@@ -1,0 +1,3 @@
+D:/Projects/Lilythorn/build/x64-Clang-Debug/CMakeFiles/lilythorn.dir
+D:/Projects/Lilythorn/build/x64-Clang-Debug/CMakeFiles/edit_cache.dir
+D:/Projects/Lilythorn/build/x64-Clang-Debug/CMakeFiles/rebuild_cache.dir
