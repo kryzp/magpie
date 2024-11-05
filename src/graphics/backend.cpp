@@ -1220,7 +1220,7 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
  * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
  */
 
-void VulkanBackend::pushShaderParams(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
+void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
 {
 	ShaderParameters::PackedData packedConstants = params.getPackedConstants();
 
@@ -1238,7 +1238,7 @@ void VulkanBackend::pushShaderParams(int bufferIdx, int bindIdx, VkShaderStageFl
 	}
 }
 
-void VulkanBackend::pushShaderBuffer(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
+void VulkanBackend::pushSsbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
 {
 	bool modified = false;
 
@@ -1250,24 +1250,34 @@ void VulkanBackend::pushShaderBuffer(int bufferIdx, int bindIdx, VkShaderStageFl
 	}
 }
 
-void VulkanBackend::bindShaderParams(int bufferIdx, int bindIdx)
+void VulkanBackend::bindUbo(int bufferIdx, int bindIdx)
 {
 	m_uboManagers[bufferIdx].bind(bindIdx);
 }
 
-void VulkanBackend::bindShaderBuffer(int bufferIdx, int bindIdx)
+void VulkanBackend::bindSsbo(int bufferIdx, int bindIdx)
 {
 	m_ssboManagers[bufferIdx].bind(bindIdx);
 }
 
-void VulkanBackend::unbindShaderParams(int bufferIdx)
+void VulkanBackend::unbindUbo(int bufferIdx)
 {
 	m_uboManagers[bufferIdx].unbind();
 }
 
-void VulkanBackend::unbindShaderBuffer(int bufferIdx)
+void VulkanBackend::unbindSsbo(int bufferIdx)
 {
 	m_ssboManagers[bufferIdx].unbind();
+}
+
+GPUBuffer* VulkanBackend::getUboBuffer(int bufferIdx)
+{
+	return m_uboManagers[bufferIdx].getBuffer();
+}
+
+GPUBuffer* VulkanBackend::getSsboBuffer(int bufferIdx)
+{
+	return m_ssboManagers[bufferIdx].getBuffer();
 }
 
 void VulkanBackend::setPushConstants(ShaderParameters& params)

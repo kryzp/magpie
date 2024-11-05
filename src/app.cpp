@@ -77,10 +77,12 @@ struct MyVertex
 	glm::vec3 norm;
 };
 
+/*
 struct MyInstancedData
 {
 	glm::vec3 positionOffset;
 };
+*/
 
 void App::run()
 {
@@ -146,8 +148,10 @@ void App::run()
 	instancedVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
 	// instanced component
-	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, 0);
-	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
+//	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, 0);
+	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32_SFLOAT, 0);
+	instancedVertexFormat.addBinding(1, sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE);
+//	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
 
 	RenderPass pass;
 
@@ -157,10 +161,11 @@ void App::run()
 
 	for (int i = 0; i < nParticles; i++)
 	{
-		particleData[i].position = { 0.2f, 0.0f };
-		particleData[i].velocity = { 0.0f, 0.0f };
+		particleData[i].position = { i, 0.0f };
+		particleData[i].velocity = { 0.0f, i * 0.001f };
 	}
 
+	/*
 	MyInstancedData instanceRawData[8];
 
 	for (int i = 0; i < 8; i++)
@@ -174,6 +179,7 @@ void App::run()
 	instanceDataStage->writeDataToMe(instanceRawData, sizeof(MyInstancedData) * 8, 0);
 	instanceDataStage->writeToBuffer(instanceData, sizeof(MyInstancedData) * 8, 0, 0);
 	delete instanceDataStage;
+	*/
 
 	ShaderParameters pushConstants;
 
@@ -191,7 +197,7 @@ void App::run()
 
 	const float aspect = static_cast<float>(m_config.width) / static_cast<float>(m_config.height);
 
-	g_vulkanBackend->pushShaderBuffer(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
+	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 
 	while (m_running)
 	{
@@ -218,9 +224,9 @@ void App::run()
 		g_vulkanBackend->bindShader(computeProgram);
 
 		parameters.set("time", 1.0f);
-		g_vulkanBackend->pushShaderParams(0, 0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
 
-		g_vulkanBackend->bindShaderBuffer(0, 1);
+		g_vulkanBackend->bindSsbo(0, 1);
 
 		g_vulkanBackend->dispatchCompute(1, 1, 1);
 		
@@ -244,8 +250,8 @@ void App::run()
 
 		g_vulkanBackend->setVertexDescriptor(instancedVertexFormat);
 		g_vulkanBackend->bindShader(vertexShaderInst);
-		pass.instanceCount = 8;
-		pass.instanceBuffer = instanceData;
+		pass.instanceCount = nParticles;
+		pass.instanceBuffer = g_vulkanBackend->getSsboBuffer(0);
 		g_vulkanBackend->render(pass.build());
 		pass.instanceCount = 1;
 		pass.instanceBuffer = nullptr;
@@ -272,11 +278,11 @@ void App::run()
 		g_vulkanBackend->setPushConstants(pushConstants);
 
 		parameters.set("time", 1.0f);
-		g_vulkanBackend->pushShaderParams(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
 		parameters2.set("otherData", 1.0f);
-		g_vulkanBackend->pushShaderParams(1, 1, VK_SHADER_STAGE_ALL_GRAPHICS, parameters2);
+		g_vulkanBackend->pushUbo(1, 1, VK_SHADER_STAGE_ALL_GRAPHICS, parameters2);
 
-		g_vulkanBackend->bindShaderBuffer(0, 2);
+		g_vulkanBackend->bindSsbo(0, 2);
 
 		g_vulkanBackend->setTexture(0, target->getAttachment(0));
 		g_vulkanBackend->setSampler(0, sampler);

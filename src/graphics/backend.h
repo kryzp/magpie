@@ -107,14 +107,17 @@ namespace llt
 
 		void bindShader(const ShaderProgram* shader);
 
-		void pushShaderParams(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params);
-		void pushShaderBuffer(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size);
+		void pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params);
+		void pushSsbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size);
 
-		void bindShaderParams(int bufferIdx, int bindIdx);
-		void bindShaderBuffer(int bufferIdx, int bindIdx);
+		void bindUbo(int bufferIdx, int bindIdx);
+		void bindSsbo(int bufferIdx, int bindIdx);
 
-		void unbindShaderParams(int bufferIdx);
-		void unbindShaderBuffer(int bufferIdx);
+		void unbindUbo(int bufferIdx);
+		void unbindSsbo(int bufferIdx);
+
+		GPUBuffer* getUboBuffer(int bufferIdx);
+		GPUBuffer* getSsboBuffer(int bufferIdx);
 
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();

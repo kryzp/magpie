@@ -44,6 +44,9 @@ namespace llt
 
 		uint32_t getDynamicOffset() const;
 
+		GPUBuffer* getBuffer();
+		const GPUBuffer* getBuffer() const;
+
 	private:
 		GPUBuffer* m_buffer;
 		

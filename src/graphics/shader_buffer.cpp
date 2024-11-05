@@ -166,3 +166,13 @@ uint32_t ShaderBuffer::getDynamicOffset() const
 {
 	return m_dynamicOffset;
 }
+
+GPUBuffer* ShaderBuffer::getBuffer()
+{
+	return m_buffer;
+}
+
+const GPUBuffer* ShaderBuffer::getBuffer() const
+{
+	return m_buffer;
+}

@@ -64,7 +64,7 @@ GPUBuffer* GPUBufferMgr::createUBO(uint64_t size)
 
 GPUBuffer* GPUBufferMgr::createSSBO(uint64_t size)
 {
-	GPUBuffer* shaderStorageBuffer = new GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	GPUBuffer* shaderStorageBuffer = new GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 	shaderStorageBuffer->create(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, size);
 	return shaderStorageBuffer;
 }
