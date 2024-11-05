@@ -58,7 +58,7 @@ void DescriptorBuilder::buildLayout(VkDescriptorSetLayout& layout)
 	layout = m_cache->createLayout(layoutCreateInfo);
 }
 
-DescriptorBuilder& DescriptorBuilder::bindBuffer(
+void DescriptorBuilder::bindBuffer(
 	uint32_t idx,
 	const VkDescriptorBufferInfo* info,
 	VkDescriptorType type,
@@ -76,15 +76,14 @@ DescriptorBuilder& DescriptorBuilder::bindBuffer(
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = idx;
+	write.dstArrayElement = 0;
 	write.descriptorType = type;
 	write.descriptorCount = 1;
 	write.pBufferInfo = info;
 	m_writes.pushBack(write);
-
-	return *this;
 }
 
-DescriptorBuilder& DescriptorBuilder::bindImage(
+void DescriptorBuilder::bindImage(
 	uint32_t idx,
 	const VkDescriptorImageInfo* info,
 	VkDescriptorType type,
@@ -102,10 +101,9 @@ DescriptorBuilder& DescriptorBuilder::bindImage(
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = idx;
+	write.dstArrayElement = 0;
 	write.descriptorType = type;
 	write.descriptorCount = 1;
 	write.pImageInfo = info;
 	m_writes.pushBack(write);
-
-	return *this;
 }

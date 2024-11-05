@@ -4,6 +4,7 @@
 #include "common.h"
 #include "container/function.h"
 #include "graphics/backbuffer.h"
+#include "graphics/shader.h"
 
 namespace llt
 {

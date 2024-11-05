@@ -22,15 +22,15 @@ void DescriptorPoolMgr::init()
 void DescriptorPoolMgr::initSizes()
 {
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f);
+	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 		4.0f);
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 				4.0f);
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 				1.0f);
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f);
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 	1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 	1.0f);
+	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 				2.0f);
+	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 				2.0f);
+	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,		1.0f);
+	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,		1.0f);
 	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f);
 }
 
@@ -79,20 +79,20 @@ VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLa
 	allocInfo.pSetLayouts = &layout;
 
 	VkResult result = vkAllocateDescriptorSets(g_vulkanBackend->device, &allocInfo, &ret);
-	bool reallocate_memory = false;
+	bool reallocateMemory = false;
 
 	if (result == VK_SUCCESS) {
 		LLT_LOG("[VULKAN:DESCRIPTORPOOL] Created descriptor sets successfully!");
 		return ret;
 	} else if (result == VK_ERROR_FRAGMENTED_POOL || result == VK_ERROR_OUT_OF_POOL_MEMORY) {
 		LLT_LOG("[VULKAN:DESCRIPTORPOOL] Failed to allocate descriptor sets initially, reallocating memory...");
-		reallocate_memory = true;
+		reallocateMemory = true;
 	} else {
 		LLT_ERROR("[VULKAN:DESCRIPTORPOOL|DEBUG] Encountered unknown return result from vkAllocateDescriptorSets: %d", result);
 	}
 
 	// if we find that we are fragmented then try to just reallocate
-	if (reallocate_memory)
+	if (reallocateMemory)
 	{
 		// get a new current pool
 		m_currentPool = fetchPool();

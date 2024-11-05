@@ -219,11 +219,11 @@ namespace llt
     }
 
     template <typename T>
-    Vector<T>::Vector(uint64_t initial_capacity)
+    Vector<T>::Vector(uint64_t initialCapacity)
         : Vector()
     {
-        allocate(initial_capacity);
-        m_size = initial_capacity;
+        allocate(initialCapacity);
+        m_size = initialCapacity;
 
         for (uint64_t i = 0; i < m_capacity; i++) {
             new (m_buf + i) T();
@@ -231,14 +231,14 @@ namespace llt
     }
 
     template <typename T>
-    Vector<T>::Vector(uint64_t initial_capacity, const T& initial_element)
+    Vector<T>::Vector(uint64_t initialCapacity, const T& initialElement)
         : Vector()
     {
-        allocate(initial_capacity);
-        m_size = initial_capacity;
+        allocate(initialCapacity);
+        m_size = initialCapacity;
 
         for (uint64_t i = 0; i < m_capacity; i++) {
-            new (m_buf + i) T(initial_element);
+            new (m_buf + i) T(initialElement);
         }
     }
 

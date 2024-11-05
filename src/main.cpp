@@ -15,6 +15,8 @@ int main(void)
 
 	g_app = new App(config);
 	g_app->run();
+	
 	delete g_app;
+
 	return 0;
 }

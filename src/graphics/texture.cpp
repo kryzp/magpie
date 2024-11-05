@@ -26,6 +26,7 @@ Texture::Texture()
 	, m_mipmapCount(1)
 	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
 	, m_transient(false)
+	, m_uav(false)
 {
 }
 
@@ -157,14 +158,18 @@ void Texture::createInternalResources()
 	createInfo.samples = m_numSamples;
 	createInfo.flags = 0;
 
-	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE) {
-		createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+	if (isUnorderedAccessView()) {
+		createInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
 
 	if (vkutil::hasStencilComponent(m_format)) {
 		createInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	} else {
 		createInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	}
+
+	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE) {
+		createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
 
 	if (VkResult result = vkCreateImage(g_vulkanBackend->device, &createInfo, nullptr, &m_image); result != VK_SUCCESS) {
@@ -427,6 +432,16 @@ bool Texture::isMipmapped() const
 void Texture::setMipmapped(bool mipmapped)
 {
 	m_mipmapped = mipmapped;
+}
+
+bool Texture::isUnorderedAccessView() const
+{
+	return m_uav;
+}
+
+void Texture::setUnorderedAccessView(bool uav)
+{
+	m_uav = uav;
 }
 
 uint32_t Texture::getLayerCount() const

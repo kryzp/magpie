@@ -7,6 +7,7 @@
 #include "../container/array.h"
 #include "../container/optional.h"
 #include "../container/hash_map.h"
+#include "../container/bitset.h"
 
 #include "../math/rect.h"
 
@@ -19,7 +20,7 @@
 #include "descriptor_builder.h"
 #include "descriptor_cache.h"
 
-#include "ubo_manager.h"
+#include "shader_buffer_mgr.h"
 
 #include "buffer.h"
 #include "texture.h"
@@ -62,6 +63,10 @@ namespace llt
 		void render(const RenderOp& op);
 		void endRender();
 
+		void beginCompute();
+		void dispatchCompute(int gcX, int gcY, int gcZ);
+		void endCompute();
+
         Backbuffer* createBackbuffer();
 
 		void swapBuffers();
@@ -78,9 +83,9 @@ namespace llt
 		void getBlendConstants(float* constants);
 		void setBlendOp(bool enabled, VkLogicOp op);
 
-		void setDepthParams(bool depth_test, bool depthWrite);
+		void setDepthParams(bool depthTest, bool depthWrite);
 		void setDepthOp(VkCompareOp op);
-		void setDepthBoundsTest(bool enabled);
+		void setDepthTest(bool enabled);
 		void setDepthBounds(float min, float max);
 		void setDepthStencilTest(bool enabled);
 
@@ -94,14 +99,24 @@ namespace llt
 		void setSampler(uint32_t idx, TextureSampler* sampler);
 
 		void bindShader(const ShaderProgram* shader);
-		void bindShaderParams(VkShaderStageFlagBits shader_type, ShaderParameters& params);
+
+		void setShaderParams(int idx, VkShaderStageFlagBits type, ShaderParameters& params);
+		void setShaderBuffer(int idx, VkShaderStageFlagBits type, void* data, uint64_t size);
+
+		void bindShaderParams(int idx);
+		void bindShaderBuffer(int idx);
+
+		void unbindShaderParams(int idx);
+		void unbindShaderBuffer(int idx);
 
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();
 
 		void syncStall() const;
 
-		void clearDescriptorSetAndPool();
+		void clearDescriptorCacheAndPool();
+
+		int getCurrentFrameIdx() const;
 
         VkInstance vulkanInstance;
 		VkDevice device;
@@ -115,32 +130,40 @@ namespace llt
 
 	private:
 		void enumeratePhysicalDevices();
+		
 		void createLogicalDevice();
-		void createCommandPools(uint32_t graphicsFamilyIdx);
+		void createCommandPools();
 		void createCommandBuffers();
 		void createPipelineProcessCache();
+		void createComputeResources();
+
 		VkSampleCountFlagBits getMaxUsableSampleCount() const;
 		void findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 		void clearPipelineCache();
 
+		VkPipelineLayout getPipelineLayout(VkShaderStageFlagBits stage);
 		VkPipeline getGraphicsPipeline();
-		VkPipelineLayout getGraphicsPipelineLayout();
+		VkPipeline getComputePipeline();
 
 		void resetDescriptorBuilder();
 
-		DescriptorBuilder getDescriptorBuilder();
-		VkDescriptorSet getDescriptorSet();
+		DescriptorBuilder getDescriptorBuilder(VkShaderStageFlagBits stage);
+		VkDescriptorSet getDescriptorSet(VkShaderStageFlagBits stage);
 
-		// pipeline
-		HashMap<uint64_t, VkPipeline> m_pipelineCache;
-		HashMap<uint64_t, VkPipelineLayout> m_pipelineLayoutCache;
+		// pipelines
 		VkPipelineCache m_pipelineProcessCache;
+		HashMap<uint64_t, VkPipeline> m_graphicsPipelineCache;
+		HashMap<uint64_t, VkPipelineLayout> m_pipelineLayoutCache;
+		HashMap<uint64_t, VkPipeline> m_computePipelineCache;
+		VkPipelineShaderStageCreateInfo m_computeShaderStageInfo;
+		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_computeFinishedSemaphores;
+		bool m_uncertainComputeFinished;
 
 		// render pass
 		RenderPassBuilder* m_currentRenderPassBuilder;
 		Array<VkDescriptorImageInfo, mgc::MAX_BOUND_TEXTURES> m_imageInfos;
-		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_shaderStages;
+		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_graphicsShaderStages;
 		GenericRenderTarget* m_currentRenderTarget;
 
 		// descriptors
@@ -153,11 +176,15 @@ namespace llt
         Backbuffer* m_backbuffer;
         VkViewport m_viewport;
 		VkRect2D m_scissor;
+		uint64_t m_currentFrameIdx;
 
 		// shader parameters
-		UBOManager m_uboManager;
-		//Array<const ShaderParameters*, SHADER_TYPE_GRAPHICS_COUNT> m_current_shader_parameters;
+		ShaderBufferManager m_uboManager;
+		ShaderBufferManager m_ssboManager;
 		ShaderParameters::PackedData m_pushConstants;
+
+		Bitset<mgc::MAX_BOUND_SHADER_ELEMENTS> m_boundUbosIdx;
+		Bitset<mgc::MAX_BOUND_SHADER_ELEMENTS> m_boundSsbosIdx;
 
 		// rendering configs
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;

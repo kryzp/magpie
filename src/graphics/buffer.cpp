@@ -6,13 +6,13 @@
 #include "../common.h"
 
 using namespace llt;
-using namespace llt;
 
-Buffer::Buffer(BufferUsage usage)
+Buffer::Buffer(VkBufferUsageFlags usage)
 	: m_buffer(VK_NULL_HANDLE)
 	, m_memory(VK_NULL_HANDLE)
 	, m_usage(usage)
 	, m_properties()
+	, m_size(0)
 {
 }
 
@@ -24,14 +24,15 @@ Buffer::~Buffer()
 void Buffer::create(VkMemoryPropertyFlags properties, uint64_t size)
 {
 	this->m_properties = properties;
+	this->m_size = size;
 
-	VkBufferCreateInfo buffer_create_info = {};
-	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_create_info.size = size;
-	buffer_create_info.usage = m_usage;
-	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	VkBufferCreateInfo bufferCreateInfo = {};
+	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferCreateInfo.size = size;
+	bufferCreateInfo.usage = m_usage;
+	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (VkResult result = vkCreateBuffer(g_vulkanBackend->device, &buffer_create_info, nullptr, &m_buffer); result != VK_SUCCESS) {
+	if (VkResult result = vkCreateBuffer(g_vulkanBackend->device, &bufferCreateInfo, nullptr, &m_buffer); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:BUFFER|DEBUG] Failed to create buffer: %d", result);
 	}
 
@@ -66,20 +67,24 @@ void Buffer::cleanUp()
     m_memory = VK_NULL_HANDLE;
 }
 
-void Buffer::readDataFromMemory(const void* src, uint64_t length, uint64_t offset)
-{
-	void* dst = nullptr;
-	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &dst); // we first have to map our memory to the gpu memory before copying data
-	mem::copy(dst, src, length);
-	vkUnmapMemory(g_vulkanBackend->device, m_memory); // now that we're finished, we can unmap
-}
+// TODO: STOP REMAPPING ALL THE TIME! IT IS VERY INEFFICIENT TO DO!
+// ADD SOME FUNCTIONS WHERE THEY MAP, THEN EXIT, THEN WE CALL ANOTHER FUNCTION TO UNMAP
+// SO WE CAN DO SOME CALLS BETWEEN THEM, KINDA MAYBE MAPBEGIN() then MAPEND() OR SOMETHING IDK
 
-void Buffer::writeDataToMemory(void* dst, uint64_t length, uint64_t offset)
+void Buffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset)
 {
 	void* src = nullptr;
 	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &src);
 	mem::copy(dst, src, length);
 	vkUnmapMemory(g_vulkanBackend->device, m_memory);
+}
+
+void Buffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
+{
+	void* dst = nullptr;
+	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &dst); // we first have to map our memory to the gpu memory before copying data
+	mem::copy(dst, src, length);
+	vkUnmapMemory(g_vulkanBackend->device, m_memory); // now that we're finished, we can unmap
 }
 
 void Buffer::writeToBuffer(const Buffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
@@ -143,7 +148,7 @@ VkDeviceMemory Buffer::getMemory() const
 	return m_memory;
 }
 
-BufferUsage Buffer::getUsage() const
+VkBufferUsageFlags Buffer::getUsage() const
 {
 	return m_usage;
 }
@@ -151,4 +156,9 @@ BufferUsage Buffer::getUsage() const
 VkMemoryPropertyFlags Buffer::getProperties() const
 {
 	return m_properties;
+}
+
+uint64_t Buffer::getSize() const
+{
+	return m_size;
 }

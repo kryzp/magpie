@@ -57,7 +57,7 @@ namespace llt
 		/*
 		* Get the next image.
 		*/
-		void aquireNextImage();
+		void acquireNextImage();
 
 		/*
 		* Swap between the three buffers.

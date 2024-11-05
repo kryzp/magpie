@@ -30,8 +30,8 @@ void SubMesh::build(const Vector<Vertex>& vtx, const Vector<uint16_t>& idx)
 	Buffer* stage = g_bufferManager->createStagingBuffer(vtx.size() * sizeof(Vertex) + idx.size() * sizeof(uint16_t));
 
 	// read data to the stage
-	stage->readDataFromMemory(vtx.data(), vtx.size() * sizeof(Vertex), 0);
-	stage->readDataFromMemory(idx.data(), idx.size() * sizeof(uint16_t), vtx.size() * sizeof(Vertex));
+	stage->writeDataToMe(vtx.data(), vtx.size() * sizeof(Vertex), 0);
+	stage->writeDataToMe(idx.data(), idx.size() * sizeof(uint16_t), vtx.size() * sizeof(Vertex));
 
 	// make the stage write that data to the gpu buffers
 	stage->writeToBuffer(m_vertexBuffer, vtx.size() * sizeof(Vertex), 0, 0);

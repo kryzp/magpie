@@ -160,7 +160,7 @@ namespace llt
 		const T& operator [] (uint64_t idx) const;
 
 	private:
-		void increaseSize(int front_or_back);
+		void increaseSize(int frontOrBack);
 		void expandFront();
 		void expandBack();
 
@@ -175,27 +175,27 @@ namespace llt
 	};
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>::Deque(int initial_capacity)
+	Deque<T, ChunkSize>::Deque(int initialCapacity)
 		: m_begin()
 		, m_end()
 		, m_map(nullptr)
 		, m_size(0)
 		, m_capacity(0)
 	{
-		T** new_map = (T**)::operator new (sizeof(T*) * initial_capacity);
-		mem::set(new_map, 0, sizeof(T*) * initial_capacity);
+		T** newMap = (T**)::operator new (sizeof(T*) * initialCapacity);
+		mem::set(newMap, 0, sizeof(T*) * initialCapacity);
 
-		T** base = new_map + (initial_capacity / 2);
+		T** base = newMap + (initialCapacity / 2);
 
 		// allocate the initial capacity of chunks
-		for (int j = 0; j < initial_capacity; j++) {
-			if (!new_map[j]) {
-				new_map[j] = (T*)::operator new (sizeof(T) * ChunkSize);
+		for (int j = 0; j < initialCapacity; j++) {
+			if (!newMap[j]) {
+				newMap[j] = (T*)::operator new (sizeof(T) * ChunkSize);
 			}
 		}
 
-		m_map = new_map;
-		m_capacity = initial_capacity * ChunkSize;
+		m_map = newMap;
+		m_capacity = initialCapacity * ChunkSize;
 
 		m_begin.setChunk(base);
 		m_begin.m_cur = m_begin.m_first;
@@ -285,14 +285,14 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	void Deque<T, ChunkSize>::increaseSize(int front_or_back)
+	void Deque<T, ChunkSize>::increaseSize(int frontOrBack)
 	{
 		// double our number of chunks
 		uint64_t num_chunks = chunks() * 2;
 
 		// allocate our map!
-		T** new_map = (T**)::operator new (sizeof(T*) * num_chunks);
-		mem::set(new_map, 0, sizeof(T*) * num_chunks);
+		T** newMap = (T**)::operator new (sizeof(T*) * num_chunks);
+		mem::set(newMap, 0, sizeof(T*) * num_chunks);
 
 		int begin_offset = m_begin	.m_cur   - m_begin	.m_first;
 		int end_offset   = m_end  	.m_cur   - m_end	.m_first;
@@ -300,28 +300,28 @@ namespace llt
 		int end_chunk    = m_end	.m_chunk - m_begin	.m_chunk;
 
 		// copy our data map to specific regions depending on what direction we are allocating in
-		if (front_or_back == EXPAND_FRONT) {
-			mem::copy(new_map + chunks(), m_map, sizeof(T*) * chunks());
-		} else if (front_or_back == EXPAND_BACK) {
-			mem::copy(new_map, m_map, sizeof(T*) * chunks());
+		if (frontOrBack == EXPAND_FRONT) {
+			mem::copy(newMap + chunks(), m_map, sizeof(T*) * chunks());
+		} else if (frontOrBack == EXPAND_BACK) {
+			mem::copy(newMap, m_map, sizeof(T*) * chunks());
 		}
 
 		// allocate the new size
 		for (int j = 0; j < num_chunks; j++) {
-			if (!new_map[j]) {
-				new_map[j] = (T*)::operator new (sizeof(T) * ChunkSize);
+			if (!newMap[j]) {
+				newMap[j] = (T*)::operator new (sizeof(T) * ChunkSize);
 			}
 		}
 
 		// set our begin and end iterator chunks to the new
 		// expended-to locations depending on the direction
 		// in which we are allocating.
-		if (front_or_back == EXPAND_FRONT) {
-			m_begin.setChunk(new_map + chunks());
-			m_end  .setChunk(new_map + chunks() + end_chunk);
-		} else if (front_or_back == EXPAND_BACK) {
-			m_begin.setChunk(new_map + begin_chunk + 1);
-			m_end  .setChunk(new_map + chunks() - 1);
+		if (frontOrBack == EXPAND_FRONT) {
+			m_begin.setChunk(newMap + chunks());
+			m_end  .setChunk(newMap + chunks() + end_chunk);
+		} else if (frontOrBack == EXPAND_BACK) {
+			m_begin.setChunk(newMap + begin_chunk + 1);
+			m_end  .setChunk(newMap + chunks() - 1);
 		}
 
 		m_begin.m_cur = m_begin.m_first + begin_offset;
@@ -330,7 +330,7 @@ namespace llt
 		// destroy our old map
 		::operator delete (m_map, sizeof(T*) * m_capacity);
 
-		m_map = new_map;
+		m_map = newMap;
 		m_capacity *= 2;
 	}
 

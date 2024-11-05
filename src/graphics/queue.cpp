@@ -1,4 +1,5 @@
 #include "queue.h"
+#include "backend.h"
 
 using namespace llt;
 
@@ -7,7 +8,6 @@ Queue::Queue()
 	, m_family(QUEUE_FAMILY_NONE)
 	, m_familyIdx(0)
 	, m_frames()
-	, m_currentFrameIdx(0)
 {
 }
 
@@ -26,24 +26,14 @@ void Queue::setData(QueueFamily family, uint32_t familyIdx)
 	m_familyIdx = familyIdx;
 }
 
-void Queue::nextFrame()
-{
-	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
-}
-
 Queue::FrameData& Queue::getCurrentFrame()
 {
-	return m_frames[m_currentFrameIdx];
+	return m_frames[g_vulkanBackend->getCurrentFrameIdx()];
 }
 
 Queue::FrameData& Queue::getFrame(int idx)
 {
 	return m_frames[idx];
-}
-
-int Queue::getCurrentFrameIdx() const
-{
-	return m_currentFrameIdx;
 }
 
 VkQueue Queue::getQueue() const

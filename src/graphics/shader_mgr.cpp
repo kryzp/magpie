@@ -52,7 +52,7 @@ ShaderProgram* ShaderMgr::create(const String& source, VkShaderStageFlagBits typ
 	return shader;
 }
 
-ShaderEffect* ShaderMgr::buildEffect()
+ShaderEffect* ShaderMgr::createEffect()
 {
 	ShaderEffect* effect = new ShaderEffect();
 	m_effects.pushBack(effect);

@@ -50,7 +50,7 @@ TextureSampler* TextureMgr::getSampler(const String& name, const TextureSampler:
 	return sampler;
 }
 
-Texture* TextureMgr::create(const Image& image)
+Texture* TextureMgr::createFromImage(const Image& image)
 {
 	Texture* texture = new Texture();
 
@@ -68,22 +68,24 @@ Texture* TextureMgr::create(const Image& image)
 
 	// move the image data onto the staging buffer, and then copy the data on the staging buffer onto the texture
 	Buffer* stage = g_bufferManager->createStagingBuffer(image.getSize());
-	stage->readDataFromMemory(image.getData(), image.getSize(), 0);
+	stage->writeDataToMe(image.getData(), image.getSize(), 0);
 	stage->writeToTexture(texture, image.getSize());
 	delete stage;
 
 	return texture;
 }
 
-Texture* TextureMgr::create(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
+Texture* TextureMgr::createFromData(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
 {
 	Texture* texture = new Texture();
 
 	texture->initSize(width, height);
 	texture->initMetadata(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
 	texture->initMipLevels(4);
+
 	texture->createInternalResources();
-    texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    
+	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	// check if we're actually creating a texture from data or if we're just trying to create an empty texture for now (data = nullptr)
 	if (data)
@@ -93,7 +95,7 @@ Texture* TextureMgr::create(uint32_t width, uint32_t height, VkFormat format, Vk
 
 		// transfer data into the texture via staging buffer
 		Buffer* stage = g_bufferManager->createStagingBuffer(size);
-		stage->readDataFromMemory(data, size, 0);
+		stage->writeDataToMe(data, size, 0);
 		stage->writeToTexture(texture, size);
 		delete stage;
 	}
@@ -142,7 +144,7 @@ Texture* TextureMgr::createCubeMap(VkFormat format, const Image& right, const Im
 
 	for (int i = 0; i < 6; i++) {
 		// transfer the data to the texture at some offset based on the index of the face
-		stage->readDataFromMemory(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
+		stage->writeDataToMe(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
 		stage->writeToTexture(texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
 	}
 

@@ -11,7 +11,7 @@ namespace llt
 	enum QueueFamily
 	{
 		QUEUE_FAMILY_NONE,
-		QUEUE_FAMILY_PRESENT_GRAPHICS,
+		QUEUE_FAMILY_GRAPHICS,
 		QUEUE_FAMILY_COMPUTE,
 		QUEUE_FAMILY_TRANSFER
 	};
@@ -32,12 +32,8 @@ namespace llt
 		void init(VkQueue queue);
 		void setData(QueueFamily family, uint32_t familyIdx);
 
-		void nextFrame();
-
 		FrameData& getCurrentFrame();
 		FrameData& getFrame(int idx);
-
-		int getCurrentFrameIdx() const;
 
 		VkQueue getQueue() const;
 		
@@ -51,7 +47,6 @@ namespace llt
 		Optional<uint32_t> m_familyIdx;
 
 		FrameData m_frames[mgc::FRAMES_IN_FLIGHT];
-		uint64_t m_currentFrameIdx;
 	};
 }
 

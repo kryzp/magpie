@@ -29,16 +29,16 @@ void DescriptorCache::clearSetCache()
 	m_descriptorCache.clear();
 }
 
-VkDescriptorSet DescriptorCache::createSet(DescriptorPoolMgr* mgr, const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasAlreadyCached)
+VkDescriptorSet DescriptorCache::createSet(DescriptorPoolMgr* mgr, const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasNotCached)
 {
 	if (m_descriptorCache.contains(hash)) {
-		if (wasAlreadyCached) {
-			(*wasAlreadyCached) = false;
+		if (wasNotCached) {
+			(*wasNotCached) = false;
 		}
 		return m_descriptorCache[hash];
 	} else {
-		if (wasAlreadyCached) {
-			(*wasAlreadyCached) = true;
+		if (wasNotCached) {
+			(*wasNotCached) = true;
 		}
 	}
 
@@ -52,6 +52,7 @@ VkDescriptorSetLayout DescriptorCache::createLayout(const VkDescriptorSetLayoutC
 {
 	// create a unique hash for the layout create info
 	uint64_t createdDescriptorHash = 0;
+
 	hash::combine(&createdDescriptorHash, &layoutCreateInfo.bindingCount);
 
 	for (int i = 0; i < layoutCreateInfo.bindingCount; i++) {

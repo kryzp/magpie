@@ -63,6 +63,12 @@ App::~App()
 	delete g_systemBackend;
 }
 
+struct Particle
+{
+	glm::vec2 position;
+	glm::vec2 velocity;
+};
+
 void App::run()
 {
 	ShaderParameters pushConstants;
@@ -70,6 +76,11 @@ void App::run()
 	ShaderProgram* vertexShader			= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* fragmentShader		= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	ShaderProgram* fragmentTexShader	= g_shaderManager->create("../../res/shaders/raster/fragment_texture.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	ShaderProgram* computeProgram = g_shaderManager->create("../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+
+	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8_UNORM });
+	TextureSampler* sampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
 
 	SubMesh mesh;
 	mesh.build(
@@ -99,17 +110,42 @@ void App::run()
 		}
 	);
 
+	SubMesh quad2;
+	quad2.build(
+		{
+			{ { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+		},
+		{
+			0, 1, 2,
+			1, 3, 2
+		}
+	);
+
 	RenderPass pass;
 
-	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM });
+	int nParticles = 8;
+	uint64_t particleBufferSize = sizeof(Particle) * nParticles;
+	Particle* particleData = new Particle[nParticles];
 
-	TextureSampler* sampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
+	for (int i = 0; i < nParticles; i++)
+	{
+		particleData[i].position = { 1.0f, 0.0f };
+		particleData[i].velocity = { -0.01f, 0.0f };
+	}
+
+	ShaderParameters parameters;
+	parameters.set("time", 1.0f);
 
 	Timer deltaTimer;
 	deltaTimer.start();
 
 	double accumulator = 0.0;
 	const double deltaTime = 1.0 / (double)m_config.targetFPS;
+
+	g_vulkanBackend->setShaderBuffer(1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 
 	while (m_running)
 	{
@@ -131,6 +167,21 @@ void App::run()
 
 		// ---
 
+		g_vulkanBackend->beginCompute();
+
+		g_vulkanBackend->bindShader(computeProgram);
+
+		parameters.set("time", 1.0f);
+		g_vulkanBackend->setShaderParams(0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
+
+		g_vulkanBackend->bindShaderBuffer(1);
+
+		g_vulkanBackend->dispatchCompute(1, 1, 1);
+		
+		g_vulkanBackend->endCompute();
+
+		// ---
+
 		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
 
 		g_vulkanBackend->setRenderTarget(target);
@@ -149,11 +200,18 @@ void App::run()
 		
 		// ---
 
+		g_vulkanBackend->setDepthTest(false);
+
 		g_vulkanBackend->setRenderTarget(m_backbuffer);
 		g_vulkanBackend->beginRender();
 
 		pushConstants.set("projMatrix", glm::identity<glm::mat4>());
 		g_vulkanBackend->setPushConstants(pushConstants);
+
+		parameters.set("time", 1.0f);
+		g_vulkanBackend->setShaderParams(0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
+
+		g_vulkanBackend->bindShaderBuffer(1);
 
 		g_vulkanBackend->setTexture(0, target->getAttachment(0));
 		g_vulkanBackend->setSampler(0, sampler);
@@ -164,10 +222,21 @@ void App::run()
 		pass.mesh = &quad;
 		g_vulkanBackend->render(pass.build());
 
+		pass.mesh = &quad2;
+		g_vulkanBackend->render(pass.build());
+
+		g_vulkanBackend->setTexture(0, nullptr);
+		g_vulkanBackend->setSampler(0, nullptr);
+		g_vulkanBackend->resetPushConstants();
+
 		g_vulkanBackend->endRender();
-		
+
+		// ---
+
 		g_vulkanBackend->swapBuffers();
 	}
+
+	delete[] particleData;
 }
 
 void App::exit()

@@ -112,9 +112,12 @@ namespace llt
 	namespace mgc
 	{
 		static constexpr uint64_t MAX_RENDER_TARGET_ATTACHMENTS = 16;
-		static constexpr uint64_t MAX_BOUND_TEXTURES = 32;
 		static constexpr uint64_t FRAMES_IN_FLIGHT = 3;
 		static constexpr uint64_t RASTER_SHADER_COUNT = 2;
+		static constexpr uint64_t MAX_BOUND_UBOS = 16;
+		static constexpr uint64_t MAX_BOUND_SSBOS = 16;
+		static constexpr uint64_t MAX_BOUND_TEXTURES = 32;
+		static constexpr uint64_t MAX_BOUND_SHADER_ELEMENTS = MAX_BOUND_UBOS + MAX_BOUND_SSBOS; // idk wtf to name this
 	}
 }
 

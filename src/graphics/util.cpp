@@ -20,6 +20,8 @@ VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatK
 
 VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes)
 {
+//	return VK_PRESENT_MODE_IMMEDIATE_KHR; // todo: this disables vsync, make this an option!!!
+
 	for (const auto& available_present_mode : availablePresentModes) {
 		if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
 			return available_present_mode;
@@ -147,7 +149,7 @@ void vkutil::endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer)
 	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->device, g_vulkanBackend->graphicsQueue.getQueue());
 }
 
-uint64_t vkutil::calcUboAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties)
+uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties)
 {
 	const VkDeviceSize& minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return (size / minimumSize) * minimumSize + ((size % minimumSize) > 0 ? minimumSize : 0);
@@ -221,8 +223,7 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	bool adequateSwapChain = false;
 	bool hasRequiredExtensions = checkDeviceExtensionSupport(physicalDevice);
 
-	// PRESENT QUEUE
-	bool hasGraphics = g_vulkanBackend->graphicsQueue.getFamilyIdx().hasValue() && g_vulkanBackend->graphicsQueue.getFamilyIdx().hasValue();
+	bool hasGraphics = g_vulkanBackend->graphicsQueue.getFamilyIdx().hasValue();
 	bool hasAnisotropy = features.samplerAnisotropy;
 
 	// prefer / give more weight to discrete gpus than integrated gpus

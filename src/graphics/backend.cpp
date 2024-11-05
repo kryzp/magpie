@@ -6,6 +6,8 @@
 
 #include "../system_backend.h"
 
+#include "../math/calc.h"
+
 llt::VulkanBackend* llt::g_vulkanBackend = nullptr;
 
 using namespace llt;
@@ -204,15 +206,22 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_currentRenderPassBuilder()
 	, m_descriptorPoolManager()
 	, m_imageInfos()
-	, m_shaderStages()
+	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
 	, m_uboManager()
+	, m_ssboManager()
 	, m_pushConstants()
+	, m_boundUbosIdx()
+	, m_boundSsbosIdx()
 	, m_minSampleShading(0.2f)
 	, m_blendStateLogicOpEnabled(false)
 	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
-	, m_pipelineCache()
+	, m_graphicsPipelineCache()
 	, m_pipelineLayoutCache()
+	, m_computePipelineCache()
+	, m_computeShaderStageInfo()
+	, m_computeFinishedSemaphores()
+	, m_uncertainComputeFinished(false)
 	, m_descriptorCache()
 	, m_descriptorBuilder()
 	, m_descriptorBuilderDirty(true)
@@ -227,6 +236,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, msaaSamples(VK_SAMPLE_COUNT_1_BIT)
 	, m_viewport()
 	, m_scissor()
+	, m_currentFrameIdx(0)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
 //	, m_current_shader_parameters()
 #if LLT_DEBUG
@@ -328,7 +338,8 @@ VulkanBackend::~VulkanBackend()
 
 	m_currentRenderPassBuilder->cleanUp();
 
-	m_uboManager.cleanUp(); // ubo data
+	m_uboManager.cleanUp();
+	m_ssboManager.cleanUp();
 
 	m_descriptorCache.cleanUp();
 	m_descriptorPoolManager.cleanUp();
@@ -336,6 +347,18 @@ VulkanBackend::~VulkanBackend()
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
 		vkDestroyFence(this->device, graphicsQueue.getFrame(i).inFlightFence, nullptr);
 		vkDestroyCommandPool(this->device, graphicsQueue.getFrame(i).commandPool, nullptr);
+
+		vkDestroySemaphore(this->device, m_computeFinishedSemaphores[i], nullptr);
+
+		for (int j = 0; j < computeQueues.size(); j++) {
+			vkDestroyFence(this->device, computeQueues[j].getFrame(i).inFlightFence, nullptr);
+			vkDestroyCommandPool(this->device, computeQueues[j].getFrame(i).commandPool, nullptr);
+		}
+
+		for (int j = 0; j < transferQueues.size(); j++) {
+			vkDestroyFence(this->device, transferQueues[j].getFrame(i).inFlightFence, nullptr);
+			vkDestroyCommandPool(this->device, transferQueues[j].getFrame(i).commandPool, nullptr);
+		}
 	}
 
 	delete m_backbuffer;
@@ -530,10 +553,59 @@ void VulkanBackend::createPipelineProcessCache()
 	LLT_LOG("[VULKAN] Created graphics pipeline process cache!");
 }
 
-VkPipelineLayout VulkanBackend::getGraphicsPipelineLayout()
+void VulkanBackend::createComputeResources()
 {
-	DescriptorBuilder builder = getDescriptorBuilder();
+	VkSemaphoreCreateInfo computeSemaphoreCreateInfo = {};
+	computeSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
+	{
+		if (VkResult result = vkCreateSemaphore(this->device, &computeSemaphoreCreateInfo, nullptr, &m_computeFinishedSemaphores[i]); result != VK_SUCCESS) {
+			LLT_ERROR("[VULKAN|DEBUG] Failed to create compute finished semaphore: %d", result);
+		}
+	}
+
+	LLT_LOG("[VULKAN] Created compute resources!");
+}
+
+VkPipeline VulkanBackend::getComputePipeline()
+{
+	VkPipelineLayout computePipelineLayout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
+
+	uint64_t createdPipelineHash = 0;
+	hash::combine(&createdPipelineHash, &m_computeShaderStageInfo);
+
+	if (m_computePipelineCache.contains(createdPipelineHash)) {
+		return m_computePipelineCache[createdPipelineHash];
+	}
+
+	VkComputePipelineCreateInfo computePipelineCreateInfo = {};
+	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	computePipelineCreateInfo.layout = computePipelineLayout;
+	computePipelineCreateInfo.stage = m_computeShaderStageInfo;
+
+	VkPipeline createdPipeline = VK_NULL_HANDLE;
+
+	if (VkResult result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to create new compute pipeline: %d", result);
+	}
+
+	LLT_LOG("[VULKAN] Created new compute pipeline!");
+
+	m_computePipelineCache.insert(Pair(
+		createdPipelineHash,
+		createdPipeline
+	));
+
+	return createdPipeline;
+}
+
+VkPipelineLayout VulkanBackend::getPipelineLayout(VkShaderStageFlagBits stage)
+{
+	DescriptorBuilder builder = getDescriptorBuilder(stage);
 	uint64_t pipelineLayoutHash = builder.hash();
+
+	hash::combine(&pipelineLayoutHash, &stage);
 
 	uint64_t pushConstantCount = m_pushConstants.size();
 	hash::combine(&pipelineLayoutHash, &pushConstantCount);
@@ -553,7 +625,7 @@ VkPipelineLayout VulkanBackend::getGraphicsPipelineLayout()
 	VkPushConstantRange pushConstants;
 	pushConstants.offset = 0;
 	pushConstants.size = m_pushConstants.size();
-	pushConstants.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+	pushConstants.stageFlags = stage;
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -569,14 +641,12 @@ VkPipelineLayout VulkanBackend::getGraphicsPipelineLayout()
 
 	VkPipelineLayout pipelineLayout = {};
 
-	// create it
 	if (VkResult result = vkCreatePipelineLayout(this->device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to create pipeline layout: %d", result);
 	}
 
-	LLT_LOG("[VULKAN] Created new graphics pipeline layout!");
+	LLT_LOG("[VULKAN] Created new pipeline layout!");
 
-	// now that it is created, cache it
 	m_pipelineLayoutCache.insert(Pair(
 		pipelineLayoutHash,
 		pipelineLayout
@@ -677,17 +747,17 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 
 	hash::combine(&createdPipelineHash, &bindingDescription);
 
-	for (int i = 0; i < m_shaderStages.size(); i++) {
-		hash::combine(&createdPipelineHash, &m_shaderStages[i]);
+	for (int i = 0; i < m_graphicsShaderStages.size(); i++) {
+		hash::combine(&createdPipelineHash, &m_graphicsShaderStages[i]);
 	}
 
 	// this hash now uniquely identifies a pipeline
 	// if it exists in our cache (because it has been created before)
 	// then we return that because it is far cheaper than creating a new pipeline
 
-	if (m_pipelineCache.contains(createdPipelineHash)) {
+	if (m_graphicsPipelineCache.contains(createdPipelineHash)) {
 		// alright, a pipeline was found!
-		return m_pipelineCache[createdPipelineHash];
+		return m_graphicsPipelineCache[createdPipelineHash];
 	}
 
 	// no such pipeline exists!
@@ -699,8 +769,8 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
 	graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphicsPipelineCreateInfo.pStages = m_shaderStages.data();
-	graphicsPipelineCreateInfo.stageCount = m_shaderStages.size();
+	graphicsPipelineCreateInfo.pStages = m_graphicsShaderStages.data();
+	graphicsPipelineCreateInfo.stageCount = m_graphicsShaderStages.size();
 	graphicsPipelineCreateInfo.pVertexInputState = &vertexInputStateCreateInfo;
 	graphicsPipelineCreateInfo.pInputAssemblyState = &inputAssemblyStateCreateInfo;
 	graphicsPipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
@@ -709,7 +779,7 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	graphicsPipelineCreateInfo.pDepthStencilState = &m_depthStencilCreateInfo;
 	graphicsPipelineCreateInfo.pColorBlendState = &colourBlendStateCreateInfo;
 	graphicsPipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
-	graphicsPipelineCreateInfo.layout = getGraphicsPipelineLayout();
+	graphicsPipelineCreateInfo.layout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
 	graphicsPipelineCreateInfo.renderPass = m_currentRenderPassBuilder->getRenderPass();
 	graphicsPipelineCreateInfo.subpass = 0;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -717,34 +787,51 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 
 	VkPipeline createdPipeline = VK_NULL_HANDLE;
 
-	// create it
 	if (VkResult result = vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to create new graphics pipeline: %d", result);
 	}
 
 	LLT_LOG("[VULKAN] Created new graphics pipeline!");
 
-	// cache it
-	m_pipelineCache.insert(Pair(
+	m_graphicsPipelineCache.insert(Pair(
 		createdPipelineHash,
 		createdPipeline
 	));
 
-	// return it
 	return createdPipeline;
 }
 
-void VulkanBackend::createCommandPools(uint32_t graphics_family_idx)
+void VulkanBackend::createCommandPools()
 {
 	VkCommandPoolCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	createInfo.queueFamilyIndex = graphics_family_idx;
 
 	// create a command pool for every frame in flight
-	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
+	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
+	{
+		createInfo.queueFamilyIndex = graphicsQueue.getFamilyIdx().value();
+
 		if (VkResult result = vkCreateCommandPool(this->device, &createInfo, nullptr, &graphicsQueue.getFrame(i).commandPool); result != VK_SUCCESS) {
-			LLT_ERROR("[VULKAN|DEBUG] Failed to create command pools: %d", result);
+			LLT_ERROR("[VULKAN|DEBUG] Failed to create graphics command pool: %d", result);
+		}
+
+		for (int j = 0; j < computeQueues.size(); j++)
+		{
+			createInfo.queueFamilyIndex = computeQueues[j].getFamilyIdx().value();
+
+			if (VkResult result = vkCreateCommandPool(this->device, &createInfo, nullptr, &computeQueues[j].getFrame(i).commandPool); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create compute command pool: %d", result);
+			}
+		}
+
+		for (int j = 0; j < transferQueues.size(); j++)
+		{
+			createInfo.queueFamilyIndex = transferQueues[j].getFamilyIdx().value();
+
+			if (VkResult result = vkCreateCommandPool(this->device, &createInfo, nullptr, &transferQueues[j].getFrame(i).commandPool); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create transfer command pool: %d", result);
+			}
 		}
 	}
 
@@ -756,14 +843,46 @@ void VulkanBackend::createCommandBuffers()
 	// create a command buffer for every frame in flight
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
-		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		command_buffer_allocate_info.commandPool = graphicsQueue.getFrame(i).commandPool;
-		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		command_buffer_allocate_info.commandBufferCount = 1;
+		VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAllocateInfo.commandPool = graphicsQueue.getFrame(i).commandPool;
+		commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAllocateInfo.commandBufferCount = 1;
 
-		if (VkResult result = vkAllocateCommandBuffers(this->device, &command_buffer_allocate_info, &graphicsQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
-			LLT_ERROR("[VULKAN|DEBUG] Failed to create command buffers: %d", result);
+		if (VkResult result = vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &graphicsQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
+			LLT_ERROR("[VULKAN|DEBUG] Failed to create graphics command buffer: %d", result);
+		}
+
+		// todo: im allocating multiple command buffers here, why is commandBufferCount = 1? optimise this!!
+
+		for (int j = 0; j < computeQueues.size(); j++)
+		{
+			auto& computeQueue = computeQueues[j];
+
+			VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+			commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferAllocateInfo.commandPool = computeQueue.getFrame(i).commandPool;
+			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			commandBufferAllocateInfo.commandBufferCount = 1;
+
+			if (VkResult result = vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &computeQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create compute command buffer: %d", result);
+			}
+		}
+
+		for (int j = 0; j < transferQueues.size(); j++)
+		{
+			auto& transferQueue = transferQueues[j];
+
+			VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+			commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferAllocateInfo.commandPool = transferQueue.getFrame(i).commandPool;
+			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			commandBufferAllocateInfo.commandBufferCount = 1;
+
+			if (VkResult result = vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &transferQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create transfer command buffer: %d", result);
+			}
 		}
 	}
 
@@ -809,7 +928,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	createLogicalDevice();
 	createPipelineProcessCache();
 
-	createCommandPools(graphicsQueue.getFamilyIdx().value());
+	createCommandPools();
 	createCommandBuffers();
 
 	VkFenceCreateInfo fenceCreateInfo = {};
@@ -818,15 +937,30 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
 		if (VkResult result = vkCreateFence(this->device, &fenceCreateInfo, nullptr, &graphicsQueue.getFrame(i).inFlightFence); result != VK_SUCCESS) {
-			LLT_ERROR("[VULKAN|DEBUG] Failed to create in flight fence: %d", result);
+			LLT_ERROR("[VULKAN|DEBUG] Failed to create graphics in flight fence: %d", result);
+		}
+
+		for (int j = 0; j < computeQueues.size(); j++) {
+			if (VkResult result = vkCreateFence(this->device, &fenceCreateInfo, nullptr, &computeQueues[j].getFrame(i).inFlightFence); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create compute in flight fence: %d", result);
+			}
+		}
+
+		for (int j = 0; j < transferQueues.size(); j++) {
+			if (VkResult result = vkCreateFence(this->device, &fenceCreateInfo, nullptr, &transferQueues[j].getFrame(i).inFlightFence); result != VK_SUCCESS) {
+				LLT_ERROR("[VULKAN|DEBUG] Failed to create transfer in flight fence: %d", result);
+			}
 		}
 	}
 
 	LLT_LOG("[VULKAN] Created in flight fence!");
 
+	createComputeResources();
+
 	// start off with 256kB of shader memory for each frame
 	// this will increase if it isn't enough, however it is a good baseline.
-	m_uboManager.init(KILOBYTES(256) * mgc::FRAMES_IN_FLIGHT);
+	m_uboManager.init(KILOBYTES(256) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
+	m_ssboManager.init(KILOBYTES(256) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_SSBO);
 
 	m_descriptorPoolManager.init();
 
@@ -860,15 +994,13 @@ void VulkanBackend::resetDescriptorBuilder()
 	);
 }
 
-DescriptorBuilder VulkanBackend::getDescriptorBuilder()
+DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stage)
 {
 	// check if our descriptor builder has been modified at all (i.e: dirty)
 	// no point in building a new one if it hasn't changed
 	if (!m_descriptorBuilderDirty) {
 		return m_descriptorBuilder;
 	}
-
-	uint32_t nUboDescriptors = (uint32_t)m_uboManager.getDescriptorCount();
 
 	int nTextures = 0;
 	for (; nTextures < m_imageInfos.size(); nTextures++) {
@@ -879,23 +1011,64 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder()
 
 	resetDescriptorBuilder();
 
+	int textureBaseIdx = 0;
+
 	// bind ubos
-	for (int j = 0; j < nUboDescriptors; j++) {
+	int n = 0;
+	for (int i = 0; i < mgc::MAX_BOUND_SHADER_ELEMENTS; i++)
+	{
+		if (m_boundUbosIdx.isOff(i)) {
+			continue;
+		}
+
 		m_descriptorBuilder.bindBuffer(
-			j,
-			&m_uboManager.getDescriptor(j),
+			i,
+			&m_uboManager.getDescriptor(),
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-			VK_SHADER_STAGE_ALL_GRAPHICS
+			stage
 		);
+
+		n++;
+
+		if (n >= m_boundUbosIdx.onCount()) {
+			break;
+		}
 	}
 
+	textureBaseIdx += n;
+
+	// bind ssbos
+	n = 0;
+	for (int i = 0; i < mgc::MAX_BOUND_SHADER_ELEMENTS; i++)
+	{
+		if (m_boundSsbosIdx.isOff(i)) {
+			continue;
+		}
+
+		m_descriptorBuilder.bindBuffer(
+			i,
+			&m_ssboManager.getDescriptor(),
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+			stage
+		);
+
+		n++;
+
+		if (n >= m_boundSsbosIdx.onCount()) {
+			break;
+		}
+	}
+
+	textureBaseIdx += n;
+
 	// bind samplers
-	for (int i = 0; i < nTextures; i++) {
+	for (int i = 0; i < nTextures; i++)
+	{
 		m_descriptorBuilder.bindImage(
-			nUboDescriptors + i,
+			textureBaseIdx + i,
 			&m_imageInfos[i],
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			VK_SHADER_STAGE_ALL_GRAPHICS
+			stage
 		);
 	}
 
@@ -908,9 +1081,11 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder()
  * Creates a new descriptor set based on our currently bound textures
  * by asking the descriptor builder to build one.
  */
-VkDescriptorSet VulkanBackend::getDescriptorSet()
+VkDescriptorSet VulkanBackend::getDescriptorSet(VkShaderStageFlagBits stage)
 {
 	uint64_t descriptorSetHash = 0;
+
+	hash::combine(&descriptorSetHash, &stage);
 
 	for (int i = 0; i < m_imageInfos.size(); i++) {
 		if (!m_imageInfos[i].imageView) {
@@ -923,7 +1098,7 @@ VkDescriptorSet VulkanBackend::getDescriptorSet()
 	VkDescriptorSet descriptorSet = {};
 	VkDescriptorSetLayout descriptorSetLayout = {};
 
-	DescriptorBuilder builder = getDescriptorBuilder();
+	DescriptorBuilder builder = getDescriptorBuilder(stage);
 	builder.build(descriptorSet, descriptorSetLayout, descriptorSetHash);
 
 	return descriptorSet;
@@ -931,11 +1106,17 @@ VkDescriptorSet VulkanBackend::getDescriptorSet()
 
 void VulkanBackend::clearPipelineCache()
 {
-	for (auto& [id, cache] : m_pipelineCache) {
+	for (auto& [id, cache] : m_graphicsPipelineCache) {
 		vkDestroyPipeline(this->device, cache, nullptr);
 	}
 
-	m_pipelineCache.clear();
+	m_graphicsPipelineCache.clear();
+
+	for (auto& [id, cache] : m_computePipelineCache) {
+		vkDestroyPipeline(this->device, cache, nullptr);
+	}
+
+	m_computePipelineCache.clear();
 
 	for (auto& [id, cache] : m_pipelineLayoutCache) {
 		vkDestroyPipelineLayout(this->device, cache, nullptr);
@@ -976,35 +1157,45 @@ void VulkanBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurface
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
 	if (!queueFamilyCount) {
-		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to find any queue families!");
+		LLT_ERROR("[VULKAN|DEBUG] Failed to find any queue families!");
 	}
 
 	Vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
+	Vector<uint32_t> numQueuesFound;
+	numQueuesFound.resize(queueFamilyCount);
+
+	bool foundGraphicsQueue = false;
+
 	for (int i = 0; i < queueFamilyCount; i++)
 	{
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !foundGraphicsQueue)
 		{
 			VkBool32 presentSupport = VK_FALSE;
 			vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
 
 			if (presentSupport)
 			{
-				graphicsQueue.setData(QUEUE_FAMILY_PRESENT_GRAPHICS, i);
+				graphicsQueue.setData(QUEUE_FAMILY_GRAPHICS, i);
+				foundGraphicsQueue = true;
 				continue;
 			}
 		}
 
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && numQueuesFound[i] < queueFamilies[i].queueCount)
+		{
 			computeQueues.emplaceBack();
 			computeQueues.back().setData(QUEUE_FAMILY_COMPUTE, i);
+			numQueuesFound[i]++;
 			continue;
 		}
 
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT)) {
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && numQueuesFound[i] < queueFamilies[i].queueCount)
+		{
 			transferQueues.emplaceBack();
 			transferQueues.back().setData(QUEUE_FAMILY_TRANSFER, i);
+			numQueuesFound[i]++;
 			continue;
 		}
 	}
@@ -1015,10 +1206,10 @@ void VulkanBackend::onWindowResize(int width, int height)
 	m_backbuffer->onWindowResize(width, height);
 }
 
-void VulkanBackend::setSampleShading(bool enabled, float min_sample_shading)
+void VulkanBackend::setSampleShading(bool enabled, float minSampleShading)
 {
 	m_sampleShadingEnabled = enabled;
-	m_minSampleShading = min_sample_shading;
+	m_minSampleShading = minSampleShading;
 }
 
 void VulkanBackend::setCullMode(VkCullModeFlagBits cull)
@@ -1068,31 +1259,27 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 		return;
 	}
 
-	int idx = 0;
-
 	switch (shader->type)
 	{
 		case VK_SHADER_STAGE_VERTEX_BIT:
-			idx = 0;
+			m_graphicsShaderStages[0] = shader->getShaderStageCreateInfo();
 			break;
 
 		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			idx = 1;
+			m_graphicsShaderStages[1] = shader->getShaderStageCreateInfo();
 			break;
 
 		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			idx = 2;
+			LLT_ERROR("[VULKAN|DEBUG] Geometry shaders not yet implemented!!");
 			break;
 
 		case VK_SHADER_STAGE_COMPUTE_BIT:
-			idx = 3;
+			m_computeShaderStageInfo = shader->getShaderStageCreateInfo();
 			break;
 	}
-
-	m_shaderStages[idx] = shader->getShaderStageCreateInfo();
 }
 
-void VulkanBackend::bindShaderParams(VkShaderStageFlagBits shaderType, ShaderParameters& params)
+void VulkanBackend::setShaderParams(int idx, VkShaderStageFlagBits type, ShaderParameters& params)
 {
 	ShaderParameters::PackedData packedConstants = params.getPackedConstants();
 
@@ -1101,11 +1288,45 @@ void VulkanBackend::bindShaderParams(VkShaderStageFlagBits shaderType, ShaderPar
 	}
 
 	bool modified = false;
-	m_uboManager.push_data(shaderType, packedConstants.data(), packedConstants.size(), &modified);
+	m_uboManager.pushData(packedConstants.data(), packedConstants.size(), m_currentFrameIdx, &modified);
+
+	m_boundUbosIdx.enable(idx);
 
 	if (modified) {
 		m_descriptorBuilderDirty = true;
 	}
+}
+
+void VulkanBackend::setShaderBuffer(int idx, VkShaderStageFlagBits type, void* data, uint64_t size)
+{
+	bool modified = false;
+	m_ssboManager.pushData(data, size, m_currentFrameIdx, &modified);
+
+	m_boundSsbosIdx.enable(idx);
+
+	if (modified) {
+		m_descriptorBuilderDirty = true;
+	}
+}
+
+void VulkanBackend::bindShaderParams(int idx)
+{
+	m_boundUbosIdx.enable(idx);
+}
+
+void VulkanBackend::bindShaderBuffer(int idx)
+{
+	m_boundSsbosIdx.enable(idx);
+}
+
+void VulkanBackend::unbindShaderParams(int idx)
+{
+	m_boundUbosIdx.disable(idx);
+}
+
+void VulkanBackend::unbindShaderBuffer(int idx)
+{
+	m_boundSsbosIdx.disable(idx);
 }
 
 void VulkanBackend::setPushConstants(ShaderParameters& params)
@@ -1118,18 +1339,133 @@ void VulkanBackend::resetPushConstants()
 	m_pushConstants.clear();
 }
 
-void VulkanBackend::clearDescriptorSetAndPool()
+void VulkanBackend::clearDescriptorCacheAndPool()
 {
 	m_descriptorCache.clearSetCache();
 //	m_descriptor_pool_mgr.reset_pools();
 }
 
+int VulkanBackend::getCurrentFrameIdx() const
+{
+	return m_currentFrameIdx;
+}
+
+void VulkanBackend::beginCompute()
+{
+	const auto& currentFrame = computeQueues[0].getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+
+	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
+
+	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	if (VkResult result = vkBeginCommandBuffer(currentBuffer, &commandBufferBeginInfo); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to begin recording compute command buffer: %d", result);
+	}
+}
+
+void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
+{
+	const auto& currentFrame = computeQueues[0].getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	VkPipeline pipeline = getComputePipeline();
+	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
+	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_COMPUTE_BIT);
+
+	if (m_pushConstants.size() > 0)
+	{
+		vkCmdPushConstants(
+			currentBuffer,
+			pipelineLayout,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			0,
+			m_pushConstants.size(),
+			m_pushConstants.data()
+		);
+	}
+
+	int dynamicOffsetCount = 0;
+
+	if (m_boundUbosIdx.any()) {
+		dynamicOffsetCount++;
+	}
+
+	if (m_boundSsbosIdx.any()) {
+		dynamicOffsetCount++;
+	}
+
+	uint32_t dynamicOffsets[] = { m_uboManager.getDynamicOffset(), m_ssboManager.getDynamicOffset() };
+
+	vkCmdBindDescriptorSets(
+		currentBuffer,
+		VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipelineLayout,
+		0,
+		1, &descriptorSet,
+		dynamicOffsetCount,
+		dynamicOffsets
+	);
+
+	vkCmdBindPipeline(
+		currentBuffer,
+		VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline
+	);
+
+	// todo: temp
+	vkCmdDispatch(
+		currentBuffer,
+		gcX, gcY, gcZ
+	);
+}
+
+void VulkanBackend::endCompute()
+{
+	const auto& currentFrame = computeQueues[0].getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to record compute command buffer: %d", result);
+	}
+
+	VkSubmitInfo submitInfo = {};
+	
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &currentBuffer;
+
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrameIdx];
+	
+	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
+
+	if (VkResult result = vkQueueSubmit(computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to submit compute command buffer: %d", result);
+	}
+
+	m_uncertainComputeFinished = true;
+
+	m_boundUbosIdx.reset();
+	m_boundSsbosIdx.reset();
+}
+
 void VulkanBackend::beginRender()
 {
-	vkWaitForFences(this->device, 1, &graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+	if (m_uncertainComputeFinished) {
+		resetDescriptorBuilder();
+	}
 
-	vkResetCommandPool(this->device, graphicsQueue.getCurrentFrame().commandPool, 0);
-	VkCommandBuffer currentBuffer = graphicsQueue.getCurrentFrame().commandBuffer;
+	const auto& currentFrame = graphicsQueue.getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+
+	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1166,21 +1502,22 @@ void VulkanBackend::render(const RenderOp& op)
 	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
 
+	// todo
 //	vkCmdSetViewport(current_buffer, 0, 1, &m_viewport);
 //	vkCmdSetScissor(current_buffer, 0, 1, &m_scissor);
 
 	const auto& vertexBuffer = op.vertexData.buffer->getBuffer();
 	const auto& indexBuffer  = op.indexData.buffer->getBuffer();
 
-	VkBuffer vertex_buffers[] = { vertexBuffer };
+	VkBuffer vertexBuffers[] = { vertexBuffer };
 	VkDeviceSize offsets[] = { 0 };
 
-	vkCmdBindVertexBuffers(currentBuffer, 0, 1, vertex_buffers, offsets);
+	vkCmdBindVertexBuffers(currentBuffer, 0, 1, vertexBuffers, offsets);
 	vkCmdBindIndexBuffer(currentBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
 	VkPipeline pipeline = getGraphicsPipeline();
-	VkPipelineLayout pipelineLayout = getGraphicsPipelineLayout();
-	VkDescriptorSet descriptorSet = getDescriptorSet();
+	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
+	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 	if (m_pushConstants.size() > 0)
 	{
@@ -1194,8 +1531,17 @@ void VulkanBackend::render(const RenderOp& op)
 		);
 	}
 
-	int dynamicOffsetCount = m_uboManager.getDynamicOffsetCount();
-	const auto& dynamicOffsets = m_uboManager.getDynamicOffsets();
+	int dynamicOffsetCount = 0;
+
+	if (m_boundUbosIdx.any()) {
+		dynamicOffsetCount++;
+	}
+
+	if (m_boundSsbosIdx.any()) {
+		dynamicOffsetCount++;
+	}
+
+	uint32_t dynamicOffsets[] = { m_uboManager.getDynamicOffset(), m_ssboManager.getDynamicOffset() };
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -1204,7 +1550,7 @@ void VulkanBackend::render(const RenderOp& op)
 		0,
 		1, &descriptorSet,
 		dynamicOffsetCount,
-		dynamicOffsets.data()
+		dynamicOffsets
 	);
 
 	vkCmdBindPipeline(
@@ -1223,9 +1569,11 @@ void VulkanBackend::render(const RenderOp& op)
 	);
 }
 
+// todo: option to wait for compute shader rather than always doing it
 void VulkanBackend::endRender()
 {
-	VkCommandBuffer currentBuffer = graphicsQueue.getCurrentFrame().commandBuffer;
+	const auto& currentFrame = graphicsQueue.getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
 	vkCmdEndRenderPass(currentBuffer);
 
@@ -1233,27 +1581,46 @@ void VulkanBackend::endRender()
 		LLT_ERROR("[VULKAN|DEBUG] Failed to record command buffer: %d", result);
 	}
 
-	const VkSemaphore* waitForFinishSemaphore = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &m_backbuffer->getImageAvailableSemaphore() : nullptr;
-	const VkSemaphore* queueFinishedSemaphore = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &m_backbuffer->getRenderFinishedSemaphore() : nullptr;
-	int semaphoreCount = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
+	int signalSemaphoreCount = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
+	const VkSemaphore* queueFinishedSemaphore = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &m_backbuffer->getRenderFinishedSemaphore() : VK_NULL_HANDLE;
 
-	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	int waitSemaphoreCount = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
+
+	VkSemaphore waitForFinishSemaphores[2] = { // todo: this is pretty ugly and probably terrible
+		(m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER) ? m_backbuffer->getImageAvailableSemaphore() : VK_NULL_HANDLE,
+		m_computeFinishedSemaphores[m_currentFrameIdx]
+	};
+
+	if (m_uncertainComputeFinished) {
+		waitSemaphoreCount++;
+		waitForFinishSemaphores[0] = m_computeFinishedSemaphores[m_currentFrameIdx];
+	}
+
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = semaphoreCount;
-	submitInfo.pSignalSemaphores = queueFinishedSemaphore;
-	submitInfo.signalSemaphoreCount = semaphoreCount;
-	submitInfo.pWaitSemaphores = waitForFinishSemaphore;
-	submitInfo.pWaitDstStageMask = &waitStage;
+
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &currentBuffer;
 
-	vkResetFences(this->device, 1, &graphicsQueue.getCurrentFrame().inFlightFence);
+	submitInfo.signalSemaphoreCount = signalSemaphoreCount;
+	submitInfo.pSignalSemaphores = queueFinishedSemaphore;
+
+	submitInfo.waitSemaphoreCount = waitSemaphoreCount;
+	submitInfo.pWaitSemaphores = waitForFinishSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+
+	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
 
 	if (VkResult result = vkQueueSubmit(graphicsQueue.getQueue(), 1, &submitInfo, graphicsQueue.getCurrentFrame().inFlightFence); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to submit draw command to buffer: %d", result);
 	}
+
+	m_uncertainComputeFinished = false;
+
+	m_boundUbosIdx.reset();
+	m_boundSsbosIdx.reset();
 }
 
 void VulkanBackend::swapBuffers()
@@ -1264,11 +1631,12 @@ void VulkanBackend::swapBuffers()
 
 	m_backbuffer->swapBuffers();
 
-	graphicsQueue.nextFrame();
+	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
 
-	m_uboManager.resetUboUsageInFrame();
+	m_uboManager.resetBufferUsageInFrame(m_currentFrameIdx);
+	m_ssboManager.resetBufferUsageInFrame(m_currentFrameIdx);
 
-	m_backbuffer->aquireNextImage();
+	m_backbuffer->acquireNextImage();
 }
 
 void VulkanBackend::syncStall() const
@@ -1298,9 +1666,9 @@ void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
 	}
 }
 
-void VulkanBackend::setDepthParams(bool depth_test, bool depthWrite)
+void VulkanBackend::setDepthParams(bool depthTest, bool depthWrite)
 {
-	m_depthStencilCreateInfo.depthTestEnable  = depth_test  ? VK_TRUE : VK_FALSE;
+	m_depthStencilCreateInfo.depthTestEnable  = depthTest ? VK_TRUE : VK_FALSE;
 	m_depthStencilCreateInfo.depthWriteEnable = depthWrite ? VK_TRUE : VK_FALSE;
 }
 
@@ -1309,7 +1677,7 @@ void VulkanBackend::setDepthOp(VkCompareOp op)
 	m_depthStencilCreateInfo.depthCompareOp = op;
 }
 
-void VulkanBackend::setDepthBoundsTest(bool enabled)
+void VulkanBackend::setDepthTest(bool enabled)
 {
 	m_depthStencilCreateInfo.depthTestEnable = enabled ? VK_TRUE : VK_FALSE;
 }

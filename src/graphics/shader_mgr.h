@@ -19,7 +19,8 @@ namespace llt
 		~ShaderMgr();
 
 		ShaderProgram* create(const String& source, VkShaderStageFlagBits type);
-		ShaderEffect* buildEffect();
+
+		ShaderEffect* createEffect();
 
 	private:
 		HashMap<uint64_t, ShaderProgram*> m_shaderCache;

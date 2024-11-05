@@ -33,13 +33,13 @@ add_executable(${PROJECT_NAME}
     src/graphics/render_target_mgr.cpp
     src/graphics/shader.cpp
     src/graphics/shader_mgr.cpp
+    src/graphics/shader_buffer_mgr.cpp
     src/graphics/mesh.cpp
     src/graphics/sub_mesh.cpp
     src/graphics/material.cpp
     src/graphics/texture.cpp
     src/graphics/texture_mgr.cpp
     src/graphics/texture_sampler.cpp
-    src/graphics/ubo_manager.cpp
     src/graphics/util.cpp
     src/graphics/image.cpp
     src/graphics/queue.cpp

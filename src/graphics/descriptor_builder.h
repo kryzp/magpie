@@ -21,8 +21,8 @@ namespace llt
 		void build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, uint64_t hash);
 		void buildLayout(VkDescriptorSetLayout& layout);
 
-		DescriptorBuilder& bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
-		DescriptorBuilder& bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	private:
 		DescriptorPoolMgr* m_mgr;

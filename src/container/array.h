@@ -161,28 +161,28 @@ namespace llt
 	template <typename T, uint64_t Size>
 	T& Array<T, Size>::at(uint64_t idx)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: %d", idx);
+		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 
 	template <typename T, uint64_t Size>
 	const T& Array<T, Size>::at(uint64_t idx) const
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: %llu", idx);
+		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 	
 	template <typename T, uint64_t Size>
 	T& Array<T, Size>::operator [] (uint64_t idx)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: %llu", idx);
+		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 	
 	template <typename T, uint64_t Size>
 	const T& Array<T, Size>::operator [] (uint64_t idx) const
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: %llu", idx);
+		LLT_ASSERT(idx >= 0 && idx < Size, "[ARRAY|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 }

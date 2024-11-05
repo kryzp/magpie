@@ -55,6 +55,9 @@ namespace llt
 		bool isMipmapped() const;
 		void setMipmapped(bool mipmapped);
 
+		bool isUnorderedAccessView() const;
+		void setUnorderedAccessView(bool uav);
+
 		uint32_t getLayerCount() const;
 		uint32_t getFaceCount() const;
 
@@ -92,6 +95,8 @@ namespace llt
 
 		uint32_t m_depth;
 		bool m_mipmapped;
+
+		bool m_uav;
 	};
 
 	/**

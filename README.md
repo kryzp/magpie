@@ -7,12 +7,16 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 todo before i start on interesting stuff:
- - implement compute shaders
- - abstract away vertex to allow for different types of vertices
+- instancing support in renderpass
+- each ShaderBufferMgr is for one uniform / storage buffer in a shader, they should be an array with a maximum number of buffers bound (e.g: 16) (Array<ShaderBufferMgr, 16> m_ubos, m_ssbos)
+- pretty sure targetFPS doesnt work
+- integrate vulkan memory allocator
+- abstract away vertex to allow for different types of vertices
+- optimise the vkmapmemory and vkunmapmemory in buffers to make it so they get called a lot less, very expensive operation!
 
 stuff im interested in:
- - pbr
- - volumetrics
- - particles (compute shaders!!)
- - fluid sims
- - refraction and stuff
+- pbr
+- volumetrics
+- particles (compute shaders!!)
+- fluid sims
+- refraction and stuff

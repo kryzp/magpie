@@ -20,19 +20,19 @@ namespace llt
 		typedef void   (*dtor_fn)(byte*);
 
 		template <typename F>
-		static Result get_call_fn(F* fn, Args&&... args)
+		static Result getCallFn(F* fn, Args&&... args)
 		{
 			return (*fn)(std::forward<Args>(args)...);
 		}
 
 		template <typename F>
-		static void get_ctor_fn(F* dst, F* src)
+		static void getCtorFn(F* dst, F* src)
 		{
 			new (dst) F(*src);
 		}
 
 		template <typename F>
-		static void get_dtor_fn(F* fn)
+		static void getDtorFn(F* fn)
 		{
 			fn->~F();
 		}
@@ -56,9 +56,9 @@ namespace llt
 		bool operator != (const Function& other);
 
 	private:
-		call_fn m_call_func;
-		ctor_fn m_create_func;
-		dtor_fn m_destroy_func;
+		call_fn m_callFn;
+		ctor_fn m_createFn;
+		dtor_fn m_destroyFn;
 
 		byte* m_data;
 		uint64_t m_data_size;
@@ -66,9 +66,9 @@ namespace llt
 
 	template <typename Result, typename... Args>
 	Function<Result(Args...)>::Function()
-		: m_call_func(nullptr)
-		, m_create_func(nullptr)
-		, m_destroy_func(nullptr)
+		: m_callFn(nullptr)
+		, m_createFn(nullptr)
+		, m_destroyFn(nullptr)
 		, m_data(nullptr)
 		, m_data_size(0)
 	{
@@ -76,9 +76,9 @@ namespace llt
 
 	template <typename Result, typename... Args>
 	Function<Result(Args...)>::Function(std::nullptr_t null)
-		: m_call_func(nullptr)
-		, m_create_func(nullptr)
-		, m_destroy_func(nullptr)
+		: m_callFn(nullptr)
+		, m_createFn(nullptr)
+		, m_destroyFn(nullptr)
 		, m_data(nullptr)
 		, m_data_size(0)
 	{
@@ -86,38 +86,38 @@ namespace llt
 
 	template <typename Result, typename... Args>
 	Function<Result(Args...)>::Function(const Function<Result(Args...)>& other)
-		: m_call_func(other.m_call_func)
-		, m_create_func(other.m_create_func)
-		, m_destroy_func(other.m_destroy_func)
+		: m_callFn(other.m_callFn)
+		, m_createFn(other.m_createFn)
+		, m_destroyFn(other.m_destroyFn)
 		, m_data_size(other.m_data_size)
 		, m_data(nullptr)
 	{
-		if (m_call_func && other.m_data)
+		if (m_callFn && other.m_data)
 		{
 			m_data = new byte[this->m_data_size];
-			m_create_func(m_data, other.m_data);
+			m_createFn(m_data, other.m_data);
 		}
 	}
 
 	template <typename Result, typename... Args>
 	template <typename F>
 	Function<Result(Args...)>::Function(F fn)
-		: m_call_func   (reinterpret_cast<call_fn>(get_call_fn<F>))
-		, m_create_func (reinterpret_cast<ctor_fn>(get_ctor_fn<F>))
-		, m_destroy_func(reinterpret_cast<dtor_fn>(get_dtor_fn<F>))
+		: m_callFn   (reinterpret_cast<call_fn>(getCallFn<F>))
+		, m_createFn (reinterpret_cast<ctor_fn>(getCtorFn<F>))
+		, m_destroyFn(reinterpret_cast<dtor_fn>(getDtorFn<F>))
 	{
 		// allocate data for functions
 		m_data_size = sizeof(F);
 		m_data = new byte[m_data_size];
-		m_create_func(m_data, reinterpret_cast<byte*>(&fn));
+		m_createFn(m_data, reinterpret_cast<byte*>(&fn));
 	}
 
 	template <typename Result, typename... Args>
 	Function<Result(Args...)>::~Function()
 	{
 		// make sure to destroy the data
-		if (m_destroy_func && m_data) {
-			m_destroy_func(m_data);
+		if (m_destroyFn && m_data) {
+			m_destroyFn(m_data);
 		}
 
 		delete[] m_data;
@@ -126,19 +126,19 @@ namespace llt
 	template <typename Result, typename... Args>
 	Result Function<Result(Args...)>::call(Args... args) const
 	{
-		return m_call_func(m_data, std::forward<Args>(args)...);
+		return m_callFn(m_data, std::forward<Args>(args)...);
 	}
 
 	template <typename Result, typename... Args>
 	Result Function<Result(Args...)>::operator ()(Args... args) const
 	{
-		return m_call_func(m_data, std::forward<Args>(args)...);
+		return m_callFn(m_data, std::forward<Args>(args)...);
 	}
 
 	template <typename Result, typename... Args>
 	Function<Result(Args...)>::operator bool () const
 	{
-		return m_call_func != nullptr;
+		return m_callFn != nullptr;
 	}
 
 	template <typename Result, typename... Args>
@@ -147,9 +147,9 @@ namespace llt
 		return (
 			this->m_data == other.m_data &&
 			this->m_data_size == other.m_data_size &&
-			this->m_call_func == other.m_call_func &&
-			this->m_create_func == other.m_create_func &&
-			this->m_destroy_func == other.m_destroy_func
+			this->m_callFn == other.m_callFn &&
+			this->m_createFn == other.m_createFn &&
+			this->m_destroyFn == other.m_destroyFn
 		);
 	}
 

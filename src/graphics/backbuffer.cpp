@@ -31,7 +31,7 @@ Backbuffer::~Backbuffer()
 void Backbuffer::create()
 {
 	createSwapChain();
-	aquireNextImage();
+	acquireNextImage();
 }
 
 void Backbuffer::create_surface()
@@ -79,8 +79,10 @@ void Backbuffer::createDepthResources()
 	m_depth.initSize(m_width, m_height);
 	m_depth.initMetadata(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_depth.initSampleCount(g_vulkanBackend->msaaSamples);
+	
 	m_depth.createInternalResources();
-    m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 	// add the component to our render pass builder
 	m_renderPassBuilder.createDepthAttachment(1, g_vulkanBackend->msaaSamples);
@@ -137,7 +139,7 @@ RenderPassBuilder* Backbuffer::getRenderPassBuilder()
 	return &m_renderPassBuilder;
 }
 
-void Backbuffer::aquireNextImage()
+void Backbuffer::acquireNextImage()
 {
 	// try to get the next image
 	// if it is deemed out of date then rebuild the swap chain
@@ -163,7 +165,6 @@ void Backbuffer::swapBuffers()
 	// queue a new present info
 	// if it returns as being out of date or suboptimal
 	// rebuild the swap chain
-	// PRESENT QUEUE
     if (VkResult result = vkQueuePresentKHR(g_vulkanBackend->graphicsQueue.getQueue(), &presentInfo); result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		rebuildSwapChain();
 	} else if (result != VK_SUCCESS) {
@@ -186,9 +187,9 @@ void Backbuffer::createSwapChain()
     SwapChainSupportDetails details = vkutil::querySwapChainSupport(g_vulkanBackend->physicalData.device, m_surface);
 
 	// get the surface settings
-    auto surf_fmt  = vkutil::chooseSwapSurfaceFormat(details.surfaceFormats);
-    auto pres_mode = vkutil::chooseSwapPresentMode(details.presentModes);
-    auto extent    = vkutil::chooseSwapExtent(details.capabilities);
+    auto surfaceFormat = vkutil::chooseSwapSurfaceFormat(details.surfaceFormats);
+    auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes);
+    auto extent = vkutil::chooseSwapExtent(details.capabilities);
 
 	// make sure our image count can't go above the maximum image count
 	// but is as high as possible.
@@ -201,8 +202,8 @@ void Backbuffer::createSwapChain()
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface = m_surface;
     createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surf_fmt.format;
-    createInfo.imageColorSpace = surf_fmt.colorSpace;
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -211,7 +212,7 @@ void Backbuffer::createSwapChain()
 	createInfo.pQueueFamilyIndices = nullptr;
     createInfo.preTransform = details.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = pres_mode;
+    createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -240,7 +241,7 @@ void Backbuffer::createSwapChain()
         m_swapChainImages[i] = images[i];
     }
 
-	g_vulkanBackend->swapChainImageFormat = surf_fmt.format;
+	g_vulkanBackend->swapChainImageFormat = surfaceFormat.format;
 
 	createSwapChainSyncObjects();
 	createSwapChainImageViews();
@@ -290,7 +291,7 @@ void Backbuffer::createSwapChainSyncObjects()
 	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	// go through all our frames in flight and create the semaphores for each frame
-	for (uint32_t i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
+	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
 		if (VkResult result = vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]); result != VK_SUCCESS) {
 			LLT_ERROR("[VULKAN:BACKBUFFER|DEBUG] Failed to create image available semaphore: %d", result);
@@ -355,7 +356,7 @@ void Backbuffer::onWindowResize(int width, int height)
 	// we have to rebuild the swapchain to reflect this
 	// also get the next image in the queue to move away from our out-of-date current one
 	rebuildSwapChain();
-	aquireNextImage();
+	acquireNextImage();
 }
 
 void Backbuffer::rebuildSwapChain()
@@ -413,10 +414,10 @@ int Backbuffer::getMSAA() const
 
 const VkSemaphore& Backbuffer::getRenderFinishedSemaphore() const
 {
-	return m_renderFinishedSemaphores[g_vulkanBackend->graphicsQueue.getCurrentFrameIdx()];
+	return m_renderFinishedSemaphores[g_vulkanBackend->getCurrentFrameIdx()];
 }
 
 const VkSemaphore& Backbuffer::getImageAvailableSemaphore() const
 {
-	return m_imageAvailableSemaphores[g_vulkanBackend->graphicsQueue.getCurrentFrameIdx()];
+	return m_imageAvailableSemaphores[g_vulkanBackend->getCurrentFrameIdx()];
 }

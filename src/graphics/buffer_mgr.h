@@ -12,10 +12,13 @@ namespace llt
 		BufferMgr();
 		~BufferMgr();
 
+		Buffer* createBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, uint64_t size);
+
 		Buffer* createStagingBuffer(uint64_t size);
 		Buffer* createVertexBuffer(uint64_t vertexCount);
 		Buffer* createIndexBuffer(uint64_t indexCount);
-		Buffer* createUniformBuffer(uint64_t size);
+		Buffer* createUBO(uint64_t size);
+		Buffer* createSSBO(uint64_t size);
 
 	private:
 		Vector<Buffer*> m_vertexBuffers;
