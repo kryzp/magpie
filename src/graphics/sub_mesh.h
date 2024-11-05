@@ -7,8 +7,8 @@
 
 #include "material.h"
 #include "vertex.h"
-#include "buffer_mgr.h"
-#include "buffer.h"
+#include "gpu_buffer_mgr.h"
+#include "gpu_buffer.h"
 
 namespace llt
 {
@@ -35,8 +35,8 @@ namespace llt
 		Material* getMaterial();
 		const Material* getMaterial() const;
 
-		Buffer* getVertexBuffer() const;
-		Buffer* getIndexBuffer() const;
+		GPUBuffer* getVertexBuffer() const;
+		GPUBuffer* getIndexBuffer() const;
 
 		Vector<Vertex>& getVertices();
 		const Vector<Vertex>& getVertices() const;
@@ -53,10 +53,10 @@ namespace llt
 
 		Material* m_material;
 
-		Buffer* m_vertexBuffer;
+		GPUBuffer* m_vertexBuffer;
 		Vector<Vertex> m_vertices;
 
-		Buffer* m_indexBuffer;
+		GPUBuffer* m_indexBuffer;
 		Vector<uint16_t> m_indices;
 	};
 }

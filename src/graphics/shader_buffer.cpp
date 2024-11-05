@@ -1,35 +1,36 @@
-#include "shader_buffer_mgr.h"
+#include "shader_buffer.h"
 #include "backend.h"
-#include "buffer_mgr.h"
+#include "gpu_buffer_mgr.h"
 
 using namespace llt;
 
-ShaderBufferManager::ShaderBufferManager()
+ShaderBuffer::ShaderBuffer()
 	: m_buffer(nullptr)
 	, m_dynamicOffset()
 	, m_info()
 	, m_usageInFrame()
 	, m_offset(0)
 	, m_maxSize(0)
+	, m_boundIdx(-1)
 	, m_type(SHADER_BUFFER_NONE)
 {
 }
 
-void ShaderBufferManager::init(uint64_t initialSize, ShaderBufferType type)
+void ShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
 {
 	m_type = type;
+	m_usageInFrame.clear();
 
 	reallocateBuffer(initialSize);
-	m_usageInFrame.clear();
 }
 
-void ShaderBufferManager::cleanUp()
+void ShaderBuffer::cleanUp()
 {
 	delete m_buffer;
 	m_buffer = nullptr;
 }
 
-void ShaderBufferManager::pushData(const void* data, uint64_t size, int currentFrame, bool* modified)
+void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, bool* modified)
 {
 	// calculate the total used memory so far
 	uint64_t totalUsedMemory = 0;
@@ -72,7 +73,7 @@ void ShaderBufferManager::pushData(const void* data, uint64_t size, int currentF
 	else
 	{
 		// actually write the data into the ssbo
-		Buffer* stage = g_bufferManager->createStagingBuffer(size);
+		GPUBuffer* stage = g_bufferManager->createStagingBuffer(size);
 		stage->writeDataToMe(data, size, 0);
 		stage->writeToBuffer(m_buffer, size, 0, dynamicOffset);
 		delete stage;
@@ -88,7 +89,7 @@ void ShaderBufferManager::pushData(const void* data, uint64_t size, int currentF
 	}
 }
 
-void ShaderBufferManager::reallocateBuffer(uint64_t size)
+void ShaderBuffer::reallocateBuffer(uint64_t size)
 {
 	delete m_buffer;
 
@@ -127,17 +128,37 @@ void ShaderBufferManager::reallocateBuffer(uint64_t size)
 	}
 }
 
-void ShaderBufferManager::resetBufferUsageInFrame(int currentFrame)
+void ShaderBuffer::resetBufferUsageInFrame(int currentFrame)
 {
 	m_usageInFrame[currentFrame] = 0;
 }
 
-const VkDescriptorBufferInfo& ShaderBufferManager::getDescriptor() const
+const VkDescriptorBufferInfo& ShaderBuffer::getDescriptor() const
 {
 	return m_info;
 }
 
-uint32_t ShaderBufferManager::getDynamicOffset() const
+void ShaderBuffer::bind(int idx)
+{
+	m_boundIdx = idx;
+}
+
+void ShaderBuffer::unbind()
+{
+	m_boundIdx = -1;
+}
+
+int ShaderBuffer::getBoundIdx() const
+{
+	return m_boundIdx;
+}
+
+bool ShaderBuffer::isBound() const
+{
+	return m_boundIdx >= 0;
+}
+
+uint32_t ShaderBuffer::getDynamicOffset() const
 {
 	return m_dynamicOffset;
 }

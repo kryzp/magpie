@@ -11,9 +11,8 @@ namespace llt
 	 */
 	enum ShaderPass
 	{
-		SHADER_PASS_NONE		= -1,
-		SHADER_PASS_SHADOW 		= 0,
-		SHADER_PASS_FORWARD 	= 1,
+		SHADER_PASS_FORWARD,
+		SHADER_PASS_SHADOW,
 		SHADER_PASS_MAX_ENUM
 	};
 
@@ -27,12 +26,12 @@ namespace llt
 		Technique() = default;
 		~Technique() = default;
 
-		void setPass(int pass, ShaderEffect* effect)
+		void setPass(ShaderPass pass, ShaderEffect* effect)
 		{
 			m_passes[pass] = effect;
 		}
 
-		ShaderEffect* getPass(int pass) const
+		ShaderEffect* getPass(ShaderPass pass) const
 		{
 			return m_passes[pass];
 		}

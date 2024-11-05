@@ -14,11 +14,15 @@ layout (binding = 0) uniform ParameterUBO {
 	float time;
 } ubo;
 
-layout(set = 0, binding = 1) readonly buffer ParticleSSBO {
+layout (binding = 1) uniform ParameterUBO2 {
+	float otherData;
+} ubo2;
+
+layout(set = 0, binding = 2) readonly buffer ParticleSSBO {
     Particle particles[];
 };
 
-layout(set = 0, binding = 2) uniform sampler2D u_texture;
+layout(set = 0, binding = 3) uniform sampler2D u_texture;
 
 void main()
 {
@@ -26,7 +30,7 @@ void main()
 
 	col *= o_colour;
 
-	col *= ubo.time * particles[0].position.x;
+	col *= ubo.time * particles[0].position.x * ubo2.otherData;
 
 	fragColour = vec4(col, 1.0);
 }

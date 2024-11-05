@@ -27,7 +27,7 @@ void SubMesh::build(const Vector<Vertex>& vtx, const Vector<uint16_t>& idx)
 	m_indexBuffer = g_bufferManager->createIndexBuffer(idx.size());
 
 	// allocate a staging buffer for them
-	Buffer* stage = g_bufferManager->createStagingBuffer(vtx.size() * sizeof(Vertex) + idx.size() * sizeof(uint16_t));
+	GPUBuffer* stage = g_bufferManager->createStagingBuffer(vtx.size() * sizeof(Vertex) + idx.size() * sizeof(uint16_t));
 
 	// read data to the stage
 	stage->writeDataToMe(vtx.data(), vtx.size() * sizeof(Vertex), 0);
@@ -61,12 +61,12 @@ const Material* SubMesh::getMaterial() const
 	return m_material;
 }
 
-Buffer* SubMesh::getVertexBuffer() const
+GPUBuffer* SubMesh::getVertexBuffer() const
 {
 	return m_vertexBuffer;
 }
 
-Buffer* SubMesh::getIndexBuffer() const
+GPUBuffer* SubMesh::getIndexBuffer() const
 {
 	return m_indexBuffer;
 }

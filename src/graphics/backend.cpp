@@ -208,11 +208,9 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_imageInfos()
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
-	, m_uboManager()
-	, m_ssboManager()
 	, m_pushConstants()
-	, m_boundUbosIdx()
-	, m_boundSsbosIdx()
+	, m_uboManagers()
+	, m_ssboManagers()
 	, m_minSampleShading(0.2f)
 	, m_blendStateLogicOpEnabled(false)
 	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
@@ -306,7 +304,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 #endif // LLT_DEBUG
 
 	// set up all of the core managers of resources
-	g_bufferManager       = new BufferMgr();
+	g_bufferManager       = new GPUBufferMgr();
 	g_textureManager      = new TextureMgr();
 	g_shaderManager       = new ShaderMgr();
 	g_renderTargetManager = new RenderTargetMgr();
@@ -338,8 +336,13 @@ VulkanBackend::~VulkanBackend()
 
 	m_currentRenderPassBuilder->cleanUp();
 
-	m_uboManager.cleanUp();
-	m_ssboManager.cleanUp();
+	for (int i = 0; i < m_uboManagers.size(); i++) {
+		m_uboManagers[i].cleanUp();
+	}
+
+	for (int i = 0; i < m_ssboManagers.size(); i++) {
+		m_ssboManagers[i].cleanUp();
+	}
 
 	m_descriptorCache.cleanUp();
 	m_descriptorPoolManager.cleanUp();
@@ -957,10 +960,16 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	createComputeResources();
 
-	// start off with 256kB of shader memory for each frame
+	// start off with 256kB of shader memory for each frame.
 	// this will increase if it isn't enough, however it is a good baseline.
-	m_uboManager.init(KILOBYTES(256) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
-	m_ssboManager.init(KILOBYTES(256) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_SSBO);
+
+	for (int i = 0; i < m_uboManagers.size(); i++) {
+		m_uboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
+	}
+
+	for (int i = 0; i < m_ssboManagers.size(); i++) {
+		m_ssboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_SSBO);
+	}
 
 	m_descriptorPoolManager.init();
 
@@ -1011,61 +1020,45 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 
 	resetDescriptorBuilder();
 
-	int textureBaseIdx = 0;
+	int baseIdx = 0;
 
 	// bind ubos
-	int n = 0;
-	for (int i = 0; i < mgc::MAX_BOUND_SHADER_ELEMENTS; i++)
+	for (int i = 0; i < mgc::MAX_BOUND_UBOS; i++)
 	{
-		if (m_boundUbosIdx.isOff(i)) {
-			continue;
-		}
+		if (m_uboManagers[i].isBound())
+		{
+			m_descriptorBuilder.bindBuffer(
+				m_uboManagers[i].getBoundIdx(),
+				&m_uboManagers[i].getDescriptor(),
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				stage
+			);
 
-		m_descriptorBuilder.bindBuffer(
-			i,
-			&m_uboManager.getDescriptor(),
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-			stage
-		);
-
-		n++;
-
-		if (n >= m_boundUbosIdx.onCount()) {
-			break;
+			baseIdx++;
 		}
 	}
-
-	textureBaseIdx += n;
 
 	// bind ssbos
-	n = 0;
-	for (int i = 0; i < mgc::MAX_BOUND_SHADER_ELEMENTS; i++)
+	for (int i = 0; i < mgc::MAX_BOUND_SSBOS; i++)
 	{
-		if (m_boundSsbosIdx.isOff(i)) {
-			continue;
-		}
+		if (m_ssboManagers[i].isBound())
+		{
+			m_descriptorBuilder.bindBuffer(
+				m_ssboManagers[i].getBoundIdx(),
+				&m_ssboManagers[i].getDescriptor(),
+				VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				stage
+			);
 
-		m_descriptorBuilder.bindBuffer(
-			i,
-			&m_ssboManager.getDescriptor(),
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-			stage
-		);
-
-		n++;
-
-		if (n >= m_boundSsbosIdx.onCount()) {
-			break;
+			baseIdx++;
 		}
 	}
 
-	textureBaseIdx += n;
-
-	// bind samplers
+	// bind textures
 	for (int i = 0; i < nTextures; i++)
 	{
 		m_descriptorBuilder.bindImage(
-			textureBaseIdx + i,
+			baseIdx + i,
 			&m_imageInfos[i],
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			stage
@@ -1279,7 +1272,11 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 	}
 }
 
-void VulkanBackend::setShaderParams(int idx, VkShaderStageFlagBits type, ShaderParameters& params)
+/*
+ * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
+ */
+
+void VulkanBackend::pushShaderParams(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
 {
 	ShaderParameters::PackedData packedConstants = params.getPackedConstants();
 
@@ -1288,45 +1285,45 @@ void VulkanBackend::setShaderParams(int idx, VkShaderStageFlagBits type, ShaderP
 	}
 
 	bool modified = false;
-	m_uboManager.pushData(packedConstants.data(), packedConstants.size(), m_currentFrameIdx, &modified);
 
-	m_boundUbosIdx.enable(idx);
+	m_uboManagers[bufferIdx].bind(bindIdx);
+	m_uboManagers[bufferIdx].pushData(packedConstants.data(), packedConstants.size(), m_currentFrameIdx, &modified);
 
 	if (modified) {
 		m_descriptorBuilderDirty = true;
 	}
 }
 
-void VulkanBackend::setShaderBuffer(int idx, VkShaderStageFlagBits type, void* data, uint64_t size)
+void VulkanBackend::pushShaderBuffer(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
 {
 	bool modified = false;
-	m_ssboManager.pushData(data, size, m_currentFrameIdx, &modified);
 
-	m_boundSsbosIdx.enable(idx);
+	m_ssboManagers[bufferIdx].bind(bindIdx);
+	m_ssboManagers[bufferIdx].pushData(data, size, m_currentFrameIdx, &modified);
 
 	if (modified) {
 		m_descriptorBuilderDirty = true;
 	}
 }
 
-void VulkanBackend::bindShaderParams(int idx)
+void VulkanBackend::bindShaderParams(int bufferIdx, int bindIdx)
 {
-	m_boundUbosIdx.enable(idx);
+	m_uboManagers[bufferIdx].bind(bindIdx);
 }
 
-void VulkanBackend::bindShaderBuffer(int idx)
+void VulkanBackend::bindShaderBuffer(int bufferIdx, int bindIdx)
 {
-	m_boundSsbosIdx.enable(idx);
+	m_ssboManagers[bufferIdx].bind(bindIdx);
 }
 
-void VulkanBackend::unbindShaderParams(int idx)
+void VulkanBackend::unbindShaderParams(int bufferIdx)
 {
-	m_boundUbosIdx.disable(idx);
+	m_uboManagers[bufferIdx].unbind();
 }
 
-void VulkanBackend::unbindShaderBuffer(int idx)
+void VulkanBackend::unbindShaderBuffer(int bufferIdx)
 {
-	m_boundSsbosIdx.disable(idx);
+	m_ssboManagers[bufferIdx].unbind();
 }
 
 void VulkanBackend::setPushConstants(ShaderParameters& params)
@@ -1342,7 +1339,7 @@ void VulkanBackend::resetPushConstants()
 void VulkanBackend::clearDescriptorCacheAndPool()
 {
 	m_descriptorCache.clearSetCache();
-//	m_descriptor_pool_mgr.reset_pools();
+//	m_descriptorPoolManager.resetPools();
 }
 
 int VulkanBackend::getCurrentFrameIdx() const
@@ -1350,8 +1347,29 @@ int VulkanBackend::getCurrentFrameIdx() const
 	return m_currentFrameIdx;
 }
 
+Vector<uint32_t> VulkanBackend::getDynamicOffsets() const
+{
+	Vector<uint32_t> result;
+
+	for (int i = 0; i < mgc::MAX_BOUND_UBOS; i++) {
+		if (m_uboManagers[i].isBound()) {
+			result.pushBack(m_uboManagers[i].getDynamicOffset());
+		}
+	}
+
+	for (int i = 0; i < mgc::MAX_BOUND_SSBOS; i++) {
+		if (m_ssboManagers[i].isBound()) {
+			result.pushBack(m_ssboManagers[i].getDynamicOffset());
+		}
+	}
+
+	return result;
+}
+
 void VulkanBackend::beginCompute()
 {
+	m_descriptorBuilderDirty = true;
+
 	const auto& currentFrame = computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
@@ -1388,17 +1406,7 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 		);
 	}
 
-	int dynamicOffsetCount = 0;
-
-	if (m_boundUbosIdx.any()) {
-		dynamicOffsetCount++;
-	}
-
-	if (m_boundSsbosIdx.any()) {
-		dynamicOffsetCount++;
-	}
-
-	uint32_t dynamicOffsets[] = { m_uboManager.getDynamicOffset(), m_ssboManager.getDynamicOffset() };
+	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -1406,8 +1414,8 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 		pipelineLayout,
 		0,
 		1, &descriptorSet,
-		dynamicOffsetCount,
-		dynamicOffsets
+		dynamicOffsets.size(),
+		dynamicOffsets.data()
 	);
 
 	vkCmdBindPipeline(
@@ -1416,7 +1424,6 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 		pipeline
 	);
 
-	// todo: temp
 	vkCmdDispatch(
 		currentBuffer,
 		gcX, gcY, gcZ
@@ -1448,17 +1455,23 @@ void VulkanBackend::endCompute()
 		LLT_ERROR("[VULKAN|DEBUG] Failed to submit compute command buffer: %d", result);
 	}
 
-	m_uncertainComputeFinished = true;
+	for (int i = 0; i < m_uboManagers.size(); i++) {
+		m_uboManagers[i].unbind();
+	}
 
-	m_boundUbosIdx.reset();
-	m_boundSsbosIdx.reset();
+	for (int i = 0; i < m_ssboManagers.size(); i++) {
+		m_ssboManagers[i].unbind();
+	}
+}
+
+void VulkanBackend::syncComputeWithNextRender()
+{
+	m_uncertainComputeFinished = true;
 }
 
 void VulkanBackend::beginRender()
 {
-	if (m_uncertainComputeFinished) {
-		resetDescriptorBuilder();
-	}
+	m_descriptorBuilderDirty = true;
 
 	const auto& currentFrame = graphicsQueue.getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
@@ -1531,17 +1544,7 @@ void VulkanBackend::render(const RenderOp& op)
 		);
 	}
 
-	int dynamicOffsetCount = 0;
-
-	if (m_boundUbosIdx.any()) {
-		dynamicOffsetCount++;
-	}
-
-	if (m_boundSsbosIdx.any()) {
-		dynamicOffsetCount++;
-	}
-
-	uint32_t dynamicOffsets[] = { m_uboManager.getDynamicOffset(), m_ssboManager.getDynamicOffset() };
+	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -1549,8 +1552,8 @@ void VulkanBackend::render(const RenderOp& op)
 		pipelineLayout,
 		0,
 		1, &descriptorSet,
-		dynamicOffsetCount,
-		dynamicOffsets
+		dynamicOffsets.size(),
+		dynamicOffsets.data()
 	);
 
 	vkCmdBindPipeline(
@@ -1591,12 +1594,12 @@ void VulkanBackend::endRender()
 		m_computeFinishedSemaphores[m_currentFrameIdx]
 	};
 
-	if (m_uncertainComputeFinished) {
-		waitSemaphoreCount++;
-		waitForFinishSemaphores[0] = m_computeFinishedSemaphores[m_currentFrameIdx];
-	}
-
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
+
+	if (m_uncertainComputeFinished) {
+		waitForFinishSemaphores[waitSemaphoreCount] = m_computeFinishedSemaphores[m_currentFrameIdx];
+		waitSemaphoreCount++;
+	}
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1619,8 +1622,13 @@ void VulkanBackend::endRender()
 
 	m_uncertainComputeFinished = false;
 
-	m_boundUbosIdx.reset();
-	m_boundSsbosIdx.reset();
+	for (int i = 0; i < m_uboManagers.size(); i++) {
+		m_uboManagers[i].unbind();
+	}
+
+	for (int i = 0; i < m_ssboManagers.size(); i++) {
+		m_ssboManagers[i].unbind();
+	}
 }
 
 void VulkanBackend::swapBuffers()
@@ -1633,8 +1641,13 @@ void VulkanBackend::swapBuffers()
 
 	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
 
-	m_uboManager.resetBufferUsageInFrame(m_currentFrameIdx);
-	m_ssboManager.resetBufferUsageInFrame(m_currentFrameIdx);
+	for (int i = 0; i < m_uboManagers.size(); i++) {
+		m_uboManagers[i].resetBufferUsageInFrame(m_currentFrameIdx);
+	}
+
+	for (int i = 0; i < m_ssboManagers.size(); i++) {
+		m_ssboManagers[i].resetBufferUsageInFrame(m_currentFrameIdx);
+	}
 
 	m_backbuffer->acquireNextImage();
 }

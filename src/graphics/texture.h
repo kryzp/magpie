@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "buffer.h"
+#include "gpu_buffer.h"
 #include "texture_sampler.h"
 #include "image.h"
 

@@ -5,7 +5,7 @@
 #include "../container/array.h"
 
 #include "util.h"
-#include "buffer.h"
+#include "gpu_buffer.h"
 
 namespace llt
 {
@@ -20,10 +20,10 @@ namespace llt
 	 * Abstracts away & manages the allocation
 	 * and lifetime of a uniform buffer for use in shaders
 	 */
-	class ShaderBufferManager
+	class ShaderBuffer
 	{
 	public:
-		ShaderBufferManager();
+		ShaderBuffer();
 
 		void init(uint64_t initialSize, ShaderBufferType type);
 		void cleanUp();
@@ -36,10 +36,16 @@ namespace llt
 
 		const VkDescriptorBufferInfo& getDescriptor() const;
 
+		void bind(int idx);
+		void unbind();
+
+		int getBoundIdx() const;
+		bool isBound() const;
+
 		uint32_t getDynamicOffset() const;
 
 	private:
-		Buffer* m_buffer;
+		GPUBuffer* m_buffer;
 		
 		uint32_t m_dynamicOffset;
 		VkDescriptorBufferInfo m_info;
@@ -48,6 +54,8 @@ namespace llt
 
 		uint64_t m_offset;
 		uint64_t m_maxSize;
+
+		int m_boundIdx;
 		
 		ShaderBufferType m_type;
 	};

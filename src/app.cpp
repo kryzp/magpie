@@ -133,11 +133,14 @@ void App::run()
 	for (int i = 0; i < nParticles; i++)
 	{
 		particleData[i].position = { 1.0f, 0.0f };
-		particleData[i].velocity = { -0.01f, 0.0f };
+		particleData[i].velocity = { 0.0f, 0.0f };
 	}
 
 	ShaderParameters parameters;
 	parameters.set("time", 1.0f);
+
+	ShaderParameters parameters2;
+	parameters2.set("otherData", 1.0f);
 
 	Timer deltaTimer;
 	deltaTimer.start();
@@ -145,7 +148,10 @@ void App::run()
 	double accumulator = 0.0;
 	const double deltaTime = 1.0 / (double)m_config.targetFPS;
 
-	g_vulkanBackend->setShaderBuffer(1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
+	// todo: can i also only set shader params once but keep updating them regardless
+	// todo: also need a way to just maintain a constant buffer without constantly moving forward in the dynamic offset :))
+
+	g_vulkanBackend->pushShaderBuffer(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 
 	while (m_running)
 	{
@@ -172,9 +178,9 @@ void App::run()
 		g_vulkanBackend->bindShader(computeProgram);
 
 		parameters.set("time", 1.0f);
-		g_vulkanBackend->setShaderParams(0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
+		g_vulkanBackend->pushShaderParams(0, 0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
 
-		g_vulkanBackend->bindShaderBuffer(1);
+		g_vulkanBackend->bindShaderBuffer(0, 1);
 
 		g_vulkanBackend->dispatchCompute(1, 1, 1);
 		
@@ -197,6 +203,10 @@ void App::run()
 		g_vulkanBackend->render(pass.build());
 
 		g_vulkanBackend->endRender();
+
+		// ---
+
+		g_vulkanBackend->syncComputeWithNextRender();
 		
 		// ---
 
@@ -209,9 +219,11 @@ void App::run()
 		g_vulkanBackend->setPushConstants(pushConstants);
 
 		parameters.set("time", 1.0f);
-		g_vulkanBackend->setShaderParams(0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
+		g_vulkanBackend->pushShaderParams(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
+		parameters2.set("otherData", 1.0f);
+		g_vulkanBackend->pushShaderParams(1, 1, VK_SHADER_STAGE_ALL_GRAPHICS, parameters2);
 
-		g_vulkanBackend->bindShaderBuffer(1);
+		g_vulkanBackend->bindShaderBuffer(0, 2);
 
 		g_vulkanBackend->setTexture(0, target->getAttachment(0));
 		g_vulkanBackend->setSampler(0, sampler);
@@ -225,11 +237,13 @@ void App::run()
 		pass.mesh = &quad2;
 		g_vulkanBackend->render(pass.build());
 
+		g_vulkanBackend->endRender();
+
+		// ---
+
 		g_vulkanBackend->setTexture(0, nullptr);
 		g_vulkanBackend->setSampler(0, nullptr);
 		g_vulkanBackend->resetPushConstants();
-
-		g_vulkanBackend->endRender();
 
 		// ---
 

@@ -2,7 +2,7 @@
 #define RENDER_PASS_H_
 
 #include "shader.h"
-#include "buffer.h"
+#include "gpu_buffer.h"
 #include "vertex.h"
 #include "sub_mesh.h"
 #include "generic_render_target.h"
@@ -18,13 +18,13 @@ namespace llt
 		struct VertexData
 		{
 			const Vector<Vertex>* vertices;
-			const Buffer* buffer;
+			const GPUBuffer* buffer;
 		};
 
 		struct IndexData
 		{
 			const Vector<uint16_t>* indices;
-			const Buffer* buffer;
+			const GPUBuffer* buffer;
 		};
 
 		VertexData vertexData;

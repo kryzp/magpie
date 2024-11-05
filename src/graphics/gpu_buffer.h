@@ -10,11 +10,11 @@ namespace llt
 	class Texture;
 	class VulkanBackend;
 
-	class Buffer
+	class GPUBuffer
 	{
 	public:
-		Buffer(VkBufferUsageFlags usage);
-		~Buffer();
+		GPUBuffer(VkBufferUsageFlags usage);
+		~GPUBuffer();
 
 		void create(VkMemoryPropertyFlags properties, uint64_t size);
 		void cleanUp();
@@ -22,7 +22,7 @@ namespace llt
 		void readDataFromMe(void* dst, uint64_t length, uint64_t offset);
 		void writeDataToMe(const void* src, uint64_t length, uint64_t offset);
 
-		void writeToBuffer(const Buffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
+		void writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
 		void writeToTexture(const Texture* texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 
 		VkBuffer getBuffer() const;

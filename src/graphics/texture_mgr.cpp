@@ -67,7 +67,7 @@ Texture* TextureMgr::createFromImage(const Image& image)
 	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	// move the image data onto the staging buffer, and then copy the data on the staging buffer onto the texture
-	Buffer* stage = g_bufferManager->createStagingBuffer(image.getSize());
+	GPUBuffer* stage = g_bufferManager->createStagingBuffer(image.getSize());
 	stage->writeDataToMe(image.getData(), image.getSize(), 0);
 	stage->writeToTexture(texture, image.getSize());
 	delete stage;
@@ -94,7 +94,7 @@ Texture* TextureMgr::createFromData(uint32_t width, uint32_t height, VkFormat fo
 		texture->setMipmapped(true);
 
 		// transfer data into the texture via staging buffer
-		Buffer* stage = g_bufferManager->createStagingBuffer(size);
+		GPUBuffer* stage = g_bufferManager->createStagingBuffer(size);
 		stage->writeDataToMe(data, size, 0);
 		stage->writeToTexture(texture, size);
 		delete stage;
@@ -138,7 +138,7 @@ Texture* TextureMgr::createCubeMap(VkFormat format, const Image& right, const Im
 	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	// create a staging buffer large enough for all 6 textures
-	Buffer* stage = g_bufferManager->createStagingBuffer(right.getSize() * 6);
+	GPUBuffer* stage = g_bufferManager->createStagingBuffer(right.getSize() * 6);
 
 	const Image* sides[] = { &right, &left, &top, &bottom, &front, &back };
 

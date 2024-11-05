@@ -1,4 +1,4 @@
-#include "buffer.h"
+#include "gpu_buffer.h"
 #include "texture.h"
 #include "backend.h"
 #include "util.h"
@@ -7,7 +7,7 @@
 
 using namespace llt;
 
-Buffer::Buffer(VkBufferUsageFlags usage)
+GPUBuffer::GPUBuffer(VkBufferUsageFlags usage)
 	: m_buffer(VK_NULL_HANDLE)
 	, m_memory(VK_NULL_HANDLE)
 	, m_usage(usage)
@@ -16,12 +16,12 @@ Buffer::Buffer(VkBufferUsageFlags usage)
 {
 }
 
-Buffer::~Buffer()
+GPUBuffer::~GPUBuffer()
 {
     cleanUp();
 }
 
-void Buffer::create(VkMemoryPropertyFlags properties, uint64_t size)
+void GPUBuffer::create(VkMemoryPropertyFlags properties, uint64_t size)
 {
 	this->m_properties = properties;
 	this->m_size = size;
@@ -52,7 +52,7 @@ void Buffer::create(VkMemoryPropertyFlags properties, uint64_t size)
 	vkBindBufferMemory(g_vulkanBackend->device, m_buffer, m_memory, 0);
 }
 
-void Buffer::cleanUp()
+void GPUBuffer::cleanUp()
 {
     if (m_buffer == VK_NULL_HANDLE &&
         m_memory == VK_NULL_HANDLE)
@@ -71,7 +71,7 @@ void Buffer::cleanUp()
 // ADD SOME FUNCTIONS WHERE THEY MAP, THEN EXIT, THEN WE CALL ANOTHER FUNCTION TO UNMAP
 // SO WE CAN DO SOME CALLS BETWEEN THEM, KINDA MAYBE MAPBEGIN() then MAPEND() OR SOMETHING IDK
 
-void Buffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset)
+void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset)
 {
 	void* src = nullptr;
 	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &src);
@@ -79,7 +79,7 @@ void Buffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset)
 	vkUnmapMemory(g_vulkanBackend->device, m_memory);
 }
 
-void Buffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
+void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
 {
 	void* dst = nullptr;
 	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &dst); // we first have to map our memory to the gpu memory before copying data
@@ -87,7 +87,7 @@ void Buffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
 	vkUnmapMemory(g_vulkanBackend->device, m_memory); // now that we're finished, we can unmap
 }
 
-void Buffer::writeToBuffer(const Buffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
+void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
 	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
 	{
@@ -99,7 +99,7 @@ void Buffer::writeToBuffer(const Buffer* other, uint64_t length, uint64_t srcOff
 		vkCmdCopyBuffer(
 			cmdBuffer,
 			m_buffer,
-			static_cast<const Buffer*>(other)->m_buffer,
+			static_cast<const GPUBuffer*>(other)->m_buffer,
 			1,
 			&region
 		);
@@ -107,7 +107,7 @@ void Buffer::writeToBuffer(const Buffer* other, uint64_t length, uint64_t srcOff
 	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
 }
 
-void Buffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
+void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
 	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
 	{
@@ -138,27 +138,27 @@ void Buffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offs
 	}
 }
 
-VkBuffer Buffer::getBuffer() const
+VkBuffer GPUBuffer::getBuffer() const
 {
 	return m_buffer;
 }
 
-VkDeviceMemory Buffer::getMemory() const
+VkDeviceMemory GPUBuffer::getMemory() const
 {
 	return m_memory;
 }
 
-VkBufferUsageFlags Buffer::getUsage() const
+VkBufferUsageFlags GPUBuffer::getUsage() const
 {
 	return m_usage;
 }
 
-VkMemoryPropertyFlags Buffer::getProperties() const
+VkMemoryPropertyFlags GPUBuffer::getProperties() const
 {
 	return m_properties;
 }
 
-uint64_t Buffer::getSize() const
+uint64_t GPUBuffer::getSize() const
 {
 	return m_size;
 }
