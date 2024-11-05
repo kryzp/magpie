@@ -70,13 +70,17 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 		// actually write the data into the ubo
 		m_buffer->writeDataToMe(data, size, dynamicOffset);
 	}
-	else
+	else if (m_type == SHADER_BUFFER_SSBO)
 	{
 		// actually write the data into the ssbo
 		GPUBuffer* stage = g_bufferManager->createStagingBuffer(size);
 		stage->writeDataToMe(data, size, 0);
 		stage->writeToBuffer(m_buffer, size, 0, dynamicOffset);
 		delete stage;
+	}
+	else
+	{
+		LLT_ERROR("[VULKAN:SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
 	}
 
 	// move forward and increment the ubo usage in the current frame

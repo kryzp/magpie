@@ -148,9 +148,6 @@ void App::run()
 	double accumulator = 0.0;
 	const double deltaTime = 1.0 / (double)m_config.targetFPS;
 
-	// todo: can i also only set shader params once but keep updating them regardless
-	// todo: also need a way to just maintain a constant buffer without constantly moving forward in the dynamic offset :))
-
 	g_vulkanBackend->pushShaderBuffer(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 
 	while (m_running)

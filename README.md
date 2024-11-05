@@ -7,9 +7,7 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 todo before i start on interesting stuff:
-- multiple ubos and ssbos in one shader
 - instancing support in renderpass
-- each ShaderBufferMgr is for one uniform / storage buffer in a shader, they should be an array with a maximum number of buffers bound (e.g: 16) (Array<ShaderBufferMgr, 16> m_ubos, m_ssbos)
 - pretty sure targetFPS doesnt work
 - integrate vulkan memory allocator
 - abstract away vertex to allow for different types of vertices
