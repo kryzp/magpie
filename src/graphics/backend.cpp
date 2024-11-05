@@ -2,7 +2,6 @@
 #include "util.h"
 #include "texture.h"
 #include "backbuffer.h"
-#include "vertex.h"
 
 #include "../system_backend.h"
 
@@ -155,52 +154,6 @@ static Vector<const char*> getInstanceExtensions()
 	return extensions;
 }
 
-/*
- * Returns the Vulkan representation of the contents of a vertex.
- */
-static Array<VkVertexInputAttributeDescription, 4> getVertexAttributeDescription()
-{
-	Array<VkVertexInputAttributeDescription, 4> result = {};
-
-	// position
-	result[0].binding = 0;
-	result[0].location = 0;
-	result[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	result[0].offset = offsetof(Vertex, pos);
-
-	// uv
-	result[1].binding = 0;
-	result[1].location = 1;
-	result[1].format = VK_FORMAT_R32G32_SFLOAT;
-	result[1].offset = offsetof(Vertex, uv);
-
-	// colour
-	result[2].binding = 0;
-	result[2].location = 2;
-	result[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-	result[2].offset = offsetof(Vertex, col);
-
-	// normal
-	result[3].binding = 0;
-	result[3].location = 3;
-	result[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-	result[3].offset = offsetof(Vertex, norm);
-
-	return result;
-}
-
-/*
- * Returns the binding description of a vertex.
- */
-static VkVertexInputBindingDescription getVertexBindingDescription()
-{
-	return {
-		.binding = 0,
-		.stride = sizeof(Vertex),
-		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-	};
-}
-
 VulkanBackend::VulkanBackend(const Config& config)
 	: vulkanInstance(VK_NULL_HANDLE)
 	, m_currentRenderPassBuilder()
@@ -236,6 +189,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_scissor()
 	, m_currentFrameIdx(0)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
+	, m_currentVertexDescriptor(nullptr)
 //	, m_current_shader_parameters()
 #if LLT_DEBUG
 	, m_debugMessenger()
@@ -573,10 +527,12 @@ void VulkanBackend::createComputeResources()
 
 VkPipeline VulkanBackend::getComputePipeline()
 {
-	VkPipelineLayout computePipelineLayout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
+	VkPipelineLayout layout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
 
 	uint64_t createdPipelineHash = 0;
+
 	hash::combine(&createdPipelineHash, &m_computeShaderStageInfo);
+	hash::combine(&createdPipelineHash, &layout);
 
 	if (m_computePipelineCache.contains(createdPipelineHash)) {
 		return m_computePipelineCache[createdPipelineHash];
@@ -584,7 +540,7 @@ VkPipeline VulkanBackend::getComputePipeline()
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {};
 	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	computePipelineCreateInfo.layout = computePipelineLayout;
+	computePipelineCreateInfo.layout = layout;
 	computePipelineCreateInfo.stage = m_computeShaderStageInfo;
 
 	VkPipeline createdPipeline = VK_NULL_HANDLE;
@@ -663,15 +619,15 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	// this is essentially a long list of configurations vulkan requires us to give
 	// it to fully specify how a graphics pipeline should behave
 
-	VkVertexInputBindingDescription bindingDescription = getVertexBindingDescription();
-	Array<VkVertexInputAttributeDescription, 4> attribDescription = getVertexAttributeDescription();
+	const auto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
+	const auto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
-	vertexInputStateCreateInfo.pVertexBindingDescriptions = &bindingDescription;
-	vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attribDescription.size();
-	vertexInputStateCreateInfo.pVertexAttributeDescriptions = attribDescription.data();
+	vertexInputStateCreateInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
+	vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+	vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+	vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
 	inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -742,13 +698,16 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
 
 	VkRenderPass pass = m_currentRenderPassBuilder->getRenderPass();
+
 	hash::combine(&createdPipelineHash, &pass);
 
-	for (int i = 0; i < attribDescription.size(); i++) {
-		hash::combine(&createdPipelineHash, &attribDescription[i]);
+	for (auto& attrib : attributeDescriptions) {
+		hash::combine(&createdPipelineHash, &attrib);
 	}
 
-	hash::combine(&createdPipelineHash, &bindingDescription);
+	for (auto& binding : bindingDescriptions) {
+		hash::combine(&createdPipelineHash, &binding);
+	}
 
 	for (int i = 0; i < m_graphicsShaderStages.size(); i++) {
 		hash::combine(&createdPipelineHash, &m_graphicsShaderStages[i]);
@@ -856,17 +815,11 @@ void VulkanBackend::createCommandBuffers()
 			LLT_ERROR("[VULKAN|DEBUG] Failed to create graphics command buffer: %d", result);
 		}
 
-		// todo: im allocating multiple command buffers here, why is commandBufferCount = 1? optimise this!!
-
 		for (int j = 0; j < computeQueues.size(); j++)
 		{
 			auto& computeQueue = computeQueues[j];
 
-			VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
-			commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			commandBufferAllocateInfo.commandPool = computeQueue.getFrame(i).commandPool;
-			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			commandBufferAllocateInfo.commandBufferCount = 1;
 
 			if (VkResult result = vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &computeQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
 				LLT_ERROR("[VULKAN|DEBUG] Failed to create compute command buffer: %d", result);
@@ -877,11 +830,7 @@ void VulkanBackend::createCommandBuffers()
 		{
 			auto& transferQueue = transferQueues[j];
 
-			VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
-			commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			commandBufferAllocateInfo.commandPool = transferQueue.getFrame(i).commandPool;
-			commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			commandBufferAllocateInfo.commandBufferCount = 1;
 
 			if (VkResult result = vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &transferQueue.getFrame(i).commandBuffer); result != VK_SUCCESS) {
 				LLT_ERROR("[VULKAN|DEBUG] Failed to create transfer command buffer: %d", result);
@@ -896,7 +845,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 {
 	// make a new backbuffer and create its surface
 	Backbuffer* backbuffer = new Backbuffer();
-	backbuffer->create_surface();
+	backbuffer->createSurface();
 
 	m_backbuffer = backbuffer;
 	setRenderTarget(backbuffer); // set the backbuffer as the initial render target
@@ -977,17 +926,8 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	setRenderTarget(m_backbuffer);
 
-	// set our initial viewport
-	m_viewport.x = 0.0f;
-	m_viewport.y = 0.0f;
-	m_viewport.width = (float)m_currentRenderPassBuilder->getWidth();
-	m_viewport.height = (float)m_currentRenderPassBuilder->getHeight();
-	m_viewport.minDepth = 0.0f;
-	m_viewport.maxDepth = 1.0f;
-
-	// set the initial scissor
-	m_scissor.offset = { 0, 0 };
-	m_scissor.extent = { m_currentRenderPassBuilder->getWidth(), m_currentRenderPassBuilder->getHeight() };
+	resetViewport();
+	resetScissor();
 
 	// finished!
 	return backbuffer;
@@ -1269,6 +1209,10 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 		case VK_SHADER_STAGE_COMPUTE_BIT:
 			m_computeShaderStageInfo = shader->getShaderStageCreateInfo();
 			break;
+
+		default:
+			LLT_ERROR("[VULKAN|DEBUG] Unrecognised shader type being bound: %d", shader->type);
+			break;
 	}
 }
 
@@ -1334,6 +1278,11 @@ void VulkanBackend::setPushConstants(ShaderParameters& params)
 void VulkanBackend::resetPushConstants()
 {
 	m_pushConstants.clear();
+}
+
+void VulkanBackend::setVertexDescriptor(const VertexDescriptor& vertexDescriptor)
+{
+	m_currentVertexDescriptor = &vertexDescriptor;
 }
 
 void VulkanBackend::clearDescriptorCacheAndPool()
@@ -1497,35 +1446,28 @@ void VulkanBackend::render(const RenderOp& op)
 {
 	VkCommandBuffer currentBuffer = graphicsQueue.getCurrentFrame().commandBuffer;
 
-	VkViewport viewport = {};
-
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = (float)m_currentRenderPassBuilder->getWidth();
-	viewport.height = (float)m_currentRenderPassBuilder->getHeight();
-
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	VkRect2D scissor = {};
-
-	scissor.offset = { 0, 0 };
-	scissor.extent = { m_currentRenderPassBuilder->getWidth(), m_currentRenderPassBuilder->getHeight() };
-
-	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
-
-	// todo
-//	vkCmdSetViewport(current_buffer, 0, 1, &m_viewport);
-//	vkCmdSetScissor(current_buffer, 0, 1, &m_scissor);
+	vkCmdSetViewport(currentBuffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(currentBuffer, 0, 1, &m_scissor);
 
 	const auto& vertexBuffer = op.vertexData.buffer->getBuffer();
 	const auto& indexBuffer  = op.indexData.buffer->getBuffer();
 
-	VkBuffer vertexBuffers[] = { vertexBuffer };
-	VkDeviceSize offsets[] = { 0 };
+	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
 
-	vkCmdBindVertexBuffers(currentBuffer, 0, 1, vertexBuffers, offsets);
+	if (op.instanceData.buffer)
+	{
+		vertexBuffers[1] = op.instanceData.buffer->getBuffer();
+	}
+
+	VkDeviceSize offsets[] = { 0, 0 };
+
+	const auto& bindings = m_currentVertexDescriptor->getBindingDescriptions();
+
+	for (int i = 0; i < bindings.size(); i++)
+	{
+		vkCmdBindVertexBuffers(currentBuffer, bindings[i].binding, 1, &vertexBuffers[i], offsets);
+	}
+
 	vkCmdBindIndexBuffer(currentBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
 	VkPipeline pipeline = getGraphicsPipeline();
@@ -1564,15 +1506,14 @@ void VulkanBackend::render(const RenderOp& op)
 
 	vkCmdDrawIndexed(
 		currentBuffer,
-		op.indexData.indices->size(),
-		1,
+		op.indexData.nIndices,
+		op.instanceData.instanceCount,
 		0,
 		0,
-		0
+		op.instanceData.firstInstance
 	);
 }
 
-// todo: option to wait for compute shader rather than always doing it
 void VulkanBackend::endRender()
 {
 	const auto& currentFrame = graphicsQueue.getCurrentFrame();
@@ -1668,15 +1609,26 @@ void VulkanBackend::setScissor(const RectI& rect)
 	m_scissor = { rect.x, rect.y, (uint32_t)rect.w, (uint32_t)rect.h };
 }
 
+void VulkanBackend::resetViewport()
+{
+	m_viewport.x = 0.0f;
+	m_viewport.y = 0.0f;
+	m_viewport.width = (float)m_currentRenderPassBuilder->getWidth();
+	m_viewport.height = (float)m_currentRenderPassBuilder->getHeight();
+	m_viewport.minDepth = 0.0f;
+	m_viewport.maxDepth = 1.0f;
+}
+
+void VulkanBackend::resetScissor()
+{
+	m_scissor.offset = { 0, 0 };
+	m_scissor.extent = { m_currentRenderPassBuilder->getWidth(), m_currentRenderPassBuilder->getHeight() };
+}
+
 void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
 {
 	m_currentRenderTarget = target;
-
-	if (target->getType() == RENDER_TARGET_TYPE_TEXTURE) {
-		m_currentRenderPassBuilder = ((RenderTarget*)m_currentRenderTarget)->getRenderPassBuilder();
-	} else if (target->getType() == RENDER_TARGET_TYPE_BACKBUFFER) {
-		m_currentRenderPassBuilder = ((Backbuffer*)m_currentRenderTarget)->getRenderPassBuilder();
-	}
+	m_currentRenderPassBuilder = m_currentRenderTarget->getRenderPassBuilder();
 }
 
 void VulkanBackend::setDepthParams(bool depthTest, bool depthWrite)

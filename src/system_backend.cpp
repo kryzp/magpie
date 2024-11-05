@@ -26,7 +26,7 @@ SystemBackend::SystemBackend(const Config& config)
 		SDL_INIT_SENSOR |
 		SDL_INIT_CAMERA) != 0)
 	{
-		LLT_ERROR("[SDL3|DEBUG] Failed to initialize: %s", SDL_GetError());
+		LLT_ERROR("[SDL|DEBUG] Failed to initialize: %s", SDL_GetError());
 	}
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
@@ -44,10 +44,10 @@ SystemBackend::SystemBackend(const Config& config)
 	m_window = SDL_CreateWindow(config.name, config.width, config.height, flags);
 
 	if (!m_window) {
-		LLT_ERROR("[SDL3|DEBUG] Failed to create window.");
+		LLT_ERROR("[SDL|DEBUG] Failed to create window.");
 	}
 
-	LLT_LOG("[SDL3] Initialized!");
+	LLT_LOG("[SDL] Initialized!");
 }
 
 SystemBackend::~SystemBackend()
@@ -57,7 +57,7 @@ SystemBackend::~SystemBackend()
 	SDL_DestroyWindow(m_window);
 	SDL_Quit();
 
-	LLT_LOG("[SDL3] Destroyed!");
+	LLT_LOG("[SDL] Destroyed!");
 }
 
 void SystemBackend::pollEvents()
@@ -70,12 +70,12 @@ void SystemBackend::pollEvents()
 		switch (ev.type)
 		{
 			case SDL_EVENT_QUIT:
-				LLT_LOG("[SDL3] Detected window close event, quitting...");
+				LLT_LOG("[SDL] Detected window close event, quitting...");
 				g_app->exit();
 				break;
 
 			case SDL_EVENT_WINDOW_RESIZED:
-				LLT_LOG("[SDL3] Detected window resize!");
+				LLT_LOG("[SDL] Detected window resize!");
 				g_vulkanBackend->onWindowResize(ev.window.data1, ev.window.data2);
 				break;
 
@@ -126,16 +126,16 @@ void SystemBackend::pollEvents()
 				break;
 
 			case SDL_EVENT_GAMEPAD_ADDED:
-				LLT_LOG("[SDL3] Gamepad added, trying to reconnect all gamepads...");
+				LLT_LOG("[SDL] Gamepad added, trying to reconnect all gamepads...");
 				reconnectAllGamepads();
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				LLT_LOG("[SDL3] Gamepad removed.");
+				LLT_LOG("[SDL] Gamepad removed.");
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMAPPED:
-				LLT_LOG("[SDL3] Gamepad remapped.");
+				LLT_LOG("[SDL] Gamepad remapped.");
 				break;
 
 			default:
@@ -156,12 +156,12 @@ void SystemBackend::reconnectAllGamepads()
 
 	if (m_gamepadCount == 0)
 	{
-		LLT_LOG("[SDL3] No gamepads found!");
+		LLT_LOG("[SDL] No gamepads found!");
 		goto finished;
 	}
 	else
 	{
-		LLT_LOG("[SDL3] Found %d gamepads!", m_gamepadCount);
+		LLT_LOG("[SDL] Found %d gamepads!", m_gamepadCount);
 	}
 
 	// iterate through found gamepads
@@ -172,11 +172,11 @@ void SystemBackend::reconnectAllGamepads()
 
 		// check if we actually managed to open the gamepad
 		if (m_gamepads[i]) {
-			LLT_LOG("[SDL3] Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i,
+			LLT_LOG("[SDL] Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i,
 				SDL_GetGamepadPlayerIndex(m_gamepads[i])
 			);
 		} else {
-			LLT_LOG("[SDL3] Failed to open gamepad with id: %d, and internal index: %d.", id, i);
+			LLT_LOG("[SDL] Failed to open gamepad with id: %d, and internal index: %d.", id, i);
 		}
 	}
 
@@ -188,7 +188,7 @@ void SystemBackend::closeAllGamepads()
 {
 	for (int i = 0; i < m_gamepadCount; i++) {
 		SDL_CloseGamepad(m_gamepads[i]);
-		LLT_LOG("[SDL3] Closed gamepad with internal index %d.", i);
+		LLT_LOG("[SDL] Closed gamepad with internal index %d.", i);
 	}
 
 	m_gamepadCount = 0;
@@ -427,6 +427,6 @@ const char* const* SystemBackend::vkGetInstanceExtensions(uint32_t* count)
 
 bool SystemBackend::vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface)
 {
-	LLT_LOG("[SDL3] Created Vulkan surface!");
+	LLT_LOG("[SDL] Created Vulkan surface!");
 	return SDL_Vulkan_CreateSurface(m_window, instance, NULL, surface);
 }

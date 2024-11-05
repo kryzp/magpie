@@ -17,7 +17,7 @@ namespace llt
 
 		void cleanUp() override;
 
-		RenderPassBuilder* getRenderPassBuilder();
+		RenderPassBuilder* getRenderPassBuilder() override;
 
 		void setClearColour(int idx, const Colour& colour) override;
 		void setDepthStencilClear(float depth, uint32_t stencil) override;

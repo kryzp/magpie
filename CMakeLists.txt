@@ -43,6 +43,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/util.cpp
     src/graphics/image.cpp
     src/graphics/queue.cpp
+    src/graphics/vertex_descriptor.cpp
     
     src/math/timer.cpp
 

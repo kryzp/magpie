@@ -11,11 +11,11 @@ struct Particle {
 	vec2 velocity;
 };
 
-layout(std140, binding = 1) buffer ParticleSSBO {
+layout (std140, binding = 1) buffer ParticleSSBO {
 	Particle particles[];
 };
 
-layout(local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {

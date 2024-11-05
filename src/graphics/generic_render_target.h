@@ -31,6 +31,8 @@ namespace llt
 
 		virtual void cleanUp() = 0;
 
+		virtual RenderPassBuilder* getRenderPassBuilder() = 0;
+
 		virtual const Texture* getAttachment(int idx) const = 0;
 		virtual const Texture* getDepthAttachment() const = 0;
 

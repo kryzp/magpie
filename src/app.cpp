@@ -69,10 +69,22 @@ struct Particle
 	glm::vec2 velocity;
 };
 
+struct MyVertex
+{
+	glm::vec3 pos;
+	glm::vec2 uv;
+	glm::vec3 col;
+	glm::vec3 norm;
+};
+
+struct MyInstancedData
+{
+	glm::vec3 positionOffset;
+};
+
 void App::run()
 {
-	ShaderParameters pushConstants;
-
+	ShaderProgram* vertexShaderInst		= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* vertexShader			= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* fragmentShader		= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	ShaderProgram* fragmentTexShader	= g_shaderManager->create("../../res/shaders/raster/fragment_texture.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -82,47 +94,60 @@ void App::run()
 	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8_UNORM });
 	TextureSampler* sampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
 
+	Vector<MyVertex> meshVertices = {
+		{ { -1.0f, -1.0f, -5.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f, -1.0f, -5.0f }, { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { -1.0f,  1.0f, -5.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f,  1.0f, -5.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }
+	};
+
+	Vector<MyVertex> quadVertices = {
+		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+	};
+
+	Vector<MyVertex> quad2Vertices = {
+		{ { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+	};
+
+	Vector<uint16_t> quadIndices = {
+		0, 1, 2,
+		1, 3, 2
+	};
+
 	SubMesh mesh;
-	mesh.build(
-		{
-			{ { -1.0f, -1.0f, -5.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ {  1.0f, -1.0f, -5.0f }, { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { -1.0f,  1.0f, -5.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ {  1.0f,  1.0f, -5.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }
-		},
-		{
-			0, 1, 2,
-			1, 3, 2
-		}
-	);
+	mesh.build(meshVertices.data(), meshVertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
 
 	SubMesh quad;
-	quad.build(
-		{
-			{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
-		},
-		{
-			0, 1, 2,
-			1, 3, 2
-		}
-	);
+	quad.build(quadVertices.data(), quadVertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
 
 	SubMesh quad2;
-	quad2.build(
-		{
-			{ { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
-		},
-		{
-			0, 1, 2,
-			1, 3, 2
-		}
-	);
+	quad2.build(quad2Vertices.data(), quad2Vertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
+
+	VertexDescriptor vertexFormat;
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+
+	VertexDescriptor instancedVertexFormat;
+
+	// regular data
+	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
+	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
+	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
+	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	instancedVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+
+	// instanced component
+	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, 0);
+	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
 
 	RenderPass pass;
 
@@ -132,9 +157,25 @@ void App::run()
 
 	for (int i = 0; i < nParticles; i++)
 	{
-		particleData[i].position = { 1.0f, 0.0f };
+		particleData[i].position = { 0.2f, 0.0f };
 		particleData[i].velocity = { 0.0f, 0.0f };
 	}
+
+	MyInstancedData instanceRawData[8];
+
+	for (int i = 0; i < 8; i++)
+	{
+		instanceRawData[i].positionOffset.x = i;
+		instanceRawData[i].positionOffset.y = 0.0f;
+	}
+
+	GPUBuffer* instanceData = g_bufferManager->createVertexBuffer(8, sizeof(MyInstancedData));
+	GPUBuffer* instanceDataStage = g_bufferManager->createStagingBuffer(sizeof(MyInstancedData) * 8);
+	instanceDataStage->writeDataToMe(instanceRawData, sizeof(MyInstancedData) * 8, 0);
+	instanceDataStage->writeToBuffer(instanceData, sizeof(MyInstancedData) * 8, 0, 0);
+	delete instanceDataStage;
+
+	ShaderParameters pushConstants;
 
 	ShaderParameters parameters;
 	parameters.set("time", 1.0f);
@@ -147,6 +188,8 @@ void App::run()
 
 	double accumulator = 0.0;
 	const double deltaTime = 1.0 / (double)m_config.targetFPS;
+
+	const float aspect = static_cast<float>(m_config.width) / static_cast<float>(m_config.height);
 
 	g_vulkanBackend->pushShaderBuffer(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 
@@ -161,12 +204,12 @@ void App::run()
 
 		// ---
 
-		double frameTime = deltaTimer.reset();
-		accumulator += CalcD::min(frameTime, deltaTime);
-
-		while (accumulator >= deltaTime) {
-			accumulator -= deltaTime;
-		}
+//		double frameTime = deltaTimer.reset();
+//		accumulator += CalcD::min(frameTime, deltaTime);
+//
+//		while (accumulator >= deltaTime) {
+//			accumulator -= deltaTime;
+//		}
 
 		// ---
 
@@ -185,18 +228,31 @@ void App::run()
 
 		// ---
 
+		g_vulkanBackend->setVertexDescriptor(vertexFormat);
+
 		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
 
 		g_vulkanBackend->setRenderTarget(target);
 		g_vulkanBackend->beginRender();
 
-		pushConstants.set("projMatrix", glm::perspective(70.0f, 1280.0f/720.0f, 0.1f, 10.0f));
+		pushConstants.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
 		g_vulkanBackend->setPushConstants(pushConstants);
 
-		g_vulkanBackend->bindShader(vertexShader);
+		pass.mesh = &mesh;
+
 		g_vulkanBackend->bindShader(fragmentShader);
 
-		pass.mesh = &mesh;
+		g_vulkanBackend->setVertexDescriptor(instancedVertexFormat);
+		g_vulkanBackend->bindShader(vertexShaderInst);
+		pass.instanceCount = 8;
+		pass.instanceBuffer = instanceData;
+		g_vulkanBackend->render(pass.build());
+		pass.instanceCount = 1;
+		pass.instanceBuffer = nullptr;
+
+		g_vulkanBackend->setVertexDescriptor(vertexFormat);
+
+		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->render(pass.build());
 
 		g_vulkanBackend->endRender();
@@ -240,6 +296,7 @@ void App::run()
 
 		g_vulkanBackend->setTexture(0, nullptr);
 		g_vulkanBackend->setSampler(0, nullptr);
+
 		g_vulkanBackend->resetPushConstants();
 
 		// ---

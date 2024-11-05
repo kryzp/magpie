@@ -28,7 +28,7 @@ namespace llt
 		/*
 		* Builds the surface of the backbuffer.
 		*/
-		void create_surface();
+		void createSurface();
 
 		/*
 		* Creates the swap chain.
@@ -46,7 +46,7 @@ namespace llt
 		/*
 		* Returns the render pass builder for the backbuffer
 		*/
-		RenderPassBuilder* getRenderPassBuilder();
+		RenderPassBuilder* getRenderPassBuilder() override;
 
 		/*
 		* Sets the clear for the colour and depth stencil

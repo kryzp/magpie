@@ -15,7 +15,7 @@ namespace llt
 		GPUBuffer* createBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, uint64_t size);
 
 		GPUBuffer* createStagingBuffer(uint64_t size);
-		GPUBuffer* createVertexBuffer(uint64_t vertexCount);
+		GPUBuffer* createVertexBuffer(uint64_t vertexCount, uint32_t vertexSize);
 		GPUBuffer* createIndexBuffer(uint64_t indexCount);
 		GPUBuffer* createUBO(uint64_t size);
 		GPUBuffer* createSSBO(uint64_t size);

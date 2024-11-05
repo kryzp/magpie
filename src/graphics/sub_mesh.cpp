@@ -4,12 +4,12 @@
 using namespace llt;
 
 SubMesh::SubMesh()
-	: m_vertices()
-	, m_indices()
+	: m_parent(nullptr)
+	, m_material(nullptr)
 	, m_vertexBuffer(nullptr)
 	, m_indexBuffer(nullptr)
-	, m_material(nullptr)
-	, m_parent(nullptr)
+	, m_nVertices(0)
+	, m_nIndices(0)
 {
 }
 
@@ -17,25 +17,28 @@ SubMesh::~SubMesh()
 {
 }
 
-void SubMesh::build(const Vector<Vertex>& vtx, const Vector<uint16_t>& idx)
+void SubMesh::build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, uint16_t* pIndices, uint32_t nIndices)
 {
-	m_vertices = vtx;
-	m_indices = idx;
+	m_nVertices = nVertices;
+	m_nIndices = nIndices;
+
+	uint64_t vertexBufferSize = nVertices * vertexSize;
+	uint64_t indexBufferSize = nIndices * sizeof(uint16_t);
 
 	// create the gpu buffers
-	m_vertexBuffer = g_bufferManager->createVertexBuffer(vtx.size());
-	m_indexBuffer = g_bufferManager->createIndexBuffer(idx.size());
+	m_vertexBuffer = g_bufferManager->createVertexBuffer(nVertices, vertexSize);
+	m_indexBuffer = g_bufferManager->createIndexBuffer(nIndices);
 
 	// allocate a staging buffer for them
-	GPUBuffer* stage = g_bufferManager->createStagingBuffer(vtx.size() * sizeof(Vertex) + idx.size() * sizeof(uint16_t));
+	GPUBuffer* stage = g_bufferManager->createStagingBuffer(vertexBufferSize + indexBufferSize);
 
 	// read data to the stage
-	stage->writeDataToMe(vtx.data(), vtx.size() * sizeof(Vertex), 0);
-	stage->writeDataToMe(idx.data(), idx.size() * sizeof(uint16_t), vtx.size() * sizeof(Vertex));
+	stage->writeDataToMe(pVertices, vertexBufferSize, 0);
+	stage->writeDataToMe(pIndices, indexBufferSize, vertexBufferSize);
 
 	// make the stage write that data to the gpu buffers
-	stage->writeToBuffer(m_vertexBuffer, vtx.size() * sizeof(Vertex), 0, 0);
-	stage->writeToBuffer(m_indexBuffer, idx.size() * sizeof(uint16_t), vtx.size() * sizeof(Vertex), 0);
+	stage->writeToBuffer(m_vertexBuffer, vertexBufferSize, 0, 0);
+	stage->writeToBuffer(m_indexBuffer, indexBufferSize, vertexBufferSize, 0);
 
 	// finished, delete the stage
 	delete stage;
@@ -46,9 +49,9 @@ const Mesh* SubMesh::getParent() const
 	return m_parent;
 }
 
-void SubMesh::setMaterial(Material* getMaterial)
+void SubMesh::setMaterial(Material* material)
 {
-	m_material = getMaterial;
+	m_material = material;
 }
 
 Material* SubMesh::getMaterial()
@@ -71,32 +74,12 @@ GPUBuffer* SubMesh::getIndexBuffer() const
 	return m_indexBuffer;
 }
 
-Vector<Vertex>& SubMesh::getVertices()
-{
-	return m_vertices;
-}
-
-const Vector<Vertex>& SubMesh::getVertices() const
-{
-	return m_vertices;
-}
-
 uint64_t SubMesh::getVertexCount() const
 {
-	return m_vertices.size();
-}
-
-Vector<uint16_t>& SubMesh::getIndices()
-{
-	return m_indices;
-}
-
-const Vector<uint16_t>& SubMesh::getIndices() const
-{
-	return m_indices;
+	return m_nVertices;
 }
 
 uint64_t SubMesh::getIndexCount() const
 {
-	return m_indices.size();
+	return m_nIndices;
 }

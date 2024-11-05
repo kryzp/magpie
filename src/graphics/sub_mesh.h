@@ -6,7 +6,6 @@
 #include "../container/vector.h"
 
 #include "material.h"
-#include "vertex.h"
 #include "gpu_buffer_mgr.h"
 #include "gpu_buffer.h"
 
@@ -27,25 +26,18 @@ namespace llt
 		SubMesh();
 		virtual ~SubMesh();
 
-		void build(const Vector<Vertex>& vtx, const Vector<uint16_t>& idx);
+		void build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, uint16_t* pIndices, uint32_t nIndices);
 
 		const Mesh* getParent() const;
 
-		void setMaterial(Material* getMaterial);
+		void setMaterial(Material* material);
 		Material* getMaterial();
 		const Material* getMaterial() const;
 
 		GPUBuffer* getVertexBuffer() const;
 		GPUBuffer* getIndexBuffer() const;
 
-		Vector<Vertex>& getVertices();
-		const Vector<Vertex>& getVertices() const;
-
 		uint64_t getVertexCount() const;
-
-		Vector<uint16_t>& getIndices();
-		const Vector<uint16_t>& getIndices() const;
-
 		uint64_t getIndexCount() const;
 
 	private:
@@ -54,10 +46,10 @@ namespace llt
 		Material* m_material;
 
 		GPUBuffer* m_vertexBuffer;
-		Vector<Vertex> m_vertices;
-
 		GPUBuffer* m_indexBuffer;
-		Vector<uint16_t> m_indices;
+
+		uint32_t m_nVertices;
+		uint32_t m_nIndices;
 	};
 }
 

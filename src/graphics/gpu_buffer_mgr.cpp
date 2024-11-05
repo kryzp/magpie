@@ -1,5 +1,4 @@
 #include "gpu_buffer_mgr.h"
-#include "vertex.h"
 
 llt::GPUBufferMgr* llt::g_bufferManager = nullptr;
 
@@ -40,10 +39,10 @@ GPUBuffer* GPUBufferMgr::createStagingBuffer(uint64_t size)
 	return stagingBuffer;
 }
 
-GPUBuffer* GPUBufferMgr::createVertexBuffer(uint64_t vertexCount)
+GPUBuffer* GPUBufferMgr::createVertexBuffer(uint64_t vertexCount, uint32_t vertexSize)
 {
 	GPUBuffer* vertexBuffer = new GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-	vertexBuffer->create(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sizeof(Vertex) * vertexCount);
+	vertexBuffer->create(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexSize * vertexCount);
 	m_vertexBuffers.pushBack(vertexBuffer);
 	return vertexBuffer;
 }

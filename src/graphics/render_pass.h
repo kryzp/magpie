@@ -3,47 +3,52 @@
 
 #include "shader.h"
 #include "gpu_buffer.h"
-#include "vertex.h"
 #include "sub_mesh.h"
 #include "generic_render_target.h"
 
 namespace llt
 {
-	/**
-	 * Generic render operation that can be sent to the
-	 * backend to be carried out and drawn to the screen.
-	 */
 	struct RenderOp
 	{
 		struct VertexData
 		{
-			const Vector<Vertex>* vertices;
+			uint32_t nVertices;
 			const GPUBuffer* buffer;
 		};
 
 		struct IndexData
 		{
-			const Vector<uint16_t>* indices;
+			uint32_t nIndices;
+			const GPUBuffer* buffer;
+		};
+
+		struct InstanceData
+		{
+			uint32_t instanceCount;
+			uint32_t firstInstance;
 			const GPUBuffer* buffer;
 		};
 
 		VertexData vertexData;
 		IndexData indexData;
+		InstanceData instanceData;
 
 		RenderOp()
 			: vertexData()
 			, indexData()
+			, instanceData()
 		{
 		}
 	};
 
-	/**
-	 * Engine-Level Render operation basically
-	 */
 	class RenderPass
 	{
 	public:
 		RenderPass()
+			: instanceCount(1)
+			, firstInstance(0)
+			, instanceBuffer(nullptr)
+			, mesh(nullptr)
 		{
 		}
 
@@ -51,14 +56,22 @@ namespace llt
 		{
 			RenderOp operation;
 
-			operation.vertexData.vertices = &mesh->getVertices();
+			operation.vertexData.nVertices = mesh->getVertexCount();
 			operation.vertexData.buffer = mesh->getVertexBuffer();
 
-			operation.indexData.indices = &mesh->getIndices();
+			operation.indexData.nIndices = mesh->getIndexCount();
 			operation.indexData.buffer = mesh->getIndexBuffer();
+
+			operation.instanceData.instanceCount = instanceCount;
+			operation.instanceData.firstInstance = firstInstance;
+			operation.instanceData.buffer = instanceBuffer;
 
 			return operation;
 		}
+
+		uint32_t instanceCount;
+		uint32_t firstInstance;
+		const GPUBuffer* instanceBuffer;
 
 		const SubMesh* mesh;
 	};

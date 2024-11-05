@@ -10,8 +10,8 @@ todo before i start on interesting stuff:
 - instancing support in renderpass
 - pretty sure targetFPS doesnt work
 - integrate vulkan memory allocator
-- abstract away vertex to allow for different types of vertices
 - optimise the vkmapmemory and vkunmapmemory in buffers to make it so they get called a lot less, very expensive operation!
+- may automatically unbind all textures and push constants (even ubos and ssbos?) at the end of each frame, idk its fine for now
 
 stuff im interested in:
 - pbr

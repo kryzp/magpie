@@ -20,6 +20,8 @@
 #include "descriptor_builder.h"
 #include "descriptor_cache.h"
 
+#include "vertex_descriptor.h"
+
 #include "shader_buffer.h"
 
 #include "gpu_buffer.h"
@@ -94,6 +96,9 @@ namespace llt
 		void setViewport(const RectF& rect);
 		void setScissor(const RectI& rect);
 
+		void resetViewport();
+		void resetScissor();
+
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
@@ -113,6 +118,8 @@ namespace llt
 
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();
+
+		void setVertexDescriptor(const VertexDescriptor& vertexDescriptor);
 
 		void syncStall() const;
 
@@ -175,6 +182,9 @@ namespace llt
 		DescriptorCache m_descriptorCache;
 		DescriptorBuilder m_descriptorBuilder;
 		bool m_descriptorBuilderDirty;
+
+		// vertices
+		const VertexDescriptor* m_currentVertexDescriptor;
 
 		// swap chain
         Backbuffer* m_backbuffer;
