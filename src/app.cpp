@@ -162,7 +162,7 @@ void App::run()
 	for (int i = 0; i < nParticles; i++)
 	{
 		particleData[i].position = { i, 0.0f };
-		particleData[i].velocity = { 0.0f, i * 0.001f };
+		particleData[i].velocity = { 0.0f, i * 0.05f };
 	}
 
 	/*
@@ -184,17 +184,14 @@ void App::run()
 	ShaderParameters pushConstants;
 
 	ShaderParameters parameters;
-	parameters.set("time", 1.0f);
+	parameters.set("deltaTime", 1.0f);
 
 	ShaderParameters parameters2;
 	parameters2.set("otherData", 1.0f);
 
-	Timer deltaTimer;
-	deltaTimer.start();
-
+	uint64_t lastPerformanceCounter = g_systemBackend->getPerformanceCounter();
 	double accumulator = 0.0;
-	const double deltaTime = 1.0 / (double)m_config.targetFPS;
-
+	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
 	const float aspect = static_cast<float>(m_config.width) / static_cast<float>(m_config.height);
 
 	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
@@ -210,16 +207,18 @@ void App::run()
 
 		// ---
 
-//		double frameTime = deltaTimer.reset();
-//		accumulator += CalcD::min(frameTime, deltaTime);
-//
-//		while (accumulator >= deltaTime) {
-//			accumulator -= deltaTime;
-//		}
+		uint64_t currentPerformanceCounter = g_systemBackend->getPerformanceCounter();
+		double deltaTime = static_cast<double>(currentPerformanceCounter - lastPerformanceCounter) / static_cast<double>(g_systemBackend->getPerformanceFrequency());
+		lastPerformanceCounter = currentPerformanceCounter;
 
-		// ---
+		accumulator += deltaTime;
 
-		printf("1");
+		while (accumulator >= targetDeltaTime)
+		{
+			// this is where the frame limited fixed update occurs!!
+
+			accumulator -= targetDeltaTime;
+		}
 
 		// ---
 
@@ -227,7 +226,7 @@ void App::run()
 
 		g_vulkanBackend->bindShader(computeProgram);
 
-		parameters.set("time", 1.0f);
+		parameters.set("deltaTime", (float)targetDeltaTime);
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
 
 		g_vulkanBackend->bindSsbo(0, 1);
@@ -281,7 +280,7 @@ void App::run()
 		pushConstants.set("projMatrix", glm::identity<glm::mat4>());
 		g_vulkanBackend->setPushConstants(pushConstants);
 
-		parameters.set("time", 1.0f);
+		parameters.set("deltaTime", 1.0f);
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
 		parameters2.set("otherData", 1.0f);
 		g_vulkanBackend->pushUbo(1, 1, VK_SHADER_STAGE_ALL_GRAPHICS, parameters2);

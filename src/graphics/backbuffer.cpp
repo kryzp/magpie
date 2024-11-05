@@ -188,7 +188,7 @@ void Backbuffer::createSwapChain()
 
 	// get the surface settings
     auto surfaceFormat = vkutil::chooseSwapSurfaceFormat(details.surfaceFormats);
-    auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes);
+    auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes, false); // temporary, we just disable vsync regardless of config
     auto extent = vkutil::chooseSwapExtent(details.capabilities);
 
 	// make sure our image count can't go above the maximum image count

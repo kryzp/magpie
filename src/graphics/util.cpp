@@ -18,9 +18,11 @@ VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatK
 	return availableSurfaceFormats[0];
 }
 
-VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes)
+VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync)
 {
-//	return VK_PRESENT_MODE_IMMEDIATE_KHR; // todo: this disables vsync, make this an option!!!
+	if (!enableVsync) {
+		return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	}
 
 	for (const auto& available_present_mode : availablePresentModes) {
 		if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {

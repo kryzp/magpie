@@ -22,40 +22,43 @@ namespace llt
 
 		void pollEvents();
 
-		String getWindowName();
+		String getWindowName() const;
 		void setWindowName(const String& name);
 
-		glm::ivec2 getWindowPosition();
+		glm::ivec2 getWindowPosition() const;
 		void setWindowPosition(const glm::ivec2& position);
 
-		glm::ivec2 getWindowSize();
+		glm::ivec2 getWindowSize() const;
 		void setWindowSize(const glm::ivec2& size);
 
-		glm::ivec2 getScreenSize();
+		glm::ivec2 getScreenSize() const;
 
-		float getWindowOpacity();
-		void setWindowOpacity(float opacity);
+		float getWindowOpacity() const;
+		void setWindowOpacity(float opacity) const;
 
-		bool isWindowResizable();
-		void toggleWindowResizable(bool toggle);
+		bool isWindowResizable() const;
+		void toggleWindowResizable(bool toggle) const;
 
-		float getWindowRefreshRate();
-		float getWindowPixelDensity();
+		float getWindowRefreshRate() const;
+		float getWindowPixelDensity() const;
 
-		bool isCursorVisible();
-		void toggleCursorVisible(bool toggle);
-		void lockCursor(bool toggle);
+		bool isCursorVisible() const;
+		void toggleCursorVisible(bool toggle) const;
+		void lockCursor(bool toggle) const;
 		void setCursorPosition(int x, int y);
 
 		void reconnectAllGamepads();
 		GamepadType getGamepadType(int player);
-		void closeGamepad(int player);
+		void closeGamepad(int player) const;
 
-		WindowMode getWindowMode();
+		WindowMode getWindowMode() const;
 		void setWindowMode(WindowMode toggle);
 
-		void sleepFor(uint64_t ms) ;
-		uint64_t getTicks();
+		void sleepFor(uint64_t ms) const;
+
+		uint64_t getTicks() const;
+		uint64_t getPerformanceCounter() const;
+		uint64_t getPerformanceFrequency() const;
 
 		void* streamFromFile(const char* filepath, const char* mode);
 		void* streamFromMemory(void* memory, uint64_t size);

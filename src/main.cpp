@@ -11,6 +11,7 @@ int main(void)
 	config.targetFPS = 144;
 	config.opacity = 1.0f;
 	config.flags = 0;
+	config.vsync = true;
 	config.windowMode = WINDOW_MODE_WINDOWED;
 
 	g_app = new App(config);

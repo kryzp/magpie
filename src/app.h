@@ -35,6 +35,8 @@ namespace llt
 		unsigned targetFPS = 60;
 		float opacity = 1.0f;
 		int flags = 0;
+		bool vsync = false;
+
 		WindowMode windowMode = WINDOW_MODE_WINDOWED;
 
 		Function<void(void)> onInit = nullptr;

@@ -16,11 +16,11 @@ namespace llt
 		void resume();
 		double reset();
 
-		double milliseconds() const;
-		double seconds() const;
+		double getMilliseconds() const;
+		double getSeconds() const;
 
 		bool started() const;
-		bool paused() const;
+		bool isPaused() const;
 
 	private:
 		uint64_t m_startTicks;

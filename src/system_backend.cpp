@@ -200,12 +200,12 @@ GamepadType SystemBackend::getGamepadType(int player)
 	return (GamepadType)SDL_GetGamepadType(SDL_GetGamepadFromPlayerIndex(player));
 }
 
-void SystemBackend::closeGamepad(int player)
+void SystemBackend::closeGamepad(int player) const
 {
 	SDL_CloseGamepad(SDL_GetGamepadFromPlayerIndex(player));
 }
 
-String SystemBackend::getWindowName()
+String SystemBackend::getWindowName() const
 {
 	return SDL_GetWindowTitle(m_window);
 }
@@ -215,7 +215,7 @@ void SystemBackend::setWindowName(const String& name)
 	SDL_SetWindowTitle(m_window, name.cstr());
 }
 
-glm::ivec2 SystemBackend::getWindowPosition()
+glm::ivec2 SystemBackend::getWindowPosition() const
 {
 	glm::ivec2 result = { 0, 0 };
 	SDL_GetWindowPosition(m_window, &result.x, &result.y);
@@ -227,7 +227,7 @@ void SystemBackend::setWindowPosition(const glm::ivec2& position)
 	SDL_SetWindowPosition(m_window, position.x, position.y);
 }
 
-glm::ivec2 SystemBackend::getWindowSize()
+glm::ivec2 SystemBackend::getWindowSize() const
 {
 	glm::ivec2 result = { 0, 0 };
 	SDL_GetWindowSize(m_window, &result.x, &result.y);
@@ -239,7 +239,7 @@ void SystemBackend::setWindowSize(const glm::ivec2& size)
 	SDL_SetWindowSize(m_window, size.x, size.y);
 }
 
-glm::ivec2 SystemBackend::getScreenSize()
+glm::ivec2 SystemBackend::getScreenSize() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -250,27 +250,27 @@ glm::ivec2 SystemBackend::getScreenSize()
 	return { 0, 0 };
 }
 
-float SystemBackend::getWindowOpacity()
+float SystemBackend::getWindowOpacity() const
 {
 	return SDL_GetWindowOpacity(m_window);
 }
 
-void SystemBackend::setWindowOpacity(float opacity)
+void SystemBackend::setWindowOpacity(float opacity) const
 {
 	SDL_SetWindowOpacity(m_window, opacity);
 }
 
-bool SystemBackend::isWindowResizable()
+bool SystemBackend::isWindowResizable() const
 {
 	return SDL_GetWindowFlags(m_window) & SDL_WINDOW_RESIZABLE;
 }
 
-void SystemBackend::toggleWindowResizable(bool toggle)
+void SystemBackend::toggleWindowResizable(bool toggle) const
 {
 	SDL_SetWindowResizable(m_window, static_cast<SDL_bool>(toggle));
 }
 
-float SystemBackend::getWindowRefreshRate()
+float SystemBackend::getWindowRefreshRate() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -281,7 +281,7 @@ float SystemBackend::getWindowRefreshRate()
 	return 0.0f;
 }
 
-float SystemBackend::getWindowPixelDensity()
+float SystemBackend::getWindowPixelDensity() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -292,12 +292,12 @@ float SystemBackend::getWindowPixelDensity()
 	return 0.0f;
 }
 
-bool SystemBackend::isCursorVisible()
+bool SystemBackend::isCursorVisible() const
 {
 	return SDL_CursorVisible();
 }
 
-void SystemBackend::toggleCursorVisible(bool toggle)
+void SystemBackend::toggleCursorVisible(bool toggle) const
 {
 	if (toggle) {
 		SDL_ShowCursor();
@@ -306,7 +306,7 @@ void SystemBackend::toggleCursorVisible(bool toggle)
 	}
 }
 
-void SystemBackend::lockCursor(bool toggle)
+void SystemBackend::lockCursor(bool toggle) const
 {
 	SDL_SetWindowRelativeMouseMode(m_window, toggle);
 }
@@ -322,7 +322,7 @@ void SystemBackend::setCursorPosition(int x, int y)
 	g_inputState->onMouseMove(x, y);
 }
 
-WindowMode SystemBackend::getWindowMode()
+WindowMode SystemBackend::getWindowMode() const
 {
 	auto flags = SDL_GetWindowFlags(m_window);
 
@@ -363,16 +363,26 @@ void SystemBackend::setWindowMode(WindowMode toggle)
 	}
 }
 
-void SystemBackend::sleepFor(uint64_t ms)
+void SystemBackend::sleepFor(uint64_t ms) const
 {
 	if (ms > 0) {
 		SDL_Delay(ms);
 	}
 }
 
-uint64_t SystemBackend::getTicks()
+uint64_t SystemBackend::getTicks() const
 {
 	return SDL_GetTicks();
+}
+
+uint64_t SystemBackend::getPerformanceCounter() const
+{
+	return SDL_GetPerformanceCounter();
+}
+
+uint64_t SystemBackend::getPerformanceFrequency() const
+{
+	return SDL_GetPerformanceFrequency();
 }
 
 void* SystemBackend::streamFromFile(const char* filepath, const char* mode)
