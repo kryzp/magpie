@@ -219,6 +219,10 @@ void App::run()
 
 		// ---
 
+		printf("1");
+
+		// ---
+
 		g_vulkanBackend->beginCompute();
 
 		g_vulkanBackend->bindShader(computeProgram);

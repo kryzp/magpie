@@ -43,16 +43,16 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 		reallocateBuffer(m_maxSize * 2);
 	}
 
-	// wrap back around to zero if we can't fit all of our data at the current point
-	if (m_offset + size >= m_maxSize) {
-		m_offset = 0;
-	}
-
 	// calculate the aligned dynamic offset
 	uint32_t dynamicOffset = vkutil::calcShaderBufferAlignedSize(
 		m_offset,
 		g_vulkanBackend->physicalData.properties
 	);
+
+	// wrap back around to zero if we can't fit all of our data at the current point
+	if (dynamicOffset + size >= m_maxSize) {
+		m_offset = 0;
+	}
 
 	// set the dynamic offset
 	m_dynamicOffset = dynamicOffset;
@@ -87,8 +87,14 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 	m_offset += size;
 	m_usageInFrame[currentFrame] += size;
 
+	// recalculate the aligned dynamic offset
+	dynamicOffset = vkutil::calcShaderBufferAlignedSize(
+		m_offset,
+		g_vulkanBackend->physicalData.properties
+	);
+
 	// again, if we have moved past the maximum size, wrap back around to zero.
-	if (m_offset >= m_maxSize) {
+	if (dynamicOffset >= m_maxSize) {
 		m_offset = 0;
 	}
 }
