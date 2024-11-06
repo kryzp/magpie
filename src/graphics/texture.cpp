@@ -65,7 +65,7 @@ void Texture::cleanUp()
 void Texture::fromImage(const Image& image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples)
 {
 	initSize(image.getWidth(), image.getHeight());
-	initMetadata(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, type);
+	initMetadata(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, type);
 	initMipLevels(mipLevels);
 	initSampleCount(numSamples);
 	initTransient(false);

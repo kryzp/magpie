@@ -31,11 +31,7 @@ void RenderTarget::cleanUp()
 
 	for (Texture* texture : m_attachments)
 	{
-		if (!texture) {
-			continue;
-		}
-
-		if (texture->getParent() == this) {
+		if (texture && texture->getParent() == this) {
 			delete texture;
 		}
 	}

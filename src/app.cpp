@@ -95,7 +95,7 @@ void App::run()
 	Texture* stoneTexture = g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
 	TextureSampler* stoneSampler = g_textureManager->getSampler("asdf", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM/*, VK_FORMAT_R8G8_UNORM*/ });
+	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ });
 	TextureSampler* targetSampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
 
 	Vector<MyVertex> quadVertices = {
@@ -261,6 +261,7 @@ void App::run()
 		// ---
 
 		uint64_t currentPerformanceCounter = g_systemBackend->getPerformanceCounter();
+
 		double deltaTime = static_cast<double>(currentPerformanceCounter - lastPerformanceCounter) / static_cast<double>(g_systemBackend->getPerformanceFrequency());
 		lastPerformanceCounter = currentPerformanceCounter;
 
@@ -385,6 +386,8 @@ void App::run()
 		glm::mat4 model = glm::identity<glm::mat4>();
 		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
 		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
 
 		ubo.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
 		ubo.set("viewMatrix", glm::identity<glm::mat4>());
