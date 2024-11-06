@@ -17,6 +17,7 @@ layout (location = 3) in vec3 a_normal;
 
 layout (location = 0) out vec3 o_colour;
 layout (location = 1) out vec2 o_texCoord;
+layout (location = 2) out vec3 o_fragPosition;
 
 void main()
 {
@@ -24,4 +25,5 @@ void main()
 
 	o_colour = a_colour;
 	o_texCoord = a_uv;
+	o_fragPosition = a_position;
 }

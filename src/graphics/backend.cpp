@@ -925,7 +925,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	createComputeResources();
 
 	// start off with 256kB of shader memory for each frame.
-	// this will increase if it isn't enough, however it is a good baseline.
+	// this will increase if it isn'm_yaw enough, however it is a good baseline.
 
 	for (int i = 0; i < m_uboManagers.size(); i++) {
 		m_uboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
@@ -961,7 +961,7 @@ void VulkanBackend::resetDescriptorBuilder()
 DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stage)
 {
 	// check if our descriptor builder has been modified at all (i.e: dirty)
-	// no point in building a new one if it hasn't changed
+	// no point in building a new one if it hasn'm_yaw changed
 	if (!m_descriptorBuilderDirty) {
 		return m_descriptorBuilder;
 	}
@@ -1232,7 +1232,7 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 }
 
 /*
- * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
+ * Ok so basically: bufferIdx is used to signify one of the N ubo'm_pitch or ssbos'm_pitch, while the bindIdx is used to signify where they will be bound on the gpu.
  */
 
 void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
@@ -1658,12 +1658,6 @@ void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
 	m_currentRenderPassBuilder = m_currentRenderTarget->getRenderPassBuilder();
 }
 
-void VulkanBackend::setDepthParams(bool depthTest, bool depthWrite)
-{
-	m_depthStencilCreateInfo.depthTestEnable  = depthTest ? VK_TRUE : VK_FALSE;
-	m_depthStencilCreateInfo.depthWriteEnable = depthWrite ? VK_TRUE : VK_FALSE;
-}
-
 void VulkanBackend::setDepthOp(VkCompareOp op)
 {
 	m_depthStencilCreateInfo.depthCompareOp = op;
@@ -1672,6 +1666,11 @@ void VulkanBackend::setDepthOp(VkCompareOp op)
 void VulkanBackend::setDepthTest(bool enabled)
 {
 	m_depthStencilCreateInfo.depthTestEnable = enabled ? VK_TRUE : VK_FALSE;
+}
+
+void VulkanBackend::setDepthWrite(bool enabled)
+{
+	m_depthStencilCreateInfo.depthWriteEnable = enabled ? VK_TRUE : VK_FALSE;
 }
 
 void VulkanBackend::setDepthBounds(float min, float max)

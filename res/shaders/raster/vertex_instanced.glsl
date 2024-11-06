@@ -21,6 +21,7 @@ layout (location = 4) in vec2 instance_positionOffset;
 
 layout (location = 0) out vec3 o_colour;
 layout (location = 1) out vec2 o_texCoord;
+layout (location = 2) out vec3 o_fragPosition;
 
 void main()
 {
@@ -28,4 +29,5 @@ void main()
 
 	o_colour = vec3(a_colour.xy, instance_positionOffset.x * 0.2);
 	o_texCoord = a_uv;
+	o_fragPosition = a_position + vec3(instance_positionOffset, 0.0);
 }

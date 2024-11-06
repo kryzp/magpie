@@ -49,7 +49,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 		g_vulkanBackend->physicalData.properties
 	);
 
-	// wrap back around to zero if we can't fit all of our data at the current point
+	// wrap back around to zero if we can'm_yaw fit all of our data at the current point
 	if (dynamicOffset + size >= m_maxSize) {
 		m_offset = 0;
 	}

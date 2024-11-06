@@ -89,9 +89,9 @@ namespace llt
 		void getBlendConstants(float* constants);
 		void setBlendOp(bool enabled, VkLogicOp op);
 
-		void setDepthParams(bool depthTest, bool depthWrite);
 		void setDepthOp(VkCompareOp op);
 		void setDepthTest(bool enabled);
+		void setDepthWrite(bool enabled);
 		void setDepthBounds(float min, float max);
 		void setDepthStencilTest(bool enabled);
 

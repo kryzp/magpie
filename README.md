@@ -7,6 +7,7 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 todo:
+- remove the idea of a fixed number of ubos and ssbos. make it so you can create them in the app, like textures, and then bind them, like textures!!!
 - imgui?
 - model loading
 

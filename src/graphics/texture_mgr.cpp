@@ -78,7 +78,7 @@ Texture* TextureMgr::createFromImage(const String& name,const Image& image)
 	return texture;
 }
 
-Texture* TextureMgr::createFromData(const String& name,uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
+Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
 {
 	Texture* texture = new Texture();
 
@@ -114,7 +114,7 @@ Texture* TextureMgr::createFromData(const String& name,uint32_t width, uint32_t 
 	return texture;
 }
 
-Texture* TextureMgr::createAttachment(const String& name,uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
+Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
 {
 	Texture* texture = new Texture();
 
@@ -132,7 +132,7 @@ Texture* TextureMgr::createAttachment(const String& name,uint32_t width, uint32_
 	return texture;
 }
 
-Texture* TextureMgr::createCubeMap(const String& name,VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
+Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
 {
 	Texture* texture = new Texture();
 

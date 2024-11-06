@@ -13,6 +13,7 @@ int main(void)
 	config.flags = 0;
 	config.vsync = true;
 	config.windowMode = WINDOW_MODE_WINDOWED;
+	config.flags = Config::FLAG_CENTRE_WINDOW | Config::FLAG_CURSOR_INVISIBLE;
 
 	g_app = new App(config);
 	g_app->run();

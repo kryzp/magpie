@@ -4,6 +4,7 @@
 
 #include "system_backend.h"
 #include "common.h"
+#include "camera.h"
 #include "input/input.h"
 #include "graphics/backend.h"
 #include "graphics/render_target.h"
@@ -84,19 +85,45 @@ struct MyInstancedData
 };
 */
 
+// note: yes, currently everything is just dumped into the app
+//       this won'm_yaw be the case after i abstract it a little, like splitting stuff off into particle systems
+//       and custom "passes"
+// 
+//       or maybe i'll just leave it spaghettified. idk.
+
 void App::run()
 {
 	ShaderProgram* vertexShaderInst		= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* vertexShader			= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* fragmentShader		= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* fragmentShaderSkybox = g_shaderManager->create("../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	ShaderProgram* computeProgram = g_shaderManager->create("../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
+	Texture* skyboxTexture = g_textureManager->createCubeMap("skybox", VK_FORMAT_R8G8B8A8_UNORM,
+		"../../res/textures/skybox/right.png",
+		"../../res/textures/skybox/left.png",
+		"../../res/textures/skybox/top.png",
+		"../../res/textures/skybox/bottom.png",
+		"../../res/textures/skybox/front.png",
+		"../../res/textures/skybox/back.png"
+	);
+	TextureSampler* skyboxSampler = g_textureManager->getSampler("skybox", TextureSampler::Style(VK_FILTER_NEAREST));
+
 	Texture* stoneTexture = g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
-	TextureSampler* stoneSampler = g_textureManager->getSampler("asdf", TextureSampler::Style(VK_FILTER_NEAREST));
+	TextureSampler* stoneSampler = g_textureManager->getSampler("stone", TextureSampler::Style(VK_FILTER_NEAREST));
 
 	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ });
-	TextureSampler* targetSampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
+	TextureSampler* targetSampler = g_textureManager->getSampler("target", TextureSampler::Style(VK_FILTER_LINEAR));
+
+	VertexDescriptor vertexFormat;
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+
+	g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 	Vector<MyVertex> quadVertices = {
 		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
@@ -175,12 +202,39 @@ void App::run()
 	SubMesh block;
 	block.build(blockVertices.data(), blockVertices.size(), sizeof(MyVertex), blockIndices.data(), blockIndices.size());
 
-	VertexDescriptor vertexFormat;
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
-	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+	Vector<MyVertex> skyboxVertices = {
+		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  1.0f, -1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
+	};
+
+	Vector<uint16_t> skyboxIndices = {
+		0, 1, 2,
+		2, 3, 0,
+
+		5, 4, 7,
+		7, 6, 5,
+
+		1, 5, 6,
+		6, 2, 1,
+
+		4, 0, 3,
+		3, 7, 4,
+
+		4, 5, 1,
+		1, 0, 4,
+
+		3, 2, 6,
+		6, 7, 3
+	};
+
+	SubMesh skybox;
+	skybox.build(skyboxVertices.data(), skyboxVertices.size(), sizeof(MyVertex), skyboxIndices.data(), skyboxIndices.size());
 
 	/*
 	VertexDescriptor instancedVertexFormat;
@@ -231,6 +285,8 @@ void App::run()
 	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 	*/
 
+	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 10.0f);
+
 	ShaderParameters pushConstants;
 	pushConstants.set("time", 0.0f);
 
@@ -243,11 +299,8 @@ void App::run()
 	uint64_t lastPerformanceCounter = g_systemBackend->getPerformanceCounter();
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
-	const float aspect = static_cast<float>(m_config.width) / static_cast<float>(m_config.height);
 
 	RenderPass pass;
-
-	g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 	while (m_running)
 	{
@@ -265,12 +318,13 @@ void App::run()
 		double deltaTime = static_cast<double>(currentPerformanceCounter - lastPerformanceCounter) / static_cast<double>(g_systemBackend->getPerformanceFrequency());
 		lastPerformanceCounter = currentPerformanceCounter;
 
-		accumulator += deltaTime;
+		accumulator += CalcF::min(deltaTime, targetDeltaTime);
 		elapsedTime += deltaTime;
 
 		while (accumulator >= targetDeltaTime)
 		{
-			// this is where the frame limited fixed update occurs!!
+			camera.update(targetDeltaTime);
+			g_systemBackend->setCursorPosition(1280/2, 720/2);
 
 			accumulator -= targetDeltaTime;
 		}
@@ -373,8 +427,6 @@ void App::run()
 
 		// ---
 
-		g_vulkanBackend->setDepthTest(true);
-
 		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
 
 		g_vulkanBackend->setRenderTarget(target);
@@ -383,14 +435,35 @@ void App::run()
 		pushConstants.set("time", (float)elapsedTime);
 		g_vulkanBackend->setPushConstants(pushConstants);
 
+		ubo.set("projMatrix", camera.getProj());
+
+		g_vulkanBackend->setDepthWrite(false);
+		g_vulkanBackend->setDepthTest(false);
+
+		ubo.set("viewMatrix", camera.getViewNoTranslation());
+		ubo.set("modelMatrix", glm::identity<glm::mat4>());
+
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+
+		g_vulkanBackend->setTexture(0, skyboxTexture);
+		g_vulkanBackend->setSampler(0, skyboxSampler);
+
+		g_vulkanBackend->bindShader(vertexShader);
+		g_vulkanBackend->bindShader(fragmentShaderSkybox);
+
+		pass.mesh = &skybox;
+		g_vulkanBackend->render(pass.build());
+
+		g_vulkanBackend->setDepthWrite(true);
+		g_vulkanBackend->setDepthTest(true);
+
 		glm::mat4 model = glm::identity<glm::mat4>();
 		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
 		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
 		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
 
-		ubo.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
-		ubo.set("viewMatrix", glm::identity<glm::mat4>());
+		ubo.set("viewMatrix", camera.getView());
 		ubo.set("modelMatrix", model);
 
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
@@ -410,6 +483,7 @@ void App::run()
 
 		g_vulkanBackend->beginRender();
 
+		g_vulkanBackend->setDepthWrite(true);
 		g_vulkanBackend->setDepthTest(false);
 
 		g_vulkanBackend->setRenderTarget(m_backbuffer);
