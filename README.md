@@ -7,8 +7,6 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 todo before i start on interesting stuff:
-- integrate vulkan memory allocator
-- optimise the vkmapmemory and vkunmapmemory in buffers to make it so they get called a lot less, very expensive operation!
 - may automatically unbind all textures and push constants (even ubos and ssbos?) at the end of each frame, idk its fine for now
 
 stuff im interested in:

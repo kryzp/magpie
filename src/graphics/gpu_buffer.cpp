@@ -7,10 +7,12 @@
 
 using namespace llt;
 
-GPUBuffer::GPUBuffer(VkBufferUsageFlags usage)
+GPUBuffer::GPUBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 	: m_buffer(VK_NULL_HANDLE)
-	, m_memory(VK_NULL_HANDLE)
+	, m_allocation()
+	, m_allocationInfo()
 	, m_usage(usage)
+	, m_memoryUsage(memoryUsage)
 	, m_properties()
 	, m_size(0)
 {
@@ -32,64 +34,39 @@ void GPUBuffer::create(VkMemoryPropertyFlags properties, uint64_t size)
 	bufferCreateInfo.usage = m_usage;
 	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	if (VkResult result = vkCreateBuffer(g_vulkanBackend->device, &bufferCreateInfo, nullptr, &m_buffer); result != VK_SUCCESS) {
+	VmaAllocationCreateInfo vmaAllocInfo = {};
+	vmaAllocInfo.usage = m_memoryUsage;
+	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+	if (VkResult result = vmaCreateBuffer(g_vulkanBackend->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:BUFFER|DEBUG] Failed to create buffer: %d", result);
 	}
-
-	VkMemoryRequirements memoryRequirements = {};
-	vkGetBufferMemoryRequirements(g_vulkanBackend->device, m_buffer, &memoryRequirements);
-
-	VkMemoryAllocateInfo memoryAllocateInfo = {};
-	memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memoryAllocateInfo.allocationSize = memoryRequirements.size;
-	memoryAllocateInfo.memoryTypeIndex = vkutil::findMemoryType(g_vulkanBackend->physicalData.device, memoryRequirements.memoryTypeBits, properties);
-
-	if (VkResult result = vkAllocateMemory(g_vulkanBackend->device, &memoryAllocateInfo, nullptr, &m_memory); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:BUFFER|DEBUG] Failed to reallocate memory for buffer: %d", result);
-	}
-
-	// finally bind the memory
-	vkBindBufferMemory(g_vulkanBackend->device, m_buffer, m_memory, 0);
 }
 
 void GPUBuffer::cleanUp()
 {
-    if (m_buffer == VK_NULL_HANDLE &&
-        m_memory == VK_NULL_HANDLE)
-    {
+    if (m_buffer == VK_NULL_HANDLE) {
         return;
     }
 
-	vkDestroyBuffer(g_vulkanBackend->device, m_buffer, nullptr);
-	vkFreeMemory(g_vulkanBackend->device, m_memory, nullptr);
+	vmaDestroyBuffer(g_vulkanBackend->m_vmaAllocator, m_buffer, m_allocation);
 
     m_buffer = VK_NULL_HANDLE;
-    m_memory = VK_NULL_HANDLE;
 }
 
-// TODO: STOP REMAPPING ALL THE TIME! IT IS VERY INEFFICIENT TO DO!
-// ADD SOME FUNCTIONS WHERE THEY MAP, THEN EXIT, THEN WE CALL ANOTHER FUNCTION TO UNMAP
-// SO WE CAN DO SOME CALLS BETWEEN THEM, KINDA MAYBE MAPBEGIN() then MAPEND() OR SOMETHING IDK
-
-void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset)
+void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset) const
 {
-	void* src = nullptr;
-	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &src);
-	mem::copy(dst, src, length);
-	vkUnmapMemory(g_vulkanBackend->device, m_memory);
+	vmaCopyAllocationToMemory(g_vulkanBackend->m_vmaAllocator, m_allocation, offset, dst, length);
 }
 
-void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
+void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset) const
 {
-	void* dst = nullptr;
-	vkMapMemory(g_vulkanBackend->device, m_memory, offset, length, 0, &dst); // we first have to map our memory to the gpu memory before copying data
-	mem::copy(dst, src, length);
-	vkUnmapMemory(g_vulkanBackend->device, m_memory); // now that we're finished, we can unmap
+	vmaCopyMemoryToAllocation(g_vulkanBackend->m_vmaAllocator, src, m_allocation, offset, length);
 }
 
 void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
 	{
 		VkBufferCopy region = {};
 		region.srcOffset = srcOffset;
@@ -109,7 +86,7 @@ void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t 
 
 void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
 	{
 		VkBufferImageCopy region = {};
 		region.bufferOffset = offset;
@@ -125,7 +102,7 @@ void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t o
 		vkCmdCopyBufferToImage(
 			cmdBuffer,
 			m_buffer,
-			((Texture*)texture)->getImage(),
+			texture->getImage(),
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			1,
 			&region
@@ -134,7 +111,7 @@ void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t o
 	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
 
 	if (baseArrayLayer == texture->getLayerCount() - 1 && texture->isMipmapped()) {
-		((const Texture*)texture)->generateMipmaps();
+		texture->generateMipmaps();
 	}
 }
 
@@ -143,14 +120,14 @@ VkBuffer GPUBuffer::getBuffer() const
 	return m_buffer;
 }
 
-VkDeviceMemory GPUBuffer::getMemory() const
-{
-	return m_memory;
-}
-
 VkBufferUsageFlags GPUBuffer::getUsage() const
 {
 	return m_usage;
+}
+
+VmaMemoryUsage GPUBuffer::getMemoryUsage() const
+{
+	return m_memoryUsage;
 }
 
 VkMemoryPropertyFlags GPUBuffer::getProperties() const

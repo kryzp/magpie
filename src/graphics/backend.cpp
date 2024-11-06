@@ -130,16 +130,16 @@ static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerC
  */
 static Vector<const char*> getInstanceExtensions()
 {
-	uint32_t ext_count = 0;
-	const char* const* names = g_systemBackend->vkGetInstanceExtensions(&ext_count);
+	uint32_t extCount = 0;
+	const char* const* names = g_systemBackend->vkGetInstanceExtensions(&extCount);
 
 	if (!names) {
 		LLT_ERROR("[VULKAN|DEBUG] Unable to get instance extension count.");
 	}
 
-	Vector<const char*> extensions(ext_count);
+	Vector<const char*> extensions(extCount);
 
-	for (int i = 0; i < ext_count; i++) {
+	for (int i = 0; i < extCount; i++) {
 		extensions[i] = names[i];
 	}
 
@@ -156,6 +156,7 @@ static Vector<const char*> getInstanceExtensions()
 
 VulkanBackend::VulkanBackend(const Config& config)
 	: vulkanInstance(VK_NULL_HANDLE)
+	, m_vmaAllocator()
 	, m_currentRenderPassBuilder()
 	, m_descriptorPoolManager()
 	, m_imageInfos()
@@ -190,7 +191,6 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_currentFrameIdx(0)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
 	, m_currentVertexDescriptor(nullptr)
-//	, m_current_shader_parameters()
 #if LLT_DEBUG
 	, m_debugMessenger()
 #endif // LLT_DEBUG
@@ -320,6 +320,8 @@ VulkanBackend::~VulkanBackend()
 
 	delete m_backbuffer;
 
+	vmaDestroyAllocator(m_vmaAllocator);
+
 	vkDestroyDevice(this->device, nullptr);
 
 #if LLT_DEBUG
@@ -439,6 +441,10 @@ void VulkanBackend::createLogicalDevice()
 			.pQueuePriorities = &QUEUE_PRIORITY
 		});
 	}
+	
+	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {};
+	bufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+	bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -450,6 +456,7 @@ void VulkanBackend::createLogicalDevice()
 	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
 	createInfo.enabledExtensionCount = LLT_ARRAY_LENGTH(vkutil::DEVICE_EXTENSIONS);
 	createInfo.pEnabledFeatures = &physicalData.features;
+	createInfo.pNext = &bufferDeviceAddressFeatures;
 
 #if LLT_DEBUG
 	// enable the validation layers on the device
@@ -491,7 +498,25 @@ void VulkanBackend::createLogicalDevice()
 		transferQueue.init(tmpQueue);
 	}
 
-	LLT_LOG("[VULKAN] Created a logical device!");
+	// init allocator
+	createVmaAllocator();
+
+	LLT_LOG("[VULKAN] Created logical device!");
+}
+
+void VulkanBackend::createVmaAllocator()
+{
+	VmaAllocatorCreateInfo allocatorCreateInfo = {};
+	allocatorCreateInfo.physicalDevice = physicalData.device;
+	allocatorCreateInfo.device = this->device;
+	allocatorCreateInfo.instance = this->vulkanInstance;
+	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+	
+	if (VkResult result = vmaCreateAllocator(&allocatorCreateInfo, &m_vmaAllocator); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to create memory allocator: %d", result);
+	}
+
+	LLT_LOG("[VULKAN] Created memory allocator!");
 }
 
 void VulkanBackend::createPipelineProcessCache()

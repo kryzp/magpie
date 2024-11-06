@@ -166,17 +166,17 @@ glm::vec2 Input::getMouseWheel() const
 
 bool Input::shift() const
 {
-	return isDown(KEY_LEFT_SHIFT) || isDown(KEY_RIGHT_SHIFT);
+	return isDown(KB_KEY_LEFT_SHIFT) || isDown(KB_KEY_RIGHT_SHIFT);
 }
 
 bool Input::ctrl() const
 {
-	return isDown(KEY_LEFT_CONTROL) || isDown(KEY_RIGHT_CONTROL);
+	return isDown(KB_KEY_LEFT_CONTROL) || isDown(KB_KEY_RIGHT_CONTROL);
 }
 
 bool Input::alt() const
 {
-	return isDown(KEY_LEFT_ALT) || isDown(KEY_RIGHT_ALT);
+	return isDown(KB_KEY_LEFT_ALT) || isDown(KB_KEY_RIGHT_ALT);
 }
 
 const char* Input::text() const

@@ -54,6 +54,8 @@ add_executable(${PROJECT_NAME}
     src/io/stream.cpp
     src/io/file_stream.cpp
     src/io/memory_stream.cpp
+
+    src/third_party/vk_mem_alloc.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${VK_LIBRARIES})

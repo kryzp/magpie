@@ -201,7 +201,7 @@ void App::run()
 		g_systemBackend->pollEvents();
 		g_inputState->update();
 
-		if (g_inputState->isPressed(KEY_ESCAPE)) {
+		if (g_inputState->isPressed(KB_KEY_ESCAPE)) {
 			exit();
 		}
 

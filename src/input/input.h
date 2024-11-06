@@ -19,13 +19,13 @@ namespace llt
 	{
 		struct KeyboardState
 		{
-			bool down[KEY_MAX_ENUM];
+			bool down[KB_KEY_MAX_ENUM];
 			char text[MAX_TEXT_INPUT];
 		};
 
 		struct MouseState
 		{
-			bool down[MB_MAX_ENUM];
+			bool down[MBTN_MAX_ENUM];
 			glm::vec2 screenPosition;
 			glm::vec2 drawPosition;
 			glm::vec2 position;

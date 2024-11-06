@@ -3,6 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "../third_party/vk_mem_alloc.h"
+
 #include "../common.h"
 
 namespace llt
@@ -13,31 +15,36 @@ namespace llt
 	class GPUBuffer
 	{
 	public:
-		GPUBuffer(VkBufferUsageFlags usage);
+		GPUBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 		~GPUBuffer();
 
 		void create(VkMemoryPropertyFlags properties, uint64_t size);
 		void cleanUp();
 
-		void readDataFromMe(void* dst, uint64_t length, uint64_t offset);
-		void writeDataToMe(const void* src, uint64_t length, uint64_t offset);
+		void readDataFromMe(void* dst, uint64_t length, uint64_t offset) const;
+		void writeDataToMe(const void* src, uint64_t length, uint64_t offset) const;
 
 		void writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
 		void writeToTexture(const Texture* texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 
 		VkBuffer getBuffer() const;
-		VkDeviceMemory getMemory() const;
 
 		VkBufferUsageFlags getUsage() const;
+		VmaMemoryUsage getMemoryUsage() const;
+
 		VkMemoryPropertyFlags getProperties() const;
 
 		uint64_t getSize() const;
 
 	private:
 		VkBuffer m_buffer;
-		VkDeviceMemory m_memory;
+		
+		VmaAllocation m_allocation;
+		VmaAllocationInfo m_allocationInfo;
 
 		VkBufferUsageFlags m_usage;
+		VmaMemoryUsage m_memoryUsage;
+		
 		VkMemoryPropertyFlags m_properties;
 
 		uint64_t m_size;

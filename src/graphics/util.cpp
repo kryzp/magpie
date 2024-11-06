@@ -103,7 +103,7 @@ bool vkutil::hasStencilComponent(VkFormat format)
 	return (format == VK_FORMAT_D32_SFLOAT) || (format == VK_FORMAT_D32_SFLOAT_S8_UINT) || (format == VK_FORMAT_D24_UNORM_S8_UINT);
 }
 
-VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool, VkDevice device)
+VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 {
 	// first we allocate the command buffer then we begin recording onto the command buffer
 	// then once we are finished we call the sister function end_single_time_commands.
@@ -116,7 +116,7 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool, VkDevice 
 
 	VkCommandBuffer cmd_buf = {};
 
-	if (VkResult result = vkAllocateCommandBuffers(device, &allocInfo, &cmd_buf); result != VK_SUCCESS) {
+	if (VkResult result = vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmd_buf); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to reallocate command buffers when copying buffer: %d", result);
 	}
 
@@ -131,7 +131,7 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool, VkDevice 
 	return cmd_buf;
 }
 
-void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkDevice device, VkQueue graphics)
+void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics)
 {
 	vkEndCommandBuffer(cmdBuffer);
 
@@ -143,12 +143,12 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuf
 	vkQueueSubmit(graphics, 1, &submit_info, VK_NULL_HANDLE);
 	vkQueueWaitIdle(graphics);
 
-	vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
+	vkFreeCommandBuffers(g_vulkanBackend->device, cmdPool, 1, &cmdBuffer);
 }
 
 void vkutil::endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer)
 {
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->device, g_vulkanBackend->graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
 }
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties)

@@ -5,13 +5,13 @@ namespace llt
 {
 	enum MouseButton
 	{
-		MB_UNKNOWN 		= 0,
-		MB_LEFT 		= 1,
-		MB_MIDDLE 		= 2,
-		MB_RIGHT 		= 3,
-		MB_SIDE_BOTTOM 	= 4,
-		MB_SIDE_TOP 	= 5,
-		MB_MAX_ENUM
+		MBTN_UNKNOWN 		= 0,
+		MBTN_LEFT 			= 1,
+		MBTN_MIDDLE 		= 2,
+		MBTN_RIGHT 			= 3,
+		MBTN_SIDE_BOTTOM 	= 4,
+		MBTN_SIDE_TOP 		= 5,
+		MBTN_MAX_ENUM
 	};
 }
 

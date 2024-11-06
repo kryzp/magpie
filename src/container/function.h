@@ -61,7 +61,7 @@ namespace llt
 		dtor_fn m_destroyFn;
 
 		byte* m_data;
-		uint64_t m_data_size;
+		uint64_t m_dataSize;
 	};
 
 	template <typename Result, typename... Args>
@@ -70,7 +70,7 @@ namespace llt
 		, m_createFn(nullptr)
 		, m_destroyFn(nullptr)
 		, m_data(nullptr)
-		, m_data_size(0)
+		, m_dataSize(0)
 	{
 	}
 
@@ -80,7 +80,7 @@ namespace llt
 		, m_createFn(nullptr)
 		, m_destroyFn(nullptr)
 		, m_data(nullptr)
-		, m_data_size(0)
+		, m_dataSize(0)
 	{
 	}
 
@@ -89,12 +89,12 @@ namespace llt
 		: m_callFn(other.m_callFn)
 		, m_createFn(other.m_createFn)
 		, m_destroyFn(other.m_destroyFn)
-		, m_data_size(other.m_data_size)
 		, m_data(nullptr)
+		, m_dataSize(other.m_dataSize)
 	{
 		if (m_callFn && other.m_data)
 		{
-			m_data = new byte[this->m_data_size];
+			m_data = new byte[this->m_dataSize];
 			m_createFn(m_data, other.m_data);
 		}
 	}
@@ -107,8 +107,8 @@ namespace llt
 		, m_destroyFn(reinterpret_cast<dtor_fn>(getDtorFn<F>))
 	{
 		// allocate data for functions
-		m_data_size = sizeof(F);
-		m_data = new byte[m_data_size];
+		m_dataSize = sizeof(F);
+		m_data = new byte[m_dataSize];
 		m_createFn(m_data, reinterpret_cast<byte*>(&fn));
 	}
 
@@ -146,7 +146,7 @@ namespace llt
 	{
 		return (
 			this->m_data == other.m_data &&
-			this->m_data_size == other.m_data_size &&
+			this->m_dataSize == other.m_dataSize &&
 			this->m_callFn == other.m_callFn &&
 			this->m_createFn == other.m_createFn &&
 			this->m_destroyFn == other.m_destroyFn

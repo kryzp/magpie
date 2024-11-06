@@ -12,20 +12,22 @@ TextureInfo Texture::getInfo() const { return {
 
 Texture::Texture()
 	: m_parent(nullptr)
-	, m_depth(1)
-	, m_mipmapped(false)
 	, m_image(VK_NULL_HANDLE)
 	, m_imageMemory(VK_NULL_HANDLE)
 	, m_imageLayout()
 	, m_view(VK_NULL_HANDLE)
+	, m_mipmapCount(1)
+	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
+	, m_transient(false)
+	, m_allocation()
+	, m_allocationInfo()
 	, m_format()
 	, m_tiling()
 	, m_type()
 	, m_width(0)
 	, m_height(0)
-	, m_mipmapCount(1)
-	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
-	, m_transient(false)
+	, m_depth(1)
+	, m_mipmapped(false)
 	, m_uav(false)
 {
 }
@@ -39,14 +41,8 @@ void Texture::cleanUp()
 {
 	if (m_image != VK_NULL_HANDLE)
 	{
-		vkDestroyImage(g_vulkanBackend->device, m_image, nullptr);
+		vmaDestroyImage(g_vulkanBackend->m_vmaAllocator, m_image, m_allocation);
 		m_image = VK_NULL_HANDLE;
-	}
-
-	if (m_imageMemory != VK_NULL_HANDLE)
-	{
-		vkFreeMemory(g_vulkanBackend->device, m_imageMemory, nullptr);
-		m_imageMemory = VK_NULL_HANDLE;
 	}
 
 	if (m_view != VK_NULL_HANDLE)
@@ -105,36 +101,36 @@ void Texture::initTransient(bool isTransient)
 
 void Texture::createInternalResources()
 {
-	VkImageType vkimagetype = (VkImageType)0;
+	VkImageType vkImageType = (VkImageType)0;
 
 	switch (m_type)
 	{
 		case VK_IMAGE_VIEW_TYPE_1D:
-			vkimagetype = VK_IMAGE_TYPE_1D;
+			vkImageType = VK_IMAGE_TYPE_1D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-			vkimagetype = VK_IMAGE_TYPE_1D;
+			vkImageType = VK_IMAGE_TYPE_1D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_2D:
-			vkimagetype = VK_IMAGE_TYPE_2D;
+			vkImageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-			vkimagetype = VK_IMAGE_TYPE_2D;
+			vkImageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_3D:
-			vkimagetype = VK_IMAGE_TYPE_3D;
+			vkImageType = VK_IMAGE_TYPE_3D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_CUBE:
-			vkimagetype = VK_IMAGE_TYPE_2D;
+			vkImageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-			vkimagetype = VK_IMAGE_TYPE_2D;
+			vkImageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		default:
@@ -144,7 +140,7 @@ void Texture::createInternalResources()
 
 	VkImageCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	createInfo.imageType = vkimagetype;
+	createInfo.imageType = vkImageType;
 	createInfo.extent.width = m_width;
 	createInfo.extent.height = m_height;
 	createInfo.extent.depth = m_depth;
@@ -172,58 +168,48 @@ void Texture::createInternalResources()
 		createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
 
-	if (VkResult result = vkCreateImage(g_vulkanBackend->device, &createInfo, nullptr, &m_image); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:TEXTURE|DEBUG] Failed to create command pool: %d", result);
+	VmaAllocationCreateInfo vmaAllocInfo = {};
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	if (VkResult result = vmaCreateImage(g_vulkanBackend->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN:TEXTURE|DEBUG] Failed to create image: %d", result);
 	}
 
-	VkMemoryRequirements memoryRequirements = {};
-	vkGetImageMemoryRequirements(g_vulkanBackend->device, m_image, &memoryRequirements);
-
-	VkMemoryAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocInfo.allocationSize = memoryRequirements.size;
-	allocInfo.memoryTypeIndex = vkutil::findMemoryType(g_vulkanBackend->physicalData.device, memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	if (VkResult result = vkAllocateMemory(g_vulkanBackend->device, &allocInfo, nullptr, &m_imageMemory); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:TEXTURE|DEBUG] Failed to allocate memory for image: %d", result);
-	}
-
-	vkBindImageMemory(g_vulkanBackend->device, m_image, m_imageMemory, 0);
-
-	m_view = generate_view();
+	m_view = generateView();
 }
 
-VkImageView Texture::generate_view() const
+VkImageView Texture::generateView() const
 {
-	VkImageViewCreateInfo view_create_info = {};
-	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_create_info.image = m_image;
-	view_create_info.viewType = m_type;
-	view_create_info.format = m_format;
+	VkImageViewCreateInfo viewCreateInfo = {};
+	viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewCreateInfo.image = m_image;
+	viewCreateInfo.viewType = m_type;
+	viewCreateInfo.format = m_format;
 
-	view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	view_create_info.subresourceRange.baseMipLevel = 0;
-	view_create_info.subresourceRange.levelCount = m_mipmapCount;
-	view_create_info.subresourceRange.baseArrayLayer = 0;
-	view_create_info.subresourceRange.layerCount = getLayerCount();
+	viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	viewCreateInfo.subresourceRange.baseMipLevel = 0;
+	viewCreateInfo.subresourceRange.levelCount = m_mipmapCount;
+	viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	viewCreateInfo.subresourceRange.layerCount = getLayerCount();
 
 	if (vkutil::hasStencilComponent(m_format)) {
 		// depth AND stencil is not allowed for sampling!
 		// so, use depth instead.
-		view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
 
 	VkImageViewUsageCreateInfo flag_restriction;
 	flag_restriction.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
 
-	view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-	view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-	view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-	view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
 	VkImageView ret = {};
 
-	if (VkResult result = vkCreateImageView(g_vulkanBackend->device, &view_create_info, nullptr, &ret); result != VK_SUCCESS) {
+	if (VkResult result = vkCreateImageView(g_vulkanBackend->device, &viewCreateInfo, nullptr, &ret); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:TEXTURE|DEBUG] Failed to create texture image view: %d", result);
 	}
 
@@ -243,7 +229,7 @@ void Texture::generateMipmaps() const
 		return;
 	}
 
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
 	{
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -342,7 +328,7 @@ void Texture::generateMipmaps() const
 
 void Texture::transitionLayout(VkImageLayout newLayout)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, g_vulkanBackend->device);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
 	{
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -406,7 +392,7 @@ void Texture::transitionLayout(VkImageLayout newLayout)
 
 		m_imageLayout = newLayout;
 	}
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->device, g_vulkanBackend->graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
 }
 
 void Texture::setParent(RenderTarget* getParent)

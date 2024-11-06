@@ -3,6 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "../third_party/vk_mem_alloc.h"
+
 #include "gpu_buffer.h"
 #include "texture_sampler.h"
 #include "image.h"
@@ -74,7 +76,7 @@ namespace llt
 		TextureInfo getInfo() const;
 
 	private:
-		VkImageView generate_view() const;
+		VkImageView generateView() const;
 
 		RenderTarget* m_parent;
 
@@ -85,6 +87,9 @@ namespace llt
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_numSamples;
 		bool m_transient;
+
+		VmaAllocation m_allocation;
+		VmaAllocationInfo m_allocationInfo;
 
 		VkFormat m_format;
 		VkImageTiling m_tiling;

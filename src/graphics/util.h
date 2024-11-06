@@ -39,6 +39,7 @@ namespace llt
 		 */
 		static const char* DEVICE_EXTENSIONS[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
 			//"VK_KHR_portability_subset"
 		};
 
@@ -53,8 +54,8 @@ namespace llt
 
 		bool hasStencilComponent(VkFormat format);
 
-		VkCommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool, VkDevice device);
-		void endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkDevice device, VkQueue graphics);
+		VkCommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool);
+		void endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics);
 		void endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer);
 
 		uint64_t calcShaderBufferAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties);

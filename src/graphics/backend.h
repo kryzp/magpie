@@ -3,6 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "../third_party/vk_mem_alloc.h"
+
 #include "../container/vector.h"
 #include "../container/array.h"
 #include "../container/optional.h"
@@ -135,6 +137,7 @@ namespace llt
 		PhysicalDeviceData physicalData;
 		VkSampleCountFlagBits msaaSamples;
 		VkFormat swapChainImageFormat;
+		VmaAllocator m_vmaAllocator;
 
 		Queue graphicsQueue;
 		Vector<Queue> computeQueues;
@@ -148,6 +151,7 @@ namespace llt
 		void createCommandBuffers();
 		void createPipelineProcessCache();
 		void createComputeResources();
+		void createVmaAllocator();
 
 		Vector<uint32_t> getDynamicOffsets() const;
 

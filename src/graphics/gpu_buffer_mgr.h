@@ -12,7 +12,7 @@ namespace llt
 		GPUBufferMgr();
 		~GPUBufferMgr();
 
-		GPUBuffer* createBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, uint64_t size);
+		GPUBuffer* createBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VkMemoryPropertyFlags properties, uint64_t size);
 
 		GPUBuffer* createStagingBuffer(uint64_t size);
 		GPUBuffer* createVertexBuffer(uint64_t vertexCount, uint32_t vertexSize);
