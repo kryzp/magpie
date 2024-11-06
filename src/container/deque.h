@@ -78,14 +78,14 @@ namespace llt
 					m_cur += d; // if we're not crossing over a chunk, just add it on
 				} else {
 					// calculate the number of chunks which we just crossed over
-					int64_t chunk_offset = 0;
+					int64_t chunkOffset = 0;
 					if (offset > 0) {
-						chunk_offset = offset / ChunkSize;
+						chunkOffset = offset / ChunkSize;
 					} else {
-						chunk_offset = ((offset + 1) / ChunkSize) - 1;
+						chunkOffset = ((offset + 1) / ChunkSize) - 1;
 					}
-					setChunk(m_chunk + chunk_offset); // update our chunk accordingly
-					m_cur = m_first + (offset - (chunk_offset * ChunkSize)); // set our current location relative to the chunk
+					setChunk(m_chunk + chunkOffset); // update our chunk accordingly
+					m_cur = m_first + (offset - (chunkOffset * ChunkSize)); // set our current location relative to the chunk
 				}
 				return *this;
 			}
@@ -118,7 +118,7 @@ namespace llt
 			T** m_chunk;
 		};
 
-		Deque(int initial_capacity = 8);
+		Deque(int initialCapacity = 8);
 
 		Deque(const Deque& other);
 		Deque(Deque&& other) noexcept;
@@ -288,11 +288,11 @@ namespace llt
 	void Deque<T, ChunkSize>::increaseSize(int frontOrBack)
 	{
 		// double our number of chunks
-		uint64_t num_chunks = chunks() * 2;
+		uint64_t numChunks = chunks() * 2;
 
 		// allocate our map!
-		T** newMap = (T**)::operator new (sizeof(T*) * num_chunks);
-		mem::set(newMap, 0, sizeof(T*) * num_chunks);
+		T** newMap = (T**)::operator new (sizeof(T*) * numChunks);
+		mem::set(newMap, 0, sizeof(T*) * numChunks);
 
 		int begin_offset = m_begin	.m_cur   - m_begin	.m_first;
 		int end_offset   = m_end  	.m_cur   - m_end	.m_first;
@@ -307,7 +307,7 @@ namespace llt
 		}
 
 		// allocate the new size
-		for (int j = 0; j < num_chunks; j++) {
+		for (int j = 0; j < numChunks; j++) {
 			if (!newMap[j]) {
 				newMap[j] = (T*)::operator new (sizeof(T) * ChunkSize);
 			}

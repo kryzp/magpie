@@ -237,6 +237,8 @@ void App::run()
 
 		// ---
 
+		g_vulkanBackend->setDepthTest(true);
+
 		g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
@@ -245,6 +247,7 @@ void App::run()
 		g_vulkanBackend->beginRender();
 
 		pushConstants.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
+		pushConstants.set("modelMatrix", glm::translate(glm::identity<glm::mat4>(), glm::vec3(1.0f, -1.0f, 0.0f)));
 		g_vulkanBackend->setPushConstants(pushConstants);
 
 		pass.mesh = &mesh;
@@ -278,6 +281,7 @@ void App::run()
 		g_vulkanBackend->beginRender();
 
 		pushConstants.set("projMatrix", glm::identity<glm::mat4>());
+		pushConstants.set("modelMatrix", glm::identity<glm::mat4>());
 		g_vulkanBackend->setPushConstants(pushConstants);
 
 		parameters.set("deltaTime", 1.0f);

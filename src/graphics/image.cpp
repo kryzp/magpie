@@ -94,14 +94,14 @@ void Image::setPixels(const Colour* data)
 	mem::copy(m_pixels, data, sizeof(Colour) * (m_width * m_height));
 }
 
-void Image::setPixels(const Colour* data, uint64_t pixel_count)
+void Image::setPixels(const Colour* data, uint64_t pixelCount)
 {
-	mem::copy(m_pixels, data, sizeof(Colour) * pixel_count);
+	mem::copy(m_pixels, data, sizeof(Colour) * pixelCount);
 }
 
-void Image::setPixels(const Colour* data, uint64_t offset, uint64_t pixel_count)
+void Image::setPixels(const Colour* data, uint64_t offset, uint64_t pixelCount)
 {
-	mem::copy(m_pixels, data + offset, sizeof(Colour) * pixel_count);
+	mem::copy(m_pixels, data + offset, sizeof(Colour) * pixelCount);
 }
 
 bool Image::saveToPng(const char* file) const
@@ -160,11 +160,42 @@ Colour Image::getPixelAt(uint32_t x, uint32_t y) const
 	return m_pixels[(y * m_width) + x];
 }
 
-Colour* Image::getPixels() { return m_pixels; }
-const Colour* Image::getPixels() const { return m_pixels; }
-byte* Image::getData() { return (byte*)m_pixels; }
-const byte* Image::getData() const { return (const byte*)m_pixels; }
-uint32_t Image::getWidth() const { return m_width; }
-uint32_t Image::getHeight() const { return m_height; }
-uint64_t Image::getSize() const { return m_width * m_height * 4; }
-int Image::getNrChannels() const{ return m_nrChannels; }
+Colour* Image::getPixels()
+{
+	return m_pixels;
+}
+
+const Colour* Image::getPixels() const
+{
+	return m_pixels;
+}
+
+byte* Image::getData()
+{
+	return (byte*)m_pixels;
+}
+
+const byte* Image::getData() const
+{
+	return (const byte*)m_pixels;
+}
+
+uint32_t Image::getWidth() const
+{
+	return m_width;
+}
+
+uint32_t Image::getHeight() const
+{
+	return m_height;
+}
+
+uint64_t Image::getSize() const
+{
+	return m_width * m_height * 4;
+}
+
+int Image::getNrChannels() const
+{
+	return m_nrChannels;
+}

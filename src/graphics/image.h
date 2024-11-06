@@ -44,7 +44,7 @@ namespace llt
 		* Set the pixels of the image given colour data.
 		*/
 		void setPixels(const Colour* data);
-		void setPixels(const Colour* data, uint64_t pixel_count);
+		void setPixels(const Colour* data, uint64_t pixelCount);
 		void setPixels(const Colour* data, uint64_t offset, uint64_t pixelCount);
 
 		/*

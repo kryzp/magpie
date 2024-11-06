@@ -6,8 +6,9 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
-todo before i start on interesting stuff:
-- may automatically unbind all textures and push constants (even ubos and ssbos?) at the end of each frame, idk its fine for now
+todo:
+- imgui?
+- model loading
 
 stuff im interested in:
 - pbr

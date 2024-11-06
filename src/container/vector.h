@@ -89,8 +89,8 @@ namespace llt
 
         Vector();
         Vector(std::initializer_list<T> data);
-        Vector(uint64_t initial_capacity);
-        Vector(uint64_t initial_capacity, const T& initial_element);
+        Vector(uint64_t initialCapacity);
+        Vector(uint64_t initialCapacity, const T& initialElement);
 		Vector(T* buf, uint64_t length);
 		Vector(const Iterator& begin, const Iterator& end);
         Vector(const Vector& other);
@@ -104,12 +104,12 @@ namespace llt
 		/*
 		 * Allocate a set amount of space.
 		 */
-        void allocate(uint64_t getCapacity);
+        void allocate(uint64_t capacity);
 
 		/*
 		 * Resize (expand/erase) to a new size.
 		 */
-        void resize(uint64_t new_size);
+        void resize(uint64_t newSize);
         void expand(uint64_t amount = 1);
 
 		/*

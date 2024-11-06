@@ -2,6 +2,7 @@
 
 layout(push_constant) uniform PushConstants {
     mat4 projMatrix;
+    mat4 modelMatrix;
 } pushConstants;
 
 layout (location = 0) in vec3 a_position;

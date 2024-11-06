@@ -32,5 +32,5 @@ void main()
 
 	col *= ubo.time * ubo2.otherData;
 
-	fragColour = vec4(col.xy, particles[0].position.x, 1.0);
+	fragColour = vec4(col, 1.0);
 }
