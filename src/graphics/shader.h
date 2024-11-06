@@ -188,7 +188,7 @@ namespace llt
 				}
 			}
 
-			// we haven'm_yaw yet cached this parameter, add it to our list
+			// we haven't yet cached this parameter, add it to our list
 			else {
 				for (int j = 0; j < n; j++) {
 					ShaderParameter p = {};
@@ -221,7 +221,7 @@ namespace llt
 				mem::copy(m_constants[i].second.data, &val, sizeof(T));
 			}
 
-			// we haven'm_yaw yet cached this parameter, add it to our list
+			// we haven't yet cached this parameter, add it to our list
 			else {
 				ShaderParameter p = {};
 				p.type = type;
@@ -238,7 +238,7 @@ namespace llt
 		*/
 		void rebuildPackedConstantData();
 
-		Vector<Pair<String, ShaderParameter>> m_constants; // the reason we don'm_yaw use a hashmap here is because we need to PRESERVE THE ORDER of the elements! the hashmap is inherently unordered.
+		Vector<Pair<String, ShaderParameter>> m_constants; // the reason we don't use a hashmap here is because we need to PRESERVE THE ORDER of the elements! the hashmap is inherently unordered.
 		bool m_dirtyConstants;
 		PackedData m_packedConstants;
 	};

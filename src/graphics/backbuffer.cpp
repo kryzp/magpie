@@ -185,7 +185,7 @@ void Backbuffer::createSwapChain()
     auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes, false); // temporary, we just disable vsync regardless of config
     auto extent = vkutil::chooseSwapExtent(details.capabilities);
 
-	// make sure our image count can'm_yaw go above the maximum image count
+	// make sure our image count can't go above the maximum image count
 	// but is as high as possible.
     uint32_t imageCount = details.capabilities.minImageCount + 1;
     if (details.capabilities.maxImageCount > 0 && imageCount > details.capabilities.maxImageCount) {
@@ -218,7 +218,7 @@ void Backbuffer::createSwapChain()
 	// get the swapchain images
     vkGetSwapchainImagesKHR(g_vulkanBackend->device, m_swapChain, &imageCount, nullptr);
 
-	// if we weren'm_yaw able to locate any throw an error
+	// if we weren't able to locate any throw an error
     if (!imageCount) {
         LLT_ERROR("[VULKAN:BACKBUFFER|DEBUG] Failed to find any images in swap chain!");
     }
@@ -338,7 +338,7 @@ void Backbuffer::onWindowResize(int width, int height)
 		return;
 	}
 
-	// if we somehow got a resize call but didn'm_yaw actually change in size then just exit early
+	// if we somehow got a resize call but didn't actually change in size then just exit early
 	if (m_width == width && m_height == height) {
 		return;
 	}

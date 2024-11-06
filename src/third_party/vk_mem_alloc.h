@@ -417,7 +417,7 @@ typedef enum VmaAllocatorCreateFlagBits
     They are useful mostly for writing breadcrumb markers - a common method for debugging GPU crash/hang/TDR.
 
     When the extension is not enabled, such memory types are still enumerated, but their usage is illegal.
-    To protect from this error, if you don'm_yaw create the allocator with this flag, it will refuse to allocate any memory or create a custom pool in such memory type,
+    To protect from this error, if you don't create the allocator with this flag, it will refuse to allocate any memory or create a custom pool in such memory type,
     returning `VK_ERROR_FEATURE_NOT_PRESENT`.
     */
     VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT = 0x00000010,
@@ -610,7 +610,7 @@ typedef enum VmaAllocationCreateFlagBits
 
     Set this flag to treat VmaAllocationCreateInfo::pUserData as pointer to a
     null-terminated string. Instead of copying pointer value, a local copy of the
-    string is made and stored in allocation'm_pitch `pName`. The string is automatically
+    string is made and stored in allocation's `pName`. The string is automatically
     freed together with the allocation. It is also used in vmaBuildStatsString().
     */
     VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT = 0x00000020,
@@ -619,7 +619,7 @@ typedef enum VmaAllocationCreateFlagBits
     This flag is only allowed for custom pools created with #VMA_POOL_CREATE_LINEAR_ALGORITHM_BIT flag.
     */
     VMA_ALLOCATION_CREATE_UPPER_ADDRESS_BIT = 0x00000040,
-    /** Create both buffer/image and allocation, but don'm_yaw bind them together.
+    /** Create both buffer/image and allocation, but don't bind them together.
     It is useful when you want to bind yourself to do some more advanced binding, e.g. using some extensions.
     The flag is meaningful only with functions that bind by default: vmaCreateBuffer(), vmaCreateImage().
     Otherwise it is ignored.
@@ -629,7 +629,7 @@ typedef enum VmaAllocationCreateFlagBits
     use also flag #VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT.
     */
     VMA_ALLOCATION_CREATE_DONT_BIND_BIT = 0x00000080,
-    /** Create allocation only if additional device memory required for it, if any, won'm_yaw exceed
+    /** Create allocation only if additional device memory required for it, if any, won't exceed
     memory budget. Otherwise return `VK_ERROR_OUT_OF_DEVICE_MEMORY`.
     */
     VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT = 0x00000100,
@@ -675,7 +675,7 @@ typedef enum VmaAllocationCreateFlagBits
     By using this flag, you declare that you will check if the allocation ended up in a `HOST_VISIBLE` memory type
     (e.g. using vmaGetAllocationMemoryProperties()) and if not, you will create some "staging" buffer and
     issue an explicit transfer to write/read your data.
-    To prepare for this possibility, don'm_yaw forget to add appropriate flags like
+    To prepare for this possibility, don't forget to add appropriate flags like
     `VK_BUFFER_USAGE_TRANSFER_DST_BIT`, `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` to the parameters of created buffer or image.
     */
     VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT = 0x00001000,
@@ -719,7 +719,7 @@ typedef enum VmaPoolCreateFlagBits
     This is an optional optimization flag.
 
     If you always allocate using vmaCreateBuffer(), vmaCreateImage(),
-    vmaAllocateMemoryForBuffer(), then you don'm_yaw need to use it because allocator
+    vmaAllocateMemoryForBuffer(), then you don't need to use it because allocator
     knows exact type of your allocations so it can handle Buffer-Image Granularity
     in the optimal way.
 
@@ -736,7 +736,7 @@ typedef enum VmaPoolCreateFlagBits
     /** \brief Enables alternative, linear allocation algorithm in this pool.
 
     Specify this flag to enable linear allocation algorithm, which always creates
-    new allocations after last one and doesn'm_yaw reuse space from allocations freed in
+    new allocations after last one and doesn't reuse space from allocations freed in
     between. It trades memory consumption for simplified algorithm and data
     structure, which has better performance and uses less memory for metadata.
 
@@ -814,7 +814,7 @@ typedef enum VmaVirtualBlockCreateFlagBits
     /** \brief Enables alternative, linear allocation algorithm in this virtual block.
 
     Specify this flag to enable linear allocation algorithm, which always creates
-    new allocations after last one and doesn'm_yaw reuse space from allocations freed in
+    new allocations after last one and doesn't reuse space from allocations freed in
     between. It trades memory consumption for simplified algorithm and data
     structure, which has better performance and uses less memory for metadata.
 
@@ -1099,7 +1099,7 @@ typedef struct VmaAllocatorCreateInfo
       value of this limit will be reported instead when using vmaGetMemoryProperties().
 
     Warning! Using this feature may not be equivalent to installing a GPU with
-    smaller amount of memory, because graphics driver doesn'm_yaw necessary fail new
+    smaller amount of memory, because graphics driver doesn't necessary fail new
     allocations with `VK_ERROR_OUT_OF_DEVICE_MEMORY` result when memory capacity is
     exceeded. It may return success and just silently migrate some device memory
     blocks to system RAM. This driver behavior can also be controlled using
@@ -1323,7 +1323,7 @@ typedef struct VmaAllocationCreateInfo
 
     If #VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT is used, it must be either
     null or pointer to a null-terminated string. The string will be then copied to
-    internal buffer, so it doesn'm_yaw need to be valid after allocation call.
+    internal buffer, so it doesn't need to be valid after allocation call.
     */
     void* VMA_NULLABLE pUserData;
     /** \brief A floating-point value between 0 and 1, indicating the priority of the allocation relative to other memory allocations.
@@ -1420,7 +1420,7 @@ typedef struct VmaAllocationInfo
     VkDeviceMemory VMA_NULLABLE_NON_DISPATCHABLE deviceMemory;
     /** \brief Offset in `VkDeviceMemory` object to the beginning of this allocation, in bytes. `(deviceMemory, offset)` pair is unique to this allocation.
 
-    You usually don'm_yaw need to use this offset. If you create a buffer or an image together with the allocation using e.g. function
+    You usually don't need to use this offset. If you create a buffer or an image together with the allocation using e.g. function
     vmaCreateBuffer(), vmaCreateImage(), functions that operate on these resources refer to the beginning of the buffer or image,
     not entire device memory block. Functions like vmaMapMemory(), vmaBindBufferMemory() also refer to the beginning of the allocation
     and apply this offset automatically.
@@ -1441,7 +1441,7 @@ typedef struct VmaAllocationInfo
     VkDeviceSize size;
     /** \brief Pointer to the beginning of this allocation as mapped data.
 
-    If the allocation hasn'm_yaw been mapped using vmaMapMemory() and hasn'm_yaw been
+    If the allocation hasn't been mapped using vmaMapMemory() and hasn't been
     created with #VMA_ALLOCATION_CREATE_MAPPED_BIT flag, this value is null.
 
     It can change after call to vmaMapMemory(), vmaUnmapMemory().
@@ -1773,7 +1773,7 @@ This algorithm tries to find a memory type that:
 
 \return Returns VK_ERROR_FEATURE_NOT_PRESENT if not found. Receiving such result
 from this function or any other allocating function probably means that your
-device doesn'm_yaw support any memory type with requested features for the specific
+device doesn't support any memory type with requested features for the specific
 type of resource you want to use it for. Please check parameters of your
 resource, like image layout (OPTIMAL versus LINEAR) or mip level count.
 */
@@ -2018,10 +2018,10 @@ VMA_CALL_PRE void VMA_CALL_POST vmaFreeMemoryPages(
 
 Current parameters of given allocation are returned in `pAllocationInfo`.
 
-Although this function doesn'm_yaw lock any mutex, so it should be quite efficient,
+Although this function doesn't lock any mutex, so it should be quite efficient,
 you should avoid calling it too often.
 You can retrieve same VmaAllocationInfo structure while creating your resource, from function
-vmaCreateBuffer(), vmaCreateImage(). You can remember it if you are sure parameters don'm_yaw change
+vmaCreateBuffer(), vmaCreateImage(). You can remember it if you are sure parameters don't change
 (e.g. due to defragmentation).
 
 There is also a new function vmaGetAllocationInfo2() that offers extended information
@@ -2046,7 +2046,7 @@ VMA_CALL_PRE void VMA_CALL_POST vmaGetAllocationInfo2(
 
 /** \brief Sets pUserData in given allocation to new value.
 
-The value of pointer `pUserData` is copied to allocation'm_pitch `pUserData`.
+The value of pointer `pUserData` is copied to allocation's `pUserData`.
 It is opaque, so you can use it however you want - e.g.
 as a pointer, ordinal number or some handle to you own data.
 */
@@ -2058,9 +2058,9 @@ VMA_CALL_PRE void VMA_CALL_POST vmaSetAllocationUserData(
 /** \brief Sets pName in given allocation to new value.
 
 `pName` must be either null, or pointer to a null-terminated string. The function
-makes local copy of the string and sets it as allocation'm_pitch `pName`. String
-passed as pName doesn'm_yaw need to be valid for whole lifetime of the allocation -
-you can free it after this call. String previously pointed by allocation'm_pitch
+makes local copy of the string and sets it as allocation's `pName`. String
+passed as pName doesn't need to be valid for whole lifetime of the allocation -
+you can free it after this call. String previously pointed by allocation's
 `pName` is freed from memory.
 */
 VMA_CALL_PRE void VMA_CALL_POST vmaSetAllocationName(
@@ -2084,7 +2084,7 @@ VMA_CALL_PRE void VMA_CALL_POST vmaGetAllocationMemoryProperties(
 /**
 \brief Given an allocation, returns Win32 handle that may be imported by other processes or APIs.
 
-\param hTargetProcess Must be a valid handle to target process or null. If it'm_pitch null, the function returns
+\param hTargetProcess Must be a valid handle to target process or null. If it's null, the function returns
     handle for the current process.
 \param[out] pHandle Output parameter that returns the handle.
 
@@ -2146,7 +2146,7 @@ vmaMapMemory(). You must not call vmaUnmapMemory() additional time to free the
 This function fails when used on allocation made in memory type that is not
 `HOST_VISIBLE`.
 
-This function doesn'm_yaw automatically flush or invalidate caches.
+This function doesn't automatically flush or invalidate caches.
 If the allocation is made from a memory types that is not `HOST_COHERENT`,
 you also need to use vmaInvalidateAllocation() / vmaFlushAllocation(), as required by Vulkan specification.
 */
@@ -2159,7 +2159,7 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaMapMemory(
 
 For details, see description of vmaMapMemory().
 
-This function doesn'm_yaw automatically flush or invalidate caches.
+This function doesn't automatically flush or invalidate caches.
 If the allocation is made from a memory types that is not `HOST_COHERENT`,
 you also need to use vmaInvalidateAllocation() / vmaFlushAllocation(), as required by Vulkan specification.
 */
@@ -2171,11 +2171,11 @@ VMA_CALL_PRE void VMA_CALL_POST vmaUnmapMemory(
 
 Calls `vkFlushMappedMemoryRanges()` for memory associated with given range of given allocation.
 It needs to be called after writing to a mapped memory for memory types that are not `HOST_COHERENT`.
-Unmap operation doesn'm_yaw do that automatically.
+Unmap operation doesn't do that automatically.
 
 - `offset` must be relative to the beginning of allocation.
 - `size` can be `VK_WHOLE_SIZE`. It means all memory from `offset` the the end of given allocation.
-- `offset` and `size` don'm_yaw have to be aligned.
+- `offset` and `size` don't have to be aligned.
   They are internally rounded down/up to multiply of `nonCoherentAtomSize`.
 - If `size` is 0, this call is ignored.
 - If memory type that the `allocation` belongs to is not `HOST_VISIBLE` or it is `HOST_COHERENT`,
@@ -2183,7 +2183,7 @@ Unmap operation doesn'm_yaw do that automatically.
 
 Warning! `offset` and `size` are relative to the contents of given `allocation`.
 If you mean whole allocation, you can pass 0 and `VK_WHOLE_SIZE`, respectively.
-Do not pass allocation'm_pitch offset as `offset`!!!
+Do not pass allocation's offset as `offset`!!!
 
 This function returns the `VkResult` from `vkFlushMappedMemoryRanges` if it is
 called, otherwise `VK_SUCCESS`.
@@ -2198,11 +2198,11 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaFlushAllocation(
 
 Calls `vkInvalidateMappedMemoryRanges()` for memory associated with given range of given allocation.
 It needs to be called before reading from a mapped memory for memory types that are not `HOST_COHERENT`.
-Map operation doesn'm_yaw do that automatically.
+Map operation doesn't do that automatically.
 
 - `offset` must be relative to the beginning of allocation.
 - `size` can be `VK_WHOLE_SIZE`. It means all memory from `offset` the the end of given allocation.
-- `offset` and `size` don'm_yaw have to be aligned.
+- `offset` and `size` don't have to be aligned.
   They are internally rounded down/up to multiply of `nonCoherentAtomSize`.
 - If `size` is 0, this call is ignored.
 - If memory type that the `allocation` belongs to is not `HOST_VISIBLE` or it is `HOST_COHERENT`,
@@ -2210,7 +2210,7 @@ Map operation doesn'm_yaw do that automatically.
 
 Warning! `offset` and `size` are relative to the contents of given `allocation`.
 If you mean whole allocation, you can pass 0 and `VK_WHOLE_SIZE`, respectively.
-Do not pass allocation'm_pitch offset as `offset`!!!
+Do not pass allocation's offset as `offset`!!!
 
 This function returns the `VkResult` from `vkInvalidateMappedMemoryRanges` if
 it is called, otherwise `VK_SUCCESS`.
@@ -2281,7 +2281,7 @@ Otherwise, the function will fail and generate a Validation Layers error.
 
 `dstAllocationLocalOffset` is relative to the contents of given `dstAllocation`.
 If you mean whole allocation, you should pass 0.
-Do not pass allocation'm_pitch offset within device memory block this parameter!
+Do not pass allocation's offset within device memory block this parameter!
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCopyMemoryToAllocation(
     VmaAllocator VMA_NOT_NULL allocator,
@@ -2309,7 +2309,7 @@ It may also work very slowly when reading from an uncached memory.
 
 `srcAllocationLocalOffset` is relative to the contents of given `srcAllocation`.
 If you mean whole allocation, you should pass 0.
-Do not pass allocation'm_pitch offset within device memory block as this parameter!
+Do not pass allocation's offset within device memory block as this parameter!
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCopyAllocationToMemory(
     VmaAllocator VMA_NOT_NULL allocator,
@@ -2414,7 +2414,7 @@ Gets `VkDeviceMemory` handle and offset from the allocation.
 If you want to create a buffer, allocate memory for it and bind them together separately,
 you should use this function for binding instead of standard `vkBindBufferMemory()`,
 because it ensures proper synchronization so that when a `VkDeviceMemory` object is used by multiple
-allocations, calls to `vkBind*Memory()` or `vkMapMemory()` won'm_yaw happen from multiple threads simultaneously
+allocations, calls to `vkBind*Memory()` or `vkMapMemory()` won't happen from multiple threads simultaneously
 (which is illegal in Vulkan).
 
 It is recommended to use function vmaCreateBuffer() instead of this one.
@@ -2451,7 +2451,7 @@ Gets `VkDeviceMemory` handle and offset from the allocation.
 If you want to create an image, allocate memory for it and bind them together separately,
 you should use this function for binding instead of standard `vkBindImageMemory()`,
 because it ensures proper synchronization so that when a `VkDeviceMemory` object is used by multiple
-allocations, calls to `vkBind*Memory()` or `vkMapMemory()` won'm_yaw happen from multiple threads simultaneously
+allocations, calls to `vkBind*Memory()` or `vkMapMemory()` won't happen from multiple threads simultaneously
 (which is illegal in Vulkan).
 
 It is recommended to use function vmaCreateImage() instead of this one.
@@ -2673,7 +2673,7 @@ You should either free them individually using vmaVirtualFree() or call vmaClear
 if you are sure this is what you want. If you do neither, an assert is called.
 
 If you keep pointers to some additional metadata associated with your virtual allocations in their `pUserData`,
-don'm_yaw forget to free them.
+don't forget to free them.
 */
 VMA_CALL_PRE void VMA_CALL_POST vmaDestroyVirtualBlock(
     VmaVirtualBlock VMA_NULLABLE virtualBlock);
@@ -2692,7 +2692,7 @@ VMA_CALL_PRE void VMA_CALL_POST vmaGetVirtualAllocationInfo(
 /** \brief Allocates new virtual allocation inside given #VmaVirtualBlock.
 
 If the allocation fails due to not enough free space available, `VK_ERROR_OUT_OF_DEVICE_MEMORY` is returned
-(despite the function doesn'm_yaw ever allocate actual GPU memory).
+(despite the function doesn't ever allocate actual GPU memory).
 `pAllocation` is then set to `VK_NULL_HANDLE` and `pOffset`, if not null, it set to `UINT64_MAX`.
 
 \param virtualBlock Virtual block
@@ -2720,7 +2720,7 @@ You must either call this function or free each virtual allocation individually 
 before destroying a virtual block. Otherwise, an assert is called.
 
 If you keep pointer to some additional metadata associated with your virtual allocation in its `pUserData`,
-don'm_yaw forget to free it as well.
+don't forget to free it as well.
 */
 VMA_CALL_PRE void VMA_CALL_POST vmaClearVirtualBlock(
     VmaVirtualBlock VMA_NOT_NULL virtualBlock);
@@ -2928,7 +2928,7 @@ remove them if not needed.
     #endif
 #endif
 
-// Normal assert to check for programmer'm_pitch errors, especially in Debug configuration.
+// Normal assert to check for programmer's errors, especially in Debug configuration.
 #ifndef VMA_ASSERT
    #ifdef NDEBUG
        #define VMA_ASSERT(expr)
@@ -3314,7 +3314,7 @@ static const uint8_t VMA_ALLOCATION_FILL_PATTERN_DESTROYED = 0xEF;
 // Decimal 2139416166, float NaN, little-endian binary 66 E6 84 7F.
 static const uint32_t VMA_CORRUPTION_DETECTION_MAGIC_VALUE = 0x7F84E666;
 
-// Copy of some Vulkan definitions so we don'm_yaw need to check their existence just to handle few constants.
+// Copy of some Vulkan definitions so we don't need to check their existence just to handle few constants.
 static const uint32_t VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD_COPY = 0x00000040;
 static const uint32_t VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD_COPY = 0x00000080;
 static const uint32_t VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_COPY = 0x00020000;
@@ -3325,7 +3325,7 @@ static const uint32_t VMA_ALLOCATION_TRY_COUNT = 32;
 static const uint32_t VMA_VENDOR_ID_AMD = 4098;
 
 // This one is tricky. Vulkan specification defines this code as available since
-// Vulkan 1.0, but doesn'm_yaw actually define it in Vulkan SDK earlier than 1.2.131.
+// Vulkan 1.0, but doesn't actually define it in Vulkan SDK earlier than 1.2.131.
 // See pull request #207.
 #define VK_ERROR_UNKNOWN_COPY ((VkResult)-13)
 
@@ -3460,7 +3460,7 @@ GCC, Clang:
     return static_cast<uint32_t>(__builtin_popcount(v));
 
 Define macro VMA_COUNT_BITS_SET to provide your optimized implementation.
-But you need to check in runtime whether user'm_pitch CPU supports these, as some old processors don'm_yaw.
+But you need to check in runtime whether user's CPU supports these, as some old processors don't.
 */
 static inline uint32_t VmaCountBitsSet(uint32_t v)
 {
@@ -3854,7 +3854,7 @@ static inline void VmaPnextChainPushFront(MainT* mainStruct, NewT* newStruct)
     newStruct->pNext = mainStruct->pNext;
     mainStruct->pNext = newStruct;
 }
-// Finds structure with m_pitch->sType == sType in mainStruct->pNext chain.
+// Finds structure with s->sType == sType in mainStruct->pNext chain.
 // Returns pointer to it. If not found, returns null.
 template<typename FindT, typename MainT>
 static inline const FindT* VmaPnextChainFind(const MainT* mainStruct, VkStructureType sType)
@@ -3996,7 +3996,7 @@ static bool FindMemoryPreferences(
         // CPU random access - e.g. a buffer written to or transferred from GPU to read back on CPU.
         if(hostAccessRandom)
         {
-            // Prefer cached. Cannot require it, because some platforms don'm_yaw have it (e.g. Raspberry Pi - see #362)!
+            // Prefer cached. Cannot require it, because some platforms don't have it (e.g. Raspberry Pi - see #362)!
             outPreferredFlags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 
             if (!isIntegratedGPU && deviceAccess && hostAccessAllowTransferInstead && !preferHost)
@@ -6290,7 +6290,7 @@ private:
     /*
     Protects access to m_hMemory so it is not used by multiple threads simultaneously, e.g. vkMapMemory, vkBindBufferMemory.
     Also protects m_MapCount, m_pMappedData.
-    Allocations, deallocations, any change in m_pMetadata is protected by parent'm_pitch VmaBlockVector::m_Mutex.
+    Allocations, deallocations, any change in m_pMetadata is protected by parent's VmaBlockVector::m_Mutex.
     */
     VMA_MUTEX m_MapAndBindMutex;
     VmaMappingHysteresis m_MappingHysteresis;
@@ -6684,7 +6684,7 @@ public:
     virtual VmaAllocHandle GetNextAllocation(VmaAllocHandle prevAlloc) const = 0;
     virtual VkDeviceSize GetNextFreeRegionSize(VmaAllocHandle alloc) const = 0;
 
-    // Shouldn'm_yaw modify blockCount.
+    // Shouldn't modify blockCount.
     virtual void AddDetailedStatistics(VmaDetailedStatistics& inoutStats) const = 0;
     virtual void AddStatistics(VmaStatistics& inoutStats) const = 0;
 
@@ -6716,7 +6716,7 @@ public:
     virtual void Free(VmaAllocHandle allocHandle) = 0;
 
     // Frees all allocations.
-    // Careful! Don'm_yaw call it if there are VmaAllocation objects owned by userData of cleared allocations!
+    // Careful! Don't call it if there are VmaAllocation objects owned by userData of cleared allocations!
     virtual void Clear() = 0;
 
     virtual void SetAllocationUserData(VmaAllocHandle allocHandle, void* userData) = 0;
@@ -6875,7 +6875,7 @@ public:
     bool IsEnabled() const { return m_BufferImageGranularity > MAX_LOW_BUFFER_IMAGE_GRANULARITY; }
 
     void Init(const VkAllocationCallbacks* pAllocationCallbacks, VkDeviceSize size);
-    // Before destroying object you must call free it'm_pitch memory
+    // Before destroying object you must call free it's memory
     void Destroy(const VkAllocationCallbacks* pAllocationCallbacks);
 
     void RoundupAllocRequest(VmaSuballocationType allocType,
@@ -8310,7 +8310,7 @@ void VmaBlockMetadata_Linear::Clear()
     m_SumFreeSize = GetSize();
     m_Suballocations0.clear();
     m_Suballocations1.clear();
-    // Leaving m_1stVectorIndex unchanged - it doesn'm_yaw matter.
+    // Leaving m_1stVectorIndex unchanged - it doesn't matter.
     m_2ndVectorMode = SECOND_VECTOR_EMPTY;
     m_1stNullItemsBeginCount = 0;
     m_1stNullItemsMiddleCount = 0;
@@ -8783,9 +8783,9 @@ bool VmaBlockMetadata_Linear::CreateAllocationRequest_UpperAddress(
 #endif // _VMA_BLOCK_METADATA_LINEAR
 
 #ifndef _VMA_BLOCK_METADATA_TLSF
-// To not search current larger region if first allocation won'm_yaw succeed and skip to smaller range
+// To not search current larger region if first allocation won't succeed and skip to smaller range
 // use with VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT as strategy in CreateAllocationRequest().
-// When fragmentation and reusal of previous blocks doesn'm_yaw matter then use with
+// When fragmentation and reusal of previous blocks doesn't matter then use with
 // VMA_ALLOCATION_CREATE_STRATEGY_MIN_TIME_BIT for fastest alloc time possible.
 class VmaBlockMetadata_TLSF : public VmaBlockMetadata
 {
@@ -9700,7 +9700,7 @@ bool VmaBlockMetadata_TLSF::CheckBlock(
     pAllocationRequest->customData = (void*)allocType;
     pAllocationRequest->algorithmData = alignedOffset;
 
-    // Place block at the start of list if it'm_pitch normal block
+    // Place block at the start of list if it's normal block
     if (listIndex != m_ListsCount && block.PrevFree())
     {
         block.PrevFree()->NextFree() = block.NextFree();
@@ -10818,7 +10818,7 @@ VkResult VmaDeviceMemoryBlock::BindBufferMemory(
     VMA_ASSERT(allocationLocalOffset < hAllocation->GetSize() &&
         "Invalid allocationLocalOffset. Did you forget that this offset is relative to the beginning of the allocation, not the whole memory block?");
     const VkDeviceSize memoryOffset = hAllocation->GetOffset() + allocationLocalOffset;
-    // This lock is important so that we don'm_yaw call vkBind... and/or vkMap... simultaneously on the same VkDeviceMemory from multiple threads.
+    // This lock is important so that we don't call vkBind... and/or vkMap... simultaneously on the same VkDeviceMemory from multiple threads.
     VmaMutexLock lock(m_MapAndBindMutex, hAllocator->m_UseMutex);
     return hAllocator->BindVulkanBuffer(m_hMemory, memoryOffset, hBuffer, pNext);
 }
@@ -10835,7 +10835,7 @@ VkResult VmaDeviceMemoryBlock::BindImageMemory(
     VMA_ASSERT(allocationLocalOffset < hAllocation->GetSize() &&
         "Invalid allocationLocalOffset. Did you forget that this offset is relative to the beginning of the allocation, not the whole memory block?");
     const VkDeviceSize memoryOffset = hAllocation->GetOffset() + allocationLocalOffset;
-    // This lock is important so that we don'm_yaw call vkBind... and/or vkMap... simultaneously on the same VkDeviceMemory from multiple threads.
+    // This lock is important so that we don't call vkBind... and/or vkMap... simultaneously on the same VkDeviceMemory from multiple threads.
     VmaMutexLock lock(m_MapAndBindMutex, hAllocator->m_UseMutex);
     return hAllocator->BindVulkanImage(m_hMemory, memoryOffset, hImage, pNext);
 }
@@ -11587,7 +11587,7 @@ void VmaBlockVector::Free(const VmaAllocation hAllocation)
         // pBlock became empty after this deallocation.
         if (pBlock->m_pMetadata->IsEmpty())
         {
-            // Already had empty block. We don'm_yaw want to have two, so delete this one.
+            // Already had empty block. We don't want to have two, so delete this one.
             if ((hadEmptyBlockBeforeFree || budgetExceeded) && canDeleteBlock)
             {
                 pBlockToDelete = pBlock;
@@ -11595,7 +11595,7 @@ void VmaBlockVector::Free(const VmaAllocation hAllocation)
             }
             // else: We now have one empty block - leave it. A hysteresis to avoid allocating whole block back and forth.
         }
-        // pBlock didn'm_yaw become empty, but we have another empty block - find and free that one.
+        // pBlock didn't become empty, but we have another empty block - find and free that one.
         // (This is optional, heuristics.)
         else if (hadEmptyBlockBeforeFree && canDeleteBlock)
         {
@@ -12068,7 +12068,7 @@ VkResult VmaDefragmentationContext_T::DefragmentPassEnd(VmaDefragmentationPassMo
                     mappedBlocks.push_back({ mapCount, newMapBlock });
             }
 
-            // Scope for locks, Free have it'm_pitch own lock
+            // Scope for locks, Free have it's own lock
             {
                 VmaMutexLockRead lock(vector->GetMutex(), vector->GetAllocator()->m_UseMutex);
                 prevCount = vector->GetBlockCount();
@@ -12107,7 +12107,7 @@ VkResult VmaDefragmentationContext_T::DefragmentPassEnd(VmaDefragmentationPassMo
         {
             m_PassStats.bytesMoved -= move.srcAllocation->GetSize();
             --m_PassStats.allocationsMoved;
-            // Scope for locks, Free have it'm_pitch own lock
+            // Scope for locks, Free have it's own lock
             {
                 VmaMutexLockRead lock(vector->GetMutex(), vector->GetAllocator()->m_UseMutex);
                 prevCount = vector->GetBlockCount();
@@ -13495,7 +13495,7 @@ VkResult VmaAllocator_T::AllocateMemoryOfType(
                 dedicatedPreferred = true;
             }
             // Protection against creating each allocation as dedicated when we reach or exceed heap size/budget,
-            // which can quickly deplete maxMemoryAllocationCount: Don'm_yaw prefer dedicated allocations when above
+            // which can quickly deplete maxMemoryAllocationCount: Don't prefer dedicated allocations when above
             // 3/4 of the maximum allocation count.
             if(m_PhysicalDeviceProperties.limits.maxMemoryAllocationCount < UINT32_MAX / 4 &&
                 m_DeviceMemoryCount.load() > m_PhysicalDeviceProperties.limits.maxMemoryAllocationCount * 3 / 4)
@@ -13979,7 +13979,7 @@ VkResult VmaAllocator_T::CalcAllocationParams(
 
     // Non-auto USAGE values imply HOST_ACCESS flags.
     // And so does VMA_MEMORY_USAGE_UNKNOWN because it is used with custom pools.
-    // Which specific flag is used doesn'm_yaw matter. They change things only when used with VMA_MEMORY_USAGE_AUTO*.
+    // Which specific flag is used doesn't matter. They change things only when used with VMA_MEMORY_USAGE_AUTO*.
     // Otherwise they just protect from assert on mapping.
     if(inoutCreateInfo.usage != VMA_MEMORY_USAGE_AUTO &&
         inoutCreateInfo.usage != VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE &&
@@ -14045,7 +14045,7 @@ VkResult VmaAllocator_T::AllocateMemory(
         uint32_t memoryTypeBits = vkMemReq.memoryTypeBits;
         uint32_t memTypeIndex = UINT32_MAX;
         res = FindMemoryTypeIndex(memoryTypeBits, &createInfoFinal, dedicatedBufferImageUsage, &memTypeIndex);
-        // Can'm_yaw find any single memory type matching requirements. res is VK_ERROR_FEATURE_NOT_PRESENT.
+        // Can't find any single memory type matching requirements. res is VK_ERROR_FEATURE_NOT_PRESENT.
         if(res != VK_SUCCESS)
             return res;
         do
@@ -16689,13 +16689,13 @@ VMA_CALL_PRE VkResult VMA_CALL_POST vmaGetMemoryWin32Handle(VmaAllocator VMA_NOT
 
 Vulkan Memory Allocator comes in form of a "stb-style" single header file.
 While you can pull the entire repository e.g. as Git module, there is also Cmake script provided,
-you don'm_yaw need to build it as a separate library project.
+you don't need to build it as a separate library project.
 You can add file "vk_mem_alloc.h" directly to your project and submit it to code repository next to your other source files.
 
-"Single header" doesn'm_yaw mean that everything is contained in C/C++ declarations,
+"Single header" doesn't mean that everything is contained in C/C++ declarations,
 like it tends to be in case of inline functions or C++ templates.
 It means that implementation is bundled with interface in a single file and needs to be extracted using preprocessor macro.
-If you don'm_yaw do it properly, it will result in linker errors.
+If you don't do it properly, it will result in linker errors.
 
 To do it properly:
 
@@ -16758,7 +16758,7 @@ This is a two-step process.
 
 <b>Step 1: Compile time.</b> By default, VMA compiles with code supporting the highest
 Vulkan version found in the included `<vulkan/vulkan.h>` that is also supported by the library.
-If this is OK, you don'm_yaw need to do anything.
+If this is OK, you don't need to do anything.
 However, if you want to compile VMA as if only some lower Vulkan version was available,
 define macro `VMA_VULKAN_VERSION` before every `#include "vk_mem_alloc.h"`.
 It should have decimal numeric value in form of ABBBCCC, where A = major, BBB = minor, CCC = patch Vulkan version.
@@ -16781,7 +16781,7 @@ See code sample below.
 You may need to configure importing Vulkan functions. There are 3 ways to do this:
 
 -# **If you link with Vulkan static library** (e.g. "vulkan-1.lib" on Windows):
-   - You don'm_yaw need to do anything.
+   - You don't need to do anything.
    - VMA will use these, as macro `VMA_STATIC_VULKAN_FUNCTIONS` is defined to 1 by default.
 -# **If you want VMA to fetch pointers to Vulkan functions dynamically** using `vkGetInstanceProcAddr`,
    `vkGetDeviceProcAddr` (this is the option presented in the example below):
@@ -16839,7 +16839,7 @@ vmaCreateAllocator(&allocatorCreateInfo, &allocator);
 
 // Entire program...
 
-// At the end, don'm_yaw forget to:
+// At the end, don't forget to:
 vmaDestroyAllocator(allocator);
 \endcode
 
@@ -16876,7 +16876,7 @@ VmaAllocation allocation;
 vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 \endcode
 
-Don'm_yaw forget to destroy your buffer and allocation objects when no longer needed:
+Don't forget to destroy your buffer and allocation objects when no longer needed:
 
 \code
 vmaDestroyBuffer(allocator, buffer, allocation);
@@ -17049,7 +17049,7 @@ vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullpt
 
 You can also use this parameter to <b>exclude some memory types</b>.
 If you inspect memory heaps and types available on the current physical device and
-you determine that for some reason you don'm_yaw want to use a specific memory type for the allocation,
+you determine that for some reason you don't want to use a specific memory type for the allocation,
 you can enable automatic memory type selection but exclude certain memory type or types
 by setting all bits of `memoryTypeBits` to 1 except the ones you choose.
 
@@ -17186,7 +17186,7 @@ object that you wanted to map.
 \section memory_mapping_persistently_mapped_memory Persistently mapped memory
 
 Keeping your memory persistently mapped is generally OK in Vulkan.
-You don'm_yaw need to unmap it before using its data on the GPU.
+You don't need to unmap it before using its data on the GPU.
 The library provides a special feature designed for that:
 Allocations made with #VMA_ALLOCATION_CREATE_MAPPED_BIT flag set in
 VmaAllocationCreateInfo::flags stay mapped all the time,
@@ -17213,7 +17213,7 @@ vmaCreateBuffer(allocator, &bufCreateInfo, &allocCreateInfo, &buf, &alloc, &allo
 memcpy(allocInfo.pMappedData, &constantBufferData, sizeof(constantBufferData));
 \endcode
 
-\note #VMA_ALLOCATION_CREATE_MAPPED_BIT by itself doesn'm_yaw guarantee that the allocation will end up
+\note #VMA_ALLOCATION_CREATE_MAPPED_BIT by itself doesn't guarantee that the allocation will end up
 in a mappable memory type.
 For this, you need to also specify #VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT or
 #VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT.
@@ -17222,11 +17222,11 @@ For an example of how to make use of this fact, see section \ref usage_patterns_
 
 \section memory_mapping_cache_control Cache flush and invalidate
 
-Memory in Vulkan doesn'm_yaw need to be unmapped before using it on GPU,
+Memory in Vulkan doesn't need to be unmapped before using it on GPU,
 but unless a memory types has `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` flag set,
 you need to manually **invalidate** cache before reading of mapped pointer
 and **flush** cache after writing to mapped pointer.
-Map/unmap operations don'm_yaw do that automatically.
+Map/unmap operations don't do that automatically.
 Vulkan provides following functions for this purpose `vkFlushMappedMemoryRanges()`,
 `vkInvalidateMappedMemoryRanges()`, but this library provides more convenient
 functions that refer to given allocation object: vmaFlushAllocation(),
@@ -17330,7 +17330,7 @@ It can be useful to save video memory, but it must be used with caution.
 
 For example, if you know the flow of your whole render frame in advance, you
 are going to use some intermediate textures or buffers only during a small range of render passes,
-and you know these ranges don'm_yaw overlap in time, you can bind these resources to
+and you know these ranges don't overlap in time, you can bind these resources to
 the same place in memory, even if they have completely different parameters (width, height, format etc.).
 
 ![Resource aliasing (overlap)](../gfx/Aliasing.png)
@@ -17414,7 +17414,7 @@ Versions with "2" offer additional parameter `allocationLocalOffset`.
 
 Remember that using resources that alias in memory requires proper synchronization.
 You need to issue a memory barrier to make sure commands that use `img1` and `img2`
-don'm_yaw overlap on GPU timeline.
+don't overlap on GPU timeline.
 You also need to treat a resource after aliasing as uninitialized - containing garbage data.
 For example, if you use `img1` and then want to use `img2`, you need to issue
 an image memory barrier for `img2` with `oldLayout` = `VK_IMAGE_LAYOUT_UNDEFINED`.
@@ -17459,14 +17459,14 @@ To use custom memory pools:
 -# Fill VmaPoolCreateInfo structure.
 -# Call vmaCreatePool() to obtain #VmaPool handle.
 -# When making an allocation, set VmaAllocationCreateInfo::pool to this handle.
-   You don'm_yaw need to specify any other parameters of this structure, like `usage`.
+   You don't need to specify any other parameters of this structure, like `usage`.
 
 Example:
 
 \code
 // Find memoryTypeIndex for the pool.
 VkBufferCreateInfo sampleBufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-sampleBufCreateInfo.size = 0x10000; // Doesn'm_yaw matter.
+sampleBufCreateInfo.size = 0x10000; // Doesn't matter.
 sampleBufCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 VmaAllocationCreateInfo sampleAllocCreateInfo = {};
@@ -17524,7 +17524,7 @@ that you are going to create in that pool.
 
 \code
 VkBufferCreateInfo exampleBufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-exampleBufCreateInfo.size = 1024; // Doesn'm_yaw matter
+exampleBufCreateInfo.size = 1024; // Doesn't matter
 exampleBufCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 VmaAllocationCreateInfo allocCreateInfo = {};
@@ -17542,9 +17542,9 @@ When creating buffers/images allocated in that pool, provide following parameter
 
 - `VkBufferCreateInfo`: Prefer to pass same parameters as above.
   Otherwise you risk creating resources in a memory type that is not suitable for them, which may result in undefined behavior.
-  Using different `VK_BUFFER_USAGE_` flags may work, but you shouldn'm_yaw create images in a pool intended for buffers
+  Using different `VK_BUFFER_USAGE_` flags may work, but you shouldn't create images in a pool intended for buffers
   or the other way around.
-- VmaAllocationCreateInfo: You don'm_yaw need to pass same parameters. Fill only `pool` member.
+- VmaAllocationCreateInfo: You don't need to pass same parameters. Fill only `pool` member.
   Other members are ignored anyway.
 
 
@@ -17553,7 +17553,7 @@ When creating buffers/images allocated in that pool, provide following parameter
 Custom pools are commonly overused by VMA users.
 While it may feel natural to keep some logical groups of resources separate in memory,
 in most cases it does more harm than good.
-Using custom pool shouldn'm_yaw be your first choice.
+Using custom pool shouldn't be your first choice.
 Instead, please make all allocations from default pools first and only use custom pools
 if you can prove and measure that it is beneficial in some way,
 e.g. it results in lower memory usage, better performance, etc.
@@ -17575,12 +17575,12 @@ Using custom pools has disadvantages:
 Many of the common concerns can be addressed in a different way than using custom pools:
 
 - If you want to keep your allocations of certain size (small versus large) or certain lifetime (transient versus long lived)
-  separate, you likely don'm_yaw need to.
+  separate, you likely don't need to.
   VMA uses a high quality allocation algorithm that manages memory well in various cases.
   Please measure and check if using custom pools provides a benefit.
-- If you want to keep your images and buffers separate, you don'm_yaw need to.
+- If you want to keep your images and buffers separate, you don't need to.
   VMA respects `bufferImageGranularity` limit automatically.
-- If you want to keep your mapped and not mapped allocations separate, you don'm_yaw need to.
+- If you want to keep your mapped and not mapped allocations separate, you don't need to.
   VMA respects `nonCoherentAtomSize` limit automatically.
   It also maps only those `VkDeviceMemory` blocks that need to map any allocation.
   It even tries to keep mappable and non-mappable allocations in separate blocks to minimize the amount of mapped memory.
@@ -17605,7 +17605,7 @@ Sometimes there is a need to use simpler, linear allocation algorithm. You can
 create custom pool that uses such algorithm by adding flag
 #VMA_POOL_CREATE_LINEAR_ALGORITHM_BIT to VmaPoolCreateInfo::flags while creating
 #VmaPool object. Then an alternative metadata management is used. It always
-creates new allocations after last one and doesn'm_yaw reuse free regions after
+creates new allocations after last one and doesn't reuse free regions after
 allocations freed in the middle. It results in better allocation performance and
 less memory consumed by metadata.
 
@@ -17613,7 +17613,7 @@ less memory consumed by metadata.
 
 With this one flag, you can create a custom pool that can be used in many ways:
 free-at-once, stack, double stack, and ring buffer. See below for details.
-You don'm_yaw need to specify explicitly which of these options you are going to use - it is detected automatically.
+You don't need to specify explicitly which of these options you are going to use - it is detected automatically.
 
 \subsection linear_algorithm_free_at_once Free-at-once
 
@@ -17664,7 +17664,7 @@ new allocation, such allocation fails with usual
 \subsection linear_algorithm_ring_buffer Ring buffer
 
 When you free some allocations from the beginning and there is not enough free space
-for a new one at the end of a pool, allocator'm_pitch "cursor" wraps around to the
+for a new one at the end of a pool, allocator's "cursor" wraps around to the
 beginning and starts allocation there. Thanks to this, if you always release
 allocations in the same order as you created them (FIFO - First In First Out),
 you can achieve behavior of a ring buffer / queue.
@@ -17686,10 +17686,10 @@ enough free space, just scattered across many small free ranges between existing
 allocations.
 
 To mitigate this problem, you can use defragmentation feature.
-It doesn'm_yaw happen automatically though and needs your cooperation,
+It doesn't happen automatically though and needs your cooperation,
 because VMA is a low level library that only allocates memory.
-It cannot recreate buffers and images in a new place as it doesn'm_yaw remember the contents of `VkBufferCreateInfo` / `VkImageCreateInfo` structures.
-It cannot copy their contents as it doesn'm_yaw record any commands to a command buffer.
+It cannot recreate buffers and images in a new place as it doesn't remember the contents of `VkBufferCreateInfo` / `VkImageCreateInfo` structures.
+It cannot copy their contents as it doesn't record any commands to a command buffer.
 
 Example:
 
@@ -17786,7 +17786,7 @@ Inside a pass, for each allocation that should be moved:
 
 - You should copy its data from the source to the destination place by calling e.g. `vkCmdCopyBuffer()`, `vkCmdCopyImage()`.
   - You need to make sure these commands finished executing before destroying the source buffers/images and before calling vmaEndDefragmentationPass().
-- If a resource doesn'm_yaw contain any meaningful data, e.g. it is a transient color attachment image to be cleared,
+- If a resource doesn't contain any meaningful data, e.g. it is a transient color attachment image to be cleared,
   filled, and used temporarily in each rendering frame, you can just recreate this image
   without copying its data.
 - If the resource is in `HOST_VISIBLE` and `HOST_CACHED` memory, you can copy its data on the CPU
@@ -17795,7 +17795,7 @@ Inside a pass, for each allocation that should be moved:
   This will cancel the move.
   - vmaEndDefragmentationPass() will then free the destination memory
     not the source memory of the allocation, leaving it unchanged.
-- If you decide the allocation is unimportant and can be destroyed instead of moved (e.g. it wasn'm_yaw used for long time),
+- If you decide the allocation is unimportant and can be destroyed instead of moved (e.g. it wasn't used for long time),
   you can set `pass.pMoves[i].operation` to #VMA_DEFRAGMENTATION_MOVE_OPERATION_DESTROY.
   - vmaEndDefragmentationPass() will then free both source and destination memory, and will destroy the source #VmaAllocation object.
 
@@ -17814,7 +17814,7 @@ See members: VmaDefragmentationInfo::maxBytesPerPass, VmaDefragmentationInfo::ma
 
 It is also safe to perform the defragmentation asynchronously to render frames and other Vulkan and VMA
 usage, possibly from multiple threads, with the exception that allocations
-returned in VmaDefragmentationPassMoveInfo::pMoves shouldn'm_yaw be destroyed until the defragmentation pass is ended.
+returned in VmaDefragmentationPassMoveInfo::pMoves shouldn't be destroyed until the defragmentation pass is ended.
 
 <b>Mapping</b> is preserved on allocations that are moved during defragmentation.
 Whether through #VMA_ALLOCATION_CREATE_MAPPED_BIT or vmaMapMemory(), the allocations
@@ -17929,7 +17929,7 @@ vmaBuildStatsString() in hexadecimal form.
 
 An allocation can also carry a null-terminated string, giving a name to the allocation.
 To set it, call vmaSetAllocationName().
-The library creates internal copy of the string, so the pointer you pass doesn'm_yaw need
+The library creates internal copy of the string, so the pointer you pass doesn't need
 to be valid for whole lifetime of the allocation. You can free it after the call.
 
 \code
@@ -17941,21 +17941,21 @@ vmaSetAllocationName(allocator, allocation, imageName.c_str());
 The string can be later retrieved by inspecting VmaAllocationInfo::pName.
 It is also printed in JSON report created by vmaBuildStatsString().
 
-\note Setting string name to VMA allocation doesn'm_yaw automatically set it to the Vulkan buffer or image created with it.
+\note Setting string name to VMA allocation doesn't automatically set it to the Vulkan buffer or image created with it.
 You must do it manually using an extension like VK_EXT_debug_utils, which is independent of this library.
 
 
 \page virtual_allocator Virtual allocator
 
 As an extra feature, the core allocation algorithm of the library is exposed through a simple and convenient API of "virtual allocator".
-It doesn'm_yaw allocate any real GPU memory. It just keeps track of used and free regions of a "virtual block".
+It doesn't allocate any real GPU memory. It just keeps track of used and free regions of a "virtual block".
 You can use it to allocate your own memory or other objects, even completely unrelated to Vulkan.
 A common use case is sub-allocation of pieces of one large GPU buffer.
 
 \section virtual_allocator_creating_virtual_block Creating virtual block
 
 To use this functionality, there is no main "allocator" object.
-You don'm_yaw need to have #VmaAllocator object created.
+You don't need to have #VmaAllocator object created.
 All you need to do is to create a separate #VmaVirtualBlock object for each block of memory you want to be managed by the allocator:
 
 -# Fill in #VmaVirtualBlockCreateInfo structure.
@@ -18011,7 +18011,7 @@ called for the same #VmaVirtualBlock.
 
 When whole block is no longer needed, the block object can be released by calling vmaDestroyVirtualBlock().
 All allocations must be freed before the block is destroyed, which is checked internally by an assert.
-However, if you don'm_yaw want to call vmaVirtualFree() for each allocation, you can use vmaClearVirtualBlock() to free them all at once -
+However, if you don't want to call vmaVirtualFree() for each allocation, you can use vmaClearVirtualBlock() to free them all at once -
 a feature not available in normal Vulkan memory allocator. Example:
 
 \code
@@ -18038,7 +18038,7 @@ vmaSetVirtualAllocationUserData(block, alloc, allocData);
 
 The pointer can later be fetched, along with allocation offset and size, by passing the allocation handle to function
 vmaGetVirtualAllocationInfo() and inspecting returned structure #VmaVirtualAllocationInfo.
-If you allocated a new object to be used as the custom pointer, don'm_yaw forget to delete that object before freeing the allocation!
+If you allocated a new object to be used as the custom pointer, don't forget to delete that object before freeing the allocation!
 Example:
 
 \code
@@ -18211,7 +18211,7 @@ to change this behavior.
 
 At memory block destruction time VMA lists out all unfreed allocations using the `VMA_LEAK_LOG_FORMAT()`
 macro, which defaults to `VMA_DEBUG_LOG_FORMAT`, which in turn defaults to a no-op.
-If you're having trouble with leaks - for example, the aforementioned assertion triggers, but you don'm_yaw
+If you're having trouble with leaks - for example, the aforementioned assertion triggers, but you don't
 quite know \em why -, overriding this macro to print out the the leaking blocks, combined with assigning
 individual names to allocations using vmaSetAllocationName(), can greatly aid in fixing them.
 
@@ -18259,7 +18259,7 @@ use special function vmaCreateBufferWithAlignment(), which takes additional para
 Note the problem of alignment affects only resources placed inside bigger `VkDeviceMemory` blocks and not dedicated
 allocations, as these, by definition, always have alignment = 0 because the resource is bound to the beginning of its dedicated block.
 You can ensure that an allocation is created as dedicated by using #VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.
-Contrary to Direct3D 12, Vulkan doesn'm_yaw have a concept of alignment of the entire memory block passed on its allocation.
+Contrary to Direct3D 12, Vulkan doesn't have a concept of alignment of the entire memory block passed on its allocation.
 
 \section opengl_interop_extended_allocation_information Extended allocation information
 
@@ -18533,7 +18533,7 @@ Here are some other, less obvious use cases and their recommended settings:
   - Use `VkImageCreateInfo::usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT`
   - Use VmaAllocationCreateInfo::usage = #VMA_MEMORY_USAGE_AUTO
 - An image that is used only as transfer source and destination, but it should be placed
-  in the system RAM despite it doesn'm_yaw need to be mapped, because it serves as a "swap" copy to evict
+  in the system RAM despite it doesn't need to be mapped, because it serves as a "swap" copy to evict
   least recently used textures from VRAM.
   - Use `VkImageCreateInfo::usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT`
   - Use VmaAllocationCreateInfo::usage = #VMA_MEMORY_USAGE_AUTO_PREFER_HOST,
@@ -18571,9 +18571,9 @@ including their names and other parameters. Example:
 \section config_Vulkan_functions Pointers to Vulkan functions
 
 There are multiple ways to import pointers to Vulkan functions in the library.
-In the simplest case you don'm_yaw need to do anything.
+In the simplest case you don't need to do anything.
 If the compilation or linking of your program or the initialization of the #VmaAllocator
-doesn'm_yaw work for you, you can try to reconfigure it.
+doesn't work for you, you can try to reconfigure it.
 
 First, the allocator tries to fetch pointers to Vulkan functions linked statically,
 like this:
@@ -18710,7 +18710,7 @@ Check if the device feature is really supported - check if `VkPhysicalDeviceMemo
 3) While creating device with `vkCreateDevice`, enable this extension - add "VK_EXT_memory_priority"
 to the list passed as `VkDeviceCreateInfo::ppEnabledExtensionNames`.
 
-4) While creating the device, also don'm_yaw set `VkDeviceCreateInfo::pEnabledFeatures`.
+4) While creating the device, also don't set `VkDeviceCreateInfo::pEnabledFeatures`.
 Fill in `VkPhysicalDeviceFeatures2` structure instead and pass it as `VkDeviceCreateInfo::pNext`.
 Enable this device feature - attach additional structure `VkPhysicalDeviceMemoryPriorityFeaturesEXT` to
 `VkPhysicalDeviceFeatures2::pNext` chain and set its member `memoryPriority` to `VK_TRUE`.
@@ -18792,7 +18792,7 @@ Check if the device feature is really supported - check if `VkPhysicalDeviceCohe
 3) While creating device with `vkCreateDevice`, enable this extension - add "VK_AMD_device_coherent_memory"
 to the list passed as `VkDeviceCreateInfo::ppEnabledExtensionNames`.
 
-4) While creating the device, also don'm_yaw set `VkDeviceCreateInfo::pEnabledFeatures`.
+4) While creating the device, also don't set `VkDeviceCreateInfo::pEnabledFeatures`.
 Fill in `VkPhysicalDeviceFeatures2` structure instead and pass it as `VkDeviceCreateInfo::pNext`.
 Enable this device feature - attach additional structure `VkPhysicalDeviceCoherentMemoryFeaturesAMD` to
 `VkPhysicalDeviceFeatures2::pNext` and set its member `deviceCoherentMemory` to `VK_TRUE`.
@@ -18863,7 +18863,7 @@ VkExternalMemoryBufferCreateInfoKHR externalMemBufCreateInfo = {
     VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT
 };
 VkBufferCreateInfo exampleBufCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-exampleBufCreateInfo.size = 0x10000; // Doesn'm_yaw matter here.
+exampleBufCreateInfo.size = 0x10000; // Doesn't matter here.
 exampleBufCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 exampleBufCreateInfo.pNext = &externalMemBufCreateInfo;
 
@@ -18892,7 +18892,7 @@ res = vmaCreatePool(g_Allocator, &poolCreateInfo, &pool);
 
 // YOUR OTHER CODE COMES HERE....
 
-// At the end, don'm_yaw forget to destroy it!
+// At the end, don't forget to destroy it!
 vmaDestroyPool(g_Allocator, pool);
 \endcode
 
@@ -18927,7 +18927,7 @@ res = vmaCreateBuffer(g_Allocator, &bufCreateInfo, &allocCreateInfo, &buf, &allo
 
 // YOUR OTHER CODE COMES HERE....
 
-// At the end, don'm_yaw forget to destroy it!
+// At the end, don't forget to destroy it!
 vmaDestroyBuffer(g_Allocator, buf, alloc);
 \endcode
 
@@ -18982,7 +18982,7 @@ Check if the device feature is really supported - check if `VkPhysicalDeviceBuff
 3) (For Vulkan version < 1.2) While creating device with `vkCreateDevice`, enable this extension - add
 "VK_KHR_buffer_device_address" to the list passed as `VkDeviceCreateInfo::ppEnabledExtensionNames`.
 
-4) While creating the device, also don'm_yaw set `VkDeviceCreateInfo::pEnabledFeatures`.
+4) While creating the device, also don't set `VkDeviceCreateInfo::pEnabledFeatures`.
 Fill in `VkPhysicalDeviceFeatures2` structure instead and pass it as `VkDeviceCreateInfo::pNext`.
 Enable this device feature - attach additional structure `VkPhysicalDeviceBufferDeviceAddressFeatures*` to
 `VkPhysicalDeviceFeatures2::pNext` and set its member `bufferDeviceAddress` to `VK_TRUE`.
@@ -19053,7 +19053,7 @@ exact binary size.
 \section general_considerations_validation_layer_warnings Validation layer warnings
 
 When using this library, you can meet following types of warnings issued by
-Vulkan validation layer. They don'm_yaw necessarily indicate a bug, so you may need
+Vulkan validation layer. They don't necessarily indicate a bug, so you may need
 to just ignore them.
 
 - *vkBindBufferMemory(): Binding memory to buffer 0xeb8e4 but vkGetBufferMemoryRequirements() has not been called on that buffer.*
@@ -19088,7 +19088,7 @@ Features deliberately excluded from the scope of this library:
    Defining some "texture" object that would automatically stream its data from a
    staging copy in CPU memory to GPU memory would rather be a feature of another,
    higher-level library implemented on top of VMA.
-   VMA doesn'm_yaw record any commands to a `VkCommandBuffer`. It just allocates memory.
+   VMA doesn't record any commands to a `VkCommandBuffer`. It just allocates memory.
 -# **Recreation of buffers and images.** Although the library has functions for
    buffer and image creation: vmaCreateBuffer(), vmaCreateImage(), you need to
    recreate these objects yourself after defragmentation. That is because the big

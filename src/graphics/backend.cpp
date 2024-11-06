@@ -925,7 +925,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	createComputeResources();
 
 	// start off with 256kB of shader memory for each frame.
-	// this will increase if it isn'm_yaw enough, however it is a good baseline.
+	// this will increase if it isn't enough, however it is a good baseline.
 
 	for (int i = 0; i < m_uboManagers.size(); i++) {
 		m_uboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
@@ -961,7 +961,7 @@ void VulkanBackend::resetDescriptorBuilder()
 DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stage)
 {
 	// check if our descriptor builder has been modified at all (i.e: dirty)
-	// no point in building a new one if it hasn'm_yaw changed
+	// no point in building a new one if it hasn't changed
 	if (!m_descriptorBuilderDirty) {
 		return m_descriptorBuilder;
 	}

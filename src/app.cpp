@@ -86,7 +86,7 @@ struct MyInstancedData
 */
 
 // note: yes, currently everything is just dumped into the app
-//       this won'm_yaw be the case after i abstract it a little, like splitting stuff off into particle systems
+//       this won't be the case after i abstract it a little, like splitting stuff off into particle systems
 //       and custom "passes"
 // 
 //       or maybe i'll just leave it spaghettified. idk.
