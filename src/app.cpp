@@ -63,12 +63,6 @@ App::~App()
 	delete g_systemBackend;
 }
 
-struct Particle
-{
-	glm::vec2 position;
-	glm::vec2 velocity;
-};
-
 struct MyVertex
 {
 	glm::vec3 pos;
@@ -78,6 +72,12 @@ struct MyVertex
 };
 
 /*
+struct Particle
+{
+	glm::vec2 position;
+	glm::vec2 velocity;
+};
+
 struct MyInstancedData
 {
 	glm::vec3 positionOffset;
@@ -89,47 +89,91 @@ void App::run()
 	ShaderProgram* vertexShaderInst		= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* vertexShader			= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	ShaderProgram* fragmentShader		= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* fragmentTexShader	= g_shaderManager->create("../../res/shaders/raster/fragment_texture.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	ShaderProgram* computeProgram = g_shaderManager->create("../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
-	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8_UNORM });
-	TextureSampler* sampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
+	Texture* stoneTexture = g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
+	TextureSampler* stoneSampler = g_textureManager->getSampler("asdf", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	Vector<MyVertex> meshVertices = {
-		{ { -1.0f, -1.0f, -5.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ {  1.0f, -1.0f, -5.0f }, { 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ { -1.0f,  1.0f, -5.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ {  1.0f,  1.0f, -5.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }
-	};
+	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_R8G8B8A8_UNORM/*, VK_FORMAT_R8G8_UNORM*/ });
+	TextureSampler* targetSampler = g_textureManager->getSampler("asdf", TextureSampler::Style());
 
 	Vector<MyVertex> quadVertices = {
-		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
-	};
-
-	Vector<MyVertex> quad2Vertices = {
-		{ { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-		{ { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
 	};
 
 	Vector<uint16_t> quadIndices = {
 		0, 1, 2,
-		1, 3, 2
+		0, 2, 3
 	};
-
-	SubMesh mesh;
-	mesh.build(meshVertices.data(), meshVertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
 
 	SubMesh quad;
 	quad.build(quadVertices.data(), quadVertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
 
-	SubMesh quad2;
-	quad2.build(quad2Vertices.data(), quad2Vertices.size(), sizeof(MyVertex), quadIndices.data(), quadIndices.size());
+	Vector<MyVertex> blockVertices = {
+
+		// front face
+		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+		{ {  1.0f,  1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+		{ {  1.0f, -1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+
+		// right face
+		{ {  1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+		{ {  1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+		{ {  1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+		{ {  1.0f, -1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+		
+		// back face
+		{ {  1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+		{ { -1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+		{ { -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+		{ {  1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+		
+		// left face
+		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+		{ { -1.0f,  1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+		{ { -1.0f, -1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+
+		// top face
+		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+		{ {  1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+		{ {  1.0f,  1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+
+		// bottom face
+		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
+		{ {  1.0f, -1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
+		{ {  1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
+		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
+	};
+
+	Vector<uint16_t> blockIndices = {
+		0, 1, 2,
+		0, 2, 3,
+
+		4, 5, 6,
+		4, 6, 7,
+
+		8, 9, 10,
+		8, 10, 11,
+
+		12, 13, 14,
+		12, 14, 15,
+
+		16, 17, 18,
+		16, 18, 19,
+
+		20, 21, 22,
+		20, 22, 23
+	};
+
+	SubMesh block;
+	block.build(blockVertices.data(), blockVertices.size(), sizeof(MyVertex), blockIndices.data(), blockIndices.size());
 
 	VertexDescriptor vertexFormat;
 	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
@@ -138,6 +182,7 @@ void App::run()
 	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
 	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
+	/*
 	VertexDescriptor instancedVertexFormat;
 
 	// regular data
@@ -153,8 +198,6 @@ void App::run()
 	instancedVertexFormat.addBinding(1, sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE);
 //	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
 
-	RenderPass pass;
-
 	int nParticles = 8;
 	uint64_t particleBufferSize = sizeof(Particle) * nParticles;
 	Particle* particleData = new Particle[nParticles];
@@ -165,7 +208,6 @@ void App::run()
 		particleData[i].velocity = { 0.0f, i * 0.05f };
 	}
 
-	/*
 	MyInstancedData instanceRawData[8];
 
 	for (int i = 0; i < 8; i++)
@@ -179,9 +221,6 @@ void App::run()
 	instanceDataStage->writeDataToMe(instanceRawData, sizeof(MyInstancedData) * 8, 0);
 	instanceDataStage->writeToBuffer(instanceData, sizeof(MyInstancedData) * 8, 0, 0);
 	delete instanceDataStage;
-	*/
-
-	ShaderParameters pushConstants;
 
 	ShaderParameters parameters;
 	parameters.set("deltaTime", 1.0f);
@@ -189,12 +228,26 @@ void App::run()
 	ShaderParameters parameters2;
 	parameters2.set("otherData", 1.0f);
 
+	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
+	*/
+
+	ShaderParameters pushConstants;
+	pushConstants.set("time", 0.0f);
+
+	ShaderParameters ubo;
+	ubo.set("projMatrix", glm::identity<glm::mat4>());
+	ubo.set("viewMatrix", glm::identity<glm::mat4>());
+	ubo.set("modelMatrix", glm::identity<glm::mat4>());
+
+	double elapsedTime = 0.0;
 	uint64_t lastPerformanceCounter = g_systemBackend->getPerformanceCounter();
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
 	const float aspect = static_cast<float>(m_config.width) / static_cast<float>(m_config.height);
 
-	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
+	RenderPass pass;
+
+	g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 	while (m_running)
 	{
@@ -212,6 +265,7 @@ void App::run()
 		lastPerformanceCounter = currentPerformanceCounter;
 
 		accumulator += deltaTime;
+		elapsedTime += deltaTime;
 
 		while (accumulator >= targetDeltaTime)
 		{
@@ -222,6 +276,8 @@ void App::run()
 
 		// ---
 
+		/*
+		
 		g_vulkanBackend->beginCompute();
 
 		g_vulkanBackend->bindShader(computeProgram);
@@ -292,7 +348,7 @@ void App::run()
 		g_vulkanBackend->bindSsbo(0, 2);
 
 		g_vulkanBackend->setTexture(0, target->getAttachment(0));
-		g_vulkanBackend->setSampler(0, sampler);
+		g_vulkanBackend->setSampler(0, targetSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentTexShader);
@@ -312,12 +368,83 @@ void App::run()
 
 		g_vulkanBackend->resetPushConstants();
 
+		*/
+
+		// ---
+
+		g_vulkanBackend->setDepthTest(true);
+
+		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
+
+		g_vulkanBackend->setRenderTarget(target);
+		g_vulkanBackend->beginRender();
+
+		pushConstants.set("time", (float)elapsedTime);
+		g_vulkanBackend->setPushConstants(pushConstants);
+
+		glm::mat4 model = glm::identity<glm::mat4>();
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		ubo.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
+		ubo.set("viewMatrix", glm::identity<glm::mat4>());
+		ubo.set("modelMatrix", model);
+
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+
+		g_vulkanBackend->setTexture(0, stoneTexture);
+		g_vulkanBackend->setSampler(0, stoneSampler);
+
+		g_vulkanBackend->bindShader(vertexShader);
+		g_vulkanBackend->bindShader(fragmentShader);
+
+		pass.mesh = &block;
+		g_vulkanBackend->render(pass.build());
+
+		g_vulkanBackend->endRender();
+
+		// ---
+
+		g_vulkanBackend->beginRender();
+
+		g_vulkanBackend->setDepthTest(false);
+
+		g_vulkanBackend->setRenderTarget(m_backbuffer);
+		g_vulkanBackend->beginRender();
+
+		pushConstants.set("time", (float)elapsedTime);
+		g_vulkanBackend->setPushConstants(pushConstants);
+
+		ubo.set("projMatrix", glm::identity<glm::mat4>());
+		ubo.set("viewMatrix", glm::identity<glm::mat4>());
+		ubo.set("modelMatrix", glm::identity<glm::mat4>());
+
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+
+		g_vulkanBackend->setTexture(0, target->getAttachment(0));
+		g_vulkanBackend->setSampler(0, targetSampler);
+
+		g_vulkanBackend->bindShader(vertexShader);
+		g_vulkanBackend->bindShader(fragmentShader);
+
+		pass.mesh = &quad;
+		g_vulkanBackend->render(pass.build());
+
+		g_vulkanBackend->endRender();
+
+		// ---
+
+		g_vulkanBackend->setTexture(0, nullptr);
+		g_vulkanBackend->setSampler(0, nullptr);
+
+		g_vulkanBackend->resetPushConstants();
+
 		// ---
 
 		g_vulkanBackend->swapBuffers();
 	}
 
-	delete[] particleData;
+//	delete[] particleData;
 }
 
 void App::exit()

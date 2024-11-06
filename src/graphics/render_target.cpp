@@ -7,7 +7,6 @@ using namespace llt;
 
 RenderTarget::RenderTarget()
 	: GenericRenderTarget()
-	, m_renderPassBuilder()
 	, m_depth()
 {
 	m_type = RENDER_TARGET_TYPE_TEXTURE;
@@ -15,7 +14,6 @@ RenderTarget::RenderTarget()
 
 RenderTarget::RenderTarget(uint32_t width, uint32_t height)
 	: GenericRenderTarget(width, height)
-	, m_renderPassBuilder()
 	, m_depth()
 {
 	m_type = RENDER_TARGET_TYPE_TEXTURE;
@@ -114,11 +112,6 @@ void RenderTarget::createDepthResources(int idx)
 	m_depth.setParent(this);
 
 	m_renderPassBuilder.createDepthAttachment(idx, VK_SAMPLE_COUNT_1_BIT);
-}
-
-RenderPassBuilder* RenderTarget::getRenderPassBuilder()
-{
-	return &m_renderPassBuilder;
 }
 
 void RenderTarget::setClearColour(int idx, const Colour& colour)

@@ -50,7 +50,7 @@ TextureSampler* TextureMgr::getSampler(const String& name, const TextureSampler:
 	return sampler;
 }
 
-Texture* TextureMgr::createFromImage(const Image& image)
+Texture* TextureMgr::createFromImage(const String& name,const Image& image)
 {
 	Texture* texture = new Texture();
 
@@ -72,10 +72,13 @@ Texture* TextureMgr::createFromImage(const Image& image)
 	stage->writeToTexture(texture, image.getSize());
 	delete stage;
 
+	// cache it
+	m_textureCache.insert(Pair(name, texture));
+
 	return texture;
 }
 
-Texture* TextureMgr::createFromData(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
+Texture* TextureMgr::createFromData(const String& name,uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
 {
 	Texture* texture = new Texture();
 
@@ -105,10 +108,13 @@ Texture* TextureMgr::createFromData(uint32_t width, uint32_t height, VkFormat fo
 		texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
+	// cache it
+	m_textureCache.insert(Pair(name, texture));
+
 	return texture;
 }
 
-Texture* TextureMgr::createAttachment(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
+Texture* TextureMgr::createAttachment(const String& name,uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
 {
 	Texture* texture = new Texture();
 
@@ -120,10 +126,13 @@ Texture* TextureMgr::createAttachment(uint32_t width, uint32_t height, VkFormat 
 	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
+	// cache it
+	m_textureCache.insert(Pair(name, texture));
+
 	return texture;
 }
 
-Texture* TextureMgr::createCubeMap(VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
+Texture* TextureMgr::createCubeMap(const String& name,VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
 {
 	Texture* texture = new Texture();
 
@@ -149,6 +158,9 @@ Texture* TextureMgr::createCubeMap(VkFormat format, const Image& right, const Im
 	}
 
 	delete stage;
+
+	// cache it
+	m_textureCache.insert(Pair(name, texture));
 
 	return texture;
 }

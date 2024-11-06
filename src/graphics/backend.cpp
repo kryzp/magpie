@@ -644,6 +644,8 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	// this is essentially a long list of configurations vulkan requires us to give
 	// it to fully specify how a graphics pipeline should behave
 
+	LLT_ASSERT(m_currentVertexDescriptor, "[VULKAN|DEBUG] Vertex descriptor must not be null!");
+	
 	const auto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
 	const auto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
 
@@ -659,24 +661,12 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
 
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = m_viewport.width;
-	viewport.height = m_viewport.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = { (uint32_t)m_viewport.width, (uint32_t)m_viewport.height };
-
 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
 	viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportStateCreateInfo.viewportCount = 1;
-	viewportStateCreateInfo.pViewports = &viewport;
+	viewportStateCreateInfo.pViewports = &m_viewport;
 	viewportStateCreateInfo.scissorCount = 1;
-	viewportStateCreateInfo.pScissors = &scissor;
+	viewportStateCreateInfo.pScissors = &m_scissor;
 
 	VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {};
 	rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -1487,6 +1477,10 @@ void VulkanBackend::render(const RenderOp& op)
 	const auto& vertexBuffer = op.vertexData.buffer->getBuffer();
 	const auto& indexBuffer  = op.indexData.buffer->getBuffer();
 
+	VkPipeline pipeline = getGraphicsPipeline();
+	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
+	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_ALL_GRAPHICS);
+
 	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
 
 	if (op.instanceData.buffer)
@@ -1504,10 +1498,6 @@ void VulkanBackend::render(const RenderOp& op)
 	}
 
 	vkCmdBindIndexBuffer(currentBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-	VkPipeline pipeline = getGraphicsPipeline();
-	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
-	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 	if (m_pushConstants.size() > 0)
 	{
@@ -1646,10 +1636,12 @@ void VulkanBackend::setScissor(const RectI& rect)
 
 void VulkanBackend::resetViewport()
 {
+	// we have to flip the viewport to ensure y+ is up!
+
 	m_viewport.x = 0.0f;
-	m_viewport.y = 0.0f;
+	m_viewport.y = (float)m_currentRenderPassBuilder->getHeight();
 	m_viewport.width = (float)m_currentRenderPassBuilder->getWidth();
-	m_viewport.height = (float)m_currentRenderPassBuilder->getHeight();
+	m_viewport.height = -(float)m_currentRenderPassBuilder->getHeight();
 	m_viewport.minDepth = 0.0f;
 	m_viewport.maxDepth = 1.0f;
 }

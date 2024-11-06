@@ -6,12 +6,14 @@ using namespace llt;
 
 TextureSampler::TextureSampler()
 	: dirty(true)
+	, style()
 	, m_sampler(VK_NULL_HANDLE)
 {
 }
 
 TextureSampler::TextureSampler(const TextureSampler::Style& style)
 	: dirty(true)
+	, style(style)
 	, m_sampler(VK_NULL_HANDLE)
 {
 }
@@ -31,7 +33,7 @@ void TextureSampler::cleanUp()
 	m_sampler = VK_NULL_HANDLE;
 }
 
-VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties properties, int getMipLevels)
+VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties properties, int mipLevels)
 {
 	// check if we actually need to create a new sampler or if our current one suffices
 	if (!dirty) {
@@ -42,29 +44,32 @@ VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties prope
 
 	cleanUp();
 
-	VkSamplerCreateInfo create_info = {};
-	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	create_info.minFilter = style.filter;
-	create_info.magFilter = style.filter;
-	create_info.addressModeU = style.wrapX;
-	create_info.addressModeV = style.wrapY;
-	create_info.addressModeW = style.wrapZ;
-	create_info.anisotropyEnable = VK_TRUE;
-	create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-	create_info.borderColor = style.borderColour;
-	create_info.unnormalizedCoordinates = VK_FALSE;
-	create_info.compareEnable = VK_FALSE;
-	create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-	create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	create_info.mipLodBias = 0.0f;
-	create_info.minLod = 0.0f;
-	create_info.maxLod = (float)getMipLevels;
+	VkSamplerCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	createInfo.minFilter = style.filter;
+	createInfo.magFilter = style.filter;
+	createInfo.addressModeU = style.wrapX;
+	createInfo.addressModeV = style.wrapY;
+	createInfo.addressModeW = style.wrapZ;
+	createInfo.anisotropyEnable = VK_TRUE;
+	createInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+	createInfo.borderColor = style.borderColour;
+	createInfo.unnormalizedCoordinates = VK_FALSE;
+	createInfo.compareEnable = VK_FALSE;
+	createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	createInfo.mipLodBias = 0.0f;
+	createInfo.minLod = 0.0f;
+	createInfo.maxLod = (float)mipLevels;
 
-	if (VkResult result = vkCreateSampler(device, &create_info, nullptr, &m_sampler); result != VK_SUCCESS) {
+	if (VkResult result = vkCreateSampler(device, &createInfo, nullptr, &m_sampler); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:SAMPLER|DEBUG] Failed to create texture sampler: %d", result);
 	}
 
 	return m_sampler;
 }
 
-VkSampler TextureSampler::sampler() const { return m_sampler; }
+VkSampler TextureSampler::sampler() const
+{
+	return m_sampler;
+}

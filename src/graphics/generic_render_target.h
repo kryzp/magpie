@@ -31,7 +31,7 @@ namespace llt
 
 		virtual void cleanUp() = 0;
 
-		virtual RenderPassBuilder* getRenderPassBuilder() = 0;
+		virtual RenderPassBuilder* getRenderPassBuilder();
 
 		virtual const Texture* getAttachment(int idx) const = 0;
 		virtual const Texture* getDepthAttachment() const = 0;
@@ -49,6 +49,8 @@ namespace llt
 		uint32_t m_width;
 		uint32_t m_height;
 		RenderTargetType m_type;
+
+		RenderPassBuilder m_renderPassBuilder;
 	};
 }
 

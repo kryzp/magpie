@@ -9,7 +9,6 @@ using namespace llt;
 
 Backbuffer::Backbuffer()
 	: GenericRenderTarget()
-	, m_renderPassBuilder()
     , m_swapChain(VK_NULL_HANDLE)
     , m_swapChainImages()
     , m_swapChainImageViews()
@@ -132,11 +131,6 @@ void Backbuffer::cleanUpSwapChain()
 
 	// finally destroy the actual swapchain
     vkDestroySwapchainKHR(g_vulkanBackend->device, m_swapChain, nullptr);
-}
-
-RenderPassBuilder* Backbuffer::getRenderPassBuilder()
-{
-	return &m_renderPassBuilder;
 }
 
 void Backbuffer::acquireNextImage()

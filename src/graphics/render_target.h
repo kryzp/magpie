@@ -17,8 +17,6 @@ namespace llt
 
 		void cleanUp() override;
 
-		RenderPassBuilder* getRenderPassBuilder() override;
-
 		void setClearColour(int idx, const Colour& colour) override;
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 
@@ -31,8 +29,6 @@ namespace llt
 
 	private:
 		void createDepthResources(int idx);
-
-		RenderPassBuilder m_renderPassBuilder;
 
 		Array<Texture*, mgc::MAX_RENDER_TARGET_ATTACHMENTS> m_attachments;
 		Texture m_depth;

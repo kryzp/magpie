@@ -44,11 +44,6 @@ namespace llt
 		void cleanUpTextures();
 
 		/*
-		* Returns the render pass builder for the backbuffer
-		*/
-		RenderPassBuilder* getRenderPassBuilder() override;
-
-		/*
 		* Sets the clear for the colour and depth stencil
 		*/
 		void setClearColour(int idx, const Colour& colour) override;
@@ -120,11 +115,6 @@ namespace llt
 		* For instance, when the window is re-sized the swapchain has to be re-built.
 		*/
 		void rebuildSwapChain();
-
-		uint32_t m_width;
-		uint32_t m_height;
-
-		RenderPassBuilder m_renderPassBuilder;
 
 		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;
 		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;

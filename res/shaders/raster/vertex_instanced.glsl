@@ -1,9 +1,14 @@
 #version 450
 
 layout (push_constant) uniform PushConstants {
-    mat4 projMatrix;
-    mat4 modelMatrix;
+	float deltaTime;
 } pushConstants;
+
+layout (binding = 0) uniform ParameterUBO {
+    mat4 projMatrix;
+    mat4 viewMatrix;
+    mat4 modelMatrix;
+} ubo;
 
 // regular vertex data
 layout (location = 0) in vec3 a_position;
@@ -19,7 +24,7 @@ layout (location = 1) out vec2 o_texCoord;
 
 void main()
 {
-	gl_Position = pushConstants.projMatrix * pushConstants.modelMatrix * vec4(a_position + vec3(instance_positionOffset, 0.0), 1.0);
+	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(a_position + vec3(instance_positionOffset, 0.0), 1.0);
 
 	o_colour = vec3(a_colour.xy, instance_positionOffset.x * 0.2);
 	o_texCoord = a_uv;

@@ -6,6 +6,7 @@ GenericRenderTarget::GenericRenderTarget()
 	: m_type(RENDER_TARGET_TYPE_NONE)
 	, m_width(0)
 	, m_height(0)
+	, m_renderPassBuilder()
 {
 }
 
@@ -13,11 +14,17 @@ GenericRenderTarget::GenericRenderTarget(uint32_t width, uint32_t height)
 	: m_type(RENDER_TARGET_TYPE_NONE)
 	, m_width(width)
 	, m_height(height)
+	, m_renderPassBuilder()
 {
 }
 
 GenericRenderTarget::~GenericRenderTarget()
 {
+}
+
+RenderPassBuilder* GenericRenderTarget::getRenderPassBuilder()
+{
+	return &m_renderPassBuilder;
 }
 
 uint32_t GenericRenderTarget::getWidth() const
