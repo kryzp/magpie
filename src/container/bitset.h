@@ -7,7 +7,7 @@ namespace llt
 {
 	/**
 	 * A wrapper around a memory efficient array of booleans that
-	 * can be toggled is_on and is_off.
+	 * can be toggled isOn and isOff.
 	 */
 	template <uint64_t Size>
 	class Bitset

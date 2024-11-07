@@ -63,7 +63,7 @@ namespace llt
 		};
 
 		HashMap();
-		HashMap(int initial_capacity);
+		HashMap(int initialCapacity);
 
 		HashMap(const HashMap& other);
 		HashMap(HashMap&& other) noexcept;

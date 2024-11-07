@@ -18,3 +18,6 @@ stuff im interested in:
 - particles (compute shaders!!)
 - fluid sims
 - refraction and stuff
+
+other todo that isnt really important:
+- use multiple compute queues
