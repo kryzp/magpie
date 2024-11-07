@@ -82,9 +82,9 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 {
 	Texture* texture = new Texture();
 
-	texture->initSize(width, height);
-	texture->initMetadata(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
-	texture->initMipLevels(4);
+	texture->setSize(width, height);
+	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
+	texture->setMipLevels(4);
 
 	texture->createInternalResources();
     
@@ -118,8 +118,8 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 {
 	Texture* texture = new Texture();
 
-	texture->initSize(width, height);
-	texture->initMetadata(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
+	texture->setSize(width, height);
+	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
 
 	texture->createInternalResources();
 
@@ -136,9 +136,9 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 {
 	Texture* texture = new Texture();
 
-	texture->initSize(right.getWidth(), right.getHeight());
-	texture->initMetadata(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
-	texture->initMipLevels(4);
+	texture->setSize(right.getWidth(), right.getHeight());
+	texture->setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
+	texture->setMipLevels(4);
 
 	texture->setMipmapped(true);
 

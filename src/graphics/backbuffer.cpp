@@ -43,10 +43,10 @@ void Backbuffer::createSurface()
 void Backbuffer::createColourResources()
 {
 	// build the colour resource
-	m_colour.initSize(m_width, m_height);
-	m_colour.initMetadata(g_vulkanBackend->swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_colour.initSampleCount(g_vulkanBackend->msaaSamples);
-	m_colour.initTransient(true);
+	m_colour.setSize(m_width, m_height);
+	m_colour.setProperties(g_vulkanBackend->swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+	m_colour.setSampleCount(g_vulkanBackend->msaaSamples);
+	m_colour.setTransient(true);
 	m_colour.createInternalResources();
 
 	// add the colour resources to our render pass builder
@@ -75,9 +75,9 @@ void Backbuffer::createDepthResources()
     VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
 	// create the depth component
-	m_depth.initSize(m_width, m_height);
-	m_depth.initMetadata(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.initSampleCount(g_vulkanBackend->msaaSamples);
+	m_depth.setSize(m_width, m_height);
+	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+	m_depth.setSampleCount(g_vulkanBackend->msaaSamples);
 	
 	m_depth.createInternalResources();
 

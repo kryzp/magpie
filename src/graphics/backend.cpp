@@ -1176,11 +1176,20 @@ void VulkanBackend::setTexture(uint32_t idx, const Texture* texture)
 	}
 
 	VkImageView vkImageView = texture->getImageView();
-	m_imageInfos[idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	if (m_imageInfos[idx].imageView != vkImageView)
 	{
 		m_imageInfos[idx].imageView = vkImageView;
+
+		if (texture->isDepthTexture())
+		{
+			m_imageInfos[idx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		}
+		else
+		{
+			m_imageInfos[idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+
 		m_descriptorBuilderDirty = true;
 	}
 }

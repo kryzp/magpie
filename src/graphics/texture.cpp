@@ -28,6 +28,7 @@ Texture::Texture()
 	, m_height(0)
 	, m_depth(1)
 	, m_mipmapped(false)
+	, m_isDepthTexture(false)
 	, m_uav(false)
 {
 }
@@ -64,39 +65,49 @@ void Texture::cleanUp()
 
 void Texture::fromImage(const Image& image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples)
 {
-	initSize(image.getWidth(), image.getHeight());
-	initMetadata(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, type);
-	initMipLevels(mipLevels);
-	initSampleCount(numSamples);
-	initTransient(false);
+	setSize(image.getWidth(), image.getHeight());
+	setProperties(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, type);
+	setMipLevels(mipLevels);
+	setSampleCount(numSamples);
+	setTransient(false);
 }
 
-void Texture::initSize(uint32_t width, uint32_t height)
+void Texture::setSize(uint32_t width, uint32_t height)
 {
 	m_width = width;
 	m_height = height;
 }
 
-void Texture::initMetadata(VkFormat format, VkImageTiling tiling, VkImageViewType type)
+void Texture::setProperties(VkFormat format, VkImageTiling tiling, VkImageViewType type)
 {
 	m_format = format;
 	m_tiling = tiling;
 	m_type = type;
 }
 
-void Texture::initMipLevels(uint32_t getMipLevels)
+void Texture::setMipLevels(uint32_t mipLevels)
 {
-	m_mipmapCount = getMipLevels;
+	m_mipmapCount = mipLevels;
 }
 
-void Texture::initSampleCount(VkSampleCountFlagBits getNumSamples)
+void Texture::setSampleCount(VkSampleCountFlagBits numSamples)
 {
-	m_numSamples = getNumSamples;
+	m_numSamples = numSamples;
 }
 
-void Texture::initTransient(bool isTransient)
+void Texture::setTransient(bool isTransient)
 {
 	m_transient = isTransient;
+}
+
+void Texture::makeDepthTexture()
+{
+	m_isDepthTexture = true;
+}
+
+bool Texture::isDepthTexture() const
+{
+	return m_isDepthTexture;
 }
 
 void Texture::createInternalResources()
@@ -264,20 +275,20 @@ void Texture::generateMipmaps() const
 			// go through all faces and blit them
 			for (int face = 0; face < getFaceCount(); face++)
 			{
-				int src_mip_width  = (int)m_width  >> (i - 1);
-				int src_mip_height = (int)m_height >> (i - 1);
-				int dst_mip_width  = (int)m_width  >> (i - 0);
-				int dst_mip_height = (int)m_height >> (i - 0);
+				int srcMipWidth  = (int)m_width  >> (i - 1);
+				int srcMipHeight = (int)m_height >> (i - 1);
+				int dstMipWidth  = (int)m_width  >> (i - 0);
+				int dstMipHeight = (int)m_height >> (i - 0);
 
 				VkImageBlit blit = {};
 				blit.srcOffsets[0] = { 0, 0, 0 };
-				blit.srcOffsets[1] = { src_mip_width, src_mip_height, 1 };
+				blit.srcOffsets[1] = { srcMipWidth, srcMipHeight, 1 };
 				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				blit.srcSubresource.mipLevel = i - 1;
 				blit.srcSubresource.baseArrayLayer = face;
 				blit.srcSubresource.layerCount = 1;
 				blit.dstOffsets[0] = { 0, 0, 0 };
-				blit.dstOffsets[1] = { dst_mip_width, dst_mip_height, 1 };
+				blit.dstOffsets[1] = { dstMipWidth, dstMipHeight, 1 };
 				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				blit.dstSubresource.mipLevel = i;
 				blit.dstSubresource.baseArrayLayer = face;

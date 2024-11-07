@@ -290,6 +290,8 @@ void App::run()
 	ShaderParameters pushConstants;
 	pushConstants.set("time", 0.0f);
 
+	glm::mat4 model = glm::identity<glm::mat4>();
+
 	ShaderParameters ubo;
 	ubo.set("projMatrix", glm::identity<glm::mat4>());
 	ubo.set("viewMatrix", glm::identity<glm::mat4>());
@@ -457,22 +459,33 @@ void App::run()
 		g_vulkanBackend->setDepthWrite(true);
 		g_vulkanBackend->setDepthTest(true);
 
-		glm::mat4 model = glm::identity<glm::mat4>();
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -5.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
-
 		ubo.set("viewMatrix", camera.getView());
-		ubo.set("modelMatrix", model);
-
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
 		g_vulkanBackend->setTexture(0, stoneTexture);
 		g_vulkanBackend->setSampler(0, stoneSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentShader);
+
+		model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0.0f, 0.0f, -5.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
+		ubo.set("modelMatrix", model);
+
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+
+		pass.mesh = &block;
+		g_vulkanBackend->render(pass.build());
+
+		model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5.0f, 0.0f, -5.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		ubo.set("modelMatrix", model);
+
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
@@ -499,6 +512,7 @@ void App::run()
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
 		g_vulkanBackend->setTexture(0, target->getAttachment(0));
+//		g_vulkanBackend->setTexture(0, target->getDepthAttachment());
 		g_vulkanBackend->setSampler(0, targetSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);

@@ -56,17 +56,11 @@ void RenderPassBuilder::createDepthAttachment(int idx, VkSampleCountFlagBits sam
 	m_attachmentDescriptions[idx].format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 	m_attachmentDescriptions[idx].samples = samples;
 	m_attachmentDescriptions[idx].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	m_attachmentDescriptions[idx].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	m_attachmentDescriptions[idx].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	m_attachmentDescriptions[idx].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	m_attachmentDescriptions[idx].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // todo: implement stencil buffer support!
 	m_attachmentDescriptions[idx].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	m_attachmentDescriptions[idx].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-	if (m_colourAttachmentCount == 0) { // assume we want to read the depth stencil buffer instead since we are a dedicated depth buffer
-		m_attachmentDescriptions[idx].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		m_attachmentDescriptions[idx].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	} else {
-		m_attachmentDescriptions[idx].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	}
+	m_attachmentDescriptions[idx].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
 	m_depthAttachmentRef.attachment = idx;
 	m_depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;

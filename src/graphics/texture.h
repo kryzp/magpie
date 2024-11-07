@@ -39,11 +39,14 @@ namespace llt
 
 		void fromImage(const Image& image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples);
 
-		void initSize(uint32_t width, uint32_t height);
-		void initMetadata(VkFormat format, VkImageTiling tiling, VkImageViewType type);
-		void initMipLevels(uint32_t mipLevels);
-		void initSampleCount(VkSampleCountFlagBits numSamples);
-		void initTransient(bool isTransient);
+		void setSize(uint32_t width, uint32_t height);
+		void setProperties(VkFormat format, VkImageTiling tiling, VkImageViewType type);
+		void setMipLevels(uint32_t mipLevels);
+		void setSampleCount(VkSampleCountFlagBits numSamples);
+		void setTransient(bool isTransient);
+
+		void makeDepthTexture();
+		bool isDepthTexture() const;
 
 		void createInternalResources();
 
@@ -100,6 +103,7 @@ namespace llt
 
 		uint32_t m_depth;
 		bool m_mipmapped;
+		bool m_isDepthTexture;
 
 		bool m_uav;
 	};

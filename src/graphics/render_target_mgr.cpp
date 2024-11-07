@@ -27,8 +27,8 @@ RenderTarget* RenderTargetMgr::createTarget(uint32_t width, uint32_t height, con
 	{
 		Texture* texture = new Texture();
 
-		texture->initSize(width, height);
-		texture->initMetadata(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+		texture->setSize(width, height);
+		texture->setProperties(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 
 		texture->createInternalResources();
 

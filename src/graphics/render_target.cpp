@@ -97,9 +97,10 @@ void RenderTarget::createDepthResources(int idx)
 {
 	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
-	m_depth.initSize(m_width, m_height);
-	m_depth.initMetadata(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.initSampleCount(VK_SAMPLE_COUNT_1_BIT);
+	m_depth.setSize(m_width, m_height);
+	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+	m_depth.setSampleCount(VK_SAMPLE_COUNT_1_BIT);
+	m_depth.makeDepthTexture();
 
 	m_depth.createInternalResources();
 

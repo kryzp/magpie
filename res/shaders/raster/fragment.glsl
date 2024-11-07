@@ -10,7 +10,7 @@ layout (set = 0, binding = 1) uniform sampler2D u_texture;
 
 void main()
 {
-	vec3 col = texture(u_texture, o_texCoord).rgb;
+	vec3 col = texture(u_texture, o_texCoord).rrr;
 
 	col *= o_colour;
 
