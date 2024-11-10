@@ -1,11 +1,11 @@
 #include "timer.h"
-#include "../system_backend.h"
+#include "../platform.h"
 
 using namespace llt;
 
 Timer::Timer()
 	: m_startTicks(0)
-	, m_started(g_systemBackend->getTicks())
+	, m_started(g_platform->getPerformanceCounter())
 	, m_pausedTicks(0)
 	, m_paused(false)
 {
@@ -15,7 +15,8 @@ void Timer::start()
 {
 	m_started = true;
 	m_paused = false;
-	m_startTicks = g_systemBackend->getTicks();
+
+	m_startTicks = g_platform->getPerformanceCounter();
 	m_pausedTicks = 0;
 }
 
@@ -23,6 +24,7 @@ void Timer::stop()
 {
 	m_started = false;
 	m_paused = false;
+
 	m_startTicks = 0;
 	m_pausedTicks = 0;
 }
@@ -34,7 +36,8 @@ void Timer::pause()
 	}
 
 	m_paused = true;
-	m_pausedTicks = g_systemBackend->getTicks() - m_startTicks;
+	m_pausedTicks = g_platform->getPerformanceCounter() - m_startTicks;
+
 	m_startTicks = 0;
 }
 
@@ -45,22 +48,23 @@ void Timer::resume()
 	}
 
 	m_paused = false;
-	m_startTicks = g_systemBackend->getTicks() - m_pausedTicks;
+	m_startTicks = g_platform->getPerformanceCounter() - m_pausedTicks;
+
 	m_pausedTicks = 0;
 }
 
 double Timer::reset()
 {
-	uint64_t mil = getMilliseconds();
+	double sec = elapsed();
 
 	if (m_started) {
 		start();
 	}
 
-	return (double)mil;
+	return sec;
 }
 
-double Timer::getMilliseconds() const
+double Timer::elapsed() const
 {
 	if (m_started)
 	{
@@ -68,18 +72,13 @@ double Timer::getMilliseconds() const
 			return m_pausedTicks;
 		}
 
-		return g_systemBackend->getTicks() - m_startTicks;
+		return static_cast<double>(g_platform->getPerformanceCounter() - m_startTicks) / static_cast<double>(g_platform->getPerformanceFrequency());
 	}
 
-	return 0;
+	return 0.0;
 }
 
-double Timer::getSeconds() const
-{
-	return getMilliseconds() / 1000.0;
-}
-
-bool Timer::started() const
+bool Timer::isStarted() const
 {
 	return m_started;
 }

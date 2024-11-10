@@ -1,6 +1,6 @@
 #include "file_stream.h"
 
-#include "../system_backend.h"
+#include "../platform.h"
 
 using namespace llt;
 
@@ -22,7 +22,7 @@ FileStream& FileStream::open(const String& filename, const char* mode)
 
 FileStream& FileStream::open(const char* filename, const char* mode)
 {
-	p_stream = g_systemBackend->streamFromFile(filename, mode);
+	p_stream = g_platform->streamFromFile(filename, mode);
 	return *this;
 }
 

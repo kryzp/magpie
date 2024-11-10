@@ -1,5 +1,5 @@
 #include "memory_stream.h"
-#include "../system_backend.h"
+#include "../platform.h"
 
 using namespace llt;
 
@@ -15,7 +15,7 @@ MemoryStream::MemoryStream(void* memory, uint64_t length)
 
 MemoryStream& MemoryStream::open(void* memory, uint64_t length)
 {
-	p_stream = g_systemBackend->streamFromMemory(memory, length);
+	p_stream = g_platform->streamFromMemory(memory, length);
 	return *this;
 }
 
@@ -33,6 +33,6 @@ ConstMemoryStream::ConstMemoryStream(const void* memory, uint64_t length)
 
 ConstMemoryStream& ConstMemoryStream::open(const void* memory, uint64_t length)
 {
-	p_stream = g_systemBackend->streamFromConstMemory(memory, length);
+	p_stream = g_platform->streamFromConstMemory(memory, length);
 	return *this;
 }

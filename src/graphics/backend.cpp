@@ -3,7 +3,7 @@
 #include "texture.h"
 #include "backbuffer.h"
 
-#include "../system_backend.h"
+#include "../platform.h"
 
 #include "../math/calc.h"
 
@@ -131,7 +131,7 @@ static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerC
 static Vector<const char*> getInstanceExtensions()
 {
 	uint32_t extCount = 0;
-	const char* const* names = g_systemBackend->vkGetInstanceExtensions(&extCount);
+	const char* const* names = g_platform->vkGetInstanceExtensions(&extCount);
 
 	if (!names) {
 		LLT_ERROR("[VULKAN|DEBUG] Unable to get instance extension count.");
@@ -148,7 +148,7 @@ static Vector<const char*> getInstanceExtensions()
 	extensions.pushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // LLT_DEBUG
 
-	//extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	//extensions.pushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // MAC SUPPORT
 	extensions.pushBack(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 	return extensions;
@@ -244,7 +244,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	auto extensions = getInstanceExtensions();
 	createInfo.enabledExtensionCount = extensions.size();
 	createInfo.ppEnabledExtensionNames = extensions.data();
-	//create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; // molten vk (macos support)
+	//createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; // MAC SUPPORT
 
 	// create the vulkan instance
 	if (VkResult result = vkCreateInstance(&createInfo, nullptr, &vulkanInstance); result != VK_SUCCESS) {
@@ -924,7 +924,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	createComputeResources();
 
-	// start off with 256kB of shader memory for each frame.
+	// start off with 16kB of shader memory per ubo / ssbo for each frame.
 	// this will increase if it isn't enough, however it is a good baseline.
 
 	for (int i = 0; i < m_uboManagers.size(); i++) {
@@ -1241,7 +1241,7 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 }
 
 /*
- * Ok so basically: bufferIdx is used to signify one of the N ubo'm_pitch or ssbos'm_pitch, while the bindIdx is used to signify where they will be bound on the gpu.
+ * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
  */
 
 void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
@@ -1629,7 +1629,7 @@ void VulkanBackend::swapBuffers()
 
 void VulkanBackend::syncStall() const
 {
-	while (g_systemBackend->getWindowSize() == glm::ivec2(0, 0)) {}
+	while (g_platform->getWindowSize() == glm::ivec2(0, 0)) {}
 	vkDeviceWaitIdle(this->device);
 }
 

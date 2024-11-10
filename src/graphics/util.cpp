@@ -1,7 +1,7 @@
 #include "util.h"
 #include "backend.h"
 
-#include "../system_backend.h"
+#include "../platform.h"
 
 #include "../math/calc.h"
 
@@ -20,9 +20,9 @@ VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatK
 
 VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync)
 {
-	if (!enableVsync) {
-		return VK_PRESENT_MODE_IMMEDIATE_KHR;
-	}
+//	if (!enableVsync) {
+//		return VK_PRESENT_MODE_IMMEDIATE_KHR;
+//	}
 
 	for (const auto& available_present_mode : availablePresentModes) {
 		if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
@@ -41,7 +41,7 @@ VkExtent2D vkutil::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities
 	}
 	else
 	{
-		glm::ivec2 wh = g_systemBackend->getWindowSize();
+		glm::ivec2 wh = g_platform->getWindowSize();
 		VkExtent2D actual_extent = { (uint32_t)wh.x, (uint32_t)wh.y };
 
 		actual_extent.width  = CalcU::clamp(actual_extent.width,  capabilities.minImageExtent.width,  capabilities.maxImageExtent.width );
@@ -114,33 +114,33 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	allocInfo.commandPool = cmdPool;
 	allocInfo.commandBufferCount = 1;
 
-	VkCommandBuffer cmd_buf = {};
+	VkCommandBuffer cmdBuffer = {};
 
-	if (VkResult result = vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmd_buf); result != VK_SUCCESS) {
+	if (VkResult result = vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmdBuffer); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to reallocate command buffers when copying buffer: %d", result);
 	}
 
-	VkCommandBufferBeginInfo begin_info = {};
-	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	if (VkResult result = vkBeginCommandBuffer(cmd_buf, &begin_info); result != VK_SUCCESS) {
+	if (VkResult result = vkBeginCommandBuffer(cmdBuffer, &beginInfo); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to begin command buffer when copying buffer: %d", result);
 	}
 
-	return cmd_buf;
+	return cmdBuffer;
 }
 
 void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics)
 {
 	vkEndCommandBuffer(cmdBuffer);
 
-	VkSubmitInfo submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &cmdBuffer;
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuffer;
 
-	vkQueueSubmit(graphics, 1, &submit_info, VK_NULL_HANDLE);
+	vkQueueSubmit(graphics, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(graphics);
 
 	vkFreeCommandBuffers(g_vulkanBackend->device, cmdPool, 1, &cmdBuffer);
@@ -235,15 +235,15 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 		resultUsability += 1;
 	}
 
-	// if we have anisotropy then thats good
+	// if we have anisotropy then that's good
 	if (hasAnisotropy) {
 		resultUsability += 1;
 	}
 
 	// it must have the required extensions
 	if (hasRequiredExtensions) {
-		SwapChainSupportDetails swap_chain_support_details = querySwapChainSupport(physicalDevice, surface);
-		adequateSwapChain = swap_chain_support_details.surfaceFormats.any() && swap_chain_support_details.presentModes.any();
+		SwapChainSupportDetails swapChainSupportDetails = querySwapChainSupport(physicalDevice, surface);
+		adequateSwapChain = swapChainSupportDetails.surfaceFormats.any() && swapChainSupportDetails.presentModes.any();
 		resultUsability += 1;
 	}
 

@@ -1,6 +1,8 @@
 #ifndef PAIR_H_
 #define PAIR_H_
 
+#include <utility>
+
 namespace llt
 {
 	/**

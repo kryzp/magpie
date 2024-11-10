@@ -1,4 +1,4 @@
-#include "system_backend.h"
+#include "platform.h"
 #include "common.h"
 #include "input/input.h"
 #include "graphics/backend.h"
@@ -6,22 +6,21 @@
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
-llt::SystemBackend* llt::g_systemBackend = nullptr;
+llt::Platform* llt::g_platform = nullptr;
 
 using namespace llt;
 
-SystemBackend::SystemBackend(const Config& config)
+Platform::Platform(const Config& config)
 	: m_window(nullptr)
 	, m_gamepads{}
 	, m_gamepadCount(0)
 {
 	if (!SDL_Init(
-		SDL_INIT_TIMER |
-		SDL_INIT_AUDIO |
 		SDL_INIT_VIDEO |
+		SDL_INIT_AUDIO |
 		SDL_INIT_JOYSTICK |
-		SDL_INIT_HAPTIC |
 		SDL_INIT_GAMEPAD |
+		SDL_INIT_HAPTIC |
 		SDL_INIT_EVENTS |
 		SDL_INIT_SENSOR |
 		SDL_INIT_CAMERA) != 0)
@@ -50,7 +49,7 @@ SystemBackend::SystemBackend(const Config& config)
 	LLT_LOG("[SDL] Initialized!");
 }
 
-SystemBackend::~SystemBackend()
+Platform::~Platform()
 {
 	closeAllGamepads();
 
@@ -60,7 +59,7 @@ SystemBackend::~SystemBackend()
 	LLT_LOG("[SDL] Destroyed!");
 }
 
-void SystemBackend::pollEvents()
+void Platform::pollEvents()
 {
 	float spx = 0.f, spy = 0.f;
 	SDL_Event ev = {};
@@ -144,7 +143,7 @@ void SystemBackend::pollEvents()
 	}
 }
 
-void SystemBackend::reconnectAllGamepads()
+void Platform::reconnectAllGamepads()
 {
 	// if we already have some gamepads connected disconnect them
 	if (m_gamepads[0] != nullptr) {
@@ -184,7 +183,7 @@ finished:
 	SDL_free(gamepadIDs); // finished, free the gamepad_ids array
 }
 
-void SystemBackend::closeAllGamepads()
+void Platform::closeAllGamepads()
 {
 	for (int i = 0; i < m_gamepadCount; i++) {
 		SDL_CloseGamepad(m_gamepads[i]);
@@ -195,51 +194,58 @@ void SystemBackend::closeAllGamepads()
 	m_gamepads.clear();
 }
 
-GamepadType SystemBackend::getGamepadType(int player)
+GamepadType Platform::getGamepadType(int player)
 {
 	return (GamepadType)SDL_GetGamepadType(SDL_GetGamepadFromPlayerIndex(player));
 }
 
-void SystemBackend::closeGamepad(int player) const
+void Platform::closeGamepad(int player) const
 {
 	SDL_CloseGamepad(SDL_GetGamepadFromPlayerIndex(player));
 }
 
-String SystemBackend::getWindowName() const
+String Platform::getWindowName() const
 {
 	return SDL_GetWindowTitle(m_window);
 }
 
-void SystemBackend::setWindowName(const String& name)
+void Platform::setWindowName(const String& name)
 {
 	SDL_SetWindowTitle(m_window, name.cstr());
 }
 
-glm::ivec2 SystemBackend::getWindowPosition() const
+glm::ivec2 Platform::getWindowPosition() const
 {
 	glm::ivec2 result = { 0, 0 };
 	SDL_GetWindowPosition(m_window, &result.x, &result.y);
 	return result;
 }
 
-void SystemBackend::setWindowPosition(const glm::ivec2& position)
+void Platform::setWindowPosition(const glm::ivec2& position)
 {
 	SDL_SetWindowPosition(m_window, position.x, position.y);
 }
 
-glm::ivec2 SystemBackend::getWindowSize() const
+glm::ivec2 Platform::getWindowSize() const
 {
 	glm::ivec2 result = { 0, 0 };
 	SDL_GetWindowSize(m_window, &result.x, &result.y);
 	return result;
 }
 
-void SystemBackend::setWindowSize(const glm::ivec2& size)
+void Platform::setWindowSize(const glm::ivec2& size)
 {
 	SDL_SetWindowSize(m_window, size.x, size.y);
 }
 
-glm::ivec2 SystemBackend::getScreenSize() const
+glm::ivec2 Platform::getWindowSizeInPixels() const
+{
+	glm::ivec2 result = { 0, 0 };
+	SDL_GetWindowSizeInPixels(m_window, &result.x, &result.y);
+	return result;
+}
+
+glm::ivec2 Platform::getScreenSize() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -250,27 +256,27 @@ glm::ivec2 SystemBackend::getScreenSize() const
 	return { 0, 0 };
 }
 
-float SystemBackend::getWindowOpacity() const
+float Platform::getWindowOpacity() const
 {
 	return SDL_GetWindowOpacity(m_window);
 }
 
-void SystemBackend::setWindowOpacity(float opacity) const
+void Platform::setWindowOpacity(float opacity) const
 {
 	SDL_SetWindowOpacity(m_window, opacity);
 }
 
-bool SystemBackend::isWindowResizable() const
+bool Platform::isWindowResizable() const
 {
 	return SDL_GetWindowFlags(m_window) & SDL_WINDOW_RESIZABLE;
 }
 
-void SystemBackend::toggleWindowResizable(bool toggle) const
+void Platform::toggleWindowResizable(bool toggle) const
 {
-	SDL_SetWindowResizable(m_window, static_cast<SDL_bool>(toggle));
+	SDL_SetWindowResizable(m_window, toggle);
 }
 
-float SystemBackend::getWindowRefreshRate() const
+float Platform::getWindowRefreshRate() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -281,7 +287,7 @@ float SystemBackend::getWindowRefreshRate() const
 	return 0.0f;
 }
 
-float SystemBackend::getWindowPixelDensity() const
+float Platform::getWindowPixelDensity() const
 {
 	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
 
@@ -292,12 +298,12 @@ float SystemBackend::getWindowPixelDensity() const
 	return 0.0f;
 }
 
-bool SystemBackend::isCursorVisible() const
+bool Platform::isCursorVisible() const
 {
 	return SDL_CursorVisible();
 }
 
-void SystemBackend::toggleCursorVisible(bool toggle) const
+void Platform::toggleCursorVisible(bool toggle) const
 {
 	if (toggle) {
 		SDL_ShowCursor();
@@ -306,12 +312,12 @@ void SystemBackend::toggleCursorVisible(bool toggle) const
 	}
 }
 
-void SystemBackend::lockCursor(bool toggle) const
+void Platform::lockCursor(bool toggle) const
 {
 	SDL_SetWindowRelativeMouseMode(m_window, toggle);
 }
 
-void SystemBackend::setCursorPosition(int x, int y)
+void Platform::setCursorPosition(int x, int y)
 {
 	SDL_WarpMouseInWindow(m_window, x, y);
 
@@ -322,7 +328,7 @@ void SystemBackend::setCursorPosition(int x, int y)
 	g_inputState->onMouseMove(x, y);
 }
 
-WindowMode SystemBackend::getWindowMode() const
+WindowMode Platform::getWindowMode() const
 {
 	auto flags = SDL_GetWindowFlags(m_window);
 
@@ -335,107 +341,107 @@ WindowMode SystemBackend::getWindowMode() const
 	return WINDOW_MODE_WINDOWED;
 }
 
-void SystemBackend::setWindowMode(WindowMode toggle)
+void Platform::setWindowMode(WindowMode toggle)
 {
 	switch (toggle)
 	{
 		case WINDOW_MODE_FULLSCREEN:
-			SDL_SetWindowFullscreen(m_window, SDL_TRUE);
-			SDL_SetWindowBordered(m_window, SDL_FALSE);
+			SDL_SetWindowFullscreen(m_window, true);
+			SDL_SetWindowBordered(m_window, false);
 			break;
 
 		case WINDOW_MODE_BORDERLESS_FULLSCREEN:
-			SDL_SetWindowFullscreen(m_window, SDL_TRUE);
-			SDL_SetWindowBordered(m_window, SDL_TRUE);
+			SDL_SetWindowFullscreen(m_window, true);
+			SDL_SetWindowBordered(m_window, true);
 			break;
 
 		case WINDOW_MODE_BORDERLESS:
-			SDL_SetWindowFullscreen(m_window, SDL_FALSE);
-			SDL_SetWindowBordered(m_window, SDL_FALSE);
+			SDL_SetWindowFullscreen(m_window, false);
+			SDL_SetWindowBordered(m_window, false);
 			break;
 
 		case WINDOW_MODE_WINDOWED:
-			SDL_SetWindowFullscreen(m_window, SDL_FALSE);
-			SDL_SetWindowBordered(m_window, SDL_TRUE);
+			SDL_SetWindowFullscreen(m_window, false);
+			SDL_SetWindowBordered(m_window, true);
 
 		default:
 			return;
 	}
 }
 
-void SystemBackend::sleepFor(uint64_t ms) const
+void Platform::sleepFor(uint64_t ms) const
 {
 	if (ms > 0) {
 		SDL_Delay(ms);
 	}
 }
 
-uint64_t SystemBackend::getTicks() const
+uint64_t Platform::getTicks() const
 {
 	return SDL_GetTicks();
 }
 
-uint64_t SystemBackend::getPerformanceCounter() const
+uint64_t Platform::getPerformanceCounter() const
 {
 	return SDL_GetPerformanceCounter();
 }
 
-uint64_t SystemBackend::getPerformanceFrequency() const
+uint64_t Platform::getPerformanceFrequency() const
 {
 	return SDL_GetPerformanceFrequency();
 }
 
-void* SystemBackend::streamFromFile(const char* filepath, const char* mode)
+void* Platform::streamFromFile(const char* filepath, const char* mode)
 {
 	return SDL_IOFromFile(filepath, mode);
 }
 
-void* SystemBackend::streamFromMemory(void* memory, uint64_t size)
+void* Platform::streamFromMemory(void* memory, uint64_t size)
 {
 	return SDL_IOFromMem(memory, size);
 }
 
-void* SystemBackend::streamFromConstMemory(const void* memory, uint64_t size)
+void* Platform::streamFromConstMemory(const void* memory, uint64_t size)
 {
 	return SDL_IOFromConstMem(memory, size);
 }
 
-int64_t SystemBackend::streamRead(void* stream, void* ptr, uint64_t size)
+int64_t Platform::streamRead(void* stream, void* dst, uint64_t size)
 {
-	return SDL_ReadIO((SDL_IOStream*)stream, ptr, size);
+	return SDL_ReadIO((SDL_IOStream*)stream, dst, size);
 }
 
-int64_t SystemBackend::streamWrite(void* stream, const void* ptr, uint64_t size)
+int64_t Platform::streamWrite(void* stream, const void* src, uint64_t size)
 {
-	return SDL_WriteIO((SDL_IOStream*)stream, ptr, size);
+	return SDL_WriteIO((SDL_IOStream*)stream, src, size);
 }
 
-int64_t SystemBackend::streamSeek(void* stream, int64_t offset)
+int64_t Platform::streamSeek(void* stream, int64_t offset)
 {
 	return SDL_SeekIO((SDL_IOStream*)stream, offset, SDL_IO_SEEK_SET);
 }
 
-int64_t SystemBackend::streamSize(void* stream)
+int64_t Platform::streamSize(void* stream)
 {
 	return SDL_GetIOSize((SDL_IOStream*)stream);
 }
 
-int64_t SystemBackend::streamPosition(void* stream)
+int64_t Platform::streamPosition(void* stream)
 {
 	return SDL_TellIO((SDL_IOStream*)stream);
 }
 
-void SystemBackend::streamClose(void* stream)
+void Platform::streamClose(void* stream)
 {
 	SDL_CloseIO((SDL_IOStream*)stream);
 }
 
-const char* const* SystemBackend::vkGetInstanceExtensions(uint32_t* count)
+const char* const* Platform::vkGetInstanceExtensions(uint32_t* count)
 {
 	return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-bool SystemBackend::vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface)
+bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface)
 {
 	LLT_LOG("[SDL] Created Vulkan surface!");
 	return SDL_Vulkan_CreateSurface(m_window, instance, NULL, surface);

@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(GLM_INCLUDE_DIRS "D:/DevLibs/glm/")
 
 set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
-set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Debug/SDL3.lib")
+set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Release/SDL3.lib")
 
 set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.3.296.0/Include/")
 set(VK_LIBRARIES "D:/VulkanSDK/1.3.296.0/Lib/vulkan-1.lib")
@@ -18,7 +18,7 @@ add_executable(${PROJECT_NAME}
     src/common.cpp
     src/app.cpp
     src/camera.cpp
-    src/system_backend.cpp
+    src/platform.cpp
 
     src/graphics/backbuffer.cpp
     src/graphics/backend.cpp

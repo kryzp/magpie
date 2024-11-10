@@ -154,11 +154,6 @@ glm::vec2 Input::getMouseScreenPosition() const
 	return m_currentState.mouse.screenPosition;
 }
 
-glm::vec2 Input::getMouseDrawPosition() const
-{
-	return m_currentState.mouse.drawPosition;
-}
-
 glm::vec2 Input::getMouseWheel() const
 {
 	return m_currentState.mouse.wheel;

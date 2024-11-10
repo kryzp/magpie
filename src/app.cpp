@@ -2,7 +2,7 @@
 
 #include "graphics/colour.h"
 
-#include "system_backend.h"
+#include "platform.h"
 #include "common.h"
 #include "camera.h"
 #include "input/input.h"
@@ -22,7 +22,7 @@ App::App(const Config& config)
 	, m_running(false)
 	, m_backbuffer(nullptr)
 {
-	g_systemBackend = new SystemBackend(config);
+	g_platform = new Platform(config);
 	g_vulkanBackend = new VulkanBackend(config);
 
 	g_inputState = new Input();
@@ -30,16 +30,16 @@ App::App(const Config& config)
 	m_backbuffer = g_vulkanBackend->createBackbuffer();
 	m_backbuffer->setClearColour(0, Colour::black());
 
-	g_systemBackend->setWindowName(m_config.name);
-	g_systemBackend->setWindowSize({ m_config.width, m_config.height });
-	g_systemBackend->setWindowMode(m_config.windowMode);
-	g_systemBackend->setWindowOpacity(m_config.opacity);
-	g_systemBackend->toggleCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE));
-	g_systemBackend->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE));
+	g_platform->setWindowName(m_config.name);
+	g_platform->setWindowSize({ m_config.width, m_config.height });
+	g_platform->setWindowMode(m_config.windowMode);
+	g_platform->setWindowOpacity(m_config.opacity);
+	g_platform->toggleCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE));
+	g_platform->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE));
 
 	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW)) {
-		const auto screenSize = g_systemBackend->getScreenSize();
-		g_systemBackend->setWindowPosition({
+		const auto screenSize = g_platform->getScreenSize();
+		g_platform->setWindowPosition({
 			(int)(screenSize.x - m_config.width) / 2,
 			(int)(screenSize.y - m_config.height) / 2
 		});
@@ -61,7 +61,7 @@ App::~App()
 	delete g_inputState;
 
 	delete g_vulkanBackend;
-	delete g_systemBackend;
+	delete g_platform;
 }
 
 struct MyVertex
@@ -113,7 +113,7 @@ void App::run()
 	Texture* stoneTexture = g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
 	TextureSampler* stoneSampler = g_textureManager->getSampler("stone", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	RenderTarget* target = g_renderTargetManager->createTarget(1280, 720, { VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ });
+	RenderTarget* target = g_renderTargetManager->createTarget(m_backbuffer->getWidth(), m_backbuffer->getHeight(), { VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ });
 	TextureSampler* targetSampler = g_textureManager->getSampler("target", TextureSampler::Style(VK_FILTER_LINEAR));
 
 	VertexDescriptor vertexFormat;
@@ -285,28 +285,41 @@ void App::run()
 	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 	*/
 
-	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 10.0f);
+	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 20.0f);
+	camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
+	camera.setPitch(-glm::radians(30.0f));
 
 	ShaderParameters pushConstants;
 	pushConstants.set("time", 0.0f);
 
-	glm::mat4 model = glm::identity<glm::mat4>();
+	glm::mat4 modelMatrix = glm::identity<glm::mat4>();
 
 	ShaderParameters ubo;
 	ubo.set("projMatrix", glm::identity<glm::mat4>());
 	ubo.set("viewMatrix", glm::identity<glm::mat4>());
 	ubo.set("modelMatrix", glm::identity<glm::mat4>());
 
-	double elapsedTime = 0.0;
-	uint64_t lastPerformanceCounter = g_systemBackend->getPerformanceCounter();
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
+	double elapsedTime = 0.0;
+	
+	Timer elapsedTimer;
+	elapsedTimer.start();
 
 	RenderPass pass;
 
+	auto getTransformationMatrix = [&](const glm::vec3& position, float rotationAngle, const glm::vec3& rotationAxis, const glm::vec3& scale, const glm::vec3& origin) -> glm::mat4 {
+		return glm::translate(glm::identity<glm::mat4>(), position) *
+			glm::rotate(glm::identity<glm::mat4>(), rotationAngle, rotationAxis) *
+			glm::scale(glm::identity<glm::mat4>(), scale) *
+			glm::translate(glm::identity<glm::mat4>(), -origin);
+	};
+
+	g_platform->setCursorPosition(m_config.width/2, m_config.height/2);
+
 	while (m_running)
 	{
-		g_systemBackend->pollEvents();
+		g_platform->pollEvents();
 		g_inputState->update();
 
 		if (g_inputState->isPressed(KB_KEY_ESCAPE)) {
@@ -315,10 +328,7 @@ void App::run()
 
 		// ---
 
-		uint64_t currentPerformanceCounter = g_systemBackend->getPerformanceCounter();
-
-		double deltaTime = static_cast<double>(currentPerformanceCounter - lastPerformanceCounter) / static_cast<double>(g_systemBackend->getPerformanceFrequency());
-		lastPerformanceCounter = currentPerformanceCounter;
+		double deltaTime = elapsedTimer.reset();
 
 		accumulator += CalcF::min(deltaTime, targetDeltaTime);
 		elapsedTime += deltaTime;
@@ -326,7 +336,7 @@ void App::run()
 		while (accumulator >= targetDeltaTime)
 		{
 			camera.update(targetDeltaTime);
-			g_systemBackend->setCursorPosition(1280/2, 720/2);
+			g_platform->setCursorPosition(m_config.width/2, m_config.height/2);
 
 			accumulator -= targetDeltaTime;
 		}
@@ -456,6 +466,8 @@ void App::run()
 		pass.mesh = &skybox;
 		g_vulkanBackend->render(pass.build());
 
+		// ---
+
 		g_vulkanBackend->setDepthWrite(true);
 		g_vulkanBackend->setDepthTest(true);
 
@@ -467,24 +479,22 @@ void App::run()
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentShader);
 
-		model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0.0f, 0.0f, -5.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
-		ubo.set("modelMatrix", model);
-
+		// floor
+		ubo.set("modelMatrix", getTransformationMatrix({ 0.0f, 0.0f, 0.0f }, 0.0f, { 0.0f, 1.0f, 0.0f }, { 10.0f, 0.25f, 10.0f }, { 0.0f, 1.0f, 0.0f }));
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
-		model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5.0f, 0.0f, -5.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::rotate(model, (float)elapsedTime, glm::vec3(0.0f, 0.0f, -1.0f));
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-		ubo.set("modelMatrix", model);
+		// block 1
+		ubo.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, {0.0f, 1.0f, 0.0}, {1.5f, 1.5f, 1.5f}, {0.0f, -1.0f, 0.0f}));
+		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
+		pass.mesh = &block;
+		g_vulkanBackend->render(pass.build());
+
+		// block 2
+		ubo.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
 		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
 
 		pass.mesh = &block;

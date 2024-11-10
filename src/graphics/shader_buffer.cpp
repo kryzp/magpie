@@ -39,7 +39,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 	}
 
 	// check if we need to increase in size
-	if (totalUsedMemory + size > m_maxSize) {
+	while (totalUsedMemory + size > m_maxSize) {
 		reallocateBuffer(m_maxSize * 2);
 	}
 

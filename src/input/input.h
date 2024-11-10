@@ -27,7 +27,6 @@ namespace llt
 		{
 			bool down[MBTN_MAX_ENUM];
 			glm::vec2 screenPosition;
-			glm::vec2 drawPosition;
 			glm::vec2 position;
 			glm::vec2 wheel;
 		};
@@ -72,7 +71,6 @@ namespace llt
 
 		glm::vec2 getMousePosition() const;
 		glm::vec2 getMouseScreenPosition() const;
-		glm::vec2 getMouseDrawPosition() const;
 		glm::vec2 getMouseWheel() const;
 
 		bool shift() const;

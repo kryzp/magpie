@@ -1,5 +1,5 @@
-#ifndef SDL3_BACKEND_H_
-#define SDL3_BACKEND_H_
+#ifndef PLATFORM_H_
+#define PLATFORM_H_
 
 #include <SDL3/SDL.h>
 #include <glm/vec2.hpp>
@@ -14,11 +14,11 @@
 
 namespace llt
 {
-	class SystemBackend
+	class Platform
 	{
 	public:
-		SystemBackend(const Config& config);
-		~SystemBackend();
+		Platform(const Config& config);
+		~Platform();
 
 		void pollEvents();
 
@@ -30,6 +30,8 @@ namespace llt
 
 		glm::ivec2 getWindowSize() const;
 		void setWindowSize(const glm::ivec2& size);
+
+		glm::ivec2 getWindowSizeInPixels() const;
 
 		glm::ivec2 getScreenSize() const;
 
@@ -63,11 +65,13 @@ namespace llt
 		void* streamFromFile(const char* filepath, const char* mode);
 		void* streamFromMemory(void* memory, uint64_t size);
 		void* streamFromConstMemory(const void* memory, uint64_t size);
-		int64_t streamRead(void* stream, void* ptr, uint64_t size);
-		int64_t streamWrite(void* stream, const void* ptr, uint64_t size);
+
+		int64_t streamRead(void* stream, void* dst, uint64_t size);
+		int64_t streamWrite(void* stream, const void* src, uint64_t size);
 		int64_t streamSeek(void* stream, int64_t offset);
 		int64_t streamSize(void* stream);
 		int64_t streamPosition(void* stream);
+
 		void streamClose(void* stream);
 
 		const char* const* vkGetInstanceExtensions(uint32_t* count);
@@ -82,7 +86,7 @@ namespace llt
 		int m_gamepadCount;
 	};
 
-	extern SystemBackend* g_systemBackend;
+	extern Platform* g_platform;
 }
 
-#endif // SDL3_BACKEND_H_
+#endif // PLATFORM_BACKEND_H_

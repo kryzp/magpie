@@ -17,6 +17,9 @@ class Camera
 		glm::mat4 getViewNoTranslation() const;
 		glm::mat4 getProj() const;
 
+		void setYaw(double yaw);
+		void setPitch(double pitch);
+
 		glm::vec3 position;
 		glm::vec3 up;
 		glm::vec3 direction;

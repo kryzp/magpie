@@ -40,7 +40,7 @@ namespace llt
 		static const char* DEVICE_EXTENSIONS[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-			//"VK_KHR_portability_subset"
+			//"VK_KHR_portability_subset" // MAC SUPPORT
 		};
 
 		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats);

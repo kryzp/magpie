@@ -21,3 +21,4 @@ stuff im interested in:
 
 other todo that isnt really important:
 - use multiple compute queues
+- mac support "works" but things like the file io have to be changed since SDL stream functions arent availabvle on mac for some reason??? so figure that out

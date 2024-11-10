@@ -3,6 +3,8 @@
 
 #include "../common.h"
 
+// todo: convert to use performance counter and performance frequency
+
 namespace llt
 {
 	class Timer
@@ -12,14 +14,15 @@ namespace llt
 
 		void start();
 		void stop();
+		
 		void pause();
 		void resume();
+
 		double reset();
 
-		double getMilliseconds() const;
-		double getSeconds() const;
+		double elapsed() const;
 
-		bool started() const;
+		bool isStarted() const;
 		bool isPaused() const;
 
 	private:

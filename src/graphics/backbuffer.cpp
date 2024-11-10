@@ -3,7 +3,7 @@
 #include "backend.h"
 #include "colour.h"
 
-#include "../system_backend.h"
+#include "../platform.h"
 
 using namespace llt;
 
@@ -35,7 +35,7 @@ void Backbuffer::create()
 
 void Backbuffer::createSurface()
 {
-    if (bool result = g_systemBackend->vkCreateSurface(g_vulkanBackend->vulkanInstance, &m_surface); !result) {
+    if (bool result = g_platform->vkCreateSurface(g_vulkanBackend->vulkanInstance, &m_surface); !result) {
         LLT_ERROR("[VULKAN:BACKBUFFER|DEBUG] Failed to create surface: %d", result);
     }
 }

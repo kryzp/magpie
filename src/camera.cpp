@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
 
+#include "platform.h"
 #include "input/input.h"
 
 using namespace llt;
@@ -38,19 +39,19 @@ void Camera::update(float dt)
 		return from + t*(to - from);
 	};
 
-	float dx = (float)(g_inputState->getMousePosition().x - 1280.0f*0.5f);
-	float dy = (float)(g_inputState->getMousePosition().y - 720.0f*0.5f);
+	float dx = (float)(g_inputState->getMousePosition().x - g_platform->getWindowSize().x*0.5f);
+	float dy = (float)(g_inputState->getMousePosition().y - g_platform->getWindowSize().y*0.5f);
 
-	if ((dx * dx) + (dy * dy) > MOUSE_DEADZONE) {
+	if ((dx * dx) + (dy * dy) > MOUSE_DEADZONE*MOUSE_DEADZONE) {
 		m_targetYaw += dx * MOUSE_SENSITIVITY * dt;
-		m_targetPitch += dy * MOUSE_SENSITIVITY * dt;
+		m_targetPitch -= dy * MOUSE_SENSITIVITY * dt;
 	}
 
 	m_yaw = lerp(m_yaw, m_targetYaw, dt * 50.0f);
 	m_pitch = lerp(m_pitch, m_targetPitch, dt * 50.0f);
 
 	float yaw = m_yaw - glm::half_pi<float>();
-	float pitch = -m_pitch;
+	float pitch = m_pitch;
 
 	direction.x = glm::cos(yaw) * glm::cos(pitch);
 	direction.y = glm::sin(pitch);
@@ -91,4 +92,14 @@ glm::mat4 Camera::getViewNoTranslation() const
 glm::mat4 Camera::getProj() const
 {
 	return glm::perspective(glm::radians(fov), width / height, near, far);
+}
+
+void Camera::setYaw(double yaw)
+{
+	m_yaw = m_targetYaw = yaw;
+}
+
+void Camera::setPitch(double pitch)
+{
+	m_pitch = m_targetPitch = pitch;
 }
