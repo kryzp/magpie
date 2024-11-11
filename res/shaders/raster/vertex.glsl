@@ -1,7 +1,7 @@
 #version 450
 
 layout (push_constant) uniform PushConstants {
-	float deltaTime;
+	float time;
 } pushConstants;
 
 layout (binding = 0) uniform ParameterUBO {

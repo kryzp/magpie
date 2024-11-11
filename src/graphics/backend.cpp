@@ -37,20 +37,20 @@ static bool debugHasValidationLayerSupport()
 
 	for (int i = 0; i < LLT_ARRAY_LENGTH(vkutil::VALIDATION_LAYERS); i++)
 	{
-		bool has_layer = false;
-		const char* layer_name_0 = vkutil::VALIDATION_LAYERS[i];
+		bool hasLayer = false;
+		const char* layerName0 = vkutil::VALIDATION_LAYERS[i];
 
 		for (int j = 0; j < layerCount; j++)
 		{
-			const char* layer_name_1 = availableLayers[j].layerName;
+			const char* layerName1 = availableLayers[j].layerName;
 
-			if (cstr::compare(layer_name_0, layer_name_1) == 0) {
-				has_layer = true;
+			if (cstr::compare(layerName0, layerName1) == 0) {
+				hasLayer = true;
 				break;
 			}
 		}
 
-		if (!has_layer) {
+		if (!hasLayer) {
 			return false;
 		}
 	}
@@ -159,6 +159,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_vmaAllocator()
 	, m_currentRenderPassBuilder()
 	, m_descriptorPoolManager()
+	, m_imageBoundIdxs()
 	, m_imageInfos()
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
@@ -442,9 +443,9 @@ void VulkanBackend::createLogicalDevice()
 		});
 	}
 	
-	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {};
-	bufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-	bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeaturesExt = {};
+	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+	bufferDeviceAddressFeaturesExt.bufferDeviceAddress = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -453,10 +454,9 @@ void VulkanBackend::createLogicalDevice()
 	createInfo.enabledLayerCount = 0;
 	createInfo.ppEnabledLayerNames = nullptr;
 	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
-	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
 	createInfo.enabledExtensionCount = LLT_ARRAY_LENGTH(vkutil::DEVICE_EXTENSIONS);
 	createInfo.pEnabledFeatures = &physicalData.features;
-	createInfo.pNext = &bufferDeviceAddressFeatures;
+	createInfo.pNext = &bufferDeviceAddressFeaturesExt;
 
 #if LLT_DEBUG
 	// enable the validation layers on the device
@@ -966,16 +966,7 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 		return m_descriptorBuilder;
 	}
 
-	int nTextures = 0;
-	for (; nTextures < m_imageInfos.size(); nTextures++) {
-		if (!m_imageInfos[nTextures].imageView) {
-			break;
-		}
-	}
-
 	resetDescriptorBuilder();
-
-	int baseIdx = 0;
 
 	// bind ubos
 	for (int i = 0; i < mgc::MAX_BOUND_UBOS; i++)
@@ -988,8 +979,6 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				stage
 			);
-
-			baseIdx++;
 		}
 	}
 
@@ -1004,20 +993,21 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 				VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
 				stage
 			);
-
-			baseIdx++;
 		}
 	}
 
 	// bind textures
-	for (int i = 0; i < nTextures; i++)
+	for (int i = 0; i < m_imageInfos.size(); i++)
 	{
-		m_descriptorBuilder.bindImage(
-			baseIdx + i,
-			&m_imageInfos[i],
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			stage
-		);
+		if (m_imageInfos[i].imageView)
+		{
+			m_descriptorBuilder.bindImage(
+				m_imageBoundIdxs[i],
+				&m_imageInfos[i],
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				stage
+			);
+		}
 	}
 
 	// finished!
@@ -1165,47 +1155,49 @@ void VulkanBackend::setCullMode(VkCullModeFlagBits cull)
 	m_cullMode = cull;
 }
 
-void VulkanBackend::setTexture(uint32_t idx, const Texture* texture)
+void VulkanBackend::setTexture(uint32_t textureIdx, uint32_t bindIdx, const Texture* texture)
 {
 	// if our texture is null then interpret that as unbinding the texture
 	// so set the image view at that index to be a null handle.
 
 	if (!texture) {
-		m_imageInfos[idx].imageView = VK_NULL_HANDLE;
+		m_imageInfos[textureIdx].imageView = VK_NULL_HANDLE;
 		return;
 	}
 
 	VkImageView vkImageView = texture->getImageView();
 
-	if (m_imageInfos[idx].imageView != vkImageView)
+	if (m_imageInfos[textureIdx].imageView != vkImageView)
 	{
-		m_imageInfos[idx].imageView = vkImageView;
+		m_imageBoundIdxs[textureIdx] = bindIdx;
+
+		m_imageInfos[textureIdx].imageView = vkImageView;
 
 		if (texture->isDepthTexture())
 		{
-			m_imageInfos[idx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		}
 		else
 		{
-			m_imageInfos[idx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		}
 
 		m_descriptorBuilderDirty = true;
 	}
 }
 
-void VulkanBackend::setSampler(uint32_t idx, TextureSampler* sampler)
+void VulkanBackend::setSampler(uint32_t textureIdx, TextureSampler* sampler)
 {
 	if (!sampler) {
-		m_imageInfos[idx].sampler = nullptr;
+		m_imageInfos[textureIdx].sampler = nullptr;
 		return;
 	}
 
 	VkSampler vkSampler = sampler->bind(device, physicalData.properties, 4);
 
-	if (m_imageInfos[idx].sampler != vkSampler)
+	if (m_imageInfos[textureIdx].sampler != vkSampler)
 	{
-		m_imageInfos[idx].sampler = vkSampler;
+		m_imageInfos[textureIdx].sampler = vkSampler;
 		m_descriptorBuilderDirty = true;
 	}
 }
@@ -1244,7 +1236,7 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
  * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
  */
 
-void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params)
+void VulkanBackend::pushUbo(int bufferIdx, VkShaderStageFlagBits type, ShaderParameters& params)
 {
 	ShaderParameters::PackedData packedConstants = params.getPackedConstants();
 
@@ -1254,7 +1246,6 @@ void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits ty
 
 	bool modified = false;
 
-	m_uboManagers[bufferIdx].bind(bindIdx);
 	m_uboManagers[bufferIdx].pushData(packedConstants.data(), packedConstants.size(), m_currentFrameIdx, &modified);
 
 	if (modified) {
@@ -1262,11 +1253,14 @@ void VulkanBackend::pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits ty
 	}
 }
 
-void VulkanBackend::pushSsbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
+void VulkanBackend::pushSsbo(int bufferIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
 {
+	if (size <= 0) {
+		return;
+	}
+
 	bool modified = false;
 
-	m_ssboManagers[bufferIdx].bind(bindIdx);
 	m_ssboManagers[bufferIdx].pushData(data, size, m_currentFrameIdx, &modified);
 
 	if (modified) {
@@ -1314,9 +1308,9 @@ void VulkanBackend::resetPushConstants()
 	m_pushConstants.clear();
 }
 
-void VulkanBackend::setVertexDescriptor(const VertexDescriptor& vertexDescriptor)
+void VulkanBackend::setVertexDescriptor(const VertexDescriptor& descriptor)
 {
-	m_currentVertexDescriptor = &vertexDescriptor;
+	m_currentVertexDescriptor = &descriptor;
 }
 
 void VulkanBackend::clearDescriptorCacheAndPool()
@@ -1571,7 +1565,8 @@ void VulkanBackend::endRender()
 
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
 
-	if (m_uncertainComputeFinished) {
+	if (m_uncertainComputeFinished)
+	{
 		waitForFinishSemaphores[waitSemaphoreCount] = m_computeFinishedSemaphores[m_currentFrameIdx];
 		waitSemaphoreCount++;
 	}

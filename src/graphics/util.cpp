@@ -42,12 +42,12 @@ VkExtent2D vkutil::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities
 	else
 	{
 		glm::ivec2 wh = g_platform->getWindowSize();
-		VkExtent2D actual_extent = { (uint32_t)wh.x, (uint32_t)wh.y };
+		VkExtent2D actualExtent = { (uint32_t)wh.x, (uint32_t)wh.y };
 
-		actual_extent.width  = CalcU::clamp(actual_extent.width,  capabilities.minImageExtent.width,  capabilities.maxImageExtent.width );
-		actual_extent.height = CalcU::clamp(actual_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+		actualExtent.width  = CalcU::clamp(actualExtent.width,  capabilities.minImageExtent.width,  capabilities.maxImageExtent.width );
+		actualExtent.height = CalcU::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
-		return actual_extent;
+		return actualExtent;
 	}
 }
 

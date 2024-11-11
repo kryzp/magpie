@@ -210,9 +210,6 @@ VkImageView Texture::generateView() const
 		viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
 
-	VkImageViewUsageCreateInfo flag_restriction;
-	flag_restriction.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
-
 	viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 	viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 	viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -281,12 +278,14 @@ void Texture::generateMipmaps() const
 				int dstMipHeight = (int)m_height >> (i - 0);
 
 				VkImageBlit blit = {};
+				
 				blit.srcOffsets[0] = { 0, 0, 0 };
 				blit.srcOffsets[1] = { srcMipWidth, srcMipHeight, 1 };
 				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				blit.srcSubresource.mipLevel = i - 1;
 				blit.srcSubresource.baseArrayLayer = face;
 				blit.srcSubresource.layerCount = 1;
+
 				blit.dstOffsets[0] = { 0, 0, 0 };
 				blit.dstOffsets[1] = { dstMipWidth, dstMipHeight, 1 };
 				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -305,6 +304,7 @@ void Texture::generateMipmaps() const
 
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
@@ -320,8 +320,10 @@ void Texture::generateMipmaps() const
 		}
 
 		barrier.subresourceRange.baseMipLevel = m_mipmapCount - 1;
+		
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 

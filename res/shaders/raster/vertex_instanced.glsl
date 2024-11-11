@@ -1,7 +1,7 @@
 #version 450
 
 layout (push_constant) uniform PushConstants {
-	float deltaTime;
+	float time;
 } pushConstants;
 
 layout (binding = 0) uniform ParameterUBO {
@@ -17,7 +17,7 @@ layout (location = 2) in vec3 a_colour;
 layout (location = 3) in vec3 a_normal;
 
 // instanced vertex data
-layout (location = 4) in vec2 instance_positionOffset;
+layout (location = 4) in vec3 instance_positionOffset;
 
 layout (location = 0) out vec3 o_colour;
 layout (location = 1) out vec2 o_texCoord;
@@ -25,9 +25,12 @@ layout (location = 2) out vec3 o_fragPosition;
 
 void main()
 {
-	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(a_position + vec3(instance_positionOffset, 0.0), 1.0);
+	vec3 finalPos = a_position + instance_positionOffset;
+	finalPos.y += sin(pushConstants.time*2.0 + 0.2*length(instance_positionOffset));
 
-	o_colour = vec3(a_colour.xy, instance_positionOffset.x * 0.2);
+	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(finalPos, 1.0);
+
+	o_colour = a_colour;
 	o_texCoord = a_uv;
-	o_fragPosition = a_position + vec3(instance_positionOffset, 0.0);
+	o_fragPosition = finalPos;
 }

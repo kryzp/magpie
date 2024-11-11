@@ -72,16 +72,16 @@ struct MyVertex
 	glm::vec3 norm;
 };
 
+struct MyInstancedData
+{
+	glm::vec3 offset;
+};
+
 /*
 struct Particle
 {
 	glm::vec2 position;
 	glm::vec2 velocity;
-};
-
-struct MyInstancedData
-{
-	glm::vec3 positionOffset;
 };
 */
 
@@ -93,10 +93,10 @@ struct MyInstancedData
 
 void App::run()
 {
-	ShaderProgram* vertexShaderInst		= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* vertexShader			= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* fragmentShader		= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* fragmentShaderSkybox = g_shaderManager->create("../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* vertexShaderInstanced	= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	ShaderProgram* vertexShader				= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	ShaderProgram* fragmentShader			= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* fragmentShaderSkybox		= g_shaderManager->create("../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	ShaderProgram* computeProgram = g_shaderManager->create("../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
@@ -115,15 +115,6 @@ void App::run()
 
 	RenderTarget* target = g_renderTargetManager->createTarget(m_backbuffer->getWidth(), m_backbuffer->getHeight(), { VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ });
 	TextureSampler* targetSampler = g_textureManager->getSampler("target", TextureSampler::Style(VK_FILTER_LINEAR));
-
-	VertexDescriptor vertexFormat;
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
-	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
-	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-
-	g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 	Vector<MyVertex> quadVertices = {
 		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
@@ -236,22 +227,26 @@ void App::run()
 	SubMesh skybox;
 	skybox.build(skyboxVertices.data(), skyboxVertices.size(), sizeof(MyVertex), skyboxIndices.data(), skyboxIndices.size());
 
-	/*
-	VertexDescriptor instancedVertexFormat;
+	// default vertex format
+	VertexDescriptor vertexFormat;
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
+	vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
-	// regular data
+	// instanced vertex format
+	VertexDescriptor instancedVertexFormat;
 	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
 	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
 	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
 	instancedVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
-	// instanced component
-//	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, 0);
-	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32_SFLOAT, 0);
-	instancedVertexFormat.addBinding(1, sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE);
-//	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
+	instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyInstancedData, offset));
+	instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
 
+	/*
 	int nParticles = 8;
 	uint64_t particleBufferSize = sizeof(Particle) * nParticles;
 	Particle* particleData = new Particle[nParticles];
@@ -285,10 +280,30 @@ void App::run()
 	g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
 	*/
 
-	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 20.0f);
+	// setup instanced data
+	const int INSTANCED_CUBE_COUNT = 256;
+	uint64_t instanceDataSize = sizeof(MyInstancedData) * INSTANCED_CUBE_COUNT;
+	MyInstancedData* instanceData = new MyInstancedData[INSTANCED_CUBE_COUNT];
+
+	for (int i = 0; i < INSTANCED_CUBE_COUNT; i++)
+	{
+		float ii = (float)(i % 16);
+		float jj = (float)(i / 16);
+
+		ii *= 2.5f;
+		jj *= 2.5f;
+
+		instanceData[i].offset = { ii, 0.0f, -jj };
+	}
+
+	g_vulkanBackend->pushSsbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, instanceData, instanceDataSize);
+
+	// setup camera
+	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 50.0f);
 	camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
 	camera.setPitch(-glm::radians(30.0f));
 
+	// shader parameters
 	ShaderParameters pushConstants;
 	pushConstants.set("time", 0.0f);
 
@@ -299,6 +314,7 @@ void App::run()
 	ubo.set("viewMatrix", glm::identity<glm::mat4>());
 	ubo.set("modelMatrix", glm::identity<glm::mat4>());
 
+	// delta time calculation
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
 	double elapsedTime = 0.0;
@@ -326,7 +342,7 @@ void App::run()
 			exit();
 		}
 
-		// ---
+		// --- ---
 
 		double deltaTime = elapsedTimer.reset();
 
@@ -341,7 +357,9 @@ void App::run()
 			accumulator -= targetDeltaTime;
 		}
 
-		// ---
+		LLT_LOG("fps: %f", 1.0/deltaTime);
+
+		// --- ---
 
 		/*
 		
@@ -360,37 +378,7 @@ void App::run()
 
 		// ---
 
-		g_vulkanBackend->setDepthTest(true);
-
-		g_vulkanBackend->setVertexDescriptor(vertexFormat);
-
-		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
-
-		g_vulkanBackend->setRenderTarget(target);
-		g_vulkanBackend->beginRender();
-
-		pushConstants.set("projMatrix", glm::perspective(70.0f, aspect, 0.1f, 10.0f));
-		pushConstants.set("modelMatrix", glm::translate(glm::identity<glm::mat4>(), glm::vec3(1.0f, -1.0f, 0.0f)));
-		g_vulkanBackend->setPushConstants(pushConstants);
-
-		pass.mesh = &mesh;
-
-		g_vulkanBackend->bindShader(fragmentShader);
-
-		g_vulkanBackend->setVertexDescriptor(instancedVertexFormat);
-		g_vulkanBackend->bindShader(vertexShaderInst);
-		pass.instanceCount = nParticles;
-		pass.instanceBuffer = g_vulkanBackend->getSsboBuffer(0);
-		g_vulkanBackend->render(pass.build());
-		pass.instanceCount = 1;
-		pass.instanceBuffer = nullptr;
-
-		g_vulkanBackend->setVertexDescriptor(vertexFormat);
-
-		g_vulkanBackend->bindShader(vertexShader);
-		g_vulkanBackend->render(pass.build());
-
-		g_vulkanBackend->endRender();
+		RENDERING TO FBO
 
 		// ---
 
@@ -398,46 +386,13 @@ void App::run()
 		
 		// ---
 
-		g_vulkanBackend->setDepthTest(false);
-
-		g_vulkanBackend->setRenderTarget(m_backbuffer);
-		g_vulkanBackend->beginRender();
-
-		pushConstants.set("projMatrix", glm::identity<glm::mat4>());
-		pushConstants.set("modelMatrix", glm::identity<glm::mat4>());
-		g_vulkanBackend->setPushConstants(pushConstants);
-
-		parameters.set("deltaTime", 1.0f);
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, parameters);
-		parameters2.set("otherData", 1.0f);
-		g_vulkanBackend->pushUbo(1, 1, VK_SHADER_STAGE_ALL_GRAPHICS, parameters2);
-
-		g_vulkanBackend->bindSsbo(0, 2);
-
-		g_vulkanBackend->setTexture(0, target->getAttachment(0));
-		g_vulkanBackend->setSampler(0, targetSampler);
-
-		g_vulkanBackend->bindShader(vertexShader);
-		g_vulkanBackend->bindShader(fragmentTexShader);
-
-		pass.mesh = &quad;
-		g_vulkanBackend->render(pass.build());
-
-		pass.mesh = &quad2;
-		g_vulkanBackend->render(pass.build());
-
-		g_vulkanBackend->endRender();
-
-		// ---
-
-		g_vulkanBackend->setTexture(0, nullptr);
-		g_vulkanBackend->setSampler(0, nullptr);
-
-		g_vulkanBackend->resetPushConstants();
+		RENDER FBO ON QUAD TO BACKBUFFER
 
 		*/
 
-		// ---
+		// --- ---
+
+		g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 		g_vulkanBackend->setCullMode(VK_CULL_MODE_BACK_BIT);
 
@@ -455,9 +410,10 @@ void App::run()
 		ubo.set("viewMatrix", camera.getViewNoTranslation());
 		ubo.set("modelMatrix", glm::identity<glm::mat4>());
 
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
-		g_vulkanBackend->setTexture(0, skyboxTexture);
+		g_vulkanBackend->setTexture(0, 1, skyboxTexture);
 		g_vulkanBackend->setSampler(0, skyboxSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
@@ -472,8 +428,11 @@ void App::run()
 		g_vulkanBackend->setDepthTest(true);
 
 		ubo.set("viewMatrix", camera.getView());
+		ubo.set("modelMatrix", glm::identity<glm::mat4>());
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
-		g_vulkanBackend->setTexture(0, stoneTexture);
+		g_vulkanBackend->setTexture(0, 1, stoneTexture);
 		g_vulkanBackend->setSampler(0, stoneSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
@@ -481,28 +440,53 @@ void App::run()
 
 		// floor
 		ubo.set("modelMatrix", getTransformationMatrix({ 0.0f, 0.0f, 0.0f }, 0.0f, { 0.0f, 1.0f, 0.0f }, { 10.0f, 0.25f, 10.0f }, { 0.0f, 1.0f, 0.0f }));
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
 		// block 1
 		ubo.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, {0.0f, 1.0f, 0.0}, {1.5f, 1.5f, 1.5f}, {0.0f, -1.0f, 0.0f}));
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
 		// block 2
 		ubo.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
+		// instancing!!!
+
+		ubo.set("modelMatrix", glm::translate(glm::identity<glm::mat4>(), glm::vec3(5.0f, -5.0f, -5.0f)));
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
+
+		g_vulkanBackend->setVertexDescriptor(instancedVertexFormat);
+
+		g_vulkanBackend->bindShader(vertexShaderInstanced);
+		g_vulkanBackend->bindShader(fragmentShader);
+
+		pass.instanceCount = INSTANCED_CUBE_COUNT;
+		pass.instanceBuffer = g_vulkanBackend->getSsboBuffer(0);
+		pass.mesh = &block;
+
+		g_vulkanBackend->render(pass.build());
+
+		pass.instanceCount = 1;
+		pass.instanceBuffer = nullptr;
+
 		g_vulkanBackend->endRender();
 
-		// ---
+		// --- ---
+
+		g_vulkanBackend->setVertexDescriptor(vertexFormat);
 
 		g_vulkanBackend->beginRender();
 
@@ -519,10 +503,11 @@ void App::run()
 		ubo.set("viewMatrix", glm::identity<glm::mat4>());
 		ubo.set("modelMatrix", glm::identity<glm::mat4>());
 
-		g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
+		g_vulkanBackend->bindUbo(0, 0);
 
-		g_vulkanBackend->setTexture(0, target->getAttachment(0));
-//		g_vulkanBackend->setTexture(0, target->getDepthAttachment());
+		g_vulkanBackend->setTexture(0, 1, target->getAttachment(0));
+//		g_vulkanBackend->setTexture(0, 1, target->getDepthAttachment());
 		g_vulkanBackend->setSampler(0, targetSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
@@ -533,18 +518,19 @@ void App::run()
 
 		g_vulkanBackend->endRender();
 
-		// ---
+		// --- ---
 
-		g_vulkanBackend->setTexture(0, nullptr);
+		g_vulkanBackend->setTexture(0, 0, nullptr);
 		g_vulkanBackend->setSampler(0, nullptr);
 
 		g_vulkanBackend->resetPushConstants();
 
-		// ---
+		// --- ---
 
 		g_vulkanBackend->swapBuffers();
 	}
 
+	delete[] instanceData;
 //	delete[] particleData;
 }
 

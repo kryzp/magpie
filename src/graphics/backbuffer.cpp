@@ -251,10 +251,14 @@ void Backbuffer::createSwapChain()
 	// because we are a backbuffer and not a regular render target
 	m_renderPassBuilder.makeBackbuffer(this);
 
+	Vector<VkClearValue> values(2);
+
+	// set the default clear values for colour buffer
+	// black
+	Colour::black().getPremultiplied().exportToFloat(values[0].color.float32);
+
 	// set the default clear values for depth and stencil
 	// white for depth and 0 for stencil
-	Vector<VkClearValue> values(2);
-	Colour::black().getPremultiplied().exportToFloat(values[0].color.float32);
 	values[1].depthStencil = { 1.0f, 0 };
 	m_renderPassBuilder.setClearValues(values);
 
@@ -268,7 +272,7 @@ void Backbuffer::createSwapChain()
 	VkImageView attachments[] = {
 		m_colour.getImageView(),
 		m_depth.getImageView(),
-		m_swapChainImageViews[0]
+		VK_NULL_HANDLE // this gets substituted for m_swapChainImageViews[n] in createRenderPass!!
 	};
 
 	// create the render pass with our attachments

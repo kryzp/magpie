@@ -8,6 +8,8 @@ I recently bought Real Time Rendering, so it's time to make the investment worth
 
 todo:
 - ALLOW MSAA SAMPLING ON RENDER TARGETS!!!
+- drawindirect support
+- move ubos and ssbos out being stored in the vulkan backend
 - somehow seperate depth texture from render target to allow for creating a render target without a depth buffer? idk.
 - create a basic test scene with blocks and stuff
 - model loading

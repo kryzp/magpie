@@ -29,6 +29,7 @@ RenderTarget* RenderTargetMgr::createTarget(uint32_t width, uint32_t height, con
 
 		texture->setSize(width, height);
 		texture->setProperties(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+		texture->setSampleCount(VK_SAMPLE_COUNT_1_BIT);
 
 		texture->createInternalResources();
 

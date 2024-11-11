@@ -104,13 +104,13 @@ namespace llt
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
-		void setTexture(uint32_t idx, const Texture* texture);
-		void setSampler(uint32_t idx, TextureSampler* sampler);
+		void setTexture(uint32_t textureIdx, uint32_t bindIdx, const Texture* texture);
+		void setSampler(uint32_t textureIdx, TextureSampler* sampler);
 
 		void bindShader(const ShaderProgram* shader);
 
-		void pushUbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, ShaderParameters& params);
-		void pushSsbo(int bufferIdx, int bindIdx, VkShaderStageFlagBits type, void* data, uint64_t size);
+		void pushUbo(int bufferIdx, VkShaderStageFlagBits type, ShaderParameters& params);
+		void pushSsbo(int bufferIdx, VkShaderStageFlagBits type, void* data, uint64_t size);
 
 		void bindUbo(int bufferIdx, int bindIdx);
 		void bindSsbo(int bufferIdx, int bindIdx);
@@ -124,7 +124,7 @@ namespace llt
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();
 
-		void setVertexDescriptor(const VertexDescriptor& vertexDescriptor);
+		void setVertexDescriptor(const VertexDescriptor& descriptor);
 
 		void syncStall() const;
 
@@ -180,6 +180,7 @@ namespace llt
 
 		// render pass
 		RenderPassBuilder* m_currentRenderPassBuilder;
+		Array<uint32_t, mgc::MAX_BOUND_TEXTURES> m_imageBoundIdxs;
 		Array<VkDescriptorImageInfo, mgc::MAX_BOUND_TEXTURES> m_imageInfos;
 		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_graphicsShaderStages;
 		GenericRenderTarget* m_currentRenderTarget;
