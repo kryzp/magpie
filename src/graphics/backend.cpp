@@ -164,8 +164,6 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
 	, m_pushConstants()
-	, m_uboManagers()
-	, m_ssboManagers()
 	, m_minSampleShading(0.2f)
 	, m_blendStateLogicOpEnabled(false)
 	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
@@ -260,6 +258,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 
 	// set up all of the core managers of resources
 	g_bufferManager       = new GPUBufferMgr();
+	g_shaderBufferManager = new ShaderBufferMgr();
 	g_textureManager      = new TextureMgr();
 	g_shaderManager       = new ShaderMgr();
 	g_renderTargetManager = new RenderTargetMgr();
@@ -291,13 +290,7 @@ VulkanBackend::~VulkanBackend()
 
 	m_currentRenderPassBuilder->cleanUp();
 
-	for (int i = 0; i < m_uboManagers.size(); i++) {
-		m_uboManagers[i].cleanUp();
-	}
-
-	for (int i = 0; i < m_ssboManagers.size(); i++) {
-		m_ssboManagers[i].cleanUp();
-	}
+	delete g_shaderBufferManager;
 
 	m_descriptorCache.cleanUp();
 	m_descriptorPoolManager.cleanUp();
@@ -924,17 +917,6 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	createComputeResources();
 
-	// start off with 16kB of shader memory per ubo / ssbo for each frame.
-	// this will increase if it isn't enough, however it is a good baseline.
-
-	for (int i = 0; i < m_uboManagers.size(); i++) {
-		m_uboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_UBO);
-	}
-
-	for (int i = 0; i < m_ssboManagers.size(); i++) {
-		m_ssboManagers[i].init(KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT, SHADER_BUFFER_SSBO);
-	}
-
 	m_descriptorPoolManager.init();
 
 	backbuffer->create();
@@ -948,9 +930,14 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	return backbuffer;
 }
 
-void VulkanBackend::resetDescriptorBuilder()
+void VulkanBackend::markDescriptorDirty()
 {
 	m_descriptorBuilderDirty = true;
+}
+
+void VulkanBackend::resetDescriptorBuilder()
+{
+	markDescriptorDirty();
 
 	m_descriptorBuilder.reset(
 		&m_descriptorPoolManager,
@@ -960,43 +947,14 @@ void VulkanBackend::resetDescriptorBuilder()
 
 DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stage)
 {
-	// check if our descriptor builder has been modified at all (i.e: dirty)
-	// no point in building a new one if it hasn't changed
 	if (!m_descriptorBuilderDirty) {
 		return m_descriptorBuilder;
 	}
 
 	resetDescriptorBuilder();
 
-	// bind ubos
-	for (int i = 0; i < mgc::MAX_BOUND_UBOS; i++)
-	{
-		if (m_uboManagers[i].isBound())
-		{
-			m_descriptorBuilder.bindBuffer(
-				m_uboManagers[i].getBoundIdx(),
-				&m_uboManagers[i].getDescriptor(),
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				stage
-			);
-		}
-	}
+	g_shaderBufferManager->bindToDescriptorBuilder(&m_descriptorBuilder, stage);
 
-	// bind ssbos
-	for (int i = 0; i < mgc::MAX_BOUND_SSBOS; i++)
-	{
-		if (m_ssboManagers[i].isBound())
-		{
-			m_descriptorBuilder.bindBuffer(
-				m_ssboManagers[i].getBoundIdx(),
-				&m_ssboManagers[i].getDescriptor(),
-				VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-				stage
-			);
-		}
-	}
-
-	// bind textures
 	for (int i = 0; i < m_imageInfos.size(); i++)
 	{
 		if (m_imageInfos[i].imageView)
@@ -1008,9 +966,12 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 				stage
 			);
 		}
+		else
+		{
+			break;
+		}
 	}
 
-	// finished!
 	m_descriptorBuilderDirty = false;
 	return m_descriptorBuilder;
 }
@@ -1155,50 +1116,55 @@ void VulkanBackend::setCullMode(VkCullModeFlagBits cull)
 	m_cullMode = cull;
 }
 
-void VulkanBackend::setTexture(uint32_t textureIdx, uint32_t bindIdx, const Texture* texture)
+void VulkanBackend::setTexture(uint32_t bindIdx, const Texture* texture, TextureSampler* sampler)
 {
-	// if our texture is null then interpret that as unbinding the texture
-	// so set the image view at that index to be a null handle.
+	int textureIdx = 0;
+	for (; textureIdx < m_imageInfos.size(); textureIdx++) {
+		if (!m_imageInfos[textureIdx].imageView || m_imageBoundIdxs[textureIdx] == bindIdx) {
+			break;
+		}
+	}
 
-	if (!texture) {
+	if (texture)
+	{
+		VkImageView vkImageView = texture->getImageView();
+
+		if (m_imageInfos[textureIdx].imageView != vkImageView)
+		{
+			m_imageBoundIdxs[textureIdx] = bindIdx;
+
+			m_imageInfos[textureIdx].imageView = vkImageView;
+
+			if (texture->isDepthTexture())
+			{
+				m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			}
+			else
+			{
+				m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			}
+
+			markDescriptorDirty();
+		}
+	}
+	else
+	{
 		m_imageInfos[textureIdx].imageView = VK_NULL_HANDLE;
-		return;
 	}
 
-	VkImageView vkImageView = texture->getImageView();
-
-	if (m_imageInfos[textureIdx].imageView != vkImageView)
+	if (sampler)
 	{
-		m_imageBoundIdxs[textureIdx] = bindIdx;
+		VkSampler vkSampler = sampler->bind(device, physicalData.properties, 4);
 
-		m_imageInfos[textureIdx].imageView = vkImageView;
-
-		if (texture->isDepthTexture())
+		if (m_imageInfos[textureIdx].sampler != vkSampler)
 		{
-			m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			m_imageInfos[textureIdx].sampler = vkSampler;
+			markDescriptorDirty();
 		}
-		else
-		{
-			m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		}
-
-		m_descriptorBuilderDirty = true;
 	}
-}
-
-void VulkanBackend::setSampler(uint32_t textureIdx, TextureSampler* sampler)
-{
-	if (!sampler) {
+	else
+	{
 		m_imageInfos[textureIdx].sampler = nullptr;
-		return;
-	}
-
-	VkSampler vkSampler = sampler->bind(device, physicalData.properties, 4);
-
-	if (m_imageInfos[textureIdx].sampler != vkSampler)
-	{
-		m_imageInfos[textureIdx].sampler = vkSampler;
-		m_descriptorBuilderDirty = true;
 	}
 }
 
@@ -1232,72 +1198,6 @@ void VulkanBackend::bindShader(const ShaderProgram* shader)
 	}
 }
 
-/*
- * Ok so basically: bufferIdx is used to signify one of the N ubo's or ssbos's, while the bindIdx is used to signify where they will be bound on the gpu.
- */
-
-void VulkanBackend::pushUbo(int bufferIdx, VkShaderStageFlagBits type, ShaderParameters& params)
-{
-	ShaderParameters::PackedData packedConstants = params.getPackedConstants();
-
-	if (packedConstants.size() <= 0) {
-		return;
-	}
-
-	bool modified = false;
-
-	m_uboManagers[bufferIdx].pushData(packedConstants.data(), packedConstants.size(), m_currentFrameIdx, &modified);
-
-	if (modified) {
-		m_descriptorBuilderDirty = true;
-	}
-}
-
-void VulkanBackend::pushSsbo(int bufferIdx, VkShaderStageFlagBits type, void* data, uint64_t size)
-{
-	if (size <= 0) {
-		return;
-	}
-
-	bool modified = false;
-
-	m_ssboManagers[bufferIdx].pushData(data, size, m_currentFrameIdx, &modified);
-
-	if (modified) {
-		m_descriptorBuilderDirty = true;
-	}
-}
-
-void VulkanBackend::bindUbo(int bufferIdx, int bindIdx)
-{
-	m_uboManagers[bufferIdx].bind(bindIdx);
-}
-
-void VulkanBackend::bindSsbo(int bufferIdx, int bindIdx)
-{
-	m_ssboManagers[bufferIdx].bind(bindIdx);
-}
-
-void VulkanBackend::unbindUbo(int bufferIdx)
-{
-	m_uboManagers[bufferIdx].unbind();
-}
-
-void VulkanBackend::unbindSsbo(int bufferIdx)
-{
-	m_ssboManagers[bufferIdx].unbind();
-}
-
-GPUBuffer* VulkanBackend::getUboBuffer(int bufferIdx)
-{
-	return m_uboManagers[bufferIdx].getBuffer();
-}
-
-GPUBuffer* VulkanBackend::getSsboBuffer(int bufferIdx)
-{
-	return m_ssboManagers[bufferIdx].getBuffer();
-}
-
 void VulkanBackend::setPushConstants(ShaderParameters& params)
 {
 	m_pushConstants = params.getPackedConstants();
@@ -1324,28 +1224,9 @@ int VulkanBackend::getCurrentFrameIdx() const
 	return m_currentFrameIdx;
 }
 
-Vector<uint32_t> VulkanBackend::getDynamicOffsets() const
-{
-	Vector<uint32_t> result;
-
-	for (int i = 0; i < mgc::MAX_BOUND_UBOS; i++) {
-		if (m_uboManagers[i].isBound()) {
-			result.pushBack(m_uboManagers[i].getDynamicOffset());
-		}
-	}
-
-	for (int i = 0; i < mgc::MAX_BOUND_SSBOS; i++) {
-		if (m_ssboManagers[i].isBound()) {
-			result.pushBack(m_ssboManagers[i].getDynamicOffset());
-		}
-	}
-
-	return result;
-}
-
 void VulkanBackend::beginCompute()
 {
-	m_descriptorBuilderDirty = true;
+	markDescriptorDirty();
 
 	const auto& currentFrame = computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
@@ -1383,7 +1264,7 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 		);
 	}
 
-	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
+	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -1432,13 +1313,7 @@ void VulkanBackend::endCompute()
 		LLT_ERROR("[VULKAN|DEBUG] Failed to submit compute command buffer: %d", result);
 	}
 
-	for (int i = 0; i < m_uboManagers.size(); i++) {
-		m_uboManagers[i].unbind();
-	}
-
-	for (int i = 0; i < m_ssboManagers.size(); i++) {
-		m_ssboManagers[i].unbind();
-	}
+	g_shaderBufferManager->unbindAll();
 }
 
 void VulkanBackend::syncComputeWithNextRender()
@@ -1448,7 +1323,7 @@ void VulkanBackend::syncComputeWithNextRender()
 
 void VulkanBackend::beginRender()
 {
-	m_descriptorBuilderDirty = true;
+	markDescriptorDirty();
 
 	const auto& currentFrame = graphicsQueue.getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
@@ -1514,7 +1389,7 @@ void VulkanBackend::render(const RenderOp& op)
 		);
 	}
 
-	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
+	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -1592,13 +1467,7 @@ void VulkanBackend::endRender()
 
 	m_uncertainComputeFinished = false;
 
-	for (int i = 0; i < m_uboManagers.size(); i++) {
-		m_uboManagers[i].unbind();
-	}
-
-	for (int i = 0; i < m_ssboManagers.size(); i++) {
-		m_ssboManagers[i].unbind();
-	}
+	g_shaderBufferManager->unbindAll();
 }
 
 void VulkanBackend::swapBuffers()
@@ -1611,13 +1480,7 @@ void VulkanBackend::swapBuffers()
 
 	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
 
-	for (int i = 0; i < m_uboManagers.size(); i++) {
-		m_uboManagers[i].resetBufferUsageInFrame(m_currentFrameIdx);
-	}
-
-	for (int i = 0; i < m_ssboManagers.size(); i++) {
-		m_ssboManagers[i].resetBufferUsageInFrame(m_currentFrameIdx);
-	}
+	g_shaderBufferManager->resetBufferUsageInFrame();
 
 	m_backbuffer->acquireNextImage();
 }

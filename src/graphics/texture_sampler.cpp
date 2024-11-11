@@ -33,7 +33,7 @@ void TextureSampler::cleanUp()
 	m_sampler = VK_NULL_HANDLE;
 }
 
-VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties properties, int mipLevels)
+VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties properties, int maxMipLevels)
 {
 	// check if we actually need to create a new sampler or if our current one suffices
 	if (!dirty) {
@@ -60,7 +60,7 @@ VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties prope
 	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	createInfo.mipLodBias = 0.0f;
 	createInfo.minLod = 0.0f;
-	createInfo.maxLod = (float)mipLevels;
+	createInfo.maxLod = (float)maxMipLevels;
 
 	if (VkResult result = vkCreateSampler(device, &createInfo, nullptr, &m_sampler); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:SAMPLER|DEBUG] Failed to create texture sampler: %d", result);

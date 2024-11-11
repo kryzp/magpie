@@ -35,6 +35,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/shader.cpp
     src/graphics/shader_mgr.cpp
     src/graphics/shader_buffer.cpp
+    src/graphics/shader_buffer_mgr.cpp
     src/graphics/mesh.cpp
     src/graphics/sub_mesh.cpp
     src/graphics/material.cpp

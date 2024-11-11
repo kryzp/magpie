@@ -34,11 +34,12 @@ namespace llt
 
 		uint64_t hash() const;
 
-		void setTexture(int idx, const Texture* texture, TextureSampler* sampler);
+		void setTexture(int idx, int bindIdx, const Texture* texture, TextureSampler* sampler);
 
 		Technique technique;
 		ShaderParameters parameters;
 		Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
+		Array<uint32_t, mgc::MAX_BOUND_TEXTURES> textureBindIdxs;
 	};
 }
 

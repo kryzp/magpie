@@ -6,6 +6,7 @@
 
 #include "util.h"
 #include "gpu_buffer.h"
+#include "shader.h"
 
 namespace llt
 {
@@ -28,11 +29,12 @@ namespace llt
 		void init(uint64_t initialSize, ShaderBufferType type);
 		void cleanUp();
 
-		void pushData(const void* data, uint64_t size, int currentFrame, bool* modified);
+		void pushData(ShaderParameters& params);
+		void pushData(const void* data, uint64_t size);
 		
 		void reallocateBuffer(uint64_t size);
 
-		void resetBufferUsageInFrame(int currentFrame);
+		void resetBufferUsageInFrame();
 
 		const VkDescriptorBufferInfo& getDescriptor() const;
 

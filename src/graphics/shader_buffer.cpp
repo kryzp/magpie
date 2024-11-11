@@ -30,7 +30,14 @@ void ShaderBuffer::cleanUp()
 	m_buffer = nullptr;
 }
 
-void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, bool* modified)
+void ShaderBuffer::pushData(ShaderParameters& params)
+{
+	auto& packedParams = params.getPackedConstants();
+
+	pushData(packedParams.data(), packedParams.size());
+}
+
+void ShaderBuffer::pushData(const void* data, uint64_t size)
 {
 	// calculate the total used memory so far
 	uint64_t totalUsedMemory = 0;
@@ -58,11 +65,6 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 	m_dynamicOffset = dynamicOffset;
 
 	m_info.offset = 0;
-
-	if (m_info.range != size && modified) {
-		(*modified) = true;
-	}
-
 	m_info.range = size;
 
 	if (m_type == SHADER_BUFFER_UBO)
@@ -86,7 +88,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size, int currentFrame, b
 
 	// move forward and increment the ubo usage in the current frame
 	m_offset += size;
-	m_usageInFrame[currentFrame] += size;
+	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] += size;
 
 	// recalculate the aligned dynamic offset
 	dynamicOffset = vkutil::calcShaderBufferAlignedSize(
@@ -139,9 +141,9 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 	}
 }
 
-void ShaderBuffer::resetBufferUsageInFrame(int currentFrame)
+void ShaderBuffer::resetBufferUsageInFrame()
 {
-	m_usageInFrame[currentFrame] = 0;
+	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] = 0;
 }
 
 const VkDescriptorBufferInfo& ShaderBuffer::getDescriptor() const
@@ -151,6 +153,10 @@ const VkDescriptorBufferInfo& ShaderBuffer::getDescriptor() const
 
 void ShaderBuffer::bind(int idx)
 {
+	if (m_boundIdx != idx) {
+		g_vulkanBackend->markDescriptorDirty();
+	}
+
 	m_boundIdx = idx;
 }
 

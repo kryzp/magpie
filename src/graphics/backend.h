@@ -34,6 +34,7 @@
 #include "render_pass.h"
 #include "queue.h"
 
+#include "shader_buffer_mgr.h"
 #include "gpu_buffer_mgr.h"
 #include "texture_mgr.h"
 #include "shader_mgr.h"
@@ -104,22 +105,9 @@ namespace llt
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
-		void setTexture(uint32_t textureIdx, uint32_t bindIdx, const Texture* texture);
-		void setSampler(uint32_t textureIdx, TextureSampler* sampler);
+		void setTexture(uint32_t bindIdx, const Texture* texture, TextureSampler* sampler);
 
 		void bindShader(const ShaderProgram* shader);
-
-		void pushUbo(int bufferIdx, VkShaderStageFlagBits type, ShaderParameters& params);
-		void pushSsbo(int bufferIdx, VkShaderStageFlagBits type, void* data, uint64_t size);
-
-		void bindUbo(int bufferIdx, int bindIdx);
-		void bindSsbo(int bufferIdx, int bindIdx);
-
-		void unbindUbo(int bufferIdx);
-		void unbindSsbo(int bufferIdx);
-
-		GPUBuffer* getUboBuffer(int bufferIdx);
-		GPUBuffer* getSsboBuffer(int bufferIdx);
 
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();
@@ -131,6 +119,8 @@ namespace llt
 		void clearDescriptorCacheAndPool();
 
 		int getCurrentFrameIdx() const;
+
+		void markDescriptorDirty();
 
         VkInstance vulkanInstance;
 		VkDevice device;
@@ -152,8 +142,6 @@ namespace llt
 		void createPipelineProcessCache();
 		void createComputeResources();
 		void createVmaAllocator();
-
-		Vector<uint32_t> getDynamicOffsets() const;
 
 		VkSampleCountFlagBits getMaxUsableSampleCount() const;
 		void findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -202,9 +190,6 @@ namespace llt
 
 		// shader parameters
 		ShaderParameters::PackedData m_pushConstants;
-
-		Array<ShaderBuffer, mgc::MAX_BOUND_UBOS> m_uboManagers;
-		Array<ShaderBuffer, mgc::MAX_BOUND_SSBOS> m_ssboManagers;
 
 		// rendering configs
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;

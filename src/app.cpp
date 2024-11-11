@@ -281,22 +281,25 @@ void App::run()
 	*/
 
 	// setup instanced data
-	const int INSTANCED_CUBE_COUNT = 256;
+	const int INSTANCED_CUBE_COUNT = 4096;
 	uint64_t instanceDataSize = sizeof(MyInstancedData) * INSTANCED_CUBE_COUNT;
 	MyInstancedData* instanceData = new MyInstancedData[INSTANCED_CUBE_COUNT];
 
 	for (int i = 0; i < INSTANCED_CUBE_COUNT; i++)
 	{
 		float ii = (float)(i % 16);
-		float jj = (float)(i / 16);
+		float jj = (float)((i / 16) % 16);
+		float kk = (float)(i / 256);
 
 		ii *= 2.5f;
 		jj *= 2.5f;
+		kk *= 2.5f;
 
-		instanceData[i].offset = { ii, 0.0f, -jj };
+		instanceData[i].offset = { ii, kk, -jj };
 	}
 
-	g_vulkanBackend->pushSsbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, instanceData, instanceDataSize);
+	ShaderBuffer* instanceSSBO = g_shaderBufferManager->createSSBO();
+	instanceSSBO->pushData(instanceData, instanceDataSize);
 
 	// setup camera
 	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 50.0f);
@@ -307,12 +310,12 @@ void App::run()
 	ShaderParameters pushConstants;
 	pushConstants.set("time", 0.0f);
 
-	glm::mat4 modelMatrix = glm::identity<glm::mat4>();
+	ShaderParameters uboParams;
+	uboParams.set("projMatrix", glm::identity<glm::mat4>());
+	uboParams.set("viewMatrix", glm::identity<glm::mat4>());
+	uboParams.set("modelMatrix", glm::identity<glm::mat4>());
 
-	ShaderParameters ubo;
-	ubo.set("projMatrix", glm::identity<glm::mat4>());
-	ubo.set("viewMatrix", glm::identity<glm::mat4>());
-	ubo.set("modelMatrix", glm::identity<glm::mat4>());
+	ShaderBuffer* ubo = g_shaderBufferManager->createUBO();
 
 	// delta time calculation
 	double accumulator = 0.0;
@@ -402,19 +405,18 @@ void App::run()
 		pushConstants.set("time", (float)elapsedTime);
 		g_vulkanBackend->setPushConstants(pushConstants);
 
-		ubo.set("projMatrix", camera.getProj());
+		uboParams.set("projMatrix", camera.getProj());
 
 		g_vulkanBackend->setDepthWrite(false);
 		g_vulkanBackend->setDepthTest(false);
 
-		ubo.set("viewMatrix", camera.getViewNoTranslation());
-		ubo.set("modelMatrix", glm::identity<glm::mat4>());
+		uboParams.set("viewMatrix", camera.getViewNoTranslation());
+		uboParams.set("modelMatrix", glm::identity<glm::mat4>());
 
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
-		g_vulkanBackend->setTexture(0, 1, skyboxTexture);
-		g_vulkanBackend->setSampler(0, skyboxSampler);
+		g_vulkanBackend->setTexture(1, skyboxTexture, skyboxSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentShaderSkybox);
@@ -427,46 +429,46 @@ void App::run()
 		g_vulkanBackend->setDepthWrite(true);
 		g_vulkanBackend->setDepthTest(true);
 
-		ubo.set("viewMatrix", camera.getView());
-		ubo.set("modelMatrix", glm::identity<glm::mat4>());
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		uboParams.set("viewMatrix", camera.getView());
+		uboParams.set("modelMatrix", glm::identity<glm::mat4>());
+		
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
-		g_vulkanBackend->setTexture(0, 1, stoneTexture);
-		g_vulkanBackend->setSampler(0, stoneSampler);
+		g_vulkanBackend->setTexture(1, stoneTexture, stoneSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentShader);
 
 		// floor
-		ubo.set("modelMatrix", getTransformationMatrix({ 0.0f, 0.0f, 0.0f }, 0.0f, { 0.0f, 1.0f, 0.0f }, { 10.0f, 0.25f, 10.0f }, { 0.0f, 1.0f, 0.0f }));
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		uboParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 0.0f, 0.0f }, 0.0f, { 0.0f, 1.0f, 0.0f }, { 10.0f, 0.25f, 10.0f }, { 0.0f, 1.0f, 0.0f }));
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
 		// block 1
-		ubo.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, {0.0f, 1.0f, 0.0}, {1.5f, 1.5f, 1.5f}, {0.0f, -1.0f, 0.0f}));
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		uboParams.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, {0.0f, 1.0f, 0.0}, {1.5f, 1.5f, 1.5f}, {0.0f, -1.0f, 0.0f}));
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
 		// block 2
-		ubo.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		uboParams.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
 		pass.mesh = &block;
 		g_vulkanBackend->render(pass.build());
 
 		// instancing!!!
 
-		ubo.set("modelMatrix", glm::translate(glm::identity<glm::mat4>(), glm::vec3(5.0f, -5.0f, -5.0f)));
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		uboParams.set("modelMatrix", getTransformationMatrix({ 5.0f, -5.0f, -5.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, 0.0f, 0.0f }));
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
 		g_vulkanBackend->setVertexDescriptor(instancedVertexFormat);
 
@@ -474,7 +476,7 @@ void App::run()
 		g_vulkanBackend->bindShader(fragmentShader);
 
 		pass.instanceCount = INSTANCED_CUBE_COUNT;
-		pass.instanceBuffer = g_vulkanBackend->getSsboBuffer(0);
+		pass.instanceBuffer = instanceSSBO->getBuffer();
 		pass.mesh = &block;
 
 		g_vulkanBackend->render(pass.build());
@@ -499,16 +501,15 @@ void App::run()
 		pushConstants.set("time", (float)elapsedTime);
 		g_vulkanBackend->setPushConstants(pushConstants);
 
-		ubo.set("projMatrix", glm::identity<glm::mat4>());
-		ubo.set("viewMatrix", glm::identity<glm::mat4>());
-		ubo.set("modelMatrix", glm::identity<glm::mat4>());
+		uboParams.set("projMatrix", glm::identity<glm::mat4>());
+		uboParams.set("viewMatrix", glm::identity<glm::mat4>());
+		uboParams.set("modelMatrix", glm::identity<glm::mat4>());
 
-		g_vulkanBackend->pushUbo(0, VK_SHADER_STAGE_ALL_GRAPHICS, ubo);
-		g_vulkanBackend->bindUbo(0, 0);
+		ubo->pushData(uboParams);
+		ubo->bind(0);
 
-		g_vulkanBackend->setTexture(0, 1, target->getAttachment(0));
-//		g_vulkanBackend->setTexture(0, 1, target->getDepthAttachment());
-		g_vulkanBackend->setSampler(0, targetSampler);
+		g_vulkanBackend->setTexture(1, target->getAttachment(0), targetSampler);
+//		g_vulkanBackend->setTexture(1, target->getDepthAttachment(), targetSampler);
 
 		g_vulkanBackend->bindShader(vertexShader);
 		g_vulkanBackend->bindShader(fragmentShader);
@@ -520,8 +521,7 @@ void App::run()
 
 		// --- ---
 
-		g_vulkanBackend->setTexture(0, 0, nullptr);
-		g_vulkanBackend->setSampler(0, nullptr);
+		g_vulkanBackend->setTexture(0, nullptr, nullptr);
 
 		g_vulkanBackend->resetPushConstants();
 

@@ -53,7 +53,7 @@ namespace llt
 		/*
 		 * Create a sampler with some properties and amount of mip levels
 		 */
-		VkSampler bind(VkDevice device, VkPhysicalDeviceProperties properties, int getMipLevels);
+		VkSampler bind(VkDevice device, VkPhysicalDeviceProperties properties, int maxMipLevels);
 
 		VkSampler sampler() const;
 
