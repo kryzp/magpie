@@ -81,15 +81,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
  */
 static VkResult debugCreateDebugUtilsMessengerExt(
 	VkInstance instance,
-	const VkDebugUtilsMessengerCreateInfoEXT* create_info,
+	const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
 	const VkAllocationCallbacks* allocator,
-	VkDebugUtilsMessengerEXT* debug_messenger
+	VkDebugUtilsMessengerEXT* debugMessenger
 )
 {
 	auto fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
 	if (fn) {
-		return fn(instance, create_info, allocator, debug_messenger);
+		return fn(instance, createInfo, allocator, debugMessenger);
 	}
 
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -185,7 +185,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_depthStencilCreateInfo()
 	, m_colourBlendAttachmentStates()
 	, m_blendConstants{0.0f, 0.0f, 0.0f, 0.0f}
-	, msaaSamples(VK_SAMPLE_COUNT_1_BIT)
+	, maxMsaaSamples(VK_SAMPLE_COUNT_1_BIT)
 	, m_viewport()
 	, m_scissor()
 	, m_currentFrameIdx(0)
@@ -367,11 +367,11 @@ void VulkanBackend::enumeratePhysicalDevices()
 	physicalData.features = features;
 
 	// get the actual number of samples we can take
-	this->msaaSamples = getMaxUsableSampleCount();
+	this->maxMsaaSamples = getMaxUsableSampleCount();
 
 	// try to rank our physical devices and select one accordingly
-	bool has_essentials = false;
-	uint32_t usability0 = vkutil::assignPhysicalDeviceUsability(surface, physicalData.device, properties, features, &has_essentials);
+	bool hasEssentials = false;
+	uint32_t usability0 = vkutil::assignPhysicalDeviceUsability(surface, physicalData.device, properties, features, &hasEssentials);
 
 	// select the device of the highest usability
 	for (int i = 1; i < deviceCount; i++)
@@ -379,9 +379,9 @@ void VulkanBackend::enumeratePhysicalDevices()
 		vkGetPhysicalDeviceProperties(devices[i], &physicalData.properties);
 		vkGetPhysicalDeviceFeatures(devices[i], &physicalData.features);
 
-		uint32_t usability1 = vkutil::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &has_essentials);
+		uint32_t usability1 = vkutil::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &hasEssentials);
 
-		if (usability1 > usability0 && has_essentials)
+		if (usability1 > usability0 && hasEssentials)
 		{
 			usability0 = usability1;
 
@@ -389,7 +389,7 @@ void VulkanBackend::enumeratePhysicalDevices()
 			physicalData.properties = properties;
 			physicalData.features = features;
 
-			this->msaaSamples = getMaxUsableSampleCount();
+			this->maxMsaaSamples = getMaxUsableSampleCount();
 		}
 	}
 
@@ -685,7 +685,7 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampleStateCreateInfo.sampleShadingEnable = m_sampleShadingEnabled ? VK_TRUE : VK_FALSE;
 	multisampleStateCreateInfo.minSampleShading = m_minSampleShading;
-	multisampleStateCreateInfo.rasterizationSamples = (VkSampleCountFlagBits)m_currentRenderTarget->getMSAA();
+	multisampleStateCreateInfo.rasterizationSamples = m_currentRenderTarget->getMSAA();
 	multisampleStateCreateInfo.pSampleMask = nullptr;
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;

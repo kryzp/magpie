@@ -99,8 +99,9 @@ void RenderTarget::createDepthResources(int idx)
 
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.setSampleCount(VK_SAMPLE_COUNT_1_BIT);
-	m_depth.makeDepthTexture();
+	m_depth.setSampleCount(getMSAA());
+
+	m_depth.flagAsDepthTexture();
 
 	m_depth.createInternalResources();
 
@@ -108,7 +109,7 @@ void RenderTarget::createDepthResources(int idx)
 
 	m_depth.setParent(this);
 
-	m_renderPassBuilder.createDepthAttachment(idx, VK_SAMPLE_COUNT_1_BIT);
+	m_renderPassBuilder.createDepthAttachment(idx, getMSAA());
 }
 
 void RenderTarget::setClearColour(int idx, const Colour& colour)
@@ -151,7 +152,7 @@ void RenderTarget::setAttachment(int idx, Texture* texture)
 	);
 }
 
-int RenderTarget::getMSAA() const
+VkSampleCountFlagBits RenderTarget::getMSAA() const
 {
 	return VK_SAMPLE_COUNT_1_BIT;
 }

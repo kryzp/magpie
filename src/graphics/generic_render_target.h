@@ -36,7 +36,7 @@ namespace llt
 		virtual const Texture* getAttachment(int idx) const = 0;
 		virtual const Texture* getDepthAttachment() const = 0;
 
-		virtual int getMSAA() const = 0;
+		virtual VkSampleCountFlagBits getMSAA() const = 0;
 
 		virtual void setClearColour(int idx, const Colour& colour) = 0;
 		virtual void setDepthStencilClear(float depth, uint32_t stencil) = 0;

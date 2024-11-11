@@ -105,6 +105,7 @@ void RenderPassBuilder::createRenderPass(uint64_t nFramebuffers, uint64_t attach
 
 	for (uint64_t n = 0; n < nFramebuffers; n++)
     {
+		// todo: this attachment replacement looks dodgy...
 		if (backbufferAttachments != nullptr) {
 			attachments[backbufferAttachmentIdx] = backbufferAttachments[n];
 		}
@@ -149,10 +150,14 @@ void RenderPassBuilder::cleanUpFramebuffers()
 	destroyFBOs();
 
 	m_framebuffers.clear();
+	
 	m_attachmentDescriptions.clear();
+	
 	m_colourAttachments.clear();
 	m_colourAttachmentResolves.clear();
+	
 	m_depthAttachmentRef = {};
+
 	m_colourAttachmentCount = 0;
 	m_attachmentCount = 0;
 }

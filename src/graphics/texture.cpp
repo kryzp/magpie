@@ -100,7 +100,7 @@ void Texture::setTransient(bool isTransient)
 	m_transient = isTransient;
 }
 
-void Texture::makeDepthTexture()
+void Texture::flagAsDepthTexture()
 {
 	m_isDepthTexture = true;
 }

@@ -45,7 +45,7 @@ namespace llt
 		void setSampleCount(VkSampleCountFlagBits numSamples);
 		void setTransient(bool isTransient);
 
-		void makeDepthTexture();
+		void flagAsDepthTexture();
 		bool isDepthTexture() const;
 
 		void createInternalResources();

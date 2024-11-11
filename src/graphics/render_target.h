@@ -26,6 +26,7 @@ namespace llt
 		void setAttachment(int idx, Texture* texture);
 
 		int getMSAA() const override;
+		VkSampleCountFlagBits getMSAA() const override;
 
 	private:
 		void createDepthResources(int idx);

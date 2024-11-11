@@ -45,21 +45,23 @@ void Backbuffer::createColourResources()
 	// build the colour resource
 	m_colour.setSize(m_width, m_height);
 	m_colour.setProperties(g_vulkanBackend->swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_colour.setSampleCount(g_vulkanBackend->msaaSamples);
+	m_colour.setSampleCount(g_vulkanBackend->maxMsaaSamples);
 	m_colour.setTransient(true);
 	m_colour.createInternalResources();
 
 	// add the colour resources to our render pass builder
-	m_renderPassBuilder.createColourAttachment(0,
+	m_renderPassBuilder.createColourAttachment(
+		0,
 		g_vulkanBackend->swapChainImageFormat,
-		g_vulkanBackend->msaaSamples,
+		g_vulkanBackend->maxMsaaSamples,
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		false
 	);
 
 	// add the resolve colour component due to MSAA
-	m_renderPassBuilder.createColourAttachment(2,
+	m_renderPassBuilder.createColourAttachment(
+		2,
 		g_vulkanBackend->swapChainImageFormat,
 		VK_SAMPLE_COUNT_1_BIT,
 		VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -77,14 +79,14 @@ void Backbuffer::createDepthResources()
 	// create the depth component
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.setSampleCount(g_vulkanBackend->msaaSamples);
+	m_depth.setSampleCount(g_vulkanBackend->maxMsaaSamples);
 	
 	m_depth.createInternalResources();
 
 	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 	// add the component to our render pass builder
-	m_renderPassBuilder.createDepthAttachment(1, g_vulkanBackend->msaaSamples);
+	m_renderPassBuilder.createDepthAttachment(1, g_vulkanBackend->maxMsaaSamples);
 
     LLT_LOG("[VULKAN:BACKBUFFER] Created depth resources!");
 }
@@ -401,9 +403,9 @@ int Backbuffer::getCurrentTextureIdx() const
 	return m_currSwapChainImageIdx;
 }
 
-int Backbuffer::getMSAA() const
+VkSampleCountFlagBits Backbuffer::getMSAA() const
 {
-	return g_vulkanBackend->msaaSamples;
+	return g_vulkanBackend->maxMsaaSamples;
 }
 
 const VkSemaphore& Backbuffer::getRenderFinishedSemaphore() const

@@ -135,7 +135,7 @@ namespace llt
         VkInstance vulkanInstance;
 		VkDevice device;
 		PhysicalDeviceData physicalData;
-		VkSampleCountFlagBits msaaSamples;
+		VkSampleCountFlagBits maxMsaaSamples;
 		VkFormat swapChainImageFormat;
 		VmaAllocator m_vmaAllocator;
 

@@ -84,7 +84,7 @@ namespace llt
 		* Get the number of MSAA samples that are being taken
 		* for anti-aliasing.
 		*/
-		int getMSAA() const override;
+		VkSampleCountFlagBits getMSAA() const override;
 
 		/*
 		* Return the current texture index in triple-buffering.
@@ -120,8 +120,10 @@ namespace llt
 		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
 
 		VkSwapchainKHR m_swapChain;
+		
 		Vector<VkImage> m_swapChainImages;
 		Vector<VkImageView> m_swapChainImageViews;
+
 		VkSurfaceKHR m_surface;
 		uint32_t m_currSwapChainImageIdx;
 
