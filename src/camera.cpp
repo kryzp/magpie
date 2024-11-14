@@ -43,19 +43,19 @@ void Camera::update(float dt)
 	float dy = (float)(g_inputState->getMousePosition().y - g_platform->getWindowSize().y*0.5f);
 
 	if ((dx * dx) + (dy * dy) > MOUSE_DEADZONE*MOUSE_DEADZONE) {
-		m_targetYaw += dx * MOUSE_SENSITIVITY * dt;
+		m_targetYaw -= dx * MOUSE_SENSITIVITY * dt;
 		m_targetPitch -= dy * MOUSE_SENSITIVITY * dt;
 	}
 
 	m_yaw = lerp(m_yaw, m_targetYaw, dt * 50.0f);
 	m_pitch = lerp(m_pitch, m_targetPitch, dt * 50.0f);
 
-	float yaw = m_yaw - glm::half_pi<float>();
+	float yaw = m_yaw + glm::half_pi<float>();
 	float pitch = m_pitch;
 
 	direction.x = glm::cos(yaw) * glm::cos(pitch);
 	direction.y = glm::sin(pitch);
-	direction.z = glm::sin(yaw) * glm::cos(pitch);
+	direction.z = -glm::sin(yaw) * glm::cos(pitch);
 
 	glm::vec3 v1 = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
 	glm::vec3 v2 = glm::normalize(glm::cross(v1, direction));

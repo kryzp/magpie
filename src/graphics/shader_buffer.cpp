@@ -76,7 +76,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	{
 		// actually write the data into the ssbo
 		// todo: do all stages have to be created on heap? pretty expensive and they get destroyed like right after, would make more sense to make them on stack...
-		GPUBuffer* stage = g_bufferManager->createStagingBuffer(size);
+		GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(size);
 		stage->writeDataToMe(data, size, 0);
 		stage->writeToBuffer(m_buffer, size, 0, dynamicOffset);
 		delete stage;
@@ -113,11 +113,11 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
-		m_buffer = g_bufferManager->createUBO(bufferSize);
+		m_buffer = g_gpuBufferManager->createUniformBuffer(bufferSize);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
-		m_buffer = g_bufferManager->createSSBO(bufferSize);
+		m_buffer = g_gpuBufferManager->createShaderStorageBuffer(bufferSize);
 	}
 	else
 	{

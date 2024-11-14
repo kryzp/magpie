@@ -257,7 +257,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 #endif // LLT_DEBUG
 
 	// set up all of the core managers of resources
-	g_bufferManager       = new GPUBufferMgr();
+	g_gpuBufferManager       = new GPUBufferMgr();
 	g_shaderBufferManager = new ShaderBufferMgr();
 	g_textureManager      = new TextureMgr();
 	g_shaderManager       = new ShaderMgr();
@@ -280,7 +280,7 @@ VulkanBackend::~VulkanBackend()
 	delete g_renderTargetManager;
 	delete g_shaderManager;
 	delete g_textureManager;
-	delete g_bufferManager;
+	delete g_gpuBufferManager;
 
 	m_backbuffer->cleanUpTextures();
 

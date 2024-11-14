@@ -16,6 +16,7 @@ namespace llt
         RenderTargetMgr();
         ~RenderTargetMgr();
 
+        // todo: should these should have a string key-hashing system also?
 		RenderTarget* createTarget(uint32_t width, uint32_t height, const Vector<VkFormat>& attachments);
 		RenderTarget* createDepthTarget(uint32_t width, uint32_t height);
 

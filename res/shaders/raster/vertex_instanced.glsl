@@ -26,7 +26,7 @@ layout (location = 2) out vec3 o_fragPosition;
 void main()
 {
 	vec3 finalPos = a_position + instance_positionOffset;
-	finalPos.y += sin(pushConstants.time*2.0 + 0.2*length(instance_positionOffset));
+	finalPos += sin(pushConstants.time*2.0 + 0.2*length(instance_positionOffset)) * normalize(instance_positionOffset) * 0.8;
 
 	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(finalPos, 1.0);
 

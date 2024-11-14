@@ -2,6 +2,7 @@
 #define APP_H_
 
 #include "common.h"
+#include "renderer.h"
 #include "container/function.h"
 #include "graphics/backbuffer.h"
 #include "graphics/shader.h"
@@ -58,7 +59,8 @@ namespace llt
 	private:
 		Config m_config;
 		bool m_running;
-		Backbuffer* m_backbuffer;
+
+		Renderer m_renderer;
 	};
 
 	extern App* g_app;

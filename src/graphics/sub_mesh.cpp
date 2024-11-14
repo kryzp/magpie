@@ -26,11 +26,11 @@ void SubMesh::build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, ui
 	uint64_t indexBufferSize = nIndices * sizeof(uint16_t);
 
 	// create the gpu buffers
-	m_vertexBuffer = g_bufferManager->createVertexBuffer(nVertices, vertexSize);
-	m_indexBuffer = g_bufferManager->createIndexBuffer(nIndices);
+	m_vertexBuffer = g_gpuBufferManager->createVertexBuffer(nVertices, vertexSize);
+	m_indexBuffer = g_gpuBufferManager->createIndexBuffer(nIndices);
 
 	// allocate a staging buffer for them
-	GPUBuffer* stage = g_bufferManager->createStagingBuffer(vertexBufferSize + indexBufferSize);
+	GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(vertexBufferSize + indexBufferSize);
 
 	// read data to the stage
 	stage->writeDataToMe(pVertices, vertexBufferSize, 0);

@@ -1,6 +1,6 @@
 #include "gpu_buffer_mgr.h"
 
-llt::GPUBufferMgr* llt::g_bufferManager = nullptr;
+llt::GPUBufferMgr* llt::g_gpuBufferManager = nullptr;
 
 using namespace llt;
 
@@ -55,14 +55,14 @@ GPUBuffer* GPUBufferMgr::createIndexBuffer(uint64_t indexCount)
 	return indexBuffer;
 }
 
-GPUBuffer* GPUBufferMgr::createUBO(uint64_t size)
+GPUBuffer* GPUBufferMgr::createUniformBuffer(uint64_t size)
 {
 	GPUBuffer* uniformBuffer = new GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	uniformBuffer->create(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, size);
 	return uniformBuffer;
 }
 
-GPUBuffer* GPUBufferMgr::createSSBO(uint64_t size)
+GPUBuffer* GPUBufferMgr::createShaderStorageBuffer(uint64_t size)
 {
 	GPUBuffer* shaderStorageBuffer = new GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	shaderStorageBuffer->create(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, size);

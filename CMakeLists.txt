@@ -18,6 +18,7 @@ add_executable(${PROJECT_NAME}
     src/common.cpp
     src/app.cpp
     src/camera.cpp
+    src/renderer.cpp
     src/platform.cpp
 
     src/graphics/backbuffer.cpp

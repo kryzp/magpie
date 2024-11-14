@@ -55,7 +55,7 @@ void Timer::resume()
 
 double Timer::reset()
 {
-	double sec = elapsed();
+	double sec = getElapsedSeconds();
 
 	if (m_started) {
 		start();
@@ -64,7 +64,7 @@ double Timer::reset()
 	return sec;
 }
 
-double Timer::elapsed() const
+double Timer::getElapsedSeconds() const
 {
 	if (m_started)
 	{

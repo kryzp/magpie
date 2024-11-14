@@ -20,7 +20,7 @@ namespace llt
 
 		double reset();
 
-		double elapsed() const;
+		double getElapsedSeconds() const;
 
 		bool isStarted() const;
 		bool isPaused() const;
