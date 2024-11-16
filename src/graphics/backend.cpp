@@ -1266,6 +1266,8 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 
 	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
 
+	LLT_LOG("%d %d", dynamicOffsets[0], dynamicOffsets[1]);
+
 	vkCmdBindDescriptorSets(
 		currentBuffer,
 		VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -1352,8 +1354,8 @@ void VulkanBackend::render(const RenderOp& op)
 	vkCmdSetViewport(currentBuffer, 0, 1, &m_viewport);
 	vkCmdSetScissor(currentBuffer, 0, 1, &m_scissor);
 
-	const auto& vertexBuffer = op.vertexData.buffer->getBuffer();
-	const auto& indexBuffer  = op.indexData.buffer->getBuffer();
+	const auto& vertexBuffer = op.meshData.vBuffer->getBuffer();
+	const auto& indexBuffer  = op.meshData.iBuffer->getBuffer();
 
 	VkPipeline pipeline = getGraphicsPipeline();
 	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
@@ -1407,14 +1409,28 @@ void VulkanBackend::render(const RenderOp& op)
 		pipeline
 	);
 
-	vkCmdDrawIndexed(
-		currentBuffer,
-		op.indexData.nIndices,
-		op.instanceData.instanceCount,
-		0,
-		0,
-		op.instanceData.firstInstance
-	);
+	if (op.indirectData.buffer)
+	{
+		// todo: start using vkCmdDrawIndirectCount
+		vkCmdDrawIndexedIndirect(
+			currentBuffer,
+			op.indirectData.buffer->getBuffer(),
+			op.indirectData.offset,
+			op.indirectData.drawCount,
+			sizeof(VkDrawIndexedIndirectCommand)
+		);
+	}
+	else
+	{
+		vkCmdDrawIndexed(
+			currentBuffer,
+			op.meshData.nIndices,
+			op.instanceData.instanceCount,
+			0,
+			0,
+			op.instanceData.firstInstance
+		);
+	}
 }
 
 void VulkanBackend::endRender()

@@ -14,13 +14,28 @@ RenderTargetMgr::RenderTargetMgr()
 
 RenderTargetMgr::~RenderTargetMgr()
 {
-	for (auto& target : m_targets) {
+	for (auto& [name, target] : m_targets) {
 		target->cleanUp();
 	}
+
+	m_targets.clear();
 }
 
-RenderTarget* RenderTargetMgr::createTarget(uint32_t width, uint32_t height, const Vector<VkFormat>& attachments)
+RenderTarget* RenderTargetMgr::get(const String& name)
 {
+	if (m_targets.contains(name)) {
+		return m_targets.get(name);
+	}
+
+	return nullptr;
+}
+
+RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments)
+{
+	if (m_targets.contains(name)) {
+		return m_targets.get(name);
+	}
+
 	RenderTarget* result = new RenderTarget(width, height);
 
 	for (int i = 0; i < attachments.size(); i++)
@@ -43,16 +58,20 @@ RenderTarget* RenderTargetMgr::createTarget(uint32_t width, uint32_t height, con
 
 	result->create();
 
-	m_targets.pushBack(result);
+	m_targets.insert(Pair(name, result));
 	return result;
 }
 
-RenderTarget* RenderTargetMgr::createDepthTarget(uint32_t width, uint32_t height)
+RenderTarget* RenderTargetMgr::createDepthTarget(const String& name, uint32_t width, uint32_t height)
 {
+	if (m_targets.contains(name)) {
+		return m_targets.get(name);
+	}
+
 	RenderTarget* result = new RenderTarget(width, height);
 
 	result->createOnlyDepth();
 
-	m_targets.pushBack(result);
+	m_targets.insert(Pair(name, result));
 	return result;
 }

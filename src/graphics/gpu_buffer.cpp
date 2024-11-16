@@ -13,7 +13,6 @@ GPUBuffer::GPUBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 	, m_allocationInfo()
 	, m_usage(usage)
 	, m_memoryUsage(memoryUsage)
-	, m_properties()
 	, m_size(0)
 {
 }
@@ -23,9 +22,8 @@ GPUBuffer::~GPUBuffer()
     cleanUp();
 }
 
-void GPUBuffer::create(VkMemoryPropertyFlags properties, uint64_t size)
+void GPUBuffer::create(uint64_t size)
 {
-	this->m_properties = properties;
 	this->m_size = size;
 
 	VkBufferCreateInfo bufferCreateInfo = {};
@@ -128,11 +126,6 @@ VkBufferUsageFlags GPUBuffer::getUsage() const
 VmaMemoryUsage GPUBuffer::getMemoryUsage() const
 {
 	return m_memoryUsage;
-}
-
-VkMemoryPropertyFlags GPUBuffer::getProperties() const
-{
-	return m_properties;
 }
 
 uint64_t GPUBuffer::getSize() const

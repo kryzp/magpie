@@ -2,7 +2,10 @@
 #define VK_RENDER_TARGET_MGR_H_
 
 #include <vulkan/vulkan.h>
+
 #include "../container/vector.h"
+#include "../container/hash_map.h"
+#include "../container/string.h"
 
 namespace llt
 {
@@ -16,12 +19,13 @@ namespace llt
         RenderTargetMgr();
         ~RenderTargetMgr();
 
-        // todo: should these should have a string key-hashing system also?
-		RenderTarget* createTarget(uint32_t width, uint32_t height, const Vector<VkFormat>& attachments);
-		RenderTarget* createDepthTarget(uint32_t width, uint32_t height);
+        RenderTarget* get(const String& name);
+
+		RenderTarget* createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments);
+		RenderTarget* createDepthTarget(const String& name, uint32_t width, uint32_t height);
 
     private:
-        Vector<RenderTarget*> m_targets;
+        HashMap<String, RenderTarget*> m_targets;
     };
 
     extern RenderTargetMgr* g_renderTargetManager;

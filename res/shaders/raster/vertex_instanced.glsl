@@ -25,12 +25,11 @@ layout (location = 2) out vec3 o_fragPosition;
 
 void main()
 {
-	vec3 finalPos = a_position + instance_positionOffset;
-	finalPos += sin(pushConstants.time*2.0 + 0.2*length(instance_positionOffset)) * normalize(instance_positionOffset) * 0.8;
+//	finalPos += sin(pushConstants.time*2.0 + 0.2*length(instance_positionOffset)) * normalize(instance_positionOffset) * 0.8;
 
-	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(finalPos, 1.0);
+	gl_Position = ubo.projMatrix * ubo.viewMatrix * (vec4(instance_positionOffset, 0.0) + ubo.modelMatrix * vec4(a_position, 1.0));
 
 	o_colour = a_colour;
 	o_texCoord = a_uv;
-	o_fragPosition = finalPos;
+	o_fragPosition = a_position + instance_positionOffset;
 }

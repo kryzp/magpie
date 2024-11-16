@@ -10,16 +10,12 @@ namespace llt
 {
 	struct RenderOp
 	{
-		struct VertexData
+		struct MeshData
 		{
 			uint32_t nVertices;
-			const GPUBuffer* buffer;
-		};
-
-		struct IndexData
-		{
+			const GPUBuffer* vBuffer;
 			uint32_t nIndices;
-			const GPUBuffer* buffer;
+			const GPUBuffer* iBuffer;
 		};
 
 		struct InstanceData
@@ -29,51 +25,47 @@ namespace llt
 			const GPUBuffer* buffer;
 		};
 
-		VertexData vertexData;
-		IndexData indexData;
+		struct IndirectData
+		{
+			uint32_t drawCount;
+			uint32_t offset;
+			const GPUBuffer* buffer;
+		};
+
+		MeshData meshData;
 		InstanceData instanceData;
+		IndirectData indirectData;
 
 		RenderOp()
-			: vertexData()
-			, indexData()
+			: meshData()
 			, instanceData()
+			, indirectData()
 		{
-		}
-	};
-
-	class RenderPass
-	{
-	public:
-		RenderPass()
-			: instanceCount(1)
-			, firstInstance(0)
-			, instanceBuffer(nullptr)
-			, mesh(nullptr)
-		{
+			instanceData.instanceCount = 1;
 		}
 
-		RenderOp build()
+		void setMesh(const SubMesh& mesh)
 		{
-			RenderOp operation;
+			meshData.nVertices = mesh.getVertexCount();
+			meshData.vBuffer = mesh.getVertexBuffer();
 
-			operation.vertexData.nVertices = mesh->getVertexCount();
-			operation.vertexData.buffer = mesh->getVertexBuffer();
-
-			operation.indexData.nIndices = mesh->getIndexCount();
-			operation.indexData.buffer = mesh->getIndexBuffer();
-
-			operation.instanceData.instanceCount = instanceCount;
-			operation.instanceData.firstInstance = firstInstance;
-			operation.instanceData.buffer = instanceBuffer;
-
-			return operation;
+			meshData.nIndices = mesh.getIndexCount();
+			meshData.iBuffer = mesh.getIndexBuffer();
 		}
 
-		uint32_t instanceCount;
-		uint32_t firstInstance;
-		const GPUBuffer* instanceBuffer;
+		void setInstanceData(uint32_t count, uint32_t first, const GPUBuffer* buffer)
+		{
+			instanceData.instanceCount = count;
+			instanceData.firstInstance = first;
+			instanceData.buffer = buffer;
+		}
 
-		const SubMesh* mesh;
+		void setIndirectData(uint32_t count, uint32_t offset, const GPUBuffer* buffer)
+		{
+			indirectData.drawCount = count;
+			indirectData.offset = offset;
+			indirectData.buffer = buffer;
+		}
 	};
 }
 

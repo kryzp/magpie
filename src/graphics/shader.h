@@ -267,6 +267,7 @@ namespace llt
 	* Describes a collection of GPU shader programs, making up a full "effect", essentially
 	* the pipeline of vertex -> ... -> fragment, all in stages.
 	*/
+	/*
 	class ShaderEffect
 	{
 	public:
@@ -280,6 +281,7 @@ namespace llt
 
 		Vector<ShaderProgram*> stages;
 	};
+	*/
 }
 
 #endif // VK_SHADER_H_

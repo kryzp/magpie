@@ -8,34 +8,38 @@ using namespace llt;
 
 ShaderMgr::ShaderMgr()
 	: m_shaderCache()
-	, m_effects()
+//	, m_effects()
 {
 }
 
 ShaderMgr::~ShaderMgr()
 {
-	for (auto& effect : m_effects) {
-		delete effect;
-	}
+//	for (auto& effect : m_effects) {
+//		delete effect;
+//	}
 
-	m_effects.clear();
+//	m_effects.clear();
 
-	for (auto& [id, shader] : m_shaderCache) {
+	for (auto& [name, shader] : m_shaderCache) {
 		delete shader;
 	}
 
 	m_shaderCache.clear();
 }
 
-ShaderProgram* ShaderMgr::create(const String& source, VkShaderStageFlagBits type)
+ShaderProgram* ShaderMgr::get(const String& name)
 {
-	uint64_t hash = 0;
+	if (m_shaderCache.contains(name)) {
+		return m_shaderCache.get(name);
+	}
 
-	hash::combine(&hash, &source);
-	hash::combine(&hash, &type);
+	return nullptr;
+}
 
-	if (m_shaderCache.contains(hash)) {
-		return m_shaderCache.get(hash);
+ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkShaderStageFlagBits type)
+{
+	if (m_shaderCache.contains(name)) {
+		return m_shaderCache.get(name);
 	}
 
 	FileStream fs(source.cstr(), "r");
@@ -47,14 +51,16 @@ ShaderProgram* ShaderMgr::create(const String& source, VkShaderStageFlagBits typ
 	shader->type = type;
 	shader->loadFromSource(sourceData.data(), sourceData.size());
 
-	m_shaderCache.insert(Pair(hash, shader));
+	m_shaderCache.insert(Pair(name, shader));
 
 	return shader;
 }
 
+/*
 ShaderEffect* ShaderMgr::createEffect()
 {
 	ShaderEffect* effect = new ShaderEffect();
 	m_effects.pushBack(effect);
 	return effect;
 }
+*/

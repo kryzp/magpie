@@ -7,6 +7,8 @@
 
 #include "../common.h"
 
+#include "function.h"
+
 namespace llt
 {
 	/**

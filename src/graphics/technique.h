@@ -26,6 +26,7 @@ namespace llt
 		Technique() = default;
 		~Technique() = default;
 
+		/*
 		void setPass(ShaderPass pass, ShaderEffect* effect)
 		{
 			m_passes[pass] = effect;
@@ -35,9 +36,10 @@ namespace llt
 		{
 			return m_passes[pass];
 		}
+		*/
 
 	private:
-		ShaderEffect* m_passes[SHADER_PASS_MAX_ENUM];
+		//ShaderEffect* m_passes[SHADER_PASS_MAX_ENUM];
 	};
 }
 

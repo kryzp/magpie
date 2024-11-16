@@ -18,13 +18,14 @@ namespace llt
 		ShaderMgr();
 		~ShaderMgr();
 
-		ShaderProgram* create(const String& source, VkShaderStageFlagBits type);
+		ShaderProgram* get(const String& name);
+		ShaderProgram* create(const String& name, const String& source, VkShaderStageFlagBits type);
 
-		ShaderEffect* createEffect();
+//		ShaderEffect* createEffect();
 
 	private:
-		HashMap<uint64_t, ShaderProgram*> m_shaderCache;
-		Vector<ShaderEffect*> m_effects;
+		HashMap<String, ShaderProgram*> m_shaderCache;
+//		Vector<ShaderEffect*> m_effects;
 	};
 
 	extern ShaderMgr* g_shaderManager;

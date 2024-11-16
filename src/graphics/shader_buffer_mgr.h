@@ -23,12 +23,14 @@ namespace llt
 
 		void bindToDescriptorBuilder(DescriptorBuilder* builder, VkShaderStageFlagBits stage);
 
-		Vector<uint32_t> getDynamicOffsets() const;
+		Vector<uint32_t> getDynamicOffsets();
 
 		ShaderBuffer* createUBO();
 		ShaderBuffer* createSSBO();
 
 	private:
+		void sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int lo, int hi);
+
 		Vector<ShaderBuffer*> m_buffers;
 	};
 

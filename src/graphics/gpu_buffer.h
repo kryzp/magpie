@@ -18,7 +18,7 @@ namespace llt
 		GPUBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
 		~GPUBuffer();
 
-		void create(VkMemoryPropertyFlags properties, uint64_t size);
+		void create(uint64_t size);
 		void cleanUp();
 
 		void readDataFromMe(void* dst, uint64_t length, uint64_t offset) const;
@@ -32,8 +32,6 @@ namespace llt
 		VkBufferUsageFlags getUsage() const;
 		VmaMemoryUsage getMemoryUsage() const;
 
-		VkMemoryPropertyFlags getProperties() const;
-
 		uint64_t getSize() const;
 
 	private:
@@ -44,8 +42,6 @@ namespace llt
 
 		VkBufferUsageFlags m_usage;
 		VmaMemoryUsage m_memoryUsage;
-		
-		VkMemoryPropertyFlags m_properties;
 
 		uint64_t m_size;
 	};

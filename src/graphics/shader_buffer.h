@@ -37,11 +37,12 @@ namespace llt
 		void resetBufferUsageInFrame();
 
 		const VkDescriptorBufferInfo& getDescriptor() const;
+		VkDescriptorType getDescriptorType() const;
 
-		void bind(int idx);
+		void bind(uint32_t idx);
 		void unbind();
 
-		int getBoundIdx() const;
+		uint32_t getBoundIdx() const;
 		bool isBound() const;
 
 		uint32_t getDynamicOffset() const;
@@ -60,7 +61,8 @@ namespace llt
 		uint64_t m_offset;
 		uint64_t m_maxSize;
 
-		int m_boundIdx;
+		uint32_t m_boundIdx;
+		bool m_isBound;
 		
 		ShaderBufferType m_type;
 	};

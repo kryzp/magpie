@@ -13,6 +13,7 @@ todo:
 - model loading
 - stencil buffer support! currently i just discard all the data
 - imgui?
+- I think queues arent currently assigned properly(?)
 
 stuff im interested in:
 - pbr

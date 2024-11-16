@@ -17,26 +17,12 @@
 
 using namespace llt;
 
-struct MyVertex
-{
-	glm::vec3 pos;
-	glm::vec2 uv;
-	glm::vec3 col;
-	glm::vec3 norm;
-};
-
-struct MyInstancedData
-{
-	glm::vec3 offset;
-};
-
 Renderer::Renderer()
 	: m_backbuffer(nullptr)
 	, m_vertexShaderInstanced(nullptr)
 	, m_vertexShader(nullptr)
 	, m_fragmentShader(nullptr)
 	, m_fragmentShaderSkybox(nullptr)
-	, m_computeProgram(nullptr)
 	, m_quadMesh()
 	, m_blockMesh()
 	, m_skyboxMesh()
@@ -51,6 +37,7 @@ Renderer::Renderer()
 	, m_shaderParams()
 	, m_shaderParamsBuffer(nullptr)
 	, m_pushConstants()
+	, m_gpuParticles()
 {
 }
 
@@ -63,6 +50,7 @@ void Renderer::init(Backbuffer* backbuffer)
 	m_backbuffer = backbuffer;
 
 	m_target = g_renderTargetManager->createTarget(
+		"target",
 		m_backbuffer->getWidth(),
 		m_backbuffer->getHeight(),
 		{ VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ }
@@ -76,6 +64,8 @@ void Renderer::init(Backbuffer* backbuffer)
 	setupVertexFormats();
 	createInstanceData();
 	setupShaderParameters();
+
+	m_gpuParticles.init();
 }
 
 void Renderer::loadTextures()
@@ -97,12 +87,10 @@ void Renderer::loadTextures()
 
 void Renderer::loadShaders()
 {
-	m_vertexShaderInstanced		= g_shaderManager->create("../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	m_vertexShader				= g_shaderManager->create("../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	m_fragmentShader			= g_shaderManager->create("../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	m_fragmentShaderSkybox		= g_shaderManager->create("../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	m_computeProgram = g_shaderManager->create("../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	m_vertexShaderInstanced		= g_shaderManager->create("vertexInstanced", "../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	m_vertexShader				= g_shaderManager->create("vertex", "../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	m_fragmentShader			= g_shaderManager->create("fragment", "../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	m_fragmentShaderSkybox		= g_shaderManager->create("fragmentSkybox", "../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void Renderer::setupShaderParameters()
@@ -135,8 +123,8 @@ void Renderer::createQuadMesh()
 
 void Renderer::createBlockMesh()
 {
-	Vector<MyVertex> blockVertices = {
-
+	Vector<MyVertex> blockVertices =
+	{
 		// front face
 		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
 		{ {  1.0f,  1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
@@ -174,7 +162,8 @@ void Renderer::createBlockMesh()
 		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
 	};
 
-	Vector<uint16_t> blockIndices = {
+	Vector<uint16_t> blockIndices =
+	{
 		0, 1, 2,
 		0, 2, 3,
 
@@ -233,25 +222,24 @@ void Renderer::createSkybox()
 	m_skyboxMesh.build(skyboxVertices.data(), skyboxVertices.size(), sizeof(MyVertex), skyboxIndices.data(), skyboxIndices.size());
 }
 
+struct MyInstancedData
+{
+	glm::vec3 offset;
+};
+
 void Renderer::setupVertexFormats()
 {
-	// default
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
 	m_vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
-	// ---
-
-	// instanced (per vertex)
 	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
 	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
 	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
 	m_instancedVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-
-	// instanced (per instance)
 	m_instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyInstancedData, offset));
 	m_instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
 }
@@ -280,16 +268,28 @@ void Renderer::createInstanceData()
 	delete[] instanceData;
 }
 
-void Renderer::render(const Camera& camera, float elapsedTime)
+void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 {
-	auto getTransformationMatrix = [&](const glm::vec3& position, float rotationAngle, const glm::vec3& rotationAxis, const glm::vec3& scale, const glm::vec3& origin) -> glm::mat4 {
-		return glm::translate(glm::identity<glm::mat4>(), position) *
+	auto getTransformationMatrix = [&](const glm::vec3& position, float rotationAngle, const glm::vec3& rotationAxis, const glm::vec3& scale, const glm::vec3& origin) -> glm::mat4
+	{
+		return
+			glm::translate(glm::identity<glm::mat4>(), position) *
 			glm::rotate(glm::identity<glm::mat4>(), rotationAngle, rotationAxis) *
 			glm::scale(glm::identity<glm::mat4>(), scale) *
 			glm::translate(glm::identity<glm::mat4>(), -origin);
 	};
 
-	RenderPass pass;
+	// --- ---
+
+	m_shaderParamsBuffer->unbind();
+	m_pushConstants.set("time", deltaTime);
+	g_vulkanBackend->setPushConstants(m_pushConstants);
+	m_gpuParticles.dispatchCompute(camera);
+	m_shaderParamsBuffer->bind(0);
+
+	// --- ---
+
+	RenderOp pass;
 
 	g_vulkanBackend->setVertexDescriptor(m_vertexFormat);
 
@@ -317,8 +317,8 @@ void Renderer::render(const Camera& camera, float elapsedTime)
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShaderSkybox);
 
-	pass.mesh = &m_skyboxMesh;
-	g_vulkanBackend->render(pass.build());
+	pass.setMesh(m_skyboxMesh);
+	g_vulkanBackend->render(pass);
 
 	// ---
 
@@ -341,27 +341,26 @@ void Renderer::render(const Camera& camera, float elapsedTime)
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	pass.mesh = &m_blockMesh;
-	g_vulkanBackend->render(pass.build());
+	pass.setMesh(m_blockMesh);
+	g_vulkanBackend->render(pass);
 
 	// block 1
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, {0.0f, 1.0f, 0.0}, {1.5f, 1.5f, 1.5f}, {0.0f, -1.0f, 0.0f}));
+	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, { 0.0f, 1.0f, 0.0f }, { 1.5f, 1.5f, 1.5f }, { 0.0f, -1.0f, 0.0f }));
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	pass.mesh = &m_blockMesh;
-	g_vulkanBackend->render(pass.build());
+	pass.setMesh(m_blockMesh);
+	g_vulkanBackend->render(pass);
 
 	// block 2
 	m_shaderParams.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	pass.mesh = &m_blockMesh;
-	g_vulkanBackend->render(pass.build());
+	pass.setMesh(m_blockMesh);
+	g_vulkanBackend->render(pass);
 
 	// instancing!!!
-
 	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 5.0f, -5.0f, -5.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, 0.0f, 0.0f }));
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
@@ -371,14 +370,20 @@ void Renderer::render(const Camera& camera, float elapsedTime)
 	g_vulkanBackend->bindShader(m_vertexShaderInstanced);
 	g_vulkanBackend->bindShader(m_fragmentShader);
 
-	pass.instanceCount = INSTANCED_CUBE_COUNT;
-	pass.instanceBuffer = m_instanceBuffer->getBuffer();
-	pass.mesh = &m_blockMesh;
+	pass.setInstanceData(INSTANCED_CUBE_COUNT, 0, m_instanceBuffer->getBuffer());
+	pass.setMesh(m_blockMesh);
 
-	g_vulkanBackend->render(pass.build());
+	g_vulkanBackend->render(pass);
 
-	pass.instanceCount = 1;
-	pass.instanceBuffer = nullptr;
+	pass.setInstanceData(1, 0, nullptr);
+
+	// particles
+	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 2.0f, -2.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.1f, 0.1f, 0.1f }, { 0.0f, 0.0f, 0.0f }));
+	m_shaderParamsBuffer->pushData(m_shaderParams);
+	m_shaderParamsBuffer->bind(0);
+	m_gpuParticles.render();
+
+	// ---
 
 	g_vulkanBackend->endRender();
 
@@ -405,19 +410,18 @@ void Renderer::render(const Camera& camera, float elapsedTime)
 	m_shaderParamsBuffer->bind(0);
 
 	g_vulkanBackend->setTexture(1, m_target->getAttachment(0), m_linearSampler);
-	//g_vulkanBackend->setTexture(1, target->getDepthAttachment(), m_linearSampler);
 
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShader);
 
-	pass.mesh = &m_quadMesh;
-	g_vulkanBackend->render(pass.build());
+	pass.setMesh(m_quadMesh);
+	g_vulkanBackend->render(pass);
 
 	g_vulkanBackend->endRender();
 
 	// --- ---
 
-	g_vulkanBackend->setTexture(0, nullptr, nullptr);
+	g_vulkanBackend->setTexture(1, nullptr, nullptr);
 
 	g_vulkanBackend->resetPushConstants();
 
@@ -425,75 +429,3 @@ void Renderer::render(const Camera& camera, float elapsedTime)
 
 	g_vulkanBackend->swapBuffers();
 }
-
-
-/*
-g_vulkanBackend->beginCompute();
-
-g_vulkanBackend->bindShader(computeProgram);
-
-parameters.set("deltaTime", (float)targetDeltaTime);
-g_vulkanBackend->pushUbo(0, 0, VK_SHADER_STAGE_COMPUTE_BIT, parameters);
-
-g_vulkanBackend->bindSsbo(0, 1);
-
-g_vulkanBackend->dispatchCompute(1, 1, 1);
-
-g_vulkanBackend->endCompute();
-
-// ---
-
-RENDERING TO FBO
-
-// ---
-
-g_vulkanBackend->syncComputeWithNextRender();
-
-// ---
-
-RENDER FBO ON QUAD TO BACKBUFFER
-*/
-
-/*
-struct Particle
-{
-	glm::vec2 position;
-	glm::vec2 velocity;
-};
-*/
-
-/*
-int nParticles = 8;
-uint64_t particleBufferSize = sizeof(Particle) * nParticles;
-Particle* particleData = new Particle[nParticles];
-
-for (int i = 0; i < nParticles; i++)
-{
-particleData[i].position = { i, 0.0f };
-particleData[i].velocity = { 0.0f, i * 0.05f };
-}
-
-MyInstancedData instanceRawData[8];
-
-for (int i = 0; i < 8; i++)
-{
-instanceRawData[i].positionOffset.x = i;
-instanceRawData[i].positionOffset.y = 0.0f;
-}
-
-GPUBuffer* instanceData = g_gpuBufferManager->createVertexBuffer(8, sizeof(MyInstancedData));
-GPUBuffer* instanceDataStage = g_gpuBufferManager->createStagingBuffer(sizeof(MyInstancedData) * 8);
-instanceDataStage->writeDataToMe(instanceRawData, sizeof(MyInstancedData) * 8, 0);
-instanceDataStage->writeToBuffer(instanceData, sizeof(MyInstancedData) * 8, 0, 0);
-delete instanceDataStage;
-
-ShaderParameters parameters;
-parameters.set("deltaTime", 1.0f);
-
-ShaderParameters parameters2;
-parameters2.set("otherData", 1.0f);
-
-g_vulkanBackend->pushSsbo(0, 1, VK_SHADER_STAGE_COMPUTE_BIT, particleData, particleBufferSize);
-
-delete[] particleData;
-*/

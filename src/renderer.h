@@ -7,12 +7,22 @@
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
 
+#include "gpu_particles.h"
+
 namespace llt
 {
 	class Backbuffer;
 	class ShaderProgram;
 	class ShaderBuffer;
 	class Camera;
+
+	struct MyVertex
+	{
+		glm::vec3 pos;
+		glm::vec2 uv;
+		glm::vec3 col;
+		glm::vec3 norm;
+	};
 
 	class Renderer
 	{
@@ -24,7 +34,7 @@ namespace llt
 		~Renderer();
 
 		void init(Backbuffer* backbuffer);
-		void render(const Camera& camera, float elapsedTime);
+		void render(const Camera& camera, float deltaTime, float elapsedTime);
 
 	private:
 		void loadTextures();
@@ -42,7 +52,6 @@ namespace llt
 		ShaderProgram* m_vertexShader;
 		ShaderProgram* m_fragmentShader;
 		ShaderProgram* m_fragmentShaderSkybox;
-		ShaderProgram* m_computeProgram;
 
 		SubMesh m_quadMesh;
 		SubMesh m_blockMesh;
@@ -65,6 +74,8 @@ namespace llt
 		ShaderBuffer* m_shaderParamsBuffer;
 
 		ShaderParameters m_pushConstants;
+
+		GPUParticles m_gpuParticles;
 	};
 }
 

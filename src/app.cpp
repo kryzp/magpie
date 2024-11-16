@@ -103,7 +103,7 @@ void App::run()
 
 		LLT_LOG("fps: %f", 1.0 / deltaTime);
 
-		m_renderer.render(camera, elapsedTimer.getElapsedSeconds());
+		m_renderer.render(camera, deltaTime, elapsedTimer.getElapsedSeconds());
 	}
 }
 
