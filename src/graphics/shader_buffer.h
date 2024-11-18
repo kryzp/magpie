@@ -53,8 +53,8 @@ namespace llt
 	private:
 		GPUBuffer* m_buffer;
 		
-		uint32_t m_dynamicOffset;
 		VkDescriptorBufferInfo m_info;
+		uint32_t m_dynamicOffset;
 		
 		Array<uint64_t, mgc::FRAMES_IN_FLIGHT> m_usageInFrame;
 

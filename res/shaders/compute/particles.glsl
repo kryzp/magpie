@@ -23,9 +23,9 @@ layout (binding = 1) buffer ParticleSSBO {
 	Particle particles[PARTICLE_COUNT];
 };
 
-//layout (binding = 2) uniform sampler2D u_motionTexture;
-//layout (binding = 3) uniform sampler2D u_depthTexture;
-//layout (binding = 4) uniform sampler2D u_normalTexture;
+layout (binding = 2) uniform sampler2D u_motionTexture;
+layout (binding = 3) uniform sampler2D u_normalTexture;
+layout (binding = 4) uniform sampler2D u_depthTexture;
 
 vec3 toScreenPosition(vec3 worldPosition)
 {
@@ -51,21 +51,31 @@ void main()
 	
 	vec3 gravity = vec3(0.0, -5.0, 0.0);
 
-	//vec3 projectedSurfacePosition = toWorldPosition(vec3(screenPosition.xy, depth));
-	bool onSurface = false;//abs(dot(normal, position - projectedSurfacePosition)) <= COLLISION_DISTANCE;
+	vec3 position = particles[idx].position;
+	vec3 screenPosition = toScreenPosition(position);
+
+	float depth = texture(u_depthTexture, screenPosition.xy).x;
+
+	vec3 projectedSurfacePosition = toWorldPosition(vec3(screenPosition.xy, depth));
+
+	vec3 normal = 2.0*texture(u_normalTexture, screenPosition.xy).xyz - 1.0;
+
+	float approxDistanceFromSurface = abs(dot(normal, position - projectedSurfacePosition));
+
+	bool onSurface = false;//approxDistanceFromSurface <= COLLISION_DISTANCE;
 
 	if (onSurface)
 	{
-//		vec3 naiveNewPosition = particles[idx].position + particles[idx].velocity*pc.deltaTime;
-//
-//		vec3 motionHere = texture(u_motionTexture, toScreenPosition(naiveNewPosition).xy).xyz;
-//		vec3 naiveNewScreenPosition = toScreenPosition(particles[idx].position) + motionHere;
-//
-//		vec3 curPosition = toWorldPosition(newScreenPosition);
-//		vec3 prevPosition = particles[idx].position;
-//
-//		particles[idx].position = curPosition;
-//		particles[idx].velocity = (curPosition - prevPosition) / pushConstants.deltaTime;
+		vec3 naiveNewPosition = position + particles[idx].velocity*pc.deltaTime;
+
+		vec3 correctionMotion = texture(u_motionTexture, toScreenPosition(naiveNewPosition).xy).xyz;
+		vec3 newScreenPosition = toScreenPosition(position) + correctionMotion;
+
+		vec3 newPosition = toWorldPosition(newScreenPosition);
+		vec3 curPosition = position;
+
+		particles[idx].position = newPosition;
+		particles[idx].velocity = (newPosition - curPosition) / pc.deltaTime;
 	}
 	else
 	{

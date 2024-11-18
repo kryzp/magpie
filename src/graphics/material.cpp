@@ -18,9 +18,8 @@ uint64_t Material::hash() const
 	return ret;
 }
 
-void Material::setTexture(int idx, int bindIdx, const Texture* texture, TextureSampler* sampler)
+void Material::setTexture(int idx, const Texture* texture, TextureSampler* sampler)
 {
-	textureBindIdxs[idx] = bindIdx;
 	textures[idx].texture = texture;
 	textures[idx].sampler = sampler;
 }

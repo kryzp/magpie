@@ -151,8 +151,9 @@ void vkutil::endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer)
 	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
 }
 
-uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties)
+uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
+	VkPhysicalDeviceProperties properties = g_vulkanBackend->physicalData.properties;
 	const VkDeviceSize& minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return (size / minimumSize) * minimumSize + ((size % minimumSize) > 0 ? minimumSize : 0);
 }

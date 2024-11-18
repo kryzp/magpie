@@ -7,7 +7,8 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 todo:
-- ALLOW MSAA SAMPLING ON RENDER TARGETS!!!
+- ALLOW MSAA SAMPLING ON RENDER TARGETS!!! probably do this by making each "Texture" really contain two textures - the normal surface and then the msaa surface.
+- VK_FORMAT_R32G32B32_SFLOAT isnt supported??? wtf???
 - drawindirect support
 - somehow seperate depth texture from render target to allow for creating a render target without a depth buffer? idk.
 - model loading

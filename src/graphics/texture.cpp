@@ -160,7 +160,7 @@ void Texture::createInternalResources()
 	createInfo.format = m_format;
 	createInfo.tiling = m_tiling;
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	createInfo.usage = m_transient ? VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT : VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	createInfo.usage = m_transient ? VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT : (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 	createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.samples = m_numSamples;
 	createInfo.flags = 0;

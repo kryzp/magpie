@@ -58,7 +58,7 @@ namespace llt
 		void endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics);
 		void endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer);
 
-		uint64_t calcShaderBufferAlignedSize(uint64_t size, VkPhysicalDeviceProperties properties);
+		uint64_t calcShaderBufferAlignedSize(uint64_t size);
 
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice);

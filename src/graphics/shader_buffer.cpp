@@ -6,8 +6,8 @@ using namespace llt;
 
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(nullptr)
-	, m_dynamicOffset()
 	, m_info()
+	, m_dynamicOffset()
 	, m_usageInFrame()
 	, m_offset(0)
 	, m_maxSize(0)
@@ -51,27 +51,18 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 		reallocateBuffer(m_maxSize * 2);
 	}
 
-	// calculate the aligned dynamic offset
-	uint32_t dynamicOffset = vkutil::calcShaderBufferAlignedSize(
-		m_offset,
-		g_vulkanBackend->physicalData.properties
-	);
-
 	// wrap back around to zero if we can't fit all of our data at the current point
-	if (dynamicOffset + size >= m_maxSize) {
+	if (m_offset + size >= m_maxSize) {
 		m_offset = 0;
 	}
 
-	// set the dynamic offset
-	m_dynamicOffset = dynamicOffset;
-
-	m_info.offset = 0;
+	m_dynamicOffset = m_offset;
 	m_info.range = size;
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
 		// actually write the data into the ubo
-		m_buffer->writeDataToMe(data, size, dynamicOffset);
+		m_buffer->writeDataToMe(data, size, m_offset);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
@@ -80,7 +71,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 		// todo: also wait can't we just do writeDataToMe??? fix this!!
 		GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(size);
 		stage->writeDataToMe(data, size, 0);
-		stage->writeToBuffer(m_buffer, size, 0, dynamicOffset);
+		stage->writeToBuffer(m_buffer, size, 0, m_offset);
 		delete stage;
 	}
 	else
@@ -91,24 +82,13 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	// move forward and increment the ubo usage in the current frame
 	m_offset += size;
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] += size;
-
-	// recalculate the aligned dynamic offset
-	dynamicOffset = vkutil::calcShaderBufferAlignedSize(
-		m_offset,
-		g_vulkanBackend->physicalData.properties
-	);
-
-	// again, if we have moved past the maximum size, wrap back around to zero.
-	if (dynamicOffset >= m_maxSize) {
-		m_offset = 0;
-	}
 }
 
 void ShaderBuffer::reallocateBuffer(uint64_t size)
 {
 	delete m_buffer;
 
-	VkDeviceSize bufferSize = vkutil::calcShaderBufferAlignedSize(size, g_vulkanBackend->physicalData.properties);
+	VkDeviceSize bufferSize = vkutil::calcShaderBufferAlignedSize(size);
 
 	m_maxSize = size;
 	m_offset = 0;

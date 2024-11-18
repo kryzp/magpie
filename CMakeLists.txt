@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
     src/platform.cpp
     src/renderer.cpp
     src/camera.cpp
+    src/entity.cpp
     src/gpu_particles.cpp
 
     src/graphics/backbuffer.cpp

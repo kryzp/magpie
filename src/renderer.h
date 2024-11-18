@@ -7,6 +7,7 @@
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
 
+#include "entity.h"
 #include "gpu_particles.h"
 
 namespace llt
@@ -45,6 +46,7 @@ namespace llt
 		void createSkybox();
 		void setupVertexFormats();
 		void createInstanceData();
+		void createEntities();
 
 		Backbuffer* m_backbuffer;
 
@@ -76,6 +78,8 @@ namespace llt
 		ShaderParameters m_pushConstants;
 
 		GPUParticles m_gpuParticles;
+
+		Vector<Entity> m_renderEntities;
 	};
 }
 

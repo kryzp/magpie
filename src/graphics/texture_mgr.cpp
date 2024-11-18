@@ -38,16 +38,13 @@ Texture* TextureMgr::getTexture(const String& name)
 	return nullptr;
 }
 
-TextureSampler* TextureMgr::getSampler(const String& name, const TextureSampler::Style& style)
+TextureSampler* TextureMgr::getSampler(const String& name)
 {
 	if (m_samplerCache.contains(name)) {
 		return m_samplerCache[name];
 	}
 
-	TextureSampler* sampler = new TextureSampler(style);
-	m_samplerCache.insert(Pair(name, sampler));
-
-	return sampler;
+	return nullptr;
 }
 
 Texture* TextureMgr::createFromImage(const String& name,const Image& image)
@@ -163,4 +160,16 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 	m_textureCache.insert(Pair(name, texture));
 
 	return texture;
+}
+
+TextureSampler* TextureMgr::createSampler(const String& name, const TextureSampler::Style& style)
+{
+	if (m_samplerCache.contains(name)) {
+		return m_samplerCache[name];
+	}
+
+	TextureSampler* sampler = new TextureSampler(style);
+	m_samplerCache.insert(Pair(name, sampler));
+
+	return sampler;
 }

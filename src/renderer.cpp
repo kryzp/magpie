@@ -38,6 +38,7 @@ Renderer::Renderer()
 	, m_shaderParamsBuffer(nullptr)
 	, m_pushConstants()
 	, m_gpuParticles()
+	, m_renderEntities()
 {
 }
 
@@ -50,10 +51,14 @@ void Renderer::init(Backbuffer* backbuffer)
 	m_backbuffer = backbuffer;
 
 	m_target = g_renderTargetManager->createTarget(
-		"target",
+		"gBuffer", // YES I KNOW THIS ISNT A DEFERRED RENDERING GBUFFER BUT WHATEVER
 		m_backbuffer->getWidth(),
 		m_backbuffer->getHeight(),
-		{ VK_FORMAT_B8G8R8A8_UNORM /*, VK_FORMAT_R8G8_UNORM*/ }
+		{
+			VK_FORMAT_B8G8R8A8_UNORM, // colour
+			VK_FORMAT_R32G32_SFLOAT, // motion
+			VK_FORMAT_R32G32B32A32_SFLOAT // normals
+		}
 	);
 
 	loadTextures();
@@ -64,14 +69,15 @@ void Renderer::init(Backbuffer* backbuffer)
 	setupVertexFormats();
 	createInstanceData();
 	setupShaderParameters();
+	createEntities();
 
 	m_gpuParticles.init();
 }
 
 void Renderer::loadTextures()
 {
-	m_linearSampler = g_textureManager->getSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
-	m_nearestSampler = g_textureManager->getSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
+	m_linearSampler = g_textureManager->createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
+	m_nearestSampler = g_textureManager->createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
 	m_skyboxTexture = g_textureManager->createCubeMap("skybox", VK_FORMAT_R8G8B8A8_UNORM,
 		"../../res/textures/skybox/right.png",
@@ -98,8 +104,10 @@ void Renderer::setupShaderParameters()
 	m_pushConstants.set("time", 0.0f);
 
 	m_shaderParams.set("projMatrix", glm::identity<glm::mat4>());
-	m_shaderParams.set("viewMatrix", glm::identity<glm::mat4>());
-	m_shaderParams.set("modelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currViewMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("prevModelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("prevViewMatrix", glm::identity<glm::mat4>());
 
 	m_shaderParamsBuffer = g_shaderBufferManager->createUBO();
 }
@@ -268,24 +276,34 @@ void Renderer::createInstanceData()
 	delete[] instanceData;
 }
 
+void Renderer::createEntities()
+{
+	auto floor = m_renderEntities.emplaceBack();
+	floor->setPosition({ 0.0f, 0.0f, 0.0f });
+	floor->setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
+	floor->setScale({ 10.0f, 0.25f, 10.0f });
+	floor->setOrigin({ 0.0f, 1.0f, 0.0f });
+
+	auto blockLarge = m_renderEntities.emplaceBack();
+	blockLarge->setPosition({ 1.0f, 0.0f, -5.0f });
+	blockLarge->setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
+	blockLarge->setScale({ 1.5f, 1.5f, 1.5f });
+	blockLarge->setOrigin({ 0.0f, -1.0f, 0.0f });
+
+	auto blockSmall = m_renderEntities.emplaceBack();
+	blockSmall->setPosition({ -3.0f, 0.0f, 1.0f });
+	blockSmall->setRotation(glm::radians(45.0f), { 0.0f, 1.0f, 0.0f });
+	blockSmall->setScale({ 0.75f, 0.75f, 0.75f });
+	blockSmall->setOrigin({ 0.0f, -1.0f, 0.0f });
+}
+
 void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 {
-	auto getTransformationMatrix = [&](const glm::vec3& position, float rotationAngle, const glm::vec3& rotationAxis, const glm::vec3& scale, const glm::vec3& origin) -> glm::mat4
-	{
-		return
-			glm::translate(glm::identity<glm::mat4>(), position) *
-			glm::rotate(glm::identity<glm::mat4>(), rotationAngle, rotationAxis) *
-			glm::scale(glm::identity<glm::mat4>(), scale) *
-			glm::translate(glm::identity<glm::mat4>(), -origin);
-	};
-
-	// --- ---
-
-	m_shaderParamsBuffer->unbind();
-	m_pushConstants.set("time", deltaTime);
-	g_vulkanBackend->setPushConstants(m_pushConstants);
-	m_gpuParticles.dispatchCompute(camera);
-	m_shaderParamsBuffer->bind(0);
+//	m_shaderParamsBuffer->unbind();
+//	m_pushConstants.set("time", deltaTime);
+//	g_vulkanBackend->setPushConstants(m_pushConstants);
+//	m_gpuParticles.dispatchCompute(camera);
+//	m_shaderParamsBuffer->bind(0);
 
 	// --- ---
 
@@ -306,8 +324,8 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->setDepthWrite(false);
 	g_vulkanBackend->setDepthTest(false);
 
-	m_shaderParams.set("viewMatrix", camera.getViewNoTranslation());
-	m_shaderParams.set("modelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currViewMatrix", camera.getViewNoTranslation());
+	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
 
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
@@ -325,8 +343,8 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->setDepthWrite(true);
 	g_vulkanBackend->setDepthTest(true);
 
-	m_shaderParams.set("viewMatrix", camera.getView());
-	m_shaderParams.set("modelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currViewMatrix", camera.getView());
+	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
 
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
@@ -336,32 +354,18 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShader);
 
-	// floor
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 0.0f, 0.0f }, 0.0f, { 0.0f, 1.0f, 0.0f }, { 10.0f, 0.25f, 10.0f }, { 0.0f, 1.0f, 0.0f }));
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_shaderParamsBuffer->bind(0);
-
-	pass.setMesh(m_blockMesh);
-	g_vulkanBackend->render(pass);
-
-	// block 1
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 1.0f, 0.0f, -5.0f }, (float)elapsedTime, { 0.0f, 1.0f, 0.0f }, { 1.5f, 1.5f, 1.5f }, { 0.0f, -1.0f, 0.0f }));
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_shaderParamsBuffer->bind(0);
-
-	pass.setMesh(m_blockMesh);
-	g_vulkanBackend->render(pass);
-
-	// block 2
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ -3.0f, 0.0f, 1.0f }, glm::radians(45.0f), { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, -1.0f, 0.0f }));
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_shaderParamsBuffer->bind(0);
-
-	pass.setMesh(m_blockMesh);
-	g_vulkanBackend->render(pass);
+	for (auto& entity : m_renderEntities)
+	{
+		m_shaderParams.set("currModelMatrix", entity.getMatrix());
+		m_shaderParamsBuffer->pushData(m_shaderParams);
+		m_shaderParamsBuffer->bind(0);
+		pass.setMesh(m_blockMesh);
+		g_vulkanBackend->render(pass);
+	}
 
 	// instancing!!!
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 5.0f, -5.0f, -5.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, 0.0f, 0.0f }));
+	/*
+	m_shaderParams.set("currModelMatrix", getTransformationMatrix({ 5.0f, -5.0f, -5.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, 0.0f, 0.0f }));
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
@@ -376,12 +380,13 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->render(pass);
 
 	pass.setInstanceData(1, 0, nullptr);
+	*/
 
 	// particles
-	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 2.0f, -2.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.1f, 0.1f, 0.1f }, { 0.0f, 0.0f, 0.0f }));
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_shaderParamsBuffer->bind(0);
-	m_gpuParticles.render();
+//	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 2.0f, -2.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.1f, 0.1f, 0.1f }, { 0.0f, 0.0f, 0.0f }));
+//	m_shaderParamsBuffer->pushData(m_shaderParams);
+//	m_shaderParamsBuffer->bind(0);
+//	m_gpuParticles.render();
 
 	// ---
 
@@ -403,8 +408,10 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 
 	m_shaderParams.set("projMatrix", glm::identity<glm::mat4>());
-	m_shaderParams.set("viewMatrix", glm::identity<glm::mat4>());
-	m_shaderParams.set("modelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currViewMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("prevModelMatrix", glm::identity<glm::mat4>());
+	m_shaderParams.set("prevViewMatrix", glm::identity<glm::mat4>());
 
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
@@ -421,6 +428,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	// --- ---
 
+	g_vulkanBackend->setTexture(0, nullptr, nullptr);
 	g_vulkanBackend->setTexture(1, nullptr, nullptr);
 
 	g_vulkanBackend->resetPushConstants();

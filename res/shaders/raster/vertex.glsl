@@ -6,8 +6,10 @@ layout (push_constant) uniform PushConstants {
 
 layout (binding = 0) uniform ParameterUBO {
     mat4 projMatrix;
-    mat4 viewMatrix;
-    mat4 modelMatrix;
+    mat4 currViewMatrix;
+    mat4 currModelMatrix;
+	mat4 prevModelMatrix;
+	mat4 prevViewMatrix;
 } ubo;
 
 layout (location = 0) in vec3 a_position;
@@ -15,15 +17,28 @@ layout (location = 1) in vec2 a_uv;
 layout (location = 2) in vec3 a_colour;
 layout (location = 3) in vec3 a_normal;
 
-layout (location = 0) out vec3 o_colour;
-layout (location = 1) out vec2 o_texCoord;
-layout (location = 2) out vec3 o_fragPosition;
+layout (location = 0) out VS_OUT
+{
+	vec3 colour;
+	vec2 texCoord;
+	vec3 position;
+	vec3 normal;
+	vec4 currScreenPos;
+	vec4 prevScreenPos;
+}
+vs_out;
 
 void main()
 {
-	gl_Position = ubo.projMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(a_position, 1.0);
+	mat4 mvMatrix = ubo.currViewMatrix * ubo.currModelMatrix;
 
-	o_colour = a_colour;
-	o_texCoord = a_uv;
-	o_fragPosition = a_position;
+	gl_Position = ubo.projMatrix * mvMatrix * vec4(a_position, 1.0);
+
+	vs_out.colour = a_colour;
+	vs_out.texCoord = a_uv;
+	vs_out.position = a_position;
+	vs_out.normal = mat3(transpose(inverse(mvMatrix))) * a_normal; // YES, I KNOW inverse() IS EXPENSIVE
+
+	vs_out.currScreenPos = ubo.projMatrix * mvMatrix * vec4(a_position, 1.0);
+	vs_out.prevScreenPos = ubo.projMatrix * ubo.prevViewMatrix * ubo.prevModelMatrix * vec4(a_position, 1.0);
 }
