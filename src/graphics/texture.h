@@ -114,22 +114,25 @@ namespace llt
 	class SampledTexture
 	{
 	public:
-		SampledTexture()
-			: texture(nullptr)
-			, sampler(nullptr)
-		{
-		}
-
-		SampledTexture(const Texture* texture, TextureSampler* sampler)
-			: texture(texture)
-			, sampler(sampler)
-		{
-		}
-
+		SampledTexture();
+		SampledTexture(const Texture* texture, TextureSampler* sampler);
 		~SampledTexture() = default;
+
+		const VkDescriptorImageInfo& getInfo();
+
+		void bind(uint32_t idx);
+		void unbind();
+		uint32_t getBoundIdx() const;
+		bool isBound() const;
 
 		const Texture* texture;
 		TextureSampler* sampler;
+
+	private:
+		VkDescriptorImageInfo m_info;
+
+		uint32_t m_boundIdx;
+		bool m_isBound;
 	};
 }
 

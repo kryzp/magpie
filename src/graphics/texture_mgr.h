@@ -10,14 +10,24 @@ namespace llt
 {
 	class VulkanBackend;
 	class Texture;
+	class SampledTexture;
 	class TextureSampler;
 	class Image;
+	class DescriptorBuilder;
 
 	class TextureMgr
 	{
 	public:
 		TextureMgr();
 		~TextureMgr();
+
+		void unbindAll();
+
+		void bindToDescriptorBuilder(DescriptorBuilder* builder, VkShaderStageFlagBits stage);
+
+		void calculateBoundTextureHash(uint64_t* hash);
+
+		SampledTexture* getSampledTexture(const String& name, const Texture* texture, TextureSampler* sampler);
 
 		Texture* getTexture(const String& name);
 		TextureSampler* getSampler(const String& name);
@@ -30,6 +40,8 @@ namespace llt
 		TextureSampler* createSampler(const String& name, const TextureSampler::Style& style);
 
 	private:
+		HashMap<String, SampledTexture*> m_sampledTextures;
+
 		HashMap<String, Texture*> m_textureCache;
 		HashMap<String, TextureSampler*> m_samplerCache;
 	};

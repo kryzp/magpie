@@ -134,6 +134,10 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 	auto pixelSampler = g_textureManager->getSampler("nearest");
 	auto gBuffer = g_renderTargetManager->get("gBuffer");
 
+	SampledTexture* motionBuffer = g_textureManager->getSampledTexture("motionBuffer", gBuffer->getAttachment(1), pixelSampler);
+	SampledTexture* normalBuffer = g_textureManager->getSampledTexture("mormalsBuffer", gBuffer->getAttachment(2), pixelSampler);
+	SampledTexture* depthBuffer = g_textureManager->getSampledTexture("depthBuffer", gBuffer->getDepthAttachment(), pixelSampler);
+
 	g_vulkanBackend->beginCompute();
 
 	m_computeParams.set("viewProjMatrix", camera.getProj() * camera.getView());
@@ -142,9 +146,9 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 
 	m_particleBuffer->bind(1);
 
-	g_vulkanBackend->setTexture(0, gBuffer->getAttachment(1), pixelSampler); // motion
-	g_vulkanBackend->setTexture(0, gBuffer->getAttachment(2), pixelSampler); // normals
-	g_vulkanBackend->setTexture(0, gBuffer->getDepthAttachment(), pixelSampler); // depth
+	motionBuffer->bind(2);
+	normalBuffer->bind(3);
+	depthBuffer->bind(4);
 
 	g_vulkanBackend->bindShader(m_computeProgram);
 

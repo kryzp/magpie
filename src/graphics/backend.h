@@ -105,8 +105,6 @@ namespace llt
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
-		void setTexture(uint32_t bindIdx, const Texture* texture, TextureSampler* sampler);
-
 		void bindShader(const ShaderProgram* shader);
 
 		void setPushConstants(ShaderParameters& params);
@@ -168,8 +166,6 @@ namespace llt
 
 		// render pass
 		RenderPassBuilder* m_currentRenderPassBuilder;
-		Array<uint32_t, mgc::MAX_BOUND_TEXTURES> m_imageBoundIdxs;
-		Array<VkDescriptorImageInfo, mgc::MAX_BOUND_TEXTURES> m_imageInfos;
 		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_graphicsShaderStages;
 		GenericRenderTarget* m_currentRenderTarget;
 

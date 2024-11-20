@@ -5,8 +5,9 @@
 using namespace llt;
 
 Entity::Entity()
-	: m_matrix()
-	, m_matrixDirty()
+	: m_matrix(glm::identity<glm::mat4>())
+	, m_prevMatrix(glm::identity<glm::mat4>())
+	, m_matrixDirty(false)
 	, m_position()
 	, m_origin()
 	, m_rotation()
@@ -20,12 +21,19 @@ Entity::~Entity()
 
 glm::mat4 Entity::getMatrix()
 {
+	m_prevMatrix = m_matrix;
+
 	if (m_matrixDirty) {
 		rebuildMatrix();
 		m_matrixDirty = false;
 	}
 
 	return m_matrix;
+}
+
+glm::mat4 Entity::getPrevMatrix()
+{
+	return m_prevMatrix;
 }
 
 void Entity::rebuildMatrix()

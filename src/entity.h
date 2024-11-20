@@ -13,6 +13,7 @@ namespace llt
 		~Entity();
 
 		glm::mat4 getMatrix();
+		glm::mat4 getPrevMatrix();
 
 		void setPosition(const glm::vec3& position);
 		void setOrigin(const glm::vec3& origin);
@@ -23,6 +24,8 @@ namespace llt
 		void rebuildMatrix();
 
 		glm::mat4 m_matrix;
+		glm::mat4 m_prevMatrix;
+
 		bool m_matrixDirty;
 
 		glm::vec3 m_position;

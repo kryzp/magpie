@@ -76,6 +76,7 @@ namespace llt
 		/*
 		 * Add a pair to the hashmap.
 		 */
+		void insert(const TKey& key, const TValue& value);
 		void insert(const KeyValuePair& pair);
 
 		/*
@@ -274,6 +275,12 @@ namespace llt
 
 		m_capacity = 0;
 		m_elementCount = 0;
+	}
+
+	template <typename TKey, typename TValue>
+	void HashMap<TKey, TValue>::insert(const TKey& key, const TValue& value)
+	{
+		this->insert(KeyValuePair(key, value));
 	}
 
 	template <typename TKey, typename TValue>

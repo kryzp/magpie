@@ -487,3 +487,64 @@ bool Texture::isTransient() const
 {
 	return m_transient;
 }
+
+// ---
+
+SampledTexture::SampledTexture()
+	: texture(nullptr)
+	, sampler(nullptr)
+	, m_boundIdx(0)
+	, m_isBound(false)
+{
+}
+
+SampledTexture::SampledTexture(const Texture* texture, TextureSampler* sampler)
+	: texture(texture)
+	, sampler(sampler)
+	, m_boundIdx(0)
+	, m_isBound(false)
+{
+}
+
+const VkDescriptorImageInfo& SampledTexture::getInfo()
+{
+	m_info.imageView = texture->getImageView();
+
+	if (texture->isDepthTexture())
+	{
+		m_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	}
+	else
+	{
+		m_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+
+	m_info.sampler = sampler->bind(4);
+
+	return m_info;
+}
+
+void SampledTexture::bind(uint32_t idx)
+{
+	if (m_boundIdx != idx) {
+		g_vulkanBackend->markDescriptorDirty();
+	}
+
+	m_boundIdx = idx;
+	m_isBound = true;
+}
+
+void SampledTexture::unbind()
+{
+	m_isBound = false;
+}
+
+uint32_t SampledTexture::getBoundIdx() const
+{
+	return m_boundIdx;
+}
+
+bool SampledTexture::isBound() const
+{
+	return m_isBound;
+}

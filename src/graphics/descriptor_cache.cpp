@@ -43,7 +43,7 @@ VkDescriptorSet DescriptorCache::createSet(DescriptorPoolMgr* mgr, const VkDescr
 	}
 
 	VkDescriptorSet set = mgr->allocateDescriptorSet(layout);
-	m_descriptorCache.insert(Pair(hash, set));
+	m_descriptorCache.insert(hash, set);
 
 	return set;
 }
@@ -72,10 +72,10 @@ VkDescriptorSetLayout DescriptorCache::createLayout(const VkDescriptorSetLayoutC
 	}
 
 	// cache it
-	m_layoutCache.insert(Pair(
+	m_layoutCache.insert(
 		createdDescriptorHash,
 		createdDescriptor
-	));
+	);
 
 	return createdDescriptor;
 }

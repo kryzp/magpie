@@ -1,8 +1,8 @@
-
 #include "texture_mgr.h"
 #include "texture.h"
 #include "texture_sampler.h"
 #include "backend.h"
+#include "descriptor_builder.h"
 
 llt::TextureMgr* llt::g_textureManager = nullptr;
 
@@ -16,6 +16,12 @@ TextureMgr::TextureMgr()
 
 TextureMgr::~TextureMgr()
 {
+	for (auto& [id, sampler] : m_sampledTextures) {
+		delete sampler;
+	}
+
+	m_sampledTextures.clear();
+
 	for (auto& [id, texture] : m_textureCache) {
 		delete texture;
 	}
@@ -27,6 +33,53 @@ TextureMgr::~TextureMgr()
 	}
 
 	m_samplerCache.clear();
+}
+
+void TextureMgr::unbindAll()
+{
+	for (auto& [id, sampler] : m_sampledTextures) {
+		sampler->unbind();
+	}
+}
+
+void TextureMgr::bindToDescriptorBuilder(DescriptorBuilder* builder, VkShaderStageFlagBits stage)
+{
+	for (auto& [id, sampler] : m_sampledTextures)
+	{
+		if (sampler->isBound())
+		{
+			builder->bindImage(
+				sampler->getBoundIdx(),
+				&sampler->getInfo(),
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				stage
+			);
+		}
+	}
+}
+
+void TextureMgr::calculateBoundTextureHash(uint64_t* hash)
+{
+	for (auto& [id, sampler] : m_sampledTextures)
+	{
+		if (sampler->isBound())
+		{
+			hash::combine(hash, &sampler->getInfo());
+		}
+	}
+}
+
+SampledTexture* TextureMgr::getSampledTexture(const String& name, const Texture* texture, TextureSampler* sampler)
+{
+	if (m_sampledTextures.contains(name)) {
+		return m_sampledTextures[name];
+	}
+
+	SampledTexture* tex = new SampledTexture(texture, sampler);
+
+	m_sampledTextures.insert(name, tex);
+
+	return tex;
 }
 
 Texture* TextureMgr::getTexture(const String& name)
@@ -70,7 +123,7 @@ Texture* TextureMgr::createFromImage(const String& name,const Image& image)
 	delete stage;
 
 	// cache it
-	m_textureCache.insert(Pair(name, texture));
+	m_textureCache.insert(name, texture);
 
 	return texture;
 }
@@ -106,7 +159,7 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 	}
 
 	// cache it
-	m_textureCache.insert(Pair(name, texture));
+	m_textureCache.insert(name, texture);
 
 	return texture;
 }
@@ -124,7 +177,7 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 	texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	// cache it
-	m_textureCache.insert(Pair(name, texture));
+	m_textureCache.insert(name, texture);
 
 	return texture;
 }
@@ -157,7 +210,7 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 	delete stage;
 
 	// cache it
-	m_textureCache.insert(Pair(name, texture));
+	m_textureCache.insert(name, texture);
 
 	return texture;
 }
@@ -169,7 +222,7 @@ TextureSampler* TextureMgr::createSampler(const String& name, const TextureSampl
 	}
 
 	TextureSampler* sampler = new TextureSampler(style);
-	m_samplerCache.insert(Pair(name, sampler));
+	m_samplerCache.insert(name, sampler);
 
 	return sampler;
 }

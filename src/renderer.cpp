@@ -39,6 +39,7 @@ Renderer::Renderer()
 	, m_pushConstants()
 	, m_gpuParticles()
 	, m_renderEntities()
+	, m_prevViewMatrix()
 {
 }
 
@@ -72,6 +73,8 @@ void Renderer::init(Backbuffer* backbuffer)
 	createEntities();
 
 	m_gpuParticles.init();
+
+	m_prevViewMatrix = glm::identity<glm::mat4>();
 }
 
 void Renderer::loadTextures()
@@ -299,11 +302,10 @@ void Renderer::createEntities()
 
 void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 {
-//	m_shaderParamsBuffer->unbind();
-//	m_pushConstants.set("time", deltaTime);
-//	g_vulkanBackend->setPushConstants(m_pushConstants);
-//	m_gpuParticles.dispatchCompute(camera);
-//	m_shaderParamsBuffer->bind(0);
+	glm::mat4 viewMatrix = camera.getView();
+
+	SampledTexture* skyboxTex = g_textureManager->getSampledTexture("skybox", m_skyboxTexture, m_linearSampler);
+	SampledTexture* stoneTex = g_textureManager->getSampledTexture("stone", m_stoneTexture, m_nearestSampler);
 
 	// --- ---
 
@@ -330,7 +332,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	g_vulkanBackend->setTexture(1, m_skyboxTexture, m_linearSampler);
+	skyboxTex->bind(1);
 
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShaderSkybox);
@@ -338,24 +340,29 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	pass.setMesh(m_skyboxMesh);
 	g_vulkanBackend->render(pass);
 
+	skyboxTex->unbind();
+
 	// ---
 
 	g_vulkanBackend->setDepthWrite(true);
 	g_vulkanBackend->setDepthTest(true);
 
-	m_shaderParams.set("currViewMatrix", camera.getView());
+	m_shaderParams.set("prevViewMatrix", m_prevViewMatrix);
+	m_shaderParams.set("currViewMatrix", viewMatrix);
+
 	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
 
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	g_vulkanBackend->setTexture(1, m_stoneTexture, m_nearestSampler);
+	stoneTex->bind(1);
 
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShader);
 
 	for (auto& entity : m_renderEntities)
 	{
+		m_shaderParams.set("prevModelMatrix", entity.getPrevMatrix());
 		m_shaderParams.set("currModelMatrix", entity.getMatrix());
 		m_shaderParamsBuffer->pushData(m_shaderParams);
 		m_shaderParamsBuffer->bind(0);
@@ -382,15 +389,31 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	pass.setInstanceData(1, 0, nullptr);
 	*/
 
-	// particles
-//	m_shaderParams.set("modelMatrix", getTransformationMatrix({ 0.0f, 2.0f, -2.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.1f, 0.1f, 0.1f }, { 0.0f, 0.0f, 0.0f }));
-//	m_shaderParamsBuffer->pushData(m_shaderParams);
-//	m_shaderParamsBuffer->bind(0);
-//	m_gpuParticles.render();
+	g_vulkanBackend->endRender();
 
-	// ---
+	stoneTex->unbind();
+
+	m_shaderParamsBuffer->unbind();
+	m_pushConstants.set("time", deltaTime);
+	g_vulkanBackend->setPushConstants(m_pushConstants);
+	m_gpuParticles.dispatchCompute(camera);
+	m_shaderParamsBuffer->bind(0);
+
+	g_vulkanBackend->beginRender();
+
+	stoneTex->bind(1);
+
+	// particles
+	glm::mat4 particleMatrix = glm::identity<glm::mat4>();
+	particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.2f, 0.2f, 0.2f }) * particleMatrix;
+	m_shaderParams.set("modelMatrix", particleMatrix);
+	m_shaderParamsBuffer->pushData(m_shaderParams);
+	m_shaderParamsBuffer->bind(0);
+	m_gpuParticles.render();
 
 	g_vulkanBackend->endRender();
+
+	stoneTex->unbind();
 
 	// --- ---
 
@@ -416,7 +439,8 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 
-	g_vulkanBackend->setTexture(1, m_target->getAttachment(0), m_linearSampler);
+	SampledTexture* attachmentTex = g_textureManager->getSampledTexture("fboAttachment", m_target->getAttachment(0), m_linearSampler);
+	attachmentTex->bind(1);
 
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShader);
@@ -428,12 +452,9 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	// --- ---
 
-	g_vulkanBackend->setTexture(0, nullptr, nullptr);
-	g_vulkanBackend->setTexture(1, nullptr, nullptr);
-
 	g_vulkanBackend->resetPushConstants();
 
-	// --- ---
-
 	g_vulkanBackend->swapBuffers();
+
+	m_prevViewMatrix = viewMatrix;
 }

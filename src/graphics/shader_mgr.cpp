@@ -51,7 +51,7 @@ ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkSha
 	shader->type = type;
 	shader->loadFromSource(sourceData.data(), sourceData.size());
 
-	m_shaderCache.insert(Pair(name, shader));
+	m_shaderCache.insert(name, shader);
 
 	return shader;
 }

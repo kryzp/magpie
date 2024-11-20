@@ -58,7 +58,7 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 
 	result->create();
 
-	m_targets.insert(Pair(name, result));
+	m_targets.insert(name, result);
 	return result;
 }
 
@@ -72,6 +72,6 @@ RenderTarget* RenderTargetMgr::createDepthTarget(const String& name, uint32_t wi
 
 	result->createOnlyDepth();
 
-	m_targets.insert(Pair(name, result));
+	m_targets.insert(name, result);
 	return result;
 }

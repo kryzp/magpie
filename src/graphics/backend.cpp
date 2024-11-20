@@ -159,8 +159,6 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_vmaAllocator()
 	, m_currentRenderPassBuilder()
 	, m_descriptorPoolManager()
-	, m_imageBoundIdxs()
-	, m_imageInfos()
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
 	, m_pushConstants()
@@ -569,10 +567,10 @@ VkPipeline VulkanBackend::getComputePipeline()
 
 	LLT_LOG("[VULKAN] Created new compute pipeline!");
 
-	m_computePipelineCache.insert(Pair(
+	m_computePipelineCache.insert(
 		createdPipelineHash,
 		createdPipeline
-	));
+	);
 
 	return createdPipeline;
 }
@@ -624,10 +622,10 @@ VkPipelineLayout VulkanBackend::getPipelineLayout(VkShaderStageFlagBits stage)
 
 	LLT_LOG("[VULKAN] Created new pipeline layout!");
 
-	m_pipelineLayoutCache.insert(Pair(
+	m_pipelineLayoutCache.insert(
 		pipelineLayoutHash,
 		pipelineLayout
-	));
+	);
 
 	return pipelineLayout;
 }
@@ -763,10 +761,10 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 
 	LLT_LOG("[VULKAN] Created new graphics pipeline!");
 
-	m_graphicsPipelineCache.insert(Pair(
+	m_graphicsPipelineCache.insert(
 		createdPipelineHash,
 		createdPipeline
-	));
+	);
 
 	return createdPipeline;
 }
@@ -955,22 +953,7 @@ DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stag
 
 	g_shaderBufferManager->bindToDescriptorBuilder(&m_descriptorBuilder, stage);
 
-	for (int i = 0; i < m_imageInfos.size(); i++)
-	{
-		if (m_imageInfos[i].imageView)
-		{
-			m_descriptorBuilder.bindImage(
-				m_imageBoundIdxs[i],
-				&m_imageInfos[i],
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				stage
-			);
-		}
-		else
-		{
-			break;
-		}
-	}
+	g_textureManager->bindToDescriptorBuilder(&m_descriptorBuilder, stage);
 
 	m_descriptorBuilderDirty = false;
 	return m_descriptorBuilder;
@@ -985,14 +968,7 @@ VkDescriptorSet VulkanBackend::getDescriptorSet(VkShaderStageFlagBits stage)
 	uint64_t descriptorSetHash = 0;
 
 	hash::combine(&descriptorSetHash, &stage);
-
-	for (int i = 0; i < m_imageInfos.size(); i++) {
-		if (!m_imageInfos[i].imageView) {
-			break;
-		} else {
-			hash::combine(&descriptorSetHash, &m_imageInfos[i]);
-		}
-	}
+	g_textureManager->calculateBoundTextureHash(&descriptorSetHash);
 
 	VkDescriptorSet descriptorSet = {};
 	VkDescriptorSetLayout descriptorSetLayout = {};
@@ -1116,58 +1092,6 @@ void VulkanBackend::setCullMode(VkCullModeFlagBits cull)
 	m_cullMode = cull;
 }
 
-void VulkanBackend::setTexture(uint32_t bindIdx, const Texture* texture, TextureSampler* sampler)
-{
-	int textureIdx = 0;
-	for (; textureIdx < m_imageInfos.size(); textureIdx++) {
-		if (!m_imageInfos[textureIdx].imageView || m_imageBoundIdxs[textureIdx] == bindIdx) {
-			break;
-		}
-	}
-
-	if (texture)
-	{
-		VkImageView vkImageView = texture->getImageView();
-
-		if (m_imageInfos[textureIdx].imageView != vkImageView)
-		{
-			m_imageBoundIdxs[textureIdx] = bindIdx;
-
-			m_imageInfos[textureIdx].imageView = vkImageView;
-
-			if (texture->isDepthTexture())
-			{
-				m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			}
-			else
-			{
-				m_imageInfos[textureIdx].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-
-			markDescriptorDirty();
-		}
-	}
-	else
-	{
-		m_imageInfos[textureIdx].imageView = VK_NULL_HANDLE;
-	}
-
-	if (sampler)
-	{
-		VkSampler vkSampler = sampler->bind(device, physicalData.properties, 4);
-
-		if (m_imageInfos[textureIdx].sampler != vkSampler)
-		{
-			m_imageInfos[textureIdx].sampler = vkSampler;
-			markDescriptorDirty();
-		}
-	}
-	else
-	{
-		m_imageInfos[textureIdx].sampler = nullptr;
-	}
-}
-
 void VulkanBackend::bindShader(const ShaderProgram* shader)
 {
 	if (!shader) {
@@ -1266,8 +1190,6 @@ void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
 
 	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
 
-	LLT_LOG("%d %d", dynamicOffsets[0], dynamicOffsets[1]);
-
 	vkCmdBindDescriptorSets(
 		currentBuffer,
 		VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -1316,6 +1238,7 @@ void VulkanBackend::endCompute()
 	}
 
 	g_shaderBufferManager->unbindAll();
+	g_textureManager->unbindAll();
 }
 
 void VulkanBackend::syncComputeWithNextRender()
@@ -1484,6 +1407,7 @@ void VulkanBackend::endRender()
 	m_uncertainComputeFinished = false;
 
 	g_shaderBufferManager->unbindAll();
+	g_textureManager->unbindAll();
 }
 
 void VulkanBackend::swapBuffers()

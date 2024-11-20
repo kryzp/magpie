@@ -33,7 +33,7 @@ void TextureSampler::cleanUp()
 	m_sampler = VK_NULL_HANDLE;
 }
 
-VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties properties, int maxMipLevels)
+VkSampler TextureSampler::bind(int maxMipLevels)
 {
 	// check if we actually need to create a new sampler or if our current one suffices
 	if (!dirty) {
@@ -41,6 +41,8 @@ VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties prope
 	} else {
 		dirty = false;
 	}
+
+	VkPhysicalDeviceProperties properties = g_vulkanBackend->physicalData.properties;
 
 	cleanUp();
 
@@ -62,7 +64,7 @@ VkSampler TextureSampler::bind(VkDevice device, VkPhysicalDeviceProperties prope
 	createInfo.minLod = 0.0f;
 	createInfo.maxLod = (float)maxMipLevels;
 
-	if (VkResult result = vkCreateSampler(device, &createInfo, nullptr, &m_sampler); result != VK_SUCCESS) {
+	if (VkResult result = vkCreateSampler(g_vulkanBackend->device, &createInfo, nullptr, &m_sampler); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:SAMPLER|DEBUG] Failed to create texture sampler: %d", result);
 	}
 

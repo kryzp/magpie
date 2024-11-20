@@ -74,12 +74,13 @@ namespace llt
 
 		ShaderParameters m_shaderParams;
 		ShaderBuffer* m_shaderParamsBuffer;
-
 		ShaderParameters m_pushConstants;
 
 		GPUParticles m_gpuParticles;
 
 		Vector<Entity> m_renderEntities;
+
+		glm::mat4 m_prevViewMatrix;
 	};
 }
 
