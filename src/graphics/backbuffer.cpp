@@ -361,10 +361,8 @@ void Backbuffer::onWindowResize(int width, int height)
 
 void Backbuffer::rebuildSwapChain()
 {
-	// wait until we are synced-up with the gpu
 	g_vulkanBackend->syncStall();
 
-	// create a new swapchain
 	cleanUpSwapChain();
 	createSwapChain();
 

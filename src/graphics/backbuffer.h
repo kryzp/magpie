@@ -20,100 +20,45 @@ namespace llt
 		Backbuffer();
 		~Backbuffer() override;
 
-		/*
-		* Actually builds the backbuffer.
-		*/
 		void create();
-
-		/*
-		* Builds the surface of the backbuffer.
-		*/
 		void createSurface();
 
-		/*
-		* Creates the swap chain.
-		*/
 		void createSwapChain();
 		void createSwapChainImageViews();
 
-		/*
-		* Functions called to clean up specific components of the backbuffer.
-		*/
 		void cleanUp() override;
 		void cleanUpSwapChain();
 		void cleanUpTextures();
 
-		/*
-		* Sets the clear for the colour and depth stencil
-		*/
 		void setClearColour(int idx, const Colour& colour) override;
+
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 
-		/*
-		* Get the next image.
-		*/
 		void acquireNextImage();
 
-		/*
-		* Swap between the three buffers.
-		* (Triple Buffering)
-		*/
 		void swapBuffers();
 
-		/*
-		* Returns the attachment at index 'idx'.
-		*/
 		const Texture* getAttachment(int idx) const override;
 
-		/*
-		* Get the depth component of the backbuffer.
-		*/
 		const Texture* getDepthAttachment() const override;
 
-		/*
-		* Called when the window resizes.
-		*/
 		void onWindowResize(int width, int height);
 
-		/*
-		* Return the surface that the backbuffer uses.
-		*/
 		VkSurfaceKHR getSurface() const;
 
-		/*
-		* Get the number of MSAA samples that are being taken
-		* for anti-aliasing.
-		*/
 		VkSampleCountFlagBits getMSAA() const override;
 
-		/*
-		* Return the current texture index in triple-buffering.
-		* Ranges from 0->2.
-		*/
 		int getCurrentTextureIdx() const;
 
-		/*
-		* Get the different semaphores.
-		*/
 		const VkSemaphore& getRenderFinishedSemaphore() const;
 		const VkSemaphore& getImageAvailableSemaphore() const;
 
 	private:
-		/*
-		* Creates the resources.
-		*/
 		void createColourResources(); // coloured visual component
 		void createDepthResources(); // depth component
 
-		/*
-		* Creates the semaphores.
-		*/
 		void createSwapChainSyncObjects();
 
-		/*
-		* Reconstructs the swapchain.
-		* For instance, when the window is re-sized the swapchain has to be re-built.
-		*/
 		void rebuildSwapChain();
 
 		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;

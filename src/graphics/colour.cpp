@@ -104,18 +104,19 @@ Colour Colour::lerp(const Colour& from, const Colour& to, float amount)
 Colour Colour::getPremultiplied() const
 {
 	return Colour(
-		r * a / 255,
-		g * a / 255,
-		b * a / 255
+		static_cast<uint8_t>(static_cast<float>(r * a) / 255.0f),
+		static_cast<uint8_t>(static_cast<float>(g * a) / 255.0f),
+		static_cast<uint8_t>(static_cast<float>(b * a) / 255.0f),
+		255
 	);
 }
 
 glm::vec3 Colour::getDisplayColour() const
 {
 	return glm::vec3(
-		static_cast<float>(r) / (255.0f),
-		static_cast<float>(g) / (255.0f),
-		static_cast<float>(b) / (255.0f)
+		static_cast<float>(r) / 255.0f,
+		static_cast<float>(g) / 255.0f,
+		static_cast<float>(b) / 255.0f
 	);
 }
 

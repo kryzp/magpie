@@ -433,10 +433,15 @@ void VulkanBackend::createLogicalDevice()
 			.pQueuePriorities = &QUEUE_PRIORITY
 		});
 	}
-	
+
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeaturesExt = {};
+	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+	dynamicRenderingFeaturesExt.dynamicRendering = VK_TRUE;
+
 	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeaturesExt = {};
 	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
 	bufferDeviceAddressFeaturesExt.bufferDeviceAddress = VK_TRUE;
+	bufferDeviceAddressFeaturesExt.pNext = &dynamicRenderingFeaturesExt;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

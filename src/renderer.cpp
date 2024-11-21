@@ -6,6 +6,7 @@
 
 #include "graphics/backend.h"
 #include "graphics/backbuffer.h"
+#include "graphics/colour.h"
 #include "graphics/texture.h"
 #include "graphics/texture_mgr.h"
 #include "graphics/render_target.h"
@@ -309,6 +310,9 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	// --- ---
 
+	//m_target->setToClear(true);
+	m_target->setClearColours(Colour::red());
+
 	RenderOp pass;
 
 	g_vulkanBackend->setVertexDescriptor(m_vertexFormat);
@@ -337,8 +341,8 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->bindShader(m_vertexShader);
 	g_vulkanBackend->bindShader(m_fragmentShaderSkybox);
 
-	pass.setMesh(m_skyboxMesh);
-	g_vulkanBackend->render(pass);
+	//pass.setMesh(m_skyboxMesh);
+	//g_vulkanBackend->render(pass);
 
 	skyboxTex->unbind();
 
@@ -399,6 +403,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_gpuParticles.dispatchCompute(camera);
 	m_shaderParamsBuffer->bind(0);
 
+	//m_target->setToClear(false);
 	g_vulkanBackend->beginRender();
 
 	stoneTex->bind(1);

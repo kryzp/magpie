@@ -146,7 +146,7 @@ void RenderTarget::setAttachment(int idx, Texture* texture)
 		idx,
 		texture->getInfo().format,
 		VK_SAMPLE_COUNT_1_BIT,
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		VK_ATTACHMENT_LOAD_OP_LOAD,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		false
 	);

@@ -16,7 +16,7 @@ namespace llt
 		void createOnlyDepth();
 
 		void cleanUp() override;
-
+		
 		void setClearColour(int idx, const Colour& colour) override;
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 
