@@ -8,7 +8,7 @@
 #include "generic_render_target.h"
 #include "texture.h"
 #include "util.h"
-#include "render_pass_builder.h"
+#include "render_info_builder.h"
 
 namespace llt
 {
@@ -29,6 +29,9 @@ namespace llt
 		void cleanUp() override;
 		void cleanUpSwapChain();
 		void cleanUpTextures();
+
+		void beginRender(VkCommandBuffer cmdBuffer) override;
+		void endRender(VkCommandBuffer cmdBuffer) override;
 
 		void setClearColour(int idx, const Colour& colour) override;
 

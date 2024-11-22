@@ -84,7 +84,6 @@ namespace llt
 		RenderTarget* m_parent;
 
 		VkImage m_image;
-		VkDeviceMemory m_imageMemory;
 		VkImageLayout m_imageLayout;
 		VkImageView m_view;
 		uint32_t m_mipmapCount;

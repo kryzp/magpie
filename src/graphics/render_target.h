@@ -15,6 +15,9 @@ namespace llt
 		void create();
 		void createOnlyDepth();
 
+		void beginRender(VkCommandBuffer cmdBuffer) override;
+		void endRender(VkCommandBuffer cmdBuffer) override;
+
 		void cleanUp() override;
 		
 		void setClearColour(int idx, const Colour& colour) override;
@@ -23,14 +26,14 @@ namespace llt
 		const Texture* getAttachment(int idx) const override;
 		const Texture* getDepthAttachment() const override;
 
-		void setAttachment(int idx, Texture* texture);
+		void addAttachment(Texture* texture);
 
 		VkSampleCountFlagBits getMSAA() const override;
 
 	private:
-		void createDepthResources(int idx);
+		void createDepthResources();
 
-		Array<Texture*, mgc::MAX_RENDER_TARGET_ATTACHMENTS> m_attachments;
+		Vector<Texture*> m_attachments;
 		Texture m_depth;
 	};
 }

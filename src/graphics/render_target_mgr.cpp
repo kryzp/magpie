@@ -53,7 +53,7 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 
 		texture->setParent(result);
 
-		result->setAttachment(i, texture);
+		result->addAttachment(texture);
 	}
 
 	result->create();

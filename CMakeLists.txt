@@ -32,7 +32,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/gpu_buffer.cpp
     src/graphics/gpu_buffer_mgr.cpp
     src/graphics/generic_render_target.cpp
-    src/graphics/render_pass_builder.cpp
+    src/graphics/render_info_builder.cpp
     src/graphics/render_target.cpp
     src/graphics/render_target_mgr.cpp
     src/graphics/shader.cpp

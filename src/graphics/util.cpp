@@ -24,9 +24,9 @@ VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& a
 //		return VK_PRESENT_MODE_IMMEDIATE_KHR;
 //	}
 
-	for (const auto& available_present_mode : availablePresentModes) {
-		if (available_present_mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-			return available_present_mode;
+	for (const auto& mode : availablePresentModes) {
+		if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+			return mode;
 		}
 	}
 
@@ -89,7 +89,6 @@ VkFormat vkutil::findDepthFormat(VkPhysicalDevice device)
 	return findSupportedFormat(
 		device,
 		{
-			VK_FORMAT_R8G8B8A8_SRGB,
 			VK_FORMAT_D32_SFLOAT_S8_UINT,
 			VK_FORMAT_D24_UNORM_S8_UINT
 		},
@@ -155,7 +154,7 @@ uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
 	VkPhysicalDeviceProperties properties = g_vulkanBackend->physicalData.properties;
 	const VkDeviceSize& minimumSize = properties.limits.minUniformBufferOffsetAlignment;
-	return (size / minimumSize) * minimumSize + ((size % minimumSize) > 0 ? minimumSize : 0);
+	return ((size / minimumSize) * minimumSize) + (((size % minimumSize) > 0) ? minimumSize : 0);
 }
 
 SwapChainSupportDetails vkutil::querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
@@ -197,12 +196,12 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to find any device extension properties!");
 	}
 
-	Vector<VkExtensionProperties> available_exts(extensionCount);
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, available_exts.data());
+	Vector<VkExtensionProperties> availableExts(extensionCount);
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExts.data());
 
 	Vector<const char*> requiredExtensions(DEVICE_EXTENSIONS, LLT_ARRAY_LENGTH(DEVICE_EXTENSIONS));
 
-	for (const auto& availableExtension : available_exts) {
+	for (const auto& availableExtension : availableExts) {
 		for (int i = 0; i < requiredExtensions.size(); i++) {
 			if (cstr::compare(availableExtension.extensionName, requiredExtensions[i])) {
 				requiredExtensions.erase(i);

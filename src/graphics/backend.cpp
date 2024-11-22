@@ -157,7 +157,7 @@ static Vector<const char*> getInstanceExtensions()
 VulkanBackend::VulkanBackend(const Config& config)
 	: vulkanInstance(VK_NULL_HANDLE)
 	, m_vmaAllocator()
-	, m_currentRenderPassBuilder()
+	, m_currentRenderInfoBuilder()
 	, m_descriptorPoolManager()
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
@@ -286,7 +286,7 @@ VulkanBackend::~VulkanBackend()
 	clearPipelineCache();
 	vkDestroyPipelineCache(this->device, m_pipelineProcessCache, nullptr);
 
-	m_currentRenderPassBuilder->cleanUp();
+	m_currentRenderInfoBuilder->clear();
 
 	delete g_shaderBufferManager;
 
@@ -690,7 +690,7 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	colourBlendStateCreateInfo.logicOpEnable = m_blendStateLogicOpEnabled ? VK_TRUE : VK_FALSE;
 	colourBlendStateCreateInfo.logicOp = m_blendStateLogicOp;
-	colourBlendStateCreateInfo.attachmentCount = m_currentRenderPassBuilder->getColourAttachmentCount();
+	colourBlendStateCreateInfo.attachmentCount = m_currentRenderInfoBuilder->getColourAttachmentCount();
 	colourBlendStateCreateInfo.pAttachments = m_colourBlendAttachmentStates.data();
 	colourBlendStateCreateInfo.blendConstants[0] = m_blendConstants[0];
 	colourBlendStateCreateInfo.blendConstants[1] = m_blendConstants[1];
@@ -699,8 +699,6 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 
 	uint64_t createdPipelineHash = 0;
 
-	// now that we have made all of our settings that impact the graphics
-	// pipeline, hash them all together
 	hash::combine(&createdPipelineHash, &m_depthStencilCreateInfo);
 	hash::combine(&createdPipelineHash, m_colourBlendAttachmentStates.data());
 	hash::combine(&createdPipelineHash, &m_blendConstants);
@@ -708,9 +706,9 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	hash::combine(&createdPipelineHash, &inputAssemblyStateCreateInfo);
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
 
-	VkRenderPass pass = m_currentRenderPassBuilder->getRenderPass();
+	VkRenderingInfoKHR info = m_currentRenderInfoBuilder->buildInfo();
 
-	hash::combine(&createdPipelineHash, &pass);
+	hash::combine(&createdPipelineHash, &info);
 
 	for (auto& attrib : attributeDescriptions) {
 		hash::combine(&createdPipelineHash, &attrib);
@@ -724,21 +722,22 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 		hash::combine(&createdPipelineHash, &m_graphicsShaderStages[i]);
 	}
 
-	// this hash now uniquely identifies a pipeline
-	// if it exists in our cache (because it has been created before)
-	// then we return that because it is far cheaper than creating a new pipeline
-
 	if (m_graphicsPipelineCache.contains(createdPipelineHash)) {
-		// alright, a pipeline was found!
 		return m_graphicsPipelineCache[createdPipelineHash];
 	}
-
-	// no such pipeline exists!
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
 	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = DYNAMIC_STATES;
+
+	auto colourFormats = m_currentRenderInfoBuilder->getColourAttachmentFormats();
+
+	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
+	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	pipelineRenderingCreateInfo.colorAttachmentCount = colourFormats.size();
+	pipelineRenderingCreateInfo.pColorAttachmentFormats = colourFormats.data();
+	pipelineRenderingCreateInfo.depthAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
 	graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -753,10 +752,11 @@ VkPipeline VulkanBackend::getGraphicsPipeline()
 	graphicsPipelineCreateInfo.pColorBlendState = &colourBlendStateCreateInfo;
 	graphicsPipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
 	graphicsPipelineCreateInfo.layout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
-	graphicsPipelineCreateInfo.renderPass = m_currentRenderPassBuilder->getRenderPass();
+	graphicsPipelineCreateInfo.renderPass = VK_NULL_HANDLE;
 	graphicsPipelineCreateInfo.subpass = 0;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
 	graphicsPipelineCreateInfo.basePipelineIndex = -1;
+	graphicsPipelineCreateInfo.pNext = &pipelineRenderingCreateInfo;
 
 	VkPipeline createdPipeline = VK_NULL_HANDLE;
 
@@ -1270,9 +1270,11 @@ void VulkanBackend::beginRender()
 		LLT_ERROR("[VULKAN|DEBUG] Failed to begin recording command buffer: %d", result);
 	}
 
-	VkRenderPassBeginInfo renderPassBeginInfo = m_currentRenderPassBuilder->buildBeginInfo();
+	m_currentRenderTarget->beginRender(currentBuffer);
 
-	vkCmdBeginRenderPass(currentBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	VkRenderingInfoKHR renderInfo = m_currentRenderInfoBuilder->buildInfo();
+
+	vkCmdBeginRendering(currentBuffer, &renderInfo);
 }
 
 void VulkanBackend::render(const RenderOp& op)
@@ -1366,7 +1368,9 @@ void VulkanBackend::endRender()
 	const auto& currentFrame = graphicsQueue.getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
-	vkCmdEndRenderPass(currentBuffer);
+	vkCmdEndRendering(currentBuffer);
+
+	m_currentRenderTarget->endRender(currentBuffer);
 
 	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to record command buffer: %d", result);
@@ -1451,9 +1455,9 @@ void VulkanBackend::resetViewport()
 	// we have to flip the viewport to ensure y+ is up!
 
 	m_viewport.x = 0.0f;
-	m_viewport.y = (float)m_currentRenderPassBuilder->getHeight();
-	m_viewport.width = (float)m_currentRenderPassBuilder->getWidth();
-	m_viewport.height = -(float)m_currentRenderPassBuilder->getHeight();
+	m_viewport.y = (float)m_currentRenderInfoBuilder->getHeight();
+	m_viewport.width = (float)m_currentRenderInfoBuilder->getWidth();
+	m_viewport.height = -(float)m_currentRenderInfoBuilder->getHeight();
 	m_viewport.minDepth = 0.0f;
 	m_viewport.maxDepth = 1.0f;
 }
@@ -1461,13 +1465,13 @@ void VulkanBackend::resetViewport()
 void VulkanBackend::resetScissor()
 {
 	m_scissor.offset = { 0, 0 };
-	m_scissor.extent = { m_currentRenderPassBuilder->getWidth(), m_currentRenderPassBuilder->getHeight() };
+	m_scissor.extent = { m_currentRenderInfoBuilder->getWidth(), m_currentRenderInfoBuilder->getHeight() };
 }
 
 void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
 {
 	m_currentRenderTarget = target;
-	m_currentRenderPassBuilder = m_currentRenderTarget->getRenderPassBuilder();
+	m_currentRenderInfoBuilder = m_currentRenderTarget->getRenderInfo();
 }
 
 void VulkanBackend::setDepthOp(VkCompareOp op)

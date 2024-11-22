@@ -45,7 +45,6 @@ namespace llt
 		void createBlockMesh();
 		void createSkybox();
 		void setupVertexFormats();
-		void createInstanceData();
 		void createEntities();
 
 		Backbuffer* m_backbuffer;
@@ -68,9 +67,6 @@ namespace llt
 		TextureSampler* m_nearestSampler;
 
 		VertexDescriptor m_vertexFormat;
-		VertexDescriptor m_instancedVertexFormat;
-
-		ShaderBuffer* m_instanceBuffer;
 
 		ShaderParameters m_shaderParams;
 		ShaderBuffer* m_shaderParamsBuffer;

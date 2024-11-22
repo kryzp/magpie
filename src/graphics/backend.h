@@ -16,7 +16,7 @@
 #include "../common.h"
 #include "../app.h"
 
-#include "render_pass_builder.h"
+#include "render_info_builder.h"
 
 #include "descriptor_pool_mgr.h"
 #include "descriptor_builder.h"
@@ -165,7 +165,7 @@ namespace llt
 		bool m_uncertainComputeFinished;
 
 		// render pass
-		RenderPassBuilder* m_currentRenderPassBuilder;
+		RenderInfoBuilder* m_currentRenderInfoBuilder;
 		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_graphicsShaderStages;
 		GenericRenderTarget* m_currentRenderTarget;
 

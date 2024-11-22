@@ -50,23 +50,11 @@ void Backbuffer::createColourResources()
 	m_colour.createInternalResources();
 
 	// add the colour resources to our render pass builder
-	m_renderPassBuilder.createColourAttachment(
-		0,
-		g_vulkanBackend->swapChainImageFormat,
-		g_vulkanBackend->maxMsaaSamples,
+	m_renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		false
-	);
-
-	// add the resolve colour component due to MSAA
-	m_renderPassBuilder.createColourAttachment(
-		2,
-		g_vulkanBackend->swapChainImageFormat,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		true
+		m_colour.getImageView(),
+		m_colour.getInfo().format,
+		m_swapChainImageViews[0]
 	);
 
 	LLT_LOG("[VULKAN:BACKBUFFER] Created colour resources!");
@@ -76,7 +64,6 @@ void Backbuffer::createDepthResources()
 {
     VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
-	// create the depth component
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_depth.setSampleCount(g_vulkanBackend->maxMsaaSamples);
@@ -85,17 +72,81 @@ void Backbuffer::createDepthResources()
 
 	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	// add the component to our render pass builder
-	m_renderPassBuilder.createDepthAttachment(1, g_vulkanBackend->maxMsaaSamples);
+	m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, &m_depth);
 
     LLT_LOG("[VULKAN:BACKBUFFER] Created depth resources!");
 }
 
+void Backbuffer::beginRender(VkCommandBuffer cmdBuffer)
+{
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	barrier.image = m_swapChainImages[m_currSwapChainImageIdx],
+	barrier.subresourceRange = {
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel = 0,
+		.levelCount = 1,
+		.baseArrayLayer = 0,
+		.layerCount = 1,
+	};
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+	VkRenderingAttachmentInfoKHR swapchainAttachment = {};
+	swapchainAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+	swapchainAttachment.imageView = m_swapChainImageViews[m_currSwapChainImageIdx];
+	swapchainAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
+	swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	swapchainAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	swapchainAttachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+
+	m_renderInfo.getColourAttachment(0).resolveImageView = m_swapChainImageViews[m_currSwapChainImageIdx];
+}
+
+void Backbuffer::endRender(VkCommandBuffer cmdBuffer)
+{
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+	barrier.image = m_swapChainImages[m_currSwapChainImageIdx],
+	barrier.subresourceRange = {
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel = 0,
+		.levelCount = 1,
+		.baseArrayLayer = 0,
+		.layerCount = 1,
+	};
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+}
+
 void Backbuffer::cleanUp()
 {
-	// clean up the render pass builder
-	m_renderPassBuilder.cleanUp();
-
 	// if our surface exists, destroy it
 	if (m_surface != VK_NULL_HANDLE)
 	{
@@ -113,9 +164,6 @@ void Backbuffer::cleanUpTextures()
 void Backbuffer::cleanUpSwapChain()
 {
 	cleanUpTextures();
-
-	// clean up the render targets we have
-	m_renderPassBuilder.cleanUpFramebuffers();
 
 	// destroy all of our semaphores
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
@@ -247,40 +295,18 @@ void Backbuffer::createSwapChain()
 	m_width = ext.width;
 	m_height = ext.height;
 
-	// tell our render pass builder to treat us differently
-	// because we are a backbuffer and not a regular render target
-	m_renderPassBuilder.makeBackbuffer(this);
-
-	Vector<VkClearValue> values(2);
-
-	// set the default clear values for colour buffer
-	// black
-	Colour::black().getPremultiplied().exportToFloat(values[0].color.float32);
-
-	// set the default clear values for depth and stencil
-	// white for depth and 0 for stencil
-	values[1].depthStencil = { 1.0f, 0 };
-	m_renderPassBuilder.setClearValues(values);
-
-	// set our dimensions and init
-	m_renderPassBuilder.setDimensions(m_width, m_height);
-
 	// create resources
 	createDepthResources();
 	createColourResources();
 
-	VkImageView attachments[] = {
-		m_colour.getImageView(),
-		m_depth.getImageView(),
-		VK_NULL_HANDLE // this gets substituted for m_swapChainImageViews[n] in createRenderPass!!
-	};
+	// set the default clear values for colour buffer
+	m_renderInfo.setClearColour(0, { { 0.0f, 0.0f, 0.0f, 1.0f } });
 
-	// create the render pass with our attachments
-	m_renderPassBuilder.createRenderPass(
-		m_swapChainImageViews.size(),
-		LLT_ARRAY_LENGTH(attachments), attachments,
-		m_swapChainImageViews.data(), 2
-	);
+	// set the default clear values for depth and stencil
+	m_renderInfo.setClearDepth({ { 1.0f, 0 } });
+
+	// set our dimensions and init
+	m_renderInfo.setDimensions(m_width, m_height);
 
     LLT_LOG("[VULKAN:BACKBUFFER] Created the swap chain!");
 }
@@ -365,34 +391,20 @@ void Backbuffer::rebuildSwapChain()
 
 	cleanUpSwapChain();
 	createSwapChain();
-
-	VkImageView attachments[] = {
-		m_colour.getImageView(),
-		m_depth.getImageView(),
-		m_swapChainImageViews[0]
-	};
-
-	m_renderPassBuilder.setDimensions(m_width, m_height);
-
-	m_renderPassBuilder.createRenderPass(
-		m_swapChainImageViews.size(),
-		LLT_ARRAY_LENGTH(attachments), attachments,
-		m_swapChainImageViews.data(), 2
-	);
 }
 
 void Backbuffer::setClearColour(int idx, const Colour& colour)
 {
 	VkClearValue value = {};
 	colour.getPremultiplied().exportToFloat(value.color.float32);
-	m_renderPassBuilder.setClearColour(0, value);
+	m_renderInfo.setClearColour(0, value);
 }
 
 void Backbuffer::setDepthStencilClear(float depth, uint32_t stencil)
 {
 	VkClearValue value = {};
 	value.depthStencil = { depth, stencil };
-	m_renderPassBuilder.setClearColour(1, value);
+	m_renderInfo.setClearColour(1, value);
 }
 
 VkSurfaceKHR Backbuffer::getSurface() const

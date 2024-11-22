@@ -24,14 +24,70 @@ RenderTarget::~RenderTarget()
 	cleanUp();
 }
 
+void RenderTarget::create()
+{
+	m_renderInfo.setDimensions(m_width, m_height);
+
+	setClearColours(Colour::black());
+
+	createDepthResources();
+	setDepthStencilClear(1.0f, 0);
+}
+
+void RenderTarget::createOnlyDepth()
+{
+	m_renderInfo.setDimensions(m_width, m_height);
+
+	createDepthResources();
+
+	setDepthStencilClear(1.0f, 0);
+}
+
+void RenderTarget::createDepthResources()
+{
+	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
+
+	m_depth.setSize(m_width, m_height);
+	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+	m_depth.setSampleCount(getMSAA());
+	m_depth.flagAsDepthTexture();
+	m_depth.createInternalResources();
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.setParent(this);
+
+	m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, &m_depth);
+}
+
+void RenderTarget::beginRender(VkCommandBuffer cmdBuffer)
+{
+	for (auto& col : m_attachments)
+	{
+		if (!col->isTransient())
+			col->transitionLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	}
+
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+}
+
+void RenderTarget::endRender(VkCommandBuffer cmdBuffer)
+{
+	for (auto& col : m_attachments)
+	{
+		if (!col->isTransient())
+			col->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	}
+
+	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+}
+
 void RenderTarget::cleanUp()
 {
-	m_renderPassBuilder.cleanUp();
+	m_renderInfo.clear();
 	m_depth.cleanUp();
 
 	for (Texture* texture : m_attachments)
 	{
-		if (texture && texture->getParent() == this) {
+		if (texture->getParent() == this) {
 			delete texture;
 		}
 	}
@@ -39,93 +95,20 @@ void RenderTarget::cleanUp()
 	m_attachments.clear();
 }
 
-void RenderTarget::create()
-{
-	m_renderPassBuilder.setDimensions(m_width, m_height);
-
-	int nColourAttachments = m_renderPassBuilder.getColourAttachmentCount();
-
-	createDepthResources(nColourAttachments);
-
-	Vector<VkClearValue> values(nColourAttachments + 1);
-	m_renderPassBuilder.setClearValues(values);
-
-	for (int i = 0; i < nColourAttachments; i++) {
-		setClearColour(i, Colour::black());
-	}
-
-	setDepthStencilClear(1.0f, 0);
-
-	Vector<VkImageView> attachments;
-
-	for (int i = 0; i < nColourAttachments; i++) {
-		attachments.pushBack(m_attachments[i]->getImageView());
-	}
-	
-	attachments.pushBack(m_depth.getImageView());
-
-	m_renderPassBuilder.createRenderPass(
-		1,
-		attachments.size(), attachments.data(),
-		nullptr, 0
-	);
-}
-
-void RenderTarget::createOnlyDepth()
-{
-	m_renderPassBuilder.setDimensions(m_width, m_height);
-
-	createDepthResources(0);
-
-	Vector<VkClearValue> values(1);
-	m_renderPassBuilder.setClearValues(values);
-
-	setDepthStencilClear(1.0f, 0);
-
-	VkImageView attachments[] = {
-		m_depth.getImageView()
-	};
-
-	m_renderPassBuilder.createRenderPass(
-		1,
-		LLT_ARRAY_LENGTH(attachments), attachments,
-		nullptr, 0
-	);
-}
-
-void RenderTarget::createDepthResources(int idx)
-{
-	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
-
-	m_depth.setSize(m_width, m_height);
-	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.setSampleCount(getMSAA());
-
-	m_depth.flagAsDepthTexture();
-
-	m_depth.createInternalResources();
-
-	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-	m_depth.setParent(this);
-
-	m_renderPassBuilder.createDepthAttachment(idx, getMSAA());
-}
-
 void RenderTarget::setClearColour(int idx, const Colour& colour)
 {
-	LLT_ASSERT(m_renderPassBuilder.getColourAttachmentCount() > 0, "[VULKAN:RENDERTARGET] Must have at least one colour attachment!");
+	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "[VULKAN:RENDERTARGET] Must have at least one colour attachment!");
 
 	VkClearValue value = {};
 	colour.getPremultiplied().exportToFloat(value.color.float32);
-	m_renderPassBuilder.setClearColour(idx, value);
+	m_renderInfo.setClearColour(idx, value);
 }
 
 void RenderTarget::setDepthStencilClear(float depth, uint32_t stencil)
 {
 	VkClearValue value = {};
 	value.depthStencil = { depth, stencil };
-	m_renderPassBuilder.setClearColour(m_renderPassBuilder.getColourAttachmentCount(), value);
+	m_renderInfo.setClearDepth(value);
 }
 
 const Texture* RenderTarget::getAttachment(int idx) const
@@ -138,17 +121,18 @@ const Texture* RenderTarget::getDepthAttachment() const
 	return &m_depth;
 }
 
-void RenderTarget::setAttachment(int idx, Texture* texture)
+void RenderTarget::addAttachment(Texture* texture)
 {
-	m_attachments[idx] = texture;
+	if (!texture)
+		return;
 
-    m_renderPassBuilder.createColourAttachment(
-		idx,
+	m_attachments.pushBack(texture);
+
+    m_renderInfo.addColourAttachment(
+		VK_ATTACHMENT_LOAD_OP_LOAD,
+		texture->getImageView(),
 		texture->getInfo().format,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		false
+		VK_NULL_HANDLE
 	);
 }
 

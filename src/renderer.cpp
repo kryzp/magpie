@@ -33,8 +33,6 @@ Renderer::Renderer()
 	, m_linearSampler(nullptr)
 	, m_nearestSampler(nullptr)
 	, m_vertexFormat()
-	, m_instancedVertexFormat()
-	, m_instanceBuffer(nullptr)
 	, m_shaderParams()
 	, m_shaderParamsBuffer(nullptr)
 	, m_pushConstants()
@@ -69,7 +67,6 @@ void Renderer::init(Backbuffer* backbuffer)
 	createBlockMesh();
 	createSkybox();
 	setupVertexFormats();
-	createInstanceData();
 	setupShaderParameters();
 	createEntities();
 
@@ -246,38 +243,6 @@ void Renderer::setupVertexFormats()
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
 	m_vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-
-	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
-	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
-	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
-	m_instancedVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
-	m_instancedVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-	m_instancedVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyInstancedData, offset));
-	m_instancedVertexFormat.addBinding(1, sizeof(MyInstancedData), VK_VERTEX_INPUT_RATE_INSTANCE);
-}
-
-void Renderer::createInstanceData()
-{
-	uint64_t instanceDataSize = sizeof(MyInstancedData) * INSTANCED_CUBE_COUNT;
-	MyInstancedData* instanceData = new MyInstancedData[INSTANCED_CUBE_COUNT];
-
-	for (int i = 0; i < INSTANCED_CUBE_COUNT; i++)
-	{
-		float ii = (float)(i % INSTANCED_LENGTH);
-		float jj = (float)((i / INSTANCED_LENGTH) % INSTANCED_LENGTH);
-		float kk = (float)(i / (INSTANCED_LENGTH*INSTANCED_LENGTH));
-
-		ii *= 2.5f;
-		jj *= 2.5f;
-		kk *= 2.5f;
-
-		instanceData[i].offset = { ii, kk, -jj };
-	}
-
-	m_instanceBuffer = g_shaderBufferManager->createSSBO();
-	m_instanceBuffer->pushData(instanceData, instanceDataSize);
-
-	delete[] instanceData;
 }
 
 void Renderer::createEntities()
@@ -310,8 +275,8 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	// --- ---
 
-	//m_target->setToClear(true);
-	m_target->setClearColours(Colour::red());
+	m_target->toggleClear(true);
+	m_target->setClearColours(Colour::black());
 
 	RenderOp pass;
 
@@ -374,26 +339,9 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 		g_vulkanBackend->render(pass);
 	}
 
-	// instancing!!!
-	/*
-	m_shaderParams.set("currModelMatrix", getTransformationMatrix({ 5.0f, -5.0f, -5.0f }, 0.0f, { 0.0f, 1.0f, 0.0 }, { 0.75f, 0.75f, 0.75f }, { 0.0f, 0.0f, 0.0f }));
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_shaderParamsBuffer->bind(0);
-
-	g_vulkanBackend->setVertexDescriptor(m_instancedVertexFormat);
-
-	g_vulkanBackend->bindShader(m_vertexShaderInstanced);
-	g_vulkanBackend->bindShader(m_fragmentShader);
-
-	pass.setInstanceData(INSTANCED_CUBE_COUNT, 0, m_instanceBuffer->getBuffer());
-	pass.setMesh(m_blockMesh);
-
-	g_vulkanBackend->render(pass);
-
-	pass.setInstanceData(1, 0, nullptr);
-	*/
-
 	g_vulkanBackend->endRender();
+
+	m_target->toggleClear(false);
 
 	stoneTex->unbind();
 
@@ -423,8 +371,6 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	// --- ---
 
 	g_vulkanBackend->setVertexDescriptor(m_vertexFormat);
-
-	g_vulkanBackend->beginRender();
 
 	g_vulkanBackend->setDepthWrite(true);
 	g_vulkanBackend->setDepthTest(false);
