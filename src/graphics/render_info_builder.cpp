@@ -75,6 +75,11 @@ VkRenderingAttachmentInfoKHR& RenderInfoBuilder::getColourAttachment(int idx)
 	return m_colourAttachments[idx];
 }
 
+VkRenderingAttachmentInfoKHR& RenderInfoBuilder::getDepthAttachment()
+{
+	return m_depthAttachment;
+}
+
 void RenderInfoBuilder::clear()
 {
 	m_colourAttachments.clear();

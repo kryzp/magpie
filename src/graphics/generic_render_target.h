@@ -43,19 +43,27 @@ namespace llt
 
 		virtual VkSampleCountFlagBits getMSAA() const = 0;
 
-		void toggleClear(int idx, bool clear)
-		{
-			m_renderInfo.getColourAttachment(idx).loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-		}
-
 		void toggleClear(bool clear)
 		{
 			for (int i = 0; i < getAttachmentCount(); i++) {
 				toggleClear(i, clear);
 			}
+
+			toggleDepthStencilClear(clear);
+		}
+
+		void toggleClear(int idx, bool clear)
+		{
+			m_renderInfo.getColourAttachment(idx).loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+		}
+
+		void toggleDepthStencilClear(bool clear)
+		{
+			m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		}
 
 		virtual void setClearColour(int idx, const Colour& colour) = 0;
+
 		virtual void setDepthStencilClear(float depth, uint32_t stencil) = 0;
 
 		void setClearColours(const Colour& colour)

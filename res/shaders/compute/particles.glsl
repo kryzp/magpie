@@ -56,15 +56,15 @@ void main()
 
 	float depth = texture(u_depthTexture, screenPosition.xy).x;
 
-	vec3 projectedSurfacePosition = toWorldPosition(vec3(screenPosition.xy, depth));
+	vec3 projectedSurfacePosition = toWorldPosition(vec3(screenPosition.xy, screenPosition.z));
 
 	vec3 normal = 2.0*texture(u_normalTexture, screenPosition.xy).xyz - 1.0;
 
 	float approxDistanceFromSurface = abs(dot(normal, position - projectedSurfacePosition));
 
-	bool onSurface = false;//approxDistanceFromSurface <= COLLISION_DISTANCE;
+	bool onSurface = approxDistanceFromSurface <= 0.001;
 
-	if (onSurface)
+	if (onSurface && false) // THIS IS VERY BROKEN RIGHT NOW
 	{
 		vec3 naiveNewPosition = position + particles[idx].velocity*pc.deltaTime;
 

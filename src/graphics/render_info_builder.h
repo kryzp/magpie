@@ -27,6 +27,7 @@ namespace llt
 		void addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* texture);
 
 		VkRenderingAttachmentInfoKHR& getColourAttachment(int idx);
+		VkRenderingAttachmentInfoKHR& getDepthAttachment();
 
 		VkRenderingInfoKHR buildInfo() const;
 

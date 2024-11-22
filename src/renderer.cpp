@@ -345,21 +345,22 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	stoneTex->unbind();
 
+	// particles: compute
 	m_shaderParamsBuffer->unbind();
 	m_pushConstants.set("time", deltaTime);
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 	m_gpuParticles.dispatchCompute(camera);
 	m_shaderParamsBuffer->bind(0);
 
-	//m_target->setToClear(false);
 	g_vulkanBackend->beginRender();
 
 	stoneTex->bind(1);
 
-	// particles
+	// particles: render
 	glm::mat4 particleMatrix = glm::identity<glm::mat4>();
 	particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.2f, 0.2f, 0.2f }) * particleMatrix;
-	m_shaderParams.set("modelMatrix", particleMatrix);
+	m_shaderParams.set("currModelMatrix", particleMatrix);
+	m_shaderParams.set("prevModelMatrix", particleMatrix);
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_shaderParamsBuffer->bind(0);
 	m_gpuParticles.render();
