@@ -41,7 +41,7 @@ void Texture::cleanUp()
 {
 	if (m_image != VK_NULL_HANDLE)
 	{
-		vmaDestroyImage(g_vulkanBackend->m_vmaAllocator, m_image, m_allocation);
+		vmaDestroyImage(g_vulkanBackend->vmaAllocator, m_image, m_allocation);
 		m_image = VK_NULL_HANDLE;
 	}
 
@@ -182,7 +182,7 @@ void Texture::createInternalResources()
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	if (VkResult result = vmaCreateImage(g_vulkanBackend->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
+	if (VkResult result = vmaCreateImage(g_vulkanBackend->vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:TEXTURE|DEBUG] Failed to create image: %d", result);
 	}
 
@@ -338,6 +338,42 @@ void Texture::generateMipmaps() const
 	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
 }
 
+void Texture::pipelineBarrier(VkPipelineStageFlags src, VkPipelineStageFlags dst) const
+{
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = m_imageLayout;
+	barrier.newLayout = m_imageLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = m_image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = m_mipmapCount;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = getLayerCount();
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = 0;
+
+	if (m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		src, dst,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
+}
+
+// todo: this is literally giving me AIDS
 void Texture::transitionLayout(VkImageLayout newLayout)
 {
 	if (m_imageLayout == newLayout) {
@@ -537,65 +573,4 @@ VkSampleCountFlagBits Texture::getNumSamples() const
 bool Texture::isTransient() const
 {
 	return m_transient;
-}
-
-// ---
-
-SampledTexture::SampledTexture()
-	: texture(nullptr)
-	, sampler(nullptr)
-	, m_boundIdx(0)
-	, m_isBound(false)
-{
-}
-
-SampledTexture::SampledTexture(const Texture* texture, TextureSampler* sampler)
-	: texture(texture)
-	, sampler(sampler)
-	, m_boundIdx(0)
-	, m_isBound(false)
-{
-}
-
-const VkDescriptorImageInfo& SampledTexture::getInfo()
-{
-	m_info.imageView = texture->getImageView();
-
-	if (texture->isDepthTexture())
-	{
-		m_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-	}
-	else
-	{
-		m_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	}
-
-	m_info.sampler = sampler->bind(4);
-
-	return m_info;
-}
-
-void SampledTexture::bind(uint32_t idx)
-{
-	if (m_boundIdx != idx) {
-		g_vulkanBackend->markDescriptorDirty();
-	}
-
-	m_boundIdx = idx;
-	m_isBound = true;
-}
-
-void SampledTexture::unbind()
-{
-	m_isBound = false;
-}
-
-uint32_t SampledTexture::getBoundIdx() const
-{
-	return m_boundIdx;
-}
-
-bool SampledTexture::isBound() const
-{
-	return m_isBound;
 }

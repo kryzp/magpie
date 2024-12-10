@@ -4,6 +4,8 @@
 #include "graphics/vertex_descriptor.h"
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
+#include "graphics/graphics_pipeline.h"
+#include "graphics/compute_pipeline.h"
 
 #include "camera.h"
 
@@ -13,13 +15,13 @@ namespace llt
 
 	class GPUParticles
 	{
-		constexpr static int PARTICLE_COUNT = 64;
+		constexpr static int PARTICLE_COUNT = 1;
 
 	public:
 		GPUParticles();
 		~GPUParticles();
 
-		void init();
+		void init(const ShaderBuffer* shaderParams);
 
 		void dispatchCompute(const Camera& camera);
 		void render();
@@ -33,6 +35,9 @@ namespace llt
 
 		SubMesh m_particleMesh;
 		VertexDescriptor m_particleVertexFormat;
+
+		GraphicsPipeline m_particleGraphicsPipeline;
+		ComputePipeline m_particleComputePipeline;
 	};
 }
 

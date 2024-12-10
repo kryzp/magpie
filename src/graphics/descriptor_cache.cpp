@@ -29,7 +29,7 @@ void DescriptorCache::clearSetCache()
 	m_descriptorCache.clear();
 }
 
-VkDescriptorSet DescriptorCache::createSet(DescriptorPoolMgr* mgr, const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasNotCached)
+VkDescriptorSet DescriptorCache::createSet(const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasNotCached)
 {
 	if (m_descriptorCache.contains(hash)) {
 		if (wasNotCached) {
@@ -42,7 +42,7 @@ VkDescriptorSet DescriptorCache::createSet(DescriptorPoolMgr* mgr, const VkDescr
 		}
 	}
 
-	VkDescriptorSet set = mgr->allocateDescriptorSet(layout);
+	VkDescriptorSet set = g_vulkanBackend->descriptorPoolManager.allocateDescriptorSet(layout);
 	m_descriptorCache.insert(hash, set);
 
 	return set;

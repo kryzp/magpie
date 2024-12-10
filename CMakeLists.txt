@@ -26,11 +26,13 @@ add_executable(${PROJECT_NAME}
     src/graphics/backbuffer.cpp
     src/graphics/backend.cpp
     src/graphics/colour.cpp
+    src/graphics/compute_pipeline.cpp
     src/graphics/descriptor_builder.cpp
     src/graphics/descriptor_cache.cpp
     src/graphics/descriptor_pool_mgr.cpp
     src/graphics/gpu_buffer.cpp
     src/graphics/gpu_buffer_mgr.cpp
+    src/graphics/graphics_pipeline.cpp
     src/graphics/generic_render_target.cpp
     src/graphics/render_info_builder.cpp
     src/graphics/render_target.cpp
@@ -39,8 +41,9 @@ add_executable(${PROJECT_NAME}
     src/graphics/shader_mgr.cpp
     src/graphics/shader_buffer.cpp
     src/graphics/shader_buffer_mgr.cpp
-    src/graphics/mesh.cpp
     src/graphics/sub_mesh.cpp
+    src/graphics/pipeline.cpp
+    src/graphics/mesh.cpp
     src/graphics/material.cpp
     src/graphics/texture.cpp
     src/graphics/texture_mgr.cpp

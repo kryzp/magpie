@@ -11,12 +11,6 @@ llt::VulkanBackend* llt::g_vulkanBackend = nullptr;
 
 using namespace llt;
 
-static VkDynamicState DYNAMIC_STATES[] = {
-	VK_DYNAMIC_STATE_VIEWPORT,
-	VK_DYNAMIC_STATE_SCISSOR,
-	VK_DYNAMIC_STATE_BLEND_CONSTANTS
-};
-
 #if LLT_DEBUG
 
 static bool g_debugEnableValidationLayers = false;
@@ -155,39 +149,26 @@ static Vector<const char*> getInstanceExtensions()
 }
 
 VulkanBackend::VulkanBackend(const Config& config)
-	: vulkanInstance(VK_NULL_HANDLE)
-	, m_vmaAllocator()
-	, m_currentRenderInfoBuilder()
-	, m_descriptorPoolManager()
-	, m_graphicsShaderStages()
-	, m_sampleShadingEnabled(true)
-	, m_pushConstants()
-	, m_minSampleShading(0.2f)
-	, m_blendStateLogicOpEnabled(false)
-	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
-	, m_graphicsPipelineCache()
-	, m_pipelineLayoutCache()
-	, m_computePipelineCache()
-	, m_computeShaderStageInfo()
-	, m_computeFinishedSemaphores()
-	, m_uncertainComputeFinished(false)
-	, m_descriptorCache()
-	, m_descriptorBuilder()
-	, m_descriptorBuilderDirty(true)
-	, m_pipelineProcessCache()
-	, swapChainImageFormat()
-	, m_currentRenderTarget(nullptr)
-	, device(VK_NULL_HANDLE)
+	: vulkanInstance()
+	, device()
 	, physicalData()
-	, m_depthStencilCreateInfo()
-	, m_colourBlendAttachmentStates()
-	, m_blendConstants{0.0f, 0.0f, 0.0f, 0.0f}
-	, maxMsaaSamples(VK_SAMPLE_COUNT_1_BIT)
-	, m_viewport()
-	, m_scissor()
-	, m_currentFrameIdx(0)
-	, m_cullMode(VK_CULL_MODE_BACK_BIT)
-	, m_currentVertexDescriptor(nullptr)
+	, maxMsaaSamples()
+	, swapChainImageFormat()
+	, vmaAllocator()
+	, descriptorPoolManager()
+	, descriptorCache()
+	, pipelineCache()
+	, pipelineLayoutCache()
+	, graphicsQueue()
+	, computeQueues()
+	, transferQueues()
+	, pushConstants()
+	, m_pipelineProcessCache()
+	, m_computeFinishedSemaphores()
+	, m_backbuffer()
+	, m_currentFrameIdx()
+	, m_currentRenderTarget()
+	, m_waitOnCompute()
 #if LLT_DEBUG
 	, m_debugMessenger()
 #endif // LLT_DEBUG
@@ -274,7 +255,6 @@ VulkanBackend::~VulkanBackend()
 
 	m_backbuffer->cleanUpSwapChain();
 
-	// destroy core managers in reverse order they were created
 	delete g_renderTargetManager;
 	delete g_shaderManager;
 	delete g_textureManager;
@@ -282,18 +262,15 @@ VulkanBackend::~VulkanBackend()
 
 	m_backbuffer->cleanUpTextures();
 
-	// destroy the pipeline cache
 	clearPipelineCache();
-	vkDestroyPipelineCache(this->device, m_pipelineProcessCache, nullptr);
-
-	m_currentRenderInfoBuilder->clear();
 
 	delete g_shaderBufferManager;
 
-	m_descriptorCache.cleanUp();
-	m_descriptorPoolManager.cleanUp();
+	descriptorCache.cleanUp();
+	descriptorPoolManager.cleanUp();
 
-	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
+	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
+	{
 		vkDestroyFence(this->device, graphicsQueue.getFrame(i).inFlightFence, nullptr);
 		vkDestroyCommandPool(this->device, graphicsQueue.getFrame(i).commandPool, nullptr);
 
@@ -312,7 +289,7 @@ VulkanBackend::~VulkanBackend()
 
 	delete m_backbuffer;
 
-	vmaDestroyAllocator(m_vmaAllocator);
+	vmaDestroyAllocator(vmaAllocator);
 
 	vkDestroyDevice(this->device, nullptr);
 
@@ -508,7 +485,7 @@ void VulkanBackend::createVmaAllocator()
 	allocatorCreateInfo.instance = this->vulkanInstance;
 	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 	
-	if (VkResult result = vmaCreateAllocator(&allocatorCreateInfo, &m_vmaAllocator); result != VK_SUCCESS) {
+	if (VkResult result = vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to create memory allocator: %d", result);
 	}
 
@@ -544,234 +521,6 @@ void VulkanBackend::createComputeResources()
 	}
 
 	LLT_LOG("[VULKAN] Created compute resources!");
-}
-
-VkPipeline VulkanBackend::getComputePipeline()
-{
-	VkPipelineLayout layout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
-
-	uint64_t createdPipelineHash = 0;
-
-	hash::combine(&createdPipelineHash, &m_computeShaderStageInfo);
-	hash::combine(&createdPipelineHash, &layout);
-
-	if (m_computePipelineCache.contains(createdPipelineHash)) {
-		return m_computePipelineCache[createdPipelineHash];
-	}
-
-	VkComputePipelineCreateInfo computePipelineCreateInfo = {};
-	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	computePipelineCreateInfo.layout = layout;
-	computePipelineCreateInfo.stage = m_computeShaderStageInfo;
-
-	VkPipeline createdPipeline = VK_NULL_HANDLE;
-
-	if (VkResult result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to create new compute pipeline: %d", result);
-	}
-
-	LLT_LOG("[VULKAN] Created new compute pipeline!");
-
-	m_computePipelineCache.insert(
-		createdPipelineHash,
-		createdPipeline
-	);
-
-	return createdPipeline;
-}
-
-VkPipelineLayout VulkanBackend::getPipelineLayout(VkShaderStageFlagBits stage)
-{
-	DescriptorBuilder builder = getDescriptorBuilder(stage);
-	uint64_t pipelineLayoutHash = builder.hash();
-
-	hash::combine(&pipelineLayoutHash, &stage);
-
-	uint64_t pushConstantCount = m_pushConstants.size();
-	hash::combine(&pipelineLayoutHash, &pushConstantCount);
-
-	// check the pipeline cache in-case the needed pipeline already exists
-	// (i.e: was created at some point prior)
-	if (m_pipelineLayoutCache.contains(pipelineLayoutHash)) {
-		return m_pipelineLayoutCache[pipelineLayoutHash];
-	}
-
-	// no pipeline found!
-	// continue...
-
-	VkDescriptorSetLayout layout = {};
-	builder.buildLayout(layout); // get the layout of the pipeline
-
-	VkPushConstantRange pushConstants;
-	pushConstants.offset = 0;
-	pushConstants.size = m_pushConstants.size();
-	pushConstants.stageFlags = stage;
-
-	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pSetLayouts = &layout;
-	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
-
-	if (pushConstants.size > 0) {
-		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
-	}
-
-	VkPipelineLayout pipelineLayout = {};
-
-	if (VkResult result = vkCreatePipelineLayout(this->device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to create pipeline layout: %d", result);
-	}
-
-	LLT_LOG("[VULKAN] Created new pipeline layout!");
-
-	m_pipelineLayoutCache.insert(
-		pipelineLayoutHash,
-		pipelineLayout
-	);
-
-	return pipelineLayout;
-}
-
-VkPipeline VulkanBackend::getGraphicsPipeline()
-{
-	// this is essentially a long list of configurations vulkan requires us to give
-	// it to fully specify how a graphics pipeline should behave
-
-	LLT_ASSERT(m_currentVertexDescriptor, "[VULKAN|DEBUG] Vertex descriptor must not be null!");
-	
-	const auto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
-	const auto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
-
-	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
-	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputStateCreateInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
-	vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
-	vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
-	vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
-	inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-	inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
-
-	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
-	viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportStateCreateInfo.viewportCount = 1;
-	viewportStateCreateInfo.pViewports = &m_viewport;
-	viewportStateCreateInfo.scissorCount = 1;
-	viewportStateCreateInfo.pScissors = &m_scissor;
-
-	VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {};
-	rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
-	rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-	rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterizationStateCreateInfo.lineWidth = 1.0f;
-	rasterizationStateCreateInfo.cullMode = m_cullMode;
-	rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-	rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;
-	rasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
-	rasterizationStateCreateInfo.depthBiasClamp = 0.0f;
-	rasterizationStateCreateInfo.depthBiasSlopeFactor = 0.0f;
-
-	VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = {};
-	multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampleStateCreateInfo.sampleShadingEnable = m_sampleShadingEnabled ? VK_TRUE : VK_FALSE;
-	multisampleStateCreateInfo.minSampleShading = m_minSampleShading;
-	multisampleStateCreateInfo.rasterizationSamples = m_currentRenderTarget->getMSAA();
-	multisampleStateCreateInfo.pSampleMask = nullptr;
-	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
-	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
-
-	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};
-	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colourBlendStateCreateInfo.logicOpEnable = m_blendStateLogicOpEnabled ? VK_TRUE : VK_FALSE;
-	colourBlendStateCreateInfo.logicOp = m_blendStateLogicOp;
-	colourBlendStateCreateInfo.attachmentCount = m_currentRenderInfoBuilder->getColourAttachmentCount();
-	colourBlendStateCreateInfo.pAttachments = m_colourBlendAttachmentStates.data();
-	colourBlendStateCreateInfo.blendConstants[0] = m_blendConstants[0];
-	colourBlendStateCreateInfo.blendConstants[1] = m_blendConstants[1];
-	colourBlendStateCreateInfo.blendConstants[2] = m_blendConstants[2];
-	colourBlendStateCreateInfo.blendConstants[3] = m_blendConstants[3];
-
-	uint64_t createdPipelineHash = 0;
-
-	hash::combine(&createdPipelineHash, &m_depthStencilCreateInfo);
-	hash::combine(&createdPipelineHash, m_colourBlendAttachmentStates.data());
-	hash::combine(&createdPipelineHash, &m_blendConstants);
-	hash::combine(&createdPipelineHash, &rasterizationStateCreateInfo);
-	hash::combine(&createdPipelineHash, &inputAssemblyStateCreateInfo);
-	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
-
-	VkRenderingInfoKHR info = m_currentRenderInfoBuilder->buildInfo();
-
-	hash::combine(&createdPipelineHash, &info);
-
-	for (auto& attrib : attributeDescriptions) {
-		hash::combine(&createdPipelineHash, &attrib);
-	}
-
-	for (auto& binding : bindingDescriptions) {
-		hash::combine(&createdPipelineHash, &binding);
-	}
-
-	for (int i = 0; i < m_graphicsShaderStages.size(); i++) {
-		hash::combine(&createdPipelineHash, &m_graphicsShaderStages[i]);
-	}
-
-	if (m_graphicsPipelineCache.contains(createdPipelineHash)) {
-		return m_graphicsPipelineCache[createdPipelineHash];
-	}
-
-	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
-	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(DYNAMIC_STATES);
-	dynamicStateCreateInfo.pDynamicStates = DYNAMIC_STATES;
-
-	auto colourFormats = m_currentRenderInfoBuilder->getColourAttachmentFormats();
-
-	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
-	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-	pipelineRenderingCreateInfo.colorAttachmentCount = colourFormats.size();
-	pipelineRenderingCreateInfo.pColorAttachmentFormats = colourFormats.data();
-	pipelineRenderingCreateInfo.depthAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
-
-	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
-	graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphicsPipelineCreateInfo.pStages = m_graphicsShaderStages.data();
-	graphicsPipelineCreateInfo.stageCount = m_graphicsShaderStages.size();
-	graphicsPipelineCreateInfo.pVertexInputState = &vertexInputStateCreateInfo;
-	graphicsPipelineCreateInfo.pInputAssemblyState = &inputAssemblyStateCreateInfo;
-	graphicsPipelineCreateInfo.pViewportState = &viewportStateCreateInfo;
-	graphicsPipelineCreateInfo.pRasterizationState = &rasterizationStateCreateInfo;
-	graphicsPipelineCreateInfo.pMultisampleState = &multisampleStateCreateInfo;
-	graphicsPipelineCreateInfo.pDepthStencilState = &m_depthStencilCreateInfo;
-	graphicsPipelineCreateInfo.pColorBlendState = &colourBlendStateCreateInfo;
-	graphicsPipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
-	graphicsPipelineCreateInfo.layout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
-	graphicsPipelineCreateInfo.renderPass = VK_NULL_HANDLE;
-	graphicsPipelineCreateInfo.subpass = 0;
-	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-	graphicsPipelineCreateInfo.basePipelineIndex = -1;
-	graphicsPipelineCreateInfo.pNext = &pipelineRenderingCreateInfo;
-
-	VkPipeline createdPipeline = VK_NULL_HANDLE;
-
-	if (VkResult result = vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to create new graphics pipeline: %d", result);
-	}
-
-	LLT_LOG("[VULKAN] Created new graphics pipeline!");
-
-	m_graphicsPipelineCache.insert(
-		createdPipelineHash,
-		createdPipeline
-	);
-
-	return createdPipeline;
 }
 
 void VulkanBackend::createCommandPools()
@@ -859,32 +608,8 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	backbuffer->createSurface();
 
 	m_backbuffer = backbuffer;
-	setRenderTarget(backbuffer); // set the backbuffer as the initial render target
 
 	enumeratePhysicalDevices(); // find a physical device
-
-	m_depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	m_depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-	m_depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
-	m_depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
-	m_depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
-	m_depthStencilCreateInfo.minDepthBounds = 0.0f;
-	m_depthStencilCreateInfo.maxDepthBounds = 1.0f;
-	m_depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-	m_depthStencilCreateInfo.front = {};
-	m_depthStencilCreateInfo.back = {};
-
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		m_colourBlendAttachmentStates[i].blendEnable = VK_TRUE;
-		m_colourBlendAttachmentStates[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		m_colourBlendAttachmentStates[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		m_colourBlendAttachmentStates[i].colorBlendOp = VK_BLEND_OP_ADD;
-		m_colourBlendAttachmentStates[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		m_colourBlendAttachmentStates[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		m_colourBlendAttachmentStates[i].alphaBlendOp = VK_BLEND_OP_ADD;
-	}
 
 	findQueueFamilies(physicalData.device, m_backbuffer->getSurface());
 
@@ -920,89 +645,29 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	createComputeResources();
 
-	m_descriptorPoolManager.init();
+	descriptorPoolManager.init();
 
 	backbuffer->create();
-
-	setRenderTarget(m_backbuffer);
-
-	resetViewport();
-	resetScissor();
 
 	// finished!
 	return backbuffer;
 }
 
-void VulkanBackend::markDescriptorDirty()
-{
-	m_descriptorBuilderDirty = true;
-}
-
-void VulkanBackend::resetDescriptorBuilder()
-{
-	markDescriptorDirty();
-
-	m_descriptorBuilder.reset(
-		&m_descriptorPoolManager,
-		&m_descriptorCache
-	);
-}
-
-DescriptorBuilder VulkanBackend::getDescriptorBuilder(VkShaderStageFlagBits stage)
-{
-	if (!m_descriptorBuilderDirty) {
-		return m_descriptorBuilder;
-	}
-
-	resetDescriptorBuilder();
-
-	g_shaderBufferManager->bindToDescriptorBuilder(&m_descriptorBuilder, stage);
-
-	g_textureManager->bindToDescriptorBuilder(&m_descriptorBuilder, stage);
-
-	m_descriptorBuilderDirty = false;
-	return m_descriptorBuilder;
-}
-
-/*
- * Creates a new descriptor set based on our currently bound textures
- * by asking the descriptor builder to build one.
- */
-VkDescriptorSet VulkanBackend::getDescriptorSet(VkShaderStageFlagBits stage)
-{
-	uint64_t descriptorSetHash = 0;
-
-	hash::combine(&descriptorSetHash, &stage);
-	g_textureManager->calculateBoundTextureHash(&descriptorSetHash);
-
-	VkDescriptorSet descriptorSet = {};
-	VkDescriptorSetLayout descriptorSetLayout = {};
-
-	DescriptorBuilder builder = getDescriptorBuilder(stage);
-	builder.build(descriptorSet, descriptorSetLayout, descriptorSetHash);
-
-	return descriptorSet;
-}
-
 void VulkanBackend::clearPipelineCache()
 {
-	for (auto& [id, cache] : m_graphicsPipelineCache) {
+	for (auto& [id, cache] : pipelineCache) {
 		vkDestroyPipeline(this->device, cache, nullptr);
 	}
 
-	m_graphicsPipelineCache.clear();
+	pipelineCache.clear();
 
-	for (auto& [id, cache] : m_computePipelineCache) {
-		vkDestroyPipeline(this->device, cache, nullptr);
-	}
-
-	m_computePipelineCache.clear();
-
-	for (auto& [id, cache] : m_pipelineLayoutCache) {
+	for (auto& [id, cache] : pipelineLayoutCache) {
 		vkDestroyPipelineLayout(this->device, cache, nullptr);
 	}
 
-	m_pipelineLayoutCache.clear();
+	pipelineLayoutCache.clear();
+
+	vkDestroyPipelineCache(this->device, m_pipelineProcessCache, nullptr);
 }
 
 VkSampleCountFlagBits VulkanBackend::getMaxUsableSampleCount() const
@@ -1086,66 +751,20 @@ void VulkanBackend::onWindowResize(int width, int height)
 	m_backbuffer->onWindowResize(width, height);
 }
 
-void VulkanBackend::setSampleShading(bool enabled, float minSampleShading)
-{
-	m_sampleShadingEnabled = enabled;
-	m_minSampleShading = minSampleShading;
-}
-
-void VulkanBackend::setCullMode(VkCullModeFlagBits cull)
-{
-	m_cullMode = cull;
-}
-
-void VulkanBackend::bindShader(const ShaderProgram* shader)
-{
-	if (!shader) {
-		return;
-	}
-
-	switch (shader->type)
-	{
-		case VK_SHADER_STAGE_VERTEX_BIT:
-			m_graphicsShaderStages[0] = shader->getShaderStageCreateInfo();
-			break;
-
-		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			m_graphicsShaderStages[1] = shader->getShaderStageCreateInfo();
-			break;
-
-		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			LLT_ERROR("[VULKAN|DEBUG] Geometry shaders not yet implemented!!");
-			break;
-
-		case VK_SHADER_STAGE_COMPUTE_BIT:
-			m_computeShaderStageInfo = shader->getShaderStageCreateInfo();
-			break;
-
-		default:
-			LLT_ERROR("[VULKAN|DEBUG] Unrecognised shader type being bound: %d", shader->type);
-			break;
-	}
-}
-
 void VulkanBackend::setPushConstants(ShaderParameters& params)
 {
-	m_pushConstants = params.getPackedConstants();
+	pushConstants = params.getPackedConstants();
 }
 
 void VulkanBackend::resetPushConstants()
 {
-	m_pushConstants.clear();
-}
-
-void VulkanBackend::setVertexDescriptor(const VertexDescriptor& descriptor)
-{
-	m_currentVertexDescriptor = &descriptor;
+	pushConstants.clear();
 }
 
 void VulkanBackend::clearDescriptorCacheAndPool()
 {
-	m_descriptorCache.clearSetCache();
-//	m_descriptorPoolManager.resetPools();
+	descriptorCache.clearSetCache();
+//	descriptorPoolManager.resetPools();
 }
 
 int VulkanBackend::getCurrentFrameIdx() const
@@ -1153,114 +772,29 @@ int VulkanBackend::getCurrentFrameIdx() const
 	return m_currentFrameIdx;
 }
 
-void VulkanBackend::beginCompute()
+void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
 {
-	markDescriptorDirty();
-
-	const auto& currentFrame = computeQueues[0].getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
-
-	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-	if (VkResult result = vkBeginCommandBuffer(currentBuffer, &commandBufferBeginInfo); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to begin recording compute command buffer: %d", result);
-	}
+	m_currentRenderTarget = target;
 }
 
-void VulkanBackend::dispatchCompute(int gcX, int gcY, int gcZ)
+GenericRenderTarget* VulkanBackend::getRenderTarget()
 {
-	const auto& currentFrame = computeQueues[0].getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	VkPipeline pipeline = getComputePipeline();
-	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_COMPUTE_BIT);
-	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_COMPUTE_BIT);
-
-	if (m_pushConstants.size() > 0)
-	{
-		vkCmdPushConstants(
-			currentBuffer,
-			pipelineLayout,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			0,
-			m_pushConstants.size(),
-			m_pushConstants.data()
-		);
-	}
-
-	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
-
-	vkCmdBindDescriptorSets(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipelineLayout,
-		0,
-		1, &descriptorSet,
-		dynamicOffsets.size(),
-		dynamicOffsets.data()
-	);
-
-	vkCmdBindPipeline(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline
-	);
-
-	vkCmdDispatch(
-		currentBuffer,
-		gcX, gcY, gcZ
-	);
+	return m_currentRenderTarget;
 }
 
-void VulkanBackend::endCompute()
+const GenericRenderTarget* VulkanBackend::getRenderTarget() const
 {
-	const auto& currentFrame = computeQueues[0].getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to record compute command buffer: %d", result);
-	}
-
-	VkSubmitInfo submitInfo = {};
-	
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &currentBuffer;
-
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrameIdx];
-	
-	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
-
-	if (VkResult result = vkQueueSubmit(computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to submit compute command buffer: %d", result);
-	}
-
-	g_shaderBufferManager->unbindAll();
-	g_textureManager->unbindAll();
+	return m_currentRenderTarget;
 }
 
-void VulkanBackend::syncComputeWithNextRender()
+void VulkanBackend::beginGraphics()
 {
-	m_uncertainComputeFinished = true;
-}
+	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	auto currentBuffer = currentFrame.commandBuffer;
 
-void VulkanBackend::beginRender()
-{
-	markDescriptorDirty();
+	vkWaitForFences(g_vulkanBackend->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 
-	const auto& currentFrame = graphicsQueue.getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
+	vkResetCommandPool(g_vulkanBackend->device, currentFrame.commandPool, 0);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1270,128 +804,41 @@ void VulkanBackend::beginRender()
 		LLT_ERROR("[VULKAN|DEBUG] Failed to begin recording command buffer: %d", result);
 	}
 
-	m_currentRenderTarget->beginRender(currentBuffer);
+	m_currentRenderTarget->beginGraphics(currentBuffer);
 
-	VkRenderingInfoKHR renderInfo = m_currentRenderInfoBuilder->buildInfo();
+	VkRenderingInfoKHR renderInfo = m_currentRenderTarget->getRenderInfo()->buildInfo();
 
 	vkCmdBeginRendering(currentBuffer, &renderInfo);
 }
 
-void VulkanBackend::render(const RenderOp& op)
+void VulkanBackend::endGraphics()
 {
-	VkCommandBuffer currentBuffer = graphicsQueue.getCurrentFrame().commandBuffer;
-
-	vkCmdSetViewport(currentBuffer, 0, 1, &m_viewport);
-	vkCmdSetScissor(currentBuffer, 0, 1, &m_scissor);
-
-	const auto& vertexBuffer = op.meshData.vBuffer->getBuffer();
-	const auto& indexBuffer  = op.meshData.iBuffer->getBuffer();
-
-	VkPipeline pipeline = getGraphicsPipeline();
-	VkPipelineLayout pipelineLayout = getPipelineLayout(VK_SHADER_STAGE_ALL_GRAPHICS);
-	VkDescriptorSet descriptorSet = getDescriptorSet(VK_SHADER_STAGE_ALL_GRAPHICS);
-
-	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
-
-	if (op.instanceData.buffer)
-	{
-		vertexBuffers[1] = op.instanceData.buffer->getBuffer();
-	}
-
-	VkDeviceSize offsets[] = { 0, 0 };
-
-	const auto& bindings = m_currentVertexDescriptor->getBindingDescriptions();
-
-	for (int i = 0; i < bindings.size(); i++)
-	{
-		vkCmdBindVertexBuffers(currentBuffer, bindings[i].binding, 1, &vertexBuffers[i], offsets);
-	}
-
-	vkCmdBindIndexBuffer(currentBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-	if (m_pushConstants.size() > 0)
-	{
-		vkCmdPushConstants(
-			currentBuffer,
-			pipelineLayout,
-			VK_SHADER_STAGE_ALL_GRAPHICS,
-			0,
-			m_pushConstants.size(),
-			m_pushConstants.data()
-		);
-	}
-
-	Vector<uint32_t> dynamicOffsets = g_shaderBufferManager->getDynamicOffsets();
-
-	vkCmdBindDescriptorSets(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout,
-		0,
-		1, &descriptorSet,
-		dynamicOffsets.size(),
-		dynamicOffsets.data()
-	);
-
-	vkCmdBindPipeline(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline
-	);
-
-	if (op.indirectData.buffer)
-	{
-		// todo: start using vkCmdDrawIndirectCount
-		vkCmdDrawIndexedIndirect(
-			currentBuffer,
-			op.indirectData.buffer->getBuffer(),
-			op.indirectData.offset,
-			op.indirectData.drawCount,
-			sizeof(VkDrawIndexedIndirectCommand)
-		);
-	}
-	else
-	{
-		vkCmdDrawIndexed(
-			currentBuffer,
-			op.meshData.nIndices,
-			op.instanceData.instanceCount,
-			0,
-			0,
-			op.instanceData.firstInstance
-		);
-	}
-}
-
-void VulkanBackend::endRender()
-{
-	const auto& currentFrame = graphicsQueue.getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	auto currentBuffer = currentFrame.commandBuffer;
 
 	vkCmdEndRendering(currentBuffer);
 
-	m_currentRenderTarget->endRender(currentBuffer);
+	m_currentRenderTarget->endGraphics(currentBuffer);
 
 	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to record command buffer: %d", result);
 	}
 
 	int signalSemaphoreCount = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
-	const VkSemaphore* queueFinishedSemaphore = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &m_backbuffer->getRenderFinishedSemaphore() : VK_NULL_HANDLE;
+	const VkSemaphore* queueFinishedSemaphore = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &((Backbuffer*)m_currentRenderTarget)->getRenderFinishedSemaphore() : VK_NULL_HANDLE;
 
 	int waitSemaphoreCount = m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
 
 	VkSemaphore waitForFinishSemaphores[2] = { // todo: this is pretty ugly and probably terrible
-		(m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER) ? m_backbuffer->getImageAvailableSemaphore() : VK_NULL_HANDLE,
-		m_computeFinishedSemaphores[m_currentFrameIdx]
+		(m_currentRenderTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER) ? ((Backbuffer*)m_currentRenderTarget)->getImageAvailableSemaphore() : VK_NULL_HANDLE,
+		VK_NULL_HANDLE
 	};
 
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
 
-	if (m_uncertainComputeFinished)
+	if (m_waitOnCompute)
 	{
-		waitForFinishSemaphores[waitSemaphoreCount] = m_computeFinishedSemaphores[m_currentFrameIdx];
-		waitSemaphoreCount++;
+		waitForFinishSemaphores[waitSemaphoreCount++] = m_computeFinishedSemaphores[m_currentFrameIdx];
 	}
 
 	VkSubmitInfo submitInfo = {};
@@ -1407,23 +854,66 @@ void VulkanBackend::endRender()
 	submitInfo.pWaitSemaphores = waitForFinishSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 
-	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
+	vkResetFences(g_vulkanBackend->device, 1, &currentFrame.inFlightFence);
 
-	if (VkResult result = vkQueueSubmit(graphicsQueue.getQueue(), 1, &submitInfo, graphicsQueue.getCurrentFrame().inFlightFence); result != VK_SUCCESS) {
+	if (VkResult result = vkQueueSubmit(g_vulkanBackend->graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN|DEBUG] Failed to submit draw command to buffer: %d", result);
 	}
 
-	m_uncertainComputeFinished = false;
+	m_waitOnCompute = false;
+}
 
-	g_shaderBufferManager->unbindAll();
-	g_textureManager->unbindAll();
+void VulkanBackend::waitOnCompute()
+{
+	m_waitOnCompute = true;
+}
+
+void VulkanBackend::beginCompute()
+{
+	const auto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+
+	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
+
+	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	if (VkResult result = vkBeginCommandBuffer(currentBuffer, &commandBufferBeginInfo); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to begin recording compute command buffer: %d", result);
+	}
+}
+
+void VulkanBackend::endCompute()
+{
+	const auto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
+
+	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to record compute command buffer: %d", result);
+	}
+
+	VkSubmitInfo submitInfo = {};
+
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &currentBuffer;
+
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrameIdx];
+
+	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
+
+	if (VkResult result = vkQueueSubmit(this->computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence); result != VK_SUCCESS) {
+		LLT_ERROR("[VULKAN|DEBUG] Failed to submit compute command buffer: %d", result);
+	}
 }
 
 void VulkanBackend::swapBuffers()
 {
 	vkWaitForFences(this->device, 1, &graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-
-	resetDescriptorBuilder();
 
 	m_backbuffer->swapBuffers();
 
@@ -1438,124 +928,4 @@ void VulkanBackend::syncStall() const
 {
 	while (g_platform->getWindowSize() == glm::ivec2(0, 0)) {}
 	vkDeviceWaitIdle(this->device);
-}
-
-void VulkanBackend::setViewport(const RectF &rect)
-{
-	m_viewport = { rect.x, rect.y, rect.w, rect.h };
-}
-
-void VulkanBackend::setScissor(const RectI& rect)
-{
-	m_scissor = { rect.x, rect.y, (uint32_t)rect.w, (uint32_t)rect.h };
-}
-
-void VulkanBackend::resetViewport()
-{
-	// we have to flip the viewport to ensure y+ is up!
-
-	m_viewport.x = 0.0f;
-	m_viewport.y = (float)m_currentRenderInfoBuilder->getHeight();
-	m_viewport.width = (float)m_currentRenderInfoBuilder->getWidth();
-	m_viewport.height = -(float)m_currentRenderInfoBuilder->getHeight();
-	m_viewport.minDepth = 0.0f;
-	m_viewport.maxDepth = 1.0f;
-}
-
-void VulkanBackend::resetScissor()
-{
-	m_scissor.offset = { 0, 0 };
-	m_scissor.extent = { m_currentRenderInfoBuilder->getWidth(), m_currentRenderInfoBuilder->getHeight() };
-}
-
-void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
-{
-	m_currentRenderTarget = target;
-	m_currentRenderInfoBuilder = m_currentRenderTarget->getRenderInfo();
-}
-
-void VulkanBackend::setDepthOp(VkCompareOp op)
-{
-	m_depthStencilCreateInfo.depthCompareOp = op;
-}
-
-void VulkanBackend::setDepthTest(bool enabled)
-{
-	m_depthStencilCreateInfo.depthTestEnable = enabled ? VK_TRUE : VK_FALSE;
-}
-
-void VulkanBackend::setDepthWrite(bool enabled)
-{
-	m_depthStencilCreateInfo.depthWriteEnable = enabled ? VK_TRUE : VK_FALSE;
-}
-
-void VulkanBackend::setDepthBounds(float min, float max)
-{
-	m_depthStencilCreateInfo.minDepthBounds = min;
-	m_depthStencilCreateInfo.maxDepthBounds = max;
-}
-
-void VulkanBackend::setDepthStencilTest(bool enabled)
-{
-	m_depthStencilCreateInfo.stencilTestEnable = enabled ? VK_TRUE : VK_FALSE;
-}
-
-void VulkanBackend::toggleBlending(bool enabled)
-{
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].blendEnable = enabled ? VK_TRUE : VK_FALSE;
-	}
-}
-
-void VulkanBackend::setBlendWriteMask(bool r, bool g, bool b, bool a)
-{
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].colorWriteMask = 0;
-
-		if (r) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
-		if (g) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
-		if (b) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
-		if (a) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
-	}
-}
-
-void VulkanBackend::setBlendColour(const Blend& blend)
-{
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].colorBlendOp = blend.op;
-		m_colourBlendAttachmentStates[i].srcColorBlendFactor = blend.src;
-		m_colourBlendAttachmentStates[i].dstColorBlendFactor = blend.dst;
-	}
-}
-
-void VulkanBackend::setBlendAlpha(const Blend& blend)
-{
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].alphaBlendOp = blend.op;
-		m_colourBlendAttachmentStates[i].srcAlphaBlendFactor = blend.src;
-		m_colourBlendAttachmentStates[i].dstAlphaBlendFactor = blend.dst;
-	}
-}
-
-void VulkanBackend::setBlendConstants(float r, float g, float b, float a)
-{
-	m_blendConstants[0] = r;
-	m_blendConstants[1] = g;
-	m_blendConstants[2] = b;
-	m_blendConstants[3] = a;
-}
-
-void VulkanBackend::getBlendConstants(float* constants)
-{
-	mem::copy(constants, m_blendConstants, sizeof(float) * 4);
-}
-
-void VulkanBackend::setBlendOp(bool enabled, VkLogicOp op)
-{
-	m_blendStateLogicOpEnabled = enabled;
-	m_blendStateLogicOp = op;
 }

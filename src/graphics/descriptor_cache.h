@@ -19,7 +19,7 @@ namespace llt
 		void cleanUp();
 		void clearSetCache();
 
-		VkDescriptorSet createSet(DescriptorPoolMgr* mgr, const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasAlreadyCached);
+		VkDescriptorSet createSet(const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasAlreadyCached);
 		VkDescriptorSetLayout createLayout(const VkDescriptorSetLayoutCreateInfo& layoutCreateInfo);
 
 	private:

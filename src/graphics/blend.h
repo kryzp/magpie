@@ -37,6 +37,8 @@ namespace llt
 		bool blendOpEnabled;
 		VkLogicOp blendOp;
 
+		bool enabled;
+
 		BlendState()
 			: blendConstants{0.0f, 0.0f, 0.0f, 0.0f}
 			, writeMask{true, true, true, true}
@@ -44,6 +46,7 @@ namespace llt
 			, alpha()
 			, blendOpEnabled(false)
 			, blendOp(VK_LOGIC_OP_COPY)
+			, enabled(true)
 		{
 		}
 	};

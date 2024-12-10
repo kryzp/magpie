@@ -6,6 +6,8 @@
 #include "graphics/vertex_descriptor.h"
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
+#include "graphics/graphics_pipeline.h"
+#include "graphics/compute_pipeline.h"
 
 #include "entity.h"
 #include "gpu_particles.h"
@@ -46,6 +48,7 @@ namespace llt
 		void createSkybox();
 		void setupVertexFormats();
 		void createEntities();
+		void createPipelines();
 
 		Backbuffer* m_backbuffer;
 
@@ -77,6 +80,11 @@ namespace llt
 		Vector<Entity> m_renderEntities;
 
 		glm::mat4 m_prevViewMatrix;
+
+		GraphicsPipeline m_skyboxPipeline;
+		GraphicsPipeline m_entityPipeline;
+
+		GraphicsPipeline m_postProcessPipeline;
 	};
 }
 

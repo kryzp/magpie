@@ -30,8 +30,8 @@ namespace llt
 		void cleanUpSwapChain();
 		void cleanUpTextures();
 
-		void beginRender(VkCommandBuffer cmdBuffer) override;
-		void endRender(VkCommandBuffer cmdBuffer) override;
+		void beginGraphics(VkCommandBuffer cmdBuffer) override;
+		void endGraphics(VkCommandBuffer cmdBuffer) override;
 
 		void setClearColour(int idx, const Colour& colour) override;
 

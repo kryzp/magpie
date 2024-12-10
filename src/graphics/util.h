@@ -27,16 +27,16 @@ namespace llt
 
 	namespace vkutil
 	{
-		/*
-		 * The list of required validation layer names we need.
-		 */
 		static const char* VALIDATION_LAYERS[] = {
 			"VK_LAYER_KHRONOS_validation"
 		};
 
-		/*
-		 * The list of device extensions that we need.
-		 */
+		static VkDynamicState DYNAMIC_STATES[] = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR,
+			VK_DYNAMIC_STATE_BLEND_CONSTANTS
+		};
+
 		static const char* DEVICE_EXTENSIONS[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,

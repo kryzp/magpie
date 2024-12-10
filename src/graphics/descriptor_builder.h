@@ -14,7 +14,7 @@ namespace llt
 		DescriptorBuilder() = default;
 		~DescriptorBuilder() = default;
 
-		void reset(DescriptorPoolMgr* mgr, DescriptorCache* cache);
+		void clear();
 
 		uint64_t hash() const;
 
@@ -25,9 +25,6 @@ namespace llt
 		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
 
 	private:
-		DescriptorPoolMgr* m_mgr;
-		DescriptorCache* m_cache;
-
 		Vector<VkWriteDescriptorSet> m_writes;
 		Vector<VkDescriptorSetLayoutBinding> m_bindings;
 	};

@@ -50,7 +50,9 @@ namespace llt
 
 		void createInternalResources();
 
+		void pipelineBarrier(VkPipelineStageFlags src, VkPipelineStageFlags dst) const;
 		void transitionLayout(VkImageLayout newLayout);
+
 		void generateMipmaps() const;
 
 		void setParent(RenderTarget* getParent);
@@ -105,33 +107,6 @@ namespace llt
 		bool m_isDepthTexture;
 
 		bool m_uav;
-	};
-
-	/**
-	* Wrapper around a texture and sampler pair
-	*/
-	class SampledTexture
-	{
-	public:
-		SampledTexture();
-		SampledTexture(const Texture* texture, TextureSampler* sampler);
-		~SampledTexture() = default;
-
-		const VkDescriptorImageInfo& getInfo();
-
-		void bind(uint32_t idx);
-		void unbind();
-		uint32_t getBoundIdx() const;
-		bool isBound() const;
-
-		const Texture* texture;
-		TextureSampler* sampler;
-
-	private:
-		VkDescriptorImageInfo m_info;
-
-		uint32_t m_boundIdx;
-		bool m_isBound;
 	};
 }
 

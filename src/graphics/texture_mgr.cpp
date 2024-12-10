@@ -16,12 +16,6 @@ TextureMgr::TextureMgr()
 
 TextureMgr::~TextureMgr()
 {
-	for (auto& [id, sampler] : m_sampledTextures) {
-		delete sampler;
-	}
-
-	m_sampledTextures.clear();
-
 	for (auto& [id, texture] : m_textureCache) {
 		delete texture;
 	}
@@ -33,53 +27,6 @@ TextureMgr::~TextureMgr()
 	}
 
 	m_samplerCache.clear();
-}
-
-void TextureMgr::unbindAll()
-{
-	for (auto& [id, sampler] : m_sampledTextures) {
-		sampler->unbind();
-	}
-}
-
-void TextureMgr::bindToDescriptorBuilder(DescriptorBuilder* builder, VkShaderStageFlagBits stage)
-{
-	for (auto& [id, sampler] : m_sampledTextures)
-	{
-		if (sampler->isBound())
-		{
-			builder->bindImage(
-				sampler->getBoundIdx(),
-				&sampler->getInfo(),
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				stage
-			);
-		}
-	}
-}
-
-void TextureMgr::calculateBoundTextureHash(uint64_t* hash)
-{
-	for (auto& [id, sampler] : m_sampledTextures)
-	{
-		if (sampler->isBound())
-		{
-			hash::combine(hash, &sampler->getInfo());
-		}
-	}
-}
-
-SampledTexture* TextureMgr::getSampledTexture(const String& name, const Texture* texture, TextureSampler* sampler)
-{
-	if (m_sampledTextures.contains(name)) {
-		return m_sampledTextures[name];
-	}
-
-	SampledTexture* tex = new SampledTexture(texture, sampler);
-
-	m_sampledTextures.insert(name, tex);
-
-	return tex;
 }
 
 Texture* TextureMgr::getTexture(const String& name)

@@ -33,8 +33,8 @@ namespace llt
 
 		virtual RenderInfoBuilder* getRenderInfo();
 
-		virtual void beginRender(VkCommandBuffer cmdBuffer) = 0;
-		virtual void endRender(VkCommandBuffer cmdBuffer) = 0;
+		virtual void beginGraphics(VkCommandBuffer cmdBuffer) = 0;
+		virtual void endGraphics(VkCommandBuffer cmdBuffer) = 0;
 
 		uint64_t getAttachmentCount() const { return m_renderInfo.getColourAttachmentCount(); }
 

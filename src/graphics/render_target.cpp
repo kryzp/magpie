@@ -58,7 +58,7 @@ void RenderTarget::createDepthResources()
 	m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, &m_depth);
 }
 
-void RenderTarget::beginRender(VkCommandBuffer cmdBuffer)
+void RenderTarget::beginGraphics(VkCommandBuffer cmdBuffer)
 {
 	for (auto& col : m_attachments)
 	{
@@ -69,7 +69,7 @@ void RenderTarget::beginRender(VkCommandBuffer cmdBuffer)
 	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void RenderTarget::endRender(VkCommandBuffer cmdBuffer)
+void RenderTarget::endGraphics(VkCommandBuffer cmdBuffer)
 {
 	for (auto& col : m_attachments)
 	{

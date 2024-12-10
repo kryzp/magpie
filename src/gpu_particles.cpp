@@ -24,6 +24,8 @@ GPUParticles::GPUParticles()
 	, m_computeParamsBuffer()
 	, m_particleMesh()
 	, m_particleVertexFormat()
+	, m_particleGraphicsPipeline()
+	, m_particleComputePipeline()
 {
 }
 
@@ -31,7 +33,7 @@ GPUParticles::~GPUParticles()
 {
 }
 
-void GPUParticles::init()
+void GPUParticles::init(const ShaderBuffer* shaderParams)
 {
 	m_computeProgram = g_shaderManager->create("particleCompute", "../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
@@ -122,59 +124,65 @@ void GPUParticles::init()
 		20, 22, 23
 	};
 
+	auto pixelSampler = g_textureManager->getSampler("nearest");
+
 	m_particleMesh.build(particleVtx.data(), particleVtx.size(), sizeof(MyVertex), particleIdx.data(), particleIdx.size());
 
-	m_computeParams.set("viewProjMatrix", glm::identity<glm::mat4>());
 	m_computeParamsBuffer = g_shaderBufferManager->createUBO();
+	m_computeParams.set("viewProjMatrix", glm::identity<glm::mat4>());
 	m_computeParamsBuffer->pushData(m_computeParams);
+
+	m_particleComputePipeline.bindShader(m_computeProgram);
+
+	m_particleComputePipeline.bindBuffer(0, m_computeParamsBuffer);
+	m_particleComputePipeline.bindBuffer(1, m_particleBuffer);
+	m_particleComputePipeline.bindTexture(2, g_renderTargetManager->get("gBuffer")->getAttachment(1), pixelSampler);
+	m_particleComputePipeline.bindTexture(3, g_renderTargetManager->get("gBuffer")->getAttachment(2), pixelSampler);
+	m_particleComputePipeline.bindTexture(4, g_renderTargetManager->get("gBuffer")->getDepthAttachment(), pixelSampler);
+
+	m_particleGraphicsPipeline.setVertexDescriptor(m_particleVertexFormat);
+	m_particleGraphicsPipeline.setDepthTest(true);
+	m_particleGraphicsPipeline.setDepthWrite(true);
+	m_particleGraphicsPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
+	m_particleGraphicsPipeline.bindShader(g_shaderManager->get("vertexInstanced"));
+	m_particleGraphicsPipeline.bindShader(g_shaderManager->get("fragment"));
+	m_particleGraphicsPipeline.bindBuffer(0, shaderParams);
+	m_particleGraphicsPipeline.bindTexture(1, g_textureManager->getTexture("stone"), pixelSampler);
 }
 
 void GPUParticles::dispatchCompute(const Camera& camera)
 {
-	auto pixelSampler = g_textureManager->getSampler("nearest");
-	auto gBuffer = g_renderTargetManager->get("gBuffer");
-
-	SampledTexture* motionBuffer = g_textureManager->getSampledTexture("motionBuffer", gBuffer->getAttachment(1), pixelSampler);
-	SampledTexture* normalBuffer = g_textureManager->getSampledTexture("mormalsBuffer", gBuffer->getAttachment(2), pixelSampler);
-	SampledTexture* depthBuffer = g_textureManager->getSampledTexture("depthBuffer", gBuffer->getDepthAttachment(), pixelSampler);
-
 	g_vulkanBackend->beginCompute();
 
-	m_computeParams.set("viewProjMatrix", camera.getProj() * camera.getView());
+	auto vpMatrix = camera.getProj() * camera.getView();
+
+	m_computeParams.set("viewProjMatrix", vpMatrix);
+	m_computeParams.set("inverseViewProjMatrix", glm::inverse(vpMatrix));
 	m_computeParamsBuffer->pushData(m_computeParams);
-	m_computeParamsBuffer->bind(0);
-
-	m_particleBuffer->bind(1);
-
-	motionBuffer->bind(2);
-	normalBuffer->bind(3);
-	depthBuffer->bind(4);
-
-	g_vulkanBackend->bindShader(m_computeProgram);
-
-	g_vulkanBackend->dispatchCompute(1, 1, 1);
+	
+	m_particleComputePipeline.dispatch(1, 1, 1);
 
 	g_vulkanBackend->endCompute();
-
-	m_computeParamsBuffer->unbind();
-	m_particleBuffer->unbind();
 }
 
 void GPUParticles::render()
 {
-	g_vulkanBackend->syncComputeWithNextRender();
-
-	g_vulkanBackend->setVertexDescriptor(m_particleVertexFormat);
-
-	auto vert = g_shaderManager->get("vertexInstanced");
-	auto frag = g_shaderManager->get("fragment");
-
-	g_vulkanBackend->bindShader(vert);
-	g_vulkanBackend->bindShader(frag);
-
 	RenderOp pass;
 	pass.setInstanceData(PARTICLE_COUNT, 0, m_particleBuffer->getBuffer());
 	pass.setMesh(m_particleMesh);
 
-	g_vulkanBackend->render(pass);
+	g_vulkanBackend->setRenderTarget(g_renderTargetManager->get("gBuffer"));
+	g_vulkanBackend->waitOnCompute();
+
+	g_vulkanBackend->beginGraphics();
+
+	Particle* p1 = new Particle();
+	GPUBuffer* data = m_particleBuffer->getBuffer();
+	data->readDataFromMe(p1, sizeof(Particle), 0);
+	LLT_LOG("%f %f %f", p1->pos.x, p1->pos.y, p1->pos.z);
+	delete p1;
+	
+	m_particleGraphicsPipeline.render(pass);
+
+	g_vulkanBackend->endGraphics();
 }

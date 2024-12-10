@@ -36,7 +36,7 @@ void GPUBuffer::create(uint64_t size)
 	vmaAllocInfo.usage = m_memoryUsage;
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	if (VkResult result = vmaCreateBuffer(g_vulkanBackend->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
+	if (VkResult result = vmaCreateBuffer(g_vulkanBackend->vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
 		LLT_ERROR("[VULKAN:BUFFER|DEBUG] Failed to create buffer: %d", result);
 	}
 }
@@ -47,19 +47,19 @@ void GPUBuffer::cleanUp()
         return;
     }
 
-	vmaDestroyBuffer(g_vulkanBackend->m_vmaAllocator, m_buffer, m_allocation);
+	vmaDestroyBuffer(g_vulkanBackend->vmaAllocator, m_buffer, m_allocation);
 
     m_buffer = VK_NULL_HANDLE;
 }
 
 void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset) const
 {
-	vmaCopyAllocationToMemory(g_vulkanBackend->m_vmaAllocator, m_allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(g_vulkanBackend->vmaAllocator, m_allocation, offset, dst, length);
 }
 
 void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset) const
 {
-	vmaCopyMemoryToAllocation(g_vulkanBackend->m_vmaAllocator, src, m_allocation, offset, length);
+	vmaCopyMemoryToAllocation(g_vulkanBackend->vmaAllocator, src, m_allocation, offset, length);
 }
 
 void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
@@ -74,7 +74,7 @@ void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t 
 		vkCmdCopyBuffer(
 			cmdBuffer,
 			m_buffer,
-			static_cast<const GPUBuffer*>(other)->m_buffer,
+			other->m_buffer,
 			1,
 			&region
 		);

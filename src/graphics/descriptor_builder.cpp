@@ -3,11 +3,8 @@
 
 using namespace llt;
 
-void DescriptorBuilder::reset(DescriptorPoolMgr* mgr, DescriptorCache* cache)
+void DescriptorBuilder::clear()
 {
-	m_mgr = mgr;
-	m_cache = cache;
-
 	m_bindings.clear();
 	m_writes.clear();
 }
@@ -32,7 +29,7 @@ void DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& layou
 	buildLayout(layout);
 
 	bool needsUpdating = false;
-	set = m_cache->createSet(m_mgr, layout, hash, &needsUpdating);
+	set = g_vulkanBackend->descriptorCache.createSet(layout, hash, &needsUpdating);
 
 	for (auto& write : m_writes) {
 		write.dstSet = set;
@@ -55,7 +52,7 @@ void DescriptorBuilder::buildLayout(VkDescriptorSetLayout& layout)
 	layoutCreateInfo.bindingCount = m_bindings.size();
 	layoutCreateInfo.pBindings = m_bindings.data();
 
-	layout = m_cache->createLayout(layoutCreateInfo);
+	layout = g_vulkanBackend->descriptorCache.createLayout(layoutCreateInfo);
 }
 
 void DescriptorBuilder::bindBuffer(

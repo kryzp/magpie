@@ -18,6 +18,7 @@ namespace llt
 
 	class Queue
 	{
+	public:
 		struct FrameData
 		{
 			VkFence inFlightFence;
@@ -25,7 +26,6 @@ namespace llt
 			VkCommandBuffer commandBuffer;
 		};
 
-	public:
 		Queue();
 		~Queue();
 

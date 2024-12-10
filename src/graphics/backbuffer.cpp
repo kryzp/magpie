@@ -46,7 +46,7 @@ void Backbuffer::createColourResources()
 	m_colour.setSize(m_width, m_height);
 	m_colour.setProperties(g_vulkanBackend->swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_colour.setSampleCount(g_vulkanBackend->maxMsaaSamples);
-	m_colour.setTransient(true);
+	m_colour.setTransient(false);
 	m_colour.createInternalResources();
 
 	// add the colour resources to our render pass builder
@@ -77,7 +77,7 @@ void Backbuffer::createDepthResources()
     LLT_LOG("[VULKAN:BACKBUFFER] Created depth resources!");
 }
 
-void Backbuffer::beginRender(VkCommandBuffer cmdBuffer)
+void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -113,10 +113,12 @@ void Backbuffer::beginRender(VkCommandBuffer cmdBuffer)
 	swapchainAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	swapchainAttachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
+	m_colour.transitionLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
 	m_renderInfo.getColourAttachment(0).resolveImageView = m_swapChainImageViews[m_currSwapChainImageIdx];
 }
 
-void Backbuffer::endRender(VkCommandBuffer cmdBuffer)
+void Backbuffer::endGraphics(VkCommandBuffer cmdBuffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -141,6 +143,8 @@ void Backbuffer::endRender(VkCommandBuffer cmdBuffer)
 		0, nullptr,
 		1, &barrier
 	);
+
+	m_colour.transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }

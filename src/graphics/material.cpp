@@ -2,6 +2,7 @@
 
 using namespace llt;
 
+/*
 Material::Material()
 {
 }
@@ -23,3 +24,4 @@ void Material::setTexture(int idx, const Texture* texture, TextureSampler* sampl
 	textures[idx].texture = texture;
 	textures[idx].sampler = sampler;
 }
+*/

@@ -101,7 +101,7 @@ void App::run()
 			accumulator -= targetDeltaTime;
 		}
 
-		LLT_LOG("fps: %f", 1.0 / deltaTime);
+		//LLT_LOG("fps: %f", 1.0 / deltaTime);
 
 		m_renderer.render(camera, deltaTime, elapsedTimer.getElapsedSeconds());
 	}

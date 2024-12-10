@@ -11,8 +11,6 @@ ShaderBuffer::ShaderBuffer()
 	, m_usageInFrame()
 	, m_offset(0)
 	, m_maxSize(0)
-	, m_boundIdx(0)
-	, m_isBound(false)
 	, m_type(SHADER_BUFFER_NONE)
 {
 }
@@ -136,31 +134,6 @@ const VkDescriptorBufferInfo& ShaderBuffer::getDescriptor() const
 VkDescriptorType ShaderBuffer::getDescriptorType() const
 {
 	return m_type == SHADER_BUFFER_UBO ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-}
-
-void ShaderBuffer::bind(uint32_t idx)
-{
-	if (m_boundIdx != idx) {
-		g_vulkanBackend->markDescriptorDirty();
-	}
-
-	m_boundIdx = idx;
-	m_isBound = true;
-}
-
-void ShaderBuffer::unbind()
-{
-	m_isBound = false;
-}
-
-uint32_t ShaderBuffer::getBoundIdx() const
-{
-	return m_boundIdx;
-}
-
-bool ShaderBuffer::isBound() const
-{
-	return m_isBound;
 }
 
 uint32_t ShaderBuffer::getDynamicOffset() const

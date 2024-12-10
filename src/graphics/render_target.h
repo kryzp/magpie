@@ -15,8 +15,8 @@ namespace llt
 		void create();
 		void createOnlyDepth();
 
-		void beginRender(VkCommandBuffer cmdBuffer) override;
-		void endRender(VkCommandBuffer cmdBuffer) override;
+		void beginGraphics(VkCommandBuffer cmdBuffer) override;
+		void endGraphics(VkCommandBuffer cmdBuffer) override;
 
 		void cleanUp() override;
 		

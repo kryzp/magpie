@@ -17,9 +17,9 @@ namespace llt
 	 */
 	struct MaterialData
 	{
-		Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
-		ShaderParameters parameters;
-		String technique;
+		//Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
+		//ShaderParameters parameters;
+		//String technique;
 	};
 
 	/**
@@ -28,6 +28,7 @@ namespace llt
 	 */
 	class Material
 	{
+	/*
 	public:
 		Material();
 		virtual ~Material();
@@ -39,6 +40,7 @@ namespace llt
 		Technique technique;
 		ShaderParameters parameters;
 		Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
+	*/
 	};
 }
 

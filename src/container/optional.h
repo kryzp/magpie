@@ -33,6 +33,8 @@ namespace llt
 
 		constexpr bool hasValue() const;
 
+		void disable();
+
 		explicit operator bool () const;
 
 		bool operator == (const Optional& other) const;
@@ -141,6 +143,12 @@ namespace llt
 	constexpr bool Optional<T>::hasValue() const
 	{
 		return m_enabled;
+	}
+
+	template <typename T>
+	void Optional<T>::disable()
+	{
+		m_enabled = false;
 	}
 
 	template <typename T>
