@@ -39,6 +39,6 @@ void main()
 	vs_out.position = a_position;
 	vs_out.normal = mat3(transpose(inverse(mvMatrix))) * a_normal; // YES, I KNOW inverse() IS EXPENSIVE
 
-	vs_out.currScreenPos = ubo.projMatrix * mvMatrix * vec4(a_position, 1.0);
+	vs_out.currScreenPos = ubo.projMatrix * ubo.currViewMatrix * ubo.currModelMatrix * vec4(a_position, 1.0);
 	vs_out.prevScreenPos = ubo.projMatrix * ubo.prevViewMatrix * ubo.prevModelMatrix * vec4(a_position, 1.0);
 }

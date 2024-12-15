@@ -18,11 +18,7 @@ ComputePipeline::~ComputePipeline()
 
 void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 {
-	for (auto& t : p_boundImagesTextures)
-	{
-		if (!t->isTransient())
-			t->pipelineBarrier(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-	}
+	p_textureBatch.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	auto currentBuffer = g_vulkanBackend->computeQueues[0].getCurrentFrame().commandBuffer;
 
@@ -65,11 +61,7 @@ void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 		gcX, gcY, gcZ
 	);
 
-	for (auto& t : p_boundImagesTextures)
-	{
-		if (!t->isTransient())
-			t->pipelineBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-	}
+	p_textureBatch.popPipelineBarriers();
 }
 
 VkPipeline ComputePipeline::getPipeline()

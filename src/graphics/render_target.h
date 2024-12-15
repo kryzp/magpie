@@ -23,8 +23,8 @@ namespace llt
 		void setClearColour(int idx, const Colour& colour) override;
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 
-		const Texture* getAttachment(int idx) const override;
-		const Texture* getDepthAttachment() const override;
+		Texture* getAttachment(int idx) override;
+		Texture* getDepthAttachment() override;
 
 		void addAttachment(Texture* texture);
 

@@ -6,11 +6,11 @@
 #include "../container/vector.h"
 
 #include "descriptor_builder.h"
+#include "texture.h"
 
 namespace llt
 {
 	class ShaderProgram;
-	class Texture;
 	class TextureSampler;
 	class ShaderBuffer;
 
@@ -27,11 +27,11 @@ namespace llt
 		Vector<uint32_t> getDynamicOffsets();
 
 		virtual void bindShader(const ShaderProgram* shader) = 0;
-		void bindTexture(int idx, const Texture* texture, TextureSampler* sampler);
+		void bindTexture(int idx, Texture* texture, TextureSampler* sampler);
 		void bindBuffer(int idx, const ShaderBuffer* buffer);
 
 	protected:
-		Vector<const Texture*> p_boundImagesTextures;
+		TextureBatch p_textureBatch;
 
 	private:
 		void sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int lo, int hi);

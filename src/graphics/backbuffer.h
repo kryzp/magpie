@@ -41,9 +41,8 @@ namespace llt
 
 		void swapBuffers();
 
-		const Texture* getAttachment(int idx) const override;
-
-		const Texture* getDepthAttachment() const override;
+		Texture* getAttachment(int idx) override;
+		Texture* getDepthAttachment() override;
 
 		void onWindowResize(int width, int height);
 

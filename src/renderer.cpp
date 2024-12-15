@@ -203,14 +203,14 @@ void Renderer::createBlockMesh()
 void Renderer::createSkybox()
 {
 	Vector<MyVertex> skyboxVertices = {
-		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f, -1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
+		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
+		{ {  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
 	};
 
 	Vector<uint16_t> skyboxIndices = {
@@ -265,7 +265,7 @@ void Renderer::createEntities()
 	blockLarge->setOrigin({ 0.0f, -1.0f, 0.0f });
 
 	auto blockSmall = m_renderEntities.emplaceBack();
-	blockSmall->setPosition({ -3.0f, 0.0f, 1.0f });
+	blockSmall->setPosition({ 0.0f, 0.0f, 0.0f });
 	blockSmall->setRotation(glm::radians(45.0f), { 0.0f, 1.0f, 0.0f });
 	blockSmall->setScale({ 0.75f, 0.75f, 0.75f });
 	blockSmall->setOrigin({ 0.0f, -1.0f, 0.0f });
@@ -303,6 +303,8 @@ void Renderer::createPipelines()
 
 void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 {
+	m_renderEntities.back().setRotation(elapsedTime * 5.0f, { 0.0f, 1.0f, 0.0f });
+
 	glm::mat4 viewMatrix = camera.getView();
 
 	m_target->toggleClear(true);

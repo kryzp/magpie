@@ -9,6 +9,9 @@
 #include "texture_sampler.h"
 #include "image.h"
 
+#include "../container/vector.h"
+#include "../container/hash_map.h"
+
 #include "../common.h"
 
 namespace llt
@@ -50,7 +53,8 @@ namespace llt
 
 		void createInternalResources();
 
-		void pipelineBarrier(VkPipelineStageFlags src, VkPipelineStageFlags dst) const;
+		VkImageMemoryBarrier getBarrier() const;
+		
 		void transitionLayout(VkImageLayout newLayout);
 
 		void generateMipmaps() const;
@@ -80,6 +84,8 @@ namespace llt
 
 		TextureInfo getInfo() const;
 
+		VkPipelineStageFlags getStage() const;
+
 	private:
 		VkImageView generateView() const;
 
@@ -91,6 +97,8 @@ namespace llt
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_numSamples;
 		bool m_transient;
+
+		VkPipelineStageFlags m_stage;
 
 		VmaAllocation m_allocation;
 		VmaAllocationInfo m_allocationInfo;
@@ -107,6 +115,22 @@ namespace llt
 		bool m_isDepthTexture;
 
 		bool m_uav;
+	};
+
+	class TextureBatch
+	{
+	public:
+		TextureBatch();
+		~TextureBatch();
+
+		void addTexture(Texture* texture);
+
+		void pushPipelineBarriers(VkPipelineStageFlags dst);
+		void popPipelineBarriers();
+		
+	private:
+		Vector<Texture*> m_textures;
+		Vector<VkPipelineStageFlags> m_stageStack;
 	};
 }
 

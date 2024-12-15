@@ -38,8 +38,8 @@ namespace llt
 
 		uint64_t getAttachmentCount() const { return m_renderInfo.getColourAttachmentCount(); }
 
-		virtual const Texture* getAttachment(int idx) const = 0;
-		virtual const Texture* getDepthAttachment() const = 0;
+		virtual Texture* getAttachment(int idx) = 0;
+		virtual Texture* getDepthAttachment() = 0;
 
 		virtual VkSampleCountFlagBits getMSAA() const = 0;
 

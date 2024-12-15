@@ -13,7 +13,7 @@
 
 namespace llt
 {
-	class RenderOp;
+	struct RenderOp;
 	class GenericRenderTarget;
 	class RenderInfoBuilder;
 

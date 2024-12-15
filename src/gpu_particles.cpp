@@ -12,7 +12,7 @@ using namespace llt;
 struct Particle
 {
 	glm::vec3 pos;
-	float _padding0;
+	float stuck;
 	glm::vec3 vel;
 	float _padding1;
 };
@@ -43,12 +43,14 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 	for (int i = 0; i < PARTICLE_COUNT; i++)
 	{
 		particleData[i].pos.x = i;
-		particleData[i].pos.y = 0.0f;
+		particleData[i].pos.y = 1.25f;
 		particleData[i].pos.z = 0.0f;
 
 		particleData[i].vel.x = 0.0f;
 		particleData[i].vel.y = 0.0f;
 		particleData[i].vel.z = 0.0f;
+
+		particleData[i].stuck = 0.0f;
 	}
 
 	m_particleBuffer = g_shaderBufferManager->createSSBO();
@@ -179,7 +181,7 @@ void GPUParticles::render()
 	Particle* p1 = new Particle();
 	GPUBuffer* data = m_particleBuffer->getBuffer();
 	data->readDataFromMe(p1, sizeof(Particle), 0);
-	LLT_LOG("%f %f %f", p1->pos.x, p1->pos.y, p1->pos.z);
+	LLT_LOG("%f %f %f | %f", p1->pos.x, p1->pos.y, p1->pos.z, p1->stuck);
 	delete p1;
 	
 	m_particleGraphicsPipeline.render(pass);

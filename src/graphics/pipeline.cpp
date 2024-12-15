@@ -14,7 +14,7 @@ Pipeline::Pipeline(VkShaderStageFlagBits stage)
 	: m_descriptorBuilder()
 	, m_stage(stage)
 	, m_boundImages()
-	, p_boundImagesTextures()
+	, p_textureBatch()
 	, m_buffers()
 {
 }
@@ -145,7 +145,7 @@ void Pipeline::sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int l
 	sortBoundOffsets(offsets, partition + 1, hi);
 }
 
-void Pipeline::bindTexture(int idx, const Texture* texture, TextureSampler* sampler)
+void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 {
 	VkDescriptorImageInfo info = {};
 
@@ -163,7 +163,7 @@ void Pipeline::bindTexture(int idx, const Texture* texture, TextureSampler* samp
 	info.sampler = sampler->bind(4);
 
 	m_boundImages.pushBack(info);
-	p_boundImagesTextures.pushBack(texture);
+	p_textureBatch.addTexture(texture);
 	
 	m_descriptorBuilder.bindImage(
 		idx,

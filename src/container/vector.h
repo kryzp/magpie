@@ -141,7 +141,7 @@ namespace llt
 		/*
 		 * Remove the front element.
 		 */
-        void popFront();
+        T popFront();
 
 		/*
 		 * Remove the last element.
@@ -493,12 +493,13 @@ namespace llt
     }
 
     template <typename T>
-    void Vector<T>::popFront()
+    T Vector<T>::popFront()
     {
         T item = std::move(m_buf[0]);
         m_buf[0].~T();
 		mem::move(m_buf, m_buf + 1, m_size - 1);
         m_size--;
+		return item;
     }
 
     template <typename T>

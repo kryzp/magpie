@@ -220,12 +220,12 @@ void Backbuffer::swapBuffers()
     }
 }
 
-const Texture* Backbuffer::getAttachment(int idx) const
+Texture* Backbuffer::getAttachment(int idx)
 {
 	return &m_colour;
 }
 
-const Texture* Backbuffer::getDepthAttachment() const
+Texture* Backbuffer::getDepthAttachment()
 {
 	return &m_depth;
 }

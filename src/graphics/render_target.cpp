@@ -111,12 +111,12 @@ void RenderTarget::setDepthStencilClear(float depth, uint32_t stencil)
 	m_renderInfo.setClearDepth(value);
 }
 
-const Texture* RenderTarget::getAttachment(int idx) const
+Texture* RenderTarget::getAttachment(int idx)
 {
 	return m_attachments[idx];
 }
 
-const Texture* RenderTarget::getDepthAttachment() const
+Texture* RenderTarget::getDepthAttachment()
 {
 	return &m_depth;
 }
