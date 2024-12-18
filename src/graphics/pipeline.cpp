@@ -90,6 +90,7 @@ VkDescriptorSet Pipeline::getDescriptorSet()
 Vector<uint32_t> Pipeline::getDynamicOffsets()
 {
 	// dynamic offsets must follow binding order!!
+	// this is very inefficient though, we really shouldn't have to sort every time this is called!!!!!!!
 
 	Vector<Pair<uint32_t, uint32_t>> boundOffsets;
 

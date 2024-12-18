@@ -36,16 +36,35 @@ ShaderProgram* ShaderMgr::get(const String& name)
 	return nullptr;
 }
 
+#include <fstream>
+#include <sstream>
+#include <string>
+
 ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkShaderStageFlagBits type)
 {
 	if (m_shaderCache.contains(name)) {
 		return m_shaderCache.get(name);
 	}
 
+	/*
 	FileStream fs(source.cstr(), "r");
 	Vector<char> sourceData(fs.size());
 	fs.read(sourceData.data(), fs.size());
 	fs.close();
+
+	ShaderProgram* shader = new ShaderProgram();
+	shader->type = type;
+	shader->loadFromSource(sourceData.data(), sourceData.size());
+
+	m_shaderCache.insert(name, shader);
+
+	return shader;
+	*/
+
+	std::ifstream fs(source.cstr());
+	std::ostringstream fsBuffer;
+	fsBuffer << fs.rdbuf();
+	std::string sourceData = fsBuffer.str();
 
 	ShaderProgram* shader = new ShaderProgram();
 	shader->type = type;

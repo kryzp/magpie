@@ -15,7 +15,7 @@ Platform::Platform(const Config& config)
 	, m_gamepads{}
 	, m_gamepadCount(0)
 {
-	if (!SDL_Init(
+	if (SDL_Init(
 		SDL_INIT_VIDEO |
 		SDL_INIT_AUDIO |
 		SDL_INIT_JOYSTICK |
@@ -61,7 +61,7 @@ Platform::~Platform()
 
 void Platform::pollEvents()
 {
-	float spx = 0.f, spy = 0.f;
+	float spx = 0.0f, spy = 0.0f;
 	SDL_Event ev = {};
 
 	while (SDL_PollEvent(&ev))
@@ -109,19 +109,19 @@ void Platform::pollEvents()
 				break;
 
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-				g_inputState->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
+				//g_inputState->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
 
 			case SDL_EVENT_GAMEPAD_BUTTON_UP:
-				g_inputState->onGamepadButtonUp(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
+				//g_inputState->onGamepadButtonUp(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
 
 			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-				g_inputState->onGamepadMotion(
-					SDL_GetGamepadPlayerIndexForID(ev.gaxis.which),
-					(GamepadAxis)ev.gaxis.axis,
-					(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.0f : 0.0f))
-				);
+				//g_inputState->onGamepadMotion(
+				//	SDL_GetGamepadPlayerIndexForID(ev.gaxis.which),
+				//	(GamepadAxis)ev.gaxis.axis,
+				//	(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.0f : 0.0f))
+				//);
 				break;
 
 			case SDL_EVENT_GAMEPAD_ADDED:
@@ -314,7 +314,7 @@ void Platform::toggleCursorVisible(bool toggle) const
 
 void Platform::lockCursor(bool toggle) const
 {
-	SDL_SetWindowRelativeMouseMode(m_window, toggle);
+	//SDL_SetWindowRelativeMouseMode(m_window, toggle);
 }
 
 void Platform::setCursorPosition(int x, int y)
@@ -393,47 +393,55 @@ uint64_t Platform::getPerformanceFrequency() const
 
 void* Platform::streamFromFile(const char* filepath, const char* mode)
 {
-	return SDL_IOFromFile(filepath, mode);
+	//return SDL_IOFromFile(filepath, mode);
+	return nullptr;
 }
 
 void* Platform::streamFromMemory(void* memory, uint64_t size)
 {
-	return SDL_IOFromMem(memory, size);
+	//return SDL_IOFromMem(memory, size);
+	return nullptr;
 }
 
 void* Platform::streamFromConstMemory(const void* memory, uint64_t size)
 {
-	return SDL_IOFromConstMem(memory, size);
+	//return SDL_IOFromConstMem(memory, size);
+	return nullptr;
 }
 
 int64_t Platform::streamRead(void* stream, void* dst, uint64_t size)
 {
-	return SDL_ReadIO((SDL_IOStream*)stream, dst, size);
+	//return SDL_ReadIO((SDL_IOStream*)stream, dst, size);
+	return 0;
 }
 
 int64_t Platform::streamWrite(void* stream, const void* src, uint64_t size)
 {
-	return SDL_WriteIO((SDL_IOStream*)stream, src, size);
+	//return SDL_WriteIO((SDL_IOStream*)stream, src, size);
+	return 0;
 }
 
 int64_t Platform::streamSeek(void* stream, int64_t offset)
 {
-	return SDL_SeekIO((SDL_IOStream*)stream, offset, SDL_IO_SEEK_SET);
+	//return SDL_SeekIO((SDL_IOStream*)stream, offset, SDL_IO_SEEK_SET);
+	return 0;
 }
 
 int64_t Platform::streamSize(void* stream)
 {
-	return SDL_GetIOSize((SDL_IOStream*)stream);
+	//return SDL_GetIOSize((SDL_IOStream*)stream);
+	return 0;
 }
 
 int64_t Platform::streamPosition(void* stream)
 {
-	return SDL_TellIO((SDL_IOStream*)stream);
+	//return SDL_TellIO((SDL_IOStream*)stream);
+	return 0;
 }
 
 void Platform::streamClose(void* stream)
 {
-	SDL_CloseIO((SDL_IOStream*)stream);
+	//SDL_CloseIO((SDL_IOStream*)stream);
 }
 
 const char* const* Platform::vkGetInstanceExtensions(uint32_t* count)

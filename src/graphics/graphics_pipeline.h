@@ -25,6 +25,7 @@ namespace llt
 
 		void render(const RenderOp& op);
 
+		void bind() override;
 		VkPipeline getPipeline() override;
 
 		void bindShader(const ShaderProgram* shader) override;

@@ -83,12 +83,10 @@ namespace llt
 
 		int getCurrentFrameIdx() const;
 
-		void setRenderTarget(GenericRenderTarget* target);
-
 		GenericRenderTarget* getRenderTarget();
 		const GenericRenderTarget* getRenderTarget() const;
 
-		void beginGraphics();
+		void beginGraphics(GenericRenderTarget* target = nullptr);
 		void endGraphics();
 
 		void beginCompute();

@@ -8,7 +8,7 @@ using namespace llt;
 RenderInfoBuilder::RenderInfoBuilder()
 	: m_colourAttachments()
 	, m_depthAttachment()
-	, m_formats()
+	, m_colourFormats()
 	, m_attachmentCount(0)
 	, m_width(0)
 	, m_height(0)
@@ -53,7 +53,7 @@ void RenderInfoBuilder::addColourAttachment(VkAttachmentLoadOp loadOp, VkImageVi
 	}
 
 	m_colourAttachments.pushBack(attachment);
-	m_formats.pushBack(format);
+	m_colourFormats.pushBack(format);
 
 	m_attachmentCount++;
 }
@@ -62,7 +62,7 @@ void RenderInfoBuilder::addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* t
 {
 	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	m_depthAttachment.imageView = texture->getImageView();
-	m_depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+	m_depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	m_depthAttachment.loadOp = loadOp;
 	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	m_depthAttachment.clearValue = { { 1.0f, 0 } };
@@ -115,7 +115,7 @@ int RenderInfoBuilder::getAttachmentCount() const
 
 const Vector<VkFormat>& RenderInfoBuilder::getColourAttachmentFormats() const
 {
-	return m_formats;
+	return m_colourFormats;
 }
 
 uint32_t RenderInfoBuilder::getWidth() const

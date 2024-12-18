@@ -15,7 +15,7 @@ layout (binding = 0) uniform ParameterUBO {
 
 struct Particle {
 	vec3 position;
-	float stuck;
+	float _padding0;
 	vec3 velocity;
 	float _padding1;
 };
@@ -24,86 +24,68 @@ layout (binding = 1) buffer ParticleSSBO {
 	Particle particles[PARTICLE_COUNT];
 };
 
-layout (binding = 2) uniform sampler2D u_motionTexture;
-layout (binding = 3) uniform sampler2D u_normalTexture;
-layout (binding = 4) uniform sampler2D u_depthTexture;
+layout (binding = 2) uniform sampler2D s_motionTexture;
+layout (binding = 3) uniform sampler2D s_normalTexture;
+layout (binding = 4) uniform sampler2D s_depthTexture;
 
-vec3 toScreenPosition(vec3 worldPosition)
+const vec3 GRAVITY = vec3(0.0, -3.0, 0.0);
+
+vec2 toScreenPosition(vec3 worldPosition)
 {
 	vec4 clipSpacePos = ubo.viewProjMatrix * vec4(worldPosition, 1.0);
 	vec3 ndcPosition = clipSpacePos.xyz / clipSpacePos.w;
 
-	vec3 screenPosition = vec3(
-		ndcPosition.x*0.5 + 0.5,
-		1.0 - (ndcPosition.y*0.5 + 0.5),
-		worldPosition.z
-	);
-	
-	return screenPosition;
+	return 0.5*ndcPosition.xy + 0.5;
 }
 
-vec3 toWorldPosition(vec3 screenPosition)
+vec3 toWorldPosition(vec2 screenPosition)
 {
-	vec3 ndcPosition = vec3(
-		2.0*screenPosition.x - 1.0,
-		1.0 - 2.0*screenPosition.y,
-		screenPosition.z
-	);
-	
-	vec4 coord = ubo.inverseViewProjMatrix * vec4(ndcPosition, 1.0);
+	float depth = texture(s_depthTexture, vec2(screenPosition.x, 1.0 - screenPosition.y)).x;
+
+	vec4 coord = ubo.inverseViewProjMatrix * vec4(2.0*screenPosition - 1.0, depth, 1.0);
 
 	vec3 worldPosition = coord.xyz / coord.w;
 
 	return worldPosition;
 }
 
+float distanceFromSurface(vec3 position)
+{
+	vec2 screenPosition = toScreenPosition(position);
+
+	vec3 normal = normalize(2.0*texture(s_normalTexture, vec2(screenPosition.x, 1.0 - screenPosition.y)).xyz - 1.0);
+
+	vec3 projectedSurfacePosition = toWorldPosition(screenPosition);
+
+	return abs(dot(normal, position - projectedSurfacePosition));
+}
+
 void main()
 {
 	uint idx = gl_GlobalInvocationID.x;
 
-	if (idx < 0 || idx >= PARTICLE_COUNT) {
-		return;
-	}
-	
-//	vec3 gravity = vec3(0.0, -9.81, 0.0);
-//
-//	vec3 position = particles[idx].position;
-//	vec3 screenPosition = toScreenPosition(position);
-//	
-//	vec3 normal = 2.0*texture(u_normalTexture, screenPosition.xy).xyz - 1.0;
-//	float depth = texture(u_depthTexture, screenPosition.xy).x;
-//
-//	vec3 projectedSurfacePosition = toWorldPosition(vec3(screenPosition.x, screenPosition.y, depth));
-//
-//	float approxDistanceFromSurface = abs(dot(normal, position - projectedSurfacePosition));
-//
-//	bool onSurface = approxDistanceFromSurface <= 0.1;
+	vec3 position = particles[idx].position;
+	vec2 screenPosition = toScreenPosition(position);
 
-	particles[idx].position = toWorldPosition(toScreenPosition(particles[idx].position));
+	bool onSurface = distanceFromSurface(position) <= 0.03;
 
-	/*
-	if (depth <= 0.99 && onSurface) // THIS IS VERY BROKEN RIGHT NOW
+	if (onSurface)
 	{
-		vec3 naiveMotion = texture(u_motionTexture, screenPosition.xy).xyz;
-		vec3 naiveScreenPosition = screenPosition + vec3(naiveMotion.x, -naiveMotion.y, naiveMotion.z);
+		vec2 naiveMotion = texture(s_motionTexture, vec2(screenPosition.x, 1.0 - screenPosition.y)).xy;
+		vec2 naiveScreenPosition = screenPosition + naiveMotion;
 
-		vec3 correctionMotion = texture(u_motionTexture, naiveScreenPosition.xy).xyz;
-		vec3 newScreenPosition = screenPosition + vec3(correctionMotion.x, -correctionMotion.y, correctionMotion.z);
+		vec2 correctionMotion = texture(s_motionTexture, vec2(naiveScreenPosition.x, 1.0 - naiveScreenPosition.y)).xy;
+		vec2 newScreenPosition = screenPosition + correctionMotion;
 
 		vec3 newPosition = toWorldPosition(newScreenPosition);
 		vec3 curPosition = position;
 
 		particles[idx].position = newPosition;
 		particles[idx].velocity = (newPosition - curPosition) / pc.deltaTime;
-
-		particles[idx].stuck = depth;
 	}
 	else
 	{
-		particles[idx].position += particles[idx].velocity*pc.deltaTime + 0.5*gravity*pc.deltaTime*pc.deltaTime;
-		particles[idx].velocity += gravity*pc.deltaTime;
-
-		particles[idx].stuck =10.0+ depth;
+		particles[idx].position += particles[idx].velocity*pc.deltaTime + 0.5*GRAVITY*pc.deltaTime*pc.deltaTime;
+		particles[idx].velocity += GRAVITY*pc.deltaTime;
 	}
-	*/
 }

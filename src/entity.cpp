@@ -19,10 +19,13 @@ Entity::~Entity()
 {
 }
 
-glm::mat4 Entity::getMatrix()
+void Entity::storePrevMatrix()
 {
 	m_prevMatrix = m_matrix;
+}
 
+glm::mat4 Entity::getMatrix()
+{
 	if (m_matrixDirty) {
 		rebuildMatrix();
 		m_matrixDirty = false;

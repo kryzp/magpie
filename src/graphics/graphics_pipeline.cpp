@@ -2,9 +2,7 @@
 
 #include "backend.h"
 #include "util.h"
-#include "texture.h"
 #include "shader.h"
-#include "shader_buffer.h"
 #include "render_target.h"
 #include "render_pass.h"
 
@@ -61,14 +59,13 @@ void GraphicsPipeline::render(const RenderOp& op)
 	const auto& vertexBuffer = op.meshData.vBuffer->getBuffer();
 	const auto& indexBuffer  = op.meshData.iBuffer->getBuffer();
 
-	VkPipeline pipeline = getPipeline();
 	VkPipelineLayout pipelineLayout = getPipelineLayout();
 	VkDescriptorSet descriptorSet = getDescriptorSet();
 
-	auto vport = getViewport();
-	auto scissor = getScissor();
+	VkViewport viewport = getViewport();
+	VkRect2D scissor = getScissor();
 
-	vkCmdSetViewport(currentBuffer, 0, 1, &vport);
+	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
 	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
 
 	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
@@ -113,12 +110,6 @@ void GraphicsPipeline::render(const RenderOp& op)
 		dynamicOffsets.data()
 	);
 
-	vkCmdBindPipeline(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipeline
-	);
-
 	if (op.indirectData.buffer)
 	{
 		// todo: start using vkCmdDrawIndirectCount
@@ -141,6 +132,20 @@ void GraphicsPipeline::render(const RenderOp& op)
 			op.instanceData.firstInstance
 		);
 	}
+}
+
+void GraphicsPipeline::bind()
+{
+	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	auto currentBuffer = currentFrame.commandBuffer;
+
+	VkPipeline pipeline = getPipeline();
+
+	vkCmdBindPipeline(
+		currentBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		pipeline
+	);
 }
 
 VkPipeline GraphicsPipeline::getPipeline()
@@ -247,6 +252,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	pipelineRenderingCreateInfo.colorAttachmentCount = colourFormats.size();
 	pipelineRenderingCreateInfo.pColorAttachmentFormats = colourFormats.data();
 	pipelineRenderingCreateInfo.depthAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
+	pipelineRenderingCreateInfo.stencilAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
 	graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

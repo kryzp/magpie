@@ -4,7 +4,6 @@
 #include "graphics/colour.h"
 
 #include "platform.h"
-#include "common.h"
 #include "camera.h"
 #include "input/input.h"
 #include "math/timer.h"
@@ -68,6 +67,7 @@ void App::run()
 	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 100.0f);
 	camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
 	camera.setPitch(-glm::radians(30.0f));
+	camera.update(0.0f);
 
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);

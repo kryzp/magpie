@@ -20,6 +20,7 @@ namespace llt
 		Pipeline(VkShaderStageFlagBits stage);
 		virtual ~Pipeline() = default;
 
+		virtual void bind() = 0;
 		virtual VkPipeline getPipeline() = 0;
 
 		VkPipelineLayout getPipelineLayout();

@@ -5,6 +5,13 @@
 
 #include "../math/calc.h"
 
+#ifdef LLT_MAC_SUPPORT
+
+PFN_vkCmdBeginRendering llt::vkutil::ext_vkCmdBeginRendering = nullptr;
+PFN_vkCmdEndRendering llt::vkutil::ext_vkCmdEndRendering = nullptr;
+
+#endif // LLT_MAC_SUPPORT
+
 using namespace llt;
 
 VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
@@ -62,7 +69,7 @@ uint32_t vkutil::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter
 		}
 	}
 
-	LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to find suitable memory type.");
+	LLT_ERROR("[UTIL|DEBUG] Failed to find suitable memory type.");
 	return 0;
 }
 
@@ -80,7 +87,7 @@ VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFor
 		}
 	}
 
-	LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to find supported format.");
+	LLT_ERROR("[UTIL|DEBUG] Failed to find supported format.");
 	return VK_FORMAT_MAX_ENUM;
 }
 
@@ -99,7 +106,7 @@ VkFormat vkutil::findDepthFormat(VkPhysicalDevice device)
 
 bool vkutil::hasStencilComponent(VkFormat format)
 {
-	return (format == VK_FORMAT_D32_SFLOAT) || (format == VK_FORMAT_D32_SFLOAT_S8_UINT) || (format == VK_FORMAT_D24_UNORM_S8_UINT);
+	return (format == VK_FORMAT_D32_SFLOAT_S8_UINT) || (format == VK_FORMAT_D24_UNORM_S8_UINT);
 }
 
 VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
@@ -116,7 +123,7 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	VkCommandBuffer cmdBuffer = {};
 
 	if (VkResult result = vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmdBuffer); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to reallocate command buffers when copying buffer: %d", result);
+		LLT_ERROR("[UTIL|DEBUG] Failed to reallocate command buffers when copying buffer: %d", result);
 	}
 
 	VkCommandBufferBeginInfo beginInfo = {};
@@ -124,7 +131,7 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	if (VkResult result = vkBeginCommandBuffer(cmdBuffer, &beginInfo); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to begin command buffer when copying buffer: %d", result);
+		LLT_ERROR("[UTIL|DEBUG] Failed to begin command buffer when copying buffer: %d", result);
 	}
 
 	return cmdBuffer;
@@ -193,7 +200,7 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
 	if (!extensionCount) {
-		LLT_ERROR("[VULKAN:UTIL|DEBUG] Failed to find any device extension properties!");
+		LLT_ERROR("[UTIL|DEBUG] Failed to find any device extension properties!");
 	}
 
 	Vector<VkExtensionProperties> availableExts(extensionCount);

@@ -29,9 +29,6 @@ namespace llt
 
 	class Renderer
 	{
-		static constexpr int INSTANCED_LENGTH = 16;
-		static constexpr int INSTANCED_CUBE_COUNT = INSTANCED_LENGTH*INSTANCED_LENGTH*INSTANCED_LENGTH;
-
 	public:
 		Renderer();
 		~Renderer();
@@ -83,8 +80,9 @@ namespace llt
 
 		GraphicsPipeline m_skyboxPipeline;
 		GraphicsPipeline m_entityPipeline;
-
 		GraphicsPipeline m_postProcessPipeline;
+
+		int m_frames;
 	};
 }
 

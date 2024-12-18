@@ -142,7 +142,11 @@ static Vector<const char*> getInstanceExtensions()
 	extensions.pushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // LLT_DEBUG
 
-	//extensions.pushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // MAC SUPPORT
+#if LLT_MAC_SUPPORT
+	extensions.pushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	extensions.pushBack("VK_EXT_metal_surface");
+#endif // LLT_MAC_SUPPORT
+
 	extensions.pushBack(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 	return extensions;
@@ -222,7 +226,10 @@ VulkanBackend::VulkanBackend(const Config& config)
 	auto extensions = getInstanceExtensions();
 	createInfo.enabledExtensionCount = extensions.size();
 	createInfo.ppEnabledExtensionNames = extensions.data();
-	//createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; // MAC SUPPORT
+
+#if LLT_MAC_SUPPORT
+	createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif // LLT_MAC_SUPPORT
 
 	// create the vulkan instance
 	if (VkResult result = vkCreateInstance(&createInfo, nullptr, &vulkanInstance); result != VK_SUCCESS) {
@@ -343,7 +350,8 @@ void VulkanBackend::enumeratePhysicalDevices()
 	uint32_t usability0 = vkutil::assignPhysicalDeviceUsability(surface, physicalData.device, properties, features, &hasEssentials);
 
 	// select the device of the highest usability
-	for (int i = 1; i < deviceCount; i++)
+	int i = 1;
+	for (; i < deviceCount; i++)
 	{
 		vkGetPhysicalDeviceProperties(devices[i], &physicalData.properties);
 		vkGetPhysicalDeviceFeatures(devices[i], &physicalData.features);
@@ -367,7 +375,7 @@ void VulkanBackend::enumeratePhysicalDevices()
 		LLT_ERROR("[VULKAN|DEBUG] Unable to find a suitable GPU!");
 	}
 
-	LLT_LOG("[VULKAN] Selected a suitable GPU: %d", physicalData.device);
+	LLT_LOG("[VULKAN] Selected a suitable GPU: %d", i);
 }
 
 void VulkanBackend::createLogicalDevice()
@@ -414,6 +422,7 @@ void VulkanBackend::createLogicalDevice()
 	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeaturesExt = {};
 	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 	dynamicRenderingFeaturesExt.dynamicRendering = VK_TRUE;
+	dynamicRenderingFeaturesExt.pNext = nullptr;
 
 	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeaturesExt = {};
 	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
@@ -473,6 +482,24 @@ void VulkanBackend::createLogicalDevice()
 
 	// init allocator
 	createVmaAllocator();
+
+	// print out current device version
+	uint32_t version = 0;
+	VkResult result = vkEnumerateInstanceVersion(&version);
+
+	if (result == VK_SUCCESS)
+	{
+		uint32_t major = VK_VERSION_MAJOR(version);
+		uint32_t minor = VK_VERSION_MINOR(version);
+
+		printf("[VULKAN] Using version: %d.%d\n", major, minor);
+	}
+
+	// get function pointers
+#ifdef LLT_MAC_SUPPORT
+	vkutil::ext_vkCmdBeginRendering = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
+	vkutil::ext_vkCmdEndRendering = (PFN_vkCmdEndRendering)vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
+#endif // LLT_MAC_SUPPORT
 
 	LLT_LOG("[VULKAN] Created logical device!");
 }
@@ -772,11 +799,6 @@ int VulkanBackend::getCurrentFrameIdx() const
 	return m_currentFrameIdx;
 }
 
-void VulkanBackend::setRenderTarget(GenericRenderTarget* target)
-{
-	m_currentRenderTarget = target;
-}
-
 GenericRenderTarget* VulkanBackend::getRenderTarget()
 {
 	return m_currentRenderTarget;
@@ -787,8 +809,10 @@ const GenericRenderTarget* VulkanBackend::getRenderTarget() const
 	return m_currentRenderTarget;
 }
 
-void VulkanBackend::beginGraphics()
+void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 {
+	m_currentRenderTarget = target ? target : m_backbuffer;
+
 	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
 	auto currentBuffer = currentFrame.commandBuffer;
 
@@ -808,7 +832,11 @@ void VulkanBackend::beginGraphics()
 
 	VkRenderingInfoKHR renderInfo = m_currentRenderTarget->getRenderInfo()->buildInfo();
 
+#if LLT_MAC_SUPPORT
+	vkutil::ext_vkCmdBeginRendering(currentBuffer, &renderInfo);
+#else
 	vkCmdBeginRendering(currentBuffer, &renderInfo);
+#endif // LLT_MAC_SUPPORT
 }
 
 void VulkanBackend::endGraphics()
@@ -816,7 +844,11 @@ void VulkanBackend::endGraphics()
 	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
 	auto currentBuffer = currentFrame.commandBuffer;
 
+#if LLT_MAC_SUPPORT
+	vkutil::ext_vkCmdEndRendering(currentBuffer);
+#else
 	vkCmdEndRendering(currentBuffer);
+#endif // LLT_MAC_SUPPORT
 
 	m_currentRenderTarget->endGraphics(currentBuffer);
 

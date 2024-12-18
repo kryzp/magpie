@@ -12,7 +12,7 @@ using namespace llt;
 struct Particle
 {
 	glm::vec3 pos;
-	float stuck;
+	float _padding0;
 	glm::vec3 vel;
 	float _padding1;
 };
@@ -35,22 +35,20 @@ GPUParticles::~GPUParticles()
 
 void GPUParticles::init(const ShaderBuffer* shaderParams)
 {
-	m_computeProgram = g_shaderManager->create("particleCompute", "../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	m_computeProgram = g_shaderManager->create("particleCompute", "../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
 	uint64_t particleDataSize = sizeof(Particle) * PARTICLE_COUNT;
 	Particle* particleData = new Particle[PARTICLE_COUNT];
 
 	for (int i = 0; i < PARTICLE_COUNT; i++)
 	{
-		particleData[i].pos.x = i;
-		particleData[i].pos.y = 1.25f;
+		particleData[i].pos.x = i - 0.2f;
+		particleData[i].pos.y = 1.6f;
 		particleData[i].pos.z = 0.0f;
 
 		particleData[i].vel.x = 0.0f;
 		particleData[i].vel.y = 0.0f;
 		particleData[i].vel.z = 0.0f;
-
-		particleData[i].stuck = 0.0f;
 	}
 
 	m_particleBuffer = g_shaderBufferManager->createSSBO();
@@ -58,14 +56,14 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 
 	delete[] particleData;
 
+	m_particleVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
 	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
 	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
-	m_particleVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 
-	m_particleVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Particle, pos));
 	m_particleVertexFormat.addBinding(1, sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE);
+	m_particleVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Particle, pos));
 
 	Vector<MyVertex> particleVtx =
 	{
@@ -126,7 +124,7 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 		20, 22, 23
 	};
 
-	auto pixelSampler = g_textureManager->getSampler("nearest");
+	TextureSampler* pixelSampler = g_textureManager->getSampler("nearest");
 
 	m_particleMesh.build(particleVtx.data(), particleVtx.size(), sizeof(MyVertex), particleIdx.data(), particleIdx.size());
 
@@ -156,12 +154,13 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 {
 	g_vulkanBackend->beginCompute();
 
-	auto vpMatrix = camera.getProj() * camera.getView();
+	glm::mat4 vpMatrix = camera.getProj() * camera.getView();
 
 	m_computeParams.set("viewProjMatrix", vpMatrix);
 	m_computeParams.set("inverseViewProjMatrix", glm::inverse(vpMatrix));
 	m_computeParamsBuffer->pushData(m_computeParams);
-	
+
+	m_particleComputePipeline.bind();
 	m_particleComputePipeline.dispatch(1, 1, 1);
 
 	g_vulkanBackend->endCompute();
@@ -173,17 +172,11 @@ void GPUParticles::render()
 	pass.setInstanceData(PARTICLE_COUNT, 0, m_particleBuffer->getBuffer());
 	pass.setMesh(m_particleMesh);
 
-	g_vulkanBackend->setRenderTarget(g_renderTargetManager->get("gBuffer"));
 	g_vulkanBackend->waitOnCompute();
 
-	g_vulkanBackend->beginGraphics();
+	g_vulkanBackend->beginGraphics(g_renderTargetManager->get("gBuffer"));
 
-	Particle* p1 = new Particle();
-	GPUBuffer* data = m_particleBuffer->getBuffer();
-	data->readDataFromMe(p1, sizeof(Particle), 0);
-	LLT_LOG("%f %f %f | %f", p1->pos.x, p1->pos.y, p1->pos.z, p1->stuck);
-	delete p1;
-	
+	m_particleGraphicsPipeline.bind();
 	m_particleGraphicsPipeline.render(pass);
 
 	g_vulkanBackend->endGraphics();

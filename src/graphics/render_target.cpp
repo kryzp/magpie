@@ -97,7 +97,7 @@ void RenderTarget::cleanUp()
 
 void RenderTarget::setClearColour(int idx, const Colour& colour)
 {
-	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "[VULKAN:RENDERTARGET] Must have at least one colour attachment!");
+	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "[RENDERTARGET] Must have at least one colour attachment!");
 
 	VkClearValue value = {};
 	colour.getPremultiplied().exportToFloat(value.color.float32);

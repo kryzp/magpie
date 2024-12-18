@@ -15,6 +15,8 @@ namespace llt
 		glm::mat4 getMatrix();
 		glm::mat4 getPrevMatrix();
 
+		void storePrevMatrix();
+
 		void setPosition(const glm::vec3& position);
 		void setOrigin(const glm::vec3& origin);
 		void setRotation(float angle, const glm::vec3& axis);

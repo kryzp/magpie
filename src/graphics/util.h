@@ -41,8 +41,15 @@ namespace llt
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
 			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-			//"VK_KHR_portability_subset" // MAC SUPPORT
+#ifdef LLT_MAC_SUPPORT
+			"VK_KHR_portability_subset"
+#endif // LLT_MAC_SUPPORT
 		};
+
+#ifdef LLT_MAC_SUPPORT
+		extern PFN_vkCmdBeginRendering ext_vkCmdBeginRendering;
+		extern PFN_vkCmdEndRendering ext_vkCmdEndRendering;
+#endif // LLT_MAC_SUPPORT
 
 		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats);
 		VkPresentModeKHR chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync);

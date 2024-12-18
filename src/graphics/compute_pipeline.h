@@ -14,6 +14,7 @@ namespace llt
 
 		void dispatch(int gcX, int gcY, int gcZ);
 
+		void bind() override;
 		VkPipeline getPipeline() override;
 
 		void bindShader(const ShaderProgram* shader) override;

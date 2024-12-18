@@ -74,7 +74,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	}
 	else
 	{
-		LLT_ERROR("[VULKAN:SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
+		LLT_ERROR("[SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
 	}
 
 	// move forward and increment the ubo usage in the current frame
@@ -101,7 +101,7 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 	}
 	else
 	{
-		LLT_ERROR("[VULKAN:SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
+		LLT_ERROR("[SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
 	}
 
 	m_info.buffer = m_buffer->getBuffer();
@@ -113,11 +113,11 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
-		LLT_LOG("[VULKAN:SHADERBUFFERMGR] (Re)Allocated ubo with size %llu.", size);
+		LLT_LOG("[SHADERBUFFERMGR] (Re)Allocated ubo with size %llu.", size);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
-		LLT_LOG("[VULKAN:SHADERBUFFERMGR] (Re)Allocated ssbo with size %llu.", size);
+		LLT_LOG("[SHADERBUFFERMGR] (Re)Allocated ssbo with size %llu.", size);
 	}
 }
 

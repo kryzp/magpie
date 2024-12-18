@@ -4,16 +4,16 @@
 
 #include "camera.h"
 
+#include "input/input.h"
+
 #include "graphics/backend.h"
 #include "graphics/backbuffer.h"
 #include "graphics/colour.h"
 #include "graphics/texture.h"
 #include "graphics/texture_mgr.h"
-#include "graphics/render_target.h"
 #include "graphics/render_target_mgr.h"
 #include "graphics/shader.h"
 #include "graphics/shader_mgr.h"
-#include "graphics/shader_buffer.h"
 #include "graphics/shader_buffer_mgr.h"
 
 using namespace llt;
@@ -42,6 +42,7 @@ Renderer::Renderer()
 	, m_skyboxPipeline()
 	, m_entityPipeline()
 	, m_postProcessPipeline()
+	, m_frames(0)
 {
 }
 
@@ -86,23 +87,23 @@ void Renderer::loadTextures()
 	m_nearestSampler = g_textureManager->createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
 	m_skyboxTexture = g_textureManager->createCubeMap("skybox", VK_FORMAT_R8G8B8A8_UNORM,
-		"../../res/textures/skybox/right.png",
-		"../../res/textures/skybox/left.png",
-		"../../res/textures/skybox/top.png",
-		"../../res/textures/skybox/bottom.png",
-		"../../res/textures/skybox/front.png",
-		"../../res/textures/skybox/back.png"
+		"../res/textures/skybox/right.png",
+		"../res/textures/skybox/left.png",
+		"../res/textures/skybox/top.png",
+		"../res/textures/skybox/bottom.png",
+		"../res/textures/skybox/front.png",
+		"../res/textures/skybox/back.png"
 	);
 
-	m_stoneTexture = g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
+	m_stoneTexture = g_textureManager->createFromImage("stone", Image("../res/textures/smooth_stone.png"));
 }
 
 void Renderer::loadShaders()
 {
-	m_vertexShaderInstanced		= g_shaderManager->create("vertexInstanced", "../../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	m_vertexShader				= g_shaderManager->create("vertex", "../../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	m_fragmentShader			= g_shaderManager->create("fragment", "../../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	m_fragmentShaderSkybox		= g_shaderManager->create("fragmentSkybox", "../../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	m_vertexShaderInstanced		= g_shaderManager->create("vertexInstanced", "../res/shaders/raster/vertex_instanced.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	m_vertexShader				= g_shaderManager->create("vertex", "../res/shaders/raster/vertex.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	m_fragmentShader			= g_shaderManager->create("fragment", "../res/shaders/raster/fragment.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	m_fragmentShaderSkybox		= g_shaderManager->create("fragmentSkybox", "../res/shaders/raster/fragment_skybox.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void Renderer::setupShaderParameters()
@@ -236,18 +237,13 @@ void Renderer::createSkybox()
 	m_skyboxMesh.build(skyboxVertices.data(), skyboxVertices.size(), sizeof(MyVertex), skyboxIndices.data(), skyboxIndices.size());
 }
 
-struct MyInstancedData
-{
-	glm::vec3 offset;
-};
-
 void Renderer::setupVertexFormats()
 {
+	m_vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
 	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
-	m_vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 }
 
 void Renderer::createEntities()
@@ -303,7 +299,11 @@ void Renderer::createPipelines()
 
 void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 {
-	m_renderEntities.back().setRotation(elapsedTime * 5.0f, { 0.0f, 1.0f, 0.0f });
+	for (Entity& entity : m_renderEntities) {
+		entity.storePrevMatrix();
+	}
+
+	m_renderEntities.back().setRotation(elapsedTime * 2.0f, { 0.0f, 1.0f, 0.0f });
 
 	glm::mat4 viewMatrix = camera.getView();
 
@@ -312,8 +312,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	RenderOp pass;
 
-	g_vulkanBackend->setRenderTarget(m_target);
-	g_vulkanBackend->beginGraphics();
+	g_vulkanBackend->beginGraphics(m_target);
 
 	m_pushConstants.set("time", elapsedTime);
 	g_vulkanBackend->setPushConstants(m_pushConstants);
@@ -321,27 +320,26 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_shaderParams.set("projMatrix", camera.getProj());
 	m_shaderParams.set("currViewMatrix", camera.getViewNoTranslation());
 	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
-
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 
 	pass.setMesh(m_skyboxMesh);
+
+	m_skyboxPipeline.bind();
 	m_skyboxPipeline.render(pass);
 
-	m_shaderParams.set("prevViewMatrix", m_prevViewMatrix);
+	m_entityPipeline.bind();
+
+	m_shaderParams.set("prevViewMatrix", viewMatrix);
 	m_shaderParams.set("currViewMatrix", viewMatrix);
 
-	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
+	pass.setMesh(m_blockMesh);
 
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-
-	for (auto& entity : m_renderEntities)
+	for (Entity& entity : m_renderEntities)
 	{
 		m_shaderParams.set("prevModelMatrix", entity.getPrevMatrix());
 		m_shaderParams.set("currModelMatrix", entity.getMatrix());
 		m_shaderParamsBuffer->pushData(m_shaderParams);
 
-		pass.setMesh(m_blockMesh);
-		
 		m_entityPipeline.render(pass);
 	}
 
@@ -349,20 +347,24 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	m_target->toggleClear(false);
 
-	// particles: compute
-	m_pushConstants.set("time", deltaTime);
-	g_vulkanBackend->setPushConstants(m_pushConstants);
-	m_gpuParticles.dispatchCompute(camera);
-	
-	// particles: render
-	glm::mat4 particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.1f, 0.1f, 0.1f });
-	m_shaderParams.set("currModelMatrix", particleMatrix);
-	m_shaderParams.set("prevModelMatrix", particleMatrix);
-	m_shaderParamsBuffer->pushData(m_shaderParams);
-	m_gpuParticles.render();
+	if (m_frames >= 10)
+	{
+		// particles: compute
+		m_pushConstants.set("time", deltaTime);
+		g_vulkanBackend->setPushConstants(m_pushConstants);
+		m_gpuParticles.dispatchCompute(camera);
 
-	g_vulkanBackend->setRenderTarget(m_backbuffer);
+		// particles: render
+		glm::mat4 particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.1f, 0.1f, 0.1f });
+		m_shaderParams.set("currModelMatrix", particleMatrix);
+		m_shaderParams.set("prevModelMatrix", particleMatrix);
+		m_shaderParamsBuffer->pushData(m_shaderParams);
+		m_gpuParticles.render();
+	}
+
 	g_vulkanBackend->beginGraphics();
+
+	m_postProcessPipeline.bind();
 
 	m_pushConstants.set("time", elapsedTime);
 	g_vulkanBackend->setPushConstants(m_pushConstants);
@@ -372,7 +374,6 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
 	m_shaderParams.set("prevModelMatrix", glm::identity<glm::mat4>());
 	m_shaderParams.set("prevViewMatrix", glm::identity<glm::mat4>());
-
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 
 	pass.setMesh(m_quadMesh);
@@ -383,5 +384,5 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->resetPushConstants();
 	g_vulkanBackend->swapBuffers();
 
-	m_prevViewMatrix = viewMatrix;
+	m_frames++;
 }

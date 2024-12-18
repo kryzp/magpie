@@ -68,7 +68,7 @@ VkDescriptorSetLayout DescriptorCache::createLayout(const VkDescriptorSetLayoutC
 	VkDescriptorSetLayout createdDescriptor = {};
 
 	if (VkResult result = vkCreateDescriptorSetLayout(g_vulkanBackend->device, &layoutCreateInfo, nullptr, &createdDescriptor); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:DESCRIPTORBUILDER|DEBUG] Failed to create descriptor set layout: %d", result);
+		LLT_ERROR("[DESCRIPTORBUILDER|DEBUG] Failed to create descriptor set layout: %d", result);
 	}
 
 	// cache it

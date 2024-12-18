@@ -82,13 +82,13 @@ VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLa
 	bool reallocateMemory = false;
 
 	if (result == VK_SUCCESS) {
-		LLT_LOG("[VULKAN:DESCRIPTORPOOL] Created descriptor sets successfully!");
+		LLT_LOG("[DESCRIPTORPOOL] Created descriptor sets successfully!");
 		return ret;
 	} else if (result == VK_ERROR_FRAGMENTED_POOL || result == VK_ERROR_OUT_OF_POOL_MEMORY) {
-		LLT_LOG("[VULKAN:DESCRIPTORPOOL] Failed to allocate descriptor sets initially, reallocating memory...");
+		LLT_LOG("[DESCRIPTORPOOL] Failed to allocate descriptor sets initially, reallocating memory...");
 		reallocateMemory = true;
 	} else {
-		LLT_ERROR("[VULKAN:DESCRIPTORPOOL|DEBUG] Encountered unknown return result from vkAllocateDescriptorSets: %d", result);
+		LLT_ERROR("[DESCRIPTORPOOL|DEBUG] Encountered unknown return result from vkAllocateDescriptorSets: %d", result);
 	}
 
 	// if we find that we are fragmented then try to just reallocate
@@ -103,9 +103,9 @@ VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLa
 
 		// if we still fail then throw an error
 		if (result != VK_SUCCESS) {
-			LLT_ERROR("[VULKAN:DESCRIPTORPOOL|DEBUG] Failed to create descriptor sets even after reallocation, allocation result: %d", result);
+			LLT_ERROR("[DESCRIPTORPOOL|DEBUG] Failed to create descriptor sets even after reallocation, allocation result: %d", result);
 		} else {
-			LLT_LOG("[VULKAN:DESCRIPTORPOOL] Created descriptor sets successfully after reallocating!");
+			LLT_LOG("[DESCRIPTORPOOL] Created descriptor sets successfully after reallocating!");
 		}
 	}
 
@@ -130,10 +130,10 @@ VkDescriptorPool DescriptorPoolMgr::createNewPool(uint32_t count)
 	VkDescriptorPool pool = {};
 
 	if (VkResult result = vkCreateDescriptorPool(g_vulkanBackend->device, &poolCreateInfo, nullptr, &pool); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN:DESCRIPTORPOOL|DEBUG] Failed to create descriptor pool: %d", result);
+		LLT_ERROR("[DESCRIPTORPOOL|DEBUG] Failed to create descriptor pool: %d", result);
 	}
 
-	LLT_LOG("[VULKAN:DESCRIPTORPOOL] Created new descriptor pool!");
+	LLT_LOG("[DESCRIPTORPOOL] Created new descriptor pool!");
 
 	return pool;
 }

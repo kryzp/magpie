@@ -5,7 +5,6 @@ using namespace llt;
 VertexDescriptor::VertexDescriptor()
 	: m_attributes()
 	, m_bindings()
-	, m_currLocation(0)
 {
 }
 
@@ -17,18 +16,11 @@ void VertexDescriptor::addAttribute(uint32_t binding, VkFormat format, uint32_t 
 {
 	VkVertexInputAttributeDescription attributeDescription;
 	attributeDescription.binding = binding;
-	attributeDescription.location = m_currLocation;
+	attributeDescription.location = m_attributes.size();
 	attributeDescription.format = format;
 	attributeDescription.offset = offset;
 
-	m_currLocation++;
-
 	m_attributes.pushBack(attributeDescription);
-}
-
-void VertexDescriptor::clearAttributes()
-{
-	m_attributes.clear();
 }
 
 void VertexDescriptor::addBinding(uint32_t binding, uint32_t stride, VkVertexInputRate inputRate)
@@ -39,6 +31,11 @@ void VertexDescriptor::addBinding(uint32_t binding, uint32_t stride, VkVertexInp
 	bindingDescription.inputRate = inputRate;
 
 	m_bindings.pushBack(bindingDescription);
+}
+
+void VertexDescriptor::clearAttributes()
+{
+	m_attributes.clear();
 }
 
 void VertexDescriptor::clearBindings()

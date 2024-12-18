@@ -15,9 +15,9 @@ namespace llt
 		~VertexDescriptor();
 
 		void addAttribute(uint32_t binding, VkFormat format, uint32_t offset);
-		void clearAttributes();
-
 		void addBinding(uint32_t binding, uint32_t stride, VkVertexInputRate inputRate);
+
+		void clearAttributes();
 		void clearBindings();
 		
 		const Vector<VkVertexInputAttributeDescription>& getAttributeDescriptions() const;
@@ -26,8 +26,6 @@ namespace llt
 	private:
 		Vector<VkVertexInputAttributeDescription> m_attributes;
 		Vector<VkVertexInputBindingDescription> m_bindings;
-
-		uint32_t m_currLocation;
 	};
 }
 

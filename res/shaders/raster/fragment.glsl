@@ -19,20 +19,20 @@ layout (set = 0, binding = 1) uniform sampler2D s_texture;
 
 void main()
 {
-	vec3 col = texture(s_texture, fs_in.texCoord).rgb;
-	col *= fs_in.colour;
-	o_albedo = vec4(col, 1.0);
-
-	// ---
-
-	o_normal = vec4(normalize(0.5 + 0.5*fs_in.normal), 1.0);
+	o_normal = vec4(0.5 + 0.5*normalize(fs_in.normal), 1.0);
 
 	// ---
 
 	vec3 currScreenPos = 0.5 + 0.5*(fs_in.currScreenPos.xyz / fs_in.currScreenPos.w);
 	vec3 prevScreenPos = 0.5 + 0.5*(fs_in.prevScreenPos.xyz / fs_in.prevScreenPos.w);
 
-	vec3 ds = currScreenPos.xyz - prevScreenPos.xyz;
+	vec2 ds = currScreenPos.xy - prevScreenPos.xy;
 
-	o_motion = vec4(ds, 1.0);
+	o_motion = vec4(ds, 0.0, 1.0);
+
+	// ---
+
+	vec3 col = texture(s_texture, fs_in.texCoord).rgb;
+	col *= fs_in.colour;
+	o_albedo = vec4(col, 1.0);
 }

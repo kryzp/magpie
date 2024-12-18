@@ -22,7 +22,6 @@ void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 
 	auto currentBuffer = g_vulkanBackend->computeQueues[0].getCurrentFrame().commandBuffer;
 
-	VkPipeline pipeline = getPipeline();
 	VkPipelineLayout pipelineLayout = getPipelineLayout();
 	VkDescriptorSet descriptorSet = getDescriptorSet();
 
@@ -50,18 +49,25 @@ void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 		dynamicOffsets.data()
 	);
 
-	vkCmdBindPipeline(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipeline
-	);
-
 	vkCmdDispatch(
 		currentBuffer,
 		gcX, gcY, gcZ
 	);
 
 	p_textureBatch.popPipelineBarriers();
+}
+
+void ComputePipeline::bind()
+{
+	auto currentBuffer = g_vulkanBackend->computeQueues[0].getCurrentFrame().commandBuffer;
+
+	VkPipeline pipeline = getPipeline();
+
+	vkCmdBindPipeline(
+		currentBuffer,
+		VK_PIPELINE_BIND_POINT_COMPUTE,
+		pipeline
+	);
 }
 
 VkPipeline ComputePipeline::getPipeline()

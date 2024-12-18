@@ -51,7 +51,7 @@ namespace llt
 		Vector<VkRenderingAttachmentInfoKHR> m_colourAttachments;
 		VkRenderingAttachmentInfoKHR m_depthAttachment;
 
-		Vector<VkFormat> m_formats;
+		Vector<VkFormat> m_colourFormats;
 
 		int m_attachmentCount;
 	};
