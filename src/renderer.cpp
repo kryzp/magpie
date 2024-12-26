@@ -329,7 +329,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	m_entityPipeline.bind();
 
-	m_shaderParams.set("prevViewMatrix", viewMatrix);
+	m_shaderParams.set("prevViewMatrix", m_prevViewMatrix);
 	m_shaderParams.set("currViewMatrix", viewMatrix);
 
 	pass.setMesh(m_blockMesh);
@@ -344,6 +344,13 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	}
 
 	g_vulkanBackend->endGraphics();
+}
+
+void Renderer::renderPostCamera(const Camera& camera, float deltaTime, float elapsedTime)
+{
+	glm::mat4 viewMatrix = camera.getView();
+
+	RenderOp pass;
 
 	m_target->toggleClear(false);
 
@@ -385,4 +392,6 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->swapBuffers();
 
 	m_frames++;
+
+	m_prevViewMatrix = viewMatrix;
 }

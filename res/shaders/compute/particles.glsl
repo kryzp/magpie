@@ -9,8 +9,10 @@ layout (push_constant) uniform PushConstants {
 } pc;
 
 layout (binding = 0) uniform ParameterUBO {
-    mat4 viewProjMatrix;
-    mat4 inverseViewProjMatrix;
+    mat4 projMatrix;
+    mat4 inverseProjMatrix;
+	mat4 viewMatrix;
+	mat4 inverseViewMatrix;
 } ubo;
 
 struct Particle {
@@ -29,10 +31,11 @@ layout (binding = 3) uniform sampler2D s_normalTexture;
 layout (binding = 4) uniform sampler2D s_depthTexture;
 
 const vec3 GRAVITY = vec3(0.0, -3.0, 0.0);
+const float TOUCH_DISTANCE = 0.03;
 
 vec2 toScreenPosition(vec3 worldPosition)
 {
-	vec4 clipSpacePos = ubo.viewProjMatrix * vec4(worldPosition, 1.0);
+	vec4 clipSpacePos = ubo.projMatrix * ubo.viewMatrix * vec4(worldPosition, 1.0);
 	vec3 ndcPosition = clipSpacePos.xyz / clipSpacePos.w;
 
 	return 0.5*ndcPosition.xy + 0.5;
@@ -41,9 +44,7 @@ vec2 toScreenPosition(vec3 worldPosition)
 vec3 toWorldPosition(vec2 screenPosition)
 {
 	float depth = texture(s_depthTexture, vec2(screenPosition.x, 1.0 - screenPosition.y)).x;
-
-	vec4 coord = ubo.inverseViewProjMatrix * vec4(2.0*screenPosition - 1.0, depth, 1.0);
-
+	vec4 coord = ubo.inverseViewMatrix * ubo.inverseProjMatrix * vec4(2.0*screenPosition - 1.0, depth, 1.0);
 	vec3 worldPosition = coord.xyz / coord.w;
 
 	return worldPosition;
@@ -52,9 +53,7 @@ vec3 toWorldPosition(vec2 screenPosition)
 float distanceFromSurface(vec3 position)
 {
 	vec2 screenPosition = toScreenPosition(position);
-
 	vec3 normal = normalize(2.0*texture(s_normalTexture, vec2(screenPosition.x, 1.0 - screenPosition.y)).xyz - 1.0);
-
 	vec3 projectedSurfacePosition = toWorldPosition(screenPosition);
 
 	return abs(dot(normal, position - projectedSurfacePosition));
@@ -67,7 +66,7 @@ void main()
 	vec3 position = particles[idx].position;
 	vec2 screenPosition = toScreenPosition(position);
 
-	bool onSurface = distanceFromSurface(position) <= 0.03;
+	bool onSurface = distanceFromSurface(position) <= TOUCH_DISTANCE;
 
 	if (onSurface)
 	{

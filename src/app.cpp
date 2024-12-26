@@ -16,6 +16,7 @@ using namespace llt;
 App::App(const Config& config)
 	: m_config(config)
 	, m_running(false)
+	, m_camera(config.width, config.height, 70.0f, 0.1f, 100.0f)
 	, m_renderer()
 {
 	g_platform = new Platform(config);
@@ -43,11 +44,15 @@ App::App(const Config& config)
 
 	m_running = true;
 
+	m_camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
+	m_camera.setPitch(-glm::radians(30.0f));
+	m_camera.update(0.0f);
+
+	m_renderer.init(backbuffer);
+
 	if (m_config.onInit) {
 		m_config.onInit();
 	}
-
-	m_renderer.init(backbuffer);
 }
 
 App::~App()
@@ -64,11 +69,6 @@ App::~App()
 
 void App::run()
 {
-	Camera camera(m_config.width, m_config.height, 70.0f, 0.1f, 100.0f);
-	camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
-	camera.setPitch(-glm::radians(30.0f));
-	camera.update(0.0f);
-
 	double accumulator = 0.0;
 	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
 	
@@ -93,17 +93,19 @@ void App::run()
 
 		accumulator += CalcF::min(deltaTime, targetDeltaTime);
 
+		m_renderer.render(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
+
 		while (accumulator >= targetDeltaTime)
 		{
-			camera.update(targetDeltaTime);
+			m_camera.update(targetDeltaTime);
 			g_platform->setCursorPosition(m_config.width/2, m_config.height/2);
 
 			accumulator -= targetDeltaTime;
 		}
 
-		//LLT_LOG("fps: %f", 1.0 / deltaTime);
+		m_renderer.renderPostCamera(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
 
-		m_renderer.render(camera, deltaTime, elapsedTimer.getElapsedSeconds());
+		//LLT_LOG("fps: %f", 1.0 / deltaTime);
 	}
 }
 

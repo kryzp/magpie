@@ -60,6 +60,7 @@ namespace llt
 		Config m_config;
 		bool m_running;
 
+		Camera m_camera;
 		Renderer m_renderer;
 	};
 

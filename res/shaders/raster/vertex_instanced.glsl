@@ -43,6 +43,6 @@ void main()
 	vs_out.position = a_position + instance_positionOffset;
 	vs_out.normal = mat3(transpose(inverse(ubo.currViewMatrix * ubo.currModelMatrix))) * a_normal; // YES, I KNOW inverse() IS EXPENSIVE
 
-	vs_out.currScreenPos = ubo.projMatrix * ubo.currViewMatrix * ubo.currModelMatrix * (vec4(instance_positionOffset, 0.0) + ubo.currModelMatrix * vec4(a_position, 1.0));
-	vs_out.prevScreenPos = ubo.projMatrix * ubo.prevViewMatrix * ubo.prevModelMatrix * (vec4(instance_positionOffset, 0.0) + ubo.prevModelMatrix * vec4(a_position, 1.0));
+	vs_out.currScreenPos = ubo.projMatrix * ubo.currViewMatrix * (vec4(instance_positionOffset, 0.0) + ubo.currModelMatrix * vec4(a_position, 1.0));
+	vs_out.prevScreenPos = ubo.projMatrix * ubo.prevViewMatrix * (vec4(instance_positionOffset, 0.0) + ubo.prevModelMatrix * vec4(a_position, 1.0));
 }
