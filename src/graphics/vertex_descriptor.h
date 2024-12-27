@@ -8,14 +8,19 @@
 
 namespace llt
 {
+	struct AttributeDescription
+	{
+		VkFormat format;
+		uint32_t offset;
+	};
+
 	class VertexDescriptor
 	{
 	public:
 		VertexDescriptor();
 		~VertexDescriptor();
 
-		void addAttribute(uint32_t binding, VkFormat format, uint32_t offset);
-		void addBinding(uint32_t binding, uint32_t stride, VkVertexInputRate inputRate);
+		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription>& attributes);
 
 		void clearAttributes();
 		void clearBindings();

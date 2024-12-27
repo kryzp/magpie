@@ -21,12 +21,14 @@ Pipeline::Pipeline(VkShaderStageFlagBits stage)
 
 VkPipelineLayout Pipeline::getPipelineLayout()
 {
-	uint64_t pipelineLayoutHash = m_descriptorBuilder.hash();
+	uint64_t pipelineLayoutHash = m_descriptorBuilder.getHash();
 
-	hash::combine(&pipelineLayoutHash, &m_stage);
+	VkPushConstantRange pushConstants = {};
+	pushConstants.offset = 0;
+	pushConstants.size = g_vulkanBackend->pushConstants.size();
+	pushConstants.stageFlags = m_stage;
 
-	uint64_t pushConstantCount = g_vulkanBackend->pushConstants.size();
-	hash::combine(&pipelineLayoutHash, &pushConstantCount);
+	hash::combine(&pipelineLayoutHash, &pushConstants);
 
 	if (g_vulkanBackend->pipelineLayoutCache.contains(pipelineLayoutHash)) {
 		return g_vulkanBackend->pipelineLayoutCache[pipelineLayoutHash];
@@ -35,11 +37,6 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 	VkDescriptorSetLayout layout = {};
 	m_descriptorBuilder.buildLayout(layout);
 
-	VkPushConstantRange pushConstants;
-	pushConstants.offset = 0;
-	pushConstants.size = g_vulkanBackend->pushConstants.size();
-	pushConstants.stageFlags = m_stage;
-
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutCreateInfo.setLayoutCount = 1;
@@ -47,7 +44,8 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
 	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 
-	if (pushConstants.size > 0) {
+	if (pushConstants.size > 0)
+	{
 		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
 		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
 	}
@@ -58,12 +56,12 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 		LLT_ERROR("[PIPELINE] Failed to create pipeline layout: %d", result);
 	}
 
-	LLT_LOG("[PIPELINE] Created new pipeline layout!");
-
 	g_vulkanBackend->pipelineLayoutCache.insert(
 		pipelineLayoutHash,
 		pipelineLayout
 	);
+
+	LLT_LOG("[PIPELINE] Created new pipeline layout!");
 
 	return pipelineLayout;
 }
@@ -152,20 +150,15 @@ void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 
 	info.imageView = texture->getImageView();
 
-	if (texture->isDepthTexture())
-	{
-		info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-	}
-	else
-	{
-		info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	}
+	info.imageLayout = texture->isDepthTexture()
+		? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+		: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	info.sampler = sampler->bind(4);
+	info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
 
 	m_boundImages.pushBack(info);
 	p_textureBatch.addTexture(texture);
-	
+
 	m_descriptorBuilder.bindImage(
 		idx,
 		&m_boundImages.back(),

@@ -113,8 +113,7 @@ namespace llt
 	{
 		static constexpr uint64_t FRAMES_IN_FLIGHT = 3;
 		static constexpr uint64_t RASTER_SHADER_COUNT = 2;
-		static constexpr uint64_t MAX_RENDER_TARGET_ATTACHMENTS = 8;
-		static constexpr uint64_t MAX_BOUND_TEXTURES = 8;
+		static constexpr int MAX_SAMPLER_MIP_LEVELS = 4;
 	}
 }
 

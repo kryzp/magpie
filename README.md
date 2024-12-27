@@ -15,6 +15,7 @@ todo:
 - stencil buffer support! currently i just discard all the data
 - imgui?
 - I think queues arent currently assigned properly(?)
+- some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
 
 stuff im interested in:
 - pbr

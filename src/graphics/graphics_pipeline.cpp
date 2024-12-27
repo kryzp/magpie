@@ -11,13 +11,9 @@ using namespace llt;
 GraphicsPipeline::GraphicsPipeline()
 	: Pipeline(VK_SHADER_STAGE_ALL_GRAPHICS)
 	, m_minSampleShading(0.2f)
-	, m_blendStateLogicOpEnabled(false)
-	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
 	, m_graphicsShaderStages()
 	, m_sampleShadingEnabled(true)
 	, m_depthStencilCreateInfo()
-	, m_colourBlendAttachmentStates()
-	, m_blendConstants{0.0f, 0.0f, 0.0f, 0.0f}
 	, m_viewport()
 	, m_scissor()
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
@@ -33,18 +29,6 @@ GraphicsPipeline::GraphicsPipeline()
 	m_depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
 	m_depthStencilCreateInfo.front = {};
 	m_depthStencilCreateInfo.back = {};
-
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		m_colourBlendAttachmentStates[i].blendEnable = VK_TRUE;
-		m_colourBlendAttachmentStates[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		m_colourBlendAttachmentStates[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		m_colourBlendAttachmentStates[i].colorBlendOp = VK_BLEND_OP_ADD;
-		m_colourBlendAttachmentStates[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		m_colourBlendAttachmentStates[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		m_colourBlendAttachmentStates[i].alphaBlendOp = VK_BLEND_OP_ADD;
-	}
 }
 
 GraphicsPipeline::~GraphicsPipeline()
@@ -150,14 +134,14 @@ void GraphicsPipeline::bind()
 
 VkPipeline GraphicsPipeline::getPipeline()
 {
-	auto renderInfoBuilder = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+	auto renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
 	auto rasterSamples = g_vulkanBackend->getRenderTarget()->getMSAA();
 
 	const auto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
 	const auto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
 
-	auto vport = getViewport();
-	auto scissor = getScissor();
+	VkViewport viewport = getViewport();
+	VkRect2D scissor = getScissor();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -174,7 +158,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {};
 	viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewportStateCreateInfo.viewportCount = 1;
-	viewportStateCreateInfo.pViewports = &vport;
+	viewportStateCreateInfo.pViewports = &viewport;
 	viewportStateCreateInfo.scissorCount = 1;
 	viewportStateCreateInfo.pScissors = &scissor;
 
@@ -200,27 +184,28 @@ VkPipeline GraphicsPipeline::getPipeline()
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
 
+	const auto& blendAttachments = renderInfo->getColourBlendAttachmentStates();
+
 	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};
 	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colourBlendStateCreateInfo.logicOpEnable = m_blendStateLogicOpEnabled ? VK_TRUE : VK_FALSE;
-	colourBlendStateCreateInfo.logicOp = m_blendStateLogicOp;
-	colourBlendStateCreateInfo.attachmentCount = renderInfoBuilder->getColourAttachmentCount();
-	colourBlendStateCreateInfo.pAttachments = m_colourBlendAttachmentStates.data();
-	colourBlendStateCreateInfo.blendConstants[0] = m_blendConstants[0];
-	colourBlendStateCreateInfo.blendConstants[1] = m_blendConstants[1];
-	colourBlendStateCreateInfo.blendConstants[2] = m_blendConstants[2];
-	colourBlendStateCreateInfo.blendConstants[3] = m_blendConstants[3];
+	colourBlendStateCreateInfo.logicOpEnable = renderInfo->isBlendStateLogicOpEnabled() ? VK_TRUE : VK_FALSE;
+	colourBlendStateCreateInfo.logicOp = renderInfo->getBlendStateLogicOp();
+	colourBlendStateCreateInfo.attachmentCount = blendAttachments.size();
+	colourBlendStateCreateInfo.pAttachments = blendAttachments.data();
+	colourBlendStateCreateInfo.blendConstants[0] = renderInfo->getBlendConstant(0);
+	colourBlendStateCreateInfo.blendConstants[1] = renderInfo->getBlendConstant(1);
+	colourBlendStateCreateInfo.blendConstants[2] = renderInfo->getBlendConstant(2);
+	colourBlendStateCreateInfo.blendConstants[3] = renderInfo->getBlendConstant(3);
 
 	uint64_t createdPipelineHash = 0;
 
 	hash::combine(&createdPipelineHash, &m_depthStencilCreateInfo);
-	hash::combine(&createdPipelineHash, m_colourBlendAttachmentStates.data());
-	hash::combine(&createdPipelineHash, &m_blendConstants);
+	hash::combine(&createdPipelineHash, &colourBlendStateCreateInfo);
 	hash::combine(&createdPipelineHash, &rasterizationStateCreateInfo);
 	hash::combine(&createdPipelineHash, &inputAssemblyStateCreateInfo);
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
 
-	VkRenderingInfoKHR info = renderInfoBuilder->buildInfo();
+	VkRenderingInfoKHR info = renderInfo->getInfo();
 
 	hash::combine(&createdPipelineHash, &info);
 
@@ -245,7 +230,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(vkutil::DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
-	auto colourFormats = renderInfoBuilder->getColourAttachmentFormats();
+	Vector<VkFormat> colourFormats = renderInfo->getColourAttachmentFormats();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -343,13 +328,13 @@ void GraphicsPipeline::setScissor(const RectI& rect)
 
 VkViewport GraphicsPipeline::getViewport() const
 {
-	auto renderInfoBuilder = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
 
 	VkViewport defaultValue = {};
 	defaultValue.x = 0.0f;
-	defaultValue.y = (float)renderInfoBuilder->getHeight();
-	defaultValue.width = (float)renderInfoBuilder->getWidth();
-	defaultValue.height = -(float)renderInfoBuilder->getHeight();
+	defaultValue.y = (float)renderInfo->getHeight();
+	defaultValue.width = (float)renderInfo->getWidth();
+	defaultValue.height = -(float)renderInfo->getHeight();
 	defaultValue.minDepth = 0.0f;
 	defaultValue.maxDepth = 1.0f;
 
@@ -358,11 +343,11 @@ VkViewport GraphicsPipeline::getViewport() const
 
 VkRect2D GraphicsPipeline::getScissor() const
 {
-	auto renderInfoBuilder = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+	auto renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
 
 	VkRect2D defaultValue = {};
 	defaultValue.offset = { 0, 0 };
-	defaultValue.extent = { renderInfoBuilder->getWidth(), renderInfoBuilder->getHeight() };
+	defaultValue.extent = { renderInfo->getWidth(), renderInfo->getHeight() };
 
 	return m_scissor.valueOr(defaultValue);
 }
@@ -401,35 +386,4 @@ void GraphicsPipeline::setDepthBounds(float min, float max)
 void GraphicsPipeline::setDepthStencilTest(bool enabled)
 {
 	m_depthStencilCreateInfo.stencilTestEnable = enabled ? VK_TRUE : VK_FALSE;
-}
-
-void GraphicsPipeline::setBlendState(const BlendState& state)
-{
-	m_blendConstants[0] = state.blendConstants[0];
-	m_blendConstants[1] = state.blendConstants[1];
-	m_blendConstants[2] = state.blendConstants[2];
-	m_blendConstants[3] = state.blendConstants[3];
-
-	m_blendStateLogicOpEnabled = state.blendOpEnabled;
-	m_blendStateLogicOp = state.blendOp;
-
-	for (int i = 0; i < m_colourBlendAttachmentStates.size(); i++)
-	{
-		m_colourBlendAttachmentStates[i].colorWriteMask = 0;
-
-		if (state.writeMask[0]) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
-		if (state.writeMask[1]) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
-		if (state.writeMask[2]) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
-		if (state.writeMask[3]) m_colourBlendAttachmentStates[i].colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
-
-		m_colourBlendAttachmentStates[i].colorBlendOp = state.colour.op;
-		m_colourBlendAttachmentStates[i].srcColorBlendFactor = state.colour.src;
-		m_colourBlendAttachmentStates[i].dstColorBlendFactor = state.colour.dst;
-
-		m_colourBlendAttachmentStates[i].alphaBlendOp = state.alpha.op;
-		m_colourBlendAttachmentStates[i].srcAlphaBlendFactor = state.alpha.src;
-		m_colourBlendAttachmentStates[i].dstAlphaBlendFactor = state.alpha.dst;
-
-		m_colourBlendAttachmentStates[i].blendEnable = state.enabled ? VK_TRUE : VK_FALSE;
-	}
 }

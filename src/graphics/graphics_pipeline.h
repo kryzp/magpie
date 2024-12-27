@@ -15,7 +15,7 @@ namespace llt
 {
 	struct RenderOp;
 	class GenericRenderTarget;
-	class RenderInfoBuilder;
+	class RenderInfo;
 
 	class GraphicsPipeline : public Pipeline
 	{
@@ -31,8 +31,6 @@ namespace llt
 		void bindShader(const ShaderProgram* shader) override;
 
 		void setVertexDescriptor(const VertexDescriptor& descriptor);
-
-		void setBlendState(const BlendState& state);
 
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
@@ -54,14 +52,10 @@ namespace llt
 		VkRect2D getScissor() const;
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
-		Array<VkPipelineColorBlendAttachmentState, mgc::MAX_RENDER_TARGET_ATTACHMENTS> m_colourBlendAttachmentStates;
-		
-		float m_blendConstants[4];
+
 		bool m_sampleShadingEnabled;
 		float m_minSampleShading;
-		bool m_blendStateLogicOpEnabled;
-		
-		VkLogicOp m_blendStateLogicOp;
+
 		VkCullModeFlagBits m_cullMode;
 
 		Optional<VkViewport> m_viewport;

@@ -12,23 +12,25 @@ VertexDescriptor::~VertexDescriptor()
 {
 }
 
-void VertexDescriptor::addAttribute(uint32_t binding, VkFormat format, uint32_t offset)
+void VertexDescriptor::addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription>& attributes)
 {
-	VkVertexInputAttributeDescription attributeDescription;
-	attributeDescription.binding = binding;
-	attributeDescription.location = m_attributes.size();
-	attributeDescription.format = format;
-	attributeDescription.offset = offset;
+	uint32_t binding = m_bindings.size();
 
-	m_attributes.pushBack(attributeDescription);
-}
-
-void VertexDescriptor::addBinding(uint32_t binding, uint32_t stride, VkVertexInputRate inputRate)
-{
-	VkVertexInputBindingDescription bindingDescription;
+	VkVertexInputBindingDescription bindingDescription = {};
 	bindingDescription.binding = binding;
 	bindingDescription.stride = stride;
 	bindingDescription.inputRate = inputRate;
+
+	for (auto& attrib : attributes)
+	{
+		VkVertexInputAttributeDescription attributeDescription = {};
+		attributeDescription.binding = binding;
+		attributeDescription.location = m_attributes.size();
+		attributeDescription.format = attrib.format;
+		attributeDescription.offset = attrib.offset;
+
+		m_attributes.pushBack(attributeDescription);
+	}
 
 	m_bindings.pushBack(bindingDescription);
 }

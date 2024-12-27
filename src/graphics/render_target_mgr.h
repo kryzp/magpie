@@ -21,8 +21,7 @@ namespace llt
 
         RenderTarget* get(const String& name);
 
-		RenderTarget* createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments);
-		RenderTarget* createDepthTarget(const String& name, uint32_t width, uint32_t height);
+		RenderTarget* createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT);
 
     private:
         HashMap<String, RenderTarget*> m_targets;

@@ -38,6 +38,8 @@ namespace llt
 		void setTexture(int idx, const Texture* texture, TextureSampler* sampler);
 
 		Technique technique;
+	 	// todo: change to a Vector<Technique> including "fallback" techniques, with primary technique at techniques[0]?
+
 		ShaderParameters parameters;
 		Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
 	*/

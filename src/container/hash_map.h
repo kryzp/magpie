@@ -7,7 +7,7 @@
 namespace llt
 {
 	/**
-	 * Dictionary structure that uses a hash function
+	 * Dictionary structure that uses a getHash function
 	 * to index the different elements inside it.
 	 */
 	template <typename TKey, typename TValue>

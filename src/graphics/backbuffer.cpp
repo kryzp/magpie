@@ -64,15 +64,20 @@ void Backbuffer::createDepthResources()
 {
     VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
 
+	// build the depth resource
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_depth.setSampleCount(g_vulkanBackend->maxMsaaSamples);
-	
 	m_depth.createInternalResources();
 
 	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, &m_depth);
+	// add the depth resource to our render pass builder
+	m_renderInfo.addDepthAttachment(
+		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		&m_depth,
+		VK_NULL_HANDLE
+	);
 
     LLT_LOG("[BACKBUFFER] Created depth resources!");
 }
@@ -331,7 +336,7 @@ void Backbuffer::createSwapChainImageViews()
 {
     m_swapChainImageViews.resize(m_swapChainImages.size());
 
-	// create an image view for each swap chian image
+	// create an image view for each swap chain image
     for (uint64_t i = 0; i < m_swapChainImages.size(); i++)
     {
         VkImageViewCreateInfo viewInfo = {};
@@ -408,7 +413,7 @@ VkSurfaceKHR Backbuffer::getSurface() const
 	return m_surface;
 }
 
-int Backbuffer::getCurrentTextureIdx() const
+uint32_t Backbuffer::getCurrentTextureIdx() const
 {
 	return m_currSwapChainImageIdx;
 }

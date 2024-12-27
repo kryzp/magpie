@@ -32,7 +32,7 @@ layout (binding = 3) uniform sampler2D s_normalTexture;
 layout (binding = 4) uniform sampler2D s_depthTexture;
 
 const vec3 GRAVITY = vec3(0.0, -3.0, 0.0);
-const float TOUCH_DISTANCE = 0.05;
+const float TOUCH_DISTANCE = 0.1;
 
 vec2 toScreenPosition(vec3 worldPosition, mat4 vm)
 {

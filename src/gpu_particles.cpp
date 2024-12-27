@@ -57,14 +57,16 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 
 	delete[] particleData;
 
-	m_particleVertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
-	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
-	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
-	m_particleVertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	m_particleVertexFormat.addBinding(sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos) },
+		{ VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm) }
+	});
 
-	m_particleVertexFormat.addBinding(1, sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE);
-	m_particleVertexFormat.addAttribute(1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Particle, pos));
+	m_particleVertexFormat.addBinding(sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(Particle, pos) }
+	});
 
 	Vector<MyVertex> particleVtx =
 	{

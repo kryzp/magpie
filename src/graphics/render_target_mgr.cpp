@@ -1,8 +1,6 @@
 #include "render_target_mgr.h"
 #include "render_target.h"
 #include "texture.h"
-#include "backbuffer.h"
-#include "backend.h"
 
 llt::RenderTargetMgr* llt::g_renderTargetManager = nullptr;
 
@@ -30,13 +28,14 @@ RenderTarget* RenderTargetMgr::get(const String& name)
 	return nullptr;
 }
 
-RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments)
+RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples)
 {
 	if (m_targets.contains(name)) {
 		return m_targets.get(name);
 	}
 
 	RenderTarget* result = new RenderTarget(width, height);
+	result->setMSAA(samples);
 
 	for (int i = 0; i < attachments.size(); i++)
 	{
@@ -44,7 +43,7 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 
 		texture->setSize(width, height);
 		texture->setProperties(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-		texture->setSampleCount(VK_SAMPLE_COUNT_1_BIT);
+		texture->setSampleCount(samples);
 
 		texture->createInternalResources();
 
@@ -57,20 +56,6 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 	}
 
 	result->create();
-
-	m_targets.insert(name, result);
-	return result;
-}
-
-RenderTarget* RenderTargetMgr::createDepthTarget(const String& name, uint32_t width, uint32_t height)
-{
-	if (m_targets.contains(name)) {
-		return m_targets.get(name);
-	}
-
-	RenderTarget* result = new RenderTarget(width, height);
-
-	result->createOnlyDepth();
 
 	m_targets.insert(name, result);
 	return result;

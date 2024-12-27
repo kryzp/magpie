@@ -1,10 +1,12 @@
 #ifndef VK_RENDER_PASS_BUILDER_H_
 #define VK_RENDER_PASS_BUILDER_H_
 
+#include <vulkan/vulkan.h>
+
 #include "../container/array.h"
 #include "../container/vector.h"
 
-#include <vulkan/vulkan.h>
+#include "blend.h"
 
 namespace llt
 {
@@ -15,24 +17,33 @@ namespace llt
 	/*
 	 * Responsible for building up the final vulkan render pass which is needed when starting to render.
 	 */
-	class RenderInfoBuilder
+	class RenderInfo
 	{
 	public:
-		RenderInfoBuilder();
-		~RenderInfoBuilder();
+		RenderInfo();
+		~RenderInfo();
 
 		void clear();
 
 		void addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imageView, VkFormat format, VkImageView resolveView);
-		void addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* texture);
+		void addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* texture, VkImageView resolveView);
 
 		VkRenderingAttachmentInfoKHR& getColourAttachment(int idx);
 		VkRenderingAttachmentInfoKHR& getDepthAttachment();
 
-		VkRenderingInfoKHR buildInfo() const;
+		VkRenderingInfoKHR getInfo() const;
 
 		void setClearColour(int idx, VkClearValue value);
 		void setClearDepth(VkClearValue value);
+
+		void setBlendState(const BlendState& state);
+
+		const Vector<VkPipelineColorBlendAttachmentState>& getColourBlendAttachmentStates() const;
+		bool isBlendStateLogicOpEnabled() const;
+		VkLogicOp getBlendStateLogicOp() const;
+
+		const Array<float, 4>& getBlendConstants() const;
+		float getBlendConstant(int idx) const;
 
 		void setDimensions(uint32_t width, uint32_t height);
 
@@ -54,6 +65,12 @@ namespace llt
 		Vector<VkFormat> m_colourFormats;
 
 		int m_attachmentCount;
+
+		Array<float, 4> m_blendConstants;
+		Vector<VkPipelineColorBlendAttachmentState> m_colourBlendAttachmentStates;
+
+		bool m_blendStateLogicOpEnabled;
+		VkLogicOp m_blendStateLogicOp;
 	};
 }
 

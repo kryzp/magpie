@@ -9,7 +9,7 @@ void DescriptorBuilder::clear()
 	m_writes.clear();
 }
 
-uint64_t DescriptorBuilder::hash() const
+uint64_t DescriptorBuilder::getHash() const
 {
 	uint64_t result = 0;
 

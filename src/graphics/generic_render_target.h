@@ -7,13 +7,13 @@
 
 #include "../container/array.h"
 
-#include "render_info_builder.h"
+#include "render_info.h"
 #include "texture.h"
 
 namespace llt
 {
 	class VulkanBackend;
-	class RenderInfoBuilder;
+	class RenderInfo;
 
 	enum RenderTargetType
 	{
@@ -31,47 +31,26 @@ namespace llt
 
 		virtual void cleanUp() = 0;
 
-		virtual RenderInfoBuilder* getRenderInfo();
+		virtual RenderInfo* getRenderInfo();
 
 		virtual void beginGraphics(VkCommandBuffer cmdBuffer) = 0;
 		virtual void endGraphics(VkCommandBuffer cmdBuffer) = 0;
-
-		uint64_t getAttachmentCount() const { return m_renderInfo.getColourAttachmentCount(); }
 
 		virtual Texture* getAttachment(int idx) = 0;
 		virtual Texture* getDepthAttachment() = 0;
 
 		virtual VkSampleCountFlagBits getMSAA() const = 0;
 
-		void toggleClear(bool clear)
-		{
-			for (int i = 0; i < getAttachmentCount(); i++) {
-				toggleClear(i, clear);
-			}
-
-			toggleDepthStencilClear(clear);
-		}
-
-		void toggleClear(int idx, bool clear)
-		{
-			m_renderInfo.getColourAttachment(idx).loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-		}
-
-		void toggleDepthStencilClear(bool clear)
-		{
-			m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-		}
-
 		virtual void setClearColour(int idx, const Colour& colour) = 0;
-
 		virtual void setDepthStencilClear(float depth, uint32_t stencil) = 0;
 
-		void setClearColours(const Colour& colour)
-		{
-			for (int i = 0; i < getAttachmentCount(); i++) {
-				setClearColour(i, colour);
-			}
-		}
+		uint64_t getAttachmentCount() const;
+
+		void setClearColours(const Colour& colour);
+
+		void toggleClear(bool clear);
+		void toggleClear(int idx, bool clear);
+		void toggleDepthStencilClear(bool clear);
 
 		uint32_t getWidth() const;
 		uint32_t getHeight() const;
@@ -82,7 +61,7 @@ namespace llt
 		uint32_t m_height;
 		RenderTargetType m_type;
 
-		RenderInfoBuilder m_renderInfo;
+		RenderInfo m_renderInfo;
 	};
 }
 

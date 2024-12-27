@@ -34,37 +34,51 @@ GPUBuffer* GPUBufferMgr::createBuffer(VkBufferUsageFlags usage, VmaMemoryUsage m
 
 GPUBuffer* GPUBufferMgr::createStagingBuffer(uint64_t size)
 {
-	GPUBuffer* stagingBuffer = new GPUBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	stagingBuffer->create(size);
-	return stagingBuffer;
+	return createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		size
+	);
 }
 
 GPUBuffer* GPUBufferMgr::createVertexBuffer(uint64_t vertexCount, uint32_t vertexSize)
 {
-	GPUBuffer* vertexBuffer = new GPUBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	vertexBuffer->create(vertexSize * vertexCount);
+	GPUBuffer* vertexBuffer = createBuffer(
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_GPU_ONLY,
+		vertexSize * vertexCount
+	);
+
 	m_vertexBuffers.pushBack(vertexBuffer);
 	return vertexBuffer;
 }
 
 GPUBuffer* GPUBufferMgr::createIndexBuffer(uint64_t indexCount)
 {
-	GPUBuffer* indexBuffer = new GPUBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-	indexBuffer->create(sizeof(uint16_t) * indexCount);
+	GPUBuffer* indexBuffer = createBuffer(
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_GPU_ONLY,
+		sizeof(uint16_t) * indexCount
+	);
+
 	m_indexBuffers.pushBack(indexBuffer);
 	return indexBuffer;
 }
 
 GPUBuffer* GPUBufferMgr::createUniformBuffer(uint64_t size)
 {
-	GPUBuffer* uniformBuffer = new GPUBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	uniformBuffer->create(size);
-	return uniformBuffer;
+	return createBuffer(
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		size
+	);
 }
 
 GPUBuffer* GPUBufferMgr::createShaderStorageBuffer(uint64_t size)
 {
-	GPUBuffer* shaderStorageBuffer = new GPUBuffer(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT/* | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT*/, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	shaderStorageBuffer->create(size);
-	return shaderStorageBuffer;
+	return createBuffer(
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT/* | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT*/,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		size
+	);
 }

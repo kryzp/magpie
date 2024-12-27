@@ -75,8 +75,8 @@ namespace llt
 		VkImage getImage() const;
 		VkImageView getImageView() const;
 
-		uint32_t width() const;
-		uint32_t height() const;
+		uint32_t getWidth() const;
+		uint32_t getHeight() const;
 
 		uint32_t getMipLevels() const;
 		VkSampleCountFlagBits getNumSamples() const;

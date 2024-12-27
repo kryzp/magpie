@@ -83,7 +83,7 @@ namespace llt
 		GraphicsPipeline m_entityPipeline;
 		GraphicsPipeline m_postProcessPipeline;
 
-		int m_frames;
+		int m_frameCount;
 	};
 }
 

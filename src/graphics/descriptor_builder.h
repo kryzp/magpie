@@ -16,7 +16,7 @@ namespace llt
 
 		void clear();
 
-		uint64_t hash() const;
+		uint64_t getHash() const;
 
 		void build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, uint64_t hash);
 		void buildLayout(VkDescriptorSetLayout& layout);

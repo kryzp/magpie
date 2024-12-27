@@ -531,12 +531,12 @@ VkImageView Texture::getImageView() const
 	return m_view;
 }
 
-uint32_t Texture::width() const
+uint32_t Texture::getWidth() const
 {
 	return m_width;
 }
 
-uint32_t Texture::height() const
+uint32_t Texture::getHeight() const
 {
 	return m_height;
 }
@@ -586,9 +586,7 @@ void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
 	{
 		if (!t->isTransient())
 		{
-			m_stageStack.pushBack(t->getStage());
-
-			auto b = t->getBarrier();
+			auto barrier = t->getBarrier();
 
 			vkCmdPipelineBarrier(
 				cmdBuffer,
@@ -596,8 +594,10 @@ void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
 				0,
 				0, nullptr,
 				0, nullptr,
-				1, &b
+				1, &barrier
 			);
+
+			m_stageStack.pushBack(t->getStage());
 		}
 	}
 
@@ -612,7 +612,7 @@ void TextureBatch::popPipelineBarriers()
 	{
 		if (!t->isTransient())
 		{
-			auto b = t->getBarrier();
+			auto barrier = t->getBarrier();
 
 			vkCmdPipelineBarrier(
 				cmdBuffer,
@@ -620,7 +620,7 @@ void TextureBatch::popPipelineBarriers()
 				0,
 				0, nullptr,
 				0, nullptr,
-				1, &b
+				1, &barrier
 			);
 		}
 	}

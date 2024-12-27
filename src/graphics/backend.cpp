@@ -830,7 +830,7 @@ void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 
 	m_currentRenderTarget->beginGraphics(currentBuffer);
 
-	VkRenderingInfoKHR renderInfo = m_currentRenderTarget->getRenderInfo()->buildInfo();
+	VkRenderingInfoKHR renderInfo = m_currentRenderTarget->getRenderInfo()->getInfo();
 
 #if LLT_MAC_SUPPORT
 	vkutil::ext_vkCmdBeginRendering(currentBuffer, &renderInfo);

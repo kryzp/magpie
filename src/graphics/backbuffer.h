@@ -8,7 +8,7 @@
 #include "generic_render_target.h"
 #include "texture.h"
 #include "util.h"
-#include "render_info_builder.h"
+#include "render_info.h"
 
 namespace llt
 {
@@ -50,7 +50,7 @@ namespace llt
 
 		VkSampleCountFlagBits getMSAA() const override;
 
-		int getCurrentTextureIdx() const;
+		uint32_t getCurrentTextureIdx() const;
 
 		const VkSemaphore& getRenderFinishedSemaphore() const;
 		const VkSemaphore& getImageAvailableSemaphore() const;

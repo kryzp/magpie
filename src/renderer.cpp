@@ -42,7 +42,7 @@ Renderer::Renderer()
 	, m_skyboxPipeline()
 	, m_entityPipeline()
 	, m_postProcessPipeline()
-	, m_frames(0)
+	, m_frameCount(0)
 {
 }
 
@@ -62,7 +62,8 @@ void Renderer::init(Backbuffer* backbuffer)
 			VK_FORMAT_B8G8R8A8_UNORM, // colour
 			VK_FORMAT_R32G32_SFLOAT, // motion
 			VK_FORMAT_R32G32B32A32_SFLOAT // normals
-		}
+		},
+		VK_SAMPLE_COUNT_1_BIT
 	);
 
 	loadTextures();
@@ -239,11 +240,12 @@ void Renderer::createSkybox()
 
 void Renderer::setupVertexFormats()
 {
-	m_vertexFormat.addBinding(0, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos));
-	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv));
-	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col));
-	m_vertexFormat.addAttribute(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm));
+	m_vertexFormat.addBinding(sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos) },
+		{ VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm) }
+	});
 }
 
 void Renderer::createEntities()
@@ -347,20 +349,17 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 
 	m_target->toggleClear(false);
 
-	if (m_frames >= 10)
-	{
-		// particles: compute
-		m_pushConstants.set("time", deltaTime);
-		g_vulkanBackend->setPushConstants(m_pushConstants);
-		m_gpuParticles.dispatchCompute(camera);
+	// particles: compute
+	m_pushConstants.set("time", deltaTime);
+	g_vulkanBackend->setPushConstants(m_pushConstants);
+	m_gpuParticles.dispatchCompute(camera);
 
-		// particles: render
-		glm::mat4 particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.1f, 0.1f, 0.1f });
-		m_shaderParams.set("currModelMatrix", particleMatrix);
-		m_shaderParams.set("prevModelMatrix", particleMatrix);
-		m_shaderParamsBuffer->pushData(m_shaderParams);
-		m_gpuParticles.render();
-	}
+	// particles: render
+	glm::mat4 particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.1f, 0.1f, 0.1f });
+	m_shaderParams.set("currModelMatrix", particleMatrix);
+	m_shaderParams.set("prevModelMatrix", particleMatrix);
+	m_shaderParamsBuffer->pushData(m_shaderParams);
+	m_gpuParticles.render();
 
 	g_vulkanBackend->beginGraphics();
 
@@ -372,7 +371,6 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	m_shaderParams.set("projMatrix", glm::identity<glm::mat4>());
 	m_shaderParams.set("currViewMatrix", glm::identity<glm::mat4>());
 	m_shaderParams.set("currModelMatrix", glm::identity<glm::mat4>());
-	m_shaderParams.set("prevModelMatrix", glm::identity<glm::mat4>());
 	m_shaderParams.set("prevViewMatrix", glm::identity<glm::mat4>());
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 
@@ -384,7 +382,7 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	g_vulkanBackend->resetPushConstants();
 	g_vulkanBackend->swapBuffers();
 
-	m_frames++;
+	m_frameCount++;
 
 	m_prevViewMatrix = viewMatrix;
 }

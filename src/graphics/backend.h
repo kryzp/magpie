@@ -16,7 +16,7 @@
 #include "../common.h"
 #include "../app.h"
 
-#include "render_info_builder.h"
+#include "render_info.h"
 
 #include "descriptor_pool_mgr.h"
 #include "descriptor_builder.h"

@@ -13,7 +13,6 @@ namespace llt
 		~RenderTarget() override;
 
 		void create();
-		void createOnlyDepth();
 
 		void beginGraphics(VkCommandBuffer cmdBuffer) override;
 		void endGraphics(VkCommandBuffer cmdBuffer) override;
@@ -29,12 +28,18 @@ namespace llt
 		void addAttachment(Texture* texture);
 
 		VkSampleCountFlagBits getMSAA() const override;
+		void setMSAA(VkSampleCountFlagBits samples);
 
 	private:
 		void createDepthResources();
 
 		Vector<Texture*> m_attachments;
+		Vector<Texture*> m_resolveAttachments;
+
 		Texture m_depth;
+		Texture m_resolveDepth;
+
+		VkSampleCountFlagBits m_samples;
 	};
 }
 

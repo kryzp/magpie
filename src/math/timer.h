@@ -3,8 +3,6 @@
 
 #include "../common.h"
 
-// todo: convert to use performance counter and performance frequency
-
 namespace llt
 {
 	class Timer

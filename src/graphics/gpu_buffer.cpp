@@ -95,7 +95,7 @@ void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t o
 		region.imageSubresource.baseArrayLayer = baseArrayLayer;
 		region.imageSubresource.layerCount = 1;
 		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { texture->width(), texture->height(), 1 };
+		region.imageExtent = { texture->getWidth(), texture->getHeight(), 1 };
 
 		vkCmdCopyBufferToImage(
 			cmdBuffer,

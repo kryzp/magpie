@@ -22,7 +22,40 @@ GenericRenderTarget::~GenericRenderTarget()
 {
 }
 
-RenderInfoBuilder* GenericRenderTarget::getRenderInfo()
+uint64_t GenericRenderTarget::getAttachmentCount() const
+{
+	return m_renderInfo.getColourAttachmentCount();
+}
+
+void GenericRenderTarget::setClearColours(const Colour& colour)
+{
+	for (int i = 0; i < getAttachmentCount(); i++)
+	{
+		setClearColour(i, colour);
+	}
+}
+
+void GenericRenderTarget::toggleClear(bool clear)
+{
+	for (int i = 0; i < getAttachmentCount(); i++)
+	{
+		toggleClear(i, clear);
+	}
+
+	toggleDepthStencilClear(clear);
+}
+
+void GenericRenderTarget::toggleClear(int idx, bool clear)
+{
+	m_renderInfo.getColourAttachment(idx).loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+}
+
+void GenericRenderTarget::toggleDepthStencilClear(bool clear)
+{
+	m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+}
+
+RenderInfo* GenericRenderTarget::getRenderInfo()
 {
 	return &m_renderInfo;
 }

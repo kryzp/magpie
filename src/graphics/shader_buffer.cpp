@@ -57,25 +57,8 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	m_dynamicOffset = m_offset;
 	m_info.range = size;
 
-	if (m_type == SHADER_BUFFER_UBO)
-	{
-		// actually write the data into the ubo
-		m_buffer->writeDataToMe(data, size, m_offset);
-	}
-	else if (m_type == SHADER_BUFFER_SSBO)
-	{
-		// actually write the data into the ssbo
-		// todo: do all stages have to be created on heap? pretty expensive and they get destroyed like right after, would make more sense to make them on stack...
-		// todo: also wait can't we just do writeDataToMe??? fix this!!
-		GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(size);
-		stage->writeDataToMe(data, size, 0);
-		stage->writeToBuffer(m_buffer, size, 0, m_offset);
-		delete stage;
-	}
-	else
-	{
-		LLT_ERROR("[SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
-	}
+	// write the data to the buffer!
+	m_buffer->writeDataToMe(data, size, m_offset);
 
 	// move forward and increment the ubo usage in the current frame
 	m_offset += size;
