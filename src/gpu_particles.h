@@ -38,6 +38,8 @@ namespace llt
 
 		GraphicsPipeline m_particleGraphicsPipeline;
 		ComputePipeline m_particleComputePipeline;
+
+		glm::mat4 m_prevViewMatrix;
 	};
 }
 

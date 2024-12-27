@@ -344,13 +344,6 @@ void Renderer::render(const Camera& camera, float deltaTime, float elapsedTime)
 	}
 
 	g_vulkanBackend->endGraphics();
-}
-
-void Renderer::renderPostCamera(const Camera& camera, float deltaTime, float elapsedTime)
-{
-	glm::mat4 viewMatrix = camera.getView();
-
-	RenderOp pass;
 
 	m_target->toggleClear(false);
 

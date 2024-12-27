@@ -26,6 +26,7 @@ GPUParticles::GPUParticles()
 	, m_particleVertexFormat()
 	, m_particleGraphicsPipeline()
 	, m_particleComputePipeline()
+	, m_prevViewMatrix(glm::identity<glm::mat4>())
 {
 }
 
@@ -131,8 +132,9 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 	m_computeParamsBuffer = g_shaderBufferManager->createUBO();
 	m_computeParams.set("projMatrix", glm::identity<glm::mat4>());
 	m_computeParams.set("inverseProjMatrix", glm::identity<glm::mat4>());
-	m_computeParams.set("viewMatrix", glm::identity<glm::mat4>());
 	m_computeParams.set("inverseViewMatrix", glm::identity<glm::mat4>());
+	m_computeParams.set("inversePrevViewMatrix", glm::identity<glm::mat4>());
+	m_computeParams.set("prevViewMatrix", glm::identity<glm::mat4>());
 	m_computeParamsBuffer->pushData(m_computeParams);
 
 	m_particleComputePipeline.bindShader(m_computeProgram);
@@ -159,8 +161,9 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 
 	m_computeParams.set("projMatrix", camera.getProj());
 	m_computeParams.set("inverseProjMatrix", glm::inverse(camera.getProj()));
-	m_computeParams.set("viewMatrix", camera.getView());
 	m_computeParams.set("inverseViewMatrix", glm::inverse(camera.getView()));
+	m_computeParams.set("inversePrevViewMatrix", glm::inverse(m_prevViewMatrix));
+	m_computeParams.set("prevViewMatrix", m_prevViewMatrix);
 	m_computeParamsBuffer->pushData(m_computeParams);
 
 	m_particleComputePipeline.bind();
@@ -168,10 +171,7 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 
 	g_vulkanBackend->endCompute();
 
-	Particle* p1 = new Particle();
-	m_particleBuffer->getBuffer()->readDataFromMe(p1, sizeof(Particle), 0);
-	LLT_LOG("%f %f %f", p1->pos.x, p1->pos.y, p1->pos.z);
-	delete p1;
+	m_prevViewMatrix = camera.getView();
 }
 
 void GPUParticles::render()

@@ -93,8 +93,6 @@ void App::run()
 
 		accumulator += CalcF::min(deltaTime, targetDeltaTime);
 
-		m_renderer.render(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
-
 		while (accumulator >= targetDeltaTime)
 		{
 			m_camera.update(targetDeltaTime);
@@ -103,7 +101,7 @@ void App::run()
 			accumulator -= targetDeltaTime;
 		}
 
-		m_renderer.renderPostCamera(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
+		m_renderer.render(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
 
 		//LLT_LOG("fps: %f", 1.0 / deltaTime);
 	}

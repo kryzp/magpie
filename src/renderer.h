@@ -36,7 +36,6 @@ namespace llt
 		void init(Backbuffer* backbuffer);
 
 		void render(const Camera& camera, float deltaTime, float elapsedTime);
-		void renderPostCamera(const Camera& camera, float deltaTime, float elapsedTime);
 
 	private:
 		void loadTextures();
