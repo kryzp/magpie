@@ -1,5 +1,5 @@
 #include "image.h"
-#include "colour.h"
+#include "../math/colour.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../third_party/stb_image.h"

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "renderer.h"
+#include "camera.h"
 #include "container/function.h"
 #include "graphics/backbuffer.h"
 #include "graphics/shader.h"

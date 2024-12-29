@@ -128,6 +128,8 @@ namespace llt
 		T* data();
 		const T* data() const;
 
+		Iterator insert(int index, const T& item);
+
 		/*
 		 * Add a new element to the front.
 		 */
@@ -360,17 +362,19 @@ namespace llt
     }
 
     template <typename T>
-    void Vector<T>::allocate(uint64_t getCapacity)
+    void Vector<T>::allocate(uint64_t capacity)
     {
 		// check if we even need to allocate more
-        if (getCapacity <= m_capacity) {
+        if (capacity <= m_capacity) {
 			return;
 		}
 
-		uint64_t newCapacity = getCapacity > 8 ? getCapacity : 8;
+		uint64_t newCapacity = m_capacity > 0
+			? m_capacity
+			: 8;
 
 		// keep doubling our capacity until we are greater than our current capacity
-		while (newCapacity < getCapacity) {
+		while (newCapacity < capacity) {
 			newCapacity *= 2;
 		}
 
@@ -474,13 +478,21 @@ namespace llt
 		return end();
 	}
 
+	template <typename T>
+	Vector<T>::Iterator Vector<T>::insert(int index, const T& item)
+	{
+		resize(m_size + 1);
+		mem::move(m_buf + index + 1, m_buf + index, sizeof(T) * (m_size - index));
+		new (m_buf + index) T(std::move(item));
+		return Iterator(m_buf + index);
+	}
+
     template <typename T>
 	Vector<T>::Iterator Vector<T>::pushFront(const T& item)
     {
         resize(m_size + 1);
         mem::move(m_buf + 1, m_buf, sizeof(T) * m_size);
         new (m_buf) T(std::move(item));
-        m_size++;
 		return Iterator(m_buf);
     }
 

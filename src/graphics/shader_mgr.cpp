@@ -8,17 +8,17 @@ using namespace llt;
 
 ShaderMgr::ShaderMgr()
 	: m_shaderCache()
-//	, m_effects()
+	, m_effects()
 {
 }
 
 ShaderMgr::~ShaderMgr()
 {
-//	for (auto& effect : m_effects) {
-//		delete effect;
-//	}
+	for (auto& effect : m_effects) {
+		delete effect;
+	}
 
-//	m_effects.clear();
+	m_effects.clear();
 
 	for (auto& [name, shader] : m_shaderCache) {
 		delete shader;
@@ -75,11 +75,9 @@ ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkSha
 	return shader;
 }
 
-/*
 ShaderEffect* ShaderMgr::createEffect()
 {
 	ShaderEffect* effect = new ShaderEffect();
 	m_effects.pushBack(effect);
 	return effect;
 }
-*/

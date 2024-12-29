@@ -35,7 +35,7 @@ GraphicsPipeline::~GraphicsPipeline()
 {
 }
 
-void GraphicsPipeline::render(const RenderOp& op)
+void GraphicsPipeline::render(const RenderPass& op)
 {
 	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
 	auto currentBuffer = currentFrame.commandBuffer;
@@ -82,7 +82,7 @@ void GraphicsPipeline::render(const RenderOp& op)
 		);
 	}
 
-	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
+	const auto& dynamicOffsets = getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -230,7 +230,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(vkutil::DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
-	Vector<VkFormat> colourFormats = renderInfo->getColourAttachmentFormats();
+	const auto& colourFormats = renderInfo->getColourAttachmentFormats();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -343,7 +343,7 @@ VkViewport GraphicsPipeline::getViewport() const
 
 VkRect2D GraphicsPipeline::getScissor() const
 {
-	auto renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
 
 	VkRect2D defaultValue = {};
 	defaultValue.offset = { 0, 0 };

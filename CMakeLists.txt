@@ -17,7 +17,6 @@ add_executable(${PROJECT_NAME}
 
     src/graphics/backbuffer.cpp
     src/graphics/backend.cpp
-    src/graphics/colour.cpp
     src/graphics/compute_pipeline.cpp
     src/graphics/descriptor_builder.cpp
     src/graphics/descriptor_cache.cpp
@@ -36,7 +35,9 @@ add_executable(${PROJECT_NAME}
     src/graphics/sub_mesh.cpp
     src/graphics/pipeline.cpp
     src/graphics/mesh.cpp
+    src/graphics/mesh_loader.cpp
     src/graphics/material.cpp
+	src/graphics/material_system.cpp
     src/graphics/texture.cpp
     src/graphics/texture_mgr.cpp
     src/graphics/texture_sampler.cpp
@@ -44,8 +45,10 @@ add_executable(${PROJECT_NAME}
     src/graphics/image.cpp
     src/graphics/queue.cpp
     src/graphics/vertex_descriptor.cpp
-    
+
+	src/math/colour.cpp
     src/math/timer.cpp
+    src/math/transform.cpp
 
     src/input/input.cpp
     src/input/v_key.cpp
@@ -68,16 +71,15 @@ endif()
 if(MAC_SUPPORT)
 	add_compile_definitions(LLT_MAC_SUPPORT)
 
-	find_package(SDL3 REQUIRED)
 	add_compile_definitions(RVN_USE_SDL3)
-	target_link_libraries(${PROJECT_NAME} SDL3::SDL3)
-
-	find_package(Vulkan REQUIRED)
 	add_compile_definitions(RVN_USE_VULKAN)
-	target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
 
+	find_package(SDL3 REQUIRED)
+	find_package(Vulkan REQUIRED)
 	find_package(glm REQUIRED)
-	target_link_libraries(${PROJECT_NAME} glm::glm)
+	find_package(assimp REQUIRED)
+
+	target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp)
 else()
 	set(GLM_INCLUDE_DIRS "D:/DevLibs/glm/")
 

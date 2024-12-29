@@ -11,7 +11,6 @@
 
 namespace llt
 {
-	class MeshMgr;
 	class Mesh;
 
 	/**
@@ -19,7 +18,6 @@ namespace llt
 	 */
 	class SubMesh
 	{
-		friend class MeshMgr;
 		friend class Mesh;
 
 	public:

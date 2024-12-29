@@ -13,7 +13,7 @@
 
 namespace llt
 {
-	struct RenderOp;
+	struct RenderPass;
 	class GenericRenderTarget;
 	class RenderInfo;
 
@@ -23,7 +23,7 @@ namespace llt
 		GraphicsPipeline();
 		~GraphicsPipeline() override;
 
-		void render(const RenderOp& op);
+		void render(const RenderPass& op);
 
 		void bind() override;
 		VkPipeline getPipeline() override;

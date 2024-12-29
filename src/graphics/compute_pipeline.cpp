@@ -18,7 +18,7 @@ ComputePipeline::~ComputePipeline()
 
 void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 {
-	p_textureBatch.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	p_boundTextures.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	auto currentBuffer = g_vulkanBackend->computeQueues[0].getCurrentFrame().commandBuffer;
 
@@ -54,7 +54,7 @@ void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 		gcX, gcY, gcZ
 	);
 
-	p_textureBatch.popPipelineBarriers();
+	p_boundTextures.popPipelineBarriers();
 }
 
 void ComputePipeline::bind()

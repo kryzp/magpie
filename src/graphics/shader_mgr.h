@@ -21,11 +21,11 @@ namespace llt
 		ShaderProgram* get(const String& name);
 		ShaderProgram* create(const String& name, const String& source, VkShaderStageFlagBits type);
 
-//		ShaderEffect* createEffect();
+		ShaderEffect* createEffect();
 
 	private:
 		HashMap<String, ShaderProgram*> m_shaderCache;
-//		Vector<ShaderEffect*> m_effects;
+		Vector<ShaderEffect*> m_effects;
 	};
 
 	extern ShaderMgr* g_shaderManager;

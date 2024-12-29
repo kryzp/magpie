@@ -1,13 +1,13 @@
 #include "app.h"
 
 #include "graphics/backend.h"
-#include "graphics/colour.h"
 
 #include "platform.h"
 #include "camera.h"
 #include "input/input.h"
 #include "math/timer.h"
 #include "math/calc.h"
+#include "math/colour.h"
 
 llt::App* llt::g_app = nullptr;
 
@@ -44,7 +44,7 @@ App::App(const Config& config)
 
 	m_running = true;
 
-	m_camera.position = glm::vec3(0.0f, 4.0f, 6.0f);
+	m_camera.position = glm::vec3(0.0f, 2.75f, 3.5f);
 	m_camera.setPitch(-glm::radians(30.0f));
 	m_camera.update(0.0f);
 

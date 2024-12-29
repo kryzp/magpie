@@ -14,7 +14,8 @@ Pipeline::Pipeline(VkShaderStageFlagBits stage)
 	: m_descriptorBuilder()
 	, m_stage(stage)
 	, m_boundImages()
-	, p_textureBatch()
+	, p_boundTextures()
+	, m_dynamicOffsets()
 	, m_buffers()
 {
 }
@@ -85,35 +86,9 @@ VkDescriptorSet Pipeline::getDescriptorSet()
 	return descriptorSet;
 }
 
-Vector<uint32_t> Pipeline::getDynamicOffsets()
-{
-	// dynamic offsets must follow binding order!!
-	// this is very inefficient though, we really shouldn't have to sort every time this is called!!!!!!!
-
-	Vector<Pair<uint32_t, uint32_t>> boundOffsets;
-
-	for (int i = 0; i < m_buffers.size(); i++)
-	{
-		auto& buf = m_buffers[i];
-		boundOffsets.pushBack(Pair<uint32_t, uint32_t>(buf.first, buf.second->getDynamicOffset()));
-	}
-
-	sortBoundOffsets(boundOffsets, 0, boundOffsets.size() - 1);
-
-	// ---
-
-	Vector<uint32_t> result;
-
-	for (int i = 0; i < boundOffsets.size(); i++)
-	{
-		result.pushBack(boundOffsets[i].second);
-	}
-
-	return result;
-}
-
 // quicksort
-void Pipeline::sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int lo, int hi)
+/*
+void sortBoundOffsets(Vector<Pair<int, uint32_t>>& offsets, int lo, int hi)
 {
 	if (lo >= hi || lo < 0) {
 		return;
@@ -128,13 +103,13 @@ void Pipeline::sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int l
 		{
 			i++;
 
-			Pair<uint32_t, uint32_t> tmp = offsets[i];
+			auto tmp = offsets[i];
 			offsets[i] = offsets[j];
 			offsets[j] = tmp;
 		}
 	}
 
-	Pair<uint32_t, uint32_t> tmp = offsets[i + 1];
+	auto tmp = offsets[i + 1];
 	offsets[i + 1] = offsets[hi];
 	offsets[hi] = tmp;
 
@@ -142,6 +117,19 @@ void Pipeline::sortBoundOffsets(Vector<Pair<uint32_t, uint32_t>>& offsets, int l
 
 	sortBoundOffsets(offsets, lo, partition - 1);
 	sortBoundOffsets(offsets, partition + 1, hi);
+}
+*/
+
+const Vector<uint32_t>& Pipeline::getDynamicOffsets()
+{
+	m_dynamicOffsets.resize(m_buffers.size());
+
+	for (int i = 0; i < m_buffers.size(); i++)
+	{
+		m_dynamicOffsets[i] = m_buffers[i].second->getDynamicOffset();
+	}
+
+	return m_dynamicOffsets;
 }
 
 void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
@@ -157,7 +145,7 @@ void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 	info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
 
 	m_boundImages.pushBack(info);
-	p_textureBatch.addTexture(texture);
+	p_boundTextures.addTexture(texture);
 
 	m_descriptorBuilder.bindImage(
 		idx,
@@ -169,7 +157,21 @@ void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 
 void Pipeline::bindBuffer(int idx, const ShaderBuffer* buffer)
 {
-	m_buffers.pushBack(Pair(idx, buffer));
+	bool inserted = false;
+
+	for (int i = 0; i < m_buffers.size(); i++)
+	{
+		if (m_buffers[i].first >= idx)
+		{
+			m_buffers.insert(i, Pair(idx, buffer));
+			inserted = true;
+			break;
+		}
+	}
+
+	if (!inserted) {
+		m_buffers.pushBack(Pair(idx, buffer));
+	}
 
 	m_descriptorBuilder.bindBuffer(
 		idx,

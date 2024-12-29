@@ -1,8 +1,8 @@
 #include "backbuffer.h"
 #include "util.h"
 #include "backend.h"
-#include "colour.h"
 
+#include "../math/colour.h"
 #include "../platform.h"
 
 using namespace llt;

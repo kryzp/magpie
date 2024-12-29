@@ -32,12 +32,15 @@ void ShaderBuffer::cleanUp()
 void ShaderBuffer::pushData(ShaderParameters& params)
 {
 	auto& packedParams = params.getPackedConstants();
-
 	pushData(packedParams.data(), packedParams.size());
 }
 
 void ShaderBuffer::pushData(const void* data, uint64_t size)
 {
+	if (!data || !size) {
+		return;
+	}
+
 	// calculate the total used memory so far
 	uint64_t totalUsedMemory = 0;
 	for (int i = 0; i < m_usageInFrame.size(); i++) {

@@ -16,26 +16,17 @@ TextureMgr::TextureMgr()
 
 TextureMgr::~TextureMgr()
 {
-	for (auto& [id, texture] : m_textureCache) {
+	for (auto& [name, texture] : m_textureCache) {
 		delete texture;
 	}
 
 	m_textureCache.clear();
 
-	for (auto& [id, sampler] : m_samplerCache) {
+	for (auto& [name, sampler] : m_samplerCache) {
 		delete sampler;
 	}
 
 	m_samplerCache.clear();
-}
-
-Texture* TextureMgr::getTexture(const String& name)
-{
-	if (m_textureCache.contains(name)) {
-		return m_textureCache[name];
-	}
-
-	return nullptr;
 }
 
 TextureSampler* TextureMgr::getSampler(const String& name)
@@ -47,8 +38,21 @@ TextureSampler* TextureMgr::getSampler(const String& name)
 	return nullptr;
 }
 
-Texture* TextureMgr::createFromImage(const String& name,const Image& image)
+Texture* TextureMgr::getTexture(const String& name)
 {
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
+	return nullptr;
+}
+
+Texture* TextureMgr::createFromImage(const String& name, const Image& image)
+{
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
 	Texture* texture = new Texture();
 
 	// create the texture from the image with a sampling count of 1 and 4 mipmaps
@@ -69,14 +73,16 @@ Texture* TextureMgr::createFromImage(const String& name,const Image& image)
 	stage->writeToTexture(texture, image.getSize());
 	delete stage;
 
-	// cache it
 	m_textureCache.insert(name, texture);
-
 	return texture;
 }
 
 Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
 {
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
 	Texture* texture = new Texture();
 
 	texture->setSize(width, height);
@@ -105,14 +111,16 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 		texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
-	// cache it
 	m_textureCache.insert(name, texture);
-
 	return texture;
 }
 
 Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
 {
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
 	Texture* texture = new Texture();
 
 	texture->setSize(width, height);
@@ -123,14 +131,16 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	// cache it
 	m_textureCache.insert(name, texture);
-
 	return texture;
 }
 
 Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
 {
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
 	Texture* texture = new Texture();
 
 	texture->setSize(right.getWidth(), right.getHeight());
@@ -156,20 +166,18 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 
 	delete stage;
 
-	// cache it
 	m_textureCache.insert(name, texture);
-
 	return texture;
 }
 
 TextureSampler* TextureMgr::createSampler(const String& name, const TextureSampler::Style& style)
 {
 	if (m_samplerCache.contains(name)) {
-		return m_samplerCache[name];
+		return m_samplerCache.get(name);
 	}
 
 	TextureSampler* sampler = new TextureSampler(style);
-	m_samplerCache.insert(name, sampler);
 
+	m_samplerCache.insert(name, sampler);
 	return sampler;
 }

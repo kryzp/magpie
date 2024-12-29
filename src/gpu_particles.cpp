@@ -1,3 +1,5 @@
+
+/*
 #include "gpu_particles.h"
 
 #include "graphics/backend.h"
@@ -57,18 +59,18 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 
 	delete[] particleData;
 
-	m_particleVertexFormat.addBinding(sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, pos) },
-		{ VK_FORMAT_R32G32_SFLOAT, offsetof(MyVertex, uv) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, col) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, norm) }
+	m_particleVertexFormat.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, pos) },
+		{ VK_FORMAT_R32G32_SFLOAT, offsetof(ModelVertex, uv) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, col) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, norm) }
 	});
 
 	m_particleVertexFormat.addBinding(sizeof(Particle), VK_VERTEX_INPUT_RATE_INSTANCE, {
 		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(Particle, pos) }
 	});
 
-	Vector<MyVertex> particleVtx =
+	Vector<ModelVertex> particleVtx =
 	{
 		// front face
 		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
@@ -129,14 +131,14 @@ void GPUParticles::init(const ShaderBuffer* shaderParams)
 
 	TextureSampler* pixelSampler = g_textureManager->getSampler("nearest");
 
-	m_particleMesh.build(particleVtx.data(), particleVtx.size(), sizeof(MyVertex), particleIdx.data(), particleIdx.size());
+	m_particleMesh.build(particleVtx.data(), particleVtx.size(), sizeof(ModelVertex), particleIdx.data(), particleIdx.size());
 
 	m_computeParamsBuffer = g_shaderBufferManager->createUBO();
-	m_computeParams.set("projMatrix", glm::identity<glm::mat4>());
-	m_computeParams.set("inverseProjMatrix", glm::identity<glm::mat4>());
-	m_computeParams.set("inverseViewMatrix", glm::identity<glm::mat4>());
-	m_computeParams.set("inversePrevViewMatrix", glm::identity<glm::mat4>());
-	m_computeParams.set("prevViewMatrix", glm::identity<glm::mat4>());
+	m_computeParams.setMat4("projMatrix", glm::identity<glm::mat4>());
+	m_computeParams.setMat4("inverseProjMatrix", glm::identity<glm::mat4>());
+	m_computeParams.setMat4("inverseViewMatrix", glm::identity<glm::mat4>());
+	m_computeParams.setMat4("inversePrevViewMatrix", glm::identity<glm::mat4>());
+	m_computeParams.setMat4("prevViewMatrix", glm::identity<glm::mat4>());
 	m_computeParamsBuffer->pushData(m_computeParams);
 
 	m_particleComputePipeline.bindShader(m_computeProgram);
@@ -161,11 +163,11 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 {
 	g_vulkanBackend->beginCompute();
 
-	m_computeParams.set("projMatrix", camera.getProj());
-	m_computeParams.set("inverseProjMatrix", glm::inverse(camera.getProj()));
-	m_computeParams.set("inverseViewMatrix", glm::inverse(camera.getView()));
-	m_computeParams.set("inversePrevViewMatrix", glm::inverse(m_prevViewMatrix));
-	m_computeParams.set("prevViewMatrix", m_prevViewMatrix);
+	m_computeParams.setMat4("projMatrix", camera.getProj());
+	m_computeParams.setMat4("inverseProjMatrix", glm::inverse(camera.getProj()));
+	m_computeParams.setMat4("inverseViewMatrix", glm::inverse(camera.getView()));
+	m_computeParams.setMat4("inversePrevViewMatrix", glm::inverse(m_prevViewMatrix));
+	m_computeParams.setMat4("prevViewMatrix", m_prevViewMatrix);
 	m_computeParamsBuffer->pushData(m_computeParams);
 
 	m_particleComputePipeline.bind();
@@ -178,7 +180,7 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 
 void GPUParticles::render()
 {
-	RenderOp pass;
+	RenderPass pass;
 	pass.setInstanceData(PARTICLE_COUNT, 0, m_particleBuffer->getBuffer());
 	pass.setMesh(m_particleMesh);
 
@@ -191,3 +193,4 @@ void GPUParticles::render()
 
 	g_vulkanBackend->endGraphics();
 }
+*/

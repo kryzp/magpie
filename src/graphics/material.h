@@ -9,40 +9,53 @@
 #include "technique.h"
 #include "texture.h"
 #include "shader.h"
+#include "shader_buffer.h"
+#include "graphics_pipeline.h"
 
 namespace llt
 {
-	/**
-	 * Compact representation of a material.
-	 */
-	struct MaterialData
+	struct BoundTexture
 	{
-		//Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
-		//ShaderParameters parameters;
-		//String technique;
+		Texture* texture;
+		TextureSampler* sampler;
 	};
 
-	/**
-	 * Material that packages together the required shaders, textures, and other
-	 * information required for drawing a material.
-	 */
+	struct MaterialData
+	{
+		Vector<BoundTexture> textures;
+		String technique;
+		ShaderParameters parameters;
+
+		bool depthTest = true;
+		bool depthWrite = true;
+
+		uint64_t getHash() const
+		{
+			uint64_t result = 0;
+
+			for (auto& t : textures) {
+				hash::combine(&result, &t);
+			}
+
+			hash::combine(&result, &technique);
+			hash::combine(&result, &depthTest);
+			hash::combine(&result, &depthWrite);
+
+			return result;
+		}
+	};
+
 	class Material
 	{
-	/*
 	public:
 		Material();
 		virtual ~Material();
 
-		uint64_t hash() const;
+		uint64_t getHash() const;
 
-		void setTexture(int idx, const Texture* texture, TextureSampler* sampler);
-
-		Technique technique;
-	 	// todo: change to a Vector<Technique> including "fallback" techniques, with primary technique at techniques[0]?
-
-		ShaderParameters parameters;
-		Array<SampledTexture, mgc::MAX_BOUND_TEXTURES> textures;
-	*/
+		Vector<BoundTexture> textures;
+		ShaderBuffer* parameterBuffer;
+		GraphicsPipeline pipeline;
 	};
 }
 

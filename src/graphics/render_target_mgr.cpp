@@ -2,6 +2,8 @@
 #include "render_target.h"
 #include "texture.h"
 
+#include "../math/colour.h"
+
 llt::RenderTargetMgr* llt::g_renderTargetManager = nullptr;
 
 using namespace llt;
@@ -55,7 +57,7 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 		result->addAttachment(texture);
 	}
 
-	result->create();
+	result->setClearColours(Colour::black());
 
 	m_targets.insert(name, result);
 	return result;

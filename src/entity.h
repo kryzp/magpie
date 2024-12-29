@@ -1,8 +1,8 @@
 #ifndef ENTITY_H_
 #define ENTITY_H_
 
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
+#include "math/transform.h"
+#include "graphics/mesh.h"
 
 namespace llt
 {
@@ -12,28 +12,15 @@ namespace llt
 		Entity();
 		~Entity();
 
-		glm::mat4 getMatrix();
-		glm::mat4 getPrevMatrix();
-
 		void storePrevMatrix();
 
-		void setPosition(const glm::vec3& position);
-		void setOrigin(const glm::vec3& origin);
-		void setRotation(float angle, const glm::vec3& axis);
-		void setScale(const glm::vec3& scale);
+		const glm::mat4& getPrevMatrix() const;
+
+		Transform transform;
+		Mesh* mesh;
 
 	private:
-		void rebuildMatrix();
-
-		glm::mat4 m_matrix;
 		glm::mat4 m_prevMatrix;
-
-		bool m_matrixDirty;
-
-		glm::vec3 m_position;
-		glm::vec3 m_origin;
-		glm::quat m_rotation;
-		glm::vec3 m_scale;
 	};
 }
 

@@ -2,6 +2,7 @@
 #define TECHNIQUE_H_
 
 #include "shader.h"
+#include "vertex_descriptor.h"
 
 namespace llt
 {
@@ -26,20 +27,29 @@ namespace llt
 		Technique() = default;
 		~Technique() = default;
 
-		/*
 		void setPass(ShaderPass pass, ShaderEffect* effect)
 		{
 			m_passes[pass] = effect;
 		}
 
-		ShaderEffect* getPass(ShaderPass pass) const
+		const ShaderEffect* getPass(ShaderPass pass) const
 		{
 			return m_passes[pass];
 		}
-		*/
+
+		void setVertexFormat(const VertexDescriptor& descriptor)
+		{
+			m_vertexFormat = descriptor;
+		}
+
+		const VertexDescriptor& getVertexFormat() const
+		{
+			return m_vertexFormat;
+		}
 
 	private:
-		//ShaderEffect* m_passes[SHADER_PASS_MAX_ENUM];
+		VertexDescriptor m_vertexFormat;
+		ShaderEffect* m_passes[SHADER_PASS_MAX_ENUM];
 	};
 }
 

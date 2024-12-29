@@ -8,7 +8,7 @@
 
 namespace llt
 {
-	struct RenderOp
+	struct RenderPass
 	{
 		struct MeshData
 		{
@@ -36,7 +36,7 @@ namespace llt
 		InstanceData instanceData;
 		IndirectData indirectData;
 
-		RenderOp()
+		RenderPass()
 			: meshData()
 			, instanceData()
 			, indirectData()

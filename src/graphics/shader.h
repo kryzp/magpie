@@ -148,23 +148,23 @@ namespace llt
 		/*
 		* Functions for setting different variables in shaders
 		*/
-		void set(const String& name, int8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S8); }
-		void set(const String& name, int16_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S16); }
-		void set(const String& name, int32_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S32); }
-		void set(const String& name, int64_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S64); }
-		void set(const String& name, uint8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U8); }
-		void set(const String& name, uint16_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U16); }
-		void set(const String& name, uint32_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U32); }
-		void set(const String& name, uint64_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U64); }
-		void set(const String& name, float val)							{ _set(name, val, ShaderParameter::PARAM_TYPE_F32); }
-		void set(const String& name, double val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_F64); }
-		void set(const String& name, bool val)							{ _set(name, val, ShaderParameter::PARAM_TYPE_BOOL); }
-		void set(const String& name, const glm::vec2& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC2F); }
-		void set(const String& name, const glm::vec3& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC3F); }
-		void set(const String& name, const glm::vec4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC4F); }
-		void set(const String& name, const glm::mat4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_MAT4X4F); }
-		void set(const String& name, const float* vals, int n)			{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_F32); }
-		void set(const String& name, const glm::vec3* vals, int n)		{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_VEC3F); }
+		void setInt8(const String& name, int8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S8); }
+		void setInt16(const String& name, int16_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S16); }
+		void setInt32(const String& name, int32_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S32); }
+		void setInt64(const String& name, int64_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S64); }
+		void setUInt8(const String& name, uint8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U8); }
+		void setUInt16(const String& name, uint16_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U16); }
+		void setUInt32(const String& name, uint32_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U32); }
+		void setUInt64(const String& name, uint64_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U64); }
+		void setFloat(const String& name, float val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_F32); }
+		void setDouble(const String& name, double val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_F64); }
+		void setBool(const String& name, bool val)							{ _set(name, val, ShaderParameter::PARAM_TYPE_BOOL); }
+		void setVec2(const String& name, const glm::vec2& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC2F); }
+		void setVec3(const String& name, const glm::vec3& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC3F); }
+		void setVec4(const String& name, const glm::vec4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC4F); }
+		void setMat4(const String& name, const glm::mat4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_MAT4X4F); }
+		void setFloatArr(const String& name, const float* vals, int n)		{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_F32); }
+		void setVec3Arr(const String& name, const glm::vec3* vals, int n)	{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_VEC3F); }
 
 	private:
 		template <typename T>
@@ -267,21 +267,14 @@ namespace llt
 	* Describes a collection of GPU shader programs, making up a full "effect", essentially
 	* the pipeline of vertex -> ... -> fragment, all in stages.
 	*/
-	/*
 	class ShaderEffect
 	{
 	public:
 		ShaderEffect() = default;
 		~ShaderEffect() = default;
 
-		void addStage(ShaderProgram* shader)
-		{
-			stages.pushBack(shader);
-		}
-
 		Vector<ShaderProgram*> stages;
 	};
-	*/
 }
 
 #endif // VK_SHADER_H_

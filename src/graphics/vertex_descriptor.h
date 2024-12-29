@@ -3,6 +3,9 @@
 
 #include <vulkan/vulkan.h>
 
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+
 #include "../common.h"
 #include "../container/vector.h"
 
@@ -32,6 +35,21 @@ namespace llt
 		Vector<VkVertexInputAttributeDescription> m_attributes;
 		Vector<VkVertexInputBindingDescription> m_bindings;
 	};
+
+	// //
+
+	struct ModelVertex
+	{
+		glm::vec3 pos;
+		glm::vec2 uv;
+		glm::vec3 col;
+		glm::vec3 norm;
+		glm::vec3 tangent;
+	};
+
+	void initVertexTypes();
+
+	extern VertexDescriptor g_modelVertex;
 }
 
 #endif // VERTEX_DESCRIPTOR_H_
