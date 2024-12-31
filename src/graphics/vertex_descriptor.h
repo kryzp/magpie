@@ -49,7 +49,7 @@ namespace llt
 
 	void initVertexTypes();
 
-	extern VertexDescriptor g_modelVertex;
+	extern VertexDescriptor g_modelVertexFormat;
 }
 
 #endif // VERTEX_DESCRIPTOR_H_

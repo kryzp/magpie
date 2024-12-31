@@ -13,116 +13,14 @@ namespace llt
 {
 	class VulkanBackend;
 
-	/**
-	* Represents the possible parameters that can be passed into a shader.
-	*/
-	struct ShaderParameter
-	{
-		static constexpr uint64_t MAX_PARAMETER_SIZE = sizeof(float) * 64;
-
-		/*
-		* Different parameter types
-		*/
-		enum ParameterType
-		{
-			PARAM_TYPE_NONE,
-
-			PARAM_TYPE_S8,
-			PARAM_TYPE_S16,
-			PARAM_TYPE_S32,
-			PARAM_TYPE_S64,
-
-			PARAM_TYPE_U8,
-			PARAM_TYPE_U16,
-			PARAM_TYPE_U32,
-			PARAM_TYPE_U64,
-
-			PARAM_TYPE_F32,
-			PARAM_TYPE_F64,
-			PARAM_TYPE_BOOL,
-
-			PARAM_TYPE_VEC2F,
-			PARAM_TYPE_VEC3F,
-			PARAM_TYPE_VEC4F,
-
-			PARAM_TYPE_MAT4X4F,
-
-			PARAM_TYPE_MAX_ENUM
-		};
-
-		ParameterType type;
-		byte data[MAX_PARAMETER_SIZE];
-
-		/*
-		* Each parameter has an alignment offset set by the vulkan standard
-		*/
-		constexpr uint64_t alignment_offset() const
-		{
-			switch (type)
-			{
-				case PARAM_TYPE_S8:			return 4;
-				case PARAM_TYPE_S16:		return 4;
-				case PARAM_TYPE_S32:		return 8;
-				case PARAM_TYPE_S64:		return 16;
-
-				case PARAM_TYPE_U8:			return 4;
-				case PARAM_TYPE_U16:		return 4;
-				case PARAM_TYPE_U32:		return 8;
-				case PARAM_TYPE_U64:		return 16;
-
-				case PARAM_TYPE_F32:		return 4;
-				case PARAM_TYPE_F64:		return 8;
-
-				case PARAM_TYPE_BOOL:		return 4;
-
-				case PARAM_TYPE_VEC2F:		return 8;
-				case PARAM_TYPE_VEC3F:		return 16;
-				case PARAM_TYPE_VEC4F:		return 16;
-
-				case PARAM_TYPE_MAT4X4F:	return 64;
-
-				default: return 0;
-			}
-		}
-
-		/*
-		* Get the actual memory size of each parameter.
-		*/
-		constexpr uint64_t size() const
-		{
-			switch (type)
-			{
-				case PARAM_TYPE_S8:			return sizeof(int8_t);
-				case PARAM_TYPE_S16:		return sizeof(int16_t);
-				case PARAM_TYPE_S32:		return sizeof(int32_t);
-				case PARAM_TYPE_S64:		return sizeof(int64_t);
-
-				case PARAM_TYPE_U8:			return sizeof(uint8_t);
-				case PARAM_TYPE_U16:		return sizeof(uint16_t);
-				case PARAM_TYPE_U32:		return sizeof(uint32_t);
-				case PARAM_TYPE_U64:		return sizeof(uint64_t);
-
-				case PARAM_TYPE_F32:		return sizeof(float);
-				case PARAM_TYPE_F64:		return sizeof(double);
-
-				case PARAM_TYPE_BOOL:		return sizeof(bool);
-
-				case PARAM_TYPE_VEC2F:		return sizeof(float) * 2;
-				case PARAM_TYPE_VEC3F:		return sizeof(float) * 3;
-				case PARAM_TYPE_VEC4F:		return sizeof(float) * 4;
-
-				case PARAM_TYPE_MAT4X4F:	return sizeof(float) * 16;
-
-				default: return 0;
-			}
-		}
-	};
-
-	/**
-	* Represents a list of a shader program parameters
-	*/
 	class ShaderParameters
 	{
+		struct ShaderParameter
+		{
+			void* data;
+			uint64_t size;
+		};
+
 	public:
 		// the packed data is really just a list of bytes so this helps legibility
 		using PackedData = Vector<byte>;
@@ -140,6 +38,11 @@ namespace llt
 		*/
 		void reset()
 		{
+			for (int i = 0; i < m_constants.size(); i++)
+			{
+				free(m_constants[i].second.data);
+			}
+
 			m_constants.clear();
 			m_packedConstants.clear();
 			m_dirtyConstants = true;
@@ -148,84 +51,51 @@ namespace llt
 		/*
 		* Functions for setting different variables in shaders
 		*/
-		void setInt8(const String& name, int8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S8); }
-		void setInt16(const String& name, int16_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S16); }
-		void setInt32(const String& name, int32_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S32); }
-		void setInt64(const String& name, int64_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_S64); }
-		void setUInt8(const String& name, uint8_t val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_U8); }
-		void setUInt16(const String& name, uint16_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U16); }
-		void setUInt32(const String& name, uint32_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U32); }
-		void setUInt64(const String& name, uint64_t val)					{ _set(name, val, ShaderParameter::PARAM_TYPE_U64); }
-		void setFloat(const String& name, float val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_F32); }
-		void setDouble(const String& name, double val)						{ _set(name, val, ShaderParameter::PARAM_TYPE_F64); }
-		void setBool(const String& name, bool val)							{ _set(name, val, ShaderParameter::PARAM_TYPE_BOOL); }
-		void setVec2(const String& name, const glm::vec2& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC2F); }
-		void setVec3(const String& name, const glm::vec3& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC3F); }
-		void setVec4(const String& name, const glm::vec4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_VEC4F); }
-		void setMat4(const String& name, const glm::mat4& val)				{ _set(name, val, ShaderParameter::PARAM_TYPE_MAT4X4F); }
-		void setFloatArr(const String& name, const float* vals, int n)		{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_F32); }
-		void setVec3Arr(const String& name, const glm::vec3* vals, int n)	{ _setArray(name, vals, n, ShaderParameter::PARAM_TYPE_VEC3F); }
+		void setInt8		(const String& name, int8_t val)						{ _setBuffer(name, &val, sizeof(int8_t)); }
+		void setInt16		(const String& name, int16_t val)						{ _setBuffer(name, &val, sizeof(int16_t)); }
+		void setInt32		(const String& name, int32_t val)						{ _setBuffer(name, &val, sizeof(int32_t)); }
+		void setInt64		(const String& name, int64_t val)						{ _setBuffer(name, &val, sizeof(int64_t)); }
+		void setUInt8		(const String& name, uint8_t val)						{ _setBuffer(name, &val, sizeof(uint8_t)); }
+		void setUInt16		(const String& name, uint16_t val)						{ _setBuffer(name, &val, sizeof(uint16_t)); }
+		void setUInt32		(const String& name, uint32_t val)						{ _setBuffer(name, &val, sizeof(uint32_t)); }
+		void setUInt64		(const String& name, uint64_t val)						{ _setBuffer(name, &val, sizeof(uint64_t)); }
+		void setFloat		(const String& name, float val)							{ _setBuffer(name, &val, sizeof(float)); }
+		void setDouble		(const String& name, double val)						{ _setBuffer(name, &val, sizeof(double)); }
+		void setBool		(const String& name, bool val)							{ _setBuffer(name, &val, sizeof(bool)); }
+		void setVec2		(const String& name, const glm::vec2& val)				{ _setBuffer(name, &val, sizeof(float) * 2); }
+		void setVec3		(const String& name, const glm::vec3& val)				{ _setBuffer(name, &val, sizeof(float) * 3); }
+		void setVec4		(const String& name, const glm::vec4& val)				{ _setBuffer(name, &val, sizeof(float) * 4); }
+		void setMat3		(const String& name, const glm::mat3& val)				{ _setBuffer(name, &val, sizeof(float) * 3 * 3); }
+		void setMat4		(const String& name, const glm::mat4& val)				{ _setBuffer(name, &val, sizeof(float) * 4 * 4); }
+		void setFloatArr	(const String& name, const float* vals, int n)			{ _setBuffer(name, vals, sizeof(float) * n); }
+		void setVec3Arr		(const String& name, const glm::vec3* vals, int n)		{ _setBuffer(name, vals, sizeof(float) * 3 * n); }
+		void setBuffer		(const String& name, const void* data, uint64_t size)	{ _setBuffer(name, data, size); }
 
 	private:
-		template <typename T>
-		void _setArray(const String& name, const T* vals, int n, ShaderParameter::ParameterType type)
+		void _setBuffer(const String& name, const void* data, uint64_t size)
 		{
 			// search for the parameter in our list
 			int i = 0;
 			for (; i <= m_constants.size(); i++) {
-				if (i == m_constants.size()) {
-					break;
-				}
-				if (m_constants[i].first == name) {
+				if (i >= m_constants.size() || m_constants[i].first == name) {
 					break;
 				}
 			}
 
-			// we've already cached this parameter, we just have to update it
-			if (i < m_constants.size()) {
-				for (int j = 0; j < n; j++) {
-					mem::copy(m_constants[i].second.data, vals + j, sizeof(T));
-				}
+			if (i < m_constants.size())
+			{
+				// we've already cached this parameter, we just have to update it
+				mem::copy(m_constants[i].second.data, data, size);
 			}
-
-			// we haven't yet cached this parameter, add it to our list
-			else {
-				for (int j = 0; j < n; j++) {
-					ShaderParameter p = {};
-					p.type = type;
-					mem::copy(p.data, vals + j, sizeof(T));
-					m_constants.pushBack(Pair(name, p));
-				}
-			}
-
-			// we've become dirty and will have to rebuild next time we ask for the data
-			m_dirtyConstants = true;
-		}
-
-		template <typename T>
-		void _set(const String& name, const T& val, ShaderParameter::ParameterType type)
-		{
-			// search for the parameter in our list
-			int i = 0;
-			for (; i <= m_constants.size(); i++) {
-				if (i == m_constants.size()) {
-					break;
-				}
-				if (m_constants[i].first == name) {
-					break;
-				}
-			}
-
-			// we've already cached this parameter, we just have to update it
-			if (i < m_constants.size()) {
-				mem::copy(m_constants[i].second.data, &val, sizeof(T));
-			}
-
-			// we haven't yet cached this parameter, add it to our list
-			else {
+			else
+			{
+				// we haven't yet cached this parameter, add it to our list
 				ShaderParameter p = {};
-				p.type = type;
-				mem::copy(p.data, &val, sizeof(T));
+				p.size = size;
+				p.data = malloc(size);
+
+				mem::copy(p.data, data, size);
+
 				m_constants.pushBack(Pair(name, p));
 			}
 
@@ -233,9 +103,6 @@ namespace llt
 			m_dirtyConstants = true;
 		}
 
-		/*
-		* Rebuilds the constant data and packs it up.
-		*/
 		void rebuildPackedConstantData();
 
 		Vector<Pair<String, ShaderParameter>> m_constants; // the reason we don't use a hashmap here is because we need to PRESERVE THE ORDER of the elements! the hashmap is inherently unordered.
@@ -251,7 +118,7 @@ namespace llt
 
 		void cleanUp();
 
-		void loadFromSource(const char* source, uint64_t source_size);
+		void loadFromSource(const char* source, uint64_t size);
 
 		VkShaderModule getModule() const;
 		VkPipelineShaderStageCreateInfo getShaderStageCreateInfo() const;
@@ -263,10 +130,6 @@ namespace llt
 		VkShaderModule m_shaderModule;
 	};
 
-	/**
-	* Describes a collection of GPU shader programs, making up a full "effect", essentially
-	* the pipeline of vertex -> ... -> fragment, all in stages.
-	*/
 	class ShaderEffect
 	{
 	public:

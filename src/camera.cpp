@@ -85,7 +85,7 @@ glm::mat4 Camera::getView() const
 	return glm::lookAt(position, position + direction, up);
 }
 
-glm::mat4 Camera::getViewNoTranslation() const
+glm::mat4 Camera::getRotationMatrix() const
 {
 	return glm::lookAt(glm::vec3(0.0, 0.0, 0.0), direction, up);
 }

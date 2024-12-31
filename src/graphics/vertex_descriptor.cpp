@@ -1,12 +1,12 @@
 #include "vertex_descriptor.h"
 
-llt::VertexDescriptor llt::g_modelVertex;
+llt::VertexDescriptor llt::g_modelVertexFormat;
 
 using namespace llt;
 
 void llt::initVertexTypes()
 {
-	g_modelVertex.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+	g_modelVertexFormat.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
 		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, pos) },
 		{ VK_FORMAT_R32G32_SFLOAT, offsetof(ModelVertex, uv) },
 		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, col) },

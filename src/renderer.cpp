@@ -72,8 +72,6 @@ void Renderer::init(Backbuffer* backbuffer)
 //
 //	m_target->createDepthAttachment();
 //
-//	createEntities();
-//
 //	m_gpuParticles.init(m_shaderParamsBuffer);
 //
 //	m_postProcessPipeline.setVertexDescriptor(g_modelVertex);
@@ -186,10 +184,13 @@ void Renderer::renderSkybox(const Camera& camera, float deltaTime, float elapsed
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 
 	g_materialSystem->globalParameters.setMat4("projMatrix", camera.getProj());
-	g_materialSystem->globalParameters.setMat4("currViewMatrix", camera.getViewNoTranslation());
-	g_materialSystem->globalParameters.setMat4("prevViewMatrix", m_prevViewMatrix);
-	g_materialSystem->globalParameters.setVec3("viewPos", camera.position);
+	g_materialSystem->globalParameters.setMat4("viewMatrix", camera.getRotationMatrix());
+	g_materialSystem->globalParameters.setVec4("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
 	g_materialSystem->updateGlobalBuffer();
+
+	g_materialSystem->instanceParameters.setMat4("modelMatrix", glm::identity<glm::mat4>());
+	g_materialSystem->instanceParameters.setMat4("normalMatrix", glm::identity<glm::mat4>());
+	g_materialSystem->updateInstanceBuffer();
 
 	RenderPass pass;
 	pass.setMesh(m_skyboxMesh);
@@ -204,9 +205,9 @@ void Renderer::renderEntities(const Camera& camera, float deltaTime, float elaps
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 
 	g_materialSystem->globalParameters.setMat4("projMatrix", camera.getProj());
-	g_materialSystem->globalParameters.setMat4("currViewMatrix", camera.getView());
-	g_materialSystem->globalParameters.setMat4("prevViewMatrix", m_prevViewMatrix);
-	g_materialSystem->globalParameters.setVec3("viewPos", camera.position);
+	g_materialSystem->globalParameters.setMat4("viewMatrix", camera.getView());
+	//g_materialSystem->globalParameters.setMat4("prevViewMatrix", m_prevViewMatrix);
+	g_materialSystem->globalParameters.setVec4("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
 	g_materialSystem->updateGlobalBuffer();
 
 	for (Entity& entity : m_renderEntities)
@@ -225,8 +226,9 @@ void Renderer::renderEntities(const Camera& camera, float deltaTime, float elaps
 			RenderPass pass;
 			pass.setMesh(*mesh);
 
-			g_materialSystem->instanceParameters.setMat4("currModelMatrix", entity.transform.getMatrix());
-			g_materialSystem->instanceParameters.setMat4("prevModelMatrix", entity.getPrevMatrix());
+			g_materialSystem->instanceParameters.setMat4("modelMatrix", entity.transform.getMatrix());
+			//g_materialSystem->instanceParameters.setMat4("prevModelMatrix", entity.getPrevMatrix());
+			g_materialSystem->instanceParameters.setMat4("normalMatrix", glm::transpose(glm::inverse(entity.transform.getMatrix())));
 			g_materialSystem->updateInstanceBuffer();
 
 			material->pipeline.render(pass);
@@ -396,5 +398,4 @@ void Renderer::createEntities()
 	s3->build(blockVertices.data(), blockVertices.size(), sizeof(ModelVertex), blockIndices.data(), blockIndices.size());
 	s3->setMaterial(stoneMaterial);
 }
-
- */
+*/

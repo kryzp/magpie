@@ -6,15 +6,21 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
+immediate todo:
+- merge ShaderParameters into ShaderBuffer someway
+- use multiple descriptor sets for different update frequencies, i.e: per frame, per instance, etc...
+- make texture transitioning nicer
+- global staging buffer rather than constantly creating a new one then deleting it
+- texture transitioning when moving into and out of a graphics queue render call is a bit messy, wayyyy too much vkQueueSubmit -> vkQueueWaitIdle then-back-to-vkQueueSubmit's!!!
+
 todo:
 - VK_FORMAT_R32G32B32_SFLOAT isnt supported??? wtf???
-- drawindirect support
-- model loading
-- stencil buffer support! currently i just discard all the data
+- drawindirect support (proper)
+- stencil buffer support!
 - I think queues arent currently assigned properly(?)
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
 
-stuff im interested in:
+broad todo:
 - imgui
 - pbr
 - volumetrics

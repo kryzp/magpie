@@ -1,6 +1,7 @@
 #include "material_system.h"
 #include "shader_mgr.h"
 #include "vertex_descriptor.h"
+#include "light.h"
 
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -33,15 +34,26 @@ void MaterialSystem::initBuffers()
 	m_globalBuffer = g_shaderBufferManager->createUBO();
 	m_instanceBuffer = g_shaderBufferManager->createUBO();
 
+	Light lights[16] = {};
+	mem::set(lights, 0, sizeof(Light) * 16);
+
+	lights[0].position = { 0.0f, 0.0f, 0.0f };
+	lights[0].radius = 0.0f;
+	lights[0].attenuation = 0.0f;
+	lights[0].colour = { 1.0f, 1.0f, 1.0f };
+	lights[0].direction = { 1.0f, -1.0f, -1.0f };
+	lights[0].type = LIGHT_TYPE_SUN;
+
+	lights[0].direction /= glm::length(lights[0].direction);
+
 	globalParameters.setMat4("projMatrix", glm::identity<glm::mat4>());
-	globalParameters.setMat4("currViewMatrix", glm::identity<glm::mat4>());
-	globalParameters.setMat4("prevViewMatrix", glm::identity<glm::mat4>());
-	globalParameters.setVec3("viewPos", glm::zero<glm::vec3>());
-
-	instanceParameters.setMat4("currModelMatrix", glm::identity<glm::mat4>());
-	instanceParameters.setMat4("prevModelMatrix", glm::identity<glm::mat4>());
-
+	globalParameters.setMat4("viewMatrix", glm::identity<glm::mat4>());
+	globalParameters.setVec4("viewPos", glm::zero<glm::vec4>());
+	globalParameters.setBuffer("lights", lights, 16 * sizeof(Light));
 	updateGlobalBuffer();
+
+	instanceParameters.setMat4("modelMatrix", glm::identity<glm::mat4>());
+	instanceParameters.setMat4("normalMatrix", glm::identity<glm::mat4>());
 	updateInstanceBuffer();
 }
 
@@ -67,9 +79,9 @@ const ShaderBuffer* MaterialSystem::getInstanceBuffer() const
 
 void MaterialSystem::loadDefaultTechniques()
 {
-	ShaderProgram* genericVertex	= g_shaderManager->create("genericVertex",	"../res/shaders/raster/generic_vertex.spv",			VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* pbrFragment		= g_shaderManager->create("pbrFragment",	"../res/shaders/raster/texturedPBR_fragment.spv",	VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* skyboxFragment	= g_shaderManager->create("skyboxFragment",	"../res/shaders/raster/fragment_skybox.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* genericVertex	= g_shaderManager->create("genericVertex",	"../res/shaders/raster/model_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
+	ShaderProgram* pbrFragment		= g_shaderManager->create("pbrFragment",	"../res/shaders/raster/texturedPBR.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* skyboxFragment	= g_shaderManager->create("skyboxFragment",	"../res/shaders/raster/skybox.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	ShaderEffect* pbrEffect = g_shaderManager->createEffect();
 	pbrEffect->stages.pushBack(genericVertex);
@@ -84,11 +96,11 @@ void MaterialSystem::loadDefaultTechniques()
 
 	pbrTechnique.setPass(SHADER_PASS_FORWARD, pbrEffect);
 	pbrTechnique.setPass(SHADER_PASS_SHADOW, nullptr);
-	pbrTechnique.setVertexFormat(g_modelVertex);
+	pbrTechnique.setVertexFormat(g_modelVertexFormat);
 
 	skyboxTechnique.setPass(SHADER_PASS_FORWARD, skyboxEffect);
 	skyboxTechnique.setPass(SHADER_PASS_SHADOW, nullptr);
-	skyboxTechnique.setVertexFormat(g_modelVertex);
+	skyboxTechnique.setVertexFormat(g_modelVertexFormat);
 
 	addTechnique("texturedPBR_opaque", pbrTechnique);
 	addTechnique("skybox", skyboxTechnique);

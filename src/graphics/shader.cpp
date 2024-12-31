@@ -20,19 +20,19 @@ void ShaderParameters::rebuildPackedConstantData()
 	m_packedConstants.clear();
 
 	// calculate the actual "aligned size" of our data
-	uint64_t alignedSize = 0;
+	uint64_t totalSize = 0;
 	for (auto& [name, param] : m_constants) {
-		alignedSize += param.alignment_offset();
+		totalSize += param.size;
 	}
 
 	// resize it to fit it
-	m_packedConstants.resize(alignedSize);
+	m_packedConstants.resize(totalSize);
 
 	// put all of our data into the packed constants
 	uint64_t offset = 0;
 	for (auto& [name, param] : m_constants) {
-		mem::copy(m_packedConstants.data() + offset, &param.data, param.size());
-		offset += param.alignment_offset();
+		mem::copy(m_packedConstants.data() + offset, param.data, param.size);
+		offset += param.size;
 	}
 }
 
@@ -56,12 +56,12 @@ void ShaderProgram::cleanUp()
 	m_shaderModule = VK_NULL_HANDLE;
 }
 
-void ShaderProgram::loadFromSource(const char* source, uint64_t source_size)
+void ShaderProgram::loadFromSource(const char* source, uint64_t size)
 {
 	// create the shader module from source
 	VkShaderModuleCreateInfo moduleCreateInfo = {};
 	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	moduleCreateInfo.codeSize = source_size;
+	moduleCreateInfo.codeSize = size;
 	moduleCreateInfo.pCode = (const uint32_t*)source;
 
 	if (VkResult result = vkCreateShaderModule(g_vulkanBackend->device, &moduleCreateInfo, nullptr, &m_shaderModule); result != VK_SUCCESS) {

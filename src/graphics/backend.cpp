@@ -841,8 +841,8 @@ void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 
 void VulkanBackend::endGraphics()
 {
-	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	auto currentBuffer = currentFrame.commandBuffer;
+	const auto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	const auto& currentBuffer = currentFrame.commandBuffer;
 
 #if LLT_MAC_SUPPORT
 	vkutil::ext_vkCmdEndRendering(currentBuffer);

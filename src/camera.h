@@ -14,7 +14,7 @@ class Camera
 		void update(float dt);
 
 		glm::mat4 getView() const;
-		glm::mat4 getViewNoTranslation() const;
+		glm::mat4 getRotationMatrix() const;
 		glm::mat4 getProj() const;
 
 		void setYaw(double yaw);
