@@ -36,7 +36,7 @@ Renderer::Renderer()
 void Renderer::init(Backbuffer* backbuffer)
 {
 	m_backbuffer = backbuffer;
-	m_pushConstants.setFloat("time", 0.0f);
+	m_pushConstants.setValue<float>("time", 0.0f);
 	m_prevViewMatrix = glm::identity<glm::mat4>();
 
 	initVertexTypes();
@@ -180,16 +180,16 @@ void Renderer::createSkybox()
 
 void Renderer::renderSkybox(const Camera& camera, float deltaTime, float elapsedTime)
 {
-	m_pushConstants.setFloat("time", elapsedTime);
+	m_pushConstants.setValue<float>("time", elapsedTime);
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 
-	g_materialSystem->globalParameters.setMat4("projMatrix", camera.getProj());
-	g_materialSystem->globalParameters.setMat4("viewMatrix", camera.getRotationMatrix());
-	g_materialSystem->globalParameters.setVec4("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
+	g_materialSystem->globalParameters.setValue<glm::mat4>("projMatrix", camera.getProj());
+	g_materialSystem->globalParameters.setValue<glm::mat4>("viewMatrix", camera.getRotationMatrix());
+	g_materialSystem->globalParameters.setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
 	g_materialSystem->updateGlobalBuffer();
 
-	g_materialSystem->instanceParameters.setMat4("modelMatrix", glm::identity<glm::mat4>());
-	g_materialSystem->instanceParameters.setMat4("normalMatrix", glm::identity<glm::mat4>());
+	g_materialSystem->instanceParameters.setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
+	g_materialSystem->instanceParameters.setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
 	g_materialSystem->updateInstanceBuffer();
 
 	RenderPass pass;
@@ -201,13 +201,13 @@ void Renderer::renderSkybox(const Camera& camera, float deltaTime, float elapsed
 
 void Renderer::renderEntities(const Camera& camera, float deltaTime, float elapsedTime)
 {
-	m_pushConstants.setFloat("time", elapsedTime);
+	m_pushConstants.setValue<float>("time", elapsedTime);
 	g_vulkanBackend->setPushConstants(m_pushConstants);
 
-	g_materialSystem->globalParameters.setMat4("projMatrix", camera.getProj());
-	g_materialSystem->globalParameters.setMat4("viewMatrix", camera.getView());
+	g_materialSystem->globalParameters.setValue<glm::mat4>("projMatrix", camera.getProj());
+	g_materialSystem->globalParameters.setValue<glm::mat4>("viewMatrix", camera.getView());
 	//g_materialSystem->globalParameters.setMat4("prevViewMatrix", m_prevViewMatrix);
-	g_materialSystem->globalParameters.setVec4("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
+	g_materialSystem->globalParameters.setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
 	g_materialSystem->updateGlobalBuffer();
 
 	for (Entity& entity : m_renderEntities)
@@ -226,9 +226,9 @@ void Renderer::renderEntities(const Camera& camera, float deltaTime, float elaps
 			RenderPass pass;
 			pass.setMesh(*mesh);
 
-			g_materialSystem->instanceParameters.setMat4("modelMatrix", entity.transform.getMatrix());
+			g_materialSystem->instanceParameters.setValue<glm::mat4>("modelMatrix", entity.transform.getMatrix());
 			//g_materialSystem->instanceParameters.setMat4("prevModelMatrix", entity.getPrevMatrix());
-			g_materialSystem->instanceParameters.setMat4("normalMatrix", glm::transpose(glm::inverse(entity.transform.getMatrix())));
+			g_materialSystem->instanceParameters.setValue<glm::mat4>("normalMatrix", glm::transpose(glm::inverse(entity.transform.getMatrix())));
 			g_materialSystem->updateInstanceBuffer();
 
 			material->pipeline.render(pass);

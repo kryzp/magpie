@@ -55,28 +55,13 @@ namespace llt
 			m_offsetAccumulator = 0;
 		}
 
-		/*
-		* Functions for setting different variables in shaders
-		*/
-		void setInt8		(const String& name, int8_t val)						{ _setBuffer(name, &val, sizeof(int8_t)); }
-		void setInt16		(const String& name, int16_t val)						{ _setBuffer(name, &val, sizeof(int16_t)); }
-		void setInt32		(const String& name, int32_t val)						{ _setBuffer(name, &val, sizeof(int32_t)); }
-		void setInt64		(const String& name, int64_t val)						{ _setBuffer(name, &val, sizeof(int64_t)); }
-		void setUInt8		(const String& name, uint8_t val)						{ _setBuffer(name, &val, sizeof(uint8_t)); }
-		void setUInt16		(const String& name, uint16_t val)						{ _setBuffer(name, &val, sizeof(uint16_t)); }
-		void setUInt32		(const String& name, uint32_t val)						{ _setBuffer(name, &val, sizeof(uint32_t)); }
-		void setUInt64		(const String& name, uint64_t val)						{ _setBuffer(name, &val, sizeof(uint64_t)); }
-		void setFloat		(const String& name, float val)							{ _setBuffer(name, &val, sizeof(float)); }
-		void setDouble		(const String& name, double val)						{ _setBuffer(name, &val, sizeof(double)); }
-		void setBool		(const String& name, bool val)							{ _setBuffer(name, &val, sizeof(bool)); }
-		void setVec2		(const String& name, const glm::vec2& val)				{ _setBuffer(name, &val, sizeof(float) * 2); }
-		void setVec3		(const String& name, const glm::vec3& val)				{ _setBuffer(name, &val, sizeof(float) * 3); }
-		void setVec4		(const String& name, const glm::vec4& val)				{ _setBuffer(name, &val, sizeof(float) * 4); }
-		void setMat3		(const String& name, const glm::mat3& val)				{ _setBuffer(name, &val, sizeof(float) * 3 * 3); }
-		void setMat4		(const String& name, const glm::mat4& val)				{ _setBuffer(name, &val, sizeof(float) * 4 * 4); }
-		void setFloatArr	(const String& name, const float* vals, int n)			{ _setBuffer(name, vals, sizeof(float) * n); }
-		void setVec3Arr		(const String& name, const glm::vec3* vals, int n)		{ _setBuffer(name, vals, sizeof(float) * 3 * n); }
-		void setBuffer		(const String& name, const void* data, uint64_t size)	{ _setBuffer(name, data, size); }
+		void setBuffer(const String& name, const void* data, uint64_t size)	{ _setBuffer(name, data, size); }
+
+		template <typename T>
+		void setValue(const String& name, const T& value) { _setBuffer(name, &value, sizeof(T)); }
+
+		template <typename T>
+		void setArray(const String& name, const T* values, uint64_t num) { _setBuffer(name, values, sizeof(T) * num); }
 
 	private:
 		void _setBuffer(const String& name, const void* data, uint64_t size)

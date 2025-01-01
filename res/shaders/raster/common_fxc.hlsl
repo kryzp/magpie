@@ -2,10 +2,13 @@
 
 struct PushConstants
 {
-    float time;
+    int storage
+    int texture2D_RID;
+    int cubeMap_RID;
 };
 
-[[vk::push_constant]] PushConstants puchConstants;
+[[vk::push_constant]]
+PushConstants puchConstants;
 
 #define MAX_N_LIGHTS 16
 

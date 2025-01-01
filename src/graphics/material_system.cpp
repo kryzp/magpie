@@ -46,14 +46,14 @@ void MaterialSystem::initBuffers()
 
 	lights[0].direction /= glm::length(lights[0].direction);
 
-	globalParameters.setMat4("projMatrix", glm::identity<glm::mat4>());
-	globalParameters.setMat4("viewMatrix", glm::identity<glm::mat4>());
-	globalParameters.setVec4("viewPos", glm::zero<glm::vec4>());
-	globalParameters.setBuffer("lights", lights, 16 * sizeof(Light));
+	globalParameters.setValue<glm::mat4>("projMatrix", glm::identity<glm::mat4>());
+	globalParameters.setValue<glm::mat4>("viewMatrix", glm::identity<glm::mat4>());
+	globalParameters.setValue<glm::vec4>("viewPos", glm::zero<glm::vec4>());
+	globalParameters.setArray<Light>("lights", lights, 16);
 	updateGlobalBuffer();
 
-	instanceParameters.setMat4("modelMatrix", glm::identity<glm::mat4>());
-	instanceParameters.setMat4("normalMatrix", glm::identity<glm::mat4>());
+	instanceParameters.setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
+	instanceParameters.setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
 	updateInstanceBuffer();
 }
 
@@ -108,7 +108,7 @@ void MaterialSystem::loadDefaultTechniques()
 
 Material* MaterialSystem::buildMaterial(MaterialData& data)
 {
-	data.parameters.setFloat("temp", 0.0f);
+	data.parameters.setValue<float>("temp", 0.0f);
 
 	if (m_materials.contains(data.getHash())) {
 		return m_materials.get(data.getHash());
