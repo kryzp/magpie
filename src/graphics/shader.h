@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 
+#include "../container/hash_map.h"
 #include "../container/vector.h"
 #include "../container/string.h"
 #include "../container/pair.h"
@@ -19,6 +20,7 @@ namespace llt
 		{
 			void* data;
 			uint64_t size;
+			uint64_t offset;
 		};
 
 	public:
@@ -26,7 +28,11 @@ namespace llt
 		using PackedData = Vector<byte>;
 
 		ShaderParameters() = default;
-		~ShaderParameters() = default;
+
+		~ShaderParameters()
+		{
+			reset();
+		}
 
 		/*
 		* Returns the packed data.
@@ -38,14 +44,15 @@ namespace llt
 		*/
 		void reset()
 		{
-			for (int i = 0; i < m_constants.size(); i++)
+			for (auto& [name, param] : m_constants)
 			{
-				free(m_constants[i].second.data);
+				free(param.data);
 			}
 
 			m_constants.clear();
 			m_packedConstants.clear();
 			m_dirtyConstants = true;
+			m_offsetAccumulator = 0;
 		}
 
 		/*
@@ -74,29 +81,23 @@ namespace llt
 	private:
 		void _setBuffer(const String& name, const void* data, uint64_t size)
 		{
-			// search for the parameter in our list
-			int i = 0;
-			for (; i <= m_constants.size(); i++) {
-				if (i >= m_constants.size() || m_constants[i].first == name) {
-					break;
-				}
-			}
-
-			if (i < m_constants.size())
+			if (m_constants.contains(name))
 			{
 				// we've already cached this parameter, we just have to update it
-				mem::copy(m_constants[i].second.data, data, size);
+				mem::copy(m_constants[name].data, data, size);
 			}
 			else
 			{
 				// we haven't yet cached this parameter, add it to our list
 				ShaderParameter p = {};
 				p.size = size;
+				p.offset = m_offsetAccumulator;
 				p.data = malloc(size);
 
 				mem::copy(p.data, data, size);
 
-				m_constants.pushBack(Pair(name, p));
+				m_constants.insert(name, p);
+				m_offsetAccumulator += size;
 			}
 
 			// we've become dirty and will have to rebuild next time we ask for the data
@@ -105,9 +106,10 @@ namespace llt
 
 		void rebuildPackedConstantData();
 
-		Vector<Pair<String, ShaderParameter>> m_constants; // the reason we don't use a hashmap here is because we need to PRESERVE THE ORDER of the elements! the hashmap is inherently unordered.
+		HashMap<String, ShaderParameter> m_constants;
 		bool m_dirtyConstants;
 		PackedData m_packedConstants;
+		uint64_t m_offsetAccumulator = 0;
 	};
 
 	class ShaderProgram

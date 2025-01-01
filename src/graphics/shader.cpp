@@ -16,23 +16,11 @@ const ShaderParameters::PackedData& ShaderParameters::getPackedConstants()
 
 void ShaderParameters::rebuildPackedConstantData()
 {
-	// clear our previously packed data
 	m_packedConstants.clear();
+	m_packedConstants.resize(m_offsetAccumulator);
 
-	// calculate the actual "aligned size" of our data
-	uint64_t totalSize = 0;
 	for (auto& [name, param] : m_constants) {
-		totalSize += param.size;
-	}
-
-	// resize it to fit it
-	m_packedConstants.resize(totalSize);
-
-	// put all of our data into the packed constants
-	uint64_t offset = 0;
-	for (auto& [name, param] : m_constants) {
-		mem::copy(m_packedConstants.data() + offset, param.data, param.size);
-		offset += param.size;
+		mem::copy(m_packedConstants.data() + param.offset, param.data, param.size);
 	}
 }
 

@@ -419,10 +419,25 @@ void VulkanBackend::createLogicalDevice()
 		});
 	}
 
+	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
+	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
+	descriptorIndexingFeaturesExt.descriptorBindingPartiallyBound = VK_TRUE;
+
+	descriptorIndexingFeaturesExt.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+	descriptorIndexingFeaturesExt.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+	descriptorIndexingFeaturesExt.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+
+	descriptorIndexingFeaturesExt.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+	descriptorIndexingFeaturesExt.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+	descriptorIndexingFeaturesExt.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+
+	descriptorIndexingFeaturesExt.pNext = nullptr;
+
 	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeaturesExt = {};
 	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 	dynamicRenderingFeaturesExt.dynamicRendering = VK_TRUE;
-	dynamicRenderingFeaturesExt.pNext = nullptr;
+	dynamicRenderingFeaturesExt.pNext = &descriptorIndexingFeaturesExt;
 
 	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeaturesExt = {};
 	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;

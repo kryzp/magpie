@@ -2,6 +2,10 @@
 #include "backend.h"
 #include "../io/file_stream.h"
 
+#include <fstream>
+#include <sstream>
+#include <string>
+
 llt::ShaderMgr* llt::g_shaderManager = nullptr;
 
 using namespace llt;
@@ -35,10 +39,6 @@ ShaderProgram* ShaderMgr::get(const String& name)
 
 	return nullptr;
 }
-
-#include <fstream>
-#include <sstream>
-#include <string>
 
 ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkShaderStageFlagBits type)
 {

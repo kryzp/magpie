@@ -151,7 +151,8 @@ void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 		idx,
 		&m_boundImages.back(),
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		m_stage
+		m_stage,
+		1
 	);
 }
 
@@ -170,13 +171,14 @@ void Pipeline::bindBuffer(int idx, const ShaderBuffer* buffer)
 	}
 
 	if (!inserted) {
-		m_buffers.pushBack(Pair(idx, buffer));
+		m_buffers.emplaceBack(idx, buffer);
 	}
 
 	m_descriptorBuilder.bindBuffer(
 		idx,
 		&buffer->getDescriptor(),
 		buffer->getDescriptorType(),
-		m_stage
+		m_stage,
+		1
 	);
 }

@@ -21,8 +21,8 @@ namespace llt
 		void build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, uint64_t hash);
 		void buildLayout(VkDescriptorSetLayout& layout);
 
-		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
-		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags);
+		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count);
+		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count);
 
 	private:
 		Vector<VkWriteDescriptorSet> m_writes;

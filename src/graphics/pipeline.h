@@ -28,6 +28,7 @@ namespace llt
 		const Vector<uint32_t>& getDynamicOffsets();
 
 		virtual void bindShader(const ShaderProgram* shader) = 0;
+
 		void bindTexture(int idx, Texture* texture, TextureSampler* sampler);
 		void bindBuffer(int idx, const ShaderBuffer* buffer);
 

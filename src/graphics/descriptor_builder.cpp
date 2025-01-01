@@ -59,13 +59,14 @@ void DescriptorBuilder::bindBuffer(
 	uint32_t idx,
 	const VkDescriptorBufferInfo* info,
 	VkDescriptorType type,
-	VkShaderStageFlags stageFlags
+	VkShaderStageFlags stageFlags,
+	int count
 )
 {
 	VkDescriptorSetLayoutBinding binding = {};
 	binding.binding = idx;
 	binding.descriptorType = type;
-	binding.descriptorCount = 1;
+	binding.descriptorCount = count;
 	binding.stageFlags = stageFlags;
 	binding.pImmutableSamplers = nullptr;
 	m_bindings.pushBack(binding);
@@ -84,13 +85,14 @@ void DescriptorBuilder::bindImage(
 	uint32_t idx,
 	const VkDescriptorImageInfo* info,
 	VkDescriptorType type,
-	VkShaderStageFlags stageFlags
+	VkShaderStageFlags stageFlags,
+	int count
 )
 {
 	VkDescriptorSetLayoutBinding binding = {};
 	binding.binding = idx;
 	binding.descriptorType = type;
-	binding.descriptorCount = 1;
+	binding.descriptorCount = count;
 	binding.stageFlags = stageFlags;
 	binding.pImmutableSamplers = nullptr;
 	m_bindings.pushBack(binding);
