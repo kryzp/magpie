@@ -37,6 +37,16 @@ namespace llt
 
 		ShaderBuffer* m_globalBuffer;
 		ShaderBuffer* m_instanceBuffer;
+
+		ShaderParameters m_bindlessParams;
+		DescriptorBuilder m_bindlessDescriptor;
+
+		DescriptorPoolMgr bindlessDescriptorPoolManager;
+		DescriptorCache bindlessDescriptorCache;
+
+		GPUBuffer* m_bindlessUBO;
+		GPUBuffer* m_bindlessSSBO;
+		GPUBuffer* m_bindlessCombinedSamplers;
 	};
 
 	extern MaterialSystem* g_materialSystem;

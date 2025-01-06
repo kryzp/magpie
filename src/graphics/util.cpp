@@ -31,7 +31,7 @@ VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& a
 //		return VK_PRESENT_MODE_IMMEDIATE_KHR;
 //	}
 
-	for (const auto& mode : availablePresentModes) {
+	for (cauto& mode : availablePresentModes) {
 		if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
 			return mode;
 		}
@@ -75,7 +75,7 @@ uint32_t vkutil::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter
 
 VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
-	for (const auto& fmt : candidates)
+	for (cauto& fmt : candidates)
 	{
 		VkFormatProperties properties = {};
 		vkGetPhysicalDeviceFormatProperties(device, fmt, &properties);
@@ -208,7 +208,7 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 
 	Vector<const char*> requiredExtensions(DEVICE_EXTENSIONS, LLT_ARRAY_LENGTH(DEVICE_EXTENSIONS));
 
-	for (const auto& availableExtension : availableExts) {
+	for (cauto& availableExtension : availableExts) {
 		for (int i = 0; i < requiredExtensions.size(); i++) {
 			if (cstr::compare(availableExtension.extensionName, requiredExtensions[i])) {
 				requiredExtensions.erase(i);

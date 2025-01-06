@@ -1,16 +1,21 @@
 #include "descriptor_cache.h"
-#include "descriptor_pool_mgr.h"
 #include "backend.h"
 
 using namespace llt;
 
 DescriptorCache::DescriptorCache()
 	: m_layoutCache()
+	, m_poolMgr(nullptr)
 {
 }
 
 DescriptorCache::~DescriptorCache()
 {
+}
+
+void DescriptorCache::setPoolManager(DescriptorPoolMgr& poolMgr)
+{
+	m_poolMgr = &poolMgr;
 }
 
 void DescriptorCache::cleanUp()
@@ -29,7 +34,7 @@ void DescriptorCache::clearSetCache()
 	m_descriptorCache.clear();
 }
 
-VkDescriptorSet DescriptorCache::createSet(const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasNotCached)
+VkDescriptorSet DescriptorCache::createSet(const VkDescriptorSetLayout& layout, uint32_t count, uint64_t hash, bool* wasNotCached)
 {
 	if (m_descriptorCache.contains(hash)) {
 		if (wasNotCached) {
@@ -42,7 +47,7 @@ VkDescriptorSet DescriptorCache::createSet(const VkDescriptorSetLayout& layout, 
 		}
 	}
 
-	VkDescriptorSet set = g_vulkanBackend->descriptorPoolManager.allocateDescriptorSet(layout);
+	VkDescriptorSet set = m_poolMgr->allocateDescriptorSet(layout, count);
 	m_descriptorCache.insert(hash, set);
 
 	return set;

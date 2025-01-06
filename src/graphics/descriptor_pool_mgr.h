@@ -16,18 +16,16 @@ namespace llt
 		DescriptorPoolMgr();
 		~DescriptorPoolMgr();
 
-		void init();
+		void setSizes(const Vector<Pair<VkDescriptorType, float>>& sizes);
 
 		void cleanUp();
 		void resetPools();
 
-		VkDescriptorSet allocateDescriptorSet(const VkDescriptorSetLayout& layout);
-
-		VkDescriptorPool fetchPool();
+		VkDescriptorSet allocateDescriptorSet(const VkDescriptorSetLayout& layout, uint32_t count);
+		VkDescriptorPool fetchPool(uint32_t count);
 
 	private:
 		VkDescriptorPool createNewPool(uint32_t count);
-		void initSizes();
 
 		Vector<VkDescriptorPool> m_usedPools;
 		Vector<VkDescriptorPool> m_freePools;

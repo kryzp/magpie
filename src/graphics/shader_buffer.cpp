@@ -58,6 +58,8 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	}
 
 	m_dynamicOffset = m_offset;
+
+	m_info.offset = 0;
 	m_info.range = size;
 
 	// write the data to the buffer!
@@ -90,12 +92,12 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 		LLT_ERROR("[SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
 	}
 
+	// all of our descriptor sets are invalid now so we have to clear our caches
+	g_vulkanBackend->clearDescriptorCacheAndPool();
+
 	m_info.buffer = m_buffer->getBuffer();
 	m_info.offset = 0;
 	m_info.range = 0;
-
-	// all of our descriptor sets are invalid now so we have to clear our caches
-	g_vulkanBackend->clearDescriptorCacheAndPool();
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{

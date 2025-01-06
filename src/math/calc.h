@@ -85,11 +85,11 @@ namespace llt
 		static T atan(T x);
 		static T atan2(T y, T x);
 
-		static T epsilon();
-		static T lowest();
-		static T minValue();
-		static T maxValue();
-		static T infinity();
+		static constexpr T epsilon();
+		static constexpr T lowest();
+		static constexpr T minValue();
+		static constexpr T maxValue();
+		static constexpr T infinity();
 	};
 
 	using CalcI = Calc<int>;
@@ -303,31 +303,31 @@ namespace llt
 	}
 
 	template <typename T>
-	T Calc<T>::epsilon()
+	constexpr T Calc<T>::epsilon()
 	{
 		return std::numeric_limits<T>::epsilon();
 	}
 
 	template <typename T>
-	T Calc<T>::lowest()
+	constexpr T Calc<T>::lowest()
 	{
 		return std::numeric_limits<T>::lowest();
 	}
 
 	template <typename T>
-	T Calc<T>::minValue()
+	constexpr T Calc<T>::minValue()
 	{
 		return std::numeric_limits<T>::min();
 	}
 
 	template <typename T>
-	T Calc<T>::maxValue()
+	constexpr T Calc<T>::maxValue()
 	{
 		return std::numeric_limits<T>::max();
 	}
 
 	template <typename T>
-	T Calc<T>::infinity()
+	constexpr T Calc<T>::infinity()
 	{
 		return std::numeric_limits<T>::infinity();
 	}

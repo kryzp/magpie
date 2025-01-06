@@ -37,20 +37,14 @@ GraphicsPipeline::~GraphicsPipeline()
 
 void GraphicsPipeline::render(const RenderPass& op)
 {
-	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	auto currentBuffer = currentFrame.commandBuffer;
+	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = currentFrame.commandBuffer;
 
-	const auto& vertexBuffer = op.meshData.vBuffer->getBuffer();
-	const auto& indexBuffer  = op.meshData.iBuffer->getBuffer();
+	cauto& vertexBuffer = op.meshData.vBuffer->getBuffer();
+	cauto& indexBuffer  = op.meshData.iBuffer->getBuffer();
 
 	VkPipelineLayout pipelineLayout = getPipelineLayout();
 	VkDescriptorSet descriptorSet = getDescriptorSet();
-
-	VkViewport viewport = getViewport();
-	VkRect2D scissor = getScissor();
-
-	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
 
 	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
 
@@ -61,7 +55,7 @@ void GraphicsPipeline::render(const RenderPass& op)
 
 	VkDeviceSize offsets[] = { 0, 0 };
 
-	const auto& bindings = m_currentVertexDescriptor->getBindingDescriptions();
+	cauto& bindings = m_currentVertexDescriptor->getBindingDescriptions();
 
 	for (int i = 0; i < bindings.size(); i++)
 	{
@@ -82,7 +76,7 @@ void GraphicsPipeline::render(const RenderPass& op)
 		);
 	}
 
-	const auto& dynamicOffsets = getDynamicOffsets();
+	cauto& dynamicOffsets = getDynamicOffsets();
 
 	vkCmdBindDescriptorSets(
 		currentBuffer,
@@ -120,8 +114,8 @@ void GraphicsPipeline::render(const RenderPass& op)
 
 void GraphicsPipeline::bind()
 {
-	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	auto currentBuffer = currentFrame.commandBuffer;
+	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = currentFrame.commandBuffer;
 
 	VkPipeline pipeline = getPipeline();
 
@@ -130,15 +124,23 @@ void GraphicsPipeline::bind()
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipeline
 	);
+
+	VkViewport viewport = getViewport();
+	VkRect2D scissor = getScissor();
+
+	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
 }
 
 VkPipeline GraphicsPipeline::getPipeline()
 {
-	auto renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
-	auto rasterSamples = g_vulkanBackend->getRenderTarget()->getMSAA();
+	cauto& renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+	cauto& rasterSamples = g_vulkanBackend->getRenderTarget()->getMSAA();
 
-	const auto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
-	const auto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
+	cauto& bindingDescriptions = m_currentVertexDescriptor->getBindingDescriptions();
+	cauto& attributeDescriptions = m_currentVertexDescriptor->getAttributeDescriptions();
+
+	cauto& blendAttachments = renderInfo->getColourBlendAttachmentStates();
 
 	VkViewport viewport = getViewport();
 	VkRect2D scissor = getScissor();
@@ -184,8 +186,6 @@ VkPipeline GraphicsPipeline::getPipeline()
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
 
-	const auto& blendAttachments = renderInfo->getColourBlendAttachmentStates();
-
 	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};
 	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	colourBlendStateCreateInfo.logicOpEnable = renderInfo->isBlendStateLogicOpEnabled() ? VK_TRUE : VK_FALSE;
@@ -230,7 +230,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(vkutil::DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
-	const auto& colourFormats = renderInfo->getColourAttachmentFormats();
+	cauto& colourFormats = renderInfo->getColourAttachmentFormats();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;

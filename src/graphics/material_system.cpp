@@ -2,6 +2,11 @@
 #include "shader_mgr.h"
 #include "vertex_descriptor.h"
 #include "light.h"
+#include "backend.h"
+
+#include "../../res/shaders/raster/common_fxc.inc"
+
+#include "../math/calc.h"
 
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -9,6 +14,23 @@
 llt::MaterialSystem* llt::g_materialSystem = nullptr;
 
 using namespace llt;
+
+enum class TextureHandle : uint32_t { INVALID = Calc<uint32_t>::maxValue() };
+enum class BufferHandle : uint32_t { INVALID = Calc<uint32_t>::maxValue() };
+
+struct Params_PBR {
+	BufferHandle meshTransforms;
+	BufferHandle pointLights;
+	BufferHandle camera;
+	uint32_t _padding0;
+};
+
+struct Params_Skybox {
+	BufferHandle camera;
+	TextureHandle skybox;
+	uint32_t _padding0;
+	uint32_t _padding1;
+};
 
 MaterialSystem::MaterialSystem()
 	: m_materials()
@@ -27,6 +49,9 @@ MaterialSystem::~MaterialSystem()
 
 	m_materials.clear();
 	m_techniques.clear();
+
+	bindlessDescriptorPoolManager.cleanUp();
+	bindlessDescriptorCache.cleanUp();
 }
 
 void MaterialSystem::initBuffers()
@@ -55,6 +80,93 @@ void MaterialSystem::initBuffers()
 	instanceParameters.setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
 	instanceParameters.setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
 	updateInstanceBuffer();
+
+	m_bindlessParams.setValue<Params_PBR>("pbsParams", {
+		.meshTransforms = (BufferHandle)0,
+		.pointLights = (BufferHandle)0,
+		.camera = (BufferHandle)0
+	});
+
+	m_bindlessParams.setValue<Params_Skybox>("cameraParams", {
+		.camera = (BufferHandle)0,
+		.skybox = (TextureHandle)0
+	});
+
+	uint32_t maxUniformBuffers = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetUniformBuffers;
+	uint32_t maxStorageBuffers = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetStorageBuffers;
+	uint32_t maxSamplesImages = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetSampledImages;
+
+	bindlessDescriptorPoolManager.setSizes({
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (float)maxUniformBuffers },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, (float)maxStorageBuffers },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, (float)maxSamplesImages }
+	});
+
+	bindlessDescriptorCache.setPoolManager(bindlessDescriptorPoolManager);
+
+	m_bindlessDescriptor.bindBuffer(
+		UNIFORM_BUFFER_BINDING,
+		nullptr,
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_SHADER_STAGE_ALL,
+		1000,
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+	);
+
+	m_bindlessDescriptor.bindBuffer(
+		STORAGE_BUFFER_BINDING,
+		nullptr,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_SHADER_STAGE_ALL,
+		1000,
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+	);
+
+	m_bindlessDescriptor.bindBuffer(
+		COMBINED_IMAGE_BUFFER_BINDING,
+		nullptr,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		VK_SHADER_STAGE_ALL,
+		1000,
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+	);
+
+	VkDescriptorSetLayout layout = {};
+	m_bindlessDescriptor.buildLayout(layout, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
+
+	/*
+	std::array<VkDescriptorSetLayoutBinding, 3> bindings{};
+	std::array<VkDescriptorBindingFlags, 3> flags{};
+	std::array<VkDescriptorType, 3> types{
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+	};
+
+	for (uint32_t i = 0; i < 3; ++i) {
+		bindings.at(i).binding = i;
+		bindings.at(i).descriptorType = types.at(i);
+		bindings.at(i).descriptorCount = 1000;
+		bindings.at(i).stageFlags = VK_SHADER_STAGE_ALL;
+		flags.at(i) = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+	}
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags{};
+	bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+	bindingFlags.pNext = nullptr;
+	bindingFlags.pBindingFlags = flags.data();
+	bindingFlags.bindingCount = 3;
+
+	VkDescriptorSetLayoutCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	createInfo.bindingCount = 3;
+	createInfo.pBindings = bindings.data();
+	createInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+	createInfo.pNext = &bindingFlags;
+
+	VkDescriptorSetLayout bindlessLayout = VK_NULL_HANDLE;
+	vkCreateDescriptorSetLayout(mDevice, &createInfo, nullptr, &bindlessLay
+	*/
 }
 
 void MaterialSystem::updateGlobalBuffer()

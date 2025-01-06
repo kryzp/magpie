@@ -6,6 +6,13 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
+TODO:
+- fix command buffer not working on shader buffer resize
+- remove global descriptor set builder / cache etc
+- merge shader buffer and shader parameters?
+- endSingleTimeCommands should not have to vkQueueWaitIdle every time
+- implement a render graph system!
+
 immediate todo:
 - merge ShaderParameters into ShaderBuffer someway
 - use multiple descriptor sets for different update frequencies, i.e: per frame, per instance, etc...

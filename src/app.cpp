@@ -35,7 +35,7 @@ App::App(const Config& config)
 	g_platform->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE));
 
 	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW)) {
-		const auto screenSize = g_platform->getScreenSize();
+		cauto screenSize = g_platform->getScreenSize();
 		g_platform->setWindowPosition({
 			(int)(screenSize.x - m_config.width) / 2,
 			(int)(screenSize.y - m_config.height) / 2

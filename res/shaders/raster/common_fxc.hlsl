@@ -2,7 +2,7 @@
 
 struct PushConstants
 {
-    int storage
+    int storage;
     int texture2D_RID;
     int cubeMap_RID;
 };

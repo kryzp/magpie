@@ -18,15 +18,16 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		void build(VkDescriptorSet& set, VkDescriptorSetLayout& layout, uint64_t hash);
-		void buildLayout(VkDescriptorSetLayout& layout);
+		void build(VkDescriptorSet& set, const VkDescriptorSetLayout& layout, uint32_t count, uint64_t hash);
+		void buildLayout(VkDescriptorSetLayout& layout, VkDescriptorSetLayoutCreateFlags flags);
 
-		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count);
-		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count);
+		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count, VkDescriptorBindingFlags flags);
+		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count, VkDescriptorBindingFlags flags);
 
 	private:
 		Vector<VkWriteDescriptorSet> m_writes;
 		Vector<VkDescriptorSetLayoutBinding> m_bindings;
+		Vector<VkDescriptorBindingFlags> m_flags;
 	};
 }
 

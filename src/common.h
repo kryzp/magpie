@@ -32,6 +32,8 @@ using sbyte = char;
 using ubyte = unsigned char;
 using byte  = unsigned char;
 
+#define cauto const auto
+
 namespace llt
 {
 	template <uint64_t Size> class Str;

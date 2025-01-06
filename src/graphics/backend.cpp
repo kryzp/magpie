@@ -243,11 +243,11 @@ VulkanBackend::VulkanBackend(const Config& config)
 #endif // LLT_DEBUG
 
 	// set up all of the core managers of resources
-	g_gpuBufferManager       = new GPUBufferMgr();
-	g_shaderBufferManager = new ShaderBufferMgr();
-	g_textureManager      = new TextureMgr();
-	g_shaderManager       = new ShaderMgr();
-	g_renderTargetManager = new RenderTargetMgr();
+	g_gpuBufferManager		= new GPUBufferMgr();
+	g_shaderBufferManager 	= new ShaderBufferMgr();
+	g_textureManager      	= new TextureMgr();
+	g_shaderManager       	= new ShaderMgr();
+	g_renderTargetManager 	= new RenderTargetMgr();
 
 	// finished :D
 	LLT_LOG("[VULKAN] Initialized!");
@@ -273,8 +273,8 @@ VulkanBackend::~VulkanBackend()
 
 	delete g_shaderBufferManager;
 
-	descriptorCache.cleanUp();
 	descriptorPoolManager.cleanUp();
+	descriptorCache.cleanUp();
 
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
@@ -424,12 +424,12 @@ void VulkanBackend::createLogicalDevice()
 
 	descriptorIndexingFeaturesExt.descriptorBindingPartiallyBound = VK_TRUE;
 
+	descriptorIndexingFeaturesExt.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-	descriptorIndexingFeaturesExt.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
+	descriptorIndexingFeaturesExt.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
 	descriptorIndexingFeaturesExt.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-	descriptorIndexingFeaturesExt.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	descriptorIndexingFeaturesExt.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 
 	descriptorIndexingFeaturesExt.pNext = nullptr;
@@ -687,7 +687,21 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	createComputeResources();
 
-	descriptorPoolManager.init();
+	descriptorPoolManager.setSizes({
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			4.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
+	});
+
+	descriptorCache.setPoolManager(descriptorPoolManager);
 
 	backbuffer->create();
 
@@ -828,8 +842,8 @@ void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 {
 	m_currentRenderTarget = target ? target : m_backbuffer;
 
-	auto currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	auto currentBuffer = currentFrame.commandBuffer;
+	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = currentFrame.commandBuffer;
 
 	vkWaitForFences(g_vulkanBackend->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -856,8 +870,8 @@ void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 
 void VulkanBackend::endGraphics()
 {
-	const auto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	const auto& currentBuffer = currentFrame.commandBuffer;
+	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = currentFrame.commandBuffer;
 
 #if LLT_MAC_SUPPORT
 	vkutil::ext_vkCmdEndRendering(currentBuffer);
@@ -908,6 +922,7 @@ void VulkanBackend::endGraphics()
 	}
 
 	m_waitOnCompute = false;
+	m_currentRenderTarget = nullptr;
 }
 
 void VulkanBackend::waitOnCompute()
@@ -917,7 +932,7 @@ void VulkanBackend::waitOnCompute()
 
 void VulkanBackend::beginCompute()
 {
-	const auto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	cauto& currentFrame = this->computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
 	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
@@ -934,7 +949,7 @@ void VulkanBackend::beginCompute()
 
 void VulkanBackend::endCompute()
 {
-	const auto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	cauto& currentFrame = this->computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
 	if (VkResult result = vkEndCommandBuffer(currentBuffer); result != VK_SUCCESS) {

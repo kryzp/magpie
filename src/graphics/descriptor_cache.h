@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include "../container/hash_map.h"
+#include "descriptor_pool_mgr.h"
 
 namespace llt
 {
@@ -16,15 +17,19 @@ namespace llt
 		DescriptorCache();
 		~DescriptorCache();
 
+		void setPoolManager(DescriptorPoolMgr& poolMgr);
+
 		void cleanUp();
 		void clearSetCache();
 
-		VkDescriptorSet createSet(const VkDescriptorSetLayout& layout, uint64_t hash, bool* wasAlreadyCached);
+		VkDescriptorSet createSet(const VkDescriptorSetLayout& layout, uint32_t count, uint64_t hash, bool* wasAlreadyCached);
 		VkDescriptorSetLayout createLayout(const VkDescriptorSetLayoutCreateInfo& layoutCreateInfo);
 
 	private:
 		HashMap<uint64_t, VkDescriptorSet> m_descriptorCache;
 		HashMap<uint64_t, VkDescriptorSetLayout> m_layoutCache;
+
+		DescriptorPoolMgr* m_poolMgr;
 	};
 }
 

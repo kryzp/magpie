@@ -14,24 +14,9 @@ DescriptorPoolMgr::~DescriptorPoolMgr()
 {
 }
 
-void DescriptorPoolMgr::init()
+void DescriptorPoolMgr::setSizes(const Vector<Pair<VkDescriptorType, float>>& sizes)
 {
-	initSizes();
-}
-
-void DescriptorPoolMgr::initSizes()
-{
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 		4.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 				4.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 				1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 				2.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 				2.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,		1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,		1.0f);
-	m_sizes.emplaceBack(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f);
+	m_sizes = sizes;
 }
 
 void DescriptorPoolMgr::cleanUp()
@@ -62,11 +47,11 @@ void DescriptorPoolMgr::resetPools()
 	m_currentPool = VK_NULL_HANDLE;
 }
 
-VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLayout& layout)
+VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLayout& layout, uint32_t count)
 {
 	// if our current pool is null then get a new one and send it to the used pools
 	if (m_currentPool == VK_NULL_HANDLE) {
-		m_currentPool = fetchPool();
+		m_currentPool = fetchPool(count);
 		m_usedPools.pushBack(m_currentPool);
 	}
 
@@ -95,7 +80,7 @@ VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLa
 	if (reallocateMemory)
 	{
 		// get a new current pool
-		m_currentPool = fetchPool();
+		m_currentPool = fetchPool(count);
 		m_usedPools.pushBack(m_currentPool);
 
 		// allocate again
@@ -110,6 +95,15 @@ VkDescriptorSet DescriptorPoolMgr::allocateDescriptorSet(const VkDescriptorSetLa
 	}
 
 	return ret;
+}
+
+VkDescriptorPool DescriptorPoolMgr::fetchPool(uint32_t count)
+{
+	if (m_freePools.size() > 0) {
+		return m_freePools.popBack();
+	} else {
+		return createNewPool(count);
+	}
 }
 
 VkDescriptorPool DescriptorPoolMgr::createNewPool(uint32_t count)
@@ -136,15 +130,4 @@ VkDescriptorPool DescriptorPoolMgr::createNewPool(uint32_t count)
 	LLT_LOG("[DESCRIPTORPOOL] Created new descriptor pool!");
 
 	return pool;
-}
-
-VkDescriptorPool DescriptorPoolMgr::fetchPool()
-{
-	if (m_freePools.size() > 0) {
-		VkDescriptorPool pool = m_freePools.back();
-		m_freePools.popBack();
-		return pool;
-	} else {
-		return createNewPool(64 * mgc::FRAMES_IN_FLIGHT);
-	}
 }

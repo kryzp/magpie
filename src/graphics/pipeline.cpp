@@ -36,7 +36,7 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 	}
 
 	VkDescriptorSetLayout layout = {};
-	m_descriptorBuilder.buildLayout(layout);
+	m_descriptorBuilder.buildLayout(layout, 0);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
 	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -80,8 +80,9 @@ VkDescriptorSet Pipeline::getDescriptorSet()
 
 	VkDescriptorSet descriptorSet = {};
 	VkDescriptorSetLayout descriptorSetLayout = {};
-	
-	m_descriptorBuilder.build(descriptorSet, descriptorSetLayout, descriptorSetHash);
+
+	m_descriptorBuilder.buildLayout(descriptorSetLayout, 0);
+	m_descriptorBuilder.build(descriptorSet, descriptorSetLayout, 64 * mgc::FRAMES_IN_FLIGHT, descriptorSetHash);
 
 	return descriptorSet;
 }
@@ -152,7 +153,8 @@ void Pipeline::bindTexture(int idx, Texture* texture, TextureSampler* sampler)
 		&m_boundImages.back(),
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		m_stage,
-		1
+		1,
+		0
 	);
 }
 
@@ -179,6 +181,7 @@ void Pipeline::bindBuffer(int idx, const ShaderBuffer* buffer)
 		&buffer->getDescriptor(),
 		buffer->getDescriptorType(),
 		m_stage,
-		1
+		1,
+		0
 	);
 }
