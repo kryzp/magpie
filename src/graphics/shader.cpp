@@ -52,9 +52,10 @@ void ShaderProgram::loadFromSource(const char* source, uint64_t size)
 	moduleCreateInfo.codeSize = size;
 	moduleCreateInfo.pCode = (const uint32_t*)source;
 
-	if (VkResult result = vkCreateShaderModule(g_vulkanBackend->device, &moduleCreateInfo, nullptr, &m_shaderModule); result != VK_SUCCESS) {
-		LLT_ERROR("[SHADER|DEBUG] Failed to create shader module: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkCreateShaderModule(g_vulkanBackend->device, &moduleCreateInfo, nullptr, &m_shaderModule),
+		"Failed to create shader module"
+	);
 }
 
 VkPipelineShaderStageCreateInfo ShaderProgram::getShaderStageCreateInfo() const

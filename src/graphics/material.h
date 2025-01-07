@@ -18,6 +18,21 @@ namespace llt
 	{
 		Texture* texture;
 		TextureSampler* sampler;
+
+		VkDescriptorImageInfo getImageInfo() const
+		{
+			VkDescriptorImageInfo info = {};
+
+			info.imageView = texture->getImageView();
+
+			info.imageLayout = texture->isDepthTexture()
+				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			
+			info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
+
+			return info;
+		}
 	};
 
 	struct MaterialData
@@ -53,9 +68,10 @@ namespace llt
 
 		uint64_t getHash() const;
 
+		VertexDescriptor vertexFormat;
 		Vector<BoundTexture> textures;
 		ShaderBuffer* parameterBuffer;
-		GraphicsPipeline pipeline;
+		ShaderPass passes[SHADER_PASS_MAX_ENUM];
 	};
 }
 

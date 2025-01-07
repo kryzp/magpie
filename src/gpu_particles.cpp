@@ -38,7 +38,7 @@ GPUParticles::~GPUParticles()
 
 void GPUParticles::init(const ShaderBuffer* shaderParams)
 {
-	m_computeProgram = g_shaderManager->create("particleCompute", "../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	m_computeProgram = g_shaderManager->create("particleCompute", "../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
 	uint64_t particleDataSize = sizeof(Particle) * PARTICLE_COUNT;
 	Particle* particleData = new Particle[PARTICLE_COUNT];
@@ -171,12 +171,24 @@ void GPUParticles::dispatchCompute(const Camera& camera)
 	m_computeParamsBuffer->pushData(m_computeParams);
 
 	m_particleComputePipeline.bind();
+
+	vkCmdBindDescriptorSets(
+	currentBuffer,
+	VK_PIPELINE_BIND_POINT_COMPUTE,
+	pipelineLayout,
+	0,
+	1, &p_descriptorSet,
+	p_dynamicOffsets.size(),
+	p_dynamicOffsets.data()
+	);
+
 	m_particleComputePipeline.dispatch(1, 1, 1);
 
 	g_vulkanBackend->endCompute();
 
 	m_prevViewMatrix = camera.getView();
 }
+
 
 void GPUParticles::render()
 {
@@ -189,6 +201,17 @@ void GPUParticles::render()
 	g_vulkanBackend->beginGraphics(g_renderTargetManager->get("gBuffer"));
 
 	m_particleGraphicsPipeline.bind();
+
+	vkCmdBindDescriptorSets(
+	currentBuffer,
+	VK_PIPELINE_BIND_POINT_COMPUTE,
+	pipelineLayout,
+	0,
+	1, &p_descriptorSet,
+	p_dynamicOffsets.size(),
+	p_dynamicOffsets.data()
+	);
+
 	m_particleGraphicsPipeline.render(pass);
 
 	g_vulkanBackend->endGraphics();

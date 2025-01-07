@@ -4,6 +4,8 @@
 #include "../container/string.h"
 #include "../container/hash_map.h"
 
+#include "descriptor_allocator.h"
+#include "descriptor_layout_cache.h"
 #include "shader_buffer_mgr.h"
 #include "material.h"
 
@@ -15,7 +17,7 @@ namespace llt
 		MaterialSystem();
 		~MaterialSystem();
 
-		void initBuffers();
+		void init();
 		void loadDefaultTechniques();
 
 		Material* buildMaterial(MaterialData& data);
@@ -38,11 +40,14 @@ namespace llt
 		ShaderBuffer* m_globalBuffer;
 		ShaderBuffer* m_instanceBuffer;
 
-		ShaderParameters m_bindlessParams;
-		DescriptorBuilder m_bindlessDescriptor;
+		DescriptorPoolDynamic m_descriptorPoolAllocator;
+		DescriptorLayoutCache m_descriptorCache;
 
-		DescriptorPoolMgr bindlessDescriptorPoolManager;
-		DescriptorCache bindlessDescriptorCache;
+//		ShaderParameters m_bindlessParams;
+//		DescriptorBuilder m_bindlessDescriptor;
+//
+//		DescriptorPoolDynamic bindlessDescriptorPoolManager;
+//		DescriptorCache bindlessDescriptorCache;
 
 		GPUBuffer* m_bindlessUBO;
 		GPUBuffer* m_bindlessSSBO;

@@ -23,9 +23,10 @@ namespace llt
 	{
 	public:
 		Renderer();
-		~Renderer();
+		~Renderer() = default;
 
 		void init(Backbuffer* backbuffer);
+		void cleanUp();
 
 		void render(const Camera& camera, float deltaTime, float elapsedTime);
 

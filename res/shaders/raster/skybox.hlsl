@@ -7,11 +7,11 @@ struct PSInput
 };
 
 TextureCube skyboxTexture : register(t3);
-SamplerState samplerState : register(s3);
+SamplerState skyboxSampler : register(s3);
 
 float4 main(PSInput input) : SV_TARGET
 {
     float3 dir = normalize(input.position);
-    float4 col = skyboxTexture.Sample(samplerState, dir);
+	float4 col = skyboxTexture.Sample(skyboxSampler, dir);
     return col * float4(input.colour, 1.0);
 }

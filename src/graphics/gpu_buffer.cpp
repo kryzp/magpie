@@ -36,9 +36,10 @@ void GPUBuffer::create(uint64_t size)
 	vmaAllocInfo.usage = m_memoryUsage;
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	if (VkResult result = vmaCreateBuffer(g_vulkanBackend->vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
-		LLT_ERROR("[BUFFER|DEBUG] Failed to create buffer: %d", result);
-	}
+	LLT_VK_CHECK(
+		vmaCreateBuffer(g_vulkanBackend->vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
+		"Failed to create buffer"
+	);
 }
 
 void GPUBuffer::cleanUp()

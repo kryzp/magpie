@@ -14,6 +14,8 @@
 #include "texture.h"
 #include "texture_sampler.h"
 
+#define LLT_VK_CHECK(_func_call, _error_msg) do{if(VkResult _VK_CHECK_RESULT_ABCDEFGH=_func_call;_VK_CHECK_RESULT_ABCDEFGH!=VK_SUCCESS){LLT_ERROR(_error_msg ": %d",_VK_CHECK_RESULT_ABCDEFGH);}}while(0);
+
 namespace llt
 {
 	class VulkanBackend;
@@ -34,7 +36,7 @@ namespace llt
 		static VkDynamicState DYNAMIC_STATES[] = {
 			VK_DYNAMIC_STATE_VIEWPORT,
 			VK_DYNAMIC_STATE_SCISSOR,
-			VK_DYNAMIC_STATE_BLEND_CONSTANTS
+//			VK_DYNAMIC_STATE_BLEND_CONSTANTS
 		};
 
 		static const char* DEVICE_EXTENSIONS[] = {

@@ -18,12 +18,11 @@ ComputePipeline::~ComputePipeline()
 
 void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 {
-	p_boundTextures.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+	//p_boundTextures.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
 	auto currentBuffer = g_vulkanBackend->computeQueues[0].getCurrentFrame().commandBuffer;
 
 	VkPipelineLayout pipelineLayout = getPipelineLayout();
-	VkDescriptorSet descriptorSet = getDescriptorSet();
 
 	if (g_vulkanBackend->pushConstants.size() > 0)
 	{
@@ -37,24 +36,12 @@ void ComputePipeline::dispatch(int gcX, int gcY, int gcZ)
 		);
 	}
 
-	Vector<uint32_t> dynamicOffsets = getDynamicOffsets();
-
-	vkCmdBindDescriptorSets(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_COMPUTE,
-		pipelineLayout,
-		0,
-		1, &descriptorSet,
-		dynamicOffsets.size(),
-		dynamicOffsets.data()
-	);
-
 	vkCmdDispatch(
 		currentBuffer,
 		gcX, gcY, gcZ
 	);
 
-	p_boundTextures.popPipelineBarriers();
+	//p_boundTextures.popPipelineBarriers();
 }
 
 void ComputePipeline::bind()
@@ -90,16 +77,17 @@ VkPipeline ComputePipeline::getPipeline()
 
 	VkPipeline createdPipeline = VK_NULL_HANDLE;
 
-	if (VkResult result = vkCreateComputePipelines(g_vulkanBackend->device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to create new compute pipeline: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkCreateComputePipelines(g_vulkanBackend->device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &createdPipeline),
+		"Failed to create new compute pipeline"
+	);
 
 	g_vulkanBackend->pipelineCache.insert(
 		createdPipelineHash,
 		createdPipeline
 	);
 
-	LLT_LOG("[VULKAN] Created new compute pipeline!");
+	LLT_LOG("Created new compute pipeline!");
 
 	return createdPipeline;
 }
@@ -117,7 +105,7 @@ void ComputePipeline::bindShader(const ShaderProgram* shader)
 			break;
 
 		default:
-			LLT_ERROR("[COMPUTEPIPELINE|DEBUG] Unrecognised shader type being bound: %d", shader->type);
+			LLT_ERROR("Unrecognised shader type being bound: %d", shader->type);
 			break;
 	}
 }

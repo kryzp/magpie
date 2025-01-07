@@ -475,7 +475,7 @@ nextAlignFound:
 			b = b->next;
 		}
 
-		LLT_ERROR("[HASHMAP|DEBUG] Could not find bucket matching key.");
+		LLT_ERROR("Could not find bucket matching key.");
 		return m_elements[0]->data.second;
 	}
 
@@ -493,7 +493,7 @@ nextAlignFound:
 			b = b->next;
 		}
 
-		LLT_ERROR("[HASHMAP|DEBUG] Could not find element matching key.");
+		LLT_ERROR("Could not find element matching key.");
 		return m_elements[0]->data.second;
 	}
 

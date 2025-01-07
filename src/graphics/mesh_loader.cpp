@@ -179,7 +179,8 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial* material, ai
 		Texture* tex = g_textureManager->getTexture(texturePath.C_Str());
 
 		if (!tex) {
-			tex = g_textureManager->createFromImage(texturePath.C_Str(), Image(texturePath.C_Str()));
+			Image image(texturePath.C_Str());
+			tex = g_textureManager->createFromImage(texturePath.C_Str(), image);
 		}
 
 		result.pushBack(tex);

@@ -183,9 +183,10 @@ void Texture::createInternalResources()
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	if (VkResult result = vmaCreateImage(g_vulkanBackend->vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo); result != VK_SUCCESS) {
-		LLT_ERROR("[TEXTURE|DEBUG] Failed to create image: %d", result);
-	}
+	LLT_VK_CHECK(
+		vmaCreateImage(g_vulkanBackend->vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
+		"Failed to create image"
+	);
 
 	m_view = generateView();
 }
@@ -217,9 +218,10 @@ VkImageView Texture::generateView() const
 
 	VkImageView ret = {};
 
-	if (VkResult result = vkCreateImageView(g_vulkanBackend->device, &viewCreateInfo, nullptr, &ret); result != VK_SUCCESS) {
-		LLT_ERROR("[TEXTURE|DEBUG] Failed to create texture image view: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkCreateImageView(g_vulkanBackend->device, &viewCreateInfo, nullptr, &ret),
+		"Failed to create texture image view"
+	);
 
 	return ret;
 }
@@ -227,13 +229,13 @@ VkImageView Texture::generateView() const
 // also transitions the texture into SHADER_READ_ONLY layout
 void Texture::generateMipmaps() const
 {
-	LLT_ASSERT(m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "[TEXTURE|DEBUG] Texture must be in TRANSFER_DST_OPTIMAL layout to generate mipmaps.");
+	LLT_ASSERT(m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "Texture must be in TRANSFER_DST_OPTIMAL layout to generate mipmaps.");
 
 	VkFormatProperties formatProperties = {};
 	vkGetPhysicalDeviceFormatProperties(g_vulkanBackend->physicalData.device, m_format, &formatProperties);
 
 	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-		LLT_ERROR("[TEXTURE|DEBUG] Texture image format doesn't support linear blitting.");
+		LLT_ERROR("Texture image format doesn't support linear blitting.");
 		return;
 	}
 
@@ -458,7 +460,7 @@ void Texture::transitionLayout(VkImageLayout newLayout)
 		}
 		else
 		{
-			LLT_ERROR("[TEXTURE|DEBUG] Unsupported layout transition for image: %d -> %d", m_imageLayout, newLayout);
+			LLT_ERROR("Unsupported layout transition for image: %d -> %d", m_imageLayout, newLayout);
 		}
 
 		vkCmdPipelineBarrier(

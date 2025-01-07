@@ -126,7 +126,7 @@ namespace llt
 	template <uint64_t Size>
 	Bitset<Size>& Bitset<Size>::enable(uint64_t idx)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] |= (1 << idx);
 		return *this;
 	}
@@ -134,7 +134,7 @@ namespace llt
 	template <uint64_t Size>
 	Bitset<Size>& Bitset<Size>::disable(uint64_t idx)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] &= ~(1 << idx);
 		return *this;
 	}
@@ -142,7 +142,7 @@ namespace llt
 	template <uint64_t Size>
 	Bitset<Size>& Bitset<Size>::toggle(uint64_t idx)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] ^= 1 << idx;
 		return *this;
 	}
@@ -150,7 +150,7 @@ namespace llt
 	template <uint64_t Size>
 	Bitset<Size>& Bitset<Size>::set(uint64_t idx, bool mode)
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		if (mode) m_bytes[idx/8] |= (1 << idx);
 		else m_bytes[idx/8] &= ~(1 << idx);
 		return *this;
@@ -159,14 +159,14 @@ namespace llt
 	template <uint64_t Size>
 	bool Bitset<Size>::isOn(uint64_t idx) const
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		return (m_bytes[idx/8] & (1 << idx)) != 0;
 	}
 
 	template <uint64_t Size>
 	bool Bitset<Size>::isOnOnly(uint64_t idx) const
 	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "[BITSET|DEBUG] Index must be within range of the bitset.");
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		return (m_bytes[idx/8] & (1 << idx)) == (1 << idx);
 	}
 

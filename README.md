@@ -7,27 +7,22 @@ You'll notice it's very similar to my other Vulkan engine, because I basically r
 I recently bought Real Time Rendering, so it's time to make the investment worth it, I guess.
 
 TODO:
-- fix command buffer not working on shader buffer resize
-- remove global descriptor set builder / cache etc
+- shader buffers + ubos should be set individually in their own function, then data just gets sent to the models
 - merge shader buffer and shader parameters?
 - endSingleTimeCommands should not have to vkQueueWaitIdle every time
 - implement a render graph system!
-
-immediate todo:
-- merge ShaderParameters into ShaderBuffer someway
+- macro LLT_VK_CHECK to take care of the if(vkXXX() == bad result) { LLT_ERR ... }
 - use multiple descriptor sets for different update frequencies, i.e: per frame, per instance, etc...
 - make texture transitioning nicer
 - global staging buffer rather than constantly creating a new one then deleting it
 - texture transitioning when moving into and out of a graphics queue render call is a bit messy, wayyyy too much vkQueueSubmit -> vkQueueWaitIdle then-back-to-vkQueueSubmit's!!!
-
-todo:
 - VK_FORMAT_R32G32B32_SFLOAT isnt supported??? wtf???
 - drawindirect support (proper)
 - stencil buffer support!
 - I think queues arent currently assigned properly(?)
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
 
-broad todo:
+BACKBURNER:
 - imgui
 - pbr
 - volumetrics

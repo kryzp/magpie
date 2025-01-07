@@ -64,9 +64,10 @@ VkSampler TextureSampler::bind(int maxMipLevels)
 	createInfo.minLod = 0.0f;
 	createInfo.maxLod = (float)maxMipLevels;
 
-	if (VkResult result = vkCreateSampler(g_vulkanBackend->device, &createInfo, nullptr, &m_sampler); result != VK_SUCCESS) {
-		LLT_ERROR("[SAMPLER|DEBUG] Failed to create texture sampler: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkCreateSampler(g_vulkanBackend->device, &createInfo, nullptr, &m_sampler),
+		"Failed to create texture sampler"
+	);
 
 	return m_sampler;
 }

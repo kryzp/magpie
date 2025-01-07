@@ -89,11 +89,8 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 	}
 	else
 	{
-		LLT_ERROR("[SHADERBUFFERMGR|DEBUG] Unsupported ShaderBufferType: %d.", m_type);
+		LLT_ERROR("Unsupported ShaderBufferType: %d.", m_type);
 	}
-
-	// all of our descriptor sets are invalid now so we have to clear our caches
-	g_vulkanBackend->clearDescriptorCacheAndPool();
 
 	m_info.buffer = m_buffer->getBuffer();
 	m_info.offset = 0;
@@ -114,7 +111,7 @@ void ShaderBuffer::resetBufferUsageInFrame()
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] = 0;
 }
 
-const VkDescriptorBufferInfo& ShaderBuffer::getDescriptor() const
+const VkDescriptorBufferInfo& ShaderBuffer::getDescriptorInfo() const
 {
 	return m_info;
 }

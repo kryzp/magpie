@@ -19,6 +19,9 @@ GraphicsPipeline::GraphicsPipeline()
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
 	, m_currentVertexDescriptor(nullptr)
 {
+	resetViewport();
+	resetScissor();
+
 	m_depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	m_depthStencilCreateInfo.depthTestEnable = VK_TRUE;
 	m_depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
@@ -37,14 +40,18 @@ GraphicsPipeline::~GraphicsPipeline()
 
 void GraphicsPipeline::render(const RenderPass& op)
 {
-	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = currentFrame.commandBuffer;
+	cauto& currentBuffer = g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer;
 
 	cauto& vertexBuffer = op.meshData.vBuffer->getBuffer();
 	cauto& indexBuffer  = op.meshData.iBuffer->getBuffer();
 
+	VkViewport viewport = getViewport();
+	VkRect2D scissor = getScissor();
+
+	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
+
 	VkPipelineLayout pipelineLayout = getPipelineLayout();
-	VkDescriptorSet descriptorSet = getDescriptorSet();
 
 	VkBuffer vertexBuffers[2] = { vertexBuffer, VK_NULL_HANDLE };
 
@@ -76,18 +83,6 @@ void GraphicsPipeline::render(const RenderPass& op)
 		);
 	}
 
-	cauto& dynamicOffsets = getDynamicOffsets();
-
-	vkCmdBindDescriptorSets(
-		currentBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout,
-		0,
-		1, &descriptorSet,
-		dynamicOffsets.size(),
-		dynamicOffsets.data()
-	);
-
 	if (op.indirectData.buffer)
 	{
 		// todo: start using vkCmdDrawIndirectCount
@@ -114,8 +109,7 @@ void GraphicsPipeline::render(const RenderPass& op)
 
 void GraphicsPipeline::bind()
 {
-	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = currentFrame.commandBuffer;
+	cauto& currentBuffer = g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer;
 
 	VkPipeline pipeline = getPipeline();
 
@@ -124,12 +118,6 @@ void GraphicsPipeline::bind()
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipeline
 	);
-
-	VkViewport viewport = getViewport();
-	VkRect2D scissor = getScissor();
-
-	vkCmdSetViewport(currentBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(currentBuffer, 0, 1, &scissor);
 }
 
 VkPipeline GraphicsPipeline::getPipeline()
@@ -204,6 +192,7 @@ VkPipeline GraphicsPipeline::getPipeline()
 	hash::combine(&createdPipelineHash, &rasterizationStateCreateInfo);
 	hash::combine(&createdPipelineHash, &inputAssemblyStateCreateInfo);
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
+	hash::combine(&createdPipelineHash, &viewportStateCreateInfo);
 
 	VkRenderingInfoKHR info = renderInfo->getInfo();
 
@@ -260,11 +249,12 @@ VkPipeline GraphicsPipeline::getPipeline()
 
 	VkPipeline createdPipeline = VK_NULL_HANDLE;
 
-	if (VkResult result = vkCreateGraphicsPipelines(g_vulkanBackend->device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &createdPipeline); result != VK_SUCCESS) {
-		LLT_ERROR("[VULKAN|DEBUG] Failed to create new graphics pipeline: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkCreateGraphicsPipelines(g_vulkanBackend->device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &createdPipeline),
+		"Failed to create new graphics pipeline"
+	);
 
-	LLT_LOG("[VULKAN] Created new graphics pipeline!");
+	LLT_LOG("Created new graphics pipeline!");
 		
 	g_vulkanBackend->pipelineCache.insert(
 		createdPipelineHash,
@@ -291,11 +281,11 @@ void GraphicsPipeline::bindShader(const ShaderProgram* shader)
 			break;
 
 		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			LLT_ERROR("[GRAPHICSPIPELINE|DEBUG] Geometry shaders not yet implemented!!");
+			LLT_ERROR("Geometry shaders not yet implemented!!");
 			break;
 
 		default:
-			LLT_ERROR("[GRAPHICSPIPELINE|DEBUG] Unrecognised shader type being bound: %d", shader->type);
+			LLT_ERROR("Unrecognised shader type being bound: %d", shader->type);
 			break;
 	}
 }
@@ -328,38 +318,32 @@ void GraphicsPipeline::setScissor(const RectI& rect)
 
 VkViewport GraphicsPipeline::getViewport() const
 {
-	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
-
-	VkViewport defaultValue = {};
-	defaultValue.x = 0.0f;
-	defaultValue.y = (float)renderInfo->getHeight();
-	defaultValue.width = (float)renderInfo->getWidth();
-	defaultValue.height = -(float)renderInfo->getHeight();
-	defaultValue.minDepth = 0.0f;
-	defaultValue.maxDepth = 1.0f;
-
-	return m_viewport.valueOr(defaultValue);
+	return m_viewport;
 }
 
 VkRect2D GraphicsPipeline::getScissor() const
 {
-	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
-
-	VkRect2D defaultValue = {};
-	defaultValue.offset = { 0, 0 };
-	defaultValue.extent = { renderInfo->getWidth(), renderInfo->getHeight() };
-
-	return m_scissor.valueOr(defaultValue);
+	return m_scissor;
 }
 
 void GraphicsPipeline::resetViewport()
 {
-	m_viewport.disable();
+	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+
+	m_viewport.x = 0.0f;
+	m_viewport.y = (float)renderInfo->getHeight();
+	m_viewport.width = (float)renderInfo->getWidth();
+	m_viewport.height = -(float)renderInfo->getHeight();
+	m_viewport.minDepth = 0.0f;
+	m_viewport.maxDepth = 1.0f;
 }
 
 void GraphicsPipeline::resetScissor()
 {
-	m_scissor.disable();
+	RenderInfo* renderInfo = g_vulkanBackend->getRenderTarget()->getRenderInfo();
+
+	m_scissor.offset = { 0, 0 };
+	m_scissor.extent = { renderInfo->getWidth(), renderInfo->getHeight() };
 }
 
 void GraphicsPipeline::setDepthOp(VkCompareOp op)

@@ -18,9 +18,9 @@
 
 #include "render_info.h"
 
-#include "descriptor_pool_mgr.h"
+#include "descriptor_allocator.h"
 #include "descriptor_builder.h"
-#include "descriptor_cache.h"
+#include "descriptor_layout_cache.h"
 
 #include "vertex_descriptor.h"
 
@@ -79,8 +79,6 @@ namespace llt
 		void waitOnCompute();
 		void syncStall() const;
 
-		void clearDescriptorCacheAndPool();
-
 		int getCurrentFrameIdx() const;
 
 		GenericRenderTarget* getRenderTarget();
@@ -92,15 +90,12 @@ namespace llt
 		void beginCompute();
 		void endCompute();
 
-        VkInstance vulkanInstance;
+        VkInstance instance;
 		VkDevice device;
 		PhysicalDeviceData physicalData;
 		VkSampleCountFlagBits maxMsaaSamples;
 		VkFormat swapChainImageFormat;
 		VmaAllocator vmaAllocator;
-
-		DescriptorPoolMgr descriptorPoolManager;
-		DescriptorCache descriptorCache;
 
 		HashMap<uint64_t, VkPipeline> pipelineCache;
 		HashMap<uint64_t, VkPipelineLayout> pipelineLayoutCache;

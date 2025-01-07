@@ -6,6 +6,9 @@
 #include "../container/vector.h"
 
 #include "descriptor_builder.h"
+#include "descriptor_layout_cache.h"
+#include "descriptor_allocator.h"
+
 #include "texture.h"
 
 namespace llt
@@ -18,32 +21,20 @@ namespace llt
 	{
 	public:
 		Pipeline(VkShaderStageFlagBits stage);
-		virtual ~Pipeline() = default;
+		virtual ~Pipeline();
 
 		virtual void bind() = 0;
 		virtual VkPipeline getPipeline() = 0;
 
 		VkPipelineLayout getPipelineLayout();
-		VkDescriptorSet getDescriptorSet();
-		const Vector<uint32_t>& getDynamicOffsets();
+
+		void setDescriptorSetLayout(const VkDescriptorSetLayout& layout);
 
 		virtual void bindShader(const ShaderProgram* shader) = 0;
 
-		void bindTexture(int idx, Texture* texture, TextureSampler* sampler);
-		void bindBuffer(int idx, const ShaderBuffer* buffer);
-
-	protected:
-		TextureBatch p_boundTextures;
-
 	private:
-		DescriptorBuilder m_descriptorBuilder;
-
 		VkShaderStageFlagBits m_stage;
-
-		Vector<VkDescriptorImageInfo> m_boundImages;
-
-		Vector<uint32_t> m_dynamicOffsets;
-		Vector<Pair<int, const ShaderBuffer*>> m_buffers;
+		VkDescriptorSetLayout m_descriptorSetLayout;
 	};
 }
 

@@ -215,7 +215,7 @@ namespace llt
 	Str<Size>::Str(const char* str)
 		: m_length(cstr::length(str))
 	{
-		LLT_ASSERT(m_length < (Size - 1), "[STRING|DEBUG] Length must not exceed maximum size."); // -1 for '\0'
+		LLT_ASSERT(m_length < (Size - 1), "Length must not exceed maximum size."); // -1 for '\0'
 
 		m_buf = new char[Size];
 		cstr::copy(m_buf, str, m_length);
@@ -225,7 +225,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size>::Str(const Str& other)
 	{
-		LLT_ASSERT(other.m_length < (Size - 1), "[STRING|DEBUG] Length must not exceed maximum size.");
+		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
 		m_buf = new char[Size];
 
@@ -238,7 +238,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size>::Str(Str&& other) noexcept
 	{
-		LLT_ASSERT(other.m_length < (Size - 1), "[STRING|DEBUG] Length must not exceed maximum size.");
+		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
 		m_buf = new char[Size];
 
@@ -252,7 +252,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size>& Str<Size>::operator = (const Str& other)
 	{
-		LLT_ASSERT(other.m_length < (Size - 1), "[STRING|DEBUG] Length must not exceed maximum size.");
+		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
 		if (!m_buf) {
 			m_buf = new char[Size];
@@ -272,7 +272,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size>& Str<Size>::operator = (Str&& other) noexcept
 	{
-		LLT_ASSERT(other.m_length < (Size - 1), "[STRING|DEBUG] Length must not exceed maximum size");
+		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size");
 
 		if (!m_buf)
 			m_buf = new char[Size];
@@ -309,7 +309,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size>& Str<Size>::append(const Str<Size>& str)
 	{
-		LLT_ASSERT((m_length + str.m_length) < (Size - 1), "[STRING|DEBUG] Final length must not exceed maximum size.");
+		LLT_ASSERT((m_length + str.m_length) < (Size - 1), "Final length must not exceed maximum size.");
 
 		m_length += str.length();
 		cstr::concat(m_buf, str.m_buf, str.length());
@@ -534,7 +534,7 @@ namespace llt
 	template <uint64_t Size>
 	int Str<Size>::indexOf(const Str& str) const
 	{
-		LLT_ASSERT(m_length >= str.m_length, "[STRING|DEBUG] String to check for must not be larger than the string getting checked.");
+		LLT_ASSERT(m_length >= str.m_length, "String to check for must not be larger than the string getting checked.");
 
 		for (unsigned i = 0; i <= m_length - str.m_length; i++)
 		{
@@ -555,7 +555,7 @@ namespace llt
 	template <uint64_t Size>
 	int Str<Size>::lastIndexOf(const Str<Size>& str) const
 	{
-		LLT_ASSERT(m_length >= str.m_length, "[STRING|DEBUG] String to check for must not be larger than the string getting checked.");
+		LLT_ASSERT(m_length >= str.m_length, "String to check for must not be larger than the string getting checked.");
 
 		for (unsigned i = m_length - str.m_length; i > 0; i--)
 		{
@@ -608,28 +608,28 @@ namespace llt
 	template <uint64_t Size>
 	char* Str<Size>::at(uint64_t idx)
 	{
-		LLT_ASSERT(idx < m_length, "[STRING|DEBUG] Index must not be more than the length of the string.");
+		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
 	const char* Str<Size>::at(uint64_t idx) const
 	{
-		LLT_ASSERT(idx < m_length, "[STRING|DEBUG] Index must not be more than the length of the string.");
+		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
 	char& Str<Size>::operator [] (uint64_t idx)
 	{
-		LLT_ASSERT(idx < m_length, "[STRING|DEBUG] Index must not be more than the length of the string.");
+		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
 	const char& Str<Size>::operator [] (uint64_t idx) const
 	{
-		LLT_ASSERT(idx < m_length, "[STRING|DEBUG] Index must not be more than the length of the string.");
+		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 

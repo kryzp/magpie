@@ -37,7 +37,7 @@ namespace llt
 
 		void resetBufferUsageInFrame();
 
-		const VkDescriptorBufferInfo& getDescriptor() const;
+		const VkDescriptorBufferInfo& getDescriptorInfo() const;
 		VkDescriptorType getDescriptorType() const;
 
 		uint32_t getDynamicOffset() const;

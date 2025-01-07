@@ -46,7 +46,6 @@ ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkSha
 		return m_shaderCache.get(name);
 	}
 
-	/*
 	FileStream fs(source.cstr(), "r");
 	Vector<char> sourceData(fs.size());
 	fs.read(sourceData.data(), fs.size());
@@ -59,8 +58,8 @@ ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkSha
 	m_shaderCache.insert(name, shader);
 
 	return shader;
-	*/
 
+	/*
 	std::ifstream fs(source.cstr());
 	std::ostringstream fsBuffer;
 	fsBuffer << fs.rdbuf();
@@ -73,6 +72,7 @@ ShaderProgram* ShaderMgr::create(const String& name, const String& source, VkSha
 	m_shaderCache.insert(name, shader);
 
 	return shader;
+	*/
 }
 
 ShaderEffect* ShaderMgr::createEffect()

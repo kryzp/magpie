@@ -10,19 +10,20 @@ struct PSInput
     [[vk::location(VS_OUT_SLOT_TBN_MATRIX)]] float3x3 tbn : TEXCOORD4;
 };
 
-Texture2D s_diffuseTexture : register(t3);
-Texture2D s_specularTexture : register(t4);
-Texture2D s_normalTexture : register(t5);
+Texture2D diffuseTexture : register(t3);
+Texture2D specularTexture : register(t4);
+Texture2D normalTexture : register(t5);
 
-SamplerState samplerDiffuse : register(s3);
-SamplerState samplerSpecular : register(s4);
-SamplerState samplerNormal : register(s5);
+SamplerState diffuseSampler : register(s3);
+SamplerState specularSampler : register(s4);
+SamplerState normalSampler : register(s5);
 
 float4 main(PSInput input) : SV_Target
 {
-    float3 diffuseColour = s_diffuseTexture.Sample(samplerDiffuse, input.texCoord).rgb;
-    float3 specularColour = s_specularTexture.Sample(samplerSpecular, input.texCoord).rgb;
-    float3 normal = s_normalTexture.Sample(samplerNormal, input.texCoord).rgb;
+	float3 diffuseColour = diffuseTexture.Sample(diffuseSampler, input.texCoord).rgb;
+	float3 specularColour = specularTexture.Sample(specularSampler, input.texCoord).rgb;
+	float3 normal = normalTexture.Sample(normalSampler, input.texCoord).rgb;
+    
     normal = normalize(2.0*normal - 1.0);
 
     float3 viewDir = normalize(input.tangentViewPos - input.tangentFragPos);

@@ -2,13 +2,14 @@
 
 struct PushConstants
 {
-    int storage;
-    int texture2D_RID;
-    int cubeMap_RID;
+	float time;
+//	int storage;
+//    int texture2D_RID;
+//    int cubeMap_RID;
 };
 
 [[vk::push_constant]]
-PushConstants puchConstants;
+PushConstants pushConstants;
 
 #define MAX_N_LIGHTS 16
 
@@ -30,7 +31,7 @@ struct FrameUBO
     Light lights[MAX_N_LIGHTS];
 };
 
-cbuffer frameData : register(b0) { FrameUBO frameData; };
+ConstantBuffer<FrameUBO> frameData : register(b0);
 
 struct InstanceUBO
 {
@@ -38,4 +39,4 @@ struct InstanceUBO
     float4x4 normalMatrix;
 };
 
-cbuffer instanceData : register(b1) { InstanceUBO instanceData; };
+ConstantBuffer<InstanceUBO> instanceData : register(b1);

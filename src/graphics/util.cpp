@@ -69,7 +69,7 @@ uint32_t vkutil::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter
 		}
 	}
 
-	LLT_ERROR("[UTIL|DEBUG] Failed to find suitable memory type.");
+	LLT_ERROR("Failed to find suitable memory type.");
 	return 0;
 }
 
@@ -87,7 +87,7 @@ VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFor
 		}
 	}
 
-	LLT_ERROR("[UTIL|DEBUG] Failed to find supported format.");
+	LLT_ERROR("Failed to find supported format.");
 	return VK_FORMAT_MAX_ENUM;
 }
 
@@ -122,17 +122,19 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 
 	VkCommandBuffer cmdBuffer = {};
 
-	if (VkResult result = vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmdBuffer); result != VK_SUCCESS) {
-		LLT_ERROR("[UTIL|DEBUG] Failed to reallocate command buffers when copying buffer: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmdBuffer),
+		"Failed to reallocate command buffers when copying buffer"
+	);
 
 	VkCommandBufferBeginInfo beginInfo = {};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	if (VkResult result = vkBeginCommandBuffer(cmdBuffer, &beginInfo); result != VK_SUCCESS) {
-		LLT_ERROR("[UTIL|DEBUG] Failed to begin command buffer when copying buffer: %d", result);
-	}
+	LLT_VK_CHECK(
+		vkBeginCommandBuffer(cmdBuffer, &beginInfo),
+		"Failed to begin command buffer when copying buffer"
+	);
 
 	return cmdBuffer;
 }
@@ -200,7 +202,7 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
 	if (!extensionCount) {
-		LLT_ERROR("[UTIL|DEBUG] Failed to find any device extension properties!");
+		LLT_ERROR("Failed to find any device extension properties!");
 	}
 
 	Vector<VkExtensionProperties> availableExts(extensionCount);

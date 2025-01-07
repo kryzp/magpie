@@ -15,6 +15,7 @@ llt::MaterialSystem* llt::g_materialSystem = nullptr;
 
 using namespace llt;
 
+/*
 enum class TextureHandle : uint32_t { INVALID = Calc<uint32_t>::maxValue() };
 enum class BufferHandle : uint32_t { INVALID = Calc<uint32_t>::maxValue() };
 
@@ -31,6 +32,7 @@ struct Params_Skybox {
 	uint32_t _padding0;
 	uint32_t _padding1;
 };
+*/
 
 MaterialSystem::MaterialSystem()
 	: m_materials()
@@ -50,12 +52,26 @@ MaterialSystem::~MaterialSystem()
 	m_materials.clear();
 	m_techniques.clear();
 
-	bindlessDescriptorPoolManager.cleanUp();
-	bindlessDescriptorCache.cleanUp();
+	m_descriptorCache.cleanUp();
+	m_descriptorPoolAllocator.cleanUp();
 }
 
-void MaterialSystem::initBuffers()
+void MaterialSystem::init()
 {
+	m_descriptorPoolAllocator.setSizes(64 * mgc::FRAMES_IN_FLIGHT, {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			4.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
+	});
+
 	m_globalBuffer = g_shaderBufferManager->createUBO();
 	m_instanceBuffer = g_shaderBufferManager->createUBO();
 
@@ -81,6 +97,7 @@ void MaterialSystem::initBuffers()
 	instanceParameters.setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
 	updateInstanceBuffer();
 
+	/*
 	m_bindlessParams.setValue<Params_PBR>("pbsParams", {
 		.meshTransforms = (BufferHandle)0,
 		.pointLights = (BufferHandle)0,
@@ -102,7 +119,7 @@ void MaterialSystem::initBuffers()
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, (float)maxSamplesImages }
 	});
 
-	bindlessDescriptorCache.setPoolManager(bindlessDescriptorPoolManager);
+	bindlessDescriptorCache.setPoolAllocator(bindlessDescriptorPoolManager);
 
 	m_bindlessDescriptor.bindBuffer(
 		UNIFORM_BUFFER_BINDING,
@@ -134,7 +151,6 @@ void MaterialSystem::initBuffers()
 	VkDescriptorSetLayout layout = {};
 	m_bindlessDescriptor.buildLayout(layout, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
-	/*
 	std::array<VkDescriptorSetLayoutBinding, 3> bindings{};
 	std::array<VkDescriptorBindingFlags, 3> flags{};
 	std::array<VkDescriptorType, 3> types{
@@ -191,9 +207,9 @@ const ShaderBuffer* MaterialSystem::getInstanceBuffer() const
 
 void MaterialSystem::loadDefaultTechniques()
 {
-	ShaderProgram* genericVertex	= g_shaderManager->create("genericVertex",	"../res/shaders/raster/model_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* pbrFragment		= g_shaderManager->create("pbrFragment",	"../res/shaders/raster/texturedPBR.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* skyboxFragment	= g_shaderManager->create("skyboxFragment",	"../res/shaders/raster/skybox.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* genericVertex	= g_shaderManager->create("genericVertex",	"../../res/shaders/raster/model_vs.spv",		VK_SHADER_STAGE_VERTEX_BIT);
+	ShaderProgram* pbrFragment		= g_shaderManager->create("pbrFragment",	"../../res/shaders/raster/texturedPBR.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram* skyboxFragment	= g_shaderManager->create("skyboxFragment",	"../../res/shaders/raster/skybox.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	ShaderEffect* pbrEffect = g_shaderManager->createEffect();
 	pbrEffect->stages.pushBack(genericVertex);
@@ -204,19 +220,19 @@ void MaterialSystem::loadDefaultTechniques()
 	skyboxEffect->stages.pushBack(skyboxFragment);
 
 	Technique pbrTechnique;
-	Technique skyboxTechnique;
-
-	pbrTechnique.setPass(SHADER_PASS_FORWARD, pbrEffect);
-	pbrTechnique.setPass(SHADER_PASS_SHADOW, nullptr);
-	pbrTechnique.setVertexFormat(g_modelVertexFormat);
-
-	skyboxTechnique.setPass(SHADER_PASS_FORWARD, skyboxEffect);
-	skyboxTechnique.setPass(SHADER_PASS_SHADOW, nullptr);
-	skyboxTechnique.setVertexFormat(g_modelVertexFormat);
-
+	pbrTechnique.passes[SHADER_PASS_FORWARD] = pbrEffect;
+	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
+	pbrTechnique.vertexFormat = g_modelVertexFormat;
 	addTechnique("texturedPBR_opaque", pbrTechnique);
+
+	Technique skyboxTechnique;
+	skyboxTechnique.passes[SHADER_PASS_FORWARD] = skyboxEffect;
+	skyboxTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
+	skyboxTechnique.vertexFormat = g_modelVertexFormat;
 	addTechnique("skybox", skyboxTechnique);
 }
+
+// todo: way to specifically decide what global buffer gets applied to what bindings in the technique
 
 Material* MaterialSystem::buildMaterial(MaterialData& data)
 {
@@ -233,26 +249,48 @@ Material* MaterialSystem::buildMaterial(MaterialData& data)
 	material->parameterBuffer = g_shaderBufferManager->createUBO();
 	material->parameterBuffer->pushData(data.parameters);
 
+	material->vertexFormat = technique.vertexFormat;
 	material->textures = data.textures;
 
-	material->pipeline.setVertexDescriptor(technique.getVertexFormat());
-	material->pipeline.setDepthTest(data.depthTest);
-	material->pipeline.setDepthWrite(data.depthWrite);
-	material->pipeline.bindShader(technique.getPass(SHADER_PASS_FORWARD)->stages[0]);
-	material->pipeline.bindShader(technique.getPass(SHADER_PASS_FORWARD)->stages[1]);
-	material->pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
+	DescriptorLayoutBuilder descriptorLayoutBuilder;
+	descriptorLayoutBuilder.bind(0, m_globalBuffer->getDescriptorType());
+	descriptorLayoutBuilder.bind(1, m_instanceBuffer->getDescriptorType());
+	descriptorLayoutBuilder.bind(2, material->parameterBuffer->getDescriptorType());
 
-	material->pipeline.bindBuffer(0, m_globalBuffer); // todo: way to specifically decide what global buffer gets applied to what bindings in the technique
-	material->pipeline.bindBuffer(1, m_instanceBuffer);
-	material->pipeline.bindBuffer(2, material->parameterBuffer);
+	DescriptorWriter descriptorWriter;
+	descriptorWriter.writeBuffer(0, m_globalBuffer->getDescriptorType(), m_globalBuffer->getDescriptorInfo());
+	descriptorWriter.writeBuffer(1, m_instanceBuffer->getDescriptorType(), m_instanceBuffer->getDescriptorInfo());
+	descriptorWriter.writeBuffer(2, material->parameterBuffer->getDescriptorType(), material->parameterBuffer->getDescriptorInfo());
 
 	for (int i = 0; i < data.textures.size(); i++)
 	{
-		material->pipeline.bindTexture(
-			i + 3,
-			data.textures[i].texture,
-			data.textures[i].sampler
-		);
+		descriptorLayoutBuilder.bind(i + 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		descriptorWriter.writeImage(i + 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, data.textures[i].getImageInfo());
+	}
+
+	VkDescriptorSetLayout descriptorLayout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
+	
+	for (int i = 0; i < SHADER_PASS_MAX_ENUM; i++)
+	{
+		if (!technique.passes[i]) {
+			continue;
+		}
+
+		for (int j = 0; j < technique.passes[i]->stages.size(); j++) {
+			material->passes[i].pipeline.bindShader(technique.passes[i]->stages[j]);
+		}
+
+		material->passes[i].pipeline.setVertexDescriptor(technique.vertexFormat);
+		material->passes[i].pipeline.setDepthTest(data.depthTest);
+		material->passes[i].pipeline.setDepthWrite(data.depthWrite);
+		material->passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
+		material->passes[i].pipeline.setDescriptorSetLayout(i == SHADER_PASS_FORWARD ? descriptorLayout : VK_NULL_HANDLE);
+
+		material->passes[i].effect = technique.passes[i];
+
+		material->passes[i].set = m_descriptorPoolAllocator.allocate(descriptorLayout);
+
+		descriptorWriter.updateSet(material->passes[i].set);
 	}
 
 	m_materials.insert(data.getHash(), material);

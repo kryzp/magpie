@@ -412,7 +412,7 @@ namespace llt
     template <typename T>
     void Vector<T>::expand(uint64_t amount)
     {
-        LLT_ASSERT(amount > 0, "[VECTOR|DEBUG] Expand amount must be higher than 0");
+        LLT_ASSERT(amount > 0, "Expand amount must be higher than 0");
 
         allocate(m_size + amount);
 
@@ -671,28 +671,28 @@ namespace llt
     template <typename T>
     T& Vector<T>::at(uint64_t idx)
     {
-		LLT_ASSERT(idx >= 0 && idx < m_size, "[VECTOR|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
+		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
     const T& Vector<T>::at(uint64_t idx) const
     {
-		LLT_ASSERT(idx >= 0 && idx < m_size, "[VECTOR|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
+		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
     T& Vector<T>::operator [] (uint64_t idx)
     {
-		LLT_ASSERT(idx >= 0 && idx < m_size, "[VECTOR|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
+		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
     const T& Vector<T>::operator [] (uint64_t idx) const
     {
-		LLT_ASSERT(idx >= 0 && idx < m_size, "[VECTOR|DEBUG] Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
+		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 }

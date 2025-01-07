@@ -5,7 +5,7 @@ using namespace llt;
 Material::Material()
 	: textures()
 	, parameterBuffer()
-	, pipeline()
+	, passes()
 {
 }
 
@@ -15,9 +15,5 @@ Material::~Material()
 
 uint64_t Material::getHash() const
 {
-	uint64_t ret = 0;
-
-	hash::combine(&ret, &pipeline);
-
-	return ret;
+	return hash::calc(passes);
 }

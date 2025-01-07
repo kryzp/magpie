@@ -61,6 +61,8 @@ App::~App()
 		m_config.onDestroy();
 	}
 
+	m_renderer.cleanUp();
+
 	delete g_inputState;
 
 	delete g_vulkanBackend;
@@ -79,6 +81,7 @@ void App::run()
 	elapsedTimer.start();
 
 	g_platform->setCursorPosition(m_config.width / 2, m_config.height / 2);
+	g_platform->lockCursor(true);
 
 	while (m_running)
 	{

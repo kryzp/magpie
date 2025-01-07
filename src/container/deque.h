@@ -413,7 +413,7 @@ namespace llt
 	template <typename T, uint64_t ChunkSize>
 	T Deque<T, ChunkSize>::popFront()
 	{
-		LLT_ASSERT(m_size > 0, "[DEQUE|DEBUG] Deque must not be empty!");
+		LLT_ASSERT(m_size > 0, "Deque must not be empty!");
 		m_size--;
 		m_begin++;
 		return *m_begin;
@@ -422,7 +422,7 @@ namespace llt
 	template <typename T, uint64_t ChunkSize>
 	T Deque<T, ChunkSize>::popBack()
 	{
-		LLT_ASSERT(m_size > 0, "[DEQUE|DEBUG] Deque must not be empty!");
+		LLT_ASSERT(m_size > 0, "Deque must not be empty!");
 		m_size--;
 		m_end--;
 		return *m_end;

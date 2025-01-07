@@ -44,7 +44,7 @@ void Renderer::init(Backbuffer* backbuffer)
 	loadTextures();
 
 	g_materialSystem = new MaterialSystem();
-	g_materialSystem->initBuffers();
+	g_materialSystem->init();
 	g_materialSystem->loadDefaultTechniques();
 
 	g_meshLoader = new MeshLoader();
@@ -56,7 +56,7 @@ void Renderer::init(Backbuffer* backbuffer)
 	backpack->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
 	backpack->transform.setScale({ 1.0f, 1.0f, 1.0f });
 	backpack->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
-	backpack->mesh = g_meshLoader->loadMesh("backpack", "../res/models/backpack.obj");
+	backpack->mesh = g_meshLoader->loadMesh("backpack", "../../res/models/backpack.obj");
 
 //	m_target = g_renderTargetManager->createTarget(
 //		"gBuffer", // YES I KNOW THIS ISNT A DEFERRED RENDERING GBUFFER BUT WHATEVER
@@ -86,7 +86,7 @@ void Renderer::init(Backbuffer* backbuffer)
 //	m_postProcessPipeline.bindTexture(3, m_target->getAttachment(0), g_textureManager->getSampler("linear"));
 }
 
-Renderer::~Renderer()
+void Renderer::cleanUp()
 {
 	delete g_meshLoader;
 	delete g_materialSystem;
@@ -98,15 +98,15 @@ void Renderer::loadTextures()
 	g_textureManager->createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
 	g_textureManager->createCubeMap("skybox", VK_FORMAT_R8G8B8A8_UNORM,
-		"../res/textures/skybox/right.jpg",
-		"../res/textures/skybox/left.jpg",
-		"../res/textures/skybox/top.jpg",
-		"../res/textures/skybox/bottom.jpg",
-		"../res/textures/skybox/front.jpg",
-		"../res/textures/skybox/back.jpg"
+		"../../res/textures/skybox/right.jpg",
+		"../../res/textures/skybox/left.jpg",
+		"../../res/textures/skybox/top.jpg",
+		"../../res/textures/skybox/bottom.jpg",
+		"../../res/textures/skybox/front.jpg",
+		"../../res/textures/skybox/back.jpg"
 	);
 
-	g_textureManager->createFromImage("stone", Image("../res/textures/smooth_stone.png"));
+	g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
 }
 
 void Renderer::createQuadMesh()
@@ -195,8 +195,20 @@ void Renderer::renderSkybox(const Camera& camera, float deltaTime, float elapsed
 	RenderPass pass;
 	pass.setMesh(m_skyboxMesh);
 
-	m_skyboxMaterial->pipeline.bind();
-	m_skyboxMaterial->pipeline.render(pass);
+	m_skyboxMaterial->passes[SHADER_PASS_FORWARD].pipeline.bind();
+
+	uint32_t dynamicOffsets[] = { g_materialSystem->getGlobalBuffer()->getDynamicOffset(), g_materialSystem->getInstanceBuffer()->getDynamicOffset(), 0}; // todo: dynamic offsets
+
+	vkCmdBindDescriptorSets(
+		g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		m_skyboxMaterial->passes[SHADER_PASS_FORWARD].pipeline.getPipelineLayout(),
+		0,
+		1, &m_skyboxMaterial->passes[SHADER_PASS_FORWARD].set,
+		3, dynamicOffsets
+	);
+
+	m_skyboxMaterial->passes[SHADER_PASS_FORWARD].pipeline.render(pass);
 }
 
 void Renderer::renderEntities(const Camera& camera, float deltaTime, float elapsedTime)
@@ -206,7 +218,6 @@ void Renderer::renderEntities(const Camera& camera, float deltaTime, float elaps
 
 	g_materialSystem->globalParameters.setValue<glm::mat4>("projMatrix", camera.getProj());
 	g_materialSystem->globalParameters.setValue<glm::mat4>("viewMatrix", camera.getView());
-	//g_materialSystem->globalParameters.setMat4("prevViewMatrix", m_prevViewMatrix);
 	g_materialSystem->globalParameters.setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
 	g_materialSystem->updateGlobalBuffer();
 
@@ -221,17 +232,27 @@ void Renderer::renderEntities(const Camera& camera, float deltaTime, float elaps
 			SubMesh* mesh = entity.mesh->getSubmesh(i);
 			Material* material = mesh->getMaterial();
 
-			material->pipeline.bind();
-
 			RenderPass pass;
 			pass.setMesh(*mesh);
 
 			g_materialSystem->instanceParameters.setValue<glm::mat4>("modelMatrix", entity.transform.getMatrix());
-			//g_materialSystem->instanceParameters.setMat4("prevModelMatrix", entity.getPrevMatrix());
 			g_materialSystem->instanceParameters.setValue<glm::mat4>("normalMatrix", glm::transpose(glm::inverse(entity.transform.getMatrix())));
 			g_materialSystem->updateInstanceBuffer();
 
-			material->pipeline.render(pass);
+			material->passes[SHADER_PASS_FORWARD].pipeline.bind(); // todo: this should not happen per entity
+
+			uint32_t dynamicOffsets[] = { g_materialSystem->getGlobalBuffer()->getDynamicOffset(), g_materialSystem->getInstanceBuffer()->getDynamicOffset(), 0}; // todo: dynamic offsets
+
+			vkCmdBindDescriptorSets(
+				g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				material->passes[SHADER_PASS_FORWARD].pipeline.getPipelineLayout(),
+				0,
+				1, &material->passes[SHADER_PASS_FORWARD].set,
+				3, dynamicOffsets
+			);
+
+			material->passes[SHADER_PASS_FORWARD].pipeline.render(pass);
 		}
 	}
 }

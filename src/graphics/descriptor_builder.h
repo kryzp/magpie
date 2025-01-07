@@ -1,33 +1,50 @@
 #ifndef DESCRIPTOR_BUILDER_H_
 #define DESCRIPTOR_BUILDER_H_
 
-#include "descriptor_pool_mgr.h"
-#include "descriptor_cache.h"
+#include <vulkan/vulkan.h>
 
+#include "../container/deque.h"
 #include "../container/vector.h"
 
 namespace llt
 {
-	class DescriptorBuilder
+	class DescriptorLayoutCache;
+
+	class DescriptorLayoutBuilder
 	{
 	public:
-		DescriptorBuilder() = default;
-		~DescriptorBuilder() = default;
+		DescriptorLayoutBuilder() = default;
+		~DescriptorLayoutBuilder() = default;
 
+		VkDescriptorSetLayout build(VkShaderStageFlags shaderStages, DescriptorLayoutCache* cache, void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
+
+		void bind(uint32_t idx, VkDescriptorType type);
 		void clear();
 
-		uint64_t getHash() const;
+	private:
+		Vector<VkDescriptorSetLayoutBinding> m_bindings;
+	};
 
-		void build(VkDescriptorSet& set, const VkDescriptorSetLayout& layout, uint32_t count, uint64_t hash);
-		void buildLayout(VkDescriptorSetLayout& layout, VkDescriptorSetLayoutCreateFlags flags);
+	class DescriptorWriter
+	{
+	public:
+		DescriptorWriter() = default;
+		~DescriptorWriter() = default;
 
-		void bindBuffer(uint32_t idx, const VkDescriptorBufferInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count, VkDescriptorBindingFlags flags);
-		void bindImage(uint32_t idx, const VkDescriptorImageInfo* info, VkDescriptorType type, VkShaderStageFlags stageFlags, int count, VkDescriptorBindingFlags flags);
+		void clear();
+		void updateSet(VkDescriptorSet set);
+
+		void writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo& info);
+		void writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset);
+
+		void writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo& info);
+		void writeImage(uint32_t idx, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout);
 
 	private:
 		Vector<VkWriteDescriptorSet> m_writes;
-		Vector<VkDescriptorSetLayoutBinding> m_bindings;
-		Vector<VkDescriptorBindingFlags> m_flags;
+
+		Vector<VkDescriptorBufferInfo> m_bufferInfos;
+		Vector<VkDescriptorImageInfo> m_imageInfos;
 	};
 }
 

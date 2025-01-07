@@ -8,12 +8,9 @@
 
 namespace llt
 {
-	class VulkanBackend;
 	class Texture;
-	class SampledTexture;
 	class TextureSampler;
 	class Image;
-	class DescriptorBuilder;
 
 	class TextureMgr
 	{

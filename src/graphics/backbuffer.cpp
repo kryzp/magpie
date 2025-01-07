@@ -35,8 +35,8 @@ void Backbuffer::create()
 
 void Backbuffer::createSurface()
 {
-    if (bool result = g_platform->vkCreateSurface(g_vulkanBackend->vulkanInstance, &m_surface); !result) {
-        LLT_ERROR("[BACKBUFFER|DEBUG] Failed to create surface: %d", result);
+    if (bool result = g_platform->vkCreateSurface(g_vulkanBackend->instance, &m_surface); !result) {
+        LLT_ERROR("Failed to create surface: %d", result);
     }
 }
 
@@ -57,7 +57,7 @@ void Backbuffer::createColourResources()
 		m_swapChainImageViews[0]
 	);
 
-	LLT_LOG("[BACKBUFFER] Created colour resources!");
+	LLT_LOG("Created colour resources!");
 }
 
 void Backbuffer::createDepthResources()
@@ -79,7 +79,7 @@ void Backbuffer::createDepthResources()
 		VK_NULL_HANDLE
 	);
 
-    LLT_LOG("[BACKBUFFER] Created depth resources!");
+    LLT_LOG("Created depth resources!");
 }
 
 void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
@@ -151,7 +151,7 @@ void Backbuffer::cleanUp()
 	// if our surface exists, destroy it
 	if (m_surface != VK_NULL_HANDLE)
 	{
-		vkDestroySurfaceKHR(g_vulkanBackend->vulkanInstance, m_surface, nullptr);
+		vkDestroySurfaceKHR(g_vulkanBackend->instance, m_surface, nullptr);
 		m_surface = VK_NULL_HANDLE;
 	}
 }
@@ -192,7 +192,7 @@ void Backbuffer::acquireNextImage()
     if (VkResult result = vkAcquireNextImageKHR(g_vulkanBackend->device, m_swapChain, UINT64_MAX, getImageAvailableSemaphore(), VK_NULL_HANDLE, &m_currSwapChainImageIdx); result == VK_ERROR_OUT_OF_DATE_KHR) {
         rebuildSwapChain();
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        LLT_ERROR("[BACKBUFFER|DEBUG] Failed to acquire next image in swap chain: %d", result);
+        LLT_ERROR("Failed to acquire next image in swap chain: %d", result);
     }
 }
 
@@ -213,7 +213,7 @@ void Backbuffer::swapBuffers()
     if (VkResult result = vkQueuePresentKHR(g_vulkanBackend->graphicsQueue.getQueue(), &presentInfo); result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		rebuildSwapChain();
 	} else if (result != VK_SUCCESS) {
-        LLT_ERROR("[BACKBUFFER|DEBUG] Failed to present swap chain image: %d", result);
+        LLT_ERROR("Failed to present swap chain image: %d", result);
     }
 }
 
@@ -262,16 +262,17 @@ void Backbuffer::createSwapChain()
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// create the swapchain!
-    if (VkResult result = vkCreateSwapchainKHR(g_vulkanBackend->device, &createInfo, nullptr, &m_swapChain); result != VK_SUCCESS) {
-        LLT_ERROR("[BACKBUFFER|DEBUG] Failed to create swap chain: %d", result);
-    }
+	LLT_VK_CHECK(
+		vkCreateSwapchainKHR(g_vulkanBackend->device, &createInfo, nullptr, &m_swapChain),
+		"Failed to create swap chain"
+	);
 
 	// get the swapchain images
     vkGetSwapchainImagesKHR(g_vulkanBackend->device, m_swapChain, &imageCount, nullptr);
 
 	// if we weren't able to locate any throw an error
     if (!imageCount) {
-        LLT_ERROR("[BACKBUFFER|DEBUG] Failed to find any images in swap chain!");
+        LLT_ERROR("Failed to find any images in swap chain!");
     }
 
     m_swapChainImages.resize(imageCount);
@@ -320,13 +321,15 @@ void Backbuffer::createSwapChainSyncObjects()
 	// go through all our frames in flight and create the semaphores for each frame
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
-		if (VkResult result = vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]); result != VK_SUCCESS) {
-			LLT_ERROR("[BACKBUFFER|DEBUG] Failed to create image available semaphore: %d", result);
-		}
+		LLT_VK_CHECK(
+			vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]),
+			"Failed to create image available semaphore"
+		);
 
-		if (VkResult result = vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[i]); result != VK_SUCCESS) {
-			LLT_ERROR("[BACKBUFFER|DEBUG] Failed to create render finished semaphore: %d", result);
-		}
+		LLT_VK_CHECK(
+			vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[i]),
+			"Failed to create render finished semaphore"
+		);
 	}
 
 	LLT_LOG("[BACKBUFFER] Created sync objects!");
@@ -356,9 +359,10 @@ void Backbuffer::createSwapChainImageViews()
         viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
         viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-        if (VkResult result = vkCreateImageView(g_vulkanBackend->device, &viewInfo, nullptr, &m_swapChainImageViews[i]); result != VK_SUCCESS) {
-            LLT_ERROR("[BACKBUFFER|DEBUG] Failed to create texture image view: %d", result);
-        }
+		LLT_VK_CHECK(
+			vkCreateImageView(g_vulkanBackend->device, &viewInfo, nullptr, &m_swapChainImageViews[i]),
+			"Failed to create texture image view"
+		);
     }
 
     LLT_LOG("[BACKBUFFER] Created swap chain image views!");

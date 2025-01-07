@@ -3,7 +3,6 @@
 
 #include "../common.h"
 #include "../container/array.h"
-#include "../container/optional.h"
 #include "../math/rect.h"
 
 #include "pipeline.h"
@@ -58,8 +57,8 @@ namespace llt
 
 		VkCullModeFlagBits m_cullMode;
 
-		Optional<VkViewport> m_viewport;
-		Optional<VkRect2D> m_scissor;
+		VkViewport m_viewport;
+		VkRect2D m_scissor;
 		
 		const VertexDescriptor* m_currentVertexDescriptor;
 		

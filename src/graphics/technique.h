@@ -3,6 +3,7 @@
 
 #include "shader.h"
 #include "vertex_descriptor.h"
+#include "graphics_pipeline.h"
 
 namespace llt
 {
@@ -10,11 +11,18 @@ namespace llt
 	 * Different passes for selecting the type of shader to use during
 	 * a stage of the rendering process.
 	 */
-	enum ShaderPass
+	enum ShaderPassType
 	{
 		SHADER_PASS_FORWARD,
 		SHADER_PASS_SHADOW,
 		SHADER_PASS_MAX_ENUM
+	};
+
+	struct ShaderPass
+	{
+		ShaderEffect* effect;
+		VkDescriptorSet set;
+		GraphicsPipeline pipeline;
 	};
 
 	/**
@@ -27,29 +35,8 @@ namespace llt
 		Technique() = default;
 		~Technique() = default;
 
-		void setPass(ShaderPass pass, ShaderEffect* effect)
-		{
-			m_passes[pass] = effect;
-		}
-
-		const ShaderEffect* getPass(ShaderPass pass) const
-		{
-			return m_passes[pass];
-		}
-
-		void setVertexFormat(const VertexDescriptor& descriptor)
-		{
-			m_vertexFormat = descriptor;
-		}
-
-		const VertexDescriptor& getVertexFormat() const
-		{
-			return m_vertexFormat;
-		}
-
-	private:
-		VertexDescriptor m_vertexFormat;
-		ShaderEffect* m_passes[SHADER_PASS_MAX_ENUM];
+		VertexDescriptor vertexFormat;
+		ShaderEffect* passes[SHADER_PASS_MAX_ENUM];
 	};
 }
 

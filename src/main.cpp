@@ -22,3 +22,37 @@ int main(void)
 
 	return 0;
 }
+
+// dump
+/*
+void sortBoundOffsets(Vector<Pair<int, uint32_t>>& offsets, int lo, int hi)
+{
+if (lo >= hi || lo < 0) {
+return;
+}
+
+int pivot = offsets[hi].first;
+int i = lo - 1;
+
+for (int j = lo; j < hi; j++)
+{
+if (offsets[j].first <= pivot)
+{
+i++;
+
+auto tmp = offsets[i];
+offsets[i] = offsets[j];
+offsets[j] = tmp;
+}
+}
+
+auto tmp = offsets[i + 1];
+offsets[i + 1] = offsets[hi];
+offsets[hi] = tmp;
+
+int partition = i + 1;
+
+sortBoundOffsets(offsets, lo, partition - 1);
+sortBoundOffsets(offsets, partition + 1, hi);
+}
+*/

@@ -19,8 +19,8 @@ add_executable(${PROJECT_NAME}
     src/graphics/backend.cpp
     src/graphics/compute_pipeline.cpp
     src/graphics/descriptor_builder.cpp
-    src/graphics/descriptor_cache.cpp
-    src/graphics/descriptor_pool_mgr.cpp
+    src/graphics/descriptor_allocator.cpp
+    src/graphics/descriptor_layout_cache.cpp
     src/graphics/gpu_buffer.cpp
     src/graphics/gpu_buffer_mgr.cpp
     src/graphics/graphics_pipeline.cpp
@@ -62,7 +62,7 @@ add_executable(${PROJECT_NAME}
 )
 
 set(DEBUG_MODE true CACHE BOOL "Enable debug mode")
-set(MAC_SUPPORT true CACHE BOOL "Enable mac support")
+set(MAC_SUPPORT false CACHE BOOL "Enable mac support")
 
 if(DEBUG_MODE)
 	add_compile_definitions(LLT_DEBUG)
@@ -89,6 +89,9 @@ else()
 	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.3.296.0/Include/")
 	set(VK_LIBRARIES "D:/VulkanSDK/1.3.296.0/Lib/vulkan-1.lib")
 
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${VK_LIBRARIES})
-	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS})
+	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
+	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
+
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${VK_LIBRARIES} ${ASSIMP_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 endif()
