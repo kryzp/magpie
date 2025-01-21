@@ -139,10 +139,10 @@ bool Image::saveToJpg(Stream& stream, int quality) const
 	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
 
 	if (quality < 1) {
-		LLT_LOG("[IMAGE] JPG quality value should be between [1 -> 100].");
+		LLT_LOG("JPG quality value should be between [1 -> 100].");
 		quality = 1;
 	} else if (quality > 100) {
-		LLT_LOG("[IMAGE] JPG quality value should be between [1 -> 100].");
+		LLT_LOG("JPG quality value should be between [1 -> 100].");
 		quality = 100;
 	}
 

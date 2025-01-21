@@ -2,10 +2,9 @@
 #include "util.h"
 #include "texture.h"
 #include "backbuffer.h"
-
 #include "../platform.h"
-
 #include "../math/calc.h"
+#include "../third_party/volk.h"
 
 llt::VulkanBackend* llt::g_vulkanBackend = nullptr;
 
@@ -153,18 +152,18 @@ static Vector<const char*> getInstanceExtensions()
 }
 
 VulkanBackend::VulkanBackend(const Config& config)
-	: instance()
-	, device()
-	, physicalData()
-	, maxMsaaSamples()
-	, swapChainImageFormat()
-	, vmaAllocator()
-	, pipelineCache()
-	, pipelineLayoutCache()
-	, graphicsQueue()
-	, computeQueues()
-	, transferQueues()
-	, pushConstants()
+	: m_instance()
+	, m_device()
+	, m_physicalData()
+	, m_maxMsaaSamples()
+	, m_swapChainImageFormat()
+	, m_vmaAllocator()
+	, m_pipelineCache()
+	, m_pipelineLayoutCache()
+	, m_graphicsQueue()
+	, m_computeQueues()
+	, m_transferQueues()
+	, m_pushConstants()
 	, m_pipelineProcessCache()
 	, m_computeFinishedSemaphores()
 	, m_backbuffer()
@@ -189,16 +188,15 @@ VulkanBackend::VulkanBackend(const Config& config)
 		.pApplicationInfo = &app_info
 	};
 
+	volkInitialize();
+
 #if LLT_DEBUG
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
 
-	// check for validation layers
 	if (debugHasValidationLayerSupport())
 	{
-		// validation layers confirmed!
 		LLT_LOG("Validation layer support verified.");
 
-		// create the debugging messenger
 		debugPopulateDebugUtilsMessengerCreateInfoExt(&debugCreateInfo);
 
 		createInfo.enabledLayerCount = LLT_ARRAY_LENGTH(vkutil::VALIDATION_LAYERS);
@@ -209,7 +207,6 @@ VulkanBackend::VulkanBackend(const Config& config)
 	}
 	else
 	{
-		// unfortunately no validation layers, continue on with the program
 		LLT_LOG("No validation layer support.");
 
 		createInfo.enabledLayerCount = 0;
@@ -231,13 +228,15 @@ VulkanBackend::VulkanBackend(const Config& config)
 
 	// create the vulkan instance
 	LLT_VK_CHECK(
-		vkCreateInstance(&createInfo, nullptr, &instance),
+		vkCreateInstance(&createInfo, nullptr, &m_instance),
 		"Failed to create instance"
 	);
 
+	volkLoadInstance(m_instance);
+
 #if LLT_DEBUG
 	LLT_VK_CHECK(
-		debugCreateDebugUtilsMessengerExt(instance, &debugCreateInfo, nullptr, &m_debugMessenger),
+		debugCreateDebugUtilsMessengerExt(m_instance, &debugCreateInfo, nullptr, &m_debugMessenger),
 		"Failed to create debug messenger"
 	);
 #endif // LLT_DEBUG
@@ -250,7 +249,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 	g_renderTargetManager 	= new RenderTargetMgr();
 
 	// finished :D
-	LLT_LOG("Initialized!");
+	LLT_LOG("Vulkan Backend Initialized!");
 }
 
 VulkanBackend::~VulkanBackend()
@@ -275,42 +274,42 @@ VulkanBackend::~VulkanBackend()
 
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
-		vkDestroyFence(this->device, graphicsQueue.getFrame(i).inFlightFence, nullptr);
-		vkDestroyCommandPool(this->device, graphicsQueue.getFrame(i).commandPool, nullptr);
+		vkDestroyFence(m_device, m_graphicsQueue.getFrame(i).inFlightFence, nullptr);
+		vkDestroyCommandPool(m_device, m_graphicsQueue.getFrame(i).commandPool, nullptr);
 
-		vkDestroySemaphore(this->device, m_computeFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(m_device, m_computeFinishedSemaphores[i], nullptr);
 
-		for (int j = 0; j < computeQueues.size(); j++) {
-			vkDestroyFence(this->device, computeQueues[j].getFrame(i).inFlightFence, nullptr);
-			vkDestroyCommandPool(this->device, computeQueues[j].getFrame(i).commandPool, nullptr);
+		for (int j = 0; j < m_computeQueues.size(); j++) {
+			vkDestroyFence(m_device, m_computeQueues[j].getFrame(i).inFlightFence, nullptr);
+			vkDestroyCommandPool(m_device, m_computeQueues[j].getFrame(i).commandPool, nullptr);
 		}
 
-		for (int j = 0; j < transferQueues.size(); j++) {
-			vkDestroyFence(this->device, transferQueues[j].getFrame(i).inFlightFence, nullptr);
-			vkDestroyCommandPool(this->device, transferQueues[j].getFrame(i).commandPool, nullptr);
+		for (int j = 0; j < m_transferQueues.size(); j++) {
+			vkDestroyFence(m_device, m_transferQueues[j].getFrame(i).inFlightFence, nullptr);
+			vkDestroyCommandPool(m_device, m_transferQueues[j].getFrame(i).commandPool, nullptr);
 		}
 	}
 
 	delete m_backbuffer;
 
-	vmaDestroyAllocator(vmaAllocator);
+	vmaDestroyAllocator(m_vmaAllocator);
 
-	vkDestroyDevice(this->device, nullptr);
+	vkDestroyDevice(m_device, nullptr);
 
 #if LLT_DEBUG
 	// if we have validation layers then destroy them
 	if (g_debugEnableValidationLayers) {
-		debugDestroyDebugUtilsMessengerExt(instance, m_debugMessenger, nullptr);
+		debugDestroyDebugUtilsMessengerExt(m_instance, m_debugMessenger, nullptr);
 		LLT_LOG("Destroyed validation layers!");
 	}
 #endif // LLT_DEBUG
 
 	// finished with vulkan, may now safely destroy the vulkan instance
-	vkDestroyInstance(instance, nullptr);
+	vkDestroyInstance(m_instance, nullptr);
 
 	// //
 
-	LLT_LOG("Destroyed!");
+	LLT_LOG("Vulkan Backend Destroyed!");
 }
 
 void VulkanBackend::enumeratePhysicalDevices()
@@ -319,7 +318,7 @@ void VulkanBackend::enumeratePhysicalDevices()
 
 	// get the total devices we have
 	uint32_t deviceCount = 0;
-	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+	vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
 
 	// no viable physical device found, exit program
 	if (!deviceCount) {
@@ -330,28 +329,28 @@ void VulkanBackend::enumeratePhysicalDevices()
 	VkPhysicalDeviceFeatures features = {};
 
 	Vector<VkPhysicalDevice> devices(deviceCount);
-	vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
 	vkGetPhysicalDeviceProperties(devices[0], &properties);
 	vkGetPhysicalDeviceFeatures(devices[0], &features);
 
-	physicalData.device = devices[0];
-	physicalData.properties = properties;
-	physicalData.features = features;
+	m_physicalData.device = devices[0];
+	m_physicalData.properties = properties;
+	m_physicalData.features = features;
 
 	// get the actual number of samples we can take
-	this->maxMsaaSamples = getMaxUsableSampleCount();
+	m_maxMsaaSamples = getMaxUsableSampleCount();
 
 	// try to rank our physical devices and select one accordingly
 	bool hasEssentials = false;
-	uint32_t usability0 = vkutil::assignPhysicalDeviceUsability(surface, physicalData.device, properties, features, &hasEssentials);
+	uint32_t usability0 = vkutil::assignPhysicalDeviceUsability(surface, m_physicalData.device, properties, features, &hasEssentials);
 
 	// select the device of the highest usability
 	int i = 1;
 	for (; i < deviceCount; i++)
 	{
-		vkGetPhysicalDeviceProperties(devices[i], &physicalData.properties);
-		vkGetPhysicalDeviceFeatures(devices[i], &physicalData.features);
+		vkGetPhysicalDeviceProperties(devices[i], &m_physicalData.properties);
+		vkGetPhysicalDeviceFeatures(devices[i], &m_physicalData.features);
 
 		uint32_t usability1 = vkutil::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &hasEssentials);
 
@@ -359,16 +358,16 @@ void VulkanBackend::enumeratePhysicalDevices()
 		{
 			usability0 = usability1;
 
-			physicalData.device = devices[i];
-			physicalData.properties = properties;
-			physicalData.features = features;
+			m_physicalData.device = devices[i];
+			m_physicalData.properties = properties;
+			m_physicalData.features = features;
 
-			this->maxMsaaSamples = getMaxUsableSampleCount();
+			m_maxMsaaSamples = getMaxUsableSampleCount();
 		}
 	}
 
 	// still no device with the abilities we need, exit the program
-	if (physicalData.device == VK_NULL_HANDLE) {
+	if (m_physicalData.device == VK_NULL_HANDLE) {
 		LLT_ERROR("Unable to find a suitable GPU!");
 	}
 
@@ -383,12 +382,12 @@ void VulkanBackend::createLogicalDevice()
 
 	queueCreateInfos.pushBack({
 		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.queueFamilyIndex = graphicsQueue.getFamilyIdx().value(),
+		.queueFamilyIndex = m_graphicsQueue.getFamilyIdx().value(),
 		.queueCount = 1,
 		.pQueuePriorities = &QUEUE_PRIORITY
 	});
 
-	for (auto& computeQueue : computeQueues)
+	for (auto& computeQueue : m_computeQueues)
 	{
 		if (!computeQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -402,7 +401,7 @@ void VulkanBackend::createLogicalDevice()
 		});
 	}
 
-	for (auto& transferQueue : transferQueues)
+	for (auto& transferQueue : m_transferQueues)
 	{
 		if (!transferQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -449,7 +448,7 @@ void VulkanBackend::createLogicalDevice()
 	createInfo.ppEnabledLayerNames = nullptr;
 	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
 	createInfo.enabledExtensionCount = LLT_ARRAY_LENGTH(vkutil::DEVICE_EXTENSIONS);
-	createInfo.pEnabledFeatures = &physicalData.features;
+	createInfo.pEnabledFeatures = &m_physicalData.features;
 	createInfo.pNext = &bufferDeviceAddressFeaturesExt;
 
 #if LLT_DEBUG
@@ -463,37 +462,39 @@ void VulkanBackend::createLogicalDevice()
 
 	// create it
 	LLT_VK_CHECK(
-		vkCreateDevice(physicalData.device, &createInfo, nullptr, &this->device),
+		vkCreateDevice(m_physicalData.device, &createInfo, nullptr, &m_device),
 		"Failed to create logical device"
 	);
+
+	volkLoadDevice(m_device);
 
 	// get the device queues for the four core vulkan families
 	VkQueue tmpQueue;
 
-	vkGetDeviceQueue(this->device, graphicsQueue.getFamilyIdx().value(), 0, &tmpQueue);
-	graphicsQueue.init(tmpQueue);
+	vkGetDeviceQueue(m_device, m_graphicsQueue.getFamilyIdx().value(), 0, &tmpQueue);
+	m_graphicsQueue.init(tmpQueue);
 
-	for (auto& computeQueue : computeQueues)
+	for (auto& computeQueue : m_computeQueues)
 	{
 		if (!computeQueue.getFamilyIdx().hasValue()) {
 			continue;
 		}
 
-		vkGetDeviceQueue(this->device, computeQueue.getFamilyIdx().value(), 0, &tmpQueue);
+		vkGetDeviceQueue(m_device, computeQueue.getFamilyIdx().value(), 0, &tmpQueue);
 		computeQueue.init(tmpQueue);
 	}
 
-	for (auto& transferQueue : transferQueues)
+	for (auto& transferQueue : m_transferQueues)
 	{
 		if (!transferQueue.getFamilyIdx().hasValue()) {
 			continue;
 		}
 
-		vkGetDeviceQueue(this->device, transferQueue.getFamilyIdx().value(), 0, &tmpQueue);
+		vkGetDeviceQueue(m_device, transferQueue.getFamilyIdx().value(), 0, &tmpQueue);
 		transferQueue.init(tmpQueue);
 	}
 
-	// init allocator
+	// init memory allocator
 	createVmaAllocator();
 
 	// print out current device version
@@ -505,28 +506,27 @@ void VulkanBackend::createLogicalDevice()
 		uint32_t major = VK_VERSION_MAJOR(version);
 		uint32_t minor = VK_VERSION_MINOR(version);
 
-		printf("Using version: %d.%d\n", major, minor);
+		LLT_LOG("Using version: %d.%d", major, minor);
 	}
-
-	// get function pointers
-#ifdef LLT_MAC_SUPPORT
-	vkutil::ext_vkCmdBeginRendering = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
-	vkutil::ext_vkCmdEndRendering = (PFN_vkCmdEndRendering)vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
-#endif // LLT_MAC_SUPPORT
 
 	LLT_LOG("Created logical device!");
 }
 
 void VulkanBackend::createVmaAllocator()
 {
+	VmaVulkanFunctions vulkanFunctions = {};
+	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+	vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+
 	VmaAllocatorCreateInfo allocatorCreateInfo = {};
-	allocatorCreateInfo.physicalDevice = physicalData.device;
-	allocatorCreateInfo.device = this->device;
-	allocatorCreateInfo.instance = this->instance;
+	allocatorCreateInfo.physicalDevice = m_physicalData.device;
+	allocatorCreateInfo.device = m_device;
+	allocatorCreateInfo.instance = m_instance;
 	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-	
+	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
+
 	LLT_VK_CHECK(
-		vmaCreateAllocator(&allocatorCreateInfo, &vmaAllocator),
+		vmaCreateAllocator(&allocatorCreateInfo, &m_vmaAllocator),
 		"Failed to create memory allocator"
 	);
 
@@ -543,7 +543,7 @@ void VulkanBackend::createPipelineProcessCache()
 	pipelineCacheCreateInfo.pInitialData = nullptr;
 
 	LLT_VK_CHECK(
-		vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &m_pipelineProcessCache),
+		vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipelineProcessCache),
 		"Failed to process pipeline cache"
 	);
 
@@ -558,7 +558,7 @@ void VulkanBackend::createComputeResources()
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
 		LLT_VK_CHECK(
-			vkCreateSemaphore(this->device, &computeSemaphoreCreateInfo, nullptr, &m_computeFinishedSemaphores[i]),
+			vkCreateSemaphore(m_device, &computeSemaphoreCreateInfo, nullptr, &m_computeFinishedSemaphores[i]),
 			"Failed to create compute finished semaphore"
 		);
 	}
@@ -572,32 +572,31 @@ void VulkanBackend::createCommandPools()
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-	// create a command pool for every frame in flight
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
-		createInfo.queueFamilyIndex = graphicsQueue.getFamilyIdx().value();
+		createInfo.queueFamilyIndex = m_graphicsQueue.getFamilyIdx().value();
 
 		LLT_VK_CHECK(
-			vkCreateCommandPool(this->device, &createInfo, nullptr, &graphicsQueue.getFrame(i).commandPool),
+			vkCreateCommandPool(m_device, &createInfo, nullptr, &m_graphicsQueue.getFrame(i).commandPool),
 			"Failed to create graphics command pool"
 		);
 
-		for (int j = 0; j < computeQueues.size(); j++)
+		for (int j = 0; j < m_computeQueues.size(); j++)
 		{
-			createInfo.queueFamilyIndex = computeQueues[j].getFamilyIdx().value();
+			createInfo.queueFamilyIndex = m_computeQueues[j].getFamilyIdx().value();
 
 			LLT_VK_CHECK(
-				vkCreateCommandPool(this->device, &createInfo, nullptr, &computeQueues[j].getFrame(i).commandPool),
+				vkCreateCommandPool(m_device, &createInfo, nullptr, &m_computeQueues[j].getFrame(i).commandPool),
 				"Failed to create compute command pool"
 			);
 		}
 
-		for (int j = 0; j < transferQueues.size(); j++)
+		for (int j = 0; j < m_transferQueues.size(); j++)
 		{
-			createInfo.queueFamilyIndex = transferQueues[j].getFamilyIdx().value();
+			createInfo.queueFamilyIndex = m_transferQueues[j].getFamilyIdx().value();
 
 			LLT_VK_CHECK(
-				vkCreateCommandPool(this->device, &createInfo, nullptr, &transferQueues[j].getFrame(i).commandPool),
+				vkCreateCommandPool(m_device, &createInfo, nullptr, &m_transferQueues[j].getFrame(i).commandPool),
 				"Failed to create transfer command pool"
 			);
 		}
@@ -608,40 +607,39 @@ void VulkanBackend::createCommandPools()
 
 void VulkanBackend::createCommandBuffers()
 {
-	// create a command buffer for every frame in flight
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
 		VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
 		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		commandBufferAllocateInfo.commandPool = graphicsQueue.getFrame(i).commandPool;
+		commandBufferAllocateInfo.commandPool = m_graphicsQueue.getFrame(i).commandPool;
 		commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		commandBufferAllocateInfo.commandBufferCount = 1;
 
 		LLT_VK_CHECK(
-			vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &graphicsQueue.getFrame(i).commandBuffer),
+			vkAllocateCommandBuffers(m_device, &commandBufferAllocateInfo, &m_graphicsQueue.getFrame(i).commandBuffer),
 			"Failed to create graphics command buffer"
 		);
 
-		for (int j = 0; j < computeQueues.size(); j++)
+		for (int j = 0; j < m_computeQueues.size(); j++)
 		{
-			auto& computeQueue = computeQueues[j];
+			auto& computeQueue = m_computeQueues[j];
 
 			commandBufferAllocateInfo.commandPool = computeQueue.getFrame(i).commandPool;
 
 			LLT_VK_CHECK(
-				vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &computeQueue.getFrame(i).commandBuffer),
+				vkAllocateCommandBuffers(m_device, &commandBufferAllocateInfo, &computeQueue.getFrame(i).commandBuffer),
 				"Failed to create compute command buffer"
 			);
 		}
 
-		for (int j = 0; j < transferQueues.size(); j++)
+		for (int j = 0; j < m_transferQueues.size(); j++)
 		{
-			auto& transferQueue = transferQueues[j];
+			auto& transferQueue = m_transferQueues[j];
 
 			commandBufferAllocateInfo.commandPool = transferQueue.getFrame(i).commandPool;
 
 			LLT_VK_CHECK(
-				vkAllocateCommandBuffers(this->device, &commandBufferAllocateInfo, &transferQueue.getFrame(i).commandBuffer),
+				vkAllocateCommandBuffers(m_device, &commandBufferAllocateInfo, &transferQueue.getFrame(i).commandBuffer),
 				"Failed to create transfer command buffer"
 			);
 		}
@@ -652,15 +650,14 @@ void VulkanBackend::createCommandBuffers()
 
 Backbuffer* VulkanBackend::createBackbuffer()
 {
-	// make a new backbuffer and create its surface
 	Backbuffer* backbuffer = new Backbuffer();
 	backbuffer->createSurface();
 
 	m_backbuffer = backbuffer;
 
-	enumeratePhysicalDevices(); // find a physical device
+	enumeratePhysicalDevices();
 
-	findQueueFamilies(physicalData.device, m_backbuffer->getSurface());
+	findQueueFamilies(m_physicalData.device, m_backbuffer->getSurface());
 
 	createLogicalDevice();
 	createPipelineProcessCache();
@@ -675,22 +672,22 @@ Backbuffer* VulkanBackend::createBackbuffer()
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
 		LLT_VK_CHECK(
-			vkCreateFence(this->device, &fenceCreateInfo, nullptr, &graphicsQueue.getFrame(i).inFlightFence),
+			vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_graphicsQueue.getFrame(i).inFlightFence),
 			"Failed to create graphics in flight fence"
 		);
 
-		for (int j = 0; j < computeQueues.size(); j++)
+		for (int j = 0; j < m_computeQueues.size(); j++)
 		{
 			LLT_VK_CHECK(
-				vkCreateFence(this->device, &fenceCreateInfo, nullptr, &computeQueues[j].getFrame(i).inFlightFence),
+				vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_computeQueues[j].getFrame(i).inFlightFence),
 				"Failed to create compute in flight fence"
 			);
 		}
 
-		for (int j = 0; j < transferQueues.size(); j++)
+		for (int j = 0; j < m_transferQueues.size(); j++)
 		{
 			LLT_VK_CHECK(
-				vkCreateFence(this->device, &fenceCreateInfo, nullptr, &transferQueues[j].getFrame(i).inFlightFence),
+				vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_transferQueues[j].getFrame(i).inFlightFence),
 				"Failed to create transfer in flight fence"
 			);
 		}
@@ -702,32 +699,31 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	backbuffer->create();
 
-	// finished!
 	return backbuffer;
 }
 
 void VulkanBackend::clearPipelineCache()
 {
-	for (auto& [id, cache] : pipelineCache) {
-		vkDestroyPipeline(this->device, cache, nullptr);
+	for (auto& [id, cache] : m_pipelineCache) {
+		vkDestroyPipeline(m_device, cache, nullptr);
 	}
 
-	pipelineCache.clear();
+	m_pipelineCache.clear();
 
-	for (auto& [id, cache] : pipelineLayoutCache) {
-		vkDestroyPipelineLayout(this->device, cache, nullptr);
+	for (auto& [id, cache] : m_pipelineLayoutCache) {
+		vkDestroyPipelineLayout(m_device, cache, nullptr);
 	}
 
-	pipelineLayoutCache.clear();
+	m_pipelineLayoutCache.clear();
 
-	vkDestroyPipelineCache(this->device, m_pipelineProcessCache, nullptr);
+	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 }
 
 VkSampleCountFlagBits VulkanBackend::getMaxUsableSampleCount() const
 {
 	VkSampleCountFlags counts =
-		physicalData.properties.limits.framebufferColorSampleCounts &
-		physicalData.properties.limits.framebufferDepthSampleCounts;
+		m_physicalData.properties.limits.framebufferColorSampleCounts &
+		m_physicalData.properties.limits.framebufferDepthSampleCounts;
 
 	if (counts & VK_SAMPLE_COUNT_64_BIT) {
 		return VK_SAMPLE_COUNT_64_BIT;
@@ -761,39 +757,36 @@ void VulkanBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurface
 	Vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-	Vector<uint32_t> numQueuesFound;
-	numQueuesFound.resize(queueFamilyCount);
-
-	bool foundGraphicsQueue = false;
+	uint32_t numQueuesFound[QUEUE_FAMILY_MAX_ENUM] = {};
 
 	for (int i = 0; i < queueFamilyCount; i++)
 	{
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !foundGraphicsQueue)
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && numQueuesFound[i] == 0)
 		{
 			VkBool32 presentSupport = VK_FALSE;
 			vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
 
 			if (presentSupport)
 			{
-				graphicsQueue.setData(QUEUE_FAMILY_GRAPHICS, i);
-				foundGraphicsQueue = true;
+				m_graphicsQueue.setData(QUEUE_FAMILY_GRAPHICS, i);
+				numQueuesFound[QUEUE_FAMILY_GRAPHICS]++;
 				continue;
 			}
 		}
 
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && numQueuesFound[i] < queueFamilies[i].queueCount)
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && numQueuesFound[QUEUE_FAMILY_COMPUTE] < queueFamilies[i].queueCount)
 		{
-			computeQueues.emplaceBack();
-			computeQueues.back().setData(QUEUE_FAMILY_COMPUTE, i);
-			numQueuesFound[i]++;
+			m_computeQueues.emplaceBack();
+			m_computeQueues.back().setData(QUEUE_FAMILY_COMPUTE, i);
+			numQueuesFound[QUEUE_FAMILY_COMPUTE]++;
 			continue;
 		}
 
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && numQueuesFound[i] < queueFamilies[i].queueCount)
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && numQueuesFound[QUEUE_FAMILY_TRANSFER] < queueFamilies[i].queueCount)
 		{
-			transferQueues.emplaceBack();
-			transferQueues.back().setData(QUEUE_FAMILY_TRANSFER, i);
-			numQueuesFound[i]++;
+			m_transferQueues.emplaceBack();
+			m_transferQueues.back().setData(QUEUE_FAMILY_TRANSFER, i);
+			numQueuesFound[QUEUE_FAMILY_TRANSFER]++;
 			continue;
 		}
 	}
@@ -806,12 +799,12 @@ void VulkanBackend::onWindowResize(int width, int height)
 
 void VulkanBackend::setPushConstants(ShaderParameters& params)
 {
-	pushConstants = params.getPackedConstants();
+	m_pushConstants = params.getPackedConstants();
 }
 
 void VulkanBackend::resetPushConstants()
 {
-	pushConstants.clear();
+	m_pushConstants.clear();
 }
 
 int VulkanBackend::getCurrentFrameIdx() const
@@ -829,16 +822,54 @@ const GenericRenderTarget* VulkanBackend::getRenderTarget() const
 	return m_currentRenderTarget ? m_currentRenderTarget : m_backbuffer;
 }
 
+VkCommandBuffer VulkanBackend::getGraphicsCommandBuffer()
+{
+	return m_graphicsQueue.getCurrentFrame().commandBuffer;
+}
+
+// todo
+VkCommandBuffer VulkanBackend::getTransferCommandBuffer(int idx)
+{
+//	if (m_transferQueues.size() > 0)
+//		return m_transferQueues[idx].getCurrentFrame().commandBuffer;
+
+	return getGraphicsCommandBuffer();
+}
+
+VkCommandBuffer VulkanBackend::getComputeCommandBuffer(int idx)
+{
+	return m_computeQueues[idx].getCurrentFrame().commandBuffer;
+}
+
+VkCommandPool VulkanBackend::getGraphicsCommandPool()
+{
+	return m_graphicsQueue.getCurrentFrame().commandPool;
+}
+
+// todo
+VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
+{
+//	if (m_transferQueues.size() > 0)
+//		return m_transferQueues[idx].getCurrentFrame().commandPool;
+
+	return getGraphicsCommandPool();
+}
+
+VkCommandPool VulkanBackend::getComputeCommandPool(int idx)
+{
+	return m_computeQueues[idx].getCurrentFrame().commandPool;
+}
+
 void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 {
+	cauto& currentFrame = m_graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = getGraphicsCommandBuffer();
+
 	m_currentRenderTarget = target;
 
-	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = currentFrame.commandBuffer;
+	vkWaitForFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 
-	vkWaitForFences(g_vulkanBackend->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetCommandPool(g_vulkanBackend->device, currentFrame.commandPool, 0);
+	vkResetCommandPool(g_vulkanBackend->m_device, currentFrame.commandPool, 0);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -853,25 +884,16 @@ void VulkanBackend::beginGraphics(GenericRenderTarget* target)
 
 	VkRenderingInfoKHR renderInfo = getRenderTarget()->getRenderInfo()->getInfo();
 
-#if LLT_MAC_SUPPORT
-	vkutil::ext_vkCmdBeginRendering(currentBuffer, &renderInfo);
-#else
 	vkCmdBeginRendering(currentBuffer, &renderInfo);
-#endif // LLT_MAC_SUPPORT
 }
 
 void VulkanBackend::endGraphics()
 {
 	cauto& currentTarget = getRenderTarget();
+	cauto& currentFrame = m_graphicsQueue.getCurrentFrame();
+	cauto& currentBuffer = getGraphicsCommandBuffer();
 
-	cauto& currentFrame = g_vulkanBackend->graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = currentFrame.commandBuffer;
-
-#if LLT_MAC_SUPPORT
-	vkutil::ext_vkCmdEndRendering(currentBuffer);
-#else
 	vkCmdEndRendering(currentBuffer);
-#endif // LLT_MAC_SUPPORT
 
 	currentTarget->endGraphics(currentBuffer);
 
@@ -910,10 +932,10 @@ void VulkanBackend::endGraphics()
 	submitInfo.pWaitSemaphores = waitForFinishSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 
-	vkResetFences(g_vulkanBackend->device, 1, &currentFrame.inFlightFence);
+	vkResetFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence);
 
 	LLT_VK_CHECK(
-		vkQueueSubmit(g_vulkanBackend->graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
+		vkQueueSubmit(g_vulkanBackend->m_graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
 		"Failed to submit draw command to buffer"
 	);
 
@@ -928,12 +950,12 @@ void VulkanBackend::waitOnCompute()
 
 void VulkanBackend::beginCompute()
 {
-	cauto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	cauto& currentFrame = m_computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
-	vkWaitForFences(this->device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 
-	vkResetCommandPool(this->device, currentFrame.commandPool, 0);
+	vkResetCommandPool(m_device, currentFrame.commandPool, 0);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -946,7 +968,7 @@ void VulkanBackend::beginCompute()
 
 void VulkanBackend::endCompute()
 {
-	cauto& currentFrame = this->computeQueues[0].getCurrentFrame();
+	cauto& currentFrame = m_computeQueues[0].getCurrentFrame();
 	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
 
 	LLT_VK_CHECK(
@@ -964,17 +986,17 @@ void VulkanBackend::endCompute()
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrameIdx];
 
-	vkResetFences(this->device, 1, &currentFrame.inFlightFence);
+	vkResetFences(m_device, 1, &currentFrame.inFlightFence);
 
 	LLT_VK_CHECK(
-		vkQueueSubmit(this->computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
+		vkQueueSubmit(m_computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
 		"Failed to submit compute command buffer"
 	);
 }
 
 void VulkanBackend::swapBuffers()
 {
-	vkWaitForFences(this->device, 1, &graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(m_device, 1, &m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 
 	m_backbuffer->swapBuffers();
 
@@ -988,5 +1010,5 @@ void VulkanBackend::swapBuffers()
 void VulkanBackend::syncStall() const
 {
 	while (g_platform->getWindowSize() == glm::ivec2(0, 0)) {}
-	vkDeviceWaitIdle(this->device);
+	vkDeviceWaitIdle(m_device);
 }

@@ -1,7 +1,7 @@
 #ifndef DESCRIPTOR_LAYOUT_CACHE_H_
 #define DESCRIPTOR_LAYOUT_CACHE_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../container/hash_map.h"
 

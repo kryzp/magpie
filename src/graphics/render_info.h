@@ -1,7 +1,7 @@
 #ifndef VK_RENDER_PASS_BUILDER_H_
 #define VK_RENDER_PASS_BUILDER_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../container/array.h"
 #include "../container/vector.h"

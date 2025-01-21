@@ -39,11 +39,11 @@ void RenderTarget::beginGraphics(VkCommandBuffer cmdBuffer)
 	for (auto& col : (m_samples != VK_SAMPLE_COUNT_1_BIT) ? m_resolveAttachments : m_attachments)
 	{
 		if (!col->isTransient()) {
-			col->transitionLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			col->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 	}
 
-	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
 void RenderTarget::endGraphics(VkCommandBuffer cmdBuffer)
@@ -51,11 +51,11 @@ void RenderTarget::endGraphics(VkCommandBuffer cmdBuffer)
 	for (auto& col : (m_samples != VK_SAMPLE_COUNT_1_BIT) ? m_resolveAttachments : m_attachments)
 	{
 		if (!col->isTransient()) {
-			col->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			col->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 	}
 
-	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void RenderTarget::cleanUp()
@@ -132,8 +132,9 @@ void RenderTarget::addAttachment(Texture* texture)
 
 		resolve->createInternalResources();
 
-		resolve->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		resolve->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		// todo: ???????
+		resolve->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		resolve->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		resolve->setParent(this);
 
@@ -171,7 +172,7 @@ void RenderTarget::setDepthAttachment(Texture* texture)
 
 void RenderTarget::createDepthAttachment()
 {
-	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
+	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
 
 	m_depth = new Texture();
 
@@ -180,7 +181,7 @@ void RenderTarget::createDepthAttachment()
 	m_depth->setSampleCount(getMSAA());
 	m_depth->flagAsDepthTexture();
 	m_depth->createInternalResources();
-	m_depth->transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth->transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	m_depth->setParent(this);
 
 	VkImageView resolveView = VK_NULL_HANDLE;
@@ -194,7 +195,7 @@ void RenderTarget::createDepthAttachment()
 		m_resolveDepth->setSampleCount(VK_SAMPLE_COUNT_1_BIT);
 		m_resolveDepth->flagAsDepthTexture();
 		m_resolveDepth->createInternalResources();
-		m_resolveDepth->transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		m_resolveDepth->transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		m_resolveDepth->setParent(this);
 
 		resolveView = m_resolveDepth->getImageView();

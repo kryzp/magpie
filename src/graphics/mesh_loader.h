@@ -21,9 +21,10 @@ namespace llt
 		Mesh* loadMesh(const String& name, const String& path);
 
 	private:
-		void processNodes(Mesh* mesh, aiNode* node, const aiScene* scene);
-		void processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene);
+		void processNodes(Mesh* mesh, aiNode* node, const aiScene* scene, const aiMatrix4x4& transform);
+		void processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene, const aiMatrix4x4& transform);
 
+		void fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial* material, aiTextureType type);
 		Vector<Texture*> loadMaterialTextures(const aiMaterial* material, aiTextureType type);
 
 		HashMap<String, Mesh*> m_meshCache;

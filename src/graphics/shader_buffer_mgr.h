@@ -12,7 +12,7 @@ namespace llt
 	{
 		// start off with 16kB of shader memory per ubo / ssbo for each frame.
 		// this will increase automatically if it isn't enough, however it is a good baseline.
-		static constexpr uint64_t INIT_BUFFER_SIZE = KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT;
+		static constexpr uint64_t INIT_BUFFER_SIZE = LLT_KILOBYTES(16) * mgc::FRAMES_IN_FLIGHT;
 
 	public:
 		ShaderBufferMgr();
@@ -20,11 +20,11 @@ namespace llt
 
 		void resetBufferUsageInFrame();
 
-		ShaderBuffer* createUBO();
-		ShaderBuffer* createSSBO();
+		DynamicShaderBuffer* createUBO();
+		DynamicShaderBuffer* createSSBO();
 
 	private:
-		Vector<ShaderBuffer*> m_buffers;
+		Vector<DynamicShaderBuffer*> m_buffers;
 	};
 
 	extern ShaderBufferMgr* g_shaderBufferManager;

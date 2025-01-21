@@ -26,18 +26,26 @@ void GPUBuffer::create(uint64_t size)
 {
 	this->m_size = size;
 
+	// todo
+//	Vector<uint32_t> queueFamilyIndices = {
+//		g_vulkanBackend->m_graphicsQueue.getFamilyIdx().value(),
+//		g_vulkanBackend->m_transferQueues[0].getFamilyIdx().value()
+//	};
+
 	VkBufferCreateInfo bufferCreateInfo = {};
 	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferCreateInfo.size = size;
 	bufferCreateInfo.usage = m_usage;
 	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	bufferCreateInfo.queueFamilyIndexCount = 0;//queueFamilyIndices.size();
+	bufferCreateInfo.pQueueFamilyIndices = nullptr;//queueFamilyIndices.data();
 
 	VmaAllocationCreateInfo vmaAllocInfo = {};
 	vmaAllocInfo.usage = m_memoryUsage;
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	LLT_VK_CHECK(
-		vmaCreateBuffer(g_vulkanBackend->vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
+		vmaCreateBuffer(g_vulkanBackend->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
 		"Failed to create buffer"
 	);
 }
@@ -48,24 +56,24 @@ void GPUBuffer::cleanUp()
         return;
     }
 
-	vmaDestroyBuffer(g_vulkanBackend->vmaAllocator, m_buffer, m_allocation);
+	vmaDestroyBuffer(g_vulkanBackend->m_vmaAllocator, m_buffer, m_allocation);
 
     m_buffer = VK_NULL_HANDLE;
 }
 
 void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset) const
 {
-	vmaCopyAllocationToMemory(g_vulkanBackend->vmaAllocator, m_allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(g_vulkanBackend->m_vmaAllocator, m_allocation, offset, dst, length);
 }
 
 void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset) const
 {
-	vmaCopyMemoryToAllocation(g_vulkanBackend->vmaAllocator, src, m_allocation, offset, length);
+	vmaCopyMemoryToAllocation(g_vulkanBackend->m_vmaAllocator, src, m_allocation, offset, length);
 }
 
 void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
 	{
 		VkBufferCopy region = {};
 		region.srcOffset = srcOffset;
@@ -85,7 +93,7 @@ void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t 
 
 void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
 	{
 		VkBufferImageCopy region = {};
 		region.bufferOffset = offset;
@@ -109,7 +117,7 @@ void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t o
 	}
 	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
 
-	if (baseArrayLayer == texture->getLayerCount() - 1 && texture->isMipmapped()) {
+	if (baseArrayLayer == texture->getLayerCount() - 1) {
 		texture->generateMipmaps();
 	}
 }

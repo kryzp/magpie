@@ -3,20 +3,19 @@
 
 #include "container/vector.h"
 
-#include "graphics/vertex_descriptor.h"
+#include "graphics/vertex_format.h"
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
-#include "graphics/graphics_pipeline.h"
-#include "graphics/compute_pipeline.h"
+#include "graphics/pipeline.h"
 
-#include "entity.h"
+#include "render_object.h"
 #include "gpu_particles.h"
 
 namespace llt
 {
 	class Backbuffer;
 	class ShaderProgram;
-	class ShaderBuffer;
+	class DynamicShaderBuffer;
 	class Camera;
 
 	class Renderer
@@ -28,36 +27,47 @@ namespace llt
 		void init(Backbuffer* backbuffer);
 		void cleanUp();
 
-		void render(const Camera& camera, float deltaTime, float elapsedTime);
+		void render(const Camera& camera, float deltaTime);
+
+		const Vector<RenderObject>::Iterator& createRenderObject();
 
 	private:
 		void loadTextures();
 		void createQuadMesh();
 		void createSkybox();
-//		void createEntities();
+		void addRenderObjects();
+		void createPostProcessResources();
 
-		void renderSkybox(const Camera& camera, float deltaTime, float elapsedTime);
-		void renderEntities(const Camera& camera, float deltaTime, float elapsedTime);
-//		void renderParticles(const Camera& camera, float deltaTime, float elapsedTime);
+		void renderSkybox(const Camera& camera);
+		void renderObjects(const Camera& camera);
+		void renderParticles(const Camera& camera, float deltaTime);
+		void renderPostProcess();
+
+		void aggregateSubMeshes(Vector<SubMesh*>& list);
+		void sortRenderListByMaterialHash(int lo, int hi);
 
 		Backbuffer* m_backbuffer;
 
 		SubMesh m_quadMesh;
 		SubMesh m_skyboxMesh;
 
-//		RenderTarget* m_target;
+		RenderTarget* m_gBuffer;
 
 		ShaderParameters m_pushConstants;
 
-//		GPUParticles m_gpuParticles;
+		Vector<RenderObject> m_renderObjects;
+		Vector<SubMesh*> m_renderList;
 
-		Vector<Entity> m_renderEntities;
-
-		glm::mat4 m_prevViewMatrix;
+		Mesh* m_blockMesh;
 
 		Material* m_skyboxMaterial;
 
 //		GraphicsPipeline m_postProcessPipeline;
+//		VkDescriptorSet m_postProcessDescriptorSet;
+
+//		DescriptorPoolDynamic m_descriptorPool;
+
+//		GPUParticles m_gpuParticles;
 
 		int m_frameCount;
 	};

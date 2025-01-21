@@ -7,6 +7,8 @@
 
 namespace llt
 {
+	class RenderObject;
+
 	class Mesh
 	{
 	public:
@@ -18,7 +20,11 @@ namespace llt
 		uint64_t getSubmeshCount() const;
 		SubMesh* getSubmesh(int idx) const;
 
+		void setOwner(RenderObject* owner);
+		RenderObject* getOwner();
+
 	private:
+		RenderObject* m_owner;
 		Vector<SubMesh*> m_subMeshes;
 	};
 }

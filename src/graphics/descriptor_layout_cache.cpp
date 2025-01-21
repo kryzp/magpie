@@ -7,7 +7,7 @@ void DescriptorLayoutCache::cleanUp()
 {
 	for (auto& [id, layout] : m_layoutCache)
 	{
-		vkDestroyDescriptorSetLayout(g_vulkanBackend->device, layout, nullptr);
+		vkDestroyDescriptorSetLayout(g_vulkanBackend->m_device, layout, nullptr);
 	}
 
 	m_layoutCache.clear();
@@ -30,7 +30,7 @@ VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetL
 	VkDescriptorSetLayout createdDescriptor = {};
 
 	LLT_VK_CHECK(
-		vkCreateDescriptorSetLayout(g_vulkanBackend->device, &layoutCreateInfo, nullptr, &createdDescriptor),
+		vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &createdDescriptor),
 		"Failed to create descriptor set layout"
 	);
 

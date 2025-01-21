@@ -24,17 +24,17 @@ void ShaderBufferMgr::resetBufferUsageInFrame()
 	}
 }
 
-ShaderBuffer* ShaderBufferMgr::createUBO()
+DynamicShaderBuffer* ShaderBufferMgr::createUBO()
 {
-	ShaderBuffer* ubo = new ShaderBuffer();
+	DynamicShaderBuffer* ubo = new DynamicShaderBuffer();
 	ubo->init(INIT_BUFFER_SIZE, SHADER_BUFFER_UBO);
 	m_buffers.pushBack(ubo);
 	return m_buffers.back();
 }
 
-ShaderBuffer* ShaderBufferMgr::createSSBO()
+DynamicShaderBuffer* ShaderBufferMgr::createSSBO()
 {
-	ShaderBuffer* ssbo = new ShaderBuffer();
+	DynamicShaderBuffer* ssbo = new DynamicShaderBuffer();
 	ssbo->init(INIT_BUFFER_SIZE, SHADER_BUFFER_SSBO);
 	m_buffers.pushBack(ssbo);
 	return m_buffers.back();

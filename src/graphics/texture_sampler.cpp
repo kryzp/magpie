@@ -29,7 +29,7 @@ void TextureSampler::cleanUp()
 		return;
 	}
 
-	vkDestroySampler(g_vulkanBackend->device, m_sampler, nullptr);
+	vkDestroySampler(g_vulkanBackend->m_device, m_sampler, nullptr);
 	m_sampler = VK_NULL_HANDLE;
 }
 
@@ -42,7 +42,7 @@ VkSampler TextureSampler::bind(int maxMipLevels)
 		dirty = false;
 	}
 
-	VkPhysicalDeviceProperties properties = g_vulkanBackend->physicalData.properties;
+	VkPhysicalDeviceProperties properties = g_vulkanBackend->m_physicalData.properties;
 
 	cleanUp();
 
@@ -65,7 +65,7 @@ VkSampler TextureSampler::bind(int maxMipLevels)
 	createInfo.maxLod = (float)maxMipLevels;
 
 	LLT_VK_CHECK(
-		vkCreateSampler(g_vulkanBackend->device, &createInfo, nullptr, &m_sampler),
+		vkCreateSampler(g_vulkanBackend->m_device, &createInfo, nullptr, &m_sampler),
 		"Failed to create texture sampler"
 	);
 

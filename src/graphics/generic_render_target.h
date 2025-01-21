@@ -1,7 +1,7 @@
 #ifndef VK_GENERIC_RENDER_TARGET_H_
 #define VK_GENERIC_RENDER_TARGET_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../common.h"
 

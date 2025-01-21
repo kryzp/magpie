@@ -1,7 +1,7 @@
 #ifndef BLEND_H_
 #define BLEND_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 namespace llt
 {

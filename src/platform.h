@@ -3,7 +3,8 @@
 
 #include <SDL3/SDL.h>
 #include <glm/vec2.hpp>
-#include <vulkan/vulkan.h>
+
+#include "third_party/volk.h"
 
 #include "container/string.h"
 #include "container/array.h"
@@ -45,7 +46,7 @@ namespace llt
 		float getWindowPixelDensity() const;
 
 		bool isCursorVisible() const;
-		void toggleCursorVisible(bool toggle) const;
+		void setCursorVisible(bool toggle) const;
 		void lockCursor(bool toggle) const;
 		void setCursorPosition(int x, int y);
 

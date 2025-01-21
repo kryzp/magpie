@@ -1,0 +1,6 @@
+fallbacks:
+ - white diffuse texture
+ - amr texture
+ - 0.5, 0.5, 1.0 normal texture
+ - white pixel
+ - black pixel

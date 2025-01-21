@@ -1,7 +1,7 @@
 #ifndef VK_QUEUE_H
 #define VK_QUEUE_H
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../common.h"
 #include "../container/optional.h"
@@ -10,10 +10,10 @@ namespace llt
 {
 	enum QueueFamily
 	{
-		QUEUE_FAMILY_NONE,
-		QUEUE_FAMILY_GRAPHICS,
+		QUEUE_FAMILY_GRAPHICS = 0,
 		QUEUE_FAMILY_COMPUTE,
-		QUEUE_FAMILY_TRANSFER
+		QUEUE_FAMILY_TRANSFER,
+		QUEUE_FAMILY_MAX_ENUM
 	};
 
 	class Queue

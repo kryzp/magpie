@@ -1,7 +1,7 @@
 #ifndef VK_SHADER_H_
 #define VK_SHADER_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include <glm/glm.hpp>
 
@@ -28,11 +28,7 @@ namespace llt
 		using PackedData = Vector<byte>;
 
 		ShaderParameters() = default;
-
-		~ShaderParameters()
-		{
-			reset();
-		}
+		~ShaderParameters() = default;
 
 		/*
 		* Returns the packed data.
@@ -42,7 +38,7 @@ namespace llt
 		/*
 		* Completely resets the data.
 		*/
-		void reset()
+		void cleanUp()
 		{
 			for (auto& [name, param] : m_constants)
 			{
@@ -52,7 +48,7 @@ namespace llt
 			m_constants.clear();
 			m_packedConstants.clear();
 			m_dirtyConstants = true;
-			m_offsetAccumulator = 0;
+			m_size = 0;
 		}
 
 		void setBuffer(const String& name, const void* data, uint64_t size)	{ _setBuffer(name, data, size); }
@@ -68,33 +64,30 @@ namespace llt
 		{
 			if (m_constants.contains(name))
 			{
-				// we've already cached this parameter, we just have to update it
 				mem::copy(m_constants[name].data, data, size);
 			}
 			else
 			{
-				// we haven't yet cached this parameter, add it to our list
 				ShaderParameter p = {};
 				p.size = size;
-				p.offset = m_offsetAccumulator;
+				p.offset = m_size;
 				p.data = malloc(size);
 
 				mem::copy(p.data, data, size);
 
 				m_constants.insert(name, p);
-				m_offsetAccumulator += size;
+				m_size += size;
 			}
 
-			// we've become dirty and will have to rebuild next time we ask for the data
 			m_dirtyConstants = true;
 		}
 
 		void rebuildPackedConstantData();
 
 		HashMap<String, ShaderParameter> m_constants;
-		bool m_dirtyConstants;
+		bool m_dirtyConstants = false;
 		PackedData m_packedConstants;
-		uint64_t m_offsetAccumulator = 0;
+		uint64_t m_size = 0;
 	};
 
 	class ShaderProgram
@@ -111,7 +104,6 @@ namespace llt
 		VkPipelineShaderStageCreateInfo getShaderStageCreateInfo() const;
 
 		VkShaderStageFlagBits type;
-		ShaderParameters params;
 
 	private:
 		VkShaderModule m_shaderModule;

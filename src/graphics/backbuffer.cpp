@@ -35,7 +35,7 @@ void Backbuffer::create()
 
 void Backbuffer::createSurface()
 {
-    if (bool result = g_platform->vkCreateSurface(g_vulkanBackend->instance, &m_surface); !result) {
+    if (bool result = g_platform->vkCreateSurface(g_vulkanBackend->m_instance, &m_surface); !result) {
         LLT_ERROR("Failed to create surface: %d", result);
     }
 }
@@ -44,8 +44,8 @@ void Backbuffer::createColourResources()
 {
 	// build the colour resource
 	m_colour.setSize(m_width, m_height);
-	m_colour.setProperties(g_vulkanBackend->swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_colour.setSampleCount(g_vulkanBackend->maxMsaaSamples);
+	m_colour.setProperties(g_vulkanBackend->m_swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
+	m_colour.setSampleCount(g_vulkanBackend->m_maxMsaaSamples);
 	m_colour.setTransient(false);
 	m_colour.createInternalResources();
 
@@ -62,15 +62,15 @@ void Backbuffer::createColourResources()
 
 void Backbuffer::createDepthResources()
 {
-    VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->physicalData.device);
+    VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
 
 	// build the depth resource
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
-	m_depth.setSampleCount(g_vulkanBackend->maxMsaaSamples);
+	m_depth.setSampleCount(g_vulkanBackend->m_maxMsaaSamples);
 	m_depth.createInternalResources();
 
-	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 	// add the depth resource to our render pass builder
 	m_renderInfo.addDepthAttachment(
@@ -108,9 +108,9 @@ void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
 		1, &barrier
 	);
 
-	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_colour.transitionLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_colour.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	m_renderInfo.getColourAttachment(0).resolveImageView = m_swapChainImageViews[m_currSwapChainImageIdx];
 }
@@ -141,9 +141,9 @@ void Backbuffer::endGraphics(VkCommandBuffer cmdBuffer)
 		1, &barrier
 	);
 
-	m_colour.transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_colour.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	m_depth.transitionLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	m_depth.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void Backbuffer::cleanUp()
@@ -151,7 +151,7 @@ void Backbuffer::cleanUp()
 	// if our surface exists, destroy it
 	if (m_surface != VK_NULL_HANDLE)
 	{
-		vkDestroySurfaceKHR(g_vulkanBackend->instance, m_surface, nullptr);
+		vkDestroySurfaceKHR(g_vulkanBackend->m_instance, m_surface, nullptr);
 		m_surface = VK_NULL_HANDLE;
 	}
 }
@@ -168,8 +168,8 @@ void Backbuffer::cleanUpSwapChain()
 
 	// destroy all of our semaphores
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(g_vulkanBackend->device, m_renderFinishedSemaphores[i], nullptr);
-		vkDestroySemaphore(g_vulkanBackend->device, m_imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(g_vulkanBackend->m_device, m_renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(g_vulkanBackend->m_device, m_imageAvailableSemaphores[i], nullptr);
 	}
 
 	m_renderFinishedSemaphores.clear();
@@ -177,11 +177,11 @@ void Backbuffer::cleanUpSwapChain()
 
 	// destroy all image views for our swapchain
     for (auto& view : m_swapChainImageViews) {
-        vkDestroyImageView(g_vulkanBackend->device, view, nullptr);
+        vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
     }
 
 	// finally destroy the actual swapchain
-    vkDestroySwapchainKHR(g_vulkanBackend->device, m_swapChain, nullptr);
+    vkDestroySwapchainKHR(g_vulkanBackend->m_device, m_swapChain, nullptr);
 }
 
 void Backbuffer::acquireNextImage()
@@ -189,7 +189,7 @@ void Backbuffer::acquireNextImage()
 	// try to get the next image
 	// if it is deemed out of date then rebuild the swap chain
 	// otherwise this is an unknown issue and throw an error
-    if (VkResult result = vkAcquireNextImageKHR(g_vulkanBackend->device, m_swapChain, UINT64_MAX, getImageAvailableSemaphore(), VK_NULL_HANDLE, &m_currSwapChainImageIdx); result == VK_ERROR_OUT_OF_DATE_KHR) {
+    if (VkResult result = vkAcquireNextImageKHR(g_vulkanBackend->m_device, m_swapChain, UINT64_MAX, getImageAvailableSemaphore(), VK_NULL_HANDLE, &m_currSwapChainImageIdx); result == VK_ERROR_OUT_OF_DATE_KHR) {
         rebuildSwapChain();
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         LLT_ERROR("Failed to acquire next image in swap chain: %d", result);
@@ -210,7 +210,7 @@ void Backbuffer::swapBuffers()
 	// queue a new present info
 	// if it returns as being out of date or suboptimal
 	// rebuild the swap chain
-    if (VkResult result = vkQueuePresentKHR(g_vulkanBackend->graphicsQueue.getQueue(), &presentInfo); result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    if (VkResult result = vkQueuePresentKHR(g_vulkanBackend->m_graphicsQueue.getQueue(), &presentInfo); result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
 		rebuildSwapChain();
 	} else if (result != VK_SUCCESS) {
         LLT_ERROR("Failed to present swap chain image: %d", result);
@@ -229,7 +229,7 @@ Texture* Backbuffer::getDepthAttachment()
 
 void Backbuffer::createSwapChain()
 {
-    SwapChainSupportDetails details = vkutil::querySwapChainSupport(g_vulkanBackend->physicalData.device, m_surface);
+    SwapChainSupportDetails details = vkutil::querySwapChainSupport(g_vulkanBackend->m_physicalData.device, m_surface);
 
 	// get the surface settings
     auto surfaceFormat = vkutil::chooseSwapSurfaceFormat(details.surfaceFormats);
@@ -263,12 +263,12 @@ void Backbuffer::createSwapChain()
 
 	// create the swapchain!
 	LLT_VK_CHECK(
-		vkCreateSwapchainKHR(g_vulkanBackend->device, &createInfo, nullptr, &m_swapChain),
+		vkCreateSwapchainKHR(g_vulkanBackend->m_device, &createInfo, nullptr, &m_swapChain),
 		"Failed to create swap chain"
 	);
 
 	// get the swapchain images
-    vkGetSwapchainImagesKHR(g_vulkanBackend->device, m_swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, nullptr);
 
 	// if we weren't able to locate any throw an error
     if (!imageCount) {
@@ -280,14 +280,14 @@ void Backbuffer::createSwapChain()
 	// now that we know for sure that we must have swap chain images (and the number of them)
 	// actually get the swap chain images array
     VkImage images[imageCount];
-    vkGetSwapchainImagesKHR(g_vulkanBackend->device, m_swapChain, &imageCount, images);
+    vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, images);
 
 	// store this info
     for (int i = 0; i < imageCount; i++) {
         m_swapChainImages[i] = images[i];
     }
 
-	g_vulkanBackend->swapChainImageFormat = surfaceFormat.format;
+	g_vulkanBackend->m_swapChainImageFormat = surfaceFormat.format;
 
 	createSwapChainSyncObjects();
 	createSwapChainImageViews();
@@ -310,7 +310,7 @@ void Backbuffer::createSwapChain()
 	// set our dimensions and init
 	m_renderInfo.setDimensions(m_width, m_height);
 
-    LLT_LOG("[BACKBUFFER] Created the swap chain!");
+    LLT_LOG("Created the swap chain!");
 }
 
 void Backbuffer::createSwapChainSyncObjects()
@@ -322,17 +322,17 @@ void Backbuffer::createSwapChainSyncObjects()
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
 		LLT_VK_CHECK(
-			vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]),
+			vkCreateSemaphore(g_vulkanBackend->m_device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]),
 			"Failed to create image available semaphore"
 		);
 
 		LLT_VK_CHECK(
-			vkCreateSemaphore(g_vulkanBackend->device, &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[i]),
+			vkCreateSemaphore(g_vulkanBackend->m_device, &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[i]),
 			"Failed to create render finished semaphore"
 		);
 	}
 
-	LLT_LOG("[BACKBUFFER] Created sync objects!");
+	LLT_LOG("Created swapchain sync objects!");
 }
 
 void Backbuffer::createSwapChainImageViews()
@@ -346,7 +346,7 @@ void Backbuffer::createSwapChainImageViews()
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = m_swapChainImages[i];
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = g_vulkanBackend->swapChainImageFormat;
+        viewInfo.format = g_vulkanBackend->m_swapChainImageFormat;
 
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.subresourceRange.baseMipLevel = 0;
@@ -360,12 +360,12 @@ void Backbuffer::createSwapChainImageViews()
         viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
 		LLT_VK_CHECK(
-			vkCreateImageView(g_vulkanBackend->device, &viewInfo, nullptr, &m_swapChainImageViews[i]),
+			vkCreateImageView(g_vulkanBackend->m_device, &viewInfo, nullptr, &m_swapChainImageViews[i]),
 			"Failed to create texture image view"
 		);
     }
 
-    LLT_LOG("[BACKBUFFER] Created swap chain image views!");
+    LLT_LOG("Created swap chain image views!");
 }
 
 void Backbuffer::onWindowResize(int width, int height)
@@ -424,7 +424,7 @@ uint32_t Backbuffer::getCurrentTextureIdx() const
 
 VkSampleCountFlagBits Backbuffer::getMSAA() const
 {
-	return g_vulkanBackend->maxMsaaSamples;
+	return g_vulkanBackend->m_maxMsaaSamples;
 }
 
 const VkSemaphore& Backbuffer::getRenderFinishedSemaphore() const

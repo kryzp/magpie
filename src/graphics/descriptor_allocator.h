@@ -1,7 +1,7 @@
 #ifndef VK_DESCRIPTOR_ALLOCATOR
 #define VK_DESCRIPTOR_ALLOCATOR
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../container/vector.h"
 #include "../container/pair.h"

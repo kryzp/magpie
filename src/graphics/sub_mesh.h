@@ -26,6 +26,7 @@ namespace llt
 
 		void build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, uint16_t* pIndices, uint32_t nIndices);
 
+		Mesh* getParent();
 		const Mesh* getParent() const;
 
 		void setMaterial(Material* material);
@@ -39,7 +40,7 @@ namespace llt
 		uint64_t getIndexCount() const;
 
 	private:
-		const Mesh* m_parent;
+		Mesh* m_parent;
 
 		Material* m_material;
 

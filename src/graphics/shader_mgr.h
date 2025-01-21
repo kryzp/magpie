@@ -1,7 +1,7 @@
 #ifndef VK_SHADER_MGR_H_
 #define VK_SHADER_MGR_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "shader.h"
 

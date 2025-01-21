@@ -12,6 +12,8 @@ namespace llt
 		GPUBufferMgr();
 		~GPUBufferMgr();
 
+		void createGlobalStagingBuffers();
+
 		GPUBuffer* createBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, uint64_t size);
 
 		GPUBuffer* createStagingBuffer(uint64_t size);
@@ -19,6 +21,9 @@ namespace llt
 		GPUBuffer* createIndexBuffer(uint64_t indexCount);
 		GPUBuffer* createUniformBuffer(uint64_t size);
 		GPUBuffer* createShaderStorageBuffer(uint64_t size);
+
+		GPUBuffer* textureStagingBuffer;
+		GPUBuffer* meshStagingBuffer;
 
 	private:
 		Vector<GPUBuffer*> m_vertexBuffers;

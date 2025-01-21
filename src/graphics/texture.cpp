@@ -1,6 +1,7 @@
 #include "texture.h"
 #include "backend.h"
 #include "util.h"
+#include "../math/calc.h"
 
 using namespace llt;
 
@@ -27,7 +28,6 @@ Texture::Texture()
 	, m_width(0)
 	, m_height(0)
 	, m_depth(1)
-	, m_mipmapped(false)
 	, m_isDepthTexture(false)
 	, m_uav(false)
 {
@@ -42,13 +42,13 @@ void Texture::cleanUp()
 {
 	if (m_image != VK_NULL_HANDLE)
 	{
-		vmaDestroyImage(g_vulkanBackend->vmaAllocator, m_image, m_allocation);
+		vmaDestroyImage(g_vulkanBackend->m_vmaAllocator, m_image, m_allocation);
 		m_image = VK_NULL_HANDLE;
 	}
 
 	if (m_view != VK_NULL_HANDLE)
 	{
-		vkDestroyImageView(g_vulkanBackend->device, m_view, nullptr);
+		vkDestroyImageView(g_vulkanBackend->m_device, m_view, nullptr);
 		m_view = VK_NULL_HANDLE;
 	}
 
@@ -87,7 +87,9 @@ void Texture::setProperties(VkFormat format, VkImageTiling tiling, VkImageViewTy
 
 void Texture::setMipLevels(uint32_t mipLevels)
 {
-	m_mipmapCount = mipLevels;
+	uint32_t minMipLevels = 1 + CalcU::floor(CalcU::log2(CalcU::max(m_width, CalcU::max(m_height, m_depth))));
+
+	m_mipmapCount = CalcU::min(minMipLevels, mipLevels);
 }
 
 void Texture::setSampleCount(VkSampleCountFlagBits numSamples)
@@ -184,7 +186,7 @@ void Texture::createInternalResources()
 	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	LLT_VK_CHECK(
-		vmaCreateImage(g_vulkanBackend->vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
+		vmaCreateImage(g_vulkanBackend->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);
 
@@ -219,7 +221,7 @@ VkImageView Texture::generateView() const
 	VkImageView ret = {};
 
 	LLT_VK_CHECK(
-		vkCreateImageView(g_vulkanBackend->device, &viewCreateInfo, nullptr, &ret),
+		vkCreateImageView(g_vulkanBackend->m_device, &viewCreateInfo, nullptr, &ret),
 		"Failed to create texture image view"
 	);
 
@@ -232,14 +234,14 @@ void Texture::generateMipmaps() const
 	LLT_ASSERT(m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "Texture must be in TRANSFER_DST_OPTIMAL layout to generate mipmaps.");
 
 	VkFormatProperties formatProperties = {};
-	vkGetPhysicalDeviceFormatProperties(g_vulkanBackend->physicalData.device, m_format, &formatProperties);
+	vkGetPhysicalDeviceFormatProperties(g_vulkanBackend->m_physicalData.device, m_format, &formatProperties);
 
 	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 		LLT_ERROR("Texture image format doesn't support linear blitting.");
 		return;
 	}
 
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 	{
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -343,10 +345,15 @@ void Texture::generateMipmaps() const
 
 VkImageMemoryBarrier Texture::getBarrier() const
 {
+	return getBarrier(m_imageLayout);
+}
+
+VkImageMemoryBarrier Texture::getBarrier(VkImageLayout newLayout) const
+{
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = m_imageLayout;
-	barrier.newLayout = m_imageLayout;
+	barrier.newLayout = newLayout;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = m_image;
@@ -358,124 +365,112 @@ VkImageMemoryBarrier Texture::getBarrier() const
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = 0;
 
-	if (m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 	}
 
 	return barrier;
 }
 
-// todo: this is literally giving me AIDS
-void Texture::transitionLayout(VkImageLayout newLayout)
+void Texture::transitionLayoutSingle(VkImageLayout newLayout)
+{
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+
+	transitionLayout(cmdBuffer, newLayout);
+
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_graphicsQueue.getQueue());
+}
+
+// todo: this is literally the worst thing ever
+void Texture::transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout)
 {
 	if (m_imageLayout == newLayout) {
 		return;
 	}
 
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkImageMemoryBarrier barrier = getBarrier(newLayout);
+
+	VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_NONE;
+
+	if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 	{
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = m_imageLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = m_image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = m_mipmapCount;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = getLayerCount();
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else if ((m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED || m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = 0;
+
+		dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = 0;
+
+		dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	}
+	else if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	{
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = 0;
 
-		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-
-		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_NONE;
-
-		if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-		{
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-		{
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else if ((m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED || m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-		{
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = 0;
-
-			dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-		{
-			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = 0;
-
-			dstStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		}
-		else if (m_imageLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = 0;
-
-			dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		}
-		else
-		{
-			LLT_ERROR("Unsupported layout transition for image: %d -> %d", m_imageLayout, newLayout);
-		}
-
-		vkCmdPipelineBarrier(
-			cmdBuffer,
-			m_stage, dstStage,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-
-		m_stage = dstStage;
-		m_imageLayout = newLayout;
+		dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	}
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
+	else
+	{
+		LLT_ERROR("Unsupported layout transition for image: %d -> %d", m_imageLayout, newLayout);
+	}
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		m_stage, dstStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	m_stage = dstStage;
+	m_imageLayout = newLayout;
 }
 
 void Texture::setParent(RenderTarget* getParent)
@@ -491,16 +486,6 @@ const RenderTarget* Texture::getParent() const
 bool Texture::hasParent() const
 {
 	return m_parent != nullptr;
-}
-
-bool Texture::isMipmapped() const
-{
-	return m_mipmapped;
-}
-
-void Texture::setMipmapped(bool mipmapped)
-{
-	m_mipmapped = mipmapped;
 }
 
 bool Texture::isUnorderedAccessView() const
@@ -582,7 +567,7 @@ void TextureBatch::addTexture(Texture* texture)
 
 void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 
 	for (auto& t : m_textures)
 	{
@@ -603,12 +588,12 @@ void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
 		}
 	}
 
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_graphicsQueue.getQueue());
 }
 
 void TextureBatch::popPipelineBarriers()
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool);
+	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 
 	for (auto& t : m_textures)
 	{
@@ -627,5 +612,5 @@ void TextureBatch::popPipelineBarriers()
 		}
 	}
 
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_graphicsQueue.getQueue());
 }

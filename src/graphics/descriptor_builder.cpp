@@ -27,7 +27,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	else
 	{
 		LLT_VK_CHECK(
-			vkCreateDescriptorSetLayout(g_vulkanBackend->device, &layoutCreateInfo, nullptr, &set),
+			vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &set),
 			"Failed to create descriptor set layout"
 		);
 	}
@@ -69,7 +69,7 @@ void DescriptorWriter::updateSet(VkDescriptorSet set)
 		write.dstSet = set;
 	}
 
-	vkUpdateDescriptorSets(g_vulkanBackend->device, m_writes.size(), m_writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(g_vulkanBackend->m_device, m_writes.size(), m_writes.data(), 0, nullptr);
 }
 
 void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo& info)

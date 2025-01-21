@@ -20,13 +20,23 @@
 
 #endif
 
-#define BYTES    (_x) (_x)
-#define KILOBYTES(_x) (_x * 1024LL)
-#define MEGABYTES(_x) (_x * 1024LL * 1024LL)
-#define GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
-#define TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
+#define LLT_BYTES    (_x) (_x)
+#define LLT_KILOBYTES(_x) (_x * 1024LL)
+#define LLT_MEGABYTES(_x) (_x * 1024LL * 1024LL)
+#define LLT_GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
+#define LLT_TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
 
 #define LLT_ARRAY_LENGTH(_arr) (sizeof((_arr)) / sizeof((*_arr)))
+#define LLT_SWAP(_x, _y) (::__lltutils_swap((_x), (_y)))
+#define LLT_SID(_str) (hash::calc(0, (_str)))
+
+template <typename T>
+inline void __lltutils_swap(T& x, T& y)
+{
+	T tmp = x;
+	x = y;
+	y = tmp;
+}
 
 using sbyte = char;
 using ubyte = unsigned char;

@@ -5,7 +5,7 @@ using namespace llt;
 
 Queue::Queue()
 	: m_queue()
-	, m_family(QUEUE_FAMILY_NONE)
+	, m_family(QUEUE_FAMILY_MAX_ENUM)
 	, m_familyIdx(0)
 	, m_frames()
 {

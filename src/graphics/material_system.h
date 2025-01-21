@@ -24,21 +24,15 @@ namespace llt
 
 		void addTechnique(const String& name, const Technique& technique);
 
-		ShaderParameters globalParameters;
-		ShaderParameters instanceParameters;
-
-		void updateGlobalBuffer();
-		void updateInstanceBuffer();
-
-		const ShaderBuffer* getGlobalBuffer() const;
-		const ShaderBuffer* getInstanceBuffer() const;
+		DynamicShaderBuffer* getGlobalBuffer() const;
+		DynamicShaderBuffer* getInstanceBuffer() const;
 
 	private:
 		HashMap<uint64_t, Material*> m_materials;
 		HashMap<String, Technique> m_techniques;
 
-		ShaderBuffer* m_globalBuffer;
-		ShaderBuffer* m_instanceBuffer;
+		DynamicShaderBuffer* m_globalBuffer;
+		DynamicShaderBuffer* m_instanceBuffer;
 
 		DescriptorPoolDynamic m_descriptorPoolAllocator;
 		DescriptorLayoutCache m_descriptorCache;

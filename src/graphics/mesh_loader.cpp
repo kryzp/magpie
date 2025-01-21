@@ -27,51 +27,73 @@ Mesh* MeshLoader::loadMesh(const String& name, const String& path)
 		return m_meshCache.get(name);
 	}
 
-	const aiScene* scene = m_importer.ReadFile(path.cstr(), aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_CalcTangentSpace);
+	const aiScene* scene = m_importer.ReadFile(path.cstr(),
+		aiProcess_Triangulate |
+		aiProcess_FlipWindingOrder |
+		aiProcess_CalcTangentSpace |
+		aiProcess_FlipUVs
+	);
 
 	if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		LLT_ERROR("[MESHLOADER] Failed to load mesh at path: %s, Error: %s", path.cstr(), m_importer.GetErrorString());
+		LLT_ERROR("Failed to load mesh at path: %s, Error: %s", path.cstr(), m_importer.GetErrorString());
 		return nullptr;
 	}
 
 	Mesh* mesh = new Mesh();
 
-	processNodes(mesh, scene->mRootNode, scene);
+	aiMatrix4x4 identity(
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	);
+
+	processNodes(mesh, scene->mRootNode, scene, identity);
 
 	m_meshCache.insert(name, mesh);
 	return mesh;
 }
 
-void MeshLoader::processNodes(Mesh* mesh, aiNode* node, const aiScene* scene)
+void MeshLoader::processNodes(Mesh* mesh, aiNode* node, const aiScene* scene, const aiMatrix4x4& transform)
 {
 	for(int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
-		processSubMesh(mesh->createSubmesh(), assimpMesh, scene);
+		processSubMesh(mesh->createSubmesh(), assimpMesh, scene, node->mTransformation * transform);
 	}
 
 	for(int i = 0; i < node->mNumChildren; i++)
 	{
-		processNodes(mesh, node->mChildren[i], scene);
+		processNodes(mesh, node->mChildren[i], scene, node->mTransformation * transform);
 	}
 }
 
-void MeshLoader::processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene)
+void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene, const aiMatrix4x4& transform)
 {
 	Vector<ModelVertex> vertices;
 	Vector<uint16_t> indices;
 
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
 	{
-		const aiVector3D& pos = assimpMesh->mVertices[i];
-		const aiVector3D& nml = assimpMesh->mNormals[i];
+		const aiVector3D& vtx = transform * assimpMesh->mVertices[i];
 
-		ModelVertex vertex;
-		vertex.pos = { pos.x, pos.y, pos.z };
-		vertex.norm = { nml.x, nml.y, nml.z };
+		ModelVertex vertex = {};
 
-		if (assimpMesh->mColors[0])
+		vertex.pos = { vtx.x, vtx.y, vtx.z };
+
+		if (assimpMesh->HasNormals())
+		{
+			const aiVector3D& nml = transform * assimpMesh->mNormals[i]; // this literally wont work lmao
+
+			vertex.norm = { nml.x, nml.y, nml.z };
+		}
+		else
+		{
+			vertex.norm = { 0.0f, 0.0f, 1.0f };
+		}
+
+		if (assimpMesh->HasVertexColors(0))
 		{
 			const aiColor4D& col = assimpMesh->mColors[0][i];
 
@@ -82,7 +104,8 @@ void MeshLoader::processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const
 			vertex.col = { 1.0f, 1.0f, 1.0f };
 		}
 
-		if (assimpMesh->mTextureCoords[0])
+
+		if (assimpMesh->HasTextureCoords(0))
 		{
 			const aiVector3D& uv = assimpMesh->mTextureCoords[0][i];
 
@@ -93,7 +116,7 @@ void MeshLoader::processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const
 			vertex.uv = { 0.0f, 0.0f };
 		}
 
-		if (assimpMesh->mTangents)
+		if (assimpMesh->HasTangentsAndBitangents())
 		{
 			const aiVector3D& tangent = assimpMesh->mTangents[i];
 
@@ -127,43 +150,32 @@ void MeshLoader::processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const
 	{
 		const aiMaterial* assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
 
-		Vector<Texture*> diffuseMaps = loadMaterialTextures(assimpMaterial, aiTextureType_DIFFUSE);
-		Vector<Texture*> specularMaps = loadMaterialTextures(assimpMaterial, aiTextureType_SPECULAR);
-		Vector<Texture*> normalMaps = loadMaterialTextures(assimpMaterial, aiTextureType_HEIGHT);
-
 		MaterialData data;
-		data.technique = "texturedPBR_opaque";
+		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
-		for (auto& tex : diffuseMaps)
-		{
-			BoundTexture boundTexture = {};
-			boundTexture.texture = tex;
-			boundTexture.sampler = g_textureManager->getSampler("linear");
-
-			data.textures.pushBack(boundTexture);
-		}
-
-		for (auto& tex : specularMaps)
-		{
-			BoundTexture boundTexture = {};
-			boundTexture.texture = tex;
-			boundTexture.sampler = g_textureManager->getSampler("linear");
-
-			data.textures.pushBack(boundTexture);
-		}
-
-		for (auto& tex : normalMaps)
-		{
-			BoundTexture boundTexture = {};
-			boundTexture.texture = tex;
-			boundTexture.sampler = g_textureManager->getSampler("linear");
-
-			data.textures.pushBack(boundTexture);
-		}
+		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE);
+		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
+		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_NORMALS);
+		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_EMISSIVE);
+		//fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
 
 		Material* material = g_materialSystem->buildMaterial(data);
 
 		submesh->setMaterial(material);
+	}
+}
+
+void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial* material, aiTextureType type)
+{
+	Vector<Texture*> maps = loadMaterialTextures(material, type);
+
+	for (auto& tex : maps)
+	{
+		BoundTexture boundTexture = {};
+		boundTexture.texture = tex;
+		boundTexture.sampler = g_textureManager->getSampler("linear");
+
+		textures.pushBack(boundTexture);
 	}
 }
 
@@ -176,11 +188,14 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial* material, ai
 		aiString texturePath;
 		material->GetTexture(type, i, &texturePath);
 
-		Texture* tex = g_textureManager->getTexture(texturePath.C_Str());
+		aiString basePath = aiString("../../res/models/GLTF/DamagedHelmet/");
+		basePath.Append(texturePath.C_Str());
+
+		Texture* tex = g_textureManager->getTexture(basePath.C_Str());
 
 		if (!tex) {
-			Image image(texturePath.C_Str());
-			tex = g_textureManager->createFromImage(texturePath.C_Str(), image);
+			Image image(basePath.C_Str());
+			tex = g_textureManager->createFromImage(basePath.C_Str(), image);
 		}
 
 		result.pushBack(tex);

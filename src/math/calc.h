@@ -6,16 +6,10 @@
 
 namespace llt
 {
-	/**
-	 * Generic calculator-wrapper for maths.
-	 */
 	template <typename T>
 	class Calc
 	{
 	public:
-		/*
-		 * Useful mathematical constants.
-		 */
 		constexpr static T E       = 2.71828182845;
 		constexpr static T PI      = 3.14159265359;
 		constexpr static T TAU     = 6.28318530718;
@@ -46,30 +40,11 @@ namespace llt
 		static T ceil(T x);
 		static T fract(T x);
 
-		/*
-		 * Checks if two numbers are within a certain "distance" of each other.
-		 * Often used to combat floating-point precision issues.
-		 */
 		static bool withinEpsilon(T lhs, T rhs, T epsilon = std::numeric_limits<T>::epsilon());
 
-		/*
-		 * Consistently approaches a value without over/under shooting.
-		 */
 		static T approach(T from, T to, T amount);
-
-		/*
-		 * Linearly interpolates between two values
-		 */
 		static T lerp(T from, T to, T t);
-
-		/*
-		 * Smoothly interpolates between two values
-		 */
 		static T smooth(T from, T to, T amount, T time);
-
-		/*
-		 * Springs between two values
-		 */
 		static T spring(T bounciness, T tension, T t);
 
 		static T sin(T x);

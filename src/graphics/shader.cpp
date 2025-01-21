@@ -16,13 +16,14 @@ const ShaderParameters::PackedData& ShaderParameters::getPackedConstants()
 
 void ShaderParameters::rebuildPackedConstantData()
 {
-	m_packedConstants.clear();
-	m_packedConstants.resize(m_offsetAccumulator);
+	m_packedConstants.resize(m_size);
 
 	for (auto& [name, param] : m_constants) {
 		mem::copy(m_packedConstants.data() + param.offset, param.data, param.size);
 	}
 }
+
+// --- //
 
 ShaderProgram::ShaderProgram()
 	: m_shaderModule(VK_NULL_HANDLE)
@@ -40,7 +41,7 @@ void ShaderProgram::cleanUp()
 		return;
 	}
 
-	vkDestroyShaderModule(g_vulkanBackend->device, m_shaderModule, nullptr);
+	vkDestroyShaderModule(g_vulkanBackend->m_device, m_shaderModule, nullptr);
 	m_shaderModule = VK_NULL_HANDLE;
 }
 
@@ -53,7 +54,7 @@ void ShaderProgram::loadFromSource(const char* source, uint64_t size)
 	moduleCreateInfo.pCode = (const uint32_t*)source;
 
 	LLT_VK_CHECK(
-		vkCreateShaderModule(g_vulkanBackend->device, &moduleCreateInfo, nullptr, &m_shaderModule),
+		vkCreateShaderModule(g_vulkanBackend->m_device, &moduleCreateInfo, nullptr, &m_shaderModule),
 		"Failed to create shader module"
 	);
 }

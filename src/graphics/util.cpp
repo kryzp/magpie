@@ -5,13 +5,6 @@
 
 #include "../math/calc.h"
 
-#ifdef LLT_MAC_SUPPORT
-
-PFN_vkCmdBeginRendering llt::vkutil::ext_vkCmdBeginRendering = nullptr;
-PFN_vkCmdEndRendering llt::vkutil::ext_vkCmdEndRendering = nullptr;
-
-#endif // LLT_MAC_SUPPORT
-
 using namespace llt;
 
 VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
@@ -123,7 +116,7 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	VkCommandBuffer cmdBuffer = {};
 
 	LLT_VK_CHECK(
-		vkAllocateCommandBuffers(g_vulkanBackend->device, &allocInfo, &cmdBuffer),
+		vkAllocateCommandBuffers(g_vulkanBackend->m_device, &allocInfo, &cmdBuffer),
 		"Failed to reallocate command buffers when copying buffer"
 	);
 
@@ -151,17 +144,17 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuf
 	vkQueueSubmit(graphics, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(graphics);
 
-	vkFreeCommandBuffers(g_vulkanBackend->device, cmdPool, 1, &cmdBuffer);
+	vkFreeCommandBuffers(g_vulkanBackend->m_device, cmdPool, 1, &cmdBuffer);
 }
 
 void vkutil::endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer)
 {
-	vkutil::endSingleTimeCommands(g_vulkanBackend->graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_graphicsQueue.getQueue());
 }
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
-	VkPhysicalDeviceProperties properties = g_vulkanBackend->physicalData.properties;
+	VkPhysicalDeviceProperties properties = g_vulkanBackend->m_physicalData.properties;
 	const VkDeviceSize& minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return ((size / minimumSize) * minimumSize) + (((size % minimumSize) > 0) ? minimumSize : 0);
 }
@@ -234,7 +227,7 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	bool adequateSwapChain = false;
 	bool hasRequiredExtensions = checkDeviceExtensionSupport(physicalDevice);
 
-	bool hasGraphics = g_vulkanBackend->graphicsQueue.getFamilyIdx().hasValue();
+	bool hasGraphics = g_vulkanBackend->m_graphicsQueue.getFamilyIdx().hasValue();
 	bool hasAnisotropy = features.samplerAnisotropy;
 
 	// prefer / give more weight to discrete gpus than integrated gpus

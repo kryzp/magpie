@@ -1,7 +1,8 @@
 #ifndef VK_BACKEND_H_
 #define VK_BACKEND_H_
 
-#include <vulkan/vulkan.h>
+#define VK_NO_PROTOTYPES
+#include "../third_party/volk.h"
 
 #include "../third_party/vk_mem_alloc.h"
 
@@ -22,7 +23,7 @@
 #include "descriptor_builder.h"
 #include "descriptor_layout_cache.h"
 
-#include "vertex_descriptor.h"
+#include "vertex_format.h"
 
 #include "shader_buffer.h"
 
@@ -33,9 +34,7 @@
 #include "backbuffer.h"
 #include "render_pass.h"
 #include "queue.h"
-
-#include "graphics_pipeline.h"
-#include "compute_pipeline.h"
+#include "pipeline.h"
 
 #include "shader_buffer_mgr.h"
 #include "gpu_buffer_mgr.h"
@@ -84,27 +83,35 @@ namespace llt
 		GenericRenderTarget* getRenderTarget();
 		const GenericRenderTarget* getRenderTarget() const;
 
+		VkCommandBuffer getGraphicsCommandBuffer();
+		VkCommandBuffer getTransferCommandBuffer(int idx = 0);
+		VkCommandBuffer getComputeCommandBuffer(int idx = 0);
+
+		VkCommandPool getGraphicsCommandPool();
+		VkCommandPool getTransferCommandPool(int idx = 0);
+		VkCommandPool getComputeCommandPool(int idx = 0);
+
 		void beginGraphics(GenericRenderTarget* target = nullptr);
 		void endGraphics();
 
 		void beginCompute();
 		void endCompute();
 
-        VkInstance instance;
-		VkDevice device;
-		PhysicalDeviceData physicalData;
-		VkSampleCountFlagBits maxMsaaSamples;
-		VkFormat swapChainImageFormat;
-		VmaAllocator vmaAllocator;
+        VkInstance m_instance;
+		VkDevice m_device;
+		PhysicalDeviceData m_physicalData;
+		VkSampleCountFlagBits m_maxMsaaSamples;
+		VkFormat m_swapChainImageFormat;
+		VmaAllocator m_vmaAllocator;
 
-		HashMap<uint64_t, VkPipeline> pipelineCache;
-		HashMap<uint64_t, VkPipelineLayout> pipelineLayoutCache;
+		HashMap<uint64_t, VkPipeline> m_pipelineCache;
+		HashMap<uint64_t, VkPipelineLayout> m_pipelineLayoutCache;
 
-		Queue graphicsQueue;
-		Vector<Queue> computeQueues;
-		Vector<Queue> transferQueues;
+		Queue m_graphicsQueue;
+		Vector<Queue> m_computeQueues;
+		Vector<Queue> m_transferQueues;
 
-		ShaderParameters::PackedData pushConstants;
+		ShaderParameters::PackedData m_pushConstants;
 
 	private:
 		void enumeratePhysicalDevices();

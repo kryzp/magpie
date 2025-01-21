@@ -16,7 +16,7 @@ using namespace llt;
 App::App(const Config& config)
 	: m_config(config)
 	, m_running(false)
-	, m_camera(config.width, config.height, 70.0f, 0.1f, 100.0f)
+	, m_camera(config.width, config.height, 75.0f, 0.01f, 50.0f)
 	, m_renderer()
 {
 	g_platform = new Platform(config);
@@ -31,14 +31,17 @@ App::App(const Config& config)
 	g_platform->setWindowSize({ m_config.width, m_config.height });
 	g_platform->setWindowMode(m_config.windowMode);
 	g_platform->setWindowOpacity(m_config.opacity);
-	g_platform->toggleCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE));
+	g_platform->setCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE));
 	g_platform->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE));
+	g_platform->lockCursor(m_config.hasFlag(Config::FLAG_LOCK_CURSOR));
 
-	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW)) {
-		cauto screenSize = g_platform->getScreenSize();
+	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW))
+	{
+		glm::ivec2 screenSize = g_platform->getScreenSize();
+
 		g_platform->setWindowPosition({
-			(int)(screenSize.x - m_config.width) / 2,
-			(int)(screenSize.y - m_config.height) / 2
+			(int)((screenSize.x - m_config.width) * 0.5f),
+			(int)((screenSize.y - m_config.height) * 0.5f)
 		});
 	}
 
@@ -72,16 +75,10 @@ App::~App()
 void App::run()
 {
 	double accumulator = 0.0;
-	const double targetDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
+	const double fixedDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
 	
 	Timer deltaTimer;
 	deltaTimer.start();
-
-	Timer elapsedTimer;
-	elapsedTimer.start();
-
-	g_platform->setCursorPosition(m_config.width / 2, m_config.height / 2);
-	g_platform->lockCursor(true);
 
 	while (m_running)
 	{
@@ -94,19 +91,28 @@ void App::run()
 
 		double deltaTime = deltaTimer.reset();
 
-		accumulator += CalcF::min(deltaTime, targetDeltaTime);
+		accumulator += CalcF::min(deltaTime, fixedDeltaTime);
 
-		while (accumulator >= targetDeltaTime)
+		while (accumulator >= fixedDeltaTime)
 		{
-			m_camera.update(targetDeltaTime);
-			g_platform->setCursorPosition(m_config.width/2, m_config.height/2);
+			if (g_inputState->isDown(MBTN_MIDDLE))
+			{
+				g_platform->setCursorVisible(false);
+				g_platform->setCursorPosition(m_config.width / 2, m_config.height / 2);
 
-			accumulator -= targetDeltaTime;
+				m_camera.update(fixedDeltaTime);
+			}
+			else
+			{
+				g_platform->setCursorVisible(true);
+			}
+
+			accumulator -= fixedDeltaTime;
 		}
 
-		m_renderer.render(m_camera, deltaTime, elapsedTimer.getElapsedSeconds());
+		m_renderer.render(m_camera, deltaTime);
 
-		LLT_LOG("fps: %f", 1.0 / deltaTime);
+//		LLT_LOG("fps: %f", 1.0 / deltaTime);
 	}
 }
 

@@ -18,21 +18,19 @@ namespace llt
 		SHADER_BUFFER_MAX_ENUM
 	};
 
-	/**
-	 * Abstracts away & manages the allocation
-	 * and lifetime of a uniform buffer for use in shaders
-	 */
-	class ShaderBuffer
+	class DynamicShaderBuffer
 	{
 	public:
-		ShaderBuffer();
+		DynamicShaderBuffer();
 
 		void init(uint64_t initialSize, ShaderBufferType type);
 		void cleanUp();
 
-		void pushData(ShaderParameters& params);
-		void pushData(const void* data, uint64_t size);
-		
+		ShaderParameters& getParameters();
+		void setParameters(const ShaderParameters& params);
+
+		void pushParameters();
+
 		void reallocateBuffer(uint64_t size);
 
 		void resetBufferUsageInFrame();
@@ -46,8 +44,11 @@ namespace llt
 		const GPUBuffer* getBuffer() const;
 
 	private:
+		void pushData(const void* data, uint64_t size);
+
 		GPUBuffer* m_buffer;
-		
+		ShaderParameters m_parameters;
+
 		VkDescriptorBufferInfo m_info;
 		uint32_t m_dynamicOffset;
 		

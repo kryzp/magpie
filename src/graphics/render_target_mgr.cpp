@@ -49,8 +49,9 @@ RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, 
 
 		texture->createInternalResources();
 
-		texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		// todo: ??????????????????????????????????????????
+		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		texture->setParent(result);
 

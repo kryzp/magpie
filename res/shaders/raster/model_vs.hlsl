@@ -16,8 +16,7 @@ struct VSOutput
     [[vk::location(VS_OUT_SLOT_POSITION)]] float3 position : TEXCOORD0;
     [[vk::location(VS_OUT_SLOT_UV)]] float2 texCoord : TEXCOORD1;
     [[vk::location(VS_OUT_SLOT_COLOUR)]] float3 colour : COLOR;
-    [[vk::location(VS_OUT_SLOT_TANGENT_FRAG_POS)]] float3 tangentFragPos : TEXCOORD2;
-    [[vk::location(VS_OUT_SLOT_TANGENT_VIEW_POS)]] float3 tangentViewPos : TEXCOORD3;
+    [[vk::location(VS_OUT_SLOT_TANGENT_FRAG_POS)]] float3 fragPos : TEXCOORD2;
     [[vk::location(VS_OUT_SLOT_TBN_MATRIX)]] float3x3 tbn : TEXCOORD4;
 };
 
@@ -28,15 +27,12 @@ VSOutput main(VSInput input)
     T = normalize(T - dot(T, N) * N);
     float3 B = normalize(cross(N, T));
 
-    float3x3 tbn = float3x3(T, B, N);
-
     VSOutput output;
-    output.colour = input.colour;
+	output.colour = input.colour;
     output.texCoord = input.uv;
     output.position = mul(instanceData.modelMatrix, float4(input.position, 1.0)).xyz;
-    output.tbn = tbn;
-    output.tangentViewPos = mul(tbn, frameData.viewPos.xyz);
-    output.tangentFragPos = mul(tbn, output.position);
+	output.tbn = transpose(float3x3(T, B, N));
+	output.fragPos = output.position;
     output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(instanceData.modelMatrix, float4(input.position, 1.0))));
 
     return output;

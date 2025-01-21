@@ -36,7 +36,7 @@ GPUParticles::~GPUParticles()
 {
 }
 
-void GPUParticles::init(const ShaderBuffer* shaderParams)
+void GPUParticles::init(const DynamicShaderBuffer* shaderParams)
 {
 	m_computeProgram = g_shaderManager->create("particleCompute", "../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 

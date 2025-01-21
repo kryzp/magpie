@@ -33,3 +33,13 @@ SubMesh* Mesh::getSubmesh(int idx) const
 {
 	return m_subMeshes[idx];
 }
+
+void Mesh::setOwner(RenderObject* owner)
+{
+	m_owner = owner;
+}
+
+RenderObject* Mesh::getOwner()
+{
+	return m_owner;
+}

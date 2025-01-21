@@ -12,18 +12,16 @@ add_executable(${PROJECT_NAME}
     src/platform.cpp
     src/renderer.cpp
     src/camera.cpp
-    src/entity.cpp
+    src/render_object.cpp
     src/gpu_particles.cpp
 
     src/graphics/backbuffer.cpp
     src/graphics/backend.cpp
-    src/graphics/compute_pipeline.cpp
     src/graphics/descriptor_builder.cpp
     src/graphics/descriptor_allocator.cpp
     src/graphics/descriptor_layout_cache.cpp
     src/graphics/gpu_buffer.cpp
     src/graphics/gpu_buffer_mgr.cpp
-    src/graphics/graphics_pipeline.cpp
     src/graphics/generic_render_target.cpp
 	src/graphics/render_info.cpp
     src/graphics/render_target.cpp
@@ -44,7 +42,7 @@ add_executable(${PROJECT_NAME}
     src/graphics/util.cpp
     src/graphics/image.cpp
     src/graphics/queue.cpp
-    src/graphics/vertex_descriptor.cpp
+    src/graphics/vertex_format.cpp
 
 	src/math/colour.cpp
     src/math/timer.cpp
@@ -59,16 +57,31 @@ add_executable(${PROJECT_NAME}
     src/io/memory_stream.cpp
 
     src/third_party/vk_mem_alloc.cpp
+    src/third_party/volk_impl.cpp
 )
 
 set(DEBUG_MODE true CACHE BOOL "Enable debug mode")
-set(MAC_SUPPORT false CACHE BOOL "Enable mac support")
 
 if(DEBUG_MODE)
 	add_compile_definitions(LLT_DEBUG)
 endif()
 
-if(MAC_SUPPORT)
+if(WIN32)
+    set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+
+	set(GLM_INCLUDE_DIRS "D:/DevLibs/glm/")
+
+	set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
+	set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Release/SDL3.lib")
+
+	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.3.296.0/Include/")
+
+	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
+	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
+
+	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
+else()
 	add_compile_definitions(LLT_MAC_SUPPORT)
 
 	add_compile_definitions(RVN_USE_SDL3)
@@ -80,18 +93,4 @@ if(MAC_SUPPORT)
 	find_package(assimp REQUIRED)
 
 	target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp)
-else()
-	set(GLM_INCLUDE_DIRS "D:/DevLibs/glm/")
-
-	set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
-	set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Release/SDL3.lib")
-
-	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.3.296.0/Include/")
-	set(VK_LIBRARIES "D:/VulkanSDK/1.3.296.0/Lib/vulkan-1.lib")
-
-	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
-	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
-
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${VK_LIBRARIES} ${ASSIMP_LIBRARIES})
-	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 endif()

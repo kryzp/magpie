@@ -1,7 +1,7 @@
 #ifndef DESCRIPTOR_BUILDER_H_
 #define DESCRIPTOR_BUILDER_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../container/deque.h"
 #include "../container/vector.h"

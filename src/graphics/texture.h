@@ -1,7 +1,7 @@
 #ifndef VK_TEXTURE_H_
 #define VK_TEXTURE_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../third_party/vk_mem_alloc.h"
 
@@ -54,17 +54,16 @@ namespace llt
 		void createInternalResources();
 
 		VkImageMemoryBarrier getBarrier() const;
+		VkImageMemoryBarrier getBarrier(VkImageLayout newLayout) const;
 		
-		void transitionLayout(VkImageLayout newLayout);
+		void transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout);
+		void transitionLayoutSingle(VkImageLayout newLayout);
 
 		void generateMipmaps() const;
 
 		void setParent(RenderTarget* getParent);
 		const RenderTarget* getParent() const;
 		bool hasParent() const;
-
-		bool isMipmapped() const;
-		void setMipmapped(bool mipmapped);
 
 		bool isUnorderedAccessView() const;
 		void setUnorderedAccessView(bool uav);
@@ -111,7 +110,6 @@ namespace llt
 		uint32_t m_height;
 
 		uint32_t m_depth;
-		bool m_mipmapped;
 		bool m_isDepthTexture;
 
 		bool m_uav;
@@ -131,6 +129,27 @@ namespace llt
 	private:
 		Vector<Texture*> m_textures;
 		Vector<VkPipelineStageFlags> m_stageStack;
+	};
+
+	struct BoundTexture
+	{
+		Texture* texture;
+		TextureSampler* sampler;
+
+		VkDescriptorImageInfo getImageInfo() const
+		{
+			VkDescriptorImageInfo info = {};
+
+			info.imageView = texture->getImageView();
+
+			info.imageLayout = texture->isDepthTexture()
+				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
+
+			return info;
+		}
 	};
 }
 

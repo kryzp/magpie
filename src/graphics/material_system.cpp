@@ -1,6 +1,6 @@
 #include "material_system.h"
 #include "shader_mgr.h"
-#include "vertex_descriptor.h"
+#include "vertex_format.h"
 #include "light.h"
 #include "backend.h"
 
@@ -39,7 +39,6 @@ MaterialSystem::MaterialSystem()
 	, m_techniques()
 	, m_globalBuffer()
 	, m_instanceBuffer()
-	, globalParameters()
 {
 }
 
@@ -87,15 +86,15 @@ void MaterialSystem::init()
 
 	lights[0].direction /= glm::length(lights[0].direction);
 
-	globalParameters.setValue<glm::mat4>("projMatrix", glm::identity<glm::mat4>());
-	globalParameters.setValue<glm::mat4>("viewMatrix", glm::identity<glm::mat4>());
-	globalParameters.setValue<glm::vec4>("viewPos", glm::zero<glm::vec4>());
-	globalParameters.setArray<Light>("lights", lights, 16);
-	updateGlobalBuffer();
+	m_globalBuffer->getParameters().setValue<glm::mat4>("projMatrix", glm::identity<glm::mat4>());
+	m_globalBuffer->getParameters().setValue<glm::mat4>("viewMatrix", glm::identity<glm::mat4>());
+	m_globalBuffer->getParameters().setValue<glm::vec4>("viewPos", glm::zero<glm::vec4>());
+	m_globalBuffer->getParameters().setArray<Light>("lights", lights, 16);
+	m_globalBuffer->pushParameters();
 
-	instanceParameters.setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
-	instanceParameters.setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
-	updateInstanceBuffer();
+	m_instanceBuffer->getParameters().setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
+	m_instanceBuffer->getParameters().setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
+	m_instanceBuffer->pushParameters();
 
 	/*
 	m_bindlessParams.setValue<Params_PBR>("pbsParams", {
@@ -185,22 +184,12 @@ void MaterialSystem::init()
 	*/
 }
 
-void MaterialSystem::updateGlobalBuffer()
-{
-	m_globalBuffer->pushData(globalParameters);
-}
-
-void MaterialSystem::updateInstanceBuffer()
-{
-	m_instanceBuffer->pushData(instanceParameters);
-}
-
-const ShaderBuffer* MaterialSystem::getGlobalBuffer() const
+DynamicShaderBuffer* MaterialSystem::getGlobalBuffer() const
 {
 	return m_globalBuffer;
 }
 
-const ShaderBuffer* MaterialSystem::getInstanceBuffer() const
+DynamicShaderBuffer* MaterialSystem::getInstanceBuffer() const
 {
 	return m_instanceBuffer;
 }
@@ -229,6 +218,8 @@ void MaterialSystem::loadDefaultTechniques()
 	skyboxTechnique.passes[SHADER_PASS_FORWARD] = skyboxEffect;
 	skyboxTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
 	skyboxTechnique.vertexFormat = g_modelVertexFormat;
+	skyboxTechnique.depthTest = false;
+	skyboxTechnique.depthWrite = false;
 	addTechnique("skybox", skyboxTechnique);
 }
 
@@ -236,8 +227,6 @@ void MaterialSystem::loadDefaultTechniques()
 
 Material* MaterialSystem::buildMaterial(MaterialData& data)
 {
-	data.parameters.setValue<float>("temp", 0.0f);
-
 	if (m_materials.contains(data.getHash())) {
 		return m_materials.get(data.getHash());
 	}
@@ -246,8 +235,11 @@ Material* MaterialSystem::buildMaterial(MaterialData& data)
 
 	Material* material = new Material();
 
+	data.parameters.setValue<float>("asdf", 0.0f);
+
 	material->parameterBuffer = g_shaderBufferManager->createUBO();
-	material->parameterBuffer->pushData(data.parameters);
+	material->parameterBuffer->setParameters(data.parameters);
+	material->parameterBuffer->pushParameters();
 
 	material->vertexFormat = technique.vertexFormat;
 	material->textures = data.textures;
@@ -280,13 +272,13 @@ Material* MaterialSystem::buildMaterial(MaterialData& data)
 			material->passes[i].pipeline.bindShader(technique.passes[i]->stages[j]);
 		}
 
-		material->passes[i].pipeline.setVertexDescriptor(technique.vertexFormat);
-		material->passes[i].pipeline.setDepthTest(data.depthTest);
-		material->passes[i].pipeline.setDepthWrite(data.depthWrite);
+		material->passes[i].pipeline.setVertexFormat(technique.vertexFormat);
+		material->passes[i].pipeline.setDepthTest(technique.depthTest);
+		material->passes[i].pipeline.setDepthWrite(technique.depthWrite);
 		material->passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 		material->passes[i].pipeline.setDescriptorSetLayout(i == SHADER_PASS_FORWARD ? descriptorLayout : VK_NULL_HANDLE);
 
-		material->passes[i].effect = technique.passes[i];
+		material->passes[i].shader = technique.passes[i];
 
 		material->passes[i].set = m_descriptorPoolAllocator.allocate(descriptorLayout);
 

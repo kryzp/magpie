@@ -4,8 +4,9 @@
 
 using namespace llt;
 
-ShaderBuffer::ShaderBuffer()
+DynamicShaderBuffer::DynamicShaderBuffer()
 	: m_buffer(nullptr)
+	, m_parameters()
 	, m_info()
 	, m_dynamicOffset()
 	, m_usageInFrame()
@@ -15,7 +16,7 @@ ShaderBuffer::ShaderBuffer()
 {
 }
 
-void ShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
+void DynamicShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
 {
 	m_type = type;
 	m_usageInFrame.clear();
@@ -23,19 +24,31 @@ void ShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
 	reallocateBuffer(initialSize);
 }
 
-void ShaderBuffer::cleanUp()
+void DynamicShaderBuffer::cleanUp()
 {
+	m_parameters.cleanUp();
+
 	delete m_buffer;
 	m_buffer = nullptr;
 }
 
-void ShaderBuffer::pushData(ShaderParameters& params)
+ShaderParameters& DynamicShaderBuffer::getParameters()
 {
-	auto& packedParams = params.getPackedConstants();
+	return m_parameters;
+}
+
+void DynamicShaderBuffer::setParameters(const ShaderParameters& params)
+{
+	m_parameters = params;
+}
+
+void DynamicShaderBuffer::pushParameters()
+{
+	auto& packedParams = m_parameters.getPackedConstants();
 	pushData(packedParams.data(), packedParams.size());
 }
 
-void ShaderBuffer::pushData(const void* data, uint64_t size)
+void DynamicShaderBuffer::pushData(const void* data, uint64_t size)
 {
 	if (!data || !size) {
 		return;
@@ -70,7 +83,7 @@ void ShaderBuffer::pushData(const void* data, uint64_t size)
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] += size;
 }
 
-void ShaderBuffer::reallocateBuffer(uint64_t size)
+void DynamicShaderBuffer::reallocateBuffer(uint64_t size)
 {
 	delete m_buffer;
 
@@ -98,40 +111,40 @@ void ShaderBuffer::reallocateBuffer(uint64_t size)
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
-		LLT_LOG("[SHADERBUFFERMGR] (Re)Allocated ubo with size %llu.", size);
+		LLT_LOG("(Re)Allocated ubo with size %llu.", size);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
-		LLT_LOG("[SHADERBUFFERMGR] (Re)Allocated ssbo with size %llu.", size);
+		LLT_LOG("(Re)Allocated ssbo with size %llu.", size);
 	}
 }
 
-void ShaderBuffer::resetBufferUsageInFrame()
+void DynamicShaderBuffer::resetBufferUsageInFrame()
 {
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] = 0;
 }
 
-const VkDescriptorBufferInfo& ShaderBuffer::getDescriptorInfo() const
+const VkDescriptorBufferInfo& DynamicShaderBuffer::getDescriptorInfo() const
 {
 	return m_info;
 }
 
-VkDescriptorType ShaderBuffer::getDescriptorType() const
+VkDescriptorType DynamicShaderBuffer::getDescriptorType() const
 {
 	return m_type == SHADER_BUFFER_UBO ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 }
 
-uint32_t ShaderBuffer::getDynamicOffset() const
+uint32_t DynamicShaderBuffer::getDynamicOffset() const
 {
 	return m_dynamicOffset;
 }
 
-GPUBuffer* ShaderBuffer::getBuffer()
+GPUBuffer* DynamicShaderBuffer::getBuffer()
 {
 	return m_buffer;
 }
 
-const GPUBuffer* ShaderBuffer::getBuffer() const
+const GPUBuffer* DynamicShaderBuffer::getBuffer() const
 {
 	return m_buffer;
 }

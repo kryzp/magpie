@@ -9,12 +9,12 @@ Input::Input()
 	, m_nextState()
 	, m_prevState()
 {
-	LLT_LOG("[INPUT] Initialized!");
+	LLT_LOG("Input Initialized!");
 }
 
 Input::~Input()
 {
-	LLT_LOG("[INPUT] Destroyed!");
+	LLT_LOG("Input Destroyed!");
 }
 
 void Input::update()

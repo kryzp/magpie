@@ -55,23 +55,16 @@ Texture* TextureMgr::createFromImage(const String& name, const Image& image)
 
 	Texture* texture = new Texture();
 
-	// create the texture from the image with a sampling count of 1 and 4 mipmaps
 	texture->fromImage(image, VK_IMAGE_VIEW_TYPE_2D, 4, VK_SAMPLE_COUNT_1_BIT);
 
-	// all images have levels of mipmaps
-	texture->setMipmapped(true);
+	texture->setMipLevels(1);
 
-	// create the internal resources for the texture
 	texture->createInternalResources();
 
-	// transition into the transfer destination layout for the staging buffer
-	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	// move the image data onto the staging buffer, and then copy the data on the staging buffer onto the texture
-	GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(image.getSize());
-	stage->writeDataToMe(image.getData(), image.getSize(), 0);
-	stage->writeToTexture(texture, image.getSize());
-	delete stage;
+	g_gpuBufferManager->textureStagingBuffer->writeDataToMe(image.getData(), image.getSize(), 0);
+	g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, image.getSize());
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -87,28 +80,21 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
-	texture->setMipLevels(4);
 
 	texture->createInternalResources();
     
-	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	// check if we're actually creating a texture from data or if we're just trying to create an empty texture for now (data = nullptr)
 	if (data)
 	{
-		// this means we need to be mipmapped
-		texture->setMipmapped(true);
+		texture->setMipLevels(4);
 
-		// transfer data into the texture via staging buffer
-		GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(size);
-		stage->writeDataToMe(data, size, 0);
-		stage->writeToTexture(texture, size);
-		delete stage;
+		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(data, size, 0);
+		g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, size);
 	}
 	else
 	{
-		// simply just transition into the shader reading layout
-		texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 	m_textureCache.insert(name, texture);
@@ -128,8 +114,9 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 
 	texture->createInternalResources();
 
-	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	texture->transitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	// todo: WHAT???
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -145,26 +132,24 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 
 	texture->setSize(right.getWidth(), right.getHeight());
 	texture->setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
-	texture->setMipLevels(4);
 
-	texture->setMipmapped(true);
+	texture->setMipLevels(4);
 
 	texture->createInternalResources();
 
-	texture->transitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-	// create a staging buffer large enough for all 6 textures
-	GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(right.getSize() * 6);
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	const Image* sides[] = { &right, &left, &top, &bottom, &front, &back };
 
-	for (int i = 0; i < 6; i++) {
-		// transfer the data to the texture at some offset based on the index of the face
-		stage->writeDataToMe(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
-		stage->writeToTexture(texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
+	for (int i = 0; i < 6; i++)
+	{
+		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
 	}
 
-	delete stage;
+	for (int i = 0; i < 6; i++)
+	{
+		g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
+	}
 
 	m_textureCache.insert(name, texture);
 	return texture;

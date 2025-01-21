@@ -28,7 +28,8 @@ namespace llt
 			FLAG_VSYNC              = 1 << 1,
 			FLAG_CURSOR_INVISIBLE   = 1 << 2,
 			FLAG_CENTRE_WINDOW      = 1 << 3,
-			FLAG_HIGH_PIXEL_DENSITY = 1 << 4
+			FLAG_HIGH_PIXEL_DENSITY = 1 << 4,
+			FLAG_LOCK_CURSOR		= 1 << 5
 		};
 
 		const char* name = nullptr;

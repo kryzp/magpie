@@ -6,43 +6,49 @@
 #include "../container/array.h"
 #include "../container/string.h"
 
-#include "technique.h"
 #include "texture.h"
 #include "shader.h"
 #include "shader_buffer.h"
-#include "graphics_pipeline.h"
+#include "pipeline.h"
 
 namespace llt
 {
-	struct BoundTexture
+	class SubMesh;
+
+	enum ShaderPassType
 	{
-		Texture* texture;
-		TextureSampler* sampler;
+		SHADER_PASS_FORWARD,
+		SHADER_PASS_SHADOW,
+		SHADER_PASS_MAX_ENUM
+	};
 
-		VkDescriptorImageInfo getImageInfo() const
-		{
-			VkDescriptorImageInfo info = {};
+	struct ShaderPass
+	{
+		ShaderEffect* shader;
+		VkDescriptorSet set;
+		GraphicsPipeline pipeline;
+	};
 
-			info.imageView = texture->getImageView();
+	class Technique
+	{
+	public:
+		Technique() = default;
+		~Technique() = default;
 
-			info.imageLayout = texture->isDepthTexture()
-				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			
-			info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
+		VertexFormat vertexFormat;
 
-			return info;
-		}
+		ShaderEffect* passes[SHADER_PASS_MAX_ENUM];
+		// todo: default parameters
+
+		bool depthTest = true;
+		bool depthWrite = true;
 	};
 
 	struct MaterialData
 	{
 		Vector<BoundTexture> textures;
-		String technique;
 		ShaderParameters parameters;
-
-		bool depthTest = true;
-		bool depthWrite = true;
+		String technique;
 
 		uint64_t getHash() const
 		{
@@ -53,8 +59,6 @@ namespace llt
 			}
 
 			hash::combine(&result, &technique);
-			hash::combine(&result, &depthTest);
-			hash::combine(&result, &depthWrite);
 
 			return result;
 		}
@@ -63,14 +67,19 @@ namespace llt
 	class Material
 	{
 	public:
-		Material();
-		virtual ~Material();
+		Material() = default;
+		~Material() = default;
 
 		uint64_t getHash() const;
 
-		VertexDescriptor vertexFormat;
+		void bindPipeline(ShaderPassType type);
+
+		void render(ShaderPassType type, const RenderPass& pass);
+		void renderMesh(ShaderPassType type, const SubMesh& mesh);
+
+		VertexFormat vertexFormat;
 		Vector<BoundTexture> textures;
-		ShaderBuffer* parameterBuffer;
+		DynamicShaderBuffer* parameterBuffer;
 		ShaderPass passes[SHADER_PASS_MAX_ENUM];
 	};
 }

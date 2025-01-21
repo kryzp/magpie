@@ -1,7 +1,7 @@
 #ifndef VK_BUFFER_H_
 #define VK_BUFFER_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../third_party/vk_mem_alloc.h"
 

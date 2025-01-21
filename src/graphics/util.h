@@ -1,7 +1,7 @@
 #ifndef VK_UTIL_H_
 #define VK_UTIL_H_
 
-#include <vulkan/vulkan.h>
+#include "../third_party/volk.h"
 
 #include "../common.h"
 
@@ -29,9 +29,11 @@ namespace llt
 
 	namespace vkutil
 	{
+#ifdef LLT_DEBUG
 		static const char* VALIDATION_LAYERS[] = {
 			"VK_LAYER_KHRONOS_validation"
 		};
+#endif // LLT_DEBUG
 
 		static VkDynamicState DYNAMIC_STATES[] = {
 			VK_DYNAMIC_STATE_VIEWPORT,
@@ -47,11 +49,6 @@ namespace llt
 			"VK_KHR_portability_subset"
 #endif // LLT_MAC_SUPPORT
 		};
-
-#ifdef LLT_MAC_SUPPORT
-		extern PFN_vkCmdBeginRendering ext_vkCmdBeginRendering;
-		extern PFN_vkCmdEndRendering ext_vkCmdEndRendering;
-#endif // LLT_MAC_SUPPORT
 
 		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats);
 		VkPresentModeKHR chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync);

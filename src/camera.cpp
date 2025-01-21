@@ -33,7 +33,7 @@ Camera::~Camera()
 void Camera::update(float dt)
 {
 	const float MOUSE_DEADZONE = 0.001f;
-	const float MOUSE_SENSITIVITY = 0.5f;
+	const float TURN_SPEED = 1.0f;
 	const float MOVE_SPEED = 2.5f;
 	
 	auto lerp = [&](float from, float to, float t) -> float {
@@ -44,8 +44,8 @@ void Camera::update(float dt)
 	float dy = (float)(g_inputState->getMousePosition().y - g_platform->getWindowSize().y*0.5f);
 
 	if ((dx * dx) + (dy * dy) > MOUSE_DEADZONE*MOUSE_DEADZONE) {
-		m_targetYaw -= dx * MOUSE_SENSITIVITY * dt;
-		m_targetPitch -= dy * MOUSE_SENSITIVITY * dt;
+		m_targetYaw -= dx * TURN_SPEED * dt;
+		m_targetPitch -= dy * TURN_SPEED * dt;
 	}
 
 	m_yaw = lerp(m_yaw, m_targetYaw, dt * 50.0f);

@@ -12,6 +12,9 @@ GPUBufferMgr::GPUBufferMgr()
 
 GPUBufferMgr::~GPUBufferMgr()
 {
+	delete textureStagingBuffer;
+	delete meshStagingBuffer;
+
 	for (auto& vertexBuffer : m_vertexBuffers) {
 		delete vertexBuffer;
 	}
@@ -23,6 +26,14 @@ GPUBufferMgr::~GPUBufferMgr()
 	}
 
 	m_indexBuffers.clear();
+}
+
+void GPUBufferMgr::createGlobalStagingBuffers()
+{
+	textureStagingBuffer = createStagingBuffer(LLT_MEGABYTES(256));
+	meshStagingBuffer = createStagingBuffer(LLT_MEGABYTES(256));
+
+	LLT_LOG("Allocated texture & mesh staging buffers!");
 }
 
 GPUBuffer* GPUBufferMgr::createBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, uint64_t size)

@@ -29,19 +29,18 @@ void SubMesh::build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, ui
 	m_vertexBuffer = g_gpuBufferManager->createVertexBuffer(nVertices, vertexSize);
 	m_indexBuffer = g_gpuBufferManager->createIndexBuffer(nIndices);
 
-	// allocate a staging buffer for them
-	GPUBuffer* stage = g_gpuBufferManager->createStagingBuffer(vertexBufferSize + indexBufferSize);
-
 	// read data to the stage
-	stage->writeDataToMe(pVertices, vertexBufferSize, 0);
-	stage->writeDataToMe(pIndices, indexBufferSize, vertexBufferSize);
+	g_gpuBufferManager->meshStagingBuffer->writeDataToMe(pVertices, vertexBufferSize, 0);
+	g_gpuBufferManager->meshStagingBuffer->writeDataToMe(pIndices, indexBufferSize, vertexBufferSize);
 
 	// make the stage write that data to the gpu buffers
-	stage->writeToBuffer(m_vertexBuffer, vertexBufferSize, 0, 0);
-	stage->writeToBuffer(m_indexBuffer, indexBufferSize, vertexBufferSize, 0);
+	g_gpuBufferManager->meshStagingBuffer->writeToBuffer(m_vertexBuffer, vertexBufferSize, 0, 0);
+	g_gpuBufferManager->meshStagingBuffer->writeToBuffer(m_indexBuffer, indexBufferSize, vertexBufferSize, 0);
+}
 
-	// finished, delete the stage
-	delete stage;
+Mesh* SubMesh::getParent()
+{
+	return m_parent;
 }
 
 const Mesh* SubMesh::getParent() const
