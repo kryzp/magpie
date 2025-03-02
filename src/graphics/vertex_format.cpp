@@ -1,11 +1,22 @@
 #include "vertex_format.h"
 
+llt::VertexFormat llt::g_primitiveVertexFormat;
+llt::VertexFormat llt::g_primitiveUvVertexFormat;
 llt::VertexFormat llt::g_modelVertexFormat;
 
 using namespace llt;
 
 void llt::initVertexTypes()
 {
+	g_primitiveVertexFormat.addBinding(sizeof(PrimitiveVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveVertex, pos) }
+	});
+
+	g_primitiveUvVertexFormat.addBinding(sizeof(PrimitiveUVVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveUVVertex, pos) },
+		{ VK_FORMAT_R32G32_SFLOAT, offsetof(PrimitiveUVVertex, uv) }
+	});
+
 	g_modelVertexFormat.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
 		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, pos) },
 		{ VK_FORMAT_R32G32_SFLOAT, offsetof(ModelVertex, uv) },

@@ -24,16 +24,16 @@ RenderInfo::~RenderInfo()
 	clear();
 }
 
-VkRenderingInfoKHR RenderInfo::getInfo() const
+VkRenderingInfo RenderInfo::getInfo() const
 {
-	VkRenderingInfoKHR info = {};
+	VkRenderingInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
 	info.renderArea.offset = { 0, 0 };
 	info.renderArea.extent = { m_width, m_height };
 	info.layerCount = 1;
 	info.colorAttachmentCount = m_colourAttachments.size();
 	info.pColorAttachments = m_colourAttachments.data();
-	info.pDepthAttachment = &m_depthAttachment;
+	info.pDepthAttachment = (m_depthAttachment.imageView != VK_NULL_HANDLE) ? &m_depthAttachment : nullptr;
 	info.pStencilAttachment = nullptr; // TODO: IMPLEMENT STENCIL RENDERING!!
 
 	return info;
@@ -47,7 +47,7 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imag
 	attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	attachment.loadOp = loadOp;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } }; // default to black
+	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 	if (resolveView != VK_NULL_HANDLE)
 	{
@@ -78,10 +78,10 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imag
 	m_attachmentCount++;
 }
 
-void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* texture, VkImageView resolveView)
+void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, VkImageView depthView, VkImageView resolveView)
 {
 	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	m_depthAttachment.imageView = texture->getImageView();
+	m_depthAttachment.imageView = depthView;
 	m_depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	m_depthAttachment.loadOp = loadOp;
 	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -186,7 +186,7 @@ float RenderInfo::getBlendConstant(int idx) const
 	return m_blendConstants[idx];
 }
 
-void RenderInfo::setDimensions(uint32_t width, uint32_t height)
+void RenderInfo::setSize(uint32_t width, uint32_t height)
 {
 	m_width = width;
 	m_height = height;

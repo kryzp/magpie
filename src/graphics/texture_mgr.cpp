@@ -47,6 +47,12 @@ Texture* TextureMgr::getTexture(const String& name)
 	return nullptr;
 }
 
+Texture* TextureMgr::create(const String& name, const String& path)
+{
+	Image image(path.cstr());
+	return createFromImage(name, image);
+}
+
 Texture* TextureMgr::createFromImage(const String& name, const Image& image)
 {
 	if (m_textureCache.contains(name)) {
@@ -56,15 +62,14 @@ Texture* TextureMgr::createFromImage(const String& name, const Image& image)
 	Texture* texture = new Texture();
 
 	texture->fromImage(image, VK_IMAGE_VIEW_TYPE_2D, 4, VK_SAMPLE_COUNT_1_BIT);
-
 	texture->setMipLevels(1);
-
 	texture->createInternalResources();
-
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	g_gpuBufferManager->textureStagingBuffer->writeDataToMe(image.getData(), image.getSize(), 0);
-	g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, image.getSize());
+	g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, image.getSize());
+
+	texture->generateMipmaps();
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -80,9 +85,7 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
-
 	texture->createInternalResources();
-    
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	if (data)
@@ -90,7 +93,9 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 		texture->setMipLevels(4);
 
 		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(data, size, 0);
-		g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, size);
+		g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, size);
+
+		texture->generateMipmaps();
 	}
 	else
 	{
@@ -111,18 +116,16 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
-
 	texture->createInternalResources();
 
-	// todo: WHAT???
-	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+//	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	m_textureCache.insert(name, texture);
 	return texture;
 }
 
-Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
+Texture* TextureMgr::createCubemap(const String& name, uint32_t size, VkFormat format, int mipLevels)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
@@ -130,13 +133,28 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 
 	Texture* texture = new Texture();
 
-	texture->setSize(right.getWidth(), right.getHeight());
+	texture->setSize(size, size);
 	texture->setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
-
-	texture->setMipLevels(4);
-
+	texture->setMipLevels(mipLevels);
 	texture->createInternalResources();
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+	m_textureCache.insert(name, texture);
+	return texture;
+}
+
+Texture* TextureMgr::createCubemap(const String& name, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
+{
+	if (m_textureCache.contains(name)) {
+		return m_textureCache.get(name);
+	}
+
+	Texture* texture = new Texture();
+
+	texture->setSize(right.getWidth(), right.getWidth());
+	texture->setProperties(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
+	texture->setMipLevels(4);
+	texture->createInternalResources();
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	const Image* sides[] = { &right, &left, &top, &bottom, &front, &back };
@@ -146,10 +164,16 @@ Texture* TextureMgr::createCubeMap(const String& name, VkFormat format, const Im
 		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
 	}
 
+	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
+
 	for (int i = 0; i < 6; i++)
 	{
-		g_gpuBufferManager->textureStagingBuffer->writeToTexture(texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
+		g_gpuBufferManager->textureStagingBuffer->writeToTexture(commandBuffer, texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
 	}
+
+	vkutil::endSingleTimeTransferCommands(commandBuffer);
+
+	texture->generateMipmaps();
 
 	m_textureCache.insert(name, texture);
 	return texture;

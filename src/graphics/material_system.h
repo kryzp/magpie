@@ -28,6 +28,12 @@ namespace llt
 		DynamicShaderBuffer* getInstanceBuffer() const;
 
 	private:
+		void createQuadMesh();
+		void createCubeMesh();
+
+		void generateEnvironmentMaps(CommandBuffer& buffer);
+		void precomputeBRDF(CommandBuffer& buffer);
+
 		HashMap<uint64_t, Material*> m_materials;
 		HashMap<String, Technique> m_techniques;
 
@@ -46,6 +52,19 @@ namespace llt
 		GPUBuffer* m_bindlessUBO;
 		GPUBuffer* m_bindlessSSBO;
 		GPUBuffer* m_bindlessCombinedSamplers;
+
+		Texture* m_environmentMap;
+		Texture* m_irradianceMap;
+		Texture* m_prefilterMap;
+		Texture* m_brdfIntegration;
+
+		GraphicsPipeline m_equirectangularToCubemapPipeline;
+		GraphicsPipeline m_irradianceGenerationPipeline;
+		GraphicsPipeline m_prefilterGenerationPipeline;
+		GraphicsPipeline m_brdfIntegrationPipeline;
+
+		SubMesh* m_quadMesh;
+		SubMesh* m_cubeMesh;
 	};
 
 	extern MaterialSystem* g_materialSystem;

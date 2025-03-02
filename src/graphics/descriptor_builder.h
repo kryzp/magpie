@@ -32,7 +32,7 @@ namespace llt
 		~DescriptorWriter() = default;
 
 		void clear();
-		void updateSet(VkDescriptorSet set);
+		void updateSet(const VkDescriptorSet& set);
 
 		void writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo& info);
 		void writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset);

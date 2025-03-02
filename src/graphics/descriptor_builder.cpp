@@ -62,14 +62,18 @@ void DescriptorWriter::clear()
 	m_imageInfos.clear();
 }
 
-void DescriptorWriter::updateSet(VkDescriptorSet set)
+void DescriptorWriter::updateSet(const VkDescriptorSet& set)
 {
 	for (auto& write : m_writes)
 	{
 		write.dstSet = set;
 	}
 
-	vkUpdateDescriptorSets(g_vulkanBackend->m_device, m_writes.size(), m_writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(
+		g_vulkanBackend->m_device,
+		m_writes.size(), m_writes.data(),
+		0, nullptr
+	);
 }
 
 void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo& info)

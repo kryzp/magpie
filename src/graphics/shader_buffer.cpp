@@ -12,7 +12,7 @@ DynamicShaderBuffer::DynamicShaderBuffer()
 	, m_usageInFrame()
 	, m_offset(0)
 	, m_maxSize(0)
-	, m_type(SHADER_BUFFER_NONE)
+	, m_type(SHADER_BUFFER_MAX_ENUM)
 {
 }
 
@@ -83,13 +83,13 @@ void DynamicShaderBuffer::pushData(const void* data, uint64_t size)
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] += size;
 }
 
-void DynamicShaderBuffer::reallocateBuffer(uint64_t size)
+void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
 {
 	delete m_buffer;
 
-	VkDeviceSize bufferSize = vkutil::calcShaderBufferAlignedSize(size);
+	VkDeviceSize bufferSize = vkutil::calcShaderBufferAlignedSize(allocationSize);
 
-	m_maxSize = size;
+	m_maxSize = allocationSize;
 	m_offset = 0;
 
 	if (m_type == SHADER_BUFFER_UBO)
@@ -111,11 +111,11 @@ void DynamicShaderBuffer::reallocateBuffer(uint64_t size)
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
-		LLT_LOG("(Re)Allocated ubo with size %llu.", size);
+		LLT_LOG("(Re)Allocated ubo with allocation size %llu.", allocationSize);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
-		LLT_LOG("(Re)Allocated ssbo with size %llu.", size);
+		LLT_LOG("(Re)Allocated ssbo with allocation size %llu.", allocationSize);
 	}
 }
 

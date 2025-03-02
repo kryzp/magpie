@@ -23,6 +23,8 @@ namespace llt
 
 		void pollEvents();
 
+		void imGuiNewFrame();
+
 		String getWindowName() const;
 		void setWindowName(const String& name);
 
@@ -77,6 +79,8 @@ namespace llt
 
 		const char* const* vkGetInstanceExtensions(uint32_t* count);
 		bool vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface);
+
+		void initImGui();
 
 	private:
 		void closeAllGamepads();

@@ -18,8 +18,14 @@ Image::Image()
 	: m_pixels(nullptr)
 	, m_width(0)
 	, m_height(0)
-	, m_nrChannels(0)
+	, m_channels(0)
 	, m_stbiManaged(false)
+	, m_format(FORMAT_RGBA8)
+{
+}
+
+Image::Image(const String& path)
+	: Image(path.cstr())
 {
 }
 
@@ -32,10 +38,11 @@ Image::Image(const char* path)
 Image::Image(int width, int height)
 	: m_width(width)
 	, m_height(height)
-	, m_nrChannels(0)
+	, m_channels(0)
 	, m_stbiManaged(false)
+	, m_format(FORMAT_RGBA8)
 {
-	this->m_pixels = new Colour[width * height];
+	m_pixels = new Colour[width * height];
 }
 
 Image::~Image()
@@ -43,15 +50,34 @@ Image::~Image()
 	free();
 }
 
+void Image::load(const String& path)
+{
+	load(path.cstr());
+}
+
 void Image::load(const char* path)
 {
-	this->m_stbiManaged = true;
+	int w, h, channels;
 
-	int w, h, nrc;
-	this->m_pixels = (Colour*)stbi_load(path, &w, &h, &nrc, 4);
+	if (stbi_is_hdr(path))
+	{
+		m_pixels = stbi_loadf(path, &w, &h, &channels, 4);
+		m_format = FORMAT_RGBAF;
+	}
+	else
+	{
+		m_pixels = stbi_load(path, &w, &h, &channels, 4);
+		m_format = FORMAT_RGBA8;
+
+		if (!m_pixels)
+			LLT_ERROR("Couldn't load image :(");
+	}
+
 	this->m_width = w;
 	this->m_height = h;
-	this->m_nrChannels = nrc;
+	this->m_channels = channels;
+
+	this->m_stbiManaged = true;
 }
 
 void Image::free()
@@ -63,7 +89,7 @@ void Image::free()
 	if (m_stbiManaged) {
 		stbi_image_free(m_pixels);
 	} else {
-		delete[] m_pixels;
+		delete[] (Colour*)m_pixels;
 	}
 
 	m_pixels = nullptr;
@@ -82,26 +108,27 @@ void Image::paint(const RectI& rect, const BrushFn& brush)
 		{
 			int px = rect.x + x;
 			int py = rect.y + y;
+
 			int idx = (py * m_width) + px;
 
-			m_pixels[idx] = brush(x, y);
+			((Colour*)m_pixels)[idx] = brush(x, y);
 		}
 	}
 }
 
+Colour Image::getPixelAt(uint32_t x, uint32_t y) const
+{
+	return ((Colour*)m_pixels)[(y * m_width) + x];
+}
+
 void Image::setPixels(const Colour* data)
 {
-	mem::copy(m_pixels, data, sizeof(Colour) * (m_width * m_height));
+	mem::copy(m_pixels, data, sizeof(Colour) * getPixelCount());
 }
 
-void Image::setPixels(const Colour* data, uint64_t pixelCount)
+void Image::setPixels(uint64_t dstFirst, const Colour* data, uint64_t srcFirst, uint64_t count)
 {
-	mem::copy(m_pixels, data, sizeof(Colour) * pixelCount);
-}
-
-void Image::setPixels(const Colour* data, uint64_t offset, uint64_t pixelCount)
-{
-	mem::copy(m_pixels, data + offset, sizeof(Colour) * pixelCount);
+	mem::copy((Colour*)m_pixels + sizeof(Colour) * dstFirst, data + sizeof(Colour) * srcFirst, sizeof(Colour) * count);
 }
 
 bool Image::saveToPng(const char* file) const
@@ -139,10 +166,10 @@ bool Image::saveToJpg(Stream& stream, int quality) const
 	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
 
 	if (quality < 1) {
-		LLT_LOG("JPG quality value should be between [1 -> 100].");
+		LLT_LOG("JPG quality value should be between [1, 100].");
 		quality = 1;
 	} else if (quality > 100) {
-		LLT_LOG("JPG quality value should be between [1 -> 100].");
+		LLT_LOG("JPG quality value should be between [1, 100].");
 		quality = 100;
 	}
 
@@ -155,29 +182,19 @@ bool Image::saveToJpg(Stream& stream, int quality) const
 	return false;
 }
 
-Colour Image::getPixelAt(uint32_t x, uint32_t y) const
-{
-	return m_pixels[(y * m_width) + x];
-}
-
-Colour* Image::getPixels()
+void* Image::getData()
 {
 	return m_pixels;
 }
 
-const Colour* Image::getPixels() const
+const void* Image::getData() const
 {
 	return m_pixels;
 }
 
-byte* Image::getData()
+Image::Format Image::getFormat() const
 {
-	return (byte*)m_pixels;
-}
-
-const byte* Image::getData() const
-{
-	return (const byte*)m_pixels;
+	return m_format;
 }
 
 uint32_t Image::getWidth() const
@@ -190,12 +207,18 @@ uint32_t Image::getHeight() const
 	return m_height;
 }
 
-uint64_t Image::getSize() const
+uint32_t Image::getPixelCount() const
 {
-	return m_width * m_height * 4;
+	return m_width * m_height;
 }
 
-int Image::getNrChannels() const
+uint64_t Image::getSize() const
 {
-	return m_nrChannels;
+	uint64_t unit = m_format == FORMAT_RGBA8 ? sizeof(uint8_t) : sizeof(float);
+	return m_width * m_height * 4 * unit;
+}
+
+int Image::getChannels() const
+{
+	return m_channels;
 }

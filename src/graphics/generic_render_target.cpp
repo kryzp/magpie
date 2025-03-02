@@ -3,7 +3,7 @@
 using namespace llt;
 
 GenericRenderTarget::GenericRenderTarget()
-	: m_type(RENDER_TARGET_TYPE_NONE)
+	: m_type(RENDER_TARGET_TYPE_MAX_ENUM)
 	, m_width(0)
 	, m_height(0)
 	, m_renderInfo()
@@ -11,7 +11,7 @@ GenericRenderTarget::GenericRenderTarget()
 }
 
 GenericRenderTarget::GenericRenderTarget(uint32_t width, uint32_t height)
-	: m_type(RENDER_TARGET_TYPE_NONE)
+	: m_type(RENDER_TARGET_TYPE_MAX_ENUM)
 	, m_width(width)
 	, m_height(height)
 	, m_renderInfo()
@@ -55,9 +55,9 @@ void GenericRenderTarget::toggleDepthStencilClear(bool clear)
 	m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 }
 
-RenderInfo* GenericRenderTarget::getRenderInfo()
+const RenderInfo& GenericRenderTarget::getRenderInfo() const
 {
-	return &m_renderInfo;
+	return m_renderInfo;
 }
 
 uint32_t GenericRenderTarget::getWidth() const

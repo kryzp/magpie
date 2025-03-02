@@ -12,7 +12,6 @@ namespace llt
 {
 	enum ShaderBufferType
 	{
-		SHADER_BUFFER_NONE,
 		SHADER_BUFFER_UBO,
 		SHADER_BUFFER_SSBO,
 		SHADER_BUFFER_MAX_ENUM
@@ -22,6 +21,7 @@ namespace llt
 	{
 	public:
 		DynamicShaderBuffer();
+		~DynamicShaderBuffer() = default;
 
 		void init(uint64_t initialSize, ShaderBufferType type);
 		void cleanUp();
@@ -31,7 +31,7 @@ namespace llt
 
 		void pushParameters();
 
-		void reallocateBuffer(uint64_t size);
+		void reallocateBuffer(uint64_t allocationSize);
 
 		void resetBufferUsageInFrame();
 

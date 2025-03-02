@@ -18,6 +18,7 @@ App::App(const Config& config)
 	, m_running(false)
 	, m_camera(config.width, config.height, 75.0f, 0.01f, 50.0f)
 	, m_renderer()
+	, m_frameCount(0)
 {
 	g_platform = new Platform(config);
 	g_vulkanBackend = new VulkanBackend(config);
@@ -26,6 +27,8 @@ App::App(const Config& config)
 
 	Backbuffer* backbuffer = g_vulkanBackend->createBackbuffer();
 	backbuffer->setClearColour(0, Colour::black());
+
+	g_platform->initImGui();
 
 	g_platform->setWindowName(m_config.name);
 	g_platform->setWindowSize({ m_config.width, m_config.height });
@@ -51,7 +54,7 @@ App::App(const Config& config)
 	m_camera.setPitch(-glm::radians(30.0f));
 	m_camera.update(0.0f);
 
-	m_renderer.init(backbuffer);
+	m_renderer.init();
 
 	if (m_config.onInit) {
 		m_config.onInit();
@@ -89,6 +92,8 @@ void App::run()
 			exit();
 		}
 
+		g_platform->imGuiNewFrame();
+
 		double deltaTime = deltaTimer.reset();
 
 		accumulator += CalcF::min(deltaTime, fixedDeltaTime);
@@ -110,9 +115,14 @@ void App::run()
 			accumulator -= fixedDeltaTime;
 		}
 
+		ImGui::ShowDemoWindow();
+		ImGui::Render();
+
 		m_renderer.render(m_camera, deltaTime);
 
 //		LLT_LOG("fps: %f", 1.0 / deltaTime);
+
+		m_frameCount++;
 	}
 }
 

@@ -141,8 +141,8 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 	}
 
 	submesh->build(
-		vertices.data(), vertices.size(),
 		sizeof(ModelVertex),
+		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
 
@@ -154,6 +154,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE);
+		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_LIGHTMAP);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_NORMALS);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_EMISSIVE);
@@ -176,6 +177,7 @@ void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, cons
 		boundTexture.sampler = g_textureManager->getSampler("linear");
 
 		textures.pushBack(boundTexture);
+		return; // for now only want one of each!
 	}
 }
 
@@ -193,10 +195,8 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial* material, ai
 
 		Texture* tex = g_textureManager->getTexture(basePath.C_Str());
 
-		if (!tex) {
-			Image image(basePath.C_Str());
-			tex = g_textureManager->createFromImage(basePath.C_Str(), image);
-		}
+		if (!tex)
+			tex = g_textureManager->create(basePath.C_Str(), basePath.C_Str());
 
 		result.pushBack(tex);
 	}

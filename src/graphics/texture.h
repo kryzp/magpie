@@ -8,6 +8,7 @@
 #include "gpu_buffer.h"
 #include "texture_sampler.h"
 #include "image.h"
+#include "command_buffer.h"
 
 #include "../container/vector.h"
 #include "../container/hash_map.h"
@@ -20,16 +21,8 @@ namespace llt
 
 	enum TextureProperty
 	{
-		TEXTURE_PROPERTY_NONE = 0,
 		TEXTURE_PROPERTY_MIPMAPPED,
 		TEXTURE_PROPERTY_MAX_ENUM
-	};
-
-	struct TextureInfo
-	{
-		VkFormat format;
-		VkImageTiling tiling;
-		VkImageViewType type;
 	};
 
 	class Texture
@@ -56,10 +49,10 @@ namespace llt
 		VkImageMemoryBarrier getBarrier() const;
 		VkImageMemoryBarrier getBarrier(VkImageLayout newLayout) const;
 		
-		void transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout);
+		void transitionLayout(CommandBuffer& buffer, VkImageLayout newLayout);
 		void transitionLayoutSingle(VkImageLayout newLayout);
 
-		void generateMipmaps() const;
+		void generateMipmaps();
 
 		void setParent(RenderTarget* getParent);
 		const RenderTarget* getParent() const;
@@ -72,7 +65,6 @@ namespace llt
 		uint32_t getFaceCount() const;
 
 		VkImage getImage() const;
-		VkImageView getImageView() const;
 
 		uint32_t getWidth() const;
 		uint32_t getHeight() const;
@@ -81,18 +73,23 @@ namespace llt
 		VkSampleCountFlagBits getNumSamples() const;
 		bool isTransient() const;
 
-		TextureInfo getInfo() const;
+		VkFormat getFormat() const;
+		VkImageTiling getTiling() const;
+		VkImageViewType getType() const;
 
 		VkPipelineStageFlags getStage() const;
 
-	private:
-		VkImageView generateView() const;
+		VkImageView getStandardView() const;
+		VkImageView generateView(int layerCount, int layer, int baseMipLevel) const;
 
+		VkImageLayout getImageLayout() const;
+
+	private:
 		RenderTarget* m_parent;
 
 		VkImage m_image;
+		VkImageView m_standardView;
 		VkImageLayout m_imageLayout;
-		VkImageView m_view;
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_numSamples;
 		bool m_transient;
@@ -115,6 +112,7 @@ namespace llt
 		bool m_uav;
 	};
 
+	/*
 	class TextureBatch
 	{
 	public:
@@ -130,6 +128,7 @@ namespace llt
 		Vector<Texture*> m_textures;
 		Vector<VkPipelineStageFlags> m_stageStack;
 	};
+	*/
 
 	struct BoundTexture
 	{
@@ -140,7 +139,7 @@ namespace llt
 		{
 			VkDescriptorImageInfo info = {};
 
-			info.imageView = texture->getImageView();
+			info.imageView = texture->getStandardView();
 
 			info.imageLayout = texture->isDepthTexture()
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL

@@ -6,7 +6,7 @@
 
 using namespace llt;
 
-void DescriptorPoolStatic::init(uint32_t maxSets, const Vector<DescriptorPoolSizeRatio>& sizes)
+void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio>& sizes)
 {
 	Vector<VkDescriptorPoolSize> poolSizes;
 
@@ -20,17 +20,12 @@ void DescriptorPoolStatic::init(uint32_t maxSets, const Vector<DescriptorPoolSiz
 
 	VkDescriptorPoolCreateInfo poolCreateInfo = {};
 	poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolCreateInfo.flags = 0;
+	poolCreateInfo.flags = flags;
 	poolCreateInfo.maxSets = maxSets;
 	poolCreateInfo.poolSizeCount = (uint32_t)poolSizes.size();
 	poolCreateInfo.pPoolSizes = poolSizes.data();
 
 	vkCreateDescriptorPool(g_vulkanBackend->m_device, &poolCreateInfo, nullptr, &m_pool);
-}
-
-void DescriptorPoolStatic::clear()
-{
-	vkResetDescriptorPool(g_vulkanBackend->m_device, m_pool, 0);
 }
 
 void DescriptorPoolStatic::cleanUp()
@@ -40,6 +35,11 @@ void DescriptorPoolStatic::cleanUp()
 
 	vkDestroyDescriptorPool(g_vulkanBackend->m_device, m_pool, nullptr);
 	m_pool = VK_NULL_HANDLE;
+}
+
+void DescriptorPoolStatic::clear()
+{
+	vkResetDescriptorPool(g_vulkanBackend->m_device, m_pool, 0);
 }
 
 VkDescriptorSet DescriptorPoolStatic::allocate(VkDescriptorSetLayout layout)
@@ -61,7 +61,14 @@ VkDescriptorSet DescriptorPoolStatic::allocate(VkDescriptorSetLayout layout)
 	return set;
 }
 
-void DescriptorPoolDynamic::setSizes(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes)
+VkDescriptorPool DescriptorPoolStatic::getPool() const
+{
+	return m_pool;
+}
+
+// ===================================================================================== //
+
+void DescriptorPoolDynamic::init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes)
 {
 	m_sizes = sizes;
 
@@ -69,22 +76,6 @@ void DescriptorPoolDynamic::setSizes(uint32_t initialSets, const Vector<Descript
 
 	m_freePools.pushBack(newPool);
 	m_setsPerPool = initialSets * GROWTH_FACTOR;
-}
-
-void DescriptorPoolDynamic::clear()
-{
-	for (auto p : m_freePools)
-	{
-		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
-	}
-
-	for (auto p : m_usedPools)
-	{
-		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
-		m_freePools.pushBack(p);
-	}
-	
-	m_usedPools.clear();
 }
 
 void DescriptorPoolDynamic::cleanUp()
@@ -100,6 +91,22 @@ void DescriptorPoolDynamic::cleanUp()
 	}
 
 	m_freePools.clear();
+	m_usedPools.clear();
+}
+
+void DescriptorPoolDynamic::clear()
+{
+	for (auto p : m_freePools)
+	{
+		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
+	}
+
+	for (auto p : m_usedPools)
+	{
+		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
+		m_freePools.pushBack(p);
+	}
+	
 	m_usedPools.clear();
 }
 
@@ -127,7 +134,7 @@ VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout& lay
 
 		LLT_VK_CHECK(
 			vkAllocateDescriptorSets(g_vulkanBackend->m_device, &allocInfo, &ret),
-			"[DESCRIPTORPOOLALLOCATOR] Failed to allocate descriptor sets"
+			"Failed to allocate descriptor sets"
 		);
 	}
 

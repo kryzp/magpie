@@ -52,8 +52,8 @@ void Backbuffer::createColourResources()
 	// add the colour resources to our render pass builder
 	m_renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		m_colour.getImageView(),
-		m_colour.getInfo().format,
+		m_colour.getStandardView(),
+		m_colour.getFormat(),
 		m_swapChainImageViews[0]
 	);
 
@@ -75,21 +75,21 @@ void Backbuffer::createDepthResources()
 	// add the depth resource to our render pass builder
 	m_renderInfo.addDepthAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		&m_depth,
+		m_depth.getStandardView(),
 		VK_NULL_HANDLE
 	);
 
     LLT_LOG("Created depth resources!");
 }
 
-void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
+void Backbuffer::beginRendering(CommandBuffer& buffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	barrier.image = m_swapChainImages[m_currSwapChainImageIdx],
+	barrier.image = getCurrentSwapchainImage(),
 	barrier.subresourceRange = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.baseMipLevel = 0,
@@ -99,7 +99,7 @@ void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
 	};
 
 	vkCmdPipelineBarrier(
-		cmdBuffer,
+		buffer.getBuffer(),
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		0,
@@ -108,21 +108,21 @@ void Backbuffer::beginGraphics(VkCommandBuffer cmdBuffer)
 		1, &barrier
 	);
 
-	m_depth.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_colour.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_colour.transitionLayout(buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-	m_renderInfo.getColourAttachment(0).resolveImageView = m_swapChainImageViews[m_currSwapChainImageIdx];
+	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView();
 }
 
-void Backbuffer::endGraphics(VkCommandBuffer cmdBuffer)
+void Backbuffer::endRendering(CommandBuffer& buffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-	barrier.image = m_swapChainImages[m_currSwapChainImageIdx],
+	barrier.image = getCurrentSwapchainImage(),
 	barrier.subresourceRange = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.baseMipLevel = 0,
@@ -132,7 +132,7 @@ void Backbuffer::endGraphics(VkCommandBuffer cmdBuffer)
 	};
 
 	vkCmdPipelineBarrier(
-		cmdBuffer,
+		buffer.getBuffer(),
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 		0,
@@ -141,9 +141,9 @@ void Backbuffer::endGraphics(VkCommandBuffer cmdBuffer)
 		1, &barrier
 	);
 
-	m_colour.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_colour.transitionLayout(buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	m_depth.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	m_depth.transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void Backbuffer::cleanUp()
@@ -227,6 +227,16 @@ Texture* Backbuffer::getDepthAttachment()
 	return &m_depth;
 }
 
+VkImage Backbuffer::getCurrentSwapchainImage() const
+{
+	return m_swapChainImages[m_currSwapChainImageIdx];
+}
+
+VkImageView Backbuffer::getCurrentSwapchainImageView() const
+{
+	return m_swapChainImageViews[m_currSwapChainImageIdx];
+}
+
 void Backbuffer::createSwapChain()
 {
     SwapChainSupportDetails details = vkutil::querySwapChainSupport(g_vulkanBackend->m_physicalData.device, m_surface);
@@ -267,10 +277,8 @@ void Backbuffer::createSwapChain()
 		"Failed to create swap chain"
 	);
 
-	// get the swapchain images
     vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, nullptr);
 
-	// if we weren't able to locate any throw an error
     if (!imageCount) {
         LLT_ERROR("Failed to find any images in swap chain!");
     }
@@ -282,7 +290,6 @@ void Backbuffer::createSwapChain()
     VkImage images[imageCount];
     vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, images);
 
-	// store this info
     for (int i = 0; i < imageCount; i++) {
         m_swapChainImages[i] = images[i];
     }
@@ -297,18 +304,12 @@ void Backbuffer::createSwapChain()
 	m_width = ext.width;
 	m_height = ext.height;
 
-	// create resources
 	createDepthResources();
 	createColourResources();
 
-	// set the default clear values for colour buffer
 	m_renderInfo.setClearColour(0, { { 0.0f, 0.0f, 0.0f, 1.0f } });
-
-	// set the default clear values for depth and stencil
 	m_renderInfo.setClearDepth({ { 1.0f, 0 } });
-
-	// set our dimensions and init
-	m_renderInfo.setDimensions(m_width, m_height);
+	m_renderInfo.setSize(m_width, m_height);
 
     LLT_LOG("Created the swap chain!");
 }
@@ -370,17 +371,12 @@ void Backbuffer::createSwapChainImageViews()
 
 void Backbuffer::onWindowResize(int width, int height)
 {
-	// invalid size
-	if (width == 0 || height == 0) {
+	if (width == 0 || height == 0)
 		return;
-	}
 
-	// if we somehow got a resize call but didn't actually change in size then just exit early
-	if (m_width == width && m_height == height) {
+	if (m_width == width && m_height == height)
 		return;
-	}
 
-	// update to our new dimensions
 	m_width = width;
 	m_height = height;
 

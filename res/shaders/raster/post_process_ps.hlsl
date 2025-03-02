@@ -1,7 +1,7 @@
-
 struct PSInput
 {
-	[[vk::location(0)]] float2 uv : TEXCOORD0;
+	[[vk::location(0)]]
+	float2 uv : TEXCOORD0;
 };
 
 Texture2D texture : register(t0);

@@ -5,28 +5,18 @@
 
 using namespace llt;
 
-RenderTarget::RenderTarget()
-	: GenericRenderTarget()
-	, m_attachments()
-	, m_resolveAttachments()
-	, m_depth()
-	, m_resolveDepth()
-	, m_samples(VK_SAMPLE_COUNT_1_BIT)
-{
-	m_type = RENDER_TARGET_TYPE_TEXTURE;
-	m_renderInfo.setDimensions(m_width, m_height);
-}
-
 RenderTarget::RenderTarget(uint32_t width, uint32_t height)
 	: GenericRenderTarget(width, height)
 	, m_attachments()
 	, m_resolveAttachments()
+	, m_attachmentViews()
+	, m_layoutQueue()
 	, m_depth()
 	, m_resolveDepth()
 	, m_samples(VK_SAMPLE_COUNT_1_BIT)
 {
 	m_type = RENDER_TARGET_TYPE_TEXTURE;
-	m_renderInfo.setDimensions(m_width, m_height);
+	m_renderInfo.setSize(m_width, m_height);
 }
 
 RenderTarget::~RenderTarget()
@@ -34,62 +24,82 @@ RenderTarget::~RenderTarget()
 	cleanUp();
 }
 
-void RenderTarget::beginGraphics(VkCommandBuffer cmdBuffer)
+void RenderTarget::beginRendering(CommandBuffer& buffer)
 {
-	for (auto& col : (m_samples != VK_SAMPLE_COUNT_1_BIT) ? m_resolveAttachments : m_attachments)
+	for (int i = 0; i < m_attachments.size(); i++)
 	{
-		if (!col->isTransient()) {
-			col->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		Texture* col = getAttachment(i);
+
+		if (!col->isTransient())
+		{
+			m_layoutQueue.pushBack(col->getImageLayout());
+			col->transitionLayout(buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 	}
 
-	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	if (getDepthAttachment())
+		getDepthAttachment()->transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void RenderTarget::endGraphics(VkCommandBuffer cmdBuffer)
+void RenderTarget::endRendering(CommandBuffer& buffer)
 {
-	for (auto& col : (m_samples != VK_SAMPLE_COUNT_1_BIT) ? m_resolveAttachments : m_attachments)
+	for (int i = 0; i < m_attachments.size(); i++)
 	{
-		if (!col->isTransient()) {
-			col->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		Texture* col = getAttachment(i);
+
+		if (!col->isTransient())
+		{
+			VkImageLayout layout = m_layoutQueue.popFront();
+			col->transitionLayout(buffer, layout);
 		}
 	}
 
-	(m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth)->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	if (getDepthAttachment())
+		getDepthAttachment()->transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void RenderTarget::cleanUp()
 {
 	m_renderInfo.clear();
 
-	if (m_depth && m_depth->getParent() == this) {
-		delete m_depth;
+	for (auto& view : m_attachmentViews)
+	{
+		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
+		view = VK_NULL_HANDLE;
 	}
 
-	if (m_resolveDepth) {
-		delete m_resolveDepth;
-	}
+	m_attachmentViews.clear();
 
 	for (Texture* texture : m_attachments)
 	{
-		if (texture->getParent() == this) {
+		if (texture->getParent() == this)
 			delete texture;
-		}
-	}
-
-	for (Texture* texture : m_resolveAttachments)
-	{
-		if (texture->getParent() == this) {
-			delete texture;
-		}
 	}
 
 	m_attachments.clear();
+
+	for (Texture* texture : m_resolveAttachments)
+	{
+		if (texture->getParent() == this)
+			delete texture;
+	}
+
+	m_resolveAttachments.clear();
+
+	if (m_depth && m_depth->getParent() == this)
+		delete m_depth;
+
+	if (m_resolveDepth)
+		delete m_resolveDepth;
+}
+
+void RenderTarget::clear()
+{
 }
 
 void RenderTarget::setClearColour(int idx, const Colour& colour)
 {
-	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "[RENDERTARGET] Must have at least one colour attachment!");
+	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "Must have at least one colour attachment!");
 
 	VkClearValue value = {};
 	colour.getPremultiplied().exportToFloat(value.color.float32);
@@ -113,7 +123,7 @@ Texture* RenderTarget::getDepthAttachment()
 	return m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth;
 }
 
-void RenderTarget::addAttachment(Texture* texture)
+void RenderTarget::addAttachment(Texture* texture, int layer, int mip)
 {
 	if (!texture)
 		return;
@@ -122,30 +132,33 @@ void RenderTarget::addAttachment(Texture* texture)
 
 	VkImageView resolveView = VK_NULL_HANDLE;
 
+	// todo: 99% certain that this won't work for layer != 0, just as im coding this :)!
 	if (texture->getNumSamples() != VK_SAMPLE_COUNT_1_BIT)
 	{
 		Texture* resolve = new Texture();
 
 		resolve->setSize(texture->getWidth(), texture->getHeight());
-		resolve->setProperties(texture->getInfo().format, texture->getInfo().tiling, texture->getInfo().type);
+		resolve->setProperties(texture->getFormat(), texture->getTiling(), texture->getType());
 		resolve->setSampleCount(VK_SAMPLE_COUNT_1_BIT);
 
 		resolve->createInternalResources();
 
-		// todo: ???????
-		resolve->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+//		resolve->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		resolve->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		resolve->setParent(this);
 
 		m_resolveAttachments.pushBack(resolve);
-		resolveView = resolve->getImageView();
+		resolveView = resolve->getStandardView();
 	}
+
+	VkImageView view = texture->generateView(1, layer, mip);
+	m_attachmentViews.pushBack(view);
 
 	m_renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_LOAD,
-		texture->getImageView(),
-		texture->getInfo().format,
+		view,
+		texture->getFormat(),
 		resolveView
 	);
 }
@@ -154,7 +167,7 @@ void RenderTarget::setDepthAttachment(Texture* texture)
 {
 	if (m_depth)
 	{
-		m_renderInfo.getDepthAttachment().imageView = texture->getImageView();
+		m_renderInfo.getDepthAttachment().imageView = texture->getStandardView();
 	}
 	else
 	{
@@ -162,7 +175,7 @@ void RenderTarget::setDepthAttachment(Texture* texture)
 
 		m_renderInfo.addDepthAttachment(
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			m_depth,
+			m_depth->getStandardView(),
 			VK_NULL_HANDLE
 		);
 
@@ -198,12 +211,12 @@ void RenderTarget::createDepthAttachment()
 		m_resolveDepth->transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		m_resolveDepth->setParent(this);
 
-		resolveView = m_resolveDepth->getImageView();
+		resolveView = m_resolveDepth->getStandardView();
 	}
 
 	m_renderInfo.addDepthAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		m_depth,
+		m_depth->getStandardView(),
 		resolveView
 	);
 

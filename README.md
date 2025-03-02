@@ -11,14 +11,20 @@ TODO (no particular order):
 - stencil buffer support!
 - I think queues arent currently assigned properly(?)
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
+- command buffer abstraction
+- properly comment the code
+- sometimes way more pipelines get created then usual, for some reason?? (the blend attachments loop is the perpetrator for some reason)
+- should be multiple bind descriptor sets for the different frequencies (per pass, per material, per frame etc)
+- file structure is a mess re-organise it, like why is renderer.cpp not in /graphics/???
+- imgui is all over the place and should be organised more
+- renderinfo and rendertarget are super similar. am i certain i cant merge them somehow
 
 BACKBURNER:
-- imgui
-- pbr
 - volumetrics
-- particles (compute shaders!!)
-- fluid sims
+- particles (compute shaders!! follow the naughty dog siggraph)
+- realistic ocean water
 - refraction and stuff
+- post processing pipeline
 
 other todo that isnt really important:
 - use multiple compute queues

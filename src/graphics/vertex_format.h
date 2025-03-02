@@ -38,6 +38,23 @@ namespace llt
 
 	// //
 
+	void initVertexTypes();
+
+	struct PrimitiveVertex
+	{
+		glm::vec3 pos;
+	};
+
+	extern VertexFormat g_primitiveVertexFormat;
+
+	struct PrimitiveUVVertex
+	{
+		glm::vec3 pos;
+		glm::vec2 uv;
+	};
+
+	extern VertexFormat g_primitiveUvVertexFormat;
+
 	struct ModelVertex
 	{
 		glm::vec3 pos;
@@ -46,8 +63,6 @@ namespace llt
 		glm::vec3 norm;
 		glm::vec3 tangent;
 	};
-
-	void initVertexTypes();
 
 	extern VertexFormat g_modelVertexFormat;
 }

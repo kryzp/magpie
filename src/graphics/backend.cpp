@@ -5,6 +5,7 @@
 #include "../platform.h"
 #include "../math/calc.h"
 #include "../third_party/volk.h"
+#include "../third_party/imgui/imgui_impl_sdl3.h"
 
 llt::VulkanBackend* llt::g_vulkanBackend = nullptr;
 
@@ -165,14 +166,13 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_transferQueues()
 	, m_pushConstants()
 	, m_pipelineProcessCache()
-	, m_computeFinishedSemaphores()
 	, m_backbuffer()
 	, m_currentFrameIdx()
-	, m_currentRenderTarget()
-	, m_waitOnCompute()
+	, m_imGuiColourFormat(VK_FORMAT_B8G8R8A8_UNORM)
 #if LLT_DEBUG
 	, m_debugMessenger()
 #endif // LLT_DEBUG
+	, m_imGuiDescriptorPool()
 {
 	VkApplicationInfo app_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -259,6 +259,12 @@ VulkanBackend::~VulkanBackend()
 
 	// //
 
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
+
+	m_imGuiDescriptorPool.cleanUp();
+
 	m_backbuffer->cleanUpSwapChain();
 
 	delete g_renderTargetManager;
@@ -276,8 +282,6 @@ VulkanBackend::~VulkanBackend()
 	{
 		vkDestroyFence(m_device, m_graphicsQueue.getFrame(i).inFlightFence, nullptr);
 		vkDestroyCommandPool(m_device, m_graphicsQueue.getFrame(i).commandPool, nullptr);
-
-		vkDestroySemaphore(m_device, m_computeFinishedSemaphores[i], nullptr);
 
 		for (int j = 0; j < m_computeQueues.size(); j++) {
 			vkDestroyFence(m_device, m_computeQueues[j].getFrame(i).inFlightFence, nullptr);
@@ -550,6 +554,7 @@ void VulkanBackend::createPipelineProcessCache()
 	LLT_LOG("Created graphics pipeline process cache!");
 }
 
+/*
 void VulkanBackend::createComputeResources()
 {
 	VkSemaphoreCreateInfo computeSemaphoreCreateInfo = {};
@@ -565,6 +570,7 @@ void VulkanBackend::createComputeResources()
 
 	LLT_LOG("Created compute resources!");
 }
+*/
 
 void VulkanBackend::createCommandPools()
 {
@@ -695,7 +701,7 @@ Backbuffer* VulkanBackend::createBackbuffer()
 
 	LLT_LOG("Created in flight fence!");
 
-	createComputeResources();
+//	createComputeResources();
 
 	backbuffer->create();
 
@@ -812,41 +818,11 @@ int VulkanBackend::getCurrentFrameIdx() const
 	return m_currentFrameIdx;
 }
 
-GenericRenderTarget* VulkanBackend::getRenderTarget()
-{
-	return m_currentRenderTarget ? m_currentRenderTarget : m_backbuffer;
-}
-
-const GenericRenderTarget* VulkanBackend::getRenderTarget() const
-{
-	return m_currentRenderTarget ? m_currentRenderTarget : m_backbuffer;
-}
-
-VkCommandBuffer VulkanBackend::getGraphicsCommandBuffer()
-{
-	return m_graphicsQueue.getCurrentFrame().commandBuffer;
-}
-
-// todo
-VkCommandBuffer VulkanBackend::getTransferCommandBuffer(int idx)
-{
-//	if (m_transferQueues.size() > 0)
-//		return m_transferQueues[idx].getCurrentFrame().commandBuffer;
-
-	return getGraphicsCommandBuffer();
-}
-
-VkCommandBuffer VulkanBackend::getComputeCommandBuffer(int idx)
-{
-	return m_computeQueues[idx].getCurrentFrame().commandBuffer;
-}
-
 VkCommandPool VulkanBackend::getGraphicsCommandPool()
 {
 	return m_graphicsQueue.getCurrentFrame().commandPool;
 }
 
-// todo
 VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
 {
 //	if (m_transferQueues.size() > 0)
@@ -858,140 +834,6 @@ VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
 VkCommandPool VulkanBackend::getComputeCommandPool(int idx)
 {
 	return m_computeQueues[idx].getCurrentFrame().commandPool;
-}
-
-void VulkanBackend::beginGraphics(GenericRenderTarget* target)
-{
-	cauto& currentFrame = m_graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = getGraphicsCommandBuffer();
-
-	m_currentRenderTarget = target;
-
-	vkWaitForFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetCommandPool(g_vulkanBackend->m_device, currentFrame.commandPool, 0);
-
-	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	LLT_VK_CHECK(
-		vkBeginCommandBuffer(currentBuffer, &commandBufferBeginInfo),
-		"Failed to begin recording command buffer"
-	);
-
-	getRenderTarget()->beginGraphics(currentBuffer);
-
-	VkRenderingInfoKHR renderInfo = getRenderTarget()->getRenderInfo()->getInfo();
-
-	vkCmdBeginRendering(currentBuffer, &renderInfo);
-}
-
-void VulkanBackend::endGraphics()
-{
-	cauto& currentTarget = getRenderTarget();
-	cauto& currentFrame = m_graphicsQueue.getCurrentFrame();
-	cauto& currentBuffer = getGraphicsCommandBuffer();
-
-	vkCmdEndRendering(currentBuffer);
-
-	currentTarget->endGraphics(currentBuffer);
-
-	LLT_VK_CHECK(
-		vkEndCommandBuffer(currentBuffer),
-		"Failed to record command buffer"
-	);
-
-	int signalSemaphoreCount = currentTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
-	const VkSemaphore* queueFinishedSemaphore = currentTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? &((Backbuffer*)currentTarget)->getRenderFinishedSemaphore() : VK_NULL_HANDLE;
-
-	int waitSemaphoreCount = currentTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER ? 1 : 0;
-
-	VkSemaphore waitForFinishSemaphores[2] = { // todo: this is pretty ugly and probably terrible
-		(currentTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER) ? ((Backbuffer*)currentTarget)->getImageAvailableSemaphore() : VK_NULL_HANDLE,
-		VK_NULL_HANDLE
-	};
-
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
-
-	if (m_waitOnCompute)
-	{
-		waitForFinishSemaphores[waitSemaphoreCount++] = m_computeFinishedSemaphores[m_currentFrameIdx];
-	}
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &currentBuffer;
-
-	submitInfo.signalSemaphoreCount = signalSemaphoreCount;
-	submitInfo.pSignalSemaphores = queueFinishedSemaphore;
-
-	submitInfo.waitSemaphoreCount = waitSemaphoreCount;
-	submitInfo.pWaitSemaphores = waitForFinishSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-
-	vkResetFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence);
-
-	LLT_VK_CHECK(
-		vkQueueSubmit(g_vulkanBackend->m_graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
-		"Failed to submit draw command to buffer"
-	);
-
-	m_waitOnCompute = false;
-	m_currentRenderTarget = nullptr;
-}
-
-void VulkanBackend::waitOnCompute()
-{
-	m_waitOnCompute = true;
-}
-
-void VulkanBackend::beginCompute()
-{
-	cauto& currentFrame = m_computeQueues[0].getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	vkWaitForFences(m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
-	vkResetCommandPool(m_device, currentFrame.commandPool, 0);
-
-	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-	LLT_VK_CHECK(
-		vkBeginCommandBuffer(currentBuffer, &commandBufferBeginInfo),
-		"Failed to begin recording compute command buffer"
-	);
-}
-
-void VulkanBackend::endCompute()
-{
-	cauto& currentFrame = m_computeQueues[0].getCurrentFrame();
-	VkCommandBuffer currentBuffer = currentFrame.commandBuffer;
-
-	LLT_VK_CHECK(
-		vkEndCommandBuffer(currentBuffer),
-		"Failed to record compute command buffer"
-	);
-
-	VkSubmitInfo submitInfo = {};
-
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &currentBuffer;
-
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &m_computeFinishedSemaphores[m_currentFrameIdx];
-
-	vkResetFences(m_device, 1, &currentFrame.inFlightFence);
-
-	LLT_VK_CHECK(
-		vkQueueSubmit(m_computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
-		"Failed to submit compute command buffer"
-	);
 }
 
 void VulkanBackend::swapBuffers()
@@ -1011,4 +853,49 @@ void VulkanBackend::syncStall() const
 {
 	while (g_platform->getWindowSize() == glm::ivec2(0, 0)) {}
 	vkDeviceWaitIdle(m_device);
+}
+
+void VulkanBackend::createImGuiResources()
+{
+	m_imGuiDescriptorPool.init(1000, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					1.0f },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	1.0f },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			1.0f }
+	});
+}
+
+ImGui_ImplVulkan_InitInfo VulkanBackend::getImGuiInitInfo() const
+{
+	ImGui_ImplVulkan_InitInfo info = {};
+	info.Instance = m_instance;
+	info.PhysicalDevice = m_physicalData.device;
+	info.Device = m_device;
+	info.QueueFamily = m_graphicsQueue.getFamilyIdx().value();
+	info.Queue = m_graphicsQueue.getQueue();
+	info.PipelineCache = m_pipelineProcessCache;
+	info.DescriptorPool = m_imGuiDescriptorPool.getPool();
+	info.Allocator = nullptr;
+	info.MinImageCount = mgc::FRAMES_IN_FLIGHT;
+	info.ImageCount = mgc::FRAMES_IN_FLIGHT;
+	info.CheckVkResultFn = nullptr;
+	info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	info.UseDynamicRendering = true;
+	info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+	info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_imGuiColourFormat;
+
+	return info;
+}
+
+VkFormat VulkanBackend::getImGuiAttachmentFormat() const
+{
+	return m_imGuiColourFormat;
 }

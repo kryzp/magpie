@@ -17,6 +17,7 @@ add_executable(${PROJECT_NAME}
 
     src/graphics/backbuffer.cpp
     src/graphics/backend.cpp
+    src/graphics/command_buffer.cpp
     src/graphics/descriptor_builder.cpp
     src/graphics/descriptor_allocator.cpp
     src/graphics/descriptor_layout_cache.cpp
@@ -51,13 +52,20 @@ add_executable(${PROJECT_NAME}
     src/input/input.cpp
     src/input/v_key.cpp
 
-    src/io/endian.cpp
     src/io/stream.cpp
     src/io/file_stream.cpp
     src/io/memory_stream.cpp
 
     src/third_party/vk_mem_alloc.cpp
     src/third_party/volk_impl.cpp
+
+    src/third_party/imgui/imgui.cpp
+    src/third_party/imgui/imgui_demo.cpp
+    src/third_party/imgui/imgui_draw.cpp
+    src/third_party/imgui/imgui_tables.cpp
+    src/third_party/imgui/imgui_widgets.cpp
+    src/third_party/imgui/imgui_impl_sdl3.cpp
+    src/third_party/imgui/imgui_impl_vulkan.cpp
 )
 
 set(DEBUG_MODE true CACHE BOOL "Enable debug mode")

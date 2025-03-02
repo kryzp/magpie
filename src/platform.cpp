@@ -2,6 +2,8 @@
 #include "common.h"
 #include "input/input.h"
 #include "graphics/backend.h"
+#include "third_party/imgui/imgui.h"
+#include "third_party/imgui/imgui_impl_sdl3.h"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -65,6 +67,8 @@ void Platform::pollEvents()
 
 	while (SDL_PollEvent(&ev))
 	{
+		ImGui_ImplSDL3_ProcessEvent(&ev);
+
 		switch (ev.type)
 		{
 			case SDL_EVENT_QUIT:
@@ -433,6 +437,37 @@ int64_t Platform::streamPosition(void* stream)
 void Platform::streamClose(void* stream)
 {
 	SDL_CloseIO((SDL_IOStream*)stream);
+}
+
+void Platform::initImGui()
+{
+	IMGUI_CHECKVERSION();
+
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
+
+	// set imgui io.ConfigFlags |= ImGuiConfigFlags_(...) here
+
+	ImGui::StyleColorsClassic();
+
+	ImGui_ImplSDL3_InitForVulkan(m_window);
+
+	g_vulkanBackend->createImGuiResources();
+
+	ImGui_ImplVulkan_InitInfo initInfo = g_vulkanBackend->getImGuiInitInfo();
+
+	ImGui_ImplVulkan_Init(&initInfo);
+
+	ImGui_ImplVulkan_CreateFontsTexture();
+}
+
+void Platform::imGuiNewFrame()
+{
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
 }
 
 const char* const* Platform::vkGetInstanceExtensions(uint32_t* count)

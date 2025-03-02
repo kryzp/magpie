@@ -73,53 +73,52 @@ void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset)
 
 void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
-	{
-		VkBufferCopy region = {};
-		region.srcOffset = srcOffset;
-		region.dstOffset = dstOffset;
-		region.size = length;
+	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
 
-		vkCmdCopyBuffer(
-			cmdBuffer,
-			m_buffer,
-			other->m_buffer,
-			1,
-			&region
-		);
-	}
-	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
+	VkBufferCopy region = {};
+	region.srcOffset = srcOffset;
+	region.dstOffset = dstOffset;
+	region.size = length;
+
+	vkCmdCopyBuffer(
+		commandBuffer.getBuffer(),
+		m_buffer,
+		other->m_buffer,
+		1,
+		&region
+	);
+
+	vkutil::endSingleTimeTransferCommands(commandBuffer);
 }
 
-void GPUBuffer::writeToTexture(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
+void GPUBuffer::writeToTextureSingle(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
-	{
-		VkBufferImageCopy region = {};
-		region.bufferOffset = offset;
-		region.bufferRowLength = 0;
-		region.bufferImageHeight = 0;
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = 0;
-		region.imageSubresource.baseArrayLayer = baseArrayLayer;
-		region.imageSubresource.layerCount = 1;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { texture->getWidth(), texture->getHeight(), 1 };
+	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
+	writeToTexture(commandBuffer, texture, size, offset, baseArrayLayer);
+	vkutil::endSingleTimeTransferCommands(commandBuffer);
+}
 
-		vkCmdCopyBufferToImage(
-			cmdBuffer,
-			m_buffer,
-			texture->getImage(),
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&region
-		);
-	}
-	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
+void GPUBuffer::writeToTexture(CommandBuffer& commandBuffer, const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
+{
+	VkBufferImageCopy region = {};
+	region.bufferOffset = offset;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = baseArrayLayer;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { texture->getWidth(), texture->getHeight(), 1 };
 
-	if (baseArrayLayer == texture->getLayerCount() - 1) {
-		texture->generateMipmaps();
-	}
+	vkCmdCopyBufferToImage(
+		commandBuffer.getBuffer(),
+		m_buffer,
+		texture->getImage(),
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&region
+	);
 }
 
 VkBuffer GPUBuffer::getBuffer() const

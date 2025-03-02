@@ -31,8 +31,8 @@ namespace llt
 		void cleanUpSwapChain();
 		void cleanUpTextures();
 
-		void beginGraphics(VkCommandBuffer cmdBuffer) override;
-		void endGraphics(VkCommandBuffer cmdBuffer) override;
+		void beginRendering(CommandBuffer& buffer) override;
+		void endRendering(CommandBuffer& buffer) override;
 
 		void setClearColour(int idx, const Colour& colour) override;
 
@@ -44,6 +44,9 @@ namespace llt
 
 		Texture* getAttachment(int idx) override;
 		Texture* getDepthAttachment() override;
+
+		VkImage getCurrentSwapchainImage() const;
+		VkImageView getCurrentSwapchainImageView() const;
 
 		void onWindowResize(int width, int height);
 

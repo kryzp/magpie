@@ -20,12 +20,15 @@ uint64_t Material::getHash() const
 	return result;
 }
 
-void Material::bindPipeline(ShaderPassType type)
+void Material::bindPipeline(CommandBuffer& buffer, RenderInfo& renderInfo, ShaderPassType type)
 {
-	this->passes[type].pipeline.bind();
+	if (this->passes[type].pipeline.getPipeline() == VK_NULL_HANDLE)
+		this->passes[type].pipeline.create(&renderInfo);
+
+	this->passes[type].pipeline.bind(buffer);
 }
 
-void Material::render(ShaderPassType type, const RenderPass& pass)
+void Material::render(CommandBuffer& buffer, ShaderPassType type, const RenderPass& pass)
 {
 	uint32_t dynamicOffsets[] = {
 		g_materialSystem->getGlobalBuffer()->getDynamicOffset(),
@@ -34,7 +37,7 @@ void Material::render(ShaderPassType type, const RenderPass& pass)
 	};
 
 	vkCmdBindDescriptorSets(
-		g_vulkanBackend->getGraphicsCommandBuffer(),
+		buffer.getBuffer(),
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		this->passes[type].pipeline.getPipelineLayout(),
 		0,
@@ -42,11 +45,11 @@ void Material::render(ShaderPassType type, const RenderPass& pass)
 		LLT_ARRAY_LENGTH(dynamicOffsets), dynamicOffsets
 	);
 
-	this->passes[type].pipeline.render(pass);
+	this->passes[type].pipeline.render(buffer, pass);
 }
 
-void Material::renderMesh(ShaderPassType type, const SubMesh& mesh)
+void Material::renderMesh(CommandBuffer& buffer, ShaderPassType type, const SubMesh& mesh)
 {
 	RenderPass pass(mesh);
-	render(type, pass);
+	render(buffer, type, pass);
 }

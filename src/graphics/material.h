@@ -72,10 +72,10 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		void bindPipeline(ShaderPassType type);
+		void bindPipeline(CommandBuffer& buffer, RenderInfo& renderInfo, ShaderPassType type);
 
-		void render(ShaderPassType type, const RenderPass& pass);
-		void renderMesh(ShaderPassType type, const SubMesh& mesh);
+		void render(CommandBuffer& buffer, ShaderPassType type, const RenderPass& pass);
+		void renderMesh(CommandBuffer& buffer, ShaderPassType type, const SubMesh& mesh);
 
 		VertexFormat vertexFormat;
 		Vector<BoundTexture> textures;

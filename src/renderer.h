@@ -7,6 +7,7 @@
 #include "graphics/sub_mesh.h"
 #include "graphics/shader.h"
 #include "graphics/pipeline.h"
+#include "graphics/command_buffer.h"
 
 #include "render_object.h"
 #include "gpu_particles.h"
@@ -24,12 +25,12 @@ namespace llt
 		Renderer();
 		~Renderer() = default;
 
-		void init(Backbuffer* backbuffer);
+		void init();
 		void cleanUp();
 
 		void render(const Camera& camera, float deltaTime);
 
-		const Vector<RenderObject>::Iterator& createRenderObject();
+		Vector<RenderObject>::Iterator createRenderObject();
 
 	private:
 		void loadTextures();
@@ -38,15 +39,14 @@ namespace llt
 		void addRenderObjects();
 		void createPostProcessResources();
 
-		void renderSkybox(const Camera& camera);
-		void renderObjects(const Camera& camera);
-		void renderParticles(const Camera& camera, float deltaTime);
+		void renderSkybox(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target);
+		void renderObjects(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target);
+		void renderParticles(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target, float deltaTime);
 		void renderPostProcess();
+		void renderImGui(CommandBuffer& buffer);
 
 		void aggregateSubMeshes(Vector<SubMesh*>& list);
 		void sortRenderListByMaterialHash(int lo, int hi);
-
-		Backbuffer* m_backbuffer;
 
 		SubMesh m_quadMesh;
 		SubMesh m_skyboxMesh;
@@ -68,8 +68,6 @@ namespace llt
 //		DescriptorPoolDynamic m_descriptorPool;
 
 //		GPUParticles m_gpuParticles;
-
-		int m_frameCount;
 	};
 }
 

@@ -9,6 +9,7 @@
 
 #include "render_info.h"
 #include "texture.h"
+#include "command_buffer.h"
 
 namespace llt
 {
@@ -17,9 +18,9 @@ namespace llt
 
 	enum RenderTargetType
 	{
-		RENDER_TARGET_TYPE_NONE = 0,
 		RENDER_TARGET_TYPE_TEXTURE,
-		RENDER_TARGET_TYPE_BACKBUFFER
+		RENDER_TARGET_TYPE_BACKBUFFER,
+		RENDER_TARGET_TYPE_MAX_ENUM
 	};
 
 	class GenericRenderTarget
@@ -31,10 +32,10 @@ namespace llt
 
 		virtual void cleanUp() = 0;
 
-		virtual RenderInfo* getRenderInfo();
+		const RenderInfo& getRenderInfo() const;
 
-		virtual void beginGraphics(VkCommandBuffer cmdBuffer) = 0;
-		virtual void endGraphics(VkCommandBuffer cmdBuffer) = 0;
+		virtual void beginRendering(CommandBuffer& buffer) = 0;
+		virtual void endRendering(CommandBuffer& buffer) = 0;
 
 		virtual Texture* getAttachment(int idx) = 0;
 		virtual Texture* getDepthAttachment() = 0;

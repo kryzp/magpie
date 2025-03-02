@@ -13,6 +13,7 @@
 #include "shader.h"
 #include "texture.h"
 #include "texture_sampler.h"
+#include "command_buffer.h"
 
 #define LLT_VK_CHECK(_func_call, _error_msg) do{if(VkResult _VK_CHECK_RESULT_ABCDEFGH=_func_call;_VK_CHECK_RESULT_ABCDEFGH!=VK_SUCCESS){LLT_ERROR(_error_msg ": %d",_VK_CHECK_RESULT_ABCDEFGH);}}while(0);
 
@@ -61,15 +62,21 @@ namespace llt
 
 		bool hasStencilComponent(VkFormat format);
 
-		VkCommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool);
-		void endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics);
-		void endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer);
+		CommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool);
+
+		void endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer& buffer, VkQueue graphics);
+
+		void endSingleTimeGraphicsCommands(const CommandBuffer& buffer);
+		void endSingleTimeTransferCommands(const CommandBuffer& buffer);
 
 		uint64_t calcShaderBufferAlignedSize(uint64_t size);
 
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice);
 		uint32_t assignPhysicalDeviceUsability(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, VkPhysicalDeviceFeatures features, bool* hasEssentials);
+
+		VkPipelineStageFlags getTransferPipelineStageFlags(VkImageLayout layout);
+		VkAccessFlags getTransferAccessFlags(VkImageLayout layout);
 	}
 }
 

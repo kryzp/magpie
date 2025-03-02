@@ -6,6 +6,8 @@
 
 #include "../third_party/vk_mem_alloc.h"
 
+#include "../third_party/imgui/imgui_impl_vulkan.h"
+
 #include "../container/vector.h"
 #include "../container/array.h"
 #include "../container/optional.h"
@@ -46,7 +48,6 @@ namespace llt
 {
 	enum CullMode
 	{
-		CULL_MODE_NONE = 0,
 		CULL_MODE_BACK,
 		CULL_MODE_FRONT,
 		CULL_MODE_FRONT_AND_BACK,
@@ -75,27 +76,13 @@ namespace llt
 		void setPushConstants(ShaderParameters& params);
 		void resetPushConstants();
 
-		void waitOnCompute();
 		void syncStall() const;
 
 		int getCurrentFrameIdx() const;
 
-		GenericRenderTarget* getRenderTarget();
-		const GenericRenderTarget* getRenderTarget() const;
-
-		VkCommandBuffer getGraphicsCommandBuffer();
-		VkCommandBuffer getTransferCommandBuffer(int idx = 0);
-		VkCommandBuffer getComputeCommandBuffer(int idx = 0);
-
 		VkCommandPool getGraphicsCommandPool();
 		VkCommandPool getTransferCommandPool(int idx = 0);
 		VkCommandPool getComputeCommandPool(int idx = 0);
-
-		void beginGraphics(GenericRenderTarget* target = nullptr);
-		void endGraphics();
-
-		void beginCompute();
-		void endCompute();
 
         VkInstance m_instance;
 		VkDevice m_device;
@@ -113,6 +100,12 @@ namespace llt
 
 		ShaderParameters::PackedData m_pushConstants;
 
+		Backbuffer* m_backbuffer;
+
+		void createImGuiResources();
+		ImGui_ImplVulkan_InitInfo getImGuiInitInfo() const;
+		VkFormat getImGuiAttachmentFormat() const;
+
 	private:
 		void enumeratePhysicalDevices();
 		
@@ -120,7 +113,6 @@ namespace llt
 		void createCommandPools();
 		void createCommandBuffers();
 		void createPipelineProcessCache();
-		void createComputeResources();
 		void createVmaAllocator();
 
 		VkSampleCountFlagBits getMaxUsableSampleCount() const;
@@ -128,17 +120,15 @@ namespace llt
 
 		void clearPipelineCache();
 
-		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_computeFinishedSemaphores;
-
-		Backbuffer* m_backbuffer;
 		uint64_t m_currentFrameIdx;
-		GenericRenderTarget* m_currentRenderTarget;
 		VkPipelineCache m_pipelineProcessCache;
-		bool m_waitOnCompute;
 
 #if LLT_DEBUG
 		VkDebugUtilsMessengerEXT m_debugMessenger;
 #endif // LLT_DEBUG
+
+		DescriptorPoolStatic m_imGuiDescriptorPool;
+		VkFormat m_imGuiColourFormat;
 	};
 
 	extern VulkanBackend* g_vulkanBackend;

@@ -17,7 +17,7 @@ SubMesh::~SubMesh()
 {
 }
 
-void SubMesh::build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, uint16_t* pIndices, uint32_t nIndices)
+void SubMesh::build(uint64_t vertexSize, void* pVertices, uint32_t nVertices, uint16_t* pIndices, uint32_t nIndices)
 {
 	m_nVertices = nVertices;
 	m_nIndices = nIndices;

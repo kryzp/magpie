@@ -26,12 +26,12 @@ namespace llt
 		void clear();
 
 		void addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imageView, VkFormat format, VkImageView resolveView);
-		void addDepthAttachment(VkAttachmentLoadOp loadOp, Texture* texture, VkImageView resolveView);
+		void addDepthAttachment(VkAttachmentLoadOp loadOp, VkImageView depthView, VkImageView resolveView);
 
 		VkRenderingAttachmentInfoKHR& getColourAttachment(int idx);
 		VkRenderingAttachmentInfoKHR& getDepthAttachment();
 
-		VkRenderingInfoKHR getInfo() const;
+		VkRenderingInfo getInfo() const;
 
 		void setClearColour(int idx, VkClearValue value);
 		void setClearDepth(VkClearValue value);
@@ -45,7 +45,7 @@ namespace llt
 		const Array<float, 4>& getBlendConstants() const;
 		float getBlendConstant(int idx) const;
 
-		void setDimensions(uint32_t width, uint32_t height);
+		void setSize(uint32_t width, uint32_t height);
 
 		int getColourAttachmentCount() const;
 		int getAttachmentCount() const;

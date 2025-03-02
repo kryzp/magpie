@@ -1,0 +1,32 @@
+
+Ni = 64
+Nj = 64
+
+D = 10
+
+Csun = (...)
+Csmoke = (...)
+
+S = (...)
+
+ro = (...)
+rd = (...)
+
+Lo = 0
+
+for i in range(Ni)
+	ti = i / Ni
+	r = ro + ti*rd
+	density = sampleDensity(r)
+	distance = ti * D
+	transmittance = exp(-density * distance) * D / Ni
+	sunTransmittance = 0
+	for j in range(Nj):
+		tj = j / Nj
+		p = r + tj*(S - r)
+		density = sampleDensity(p)
+		distance = tj * length(S - r)
+		sunTransmittance += exp(-density * distance) * length(S - r) / Nj
+	Lo += (Csun * sunTransmittance) * (Csmoke * transmittance)
+
+

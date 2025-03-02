@@ -102,7 +102,7 @@ bool vkutil::hasStencilComponent(VkFormat format)
 	return (format == VK_FORMAT_D32_SFLOAT_S8_UINT) || (format == VK_FORMAT_D24_UNORM_S8_UINT);
 }
 
-VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
+CommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 {
 	// first we allocate the command buffer then we begin recording onto the command buffer
 	// then once we are finished we call the sister function end_single_time_commands.
@@ -129,11 +129,13 @@ VkCommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 		"Failed to begin command buffer when copying buffer"
 	);
 
-	return cmdBuffer;
+	return CommandBuffer(cmdBuffer);
 }
 
-void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuffer, VkQueue graphics)
+void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer& buffer, VkQueue graphics)
 {
+	cauto cmdBuffer = buffer.getBuffer();
+
 	vkEndCommandBuffer(cmdBuffer);
 
 	VkSubmitInfo submitInfo = {};
@@ -147,9 +149,15 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, VkCommandBuffer cmdBuf
 	vkFreeCommandBuffers(g_vulkanBackend->m_device, cmdPool, 1, &cmdBuffer);
 }
 
-void vkutil::endSingleTimeGraphicsCommands(VkCommandBuffer cmdBuffer)
+void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer& buffer)
 {
-	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, buffer, g_vulkanBackend->m_graphicsQueue.getQueue());
+}
+
+void vkutil::endSingleTimeTransferCommands(const CommandBuffer& buffer)
+{
+	endSingleTimeGraphicsCommands(buffer);
+//	vkutil::endSingleTimeCommands(g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_transferQueues[0].getQueue());
 }
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
@@ -255,4 +263,61 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	}
 
 	return resultUsability;
+}
+
+VkPipelineStageFlags vkutil::getTransferPipelineStageFlags(VkImageLayout layout)
+{
+	switch (layout)
+	{
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			return VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+			return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+		default:
+			LLT_ERROR("Unknown/Unsupported image layout for pipeline stage flags: %d", layout);
+	}
+}
+
+VkAccessFlags vkutil::getTransferAccessFlags(VkImageLayout layout)
+{
+	switch (layout)
+	{
+		case VK_IMAGE_LAYOUT_UNDEFINED:
+			return 0;
+
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			return VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			return VK_ACCESS_SHADER_READ_BIT;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+			return 0;
+
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+			return 0;
+
+		default:
+			LLT_ERROR("Unknown/Unsupported image layout for access flags: %d", layout);
+	}
 }

@@ -24,7 +24,7 @@ namespace llt
 		SubMesh();
 		virtual ~SubMesh();
 
-		void build(void* pVertices, uint32_t nVertices, uint64_t vertexSize, uint16_t* pIndices, uint32_t nIndices);
+		void build(uint64_t vertexSize, void* pVertices, uint32_t nVertices, uint16_t* pIndices, uint32_t nIndices);
 
 		Mesh* getParent();
 		const Mesh* getParent() const;

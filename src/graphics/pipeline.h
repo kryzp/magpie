@@ -19,6 +19,7 @@
 #include "blend.h"
 #include "queue.h"
 #include "texture.h"
+#include "render_target.h"
 
 namespace llt
 {
@@ -35,16 +36,20 @@ namespace llt
 		Pipeline(VkShaderStageFlagBits stage);
 		virtual ~Pipeline();
 
-		virtual void bind() = 0;
+		virtual void create(RenderInfo* renderInfo) = 0;
 
-		void preCache();
-		virtual VkPipeline getPipeline() = 0;
+		virtual void bind(CommandBuffer& buffer) = 0;
+
+		VkPipeline getPipeline();
 
 		VkPipelineLayout getPipelineLayout();
 
 		void setDescriptorSetLayout(const VkDescriptorSetLayout& layout);
 
 		virtual void bindShader(const ShaderProgram* shader) = 0;
+
+	protected:
+		VkPipeline m_pipeline;
 
 	private:
 		VkShaderStageFlagBits m_stage;
@@ -57,16 +62,17 @@ namespace llt
 		GraphicsPipeline();
 		~GraphicsPipeline() override;
 
-		void render(const RenderPass& op);
+		void create(RenderInfo* renderInfo) override;
 
-		void bind() override;
+		void bind(CommandBuffer& buffer) override;
 
-		VkPipeline getPipeline() override;
-
+		void render(CommandBuffer& buffer, const RenderPass& op);
+		
 		void bindShader(const ShaderProgram* shader) override;
 
 		void setVertexFormat(const VertexFormat& format);
 
+		void setMSAA(VkSampleCountFlagBits samples);
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
@@ -79,8 +85,8 @@ namespace llt
 		void setViewport(const RectF& rect);
 		void setScissor(const RectI& rect);
 
-		void resetViewport();
-		void resetScissor();
+		void resetViewport(const RenderInfo& info);
+		void resetScissor(const RenderInfo& info);
 
 	private:
 		VkViewport getViewport() const;
@@ -88,13 +94,14 @@ namespace llt
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
 
+		VkSampleCountFlagBits m_samples;
 		bool m_sampleShadingEnabled;
 		float m_minSampleShading;
 
 		VkCullModeFlagBits m_cullMode;
 
-		Optional<VkViewport> m_viewport;
-		Optional<VkRect2D> m_scissor;
+		VkViewport m_viewport;
+		VkRect2D m_scissor;
 
 		VertexFormat m_currentVertexFormat;
 
@@ -107,10 +114,11 @@ namespace llt
 		ComputePipeline();
 		~ComputePipeline() override;
 
-		void dispatch(int gcX, int gcY, int gcZ);
+		void create(RenderInfo* renderInfo = nullptr) override;
 
-		void bind() override;
-		VkPipeline getPipeline() override;
+		void bind(CommandBuffer& buffer) override;
+
+		void dispatch(CommandBuffer& buffer, int gcX, int gcY, int gcZ);
 
 		void bindShader(const ShaderProgram* shader) override;
 

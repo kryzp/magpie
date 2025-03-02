@@ -7,8 +7,6 @@ namespace llt
 
 	enum GamepadButton
 	{
-		GAMEPAD_BTN_NONE = -1,
-
 		GAMEPAD_BTN_A,
 		GAMEPAD_BTN_B,
 		GAMEPAD_BTN_X,
@@ -34,8 +32,6 @@ namespace llt
 
 	enum GamepadAxis
 	{
-		GAMEPAD_AXIS_NONE = -1,
-
 		GAMEPAD_AXIS_LEFT_X,
 		GAMEPAD_AXIS_LEFT_Y,
 
@@ -50,7 +46,6 @@ namespace llt
 
 	enum GamepadType
 	{
-		GAMEPAD_TYPE_UNKNOWN = 0,
 		GAMEPAD_TYPE_STANDARD,
 
 		GAMEPAD_TYPE_XBOX_360,

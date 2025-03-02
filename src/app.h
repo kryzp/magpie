@@ -61,6 +61,7 @@ namespace llt
 	private:
 		Config m_config;
 		bool m_running;
+		int m_frameCount;
 
 		Camera m_camera;
 		Renderer m_renderer;

@@ -17,17 +17,20 @@ namespace llt
 		DescriptorPoolStatic() = default;
 		~DescriptorPoolStatic() = default;
 
-		void init(uint32_t maxSets, const Vector<DescriptorPoolSizeRatio>& sizes);
-		void clear();
-
+		void init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio>& sizes);
 		void cleanUp();
 
+		void clear();
+
 		VkDescriptorSet allocate(VkDescriptorSetLayout layout);
+
+		VkDescriptorPool getPool() const;
 
 	private:
 		VkDescriptorPool m_pool;
 	};
 
+	// todo: this should have a name like DescriptorPoolAllocator and rename the static one to just DescriptorPool
 	// acts like a regular pool but dynamically grows to fill up more space if it runs out of room, like a vector
 	class DescriptorPoolDynamic
 	{
@@ -38,10 +41,10 @@ namespace llt
 		DescriptorPoolDynamic() = default;
 		~DescriptorPoolDynamic() = default;
 
-		void setSizes(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes);
-		void clear();
-
+		void init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes);
 		void cleanUp();
+
+		void clear();
 
 		VkDescriptorSet allocate(const VkDescriptorSetLayout& layout, void* pNext = nullptr);
 

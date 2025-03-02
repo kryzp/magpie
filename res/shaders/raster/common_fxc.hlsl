@@ -5,7 +5,7 @@
 struct PushConstants
 {
 	float time;
-//	int storage;
+//	int cbuffer_RID;
 //  int texture2D_RID;
 //  int cubeMap_RID;
 };

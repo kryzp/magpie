@@ -8,20 +8,20 @@
 
 #include "graphics/backend.h"
 #include "graphics/backbuffer.h"
+#include "graphics/command_buffer.h"
 #include "graphics/material.h"
+#include "graphics/material_system.h"
+#include "graphics/mesh_loader.h"
 #include "graphics/texture.h"
 #include "graphics/texture_mgr.h"
 #include "graphics/render_target_mgr.h"
-#include "graphics/material_system.h"
-#include "graphics/mesh_loader.h"
 
 #include "math/colour.h"
 
 using namespace llt;
 
 Renderer::Renderer()
-	: m_backbuffer(nullptr)
-	, m_quadMesh()
+	: m_quadMesh()
 	, m_skyboxMesh()
 	, m_gBuffer(nullptr)
 	, m_pushConstants()
@@ -30,14 +30,12 @@ Renderer::Renderer()
 	, m_renderList()
 	, m_skyboxMaterial()
 //	, m_postProcessPipeline()
-	, m_frameCount(0)
 	, m_blockMesh(nullptr)
 {
 }
 
-void Renderer::init(Backbuffer* backbuffer)
+void Renderer::init()
 {
-	m_backbuffer = backbuffer;
 	m_pushConstants.setValue<float>("time", 0.0f);
 
 	g_gpuBufferManager->createGlobalStagingBuffers();
@@ -46,13 +44,14 @@ void Renderer::init(Backbuffer* backbuffer)
 	createQuadMesh();
 	loadTextures();
 
-	g_materialSystem = new MaterialSystem();
-	g_materialSystem->init();
-	g_materialSystem->loadDefaultTechniques();
-
 	g_meshLoader = new MeshLoader();
 
+	g_materialSystem = new MaterialSystem();
+	g_materialSystem->loadDefaultTechniques();
+	g_materialSystem->init();
+
 	createSkybox();
+
 	addRenderObjects();
 
 //	m_gBuffer = g_renderTargetManager->createTarget(
@@ -84,7 +83,7 @@ void Renderer::cleanUp()
 	delete g_materialSystem;
 }
 
-const Vector<RenderObject>::Iterator& Renderer::createRenderObject()
+Vector<RenderObject>::Iterator Renderer::createRenderObject()
 {
 	return m_renderObjects.emplaceBack();
 }
@@ -95,74 +94,7 @@ void Renderer::addRenderObjects()
 //	woodMaterialData.textures.pushBack({ g_textureManager->getTexture("wood"), g_textureManager->getSampler("linear") });
 //	woodMaterialData.technique = "texturedPBR";
 //	Material* woodMaterial = g_materialSystem->buildMaterial(woodMaterialData);
-//
-//	Vector<ModelVertex> blockVertices =
-//	{
-//		// front face
-//		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
-//		{ {  1.0f,  1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
-//		{ {  1.0f, -1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
-//		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
-//
-//		// right face
-//		{ {  1.0f,  1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
-//		{ {  1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
-//		{ {  1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
-//		{ {  1.0f, -1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
-//
-//		// back face
-//		{ {  1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
-//		{ { -1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
-//		{ { -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
-//		{ {  1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
-//
-//		// left face
-//		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
-//		{ { -1.0f,  1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
-//		{ { -1.0f, -1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
-//		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
-//
-//		// top face
-//		{ { -1.0f,  1.0f, -1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
-//		{ {  1.0f,  1.0f, -1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
-//		{ {  1.0f,  1.0f,  1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
-//		{ { -1.0f,  1.0f,  1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
-//
-//		// bottom face
-//		{ { -1.0f, -1.0f,  1.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
-//		{ {  1.0f, -1.0f,  1.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
-//		{ {  1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
-//		{ { -1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
-//	};
-//
-//	Vector<uint16_t> blockIndices =
-//	{
-//		0, 1, 2,
-//		0, 2, 3,
-//
-//		4, 5, 6,
-//		4, 6, 7,
-//
-//		8, 9, 10,
-//		8, 10, 11,
-//
-//		12, 13, 14,
-//		12, 14, 15,
-//
-//		16, 17, 18,
-//		16, 18, 19,
-//
-//		20, 21, 22,
-//		20, 22, 23
-//	};
-//
-//	m_blockMesh = new Mesh();
-//	{
-//		SubMesh* mesh = m_blockMesh->createSubmesh();
-//		mesh->setMaterial(woodMaterial);
-//		mesh->build(blockVertices.data(), blockVertices.size(), sizeof(ModelVertex), blockIndices.data(), blockIndices.size());
-//	}
-//
+
 //	auto floor = m_renderEntities.emplaceBack();
 //	floor->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 //	floor->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
@@ -172,7 +104,7 @@ void Renderer::addRenderObjects()
 	
 	auto assimpModel = createRenderObject();
 	assimpModel->transform.setPosition({ 0.0f, 0.0f, 0.0f });
-	assimpModel->transform.setRotation(glm::radians(0.0f), {1.0f, 0.0f, 0.0f});
+	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
 	assimpModel->transform.setScale({ 4.0f, 4.0f, 4.0f });
 	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
 	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
@@ -230,17 +162,9 @@ void Renderer::loadTextures()
 	g_textureManager->createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
 	g_textureManager->createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	g_textureManager->createCubeMap("skybox", VK_FORMAT_R8G8B8A8_UNORM,
-		"../../res/textures/skybox/right.jpg",
-		"../../res/textures/skybox/left.jpg",
-		"../../res/textures/skybox/top.jpg",
-		"../../res/textures/skybox/bottom.jpg",
-		"../../res/textures/skybox/front.jpg",
-		"../../res/textures/skybox/back.jpg"
-	);
-
-	g_textureManager->createFromImage("stone", Image("../../res/textures/smooth_stone.png"));
-	g_textureManager->createFromImage("wood", Image("../../res/textures/wood.jpg"));
+	g_textureManager->create("environmentHDR", "../../res/textures/rogland_clear_night_greg_zaal.hdr");
+	g_textureManager->create("stone", "../../res/textures/smooth_stone.png");
+	g_textureManager->create("wood", "../../res/textures/wood.jpg");
 }
 
 void Renderer::createQuadMesh()
@@ -258,15 +182,16 @@ void Renderer::createQuadMesh()
 	};
 
 	m_quadMesh.build(
-		quadVertices.data(), quadVertices.size(),
 		sizeof(ModelVertex),
+		quadVertices.data(), quadVertices.size(),
 		quadIndices.data(), quadIndices.size()
 	);
 }
 
 void Renderer::createSkybox()
 {
-	Vector<ModelVertex> skyboxVertices = {
+	Vector<ModelVertex> skyboxVertices =
+	{
 		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
 		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
 		{ {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
@@ -277,7 +202,8 @@ void Renderer::createSkybox()
 		{ {  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
 	};
 
-	Vector<uint16_t> skyboxIndices = {
+	Vector<uint16_t> skyboxIndices =
+	{
 		0, 1, 2,
 		2, 3, 0,
 
@@ -298,14 +224,14 @@ void Renderer::createSkybox()
 	};
 
 	m_skyboxMesh.build(
-		skyboxVertices.data(), skyboxVertices.size(),
 		sizeof(ModelVertex),
+		skyboxVertices.data(), skyboxVertices.size(),
 		skyboxIndices.data(), skyboxIndices.size()
 	);
 
 	MaterialData skyboxData;
-	skyboxData.textures.pushBack({ g_textureManager->getTexture("skybox"), g_textureManager->getSampler("linear") });
 	skyboxData.technique = "skybox";
+	skyboxData.textures = { { g_textureManager->getTexture("environmentMap"), g_textureManager->getSampler("linear") } };
 
 	m_skyboxMaterial = g_materialSystem->buildMaterial(skyboxData);
 }
@@ -351,8 +277,10 @@ void Renderer::sortRenderListByMaterialHash(int lo, int hi)
 	sortRenderListByMaterialHash(partition + 1, hi);
 }
 
-void Renderer::renderObjects(const Camera& camera)
+void Renderer::renderObjects(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target)
 {
+	RenderInfo info = target->getRenderInfo();
+
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("viewMatrix", camera.getView());
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
@@ -364,7 +292,7 @@ void Renderer::renderObjects(const Camera& camera)
 	if (m_renderList.size() > 0)
 	{
 		uint64_t currentMaterialHash = m_renderList[0]->getMaterial()->getHash();
-		m_renderList[0]->getMaterial()->bindPipeline(SHADER_PASS_FORWARD);
+		m_renderList[0]->getMaterial()->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
 
 		for (int i = 0; i < m_renderList.size(); i++)
 		{
@@ -373,7 +301,7 @@ void Renderer::renderObjects(const Camera& camera)
 
 			if (currentMaterialHash != mat->getHash())
 			{
-				mat->bindPipeline(SHADER_PASS_FORWARD);
+				mat->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
 
 				currentMaterialHash = mat->getHash();
 			}
@@ -384,12 +312,12 @@ void Renderer::renderObjects(const Camera& camera)
 			g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("normalMatrix", glm::transpose(glm::inverse(transform)));
 			g_materialSystem->getInstanceBuffer()->pushParameters();
 
-			mat->renderMesh(SHADER_PASS_FORWARD, *mesh);
+			mat->renderMesh(buffer, SHADER_PASS_FORWARD, *mesh);
 		}
 	}
 }
 
-void Renderer::renderSkybox(const Camera& camera)
+void Renderer::renderSkybox(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target)
 {
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("viewMatrix", camera.getRotationMatrix());
@@ -400,8 +328,10 @@ void Renderer::renderSkybox(const Camera& camera)
 	g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
 	g_materialSystem->getInstanceBuffer()->pushParameters();
 
-	m_skyboxMaterial->bindPipeline(SHADER_PASS_FORWARD);
-	m_skyboxMaterial->renderMesh(SHADER_PASS_FORWARD, m_skyboxMesh);
+	RenderInfo info = target->getRenderInfo();
+
+	m_skyboxMaterial->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
+	m_skyboxMaterial->renderMesh(buffer, SHADER_PASS_FORWARD, m_skyboxMesh);
 }
 
 void Renderer::render(const Camera& camera, float deltaTime)
@@ -413,26 +343,54 @@ void Renderer::render(const Camera& camera, float deltaTime)
 //	m_gBuffer->toggleClear(true);
 //	m_gBuffer->setClearColours(Colour::black());
 
-	g_vulkanBackend->beginGraphics(/*m_gBuffer*/);
+	CommandBuffer graphicsBuffer = CommandBuffer::fromGraphics();
 
-	renderSkybox(camera);
-	renderObjects(camera);
+	graphicsBuffer.beginRendering(g_vulkanBackend->m_backbuffer);
 
-	g_vulkanBackend->endGraphics();
+	renderSkybox(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
+	renderObjects(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
+
+	graphicsBuffer.endRendering();
+	graphicsBuffer.submit();
+
+	renderImGui(graphicsBuffer);
 
 //	renderParticles(camera, deltaTime);
-
 //	g_vulkanBackend->beginGraphics();
 //	renderPostProcess();
 //	g_vulkanBackend->endGraphics();
 
 	g_vulkanBackend->resetPushConstants();
-	g_vulkanBackend->swapBuffers();
 
-	m_frameCount++;
+	g_vulkanBackend->swapBuffers();
 }
 
-void Renderer::renderParticles(const Camera& camera, float deltaTime)
+void Renderer::renderImGui(CommandBuffer& buffer)
+{
+	RenderInfo renderInfo;
+	
+	renderInfo.setSize(
+		g_vulkanBackend->m_backbuffer->getWidth(),
+		g_vulkanBackend->m_backbuffer->getHeight()
+	);
+	
+	renderInfo.addColourAttachment(
+		VK_ATTACHMENT_LOAD_OP_LOAD,
+		g_vulkanBackend->m_backbuffer->getCurrentSwapchainImageView(),
+		g_vulkanBackend->getImGuiAttachmentFormat(),
+		VK_NULL_HANDLE
+	);
+
+	buffer.beginRendering(renderInfo);
+
+	ImDrawData* drawData = ImGui::GetDrawData();
+	ImGui_ImplVulkan_RenderDrawData(drawData, buffer.getBuffer());
+
+	buffer.endRendering();
+	buffer.submit();
+}
+
+void Renderer::renderParticles(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target, float deltaTime)
 {
 /*
 	m_gBuffer->toggleClear(false);
@@ -451,21 +409,23 @@ void Renderer::renderParticles(const Camera& camera, float deltaTime)
 
 void Renderer::renderPostProcess()
 {
-	/*
+/*
 	RenderPass pass;
 	pass.setMesh(m_quadMesh);
 
 	m_postProcessPipeline.bind();
 
 	vkCmdBindDescriptorSets(
-	g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer,
-	VK_PIPELINE_BIND_POINT_GRAPHICS,
-	m_postProcessPipeline.getPipelineLayout(),
-	0,
-	1, &m_postProcessDescriptorSet,
-	0, nullptr
+		g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		m_postProcessPipeline.getPipelineLayout(),
+		0,
+		1, &m_postProcessDescriptorSet,
+		0, nullptr
 	);
 
 	m_postProcessPipeline.render(pass);
-	*/
+*/
 }
+
+// todo: water. post processing pipeline.

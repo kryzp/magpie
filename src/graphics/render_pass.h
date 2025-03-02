@@ -24,18 +24,17 @@ namespace llt
 		const GPUBuffer* indirectBuffer;
 
 		RenderPass()
-			: nVertices()
-			, vertexBuffer()
-			, nIndices()
-			, indexBuffer()
-			, instanceCount()
-			, firstInstance()
-			, instanceBuffer()
-			, indirectDrawCount()
-			, indirectOffset()
-			, indirectBuffer()
+			: nVertices(0)
+			, vertexBuffer(nullptr)
+			, nIndices(0)
+			, indexBuffer(nullptr)
+			, instanceCount(1)
+			, firstInstance(0)
+			, instanceBuffer(nullptr)
+			, indirectDrawCount(0)
+			, indirectOffset(0)
+			, indirectBuffer(nullptr)
 		{
-			instanceCount = 1;
 		}
 
 		RenderPass(const SubMesh& mesh)
