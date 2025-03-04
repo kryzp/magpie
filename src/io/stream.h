@@ -1,8 +1,7 @@
 #ifndef STREAM_H_
 #define STREAM_H_
 
-#include "stream.h"
-#include "../common.h"
+#include "core/common.h"
 
 namespace llt
 {

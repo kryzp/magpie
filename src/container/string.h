@@ -1,7 +1,8 @@
 #ifndef STRING_H_
 #define STRING_H_
 
-#include "../common.h"
+#include "core/common.h"
+
 #include "vector.h"
 
 namespace llt

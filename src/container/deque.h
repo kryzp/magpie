@@ -1,8 +1,9 @@
 #ifndef DEQUE_H_
 #define DEQUE_H_
 
-#include "../common.h"
 #include <new>
+
+#include "core/common.h"
 
 namespace llt
 {

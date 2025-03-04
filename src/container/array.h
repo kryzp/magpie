@@ -2,7 +2,8 @@
 #define ARRAY_H_
 
 #include <initializer_list>
-#include "../common.h"
+
+#include "core/common.h"
 
 namespace llt
 {

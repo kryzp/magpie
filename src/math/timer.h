@@ -1,7 +1,7 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
-#include "../common.h"
+#include "core/common.h"
 
 namespace llt
 {

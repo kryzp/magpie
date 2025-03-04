@@ -2,7 +2,8 @@
 #define FUNCTION_H_
 
 #include <memory>
-#include "../common.h"
+
+#include "core/common.h"
 
 namespace llt
 {

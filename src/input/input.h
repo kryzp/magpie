@@ -3,7 +3,7 @@
 
 #include <glm/vec2.hpp>
 
-#include "../common.h"
+#include "core/common.h"
 
 #include "keyboard.h"
 #include "mouse.h"

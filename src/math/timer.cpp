@@ -1,5 +1,6 @@
 #include "timer.h"
-#include "../platform.h"
+
+#include "core/platform.h"
 
 using namespace llt;
 

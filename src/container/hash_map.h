@@ -1,7 +1,8 @@
 #ifndef HASH_MAP_H_
 #define HASH_MAP_H_
 
-#include "../common.h"
+#include "core/common.h"
+
 #include "pair.h"
 
 namespace llt

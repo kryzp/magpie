@@ -1,7 +1,7 @@
 #ifndef BITSET_H_
 #define BITSET_H_
 
-#include "../common.h"
+#include "core/common.h"
 
 namespace llt
 {

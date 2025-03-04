@@ -7,43 +7,44 @@ set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/common.cpp
-    src/app.cpp
-    src/platform.cpp
-    src/renderer.cpp
-    src/camera.cpp
-    src/render_object.cpp
-    src/gpu_particles.cpp
+    src/core/common.cpp
+    src/core/app.cpp
+    src/core/platform.cpp
 
-    src/graphics/backbuffer.cpp
-    src/graphics/backend.cpp
-    src/graphics/command_buffer.cpp
-    src/graphics/descriptor_builder.cpp
-    src/graphics/descriptor_allocator.cpp
-    src/graphics/descriptor_layout_cache.cpp
-    src/graphics/gpu_buffer.cpp
-    src/graphics/gpu_buffer_mgr.cpp
-    src/graphics/generic_render_target.cpp
-	src/graphics/render_info.cpp
-    src/graphics/render_target.cpp
-    src/graphics/render_target_mgr.cpp
-    src/graphics/shader.cpp
-    src/graphics/shader_mgr.cpp
-    src/graphics/shader_buffer.cpp
-    src/graphics/shader_buffer_mgr.cpp
-    src/graphics/sub_mesh.cpp
-    src/graphics/pipeline.cpp
-    src/graphics/mesh.cpp
-    src/graphics/mesh_loader.cpp
-    src/graphics/material.cpp
-	src/graphics/material_system.cpp
-    src/graphics/texture.cpp
-    src/graphics/texture_mgr.cpp
-    src/graphics/texture_sampler.cpp
-    src/graphics/util.cpp
-    src/graphics/image.cpp
-    src/graphics/queue.cpp
-    src/graphics/vertex_format.cpp
+    src/rendering/renderer.cpp
+    src/rendering/gpu_buffer_mgr.cpp
+    src/rendering/render_target_mgr.cpp
+    src/rendering/shader_mgr.cpp
+    src/rendering/shader_buffer_mgr.cpp
+    src/rendering/sub_mesh.cpp
+    src/rendering/mesh.cpp
+    src/rendering/mesh_loader.cpp
+    src/rendering/material.cpp
+	src/rendering/material_system.cpp
+    src/rendering/texture_mgr.cpp
+    src/rendering/image.cpp
+    src/rendering/camera.cpp
+    src/rendering/render_object.cpp
+    src/rendering/gpu_particles.cpp
+
+    src/vulkan/backbuffer.cpp
+    src/vulkan/backend.cpp
+    src/vulkan/command_buffer.cpp
+    src/vulkan/descriptor_builder.cpp
+    src/vulkan/descriptor_allocator.cpp
+    src/vulkan/descriptor_layout_cache.cpp
+    src/vulkan/gpu_buffer.cpp
+    src/vulkan/generic_render_target.cpp
+	src/vulkan/render_info.cpp
+    src/vulkan/render_target.cpp
+    src/vulkan/shader.cpp
+    src/vulkan/shader_buffer.cpp
+    src/vulkan/pipeline.cpp
+    src/vulkan/texture.cpp
+    src/vulkan/texture_sampler.cpp
+    src/vulkan/util.cpp
+    src/vulkan/queue.cpp
+    src/vulkan/vertex_format.cpp
 
 	src/math/colour.cpp
     src/math/timer.cpp
@@ -88,6 +89,8 @@ if(WIN32)
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
 
 	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
+
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
 	add_compile_definitions(LLT_MAC_SUPPORT)
