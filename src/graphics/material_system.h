@@ -61,10 +61,10 @@ namespace llt
 		Texture *m_prefilterMap;
 		Texture *m_brdfIntegration;
 
-		GraphicsPipeline m_equirectangularToCubemapPipeline;
-		GraphicsPipeline m_irradianceGenerationPipeline;
-		GraphicsPipeline m_prefilterGenerationPipeline;
-		GraphicsPipeline m_brdfIntegrationPipeline;
+		Pipeline m_equirectangularToCubemapPipeline;
+		Pipeline m_irradianceGenerationPipeline;
+		Pipeline m_prefilterGenerationPipeline;
+		Pipeline m_brdfIntegrationPipeline;
 
 		SubMesh *m_quadMesh;
 		SubMesh *m_cubeMesh;

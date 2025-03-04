@@ -98,8 +98,7 @@ void Backbuffer::beginRendering(CommandBuffer &buffer)
 		.layerCount = 1,
 	};
 
-	vkCmdPipelineBarrier(
-		buffer.getBuffer(),
+	buffer.pipelineBarrier(
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		0,
@@ -131,8 +130,7 @@ void Backbuffer::endRendering(CommandBuffer &buffer)
 		.layerCount = 1,
 	};
 
-	vkCmdPipelineBarrier(
-		buffer.getBuffer(),
+	buffer.pipelineBarrier(
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 		0,

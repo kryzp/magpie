@@ -24,12 +24,12 @@ uint64_t Material::getHash() const
 void Material::bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType type)
 {
 	if (m_passes[type].pipeline.getPipeline() == VK_NULL_HANDLE)
-		m_passes[type].pipeline.create(&renderInfo);
+		m_passes[type].pipeline.buildGraphicsPipeline(&renderInfo);
 
-	m_passes[type].pipeline.bind(buffer);
+	buffer.bindPipeline(m_passes[type].pipeline);
 }
 
-void Material::render(CommandBuffer &buffer, ShaderPassType type, const RenderPass &pass)
+void Material::renderMesh(CommandBuffer &buffer, ShaderPassType type, const SubMesh &mesh)
 {
 	Vector<uint32_t> dynamicOffsets = {
 		g_materialSystem->getGlobalBuffer()->getDynamicOffset(),
@@ -37,13 +37,14 @@ void Material::render(CommandBuffer &buffer, ShaderPassType type, const RenderPa
 		m_parameterBuffer->getDynamicOffset()
 	};
 
-	m_passes[type].pipeline.bindSet(buffer, m_passes[type].set, dynamicOffsets);
+	buffer.bindDescriptorSets(
+		m_passes[type].pipeline.getBindPoint(),
+		m_passes[type].pipeline.getPipelineLayout(),
+		0,
+		1, &m_passes[type].set,
+		dynamicOffsets.size(),
+		dynamicOffsets.data()
+	);
 
-	m_passes[type].pipeline.render(buffer, pass);
-}
-
-void Material::renderMesh(CommandBuffer &buffer, ShaderPassType type, const SubMesh &mesh)
-{
-	RenderPass pass(mesh);
-	render(buffer, type, pass);
+	mesh.render(buffer);
 }

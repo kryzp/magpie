@@ -217,8 +217,7 @@ void Texture::generateMipmaps()
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 		// set up a pipeline barrier for the transferring stage
-		vkCmdPipelineBarrier(
-			commandBuffer.getBuffer(),
+		commandBuffer.pipelineBarrier(
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			0,
@@ -251,8 +250,7 @@ void Texture::generateMipmaps()
 			blit.dstSubresource.baseArrayLayer = face;
 			blit.dstSubresource.layerCount = 1;
 
-			vkCmdBlitImage(
-				commandBuffer.getBuffer(),
+			commandBuffer.blitImage(
 				m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1, &blit,
@@ -266,8 +264,7 @@ void Texture::generateMipmaps()
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-		vkCmdPipelineBarrier(
-			commandBuffer.getBuffer(),
+		commandBuffer.pipelineBarrier(
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0,
@@ -285,9 +282,9 @@ void Texture::generateMipmaps()
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-	vkCmdPipelineBarrier(
-		commandBuffer.getBuffer(),
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	commandBuffer.pipelineBarrier(
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		0,
 		0, nullptr,
 		0, nullptr,
@@ -351,8 +348,7 @@ void Texture::transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout)
 	VkPipelineStageFlags srcStage = m_stage;
 	VkPipelineStageFlags dstStage = vkutil::getTransferPipelineStageFlags(newLayout);
 
-	vkCmdPipelineBarrier(
-		buffer.getBuffer(),
+	buffer.pipelineBarrier(
 		srcStage, dstStage,
 		0,
 		0, nullptr,

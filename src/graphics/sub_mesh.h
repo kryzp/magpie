@@ -24,7 +24,9 @@ namespace llt
 		SubMesh();
 		virtual ~SubMesh();
 
-		void build(uint64_t vertexSize, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
+		void render(CommandBuffer &buffer) const;
+
+		void build(const VertexFormat &format, uint64_t vertexSize, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 
 		Mesh *getParent();
 		const Mesh *getParent() const;
@@ -41,6 +43,7 @@ namespace llt
 
 	private:
 		Mesh *m_parent;
+		const VertexFormat *m_vertexFormat;
 
 		Material *m_material;
 

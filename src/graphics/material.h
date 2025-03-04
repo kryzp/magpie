@@ -26,7 +26,14 @@ namespace llt
 	{
 		ShaderEffect *shader;
 		VkDescriptorSet set;
-		GraphicsPipeline pipeline;
+		Pipeline pipeline;
+
+		ShaderPass()
+			: shader(nullptr)
+			, set()
+			, pipeline(Pipeline::fromGraphics())
+		{
+		}
 	};
 
 	class Technique
@@ -74,7 +81,6 @@ namespace llt
 
 		void bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType type);
 
-		void render(CommandBuffer &buffer, ShaderPassType type, const RenderPass &pass);
 		void renderMesh(CommandBuffer &buffer, ShaderPassType type, const SubMesh &mesh);
 
 		VertexFormat m_vertexFormat;

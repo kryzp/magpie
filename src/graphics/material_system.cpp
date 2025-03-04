@@ -43,10 +43,10 @@ MaterialSystem::MaterialSystem()
 	, m_irradianceMap()
 	, m_prefilterMap()
 	, m_brdfIntegration()
-	, m_equirectangularToCubemapPipeline()
-	, m_irradianceGenerationPipeline()
-	, m_prefilterGenerationPipeline()
-	, m_brdfIntegrationPipeline()
+	, m_equirectangularToCubemapPipeline(Pipeline::fromGraphics())
+	, m_irradianceGenerationPipeline(Pipeline::fromGraphics())
+	, m_prefilterGenerationPipeline(Pipeline::fromGraphics())
+	, m_brdfIntegrationPipeline(Pipeline::fromGraphics())
 	, m_quadMesh()
 	, m_cubeMesh()
 {
@@ -246,6 +246,7 @@ void MaterialSystem::createQuadMesh()
 
 	m_quadMesh = new SubMesh();
 	m_quadMesh->build(
+		g_primitiveUvVertexFormat,
 		sizeof(PrimitiveUVVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
@@ -289,6 +290,7 @@ void MaterialSystem::createCubeMesh()
 
 	m_cubeMesh = new SubMesh();
 	m_cubeMesh->build(
+		g_primitiveVertexFormat,
 		sizeof(PrimitiveVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
@@ -345,8 +347,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	pc.setValue<glm::mat4>("proj", captureProjection);
 	pc.setValue<glm::mat4>("view", glm::identity<glm::mat4>());
 
-	g_vulkanBackend->setPushConstants(pc);
-
+	m_equirectangularToCubemapPipeline.setPushConstantsSize(pc.getPackedConstants().size());
 	m_equirectangularToCubemapPipeline.bindShader(primitiveShader);
 	m_equirectangularToCubemapPipeline.bindShader(equirectangularToCubemapShader);
 	m_equirectangularToCubemapPipeline.setVertexFormat(g_primitiveVertexFormat);
@@ -354,28 +355,42 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_equirectangularToCubemapPipeline.setDepthWrite(false);
 	m_equirectangularToCubemapPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_equirectangularToCubemapPipeline.setDescriptorSetLayout(etcDescriptorLayout);
-	m_equirectangularToCubemapPipeline.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
-	m_equirectangularToCubemapPipeline.create(&etcRenderInfo);
+	m_equirectangularToCubemapPipeline.buildGraphicsPipeline(&etcRenderInfo);
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.setValue<glm::mat4>("view", captureViews[i]);
-		g_vulkanBackend->setPushConstants(pc);
 
 		RenderTarget target(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
 		target.addAttachment(m_environmentMap, i, 0);
 
 		buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-		m_equirectangularToCubemapPipeline.bind(buffer);
+		buffer.bindPipeline(m_equirectangularToCubemapPipeline);
 
-		m_equirectangularToCubemapPipeline.bindSet(buffer, etcDescriptorSet);
+		buffer.bindDescriptorSets(
+			m_equirectangularToCubemapPipeline.getBindPoint(),
+			m_equirectangularToCubemapPipeline.getPipelineLayout(),
+			0,
+			1, &etcDescriptorSet,
+			0, nullptr
+		);
 
-		m_equirectangularToCubemapPipeline.render(buffer, *m_cubeMesh);
+		buffer.setScissor(etcRenderInfo);
+		buffer.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
+
+		buffer.pushConstants(
+			m_equirectangularToCubemapPipeline.getPipelineLayout(),
+			VK_SHADER_STAGE_ALL_GRAPHICS,
+			pc
+		);
+
+		m_cubeMesh->render(buffer);
 
 		buffer.endRendering();
-		buffer.submit();
 	}
+
+	buffer.submit();
 
 	m_environmentMap->generateMipmaps();
 
@@ -405,6 +420,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	icRenderInfo.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 	icRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_irradianceMap->getFormat(), VK_NULL_HANDLE);
 
+	m_irradianceGenerationPipeline.setPushConstantsSize(pc.getPackedConstants().size());
 	m_irradianceGenerationPipeline.bindShader(primitiveShader);
 	m_irradianceGenerationPipeline.bindShader(irradianceConvolutionShader);
 	m_irradianceGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
@@ -412,24 +428,37 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_irradianceGenerationPipeline.setDepthWrite(false);
 	m_irradianceGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_irradianceGenerationPipeline.setDescriptorSetLayout(icDescriptorLayout);
-	m_irradianceGenerationPipeline.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
-	m_irradianceGenerationPipeline.create(&icRenderInfo);
+	m_irradianceGenerationPipeline.buildGraphicsPipeline(&icRenderInfo);
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.setValue<glm::mat4>("view", captureViews[i]);
-		g_vulkanBackend->setPushConstants(pc);
 
 		RenderTarget target(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 		target.addAttachment(m_irradianceMap, i, 0);
 
 		buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-		m_irradianceGenerationPipeline.bind(buffer);
+		buffer.bindPipeline(m_irradianceGenerationPipeline);
 
-		m_equirectangularToCubemapPipeline.bindSet(buffer, icDescriptorSet);
+		buffer.bindDescriptorSets(
+			m_irradianceGenerationPipeline.getBindPoint(),
+			m_irradianceGenerationPipeline.getPipelineLayout(),
+			0,
+			1, &icDescriptorSet,
+			0, nullptr
+		);
 
-		m_irradianceGenerationPipeline.render(buffer, *m_cubeMesh);
+		buffer.setScissor(icRenderInfo);
+		buffer.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
+
+		buffer.pushConstants(
+			m_irradianceGenerationPipeline.getPipelineLayout(),
+			VK_SHADER_STAGE_ALL_GRAPHICS,
+			pc
+		);
+
+		m_cubeMesh->render(buffer);
 
 		buffer.endRendering();
 		buffer.submit();
@@ -471,6 +500,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	pfRenderInfo.setSize(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
 	pfRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_prefilterMap->getFormat(), VK_NULL_HANDLE);
 
+	m_prefilterGenerationPipeline.setPushConstantsSize(pc.getPackedConstants().size());
 	m_prefilterGenerationPipeline.bindShader(primitiveShader);
 	m_prefilterGenerationPipeline.bindShader(prefilterConvolutionShader);
 	m_prefilterGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
@@ -478,15 +508,12 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_prefilterGenerationPipeline.setDepthWrite(false);
 	m_prefilterGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_prefilterGenerationPipeline.setDescriptorSetLayout(pfDescriptorLayout);
-	m_prefilterGenerationPipeline.setViewport({ 0, 0, PREFILTER_RESOLUTION, PREFILTER_RESOLUTION });
-	m_prefilterGenerationPipeline.create(&pfRenderInfo);
+	m_prefilterGenerationPipeline.buildGraphicsPipeline(&pfRenderInfo);
 
 	for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
 	{
 		int width = PREFILTER_RESOLUTION / CalcI::pow(2, mipLevel);
 		int height = PREFILTER_RESOLUTION / CalcI::pow(2, mipLevel);
-
-		m_prefilterGenerationPipeline.setViewport({ 0, 0, (float)width, (float)height });
 
 		float roughness = (float)mipLevel / (float)(PREFILTER_MIP_LEVELS - 1);
 
@@ -496,22 +523,37 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 		for (int i = 0; i < 6; i++)
 		{
 			pc.setValue<glm::mat4>("view", captureViews[i]);
-			g_vulkanBackend->setPushConstants(pc);
 
 			RenderTarget target(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
 			target.addAttachment(m_prefilterMap, i, mipLevel);
 
 			buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-			m_prefilterGenerationPipeline.bind(buffer);
+			buffer.bindPipeline(m_prefilterGenerationPipeline);
 
 			Vector<uint32_t> dynamicOffsets = {
 				pfParameterBuffer.getDynamicOffset()
 			};
 
-			m_prefilterGenerationPipeline.bindSet(buffer, pfDescriptorSet, dynamicOffsets);
+			buffer.bindDescriptorSets(
+				m_prefilterGenerationPipeline.getBindPoint(),
+				m_prefilterGenerationPipeline.getPipelineLayout(),
+				0,
+				1, &pfDescriptorSet,
+				dynamicOffsets.size(),
+				dynamicOffsets.data()
+			);
 
-			m_prefilterGenerationPipeline.render(buffer, *m_cubeMesh);
+			buffer.setScissor(pfRenderInfo);
+			buffer.setViewport({ 0, 0, (float)width, (float)height });
+
+			buffer.pushConstants(
+				m_prefilterGenerationPipeline.getPipelineLayout(),
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				pc
+			);
+
+			m_cubeMesh->render(buffer);
 
 			buffer.endRendering();
 			buffer.submit();
@@ -521,8 +563,6 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_prefilterMap->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	pfParameterBuffer.cleanUp();
-
-	g_vulkanBackend->resetPushConstants();
 }
 
 void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
@@ -552,16 +592,24 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 	m_brdfIntegrationPipeline.setDepthWrite(false);
 	m_brdfIntegrationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_brdfIntegrationPipeline.setDescriptorSetLayout(layout);
-	m_brdfIntegrationPipeline.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
-	m_brdfIntegrationPipeline.create(&info);
+	m_brdfIntegrationPipeline.buildGraphicsPipeline(&info);
 
 	buffer.beginRendering(info);
 
-	m_brdfIntegrationPipeline.bind(buffer);
+	buffer.bindPipeline(m_brdfIntegrationPipeline);
 
-	m_brdfIntegrationPipeline.bindSet(buffer, set);
+	buffer.bindDescriptorSets(
+		m_brdfIntegrationPipeline.getBindPoint(),
+		m_brdfIntegrationPipeline.getPipelineLayout(),
+		0,
+		1, &set,
+		0, nullptr
+	);
 
-	m_brdfIntegrationPipeline.render(buffer, *m_quadMesh);
+	buffer.setScissor(info);
+	buffer.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
+
+	m_quadMesh->render(buffer);
 
 	buffer.endRendering();
 	buffer.submit();

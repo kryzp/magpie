@@ -175,6 +175,7 @@ void Renderer::createQuadMesh()
 	};
 
 	m_quadMesh.build(
+		g_modelVertexFormat,
 		sizeof(ModelVertex),
 		quadVertices.data(), quadVertices.size(),
 		quadIndices.data(), quadIndices.size()
@@ -217,6 +218,7 @@ void Renderer::createSkybox()
 	};
 
 	m_skyboxMesh.build(
+		g_modelVertexFormat,
 		sizeof(ModelVertex),
 		skyboxVertices.data(), skyboxVertices.size(),
 		skyboxIndices.data(), skyboxIndices.size()
@@ -345,6 +347,9 @@ void Renderer::render(const Camera &camera, float deltaTime)
 
 	graphicsBuffer.beginRendering(g_vulkanBackend->m_backbuffer);
 
+	graphicsBuffer.setViewport(g_vulkanBackend->m_backbuffer->getRenderInfo());
+	graphicsBuffer.setScissor(g_vulkanBackend->m_backbuffer->getRenderInfo());
+
 	renderSkybox(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
 	renderObjects(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
 
@@ -357,8 +362,6 @@ void Renderer::render(const Camera &camera, float deltaTime)
 //	g_vulkanBackend->beginGraphics();
 //	renderPostProcess();
 //	g_vulkanBackend->endGraphics();
-
-	g_vulkanBackend->resetPushConstants();
 
 	g_vulkanBackend->swapBuffers();
 }

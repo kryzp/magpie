@@ -164,7 +164,6 @@ VulkanBackend::VulkanBackend(const Config &config)
 	, m_graphicsQueue()
 	, m_computeQueues()
 	, m_transferQueues()
-	, m_pushConstants()
 	, m_pipelineProcessCache()
 	, m_backbuffer()
 	, m_currentFrameIdx()
@@ -800,16 +799,6 @@ void VulkanBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurface
 void VulkanBackend::onWindowResize(int width, int height)
 {
 	m_backbuffer->onWindowResize(width, height);
-}
-
-void VulkanBackend::setPushConstants(ShaderParameters &params)
-{
-	m_pushConstants = params.getPackedConstants();
-}
-
-void VulkanBackend::resetPushConstants()
-{
-	m_pushConstants.clear();
 }
 
 int VulkanBackend::getCurrentFrameIdx() const

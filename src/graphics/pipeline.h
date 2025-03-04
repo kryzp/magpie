@@ -33,43 +33,24 @@ namespace llt
 	class Pipeline
 	{
 	public:
+		static Pipeline fromGraphics();
+		static Pipeline fromCompute();
+
 		Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint);
 		virtual ~Pipeline();
 
-		virtual void create(RenderInfo *renderInfo) = 0;
-
-		void bind(CommandBuffer &buffer);
-
-		void bindSet(CommandBuffer &buffer, const VkDescriptorSet &set);
-		void bindSet(CommandBuffer &buffer, const VkDescriptorSet &set, const Vector<uint32_t> &dynamicOffsets);
+		VkPipeline buildGraphicsPipeline(RenderInfo *renderInfo);
+		VkPipeline buildComputePipeline();
 
 		VkPipeline getPipeline();
 		VkPipelineLayout getPipelineLayout();
+		
+		VkPipelineBindPoint getBindPoint() const;
+
+		void bindShader(const ShaderProgram *shader);
+		void setPushConstantsSize(uint32_t size);
 
 		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
-
-		virtual void bindShader(const ShaderProgram *shader) = 0;
-
-	protected:
-		VkPipeline m_pipeline;
-
-	private:
-		VkShaderStageFlagBits m_stage;
-		VkDescriptorSetLayout m_descriptorSetLayout;
-		VkPipelineBindPoint m_bindPoint;
-	};
-
-	class GraphicsPipeline : public Pipeline
-	{
-	public:
-		GraphicsPipeline();
-		~GraphicsPipeline() override;
-
-		void create(RenderInfo *renderInfo) override;
-
-		void render(CommandBuffer &buffer, const RenderPass &op);
-		
-		void bindShader(const ShaderProgram *shader) override;
 
 		void setVertexFormat(const VertexFormat &format);
 
@@ -83,15 +64,13 @@ namespace llt
 		void setDepthBounds(float min, float max);
 		void setDepthStencilTest(bool enabled);
 
-		void setViewport(const RectF &rect);
-		void setScissor(const RectI &rect);
-
-		void resetViewport(const RenderInfo &info);
-		void resetScissor(const RenderInfo &info);
-
 	private:
-		VkViewport getViewport() const;
-		VkRect2D getScissor() const;
+		VkPipeline m_pipeline;
+
+		VkShaderStageFlagBits m_stage;
+		VkDescriptorSetLayout m_descriptorSetLayout;
+		VkPipelineBindPoint m_bindPoint;
+		uint32_t m_pushConstantsSize;
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
 
@@ -101,28 +80,10 @@ namespace llt
 
 		VkCullModeFlagBits m_cullMode;
 
-		VkViewport m_viewport;
-		VkRect2D m_scissor;
-
 		VertexFormat m_currentVertexFormat;
 
-		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_shaderStages;
-	};
-
-	class ComputePipeline : public Pipeline
-	{
-	public:
-		ComputePipeline();
-		~ComputePipeline() override;
-
-		void create(RenderInfo *renderInfo = nullptr) override;
-
-		void dispatch(CommandBuffer &buffer, int gcX, int gcY, int gcZ);
-
-		void bindShader(const ShaderProgram *shader) override;
-
-	private:
 		VkPipelineShaderStageCreateInfo m_computeShaderStageInfo;
+		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_shaderStages;
 	};
 }
 

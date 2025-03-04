@@ -80,12 +80,9 @@ void GPUBuffer::writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t 
 	region.dstOffset = dstOffset;
 	region.size = length;
 
-	vkCmdCopyBuffer(
-		commandBuffer.getBuffer(),
-		m_buffer,
-		other->m_buffer,
-		1,
-		&region
+	commandBuffer.copyBufferToBuffer(
+		m_buffer, other->m_buffer,
+		1, &region
 	);
 
 	vkutil::endSingleTimeTransferCommands(commandBuffer);
@@ -111,13 +108,10 @@ void GPUBuffer::writeToTexture(CommandBuffer &commandBuffer, const Texture *text
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { texture->getWidth(), texture->getHeight(), 1 };
 
-	vkCmdCopyBufferToImage(
-		commandBuffer.getBuffer(),
-		m_buffer,
-		texture->getImage(),
+	commandBuffer.copyBufferToImage(
+		m_buffer, texture->getImage(),
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&region
+		1, &region
 	);
 }
 

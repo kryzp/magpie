@@ -141,6 +141,7 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 	}
 
 	submesh->build(
+		g_modelVertexFormat,
 		sizeof(ModelVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()

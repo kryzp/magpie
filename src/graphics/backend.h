@@ -73,9 +73,6 @@ namespace llt
 
 		void onWindowResize(int width, int height);
 
-		void setPushConstants(ShaderParameters &params);
-		void resetPushConstants();
-
 		void syncStall() const;
 
 		int getCurrentFrameIdx() const;
@@ -97,8 +94,6 @@ namespace llt
 		Queue m_graphicsQueue;
 		Vector<Queue> m_computeQueues;
 		Vector<Queue> m_transferQueues;
-
-		ShaderParameters::PackedData m_pushConstants;
 
 		Backbuffer *m_backbuffer;
 
