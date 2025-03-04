@@ -4,7 +4,7 @@
 
 using namespace llt;
 
-const ShaderParameters::PackedData& ShaderParameters::getPackedConstants()
+const ShaderParameters::PackedData &ShaderParameters::getPackedConstants()
 {
 	if (m_dirtyConstants) {
 		rebuildPackedConstantData();
@@ -45,7 +45,7 @@ void ShaderProgram::cleanUp()
 	m_shaderModule = VK_NULL_HANDLE;
 }
 
-void ShaderProgram::loadFromSource(const char* source, uint64_t size)
+void ShaderProgram::loadFromSource(const char *source, uint64_t size)
 {
 	// create the shader module from source
 	VkShaderModuleCreateInfo moduleCreateInfo = {};

@@ -14,22 +14,22 @@ namespace llt
 	{
 	public:
 		Optional();
-		Optional(const T& value);
-		Optional(const T& value, bool enabled);
+		Optional(const T &value);
+		Optional(const T &value, bool enabled);
 
-		Optional(const Optional& other);
-		Optional(Optional&& other) noexcept;
+		Optional(const Optional &other);
+		Optional(Optional &&other) noexcept;
 
-		Optional& operator = (const Optional& other);
-		Optional& operator = (Optional&& other) noexcept;
+		Optional &operator = (const Optional &other);
+		Optional &operator = (Optional &&other) noexcept;
 
 		~Optional();
 
-		T& valueOr(T& other);
-		const T& valueOr(const T& other) const;
+		T &valueOr(T &other);
+		const T &valueOr(const T &other) const;
 
-		T& value();
-		const T& value() const;
+		T &value();
+		const T &value() const;
 
 		constexpr bool hasValue() const;
 
@@ -37,8 +37,8 @@ namespace llt
 
 		explicit operator bool () const;
 
-		bool operator == (const Optional& other) const;
-		bool operator != (const Optional& other) const;
+		bool operator == (const Optional &other) const;
+		bool operator != (const Optional &other) const;
 
 	private:
 		T m_value;
@@ -53,28 +53,28 @@ namespace llt
 	}
 
 	template <typename T>
-	Optional<T>::Optional(const T& value)
+	Optional<T>::Optional(const T &value)
 		: m_value(value)
 		, m_enabled(true)
 	{
 	}
 
 	template <typename T>
-	Optional<T>::Optional(const T& value, bool enabled)
+	Optional<T>::Optional(const T &value, bool enabled)
 		: m_value(value)
 		, m_enabled(enabled)
 	{
 	}
 
 	template <typename T>
-	Optional<T>::Optional(const Optional& other)
+	Optional<T>::Optional(const Optional &other)
 		: m_value(other.m_value)
 		, m_enabled(other.m_enabled)
 	{
 	}
 
 	template <typename T>
-	Optional<T>::Optional(Optional&& other) noexcept
+	Optional<T>::Optional(Optional &&other) noexcept
 		: m_value(std::move(other.m_value))
 		, m_enabled(std::move(other.m_enabled))
 	{
@@ -108,7 +108,7 @@ namespace llt
 	}
 
 	template <typename T>
-	T& Optional<T>::valueOr(T& other)
+	T &Optional<T>::valueOr(T &other)
 	{
 		if (m_enabled) {
 			return m_value;
@@ -118,7 +118,7 @@ namespace llt
 	}
 
 	template <typename T>
-	const T& Optional<T>::valueOr(const T& other) const
+	const T &Optional<T>::valueOr(const T &other) const
 	{
 		if (m_enabled) {
 			return m_value;
@@ -128,13 +128,13 @@ namespace llt
 	}
 
 	template <typename T>
-	T& Optional<T>::value()
+	T &Optional<T>::value()
 	{
 		return m_value;
 	}
 
 	template <typename T>
-	const T& Optional<T>::value() const
+	const T &Optional<T>::value() const
 	{
 		return m_value;
 	}
@@ -158,13 +158,13 @@ namespace llt
 	}
 
 	template <typename T>
-	bool Optional<T>::operator == (const Optional& other) const
+	bool Optional<T>::operator == (const Optional &other) const
 	{
 		return this->m_enabled && other.m_enabled && this->m_value == other.m_value;
 	}
 
 	template <typename T>
-	bool Optional<T>::operator != (const Optional& other) const
+	bool Optional<T>::operator != (const Optional &other) const
 	{
 		return !((*this) == other);
 	}

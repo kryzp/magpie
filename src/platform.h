@@ -18,7 +18,7 @@ namespace llt
 	class Platform
 	{
 	public:
-		Platform(const Config& config);
+		Platform(const Config &config);
 		~Platform();
 
 		void pollEvents();
@@ -26,7 +26,7 @@ namespace llt
 		void imGuiNewFrame();
 
 		String getWindowName() const;
-		void setWindowName(const String& name);
+		void setWindowName(const String &name);
 
 		glm::ivec2 getWindowPosition() const;
 		void setWindowPosition(const glm::ivec2& position);
@@ -65,33 +65,33 @@ namespace llt
 		uint64_t getPerformanceCounter() const;
 		uint64_t getPerformanceFrequency() const;
 
-		void* streamFromFile(const char* filepath, const char* mode);
-		void* streamFromMemory(void* memory, uint64_t size);
-		void* streamFromConstMemory(const void* memory, uint64_t size);
+		void *streamFromFile(const char *filepath, const char *mode);
+		void *streamFromMemory(void *memory, uint64_t size);
+		void *streamFromConstMemory(const void *memory, uint64_t size);
 
-		int64_t streamRead(void* stream, void* dst, uint64_t size);
-		int64_t streamWrite(void* stream, const void* src, uint64_t size);
-		int64_t streamSeek(void* stream, int64_t offset);
-		int64_t streamSize(void* stream);
-		int64_t streamPosition(void* stream);
+		int64_t streamRead(void *stream, void *dst, uint64_t size);
+		int64_t streamWrite(void *stream, const void *src, uint64_t size);
+		int64_t streamSeek(void *stream, int64_t offset);
+		int64_t streamSize(void *stream);
+		int64_t streamPosition(void *stream);
 
-		void streamClose(void* stream);
+		void streamClose(void *stream);
 
-		const char* const* vkGetInstanceExtensions(uint32_t* count);
-		bool vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface);
+		const char *const *vkGetInstanceExtensions(uint32_t *count);
+		bool vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface);
 
 		void initImGui();
 
 	private:
 		void closeAllGamepads();
 
-		SDL_Window* m_window;
+		SDL_Window *m_window;
 
 		Array<SDL_Gamepad*, MAX_GAMEPADS> m_gamepads;
 		int m_gamepadCount;
 	};
 
-	extern Platform* g_platform;
+	extern Platform *g_platform;
 }
 
 #endif // PLATFORM_BACKEND_H_

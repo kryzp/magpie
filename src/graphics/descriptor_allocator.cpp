@@ -10,7 +10,7 @@ void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags fl
 {
 	Vector<VkDescriptorPoolSize> poolSizes;
 
-	for (auto& ratio : sizes)
+	for (auto &ratio : sizes)
 	{
 		poolSizes.emplaceBack(
 			ratio.first,
@@ -68,7 +68,7 @@ VkDescriptorPool DescriptorPoolStatic::getPool() const
 
 // ===================================================================================== //
 
-void DescriptorPoolDynamic::init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes)
+void DescriptorPoolDynamic::init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio> &sizes)
 {
 	m_sizes = sizes;
 
@@ -110,7 +110,7 @@ void DescriptorPoolDynamic::clear()
 	m_usedPools.clear();
 }
 
-VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout& layout, void* pNext)
+VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout &layout, void *pNext)
 {
 	VkDescriptorPool allocatedPool = fetchPool();
 
@@ -160,11 +160,11 @@ VkDescriptorPool DescriptorPoolDynamic::fetchPool()
 	return newPool;
 }
 
-VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t setCount, const Vector<DescriptorPoolSizeRatio>& sizes)
+VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t setCount, const Vector<DescriptorPoolSizeRatio> &sizes)
 {
 	Vector<VkDescriptorPoolSize> poolSizes;
 
-	for (auto& ratio : sizes)
+	for (auto &ratio : sizes)
 	{
 		poolSizes.emplaceBack(
 			ratio.first,

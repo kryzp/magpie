@@ -7,7 +7,7 @@
 #include "../third_party/volk.h"
 #include "../third_party/imgui/imgui_impl_sdl3.h"
 
-llt::VulkanBackend* llt::g_vulkanBackend = nullptr;
+llt::VulkanBackend *llt::g_vulkanBackend = nullptr;
 
 using namespace llt;
 
@@ -32,11 +32,11 @@ static bool debugHasValidationLayerSupport()
 	for (int i = 0; i < LLT_ARRAY_LENGTH(vkutil::VALIDATION_LAYERS); i++)
 	{
 		bool hasLayer = false;
-		const char* layerName0 = vkutil::VALIDATION_LAYERS[i];
+		const char *layerName0 = vkutil::VALIDATION_LAYERS[i];
 
 		for (int j = 0; j < layerCount; j++)
 		{
-			const char* layerName1 = availableLayers[j].layerName;
+			const char *layerName1 = availableLayers[j].layerName;
 
 			if (cstr::compare(layerName0, layerName1) == 0) {
 				hasLayer = true;
@@ -59,8 +59,8 @@ static bool debugHasValidationLayerSupport()
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData
+	const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+	void *pUserData
 )
 {
 	if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
@@ -75,9 +75,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
  */
 static VkResult debugCreateDebugUtilsMessengerExt(
 	VkInstance instance,
-	const VkDebugUtilsMessengerCreateInfoEXT* createInfo,
-	const VkAllocationCallbacks* allocator,
-	VkDebugUtilsMessengerEXT* debugMessenger
+	const VkDebugUtilsMessengerCreateInfoEXT *createInfo,
+	const VkAllocationCallbacks *allocator,
+	VkDebugUtilsMessengerEXT *debugMessenger
 )
 {
 	auto fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -95,7 +95,7 @@ static VkResult debugCreateDebugUtilsMessengerExt(
 static void debugDestroyDebugUtilsMessengerExt(
 	VkInstance instance,
 	VkDebugUtilsMessengerEXT messenger,
-	const VkAllocationCallbacks* allocator
+	const VkAllocationCallbacks *allocator
 )
 {
 	auto fn = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -108,7 +108,7 @@ static void debugDestroyDebugUtilsMessengerExt(
 /*
  * Set all of the settings for how the debugging messenger should output information.
  */
-static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerCreateInfoEXT* info)
+static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerCreateInfoEXT *info)
 {
 	info->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	info->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -125,7 +125,7 @@ static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerC
 static Vector<const char*> getInstanceExtensions()
 {
 	uint32_t extCount = 0;
-	const char* const* names = g_platform->vkGetInstanceExtensions(&extCount);
+	const char *const *names = g_platform->vkGetInstanceExtensions(&extCount);
 
 	if (!names) {
 		LLT_ERROR("Unable to get instance extension count.");
@@ -152,7 +152,7 @@ static Vector<const char*> getInstanceExtensions()
 	return extensions;
 }
 
-VulkanBackend::VulkanBackend(const Config& config)
+VulkanBackend::VulkanBackend(const Config &config)
 	: m_instance()
 	, m_device()
 	, m_physicalData()
@@ -168,7 +168,6 @@ VulkanBackend::VulkanBackend(const Config& config)
 	, m_pipelineProcessCache()
 	, m_backbuffer()
 	, m_currentFrameIdx()
-	, m_imGuiColourFormat(VK_FORMAT_B8G8R8A8_UNORM)
 #if LLT_DEBUG
 	, m_debugMessenger()
 #endif // LLT_DEBUG
@@ -201,7 +200,7 @@ VulkanBackend::VulkanBackend(const Config& config)
 
 		createInfo.enabledLayerCount = LLT_ARRAY_LENGTH(vkutil::VALIDATION_LAYERS);
 		createInfo.ppEnabledLayerNames = vkutil::VALIDATION_LAYERS;
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
 
 		g_debugEnableValidationLayers = true;
 	}
@@ -391,7 +390,7 @@ void VulkanBackend::createLogicalDevice()
 		.pQueuePriorities = &QUEUE_PRIORITY
 	});
 
-	for (auto& computeQueue : m_computeQueues)
+	for (auto &computeQueue : m_computeQueues)
 	{
 		if (!computeQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -405,7 +404,7 @@ void VulkanBackend::createLogicalDevice()
 		});
 	}
 
-	for (auto& transferQueue : m_transferQueues)
+	for (auto &transferQueue : m_transferQueues)
 	{
 		if (!transferQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -478,7 +477,7 @@ void VulkanBackend::createLogicalDevice()
 	vkGetDeviceQueue(m_device, m_graphicsQueue.getFamilyIdx().value(), 0, &tmpQueue);
 	m_graphicsQueue.init(tmpQueue);
 
-	for (auto& computeQueue : m_computeQueues)
+	for (auto &computeQueue : m_computeQueues)
 	{
 		if (!computeQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -488,7 +487,7 @@ void VulkanBackend::createLogicalDevice()
 		computeQueue.init(tmpQueue);
 	}
 
-	for (auto& transferQueue : m_transferQueues)
+	for (auto &transferQueue : m_transferQueues)
 	{
 		if (!transferQueue.getFamilyIdx().hasValue()) {
 			continue;
@@ -628,7 +627,7 @@ void VulkanBackend::createCommandBuffers()
 
 		for (int j = 0; j < m_computeQueues.size(); j++)
 		{
-			auto& computeQueue = m_computeQueues[j];
+			auto &computeQueue = m_computeQueues[j];
 
 			commandBufferAllocateInfo.commandPool = computeQueue.getFrame(i).commandPool;
 
@@ -640,7 +639,7 @@ void VulkanBackend::createCommandBuffers()
 
 		for (int j = 0; j < m_transferQueues.size(); j++)
 		{
-			auto& transferQueue = m_transferQueues[j];
+			auto &transferQueue = m_transferQueues[j];
 
 			commandBufferAllocateInfo.commandPool = transferQueue.getFrame(i).commandPool;
 
@@ -654,9 +653,9 @@ void VulkanBackend::createCommandBuffers()
 	LLT_LOG("Created command buffer!");
 }
 
-Backbuffer* VulkanBackend::createBackbuffer()
+Backbuffer *VulkanBackend::createBackbuffer()
 {
-	Backbuffer* backbuffer = new Backbuffer();
+	Backbuffer *backbuffer = new Backbuffer();
 	backbuffer->createSurface();
 
 	m_backbuffer = backbuffer;
@@ -803,7 +802,7 @@ void VulkanBackend::onWindowResize(int width, int height)
 	m_backbuffer->onWindowResize(width, height);
 }
 
-void VulkanBackend::setPushConstants(ShaderParameters& params)
+void VulkanBackend::setPushConstants(ShaderParameters &params)
 {
 	m_pushConstants = params.getPackedConstants();
 }
@@ -890,12 +889,12 @@ ImGui_ImplVulkan_InitInfo VulkanBackend::getImGuiInitInfo() const
 	info.UseDynamicRendering = true;
 	info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_imGuiColourFormat;
+	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_swapChainImageFormat;
 
 	return info;
 }
 
 VkFormat VulkanBackend::getImGuiAttachmentFormat() const
 {
-	return m_imGuiColourFormat;
+	return m_swapChainImageFormat;
 }

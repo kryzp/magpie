@@ -13,14 +13,14 @@ Stream::~Stream()
 	close(); // close automatically on destroy.
 }
 
-void Stream::read(void* buffer, uint64_t length) const
+void Stream::read(void *buffer, uint64_t length) const
 {
 	if (p_stream) {
 		g_platform->streamRead(p_stream, buffer, length);
 	}
 }
 
-void Stream::write(void* data, uint64_t length) const
+void Stream::write(void *data, uint64_t length) const
 {
 	if (p_stream) {
 		g_platform->streamWrite(p_stream, data, length);
@@ -62,12 +62,12 @@ int64_t Stream::size() const
 	return -1; // stream isnt open, return -1
 }
 
-void* Stream::getStream()
+void *Stream::getStream()
 {
 	return p_stream;
 }
 
-const void* Stream::getStream() const
+const void *Stream::getStream() const
 {
 	return p_stream;
 }

@@ -4,7 +4,7 @@
 
 #include "../math/colour.h"
 
-llt::RenderTargetMgr* llt::g_renderTargetManager = nullptr;
+llt::RenderTargetMgr *llt::g_renderTargetManager = nullptr;
 
 using namespace llt;
 
@@ -21,7 +21,7 @@ RenderTargetMgr::~RenderTargetMgr()
 	m_targets.clear();
 }
 
-RenderTarget* RenderTargetMgr::get(const String& name)
+RenderTarget *RenderTargetMgr::get(const String &name)
 {
 	if (m_targets.contains(name)) {
 		return m_targets.get(name);
@@ -30,18 +30,18 @@ RenderTarget* RenderTargetMgr::get(const String& name)
 	return nullptr;
 }
 
-RenderTarget* RenderTargetMgr::createTarget(const String& name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples)
+RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples)
 {
 	if (m_targets.contains(name)) {
 		return m_targets.get(name);
 	}
 
-	RenderTarget* result = new RenderTarget(width, height);
+	RenderTarget *result = new RenderTarget(width, height);
 	result->setMSAA(samples);
 
 	for (int i = 0; i < attachments.size(); i++)
 	{
-		Texture* texture = new Texture();
+		Texture *texture = new Texture();
 
 		texture->setSize(width, height);
 		texture->setProperties(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);

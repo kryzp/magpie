@@ -12,8 +12,8 @@ namespace llt
 	{
 	public:
 		MemoryStream();
-		MemoryStream(void* memory, uint64_t length);
-		MemoryStream& open(void* memory, uint64_t length);
+		MemoryStream(void *memory, uint64_t length);
+		MemoryStream &open(void *memory, uint64_t length);
 	};
 
 	/**
@@ -23,8 +23,8 @@ namespace llt
 	{
 	public:
 		ConstMemoryStream();
-		ConstMemoryStream(const void* memory, uint64_t length);
-		ConstMemoryStream& open(const void* memory, uint64_t length);
+		ConstMemoryStream(const void *memory, uint64_t length);
+		ConstMemoryStream &open(const void *memory, uint64_t length);
 	};
 }
 

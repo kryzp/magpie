@@ -33,7 +33,7 @@ namespace llt
 
 		void cleanUp();
 
-		void fromImage(const Image& image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples);
+		void fromImage(const Image &image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples);
 
 		void setSize(uint32_t width, uint32_t height);
 		void setProperties(VkFormat format, VkImageTiling tiling, VkImageViewType type);
@@ -49,13 +49,13 @@ namespace llt
 		VkImageMemoryBarrier getBarrier() const;
 		VkImageMemoryBarrier getBarrier(VkImageLayout newLayout) const;
 		
-		void transitionLayout(CommandBuffer& buffer, VkImageLayout newLayout);
+		void transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout);
 		void transitionLayoutSingle(VkImageLayout newLayout);
 
 		void generateMipmaps();
 
-		void setParent(RenderTarget* getParent);
-		const RenderTarget* getParent() const;
+		void setParent(RenderTarget *getParent);
+		const RenderTarget *getParent() const;
 		bool hasParent() const;
 
 		bool isUnorderedAccessView() const;
@@ -85,7 +85,7 @@ namespace llt
 		VkImageLayout getImageLayout() const;
 
 	private:
-		RenderTarget* m_parent;
+		RenderTarget *m_parent;
 
 		VkImage m_image;
 		VkImageView m_standardView;
@@ -119,7 +119,7 @@ namespace llt
 		TextureBatch();
 		~TextureBatch();
 
-		void addTexture(Texture* texture);
+		void addTexture(Texture *texture);
 
 		void pushPipelineBarriers(VkPipelineStageFlags dst);
 		void popPipelineBarriers();
@@ -132,8 +132,8 @@ namespace llt
 
 	struct BoundTexture
 	{
-		Texture* texture;
-		TextureSampler* sampler;
+		Texture *texture;
+		TextureSampler *sampler;
 
 		VkDescriptorImageInfo getImageInfo() const
 		{

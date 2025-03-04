@@ -22,13 +22,13 @@ namespace llt
 		void create(uint64_t size);
 		void cleanUp();
 
-		void readDataFromMe(void* dst, uint64_t length, uint64_t offset) const;
-		void writeDataToMe(const void* src, uint64_t length, uint64_t offset) const;
+		void readDataFromMe(void *dst, uint64_t length, uint64_t offset) const;
+		void writeDataToMe(const void *src, uint64_t length, uint64_t offset) const;
 
-		void writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
+		void writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
 
-		void writeToTextureSingle(const Texture* texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
-		void writeToTexture(CommandBuffer& commandBuffer, const Texture* texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
+		void writeToTextureSingle(const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
+		void writeToTexture(CommandBuffer &commandBuffer, const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 
 		VkBuffer getBuffer() const;
 

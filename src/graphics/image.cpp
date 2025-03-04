@@ -9,9 +9,9 @@
 
 using namespace llt;
 
-static void _stbi_write(void* context, void* data, int size)
+static void _stbi_write(void *context, void *data, int size)
 {
-	((Stream*)context)->write((char*)data, size);
+	((Stream *)context)->write((char *)data, size);
 }
 
 Image::Image()
@@ -24,12 +24,12 @@ Image::Image()
 {
 }
 
-Image::Image(const String& path)
+Image::Image(const String &path)
 	: Image(path.cstr())
 {
 }
 
-Image::Image(const char* path)
+Image::Image(const char *path)
 	: Image()
 {
 	load(path);
@@ -50,12 +50,12 @@ Image::~Image()
 	free();
 }
 
-void Image::load(const String& path)
+void Image::load(const String &path)
 {
 	load(path.cstr());
 }
 
-void Image::load(const char* path)
+void Image::load(const char *path)
 {
 	int w, h, channels;
 
@@ -89,18 +89,18 @@ void Image::free()
 	if (m_stbiManaged) {
 		stbi_image_free(m_pixels);
 	} else {
-		delete[] (Colour*)m_pixels;
+		delete[] (Colour *)m_pixels;
 	}
 
 	m_pixels = nullptr;
 }
 
-void Image::paint(const BrushFn& brush)
+void Image::paint(const BrushFn &brush)
 {
 	paint(RectI(0, 0, m_width, m_height), brush);
 }
 
-void Image::paint(const RectI& rect, const BrushFn& brush)
+void Image::paint(const RectI &rect, const BrushFn &brush)
 {
 	for (int y = 0; y < rect.h; y++)
 	{
@@ -111,33 +111,33 @@ void Image::paint(const RectI& rect, const BrushFn& brush)
 
 			int idx = (py * m_width) + px;
 
-			((Colour*)m_pixels)[idx] = brush(x, y);
+			((Colour *)m_pixels)[idx] = brush(x, y);
 		}
 	}
 }
 
 Colour Image::getPixelAt(uint32_t x, uint32_t y) const
 {
-	return ((Colour*)m_pixels)[(y * m_width) + x];
+	return ((Colour *)m_pixels)[(y * m_width) + x];
 }
 
-void Image::setPixels(const Colour* data)
+void Image::setPixels(const Colour *data)
 {
 	mem::copy(m_pixels, data, sizeof(Colour) * getPixelCount());
 }
 
-void Image::setPixels(uint64_t dstFirst, const Colour* data, uint64_t srcFirst, uint64_t count)
+void Image::setPixels(uint64_t dstFirst, const Colour *data, uint64_t srcFirst, uint64_t count)
 {
-	mem::copy((Colour*)m_pixels + sizeof(Colour) * dstFirst, data + sizeof(Colour) * srcFirst, sizeof(Colour) * count);
+	mem::copy((Colour *)m_pixels + sizeof(Colour) * dstFirst, data + sizeof(Colour) * srcFirst, sizeof(Colour) * count);
 }
 
-bool Image::saveToPng(const char* file) const
+bool Image::saveToPng(const char *file) const
 {
 	FileStream fs(file, "wb");
 	return saveToPng(fs);
 }
 
-bool Image::saveToPng(Stream& stream) const
+bool Image::saveToPng(Stream &stream) const
 {
 	LLT_ASSERT(m_pixels, "Pixel data cannot be null.");
 	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
@@ -154,13 +154,13 @@ bool Image::saveToPng(Stream& stream) const
 	return false;
 }
 
-bool Image::saveToJpg(const char* file, int quality) const
+bool Image::saveToJpg(const char *file, int quality) const
 {
 	FileStream fs(file, "wb");
 	return saveToJpg(fs, quality);
 }
 
-bool Image::saveToJpg(Stream& stream, int quality) const
+bool Image::saveToJpg(Stream &stream, int quality) const
 {
 	LLT_ASSERT(m_pixels, "Pixel data cannot be null.");
 	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
@@ -182,12 +182,12 @@ bool Image::saveToJpg(Stream& stream, int quality) const
 	return false;
 }
 
-void* Image::getData()
+void *Image::getData()
 {
 	return m_pixels;
 }
 
-const void* Image::getData() const
+const void *Image::getData() const
 {
 	return m_pixels;
 }

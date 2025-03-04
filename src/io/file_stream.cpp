@@ -9,24 +9,24 @@ FileStream::FileStream()
 {
 }
 
-FileStream::FileStream(const char* filename, const char* mode)
+FileStream::FileStream(const char *filename, const char *mode)
 	: Stream()
 {
 	open(filename, mode);
 }
 
-FileStream& FileStream::open(const String& filename, const char* mode)
+FileStream &FileStream::open(const String &filename, const char *mode)
 {
 	return open(filename.cstr(), mode);
 }
 
-FileStream& FileStream::open(const char* filename, const char* mode)
+FileStream &FileStream::open(const char *filename, const char *mode)
 {
 	p_stream = g_platform->streamFromFile(filename, mode);
 	return *this;
 }
 
-bool FileStream::getLine(String& str, int32_t& pointer)
+bool FileStream::getLine(String &str, int32_t &pointer)
 {
 	// clear the current line string
 	str.clear();

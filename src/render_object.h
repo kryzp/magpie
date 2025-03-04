@@ -17,7 +17,7 @@ namespace llt
 		const glm::mat4& getPrevMatrix() const;
 
 		Transform transform;
-		Mesh* mesh;
+		Mesh *mesh;
 
 	private:
 		glm::mat4 m_prevMatrix;

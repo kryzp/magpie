@@ -13,7 +13,7 @@ void DescriptorLayoutCache::cleanUp()
 	m_layoutCache.clear();
 }
 
-VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetLayoutCreateInfo& layoutCreateInfo)
+VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetLayoutCreateInfo &layoutCreateInfo)
 {
 	uint64_t createdDescriptorHash = 0;
 

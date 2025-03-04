@@ -28,11 +28,11 @@ namespace llt
 		{
 		}
 
-		static const Rect& zero();
-		static const Rect& one();
+		static const Rect &zero();
+		static const Rect &one();
 
 		bool contains(const glm::vec<2, T>& other) const;
-		bool intersects(const Rect& other) const;
+		bool intersects(const Rect &other) const;
 
 		glm::vec<2, T> position() const;
 		glm::vec<2, T> size() const;
@@ -50,20 +50,20 @@ namespace llt
 		/*
 		 * Operator overloading...
 		 */
-		bool operator == (const Rect& other) const;
-		bool operator != (const Rect& other) const;
+		bool operator == (const Rect &other) const;
+		bool operator != (const Rect &other) const;
 
-		Rect operator + (const Rect& other) const;
-		Rect operator - (const Rect& other) const;
-		Rect operator * (const Rect& other) const;
-		Rect operator / (const Rect& other) const;
+		Rect operator + (const Rect &other) const;
+		Rect operator - (const Rect &other) const;
+		Rect operator * (const Rect &other) const;
+		Rect operator / (const Rect &other) const;
 		
 		Rect operator - () const;
 
-		Rect& operator += (const Rect& other);
-		Rect& operator -= (const Rect& other);
-		Rect& operator *= (const Rect& other);
-		Rect& operator /= (const Rect& other);
+		Rect &operator += (const Rect &other);
+		Rect &operator -= (const Rect &other);
+		Rect &operator *= (const Rect &other);
+		Rect &operator /= (const Rect &other);
 	};
 
 	using RectF = Rect<float>;
@@ -138,20 +138,20 @@ namespace llt
 		);
 	}
 
-	template <typename T> bool Rect<T>::operator == (const Rect& other) const { return this->x == other.x && this->y == other.y && this->w == other.w && this->h == other.y; }
-	template <typename T> bool Rect<T>::operator != (const Rect& other) const { return !(*this == other); }
+	template <typename T> bool Rect<T>::operator == (const Rect &other) const { return this->x == other.x && this->y == other.y && this->w == other.w && this->h == other.y; }
+	template <typename T> bool Rect<T>::operator != (const Rect &other) const { return !(*this == other); }
 
-	template <typename T> Rect<T> Rect<T>::operator + (const Rect& other) const { return Rect(this->x + other.x, this->y + other.y, this->w + other.w, this->h + other.h); }
-	template <typename T> Rect<T> Rect<T>::operator - (const Rect& other) const { return Rect(this->x - other.x, this->y - other.y, this->w - other.w, this->h - other.h); }
-	template <typename T> Rect<T> Rect<T>::operator * (const Rect& other) const { return Rect(this->x * other.x, this->y * other.y, this->w * other.w, this->h * other.h); }
-	template <typename T> Rect<T> Rect<T>::operator / (const Rect& other) const { return Rect(this->x / other.x, this->y / other.y, this->w / other.w, this->h / other.h); }
+	template <typename T> Rect<T> Rect<T>::operator + (const Rect &other) const { return Rect(this->x + other.x, this->y + other.y, this->w + other.w, this->h + other.h); }
+	template <typename T> Rect<T> Rect<T>::operator - (const Rect &other) const { return Rect(this->x - other.x, this->y - other.y, this->w - other.w, this->h - other.h); }
+	template <typename T> Rect<T> Rect<T>::operator * (const Rect &other) const { return Rect(this->x * other.x, this->y * other.y, this->w * other.w, this->h * other.h); }
+	template <typename T> Rect<T> Rect<T>::operator / (const Rect &other) const { return Rect(this->x / other.x, this->y / other.y, this->w / other.w, this->h / other.h); }
 
 	template <typename T> Rect<T> Rect<T>::operator - () const { return Rect(-this->x, -this->y, -this->w, -this->h); }
 
-	template <typename T> Rect<T>& Rect<T>::operator += (const Rect& other) { this->x += other.x; this->y += other.y; this->w += other.w; this->h += other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator -= (const Rect& other) { this->x -= other.x; this->y -= other.y; this->w -= other.w; this->h -= other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator *= (const Rect& other) { this->x *= other.x; this->y *= other.y; this->w *= other.w; this->h *= other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator /= (const Rect& other) { this->x /= other.x; this->y /= other.y; this->w /= other.w; this->h /= other.h; return *this; }
+	template <typename T> Rect<T>& Rect<T>::operator += (const Rect &other) { this->x += other.x; this->y += other.y; this->w += other.w; this->h += other.h; return *this; }
+	template <typename T> Rect<T>& Rect<T>::operator -= (const Rect &other) { this->x -= other.x; this->y -= other.y; this->w -= other.w; this->h -= other.h; return *this; }
+	template <typename T> Rect<T>& Rect<T>::operator *= (const Rect &other) { this->x *= other.x; this->y *= other.y; this->w *= other.w; this->h *= other.h; return *this; }
+	template <typename T> Rect<T>& Rect<T>::operator /= (const Rect &other) { this->x /= other.x; this->y /= other.y; this->w /= other.w; this->h /= other.h; return *this; }
 
 	template <typename T> glm::vec<2, T> Rect<T>::position() const { return glm::vec<2, T>(x, y); }
 	template <typename T> glm::vec<2, T> Rect<T>::size()     const { return glm::vec<2, T>(w, h); }

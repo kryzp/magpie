@@ -32,22 +32,22 @@ namespace llt
 
 		virtual void cleanUp() = 0;
 
-		const RenderInfo& getRenderInfo() const;
+		const RenderInfo &getRenderInfo() const;
 
-		virtual void beginRendering(CommandBuffer& buffer) = 0;
-		virtual void endRendering(CommandBuffer& buffer) = 0;
+		virtual void beginRendering(CommandBuffer &buffer) = 0;
+		virtual void endRendering(CommandBuffer &buffer) = 0;
 
-		virtual Texture* getAttachment(int idx) = 0;
-		virtual Texture* getDepthAttachment() = 0;
+		virtual Texture *getAttachment(int idx) = 0;
+		virtual Texture *getDepthAttachment() = 0;
 
 		virtual VkSampleCountFlagBits getMSAA() const = 0;
 
-		virtual void setClearColour(int idx, const Colour& colour) = 0;
+		virtual void setClearColour(int idx, const Colour &colour) = 0;
 		virtual void setDepthStencilClear(float depth, uint32_t stencil) = 0;
 
 		uint64_t getAttachmentCount() const;
 
-		void setClearColours(const Colour& colour);
+		void setClearColours(const Colour &colour);
 
 		void toggleClear(bool clear);
 		void toggleClear(int idx, bool clear);

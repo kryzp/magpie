@@ -28,22 +28,21 @@ namespace llt
 		void init();
 		void cleanUp();
 
-		void render(const Camera& camera, float deltaTime);
+		void render(const Camera &camera, float deltaTime);
 
 		Vector<RenderObject>::Iterator createRenderObject();
 
 	private:
-		void loadTextures();
 		void createQuadMesh();
 		void createSkybox();
 		void addRenderObjects();
 		void createPostProcessResources();
 
-		void renderSkybox(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target);
-		void renderObjects(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target);
-		void renderParticles(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target, float deltaTime);
+		void renderSkybox(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target);
+		void renderObjects(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target);
+		void renderParticles(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target, float deltaTime);
 		void renderPostProcess();
-		void renderImGui(CommandBuffer& buffer);
+		void renderImGui(CommandBuffer &buffer);
 
 		void aggregateSubMeshes(Vector<SubMesh*>& list);
 		void sortRenderListByMaterialHash(int lo, int hi);
@@ -51,16 +50,16 @@ namespace llt
 		SubMesh m_quadMesh;
 		SubMesh m_skyboxMesh;
 
-		RenderTarget* m_gBuffer;
+		RenderTarget *m_gBuffer;
 
 		ShaderParameters m_pushConstants;
 
 		Vector<RenderObject> m_renderObjects;
 		Vector<SubMesh*> m_renderList;
 
-		Mesh* m_blockMesh;
+		Mesh *m_blockMesh;
 
-		Material* m_skyboxMaterial;
+		Material *m_skyboxMaterial;
 
 //		GraphicsPipeline m_postProcessPipeline;
 //		VkDescriptorSet m_postProcessDescriptorSet;

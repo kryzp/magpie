@@ -17,7 +17,7 @@ SubMesh::~SubMesh()
 {
 }
 
-void SubMesh::build(uint64_t vertexSize, void* pVertices, uint32_t nVertices, uint16_t* pIndices, uint32_t nIndices)
+void SubMesh::build(uint64_t vertexSize, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices)
 {
 	m_nVertices = nVertices;
 	m_nIndices = nIndices;
@@ -38,37 +38,37 @@ void SubMesh::build(uint64_t vertexSize, void* pVertices, uint32_t nVertices, ui
 	g_gpuBufferManager->meshStagingBuffer->writeToBuffer(m_indexBuffer, indexBufferSize, vertexBufferSize, 0);
 }
 
-Mesh* SubMesh::getParent()
+Mesh *SubMesh::getParent()
 {
 	return m_parent;
 }
 
-const Mesh* SubMesh::getParent() const
+const Mesh *SubMesh::getParent() const
 {
 	return m_parent;
 }
 
-void SubMesh::setMaterial(Material* material)
+void SubMesh::setMaterial(Material *material)
 {
 	m_material = material;
 }
 
-Material* SubMesh::getMaterial()
+Material *SubMesh::getMaterial()
 {
 	return m_material;
 }
 
-const Material* SubMesh::getMaterial() const
+const Material *SubMesh::getMaterial() const
 {
 	return m_material;
 }
 
-GPUBuffer* SubMesh::getVertexBuffer() const
+GPUBuffer *SubMesh::getVertexBuffer() const
 {
 	return m_vertexBuffer;
 }
 
-GPUBuffer* SubMesh::getIndexBuffer() const
+GPUBuffer *SubMesh::getIndexBuffer() const
 {
 	return m_indexBuffer;
 }

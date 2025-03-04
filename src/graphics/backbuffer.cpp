@@ -82,7 +82,7 @@ void Backbuffer::createDepthResources()
     LLT_LOG("Created depth resources!");
 }
 
-void Backbuffer::beginRendering(CommandBuffer& buffer)
+void Backbuffer::beginRendering(CommandBuffer &buffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -115,7 +115,7 @@ void Backbuffer::beginRendering(CommandBuffer& buffer)
 	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView();
 }
 
-void Backbuffer::endRendering(CommandBuffer& buffer)
+void Backbuffer::endRendering(CommandBuffer &buffer)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -176,7 +176,7 @@ void Backbuffer::cleanUpSwapChain()
 	m_imageAvailableSemaphores.clear();
 
 	// destroy all image views for our swapchain
-    for (auto& view : m_swapChainImageViews) {
+    for (auto &view : m_swapChainImageViews) {
         vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
     }
 
@@ -217,12 +217,12 @@ void Backbuffer::swapBuffers()
     }
 }
 
-Texture* Backbuffer::getAttachment(int idx)
+Texture *Backbuffer::getAttachment(int idx)
 {
 	return &m_colour;
 }
 
-Texture* Backbuffer::getDepthAttachment()
+Texture *Backbuffer::getDepthAttachment()
 {
 	return &m_depth;
 }
@@ -394,7 +394,7 @@ void Backbuffer::rebuildSwapChain()
 	createSwapChain();
 }
 
-void Backbuffer::setClearColour(int idx, const Colour& colour)
+void Backbuffer::setClearColour(int idx, const Colour &colour)
 {
 	VkClearValue value = {};
 	colour.getPremultiplied().exportToFloat(value.color.float32);
@@ -423,12 +423,12 @@ VkSampleCountFlagBits Backbuffer::getMSAA() const
 	return g_vulkanBackend->m_maxMsaaSamples;
 }
 
-const VkSemaphore& Backbuffer::getRenderFinishedSemaphore() const
+const VkSemaphore &Backbuffer::getRenderFinishedSemaphore() const
 {
 	return m_renderFinishedSemaphores[g_vulkanBackend->getCurrentFrameIdx()];
 }
 
-const VkSemaphore& Backbuffer::getImageAvailableSemaphore() const
+const VkSemaphore &Backbuffer::getImageAvailableSemaphore() const
 {
 	return m_imageAvailableSemaphores[g_vulkanBackend->getCurrentFrameIdx()];
 }

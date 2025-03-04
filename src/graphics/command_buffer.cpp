@@ -35,7 +35,7 @@ CommandBuffer::~CommandBuffer()
 
 void CommandBuffer::submit(VkSemaphore computeSemaphore)
 {
-	cauto& currentFrame = g_vulkanBackend->m_graphicsQueue.getCurrentFrame();
+	cauto &currentFrame = g_vulkanBackend->m_graphicsQueue.getCurrentFrame();
 
 	LLT_VK_CHECK(
 		vkEndCommandBuffer(m_buffer),
@@ -52,11 +52,11 @@ void CommandBuffer::submit(VkSemaphore computeSemaphore)
 	{
 		if (m_target->getType() == RENDER_TARGET_TYPE_BACKBUFFER)
 		{
-			blitSemaphore = ((Backbuffer*)m_target)->getImageAvailableSemaphore();
+			blitSemaphore = ((Backbuffer *)m_target)->getImageAvailableSemaphore();
 			waitSemaphoreCount++;
 
 			signalSemaphoreCount++;
-			queueFinishedSemaphores[0] = ((Backbuffer*)m_target)->getRenderFinishedSemaphore();
+			queueFinishedSemaphores[0] = ((Backbuffer *)m_target)->getRenderFinishedSemaphore();
 		}
 	}
 
@@ -89,14 +89,14 @@ void CommandBuffer::submit(VkSemaphore computeSemaphore)
 	m_target = nullptr;
 }
 
-void CommandBuffer::beginRendering(GenericRenderTarget* target)
+void CommandBuffer::beginRendering(GenericRenderTarget *target)
 {
 	m_target = target;
 
 	beginRendering(m_target->getRenderInfo());
 }
 
-void CommandBuffer::beginRendering(const RenderInfo& info)
+void CommandBuffer::beginRendering(const RenderInfo &info)
 {
 	_beginRecording();
 
@@ -120,7 +120,7 @@ void CommandBuffer::endRendering()
 
 void CommandBuffer::_beginRecording()
 {
-	cauto& currentFrame = g_vulkanBackend->m_graphicsQueue.getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
+	cauto &currentFrame = g_vulkanBackend->m_graphicsQueue.getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
 
 	vkWaitForFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 	vkResetCommandPool(g_vulkanBackend->m_device, currentFrame.commandPool, 0);
@@ -137,7 +137,7 @@ void CommandBuffer::_beginRecording()
 
 void CommandBuffer::beginCompute()
 {
-	cauto& currentFrame = g_vulkanBackend->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
+	cauto &currentFrame = g_vulkanBackend->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
 
 	vkWaitForFences(g_vulkanBackend->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
 	vkResetCommandPool(g_vulkanBackend->m_device, currentFrame.commandPool, 0);
@@ -153,7 +153,7 @@ void CommandBuffer::beginCompute()
 
 void CommandBuffer::endCompute(VkSemaphore signalSemaphore)
 {
-	cauto& currentFrame = g_vulkanBackend->m_computeQueues[0].getCurrentFrame();
+	cauto &currentFrame = g_vulkanBackend->m_computeQueues[0].getCurrentFrame();
 
 	LLT_VK_CHECK(
 		vkEndCommandBuffer(m_buffer),

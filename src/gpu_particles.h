@@ -23,17 +23,17 @@ namespace llt
 		GPUParticles();
 		~GPUParticles();
 
-		void init(const DynamicShaderBuffer* shaderParams);
+		void init(const DynamicShaderBuffer *shaderParams);
 
-		void dispatchCompute(const Camera& camera);
+		void dispatchCompute(const Camera &camera);
 		void render();
 
 	private:
-		DynamicShaderBuffer* m_particleBuffer;
+		DynamicShaderBuffer *m_particleBuffer;
 
-		ShaderProgram* m_computeProgram;
+		ShaderProgram *m_computeProgram;
 		ShaderParameters m_computeParams;
-		DynamicShaderBuffer* m_computeParamsBuffer;
+		DynamicShaderBuffer *m_computeParamsBuffer;
 
 		SubMesh m_particleMesh;
 		VertexDescriptor m_particleVertexFormat;

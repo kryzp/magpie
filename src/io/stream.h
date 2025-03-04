@@ -18,12 +18,12 @@ namespace llt
 		/*
 		 * Read data at its current stream position.
 		 */
-		virtual void read(void* buffer, uint64_t length) const;
+		virtual void read(void *buffer, uint64_t length) const;
 
 		/*
 		 * Write data to its current stream position.
 		 */
-		virtual void write(void* data, uint64_t length) const;
+		virtual void write(void *data, uint64_t length) const;
 
 		/*
 		 * Goto a set stream position.
@@ -48,11 +48,11 @@ namespace llt
 		/*
 		 * Get the actual memory pointer to the stream.
 		 */
-		void* getStream();
-		const void* getStream() const;
+		void *getStream();
+		const void *getStream() const;
 
 	protected:
-		void* p_stream;
+		void *p_stream;
 	};
 }
 

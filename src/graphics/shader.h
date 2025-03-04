@@ -18,7 +18,7 @@ namespace llt
 	{
 		struct ShaderParameter
 		{
-			void* data;
+			void *data;
 			uint64_t size;
 			uint64_t offset;
 		};
@@ -33,7 +33,7 @@ namespace llt
 		/*
 		* Returns the packed data.
 		*/
-		const PackedData& getPackedConstants();
+		const PackedData &getPackedConstants();
 
 		/*
 		* Completely resets the data.
@@ -51,20 +51,23 @@ namespace llt
 			m_size = 0;
 		}
 
-		void setBuffer(const String& name, const void* data, uint64_t size)	{ _setBuffer(name, data, size); }
+		void setBuffer(const String &name, const void *data, uint64_t size)	{ _setBuffer(name, data, size, 0); }
 
 		template <typename T>
-		void setValue(const String& name, const T& value) { _setBuffer(name, &value, sizeof(T)); }
+		void setValue(const String &name, const T &value) { _setBuffer(name, &value, sizeof(T), 0); }
 
 		template <typename T>
-		void setArray(const String& name, const T* values, uint64_t num) { _setBuffer(name, values, sizeof(T) * num); }
+		void setArray(const String &name, const T *values, uint64_t num) { _setBuffer(name, values, sizeof(T) * num, 0); }
+
+		template <typename T>
+		void setArrayValue(const String &name, const T &value, uint64_t index) { _setBuffer(name, &value, sizeof(T), index); }
 
 	private:
-		void _setBuffer(const String& name, const void* data, uint64_t size)
+		void _setBuffer(const String &name, const void *data, uint64_t size, uint64_t dstOffset)
 		{
 			if (m_constants.contains(name))
 			{
-				mem::copy(m_constants[name].data, data, size);
+				mem::copy((char *)m_constants[name].data + dstOffset*size, data, size);
 			}
 			else
 			{
@@ -73,7 +76,7 @@ namespace llt
 				p.offset = m_size;
 				p.data = malloc(size);
 
-				mem::copy(p.data, data, size);
+				mem::copy((char *)p.data + dstOffset*size, data, size);
 
 				m_constants.insert(name, p);
 				m_size += size;
@@ -98,7 +101,7 @@ namespace llt
 
 		void cleanUp();
 
-		void loadFromSource(const char* source, uint64_t size);
+		void loadFromSource(const char *source, uint64_t size);
 
 		VkShaderModule getModule() const;
 		VkPipelineShaderStageCreateInfo getShaderStageCreateInfo() const;

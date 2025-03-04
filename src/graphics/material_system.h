@@ -20,25 +20,28 @@ namespace llt
 		void init();
 		void loadDefaultTechniques();
 
-		Material* buildMaterial(MaterialData& data);
+		void updateImGui();
 
-		void addTechnique(const String& name, const Technique& technique);
+		Material *buildMaterial(MaterialData &data);
 
-		DynamicShaderBuffer* getGlobalBuffer() const;
-		DynamicShaderBuffer* getInstanceBuffer() const;
+		void addTechnique(const String &name, const Technique &technique);
+
+		DynamicShaderBuffer *getGlobalBuffer() const;
+		DynamicShaderBuffer *getInstanceBuffer() const;
 
 	private:
 		void createQuadMesh();
 		void createCubeMesh();
 
-		void generateEnvironmentMaps(CommandBuffer& buffer);
-		void precomputeBRDF(CommandBuffer& buffer);
+		void generateEnvironmentMaps(CommandBuffer &buffer);
+
+		void precomputeBRDF(CommandBuffer &buffer);
 
 		HashMap<uint64_t, Material*> m_materials;
 		HashMap<String, Technique> m_techniques;
 
-		DynamicShaderBuffer* m_globalBuffer;
-		DynamicShaderBuffer* m_instanceBuffer;
+		DynamicShaderBuffer *m_globalBuffer;
+		DynamicShaderBuffer *m_instanceBuffer;
 
 		DescriptorPoolDynamic m_descriptorPoolAllocator;
 		DescriptorLayoutCache m_descriptorCache;
@@ -49,25 +52,25 @@ namespace llt
 //		DescriptorPoolDynamic bindlessDescriptorPoolManager;
 //		DescriptorCache bindlessDescriptorCache;
 
-		GPUBuffer* m_bindlessUBO;
-		GPUBuffer* m_bindlessSSBO;
-		GPUBuffer* m_bindlessCombinedSamplers;
+		GPUBuffer *m_bindlessUBO;
+		GPUBuffer *m_bindlessSSBO;
+		GPUBuffer *m_bindlessCombinedSamplers;
 
-		Texture* m_environmentMap;
-		Texture* m_irradianceMap;
-		Texture* m_prefilterMap;
-		Texture* m_brdfIntegration;
+		Texture *m_environmentMap;
+		Texture *m_irradianceMap;
+		Texture *m_prefilterMap;
+		Texture *m_brdfIntegration;
 
 		GraphicsPipeline m_equirectangularToCubemapPipeline;
 		GraphicsPipeline m_irradianceGenerationPipeline;
 		GraphicsPipeline m_prefilterGenerationPipeline;
 		GraphicsPipeline m_brdfIntegrationPipeline;
 
-		SubMesh* m_quadMesh;
-		SubMesh* m_cubeMesh;
+		SubMesh *m_quadMesh;
+		SubMesh *m_cubeMesh;
 	};
 
-	extern MaterialSystem* g_materialSystem;
+	extern MaterialSystem *g_materialSystem;
 }
 
 #endif // MATERIAL_SYSTEM_H_

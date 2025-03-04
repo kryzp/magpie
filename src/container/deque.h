@@ -26,23 +26,23 @@ namespace llt
 
 		public:
 			Iterator() : m_cur(nullptr), m_first(nullptr), m_last(nullptr), m_chunk(nullptr) { }
-			Iterator(T* curr, T* first, T* last, T** chunk) : m_cur(curr), m_first(first), m_last(last), m_chunk(chunk) { }
-			Iterator(T** chunk) : m_cur(nullptr), m_first(nullptr), m_last(nullptr), m_chunk(chunk) { setChunk(chunk); }
+			Iterator(T *curr, T *first, T *last, T **chunk) : m_cur(curr), m_first(first), m_last(last), m_chunk(chunk) { }
+			Iterator(T **chunk) : m_cur(nullptr), m_first(nullptr), m_last(nullptr), m_chunk(chunk) { setChunk(chunk); }
 			~Iterator() = default;
 
-			T& operator * () const { return *m_cur; }
-			T* operator -> () const { return m_cur; }
+			T &operator * () const { return *m_cur; }
+			T *operator -> () const { return m_cur; }
 
-			T* get() { return m_cur; }
-			const T* get() const { return m_cur; }
+			T *get() { return m_cur; }
+			const T *get() const { return m_cur; }
 
-			void setChunk(T** chunk) {
+			void setChunk(T **chunk) {
 				m_chunk = chunk;
 				m_first = *chunk;
 				m_last = m_first + ChunkSize;
 			}
 
-			Iterator& operator ++ () {
+			Iterator &operator ++ () {
 				m_cur++;
 				if (m_cur == m_last) {
 					setChunk(m_chunk + 1);
@@ -51,7 +51,7 @@ namespace llt
 				return *this;
 			}
 
-			Iterator& operator -- () {
+			Iterator &operator -- () {
 				if (m_cur == m_first) {
 					setChunk(m_chunk - 1);
 					m_cur = m_last;
@@ -72,7 +72,7 @@ namespace llt
 				return t;
 			}
 
-			Iterator& operator += (int64_t d) {
+			Iterator &operator += (int64_t d) {
 				int64_t offset = d + m_cur - m_first; // calculate our chunk offset
 				if (offset >= 0 && offset < ChunkSize) {
 					m_cur += d; // if we're not crossing over a chunk, just add it on
@@ -90,7 +90,7 @@ namespace llt
 				return *this;
 			}
 
-			Iterator& operator -= (int64_t d) {
+			Iterator &operator -= (int64_t d) {
 				return (*this) += -d;
 			}
 
@@ -104,60 +104,60 @@ namespace llt
 				return t -= d;
 			}
 
-			T& operator [] (int64_t d) const {
+			T &operator [] (int64_t d) const {
 				return *((*this) + d);
 			}
 
-			bool operator == (const Iterator& other) const { return this->m_cur == other.m_cur && this->m_first == other.m_first && this->m_last == other.m_last && this->m_chunk == other.m_chunk; }
-			bool operator != (const Iterator& other) const { return this->m_cur != other.m_cur || this->m_first != other.m_first || this->m_last != other.m_last || this->m_chunk != other.m_chunk; }
+			bool operator == (const Iterator &other) const { return this->m_cur == other.m_cur && this->m_first == other.m_first && this->m_last == other.m_last && this->m_chunk == other.m_chunk; }
+			bool operator != (const Iterator &other) const { return this->m_cur != other.m_cur || this->m_first != other.m_first || this->m_last != other.m_last || this->m_chunk != other.m_chunk; }
 
 		private:
-			T* m_cur;
-			T* m_first;
-			T* m_last;
-			T** m_chunk;
+			T *m_cur;
+			T *m_first;
+			T *m_last;
+			T **m_chunk;
 		};
 
 		Deque(int initialCapacity = 8);
 
-		Deque(const Deque& other);
-		Deque(Deque&& other) noexcept;
+		Deque(const Deque &other);
+		Deque(Deque &&other) noexcept;
 
-		Deque& operator = (const Deque& other);
-		Deque& operator = (Deque&& other) noexcept;
+		Deque &operator = (const Deque &other);
+		Deque &operator = (Deque &&other) noexcept;
 
 		~Deque();
 
 		void clear();
 		bool empty() const;
 		uint64_t size() const;
-		void swap(Deque& other);
+		void swap(Deque &other);
 
-		T& pushBack(const T& item);
-		T& pushFront(const T& item);
+		T &pushBack(const T &item);
+		T &pushFront(const T &item);
 
 		T popBack();
 		T popFront();
 
 		template <typename... Args>
-		T& emplaceFront(Args&&... args);
+		T &emplaceFront(Args&&... args);
 
 		template <typename... Args>
-		T& emplaceBack(Args&&... args);
+		T &emplaceBack(Args&&... args);
 
-		T& front();
-		const T& front() const;
-		T& back();
-		const T& back() const;
+		T &front();
+		const T &front() const;
+		T &back();
+		const T &back() const;
 
 		Iterator begin();
 		Iterator end();
 
-		T& at(uint64_t idx);
-		const T& at(uint64_t idx) const;
+		T &at(uint64_t idx);
+		const T &at(uint64_t idx) const;
 
-		T& operator [] (uint64_t idx);
-		const T& operator [] (uint64_t idx) const;
+		T &operator [] (uint64_t idx);
+		const T &operator [] (uint64_t idx) const;
 
 	private:
 		void increaseSize(int frontOrBack);
@@ -169,7 +169,7 @@ namespace llt
 		Iterator m_begin;
 		Iterator m_end;
 
-		T** m_map;
+		T **m_map;
 		uint64_t m_size;
 		uint64_t m_capacity;
 	};
@@ -182,15 +182,15 @@ namespace llt
 		, m_size(0)
 		, m_capacity(0)
 	{
-		T** newMap = (T**)::operator new (sizeof(T*) * initialCapacity);
-		mem::set(newMap, 0, sizeof(T*) * initialCapacity);
+		T **newMap = (T **)::operator new (sizeof(T *) * initialCapacity);
+		mem::set(newMap, 0, sizeof(T *) * initialCapacity);
 
-		T** base = newMap + (initialCapacity / 2);
+		T **base = newMap + (initialCapacity / 2);
 
 		// allocate the initial capacity of chunks
 		for (int j = 0; j < initialCapacity; j++) {
 			if (!newMap[j]) {
-				newMap[j] = (T*)::operator new (sizeof(T) * ChunkSize);
+				newMap[j] = (T *)::operator new (sizeof(T) * ChunkSize);
 			}
 		}
 
@@ -205,19 +205,19 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>::Deque(const Deque& other)
+	Deque<T, ChunkSize>::Deque(const Deque &other)
 		: Deque()
 	{
 		clear();
 
 		// add all the chunks from the other double ended queue
-		for (T* cur = other.m_begin.m_cur + 1; cur < other.m_end.m_cur; cur++) {
+		for (T *cur = other.m_begin.m_cur + 1; cur < other.m_end.m_cur; cur++) {
 			pushBack(*cur);
 		}
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>::Deque(Deque&& other) noexcept
+	Deque<T, ChunkSize>::Deque(Deque &&other) noexcept
 		: Deque()
 	{
 		clear();
@@ -225,12 +225,12 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (const Deque& other)
+	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (const Deque &other)
 	{
 		clear();
 
 		// add all the chunks from the other double ended queue
-		for (T* cur = other.m_begin.m_cur + 1; cur < other.m_end.m_cur; cur++) {
+		for (T *cur = other.m_begin.m_cur + 1; cur < other.m_end.m_cur; cur++) {
 			pushBack(*cur);
 		}
 
@@ -238,7 +238,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (Deque&& other) noexcept
+	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (Deque &&other) noexcept
 	{
 		clear();
 		swap(other);
@@ -255,7 +255,7 @@ namespace llt
 			::operator delete (m_map[i], sizeof(T) * ChunkSize);
 		}
 
-		::operator delete (m_map, sizeof(T*) * chunks());
+		::operator delete (m_map, sizeof(T *) * chunks());
 
 		m_map = nullptr;
 		m_capacity = 0;
@@ -275,7 +275,7 @@ namespace llt
 
 		m_size = 0;
 
-		T** base  = m_map + (chunks() / 2);
+		T **base  = m_map + (chunks() / 2);
 
 		m_begin.setChunk(base);
 		m_begin.m_cur = m_begin.m_first;
@@ -291,8 +291,8 @@ namespace llt
 		uint64_t numChunks = chunks() * 2;
 
 		// allocate our map!
-		T** newMap = (T**)::operator new (sizeof(T*) * numChunks);
-		mem::set(newMap, 0, sizeof(T*) * numChunks);
+		T **newMap = (T**)::operator new (sizeof(T *) * numChunks);
+		mem::set(newMap, 0, sizeof(T *) * numChunks);
 
 		int begin_offset = m_begin	.m_cur   - m_begin	.m_first;
 		int end_offset   = m_end  	.m_cur   - m_end	.m_first;
@@ -301,9 +301,9 @@ namespace llt
 
 		// copy our data map to specific regions depending on what direction we are allocating in
 		if (frontOrBack == EXPAND_FRONT) {
-			mem::copy(newMap + chunks(), m_map, sizeof(T*) * chunks());
+			mem::copy(newMap + chunks(), m_map, sizeof(T *) * chunks());
 		} else if (frontOrBack == EXPAND_BACK) {
-			mem::copy(newMap, m_map, sizeof(T*) * chunks());
+			mem::copy(newMap, m_map, sizeof(T *) * chunks());
 		}
 
 		// allocate the new size
@@ -371,11 +371,11 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	void Deque<T, ChunkSize>::swap(Deque& other)
+	void Deque<T, ChunkSize>::swap(Deque &other)
 	{
 		Iterator t_begin = this->m_begin;
 		Iterator t_end = this->m_end;
-		T** t_map = this->m_map;
+		T **t_map = this->m_map;
 		uint64_t t_size = this->m_size;
 		uint64_t t_capacity = this->m_capacity;
 
@@ -393,7 +393,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::pushFront(const T& item)
+	T &Deque<T, ChunkSize>::pushFront(const T &item)
 	{
 		expandFront();
 		(*m_begin) = std::move(item);
@@ -402,7 +402,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::pushBack(const T& item)
+	T &Deque<T, ChunkSize>::pushBack(const T &item)
 	{
 		expandBack();
 		(*m_end) = std::move(item);
@@ -430,7 +430,7 @@ namespace llt
 
 	template <typename T, uint64_t ChunkSize>
 	template <typename... Args>
-	T& Deque<T, ChunkSize>::emplaceFront(Args&&... args)
+	T &Deque<T, ChunkSize>::emplaceFront(Args&&... args)
 	{
 		expandFront();
 		new (m_begin.get()) T(std::forward<Args>(args)...);
@@ -440,7 +440,7 @@ namespace llt
 
 	template <typename T, uint64_t ChunkSize>
 	template <typename... Args>
-	T& Deque<T, ChunkSize>::emplaceBack(Args&&... args)
+	T &Deque<T, ChunkSize>::emplaceBack(Args&&... args)
 	{
 		expandBack();
 		new (m_end.get()) T(std::forward<Args>(args)...);
@@ -449,25 +449,25 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::front()
+	T &Deque<T, ChunkSize>::front()
 	{
 		return *(m_begin + 1);
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	const T& Deque<T, ChunkSize>::front() const
+	const T &Deque<T, ChunkSize>::front() const
 	{
 		return *(m_begin + 1);
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::back()
+	T &Deque<T, ChunkSize>::back()
 	{
 		return *(m_end - 1);
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	const T& Deque<T, ChunkSize>::back() const
+	const T &Deque<T, ChunkSize>::back() const
 	{
 		return *(m_end - 1);
 	}
@@ -485,25 +485,25 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::at(uint64_t idx)
+	T &Deque<T, ChunkSize>::at(uint64_t idx)
 	{
 		return m_begin[idx];
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	const T& Deque<T, ChunkSize>::at(uint64_t idx) const
+	const T &Deque<T, ChunkSize>::at(uint64_t idx) const
 	{
 		return m_begin[idx];
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	T& Deque<T, ChunkSize>::operator [] (uint64_t idx)
+	T &Deque<T, ChunkSize>::operator [] (uint64_t idx)
 	{
 		return m_begin[idx];
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	const T& Deque<T, ChunkSize>::operator [] (uint64_t idx) const
+	const T &Deque<T, ChunkSize>::operator [] (uint64_t idx) const
 	{
 		return m_begin[idx];
 	}

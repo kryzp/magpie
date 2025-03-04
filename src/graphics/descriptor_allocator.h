@@ -17,7 +17,7 @@ namespace llt
 		DescriptorPoolStatic() = default;
 		~DescriptorPoolStatic() = default;
 
-		void init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio>& sizes);
+		void init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio> &sizes);
 		void cleanUp();
 
 		void clear();
@@ -41,16 +41,16 @@ namespace llt
 		DescriptorPoolDynamic() = default;
 		~DescriptorPoolDynamic() = default;
 
-		void init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio>& sizes);
+		void init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio> &sizes);
 		void cleanUp();
 
 		void clear();
 
-		VkDescriptorSet allocate(const VkDescriptorSetLayout& layout, void* pNext = nullptr);
+		VkDescriptorSet allocate(const VkDescriptorSetLayout &layout, void *pNext = nullptr);
 
 	private:
 		VkDescriptorPool fetchPool();
-		VkDescriptorPool createNewPool(uint32_t setCount, const Vector<DescriptorPoolSizeRatio>& sizes);
+		VkDescriptorPool createNewPool(uint32_t setCount, const Vector<DescriptorPoolSizeRatio> &sizes);
 
 		Vector<VkDescriptorPool> m_usedPools;
 		Vector<VkDescriptorPool> m_freePools;

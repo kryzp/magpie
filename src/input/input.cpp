@@ -1,6 +1,6 @@
 #include "input.h"
 
-llt::Input* llt::g_inputState = nullptr;
+llt::Input *llt::g_inputState = nullptr;
 
 using namespace llt;
 
@@ -24,22 +24,22 @@ void Input::update()
 	m_currentState = m_nextState;
 }
 
-bool Input::isDown(const VirtualKey& k) const
+bool Input::isDown(const VirtualKey &k) const
 {
-	for (auto& kb : k.keyboardKeys) {
+	for (auto &kb : k.keyboardKeys) {
 		if (isDown(kb)) {
 			return true;
 		}
 	}
 
-	for (auto& mb : k.mouseButtons) {
+	for (auto &mb : k.mouseButtons) {
 		if (isDown(mb)) {
 			return true;
 		}
 	}
 
 	for (int i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto& jsb : k.gamepadButtons) {
+		for (auto &jsb : k.gamepadButtons) {
 			if (isDown(jsb, i)) {
 				return true;
 			}
@@ -49,22 +49,22 @@ bool Input::isDown(const VirtualKey& k) const
 	return false;
 }
 
-bool Input::isPressed(const VirtualKey& k) const
+bool Input::isPressed(const VirtualKey &k) const
 {
-	for (auto& kb : k.keyboardKeys) {
+	for (auto &kb : k.keyboardKeys) {
 		if (isPressed(kb)) {
 			return true;
 		}
 	}
 
-	for (auto& mb : k.mouseButtons) {
+	for (auto &mb : k.mouseButtons) {
 		if (isPressed(mb)) {
 			return true;
 		}
 	}
 
 	for (int i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto& jsb : k.gamepadButtons) {
+		for (auto &jsb : k.gamepadButtons) {
 			if (isPressed(jsb, i)) {
 				return true;
 			}
@@ -74,22 +74,22 @@ bool Input::isPressed(const VirtualKey& k) const
 	return false;
 }
 
-bool Input::isReleased(const VirtualKey& k) const
+bool Input::isReleased(const VirtualKey &k) const
 {
-	for (auto& kb : k.keyboardKeys) {
+	for (auto &kb : k.keyboardKeys) {
 		if (isReleased(kb)) {
 			return true;
 		}
 	}
 
-	for (auto& mb : k.mouseButtons) {
+	for (auto &mb : k.mouseButtons) {
 		if (isReleased(mb)) {
 			return true;
 		}
 	}
 
 	for (uint32_t i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto& jsb : k.gamepadButtons) {
+		for (auto &jsb : k.gamepadButtons) {
 			if (isReleased(jsb, i)) {
 				return true;
 			}
@@ -99,47 +99,47 @@ bool Input::isReleased(const VirtualKey& k) const
 	return false;
 }
 
-bool Input::isDown(const KeyboardKey& k) const
+bool Input::isDown(const KeyboardKey &k) const
 {
 	return m_currentState.keyboard.down[k];
 }
 
-bool Input::isPressed(const KeyboardKey& k) const
+bool Input::isPressed(const KeyboardKey &k) const
 {
 	return m_currentState.keyboard.down[k] && !m_prevState.keyboard.down[k];
 }
 
-bool Input::isReleased(const KeyboardKey& k) const
+bool Input::isReleased(const KeyboardKey &k) const
 {
 	return !m_currentState.keyboard.down[k] && m_prevState.keyboard.down[k];
 }
 
-bool Input::isDown(const MouseButton& mb) const
+bool Input::isDown(const MouseButton &mb) const
 {
 	return m_currentState.mouse.down[mb];
 }
 
-bool Input::isPressed(const MouseButton& mb) const
+bool Input::isPressed(const MouseButton &mb) const
 {
 	return m_currentState.mouse.down[mb] && !m_prevState.mouse.down[mb];
 }
 
-bool Input::isReleased(const MouseButton& mb) const
+bool Input::isReleased(const MouseButton &mb) const
 {
 	return !m_currentState.mouse.down[mb] && m_prevState.mouse.down[mb];
 }
 
-bool Input::isDown(const GamepadButton& gpb, uint32_t id) const
+bool Input::isDown(const GamepadButton &gpb, uint32_t id) const
 {
 	return m_currentState.gamepads[id].down[gpb];
 }
 
-bool Input::isPressed(const GamepadButton& gpb, uint32_t id) const
+bool Input::isPressed(const GamepadButton &gpb, uint32_t id) const
 {
 	return m_currentState.gamepads[id].down[gpb] && !m_prevState.gamepads[id].down[gpb];
 }
 
-bool Input::isReleased(const GamepadButton& gpb, uint32_t id) const
+bool Input::isReleased(const GamepadButton &gpb, uint32_t id) const
 {
 	return !m_currentState.gamepads[id].down[gpb] && m_prevState.gamepads[id].down[gpb];
 }
@@ -174,7 +174,7 @@ bool Input::alt() const
 	return isDown(KB_KEY_LEFT_ALT) || isDown(KB_KEY_RIGHT_ALT);
 }
 
-const char* Input::text() const
+const char *Input::text() const
 {
 	return m_currentState.keyboard.text;
 }
@@ -234,7 +234,7 @@ void Input::onKeyUp(uint64_t btn)
 	m_nextState.keyboard.down[btn] = false;
 }
 
-void Input::onTextUtf8(const char* text)
+void Input::onTextUtf8(const char *text)
 {
 	cstr::concat(m_nextState.keyboard.text, text, MAX_TEXT_INPUT);
 }

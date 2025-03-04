@@ -18,17 +18,19 @@ namespace llt
 		ShaderMgr();
 		~ShaderMgr();
 
-		ShaderProgram* get(const String& name);
-		ShaderProgram* create(const String& name, const String& source, VkShaderStageFlagBits type);
+		void loadDefaultShaders();
 
-		ShaderEffect* createEffect();
+		ShaderProgram *get(const String &name);
+		ShaderProgram *load(const String &name, const String &source, VkShaderStageFlagBits type);
+
+		ShaderEffect *createEffect();
 
 	private:
 		HashMap<String, ShaderProgram*> m_shaderCache;
 		Vector<ShaderEffect*> m_effects;
 	};
 
-	extern ShaderMgr* g_shaderManager;
+	extern ShaderMgr *g_shaderManager;
 }
 
 #endif // VK_SHADER_MGR_H_

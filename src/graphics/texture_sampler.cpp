@@ -11,7 +11,7 @@ TextureSampler::TextureSampler()
 {
 }
 
-TextureSampler::TextureSampler(const TextureSampler::Style& style)
+TextureSampler::TextureSampler(const TextureSampler::Style &style)
 	: dirty(true)
 	, style(style)
 	, m_sampler(VK_NULL_HANDLE)

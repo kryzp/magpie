@@ -32,8 +32,8 @@ namespace llt
 		void init(VkQueue queue);
 		void setData(QueueFamily family, uint32_t familyIdx);
 
-		FrameData& getCurrentFrame();
-		FrameData& getFrame(int idx);
+		FrameData &getCurrentFrame();
+		FrameData &getFrame(int idx);
 
 		VkQueue getQueue() const;
 		

@@ -9,11 +9,11 @@
 #include "math/calc.h"
 #include "math/colour.h"
 
-llt::App* llt::g_app = nullptr;
+llt::App *llt::g_app = nullptr;
 
 using namespace llt;
 
-App::App(const Config& config)
+App::App(const Config &config)
 	: m_config(config)
 	, m_running(false)
 	, m_camera(config.width, config.height, 75.0f, 0.01f, 50.0f)
@@ -25,7 +25,7 @@ App::App(const Config& config)
 
 	g_inputState = new Input();
 
-	Backbuffer* backbuffer = g_vulkanBackend->createBackbuffer();
+	Backbuffer *backbuffer = g_vulkanBackend->createBackbuffer();
 	backbuffer->setClearColour(0, Colour::black());
 
 	g_platform->initImGui();
@@ -100,7 +100,7 @@ void App::run()
 
 		while (accumulator >= fixedDeltaTime)
 		{
-			if (g_inputState->isDown(MBTN_MIDDLE))
+			if (g_inputState->isDown(KB_KEY_F))
 			{
 				g_platform->setCursorVisible(false);
 				g_platform->setCursorPosition(m_config.width / 2, m_config.height / 2);
@@ -114,9 +114,6 @@ void App::run()
 
 			accumulator -= fixedDeltaTime;
 		}
-
-		ImGui::ShowDemoWindow();
-		ImGui::Render();
 
 		m_renderer.render(m_camera, deltaTime);
 

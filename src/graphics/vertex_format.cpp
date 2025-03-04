@@ -45,7 +45,7 @@ void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, cons
 	bindingDescription.stride = stride;
 	bindingDescription.inputRate = inputRate;
 
-	for (auto& attrib : attributes)
+	for (auto &attrib : attributes)
 	{
 		VkVertexInputAttributeDescription attributeDescription = {};
 		attributeDescription.binding = binding;

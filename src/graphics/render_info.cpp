@@ -103,12 +103,12 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, VkImageView depth
 	m_attachmentCount++;
 }
 
-VkRenderingAttachmentInfoKHR& RenderInfo::getColourAttachment(int idx)
+VkRenderingAttachmentInfoKHR &RenderInfo::getColourAttachment(int idx)
 {
 	return m_colourAttachments[idx];
 }
 
-VkRenderingAttachmentInfoKHR& RenderInfo::getDepthAttachment()
+VkRenderingAttachmentInfoKHR &RenderInfo::getDepthAttachment()
 {
 	return m_depthAttachment;
 }
@@ -130,7 +130,7 @@ void RenderInfo::setClearDepth(VkClearValue value)
 	m_depthAttachment.clearValue = value;
 }
 
-void RenderInfo::setBlendState(const BlendState& state)
+void RenderInfo::setBlendState(const BlendState &state)
 {
 	m_blendConstants[0] = state.blendConstants[0];
 	m_blendConstants[1] = state.blendConstants[1];

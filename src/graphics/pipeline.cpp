@@ -10,10 +10,11 @@
 
 using namespace llt;
 
-Pipeline::Pipeline(VkShaderStageFlagBits stage)
+Pipeline::Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint)
 	: m_stage(stage)
 	, m_descriptorSetLayout(VK_NULL_HANDLE)
 	, m_pipeline(VK_NULL_HANDLE)
+	, m_bindPoint(bindPoint)
 {
 }
 
@@ -24,6 +25,40 @@ Pipeline::~Pipeline()
 VkPipeline Pipeline::getPipeline()
 {
 	return m_pipeline;
+}
+
+void Pipeline::bind(CommandBuffer &buffer)
+{
+	vkCmdBindPipeline(
+		buffer.getBuffer(),
+		m_bindPoint,
+		m_pipeline
+	);
+}
+
+void Pipeline::bindSet(CommandBuffer &buffer, const VkDescriptorSet &set)
+{
+	vkCmdBindDescriptorSets(
+		buffer.getBuffer(),
+		m_bindPoint,
+		getPipelineLayout(),
+		0,
+		1, &set,
+		0, nullptr
+	);
+}
+
+void Pipeline::bindSet(CommandBuffer &buffer, const VkDescriptorSet &set, const Vector<uint32_t> &dynamicOffsets)
+{
+	vkCmdBindDescriptorSets(
+		buffer.getBuffer(),
+		m_bindPoint,
+		getPipelineLayout(),
+		0,
+		1, &set,
+		dynamicOffsets.size(),
+		dynamicOffsets.data()
+	);
 }
 
 VkPipelineLayout Pipeline::getPipelineLayout()
@@ -73,7 +108,7 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 	return pipelineLayout;
 }
 
-void Pipeline::setDescriptorSetLayout(const VkDescriptorSetLayout& layout)
+void Pipeline::setDescriptorSetLayout(const VkDescriptorSetLayout &layout)
 {
 	m_descriptorSetLayout = layout;
 }
@@ -81,7 +116,7 @@ void Pipeline::setDescriptorSetLayout(const VkDescriptorSetLayout& layout)
 // --- graphics pipeline
 
 GraphicsPipeline::GraphicsPipeline()
-	: Pipeline(VK_SHADER_STAGE_ALL_GRAPHICS)
+	: Pipeline(VK_SHADER_STAGE_ALL_GRAPHICS, VK_PIPELINE_BIND_POINT_GRAPHICS)
 	, m_depthStencilCreateInfo()
 	, m_samples(VK_SAMPLE_COUNT_1_BIT)
 	, m_sampleShadingEnabled()
@@ -108,7 +143,7 @@ GraphicsPipeline::~GraphicsPipeline()
 {
 }
 
-void GraphicsPipeline::render(CommandBuffer& buffer, const RenderPass& op)
+void GraphicsPipeline::render(CommandBuffer &buffer, const RenderPass &op)
 {
 	VkViewport viewport = getViewport();
 	VkRect2D scissor = getScissor();
@@ -130,8 +165,8 @@ void GraphicsPipeline::render(CommandBuffer& buffer, const RenderPass& op)
 		);
 	}
 
-	cauto& vertexBuffer = op.vertexBuffer->getBuffer();
-	cauto& indexBuffer  = op.indexBuffer->getBuffer();
+	cauto &vertexBuffer = op.vertexBuffer->getBuffer();
+	cauto &indexBuffer  = op.indexBuffer->getBuffer();
 
 	VkBuffer pVertexBuffers[] = {
 		vertexBuffer,
@@ -143,10 +178,10 @@ void GraphicsPipeline::render(CommandBuffer& buffer, const RenderPass& op)
 	if (op.instanceBuffer)
 	{
 		pVertexBuffers[1] = op.instanceBuffer->getBuffer();
-		nVertexBuffers = 2;
+		nVertexBuffers++;
 	}
 
-	cauto& bindings = m_currentVertexFormat.getBindingDescriptions();
+	cauto &bindings = m_currentVertexFormat.getBindingDescriptions();
 
 	VkDeviceSize vertexBufferOffsets[] = { 0, 0 };
 
@@ -191,10 +226,10 @@ void GraphicsPipeline::render(CommandBuffer& buffer, const RenderPass& op)
 	}
 }
 
-void GraphicsPipeline::create(RenderInfo* renderInfo)
+void GraphicsPipeline::create(RenderInfo *renderInfo)
 {
-	cauto& bindingDescriptions = m_currentVertexFormat.getBindingDescriptions();
-	cauto& attributeDescriptions = m_currentVertexFormat.getAttributeDescriptions();
+	cauto &bindingDescriptions = m_currentVertexFormat.getBindingDescriptions();
+	cauto &attributeDescriptions = m_currentVertexFormat.getAttributeDescriptions();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -243,7 +278,7 @@ void GraphicsPipeline::create(RenderInfo* renderInfo)
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
 
-	cauto& blendAttachments = renderInfo->getColourBlendAttachmentStates();
+	cauto &blendAttachments = renderInfo->getColourBlendAttachmentStates();
 
 	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};
 	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -272,15 +307,15 @@ void GraphicsPipeline::create(RenderInfo* renderInfo)
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
 	hash::combine(&createdPipelineHash, &viewportStateCreateInfo);
 
-	for (auto& st : blendAttachments) {
+	for (auto &st : blendAttachments) {
 		hash::combine(&createdPipelineHash, &st);
 	}
 
-	for (auto& attrib : attributeDescriptions) {
+	for (auto &attrib : attributeDescriptions) {
 		hash::combine(&createdPipelineHash, &attrib);
 	}
 
-	for (auto& binding : bindingDescriptions) {
+	for (auto &binding : bindingDescriptions) {
 		hash::combine(&createdPipelineHash, &binding);
 	}
 
@@ -299,7 +334,7 @@ void GraphicsPipeline::create(RenderInfo* renderInfo)
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(vkutil::DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
-	cauto& colourFormats = renderInfo->getColourAttachmentFormats();
+	cauto &colourFormats = renderInfo->getColourAttachmentFormats();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -340,16 +375,7 @@ void GraphicsPipeline::create(RenderInfo* renderInfo)
 	);
 }
 
-void GraphicsPipeline::bind(CommandBuffer& buffer)
-{
-	vkCmdBindPipeline(
-		buffer.getBuffer(),
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		m_pipeline
-	);
-}
-
-void GraphicsPipeline::bindShader(const ShaderProgram* shader)
+void GraphicsPipeline::bindShader(const ShaderProgram *shader)
 {
 	if (!shader) {
 		return;
@@ -373,7 +399,7 @@ void GraphicsPipeline::bindShader(const ShaderProgram* shader)
 	}
 }
 
-void GraphicsPipeline::setVertexFormat(const VertexFormat& descriptor)
+void GraphicsPipeline::setVertexFormat(const VertexFormat &descriptor)
 {
 	m_currentVertexFormat = descriptor;
 }
@@ -399,7 +425,7 @@ void GraphicsPipeline::setViewport(const RectF &rect)
 	m_viewport = (VkViewport) { rect.x, rect.y, rect.w, rect.h };
 }
 
-void GraphicsPipeline::setScissor(const RectI& rect)
+void GraphicsPipeline::setScissor(const RectI &rect)
 {
 	m_scissor = (VkRect2D) { { rect.x, rect.y }, { (uint32_t)rect.w, (uint32_t)rect.h } };
 }
@@ -414,7 +440,7 @@ VkRect2D GraphicsPipeline::getScissor() const
 	return m_scissor;
 }
 
-void GraphicsPipeline::resetViewport(const RenderInfo& info)
+void GraphicsPipeline::resetViewport(const RenderInfo &info)
 {
 	m_viewport.x = 0.0f;
 	m_viewport.y = (float)info.getHeight();
@@ -424,7 +450,7 @@ void GraphicsPipeline::resetViewport(const RenderInfo& info)
 	m_viewport.maxDepth = 1.0f;
 }
 
-void GraphicsPipeline::resetScissor(const RenderInfo& info)
+void GraphicsPipeline::resetScissor(const RenderInfo &info)
 {
 	m_scissor.offset = { 0, 0 };
 	m_scissor.extent = { info.getWidth(), info.getHeight() };
@@ -459,7 +485,7 @@ void GraphicsPipeline::setDepthStencilTest(bool enabled)
 // --- compute pipeline
 
 ComputePipeline::ComputePipeline()
-	: Pipeline(VK_SHADER_STAGE_COMPUTE_BIT)
+	: Pipeline(VK_SHADER_STAGE_COMPUTE_BIT, VK_PIPELINE_BIND_POINT_COMPUTE)
 	, m_computeShaderStageInfo()
 {
 }
@@ -468,7 +494,7 @@ ComputePipeline::~ComputePipeline()
 {
 }
 
-void ComputePipeline::dispatch(CommandBuffer& buffer, int gcX, int gcY, int gcZ)
+void ComputePipeline::dispatch(CommandBuffer &buffer, int gcX, int gcY, int gcZ)
 {
 	//p_boundTextures.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
@@ -494,16 +520,7 @@ void ComputePipeline::dispatch(CommandBuffer& buffer, int gcX, int gcY, int gcZ)
 	//p_boundTextures.popPipelineBarriers();
 }
 
-void ComputePipeline::bind(CommandBuffer& buffer)
-{
-	vkCmdBindPipeline(
-		buffer.getBuffer(),
-		VK_PIPELINE_BIND_POINT_COMPUTE,
-		m_pipeline
-	);
-}
-
-void ComputePipeline::create(RenderInfo* renderInfo)
+void ComputePipeline::create(RenderInfo *renderInfo)
 {
 	VkPipelineLayout layout = getPipelineLayout();
 
@@ -536,7 +553,7 @@ void ComputePipeline::create(RenderInfo* renderInfo)
 	LLT_LOG("Created new compute pipeline!");
 }
 
-void ComputePipeline::bindShader(const ShaderProgram* shader)
+void ComputePipeline::bindShader(const ShaderProgram *shader)
 {
 	if (!shader) {
 		return;

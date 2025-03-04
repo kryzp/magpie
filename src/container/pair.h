@@ -15,18 +15,18 @@ namespace llt
 		TSecond second;
 
 		Pair();
-		Pair(const TFirst& a, const TSecond& b);
+		Pair(const TFirst &a, const TSecond &b);
 
-		Pair(const Pair& other);
-		Pair(Pair&& other) noexcept;
+		Pair(const Pair &other);
+		Pair(Pair &&other) noexcept;
 
-		Pair& operator = (const Pair& other);
-		Pair& operator = (Pair&& other) noexcept;
+		Pair &operator = (const Pair &other);
+		Pair &operator = (Pair &&other) noexcept;
 
 		~Pair() = default;
 
-		bool operator == (const Pair& other) const;
-		bool operator != (const Pair& other) const;
+		bool operator == (const Pair &other) const;
+		bool operator != (const Pair &other) const;
 	};
 
 	template <typename TFirst, typename TSecond>
@@ -37,28 +37,28 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>::Pair(const TFirst& a, const TSecond& b)
+	Pair<TFirst, TSecond>::Pair(const TFirst &a, const TSecond &b)
 		: first(a)
 		, second(b)
 	{
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>::Pair(const Pair& other)
+	Pair<TFirst, TSecond>::Pair(const Pair &other)
 		: first(other.first)
 		, second(other.second)
 	{
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>::Pair(Pair&& other) noexcept
+	Pair<TFirst, TSecond>::Pair(Pair &&other) noexcept
 		: first(std::move(other.first))
 		, second(std::move(other.second))
 	{
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (const Pair& other)
+	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (const Pair &other)
 	{
 		this->first = other.first;
 		this->second = other.second;
@@ -67,7 +67,7 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (Pair&& other) noexcept
+	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (Pair &&other) noexcept
 	{
 		this->first = std::move(other.first);
 		this->second = std::move(other.second);
@@ -76,7 +76,7 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	bool Pair<TFirst, TSecond>::operator == (const Pair& other) const
+	bool Pair<TFirst, TSecond>::operator == (const Pair &other) const
 	{
 		return (
 			this->first == other.first &&
@@ -85,7 +85,7 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	bool Pair<TFirst, TSecond>::operator != (const Pair& other) const
+	bool Pair<TFirst, TSecond>::operator != (const Pair &other) const
 	{
 		return !(*this == other);
 	}

@@ -24,28 +24,28 @@ namespace llt
 		SubMesh();
 		virtual ~SubMesh();
 
-		void build(uint64_t vertexSize, void* pVertices, uint32_t nVertices, uint16_t* pIndices, uint32_t nIndices);
+		void build(uint64_t vertexSize, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 
-		Mesh* getParent();
-		const Mesh* getParent() const;
+		Mesh *getParent();
+		const Mesh *getParent() const;
 
-		void setMaterial(Material* material);
-		Material* getMaterial();
-		const Material* getMaterial() const;
+		void setMaterial(Material *material);
+		Material *getMaterial();
+		const Material *getMaterial() const;
 
-		GPUBuffer* getVertexBuffer() const;
-		GPUBuffer* getIndexBuffer() const;
+		GPUBuffer *getVertexBuffer() const;
+		GPUBuffer *getIndexBuffer() const;
 
 		uint64_t getVertexCount() const;
 		uint64_t getIndexCount() const;
 
 	private:
-		Mesh* m_parent;
+		Mesh *m_parent;
 
-		Material* m_material;
+		Material *m_material;
 
-		GPUBuffer* m_vertexBuffer;
-		GPUBuffer* m_indexBuffer;
+		GPUBuffer *m_vertexBuffer;
+		GPUBuffer *m_indexBuffer;
 
 		uint32_t m_nVertices;
 		uint32_t m_nIndices;

@@ -32,15 +32,15 @@ namespace llt
 		/*
 		 * Basic core colours for convenience.
 		 */
-		static const Colour& empty();
-		static const Colour& black();
-		static const Colour& white();
-		static const Colour& red();
-		static const Colour& green();
-		static const Colour& blue();
-		static const Colour& yellow();
-		static const Colour& magenta();
-		static const Colour& cyan();
+		static const Colour &empty();
+		static const Colour &black();
+		static const Colour &white();
+		static const Colour &red();
+		static const Colour &green();
+		static const Colour &blue();
+		static const Colour &yellow();
+		static const Colour &magenta();
+		static const Colour &cyan();
 
 		/*
 		 * Build a colour from the HSV representation.
@@ -50,7 +50,7 @@ namespace llt
 		/*
 		 * Linearly interpolate between two colours
 		 */
-		static Colour lerp(const Colour& from, const Colour& to, float amount);
+		static Colour lerp(const Colour &from, const Colour &to, float amount);
 
 		/*
 		 * Get the packed colour value as a single 32-bit integer.
@@ -67,18 +67,18 @@ namespace llt
 		 */
 		glm::vec3 getDisplayColour() const;
 
-		void exportToUint8(uint8_t* colours) const;
-		void exportToFloat(float* colours) const;
+		void exportToUint8(uint8_t *colours) const;
+		void exportToFloat(float *colours) const;
 
-		bool operator == (const Colour& other) const;
-		bool operator != (const Colour& other) const;
+		bool operator == (const Colour &other) const;
+		bool operator != (const Colour &other) const;
 
 		Colour operator - () const;
 		Colour operator * (float factor) const;
 		Colour operator / (float factor) const;
 
-		Colour& operator *= (float factor);
-		Colour& operator /= (float factor);
+		Colour &operator *= (float factor);
+		Colour &operator /= (float factor);
 	};
 }
 

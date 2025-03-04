@@ -15,16 +15,16 @@ namespace llt
 		Mesh();
 		~Mesh();
 
-		SubMesh* createSubmesh();
+		SubMesh *createSubmesh();
 
 		uint64_t getSubmeshCount() const;
-		SubMesh* getSubmesh(int idx) const;
+		SubMesh *getSubmesh(int idx) const;
 
-		void setOwner(RenderObject* owner);
-		RenderObject* getOwner();
+		void setOwner(RenderObject *owner);
+		RenderObject *getOwner();
 
 	private:
-		RenderObject* m_owner;
+		RenderObject *m_owner;
 		Vector<SubMesh*> m_subMeshes;
 	};
 }

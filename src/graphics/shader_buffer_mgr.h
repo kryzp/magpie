@@ -20,14 +20,14 @@ namespace llt
 
 		void resetBufferUsageInFrame();
 
-		DynamicShaderBuffer* createUBO();
-		DynamicShaderBuffer* createSSBO();
+		DynamicShaderBuffer *createUBO();
+		DynamicShaderBuffer *createSSBO();
 
 	private:
 		Vector<DynamicShaderBuffer*> m_buffers;
 	};
 
-	extern ShaderBufferMgr* g_shaderBufferManager;
+	extern ShaderBufferMgr *g_shaderBufferManager;
 }
 
 #endif // SHADER_BUFFER_MGR_

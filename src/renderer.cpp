@@ -41,10 +41,13 @@ void Renderer::init()
 	g_gpuBufferManager->createGlobalStagingBuffers();
 
 	initVertexTypes();
+
 	createQuadMesh();
-	loadTextures();
 
 	g_meshLoader = new MeshLoader();
+
+	g_textureManager->loadDefaultTexturesAndSamplers();
+	g_shaderManager->loadDefaultShaders();
 
 	g_materialSystem = new MaterialSystem();
 	g_materialSystem->loadDefaultTechniques();
@@ -93,7 +96,7 @@ void Renderer::addRenderObjects()
 //	MaterialData woodMaterialData;
 //	woodMaterialData.textures.pushBack({ g_textureManager->getTexture("wood"), g_textureManager->getSampler("linear") });
 //	woodMaterialData.technique = "texturedPBR";
-//	Material* woodMaterial = g_materialSystem->buildMaterial(woodMaterialData);
+//	Material *woodMaterial = g_materialSystem->buildMaterial(woodMaterialData);
 
 //	auto floor = m_renderEntities.emplaceBack();
 //	floor->transform.setPosition({ 0.0f, 0.0f, 0.0f });
@@ -126,8 +129,8 @@ void Renderer::createPostProcessResources()
 	
 	VkDescriptorSetLayout ppDescriptorSetLayout = ppDescriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, nullptr);
 	
-	ShaderProgram* ppVS = g_shaderManager->create("postProcessVertex", "../../res/shaders/raster/post_process_vs.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* ppPS = g_shaderManager->create("postProcessFragment", "../../res/shaders/raster/post_process_ps.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram *ppVS = g_shaderManager->create("postProcessVertex", "../../res/shaders/raster/post_process_vs.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	ShaderProgram *ppPS = g_shaderManager->create("postProcessFragment", "../../res/shaders/raster/post_process_ps.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	
 	m_postProcessPipeline.setVertexDescriptor(g_modelVertexFormat);
 	m_postProcessPipeline.setDepthTest(false);
@@ -155,16 +158,6 @@ void Renderer::createPostProcessResources()
 	
 	ppDescriptorWriter.updateSet(m_postProcessDescriptorSet);
 */
-}
-
-void Renderer::loadTextures()
-{
-	g_textureManager->createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
-	g_textureManager->createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
-
-	g_textureManager->create("environmentHDR", "../../res/textures/rogland_clear_night_greg_zaal.hdr");
-	g_textureManager->create("stone", "../../res/textures/smooth_stone.png");
-	g_textureManager->create("wood", "../../res/textures/wood.jpg");
 }
 
 void Renderer::createQuadMesh()
@@ -236,11 +229,11 @@ void Renderer::createSkybox()
 	m_skyboxMaterial = g_materialSystem->buildMaterial(skyboxData);
 }
 
-void Renderer::aggregateSubMeshes(Vector<SubMesh*>& list)
+void Renderer::aggregateSubMeshes(Vector<SubMesh*> &list)
 {
 	list.clear();
 
-	for (auto& obj : m_renderObjects)
+	for (auto &obj : m_renderObjects)
 	{
 		if (!obj.mesh)
 			continue;
@@ -277,7 +270,7 @@ void Renderer::sortRenderListByMaterialHash(int lo, int hi)
 	sortRenderListByMaterialHash(partition + 1, hi);
 }
 
-void Renderer::renderObjects(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target)
+void Renderer::renderObjects(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target)
 {
 	RenderInfo info = target->getRenderInfo();
 
@@ -296,8 +289,8 @@ void Renderer::renderObjects(CommandBuffer& buffer, const Camera& camera, const 
 
 		for (int i = 0; i < m_renderList.size(); i++)
 		{
-			SubMesh* mesh = m_renderList[i];
-			Material* mat = mesh->getMaterial();
+			SubMesh *mesh = m_renderList[i];
+			Material *mat = mesh->getMaterial();
 
 			if (currentMaterialHash != mat->getHash())
 			{
@@ -317,7 +310,7 @@ void Renderer::renderObjects(CommandBuffer& buffer, const Camera& camera, const 
 	}
 }
 
-void Renderer::renderSkybox(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target)
+void Renderer::renderSkybox(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target)
 {
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
 	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("viewMatrix", camera.getRotationMatrix());
@@ -334,9 +327,14 @@ void Renderer::renderSkybox(CommandBuffer& buffer, const Camera& camera, const G
 	m_skyboxMaterial->renderMesh(buffer, SHADER_PASS_FORWARD, m_skyboxMesh);
 }
 
-void Renderer::render(const Camera& camera, float deltaTime)
+void Renderer::render(const Camera &camera, float deltaTime)
 {
-	for (RenderObject& entity : m_renderObjects) {
+	g_materialSystem->updateImGui();
+
+	ImGui::ShowDemoWindow();
+	ImGui::Render();
+
+	for (RenderObject &entity : m_renderObjects) {
 		entity.storePrevMatrix();
 	}
 
@@ -365,7 +363,7 @@ void Renderer::render(const Camera& camera, float deltaTime)
 	g_vulkanBackend->swapBuffers();
 }
 
-void Renderer::renderImGui(CommandBuffer& buffer)
+void Renderer::renderImGui(CommandBuffer &buffer)
 {
 	RenderInfo renderInfo;
 	
@@ -383,14 +381,14 @@ void Renderer::renderImGui(CommandBuffer& buffer)
 
 	buffer.beginRendering(renderInfo);
 
-	ImDrawData* drawData = ImGui::GetDrawData();
+	ImDrawData *drawData = ImGui::GetDrawData();
 	ImGui_ImplVulkan_RenderDrawData(drawData, buffer.getBuffer());
 
 	buffer.endRendering();
 	buffer.submit();
 }
 
-void Renderer::renderParticles(CommandBuffer& buffer, const Camera& camera, const GenericRenderTarget* target, float deltaTime)
+void Renderer::renderParticles(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target, float deltaTime)
 {
 /*
 	m_gBuffer->toggleClear(false);

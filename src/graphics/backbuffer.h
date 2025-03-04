@@ -31,10 +31,10 @@ namespace llt
 		void cleanUpSwapChain();
 		void cleanUpTextures();
 
-		void beginRendering(CommandBuffer& buffer) override;
-		void endRendering(CommandBuffer& buffer) override;
+		void beginRendering(CommandBuffer &buffer) override;
+		void endRendering(CommandBuffer &buffer) override;
 
-		void setClearColour(int idx, const Colour& colour) override;
+		void setClearColour(int idx, const Colour &colour) override;
 
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 
@@ -42,8 +42,8 @@ namespace llt
 
 		void swapBuffers();
 
-		Texture* getAttachment(int idx) override;
-		Texture* getDepthAttachment() override;
+		Texture *getAttachment(int idx) override;
+		Texture *getDepthAttachment() override;
 
 		VkImage getCurrentSwapchainImage() const;
 		VkImageView getCurrentSwapchainImageView() const;
@@ -56,8 +56,8 @@ namespace llt
 
 		uint32_t getCurrentTextureIdx() const;
 
-		const VkSemaphore& getRenderFinishedSemaphore() const;
-		const VkSemaphore& getImageAvailableSemaphore() const;
+		const VkSemaphore &getRenderFinishedSemaphore() const;
+		const VkSemaphore &getImageAvailableSemaphore() const;
 
 	private:
 		void createColourResources(); // coloured visual component

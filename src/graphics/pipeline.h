@@ -33,20 +33,22 @@ namespace llt
 	class Pipeline
 	{
 	public:
-		Pipeline(VkShaderStageFlagBits stage);
+		Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint);
 		virtual ~Pipeline();
 
-		virtual void create(RenderInfo* renderInfo) = 0;
+		virtual void create(RenderInfo *renderInfo) = 0;
 
-		virtual void bind(CommandBuffer& buffer) = 0;
+		void bind(CommandBuffer &buffer);
+
+		void bindSet(CommandBuffer &buffer, const VkDescriptorSet &set);
+		void bindSet(CommandBuffer &buffer, const VkDescriptorSet &set, const Vector<uint32_t> &dynamicOffsets);
 
 		VkPipeline getPipeline();
-
 		VkPipelineLayout getPipelineLayout();
 
-		void setDescriptorSetLayout(const VkDescriptorSetLayout& layout);
+		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
 
-		virtual void bindShader(const ShaderProgram* shader) = 0;
+		virtual void bindShader(const ShaderProgram *shader) = 0;
 
 	protected:
 		VkPipeline m_pipeline;
@@ -54,6 +56,7 @@ namespace llt
 	private:
 		VkShaderStageFlagBits m_stage;
 		VkDescriptorSetLayout m_descriptorSetLayout;
+		VkPipelineBindPoint m_bindPoint;
 	};
 
 	class GraphicsPipeline : public Pipeline
@@ -62,15 +65,13 @@ namespace llt
 		GraphicsPipeline();
 		~GraphicsPipeline() override;
 
-		void create(RenderInfo* renderInfo) override;
+		void create(RenderInfo *renderInfo) override;
 
-		void bind(CommandBuffer& buffer) override;
-
-		void render(CommandBuffer& buffer, const RenderPass& op);
+		void render(CommandBuffer &buffer, const RenderPass &op);
 		
-		void bindShader(const ShaderProgram* shader) override;
+		void bindShader(const ShaderProgram *shader) override;
 
-		void setVertexFormat(const VertexFormat& format);
+		void setVertexFormat(const VertexFormat &format);
 
 		void setMSAA(VkSampleCountFlagBits samples);
 		void setSampleShading(bool enabled, float minSampleShading);
@@ -82,11 +83,11 @@ namespace llt
 		void setDepthBounds(float min, float max);
 		void setDepthStencilTest(bool enabled);
 
-		void setViewport(const RectF& rect);
-		void setScissor(const RectI& rect);
+		void setViewport(const RectF &rect);
+		void setScissor(const RectI &rect);
 
-		void resetViewport(const RenderInfo& info);
-		void resetScissor(const RenderInfo& info);
+		void resetViewport(const RenderInfo &info);
+		void resetScissor(const RenderInfo &info);
 
 	private:
 		VkViewport getViewport() const;
@@ -114,13 +115,11 @@ namespace llt
 		ComputePipeline();
 		~ComputePipeline() override;
 
-		void create(RenderInfo* renderInfo = nullptr) override;
+		void create(RenderInfo *renderInfo = nullptr) override;
 
-		void bind(CommandBuffer& buffer) override;
+		void dispatch(CommandBuffer &buffer, int gcX, int gcY, int gcZ);
 
-		void dispatch(CommandBuffer& buffer, int gcX, int gcY, int gcZ);
-
-		void bindShader(const ShaderProgram* shader) override;
+		void bindShader(const ShaderProgram *shader) override;
 
 	private:
 		VkPipelineShaderStageCreateInfo m_computeShaderStageInfo;

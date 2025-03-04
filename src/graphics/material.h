@@ -24,7 +24,7 @@ namespace llt
 
 	struct ShaderPass
 	{
-		ShaderEffect* shader;
+		ShaderEffect *shader;
 		VkDescriptorSet set;
 		GraphicsPipeline pipeline;
 	};
@@ -37,7 +37,7 @@ namespace llt
 
 		VertexFormat vertexFormat;
 
-		ShaderEffect* passes[SHADER_PASS_MAX_ENUM];
+		ShaderEffect *passes[SHADER_PASS_MAX_ENUM];
 		// todo: default parameters
 
 		bool depthTest = true;
@@ -54,7 +54,7 @@ namespace llt
 		{
 			uint64_t result = 0;
 
-			for (auto& t : textures) {
+			for (auto &t : textures) {
 				hash::combine(&result, &t);
 			}
 
@@ -72,15 +72,15 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		void bindPipeline(CommandBuffer& buffer, RenderInfo& renderInfo, ShaderPassType type);
+		void bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType type);
 
-		void render(CommandBuffer& buffer, ShaderPassType type, const RenderPass& pass);
-		void renderMesh(CommandBuffer& buffer, ShaderPassType type, const SubMesh& mesh);
+		void render(CommandBuffer &buffer, ShaderPassType type, const RenderPass &pass);
+		void renderMesh(CommandBuffer &buffer, ShaderPassType type, const SubMesh &mesh);
 
-		VertexFormat vertexFormat;
-		Vector<BoundTexture> textures;
-		DynamicShaderBuffer* parameterBuffer;
-		ShaderPass passes[SHADER_PASS_MAX_ENUM];
+		VertexFormat m_vertexFormat;
+		Vector<BoundTexture> m_textures;
+		DynamicShaderBuffer *m_parameterBuffer;
+		ShaderPass m_passes[SHADER_PASS_MAX_ENUM];
 	};
 }
 

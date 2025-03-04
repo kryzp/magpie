@@ -91,7 +91,7 @@ Colour Colour::fromHSV(float hue, float sat, float val, uint8_t alpha)
 	);
 }
 
-Colour Colour::lerp(const Colour& from, const Colour& to, float amount)
+Colour Colour::lerp(const Colour &from, const Colour &to, float amount)
 {
 	return Colour(
 		CalcF::lerp(from.r, to.r, amount),
@@ -120,7 +120,7 @@ glm::vec3 Colour::getDisplayColour() const
 	);
 }
 
-void Colour::exportToUint8(uint8_t* colours) const
+void Colour::exportToUint8(uint8_t *colours) const
 {
 	colours[0] = r;
 	colours[1] = g;
@@ -128,7 +128,7 @@ void Colour::exportToUint8(uint8_t* colours) const
 	colours[3] = a;
 }
 
-void Colour::exportToFloat(float* colours) const
+void Colour::exportToFloat(float *colours) const
 {
 	colours[0] = static_cast<float>(r) / 255.0f;
 	colours[1] = static_cast<float>(g) / 255.0f;
@@ -136,7 +136,7 @@ void Colour::exportToFloat(float* colours) const
 	colours[3] = static_cast<float>(a) / 255.0f;
 }
 
-bool Colour::operator == (const Colour& other) const
+bool Colour::operator == (const Colour &other) const
 {
 	return (
 		r == other.r &&
@@ -146,7 +146,7 @@ bool Colour::operator == (const Colour& other) const
 	);
 }
 
-bool Colour::operator != (const Colour& other) const
+bool Colour::operator != (const Colour &other) const
 {
 	return !(*this == other);
 }
@@ -181,24 +181,24 @@ Colour Colour::operator / (float factor) const
 	);
 }
 
-Colour& Colour::operator *= (float factor)
+Colour &Colour::operator *= (float factor)
 {
 	(*this) = (*this) * factor;
 	return *this;
 }
 
-Colour& Colour::operator /= (float factor)
+Colour &Colour::operator /= (float factor)
 {
 	(*this) = (*this) / factor;
 	return *this;
 }
 
-const Colour& Colour::empty()   { static const Colour EMPTY   = Colour(000, 000, 000, 000); return EMPTY;   }
-const Colour& Colour::black()   { static const Colour BLACK   = Colour(000, 000, 000, 255); return BLACK;   }
-const Colour& Colour::white()   { static const Colour WHITE   = Colour(255, 255, 255, 255); return WHITE;   }
-const Colour& Colour::red()     { static const Colour RED     = Colour(255, 000, 000, 255); return RED;     }
-const Colour& Colour::green()   { static const Colour GREEN   = Colour(000, 255, 000, 255); return GREEN;   }
-const Colour& Colour::blue()    { static const Colour BLUE    = Colour(000, 000, 255, 255); return BLUE;    }
-const Colour& Colour::yellow()  { static const Colour YELLOW  = Colour(255, 255, 000, 255); return YELLOW;  }
-const Colour& Colour::magenta() { static const Colour MAGENTA = Colour(255, 000, 255, 255); return MAGENTA; }
-const Colour& Colour::cyan()    { static const Colour CYAN    = Colour(000, 255, 255, 255); return CYAN;    }
+const Colour &Colour::empty()   { static const Colour EMPTY   = Colour(000, 000, 000, 000); return EMPTY;   }
+const Colour &Colour::black()   { static const Colour BLACK   = Colour(000, 000, 000, 255); return BLACK;   }
+const Colour &Colour::white()   { static const Colour WHITE   = Colour(255, 255, 255, 255); return WHITE;   }
+const Colour &Colour::red()     { static const Colour RED     = Colour(255, 000, 000, 255); return RED;     }
+const Colour &Colour::green()   { static const Colour GREEN   = Colour(000, 255, 000, 255); return GREEN;   }
+const Colour &Colour::blue()    { static const Colour BLUE    = Colour(000, 000, 255, 255); return BLUE;    }
+const Colour &Colour::yellow()  { static const Colour YELLOW  = Colour(255, 255, 000, 255); return YELLOW;  }
+const Colour &Colour::magenta() { static const Colour MAGENTA = Colour(255, 000, 255, 255); return MAGENTA; }
+const Colour &Colour::cyan()    { static const Colour CYAN    = Colour(000, 255, 255, 255); return CYAN;    }

@@ -2,7 +2,7 @@
 #include "texture_mgr.h"
 #include "material_system.h"
 
-llt::MeshLoader* llt::g_meshLoader = nullptr;
+llt::MeshLoader *llt::g_meshLoader = nullptr;
 
 using namespace llt;
 
@@ -21,13 +21,13 @@ MeshLoader::~MeshLoader()
 	m_meshCache.clear();
 }
 
-Mesh* MeshLoader::loadMesh(const String& name, const String& path)
+Mesh *MeshLoader::loadMesh(const String &name, const String &path)
 {
 	if (m_meshCache.contains(name)) {
 		return m_meshCache.get(name);
 	}
 
-	const aiScene* scene = m_importer.ReadFile(path.cstr(),
+	const aiScene *scene = m_importer.ReadFile(path.cstr(),
 		aiProcess_Triangulate |
 		aiProcess_FlipWindingOrder |
 		aiProcess_CalcTangentSpace |
@@ -40,7 +40,7 @@ Mesh* MeshLoader::loadMesh(const String& name, const String& path)
 		return nullptr;
 	}
 
-	Mesh* mesh = new Mesh();
+	Mesh *mesh = new Mesh();
 
 	aiMatrix4x4 identity(
 		1.0f, 0.0f, 0.0f, 0.0f,
@@ -55,11 +55,11 @@ Mesh* MeshLoader::loadMesh(const String& name, const String& path)
 	return mesh;
 }
 
-void MeshLoader::processNodes(Mesh* mesh, aiNode* node, const aiScene* scene, const aiMatrix4x4& transform)
+void MeshLoader::processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform)
 {
 	for(int i = 0; i < node->mNumMeshes; i++)
 	{
-		aiMesh* assimpMesh = scene->mMeshes[node->mMeshes[i]];
+		aiMesh *assimpMesh = scene->mMeshes[node->mMeshes[i]];
 		processSubMesh(mesh->createSubmesh(), assimpMesh, scene, node->mTransformation * transform);
 	}
 
@@ -69,14 +69,14 @@ void MeshLoader::processNodes(Mesh* mesh, aiNode* node, const aiScene* scene, co
 	}
 }
 
-void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene, const aiMatrix4x4& transform)
+void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
 {
 	Vector<ModelVertex> vertices;
 	Vector<uint16_t> indices;
 
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
 	{
-		const aiVector3D& vtx = transform * assimpMesh->mVertices[i];
+		const aiVector3D &vtx = transform * assimpMesh->mVertices[i];
 
 		ModelVertex vertex = {};
 
@@ -84,7 +84,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 		if (assimpMesh->HasNormals())
 		{
-			const aiVector3D& nml = transform * assimpMesh->mNormals[i]; // this literally wont work lmao
+			const aiVector3D &nml = transform * assimpMesh->mNormals[i]; // this literally wont work lmao
 
 			vertex.norm = { nml.x, nml.y, nml.z };
 		}
@@ -95,7 +95,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 		if (assimpMesh->HasVertexColors(0))
 		{
-			const aiColor4D& col = assimpMesh->mColors[0][i];
+			const aiColor4D &col = assimpMesh->mColors[0][i];
 
 			vertex.col = { col.r, col.g, col.b };
 		}
@@ -107,7 +107,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 		if (assimpMesh->HasTextureCoords(0))
 		{
-			const aiVector3D& uv = assimpMesh->mTextureCoords[0][i];
+			const aiVector3D &uv = assimpMesh->mTextureCoords[0][i];
 
 			vertex.uv = { uv.x, uv.y };
 		}
@@ -118,7 +118,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 		if (assimpMesh->HasTangentsAndBitangents())
 		{
-			const aiVector3D& tangent = assimpMesh->mTangents[i];
+			const aiVector3D &tangent = assimpMesh->mTangents[i];
 
 			vertex.tangent = { tangent.x, tangent.y, tangent.z };
 		}
@@ -132,7 +132,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 	for (int i = 0; i < assimpMesh->mNumFaces; i++)
 	{
-		const aiFace& face = assimpMesh->mFaces[i];
+		const aiFace &face = assimpMesh->mFaces[i];
 
 		for (int j = 0; j < face.mNumIndices; j++)
 		{
@@ -148,7 +148,7 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 
 	if (assimpMesh->mMaterialIndex >= 0)
 	{
-		const aiMaterial* assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
+		const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
 
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
@@ -160,17 +160,17 @@ void MeshLoader::processSubMesh(SubMesh* submesh, aiMesh* assimpMesh, const aiSc
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_EMISSIVE);
 		//fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
 
-		Material* material = g_materialSystem->buildMaterial(data);
+		Material *material = g_materialSystem->buildMaterial(data);
 
 		submesh->setMaterial(material);
 	}
 }
 
-void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial* material, aiTextureType type)
+void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial *material, aiTextureType type)
 {
 	Vector<Texture*> maps = loadMaterialTextures(material, type);
 
-	for (auto& tex : maps)
+	for (auto &tex : maps)
 	{
 		BoundTexture boundTexture = {};
 		boundTexture.texture = tex;
@@ -181,7 +181,7 @@ void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, cons
 	}
 }
 
-Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial* material, aiTextureType type)
+Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type)
 {
 	Vector<Texture*> result;
 
@@ -193,10 +193,10 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial* material, ai
 		aiString basePath = aiString("../../res/models/GLTF/DamagedHelmet/");
 		basePath.Append(texturePath.C_Str());
 
-		Texture* tex = g_textureManager->getTexture(basePath.C_Str());
+		Texture *tex = g_textureManager->getTexture(basePath.C_Str());
 
 		if (!tex)
-			tex = g_textureManager->create(basePath.C_Str(), basePath.C_Str());
+			tex = g_textureManager->load(basePath.C_Str(), basePath.C_Str());
 
 		result.pushBack(tex);
 	}

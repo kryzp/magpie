@@ -40,12 +40,12 @@ namespace llt
 			{
 			}
 
-			bool operator == (const Style& other) const { return this->filter == other.filter && this->wrapX == other.wrapX && this->wrapY == other.wrapY && this->wrapZ == other.wrapZ; }
-			bool operator != (const Style& other) const { return !(*this == other); }
+			bool operator == (const Style &other) const { return this->filter == other.filter && this->wrapX == other.wrapX && this->wrapY == other.wrapY && this->wrapZ == other.wrapZ; }
+			bool operator != (const Style &other) const { return !(*this == other); }
 		};
 
 		TextureSampler();
-		TextureSampler(const Style& style);
+		TextureSampler(const Style &style);
 		~TextureSampler();
 
 		void cleanUp();
@@ -60,8 +60,8 @@ namespace llt
 		bool dirty;
 		Style style;
 
-		bool operator == (const TextureSampler& other) const { return this->style == other.style; }
-		bool operator != (const TextureSampler& other) const { return this->style != other.style; }
+		bool operator == (const TextureSampler &other) const { return this->style == other.style; }
+		bool operator != (const TextureSampler &other) const { return this->style != other.style; }
 
 	private:
 		VkSampler m_sampler;

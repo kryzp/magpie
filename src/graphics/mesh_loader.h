@@ -18,20 +18,20 @@ namespace llt
 		MeshLoader();
 		~MeshLoader();
 
-		Mesh* loadMesh(const String& name, const String& path);
+		Mesh *loadMesh(const String &name, const String &path);
 
 	private:
-		void processNodes(Mesh* mesh, aiNode* node, const aiScene* scene, const aiMatrix4x4& transform);
-		void processSubMesh(llt::SubMesh* submesh, aiMesh* assimpMesh, const aiScene* scene, const aiMatrix4x4& transform);
+		void processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
+		void processSubMesh(llt::SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 
-		void fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial* material, aiTextureType type);
-		Vector<Texture*> loadMaterialTextures(const aiMaterial* material, aiTextureType type);
+		void fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial *material, aiTextureType type);
+		Vector<Texture*> loadMaterialTextures(const aiMaterial *material, aiTextureType type);
 
 		HashMap<String, Mesh*> m_meshCache;
 		Assimp::Importer m_importer;
 	};
 
-	extern MeshLoader* g_meshLoader;
+	extern MeshLoader *g_meshLoader;
 }
 
 #endif // MESH_LOADER_H_

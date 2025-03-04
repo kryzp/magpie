@@ -22,85 +22,85 @@ namespace llt
 		{
 		public:
 			Iterator() : m_ptr(nullptr) { }
-			Iterator(T* ptr) : m_ptr(ptr) { }
+			Iterator(T *ptr) : m_ptr(ptr) { }
 			~Iterator() = default;
-			T& operator * () const { return *m_ptr; }
-			T* operator -> () const { return m_ptr; }
-			Iterator& operator ++ () { m_ptr++; return *this; }
-			Iterator& operator -- () { m_ptr--; return *this; }
-			Iterator& operator ++ (int) { m_ptr++; return *this; }
-			Iterator& operator -- (int) { m_ptr--; return *this; }
-			bool operator == (const Iterator& other) const { return this->m_ptr == other.m_ptr; }
-			bool operator != (const Iterator& other) const { return this->m_ptr != other.m_ptr; }
+			T &operator * () const { return *m_ptr; }
+			T *operator -> () const { return m_ptr; }
+			Iterator &operator ++ () { m_ptr++; return *this; }
+			Iterator &operator -- () { m_ptr--; return *this; }
+			Iterator &operator ++ (int) { m_ptr++; return *this; }
+			Iterator &operator -- (int) { m_ptr--; return *this; }
+			bool operator == (const Iterator &other) const { return this->m_ptr == other.m_ptr; }
+			bool operator != (const Iterator &other) const { return this->m_ptr != other.m_ptr; }
 		private:
-			T* m_ptr;
+			T *m_ptr;
 		};
 
 		class ConstIterator
 		{
 		public:
 			ConstIterator() : m_ptr(nullptr) { }
-			ConstIterator(const T* ptr) : m_ptr(ptr) { }
+			ConstIterator(const T *ptr) : m_ptr(ptr) { }
 			~ConstIterator() = default;
-			const T& operator * () const { return *m_ptr; }
-			const T* operator -> () const { return m_ptr; }
-			ConstIterator& operator ++ () { m_ptr++; return *this; }
-			ConstIterator& operator -- () { m_ptr--; return *this; }
-			ConstIterator& operator ++ (int) { m_ptr++; return *this; }
-			ConstIterator& operator -- (int) { m_ptr--; return *this; }
-			bool operator == (const ConstIterator& other) const { return this->m_ptr == other.m_ptr; }
-			bool operator != (const ConstIterator& other) const { return this->m_ptr != other.m_ptr; }
+			const T &operator * () const { return *m_ptr; }
+			const T *operator -> () const { return m_ptr; }
+			ConstIterator &operator ++ () { m_ptr++; return *this; }
+			ConstIterator &operator -- () { m_ptr--; return *this; }
+			ConstIterator &operator ++ (int) { m_ptr++; return *this; }
+			ConstIterator &operator -- (int) { m_ptr--; return *this; }
+			bool operator == (const ConstIterator &other) const { return this->m_ptr == other.m_ptr; }
+			bool operator != (const ConstIterator &other) const { return this->m_ptr != other.m_ptr; }
 		private:
-			const T* m_ptr;
+			const T *m_ptr;
 		};
 
 		class ReverseIterator
 		{
 		public:
 			ReverseIterator() : m_ptr(nullptr) { }
-			ReverseIterator(T* ptr) : m_ptr(ptr) { }
+			ReverseIterator(T *ptr) : m_ptr(ptr) { }
 			~ReverseIterator() = default;
-			T& operator * () const { return *m_ptr; }
-			T* operator -> () const { return m_ptr; }
-			ReverseIterator& operator ++ () { m_ptr--; return *this; }
-			ReverseIterator& operator -- () { m_ptr++; return *this; }
-			ReverseIterator& operator ++ (int) { m_ptr--; return *this; }
-			ReverseIterator& operator -- (int) { m_ptr++; return *this; }
-			bool operator == (const ReverseIterator& other) const { return this->m_ptr == other.m_ptr; }
-			bool operator != (const ReverseIterator& other) const { return this->m_ptr != other.m_ptr; }
+			T &operator * () const { return *m_ptr; }
+			T *operator -> () const { return m_ptr; }
+			ReverseIterator &operator ++ () { m_ptr--; return *this; }
+			ReverseIterator &operator -- () { m_ptr++; return *this; }
+			ReverseIterator &operator ++ (int) { m_ptr--; return *this; }
+			ReverseIterator &operator -- (int) { m_ptr++; return *this; }
+			bool operator == (const ReverseIterator &other) const { return this->m_ptr == other.m_ptr; }
+			bool operator != (const ReverseIterator &other) const { return this->m_ptr != other.m_ptr; }
 		private:
-			T* m_ptr;
+			T *m_ptr;
 		};
 
 		class ReverseConstIterator
 		{
 		public:
 			ReverseConstIterator() : m_ptr(nullptr) { }
-			ReverseConstIterator(const T* ptr) : m_ptr(ptr) { }
+			ReverseConstIterator(const T *ptr) : m_ptr(ptr) { }
 			~ReverseConstIterator() = default;
-			const T& operator * () const { return *m_ptr; }
-			const T* operator -> () const { return m_ptr; }
-			ReverseConstIterator& operator ++ () { m_ptr--; return *this; }
-			ReverseConstIterator& operator -- () { m_ptr++; return *this; }
-			ReverseConstIterator& operator ++ (int) { m_ptr--; return *this; }
-			ReverseConstIterator& operator -- (int) { m_ptr++; return *this; }
-			bool operator == (const ReverseConstIterator& other) const { return this->m_ptr == other.m_ptr; }
-			bool operator != (const ReverseConstIterator& other) const { return this->m_ptr != other.m_ptr; }
+			const T &operator * () const { return *m_ptr; }
+			const T *operator -> () const { return m_ptr; }
+			ReverseConstIterator &operator ++ () { m_ptr--; return *this; }
+			ReverseConstIterator &operator -- () { m_ptr++; return *this; }
+			ReverseConstIterator &operator ++ (int) { m_ptr--; return *this; }
+			ReverseConstIterator &operator -- (int) { m_ptr++; return *this; }
+			bool operator == (const ReverseConstIterator &other) const { return this->m_ptr == other.m_ptr; }
+			bool operator != (const ReverseConstIterator &other) const { return this->m_ptr != other.m_ptr; }
 		private:
-			const T* m_ptr;
+			const T *m_ptr;
 		};
 
         Vector();
         Vector(std::initializer_list<T> data);
         Vector(uint64_t initialCapacity);
-        Vector(uint64_t initialCapacity, const T& initialElement);
-		Vector(T* buf, uint64_t length);
-		Vector(const Iterator& begin, const Iterator& end);
-        Vector(const Vector& other);
-        Vector(Vector&& other) noexcept;
+        Vector(uint64_t initialCapacity, const T &initialElement);
+		Vector(T *buf, uint64_t length);
+		Vector(const Iterator &begin, const Iterator &end);
+        Vector(const Vector &other);
+        Vector(Vector &&other) noexcept;
 
-        Vector& operator = (const Vector& other);
-        Vector& operator = (Vector&& other) noexcept;
+        Vector &operator = (const Vector &other);
+        Vector &operator = (Vector &&other) noexcept;
 
         ~Vector();
 
@@ -123,22 +123,22 @@ namespace llt
 		void erase(uint64_t index, uint64_t amount = 1);
 		void erase(Iterator it, uint64_t amount = 1);
 
-		Iterator find(const T& item);
+		Iterator find(const T &item);
 
-		T* data();
-		const T* data() const;
+		T *data();
+		const T *data() const;
 
-		Iterator insert(int index, const T& item);
+		Iterator insert(int index, const T &item);
 
 		/*
 		 * Add a new element to the front.
 		 */
-        Iterator pushFront(const T& item);
+        Iterator pushFront(const T &item);
 
 		/*
 		 * Add a new element to the back.
 		 */
-        Iterator pushBack(const T& item);
+        Iterator pushBack(const T &item);
 
 		/*
 		 * Remove the front element.
@@ -171,10 +171,10 @@ namespace llt
 		bool any() const;
 		bool empty() const;
 
-		T& front();
-		const T& front() const;
-		T& back();
-		const T& back() const;
+		T &front();
+		const T &front() const;
+		T &back();
+		const T &back() const;
 
         Iterator begin();
         ConstIterator begin() const;
@@ -191,14 +191,14 @@ namespace llt
 		ReverseConstIterator crbegin() const;
 		ReverseConstIterator crend() const;
 
-		T& at(uint64_t idx);
-        const T& at(uint64_t idx) const;
+		T &at(uint64_t idx);
+        const T &at(uint64_t idx) const;
 
-        T& operator [] (uint64_t idx);
-        const T& operator [] (uint64_t idx) const;
+        T &operator [] (uint64_t idx);
+        const T &operator [] (uint64_t idx) const;
 
     private:
-        T* m_buf;
+        T *m_buf;
         uint64_t m_size;
         uint64_t m_capacity;
 	};
@@ -236,7 +236,7 @@ namespace llt
     }
 
     template <typename T>
-    Vector<T>::Vector(uint64_t initialCapacity, const T& initialElement)
+    Vector<T>::Vector(uint64_t initialCapacity, const T &initialElement)
         : Vector()
     {
         allocate(initialCapacity);
@@ -248,7 +248,7 @@ namespace llt
     }
 
 	template <typename T>
-	Vector<T>::Vector(T* buf, uint64_t length)
+	Vector<T>::Vector(T *buf, uint64_t length)
 		: Vector()
 	{
 		allocate(length);
@@ -260,7 +260,7 @@ namespace llt
 	}
 
 	template <typename T>
-	Vector<T>::Vector(const Iterator& begin, const Iterator& end)
+	Vector<T>::Vector(const Iterator &begin, const Iterator &end)
 		: Vector()
 	{
 		allocate(end.m_ptr - begin.m_ptr);
@@ -272,7 +272,7 @@ namespace llt
 	}
 
     template <typename T>
-    Vector<T>::Vector(const Vector& other)
+    Vector<T>::Vector(const Vector &other)
         : Vector()
     {
         if (other.m_capacity <= 0) {
@@ -289,7 +289,7 @@ namespace llt
     }
 
     template <typename T>
-    Vector<T>::Vector(Vector&& other) noexcept
+    Vector<T>::Vector(Vector &&other) noexcept
 		: Vector()
     {
         this->m_capacity = std::move(other.m_capacity);
@@ -302,7 +302,7 @@ namespace llt
     }
     
     template <typename T>
-    Vector<T>& Vector<T>::operator = (const Vector& other)
+    Vector<T>& Vector<T>::operator = (const Vector &other)
     {
 		allocate(other.m_capacity);
 		clear();
@@ -317,7 +317,7 @@ namespace llt
     }
     
     template <typename T>
-    Vector<T>& Vector<T>::operator = (Vector&& other) noexcept
+    Vector<T>& Vector<T>::operator = (Vector &&other) noexcept
     {
 		clear();
 
@@ -379,7 +379,7 @@ namespace llt
 		}
 
 		// allocate a new command buffer
-		T* newBuffer = (T*)::operator new (sizeof(T) * newCapacity);
+		T *newBuffer = (T*)::operator new (sizeof(T) * newCapacity);
 		mem::set(newBuffer, 0, sizeof(T) * newCapacity);
 
 		// move all of our elements into the new buffer
@@ -466,7 +466,7 @@ namespace llt
 	}
 
 	template <typename T>
-	typename Vector<T>::Iterator Vector<T>::find(const T& item)
+	typename Vector<T>::Iterator Vector<T>::find(const T &item)
 	{
 		// linear search
 		for (uint64_t i = 0; i < m_size; i++) {
@@ -479,7 +479,7 @@ namespace llt
 	}
 
 	template <typename T>
-	Vector<T>::Iterator Vector<T>::insert(int index, const T& item)
+	Vector<T>::Iterator Vector<T>::insert(int index, const T &item)
 	{
 		resize(m_size + 1);
 		mem::move(m_buf + index + 1, m_buf + index, sizeof(T) * (m_size - index));
@@ -488,7 +488,7 @@ namespace llt
 	}
 
     template <typename T>
-	Vector<T>::Iterator Vector<T>::pushFront(const T& item)
+	Vector<T>::Iterator Vector<T>::pushFront(const T &item)
     {
         resize(m_size + 1);
         mem::move(m_buf + 1, m_buf, sizeof(T) * m_size);
@@ -497,7 +497,7 @@ namespace llt
     }
 
     template <typename T>
-	Vector<T>::Iterator Vector<T>::pushBack(const T& item)
+	Vector<T>::Iterator Vector<T>::pushBack(const T &item)
     {
         resize(m_size + 1);
         new (m_buf + m_size - 1) T(std::move(item));
@@ -543,37 +543,37 @@ namespace llt
 	}
 
 	template <typename T>
-	T* Vector<T>::data()
+	T *Vector<T>::data()
 	{
 		return m_buf;
 	}
 
 	template <typename T>
-	const T* Vector<T>::data() const
+	const T *Vector<T>::data() const
 	{
 		return m_buf;
 	}
 
 	template <typename T>
-	T& Vector<T>::front()
+	T &Vector<T>::front()
 	{
 		return m_buf[0];
 	}
 
 	template <typename T>
-	const T& Vector<T>::front() const
+	const T &Vector<T>::front() const
 	{
 		return m_buf[0];
 	}
 
 	template <typename T>
-	T& Vector<T>::back()
+	T &Vector<T>::back()
 	{
 		return m_buf[m_size - 1];
 	}
 
 	template <typename T>
-	const T& Vector<T>::back() const
+	const T &Vector<T>::back() const
 	{
 		return m_buf[m_size - 1];
 	}
@@ -669,28 +669,28 @@ namespace llt
 	}
 
     template <typename T>
-    T& Vector<T>::at(uint64_t idx)
+    T &Vector<T>::at(uint64_t idx)
     {
 		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
-    const T& Vector<T>::at(uint64_t idx) const
+    const T &Vector<T>::at(uint64_t idx) const
     {
 		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
-    T& Vector<T>::operator [] (uint64_t idx)
+    T &Vector<T>::operator [] (uint64_t idx)
     {
 		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];
     }
 
     template <typename T>
-    const T& Vector<T>::operator [] (uint64_t idx) const
+    const T &Vector<T>::operator [] (uint64_t idx) const
     {
 		LLT_ASSERT(idx >= 0 && idx < m_size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, m_size);
         return m_buf[idx];

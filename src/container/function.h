@@ -16,23 +16,23 @@ namespace llt
 	class Function<Result(Args...)>
 	{
 		typedef Result (*call_fn)(byte*, Args&&...);
-		typedef void   (*ctor_fn)(byte*, byte*);
-		typedef void   (*dtor_fn)(byte*);
+		typedef void   (*ctor_fn)(byte*, byte *);
+		typedef void   (*dtor_fn)(byte *);
 
 		template <typename F>
-		static Result getCallFn(F* fn, Args&&... args)
+		static Result getCallFn(F *fn, Args&&... args)
 		{
 			return (*fn)(std::forward<Args>(args)...);
 		}
 
 		template <typename F>
-		static void getCtorFn(F* dst, F* src)
+		static void getCtorFn(F *dst, F *src)
 		{
 			new (dst) F(*src);
 		}
 
 		template <typename F>
-		static void getDtorFn(F* fn)
+		static void getDtorFn(F *fn)
 		{
 			fn->~F();
 		}
@@ -40,7 +40,7 @@ namespace llt
 	public:
 		Function();
 		Function(std::nullptr_t null);
-		Function(const Function& other);
+		Function(const Function &other);
 
 		template <typename F>
 		Function(F fn);
@@ -52,15 +52,15 @@ namespace llt
 
 		operator bool () const;
 
-		bool operator == (const Function& other);
-		bool operator != (const Function& other);
+		bool operator == (const Function &other);
+		bool operator != (const Function &other);
 
 	private:
 		call_fn m_callFn;
 		ctor_fn m_createFn;
 		dtor_fn m_destroyFn;
 
-		byte* m_data;
+		byte *m_data;
 		uint64_t m_dataSize;
 	};
 
@@ -142,7 +142,7 @@ namespace llt
 	}
 
 	template <typename Result, typename... Args>
-	bool Function<Result(Args...)>::operator == (const Function& other)
+	bool Function<Result(Args...)>::operator == (const Function &other)
 	{
 		return (
 			this->m_data == other.m_data &&
@@ -154,7 +154,7 @@ namespace llt
 	}
 
 	template <typename Result, typename... Args>
-	bool Function<Result(Args...)>::operator != (const Function& other)
+	bool Function<Result(Args...)>::operator != (const Function &other)
 	{
 		return !(*this == other);
 	}

@@ -16,32 +16,32 @@ namespace llt
 	public:
 		Array();
 		Array(std::initializer_list<T> data);
-		Array(const Array& other);
-		Array& operator = (const Array& other);
+		Array(const Array &other);
+		Array &operator = (const Array &other);
 		~Array();
 
-		void fill(const T& value);
+		void fill(const T &value);
 		void clear();
 
 		constexpr uint64_t memorySize() const;
 		constexpr uint64_t size() const;
 
-		T* data();
-		const T* data() const;
+		T *data();
+		const T *data() const;
 
-		T* begin();
-		const T* begin() const;
-		T* end();
-		const T* end() const;
+		T *begin();
+		const T *begin() const;
+		T *end();
+		const T *end() const;
 
-		const T* cbegin() const;
-		const T* cend() const;
+		const T *cbegin() const;
+		const T *cend() const;
 
-		T& at(uint64_t idx);
-		const T& at(uint64_t idx) const;
+		T &at(uint64_t idx);
+		const T &at(uint64_t idx) const;
 
-		T& operator [] (uint64_t idx);
-		const T& operator [] (uint64_t idx) const;
+		T &operator [] (uint64_t idx);
+		const T &operator [] (uint64_t idx) const;
 
 	private:
 		T m_buf[Size];
@@ -62,7 +62,7 @@ namespace llt
 	}
 	
 	template <typename T, uint64_t Size>
-	Array<T, Size>::Array(const Array& other)
+	Array<T, Size>::Array(const Array &other)
 	{
 		for (uint64_t i = 0; i < Size; i++) {
 			m_buf[i] = other.m_buf[i];
@@ -70,7 +70,7 @@ namespace llt
 	}
 	
 	template <typename T, uint64_t Size>
-	Array<T, Size>& Array<T, Size>::operator = (const Array& other)
+	Array<T, Size>& Array<T, Size>::operator = (const Array &other)
 	{
 		for (uint64_t i = 0; i < Size; i++) {
 			m_buf[i] = other.m_buf[i];
@@ -85,7 +85,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t Size>
-	void Array<T, Size>::fill(const T& value)
+	void Array<T, Size>::fill(const T &value)
 	{
 		for (int i = 0; i < Size; i++) {
 			m_buf[i] = value;
@@ -111,76 +111,76 @@ namespace llt
 	}
 
 	template <typename T, uint64_t Size>
-	T* Array<T, Size>::data()
+	T *Array<T, Size>::data()
 	{
 		return m_buf;
 	}
 
 	template <typename T, uint64_t Size>
-	const T* Array<T, Size>::data() const
+	const T *Array<T, Size>::data() const
 	{
 		return m_buf;
 	}
 
 	template <typename T, uint64_t Size>
-	T* Array<T, Size>::begin()
+	T *Array<T, Size>::begin()
 	{
 		return m_buf;
 	}
 
 	template <typename T, uint64_t Size>
-	const T* Array<T, Size>::begin() const
+	const T *Array<T, Size>::begin() const
 	{
 		return m_buf;
 	}
 
 	template <typename T, uint64_t Size>
-	T* Array<T, Size>::end()
+	T *Array<T, Size>::end()
 	{
 		return m_buf + Size;
 	}
 
 	template <typename T, uint64_t Size>
-	const T* Array<T, Size>::end() const
+	const T *Array<T, Size>::end() const
 	{
 		return m_buf + Size;
 	}
 
 	template <typename T, uint64_t Size>
-	const T* Array<T, Size>::cbegin() const
+	const T *Array<T, Size>::cbegin() const
 	{
 		return m_buf;
 	}
 
 	template <typename T, uint64_t Size>
-	const T* Array<T, Size>::cend() const
+	const T *Array<T, Size>::cend() const
 	{
 		return m_buf + Size;
 	}
 
 	template <typename T, uint64_t Size>
-	T& Array<T, Size>::at(uint64_t idx)
+	T &Array<T, Size>::at(uint64_t idx)
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 
 	template <typename T, uint64_t Size>
-	const T& Array<T, Size>::at(uint64_t idx) const
-	{
-		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
-		return m_buf[idx];
-	}
-	
-	template <typename T, uint64_t Size>
-	T& Array<T, Size>::operator [] (uint64_t idx)
+	const T &Array<T, Size>::at(uint64_t idx) const
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];
 	}
 	
 	template <typename T, uint64_t Size>
-	const T& Array<T, Size>::operator [] (uint64_t idx) const
+	T &Array<T, Size>::operator [] (uint64_t idx)
+	{
+		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
+		return m_buf[idx];
+	}
+	
+	template <typename T, uint64_t Size>
+	const T &Array<T, Size>::operator [] (uint64_t idx) const
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within bounds: INDEX=%llu, SIZE=%llu", idx, Size);
 		return m_buf[idx];

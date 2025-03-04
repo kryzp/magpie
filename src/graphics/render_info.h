@@ -28,15 +28,15 @@ namespace llt
 		void addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imageView, VkFormat format, VkImageView resolveView);
 		void addDepthAttachment(VkAttachmentLoadOp loadOp, VkImageView depthView, VkImageView resolveView);
 
-		VkRenderingAttachmentInfoKHR& getColourAttachment(int idx);
-		VkRenderingAttachmentInfoKHR& getDepthAttachment();
+		VkRenderingAttachmentInfoKHR &getColourAttachment(int idx);
+		VkRenderingAttachmentInfoKHR &getDepthAttachment();
 
 		VkRenderingInfo getInfo() const;
 
 		void setClearColour(int idx, VkClearValue value);
 		void setClearDepth(VkClearValue value);
 
-		void setBlendState(const BlendState& state);
+		void setBlendState(const BlendState &state);
 
 		const Vector<VkPipelineColorBlendAttachmentState>& getColourBlendAttachmentStates() const;
 		bool isBlendStateLogicOpEnabled() const;

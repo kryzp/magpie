@@ -11,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-llt::MaterialSystem* llt::g_materialSystem = nullptr;
+llt::MaterialSystem *llt::g_materialSystem = nullptr;
 
 using namespace llt;
 
@@ -90,13 +90,13 @@ void MaterialSystem::init()
 	Light lights[16] = {};
 	mem::set(lights, 0, sizeof(Light) * 16);
 
-//	lights[0].position = { 0.0f, 5.0f, 0.0f };
-//	lights[0].radius = 0.0f;
-//	lights[0].attenuation = 0.0f;
-//	lights[0].colour = { 1.0f, 1.0f, 1.0f };
-//	lights[0].direction = { 1.0f, -1.0f, -1.0f };
-//	lights[0].type = LIGHT_TYPE_SUN;
-//	lights[0].direction /= glm::length(lights[0].direction);
+	lights[0].position = { 0.0f, 5.0f, 0.0f };
+	lights[0].radius = 0.0f;
+	lights[0].attenuation = 0.0f;
+	lights[0].colour = { 1.0f, 1.0f, 1.0f };
+	lights[0].direction = { 1.0f, -1.0f, -1.0f };
+	lights[0].type = LIGHT_TYPE_SUN;
+	lights[0].direction /= glm::length(lights[0].direction);
 
 	m_globalBuffer->getParameters().setValue<glm::mat4>("projMatrix", glm::identity<glm::mat4>());
 	m_globalBuffer->getParameters().setValue<glm::mat4>("viewMatrix", glm::identity<glm::mat4>());
@@ -204,6 +204,30 @@ void MaterialSystem::init()
 	precomputeBRDF(graphicsBuffer);
 }
 
+void MaterialSystem::updateImGui()
+{
+	static float intensity = 0.0f;
+
+	ImGui::Begin("Material System");
+
+	if (ImGui::SliderFloat("Intensity", &intensity, 0.0f, 20.0f))
+	{
+		Light light;
+		light.position = { 0.0f, 5.0f, 0.0f };
+		light.radius = 0.0f;
+		light.attenuation = 0.0f;
+		light.colour = { intensity, intensity, intensity };
+		light.direction = { 1.0f, -1.0f, -1.0f };
+		light.type = LIGHT_TYPE_SUN;
+		light.direction /= glm::length(light.direction);
+
+		m_globalBuffer->getParameters().setArrayValue("lights", light, 0);
+		m_globalBuffer->pushParameters();
+	}
+
+	ImGui::End();
+}
+
 void MaterialSystem::createQuadMesh()
 {
 	Vector<PrimitiveUVVertex> vertices =
@@ -273,7 +297,7 @@ void MaterialSystem::createCubeMesh()
 
 // todo: this needs to be moved to a seperate class. EnvironmentMapGenerator or something idk
 // -> also lots of repeating code.
-void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
+void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 {
 	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
@@ -286,14 +310,13 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
 		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f,-1.0f, 0.0f))
 	};
 
-	// todo: shader loading needs to be moved into one function for ease of use and then just use ->get(...) everywhere else
-	ShaderProgram* primitiveShader = g_shaderManager->create("primitiveVS", "../../res/shaders/raster/primitive_vs.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* equirectangularToCubemapShader = g_shaderManager->create("equirectangularToCubemap", "../../res/shaders/raster/equirectangular_to_cubemap.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* irradianceConvolutionShader = g_shaderManager->create("irradianceConvolution", "../../res/shaders/raster/irradiance_convolution.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* prefilterConvolutionShader = g_shaderManager->create("prefilterConvolution", "../../res/shaders/raster/prefilter_convolution.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
 	DescriptorLayoutBuilder descriptorLayoutBuilder;
 	DescriptorWriter descriptorWriter;
+
+	ShaderProgram *primitiveShader = g_shaderManager->get("primitiveVS");
+	ShaderProgram *equirectangularToCubemapShader = g_shaderManager->get("equirectangularToCubemap");
+	ShaderProgram *irradianceConvolutionShader = g_shaderManager->get("irradianceConvolution");
+	ShaderProgram *prefilterConvolutionShader = g_shaderManager->get("prefilterConvolution");
 
 	// =====================================================
 	LLT_LOG("Generating environment map...");
@@ -346,14 +369,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
 
 		m_equirectangularToCubemapPipeline.bind(buffer);
 
-		vkCmdBindDescriptorSets(
-			buffer.getBuffer(),
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_equirectangularToCubemapPipeline.getPipelineLayout(),
-			0,
-			1, &etcDescriptorSet,
-			0, nullptr
-		);
+		m_equirectangularToCubemapPipeline.bindSet(buffer, etcDescriptorSet);
 
 		m_equirectangularToCubemapPipeline.render(buffer, *m_cubeMesh);
 
@@ -411,14 +427,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
 
 		m_irradianceGenerationPipeline.bind(buffer);
 
-		vkCmdBindDescriptorSets(
-			buffer.getBuffer(),
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_irradianceGenerationPipeline.getPipelineLayout(),
-			0,
-			1, &icDescriptorSet,
-			0, nullptr
-		);
+		m_equirectangularToCubemapPipeline.bindSet(buffer, icDescriptorSet);
 
 		m_irradianceGenerationPipeline.render(buffer, *m_cubeMesh);
 
@@ -496,18 +505,11 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
 
 			m_prefilterGenerationPipeline.bind(buffer);
 
-			uint32_t dynamicOffsets[] = {
+			Vector<uint32_t> dynamicOffsets = {
 				pfParameterBuffer.getDynamicOffset()
 			};
 
-			vkCmdBindDescriptorSets(
-				buffer.getBuffer(),
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				m_prefilterGenerationPipeline.getPipelineLayout(),
-				0,
-				1, &pfDescriptorSet,
-				LLT_ARRAY_LENGTH(dynamicOffsets), dynamicOffsets
-			);
+			m_prefilterGenerationPipeline.bindSet(buffer, pfDescriptorSet, dynamicOffsets);
 
 			m_prefilterGenerationPipeline.render(buffer, *m_cubeMesh);
 
@@ -523,14 +525,14 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer& buffer)
 	g_vulkanBackend->resetPushConstants();
 }
 
-void MaterialSystem::precomputeBRDF(CommandBuffer& buffer)
+void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 {
 	LLT_LOG("Precomputing BRDF...");
 
 	const int BRDF_RESOLUTION = 512;
 
-	ShaderProgram* primitiveQuadShader = g_shaderManager->create("primitiveQuadVS", "../../res/shaders/raster/primitive_quad_vs.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* brdfIntegratorShader = g_shaderManager->create("brdfIntegrator", "../../res/shaders/raster/brdf_integrator.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram *primitiveQuadShader = g_shaderManager->get("primitiveQuadVS");
+	ShaderProgram *brdfIntegratorShader = g_shaderManager->get("brdfIntegrator");
 
 	m_brdfIntegration = g_textureManager->createAttachment("brdfIntegration", BRDF_RESOLUTION, BRDF_RESOLUTION, VK_FORMAT_R32G32_SFLOAT, VK_IMAGE_TILING_LINEAR);
 
@@ -557,14 +559,7 @@ void MaterialSystem::precomputeBRDF(CommandBuffer& buffer)
 
 	m_brdfIntegrationPipeline.bind(buffer);
 
-	vkCmdBindDescriptorSets(
-		buffer.getBuffer(),
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		m_brdfIntegrationPipeline.getPipelineLayout(),
-		0,
-		1, &set,
-		0, nullptr
-	);
+	m_brdfIntegrationPipeline.bindSet(buffer, set);
 
 	m_brdfIntegrationPipeline.render(buffer, *m_quadMesh);
 
@@ -572,27 +567,27 @@ void MaterialSystem::precomputeBRDF(CommandBuffer& buffer)
 	buffer.submit();
 }
 
-DynamicShaderBuffer* MaterialSystem::getGlobalBuffer() const
+DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
 {
 	return m_globalBuffer;
 }
 
-DynamicShaderBuffer* MaterialSystem::getInstanceBuffer() const
+DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
 {
 	return m_instanceBuffer;
 }
 
 void MaterialSystem::loadDefaultTechniques()
 {
-	ShaderProgram* genericVertex	= g_shaderManager->create("genericVertex",	"../../res/shaders/raster/model_vs.spv",		VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram* pbrFragment		= g_shaderManager->create("pbrFragment",	"../../res/shaders/raster/texturedPBR.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-	ShaderProgram* skyboxFragment	= g_shaderManager->create("skyboxFragment",	"../../res/shaders/raster/skybox.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+	ShaderProgram *genericVertex = g_shaderManager->get("genericVertex");
+	ShaderProgram *pbrFragment = g_shaderManager->get("pbrFragment");
+	ShaderProgram *skyboxFragment = g_shaderManager->get("skyboxFragment");
 
-	ShaderEffect* pbrEffect = g_shaderManager->createEffect();
+	ShaderEffect *pbrEffect = g_shaderManager->createEffect();
 	pbrEffect->stages.pushBack(genericVertex);
 	pbrEffect->stages.pushBack(pbrFragment);
 
-	ShaderEffect* skyboxEffect = g_shaderManager->createEffect();
+	ShaderEffect *skyboxEffect = g_shaderManager->createEffect();
 	skyboxEffect->stages.pushBack(genericVertex);
 	skyboxEffect->stages.pushBack(skyboxFragment);
 
@@ -613,34 +608,34 @@ void MaterialSystem::loadDefaultTechniques()
 
 // todo: way to specifically decide what global buffer gets applied to what bindings in the technique
 
-Material* MaterialSystem::buildMaterial(MaterialData& data)
+Material *MaterialSystem::buildMaterial(MaterialData &data)
 {
 	if (m_materials.contains(data.getHash())) {
 		return m_materials.get(data.getHash());
 	}
 
-	Technique& technique = m_techniques.get(data.technique);
+	Technique &technique = m_techniques.get(data.technique);
 
-	Material* material = new Material();
+	Material *material = new Material();
 
 	data.parameters.setValue<float>("asdf", 0.0f);
 
-	material->parameterBuffer = g_shaderBufferManager->createUBO();
-	material->parameterBuffer->setParameters(data.parameters);
-	material->parameterBuffer->pushParameters();
+	material->m_parameterBuffer = g_shaderBufferManager->createUBO();
+	material->m_parameterBuffer->setParameters(data.parameters);
+	material->m_parameterBuffer->pushParameters();
 
-	material->vertexFormat = technique.vertexFormat;
-	material->textures = data.textures;
+	material->m_vertexFormat = technique.vertexFormat;
+	material->m_textures = data.textures;
 
 	DescriptorLayoutBuilder descriptorLayoutBuilder;
 	descriptorLayoutBuilder.bind(0, m_globalBuffer->getDescriptorType());
 	descriptorLayoutBuilder.bind(1, m_instanceBuffer->getDescriptorType());
-	descriptorLayoutBuilder.bind(2, material->parameterBuffer->getDescriptorType());
+	descriptorLayoutBuilder.bind(2, material->m_parameterBuffer->getDescriptorType());
 
 	DescriptorWriter descriptorWriter;
 	descriptorWriter.writeBuffer(0, m_globalBuffer->getDescriptorType(), m_globalBuffer->getDescriptorInfo());
 	descriptorWriter.writeBuffer(1, m_instanceBuffer->getDescriptorType(), m_instanceBuffer->getDescriptorInfo());
-	descriptorWriter.writeBuffer(2, material->parameterBuffer->getDescriptorType(), material->parameterBuffer->getDescriptorInfo());
+	descriptorWriter.writeBuffer(2, material->m_parameterBuffer->getDescriptorType(), material->m_parameterBuffer->getDescriptorInfo());
 
 	// bind irradiance map
 	BoundTexture irradianceMap = {};
@@ -682,28 +677,28 @@ Material* MaterialSystem::buildMaterial(MaterialData& data)
 		}
 
 		for (int j = 0; j < technique.passes[i]->stages.size(); j++) {
-			material->passes[i].pipeline.bindShader(technique.passes[i]->stages[j]);
+			material->m_passes[i].pipeline.bindShader(technique.passes[i]->stages[j]);
 		}
 
-		material->passes[i].pipeline.setVertexFormat(technique.vertexFormat);
-		material->passes[i].pipeline.setDepthTest(technique.depthTest);
-		material->passes[i].pipeline.setDepthWrite(technique.depthWrite);
-		material->passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-		material->passes[i].pipeline.setDescriptorSetLayout(i == SHADER_PASS_FORWARD ? descriptorLayout : VK_NULL_HANDLE);
-		material->passes[i].pipeline.setMSAA(g_vulkanBackend->m_maxMsaaSamples); // todo temp
+		material->m_passes[i].pipeline.setVertexFormat(technique.vertexFormat);
+		material->m_passes[i].pipeline.setDepthTest(technique.depthTest);
+		material->m_passes[i].pipeline.setDepthWrite(technique.depthWrite);
+		material->m_passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
+		material->m_passes[i].pipeline.setDescriptorSetLayout(i == SHADER_PASS_FORWARD ? descriptorLayout : VK_NULL_HANDLE);
+		material->m_passes[i].pipeline.setMSAA(g_vulkanBackend->m_maxMsaaSamples); // todo temp
 
-		material->passes[i].shader = technique.passes[i];
+		material->m_passes[i].shader = technique.passes[i];
 
-		material->passes[i].set = m_descriptorPoolAllocator.allocate(descriptorLayout);
+		material->m_passes[i].set = m_descriptorPoolAllocator.allocate(descriptorLayout);
 
-		descriptorWriter.updateSet(material->passes[i].set);
+		descriptorWriter.updateSet(material->m_passes[i].set);
 	}
 
 	m_materials.insert(data.getHash(), material);
 	return material;
 }
 
-void MaterialSystem::addTechnique(const String& name, const Technique& technique)
+void MaterialSystem::addTechnique(const String &name, const Technique &technique)
 {
 	m_techniques.insert(name, technique);
 }

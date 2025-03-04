@@ -25,5 +25,9 @@ float4 main(PSInput input) : SV_TARGET
 {
     float3 dir = normalize(input.position);
 	float4 col = skyboxTexture.Sample(skyboxSampler, dir);
+
+	//col = col / (col + 1.0);
+    //col = pow(col, 1.0 / 2.2);
+
     return col * float4(input.colour, 1.0);
 }

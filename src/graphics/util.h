@@ -31,7 +31,7 @@ namespace llt
 	namespace vkutil
 	{
 #ifdef LLT_DEBUG
-		static const char* VALIDATION_LAYERS[] = {
+		static const char *VALIDATION_LAYERS[] = {
 			"VK_LAYER_KHRONOS_validation"
 		};
 #endif // LLT_DEBUG
@@ -42,7 +42,7 @@ namespace llt
 //			VK_DYNAMIC_STATE_BLEND_CONSTANTS
 		};
 
-		static const char* DEVICE_EXTENSIONS[] = {
+		static const char *DEVICE_EXTENSIONS[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
 			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
@@ -53,7 +53,7 @@ namespace llt
 
 		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats);
 		VkPresentModeKHR chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync);
-		VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+		VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
 		uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter, VkMemoryPropertyFlags properties);
 
@@ -64,16 +64,16 @@ namespace llt
 
 		CommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool);
 
-		void endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer& buffer, VkQueue graphics);
+		void endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &buffer, VkQueue graphics);
 
-		void endSingleTimeGraphicsCommands(const CommandBuffer& buffer);
-		void endSingleTimeTransferCommands(const CommandBuffer& buffer);
+		void endSingleTimeGraphicsCommands(const CommandBuffer &buffer);
+		void endSingleTimeTransferCommands(const CommandBuffer &buffer);
 
 		uint64_t calcShaderBufferAlignedSize(uint64_t size);
 
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice);
-		uint32_t assignPhysicalDeviceUsability(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, VkPhysicalDeviceFeatures features, bool* hasEssentials);
+		uint32_t assignPhysicalDeviceUsability(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, VkPhysicalDeviceFeatures features, bool *hasEssentials);
 
 		VkPipelineStageFlags getTransferPipelineStageFlags(VkImageLayout layout);
 		VkAccessFlags getTransferAccessFlags(VkImageLayout layout);

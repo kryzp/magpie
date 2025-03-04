@@ -36,12 +36,12 @@ GPUParticles::~GPUParticles()
 {
 }
 
-void GPUParticles::init(const DynamicShaderBuffer* shaderParams)
+void GPUParticles::init(const DynamicShaderBuffer *shaderParams)
 {
 	m_computeProgram = g_shaderManager->create("particleCompute", "../../res/shaders/compute/particles.spv", VK_SHADER_STAGE_COMPUTE_BIT);
 
 	uint64_t particleDataSize = sizeof(Particle) * PARTICLE_COUNT;
-	Particle* particleData = new Particle[PARTICLE_COUNT];
+	Particle *particleData = new Particle[PARTICLE_COUNT];
 
 	for (int i = 0; i < PARTICLE_COUNT; i++)
 	{
@@ -129,7 +129,7 @@ void GPUParticles::init(const DynamicShaderBuffer* shaderParams)
 		20, 22, 23
 	};
 
-	TextureSampler* pixelSampler = g_textureManager->getSampler("nearest");
+	TextureSampler *pixelSampler = g_textureManager->getSampler("nearest");
 
 	m_particleMesh.build(particleVtx.data(), particleVtx.size(), sizeof(ModelVertex), particleIdx.data(), particleIdx.size());
 
@@ -159,7 +159,7 @@ void GPUParticles::init(const DynamicShaderBuffer* shaderParams)
 	m_particleGraphicsPipeline.bindTexture(1, g_textureManager->getTexture("stone"), pixelSampler);
 }
 
-void GPUParticles::dispatchCompute(const Camera& camera)
+void GPUParticles::dispatchCompute(const Camera &camera)
 {
 	g_vulkanBackend->beginCompute();
 

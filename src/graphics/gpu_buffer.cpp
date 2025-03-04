@@ -61,17 +61,17 @@ void GPUBuffer::cleanUp()
     m_buffer = VK_NULL_HANDLE;
 }
 
-void GPUBuffer::readDataFromMe(void* dst, uint64_t length, uint64_t offset) const
+void GPUBuffer::readDataFromMe(void *dst, uint64_t length, uint64_t offset) const
 {
 	vmaCopyAllocationToMemory(g_vulkanBackend->m_vmaAllocator, m_allocation, offset, dst, length);
 }
 
-void GPUBuffer::writeDataToMe(const void* src, uint64_t length, uint64_t offset) const
+void GPUBuffer::writeDataToMe(const void *src, uint64_t length, uint64_t offset) const
 {
 	vmaCopyMemoryToAllocation(g_vulkanBackend->m_vmaAllocator, src, m_allocation, offset, length);
 }
 
-void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
+void GPUBuffer::writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
 	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
 
@@ -91,14 +91,14 @@ void GPUBuffer::writeToBuffer(const GPUBuffer* other, uint64_t length, uint64_t 
 	vkutil::endSingleTimeTransferCommands(commandBuffer);
 }
 
-void GPUBuffer::writeToTextureSingle(const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
+void GPUBuffer::writeToTextureSingle(const Texture *texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
 	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
 	writeToTexture(commandBuffer, texture, size, offset, baseArrayLayer);
 	vkutil::endSingleTimeTransferCommands(commandBuffer);
 }
 
-void GPUBuffer::writeToTexture(CommandBuffer& commandBuffer, const Texture* texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
+void GPUBuffer::writeToTexture(CommandBuffer &commandBuffer, const Texture *texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
 	VkBufferImageCopy region = {};
 	region.bufferOffset = offset;

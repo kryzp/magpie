@@ -4,7 +4,7 @@
 #include "backend.h"
 #include "descriptor_builder.h"
 
-llt::TextureMgr* llt::g_textureManager = nullptr;
+llt::TextureMgr *llt::g_textureManager = nullptr;
 
 using namespace llt;
 
@@ -29,7 +29,17 @@ TextureMgr::~TextureMgr()
 	m_samplerCache.clear();
 }
 
-TextureSampler* TextureMgr::getSampler(const String& name)
+void TextureMgr::loadDefaultTexturesAndSamplers()
+{
+	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
+	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
+
+	load("environmentHDR", "../../res/textures/cannon_4k.hdr");
+	load("stone", "../../res/textures/smooth_stone.png");
+	load("wood", "../../res/textures/wood.jpg");
+}
+
+TextureSampler *TextureMgr::getSampler(const String &name)
 {
 	if (m_samplerCache.contains(name)) {
 		return m_samplerCache[name];
@@ -38,7 +48,7 @@ TextureSampler* TextureMgr::getSampler(const String& name)
 	return nullptr;
 }
 
-Texture* TextureMgr::getTexture(const String& name)
+Texture *TextureMgr::getTexture(const String &name)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
@@ -47,19 +57,19 @@ Texture* TextureMgr::getTexture(const String& name)
 	return nullptr;
 }
 
-Texture* TextureMgr::create(const String& name, const String& path)
+Texture *TextureMgr::load(const String &name, const String &path)
 {
 	Image image(path.cstr());
 	return createFromImage(name, image);
 }
 
-Texture* TextureMgr::createFromImage(const String& name, const Image& image)
+Texture *TextureMgr::createFromImage(const String &name, const Image &image)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
 	}
 
-	Texture* texture = new Texture();
+	Texture *texture = new Texture();
 
 	texture->fromImage(image, VK_IMAGE_VIEW_TYPE_2D, 4, VK_SAMPLE_COUNT_1_BIT);
 	texture->setMipLevels(1);
@@ -75,13 +85,13 @@ Texture* TextureMgr::createFromImage(const String& name, const Image& image)
 	return texture;
 }
 
-Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte* data, uint64_t size)
+Texture *TextureMgr::createFromData(const String &name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte *data, uint64_t size)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
 	}
 
-	Texture* texture = new Texture();
+	Texture *texture = new Texture();
 
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
@@ -106,13 +116,13 @@ Texture* TextureMgr::createFromData(const String& name, uint32_t width, uint32_t
 	return texture;
 }
 
-Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
+Texture *TextureMgr::createAttachment(const String &name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
 	}
 
-	Texture* texture = new Texture();
+	Texture *texture = new Texture();
 
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
@@ -125,13 +135,13 @@ Texture* TextureMgr::createAttachment(const String& name, uint32_t width, uint32
 	return texture;
 }
 
-Texture* TextureMgr::createCubemap(const String& name, uint32_t size, VkFormat format, int mipLevels)
+Texture *TextureMgr::createCubemap(const String &name, uint32_t size, VkFormat format, int mipLevels)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
 	}
 
-	Texture* texture = new Texture();
+	Texture *texture = new Texture();
 
 	texture->setSize(size, size);
 	texture->setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
@@ -143,13 +153,13 @@ Texture* TextureMgr::createCubemap(const String& name, uint32_t size, VkFormat f
 	return texture;
 }
 
-Texture* TextureMgr::createCubemap(const String& name, const Image& right, const Image& left, const Image& top, const Image& bottom, const Image& front, const Image& back)
+Texture *TextureMgr::createCubemap(const String &name, const Image &right, const Image &left, const Image &top, const Image &bottom, const Image &front, const Image &back)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
 	}
 
-	Texture* texture = new Texture();
+	Texture *texture = new Texture();
 
 	texture->setSize(right.getWidth(), right.getWidth());
 	texture->setProperties(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
@@ -157,7 +167,7 @@ Texture* TextureMgr::createCubemap(const String& name, const Image& right, const
 	texture->createInternalResources();
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-	const Image* sides[] = { &right, &left, &top, &bottom, &front, &back };
+	const Image *sides[] = { &right, &left, &top, &bottom, &front, &back };
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -179,13 +189,13 @@ Texture* TextureMgr::createCubemap(const String& name, const Image& right, const
 	return texture;
 }
 
-TextureSampler* TextureMgr::createSampler(const String& name, const TextureSampler::Style& style)
+TextureSampler *TextureMgr::createSampler(const String &name, const TextureSampler::Style &style)
 {
 	if (m_samplerCache.contains(name)) {
 		return m_samplerCache.get(name);
 	}
 
-	TextureSampler* sampler = new TextureSampler(style);
+	TextureSampler *sampler = new TextureSampler(style);
 
 	m_samplerCache.insert(name, sampler);
 	return sampler;

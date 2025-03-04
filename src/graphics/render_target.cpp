@@ -24,11 +24,11 @@ RenderTarget::~RenderTarget()
 	cleanUp();
 }
 
-void RenderTarget::beginRendering(CommandBuffer& buffer)
+void RenderTarget::beginRendering(CommandBuffer &buffer)
 {
 	for (int i = 0; i < m_attachments.size(); i++)
 	{
-		Texture* col = getAttachment(i);
+		Texture *col = getAttachment(i);
 
 		if (!col->isTransient())
 		{
@@ -41,11 +41,11 @@ void RenderTarget::beginRendering(CommandBuffer& buffer)
 		getDepthAttachment()->transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void RenderTarget::endRendering(CommandBuffer& buffer)
+void RenderTarget::endRendering(CommandBuffer &buffer)
 {
 	for (int i = 0; i < m_attachments.size(); i++)
 	{
-		Texture* col = getAttachment(i);
+		Texture *col = getAttachment(i);
 
 		if (!col->isTransient())
 		{
@@ -62,7 +62,7 @@ void RenderTarget::cleanUp()
 {
 	m_renderInfo.clear();
 
-	for (auto& view : m_attachmentViews)
+	for (auto &view : m_attachmentViews)
 	{
 		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 		view = VK_NULL_HANDLE;
@@ -70,7 +70,7 @@ void RenderTarget::cleanUp()
 
 	m_attachmentViews.clear();
 
-	for (Texture* texture : m_attachments)
+	for (Texture *texture : m_attachments)
 	{
 		if (texture->getParent() == this)
 			delete texture;
@@ -78,7 +78,7 @@ void RenderTarget::cleanUp()
 
 	m_attachments.clear();
 
-	for (Texture* texture : m_resolveAttachments)
+	for (Texture *texture : m_resolveAttachments)
 	{
 		if (texture->getParent() == this)
 			delete texture;
@@ -97,7 +97,7 @@ void RenderTarget::clear()
 {
 }
 
-void RenderTarget::setClearColour(int idx, const Colour& colour)
+void RenderTarget::setClearColour(int idx, const Colour &colour)
 {
 	LLT_ASSERT(m_renderInfo.getColourAttachmentCount() > 0, "Must have at least one colour attachment!");
 
@@ -113,17 +113,17 @@ void RenderTarget::setDepthStencilClear(float depth, uint32_t stencil)
 	m_renderInfo.setClearDepth(value);
 }
 
-Texture* RenderTarget::getAttachment(int idx)
+Texture *RenderTarget::getAttachment(int idx)
 {
 	return m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveAttachments[idx] : m_attachments[idx];
 }
 
-Texture* RenderTarget::getDepthAttachment()
+Texture *RenderTarget::getDepthAttachment()
 {
 	return m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth;
 }
 
-void RenderTarget::addAttachment(Texture* texture, int layer, int mip)
+void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
 {
 	if (!texture)
 		return;
@@ -135,7 +135,7 @@ void RenderTarget::addAttachment(Texture* texture, int layer, int mip)
 	// todo: 99% certain that this won't work for layer != 0, just as im coding this :)!
 	if (texture->getNumSamples() != VK_SAMPLE_COUNT_1_BIT)
 	{
-		Texture* resolve = new Texture();
+		Texture *resolve = new Texture();
 
 		resolve->setSize(texture->getWidth(), texture->getHeight());
 		resolve->setProperties(texture->getFormat(), texture->getTiling(), texture->getType());
@@ -163,7 +163,7 @@ void RenderTarget::addAttachment(Texture* texture, int layer, int mip)
 	);
 }
 
-void RenderTarget::setDepthAttachment(Texture* texture)
+void RenderTarget::setDepthAttachment(Texture *texture)
 {
 	if (m_depth)
 	{

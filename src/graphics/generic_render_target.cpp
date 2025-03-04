@@ -27,7 +27,7 @@ uint64_t GenericRenderTarget::getAttachmentCount() const
 	return m_renderInfo.getColourAttachmentCount();
 }
 
-void GenericRenderTarget::setClearColours(const Colour& colour)
+void GenericRenderTarget::setClearColours(const Colour &colour)
 {
 	for (int i = 0; i < getAttachmentCount(); i++)
 	{
@@ -55,7 +55,7 @@ void GenericRenderTarget::toggleDepthStencilClear(bool clear)
 	m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 }
 
-const RenderInfo& GenericRenderTarget::getRenderInfo() const
+const RenderInfo &GenericRenderTarget::getRenderInfo() const
 {
 	return m_renderInfo;
 }

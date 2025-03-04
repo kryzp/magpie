@@ -32,7 +32,7 @@ namespace llt
 			FLAG_LOCK_CURSOR		= 1 << 5
 		};
 
-		const char* name = nullptr;
+		const char *name = nullptr;
 		unsigned width = 1280;
 		unsigned height = 720;
 		unsigned targetFPS = 60;
@@ -52,7 +52,7 @@ namespace llt
 	class App
 	{
 	public:
-		App(const Config& config);
+		App(const Config &config);
 		~App();
 
 		void run();
@@ -67,7 +67,7 @@ namespace llt
 		Renderer m_renderer;
 	};
 
-	extern App* g_app;
+	extern App *g_app;
 }
 
 #endif // APP_H_

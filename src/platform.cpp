@@ -7,11 +7,11 @@
 
 #include <SDL3/SDL_vulkan.h>
 
-llt::Platform* llt::g_platform = nullptr;
+llt::Platform *llt::g_platform = nullptr;
 
 using namespace llt;
 
-Platform::Platform(const Config& config)
+Platform::Platform(const Config &config)
 	: m_window(nullptr)
 	, m_gamepads{}
 	, m_gamepadCount(0)
@@ -154,7 +154,7 @@ void Platform::reconnectAllGamepads()
 	}
 
 	// find all connected gamepads
-	SDL_JoystickID* gamepadIDs = SDL_GetGamepads(&m_gamepadCount);
+	SDL_JoystickID *gamepadIDs = SDL_GetGamepads(&m_gamepadCount);
 
 	if (m_gamepadCount == 0)
 	{
@@ -212,7 +212,7 @@ String Platform::getWindowName() const
 	return SDL_GetWindowTitle(m_window);
 }
 
-void Platform::setWindowName(const String& name)
+void Platform::setWindowName(const String &name)
 {
 	SDL_SetWindowTitle(m_window, name.cstr());
 }
@@ -250,7 +250,7 @@ glm::ivec2 Platform::getWindowSizeInPixels() const
 
 glm::ivec2 Platform::getScreenSize() const
 {
-	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
+	const SDL_DisplayMode *out = SDL_GetCurrentDisplayMode(1);
 
 	if (out) {
 		return { out->w, out->h };
@@ -281,7 +281,7 @@ void Platform::toggleWindowResizable(bool toggle) const
 
 float Platform::getWindowRefreshRate() const
 {
-	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
+	const SDL_DisplayMode *out = SDL_GetCurrentDisplayMode(1);
 
 	if (out) {
 		return out->refresh_rate;
@@ -292,7 +292,7 @@ float Platform::getWindowRefreshRate() const
 
 float Platform::getWindowPixelDensity() const
 {
-	const SDL_DisplayMode* out = SDL_GetCurrentDisplayMode(1);
+	const SDL_DisplayMode *out = SDL_GetCurrentDisplayMode(1);
 
 	if (out) {
 		return out->pixel_density;
@@ -394,49 +394,49 @@ uint64_t Platform::getPerformanceFrequency() const
 	return SDL_GetPerformanceFrequency();
 }
 
-void* Platform::streamFromFile(const char* filepath, const char* mode)
+void *Platform::streamFromFile(const char *filepath, const char *mode)
 {
 	return SDL_IOFromFile(filepath, mode);
 }
 
-void* Platform::streamFromMemory(void* memory, uint64_t size)
+void *Platform::streamFromMemory(void *memory, uint64_t size)
 {
 	return SDL_IOFromMem(memory, size);
 }
 
-void* Platform::streamFromConstMemory(const void* memory, uint64_t size)
+void *Platform::streamFromConstMemory(const void *memory, uint64_t size)
 {
 	return SDL_IOFromConstMem(memory, size);
 }
 
-int64_t Platform::streamRead(void* stream, void* dst, uint64_t size)
+int64_t Platform::streamRead(void *stream, void *dst, uint64_t size)
 {
-	return SDL_ReadIO((SDL_IOStream*)stream, dst, size);
+	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
 }
 
-int64_t Platform::streamWrite(void* stream, const void* src, uint64_t size)
+int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size)
 {
-	return SDL_WriteIO((SDL_IOStream*)stream, src, size);
+	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
 }
 
-int64_t Platform::streamSeek(void* stream, int64_t offset)
+int64_t Platform::streamSeek(void *stream, int64_t offset)
 {
-	return SDL_SeekIO((SDL_IOStream*)stream, offset, SDL_IO_SEEK_SET);
+	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
 }
 
-int64_t Platform::streamSize(void* stream)
+int64_t Platform::streamSize(void *stream)
 {
-	return SDL_GetIOSize((SDL_IOStream*)stream);
+	return SDL_GetIOSize((SDL_IOStream *)stream);
 }
 
-int64_t Platform::streamPosition(void* stream)
+int64_t Platform::streamPosition(void *stream)
 {
-	return SDL_TellIO((SDL_IOStream*)stream);
+	return SDL_TellIO((SDL_IOStream *)stream);
 }
 
-void Platform::streamClose(void* stream)
+void Platform::streamClose(void *stream)
 {
-	SDL_CloseIO((SDL_IOStream*)stream);
+	SDL_CloseIO((SDL_IOStream *)stream);
 }
 
 void Platform::initImGui()
@@ -445,7 +445,7 @@ void Platform::initImGui()
 
 	ImGui::CreateContext();
 
-	ImGuiIO& io = ImGui::GetIO();
+	ImGuiIO &io = ImGui::GetIO();
 	(void)io;
 
 	// set imgui io.ConfigFlags |= ImGuiConfigFlags_(...) here
@@ -470,12 +470,12 @@ void Platform::imGuiNewFrame()
 	ImGui::NewFrame();
 }
 
-const char* const* Platform::vkGetInstanceExtensions(uint32_t* count)
+const char *const *Platform::vkGetInstanceExtensions(uint32_t *count)
 {
 	return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR* surface)
+bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface)
 {
 	LLT_LOG("Created Vulkan surface!");
 	return SDL_Vulkan_CreateSurface(m_window, instance, NULL, surface);

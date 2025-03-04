@@ -21,8 +21,8 @@ namespace llt
 
 		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
 
-		void beginRendering(GenericRenderTarget* target);
-		void beginRendering(const RenderInfo& info);
+		void beginRendering(GenericRenderTarget *target);
+		void beginRendering(const RenderInfo &info);
 		
 		void endRendering();
 
@@ -36,7 +36,7 @@ namespace llt
 
 		VkCommandBuffer m_buffer;
 
-		GenericRenderTarget* m_target;
+		GenericRenderTarget *m_target;
 	};
 }
 

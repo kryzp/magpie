@@ -4,9 +4,9 @@
 
 using namespace llt;
 
-VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderStages, DescriptorLayoutCache* cache, void* pNext, VkDescriptorSetLayoutCreateFlags flags)
+VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderStages, DescriptorLayoutCache *cache, void *pNext, VkDescriptorSetLayoutCreateFlags flags)
 {
-	for (auto& binding : m_bindings)
+	for (auto &binding : m_bindings)
 	{
 		binding.stageFlags |= shaderStages;
 	}
@@ -62,9 +62,9 @@ void DescriptorWriter::clear()
 	m_imageInfos.clear();
 }
 
-void DescriptorWriter::updateSet(const VkDescriptorSet& set)
+void DescriptorWriter::updateSet(const VkDescriptorSet &set)
 {
-	for (auto& write : m_writes)
+	for (auto &write : m_writes)
 	{
 		write.dstSet = set;
 	}
@@ -76,7 +76,7 @@ void DescriptorWriter::updateSet(const VkDescriptorSet& set)
 	);
 }
 
-void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo& info)
+void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo &info)
 {
 	m_bufferInfos.pushBack(info);
 
@@ -101,7 +101,7 @@ void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer
 	writeBuffer(idx, type, info);
 }
 
-void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo& info)
+void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo &info)
 {
 	m_imageInfos.pushBack(info);
 
@@ -131,11 +131,11 @@ uint64_t DescriptorBuilder::getHash() const
 {
 	uint64_t result = 0;
 
-	for (auto& binding : m_bindings) {
+	for (auto &binding : m_bindings) {
 		hash::combine(&result, &binding);
 	}
 
-	for (auto& binding : m_writes) {
+	for (auto &binding : m_writes) {
 		hash::combine(&result, &binding);
 	}
 
@@ -146,14 +146,14 @@ Vector<uint32_t> DescriptorBuilder::getDynamicOffsets() const
 {
 	Vector<uint32_t> result;
 
-	for (auto& elem : m_dynamicOffsets) {
+	for (auto &elem : m_dynamicOffsets) {
 		result.pushBack(elem.second);
 	}
 
 	return result;
 }
 
-DescriptorBuilder DescriptorBuilder::begin(DescriptorCache& cache, DescriptorPoolDynamic& allocator)
+DescriptorBuilder DescriptorBuilder::begin(DescriptorCache &cache, DescriptorPoolDynamic &allocator)
 {
 	DescriptorBuilder builder;
 	builder.m_cache = &cache;
@@ -162,11 +162,11 @@ DescriptorBuilder DescriptorBuilder::begin(DescriptorCache& cache, DescriptorPoo
 	return builder;
 }
 
-VkDescriptorSet DescriptorBuilder::buildGivenLayout(const VkDescriptorSetLayout& layout, uint32_t count)
+VkDescriptorSet DescriptorBuilder::buildGivenLayout(const VkDescriptorSetLayout &layout, uint32_t count)
 {
 	uint64_t hash = 0;
 
-	for (auto& write : m_writes)
+	for (auto &write : m_writes)
 	{
 		if (write.pImageInfo)
 			hash::combine(&hash, write.pImageInfo);
@@ -175,7 +175,7 @@ VkDescriptorSet DescriptorBuilder::buildGivenLayout(const VkDescriptorSetLayout&
 	bool needsUpdating = false;
 	VkDescriptorSet set = m_cache->createSet(layout, count, hash, m_poolAllocator, &needsUpdating);
 
-	for (auto& write : m_writes) {
+	for (auto &write : m_writes) {
 		write.dstSet = set;
 	}
 
@@ -215,9 +215,9 @@ VkDescriptorSetLayout DescriptorBuilder::buildLayout(VkDescriptorSetLayoutCreate
 	return m_cache->createLayout(layoutCreateInfo);
 }
 
-DescriptorBuilder& DescriptorBuilder::bindBuffer(
+DescriptorBuilder &DescriptorBuilder::bindBuffer(
 	uint32_t idx,
-	const VkDescriptorBufferInfo* info,
+	const VkDescriptorBufferInfo *info,
 	VkDescriptorType type,
 	VkShaderStageFlags stageFlags,
 	int count,
@@ -263,9 +263,9 @@ DescriptorBuilder& DescriptorBuilder::bindBuffer(
 	return *this;
 }
 
-DescriptorBuilder& DescriptorBuilder::bindImage(
+DescriptorBuilder &DescriptorBuilder::bindImage(
 	uint32_t idx,
-	const VkDescriptorImageInfo* info,
+	const VkDescriptorImageInfo *info,
 	VkDescriptorType type,
 	VkShaderStageFlags stageFlags,
 	int count,

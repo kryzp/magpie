@@ -32,23 +32,23 @@ void DynamicShaderBuffer::cleanUp()
 	m_buffer = nullptr;
 }
 
-ShaderParameters& DynamicShaderBuffer::getParameters()
+ShaderParameters &DynamicShaderBuffer::getParameters()
 {
 	return m_parameters;
 }
 
-void DynamicShaderBuffer::setParameters(const ShaderParameters& params)
+void DynamicShaderBuffer::setParameters(const ShaderParameters &params)
 {
 	m_parameters = params;
 }
 
 void DynamicShaderBuffer::pushParameters()
 {
-	auto& packedParams = m_parameters.getPackedConstants();
+	auto &packedParams = m_parameters.getPackedConstants();
 	pushData(packedParams.data(), packedParams.size());
 }
 
-void DynamicShaderBuffer::pushData(const void* data, uint64_t size)
+void DynamicShaderBuffer::pushData(const void *data, uint64_t size)
 {
 	if (!data || !size) {
 		return;
@@ -62,6 +62,7 @@ void DynamicShaderBuffer::pushData(const void* data, uint64_t size)
 
 	// check if we need to increase in size
 	while (totalUsedMemory + size > m_maxSize) {
+		LLT_LOG("Shader buffer expanding size and reallocating...");
 		reallocateBuffer(m_maxSize * 2);
 	}
 
@@ -111,11 +112,11 @@ void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
 
 	if (m_type == SHADER_BUFFER_UBO)
 	{
-		LLT_LOG("(Re)Allocated ubo with allocation size %llu.", allocationSize);
+		LLT_LOG("Allocated UBO with allocation size %llu.", allocationSize);
 	}
 	else if (m_type == SHADER_BUFFER_SSBO)
 	{
-		LLT_LOG("(Re)Allocated ssbo with allocation size %llu.", allocationSize);
+		LLT_LOG("Allocated SSBO with allocation size %llu.", allocationSize);
 	}
 }
 
@@ -124,7 +125,7 @@ void DynamicShaderBuffer::resetBufferUsageInFrame()
 	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] = 0;
 }
 
-const VkDescriptorBufferInfo& DynamicShaderBuffer::getDescriptorInfo() const
+const VkDescriptorBufferInfo &DynamicShaderBuffer::getDescriptorInfo() const
 {
 	return m_info;
 }
@@ -139,12 +140,12 @@ uint32_t DynamicShaderBuffer::getDynamicOffset() const
 	return m_dynamicOffset;
 }
 
-GPUBuffer* DynamicShaderBuffer::getBuffer()
+GPUBuffer *DynamicShaderBuffer::getBuffer()
 {
 	return m_buffer;
 }
 
-const GPUBuffer* DynamicShaderBuffer::getBuffer() const
+const GPUBuffer *DynamicShaderBuffer::getBuffer() const
 {
 	return m_buffer;
 }

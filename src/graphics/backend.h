@@ -64,16 +64,16 @@ namespace llt
 	class VulkanBackend
 	{
 	public:
-		VulkanBackend(const Config& config);
+		VulkanBackend(const Config &config);
 		~VulkanBackend();
 
-        Backbuffer* createBackbuffer();
+        Backbuffer *createBackbuffer();
 
 		void swapBuffers();
 
 		void onWindowResize(int width, int height);
 
-		void setPushConstants(ShaderParameters& params);
+		void setPushConstants(ShaderParameters &params);
 		void resetPushConstants();
 
 		void syncStall() const;
@@ -100,7 +100,7 @@ namespace llt
 
 		ShaderParameters::PackedData m_pushConstants;
 
-		Backbuffer* m_backbuffer;
+		Backbuffer *m_backbuffer;
 
 		void createImGuiResources();
 		ImGui_ImplVulkan_InitInfo getImGuiInitInfo() const;
@@ -128,10 +128,9 @@ namespace llt
 #endif // LLT_DEBUG
 
 		DescriptorPoolStatic m_imGuiDescriptorPool;
-		VkFormat m_imGuiColourFormat;
 	};
 
-	extern VulkanBackend* g_vulkanBackend;
+	extern VulkanBackend *g_vulkanBackend;
 }
 
 #endif // VK_BACKEND_H_

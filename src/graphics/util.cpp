@@ -9,8 +9,8 @@ using namespace llt;
 
 VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
 {
-	for (auto& availableFormat : availableSurfaceFormats) {
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+	for (auto &availableFormat : availableSurfaceFormats) {
+		if (availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			return availableFormat;
 		}
 	}
@@ -24,7 +24,7 @@ VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& a
 //		return VK_PRESENT_MODE_IMMEDIATE_KHR;
 //	}
 
-	for (cauto& mode : availablePresentModes) {
+	for (cauto &mode : availablePresentModes) {
 		if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
 			return mode;
 		}
@@ -33,7 +33,7 @@ VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& a
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D vkutil::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D vkutil::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
 {
 	if (capabilities.currentExtent.width != CalcU::maxValue())
 	{
@@ -68,7 +68,7 @@ uint32_t vkutil::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter
 
 VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
-	for (cauto& fmt : candidates)
+	for (cauto &fmt : candidates)
 	{
 		VkFormatProperties properties = {};
 		vkGetPhysicalDeviceFormatProperties(device, fmt, &properties);
@@ -132,7 +132,7 @@ CommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	return CommandBuffer(cmdBuffer);
 }
 
-void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer& buffer, VkQueue graphics)
+void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &buffer, VkQueue graphics)
 {
 	cauto cmdBuffer = buffer.getBuffer();
 
@@ -149,12 +149,12 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer& b
 	vkFreeCommandBuffers(g_vulkanBackend->m_device, cmdPool, 1, &cmdBuffer);
 }
 
-void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer& buffer)
+void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer &buffer)
 {
 	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, buffer, g_vulkanBackend->m_graphicsQueue.getQueue());
 }
 
-void vkutil::endSingleTimeTransferCommands(const CommandBuffer& buffer)
+void vkutil::endSingleTimeTransferCommands(const CommandBuffer &buffer)
 {
 	endSingleTimeGraphicsCommands(buffer);
 //	vkutil::endSingleTimeCommands(g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_transferQueues[0].getQueue());
@@ -163,7 +163,7 @@ void vkutil::endSingleTimeTransferCommands(const CommandBuffer& buffer)
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
 	VkPhysicalDeviceProperties properties = g_vulkanBackend->m_physicalData.properties;
-	const VkDeviceSize& minimumSize = properties.limits.minUniformBufferOffsetAlignment;
+	const VkDeviceSize &minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return ((size / minimumSize) * minimumSize) + (((size % minimumSize) > 0) ? minimumSize : 0);
 }
 
@@ -211,7 +211,7 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 
 	Vector<const char*> requiredExtensions(DEVICE_EXTENSIONS, LLT_ARRAY_LENGTH(DEVICE_EXTENSIONS));
 
-	for (cauto& availableExtension : availableExts) {
+	for (cauto &availableExtension : availableExts) {
 		for (int i = 0; i < requiredExtensions.size(); i++) {
 			if (cstr::compare(availableExtension.extensionName, requiredExtensions[i])) {
 				requiredExtensions.erase(i);
@@ -227,7 +227,7 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	VkPhysicalDevice physicalDevice,
 	VkPhysicalDeviceProperties properties,
 	VkPhysicalDeviceFeatures features,
-	bool* hasEssentials
+	bool *hasEssentials
 )
 {
 	uint32_t resultUsability = 0;

@@ -19,10 +19,10 @@ namespace llt
         RenderTargetMgr();
         ~RenderTargetMgr();
 
-        RenderTarget* get(const String& name);
+        RenderTarget *get(const String &name);
 
-		RenderTarget* createTarget(
-            const String& name,
+		RenderTarget *createTarget(
+            const String &name,
             uint32_t width, uint32_t height,
             const Vector<VkFormat>& attachments,
             VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT
@@ -32,7 +32,7 @@ namespace llt
         HashMap<String, RenderTarget*> m_targets;
     };
 
-    extern RenderTargetMgr* g_renderTargetManager;
+    extern RenderTargetMgr *g_renderTargetManager;
 }
 
 #endif // VK_RENDER_TARGET_MGR_H_

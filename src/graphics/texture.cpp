@@ -337,7 +337,7 @@ void Texture::transitionLayoutSingle(VkImageLayout newLayout)
 	vkutil::endSingleTimeGraphicsCommands(buffer);
 }
 
-void Texture::transitionLayout(CommandBuffer& buffer, VkImageLayout newLayout)
+void Texture::transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout)
 {
 	if (m_imageLayout == newLayout) {
 		return;
@@ -364,7 +364,7 @@ void Texture::transitionLayout(CommandBuffer& buffer, VkImageLayout newLayout)
 	m_imageLayout = newLayout;
 }
 
-void Texture::fromImage(const Image& image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples)
+void Texture::fromImage(const Image &image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples)
 {
 	setSize(image.getWidth(), image.getHeight());
 
@@ -430,12 +430,12 @@ bool Texture::isDepthTexture() const
 	return m_isDepthTexture;
 }
 
-void Texture::setParent(RenderTarget* getParent)
+void Texture::setParent(RenderTarget *getParent)
 {
 	m_parent = getParent;
 }
 
-const RenderTarget* Texture::getParent() const
+const RenderTarget *Texture::getParent() const
 {
 	return m_parent;
 }
@@ -533,7 +533,7 @@ TextureBatch::~TextureBatch()
 {
 }
 
-void TextureBatch::addTexture(Texture* texture)
+void TextureBatch::addTexture(Texture *texture)
 {
 	m_textures.pushBack(texture);
 }
@@ -542,7 +542,7 @@ void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
 {
 	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 
-	for (auto& t : m_textures)
+	for (auto &t : m_textures)
 	{
 		if (!t->isTransient())
 		{
@@ -568,7 +568,7 @@ void TextureBatch::popPipelineBarriers()
 {
 	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 
-	for (auto& t : m_textures)
+	for (auto &t : m_textures)
 	{
 		if (!t->isTransient())
 		{

@@ -21,68 +21,68 @@ namespace llt
 		struct Element
 		{
 			Element() : data(), next(nullptr), prev(nullptr) { }
-			Element(const KeyValuePair& p) : data(p), next(nullptr), prev(nullptr) { }
-			Element(Element&& other) noexcept : data(std::move(other.data)), next(std::move(other.next)), prev(std::move(other.prev)) { };
+			Element(const KeyValuePair &p) : data(p), next(nullptr), prev(nullptr) { }
+			Element(Element &&other) noexcept : data(std::move(other.data)), next(std::move(other.next)), prev(std::move(other.prev)) { };
 			KeyValuePair data;
-			Element* next;
-			Element* prev;
+			Element *next;
+			Element *prev;
 		};
 
 		struct Iterator
 		{
 			Iterator() : m_elem(nullptr) { }
-			Iterator(Element* init) : m_elem(init) { }
+			Iterator(Element *init) : m_elem(init) { }
 			~Iterator() = default;
-			KeyValuePair& operator * () const { return m_elem->data; }
-			KeyValuePair* operator -> () const { return &m_elem->data; }
-			Iterator& operator ++ () { if (m_elem) { m_elem = m_elem->next; } return *this; }
-			Iterator& operator -- () { if (m_elem) { m_elem = m_elem->prev; } return *this; }
-			Iterator& operator ++ (int) { if (m_elem) { m_elem = m_elem->next; } return *this; }
-			Iterator& operator -- (int) { if (m_elem) { m_elem = m_elem->prev; } return *this; }
-			bool operator == (const Iterator& other) const { return this->m_elem == other.m_elem; }
-			bool operator != (const Iterator& other) const { return this->m_elem != other.m_elem; }
+			KeyValuePair &operator * () const { return m_elem->data; }
+			KeyValuePair *operator -> () const { return &m_elem->data; }
+			Iterator &operator ++ () { if (m_elem) { m_elem = m_elem->next; } return *this; }
+			Iterator &operator -- () { if (m_elem) { m_elem = m_elem->prev; } return *this; }
+			Iterator &operator ++ (int) { if (m_elem) { m_elem = m_elem->next; } return *this; }
+			Iterator &operator -- (int) { if (m_elem) { m_elem = m_elem->prev; } return *this; }
+			bool operator == (const Iterator &other) const { return this->m_elem == other.m_elem; }
+			bool operator != (const Iterator &other) const { return this->m_elem != other.m_elem; }
 		private:
-			Element* m_elem;
+			Element *m_elem;
 		};
 
 		struct ConstIterator
 		{
 			ConstIterator() : m_elem(nullptr) { }
-			ConstIterator(const Element* init) : m_elem(init) { }
+			ConstIterator(const Element *init) : m_elem(init) { }
 			~ConstIterator() = default;
-			const KeyValuePair& operator * () const { return m_elem->data; }
-			const KeyValuePair* operator -> () const { return &m_elem->data; }
-			ConstIterator& operator ++ () { if (m_elem) { m_elem = m_elem->next; } return *this; }
-			ConstIterator& operator -- () { if (m_elem) { m_elem = m_elem->prev; } return *this; }
-			ConstIterator& operator ++ (int) { if (m_elem) { m_elem = m_elem->next; } return *this; }
-			ConstIterator& operator -- (int) { if (m_elem) { m_elem = m_elem->prev; } return *this; }
-			bool operator == (const ConstIterator& other) const { return this->m_elem == other.m_elem; }
-			bool operator != (const ConstIterator& other) const { return this->m_elem != other.m_elem; }
+			const KeyValuePair &operator * () const { return m_elem->data; }
+			const KeyValuePair *operator -> () const { return &m_elem->data; }
+			ConstIterator &operator ++ () { if (m_elem) { m_elem = m_elem->next; } return *this; }
+			ConstIterator &operator -- () { if (m_elem) { m_elem = m_elem->prev; } return *this; }
+			ConstIterator &operator ++ (int) { if (m_elem) { m_elem = m_elem->next; } return *this; }
+			ConstIterator &operator -- (int) { if (m_elem) { m_elem = m_elem->prev; } return *this; }
+			bool operator == (const ConstIterator &other) const { return this->m_elem == other.m_elem; }
+			bool operator != (const ConstIterator &other) const { return this->m_elem != other.m_elem; }
 		private:
-			const Element* m_elem;
+			const Element *m_elem;
 		};
 
 		HashMap();
 		HashMap(int initialCapacity);
 
-		HashMap(const HashMap& other);
-		HashMap(HashMap&& other) noexcept;
+		HashMap(const HashMap &other);
+		HashMap(HashMap &&other) noexcept;
 
-		HashMap& operator = (const HashMap& other);
-		HashMap& operator = (HashMap&& other) noexcept;
+		HashMap &operator = (const HashMap &other);
+		HashMap &operator = (HashMap &&other) noexcept;
 
 		~HashMap();
 
 		/*
 		 * Add a pair to the hashmap.
 		 */
-		void insert(const TKey& key, const TValue& value);
-		void insert(const KeyValuePair& pair);
+		void insert(const TKey &key, const TValue &value);
+		void insert(const KeyValuePair &pair);
 
 		/*
 		 * Erase the entry with this key from the hashmap.
 		 */
-		void erase(const TKey& key);
+		void erase(const TKey &key);
 
 		/*
 		 * Erase all entries.
@@ -92,22 +92,22 @@ namespace llt
 		/*
 		 * Retrieve the entry with this key.
 		 */
-		TValue& get(const TKey& key);
-		const TValue& get(const TKey& key) const;
+		TValue &get(const TKey &key);
+		const TValue &get(const TKey &key) const;
 
 		/*
 		 * Check if the hashmap contains this key.
 		 */
-		bool contains(const TKey& key);
+		bool contains(const TKey &key);
 
 		int getElementCount() const;
 		int getCapacity() const;
 		bool isEmpty() const;
 
-		Element* first();
-		const Element* first() const;
-		Element* last();
-		const Element* last() const;
+		Element *first();
+		const Element *first() const;
+		Element *last();
+		const Element *last() const;
 
 		Iterator begin();
 		ConstIterator begin() const;
@@ -117,14 +117,14 @@ namespace llt
 		ConstIterator cbegin() const;
 		ConstIterator cend() const;
 
-		TValue& operator [] (const TKey& idx);
-		const TValue& operator [] (const TKey& idx) const;
+		TValue &operator [] (const TKey &idx);
+		const TValue &operator [] (const TKey &idx) const;
 
 	private:
 		/*
 		 * Calculates the bucket index of the key.
 		 */
-		int indexOf(const TKey& key) const;
+		int indexOf(const TKey &key) const;
 
 		/*
 		 * Allocates the memory for the element buckets.
@@ -141,9 +141,9 @@ namespace llt
 		 * (Internal without pointer re-alignment)
 		 * Insert a key-value pair.
 		 */
-		void _insert(const KeyValuePair& pair);
+		void _insert(const KeyValuePair &pair);
 
-		Element** m_elements;
+		Element **m_elements;
 		int m_elementCount;
 		int m_capacity;
 	};
@@ -167,7 +167,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>::HashMap(const HashMap& other)
+	HashMap<TKey, TValue>::HashMap(const HashMap &other)
 	{
 		this->m_elements = nullptr;
 		this->m_elementCount = other.m_elementCount;
@@ -186,7 +186,7 @@ namespace llt
 		{
 			if (other.m_elements[i])
 			{
-				Element* elemPtr = other.m_elements[i];
+				Element *elemPtr = other.m_elements[i];
 
 				while (elemPtr) {
 					_insert(elemPtr->data);
@@ -201,7 +201,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>::HashMap(HashMap&& other) noexcept
+	HashMap<TKey, TValue>::HashMap(HashMap &&other) noexcept
 	{
 		this->m_elements = std::move(other.m_elements);
 		this->m_elementCount = std::move(other.m_elementCount);
@@ -213,7 +213,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (const HashMap& other)
+	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (const HashMap &other)
 	{
 		this->m_elements = nullptr;
 		this->m_elementCount = other.m_elementCount;
@@ -229,7 +229,7 @@ namespace llt
 		{
 			if (other.m_elements[i])
 			{
-				Element* elemPtr = other.m_elements[i];
+				Element *elemPtr = other.m_elements[i];
 
 				while (elemPtr) {
 					_insert(elemPtr->data);
@@ -246,7 +246,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (HashMap&& other) noexcept
+	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (HashMap &&other) noexcept
 	{
 		this->m_elements = std::move(other.m_elements);
 		this->m_elementCount = std::move(other.m_elementCount);
@@ -262,11 +262,11 @@ namespace llt
 	template <typename TKey, typename TValue>
 	HashMap<TKey, TValue>::~HashMap()
 	{
-		Element* e = m_elements[0];
+		Element *e = m_elements[0];
 
 		while (e)
 		{
-			Element* next = e->next;
+			Element *next = e->next;
 			delete e;
 			e = next;
 		}
@@ -278,13 +278,13 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	void HashMap<TKey, TValue>::insert(const TKey& key, const TValue& value)
+	void HashMap<TKey, TValue>::insert(const TKey &key, const TValue &value)
 	{
 		this->insert(KeyValuePair(key, value));
 	}
 
 	template <typename TKey, typename TValue>
-	void HashMap<TKey, TValue>::insert(const KeyValuePair& pair)
+	void HashMap<TKey, TValue>::insert(const KeyValuePair &pair)
 	{
 		_insert(pair);
 
@@ -294,11 +294,11 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	void HashMap<TKey, TValue>::_insert(const KeyValuePair& pair)
+	void HashMap<TKey, TValue>::_insert(const KeyValuePair &pair)
 	{
 		auto idx = indexOf(pair.first);
 
-		Element* b = m_elements[idx];
+		Element *b = m_elements[idx];
 
 		if (b)
 		{
@@ -316,9 +316,9 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	void HashMap<TKey, TValue>::erase(const TKey& key)
+	void HashMap<TKey, TValue>::erase(const TKey &key)
 	{
-		Element* b = m_elements[indexOf(key)];
+		Element *b = m_elements[indexOf(key)];
 
 		while (b)
 		{
@@ -369,8 +369,8 @@ namespace llt
 			m_capacity *= 2;
 		}
 
-		Element** newBuffer = new Element*[m_capacity];
-		mem::set(newBuffer, 0, sizeof(Element*) * m_capacity);
+		Element **newBuffer = new Element*[m_capacity];
+		mem::set(newBuffer, 0, sizeof(Element *) * m_capacity);
 
 		if (m_elements)
 		{
@@ -393,8 +393,8 @@ namespace llt
 	template <typename TKey, typename TValue>
 	void HashMap<TKey, TValue>::realignPtrs()
 	{
-		Element* f = first();
-		Element* l = last();
+		Element *f = first();
+		Element *l = last();
 
 		if (f == nullptr && l == nullptr) {
 			return;
@@ -402,7 +402,7 @@ namespace llt
 
 		for (int i = 0; i < m_capacity; i++)
 		{
-			Element* bucket = m_elements[i];
+			Element *bucket = m_elements[i];
 
 			// make sure we are on a valid bucket
 			if (!bucket) {
@@ -419,7 +419,7 @@ namespace llt
 
 					if (m_elements[checkIdx])
 					{
-						Element* lastElem = m_elements[i];
+						Element *lastElem = m_elements[i];
 
 						while (lastElem->next) {
 							for (int k = 0; k < m_capacity; k++) {
@@ -462,9 +462,9 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	TValue& HashMap<TKey, TValue>::get(const TKey& key)
+	TValue &HashMap<TKey, TValue>::get(const TKey &key)
 	{
-		Element* b = m_elements[indexOf(key)];
+		Element *b = m_elements[indexOf(key)];
 
 		while (b)
 		{
@@ -480,9 +480,9 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	const TValue& HashMap<TKey, TValue>::get(const TKey& key) const
+	const TValue &HashMap<TKey, TValue>::get(const TKey &key) const
 	{
-		Element* b = m_elements[indexOf(key)];
+		Element *b = m_elements[indexOf(key)];
 
 		while (b)
 		{
@@ -498,9 +498,9 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	bool HashMap<TKey, TValue>::contains(const TKey& key)
+	bool HashMap<TKey, TValue>::contains(const TKey &key)
 	{
-		Element* b = m_elements[indexOf(key)];
+		Element *b = m_elements[indexOf(key)];
 
 		while (b)
 		{
@@ -539,13 +539,13 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	int HashMap<TKey, TValue>::indexOf(const TKey& key) const
+	int HashMap<TKey, TValue>::indexOf(const TKey &key) const
 	{
 		return hash::calc(&key) % m_capacity;
 	}
 
 	template <typename TKey, typename TValue>
-	typename HashMap<TKey, TValue>::Element* HashMap<TKey, TValue>::first()
+	typename HashMap<TKey, TValue>::Element *HashMap<TKey, TValue>::first()
 	{
 		for (int i = 0; i < m_capacity; i++) {
 			if (m_elements[i]) {
@@ -557,7 +557,7 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	const typename HashMap<TKey, TValue>::Element* HashMap<TKey, TValue>::first() const
+	const typename HashMap<TKey, TValue>::Element *HashMap<TKey, TValue>::first() const
 	{
 		for (int i = 0; i < m_capacity; i++) {
 			if (m_elements[i]) {
@@ -569,7 +569,7 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	typename HashMap<TKey, TValue>::Element* HashMap<TKey, TValue>::last()
+	typename HashMap<TKey, TValue>::Element *HashMap<TKey, TValue>::last()
 	{
 		for (int i = m_capacity - 1; i >= 0; i--) {
 			if (m_elements[i]) {
@@ -581,7 +581,7 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	const typename HashMap<TKey, TValue>::Element* HashMap<TKey, TValue>::last() const
+	const typename HashMap<TKey, TValue>::Element *HashMap<TKey, TValue>::last() const
 	{
 		for (int i = m_capacity; i >= 0; i--) {
 			if (m_elements[i]) {
@@ -629,13 +629,13 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	TValue& HashMap<TKey, TValue>::operator [] (const TKey& idx)
+	TValue &HashMap<TKey, TValue>::operator [] (const TKey &idx)
 	{
 		return get(idx);
 	}
 
 	template <typename TKey, typename TValue>
-	const TValue& HashMap<TKey, TValue>::operator [] (const TKey& idx) const
+	const TValue &HashMap<TKey, TValue>::operator [] (const TKey &idx) const
 	{
 		return get(idx);
 	}

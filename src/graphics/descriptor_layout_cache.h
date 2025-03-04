@@ -15,7 +15,7 @@ namespace llt
 
 		void cleanUp();
 
-		VkDescriptorSetLayout createLayout(const VkDescriptorSetLayoutCreateInfo& layoutCreateInfo);
+		VkDescriptorSetLayout createLayout(const VkDescriptorSetLayoutCreateInfo &layoutCreateInfo);
 
 	private:
 		HashMap<uint64_t, VkDescriptorSetLayout> m_layoutCache;

@@ -23,13 +23,13 @@ namespace llt
 		uint64_t onCount() const;
 		uint64_t offCount() const;
 
-		Bitset& reset();
-		Bitset& invert();
+		Bitset &reset();
+		Bitset &invert();
 
-		Bitset& enable(uint64_t idx);
-		Bitset& disable(uint64_t idx);
-		Bitset& set(uint64_t idx, bool mode);
-		Bitset& toggle(uint64_t idx);
+		Bitset &enable(uint64_t idx);
+		Bitset &disable(uint64_t idx);
+		Bitset &set(uint64_t idx, bool mode);
+		Bitset &toggle(uint64_t idx);
 
 		bool isOn(uint64_t idx) const;
 		bool isOnOnly(uint64_t idx) const;
@@ -41,7 +41,7 @@ namespace llt
 		constexpr inline uint64_t memorySize() const;
 
 	private:
-		byte* m_bytes;
+		byte *m_bytes;
 	};
 
 	template <uint64_t Size>

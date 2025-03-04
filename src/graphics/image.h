@@ -22,13 +22,13 @@ namespace llt
 		using BrushFn = Function<Colour(uint32_t, uint32_t)>;
 
 		Image();
-		Image(const String& path);
-		Image(const char* path);
+		Image(const String &path);
+		Image(const char *path);
 		Image(int width, int height);
 		~Image();
 
-		void load(const String& path);
-		void load(const char* path);
+		void load(const String &path);
+		void load(const char *path);
 
 		void free();
 
@@ -37,21 +37,21 @@ namespace llt
 		* which is ran on every pixel of the image and outputs
 		* a colour for each pixel.
 		*/
-		void paint(const BrushFn& brush);
-		void paint(const RectI& rect, const BrushFn& brush);
+		void paint(const BrushFn &brush);
+		void paint(const RectI &rect, const BrushFn &brush);
 		
-		void setPixels(const Colour* data);
-		void setPixels(uint64_t dstFirst, const Colour* data, uint64_t srcFirst, uint64_t count);
+		void setPixels(const Colour *data);
+		void setPixels(uint64_t dstFirst, const Colour *data, uint64_t srcFirst, uint64_t count);
 
-		bool saveToPng(const char* file) const;
-		bool saveToPng(Stream& stream) const;
-		bool saveToJpg(const char* file, int quality) const;
-		bool saveToJpg(Stream& stream, int quality) const;
+		bool saveToPng(const char *file) const;
+		bool saveToPng(Stream &stream) const;
+		bool saveToJpg(const char *file, int quality) const;
+		bool saveToJpg(Stream &stream, int quality) const;
 
 		Colour getPixelAt(uint32_t x, uint32_t y) const;
 
-		void* getData();
-		const void* getData() const;
+		void *getData();
+		const void *getData() const;
 
 		Format getFormat() const;
 		uint32_t getWidth() const;
@@ -61,7 +61,7 @@ namespace llt
 		int getChannels() const;
 
 	private:
-		void* m_pixels;
+		void *m_pixels;
 		Format m_format;
 
 		uint32_t m_width;

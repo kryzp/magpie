@@ -19,18 +19,18 @@ namespace llt
 
 		public:
 			Iterator() : m_char(nullptr) { }
-			Iterator(char* ptr) : m_char(ptr) { }
+			Iterator(char *ptr) : m_char(ptr) { }
 			~Iterator() = default;
-			char& operator * () const { return *m_char; }
-			char* operator -> () const { return &(*m_char); }
-			Iterator& operator ++ () { m_char++; return *this; }
-			Iterator& operator -- () { m_char--; return *this; }
-			Iterator& operator ++ (int) { m_char++; return *this; }
-			Iterator& operator -- (int) { m_char--; return *this; }
-			bool operator == (const Iterator& other) const { return this->m_char == other.m_char; }
-			bool operator != (const Iterator& other) const { return this->m_char != other.m_char; }
+			char &operator * () const { return *m_char; }
+			char *operator -> () const { return &(*m_char); }
+			Iterator &operator ++ () { m_char++; return *this; }
+			Iterator &operator -- () { m_char--; return *this; }
+			Iterator &operator ++ (int) { m_char++; return *this; }
+			Iterator &operator -- (int) { m_char--; return *this; }
+			bool operator == (const Iterator &other) const { return this->m_char == other.m_char; }
+			bool operator != (const Iterator &other) const { return this->m_char != other.m_char; }
 		private:
-			char* m_char;
+			char *m_char;
 		};
 
 		class ConstIterator
@@ -39,18 +39,18 @@ namespace llt
 
 		public:
 			ConstIterator() : m_char(nullptr) { }
-			ConstIterator(const char* ptr) : m_char(ptr) { }
+			ConstIterator(const char *ptr) : m_char(ptr) { }
 			~ConstIterator() = default;
-			const char& operator * () const { return *m_char; }
-			const char* operator -> () const { return &(*m_char); }
-			ConstIterator& operator ++ () { m_char++; return *this; }
-			ConstIterator& operator -- () { m_char--; return *this; }
-			ConstIterator& operator ++ (int) { m_char++; return *this; }
-			ConstIterator& operator -- (int) { m_char--; return *this; }
-			bool operator == (const ConstIterator& other) const { return this->m_char == other.m_char; }
-			bool operator != (const ConstIterator& other) const { return this->m_char != other.m_char; }
+			const char &operator * () const { return *m_char; }
+			const char *operator -> () const { return &(*m_char); }
+			ConstIterator &operator ++ () { m_char++; return *this; }
+			ConstIterator &operator -- () { m_char--; return *this; }
+			ConstIterator &operator ++ (int) { m_char++; return *this; }
+			ConstIterator &operator -- (int) { m_char--; return *this; }
+			bool operator == (const ConstIterator &other) const { return this->m_char == other.m_char; }
+			bool operator != (const ConstIterator &other) const { return this->m_char != other.m_char; }
 		private:
-			const char* m_char;
+			const char *m_char;
 		};
 
 		class ReverseIterator
@@ -59,18 +59,18 @@ namespace llt
 
 		public:
 			ReverseIterator() : m_char(nullptr) { }
-			ReverseIterator(char* ptr) : m_char(ptr) { }
+			ReverseIterator(char *ptr) : m_char(ptr) { }
 			~ReverseIterator() = default;
-			char& operator * () const { return *m_char; }
-			char* operator -> () const { return &(*m_char); }
-			ReverseIterator& operator ++ () { m_char--; return *this; }
-			ReverseIterator& operator -- () { m_char++; return *this; }
-			ReverseIterator& operator ++ (int) { m_char--; return *this; }
-			ReverseIterator& operator -- (int) { m_char++; return *this; }
-			bool operator == (const ReverseIterator& other) const { return this->m_char == other.m_char; }
-			bool operator != (const ReverseIterator& other) const { return this->m_char != other.m_char; }
+			char &operator * () const { return *m_char; }
+			char *operator -> () const { return &(*m_char); }
+			ReverseIterator &operator ++ () { m_char--; return *this; }
+			ReverseIterator &operator -- () { m_char++; return *this; }
+			ReverseIterator &operator ++ (int) { m_char--; return *this; }
+			ReverseIterator &operator -- (int) { m_char++; return *this; }
+			bool operator == (const ReverseIterator &other) const { return this->m_char == other.m_char; }
+			bool operator != (const ReverseIterator &other) const { return this->m_char != other.m_char; }
 		private:
-			char* m_char;
+			char *m_char;
 		};
 
 		class ReverseConstIterator
@@ -79,28 +79,28 @@ namespace llt
 
 		public:
 			ReverseConstIterator() : m_char(nullptr) { }
-			ReverseConstIterator(const char* ptr) : m_char(ptr) { }
+			ReverseConstIterator(const char *ptr) : m_char(ptr) { }
 			~ReverseConstIterator() = default;
-			const char& operator * () const { return *m_char; }
-			const char* operator -> () const { return &(*m_char); }
-			ReverseConstIterator& operator ++ () { m_char--; return *this; }
-			ReverseConstIterator& operator -- () { m_char++; return *this; }
-			ReverseConstIterator& operator ++ (int) { m_char--; return *this; }
-			ReverseConstIterator& operator -- (int) { m_char++; return *this; }
-			bool operator == (const ReverseConstIterator& other) const { return this->m_char == other.m_char; }
-			bool operator != (const ReverseConstIterator& other) const { return this->m_char != other.m_char; }
+			const char &operator * () const { return *m_char; }
+			const char *operator -> () const { return &(*m_char); }
+			ReverseConstIterator &operator ++ () { m_char--; return *this; }
+			ReverseConstIterator &operator -- () { m_char++; return *this; }
+			ReverseConstIterator &operator ++ (int) { m_char--; return *this; }
+			ReverseConstIterator &operator -- (int) { m_char++; return *this; }
+			bool operator == (const ReverseConstIterator &other) const { return this->m_char == other.m_char; }
+			bool operator != (const ReverseConstIterator &other) const { return this->m_char != other.m_char; }
 		private:
-			const char* m_char;
+			const char *m_char;
 		};
 
 		Str();
-		Str(const char* str);
+		Str(const char *str);
 
-		Str(const Str& other);
-		Str(Str&& other) noexcept;
+		Str(const Str &other);
+		Str(Str &&other) noexcept;
 
-		Str& operator = (const Str& other);
-		Str& operator = (Str&& other) noexcept;
+		Str &operator = (const Str &other);
+		Str &operator = (Str &&other) noexcept;
 
 		~Str();
 
@@ -110,7 +110,7 @@ namespace llt
 		/*
 		 * Append a string to the end.
 		 */
-		Str& append(const Str& str);
+		Str &append(const Str &str);
 
 		/*
 		 * Convert all letters to be uppercase/lowercase.
@@ -133,20 +133,20 @@ namespace llt
 		/*
 		 * Split the string based on a delimiter.
 		 */
-		Vector<Str> split(const char* delimiter = " ") const;
+		Vector<Str> split(const char *delimiter = " ") const;
 
 		/*
 		 * Find the first or last index of a substring in this string.
 		 */
-		int indexOf(const Str& str) const;
-		int lastIndexOf(const Str& str) const;
+		int indexOf(const Str &str) const;
+		int lastIndexOf(const Str &str) const;
 
 		/*
 		 * Check if this string starts with, ends with or contains another string.
 		 */
-		bool startsWith(const Str& str) const;
-		bool endsWith(const Str& str) const;
-		bool contains(const Str& str) const;
+		bool startsWith(const Str &str) const;
+		bool endsWith(const Str &str) const;
+		bool contains(const Str &str) const;
 
 		/*
 		 * Add a character to the front or back.
@@ -175,29 +175,29 @@ namespace llt
 		ReverseConstIterator rcbegin() const;
 		ReverseConstIterator rcend() const;
 
-		char* cstr();
-		const char* cstr() const;
+		char *cstr();
+		const char *cstr() const;
 
 		uint64_t length() const;
 		constexpr uint64_t size() const;
 
-		char* at(uint64_t idx);
-		const char* at(uint64_t idx) const;
+		char *at(uint64_t idx);
+		const char *at(uint64_t idx) const;
 
-		char& operator [] (uint64_t idx);
-		const char& operator [] (uint64_t idx) const;
+		char &operator [] (uint64_t idx);
+		const char &operator [] (uint64_t idx) const;
 
-		bool operator == (const Str& other) const;
-		bool operator != (const Str& other) const;
+		bool operator == (const Str &other) const;
+		bool operator != (const Str &other) const;
 
-		Str operator + (const Str& other) const;
-		Str& operator += (const Str& other);
+		Str operator + (const Str &other) const;
+		Str &operator += (const Str &other);
 
 		explicit operator char* ();
 		explicit operator const char* () const;
 
 	private:
-		char* m_buf;
+		char *m_buf;
 		uint64_t m_length;
 	};
 
@@ -212,7 +212,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Str<Size>::Str(const char* str)
+	Str<Size>::Str(const char *str)
 		: m_length(cstr::length(str))
 	{
 		LLT_ASSERT(m_length < (Size - 1), "Length must not exceed maximum size."); // -1 for '\0'
@@ -223,7 +223,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>::Str(const Str& other)
+	Str<Size>::Str(const Str &other)
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
@@ -236,7 +236,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>::Str(Str&& other) noexcept
+	Str<Size>::Str(Str &&other) noexcept
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
@@ -250,7 +250,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::operator = (const Str& other)
+	Str<Size>& Str<Size>::operator = (const Str &other)
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
@@ -270,7 +270,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::operator = (Str&& other) noexcept
+	Str<Size>& Str<Size>::operator = (Str &&other) noexcept
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size");
 
@@ -420,13 +420,13 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	char* Str<Size>::cstr()
+	char *Str<Size>::cstr()
 	{
 		return m_buf;
 	}
 
 	template <uint64_t Size>
-	const char* Str<Size>::cstr() const
+	const char *Str<Size>::cstr() const
 	{
 		return m_buf;
 	}
@@ -452,7 +452,7 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size> Str<Size>::trimStart() const
 	{
-		const char* buffer = m_buf;
+		const char *buffer = m_buf;
 		while (cstr::isSpace(*buffer)) buffer++;
 		int whitespace = buffer - m_buf;
 
@@ -466,9 +466,9 @@ namespace llt
 	template <uint64_t Size>
 	Str<Size> Str<Size>::trimEnd() const
 	{
-		const char* end = m_buf + m_length - 1;
+		const char *end = m_buf + m_length - 1;
 
-		const char* buffer = end;
+		const char *buffer = end;
 		while (buffer > m_buf && cstr::isSpace(*buffer)) buffer--;
 		int whitespace = buffer - end;
 
@@ -489,14 +489,14 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Vector<Str<Size>> Str<Size>::split(const char* delimiter) const
+	Vector<Str<Size>> Str<Size>::split(const char *delimiter) const
 	{
 		Vector<Str<Size>> tokens;
 
 		char token_buf[Size] = { 0 };
 		mem::copy(token_buf, m_buf, m_length);
 
-		char* token = cstr::token(token_buf, delimiter);
+		char *token = cstr::token(token_buf, delimiter);
 
 		while (token)
 		{
@@ -512,7 +512,7 @@ namespace llt
 	{
 		Str<Size> copy = *this;
 
-		for (auto& c : copy) {
+		for (auto &c : copy) {
 			c = cstr::toUpper(c);
 		}
 
@@ -524,7 +524,7 @@ namespace llt
 	{
 		Str<Size> copy = *this;
 
-		for (auto& c : copy) {
+		for (auto &c : copy) {
 			c = cstr::toLower(c);
 		}
 
@@ -532,7 +532,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	int Str<Size>::indexOf(const Str& str) const
+	int Str<Size>::indexOf(const Str &str) const
 	{
 		LLT_ASSERT(m_length >= str.m_length, "String to check for must not be larger than the string getting checked.");
 
@@ -574,7 +574,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	bool Str<Size>::startsWith(const Str& str) const
+	bool Str<Size>::startsWith(const Str &str) const
 	{
 		for (int i = 0; i < str.length(); i++)
 		{
@@ -587,7 +587,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	bool Str<Size>::endsWith(const Str& str) const
+	bool Str<Size>::endsWith(const Str &str) const
 	{
 		for (int i = 0; i < str.length(); i++)
 		{
@@ -600,34 +600,34 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	bool Str<Size>::contains(const Str& str) const
+	bool Str<Size>::contains(const Str &str) const
 	{
 		return indexOf(str) != -1;
 	}
 
 	template <uint64_t Size>
-	char* Str<Size>::at(uint64_t idx)
+	char *Str<Size>::at(uint64_t idx)
 	{
 		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
-	const char* Str<Size>::at(uint64_t idx) const
+	const char *Str<Size>::at(uint64_t idx) const
 	{
 		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
-	char& Str<Size>::operator [] (uint64_t idx)
+	char &Str<Size>::operator [] (uint64_t idx)
 	{
 		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
 	}
 
 	template <uint64_t Size>
-	const char& Str<Size>::operator [] (uint64_t idx) const
+	const char &Str<Size>::operator [] (uint64_t idx) const
 	{
 		LLT_ASSERT(idx < m_length, "Index must not be more than the length of the string.");
 		return m_buf[idx];
@@ -648,7 +648,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	bool Str<Size>::operator == (const Str& other) const
+	bool Str<Size>::operator == (const Str &other) const
 	{
 		if (!other.m_buf || !this->m_buf)
 			return false;
@@ -657,7 +657,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	bool Str<Size>::operator != (const Str& other) const
+	bool Str<Size>::operator != (const Str &other) const
 	{
 		return !(*this == other);
 	}

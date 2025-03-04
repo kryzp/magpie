@@ -53,21 +53,21 @@ namespace llt
 
 		void update();
 
-		bool isDown(const VirtualKey& k) const;
-		bool isPressed(const VirtualKey& k) const;
-		bool isReleased(const VirtualKey& k) const;
+		bool isDown(const VirtualKey &k) const;
+		bool isPressed(const VirtualKey &k) const;
+		bool isReleased(const VirtualKey &k) const;
 
-		bool isDown(const KeyboardKey& k) const;
-		bool isPressed(const KeyboardKey& k) const;
-		bool isReleased(const KeyboardKey& k) const;
+		bool isDown(const KeyboardKey &k) const;
+		bool isPressed(const KeyboardKey &k) const;
+		bool isReleased(const KeyboardKey &k) const;
 
-		bool isDown(const MouseButton& mb) const;
-		bool isPressed(const MouseButton& mb) const;
-		bool isReleased(const MouseButton& mb) const;
+		bool isDown(const MouseButton &mb) const;
+		bool isPressed(const MouseButton &mb) const;
+		bool isReleased(const MouseButton &mb) const;
 
-		bool isDown(const GamepadButton& gpb, uint32_t id) const;
-		bool isPressed(const GamepadButton& gpb, uint32_t id) const;
-		bool isReleased(const GamepadButton& gpb, uint32_t id) const;
+		bool isDown(const GamepadButton &gpb, uint32_t id) const;
+		bool isPressed(const GamepadButton &gpb, uint32_t id) const;
+		bool isReleased(const GamepadButton &gpb, uint32_t id) const;
 
 		glm::vec2 getMousePosition() const;
 		glm::vec2 getMouseScreenPosition() const;
@@ -77,7 +77,7 @@ namespace llt
 		bool ctrl() const;
 		bool alt() const;
 
-		const char* text() const;
+		const char *text() const;
 
 		glm::vec2 getLeftStick(uint32_t id) const;
 		glm::vec2 getRightStick(uint32_t id) const;
@@ -95,7 +95,7 @@ namespace llt
 		void onKeyDown(uint64_t btn);
 		void onKeyUp(uint64_t btn);
 
-		void onTextUtf8(const char* text);
+		void onTextUtf8(const char *text);
 
 		void onGamepadButtonDown(uint64_t btn, int id);
 		void onGamepadButtonUp(uint64_t btn, int id);
@@ -107,7 +107,7 @@ namespace llt
 		InputState m_prevState;
 	};
 
-	extern Input* g_inputState;
+	extern Input *g_inputState;
 }
 
 #endif // INPUT_MGR_H_

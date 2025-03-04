@@ -26,12 +26,12 @@ void Queue::setData(QueueFamily family, uint32_t familyIdx)
 	m_familyIdx = familyIdx;
 }
 
-Queue::FrameData& Queue::getCurrentFrame()
+Queue::FrameData &Queue::getCurrentFrame()
 {
 	return m_frames[g_vulkanBackend->getCurrentFrameIdx()];
 }
 
-Queue::FrameData& Queue::getFrame(int idx)
+Queue::FrameData &Queue::getFrame(int idx)
 {
 	return m_frames[idx];
 }
