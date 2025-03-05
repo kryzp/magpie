@@ -32,18 +32,16 @@ namespace llt
 	class Pipeline
 	{
 	public:
-		static Pipeline fromGraphics();
-		static Pipeline fromCompute();
+		Pipeline();
+		~Pipeline() = default;
 
-		Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint);
-		virtual ~Pipeline();
-
-		VkPipeline buildGraphicsPipeline(RenderInfo *renderInfo);
+		VkPipeline buildGraphicsPipeline(RenderInfo &renderInfo);
 		VkPipeline buildComputePipeline();
 
 		VkPipeline getPipeline();
 		VkPipelineLayout getPipelineLayout();
 		
+		VkShaderStageFlagBits getShaderStage() const;
 		VkPipelineBindPoint getBindPoint() const;
 
 		void bindShader(const ShaderProgram *shader);
@@ -67,8 +65,8 @@ namespace llt
 		VkPipeline m_pipeline;
 
 		VkShaderStageFlagBits m_stage;
-		VkDescriptorSetLayout m_descriptorSetLayout;
 		VkPipelineBindPoint m_bindPoint;
+		VkDescriptorSetLayout m_descriptorSetLayout;
 		uint32_t m_pushConstantsSize;
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;

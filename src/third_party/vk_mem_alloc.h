@@ -129,7 +129,7 @@ extern "C" {
 #endif
 
 #if !defined(VULKAN_H_)
-#include "../third_party/volk.h"
+#include "volk.h"
 #endif
 
 #if !defined(VMA_VULKAN_VERSION)

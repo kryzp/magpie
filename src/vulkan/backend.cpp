@@ -30,15 +30,15 @@ static bool debugHasValidationLayerSupport()
 	uint32_t layerCount = 0;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-	VkLayerProperties availableLayers[layerCount];
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
+	Vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
 	for (int i = 0; i < LLT_ARRAY_LENGTH(vkutil::VALIDATION_LAYERS); i++)
 	{
 		bool hasLayer = false;
 		const char *layerName0 = vkutil::VALIDATION_LAYERS[i];
 
-		for (int j = 0; j < layerCount; j++)
+		for (int j = 0; j < availableLayers.size(); j++)
 		{
 			const char *layerName1 = availableLayers[j].layerName;
 

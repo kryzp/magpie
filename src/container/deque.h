@@ -2,6 +2,7 @@
 #define DEQUE_H_
 
 #include <new>
+#include <memory>
 
 #include "core/common.h"
 
@@ -267,7 +268,7 @@ namespace llt
 	void Deque<T, ChunkSize>::clear()
 	{
 		for (Iterator ptr = m_begin + 1; ptr.m_cur <= m_end.m_cur; ptr++) {
-			ptr->~T();
+			ptr.get()->~T();
 		}
 
 		for (int i = 0; i < chunks(); i++) {

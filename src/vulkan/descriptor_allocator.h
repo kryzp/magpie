@@ -1,10 +1,10 @@
 #ifndef VK_DESCRIPTOR_ALLOCATOR
 #define VK_DESCRIPTOR_ALLOCATOR
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
-#include "../container/vector.h"
-#include "../container/pair.h"
+#include "container/vector.h"
+#include "container/pair.h"
 
 namespace llt
 {

@@ -1,9 +1,9 @@
 #ifndef DESCRIPTOR_LAYOUT_CACHE_H_
 #define DESCRIPTOR_LAYOUT_CACHE_H_
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
-#include "../container/hash_map.h"
+#include "container/hash_map.h"
 
 namespace llt
 {

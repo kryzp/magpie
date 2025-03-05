@@ -2,7 +2,8 @@
 #define LINKED_LIST_H_
 
 #include <new>
-#include "../common.h"
+
+#include "common.h"
 
 namespace rvn
 {

@@ -25,7 +25,7 @@ uint64_t Material::getHash() const
 void Material::bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType pass)
 {
 	if (m_passes[pass].pipeline.getPipeline() == VK_NULL_HANDLE)
-		m_passes[pass].pipeline.buildGraphicsPipeline(&renderInfo);
+		m_passes[pass].pipeline.buildGraphicsPipeline(renderInfo);
 
 	buffer.bindPipeline(m_passes[pass].pipeline);
 }

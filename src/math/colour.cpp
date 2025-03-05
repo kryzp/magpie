@@ -1,5 +1,6 @@
 #include "colour.h"
-#include "../math/calc.h"
+
+#include "math/calc.h"
 
 using namespace llt;
 

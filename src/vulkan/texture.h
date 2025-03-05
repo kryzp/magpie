@@ -112,24 +112,6 @@ namespace llt
 		bool m_uav;
 	};
 
-	/*
-	class TextureBatch
-	{
-	public:
-		TextureBatch();
-		~TextureBatch();
-
-		void addTexture(Texture *texture);
-
-		void pushPipelineBarriers(VkPipelineStageFlags dst);
-		void popPipelineBarriers();
-		
-	private:
-		Vector<Texture*> m_textures;
-		Vector<VkPipelineStageFlags> m_stageStack;
-	};
-	*/
-
 	struct BoundTexture
 	{
 		Texture *texture;

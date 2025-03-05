@@ -10,12 +10,12 @@ namespace llt
 	class Calc
 	{
 	public:
-		constexpr static T E       = 2.71828182845;
-		constexpr static T PI      = 3.14159265359;
-		constexpr static T TAU     = 6.28318530718;
+		constexpr static T E       =  2.71828182845;
+		constexpr static T PI      =  3.14159265359;
+		constexpr static T TAU     =  6.28318530718;
 		constexpr static T RAD2DEG = 57.2957795131;
-		constexpr static T DEG2RAD = 0.01745329251;
-		constexpr static T SQRT2   = 1.4142135624;
+		constexpr static T DEG2RAD =  0.01745329251;
+		constexpr static T SQRT2   =  1.4142135624;
 
 		static T abs(T x);
 		static T mod(T x, T y);
@@ -83,7 +83,7 @@ namespace llt
 	template <typename T>
 	T Calc<T>::mod(T x, T y)
 	{
-		return std::fmodf(x, y);
+		return std::fmod(x, y);
 	}
 
 	template <typename T>
@@ -189,7 +189,7 @@ namespace llt
 	template <typename T>
 	bool Calc<T>::withinEpsilon(T lhs, T rhs, T epsilon)
 	{
-		return std::fabsf(rhs - lhs) <= epsilon;
+		return std::fabs(rhs - lhs) <= epsilon;
 	}
 
 	template <typename T>

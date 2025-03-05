@@ -1,11 +1,11 @@
 #ifndef VK_RENDER_TARGET_MGR_H_
 #define VK_RENDER_TARGET_MGR_H_
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
-#include "../container/vector.h"
-#include "../container/hash_map.h"
-#include "../container/string.h"
+#include "container/vector.h"
+#include "container/hash_map.h"
+#include "container/string.h"
 
 namespace llt
 {

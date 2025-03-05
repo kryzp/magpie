@@ -1,8 +1,8 @@
 #ifndef MATERIAL_SYSTEM_H_
 #define MATERIAL_SYSTEM_H_
 
-#include "../container/string.h"
-#include "../container/hash_map.h"
+#include "container/string.h"
+#include "container/hash_map.h"
 
 #include "vulkan/descriptor_allocator.h"
 #include "vulkan/descriptor_layout_cache.h"

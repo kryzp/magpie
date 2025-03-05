@@ -25,7 +25,7 @@ namespace llt
 
 		void render(CommandBuffer &buffer) const;
 
-		void build(const VertexFormat &format, uint64_t vertexSize, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
+		void build(const VertexFormat &format, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 
 		Mesh *getParent();
 		const Mesh *getParent() const;

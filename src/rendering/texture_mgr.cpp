@@ -35,9 +35,9 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
 	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	load("environmentHDR",	"../../res/textures/cannon_4k.hdr");
-	load("stone",			"../../res/textures/smooth_stone.png");
-	load("wood",			"../../res/textures/wood.jpg");
+	load("environmentHDR",	"../res/textures/cannon_4k.hdr");
+	load("stone",			"../res/textures/smooth_stone.png");
+	load("wood",			"../res/textures/wood.jpg");
 }
 
 TextureSampler *TextureMgr::getSampler(const String &name)

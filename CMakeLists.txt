@@ -2,6 +2,7 @@
 project(lilythorn)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
@@ -26,6 +27,7 @@ add_executable(${PROJECT_NAME}
     src/rendering/camera.cpp
     src/rendering/render_object.cpp
     src/rendering/gpu_particles.cpp
+    src/rendering/scene.cpp
 
     src/vulkan/backbuffer.cpp
     src/vulkan/backend.cpp

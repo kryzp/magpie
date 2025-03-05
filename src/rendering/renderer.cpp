@@ -22,13 +22,14 @@
 using namespace llt;
 
 Renderer::Renderer()
-	: m_quadMesh()
-	, m_skyboxMesh()
 //	, m_gBuffer(nullptr)
 //	, m_gpuParticles()
-	, m_renderObjects()
-	, m_renderList()
-	, m_skyboxMaterial()
+	: m_currentScene()
+	, m_skyboxMesh()
+	, m_skyboxPipeline()
+	, m_skyboxSet()
+	, m_descriptorPool()
+	, m_descriptorLayoutCache()
 //	, m_postProcessPipeline()
 {
 }
@@ -37,9 +38,21 @@ void Renderer::init()
 {
 	g_gpuBufferManager->createGlobalStagingBuffers();
 
-	initVertexTypes();
+	m_descriptorPool.init(64 * mgc::FRAMES_IN_FLIGHT, {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			4.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
+	});
 
-	createQuadMesh();
+	initVertexTypes();
 
 	g_meshLoader = new MeshLoader();
 
@@ -50,7 +63,7 @@ void Renderer::init()
 	g_materialSystem->loadDefaultTechniques();
 	g_materialSystem->init();
 
-	createSkybox();
+	createSkyboxResources();
 
 	addRenderObjects();
 
@@ -75,25 +88,21 @@ void Renderer::init()
 
 void Renderer::cleanUp()
 {
-//	m_descriptorPool.cleanUp();
+	m_descriptorPool.cleanUp();
+	m_descriptorLayoutCache.cleanUp();
 
 	delete g_meshLoader;
 	delete g_materialSystem;
 }
 
-Vector<RenderObject>::Iterator Renderer::createRenderObject()
-{
-	return m_renderObjects.emplaceBack();
-}
-
 void Renderer::addRenderObjects()
 {
-	auto assimpModel = createRenderObject();
+	auto assimpModel = m_currentScene.createRenderObject();
 	assimpModel->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
 	assimpModel->transform.setScale({ 4.0f, 4.0f, 4.0f });
 	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
-	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+	assimpModel->mesh = g_meshLoader->loadMesh("model", "../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
 	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 
@@ -143,40 +152,18 @@ void Renderer::createPostProcessResources()
 */
 }
 
-void Renderer::createQuadMesh()
+void Renderer::createSkyboxResources()
 {
-	Vector<ModelVertex> quadVertices = {
-		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
-	};
-
-	Vector<uint16_t> quadIndices = {
-		0, 1, 2,
-		0, 2, 3
-	};
-
-	m_quadMesh.build(
-		g_modelVertexFormat,
-		sizeof(ModelVertex),
-		quadVertices.data(), quadVertices.size(),
-		quadIndices.data(), quadIndices.size()
-	);
-}
-
-void Renderer::createSkybox()
-{
-	Vector<ModelVertex> skyboxVertices =
+	Vector<PrimitiveVertex> skyboxVertices =
 	{
-		{ { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } },
-		{ {  0.5f,  0.5f, -0.5f }, { 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f } }
+		{ { -0.5f,  0.5f,  0.5f } },
+		{ { -0.5f, -0.5f,  0.5f } },
+		{ {  0.5f, -0.5f,  0.5f } },
+		{ {  0.5f,  0.5f,  0.5f } },
+		{ { -0.5f,  0.5f, -0.5f } },
+		{ { -0.5f, -0.5f, -0.5f } },
+		{ {  0.5f, -0.5f, -0.5f } },
+		{ {  0.5f,  0.5f, -0.5f } }
 	};
 
 	Vector<uint16_t> skyboxIndices =
@@ -201,118 +188,73 @@ void Renderer::createSkybox()
 	};
 
 	m_skyboxMesh.build(
-		g_modelVertexFormat,
-		sizeof(ModelVertex),
+		g_primitiveVertexFormat,
 		skyboxVertices.data(), skyboxVertices.size(),
 		skyboxIndices.data(), skyboxIndices.size()
 	);
 
-	MaterialData skyboxData;
-	skyboxData.technique = "skybox";
-	skyboxData.textures = { { g_textureManager->getTexture("environmentMap"), g_textureManager->getSampler("linear") } };
+	BoundTexture skyboxCubemap;
+	skyboxCubemap.texture = g_textureManager->getTexture("environmentMap");
+	skyboxCubemap.sampler = g_textureManager->getSampler("linear");
 
-	m_skyboxMaterial = g_materialSystem->buildMaterial(skyboxData);
-}
+	DescriptorLayoutBuilder descriptorLayoutBuilder;
+	DescriptorWriter descriptorWriter;
 
-void Renderer::aggregateSubMeshes(Vector<SubMesh*> &list)
-{
-	list.clear();
+	descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getImageInfo());
 
-	for (auto &obj : m_renderObjects)
-	{
-		if (!obj.mesh)
-			continue;
+	VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+	m_skyboxSet = m_descriptorPool.allocate(layout);
 
-		for (int i = 0; i < obj.mesh->getSubmeshCount(); i++)
-		{
-			list.pushBack(obj.mesh->getSubmesh(i));
-		}
-	}
-}
+	descriptorWriter.updateSet(m_skyboxSet);
 
-void Renderer::sortRenderListByMaterialHash(int lo, int hi)
-{
-	if (lo >= hi || lo < 0) {
-		return;
-	}
-
-	int pivot = m_renderList[hi]->getMaterial()->getHash();
-	int i = lo - 1;
-
-	for (int j = lo; j < hi; j++)
-	{
-		if (m_renderList[j]->getMaterial()->getHash() <= pivot)
-		{
-			i++;
-			LLT_SWAP(m_renderList[i], m_renderList[j]);
-		}
-	}
-
-	int partition = i + 1;
-	LLT_SWAP(m_renderList[partition], m_renderList[hi]);
-
-	sortRenderListByMaterialHash(lo, partition - 1);
-	sortRenderListByMaterialHash(partition + 1, hi);
-}
-
-void Renderer::renderObjects(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target)
-{
-	RenderInfo info = target->getRenderInfo();
-
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("viewMatrix", camera.getView());
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
-	g_materialSystem->getGlobalBuffer()->pushParameters();
-
-	aggregateSubMeshes(m_renderList);
-	sortRenderListByMaterialHash(0, m_renderList.size() - 1);
-
-	if (m_renderList.size() > 0)
-	{
-		uint64_t currentMaterialHash = m_renderList[0]->getMaterial()->getHash();
-		m_renderList[0]->getMaterial()->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
-
-		for (int i = 0; i < m_renderList.size(); i++)
-		{
-			SubMesh *mesh = m_renderList[i];
-			Material *mat = mesh->getMaterial();
-
-			if (currentMaterialHash != mat->getHash())
-			{
-				mat->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
-
-				currentMaterialHash = mat->getHash();
-			}
-
-			glm::mat4 transform = mesh->getParent()->getOwner()->transform.getMatrix();
-
-			g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("modelMatrix", transform);
-			g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("normalMatrix", glm::transpose(glm::inverse(transform)));
-			g_materialSystem->getInstanceBuffer()->pushParameters();
-
-			mat->bindDescriptorSets(buffer, SHADER_PASS_FORWARD);
-			mesh->render(buffer);
-		}
-	}
+	m_skyboxPipeline.setPushConstantsSize(sizeof(float)*16 * 2);
+	m_skyboxPipeline.bindShader(g_shaderManager->get("primitiveVS"));
+	m_skyboxPipeline.bindShader(g_shaderManager->get("skyboxFragment"));
+	m_skyboxPipeline.setVertexFormat(g_primitiveVertexFormat);
+	m_skyboxPipeline.setDepthTest(false);
+	m_skyboxPipeline.setDepthWrite(false);
+	m_skyboxPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
+	m_skyboxPipeline.setDescriptorSetLayout(layout);
+	m_skyboxPipeline.setMSAA(g_vulkanBackend->m_backbuffer->getMSAA());
 }
 
 void Renderer::renderSkybox(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target)
 {
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::mat4>("viewMatrix", camera.getRotationMatrix());
-	g_materialSystem->getGlobalBuffer()->getParameters().setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
-	g_materialSystem->getGlobalBuffer()->pushParameters();
-
-	g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
-	g_materialSystem->getInstanceBuffer()->getParameters().setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
-	g_materialSystem->getInstanceBuffer()->pushParameters();
-
 	RenderInfo info = target->getRenderInfo();
 
-	m_skyboxMaterial->bindPipeline(buffer, info, SHADER_PASS_FORWARD);
-	m_skyboxMaterial->bindDescriptorSets(buffer, SHADER_PASS_FORWARD);
-	
+	ShaderParameters params;
+	params.setValue<glm::mat4>("proj", camera.getProj());
+	params.setValue<glm::mat4>("view", camera.getRotationMatrix());
+
+	if (m_skyboxPipeline.getPipeline() == VK_NULL_HANDLE)
+		m_skyboxPipeline.buildGraphicsPipeline(info);
+
+	buffer.bindPipeline(m_skyboxPipeline);
+
+	buffer.bindDescriptorSets(
+		m_skyboxPipeline.getBindPoint(),
+		m_skyboxPipeline.getPipelineLayout(),
+		0,
+		1, &m_skyboxSet,
+		0, nullptr
+	);
+
+	buffer.setViewport(info);
+	buffer.setScissor(info);
+
+	buffer.pushConstants(
+		m_skyboxPipeline.getPipelineLayout(),
+		m_skyboxPipeline.getShaderStage(),
+		params
+	);
+
 	m_skyboxMesh.render(buffer);
+}
+
+void Renderer::setScene(const Scene &scene)
+{
+	m_currentScene = scene;
 }
 
 void Renderer::render(const Camera &camera, float deltaTime)
@@ -322,9 +264,7 @@ void Renderer::render(const Camera &camera, float deltaTime)
 	ImGui::ShowDemoWindow();
 	ImGui::Render();
 
-	for (RenderObject &entity : m_renderObjects) {
-		entity.storePrevMatrix();
-	}
+	m_currentScene.updatePrevMatrices();
 
 //	m_gBuffer->toggleClear(true);
 //	m_gBuffer->setClearColours(Colour::black());
@@ -337,7 +277,8 @@ void Renderer::render(const Camera &camera, float deltaTime)
 	graphicsBuffer.setScissor(g_vulkanBackend->m_backbuffer->getRenderInfo());
 
 	renderSkybox(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
-	renderObjects(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
+
+	m_currentScene.render(graphicsBuffer, camera, g_vulkanBackend->m_backbuffer);
 
 	graphicsBuffer.endRendering();
 	graphicsBuffer.submit();

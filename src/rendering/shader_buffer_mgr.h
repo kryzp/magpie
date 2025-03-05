@@ -1,7 +1,7 @@
 #ifndef SHADER_BUFFER_MGR_
 #define SHADER_BUFFER_MGR_
 
-#include "../container/vector.h"
+#include "container/vector.h"
 
 #include "vulkan/descriptor_builder.h"
 #include "vulkan/shader_buffer.h"

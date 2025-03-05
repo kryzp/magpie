@@ -44,14 +44,12 @@ void Backbuffer::createSurface()
 
 void Backbuffer::createColourResources()
 {
-	// build the colour resource
 	m_colour.setSize(m_width, m_height);
 	m_colour.setProperties(g_vulkanBackend->m_swapChainImageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_colour.setSampleCount(g_vulkanBackend->m_maxMsaaSamples);
 	m_colour.setTransient(false);
 	m_colour.createInternalResources();
 
-	// add the colour resources to our render pass builder
 	m_renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
 		m_colour.getStandardView(),
@@ -66,7 +64,6 @@ void Backbuffer::createDepthResources()
 {
     VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
 
-	// build the depth resource
 	m_depth.setSize(m_width, m_height);
 	m_depth.setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 	m_depth.setSampleCount(g_vulkanBackend->m_maxMsaaSamples);
@@ -74,7 +71,6 @@ void Backbuffer::createDepthResources()
 
 	m_depth.transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	// add the depth resource to our render pass builder
 	m_renderInfo.addDepthAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
 		m_depth.getStandardView(),
@@ -287,10 +283,10 @@ void Backbuffer::createSwapChain()
 
 	// now that we know for sure that we must have swap chain images (and the number of them)
 	// actually get the swap chain images array
-    VkImage images[imageCount];
-    vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, images);
+    Vector<VkImage> images(imageCount);
+    vkGetSwapchainImagesKHR(g_vulkanBackend->m_device, m_swapChain, &imageCount, images.data());
 
-    for (int i = 0; i < imageCount; i++) {
+    for (int i = 0; i < images.size(); i++) {
         m_swapChainImages[i] = images[i];
     }
 

@@ -1,7 +1,9 @@
 #include "texture.h"
+
 #include "backend.h"
 #include "util.h"
-#include "../math/calc.h"
+
+#include "math/calc.h"
 
 using namespace llt;
 

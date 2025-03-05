@@ -1,7 +1,9 @@
 #include "render_target.h"
+
 #include "backend.h"
 #include "util.h"
-#include "../math/colour.h"
+
+#include "math/colour.h"
 
 using namespace llt;
 

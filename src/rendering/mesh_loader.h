@@ -5,8 +5,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "../container/string.h"
-#include "../container/hash_map.h"
+#include "container/string.h"
+#include "container/hash_map.h"
 
 #include "mesh.h"
 

@@ -2,7 +2,8 @@
 #define FILE_STREAM_H_
 
 #include "stream.h"
-#include "../container/string.h"
+
+#include "container/string.h"
 
 namespace llt
 {

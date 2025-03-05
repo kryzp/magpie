@@ -29,6 +29,7 @@ void llt::initVertexTypes()
 VertexFormat::VertexFormat()
 	: m_attributes()
 	, m_bindings()
+	, m_size(0)
 {
 }
 
@@ -38,6 +39,9 @@ VertexFormat::~VertexFormat()
 
 void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription>& attributes)
 {
+	if (inputRate == VK_VERTEX_INPUT_RATE_VERTEX)
+		m_size = stride;
+
 	uint32_t binding = m_bindings.size();
 
 	VkVertexInputBindingDescription bindingDescription = {};
@@ -77,4 +81,9 @@ const Vector<VkVertexInputAttributeDescription>& VertexFormat::getAttributeDescr
 const Vector<VkVertexInputBindingDescription>& VertexFormat::getBindingDescriptions() const
 {
 	return m_bindings;
+}
+
+uint64_t VertexFormat::getVertexSize() const
+{
+	return m_size;
 }

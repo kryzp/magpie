@@ -3,7 +3,7 @@
 
 #include <glm/vec4.hpp>
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
 #include "generic_render_target.h"
 #include "texture.h"

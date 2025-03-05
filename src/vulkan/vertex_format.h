@@ -32,9 +32,13 @@ namespace llt
 		const Vector<VkVertexInputAttributeDescription>& getAttributeDescriptions() const;
 		const Vector<VkVertexInputBindingDescription>& getBindingDescriptions() const;
 
+		uint64_t getVertexSize() const;
+
 	private:
 		Vector<VkVertexInputAttributeDescription> m_attributes;
 		Vector<VkVertexInputBindingDescription> m_bindings;
+
+		uint64_t m_size;
 	};
 
 	// //

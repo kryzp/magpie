@@ -15,29 +15,26 @@ void DescriptorLayoutCache::cleanUp()
 
 VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetLayoutCreateInfo &layoutCreateInfo)
 {
-	uint64_t createdDescriptorHash = 0;
+	uint64_t hash = 0;
 
-	hash::combine(&createdDescriptorHash, &layoutCreateInfo.bindingCount);
+	hash::combine(&hash, &layoutCreateInfo.bindingCount);
 
 	for (int i = 0; i < layoutCreateInfo.bindingCount; i++) {
-		hash::combine(&createdDescriptorHash, &layoutCreateInfo.pBindings[i]);
+		hash::combine(&hash, &layoutCreateInfo.pBindings[i]);
 	}
 
-	if (m_layoutCache.contains(createdDescriptorHash)) {
-		return m_layoutCache[createdDescriptorHash];
+	if (m_layoutCache.contains(hash)) {
+		return m_layoutCache[hash];
 	}
 
-	VkDescriptorSetLayout createdDescriptor = {};
+	VkDescriptorSetLayout layout = {};
 
 	LLT_VK_CHECK(
-		vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &createdDescriptor),
+		vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &layout),
 		"Failed to create descriptor set layout"
 	);
 
-	m_layoutCache.insert(
-		createdDescriptorHash,
-		createdDescriptor
-	);
+	m_layoutCache.insert(hash, layout);
 
-	return createdDescriptor;
+	return layout;
 }

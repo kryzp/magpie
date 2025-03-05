@@ -12,6 +12,7 @@
 
 #include "render_object.h"
 #include "gpu_particles.h"
+#include "scene.h"
 
 namespace llt
 {
@@ -31,32 +32,28 @@ namespace llt
 
 		void render(const Camera &camera, float deltaTime);
 
-		Vector<RenderObject>::Iterator createRenderObject();
+		void setScene(const Scene &scene);
 
 	private:
-		void createQuadMesh();
-		void createSkybox();
+		void createSkyboxResources();
 		void addRenderObjects();
 		void createPostProcessResources();
 
 		void renderSkybox(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target);
-		void renderObjects(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target);
 		void renderParticles(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target, float deltaTime);
 		void renderPostProcess();
 		void renderImGui(CommandBuffer &buffer);
 
-		void aggregateSubMeshes(Vector<SubMesh*>& list);
-		void sortRenderListByMaterialHash(int lo, int hi);
-
-		SubMesh m_quadMesh;
-		SubMesh m_skyboxMesh;
-
 //		RenderTarget *m_gBuffer;
 
-		Vector<RenderObject> m_renderObjects;
-		Vector<SubMesh*> m_renderList;
+		Scene m_currentScene;
 
-		Material *m_skyboxMaterial;
+		SubMesh m_skyboxMesh;
+		Pipeline m_skyboxPipeline;
+		VkDescriptorSet m_skyboxSet;
+
+		DescriptorPoolDynamic m_descriptorPool;
+		DescriptorLayoutCache m_descriptorLayoutCache;
 
 //		GraphicsPipeline m_postProcessPipeline;
 //		VkDescriptorSet m_postProcessDescriptorSet;

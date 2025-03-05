@@ -31,7 +31,7 @@ namespace llt
 		ShaderPass()
 			: shader(nullptr)
 			, set()
-			, pipeline(Pipeline::fromGraphics())
+			, pipeline()
 		{
 		}
 	};

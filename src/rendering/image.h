@@ -1,10 +1,12 @@
 #ifndef IMAGE_H_
 #define IMAGE_H_
 
-#include "../container/string.h"
-#include "../container/function.h"
-#include "../io/file_stream.h"
-#include "../math/rect.h"
+#include "container/string.h"
+#include "container/function.h"
+
+#include "io/file_stream.h"
+
+#include "math/rect.h"
 
 namespace llt
 {

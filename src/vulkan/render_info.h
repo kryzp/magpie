@@ -1,10 +1,10 @@
 #ifndef VK_RENDER_PASS_BUILDER_H_
 #define VK_RENDER_PASS_BUILDER_H_
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
-#include "../container/array.h"
-#include "../container/vector.h"
+#include "container/array.h"
+#include "container/vector.h"
 
 #include "blend.h"
 

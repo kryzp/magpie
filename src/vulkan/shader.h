@@ -1,14 +1,14 @@
 #ifndef VK_SHADER_H_
 #define VK_SHADER_H_
 
-#include "../third_party/volk.h"
-
 #include <glm/glm.hpp>
 
-#include "../container/hash_map.h"
-#include "../container/vector.h"
-#include "../container/string.h"
-#include "../container/pair.h"
+#include "third_party/volk.h"
+
+#include "container/hash_map.h"
+#include "container/vector.h"
+#include "container/string.h"
+#include "container/pair.h"
 
 namespace llt
 {

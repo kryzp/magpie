@@ -1,7 +1,7 @@
 #ifndef VK_TEXTURE_SAMPLER_H_
 #define VK_TEXTURE_SAMPLER_H_
 
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
 namespace llt
 {

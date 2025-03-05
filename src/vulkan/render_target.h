@@ -2,7 +2,8 @@
 #define VK_RENDER_TARGET_H_
 
 #include "generic_render_target.h"
-#include "../container/deque.h"
+
+#include "container/deque.h"
 
 namespace llt
 {

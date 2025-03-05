@@ -18,21 +18,21 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	layoutCreateInfo.bindingCount = m_bindings.size();
 	layoutCreateInfo.pBindings = m_bindings.data();
 
-	VkDescriptorSetLayout set = VK_NULL_HANDLE;
+	VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 	
 	if (cache)
 	{
-		set = cache->createLayout(layoutCreateInfo);
+		layout = cache->createLayout(layoutCreateInfo);
 	}
 	else
 	{
 		LLT_VK_CHECK(
-			vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &set),
+			vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &layout),
 			"Failed to create descriptor set layout"
 		);
 	}
 
-	return set;
+	return layout;
 }
 
 void DescriptorLayoutBuilder::bind(uint32_t idx, VkDescriptorType type)

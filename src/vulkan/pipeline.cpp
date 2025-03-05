@@ -9,21 +9,11 @@
 
 using namespace llt;
 
-Pipeline Pipeline::fromGraphics()
-{
-	return Pipeline(VK_SHADER_STAGE_ALL_GRAPHICS, VK_PIPELINE_BIND_POINT_GRAPHICS);
-}
-
-Pipeline Pipeline::fromCompute()
-{
-	return Pipeline(VK_SHADER_STAGE_COMPUTE_BIT, VK_PIPELINE_BIND_POINT_COMPUTE);
-}
-
-Pipeline::Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint)
-	: m_stage(stage)
-	, m_descriptorSetLayout(VK_NULL_HANDLE)
+Pipeline::Pipeline()
+	: m_stage()
+//	, m_descriptorSetLayout(VK_NULL_HANDLE)
 	, m_pipeline(VK_NULL_HANDLE)
-	, m_bindPoint(bindPoint)
+	, m_bindPoint()
 	, m_pushConstantsSize(0)
 	, m_depthStencilCreateInfo()
 	, m_samples(VK_SAMPLE_COUNT_1_BIT)
@@ -46,12 +36,11 @@ Pipeline::Pipeline(VkShaderStageFlagBits stage, VkPipelineBindPoint bindPoint)
 	m_depthStencilCreateInfo.back = {};
 }
 
-Pipeline::~Pipeline()
+VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo &renderInfo)
 {
-}
+	m_stage = VK_SHADER_STAGE_ALL_GRAPHICS;
+	m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo *renderInfo)
-{
 	cauto &bindingDescriptions = m_currentVertexFormat.getBindingDescriptions();
 	cauto &attributeDescriptions = m_currentVertexFormat.getAttributeDescriptions();
 
@@ -96,18 +85,18 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo *renderInfo)
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
 
-	cauto &blendAttachments = renderInfo->getColourBlendAttachmentStates();
+	cauto &blendAttachments = renderInfo.getColourBlendAttachmentStates();
 
 	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};
 	colourBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	colourBlendStateCreateInfo.logicOpEnable = renderInfo->isBlendStateLogicOpEnabled() ? VK_TRUE : VK_FALSE;
-	colourBlendStateCreateInfo.logicOp = renderInfo->getBlendStateLogicOp();
+	colourBlendStateCreateInfo.logicOpEnable = renderInfo.isBlendStateLogicOpEnabled() ? VK_TRUE : VK_FALSE;
+	colourBlendStateCreateInfo.logicOp = renderInfo.getBlendStateLogicOp();
 	colourBlendStateCreateInfo.attachmentCount = blendAttachments.size();
 	colourBlendStateCreateInfo.pAttachments = blendAttachments.data();
-	colourBlendStateCreateInfo.blendConstants[0] = renderInfo->getBlendConstant(0);
-	colourBlendStateCreateInfo.blendConstants[1] = renderInfo->getBlendConstant(1);
-	colourBlendStateCreateInfo.blendConstants[2] = renderInfo->getBlendConstant(2);
-	colourBlendStateCreateInfo.blendConstants[3] = renderInfo->getBlendConstant(3);
+	colourBlendStateCreateInfo.blendConstants[0] = renderInfo.getBlendConstant(0);
+	colourBlendStateCreateInfo.blendConstants[1] = renderInfo.getBlendConstant(1);
+	colourBlendStateCreateInfo.blendConstants[2] = renderInfo.getBlendConstant(2);
+	colourBlendStateCreateInfo.blendConstants[3] = renderInfo.getBlendConstant(3);
 
 	uint64_t createdPipelineHash = 0;
 
@@ -155,7 +144,7 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo *renderInfo)
 	dynamicStateCreateInfo.dynamicStateCount = LLT_ARRAY_LENGTH(vkutil::DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
-	cauto &colourFormats = renderInfo->getColourAttachmentFormats();
+	cauto &colourFormats = renderInfo.getColourAttachmentFormats();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -200,12 +189,12 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo *renderInfo)
 
 VkPipeline Pipeline::buildComputePipeline()
 {
-	VkPipelineLayout layout = getPipelineLayout();
+	m_stage = VK_SHADER_STAGE_COMPUTE_BIT;
+	m_bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
 	uint64_t createdPipelineHash = 0;
 
 	hash::combine(&createdPipelineHash, &m_computeShaderStageInfo);
-	hash::combine(&createdPipelineHash, &layout);
 
 	if (g_vulkanBackend->m_pipelineCache.contains(createdPipelineHash))
 	{
@@ -218,7 +207,7 @@ VkPipeline Pipeline::buildComputePipeline()
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {};
 	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	computePipelineCreateInfo.layout = layout;
+	computePipelineCreateInfo.layout = getPipelineLayout();
 	computePipelineCreateInfo.stage = m_computeShaderStageInfo;
 
 	LLT_VK_CHECK(
@@ -319,6 +308,11 @@ VkPipelineLayout Pipeline::getPipelineLayout()
 	LLT_LOG("Created new pipeline layout!");
 
 	return pipelineLayout;
+}
+
+VkShaderStageFlagBits Pipeline::getShaderStage() const
+{
+	return m_stage;
 }
 
 VkPipelineBindPoint Pipeline::getBindPoint() const

@@ -45,10 +45,10 @@ MaterialSystem::MaterialSystem()
 	, m_irradianceMap()
 	, m_prefilterMap()
 	, m_brdfIntegration()
-	, m_equirectangularToCubemapPipeline(Pipeline::fromGraphics())
-	, m_irradianceGenerationPipeline(Pipeline::fromGraphics())
-	, m_prefilterGenerationPipeline(Pipeline::fromGraphics())
-	, m_brdfIntegrationPipeline(Pipeline::fromGraphics())
+	, m_equirectangularToCubemapPipeline()
+	, m_irradianceGenerationPipeline()
+	, m_prefilterGenerationPipeline()
+	, m_brdfIntegrationPipeline()
 	, m_quadMesh()
 	, m_cubeMesh()
 {
@@ -249,7 +249,6 @@ void MaterialSystem::createQuadMesh()
 	m_quadMesh = new SubMesh();
 	m_quadMesh->build(
 		g_primitiveUvVertexFormat,
-		sizeof(PrimitiveUVVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
@@ -293,7 +292,6 @@ void MaterialSystem::createCubeMesh()
 	m_cubeMesh = new SubMesh();
 	m_cubeMesh->build(
 		g_primitiveVertexFormat,
-		sizeof(PrimitiveVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
@@ -357,7 +355,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_equirectangularToCubemapPipeline.setDepthWrite(false);
 	m_equirectangularToCubemapPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_equirectangularToCubemapPipeline.setDescriptorSetLayout(etcDescriptorLayout);
-	m_equirectangularToCubemapPipeline.buildGraphicsPipeline(&etcRenderInfo);
+	m_equirectangularToCubemapPipeline.buildGraphicsPipeline(etcRenderInfo);
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -383,7 +381,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.pushConstants(
 			m_equirectangularToCubemapPipeline.getPipelineLayout(),
-			VK_SHADER_STAGE_ALL_GRAPHICS,
+			m_equirectangularToCubemapPipeline.getShaderStage(),
 			pc
 		);
 
@@ -429,7 +427,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_irradianceGenerationPipeline.setDepthWrite(false);
 	m_irradianceGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_irradianceGenerationPipeline.setDescriptorSetLayout(icDescriptorLayout);
-	m_irradianceGenerationPipeline.buildGraphicsPipeline(&icRenderInfo);
+	m_irradianceGenerationPipeline.buildGraphicsPipeline(icRenderInfo);
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -455,7 +453,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.pushConstants(
 			m_irradianceGenerationPipeline.getPipelineLayout(),
-			VK_SHADER_STAGE_ALL_GRAPHICS,
+			m_irradianceGenerationPipeline.getShaderStage(),
 			pc
 		);
 
@@ -509,7 +507,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	m_prefilterGenerationPipeline.setDepthWrite(false);
 	m_prefilterGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_prefilterGenerationPipeline.setDescriptorSetLayout(pfDescriptorLayout);
-	m_prefilterGenerationPipeline.buildGraphicsPipeline(&pfRenderInfo);
+	m_prefilterGenerationPipeline.buildGraphicsPipeline(pfRenderInfo);
 
 	for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
 	{
@@ -550,7 +548,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 			buffer.pushConstants(
 				m_prefilterGenerationPipeline.getPipelineLayout(),
-				VK_SHADER_STAGE_ALL_GRAPHICS,
+				m_prefilterGenerationPipeline.getShaderStage(),
 				pc
 			);
 
@@ -593,7 +591,7 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 	m_brdfIntegrationPipeline.setDepthWrite(false);
 	m_brdfIntegrationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_brdfIntegrationPipeline.setDescriptorSetLayout(layout);
-	m_brdfIntegrationPipeline.buildGraphicsPipeline(&info);
+	m_brdfIntegrationPipeline.buildGraphicsPipeline(info);
 
 	buffer.beginRendering(info);
 
@@ -630,29 +628,16 @@ void MaterialSystem::loadDefaultTechniques()
 {
 	ShaderProgram *genericVertex = g_shaderManager->get("genericVertex");
 	ShaderProgram *pbrFragment = g_shaderManager->get("pbrFragment");
-	ShaderProgram *skyboxFragment = g_shaderManager->get("skyboxFragment");
 
 	ShaderEffect *pbrEffect = g_shaderManager->createEffect();
 	pbrEffect->stages.pushBack(genericVertex);
 	pbrEffect->stages.pushBack(pbrFragment);
-
-	ShaderEffect *skyboxEffect = g_shaderManager->createEffect();
-	skyboxEffect->stages.pushBack(genericVertex);
-	skyboxEffect->stages.pushBack(skyboxFragment);
 
 	Technique pbrTechnique;
 	pbrTechnique.passes[SHADER_PASS_FORWARD] = pbrEffect;
 	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
 	pbrTechnique.vertexFormat = g_modelVertexFormat;
 	addTechnique("texturedPBR_opaque", pbrTechnique);
-
-	Technique skyboxTechnique;
-	skyboxTechnique.passes[SHADER_PASS_FORWARD] = skyboxEffect;
-	skyboxTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
-	skyboxTechnique.vertexFormat = g_modelVertexFormat;
-	skyboxTechnique.depthTest = false;
-	skyboxTechnique.depthWrite = false;
-	addTechnique("skybox", skyboxTechnique);
 }
 
 // todo: way to specifically decide what global buffer gets applied to what bindings in the technique

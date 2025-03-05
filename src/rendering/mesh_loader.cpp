@@ -142,7 +142,6 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 
 	submesh->build(
 		g_modelVertexFormat,
-		sizeof(ModelVertex),
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
@@ -191,7 +190,7 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial *material, ai
 		aiString texturePath;
 		material->GetTexture(type, i, &texturePath);
 
-		aiString basePath = aiString("../../res/models/GLTF/DamagedHelmet/");
+		aiString basePath = aiString("../res/models/GLTF/DamagedHelmet/"); // todo????
 		basePath.Append(texturePath.C_Str());
 
 		Texture *tex = g_textureManager->getTexture(basePath.C_Str());

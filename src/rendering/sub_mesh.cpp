@@ -81,7 +81,6 @@ void SubMesh::render(CommandBuffer &buffer) const
 
 void SubMesh::build(
 	const VertexFormat &format,
-	uint64_t vertexSize,
 	void *pVertices, uint32_t nVertices,
 	uint16_t *pIndices, uint32_t nIndices
 )
@@ -91,11 +90,11 @@ void SubMesh::build(
 	m_nVertices = nVertices;
 	m_nIndices = nIndices;
 
-	uint64_t vertexBufferSize = nVertices * vertexSize;
+	uint64_t vertexBufferSize = nVertices * m_vertexFormat->getVertexSize();
 	uint64_t indexBufferSize = nIndices * sizeof(uint16_t);
 
 	// create the gpu buffers
-	m_vertexBuffer = g_gpuBufferManager->createVertexBuffer(nVertices, vertexSize);
+	m_vertexBuffer = g_gpuBufferManager->createVertexBuffer(nVertices, m_vertexFormat->getVertexSize());
 	m_indexBuffer = g_gpuBufferManager->createIndexBuffer(nIndices);
 
 	// read data to the stage

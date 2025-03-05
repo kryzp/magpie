@@ -2,7 +2,7 @@
 #define COMMAND_BUFFER_H_
 
 #define VK_NO_PROTOTYPES
-#include "../third_party/volk.h"
+#include "third_party/volk.h"
 
 namespace llt
 {
