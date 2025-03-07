@@ -4,12 +4,14 @@
 #define VK_NO_PROTOTYPES
 #include "third_party/volk.h"
 
+#include "render_info.h"
+
 namespace llt
 {
 	class GenericRenderTarget;
-	class RenderInfo;
 	class ShaderParameters;
 	class Pipeline;
+	class ShaderEffect;
 
 	class CommandBuffer
 	{
@@ -21,12 +23,21 @@ namespace llt
 		CommandBuffer(VkCommandBuffer buffer);
 		~CommandBuffer();
 
+		void setShader(ShaderEffect *shader);
+
+		// ---
+
 		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
 
 		void beginRendering(GenericRenderTarget *target);
 		void beginRendering(const RenderInfo &info);
 		
 		void endRendering();
+
+		const RenderInfo &getCurrentRenderInfo() const;
+
+		void bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline);
+		void bindPipeline(Pipeline &pipeline);
 
 		void drawIndexed(
 			uint32_t indexCount,
@@ -53,8 +64,6 @@ namespace llt
 		);
 
 		void bindDescriptorSets(
-			VkPipelineBindPoint bindPoint,
-			VkPipelineLayout pipelineLayout,
 			uint32_t firstSet,
 			uint32_t setCount,
 			const VkDescriptorSet *descriptorSets,
@@ -62,31 +71,10 @@ namespace llt
 			const uint32_t *dynamicOffsets
 		);
 
-		void bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline);
-		void bindPipeline(Pipeline &pipeline);
-
-		void setViewports(
-			uint32_t viewportCount,
-			VkViewport *viewports,
-			uint32_t firstViewport = 0
-		);
-
 		void setViewport(const VkViewport &viewport);
-
-		void setViewport(const RenderInfo &info);
-
-		void setScissors(
-			uint32_t scissorCount,
-			VkRect2D *scissors,
-			uint32_t firstScissor = 0
-		);
-
 		void setScissor(const VkRect2D &scissor);
 
-		void setScissor(const RenderInfo &info);
-
 		void pushConstants(
-			VkPipelineLayout pipelineLayout,
 			VkShaderStageFlagBits stageFlags,
 			uint32_t offset,
 			uint32_t size,
@@ -94,7 +82,6 @@ namespace llt
 		);
 
 		void pushConstants(
-			VkPipelineLayout pipelineLayout,
 			VkShaderStageFlagBits stageFlags,
 			ShaderParameters &params
 		);
@@ -157,8 +144,13 @@ namespace llt
 		void _beginRecording();
 
 		VkCommandBuffer m_buffer;
+		VkPipelineLayout m_currentPipelineLayout;
 
-		GenericRenderTarget *m_target;
+		VkViewport m_viewport;
+		VkRect2D m_scissor;
+
+		GenericRenderTarget *m_currentTarget;
+		RenderInfo m_currentRenderInfo;
 	};
 }
 

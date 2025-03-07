@@ -47,6 +47,9 @@ namespace llt
 
 		void setSize(uint32_t width, uint32_t height);
 
+		VkSampleCountFlagBits getMSAA() const;
+		void setMSAA(VkSampleCountFlagBits samples);
+
 		int getColourAttachmentCount() const;
 		int getAttachmentCount() const;
 
@@ -71,6 +74,8 @@ namespace llt
 
 		bool m_blendStateLogicOpEnabled;
 		VkLogicOp m_blendStateLogicOp;
+
+		VkSampleCountFlagBits m_samples;
 	};
 }
 

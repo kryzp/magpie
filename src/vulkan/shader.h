@@ -103,22 +103,40 @@ namespace llt
 
 		void loadFromSource(const char *source, uint64_t size);
 
-		VkShaderModule getModule() const;
 		VkPipelineShaderStageCreateInfo getShaderStageCreateInfo() const;
 
-		VkShaderStageFlagBits type;
+		VkShaderStageFlagBits getStage() const;
+		void setStage(VkShaderStageFlagBits stage);
+
+		VkShaderModule getModule() const;
 
 	private:
-		VkShaderModule m_shaderModule;
+		VkShaderStageFlagBits m_stage;
+		VkShaderModule m_module;
 	};
 
 	class ShaderEffect
 	{
 	public:
-		ShaderEffect() = default;
+		ShaderEffect();
 		~ShaderEffect() = default;
 
-		Vector<ShaderProgram*> stages;
+		VkPipelineLayout getPipelineLayout();
+
+		void addStage(ShaderProgram *program);
+		const Vector<ShaderProgram *> &getStages() const;
+
+		const VkDescriptorSetLayout &getDescriptorSetLayout() const;
+		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
+		
+		void setPushConstantsSize(uint64_t size);
+
+	private:
+		Vector<ShaderProgram *> m_stages;
+		VkPipelineLayout m_layout;
+
+		VkDescriptorSetLayout m_descriptorSetLayout;
+		uint64_t m_pushConstantsSize;
 	};
 }
 

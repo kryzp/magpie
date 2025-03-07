@@ -11,5 +11,6 @@ SamplerState skyboxSampler : register(s0);
 float4 main(PSInput input) : SV_TARGET
 {
     float3 dir = normalize(input.position);
-	return float4(skyboxTexture.Sample(skyboxSampler, dir).rgb, 1.0);
+	float3 col = skyboxTexture.Sample(skyboxSampler, dir).rgb;
+	return float4(col, 1.0);
 }

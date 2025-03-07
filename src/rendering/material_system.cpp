@@ -5,6 +5,7 @@
 
 #include "shader_mgr.h"
 #include "light.h"
+#include "mesh_loader.h"
 
 #include "vulkan/vertex_format.h"
 #include "vulkan/backend.h"
@@ -41,23 +42,21 @@ MaterialSystem::MaterialSystem()
 	, m_techniques()
 	, m_globalBuffer()
 	, m_instanceBuffer()
+	, m_descriptorPoolAllocator()
 	, m_environmentMap()
 	, m_irradianceMap()
 	, m_prefilterMap()
-	, m_brdfIntegration()
+	, m_brdfLUT()
 	, m_equirectangularToCubemapPipeline()
 	, m_irradianceGenerationPipeline()
 	, m_prefilterGenerationPipeline()
 	, m_brdfIntegrationPipeline()
-	, m_quadMesh()
-	, m_cubeMesh()
 {
 }
 
 MaterialSystem::~MaterialSystem()
 {
-	delete m_quadMesh;
-	delete m_cubeMesh;
+	m_descriptorPoolAllocator.cleanUp();
 
 	for (auto& [id, mat] : m_materials) {
 		delete mat;
@@ -65,9 +64,6 @@ MaterialSystem::~MaterialSystem()
 
 	m_materials.clear();
 	m_techniques.clear();
-
-	m_descriptorCache.cleanUp();
-	m_descriptorPoolAllocator.cleanUp();
 }
 
 void MaterialSystem::init()
@@ -197,9 +193,6 @@ void MaterialSystem::init()
 	vkCreateDescriptorSetLayout(mDevice, &createInfo, nullptr, &bindlessLay
 	*/
 
-	createQuadMesh();
-	createCubeMesh();
-
 	CommandBuffer graphicsBuffer = CommandBuffer::fromGraphics();
 
 	generateEnvironmentMaps(graphicsBuffer);
@@ -230,73 +223,6 @@ void MaterialSystem::updateImGui()
 	ImGui::End();
 }
 
-void MaterialSystem::createQuadMesh()
-{
-	Vector<PrimitiveUVVertex> vertices =
-	{
-		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f } },
-		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } },
-		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f } },
-		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 1.0f } }
-	};
-
-	Vector<uint16_t> indices =
-	{
-		0, 1, 2,
-		0, 2, 3
-	};
-
-	m_quadMesh = new SubMesh();
-	m_quadMesh->build(
-		g_primitiveUvVertexFormat,
-		vertices.data(), vertices.size(),
-		indices.data(), indices.size()
-	);
-}
-
-void MaterialSystem::createCubeMesh()
-{
-	Vector<PrimitiveVertex> vertices =
-	{
-		{ { -1.0f,  1.0f, -1.0f } },
-		{ { -1.0f, -1.0f, -1.0f } },
-		{ {  1.0f, -1.0f, -1.0f } },
-		{ {  1.0f,  1.0f, -1.0f } },
-		{ { -1.0f,  1.0f,  1.0f } },
-		{ { -1.0f, -1.0f,  1.0f } },
-		{ {  1.0f, -1.0f,  1.0f } },
-		{ {  1.0f,  1.0f,  1.0f } }
-	};
-
-	Vector<uint16_t> indices =
-	{
-		0, 1, 2,
-		2, 3, 0,
-
-		4, 6, 5,
-		7, 6, 4,
-
-		4, 5, 1,
-		1, 0, 4,
-
-		3, 2, 6,
-		6, 7, 3,
-
-		4, 0, 3,
-		3, 7, 4,
-
-		1, 5, 6,
-		6, 2, 1
-	};
-
-	m_cubeMesh = new SubMesh();
-	m_cubeMesh->build(
-		g_primitiveVertexFormat,
-		vertices.data(), vertices.size(),
-		indices.data(), indices.size()
-	);
-}
-
 // todo: this needs to be moved to a seperate class. EnvironmentMapGenerator or something idk
 // -> also lots of repeating code.
 void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
@@ -304,40 +230,35 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
 	glm::mat4 captureViews[] = {
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f,-1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f,-1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
 		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
 		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f,-1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f,-1.0f, 0.0f))
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
 	};
 
-	DescriptorLayoutBuilder descriptorLayoutBuilder;
 	DescriptorWriter descriptorWriter;
 
-	ShaderProgram *primitiveShader = g_shaderManager->get("primitiveVS");
-	ShaderProgram *equirectangularToCubemapShader = g_shaderManager->get("equirectangularToCubemap");
-	ShaderProgram *irradianceConvolutionShader = g_shaderManager->get("irradianceConvolution");
-	ShaderProgram *prefilterConvolutionShader = g_shaderManager->get("prefilterConvolution");
+	SubMesh *cubeMesh = g_meshLoader->getCubeMesh();
 
 	// =====================================================
 	LLT_LOG("Generating environment map...");
 
+	descriptorWriter.clear();
+
 	const int ENVIRONMENT_RESOLUTION = 1024;
 
-	m_environmentMap = g_textureManager->createCubemap("environmentMap", ENVIRONMENT_RESOLUTION, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
+	m_environmentMap = g_textureManager->createCubemap(
+		"environmentMap",
+		ENVIRONMENT_RESOLUTION,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		4
+	);
 
 	BoundTexture hdrImage;
 	hdrImage.texture = g_textureManager->getTexture("environmentHDR");
 	hdrImage.sampler = g_textureManager->getSampler("linear");
-
-	descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getImageInfo());
-
-	VkDescriptorSetLayout etcDescriptorLayout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
-	VkDescriptorSet etcDescriptorSet = m_descriptorPoolAllocator.allocate(etcDescriptorLayout);
-
-	descriptorWriter.updateSet(etcDescriptorSet);
 
 	RenderInfo etcRenderInfo;
 	etcRenderInfo.setSize(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
@@ -347,14 +268,18 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	pc.setValue<glm::mat4>("proj", captureProjection);
 	pc.setValue<glm::mat4>("view", glm::identity<glm::mat4>());
 
-	m_equirectangularToCubemapPipeline.setPushConstantsSize(pc.getPackedConstants().size());
-	m_equirectangularToCubemapPipeline.bindShader(primitiveShader);
+	ShaderEffect *equirectangularToCubemapShader = g_shaderManager->getEffect("equirectangularToCubemap");
+
+	VkDescriptorSet etcDescriptorSet = m_descriptorPoolAllocator.allocate(equirectangularToCubemapShader->getDescriptorSetLayout());
+
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getImageInfo());
+	descriptorWriter.updateSet(etcDescriptorSet);
+
 	m_equirectangularToCubemapPipeline.bindShader(equirectangularToCubemapShader);
 	m_equirectangularToCubemapPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_equirectangularToCubemapPipeline.setDepthTest(false);
 	m_equirectangularToCubemapPipeline.setDepthWrite(false);
 	m_equirectangularToCubemapPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_equirectangularToCubemapPipeline.setDescriptorSetLayout(etcDescriptorLayout);
 	m_equirectangularToCubemapPipeline.buildGraphicsPipeline(etcRenderInfo);
 
 	for (int i = 0; i < 6; i++)
@@ -368,24 +293,22 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.bindPipeline(m_equirectangularToCubemapPipeline);
 
+		buffer.setShader(equirectangularToCubemapShader);
+
 		buffer.bindDescriptorSets(
-			m_equirectangularToCubemapPipeline.getBindPoint(),
-			m_equirectangularToCubemapPipeline.getPipelineLayout(),
 			0,
 			1, &etcDescriptorSet,
 			0, nullptr
 		);
 
-		buffer.setScissor(etcRenderInfo);
 		buffer.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
 
 		buffer.pushConstants(
-			m_equirectangularToCubemapPipeline.getPipelineLayout(),
-			m_equirectangularToCubemapPipeline.getShaderStage(),
+			VK_SHADER_STAGE_ALL_GRAPHICS,
 			pc
 		);
 
-		m_cubeMesh->render(buffer);
+		cubeMesh->render(buffer);
 
 		buffer.endRendering();
 		buffer.submit();
@@ -396,37 +319,37 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	// =====================================================
 	LLT_LOG("Generating irradiance map...");
 
-	const int IRRADIANCE_RESOLUTION = 32;
-
-	descriptorLayoutBuilder.clear();
 	descriptorWriter.clear();
 
-	m_irradianceMap = g_textureManager->createCubemap("irradianceMap", IRRADIANCE_RESOLUTION, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
+	const int IRRADIANCE_RESOLUTION = 32;
+
+	m_irradianceMap = g_textureManager->createCubemap(
+		"irradianceMap",
+		IRRADIANCE_RESOLUTION,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		4
+	);
 
 	BoundTexture envMapImage;
 	envMapImage.texture = m_environmentMap;
 	envMapImage.sampler = g_textureManager->getSampler("linear");
 
-	descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
-
-	VkDescriptorSetLayout icDescriptorLayout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
-	VkDescriptorSet icDescriptorSet = m_descriptorPoolAllocator.allocate(icDescriptorLayout);
-
-	descriptorWriter.updateSet(icDescriptorSet);
-
 	RenderInfo icRenderInfo;
 	icRenderInfo.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 	icRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_irradianceMap->getFormat());
 
-	m_irradianceGenerationPipeline.setPushConstantsSize(pc.getPackedConstants().size());
-	m_irradianceGenerationPipeline.bindShader(primitiveShader);
-	m_irradianceGenerationPipeline.bindShader(irradianceConvolutionShader);
+	ShaderEffect *irradianceGenerationShader = g_shaderManager->getEffect("irradianceConvolution");
+
+	VkDescriptorSet icDescriptorSet = m_descriptorPoolAllocator.allocate(irradianceGenerationShader->getDescriptorSetLayout());
+
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
+	descriptorWriter.updateSet(icDescriptorSet);
+
+	m_irradianceGenerationPipeline.bindShader(irradianceGenerationShader);
 	m_irradianceGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_irradianceGenerationPipeline.setDepthTest(false);
 	m_irradianceGenerationPipeline.setDepthWrite(false);
 	m_irradianceGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_irradianceGenerationPipeline.setDescriptorSetLayout(icDescriptorLayout);
 	m_irradianceGenerationPipeline.buildGraphicsPipeline(icRenderInfo);
 
 	for (int i = 0; i < 6; i++)
@@ -440,24 +363,22 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.bindPipeline(m_irradianceGenerationPipeline);
 
+		buffer.setShader(irradianceGenerationShader);
+
 		buffer.bindDescriptorSets(
-			m_irradianceGenerationPipeline.getBindPoint(),
-			m_irradianceGenerationPipeline.getPipelineLayout(),
 			0,
 			1, &icDescriptorSet,
 			0, nullptr
 		);
 
-		buffer.setScissor(icRenderInfo);
 		buffer.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
 
 		buffer.pushConstants(
-			m_irradianceGenerationPipeline.getPipelineLayout(),
-			m_irradianceGenerationPipeline.getShaderStage(),
+			VK_SHADER_STAGE_ALL_GRAPHICS,
 			pc
 		);
 
-		m_cubeMesh->render(buffer);
+		cubeMesh->render(buffer);
 
 		buffer.endRendering();
 		buffer.submit();
@@ -468,13 +389,17 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	// =====================================================
 	LLT_LOG("Generating prefilter map...");
 
-	const int PREFILTER_RESOLUTION = 128;
-	const int PREFILTER_MIP_LEVELS = 5;
-	
-	descriptorLayoutBuilder.clear();
 	descriptorWriter.clear();
 
-	m_prefilterMap = g_textureManager->createCubemap("prefilterMap", PREFILTER_RESOLUTION, VK_FORMAT_R32G32B32A32_SFLOAT, PREFILTER_MIP_LEVELS);
+	const int PREFILTER_RESOLUTION = 128;
+	const int PREFILTER_MIP_LEVELS = 5;
+
+	m_prefilterMap = g_textureManager->createCubemap(
+		"prefilterMap",
+		PREFILTER_RESOLUTION,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		PREFILTER_MIP_LEVELS
+	);
 
 	DynamicShaderBuffer pfParameterBuffer;
 	pfParameterBuffer.init(sizeof(float) * 4 * PREFILTER_MIP_LEVELS * 6, SHADER_BUFFER_UBO);
@@ -484,29 +409,23 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	pfParameterBuffer.getParameters().setValue<float>("_padding2", 0.0f);
 	pfParameterBuffer.pushParameters();
 
-	descriptorLayoutBuilder.bind(0, pfParameterBuffer.getDescriptorType());
-	descriptorWriter.writeBuffer(0, pfParameterBuffer.getDescriptorType(), pfParameterBuffer.getDescriptorInfo());
-
-	descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-	descriptorWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
-
-	VkDescriptorSetLayout pfDescriptorLayout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
-	VkDescriptorSet pfDescriptorSet = m_descriptorPoolAllocator.allocate(pfDescriptorLayout);
-
-	descriptorWriter.updateSet(pfDescriptorSet);
-
 	RenderInfo pfRenderInfo;
 	pfRenderInfo.setSize(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
 	pfRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_prefilterMap->getFormat());
 
-	m_prefilterGenerationPipeline.setPushConstantsSize(pc.getPackedConstants().size());
-	m_prefilterGenerationPipeline.bindShader(primitiveShader);
-	m_prefilterGenerationPipeline.bindShader(prefilterConvolutionShader);
+	ShaderEffect *prefilterGenerationShader = g_shaderManager->getEffect("prefilterConvolution");
+
+	VkDescriptorSet pfDescriptorSet = m_descriptorPoolAllocator.allocate(prefilterGenerationShader->getDescriptorSetLayout());
+
+	descriptorWriter.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer.getDescriptorInfo());
+	descriptorWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
+	descriptorWriter.updateSet(pfDescriptorSet);
+
+	m_prefilterGenerationPipeline.bindShader(prefilterGenerationShader);
 	m_prefilterGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_prefilterGenerationPipeline.setDepthTest(false);
 	m_prefilterGenerationPipeline.setDepthWrite(false);
 	m_prefilterGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_prefilterGenerationPipeline.setDescriptorSetLayout(pfDescriptorLayout);
 	m_prefilterGenerationPipeline.buildGraphicsPipeline(pfRenderInfo);
 
 	for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
@@ -530,29 +449,24 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 			buffer.bindPipeline(m_prefilterGenerationPipeline);
 
-			Vector<uint32_t> dynamicOffsets = {
-				pfParameterBuffer.getDynamicOffset()
-			};
+			buffer.setShader(prefilterGenerationShader);
+
+			uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
 
 			buffer.bindDescriptorSets(
-				m_prefilterGenerationPipeline.getBindPoint(),
-				m_prefilterGenerationPipeline.getPipelineLayout(),
 				0,
 				1, &pfDescriptorSet,
-				dynamicOffsets.size(),
-				dynamicOffsets.data()
+				1, &dynamicOffset
 			);
 
-			buffer.setScissor(pfRenderInfo);
 			buffer.setViewport({ 0, 0, (float)width, (float)height });
 
 			buffer.pushConstants(
-				m_prefilterGenerationPipeline.getPipelineLayout(),
-				m_prefilterGenerationPipeline.getShaderStage(),
+				VK_SHADER_STAGE_ALL_GRAPHICS,
 				pc
 			);
 
-			m_cubeMesh->render(buffer);
+			cubeMesh->render(buffer);
 
 			buffer.endRendering();
 			buffer.submit();
@@ -568,47 +482,47 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 {
 	LLT_LOG("Precomputing BRDF...");
 
+	SubMesh *quadMesh = g_meshLoader->getQuadMesh();
+
 	const int BRDF_RESOLUTION = 512;
 
-	ShaderProgram *primitiveQuadShader = g_shaderManager->get("primitiveQuadVS");
-	ShaderProgram *brdfIntegratorShader = g_shaderManager->get("brdfIntegrator");
-
-	m_brdfIntegration = g_textureManager->createAttachment("brdfIntegration", BRDF_RESOLUTION, BRDF_RESOLUTION, VK_FORMAT_R32G32_SFLOAT, VK_IMAGE_TILING_LINEAR);
-
-	DescriptorLayoutBuilder descriptorLayoutBuilder;
-
-	VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
-	VkDescriptorSet set = m_descriptorPoolAllocator.allocate(layout);
+	m_brdfLUT = g_textureManager->createAttachment(
+		"brdfIntegration",
+		BRDF_RESOLUTION, BRDF_RESOLUTION,
+		VK_FORMAT_R32G32_SFLOAT,
+		VK_IMAGE_TILING_LINEAR
+	);
 
 	RenderInfo info;
 	info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
-	info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, m_brdfIntegration->getStandardView(), m_brdfIntegration->getFormat());
+	info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, m_brdfLUT->getStandardView(), m_brdfLUT->getFormat());
 
-	m_brdfIntegrationPipeline.bindShader(primitiveQuadShader);
-	m_brdfIntegrationPipeline.bindShader(brdfIntegratorShader);
+	ShaderEffect *brdfLUTShader = g_shaderManager->getEffect("brdfLUT");
+
+	VkDescriptorSet set = m_descriptorPoolAllocator.allocate(brdfLUTShader->getDescriptorSetLayout());
+
+	m_brdfIntegrationPipeline.bindShader(brdfLUTShader);
 	m_brdfIntegrationPipeline.setVertexFormat(g_primitiveUvVertexFormat);
 	m_brdfIntegrationPipeline.setDepthTest(false);
 	m_brdfIntegrationPipeline.setDepthWrite(false);
 	m_brdfIntegrationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_brdfIntegrationPipeline.setDescriptorSetLayout(layout);
 	m_brdfIntegrationPipeline.buildGraphicsPipeline(info);
 
 	buffer.beginRendering(info);
 
 	buffer.bindPipeline(m_brdfIntegrationPipeline);
 
+	buffer.setShader(brdfLUTShader);
+
 	buffer.bindDescriptorSets(
-		m_brdfIntegrationPipeline.getBindPoint(),
-		m_brdfIntegrationPipeline.getPipelineLayout(),
 		0,
 		1, &set,
 		0, nullptr
 	);
 
-	buffer.setScissor(info);
 	buffer.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
-	m_quadMesh->render(buffer);
+	quadMesh->render(buffer);
 
 	buffer.endRendering();
 	buffer.submit();
@@ -626,15 +540,8 @@ DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
 
 void MaterialSystem::loadDefaultTechniques()
 {
-	ShaderProgram *genericVertex = g_shaderManager->get("genericVertex");
-	ShaderProgram *pbrFragment = g_shaderManager->get("pbrFragment");
-
-	ShaderEffect *pbrEffect = g_shaderManager->createEffect();
-	pbrEffect->stages.pushBack(genericVertex);
-	pbrEffect->stages.pushBack(pbrFragment);
-
 	Technique pbrTechnique;
-	pbrTechnique.passes[SHADER_PASS_FORWARD] = pbrEffect;
+	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR_opaque");
 	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
 	pbrTechnique.vertexFormat = g_modelVertexFormat;
 	addTechnique("texturedPBR_opaque", pbrTechnique);
@@ -661,22 +568,16 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	material->m_vertexFormat = technique.vertexFormat;
 	material->m_textures = data.textures;
 
-	DescriptorLayoutBuilder descriptorLayoutBuilder;
-	descriptorLayoutBuilder.bind(0, m_globalBuffer->getDescriptorType());
-	descriptorLayoutBuilder.bind(1, m_instanceBuffer->getDescriptorType());
-	descriptorLayoutBuilder.bind(2, material->m_parameterBuffer->getDescriptorType());
-
 	DescriptorWriter descriptorWriter;
-	descriptorWriter.writeBuffer(0, m_globalBuffer->getDescriptorType(), m_globalBuffer->getDescriptorInfo());
-	descriptorWriter.writeBuffer(1, m_instanceBuffer->getDescriptorType(), m_instanceBuffer->getDescriptorInfo());
-	descriptorWriter.writeBuffer(2, material->m_parameterBuffer->getDescriptorType(), material->m_parameterBuffer->getDescriptorInfo());
+	descriptorWriter.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,			 m_globalBuffer		->getDescriptorInfo());
+	descriptorWriter.writeBuffer(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,			 m_instanceBuffer	->getDescriptorInfo());
+	descriptorWriter.writeBuffer(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, material->m_parameterBuffer	->getDescriptorInfo());
 
 	// bind irradiance map
 	BoundTexture irradianceMap = {};
 	irradianceMap.texture = g_textureManager->getTexture("irradianceMap");
 	irradianceMap.sampler = g_textureManager->getSampler("linear");
 
-	descriptorLayoutBuilder.bind(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	descriptorWriter.writeImage(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, irradianceMap.getImageInfo());
 
 	// bind prefilter map
@@ -684,7 +585,6 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	prefilterMap.texture = g_textureManager->getTexture("prefilterMap");
 	prefilterMap.sampler = g_textureManager->getSampler("linear");
 
-	descriptorLayoutBuilder.bind(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	descriptorWriter.writeImage(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, prefilterMap.getImageInfo());
 
 	// bind brdf LUT
@@ -692,43 +592,33 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	brdfTexture.texture = g_textureManager->getTexture("brdfIntegration");
 	brdfTexture.sampler = g_textureManager->getSampler("linear");
 
-	descriptorLayoutBuilder.bind(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 	descriptorWriter.writeImage(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, brdfTexture.getImageInfo());
 
 	// rest of the textures
 	for (int i = 0; i < data.textures.size(); i++)
 	{
-		descriptorLayoutBuilder.bind(6 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 		descriptorWriter.writeImage(6 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, data.textures[i].getImageInfo());
 	}
 
-	VkDescriptorSetLayout descriptorLayout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorCache);
-	
 	for (int i = 0; i < SHADER_PASS_MAX_ENUM; i++)
 	{
-		if (!technique.passes[i]) {
+		if (!technique.passes[i])
 			continue;
-		}
 
-		for (int j = 0; j < technique.passes[i]->stages.size(); j++) {
-			material->m_passes[i].pipeline.bindShader(technique.passes[i]->stages[j]);
-		}
+		material->m_passes[i].shader = technique.passes[i];
 
+		material->m_passes[i].set = m_descriptorPoolAllocator.allocate(technique.passes[i]->getDescriptorSetLayout());
+		descriptorWriter.updateSet(material->m_passes[i].set);
+
+		material->m_passes[i].pipeline.bindShader(technique.passes[i]);
 		material->m_passes[i].pipeline.setVertexFormat(technique.vertexFormat);
 		material->m_passes[i].pipeline.setDepthTest(technique.depthTest);
 		material->m_passes[i].pipeline.setDepthWrite(technique.depthWrite);
 		material->m_passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-		material->m_passes[i].pipeline.setDescriptorSetLayout(i == SHADER_PASS_FORWARD ? descriptorLayout : VK_NULL_HANDLE);
-		material->m_passes[i].pipeline.setMSAA(g_vulkanBackend->m_maxMsaaSamples); // todo temp
-
-		material->m_passes[i].shader = technique.passes[i];
-
-		material->m_passes[i].set = m_descriptorPoolAllocator.allocate(descriptorLayout);
-
-		descriptorWriter.updateSet(material->m_passes[i].set);
 	}
 
 	m_materials.insert(data.getHash(), material);
+
 	return material;
 }
 

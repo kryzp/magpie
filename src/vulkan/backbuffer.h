@@ -52,8 +52,6 @@ namespace llt
 
 		VkSurfaceKHR getSurface() const;
 
-		VkSampleCountFlagBits getMSAA() const override;
-
 		uint32_t getCurrentTextureIdx() const;
 
 		const VkSemaphore &getRenderFinishedSemaphore() const;

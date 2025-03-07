@@ -32,8 +32,6 @@ namespace llt
 		DynamicShaderBuffer *getInstanceBuffer() const;
 
 	private:
-		void createQuadMesh();
-		void createCubeMesh();
 
 		void generateEnvironmentMaps(CommandBuffer &buffer);
 
@@ -46,7 +44,6 @@ namespace llt
 		DynamicShaderBuffer *m_instanceBuffer;
 
 		DescriptorPoolDynamic m_descriptorPoolAllocator;
-		DescriptorLayoutCache m_descriptorCache;
 
 //		ShaderParameters m_bindlessParams;
 //		DescriptorBuilder m_bindlessDescriptor;
@@ -54,22 +51,19 @@ namespace llt
 //		DescriptorPoolDynamic bindlessDescriptorPoolManager;
 //		DescriptorCache bindlessDescriptorCache;
 
-		GPUBuffer *m_bindlessUBO;
-		GPUBuffer *m_bindlessSSBO;
-		GPUBuffer *m_bindlessCombinedSamplers;
+//		GPUBuffer *m_bindlessUBO;
+//		GPUBuffer *m_bindlessSSBO;
+//		GPUBuffer *m_bindlessCombinedSamplers;
 
 		Texture *m_environmentMap;
 		Texture *m_irradianceMap;
 		Texture *m_prefilterMap;
-		Texture *m_brdfIntegration;
+		Texture *m_brdfLUT;
 
 		Pipeline m_equirectangularToCubemapPipeline;
 		Pipeline m_irradianceGenerationPipeline;
 		Pipeline m_prefilterGenerationPipeline;
 		Pipeline m_brdfIntegrationPipeline;
-
-		SubMesh *m_quadMesh;
-		SubMesh *m_cubeMesh;
 	};
 
 	extern MaterialSystem *g_materialSystem;

@@ -15,7 +15,6 @@ RenderTarget::RenderTarget(uint32_t width, uint32_t height)
 	, m_layoutQueue()
 	, m_depth()
 	, m_resolveDepth()
-	, m_samples(VK_SAMPLE_COUNT_1_BIT)
 {
 	m_type = RENDER_TARGET_TYPE_TEXTURE;
 	m_renderInfo.setSize(m_width, m_height);
@@ -34,7 +33,7 @@ void RenderTarget::beginRendering(CommandBuffer &buffer)
 
 		if (!col->isTransient())
 		{
-			m_layoutQueue.pushBack(col->getImageLayout());
+			m_layoutQueue.push_back(col->getImageLayout());
 			col->transitionLayout(buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 	}
@@ -51,7 +50,12 @@ void RenderTarget::endRendering(CommandBuffer &buffer)
 
 		if (!col->isTransient())
 		{
-			VkImageLayout layout = m_layoutQueue.popFront();
+			int sss = m_layoutQueue.size();
+
+			VkImageLayout layout = m_layoutQueue.front();
+
+			m_layoutQueue.pop_front();
+			
 			col->transitionLayout(buffer, layout);
 		}
 	}
@@ -117,12 +121,12 @@ void RenderTarget::setDepthStencilClear(float depth, uint32_t stencil)
 
 Texture *RenderTarget::getAttachment(int idx)
 {
-	return m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveAttachments[idx] : m_attachments[idx];
+	return m_renderInfo.getMSAA() != VK_SAMPLE_COUNT_1_BIT ? m_resolveAttachments[idx] : m_attachments[idx];
 }
 
 Texture *RenderTarget::getDepthAttachment()
 {
-	return m_samples != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth;
+	return m_renderInfo.getMSAA() != VK_SAMPLE_COUNT_1_BIT ? m_resolveDepth : m_depth;
 }
 
 void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
@@ -200,7 +204,7 @@ void RenderTarget::createDepthAttachment()
 
 	VkImageView resolveView = VK_NULL_HANDLE;
 
-	if (m_samples != VK_SAMPLE_COUNT_1_BIT)
+	if (m_renderInfo.getMSAA() != VK_SAMPLE_COUNT_1_BIT)
 	{
 		m_resolveDepth = new Texture();
 
@@ -226,10 +230,10 @@ void RenderTarget::createDepthAttachment()
 
 VkSampleCountFlagBits RenderTarget::getMSAA() const
 {
-	return m_samples;
+	return m_renderInfo.getMSAA();
 }
 
 void RenderTarget::setMSAA(VkSampleCountFlagBits samples)
 {
-	m_samples = samples;
+	m_renderInfo.setMSAA(samples);
 }

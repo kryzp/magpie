@@ -8,8 +8,10 @@
 #include "vulkan/pipeline.h"
 #include "vulkan/command_buffer.h"
 
-#include "rendering/sub_mesh.h"
+#include "passes/forward_pass.h"
+#include "passes/post_process_pass.h"
 
+#include "sub_mesh.h"
 #include "render_object.h"
 #include "gpu_particles.h"
 #include "scene.h"
@@ -37,20 +39,20 @@ namespace llt
 	private:
 		void createSkyboxResources();
 		void addRenderObjects();
-		void createPostProcessResources();
 
-		void renderSkybox(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target);
-		void renderParticles(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target, float deltaTime);
-		void renderPostProcess();
+		void renderSkybox(CommandBuffer &buffer, const Camera &camera);
 		void renderImGui(CommandBuffer &buffer);
 
-//		RenderTarget *m_gBuffer;
+		RenderTarget *m_target;
 
 		Scene m_currentScene;
 
 		SubMesh m_skyboxMesh;
 		Pipeline m_skyboxPipeline;
 		VkDescriptorSet m_skyboxSet;
+
+		ForwardPass m_forwardPass;
+		PostProcessPass m_postProcessPass;
 
 		DescriptorPoolDynamic m_descriptorPool;
 		DescriptorLayoutCache m_descriptorLayoutCache;

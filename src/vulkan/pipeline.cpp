@@ -4,24 +4,20 @@
 #include "util.h"
 #include "texture.h"
 #include "shader.h"
-#include "shader_buffer.h"
 #include "render_target.h"
 
 using namespace llt;
 
 Pipeline::Pipeline()
-	: m_stage()
-//	, m_descriptorSetLayout(VK_NULL_HANDLE)
-	, m_pipeline(VK_NULL_HANDLE)
+	: m_pipeline(VK_NULL_HANDLE)
 	, m_bindPoint()
-	, m_pushConstantsSize(0)
 	, m_depthStencilCreateInfo()
-	, m_samples(VK_SAMPLE_COUNT_1_BIT)
 	, m_sampleShadingEnabled()
 	, m_minSampleShading()
 	, m_cullMode()
 	, m_currentVertexFormat()
 	, m_computeShaderStageInfo()
+	, m_boundShader(nullptr)
 	, m_shaderStages()
 {
 	m_depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -36,9 +32,8 @@ Pipeline::Pipeline()
 	m_depthStencilCreateInfo.back = {};
 }
 
-VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo &renderInfo)
+VkPipeline Pipeline::buildGraphicsPipeline(const RenderInfo &renderInfo)
 {
-	m_stage = VK_SHADER_STAGE_ALL_GRAPHICS;
 	m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	cauto &bindingDescriptions = m_currentVertexFormat.getBindingDescriptions();
@@ -80,7 +75,7 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo &renderInfo)
 	multisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampleStateCreateInfo.sampleShadingEnable = m_sampleShadingEnabled ? VK_TRUE : VK_FALSE;
 	multisampleStateCreateInfo.minSampleShading = m_minSampleShading;
-	multisampleStateCreateInfo.rasterizationSamples = m_samples;
+	multisampleStateCreateInfo.rasterizationSamples = renderInfo.getMSAA();
 	multisampleStateCreateInfo.pSampleMask = nullptr;
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
@@ -165,7 +160,7 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo &renderInfo)
 	graphicsPipelineCreateInfo.pDepthStencilState = &m_depthStencilCreateInfo;
 	graphicsPipelineCreateInfo.pColorBlendState = &colourBlendStateCreateInfo;
 	graphicsPipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
-	graphicsPipelineCreateInfo.layout = getPipelineLayout();
+	graphicsPipelineCreateInfo.layout = m_boundShader->getPipelineLayout();
 	graphicsPipelineCreateInfo.renderPass = VK_NULL_HANDLE;
 	graphicsPipelineCreateInfo.subpass = 0;
 	graphicsPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -189,7 +184,6 @@ VkPipeline Pipeline::buildGraphicsPipeline(RenderInfo &renderInfo)
 
 VkPipeline Pipeline::buildComputePipeline()
 {
-	m_stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	m_bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
 	uint64_t createdPipelineHash = 0;
@@ -207,7 +201,7 @@ VkPipeline Pipeline::buildComputePipeline()
 
 	VkComputePipelineCreateInfo computePipelineCreateInfo = {};
 	computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	computePipelineCreateInfo.layout = getPipelineLayout();
+	computePipelineCreateInfo.layout = m_boundShader->getPipelineLayout();
 	computePipelineCreateInfo.stage = m_computeShaderStageInfo;
 
 	LLT_VK_CHECK(
@@ -225,31 +219,42 @@ VkPipeline Pipeline::buildComputePipeline()
 	return m_pipeline;
 }
 
-void Pipeline::bindShader(const ShaderProgram *shader)
+void Pipeline::bindShader(ShaderEffect *shader)
 {
 	if (!shader) {
 		return;
 	}
 
-	switch (shader->type)
+	m_boundShader = shader;
+
+	for (auto &stage : shader->getStages())
 	{
-		case VK_SHADER_STAGE_VERTEX_BIT:
-			m_shaderStages[0] = shader->getShaderStageCreateInfo();
-			break;
+		switch (stage->getStage())
+		{
+			case VK_SHADER_STAGE_VERTEX_BIT:
+				m_shaderStages[0] = stage->getShaderStageCreateInfo();
+				break;
 
-		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			m_shaderStages[1] = shader->getShaderStageCreateInfo();
-			break;
+			case VK_SHADER_STAGE_FRAGMENT_BIT:
+				m_shaderStages[1] = stage->getShaderStageCreateInfo();
+				break;
 
-		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			LLT_ERROR("Geometry shaders not yet implemented!!");
+			case VK_SHADER_STAGE_GEOMETRY_BIT:
+				LLT_ERROR("Geometry shaders not yet supported!");
 
-		case VK_SHADER_STAGE_COMPUTE_BIT:
-			m_computeShaderStageInfo = shader->getShaderStageCreateInfo();
-			break;
+			case VK_SHADER_STAGE_MESH_BIT_EXT:
+				LLT_ERROR("Mesh shaders not yet supported!");
 
-		default:
-			LLT_ERROR("Unrecognised shader type being bound to pipeline: %d", shader->type);
+			case VK_SHADER_STAGE_TASK_BIT_EXT:
+				LLT_ERROR("Task shaders not yet supported!");
+
+			case VK_SHADER_STAGE_COMPUTE_BIT:
+				m_computeShaderStageInfo = stage->getShaderStageCreateInfo();
+				break;
+
+			default:
+				LLT_ERROR("Unrecognised shader stage being bound to pipeline: %d", stage->getStage());
+		}
 	}
 }
 
@@ -258,81 +263,14 @@ VkPipeline Pipeline::getPipeline()
 	return m_pipeline;
 }
 
-void Pipeline::setPushConstantsSize(uint32_t size)
-{
-	m_pushConstantsSize = size;
-}
-
-VkPipelineLayout Pipeline::getPipelineLayout()
-{
-	uint64_t pipelineLayoutHash = 0;
-
-	VkPushConstantRange pushConstants = {};
-	pushConstants.offset = 0;
-	pushConstants.size = m_pushConstantsSize;
-	pushConstants.stageFlags = m_stage;
-
-	hash::combine(&pipelineLayoutHash, &pushConstants);
-
-	hash::combine(&pipelineLayoutHash, &m_descriptorSetLayout);
-
-	if (g_vulkanBackend->m_pipelineLayoutCache.contains(pipelineLayoutHash)) {
-		return g_vulkanBackend->m_pipelineLayoutCache[pipelineLayoutHash];
-	}
-
-	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pSetLayouts = &m_descriptorSetLayout;
-	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
-
-	if (pushConstants.size > 0)
-	{
-		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
-	}
-
-	VkPipelineLayout pipelineLayout = {};
-
-	LLT_VK_CHECK(
-		vkCreatePipelineLayout(g_vulkanBackend->m_device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout),
-		"Failed to create pipeline layout"
-	);
-
-	g_vulkanBackend->m_pipelineLayoutCache.insert(
-		pipelineLayoutHash,
-		pipelineLayout
-	);
-
-	LLT_LOG("Created new pipeline layout!");
-
-	return pipelineLayout;
-}
-
-VkShaderStageFlagBits Pipeline::getShaderStage() const
-{
-	return m_stage;
-}
-
 VkPipelineBindPoint Pipeline::getBindPoint() const
 {
 	return m_bindPoint;
 }
 
-void Pipeline::setDescriptorSetLayout(const VkDescriptorSetLayout &layout)
-{
-	m_descriptorSetLayout = layout;
-}
-
 void Pipeline::setVertexFormat(const VertexFormat &descriptor)
 {
 	m_currentVertexFormat = descriptor;
-}
-
-void Pipeline::setMSAA(VkSampleCountFlagBits samples)
-{
-	m_samples = samples;
 }
 
 void Pipeline::setSampleShading(bool enabled, float minSampleShading)
@@ -345,24 +283,6 @@ void Pipeline::setCullMode(VkCullModeFlagBits cull)
 {
 	m_cullMode = cull;
 }
-
-/*
-void Pipeline::resetViewport(const RenderInfo &info)
-{
-	m_viewport.x = 0.0f;
-	m_viewport.y = (float)info.getHeight();
-	m_viewport.width = (float)info.getWidth();
-	m_viewport.height = -(float)info.getHeight();
-	m_viewport.minDepth = 0.0f;
-	m_viewport.maxDepth = 1.0f;
-}
-
-void Pipeline::resetScissor(const RenderInfo &info)
-{
-	m_scissor.offset = { 0, 0 };
-	m_scissor.extent = { info.getWidth(), info.getHeight() };
-}
-*/
 
 void Pipeline::setDepthOp(VkCompareOp op)
 {
@@ -389,14 +309,3 @@ void Pipeline::setDepthStencilTest(bool enabled)
 {
 	m_depthStencilCreateInfo.stencilTestEnable = enabled ? VK_TRUE : VK_FALSE;
 }
-
-/*
-void ComputePipeline::dispatch(CommandBuffer &buffer, int gcX, int gcY, int gcZ)
-{
-	//p_boundTextures.pushPipelineBarriers(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-
-	buffer.dispatch(gcX, gcY, gcZ);
-
-	//p_boundTextures.popPipelineBarriers();
-}
-*/

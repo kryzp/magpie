@@ -79,7 +79,7 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		void bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType pass);
+		void bindPipeline(CommandBuffer &buffer, ShaderPassType pass);
 		void bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass);
 
 		VertexFormat m_vertexFormat;

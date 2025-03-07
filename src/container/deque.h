@@ -311,7 +311,7 @@ namespace llt
 		// allocate the new size
 		for (int j = 0; j < numChunks; j++) {
 			if (!newMap[j]) {
-				newMap[j] = (T*)::operator new (sizeof(T) * ChunkSize);
+				newMap[j] = (T *)::operator new (sizeof(T) * ChunkSize);
 			}
 		}
 
@@ -330,7 +330,7 @@ namespace llt
 		m_end  .m_cur = m_end  .m_first + end_offset;
 
 		// destroy our old map
-		::operator delete (m_map, sizeof(T*) * m_capacity);
+		::operator delete (m_map, sizeof(T *) * m_capacity);
 
 		m_map = newMap;
 		m_capacity *= 2;

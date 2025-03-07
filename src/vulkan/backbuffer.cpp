@@ -306,6 +306,7 @@ void Backbuffer::createSwapChain()
 	m_renderInfo.setClearColour(0, { { 0.0f, 0.0f, 0.0f, 1.0f } });
 	m_renderInfo.setClearDepth({ { 1.0f, 0 } });
 	m_renderInfo.setSize(m_width, m_height);
+	m_renderInfo.setMSAA(g_vulkanBackend->m_maxMsaaSamples);
 
     LLT_LOG("Created the swap chain!");
 }
@@ -412,11 +413,6 @@ VkSurfaceKHR Backbuffer::getSurface() const
 uint32_t Backbuffer::getCurrentTextureIdx() const
 {
 	return m_currSwapChainImageIdx;
-}
-
-VkSampleCountFlagBits Backbuffer::getMSAA() const
-{
-	return g_vulkanBackend->m_maxMsaaSamples;
 }
 
 const VkSemaphore &Backbuffer::getRenderFinishedSemaphore() const

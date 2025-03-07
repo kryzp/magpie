@@ -144,8 +144,6 @@ float4 main(PSInput input) : SV_Target
 	
 	float3 finalColour = ambient + emissive + Lo;
 	
-	//finalColour = finalColour / (finalColour + 10.0);
-	
 	finalColour *= input.colour;
 	return float4(finalColour, 1.0);
 }

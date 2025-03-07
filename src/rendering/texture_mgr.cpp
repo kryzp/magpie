@@ -35,9 +35,9 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
 	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	load("environmentHDR",	"../res/textures/cannon_4k.hdr");
-	load("stone",			"../res/textures/smooth_stone.png");
-	load("wood",			"../res/textures/wood.jpg");
+	load("environmentHDR",	"../../res/textures/cannon_4k.hdr");
+	load("stone",			"../../res/textures/smooth_stone.png");
+	load("wood",			"../../res/textures/wood.jpg");
 }
 
 TextureSampler *TextureMgr::getSampler(const String &name)
@@ -101,11 +101,10 @@ Texture *TextureMgr::createFromData(const String &name, uint32_t width, uint32_t
 
 	if (data)
 	{
-		texture->setMipLevels(4);
-
 		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(data, size, 0);
 		g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, size);
 
+		texture->setMipLevels(4);
 		texture->generateMipmaps();
 	}
 	else
@@ -128,8 +127,6 @@ Texture *TextureMgr::createAttachment(const String &name, uint32_t width, uint32
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
 	texture->createInternalResources();
-
-//	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	m_textureCache.insert(name, texture);

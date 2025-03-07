@@ -9,16 +9,100 @@ using namespace llt;
 MeshLoader::MeshLoader()
 	: m_meshCache()
 	, m_importer()
+	, m_quadMesh(nullptr)
+	, m_cubeMesh(nullptr)
 {
+	createQuadMesh();
+	createCubeMesh();
 }
 
 MeshLoader::~MeshLoader()
 {
+	delete m_quadMesh;
+	delete m_cubeMesh;
+
 	for (auto& [name, mesh] : m_meshCache) {
 		delete mesh;
 	}
 
 	m_meshCache.clear();
+}
+
+void MeshLoader::createQuadMesh()
+{
+	Vector<PrimitiveUVVertex> vertices =
+	{
+		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f } },
+		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f } },
+		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } },
+		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } }
+	};
+
+	Vector<uint16_t> indices =
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+
+	m_quadMesh = new SubMesh();
+	m_quadMesh->build(
+		g_primitiveUvVertexFormat,
+		vertices.data(), vertices.size(),
+		indices.data(), indices.size()
+	);
+}
+
+void MeshLoader::createCubeMesh()
+{
+	Vector<PrimitiveVertex> vertices =
+	{
+		{ { -1.0f,  1.0f, -1.0f } },
+		{ { -1.0f, -1.0f, -1.0f } },
+		{ {  1.0f, -1.0f, -1.0f } },
+		{ {  1.0f,  1.0f, -1.0f } },
+		{ { -1.0f,  1.0f,  1.0f } },
+		{ { -1.0f, -1.0f,  1.0f } },
+		{ {  1.0f, -1.0f,  1.0f } },
+		{ {  1.0f,  1.0f,  1.0f } }
+	};
+
+	Vector<uint16_t> indices =
+	{
+		0, 2, 1,
+		2, 0, 3,
+
+		7, 5, 6,
+		5, 7, 4,
+
+		4, 1, 5,
+		1, 4, 0,
+
+		3, 6, 2,
+		6, 3, 7,
+
+		1, 6, 5,
+		6, 1, 2,
+
+		4, 3, 0,
+		3, 4, 7
+	};
+
+	m_cubeMesh = new SubMesh();
+	m_cubeMesh->build(
+		g_primitiveVertexFormat,
+		vertices.data(), vertices.size(),
+		indices.data(), indices.size()
+	);
+}
+
+SubMesh *MeshLoader::getQuadMesh()
+{
+	return m_quadMesh;
+}
+
+SubMesh *MeshLoader::getCubeMesh()
+{
+	return m_cubeMesh;
 }
 
 Mesh *MeshLoader::loadMesh(const String &name, const String &path)
@@ -190,7 +274,7 @@ Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial *material, ai
 		aiString texturePath;
 		material->GetTexture(type, i, &texturePath);
 
-		aiString basePath = aiString("../res/models/GLTF/DamagedHelmet/"); // todo????
+		aiString basePath = aiString("../../res/models/GLTF/DamagedHelmet/"); // todo????
 		basePath.Append(texturePath.C_Str());
 
 		Texture *tex = g_textureManager->getTexture(basePath.C_Str());

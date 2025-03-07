@@ -16,12 +16,15 @@ TODO (no particular order):
 - proper scene rendering system
 - implement a render graph system!
 - bindless material rendering
+- hdr resolve tonemapper should be compute shader
 
 BACKBURNER:
 - volumetrics
 - particles (compute shaders!! follow the naughty dog siggraph)
 - realistic ocean water
 - refraction and stuff
+- terrain generation
+- fur / hair rendering
 - post processing pipeline
 
 other todo that isnt really important:

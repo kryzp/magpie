@@ -237,7 +237,7 @@ void Texture::generateMipmaps()
 			int dstMipHeight = (int)m_height >> (i - 0);
 
 			VkImageBlit blit = {};
-				
+
 			blit.srcOffsets[0] = { 0, 0, 0 };
 			blit.srcOffsets[1] = { srcMipWidth, srcMipHeight, 1 };
 			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

@@ -5,6 +5,8 @@
 
 #include "container/deque.h"
 
+#include <deque>
+
 namespace llt
 {
 	class RenderTarget : public GenericRenderTarget
@@ -31,7 +33,7 @@ namespace llt
 		void createDepthAttachment();
 		void setDepthAttachment(Texture *texture);
 
-		VkSampleCountFlagBits getMSAA() const override;
+		VkSampleCountFlagBits getMSAA() const;
 		void setMSAA(VkSampleCountFlagBits samples);
 
 	private:
@@ -40,12 +42,10 @@ namespace llt
 
 		Vector<VkImageView> m_attachmentViews;
 
-		Deque<VkImageLayout> m_layoutQueue;
+		std::deque<VkImageLayout> m_layoutQueue;
 
 		Texture *m_depth;
 		Texture *m_resolveDepth;
-
-		VkSampleCountFlagBits m_samples;
 	};
 }
 

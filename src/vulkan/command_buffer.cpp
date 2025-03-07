@@ -29,12 +29,21 @@ CommandBuffer CommandBuffer::fromTransfer()
 
 CommandBuffer::CommandBuffer(VkCommandBuffer buffer)
 	: m_buffer(buffer)
-	, m_target(nullptr)
+	, m_currentPipelineLayout(VK_NULL_HANDLE)
+	, m_viewport()
+	, m_scissor()
+	, m_currentTarget(nullptr)
+	, m_currentRenderInfo()
 {
 }
 
 CommandBuffer::~CommandBuffer()
 {
+}
+
+void CommandBuffer::setShader(ShaderEffect *shader)
+{
+	m_currentPipelineLayout = shader->getPipelineLayout();
 }
 
 void CommandBuffer::submit(VkSemaphore computeSemaphore)
@@ -52,15 +61,15 @@ void CommandBuffer::submit(VkSemaphore computeSemaphore)
 	int waitSemaphoreCount = 0;
 	VkSemaphore blitSemaphore = VK_NULL_HANDLE;
 
-	if (m_target)
+	if (m_currentTarget)
 	{
-		if (m_target->getType() == RENDER_TARGET_TYPE_BACKBUFFER)
+		if (m_currentTarget->getType() == RENDER_TARGET_TYPE_BACKBUFFER)
 		{
-			blitSemaphore = ((Backbuffer *)m_target)->getImageAvailableSemaphore();
+			blitSemaphore = ((Backbuffer *)m_currentTarget)->getImageAvailableSemaphore();
 			waitSemaphoreCount++;
 
 			signalSemaphoreCount++;
-			queueFinishedSemaphores[0] = ((Backbuffer *)m_target)->getRenderFinishedSemaphore();
+			queueFinishedSemaphores[0] = ((Backbuffer *)m_currentTarget)->getRenderFinishedSemaphore();
 		}
 	}
 
@@ -90,26 +99,36 @@ void CommandBuffer::submit(VkSemaphore computeSemaphore)
 		"Failed to submit draw command to buffer"
 	);
 
-	m_target = nullptr;
+	m_currentTarget = nullptr;
 }
 
 void CommandBuffer::beginRendering(GenericRenderTarget *target)
 {
-	m_target = target;
+	m_currentTarget = target;
 
-	beginRendering(m_target->getRenderInfo());
+	beginRendering(m_currentTarget->getRenderInfo());
 }
 
 void CommandBuffer::beginRendering(const RenderInfo &info)
 {
+	m_currentRenderInfo = info;
+
 	_beginRecording();
 
-	if (m_target)
-		m_target->beginRendering(*this);
-//	else
-//		m_target = g_vulkanBackend->m_backbuffer;
+	if (m_currentTarget)
+		m_currentTarget->beginRendering(*this);
 
 	VkRenderingInfo renderInfo = info.getInfo();
+
+	m_viewport.x = 0.0f;
+	m_viewport.y = (float)info.getHeight();
+	m_viewport.width = (float)info.getWidth();
+	m_viewport.height = -(float)info.getHeight();
+	m_viewport.minDepth = 0.0f;
+	m_viewport.maxDepth = 1.0f;
+
+	m_scissor.offset = { 0, 0 };
+	m_scissor.extent = { info.getWidth(), info.getHeight() };
 
 	vkCmdBeginRendering(m_buffer, &renderInfo);
 }
@@ -135,8 +154,31 @@ void CommandBuffer::endRendering()
 {
 	vkCmdEndRendering(m_buffer);
 
-	if (m_target)
-		m_target->endRendering(*this);
+	if (m_currentTarget)
+		m_currentTarget->endRendering(*this);
+}
+
+const RenderInfo &CommandBuffer::getCurrentRenderInfo() const
+{
+	return m_currentRenderInfo;
+}
+
+void CommandBuffer::bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline)
+{
+	vkCmdBindPipeline(
+		m_buffer,
+		bindPoint,
+		pipeline
+	);
+}
+
+void CommandBuffer::bindPipeline(Pipeline &pipeline)
+{
+	vkCmdBindPipeline(
+		m_buffer,
+		pipeline.getBindPoint(),
+		pipeline.getPipeline()
+	);
 }
 
 void CommandBuffer::drawIndexed(
@@ -147,6 +189,9 @@ void CommandBuffer::drawIndexed(
 	uint32_t firstInstance
 )
 {
+	vkCmdSetViewport(m_buffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(m_buffer, 0, 1, &m_scissor);
+
 	vkCmdDrawIndexed(
 		m_buffer,
 		indexCount,
@@ -194,8 +239,6 @@ void CommandBuffer::drawIndexedIndirectCount(
 }
 
 void CommandBuffer::bindDescriptorSets(
-	VkPipelineBindPoint bindPoint,
-	VkPipelineLayout pipelineLayout,
 	uint32_t firstSet,
 	uint32_t setCount,
 	const VkDescriptorSet *descriptorSets,
@@ -205,7 +248,8 @@ void CommandBuffer::bindDescriptorSets(
 {
 	vkCmdBindDescriptorSets(
 		m_buffer,
-		bindPoint, pipelineLayout,
+		m_currentTarget ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
+		m_currentPipelineLayout,
 		firstSet,
 		setCount, descriptorSets,
 		dynamicOffsetCount,
@@ -213,76 +257,20 @@ void CommandBuffer::bindDescriptorSets(
 	);
 }
 
-void CommandBuffer::bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline)
-{
-	vkCmdBindPipeline(
-		m_buffer,
-		bindPoint,
-		pipeline
-	);
-}
-
-void CommandBuffer::bindPipeline(Pipeline &pipeline)
-{
-	vkCmdBindPipeline(
-		m_buffer,
-		pipeline.getBindPoint(),
-		pipeline.getPipeline()
-	);
-}
-
-void CommandBuffer::setViewports(
-	uint32_t viewportCount,
-	VkViewport *viewports,
-	uint32_t firstViewport
-)
-{
-	vkCmdSetViewport(m_buffer, firstViewport, viewportCount, viewports);
-}
-
 void CommandBuffer::setViewport(const VkViewport &viewport)
 {
-	vkCmdSetViewport(m_buffer, 0, 1, &viewport);
-}
-
-void CommandBuffer::setViewport(const RenderInfo &info)
-{
-	VkViewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = (float)info.getHeight();
-	viewport.width = (float)info.getWidth();
-	viewport.height = -(float)info.getHeight();
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
-
-	vkCmdSetViewport(m_buffer, 0, 1, &viewport);
-}
-
-void CommandBuffer::setScissors(
-	uint32_t scissorCount,
-	VkRect2D *scissors,
-	uint32_t firstScissor
-)
-{
-	vkCmdSetScissor(m_buffer, firstScissor, scissorCount, scissors);
+	m_viewport.x = viewport.x;
+	m_viewport.y = viewport.height - viewport.y;
+	m_viewport.width = viewport.width;
+	m_viewport.height = -viewport.height;
 }
 
 void CommandBuffer::setScissor(const VkRect2D &scissor)
 {
-	vkCmdSetScissor(m_buffer, 0, 1, &scissor);
-}
-
-void CommandBuffer::setScissor(const RenderInfo &info)
-{
-	VkRect2D scissor = {};
-	scissor.offset = { 0, 0 };
-	scissor.extent = { info.getWidth(), info.getHeight() };
-
-	vkCmdSetScissor(m_buffer, 0, 1, &scissor);
+	m_scissor = scissor;
 }
 
 void CommandBuffer::pushConstants(
-	VkPipelineLayout pipelineLayout,
 	VkShaderStageFlagBits stageFlags,
 	uint32_t offset,
 	uint32_t size,
@@ -291,7 +279,7 @@ void CommandBuffer::pushConstants(
 {
 	vkCmdPushConstants(
 		m_buffer,
-		pipelineLayout,
+		m_currentPipelineLayout,
 		stageFlags,
 		offset,
 		size,
@@ -300,7 +288,6 @@ void CommandBuffer::pushConstants(
 }
 
 void CommandBuffer::pushConstants(
-	VkPipelineLayout pipelineLayout,
 	VkShaderStageFlagBits stageFlags,
 	ShaderParameters &params
 )
@@ -309,7 +296,7 @@ void CommandBuffer::pushConstants(
 
 	vkCmdPushConstants(
 		m_buffer,
-		pipelineLayout,
+		m_currentPipelineLayout,
 		stageFlags,
 		0,
 		data.size(),

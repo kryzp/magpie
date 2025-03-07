@@ -22,10 +22,10 @@ uint64_t Material::getHash() const
 	return result;
 }
 
-void Material::bindPipeline(CommandBuffer &buffer, RenderInfo &renderInfo, ShaderPassType pass)
+void Material::bindPipeline(CommandBuffer &buffer, ShaderPassType pass)
 {
 	if (m_passes[pass].pipeline.getPipeline() == VK_NULL_HANDLE)
-		m_passes[pass].pipeline.buildGraphicsPipeline(renderInfo);
+		m_passes[pass].pipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
 
 	buffer.bindPipeline(m_passes[pass].pipeline);
 }
@@ -39,8 +39,6 @@ void Material::bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass)
 	};
 
 	buffer.bindDescriptorSets(
-		m_passes[pass].pipeline.getBindPoint(),
-		m_passes[pass].pipeline.getPipelineLayout(),
 		0,
 		1, &m_passes[pass].set,
 		dynamicOffsets.size(),

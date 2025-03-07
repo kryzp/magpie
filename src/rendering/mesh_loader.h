@@ -20,7 +20,16 @@ namespace llt
 
 		Mesh *loadMesh(const String &name, const String &path);
 
+		SubMesh *getQuadMesh();
+		SubMesh *getCubeMesh();
+
 	private:
+		void createQuadMesh();
+		void createCubeMesh();
+
+		SubMesh *m_quadMesh;
+		SubMesh *m_cubeMesh;
+
 		void processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
 		void processSubMesh(llt::SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 

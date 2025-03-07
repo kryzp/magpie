@@ -1,14 +1,13 @@
-#ifndef RENDER_PASS_H_
-#define RENDER_PASS_H_
+#ifndef RENDER_OP_H_
+#define RENDER_OP_H_
 
-#include "shader.h"
-#include "gpu_buffer.h"
 #include "sub_mesh.h"
-#include "generic_render_target.h"
 
 namespace llt
 {
-	struct RenderPass
+	class GPUBuffer;
+
+	struct RenderOp
 	{
 		uint32_t nVertices;
 		const GPUBuffer *vertexBuffer;
@@ -23,7 +22,7 @@ namespace llt
 		uint32_t indirectOffset;
 		const GPUBuffer *indirectBuffer;
 
-		RenderPass()
+		RenderOp()
 			: nVertices(0)
 			, vertexBuffer(nullptr)
 			, nIndices(0)
@@ -37,8 +36,8 @@ namespace llt
 		{
 		}
 
-		RenderPass(const SubMesh &mesh)
-			: RenderPass()
+		RenderOp(const SubMesh &mesh)
+			: RenderOp()
 		{
 			setMesh(mesh);
 		}
@@ -68,4 +67,4 @@ namespace llt
 	};
 }
 
-#endif // RENDER_PASS_H_
+#endif // RENDER_OP_H_

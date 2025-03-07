@@ -16,6 +16,7 @@ RenderInfo::RenderInfo()
 	, m_colourBlendAttachmentStates()
 	, m_blendStateLogicOpEnabled(false)
 	, m_blendStateLogicOp(VK_LOGIC_OP_COPY)
+	, m_samples(VK_SAMPLE_COUNT_1_BIT)
 {
 }
 
@@ -190,6 +191,16 @@ void RenderInfo::setSize(uint32_t width, uint32_t height)
 {
 	m_width = width;
 	m_height = height;
+}
+
+VkSampleCountFlagBits RenderInfo::getMSAA() const
+{
+	return m_samples;
+}
+
+void RenderInfo::setMSAA(VkSampleCountFlagBits samples)
+{
+	m_samples = samples;
 }
 
 int RenderInfo::getColourAttachmentCount() const

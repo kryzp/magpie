@@ -29,6 +29,9 @@ add_executable(${PROJECT_NAME}
     src/rendering/gpu_particles.cpp
     src/rendering/scene.cpp
 
+    src/rendering/passes/forward_pass.cpp
+    src/rendering/passes/post_process_pass.cpp
+
     src/vulkan/backbuffer.cpp
     src/vulkan/backend.cpp
     src/vulkan/command_buffer.cpp

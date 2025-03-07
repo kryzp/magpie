@@ -22,10 +22,9 @@
 
 namespace llt
 {
-	class ShaderProgram;
+	class ShaderEffect;
 	class TextureSampler;
 	class DynamicShaderBuffer;
-	struct RenderPass;
 	class GenericRenderTarget;
 	class RenderInfo;
 
@@ -35,23 +34,17 @@ namespace llt
 		Pipeline();
 		~Pipeline() = default;
 
-		VkPipeline buildGraphicsPipeline(RenderInfo &renderInfo);
+		VkPipeline buildGraphicsPipeline(const RenderInfo &renderInfo);
 		VkPipeline buildComputePipeline();
 
 		VkPipeline getPipeline();
-		VkPipelineLayout getPipelineLayout();
 		
-		VkShaderStageFlagBits getShaderStage() const;
 		VkPipelineBindPoint getBindPoint() const;
 
-		void bindShader(const ShaderProgram *shader);
-		void setPushConstantsSize(uint32_t size);
-
-		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
+		void bindShader(ShaderEffect *shader);
 
 		void setVertexFormat(const VertexFormat &format);
 
-		void setMSAA(VkSampleCountFlagBits samples);
 		void setSampleShading(bool enabled, float minSampleShading);
 		void setCullMode(VkCullModeFlagBits cull);
 
@@ -64,14 +57,10 @@ namespace llt
 	private:
 		VkPipeline m_pipeline;
 
-		VkShaderStageFlagBits m_stage;
 		VkPipelineBindPoint m_bindPoint;
-		VkDescriptorSetLayout m_descriptorSetLayout;
-		uint32_t m_pushConstantsSize;
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
 
-		VkSampleCountFlagBits m_samples;
 		bool m_sampleShadingEnabled;
 		float m_minSampleShading;
 
@@ -80,6 +69,8 @@ namespace llt
 		VertexFormat m_currentVertexFormat;
 
 		VkPipelineShaderStageCreateInfo m_computeShaderStageInfo;
+
+		ShaderEffect *m_boundShader;
 		Array<VkPipelineShaderStageCreateInfo, mgc::RASTER_SHADER_COUNT> m_shaderStages;
 	};
 }
