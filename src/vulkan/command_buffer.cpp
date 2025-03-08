@@ -41,11 +41,6 @@ CommandBuffer::~CommandBuffer()
 {
 }
 
-void CommandBuffer::setShader(ShaderEffect *shader)
-{
-	m_currentPipelineLayout = shader->getPipelineLayout();
-}
-
 void CommandBuffer::submit(VkSemaphore computeSemaphore)
 {
 	cauto &currentFrame = g_vulkanBackend->m_graphicsQueue.getCurrentFrame();
@@ -130,7 +125,7 @@ void CommandBuffer::beginRendering(const RenderInfo &info)
 	m_scissor.offset = { 0, 0 };
 	m_scissor.extent = { info.getWidth(), info.getHeight() };
 
-	vkCmdBeginRendering(m_buffer, &renderInfo);
+	vkCmdBeginRenderingKHR(m_buffer, &renderInfo);
 }
 
 void CommandBuffer::_beginRecording()
@@ -152,7 +147,7 @@ void CommandBuffer::_beginRecording()
 
 void CommandBuffer::endRendering()
 {
-	vkCmdEndRendering(m_buffer);
+	vkCmdEndRenderingKHR(m_buffer);
 
 	if (m_currentTarget)
 		m_currentTarget->endRendering(*this);
@@ -163,17 +158,10 @@ const RenderInfo &CommandBuffer::getCurrentRenderInfo() const
 	return m_currentRenderInfo;
 }
 
-void CommandBuffer::bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline)
-{
-	vkCmdBindPipeline(
-		m_buffer,
-		bindPoint,
-		pipeline
-	);
-}
-
 void CommandBuffer::bindPipeline(Pipeline &pipeline)
 {
+	m_currentPipelineLayout = pipeline.getShader()->getPipelineLayout();
+
 	vkCmdBindPipeline(
 		m_buffer,
 		pipeline.getBindPoint(),

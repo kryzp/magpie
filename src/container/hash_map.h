@@ -96,10 +96,13 @@ namespace llt
 		TValue &get(const TKey &key);
 		const TValue &get(const TKey &key) const;
 
+		TValue &getOrDefault(const TKey &key, TValue &fallback);
+		const TValue &getOrDefault(const TKey &key, const TValue &fallback) const;
+
 		/*
 		 * Check if the hashmap contains this key.
 		 */
-		bool contains(const TKey &key);
+		bool contains(const TKey &key) const;
 
 		int getElementCount() const;
 		int getCapacity() const;
@@ -499,7 +502,25 @@ nextAlignFound:
 	}
 
 	template <typename TKey, typename TValue>
-	bool HashMap<TKey, TValue>::contains(const TKey &key)
+	TValue &HashMap<TKey, TValue>::getOrDefault(const TKey &key, TValue &fallback)
+	{
+		if (contains(key))
+			return get(key);
+
+		return fallback;
+	}
+
+	template <typename TKey, typename TValue>
+	const TValue &HashMap<TKey, TValue>::getOrDefault(const TKey &key, const TValue &fallback) const
+	{
+		if (contains(key))
+			return get(key);
+
+		return fallback;
+	}
+
+	template <typename TKey, typename TValue>
+	bool HashMap<TKey, TValue>::contains(const TKey &key) const
 	{
 		Element *b = m_elements[indexOf(key)];
 

@@ -54,6 +54,7 @@ namespace llt
 		int getAttachmentCount() const;
 
 		const Vector<VkFormat>& getColourAttachmentFormats() const;
+		const VkFormat& getDepthAttachmentFormat() const;
 
 		uint32_t getWidth() const;
 		uint32_t getHeight() const;

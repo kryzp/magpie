@@ -187,7 +187,7 @@ void Renderer::render(const Camera &camera, float deltaTime)
 
 	buffer.beginRendering(g_vulkanBackend->m_backbuffer);
 	{
-		m_postProcessPass.render(buffer, m_target);
+		m_postProcessPass.render(buffer);
 	}
 	buffer.endRendering();
 	buffer.submit();
@@ -296,8 +296,6 @@ void Renderer::renderSkybox(CommandBuffer &buffer, const Camera &camera)
 		m_skyboxPipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
 
 	buffer.bindPipeline(m_skyboxPipeline);
-
-	buffer.setShader(g_shaderManager->getEffect("skybox"));
 
 	buffer.bindDescriptorSets(
 		0,

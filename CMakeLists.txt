@@ -80,6 +80,8 @@ if(DEBUG_MODE)
 	add_compile_definitions(LLT_DEBUG)
 endif()
 
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 if(WIN32)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
@@ -95,7 +97,6 @@ if(WIN32)
 
 	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
 
-    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
 	add_compile_definitions(LLT_MAC_SUPPORT)
@@ -108,5 +109,6 @@ else()
 	find_package(glm REQUIRED)
 	find_package(assimp REQUIRED)
 
-	target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp)
+	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
+	target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm::glm assimp::assimp)
 endif()

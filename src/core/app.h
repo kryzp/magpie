@@ -12,24 +12,24 @@ namespace llt
 {
 	enum WindowMode
 	{
-		WINDOW_MODE_WINDOWED	= 0 << 0,
-		WINDOW_MODE_BORDERLESS	= 1 << 0,
-		WINDOW_MODE_FULLSCREEN	= 1 << 1,
+		WINDOW_MODE_WINDOWED_BIT	= 0 << 0,
+		WINDOW_MODE_BORDERLESS_BIT	= 1 << 0,
+		WINDOW_MODE_FULLSCREEN_BIT	= 1 << 1,
 
-		WINDOW_MODE_BORDERLESS_FULLSCREEN = WINDOW_MODE_BORDERLESS | WINDOW_MODE_FULLSCREEN
+//		WINDOW_MODE_BORDERLESS_FULLSCREEN_BIT = WINDOW_MODE_BORDERLESS_BIT | WINDOW_MODE_FULLSCREEN_BIT
 	};
 
 	struct Config
 	{
 		enum ConfigFlag
 		{
-			FLAG_NONE			    = 0 << 0,
-			FLAG_RESIZABLE          = 1 << 0,
-			FLAG_VSYNC              = 1 << 1,
-			FLAG_CURSOR_INVISIBLE   = 1 << 2,
-			FLAG_CENTRE_WINDOW      = 1 << 3,
-			FLAG_HIGH_PIXEL_DENSITY = 1 << 4,
-			FLAG_LOCK_CURSOR		= 1 << 5
+			FLAG_NONE_BIT			    = 0 << 0,
+			FLAG_RESIZABLE_BIT          = 1 << 0,
+			FLAG_VSYNC_BIT              = 1 << 1,
+			FLAG_CURSOR_INVISIBLE_BIT   = 1 << 2,
+			FLAG_CENTRE_WINDOW_BIT      = 1 << 3,
+			FLAG_HIGH_PIXEL_DENSITY_BIT = 1 << 4,
+			FLAG_LOCK_CURSOR_BIT		= 1 << 5
 		};
 
 		const char *name = nullptr;
@@ -40,7 +40,7 @@ namespace llt
 		int flags = 0;
 		bool vsync = false;
 
-		WindowMode windowMode = WINDOW_MODE_WINDOWED;
+		WindowMode windowMode = WINDOW_MODE_WINDOWED_BIT;
 
 		Function<void(void)> onInit = nullptr;
 		Function<void(void)> onExit = nullptr;

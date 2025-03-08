@@ -34,11 +34,11 @@ App::App(const Config &config)
 	g_platform->setWindowSize({ m_config.width, m_config.height });
 	g_platform->setWindowMode(m_config.windowMode);
 	g_platform->setWindowOpacity(m_config.opacity);
-	g_platform->setCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE));
-	g_platform->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE));
-	g_platform->lockCursor(m_config.hasFlag(Config::FLAG_LOCK_CURSOR));
+	g_platform->setCursorVisible(!m_config.hasFlag(Config::FLAG_CURSOR_INVISIBLE_BIT));
+	g_platform->toggleWindowResizable(m_config.hasFlag(Config::FLAG_RESIZABLE_BIT));
+	g_platform->lockCursor(m_config.hasFlag(Config::FLAG_LOCK_CURSOR_BIT));
 
-	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW))
+	if (m_config.hasFlag(Config::FLAG_CENTRE_WINDOW_BIT))
 	{
 		glm::ivec2 screenSize = g_platform->getScreenSize();
 

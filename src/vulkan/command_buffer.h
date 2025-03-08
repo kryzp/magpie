@@ -23,8 +23,6 @@ namespace llt
 		CommandBuffer(VkCommandBuffer buffer);
 		~CommandBuffer();
 
-		void setShader(ShaderEffect *shader);
-
 		// ---
 
 		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
@@ -36,7 +34,6 @@ namespace llt
 
 		const RenderInfo &getCurrentRenderInfo() const;
 
-		void bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline);
 		void bindPipeline(Pipeline &pipeline);
 
 		void drawIndexed(

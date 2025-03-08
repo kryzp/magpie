@@ -218,6 +218,11 @@ const Vector<VkFormat>& RenderInfo::getColourAttachmentFormats() const
 	return m_colourFormats;
 }
 
+const VkFormat& RenderInfo::getDepthAttachmentFormat() const
+{
+	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device) : VK_FORMAT_UNDEFINED;
+}
+
 uint32_t RenderInfo::getWidth() const
 {
 	return m_width;

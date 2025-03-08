@@ -293,8 +293,6 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.bindPipeline(m_equirectangularToCubemapPipeline);
 
-		buffer.setShader(equirectangularToCubemapShader);
-
 		buffer.bindDescriptorSets(
 			0,
 			1, &etcDescriptorSet,
@@ -312,6 +310,8 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.endRendering();
 		buffer.submit();
+
+		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
 	m_environmentMap->generateMipmaps();
@@ -363,8 +363,6 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.bindPipeline(m_irradianceGenerationPipeline);
 
-		buffer.setShader(irradianceGenerationShader);
-
 		buffer.bindDescriptorSets(
 			0,
 			1, &icDescriptorSet,
@@ -382,6 +380,8 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		buffer.endRendering();
 		buffer.submit();
+
+		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
 	m_irradianceMap->generateMipmaps();
@@ -442,14 +442,12 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 		{
 			pc.setValue<glm::mat4>("view", captureViews[i]);
 
-			RenderTarget target(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
+			RenderTarget target(width, height);
 			target.addAttachment(m_prefilterMap, i, mipLevel);
 
 			buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
 			buffer.bindPipeline(m_prefilterGenerationPipeline);
-
-			buffer.setShader(prefilterGenerationShader);
 
 			uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
 
@@ -470,6 +468,8 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 			buffer.endRendering();
 			buffer.submit();
+
+			vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 		}
 	}
 
@@ -512,8 +512,6 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 
 	buffer.bindPipeline(m_brdfIntegrationPipeline);
 
-	buffer.setShader(brdfLUTShader);
-
 	buffer.bindDescriptorSets(
 		0,
 		1, &set,
@@ -526,6 +524,8 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 
 	buffer.endRendering();
 	buffer.submit();
+
+	vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 }
 
 DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
@@ -536,15 +536,6 @@ DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
 DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
 {
 	return m_instanceBuffer;
-}
-
-void MaterialSystem::loadDefaultTechniques()
-{
-	Technique pbrTechnique;
-	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR_opaque");
-	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
-	pbrTechnique.vertexFormat = g_modelVertexFormat;
-	addTechnique("texturedPBR_opaque", pbrTechnique);
 }
 
 // todo: way to specifically decide what global buffer gets applied to what bindings in the technique
@@ -573,28 +564,28 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	descriptorWriter.writeBuffer(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,			 m_instanceBuffer	->getDescriptorInfo());
 	descriptorWriter.writeBuffer(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, material->m_parameterBuffer	->getDescriptorInfo());
 
-	// bind irradiance map
+	// write the irradiance map
 	BoundTexture irradianceMap = {};
 	irradianceMap.texture = g_textureManager->getTexture("irradianceMap");
 	irradianceMap.sampler = g_textureManager->getSampler("linear");
 
 	descriptorWriter.writeImage(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, irradianceMap.getImageInfo());
 
-	// bind prefilter map
+	// write the prefilter map
 	BoundTexture prefilterMap = {};
 	prefilterMap.texture = g_textureManager->getTexture("prefilterMap");
 	prefilterMap.sampler = g_textureManager->getSampler("linear");
 
 	descriptorWriter.writeImage(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, prefilterMap.getImageInfo());
 
-	// bind brdf LUT
+	// write the brdf LUT
 	BoundTexture brdfTexture = {};
 	brdfTexture.texture = g_textureManager->getTexture("brdfIntegration");
 	brdfTexture.sampler = g_textureManager->getSampler("linear");
 
 	descriptorWriter.writeImage(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, brdfTexture.getImageInfo());
 
-	// rest of the textures
+	// write the rest of the textures
 	for (int i = 0; i < data.textures.size(); i++)
 	{
 		descriptorWriter.writeImage(6 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, data.textures[i].getImageInfo());
@@ -620,6 +611,15 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	m_materials.insert(data.getHash(), material);
 
 	return material;
+}
+
+void MaterialSystem::loadDefaultTechniques()
+{
+	Technique pbrTechnique;
+	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR_opaque");
+	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
+	pbrTechnique.vertexFormat = g_modelVertexFormat;
+	addTechnique("texturedPBR_opaque", pbrTechnique);
 }
 
 void MaterialSystem::addTechnique(const String &name, const Technique &technique)

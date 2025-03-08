@@ -1,11 +1,10 @@
 #include "shader_mgr.h"
 
-#include <fstream>
-#include <sstream>
-#include <string>
-
 #include "vulkan/backend.h"
+
 #include "io/file_stream.h"
+
+#include <fstream>
 
 llt::ShaderMgr *llt::g_shaderManager = nullptr;
 
@@ -163,10 +162,7 @@ void ShaderMgr::createDefaultShaderEffects()
 
 ShaderProgram *ShaderMgr::get(const String &name)
 {
-	if (m_shaderCache.contains(name))
-		return m_shaderCache.get(name);
-
-	return nullptr;
+	return m_shaderCache.getOrDefault(name, nullptr);
 }
 
 ShaderProgram *ShaderMgr::load(const String &name, const String &source, VkShaderStageFlagBits stage)
@@ -174,10 +170,25 @@ ShaderProgram *ShaderMgr::load(const String &name, const String &source, VkShade
 	if (m_shaderCache.contains(name))
 		return m_shaderCache.get(name);
 
+	/*
 	FileStream fs(source.cstr(), "r");
 	Vector<char> sourceData(fs.size());
 	fs.read(sourceData.data(), fs.size());
 	fs.close();
+	*/
+
+	// todo: there should be platform abstractions for the file handles
+	// like FileStream myFile = g_platform->openFile(...)
+	// on windows it uses the SDL i/o streams
+	// on mac / linux something else idk
+
+	std::ifstream file(source.cstr(), std::ios::binary | std::ios::ate);
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::vector<char> sourceData(size);
+	file.read(sourceData.data(), size);
 
 	ShaderProgram *shader = new ShaderProgram();
 	shader->setStage(stage);
@@ -190,10 +201,7 @@ ShaderProgram *ShaderMgr::load(const String &name, const String &source, VkShade
 
 ShaderEffect *ShaderMgr::getEffect(const String& name)
 {
-	if (m_effects.contains(name))
-		return m_effects.get(name);
-
-	return nullptr;
+	return m_effects.getOrDefault(name, nullptr);
 }
 
 ShaderEffect *ShaderMgr::createEffect(const String &name)

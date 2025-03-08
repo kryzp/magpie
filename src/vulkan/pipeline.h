@@ -54,12 +54,12 @@ namespace llt
 		void setDepthBounds(float min, float max);
 		void setDepthStencilTest(bool enabled);
 
+		ShaderEffect *getShader();
+		const ShaderEffect *getShader() const;
+
 	private:
 		VkPipeline m_pipeline;
-
 		VkPipelineBindPoint m_bindPoint;
-
-		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
 
 		bool m_sampleShadingEnabled;
 		float m_minSampleShading;
@@ -68,6 +68,7 @@ namespace llt
 
 		VertexFormat m_currentVertexFormat;
 
+		VkPipelineDepthStencilStateCreateInfo m_depthStencilCreateInfo;
 		VkPipelineShaderStageCreateInfo m_computeShaderStageInfo;
 
 		ShaderEffect *m_boundShader;

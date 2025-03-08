@@ -24,11 +24,7 @@ RenderTargetMgr::~RenderTargetMgr()
 
 RenderTarget *RenderTargetMgr::get(const String &name)
 {
-	if (m_targets.contains(name)) {
-		return m_targets.get(name);
-	}
-
-	return nullptr;
+	return m_targets.getOrDefault(name, nullptr);
 }
 
 RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples)

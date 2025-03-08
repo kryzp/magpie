@@ -16,7 +16,7 @@ Platform::Platform(const Config &config)
 	, m_gamepads{}
 	, m_gamepadCount(0)
 {
-	if (SDL_Init(
+	uint32_t initFlags =
 		SDL_INIT_VIDEO |
 		SDL_INIT_AUDIO |
 		SDL_INIT_JOYSTICK |
@@ -24,18 +24,25 @@ Platform::Platform(const Config &config)
 		SDL_INIT_HAPTIC |
 		SDL_INIT_EVENTS |
 		SDL_INIT_SENSOR |
-		SDL_INIT_CAMERA) == 0)
-	{
+		SDL_INIT_CAMERA;
+
+	// i have no fucking idea why this is the case but whatever
+#ifdef _WIN32
+	bool failedInit = SDL_Init(initFlags) == 0;
+#else
+	bool failedInit = SDL_Init(initFlags) != 0;
+#endif // _WIN32
+
+	if (failedInit)
 		LLT_ERROR("Failed to initialize: %s", SDL_GetError());
-	}
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	if (config.hasFlag(Config::FLAG_RESIZABLE)) {
+	if (config.hasFlag(Config::FLAG_RESIZABLE_BIT)) {
 		flags |= SDL_WINDOW_RESIZABLE;
 	}
 
-	if (config.hasFlag(Config::FLAG_HIGH_PIXEL_DENSITY)) {
+	if (config.hasFlag(Config::FLAG_HIGH_PIXEL_DENSITY_BIT)) {
 		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	}
 
@@ -111,6 +118,7 @@ void Platform::pollEvents()
 				g_inputState->onTextUtf8(ev.text.text);
 				break;
 
+#if _WIN32
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
 				g_inputState->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
@@ -126,6 +134,7 @@ void Platform::pollEvents()
 					(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.0f : 0.0f))
 				);
 				break;
+#endif // _WIN32
 
 			case SDL_EVENT_GAMEPAD_ADDED:
 				LLT_LOG("Gamepad added, trying to reconnect all gamepads...");
@@ -317,7 +326,9 @@ void Platform::setCursorVisible(bool toggle) const
 
 void Platform::lockCursor(bool toggle) const
 {
+#if _WIN32
 	SDL_SetWindowRelativeMouseMode(m_window, toggle);
+#endif // _WIN32
 }
 
 void Platform::setCursorPosition(int x, int y)
@@ -336,34 +347,34 @@ WindowMode Platform::getWindowMode() const
 	auto flags = SDL_GetWindowFlags(m_window);
 
 	if (flags & SDL_WINDOW_FULLSCREEN) {
-		return WINDOW_MODE_FULLSCREEN;
+		return WINDOW_MODE_FULLSCREEN_BIT;
 	} else if (flags & SDL_WINDOW_BORDERLESS) {
-		return WINDOW_MODE_BORDERLESS;
+		return WINDOW_MODE_BORDERLESS_BIT;
 	}
 
-	return WINDOW_MODE_WINDOWED;
+	return WINDOW_MODE_WINDOWED_BIT;
 }
 
 void Platform::setWindowMode(WindowMode toggle)
 {
 	switch (toggle)
 	{
-		case WINDOW_MODE_FULLSCREEN:
+		case WINDOW_MODE_FULLSCREEN_BIT:
 			SDL_SetWindowFullscreen(m_window, true);
 			SDL_SetWindowBordered(m_window, false);
 			break;
 
-		case WINDOW_MODE_BORDERLESS_FULLSCREEN:
-			SDL_SetWindowFullscreen(m_window, true);
-			SDL_SetWindowBordered(m_window, true);
-			break;
+//		case WINDOW_MODE_BORDERLESS_FULLSCREEN_BIT:
+//			SDL_SetWindowFullscreen(m_window, true);
+//			SDL_SetWindowBordered(m_window, true);
+//			break;
 
-		case WINDOW_MODE_BORDERLESS:
+		case WINDOW_MODE_BORDERLESS_BIT:
 			SDL_SetWindowFullscreen(m_window, false);
 			SDL_SetWindowBordered(m_window, false);
 			break;
 
-		case WINDOW_MODE_WINDOWED:
+		case WINDOW_MODE_WINDOWED_BIT:
 			SDL_SetWindowFullscreen(m_window, false);
 			SDL_SetWindowBordered(m_window, true);
 
@@ -396,47 +407,65 @@ uint64_t Platform::getPerformanceFrequency() const
 
 void *Platform::streamFromFile(const char *filepath, const char *mode)
 {
+#if _WIN32
 	return SDL_IOFromFile(filepath, mode);
+#endif // _WIN32
 }
 
 void *Platform::streamFromMemory(void *memory, uint64_t size)
 {
+#if _WIN32
 	return SDL_IOFromMem(memory, size);
+#endif // _WIN32
 }
 
 void *Platform::streamFromConstMemory(const void *memory, uint64_t size)
 {
+#if _WIN32
 	return SDL_IOFromConstMem(memory, size);
+#endif // _WIN32
 }
 
 int64_t Platform::streamRead(void *stream, void *dst, uint64_t size)
 {
+#if _WIN32
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
+#endif // _WIN32
 }
 
 int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size)
 {
+#if _WIN32
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
+#endif // _WIN32
 }
 
 int64_t Platform::streamSeek(void *stream, int64_t offset)
 {
+#if _WIN32
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
+#endif // _WIN32
 }
 
 int64_t Platform::streamSize(void *stream)
 {
+#if _WIN32
 	return SDL_GetIOSize((SDL_IOStream *)stream);
+#endif // _WIN32
 }
 
 int64_t Platform::streamPosition(void *stream)
 {
+#if _WIN32
 	return SDL_TellIO((SDL_IOStream *)stream);
+#endif // _WIN32
 }
 
 void Platform::streamClose(void *stream)
 {
+#if _WIN32
 	SDL_CloseIO((SDL_IOStream *)stream);
+#endif // _WIN32
 }
 
 void Platform::initImGui()

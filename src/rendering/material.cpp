@@ -22,12 +22,9 @@ uint64_t Material::getHash() const
 	return result;
 }
 
-void Material::bindPipeline(CommandBuffer &buffer, ShaderPassType pass)
+Pipeline &Material::getPipeline(ShaderPassType pass)
 {
-	if (m_passes[pass].pipeline.getPipeline() == VK_NULL_HANDLE)
-		m_passes[pass].pipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
-
-	buffer.bindPipeline(m_passes[pass].pipeline);
+	return m_passes[pass].pipeline;
 }
 
 void Material::bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass)

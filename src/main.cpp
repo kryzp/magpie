@@ -12,8 +12,8 @@ int main(void)
 	config.opacity = 1.0f;
 	config.flags = 0;
 	config.vsync = true;
-	config.windowMode = WINDOW_MODE_WINDOWED;
-	config.flags = Config::FLAG_CENTRE_WINDOW;
+	config.windowMode = WINDOW_MODE_WINDOWED_BIT;
+	config.flags = Config::FLAG_CENTRE_WINDOW_BIT;
 
 	g_app = new App(config);
 	g_app->run();

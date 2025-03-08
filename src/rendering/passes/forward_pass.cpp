@@ -5,7 +5,6 @@
 #include "../camera.h"
 #include "../material_system.h"
 #include "../mesh.h"
-#include "../sub_mesh.h"
 #include "../render_object.h"
 
 using namespace llt;
@@ -40,9 +39,12 @@ void ForwardPass::render(CommandBuffer &buffer, const Camera &camera, const Vect
 
 		if (i == 0 || currentMaterialHash != mat->getHash())
 		{
-			mat->bindPipeline(buffer, SHADER_PASS_FORWARD);
+			auto &pipeline = mat->getPipeline(SHADER_PASS_FORWARD);
 
-			buffer.setShader(mat->m_passes[SHADER_PASS_FORWARD].shader);
+			if (pipeline.getPipeline() == VK_NULL_HANDLE)
+				pipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
+
+			buffer.bindPipeline(pipeline);
 
 			currentMaterialHash = mat->getHash();
 		}

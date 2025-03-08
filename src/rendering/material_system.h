@@ -32,9 +32,7 @@ namespace llt
 		DynamicShaderBuffer *getInstanceBuffer() const;
 
 	private:
-
 		void generateEnvironmentMaps(CommandBuffer &buffer);
-
 		void precomputeBRDF(CommandBuffer &buffer);
 
 		HashMap<uint64_t, Material*> m_materials;

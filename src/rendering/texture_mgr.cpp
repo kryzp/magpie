@@ -42,20 +42,12 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 
 TextureSampler *TextureMgr::getSampler(const String &name)
 {
-	if (m_samplerCache.contains(name)) {
-		return m_samplerCache[name];
-	}
-
-	return nullptr;
+	return m_samplerCache.getOrDefault(name, nullptr);
 }
 
 Texture *TextureMgr::getTexture(const String &name)
 {
-	if (m_textureCache.contains(name)) {
-		return m_textureCache.get(name);
-	}
-
-	return nullptr;
+	return m_textureCache.getOrDefault(name, nullptr);
 }
 
 Texture *TextureMgr::load(const String &name, const String &path)

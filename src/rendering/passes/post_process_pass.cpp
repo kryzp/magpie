@@ -38,7 +38,7 @@ void PostProcessPass::cleanUp()
 {
 }
 
-void PostProcessPass::render(CommandBuffer &buffer, GenericRenderTarget *input)
+void PostProcessPass::render(CommandBuffer &buffer)
 {
 	if (m_hdrPipeline.getPipeline() == VK_NULL_HANDLE)
 		m_hdrPipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
@@ -46,8 +46,6 @@ void PostProcessPass::render(CommandBuffer &buffer, GenericRenderTarget *input)
 	SubMesh *quadMesh = g_meshLoader->getQuadMesh();
 
 	buffer.bindPipeline(m_hdrPipeline);
-
-	buffer.setShader(g_shaderManager->getEffect("hdrTonemapping"));
 
 	buffer.bindDescriptorSets(
 		0,

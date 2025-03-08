@@ -140,13 +140,14 @@ VkPipeline Pipeline::buildGraphicsPipeline(const RenderInfo &renderInfo)
 	dynamicStateCreateInfo.pDynamicStates = vkutil::DYNAMIC_STATES;
 
 	cauto &colourFormats = renderInfo.getColourAttachmentFormats();
+	VkFormat depthStencilFormat = renderInfo.getDepthAttachmentFormat();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
 	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
 	pipelineRenderingCreateInfo.colorAttachmentCount = colourFormats.size();
 	pipelineRenderingCreateInfo.pColorAttachmentFormats = colourFormats.data();
-	pipelineRenderingCreateInfo.depthAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
-	pipelineRenderingCreateInfo.stencilAttachmentFormat = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
+	pipelineRenderingCreateInfo.depthAttachmentFormat = depthStencilFormat;
+	pipelineRenderingCreateInfo.stencilAttachmentFormat = depthStencilFormat;
 
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {};
 	graphicsPipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -308,4 +309,14 @@ void Pipeline::setDepthBounds(float min, float max)
 void Pipeline::setDepthStencilTest(bool enabled)
 {
 	m_depthStencilCreateInfo.stencilTestEnable = enabled ? VK_TRUE : VK_FALSE;
+}
+
+ShaderEffect *Pipeline::getShader()
+{
+	return m_boundShader;
+}
+
+const ShaderEffect *Pipeline::getShader() const
+{
+	return m_boundShader;
 }
