@@ -50,7 +50,7 @@ void Profiler::getQuerys(CommandBuffer &cmd)
 	m_queryFrames[currentFrame].last = 0;
 	m_queryFrames[currentFrame].samples.clear();
 
-	std::vector<uint64_t> queryState;
+	Vector<uint64_t> queryState;
 	queryState.resize(state.last);
 
 	if (state.last != 0)

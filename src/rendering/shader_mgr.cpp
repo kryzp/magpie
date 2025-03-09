@@ -5,6 +5,7 @@
 #include "io/file_stream.h"
 
 #include <fstream>
+#include <vector>
 
 llt::ShaderMgr *llt::g_shaderManager = nullptr;
 
