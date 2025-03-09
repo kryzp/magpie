@@ -120,6 +120,10 @@ namespace llt
 			const VkBufferImageCopy *regions
 		);
 
+		void writeTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool pool, uint32_t query);
+
+		void resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32_t queryCount);
+
 		void beginCompute();
 		void endCompute(VkSemaphore signalSemaphore);
 

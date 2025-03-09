@@ -98,7 +98,7 @@ namespace llt
 
 		void createImGuiResources();
 		ImGui_ImplVulkan_InitInfo getImGuiInitInfo() const;
-		VkFormat getImGuiAttachmentFormat() const;
+		const VkFormat &getImGuiAttachmentFormat() const;
 
 	private:
 		void enumeratePhysicalDevices();

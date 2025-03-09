@@ -45,7 +45,7 @@ void Profiler::getQuerys(CommandBuffer &cmd)
 
 	QueryFrameState& state = m_queryFrames[currentFrame];
 
-	vkCmdResetQueryPool(cmd.getBuffer(), m_queryFrames[currentFrame].queryPool, 0, m_queryFrames[currentFrame].last);
+	cmd.resetQueryPool(m_queryFrames[currentFrame].queryPool, 0, m_queryFrames[currentFrame].last);
 
 	m_queryFrames[currentFrame].last = 0;
 	m_queryFrames[currentFrame].samples.clear();
@@ -105,8 +105,7 @@ ScopeTimer::ScopeTimer(const char *name, CommandBuffer &cmd)
 
 	VkQueryPool pool = g_profiler->getTimerPool();
 
-	vkCmdWriteTimestamp(
-		cmd.getBuffer(),
+	m_cmd.writeTimestamp(
 		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 		pool,
 		m_sample.start
@@ -119,8 +118,7 @@ ScopeTimer::~ScopeTimer()
 
 	VkQueryPool pool = g_profiler->getTimerPool();
 
-	vkCmdWriteTimestamp(
-		m_cmd.getBuffer(),
+	m_cmd.writeTimestamp(
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		pool,
 		m_sample.end

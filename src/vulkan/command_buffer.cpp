@@ -377,6 +377,26 @@ void CommandBuffer::copyBufferToImage(
 	);
 }
 
+void CommandBuffer::writeTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool pool, uint32_t query)
+{
+	vkCmdWriteTimestamp(
+		m_buffer,
+		pipelineStage,
+		pool,
+		query
+	);
+}
+
+void CommandBuffer::resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32_t queryCount)
+{
+	vkCmdResetQueryPool(
+		m_buffer,
+		pool,
+		firstQuery,
+		queryCount
+	);
+}
+
 void CommandBuffer::beginCompute()
 {
 	cauto &currentFrame = g_vulkanBackend->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)

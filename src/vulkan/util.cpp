@@ -154,13 +154,22 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &c
 
 void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer &cmd)
 {
-	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmd, g_vulkanBackend->m_graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(
+		g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool,
+		cmd,
+		g_vulkanBackend->m_graphicsQueue.getQueue()
+	);
 }
 
 void vkutil::endSingleTimeTransferCommands(const CommandBuffer &cmd)
 {
 	endSingleTimeGraphicsCommands(cmd);
-//	vkutil::endSingleTimeCommands(g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_transferQueues[0].getQueue());
+
+//	vkutil::endSingleTimeCommands(
+//		g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool,
+//		cmd,
+//		g_vulkanBackend->m_transferQueues[0].getQueue()
+//	);
 }
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)

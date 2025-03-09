@@ -28,6 +28,7 @@ void DynamicShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
 void DynamicShaderBuffer::cleanUp()
 {
 	delete m_buffer;
+
 	m_buffer = nullptr;
 }
 

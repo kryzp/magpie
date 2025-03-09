@@ -882,12 +882,12 @@ ImGui_ImplVulkan_InitInfo VulkanBackend::getImGuiInitInfo() const
 	info.UseDynamicRendering = true;
 	info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_swapChainImageFormat;
+	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &getImGuiAttachmentFormat();
 
 	return info;
 }
 
-VkFormat VulkanBackend::getImGuiAttachmentFormat() const
+const VkFormat &VulkanBackend::getImGuiAttachmentFormat() const
 {
 	return m_swapChainImageFormat;
 }
