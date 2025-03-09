@@ -11,6 +11,8 @@ add_executable(${PROJECT_NAME}
     src/core/common.cpp
     src/core/app.cpp
     src/core/platform.cpp
+    src/core/debug_ui.cpp
+    src/core/profiler.cpp
 
     src/rendering/renderer.cpp
     src/rendering/gpu_buffer_mgr.cpp
@@ -95,20 +97,16 @@ if(WIN32)
 	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
 
-	target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
 
-	target_include_directories(${PROJECT_NAME} PUBLIC ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
+	target_include_directories(${PROJECT_NAME} PRIVATE ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
 	add_compile_definitions(LLT_MAC_SUPPORT)
-
-	add_compile_definitions(RVN_USE_SDL3)
-	add_compile_definitions(RVN_USE_VULKAN)
 
 	find_package(SDL3 REQUIRED)
 	find_package(Vulkan REQUIRED)
 	find_package(glm REQUIRED)
 	find_package(assimp REQUIRED)
 
-	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
-	target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan glm::glm assimp::assimp)
+	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp)
 endif()

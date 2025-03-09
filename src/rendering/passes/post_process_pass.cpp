@@ -38,20 +38,20 @@ void PostProcessPass::cleanUp()
 {
 }
 
-void PostProcessPass::render(CommandBuffer &buffer)
+void PostProcessPass::render(CommandBuffer &cmd)
 {
 	if (m_hdrPipeline.getPipeline() == VK_NULL_HANDLE)
-		m_hdrPipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
+		m_hdrPipeline.buildGraphicsPipeline(cmd.getCurrentRenderInfo());
 
 	SubMesh *quadMesh = g_meshLoader->getQuadMesh();
 
-	buffer.bindPipeline(m_hdrPipeline);
+	cmd.bindPipeline(m_hdrPipeline);
 
-	buffer.bindDescriptorSets(
+	cmd.bindDescriptorSets(
 		0,
 		1, &m_hdrSet,
 		0, nullptr
 	);
 
-	quadMesh->render(buffer);
+	quadMesh->render(cmd);
 }

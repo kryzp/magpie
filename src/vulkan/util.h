@@ -64,10 +64,10 @@ namespace llt
 
 		CommandBuffer beginSingleTimeCommands(VkCommandPool cmdPool);
 
-		void endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &buffer, VkQueue graphics);
+		void endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &cmd, VkQueue graphics);
 
-		void endSingleTimeGraphicsCommands(const CommandBuffer &buffer);
-		void endSingleTimeTransferCommands(const CommandBuffer &buffer);
+		void endSingleTimeGraphicsCommands(const CommandBuffer &cmd);
+		void endSingleTimeTransferCommands(const CommandBuffer &cmd);
 
 		uint64_t calcShaderBufferAlignedSize(uint64_t size);
 

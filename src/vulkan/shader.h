@@ -14,6 +14,7 @@ namespace llt
 {
 	class VulkanBackend;
 
+	/*
 	class ShaderParameters
 	{
 		struct ShaderParameter
@@ -24,20 +25,13 @@ namespace llt
 		};
 
 	public:
-		// the packed data is really just a list of bytes so this helps legibility
 		using PackedData = Vector<byte>;
 
 		ShaderParameters() = default;
 		~ShaderParameters() = default;
 
-		/*
-		* Returns the packed data.
-		*/
 		const PackedData &getPackedConstants();
 
-		/*
-		* Completely resets the data.
-		*/
 		void cleanUp()
 		{
 			for (auto& [name, param] : m_constants)
@@ -92,6 +86,7 @@ namespace llt
 		PackedData m_packedConstants;
 		uint64_t m_size = 0;
 	};
+	*/
 
 	class ShaderProgram
 	{

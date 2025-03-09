@@ -49,7 +49,7 @@ namespace llt
 		VkImageMemoryBarrier getBarrier() const;
 		VkImageMemoryBarrier getBarrier(VkImageLayout newLayout) const;
 		
-		void transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout);
+		void transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout);
 		void transitionLayoutSingle(VkImageLayout newLayout);
 
 		void generateMipmaps();

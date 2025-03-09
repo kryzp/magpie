@@ -25,7 +25,7 @@ RenderTarget::~RenderTarget()
 	cleanUp();
 }
 
-void RenderTarget::beginRendering(CommandBuffer &buffer)
+void RenderTarget::beginRendering(CommandBuffer &cmd)
 {
 	for (int i = 0; i < m_attachments.size(); i++)
 	{
@@ -34,15 +34,15 @@ void RenderTarget::beginRendering(CommandBuffer &buffer)
 		if (!col->isTransient())
 		{
 			m_layoutQueue.push_back(col->getImageLayout());
-			col->transitionLayout(buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			col->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		}
 	}
 
 	if (getDepthAttachment())
-		getDepthAttachment()->transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		getDepthAttachment()->transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-void RenderTarget::endRendering(CommandBuffer &buffer)
+void RenderTarget::endRendering(CommandBuffer &cmd)
 {
 	for (int i = 0; i < m_attachments.size(); i++)
 	{
@@ -56,12 +56,12 @@ void RenderTarget::endRendering(CommandBuffer &buffer)
 
 			m_layoutQueue.pop_front();
 			
-			col->transitionLayout(buffer, layout);
+			col->transitionLayout(cmd, layout);
 		}
 	}
 
 	if (getDepthAttachment())
-		getDepthAttachment()->transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+		getDepthAttachment()->transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void RenderTarget::cleanUp()

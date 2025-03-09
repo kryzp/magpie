@@ -19,7 +19,7 @@ SubMesh::~SubMesh()
 {
 }
 
-void SubMesh::render(CommandBuffer &buffer) const
+void SubMesh::render(CommandBuffer &cmd) const
 {
 	VkBuffer pVertexBuffers[] = {
 		m_vertexBuffer->getBuffer(),
@@ -40,20 +40,20 @@ void SubMesh::render(CommandBuffer &buffer) const
 
 	VkDeviceSize vertexBufferOffsets[] = { 0, 0 };
 
-	buffer.bindVertexBuffers(
+	cmd.bindVertexBuffers(
 		bindings[0].binding,
 		nVertexBuffers,
 		pVertexBuffers,
 		vertexBufferOffsets
 	);
 
-	buffer.bindIndexBuffer(
+	cmd.bindIndexBuffer(
 		m_indexBuffer->getBuffer(),
 		0,
 		VK_INDEX_TYPE_UINT16
 	);
 
-	buffer.drawIndexed(m_nIndices);
+	cmd.drawIndexed(m_nIndices);
 
 	/*
 	if (op.indirectBuffer != nullptr)

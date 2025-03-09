@@ -26,10 +26,7 @@ namespace llt
 		void init(uint64_t initialSize, ShaderBufferType type);
 		void cleanUp();
 
-		ShaderParameters &getParameters();
-		void setParameters(const ShaderParameters &params);
-
-		void pushParameters();
+		void pushData(const void *data, uint64_t size);
 
 		void reallocateBuffer(uint64_t allocationSize);
 
@@ -44,10 +41,7 @@ namespace llt
 		const GPUBuffer *getBuffer() const;
 
 	private:
-		void pushData(const void *data, uint64_t size);
-
 		GPUBuffer *m_buffer;
-		ShaderParameters m_parameters;
 
 		VkDescriptorBufferInfo m_info;
 		uint32_t m_dynamicOffset;

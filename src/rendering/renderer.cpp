@@ -4,6 +4,8 @@
 
 #include "camera.h"
 
+#include "core/profiler.h"
+
 #include "input/input.h"
 
 #include "vulkan/backend.h"
@@ -166,43 +168,35 @@ void Renderer::setScene(const Scene &scene)
 
 void Renderer::render(const Camera &camera, float deltaTime)
 {
-	g_materialSystem->updateImGui();
-
-	ImGui::ShowDemoWindow();
-	ImGui::Render();
-
 	m_currentScene.updatePrevMatrices();
 
-	CommandBuffer buffer = CommandBuffer::fromGraphics();
+	CommandBuffer cmd = CommandBuffer::fromGraphics();
 
-	buffer.beginRendering(m_target);
+	cmd.beginRendering(m_target);
 	{
-		renderSkybox(buffer, camera);
+		renderSkybox(cmd, camera);
 
 		auto &renderList = m_currentScene.getRenderList();
-		m_forwardPass.render(buffer, camera, renderList);
+		m_forwardPass.render(cmd, camera, renderList);
 	}
-	buffer.endRendering();
-	buffer.submit();
+	cmd.endRendering();
+	cmd.submit();
 
-	buffer.beginRendering(g_vulkanBackend->m_backbuffer);
+	cmd.beginRendering(g_vulkanBackend->m_backbuffer);
 	{
-		m_postProcessPass.render(buffer);
+		m_postProcessPass.render(cmd);
 	}
-	buffer.endRendering();
-	buffer.submit();
+	cmd.endRendering();
+	cmd.submit();
 
-	renderImGui(buffer);
+	ImGui::Render();
 
-//	renderParticles(camera, deltaTime);
-//	g_vulkanBackend->beginGraphics();
-//	renderPostProcess();
-//	g_vulkanBackend->endGraphics();
+	renderImGui(cmd);
 
 	g_vulkanBackend->swapBuffers();
 }
 
-void Renderer::renderImGui(CommandBuffer &buffer)
+void Renderer::renderImGui(CommandBuffer &cmd)
 {
 	RenderInfo renderInfo;
 	
@@ -217,13 +211,13 @@ void Renderer::renderImGui(CommandBuffer &buffer)
 		g_vulkanBackend->getImGuiAttachmentFormat()
 	);
 
-	buffer.beginRendering(renderInfo);
+	cmd.beginRendering(renderInfo);
 
 	ImDrawData *drawData = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(drawData, buffer.getBuffer());
+	ImGui_ImplVulkan_RenderDrawData(drawData, cmd.getBuffer());
 
-	buffer.endRendering();
-	buffer.submit();
+	cmd.endRendering();
+	cmd.submit();
 }
 
 void Renderer::createSkyboxResources()
@@ -286,33 +280,42 @@ void Renderer::createSkyboxResources()
 	m_skyboxPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 }
 
-void Renderer::renderSkybox(CommandBuffer &buffer, const Camera &camera)
+#include "core/profiler.h"
+
+void Renderer::renderSkybox(CommandBuffer &cmd, const Camera &camera)
 {
-	ShaderParameters params;
-	params.setValue<glm::mat4>("proj", camera.getProj());
-	params.setValue<glm::mat4>("view", camera.getRotationMatrix());
+	struct
+	{
+		glm::mat4 proj;
+		glm::mat4 view;
+	}
+	params;
+
+	params.proj = camera.getProj();
+	params.view = camera.getRotationMatrix();
 
 	if (m_skyboxPipeline.getPipeline() == VK_NULL_HANDLE)
-		m_skyboxPipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
+		m_skyboxPipeline.buildGraphicsPipeline(cmd.getCurrentRenderInfo());
 
-	buffer.bindPipeline(m_skyboxPipeline);
+	cmd.bindPipeline(m_skyboxPipeline);
 
-	buffer.bindDescriptorSets(
+	cmd.bindDescriptorSets(
 		0,
 		1, &m_skyboxSet,
 		0, nullptr
 	);
 
-	buffer.pushConstants(
+	cmd.pushConstants(
 		VK_SHADER_STAGE_ALL_GRAPHICS,
-		params
+		sizeof(params),
+		&params
 	);
 
-	m_skyboxMesh.render(buffer);
+	m_skyboxMesh.render(cmd);
 }
 
 /*
-void Renderer::renderParticles(CommandBuffer &buffer, const Camera &camera, const GenericRenderTarget *target, float deltaTime)
+void Renderer::renderParticles(CommandBuffer &cmd, const Camera &camera, const GenericRenderTarget *target, float deltaTime)
 {
 	m_gBuffer->toggleClear(false);
 

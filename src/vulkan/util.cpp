@@ -135,9 +135,9 @@ CommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	return CommandBuffer(cmdBuffer);
 }
 
-void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &buffer, VkQueue graphics)
+void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &cmd, VkQueue graphics)
 {
-	cauto cmdBuffer = buffer.getBuffer();
+	cauto cmdBuffer = cmd.getBuffer();
 
 	vkEndCommandBuffer(cmdBuffer);
 
@@ -152,14 +152,14 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &b
 	vkFreeCommandBuffers(g_vulkanBackend->m_device, cmdPool, 1, &cmdBuffer);
 }
 
-void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer &buffer)
+void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer &cmd)
 {
-	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, buffer, g_vulkanBackend->m_graphicsQueue.getQueue());
+	vkutil::endSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool, cmd, g_vulkanBackend->m_graphicsQueue.getQueue());
 }
 
-void vkutil::endSingleTimeTransferCommands(const CommandBuffer &buffer)
+void vkutil::endSingleTimeTransferCommands(const CommandBuffer &cmd)
 {
-	endSingleTimeGraphicsCommands(buffer);
+	endSingleTimeGraphicsCommands(cmd);
 //	vkutil::endSingleTimeCommands(g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool, cmdBuffer, g_vulkanBackend->m_transferQueues[0].getQueue());
 }
 

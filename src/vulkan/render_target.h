@@ -15,8 +15,8 @@ namespace llt
 		RenderTarget(uint32_t width, uint32_t height);
 		~RenderTarget() override;
 
-		void beginRendering(CommandBuffer &buffer) override;
-		void endRendering(CommandBuffer &buffer) override;
+		void beginRendering(CommandBuffer &cmd) override;
+		void endRendering(CommandBuffer &cmd) override;
 
 		void cleanUp() override;
 		

@@ -8,7 +8,6 @@ using namespace llt;
 
 DynamicShaderBuffer::DynamicShaderBuffer()
 	: m_buffer(nullptr)
-	, m_parameters()
 	, m_info()
 	, m_dynamicOffset()
 	, m_usageInFrame()
@@ -28,26 +27,8 @@ void DynamicShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
 
 void DynamicShaderBuffer::cleanUp()
 {
-	m_parameters.cleanUp();
-
 	delete m_buffer;
 	m_buffer = nullptr;
-}
-
-ShaderParameters &DynamicShaderBuffer::getParameters()
-{
-	return m_parameters;
-}
-
-void DynamicShaderBuffer::setParameters(const ShaderParameters &params)
-{
-	m_parameters = params;
-}
-
-void DynamicShaderBuffer::pushParameters()
-{
-	auto &packedParams = m_parameters.getPackedConstants();
-	pushData(packedParams.data(), packedParams.size());
 }
 
 void DynamicShaderBuffer::pushData(const void *data, uint64_t size)

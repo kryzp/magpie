@@ -40,8 +40,8 @@ namespace llt
 		void createSkyboxResources();
 		void addRenderObjects();
 
-		void renderSkybox(CommandBuffer &buffer, const Camera &camera);
-		void renderImGui(CommandBuffer &buffer);
+		void renderSkybox(CommandBuffer &cmd, const Camera &camera);
+		void renderImGui(CommandBuffer &cmd);
 
 		RenderTarget *m_target;
 

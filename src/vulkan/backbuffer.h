@@ -31,8 +31,8 @@ namespace llt
 		void cleanUpSwapChain();
 		void cleanUpTextures();
 
-		void beginRendering(CommandBuffer &buffer) override;
-		void endRendering(CommandBuffer &buffer) override;
+		void beginRendering(CommandBuffer &cmd) override;
+		void endRendering(CommandBuffer &cmd) override;
 
 		void setClearColour(int idx, const Colour &colour) override;
 
@@ -51,8 +51,6 @@ namespace llt
 		void onWindowResize(int width, int height);
 
 		VkSurfaceKHR getSurface() const;
-
-		uint32_t getCurrentTextureIdx() const;
 
 		const VkSemaphore &getRenderFinishedSemaphore() const;
 		const VkSemaphore &getImageAvailableSemaphore() const;

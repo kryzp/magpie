@@ -4,7 +4,6 @@
 #include <glm/ext/matrix_transform.hpp>
 
 #include "shader_mgr.h"
-#include "light.h"
 #include "mesh_loader.h"
 
 #include "vulkan/vertex_format.h"
@@ -96,15 +95,15 @@ void MaterialSystem::init()
 	lights[0].type = LIGHT_TYPE_SUN;
 	lights[0].direction /= glm::length(lights[0].direction);
 
-	m_globalBuffer->getParameters().setValue<glm::mat4>("projMatrix", glm::identity<glm::mat4>());
-	m_globalBuffer->getParameters().setValue<glm::mat4>("viewMatrix", glm::identity<glm::mat4>());
-	m_globalBuffer->getParameters().setValue<glm::vec4>("viewPos", glm::zero<glm::vec4>());
-	m_globalBuffer->getParameters().setArray<Light>("lights", lights, 16);
-	m_globalBuffer->pushParameters();
+	m_globalData.proj = glm::identity<glm::mat4>();
+	m_globalData.view = glm::identity<glm::mat4>();
+	m_globalData.cameraPosition = glm::zero<glm::vec4>();
+	mem::copy(m_globalData.lights, lights, sizeof(Light) * 16);
+	pushGlobalData();
 
-	m_instanceBuffer->getParameters().setValue<glm::mat4>("modelMatrix", glm::identity<glm::mat4>());
-	m_instanceBuffer->getParameters().setValue<glm::mat4>("normalMatrix", glm::identity<glm::mat4>());
-	m_instanceBuffer->pushParameters();
+	m_instanceData.model = glm::identity<glm::mat4>();
+	m_instanceData.normalMatrix = glm::identity<glm::mat4>();
+	pushInstanceData();
 
 	/*
 	m_bindlessParams.setValue<Params_PBR>("pbsParams", {
@@ -199,33 +198,9 @@ void MaterialSystem::init()
 	precomputeBRDF(graphicsBuffer);
 }
 
-void MaterialSystem::updateImGui()
-{
-	static float intensity = 0.0f;
-
-	ImGui::Begin("Material System");
-
-	if (ImGui::SliderFloat("Intensity", &intensity, 0.0f, 20.0f))
-	{
-		Light light;
-		light.position = { 0.0f, 5.0f, 0.0f };
-		light.radius = 0.0f;
-		light.attenuation = 0.0f;
-		light.colour = { intensity, intensity, intensity };
-		light.direction = { 1.0f, -1.0f, -1.0f };
-		light.type = LIGHT_TYPE_SUN;
-		light.direction /= glm::length(light.direction);
-
-		m_globalBuffer->getParameters().setArrayValue("lights", light, 0);
-		m_globalBuffer->pushParameters();
-	}
-
-	ImGui::End();
-}
-
 // todo: this needs to be moved to a seperate class. EnvironmentMapGenerator or something idk
 // -> also lots of repeating code.
-void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
+void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 {
 	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
@@ -264,9 +239,15 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	etcRenderInfo.setSize(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
 	etcRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_environmentMap->getFormat());
 
-	ShaderParameters pc;
-	pc.setValue<glm::mat4>("proj", captureProjection);
-	pc.setValue<glm::mat4>("view", glm::identity<glm::mat4>());
+	struct
+	{
+		glm::mat4 proj;
+		glm::mat4 view;
+	}
+	pc;
+
+	pc.proj = captureProjection;
+	pc.view = glm::identity<glm::mat4>();
 
 	ShaderEffect *equirectangularToCubemapShader = g_shaderManager->getEffect("equirectangularToCubemap");
 
@@ -284,32 +265,33 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 	for (int i = 0; i < 6; i++)
 	{
-		pc.setValue<glm::mat4>("view", captureViews[i]);
+		pc.view = captureViews[i];
 
 		RenderTarget target(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
 		target.addAttachment(m_environmentMap, i, 0);
 
-		buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+		cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-		buffer.bindPipeline(m_equirectangularToCubemapPipeline);
+		cmd.bindPipeline(m_equirectangularToCubemapPipeline);
 
-		buffer.bindDescriptorSets(
+		cmd.bindDescriptorSets(
 			0,
 			1, &etcDescriptorSet,
 			0, nullptr
 		);
 
-		buffer.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
+		cmd.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
 
-		buffer.pushConstants(
+		cmd.pushConstants(
 			VK_SHADER_STAGE_ALL_GRAPHICS,
-			pc
+			sizeof(pc),
+			&pc
 		);
 
-		cubeMesh->render(buffer);
+		cubeMesh->render(cmd);
 
-		buffer.endRendering();
-		buffer.submit();
+		cmd.endRendering();
+		cmd.submit();
 
 		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 	}
@@ -354,32 +336,33 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 	for (int i = 0; i < 6; i++)
 	{
-		pc.setValue<glm::mat4>("view", captureViews[i]);
+		pc.view = captureViews[i];
 
 		RenderTarget target(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 		target.addAttachment(m_irradianceMap, i, 0);
 
-		buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+		cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-		buffer.bindPipeline(m_irradianceGenerationPipeline);
+		cmd.bindPipeline(m_irradianceGenerationPipeline);
 
-		buffer.bindDescriptorSets(
+		cmd.bindDescriptorSets(
 			0,
 			1, &icDescriptorSet,
 			0, nullptr
 		);
 
-		buffer.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
+		cmd.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
 
-		buffer.pushConstants(
+		cmd.pushConstants(
 			VK_SHADER_STAGE_ALL_GRAPHICS,
-			pc
+			sizeof(pc),
+			&pc
 		);
 
-		cubeMesh->render(buffer);
+		cubeMesh->render(cmd);
 
-		buffer.endRendering();
-		buffer.submit();
+		cmd.endRendering();
+		cmd.submit();
 
 		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 	}
@@ -401,13 +384,18 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 		PREFILTER_MIP_LEVELS
 	);
 
+	struct
+	{
+		float roughness = 0.0f;
+		float _padding0 = 0.0f;
+		float _padding1 = 0.0f;
+		float _padding2 = 0.0f;
+	}
+	prefilterParams;
+
 	DynamicShaderBuffer pfParameterBuffer;
 	pfParameterBuffer.init(sizeof(float) * 4 * PREFILTER_MIP_LEVELS * 6, SHADER_BUFFER_UBO);
-	pfParameterBuffer.getParameters().setValue<float>("roughness", 0.0f);
-	pfParameterBuffer.getParameters().setValue<float>("_padding0", 0.0f);
-	pfParameterBuffer.getParameters().setValue<float>("_padding1", 0.0f);
-	pfParameterBuffer.getParameters().setValue<float>("_padding2", 0.0f);
-	pfParameterBuffer.pushParameters();
+	pfParameterBuffer.pushData(&prefilterParams, sizeof(prefilterParams));
 
 	RenderInfo pfRenderInfo;
 	pfRenderInfo.setSize(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
@@ -435,39 +423,40 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 
 		float roughness = (float)mipLevel / (float)(PREFILTER_MIP_LEVELS - 1);
 
-		pfParameterBuffer.getParameters().setValue<float>("roughness", roughness);
-		pfParameterBuffer.pushParameters();
+		prefilterParams.roughness = roughness;
+		pfParameterBuffer.pushData(&prefilterParams, sizeof(prefilterParams));
 
 		for (int i = 0; i < 6; i++)
 		{
-			pc.setValue<glm::mat4>("view", captureViews[i]);
+			pc.view = captureViews[i];
 
 			RenderTarget target(width, height);
 			target.addAttachment(m_prefilterMap, i, mipLevel);
 
-			buffer.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+			cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 
-			buffer.bindPipeline(m_prefilterGenerationPipeline);
+			cmd.bindPipeline(m_prefilterGenerationPipeline);
 
 			uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
 
-			buffer.bindDescriptorSets(
+			cmd.bindDescriptorSets(
 				0,
 				1, &pfDescriptorSet,
 				1, &dynamicOffset
 			);
 
-			buffer.setViewport({ 0, 0, (float)width, (float)height });
+			cmd.setViewport({ 0, 0, (float)width, (float)height });
 
-			buffer.pushConstants(
+			cmd.pushConstants(
 				VK_SHADER_STAGE_ALL_GRAPHICS,
-				pc
+				sizeof(pc),
+				&pc
 			);
 
-			cubeMesh->render(buffer);
+			cubeMesh->render(cmd);
 
-			buffer.endRendering();
-			buffer.submit();
+			cmd.endRendering();
+			cmd.submit();
 
 			vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 		}
@@ -478,7 +467,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &buffer)
 	pfParameterBuffer.cleanUp();
 }
 
-void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
+void MaterialSystem::precomputeBRDF(CommandBuffer &cmd)
 {
 	LLT_LOG("Precomputing BRDF...");
 
@@ -508,34 +497,24 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &buffer)
 	m_brdfIntegrationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	m_brdfIntegrationPipeline.buildGraphicsPipeline(info);
 
-	buffer.beginRendering(info);
+	cmd.beginRendering(info);
 
-	buffer.bindPipeline(m_brdfIntegrationPipeline);
+	cmd.bindPipeline(m_brdfIntegrationPipeline);
 
-	buffer.bindDescriptorSets(
+	cmd.bindDescriptorSets(
 		0,
 		1, &set,
 		0, nullptr
 	);
 
-	buffer.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
+	cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
-	quadMesh->render(buffer);
+	quadMesh->render(cmd);
 
-	buffer.endRendering();
-	buffer.submit();
+	cmd.endRendering();
+	cmd.submit();
 
 	vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-}
-
-DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
-{
-	return m_globalBuffer;
-}
-
-DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
-{
-	return m_instanceBuffer;
 }
 
 // todo: way to specifically decide what global buffer gets applied to what bindings in the technique
@@ -549,12 +528,25 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	Technique &technique = m_techniques.get(data.technique);
 
 	Material *material = new Material();
-
-	data.parameters.setValue<float>("asdf", 0.0f);
-
 	material->m_parameterBuffer = g_shaderBufferManager->createUBO();
-	material->m_parameterBuffer->setParameters(data.parameters);
-	material->m_parameterBuffer->pushParameters();
+
+	if (data.parameterSize > 0)
+	{
+		material->m_parameterBuffer->pushData(data.parameters, data.parameterSize);
+	}
+	else
+	{
+		struct
+		{
+			int asdf = 0;
+		}
+		garbageDefaultParametersWhatIsEvenGoingOn;
+
+		material->m_parameterBuffer->pushData(
+			&garbageDefaultParametersWhatIsEvenGoingOn,
+			sizeof(garbageDefaultParametersWhatIsEvenGoingOn)
+		);
+	}
 
 	material->m_vertexFormat = technique.vertexFormat;
 	material->m_textures = data.textures;
@@ -625,4 +617,24 @@ void MaterialSystem::loadDefaultTechniques()
 void MaterialSystem::addTechnique(const String &name, const Technique &technique)
 {
 	m_techniques.insert(name, technique);
+}
+
+void MaterialSystem::pushGlobalData()
+{
+	m_globalBuffer->pushData(&m_globalData, sizeof(m_globalData));
+}
+
+void MaterialSystem::pushInstanceData()
+{
+	m_instanceBuffer->pushData(&m_instanceData, sizeof(m_instanceData));
+}
+
+DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
+{
+	return m_globalBuffer;
+}
+
+DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
+{
+	return m_instanceBuffer;
 }

@@ -9,7 +9,6 @@
 namespace llt
 {
 	class GenericRenderTarget;
-	class ShaderParameters;
 	class Pipeline;
 	class ShaderEffect;
 
@@ -22,8 +21,6 @@ namespace llt
 
 		CommandBuffer(VkCommandBuffer buffer);
 		~CommandBuffer();
-
-		// ---
 
 		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
 
@@ -73,14 +70,9 @@ namespace llt
 
 		void pushConstants(
 			VkShaderStageFlagBits stageFlags,
-			uint32_t offset,
 			uint32_t size,
-			void *data
-		);
-
-		void pushConstants(
-			VkShaderStageFlagBits stageFlags,
-			ShaderParameters &params
+			void *data,
+			uint32_t offset = 0
 		);
 
 		void bindVertexBuffers(
@@ -127,8 +119,6 @@ namespace llt
 			uint32_t regionCount,
 			const VkBufferImageCopy *regions
 		);
-
-		// ---
 
 		void beginCompute();
 		void endCompute(VkSemaphore signalSemaphore);

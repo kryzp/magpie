@@ -34,8 +34,8 @@ namespace llt
 
 		const RenderInfo &getRenderInfo() const;
 
-		virtual void beginRendering(CommandBuffer &buffer) = 0;
-		virtual void endRendering(CommandBuffer &buffer) = 0;
+		virtual void beginRendering(CommandBuffer &cmd) = 0;
+		virtual void endRendering(CommandBuffer &cmd) = 0;
 
 		virtual Texture *getAttachment(int idx) = 0;
 		virtual Texture *getDepthAttachment() = 0;

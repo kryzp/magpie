@@ -17,18 +17,15 @@ void ForwardPass::cleanUp()
 {
 }
 
-void ForwardPass::render(CommandBuffer &buffer, const Camera &camera, const Vector<SubMesh *> &renderList)
+void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList)
 {
 	if (renderList.size() <= 0)
 		return;
 
-	auto *globalBuffer = g_materialSystem->getGlobalBuffer();
-	auto *instanceBuffer = g_materialSystem->getInstanceBuffer();
-
-	globalBuffer->getParameters().setValue<glm::mat4>("projMatrix", camera.getProj());
-	globalBuffer->getParameters().setValue<glm::mat4>("viewMatrix", camera.getView());
-	globalBuffer->getParameters().setValue<glm::vec4>("viewPos", { camera.position.x, camera.position.y, camera.position.z, 0.0f });
-	globalBuffer->pushParameters();
+	g_materialSystem->m_globalData.proj = camera.getProj();
+	g_materialSystem->m_globalData.view = camera.getView();
+	g_materialSystem->m_globalData.cameraPosition = { camera.position.x, camera.position.y, camera.position.z, 0.0f };
+	g_materialSystem->pushGlobalData();
 
 	uint64_t currentMaterialHash = 0;
 
@@ -42,21 +39,21 @@ void ForwardPass::render(CommandBuffer &buffer, const Camera &camera, const Vect
 			auto &pipeline = mat->getPipeline(SHADER_PASS_FORWARD);
 
 			if (pipeline.getPipeline() == VK_NULL_HANDLE)
-				pipeline.buildGraphicsPipeline(buffer.getCurrentRenderInfo());
+				pipeline.buildGraphicsPipeline(cmd.getCurrentRenderInfo());
 
-			buffer.bindPipeline(pipeline);
+			cmd.bindPipeline(pipeline);
 
 			currentMaterialHash = mat->getHash();
 		}
 
 		glm::mat4 transform = mesh->getParent()->getOwner()->transform.getMatrix();
 
-		instanceBuffer->getParameters().setValue<glm::mat4>("modelMatrix", transform);
-		instanceBuffer->getParameters().setValue<glm::mat4>("normalMatrix", glm::transpose(glm::inverse(transform)));
-		instanceBuffer->pushParameters();
+		g_materialSystem->m_instanceData.model = transform;
+		g_materialSystem->m_instanceData.normalMatrix = glm::transpose(glm::inverse(transform));
+		g_materialSystem->pushInstanceData();
 
-		mat->bindDescriptorSets(buffer, SHADER_PASS_FORWARD);
+		mat->bindDescriptorSets(cmd, SHADER_PASS_FORWARD);
 
-		mesh->render(buffer);
+		mesh->render(cmd);
 	}
 }

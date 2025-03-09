@@ -20,7 +20,7 @@ namespace llt
 		void init(DescriptorPoolDynamic& pool) override;
 		void cleanUp() override;
 
-		void render(CommandBuffer &buffer, const Camera &camera, const Vector<SubMesh *> &renderList);
+		void render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList);
 	};
 }
 

@@ -27,7 +27,7 @@ Pipeline &Material::getPipeline(ShaderPassType pass)
 	return m_passes[pass].pipeline;
 }
 
-void Material::bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass)
+void Material::bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass)
 {
 	Vector<uint32_t> dynamicOffsets = {
 		g_materialSystem->getGlobalBuffer()->getDynamicOffset(),
@@ -35,7 +35,7 @@ void Material::bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass)
 		m_parameterBuffer->getDynamicOffset()
 	};
 
-	buffer.bindDescriptorSets(
+	cmd.bindDescriptorSets(
 		0,
 		1, &m_passes[pass].set,
 		dynamicOffsets.size(),

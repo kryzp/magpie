@@ -80,7 +80,7 @@ void Backbuffer::createDepthResources()
     LLT_LOG("Created depth resources!");
 }
 
-void Backbuffer::beginRendering(CommandBuffer &buffer)
+void Backbuffer::beginRendering(CommandBuffer &cmd)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -96,7 +96,7 @@ void Backbuffer::beginRendering(CommandBuffer &buffer)
 		.layerCount = 1,
 	};
 
-	buffer.pipelineBarrier(
+	cmd.pipelineBarrier(
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		0,
@@ -105,14 +105,14 @@ void Backbuffer::beginRendering(CommandBuffer &buffer)
 		1, &barrier
 	);
 
-	m_depth.transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_colour.transitionLayout(buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	m_colour.transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView();
 }
 
-void Backbuffer::endRendering(CommandBuffer &buffer)
+void Backbuffer::endRendering(CommandBuffer &cmd)
 {
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -128,7 +128,7 @@ void Backbuffer::endRendering(CommandBuffer &buffer)
 		.layerCount = 1,
 	};
 
-	buffer.pipelineBarrier(
+	cmd.pipelineBarrier(
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 		0,
@@ -137,9 +137,9 @@ void Backbuffer::endRendering(CommandBuffer &buffer)
 		1, &barrier
 	);
 
-	m_colour.transitionLayout(buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	m_colour.transitionLayout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	m_depth.transitionLayout(buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+	m_depth.transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 }
 
 void Backbuffer::cleanUp()
@@ -408,11 +408,6 @@ void Backbuffer::setDepthStencilClear(float depth, uint32_t stencil)
 VkSurfaceKHR Backbuffer::getSurface() const
 {
 	return m_surface;
-}
-
-uint32_t Backbuffer::getCurrentTextureIdx() const
-{
-	return m_currSwapChainImageIdx;
 }
 
 const VkSemaphore &Backbuffer::getRenderFinishedSemaphore() const

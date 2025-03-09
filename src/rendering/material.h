@@ -54,8 +54,18 @@ namespace llt
 	struct MaterialData
 	{
 		Vector<BoundTexture> textures;
-		ShaderParameters parameters;
 		String technique;
+
+		void *parameters;
+		uint64_t parameterSize;
+
+		MaterialData()
+			: textures()
+			, technique("UNDEFINED")
+			, parameters(nullptr)
+			, parameterSize(0)
+		{
+		}
 
 		uint64_t getHash() const
 		{
@@ -81,7 +91,7 @@ namespace llt
 
 		Pipeline &getPipeline(ShaderPassType pass);
 
-		void bindDescriptorSets(CommandBuffer &buffer, ShaderPassType pass);
+		void bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass);
 
 		VertexFormat m_vertexFormat;
 		Vector<BoundTexture> m_textures;

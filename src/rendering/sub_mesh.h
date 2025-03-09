@@ -23,7 +23,7 @@ namespace llt
 		SubMesh();
 		virtual ~SubMesh();
 
-		void render(CommandBuffer &buffer) const;
+		void render(CommandBuffer &cmd) const;
 
 		void build(const VertexFormat &format, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 

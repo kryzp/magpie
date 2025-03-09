@@ -10,6 +10,7 @@
 #include "shader_buffer_mgr.h"
 
 #include "material.h"
+#include "light.h"
 
 namespace llt
 {
@@ -22,18 +23,35 @@ namespace llt
 		void init();
 		void loadDefaultTechniques();
 
-		void updateImGui();
-
 		Material *buildMaterial(MaterialData &data);
 
 		void addTechnique(const String &name, const Technique &technique);
 
+		void pushGlobalData();
+		void pushInstanceData();
+
 		DynamicShaderBuffer *getGlobalBuffer() const;
 		DynamicShaderBuffer *getInstanceBuffer() const;
 
+		struct
+		{
+			glm::mat4 proj;
+			glm::mat4 view;
+			glm::vec4 cameraPosition;
+			Light lights[16];
+		}
+		m_globalData;
+
+		struct
+		{
+			glm::mat4 model;
+			glm::mat4 normalMatrix;
+		}
+		m_instanceData;
+
 	private:
-		void generateEnvironmentMaps(CommandBuffer &buffer);
-		void precomputeBRDF(CommandBuffer &buffer);
+		void generateEnvironmentMaps(CommandBuffer &cmd);
+		void precomputeBRDF(CommandBuffer &cmd);
 
 		HashMap<uint64_t, Material*> m_materials;
 		HashMap<String, Technique> m_techniques;

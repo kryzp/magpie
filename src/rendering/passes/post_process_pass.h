@@ -19,7 +19,7 @@ namespace llt
 		void init(DescriptorPoolDynamic& pool) override;
 		void cleanUp() override;
 
-		void render(CommandBuffer &buffer);
+		void render(CommandBuffer &cmd);
 
 	private:
 		Pipeline m_hdrPipeline;

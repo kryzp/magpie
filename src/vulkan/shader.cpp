@@ -4,6 +4,8 @@
 
 using namespace llt;
 
+/*
+
 const ShaderParameters::PackedData &ShaderParameters::getPackedConstants()
 {
 	if (m_dirtyConstants) {
@@ -23,7 +25,7 @@ void ShaderParameters::rebuildPackedConstantData()
 	}
 }
 
-// --- //
+*/
 
 ShaderProgram::ShaderProgram()
 	: m_stage()

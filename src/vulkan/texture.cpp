@@ -329,14 +329,14 @@ VkImageMemoryBarrier Texture::getBarrier(VkImageLayout newLayout) const
 
 void Texture::transitionLayoutSingle(VkImageLayout newLayout)
 {
-	CommandBuffer buffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
 
-	transitionLayout(buffer, newLayout);
+	transitionLayout(cmd, newLayout);
 
-	vkutil::endSingleTimeGraphicsCommands(buffer);
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 }
 
-void Texture::transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout)
+void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
 {
 	if (m_imageLayout == newLayout) {
 		return;
@@ -350,7 +350,7 @@ void Texture::transitionLayout(CommandBuffer &buffer, VkImageLayout newLayout)
 	VkPipelineStageFlags srcStage = m_stage;
 	VkPipelineStageFlags dstStage = vkutil::getTransferPipelineStageFlags(newLayout);
 
-	buffer.pipelineBarrier(
+	cmd.pipelineBarrier(
 		srcStage, dstStage,
 		0,
 		0, nullptr,

@@ -17,6 +17,9 @@ TODO (no particular order):
 - implement a render graph system!
 - bindless material rendering
 - hdr resolve tonemapper should be compute shader
+- "vulkan backend" needs to be changed into "device"
+- "backbuffer" needs to be changed into "swapchain"
+  - double-ended queue implementation is broken (see render target)
 
 BACKBURNER:
 - volumetrics

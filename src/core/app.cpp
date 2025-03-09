@@ -1,10 +1,16 @@
 #include "app.h"
 
+#include "platform.h"
+#include "debug_ui.h"
+#include "profiler.h"
+
 #include "vulkan/backend.h"
 
-#include "core/platform.h"
 #include "rendering/camera.h"
+#include "rendering/material_system.h"
+
 #include "input/input.h"
+
 #include "math/timer.h"
 #include "math/calc.h"
 #include "math/colour.h"
@@ -48,6 +54,8 @@ App::App(const Config &config)
 		});
 	}
 
+	g_profiler = new Profiler(100);
+
 	m_running = true;
 
 	m_camera.position = glm::vec3(0.0f, 2.75f, 3.5f);
@@ -69,6 +77,7 @@ App::~App()
 
 	m_renderer.cleanUp();
 
+	delete g_profiler;
 	delete g_inputState;
 
 	delete g_vulkanBackend;
@@ -114,6 +123,8 @@ void App::run()
 
 			accumulator -= fixedDeltaTime;
 		}
+
+		debugui::updateImGui();
 
 		m_renderer.render(m_camera, deltaTime);
 

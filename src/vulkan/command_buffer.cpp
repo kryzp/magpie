@@ -260,9 +260,9 @@ void CommandBuffer::setScissor(const VkRect2D &scissor)
 
 void CommandBuffer::pushConstants(
 	VkShaderStageFlagBits stageFlags,
-	uint32_t offset,
 	uint32_t size,
-	void *data
+	void *data,
+	uint32_t offset
 )
 {
 	vkCmdPushConstants(
@@ -272,23 +272,6 @@ void CommandBuffer::pushConstants(
 		offset,
 		size,
 		data
-	);
-}
-
-void CommandBuffer::pushConstants(
-	VkShaderStageFlagBits stageFlags,
-	ShaderParameters &params
-)
-{
-	cauto &data = params.getPackedConstants();
-
-	vkCmdPushConstants(
-		m_buffer,
-		m_currentPipelineLayout,
-		stageFlags,
-		0,
-		data.size(),
-		data.data()
 	);
 }
 
