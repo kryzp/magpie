@@ -280,8 +280,6 @@ void Renderer::createSkyboxResources()
 	m_skyboxPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 }
 
-#include "core/profiler.h"
-
 void Renderer::renderSkybox(CommandBuffer &cmd, const Camera &camera)
 {
 	struct
