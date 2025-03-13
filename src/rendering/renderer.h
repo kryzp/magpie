@@ -48,11 +48,8 @@ namespace llt
 		Scene m_currentScene;
 
 		SubMesh m_skyboxMesh;
-		Pipeline m_skyboxPipeline;
+		GraphicsPipelineDefinition m_skyboxPipeline;
 		VkDescriptorSet m_skyboxSet;
-
-		ForwardPass m_forwardPass;
-		PostProcessPass m_postProcessPass;
 
 		DescriptorPoolDynamic m_descriptorPool;
 		DescriptorLayoutCache m_descriptorLayoutCache;

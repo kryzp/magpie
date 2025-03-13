@@ -57,7 +57,7 @@ MaterialSystem::~MaterialSystem()
 {
 	m_descriptorPoolAllocator.cleanUp();
 
-	for (auto& [id, mat] : m_materials) {
+	for (auto &[id, mat] : m_materials) {
 		delete mat;
 	}
 
@@ -87,13 +87,13 @@ void MaterialSystem::init()
 	Light lights[16] = {};
 	mem::set(lights, 0, sizeof(Light) * 16);
 
-	lights[0].position = { 0.0f, 5.0f, 0.0f };
-	lights[0].radius = 0.0f;
-	lights[0].attenuation = 0.0f;
-	lights[0].colour = { 1.0f, 1.0f, 1.0f };
-	lights[0].direction = { 1.0f, -1.0f, -1.0f };
-	lights[0].type = LIGHT_TYPE_SUN;
-	lights[0].direction /= glm::length(lights[0].direction);
+//	lights[0].position = { 0.0f, 5.0f, 0.0f };
+//	lights[0].radius = 0.0f;
+//	lights[0].attenuation = 0.0f;
+//	lights[0].colour = { 1.0f, 1.0f, 1.0f };
+//	lights[0].direction = { 1.0f, -1.0f, -1.0f };
+//	lights[0].type = LIGHT_TYPE_SUN;
+//	lights[0].direction /= glm::length(lights[0].direction);
 
 	m_globalData.proj = glm::identity<glm::mat4>();
 	m_globalData.view = glm::identity<glm::mat4>();
@@ -205,12 +205,12 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
 	glm::mat4 captureViews[] = {
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
 	};
 
 	DescriptorWriter descriptorWriter;
@@ -231,9 +231,10 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		4
 	);
 
-	BoundTexture hdrImage;
-	hdrImage.texture = g_textureManager->getTexture("environmentHDR");
-	hdrImage.sampler = g_textureManager->getSampler("linear");
+	BoundTexture hdrImage(
+		g_textureManager->getTexture("environmentHDR"),
+		g_textureManager->getSampler("linear")
+	);
 
 	RenderInfo etcRenderInfo;
 	etcRenderInfo.setSize(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
@@ -253,36 +254,42 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 
 	VkDescriptorSet etcDescriptorSet = m_descriptorPoolAllocator.allocate(equirectangularToCubemapShader->getDescriptorSetLayout());
 
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getImageInfo());
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getStandardImageInfo());
 	descriptorWriter.updateSet(etcDescriptorSet);
 
-	m_equirectangularToCubemapPipeline.bindShader(equirectangularToCubemapShader);
+	m_equirectangularToCubemapPipeline.setShader(equirectangularToCubemapShader);
 	m_equirectangularToCubemapPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_equirectangularToCubemapPipeline.setDepthTest(false);
 	m_equirectangularToCubemapPipeline.setDepthWrite(false);
-	m_equirectangularToCubemapPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_equirectangularToCubemapPipeline.buildGraphicsPipeline(etcRenderInfo);
+
+	PipelineData etcPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_equirectangularToCubemapPipeline, etcRenderInfo);
+
+	VkImageView environmentViews[6];
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.view = captureViews[i];
 
-		RenderTarget target(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
-		target.addAttachment(m_environmentMap, i, 0);
+		environmentViews[i] = m_environmentMap->createView(1, i, 0);
 
-		cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
-
-		cmd.bindPipeline(m_equirectangularToCubemapPipeline);
-
-		cmd.bindDescriptorSets(
-			0,
-			1, &etcDescriptorSet,
-			0, nullptr
+		RenderInfo info;
+		info.setSize(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
+		info.addColourAttachment(
+			VK_ATTACHMENT_LOAD_OP_LOAD,
+			environmentViews[i],
+			m_environmentMap->getFormat()
 		);
+
+		cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+
+		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, etcPipelineData.pipeline);
+
+		cmd.bindDescriptorSets(0, etcPipelineData.layout, { etcDescriptorSet }, {});
 
 		cmd.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
 
 		cmd.pushConstants(
+			etcPipelineData.layout,
 			VK_SHADER_STAGE_ALL_GRAPHICS,
 			sizeof(pc),
 			&pc
@@ -292,9 +299,13 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 
 		cmd.endRendering();
 		cmd.submit();
-
-		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 	}
+
+	// todo: turn into g_vulkanBackend function
+	vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+
+	for (int i = 0; i < 6; i++)
+		vkDestroyImageView(g_vulkanBackend->m_device, environmentViews[i], nullptr);
 
 	m_environmentMap->generateMipmaps();
 
@@ -312,10 +323,11 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		4
 	);
 
-	BoundTexture envMapImage;
-	envMapImage.texture = m_environmentMap;
-	envMapImage.sampler = g_textureManager->getSampler("linear");
-
+	BoundTexture envMapImage(
+		m_environmentMap,
+		g_textureManager->getSampler("linear")
+	);
+	
 	RenderInfo icRenderInfo;
 	icRenderInfo.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 	icRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_irradianceMap->getFormat());
@@ -324,36 +336,40 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 
 	VkDescriptorSet icDescriptorSet = m_descriptorPoolAllocator.allocate(irradianceGenerationShader->getDescriptorSetLayout());
 
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo());
 	descriptorWriter.updateSet(icDescriptorSet);
 
-	m_irradianceGenerationPipeline.bindShader(irradianceGenerationShader);
+	m_irradianceGenerationPipeline.setShader(irradianceGenerationShader);
 	m_irradianceGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_irradianceGenerationPipeline.setDepthTest(false);
 	m_irradianceGenerationPipeline.setDepthWrite(false);
-	m_irradianceGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_irradianceGenerationPipeline.buildGraphicsPipeline(icRenderInfo);
+
+	PipelineData icPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_irradianceGenerationPipeline, icRenderInfo);
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.view = captureViews[i];
 
-		RenderTarget target(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
-		target.addAttachment(m_irradianceMap, i, 0);
+		VkImageView view = m_irradianceMap->createView(1, i, 0);
 
-		cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
-
-		cmd.bindPipeline(m_irradianceGenerationPipeline);
-
-		cmd.bindDescriptorSets(
-			0,
-			1, &icDescriptorSet,
-			0, nullptr
+		RenderInfo info;
+		info.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
+		info.addColourAttachment(
+			VK_ATTACHMENT_LOAD_OP_LOAD,
+			view,
+			m_irradianceMap->getFormat()
 		);
+
+		cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+
+		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, icPipelineData.pipeline);
+
+		cmd.bindDescriptorSets(0, icPipelineData.layout, { icDescriptorSet }, {});
 
 		cmd.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
 
 		cmd.pushConstants(
+			icPipelineData.layout,
 			VK_SHADER_STAGE_ALL_GRAPHICS,
 			sizeof(pc),
 			&pc
@@ -364,7 +380,10 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		cmd.endRendering();
 		cmd.submit();
 
+		// todo: turn into g_vulkanBackend function
 		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+
+		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 	}
 
 	m_irradianceMap->generateMipmaps();
@@ -406,20 +425,20 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	VkDescriptorSet pfDescriptorSet = m_descriptorPoolAllocator.allocate(prefilterGenerationShader->getDescriptorSetLayout());
 
 	descriptorWriter.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer.getDescriptorInfo());
-	descriptorWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getImageInfo());
+	descriptorWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo());
 	descriptorWriter.updateSet(pfDescriptorSet);
 
-	m_prefilterGenerationPipeline.bindShader(prefilterGenerationShader);
+	m_prefilterGenerationPipeline.setShader(prefilterGenerationShader);
 	m_prefilterGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_prefilterGenerationPipeline.setDepthTest(false);
 	m_prefilterGenerationPipeline.setDepthWrite(false);
-	m_prefilterGenerationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_prefilterGenerationPipeline.buildGraphicsPipeline(pfRenderInfo);
+
+	PipelineData pfPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_prefilterGenerationPipeline, pfRenderInfo);
 
 	for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
 	{
-		int width = PREFILTER_RESOLUTION / CalcI::pow(2, mipLevel);
-		int height = PREFILTER_RESOLUTION / CalcI::pow(2, mipLevel);
+		int width = PREFILTER_RESOLUTION >> mipLevel;
+		int height = PREFILTER_RESOLUTION >> mipLevel;
 
 		float roughness = (float)mipLevel / (float)(PREFILTER_MIP_LEVELS - 1);
 
@@ -430,24 +449,28 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		{
 			pc.view = captureViews[i];
 
-			RenderTarget target(width, height);
-			target.addAttachment(m_prefilterMap, i, mipLevel);
+			VkImageView view = m_prefilterMap->createView(1, i, mipLevel);
 
-			cmd.beginRendering(&target); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+			RenderInfo info;
+			info.setSize(width, height);
+			info.addColourAttachment(
+				VK_ATTACHMENT_LOAD_OP_LOAD,
+				view,
+				m_prefilterMap->getFormat()
+			);
 
-			cmd.bindPipeline(m_prefilterGenerationPipeline);
+			cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pfPipelineData.pipeline);
 
 			uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
 
-			cmd.bindDescriptorSets(
-				0,
-				1, &pfDescriptorSet,
-				1, &dynamicOffset
-			);
+			cmd.bindDescriptorSets(0, pfPipelineData.layout, { pfDescriptorSet }, { dynamicOffset });
 
 			cmd.setViewport({ 0, 0, (float)width, (float)height });
 
 			cmd.pushConstants(
+				pfPipelineData.layout,
 				VK_SHADER_STAGE_ALL_GRAPHICS,
 				sizeof(pc),
 				&pc
@@ -458,7 +481,10 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 			cmd.endRendering();
 			cmd.submit();
 
+			// todo: turn into g_vulkanBackend function
 			vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+
+			vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 		}
 	}
 
@@ -490,22 +516,18 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &cmd)
 
 	VkDescriptorSet set = m_descriptorPoolAllocator.allocate(brdfLUTShader->getDescriptorSetLayout());
 
-	m_brdfIntegrationPipeline.bindShader(brdfLUTShader);
+	m_brdfIntegrationPipeline.setShader(brdfLUTShader);
 	m_brdfIntegrationPipeline.setVertexFormat(g_primitiveUvVertexFormat);
 	m_brdfIntegrationPipeline.setDepthTest(false);
 	m_brdfIntegrationPipeline.setDepthWrite(false);
-	m_brdfIntegrationPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_brdfIntegrationPipeline.buildGraphicsPipeline(info);
+
+	PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_brdfIntegrationPipeline, info);
 
 	cmd.beginRendering(info);
 
-	cmd.bindPipeline(m_brdfIntegrationPipeline);
+	cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-	cmd.bindDescriptorSets(
-		0,
-		1, &set,
-		0, nullptr
-	);
+	cmd.bindDescriptorSets(0, pipelineData.layout, { set }, {});
 
 	cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
@@ -557,30 +579,33 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	descriptorWriter.writeBuffer(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, material->m_parameterBuffer	->getDescriptorInfo());
 
 	// write the irradiance map
-	BoundTexture irradianceMap = {};
-	irradianceMap.texture = g_textureManager->getTexture("irradianceMap");
-	irradianceMap.sampler = g_textureManager->getSampler("linear");
+	BoundTexture irradianceMap(
+		g_textureManager->getTexture("irradianceMap"),
+		g_textureManager->getSampler("linear")
+	);
 
-	descriptorWriter.writeImage(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, irradianceMap.getImageInfo());
+	descriptorWriter.writeImage(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, irradianceMap.getStandardImageInfo());
 
 	// write the prefilter map
-	BoundTexture prefilterMap = {};
-	prefilterMap.texture = g_textureManager->getTexture("prefilterMap");
-	prefilterMap.sampler = g_textureManager->getSampler("linear");
+	BoundTexture prefilterMap(
+		g_textureManager->getTexture("prefilterMap"),
+		g_textureManager->getSampler("linear")
+	);
 
-	descriptorWriter.writeImage(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, prefilterMap.getImageInfo());
+	descriptorWriter.writeImage(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, prefilterMap.getStandardImageInfo());
 
 	// write the brdf LUT
-	BoundTexture brdfTexture = {};
-	brdfTexture.texture = g_textureManager->getTexture("brdfIntegration");
-	brdfTexture.sampler = g_textureManager->getSampler("linear");
+	BoundTexture brdfTexture(
+		g_textureManager->getTexture("brdfIntegration"),
+		g_textureManager->getSampler("linear")
+	);
 
-	descriptorWriter.writeImage(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, brdfTexture.getImageInfo());
+	descriptorWriter.writeImage(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, brdfTexture.getStandardImageInfo());
 
 	// write the rest of the textures
 	for (int i = 0; i < data.textures.size(); i++)
 	{
-		descriptorWriter.writeImage(6 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, data.textures[i].getImageInfo());
+		descriptorWriter.writeImage(6 + i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, data.textures[i].getStandardImageInfo());
 	}
 
 	for (int i = 0; i < SHADER_PASS_MAX_ENUM; i++)
@@ -593,11 +618,10 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 		material->m_passes[i].set = m_descriptorPoolAllocator.allocate(technique.passes[i]->getDescriptorSetLayout());
 		descriptorWriter.updateSet(material->m_passes[i].set);
 
-		material->m_passes[i].pipeline.bindShader(technique.passes[i]);
+		material->m_passes[i].pipeline.setShader(technique.passes[i]);
 		material->m_passes[i].pipeline.setVertexFormat(technique.vertexFormat);
 		material->m_passes[i].pipeline.setDepthTest(technique.depthTest);
 		material->m_passes[i].pipeline.setDepthWrite(technique.depthWrite);
-		material->m_passes[i].pipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 	}
 
 	m_materials.insert(data.getHash(), material);

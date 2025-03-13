@@ -217,7 +217,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (const HashMap &other)
+	HashMap<TKey, TValue> &HashMap<TKey, TValue>::operator = (const HashMap &other)
 	{
 		this->m_elements = nullptr;
 		this->m_elementCount = other.m_elementCount;
@@ -250,7 +250,7 @@ namespace llt
 	}
 
 	template <typename TKey, typename TValue>
-	HashMap<TKey, TValue>& HashMap<TKey, TValue>::operator = (HashMap &&other) noexcept
+	HashMap<TKey, TValue> &HashMap<TKey, TValue>::operator = (HashMap &&other) noexcept
 	{
 		this->m_elements = std::move(other.m_elements);
 		this->m_elementCount = std::move(other.m_elementCount);
@@ -266,19 +266,7 @@ namespace llt
 	template <typename TKey, typename TValue>
 	HashMap<TKey, TValue>::~HashMap()
 	{
-		Element *e = m_elements[0];
-
-		while (e)
-		{
-			Element *next = e->next;
-			delete e;
-			e = next;
-		}
-
-		delete[] m_elements;
-
-		m_capacity = 0;
-		m_elementCount = 0;
+		clear();
 	}
 
 	template <typename TKey, typename TValue>
@@ -356,6 +344,31 @@ namespace llt
 	template <typename TKey, typename TValue>
 	void HashMap<TKey, TValue>::clear()
 	{
+		if (!m_elements)
+			return;
+
+		Element *e = nullptr;
+
+		for (int i = 0; i < m_capacity; i++)
+		{
+			if (m_elements[i])
+			{
+				e = m_elements[i];
+				break;
+			}
+		}
+
+		while (e)
+		{
+			Element *next = e->next;
+			delete e;
+			e = next;
+		}
+
+		delete[] m_elements;
+		m_elements = nullptr;
+
+		m_capacity = 0;
 		m_elementCount = 0;
 	}
 
@@ -373,7 +386,7 @@ namespace llt
 			m_capacity *= 2;
 		}
 
-		Element **newBuffer = new Element*[m_capacity];
+		Element **newBuffer = new Element *[m_capacity];
 		mem::set(newBuffer, 0, sizeof(Element *) * m_capacity);
 
 		if (m_elements)

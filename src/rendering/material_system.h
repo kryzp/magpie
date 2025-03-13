@@ -76,10 +76,10 @@ namespace llt
 		Texture *m_prefilterMap;
 		Texture *m_brdfLUT;
 
-		Pipeline m_equirectangularToCubemapPipeline;
-		Pipeline m_irradianceGenerationPipeline;
-		Pipeline m_prefilterGenerationPipeline;
-		Pipeline m_brdfIntegrationPipeline;
+		GraphicsPipelineDefinition m_equirectangularToCubemapPipeline;
+		GraphicsPipelineDefinition m_irradianceGenerationPipeline;
+		GraphicsPipelineDefinition m_prefilterGenerationPipeline;
+		GraphicsPipelineDefinition m_brdfIntegrationPipeline;
 	};
 
 	extern MaterialSystem *g_materialSystem;

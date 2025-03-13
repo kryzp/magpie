@@ -82,7 +82,7 @@ namespace llt
 	}
 
 	template <typename T>
-	Optional<T>& Optional<T>::operator = (const Optional<T>& other)
+	Optional<T> &Optional<T>::operator = (const Optional<T> &other)
 	{
 		this->m_value = other.m_value;
 		this->m_enabled = other.m_enabled;
@@ -91,7 +91,7 @@ namespace llt
 	}
 
 	template <typename T>
-	Optional<T>& Optional<T>::operator = (Optional<T>&& other) noexcept
+	Optional<T> &Optional<T>::operator = (Optional<T> &&other) noexcept
 	{
 		this->m_value = std::move(other.m_value);
 		this->m_enabled = std::move(other.m_enabled);

@@ -54,29 +54,6 @@ void SubMesh::render(CommandBuffer &cmd) const
 	);
 
 	cmd.drawIndexed(m_nIndices);
-
-	/*
-	if (op.indirectBuffer != nullptr)
-	{
-		// todo: start using drawIndexedIndirectCount
-
-		buffer.drawIndexedIndirect(
-			op.indirectBuffer->getBuffer(),
-			op.indirectOffset,
-			op.indirectDrawCount,
-			sizeof(VkDrawIndexedIndirectCommand)
-		);
-	}
-	else
-	{
-		buffer.drawIndexed(
-			op.nIndices,
-			op.instanceCount,
-			0, 0,
-			op.firstInstance
-		);
-	}
-	*/
 }
 
 void SubMesh::build(

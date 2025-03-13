@@ -10,25 +10,27 @@ TODO (no particular order):
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
 - properly comment the code
 - should be multiple bind descriptor sets for the different frequencies (per pass, per material, per frame etc)
-- imgui is all over the place and should be organised more
 - renderinfo and rendertarget are super similar. am i certain i cant merge them somehow
 - command pool abstraction
-- proper scene rendering system
 - implement a render graph system!
 - bindless material rendering
 - hdr resolve tonemapper should be compute shader
 - "vulkan backend" needs to be changed into "device"
 - "backbuffer" needs to be changed into "swapchain"
-  - double-ended queue implementation is broken (see render target)
+- double-ended queue implementation is broken (see render target)
+- spruit_sunrise_greg_zaal when generating the prefilter and irradiance it has too high values which cause blobs of white that look terrible :/ - cap it somehow
 
 BACKBURNER:
 - volumetrics
-- particles (compute shaders!! follow the naughty dog siggraph)
-- realistic ocean water
+- clustered deferred rendering
+- shadowmapping: directional and point lights
+- particles (compute shaders!! follow the naughty dog last of us 2 siggraph)
+- realistic ocean water based on fft
 - refraction and stuff
-- terrain generation
+- terrain generation based on no mans sky talk
 - fur / hair rendering
 - post processing pipeline
+- ui rendering
 
 other todo that isnt really important:
 - use multiple compute queues

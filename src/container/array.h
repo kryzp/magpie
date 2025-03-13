@@ -71,7 +71,7 @@ namespace llt
 	}
 	
 	template <typename T, uint64_t Size>
-	Array<T, Size>& Array<T, Size>::operator = (const Array &other)
+	Array<T, Size> &Array<T, Size>::operator = (const Array &other)
 	{
 		for (uint64_t i = 0; i < Size; i++) {
 			m_buf[i] = other.m_buf[i];

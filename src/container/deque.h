@@ -141,11 +141,11 @@ namespace llt
 		T popBack();
 		T popFront();
 
-		template <typename... Args>
-		T &emplaceFront(Args&&... args);
+		template <typename ...Args>
+		T &emplaceFront(Args &&...args);
 
-		template <typename... Args>
-		T &emplaceBack(Args&&... args);
+		template <typename ...Args>
+		T &emplaceBack(Args &&...args);
 
 		T &front();
 		const T &front() const;
@@ -227,7 +227,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (const Deque &other)
+	Deque<T, ChunkSize> &Deque<T, ChunkSize>::operator = (const Deque &other)
 	{
 		clear();
 
@@ -240,7 +240,7 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	Deque<T, ChunkSize>& Deque<T, ChunkSize>::operator = (Deque &&other) noexcept
+	Deque<T, ChunkSize> &Deque<T, ChunkSize>::operator = (Deque &&other) noexcept
 	{
 		clear();
 		swap(other);
@@ -431,8 +431,8 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	template <typename... Args>
-	T &Deque<T, ChunkSize>::emplaceFront(Args&&... args)
+	template <typename ...Args>
+	T &Deque<T, ChunkSize>::emplaceFront(Args &&...args)
 	{
 		expandFront();
 		new (m_begin.get()) T(std::forward<Args>(args)...);
@@ -441,8 +441,8 @@ namespace llt
 	}
 
 	template <typename T, uint64_t ChunkSize>
-	template <typename... Args>
-	T &Deque<T, ChunkSize>::emplaceBack(Args&&... args)
+	template <typename ...Args>
+	T &Deque<T, ChunkSize>::emplaceBack(Args &&...args)
 	{
 		expandBack();
 		new (m_end.get()) T(std::forward<Args>(args)...);

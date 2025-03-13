@@ -36,15 +36,6 @@ namespace llt
 		void setClearColour(int idx, VkClearValue value);
 		void setClearDepth(VkClearValue value);
 
-		void setBlendState(const BlendState &state);
-
-		const Vector<VkPipelineColorBlendAttachmentState>& getColourBlendAttachmentStates() const;
-		bool isBlendStateLogicOpEnabled() const;
-		VkLogicOp getBlendStateLogicOp() const;
-
-		const Array<float, 4>& getBlendConstants() const;
-		float getBlendConstant(int idx) const;
-
 		void setSize(uint32_t width, uint32_t height);
 
 		VkSampleCountFlagBits getMSAA() const;
@@ -53,8 +44,8 @@ namespace llt
 		int getColourAttachmentCount() const;
 		int getAttachmentCount() const;
 
-		const Vector<VkFormat>& getColourAttachmentFormats() const;
-		const VkFormat& getDepthAttachmentFormat() const;
+		const Vector<VkFormat> &getColourAttachmentFormats() const;
+		const VkFormat &getDepthAttachmentFormat() const;
 
 		uint32_t getWidth() const;
 		uint32_t getHeight() const;
@@ -69,12 +60,6 @@ namespace llt
 		Vector<VkFormat> m_colourFormats;
 
 		int m_attachmentCount;
-
-		Array<float, 4> m_blendConstants;
-		Vector<VkPipelineColorBlendAttachmentState> m_colourBlendAttachmentStates;
-
-		bool m_blendStateLogicOpEnabled;
-		VkLogicOp m_blendStateLogicOp;
 
 		VkSampleCountFlagBits m_samples;
 	};

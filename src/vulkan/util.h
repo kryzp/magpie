@@ -51,13 +51,13 @@ namespace llt
 #endif // LLT_MAC_SUPPORT
 		};
 
-		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats);
-		VkPresentModeKHR chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync);
+		VkSurfaceFormatKHR chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR> &availableSurfaceFormats);
+		VkPresentModeKHR chooseSwapPresentMode(const Vector<VkPresentModeKHR> &availablePresentModes, bool enableVsync);
 		VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
 		uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter, VkMemoryPropertyFlags properties);
 
-		VkFormat findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+		VkFormat findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 		VkFormat findDepthFormat(VkPhysicalDevice device);
 
 		bool hasStencilComponent(VkFormat format);

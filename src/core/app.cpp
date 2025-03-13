@@ -64,6 +64,8 @@ App::App(const Config &config)
 
 	m_renderer.init();
 
+	dbgui::init();
+
 	if (m_config.onInit) {
 		m_config.onInit();
 	}
@@ -124,11 +126,9 @@ void App::run()
 			accumulator -= fixedDeltaTime;
 		}
 
-		debugui::updateImGui();
+		dbgui::update();
 
 		m_renderer.render(m_camera, deltaTime);
-
-//		LLT_LOG("fps: %f", 1.0 / deltaTime);
 
 		m_frameCount++;
 	}

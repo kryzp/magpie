@@ -24,7 +24,7 @@ namespace llt
 		ShaderProgram *get(const String &name);
 		ShaderProgram *load(const String &name, const String &source, VkShaderStageFlagBits stage);
 
-		ShaderEffect *getEffect(const String& name);
+		ShaderEffect *getEffect(const String &name);
 		ShaderEffect *createEffect(const String &name);
 
 	private:

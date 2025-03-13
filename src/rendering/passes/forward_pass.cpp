@@ -1,5 +1,6 @@
 #include "forward_pass.h"
 
+#include "vulkan/backend.h"
 #include "vulkan/command_buffer.h"
 
 #include "../camera.h"
@@ -7,9 +8,11 @@
 #include "../mesh.h"
 #include "../render_object.h"
 
+llt::ForwardPass llt::g_forwardPass;
+
 using namespace llt;
 
-void ForwardPass::init(DescriptorPoolDynamic& pool)
+void ForwardPass::init()
 {
 }
 
@@ -34,14 +37,11 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		SubMesh *mesh = renderList[i];
 		Material *mat = mesh->getMaterial();
 
+		PipelineData data = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(mat->getPipelineDef(SHADER_PASS_FORWARD), cmd.getCurrentRenderInfo());
+
 		if (i == 0 || currentMaterialHash != mat->getHash())
 		{
-			auto &pipeline = mat->getPipeline(SHADER_PASS_FORWARD);
-
-			if (pipeline.getPipeline() == VK_NULL_HANDLE)
-				pipeline.buildGraphicsPipeline(cmd.getCurrentRenderInfo());
-
-			cmd.bindPipeline(pipeline);
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, data.pipeline);
 
 			currentMaterialHash = mat->getHash();
 		}
@@ -52,7 +52,7 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		g_materialSystem->m_instanceData.normalMatrix = glm::transpose(glm::inverse(transform));
 		g_materialSystem->pushInstanceData();
 
-		mat->bindDescriptorSets(cmd, SHADER_PASS_FORWARD);
+		mat->bindDescriptorSets(cmd, SHADER_PASS_FORWARD, data.layout);
 
 		mesh->render(cmd);
 	}

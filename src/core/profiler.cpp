@@ -43,7 +43,7 @@ void Profiler::getQuerys(CommandBuffer &cmd)
 {
 	int currentFrame = g_vulkanBackend->getCurrentFrameIdx();
 
-	QueryFrameState& state = m_queryFrames[currentFrame];
+	QueryFrameState &state = m_queryFrames[currentFrame];
 
 	cmd.resetQueryPool(m_queryFrames[currentFrame].queryPool, 0, m_queryFrames[currentFrame].last);
 

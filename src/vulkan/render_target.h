@@ -20,8 +20,6 @@ namespace llt
 
 		void cleanUp() override;
 		
-		void clear();
-
 		void setClearColour(int idx, const Colour &colour) override;
 		void setDepthStencilClear(float depth, uint32_t stencil) override;
 

@@ -153,14 +153,14 @@ namespace llt
 		/*
 		 * Emplace a new element to the front.
 		 */
-		template <typename... Args>
-		Iterator emplaceFront(Args&&... args);
+		template <typename ...Args>
+		Iterator emplaceFront(Args &&...args);
 
 		/*
 		 * Emplace a new element to the back.
 		 */
-		template <typename... Args>
-		Iterator emplaceBack(Args&&... args);
+		template <typename ...Args>
+		Iterator emplaceBack(Args &&...args);
 
         void clear();
         uint64_t size() const;
@@ -302,7 +302,7 @@ namespace llt
     }
     
     template <typename T>
-    Vector<T>& Vector<T>::operator = (const Vector &other)
+    Vector<T> &Vector<T>::operator = (const Vector &other)
     {
 		allocate(other.m_capacity);
 		clear();
@@ -317,7 +317,7 @@ namespace llt
     }
     
     template <typename T>
-    Vector<T>& Vector<T>::operator = (Vector &&other) noexcept
+    Vector<T> &Vector<T>::operator = (Vector &&other) noexcept
     {
 		clear();
 
@@ -524,8 +524,8 @@ namespace llt
     }
 
 	template <typename T>
-	template <typename... Args>
-	Vector<T>::Iterator Vector<T>::emplaceFront(Args&&... args)
+	template <typename ...Args>
+	Vector<T>::Iterator Vector<T>::emplaceFront(Args &&...args)
 	{
 		resize(m_size + 1);
 		mem::move(m_buf + 1, m_buf, sizeof(T) * (m_size - 1));
@@ -534,8 +534,8 @@ namespace llt
 	}
 
 	template <typename T>
-	template <typename... Args>
-	Vector<T>::Iterator Vector<T>::emplaceBack(Args&&... args)
+	template <typename ...Args>
+	Vector<T>::Iterator Vector<T>::emplaceBack(Args &&...args)
 	{
 		resize(m_size + 1);
 		new (m_buf + m_size - 1) T(std::forward<Args>(args)...);

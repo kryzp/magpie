@@ -1,9 +1,10 @@
 #ifndef DEBUG_UI_H_
 #define DEBUG_UI_H_
 
-namespace llt::debugui
+namespace llt::dbgui
 {
-	void updateImGui();
+	void init();
+	void update();
 }
 
 #endif // DEBUG_UI_H_

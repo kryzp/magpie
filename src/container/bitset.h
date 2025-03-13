@@ -110,21 +110,21 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::reset()
+	Bitset<Size> &Bitset<Size>::reset()
 	{
 		mem::set(m_bytes, 0, memorySize());
 		return *this;
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::invert()
+	Bitset<Size> &Bitset<Size>::invert()
 	{
 		for (int i = 0; i < Size; i++) toggle(i);
 		return *this;
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::enable(uint64_t idx)
+	Bitset<Size> &Bitset<Size>::enable(uint64_t idx)
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] |= (1 << idx);
@@ -132,7 +132,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::disable(uint64_t idx)
+	Bitset<Size> &Bitset<Size>::disable(uint64_t idx)
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] &= ~(1 << idx);
@@ -140,7 +140,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::toggle(uint64_t idx)
+	Bitset<Size> &Bitset<Size>::toggle(uint64_t idx)
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		m_bytes[idx/8] ^= 1 << idx;
@@ -148,7 +148,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Bitset<Size>& Bitset<Size>::set(uint64_t idx, bool mode)
+	Bitset<Size> &Bitset<Size>::set(uint64_t idx, bool mode)
 	{
 		LLT_ASSERT(idx >= 0 && idx < Size, "Index must be within range of the bitset.");
 		if (mode) m_bytes[idx/8] |= (1 << idx);

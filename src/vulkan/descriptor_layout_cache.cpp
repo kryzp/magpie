@@ -5,8 +5,7 @@ using namespace llt;
 
 void DescriptorLayoutCache::cleanUp()
 {
-	for (auto& [id, layout] : m_layoutCache)
-	{
+	for (auto &[id, layout] : m_layoutCache) {
 		vkDestroyDescriptorSetLayout(g_vulkanBackend->m_device, layout, nullptr);
 	}
 

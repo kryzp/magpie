@@ -88,14 +88,14 @@ namespace rvn
 		 */
 		Iterator insert(const T &item, const Iterator &it);
 
-		template <typename... Args>
-		Iterator emplace(Args&&... args, const Iterator &it);
+		template <typename ...Args>
+		Iterator emplace(Args &&...args, const Iterator &it);
 
-		template <typename... Args>
-		Iterator emplaceFront(Args&&... args);
+		template <typename ...Args>
+		Iterator emplaceFront(Args &&...args);
 
-		template <typename... Args>
-		Iterator emplaceBack(Args&&... args);
+		template <typename ...Args>
+		Iterator emplaceBack(Args &&...args);
 
 		Iterator pushFront(const T &item);
 		Iterator pushBack(const T &item);
@@ -204,8 +204,8 @@ namespace rvn
 	}
 
 	template <typename T>
-	template <typename... Args>
-	LinkedList<T>::Iterator LinkedList<T>::emplace(Args&&... args, const Iterator &it)
+	template <typename ...Args>
+	LinkedList<T>::Iterator LinkedList<T>::emplace(Args &&...args, const Iterator &it)
 	{
 		Link *l = new Link();
 
@@ -225,15 +225,15 @@ namespace rvn
 	}
 
 	template <typename T>
-	template <typename... Args>
-	LinkedList<T>::Iterator LinkedList<T>::emplaceFront(Args&&... args)
+	template <typename ...Args>
+	LinkedList<T>::Iterator LinkedList<T>::emplaceFront(Args &&...args)
 	{
 		return emplace(std::forward<Args>(args)..., begin());
 	}
 
 	template <typename T>
-	template <typename... Args>
-	LinkedList<T>::Iterator LinkedList<T>::emplaceBack(Args&&... args)
+	template <typename ...Args>
+	LinkedList<T>::Iterator LinkedList<T>::emplaceBack(Args &&...args)
 	{
 		return emplace(std::forward<Args>(args)..., end());
 	}

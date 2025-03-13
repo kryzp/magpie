@@ -51,6 +51,8 @@ void ShaderMgr::loadDefaultShaderPrograms()
 	load("pbrFragment",					"../../res/shaders/raster/texturedPBR.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("skyboxFragment",				"../../res/shaders/raster/skybox.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("hdrTonemappingPS",			"../../res/shaders/raster/hdr_tonemapping.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("bloomDownsamplePS",			"../../res/shaders/raster/bloom_downsample.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("bloomUpsamplePS",				"../../res/shaders/raster/bloom_upsample.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void ShaderMgr::createDefaultShaderEffects()
@@ -150,14 +152,43 @@ void ShaderMgr::createDefaultShaderEffects()
 	{
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
 		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
 
 		ShaderEffect *hdrTonemapping_effect = createEffect("hdrTonemapping");
 		hdrTonemapping_effect->setDescriptorSetLayout(layout);
-		hdrTonemapping_effect->setPushConstantsSize(0);
+		hdrTonemapping_effect->setPushConstantsSize(sizeof(float)*2);
 		hdrTonemapping_effect->addStage(get("primitiveQuadVS"));
 		hdrTonemapping_effect->addStage(get("hdrTonemappingPS"));
+	}
+
+	// BLOOM DOWNSAMPLE
+	{
+		DescriptorLayoutBuilder descriptorLayoutBuilder;
+		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+
+		ShaderEffect *bloomDownsample_effect = createEffect("bloomDownsample");
+		bloomDownsample_effect->setDescriptorSetLayout(layout);
+		bloomDownsample_effect->setPushConstantsSize(sizeof(int));
+		bloomDownsample_effect->addStage(get("primitiveQuadVS"));
+		bloomDownsample_effect->addStage(get("bloomDownsamplePS"));
+	}
+
+	// BLOOM UPSAMPLE
+	{
+		DescriptorLayoutBuilder descriptorLayoutBuilder;
+		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+
+		ShaderEffect *bloomUpsample_effect = createEffect("bloomUpsample");
+		bloomUpsample_effect->setDescriptorSetLayout(layout);
+		bloomUpsample_effect->setPushConstantsSize(sizeof(float));
+		bloomUpsample_effect->addStage(get("primitiveQuadVS"));
+		bloomUpsample_effect->addStage(get("bloomUpsamplePS"));
 	}
 }
 
@@ -200,7 +231,7 @@ ShaderProgram *ShaderMgr::load(const String &name, const String &source, VkShade
 	return shader;
 }
 
-ShaderEffect *ShaderMgr::getEffect(const String& name)
+ShaderEffect *ShaderMgr::getEffect(const String &name)
 {
 	return m_effects.getOrDefault(name, nullptr);
 }

@@ -6,10 +6,11 @@
 
 #include "render_info.h"
 
+#include "container/vector.h"
+
 namespace llt
 {
 	class GenericRenderTarget;
-	class Pipeline;
 	class ShaderEffect;
 
 	class CommandBuffer
@@ -31,7 +32,7 @@ namespace llt
 
 		const RenderInfo &getCurrentRenderInfo() const;
 
-		void bindPipeline(Pipeline &pipeline);
+		void bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline);
 
 		void drawIndexed(
 			uint32_t indexCount,
@@ -59,16 +60,16 @@ namespace llt
 
 		void bindDescriptorSets(
 			uint32_t firstSet,
-			uint32_t setCount,
-			const VkDescriptorSet *descriptorSets,
-			uint32_t dynamicOffsetCount,
-			const uint32_t *dynamicOffsets
+			VkPipelineLayout layout,
+			const Vector<VkDescriptorSet> &descriptorSets,
+			const Vector<uint32_t> &dynamicOffsets
 		);
 
 		void setViewport(const VkViewport &viewport);
 		void setScissor(const VkRect2D &scissor);
 
 		void pushConstants(
+			VkPipelineLayout layout,
 			VkShaderStageFlagBits stageFlags,
 			uint32_t size,
 			void *data,
@@ -92,32 +93,31 @@ namespace llt
 			VkPipelineStageFlags srcStageMask,
 			VkPipelineStageFlags dstStageMask,
 			VkDependencyFlags dependencyFlags,
-			uint32_t memoryBarrierCount,		const VkMemoryBarrier *memoryBarriers,
-			uint32_t bufferMemoryBarrierCount,	const VkBufferMemoryBarrier *bufferMemoryBarriers,
-			uint32_t imageMemoryBarrierCount,	const VkImageMemoryBarrier *imageMemoryBarriers
+			const Vector<VkMemoryBarrier> &memoryBarriers,
+			const Vector<VkBufferMemoryBarrier> &bufferMemoryBarriers,
+			const Vector<VkImageMemoryBarrier> &imageMemoryBarriers
 		);
+
+		void generateMipmaps(const Texture &texture);
 
 		void blitImage(
 			VkImage srcImage, VkImageLayout srcImageLayout,
 			VkImage dstImage, VkImageLayout dstImageLayout,
-			uint32_t regionCount,
-			const VkImageBlit *regions,
+			const Vector<VkImageBlit> &regions,
 			VkFilter filter
 		);
 
 		void copyBufferToBuffer(
 			VkBuffer srcBuffer,
 			VkBuffer dstBuffer,
-			uint32_t regionCount,
-			const VkBufferCopy *regions
+			const Vector<VkBufferCopy> &regions
 		);
 
 		void copyBufferToImage(
 			VkBuffer srcBuffer,
 			VkImage dstImage,
 			VkImageLayout dstImageLayout,
-			uint32_t regionCount,
-			const VkBufferImageCopy *regions
+			const Vector<VkBufferImageCopy> &regions
 		);
 
 		void writeTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool pool, uint32_t query);
@@ -135,13 +135,14 @@ namespace llt
 		void _beginRecording();
 
 		VkCommandBuffer m_buffer;
-		VkPipelineLayout m_currentPipelineLayout;
 
 		VkViewport m_viewport;
 		VkRect2D m_scissor;
 
 		GenericRenderTarget *m_currentTarget;
 		RenderInfo m_currentRenderInfo;
+
+		bool m_isRendering;
 	};
 }
 

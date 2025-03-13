@@ -164,7 +164,6 @@ VulkanBackend::VulkanBackend(const Config &config)
 	, m_swapChainImageFormat()
 	, m_vmaAllocator()
 	, m_pipelineCache()
-	, m_pipelineLayoutCache()
 	, m_graphicsQueue()
 	, m_computeQueues()
 	, m_transferQueues()
@@ -243,6 +242,8 @@ VulkanBackend::VulkanBackend(const Config &config)
 	);
 #endif // LLT_DEBUG
 
+	m_pipelineCache.init();
+
 	// set up all of the core managers of resources
 	g_gpuBufferManager		= new GPUBufferMgr();
 	g_shaderBufferManager 	= new ShaderBufferMgr();
@@ -259,7 +260,7 @@ VulkanBackend::~VulkanBackend()
 	// wait until we are synced-up with the gpu before proceeding
 	syncStall();
 
-	// //
+	// ---
 
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplSDL3_Shutdown();
@@ -276,7 +277,8 @@ VulkanBackend::~VulkanBackend()
 
 	m_backbuffer->cleanUpTextures();
 
-	clearPipelineCache();
+	m_pipelineCache.dispose();
+	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 
 	delete g_shaderBufferManager;
 
@@ -710,23 +712,6 @@ Backbuffer *VulkanBackend::createBackbuffer()
 	return backbuffer;
 }
 
-void VulkanBackend::clearPipelineCache()
-{
-	for (auto& [id, cache] : m_pipelineCache) {
-		vkDestroyPipeline(m_device, cache, nullptr);
-	}
-
-	m_pipelineCache.clear();
-
-	for (auto& [id, cache] : m_pipelineLayoutCache) {
-		vkDestroyPipelineLayout(m_device, cache, nullptr);
-	}
-
-	m_pipelineLayoutCache.clear();
-
-	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
-}
-
 VkSampleCountFlagBits VulkanBackend::getMaxUsableSampleCount() const
 {
 	VkSampleCountFlags counts =
@@ -826,6 +811,16 @@ VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
 VkCommandPool VulkanBackend::getComputeCommandPool(int idx)
 {
 	return m_computeQueues[idx].getCurrentFrame().commandPool;
+}
+
+PipelineCache &VulkanBackend::getPipelineCache()
+{
+	return m_pipelineCache;
+}
+
+const PipelineCache &VulkanBackend::getPipelineCache() const
+{
+	return m_pipelineCache;
 }
 
 void VulkanBackend::swapBuffers()

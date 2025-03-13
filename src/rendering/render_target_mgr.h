@@ -24,8 +24,9 @@ namespace llt
 		RenderTarget *createTarget(
             const String &name,
             uint32_t width, uint32_t height,
-            const Vector<VkFormat>& attachments,
-            VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT
+            const Vector<VkFormat> &attachments,
+            VkSampleCountFlagBits samples,
+            int mipLevels
         );
 
     private:

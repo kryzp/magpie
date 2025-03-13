@@ -92,58 +92,9 @@ VkShaderModule ShaderProgram::getModule() const
 
 ShaderEffect::ShaderEffect()
 	: m_stages()
-	, m_layout()
 	, m_descriptorSetLayout()
 	, m_pushConstantsSize(0)
 {
-}
-
-VkPipelineLayout ShaderEffect::getPipelineLayout()
-{
-	VkShaderStageFlagBits shaderStage = m_stages[0]->getStage() == VK_SHADER_STAGE_COMPUTE_BIT ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
-
-	uint64_t pipelineLayoutHash = 0;
-
-	VkPushConstantRange pushConstants = {};
-	pushConstants.offset = 0;
-	pushConstants.size = m_pushConstantsSize;
-	pushConstants.stageFlags = shaderStage;
-
-	hash::combine(&pipelineLayoutHash, &pushConstants);
-	hash::combine(&pipelineLayoutHash, &m_descriptorSetLayout);
-
-	if (g_vulkanBackend->m_pipelineLayoutCache.contains(pipelineLayoutHash))
-	{
-		m_layout = g_vulkanBackend->m_pipelineLayoutCache[pipelineLayoutHash];
-		return m_layout;
-	}
-
-	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-	pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pSetLayouts = &m_descriptorSetLayout;
-	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
-
-	if (pushConstants.size > 0)
-	{
-		pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-		pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
-	}
-
-	LLT_VK_CHECK(
-		vkCreatePipelineLayout(g_vulkanBackend->m_device, &pipelineLayoutCreateInfo, nullptr, &m_layout),
-		"Failed to create pipeline layout"
-	);
-
-	g_vulkanBackend->m_pipelineLayoutCache.insert(
-		pipelineLayoutHash,
-		m_layout
-	);
-
-	LLT_LOG("Created new pipeline layout!");
-
-	return m_layout;
 }
 
 void ShaderEffect::addStage(ShaderProgram *program)
@@ -154,6 +105,11 @@ void ShaderEffect::addStage(ShaderProgram *program)
 const Vector<ShaderProgram *> &ShaderEffect::getStages() const
 {
 	return m_stages;
+}
+
+const ShaderProgram *ShaderEffect::getStage(int idx) const
+{
+	return m_stages[idx];
 }
 
 const VkDescriptorSetLayout &ShaderEffect::getDescriptorSetLayout() const
@@ -169,4 +125,9 @@ void ShaderEffect::setDescriptorSetLayout(const VkDescriptorSetLayout &layout)
 void ShaderEffect::setPushConstantsSize(uint64_t size)
 {
 	m_pushConstantsSize = size;
+}
+
+uint64_t ShaderEffect::getPushConstantsSize() const
+{
+	return m_pushConstantsSize;
 }

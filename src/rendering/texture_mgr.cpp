@@ -17,13 +17,13 @@ TextureMgr::TextureMgr()
 
 TextureMgr::~TextureMgr()
 {
-	for (auto& [name, texture] : m_textureCache) {
+	for (auto &[name, texture] : m_textureCache) {
 		delete texture;
 	}
 
 	m_textureCache.clear();
 
-	for (auto& [name, sampler] : m_samplerCache) {
+	for (auto &[name, sampler] : m_samplerCache) {
 		delete sampler;
 	}
 
@@ -35,7 +35,7 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
 	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	load("environmentHDR",	"../../res/textures/cannon_4k.hdr");
+	load("environmentHDR",	"../../res/textures/rogland_clear_night_greg_zaal.hdr");
 	load("stone",			"../../res/textures/smooth_stone.png");
 	load("wood",			"../../res/textures/wood.jpg");
 }
@@ -143,7 +143,7 @@ Texture *TextureMgr::createCubemap(const String &name, uint32_t size, VkFormat f
 	return texture;
 }
 
-Texture *TextureMgr::createCubemap(const String &name, const Image &right, const Image &left, const Image &top, const Image &bottom, const Image &front, const Image &back)
+Texture *TextureMgr::createCubemap(const String &name, const Image &right, const Image &left, const Image &top, const Image &bottom, const Image &front, const Image &back, int mipLevels)
 {
 	if (m_textureCache.contains(name)) {
 		return m_textureCache.get(name);
@@ -153,7 +153,7 @@ Texture *TextureMgr::createCubemap(const String &name, const Image &right, const
 
 	texture->setSize(right.getWidth(), right.getWidth());
 	texture->setProperties(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
-	texture->setMipLevels(4);
+	texture->setMipLevels(mipLevels);
 	texture->createInternalResources();
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 

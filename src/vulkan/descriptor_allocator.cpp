@@ -8,7 +8,7 @@
 
 using namespace llt;
 
-void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio>& sizes)
+void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const Vector<DescriptorPoolSizeRatio> &sizes)
 {
 	Vector<VkDescriptorPoolSize> poolSizes;
 

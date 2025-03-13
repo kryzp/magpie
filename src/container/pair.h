@@ -58,7 +58,7 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (const Pair &other)
+	Pair<TFirst, TSecond> &Pair<TFirst, TSecond>::operator = (const Pair &other)
 	{
 		this->first = other.first;
 		this->second = other.second;
@@ -67,7 +67,7 @@ namespace llt
 	}
 
 	template <typename TFirst, typename TSecond>
-	Pair<TFirst, TSecond>& Pair<TFirst, TSecond>::operator = (Pair &&other) noexcept
+	Pair<TFirst, TSecond> &Pair<TFirst, TSecond>::operator = (Pair &&other) noexcept
 	{
 		this->first = std::move(other.first);
 		this->second = std::move(other.second);

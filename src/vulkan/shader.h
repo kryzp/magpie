@@ -116,19 +116,19 @@ namespace llt
 		ShaderEffect();
 		~ShaderEffect() = default;
 
-		VkPipelineLayout getPipelineLayout();
-
 		void addStage(ShaderProgram *program);
+
 		const Vector<ShaderProgram *> &getStages() const;
+		const ShaderProgram *getStage(int idx) const;
 
 		const VkDescriptorSetLayout &getDescriptorSetLayout() const;
 		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
 		
 		void setPushConstantsSize(uint64_t size);
+		uint64_t getPushConstantsSize() const;
 
 	private:
 		Vector<ShaderProgram *> m_stages;
-		VkPipelineLayout m_layout;
 
 		VkDescriptorSetLayout m_descriptorSetLayout;
 		uint64_t m_pushConstantsSize;

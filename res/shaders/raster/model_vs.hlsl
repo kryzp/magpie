@@ -49,7 +49,7 @@ VSOutput main(VSInput input)
 	output.colour = input.colour;
     output.texCoord = input.uv;
     output.position = mul(instanceData.modelMatrix, float4(input.position, 1.0)).xyz;
-	output.tbn = transpose(float3x3(T, B, N));
+	output.tbn = float3x3(T, B, N);
 	output.fragPos = output.position;
     output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(instanceData.modelMatrix, float4(input.position, 1.0))));
 

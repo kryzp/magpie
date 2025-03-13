@@ -83,7 +83,7 @@ void GPUBuffer::writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t 
 
 	commandBuffer.copyBufferToBuffer(
 		m_buffer, other->m_buffer,
-		1, &region
+		{ region }
 	);
 
 	vkutil::endSingleTimeTransferCommands(commandBuffer);
@@ -112,7 +112,7 @@ void GPUBuffer::writeToTexture(CommandBuffer &commandBuffer, const Texture *text
 	commandBuffer.copyBufferToImage(
 		m_buffer, texture->getImage(),
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1, &region
+		{ region }
 	);
 }
 

@@ -36,6 +36,7 @@
 #include "backbuffer.h"
 #include "queue.h"
 #include "pipeline.h"
+#include "device.h"
 
 #include "rendering/shader_buffer_mgr.h"
 #include "rendering/gpu_buffer_mgr.h"
@@ -80,15 +81,15 @@ namespace llt
 		VkCommandPool getTransferCommandPool(int idx = 0);
 		VkCommandPool getComputeCommandPool(int idx = 0);
 
+		PipelineCache &getPipelineCache();
+		const PipelineCache &getPipelineCache() const;
+
         VkInstance m_instance;
 		VkDevice m_device;
 		PhysicalDeviceData m_physicalData;
 		VkSampleCountFlagBits m_maxMsaaSamples;
 		VkFormat m_swapChainImageFormat;
 		VmaAllocator m_vmaAllocator;
-
-		HashMap<uint64_t, VkPipeline> m_pipelineCache;
-		HashMap<uint64_t, VkPipelineLayout> m_pipelineLayoutCache;
 
 		Queue m_graphicsQueue;
 		Vector<Queue> m_computeQueues;
@@ -112,7 +113,7 @@ namespace llt
 		VkSampleCountFlagBits getMaxUsableSampleCount() const;
 		void findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
-		void clearPipelineCache();
+		PipelineCache m_pipelineCache;
 
 		uint64_t m_currentFrameIdx;
 		VkPipelineCache m_pipelineProcessCache;

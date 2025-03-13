@@ -20,7 +20,7 @@ namespace llt
 
 		// enable implicit casting to other rects
 		template <typename Y>
-		Rect(const Rect<Y>& other) noexcept
+		Rect(const Rect<Y> &other) noexcept
 			: x(other.x)
 			, y(other.y)
 			, w(other.w)
@@ -31,7 +31,7 @@ namespace llt
 		static const Rect &zero();
 		static const Rect &one();
 
-		bool contains(const glm::vec<2, T>& other) const;
+		bool contains(const glm::vec<2, T> &other) const;
 		bool intersects(const Rect &other) const;
 
 		glm::vec<2, T> position() const;
@@ -107,7 +107,7 @@ namespace llt
 	}
 
 	template <typename T>
-	bool Rect<T>::contains(const glm::vec<2, T>& other) const
+	bool Rect<T>::contains(const glm::vec<2, T> &other) const
 	{
 		return (
 
@@ -123,7 +123,7 @@ namespace llt
 	}
 
 	template <typename T>
-	bool Rect<T>::intersects(const Rect<T>& other) const
+	bool Rect<T>::intersects(const Rect<T> &other) const
 	{
 		return (
 
@@ -148,10 +148,10 @@ namespace llt
 
 	template <typename T> Rect<T> Rect<T>::operator - () const { return Rect(-this->x, -this->y, -this->w, -this->h); }
 
-	template <typename T> Rect<T>& Rect<T>::operator += (const Rect &other) { this->x += other.x; this->y += other.y; this->w += other.w; this->h += other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator -= (const Rect &other) { this->x -= other.x; this->y -= other.y; this->w -= other.w; this->h -= other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator *= (const Rect &other) { this->x *= other.x; this->y *= other.y; this->w *= other.w; this->h *= other.h; return *this; }
-	template <typename T> Rect<T>& Rect<T>::operator /= (const Rect &other) { this->x /= other.x; this->y /= other.y; this->w /= other.w; this->h /= other.h; return *this; }
+	template <typename T> Rect<T> &Rect<T>::operator += (const Rect &other) { this->x += other.x; this->y += other.y; this->w += other.w; this->h += other.h; return *this; }
+	template <typename T> Rect<T> &Rect<T>::operator -= (const Rect &other) { this->x -= other.x; this->y -= other.y; this->w -= other.w; this->h -= other.h; return *this; }
+	template <typename T> Rect<T> &Rect<T>::operator *= (const Rect &other) { this->x *= other.x; this->y *= other.y; this->w *= other.w; this->h *= other.h; return *this; }
+	template <typename T> Rect<T> &Rect<T>::operator /= (const Rect &other) { this->x /= other.x; this->y /= other.y; this->w /= other.w; this->h /= other.h; return *this; }
 
 	template <typename T> glm::vec<2, T> Rect<T>::position() const { return glm::vec<2, T>(x, y); }
 	template <typename T> glm::vec<2, T> Rect<T>::size()     const { return glm::vec<2, T>(w, h); }
@@ -166,8 +166,8 @@ namespace llt
 	template <typename T> glm::vec<2, T> Rect<T>::bottomLeft()  const { return glm::vec<2, T>(left(),  bottom()); }
 	template <typename T> glm::vec<2, T> Rect<T>::bottomRight() const { return glm::vec<2, T>(right(), bottom()); }
 
-	template <typename T> const Rect<T>& Rect<T>::zero() { static const Rect ZERO = Rect(0, 0, 0, 0); return ZERO; }
-	template <typename T> const Rect<T>& Rect<T>::one()  { static const Rect ONE  = Rect(0, 0, 1, 1); return ONE;  }
+	template <typename T> const Rect<T> &Rect<T>::zero() { static const Rect ZERO = Rect(0, 0, 0, 0); return ZERO; }
+	template <typename T> const Rect<T> &Rect<T>::one()  { static const Rect ONE  = Rect(0, 0, 1, 1); return ONE;  }
 }
 
 #endif // RECT_H_

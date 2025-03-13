@@ -15,7 +15,7 @@ RenderTargetMgr::RenderTargetMgr()
 
 RenderTargetMgr::~RenderTargetMgr()
 {
-	for (auto& [name, target] : m_targets) {
+	for (auto &[name, target] : m_targets) {
 		target->cleanUp();
 	}
 
@@ -27,7 +27,7 @@ RenderTarget *RenderTargetMgr::get(const String &name)
 	return m_targets.getOrDefault(name, nullptr);
 }
 
-RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, uint32_t height, const Vector<VkFormat>& attachments, VkSampleCountFlagBits samples)
+RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, uint32_t height, const Vector<VkFormat> &attachments, VkSampleCountFlagBits samples, int mipLevels)
 {
 	if (m_targets.contains(name)) {
 		return m_targets.get(name);
@@ -43,13 +43,19 @@ RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, 
 		texture->setSize(width, height);
 		texture->setProperties(attachments[i], VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_2D);
 		texture->setSampleCount(samples);
-
+		texture->setMipLevels(mipLevels);
+		texture->setParent(result);
 		texture->createInternalResources();
 
-//		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		texture->setParent(result);
+		if (mipLevels > 1)
+		{
+			texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			texture->generateMipmaps();
+		}
+		else
+		{
+			texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		}
 
 		result->addAttachment(texture);
 	}

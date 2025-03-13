@@ -32,7 +32,7 @@ namespace llt
 		Texture *createAttachment(const String &name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling);
 		
 		Texture *createCubemap(const String &name, uint32_t size, VkFormat format, int mipLevels);
-		Texture *createCubemap(const String &name, const Image &right, const Image &left, const Image &top, const Image &bottom, const Image &front, const Image &back);
+		Texture *createCubemap(const String &name, const Image &right, const Image &left, const Image &top, const Image &bottom, const Image &front, const Image &back, int mipLevels);
 
 		TextureSampler *createSampler(const String &name, const TextureSampler::Style &style);
 

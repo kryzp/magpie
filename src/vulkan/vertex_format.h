@@ -24,13 +24,13 @@ namespace llt
 		VertexFormat();
 		~VertexFormat();
 
-		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription>& attributes);
+		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription> &attributes);
 
 		void clearAttributes();
 		void clearBindings();
 		
-		const Vector<VkVertexInputAttributeDescription>& getAttributeDescriptions() const;
-		const Vector<VkVertexInputBindingDescription>& getBindingDescriptions() const;
+		const Vector<VkVertexInputAttributeDescription> &getAttributeDescriptions() const;
+		const Vector<VkVertexInputBindingDescription> &getBindingDescriptions() const;
 
 		uint64_t getVertexSize() const;
 

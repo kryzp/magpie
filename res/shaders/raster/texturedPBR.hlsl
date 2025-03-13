@@ -54,6 +54,8 @@ float distributionGGX(float NdotH, float roughness)
 	float a2 = a * a;
 	
 	float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
+	
+	denom = max(denom, 0.00001);
 
 	return a2 / (denom * denom * MATH_PI);
 }
@@ -89,7 +91,7 @@ float4 main(PSInput input) : SV_Target
 	
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 	
-	normal = normalize(mul(input.tbn, normalize(2.0*normal - 1.0)));
+	normal = normalize(mul(normalize(2.0*normal - 1.0), input.tbn));
 	float3 viewDir = normalize(frameData.viewPos.xyz - input.fragPos);
 	
 	float NdotV = max(0.0, dot(normal, viewDir));
@@ -125,7 +127,7 @@ float4 main(PSInput input) : SV_Target
 		float3 kD = (1.0 - F) * (1.0 - metallicValue);
 		
 		float3 diffuse = kD * albedo / MATH_PI;
-		float3 specular = (F * G * NDF) / (4.0 * dot(normal, lightDir) * dot(normal, viewDir) + 0.0001);
+		float3 specular = (F * G * NDF) / (4.0 * NdotL * NdotV + 0.0001);
 		
 		Lo += (diffuse + specular) * radiance * NdotL;
 	}
@@ -142,8 +144,48 @@ float4 main(PSInput input) : SV_Target
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambientOcclusion;
 	
-	float3 finalColour = ambient + emissive + Lo;
+	float3 finalColour = ambient + Lo + emissive;
 	
 	finalColour *= input.colour;
+	
 	return float4(finalColour, 1.0);
+
+	/*
+	float3 camPos = frameData.viewPos.xyz;
+	float3 worldPos = input.fragPos;
+	
+	float3 viewDir = normalize(camPos - worldPos);
+	
+	// we don't use the normal texture as we don't want that much detail - just geometry
+	float3 normal = input.tbn[2];
+	
+	float NdotV = dot(normal, viewDir);
+	float theta = acos(NdotV);
+	
+	float curvature = length(fwidth(normal)) / length(fwidth(worldPos));
+	
+	float radius = 1.0 / (curvature + 0.001);
+	
+	float diffusionCoeff = 1.0;
+	float extinctionCoeff = 0.1;
+	
+	float alpha = 1.0;
+	
+	float3 A = 0.0;
+	float3 B = 0.0;
+	
+	float dx = 0.01;
+	
+	for (float x = -MATH_PI; x <= MATH_PI; x += dx)
+	{
+		float3 irradianceSample = alpha / (4.0 * MATH_PI * diffusionCoeff) * exp(-abs(2.0 * sin(x * 0.5)) / diffusionCoeff);
+		
+		A += irradianceSample * dx * cos(theta + x);
+		B += irradianceSample * dx;
+	}
+	
+	float3 transmittance = exp(-extinctionCoeff * (A / B));
+	
+	return float4(transmittance, 1.0);
+	*/
 }

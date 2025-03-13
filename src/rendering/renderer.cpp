@@ -30,11 +30,8 @@ Renderer::Renderer()
 	, m_skyboxMesh()
 	, m_skyboxPipeline()
 	, m_skyboxSet()
-	, m_forwardPass()
-	, m_postProcessPass()
 	, m_descriptorPool()
 	, m_descriptorLayoutCache()
-//	, m_postProcessPipeline()
 {
 }
 
@@ -78,24 +75,24 @@ void Renderer::init()
 		{
 			VK_FORMAT_R32G32B32A32_SFLOAT
 		},
-		VK_SAMPLE_COUNT_1_BIT
+		VK_SAMPLE_COUNT_1_BIT,
+		1
 	);
 
 	m_target->createDepthAttachment();
-
 	m_target->toggleClear(true);
 	m_target->setClearColours(Colour::black());
 
-	m_forwardPass.init(m_descriptorPool);
-	m_postProcessPass.init(m_descriptorPool);
+	g_forwardPass.init();
+	g_postProcessPass.init(m_descriptorPool);
 
 //	m_gpuParticles.init(m_shaderParamsBuffer);
 }
 
 void Renderer::cleanUp()
 {
-	m_forwardPass.cleanUp();
-	m_postProcessPass.cleanUp();
+	g_forwardPass.cleanUp();
+	g_postProcessPass.cleanUp();
 
 	m_descriptorPool.cleanUp();
 	m_descriptorLayoutCache.cleanUp();
@@ -115,52 +112,6 @@ void Renderer::addRenderObjects()
 	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 
-/*
-void Renderer::createPostProcessResources()
-{
-	DescriptorLayoutBuilder ppDescriptorLayoutBuilder;
-	ppDescriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-	BoundTexture gBufferAttachment;
-	gBufferAttachment.texture = m_gBuffer->getAttachment(0);
-	gBufferAttachment.sampler = g_textureManager->getSampler("linear");
-
-	DescriptorWriter ppDescriptorWriter;
-	ppDescriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, gBufferAttachment.getImageInfo());
-	
-	VkDescriptorSetLayout ppDescriptorSetLayout = ppDescriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, nullptr);
-	
-	ShaderProgram *ppVS = g_shaderManager->create("postProcessVertex", "../../res/shaders/raster/post_process_vs.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	ShaderProgram *ppPS = g_shaderManager->create("postProcessFragment", "../../res/shaders/raster/post_process_ps.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	
-	m_postProcessPipeline.setVertexDescriptor(g_modelVertexFormat);
-	m_postProcessPipeline.setDepthTest(false);
-	m_postProcessPipeline.setDepthWrite(false);
-	m_postProcessPipeline.bindShader(ppVS);
-	m_postProcessPipeline.bindShader(ppPS);
-	m_postProcessPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
-	m_postProcessPipeline.setDescriptorSetLayout(ppDescriptorSetLayout);
-	
-	m_descriptorPool.setSizes(64 * mgc::FRAMES_IN_FLIGHT, {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			4.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
-	});
-	
-	m_postProcessDescriptorSet = m_descriptorPool.allocate(ppDescriptorSetLayout);
-	
-	ppDescriptorWriter.updateSet(m_postProcessDescriptorSet);
-}
-*/
-
 void Renderer::setScene(const Scene &scene)
 {
 	m_currentScene = scene;
@@ -177,17 +128,13 @@ void Renderer::render(const Camera &camera, float deltaTime)
 		renderSkybox(cmd, camera);
 
 		auto &renderList = m_currentScene.getRenderList();
-		m_forwardPass.render(cmd, camera, renderList);
+		
+		g_forwardPass.render(cmd, camera, renderList);
 	}
 	cmd.endRendering();
 	cmd.submit();
 
-	cmd.beginRendering(g_vulkanBackend->m_backbuffer);
-	{
-		m_postProcessPass.render(cmd);
-	}
-	cmd.endRendering();
-	cmd.submit();
+	g_postProcessPass.render(cmd);
 
 	ImGui::Render();
 
@@ -263,25 +210,27 @@ void Renderer::createSkyboxResources()
 
 	ShaderEffect *skyboxShader = g_shaderManager->getEffect("skybox");
 
-	BoundTexture skyboxCubemap;
-	skyboxCubemap.texture = g_textureManager->getTexture("environmentMap");
-	skyboxCubemap.sampler = g_textureManager->getSampler("linear");
-
+	BoundTexture skyboxCubemap(
+		g_textureManager->getTexture("environmentMap"),
+		g_textureManager->getSampler("linear")
+	);
+	
 	DescriptorWriter descriptorWriter;
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getImageInfo());
+	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getStandardImageInfo());
 
 	m_skyboxSet = m_descriptorPool.allocate(skyboxShader->getDescriptorSetLayout());
 	descriptorWriter.updateSet(m_skyboxSet);
 
-	m_skyboxPipeline.bindShader(skyboxShader);
+	m_skyboxPipeline.setShader(skyboxShader);
 	m_skyboxPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_skyboxPipeline.setDepthTest(false);
 	m_skyboxPipeline.setDepthWrite(false);
-	m_skyboxPipeline.setCullMode(VK_CULL_MODE_BACK_BIT);
 }
 
 void Renderer::renderSkybox(CommandBuffer &cmd, const Camera &camera)
 {
+	PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, cmd.getCurrentRenderInfo());
+
 	struct
 	{
 		glm::mat4 proj;
@@ -292,18 +241,12 @@ void Renderer::renderSkybox(CommandBuffer &cmd, const Camera &camera)
 	params.proj = camera.getProj();
 	params.view = camera.getRotationMatrix();
 
-	if (m_skyboxPipeline.getPipeline() == VK_NULL_HANDLE)
-		m_skyboxPipeline.buildGraphicsPipeline(cmd.getCurrentRenderInfo());
+	cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-	cmd.bindPipeline(m_skyboxPipeline);
-
-	cmd.bindDescriptorSets(
-		0,
-		1, &m_skyboxSet,
-		0, nullptr
-	);
+	cmd.bindDescriptorSets(0, pipelineData.layout, { m_skyboxSet }, {});
 
 	cmd.pushConstants(
+		pipelineData.layout,
 		VK_SHADER_STAGE_ALL_GRAPHICS,
 		sizeof(params),
 		&params

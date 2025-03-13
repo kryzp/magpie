@@ -10,7 +10,7 @@ using namespace llt;
 Texture::Texture()
 	: m_parent(nullptr)
 	, m_image(VK_NULL_HANDLE)
-	, m_imageLayout()
+	, m_imageLayout(VK_IMAGE_LAYOUT_UNDEFINED)
 	, m_standardView(VK_NULL_HANDLE)
 	, m_mipmapCount(1)
 	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
@@ -136,7 +136,7 @@ void Texture::createInternalResources()
 		"Failed to create image"
 	);
 
-	m_standardView = generateView(getLayerCount(), 0, 0);
+	m_standardView = createView(getLayerCount(), 0, 0);
 }
 
 VkImageView Texture::getStandardView() const
@@ -144,7 +144,7 @@ VkImageView Texture::getStandardView() const
 	return m_standardView;
 }
 
-VkImageView Texture::generateView(int layerCount, int layer, int baseMipLevel) const
+VkImageView Texture::createView(int layerCount, int layer, int baseMipLevel) const
 {
 	VkImageViewType viewType = m_type;
 
@@ -163,7 +163,8 @@ VkImageView Texture::generateView(int layerCount, int layer, int baseMipLevel) c
 	viewCreateInfo.subresourceRange.baseArrayLayer = layer;
 	viewCreateInfo.subresourceRange.layerCount = layerCount;
 
-	if (vkutil::hasStencilComponent(m_format)) {
+	if (vkutil::hasStencilComponent(m_format))
+	{
 		// depth AND stencil is not allowed for sampling!
 		// so, use depth instead.
 		viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -184,6 +185,36 @@ VkImageView Texture::generateView(int layerCount, int layer, int baseMipLevel) c
 	return ret;
 }
 
+void Texture::transitionLayoutSingle(VkImageLayout newLayout)
+{
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+	transitionLayout(cmd, newLayout);
+	vkutil::endSingleTimeGraphicsCommands(cmd);
+}
+
+void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
+{
+	if (m_imageLayout == newLayout)
+		return;
+
+	VkImageMemoryBarrier barrier = getBarrier(newLayout);
+
+	barrier.srcAccessMask = vkutil::getTransferAccessFlags(m_imageLayout);
+	barrier.dstAccessMask = vkutil::getTransferAccessFlags(newLayout);
+
+	VkPipelineStageFlags srcStage = m_stage;
+	VkPipelineStageFlags dstStage = vkutil::getTransferPipelineStageFlags(newLayout);
+
+	cmd.pipelineBarrier(
+		srcStage, dstStage,
+		0,
+		{}, {}, { barrier }
+	);
+
+	m_stage = dstStage;
+	m_imageLayout = newLayout;
+}
+
 // also transitions the texture into SHADER_READ_ONLY layout
 void Texture::generateMipmaps()
 {
@@ -192,108 +223,15 @@ void Texture::generateMipmaps()
 	VkFormatProperties formatProperties = {};
 	vkGetPhysicalDeviceFormatProperties(g_vulkanBackend->m_physicalData.device, m_format, &formatProperties);
 
-	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+	{
 		LLT_ERROR("Texture image format doesn't support linear blitting.");
 		return;
 	}
 
-	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
-
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.image = m_image;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = getLayerCount();
-	barrier.subresourceRange.levelCount = 1;
-
-	for (int i = 1; i < m_mipmapCount; i++)
-	{
-		barrier.subresourceRange.baseMipLevel = i - 1;
-
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-		// set up a pipeline barrier for the transferring stage
-		commandBuffer.pipelineBarrier(
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-
-		// go through all faces and blit them
-		for (int face = 0; face < getFaceCount(); face++)
-		{
-			int srcMipWidth  = (int)m_width  >> (i - 1);
-			int srcMipHeight = (int)m_height >> (i - 1);
-			int dstMipWidth  = (int)m_width  >> (i - 0);
-			int dstMipHeight = (int)m_height >> (i - 0);
-
-			VkImageBlit blit = {};
-
-			blit.srcOffsets[0] = { 0, 0, 0 };
-			blit.srcOffsets[1] = { srcMipWidth, srcMipHeight, 1 };
-			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			blit.srcSubresource.mipLevel = i - 1;
-			blit.srcSubresource.baseArrayLayer = face;
-			blit.srcSubresource.layerCount = 1;
-
-			blit.dstOffsets[0] = { 0, 0, 0 };
-			blit.dstOffsets[1] = { dstMipWidth, dstMipHeight, 1 };
-			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			blit.dstSubresource.mipLevel = i;
-			blit.dstSubresource.baseArrayLayer = face;
-			blit.dstSubresource.layerCount = 1;
-
-			commandBuffer.blitImage(
-				m_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1, &blit,
-				VK_FILTER_LINEAR
-			);
-		}
-
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		commandBuffer.pipelineBarrier(
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-	}
-
-	barrier.subresourceRange.baseMipLevel = m_mipmapCount - 1;
-		
-	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-	commandBuffer.pipelineBarrier(
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-
-	vkutil::endSingleTimeGraphicsCommands(commandBuffer);
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+	cmd.generateMipmaps(*this);
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
@@ -325,41 +263,6 @@ VkImageMemoryBarrier Texture::getBarrier(VkImageLayout newLayout) const
 	}
 
 	return barrier;
-}
-
-void Texture::transitionLayoutSingle(VkImageLayout newLayout)
-{
-	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
-
-	transitionLayout(cmd, newLayout);
-
-	vkutil::endSingleTimeGraphicsCommands(cmd);
-}
-
-void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
-{
-	if (m_imageLayout == newLayout) {
-		return;
-	}
-
-	VkImageMemoryBarrier barrier = getBarrier(newLayout);
-
-	barrier.srcAccessMask = vkutil::getTransferAccessFlags(m_imageLayout);
-	barrier.dstAccessMask = vkutil::getTransferAccessFlags(newLayout);
-
-	VkPipelineStageFlags srcStage = m_stage;
-	VkPipelineStageFlags dstStage = vkutil::getTransferPipelineStageFlags(newLayout);
-
-	cmd.pipelineBarrier(
-		srcStage, dstStage,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-
-	m_stage = dstStage;
-	m_imageLayout = newLayout;
 }
 
 void Texture::fromImage(const Image &image, VkImageViewType type, uint32_t mipLevels, VkSampleCountFlagBits numSamples)
@@ -517,72 +420,3 @@ VkImageLayout Texture::getImageLayout() const
 {
 	return m_imageLayout;
 }
-
-// ---
-
-/*
-TextureBatch::TextureBatch()
-	: m_textures()
-	, m_stageStack()
-{
-}
-
-TextureBatch::~TextureBatch()
-{
-}
-
-void TextureBatch::addTexture(Texture *texture)
-{
-	m_textures.pushBack(texture);
-}
-
-void TextureBatch::pushPipelineBarriers(VkPipelineStageFlags dst)
-{
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
-
-	for (auto &t : m_textures)
-	{
-		if (!t->isTransient())
-		{
-			auto barrier = t->getBarrier();
-
-			vkCmdPipelineBarrier(
-				cmdBuffer,
-				t->getStage(), dst,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			m_stageStack.pushBack(t->getStage());
-		}
-	}
-
-	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
-}
-
-void TextureBatch::popPipelineBarriers()
-{
-	VkCommandBuffer cmdBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
-
-	for (auto &t : m_textures)
-	{
-		if (!t->isTransient())
-		{
-			auto barrier = t->getBarrier();
-
-			vkCmdPipelineBarrier(
-				cmdBuffer,
-				t->getStage(), m_stageStack.popFront(),
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-		}
-	}
-
-	vkutil::endSingleTimeGraphicsCommands(cmdBuffer);
-}
-*/

@@ -3,25 +3,25 @@
 
 #include "container/vector.h"
 
-#include "render_pass.h"
-
 namespace llt
 {
 	class CommandBuffer;
 	class Camera;
 	class SubMesh;
 
-	class ForwardPass : public RenderPass
+	class ForwardPass
 	{
 	public:
 		ForwardPass() = default;
-		~ForwardPass() override = default;
+		~ForwardPass() = default;
 
-		void init(DescriptorPoolDynamic& pool) override;
-		void cleanUp() override;
+		void init();
+		void cleanUp();
 
 		void render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList);
 	};
+
+	extern ForwardPass g_forwardPass;
 }
 
 #endif // FORWARD_PASS_H_

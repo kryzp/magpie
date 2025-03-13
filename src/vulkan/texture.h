@@ -80,7 +80,7 @@ namespace llt
 		VkPipelineStageFlags getStage() const;
 
 		VkImageView getStandardView() const;
-		VkImageView generateView(int layerCount, int layer, int baseMipLevel) const;
+		VkImageView createView(int layerCount, int layer, int baseMipLevel) const;
 
 		VkImageLayout getImageLayout() const;
 
@@ -112,25 +112,54 @@ namespace llt
 		bool m_uav;
 	};
 
-	struct BoundTexture
+	class BoundTexture
 	{
-		Texture *texture;
-		TextureSampler *sampler;
+	public:
+		BoundTexture()
+			: m_texture(nullptr)
+			, m_sampler(nullptr)
+		{
+		}
 
-		VkDescriptorImageInfo getImageInfo() const
+		BoundTexture(Texture *texture, TextureSampler *sampler)
+			: m_texture(texture)
+			, m_sampler(sampler)
+		{
+		}
+
+		VkDescriptorImageInfo getStandardImageInfo() const
 		{
 			VkDescriptorImageInfo info = {};
 
-			info.imageView = texture->getStandardView();
+			info.imageView = m_texture->getStandardView();
 
-			info.imageLayout = texture->isDepthTexture()
+			info.imageLayout = m_texture->isDepthTexture()
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			info.sampler = sampler->bind(mgc::MAX_SAMPLER_MIP_LEVELS);
+			info.sampler = m_sampler->bind(m_texture->getMipLevels());
 
 			return info;
 		}
+
+		VkDescriptorImageInfo getImageInfo(VkImageView view) const
+		{
+			VkDescriptorImageInfo info = {};
+
+			info.imageView = view;
+
+			info.imageLayout = m_texture->isDepthTexture()
+				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			info.sampler = m_sampler->bind(m_texture->getMipLevels());
+
+			return info;
+		}
+
+	private:
+		Texture *m_texture;
+		TextureSampler *m_sampler;
 	};
 }
 

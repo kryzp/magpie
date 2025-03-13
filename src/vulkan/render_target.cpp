@@ -25,6 +25,41 @@ RenderTarget::~RenderTarget()
 	cleanUp();
 }
 
+void RenderTarget::cleanUp()
+{
+	m_renderInfo.clear();
+
+	for (auto &view : m_attachmentViews)
+	{
+		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
+		view = VK_NULL_HANDLE;
+	}
+
+	m_attachmentViews.clear();
+
+	for (Texture *texture : m_attachments)
+	{
+		if (texture->getParent() == this)
+			delete texture;
+	}
+
+	m_attachments.clear();
+
+	for (Texture *texture : m_resolveAttachments)
+	{
+		if (texture->getParent() == this)
+			delete texture;
+	}
+
+	m_resolveAttachments.clear();
+
+	if (m_depth && m_depth->getParent() == this)
+		delete m_depth;
+
+	if (m_resolveDepth)
+		delete m_resolveDepth;
+}
+
 void RenderTarget::beginRendering(CommandBuffer &cmd)
 {
 	for (int i = 0; i < m_attachments.size(); i++)
@@ -62,45 +97,6 @@ void RenderTarget::endRendering(CommandBuffer &cmd)
 
 	if (getDepthAttachment())
 		getDepthAttachment()->transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-}
-
-void RenderTarget::cleanUp()
-{
-	m_renderInfo.clear();
-
-	for (auto &view : m_attachmentViews)
-	{
-		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
-		view = VK_NULL_HANDLE;
-	}
-
-	m_attachmentViews.clear();
-
-	for (Texture *texture : m_attachments)
-	{
-		if (texture->getParent() == this)
-			delete texture;
-	}
-
-	m_attachments.clear();
-
-	for (Texture *texture : m_resolveAttachments)
-	{
-		if (texture->getParent() == this)
-			delete texture;
-	}
-
-	m_resolveAttachments.clear();
-
-	if (m_depth && m_depth->getParent() == this)
-		delete m_depth;
-
-	if (m_resolveDepth)
-		delete m_resolveDepth;
-}
-
-void RenderTarget::clear()
-{
 }
 
 void RenderTarget::setClearColour(int idx, const Colour &colour)
@@ -157,7 +153,7 @@ void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
 		resolveView = resolve->getStandardView();
 	}
 
-	VkImageView view = texture->generateView(1, layer, mip);
+	VkImageView view = texture->createView(1, layer, mip);
 	m_attachmentViews.pushBack(view);
 
 	m_renderInfo.addColourAttachment(

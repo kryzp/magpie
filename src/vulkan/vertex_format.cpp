@@ -37,7 +37,7 @@ VertexFormat::~VertexFormat()
 {
 }
 
-void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription>& attributes)
+void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription> &attributes)
 {
 	if (inputRate == VK_VERTEX_INPUT_RATE_VERTEX)
 		m_size = stride;
@@ -73,12 +73,12 @@ void VertexFormat::clearBindings()
 	m_bindings.clear();
 }
 
-const Vector<VkVertexInputAttributeDescription>& VertexFormat::getAttributeDescriptions() const
+const Vector<VkVertexInputAttributeDescription> &VertexFormat::getAttributeDescriptions() const
 {
 	return m_attributes;
 }
 
-const Vector<VkVertexInputBindingDescription>& VertexFormat::getBindingDescriptions() const
+const Vector<VkVertexInputBindingDescription> &VertexFormat::getBindingDescriptions() const
 {
 	return m_bindings;
 }

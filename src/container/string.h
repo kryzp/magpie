@@ -194,8 +194,8 @@ namespace llt
 		Str operator + (const Str &other) const;
 		Str &operator += (const Str &other);
 
-		explicit operator char* ();
-		explicit operator const char* () const;
+		explicit operator char * ();
+		explicit operator const char * () const;
 
 	private:
 		char *m_buf;
@@ -251,7 +251,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::operator = (const Str &other)
+	Str<Size> &Str<Size>::operator = (const Str &other)
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size.");
 
@@ -271,7 +271,7 @@ namespace llt
 	}
 	
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::operator = (Str &&other) noexcept
+	Str<Size> &Str<Size>::operator = (Str &&other) noexcept
 	{
 		LLT_ASSERT(other.m_length < (Size - 1), "Length must not exceed maximum size");
 
@@ -308,7 +308,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::append(const Str<Size>& str)
+	Str<Size> &Str<Size>::append(const Str<Size> &str)
 	{
 		LLT_ASSERT((m_length + str.m_length) < (Size - 1), "Final length must not exceed maximum size.");
 
@@ -554,7 +554,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	int Str<Size>::lastIndexOf(const Str<Size>& str) const
+	int Str<Size>::lastIndexOf(const Str<Size> &str) const
 	{
 		LLT_ASSERT(m_length >= str.m_length, "String to check for must not be larger than the string getting checked.");
 
@@ -635,7 +635,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Str<Size> Str<Size>::operator + (const Str<Size>& other) const
+	Str<Size> Str<Size>::operator + (const Str<Size> &other) const
 	{
 		Str str = *this;
 		str.append(other);
@@ -643,7 +643,7 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Str<Size>& Str<Size>::operator += (const Str<Size>& other)
+	Str<Size> &Str<Size>::operator += (const Str<Size> &other)
 	{
 		return append(other);
 	}
@@ -664,13 +664,13 @@ namespace llt
 	}
 
 	template <uint64_t Size>
-	Str<Size>::operator const char* () const
+	Str<Size>::operator const char * () const
 	{
 		return m_buf;
 	}
 
 	template <uint64_t Size>
-	Str<Size>::operator char* ()
+	Str<Size>::operator char * ()
 	{
 		return m_buf;
 	}

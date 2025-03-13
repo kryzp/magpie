@@ -21,7 +21,7 @@ MeshLoader::~MeshLoader()
 	delete m_quadMesh;
 	delete m_cubeMesh;
 
-	for (auto& [name, mesh] : m_meshCache) {
+	for (auto &[name, mesh] : m_meshCache) {
 		delete mesh;
 	}
 
@@ -237,12 +237,13 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
+		// todo: handle missing textures
+
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_LIGHTMAP);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_NORMALS);
 		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_EMISSIVE);
-		//fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
 
 		Material *material = g_materialSystem->buildMaterial(data);
 
@@ -250,17 +251,13 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 	}
 }
 
-void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture>& textures, const aiMaterial *material, aiTextureType type)
+void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const aiMaterial *material, aiTextureType type)
 {
 	Vector<Texture*> maps = loadMaterialTextures(material, type);
 
 	for (auto &tex : maps)
 	{
-		BoundTexture boundTexture = {};
-		boundTexture.texture = tex;
-		boundTexture.sampler = g_textureManager->getSampler("linear");
-
-		textures.pushBack(boundTexture);
+		textures.pushBack(BoundTexture(tex, g_textureManager->getSampler("linear")));
 		return; // for now only want one of each!
 	}
 }

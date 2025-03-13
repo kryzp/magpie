@@ -26,7 +26,7 @@ namespace llt
 	{
 		ShaderEffect *shader;
 		VkDescriptorSet set;
-		Pipeline pipeline;
+		GraphicsPipelineDefinition pipeline;
 
 		ShaderPass()
 			: shader(nullptr)
@@ -89,9 +89,9 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		Pipeline &getPipeline(ShaderPassType pass);
+		GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass);
 
-		void bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass);
+		void bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass, VkPipelineLayout layout);
 
 		VertexFormat m_vertexFormat;
 		Vector<BoundTexture> m_textures;

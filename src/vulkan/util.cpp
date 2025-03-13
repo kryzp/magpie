@@ -8,9 +8,10 @@
 
 using namespace llt;
 
-VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR>& availableSurfaceFormats)
+VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatKHR> &availableSurfaceFormats)
 {
-	for (auto &availableFormat : availableSurfaceFormats) {
+	for (auto &availableFormat : availableSurfaceFormats)
+	{
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			LLT_LOG("Found *desired* swapchain swap surface format & colour space!");
 			return availableFormat;
@@ -21,7 +22,7 @@ VkSurfaceFormatKHR vkutil::chooseSwapSurfaceFormat(const Vector<VkSurfaceFormatK
 	return availableSurfaceFormats[0];
 }
 
-VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR>& availablePresentModes, bool enableVsync)
+VkPresentModeKHR vkutil::chooseSwapPresentMode(const Vector<VkPresentModeKHR> &availablePresentModes, bool enableVsync)
 {
 //	if (!enableVsync) {
 //		return VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -69,7 +70,7 @@ uint32_t vkutil::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t filter
 	return 0;
 }
 
-VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+VkFormat vkutil::findSupportedFormat(VkPhysicalDevice device, const Vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
 	for (cauto &fmt : candidates)
 	{

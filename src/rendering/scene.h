@@ -22,7 +22,7 @@ namespace llt
 
 		Vector<RenderObject>::Iterator createRenderObject();
 
-		const Vector<SubMesh *>& getRenderList();
+		const Vector<SubMesh *> &getRenderList();
 
 	private:
 		void aggregateSubMeshes();

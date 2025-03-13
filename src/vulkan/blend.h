@@ -11,13 +11,6 @@ namespace llt
 		VkBlendFactor src;
 		VkBlendFactor dst;
 
-		Blend()
-			: op(VK_BLEND_OP_ADD)
-			, src(VK_BLEND_FACTOR_ONE)
-			, dst(VK_BLEND_FACTOR_ZERO)
-		{
-		}
-
 		Blend(VkBlendOp op, VkBlendFactor src, VkBlendFactor dst)
 			: op(op)
 			, src(src)
@@ -42,8 +35,8 @@ namespace llt
 		BlendState()
 			: blendConstants{0.0f, 0.0f, 0.0f, 0.0f}
 			, writeMask{true, true, true, true}
-			, colour()
-			, alpha()
+			, colour(VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO)
+			, alpha(VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
 			, blendOpEnabled(false)
 			, blendOp(VK_LOGIC_OP_COPY)
 			, enabled(true)

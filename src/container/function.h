@@ -13,15 +13,15 @@ namespace llt
 	/**
 	 * Wrapper around a function pointer pretty much
 	 */
-	template <typename Result, typename... Args>
-	class Function<Result(Args...)>
+	template <typename Result, typename ...Args>
+	class Function<Result(Args ...)>
 	{
-		typedef Result (*call_fn)(byte*, Args&&...);
-		typedef void   (*ctor_fn)(byte*, byte *);
+		typedef Result (*call_fn)(byte *, Args &&...);
+		typedef void   (*ctor_fn)(byte *, byte *);
 		typedef void   (*dtor_fn)(byte *);
 
 		template <typename F>
-		static Result getCallFn(F *fn, Args&&... args)
+		static Result getCallFn(F *fn, Args &&...args)
 		{
 			return (*fn)(std::forward<Args>(args)...);
 		}
@@ -48,8 +48,8 @@ namespace llt
 
 		~Function();
 
-		Result call(Args... args) const;
-		Result operator ()(Args... args) const;
+		Result call(Args ...args) const;
+		Result operator ()(Args ...args) const;
 
 		operator bool () const;
 
@@ -65,7 +65,7 @@ namespace llt
 		uint64_t m_dataSize;
 	};
 
-	template <typename Result, typename... Args>
+	template <typename Result, typename ...Args>
 	Function<Result(Args...)>::Function()
 		: m_callFn(nullptr)
 		, m_createFn(nullptr)
@@ -75,7 +75,7 @@ namespace llt
 	{
 	}
 
-	template <typename Result, typename... Args>
+	template <typename Result, typename ...Args>
 	Function<Result(Args...)>::Function(std::nullptr_t null)
 		: m_callFn(nullptr)
 		, m_createFn(nullptr)
@@ -85,8 +85,8 @@ namespace llt
 	{
 	}
 
-	template <typename Result, typename... Args>
-	Function<Result(Args...)>::Function(const Function<Result(Args...)>& other)
+	template <typename Result, typename ...Args>
+	Function<Result(Args...)>::Function(const Function<Result(Args ...)> &other)
 		: m_callFn(other.m_callFn)
 		, m_createFn(other.m_createFn)
 		, m_destroyFn(other.m_destroyFn)
@@ -100,7 +100,7 @@ namespace llt
 		}
 	}
 
-	template <typename Result, typename... Args>
+	template <typename Result, typename ...Args>
 	template <typename F>
 	Function<Result(Args...)>::Function(F fn)
 		: m_callFn   (reinterpret_cast<call_fn>(getCallFn<F>))
@@ -110,11 +110,11 @@ namespace llt
 		// allocate data for functions
 		m_dataSize = sizeof(F);
 		m_data = new byte[m_dataSize];
-		m_createFn(m_data, reinterpret_cast<byte*>(&fn));
+		m_createFn(m_data, reinterpret_cast<byte *>(&fn));
 	}
 
-	template <typename Result, typename... Args>
-	Function<Result(Args...)>::~Function()
+	template <typename Result, typename ...Args>
+	Function<Result(Args ...)>::~Function()
 	{
 		// make sure to destroy the data
 		if (m_destroyFn && m_data) {
@@ -124,26 +124,26 @@ namespace llt
 		delete[] m_data;
 	}
 
-	template <typename Result, typename... Args>
-	Result Function<Result(Args...)>::call(Args... args) const
+	template <typename Result, typename ...Args>
+	Result Function<Result(Args ...)>::call(Args ...args) const
 	{
 		return m_callFn(m_data, std::forward<Args>(args)...);
 	}
 
-	template <typename Result, typename... Args>
-	Result Function<Result(Args...)>::operator ()(Args... args) const
+	template <typename Result, typename ...Args>
+	Result Function<Result(Args ...)>::operator ()(Args ...args) const
 	{
 		return m_callFn(m_data, std::forward<Args>(args)...);
 	}
 
-	template <typename Result, typename... Args>
-	Function<Result(Args...)>::operator bool () const
+	template <typename Result, typename ...Args>
+	Function<Result(Args ...)>::operator bool () const
 	{
 		return m_callFn != nullptr;
 	}
 
-	template <typename Result, typename... Args>
-	bool Function<Result(Args...)>::operator == (const Function &other)
+	template <typename Result, typename ...Args>
+	bool Function<Result(Args ...)>::operator == (const Function &other)
 	{
 		return (
 			this->m_data == other.m_data &&
@@ -154,8 +154,8 @@ namespace llt
 		);
 	}
 
-	template <typename Result, typename... Args>
-	bool Function<Result(Args...)>::operator != (const Function &other)
+	template <typename Result, typename ...Args>
+	bool Function<Result(Args ...)>::operator != (const Function &other)
 	{
 		return !(*this == other);
 	}

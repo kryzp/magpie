@@ -47,12 +47,12 @@ void GenericRenderTarget::toggleClear(bool clear)
 
 void GenericRenderTarget::toggleClear(int idx, bool clear)
 {
-	m_renderInfo.getColourAttachment(idx).loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	m_renderInfo.getColourAttachment(idx).loadOp = (clear) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 }
 
 void GenericRenderTarget::toggleDepthStencilClear(bool clear)
 {
-	m_renderInfo.getDepthAttachment().loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	m_renderInfo.getDepthAttachment().loadOp = (clear) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 }
 
 const RenderInfo &GenericRenderTarget::getRenderInfo() const
