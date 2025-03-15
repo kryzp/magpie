@@ -78,10 +78,9 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// SKYBOX
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *skybox_effect = createEffect("skybox");
 		skybox_effect->setDescriptorSetLayout(layout);
@@ -92,10 +91,9 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// EQUIRECTANGULAR TO CUBEMAP
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *equirectangularToCubemap_effect = createEffect("equirectangular_to_cubemap");
 		equirectangularToCubemap_effect->setDescriptorSetLayout(layout);
@@ -106,10 +104,9 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// IRRADIANCE CONVOLUTION
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *irradianceConvolution_effect = createEffect("irradiance_convolution");
 		irradianceConvolution_effect->setDescriptorSetLayout(layout);
@@ -120,11 +117,10 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// PREFILTER CONVOLUTION
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
-		descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+			.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *prefilterConvolution_effect = createEffect("prefilter_convolution");
 		prefilterConvolution_effect->setDescriptorSetLayout(layout);
@@ -135,9 +131,8 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// BRDF LUT GENERATION
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *brdfLUT_effect = createEffect("brdf_lut");
 		brdfLUT_effect->setDescriptorSetLayout(layout);
@@ -148,11 +143,10 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// HDR TONEMAPPING
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-		descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *hdrTonemapping_effect = createEffect("hdr_tonemapping");
 		hdrTonemapping_effect->setDescriptorSetLayout(layout);
@@ -163,10 +157,9 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// BLOOM DOWNSAMPLE
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *bloomDownsample_effect = createEffect("bloom_downsample");
 		bloomDownsample_effect->setDescriptorSetLayout(layout);
@@ -177,10 +170,9 @@ void ShaderMgr::createDefaultShaderEffects()
 
 	// BLOOM UPSAMPLE
 	{
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
-		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+			.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *bloomUpsample_effect = createEffect("bloom_upsample");
 		bloomUpsample_effect->setDescriptorSetLayout(layout);

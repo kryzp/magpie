@@ -18,8 +18,7 @@ namespace llt
 
 		VkDescriptorSetLayout build(VkShaderStageFlags shaderStages, void *pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
 
-		void bind(uint32_t idx, VkDescriptorType type);
-		void clear();
+		DescriptorLayoutBuilder &bind(uint32_t idx, VkDescriptorType type);
 
 	private:
 		Vector<VkDescriptorSetLayoutBinding> m_bindings;

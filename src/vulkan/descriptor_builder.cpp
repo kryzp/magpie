@@ -21,7 +21,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	return g_vkCore->getDescriptorLayoutCache().createLayout(layoutCreateInfo);
 }
 
-void DescriptorLayoutBuilder::bind(uint32_t idx, VkDescriptorType type)
+DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t idx, VkDescriptorType type)
 {
 	VkDescriptorSetLayoutBinding binding = {};
 	binding.binding = idx;
@@ -31,11 +31,8 @@ void DescriptorLayoutBuilder::bind(uint32_t idx, VkDescriptorType type)
 	binding.pImmutableSamplers = nullptr;
 
 	m_bindings.pushBack(binding);
-}
 
-void DescriptorLayoutBuilder::clear()
-{
-	m_bindings.clear();
+	return *this;
 }
 
 // ---
