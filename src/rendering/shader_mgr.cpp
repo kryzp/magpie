@@ -37,10 +37,10 @@ void ShaderMgr::loadDefaultShaders()
 
 void ShaderMgr::loadDefaultShaderPrograms()
 {
-	load("primitive_vs",					"../../res/shaders/compiled/primitive_vs.spv",					VK_SHADER_STAGE_VERTEX_BIT);
-	load("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
-	load("primitive_quad_vs",				"../../res/shaders/compiled/primitive_quad_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
-	load("model_vs",						"../../res/shaders/compiled/model_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
+	load("primitive_vs",					"../../res/shaders/compiled/primitive_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
+	load("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
+	load("primitive_quad_vs",				"../../res/shaders/compiled/primitive_quad_vs.spv",					VK_SHADER_STAGE_VERTEX_BIT);
+	load("model_vs",						"../../res/shaders/compiled/model_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
 
 	load("equirectangular_to_cubemap_ps",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("irradiance_convolution_ps",		"../../res/shaders/compiled/irradiance_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
