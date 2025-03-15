@@ -10,12 +10,14 @@ namespace llt
 
 	class PostProcessPass
 	{
+		constexpr static int BLOOM_MIPS = 6;
+
 	public:
 		PostProcessPass() = default;
 		~PostProcessPass() = default;
 
-		void init(DescriptorPoolDynamic &pool);
-		void cleanUp();
+		void init(DescriptorPoolDynamic &pool, RenderTarget *input);
+		void dispose();
 
 		void render(CommandBuffer &cmd);
 
@@ -31,8 +33,8 @@ namespace llt
 	private:
 		void initDefaultValues();
 
-		void createHDRResources(DescriptorPoolDynamic &pool);
-		void createBloomResources(DescriptorPoolDynamic &pool);
+		void createHDRResources(DescriptorPoolDynamic &pool, RenderTarget *input);
+		void createBloomResources(DescriptorPoolDynamic &pool, RenderTarget *input);
 
 		void applyHDRTexture(CommandBuffer &cmd);
 
@@ -50,7 +52,9 @@ namespace llt
 		VkDescriptorSet m_bloomDownsampleSet;
 
 		GraphicsPipelineDefinition m_bloomUpsamplePipeline;
-		VkDescriptorSet m_bloomUpsampleSet;
+		VkDescriptorSet m_bloomUpsampleSets[BLOOM_MIPS - 1];
+
+		VkImageView m_bloomViews[BLOOM_MIPS];
 
 		RenderTarget *m_bloomTarget;
 	};

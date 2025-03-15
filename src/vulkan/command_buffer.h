@@ -23,6 +23,7 @@ namespace llt
 		CommandBuffer(VkCommandBuffer buffer);
 		~CommandBuffer();
 
+		void beginRecording();
 		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
 
 		void beginRendering(GenericRenderTarget *target);
@@ -98,6 +99,7 @@ namespace llt
 			const Vector<VkImageMemoryBarrier> &imageMemoryBarriers
 		);
 
+		void transitionForMipmapGeneration(Texture &texture);
 		void generateMipmaps(const Texture &texture);
 
 		void blitImage(
@@ -129,11 +131,9 @@ namespace llt
 
 		void dispatch(uint32_t gcX, uint32_t gcY, uint32_t gcZ);
 
-		VkCommandBuffer getBuffer() const;
+		VkCommandBuffer getHandle() const;
 
 	private:
-		void _beginRecording();
-
 		VkCommandBuffer m_buffer;
 
 		VkViewport m_viewport;

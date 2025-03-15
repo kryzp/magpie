@@ -1,6 +1,6 @@
 #include "render_target.h"
 
-#include "backend.h"
+#include "core.h"
 #include "util.h"
 
 #include "math/colour.h"
@@ -11,7 +11,6 @@ RenderTarget::RenderTarget(uint32_t width, uint32_t height)
 	: GenericRenderTarget(width, height)
 	, m_attachments()
 	, m_resolveAttachments()
-	, m_attachmentViews()
 	, m_layoutQueue()
 	, m_depth()
 	, m_resolveDepth()
@@ -28,14 +27,6 @@ RenderTarget::~RenderTarget()
 void RenderTarget::cleanUp()
 {
 	m_renderInfo.clear();
-
-	for (auto &view : m_attachmentViews)
-	{
-		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
-		view = VK_NULL_HANDLE;
-	}
-
-	m_attachmentViews.clear();
 
 	for (Texture *texture : m_attachments)
 	{
@@ -85,8 +76,6 @@ void RenderTarget::endRendering(CommandBuffer &cmd)
 
 		if (!col->isTransient())
 		{
-			int sss = m_layoutQueue.size();
-
 			VkImageLayout layout = m_layoutQueue.front();
 
 			m_layoutQueue.pop_front();
@@ -153,8 +142,7 @@ void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
 		resolveView = resolve->getStandardView();
 	}
 
-	VkImageView view = texture->createView(1, layer, mip);
-	m_attachmentViews.pushBack(view);
+	VkImageView view = texture->getView(1, layer, mip);
 
 	m_renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -186,7 +174,7 @@ void RenderTarget::setDepthAttachment(Texture *texture)
 
 void RenderTarget::createDepthAttachment()
 {
-	VkFormat format = vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device);
+	VkFormat format = vkutil::findDepthFormat(g_vkCore->m_physicalData.device);
 
 	m_depth = new Texture();
 

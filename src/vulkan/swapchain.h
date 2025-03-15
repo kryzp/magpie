@@ -1,5 +1,5 @@
-#ifndef VK_BACKBUFFER_H_
-#define VK_BACKBUFFER_H_
+#ifndef VK_SWAPCHAIN_H_
+#define VK_SWAPCHAIN_H_
 
 #include <glm/vec4.hpp>
 
@@ -12,14 +12,14 @@
 
 namespace llt
 {
-	class VulkanBackend;
+	class VulkanCore;
 
 	// swapchain wrapper
-	class Backbuffer : public GenericRenderTarget
+	class Swapchain : public GenericRenderTarget
 	{
 	public:
-		Backbuffer();
-		~Backbuffer() override;
+		Swapchain();
+		~Swapchain() override;
 
 		void create();
 		void createSurface();
@@ -79,4 +79,4 @@ namespace llt
 	};
 }
 
-#endif // VK_BACKBUFFER_H_
+#endif // VK_SWAPCHAIN_H_

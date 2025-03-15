@@ -3,7 +3,9 @@
 using namespace llt;
 
 Mesh::Mesh()
-	: m_subMeshes()
+	: m_owner(nullptr)
+	, m_subMeshes()
+	, m_directory("")
 {
 }
 
@@ -42,4 +44,14 @@ void Mesh::setOwner(RenderObject *owner)
 RenderObject *Mesh::getOwner()
 {
 	return m_owner;
+}
+
+void Mesh::setDirectory(const String &directory)
+{
+	m_directory = directory;
+}
+
+const String &Mesh::getDirectory() const
+{
+	return m_directory;
 }

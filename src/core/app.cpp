@@ -4,7 +4,7 @@
 #include "debug_ui.h"
 #include "profiler.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 #include "rendering/camera.h"
 #include "rendering/material_system.h"
@@ -22,17 +22,17 @@ using namespace llt;
 App::App(const Config &config)
 	: m_config(config)
 	, m_running(false)
-	, m_camera(config.width, config.height, 75.0f, 0.01f, 50.0f)
+	, m_camera(config.width, config.height, 75.0f, 0.01f, 100.0f)
 	, m_renderer()
 	, m_frameCount(0)
 {
 	g_platform = new Platform(config);
-	g_vulkanBackend = new VulkanBackend(config);
+	g_vkCore = new VulkanCore(config);
 
 	g_inputState = new Input();
 
-	Backbuffer *backbuffer = g_vulkanBackend->createBackbuffer();
-	backbuffer->setClearColour(0, Colour::black());
+	Swapchain *swapchain = g_vkCore->createSwapchain();
+	swapchain->setClearColour(0, Colour::black());
 
 	g_platform->initImGui();
 
@@ -82,7 +82,7 @@ App::~App()
 	delete g_profiler;
 	delete g_inputState;
 
-	delete g_vulkanBackend;
+	delete g_vkCore;
 	delete g_platform;
 }
 

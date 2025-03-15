@@ -1,6 +1,6 @@
 #include "shader_mgr.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 #include "io/file_stream.h"
 
@@ -14,14 +14,11 @@ using namespace llt;
 ShaderMgr::ShaderMgr()
 	: m_shaderCache()
 	, m_effects()
-	, m_descriptorLayoutCache()
 {
 }
 
 ShaderMgr::~ShaderMgr()
 {
-	m_descriptorLayoutCache.cleanUp();
-
 	for (auto &[name, effect] : m_effects)
 		delete effect;
 
@@ -40,19 +37,20 @@ void ShaderMgr::loadDefaultShaders()
 
 void ShaderMgr::loadDefaultShaderPrograms()
 {
-	load("primitiveVS",					"../../res/shaders/raster/primitive_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
-	load("primitiveQuadVS",				"../../res/shaders/raster/primitive_quad_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
-	load("genericVertex",				"../../res/shaders/raster/model_vs.spv",					VK_SHADER_STAGE_VERTEX_BIT);
+	load("primitive_vs",					"../../res/shaders/compiled/primitive_vs.spv",					VK_SHADER_STAGE_VERTEX_BIT);
+	load("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
+	load("primitive_quad_vs",				"../../res/shaders/compiled/primitive_quad_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
+	load("model_vs",						"../../res/shaders/compiled/model_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
 
-	load("equirectangularToCubemap",	"../../res/shaders/raster/equirectangular_to_cubemap.spv",	VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("irradianceConvolution",		"../../res/shaders/raster/irradiance_convolution.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("prefilterConvolution",		"../../res/shaders/raster/prefilter_convolution.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("brdfIntegrator",				"../../res/shaders/raster/brdf_integrator.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("pbrFragment",					"../../res/shaders/raster/texturedPBR.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("skyboxFragment",				"../../res/shaders/raster/skybox.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("hdrTonemappingPS",			"../../res/shaders/raster/hdr_tonemapping.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("bloomDownsamplePS",			"../../res/shaders/raster/bloom_downsample.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-	load("bloomUpsamplePS",				"../../res/shaders/raster/bloom_upsample.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("equirectangular_to_cubemap_ps",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("irradiance_convolution_ps",		"../../res/shaders/compiled/irradiance_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("prefilter_convolution_ps",		"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("brdf_integrator_ps",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("texturedPBR_ps",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("skybox_ps",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("hdr_tonemapping_ps",				"../../res/shaders/compiled/hdr_tonemapping_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("bloom_upsample_ps",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 void ShaderMgr::createDefaultShaderEffects()
@@ -69,13 +67,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		for (int i = 3; i <= 10; i++)
 			descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *pbr_effect = createEffect("texturedPBR_opaque");
+		ShaderEffect *pbr_effect = createEffect("texturedPBR");
 		pbr_effect->setDescriptorSetLayout(layout);
 		pbr_effect->setPushConstantsSize(0);
-		pbr_effect->addStage(g_shaderManager->get("genericVertex"));
-		pbr_effect->addStage(g_shaderManager->get("pbrFragment"));
+		pbr_effect->addStage(g_shaderManager->get("model_vs"));
+		pbr_effect->addStage(g_shaderManager->get("texturedPBR_ps"));
 	}
 
 	// SKYBOX
@@ -83,13 +81,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
 		ShaderEffect *skybox_effect = createEffect("skybox");
 		skybox_effect->setDescriptorSetLayout(layout);
 		skybox_effect->setPushConstantsSize(sizeof(float)*16 * 2);
-		skybox_effect->addStage(get("primitiveVS"));
-		skybox_effect->addStage(get("skyboxFragment"));
+		skybox_effect->addStage(get("skybox_vs"));
+		skybox_effect->addStage(get("skybox_ps"));
 	}
 
 	// EQUIRECTANGULAR TO CUBEMAP
@@ -97,13 +95,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *equirectangularToCubemap_effect = createEffect("equirectangularToCubemap");
+		ShaderEffect *equirectangularToCubemap_effect = createEffect("equirectangular_to_cubemap");
 		equirectangularToCubemap_effect->setDescriptorSetLayout(layout);
 		equirectangularToCubemap_effect->setPushConstantsSize(sizeof(float)*16 * 2);
-		equirectangularToCubemap_effect->addStage(get("primitiveVS"));
-		equirectangularToCubemap_effect->addStage(get("equirectangularToCubemap"));
+		equirectangularToCubemap_effect->addStage(get("primitive_vs"));
+		equirectangularToCubemap_effect->addStage(get("equirectangular_to_cubemap_ps"));
 	}
 
 	// IRRADIANCE CONVOLUTION
@@ -111,13 +109,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *irradianceConvolution_effect = createEffect("irradianceConvolution");
+		ShaderEffect *irradianceConvolution_effect = createEffect("irradiance_convolution");
 		irradianceConvolution_effect->setDescriptorSetLayout(layout);
 		irradianceConvolution_effect->setPushConstantsSize(sizeof(float)*16 * 2);
-		irradianceConvolution_effect->addStage(get("primitiveVS"));
-		irradianceConvolution_effect->addStage(get("irradianceConvolution"));
+		irradianceConvolution_effect->addStage(get("primitive_vs"));
+		irradianceConvolution_effect->addStage(get("irradiance_convolution_ps"));
 	}
 
 	// PREFILTER CONVOLUTION
@@ -126,26 +124,26 @@ void ShaderMgr::createDefaultShaderEffects()
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 		descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *prefilterConvolution_effect = createEffect("prefilterConvolution");
+		ShaderEffect *prefilterConvolution_effect = createEffect("prefilter_convolution");
 		prefilterConvolution_effect->setDescriptorSetLayout(layout);
 		prefilterConvolution_effect->setPushConstantsSize(sizeof(float)*16 * 2);
-		prefilterConvolution_effect->addStage(get("primitiveVS"));
-		prefilterConvolution_effect->addStage(get("prefilterConvolution"));
+		prefilterConvolution_effect->addStage(get("primitive_vs"));
+		prefilterConvolution_effect->addStage(get("prefilter_convolution_ps"));
 	}
 
 	// BRDF LUT GENERATION
 	{
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *brdfLUT_effect = createEffect("brdfLUT");
+		ShaderEffect *brdfLUT_effect = createEffect("brdf_lut");
 		brdfLUT_effect->setDescriptorSetLayout(layout);
 		brdfLUT_effect->setPushConstantsSize(0);
-		brdfLUT_effect->addStage(get("primitiveQuadVS"));
-		brdfLUT_effect->addStage(get("brdfIntegrator"));
+		brdfLUT_effect->addStage(get("primitive_quad_vs"));
+		brdfLUT_effect->addStage(get("brdf_integrator_ps"));
 	}
 
 	// HDR TONEMAPPING
@@ -154,13 +152,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 		descriptorLayoutBuilder.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *hdrTonemapping_effect = createEffect("hdrTonemapping");
+		ShaderEffect *hdrTonemapping_effect = createEffect("hdr_tonemapping");
 		hdrTonemapping_effect->setDescriptorSetLayout(layout);
 		hdrTonemapping_effect->setPushConstantsSize(sizeof(float)*2);
-		hdrTonemapping_effect->addStage(get("primitiveQuadVS"));
-		hdrTonemapping_effect->addStage(get("hdrTonemappingPS"));
+		hdrTonemapping_effect->addStage(get("primitive_quad_vs"));
+		hdrTonemapping_effect->addStage(get("hdr_tonemapping_ps"));
 	}
 
 	// BLOOM DOWNSAMPLE
@@ -168,13 +166,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *bloomDownsample_effect = createEffect("bloomDownsample");
+		ShaderEffect *bloomDownsample_effect = createEffect("bloom_downsample");
 		bloomDownsample_effect->setDescriptorSetLayout(layout);
 		bloomDownsample_effect->setPushConstantsSize(sizeof(int));
-		bloomDownsample_effect->addStage(get("primitiveQuadVS"));
-		bloomDownsample_effect->addStage(get("bloomDownsamplePS"));
+		bloomDownsample_effect->addStage(get("primitive_quad_vs"));
+		bloomDownsample_effect->addStage(get("bloom_downsample_ps"));
 	}
 
 	// BLOOM UPSAMPLE
@@ -182,13 +180,13 @@ void ShaderMgr::createDefaultShaderEffects()
 		DescriptorLayoutBuilder descriptorLayoutBuilder;
 		descriptorLayoutBuilder.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS, &m_descriptorLayoutCache);
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		ShaderEffect *bloomUpsample_effect = createEffect("bloomUpsample");
+		ShaderEffect *bloomUpsample_effect = createEffect("bloom_upsample");
 		bloomUpsample_effect->setDescriptorSetLayout(layout);
 		bloomUpsample_effect->setPushConstantsSize(sizeof(float));
-		bloomUpsample_effect->addStage(get("primitiveQuadVS"));
-		bloomUpsample_effect->addStage(get("bloomUpsamplePS"));
+		bloomUpsample_effect->addStage(get("primitive_quad_vs"));
+		bloomUpsample_effect->addStage(get("bloom_upsample_ps"));
 	}
 }
 

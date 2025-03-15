@@ -25,6 +25,7 @@ float4 main(PSInput input) : SV_TARGET
 	float3 bloom = bloomTexture.Sample(bloomSampler, input.uv).rgb;
 	
 	col = lerp(col, bloom, pc.bloomIntensity);
+	
 	col = 1.0 - exp(-col * pc.exposure);
 	
 	return float4(col, 1.0);

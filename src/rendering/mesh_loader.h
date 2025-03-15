@@ -33,8 +33,8 @@ namespace llt
 		void processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
 		void processSubMesh(llt::SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 
-		void fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const aiMaterial *material, aiTextureType type);
-		Vector<Texture*> loadMaterialTextures(const aiMaterial *material, aiTextureType type);
+		void fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, const Texture *fallback);
+		Vector<Texture*> loadMaterialTextures(const aiMaterial *material, aiTextureType type, const String &localPath);
 
 		HashMap<String, Mesh*> m_meshCache;
 		Assimp::Importer m_importer;

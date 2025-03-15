@@ -7,7 +7,7 @@
 
 #include "math/colour.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 #include "vulkan/shader.h"
 #include "vulkan/pipeline.h"
 #include "vulkan/descriptor_builder.h"
@@ -17,15 +17,15 @@ llt::PostProcessPass llt::g_postProcessPass;
 
 using namespace llt;
 
-void PostProcessPass::init(DescriptorPoolDynamic &pool)
+void PostProcessPass::init(DescriptorPoolDynamic &pool, RenderTarget *input)
 {
 	initDefaultValues();
 
-	createBloomResources(pool);
-	createHDRResources(pool);
+	createBloomResources(pool, input);
+	createHDRResources(pool, input);
 }
 
-void PostProcessPass::cleanUp()
+void PostProcessPass::dispose()
 {
 }
 
@@ -37,10 +37,10 @@ void PostProcessPass::initDefaultValues()
 	m_bloomIntensity = 0.0f;
 }
 
-void PostProcessPass::createHDRResources(DescriptorPoolDynamic &pool)
+void PostProcessPass::createHDRResources(DescriptorPoolDynamic &pool, RenderTarget *input)
 {
 	BoundTexture sceneTexture(
-		g_renderTargetManager->get("target")->getAttachment(0),
+		input->getAttachment(0),
 		g_textureManager->getSampler("linear")
 	);
 
@@ -49,14 +49,14 @@ void PostProcessPass::createHDRResources(DescriptorPoolDynamic &pool)
 		g_textureManager->getSampler("linear")
 	);
 
-	ShaderEffect *hdrTonemappingShader = g_shaderManager->getEffect("hdrTonemapping");
+	ShaderEffect *hdrTonemappingShader = g_shaderManager->getEffect("hdr_tonemapping");
 
 	m_hdrSet = pool.allocate(hdrTonemappingShader->getDescriptorSetLayout());
 
-	DescriptorWriter hdrWriter;
-	hdrWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sceneTexture.getStandardImageInfo());
-	hdrWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, bloomTexture.getStandardImageInfo());
-	hdrWriter.updateSet(m_hdrSet);
+	DescriptorWriter()
+		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sceneTexture.getStandardImageInfo())
+		.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, bloomTexture.getStandardImageInfo())
+		.updateSet(m_hdrSet);
 
 	m_hdrPipeline.setShader(hdrTonemappingShader);
 	m_hdrPipeline.setVertexFormat(g_primitiveUvVertexFormat);
@@ -64,28 +64,33 @@ void PostProcessPass::createHDRResources(DescriptorPoolDynamic &pool)
 	m_hdrPipeline.setDepthWrite(false);
 }
 
-void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool)
+void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool, RenderTarget *input)
 {
 	m_bloomTarget = g_renderTargetManager->createTarget(
 		"bloomTarget",
-		g_vulkanBackend->m_backbuffer->getWidth(),
-		g_vulkanBackend->m_backbuffer->getHeight(),
+		g_vkCore->m_swapchain->getWidth(),
+		g_vkCore->m_swapchain->getHeight(),
 		{
 			VK_FORMAT_R32G32B32A32_SFLOAT
 		},
 		VK_SAMPLE_COUNT_1_BIT,
-		5
+		BLOOM_MIPS
 	);
-
-	m_bloomTarget->createDepthAttachment();
-	m_bloomTarget->toggleClear(false);
-	m_bloomTarget->setClearColours(Colour::black());
 
 	// ---
 
-	ShaderEffect *bloomDownsampleShader = g_shaderManager->getEffect("bloomDownsample");
+	BoundTexture downsampleInputImage(
+		input->getAttachment(0),
+		g_textureManager->getSampler("linear")
+	);
+
+	ShaderEffect *bloomDownsampleShader = g_shaderManager->getEffect("bloom_downsample");
 
 	m_bloomDownsampleSet = pool.allocate(bloomDownsampleShader->getDescriptorSetLayout());
+
+	DescriptorWriter()
+		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, downsampleInputImage.getStandardImageInfo())
+		.updateSet(m_bloomDownsampleSet);
 
 	m_bloomDownsamplePipeline.setShader(bloomDownsampleShader);
 	m_bloomDownsamplePipeline.setVertexFormat(g_primitiveUvVertexFormat);
@@ -94,9 +99,7 @@ void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool)
 
 	// ---
 
-	ShaderEffect *bloomUpsampleShader = g_shaderManager->getEffect("bloomUpsample");
-
-	m_bloomUpsampleSet = pool.allocate(bloomUpsampleShader->getDescriptorSetLayout());
+	ShaderEffect *bloomUpsampleShader = g_shaderManager->getEffect("bloom_upsample");
 
 	BlendState upsampleBlend;
 	upsampleBlend.enabled = true;
@@ -116,11 +119,31 @@ void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool)
 	m_bloomUpsamplePipeline.setDepthTest(false);
 	m_bloomUpsamplePipeline.setDepthWrite(false);
 	m_bloomUpsamplePipeline.setBlendState(upsampleBlend);
+
+	BoundTexture upsampleImageInput(
+		m_bloomTarget->getAttachment(0),
+		g_textureManager->getSampler("linear")
+	);
+
+	for (int i = 0; i < BLOOM_MIPS; i++)
+	{
+		m_bloomViews[i] = m_bloomTarget->getAttachment(0)->getView(1, 0, i);
+	}
+
+	for (int i = 0; i < BLOOM_MIPS - 1; i++)
+	{
+		m_bloomUpsampleSets[i] = pool.allocate(bloomUpsampleShader->getDescriptorSetLayout());
+
+		DescriptorWriter()
+			.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, upsampleImageInput.getImageInfo(m_bloomViews[i + 1]))
+			.updateSet(m_bloomUpsampleSets[i]);
+	}
 }
 
 void PostProcessPass::render(CommandBuffer &cmd)
 {
 	renderBloomDownsamples(cmd);
+
 	renderBloomUpsamples(cmd);
 
 	applyHDRTexture(cmd);
@@ -128,25 +151,26 @@ void PostProcessPass::render(CommandBuffer &cmd)
 
 void PostProcessPass::applyHDRTexture(CommandBuffer &cmd)
 {
+	struct
+	{
+		float exposure;
+		float bloomIntensity;
+	}
+	pc;
+
+	pc.exposure = m_exposure;
+	pc.bloomIntensity = m_bloomIntensity;
+
 	SubMesh *quadMesh = g_meshLoader->getQuadMesh();
 
-	cmd.beginRendering(g_vulkanBackend->m_backbuffer);
+	cmd.beginRecording();
+	cmd.beginRendering(g_vkCore->m_swapchain);
 	{
-		PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_hdrPipeline, cmd.getCurrentRenderInfo());
+		PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_hdrPipeline, cmd.getCurrentRenderInfo());
 
 		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
 		cmd.bindDescriptorSets(0, pipelineData.layout, { m_hdrSet }, {});
-
-		struct
-		{
-			float exposure;
-			float bloomIntensity;
-		}
-		pc;
-
-		pc.exposure = m_exposure;
-		pc.bloomIntensity = m_bloomIntensity;
 
 		cmd.pushConstants(
 			pipelineData.layout,
@@ -163,46 +187,37 @@ void PostProcessPass::applyHDRTexture(CommandBuffer &cmd)
 
 void PostProcessPass::renderBloomDownsamples(CommandBuffer &cmd)
 {
+	struct
+	{
+		int mipLevel;
+	}
+	pc;
+
 	Texture *attachment = m_bloomTarget->getAttachment(0);
 	SubMesh *quad = g_meshLoader->getQuadMesh();
 
+	cmd.beginRecording();
+
 	for (int mipLevel = 0; mipLevel < attachment->getMipLevels(); mipLevel++)
 	{
-		int width = attachment->getWidth() >> mipLevel;
+		int width  = attachment->getWidth()  >> mipLevel;
 		int height = attachment->getHeight() >> mipLevel;
-
-		VkImageView view = attachment->createView(1, 0, mipLevel);
 
 		RenderInfo info;
 		info.setSize(width, height);
 		info.addColourAttachment(
 			VK_ATTACHMENT_LOAD_OP_LOAD,
-			view,
+			m_bloomViews[mipLevel],
 			attachment->getFormat()
 		);
 
 		cmd.beginRendering(info);
 		{
-			PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_bloomDownsamplePipeline, cmd.getCurrentRenderInfo());
+			PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_bloomDownsamplePipeline, cmd.getCurrentRenderInfo());
 
 			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-			BoundTexture downsampleInputImage(
-				g_renderTargetManager->get("target")->getAttachment(0),
-				g_textureManager->getSampler("linear")
-			);
-
-			DescriptorWriter downsampleWriter;
-			downsampleWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, downsampleInputImage.getStandardImageInfo());
-			downsampleWriter.updateSet(m_bloomDownsampleSet);
-
 			cmd.bindDescriptorSets(0, pipelineData.layout, { m_bloomDownsampleSet }, {});
-
-			struct
-			{
-				int mipLevel;
-			}
-			pc;
 
 			pc.mipLevel = mipLevel;
 
@@ -218,16 +233,21 @@ void PostProcessPass::renderBloomDownsamples(CommandBuffer &cmd)
 			quad->render(cmd);
 		}
 		cmd.endRendering();
-		cmd.submit();
-
-		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-		
-		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 	}
+
+	cmd.submit();
 }
 
 void PostProcessPass::renderBloomUpsamples(CommandBuffer &cmd)
 {
+	struct
+	{
+		float filterRadius;
+	}
+	pc;
+
+	pc.filterRadius = m_bloomRadius;
+
 	Texture *attachment = m_bloomTarget->getAttachment(0);
 	SubMesh *quad = g_meshLoader->getQuadMesh();
 
@@ -236,43 +256,24 @@ void PostProcessPass::renderBloomUpsamples(CommandBuffer &cmd)
 		int dstWidth  = attachment->getWidth()  >> (mipLevel - 1);
 		int dstHeight = attachment->getHeight() >> (mipLevel - 1);
 
-		VkImageView srcView = m_bloomTarget->getAttachment(0)->createView(1, 0, mipLevel);
-		VkImageView dstView = attachment->createView(1, 0, mipLevel - 1);
-
 		RenderInfo info;
 		info.setSize(dstWidth, dstHeight);
 		info.addColourAttachment(
 			VK_ATTACHMENT_LOAD_OP_LOAD,
-			dstView,
+			m_bloomViews[mipLevel - 1],
 			attachment->getFormat()
 		);
 
+		cmd.beginRecording();
 		cmd.beginRendering(info);
 		{
-			PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_bloomUpsamplePipeline, info);
+			PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_bloomUpsamplePipeline, info);
 
 			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-			BoundTexture upsampleImageInput(
-				m_bloomTarget->getAttachment(0),
-				g_textureManager->getSampler("linear")
-			);
-
-			DescriptorWriter upsampleWriter;
-			upsampleWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, upsampleImageInput.getImageInfo(srcView));
-			upsampleWriter.updateSet(m_bloomUpsampleSet);
-
-			cmd.bindDescriptorSets(0, pipelineData.layout, { m_bloomUpsampleSet }, {});
+			cmd.bindDescriptorSets(0, pipelineData.layout, { m_bloomUpsampleSets[mipLevel - 1] }, {});
 
 			cmd.setViewport({ 0.0f, 0.0f, (float)dstWidth, (float)dstHeight });
-
-			struct
-			{
-				float filterRadius;
-			}
-			pc;
-
-			pc.filterRadius = m_bloomRadius;
 
 			cmd.pushConstants(
 				pipelineData.layout,
@@ -285,11 +286,6 @@ void PostProcessPass::renderBloomUpsamples(CommandBuffer &cmd)
 		}
 		cmd.endRendering();
 		cmd.submit();
-
-		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-
-		vkDestroyImageView(g_vulkanBackend->m_device, srcView, nullptr);
-		vkDestroyImageView(g_vulkanBackend->m_device, dstView, nullptr);
 	}
 }
 

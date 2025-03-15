@@ -1,7 +1,7 @@
 #include "material.h"
 #include "material_system.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 using namespace llt;
 
@@ -22,23 +22,21 @@ uint64_t Material::getHash() const
 	return result;
 }
 
-GraphicsPipelineDefinition &Material::getPipelineDef(ShaderPassType pass)
+const GraphicsPipelineDefinition &Material::getPipelineDef(ShaderPassType pass) const
 {
 	return m_passes[pass].pipeline;
 }
 
-void Material::bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass, VkPipelineLayout layout)
+const VkDescriptorSet &Material::getDescriptorSet(ShaderPassType pass) const
 {
-	Vector<uint32_t> dynamicOffsets = {
+	return m_passes[pass].set;
+}
+
+Vector<uint32_t> Material::getDynamicOffsets() const
+{
+	return {
 		g_materialSystem->getGlobalBuffer()->getDynamicOffset(),
 		g_materialSystem->getInstanceBuffer()->getDynamicOffset(),
 		m_parameterBuffer->getDynamicOffset()
 	};
-
-	cmd.bindDescriptorSets(
-		0,
-		layout,
-		{ m_passes[pass].set },
-		dynamicOffsets
-	);
 }

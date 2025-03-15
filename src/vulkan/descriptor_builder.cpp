@@ -1,10 +1,10 @@
 #include "descriptor_builder.h"
 #include "descriptor_layout_cache.h"
-#include "backend.h"
+#include "core.h"
 
 using namespace llt;
 
-VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderStages, DescriptorLayoutCache *cache, void *pNext, VkDescriptorSetLayoutCreateFlags flags)
+VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderStages, void *pNext, VkDescriptorSetLayoutCreateFlags flags)
 {
 	for (auto &binding : m_bindings)
 	{
@@ -18,21 +18,7 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	layoutCreateInfo.bindingCount = m_bindings.size();
 	layoutCreateInfo.pBindings = m_bindings.data();
 
-	VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-	
-	if (cache)
-	{
-		layout = cache->createLayout(layoutCreateInfo);
-	}
-	else
-	{
-		LLT_VK_CHECK(
-			vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &layout),
-			"Failed to create descriptor set layout"
-		);
-	}
-
-	return layout;
+	return g_vkCore->getDescriptorLayoutCache().createLayout(layoutCreateInfo);
 }
 
 void DescriptorLayoutBuilder::bind(uint32_t idx, VkDescriptorType type)
@@ -52,17 +38,9 @@ void DescriptorLayoutBuilder::clear()
 	m_bindings.clear();
 }
 
-// //
+// ---
 
-void DescriptorWriter::clear()
-{
-	m_writes.clear();
-
-	m_bufferInfos.clear();
-	m_imageInfos.clear();
-}
-
-void DescriptorWriter::updateSet(const VkDescriptorSet &set)
+DescriptorWriter &DescriptorWriter::updateSet(const VkDescriptorSet &set)
 {
 	for (auto &write : m_writes)
 	{
@@ -70,13 +48,15 @@ void DescriptorWriter::updateSet(const VkDescriptorSet &set)
 	}
 
 	vkUpdateDescriptorSets(
-		g_vulkanBackend->m_device,
+		g_vkCore->m_device,
 		m_writes.size(), m_writes.data(),
 		0, nullptr
 	);
+
+	return *this;
 }
 
-void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo &info)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo &info)
 {
 	m_bufferInfos.pushBack(info);
 
@@ -89,9 +69,11 @@ void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, const Vk
 	write.pBufferInfo = &m_bufferInfos.back();
 
 	m_writes.pushBack(write);
+
+	return *this;
 }
 
-void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset)
 {
 	VkDescriptorBufferInfo info = {};
 	info.buffer = buffer;
@@ -99,9 +81,11 @@ void DescriptorWriter::writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer
 	info.range = size;
 
 	writeBuffer(idx, type, info);
+
+	return *this;
 }
 
-void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo &info)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo &info)
 {
 	m_imageInfos.pushBack(info);
 
@@ -114,9 +98,11 @@ void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, const VkD
 	write.pImageInfo = &m_imageInfos.back();
 
 	m_writes.pushBack(write);
+
+	return *this;
 }
 
-void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout)
 {
 	VkDescriptorImageInfo info = {};
 	info.sampler = sampler;
@@ -124,6 +110,8 @@ void DescriptorWriter::writeImage(uint32_t idx, VkDescriptorType type, VkImageVi
 	info.imageLayout = layout;
 
 	writeImage(idx, type, info);
+
+	return *this;
 }
 
 /*
@@ -181,7 +169,7 @@ VkDescriptorSet DescriptorBuilder::buildGivenLayout(const VkDescriptorSetLayout 
 
 	if (needsUpdating) {
 		vkUpdateDescriptorSets(
-			g_vulkanBackend->device,
+			g_vkCore->device,
 			m_writes.size(),
 			m_writes.data(),
 			0, nullptr

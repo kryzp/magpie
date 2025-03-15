@@ -1,4 +1,4 @@
-#include "backend.h"
+#include "core.h"
 
 #include "core/platform.h"
 
@@ -9,9 +9,9 @@
 
 #include "util.h"
 #include "texture.h"
-#include "backbuffer.h"
+#include "swapchain.h"
 
-llt::VulkanBackend *llt::g_vulkanBackend = nullptr;
+llt::VulkanCore *llt::g_vkCore = nullptr;
 
 using namespace llt;
 
@@ -156,7 +156,7 @@ static Vector<const char*> getInstanceExtensions()
 	return extensions;
 }
 
-VulkanBackend::VulkanBackend(const Config &config)
+VulkanCore::VulkanCore(const Config &config)
 	: m_instance()
 	, m_device()
 	, m_physicalData()
@@ -164,11 +164,12 @@ VulkanBackend::VulkanBackend(const Config &config)
 	, m_swapChainImageFormat()
 	, m_vmaAllocator()
 	, m_pipelineCache()
+	, m_descriptorLayoutCache()
 	, m_graphicsQueue()
 	, m_computeQueues()
 	, m_transferQueues()
 	, m_pipelineProcessCache()
-	, m_backbuffer()
+	, m_swapchain()
 	, m_currentFrameIdx()
 #if LLT_DEBUG
 	, m_debugMessenger()
@@ -255,7 +256,7 @@ VulkanBackend::VulkanBackend(const Config &config)
 	LLT_LOG("Vulkan Backend Initialized!");
 }
 
-VulkanBackend::~VulkanBackend()
+VulkanCore::~VulkanCore()
 {
 	// wait until we are synced-up with the gpu before proceeding
 	syncStall();
@@ -266,16 +267,18 @@ VulkanBackend::~VulkanBackend()
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 
+	m_descriptorLayoutCache.cleanUp();
+
 	m_imGuiDescriptorPool.cleanUp();
 
-	m_backbuffer->cleanUpSwapChain();
+	m_swapchain->cleanUpSwapChain();
 
 	delete g_renderTargetManager;
 	delete g_shaderManager;
 	delete g_textureManager;
 	delete g_gpuBufferManager;
 
-	m_backbuffer->cleanUpTextures();
+	m_swapchain->cleanUpTextures();
 
 	m_pipelineCache.dispose();
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
@@ -298,7 +301,7 @@ VulkanBackend::~VulkanBackend()
 		}
 	}
 
-	delete m_backbuffer;
+	delete m_swapchain;
 
 	vmaDestroyAllocator(m_vmaAllocator);
 
@@ -320,9 +323,9 @@ VulkanBackend::~VulkanBackend()
 	LLT_LOG("Vulkan Backend Destroyed!");
 }
 
-void VulkanBackend::enumeratePhysicalDevices()
+void VulkanCore::enumeratePhysicalDevices()
 {
-	VkSurfaceKHR surface = m_backbuffer->getSurface();
+	VkSurfaceKHR surface = m_swapchain->getSurface();
 
 	// get the total devices we have
 	uint32_t deviceCount = 0;
@@ -382,7 +385,7 @@ void VulkanBackend::enumeratePhysicalDevices()
 	LLT_LOG("Selected a suitable GPU: %d", i);
 }
 
-void VulkanBackend::createLogicalDevice()
+void VulkanCore::createLogicalDevice()
 {
 	const float QUEUE_PRIORITY = 1.0f;
 
@@ -520,7 +523,7 @@ void VulkanBackend::createLogicalDevice()
 	LLT_LOG("Created logical device!");
 }
 
-void VulkanBackend::createVmaAllocator()
+void VulkanCore::createVmaAllocator()
 {
 	VmaVulkanFunctions vulkanFunctions = {};
 	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
@@ -541,7 +544,7 @@ void VulkanBackend::createVmaAllocator()
 	LLT_LOG("Created memory allocator!");
 }
 
-void VulkanBackend::createPipelineProcessCache()
+void VulkanCore::createPipelineProcessCache()
 {
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -576,7 +579,7 @@ void VulkanBackend::createComputeResources()
 }
 */
 
-void VulkanBackend::createCommandPools()
+void VulkanCore::createCommandPools()
 {
 	VkCommandPoolCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -615,7 +618,7 @@ void VulkanBackend::createCommandPools()
 	LLT_LOG("Created command pool!");
 }
 
-void VulkanBackend::createCommandBuffers()
+void VulkanCore::createCommandBuffers()
 {
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
@@ -658,16 +661,14 @@ void VulkanBackend::createCommandBuffers()
 	LLT_LOG("Created command buffer!");
 }
 
-Backbuffer *VulkanBackend::createBackbuffer()
+Swapchain *VulkanCore::createSwapchain()
 {
-	Backbuffer *backbuffer = new Backbuffer();
-	backbuffer->createSurface();
-
-	m_backbuffer = backbuffer;
+	m_swapchain = new Swapchain();
+	m_swapchain->createSurface();
 
 	enumeratePhysicalDevices();
 
-	findQueueFamilies(m_physicalData.device, m_backbuffer->getSurface());
+	findQueueFamilies(m_physicalData.device, m_swapchain->getSurface());
 
 	createLogicalDevice();
 	createPipelineProcessCache();
@@ -707,12 +708,12 @@ Backbuffer *VulkanBackend::createBackbuffer()
 
 //	createComputeResources();
 
-	backbuffer->create();
+	m_swapchain->create();
 
-	return backbuffer;
+	return m_swapchain;
 }
 
-VkSampleCountFlagBits VulkanBackend::getMaxUsableSampleCount() const
+VkSampleCountFlagBits VulkanCore::getMaxUsableSampleCount() const
 {
 	VkSampleCountFlags counts =
 		m_physicalData.properties.limits.framebufferColorSampleCounts &
@@ -738,7 +739,7 @@ VkSampleCountFlagBits VulkanBackend::getMaxUsableSampleCount() const
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-void VulkanBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -785,22 +786,22 @@ void VulkanBackend::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurface
 	}
 }
 
-void VulkanBackend::onWindowResize(int width, int height)
+void VulkanCore::onWindowResize(int width, int height)
 {
-	m_backbuffer->onWindowResize(width, height);
+	m_swapchain->onWindowResize(width, height);
 }
 
-int VulkanBackend::getCurrentFrameIdx() const
+int VulkanCore::getCurrentFrameIdx() const
 {
 	return m_currentFrameIdx;
 }
 
-VkCommandPool VulkanBackend::getGraphicsCommandPool()
+VkCommandPool VulkanCore::getGraphicsCommandPool()
 {
 	return m_graphicsQueue.getCurrentFrame().commandPool;
 }
 
-VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
+VkCommandPool VulkanCore::getTransferCommandPool(int idx)
 {
 //	if (m_transferQueues.size() > 0)
 //		return m_transferQueues[idx].getCurrentFrame().commandPool;
@@ -808,41 +809,54 @@ VkCommandPool VulkanBackend::getTransferCommandPool(int idx)
 	return getGraphicsCommandPool();
 }
 
-VkCommandPool VulkanBackend::getComputeCommandPool(int idx)
+VkCommandPool VulkanCore::getComputeCommandPool(int idx)
 {
 	return m_computeQueues[idx].getCurrentFrame().commandPool;
 }
 
-PipelineCache &VulkanBackend::getPipelineCache()
+PipelineCache &VulkanCore::getPipelineCache()
 {
 	return m_pipelineCache;
 }
 
-const PipelineCache &VulkanBackend::getPipelineCache() const
+const PipelineCache &VulkanCore::getPipelineCache() const
 {
 	return m_pipelineCache;
 }
 
-void VulkanBackend::swapBuffers()
+DescriptorLayoutCache &VulkanCore::getDescriptorLayoutCache()
 {
-	vkWaitForFences(m_device, 1, &m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+	return m_descriptorLayoutCache;
+}
 
-	m_backbuffer->swapBuffers();
+const DescriptorLayoutCache &VulkanCore::getDescriptorLayoutCache() const
+{
+	return m_descriptorLayoutCache;
+}
+
+void VulkanCore::swapBuffers()
+{
+	cauto &currentFrame = g_vkCore->m_graphicsQueue.getCurrentFrame();
+
+	vkWaitForFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+	vkResetCommandPool(g_vkCore->m_device, currentFrame.commandPool, 0);
+
+	m_swapchain->swapBuffers();
 
 	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
 
 	g_shaderBufferManager->resetBufferUsageInFrame();
 
-	m_backbuffer->acquireNextImage();
+	m_swapchain->acquireNextImage();
 }
 
-void VulkanBackend::syncStall() const
+void VulkanCore::syncStall() const
 {
 	while (g_platform->getWindowSize() == glm::ivec2(0, 0)) {}
 	vkDeviceWaitIdle(m_device);
 }
 
-void VulkanBackend::createImGuiResources()
+void VulkanCore::createImGuiResources()
 {
 	m_imGuiDescriptorPool.init(1000, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					1.0f },
@@ -859,7 +873,7 @@ void VulkanBackend::createImGuiResources()
 	});
 }
 
-ImGui_ImplVulkan_InitInfo VulkanBackend::getImGuiInitInfo() const
+ImGui_ImplVulkan_InitInfo VulkanCore::getImGuiInitInfo() const
 {
 	ImGui_ImplVulkan_InitInfo info = {};
 	info.Instance = m_instance;
@@ -882,7 +896,7 @@ ImGui_ImplVulkan_InitInfo VulkanBackend::getImGuiInitInfo() const
 	return info;
 }
 
-const VkFormat &VulkanBackend::getImGuiAttachmentFormat() const
+const VkFormat &VulkanCore::getImGuiAttachmentFormat() const
 {
 	return m_swapChainImageFormat;
 }

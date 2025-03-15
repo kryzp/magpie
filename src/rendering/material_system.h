@@ -49,6 +49,12 @@ namespace llt
 		}
 		m_instanceData;
 
+		const Texture *getDiffuseFallback() const;
+		const Texture *getAOFallback() const;
+		const Texture *getRoughnessMetallicFallback() const;
+		const Texture *getNormalFallback() const;
+		const Texture *getEmissiveFallback() const;
+
 	private:
 		void generateEnvironmentMaps(CommandBuffer &cmd);
 		void precomputeBRDF(CommandBuffer &cmd);

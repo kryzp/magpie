@@ -8,17 +8,13 @@ TODO (no particular order):
 - stencil buffer support!
 - I think queues arent currently assigned properly(?)
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
-- properly comment the code
+- properly comment the code & assertations
 - should be multiple bind descriptor sets for the different frequencies (per pass, per material, per frame etc)
-- renderinfo and rendertarget are super similar. am i certain i cant merge them somehow
 - command pool abstraction
 - implement a render graph system!
 - bindless material rendering
 - hdr resolve tonemapper should be compute shader
-- "vulkan backend" needs to be changed into "device"
-- "backbuffer" needs to be changed into "swapchain"
 - double-ended queue implementation is broken (see render target)
-- spruit_sunrise_greg_zaal when generating the prefilter and irradiance it has too high values which cause blobs of white that look terrible :/ - cap it somehow
 
 BACKBURNER:
 - volumetrics
@@ -31,6 +27,7 @@ BACKBURNER:
 - fur / hair rendering
 - post processing pipeline
 - ui rendering
+- text rendering
 
 other todo that isnt really important:
 - use multiple compute queues

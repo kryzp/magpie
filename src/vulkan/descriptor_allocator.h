@@ -30,8 +30,6 @@ namespace llt
 		VkDescriptorPool m_pool;
 	};
 
-	// todo: this should have a name like DescriptorPoolAllocator and rename the static one to just DescriptorPool
-	// acts like a regular pool but dynamically grows to fill up more space if it runs out of room, like a vector
 	class DescriptorPoolDynamic
 	{
 		constexpr static float GROWTH_FACTOR = 2.0f; // grows by 2x every time

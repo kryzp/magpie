@@ -3,7 +3,7 @@
 #include "core/common.h"
 
 #include "texture.h"
-#include "backend.h"
+#include "core.h"
 #include "util.h"
 
 using namespace llt;
@@ -29,8 +29,8 @@ void GPUBuffer::create(uint64_t size)
 
 	// todo
 //	Vector<uint32_t> queueFamilyIndices = {
-//		g_vulkanBackend->m_graphicsQueue.getFamilyIdx().value(),
-//		g_vulkanBackend->m_transferQueues[0].getFamilyIdx().value()
+//		g_vkCore->m_graphicsQueue.getFamilyIdx().value(),
+//		g_vkCore->m_transferQueues[0].getFamilyIdx().value()
 //	};
 
 	VkBufferCreateInfo bufferCreateInfo = {};
@@ -46,7 +46,7 @@ void GPUBuffer::create(uint64_t size)
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	LLT_VK_CHECK(
-		vmaCreateBuffer(g_vulkanBackend->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
+		vmaCreateBuffer(g_vkCore->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
 		"Failed to create buffer"
 	);
 }
@@ -57,24 +57,24 @@ void GPUBuffer::cleanUp()
         return;
     }
 
-	vmaDestroyBuffer(g_vulkanBackend->m_vmaAllocator, m_buffer, m_allocation);
+	vmaDestroyBuffer(g_vkCore->m_vmaAllocator, m_buffer, m_allocation);
 
     m_buffer = VK_NULL_HANDLE;
 }
 
 void GPUBuffer::readDataFromMe(void *dst, uint64_t length, uint64_t offset) const
 {
-	vmaCopyAllocationToMemory(g_vulkanBackend->m_vmaAllocator, m_allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(g_vkCore->m_vmaAllocator, m_allocation, offset, dst, length);
 }
 
 void GPUBuffer::writeDataToMe(const void *src, uint64_t length, uint64_t offset) const
 {
-	vmaCopyMemoryToAllocation(g_vulkanBackend->m_vmaAllocator, src, m_allocation, offset, length);
+	vmaCopyMemoryToAllocation(g_vkCore->m_vmaAllocator, src, m_allocation, offset, length);
 }
 
 void GPUBuffer::writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
 {
-	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
+	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vkCore->getTransferCommandPool());
 
 	VkBufferCopy region = {};
 	region.srcOffset = srcOffset;
@@ -91,7 +91,7 @@ void GPUBuffer::writeToBuffer(const GPUBuffer *other, uint64_t length, uint64_t 
 
 void GPUBuffer::writeToTextureSingle(const Texture *texture, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
 {
-	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
+	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vkCore->getTransferCommandPool());
 	writeToTexture(commandBuffer, texture, size, offset, baseArrayLayer);
 	vkutil::endSingleTimeTransferCommands(commandBuffer);
 }
@@ -116,7 +116,7 @@ void GPUBuffer::writeToTexture(CommandBuffer &commandBuffer, const Texture *text
 	);
 }
 
-VkBuffer GPUBuffer::getBuffer() const
+VkBuffer GPUBuffer::getHandle() const
 {
 	return m_buffer;
 }

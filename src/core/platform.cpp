@@ -1,7 +1,7 @@
 #include "platform.h"
 #include "common.h"
 #include "input/input.h"
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_impl_sdl3.h"
 
@@ -85,7 +85,7 @@ void Platform::pollEvents()
 
 			case SDL_EVENT_WINDOW_RESIZED:
 				LLT_LOG("Detected window resize!");
-				g_vulkanBackend->onWindowResize(ev.window.data1, ev.window.data2);
+				g_vkCore->onWindowResize(ev.window.data1, ev.window.data2);
 				break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
@@ -483,9 +483,9 @@ void Platform::initImGui()
 
 	ImGui_ImplSDL3_InitForVulkan(m_window);
 
-	g_vulkanBackend->createImGuiResources();
+	g_vkCore->createImGuiResources();
 
-	ImGui_ImplVulkan_InitInfo initInfo = g_vulkanBackend->getImGuiInitInfo();
+	ImGui_ImplVulkan_InitInfo initInfo = g_vkCore->getImGuiInitInfo();
 
 	ImGui_ImplVulkan_Init(&initInfo);
 

@@ -2,7 +2,7 @@
 
 #include "vulkan/texture.h"
 #include "vulkan/texture_sampler.h"
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 #include "vulkan/descriptor_builder.h"
 
 llt::TextureMgr *llt::g_textureManager = nullptr;
@@ -35,9 +35,14 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
 	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
 
-	load("environmentHDR",	"../../res/textures/rogland_clear_night_greg_zaal.hdr");
-	load("stone",			"../../res/textures/smooth_stone.png");
-	load("wood",			"../../res/textures/wood.jpg");
+	load("fallback_white",		"../../res/textures/standard/white.png");
+	load("fallback_black",		"../../res/textures/standard/black.png");
+	load("fallback_normals",	"../../res/textures/standard/normal_fallback.png");
+
+	load("environmentHDR",		"../../res/textures/spruit_sunrise_greg_zaal.hdr");
+
+	load("stone",				"../../res/textures/smooth_stone.png");
+	load("wood",				"../../res/textures/wood.jpg");
 }
 
 TextureSampler *TextureMgr::getSampler(const String &name)
@@ -72,7 +77,9 @@ Texture *TextureMgr::createFromImage(const String &name, const Image &image)
 	g_gpuBufferManager->textureStagingBuffer->writeDataToMe(image.getData(), image.getSize(), 0);
 	g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, image.getSize());
 
-	texture->generateMipmaps();
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getGraphicsCommandPool());
+	texture->generateMipmaps(cmd);
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -97,7 +104,10 @@ Texture *TextureMgr::createFromData(const String &name, uint32_t width, uint32_t
 		g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, size);
 
 		texture->setMipLevels(4);
-		texture->generateMipmaps();
+
+		CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getGraphicsCommandPool());
+		texture->generateMipmaps(cmd);
+		vkutil::endSingleTimeGraphicsCommands(cmd);
 	}
 	else
 	{
@@ -164,16 +174,16 @@ Texture *TextureMgr::createCubemap(const String &name, const Image &right, const
 		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(sides[i]->getData(), sides[i]->getSize(), sides[i]->getSize() * i);
 	}
 
-	CommandBuffer commandBuffer = vkutil::beginSingleTimeCommands(g_vulkanBackend->getTransferCommandPool());
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getTransferCommandPool());
 
 	for (int i = 0; i < 6; i++)
 	{
-		g_gpuBufferManager->textureStagingBuffer->writeToTexture(commandBuffer, texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
+		g_gpuBufferManager->textureStagingBuffer->writeToTexture(cmd, texture, sides[i]->getSize(), sides[i]->getSize() * i, i);
 	}
 
-	vkutil::endSingleTimeTransferCommands(commandBuffer);
+	texture->generateMipmaps(cmd);
 
-	texture->generateMipmaps();
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_textureCache.insert(name, texture);
 	return texture;

@@ -2,7 +2,7 @@
 /*
 #include "gpu_particles.h"
 
-#include "rendering/backend.h"
+#include "rendering/core.h"
 #include "rendering/shader_buffer_mgr.h"
 #include "renderer.h"
 
@@ -161,7 +161,7 @@ void GPUParticles::init(const DynamicShaderBuffer *shaderParams)
 
 void GPUParticles::dispatchCompute(const Camera &camera)
 {
-	g_vulkanBackend->beginCompute();
+	g_vkCore->beginCompute();
 
 	m_computeParams.setMat4("projMatrix", camera.getProj());
 	m_computeParams.setMat4("inverseProjMatrix", glm::inverse(camera.getProj()));
@@ -184,7 +184,7 @@ void GPUParticles::dispatchCompute(const Camera &camera)
 
 	m_particleComputePipeline.dispatch(1, 1, 1);
 
-	g_vulkanBackend->endCompute();
+	g_vkCore->endCompute();
 
 	m_prevViewMatrix = camera.getView();
 }
@@ -196,9 +196,9 @@ void GPUParticles::render()
 	pass.setInstanceData(PARTICLE_COUNT, 0, m_particleBuffer->getBuffer());
 	pass.setMesh(m_particleMesh);
 
-	g_vulkanBackend->waitOnCompute();
+	g_vkCore->waitOnCompute();
 
-	g_vulkanBackend->beginGraphics(g_renderTargetManager->get("gBuffer"));
+	g_vkCore->beginGraphics(g_renderTargetManager->get("gBuffer"));
 
 	m_particleGraphicsPipeline.bind();
 
@@ -214,6 +214,6 @@ void GPUParticles::render()
 
 	m_particleGraphicsPipeline.render(pass);
 
-	g_vulkanBackend->endGraphics();
+	g_vkCore->endGraphics();
 }
 */

@@ -1,6 +1,6 @@
 #include "profiler.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 // cheers to the vulkan engine guide for helping me with this
 
@@ -13,7 +13,7 @@ Profiler::Profiler(int perFramePoolSizes)
 	, m_queryFrames()
 	, m_timings()
 {
-	m_period = g_vulkanBackend->m_physicalData.properties.limits.timestampPeriod;
+	m_period = g_vkCore->m_physicalData.properties.limits.timestampPeriod;
 
 	VkQueryPoolCreateInfo queryPoolInfo = {};
 	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
@@ -23,7 +23,7 @@ Profiler::Profiler(int perFramePoolSizes)
 	for (auto &frame : m_queryFrames)
 	{
 		vkCreateQueryPool(
-			g_vulkanBackend->m_device,
+			g_vkCore->m_device,
 			&queryPoolInfo,
 			nullptr,
 			&frame.queryPool
@@ -36,12 +36,12 @@ Profiler::Profiler(int perFramePoolSizes)
 Profiler::~Profiler()
 {
 	for (auto &frame : m_queryFrames)
-		vkDestroyQueryPool(g_vulkanBackend->m_device, frame.queryPool, nullptr);
+		vkDestroyQueryPool(g_vkCore->m_device, frame.queryPool, nullptr);
 }
 
 void Profiler::getQuerys(CommandBuffer &cmd)
 {
-	int currentFrame = g_vulkanBackend->getCurrentFrameIdx();
+	int currentFrame = g_vkCore->getCurrentFrameIdx();
 
 	QueryFrameState &state = m_queryFrames[currentFrame];
 
@@ -56,7 +56,7 @@ void Profiler::getQuerys(CommandBuffer &cmd)
 	if (state.last != 0)
 	{
 		vkGetQueryPoolResults(
-			g_vulkanBackend->m_device,
+			g_vkCore->m_device,
 			state.queryPool,
 			0,
 			state.last,
@@ -82,17 +82,17 @@ void Profiler::getQuerys(CommandBuffer &cmd)
 
 void Profiler::storeSample(const ScopeTimer::Sample &sample)
 {
-	m_queryFrames[g_vulkanBackend->getCurrentFrameIdx()].samples.pushBack(sample);
+	m_queryFrames[g_vkCore->getCurrentFrameIdx()].samples.pushBack(sample);
 }
 
 VkQueryPool Profiler::getTimerPool() const
 {
-	return m_queryFrames[g_vulkanBackend->getCurrentFrameIdx()].queryPool;
+	return m_queryFrames[g_vkCore->getCurrentFrameIdx()].queryPool;
 }
 
 uint64_t Profiler::getTimestampID()
 {
-	return m_queryFrames[g_vulkanBackend->getCurrentFrameIdx()].last++;
+	return m_queryFrames[g_vkCore->getCurrentFrameIdx()].last++;
 }
 
 ScopeTimer::ScopeTimer(const char *name, CommandBuffer &cmd)

@@ -1,6 +1,6 @@
 #include "forward_pass.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 #include "vulkan/command_buffer.h"
 
 #include "../camera.h"
@@ -16,7 +16,7 @@ void ForwardPass::init()
 {
 }
 
-void ForwardPass::cleanUp()
+void ForwardPass::dispose()
 {
 }
 
@@ -37,7 +37,7 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		SubMesh *mesh = renderList[i];
 		Material *mat = mesh->getMaterial();
 
-		PipelineData data = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(mat->getPipelineDef(SHADER_PASS_FORWARD), cmd.getCurrentRenderInfo());
+		PipelineData data = g_vkCore->getPipelineCache().fetchGraphicsPipeline(mat->getPipelineDef(SHADER_PASS_FORWARD), cmd.getCurrentRenderInfo());
 
 		if (i == 0 || currentMaterialHash != mat->getHash())
 		{
@@ -52,7 +52,15 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		g_materialSystem->m_instanceData.normalMatrix = glm::transpose(glm::inverse(transform));
 		g_materialSystem->pushInstanceData();
 
-		mat->bindDescriptorSets(cmd, SHADER_PASS_FORWARD, data.layout);
+		VkDescriptorSet materialSet = mat->getDescriptorSet(SHADER_PASS_FORWARD);
+		Vector<uint32_t> dynamicOffsets = mat->getDynamicOffsets();
+
+		cmd.bindDescriptorSets(
+			0,
+			data.layout,
+			{ materialSet },
+			dynamicOffsets
+		);
 
 		mesh->render(cmd);
 	}

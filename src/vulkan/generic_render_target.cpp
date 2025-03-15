@@ -39,13 +39,13 @@ void GenericRenderTarget::toggleClear(bool clear)
 {
 	for (int i = 0; i < getAttachmentCount(); i++)
 	{
-		toggleClear(i, clear);
+		toggleColourClear(i, clear);
 	}
 
 	toggleDepthStencilClear(clear);
 }
 
-void GenericRenderTarget::toggleClear(int idx, bool clear)
+void GenericRenderTarget::toggleColourClear(int idx, bool clear)
 {
 	m_renderInfo.getColourAttachment(idx).loadOp = (clear) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 }

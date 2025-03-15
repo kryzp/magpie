@@ -16,7 +16,7 @@ namespace llt
 		~ForwardPass() = default;
 
 		void init();
-		void cleanUp();
+		void dispose();
 
 		void render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList);
 	};

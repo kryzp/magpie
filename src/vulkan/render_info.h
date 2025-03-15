@@ -11,8 +11,8 @@
 namespace llt
 {
 	class Texture;
-	class VulkanBackend;
-	class Backbuffer;
+	class VulkanCore;
+	class Swapchain;
 
 	/*
 	 * Responsible for building up the final vulkan render pass which is needed when starting to render.

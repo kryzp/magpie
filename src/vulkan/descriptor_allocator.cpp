@@ -1,6 +1,6 @@
 #include "descriptor_allocator.h"
 
-#include "backend.h"
+#include "core.h"
 
 #include "math/calc.h"
 
@@ -27,7 +27,7 @@ void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags fl
 	poolCreateInfo.poolSizeCount = (uint32_t)poolSizes.size();
 	poolCreateInfo.pPoolSizes = poolSizes.data();
 
-	vkCreateDescriptorPool(g_vulkanBackend->m_device, &poolCreateInfo, nullptr, &m_pool);
+	vkCreateDescriptorPool(g_vkCore->m_device, &poolCreateInfo, nullptr, &m_pool);
 }
 
 void DescriptorPoolStatic::cleanUp()
@@ -35,13 +35,13 @@ void DescriptorPoolStatic::cleanUp()
 	if (m_pool == VK_NULL_HANDLE)
 		return;
 
-	vkDestroyDescriptorPool(g_vulkanBackend->m_device, m_pool, nullptr);
+	vkDestroyDescriptorPool(g_vkCore->m_device, m_pool, nullptr);
 	m_pool = VK_NULL_HANDLE;
 }
 
 void DescriptorPoolStatic::clear()
 {
-	vkResetDescriptorPool(g_vulkanBackend->m_device, m_pool, 0);
+	vkResetDescriptorPool(g_vkCore->m_device, m_pool, 0);
 }
 
 VkDescriptorSet DescriptorPoolStatic::allocate(VkDescriptorSetLayout layout)
@@ -56,7 +56,7 @@ VkDescriptorSet DescriptorPoolStatic::allocate(VkDescriptorSetLayout layout)
 	VkDescriptorSet set = VK_NULL_HANDLE;
 
 	LLT_VK_CHECK(
-		vkAllocateDescriptorSets(g_vulkanBackend->m_device, &allocInfo, &set),
+		vkAllocateDescriptorSets(g_vkCore->m_device, &allocInfo, &set),
 		"Failed to allocate descriptor set"
 	);
 
@@ -84,12 +84,12 @@ void DescriptorPoolDynamic::cleanUp()
 {
 	for (auto p : m_freePools)
 	{
-		vkDestroyDescriptorPool(g_vulkanBackend->m_device, p, nullptr);
+		vkDestroyDescriptorPool(g_vkCore->m_device, p, nullptr);
 	}
 
 	for (auto p : m_usedPools)
 	{
-		vkDestroyDescriptorPool(g_vulkanBackend->m_device, p, nullptr);
+		vkDestroyDescriptorPool(g_vkCore->m_device, p, nullptr);
 	}
 
 	m_freePools.clear();
@@ -100,12 +100,12 @@ void DescriptorPoolDynamic::clear()
 {
 	for (auto p : m_freePools)
 	{
-		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
+		vkResetDescriptorPool(g_vkCore->m_device, p, 0);
 	}
 
 	for (auto p : m_usedPools)
 	{
-		vkResetDescriptorPool(g_vulkanBackend->m_device, p, 0);
+		vkResetDescriptorPool(g_vkCore->m_device, p, 0);
 		m_freePools.pushBack(p);
 	}
 	
@@ -125,7 +125,7 @@ VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout &lay
 	allocInfo.descriptorSetCount = 1;
 	allocInfo.pSetLayouts = &layout;
 
-	VkResult result = vkAllocateDescriptorSets(g_vulkanBackend->m_device, &allocInfo, &ret);
+	VkResult result = vkAllocateDescriptorSets(g_vkCore->m_device, &allocInfo, &ret);
 
 	if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL) {
 
@@ -135,7 +135,7 @@ VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout &lay
 		allocInfo.descriptorPool = allocatedPool;
 
 		LLT_VK_CHECK(
-			vkAllocateDescriptorSets(g_vulkanBackend->m_device, &allocInfo, &ret),
+			vkAllocateDescriptorSets(g_vkCore->m_device, &allocInfo, &ret),
 			"Failed to allocate descriptor sets"
 		);
 	}
@@ -183,7 +183,7 @@ VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t setCount, const V
 
 	VkDescriptorPool newPool = {};
 
-	vkCreateDescriptorPool(g_vulkanBackend->m_device, &pool_info, nullptr, &newPool);
+	vkCreateDescriptorPool(g_vkCore->m_device, &pool_info, nullptr, &newPool);
 
 	return newPool;
 }

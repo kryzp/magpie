@@ -1,5 +1,5 @@
-#ifndef VK_BACKEND_H_
-#define VK_BACKEND_H_
+#ifndef VK_CORE_H_
+#define VK_CORE_H_
 
 #define VK_NO_PROTOTYPES
 #include "third_party/volk.h"
@@ -33,10 +33,9 @@
 #include "texture.h"
 #include "shader.h"
 #include "render_target.h"
-#include "backbuffer.h"
+#include "swapchain.h"
 #include "queue.h"
 #include "pipeline.h"
-#include "device.h"
 
 #include "rendering/shader_buffer_mgr.h"
 #include "rendering/gpu_buffer_mgr.h"
@@ -46,14 +45,6 @@
 
 namespace llt
 {
-	enum CullMode
-	{
-		CULL_MODE_BACK,
-		CULL_MODE_FRONT,
-		CULL_MODE_FRONT_AND_BACK,
-		CULL_MODE_MAX_ENUM
-	};
-
 	struct PhysicalDeviceData
 	{
 		VkPhysicalDevice device;
@@ -61,13 +52,13 @@ namespace llt
 		VkPhysicalDeviceFeatures features;
 	};
 
-	class VulkanBackend
+	class VulkanCore
 	{
 	public:
-		VulkanBackend(const Config &config);
-		~VulkanBackend();
+		VulkanCore(const Config &config);
+		~VulkanCore();
 
-        Backbuffer *createBackbuffer();
+        Swapchain *createSwapchain();
 
 		void swapBuffers();
 
@@ -84,6 +75,9 @@ namespace llt
 		PipelineCache &getPipelineCache();
 		const PipelineCache &getPipelineCache() const;
 
+		DescriptorLayoutCache &getDescriptorLayoutCache();
+		const DescriptorLayoutCache &getDescriptorLayoutCache() const;
+
         VkInstance m_instance;
 		VkDevice m_device;
 		PhysicalDeviceData m_physicalData;
@@ -95,7 +89,7 @@ namespace llt
 		Vector<Queue> m_computeQueues;
 		Vector<Queue> m_transferQueues;
 
-		Backbuffer *m_backbuffer;
+		Swapchain *m_swapchain;
 
 		void createImGuiResources();
 		ImGui_ImplVulkan_InitInfo getImGuiInitInfo() const;
@@ -114,6 +108,7 @@ namespace llt
 		void findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 		PipelineCache m_pipelineCache;
+		DescriptorLayoutCache m_descriptorLayoutCache;
 
 		uint64_t m_currentFrameIdx;
 		VkPipelineCache m_pipelineProcessCache;
@@ -125,7 +120,7 @@ namespace llt
 		DescriptorPoolStatic m_imGuiDescriptorPool;
 	};
 
-	extern VulkanBackend *g_vulkanBackend;
+	extern VulkanCore *g_vkCore;
 }
 
-#endif // VK_BACKEND_H_
+#endif // VK_CORE_H_

@@ -33,9 +33,9 @@ add_executable(${PROJECT_NAME}
 
     src/rendering/passes/forward_pass.cpp
     src/rendering/passes/post_process_pass.cpp
+    src/rendering/passes/shadow_pass.cpp
 
-    src/vulkan/backbuffer.cpp
-    src/vulkan/backend.cpp
+    src/vulkan/core.cpp
     src/vulkan/command_buffer.cpp
     src/vulkan/descriptor_builder.cpp
     src/vulkan/descriptor_allocator.cpp
@@ -44,6 +44,7 @@ add_executable(${PROJECT_NAME}
     src/vulkan/generic_render_target.cpp
 	src/vulkan/render_info.cpp
     src/vulkan/render_target.cpp
+    src/vulkan/swapchain.cpp
     src/vulkan/shader.cpp
     src/vulkan/shader_buffer.cpp
     src/vulkan/pipeline.cpp

@@ -8,9 +8,6 @@
 #include "vulkan/pipeline.h"
 #include "vulkan/command_buffer.h"
 
-#include "passes/forward_pass.h"
-#include "passes/post_process_pass.h"
-
 #include "sub_mesh.h"
 #include "render_object.h"
 #include "gpu_particles.h"
@@ -18,7 +15,7 @@
 
 namespace llt
 {
-	class Backbuffer;
+	class Swapchain;
 	class ShaderProgram;
 	class DynamicShaderBuffer;
 	class Camera;
@@ -53,13 +50,6 @@ namespace llt
 
 		DescriptorPoolDynamic m_descriptorPool;
 		DescriptorLayoutCache m_descriptorLayoutCache;
-
-//		GraphicsPipeline m_postProcessPipeline;
-//		VkDescriptorSet m_postProcessDescriptorSet;
-
-//		DescriptorPoolDynamic m_descriptorPool;
-
-//		GPUParticles m_gpuParticles;
 	};
 }
 

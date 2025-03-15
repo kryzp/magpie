@@ -1,6 +1,6 @@
 #include "shader_buffer.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 #include "rendering/gpu_buffer_mgr.h"
 
@@ -65,7 +65,7 @@ void DynamicShaderBuffer::pushData(const void *data, uint64_t size)
 
 	// move forward and increment the ubo usage in the current frame
 	m_offset += size;
-	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] += size;
+	m_usageInFrame[g_vkCore->getCurrentFrameIdx()] += size;
 }
 
 void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
@@ -90,7 +90,7 @@ void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
 		LLT_ERROR("Unsupported ShaderBufferType: %d.", m_type);
 	}
 
-	m_info.buffer = m_buffer->getBuffer();
+	m_info.buffer = m_buffer->getHandle();
 	m_info.offset = 0;
 	m_info.range = 0;
 
@@ -106,7 +106,7 @@ void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
 
 void DynamicShaderBuffer::resetBufferUsageInFrame()
 {
-	m_usageInFrame[g_vulkanBackend->getCurrentFrameIdx()] = 0;
+	m_usageInFrame[g_vkCore->getCurrentFrameIdx()] = 0;
 }
 
 const VkDescriptorBufferInfo &DynamicShaderBuffer::getDescriptorInfo() const

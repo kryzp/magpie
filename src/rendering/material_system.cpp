@@ -7,11 +7,11 @@
 #include "mesh_loader.h"
 
 #include "vulkan/vertex_format.h"
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 #include "math/calc.h"
 
-#include "../../res/shaders/raster/common_fxc.inc"
+#include "../../res/shaders/src/common_fxc.inc"
 
 llt::MaterialSystem *llt::g_materialSystem = nullptr;
 
@@ -81,8 +81,8 @@ void MaterialSystem::init()
 		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
 	});
 
-	m_globalBuffer = g_shaderBufferManager->createUBO();
-	m_instanceBuffer = g_shaderBufferManager->createUBO();
+	m_globalBuffer = g_shaderBufferManager->createUBO(sizeof(m_globalData) * 5);
+	m_instanceBuffer = g_shaderBufferManager->createUBO(sizeof(m_instanceData) * 200);
 
 	Light lights[16] = {};
 	mem::set(lights, 0, sizeof(Light) * 16);
@@ -117,9 +117,9 @@ void MaterialSystem::init()
 		.skybox = (TextureHandle)0
 	});
 
-	uint32_t maxUniformBuffers = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetUniformBuffers;
-	uint32_t maxStorageBuffers = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetStorageBuffers;
-	uint32_t maxSamplesImages = g_vulkanBackend->physicalData.properties.limits.maxDescriptorSetSampledImages;
+	uint32_t maxUniformBuffers = g_vkCore->physicalData.properties.limits.maxDescriptorSetUniformBuffers;
+	uint32_t maxStorageBuffers = g_vkCore->physicalData.properties.limits.maxDescriptorSetStorageBuffers;
+	uint32_t maxSamplesImages = g_vkCore->physicalData.properties.limits.maxDescriptorSetSampledImages;
 
 	bindlessDescriptorPoolManager.setSizes({
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (float)maxUniformBuffers },
@@ -205,22 +205,18 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
 	glm::mat4 captureViews[] = {
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
 	};
-
-	DescriptorWriter descriptorWriter;
 
 	SubMesh *cubeMesh = g_meshLoader->getCubeMesh();
 
 	// =====================================================
 	LLT_LOG("Generating environment map...");
-
-	descriptorWriter.clear();
 
 	const int ENVIRONMENT_RESOLUTION = 1024;
 
@@ -250,69 +246,65 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	pc.proj = captureProjection;
 	pc.view = glm::identity<glm::mat4>();
 
-	ShaderEffect *equirectangularToCubemapShader = g_shaderManager->getEffect("equirectangularToCubemap");
+	ShaderEffect *equirectangularToCubemapShader = g_shaderManager->getEffect("equirectangular_to_cubemap");
 
 	VkDescriptorSet etcDescriptorSet = m_descriptorPoolAllocator.allocate(equirectangularToCubemapShader->getDescriptorSetLayout());
 
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getStandardImageInfo());
-	descriptorWriter.updateSet(etcDescriptorSet);
+	DescriptorWriter()
+		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, hdrImage.getStandardImageInfo())
+		.updateSet(etcDescriptorSet);
 
 	m_equirectangularToCubemapPipeline.setShader(equirectangularToCubemapShader);
 	m_equirectangularToCubemapPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_equirectangularToCubemapPipeline.setDepthTest(false);
 	m_equirectangularToCubemapPipeline.setDepthWrite(false);
 
-	PipelineData etcPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_equirectangularToCubemapPipeline, etcRenderInfo);
+	PipelineData etcPipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_equirectangularToCubemapPipeline, etcRenderInfo);
 
-	VkImageView environmentViews[6];
+	cmd.beginRecording();
+
+	m_environmentMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.view = captureViews[i];
 
-		environmentViews[i] = m_environmentMap->createView(1, i, 0);
+		VkImageView view = m_environmentMap->getView(1, i, 0);
 
 		RenderInfo info;
 		info.setSize(ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION);
 		info.addColourAttachment(
 			VK_ATTACHMENT_LOAD_OP_LOAD,
-			environmentViews[i],
+			view,
 			m_environmentMap->getFormat()
 		);
 
 		cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+		{
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, etcPipelineData.pipeline);
 
-		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, etcPipelineData.pipeline);
+			cmd.bindDescriptorSets(0, etcPipelineData.layout, { etcDescriptorSet }, {});
 
-		cmd.bindDescriptorSets(0, etcPipelineData.layout, { etcDescriptorSet }, {});
+			cmd.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
 
-		cmd.setViewport({ 0, 0, ENVIRONMENT_RESOLUTION, ENVIRONMENT_RESOLUTION });
+			cmd.pushConstants(
+				etcPipelineData.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(pc),
+				&pc
+			);
 
-		cmd.pushConstants(
-			etcPipelineData.layout,
-			VK_SHADER_STAGE_ALL_GRAPHICS,
-			sizeof(pc),
-			&pc
-		);
-
-		cubeMesh->render(cmd);
-
+			cubeMesh->render(cmd);
+		}
 		cmd.endRendering();
-		cmd.submit();
 	}
 
-	// todo: turn into g_vulkanBackend function
-	vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
+	m_environmentMap->generateMipmaps(cmd);
 
-	for (int i = 0; i < 6; i++)
-		vkDestroyImageView(g_vulkanBackend->m_device, environmentViews[i], nullptr);
-
-	m_environmentMap->generateMipmaps();
+	cmd.submit();
 
 	// =====================================================
 	LLT_LOG("Generating irradiance map...");
-
-	descriptorWriter.clear();
 
 	const int IRRADIANCE_RESOLUTION = 32;
 
@@ -332,25 +324,30 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	icRenderInfo.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
 	icRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_irradianceMap->getFormat());
 
-	ShaderEffect *irradianceGenerationShader = g_shaderManager->getEffect("irradianceConvolution");
+	ShaderEffect *irradianceGenerationShader = g_shaderManager->getEffect("irradiance_convolution");
 
 	VkDescriptorSet icDescriptorSet = m_descriptorPoolAllocator.allocate(irradianceGenerationShader->getDescriptorSetLayout());
 
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo());
-	descriptorWriter.updateSet(icDescriptorSet);
+	DescriptorWriter()
+		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo())
+		.updateSet(icDescriptorSet);
 
 	m_irradianceGenerationPipeline.setShader(irradianceGenerationShader);
 	m_irradianceGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_irradianceGenerationPipeline.setDepthTest(false);
 	m_irradianceGenerationPipeline.setDepthWrite(false);
 
-	PipelineData icPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_irradianceGenerationPipeline, icRenderInfo);
+	PipelineData icPipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_irradianceGenerationPipeline, icRenderInfo);
+
+	cmd.beginRecording();
+	
+	m_irradianceMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	for (int i = 0; i < 6; i++)
 	{
 		pc.view = captureViews[i];
 
-		VkImageView view = m_irradianceMap->createView(1, i, 0);
+		VkImageView view = m_irradianceMap->getView(1, i, 0);
 
 		RenderInfo info;
 		info.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
@@ -361,37 +358,31 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		);
 
 		cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+		{
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, icPipelineData.pipeline);
 
-		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, icPipelineData.pipeline);
+			cmd.bindDescriptorSets(0, icPipelineData.layout, { icDescriptorSet }, {});
 
-		cmd.bindDescriptorSets(0, icPipelineData.layout, { icDescriptorSet }, {});
+			cmd.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
 
-		cmd.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
+			cmd.pushConstants(
+				icPipelineData.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(pc),
+				&pc
+			);
 
-		cmd.pushConstants(
-			icPipelineData.layout,
-			VK_SHADER_STAGE_ALL_GRAPHICS,
-			sizeof(pc),
-			&pc
-		);
-
-		cubeMesh->render(cmd);
-
+			cubeMesh->render(cmd);
+		}
 		cmd.endRendering();
-		cmd.submit();
-
-		// todo: turn into g_vulkanBackend function
-		vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-
-		vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 	}
 
-	m_irradianceMap->generateMipmaps();
+	m_irradianceMap->generateMipmaps(cmd);
+
+	cmd.submit();
 
 	// =====================================================
 	LLT_LOG("Generating prefilter map...");
-
-	descriptorWriter.clear();
 
 	const int PREFILTER_RESOLUTION = 128;
 	const int PREFILTER_MIP_LEVELS = 5;
@@ -420,20 +411,25 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	pfRenderInfo.setSize(PREFILTER_RESOLUTION, PREFILTER_RESOLUTION);
 	pfRenderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, VK_NULL_HANDLE, m_prefilterMap->getFormat());
 
-	ShaderEffect *prefilterGenerationShader = g_shaderManager->getEffect("prefilterConvolution");
+	ShaderEffect *prefilterGenerationShader = g_shaderManager->getEffect("prefilter_convolution");
 
 	VkDescriptorSet pfDescriptorSet = m_descriptorPoolAllocator.allocate(prefilterGenerationShader->getDescriptorSetLayout());
 
-	descriptorWriter.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer.getDescriptorInfo());
-	descriptorWriter.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo());
-	descriptorWriter.updateSet(pfDescriptorSet);
+	DescriptorWriter()
+		.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer.getDescriptorInfo())
+		.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo())
+		.updateSet(pfDescriptorSet);
 
 	m_prefilterGenerationPipeline.setShader(prefilterGenerationShader);
 	m_prefilterGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
 	m_prefilterGenerationPipeline.setDepthTest(false);
 	m_prefilterGenerationPipeline.setDepthWrite(false);
 
-	PipelineData pfPipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_prefilterGenerationPipeline, pfRenderInfo);
+	PipelineData pfPipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_prefilterGenerationPipeline, pfRenderInfo);
+
+	cmd.beginRecording();
+
+	m_prefilterMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 	for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
 	{
@@ -449,7 +445,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 		{
 			pc.view = captureViews[i];
 
-			VkImageView view = m_prefilterMap->createView(1, i, mipLevel);
+			VkImageView view = m_prefilterMap->getView(1, i, mipLevel);
 
 			RenderInfo info;
 			info.setSize(width, height);
@@ -460,33 +456,29 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 			);
 
 			cmd.beginRendering(info); // todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+			{
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pfPipelineData.pipeline);
 
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pfPipelineData.pipeline);
+				uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
 
-			uint32_t dynamicOffset = pfParameterBuffer.getDynamicOffset();
+				cmd.bindDescriptorSets(0, pfPipelineData.layout, { pfDescriptorSet }, { dynamicOffset });
 
-			cmd.bindDescriptorSets(0, pfPipelineData.layout, { pfDescriptorSet }, { dynamicOffset });
+				cmd.setViewport({ 0, 0, (float)width, (float)height });
 
-			cmd.setViewport({ 0, 0, (float)width, (float)height });
+				cmd.pushConstants(
+					pfPipelineData.layout,
+					VK_SHADER_STAGE_ALL_GRAPHICS,
+					sizeof(pc),
+					&pc
+				);
 
-			cmd.pushConstants(
-				pfPipelineData.layout,
-				VK_SHADER_STAGE_ALL_GRAPHICS,
-				sizeof(pc),
-				&pc
-			);
-
-			cubeMesh->render(cmd);
-
+				cubeMesh->render(cmd);
+			}
 			cmd.endRendering();
-			cmd.submit();
-
-			// todo: turn into g_vulkanBackend function
-			vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
-
-			vkDestroyImageView(g_vulkanBackend->m_device, view, nullptr);
 		}
 	}
+
+	cmd.submit();
 
 	m_prefilterMap->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -512,7 +504,7 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &cmd)
 	info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
 	info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, m_brdfLUT->getStandardView(), m_brdfLUT->getFormat());
 
-	ShaderEffect *brdfLUTShader = g_shaderManager->getEffect("brdfLUT");
+	ShaderEffect *brdfLUTShader = g_shaderManager->getEffect("brdf_lut");
 
 	VkDescriptorSet set = m_descriptorPoolAllocator.allocate(brdfLUTShader->getDescriptorSetLayout());
 
@@ -521,8 +513,9 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &cmd)
 	m_brdfIntegrationPipeline.setDepthTest(false);
 	m_brdfIntegrationPipeline.setDepthWrite(false);
 
-	PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_brdfIntegrationPipeline, info);
+	PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_brdfIntegrationPipeline, info);
 
+	cmd.beginRecording();
 	cmd.beginRendering(info);
 
 	cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
@@ -535,8 +528,6 @@ void MaterialSystem::precomputeBRDF(CommandBuffer &cmd)
 
 	cmd.endRendering();
 	cmd.submit();
-
-	vkWaitForFences(g_vulkanBackend->m_device, 1, &g_vulkanBackend->m_graphicsQueue.getCurrentFrame().inFlightFence, VK_TRUE, UINT64_MAX);
 }
 
 // todo: way to specifically decide what global buffer gets applied to what bindings in the technique
@@ -550,7 +541,7 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 	Technique &technique = m_techniques.get(data.technique);
 
 	Material *material = new Material();
-	material->m_parameterBuffer = g_shaderBufferManager->createUBO();
+	material->m_parameterBuffer = g_shaderBufferManager->createUBO(sizeof(float) * 32);
 
 	if (data.parameterSize > 0)
 	{
@@ -632,7 +623,7 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 void MaterialSystem::loadDefaultTechniques()
 {
 	Technique pbrTechnique;
-	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR_opaque");
+	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR");
 	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
 	pbrTechnique.vertexFormat = g_modelVertexFormat;
 	addTechnique("texturedPBR_opaque", pbrTechnique);
@@ -661,4 +652,29 @@ DynamicShaderBuffer *MaterialSystem::getGlobalBuffer() const
 DynamicShaderBuffer *MaterialSystem::getInstanceBuffer() const
 {
 	return m_instanceBuffer;
+}
+
+const Texture *MaterialSystem::getDiffuseFallback() const
+{
+	return g_textureManager->getTexture("fallback_white");
+}
+
+const Texture *MaterialSystem::getAOFallback() const
+{
+	return g_textureManager->getTexture("fallback_white");
+}
+
+const Texture *MaterialSystem::getRoughnessMetallicFallback() const
+{
+	return g_textureManager->getTexture("fallback_black");
+}
+
+const Texture *MaterialSystem::getNormalFallback() const
+{
+	return g_textureManager->getTexture("fallback_normals");
+}
+
+const Texture *MaterialSystem::getEmissiveFallback() const
+{
+	return g_textureManager->getTexture("fallback_black");
 }

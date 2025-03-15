@@ -11,7 +11,7 @@
 namespace llt
 {
 	class Texture;
-	class VulkanBackend;
+	class VulkanCore;
 
 	class GPUBuffer
 	{
@@ -30,7 +30,7 @@ namespace llt
 		void writeToTextureSingle(const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 		void writeToTexture(CommandBuffer &commandBuffer, const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 
-		VkBuffer getBuffer() const;
+		VkBuffer getHandle() const;
 
 		VkBufferUsageFlags getUsage() const;
 		VmaMemoryUsage getMemoryUsage() const;

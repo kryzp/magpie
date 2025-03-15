@@ -1,12 +1,12 @@
 #include "descriptor_layout_cache.h"
-#include "backend.h"
+#include "core.h"
 
 using namespace llt;
 
 void DescriptorLayoutCache::cleanUp()
 {
 	for (auto &[id, layout] : m_layoutCache) {
-		vkDestroyDescriptorSetLayout(g_vulkanBackend->m_device, layout, nullptr);
+		vkDestroyDescriptorSetLayout(g_vkCore->m_device, layout, nullptr);
 	}
 
 	m_layoutCache.clear();
@@ -29,7 +29,7 @@ VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetL
 	VkDescriptorSetLayout layout = {};
 
 	LLT_VK_CHECK(
-		vkCreateDescriptorSetLayout(g_vulkanBackend->m_device, &layoutCreateInfo, nullptr, &layout),
+		vkCreateDescriptorSetLayout(g_vkCore->m_device, &layoutCreateInfo, nullptr, &layout),
 		"Failed to create descriptor set layout"
 	);
 

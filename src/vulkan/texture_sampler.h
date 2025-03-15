@@ -53,11 +53,10 @@ namespace llt
 		/*
 		 * Create a sampler with some properties and amount of mip levels
 		 */
-		VkSampler bind(int maxMipLevels);
+		VkSampler bind();
 
 		VkSampler sampler() const;
 
-		bool dirty;
 		Style style;
 
 		bool operator == (const TextureSampler &other) const { return this->style == other.style; }

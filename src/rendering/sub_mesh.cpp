@@ -1,6 +1,6 @@
 #include "sub_mesh.h"
 
-#include "vulkan/backend.h"
+#include "vulkan/core.h"
 
 using namespace llt;
 
@@ -22,7 +22,7 @@ SubMesh::~SubMesh()
 void SubMesh::render(CommandBuffer &cmd) const
 {
 	VkBuffer pVertexBuffers[] = {
-		m_vertexBuffer->getBuffer(),
+		m_vertexBuffer->getHandle(),
 		VK_NULL_HANDLE
 	};
 
@@ -48,7 +48,7 @@ void SubMesh::render(CommandBuffer &cmd) const
 	);
 
 	cmd.bindIndexBuffer(
-		m_indexBuffer->getBuffer(),
+		m_indexBuffer->getHandle(),
 		0,
 		VK_INDEX_TYPE_UINT16
 	);

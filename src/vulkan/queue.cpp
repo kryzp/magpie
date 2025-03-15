@@ -1,5 +1,5 @@
 #include "queue.h"
-#include "backend.h"
+#include "core.h"
 
 using namespace llt;
 
@@ -28,7 +28,7 @@ void Queue::setData(QueueFamily family, uint32_t familyIdx)
 
 Queue::FrameData &Queue::getCurrentFrame()
 {
-	return m_frames[g_vulkanBackend->getCurrentFrameIdx()];
+	return m_frames[g_vkCore->getCurrentFrameIdx()];
 }
 
 Queue::FrameData &Queue::getFrame(int idx)

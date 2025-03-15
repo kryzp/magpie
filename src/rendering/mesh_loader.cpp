@@ -2,6 +2,8 @@
 #include "texture_mgr.h"
 #include "material_system.h"
 
+#include <filesystem>
+
 llt::MeshLoader *llt::g_meshLoader = nullptr;
 
 using namespace llt;
@@ -126,6 +128,11 @@ Mesh *MeshLoader::loadMesh(const String &name, const String &path)
 
 	Mesh *mesh = new Mesh();
 
+	std::filesystem::path filePath(path.cstr());
+	std::string directory = filePath.parent_path().string() + "/";
+
+	mesh->setDirectory(directory.c_str());
+
 	aiMatrix4x4 identity(
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
@@ -239,11 +246,11 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 
 		// todo: handle missing textures
 
-		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE);
-		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_LIGHTMAP);
-		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS);
-		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_NORMALS);
-		fetchMaterialBoundTextures(data.textures, assimpMaterial, aiTextureType_EMISSIVE);
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,			g_materialSystem->getDiffuseFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,			g_materialSystem->getAOFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS, g_materialSystem->getRoughnessMetallicFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,			g_materialSystem->getNormalFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,			g_materialSystem->getEmissiveFallback());
 
 		Material *material = g_materialSystem->buildMaterial(data);
 
@@ -251,27 +258,33 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 	}
 }
 
-void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const aiMaterial *material, aiTextureType type)
+void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, const Texture *fallback)
 {
-	Vector<Texture*> maps = loadMaterialTextures(material, type);
+	Vector<Texture *> maps = loadMaterialTextures(material, type, localPath);
 
-	for (auto &tex : maps)
+	if (maps.size() >= 1)
 	{
-		textures.pushBack(BoundTexture(tex, g_textureManager->getSampler("linear")));
-		return; // for now only want one of each!
+		textures.pushBack(BoundTexture(maps[0], g_textureManager->getSampler("linear")));
+	}
+	else
+	{
+		if (fallback)
+		{
+			textures.pushBack(BoundTexture(fallback, g_textureManager->getSampler("linear")));
+		}
 	}
 }
 
-Vector<Texture*> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type)
+Vector<Texture *> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type, const String &localPath)
 {
-	Vector<Texture*> result;
+	Vector<Texture *> result;
 
 	for (int i = 0; i < material->GetTextureCount(type); i++)
 	{
 		aiString texturePath;
 		material->GetTexture(type, i, &texturePath);
 
-		aiString basePath = aiString("../../res/models/GLTF/DamagedHelmet/"); // todo????
+		aiString basePath = aiString(localPath.cstr());
 		basePath.Append(texturePath.C_Str());
 
 		Texture *tex = g_textureManager->getTexture(basePath.C_Str());

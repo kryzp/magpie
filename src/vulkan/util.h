@@ -19,7 +19,7 @@
 
 namespace llt
 {
-	class VulkanBackend;
+	class VulkanCore;
 
 	struct SwapChainSupportDetails
 	{

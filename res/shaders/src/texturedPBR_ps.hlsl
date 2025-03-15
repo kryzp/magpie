@@ -86,6 +86,7 @@ float4 main(PSInput input) : SV_Target
 	float3 normal = normalTexture.Sample(normalSampler, uv).rgb;
 	float3 emissive = emissiveTexture.Sample(emissiveSampler, uv).rgb;
 	
+	ambientOcclusion += metallicRoughness.r;
 	float roughnessValue = metallicRoughness.g;
 	float metallicValue = metallicRoughness.b;
 	

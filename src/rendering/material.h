@@ -89,9 +89,9 @@ namespace llt
 
 		uint64_t getHash() const;
 
-		GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass);
-
-		void bindDescriptorSets(CommandBuffer &cmd, ShaderPassType pass, VkPipelineLayout layout);
+		const GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass) const;
+		const VkDescriptorSet &getDescriptorSet(ShaderPassType pass) const;
+		Vector<uint32_t> getDynamicOffsets() const;
 
 		VertexFormat m_vertexFormat;
 		Vector<BoundTexture> m_textures;

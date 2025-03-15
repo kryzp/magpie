@@ -1,19 +1,17 @@
 #include "texture_sampler.h"
 #include "util.h"
-#include "backend.h"
+#include "core.h"
 
 using namespace llt;
 
 TextureSampler::TextureSampler()
-	: dirty(true)
-	, style()
+	: style()
 	, m_sampler(VK_NULL_HANDLE)
 {
 }
 
 TextureSampler::TextureSampler(const TextureSampler::Style &style)
-	: dirty(true)
-	, style(style)
+	: style(style)
 	, m_sampler(VK_NULL_HANDLE)
 {
 }
@@ -29,20 +27,16 @@ void TextureSampler::cleanUp()
 		return;
 	}
 
-	vkDestroySampler(g_vulkanBackend->m_device, m_sampler, nullptr);
+	vkDestroySampler(g_vkCore->m_device, m_sampler, nullptr);
 	m_sampler = VK_NULL_HANDLE;
 }
 
-VkSampler TextureSampler::bind(int maxMipLevels)
+VkSampler TextureSampler::bind()
 {
-	// check if we actually need to create a new sampler or if our current one suffices
-	if (!dirty) {
+	if (m_sampler)
 		return m_sampler;
-	} else {
-		dirty = false;
-	}
 
-	VkPhysicalDeviceProperties properties = g_vulkanBackend->m_physicalData.properties;
+	VkPhysicalDeviceProperties properties = g_vkCore->m_physicalData.properties;
 
 	cleanUp();
 
@@ -62,10 +56,10 @@ VkSampler TextureSampler::bind(int maxMipLevels)
 	createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	createInfo.mipLodBias = 0.0f;
 	createInfo.minLod = 0.0f;
-	createInfo.maxLod = (float)maxMipLevels;
+	createInfo.maxLod = VK_LOD_CLAMP_NONE;
 
 	LLT_VK_CHECK(
-		vkCreateSampler(g_vulkanBackend->m_device, &createInfo, nullptr, &m_sampler),
+		vkCreateSampler(g_vkCore->m_device, &createInfo, nullptr, &m_sampler),
 		"Failed to create texture sampler"
 	);
 

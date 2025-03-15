@@ -1,6 +1,6 @@
 #include "util.h"
 
-#include "backend.h"
+#include "core.h"
 
 #include "core/platform.h"
 
@@ -120,7 +120,7 @@ CommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 	VkCommandBuffer cmdBuffer = {};
 
 	LLT_VK_CHECK(
-		vkAllocateCommandBuffers(g_vulkanBackend->m_device, &allocInfo, &cmdBuffer),
+		vkAllocateCommandBuffers(g_vkCore->m_device, &allocInfo, &cmdBuffer),
 		"Failed to reallocate command buffers when copying buffer"
 	);
 
@@ -138,7 +138,7 @@ CommandBuffer vkutil::beginSingleTimeCommands(VkCommandPool cmdPool)
 
 void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &cmd, VkQueue graphics)
 {
-	cauto cmdBuffer = cmd.getBuffer();
+	cauto cmdBuffer = cmd.getHandle();
 
 	vkEndCommandBuffer(cmdBuffer);
 
@@ -150,15 +150,15 @@ void vkutil::endSingleTimeCommands(VkCommandPool cmdPool, const CommandBuffer &c
 	vkQueueSubmit(graphics, 1, &submitInfo, VK_NULL_HANDLE);
 	vkQueueWaitIdle(graphics);
 
-	vkFreeCommandBuffers(g_vulkanBackend->m_device, cmdPool, 1, &cmdBuffer);
+	vkFreeCommandBuffers(g_vkCore->m_device, cmdPool, 1, &cmdBuffer);
 }
 
 void vkutil::endSingleTimeGraphicsCommands(const CommandBuffer &cmd)
 {
 	vkutil::endSingleTimeCommands(
-		g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool,
+		g_vkCore->m_graphicsQueue.getCurrentFrame().commandPool,
 		cmd,
-		g_vulkanBackend->m_graphicsQueue.getQueue()
+		g_vkCore->m_graphicsQueue.getQueue()
 	);
 }
 
@@ -167,15 +167,15 @@ void vkutil::endSingleTimeTransferCommands(const CommandBuffer &cmd)
 	endSingleTimeGraphicsCommands(cmd);
 
 //	vkutil::endSingleTimeCommands(
-//		g_vulkanBackend->m_transferQueues[0].getCurrentFrame().commandPool,
+//		g_vkCore->m_transferQueues[0].getCurrentFrame().commandPool,
 //		cmd,
-//		g_vulkanBackend->m_transferQueues[0].getQueue()
+//		g_vkCore->m_transferQueues[0].getQueue()
 //	);
 }
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
-	VkPhysicalDeviceProperties properties = g_vulkanBackend->m_physicalData.properties;
+	VkPhysicalDeviceProperties properties = g_vkCore->m_physicalData.properties;
 	const VkDeviceSize &minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return ((size / minimumSize) * minimumSize) + (((size % minimumSize) > 0) ? minimumSize : 0);
 }
@@ -248,7 +248,7 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	bool adequateSwapChain = false;
 	bool hasRequiredExtensions = checkDeviceExtensionSupport(physicalDevice);
 
-	bool hasGraphics = g_vulkanBackend->m_graphicsQueue.getFamilyIdx().hasValue();
+	bool hasGraphics = g_vkCore->m_graphicsQueue.getFamilyIdx().hasValue();
 	bool hasAnisotropy = features.samplerAnisotropy;
 
 	// prefer / give more weight to discrete gpus than integrated gpus
@@ -282,6 +282,9 @@ VkPipelineStageFlags vkutil::getTransferPipelineStageFlags(VkImageLayout layout)
 {
 	switch (layout)
 	{
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			return VK_PIPELINE_STAGE_TRANSFER_BIT;
+
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			return VK_PIPELINE_STAGE_TRANSFER_BIT;
 
@@ -311,6 +314,9 @@ VkAccessFlags vkutil::getTransferAccessFlags(VkImageLayout layout)
 	{
 		case VK_IMAGE_LAYOUT_UNDEFINED:
 			return VK_ACCESS_NONE;
+
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			return VK_ACCESS_TRANSFER_READ_BIT;
 
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			return VK_ACCESS_TRANSFER_WRITE_BIT;

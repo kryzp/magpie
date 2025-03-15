@@ -38,8 +38,6 @@ namespace llt
 		Vector<Texture*> m_attachments;
 		Vector<Texture*> m_resolveAttachments;
 
-		Vector<VkImageView> m_attachmentViews;
-
 		std::deque<VkImageLayout> m_layoutQueue;
 
 		Texture *m_depth;

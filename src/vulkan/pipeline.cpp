@@ -1,6 +1,6 @@
 #include "pipeline.h"
 
-#include "backend.h"
+#include "core.h"
 #include "util.h"
 #include "texture.h"
 #include "shader.h"
@@ -34,12 +34,12 @@ GraphicsPipelineDefinition::GraphicsPipelineDefinition()
 
 	m_colourBlendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	m_colourBlendState.blendEnable = VK_TRUE;
+	m_colourBlendState.colorBlendOp = VK_BLEND_OP_ADD;
 	m_colourBlendState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	m_colourBlendState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	m_colourBlendState.colorBlendOp = VK_BLEND_OP_ADD;
+	m_colourBlendState.alphaBlendOp = VK_BLEND_OP_ADD;
 	m_colourBlendState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	m_colourBlendState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	m_colourBlendState.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 
 void GraphicsPipelineDefinition::setShader(const ShaderEffect *shader)
@@ -252,13 +252,13 @@ void PipelineCache::init()
 void PipelineCache::dispose()
 {
 	for (auto &[id, cache] : m_pipelines) {
-		vkDestroyPipeline(g_vulkanBackend->m_device, cache, nullptr);
+		vkDestroyPipeline(g_vkCore->m_device, cache, nullptr);
 	}
 
 	m_pipelines.clear();
 
 	for (auto &[id, cache] : m_layouts) {
-		vkDestroyPipelineLayout(g_vulkanBackend->m_device, cache, nullptr);
+		vkDestroyPipelineLayout(g_vkCore->m_device, cache, nullptr);
 	}
 
 	m_layouts.clear();
@@ -406,7 +406,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
 	LLT_VK_CHECK(
-		vkCreateGraphicsPipelines(g_vulkanBackend->m_device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &pipeline),
+		vkCreateGraphicsPipelines(g_vkCore->m_device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &pipeline),
 		"Failed to create new graphics pipeline"
 	);
 
@@ -451,7 +451,7 @@ PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
 	LLT_VK_CHECK(
-		vkCreateComputePipelines(g_vulkanBackend->m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &pipeline),
+		vkCreateComputePipelines(g_vkCore->m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &pipeline),
 		"Failed to create new compute pipeline"
 	);
 
@@ -504,7 +504,7 @@ VkPipelineLayout PipelineCache::fetchPipelineLayout(const ShaderEffect *shader)
 	VkPipelineLayout layout = VK_NULL_HANDLE;
 
 	LLT_VK_CHECK(
-		vkCreatePipelineLayout(g_vulkanBackend->m_device, &pipelineLayoutCreateInfo, nullptr, &layout),
+		vkCreatePipelineLayout(g_vkCore->m_device, &pipelineLayoutCreateInfo, nullptr, &layout),
 		"Failed to create pipeline layout"
 	);
 

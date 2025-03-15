@@ -11,7 +11,7 @@
 
 namespace llt
 {
-	class VulkanBackend;
+	class VulkanCore;
 	
 	class ShaderMgr
 	{
@@ -33,8 +33,6 @@ namespace llt
 
 		HashMap<String, ShaderProgram*> m_shaderCache;
 		HashMap<String, ShaderEffect*> m_effects;
-
-		DescriptorLayoutCache m_descriptorLayoutCache;
 	};
 
 	extern ShaderMgr *g_shaderManager;

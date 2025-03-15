@@ -1,6 +1,6 @@
 #include "texture.h"
 
-#include "backend.h"
+#include "core.h"
 #include "util.h"
 
 #include "math/calc.h"
@@ -12,6 +12,7 @@ Texture::Texture()
 	, m_image(VK_NULL_HANDLE)
 	, m_imageLayout(VK_IMAGE_LAYOUT_UNDEFINED)
 	, m_standardView(VK_NULL_HANDLE)
+	, m_viewCache()
 	, m_mipmapCount(1)
 	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
 	, m_transient(false)
@@ -25,7 +26,7 @@ Texture::Texture()
 	, m_height(0)
 	, m_depth(1)
 	, m_isDepthTexture(false)
-	, m_uav(false)
+	, m_isUAV(false)
 {
 }
 
@@ -38,15 +39,19 @@ void Texture::cleanUp()
 {
 	if (m_image != VK_NULL_HANDLE)
 	{
-		vmaDestroyImage(g_vulkanBackend->m_vmaAllocator, m_image, m_allocation);
+		vmaDestroyImage(g_vkCore->m_vmaAllocator, m_image, m_allocation);
 		m_image = VK_NULL_HANDLE;
 	}
 
-	if (m_standardView != VK_NULL_HANDLE)
+	for (auto &[id, view] : m_viewCache)
 	{
-		vkDestroyImageView(g_vulkanBackend->m_device, m_standardView, nullptr);
-		m_standardView = VK_NULL_HANDLE;
+		vkDestroyImageView(g_vkCore->m_device, view, nullptr);
+		view = VK_NULL_HANDLE;
 	}
+
+	m_standardView = VK_NULL_HANDLE;
+
+	m_viewCache.clear();
 
 	m_imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	m_format = VK_FORMAT_MAX_ENUM;
@@ -132,11 +137,11 @@ void Texture::createInternalResources()
 	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	LLT_VK_CHECK(
-		vmaCreateImage(g_vulkanBackend->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
+		vmaCreateImage(g_vkCore->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);
 
-	m_standardView = createView(getLayerCount(), 0, 0);
+	m_standardView = getView(getLayerCount(), 0, 0);
 }
 
 VkImageView Texture::getStandardView() const
@@ -144,8 +149,19 @@ VkImageView Texture::getStandardView() const
 	return m_standardView;
 }
 
-VkImageView Texture::createView(int layerCount, int layer, int baseMipLevel) const
+VkImageView Texture::getView(int layerCount, int layer, int baseMipLevel)
 {
+	uint64_t hash = 0;
+
+	hash::combine(&hash, &layerCount);
+	hash::combine(&hash, &layer);
+	hash::combine(&hash, &baseMipLevel);
+
+	if (m_viewCache.contains(hash))
+	{
+		return m_viewCache[hash];
+	}
+
 	VkImageViewType viewType = m_type;
 
 	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE && layerCount == 1)
@@ -175,27 +191,32 @@ VkImageView Texture::createView(int layerCount, int layer, int baseMipLevel) con
 	viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 	viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-	VkImageView ret = {};
+	VkImageView view = {};
 
 	LLT_VK_CHECK(
-		vkCreateImageView(g_vulkanBackend->m_device, &viewCreateInfo, nullptr, &ret),
-		"Failed to create texture image view"
+		vkCreateImageView(g_vkCore->m_device, &viewCreateInfo, nullptr, &view),
+		"Failed to create texture image view."
 	);
 
-	return ret;
+	m_viewCache.insert(
+		hash,
+		view
+	);
+
+	return view;
 }
 
 void Texture::transitionLayoutSingle(VkImageLayout newLayout)
 {
-	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->m_graphicsQueue.getCurrentFrame().commandPool);
 	transitionLayout(cmd, newLayout);
 	vkutil::endSingleTimeGraphicsCommands(cmd);
 }
 
 void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
 {
-	if (m_imageLayout == newLayout)
-		return;
+	//if (m_imageLayout == newLayout)
+	//	return;
 
 	VkImageMemoryBarrier barrier = getBarrier(newLayout);
 
@@ -216,12 +237,10 @@ void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
 }
 
 // also transitions the texture into SHADER_READ_ONLY layout
-void Texture::generateMipmaps()
+void Texture::generateMipmaps(CommandBuffer &cmd)
 {
-	LLT_ASSERT(m_imageLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "Texture must be in TRANSFER_DST_OPTIMAL layout to generate mipmaps.");
-
 	VkFormatProperties formatProperties = {};
-	vkGetPhysicalDeviceFormatProperties(g_vulkanBackend->m_physicalData.device, m_format, &formatProperties);
+	vkGetPhysicalDeviceFormatProperties(g_vkCore->m_physicalData.device, m_format, &formatProperties);
 
 	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 	{
@@ -229,9 +248,8 @@ void Texture::generateMipmaps()
 		return;
 	}
 
-	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vulkanBackend->m_graphicsQueue.getCurrentFrame().commandPool);
+	cmd.transitionForMipmapGeneration(*this);
 	cmd.generateMipmaps(*this);
-	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
@@ -306,9 +324,9 @@ void Texture::setProperties(VkFormat format, VkImageTiling tiling, VkImageViewTy
 
 void Texture::setMipLevels(uint32_t mipLevels)
 {
-	uint32_t minMipLevels = 1 + CalcU::floor(CalcU::log2(CalcU::max(m_width, CalcU::max(m_height, m_depth))));
+	uint32_t maxMipLevels = 1 + CalcU::floor(CalcU::log2(CalcU::max(m_width, CalcU::max(m_height, m_depth))));
 
-	m_mipmapCount = CalcU::min(minMipLevels, mipLevels);
+	m_mipmapCount = CalcU::min(maxMipLevels, mipLevels);
 }
 
 void Texture::setSampleCount(VkSampleCountFlagBits numSamples)
@@ -348,12 +366,12 @@ bool Texture::hasParent() const
 
 bool Texture::isUnorderedAccessView() const
 {
-	return m_uav;
+	return m_isUAV;
 }
 
 void Texture::setUnorderedAccessView(bool uav)
 {
-	m_uav = uav;
+	m_isUAV = uav;
 }
 
 uint32_t Texture::getLayerCount() const

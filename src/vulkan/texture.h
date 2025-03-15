@@ -52,7 +52,7 @@ namespace llt
 		void transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout);
 		void transitionLayoutSingle(VkImageLayout newLayout);
 
-		void generateMipmaps();
+		void generateMipmaps(CommandBuffer &cmd);
 
 		void setParent(RenderTarget *getParent);
 		const RenderTarget *getParent() const;
@@ -80,7 +80,7 @@ namespace llt
 		VkPipelineStageFlags getStage() const;
 
 		VkImageView getStandardView() const;
-		VkImageView createView(int layerCount, int layer, int baseMipLevel) const;
+		VkImageView getView(int layerCount, int layer, int baseMipLevel);
 
 		VkImageLayout getImageLayout() const;
 
@@ -88,11 +88,13 @@ namespace llt
 		RenderTarget *m_parent;
 
 		VkImage m_image;
-		VkImageView m_standardView;
 		VkImageLayout m_imageLayout;
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_numSamples;
 		bool m_transient;
+
+		VkImageView m_standardView;
+		HashMap<uint64_t, VkImageView> m_viewCache;
 
 		VkPipelineStageFlags m_stage;
 
@@ -109,7 +111,7 @@ namespace llt
 		uint32_t m_depth;
 		bool m_isDepthTexture;
 
-		bool m_uav;
+		bool m_isUAV;
 	};
 
 	class BoundTexture
@@ -121,7 +123,7 @@ namespace llt
 		{
 		}
 
-		BoundTexture(Texture *texture, TextureSampler *sampler)
+		BoundTexture(const Texture *texture, TextureSampler *sampler)
 			: m_texture(texture)
 			, m_sampler(sampler)
 		{
@@ -137,7 +139,7 @@ namespace llt
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			info.sampler = m_sampler->bind(m_texture->getMipLevels());
+			info.sampler = m_sampler->bind();
 
 			return info;
 		}
@@ -152,13 +154,13 @@ namespace llt
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			info.sampler = m_sampler->bind(m_texture->getMipLevels());
+			info.sampler = m_sampler->bind();
 
 			return info;
 		}
 
 	private:
-		Texture *m_texture;
+		const Texture *m_texture;
 		TextureSampler *m_sampler;
 	};
 }

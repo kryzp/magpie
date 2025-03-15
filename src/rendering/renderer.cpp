@@ -8,16 +8,20 @@
 
 #include "input/input.h"
 
-#include "vulkan/backend.h"
-#include "vulkan/backbuffer.h"
+#include "vulkan/core.h"
+#include "vulkan/swapchain.h"
 #include "vulkan/command_buffer.h"
 #include "vulkan/texture.h"
 
-#include "rendering/material.h"
-#include "rendering/material_system.h"
-#include "rendering/mesh_loader.h"
-#include "rendering/texture_mgr.h"
-#include "rendering/render_target_mgr.h"
+#include "material.h"
+#include "material_system.h"
+#include "mesh_loader.h"
+#include "texture_mgr.h"
+#include "render_target_mgr.h"
+
+#include "./passes/forward_pass.h"
+#include "./passes/post_process_pass.h"
+#include "./passes/shadow_pass.h"
 
 #include "math/colour.h"
 
@@ -25,7 +29,6 @@ using namespace llt;
 
 Renderer::Renderer()
 	: m_target(nullptr)
-//	, m_gpuParticles()
 	, m_currentScene()
 	, m_skyboxMesh()
 	, m_skyboxPipeline()
@@ -70,12 +73,12 @@ void Renderer::init()
 
 	m_target = g_renderTargetManager->createTarget(
 		"target",
-		g_vulkanBackend->m_backbuffer->getWidth(),
-		g_vulkanBackend->m_backbuffer->getHeight(),
+		g_vkCore->m_swapchain->getWidth(),
+		g_vkCore->m_swapchain->getHeight(),
 		{
 			VK_FORMAT_R32G32B32A32_SFLOAT
 		},
-		VK_SAMPLE_COUNT_1_BIT,
+		VK_SAMPLE_COUNT_8_BIT,
 		1
 	);
 
@@ -84,15 +87,15 @@ void Renderer::init()
 	m_target->setClearColours(Colour::black());
 
 	g_forwardPass.init();
-	g_postProcessPass.init(m_descriptorPool);
-
-//	m_gpuParticles.init(m_shaderParamsBuffer);
+	g_postProcessPass.init(m_descriptorPool, m_target);
+	g_shadowPass.init();
 }
 
 void Renderer::cleanUp()
 {
-	g_forwardPass.cleanUp();
-	g_postProcessPass.cleanUp();
+	g_shadowPass.dispose();
+	g_postProcessPass.dispose();
+	g_forwardPass.dispose();
 
 	m_descriptorPool.cleanUp();
 	m_descriptorLayoutCache.cleanUp();
@@ -123,10 +126,9 @@ void Renderer::render(const Camera &camera, float deltaTime)
 
 	CommandBuffer cmd = CommandBuffer::fromGraphics();
 
+	cmd.beginRecording();
 	cmd.beginRendering(m_target);
 	{
-		renderSkybox(cmd, camera);
-
 		auto &renderList = m_currentScene.getRenderList();
 		
 		g_forwardPass.render(cmd, camera, renderList);
@@ -134,13 +136,23 @@ void Renderer::render(const Camera &camera, float deltaTime)
 	cmd.endRendering();
 	cmd.submit();
 
+	m_target->toggleClear(false);
+
+	cmd.beginRecording();
+	cmd.beginRendering(m_target);
+	renderSkybox(cmd, camera);
+	cmd.endRendering();
+	cmd.submit();
+
+	m_target->toggleClear(true);
+
 	g_postProcessPass.render(cmd);
 
 	ImGui::Render();
 
 	renderImGui(cmd);
 
-	g_vulkanBackend->swapBuffers();
+	g_vkCore->swapBuffers();
 }
 
 void Renderer::renderImGui(CommandBuffer &cmd)
@@ -148,20 +160,21 @@ void Renderer::renderImGui(CommandBuffer &cmd)
 	RenderInfo renderInfo;
 	
 	renderInfo.setSize(
-		g_vulkanBackend->m_backbuffer->getWidth(),
-		g_vulkanBackend->m_backbuffer->getHeight()
+		g_vkCore->m_swapchain->getWidth(),
+		g_vkCore->m_swapchain->getHeight()
 	);
 	
 	renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_LOAD,
-		g_vulkanBackend->m_backbuffer->getCurrentSwapchainImageView(),
-		g_vulkanBackend->getImGuiAttachmentFormat()
+		g_vkCore->m_swapchain->getCurrentSwapchainImageView(),
+		g_vkCore->getImGuiAttachmentFormat()
 	);
 
+	cmd.beginRecording();
 	cmd.beginRendering(renderInfo);
 
 	ImDrawData *drawData = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(drawData, cmd.getBuffer());
+	ImGui_ImplVulkan_RenderDrawData(drawData, cmd.getHandle());
 
 	cmd.endRendering();
 	cmd.submit();
@@ -214,22 +227,23 @@ void Renderer::createSkyboxResources()
 		g_textureManager->getTexture("environmentMap"),
 		g_textureManager->getSampler("linear")
 	);
-	
-	DescriptorWriter descriptorWriter;
-	descriptorWriter.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getStandardImageInfo());
 
 	m_skyboxSet = m_descriptorPool.allocate(skyboxShader->getDescriptorSetLayout());
-	descriptorWriter.updateSet(m_skyboxSet);
+
+	DescriptorWriter()
+		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getStandardImageInfo())
+		.updateSet(m_skyboxSet);
 
 	m_skyboxPipeline.setShader(skyboxShader);
 	m_skyboxPipeline.setVertexFormat(g_primitiveVertexFormat);
-	m_skyboxPipeline.setDepthTest(false);
+	m_skyboxPipeline.setDepthTest(true);
 	m_skyboxPipeline.setDepthWrite(false);
+	m_skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
 }
 
 void Renderer::renderSkybox(CommandBuffer &cmd, const Camera &camera)
 {
-	PipelineData pipelineData = g_vulkanBackend->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, cmd.getCurrentRenderInfo());
+	PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, cmd.getCurrentRenderInfo());
 
 	struct
 	{
@@ -261,7 +275,7 @@ void Renderer::renderParticles(CommandBuffer &cmd, const Camera &camera, const G
 	m_gBuffer->toggleClear(false);
 
 	m_pushConstants.set("time", deltaTime);
-	g_vulkanBackend->setPushConstants(m_pushConstants);
+	g_vkCore->setPushConstants(m_pushConstants);
 	m_gpuParticles.dispatchCompute(camera);
 
 	glm::mat4 particleMatrix = glm::scale(glm::identity<glm::mat4>(), { 0.1f, 0.1f, 0.1f });
@@ -269,24 +283,5 @@ void Renderer::renderParticles(CommandBuffer &cmd, const Camera &camera, const G
 	m_shaderParams.set("prevModelMatrix", particleMatrix);
 	m_shaderParamsBuffer->pushData(m_shaderParams);
 	m_gpuParticles.render();
-}
-
-void Renderer::renderPostProcess()
-{
-	RenderPass pass;
-	pass.setMesh(m_quadMesh);
-
-	m_postProcessPipeline.bind();
-
-	vkCmdBindDescriptorSets(
-		g_vulkanBackend->graphicsQueue.getCurrentFrame().commandBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		m_postProcessPipeline.getPipelineLayout(),
-		0,
-		1, &m_postProcessDescriptorSet,
-		0, nullptr
-	);
-
-	m_postProcessPipeline.render(pass);
 }
 */

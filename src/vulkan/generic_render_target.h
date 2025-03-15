@@ -13,13 +13,13 @@
 
 namespace llt
 {
-	class VulkanBackend;
+	class VulkanCore;
 	class RenderInfo;
 
 	enum RenderTargetType
 	{
 		RENDER_TARGET_TYPE_TEXTURE,
-		RENDER_TARGET_TYPE_BACKBUFFER,
+		RENDER_TARGET_TYPE_SWAPCHAIN,
 		RENDER_TARGET_TYPE_MAX_ENUM
 	};
 
@@ -48,7 +48,7 @@ namespace llt
 		void setClearColours(const Colour &colour);
 
 		void toggleClear(bool clear);
-		void toggleClear(int idx, bool clear);
+		void toggleColourClear(int idx, bool clear);
 		void toggleDepthStencilClear(bool clear);
 
 		uint32_t getWidth() const;

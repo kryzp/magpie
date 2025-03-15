@@ -9,7 +9,7 @@
 
 namespace llt
 {
-    class VulkanBackend;
+    class VulkanCore;
     class RenderTarget;
 	class Texture;
 

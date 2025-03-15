@@ -2,6 +2,8 @@
 
 #include "vulkan/render_target.h"
 #include "vulkan/texture.h"
+#include "vulkan/util.h"
+#include "vulkan/core.h"
 
 #include "math/colour.h"
 
@@ -36,6 +38,8 @@ RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, 
 	RenderTarget *result = new RenderTarget(width, height);
 	result->setMSAA(samples);
 
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->m_graphicsQueue.getCurrentFrame().commandPool);
+
 	for (int i = 0; i < attachments.size(); i++)
 	{
 		Texture *texture = new Texture();
@@ -49,16 +53,17 @@ RenderTarget *RenderTargetMgr::createTarget(const String &name, uint32_t width, 
 
 		if (mipLevels > 1)
 		{
-			texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			texture->generateMipmaps();
+			texture->generateMipmaps(cmd);
 		}
 		else
 		{
-			texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			texture->transitionLayout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
 		result->addAttachment(texture);
 	}
+
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	result->setClearColours(Colour::black());
 

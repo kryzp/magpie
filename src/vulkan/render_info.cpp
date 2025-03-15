@@ -1,7 +1,7 @@
 #include "render_info.h"
-#include "backend.h"
+#include "core.h"
 #include "util.h"
-#include "backbuffer.h"
+#include "swapchain.h"
 
 using namespace llt;
 
@@ -150,7 +150,7 @@ const Vector<VkFormat> &RenderInfo::getColourAttachmentFormats() const
 
 const VkFormat &RenderInfo::getDepthAttachmentFormat() const
 {
-	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vkutil::findDepthFormat(g_vulkanBackend->m_physicalData.device) : VK_FORMAT_UNDEFINED;
+	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vkutil::findDepthFormat(g_vkCore->m_physicalData.device) : VK_FORMAT_UNDEFINED;
 }
 
 uint32_t RenderInfo::getWidth() const
