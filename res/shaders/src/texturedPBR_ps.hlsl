@@ -46,9 +46,7 @@ float distributionGGX(float NdotH, float roughness)
 	
 	float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
 	
-	denom = max(denom, 0.00001);
-
-	return a2 / (denom * denom * MATH_PI);
+	return a2 / max(0.0000001, denom * denom * MATH_PI);
 }
 
 float geometrySchlickGGX(float NdotV, float roughness)
@@ -71,13 +69,24 @@ float4 main(PSInput input) : SV_Target
 {
 	float2 uv = frac(input.texCoord);
 	
-	float3 viewDir = mul(frameData.viewPos.xyz - input.fragPos.xyz, transpose(input.tbn));
+	float3 viewDirWorldPos = frameData.viewPos.xyz - input.fragPos.xyz;
+	float3 viewDir = mul(viewDirWorldPos, transpose(input.tbn));
 	viewDir = normalize(viewDir);
 	
-	float depth = .075;
-	float2 p = depth / viewDir.z * viewDir.xy;
+	float eta = 1.0 / 1.5;
+
+	float3 reflectedViewDirWP = reflect(-viewDirWorldPos, input.tbn[2]);
+	float3 refractedViewDir = refract(-viewDir, float3(0.0, 0.0, 1.0), eta);
+	
+	float depth = pushConstants.time * 0.5;
+	float2 p = depth / refractedViewDir.z * refractedViewDir.xy;
+	
+	//float3 F = fresnelSchlick(viewDir.z, 0.04, 0.0);
 	
 	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv - p).rgb;
+	//float3 specular = localPrefilterMap.Sample(localIrradianceMapSampler, reflectedViewDirWP).rgb;
+	
+	//float3 col = lerp(albedo, specular, F);
 	
 	return float4(albedo, 1.0);
 }
