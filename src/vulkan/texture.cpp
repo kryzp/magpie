@@ -164,8 +164,9 @@ VkImageView Texture::getView(int layerCount, int layer, int baseMipLevel)
 
 	VkImageViewType viewType = m_type;
 
-	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE && layerCount == 1)
+	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE && layerCount == 1) {
 		viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	}
 
 	VkImageViewCreateInfo viewCreateInfo = {};
 	viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

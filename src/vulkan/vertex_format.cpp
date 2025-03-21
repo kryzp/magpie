@@ -9,20 +9,21 @@ using namespace llt;
 void llt::initVertexTypes()
 {
 	g_primitiveVertexFormat.addBinding(sizeof(PrimitiveVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveVertex, pos) }
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveVertex, position) }
 	});
 
 	g_primitiveUvVertexFormat.addBinding(sizeof(PrimitiveUVVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveUVVertex, pos) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveUVVertex, position) },
 		{ VK_FORMAT_R32G32_SFLOAT, offsetof(PrimitiveUVVertex, uv) }
 	});
 
 	g_modelVertexFormat.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, pos) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, position) },
 		{ VK_FORMAT_R32G32_SFLOAT, offsetof(ModelVertex, uv) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, col) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, norm) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, tangent) }
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, colour) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, normal) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, tangent) },
+		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, bitangent) }
 	});
 }
 

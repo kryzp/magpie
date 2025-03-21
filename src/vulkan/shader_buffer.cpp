@@ -13,11 +13,11 @@ DynamicShaderBuffer::DynamicShaderBuffer()
 	, m_usageInFrame()
 	, m_offset(0)
 	, m_maxSize(0)
-	, m_type(SHADER_BUFFER_MAX_ENUM)
+	, m_type(VK_DESCRIPTOR_TYPE_MAX_ENUM)
 {
 }
 
-void DynamicShaderBuffer::init(uint64_t initialSize, ShaderBufferType type)
+void DynamicShaderBuffer::init(uint64_t initialSize, VkDescriptorType type)
 {
 	m_type = type;
 	m_usageInFrame.clear();
@@ -70,37 +70,44 @@ void DynamicShaderBuffer::pushData(const void *data, uint64_t size)
 
 void DynamicShaderBuffer::reallocateBuffer(uint64_t allocationSize)
 {
-	delete m_buffer;
-
 	VkDeviceSize bufferSize = vkutil::calcShaderBufferAlignedSize(allocationSize);
 
 	m_maxSize = allocationSize;
 	m_offset = 0;
 
-	if (m_type == SHADER_BUFFER_UBO)
+	GPUBuffer *newBuffer = nullptr;
+
+	if (m_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
 	{
-		m_buffer = g_gpuBufferManager->createUniformBuffer(bufferSize);
+		newBuffer = g_gpuBufferManager->createUniformBuffer(bufferSize);
 	}
-	else if (m_type == SHADER_BUFFER_SSBO)
+	else if (m_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
 	{
-		m_buffer = g_gpuBufferManager->createShaderStorageBuffer(bufferSize);
+		newBuffer = g_gpuBufferManager->createShaderStorageBuffer(bufferSize);
 	}
 	else
 	{
-		LLT_ERROR("Unsupported ShaderBufferType: %d.", m_type);
+		LLT_ERROR("Unsupported ShaderBufferType when re-allocating shader buffer: %d.", m_type);
 	}
+
+	if (m_buffer)
+	{
+		m_buffer->writeToBuffer(newBuffer, m_buffer->getSize(), 0, 0);
+		delete m_buffer;
+	}
+
+	m_buffer = newBuffer;
 
 	m_info.buffer = m_buffer->getHandle();
 	m_info.offset = 0;
-	m_info.range = 0;
 
-	if (m_type == SHADER_BUFFER_UBO)
+	if (m_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
 	{
-		LLT_LOG("Allocated UBO with allocation size %llu.", allocationSize);
+		LLT_LOG("Allocated dynamic UBO with allocation size %llu.", allocationSize);
 	}
-	else if (m_type == SHADER_BUFFER_SSBO)
+	else if (m_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)
 	{
-		LLT_LOG("Allocated SSBO with allocation size %llu.", allocationSize);
+		LLT_LOG("Allocated dynamic SSBO with allocation size %llu.", allocationSize);
 	}
 }
 
@@ -116,7 +123,7 @@ const VkDescriptorBufferInfo &DynamicShaderBuffer::getDescriptorInfo() const
 
 VkDescriptorType DynamicShaderBuffer::getDescriptorType() const
 {
-	return m_type == SHADER_BUFFER_UBO ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+	return m_type;
 }
 
 uint32_t DynamicShaderBuffer::getDynamicOffset() const

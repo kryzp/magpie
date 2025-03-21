@@ -1,5 +1,5 @@
-#ifndef UBO_MANAGER_H_
-#define UBO_MANAGER_H_
+#ifndef DYNAMIC_SHADER_BUFFER_H_
+#define DYNAMIC_SHADER_BUFFER_H_
 
 #include "core/common.h"
 #include "container/array.h"
@@ -10,20 +10,13 @@
 
 namespace llt
 {
-	enum ShaderBufferType
-	{
-		SHADER_BUFFER_UBO,
-		SHADER_BUFFER_SSBO,
-		SHADER_BUFFER_MAX_ENUM
-	};
-
 	class DynamicShaderBuffer
 	{
 	public:
 		DynamicShaderBuffer();
 		~DynamicShaderBuffer() = default;
 
-		void init(uint64_t initialSize, ShaderBufferType type);
+		void init(uint64_t initialSize, VkDescriptorType type);
 		void cleanUp();
 
 		void pushData(const void *data, uint64_t size);
@@ -51,8 +44,8 @@ namespace llt
 		uint64_t m_offset;
 		uint64_t m_maxSize;
 
-		ShaderBufferType m_type;
+		VkDescriptorType m_type;
 	};
 }
 
-#endif // UBO_MANAGER_H_
+#endif // DYNAMIC_SHADER_BUFFER_H_

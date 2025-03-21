@@ -71,7 +71,7 @@ void ShaderMgr::createDefaultShaderEffects()
 
 		ShaderEffect *pbr_effect = createEffect("texturedPBR");
 		pbr_effect->setDescriptorSetLayout(layout);
-		pbr_effect->setPushConstantsSize(0);
+		pbr_effect->setPushConstantsSize(sizeof(float));
 		pbr_effect->addStage(g_shaderManager->get("model_vs"));
 		pbr_effect->addStage(g_shaderManager->get("texturedPBR_ps"));
 	}

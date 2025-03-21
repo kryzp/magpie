@@ -109,9 +109,9 @@ void Renderer::addRenderObjects()
 	auto assimpModel = m_currentScene.createRenderObject();
 	assimpModel->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
-	assimpModel->transform.setScale({ 4.0f, 4.0f, 4.0f });
+	assimpModel->transform.setScale({ 1.0f, 1.0f, 1.0f });
 	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
-	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/WoodCube/scene.gltf");
 	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 

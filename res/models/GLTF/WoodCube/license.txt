@@ -1,0 +1,11 @@
+Model Information:
+* title:	Wood Texture On Rounded Cube
+* source:	https://sketchfab.com/3d-models/wood-texture-on-rounded-cube-10bbe64ec92c405cb0d4d4d9b07ef019
+* author:	Jordan Pelayo (https://sketchfab.com/JordanPelayo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Wood Texture On Rounded Cube" (https://sketchfab.com/3d-models/wood-texture-on-rounded-cube-10bbe64ec92c405cb0d4d4d9b07ef019) by Jordan Pelayo (https://sketchfab.com/JordanPelayo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

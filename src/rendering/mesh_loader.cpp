@@ -162,7 +162,7 @@ void MeshLoader::processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, co
 
 void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
 {
-	Vector<ModelVertex> vertices;
+	Vector<ModelVertex> vertices(assimpMesh->mNumVertices);
 	Vector<uint16_t> indices;
 
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
@@ -171,30 +171,7 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 
 		ModelVertex vertex = {};
 
-		vertex.pos = { vtx.x, vtx.y, vtx.z };
-
-		if (assimpMesh->HasNormals())
-		{
-			const aiVector3D &nml = transform * assimpMesh->mNormals[i]; // this literally wont work lmao
-
-			vertex.norm = { nml.x, nml.y, nml.z };
-		}
-		else
-		{
-			vertex.norm = { 0.0f, 0.0f, 1.0f };
-		}
-
-		if (assimpMesh->HasVertexColors(0))
-		{
-			const aiColor4D &col = assimpMesh->mColors[0][i];
-
-			vertex.col = { col.r, col.g, col.b };
-		}
-		else
-		{
-			vertex.col = { 1.0f, 1.0f, 1.0f };
-		}
-
+		vertex.position = { vtx.x, vtx.y, vtx.z };
 
 		if (assimpMesh->HasTextureCoords(0))
 		{
@@ -207,18 +184,43 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 			vertex.uv = { 0.0f, 0.0f };
 		}
 
+		if (assimpMesh->HasVertexColors(0))
+		{
+			const aiColor4D &col = assimpMesh->mColors[0][i];
+
+			vertex.colour = { col.r, col.g, col.b };
+		}
+		else
+		{
+			vertex.colour = { 1.0f, 1.0f, 1.0f };
+		}
+
+		if (assimpMesh->HasNormals())
+		{
+			const aiVector3D &nml = transform * assimpMesh->mNormals[i]; // this literally wont work lmao
+
+			vertex.normal = { nml.x, nml.y, nml.z };
+		}
+		else
+		{
+			vertex.normal = { 0.0f, 0.0f, 1.0f };
+		}
+
 		if (assimpMesh->HasTangentsAndBitangents())
 		{
-			const aiVector3D &tangent = assimpMesh->mTangents[i];
+			const aiVector3D &tangent = transform * assimpMesh->mTangents[i];
+			const aiVector3D &bitangent = transform * assimpMesh->mBitangents[i];
 
 			vertex.tangent = { tangent.x, tangent.y, tangent.z };
+			vertex.bitangent = { bitangent.x, bitangent.y, bitangent.z };
 		}
 		else
 		{
 			vertex.tangent = { 0.0f, 0.0f, 0.0f };
+			vertex.bitangent = { 0.0f, 0.0f, 0.0f };
 		}
 
-		vertices.pushBack(vertex);
+		vertices[i] = vertex;
 	}
 
 	for (int i = 0; i < assimpMesh->mNumFaces; i++)
@@ -244,13 +246,11 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
-		// todo: handle missing textures
-
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,			g_materialSystem->getDiffuseFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,			g_materialSystem->getAOFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS, g_materialSystem->getRoughnessMetallicFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,			g_materialSystem->getNormalFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,			g_materialSystem->getEmissiveFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				g_materialSystem->getDiffuseFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				g_materialSystem->getAOFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	g_materialSystem->getRoughnessMetallicFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
 
 		Material *material = g_materialSystem->buildMaterial(data);
 

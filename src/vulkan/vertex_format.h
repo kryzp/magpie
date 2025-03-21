@@ -47,14 +47,14 @@ namespace llt
 
 	struct PrimitiveVertex
 	{
-		glm::vec3 pos;
+		glm::vec3 position;
 	};
 
 	extern VertexFormat g_primitiveVertexFormat;
 
 	struct PrimitiveUVVertex
 	{
-		glm::vec3 pos;
+		glm::vec3 position;
 		glm::vec2 uv;
 	};
 
@@ -62,11 +62,12 @@ namespace llt
 
 	struct ModelVertex
 	{
-		glm::vec3 pos;
+		glm::vec3 position;
 		glm::vec2 uv;
-		glm::vec3 col;
-		glm::vec3 norm;
+		glm::vec3 colour;
+		glm::vec3 normal;
 		glm::vec3 tangent;
+		glm::vec3 bitangent;
 	};
 
 	extern VertexFormat g_modelVertexFormat;

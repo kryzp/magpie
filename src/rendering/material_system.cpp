@@ -404,7 +404,7 @@ void MaterialSystem::generateEnvironmentMaps(CommandBuffer &cmd)
 	prefilterParams;
 
 	DynamicShaderBuffer pfParameterBuffer;
-	pfParameterBuffer.init(sizeof(float) * 4 * PREFILTER_MIP_LEVELS * 6, SHADER_BUFFER_UBO);
+	pfParameterBuffer.init(sizeof(float) * 4 * PREFILTER_MIP_LEVELS * 6, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 	pfParameterBuffer.pushData(&prefilterParams, sizeof(prefilterParams));
 
 	RenderInfo pfRenderInfo;

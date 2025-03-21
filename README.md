@@ -17,6 +17,7 @@ TODO (no particular order):
 - double-ended queue implementation is broken (see render target)
 
 BACKBURNER:
+- ASSET SYSTEM WITH HOT RELOADING OF SHADERS FOR THE LOVE OF GOD !!!!
 - volumetrics
 - clustered deferred rendering
 - shadowmapping: directional and point lights

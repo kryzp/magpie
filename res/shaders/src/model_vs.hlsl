@@ -16,34 +16,27 @@ struct VSInput
     
     [[vk::location(VS_ATT_SLOT_TANGENT)]]
     float3 tangent : TANGENT;
+    
+	[[vk::location(VS_ATT_SLOT_BITANGENT)]]
+    float3 bitangent : BITANGENT;
 };
 
 struct VSOutput
 {
     float4 svPosition : SV_Position;
 
-    [[vk::location(VS_OUT_SLOT_POSITION)]]
-    float3 position : TEXCOORD0;
-    
-    [[vk::location(VS_OUT_SLOT_UV)]]
-    float2 texCoord : TEXCOORD1;
-    
-    [[vk::location(VS_OUT_SLOT_COLOUR)]]
-    float3 colour : COLOR;
-    
-    [[vk::location(VS_OUT_SLOT_TANGENT_FRAG_POS)]]
-    float3 fragPos : TEXCOORD2;
-    
-    [[vk::location(VS_OUT_SLOT_TBN_MATRIX)]]
-    float3x3 tbn : TEXCOORD4;
+    [[vk::location(0)]] float3 colour       : COLOR;
+    [[vk::location(1)]] float3 position     : TEXCOORD0;
+    [[vk::location(2)]] float2 texCoord     : TEXCOORD1;
+    [[vk::location(3)]] float3 fragPos      : TEXCOORD2;
+    [[vk::location(4)]] float3x3 tbn        : TEXCOORD3;
 };
 
 VSOutput main(VSInput input)
 {
     float3 T = normalize(mul((float3x3)instanceData.normalMatrix, input.tangent));
     float3 N = normalize(mul((float3x3)instanceData.normalMatrix, input.normal));
-    T = normalize(T - dot(T, N) * N);
-    float3 B = normalize(cross(N, T));
+    float3 B = normalize(mul((float3x3)instanceData.normalMatrix, input.bitangent));
 
     VSOutput output;
 	output.colour = input.colour;

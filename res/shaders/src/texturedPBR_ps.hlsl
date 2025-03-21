@@ -2,20 +2,11 @@
 
 struct PSInput
 {
-    [[vk::location(VS_OUT_SLOT_POSITION)]]
-	float3 position : TEXCOORD0;
-	
-    [[vk::location(VS_OUT_SLOT_UV)]]
-	float2 texCoord : TEXCOORD1;
-	
-    [[vk::location(VS_OUT_SLOT_COLOUR)]]
-	float3 colour : COLOR;
-	
-    [[vk::location(VS_OUT_SLOT_TANGENT_FRAG_POS)]]
-	float3 fragPos : TEXCOORD2;
-	
-    [[vk::location(VS_OUT_SLOT_TBN_MATRIX)]]
-	float3x3 tbn : TEXCOORD4;
+	[[vk::location(0)]] float3 colour		: COLOR;
+	[[vk::location(1)]] float3 position		: TEXCOORD0;
+	[[vk::location(2)]] float2 texCoord		: TEXCOORD1;
+	[[vk::location(3)]] float3 fragPos		: TEXCOORD2;
+	[[vk::location(4)]] float3x3 tbn		: TEXCOORD3;
 };
 
 #define MAX_REFLECTION_LOD 4.0
@@ -78,6 +69,20 @@ float geometrySmith(float NdotV, float NdotL, float roughness)
 
 float4 main(PSInput input) : SV_Target
 {
+	float2 uv = frac(input.texCoord);
+	
+	float3 viewDir = mul(frameData.viewPos.xyz - input.fragPos.xyz, transpose(input.tbn));
+	viewDir = normalize(viewDir);
+	
+	float depth = .075;
+	float2 p = depth / viewDir.z * viewDir.xy;
+	
+	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv - p).rgb;
+	
+	return float4(albedo, 1.0);
+}
+
+	/*
 	float2 uv = frac(input.texCoord);
 	
 	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv).rgb;
@@ -150,43 +155,4 @@ float4 main(PSInput input) : SV_Target
 	finalColour *= input.colour;
 	
 	return float4(finalColour, 1.0);
-
-	/*
-	float3 camPos = frameData.viewPos.xyz;
-	float3 worldPos = input.fragPos;
-	
-	float3 viewDir = normalize(camPos - worldPos);
-	
-	// we don't use the normal texture as we don't want that much detail - just geometry
-	float3 normal = input.tbn[2];
-	
-	float NdotV = dot(normal, viewDir);
-	float theta = acos(NdotV);
-	
-	float curvature = length(fwidth(normal)) / length(fwidth(worldPos));
-	
-	float radius = 1.0 / (curvature + 0.001);
-	
-	float diffusionCoeff = 1.0;
-	float extinctionCoeff = 0.1;
-	
-	float alpha = 1.0;
-	
-	float3 A = 0.0;
-	float3 B = 0.0;
-	
-	float dx = 0.01;
-	
-	for (float x = -MATH_PI; x <= MATH_PI; x += dx)
-	{
-		float3 irradianceSample = alpha / (4.0 * MATH_PI * diffusionCoeff) * exp(-abs(2.0 * sin(x * 0.5)) / diffusionCoeff);
-		
-		A += irradianceSample * dx * cos(theta + x);
-		B += irradianceSample * dx;
-	}
-	
-	float3 transmittance = exp(-extinctionCoeff * (A / B));
-	
-	return float4(transmittance, 1.0);
 	*/
-}
