@@ -57,15 +57,6 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		VkDescriptorSet materialSet = mat->getDescriptorSet(SHADER_PASS_FORWARD);
 		Vector<uint32_t> dynamicOffsets = mat->getDynamicOffsets();
 
-		float pushconstants = g_inputState->alt();
-
-		cmd.pushConstants(
-			data.layout,
-			VK_SHADER_STAGE_ALL_GRAPHICS,
-			sizeof(float),
-			&pushconstants
-		);
-
 		cmd.bindDescriptorSets(
 			0,
 			data.layout,

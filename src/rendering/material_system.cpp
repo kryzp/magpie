@@ -545,7 +545,10 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 
 	if (data.parameterSize > 0)
 	{
-		material->m_parameterBuffer->pushData(data.parameters, data.parameterSize);
+		material->m_parameterBuffer->pushData(
+			data.parameters,
+			data.parameterSize
+		);
 	}
 	else
 	{
@@ -622,11 +625,23 @@ Material *MaterialSystem::buildMaterial(MaterialData &data)
 
 void MaterialSystem::loadDefaultTechniques()
 {
-	Technique pbrTechnique;
-	pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR");
-	pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
-	pbrTechnique.vertexFormat = g_modelVertexFormat;
-	addTechnique("texturedPBR_opaque", pbrTechnique);
+	// PBR
+	{
+		Technique pbrTechnique;
+		pbrTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("texturedPBR");
+		pbrTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
+		pbrTechnique.vertexFormat = g_modelVertexFormat;
+		addTechnique("texturedPBR_opaque", pbrTechnique);
+	}
+
+	// SUBSURFACE REFRACTION
+	{
+		Technique subsurfaceRefractionTechnique;
+		subsurfaceRefractionTechnique.passes[SHADER_PASS_FORWARD] = g_shaderManager->getEffect("subsurface_refraction");
+		subsurfaceRefractionTechnique.passes[SHADER_PASS_SHADOW] = nullptr;
+		subsurfaceRefractionTechnique.vertexFormat = g_modelVertexFormat;
+		addTechnique("subsurface_refraction", subsurfaceRefractionTechnique);
+	}
 }
 
 void MaterialSystem::addTechnique(const String &name, const Technique &technique)

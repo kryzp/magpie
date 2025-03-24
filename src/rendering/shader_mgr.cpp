@@ -47,6 +47,7 @@ void ShaderMgr::loadDefaultShaderPrograms()
 	load("prefilter_convolution_ps",		"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("brdf_integrator_ps",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("texturedPBR_ps",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
+	load("subsurface_refraction_ps",		"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("skybox_ps",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("hdr_tonemapping_ps",				"../../res/shaders/compiled/hdr_tonemapping_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 	load("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -71,9 +72,30 @@ void ShaderMgr::createDefaultShaderEffects()
 
 		ShaderEffect *pbr_effect = createEffect("texturedPBR");
 		pbr_effect->setDescriptorSetLayout(layout);
-		pbr_effect->setPushConstantsSize(sizeof(float));
+		pbr_effect->setPushConstantsSize(0);
 		pbr_effect->addStage(g_shaderManager->get("model_vs"));
 		pbr_effect->addStage(g_shaderManager->get("texturedPBR_ps"));
+	}
+
+	// SUBSURFACE REFRACTION
+	{
+		DescriptorLayoutBuilder descriptorLayoutBuilder;
+
+		// bind all buffers
+		for (int i = 0; i <= 2; i++)
+			descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+
+		// bind all textures
+		for (int i = 3; i <= 10; i++)
+			descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+
+		ShaderEffect *pbr_effect = createEffect("subsurface_refraction");
+		pbr_effect->setDescriptorSetLayout(layout);
+		pbr_effect->setPushConstantsSize(0);
+		pbr_effect->addStage(g_shaderManager->get("model_vs"));
+		pbr_effect->addStage(g_shaderManager->get("subsurface_refraction_ps"));
 	}
 
 	// SKYBOX

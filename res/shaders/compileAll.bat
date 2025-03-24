@@ -9,6 +9,7 @@ set DXC=D:/dxc_2024_07_31/bin/x64/dxc.exe
 
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/skybox_ps.hlsl						-Fo compiled/skybox_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/texturedPBR_ps.hlsl					-Fo compiled/texturedPBR_ps.spv
+%DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/subsurface_refraction_ps.hlsl			-Fo compiled/subsurface_refraction_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/equirectangular_to_cubemap_ps.hlsl	-Fo compiled/equirectangular_to_cubemap_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/irradiance_convolution_ps.hlsl		-Fo compiled/irradiance_convolution_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/prefilter_convolution_ps.hlsl			-Fo compiled/prefilter_convolution_ps.spv

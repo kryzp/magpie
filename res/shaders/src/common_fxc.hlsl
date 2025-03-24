@@ -42,10 +42,3 @@ struct InstanceUBO
 };
 
 ConstantBuffer<InstanceUBO> instanceData : register(b1);
-
-struct MaterialUBO
-{
-    float temp;
-};
-
-ConstantBuffer<MaterialUBO> materialData : register(b2); 

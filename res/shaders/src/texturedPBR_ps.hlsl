@@ -69,31 +69,6 @@ float4 main(PSInput input) : SV_Target
 {
 	float2 uv = frac(input.texCoord);
 	
-	float3 viewDirWorldPos = frameData.viewPos.xyz - input.fragPos.xyz;
-	float3 viewDir = mul(viewDirWorldPos, transpose(input.tbn));
-	viewDir = normalize(viewDir);
-	
-	float eta = 1.0 / 1.5;
-
-	float3 reflectedViewDirWP = reflect(-viewDirWorldPos, input.tbn[2]);
-	float3 refractedViewDir = refract(-viewDir, float3(0.0, 0.0, 1.0), eta);
-	
-	float depth = pushConstants.time * 0.5;
-	float2 p = depth / refractedViewDir.z * refractedViewDir.xy;
-	
-	//float3 F = fresnelSchlick(viewDir.z, 0.04, 0.0);
-	
-	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv - p).rgb;
-	//float3 specular = localPrefilterMap.Sample(localIrradianceMapSampler, reflectedViewDirWP).rgb;
-	
-	//float3 col = lerp(albedo, specular, F);
-	
-	return float4(albedo, 1.0);
-}
-
-	/*
-	float2 uv = frac(input.texCoord);
-	
 	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv).rgb;
 	float ambientOcclusion = aoTexture.Sample(aoSampler, uv).r;
 	float3 metallicRoughness = mrTexture.Sample(mrSampler, uv).rgb;
@@ -106,7 +81,7 @@ float4 main(PSInput input) : SV_Target
 	
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 	
-	normal = normalize(mul(normalize(2.0*normal - 1.0), input.tbn));
+	normal = normalize(mul(normalize(2.0 * normal - 1.0), input.tbn));
 	float3 viewDir = normalize(frameData.viewPos.xyz - input.fragPos);
 	
 	float NdotV = max(0.0, dot(normal, viewDir));
@@ -164,4 +139,4 @@ float4 main(PSInput input) : SV_Target
 	finalColour *= input.colour;
 	
 	return float4(finalColour, 1.0);
-	*/
+}
