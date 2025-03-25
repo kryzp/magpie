@@ -18,7 +18,7 @@ namespace llt
 
 		VkDescriptorSetLayout build(VkShaderStageFlags shaderStages, void *pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
 
-		DescriptorLayoutBuilder &bind(uint32_t idx, VkDescriptorType type);
+		DescriptorLayoutBuilder &bind(uint32_t binding, VkDescriptorType type);
 
 	private:
 		Vector<VkDescriptorSetLayoutBinding> m_bindings;
@@ -32,11 +32,11 @@ namespace llt
 
 		DescriptorWriter &updateSet(const VkDescriptorSet &set);
 
-		DescriptorWriter &writeBuffer(uint32_t idx, VkDescriptorType type, const VkDescriptorBufferInfo &info);
-		DescriptorWriter &writeBuffer(uint32_t idx, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset);
+		DescriptorWriter &writeBuffer(uint32_t binding, VkDescriptorType type, const VkDescriptorBufferInfo &info);
+		DescriptorWriter &writeBuffer(uint32_t binding, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset);
 
-		DescriptorWriter &writeImage(uint32_t idx, VkDescriptorType type, const VkDescriptorImageInfo &info);
-		DescriptorWriter &writeImage(uint32_t idx, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout);
+		DescriptorWriter &writeImage(uint32_t binding, VkDescriptorType type, const VkDescriptorImageInfo &info);
+		DescriptorWriter &writeImage(uint32_t binding, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout);
 
 	private:
 		Vector<VkWriteDescriptorSet> m_writes;

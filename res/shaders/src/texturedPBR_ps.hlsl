@@ -1,5 +1,14 @@
 #include "common_ps.hlsl"
 
+/*
+struct PushConstants
+{
+};
+
+[[vk::push_constant]]
+PushConstants pc;
+*/
+
 struct PSInput
 {
 	[[vk::location(VS_MODEL_OUT_SLOT_COLOR)]]

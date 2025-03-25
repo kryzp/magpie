@@ -244,7 +244,7 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
 
 		MaterialData data;
-		data.technique = "subsurface_refraction"; // temporarily just the forced material type
+		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				g_materialSystem->getDiffuseFallback());
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				g_materialSystem->getAOFallback());
@@ -252,9 +252,10 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
 
+		/*
 		struct
 		{
-			float eta = 1.0f / 1.5f;
+			float eta = 1.0f / 1.0f;
 			float depth = 0.2f;
 			float extinction = 2.0f;
 			float _padding1;
@@ -263,6 +264,7 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 
 		data.parameters = &materialData;
 		data.parameterSize = sizeof(materialData);
+		*/
 
 		Material *material = g_materialSystem->buildMaterial(data);
 

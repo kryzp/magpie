@@ -9,7 +9,7 @@ TODO (no particular order):
 - I think queues arent currently assigned properly(?)
 - some kind of compute queue id system, so graphics pipelines can specifically decide to wait on select compute pipelines to finish.
 - properly comment the code & assertations
-- should be multiple bind descriptor sets for the different frequencies (per pass, per material, per frame etc)
+- should be multiple bind descriptor sets for the different frequencies (per pass = space2, per material = space3, per frame = space1 etc)
 - command pool abstraction
 - hdr resolve tonemapper should be compute shader
 - double-ended queue implementation is broken (see render target)

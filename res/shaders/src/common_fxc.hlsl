@@ -2,17 +2,6 @@
 
 #define MATH_PI 3.14159265359
 
-struct PushConstants
-{
-	float time;
-//	int cbuffer_RID;
-//  int texture2D_RID;
-//  int cubeMap_RID;
-};
-
-[[vk::push_constant]]
-PushConstants pushConstants;
-
 #define MAX_N_LIGHTS 16
 
 struct Light

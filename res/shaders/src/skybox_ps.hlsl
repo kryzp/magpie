@@ -1,4 +1,3 @@
-
 struct PSInput
 {
     [[vk::location(0)]]

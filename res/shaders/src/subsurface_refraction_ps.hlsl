@@ -75,22 +75,19 @@ float4 main(PSInput input) : SV_Target
 	
 	float2 refractedUV = surfaceParallax(uv, refractedViewDirTangent);
 	
-	float3 normal = normalTexture.Sample(normalSampler, refractedUV).rgb;
-	normal = normalize(mul(normalize(2.0 * normal - 1.0), input.tbn));
+	float3 textureNormal = normalTexture.Sample(normalSampler, refractedUV).rgb;
+	textureNormal = normalize(mul(normalize(2.0 * textureNormal - 1.0), input.tbn));
 	
 	float3 albedo = diffuseTexture.Sample(diffuseSampler, refractedUV).rgb;
-	float3 diffuse = albedo * localIrradianceMap.Sample(localIrradianceMapSampler, normal).rgb;
+	float3 diffuse = albedo * localIrradianceMap.Sample(localIrradianceMapSampler, textureNormal).rgb;
 	
-	float3 specular = localPrefilterMap.Sample(localIrradianceMapSampler, reflectedViewDir).rgb;
+	float3 specular = localPrefilterMap.Sample(localPrefilterMapSampler, reflectedViewDir).rgb;
 	
-	float d = materialData.depth * sqrt(1.0 + 1.0/(refractedViewDirTangent.z*refractedViewDirTangent.z));
-	d = min(d, 9999.9);
-	
-	float transmittance = exp(-materialData.extinction * d);
+	if (refractedUV.x < 0.0 || refractedUV.y < 0.0 || refractedUV.x > 1.0 || refractedUV.y > 1.0) {
+		diffuse = localPrefilterMap.Sample(localPrefilterMapSampler, -viewDir).rgb;
+	}
 	
 	float3 F = fresnelSchlick(viewDirTangent.z, 0.04);
-	
-	//diffuse = lerp(float3(0.23, 0.19, 0.1), diffuse, transmittance);
 	
 	float3 col = lerp(diffuse, specular, F);
 	
