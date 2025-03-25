@@ -12,11 +12,17 @@ ConstantBuffer<MaterialUBO> materialData : register(b2);
 
 struct PSInput
 {
-	[[vk::location(0)]] float3 colour : COLOR;
-	[[vk::location(1)]] float3 position : TEXCOORD0;
-	[[vk::location(2)]] float2 texCoord : TEXCOORD1;
-	[[vk::location(3)]] float3 fragPos : TEXCOORD2;
-	[[vk::location(4)]] float3x3 tbn : TEXCOORD3;
+	[[vk::location(VS_MODEL_OUT_SLOT_COLOR)]]
+    float3 colour : COLOR;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_POSITION)]]
+    float3 position : TEXCOORD0;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_UV)]]
+    float2 texCoord : TEXCOORD1;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_TBN)]]
+    float3x3 tbn : TEXCOORD3;
 };
 
 #define MAX_REFLECTION_LOD 4.0
@@ -61,7 +67,7 @@ float4 main(PSInput input) : SV_Target
 	
 	float3 surfaceNormal = input.tbn[2];
 	
-	float3 viewDir = normalize(frameData.viewPos.xyz - input.fragPos.xyz);
+	float3 viewDir = normalize(frameData.viewPos.xyz - input.position.xyz);
 	float3 viewDirTangent = normalize(mul(viewDir, transpose(input.tbn)));
 	
 	float3 reflectedViewDir = reflect(-viewDir, surfaceNormal);

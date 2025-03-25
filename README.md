@@ -11,19 +11,19 @@ TODO (no particular order):
 - properly comment the code & assertations
 - should be multiple bind descriptor sets for the different frequencies (per pass, per material, per frame etc)
 - command pool abstraction
-- implement a render graph system!
-- bindless material rendering
 - hdr resolve tonemapper should be compute shader
 - double-ended queue implementation is broken (see render target)
 
 BACKBURNER:
 - ASSET SYSTEM WITH HOT RELOADING OF SHADERS FOR THE LOVE OF GOD !!!!
 - volumetrics
+- bindless rendering
 - clustered deferred rendering
 - shadowmapping: directional and point lights
 - particles (compute shaders!! follow the naughty dog last of us 2 siggraph)
 - realistic ocean water based on fft
 - refraction and stuff
+- implement a render graph system!
 - terrain generation based on no mans sky talk
 - fur / hair rendering
 - post processing pipeline

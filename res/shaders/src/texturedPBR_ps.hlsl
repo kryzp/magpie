@@ -2,11 +2,17 @@
 
 struct PSInput
 {
-	[[vk::location(0)]] float3 colour		: COLOR;
-	[[vk::location(1)]] float3 position		: TEXCOORD0;
-	[[vk::location(2)]] float2 texCoord		: TEXCOORD1;
-	[[vk::location(3)]] float3 fragPos		: TEXCOORD2;
-	[[vk::location(4)]] float3x3 tbn		: TEXCOORD3;
+	[[vk::location(VS_MODEL_OUT_SLOT_COLOR)]]
+    float3 colour : COLOR;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_POSITION)]]
+    float3 position : TEXCOORD0;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_UV)]]
+    float2 texCoord : TEXCOORD1;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_TBN)]]
+    float3x3 tbn : TEXCOORD3;
 };
 
 #define MAX_REFLECTION_LOD 4.0
@@ -82,7 +88,7 @@ float4 main(PSInput input) : SV_Target
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 	
 	normal = normalize(mul(normalize(2.0 * normal - 1.0), input.tbn));
-	float3 viewDir = normalize(frameData.viewPos.xyz - input.fragPos);
+	float3 viewDir = normalize(frameData.viewPos.xyz - input.position);
 	
 	float NdotV = max(0.0, dot(normal, viewDir));
 	
@@ -93,7 +99,7 @@ float4 main(PSInput input) : SV_Target
 		if (dot(frameData.lights[i].colour, frameData.lights[i].colour) <= 0.01)
 			continue;
 		
-		float3 deltaX = frameData.lights[i].position - input.fragPos;
+		float3 deltaX = frameData.lights[i].position - input.position;
 		float distanceSquared = dot(deltaX, deltaX);
 		float attenuation = 1.0 / (0.125 * distanceSquared);
 		float3 radiance = frameData.lights[i].colour * attenuation;

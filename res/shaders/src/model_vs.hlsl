@@ -2,22 +2,22 @@
 
 struct VSInput
 {
-    [[vk::location(VS_ATT_SLOT_POSITION)]]
+	[[vk::location(VS_MODEL_ATT_SLOT_POSITION)]]
     float3 position : POSITION;
     
-    [[vk::location(VS_ATT_SLOT_UV)]]
+	[[vk::location(VS_MODEL_ATT_SLOT_UV)]]
     float2 uv : TEXCOORD0;
     
-    [[vk::location(VS_ATT_SLOT_COLOUR)]]
+	[[vk::location(VS_MODEL_ATT_SLOT_COLOUR)]]
     float3 colour : COLOR;
     
-    [[vk::location(VS_ATT_SLOT_NORMAL)]]
+    [[vk::location(VS_MODEL_ATT_SLOT_NORMAL)]]
     float3 normal : NORMAL;
     
-    [[vk::location(VS_ATT_SLOT_TANGENT)]]
+	[[vk::location(VS_MODEL_ATT_SLOT_TANGENT)]]
     float3 tangent : TANGENT;
     
-	[[vk::location(VS_ATT_SLOT_BITANGENT)]]
+	[[vk::location(VS_MODEL_ATT_SLOT_BITANGENT)]]
     float3 bitangent : BITANGENT;
 };
 
@@ -25,11 +25,17 @@ struct VSOutput
 {
     float4 svPosition : SV_Position;
 
-    [[vk::location(0)]] float3 colour       : COLOR;
-    [[vk::location(1)]] float3 position     : TEXCOORD0;
-    [[vk::location(2)]] float2 texCoord     : TEXCOORD1;
-    [[vk::location(3)]] float3 fragPos      : TEXCOORD2;
-    [[vk::location(4)]] float3x3 tbn        : TEXCOORD3;
+	[[vk::location(VS_MODEL_OUT_SLOT_COLOR)]]
+    float3 colour : COLOR;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_POSITION)]]
+    float3 position : TEXCOORD0;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_UV)]]
+    float2 texCoord : TEXCOORD1;
+    
+	[[vk::location(VS_MODEL_OUT_SLOT_TBN)]]
+    float3x3 tbn : TEXCOORD3;
 };
 
 VSOutput main(VSInput input)
@@ -43,7 +49,6 @@ VSOutput main(VSInput input)
     output.texCoord = input.uv;
     output.position = mul(instanceData.modelMatrix, float4(input.position, 1.0)).xyz;
 	output.tbn = float3x3(T, B, N);
-	output.fragPos = output.position;
     output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(instanceData.modelMatrix, float4(input.position, 1.0))));
 
     return output;
