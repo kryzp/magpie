@@ -21,10 +21,10 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	return g_vkCore->getDescriptorLayoutCache().createLayout(layoutCreateInfo);
 }
 
-DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t binding, VkDescriptorType type)
+DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t bindingIndex, VkDescriptorType type)
 {
 	VkDescriptorSetLayoutBinding binding = {};
-	binding.binding = binding;
+	binding.binding = bindingIndex;
 	binding.descriptorType = type;
 	binding.descriptorCount = 1;
 	binding.stageFlags = 0;
@@ -53,13 +53,13 @@ DescriptorWriter &DescriptorWriter::updateSet(const VkDescriptorSet &set)
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t binding, VkDescriptorType type, const VkDescriptorBufferInfo &info)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info)
 {
 	m_bufferInfos.pushBack(info);
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstBinding = binding;
+	write.dstBinding = bindingIndex;
 	write.dstSet = VK_NULL_HANDLE;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
@@ -70,25 +70,25 @@ DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t binding, VkDescriptorTy
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t binding, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset)
 {
 	VkDescriptorBufferInfo info = {};
 	info.buffer = buffer;
 	info.offset = offset;
 	info.range = size;
 
-	writeBuffer(binding, type, info);
+	writeBuffer(bindingIndex, type, info);
 
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeImage(uint32_t binding, VkDescriptorType type, const VkDescriptorImageInfo &info)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info)
 {
 	m_imageInfos.pushBack(info);
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstBinding = binding;
+	write.dstBinding = bindingIndex;
 	write.dstSet = VK_NULL_HANDLE;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
@@ -99,14 +99,14 @@ DescriptorWriter &DescriptorWriter::writeImage(uint32_t binding, VkDescriptorTyp
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeImage(uint32_t binding, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout)
 {
 	VkDescriptorImageInfo info = {};
 	info.sampler = sampler;
 	info.imageView = image;
 	info.imageLayout = layout;
 
-	writeImage(binding, type, info);
+	writeImage(bindingIndex, type, info);
 
 	return *this;
 }

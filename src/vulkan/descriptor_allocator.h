@@ -40,6 +40,7 @@ namespace llt
 		~DescriptorPoolDynamic() = default;
 
 		void init(uint32_t initialSets, const Vector<DescriptorPoolSizeRatio> &sizes);
+
 		void cleanUp();
 
 		void clear();
