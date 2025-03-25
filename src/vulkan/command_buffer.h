@@ -24,7 +24,9 @@ namespace llt
 		~CommandBuffer();
 
 		void beginRecording();
-		void submit(VkSemaphore computeSemaphore = VK_NULL_HANDLE);
+
+		void submit();
+		void submit(VkSemaphoreSubmitInfo computeSemaphore);
 
 		void beginRendering(GenericRenderTarget *target);
 		void beginRendering(const RenderInfo &info);
@@ -91,12 +93,10 @@ namespace llt
 		);
 
 		void pipelineBarrier(
-			VkPipelineStageFlags srcStageMask,
-			VkPipelineStageFlags dstStageMask,
 			VkDependencyFlags dependencyFlags,
-			const Vector<VkMemoryBarrier> &memoryBarriers,
-			const Vector<VkBufferMemoryBarrier> &bufferMemoryBarriers,
-			const Vector<VkImageMemoryBarrier> &imageMemoryBarriers
+			const Vector<VkMemoryBarrier2> &memoryBarriers,
+			const Vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
+			const Vector<VkImageMemoryBarrier2> &imageMemoryBarriers
 		);
 
 		void transitionForMipmapGeneration(Texture &texture);

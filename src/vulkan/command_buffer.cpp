@@ -56,7 +56,13 @@ void CommandBuffer::beginRecording()
 	);
 }
 
-void CommandBuffer::submit(VkSemaphore computeSemaphore)
+void CommandBuffer::submit()
+{
+	VkSemaphoreSubmitInfo emptyComputeSemaphore = {};
+	submit(emptyComputeSemaphore);
+}
+
+void CommandBuffer::submit(VkSemaphoreSubmitInfo computeSemaphore)
 {
 	cauto &currentFrame = g_vkCore->m_graphicsQueue.getCurrentFrame();
 
@@ -65,47 +71,51 @@ void CommandBuffer::submit(VkSemaphore computeSemaphore)
 		"Failed to record command buffer"
 	);
 
+	VkCommandBufferSubmitInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+	bufferInfo.deviceMask = 0;
+	bufferInfo.commandBuffer = m_buffer;
+
+	VkSemaphoreSubmitInfo renderFinishedSemaphore = {};
+	VkSemaphoreSubmitInfo waitSemaphoreSubmitInfos[2] = {};
+	
 	int signalSemaphoreCount = 0;
-	VkSemaphore queueFinishedSemaphores[] = { VK_NULL_HANDLE };
-
 	int waitSemaphoreCount = 0;
-	VkSemaphore blitSemaphore = VK_NULL_HANDLE;
 
-	if (m_currentTarget)
+	if (m_currentTarget && m_currentTarget->getType() == RENDER_TARGET_TYPE_SWAPCHAIN)
 	{
-		if (m_currentTarget->getType() == RENDER_TARGET_TYPE_SWAPCHAIN)
-		{
-			blitSemaphore = ((Swapchain *)m_currentTarget)->getImageAvailableSemaphore();
-			waitSemaphoreCount++;
+		waitSemaphoreCount++;
+		waitSemaphoreSubmitInfos[0] = ((Swapchain *)m_currentTarget)->getImageAvailableSemaphoreSubmitInfo();
 
-			signalSemaphoreCount++;
-			queueFinishedSemaphores[0] = ((Swapchain *)m_currentTarget)->getRenderFinishedSemaphore();
-		}
+		signalSemaphoreCount++;
+		renderFinishedSemaphore = ((Swapchain *)m_currentTarget)->getRenderFinishedSemaphoreSubmitInfo();
 	}
 
-	if (computeSemaphore)
+	if (computeSemaphore.semaphore)
+	{
 		waitSemaphoreCount++;
+		waitSemaphoreSubmitInfos[1] = computeSemaphore;
+	}
 
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
-	VkSemaphore waitForFinishSemaphores[] = { blitSemaphore, computeSemaphore };
+//	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
 
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	VkSubmitInfo2 submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+	submitInfo.flags = 0;
 
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_buffer;
+	submitInfo.commandBufferInfoCount = 1;
+	submitInfo.pCommandBufferInfos = &bufferInfo;
 
-	submitInfo.signalSemaphoreCount = signalSemaphoreCount;
-	submitInfo.pSignalSemaphores = queueFinishedSemaphores;
+	submitInfo.signalSemaphoreInfoCount = signalSemaphoreCount;
+	submitInfo.pSignalSemaphoreInfos = &renderFinishedSemaphore;
 
-	submitInfo.waitSemaphoreCount = waitSemaphoreCount;
-	submitInfo.pWaitSemaphores = waitForFinishSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.waitSemaphoreInfoCount = waitSemaphoreCount;
+	submitInfo.pWaitSemaphoreInfos = waitSemaphoreSubmitInfos;
 
 	vkResetFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence);
 
 	LLT_VK_CHECK(
-		vkQueueSubmit(g_vkCore->m_graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
+		vkQueueSubmit2(g_vkCore->m_graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
 		"Failed to submit draw command to buffer"
 	);
 
@@ -140,12 +150,12 @@ void CommandBuffer::beginRendering(const RenderInfo &info)
 
 	m_isRendering = true;
 
-	vkCmdBeginRenderingKHR(m_buffer, &renderInfo);
+	vkCmdBeginRendering(m_buffer, &renderInfo);
 }
 
 void CommandBuffer::endRendering()
 {
-	vkCmdEndRenderingKHR(m_buffer);
+	vkCmdEndRendering(m_buffer);
 
 	if (m_currentTarget)
 		m_currentTarget->endRendering(*this);
@@ -305,25 +315,29 @@ void CommandBuffer::bindIndexBuffer(
 }
 
 void CommandBuffer::pipelineBarrier(
-	VkPipelineStageFlags srcStageMask,
-	VkPipelineStageFlags dstStageMask,
 	VkDependencyFlags dependencyFlags,
-	const Vector<VkMemoryBarrier> &memoryBarriers,
-	const Vector<VkBufferMemoryBarrier> &bufferMemoryBarriers,
-	const Vector<VkImageMemoryBarrier> &imageMemoryBarriers
+	const Vector<VkMemoryBarrier2> &memoryBarriers,
+	const Vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
+	const Vector<VkImageMemoryBarrier2> &imageMemoryBarriers
 )
 {
-	vkCmdPipelineBarrier(
+	VkDependencyInfo dependency = {};
+	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR;
+
+	dependency.dependencyFlags = dependencyFlags;
+	
+	dependency.memoryBarrierCount = memoryBarriers.size();
+	dependency.pMemoryBarriers = memoryBarriers.data();
+	
+	dependency.bufferMemoryBarrierCount = bufferMemoryBarriers.size();
+	dependency.pBufferMemoryBarriers =	bufferMemoryBarriers.data();
+	
+	dependency.imageMemoryBarrierCount = imageMemoryBarriers.size();
+	dependency.pImageMemoryBarriers = imageMemoryBarriers.data();
+
+	vkCmdPipelineBarrier2(
 		m_buffer,
-		srcStageMask,
-		dstStageMask,
-		dependencyFlags,
-		memoryBarriers.size(),
-		memoryBarriers.data(),
-		bufferMemoryBarriers.size(),
-		bufferMemoryBarriers.data(),
-		imageMemoryBarriers.size(),
-		imageMemoryBarriers.data()
+		&dependency
 	);
 }
 
@@ -336,8 +350,8 @@ void CommandBuffer::transitionForMipmapGeneration(Texture &texture)
 
 void CommandBuffer::generateMipmaps(const Texture &texture)
 {
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	barrier.image = texture.getImage();
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -352,12 +366,14 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
+		barrier.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
 		pipelineBarrier(
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			0,
 			{}, {}, { barrier }
 		);
@@ -399,9 +415,10 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
+		barrier.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
 		pipelineBarrier(
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0,
 			{}, {}, { barrier }
 		);
@@ -415,9 +432,10 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
+	barrier.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	barrier.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
 	pipelineBarrier(
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		0,
 		{}, {}, { barrier }
 	);

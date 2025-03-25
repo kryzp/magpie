@@ -82,23 +82,26 @@ void Swapchain::createDepthResources()
 
 void Swapchain::beginRendering(CommandBuffer &cmd)
 {
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	barrier.image = getCurrentSwapchainImage(),
-	barrier.subresourceRange = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0,
-		.levelCount = 1,
-		.baseArrayLayer = 0,
-		.layerCount = 1,
-	};
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+	
+	barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+	barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	barrier.image = getCurrentSwapchainImage();
+	
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
 
 	cmd.pipelineBarrier(
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		0,
 		{}, {}, { barrier }
 	);
@@ -112,23 +115,26 @@ void Swapchain::beginRendering(CommandBuffer &cmd)
 
 void Swapchain::endRendering(CommandBuffer &cmd)
 {
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-	barrier.image = getCurrentSwapchainImage(),
-	barrier.subresourceRange = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0,
-		.levelCount = 1,
-		.baseArrayLayer = 0,
-		.layerCount = 1,
-	};
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+
+	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	
+	barrier.image = getCurrentSwapchainImage();
+	
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
 
 	cmd.pipelineBarrier(
-		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 		0,
 		{}, {}, { barrier }
 	);
@@ -181,7 +187,16 @@ void Swapchain::acquireNextImage()
 	// try to get the next image
 	// if it is deemed out of date then rebuild the swap chain
 	// otherwise this is an unknown issue and throw an error
-    if (VkResult result = vkAcquireNextImageKHR(g_vkCore->m_device, m_swapChain, UINT64_MAX, getImageAvailableSemaphore(), VK_NULL_HANDLE, &m_currSwapChainImageIdx); result == VK_ERROR_OUT_OF_DATE_KHR) {
+
+	VkAcquireNextImageInfoKHR info = {};
+	info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+	info.swapchain = m_swapChain;
+	info.timeout = UINT64_MAX;
+	info.semaphore = getImageAvailableSemaphoreSubmitInfo().semaphore;
+	info.fence = VK_NULL_HANDLE;
+	info.deviceMask = 1;
+
+	if (VkResult result = vkAcquireNextImage2KHR(g_vkCore->m_device, &info, &m_currSwapChainImageIdx); result == VK_ERROR_OUT_OF_DATE_KHR) {
         rebuildSwapChain();
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         LLT_ERROR("Failed to acquire next image in swap chain: %d", result);
@@ -190,10 +205,12 @@ void Swapchain::acquireNextImage()
 
 void Swapchain::swapBuffers()
 {
+	VkSemaphoreSubmitInfo waitSemaphoreSubmitInfo = getRenderFinishedSemaphoreSubmitInfo();
+
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &getRenderFinishedSemaphore();
+    presentInfo.pWaitSemaphores = &waitSemaphoreSubmitInfo.semaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &m_swapChain;
     presentInfo.pImageIndices = &m_currSwapChainImageIdx;
@@ -406,12 +423,21 @@ VkSurfaceKHR Swapchain::getSurface() const
 	return m_surface;
 }
 
-const VkSemaphore &Swapchain::getRenderFinishedSemaphore() const
+const VkSemaphoreSubmitInfo &Swapchain::getRenderFinishedSemaphoreSubmitInfo() const
 {
-	return m_renderFinishedSemaphores[g_vkCore->getCurrentFrameIdx()];
+	VkSemaphoreSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+	submitInfo.semaphore = m_renderFinishedSemaphores[g_vkCore->getCurrentFrameIdx()];
+
+	return submitInfo;
 }
 
-const VkSemaphore &Swapchain::getImageAvailableSemaphore() const
+const VkSemaphoreSubmitInfo &Swapchain::getImageAvailableSemaphoreSubmitInfo() const
 {
-	return m_imageAvailableSemaphores[g_vkCore->getCurrentFrameIdx()];
+	VkSemaphoreSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+	submitInfo.semaphore = m_imageAvailableSemaphores[g_vkCore->getCurrentFrameIdx()];
+	submitInfo.stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	return submitInfo;
 }

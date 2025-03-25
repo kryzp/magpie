@@ -219,21 +219,20 @@ void Texture::transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout)
 	//if (m_imageLayout == newLayout)
 	//	return;
 
-	VkImageMemoryBarrier barrier = getBarrier(newLayout);
+	VkImageMemoryBarrier2 barrier = getBarrier(newLayout);
 
 	barrier.srcAccessMask = vkutil::getTransferAccessFlags(m_imageLayout);
 	barrier.dstAccessMask = vkutil::getTransferAccessFlags(newLayout);
 
-	VkPipelineStageFlags srcStage = m_stage;
-	VkPipelineStageFlags dstStage = vkutil::getTransferPipelineStageFlags(newLayout);
+	barrier.srcStageMask = m_stage;
+	barrier.dstStageMask = vkutil::getTransferPipelineStageFlags(newLayout);
 
 	cmd.pipelineBarrier(
-		srcStage, dstStage,
 		0,
 		{}, {}, { barrier }
 	);
 
-	m_stage = dstStage;
+	m_stage = barrier.dstStageMask;
 	m_imageLayout = newLayout;
 }
 
@@ -255,27 +254,35 @@ void Texture::generateMipmaps(CommandBuffer &cmd)
 	m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
-VkImageMemoryBarrier Texture::getBarrier() const
+VkImageMemoryBarrier2 Texture::getBarrier() const
 {
 	return getBarrier(m_imageLayout);
 }
 
-VkImageMemoryBarrier Texture::getBarrier(VkImageLayout newLayout) const
+VkImageMemoryBarrier2 Texture::getBarrier(VkImageLayout newLayout) const
 {
-	VkImageMemoryBarrier barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+	
 	barrier.oldLayout = m_imageLayout;
 	barrier.newLayout = newLayout;
+	
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	
 	barrier.image = m_image;
+	
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = m_mipmapCount;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = getLayerCount();
+	
 	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = 0;
+
+	barrier.srcStageMask = 0;
+	barrier.dstStageMask = 0;
 
 	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;

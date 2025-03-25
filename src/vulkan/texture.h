@@ -46,8 +46,8 @@ namespace llt
 
 		void createInternalResources();
 
-		VkImageMemoryBarrier getBarrier() const;
-		VkImageMemoryBarrier getBarrier(VkImageLayout newLayout) const;
+		VkImageMemoryBarrier2 getBarrier() const;
+		VkImageMemoryBarrier2 getBarrier(VkImageLayout newLayout) const;
 		
 		void transitionLayout(CommandBuffer &cmd, VkImageLayout newLayout);
 		void transitionLayoutSingle(VkImageLayout newLayout);

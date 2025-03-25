@@ -176,7 +176,7 @@ VulkanCore::VulkanCore(const Config &config)
 #endif // LLT_DEBUG
 	, m_imGuiDescriptorPool()
 {
-	VkApplicationInfo app_info = {
+	VkApplicationInfo appInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = config.name,
 		.applicationVersion = VK_MAKE_API_VERSION(0, 1, 0, 0),
@@ -185,10 +185,9 @@ VulkanCore::VulkanCore(const Config &config)
 		.apiVersion = VK_API_VERSION_1_3
 	};
 
-	VkInstanceCreateInfo createInfo = {
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pApplicationInfo = &app_info
-	};
+	VkInstanceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pApplicationInfo = &appInfo;
 
 	volkInitialize();
 
@@ -428,21 +427,17 @@ void VulkanCore::createLogicalDevice()
 
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
 	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-
 	descriptorIndexingFeaturesExt.descriptorBindingPartiallyBound = VK_TRUE;
-
 	descriptorIndexingFeaturesExt.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-
 	descriptorIndexingFeaturesExt.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
 	descriptorIndexingFeaturesExt.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
 	descriptorIndexingFeaturesExt.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-
 	descriptorIndexingFeaturesExt.pNext = nullptr;
 
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeaturesExt = {};
-	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+	VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeaturesExt = {};
+	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
 	dynamicRenderingFeaturesExt.dynamicRendering = VK_TRUE;
 	dynamicRenderingFeaturesExt.pNext = &descriptorIndexingFeaturesExt;
 
@@ -450,6 +445,11 @@ void VulkanCore::createLogicalDevice()
 	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
 	bufferDeviceAddressFeaturesExt.bufferDeviceAddress = VK_TRUE;
 	bufferDeviceAddressFeaturesExt.pNext = &dynamicRenderingFeaturesExt;
+
+	VkPhysicalDeviceSynchronization2Features synchronisation2FeaturesExt = {};
+	synchronisation2FeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+	synchronisation2FeaturesExt.synchronization2 = VK_TRUE;
+	synchronisation2FeaturesExt.pNext = &bufferDeviceAddressFeaturesExt;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -460,7 +460,7 @@ void VulkanCore::createLogicalDevice()
 	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
 	createInfo.enabledExtensionCount = LLT_ARRAY_LENGTH(vkutil::DEVICE_EXTENSIONS);
 	createInfo.pEnabledFeatures = &m_physicalData.features;
-	createInfo.pNext = &bufferDeviceAddressFeaturesExt;
+	createInfo.pNext = &synchronisation2FeaturesExt;
 
 #if LLT_DEBUG
 	// enable the validation layers on the device

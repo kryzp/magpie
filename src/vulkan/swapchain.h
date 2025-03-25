@@ -52,8 +52,8 @@ namespace llt
 
 		VkSurfaceKHR getSurface() const;
 
-		const VkSemaphore &getRenderFinishedSemaphore() const;
-		const VkSemaphore &getImageAvailableSemaphore() const;
+		const VkSemaphoreSubmitInfo &getRenderFinishedSemaphoreSubmitInfo() const;
+		const VkSemaphoreSubmitInfo &getImageAvailableSemaphoreSubmitInfo() const;
 
 	private:
 		void createColourResources(); // coloured visual component
