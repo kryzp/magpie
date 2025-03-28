@@ -20,7 +20,7 @@ namespace llt
 		GPUBuffer *createVertexBuffer(uint64_t vertexCount, uint32_t vertexSize);
 		GPUBuffer *createIndexBuffer(uint64_t indexCount);
 		GPUBuffer *createUniformBuffer(uint64_t size);
-		GPUBuffer *createShaderStorageBuffer(uint64_t size);
+		GPUBuffer *createStorageBuffer(uint64_t size);
 
 		GPUBuffer *textureStagingBuffer;
 		GPUBuffer *meshStagingBuffer;

@@ -9,15 +9,14 @@
 #include "container/vector.h"
 #include "container/hash_map.h"
 
-#include "rendering/image.h"
-
-#include "gpu_buffer.h"
 #include "texture_sampler.h"
-#include "command_buffer.h"
+#include "texture_view.h"
 
 namespace llt
 {
+	class CommandBuffer;
 	class RenderTarget;
+	class Image;
 
 	enum TextureProperty
 	{
@@ -76,13 +75,12 @@ namespace llt
 		VkFormat getFormat() const;
 		VkImageTiling getTiling() const;
 		VkImageViewType getType() const;
+		VkImageLayout getImageLayout() const;
+
+		TextureView getStandardView();
+		TextureView getView(int layerCount, int layer, int baseMipLevel);
 
 		VkPipelineStageFlags getStage() const;
-
-		VkImageView getStandardView() const;
-		VkImageView getView(int layerCount, int layer, int baseMipLevel);
-
-		VkImageLayout getImageLayout() const;
 
 	private:
 		RenderTarget *m_parent;
@@ -93,8 +91,7 @@ namespace llt
 		VkSampleCountFlagBits m_numSamples;
 		bool m_transient;
 
-		VkImageView m_standardView;
-		HashMap<uint64_t, VkImageView> m_viewCache;
+		HashMap<uint64_t, TextureView> m_viewCache;
 
 		VkPipelineStageFlags m_stage;
 
@@ -123,44 +120,34 @@ namespace llt
 		{
 		}
 
-		BoundTexture(const Texture *texture, TextureSampler *sampler)
+		BoundTexture(Texture *texture, TextureSampler *sampler)
 			: m_texture(texture)
 			, m_sampler(sampler)
 		{
 		}
 
-		VkDescriptorImageInfo getStandardImageInfo() const
+		VkDescriptorImageInfo getImageInfo(const TextureView &view) const
 		{
 			VkDescriptorImageInfo info = {};
 
-			info.imageView = m_texture->getStandardView();
+			info.imageView = view.getHandle();
 
 			info.imageLayout = m_texture->isDepthTexture()
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			info.sampler = m_sampler->bind();
+			info.sampler = m_sampler->getHandle();
 
 			return info;
 		}
 
-		VkDescriptorImageInfo getImageInfo(VkImageView view) const
+		VkDescriptorImageInfo getStandardImageInfo() const
 		{
-			VkDescriptorImageInfo info = {};
-
-			info.imageView = view;
-
-			info.imageLayout = m_texture->isDepthTexture()
-				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-			info.sampler = m_sampler->bind();
-
-			return info;
+			return getImageInfo(m_texture->getStandardView());
 		}
 
 	private:
-		const Texture *m_texture;
+		Texture *m_texture;
 		TextureSampler *m_sampler;
 	};
 }

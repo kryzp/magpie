@@ -1,13 +1,6 @@
 #include "common_ps.hlsl"
 
-/*
-struct PushConstants
-{
-};
-
-[[vk::push_constant]]
-PushConstants pc;
-*/
+#define MAX_REFLECTION_LOD 4.0
 
 struct PSInput
 {
@@ -23,29 +16,6 @@ struct PSInput
 	[[vk::location(VS_MODEL_OUT_SLOT_TBN)]]
     float3x3 tbn : TEXCOORD3;
 };
-
-#define MAX_REFLECTION_LOD 4.0
-
-TextureCube localIrradianceMap : register(t3);
-SamplerState localIrradianceMapSampler : register(s3);
-
-TextureCube localPrefilterMap : register(t4);
-SamplerState localPrefilterMapSampler : register(s4);
-
-Texture2D brdfLUT : register(t5);
-SamplerState brdfLUTSampler : register(s5);
-
-Texture2D diffuseTexture : register(t6);
-Texture2D aoTexture : register(t7);
-Texture2D mrTexture : register(t8);
-Texture2D normalTexture : register(t9);
-Texture2D emissiveTexture : register(t10);
-
-SamplerState diffuseSampler : register(s6);
-SamplerState aoSampler : register(s7);
-SamplerState mrSampler : register(s8);
-SamplerState normalSampler : register(s9);
-SamplerState emissiveSampler : register(s10);
 
 float3 fresnelSchlick(float cosT, float3 F0, float roughness)
 {
@@ -84,11 +54,14 @@ float4 main(PSInput input) : SV_Target
 {
 	float2 uv = frac(input.texCoord);
 	
-	float3 albedo = diffuseTexture.Sample(diffuseSampler, uv).rgb;
-	float ambientOcclusion = aoTexture.Sample(aoSampler, uv).r;
-	float3 metallicRoughness = mrTexture.Sample(mrSampler, uv).rgb;
-	float3 normal = normalTexture.Sample(normalSampler, uv).rgb;
-	float3 emissive = emissiveTexture.Sample(emissiveSampler, uv).rgb;
+	SamplerState textureSampler = samplerTable[pc.textureSampler_ID];
+	SamplerState cubemapSampler = samplerTable[pc.cubemapSampler_ID];
+	
+	float3 albedo				= texture2DTable[pc.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
+	float ambientOcclusion		= texture2DTable[pc.aoTexture_ID]		.Sample(textureSampler, uv).r;
+	float3 metallicRoughness	= texture2DTable[pc.mrTexture_ID]		.Sample(textureSampler, uv).rgb;
+	float3 normal				= texture2DTable[pc.normalTexture_ID]	.Sample(textureSampler, uv).rgb;
+	float3 emissive				= texture2DTable[pc.emissiveTexture_ID]	.Sample(textureSampler, uv).rgb;
 	
 	ambientOcclusion += metallicRoughness.r;
 	float roughnessValue = metallicRoughness.g;
@@ -103,6 +76,7 @@ float4 main(PSInput input) : SV_Target
 	
 	float3 Lo = 0.0;
 	
+	/*
 	for (int i = 0; i < MAX_N_LIGHTS; i++)
 	{
 		if (dot(frameData.lights[i].colour, frameData.lights[i].colour) <= 0.01)
@@ -136,16 +110,17 @@ float4 main(PSInput input) : SV_Target
 		
 		Lo += (diffuse + specular) * radiance * NdotL;
 	}
+	*/
 	
 	float3 F = fresnelSchlick(NdotV, F0, roughnessValue);
 	float3 kD = (1.0 - F) * (1.0 - metallicValue);
 	
 	float3 reflected = reflect(-viewDir, normal);
-	float3 prefilteredColour = localPrefilterMap.SampleLevel(localPrefilterMapSampler, reflected, roughnessValue * MAX_REFLECTION_LOD).rgb;
-	float2 environmentBRDF = brdfLUT.Sample(brdfLUTSampler, float2(NdotV, roughnessValue)).xy;
+	float3 prefilteredColour = textureCubeTable[pc.prefilterMap_ID].SampleLevel(cubemapSampler, reflected, roughnessValue * MAX_REFLECTION_LOD).rgb;
+	float2 environmentBRDF = texture2DTable[pc.brdfLUT_ID].Sample(textureSampler, float2(NdotV, roughnessValue)).xy;
 	float3 specular = prefilteredColour * (F * environmentBRDF.x + environmentBRDF.y);
 	
-	float3 irradiance = localIrradianceMap.Sample(localIrradianceMapSampler, normal).rgb;
+	float3 irradiance = textureCubeTable[pc.irradianceMap_ID].Sample(cubemapSampler, normal).rgb;
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambientOcclusion;
 	

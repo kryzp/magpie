@@ -30,11 +30,12 @@ namespace llt
 		void writeToTextureSingle(const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 		void writeToTexture(CommandBuffer &commandBuffer, const Texture *texture, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
 
-		VkBuffer getHandle() const;
+		VkDescriptorBufferInfo getDescriptorInfo(uint32_t offset = 0) const;
+		VkDescriptorBufferInfo getDescriptorInfoRange(uint32_t range, uint32_t offset = 0) const;
 
+		VkBuffer getHandle() const;
 		VkBufferUsageFlags getUsage() const;
 		VmaMemoryUsage getMemoryUsage() const;
-
 		uint64_t getSize() const;
 
 	private:

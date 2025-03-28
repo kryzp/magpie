@@ -28,5 +28,3 @@ for i in range(Ni)
 		distance = tj * length(S - r)
 		sunTransmittance += exp(-density * distance) * length(S - r) / Nj
 	Lo += (Csun * sunTransmittance) * (Csmoke * transmittance)
-
-

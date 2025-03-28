@@ -1,12 +1,15 @@
 #ifndef POST_PROCESS_PASS_H_
 #define POST_PROCESS_PASS_H_
 
-#include "vulkan/pipeline.h"
+#include "vulkan/pipeline_definition.h"
+#include "vulkan/texture_view.h"
 
 namespace llt
 {
 	class CommandBuffer;
 	class GenericRenderTarget;
+	class RenderTarget;
+	class DescriptorPoolDynamic;
 
 	class PostProcessPass
 	{
@@ -54,7 +57,7 @@ namespace llt
 		GraphicsPipelineDefinition m_bloomUpsamplePipeline;
 		VkDescriptorSet m_bloomUpsampleSets[BLOOM_MIPS - 1];
 
-		VkImageView m_bloomViews[BLOOM_MIPS];
+		TextureView m_bloomViews[BLOOM_MIPS];
 
 		RenderTarget *m_bloomTarget;
 	};

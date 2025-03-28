@@ -1,12 +1,10 @@
 #ifndef COMMAND_BUFFER_H_
 #define COMMAND_BUFFER_H_
 
-#define VK_NO_PROTOTYPES
 #include "third_party/volk.h"
+#include "container/vector.h"
 
 #include "render_info.h"
-
-#include "container/vector.h"
 
 namespace llt
 {

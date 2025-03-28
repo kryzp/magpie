@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 
+// todo: use static_assert
 #define LLT_ASSERT(_exp, _msg, ...) do{if(!(_exp)){::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}}while(0)
 #define LLT_ERROR(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}while(0)
 #define LLT_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)

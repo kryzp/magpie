@@ -3,6 +3,7 @@
 #include "vulkan/core.h"
 #include "vulkan/command_buffer.h"
 
+#include "../texture_mgr.h"
 #include "../camera.h"
 #include "../material_system.h"
 #include "../mesh.h"
@@ -20,17 +21,16 @@ void ForwardPass::dispose()
 {
 }
 
-#include "input/input.h"
-
 void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList)
 {
 	if (renderList.size() <= 0)
 		return;
 
-	g_materialSystem->m_globalData.proj = camera.getProj();
-	g_materialSystem->m_globalData.view = camera.getView();
-	g_materialSystem->m_globalData.cameraPosition = { camera.position.x, camera.position.y, camera.position.z, 0.0f };
-	g_materialSystem->pushGlobalData();
+	g_bindlessResources->writeFrameConstants({
+		.proj = camera.getProj(),
+		.view = camera.getView(),
+		.cameraPosition = { camera.position.x, camera.position.y, camera.position.z, 0.0f }
+	});
 
 	uint64_t currentMaterialHash = 0;
 
@@ -48,20 +48,64 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 			currentMaterialHash = mat->getHash();
 		}
 
-		glm::mat4 transform = mesh->getParent()->getOwner()->transform.getMatrix();
+		static float t = 0.f;
+		t += 0.01f;
 
-		g_materialSystem->m_instanceData.model = transform;
-		g_materialSystem->m_instanceData.normalMatrix = glm::transpose(glm::inverse(transform));
-		g_materialSystem->pushInstanceData();
+		glm::mat4 transform = glm::scale(glm::rotate(mesh->getParent()->getOwner()->transform.getMatrix(), t, { 0.0f, 1.0f, 0.0 }), glm::vec3(1.0 + glm::sin(t)*0.5f));
 
-		VkDescriptorSet materialSet = mat->getDescriptorSet(SHADER_PASS_FORWARD);
-		Vector<uint32_t> dynamicOffsets = mat->getDynamicOffsets();
+		g_bindlessResources->writeTransformData(i, {
+			.model = transform,
+			.normalMatrix = glm::transpose(glm::inverse(transform))
+		});
+
+		struct
+		{
+			BindlessResourceHandle transform_ID;
+
+			BindlessResourceHandle irradianceMap_ID;
+			BindlessResourceHandle prefilterMap_ID;
+
+			BindlessResourceHandle brdfLUT_ID;
+
+			BindlessResourceHandle diffuseTexture_ID;
+			BindlessResourceHandle aoTexture_ID;
+			BindlessResourceHandle mrTexture_ID;
+			BindlessResourceHandle normalTexture_ID;
+			BindlessResourceHandle emissiveTexture_ID;
+
+			BindlessResourceHandle cubemapSampler_ID;
+			BindlessResourceHandle textureSampler_ID;
+		}
+		pushConstants;
+
+		pushConstants.transform_ID = 0;
+
+		pushConstants.irradianceMap_ID = g_materialSystem->getIrradianceMap()->getStandardView().getBindlessHandle();
+		pushConstants.prefilterMap_ID = g_materialSystem->getPrefilterMap()->getStandardView().getBindlessHandle();
+
+		pushConstants.brdfLUT_ID = g_materialSystem->getBRDFLUT()->getStandardView().getBindlessHandle();
+
+		pushConstants.diffuseTexture_ID = mat->m_textures[0].getBindlessHandle();
+		pushConstants.aoTexture_ID = mat->m_textures[1].getBindlessHandle();
+		pushConstants.mrTexture_ID = mat->m_textures[2].getBindlessHandle();
+		pushConstants.normalTexture_ID = mat->m_textures[3].getBindlessHandle();
+		pushConstants.emissiveTexture_ID = mat->m_textures[4].getBindlessHandle();
+
+		pushConstants.cubemapSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle();
+		pushConstants.textureSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle();
+
+		cmd.pushConstants(
+			data.layout,
+			VK_SHADER_STAGE_ALL_GRAPHICS,
+			sizeof(pushConstants),
+			&pushConstants
+		);
 
 		cmd.bindDescriptorSets(
 			0,
 			data.layout,
-			{ materialSet },
-			dynamicOffsets
+			{ g_bindlessResources->getSet() },
+			{}
 		);
 
 		mesh->render(cmd);

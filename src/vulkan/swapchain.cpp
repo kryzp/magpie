@@ -29,7 +29,7 @@ Swapchain::~Swapchain()
 	cleanUp();
 }
 
-void Swapchain::create()
+void Swapchain::finalise()
 {
 	createSwapChain();
 	acquireNextImage();
@@ -50,11 +50,12 @@ void Swapchain::createColourResources()
 	m_colour.setTransient(false);
 	m_colour.createInternalResources();
 
-	m_renderInfo.addColourAttachment(
+	m_colour.transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	m_renderInfo.addColourAttachmentWithResolve(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
 		m_colour.getStandardView(),
-		m_colour.getFormat(),
-		m_swapChainImageViews[0]
+		getCurrentSwapchainImageView()
 	);
 
 	LLT_LOG("Created colour resources!");
@@ -69,13 +70,9 @@ void Swapchain::createDepthResources()
 	m_depth.setSampleCount(g_vkCore->m_maxMsaaSamples);
 	m_depth.createInternalResources();
 
-	m_depth.transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	m_depth.transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 
-	m_renderInfo.addDepthAttachment(
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		m_depth.getStandardView(),
-		VK_NULL_HANDLE
-	);
+	m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, m_depth.getStandardView());
 
     LLT_LOG("Created depth resources!");
 }
@@ -110,7 +107,7 @@ void Swapchain::beginRendering(CommandBuffer &cmd)
 
 	m_depth.transitionLayout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView();
+	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView().getHandle();
 }
 
 void Swapchain::endRendering(CommandBuffer &cmd)
@@ -241,9 +238,9 @@ VkImage Swapchain::getCurrentSwapchainImage() const
 	return m_swapChainImages[m_currSwapChainImageIdx];
 }
 
-VkImageView Swapchain::getCurrentSwapchainImageView() const
+TextureView Swapchain::getCurrentSwapchainImageView() const
 {
-	return m_swapChainImageViews[m_currSwapChainImageIdx];
+	return TextureView(m_swapChainImageViews[m_currSwapChainImageIdx], g_vkCore->m_swapChainImageFormat);
 }
 
 void Swapchain::createSwapChain()

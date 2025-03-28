@@ -1,6 +1,7 @@
 #include "texture_mgr.h"
 
 #include "vulkan/texture.h"
+#include "vulkan/image.h"
 #include "vulkan/texture_sampler.h"
 #include "vulkan/core.h"
 #include "vulkan/descriptor_builder.h"
@@ -32,8 +33,8 @@ TextureMgr::~TextureMgr()
 
 void TextureMgr::loadDefaultTexturesAndSamplers()
 {
-	createSampler("linear", TextureSampler::Style(VK_FILTER_LINEAR));
-	createSampler("nearest", TextureSampler::Style(VK_FILTER_NEAREST));
+	createSampler("linear",		TextureSampler::Style(VK_FILTER_LINEAR));
+	createSampler("nearest",	TextureSampler::Style(VK_FILTER_NEAREST));
 
 	load("fallback_white",		"../../res/textures/standard/white.png");
 	load("fallback_black",		"../../res/textures/standard/black.png");
@@ -96,23 +97,26 @@ Texture *TextureMgr::createFromData(const String &name, uint32_t width, uint32_t
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
 	texture->createInternalResources();
-	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getGraphicsCommandPool());
 
 	if (data)
 	{
+		texture->transitionLayout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
 		g_gpuBufferManager->textureStagingBuffer->writeDataToMe(data, size, 0);
 		g_gpuBufferManager->textureStagingBuffer->writeToTextureSingle(texture, size);
 
 		texture->setMipLevels(4);
 
-		CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getGraphicsCommandPool());
 		texture->generateMipmaps(cmd);
-		vkutil::endSingleTimeGraphicsCommands(cmd);
 	}
 	else
 	{
-		texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		texture->transitionLayout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
+
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -129,7 +133,10 @@ Texture *TextureMgr::createAttachment(const String &name, uint32_t width, uint32
 	texture->setSize(width, height);
 	texture->setProperties(format, tiling, VK_IMAGE_VIEW_TYPE_2D);
 	texture->createInternalResources();
+
+	CommandBuffer cmd = vkutil::beginSingleTimeCommands(g_vkCore->getGraphicsCommandPool());
 	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	vkutil::endSingleTimeGraphicsCommands(cmd);
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -147,7 +154,7 @@ Texture *TextureMgr::createCubemap(const String &name, uint32_t size, VkFormat f
 	texture->setProperties(format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_VIEW_TYPE_CUBE);
 	texture->setMipLevels(mipLevels);
 	texture->createInternalResources();
-	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	texture->transitionLayoutSingle(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	m_textureCache.insert(name, texture);
 	return texture;
@@ -196,6 +203,8 @@ TextureSampler *TextureMgr::createSampler(const String &name, const TextureSampl
 	}
 
 	TextureSampler *sampler = new TextureSampler(style);
+
+	sampler->init();
 
 	m_samplerCache.insert(name, sampler);
 	return sampler;

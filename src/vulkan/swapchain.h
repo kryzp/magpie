@@ -6,9 +6,8 @@
 #include "third_party/volk.h"
 
 #include "generic_render_target.h"
-#include "texture.h"
 #include "util.h"
-#include "render_info.h"
+#include "texture.h"
 
 namespace llt
 {
@@ -21,7 +20,7 @@ namespace llt
 		Swapchain();
 		~Swapchain() override;
 
-		void create();
+		void finalise();
 		void createSurface();
 
 		void createSwapChain();
@@ -46,7 +45,7 @@ namespace llt
 		Texture *getDepthAttachment() override;
 
 		VkImage getCurrentSwapchainImage() const;
-		VkImageView getCurrentSwapchainImageView() const;
+		TextureView getCurrentSwapchainImageView() const;
 
 		void onWindowResize(int width, int height);
 

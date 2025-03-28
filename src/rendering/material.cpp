@@ -26,17 +26,3 @@ const GraphicsPipelineDefinition &Material::getPipelineDef(ShaderPassType pass) 
 {
 	return m_passes[pass].pipeline;
 }
-
-const VkDescriptorSet &Material::getDescriptorSet(ShaderPassType pass) const
-{
-	return m_passes[pass].set;
-}
-
-Vector<uint32_t> Material::getDynamicOffsets() const
-{
-	return {
-		g_materialSystem->getGlobalBuffer()->getDynamicOffset(),
-		g_materialSystem->getInstanceBuffer()->getDynamicOffset(),
-		m_parameterBuffer->getDynamicOffset()
-	};
-}

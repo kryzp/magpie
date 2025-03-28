@@ -12,10 +12,13 @@
 #include "vulkan/swapchain.h"
 #include "vulkan/command_buffer.h"
 #include "vulkan/texture.h"
+#include "vulkan/descriptor_builder.h"
+#include "vulkan/render_target.h"
 
 #include "material.h"
 #include "material_system.h"
 #include "mesh_loader.h"
+#include "shader_mgr.h"
 #include "texture_mgr.h"
 #include "render_target_mgr.h"
 
@@ -60,16 +63,13 @@ void Renderer::init()
 
 	g_meshLoader = new MeshLoader();
 
+	g_materialSystem = new MaterialSystem();
+	g_materialSystem->init();
+
 	g_textureManager->loadDefaultTexturesAndSamplers();
 	g_shaderManager->loadDefaultShaders();
 
-	g_materialSystem = new MaterialSystem();
-	g_materialSystem->loadDefaultTechniques();
-	g_materialSystem->init();
-
-	createSkyboxResources();
-
-	addRenderObjects();
+	g_materialSystem->finalise();
 
 	m_target = g_renderTargetManager->createTarget(
 		"target",
@@ -86,9 +86,19 @@ void Renderer::init()
 	m_target->toggleClear(true);
 	m_target->setClearColours(Colour::black());
 
+	createSkyboxResources();
+
 	g_forwardPass.init();
 	g_postProcessPass.init(m_descriptorPool, m_target);
 	g_shadowPass.init();
+
+	auto assimpModel = m_currentScene.createRenderObject();
+	assimpModel->transform.setPosition({ 0.0f, 0.0f, 0.0f });
+	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
+	assimpModel->transform.setScale({ 1.0f, 1.0f, 1.0f });
+	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
+	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 
 void Renderer::cleanUp()
@@ -102,17 +112,6 @@ void Renderer::cleanUp()
 
 	delete g_meshLoader;
 	delete g_materialSystem;
-}
-
-void Renderer::addRenderObjects()
-{
-	auto assimpModel = m_currentScene.createRenderObject();
-	assimpModel->transform.setPosition({ 0.0f, 0.0f, 0.0f });
-	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
-	assimpModel->transform.setScale({ 1.0f, 1.0f, 1.0f });
-	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
-	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/WoodCube/scene.gltf");
-	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 
 void Renderer::setScene(const Scene &scene)
@@ -166,8 +165,7 @@ void Renderer::renderImGui(CommandBuffer &cmd)
 	
 	renderInfo.addColourAttachment(
 		VK_ATTACHMENT_LOAD_OP_LOAD,
-		g_vkCore->m_swapchain->getCurrentSwapchainImageView(),
-		g_vkCore->getImGuiAttachmentFormat()
+		g_vkCore->m_swapchain->getCurrentSwapchainImageView()
 	);
 
 	cmd.beginRecording();
@@ -224,14 +222,14 @@ void Renderer::createSkyboxResources()
 	ShaderEffect *skyboxShader = g_shaderManager->getEffect("skybox");
 
 	BoundTexture skyboxCubemap(
-		g_textureManager->getTexture("environmentMap"),
+		g_textureManager->getTexture("environment_map"),
 		g_textureManager->getSampler("linear")
 	);
 
-	m_skyboxSet = m_descriptorPool.allocate(skyboxShader->getDescriptorSetLayout());
+	m_skyboxSet = m_descriptorPool.allocate(skyboxShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
-		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getStandardImageInfo())
+		.writeCombinedImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, skyboxCubemap.getStandardImageInfo())
 		.updateSet(m_skyboxSet);
 
 	m_skyboxPipeline.setShader(skyboxShader);

@@ -2,9 +2,11 @@
 #define APP_H_
 
 #include "common.h"
+
 #include "container/function.h"
-#include "vulkan/swapchain.h"
+
 #include "vulkan/shader.h"
+
 #include "rendering/renderer.h"
 #include "rendering/camera.h"
 

@@ -7,13 +7,29 @@
 #include "vulkan/descriptor_allocator.h"
 #include "vulkan/descriptor_layout_cache.h"
 
-#include "shader_buffer_mgr.h"
-
 #include "material.h"
-#include "light.h"
+#include "bindless_resource_mgr.h"
 
 namespace llt
 {
+	class MaterialRegistry
+	{
+	public:
+		MaterialRegistry() = default;
+		~MaterialRegistry() = default;
+
+		void loadDefaultTechniques();
+
+		void cleanUp();
+
+		Material *buildMaterial(MaterialData &data);
+		void addTechnique(const String &name, const Technique &technique);
+
+	private:
+		HashMap<uint64_t, Material*> m_materials;
+		HashMap<String, Technique> m_techniques;
+	};
+
 	class MaterialSystem
 	{
 	public:
@@ -21,61 +37,29 @@ namespace llt
 		~MaterialSystem();
 
 		void init();
-		void loadDefaultTechniques();
+		void finalise();
 
-		Material *buildMaterial(MaterialData &data);
+		MaterialRegistry &getRegistry();
+		const MaterialRegistry &getRegistry() const;
 
-		void addTechnique(const String &name, const Technique &technique);
+		Texture *getIrradianceMap() const;
+		Texture *getPrefilterMap() const;
 
-		void pushGlobalData();
-		void pushInstanceData();
+		Texture *getBRDFLUT() const;
 
-		DynamicShaderBuffer *getGlobalBuffer() const;
-		DynamicShaderBuffer *getInstanceBuffer() const;
-
-		struct
-		{
-			glm::mat4 proj;
-			glm::mat4 view;
-			glm::vec4 cameraPosition;
-			Light lights[16];
-		}
-		m_globalData;
-
-		struct
-		{
-			glm::mat4 model;
-			glm::mat4 normalMatrix;
-		}
-		m_instanceData;
-
-		const Texture *getDiffuseFallback() const;
-		const Texture *getAOFallback() const;
-		const Texture *getRoughnessMetallicFallback() const;
-		const Texture *getNormalFallback() const;
-		const Texture *getEmissiveFallback() const;
+		Texture *getDiffuseFallback() const;
+		Texture *getAOFallback() const;
+		Texture *getRoughnessMetallicFallback() const;
+		Texture *getNormalFallback() const;
+		Texture *getEmissiveFallback() const;
 
 	private:
 		void generateEnvironmentMaps(CommandBuffer &cmd);
 		void precomputeBRDF(CommandBuffer &cmd);
 
-		HashMap<uint64_t, Material*> m_materials;
-		HashMap<String, Technique> m_techniques;
-
-		DynamicShaderBuffer *m_globalBuffer;
-		DynamicShaderBuffer *m_instanceBuffer;
+		MaterialRegistry m_registry;
 
 		DescriptorPoolDynamic m_descriptorPoolAllocator;
-
-//		ShaderParameters m_bindlessParams;
-//		DescriptorBuilder m_bindlessDescriptor;
-//
-//		DescriptorPoolDynamic bindlessDescriptorPoolManager;
-//		DescriptorCache bindlessDescriptorCache;
-
-//		GPUBuffer *m_bindlessUBO;
-//		GPUBuffer *m_bindlessSSBO;
-//		GPUBuffer *m_bindlessCombinedSamplers;
 
 		Texture *m_environmentMap;
 		Texture *m_irradianceMap;

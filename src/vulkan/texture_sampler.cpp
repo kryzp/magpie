@@ -2,6 +2,8 @@
 #include "util.h"
 #include "core.h"
 
+#include "rendering/bindless_resource_mgr.h"
+
 using namespace llt;
 
 TextureSampler::TextureSampler()
@@ -19,26 +21,11 @@ TextureSampler::TextureSampler(const TextureSampler::Style &style)
 TextureSampler::~TextureSampler()
 {
 	cleanUp();
-}
+};
 
-void TextureSampler::cleanUp()
+void TextureSampler::init()
 {
-	if (m_sampler == VK_NULL_HANDLE) {
-		return;
-	}
-
-	vkDestroySampler(g_vkCore->m_device, m_sampler, nullptr);
-	m_sampler = VK_NULL_HANDLE;
-}
-
-VkSampler TextureSampler::bind()
-{
-	if (m_sampler)
-		return m_sampler;
-
-	VkPhysicalDeviceProperties properties = g_vkCore->m_physicalData.properties;
-
-	cleanUp();
+	cauto &properties = g_vkCore->m_physicalData.properties.properties;
 
 	VkSamplerCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -63,10 +50,25 @@ VkSampler TextureSampler::bind()
 		"Failed to create texture sampler"
 	);
 
+	g_bindlessResources->registerSampler(this);
+}
+
+void TextureSampler::cleanUp()
+{
+	if (m_sampler == VK_NULL_HANDLE) {
+		return;
+	}
+
+	vkDestroySampler(g_vkCore->m_device, m_sampler, nullptr);
+	m_sampler = VK_NULL_HANDLE;
+}
+
+VkSampler TextureSampler::getHandle() const
+{
 	return m_sampler;
 }
 
-VkSampler TextureSampler::sampler() const
+BindlessResourceHandle TextureSampler::getBindlessHandle() const
 {
-	return m_sampler;
+	return m_bindlessHandle;
 }

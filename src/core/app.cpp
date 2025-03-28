@@ -32,7 +32,7 @@ App::App(const Config &config)
 	g_inputState = new Input();
 
 	Swapchain *swapchain = g_vkCore->createSwapchain();
-	swapchain->setClearColour(0, Colour::black());
+	swapchain->setClearColours(Colour::black());
 
 	g_platform->initImGui();
 

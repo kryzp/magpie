@@ -1,30 +1,22 @@
-#ifndef PIPELINE_H_
-#define PIPELINE_H_
+#ifndef PIPELINE_DEFINITION_H_
+#define PIPELINE_DEFINITION_H_
 
 #include "third_party/volk.h"
 
 #include "core/common.h"
 
 #include "container/array.h"
-#include "container/optional.h"
-#include "container/vector.h"
+#include "container/hash_map.h"
 
 #include "math/rect.h"
 
-#include "descriptor_builder.h"
-#include "descriptor_layout_cache.h"
-#include "descriptor_allocator.h"
-#include "vertex_format.h"
 #include "blend.h"
-#include "queue.h"
-#include "texture.h"
-#include "render_target.h"
+#include "vertex_format.h"
 
 namespace llt
 {
 	class ShaderEffect;
 	class TextureSampler;
-	class DynamicShaderBuffer;
 	class GenericRenderTarget;
 	class RenderInfo;
 
@@ -103,31 +95,6 @@ namespace llt
 		const ShaderEffect *m_shader;
 		VkPipelineShaderStageCreateInfo m_stage;
 	};
-
-	struct PipelineData
-	{
-		VkPipeline pipeline;
-		VkPipelineLayout layout;
-	};
-
-	class PipelineCache
-	{
-	public:
-		PipelineCache();
-		~PipelineCache();
-
-		void init();
-		void dispose();
-
-		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo);
-		PipelineData fetchComputePipeline(const ComputePipelineDefinition &definition);
-
-		VkPipelineLayout fetchPipelineLayout(const ShaderEffect *shader);
-
-	private:
-		HashMap<uint64_t, VkPipeline> m_pipelines;
-		HashMap<uint64_t, VkPipelineLayout> m_layouts;
-	};
 }
 
-#endif // PIPELINE_H_
+#endif // PIPELINE_DEFINITION_H_

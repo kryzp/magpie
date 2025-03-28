@@ -40,16 +40,19 @@ struct VSOutput
 
 VSOutput main(VSInput input)
 {
-    float3 T = normalize(mul((float3x3)instanceData.normalMatrix, input.tangent));
-    float3 N = normalize(mul((float3x3)instanceData.normalMatrix, input.normal));
-    float3 B = normalize(mul((float3x3)instanceData.normalMatrix, input.bitangent));
+    float4x4 modelMatrix = transformTable[pc.transform_ID].modelMatrix;
+    float3x3 normalMatrix = (float3x3)transformTable[pc.transform_ID].normalMatrix;
+    
+    float3 T = normalize(mul(normalMatrix, input.tangent));
+    float3 N = normalize(mul(normalMatrix, input.normal));
+    float3 B = normalize(mul(normalMatrix, input.bitangent));
 
     VSOutput output;
 	output.colour = input.colour;
     output.texCoord = input.uv;
-    output.position = mul(instanceData.modelMatrix, float4(input.position, 1.0)).xyz;
+	output.position = mul(modelMatrix, float4(input.position, 1.0)).xyz;
 	output.tbn = float3x3(T, B, N);
-    output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(instanceData.modelMatrix, float4(input.position, 1.0))));
+	output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(modelMatrix, float4(input.position, 1.0))));
 
     return output;
 }

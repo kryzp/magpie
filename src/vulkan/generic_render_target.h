@@ -3,18 +3,19 @@
 
 #include "third_party/volk.h"
 
-#include "core/common.h"
-
 #include "container/array.h"
 
+#include "core/common.h"
+
 #include "render_info.h"
-#include "texture.h"
-#include "command_buffer.h"
 
 namespace llt
 {
 	class VulkanCore;
 	class RenderInfo;
+	class Colour;
+	class CommandBuffer;
+	class Texture;
 
 	enum RenderTargetType
 	{

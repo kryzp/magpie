@@ -1,9 +1,12 @@
 #include "texture.h"
 
+#include "math/calc.h"
+
+#include "rendering/bindless_resource_mgr.h"
+
 #include "core.h"
 #include "util.h"
-
-#include "math/calc.h"
+#include "image.h"
 
 using namespace llt;
 
@@ -11,9 +14,8 @@ Texture::Texture()
 	: m_parent(nullptr)
 	, m_image(VK_NULL_HANDLE)
 	, m_imageLayout(VK_IMAGE_LAYOUT_UNDEFINED)
-	, m_standardView(VK_NULL_HANDLE)
-	, m_viewCache()
 	, m_mipmapCount(1)
+	, m_viewCache()
 	, m_numSamples(VK_SAMPLE_COUNT_1_BIT)
 	, m_transient(false)
 	, m_stage(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
@@ -45,11 +47,8 @@ void Texture::cleanUp()
 
 	for (auto &[id, view] : m_viewCache)
 	{
-		vkDestroyImageView(g_vkCore->m_device, view, nullptr);
-		view = VK_NULL_HANDLE;
+		view.cleanUp();
 	}
-
-	m_standardView = VK_NULL_HANDLE;
 
 	m_viewCache.clear();
 
@@ -66,36 +65,36 @@ void Texture::cleanUp()
 
 void Texture::createInternalResources()
 {
-	VkImageType vkImageType = VK_IMAGE_TYPE_MAX_ENUM;
+	VkImageType imageType = VK_IMAGE_TYPE_MAX_ENUM;
 
 	switch (m_type)
 	{
 		case VK_IMAGE_VIEW_TYPE_1D:
-			vkImageType = VK_IMAGE_TYPE_1D;
+			imageType = VK_IMAGE_TYPE_1D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-			vkImageType = VK_IMAGE_TYPE_1D;
+			imageType = VK_IMAGE_TYPE_1D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_2D:
-			vkImageType = VK_IMAGE_TYPE_2D;
+			imageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-			vkImageType = VK_IMAGE_TYPE_2D;
+			imageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_3D:
-			vkImageType = VK_IMAGE_TYPE_3D;
+			imageType = VK_IMAGE_TYPE_3D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_CUBE:
-			vkImageType = VK_IMAGE_TYPE_2D;
+			imageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-			vkImageType = VK_IMAGE_TYPE_2D;
+			imageType = VK_IMAGE_TYPE_2D;
 			break;
 
 		default:
@@ -104,7 +103,7 @@ void Texture::createInternalResources()
 
 	VkImageCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	createInfo.imageType = vkImageType;
+	createInfo.imageType = imageType;
 	createInfo.extent.width = m_width;
 	createInfo.extent.height = m_height;
 	createInfo.extent.depth = m_depth;
@@ -140,16 +139,14 @@ void Texture::createInternalResources()
 		vmaCreateImage(g_vkCore->m_vmaAllocator, &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);
-
-	m_standardView = getView(getLayerCount(), 0, 0);
 }
 
-VkImageView Texture::getStandardView() const
+TextureView Texture::getStandardView()
 {
-	return m_standardView;
+	return getView(getLayerCount(), 0, 0);
 }
 
-VkImageView Texture::getView(int layerCount, int layer, int baseMipLevel)
+TextureView Texture::getView(int layerCount, int layer, int baseMipLevel)
 {
 	uint64_t hash = 0;
 
@@ -161,7 +158,7 @@ VkImageView Texture::getView(int layerCount, int layer, int baseMipLevel)
 	{
 		return m_viewCache[hash];
 	}
-
+	
 	VkImageViewType viewType = m_type;
 
 	if (m_type == VK_IMAGE_VIEW_TYPE_CUBE && layerCount == 1) {
@@ -199,12 +196,23 @@ VkImageView Texture::getView(int layerCount, int layer, int baseMipLevel)
 		"Failed to create texture image view."
 	);
 
+	TextureView textureView(view, m_format);
+
+	if (viewType == VK_IMAGE_VIEW_TYPE_CUBE)
+	{
+		g_bindlessResources->registerCubemap(textureView);
+	}
+	else
+	{
+		g_bindlessResources->registerTexture(textureView);
+	}
+
 	m_viewCache.insert(
 		hash,
-		view
+		textureView
 	);
 
-	return view;
+	return textureView;
 }
 
 void Texture::transitionLayoutSingle(VkImageLayout newLayout)
@@ -251,7 +259,7 @@ void Texture::generateMipmaps(CommandBuffer &cmd)
 	cmd.transitionForMipmapGeneration(*this);
 	cmd.generateMipmaps(*this);
 
-	m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	m_imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // todo: this should be in the command buffer. also in general cmd.generateMipmaps is a bit of a mess
 }
 
 VkImageMemoryBarrier2 Texture::getBarrier() const

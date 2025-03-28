@@ -116,6 +116,24 @@ void GPUBuffer::writeToTexture(CommandBuffer &commandBuffer, const Texture *text
 	);
 }
 
+VkDescriptorBufferInfo GPUBuffer::getDescriptorInfo(uint32_t offset) const
+{
+	return {
+		.buffer = m_buffer,
+		.offset = offset,
+		.range = m_size
+	};
+}
+
+VkDescriptorBufferInfo GPUBuffer::getDescriptorInfoRange(uint32_t range, uint32_t offset) const
+{
+	return {
+		.buffer = m_buffer,
+		.offset = offset,
+		.range = range
+	};
+}
+
 VkBuffer GPUBuffer::getHandle() const
 {
 	return m_buffer;

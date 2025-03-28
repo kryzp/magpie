@@ -47,16 +47,16 @@ namespace llt
 		const Vector<ShaderProgram *> &getStages() const;
 		const ShaderProgram *getStage(int idx) const;
 
-		const VkDescriptorSetLayout &getDescriptorSetLayout() const;
-		void setDescriptorSetLayout(const VkDescriptorSetLayout &layout);
-		
+		const Vector<VkDescriptorSetLayout> &getDescriptorSetLayouts() const;
+		void setDescriptorSetLayouts(const Vector<VkDescriptorSetLayout> &layouts);
+
 		void setPushConstantsSize(uint64_t size);
 		uint64_t getPushConstantsSize() const;
 
 	private:
 		Vector<ShaderProgram *> m_stages;
 
-		VkDescriptorSetLayout m_descriptorSetLayout;
+		Vector<VkDescriptorSetLayout> m_descriptorSetLayouts;
 		uint64_t m_pushConstantsSize;
 	};
 }

@@ -26,9 +26,7 @@ namespace llt
 		Texture *load(const String &name, const String &path);
 		
 		Texture *createFromImage(const String &name, const Image &image);
-		
 		Texture *createFromData(const String &name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, const byte *data, uint64_t size);
-		
 		Texture *createAttachment(const String &name, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling);
 		
 		Texture *createCubemap(const String &name, uint32_t size, VkFormat format, int mipLevels);

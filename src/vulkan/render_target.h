@@ -9,6 +9,8 @@
 
 namespace llt
 {
+	class CommandBuffer;
+
 	class RenderTarget : public GenericRenderTarget
 	{
 	public:

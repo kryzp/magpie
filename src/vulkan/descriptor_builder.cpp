@@ -21,12 +21,12 @@ VkDescriptorSetLayout DescriptorLayoutBuilder::build(VkShaderStageFlags shaderSt
 	return g_vkCore->getDescriptorLayoutCache().createLayout(layoutCreateInfo);
 }
 
-DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t bindingIndex, VkDescriptorType type)
+DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t bindingIndex, VkDescriptorType type, uint32_t descriptorCount)
 {
 	VkDescriptorSetLayoutBinding binding = {};
 	binding.binding = bindingIndex;
 	binding.descriptorType = type;
-	binding.descriptorCount = 1;
+	binding.descriptorCount = descriptorCount;
 	binding.stageFlags = 0;
 	binding.pImmutableSamplers = nullptr;
 
@@ -37,7 +37,12 @@ DescriptorLayoutBuilder &DescriptorLayoutBuilder::bind(uint32_t bindingIndex, Vk
 
 // ---
 
-DescriptorWriter &DescriptorWriter::updateSet(const VkDescriptorSet &set)
+void DescriptorWriter::clear()
+{
+	m_writes.clear();
+}
+
+void DescriptorWriter::updateSet(const VkDescriptorSet &set)
 {
 	for (auto &write : m_writes)
 	{
@@ -49,233 +54,78 @@ DescriptorWriter &DescriptorWriter::updateSet(const VkDescriptorSet &set)
 		m_writes.size(), m_writes.data(),
 		0, nullptr
 	);
-
-	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t dstArrayElement)
 {
-	m_bufferInfos.pushBack(info);
+	m_bufferInfos[m_nBufferInfos] = info;
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
-	write.dstSet = VK_NULL_HANDLE;
+	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
+	write.dstArrayElement = dstArrayElement;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
-	write.pBufferInfo = &m_bufferInfos.back();
+	write.pBufferInfo = &m_bufferInfos[m_nBufferInfos];
 
 	m_writes.pushBack(write);
+
+	m_nBufferInfos++;
 
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset, uint32_t dstArrayElement)
 {
 	VkDescriptorBufferInfo info = {};
 	info.buffer = buffer;
 	info.offset = offset;
 	info.range = size;
 
-	writeBuffer(bindingIndex, type, info);
+	writeBuffer(bindingIndex, type, info, dstArrayElement);
 
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info)
+DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement)
 {
-	m_imageInfos.pushBack(info);
+	m_imageInfos[m_nImageInfos] = info;
 
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
-	write.dstSet = VK_NULL_HANDLE;
+	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
+	write.dstArrayElement = dstArrayElement;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
-	write.pImageInfo = &m_imageInfos.back();
+	write.pImageInfo = &m_imageInfos[m_nImageInfos];
 
 	m_writes.pushBack(write);
+
+	m_nImageInfos++;
 
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, VkImageView image, VkSampler sampler, VkImageLayout layout)
+DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement)
 {
 	VkDescriptorImageInfo info = {};
-	info.sampler = sampler;
 	info.imageView = image;
 	info.imageLayout = layout;
+	info.sampler = sampler;
 
-	writeImage(bindingIndex, type, info);
-
-	return *this;
-}
-
-/*
-uint64_t DescriptorBuilder::getHash() const
-{
-	uint64_t result = 0;
-
-	for (auto &binding : m_bindings) {
-		hash::combine(&result, &binding);
-	}
-
-	for (auto &binding : m_writes) {
-		hash::combine(&result, &binding);
-	}
-
-	return result;
-}
-
-Vector<uint32_t> DescriptorBuilder::getDynamicOffsets() const
-{
-	Vector<uint32_t> result;
-
-	for (auto &elem : m_dynamicOffsets) {
-		result.pushBack(elem.second);
-	}
-
-	return result;
-}
-
-DescriptorBuilder DescriptorBuilder::begin(DescriptorCache &cache, DescriptorPoolDynamic &allocator)
-{
-	DescriptorBuilder builder;
-	builder.m_cache = &cache;
-	builder.m_poolAllocator = &allocator;
-
-	return builder;
-}
-
-VkDescriptorSet DescriptorBuilder::buildGivenLayout(const VkDescriptorSetLayout &layout, uint32_t count)
-{
-	uint64_t hash = 0;
-
-	for (auto &write : m_writes)
-	{
-		if (write.pImageInfo)
-			hash::combine(&hash, write.pImageInfo);
-	}
-
-	bool needsUpdating = false;
-	VkDescriptorSet set = m_cache->createSet(layout, count, hash, m_poolAllocator, &needsUpdating);
-
-	for (auto &write : m_writes) {
-		write.dstSet = set;
-	}
-
-	if (needsUpdating) {
-		vkUpdateDescriptorSets(
-			g_vkCore->device,
-			m_writes.size(),
-			m_writes.data(),
-			0, nullptr
-		);
-	}
-
-	return set;
-}
-
-VkDescriptorSet DescriptorBuilder::build(uint32_t count, VkDescriptorSetLayoutCreateFlags layoutFlags)
-{
-	VkDescriptorSetLayout layout = buildLayout(layoutFlags);
-	return buildGivenLayout(layout, count);
-}
-
-VkDescriptorSetLayout DescriptorBuilder::buildLayout(VkDescriptorSetLayoutCreateFlags flags)
-{
-	VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {};
-	bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-	bindingFlags.bindingCount = m_flags.size();
-	bindingFlags.pBindingFlags = m_flags.data();
-	bindingFlags.pNext = nullptr;
-
-	VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
-	layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutCreateInfo.bindingCount = m_bindings.size();
-	layoutCreateInfo.pBindings = m_bindings.data();
-	layoutCreateInfo.flags = flags;
-	layoutCreateInfo.pNext = &bindingFlags;
-
-	return m_cache->createLayout(layoutCreateInfo);
-}
-
-DescriptorBuilder &DescriptorBuilder::bindBuffer(
-	uint32_t idx,
-	const VkDescriptorBufferInfo *info,
-	VkDescriptorType type,
-	VkShaderStageFlags stageFlags,
-	int count,
-	uint32_t dynamicOffset,
-	VkDescriptorBindingFlags flags
-)
-{
-	bool inserted = false;
-
-	for (int i = 0; i < m_dynamicOffsets.size(); i++)
-	{
-		if (m_dynamicOffsets[i].first >= idx)
-		{
-			m_dynamicOffsets.insert(i, Pair(idx, dynamicOffset));
-			inserted = true;
-			break;
-		}
-	}
-
-	if (!inserted) {
-		m_dynamicOffsets.emplaceBack(idx, dynamicOffset);
-	}
-
-	m_flags.pushBack(flags);
-
-	VkDescriptorSetLayoutBinding binding = {};
-	binding.binding = idx;
-	binding.descriptorType = type;
-	binding.descriptorCount = count;
-	binding.stageFlags = stageFlags;
-	binding.pImmutableSamplers = nullptr;
-	m_bindings.pushBack(binding);
-
-	VkWriteDescriptorSet write = {};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstBinding = idx;
-	write.dstArrayElement = 0;
-	write.descriptorType = type;
-	write.descriptorCount = 1;
-	write.pBufferInfo = info;
-	m_writes.pushBack(write);
+	writeCombinedImage(bindingIndex, type, info, dstArrayElement);
 
 	return *this;
 }
 
-DescriptorBuilder &DescriptorBuilder::bindImage(
-	uint32_t idx,
-	const VkDescriptorImageInfo *info,
-	VkDescriptorType type,
-	VkShaderStageFlags stageFlags,
-	int count,
-	VkDescriptorBindingFlags flags
-)
+DescriptorWriter &DescriptorWriter::writeSampledImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement)
 {
-	m_flags.pushBack(flags);
-
-	VkDescriptorSetLayoutBinding binding = {};
-	binding.binding = idx;
-	binding.descriptorType = type;
-	binding.descriptorCount = count;
-	binding.stageFlags = stageFlags;
-	binding.pImmutableSamplers = nullptr;
-	m_bindings.pushBack(binding);
-
-	VkWriteDescriptorSet write = {};
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstBinding = idx;
-	write.dstArrayElement = 0;
-	write.descriptorType = type;
-	write.descriptorCount = 1;
-	write.pImageInfo = info;
-	m_writes.pushBack(write);
-
-	return *this;
+	return writeCombinedImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, image, layout, VK_NULL_HANDLE, dstArrayElement);
 }
-*/
+
+DescriptorWriter &DescriptorWriter::writeSampler(uint32_t bindingIndex, VkSampler sampler, uint32_t dstArrayElement)
+{
+	return writeCombinedImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLER, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED, sampler, dstArrayElement);
+}

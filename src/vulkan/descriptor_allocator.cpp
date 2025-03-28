@@ -24,10 +24,13 @@ void DescriptorPoolStatic::init(uint32_t maxSets, VkDescriptorPoolCreateFlags fl
 	poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolCreateInfo.flags = flags;
 	poolCreateInfo.maxSets = maxSets;
-	poolCreateInfo.poolSizeCount = (uint32_t)poolSizes.size();
+	poolCreateInfo.poolSizeCount = poolSizes.size();
 	poolCreateInfo.pPoolSizes = poolSizes.data();
 
-	vkCreateDescriptorPool(g_vkCore->m_device, &poolCreateInfo, nullptr, &m_pool);
+	LLT_VK_CHECK(
+		vkCreateDescriptorPool(g_vkCore->m_device, &poolCreateInfo, nullptr, &m_pool),
+		"Failed to create static descriptor pool"
+	);
 }
 
 void DescriptorPoolStatic::cleanUp()
@@ -112,7 +115,7 @@ void DescriptorPoolDynamic::clear()
 	m_usedPools.clear();
 }
 
-VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout &layout, void *pNext)
+VkDescriptorSet DescriptorPoolDynamic::allocate(const Vector<VkDescriptorSetLayout> &layouts, void *pNext)
 {
 	VkDescriptorPool allocatedPool = fetchPool();
 
@@ -122,8 +125,8 @@ VkDescriptorSet DescriptorPoolDynamic::allocate(const VkDescriptorSetLayout &lay
 	allocInfo.pNext = pNext;
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = allocatedPool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &layout;
+	allocInfo.descriptorSetCount = layouts.size();
+	allocInfo.pSetLayouts = layouts.data();
 
 	VkResult result = vkAllocateDescriptorSets(g_vkCore->m_device, &allocInfo, &ret);
 

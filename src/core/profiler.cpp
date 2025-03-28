@@ -13,7 +13,7 @@ Profiler::Profiler(int perFramePoolSizes)
 	, m_queryFrames()
 	, m_timings()
 {
-	m_period = g_vkCore->m_physicalData.properties.limits.timestampPeriod;
+	m_period = g_vkCore->m_physicalData.properties.properties.limits.timestampPeriod;
 
 	VkQueryPoolCreateInfo queryPoolInfo = {};
 	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;

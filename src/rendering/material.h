@@ -8,8 +8,7 @@
 
 #include "vulkan/texture.h"
 #include "vulkan/shader.h"
-#include "vulkan/shader_buffer.h"
-#include "vulkan/pipeline.h"
+#include "vulkan/pipeline_definition.h"
 
 namespace llt
 {
@@ -25,12 +24,10 @@ namespace llt
 	struct ShaderPass
 	{
 		ShaderEffect *shader;
-		VkDescriptorSet set;
 		GraphicsPipelineDefinition pipeline;
 
 		ShaderPass()
 			: shader(nullptr)
-			, set()
 			, pipeline()
 		{
 		}
@@ -53,17 +50,17 @@ namespace llt
 
 	struct MaterialData
 	{
-		Vector<BoundTexture> textures;
+		Vector<TextureView> textures;
 		String technique;
 
-		void *parameters;
-		uint64_t parameterSize;
+//		void *parameters;
+//		uint64_t parameterSize;
 
 		MaterialData()
 			: textures()
 			, technique("UNDEFINED")
-			, parameters(nullptr)
-			, parameterSize(0)
+//			, parameters(nullptr)
+//			, parameterSize(0)
 		{
 		}
 
@@ -90,12 +87,10 @@ namespace llt
 		uint64_t getHash() const;
 
 		const GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass) const;
-		const VkDescriptorSet &getDescriptorSet(ShaderPassType pass) const;
-		Vector<uint32_t> getDynamicOffsets() const;
 
 		VertexFormat m_vertexFormat;
-		Vector<BoundTexture> m_textures;
-		DynamicShaderBuffer *m_parameterBuffer;
+		Vector<TextureView> m_textures;
+//		DynamicShaderBuffer *m_parameterBuffer;
 		ShaderPass m_passes[SHADER_PASS_MAX_ENUM];
 	};
 }

@@ -12,6 +12,7 @@ llt::RenderTargetMgr *llt::g_renderTargetManager = nullptr;
 using namespace llt;
 
 RenderTargetMgr::RenderTargetMgr()
+	: m_targets()
 {
 }
 

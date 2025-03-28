@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "util.h"
+#include "command_buffer.h"
 
 #include "math/colour.h"
 
@@ -121,7 +122,7 @@ void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
 
 	m_attachments.pushBack(texture);
 
-	VkImageView resolveView = VK_NULL_HANDLE;
+	const TextureView &view = texture->getView(1, layer, mip);
 
 	// todo: 99% certain that this won't work for layer != 0, just as im coding this :)!
 	if (texture->getNumSamples() != VK_SAMPLE_COUNT_1_BIT)
@@ -139,24 +140,22 @@ void RenderTarget::addAttachment(Texture *texture, int layer, int mip)
 		resolve->setParent(this);
 
 		m_resolveAttachments.pushBack(resolve);
-		resolveView = resolve->getStandardView();
+
+		TextureView resolveView = resolve->getStandardView();
+
+		m_renderInfo.addColourAttachmentWithResolve(VK_ATTACHMENT_LOAD_OP_LOAD, view, resolveView);
 	}
-
-	VkImageView view = texture->getView(1, layer, mip);
-
-	m_renderInfo.addColourAttachment(
-		VK_ATTACHMENT_LOAD_OP_LOAD,
-		view,
-		texture->getFormat(),
-		resolveView
-	);
+	else
+	{
+		m_renderInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, view);
+	}
 }
 
 void RenderTarget::setDepthAttachment(Texture *texture)
 {
 	if (m_depth)
 	{
-		m_renderInfo.getDepthAttachment().imageView = texture->getStandardView();
+		m_renderInfo.getDepthAttachment().imageView = texture->getStandardView().getHandle();
 	}
 	else
 	{
@@ -164,8 +163,7 @@ void RenderTarget::setDepthAttachment(Texture *texture)
 
 		m_renderInfo.addDepthAttachment(
 			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			m_depth->getStandardView(),
-			VK_NULL_HANDLE
+			m_depth->getStandardView()
 		);
 
 		setDepthStencilClear(1.0f, 0);
@@ -186,7 +184,7 @@ void RenderTarget::createDepthAttachment()
 	m_depth->transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	m_depth->setParent(this);
 
-	VkImageView resolveView = VK_NULL_HANDLE;
+	const TextureView &view = m_depth->getStandardView();
 
 	if (m_renderInfo.getMSAA() != VK_SAMPLE_COUNT_1_BIT)
 	{
@@ -200,14 +198,14 @@ void RenderTarget::createDepthAttachment()
 		m_resolveDepth->transitionLayoutSingle(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		m_resolveDepth->setParent(this);
 
-		resolveView = m_resolveDepth->getStandardView();
-	}
+		TextureView resolveView = m_resolveDepth->getStandardView();
 
-	m_renderInfo.addDepthAttachment(
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		m_depth->getStandardView(),
-		resolveView
-	);
+		m_renderInfo.addDepthAttachmentWithResolve(VK_ATTACHMENT_LOAD_OP_CLEAR, view, resolveView);
+	}
+	else
+	{
+		m_renderInfo.addDepthAttachment(VK_ATTACHMENT_LOAD_OP_CLEAR, view);
+	}
 
 	setDepthStencilClear(1.0f, 0);
 }

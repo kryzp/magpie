@@ -3,23 +3,14 @@
 
 #include "third_party/volk.h"
 
-#include "core/common.h"
-
 #include "container/vector.h"
-#include "container/optional.h"
-#include "container/array.h"
-
-#include "blend.h"
-#include "shader.h"
-#include "texture.h"
-#include "texture_sampler.h"
-#include "command_buffer.h"
 
 #define LLT_VK_CHECK(_func_call, _error_msg) do{if(VkResult _VK_CHECK_RESULT_ABCDEFGH=_func_call;_VK_CHECK_RESULT_ABCDEFGH!=VK_SUCCESS){LLT_ERROR(_error_msg ": %d",_VK_CHECK_RESULT_ABCDEFGH);}}while(0);
 
 namespace llt
 {
 	class VulkanCore;
+	class CommandBuffer;
 
 	struct SwapChainSupportDetails
 	{
@@ -72,7 +63,7 @@ namespace llt
 
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice);
-		uint32_t assignPhysicalDeviceUsability(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, VkPhysicalDeviceFeatures features, bool *hasEssentials);
+		uint32_t assignPhysicalDeviceUsability(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties2 properties, VkPhysicalDeviceFeatures2 features, bool *hasEssentials);
 
 		VkPipelineStageFlags getTransferPipelineStageFlags(VkImageLayout layout);
 		VkAccessFlags getTransferAccessFlags(VkImageLayout layout);

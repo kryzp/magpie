@@ -1,55 +1,26 @@
 #ifndef VK_CORE_H_
 #define VK_CORE_H_
 
-#define VK_NO_PROTOTYPES
 #include "third_party/volk.h"
-
 #include "third_party/vk_mem_alloc.h"
-
 #include "third_party/imgui/imgui_impl_vulkan.h"
-
-#include "container/vector.h"
-#include "container/array.h"
-#include "container/optional.h"
-#include "container/hash_map.h"
-#include "container/bitset.h"
-
-#include "math/rect.h"
 
 #include "core/common.h"
 #include "core/app.h"
 
-#include "render_info.h"
-
-#include "descriptor_allocator.h"
-#include "descriptor_builder.h"
-#include "descriptor_layout_cache.h"
-
-#include "vertex_format.h"
-
-#include "shader_buffer.h"
-
-#include "gpu_buffer.h"
-#include "texture.h"
-#include "shader.h"
-#include "render_target.h"
-#include "swapchain.h"
+#include "pipeline_cache.h"
 #include "queue.h"
-#include "pipeline.h"
-
-#include "rendering/shader_buffer_mgr.h"
-#include "rendering/gpu_buffer_mgr.h"
-#include "rendering/texture_mgr.h"
-#include "rendering/shader_mgr.h"
-#include "rendering/render_target_mgr.h"
+#include "swapchain.h"
+#include "descriptor_allocator.h"
+#include "descriptor_layout_cache.h"
 
 namespace llt
 {
 	struct PhysicalDeviceData
 	{
 		VkPhysicalDevice device;
-		VkPhysicalDeviceProperties properties;
-		VkPhysicalDeviceFeatures features;
+		VkPhysicalDeviceProperties2 properties;
+		VkPhysicalDeviceFeatures2 features;
 	};
 
 	class VulkanCore
@@ -58,7 +29,7 @@ namespace llt
 		VulkanCore(const Config &config);
 		~VulkanCore();
 
-        Swapchain *createSwapchain();
+		Swapchain *createSwapchain();
 
 		void swapBuffers();
 
@@ -82,7 +53,6 @@ namespace llt
 		VkDevice m_device;
 		PhysicalDeviceData m_physicalData;
 		VkSampleCountFlagBits m_maxMsaaSamples;
-		VkFormat m_swapChainImageFormat;
 		VmaAllocator m_vmaAllocator;
 
 		Queue m_graphicsQueue;
@@ -90,10 +60,10 @@ namespace llt
 		Vector<Queue> m_transferQueues;
 
 		Swapchain *m_swapchain;
+		VkFormat m_swapChainImageFormat;
 
 		void createImGuiResources();
 		ImGui_ImplVulkan_InitInfo getImGuiInitInfo() const;
-		const VkFormat &getImGuiAttachmentFormat() const;
 
 	private:
 		void enumeratePhysicalDevices();

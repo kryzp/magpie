@@ -11,6 +11,7 @@
 namespace llt
 {
 	class Texture;
+	class TextureView;
 	class VulkanCore;
 	class Swapchain;
 
@@ -25,8 +26,11 @@ namespace llt
 
 		void clear();
 
-		void addColourAttachment(VkAttachmentLoadOp loadOp, VkImageView imageView, VkFormat format, VkImageView resolveView = VK_NULL_HANDLE);
-		void addDepthAttachment(VkAttachmentLoadOp loadOp, VkImageView depthView, VkImageView resolveView = VK_NULL_HANDLE);
+		void addColourAttachment(VkAttachmentLoadOp loadOp, const TextureView &view);
+		void addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve);
+
+		void addDepthAttachment(VkAttachmentLoadOp loadOp, const TextureView &view);
+		void addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve);
 
 		VkRenderingAttachmentInfoKHR &getColourAttachment(int idx);
 		VkRenderingAttachmentInfoKHR &getDepthAttachment();
@@ -45,7 +49,7 @@ namespace llt
 		int getAttachmentCount() const;
 
 		const Vector<VkFormat> &getColourAttachmentFormats() const;
-		const VkFormat &getDepthAttachmentFormat() const;
+		VkFormat getDepthAttachmentFormat() const;
 
 		uint32_t getWidth() const;
 		uint32_t getHeight() const;

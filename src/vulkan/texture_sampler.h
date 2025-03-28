@@ -3,10 +3,14 @@
 
 #include "third_party/volk.h"
 
+#include "rendering/types.h"
+
 namespace llt
 {
 	class TextureSampler
 	{
+		friend class BindlessResourceManager;
+
 	public:
 		struct Style
 		{
@@ -46,16 +50,14 @@ namespace llt
 
 		TextureSampler();
 		TextureSampler(const Style &style);
+		
 		~TextureSampler();
 
+		void init();
 		void cleanUp();
 
-		/*
-		 * Create a sampler with some properties and amount of mip levels
-		 */
-		VkSampler bind();
-
-		VkSampler sampler() const;
+		VkSampler getHandle() const;
+		BindlessResourceHandle getBindlessHandle() const;
 
 		Style style;
 
@@ -64,6 +66,7 @@ namespace llt
 
 	private:
 		VkSampler m_sampler;
+		BindlessResourceHandle m_bindlessHandle;
 	};
 }
 

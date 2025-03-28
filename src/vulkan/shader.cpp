@@ -68,7 +68,7 @@ VkShaderModule ShaderProgram::getModule() const
 
 ShaderEffect::ShaderEffect()
 	: m_stages()
-	, m_descriptorSetLayout()
+	, m_descriptorSetLayouts()
 	, m_pushConstantsSize(0)
 {
 }
@@ -88,14 +88,14 @@ const ShaderProgram *ShaderEffect::getStage(int idx) const
 	return m_stages[idx];
 }
 
-const VkDescriptorSetLayout &ShaderEffect::getDescriptorSetLayout() const
+const Vector<VkDescriptorSetLayout> &ShaderEffect::getDescriptorSetLayouts() const
 {
-	return m_descriptorSetLayout;
+	return m_descriptorSetLayouts;
 }
 
-void ShaderEffect::setDescriptorSetLayout(const VkDescriptorSetLayout &layout)
+void ShaderEffect::setDescriptorSetLayouts(const Vector<VkDescriptorSetLayout> &layouts)
 {
-	m_descriptorSetLayout = layout;
+	m_descriptorSetLayouts = layouts;
 }
 
 void ShaderEffect::setPushConstantsSize(uint64_t size)

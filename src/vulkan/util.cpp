@@ -175,7 +175,7 @@ void vkutil::endSingleTimeTransferCommands(const CommandBuffer &cmd)
 
 uint64_t vkutil::calcShaderBufferAlignedSize(uint64_t size)
 {
-	VkPhysicalDeviceProperties properties = g_vkCore->m_physicalData.properties;
+	cauto &properties = g_vkCore->m_physicalData.properties.properties;
 	const VkDeviceSize &minimumSize = properties.limits.minUniformBufferOffsetAlignment;
 	return ((size / minimumSize) * minimumSize) + (((size % minimumSize) > 0) ? minimumSize : 0);
 }
@@ -238,8 +238,8 @@ bool vkutil::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 uint32_t vkutil::assignPhysicalDeviceUsability(
 	VkSurfaceKHR surface,
 	VkPhysicalDevice physicalDevice,
-	VkPhysicalDeviceProperties properties,
-	VkPhysicalDeviceFeatures features,
+	VkPhysicalDeviceProperties2 properties,
+	VkPhysicalDeviceFeatures2 features,
 	bool *hasEssentials
 )
 {
@@ -249,12 +249,12 @@ uint32_t vkutil::assignPhysicalDeviceUsability(
 	bool hasRequiredExtensions = checkDeviceExtensionSupport(physicalDevice);
 
 	bool hasGraphics = g_vkCore->m_graphicsQueue.getFamilyIdx().hasValue();
-	bool hasAnisotropy = features.samplerAnisotropy;
+	bool hasAnisotropy = features.features.samplerAnisotropy;
 
 	// prefer / give more weight to discrete gpus than integrated gpus
-	if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+	if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
 		resultUsability += 4;
-	} else if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+	} else if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
 		resultUsability += 1;
 	}
 

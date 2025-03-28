@@ -11,6 +11,11 @@
 #include "texture.h"
 #include "swapchain.h"
 
+#include "rendering/render_target_mgr.h"
+#include "rendering/texture_mgr.h"
+#include "rendering/shader_mgr.h"
+#include "rendering/bindless_resource_mgr.h"
+
 llt::VulkanCore *llt::g_vkCore = nullptr;
 
 using namespace llt;
@@ -19,12 +24,6 @@ using namespace llt;
 
 static bool g_debugEnableValidationLayers = false;
 
-/*
- * Go through all the required layers to see
- * if there is support for a validation layer that
- * we need. If there is then it means
- * we must have support for validation layers.
- */
 static bool debugHasValidationLayerSupport()
 {
 	uint32_t layerCount = 0;
@@ -56,10 +55,6 @@ static bool debugHasValidationLayerSupport()
 	return true;
 }
 
-/*
- * Hook for the validation layer.
- * Calls to the engine error function.
- */
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -74,9 +69,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 	return VK_FALSE;
 }
 
-/*
- * Initializes the vulkan debugging messenger.
- */
 static VkResult debugCreateDebugUtilsMessengerExt(
 	VkInstance instance,
 	const VkDebugUtilsMessengerCreateInfoEXT *createInfo,
@@ -93,9 +85,6 @@ static VkResult debugCreateDebugUtilsMessengerExt(
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-/*
- * Destroys the vulkan debugging messenger.
- */
 static void debugDestroyDebugUtilsMessengerExt(
 	VkInstance instance,
 	VkDebugUtilsMessengerEXT messenger,
@@ -109,9 +98,6 @@ static void debugDestroyDebugUtilsMessengerExt(
 	}
 }
 
-/*
- * Set all of the settings for how the debugging messenger should output information.
- */
 static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerCreateInfoEXT *info)
 {
 	info->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -123,9 +109,6 @@ static void debugPopulateDebugUtilsMessengerCreateInfoExt(VkDebugUtilsMessengerC
 
 #endif // LLT_DEBUG
 
-/*
- * Retrieve all the possible extensions for our Vulkan backend.
- */
 static Vector<const char*> getInstanceExtensions()
 {
 	uint32_t extCount = 0;
@@ -246,10 +229,10 @@ VulkanCore::VulkanCore(const Config &config)
 
 	// set up all of the core managers of resources
 	g_gpuBufferManager		= new GPUBufferMgr();
-	g_shaderBufferManager 	= new ShaderBufferMgr();
 	g_textureManager      	= new TextureMgr();
 	g_shaderManager       	= new ShaderMgr();
 	g_renderTargetManager 	= new RenderTargetMgr();
+	g_bindlessResources		= new BindlessResourceManager();
 
 	// finished :D
 	LLT_LOG("Vulkan Backend Initialized!");
@@ -272,6 +255,7 @@ VulkanCore::~VulkanCore()
 
 	m_swapchain->cleanUpSwapChain();
 
+	delete g_bindlessResources;
 	delete g_renderTargetManager;
 	delete g_shaderManager;
 	delete g_textureManager;
@@ -281,8 +265,6 @@ VulkanCore::~VulkanCore()
 
 	m_pipelineCache.dispose();
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
-
-	delete g_shaderBufferManager;
 
 	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
 	{
@@ -335,14 +317,17 @@ void VulkanCore::enumeratePhysicalDevices()
 		LLT_ERROR("Failed to find GPUs with Vulkan support!");
 	}
 
-	VkPhysicalDeviceProperties properties = {};
-	VkPhysicalDeviceFeatures features = {};
+	VkPhysicalDeviceProperties2 properties = {};
+	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+
+	VkPhysicalDeviceFeatures2 features = {};
+	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
 	Vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
-	vkGetPhysicalDeviceProperties(devices[0], &properties);
-	vkGetPhysicalDeviceFeatures(devices[0], &features);
+	vkGetPhysicalDeviceProperties2(devices[0], &properties);
+	vkGetPhysicalDeviceFeatures2(devices[0], &features);
 
 	m_physicalData.device = devices[0];
 	m_physicalData.properties = properties;
@@ -359,8 +344,8 @@ void VulkanCore::enumeratePhysicalDevices()
 	int i = 1;
 	for (; i < deviceCount; i++)
 	{
-		vkGetPhysicalDeviceProperties(devices[i], &m_physicalData.properties);
-		vkGetPhysicalDeviceFeatures(devices[i], &m_physicalData.features);
+		vkGetPhysicalDeviceProperties2(devices[i], &m_physicalData.properties);
+		vkGetPhysicalDeviceFeatures2(devices[i], &m_physicalData.features);
 
 		uint32_t usability1 = vkutil::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &hasEssentials);
 
@@ -427,6 +412,7 @@ void VulkanCore::createLogicalDevice()
 
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
 	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	descriptorIndexingFeaturesExt.runtimeDescriptorArray = VK_TRUE;
 	descriptorIndexingFeaturesExt.descriptorBindingPartiallyBound = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
 	descriptorIndexingFeaturesExt.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
@@ -459,7 +445,7 @@ void VulkanCore::createLogicalDevice()
 	createInfo.ppEnabledLayerNames = nullptr;
 	createInfo.ppEnabledExtensionNames = vkutil::DEVICE_EXTENSIONS;
 	createInfo.enabledExtensionCount = LLT_ARRAY_LENGTH(vkutil::DEVICE_EXTENSIONS);
-	createInfo.pEnabledFeatures = &m_physicalData.features;
+	createInfo.pEnabledFeatures = &m_physicalData.features.features;
 	createInfo.pNext = &synchronisation2FeaturesExt;
 
 #if LLT_DEBUG
@@ -708,7 +694,9 @@ Swapchain *VulkanCore::createSwapchain()
 
 //	createComputeResources();
 
-	m_swapchain->create();
+	g_bindlessResources->init();
+
+	m_swapchain->finalise();
 
 	return m_swapchain;
 }
@@ -716,8 +704,8 @@ Swapchain *VulkanCore::createSwapchain()
 VkSampleCountFlagBits VulkanCore::getMaxUsableSampleCount() const
 {
 	VkSampleCountFlags counts =
-		m_physicalData.properties.limits.framebufferColorSampleCounts &
-		m_physicalData.properties.limits.framebufferDepthSampleCounts;
+		m_physicalData.properties.properties.limits.framebufferColorSampleCounts &
+		m_physicalData.properties.properties.limits.framebufferDepthSampleCounts;
 
 	if (counts & VK_SAMPLE_COUNT_64_BIT) {
 		return VK_SAMPLE_COUNT_64_BIT;
@@ -845,7 +833,7 @@ void VulkanCore::swapBuffers()
 
 	m_currentFrameIdx = (m_currentFrameIdx + 1) % mgc::FRAMES_IN_FLIGHT;
 
-	g_shaderBufferManager->resetBufferUsageInFrame();
+//	g_shaderBufferManager->resetBufferUsageInFrame();
 
 	m_swapchain->acquireNextImage();
 }
@@ -891,12 +879,7 @@ ImGui_ImplVulkan_InitInfo VulkanCore::getImGuiInitInfo() const
 	info.UseDynamicRendering = true;
 	info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &getImGuiAttachmentFormat();
+	info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_swapChainImageFormat;
 
 	return info;
-}
-
-const VkFormat &VulkanCore::getImGuiAttachmentFormat() const
-{
-	return m_swapChainImageFormat;
 }

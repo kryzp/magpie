@@ -9,7 +9,8 @@
 
 #include "vulkan/core.h"
 #include "vulkan/shader.h"
-#include "vulkan/pipeline.h"
+#include "vulkan/pipeline_definition.h"
+#include "vulkan/render_target.h"
 #include "vulkan/descriptor_builder.h"
 #include "vulkan/descriptor_allocator.h"
 
@@ -51,11 +52,11 @@ void PostProcessPass::createHDRResources(DescriptorPoolDynamic &pool, RenderTarg
 
 	ShaderEffect *hdrTonemappingShader = g_shaderManager->getEffect("hdr_tonemapping");
 
-	m_hdrSet = pool.allocate(hdrTonemappingShader->getDescriptorSetLayout());
+	m_hdrSet = pool.allocate(hdrTonemappingShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
-		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sceneTexture.getStandardImageInfo())
-		.writeImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, bloomTexture.getStandardImageInfo())
+		.writeCombinedImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, sceneTexture.getStandardImageInfo())
+		.writeCombinedImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, bloomTexture.getStandardImageInfo())
 		.updateSet(m_hdrSet);
 
 	m_hdrPipeline.setShader(hdrTonemappingShader);
@@ -86,10 +87,10 @@ void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool, RenderTa
 
 	ShaderEffect *bloomDownsampleShader = g_shaderManager->getEffect("bloom_downsample");
 
-	m_bloomDownsampleSet = pool.allocate(bloomDownsampleShader->getDescriptorSetLayout());
+	m_bloomDownsampleSet = pool.allocate(bloomDownsampleShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
-		.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, downsampleInputImage.getStandardImageInfo())
+		.writeCombinedImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, downsampleInputImage.getStandardImageInfo())
 		.updateSet(m_bloomDownsampleSet);
 
 	m_bloomDownsamplePipeline.setShader(bloomDownsampleShader);
@@ -132,10 +133,10 @@ void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool, RenderTa
 
 	for (int i = 0; i < BLOOM_MIPS - 1; i++)
 	{
-		m_bloomUpsampleSets[i] = pool.allocate(bloomUpsampleShader->getDescriptorSetLayout());
+		m_bloomUpsampleSets[i] = pool.allocate(bloomUpsampleShader->getDescriptorSetLayouts());
 
 		DescriptorWriter()
-			.writeImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, upsampleImageInput.getImageInfo(m_bloomViews[i + 1]))
+			.writeCombinedImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, upsampleImageInput.getImageInfo(m_bloomViews[i + 1]))
 			.updateSet(m_bloomUpsampleSets[i]);
 	}
 }
@@ -143,7 +144,6 @@ void PostProcessPass::createBloomResources(DescriptorPoolDynamic &pool, RenderTa
 void PostProcessPass::render(CommandBuffer &cmd)
 {
 	renderBloomDownsamples(cmd);
-
 	renderBloomUpsamples(cmd);
 
 	applyHDRTexture(cmd);
@@ -205,11 +205,7 @@ void PostProcessPass::renderBloomDownsamples(CommandBuffer &cmd)
 
 		RenderInfo info;
 		info.setSize(width, height);
-		info.addColourAttachment(
-			VK_ATTACHMENT_LOAD_OP_LOAD,
-			m_bloomViews[mipLevel],
-			attachment->getFormat()
-		);
+		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, m_bloomViews[mipLevel]);
 
 		cmd.beginRendering(info);
 		{
@@ -258,11 +254,7 @@ void PostProcessPass::renderBloomUpsamples(CommandBuffer &cmd)
 
 		RenderInfo info;
 		info.setSize(dstWidth, dstHeight);
-		info.addColourAttachment(
-			VK_ATTACHMENT_LOAD_OP_LOAD,
-			m_bloomViews[mipLevel - 1],
-			attachment->getFormat()
-		);
+		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, m_bloomViews[mipLevel - 1]);
 
 		cmd.beginRecording();
 		cmd.beginRendering(info);

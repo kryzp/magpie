@@ -1,5 +1,7 @@
 #include "generic_render_target.h"
 
+#include "math/colour.h"
+
 using namespace llt;
 
 GenericRenderTarget::GenericRenderTarget()

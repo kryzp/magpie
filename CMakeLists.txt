@@ -14,18 +14,17 @@ add_executable(${PROJECT_NAME}
     src/core/debug_ui.cpp
     src/core/profiler.cpp
 
+    src/rendering/bindless_resource_mgr.cpp
     src/rendering/renderer.cpp
     src/rendering/gpu_buffer_mgr.cpp
     src/rendering/render_target_mgr.cpp
     src/rendering/shader_mgr.cpp
-    src/rendering/shader_buffer_mgr.cpp
     src/rendering/sub_mesh.cpp
     src/rendering/mesh.cpp
     src/rendering/mesh_loader.cpp
     src/rendering/material.cpp
 	src/rendering/material_system.cpp
     src/rendering/texture_mgr.cpp
-    src/rendering/image.cpp
     src/rendering/camera.cpp
     src/rendering/render_object.cpp
     src/rendering/gpu_particles.cpp
@@ -44,12 +43,14 @@ add_executable(${PROJECT_NAME}
     src/vulkan/generic_render_target.cpp
 	src/vulkan/render_info.cpp
     src/vulkan/render_target.cpp
+    src/vulkan/image.cpp
     src/vulkan/swapchain.cpp
     src/vulkan/shader.cpp
-    src/vulkan/shader_buffer.cpp
-    src/vulkan/pipeline.cpp
+    src/vulkan/pipeline_definition.cpp
+    src/vulkan/pipeline_cache.cpp
     src/vulkan/texture.cpp
     src/vulkan/texture_sampler.cpp
+    src/vulkan/texture_view.cpp
     src/vulkan/util.cpp
     src/vulkan/queue.cpp
     src/vulkan/vertex_format.cpp

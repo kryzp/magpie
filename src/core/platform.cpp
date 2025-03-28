@@ -26,7 +26,7 @@ Platform::Platform(const Config &config)
 		SDL_INIT_SENSOR |
 		SDL_INIT_CAMERA;
 
-	// i have no fucking idea why this is the case but whatever
+	// i have no idea why this is the case but whatever
 #ifdef _WIN32
 	bool failedInit = SDL_Init(initFlags) == 0;
 #else

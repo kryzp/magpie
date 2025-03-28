@@ -13,6 +13,9 @@ TODO (no particular order):
 - command pool abstraction
 - hdr resolve tonemapper should be compute shader
 - double-ended queue implementation is broken (see render target)
+- bindless system is pretty messy. like why is it's init() in createSwapchain() ???? actually in general createSwapchain() is a mess...
+
+get rid of renderer and just move everything into the scene
 
 BACKBURNER:
 - ASSET SYSTEM WITH HOT RELOADING OF SHADERS FOR THE LOVE OF GOD !!!!

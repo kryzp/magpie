@@ -252,39 +252,25 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
 
-		/*
-		struct
-		{
-			float eta = 1.0f / 1.0f;
-			float depth = 0.2f;
-			float extinction = 2.0f;
-			float _padding1;
-		}
-		materialData;
-
-		data.parameters = &materialData;
-		data.parameterSize = sizeof(materialData);
-		*/
-
-		Material *material = g_materialSystem->buildMaterial(data);
+		Material *material = g_materialSystem->getRegistry().buildMaterial(data);
 
 		submesh->setMaterial(material);
 	}
 }
 
-void MeshLoader::fetchMaterialBoundTextures(Vector<BoundTexture> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, const Texture *fallback)
+void MeshLoader::fetchMaterialBoundTextures(Vector<TextureView> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, Texture *fallback)
 {
 	Vector<Texture *> maps = loadMaterialTextures(material, type, localPath);
 
 	if (maps.size() >= 1)
 	{
-		textures.pushBack(BoundTexture(maps[0], g_textureManager->getSampler("linear")));
+		textures.pushBack(maps[0]->getStandardView());
 	}
 	else
 	{
 		if (fallback)
 		{
-			textures.pushBack(BoundTexture(fallback, g_textureManager->getSampler("linear")));
+			textures.pushBack(fallback->getStandardView());
 		}
 	}
 }

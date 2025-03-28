@@ -6,7 +6,6 @@
 #include "render_target.h"
 #include "render_info.h"
 #include "shader.h"
-#include "pipeline.h"
 
 using namespace llt;
 
