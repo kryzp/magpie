@@ -1,12 +1,14 @@
 #ifndef VK_BUFFER_H_
 #define VK_BUFFER_H_
 
-#include "command_buffer.h"
-
 #include "third_party/volk.h"
 #include "third_party/vk_mem_alloc.h"
 
 #include "core/common.h"
+
+#include "rendering/bindless_resource_mgr.h"
+
+#include "command_buffer.h"
 
 namespace llt
 {
@@ -35,8 +37,12 @@ namespace llt
 
 		VkBuffer getHandle() const;
 		VkBufferUsageFlags getUsage() const;
+
 		VmaMemoryUsage getMemoryUsage() const;
+
 		uint64_t getSize() const;
+
+		const BindlessResourceHandle &getBindlessHandle() const;
 
 	private:
 		VkBuffer m_buffer;
@@ -48,6 +54,8 @@ namespace llt
 		VmaMemoryUsage m_memoryUsage;
 
 		uint64_t m_size;
+
+		BindlessResourceHandle m_bindlessHandle;
 	};
 }
 

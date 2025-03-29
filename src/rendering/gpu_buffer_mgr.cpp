@@ -30,8 +30,8 @@ GPUBufferMgr::~GPUBufferMgr()
 
 void GPUBufferMgr::createGlobalStagingBuffers()
 {
-	textureStagingBuffer = createStagingBuffer(LLT_MEGABYTES(256));
-	meshStagingBuffer = createStagingBuffer(LLT_MEGABYTES(256));
+	textureStagingBuffer = createStagingBuffer(LLT_MEGABYTES(164));
+	meshStagingBuffer = createStagingBuffer(LLT_MEGABYTES(164));
 
 	LLT_LOG("Allocated texture & mesh staging buffers!");
 }

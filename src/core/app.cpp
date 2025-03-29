@@ -66,16 +66,14 @@ App::App(const Config &config)
 
 	dbgui::init();
 
-	if (m_config.onInit) {
+	if (m_config.onInit)
 		m_config.onInit();
-	}
 }
 
 App::~App()
 {
-	if (m_config.onDestroy) {
+	if (m_config.onDestroy)
 		m_config.onDestroy();
-	}
 
 	m_renderer.cleanUp();
 
@@ -89,7 +87,7 @@ App::~App()
 void App::run()
 {
 	double accumulator = 0.0;
-	const double fixedDeltaTime = 1.0 / static_cast<double>(m_config.targetFPS);
+	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, g_platform->getWindowRefreshRate()));
 	
 	Timer deltaTimer;
 	deltaTimer.start();
@@ -138,7 +136,6 @@ void App::exit()
 {
 	m_running = false;
 
-	if (m_config.onExit) {
+	if (m_config.onExit)
 		m_config.onExit();
-	}
 }

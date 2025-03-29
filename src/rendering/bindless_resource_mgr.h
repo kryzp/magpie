@@ -47,25 +47,21 @@ namespace llt
 
 		void updateSet();
 
-		void writeFrameConstants(const FrameConstants &frameConstants);
-		void writeTransformData(int index, const TransformData &transformData);
-
+		BindlessResourceHandle registerBuffer(const GPUBuffer *buffer);
+		BindlessResourceHandle registerSampler(const TextureSampler *sampler);
 		BindlessResourceHandle registerTexture2D(const TextureView &view);
 		BindlessResourceHandle registerCubemap(const TextureView &cubemap);
-		BindlessResourceHandle registerSampler(const TextureSampler *sampler);
 
+		void writeBuffers(uint32_t firstIndex, const Vector<const GPUBuffer *> &buffers);
+		void writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers);
 		void writeTexture2Ds(uint32_t firstIndex, const Vector<TextureView> &views);
 		void writeCubemaps(uint32_t firstIndex, const Vector<TextureView> &cubemaps);
-		void writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers);
 
 		const VkDescriptorSet &getSet() const;
 		const VkDescriptorSetLayout &getLayout() const;
 
 	private:
 		DescriptorWriter m_writer;
-
-		GPUBuffer *m_frameConstantsBuffer;
-		GPUBuffer *m_transformationBuffer;
 
 		DescriptorPoolStatic m_bindlessPool;
 		VkDescriptorSet m_bindlessSet;
@@ -75,6 +71,7 @@ namespace llt
 		BindlessResourceID m_textureHandle_UID;
 		BindlessResourceID m_cubeHandle_UID;
 		BindlessResourceID m_samplerHandle_UID;
+		BindlessResourceID m_bufferHandle_UID;
 	};
 
 	extern BindlessResourceManager *g_bindlessResources;

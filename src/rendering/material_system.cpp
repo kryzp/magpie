@@ -67,12 +67,13 @@ void MaterialSystem::init()
 
 void MaterialSystem::finalise()
 {
-	m_registry.loadDefaultTechniques();
+	m_registry.init();
 
 	CommandBuffer cmd = CommandBuffer::fromGraphics();
-
-	generateEnvironmentMaps(cmd);
-	precomputeBRDF(cmd);
+	{
+		generateEnvironmentMaps(cmd);
+		precomputeBRDF(cmd);
+	}
 }
 
 // todo: this needs to be moved to a seperate class. IrradianceProbe or something idk
@@ -445,12 +446,29 @@ Texture *MaterialSystem::getEmissiveFallback() const
 
 void MaterialRegistry::cleanUp()
 {
+	delete m_materialIdBuffer;
+
 	for (auto &[id, mat] : m_materials) {
 		delete mat;
 	}
 
 	m_materials.clear();
 	m_techniques.clear();
+}
+
+void MaterialRegistry::init()
+{
+	loadDefaultTechniques();
+
+	createMaterialIdBuffer();
+}
+
+void MaterialRegistry::createMaterialIdBuffer()
+{
+	// todo: max material count is 16 right now temporarily
+	m_materialIdBuffer = g_gpuBufferManager->createStorageBuffer(sizeof(Material) * 16);
+
+	m_material_UID = 0;
 }
 
 void MaterialRegistry::loadDefaultTechniques()
@@ -484,7 +502,6 @@ Material *MaterialRegistry::buildMaterial(MaterialData &data)
 	cauto &technique = m_techniques.get(data.technique);
 
 	Material *material = new Material();
-	material->m_vertexFormat = technique.vertexFormat;
 
 	material->m_textures.resize(data.textures.size());
 
@@ -531,7 +548,34 @@ Material *MaterialRegistry::buildMaterial(MaterialData &data)
 		material->m_passes[i].pipeline.setDepthWrite(technique.depthWrite);
 	}
 
-	m_materials.insert(data.getHash(), material);
+	m_materials.insert(
+		data.getHash(),
+		material
+	);
+
+	struct BindlessMaterialData
+	{
+		BindlessResourceID diffuseTexture_ID;
+		BindlessResourceID aoTexture_ID;
+		BindlessResourceID mrTexture_ID;
+		BindlessResourceID normalTexture_ID;
+		BindlessResourceID emissiveTexture_ID;
+	};
+
+	BindlessMaterialData materialData = {};
+	materialData.diffuseTexture_ID		= material->getTextures()[0].id;
+	materialData.aoTexture_ID			= material->getTextures()[1].id;
+	materialData.mrTexture_ID			= material->getTextures()[2].id;
+	materialData.normalTexture_ID		= material->getTextures()[3].id;
+	materialData.emissiveTexture_ID		= material->getTextures()[4].id;
+
+	material->m_bindlessHandle.id = m_material_UID++;
+
+	m_materialIdBuffer->writeDataToMe(
+		&materialData,
+		sizeof(BindlessMaterialData),
+		sizeof(BindlessMaterialData) * material->m_bindlessHandle.id
+	);
 
 	return material;
 }
@@ -539,4 +583,9 @@ Material *MaterialRegistry::buildMaterial(MaterialData &data)
 void MaterialRegistry::addTechnique(const String &name, const Technique &technique)
 {
 	m_techniques.insert(name, technique);
+}
+
+const GPUBuffer *MaterialRegistry::getMaterialIdBuffer() const
+{
+	return m_materialIdBuffer;
 }

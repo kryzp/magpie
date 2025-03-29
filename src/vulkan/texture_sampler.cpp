@@ -9,12 +9,14 @@ using namespace llt;
 TextureSampler::TextureSampler()
 	: style()
 	, m_sampler(VK_NULL_HANDLE)
+	, m_bindlessHandle(BindlessResourceHandle::INVALID)
 {
 }
 
 TextureSampler::TextureSampler(const TextureSampler::Style &style)
 	: style(style)
 	, m_sampler(VK_NULL_HANDLE)
+	, m_bindlessHandle(BindlessResourceHandle::INVALID)
 {
 }
 

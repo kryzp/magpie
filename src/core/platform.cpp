@@ -290,24 +290,12 @@ void Platform::toggleWindowResizable(bool toggle) const
 
 float Platform::getWindowRefreshRate() const
 {
-	const SDL_DisplayMode *out = SDL_GetCurrentDisplayMode(1);
-
-	if (out) {
-		return out->refresh_rate;
-	}
-
-	return 0.0f;
+	return SDL_GetCurrentDisplayMode(1)->refresh_rate;
 }
 
 float Platform::getWindowPixelDensity() const
 {
-	const SDL_DisplayMode *out = SDL_GetCurrentDisplayMode(1);
-
-	if (out) {
-		return out->pixel_density;
-	}
-
-	return 0.0f;
+	return SDL_GetCurrentDisplayMode(1)->pixel_density;
 }
 
 bool Platform::isCursorVisible() const
@@ -317,11 +305,7 @@ bool Platform::isCursorVisible() const
 
 void Platform::setCursorVisible(bool toggle) const
 {
-	if (toggle) {
-		SDL_ShowCursor();
-	} else {
-		SDL_HideCursor();
-	}
+	toggle ? SDL_ShowCursor() : SDL_HideCursor();
 }
 
 void Platform::lockCursor(bool toggle) const
@@ -335,7 +319,7 @@ void Platform::setCursorPosition(int x, int y)
 {
 	SDL_WarpMouseInWindow(m_window, x, y);
 
-	float spx = 0.f, spy = 0.f;
+	float spx = 0.0f, spy = 0.0f;
 	SDL_GetGlobalMouseState(&spx, &spy);
 
 	g_inputState->onMouseScreenMove(spx, spy);
@@ -385,9 +369,8 @@ void Platform::setWindowMode(WindowMode toggle)
 
 void Platform::sleepFor(uint64_t ms) const
 {
-	if (ms > 0) {
+	if (ms > 0)
 		SDL_Delay(ms);
-	}
 }
 
 uint64_t Platform::getTicks() const
@@ -475,10 +458,7 @@ void Platform::initImGui()
 	ImGui::CreateContext();
 
 	ImGuiIO &io = ImGui::GetIO();
-	(void)io;
-
-	// set imgui io.ConfigFlags |= ImGuiConfigFlags_(...) here
-
+	
 	ImGui::StyleColorsClassic();
 
 	ImGui_ImplSDL3_InitForVulkan(m_window);

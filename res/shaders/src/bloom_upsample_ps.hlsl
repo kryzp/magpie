@@ -1,10 +1,11 @@
+#include "common.hlsl"
+
 struct PushConstants
 {
 	float filterRadius;
 };
 
-[[vk::push_constant]]
-PushConstants pc;
+PUSH_CONSTANTS(PushConstants, pc);
 
 struct PSInput
 {

@@ -1,5 +1,5 @@
-#ifndef COMMON_FXC_INC_
-#define COMMON_FXC_INC_
+#ifndef MODEL_COMMON_INC_
+#define MODEL_COMMON_INC_
 
 #define VS_MODEL_ATT_SLOT_POSITION 0
 #define VS_MODEL_ATT_SLOT_UV 1
@@ -13,4 +13,4 @@
 #define VS_MODEL_OUT_SLOT_UV 2
 #define VS_MODEL_OUT_SLOT_TBN 3
 
-#endif // COMMON_FXC_INC_
+#endif // MODEL_COMMON_INC_

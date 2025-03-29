@@ -1,7 +1,5 @@
 #include "gpu_buffer.h"
 
-#include "core/common.h"
-
 #include "texture.h"
 #include "core.h"
 #include "util.h"
@@ -15,6 +13,7 @@ GPUBuffer::GPUBuffer(VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 	, m_usage(usage)
 	, m_memoryUsage(memoryUsage)
 	, m_size(0)
+	, m_bindlessHandle(BindlessResourceHandle::INVALID)
 {
 }
 
@@ -49,6 +48,9 @@ void GPUBuffer::create(uint64_t size)
 		vmaCreateBuffer(g_vkCore->m_vmaAllocator, &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
 		"Failed to create buffer"
 	);
+
+	if (m_usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
+		m_bindlessHandle = g_bindlessResources->registerBuffer(this);
 }
 
 void GPUBuffer::cleanUp()
@@ -152,4 +154,9 @@ VmaMemoryUsage GPUBuffer::getMemoryUsage() const
 uint64_t GPUBuffer::getSize() const
 {
 	return m_size;
+}
+
+const BindlessResourceHandle &GPUBuffer::getBindlessHandle() const
+{
+	return m_bindlessHandle;
 }

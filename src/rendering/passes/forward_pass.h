@@ -8,6 +8,7 @@ namespace llt
 	class CommandBuffer;
 	class Camera;
 	class SubMesh;
+	class GPUBuffer;
 
 	class ForwardPass
 	{
@@ -19,6 +20,10 @@ namespace llt
 		void dispose();
 
 		void render(CommandBuffer &cmd, const Camera &camera, const Vector<SubMesh *> &renderList);
+
+	private:
+		GPUBuffer *m_frameConstantsBuffer;
+		GPUBuffer *m_transformationBuffer;
 	};
 
 	extern ForwardPass g_forwardPass;

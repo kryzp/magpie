@@ -16,22 +16,18 @@ using namespace llt;
 
 BindlessResourceManager::BindlessResourceManager()
 	: m_writer()
-	, m_frameConstantsBuffer()
-	, m_transformationBuffer()
 	, m_bindlessPool()
 	, m_bindlessSet()
 	, m_bindlessLayout()
 	, m_textureHandle_UID(0)
 	, m_cubeHandle_UID(0)
 	, m_samplerHandle_UID(0)
+	, m_bufferHandle_UID(0)
 {
 }
 
 BindlessResourceManager::~BindlessResourceManager()
 {
-	delete m_frameConstantsBuffer;
-	delete m_transformationBuffer;
-
 	m_bindlessPool.cleanUp();
 }
 
@@ -45,7 +41,6 @@ void BindlessResourceManager::init()
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
 	};
 
@@ -55,11 +50,10 @@ void BindlessResourceManager::init()
 	bindingFlags.pBindingFlags = flags.data();
 
 	m_bindlessLayout = DescriptorLayoutBuilder()
-		.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,		1)
-		.bind(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		1)
+		.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		BINDLESS_MAX_BUFFERS)
+		.bind(1, VK_DESCRIPTOR_TYPE_SAMPLER,			BINDLESS_MAX_SAMPLERS)
 		.bind(2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		BINDLESS_MAX_IMAGES)
 		.bind(3, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		BINDLESS_MAX_IMAGES)
-		.bind(4, VK_DESCRIPTOR_TYPE_SAMPLER,			BINDLESS_MAX_SAMPLERS)
 		.build(
 			VK_SHADER_STAGE_ALL_GRAPHICS,
 			&bindingFlags,
@@ -67,36 +61,13 @@ void BindlessResourceManager::init()
 		);
 
 	m_bindlessPool.init(1, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT, {
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,	(float)1 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	(float)1 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	(float)BINDLESS_MAX_BUFFERS },
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,			(float)BINDLESS_MAX_SAMPLERS },
 		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		(float)BINDLESS_MAX_IMAGES },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		(float)BINDLESS_MAX_IMAGES },
-		{ VK_DESCRIPTOR_TYPE_SAMPLER,			(float)BINDLESS_MAX_SAMPLERS }
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		(float)BINDLESS_MAX_IMAGES }
 	});
 
 	m_bindlessSet = m_bindlessPool.allocate(m_bindlessLayout);
-
-	m_frameConstantsBuffer = g_gpuBufferManager->createUniformBuffer(sizeof(FrameConstants));
-	m_transformationBuffer = g_gpuBufferManager->createStorageBuffer(sizeof(TransformData) * 16);
-
-	writeFrameConstants({
-		.proj = glm::identity<glm::mat4>(),
-		.view = glm::identity<glm::mat4>(),
-		.cameraPosition = glm::zero<glm::vec4>()
-	});
-
-	for (int i = 0; i < 16; i++)
-	{
-		writeTransformData(i, {
-			.model = glm::identity<glm::mat4>(),
-			.normalMatrix = glm::identity<glm::mat4>()
-		});
-	}
-
-	DescriptorWriter()
-		.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_frameConstantsBuffer->getDescriptorInfo())
-		.writeBuffer(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_transformationBuffer->getDescriptorInfo())
-		.updateSet(m_bindlessSet);
 }
 
 void BindlessResourceManager::updateSet()
@@ -105,14 +76,26 @@ void BindlessResourceManager::updateSet()
 	m_writer.clear();
 }
 
-void BindlessResourceManager::writeFrameConstants(const FrameConstants &frameConstants)
+BindlessResourceHandle BindlessResourceManager::registerBuffer(const GPUBuffer *buffer)
 {
-	m_frameConstantsBuffer->writeDataToMe(&frameConstants, sizeof(FrameConstants), 0);
+	BindlessResourceHandle handle = {};
+	handle.id = m_bufferHandle_UID++;
+
+	writeBuffers(handle.id, { buffer });
+	updateSet();
+
+	return handle;
 }
 
-void BindlessResourceManager::writeTransformData(int index, const TransformData &transformData)
+BindlessResourceHandle BindlessResourceManager::registerSampler(const TextureSampler *sampler)
 {
-	m_transformationBuffer->writeDataToMe(&transformData, sizeof(TransformData), sizeof(TransformData) * index);
+	BindlessResourceHandle handle = {};
+	handle.id = m_samplerHandle_UID++;
+
+	writeSamplers(handle.id, { sampler });
+	updateSet();
+
+	return handle;
 }
 
 BindlessResourceHandle BindlessResourceManager::registerTexture2D(const TextureView &view)
@@ -137,15 +120,29 @@ BindlessResourceHandle BindlessResourceManager::registerCubemap(const TextureVie
 	return handle;
 }
 
-BindlessResourceHandle BindlessResourceManager::registerSampler(const TextureSampler *sampler)
+void BindlessResourceManager::writeBuffers(uint32_t firstIndex, const Vector<const GPUBuffer *> &buffers)
 {
-	BindlessResourceHandle handle = {};
-	handle.id = m_samplerHandle_UID++;
+	for (int i = 0; i < buffers.size(); i++)
+	{
+		m_writer.writeBuffer(
+			0,
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			buffers[i]->getDescriptorInfo(),
+			firstIndex + i
+		);
+	}
+}
 
-	writeSamplers(handle.id, { sampler });
-	updateSet();
-
-	return handle;
+void BindlessResourceManager::writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers)
+{
+	for (int i = 0; i < samplers.size(); i++)
+	{
+		m_writer.writeSampler(
+			1,
+			samplers[i]->getHandle(),
+			firstIndex + i
+		);
+	}
 }
 
 void BindlessResourceManager::writeTexture2Ds(uint32_t firstIndex, const Vector<TextureView> &views)
@@ -169,18 +166,6 @@ void BindlessResourceManager::writeCubemaps(uint32_t firstIndex, const Vector<Te
 			3,
 			cubemaps[i].getHandle(),
 			VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-			firstIndex + i
-		);
-	}
-}
-
-void BindlessResourceManager::writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers)
-{
-	for (int i = 0; i < samplers.size(); i++)
-	{
-		m_writer.writeSampler(
-			4,
-			samplers[i]->getHandle(),
 			firstIndex + i
 		);
 	}

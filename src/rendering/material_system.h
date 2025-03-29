@@ -17,17 +17,24 @@ namespace llt
 	public:
 		MaterialRegistry() = default;
 		~MaterialRegistry() = default;
-
-		void loadDefaultTechniques();
-
+		
+		void init();
 		void cleanUp();
 
 		Material *buildMaterial(MaterialData &data);
 		void addTechnique(const String &name, const Technique &technique);
 
+		const GPUBuffer *getMaterialIdBuffer() const;
+
 	private:
+		void loadDefaultTechniques();
+		void createMaterialIdBuffer();
+
 		HashMap<uint64_t, Material*> m_materials;
 		HashMap<String, Technique> m_techniques;
+
+		GPUBuffer *m_materialIdBuffer;
+		BindlessResourceID m_material_UID;
 	};
 
 	class MaterialSystem

@@ -9,8 +9,6 @@ namespace llt
 {
 	class TextureSampler
 	{
-		friend class BindlessResourceManager;
-
 	public:
 		struct Style
 		{

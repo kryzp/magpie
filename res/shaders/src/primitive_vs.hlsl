@@ -1,11 +1,12 @@
+#include "common.hlsl"
+
 struct PushConstants
 {
 	float4x4 proj;
 	float4x4 view;
 };
 
-[[vk::push_constant]]
-PushConstants pc;
+PUSH_CONSTANTS(PushConstants, pc);
 
 struct VSInput
 {

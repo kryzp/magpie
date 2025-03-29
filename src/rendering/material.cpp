@@ -13,8 +13,6 @@ uint64_t Material::getHash() const
 		hash::combine(&result, &t);
 	}
 
-	hash::combine(&result, &m_vertexFormat);
-
 	// todo: dont like hashing pointers...
 	hash::combine(&result, &m_passes[SHADER_PASS_FORWARD].shader);
 	hash::combine(&result, &m_passes[SHADER_PASS_SHADOW].shader);
@@ -25,4 +23,14 @@ uint64_t Material::getHash() const
 const GraphicsPipelineDefinition &Material::getPipelineDef(ShaderPassType pass) const
 {
 	return m_passes[pass].pipeline;
+}
+
+const Vector<BindlessResourceHandle> &Material::getTextures() const
+{
+	return m_textures;
+}
+
+const BindlessResourceHandle &Material::getBindlessHandle() const
+{
+	return m_bindlessHandle;
 }

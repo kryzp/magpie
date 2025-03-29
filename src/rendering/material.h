@@ -80,6 +80,8 @@ namespace llt
 
 	class Material
 	{
+		friend class MaterialRegistry;
+
 	public:
 		Material() = default;
 		~Material() = default;
@@ -88,7 +90,13 @@ namespace llt
 
 		const GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass) const;
 
-		VertexFormat m_vertexFormat;
+		const Vector<BindlessResourceHandle> &getTextures() const;
+
+		const BindlessResourceHandle &getBindlessHandle() const;
+
+	private:
+		BindlessResourceHandle m_bindlessHandle;
+
 		Vector<BindlessResourceHandle> m_textures;
 //		DynamicShaderBuffer *m_parameterBuffer;
 		ShaderPass m_passes[SHADER_PASS_MAX_ENUM];

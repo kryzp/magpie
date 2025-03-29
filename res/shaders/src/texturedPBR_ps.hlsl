@@ -1,4 +1,8 @@
-#include "common_ps.hlsl"
+#pragma shader_model 5_1
+
+#include "bindless.hlsl"
+
+#include "model_common.inc"
 
 #define MAX_REFLECTION_LOD 4.0
 
@@ -57,15 +61,18 @@ float4 main(PSInput input) : SV_Target
 	SamplerState textureSampler = samplerTable[pc.textureSampler_ID];
 	SamplerState cubemapSampler = samplerTable[pc.cubemapSampler_ID];
 	
-	float3 albedo				= texture2DTable[pc.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
-	float ambientOcclusion		= texture2DTable[pc.aoTexture_ID]		.Sample(textureSampler, uv).r;
-	float3 metallicRoughness	= texture2DTable[pc.mrTexture_ID]		.Sample(textureSampler, uv).rgb;
-	float3 normal				= texture2DTable[pc.normalTexture_ID]	.Sample(textureSampler, uv).rgb;
-	float3 emissive				= texture2DTable[pc.emissiveTexture_ID]	.Sample(textureSampler, uv).rgb;
+	FrameConstants frameData	= bufferTable[pc.frameDataBuffer_ID]		.Load<FrameConstants>(0);
+	MaterialData materialDats	= bufferTable[pc.materialDataBuffer_ID]		.Load<MaterialData>(pc.material_ID);
 	
-	ambientOcclusion += metallicRoughness.r;
-	float roughnessValue = metallicRoughness.g;
-	float metallicValue = metallicRoughness.b;
+	float3 albedo				= texture2DTable[materialData.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
+	float  ambientOcclusion		= texture2DTable[materialData.aoTexture_ID]			.Sample(textureSampler, uv).r;
+	float3 metallicRoughness	= texture2DTable[materialData.mrTexture_ID]			.Sample(textureSampler, uv).rgb;
+	float3 normal				= texture2DTable[materialData.normalTexture_ID]		.Sample(textureSampler, uv).rgb;
+	float3 emissive				= texture2DTable[materialData.emissiveTexture_ID]	.Sample(textureSampler, uv).rgb;
+	
+	ambientOcclusion		+= metallicRoughness.r;
+	float roughnessValue	 = metallicRoughness.g;
+	float metallicValue		 = metallicRoughness.b;
 	
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 	
@@ -105,10 +112,10 @@ float4 main(PSInput input) : SV_Target
 		
 		float3 kD = (1.0 - F) * (1.0 - metallicValue);
 		
-		float3 diffuse = kD * albedo / MATH_PI;
+		float3 diffuse = albedo / MATH_PI;
 		float3 specular = (F * G * NDF) / (4.0 * NdotL * NdotV + 0.0001);
 		
-		Lo += (diffuse + specular) * radiance * NdotL;
+		Lo += (kD * diffuse + specular) * radiance * NdotL;
 	}
 	*/
 	
@@ -116,8 +123,12 @@ float4 main(PSInput input) : SV_Target
 	float3 kD = (1.0 - F) * (1.0 - metallicValue);
 	
 	float3 reflected = reflect(-viewDir, normal);
-	float3 prefilteredColour = textureCubeTable[pc.prefilterMap_ID].SampleLevel(cubemapSampler, reflected, roughnessValue * MAX_REFLECTION_LOD).rgb;
+	
+	float prefilterMipLevel = roughnessValue * MAX_REFLECTION_LOD;
+	float3 prefilteredColour = textureCubeTable[pc.prefilterMap_ID].SampleLevel(cubemapSampler, reflected, prefilterMipLevel).rgb;
+	
 	float2 environmentBRDF = texture2DTable[pc.brdfLUT_ID].Sample(textureSampler, float2(NdotV, roughnessValue)).xy;
+	
 	float3 specular = prefilteredColour * (F * environmentBRDF.x + environmentBRDF.y);
 	
 	float3 irradiance = textureCubeTable[pc.irradianceMap_ID].Sample(cubemapSampler, normal).rgb;

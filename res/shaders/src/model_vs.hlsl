@@ -1,4 +1,6 @@
-#include "common_vs.hlsl"
+#include "bindless.hlsl"
+
+#include "model_common.inc"
 
 struct VSInput
 {
@@ -40,8 +42,11 @@ struct VSOutput
 
 VSOutput main(VSInput input)
 {
-    float4x4 modelMatrix = transformTable[pc.transform_ID].modelMatrix;
-    float3x3 normalMatrix = (float3x3)transformTable[pc.transform_ID].normalMatrix;
+	FrameConstants frameData = bufferTable[pc.frameDataBuffer_ID].Load<FrameConstants>(0);
+    TransformData transform = bufferTable[pc.transformBuffer_ID].Load<TransformData>(pc.transform_ID);
+    
+    float4x4 modelMatrix = transform.modelMatrix;
+    float3x3 normalMatrix = (float3x3)transform.normalMatrix;
     
     float3 T = normalize(mul(normalMatrix, input.tangent));
     float3 N = normalize(mul(normalMatrix, input.normal));

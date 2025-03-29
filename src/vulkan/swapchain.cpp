@@ -162,7 +162,8 @@ void Swapchain::cleanUpSwapChain()
 	cleanUpTextures();
 
 	// destroy all of our semaphores
-	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++) {
+	for (int i = 0; i < mgc::FRAMES_IN_FLIGHT; i++)
+	{
 		vkDestroySemaphore(g_vkCore->m_device, m_renderFinishedSemaphores[i], nullptr);
 		vkDestroySemaphore(g_vkCore->m_device, m_imageAvailableSemaphores[i], nullptr);
 	}
@@ -249,7 +250,7 @@ void Swapchain::createSwapChain()
 
 	// get the surface settings
     auto surfaceFormat = vkutil::chooseSwapSurfaceFormat(details.surfaceFormats);
-    auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes, false); // temporary, we just disable vsync regardless of config
+    auto presentMode = vkutil::chooseSwapPresentMode(details.presentModes, true); // temporary, we just enable vsync regardless of config
     auto extent = vkutil::chooseSwapExtent(details.capabilities);
 
 	// make sure our image count can't go above the maximum image count
@@ -275,7 +276,7 @@ void Swapchain::createSwapChain()
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
+	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// create the swapchain!
 	LLT_VK_CHECK(

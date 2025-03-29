@@ -1,11 +1,12 @@
+#include "common.hlsl"
+
 struct PushConstants
 {
 	float exposure;
 	float bloomIntensity;
 };
 
-[[vk::push_constant]]
-PushConstants pc;
+PUSH_CONSTANTS(PushConstants, pc);
 
 struct PSInput
 {
