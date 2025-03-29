@@ -8,8 +8,6 @@
 #include "vulkan/descriptor_allocator.h"
 #include "vulkan/descriptor_builder.h"
 
-#include "types.h"
-
 namespace llt
 {
 	struct FrameConstants
@@ -31,6 +29,14 @@ namespace llt
 	class TextureSampler;
 	class GPUBuffer;
 
+	using BindlessResourceID = int;
+
+	struct BindlessResourceHandle
+	{
+		constexpr static BindlessResourceID INVALID = Calc<BindlessResourceID>::maxValue();
+		BindlessResourceID id = INVALID;
+	};
+
 	class BindlessResourceManager
 	{
 	public:
@@ -44,13 +50,13 @@ namespace llt
 		void writeFrameConstants(const FrameConstants &frameConstants);
 		void writeTransformData(int index, const TransformData &transformData);
 
-		BindlessResourceHandle registerTexture(TextureView &view);
-		BindlessResourceHandle registerCubemap(TextureView &cubemap);
-		BindlessResourceHandle registerSampler(TextureSampler *sampler);
+		BindlessResourceHandle registerTexture2D(const TextureView &view);
+		BindlessResourceHandle registerCubemap(const TextureView &cubemap);
+		BindlessResourceHandle registerSampler(const TextureSampler *sampler);
 
 		void writeTexture2Ds(uint32_t firstIndex, const Vector<TextureView> &views);
 		void writeCubemaps(uint32_t firstIndex, const Vector<TextureView> &cubemaps);
-		void writeSamplers(uint32_t firstIndex, const Vector<TextureSampler *> &samplers);
+		void writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers);
 
 		const VkDescriptorSet &getSet() const;
 		const VkDescriptorSetLayout &getLayout() const;
@@ -66,9 +72,9 @@ namespace llt
 		VkDescriptorSetLayout m_bindlessLayout;
 
 		// todo: this should be more like a freelist
-		BindlessResourceHandle m_textureHandle_UID;
-		BindlessResourceHandle m_cubeHandle_UID;
-		BindlessResourceHandle m_samplerHandle_UID;
+		BindlessResourceID m_textureHandle_UID;
+		BindlessResourceID m_cubeHandle_UID;
+		BindlessResourceID m_samplerHandle_UID;
 	};
 
 	extern BindlessResourceManager *g_bindlessResources;

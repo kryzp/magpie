@@ -7,7 +7,7 @@ using namespace llt;
 TextureView::TextureView(VkImageView view, VkFormat format)
 	: m_view(view)
 	, m_format(format)
-	, m_bindlessHandle(BINDLESS_RESOURCE_HANDLE_INVALID)
+	, m_bindlessHandle(BindlessResourceHandle::INVALID)
 {
 }
 
@@ -30,7 +30,7 @@ const VkFormat &TextureView::getFormat() const
 	return m_format;
 }
 
-BindlessResourceHandle TextureView::getBindlessHandle() const
+const BindlessResourceHandle &TextureView::getBindlessHandle() const
 {
 	return m_bindlessHandle;
 }

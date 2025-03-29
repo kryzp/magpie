@@ -50,7 +50,7 @@ void TextureSampler::init()
 		"Failed to create texture sampler"
 	);
 
-	g_bindlessResources->registerSampler(this);
+	m_bindlessHandle = g_bindlessResources->registerSampler(this);
 }
 
 void TextureSampler::cleanUp()
@@ -68,7 +68,7 @@ VkSampler TextureSampler::getHandle() const
 	return m_sampler;
 }
 
-BindlessResourceHandle TextureSampler::getBindlessHandle() const
+const BindlessResourceHandle& TextureSampler::getBindlessHandle() const
 {
 	return m_bindlessHandle;
 }

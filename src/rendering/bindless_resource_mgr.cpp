@@ -83,14 +83,14 @@ void BindlessResourceManager::init()
 		.proj = glm::identity<glm::mat4>(),
 		.view = glm::identity<glm::mat4>(),
 		.cameraPosition = glm::zero<glm::vec4>()
-		});
+	});
 
 	for (int i = 0; i < 16; i++)
 	{
 		writeTransformData(i, {
 			.model = glm::identity<glm::mat4>(),
 			.normalMatrix = glm::identity<glm::mat4>()
-			});
+		});
 	}
 
 	DescriptorWriter()
@@ -115,34 +115,37 @@ void BindlessResourceManager::writeTransformData(int index, const TransformData 
 	m_transformationBuffer->writeDataToMe(&transformData, sizeof(TransformData), sizeof(TransformData) * index);
 }
 
-BindlessResourceHandle BindlessResourceManager::registerTexture(TextureView &view)
+BindlessResourceHandle BindlessResourceManager::registerTexture2D(const TextureView &view)
 {
-	view.m_bindlessHandle = m_textureHandle_UID++;
-	
-	writeTexture2Ds(view.m_bindlessHandle, { view });
+	BindlessResourceHandle handle = {};
+	handle.id = m_textureHandle_UID++;
+
+	writeTexture2Ds(handle.id, { view });
 	updateSet();
 
-	return view.m_bindlessHandle;
+	return handle;
 }
 
-BindlessResourceHandle BindlessResourceManager::registerCubemap(TextureView &cubemap)
+BindlessResourceHandle BindlessResourceManager::registerCubemap(const TextureView &cubemap)
 {
-	cubemap.m_bindlessHandle = m_cubeHandle_UID++;
+	BindlessResourceHandle handle = {};
+	handle.id = m_cubeHandle_UID++;
 
-	writeCubemaps(cubemap.m_bindlessHandle, { cubemap });
+	writeCubemaps(handle.id, { cubemap });
 	updateSet();
 
-	return cubemap.m_bindlessHandle;
+	return handle;
 }
 
-BindlessResourceHandle BindlessResourceManager::registerSampler(TextureSampler *sampler)
+BindlessResourceHandle BindlessResourceManager::registerSampler(const TextureSampler *sampler)
 {
-	sampler->m_bindlessHandle = m_samplerHandle_UID++;
+	BindlessResourceHandle handle = {};
+	handle.id = m_samplerHandle_UID++;
 
-	writeSamplers(sampler->m_bindlessHandle, { sampler });
+	writeSamplers(handle.id, { sampler });
 	updateSet();
 
-	return sampler->m_bindlessHandle;
+	return handle;
 }
 
 void BindlessResourceManager::writeTexture2Ds(uint32_t firstIndex, const Vector<TextureView> &views)
@@ -171,7 +174,7 @@ void BindlessResourceManager::writeCubemaps(uint32_t firstIndex, const Vector<Te
 	}
 }
 
-void BindlessResourceManager::writeSamplers(uint32_t firstIndex, const Vector<TextureSampler *> &samplers)
+void BindlessResourceManager::writeSamplers(uint32_t firstIndex, const Vector<const TextureSampler *> &samplers)
 {
 	for (int i = 0; i < samplers.size(); i++)
 	{

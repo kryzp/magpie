@@ -51,7 +51,7 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 		static float t = 0.f;
 		t += 0.01f;
 
-		glm::mat4 transform = glm::scale(glm::rotate(mesh->getParent()->getOwner()->transform.getMatrix(), t, { 0.0f, 1.0f, 0.0 }), glm::vec3(1.0 + glm::sin(t)*0.5f));
+		glm::mat4 transform = glm::rotate(mesh->getParent()->getOwner()->transform.getMatrix(), t, { 0.0f, 1.0f, 0.0 });
 
 		g_bindlessResources->writeTransformData(i, {
 			.model = transform,
@@ -60,39 +60,39 @@ void ForwardPass::render(CommandBuffer &cmd, const Camera &camera, const Vector<
 
 		struct
 		{
-			BindlessResourceHandle transform_ID;
+			BindlessResourceID transform_ID;
 
-			BindlessResourceHandle irradianceMap_ID;
-			BindlessResourceHandle prefilterMap_ID;
+			BindlessResourceID irradianceMap_ID;
+			BindlessResourceID prefilterMap_ID;
 
-			BindlessResourceHandle brdfLUT_ID;
+			BindlessResourceID brdfLUT_ID;
 
-			BindlessResourceHandle diffuseTexture_ID;
-			BindlessResourceHandle aoTexture_ID;
-			BindlessResourceHandle mrTexture_ID;
-			BindlessResourceHandle normalTexture_ID;
-			BindlessResourceHandle emissiveTexture_ID;
+			BindlessResourceID diffuseTexture_ID;
+			BindlessResourceID aoTexture_ID;
+			BindlessResourceID mrTexture_ID;
+			BindlessResourceID normalTexture_ID;
+			BindlessResourceID emissiveTexture_ID;
 
-			BindlessResourceHandle cubemapSampler_ID;
-			BindlessResourceHandle textureSampler_ID;
+			BindlessResourceID cubemapSampler_ID;
+			BindlessResourceID textureSampler_ID;
 		}
 		pushConstants;
 
 		pushConstants.transform_ID = 0;
 
-		pushConstants.irradianceMap_ID = g_materialSystem->getIrradianceMap()->getStandardView().getBindlessHandle();
-		pushConstants.prefilterMap_ID = g_materialSystem->getPrefilterMap()->getStandardView().getBindlessHandle();
+		pushConstants.irradianceMap_ID = g_materialSystem->getIrradianceMap()->getStandardView().getBindlessHandle().id;
+		pushConstants.prefilterMap_ID = g_materialSystem->getPrefilterMap()->getStandardView().getBindlessHandle().id;
 
-		pushConstants.brdfLUT_ID = g_materialSystem->getBRDFLUT()->getStandardView().getBindlessHandle();
+		pushConstants.brdfLUT_ID = g_materialSystem->getBRDFLUT()->getStandardView().getBindlessHandle().id;
 
-		pushConstants.diffuseTexture_ID = mat->m_textures[0].getBindlessHandle();
-		pushConstants.aoTexture_ID = mat->m_textures[1].getBindlessHandle();
-		pushConstants.mrTexture_ID = mat->m_textures[2].getBindlessHandle();
-		pushConstants.normalTexture_ID = mat->m_textures[3].getBindlessHandle();
-		pushConstants.emissiveTexture_ID = mat->m_textures[4].getBindlessHandle();
+		pushConstants.diffuseTexture_ID		= mat->m_textures[0].id;
+		pushConstants.aoTexture_ID			= mat->m_textures[1].id;
+		pushConstants.mrTexture_ID			= mat->m_textures[2].id;
+		pushConstants.normalTexture_ID		= mat->m_textures[3].id;
+		pushConstants.emissiveTexture_ID	= mat->m_textures[4].id;
 
-		pushConstants.cubemapSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle();
-		pushConstants.textureSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle();
+		pushConstants.cubemapSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle().id;
+		pushConstants.textureSampler_ID = g_textureManager->getSampler("linear")->getBindlessHandle().id;
 
 		cmd.pushConstants(
 			data.layout,

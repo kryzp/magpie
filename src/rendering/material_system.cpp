@@ -485,7 +485,13 @@ Material *MaterialRegistry::buildMaterial(MaterialData &data)
 
 	Material *material = new Material();
 	material->m_vertexFormat = technique.vertexFormat;
-	material->m_textures = data.textures;
+
+	material->m_textures.resize(data.textures.size());
+
+	for (int i = 0; i < data.textures.size(); i++)
+	{
+		material->m_textures[i] = data.textures[i].getBindlessHandle();
+	}
 
 	/*
 	material->m_parameterBuffer = g_shaderBufferManager->createDynamicUBO(sizeof(float) * 32);

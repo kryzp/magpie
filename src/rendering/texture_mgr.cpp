@@ -40,7 +40,7 @@ void TextureMgr::loadDefaultTexturesAndSamplers()
 	load("fallback_black",		"../../res/textures/standard/black.png");
 	load("fallback_normals",	"../../res/textures/standard/normal_fallback.png");
 
-	load("environmentHDR",		"../../res/textures/spruit_sunrise_greg_zaal.hdr");
+	load("environmentHDR",		"../../res/textures/rogland_clear_night_greg_zaal.hdr");
 
 	load("stone",				"../../res/textures/smooth_stone.png");
 	load("wood",				"../../res/textures/wood.jpg");

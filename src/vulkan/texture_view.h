@@ -3,15 +3,13 @@
 
 #include "third_party/volk.h"
 
-#include "rendering/types.h"
+#include "rendering/bindless_resource_mgr.h"
 
 namespace llt
 {
-	class Texture;
-
 	class TextureView
 	{
-		friend class BindlessResourceManager;
+		friend class Texture;
 
 	public:
 		TextureView() = default;
@@ -24,7 +22,7 @@ namespace llt
 		const VkImageView &getHandle() const;
 		const VkFormat &getFormat() const;
 		
-		BindlessResourceHandle getBindlessHandle() const;
+		const BindlessResourceHandle &getBindlessHandle() const;
 
 	private:
 		VkImageView m_view;

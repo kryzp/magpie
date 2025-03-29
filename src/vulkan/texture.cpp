@@ -200,11 +200,11 @@ TextureView Texture::getView(int layerCount, int layer, int baseMipLevel)
 
 	if (viewType == VK_IMAGE_VIEW_TYPE_CUBE)
 	{
-		g_bindlessResources->registerCubemap(textureView);
+		textureView.m_bindlessHandle = g_bindlessResources->registerCubemap(textureView);
 	}
 	else
 	{
-		g_bindlessResources->registerTexture(textureView);
+		textureView.m_bindlessHandle = g_bindlessResources->registerTexture2D(textureView);
 	}
 
 	m_viewCache.insert(

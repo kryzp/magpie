@@ -89,7 +89,7 @@ namespace llt
 		const GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass) const;
 
 		VertexFormat m_vertexFormat;
-		Vector<TextureView> m_textures;
+		Vector<BindlessResourceHandle> m_textures;
 //		DynamicShaderBuffer *m_parameterBuffer;
 		ShaderPass m_passes[SHADER_PASS_MAX_ENUM];
 	};

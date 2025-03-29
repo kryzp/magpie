@@ -97,7 +97,7 @@ void Renderer::init()
 	assimpModel->transform.setRotation(glm::radians(0.0f), { 1.0f, 0.0f, 0.0f });
 	assimpModel->transform.setScale({ 1.0f, 1.0f, 1.0f });
 	assimpModel->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
-	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+	assimpModel->mesh = g_meshLoader->loadMesh("model", "../../res/models/GLTF/WoodCube/Scene.gltf");
 	assimpModel->mesh->setOwner(&(*assimpModel));
 }
 

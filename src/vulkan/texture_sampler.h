@@ -3,7 +3,7 @@
 
 #include "third_party/volk.h"
 
-#include "rendering/types.h"
+#include "rendering/bindless_resource_mgr.h"
 
 namespace llt
 {
@@ -57,7 +57,7 @@ namespace llt
 		void cleanUp();
 
 		VkSampler getHandle() const;
-		BindlessResourceHandle getBindlessHandle() const;
+		const BindlessResourceHandle &getBindlessHandle() const;
 
 		Style style;
 
