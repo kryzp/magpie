@@ -1,77 +1,89 @@
-#ifndef IMAGE_H_
-#define IMAGE_H_
+#pragma once
 
-#include "container/string.h"
-#include "container/function.h"
+#include "third_party/volk.h"
+#include "third_party/vk_mem_alloc.h"
 
-#include "io/file_stream.h"
-
-#include "math/rect.h"
-
-namespace llt
+namespace mgp
 {
-	struct Colour;
+	class VulkanCore;
+	class ImageView;
 
 	class Image
 	{
+		friend class CommandBuffer;
+
 	public:
-		enum Format
-		{
-			FORMAT_RGBA8, // ldr
-			FORMAT_RGBAF, // hdr
-		};
-
-		using BrushFn = Function<Colour(uint32_t, uint32_t)>;
-
 		Image();
-		Image(const String &path);
-		Image(const char *path);
-		Image(int width, int height);
 		~Image();
 
-		void load(const String &path);
-		void load(const char *path);
+		void create(
+			VulkanCore *core,
+			unsigned width, unsigned height, unsigned depth,
+			VkFormat format,
+			VkImageViewType type,
+			VkImageTiling tiling,
+			uint32_t mipmaps,
+			VkSampleCountFlagBits samples,
+			bool transient,
+			bool uav
+		);
 
-		void free();
+		ImageView *createView(
+			int layerCount,
+			int layer,
+			int baseMipLevel
+		) const;
 
-		/*
-		* Create custom images by defining a "brush" function
-		* which is ran on every pixel of the image and outputs
-		* a colour for each pixel.
-		*/
-		void paint(const BrushFn &brush);
-		void paint(const RectI &rect, const BrushFn &brush);
+		VkImageMemoryBarrier2 getBarrier(
+			VkImageLayout newLayout
+		) const;
+
+		const VkImage &getHandle() const;
+		const VkImageLayout &getLayout() const;
+
+		unsigned getWidth() const;
+		unsigned getHeight() const;
+		unsigned getDepth() const;
+
+		VkFormat getFormat() const;
+		VkImageViewType getType() const;
+		VkImageTiling getTiling() const;
+
+		uint32_t getMipmapCount() const;
+		VkSampleCountFlagBits getSamples() const;
+
+		bool isTransient() const;
+		bool isUAV() const;
+
+		bool isCubemap() const;
+		bool isDepth() const;
 		
-		void setPixels(const Colour *data);
-		void setPixels(uint64_t dstFirst, const Colour *data, uint64_t srcFirst, uint64_t count);
-
-		bool saveToPng(const char *file) const;
-		bool saveToPng(Stream &stream) const;
-		bool saveToJpg(const char *file, int quality) const;
-		bool saveToJpg(Stream &stream, int quality) const;
-
-		Colour getPixelAt(uint32_t x, uint32_t y) const;
-
-		void *getData();
-		const void *getData() const;
-
-		Format getFormat() const;
-		uint32_t getWidth() const;
-		uint32_t getHeight() const;
-		uint32_t getPixelCount() const;
-		uint64_t getSize() const;
-		int getChannels() const;
+		unsigned getLayerCount() const;
+		unsigned getFaceCount() const;
 
 	private:
-		void *m_pixels;
-		Format m_format;
+		VkImage m_image;
+		VkImageLayout m_layout;
 
-		uint32_t m_width;
-		uint32_t m_height;
-		int m_channels;
+		VulkanCore *m_core;
 
-		bool m_stbiManaged;
+		unsigned m_width;
+		unsigned m_height;
+		unsigned m_depth;
+
+		VkFormat m_format;
+		VkImageViewType m_type;
+		VkImageTiling m_tiling;
+
+		VkImageUsageFlags m_usage;
+
+		uint32_t m_mipmapCount;
+		VkSampleCountFlagBits m_samples;
+
+		VmaAllocation m_allocation;
+		VmaAllocationInfo m_allocationInfo;
+
+		bool m_transient;
+		bool m_isUAV;
 	};
 }
-
-#endif // IMAGE_H_

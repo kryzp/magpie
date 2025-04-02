@@ -1,10 +1,7 @@
-#ifndef DEBUG_UI_H_
-#define DEBUG_UI_H_
+#pragma once
 
-namespace llt::dbgui
+namespace mgp::dbgui
 {
 	void init();
 	void update();
 }
-
-#endif // DEBUG_UI_H_

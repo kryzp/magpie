@@ -1,9 +1,8 @@
-#ifndef BLEND_H_
-#define BLEND_H_
+#pragma once
 
 #include "third_party/volk.h"
 
-namespace llt
+namespace mgp
 {
 	struct Blend
 	{
@@ -44,5 +43,3 @@ namespace llt
 		}
 	};
 }
-
-#endif // BLEND_H_

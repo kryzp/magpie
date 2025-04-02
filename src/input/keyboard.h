@@ -1,7 +1,6 @@
-#ifndef KEYBOARD_H_
-#define KEYBOARD_H_
+#pragma once
 
-namespace llt
+namespace mgp
 {
 	constexpr int MAX_TEXT_INPUT = 512;
 
@@ -223,5 +222,3 @@ namespace llt
 		KB_KEY_MAX_ENUM
 	};
 }
-
-#endif // KEYBOARD_H_

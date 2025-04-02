@@ -1,39 +1,33 @@
-#ifndef COMMAND_BUFFER_H_
-#define COMMAND_BUFFER_H_
+#pragma once
+
+#include <vector>
 
 #include "third_party/volk.h"
-#include "container/vector.h"
 
 #include "render_info.h"
 
-namespace llt
+namespace mgp
 {
-	class GenericRenderTarget;
-	class ShaderEffect;
+	class Image;
 
 	class CommandBuffer
 	{
 	public:
-		static CommandBuffer fromGraphics();
-		static CommandBuffer fromCompute();
-		static CommandBuffer fromTransfer();
-
 		CommandBuffer(VkCommandBuffer buffer);
 		~CommandBuffer();
 
-		void beginRecording();
+		void begin();
+		void end();
 
-		void submit();
-		void submit(VkSemaphoreSubmitInfo computeSemaphore);
+		VkCommandBufferSubmitInfo getSubmitInfo() const;
 
-		void beginRendering(GenericRenderTarget *target);
 		void beginRendering(const RenderInfo &info);
-		
 		void endRendering();
 
-		const RenderInfo &getCurrentRenderInfo() const;
-
-		void bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline);
+		void bindPipeline(
+			VkPipelineBindPoint bindPoint,
+			VkPipeline pipeline
+		);
 
 		void drawIndexed(
 			uint32_t indexCount,
@@ -49,7 +43,7 @@ namespace llt
 			uint32_t drawCount,
 			uint32_t stride
 		);
-		
+
 		void drawIndexedIndirectCount(
 			VkBuffer buffer,
 			VkDeviceSize offset,
@@ -62,8 +56,8 @@ namespace llt
 		void bindDescriptorSets(
 			uint32_t firstSet,
 			VkPipelineLayout layout,
-			const Vector<VkDescriptorSet> &descriptorSets,
-			const Vector<uint32_t> &dynamicOffsets
+			const std::vector<VkDescriptorSet> &descriptorSets,
+			const std::vector<uint32_t> &dynamicOffsets
 		);
 
 		void setViewport(const VkViewport &viewport);
@@ -80,8 +74,8 @@ namespace llt
 		void bindVertexBuffers(
 			uint32_t firstBinding,
 			uint32_t count,
-			VkBuffer *buffers,
-			VkDeviceSize *offsets
+			const VkBuffer *buffers,
+			const VkDeviceSize *offsets
 		);
 
 		void bindIndexBuffer(
@@ -92,42 +86,44 @@ namespace llt
 
 		void pipelineBarrier(
 			VkDependencyFlags dependencyFlags,
-			const Vector<VkMemoryBarrier2> &memoryBarriers,
-			const Vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
-			const Vector<VkImageMemoryBarrier2> &imageMemoryBarriers
+			const std::vector<VkMemoryBarrier2> &memoryBarriers,
+			const std::vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
+			const std::vector<VkImageMemoryBarrier2> &imageMemoryBarriers
 		);
 
-		void transitionForMipmapGeneration(Texture &texture);
-		void generateMipmaps(const Texture &texture);
+		void transitionLayout(Image &image, VkImageLayout newLayout);
+
+		void generateMipmaps(Image &image);
 
 		void blitImage(
 			VkImage srcImage, VkImageLayout srcImageLayout,
 			VkImage dstImage, VkImageLayout dstImageLayout,
-			const Vector<VkImageBlit> &regions,
+			const std::vector<VkImageBlit> &regions,
 			VkFilter filter
 		);
 
 		void copyBufferToBuffer(
 			VkBuffer srcBuffer,
 			VkBuffer dstBuffer,
-			const Vector<VkBufferCopy> &regions
+			const std::vector<VkBufferCopy> &regions
 		);
 
 		void copyBufferToImage(
 			VkBuffer srcBuffer,
 			VkImage dstImage,
 			VkImageLayout dstImageLayout,
-			const Vector<VkBufferImageCopy> &regions
+			const std::vector<VkBufferImageCopy> &regions
 		);
 
 		void writeTimestamp(VkPipelineStageFlagBits pipelineStage, VkQueryPool pool, uint32_t query);
 
 		void resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32_t queryCount);
 
+		/*
 		void beginCompute();
 		void endCompute(VkSemaphore signalSemaphore);
-
 		void dispatch(uint32_t gcX, uint32_t gcY, uint32_t gcZ);
+		*/
 
 		VkCommandBuffer getHandle() const;
 
@@ -137,11 +133,6 @@ namespace llt
 		VkViewport m_viewport;
 		VkRect2D m_scissor;
 
-		GenericRenderTarget *m_currentTarget;
-		RenderInfo m_currentRenderInfo;
-
 		bool m_isRendering;
 	};
 }
-
-#endif // COMMAND_BUFFER_H_

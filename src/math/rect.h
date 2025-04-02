@@ -1,9 +1,8 @@
-#ifndef RECT_H_
-#define RECT_H_
+#pragma once
 
 #include <glm/vec2.hpp>
 
-namespace llt
+namespace mgp
 {
 	template <typename T>
 	struct Rect
@@ -169,5 +168,3 @@ namespace llt
 	template <typename T> const Rect<T> &Rect<T>::zero() { static const Rect ZERO = Rect(0, 0, 0, 0); return ZERO; }
 	template <typename T> const Rect<T> &Rect<T>::one()  { static const Rect ONE  = Rect(0, 0, 1, 1); return ONE;  }
 }
-
-#endif // RECT_H_

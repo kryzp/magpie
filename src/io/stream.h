@@ -3,54 +3,31 @@
 
 #include "core/common.h"
 
-namespace llt
+namespace mgp
 {
-	/**
-	 * Representation of a generic stream of data.
-	 */
+	class Platform;
+
 	class Stream
 	{
 	public:
-		Stream();
+		Stream(const Platform *platform);
 		virtual ~Stream();
 
-		/*
-		 * Read data at its current stream position.
-		 */
 		virtual void read(void *buffer, uint64_t length) const;
-
-		/*
-		 * Write data to its current stream position.
-		 */
 		virtual void write(void *data, uint64_t length) const;
 
-		/*
-		 * Goto a set stream position.
-		 */
 		virtual void seek(int64_t offset) const;
 
-		/*
-		 * Close the stream.
-		 */
 		virtual void close();
 
-		/*
-		 * Get the current stream position.
-		 */
-		virtual int64_t position() const;
+		virtual int64_t getPosition() const;
+		virtual int64_t getSize() const;
 
-		/*
-		 * Get the size of the stream.
-		 */
-		virtual int64_t size() const;
-
-		/*
-		 * Get the actual memory pointer to the stream.
-		 */
 		void *getStream();
 		const void *getStream() const;
 
 	protected:
+		const Platform *p_platform;
 		void *p_stream;
 	};
 }

@@ -1,22 +1,104 @@
-#ifndef PIPELINE_CACHE_H_
-#define PIPELINE_CACHE_H_
+#pragma once
+
+#include <array>
+#include <unordered_map>
 
 #include "third_party/volk.h"
 
-#include "container/hash_map.h"
-
-namespace llt
+namespace mgp
 {
-	class GraphicsPipelineDefinition;
-	class ComputePipelineDefinition;
-
+	class Shader;
+	class VertexFormat;
+	class BlendState;
 	class RenderInfo;
-	class ShaderEffect;
+	class VulkanCore;
+
+	class GraphicsPipelineDefinition
+	{
+	public:
+		GraphicsPipelineDefinition();
+		~GraphicsPipelineDefinition();
+
+		void setShader(const Shader *shader);
+		const Shader *getShader() const;
+
+		void setVertexFormat(const VertexFormat &format);
+		const VertexFormat &getVertexFormat() const;
+
+		void setSampleShading(bool enabled, float minSampleShading);
+
+		bool isSampleShadingEnabled() const;
+		float getMinSampleShading() const;
+
+		void setCullMode(VkCullModeFlagBits cull);
+		VkCullModeFlagBits getCullMode() const;
+
+		const std::vector<VkPipelineShaderStageCreateInfo> &getShaderStages() const;
+
+		void setDepthOp(VkCompareOp op);
+		void setDepthTest(bool enabled);
+		void setDepthWrite(bool enabled);
+		void setDepthBounds(float min, float max);
+		void setDepthStencilTest(bool enabled);
+
+		const VkPipelineDepthStencilStateCreateInfo &getDepthStencilState() const;
+
+		void setBlendState(const BlendState &state);
+
+		const VkPipelineColorBlendAttachmentState &getColourBlendState() const;
+
+		bool isBlendStateLogicOpEnabled() const;
+		VkLogicOp getBlendStateLogicOp() const;
+
+		const std::array<float, 4> &getBlendConstants() const;
+		float getBlendConstant(int idx) const;
+
+	private:
+		const Shader *m_shader;
+
+		const VertexFormat *m_vertexFormat;
+
+		VkCullModeFlagBits m_cullMode;
+
+		std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
+
+		VkPipelineDepthStencilStateCreateInfo m_depthStencilInfo;
+
+		std::array<float, 4> m_blendConstants;
+		VkPipelineColorBlendAttachmentState m_colourBlendState;
+
+		bool m_blendStateLogicOpEnabled;
+		VkLogicOp m_blendStateLogicOp;
+
+		bool m_sampleShadingEnabled;
+		float m_minSampleShading;
+	};
+
+	class ComputePipelineDefinition
+	{
+	public:
+		ComputePipelineDefinition();
+
+		void setShader(const Shader *shader);
+		const Shader *getShader() const;
+
+		const VkPipelineShaderStageCreateInfo &getStage() const;
+
+	private:
+		const Shader *m_shader;
+		VkPipelineShaderStageCreateInfo m_stage;
+	};
 
 	struct PipelineData
 	{
 		VkPipeline pipeline;
 		VkPipelineLayout layout;
+	};
+
+	static constexpr VkDynamicState PIPELINE_DYNAMIC_STATES[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+		//VK_DYNAMIC_STATE_BLEND_CONSTANTS // todo: add dynamic blend constants
 	};
 
 	class PipelineCache
@@ -25,18 +107,18 @@ namespace llt
 		PipelineCache();
 		~PipelineCache();
 
-		void init();
+		void init(const VulkanCore *core);
 		void dispose();
 
 		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo);
 		PipelineData fetchComputePipeline(const ComputePipelineDefinition &definition);
 
-		VkPipelineLayout fetchPipelineLayout(const ShaderEffect *shader);
+		VkPipelineLayout fetchPipelineLayout(const Shader *shader);
 
 	private:
-		HashMap<uint64_t, VkPipeline> m_pipelines;
-		HashMap<uint64_t, VkPipelineLayout> m_layouts;
+		std::unordered_map<uint64_t, VkPipeline> m_pipelines;
+		std::unordered_map<uint64_t, VkPipelineLayout> m_layouts;
+
+		const VulkanCore *m_core;
 	};
 }
-
-#endif // PIPELINE_CACHE_H_

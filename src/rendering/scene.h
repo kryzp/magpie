@@ -1,16 +1,25 @@
-#ifndef SCENE_H_
-#define SCENE_H_
+#pragma once
 
-#include "container/vector.h"
+#include <vector>
 
-#include "render_object.h"
+#include <glm/glm.hpp>
 
-namespace llt
+#include "math/transform.h"
+
+namespace mgp
 {
-	class Camera;
-	class RenderTarget;
-	class CommandBuffer;
+	class Mesh;
 	class SubMesh;
+
+	class RenderObject
+	{
+	public:
+		RenderObject();
+		~RenderObject();
+
+		Transform transform;
+		Mesh *mesh;
+	};
 
 	class Scene
 	{
@@ -18,21 +27,17 @@ namespace llt
 		Scene();
 		~Scene();
 
-		void updatePrevMatrices();
+		std::vector<RenderObject>::iterator createRenderObject();
 
-		Vector<RenderObject>::Iterator createRenderObject();
-
-		const Vector<SubMesh *> &getRenderList();
+		const std::vector<SubMesh *> &getRenderList();
 
 	private:
 		void aggregateSubMeshes();
 		void sortRenderListByMaterialHash(int lo, int hi);
 
-		Vector<RenderObject> m_renderObjects;
+		std::vector<RenderObject> m_renderObjects;
 
-		Vector<SubMesh *> m_renderList;
+		std::vector<SubMesh *> m_renderList;
 		bool m_renderListDirty;
 	};
 }
-
-#endif // SCENE_H_

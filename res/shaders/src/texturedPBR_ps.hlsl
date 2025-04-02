@@ -62,7 +62,7 @@ float4 main(PSInput input) : SV_Target
 	SamplerState cubemapSampler = samplerTable[pc.cubemapSampler_ID];
 	
 	FrameConstants frameData	= bufferTable[pc.frameDataBuffer_ID]		.Load<FrameConstants>(0);
-	MaterialData materialDats	= bufferTable[pc.materialDataBuffer_ID]		.Load<MaterialData>(pc.material_ID);
+	MaterialData materialData	= bufferTable[pc.materialDataBuffer_ID]		.Load<MaterialData>(pc.material_ID);
 	
 	float3 albedo				= texture2DTable[materialData.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
 	float  ambientOcclusion		= texture2DTable[materialData.aoTexture_ID]			.Sample(textureSampler, uv).r;

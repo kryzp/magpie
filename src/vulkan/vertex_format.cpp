@@ -1,29 +1,29 @@
 #include "vertex_format.h"
 
-llt::VertexFormat llt::g_primitiveVertexFormat;
-llt::VertexFormat llt::g_primitiveUvVertexFormat;
-llt::VertexFormat llt::g_modelVertexFormat;
+mgp::VertexFormat mgp::vtx::PRIMITIVE_VERTEX_FORMAT;
+mgp::VertexFormat mgp::vtx::PRIMTIIVE_UV_VERTEX_FORMAT;
+mgp::VertexFormat mgp::vtx::MODEL_VERTEX_FORMAT;
 
-using namespace llt;
+using namespace mgp;
 
-void llt::initVertexTypes()
+void vtx::initVertexTypes()
 {
-	g_primitiveVertexFormat.addBinding(sizeof(PrimitiveVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveVertex, position) }
+	PRIMITIVE_VERTEX_FORMAT.addBinding(sizeof(PrimitiveVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveVertex, position) }
 	});
 
-	g_primitiveUvVertexFormat.addBinding(sizeof(PrimitiveUVVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(PrimitiveUVVertex, position) },
-		{ VK_FORMAT_R32G32_SFLOAT, offsetof(PrimitiveUVVertex, uv) }
+	PRIMTIIVE_UV_VERTEX_FORMAT.addBinding(sizeof(PrimitiveUVVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveUVVertex, position) },
+		{ VK_FORMAT_R32G32_SFLOAT,		offsetof(PrimitiveUVVertex, uv) }
 	});
 
-	g_modelVertexFormat.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, position) },
-		{ VK_FORMAT_R32G32_SFLOAT, offsetof(ModelVertex, uv) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, colour) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, normal) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, tangent) },
-		{ VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, bitangent) }
+	MODEL_VERTEX_FORMAT.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, position) },
+		{ VK_FORMAT_R32G32_SFLOAT,		offsetof(ModelVertex, uv) },
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, colour) },
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, normal) },
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, tangent) },
+		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, bitangent) }
 	});
 }
 
@@ -38,7 +38,7 @@ VertexFormat::~VertexFormat()
 {
 }
 
-void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription> &attributes)
+void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const std::vector<AttributeDescription> &attributes)
 {
 	if (inputRate == VK_VERTEX_INPUT_RATE_VERTEX)
 		m_size = stride;
@@ -58,10 +58,10 @@ void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, cons
 		attributeDescription.format = attrib.format;
 		attributeDescription.offset = attrib.offset;
 
-		m_attributes.pushBack(attributeDescription);
+		m_attributes.push_back(attributeDescription);
 	}
 
-	m_bindings.pushBack(bindingDescription);
+	m_bindings.push_back(bindingDescription);
 }
 
 void VertexFormat::clearAttributes()
@@ -74,12 +74,12 @@ void VertexFormat::clearBindings()
 	m_bindings.clear();
 }
 
-const Vector<VkVertexInputAttributeDescription> &VertexFormat::getAttributeDescriptions() const
+const std::vector<VkVertexInputAttributeDescription> &VertexFormat::getAttributeDescriptions() const
 {
 	return m_attributes;
 }
 
-const Vector<VkVertexInputBindingDescription> &VertexFormat::getBindingDescriptions() const
+const std::vector<VkVertexInputBindingDescription> &VertexFormat::getBindingDescriptions() const
 {
 	return m_bindings;
 }

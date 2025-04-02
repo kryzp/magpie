@@ -1,11 +1,10 @@
 #include "common.h"
-#include "container/string.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <cctype>
 
-using namespace llt;
+using namespace mgp;
 
 template <>
 uint64_t hash::calc(uint64_t start, const char *str)
@@ -18,9 +17,9 @@ uint64_t hash::calc(uint64_t start, const char *str)
 }
 
 template <>
-uint64_t hash::calc(uint64_t start, const String *str)
+uint64_t hash::calc(uint64_t start, const std::string *str)
 {
-	return calc(start, str->cstr());
+	return calc(start, str->c_str());
 }
 
 void *mem::set(void *ptr, byte val, uint64_t size)

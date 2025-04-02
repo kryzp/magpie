@@ -1,44 +1,38 @@
 #include "shader.h"
+
+#include "core/common.h"
+
 #include "core.h"
-#include "util.h"
 
-using namespace llt;
+using namespace mgp;
 
-ShaderProgram::ShaderProgram()
+ShaderStage::ShaderStage(const VulkanCore *core)
 	: m_stage()
 	, m_module(VK_NULL_HANDLE)
+	, m_core(core)
 {
 }
 
-ShaderProgram::~ShaderProgram()
+ShaderStage::~ShaderStage()
 {
-	cleanUp();
-}
-
-void ShaderProgram::cleanUp()
-{
-	if (m_module == VK_NULL_HANDLE) {
-		return;
-	}
-
-	vkDestroyShaderModule(g_vkCore->m_device, m_module, nullptr);
+	vkDestroyShaderModule(m_core->getLogicalDevice(), m_module, nullptr);
 	m_module = VK_NULL_HANDLE;
 }
 
-void ShaderProgram::loadFromSource(const char *source, uint64_t size)
+void ShaderStage::loadFromSource(const char *source, uint64_t size)
 {
 	VkShaderModuleCreateInfo moduleCreateInfo = {};
 	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	moduleCreateInfo.codeSize = size;
 	moduleCreateInfo.pCode = (const uint32_t *)source;
 
-	LLT_VK_CHECK(
-		vkCreateShaderModule(g_vkCore->m_device, &moduleCreateInfo, nullptr, &m_module),
+	MGP_VK_CHECK(
+		vkCreateShaderModule(m_core->getLogicalDevice(), &moduleCreateInfo, nullptr, &m_module),
 		"Failed to create shader module"
 	);
 }
 
-VkPipelineShaderStageCreateInfo ShaderProgram::getShaderStageCreateInfo() const
+VkPipelineShaderStageCreateInfo ShaderStage::getShaderStageCreateInfo() const
 {
 	VkPipelineShaderStageCreateInfo shaderStage = {};
 	shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -49,61 +43,60 @@ VkPipelineShaderStageCreateInfo ShaderProgram::getShaderStageCreateInfo() const
 	return shaderStage;
 }
 
-VkShaderStageFlagBits ShaderProgram::getStage() const
+VkShaderStageFlagBits ShaderStage::getStage() const
 {
 	return m_stage;
 }
 
-void ShaderProgram::setStage(VkShaderStageFlagBits stage)
+void ShaderStage::setStage(VkShaderStageFlagBits stage)
 {
 	m_stage = stage;
 }
 
-VkShaderModule ShaderProgram::getModule() const
+VkShaderModule ShaderStage::getModule() const
 {
 	return m_module;
 }
 
-// ---
-
-ShaderEffect::ShaderEffect()
+Shader::Shader()
 	: m_stages()
 	, m_descriptorSetLayouts()
 	, m_pushConstantsSize(0)
 {
 }
 
-void ShaderEffect::addStage(ShaderProgram *program)
+void Shader::addStage(ShaderStage *stage)
 {
-	m_stages.pushBack(program);
+	m_stages.push_back(stage);
 }
 
-const Vector<ShaderProgram *> &ShaderEffect::getStages() const
+const std::vector<ShaderStage *> &Shader::getStages() const
 {
 	return m_stages;
 }
 
-const ShaderProgram *ShaderEffect::getStage(int idx) const
+const ShaderStage *Shader::getStage(int idx) const
 {
 	return m_stages[idx];
 }
 
-const Vector<VkDescriptorSetLayout> &ShaderEffect::getDescriptorSetLayouts() const
+const std::vector<VkDescriptorSetLayout> &Shader::getDescriptorSetLayouts() const
 {
 	return m_descriptorSetLayouts;
 }
 
-void ShaderEffect::setDescriptorSetLayouts(const Vector<VkDescriptorSetLayout> &layouts)
+void Shader::setDescriptorSetLayouts(const std::vector<VkDescriptorSetLayout> &layouts)
 {
 	m_descriptorSetLayouts = layouts;
 }
 
-void ShaderEffect::setPushConstantsSize(uint64_t size)
+void Shader::setPushConstantsSize(uint64_t size)
 {
 	m_pushConstantsSize = size;
 }
 
-uint64_t ShaderEffect::getPushConstantsSize() const
+uint64_t Shader::getPushConstantsSize() const
 {
 	return m_pushConstantsSize;
 }
+

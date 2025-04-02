@@ -1,15 +1,12 @@
 #include "platform.h"
-#include "common.h"
-#include "input/input.h"
-#include "vulkan/core.h"
-#include "third_party/imgui/imgui.h"
-#include "third_party/imgui/imgui_impl_sdl3.h"
 
 #include <SDL3/SDL_vulkan.h>
 
-llt::Platform *llt::g_platform = nullptr;
+#include "third_party/imgui/imgui_impl_sdl3.h"
 
-using namespace llt;
+#include "common.h"
+
+using namespace mgp;
 
 Platform::Platform(const Config &config)
 	: m_window(nullptr)
@@ -34,27 +31,27 @@ Platform::Platform(const Config &config)
 #endif // _WIN32
 
 	if (failedInit)
-		LLT_ERROR("Failed to initialize: %s", SDL_GetError());
+		MGP_ERROR("Failed to initialize: %s", SDL_GetError());
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	if (config.hasFlag(Config::FLAG_RESIZABLE_BIT)) {
+	if (config.hasFlag(CONFIG_FLAG_RESIZABLE_BIT)) {
 		flags |= SDL_WINDOW_RESIZABLE;
 	}
 
-	if (config.hasFlag(Config::FLAG_HIGH_PIXEL_DENSITY_BIT)) {
+	if (config.hasFlag(CONFIG_FLAG_HIGH_PIXEL_DENSITY_BIT)) {
 		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	}
 
 	flags |= SDL_WINDOW_VULKAN;
 
-	m_window = SDL_CreateWindow(config.name, config.width, config.height, flags);
+	m_window = SDL_CreateWindow(config.windowName, config.width, config.height, flags);
 
 	if (!m_window) {
-		LLT_ERROR("Failed to create window.");
+		MGP_ERROR("Failed to create window.");
 	}
 
-	LLT_LOG("SDL Initialized!");
+	MGP_LOG("SDL Initialized!");
 }
 
 Platform::~Platform()
@@ -64,10 +61,10 @@ Platform::~Platform()
 	SDL_DestroyWindow(m_window);
 	SDL_Quit();
 
-	LLT_LOG("SDL Destroyed!");
+	MGP_LOG("SDL Destroyed!");
 }
 
-void Platform::pollEvents()
+void Platform::pollEvents(InputState *input)
 {
 	float spx = 0.0f, spy = 0.0f;
 	SDL_Event ev = {};
@@ -79,56 +76,56 @@ void Platform::pollEvents()
 		switch (ev.type)
 		{
 			case SDL_EVENT_QUIT:
-				LLT_LOG("Detected window close event, quitting...");
-				g_app->exit();
+				if (onExit)
+					onExit();
 				break;
 
 			case SDL_EVENT_WINDOW_RESIZED:
-				LLT_LOG("Detected window resize!");
-				g_vkCore->onWindowResize(ev.window.data1, ev.window.data2);
+				if (onWindowResize)
+					onWindowResize(ev.window.data1, ev.window.data2);
 				break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
-				g_inputState->onMouseWheel(ev.wheel.x, ev.wheel.y);
+				input->onMouseWheel(ev.wheel.x, ev.wheel.y);
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
 				SDL_GetGlobalMouseState(&spx, &spy);
-				g_inputState->onMouseScreenMove(spx, spy);
-				g_inputState->onMouseMove(ev.motion.x, ev.motion.y);
+				input->onMouseScreenMove(spx, spy);
+				input->onMouseMove(ev.motion.x, ev.motion.y);
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
-				g_inputState->onMouseDown(ev.button.button);
+				input->onMouseDown(ev.button.button);
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
-				g_inputState->onMouseUp(ev.button.button);
+				input->onMouseUp(ev.button.button);
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
-				g_inputState->onKeyDown(ev.key.scancode);
+				input->onKeyDown(ev.key.scancode);
 				break;
 
 			case SDL_EVENT_KEY_UP:
-				g_inputState->onKeyUp(ev.key.scancode);
+				input->onKeyUp(ev.key.scancode);
 				break;
 
 			case SDL_EVENT_TEXT_INPUT:
-				g_inputState->onTextUtf8(ev.text.text);
+				input->onTextUtf8(ev.text.text);
 				break;
 
 #if _WIN32
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-				g_inputState->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
+				input->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
 
 			case SDL_EVENT_GAMEPAD_BUTTON_UP:
-				g_inputState->onGamepadButtonUp(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
+				input->onGamepadButtonUp(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
 
 			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-				g_inputState->onGamepadMotion(
+				input->onGamepadMotion(
 					SDL_GetGamepadPlayerIndexForID(ev.gaxis.which),
 					(GamepadAxis)ev.gaxis.axis,
 					(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.0f : 0.0f))
@@ -137,16 +134,16 @@ void Platform::pollEvents()
 #endif // _WIN32
 
 			case SDL_EVENT_GAMEPAD_ADDED:
-				LLT_LOG("Gamepad added, trying to reconnect all gamepads...");
+				MGP_LOG("Gamepad added, trying to reconnect all gamepads...");
 				reconnectAllGamepads();
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				LLT_LOG("Gamepad removed.");
+				MGP_LOG("Gamepad removed.");
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMAPPED:
-				LLT_LOG("Gamepad remapped.");
+				MGP_LOG("Gamepad remapped.");
 				break;
 
 			default:
@@ -167,12 +164,12 @@ void Platform::reconnectAllGamepads()
 
 	if (m_gamepadCount == 0)
 	{
-		LLT_LOG("No gamepads found!");
+		MGP_LOG("No gamepads found!");
 		goto finished;
 	}
 	else
 	{
-		LLT_LOG("Found %d gamepads!", m_gamepadCount);
+		MGP_LOG("Found %d gamepads!", m_gamepadCount);
 	}
 
 	// iterate through found gamepads
@@ -183,11 +180,11 @@ void Platform::reconnectAllGamepads()
 
 		// check if we actually managed to open the gamepad
 		if (m_gamepads[i]) {
-			LLT_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i,
+			MGP_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i,
 				SDL_GetGamepadPlayerIndex(m_gamepads[i])
 			);
 		} else {
-			LLT_LOG("Failed to open gamepad with id: %d, and internal index: %d.", id, i);
+			MGP_LOG("Failed to open gamepad with id: %d, and internal index: %d.", id, i);
 		}
 	}
 
@@ -199,11 +196,10 @@ void Platform::closeAllGamepads()
 {
 	for (int i = 0; i < m_gamepadCount; i++) {
 		SDL_CloseGamepad(m_gamepads[i]);
-		LLT_LOG("Closed gamepad with internal index %d.", i);
+		MGP_LOG("Closed gamepad with internal index %d.", i);
 	}
 
 	m_gamepadCount = 0;
-	m_gamepads.clear();
 }
 
 GamepadType Platform::getGamepadType(int player)
@@ -216,14 +212,14 @@ void Platform::closeGamepad(int player) const
 	SDL_CloseGamepad(SDL_GetGamepadFromPlayerIndex(player));
 }
 
-String Platform::getWindowName() const
+std::string Platform::getWindowName() const
 {
 	return SDL_GetWindowTitle(m_window);
 }
 
-void Platform::setWindowName(const String &name)
+void Platform::setWindowName(const std::string &name)
 {
-	SDL_SetWindowTitle(m_window, name.cstr());
+	SDL_SetWindowTitle(m_window, name.c_str());
 }
 
 glm::ivec2 Platform::getWindowPosition() const
@@ -315,15 +311,18 @@ void Platform::lockCursor(bool toggle) const
 #endif // _WIN32
 }
 
-void Platform::setCursorPosition(int x, int y)
+void Platform::setCursorPosition(int x, int y, InputState *input)
 {
 	SDL_WarpMouseInWindow(m_window, x, y);
 
 	float spx = 0.0f, spy = 0.0f;
 	SDL_GetGlobalMouseState(&spx, &spy);
 
-	g_inputState->onMouseScreenMove(spx, spy);
-	g_inputState->onMouseMove(x, y);
+	if (input)
+	{
+		input->onMouseScreenMove(spx, spy);
+		input->onMouseMove(x, y);
+	}
 }
 
 WindowMode Platform::getWindowMode() const
@@ -388,63 +387,63 @@ uint64_t Platform::getPerformanceFrequency() const
 	return SDL_GetPerformanceFrequency();
 }
 
-void *Platform::streamFromFile(const char *filepath, const char *mode)
+void *Platform::streamFromFile(const char *filepath, const char *mode) const
 {
 #if _WIN32
 	return SDL_IOFromFile(filepath, mode);
 #endif // _WIN32
 }
 
-void *Platform::streamFromMemory(void *memory, uint64_t size)
+void *Platform::streamFromMemory(void *memory, uint64_t size) const
 {
 #if _WIN32
 	return SDL_IOFromMem(memory, size);
 #endif // _WIN32
 }
 
-void *Platform::streamFromConstMemory(const void *memory, uint64_t size)
+void *Platform::streamFromConstMemory(const void *memory, uint64_t size) const
 {
 #if _WIN32
 	return SDL_IOFromConstMem(memory, size);
 #endif // _WIN32
 }
 
-int64_t Platform::streamRead(void *stream, void *dst, uint64_t size)
+int64_t Platform::streamRead(void *stream, void *dst, uint64_t size) const
 {
 #if _WIN32
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
 #endif // _WIN32
 }
 
-int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size)
+int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size) const
 {
 #if _WIN32
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
 #endif // _WIN32
 }
 
-int64_t Platform::streamSeek(void *stream, int64_t offset)
+int64_t Platform::streamSeek(void *stream, int64_t offset) const
 {
 #if _WIN32
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
 #endif // _WIN32
 }
 
-int64_t Platform::streamSize(void *stream)
+int64_t Platform::streamSize(void *stream) const
 {
 #if _WIN32
 	return SDL_GetIOSize((SDL_IOStream *)stream);
 #endif // _WIN32
 }
 
-int64_t Platform::streamPosition(void *stream)
+int64_t Platform::streamPosition(void *stream) const
 {
 #if _WIN32
 	return SDL_TellIO((SDL_IOStream *)stream);
 #endif // _WIN32
 }
 
-void Platform::streamClose(void *stream)
+void Platform::streamClose(void *stream) const
 {
 #if _WIN32
 	SDL_CloseIO((SDL_IOStream *)stream);
@@ -453,39 +452,16 @@ void Platform::streamClose(void *stream)
 
 void Platform::initImGui()
 {
-	IMGUI_CHECKVERSION();
-
-	ImGui::CreateContext();
-
-	ImGuiIO &io = ImGui::GetIO();
-	
-	ImGui::StyleColorsClassic();
-
 	ImGui_ImplSDL3_InitForVulkan(m_window);
-
-	g_vkCore->createImGuiResources();
-
-	ImGui_ImplVulkan_InitInfo initInfo = g_vkCore->getImGuiInitInfo();
-
-	ImGui_ImplVulkan_Init(&initInfo);
-
-	ImGui_ImplVulkan_CreateFontsTexture();
 }
 
-void Platform::imGuiNewFrame()
-{
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL3_NewFrame();
-	ImGui::NewFrame();
-}
-
-const char *const *Platform::vkGetInstanceExtensions(uint32_t *count)
+const char *const *Platform::vkGetInstanceExtensions(uint32_t *count) const
 {
 	return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface)
+bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface) const
 {
-	LLT_LOG("Created Vulkan surface!");
+	MGP_LOG("Created Vulkan surface!");
 	return SDL_Vulkan_CreateSurface(m_window, instance, NULL, surface);
 }

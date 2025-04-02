@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required (VERSION 3.8)
-project(lilythorn)
+project(magpie)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,55 +12,37 @@ add_executable(${PROJECT_NAME}
     src/core/app.cpp
     src/core/platform.cpp
     src/core/debug_ui.cpp
-    src/core/profiler.cpp
 
-    src/rendering/bindless_resource_mgr.cpp
-    src/rendering/renderer.cpp
-    src/rendering/gpu_buffer_mgr.cpp
-    src/rendering/render_target_mgr.cpp
-    src/rendering/shader_mgr.cpp
-    src/rendering/sub_mesh.cpp
+    src/rendering/camera.cpp
+    src/rendering/scene.cpp
     src/rendering/mesh.cpp
     src/rendering/mesh_loader.cpp
-    src/rendering/material.cpp
-	src/rendering/material_system.cpp
-    src/rendering/texture_mgr.cpp
-    src/rendering/camera.cpp
-    src/rendering/render_object.cpp
-    src/rendering/gpu_particles.cpp
-    src/rendering/scene.cpp
-
-    src/rendering/passes/forward_pass.cpp
-    src/rendering/passes/post_process_pass.cpp
-    src/rendering/passes/shadow_pass.cpp
 
     src/vulkan/core.cpp
-    src/vulkan/command_buffer.cpp
-    src/vulkan/descriptor_builder.cpp
-    src/vulkan/descriptor_allocator.cpp
-    src/vulkan/descriptor_layout_cache.cpp
-    src/vulkan/gpu_buffer.cpp
-    src/vulkan/generic_render_target.cpp
-	src/vulkan/render_info.cpp
-    src/vulkan/render_target.cpp
-    src/vulkan/image.cpp
+    src/vulkan/toolbox.cpp
     src/vulkan/swapchain.cpp
-    src/vulkan/shader.cpp
-    src/vulkan/pipeline_definition.cpp
-    src/vulkan/pipeline_cache.cpp
-    src/vulkan/texture.cpp
-    src/vulkan/texture_sampler.cpp
-    src/vulkan/texture_view.cpp
-    src/vulkan/util.cpp
-    src/vulkan/queue.cpp
+    src/vulkan/descriptor.cpp
     src/vulkan/vertex_format.cpp
+    src/vulkan/validation.cpp
+    src/vulkan/pipeline_cache.cpp
+    src/vulkan/render_info.cpp
+    src/vulkan/image.cpp
+    src/vulkan/image_view.cpp
+    src/vulkan/sampler.cpp
+    src/vulkan/surface.cpp
+    src/vulkan/command_buffer.cpp
+    src/vulkan/gpu_buffer.cpp
+    src/vulkan/shader.cpp
+    src/vulkan/sync.cpp
+    src/vulkan/queue.cpp
+    src/vulkan/bitmap.cpp
+    src/vulkan/bindless.cpp
 
 	src/math/colour.cpp
     src/math/timer.cpp
     src/math/transform.cpp
 
     src/input/input.cpp
-    src/input/v_key.cpp
 
     src/io/stream.cpp
     src/io/file_stream.cpp
@@ -78,11 +60,7 @@ add_executable(${PROJECT_NAME}
     src/third_party/imgui/imgui_impl_vulkan.cpp
 )
 
-set(DEBUG_MODE true CACHE BOOL "Enable debug mode")
-
-if(DEBUG_MODE)
-	add_compile_definitions(LLT_DEBUG)
-endif()
+add_compile_definitions(MGP_DEBUG)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
@@ -103,7 +81,7 @@ if(WIN32)
 
 	target_include_directories(${PROJECT_NAME} PRIVATE ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
-	add_compile_definitions(LLT_MAC_SUPPORT)
+	add_compile_definitions(MGP_MAC_SUPPORT)
 
 	find_package(SDL3 REQUIRED)
 	find_package(Vulkan REQUIRED)

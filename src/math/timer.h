@@ -1,14 +1,15 @@
-#ifndef TIMER_H_
-#define TIMER_H_
+#pragma once
 
 #include "core/common.h"
 
-namespace llt
+namespace mgp
 {
+	class Platform;
+
 	class Timer
 	{
 	public:
-		Timer();
+		Timer(Platform *platform);
 
 		void start();
 		void stop();
@@ -29,7 +30,7 @@ namespace llt
 
 		uint64_t m_pausedTicks;
 		bool m_paused;
+
+		Platform *m_platform;
 	};
 }
-
-#endif // TIMER_H_

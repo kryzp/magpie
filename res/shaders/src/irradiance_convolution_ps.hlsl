@@ -1,10 +1,10 @@
+#include "common.hlsl"
+
 struct PSInput
 {
 	[[vk::location(0)]]
 	float3 worldPos : TEXCOORD0;
 };
-
-#define MATH_PI 3.14159265359
 
 TextureCube environmentMap : register(t0);
 SamplerState samplerState : register(s0);

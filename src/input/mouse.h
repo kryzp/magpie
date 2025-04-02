@@ -1,7 +1,6 @@
-#ifndef MOUSE_H_
-#define MOUSE_H_
+#pragma once
 
-namespace llt
+namespace mgp
 {
 	enum MouseButton
 	{
@@ -14,5 +13,3 @@ namespace llt
 		MBTN_MAX_ENUM
 	};
 }
-
-#endif // MOUSE_H_

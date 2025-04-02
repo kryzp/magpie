@@ -6,9 +6,10 @@
 #include <glm/glm.hpp>
 
 #include "core/platform.h"
+
 #include "input/input.h"
 
-using namespace llt;
+using namespace mgp;
 
 Camera::Camera(float width, float height, float fov, float near, float far)
 	: position(0.0f, 0.0f, 0.0f)
@@ -30,7 +31,7 @@ Camera::~Camera()
 {
 }
 
-void Camera::update(float dt)
+void Camera::update(const InputState *input, const Platform *platform, float dt)
 {
 	const float MOUSE_DEADZONE = 0.001f;
 	const float TURN_SPEED = 1.0f;
@@ -40,8 +41,8 @@ void Camera::update(float dt)
 		return from + t*(to - from);
 	};
 
-	float dx = (float)(g_inputState->getMousePosition().x - g_platform->getWindowSize().x*0.5f);
-	float dy = (float)(g_inputState->getMousePosition().y - g_platform->getWindowSize().y*0.5f);
+	float dx = (float)(input->getMousePosition().x - platform->getWindowSize().x*0.5f);
+	float dy = (float)(input->getMousePosition().y - platform->getWindowSize().y*0.5f);
 
 	if ((dx * dx) + (dy * dy) > MOUSE_DEADZONE*MOUSE_DEADZONE) {
 		m_targetYaw -= dx * TURN_SPEED * dt;
@@ -61,21 +62,21 @@ void Camera::update(float dt)
 	glm::vec3 v1 = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
 	glm::vec3 v2 = glm::normalize(glm::cross(v1, direction));
 
-	if (g_inputState->isDown(KB_KEY_A)) {
+	if (input->isDown(KB_KEY_A)) {
 		position += -v1 * MOVE_SPEED * dt;
-	} else if (g_inputState->isDown(KB_KEY_D)) {
+	} else if (input->isDown(KB_KEY_D)) {
 		position += +v1 * MOVE_SPEED * dt;
 	}
 
-	if (g_inputState->isDown(KB_KEY_W)) {
+	if (input->isDown(KB_KEY_W)) {
 		position += +direction * MOVE_SPEED * dt;
-	} else if (g_inputState->isDown(KB_KEY_S)) {
+	} else if (input->isDown(KB_KEY_S)) {
 		position += -direction * MOVE_SPEED * dt;
 	}
 
-	if (g_inputState->shift() || g_inputState->ctrl()) {
+	if (input->shift() || input->ctrl()) {
 		position += -v2 * MOVE_SPEED * dt;
-	} else if (g_inputState->isDown(KB_KEY_SPACE)) {
+	} else if (input->isDown(KB_KEY_SPACE)) {
 		position += +v2 * MOVE_SPEED * dt;
 	}
 }

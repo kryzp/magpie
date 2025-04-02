@@ -2,36 +2,15 @@
 
 #include "core/common.h"
 
-#include "core.h"
-#include "render_target.h"
-#include "render_info.h"
-#include "shader.h"
+#include "image.h"
+#include "toolbox.h"
 
-using namespace llt;
-
-CommandBuffer CommandBuffer::fromGraphics()
-{
-	return CommandBuffer(g_vkCore->m_graphicsQueue.getCurrentFrame().commandBuffer);
-}
-
-CommandBuffer CommandBuffer::fromCompute()
-{
-	return CommandBuffer(g_vkCore->m_computeQueues[0].getCurrentFrame().commandBuffer);
-}
-
-CommandBuffer CommandBuffer::fromTransfer()
-{
-	//	if (m_transferQueues.size() > 0)
-	//		return CommandBuffer(g_vkCore->m_transferQueues[0].getCurrentFrame().commandBuffer);
-	return fromGraphics();
-}
+using namespace mgp;
 
 CommandBuffer::CommandBuffer(VkCommandBuffer buffer)
 	: m_buffer(buffer)
 	, m_viewport()
 	, m_scissor()
-	, m_currentTarget(nullptr)
-	, m_currentRenderInfo()
 	, m_isRendering(false)
 {
 }
@@ -40,112 +19,49 @@ CommandBuffer::~CommandBuffer()
 {
 }
 
-void CommandBuffer::beginRecording()
+void CommandBuffer::begin()
 {
-	cauto &currentFrame = g_vkCore->m_graphicsQueue.getCurrentFrame();
-	vkWaitForFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-
 	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	LLT_VK_CHECK(
+	MGP_VK_CHECK(
 		vkBeginCommandBuffer(m_buffer, &commandBufferBeginInfo),
-		"Failed to begin recording command buffer"
+		"Failed to begin recording instant command buffer"
 	);
 }
 
-void CommandBuffer::submit()
+void CommandBuffer::end()
 {
-	VkSemaphoreSubmitInfo emptyComputeSemaphore = {};
-	submit(emptyComputeSemaphore);
-}
-
-void CommandBuffer::submit(VkSemaphoreSubmitInfo computeSemaphore)
-{
-	cauto &currentFrame = g_vkCore->m_graphicsQueue.getCurrentFrame();
-
-	LLT_VK_CHECK(
+	MGP_VK_CHECK(
 		vkEndCommandBuffer(m_buffer),
 		"Failed to record command buffer"
 	);
+}
 
+VkCommandBufferSubmitInfo CommandBuffer::getSubmitInfo() const
+{
 	VkCommandBufferSubmitInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 	bufferInfo.deviceMask = 0;
 	bufferInfo.commandBuffer = m_buffer;
 
-	VkSemaphoreSubmitInfo renderFinishedSemaphore = {};
-	VkSemaphoreSubmitInfo waitSemaphoreSubmitInfos[2] = {};
-	
-	int signalSemaphoreCount = 0;
-	int waitSemaphoreCount = 0;
-
-	if (m_currentTarget && m_currentTarget->getType() == RENDER_TARGET_TYPE_SWAPCHAIN)
-	{
-		waitSemaphoreCount++;
-		waitSemaphoreSubmitInfos[0] = ((Swapchain *)m_currentTarget)->getImageAvailableSemaphoreSubmitInfo();
-
-		signalSemaphoreCount++;
-		renderFinishedSemaphore = ((Swapchain *)m_currentTarget)->getRenderFinishedSemaphoreSubmitInfo();
-	}
-
-	if (computeSemaphore.semaphore)
-	{
-		waitSemaphoreCount++;
-		waitSemaphoreSubmitInfos[1] = computeSemaphore;
-	}
-
-//	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT };
-
-	VkSubmitInfo2 submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-	submitInfo.flags = 0;
-
-	submitInfo.commandBufferInfoCount = 1;
-	submitInfo.pCommandBufferInfos = &bufferInfo;
-
-	submitInfo.signalSemaphoreInfoCount = signalSemaphoreCount;
-	submitInfo.pSignalSemaphoreInfos = &renderFinishedSemaphore;
-
-	submitInfo.waitSemaphoreInfoCount = waitSemaphoreCount;
-	submitInfo.pWaitSemaphoreInfos = waitSemaphoreSubmitInfos;
-
-	vkResetFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence);
-
-	LLT_VK_CHECK(
-		vkQueueSubmit2(g_vkCore->m_graphicsQueue.getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
-		"Failed to submit draw command to buffer"
-	);
-
-	m_currentTarget = nullptr;
+	return bufferInfo;
 }
 
-void CommandBuffer::beginRendering(GenericRenderTarget *target)
+void CommandBuffer::beginRendering(const RenderInfo &target)
 {
-	m_currentTarget = target;
-
-	beginRendering(m_currentTarget->getRenderInfo());
-}
-
-void CommandBuffer::beginRendering(const RenderInfo &info)
-{
-	m_currentRenderInfo = info;
-
-	if (m_currentTarget)
-		m_currentTarget->beginRendering(*this);
-
-	VkRenderingInfo renderInfo = info.getInfo();
+	VkRenderingInfo renderInfo = target.getInfo();
 
 	m_viewport.x = 0.0f;
-	m_viewport.y = (float)info.getHeight();
-	m_viewport.width = (float)info.getWidth();
-	m_viewport.height = -(float)info.getHeight();
+	m_viewport.y = (float)target.getHeight();
+	m_viewport.width = (float)target.getWidth();
+	m_viewport.height = -(float)target.getHeight();
 	m_viewport.minDepth = 0.0f;
 	m_viewport.maxDepth = 1.0f;
 
 	m_scissor.offset = { 0, 0 };
-	m_scissor.extent = { info.getWidth(), info.getHeight() };
+	m_scissor.extent = { target.getWidth(), target.getHeight() };
 
 	m_isRendering = true;
 
@@ -155,19 +71,13 @@ void CommandBuffer::beginRendering(const RenderInfo &info)
 void CommandBuffer::endRendering()
 {
 	vkCmdEndRendering(m_buffer);
-
-	if (m_currentTarget)
-		m_currentTarget->endRendering(*this);
-
 	m_isRendering = false;
 }
 
-const RenderInfo &CommandBuffer::getCurrentRenderInfo() const
-{
-	return m_currentRenderInfo;
-}
-
-void CommandBuffer::bindPipeline(VkPipelineBindPoint bindPoint, VkPipeline pipeline)
+void CommandBuffer::bindPipeline(
+	VkPipelineBindPoint bindPoint,
+	VkPipeline pipeline
+)
 {
 	vkCmdBindPipeline(
 		m_buffer,
@@ -236,8 +146,8 @@ void CommandBuffer::drawIndexedIndirectCount(
 void CommandBuffer::bindDescriptorSets(
 	uint32_t firstSet,
 	VkPipelineLayout layout,
-	const Vector<VkDescriptorSet> &descriptorSets,
-	const Vector<uint32_t> &dynamicOffsets
+	const std::vector<VkDescriptorSet> &descriptorSets,
+	const std::vector<uint32_t> &dynamicOffsets
 )
 {
 	vkCmdBindDescriptorSets(
@@ -286,8 +196,8 @@ void CommandBuffer::pushConstants(
 void CommandBuffer::bindVertexBuffers(
 	uint32_t firstBinding,
 	uint32_t count,
-	VkBuffer *buffers,
-	VkDeviceSize *offsets
+	const VkBuffer *buffers,
+	const VkDeviceSize *offsets
 )
 {
 	vkCmdBindVertexBuffers(
@@ -315,22 +225,22 @@ void CommandBuffer::bindIndexBuffer(
 
 void CommandBuffer::pipelineBarrier(
 	VkDependencyFlags dependencyFlags,
-	const Vector<VkMemoryBarrier2> &memoryBarriers,
-	const Vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
-	const Vector<VkImageMemoryBarrier2> &imageMemoryBarriers
+	const std::vector<VkMemoryBarrier2> &memoryBarriers,
+	const std::vector<VkBufferMemoryBarrier2> &bufferMemoryBarriers,
+	const std::vector<VkImageMemoryBarrier2> &imageMemoryBarriers
 )
 {
 	VkDependencyInfo dependency = {};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR;
 
 	dependency.dependencyFlags = dependencyFlags;
-	
+
 	dependency.memoryBarrierCount = memoryBarriers.size();
 	dependency.pMemoryBarriers = memoryBarriers.data();
-	
+
 	dependency.bufferMemoryBarrierCount = bufferMemoryBarriers.size();
 	dependency.pBufferMemoryBarriers =	bufferMemoryBarriers.data();
-	
+
 	dependency.imageMemoryBarrierCount = imageMemoryBarriers.size();
 	dependency.pImageMemoryBarriers = imageMemoryBarriers.data();
 
@@ -340,32 +250,49 @@ void CommandBuffer::pipelineBarrier(
 	);
 }
 
-void CommandBuffer::transitionForMipmapGeneration(Texture &texture)
+void CommandBuffer::transitionLayout(
+	Image &image,
+	VkImageLayout newLayout
+)
 {
-	// todo: bad
-	if (texture.getImageLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-		texture.transitionLayout(*this, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	VkImageMemoryBarrier2 barrier = image.getBarrier(newLayout);
+
+	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;//vkutil::getTransferAccessFlags(m_imageLayout);
+	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;//vkutil::getTransferAccessFlags(newLayout);
+
+	barrier.srcStageMask = vk_toolbox::getTransferPipelineStageFlags(image.getLayout());
+	barrier.dstStageMask = vk_toolbox::getTransferPipelineStageFlags(newLayout);
+
+	pipelineBarrier(
+		0,
+		{}, {}, { barrier }
+	);
+
+	image.m_layout = newLayout;
 }
 
-void CommandBuffer::generateMipmaps(const Texture &texture)
+void CommandBuffer::generateMipmaps(Image &image)
 {
+//	if (image.getLayout() != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+//		transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	barrier.image = texture.getImage();
+	barrier.image = image.getHandle();
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = texture.getLayerCount();
+	barrier.subresourceRange.layerCount = image.getLayerCount();
 	barrier.subresourceRange.levelCount = 1;
 
-	for (int i = 1; i < texture.getMipLevels(); i++)
+	for (int i = 1; i < image.getMipmapCount(); i++)
 	{
 		barrier.subresourceRange.baseMipLevel = i - 1;
 
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		
+
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
@@ -377,12 +304,12 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 			{}, {}, { barrier }
 		);
 
-		for (int face = 0; face < texture.getFaceCount(); face++)
+		for (int face = 0; face < image.getFaceCount(); face++)
 		{
-			int srcMipWidth  = (int)texture.getWidth()  >> (i - 1);
-			int srcMipHeight = (int)texture.getHeight() >> (i - 1);
-			int dstMipWidth  = (int)texture.getWidth()  >> (i - 0);
-			int dstMipHeight = (int)texture.getHeight() >> (i - 0);
+			int srcMipWidth  = (int)image.getWidth()  >> (i - 1);
+			int srcMipHeight = (int)image.getHeight() >> (i - 1);
+			int dstMipWidth  = (int)image.getWidth()  >> (i - 0);
+			int dstMipHeight = (int)image.getHeight() >> (i - 0);
 
 			VkImageBlit blit = {};
 
@@ -401,8 +328,8 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 			blit.dstSubresource.layerCount = 1;
 
 			blitImage(
-				texture.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				texture.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image.getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				{ blit },
 				VK_FILTER_LINEAR
 			);
@@ -423,7 +350,7 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 		);
 	}
 
-	barrier.subresourceRange.baseMipLevel = texture.getMipLevels() - 1;
+	barrier.subresourceRange.baseMipLevel = image.getMipmapCount() - 1;
 
 	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -438,12 +365,14 @@ void CommandBuffer::generateMipmaps(const Texture &texture)
 		0,
 		{}, {}, { barrier }
 	);
+
+	image.m_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 void CommandBuffer::blitImage(
 	VkImage srcImage, VkImageLayout srcImageLayout,
 	VkImage dstImage, VkImageLayout dstImageLayout,
-	const Vector<VkImageBlit> &regions,
+	const std::vector<VkImageBlit> &regions,
 	VkFilter filter
 )
 {
@@ -460,7 +389,7 @@ void CommandBuffer::blitImage(
 void CommandBuffer::copyBufferToBuffer(
 	VkBuffer srcBuffer,
 	VkBuffer dstBuffer,
-	const Vector<VkBufferCopy> &regions
+	const std::vector<VkBufferCopy> &regions
 )
 {
 	vkCmdCopyBuffer(
@@ -476,7 +405,7 @@ void CommandBuffer::copyBufferToImage(
 	VkBuffer srcBuffer,
 	VkImage dstImage,
 	VkImageLayout dstImageLayout,
-	const Vector<VkBufferImageCopy> &regions
+	const std::vector<VkBufferImageCopy> &regions
 )
 {
 	vkCmdCopyBufferToImage(
@@ -509,53 +438,55 @@ void CommandBuffer::resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32
 	);
 }
 
+/*
 void CommandBuffer::beginCompute()
 {
-	cauto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
+auto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
 
-	vkWaitForFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetCommandPool(g_vkCore->m_device, currentFrame.commandPool, 0);
+vkWaitForFences(g_vkCore->m_device, 1, &currentFrame.getInFlightFence(), VK_TRUE, UINT64_MAX);
+currentFrame.resetCommandPool();
 
-	VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	LLT_VK_CHECK(
-		vkBeginCommandBuffer(m_buffer, &commandBufferBeginInfo),
-		"Failed to begin recording compute command buffer"
-	);
+LLT_VK_CHECK(
+vkBeginCommandBuffer(m_buffer, &commandBufferBeginInfo),
+"Failed to begin recording compute command buffer"
+);
 }
 
 void CommandBuffer::endCompute(VkSemaphore signalSemaphore)
 {
-	cauto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame();
+cauto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame();
 
-	LLT_VK_CHECK(
-		vkEndCommandBuffer(m_buffer),
-		"Failed to record compute command buffer"
-	);
+LLT_VK_CHECK(
+vkEndCommandBuffer(m_buffer),
+"Failed to record compute command buffer"
+);
 
-	VkSubmitInfo submitInfo = {};
+VkSubmitInfo submitInfo = {};
 
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_buffer;
+submitInfo.commandBufferCount = 1;
+submitInfo.pCommandBuffers = &m_buffer;
 
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &signalSemaphore;
+submitInfo.signalSemaphoreCount = 1;
+submitInfo.pSignalSemaphores = &signalSemaphore;
 
-	vkResetFences(g_vkCore->m_device, 1, &currentFrame.inFlightFence);
+vkResetFences(g_vkCore->m_device, 1, &currentFrame.getInFlightFence());
 
-	LLT_VK_CHECK(
-		vkQueueSubmit(g_vkCore->m_computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.inFlightFence),
-		"Failed to submit compute command buffer"
-	);
+LLT_VK_CHECK(
+vkQueueSubmit(g_vkCore->m_computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.getInFlightFence()),
+"Failed to submit compute command buffer"
+);
 }
 
 void CommandBuffer::dispatch(uint32_t gcX, uint32_t gcY, uint32_t gcZ)
 {
-	vkCmdDispatch(m_buffer, gcX, gcY, gcZ);
+vkCmdDispatch(m_buffer, gcX, gcY, gcZ);
 }
+*/
 
 VkCommandBuffer CommandBuffer::getHandle() const
 {

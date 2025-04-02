@@ -1,224 +1,316 @@
 #include "image.h"
-#include "math/colour.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "third_party/stb_image.h"
+#include "core/common.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "third_party/stb_image_write.h"
+#include "core.h"
+#include "toolbox.h"
+#include "image_view.h"
 
-using namespace llt;
-
-static void _stbi_write(void *context, void *data, int size)
-{
-	((Stream *)context)->write((char *)data, size);
-}
+using namespace mgp;
 
 Image::Image()
-	: m_pixels(nullptr)
+	: m_image(VK_NULL_HANDLE)
+	, m_layout()
+	, m_core(nullptr)
 	, m_width(0)
 	, m_height(0)
-	, m_channels(0)
-	, m_stbiManaged(false)
-	, m_format(FORMAT_RGBA8)
+	, m_depth(1)
+	, m_format()
+	, m_type()
+	, m_tiling()
+	, m_usage()
+	, m_mipmapCount(1)
+	, m_samples(VK_SAMPLE_COUNT_1_BIT)
+	, m_allocation()
+	, m_allocationInfo()
+	, m_transient(false)
+	, m_isUAV(false)
 {
-}
-
-Image::Image(const String &path)
-	: Image(path.cstr())
-{
-}
-
-Image::Image(const char *path)
-	: Image()
-{
-	load(path);
-}
-
-Image::Image(int width, int height)
-	: m_width(width)
-	, m_height(height)
-	, m_channels(0)
-	, m_stbiManaged(false)
-	, m_format(FORMAT_RGBA8)
-{
-	m_pixels = new Colour[width * height];
 }
 
 Image::~Image()
 {
-	free();
+	vmaDestroyImage(m_core->getVMAAllocator(), m_image, m_allocation);
+	m_image = VK_NULL_HANDLE;
 }
 
-void Image::load(const String &path)
+void Image::create(
+	VulkanCore *core,
+	unsigned width, unsigned height, unsigned depth,
+	VkFormat format,
+	VkImageViewType type,
+	VkImageTiling tiling,
+	uint32_t mipmaps,
+	VkSampleCountFlagBits samples,
+	bool transient,
+	bool uav
+)
 {
-	load(path.cstr());
-}
+	m_core = core;
 
-void Image::load(const char *path)
-{
-	int w, h, channels;
+	m_width = width;
+	m_height = height;
+	m_depth = depth;
 
-	if (stbi_is_hdr(path))
+	m_format = format;
+	m_type = type;
+	m_tiling = tiling;
+
+	m_mipmapCount = mipmaps;
+	m_samples = samples;
+
+	m_transient = transient;
+	m_isUAV = uav;
+
+	VkImageType imageType = VK_IMAGE_TYPE_MAX_ENUM;
+
+	switch (m_type)
 	{
-		m_pixels = stbi_loadf(path, &w, &h, &channels, 4);
-		m_format = FORMAT_RGBAF;
+		case VK_IMAGE_VIEW_TYPE_1D:
+			imageType = VK_IMAGE_TYPE_1D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+			imageType = VK_IMAGE_TYPE_1D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_2D:
+			imageType = VK_IMAGE_TYPE_2D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+			imageType = VK_IMAGE_TYPE_2D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_3D:
+			imageType = VK_IMAGE_TYPE_3D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_CUBE:
+			imageType = VK_IMAGE_TYPE_2D;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+			imageType = VK_IMAGE_TYPE_2D;
+			break;
+
+		default:
+			MGP_ERROR("Failed to find VkImageType given VkImageViewType: %d", m_type);
+	}
+
+	if (m_transient)
+	{
+		m_usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	}
 	else
 	{
-		m_pixels = stbi_load(path, &w, &h, &channels, 4);
-		m_format = FORMAT_RGBA8;
-
-		if (!m_pixels)
-			LLT_ERROR("Couldn't load image :(");
+		m_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	}
 
-	this->m_width = w;
-	this->m_height = h;
-	this->m_channels = channels;
+	VkImageCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	createInfo.imageType = imageType;
+	createInfo.extent.width = m_width;
+	createInfo.extent.height = m_height;
+	createInfo.extent.depth = m_depth;
+	createInfo.mipLevels = m_mipmapCount;
+	createInfo.arrayLayers = getFaceCount();
+	createInfo.format = m_format;
+	createInfo.tiling = m_tiling;
+	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	createInfo.usage = m_usage;
+	createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	createInfo.samples = m_samples;
+	createInfo.flags = 0;
 
-	this->m_stbiManaged = true;
-}
-
-void Image::free()
-{
-	if (!m_pixels) {
-		return;
-	}
-
-	if (m_stbiManaged) {
-		stbi_image_free(m_pixels);
-	} else {
-		delete[] (Colour *)m_pixels;
-	}
-
-	m_pixels = nullptr;
-}
-
-void Image::paint(const BrushFn &brush)
-{
-	paint(RectI(0, 0, m_width, m_height), brush);
-}
-
-void Image::paint(const RectI &rect, const BrushFn &brush)
-{
-	for (int y = 0; y < rect.h; y++)
+	if (isUAV())
 	{
-		for (int x = 0; x < rect.w; x++)
-		{
-			int px = rect.x + x;
-			int py = rect.y + y;
-
-			int idx = (py * m_width) + px;
-
-			((Colour *)m_pixels)[idx] = brush(x, y);
-		}
-	}
-}
-
-Colour Image::getPixelAt(uint32_t x, uint32_t y) const
-{
-	return ((Colour *)m_pixels)[(y * m_width) + x];
-}
-
-void Image::setPixels(const Colour *data)
-{
-	mem::copy(m_pixels, data, sizeof(Colour) * getPixelCount());
-}
-
-void Image::setPixels(uint64_t dstFirst, const Colour *data, uint64_t srcFirst, uint64_t count)
-{
-	mem::copy((Colour *)m_pixels + sizeof(Colour) * dstFirst, data + sizeof(Colour) * srcFirst, sizeof(Colour) * count);
-}
-
-bool Image::saveToPng(const char *file) const
-{
-	FileStream fs(file, "wb");
-	return saveToPng(fs);
-}
-
-bool Image::saveToPng(Stream &stream) const
-{
-	LLT_ASSERT(m_pixels, "Pixel data cannot be null.");
-	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
-
-	stbi_write_force_png_filter = 0;
-	stbi_write_png_compression_level = 0;
-
-	if (stbi_write_png_to_func(_stbi_write, &stream, m_width, m_height, 4, m_pixels, m_width * 4) != 0) {
-		return true;
-	} else {
-		LLT_ERROR("stbi_write_png_to_func(...) failed.");
+		createInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
 
-	return false;
-}
-
-bool Image::saveToJpg(const char *file, int quality) const
-{
-	FileStream fs(file, "wb");
-	return saveToJpg(fs, quality);
-}
-
-bool Image::saveToJpg(Stream &stream, int quality) const
-{
-	LLT_ASSERT(m_pixels, "Pixel data cannot be null.");
-	LLT_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
-
-	if (quality < 1) {
-		LLT_LOG("JPG quality value should be between [1, 100].");
-		quality = 1;
-	} else if (quality > 100) {
-		LLT_LOG("JPG quality value should be between [1, 100].");
-		quality = 100;
+	if (isCubemap())
+	{
+		createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
 
-	if (stbi_write_jpg_to_func(_stbi_write, &stream, m_width, m_height, 4, m_pixels, quality) != 0) {
-		return true;
-	} else {
-		LLT_ERROR("stbi_write_jpg_to_func(...) failed.");
+	if (isDepth())
+	{
+		createInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	else
+	{
+		createInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 
-	return false;
+	VmaAllocationCreateInfo vmaAllocInfo = {};
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	MGP_VK_CHECK(
+		vmaCreateImage(m_core->getVMAAllocator(), &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
+		"Failed to create image"
+	);
 }
 
-void *Image::getData()
+ImageView *Image::createView(
+	int layerCount,
+	int layer,
+	int baseMipLevel
+) const
 {
-	return m_pixels;
+	VkImageViewType viewType = m_type;
+
+	if (isCubemap() && layerCount == 1)
+	{
+		viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	}
+
+	VkImageViewCreateInfo viewCreateInfo = {};
+	viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	viewCreateInfo.image = m_image;
+	viewCreateInfo.viewType = viewType;
+	viewCreateInfo.format = m_format;
+
+	viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	viewCreateInfo.subresourceRange.baseMipLevel = baseMipLevel;
+	viewCreateInfo.subresourceRange.levelCount = m_mipmapCount - baseMipLevel;
+	viewCreateInfo.subresourceRange.baseArrayLayer = layer;
+	viewCreateInfo.subresourceRange.layerCount = layerCount;
+
+	if (isDepth())
+	{
+		// depth AND stencil is not allowed for sampling!
+		// so, use depth instead.
+		viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+
+	viewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+	VkImageView view = {};
+
+	MGP_VK_CHECK(
+		vkCreateImageView(m_core->getLogicalDevice(), &viewCreateInfo, nullptr, &view),
+		"Failed to create texture image view."
+	);
+
+	return new ImageView(m_core, view, m_format, m_usage);
 }
 
-const void *Image::getData() const
+VkImageMemoryBarrier2 Image::getBarrier(
+	VkImageLayout newLayout
+) const
 {
-	return m_pixels;
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+
+	barrier.oldLayout = m_layout;
+	barrier.newLayout = newLayout;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.image = m_image;
+
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = m_mipmapCount;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = getLayerCount();
+
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = 0;
+
+	barrier.srcStageMask = 0;
+	barrier.dstStageMask = 0;
+
+	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+		newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+	{
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
+
+	return barrier;
 }
 
-Image::Format Image::getFormat() const
+const VkImage &Image::getHandle() const
 {
-	return m_format;
+	return m_image;
 }
 
-uint32_t Image::getWidth() const
+const VkImageLayout &Image::getLayout() const
+{
+	return m_layout;
+}
+
+unsigned Image::getWidth() const
 {
 	return m_width;
 }
 
-uint32_t Image::getHeight() const
+unsigned Image::getHeight() const
 {
 	return m_height;
 }
 
-uint32_t Image::getPixelCount() const
+unsigned Image::getDepth() const
 {
-	return m_width * m_height;
+	return m_depth;
 }
 
-uint64_t Image::getSize() const
+VkFormat Image::getFormat() const
 {
-	uint64_t unit = m_format == FORMAT_RGBA8 ? sizeof(uint8_t) : sizeof(float);
-	return m_width * m_height * 4 * unit;
+	return m_format;
 }
 
-int Image::getChannels() const
+VkImageViewType Image::getType() const
 {
-	return m_channels;
+	return m_type;
+}
+
+VkImageTiling Image::getTiling() const
+{
+	return m_tiling;
+}
+
+uint32_t Image::getMipmapCount() const
+{
+	return m_mipmapCount;
+}
+
+VkSampleCountFlagBits Image::getSamples() const
+{
+	return m_samples;
+}
+
+bool Image::isTransient() const
+{
+	return m_transient;
+}
+
+bool Image::isUAV() const
+{
+	return m_isUAV;
+}
+
+bool Image::isCubemap() const
+{
+	return m_type == VK_IMAGE_VIEW_TYPE_CUBE;
+}
+
+bool Image::isDepth() const
+{
+	return vk_toolbox::hasStencilComponent(m_format);
+}
+
+unsigned Image::getLayerCount() const
+{
+	return (m_type == VK_IMAGE_VIEW_TYPE_1D_ARRAY || m_type == VK_IMAGE_VIEW_TYPE_2D_ARRAY) ? m_depth : getFaceCount();
+}
+
+unsigned Image::getFaceCount() const
+{
+	return isCubemap() ? 6 : 1;
 }

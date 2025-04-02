@@ -1,17 +1,19 @@
-#ifndef CAMERA_H_
-#define CAMERA_H_
+#pragma once
 
 #include <glm/mat4x4.hpp>
 
-namespace llt
+namespace mgp
 {
-class Camera
-{
+	class InputState;
+	class Platform;
+
+	class Camera
+	{
 	public:
 		Camera(float width, float height, float fov, float near, float far);
 		~Camera();
 
-		void update(float dt);
+		void update(const InputState *input, const Platform *platform, float dt);
 
 		glm::mat4 getView() const;
 		glm::mat4 getRotationMatrix() const;
@@ -39,5 +41,3 @@ class Camera
 		float m_targetPitch = 0.0f;
 	};
 }
-
-#endif // CAMERA_H_

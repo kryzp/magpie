@@ -1,10 +1,9 @@
-#ifndef CALC_H_
-#define CALC_H_
+#pragma once
 
 #include <limits>
 #include <cmath>
 
-namespace llt
+namespace mgp
 {
 	template <typename T>
 	class Calc
@@ -307,5 +306,3 @@ namespace llt
 		return std::numeric_limits<T>::infinity();
 	}
 }
-
-#endif // CALC_H_

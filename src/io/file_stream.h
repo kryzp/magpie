@@ -1,11 +1,10 @@
-#ifndef FILE_STREAM_H_
-#define FILE_STREAM_H_
+#pragma once
+
+#include <string>
 
 #include "stream.h"
 
-#include "container/string.h"
-
-namespace llt
+namespace mgp
 {
 	/**
 	 * File-specialized stream.
@@ -13,19 +12,12 @@ namespace llt
 	class FileStream : public Stream
 	{
 	public:
-		FileStream();
-		FileStream(const char *filename, const char *mode);
+		FileStream(const Platform *platform);
+		FileStream(const Platform *platform, const char *filename, const char *mode);
 
-		FileStream &open(const String &filename, const char *mode);
+		FileStream &open(const std::string &filename, const char *mode);
 		FileStream &open(const char *filename, const char *mode);
 
-		/*
-		 * Allows for iterating through each line in a file one-by-one.
-		 * Requires a variable "pointer" to be created beforehand and referenced
-		 * to cache the current line.
-		 */
-		bool getLine(String &str, int32_t &pointer);
+		bool getLine(std::string &str, int32_t &pointer);
 	};
 }
-
-#endif // FILE_STREAM_H_

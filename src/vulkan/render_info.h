@@ -1,36 +1,27 @@
-#ifndef VK_RENDER_PASS_BUILDER_H_
-#define VK_RENDER_PASS_BUILDER_H_
+#pragma once
+
+#include <vector>
 
 #include "third_party/volk.h"
 
-#include "container/array.h"
-#include "container/vector.h"
-
-#include "blend.h"
-
-namespace llt
+namespace mgp
 {
-	class Texture;
-	class TextureView;
+	class ImageView;
 	class VulkanCore;
-	class Swapchain;
 
-	/*
-	 * Responsible for building up the final vulkan render pass which is needed when starting to render.
-	 */
 	class RenderInfo
 	{
 	public:
-		RenderInfo();
+		RenderInfo(const VulkanCore *core);
 		~RenderInfo();
 
 		void clear();
 
-		void addColourAttachment(VkAttachmentLoadOp loadOp, const TextureView &view);
-		void addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve);
+		void addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view);
+		void addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve);
 
-		void addDepthAttachment(VkAttachmentLoadOp loadOp, const TextureView &view);
-		void addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve);
+		void addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view);
+		void addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve);
 
 		VkRenderingAttachmentInfoKHR &getColourAttachment(int idx);
 		VkRenderingAttachmentInfoKHR &getDepthAttachment();
@@ -48,7 +39,7 @@ namespace llt
 		int getColourAttachmentCount() const;
 		int getAttachmentCount() const;
 
-		const Vector<VkFormat> &getColourAttachmentFormats() const;
+		const std::vector<VkFormat> &getColourAttachmentFormats() const;
 		VkFormat getDepthAttachmentFormat() const;
 
 		uint32_t getWidth() const;
@@ -58,15 +49,15 @@ namespace llt
 		uint32_t m_width;
 		uint32_t m_height;
 
-		Vector<VkRenderingAttachmentInfoKHR> m_colourAttachments;
+		const VulkanCore *m_core;
+
+		std::vector<VkRenderingAttachmentInfoKHR> m_colourAttachments;
 		VkRenderingAttachmentInfoKHR m_depthAttachment;
 
-		Vector<VkFormat> m_colourFormats;
+		std::vector<VkFormat> m_colourFormats;
 
 		int m_attachmentCount;
 
 		VkSampleCountFlagBits m_samples;
 	};
 }
-
-#endif // VK_RENDER_PASS_BUILDER_H_

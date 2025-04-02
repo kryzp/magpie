@@ -1,3 +1,5 @@
+#include "common.hlsl"
+
 struct PSInput
 {
 	[[vk::location(0)]]
@@ -12,7 +14,6 @@ struct DataUBO
 
 ConstantBuffer<DataUBO> ubo : register(b0);
 
-#define MATH_PI 3.14159265359
 #define SAMPLE_COUNT 1024
 
 TextureCube environmentMap : register(t1);

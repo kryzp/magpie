@@ -1,9 +1,8 @@
-#ifndef MEMORY_STREAM_H_
-#define MEMORY_STREAM_H_
+#pragma once
 
 #include "stream.h"
 
-namespace llt
+namespace mgp
 {
 	/**
 	 * Memory-specialized stream.
@@ -11,8 +10,9 @@ namespace llt
 	class MemoryStream : public Stream
 	{
 	public:
-		MemoryStream();
-		MemoryStream(void *memory, uint64_t length);
+		MemoryStream(const Platform *platform);
+		MemoryStream(const Platform *platform, void *memory, uint64_t length);
+
 		MemoryStream &open(void *memory, uint64_t length);
 	};
 
@@ -22,10 +22,9 @@ namespace llt
 	class ConstMemoryStream : public Stream
 	{
 	public:
-		ConstMemoryStream();
-		ConstMemoryStream(const void *memory, uint64_t length);
+		ConstMemoryStream(const Platform *platform);
+		ConstMemoryStream(const Platform *platform, const void *memory, uint64_t length);
+
 		ConstMemoryStream &open(const void *memory, uint64_t length);
 	};
 }
-
-#endif // MEMORY_STREAM_H_

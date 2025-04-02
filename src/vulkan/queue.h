@@ -1,54 +1,71 @@
-#ifndef VK_QUEUE_H
-#define VK_QUEUE_H
+#pragma once
+
+#include <array>
+#include <vector>
 
 #include "third_party/volk.h"
 
-#include "core/common.h"
-
-#include "container/optional.h"
-
-namespace llt
+namespace mgp
 {
-	enum QueueFamily
-	{
-		QUEUE_FAMILY_GRAPHICS = 0,
-		QUEUE_FAMILY_COMPUTE,
-		QUEUE_FAMILY_TRANSFER,
-		QUEUE_FAMILY_MAX_ENUM
-	};
+	class VulkanCore;
 
 	class Queue
 	{
 	public:
-		struct FrameData
+		constexpr static int FRAMES_IN_FLIGHT = 3;
+
+		class FrameData
 		{
-			VkFence inFlightFence;
-			VkCommandPool commandPool;
-			VkCommandBuffer commandBuffer;
+			constexpr static uint32_t INIT_COMMAND_BUFFER_COUNT = 4;
+
+		public:
+			FrameData();
+			~FrameData() = default;
+
+			void create(const VulkanCore *core, int queueFamilyIndex);
+			void destroy() const;
+
+			VkCommandBuffer getFreeBuffer();
+
+			void resetCommandPool();
+
+			const VkCommandPool &getCommandPool() const;
+
+			const VkFence &getInFlightFence() const;
+			const VkFence &getInstantSubmitFence() const;
+
+		private:
+			void expandBuffers(int n);
+
+			VkCommandPool m_commandPool;
+
+			unsigned m_freeIndex;
+			std::vector<VkCommandBuffer> m_freeBuffers;
+
+			VkFence m_inFlightFence;
+			VkFence m_instantSubmitFence;
+
+			const VulkanCore *m_core;
 		};
 
 		Queue();
-		~Queue();
+		~Queue() = default;
 
-		void init(VkQueue queue);
-		void setData(QueueFamily family, uint32_t familyIdx);
+		void create(const VulkanCore *core, unsigned index);
+		void destroy();
 
-		FrameData &getCurrentFrame();
-		FrameData &getFrame(int idx);
+		void setFamilyIndex(unsigned index);
 
-		VkQueue getQueue() const;
-		
-		QueueFamily getFamily() const;
-		Optional<uint32_t> getFamilyIdx() const;
+		const VkQueue &getHandle() const;
+		unsigned getFamilyIndex() const;
+
+		FrameData &getFrame(int frame);
+		const FrameData &getFrame(int frame) const;
 
 	private:
 		VkQueue m_queue;
-		
-		QueueFamily m_family;
-		Optional<uint32_t> m_familyIdx;
+		unsigned m_familyIndex;
 
-		FrameData m_frames[mgc::FRAMES_IN_FLIGHT];
+		std::array<FrameData, FRAMES_IN_FLIGHT> m_frames;
 	};
 }
-
-#endif // VK_QUEUE_H

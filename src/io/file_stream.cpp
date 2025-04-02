@@ -2,52 +2,46 @@
 
 #include "core/platform.h"
 
-using namespace llt;
+using namespace mgp;
 
-FileStream::FileStream()
-	: Stream()
+FileStream::FileStream(const Platform *platform)
+	: Stream(platform)
 {
 }
 
-FileStream::FileStream(const char *filename, const char *mode)
-	: Stream()
+FileStream::FileStream(const Platform *platform, const char *filename, const char *mode)
+	: Stream(platform)
 {
 	open(filename, mode);
 }
 
-FileStream &FileStream::open(const String &filename, const char *mode)
+FileStream &FileStream::open(const std::string &filename, const char *mode)
 {
-	return open(filename.cstr(), mode);
+	return open(filename.c_str(), mode);
 }
 
 FileStream &FileStream::open(const char *filename, const char *mode)
 {
-	p_stream = g_platform->streamFromFile(filename, mode);
+	p_stream = p_platform->streamFromFile(filename, mode);
 	return *this;
 }
 
-bool FileStream::getLine(String &str, int32_t &pointer)
+bool FileStream::getLine(std::string &str, int32_t &pointer)
 {
-	// clear the current line string
 	str.clear();
 
 	char c;
+
 	do
 	{
-		// read the next character and add it to the current line string
 		read(&c, 1);
-		str.pushBack(c);
+		str.push_back(c);
 
-		// move forward
 		pointer++;
 
-		// if we hit the end of the file, exit and return false
-		// this is because this function is best used in a while() loop, so returning false will automatically exit the loop
-		if (pointer > size()) {
+		if (pointer > getSize())
 			return false;
-		}
 
-		// move the stream to the position of our pointer
 		seek(pointer);
 	}
 	while (c != '\n');

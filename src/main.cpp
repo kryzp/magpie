@@ -1,11 +1,12 @@
 #include "core/app.h"
 
-using namespace llt;
+using namespace mgp;
 
 int main(void)
 {
 	Config config;
-	config.name = "Lilythorn";
+	config.windowName = "Magpie Demo";
+	config.engineName = "Magpie";
 	config.width = 1280;
 	config.height = 720;
 	config.targetFPS = 144;
@@ -13,12 +14,13 @@ int main(void)
 	config.flags = 0;
 	config.vsync = true;
 	config.windowMode = WINDOW_MODE_WINDOWED_BIT;
-	config.flags = Config::FLAG_CENTRE_WINDOW_BIT;
+	config.flags = CONFIG_FLAG_CENTRE_WINDOW_BIT | CONFIG_FLAG_RESIZABLE_BIT;
 
-	g_app = new App(config);
-	g_app->run();
+	App *app = new App(config);
+
+	app->run();
 	
-	delete g_app;
+	delete app;
 
 	return 0;
 }

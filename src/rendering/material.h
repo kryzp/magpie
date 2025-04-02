@@ -1,36 +1,24 @@
-#ifndef MATERIAL_H_
-#define MATERIAL_H_
+#pragma once
 
-#include "core/common.h"
+#include <vector>
+#include <string>
 
-#include "container/array.h"
-#include "container/string.h"
+#include "vulkan/image_view.h"
+#include "vulkan/vertex_format.h"
+#include "vulkan/pipeline_cache.h"
+#include "vulkan/bindless.h"
 
-#include "vulkan/texture.h"
-#include "vulkan/shader.h"
-#include "vulkan/pipeline_definition.h"
-
-namespace llt
+namespace mgp
 {
 	class SubMesh;
+	class Shader;
+	class GPUBuffer;
 
 	enum ShaderPassType
 	{
 		SHADER_PASS_FORWARD,
 		SHADER_PASS_SHADOW,
 		SHADER_PASS_MAX_ENUM
-	};
-
-	struct ShaderPass
-	{
-		ShaderEffect *shader;
-		GraphicsPipelineDefinition pipeline;
-
-		ShaderPass()
-			: shader(nullptr)
-			, pipeline()
-		{
-		}
 	};
 
 	class Technique
@@ -41,26 +29,24 @@ namespace llt
 
 		VertexFormat vertexFormat;
 
-		ShaderEffect *passes[SHADER_PASS_MAX_ENUM];
-		// todo: default parameters
+		Shader *passes[SHADER_PASS_MAX_ENUM];
 
-		bool depthTest = true;
-		bool depthWrite = true;
+		// todo: default parameters
 	};
 
 	struct MaterialData
 	{
-		Vector<TextureView> textures;
-		String technique;
+		std::string technique;
+		std::vector<bindless::Handle> textures;
 
-//		void *parameters;
-//		uint64_t parameterSize;
+		void *parameters;
+		uint64_t parameterSize;
 
 		MaterialData()
-			: textures()
-			, technique("UNDEFINED")
-//			, parameters(nullptr)
-//			, parameterSize(0)
+			: technique("UNDEFINED")
+			, textures()
+			, parameters(nullptr)
+			, parameterSize(0)
 		{
 		}
 
@@ -68,9 +54,8 @@ namespace llt
 		{
 			uint64_t result = 0;
 
-			for (auto &t : textures) {
+			for (auto &t : textures)
 				hash::combine(&result, &t);
-			}
 
 			hash::combine(&result, &technique);
 
@@ -78,29 +63,26 @@ namespace llt
 		}
 	};
 
-	class Material
+	struct Material
 	{
-		friend class MaterialRegistry;
-
-	public:
 		Material() = default;
 		~Material() = default;
 
-		uint64_t getHash() const;
+		uint64_t getHash() const
+		{
+			uint64_t result = 0;
 
-		const GraphicsPipelineDefinition &getPipelineDef(ShaderPassType pass) const;
+			for (auto &t : textures)
+				hash::combine(&result, &t);
 
-		const Vector<BindlessResourceHandle> &getTextures() const;
+			hash::combine(&result, &passes[SHADER_PASS_FORWARD]);
+			hash::combine(&result, &passes[SHADER_PASS_SHADOW]);
 
-		const BindlessResourceHandle &getBindlessHandle() const;
+			return result;
+		}
 
-	private:
-		BindlessResourceHandle m_bindlessHandle;
-
-		Vector<BindlessResourceHandle> m_textures;
-//		DynamicShaderBuffer *m_parameterBuffer;
-		ShaderPass m_passes[SHADER_PASS_MAX_ENUM];
+		std::vector<bindless::Handle> textures;
+		GPUBuffer *parameterBuffer;
+		GraphicsPipelineDefinition passes[SHADER_PASS_MAX_ENUM];
 	};
 }
-
-#endif // MATERIAL_H_

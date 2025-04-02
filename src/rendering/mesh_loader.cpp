@@ -1,119 +1,31 @@
 #include "mesh_loader.h"
-#include "texture_mgr.h"
-#include "material_system.h"
 
 #include <filesystem>
 
-llt::MeshLoader *llt::g_meshLoader = nullptr;
+#include "core/common.h"
 
-using namespace llt;
+#include "vulkan/vertex_format.h"
+#include "vulkan/image.h"
+#include "vulkan/image_view.h"
 
-MeshLoader::MeshLoader()
-	: m_meshCache()
-	, m_importer()
-	, m_quadMesh(nullptr)
-	, m_cubeMesh(nullptr)
+#include "mesh.h"
+#include "material.h"
+
+using namespace mgp;
+
+MeshLoader::MeshLoader(VulkanCore *core)
+	: m_importer()
+	, m_core(core)
 {
-	createQuadMesh();
-	createCubeMesh();
 }
 
 MeshLoader::~MeshLoader()
 {
-	delete m_quadMesh;
-	delete m_cubeMesh;
-
-	for (auto &[name, mesh] : m_meshCache) {
-		delete mesh;
-	}
-
-	m_meshCache.clear();
 }
 
-void MeshLoader::createQuadMesh()
+Mesh *MeshLoader::loadMesh(const std::string &path)
 {
-	Vector<PrimitiveUVVertex> vertices =
-	{
-		{ { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f } },
-		{ {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f } },
-		{ {  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f } },
-		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f } }
-	};
-
-	Vector<uint16_t> indices =
-	{
-		0, 1, 2,
-		0, 2, 3
-	};
-
-	m_quadMesh = new SubMesh();
-	m_quadMesh->build(
-		g_primitiveUvVertexFormat,
-		vertices.data(), vertices.size(),
-		indices.data(), indices.size()
-	);
-}
-
-void MeshLoader::createCubeMesh()
-{
-	Vector<PrimitiveVertex> vertices =
-	{
-		{ { -1.0f,  1.0f, -1.0f } },
-		{ { -1.0f, -1.0f, -1.0f } },
-		{ {  1.0f, -1.0f, -1.0f } },
-		{ {  1.0f,  1.0f, -1.0f } },
-		{ { -1.0f,  1.0f,  1.0f } },
-		{ { -1.0f, -1.0f,  1.0f } },
-		{ {  1.0f, -1.0f,  1.0f } },
-		{ {  1.0f,  1.0f,  1.0f } }
-	};
-
-	Vector<uint16_t> indices =
-	{
-		0, 2, 1,
-		2, 0, 3,
-
-		7, 5, 6,
-		5, 7, 4,
-
-		4, 1, 5,
-		1, 4, 0,
-
-		3, 6, 2,
-		6, 3, 7,
-
-		1, 6, 5,
-		6, 1, 2,
-
-		4, 3, 0,
-		3, 4, 7
-	};
-
-	m_cubeMesh = new SubMesh();
-	m_cubeMesh->build(
-		g_primitiveVertexFormat,
-		vertices.data(), vertices.size(),
-		indices.data(), indices.size()
-	);
-}
-
-SubMesh *MeshLoader::getQuadMesh()
-{
-	return m_quadMesh;
-}
-
-SubMesh *MeshLoader::getCubeMesh()
-{
-	return m_cubeMesh;
-}
-
-Mesh *MeshLoader::loadMesh(const String &name, const String &path)
-{
-	if (m_meshCache.contains(name)) {
-		return m_meshCache.get(name);
-	}
-
-	const aiScene *scene = m_importer.ReadFile(path.cstr(),
+	const aiScene *scene = m_importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate |
 		aiProcess_FlipWindingOrder |
 		aiProcess_CalcTangentSpace |
@@ -122,16 +34,15 @@ Mesh *MeshLoader::loadMesh(const String &name, const String &path)
 
 	if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		LLT_ERROR("Failed to load mesh at path: %s, Error: %s", path.cstr(), m_importer.GetErrorString());
+		MGP_ERROR("Failed to load mesh at path: %s, Error: %s", path.c_str(), m_importer.GetErrorString());
 		return nullptr;
 	}
 
-	Mesh *mesh = new Mesh();
-
-	std::filesystem::path filePath(path.cstr());
+	std::filesystem::path filePath(path);
 	std::string directory = filePath.parent_path().string() + "/";
 
-	mesh->setDirectory(directory.c_str());
+	Mesh *mesh = new Mesh(m_core);
+	mesh->setDirectory(directory);
 
 	aiMatrix4x4 identity(
 		1.0f, 0.0f, 0.0f, 0.0f,
@@ -142,7 +53,6 @@ Mesh *MeshLoader::loadMesh(const String &name, const String &path)
 
 	processNodes(mesh, scene->mRootNode, scene, identity);
 
-	m_meshCache.insert(name, mesh);
 	return mesh;
 }
 
@@ -162,14 +72,14 @@ void MeshLoader::processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, co
 
 void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
 {
-	Vector<ModelVertex> vertices(assimpMesh->mNumVertices);
-	Vector<uint16_t> indices;
+	std::vector<vtx::ModelVertex> vertices(assimpMesh->mNumVertices);
+	std::vector<uint16_t> indices;
 
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
 	{
 		const aiVector3D &vtx = transform * assimpMesh->mVertices[i];
 
-		ModelVertex vertex = {};
+		vtx::ModelVertex vertex = {};
 
 		vertex.position = { vtx.x, vtx.y, vtx.z };
 
@@ -229,16 +139,17 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 
 		for (int j = 0; j < face.mNumIndices; j++)
 		{
-			indices.pushBack(face.mIndices[j]);
+			indices.push_back(face.mIndices[j]);
 		}
 	}
 
 	submesh->build(
-		g_modelVertexFormat,
+		vtx::MODEL_VERTEX_FORMAT,
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
 
+	/*
 	if (assimpMesh->mMaterialIndex >= 0)
 	{
 		const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
@@ -246,53 +157,51 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				g_materialSystem->getDiffuseFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				g_materialSystem->getAOFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	g_materialSystem->getRoughnessMetallicFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
+		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				g_materialSystem->getDiffuseFallback());
+		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				g_materialSystem->getAOFallback());
+		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	g_materialSystem->getRoughnessMetallicFallback());
+		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
+		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
 
-		Material *material = g_materialSystem->getRegistry().buildMaterial(data);
+		Material *material = nullptr;//g_materialSystem->getRegistry().buildMaterial(data);
 
 		submesh->setMaterial(material);
 	}
+	*/
 }
 
-void MeshLoader::fetchMaterialBoundTextures(Vector<TextureView> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, Texture *fallback)
+void MeshLoader::fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
 {
-	Vector<Texture *> maps = loadMaterialTextures(material, type, localPath);
+	std::vector<Image *> maps = loadMaterialTextures(material, type, localPath);
 
 	if (maps.size() >= 1)
 	{
-		textures.pushBack(maps[0]->getStandardView());
+		//textures.push_back(maps[0]->getStandardView());
 	}
 	else
 	{
 		if (fallback)
 		{
-			textures.pushBack(fallback->getStandardView());
+			//textures.push_back(fallback->getStandardView());
 		}
 	}
 }
 
-Vector<Texture *> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type, const String &localPath)
+std::vector<Image *> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath)
 {
-	Vector<Texture *> result;
+	std::vector<Image *> result;
 
 	for (int i = 0; i < material->GetTextureCount(type); i++)
 	{
 		aiString texturePath;
 		material->GetTexture(type, i, &texturePath);
 
-		aiString basePath = aiString(localPath.cstr());
+		aiString basePath = aiString(localPath.c_str());
 		basePath.Append(texturePath.C_Str());
 
-		Texture *tex = g_textureManager->getTexture(basePath.C_Str());
+		Image *tex = nullptr;//g_textureManager->load(basePath.C_Str(), basePath.C_Str());
 
-		if (!tex)
-			tex = g_textureManager->load(basePath.C_Str(), basePath.C_Str());
-
-		result.pushBack(tex);
+		result.push_back(tex);
 	}
 
 	return result;

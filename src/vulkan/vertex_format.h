@@ -1,6 +1,8 @@
 #ifndef VERTEX_DESCRIPTOR_H_
 #define VERTEX_DESCRIPTOR_H_
 
+#include <vector>
+
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
@@ -8,9 +10,7 @@
 
 #include "core/common.h"
 
-#include "container/vector.h"
-
-namespace llt
+namespace mgp
 {
 	struct AttributeDescription
 	{
@@ -24,53 +24,52 @@ namespace llt
 		VertexFormat();
 		~VertexFormat();
 
-		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const Vector<AttributeDescription> &attributes);
+		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const std::vector<AttributeDescription> &attributes);
 
 		void clearAttributes();
 		void clearBindings();
 		
-		const Vector<VkVertexInputAttributeDescription> &getAttributeDescriptions() const;
-		const Vector<VkVertexInputBindingDescription> &getBindingDescriptions() const;
+		const std::vector<VkVertexInputAttributeDescription> &getAttributeDescriptions() const;
+		const std::vector<VkVertexInputBindingDescription> &getBindingDescriptions() const;
 
 		uint64_t getVertexSize() const;
 
 	private:
-		Vector<VkVertexInputAttributeDescription> m_attributes;
-		Vector<VkVertexInputBindingDescription> m_bindings;
+		std::vector<VkVertexInputAttributeDescription> m_attributes;
+		std::vector<VkVertexInputBindingDescription> m_bindings;
 
 		uint64_t m_size;
 	};
 
-	// //
-
-	void initVertexTypes();
-
-	struct PrimitiveVertex
+	namespace vtx
 	{
-		glm::vec3 position;
-	};
+		struct PrimitiveVertex
+		{
+			glm::vec3 position;
+		};
 
-	extern VertexFormat g_primitiveVertexFormat;
+		struct PrimitiveUVVertex
+		{
+			glm::vec3 position;
+			glm::vec2 uv;
+		};
 
-	struct PrimitiveUVVertex
-	{
-		glm::vec3 position;
-		glm::vec2 uv;
-	};
+		struct ModelVertex
+		{
+			glm::vec3 position;
+			glm::vec2 uv;
+			glm::vec3 colour;
+			glm::vec3 normal;
+			glm::vec3 tangent;
+			glm::vec3 bitangent;
+		};
 
-	extern VertexFormat g_primitiveUvVertexFormat;
+		extern VertexFormat PRIMITIVE_VERTEX_FORMAT;
+		extern VertexFormat PRIMTIIVE_UV_VERTEX_FORMAT;
+		extern VertexFormat MODEL_VERTEX_FORMAT;
 
-	struct ModelVertex
-	{
-		glm::vec3 position;
-		glm::vec2 uv;
-		glm::vec3 colour;
-		glm::vec3 normal;
-		glm::vec3 tangent;
-		glm::vec3 bitangent;
-	};
-
-	extern VertexFormat g_modelVertexFormat;
+		void initVertexTypes();
+	}
 }
 
 #endif // VERTEX_DESCRIPTOR_H_

@@ -1,38 +1,40 @@
-#ifndef COMMON_H_
-#define COMMON_H_
+#pragma once
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <string>
 
-#ifdef LLT_DEBUG
+#ifdef MGP_DEBUG
 
 #include <stdio.h>
 
 // todo: use static_assert
-#define LLT_ASSERT(_exp, _msg, ...) do{if(!(_exp)){::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}}while(0)
-#define LLT_ERROR(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}while(0)
-#define LLT_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
+#define MGP_ASSERT(_exp, _msg, ...) do{if(!(_exp)){::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}}while(0)
+#define MGP_ERROR(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}while(0)
+#define MGP_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
 
 #else
 
-#define LLT_ASSERT(_exp, _msg)
-#define LLT_ERROR(_msg)
-#define LLT_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
+#define MGP_ASSERT(_exp, _msg)
+#define MGP_ERROR(_msg)
+#define MGP_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
 
 #endif
 
-#define LLT_BYTES    (_x) (_x)
-#define LLT_KILOBYTES(_x) (_x * 1024LL)
-#define LLT_MEGABYTES(_x) (_x * 1024LL * 1024LL)
-#define LLT_GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
-#define LLT_TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
+#define MGP_VK_CHECK(_func_call, _error_msg) do{if(VkResult _VK_CHECK_RESULT_ABCDEFGH=_func_call;_VK_CHECK_RESULT_ABCDEFGH!=VK_SUCCESS){MGP_ERROR(_error_msg ": %d",_VK_CHECK_RESULT_ABCDEFGH);}}while(0);
 
-#define LLT_ARRAY_LENGTH(_arr) (sizeof((_arr)) / sizeof((*_arr)))
-#define LLT_SWAP(_x, _y) (::__lltutils_swap((_x), (_y)))
-#define LLT_SID(_str) (hash::calc(0, (_str)))
+#define MGP_BYTES    (_x) (_x)
+#define MGP_KILOBYTES(_x) (_x * 1024LL)
+#define MGP_MEGABYTES(_x) (_x * 1024LL * 1024LL)
+#define MGP_GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
+#define MGP_TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
+
+#define MGP_ARRAY_LENGTH(_arr) (sizeof((_arr)) / sizeof((*_arr)))
+#define MGP_SWAP(_x, _y) (::__mgputils_swap((_x), (_y)))
+#define MGP_SID(_str) (hash::calc(0, (_str)))
 
 template <typename T>
-inline void __lltutils_swap(T &x, T &y)
+inline void __mgputils_swap(T &x, T &y)
 {
 	T tmp = x;
 	x = y;
@@ -45,11 +47,8 @@ using byte  = unsigned char;
 
 #define cauto const auto
 
-namespace llt
+namespace mgp
 {
-	template <uint64_t Size> class Str;
-	using String = Str<512>;
-
 	// hashing implementation
 	namespace hash
 	{
@@ -84,7 +83,7 @@ namespace llt
 		}
 
 		template <> uint64_t calc(uint64_t start, const char *str);
-		template <> uint64_t calc(uint64_t start, const String *str);
+		template <> uint64_t calc(uint64_t start, const std::string *str);
 	}
 
 	// wrapper around C memory functions to make code more legible
@@ -120,14 +119,4 @@ namespace llt
 		int toInt(const char *str);
 		float toFloat(const char *str);
 	}
-
-	// magic constants
-	namespace mgc
-	{
-		static constexpr uint64_t FRAMES_IN_FLIGHT = 3;
-		static constexpr uint64_t RASTER_SHADER_COUNT = 2;
-		static constexpr int MAX_SAMPLER_MIP_LEVELS = 4;
-	}
 }
-
-#endif // COMMON_H_

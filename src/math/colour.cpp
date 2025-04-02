@@ -2,7 +2,7 @@
 
 #include "math/calc.h"
 
-using namespace llt;
+using namespace mgp;
 
 Colour::Colour()
 	: a(0)

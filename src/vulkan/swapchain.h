@@ -1,81 +1,92 @@
-#ifndef VK_SWAPCHAIN_H_
-#define VK_SWAPCHAIN_H_
+#pragma once
 
-#include <glm/vec4.hpp>
+#include <array>
+#include <vector>
 
 #include "third_party/volk.h"
 
-#include "generic_render_target.h"
-#include "util.h"
-#include "texture.h"
+#include "math/colour.h"
 
-namespace llt
+#include "core.h"
+#include "image.h"
+#include "image_view.h"
+#include "queue.h"
+#include "render_info.h"
+
+namespace mgp
 {
-	class VulkanCore;
+	class Platform;
+	class CommandBuffer;
 
-	// swapchain wrapper
-	class Swapchain : public GenericRenderTarget
+	class Swapchain
 	{
 	public:
-		Swapchain();
-		~Swapchain() override;
+		Swapchain(VulkanCore *core, const Platform *platform);
+		~Swapchain();
 
-		void finalise();
-		void createSurface();
+		void beginRendering(CommandBuffer &cmd);
+		void endRendering(CommandBuffer &cmd);
 
-		void createSwapChain();
-		void createSwapChainImageViews();
-
-		void cleanUp() override;
-		void cleanUpSwapChain();
-		void cleanUpTextures();
-
-		void beginRendering(CommandBuffer &cmd) override;
-		void endRendering(CommandBuffer &cmd) override;
-
-		void setClearColour(int idx, const Colour &colour) override;
-
-		void setDepthStencilClear(float depth, uint32_t stencil) override;
+		void setClearColour(const Colour &colour);
+		void setDepthStencilClear(float depth, uint32_t stencil);
 
 		void acquireNextImage();
 
-		void swapBuffers();
-
-		Texture *getAttachment(int idx) override;
-		Texture *getDepthAttachment() override;
+		const Image &getColourAttachment() const;
+		const Image &getDepthAttachment() const;
 
 		VkImage getCurrentSwapchainImage() const;
-		TextureView getCurrentSwapchainImageView() const;
+		VkImageView getCurrentSwapchainImageView() const;
+
+		unsigned getCurrentSwapchainImageIndex() const;
 
 		void onWindowResize(int width, int height);
 
-		VkSurfaceKHR getSurface() const;
+		VkSemaphoreSubmitInfo getRenderFinishedSemaphoreSubmitInfo() const;
+		VkSemaphoreSubmitInfo getImageAvailableSemaphoreSubmitInfo() const;
 
-		const VkSemaphoreSubmitInfo &getRenderFinishedSemaphoreSubmitInfo() const;
-		const VkSemaphoreSubmitInfo &getImageAvailableSemaphoreSubmitInfo() const;
+		const VkSwapchainKHR &getHandle() const;
+		const VkFormat &getSwapchainImageFormat() const;
+
+		RenderInfo &getRenderInfo();
+		const RenderInfo &getRenderInfo() const;
+
+		void rebuildSwapchain();
 
 	private:
-		void createColourResources(); // coloured visual component
-		void createDepthResources(); // depth component
+		void destroy();
 
-		void createSwapChainSyncObjects();
+		void createSwapchain();
+		void createSwapchainImageViews();
+		void createSwapchainSyncObjects();
 
-		void rebuildSwapChain();
+		void createColourResources();
+		void createDepthResources();
 
-		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;
-		Array<VkSemaphore, mgc::FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
+		std::array<VkSemaphore, Queue::FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;
+		std::array<VkSemaphore, Queue::FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
 
-		VkSwapchainKHR m_swapChain;
-		
-		Vector<VkImage> m_swapChainImages;
-		Vector<VkImageView> m_swapChainImageViews;
+		VkSwapchainKHR m_swapchain;
 
-		VkSurfaceKHR m_surface;
-		uint32_t m_currSwapChainImageIdx;
+		std::vector<VkImage> m_swapchainImages;
+		std::vector<VkImageView> m_swapchainImageViews;
 
-		Texture m_colour;
-		Texture m_depth;
+		VkFormat m_swapchainImageFormat;
+
+		unsigned m_currSwapchainImageIdx;
+
+		Image m_colour;
+		Image m_depth;
+
+		ImageView *m_colourView;
+		ImageView *m_depthView;
+
+		unsigned m_width;
+		unsigned m_height;
+
+		RenderInfo m_renderInfo;
+
+		VulkanCore *m_core;
+		const Platform *m_platform;
 	};
 }
-
-#endif // VK_SWAPCHAIN_H_

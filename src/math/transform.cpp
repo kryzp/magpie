@@ -1,6 +1,6 @@
 #include "transform.h"
 
-using namespace llt;
+using namespace mgp;
 
 Transform::Transform()
 	: m_matrix(glm::identity<glm::mat4>())
@@ -18,7 +18,8 @@ Transform::~Transform()
 
 glm::mat4 Transform::getMatrix()
 {
-	if (m_matrixDirty) {
+	if (m_matrixDirty)
+	{
 		rebuildMatrix();
 		m_matrixDirty = false;
 	}
@@ -29,7 +30,6 @@ glm::mat4 Transform::getMatrix()
 void Transform::rebuildMatrix()
 {
 	m_matrix = glm::identity<glm::mat4>();
-
 	m_matrix = glm::translate(glm::identity<glm::mat4>(), -m_origin) * m_matrix;
 	m_matrix = glm::mat4_cast(m_rotation) * m_matrix;
 	m_matrix = glm::scale(glm::identity<glm::mat4>(), m_scale) * m_matrix;

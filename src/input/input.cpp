@@ -1,245 +1,168 @@
 #include "input.h"
 
-llt::Input *llt::g_inputState = nullptr;
+using namespace mgp;
 
-using namespace llt;
-
-Input::Input()
+InputState::InputState()
 	: m_currentState()
 	, m_nextState()
 	, m_prevState()
 {
-	LLT_LOG("Input Initialized!");
+	MGP_LOG("Input Initialized!");
 }
 
-Input::~Input()
+InputState::~InputState()
 {
-	LLT_LOG("Input Destroyed!");
+	MGP_LOG("Input Destroyed!");
 }
 
-void Input::update()
+void InputState::update()
 {
 	// "shuffle" our input state forward
 	m_prevState = m_currentState;
 	m_currentState = m_nextState;
 }
 
-bool Input::isDown(const VirtualKey &k) const
-{
-	for (auto &kb : k.keyboardKeys) {
-		if (isDown(kb)) {
-			return true;
-		}
-	}
-
-	for (auto &mb : k.mouseButtons) {
-		if (isDown(mb)) {
-			return true;
-		}
-	}
-
-	for (int i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto &jsb : k.gamepadButtons) {
-			if (isDown(jsb, i)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool Input::isPressed(const VirtualKey &k) const
-{
-	for (auto &kb : k.keyboardKeys) {
-		if (isPressed(kb)) {
-			return true;
-		}
-	}
-
-	for (auto &mb : k.mouseButtons) {
-		if (isPressed(mb)) {
-			return true;
-		}
-	}
-
-	for (int i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto &jsb : k.gamepadButtons) {
-			if (isPressed(jsb, i)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool Input::isReleased(const VirtualKey &k) const
-{
-	for (auto &kb : k.keyboardKeys) {
-		if (isReleased(kb)) {
-			return true;
-		}
-	}
-
-	for (auto &mb : k.mouseButtons) {
-		if (isReleased(mb)) {
-			return true;
-		}
-	}
-
-	for (uint32_t i = 0; i < MAX_GAMEPADS; i++) {
-		for (auto &jsb : k.gamepadButtons) {
-			if (isReleased(jsb, i)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool Input::isDown(const KeyboardKey &k) const
+bool InputState::isDown(const KeyboardKey &k) const
 {
 	return m_currentState.keyboard.down[k];
 }
 
-bool Input::isPressed(const KeyboardKey &k) const
+bool InputState::isPressed(const KeyboardKey &k) const
 {
 	return m_currentState.keyboard.down[k] && !m_prevState.keyboard.down[k];
 }
 
-bool Input::isReleased(const KeyboardKey &k) const
+bool InputState::isReleased(const KeyboardKey &k) const
 {
 	return !m_currentState.keyboard.down[k] && m_prevState.keyboard.down[k];
 }
 
-bool Input::isDown(const MouseButton &mb) const
+bool InputState::isDown(const MouseButton &mb) const
 {
 	return m_currentState.mouse.down[mb];
 }
 
-bool Input::isPressed(const MouseButton &mb) const
+bool InputState::isPressed(const MouseButton &mb) const
 {
 	return m_currentState.mouse.down[mb] && !m_prevState.mouse.down[mb];
 }
 
-bool Input::isReleased(const MouseButton &mb) const
+bool InputState::isReleased(const MouseButton &mb) const
 {
 	return !m_currentState.mouse.down[mb] && m_prevState.mouse.down[mb];
 }
 
-bool Input::isDown(const GamepadButton &gpb, uint32_t id) const
+bool InputState::isDown(const GamepadButton &gpb, uint32_t id) const
 {
 	return m_currentState.gamepads[id].down[gpb];
 }
 
-bool Input::isPressed(const GamepadButton &gpb, uint32_t id) const
+bool InputState::isPressed(const GamepadButton &gpb, uint32_t id) const
 {
 	return m_currentState.gamepads[id].down[gpb] && !m_prevState.gamepads[id].down[gpb];
 }
 
-bool Input::isReleased(const GamepadButton &gpb, uint32_t id) const
+bool InputState::isReleased(const GamepadButton &gpb, uint32_t id) const
 {
 	return !m_currentState.gamepads[id].down[gpb] && m_prevState.gamepads[id].down[gpb];
 }
 
-glm::vec2 Input::getMousePosition() const
+glm::vec2 InputState::getMousePosition() const
 {
 	return m_currentState.mouse.position;
 }
 
-glm::vec2 Input::getMouseScreenPosition() const
+glm::vec2 InputState::getMouseScreenPosition() const
 {
 	return m_currentState.mouse.screenPosition;
 }
 
-glm::vec2 Input::getMouseWheel() const
+glm::vec2 InputState::getMouseWheel() const
 {
 	return m_currentState.mouse.wheel;
 }
 
-bool Input::shift() const
+bool InputState::shift() const
 {
 	return isDown(KB_KEY_LEFT_SHIFT) || isDown(KB_KEY_RIGHT_SHIFT);
 }
 
-bool Input::ctrl() const
+bool InputState::ctrl() const
 {
 	return isDown(KB_KEY_LEFT_CONTROL) || isDown(KB_KEY_RIGHT_CONTROL);
 }
 
-bool Input::alt() const
+bool InputState::alt() const
 {
 	return isDown(KB_KEY_LEFT_ALT) || isDown(KB_KEY_RIGHT_ALT);
 }
 
-const char *Input::text() const
+const char *InputState::text() const
 {
 	return m_currentState.keyboard.text;
 }
 
-glm::vec2 Input::getLeftStick(uint32_t id) const
+glm::vec2 InputState::getLeftStick(uint32_t id) const
 {
 	return m_currentState.gamepads[id].leftStick;
 }
 
-glm::vec2 Input::getRightStick(uint32_t id) const
+glm::vec2 InputState::getRightStick(uint32_t id) const
 {
 	return m_currentState.gamepads[id].rightStick;
 }
 
-float Input::getLeftTrigger(uint32_t id) const
+float InputState::getLeftTrigger(uint32_t id) const
 {
 	return m_currentState.gamepads[id].leftTrigger;
 }
 
-float Input::getRightTrigger(uint32_t id) const
+float InputState::getRightTrigger(uint32_t id) const
 {
 	return m_currentState.gamepads[id].rightTrigger;
 }
 
-void Input::onMouseWheel(float x, float y)
+void InputState::onMouseWheel(float x, float y)
 {
 	m_nextState.mouse.wheel = glm::vec2(x, y);
 }
 
-void Input::onMouseScreenMove(float x, float y)
+void InputState::onMouseScreenMove(float x, float y)
 {
 	m_nextState.mouse.screenPosition = glm::vec2(x, y);
 }
 
-void Input::onMouseMove(float x, float y)
+void InputState::onMouseMove(float x, float y)
 {
 	m_nextState.mouse.position = glm::vec2(x, y);
 }
 
-void Input::onMouseDown(uint64_t btn)
+void InputState::onMouseDown(uint64_t btn)
 {
 	m_nextState.mouse.down[btn] = true;
 }
 
-void Input::onMouseUp(uint64_t btn)
+void InputState::onMouseUp(uint64_t btn)
 {
 	m_nextState.mouse.down[btn] = false;
 }
 
-void Input::onKeyDown(uint64_t btn)
+void InputState::onKeyDown(uint64_t btn)
 {
 	m_nextState.keyboard.down[btn] = true;
 }
 
-void Input::onKeyUp(uint64_t btn)
+void InputState::onKeyUp(uint64_t btn)
 {
 	m_nextState.keyboard.down[btn] = false;
 }
 
-void Input::onTextUtf8(const char *text)
+void InputState::onTextUtf8(const char *text)
 {
 	cstr::concat(m_nextState.keyboard.text, text, MAX_TEXT_INPUT);
 }
 
-void Input::onGamepadButtonDown(uint64_t btn, int id)
+void InputState::onGamepadButtonDown(uint64_t btn, int id)
 {
 	if (id < 0)
 		return;
@@ -247,7 +170,7 @@ void Input::onGamepadButtonDown(uint64_t btn, int id)
 	m_nextState.gamepads[id].down[btn] = true;
 }
 
-void Input::onGamepadButtonUp(uint64_t btn, int id)
+void InputState::onGamepadButtonUp(uint64_t btn, int id)
 {
 	if (id < 0)
 		return;
@@ -255,7 +178,7 @@ void Input::onGamepadButtonUp(uint64_t btn, int id)
 	m_nextState.gamepads[id].down[btn] = false;
 }
 
-void Input::onGamepadMotion(int id, GamepadAxis axis, float value)
+void InputState::onGamepadMotion(int id, GamepadAxis axis, float value)
 {
 	if (id < 0)
 		return;

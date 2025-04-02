@@ -1,10 +1,9 @@
-#ifndef TRANSFORM_H_
-#define TRANSFORM_H_
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace llt
+namespace mgp
 {
 	class Transform
 	{
@@ -30,8 +29,5 @@ namespace llt
 		glm::vec3 m_origin;
 		glm::quat m_rotation;
 		glm::vec3 m_scale;
-
 	};
 };
-
-#endif // TRANSFORM_H_

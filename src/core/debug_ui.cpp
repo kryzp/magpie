@@ -1,23 +1,11 @@
 #include "debug_ui.h"
 
-#include "rendering/material_system.h"
-#include "rendering/light.h"
-
-#include "rendering/passes/post_process_pass.h"
-
 #include "third_party/imgui/imgui.h"
 
-using namespace llt;
-
-static float g_exposure;
-static float g_bloomRadius;
-static float g_bloomIntensity;
+using namespace mgp;
 
 void dbgui::init()
 {
-	g_exposure = g_postProcessPass.getExposure();
-	g_bloomRadius = g_postProcessPass.getBloomRadius();
-	g_bloomIntensity = g_postProcessPass.getBloomIntensity();
 }
 
 void dbgui::update()
@@ -45,6 +33,7 @@ void dbgui::update()
 	ImGui::End();
 	*/
 
+	/*
 	ImGui::Begin("Post Processing");
 	{
 		if (ImGui::SliderFloat("HDR Exposure", &g_exposure, 0.0f, 5.0f))
@@ -65,4 +54,5 @@ void dbgui::update()
 	ImGui::End();
 
 	ImGui::ShowDemoWindow();
+	*/
 }

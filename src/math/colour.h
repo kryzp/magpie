@@ -1,11 +1,10 @@
-#ifndef COLOUR_H_
-#define COLOUR_H_
+#pragma once
 
 #include <glm/vec3.hpp>
 
 #include "core/common.h"
 
-namespace llt
+namespace mgp
 {
 	/**
 	 * Used for representing a 32-bit (0-255 per colour) colour.
@@ -81,5 +80,3 @@ namespace llt
 		Colour &operator /= (float factor);
 	};
 }
-
-#endif // COLOUR_H_

@@ -1,46 +1,39 @@
-#ifndef MESH_LOADER_H_
-#define MESH_LOADER_H_
+#pragma once
+
+#include <vector>
+#include <string>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "container/string.h"
-#include "container/hash_map.h"
+#include "vulkan/bindless.h"
 
-#include "mesh.h"
-
-namespace llt
+namespace mgp
 {
+	class VulkanCore;
+	class Mesh;
+	class SubMesh;
+	class Image;
+	class ImageView;
+
 	class MeshLoader
 	{
 	public:
-		MeshLoader();
+		MeshLoader(VulkanCore *core);
 		~MeshLoader();
 
-		Mesh *loadMesh(const String &name, const String &path);
-
-		SubMesh *getQuadMesh();
-		SubMesh *getCubeMesh();
+		Mesh *loadMesh(const std::string &path);
 
 	private:
-		void createQuadMesh();
-		void createCubeMesh();
-
-		SubMesh *m_quadMesh;
-		SubMesh *m_cubeMesh;
-
 		void processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
 		void processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 
-		void fetchMaterialBoundTextures(Vector<TextureView> &textures, const String &localPath, const aiMaterial *material, aiTextureType type, Texture *fallback);
-		Vector<Texture*> loadMaterialTextures(const aiMaterial *material, aiTextureType type, const String &localPath);
+		void fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback);
+		std::vector<Image *> loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath);
 
-		HashMap<String, Mesh*> m_meshCache;
 		Assimp::Importer m_importer;
+
+		VulkanCore *m_core;
 	};
-
-	extern MeshLoader *g_meshLoader;
 }
-
-#endif // MESH_LOADER_H_

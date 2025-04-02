@@ -2,13 +2,14 @@
 
 #include "core/platform.h"
 
-using namespace llt;
+using namespace mgp;
 
-Timer::Timer()
+Timer::Timer(Platform *platform)
 	: m_startTicks(0)
-	, m_started(g_platform->getPerformanceCounter())
+	, m_started(platform->getPerformanceCounter())
 	, m_pausedTicks(0)
 	, m_paused(false)
+	, m_platform(platform)
 {
 }
 
@@ -17,7 +18,7 @@ void Timer::start()
 	m_started = true;
 	m_paused = false;
 
-	m_startTicks = g_platform->getPerformanceCounter();
+	m_startTicks = m_platform->getPerformanceCounter();
 	m_pausedTicks = 0;
 }
 
@@ -32,24 +33,22 @@ void Timer::stop()
 
 void Timer::pause()
 {
-	if (!m_started || m_paused) {
+	if (!m_started || m_paused)
 		return;
-	}
 
 	m_paused = true;
-	m_pausedTicks = g_platform->getPerformanceCounter() - m_startTicks;
+	m_pausedTicks = m_platform->getPerformanceCounter() - m_startTicks;
 
 	m_startTicks = 0;
 }
 
 void Timer::resume()
 {
-	if (!m_started || !m_paused) {
+	if (!m_started || !m_paused)
 		return;
-	}
 
 	m_paused = false;
-	m_startTicks = g_platform->getPerformanceCounter() - m_pausedTicks;
+	m_startTicks = m_platform->getPerformanceCounter() - m_pausedTicks;
 
 	m_pausedTicks = 0;
 }
@@ -58,9 +57,8 @@ double Timer::reset()
 {
 	double sec = getElapsedSeconds();
 
-	if (m_started) {
+	if (m_started)
 		start();
-	}
 
 	return sec;
 }
@@ -69,11 +67,10 @@ double Timer::getElapsedSeconds() const
 {
 	if (m_started)
 	{
-		if (m_paused) {
+		if (m_paused)
 			return m_pausedTicks;
-		}
 
-		return static_cast<double>(g_platform->getPerformanceCounter() - m_startTicks) / static_cast<double>(g_platform->getPerformanceFrequency());
+		return static_cast<double>(m_platform->getPerformanceCounter() - m_startTicks) / static_cast<double>(m_platform->getPerformanceFrequency());
 	}
 
 	return 0.0;

@@ -1,13 +1,21 @@
 #include "scene.h"
 
-#include "camera.h"
-#include "material_system.h"
+#include "core/common.h"
+
+#include "material.h"
 #include "mesh.h"
-#include "sub_mesh.h"
 
-#include "vulkan/command_buffer.h"
+using namespace mgp;
 
-using namespace llt;
+RenderObject::RenderObject()
+	: transform()
+	, mesh()
+{
+}
+
+RenderObject::~RenderObject()
+{
+}
 
 Scene::Scene()
 	: m_renderObjects()
@@ -32,16 +40,15 @@ void Scene::aggregateSubMeshes()
 
 		for (int i = 0; i < obj.mesh->getSubmeshCount(); i++)
 		{
-			m_renderList.pushBack(obj.mesh->getSubmesh(i));
+			m_renderList.push_back(obj.mesh->getSubmesh(i));
 		}
 	}
 }
 
 void Scene::sortRenderListByMaterialHash(int lo, int hi)
 {
-	if (lo >= hi || lo < 0) {
+	if (lo >= hi || lo < 0)
 		return;
-	}
 
 	int pivot = m_renderList[hi]->getMaterial()->getHash();
 	int i = lo - 1;
@@ -51,30 +58,25 @@ void Scene::sortRenderListByMaterialHash(int lo, int hi)
 		if (m_renderList[j]->getMaterial()->getHash() <= pivot)
 		{
 			i++;
-			LLT_SWAP(m_renderList[i], m_renderList[j]);
+			MGP_SWAP(m_renderList[i], m_renderList[j]);
 		}
 	}
 
 	int partition = i + 1;
-	LLT_SWAP(m_renderList[partition], m_renderList[hi]);
+	MGP_SWAP(m_renderList[partition], m_renderList[hi]);
 
 	sortRenderListByMaterialHash(lo, partition - 1);
 	sortRenderListByMaterialHash(partition + 1, hi);
 }
 
-void Scene::updatePrevMatrices()
-{
-	for (RenderObject &entity : m_renderObjects)
-		entity.storePrevMatrix();
-}
-
-Vector<RenderObject>::Iterator Scene::createRenderObject()
+std::vector<RenderObject>::iterator Scene::createRenderObject()
 {
 	m_renderListDirty = true;
-	return m_renderObjects.emplaceBack();
+	m_renderObjects.emplace_back();
+	return m_renderObjects.end();
 }
 
-const Vector<SubMesh *> &Scene::getRenderList()
+const std::vector<SubMesh *> &Scene::getRenderList()
 {
 	if (m_renderListDirty)
 	{

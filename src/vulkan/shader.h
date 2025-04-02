@@ -1,26 +1,18 @@
-#ifndef VK_SHADER_H_
-#define VK_SHADER_H_
+#pragma once
 
-#include <glm/glm.hpp>
+#include <vector>
 
 #include "third_party/volk.h"
 
-#include "container/hash_map.h"
-#include "container/vector.h"
-#include "container/string.h"
-#include "container/pair.h"
-
-namespace llt
+namespace mgp
 {
 	class VulkanCore;
 
-	class ShaderProgram
+	class ShaderStage
 	{
 	public:
-		ShaderProgram();
-		~ShaderProgram();
-
-		void cleanUp();
+		ShaderStage(const VulkanCore *core);
+		~ShaderStage();
 
 		void loadFromSource(const char *source, uint64_t size);
 
@@ -34,31 +26,30 @@ namespace llt
 	private:
 		VkShaderStageFlagBits m_stage;
 		VkShaderModule m_module;
+
+		const VulkanCore *m_core;
 	};
 
-	class ShaderEffect
+	class Shader
 	{
 	public:
-		ShaderEffect();
-		~ShaderEffect() = default;
+		Shader();
+		~Shader() = default;
 
-		void addStage(ShaderProgram *program);
+		void addStage(ShaderStage *stage);
 
-		const Vector<ShaderProgram *> &getStages() const;
-		const ShaderProgram *getStage(int idx) const;
+		const std::vector<ShaderStage *> &getStages() const;
+		const ShaderStage *getStage(int idx) const;
 
-		const Vector<VkDescriptorSetLayout> &getDescriptorSetLayouts() const;
-		void setDescriptorSetLayouts(const Vector<VkDescriptorSetLayout> &layouts);
+		const std::vector<VkDescriptorSetLayout> &getDescriptorSetLayouts() const;
+		void setDescriptorSetLayouts(const std::vector<VkDescriptorSetLayout> &layouts);
 
 		void setPushConstantsSize(uint64_t size);
 		uint64_t getPushConstantsSize() const;
 
 	private:
-		Vector<ShaderProgram *> m_stages;
-
-		Vector<VkDescriptorSetLayout> m_descriptorSetLayouts;
+		std::vector<ShaderStage *> m_stages;
+		std::vector<VkDescriptorSetLayout> m_descriptorSetLayouts;
 		uint64_t m_pushConstantsSize;
 	};
 }
-
-#endif // VK_SHADER_H_

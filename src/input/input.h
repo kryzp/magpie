@@ -1,5 +1,4 @@
-#ifndef INPUT_MGR_H_
-#define INPUT_MGR_H_
+#pragma once
 
 #include <glm/vec2.hpp>
 
@@ -8,14 +7,10 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "gamepad.h"
-#include "v_key.h"
 
-namespace llt
+namespace mgp
 {
-	/**
-	 * Manages input in the program.
-	 */
-	class Input
+	class InputState
 	{
 		struct KeyboardState
 		{
@@ -40,7 +35,7 @@ namespace llt
 			float rightTrigger;
 		};
 
-		struct InputState
+		struct InputData
 		{
 			KeyboardState keyboard;
 			MouseState mouse;
@@ -48,14 +43,10 @@ namespace llt
 		};
 
 	public:
-		Input();
-		~Input();
+		InputState();
+		~InputState();
 
 		void update();
-
-		bool isDown(const VirtualKey &k) const;
-		bool isPressed(const VirtualKey &k) const;
-		bool isReleased(const VirtualKey &k) const;
 
 		bool isDown(const KeyboardKey &k) const;
 		bool isPressed(const KeyboardKey &k) const;
@@ -102,12 +93,8 @@ namespace llt
 		void onGamepadMotion(int id, GamepadAxis axis, float value);
 
 	private:
-		InputState m_currentState;
-		InputState m_nextState;
-		InputState m_prevState;
+		InputData m_currentState;
+		InputData m_nextState;
+		InputData m_prevState;
 	};
-
-	extern Input *g_inputState;
 }
-
-#endif // INPUT_MGR_H_

@@ -1,7 +1,6 @@
-#ifndef GAMEPAD_H_
-#define GAMEPAD_H_
+#pragma once
 
-namespace llt
+namespace mgp
 {
 	constexpr unsigned MAX_GAMEPADS = 4;
 
@@ -63,5 +62,3 @@ namespace llt
 		GAMEPAD_TYPE_MAX_ENUM
 	};
 }
-
-#endif // GAMEPAD_H_

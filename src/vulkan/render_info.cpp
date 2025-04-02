@@ -1,11 +1,12 @@
 #include "render_info.h"
+
 #include "core.h"
-#include "util.h"
-#include "swapchain.h"
+#include "toolbox.h"
+#include "image_view.h"
 
-using namespace llt;
+using namespace mgp;
 
-RenderInfo::RenderInfo()
+RenderInfo::RenderInfo(const VulkanCore *core)
 	: m_colourAttachments()
 	, m_depthAttachment()
 	, m_colourFormats()
@@ -13,6 +14,7 @@ RenderInfo::RenderInfo()
 	, m_width(0)
 	, m_height(0)
 	, m_samples(VK_SAMPLE_COUNT_1_BIT)
+	, m_core(core)
 {
 }
 
@@ -36,7 +38,7 @@ VkRenderingInfo RenderInfo::getInfo() const
 	return info;
 }
 
-void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const TextureView &view)
+void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view)
 {
 	VkRenderingAttachmentInfoKHR attachment = {};
 	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -49,13 +51,13 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const TextureVie
 	attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	attachment.resolveMode = VK_RESOLVE_MODE_NONE;
 
-	m_colourAttachments.pushBack(attachment);
-	m_colourFormats.pushBack(view.getFormat());
+	m_colourAttachments.push_back(attachment);
+	m_colourFormats.push_back(view.getFormat());
 
 	m_attachmentCount++;
 }
 
-void RenderInfo::addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve)
+void RenderInfo::addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve)
 {
 	VkRenderingAttachmentInfoKHR attachment = {};
 	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -64,17 +66,17 @@ void RenderInfo::addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const
 	attachment.loadOp = loadOp;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-	attachment.resolveImageView = resolve.getHandle();
+	attachment.resolveImageView = resolve;
 	attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
 
-	m_colourAttachments.pushBack(attachment);
-	m_colourFormats.pushBack(view.getFormat());
+	m_colourAttachments.push_back(attachment);
+	m_colourFormats.push_back(view.getFormat());
 
 	m_attachmentCount++;
 }
 
-void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const TextureView &view)
+void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view)
 {
 	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	m_depthAttachment.imageView = view.getHandle();
@@ -89,7 +91,7 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const TextureView
 	m_attachmentCount++;
 }
 
-void RenderInfo::addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const TextureView &view, const TextureView &resolve)
+void RenderInfo::addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve)
 {
 	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	m_depthAttachment.imageView = view.getHandle();
@@ -97,7 +99,7 @@ void RenderInfo::addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const 
 	m_depthAttachment.loadOp = loadOp;
 	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	m_depthAttachment.clearValue = { { 1.0f, 0 } };
-	m_depthAttachment.resolveImageView = resolve.getHandle();
+	m_depthAttachment.resolveImageView = resolve;
 	m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	m_depthAttachment.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
 
@@ -157,14 +159,14 @@ int RenderInfo::getAttachmentCount() const
 	return m_attachmentCount;
 }
 
-const Vector<VkFormat> &RenderInfo::getColourAttachmentFormats() const
+const std::vector<VkFormat> &RenderInfo::getColourAttachmentFormats() const
 {
 	return m_colourFormats;
 }
 
 VkFormat RenderInfo::getDepthAttachmentFormat() const
 {
-	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vkutil::findDepthFormat(g_vkCore->m_physicalData.device) : VK_FORMAT_UNDEFINED;
+	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vk_toolbox::findDepthFormat(m_core->getPhysicalDevice()) : VK_FORMAT_UNDEFINED;
 }
 
 uint32_t RenderInfo::getWidth() const
