@@ -13,6 +13,7 @@ Feel free to use any of the code in personal / professional / public / private p
 	- Parallel bindless resource system (any viable image view, buffer and sampler is automatically added to the bindless set)
 	- GLTF Model loading
 	- PBR
+	- ImGui Support
 
 ### Stuff to implement
 	[ ] Well commented codebase
