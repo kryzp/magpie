@@ -42,7 +42,7 @@ void Swapchain::destroy()
 
 	for (auto &view : m_swapchainImageViews)
 	{
-		vkDestroyImageView(m_core->getLogicalDevice(), view, nullptr);
+		delete view;
 	}
 
 	vkDestroySwapchainKHR(m_core->getLogicalDevice(), m_swapchain, nullptr);
@@ -77,7 +77,7 @@ void Swapchain::beginRendering(CommandBuffer &cmd)
 	cmd.transitionLayout(m_colour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	cmd.transitionLayout(m_depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView();
+	m_renderInfo.getColourAttachment(0).resolveImageView = getCurrentSwapchainImageView()->getHandle();
 }
 
 void Swapchain::endRendering(CommandBuffer &cmd)
@@ -149,7 +149,7 @@ VkImage Swapchain::getCurrentSwapchainImage() const
 	return m_swapchainImages[m_currSwapchainImageIdx];
 }
 
-VkImageView Swapchain::getCurrentSwapchainImageView() const
+const ImageView *Swapchain::getCurrentSwapchainImageView() const
 {
 	return m_swapchainImageViews[m_currSwapchainImageIdx];
 }
@@ -265,9 +265,19 @@ void Swapchain::createSwapchainImageViews()
 		viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 		viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
+		VkImageView swapchainView = VK_NULL_HANDLE;
+
 		MGP_VK_CHECK(
-			vkCreateImageView(m_core->getLogicalDevice(), &viewInfo, nullptr, &m_swapchainImageViews[i]),
+			vkCreateImageView(m_core->getLogicalDevice(), &viewInfo, nullptr, &swapchainView),
 			"Failed to create texture image view"
+		);
+
+		m_swapchainImageViews[i] = new ImageView(
+			m_core,
+			swapchainView,
+			VK_IMAGE_VIEW_TYPE_2D,
+			m_swapchainImageFormat,
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
 		);
 	}
 }
@@ -315,6 +325,16 @@ void Swapchain::rebuildSwapchain()
 
 	destroy();
 	createSwapchain();
+}
+
+unsigned Swapchain::getWidth() const
+{
+	return m_width;
+}
+
+unsigned Swapchain::getHeight() const
+{
+	return m_height;
 }
 
 void Swapchain::setClearColour(const Colour &colour)
@@ -389,7 +409,7 @@ void Swapchain::createColourResources()
 	m_renderInfo.addColourAttachmentWithResolve(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
 		*m_colour.getStandardView(),
-		getCurrentSwapchainImageView()
+		getCurrentSwapchainImageView()->getHandle()
 	);
 }
 

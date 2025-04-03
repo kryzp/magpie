@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "third_party/volk.h"
 #include "third_party/vk_mem_alloc.h"
 
@@ -32,7 +34,7 @@ namespace mgp
 			int layerCount,
 			int layer,
 			int baseMipLevel
-		) const;
+		);
 
 		VkImageMemoryBarrier2 getBarrier(
 			VkImageLayout newLayout
@@ -61,13 +63,13 @@ namespace mgp
 		unsigned getLayerCount() const;
 		unsigned getFaceCount() const;
 
-		const ImageView *getStandardView() const;
+		const ImageView *getStandardView();
 
 	private:
 		VkImage m_image;
 		VkImageLayout m_layout;
 
-		ImageView *m_standardView;
+		std::unordered_map<uint64_t, ImageView *> m_viewCache;
 
 		VulkanCore *m_core;
 

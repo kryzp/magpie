@@ -11,7 +11,7 @@ using namespace mgp;
 Image::Image()
 	: m_image(VK_NULL_HANDLE)
 	, m_layout()
-	, m_standardView(nullptr)
+	, m_viewCache()
 	, m_core(nullptr)
 	, m_width(0)
 	, m_height(0)
@@ -31,7 +31,8 @@ Image::Image()
 
 Image::~Image()
 {
-	delete m_standardView;
+	for (auto &[id, view] : m_viewCache)
+		delete view;
 
 	vmaDestroyImage(m_core->getVMAAllocator(), m_image, m_allocation);
 	m_image = VK_NULL_HANDLE;
@@ -154,15 +155,24 @@ void Image::create(
 		"Failed to create image"
 	);
 
-	m_standardView = createView(getLayerCount(), 0, 0);
+//	getStandardView(); // cache the standard view
 }
 
 ImageView *Image::createView(
 	int layerCount,
 	int layer,
 	int baseMipLevel
-) const
+)
 {
+	uint64_t hash = 0;
+
+	hash::combine(&hash, &layerCount);
+	hash::combine(&hash, &layer);
+	hash::combine(&hash, &baseMipLevel);
+
+	if (m_viewCache.contains(hash))
+		return m_viewCache.at(hash);
+
 	VkImageViewType viewType = m_type;
 
 	if (isCubemap() && layerCount == 1)
@@ -201,7 +211,11 @@ ImageView *Image::createView(
 		"Failed to create texture image view."
 	);
 
-	return new ImageView(m_core, view, m_type, m_format, m_usage);
+	ImageView *imageView = new ImageView(m_core, view, m_type, m_format, m_usage);
+
+	m_viewCache.insert({ hash, imageView });
+
+	return imageView;
 }
 
 VkImageMemoryBarrier2 Image::getBarrier(
@@ -320,7 +334,7 @@ unsigned Image::getFaceCount() const
 	return isCubemap() ? 6 : 1;
 }
 
-const ImageView *Image::getStandardView() const
+const ImageView *Image::getStandardView()
 {
-	return m_standardView;
+	return createView(getLayerCount(), 0, 0);
 }

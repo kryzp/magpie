@@ -59,10 +59,6 @@ namespace mgp
 
 		WindowMode windowMode = WINDOW_MODE_WINDOWED_BIT;
 
-		std::function<void(void)> onInit = nullptr;
-		std::function<void(void)> onExit = nullptr;
-		std::function<void(void)> onDestroy = nullptr;
-
 		constexpr bool hasFlag(ConfigFlag flag) const { return flags & flag; }
 	};
 
@@ -103,7 +99,18 @@ namespace mgp
 	private:
 		void tick(float dt);
 		void tickFixed(float dt);
-		void render(CommandBuffer &inFlightCmd);
+		void render(CommandBuffer &inFlightCmd, const Swapchain *swapchain);
+
+		Config m_config;
+
+		VulkanCore *m_vulkanCore;
+		Platform *m_platform;
+
+		InputState *m_inputSt;
+
+		bool m_running;
+
+		Camera m_camera;
 
 		void loadTextures();
 		void loadShaders();
@@ -145,18 +152,5 @@ namespace mgp
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;
-
-		void initImGui();
-
-		Config m_config;
-		
-		VulkanCore *m_vulkanCore;
-		Platform *m_platform;
-
-		InputState *m_inputSt;
-
-		bool m_running;
-
-		Camera m_camera;
 	};
 }

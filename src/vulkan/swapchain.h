@@ -36,7 +36,7 @@ namespace mgp
 		const Image &getDepthAttachment() const;
 
 		VkImage getCurrentSwapchainImage() const;
-		VkImageView getCurrentSwapchainImageView() const;
+		const ImageView *getCurrentSwapchainImageView() const;
 
 		unsigned getCurrentSwapchainImageIndex() const;
 
@@ -52,6 +52,9 @@ namespace mgp
 		const RenderInfo &getRenderInfo() const;
 
 		void rebuildSwapchain();
+
+		unsigned getWidth() const;
+		unsigned getHeight() const;
 
 	private:
 		void destroy();
@@ -69,7 +72,7 @@ namespace mgp
 		VkSwapchainKHR m_swapchain;
 
 		std::vector<VkImage> m_swapchainImages;
-		std::vector<VkImageView> m_swapchainImageViews;
+		std::vector<ImageView *> m_swapchainImageViews;
 
 		VkFormat m_swapchainImageFormat;
 

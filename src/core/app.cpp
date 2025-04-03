@@ -65,8 +65,6 @@ App::App(const Config &config)
 
 	vtx::initVertexTypes();
 
-	initImGui();
-
 	m_platform->setWindowName(m_config.windowName);
 	m_platform->setWindowSize({ m_config.width, m_config.height });
 	m_platform->setWindowMode(m_config.windowMode);
@@ -88,8 +86,6 @@ App::App(const Config &config)
 	m_camera.position = glm::vec3(0.0f, 2.75f, 3.5f);
 	m_camera.setPitch(-glm::radians(30.0f));
 	m_camera.update(m_inputSt, m_platform, 0.0f);
-
-	dbgui::init();
 
 	loadTextures();
 	loadShaders();
@@ -118,17 +114,11 @@ App::App(const Config &config)
 
 	m_running = true;
 
-	if (m_config.onInit)
-		m_config.onInit();
-
 	m_platform->onExit = [this]() { exit(); };
 }
 
 App::~App()
 {
-	if (m_config.onDestroy)
-		m_config.onDestroy();
-
 	m_descriptorPool.cleanUp();
 
 	delete m_skyboxMesh;
@@ -219,6 +209,8 @@ void App::run()
 
 	InFlightSync inFlightSync(m_vulkanCore);
 
+	dbgui::init(m_platform, m_vulkanCore);
+
 	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
 		MGP_LOG("Detected window resize!");
 		inFlightSync.onWindowResize(w, h);
@@ -250,8 +242,6 @@ void App::run()
 
 		CommandBuffer &cmd = inFlightSync.begin();
 		{
-			render(cmd);
-
 			FrameConstants constants;
 			constants.proj = m_camera.getProj();
 			constants.view = m_camera.getView();
@@ -350,6 +340,8 @@ void App::run()
 				}
 			}
 			cmd.endRendering();
+
+			render(cmd, inFlightSync.getSwapchain());
 		}
 		inFlightSync.present();
 
@@ -368,18 +360,11 @@ void App::exit()
 	MGP_LOG("Detected window close event, quitting...");
 
 	m_running = false;
-
-	if (m_config.onExit)
-		m_config.onExit();
 }
 
 void App::tick(float dt)
 {
-	//ImGui_ImplVulkan_NewFrame();
-	//ImGui_ImplSDL3_NewFrame();
-	//ImGui::NewFrame();
-
-	//dbgui::update();
+	dbgui::update();
 }
 
 void App::tickFixed(float dt)
@@ -397,8 +382,9 @@ void App::tickFixed(float dt)
 	}
 }
 
-void App::render(CommandBuffer &inFlightCmd)
+void App::render(CommandBuffer &inFlightCmd, const Swapchain *swapchain)
 {
+	dbgui::render(inFlightCmd, swapchain);
 }
 
 void App::loadTextures()
@@ -1188,17 +1174,4 @@ void App::createSkybox()
 	m_skyboxPipeline.setDepthTest(true);
 	m_skyboxPipeline.setDepthWrite(false);
 	m_skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
-}
-
-void App::initImGui()
-{
-	IMGUI_CHECKVERSION();
-
-	ImGui::CreateContext();
-	//ImGuiIO &io = ImGui::GetIO();
-
-	ImGui::StyleColorsClassic();
-
-	m_platform->initImGui();
-	m_vulkanCore->initImGui();
 }
