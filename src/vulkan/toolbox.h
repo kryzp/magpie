@@ -22,9 +22,9 @@ namespace mgp::vk_toolbox
 	static constexpr char *DEVICE_EXTENSIONS[] = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-#ifdef LLT_MAC_SUPPORT
+#ifdef MGP_MAC_SUPPORT
 		"VK_KHR_portability_subset"
-#endif // LLT_MAC_SUPPORT
+#endif
 	};
 
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableSurfaceFormats);
