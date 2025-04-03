@@ -34,9 +34,6 @@ Swapchain::~Swapchain()
 
 void Swapchain::destroy()
 {
-	delete m_colourView;
-	delete m_depthView;
-
 	for (int i = 0; i < Queue::FRAMES_IN_FLIGHT; i++)
 	{
 		vkDestroySemaphore(m_core->getLogicalDevice(), m_renderFinishedSemaphores[i], nullptr);
@@ -389,11 +386,9 @@ void Swapchain::createColourResources()
 		false
 	);
 
-	m_colourView = m_colour.createView(1, 0, 0);
-
 	m_renderInfo.addColourAttachmentWithResolve(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		*m_colourView,
+		*m_colour.getStandardView(),
 		getCurrentSwapchainImageView()
 	);
 }
@@ -414,10 +409,8 @@ void Swapchain::createDepthResources()
 		false
 	);
 
-	m_depthView = m_depth.createView(1, 0, 0);
-
 	m_renderInfo.addDepthAttachment(
 		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		*m_depthView
+		*m_depth.getStandardView()
 	);
 }

@@ -78,9 +78,6 @@ namespace mgp
 		Image m_colour;
 		Image m_depth;
 
-		ImageView *m_colourView;
-		ImageView *m_depthView;
-
 		unsigned m_width;
 		unsigned m_height;
 

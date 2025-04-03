@@ -1,4 +1,4 @@
-#include "mesh.h"
+#include "model.h"
 
 #include "third_party/volk.h"
 
@@ -12,7 +12,7 @@
 
 using namespace mgp;
 
-Mesh::Mesh(VulkanCore *core)
+Model::Model(VulkanCore *core)
 	: m_owner(nullptr)
 	, m_core(core)
 	, m_subMeshes()
@@ -20,15 +20,15 @@ Mesh::Mesh(VulkanCore *core)
 {
 }
 
-Mesh::~Mesh()
+Model::~Model()
 {
 	for (auto &sub : m_subMeshes)
 		delete sub;
 }
 
-SubMesh *Mesh::createSubmesh()
+Mesh *Model::createMesh()
 {
-	SubMesh *sub = new SubMesh(m_core);
+	Mesh *sub = new Mesh(m_core);
 	sub->m_parent = this;
 	
 	m_subMeshes.push_back(sub);
@@ -36,37 +36,37 @@ SubMesh *Mesh::createSubmesh()
 	return sub;
 }
 
-uint64_t Mesh::getSubmeshCount() const
+uint64_t Model::getSubmeshCount() const
 {
 	return m_subMeshes.size();
 }
 
-SubMesh *Mesh::getSubmesh(int idx) const
+Mesh *Model::getSubmesh(int idx) const
 {
 	return m_subMeshes[idx];
 }
 
-void Mesh::setOwner(RenderObject *owner)
+void Model::setOwner(RenderObject *owner)
 {
 	m_owner = owner;
 }
 
-RenderObject *Mesh::getOwner()
+RenderObject *Model::getOwner()
 {
 	return m_owner;
 }
 
-void Mesh::setDirectory(const std::string &directory)
+void Model::setDirectory(const std::string &directory)
 {
 	m_directory = directory;
 }
 
-const std::string &Mesh::getDirectory() const
+const std::string &Model::getDirectory() const
 {
 	return m_directory;
 }
 
-SubMesh::SubMesh(VulkanCore *core)
+Mesh::Mesh(VulkanCore *core)
 	: m_parent(nullptr)
 	, m_core(core)
 	, m_vertexFormat(nullptr)
@@ -78,13 +78,13 @@ SubMesh::SubMesh(VulkanCore *core)
 {
 }
 
-SubMesh::~SubMesh()
+Mesh::~Mesh()
 {
 	delete m_vertexBuffer;
 	delete m_indexBuffer;
 }
 
-void SubMesh::build(
+void Mesh::build(
 	const VertexFormat &format,
 	void *pVertices, uint32_t nVertices,
 	uint16_t *pIndices, uint32_t nIndices
@@ -137,7 +137,7 @@ void SubMesh::build(
 	delete stagingBuffer;
 }
 
-void SubMesh::render(CommandBuffer &cmd) const
+void Mesh::render(CommandBuffer &cmd) const
 {
 	cauto &bindings = m_vertexFormat->getBindingDescriptions();
 
@@ -159,47 +159,47 @@ void SubMesh::render(CommandBuffer &cmd) const
 	cmd.drawIndexed(m_nIndices);
 }
 
-Mesh *SubMesh::getParent()
+Model *Mesh::getParent()
 {
 	return m_parent;
 }
 
-const Mesh *SubMesh::getParent() const
+const Model *Mesh::getParent() const
 {
 	return m_parent;
 }
 
-void SubMesh::setMaterial(Material *material)
+void Mesh::setMaterial(Material *material)
 {
 	m_material = material;
 }
 
-Material *SubMesh::getMaterial()
+Material *Mesh::getMaterial()
 {
 	return m_material;
 }
 
-const Material *SubMesh::getMaterial() const
+const Material *Mesh::getMaterial() const
 {
 	return m_material;
 }
 
-GPUBuffer *SubMesh::getVertexBuffer() const
+GPUBuffer *Mesh::getVertexBuffer() const
 {
 	return m_vertexBuffer;
 }
 
-GPUBuffer *SubMesh::getIndexBuffer() const
+GPUBuffer *Mesh::getIndexBuffer() const
 {
 	return m_indexBuffer;
 }
 
-uint64_t SubMesh::getVertexCount() const
+uint64_t Mesh::getVertexCount() const
 {
 	return m_nVertices;
 }
 
-uint64_t SubMesh::getIndexCount() const
+uint64_t Mesh::getIndexCount() const
 {
 	return m_nIndices;
 }

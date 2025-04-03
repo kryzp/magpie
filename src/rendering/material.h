@@ -10,7 +10,7 @@
 
 namespace mgp
 {
-	class SubMesh;
+	class Mesh;
 	class Shader;
 	class GPUBuffer;
 
@@ -27,7 +27,7 @@ namespace mgp
 		Technique() = default;
 		~Technique() = default;
 
-		VertexFormat vertexFormat;
+		VertexFormat *vertexFormat;
 
 		Shader *passes[SHADER_PASS_MAX_ENUM];
 
@@ -84,5 +84,6 @@ namespace mgp
 		std::vector<bindless::Handle> textures;
 		GPUBuffer *parameterBuffer;
 		GraphicsPipelineDefinition passes[SHADER_PASS_MAX_ENUM];
+		bindless::Handle bindlessHandle;
 	};
 }

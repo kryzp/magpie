@@ -5,12 +5,11 @@ set DXC=D:/dxc_2024_07_31/bin/x64/dxc.exe
 :: vertex shaders
 %DXC% -spirv -T vs_6_0 -fspv-debug=vulkan-with-source -E main src/model_vs.hlsl							-Fo compiled/model_vs.spv
 %DXC% -spirv -T vs_6_0 -fspv-debug=vulkan-with-source -E main src/primitive_vs.hlsl						-Fo compiled/primitive_vs.spv
-%DXC% -spirv -T vs_6_0 -fspv-debug=vulkan-with-source -E main src/primitive_quad_vs.hlsl				-Fo compiled/primitive_quad_vs.spv
+%DXC% -spirv -T vs_6_0 -fspv-debug=vulkan-with-source -E main src/fullscreen_quad_vs.hlsl				-Fo compiled/fullscreen_quad_vs.spv
 %DXC% -spirv -T vs_6_0 -fspv-debug=vulkan-with-source -E main src/skybox_vs.hlsl						-Fo compiled/skybox_vs.spv
 
 :: pixel shaders
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/skybox_ps.hlsl						-Fo compiled/skybox_ps.spv
-%DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/whitePBR_ps.hlsl						-Fo compiled/whitePBR_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/texturedPBR_ps.hlsl					-Fo compiled/texturedPBR_ps.spv
 ::%DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/subsurface_refraction_ps.hlsl			-Fo compiled/subsurface_refraction_ps.spv
 %DXC% -spirv -T ps_6_0 -fspv-debug=vulkan-with-source -E main src/equirectangular_to_cubemap_ps.hlsl	-Fo compiled/equirectangular_to_cubemap_ps.spv

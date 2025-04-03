@@ -86,6 +86,25 @@ void CommandBuffer::bindPipeline(
 	);
 }
 
+void CommandBuffer::draw(
+	uint32_t vertexCount,
+	uint32_t instanceCount,
+	uint32_t firstVertex,
+	uint32_t firstInstance
+)
+{
+	vkCmdSetViewport(m_buffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(m_buffer, 0, 1, &m_scissor);
+
+	vkCmdDraw(
+		m_buffer,
+		vertexCount,
+		instanceCount,
+		firstVertex,
+		firstInstance
+	);
+}
+
 void CommandBuffer::drawIndexed(
 	uint32_t indexCount,
 	uint32_t instanceCount,
@@ -114,6 +133,9 @@ void CommandBuffer::drawIndexedIndirect(
 	uint32_t stride
 )
 {
+	vkCmdSetViewport(m_buffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(m_buffer, 0, 1, &m_scissor);
+
 	vkCmdDrawIndexedIndirect(
 		m_buffer,
 		buffer,
@@ -132,6 +154,9 @@ void CommandBuffer::drawIndexedIndirectCount(
 	uint32_t stride
 )
 {
+	vkCmdSetViewport(m_buffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(m_buffer, 0, 1, &m_scissor);
+
 	vkCmdDrawIndexedIndirectCount(
 		m_buffer,
 		buffer,

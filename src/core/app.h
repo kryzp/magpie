@@ -9,6 +9,7 @@
 
 #include "rendering/camera.h"
 
+#include "vulkan/bindless.h"
 #include "vulkan/pipeline_cache.h"
 
 namespace mgp
@@ -77,7 +78,9 @@ namespace mgp
 	class Sampler;
 	class Material;
 	class MaterialData;
+	class Mesh;
 	class Technique;
+	class GPUBuffer;
 
 	class EnvironmentProbe
 	{
@@ -94,6 +97,9 @@ namespace mgp
 		void run();
 		void exit();
 
+		Image *loadTexture(const std::string &name, const std::string &path);
+		Material *buildMaterial(MaterialData &data);
+
 	private:
 		void tick(float dt);
 		void tickFixed(float dt);
@@ -103,20 +109,15 @@ namespace mgp
 		void loadShaders();
 		void loadTechniques();
 
-//		void createMaterialIdBuffer();
-
-		Image *loadTexture(const std::string &name, const std::string &path);
-
 		ShaderStage *getShaderStage(const std::string &name);
 		Shader *getShader(const std::string &name);
 		ShaderStage *loadShaderStage(const std::string &name, const std::string &path, VkShaderStageFlagBits stageType);
 		Shader *createShader(const std::string &name);
 
-		Material *buildMaterial(MaterialData &data);
 		void addTechnique(const std::string &name, const Technique &technique);
 
 		Sampler *m_linearSampler;
-		std::unordered_map<std::string, Image *> m_imageCache;
+		std::unordered_map<std::string, Image *> m_loadedImageCache;
 
 		std::unordered_map<std::string, ShaderStage *> m_shaderStageCache;
 		std::unordered_map<std::string, Shader *> m_shaderCache;
@@ -124,22 +125,21 @@ namespace mgp
 		std::unordered_map<uint64_t, Material *> m_materials;
 		std::unordered_map<std::string, Technique> m_techniques;
 
+		GPUBuffer *m_bindlessMaterialTable;
+		bindless::Handle m_materialHandle_UID;
+
+		void createSkybox();
+
+		Mesh *m_skyboxMesh;
+
+		DescriptorPoolDynamic m_descriptorPool;
+
 		void generateEnvironmentProbe(CommandBuffer &cmd);
 		void precomputeBRDF(CommandBuffer &cmd);
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;
 		Image *m_brdfLUT;
-
-//		DescriptorPoolDynamic m_descriptorPoolAllocator;
-
-		GraphicsPipelineDefinition m_equirectangularToCubemapPipeline;
-		GraphicsPipelineDefinition m_irradianceGenerationPipeline;
-		GraphicsPipelineDefinition m_prefilterGenerationPipeline;
-		GraphicsPipelineDefinition m_brdfIntegrationPipeline;
-
-//		GPUBuffer *m_materialIdBuffer;
-//		bindless::Handle m_material_UID;
 
 		void initImGui();
 

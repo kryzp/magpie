@@ -8,10 +8,17 @@ Yes, the code is a little messy at some points. The focus isn't on micro-optimis
 
 Feel free to use any of the code in personal / professional / public / private projects as long as you credit me.
 
-### (Mostly cool) Stuff to implement
-	[ ] Well commented codebase + Assertations to make bugs easier to catch
+### Features
+	- Low level vulkan abstraction in /vulkan/
+	- Parallel bindless resource system (any viable image view, buffer and sampler is automatically added to the bindless set)
+	- GLTF Model loading
+	- PBR
+
+### Stuff to implement
+	[ ] Well commented codebase
+	[ ] Assertations to make bugs easier to catch
 	[ ] Volumetrics
-	[ ] Parallel bindless resource system
+	[ ] Bone Animation
 	[ ] Fur / Hair Rendering
 	[ ] Text & UI Rendering
 	[ ] Realistic ocean water based on FFT
@@ -22,7 +29,8 @@ Feel free to use any of the code in personal / professional / public / private p
 	[ ] Shadow Mapping: Point lights & Directional lights
 	[ ] Realistic Refraction
 	[ ] Hybrid Clustered Deferred + Forward Rendering (for transparency)
-	[ ] Asset System + Hot Reloading
+	[ ] Asset System
+		- Hot Reloading
 		- Textures
 		- Shaders
 	[ ] Good macOS support

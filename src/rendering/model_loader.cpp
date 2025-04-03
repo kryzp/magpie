@@ -1,29 +1,31 @@
-#include "mesh_loader.h"
+#include "model_loader.h"
 
 #include <filesystem>
 
+#include "core/app.h"
 #include "core/common.h"
 
 #include "vulkan/vertex_format.h"
 #include "vulkan/image.h"
 #include "vulkan/image_view.h"
 
-#include "mesh.h"
+#include "model.h"
 #include "material.h"
 
 using namespace mgp;
 
-MeshLoader::MeshLoader(VulkanCore *core)
+ModelLoader::ModelLoader(VulkanCore *core, App *app)
 	: m_importer()
 	, m_core(core)
+	, m_app(app)
 {
 }
 
-MeshLoader::~MeshLoader()
+ModelLoader::~ModelLoader()
 {
 }
 
-Mesh *MeshLoader::loadMesh(const std::string &path)
+Model *ModelLoader::loadMesh(const std::string &path)
 {
 	const aiScene *scene = m_importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate |
@@ -41,7 +43,7 @@ Mesh *MeshLoader::loadMesh(const std::string &path)
 	std::filesystem::path filePath(path);
 	std::string directory = filePath.parent_path().string() + "/";
 
-	Mesh *mesh = new Mesh(m_core);
+	Model *mesh = new Model(m_core);
 	mesh->setDirectory(directory);
 
 	aiMatrix4x4 identity(
@@ -56,12 +58,12 @@ Mesh *MeshLoader::loadMesh(const std::string &path)
 	return mesh;
 }
 
-void MeshLoader::processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform)
+void ModelLoader::processNodes(Model *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform)
 {
 	for(int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh *assimpMesh = scene->mMeshes[node->mMeshes[i]];
-		processSubMesh(mesh->createSubmesh(), assimpMesh, scene, node->mTransformation * transform);
+		processSubMesh(mesh->createMesh(), assimpMesh, scene, node->mTransformation * transform);
 	}
 
 	for(int i = 0; i < node->mNumChildren; i++)
@@ -70,7 +72,7 @@ void MeshLoader::processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, co
 	}
 }
 
-void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
+void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
 {
 	std::vector<vtx::ModelVertex> vertices(assimpMesh->mNumVertices);
 	std::vector<uint16_t> indices;
@@ -149,7 +151,6 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		indices.data(), indices.size()
 	);
 
-	/*
 	if (assimpMesh->mMaterialIndex >= 0)
 	{
 		const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
@@ -157,37 +158,34 @@ void MeshLoader::processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiSc
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
-		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				g_materialSystem->getDiffuseFallback());
-		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				g_materialSystem->getAOFallback());
-		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	g_materialSystem->getRoughnessMetallicFallback());
-		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				g_materialSystem->getNormalFallback());
-		//fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				g_materialSystem->getEmissiveFallback());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				nullptr);
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				nullptr);
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	nullptr);
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				nullptr);
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				nullptr);
 
-		Material *material = nullptr;//g_materialSystem->getRegistry().buildMaterial(data);
-
-		submesh->setMaterial(material);
+		submesh->setMaterial(m_app->buildMaterial(data));
 	}
-	*/
 }
 
-void MeshLoader::fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
+void ModelLoader::fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
 {
 	std::vector<Image *> maps = loadMaterialTextures(material, type, localPath);
 
 	if (maps.size() >= 1)
 	{
-		//textures.push_back(maps[0]->getStandardView());
+		textures.push_back(maps[0]->getStandardView()->getBindlessHandle());
 	}
 	else
 	{
 		if (fallback)
 		{
-			//textures.push_back(fallback->getStandardView());
+			textures.push_back(fallback->getStandardView()->getBindlessHandle());
 		}
 	}
 }
 
-std::vector<Image *> MeshLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath)
+std::vector<Image *> ModelLoader::loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath)
 {
 	std::vector<Image *> result;
 
@@ -199,9 +197,7 @@ std::vector<Image *> MeshLoader::loadMaterialTextures(const aiMaterial *material
 		aiString basePath = aiString(localPath.c_str());
 		basePath.Append(texturePath.C_Str());
 
-		Image *tex = nullptr;//g_textureManager->load(basePath.C_Str(), basePath.C_Str());
-
-		result.push_back(tex);
+		result.push_back(m_app->loadTexture(basePath.C_Str(), basePath.C_Str()));
 	}
 
 	return result;

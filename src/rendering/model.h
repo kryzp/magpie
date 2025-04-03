@@ -12,18 +12,18 @@ namespace mgp
 	class VertexFormat;
 	class Material;
 	class RenderObject;
-	class SubMesh;
+	class Mesh;
 
-	class Mesh
+	class Model
 	{
 	public:
-		Mesh(VulkanCore *core);
-		~Mesh();
+		Model(VulkanCore *core);
+		~Model();
 
-		SubMesh *createSubmesh();
+		Mesh *createMesh();
 
 		uint64_t getSubmeshCount() const;
-		SubMesh *getSubmesh(int idx) const;
+		Mesh *getSubmesh(int idx) const;
 
 		void setOwner(RenderObject *owner);
 		RenderObject *getOwner();
@@ -36,25 +36,25 @@ namespace mgp
 
 		VulkanCore *m_core;
 		
-		std::vector<SubMesh *> m_subMeshes;
+		std::vector<Mesh *> m_subMeshes;
 
 		std::string m_directory;
 	};
 
-	class SubMesh
+	class Mesh
 	{
-		friend class Mesh;
+		friend class Model;
 
 	public:
-		SubMesh(VulkanCore *core);
-		~SubMesh();
+		Mesh(VulkanCore *core);
+		~Mesh();
 
 		void build(const VertexFormat &format, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 
 		void render(CommandBuffer &cmd) const;
 
-		Mesh *getParent();
-		const Mesh *getParent() const;
+		Model *getParent();
+		const Model *getParent() const;
 
 		void setMaterial(Material *material);
 
@@ -68,7 +68,7 @@ namespace mgp
 		uint64_t getIndexCount() const;
 
 	private:
-		Mesh *m_parent;
+		Model *m_parent;
 
 		VulkanCore *m_core;
 

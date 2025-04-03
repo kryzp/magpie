@@ -108,9 +108,9 @@ namespace mgp
 		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t dstArrayElement = 0);
 		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset, uint32_t dstArrayElement = 0);
 
-		DescriptorWriter &writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement = 0);
-		DescriptorWriter &writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement = 0);
+		DescriptorWriter &writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement = 0);
 
+		DescriptorWriter &writeCombinedImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement = 0);
 		DescriptorWriter &writeSampledImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement = 0);
 		DescriptorWriter &writeStorageImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement = 0);
 		DescriptorWriter &writeSampler(uint32_t bindingIndex, VkSampler sampler, uint32_t dstArrayElement = 0);

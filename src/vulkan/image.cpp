@@ -11,6 +11,7 @@ using namespace mgp;
 Image::Image()
 	: m_image(VK_NULL_HANDLE)
 	, m_layout()
+	, m_standardView(nullptr)
 	, m_core(nullptr)
 	, m_width(0)
 	, m_height(0)
@@ -30,6 +31,8 @@ Image::Image()
 
 Image::~Image()
 {
+	delete m_standardView;
+
 	vmaDestroyImage(m_core->getVMAAllocator(), m_image, m_allocation);
 	m_image = VK_NULL_HANDLE;
 }
@@ -150,6 +153,8 @@ void Image::create(
 		vmaCreateImage(m_core->getVMAAllocator(), &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);
+
+	m_standardView = createView(getLayerCount(), 0, 0);
 }
 
 ImageView *Image::createView(
@@ -313,4 +318,9 @@ unsigned Image::getLayerCount() const
 unsigned Image::getFaceCount() const
 {
 	return isCubemap() ? 6 : 1;
+}
+
+const ImageView *Image::getStandardView() const
+{
+	return m_standardView;
 }

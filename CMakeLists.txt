@@ -15,8 +15,8 @@ add_executable(${PROJECT_NAME}
 
     src/rendering/camera.cpp
     src/rendering/scene.cpp
-    src/rendering/mesh.cpp
-    src/rendering/mesh_loader.cpp
+    src/rendering/model.cpp
+    src/rendering/model_loader.cpp
 
     src/vulkan/core.cpp
     src/vulkan/toolbox.cpp

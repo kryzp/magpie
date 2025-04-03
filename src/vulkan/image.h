@@ -61,9 +61,13 @@ namespace mgp
 		unsigned getLayerCount() const;
 		unsigned getFaceCount() const;
 
+		const ImageView *getStandardView() const;
+
 	private:
 		VkImage m_image;
 		VkImageLayout m_layout;
+
+		ImageView *m_standardView;
 
 		VulkanCore *m_core;
 

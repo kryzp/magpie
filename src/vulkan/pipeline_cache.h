@@ -22,8 +22,8 @@ namespace mgp
 		void setShader(const Shader *shader);
 		const Shader *getShader() const;
 
-		void setVertexFormat(const VertexFormat &format);
-		const VertexFormat &getVertexFormat() const;
+		void setVertexFormat(const VertexFormat *format);
+		const VertexFormat *getVertexFormat() const;
 
 		void setSampleShading(bool enabled, float minSampleShading);
 
@@ -32,6 +32,9 @@ namespace mgp
 
 		void setCullMode(VkCullModeFlagBits cull);
 		VkCullModeFlagBits getCullMode() const;
+
+		void setFrontFace(VkFrontFace front);
+		VkFrontFace getFrontFace() const;
 
 		const std::vector<VkPipelineShaderStageCreateInfo> &getShaderStages() const;
 
@@ -59,6 +62,7 @@ namespace mgp
 		const VertexFormat *m_vertexFormat;
 
 		VkCullModeFlagBits m_cullMode;
+		VkFrontFace m_frontFace;
 
 		std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 

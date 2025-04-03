@@ -14,6 +14,7 @@ GraphicsPipelineDefinition::GraphicsPipelineDefinition()
 	: m_shader(nullptr)
 	, m_vertexFormat(nullptr)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
+	, m_frontFace(VK_FRONT_FACE_CLOCKWISE)
 	, m_shaderStages()
 	, m_depthStencilInfo()
 	, m_blendConstants{ 0.0f, 0.0f, 0.0f, 0.0f }
@@ -63,14 +64,14 @@ const Shader *GraphicsPipelineDefinition::getShader() const
 	return m_shader;
 }
 
-void GraphicsPipelineDefinition::setVertexFormat(const VertexFormat &format)
+void GraphicsPipelineDefinition::setVertexFormat(const VertexFormat *format)
 {
-	m_vertexFormat = &format;
+	m_vertexFormat = format;
 }
 
-const VertexFormat &GraphicsPipelineDefinition::getVertexFormat() const
+const VertexFormat *GraphicsPipelineDefinition::getVertexFormat() const
 {
-	return *m_vertexFormat;
+	return m_vertexFormat;
 }
 
 void GraphicsPipelineDefinition::setSampleShading(bool enabled, float minSampleShading)
@@ -97,6 +98,16 @@ void GraphicsPipelineDefinition::setCullMode(VkCullModeFlagBits cull)
 VkCullModeFlagBits GraphicsPipelineDefinition::getCullMode() const
 {
 	return m_cullMode;
+}
+
+void GraphicsPipelineDefinition::setFrontFace(VkFrontFace front)
+{
+	m_frontFace = front;
+}
+
+VkFrontFace GraphicsPipelineDefinition::getFrontFace() const
+{
+	return m_frontFace;
 }
 
 const std::vector<VkPipelineShaderStageCreateInfo> &GraphicsPipelineDefinition::getShaderStages() const
@@ -243,15 +254,26 @@ void PipelineCache::dispose()
 
 PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
 {
-	cauto &bindingDescriptions = definition.getVertexFormat().getBindingDescriptions();
-	cauto &attributeDescriptions = definition.getVertexFormat().getAttributeDescriptions();
-
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputStateCreateInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
-	vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
-	vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
-	vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+	if (definition.getVertexFormat())
+	{
+		cauto &bindingDescriptions = definition.getVertexFormat()->getBindingDescriptions();
+		cauto &attributeDescriptions = definition.getVertexFormat()->getAttributeDescriptions();
+
+		vertexInputStateCreateInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
+		vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+		vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+		vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+	}
+	else
+	{
+		vertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+		vertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
+		vertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
+	}
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
 	inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -272,7 +294,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 	rasterizationStateCreateInfo.lineWidth = 1.0f;
 	rasterizationStateCreateInfo.cullMode = definition.getCullMode();
-	rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rasterizationStateCreateInfo.frontFace = definition.getFrontFace();
 	rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;
 	rasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
 	rasterizationStateCreateInfo.depthBiasClamp = 0.0f;
@@ -322,12 +344,18 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	hash::combine(&createdPipelineHash, &multisampleStateCreateInfo);
 	hash::combine(&createdPipelineHash, &viewportStateCreateInfo);
 
-	for (auto &attrib : attributeDescriptions) {
-		hash::combine(&createdPipelineHash, &attrib);
-	}
+	if (definition.getVertexFormat())
+	{
+		cauto &bindingDescriptions = definition.getVertexFormat()->getBindingDescriptions();
+		cauto &attributeDescriptions = definition.getVertexFormat()->getAttributeDescriptions();
 
-	for (auto &binding : bindingDescriptions) {
-		hash::combine(&createdPipelineHash, &binding);
+		for (auto &attrib : attributeDescriptions) {
+			hash::combine(&createdPipelineHash, &attrib);
+		}
+
+		for (auto &binding : bindingDescriptions) {
+			hash::combine(&createdPipelineHash, &binding);
+		}
 	}
 
 	for (int i = 0; i < definition.getShaderStages().size(); i++) {

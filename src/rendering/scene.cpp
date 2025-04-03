@@ -3,13 +3,13 @@
 #include "core/common.h"
 
 #include "material.h"
-#include "mesh.h"
+#include "model.h"
 
 using namespace mgp;
 
 RenderObject::RenderObject()
 	: transform()
-	, mesh()
+	, model()
 {
 }
 
@@ -29,18 +29,18 @@ Scene::~Scene()
 }
 
 // todo: this shouldnt be called every frame. rather, createRenderObject should be addRenderObject(...) and when added we add all of its submeshes to the renderlist
-void Scene::aggregateSubMeshes()
+void Scene::aggregateMeshes()
 {
 	m_renderList.clear();
 
 	for (auto &obj : m_renderObjects)
 	{
-		if (!obj.mesh)
+		if (!obj.model)
 			continue;
 
-		for (int i = 0; i < obj.mesh->getSubmeshCount(); i++)
+		for (int i = 0; i < obj.model->getSubmeshCount(); i++)
 		{
-			m_renderList.push_back(obj.mesh->getSubmesh(i));
+			m_renderList.push_back(obj.model->getSubmesh(i));
 		}
 	}
 }
@@ -76,11 +76,28 @@ std::vector<RenderObject>::iterator Scene::createRenderObject()
 	return m_renderObjects.end();
 }
 
-const std::vector<SubMesh *> &Scene::getRenderList()
+void Scene::foreachObject(const std::function<void(RenderObject &)> &fn)
+{
+	for (auto &o : m_renderObjects)
+	{
+		fn(o);
+	}
+}
+
+void Scene::foreachMesh(const std::function<void(Mesh &)> &fn)
+{
+	for (auto &o : m_renderObjects)
+	{
+		for (int i = 0; i < o.model->getSubmeshCount(); i++)
+			fn(*o.model->getSubmesh(i));
+	}
+}
+
+const std::vector<Mesh *> &Scene::getRenderList()
 {
 	if (m_renderListDirty)
 	{
-		aggregateSubMeshes();
+		aggregateMeshes();
 		sortRenderListByMaterialHash(0, m_renderList.size() - 1);
 
 		m_renderListDirty = false;

@@ -12,22 +12,23 @@
 namespace mgp
 {
 	class VulkanCore;
+	class Model;
 	class Mesh;
-	class SubMesh;
 	class Image;
 	class ImageView;
+	class App;
 
-	class MeshLoader
+	class ModelLoader
 	{
 	public:
-		MeshLoader(VulkanCore *core);
-		~MeshLoader();
+		ModelLoader(VulkanCore *core, App *app);
+		~ModelLoader();
 
-		Mesh *loadMesh(const std::string &path);
+		Model *loadMesh(const std::string &path);
 
 	private:
-		void processNodes(Mesh *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
-		void processSubMesh(SubMesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
+		void processNodes(Model *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
+		void processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 
 		void fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback);
 		std::vector<Image *> loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath);
@@ -35,5 +36,6 @@ namespace mgp
 		Assimp::Importer m_importer;
 
 		VulkanCore *m_core;
+		App *m_app;
 	};
 }

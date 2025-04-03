@@ -312,7 +312,7 @@ DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescrip
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement)
 {
 	m_imageInfos[m_nImageInfos] = info;
 
@@ -332,29 +332,50 @@ DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, Vk
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkDescriptorType type, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement)
 {
 	VkDescriptorImageInfo info = {};
 	info.imageView = image;
 	info.imageLayout = layout;
 	info.sampler = sampler;
 
-	writeCombinedImage(bindingIndex, type, info, dstArrayElement);
+	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info, dstArrayElement);
 
 	return *this;
 }
 
 DescriptorWriter &DescriptorWriter::writeSampledImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement)
 {
-	return writeCombinedImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, image, layout, VK_NULL_HANDLE, dstArrayElement);
+	VkDescriptorImageInfo info = {};
+	info.imageView = image;
+	info.imageLayout = layout;
+	info.sampler = VK_NULL_HANDLE;
+
+	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, info, dstArrayElement);
+
+	return *this;
 }
 
 DescriptorWriter &DescriptorWriter::writeStorageImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement)
 {
-	return writeCombinedImage(bindingIndex, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, image, layout, VK_NULL_HANDLE, dstArrayElement);
+	VkDescriptorImageInfo info = {};
+	info.imageView = image;
+	info.imageLayout = layout;
+	info.sampler = VK_NULL_HANDLE;
+
+	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, info, dstArrayElement);
+
+	return *this;
 }
 
 DescriptorWriter &DescriptorWriter::writeSampler(uint32_t bindingIndex, VkSampler sampler, uint32_t dstArrayElement)
 {
-	return writeCombinedImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLER, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED, sampler, dstArrayElement);
+	VkDescriptorImageInfo info = {};
+	info.imageView = VK_NULL_HANDLE;
+	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	info.sampler = sampler;
+
+	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLER, info, dstArrayElement);
+
+	return *this;
 }

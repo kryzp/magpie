@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 #include <glm/glm.hpp>
 
@@ -8,8 +9,8 @@
 
 namespace mgp
 {
+	class Model;
 	class Mesh;
-	class SubMesh;
 
 	class RenderObject
 	{
@@ -18,7 +19,7 @@ namespace mgp
 		~RenderObject();
 
 		Transform transform;
-		Mesh *mesh;
+		Model *model;
 	};
 
 	class Scene
@@ -29,15 +30,18 @@ namespace mgp
 
 		std::vector<RenderObject>::iterator createRenderObject();
 
-		const std::vector<SubMesh *> &getRenderList();
+		void foreachObject(const std::function<void(RenderObject &)> &fn);
+		void foreachMesh(const std::function<void(Mesh &)> &fn);
+
+		const std::vector<Mesh *> &getRenderList();
 
 	private:
-		void aggregateSubMeshes();
+		void aggregateMeshes();
 		void sortRenderListByMaterialHash(int lo, int hi);
 
 		std::vector<RenderObject> m_renderObjects;
 
-		std::vector<SubMesh *> m_renderList;
+		std::vector<Mesh *> m_renderList;
 		bool m_renderListDirty;
 	};
 }
