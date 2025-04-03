@@ -82,7 +82,7 @@ namespace mgp
 	class Technique;
 	class GPUBuffer;
 
-	class EnvironmentProbe
+	struct EnvironmentProbe
 	{
 		Image *prefilter;
 		Image *irradiance;
@@ -128,18 +128,23 @@ namespace mgp
 		GPUBuffer *m_bindlessMaterialTable;
 		bindless::Handle m_materialHandle_UID;
 
+		void createSkyboxMesh();
 		void createSkybox();
 
 		Mesh *m_skyboxMesh;
+		Shader *m_skyboxShader;
+		VkDescriptorSet m_skyboxSet;
+		GraphicsPipelineDefinition m_skyboxPipeline;
 
 		DescriptorPoolDynamic m_descriptorPool;
 
-		void generateEnvironmentProbe(CommandBuffer &cmd);
-		void precomputeBRDF(CommandBuffer &cmd);
+		void precomputeBRDF();
+		void generateEnvironmentProbe();
+
+		Image *m_brdfLUT;
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;
-		Image *m_brdfLUT;
 
 		void initImGui();
 

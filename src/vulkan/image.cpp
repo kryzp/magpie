@@ -201,7 +201,7 @@ ImageView *Image::createView(
 		"Failed to create texture image view."
 	);
 
-	return new ImageView(m_core, view, m_format, m_usage);
+	return new ImageView(m_core, view, m_type, m_format, m_usage);
 }
 
 VkImageMemoryBarrier2 Image::getBarrier(

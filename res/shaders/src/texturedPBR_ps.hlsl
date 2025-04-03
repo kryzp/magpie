@@ -64,15 +64,22 @@ float4 main(PSInput input) : SV_Target
 	FrameConstants frameData	= bufferTable[pc.frameDataBuffer_ID]		.Load<FrameConstants>(0);
 	MaterialData materialData	= bufferTable[pc.materialDataBuffer_ID]		.Load<MaterialData>(pc.material_ID);
 	
-	float3 albedo				= 1.0;//texture2DTable[materialData.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
-	float  ambientOcclusion		= texture2DTable[materialData.aoTexture_ID]			.Sample(textureSampler, uv).r;
-	float3 metallicRoughness	= texture2DTable[materialData.mrTexture_ID]			.Sample(textureSampler, uv).rgb;
-	float3 normal				= texture2DTable[materialData.normalTexture_ID]		.Sample(textureSampler, uv).rgb;
-	float3 emissive				= 0.0;//texture2DTable[materialData.emissiveTexture_ID]	.Sample(textureSampler, uv).rgb;
+	float3 albedo					= texture2DTable[materialData.diffuseTexture_ID]	.Sample(textureSampler, uv).rgb;
+	float  ambientOcclusion			= texture2DTable[materialData.aoTexture_ID]			.Sample(textureSampler, uv).r;
+	float3 ambientRoughnessMetallic	= texture2DTable[materialData.armTexture_ID]		.Sample(textureSampler, uv).rgb;
+	float3 normal					= texture2DTable[materialData.normalTexture_ID]		.Sample(textureSampler, uv).rgb;
+	float3 emissive					= texture2DTable[materialData.emissiveTexture_ID]	.Sample(textureSampler, uv).rgb;
 	
-	ambientOcclusion		+= metallicRoughness.r;
-	float roughnessValue	 = metallicRoughness.g;
-	float metallicValue		 = metallicRoughness.b;
+	// light testing rough white surface
+//	float3 albedo					= 1.0;
+//	float  ambientOcclusion			= texture2DTable[materialData.aoTexture_ID].Sample(textureSampler, uv).r;
+//	float3 ambientRoughnessMetallic	= float3(texture2DTable[materialData.armTexture_ID].Sample(textureSampler, uv).r, 1.0, 0.0);
+//	float3 normal					= float3(0.5, 0.5, 1.0);
+//	float3 emissive					= 0.0;
+	
+	ambientOcclusion		+= ambientRoughnessMetallic.r;
+	float roughnessValue	 = ambientRoughnessMetallic.g;
+	float metallicValue		 = ambientRoughnessMetallic.b;
 	
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 	
@@ -119,21 +126,21 @@ float4 main(PSInput input) : SV_Target
 	}
 	*/
 	
-//	float3 F = fresnelSchlick(NdotV, F0, roughnessValue);
-//	float3 kD = (1.0 - F) * (1.0 - metallicValue);
+	float3 F = fresnelSchlick(NdotV, F0, roughnessValue);
+	float3 kD = (1.0 - F) * (1.0 - metallicValue);
 	
-//	float3 reflected = reflect(-viewDir, normal);
+	float3 reflected = reflect(-viewDir, normal);
 	
-//	float prefilterMipLevel = roughnessValue * MAX_REFLECTION_LOD;
-//	float3 prefilteredColour = textureCubeTable[pc.prefilterMap_ID].SampleLevel(cubemapSampler, reflected, prefilterMipLevel).rgb;
+	float prefilterMipLevel = roughnessValue * MAX_REFLECTION_LOD;
+	float3 prefilteredColour = textureCubeTable[pc.prefilterMap_ID].SampleLevel(cubemapSampler, reflected, prefilterMipLevel).rgb;
 	
-//	float2 environmentBRDF = texture2DTable[pc.brdfLUT_ID].Sample(textureSampler, float2(NdotV, roughnessValue)).xy;
+	float2 environmentBRDF = texture2DTable[pc.brdfLUT_ID].Sample(textureSampler, float2(NdotV, roughnessValue)).xy;
 	
-//	float3 specular = prefilteredColour * (F * environmentBRDF.x + environmentBRDF.y);
+	float3 specular = prefilteredColour * (F * environmentBRDF.x + environmentBRDF.y);
 	
-	float3 irradiance = 1.0;//textureCubeTable[pc.irradianceMap_ID].Sample(cubemapSampler, normal).rgb;
+	float3 irradiance = textureCubeTable[pc.irradianceMap_ID].Sample(cubemapSampler, normal).rgb;
 	float3 diffuse = irradiance * albedo;
-	float3 ambient = (1.0 * diffuse + 0.0) * ambientOcclusion;
+	float3 ambient = (kD * diffuse + specular) * ambientOcclusion;
 	
 	float3 finalColour = ambient + Lo + emissive;
 	

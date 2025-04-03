@@ -4,14 +4,19 @@
 
 using namespace mgp;
 
-ImageView::ImageView(VulkanCore *core, VkImageView view, VkFormat format, VkImageUsageFlags usage)
+ImageView::ImageView(VulkanCore *core, VkImageView view, VkImageViewType type, VkFormat format, VkImageUsageFlags usage)
 	: m_view(view)
 	, m_format(format)
 	, m_bindlessHandle(bindless::INVALID_HANDLE)
 	, m_core(core)
 {
 	if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
-		m_bindlessHandle = m_core->getBindlessResources().registerTexture2D(*this);
+	{
+		if (type == VK_IMAGE_VIEW_TYPE_2D)
+			m_bindlessHandle = m_core->getBindlessResources().registerTexture2D(*this);
+		else if (type == VK_IMAGE_VIEW_TYPE_CUBE)
+			m_bindlessHandle = m_core->getBindlessResources().registerCubemap(*this);
+	}
 }
 
 ImageView::~ImageView()

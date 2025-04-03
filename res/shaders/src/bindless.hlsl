@@ -4,7 +4,7 @@ struct MaterialData
 {
 	int diffuseTexture_ID;
 	int aoTexture_ID;
-	int mrTexture_ID;
+	int armTexture_ID;
 	int normalTexture_ID;
 	int emissiveTexture_ID;
 };
@@ -19,6 +19,7 @@ struct PushConstants
 	
 	int irradianceMap_ID;
 	int prefilterMap_ID;
+	
 	int brdfLUT_ID;
 	
 	int material_ID;

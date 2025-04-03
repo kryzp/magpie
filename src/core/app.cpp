@@ -44,14 +44,13 @@ App::App(const Config &config)
 	, m_bindlessMaterialTable()
 	, m_materialHandle_UID()
 	, m_skyboxMesh(nullptr)
-	, m_environmentMap()
+	, m_skyboxShader(nullptr)
+	, m_skyboxSet(VK_NULL_HANDLE)
+	, m_skyboxPipeline()
+	, m_brdfLUT(nullptr)
+	, m_environmentMap(nullptr)
 	, m_environmentProbe()
-	, m_brdfLUT()
 	, m_descriptorPool()
-//	, m_equirectangularToCubemapPipeline()
-//	, m_irradianceGenerationPipeline()
-//	, m_prefilterGenerationPipeline()
-//	, m_brdfIntegrationPipeline()
 	, m_config(config)
 	, m_vulkanCore(nullptr)
 	, m_platform(nullptr)
@@ -96,8 +95,6 @@ App::App(const Config &config)
 	loadShaders();
 	loadTechniques();
 
-	createSkybox();
-
 	m_descriptorPool.init(m_vulkanCore, 64 * Queue::FRAMES_IN_FLIGHT, {
 		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
@@ -111,6 +108,13 @@ App::App(const Config &config)
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
 		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
 	});
+
+	createSkyboxMesh();
+
+	precomputeBRDF();
+	generateEnvironmentProbe();
+
+	createSkybox();
 
 	m_running = true;
 
@@ -137,6 +141,9 @@ App::~App()
 	delete m_linearSampler;
 
 	delete m_environmentMap;
+
+	delete m_environmentProbe.irradiance;
+	delete m_environmentProbe.prefilter;
 
 	delete m_brdfLUT;
 
@@ -176,7 +183,7 @@ struct BindlessMaterialHandles
 {
 	bindless::Handle diffuseTexture_ID;
 	bindless::Handle aoTexture_ID;
-	bindless::Handle mrTexture_ID;
+	bindless::Handle armTexture_ID;
 	bindless::Handle normalTexture_ID;
 	bindless::Handle emissiveTexture_ID;
 };
@@ -217,31 +224,8 @@ void App::run()
 		inFlightSync.onWindowResize(w, h);
 	};
 
-	InstantSubmitSync instantSubmit(m_vulkanCore);
-	CommandBuffer &instantCmd = instantSubmit.begin();
-	{
-		generateEnvironmentProbe(instantCmd);
-		precomputeBRDF(instantCmd);
-	}
-	instantSubmit.submit();
-
 	ModelLoader meshLoader(m_vulkanCore, this);
 	Model *mesh = meshLoader.loadMesh("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
-
-	Shader *skyboxShader = getShader("skybox");
-
-	VkDescriptorSet skyboxSet = m_descriptorPool.allocate(skyboxShader->getDescriptorSetLayouts());
-
-	DescriptorWriter()
-		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
-		.updateSet(m_vulkanCore, skyboxSet);
-
-	GraphicsPipelineDefinition skyboxPipeline;
-	skyboxPipeline.setShader(skyboxShader);
-	skyboxPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
-	skyboxPipeline.setDepthTest(true);
-	skyboxPipeline.setDepthWrite(false);
-	skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	while (m_running)
 	{
@@ -316,9 +300,10 @@ void App::run()
 
 						pushConstants.transform_ID			= 0;
 
-						pushConstants.irradianceMap_ID		= 0;//g_materialSystem->getIrradianceMap()->getStandardView().getBindlessHandle().id;
-						pushConstants.prefilterMap_ID		= 0;//g_materialSystem->getPrefilterMap()->getStandardView().getBindlessHandle().id;
-						pushConstants.brdfLUT_ID			= 0;//g_materialSystem->getBRDFLUT()->getStandardView().getBindlessHandle().id;
+						pushConstants.irradianceMap_ID		= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+						pushConstants.prefilterMap_ID		= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+
+						pushConstants.brdfLUT_ID			= m_brdfLUT->getStandardView()->getBindlessHandle();
 
 						pushConstants.material_ID			= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
 
@@ -338,7 +323,7 @@ void App::run()
 
 				// skybox
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(skyboxPipeline, inFlightSync.getSwapchain()->getRenderInfo());
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, inFlightSync.getSwapchain()->getRenderInfo());
 
 					struct
 					{
@@ -352,7 +337,7 @@ void App::run()
 
 					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-					cmd.bindDescriptorSets(0, pipelineData.layout, { skyboxSet }, {});
+					cmd.bindDescriptorSets(0, pipelineData.layout, { m_skyboxSet }, {});
 
 					cmd.pushConstants(
 						pipelineData.layout,
@@ -424,7 +409,7 @@ void App::loadTextures()
 	loadTexture("fallback_black",	"../../res/textures/standard/black.png");
 	loadTexture("fallback_normals",	"../../res/textures/standard/normal_fallback.png");
 
-	loadTexture("environmentHDR",	"../../res/textures/spruit_sunrise_greg_zaal.hdr");
+	loadTexture("environmentHDR",	"../../res/textures/rogland_clear_night_greg_zaal.hdr");
 
 	loadTexture("stone",			"../../res/textures/smooth_stone.png");
 	loadTexture("wood",				"../../res/textures/wood.jpg");
@@ -776,7 +761,7 @@ Material *App::buildMaterial(MaterialData &data)
 	BindlessMaterialHandles handles = {};
 	handles.diffuseTexture_ID		= material->textures[0];
 	handles.aoTexture_ID			= material->textures[1];
-	handles.mrTexture_ID			= material->textures[2];
+	handles.armTexture_ID			= material->textures[2];
 	handles.normalTexture_ID		= material->textures[3];
 	handles.emissiveTexture_ID		= material->textures[4];
 
@@ -796,9 +781,72 @@ void App::addTechnique(const std::string &name, const Technique &technique)
 	m_techniques.insert({ name, technique });
 }
 
-void App::generateEnvironmentProbe(CommandBuffer &cmd)
+void App::precomputeBRDF()
 {
-	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	InstantSubmitSync instantSubmit(m_vulkanCore);
+	CommandBuffer &cmd = instantSubmit.begin();
+	{
+		MGP_LOG("Precomputing BRDF...");
+
+		const int BRDF_RESOLUTION = 512;
+
+		m_brdfLUT = new Image();
+
+		m_brdfLUT->create(
+			m_vulkanCore,
+			BRDF_RESOLUTION, BRDF_RESOLUTION, 1,
+			VK_FORMAT_R32G32_SFLOAT,
+			VK_IMAGE_VIEW_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			1,
+			VK_SAMPLE_COUNT_1_BIT,
+			false,
+			false
+		);
+
+		RenderInfo info(m_vulkanCore);
+		info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
+		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *m_brdfLUT->getStandardView());
+
+		Shader *brdfLUTShader = getShader("brdf_lut");
+
+		VkDescriptorSet set = m_descriptorPool.allocate(brdfLUTShader->getDescriptorSetLayouts());
+
+		GraphicsPipelineDefinition brdfIntegrationPipeline;
+		brdfIntegrationPipeline.setShader(brdfLUTShader);
+		brdfIntegrationPipeline.setDepthTest(false);
+		brdfIntegrationPipeline.setDepthWrite(false);
+
+		PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
+
+		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		cmd.beginRendering(info);
+		{
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+
+			cmd.bindDescriptorSets(0, pipelineData.layout, { set }, {});
+
+			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
+
+			cmd.draw(3);
+		}
+		cmd.endRendering();
+
+		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	}
+	instantSubmit.submit();
+}
+
+void App::generateEnvironmentProbe()
+{
+	const int ENVIRONMENT_MAP_RESOLUTION = 1024;
+	const int IRRADIANCE_MAP_RESOLUTION = 32;
+
+	const int PREFILTER_MAP_RESOLUTION = 128;
+	const int PREFILTER_MAP_MIP_LEVELS = 5;
+
+	glm::mat4 captureProjectionMatrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
 	glm::mat4 captureViewMatrices[] =
 	{
@@ -810,26 +858,6 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
 	};
 
-	// ---
-
-	MGP_LOG("Generating environment map...");
-
-	const int ENVIRONMENT_MAP_RESOLUTION = 1024;
-
-	m_environmentMap = new Image();
-
-	m_environmentMap->create(
-		m_vulkanCore,
-		ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION, 1,
-		VK_FORMAT_R32G32B32A32_SFLOAT,
-		VK_IMAGE_VIEW_TYPE_CUBE,
-		VK_IMAGE_TILING_OPTIMAL,
-		4,
-		VK_SAMPLE_COUNT_1_BIT,
-		false,
-		false
-	);
-
 	struct
 	{
 		glm::mat4 proj;
@@ -837,117 +865,69 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 	}
 	pc;
 
-	pc.proj = captureProjection;
-	pc.view = glm::identity<glm::mat4>();
+	InstantSubmitSync instantSubmit(m_vulkanCore);
 
-	Shader *eqrToCbmShader = getShader("equirectangular_to_cubemap");
-
-	VkDescriptorSet eqrToCbmSet = m_descriptorPool.allocate(eqrToCbmShader->getDescriptorSetLayouts());
-
-	Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
-
-	DescriptorWriter()
-		.writeCombinedImage(0, environmentHDRImage->getStandardView()->getHandle(), environmentHDRImage->getLayout(), m_linearSampler->getHandle())
-		.updateSet(m_vulkanCore, eqrToCbmSet);
-
-	GraphicsPipelineDefinition equirectangularToCubemapPipeline;
-	equirectangularToCubemapPipeline.setShader(eqrToCbmShader);
-	equirectangularToCubemapPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
-	equirectangularToCubemapPipeline.setDepthTest(false);
-	equirectangularToCubemapPipeline.setDepthWrite(false);
-
-	cmd.transitionLayout(*m_environmentMap, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-	for (int i = 0; i < 6; i++)
+	// generate environment map / skybox from 2D HDR image
+	CommandBuffer &cmd = instantSubmit.begin();
 	{
-		pc.view = captureViewMatrices[i];
+		MGP_LOG("Generating environment map...");
 
-		ImageView *view = m_environmentMap->createView(1, i, 0);
+		m_environmentMap = new Image();
 
-		RenderInfo targetInfo(m_vulkanCore);
-		targetInfo.setSize(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION);
-		targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
+		m_environmentMap->create(
+			m_vulkanCore,
+			ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION, 1,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_VIEW_TYPE_CUBE,
+			VK_IMAGE_TILING_OPTIMAL,
+			4,
+			VK_SAMPLE_COUNT_1_BIT,
+			false,
+			false
+		);
 
-		PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
+		pc.proj = captureProjectionMatrix;
+		pc.view = glm::identity<glm::mat4>();
 
-		// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
-		cmd.beginRendering(targetInfo);
-		{
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+		Shader *eqrToCbmShader = getShader("equirectangular_to_cubemap");
 
-			cmd.bindDescriptorSets(0, pipelineData.layout, { eqrToCbmSet }, {});
+		VkDescriptorSet eqrToCbmSet = m_descriptorPool.allocate(eqrToCbmShader->getDescriptorSetLayouts());
 
-			cmd.setViewport({ 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION });
+		Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
 
-			cmd.pushConstants(
-				pipelineData.layout,
-				VK_SHADER_STAGE_ALL_GRAPHICS,
-				sizeof(pc),
-				&pc
-			);
+		DescriptorWriter()
+			.writeCombinedImage(0, environmentHDRImage->getStandardView()->getHandle(), environmentHDRImage->getLayout(), m_linearSampler->getHandle())
+			.updateSet(m_vulkanCore, eqrToCbmSet);
 
-			m_skyboxMesh->render(cmd);
-		}
-		cmd.endRendering();
-	}
+		GraphicsPipelineDefinition equirectangularToCubemapPipeline;
+		equirectangularToCubemapPipeline.setShader(eqrToCbmShader);
+		equirectangularToCubemapPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
+		equirectangularToCubemapPipeline.setDepthTest(false);
+		equirectangularToCubemapPipeline.setDepthWrite(false);
 
-	cmd.transitionLayout(*m_environmentMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	cmd.generateMipmaps(*m_environmentMap);
-
-	/*
-	LLT_LOG("Generating irradiance map...");
-
-	const int IRRADIANCE_RESOLUTION = 32;
-
-	m_irradianceMap = g_textureManager->createCubemap(
-		"irradiance_map",
-		IRRADIANCE_RESOLUTION,
-		VK_FORMAT_R32G32B32A32_SFLOAT,
-		4
-	);
-
-	BoundTexture envMapImage(
-		m_environmentMap,
-		g_textureManager->getSampler("linear")
-	);
-
-	ShaderEffect *irradianceGenerationShader = g_shaderManager->getEffect("irradiance_convolution");
-
-	VkDescriptorSet icDescriptorSet = m_descriptorPoolAllocator.allocate(irradianceGenerationShader->getDescriptorSetLayouts());
-
-	DescriptorWriter()
-		.writeCombinedImage(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo())
-		.updateSet(icDescriptorSet);
-
-	m_irradianceGenerationPipeline.setShader(irradianceGenerationShader);
-	m_irradianceGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
-	m_irradianceGenerationPipeline.setDepthTest(false);
-	m_irradianceGenerationPipeline.setDepthWrite(false);
-
-	cmd.begin();
-	{
-		m_irradianceMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		cmd.transitionLayout(*m_environmentMap, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		for (int i = 0; i < 6; i++)
 		{
-			pc.view = captureViews[i];
+			pc.view = captureViewMatrices[i];
 
-			TextureView view = m_irradianceMap->getView(1, i, 0);
+			// todo: these aren't being deleted lmaooooooo
+			ImageView *view = m_environmentMap->createView(1, i, 0);
 
-			RenderInfo targetInfo;
-			targetInfo.setSize(IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION);
-			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, view);
+			RenderInfo targetInfo(m_vulkanCore);
+			targetInfo.setSize(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION);
+			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
 
-			PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_irradianceGenerationPipeline, targetInfo);
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
 				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-				cmd.bindDescriptorSets(0, pipelineData.layout, { icDescriptorSet }, {});
+				cmd.bindDescriptorSets(0, pipelineData.layout, { eqrToCbmSet }, {});
 
-				cmd.setViewport({ 0, 0, IRRADIANCE_RESOLUTION, IRRADIANCE_RESOLUTION });
+				cmd.setViewport({ 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION });
 
 				cmd.pushConstants(
 					pipelineData.layout,
@@ -956,28 +936,15 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 					&pc
 				);
 
-				cubeMesh->render(cmd);
+				m_skyboxMesh->render(cmd);
 			}
 			cmd.endRendering();
 		}
 
-		m_irradianceMap->generateMipmaps(cmd);
+		cmd.transitionLayout(*m_environmentMap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		cmd.generateMipmaps(*m_environmentMap);
 	}
-	cmd.endAndSubmitGraphics();
-
-	// ---
-
-	LLT_LOG("Generating prefilter map...");
-
-	const int PREFILTER_RESOLUTION = 128;
-	const int PREFILTER_MIP_LEVELS = 5;
-
-	m_prefilterMap = g_textureManager->createCubemap(
-		"prefilter_map",
-		PREFILTER_RESOLUTION,
-		VK_FORMAT_R32G32B32A32_SFLOAT,
-		PREFILTER_MIP_LEVELS
-	);
+	instantSubmit.submit();
 
 	struct
 	{
@@ -988,32 +955,126 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 	}
 	prefilterParams;
 
-	GPUBuffer *pfParameterBuffer = g_gpuBufferManager->createUniformBuffer(sizeof(prefilterParams) * PREFILTER_MIP_LEVELS);
+	GPUBuffer *pfParameterBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(prefilterParams) * PREFILTER_MAP_MIP_LEVELS
+	);
 
-	ShaderEffect *prefilterGenerationShader = g_shaderManager->getEffect("prefilter_convolution");
-
-	VkDescriptorSet pfDescriptorSet = m_descriptorPoolAllocator.allocate(prefilterGenerationShader->getDescriptorSetLayouts());
-
-	DescriptorWriter()
-		.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
-		.writeCombinedImage(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, envMapImage.getStandardImageInfo())
-		.updateSet(pfDescriptorSet);
-
-	m_prefilterGenerationPipeline.setShader(prefilterGenerationShader);
-	m_prefilterGenerationPipeline.setVertexFormat(g_primitiveVertexFormat);
-	m_prefilterGenerationPipeline.setDepthTest(false);
-	m_prefilterGenerationPipeline.setDepthWrite(false);
-
-	cmd.begin();
+	// generate irradiance and prefilter maps from environment map
+	cmd = instantSubmit.begin();
 	{
-		m_prefilterMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		MGP_LOG("Generating irradiance map...");
 
-		for (int mipLevel = 0; mipLevel < PREFILTER_MIP_LEVELS; mipLevel++)
+		m_environmentProbe.irradiance = new Image();
+
+		m_environmentProbe.irradiance->create(
+			m_vulkanCore,
+			IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION, 1,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_VIEW_TYPE_CUBE,
+			VK_IMAGE_TILING_OPTIMAL,
+			4,
+			VK_SAMPLE_COUNT_1_BIT,
+			false,
+			false
+		);
+
+		Shader *irradianceGenShader = getShader("irradiance_convolution");
+
+		VkDescriptorSet irradianceSet = m_descriptorPool.allocate(irradianceGenShader->getDescriptorSetLayouts());
+
+		DescriptorWriter()
+			.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+			.updateSet(m_vulkanCore, irradianceSet);
+
+		GraphicsPipelineDefinition irradiancePipeline;
+		irradiancePipeline.setShader(irradianceGenShader);
+		irradiancePipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
+		irradiancePipeline.setDepthTest(false);
+		irradiancePipeline.setDepthWrite(false);
+
+		cmd.transitionLayout(*m_environmentProbe.irradiance, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		
+		for (int i = 0; i < 6; i++)
 		{
-			int width = PREFILTER_RESOLUTION >> mipLevel;
-			int height = PREFILTER_RESOLUTION >> mipLevel;
+			pc.view = captureViewMatrices[i];
 
-			float roughness = (float)mipLevel / (float)(PREFILTER_MIP_LEVELS - 1);
+			// todo: these aren't being deleted lmaooooooo
+			ImageView *view = m_environmentProbe.irradiance->createView(1, i, 0);
+
+			RenderInfo targetInfo(m_vulkanCore);
+			targetInfo.setSize(IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION);
+			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
+
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
+
+			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
+			cmd.beginRendering(targetInfo);
+			{
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+
+				cmd.bindDescriptorSets(0, pipelineData.layout, { irradianceSet }, {});
+
+				cmd.setViewport({ 0, 0, IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION });
+
+				cmd.pushConstants(
+					pipelineData.layout,
+					VK_SHADER_STAGE_ALL_GRAPHICS,
+					sizeof(pc),
+					&pc
+				);
+
+				m_skyboxMesh->render(cmd);
+			}
+			cmd.endRendering();
+		}
+
+		cmd.transitionLayout(*m_environmentProbe.irradiance, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		cmd.generateMipmaps(*m_environmentProbe.irradiance);
+
+		// ---
+
+		MGP_LOG("Generating prefilter map...");
+
+		m_environmentProbe.prefilter = new Image();
+
+		m_environmentProbe.prefilter->create(
+			m_vulkanCore,
+			PREFILTER_MAP_RESOLUTION, PREFILTER_MAP_RESOLUTION, 1,
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			VK_IMAGE_VIEW_TYPE_CUBE,
+			VK_IMAGE_TILING_OPTIMAL,
+			PREFILTER_MAP_MIP_LEVELS,
+			VK_SAMPLE_COUNT_1_BIT,
+			false,
+			false
+		);
+
+		Shader *prefilterShader = getShader("prefilter_convolution");
+
+		VkDescriptorSet prefilterSet = m_descriptorPool.allocate(prefilterShader->getDescriptorSetLayouts());
+
+		DescriptorWriter()
+			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
+			.writeCombinedImage(1, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+			.updateSet(m_vulkanCore, prefilterSet);
+
+		GraphicsPipelineDefinition prefilterPipeline;
+		prefilterPipeline.setShader(prefilterShader);
+		prefilterPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
+		prefilterPipeline.setDepthTest(false);
+		prefilterPipeline.setDepthWrite(false);
+
+		cmd.transitionLayout(*m_environmentProbe.prefilter, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		for (int mipLevel = 0; mipLevel < PREFILTER_MAP_MIP_LEVELS; mipLevel++)
+		{
+			int width = PREFILTER_MAP_RESOLUTION >> mipLevel;
+			int height = PREFILTER_MAP_RESOLUTION >> mipLevel;
+
+			float roughness = (float)mipLevel / (float)(PREFILTER_MAP_MIP_LEVELS - 1);
 
 			prefilterParams.roughness = roughness;
 			uint32_t dynamicOffset = sizeof(prefilterParams) * mipLevel;
@@ -1021,15 +1082,16 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 
 			for (int i = 0; i < 6; i++)
 			{
-				pc.view = captureViews[i];
+				pc.view = captureViewMatrices[i];
 
-				TextureView view = m_prefilterMap->getView(1, i, mipLevel);
+				// todo: these aren't being deleted lmaooooooo
+				ImageView *view = m_environmentProbe.prefilter->createView(1, i, mipLevel);
 
-				RenderInfo info;
+				RenderInfo info(m_vulkanCore);
 				info.setSize(width, height);
-				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, view);
+				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
 
-				PipelineData pipelineData = g_vkCore->getPipelineCache().fetchGraphicsPipeline(m_prefilterGenerationPipeline, info);
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
 
 				// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 				cmd.beginRendering(info);
@@ -1039,7 +1101,7 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 					cmd.bindDescriptorSets(
 						0,
 						pipelineData.layout,
-						{ pfDescriptorSet },
+						{ prefilterSet },
 						{ dynamicOffset }
 					);
 
@@ -1052,75 +1114,22 @@ void App::generateEnvironmentProbe(CommandBuffer &cmd)
 						&pc
 					);
 
-					cubeMesh->render(cmd);
+					m_skyboxMesh->render(cmd);
 				}
 				cmd.endRendering();
 			}
 		}
 
-		m_prefilterMap->transitionLayout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		cmd.transitionLayout(*m_environmentProbe.prefilter, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
-	cmd.endAndSubmitGraphics();
+	instantSubmit.submit();
 
-	vkQueueWaitIdle(g_vkCore->m_graphicsQueue.getQueue());
+	vkQueueWaitIdle(m_vulkanCore->getGraphicsQueue().getHandle());
 
 	delete pfParameterBuffer;
-	*/
 }
 
-void App::precomputeBRDF(CommandBuffer &cmd)
-{
-	MGP_LOG("Precomputing BRDF...");
-
-	const int BRDF_RESOLUTION = 512;
-
-	m_brdfLUT = new Image();
-
-	m_brdfLUT->create(
-		m_vulkanCore,
-		BRDF_RESOLUTION, BRDF_RESOLUTION, 1,
-		VK_FORMAT_R32G32_SFLOAT,
-		VK_IMAGE_VIEW_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		1,
-		VK_SAMPLE_COUNT_1_BIT,
-		false,
-		false
-	);
-
-	RenderInfo info(m_vulkanCore);
-	info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
-	info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *m_brdfLUT->getStandardView());
-
-	Shader *brdfLUTShader = getShader("brdf_lut");
-
-	VkDescriptorSet set = m_descriptorPool.allocate(brdfLUTShader->getDescriptorSetLayouts());
-
-	GraphicsPipelineDefinition brdfIntegrationPipeline;
-	brdfIntegrationPipeline.setShader(brdfLUTShader);
-	brdfIntegrationPipeline.setDepthTest(false);
-	brdfIntegrationPipeline.setDepthWrite(false);
-
-	PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
-
-	cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-	cmd.beginRendering(info);
-	{
-		cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
-
-		cmd.bindDescriptorSets(0, pipelineData.layout, { set }, {});
-
-		cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
-
-		cmd.draw(3);
-	}
-	cmd.endRendering();
-
-	cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-}
-
-void App::createSkybox()
+void App::createSkyboxMesh()
 {
 	std::vector<vtx::PrimitiveVertex> vertices =
 	{
@@ -1162,6 +1171,23 @@ void App::createSkybox()
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
+}
+
+void App::createSkybox()
+{
+	m_skyboxShader = getShader("skybox");
+
+	m_skyboxSet = m_descriptorPool.allocate(m_skyboxShader->getDescriptorSetLayouts());
+
+	DescriptorWriter()
+		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+		.updateSet(m_vulkanCore, m_skyboxSet);
+
+	m_skyboxPipeline.setShader(m_skyboxShader);
+	m_skyboxPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
+	m_skyboxPipeline.setDepthTest(true);
+	m_skyboxPipeline.setDepthWrite(false);
+	m_skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
 }
 
 void App::initImGui()

@@ -11,9 +11,7 @@ namespace mgp
 	class ImageView
 	{
 	public:
-		ImageView() = default;
-		ImageView(VulkanCore *core, VkImageView view, VkFormat format, VkImageUsageFlags usage);
-
+		ImageView(VulkanCore *core, VkImageView view, VkImageViewType type, VkFormat format, VkImageUsageFlags usage);
 		~ImageView();
 
 		const VkImageView &getHandle() const;
