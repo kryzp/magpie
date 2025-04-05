@@ -70,7 +70,7 @@ float distributionGGX(float NdotH, float roughness)
 	return a2 / (denom * denom * MATH_PI);
 }
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	uint envWidth, envHeight;
 	environmentMap.GetDimensions(envWidth, envHeight);

@@ -112,6 +112,9 @@ namespace mgp
 
 		Camera m_camera;
 
+		Image *m_targetColour;
+		Image *m_targetDepth;
+
 		void loadTextures();
 		void loadShaders();
 		void loadTechniques();

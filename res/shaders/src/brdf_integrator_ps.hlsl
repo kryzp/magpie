@@ -65,7 +65,7 @@ float geometrySmith(float NdotV, float NdotL, float roughness)
 	return ggx1 * ggx2;
 }
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	float NdotV = input.texCoord.x;
 	float roughness = input.texCoord.y;

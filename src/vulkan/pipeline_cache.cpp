@@ -367,6 +367,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
 		PipelineData data = {};
+		data.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -424,6 +425,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	MGP_LOG("Created new graphics pipeline!");
 
 	PipelineData data = {};
+	data.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	data.pipeline = pipeline;
 	data.layout = layout;
 
@@ -441,6 +443,7 @@ PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
 		PipelineData data = {};
+		data.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -469,6 +472,7 @@ PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition
 	MGP_LOG("Created new compute pipeline!");
 
 	PipelineData data = {};
+	data.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 	data.pipeline = pipeline;
 	data.layout = layout;
 

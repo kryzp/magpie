@@ -358,6 +358,7 @@ VkSemaphoreSubmitInfo Swapchain::getRenderFinishedSemaphoreSubmitInfo() const
 	VkSemaphoreSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	submitInfo.semaphore = m_renderFinishedSemaphores[m_core->getCurrentFrameIndex()];
+	submitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	return submitInfo;
 }
@@ -367,7 +368,7 @@ VkSemaphoreSubmitInfo Swapchain::getImageAvailableSemaphoreSubmitInfo() const
 	VkSemaphoreSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	submitInfo.semaphore = m_imageAvailableSemaphores[m_core->getCurrentFrameIndex()];
-	submitInfo.stageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	submitInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	return submitInfo;
 }

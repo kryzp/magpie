@@ -12,7 +12,10 @@ Feel free to use any of the code in personal / professional / public / private p
 	- Low level vulkan abstraction in /vulkan/
 	- Parallel bindless resource system (any viable image view, buffer and sampler is automatically added to the bindless set)
 	- GLTF Model loading
+	- Material System (bindless)
 	- PBR
+		- Opaque Materials
+		- Compute HDR Tonemapping
 	- ImGui Support
 
 ### Stuff to implement

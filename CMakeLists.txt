@@ -31,6 +31,7 @@ add_executable(${PROJECT_NAME}
     src/vulkan/sampler.cpp
     src/vulkan/surface.cpp
     src/vulkan/command_buffer.cpp
+    src/vulkan/command_pool.cpp
     src/vulkan/gpu_buffer.cpp
     src/vulkan/shader.cpp
     src/vulkan/sync.cpp

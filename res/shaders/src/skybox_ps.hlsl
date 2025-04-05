@@ -7,7 +7,7 @@ struct PSInput
 TextureCube skyboxTexture : register(t0);
 SamplerState skyboxSampler : register(s0);
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
     float3 dir = normalize(input.position);
     dir.z *= -1.0;

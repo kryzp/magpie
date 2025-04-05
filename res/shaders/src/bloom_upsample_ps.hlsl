@@ -16,7 +16,7 @@ struct PSInput
 Texture2D renderTarget : register(t0);
 SamplerState samplerState : register(s0);
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	float dx = pc.filterRadius;
 	float dy = pc.filterRadius;

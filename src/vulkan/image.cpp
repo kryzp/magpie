@@ -29,6 +29,32 @@ Image::Image()
 {
 }
 
+Image::Image(
+	VulkanCore *core,
+	unsigned width, unsigned height, unsigned depth,
+	VkFormat format,
+	VkImageViewType type,
+	VkImageTiling tiling,
+	uint32_t mipmaps,
+	VkSampleCountFlagBits samples,
+	bool transient,
+	bool uav
+)
+	: Image()
+{
+	create(
+		core,
+		width, height, depth,
+		format,
+		type,
+		tiling,
+		mipmaps,
+		samples,
+		transient,
+		uav
+	);
+};
+
 Image::~Image()
 {
 	for (auto &[id, view] : m_viewCache)
@@ -111,6 +137,20 @@ void Image::create(
 		m_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	}
 
+	if (isUAV())
+	{
+		m_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+	}
+
+	if (isDepth())
+	{
+		m_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	else
+	{
+		m_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	}
+
 	VkImageCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	createInfo.imageType = imageType;
@@ -127,23 +167,13 @@ void Image::create(
 	createInfo.samples = m_samples;
 	createInfo.flags = 0;
 
-	if (isUAV())
-	{
-		createInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-	}
-
 	if (isCubemap())
 	{
-		createInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-	}
-
-	if (isDepth())
-	{
-		createInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		createInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
 	else
 	{
-		createInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		createInfo.flags = 0;
 	}
 
 	VmaAllocationCreateInfo vmaAllocInfo = {};

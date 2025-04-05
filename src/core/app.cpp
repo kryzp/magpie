@@ -13,6 +13,7 @@
 #include "debug_ui.h"
 
 #include "vulkan/core.h"
+#include "vulkan/toolbox.h"
 #include "vulkan/gpu_buffer.h"
 #include "vulkan/swapchain.h"
 #include "vulkan/sync.h"
@@ -57,6 +58,8 @@ App::App(const Config &config)
 	, m_inputSt(nullptr)
 	, m_running(false)
 	, m_camera(config.width, config.height, 75.0f, 0.01f, 100.0f)
+	, m_targetColour(nullptr)
+	, m_targetDepth(nullptr)
 {
 	m_platform = new Platform(config);
 	m_vulkanCore = new VulkanCore(config, m_platform);
@@ -137,6 +140,9 @@ App::~App()
 
 	delete m_brdfLUT;
 
+	delete m_targetColour;
+	delete m_targetDepth;
+
 	for (cauto &[name, image] : m_loadedImageCache)
 		delete image;
 
@@ -178,6 +184,24 @@ struct BindlessMaterialHandles
 	bindless::Handle emissiveTexture_ID;
 };
 
+struct BindlessPushConstants // todo: this should use instance id instead
+{
+	int frameDataBuffer_ID;
+	int transformBuffer_ID;
+	int materialDataBuffer_ID;
+
+	int transform_ID;
+
+	int irradianceMap_ID;
+	int prefilterMap_ID;
+	int brdfLUT_ID;
+
+	int material_ID;
+
+	int cubemapSampler_ID;
+	int textureSampler_ID;
+};
+
 void App::run()
 {
 	GPUBuffer frameConstants(
@@ -209,15 +233,84 @@ void App::run()
 
 	InFlightSync inFlightSync(m_vulkanCore);
 
-	dbgui::init(m_platform, m_vulkanCore);
-
 	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
 		MGP_LOG("Detected window resize!");
 		inFlightSync.onWindowResize(w, h);
 	};
 
+	dbgui::init(m_platform, m_vulkanCore);
+
+	m_targetColour = new Image(
+		m_vulkanCore,
+		inFlightSync.getSwapchain()->getWidth(),
+		inFlightSync.getSwapchain()->getHeight(),
+		1,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_targetDepth = new Image(
+		m_vulkanCore,
+		inFlightSync.getSwapchain()->getWidth(),
+		inFlightSync.getSwapchain()->getHeight(),
+		1,
+		vk_toolbox::findDepthFormat(m_vulkanCore->getPhysicalDevice()),
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		false
+	);
+
+	RenderInfo targetRenderInfo(m_vulkanCore);
+
+	targetRenderInfo.setSize(
+		inFlightSync.getSwapchain()->getWidth(),
+		inFlightSync.getSwapchain()->getHeight()
+	);
+	
+	targetRenderInfo.addColourAttachment(
+		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		*m_targetColour->getStandardView()
+	);
+
+	targetRenderInfo.addDepthAttachment(
+		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		*m_targetDepth->getStandardView()
+	);
+
 	ModelLoader meshLoader(m_vulkanCore, this);
 	Model *mesh = meshLoader.loadMesh("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+
+	Shader *textureUVShader = getShader("texture_uv");
+
+	GraphicsPipelineDefinition textureUVPipeline;
+	textureUVPipeline.setShader(textureUVShader);
+	textureUVPipeline.setDepthTest(false);
+	textureUVPipeline.setDepthWrite(false);
+
+	VkDescriptorSet textureUVSet = m_descriptorPool.allocate(textureUVShader->getDescriptorSetLayouts());
+
+	DescriptorWriter()
+		.writeCombinedImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+		.updateSet(m_vulkanCore, textureUVSet);
+
+	Shader *hdrTonemappingShader = getShader("hdr_tonemapping");
+
+	ComputePipelineDefinition hdrTonemappingPipeline;
+	hdrTonemappingPipeline.setShader(hdrTonemappingShader);
+
+	VkDescriptorSet hdrTonemappingSet = m_descriptorPool.allocate(hdrTonemappingShader->getDescriptorSetLayouts());
+
+	DescriptorWriter()
+		.writeStorageImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_GENERAL)
+		.updateSet(m_vulkanCore, hdrTonemappingSet);
 
 	while (m_running)
 	{
@@ -255,57 +348,44 @@ void App::run()
 
 			transformData.writeDataToMe(&transform, sizeof(TransformData), 0);
 
-			cmd.beginRendering(inFlightSync.getSwapchain()->getRenderInfo());
+			// render to target
+			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			cmd.transitionLayout(*m_targetDepth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+			cmd.beginRendering(targetRenderInfo);
 			{
 				// model
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], inFlightSync.getSwapchain()->getRenderInfo());
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], targetRenderInfo);
 
-					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
-					cmd.bindDescriptorSets(0, pipelineData.layout, { m_vulkanCore->getBindlessResources().getSet() }, {});
+					cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { m_vulkanCore->getBindlessResources().getSet() }, {});
 
-					struct
+					BindlessPushConstants pc;
 					{
-						int frameDataBuffer_ID;
-						int transformBuffer_ID;
-						int materialDataBuffer_ID;
+						pc.frameDataBuffer_ID		= frameConstants.getBindlessHandle();
+						pc.transformBuffer_ID		= transformData.getBindlessHandle();
+						pc.materialDataBuffer_ID	= m_bindlessMaterialTable->getBindlessHandle();
 
-						int transform_ID;
+						pc.transform_ID				= 0;
 
-						int irradianceMap_ID;
-						int prefilterMap_ID;
-						int brdfLUT_ID;
+						pc.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+						pc.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
 
-						int material_ID;
+						pc.brdfLUT_ID				= m_brdfLUT->getStandardView()->getBindlessHandle();
 
-						int cubemapSampler_ID;
-						int textureSampler_ID;
-					}
-					pushConstants;
-					{
-						pushConstants.frameDataBuffer_ID	= frameConstants.getBindlessHandle();
-						pushConstants.transformBuffer_ID	= transformData.getBindlessHandle();
-						pushConstants.materialDataBuffer_ID = m_bindlessMaterialTable->getBindlessHandle();
+						pc.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
 
-						pushConstants.transform_ID			= 0;
-
-						pushConstants.irradianceMap_ID		= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
-						pushConstants.prefilterMap_ID		= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
-
-						pushConstants.brdfLUT_ID			= m_brdfLUT->getStandardView()->getBindlessHandle();
-
-						pushConstants.material_ID			= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
-
-						pushConstants.cubemapSampler_ID		= m_linearSampler->getBindlessHandle();
-						pushConstants.textureSampler_ID		= m_linearSampler->getBindlessHandle();
+						pc.cubemapSampler_ID		= m_linearSampler->getBindlessHandle();
+						pc.textureSampler_ID		= m_linearSampler->getBindlessHandle();
 					}
 
 					cmd.pushConstants(
 						pipelineData.layout,
 						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(pushConstants),
-						&pushConstants
+						sizeof(BindlessPushConstants),
+						&pc
 					);
 
 					mesh->getSubmesh(0)->render(cmd);
@@ -313,7 +393,7 @@ void App::run()
 
 				// skybox
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, inFlightSync.getSwapchain()->getRenderInfo());
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, targetRenderInfo);
 
 					struct
 					{
@@ -325,9 +405,9 @@ void App::run()
 					params.proj = m_camera.getProj();
 					params.view = m_camera.getRotationMatrix();
 
-					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
-					cmd.bindDescriptorSets(0, pipelineData.layout, { m_skyboxSet }, {});
+					cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { m_skyboxSet }, {});
 
 					cmd.pushConstants(
 						pipelineData.layout,
@@ -338,6 +418,53 @@ void App::run()
 
 					m_skyboxMesh->render(cmd);
 				}
+			}
+			cmd.endRendering();
+
+			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_GENERAL);
+
+			// post processing compute shader (target = read / write)
+			{
+				PipelineData computePipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+
+				cmd.bindPipeline(computePipelineData.bindPoint, computePipelineData.pipeline);
+
+				cmd.bindDescriptorSets(0, computePipelineData.bindPoint, computePipelineData.layout, { hdrTonemappingSet }, {});
+
+				struct
+				{
+					uint32_t width;
+					uint32_t height;
+					float exposure;
+				}
+				pc;
+
+				pc.width = 1280;
+				pc.height = 720;
+				pc.exposure = 2.5f;
+
+				cmd.pushConstants(
+					computePipelineData.layout,
+					VK_SHADER_STAGE_COMPUTE_BIT,
+					sizeof(pc),
+					&pc
+				);
+
+				cmd.dispatch(160, 90, 1);
+			}
+
+			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			cmd.transitionLayout(*m_targetDepth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+
+			cmd.beginRendering(inFlightSync.getSwapchain()->getRenderInfo());
+			{
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, inFlightSync.getSwapchain()->getRenderInfo());
+
+				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
+
+				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { textureUVSet }, {});
+
+				cmd.draw(3);
 			}
 			cmd.endRendering();
 
@@ -403,183 +530,191 @@ void App::loadTextures()
 
 void App::loadShaders()
 {
-	// vertex shaders
-	loadShaderStage("primitive_vs",						"../../res/shaders/compiled/primitive_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
-	loadShaderStage("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
-	loadShaderStage("fullscreen_quad_vs",				"../../res/shaders/compiled/fullscreen_quad_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
-	loadShaderStage("model_vs",							"../../res/shaders/compiled/model_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
-
-	// pixel shaders
-	loadShaderStage("equirectangular_to_cubemap_ps",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("irradiance_convolution_ps",		"../../res/shaders/compiled/irradiance_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("prefilter_convolution_ps",			"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("brdf_integrator_ps",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("texturedPBR_ps",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("subsurface_refraction_ps",			"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("skybox_ps",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("hdr_tonemapping_ps",				"../../res/shaders/compiled/hdr_tonemapping_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-	loadShaderStage("bloom_upsample_ps",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	// compute shaders
-	loadShaderStage("hdr_tonemapping_cs",				"../../res/shaders/compiled/hdr_tonemapping_cs.spv",				VK_SHADER_STAGE_COMPUTE_BIT);
-
-	// PBR
+	// shader stages
 	{
-		Shader *pbr = createShader("texturedPBR");
+		// vertex shaders
+		loadShaderStage("primitive_vs",						"../../res/shaders/compiled/primitive_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("fullscreen_triangle_vs",			"../../res/shaders/compiled/fullscreen_triangle_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("model_vs",							"../../res/shaders/compiled/model_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
 
-		pbr->setDescriptorSetLayouts({ m_vulkanCore->getBindlessResources().getLayout()});
-		pbr->setPushConstantsSize(sizeof(int) * 16);
-		pbr->addStage(getShaderStage("model_vs"));
-		pbr->addStage(getShaderStage("texturedPBR_ps"));
+		// pixel shaders
+		loadShaderStage("equirectangular_to_cubemap_ps",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("irradiance_convolution_ps",		"../../res/shaders/compiled/irradiance_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("prefilter_convolution_ps",			"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("brdf_integrator_ps",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("texturedPBR_ps",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("subsurface_refraction_ps",			"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("skybox_ps",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
+//		loadShaderStage("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
+//		loadShaderStage("bloom_upsample_ps",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("texture_uv_ps",					"../../res/shaders/compiled/texture_uv_ps.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
+
+		// compute shaders
+		loadShaderStage("hdr_tonemapping_cs",				"../../res/shaders/compiled/hdr_tonemapping_cs.spv",				VK_SHADER_STAGE_COMPUTE_BIT);
 	}
 
-	// SUBSURFACE REFRACTION
+	// effects
 	{
+		// PBR
+		{
+			Shader *pbr = createShader("texturedPBR");
+
+			pbr->setDescriptorSetLayouts({ m_vulkanCore->getBindlessResources().getLayout()});
+			pbr->setPushConstantsSize(sizeof(int) * 16);
+			pbr->addStage(getShaderStage("model_vs"));
+			pbr->addStage(getShaderStage("texturedPBR_ps"));
+		}
+
+		// SUBSURFACE REFRACTION
+		{
+			/*
+			DescriptorLayoutBuilder descriptorLayoutBuilder;
+
+			// bind all buffers
+			for (int i = 0; i <= 2; i++)
+			descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+
+			// bind all textures
+			for (int i = 3; i <= 10; i++)
+			descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+			VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *pbr = createEffect("subsurface_refraction");
+			pbr->setDescriptorSetLayout(layout);
+			pbr->setPushConstantsSize(0);
+			pbr->addStage(g_shaderManager->get("model_vs"));
+			pbr->addStage(g_shaderManager->get("subsurface_refraction_ps"));
+			*/
+		}
+
+		// SKYBOX
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *skybox = createShader("skybox");
+
+			skybox->setDescriptorSetLayouts({ layout });
+			skybox->setPushConstantsSize(sizeof(float)*16 * 2);
+			skybox->addStage(getShaderStage("skybox_vs"));
+			skybox->addStage(getShaderStage("skybox_ps"));
+		}
+
+		// EQUIRECTANGULAR TO CUBEMAP
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *equirectangularToCubemap = createShader("equirectangular_to_cubemap");
+
+			equirectangularToCubemap->setDescriptorSetLayouts({ layout });
+			equirectangularToCubemap->setPushConstantsSize(sizeof(float)*16 * 2);
+			equirectangularToCubemap->addStage(getShaderStage("primitive_vs"));
+			equirectangularToCubemap->addStage(getShaderStage("equirectangular_to_cubemap_ps"));
+		}
+
+		// IRRADIANCE CONVOLUTION
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *irradianceConvolution = createShader("irradiance_convolution");
+
+			irradianceConvolution->setDescriptorSetLayouts({ layout });
+			irradianceConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
+			irradianceConvolution->addStage(getShaderStage("primitive_vs"));
+			irradianceConvolution->addStage(getShaderStage("irradiance_convolution_ps"));
+		}
+
+		// PREFILTER CONVOLUTION
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+				.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *prefilterConvolution = createShader("prefilter_convolution");
+
+			prefilterConvolution->setDescriptorSetLayouts({ layout });
+			prefilterConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
+			prefilterConvolution->addStage(getShaderStage("primitive_vs"));
+			prefilterConvolution->addStage(getShaderStage("prefilter_convolution_ps"));
+		}
+
+		// BRDF LUT GENERATION
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *brdfLUT = createShader("brdf_lut");
+
+			brdfLUT->setDescriptorSetLayouts({ layout });
+			brdfLUT->setPushConstantsSize(0);
+			brdfLUT->addStage(getShaderStage("fullscreen_triangle_vs"));
+			brdfLUT->addStage(getShaderStage("brdf_integrator_ps"));
+		}
+
+		// HDR TONEMAPPING
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+				.build(m_vulkanCore, VK_SHADER_STAGE_COMPUTE_BIT);
+
+			Shader *hdrTonemapping = createShader("hdr_tonemapping");
+
+			hdrTonemapping->setDescriptorSetLayouts({ layout });
+			hdrTonemapping->setPushConstantsSize(sizeof(uint32_t)*2 + sizeof(float)*1);
+			hdrTonemapping->addStage(getShaderStage("hdr_tonemapping_cs"));
+		}
+
+		// BLOOM DOWNSAMPLE
 		/*
-		DescriptorLayoutBuilder descriptorLayoutBuilder;
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		// bind all buffers
-		for (int i = 0; i <= 2; i++)
-		descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+			Shader *bloomDownsample = createShader("bloom_downsample");
 
-		// bind all textures
-		for (int i = 3; i <= 10; i++)
-		descriptorLayoutBuilder.bind(i, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			bloomDownsample->setDescriptorSetLayouts({ layout });
+			bloomDownsample->setPushConstantsSize(sizeof(int));
+			bloomDownsample->addStage(getShaderStage("fullscreen_triangle_vs"));
+			bloomDownsample->addStage(getShaderStage("bloom_downsample_ps"));
+		}
 
-		VkDescriptorSetLayout layout = descriptorLayoutBuilder.build(VK_SHADER_STAGE_ALL_GRAPHICS);
+		// BLOOM UPSAMPLE
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		Shader *pbr = createEffect("subsurface_refraction");
-		pbr->setDescriptorSetLayout(layout);
-		pbr->setPushConstantsSize(0);
-		pbr->addStage(g_shaderManager->get("model_vs"));
-		pbr->addStage(g_shaderManager->get("subsurface_refraction_ps"));
+			Shader *bloomUpsample = createShader("bloom_upsample");
+
+			bloomUpsample->setDescriptorSetLayouts({ layout });
+			bloomUpsample->setPushConstantsSize(sizeof(float));
+			bloomUpsample->addStage(getShaderStage("fullscreen_triangle_vs"));
+			bloomUpsample->addStage(getShaderStage("bloom_upsample_ps"));
+		}
 		*/
-	}
 
-	// SKYBOX
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+		// TEXTURE UV
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-		Shader *skybox = createShader("skybox");
+			Shader *textureUV = createShader("texture_uv");
 
-		skybox->setDescriptorSetLayouts({ layout });
-		skybox->setPushConstantsSize(sizeof(float)*16 * 2);
-		skybox->addStage(getShaderStage("skybox_vs"));
-		skybox->addStage(getShaderStage("skybox_ps"));
-	}
-
-	// EQUIRECTANGULAR TO CUBEMAP
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *equirectangularToCubemap = createShader("equirectangular_to_cubemap");
-
-		equirectangularToCubemap->setDescriptorSetLayouts({ layout });
-		equirectangularToCubemap->setPushConstantsSize(sizeof(float)*16 * 2);
-		equirectangularToCubemap->addStage(getShaderStage("primitive_vs"));
-		equirectangularToCubemap->addStage(getShaderStage("equirectangular_to_cubemap_ps"));
-	}
-
-	// IRRADIANCE CONVOLUTION
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *irradianceConvolution = createShader("irradiance_convolution");
-
-		irradianceConvolution->setDescriptorSetLayouts({ layout });
-		irradianceConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-		irradianceConvolution->addStage(getShaderStage("primitive_vs"));
-		irradianceConvolution->addStage(getShaderStage("irradiance_convolution_ps"));
-	}
-
-	// PREFILTER CONVOLUTION
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-			.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *prefilterConvolution = createShader("prefilter_convolution");
-
-		prefilterConvolution->setDescriptorSetLayouts({ layout });
-		prefilterConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-		prefilterConvolution->addStage(getShaderStage("primitive_vs"));
-		prefilterConvolution->addStage(getShaderStage("prefilter_convolution_ps"));
-	}
-
-	// BRDF LUT GENERATION
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *brdfLUT = createShader("brdf_lut");
-
-		brdfLUT->setDescriptorSetLayouts({ layout });
-		brdfLUT->setPushConstantsSize(0);
-		brdfLUT->addStage(getShaderStage("fullscreen_quad_vs"));
-		brdfLUT->addStage(getShaderStage("brdf_integrator_ps"));
-	}
-
-	// HDR TONEMAPPING
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *hdrTonemapping = createShader("hdr_tonemapping");
-
-		hdrTonemapping->setDescriptorSetLayouts({ layout });
-		hdrTonemapping->setPushConstantsSize(sizeof(float) * 2);
-		hdrTonemapping->addStage(getShaderStage("fullscreen_quad_vs"));
-		hdrTonemapping->addStage(getShaderStage("hdr_tonemapping_ps"));
-
-		/*
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-		.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-		.bind(1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-		.build(VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		ShaderEffect *hdrTonemapping = createEffect("hdr_tonemapping");
-		hdrTonemapping->setDescriptorSetLayouts({ layout });
-		hdrTonemapping->setPushConstantsSize(sizeof(unsigned) * 2);
-		hdrTonemapping->addStage(get("hdr_tonemapping_cs"));
-		*/
-	}
-
-	// BLOOM DOWNSAMPLE
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *bloomDownsample = createShader("bloom_downsample");
-
-		bloomDownsample->setDescriptorSetLayouts({ layout });
-		bloomDownsample->setPushConstantsSize(sizeof(int));
-		bloomDownsample->addStage(getShaderStage("fullscreen_quad_vs"));
-		bloomDownsample->addStage(getShaderStage("bloom_downsample_ps"));
-	}
-
-	// BLOOM UPSAMPLE
-	{
-		VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-			.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-		Shader *bloomUpsample = createShader("bloom_upsample");
-
-		bloomUpsample->setDescriptorSetLayouts({ layout });
-		bloomUpsample->setPushConstantsSize(sizeof(float));
-		bloomUpsample->addStage(getShaderStage("fullscreen_quad_vs"));
-		bloomUpsample->addStage(getShaderStage("bloom_upsample_ps"));
+			textureUV->setDescriptorSetLayouts({ layout });
+			textureUV->setPushConstantsSize(0);
+			textureUV->addStage(getShaderStage("fullscreen_triangle_vs"));
+			textureUV->addStage(getShaderStage("texture_uv_ps"));
+		}
 	}
 }
 
@@ -613,9 +748,7 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 
 	Bitmap bitmap(path);
 
-	Image *image = new Image();
-
-	image->create(
+	Image *image = new Image(
 		m_vulkanCore,
 		bitmap.getWidth(), bitmap.getHeight(), 1,
 		bitmap.getFormat() == Bitmap::FORMAT_RGBA8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -776,9 +909,7 @@ void App::precomputeBRDF()
 
 		const int BRDF_RESOLUTION = 512;
 
-		m_brdfLUT = new Image();
-
-		m_brdfLUT->create(
+		m_brdfLUT = new Image(
 			m_vulkanCore,
 			BRDF_RESOLUTION, BRDF_RESOLUTION, 1,
 			VK_FORMAT_R32G32_SFLOAT,
@@ -809,9 +940,9 @@ void App::precomputeBRDF()
 
 		cmd.beginRendering(info);
 		{
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+			cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
-			cmd.bindDescriptorSets(0, pipelineData.layout, { set }, {});
+			cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { set }, {});
 
 			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
@@ -858,9 +989,7 @@ void App::generateEnvironmentProbe()
 	{
 		MGP_LOG("Generating environment map...");
 
-		m_environmentMap = new Image();
-
-		m_environmentMap->create(
+		m_environmentMap = new Image(
 			m_vulkanCore,
 			ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -882,7 +1011,7 @@ void App::generateEnvironmentProbe()
 		Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
 
 		DescriptorWriter()
-			.writeCombinedImage(0, environmentHDRImage->getStandardView()->getHandle(), environmentHDRImage->getLayout(), m_linearSampler->getHandle())
+			.writeCombinedImage(0, environmentHDRImage->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
 			.updateSet(m_vulkanCore, eqrToCbmSet);
 
 		GraphicsPipelineDefinition equirectangularToCubemapPipeline;
@@ -909,9 +1038,9 @@ void App::generateEnvironmentProbe()
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
-				cmd.bindDescriptorSets(0, pipelineData.layout, { eqrToCbmSet }, {});
+				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { eqrToCbmSet }, {});
 
 				cmd.setViewport({ 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION });
 
@@ -953,9 +1082,7 @@ void App::generateEnvironmentProbe()
 	{
 		MGP_LOG("Generating irradiance map...");
 
-		m_environmentProbe.irradiance = new Image();
-
-		m_environmentProbe.irradiance->create(
+		m_environmentProbe.irradiance = new Image(
 			m_vulkanCore,
 			IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -972,7 +1099,7 @@ void App::generateEnvironmentProbe()
 		VkDescriptorSet irradianceSet = m_descriptorPool.allocate(irradianceGenShader->getDescriptorSetLayouts());
 
 		DescriptorWriter()
-			.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+			.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
 			.updateSet(m_vulkanCore, irradianceSet);
 
 		GraphicsPipelineDefinition irradiancePipeline;
@@ -999,9 +1126,9 @@ void App::generateEnvironmentProbe()
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
-				cmd.bindDescriptorSets(0, pipelineData.layout, { irradianceSet }, {});
+				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { irradianceSet }, {});
 
 				cmd.setViewport({ 0, 0, IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION });
 
@@ -1024,9 +1151,7 @@ void App::generateEnvironmentProbe()
 
 		MGP_LOG("Generating prefilter map...");
 
-		m_environmentProbe.prefilter = new Image();
-
-		m_environmentProbe.prefilter->create(
+		m_environmentProbe.prefilter = new Image(
 			m_vulkanCore,
 			PREFILTER_MAP_RESOLUTION, PREFILTER_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -1044,7 +1169,7 @@ void App::generateEnvironmentProbe()
 
 		DescriptorWriter()
 			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
-			.writeCombinedImage(1, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+			.writeCombinedImage(1, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
 			.updateSet(m_vulkanCore, prefilterSet);
 
 		GraphicsPipelineDefinition prefilterPipeline;
@@ -1082,10 +1207,11 @@ void App::generateEnvironmentProbe()
 				// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 				cmd.beginRendering(info);
 				{
-					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
 
 					cmd.bindDescriptorSets(
 						0,
+						pipelineData.bindPoint,
 						pipelineData.layout,
 						{ prefilterSet },
 						{ dynamicOffset }
@@ -1166,7 +1292,7 @@ void App::createSkybox()
 	m_skyboxSet = m_descriptorPool.allocate(m_skyboxShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
-		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), m_environmentMap->getLayout(), m_linearSampler->getHandle())
+		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
 		.updateSet(m_vulkanCore, m_skyboxSet);
 
 	m_skyboxPipeline.setShader(m_skyboxShader);

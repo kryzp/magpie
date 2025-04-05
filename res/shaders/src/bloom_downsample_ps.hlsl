@@ -29,7 +29,7 @@ float karisAverage(float3 col)
 	return 1.0 / (1.0 + luma);
 }
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	uint width, height;
 	renderTarget.GetDimensions(width, height);

@@ -9,7 +9,7 @@ struct PSInput
 TextureCube environmentMap : register(t0);
 SamplerState samplerState : register(s0);
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	float3 normal = normalize(input.worldPos);
 	float3 right = normalize(cross(float3(0.0, 1.0, 0.0), normal));

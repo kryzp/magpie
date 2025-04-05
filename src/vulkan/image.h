@@ -16,6 +16,19 @@ namespace mgp
 
 	public:
 		Image();
+
+		Image(
+			VulkanCore *core,
+			unsigned width, unsigned height, unsigned depth,
+			VkFormat format,
+			VkImageViewType type,
+			VkImageTiling tiling,
+			uint32_t mipmaps,
+			VkSampleCountFlagBits samples,
+			bool transient,
+			bool uav
+		);
+
 		~Image();
 
 		void create(

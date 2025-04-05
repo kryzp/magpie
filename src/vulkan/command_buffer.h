@@ -62,6 +62,7 @@ namespace mgp
 
 		void bindDescriptorSets(
 			uint32_t firstSet,
+			VkPipelineBindPoint bindPoint,
 			VkPipelineLayout layout,
 			const std::vector<VkDescriptorSet> &descriptorSets,
 			const std::vector<uint32_t> &dynamicOffsets
@@ -126,11 +127,7 @@ namespace mgp
 
 		void resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32_t queryCount);
 
-		/*
-		void beginCompute();
-		void endCompute(VkSemaphore signalSemaphore);
 		void dispatch(uint32_t gcX, uint32_t gcY, uint32_t gcZ);
-		*/
 
 		VkCommandBuffer getHandle() const;
 

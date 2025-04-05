@@ -1,9 +1,10 @@
 #pragma once
 
 #include <array>
-#include <vector>
 
 #include "third_party/volk.h"
+
+#include "command_pool.h"
 
 namespace mgp
 {
@@ -14,37 +15,17 @@ namespace mgp
 	public:
 		constexpr static int FRAMES_IN_FLIGHT = 3;
 
-		class FrameData
+		struct FrameData
 		{
-			constexpr static uint32_t INIT_COMMAND_BUFFER_COUNT = 4;
-
-		public:
-			FrameData();
-			~FrameData() = default;
-
 			void create(const VulkanCore *core, int queueFamilyIndex);
 			void destroy() const;
 
-			VkCommandBuffer getFreeBuffer();
+			CommandPoolDynamic pool;
 
-			void resetCommandPool();
-
-			const VkCommandPool &getCommandPool() const;
-
-			const VkFence &getInFlightFence() const;
-			const VkFence &getInstantSubmitFence() const;
+			VkFence inFlightFence;
+			VkFence instantSubmitFence;
 
 		private:
-			void expandBuffers(int n);
-
-			VkCommandPool m_commandPool;
-
-			unsigned m_freeIndex;
-			std::vector<VkCommandBuffer> m_freeBuffers;
-
-			VkFence m_inFlightFence;
-			VkFence m_instantSubmitFence;
-
 			const VulkanCore *m_core;
 		};
 

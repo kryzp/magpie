@@ -16,7 +16,7 @@ float2 sampleSphericalMap(float3 v)
 	return uv;
 }
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(PSInput input) : SV_Target
 {
 	float2 uv = sampleSphericalMap(normalize(input.worldPos));
 	float3 col = texture.Sample(samplerState, uv).rgb;

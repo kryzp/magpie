@@ -95,6 +95,7 @@ namespace mgp
 
 	struct PipelineData
 	{
+		VkPipelineBindPoint bindPoint;
 		VkPipeline pipeline;
 		VkPipelineLayout layout;
 	};

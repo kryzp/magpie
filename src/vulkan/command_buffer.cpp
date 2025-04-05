@@ -170,6 +170,7 @@ void CommandBuffer::drawIndexedIndirectCount(
 
 void CommandBuffer::bindDescriptorSets(
 	uint32_t firstSet,
+	VkPipelineBindPoint bindPoint,
 	VkPipelineLayout layout,
 	const std::vector<VkDescriptorSet> &descriptorSets,
 	const std::vector<uint32_t> &dynamicOffsets
@@ -177,7 +178,7 @@ void CommandBuffer::bindDescriptorSets(
 {
 	vkCmdBindDescriptorSets(
 		m_buffer,
-		m_isRendering ? VK_PIPELINE_BIND_POINT_GRAPHICS : VK_PIPELINE_BIND_POINT_COMPUTE,
+		bindPoint,
 		layout,
 		firstSet,
 		descriptorSets.size(),
@@ -285,8 +286,8 @@ void CommandBuffer::transitionLayout(
 	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;//vkutil::getTransferAccessFlags(m_imageLayout);
 	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;//vkutil::getTransferAccessFlags(newLayout);
 
-	barrier.srcStageMask = vk_toolbox::getTransferPipelineStageFlags(image.getLayout());
-	barrier.dstStageMask = vk_toolbox::getTransferPipelineStageFlags(newLayout);
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;//vk_toolbox::getTransferPipelineStageFlags(image.getLayout());
+	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;//vk_toolbox::getTransferPipelineStageFlags(newLayout);
 
 	pipelineBarrier(
 		0,
@@ -462,55 +463,13 @@ void CommandBuffer::resetQueryPool(VkQueryPool pool, uint32_t firstQuery, uint32
 	);
 }
 
-/*
-void CommandBuffer::beginCompute()
-{
-auto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame(); // current buffer comes from here! (note to myself tomorrow after i get sleep)
-
-vkWaitForFences(g_vkCore->m_device, 1, &currentFrame.getInFlightFence(), VK_TRUE, UINT64_MAX);
-currentFrame.resetCommandPool();
-
-VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-LLT_VK_CHECK(
-vkBeginCommandBuffer(m_buffer, &commandBufferBeginInfo),
-"Failed to begin recording compute command buffer"
-);
-}
-
-void CommandBuffer::endCompute(VkSemaphore signalSemaphore)
-{
-cauto &currentFrame = g_vkCore->m_computeQueues[0].getCurrentFrame();
-
-LLT_VK_CHECK(
-vkEndCommandBuffer(m_buffer),
-"Failed to record compute command buffer"
-);
-
-VkSubmitInfo submitInfo = {};
-
-submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-submitInfo.commandBufferCount = 1;
-submitInfo.pCommandBuffers = &m_buffer;
-
-submitInfo.signalSemaphoreCount = 1;
-submitInfo.pSignalSemaphores = &signalSemaphore;
-
-vkResetFences(g_vkCore->m_device, 1, &currentFrame.getInFlightFence());
-
-LLT_VK_CHECK(
-vkQueueSubmit(g_vkCore->m_computeQueues[0].getQueue(), 1, &submitInfo, currentFrame.getInFlightFence()),
-"Failed to submit compute command buffer"
-);
-}
-
 void CommandBuffer::dispatch(uint32_t gcX, uint32_t gcY, uint32_t gcZ)
 {
-vkCmdDispatch(m_buffer, gcX, gcY, gcZ);
+	vkCmdDispatch(
+		m_buffer,
+		gcX, gcY, gcZ
+	);
 }
-*/
 
 VkCommandBuffer CommandBuffer::getHandle() const
 {

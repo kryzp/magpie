@@ -22,17 +22,15 @@ void InFlightSync::destroy()
 
 CommandBuffer &InFlightSync::begin()
 {
-	auto &currentFrame = m_core->getGraphicsQueue().getFrame(m_core->getCurrentFrameIndex());
+	auto &queue = m_core->getGraphicsQueue();
+	auto &currentFrame = queue.getFrame(m_core->getCurrentFrameIndex());
 
-	vkQueueWaitIdle(m_core->getGraphicsQueue().getHandle());
-	currentFrame.resetCommandPool();
-
-	m_core->waitForFence(currentFrame.getInFlightFence());
-	m_core->resetFence(currentFrame.getInFlightFence());
+	m_core->waitForFence(currentFrame.inFlightFence);
+	m_core->resetFence(currentFrame.inFlightFence);
 
 	m_swapchain->acquireNextImage();
 
-	m_cmd = CommandBuffer(currentFrame.getFreeBuffer());
+	m_cmd = CommandBuffer(currentFrame.pool.getFreeBuffer());
 
 	m_cmd.begin();
 
@@ -41,18 +39,23 @@ CommandBuffer &InFlightSync::begin()
 	return m_cmd;
 }
 
-void InFlightSync::present()
+void InFlightSync::present(const VkSemaphore *waitOn)
 {
+	auto &queue = m_core->getGraphicsQueue();
+
 	m_swapchain->endRendering(m_cmd);
 
 	m_cmd.end();
 
-	VkFence fence = m_core->getGraphicsQueue().getFrame(m_core->getCurrentFrameIndex()).getInFlightFence();
+	VkFence fence = queue.getFrame(m_core->getCurrentFrameIndex()).inFlightFence;
 
 	VkSemaphoreSubmitInfo imageAvailableSemaphore = m_swapchain->getImageAvailableSemaphoreSubmitInfo();
 	VkSemaphoreSubmitInfo renderFinishedSemaphore = m_swapchain->getRenderFinishedSemaphoreSubmitInfo();
 
 	VkCommandBufferSubmitInfo bufferInfo = m_cmd.getSubmitInfo();
+
+	VkSemaphoreSubmitInfo waitSemaphores[2];
+	waitSemaphores[0] = imageAvailableSemaphore;
 
 	VkSubmitInfo2 submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -65,10 +68,18 @@ void InFlightSync::present()
 	submitInfo.pSignalSemaphoreInfos = &renderFinishedSemaphore;
 
 	submitInfo.waitSemaphoreInfoCount = 1;
-	submitInfo.pWaitSemaphoreInfos = &imageAvailableSemaphore;
+	submitInfo.pWaitSemaphoreInfos = waitSemaphores;
+
+	if (waitOn)
+	{
+		submitInfo.waitSemaphoreInfoCount = 2;
+
+		waitSemaphores[1].semaphore = *waitOn;
+		waitSemaphores[1].stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+	}
 	
 	MGP_VK_CHECK(
-		vkQueueSubmit2(m_core->getGraphicsQueue().getHandle(), 1, &submitInfo, fence),
+		vkQueueSubmit2(queue.getHandle(), 1, &submitInfo, fence),
 		"Failed to submit in-flight draw command to buffer"
 	);
 
@@ -84,7 +95,7 @@ void InFlightSync::present()
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr;
 
-	VkResult result = vkQueuePresentKHR(m_core->getGraphicsQueue().getHandle(), &presentInfo);
+	VkResult result = vkQueuePresentKHR(queue.getHandle(), &presentInfo);
 
 	// rebuild swapchain if failure
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
@@ -98,6 +109,57 @@ void InFlightSync::present()
 		MGP_ERROR("Failed to present swap chain image: %d", result);
 	}
 }
+
+/*
+CommandBuffer &InFlightSync::beginCompute()
+{
+	auto &queue = m_core->getComputeQueues()[0];
+	auto &currentFrame = queue.getFrame(m_core->getCurrentFrameIndex());
+
+	m_core->waitForFence(currentFrame.inFlightFence);
+	m_core->resetFence(currentFrame.inFlightFence);
+
+	m_cmd = CommandBuffer(currentFrame.pool.getFreeBuffer());
+
+	m_cmd.begin();
+
+	return m_cmd;
+}
+
+void InFlightSync::dispatch(const VkSemaphore *signal)
+{
+	auto &queue = m_core->getComputeQueues()[0];
+
+	m_cmd.end();
+
+	VkFence fence = queue.getFrame(m_core->getCurrentFrameIndex()).inFlightFence;
+
+	VkCommandBufferSubmitInfo bufferInfo = m_cmd.getSubmitInfo();
+
+	VkSubmitInfo2 submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+	submitInfo.flags = 0;
+
+	submitInfo.commandBufferInfoCount = 1;
+	submitInfo.pCommandBufferInfos = &bufferInfo;
+
+	VkSemaphoreSubmitInfo signalInfo = {};
+
+	if (signal)
+	{
+		signalInfo.semaphore = *signal;
+		signalInfo.stageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+
+		submitInfo.signalSemaphoreInfoCount = 1;
+		submitInfo.pSignalSemaphoreInfos = &signalInfo;
+	}
+
+	MGP_VK_CHECK(
+		vkQueueSubmit2(queue.getHandle(), 1, &submitInfo, fence),
+		"Failed to submit in-flight draw command to buffer"
+	);
+}
+*/
 
 Swapchain *InFlightSync::getSwapchain()
 {
@@ -116,7 +178,7 @@ void InFlightSync::onWindowResize(int w, int h)
 
 InstantSubmitSync::InstantSubmitSync(VulkanCore *core)
 	: m_core(core)
-	, m_cmd(core->getGraphicsQueue().getFrame(core->getCurrentFrameIndex()).getFreeBuffer())
+	, m_cmd(core->getGraphicsQueue().getFrame(core->getCurrentFrameIndex()).pool.getFreeBuffer())
 {
 }
 
@@ -124,8 +186,8 @@ CommandBuffer &InstantSubmitSync::begin()
 {
 	cauto &currentFrame = m_core->getGraphicsQueue().getFrame(m_core->getCurrentFrameIndex());
 
-	m_core->waitForFence(currentFrame.getInstantSubmitFence());
-	m_core->resetFence(currentFrame.getInstantSubmitFence());
+	m_core->waitForFence(currentFrame.instantSubmitFence);
+	m_core->resetFence(currentFrame.instantSubmitFence);
 
 	m_cmd.begin();
 	return m_cmd;
@@ -135,7 +197,7 @@ void InstantSubmitSync::submit()
 {
 	m_cmd.end();
 
-	VkFence fence = m_core->getGraphicsQueue().getFrame(m_core->getCurrentFrameIndex()).getInstantSubmitFence();
+	VkFence fence = m_core->getGraphicsQueue().getFrame(m_core->getCurrentFrameIndex()).instantSubmitFence;
 
 	VkCommandBufferSubmitInfo bufferInfo = m_cmd.getSubmitInfo();
 

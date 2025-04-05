@@ -524,6 +524,7 @@ const VkPhysicalDeviceFeatures2 &VulkanCore::getPhysicalDeviceFeatures() const
 
 const VkSampleCountFlagBits VulkanCore::getMaxMSAASamples() const
 {
+//	return VK_SAMPLE_COUNT_1_BIT;
 	return m_maxMsaaSamples;
 }
 
@@ -612,6 +613,24 @@ const BindlessResources &VulkanCore::getBindlessResources() const
 void VulkanCore::nextFrame()
 {
 	m_currentFrameIndex = (m_currentFrameIndex + 1) % Queue::FRAMES_IN_FLIGHT;
+
+//	vkQueueWaitIdle(m_presentQueue.getHandle());
+//	m_presentQueue.getFrame(m_currentFrameIndex).pool.reset();
+
+	vkQueueWaitIdle(m_graphicsQueue.getHandle());
+	m_graphicsQueue.getFrame(m_currentFrameIndex).pool.reset();
+
+	for (auto &q : m_computeQueues)
+	{
+		vkQueueWaitIdle(q.getHandle());
+		q.getFrame(m_currentFrameIndex).pool.reset();
+	}
+
+	for (auto &q : m_transferQueues)
+	{
+		vkQueueWaitIdle(q.getHandle());
+		q.getFrame(m_currentFrameIndex).pool.reset();
+	}
 }
 
 int VulkanCore::getCurrentFrameIndex() const
