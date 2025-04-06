@@ -3,6 +3,7 @@
 #include "third_party/volk.h"
 
 #include "bindless.h"
+#include "image.h"
 
 namespace mgp
 {
@@ -11,17 +12,27 @@ namespace mgp
 	class ImageView
 	{
 	public:
-		ImageView(VulkanCore *core, VkImageView view, VkImageViewType type, VkFormat format, VkImageUsageFlags usage);
+		ImageView(
+			VulkanCore *core,
+			const ImageInfo &info,
+			int layerCount,
+			int layer,
+			int baseMipLevel
+		);
+
 		~ImageView();
 
 		const VkImageView &getHandle() const;
-		const VkFormat &getFormat() const;
+
+		ImageInfo &getInfo();
+		const ImageInfo &getInfo() const;
 
 		bindless::Handle getBindlessHandle() const;
 
 	private:
 		VkImageView m_view;
-		VkFormat m_format;
+
+		ImageInfo m_imageInfo;
 
 		bindless::Handle m_bindlessHandle;
 

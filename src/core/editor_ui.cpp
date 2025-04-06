@@ -1,4 +1,4 @@
-#include "debug_ui.h"
+#include "editor_ui.h"
 
 #include "platform.h"
 
@@ -16,7 +16,7 @@ using namespace mgp;
 static Platform *g_sdl;
 static VulkanCore *g_vulkan;
 
-void dbgui::init(Platform *sdl, VulkanCore *vulkan)
+void editor_ui::init(Platform *sdl, VulkanCore *vulkan)
 {
 	IMGUI_CHECKVERSION();
 
@@ -32,11 +32,13 @@ void dbgui::init(Platform *sdl, VulkanCore *vulkan)
 	g_vulkan->initImGui();
 }
 
-void dbgui::update()
+void editor_ui::update()
 {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
+
+	ImGui::ShowDemoWindow();
 
 	/*
 	ImGui::Begin("Material System");
@@ -59,9 +61,7 @@ void dbgui::update()
 		}
 	}
 	ImGui::End();
-	*/
 
-	/*
 	ImGui::Begin("Post Processing");
 	{
 		if (ImGui::SliderFloat("HDR Exposure", &g_exposure, 0.0f, 5.0f))
@@ -81,26 +81,14 @@ void dbgui::update()
 	}
 	ImGui::End();
 	*/
-
-	ImGui::ShowDemoWindow();
 }
 
-void dbgui::render(CommandBuffer &cmd, const Swapchain *swapchain)
+void editor_ui::render(CommandBuffer &cmd, const RenderInfo &info)
 {
 	ImGui::Render();
 
-	RenderInfo renderInfo(g_vulkan);
-	renderInfo.setSize(swapchain->getWidth(), swapchain->getHeight());
-
-	renderInfo.addColourAttachment(
-		VK_ATTACHMENT_LOAD_OP_LOAD,
-		*swapchain->getCurrentSwapchainImageView()
+	ImGui_ImplVulkan_RenderDrawData(
+		ImGui::GetDrawData(),
+		cmd.getHandle()
 	);
-
-	cmd.beginRendering(renderInfo);
-	{
-		ImDrawData *drawData = ImGui::GetDrawData();
-		ImGui_ImplVulkan_RenderDrawData(drawData, cmd.getHandle());
-	}
-	cmd.endRendering();
 }

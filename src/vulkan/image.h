@@ -10,6 +10,71 @@ namespace mgp
 	class VulkanCore;
 	class ImageView;
 
+	/*
+		vulkan image wrapper
+	*/
+	class ImageInfo
+	{
+		friend class Image;
+		friend class Swapchain;
+
+		friend class CommandBuffer;
+
+	public:
+		ImageInfo();
+		~ImageInfo();
+
+		VkImageMemoryBarrier2 getBarrier(VkImageLayout newLayout) const;
+
+		const VkImage &getHandle() const;
+		const VkImageLayout &getLayout() const;
+
+		unsigned getWidth() const;
+		unsigned getHeight() const;
+		unsigned getDepth() const;
+
+		VkFormat getFormat() const;
+		VkImageViewType getType() const;
+		VkImageTiling getTiling() const;
+
+		VkImageUsageFlags getUsage() const;
+
+		uint32_t getMipmapCount() const;
+		VkSampleCountFlagBits getSamples() const;
+
+		bool isTransient() const;
+		bool isStorage() const;
+
+		bool isCubemap() const;
+		bool isDepth() const;
+
+		unsigned getLayerCount() const;
+		unsigned getFaceCount() const;
+
+	private:
+		VkImage m_image;
+		VkImageLayout m_layout;
+
+		unsigned m_width;
+		unsigned m_height;
+		unsigned m_depth;
+
+		VkFormat m_format;
+		VkImageViewType m_type;
+		VkImageTiling m_tiling;
+
+		VkImageUsageFlags m_usage;
+
+		uint32_t m_mipmapCount;
+		VkSampleCountFlagBits m_samples;
+
+		bool m_transient;
+		bool m_storage;
+	};
+
+	/*
+		memory allocated image
+	*/
 	class Image
 	{
 		friend class CommandBuffer;
@@ -26,7 +91,7 @@ namespace mgp
 			uint32_t mipmaps,
 			VkSampleCountFlagBits samples,
 			bool transient,
-			bool uav
+			bool storage
 		);
 
 		~Image();
@@ -40,7 +105,7 @@ namespace mgp
 			uint32_t mipmaps,
 			VkSampleCountFlagBits samples,
 			bool transient,
-			bool uav
+			bool storage
 		);
 
 		ImageView *createView(
@@ -49,60 +114,20 @@ namespace mgp
 			int baseMipLevel
 		);
 
-		VkImageMemoryBarrier2 getBarrier(
-			VkImageLayout newLayout
-		) const;
+		ImageView *getStandardView();
 
 		const VkImage &getHandle() const;
-		const VkImageLayout &getLayout() const;
 
-		unsigned getWidth() const;
-		unsigned getHeight() const;
-		unsigned getDepth() const;
-
-		VkFormat getFormat() const;
-		VkImageViewType getType() const;
-		VkImageTiling getTiling() const;
-
-		uint32_t getMipmapCount() const;
-		VkSampleCountFlagBits getSamples() const;
-
-		bool isTransient() const;
-		bool isUAV() const;
-
-		bool isCubemap() const;
-		bool isDepth() const;
-		
-		unsigned getLayerCount() const;
-		unsigned getFaceCount() const;
-
-		const ImageView *getStandardView();
+		ImageInfo &getInfo();
+		const ImageInfo &getInfo() const;
 
 	private:
-		VkImage m_image;
-		VkImageLayout m_layout;
-
+		ImageInfo m_info;
 		std::unordered_map<uint64_t, ImageView *> m_viewCache;
-
-		VulkanCore *m_core;
-
-		unsigned m_width;
-		unsigned m_height;
-		unsigned m_depth;
-
-		VkFormat m_format;
-		VkImageViewType m_type;
-		VkImageTiling m_tiling;
-
-		VkImageUsageFlags m_usage;
-
-		uint32_t m_mipmapCount;
-		VkSampleCountFlagBits m_samples;
 
 		VmaAllocation m_allocation;
 		VmaAllocationInfo m_allocationInfo;
 
-		bool m_transient;
-		bool m_isUAV;
+		VulkanCore *m_core;
 	};
 }

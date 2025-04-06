@@ -11,7 +11,6 @@
 #include "image.h"
 #include "image_view.h"
 #include "queue.h"
-#include "render_info.h"
 
 namespace mgp
 {
@@ -24,19 +23,13 @@ namespace mgp
 		Swapchain(VulkanCore *core, const Platform *platform);
 		~Swapchain();
 
-		void beginRendering(CommandBuffer &cmd);
-		void endRendering(CommandBuffer &cmd);
-
-		void setClearColour(const Colour &colour);
-		void setDepthStencilClear(float depth, uint32_t stencil);
-
 		void acquireNextImage();
 
-		const Image &getColourAttachment() const;
-		const Image &getDepthAttachment() const;
+		Image &getColourAttachment();
+		Image &getDepthAttachment();
 
-		VkImage getCurrentSwapchainImage() const;
-		const ImageView *getCurrentSwapchainImageView() const;
+		ImageInfo &getCurrentSwapchainImage();
+		ImageView *getCurrentSwapchainImageView() const;
 
 		unsigned getCurrentSwapchainImageIndex() const;
 
@@ -47,9 +40,6 @@ namespace mgp
 
 		const VkSwapchainKHR &getHandle() const;
 		const VkFormat &getSwapchainImageFormat() const;
-
-		RenderInfo &getRenderInfo();
-		const RenderInfo &getRenderInfo() const;
 
 		void rebuildSwapchain();
 
@@ -71,7 +61,7 @@ namespace mgp
 
 		VkSwapchainKHR m_swapchain;
 
-		std::vector<VkImage> m_swapchainImages;
+		std::vector<ImageInfo> m_swapchainImages;
 		std::vector<ImageView *> m_swapchainImageViews;
 
 		VkFormat m_swapchainImageFormat;
@@ -83,8 +73,6 @@ namespace mgp
 
 		unsigned m_width;
 		unsigned m_height;
-
-		RenderInfo m_renderInfo;
 
 		VulkanCore *m_core;
 		const Platform *m_platform;

@@ -60,8 +60,9 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	, m_surface()
 //	, m_presentQueue()
 	, m_graphicsQueue()
-	, m_computeQueues()
-	, m_transferQueues()
+//	, m_computeQueues()
+//	, m_transferQueues()
+	, m_renderGraph(this)
 	, m_platform(platform)
 #if MGP_DEBUG
 	, m_debugMessenger()
@@ -364,11 +365,11 @@ void VulkanCore::createQueues()
 //	m_presentQueue.create(this, 0);
 	m_graphicsQueue.create(this, 0);
 
-	for (int i = 0; i < m_computeQueues.size(); i++)
-		m_computeQueues[i].create(this, i);
+//	for (int i = 0; i < m_computeQueues.size(); i++)
+//		m_computeQueues[i].create(this, i);
 
-	for (int i = 0; i < m_transferQueues.size(); i++)
-		m_transferQueues[i].create(this, i);
+//	for (int i = 0; i < m_transferQueues.size(); i++)
+//		m_transferQueues[i].create(this, i);
 }
 
 void VulkanCore::destroyQueues()
@@ -376,11 +377,11 @@ void VulkanCore::destroyQueues()
 //	m_presentQueue.destroy();
 	m_graphicsQueue.destroy();
 
-	for (auto &q : m_computeQueues)
-		q.destroy();
+//	for (auto &q : m_computeQueues)
+//		q.destroy();
 
-	for (auto &q : m_transferQueues)
-		q.destroy();
+//	for (auto &q : m_transferQueues)
+//		q.destroy();
 }
 
 void VulkanCore::populateQueueCreateInfos(std::vector<VkDeviceQueueCreateInfo> &infos, const std::vector<float> &priorities)
@@ -401,6 +402,7 @@ void VulkanCore::populateQueueCreateInfos(std::vector<VkDeviceQueueCreateInfo> &
 		.pQueuePriorities = priorities.data()
 	});
 
+	/*
 	for (auto &q : m_computeQueues)
 	{
 		infos.push_back((VkDeviceQueueCreateInfo) {
@@ -420,6 +422,7 @@ void VulkanCore::populateQueueCreateInfos(std::vector<VkDeviceQueueCreateInfo> &
 			.pQueuePriorities = priorities.data()
 		});
 	}
+	*/
 }
 
 // todo: move into vk_toolbox
@@ -436,9 +439,10 @@ void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 
 	struct QueuesFound
 	{
+//		int present;
 		int graphics;
-		int compute;
-		int transfer;
+//		int compute;
+//		int transfer;
 	};
 
 	QueuesFound numQueuesFound = {};
@@ -460,6 +464,7 @@ void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 			}
 		}
 
+		/*
 		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && numQueuesFound.compute < queueFamilies[i].queueCount)
 		{
 			m_computeQueues.emplace_back();
@@ -479,6 +484,7 @@ void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 
 			continue;
 		}
+		*/
 	}
 }
 
@@ -580,6 +586,7 @@ const Queue &VulkanCore::getGraphicsQueue() const
 	return m_graphicsQueue;
 }
 
+/*
 std::vector<Queue> &VulkanCore::getComputeQueues()
 {
 	return m_computeQueues;
@@ -599,6 +606,7 @@ const std::vector<Queue> &VulkanCore::getTransferQueues() const
 {
 	return m_transferQueues;
 }
+*/
 
 BindlessResources &VulkanCore::getBindlessResources()
 {
@@ -620,6 +628,7 @@ void VulkanCore::nextFrame()
 	vkQueueWaitIdle(m_graphicsQueue.getHandle());
 	m_graphicsQueue.getFrame(m_currentFrameIndex).pool.reset();
 
+	/*
 	for (auto &q : m_computeQueues)
 	{
 		vkQueueWaitIdle(q.getHandle());
@@ -631,11 +640,22 @@ void VulkanCore::nextFrame()
 		vkQueueWaitIdle(q.getHandle());
 		q.getFrame(m_currentFrameIndex).pool.reset();
 	}
+	*/
 }
 
 int VulkanCore::getCurrentFrameIndex() const
 {
 	return m_currentFrameIndex;
+}
+
+RenderGraph &VulkanCore::getRenderGraph()
+{
+	return m_renderGraph;
+}
+
+const RenderGraph &VulkanCore::getRenderGraph() const
+{
+	return m_renderGraph;
 }
 
 void VulkanCore::initImGui()

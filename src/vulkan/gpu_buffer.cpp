@@ -79,7 +79,7 @@ void GPUBuffer::writeToImage(CommandBuffer &cmd, const Image *image, uint64_t si
 	region.imageSubresource.baseArrayLayer = baseArrayLayer;
 	region.imageSubresource.layerCount = 1;
 	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = { image->getWidth(), image->getHeight(), 1 };
+	region.imageExtent = { image->getInfo().getWidth(), image->getInfo().getHeight(), 1 };
 
 	cmd.copyBufferToImage(
 		m_buffer, image->getHandle(),

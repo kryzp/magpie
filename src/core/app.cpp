@@ -10,7 +10,7 @@
 #include "third_party/imgui/imgui_impl_vulkan.h"
 
 #include "platform.h"
-#include "debug_ui.h"
+#include "editor_ui.h"
 
 #include "vulkan/core.h"
 #include "vulkan/toolbox.h"
@@ -238,7 +238,7 @@ void App::run()
 		inFlightSync.onWindowResize(w, h);
 	};
 
-	dbgui::init(m_platform, m_vulkanCore);
+	editor_ui::init(m_platform, m_vulkanCore);
 
 	m_targetColour = new Image(
 		m_vulkanCore,
@@ -266,23 +266,6 @@ void App::run()
 		VK_SAMPLE_COUNT_1_BIT,
 		false,
 		false
-	);
-
-	RenderInfo targetRenderInfo(m_vulkanCore);
-
-	targetRenderInfo.setSize(
-		inFlightSync.getSwapchain()->getWidth(),
-		inFlightSync.getSwapchain()->getHeight()
-	);
-	
-	targetRenderInfo.addColourAttachment(
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		*m_targetColour->getStandardView()
-	);
-
-	targetRenderInfo.addDepthAttachment(
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		*m_targetDepth->getStandardView()
 	);
 
 	ModelLoader meshLoader(m_vulkanCore, this);
@@ -320,6 +303,8 @@ void App::run()
 		if (m_inputSt->isPressed(KB_KEY_ESCAPE))
 			exit();
 
+		editor_ui::update();
+
 		double deltaTime = deltaTimer.reset();
 
 		tick(deltaTime);
@@ -333,142 +318,213 @@ void App::run()
 			accumulator -= fixedDeltaTime;
 		}
 
-		CommandBuffer &cmd = inFlightSync.begin();
+		inFlightSync.begin();
 		{
 			FrameConstants constants;
 			constants.proj = m_camera.getProj();
 			constants.view = m_camera.getView();
 			constants.cameraPosition = glm::vec4(m_camera.position, 1.0f);
 
-			frameConstants.writeDataToMe(&constants, sizeof(FrameConstants), 0);
-
 			TransformData transform;
 			transform.model = glm::identity<glm::mat4>();
 			transform.normalMatrix = glm::transpose(glm::inverse(transform.model));
 
+			frameConstants.writeDataToMe(&constants, sizeof(FrameConstants), 0);
 			transformData.writeDataToMe(&transform, sizeof(TransformData), 0);
 
-			// render to target
-			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			cmd.transitionLayout(*m_targetDepth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			RenderGraph::AttachmentInfo targetColourAttachment;
+			targetColourAttachment.view = m_targetColour->getStandardView();
+			targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			targetColourAttachment.clear = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
-			cmd.beginRendering(targetRenderInfo);
-			{
-				// model
+			RenderGraph::AttachmentInfo targetDepthAttachment;
+			targetDepthAttachment.view = m_targetDepth->getStandardView();
+			targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			targetDepthAttachment.clear = { { 1.0f, 0 } };
+
+			RenderGraph::AttachmentInfo swapchainColourAttachment;
+			swapchainColourAttachment.view = inFlightSync.getSwapchain()->getColourAttachment().getStandardView();
+			swapchainColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+			RenderGraph::AttachmentInfo swapchainDepthAttachment;
+			swapchainDepthAttachment.view = inFlightSync.getSwapchain()->getDepthAttachment().getStandardView();
+			swapchainDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+			RenderGraph::AttachmentInfo swapchainDirectAttachment;
+			swapchainDirectAttachment.view = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
+			swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+			// forward render
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+				.addColourOutputs({ targetColourAttachment })
+				.setDepthStencilOutput(targetDepthAttachment)
+				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], targetRenderInfo);
-
-					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
-
-					cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { m_vulkanCore->getBindlessResources().getSet() }, {});
-
-					BindlessPushConstants pc;
+					// model
 					{
-						pc.frameDataBuffer_ID		= frameConstants.getBindlessHandle();
-						pc.transformBuffer_ID		= transformData.getBindlessHandle();
-						pc.materialDataBuffer_ID	= m_bindlessMaterialTable->getBindlessHandle();
+						PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], info);
 
-						pc.transform_ID				= 0;
+						cmd.bindPipeline(
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							pipelineContext.pipeline
+						);
 
-						pc.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
-						pc.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+						cmd.bindDescriptorSets(
+							0,
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							pipelineContext.layout,
+							{ m_vulkanCore->getBindlessResources().getSet() },
+							{}
+						);
 
-						pc.brdfLUT_ID				= m_brdfLUT->getStandardView()->getBindlessHandle();
+						BindlessPushConstants pc;
+						{
+							pc.frameDataBuffer_ID		= frameConstants.getBindlessHandle();
+							pc.transformBuffer_ID		= transformData.getBindlessHandle();
+							pc.materialDataBuffer_ID	= m_bindlessMaterialTable->getBindlessHandle();
 
-						pc.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
+							pc.transform_ID				= 0;
 
-						pc.cubemapSampler_ID		= m_linearSampler->getBindlessHandle();
-						pc.textureSampler_ID		= m_linearSampler->getBindlessHandle();
+							pc.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+							pc.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+
+							pc.brdfLUT_ID				= m_brdfLUT->getStandardView()->getBindlessHandle();
+
+							pc.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
+
+							pc.cubemapSampler_ID		= m_linearSampler->getBindlessHandle();
+							pc.textureSampler_ID		= m_linearSampler->getBindlessHandle();
+						}
+
+						cmd.pushConstants(
+							pipelineContext.layout,
+							VK_SHADER_STAGE_ALL_GRAPHICS,
+							sizeof(BindlessPushConstants),
+							&pc
+						);
+
+						mesh->getSubmesh(0)->render(cmd);
 					}
 
-					cmd.pushConstants(
-						pipelineData.layout,
-						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(BindlessPushConstants),
-						&pc
+					// skybox
+					{
+						PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
+
+						struct
+						{
+							glm::mat4 proj;
+							glm::mat4 view;
+						}
+						params;
+
+						params.proj = m_camera.getProj();
+						params.view = m_camera.getRotationMatrix();
+
+						cmd.bindPipeline(
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							pipelineContext.pipeline
+						);
+
+						cmd.bindDescriptorSets(
+							0,
+							VK_PIPELINE_BIND_POINT_GRAPHICS,
+							pipelineContext.layout,
+							{ m_skyboxSet },
+							{}
+						);
+
+						cmd.pushConstants(
+							pipelineContext.layout,
+							VK_SHADER_STAGE_ALL_GRAPHICS,
+							sizeof(params),
+							&params
+						);
+
+						m_skyboxMesh->render(cmd);
+					}
+				})
+			);
+
+			// compute post processing compute shader (target = read / write)
+			/*
+			m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
+				.setStage(VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT)
+				.addAttachmentInput(colourAttachment)
+				.addColourOutput(colourAttachment)
+				.setBuildFn([&](CommandBuffer &cmd) -> void
+				{
+					PipelineContext computepipelineContext = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+
+					cmd.bindPipeline(
+						VK_PIPELINE_BIND_POINT_COMPUTE,
+						computepipelineContext.pipeline
 					);
 
-					mesh->getSubmesh(0)->render(cmd);
-				}
-
-				// skybox
-				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, targetRenderInfo);
+					cmd.bindDescriptorSets(
+						0,
+						VK_PIPELINE_BIND_POINT_COMPUTE,
+						computepipelineContext.layout,
+						{ hdrTonemappingSet },
+						{}
+					);
 
 					struct
 					{
-						glm::mat4 proj;
-						glm::mat4 view;
+						uint32_t width;
+						uint32_t height;
+						float exposure;
 					}
-					params;
+					pc;
 
-					params.proj = m_camera.getProj();
-					params.view = m_camera.getRotationMatrix();
-
-					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
-
-					cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { m_skyboxSet }, {});
+					pc.width = 1280;
+					pc.height = 720;
+					pc.exposure = 2.5f;
 
 					cmd.pushConstants(
-						pipelineData.layout,
-						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(params),
-						&params
+						computepipelineContext.layout,
+						VK_SHADER_STAGE_COMPUTE_BIT,
+						sizeof(pc),
+						&pc
 					);
 
-					m_skyboxMesh->render(cmd);
-				}
-			}
-			cmd.endRendering();
+					cmd.dispatch(160, 90, 1);
+				})
+			);
+			*/
 
-			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_GENERAL);
+			// output to swapchain
+			swapchainColourAttachment.resolve = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
 
-			// post processing compute shader (target = read / write)
-			{
-				PipelineData computePipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
-
-				cmd.bindPipeline(computePipelineData.bindPoint, computePipelineData.pipeline);
-
-				cmd.bindDescriptorSets(0, computePipelineData.bindPoint, computePipelineData.layout, { hdrTonemappingSet }, {});
-
-				struct
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+				.addAttachments({ targetColourAttachment })
+				.setDepthStencilInput(targetDepthAttachment)
+				.addColourOutputs({ swapchainColourAttachment })
+				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 				{
-					uint32_t width;
-					uint32_t height;
-					float exposure;
-				}
-				pc;
+					PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, info);
 
-				pc.width = 1280;
-				pc.height = 720;
-				pc.exposure = 2.5f;
+					cmd.bindPipeline(
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						pipelineContext.pipeline
+					);
 
-				cmd.pushConstants(
-					computePipelineData.layout,
-					VK_SHADER_STAGE_COMPUTE_BIT,
-					sizeof(pc),
-					&pc
-				);
+					cmd.bindDescriptorSets(
+						0,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						pipelineContext.layout,
+						{ textureUVSet },
+						{}
+					);
 
-				cmd.dispatch(160, 90, 1);
-			}
+					cmd.draw(3);
+				})
+			);
 
-			cmd.transitionLayout(*m_targetColour, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			cmd.transitionLayout(*m_targetDepth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-
-			cmd.beginRendering(inFlightSync.getSwapchain()->getRenderInfo());
-			{
-				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, inFlightSync.getSwapchain()->getRenderInfo());
-
-				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
-
-				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { textureUVSet }, {});
-
-				cmd.draw(3);
-			}
-			cmd.endRendering();
-
-			render(cmd, inFlightSync.getSwapchain());
+			// editor ui pass
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+				.addColourOutputs({ swapchainDirectAttachment })
+				.setBuildFn(editor_ui::render)
+			);
 		}
 		inFlightSync.present();
 
@@ -491,7 +547,6 @@ void App::exit()
 
 void App::tick(float dt)
 {
-	dbgui::update();
 }
 
 void App::tickFixed(float dt)
@@ -511,7 +566,6 @@ void App::tickFixed(float dt)
 
 void App::render(CommandBuffer &inFlightCmd, const Swapchain *swapchain)
 {
-	dbgui::render(inFlightCmd, swapchain);
 }
 
 void App::loadTextures()
@@ -923,7 +977,7 @@ void App::precomputeBRDF()
 
 		RenderInfo info(m_vulkanCore);
 		info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
-		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *m_brdfLUT->getStandardView());
+		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *m_brdfLUT->getStandardView(), nullptr);
 
 		Shader *brdfLUTShader = getShader("brdf_lut");
 
@@ -934,15 +988,15 @@ void App::precomputeBRDF()
 		brdfIntegrationPipeline.setDepthTest(false);
 		brdfIntegrationPipeline.setDepthWrite(false);
 
-		PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
+		PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
 
 		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		cmd.beginRendering(info);
 		{
-			cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
 
-			cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { set }, {});
+			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { set }, {});
 
 			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
@@ -1031,21 +1085,21 @@ void App::generateEnvironmentProbe()
 
 			RenderInfo targetInfo(m_vulkanCore);
 			targetInfo.setSize(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION);
-			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
+			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
+			PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
 
-				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { eqrToCbmSet }, {});
+				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { eqrToCbmSet }, {});
 
 				cmd.setViewport({ 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION });
 
 				cmd.pushConstants(
-					pipelineData.layout,
+					pipelineContext.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
 					sizeof(pc),
 					&pc
@@ -1119,21 +1173,21 @@ void App::generateEnvironmentProbe()
 
 			RenderInfo targetInfo(m_vulkanCore);
 			targetInfo.setSize(IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION);
-			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
+			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
+			PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
 
-				cmd.bindDescriptorSets(0, pipelineData.bindPoint, pipelineData.layout, { irradianceSet }, {});
+				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { irradianceSet }, {});
 
 				cmd.setViewport({ 0, 0, IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION });
 
 				cmd.pushConstants(
-					pipelineData.layout,
+					pipelineContext.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
 					sizeof(pc),
 					&pc
@@ -1200,19 +1254,19 @@ void App::generateEnvironmentProbe()
 
 				RenderInfo info(m_vulkanCore);
 				info.setSize(width, height);
-				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view);
+				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
+				PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
 
 				// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 				cmd.beginRendering(info);
 				{
-					cmd.bindPipeline(pipelineData.bindPoint, pipelineData.pipeline);
+					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
 
 					cmd.bindDescriptorSets(
 						0,
-						pipelineData.bindPoint,
-						pipelineData.layout,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						pipelineContext.layout,
 						{ prefilterSet },
 						{ dynamicOffset }
 					);
@@ -1220,7 +1274,7 @@ void App::generateEnvironmentProbe()
 					cmd.setViewport({ 0, 0, (float)width, (float)height });
 
 					cmd.pushConstants(
-						pipelineData.layout,
+						pipelineContext.layout,
 						VK_SHADER_STAGE_ALL_GRAPHICS,
 						sizeof(pc),
 						&pc

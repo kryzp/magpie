@@ -252,7 +252,7 @@ void PipelineCache::dispose()
 	m_layouts.clear();
 }
 
-PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
+PipelineContext PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
 {
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -366,8 +366,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	{
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
-		PipelineData data = {};
-		data.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		PipelineContext data = {};
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -424,15 +423,14 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 
 	MGP_LOG("Created new graphics pipeline!");
 
-	PipelineData data = {};
-	data.bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	PipelineContext data = {};
 	data.pipeline = pipeline;
 	data.layout = layout;
 
 	return data;
 }
 
-PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition &definition)
+PipelineContext PipelineCache::fetchComputePipeline(const ComputePipelineDefinition &definition)
 {
 	uint64_t createdPipelineHash = 0;
 
@@ -442,8 +440,7 @@ PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition
 	{
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
-		PipelineData data = {};
-		data.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+		PipelineContext data = {};
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -471,8 +468,7 @@ PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition
 
 	MGP_LOG("Created new compute pipeline!");
 
-	PipelineData data = {};
-	data.bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+	PipelineContext data = {};
 	data.pipeline = pipeline;
 	data.layout = layout;
 

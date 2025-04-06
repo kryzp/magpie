@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "toolbox.h"
+#include "image.h"
 #include "image_view.h"
 
 using namespace mgp;
@@ -38,7 +39,7 @@ VkRenderingInfo RenderInfo::getInfo() const
 	return info;
 }
 
-void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view)
+void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve)
 {
 	VkRenderingAttachmentInfoKHR attachment = {};
 	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -47,36 +48,27 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView 
 	attachment.loadOp = loadOp;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-	attachment.resolveImageView = VK_NULL_HANDLE;
-	attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	attachment.resolveMode = VK_RESOLVE_MODE_NONE;
+
+	if (resolve)
+	{
+		attachment.resolveImageView = resolve->getHandle();
+		attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+	}
+	else
+	{
+		attachment.resolveImageView = VK_NULL_HANDLE;
+		attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	}
 
 	m_colourAttachments.push_back(attachment);
-	m_colourFormats.push_back(view.getFormat());
+	m_colourFormats.push_back(view.getInfo().getFormat());
 
 	m_attachmentCount++;
 }
 
-void RenderInfo::addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve)
-{
-	VkRenderingAttachmentInfoKHR attachment = {};
-	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	attachment.imageView = view.getHandle();
-	attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	attachment.loadOp = loadOp;
-	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-	attachment.resolveImageView = resolve;
-	attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-
-	m_colourAttachments.push_back(attachment);
-	m_colourFormats.push_back(view.getFormat());
-
-	m_attachmentCount++;
-}
-
-void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view)
+void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve)
 {
 	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	m_depthAttachment.imageView = view.getHandle();
@@ -84,24 +76,19 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &
 	m_depthAttachment.loadOp = loadOp;
 	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	m_depthAttachment.clearValue = { { 1.0f, 0 } };
-	m_depthAttachment.resolveImageView = VK_NULL_HANDLE;
-	m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	m_depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
 
-	m_attachmentCount++;
-}
-
-void RenderInfo::addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve)
-{
-	m_depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	m_depthAttachment.imageView = view.getHandle();
-	m_depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	m_depthAttachment.loadOp = loadOp;
-	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	m_depthAttachment.clearValue = { { 1.0f, 0 } };
-	m_depthAttachment.resolveImageView = resolve;
-	m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	m_depthAttachment.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+	if (resolve)
+	{
+		m_depthAttachment.resolveImageView = resolve->getHandle();
+		m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		m_depthAttachment.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+	}
+	else
+	{
+		m_depthAttachment.resolveImageView = VK_NULL_HANDLE;
+		m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		m_depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
+	}
 
 	m_attachmentCount++;
 }

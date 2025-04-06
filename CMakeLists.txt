@@ -11,7 +11,7 @@ add_executable(${PROJECT_NAME}
     src/core/common.cpp
     src/core/app.cpp
     src/core/platform.cpp
-    src/core/debug_ui.cpp
+    src/core/editor_ui.cpp
 
     src/rendering/camera.cpp
     src/rendering/scene.cpp
@@ -38,6 +38,7 @@ add_executable(${PROJECT_NAME}
     src/vulkan/queue.cpp
     src/vulkan/bitmap.cpp
     src/vulkan/bindless.cpp
+    src/vulkan/render_graph.cpp
 
 	src/math/colour.cpp
     src/math/timer.cpp

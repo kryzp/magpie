@@ -276,12 +276,14 @@ void CommandBuffer::pipelineBarrier(
 	);
 }
 
-void CommandBuffer::transitionLayout(
-	Image &image,
-	VkImageLayout newLayout
-)
+void CommandBuffer::transitionLayout(Image &image, VkImageLayout newLayout)
 {
-	VkImageMemoryBarrier2 barrier = image.getBarrier(newLayout);
+	transitionLayout(image.m_info, newLayout);
+}
+
+void CommandBuffer::transitionLayout(ImageInfo &info, VkImageLayout newLayout)
+{
+	VkImageMemoryBarrier2 barrier = info.getBarrier(newLayout);
 
 	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;//vkutil::getTransferAccessFlags(m_imageLayout);
 	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;//vkutil::getTransferAccessFlags(newLayout);
@@ -294,12 +296,12 @@ void CommandBuffer::transitionLayout(
 		{}, {}, { barrier }
 	);
 
-	image.m_layout = newLayout;
+	info.m_layout = newLayout;
 }
 
 void CommandBuffer::generateMipmaps(Image &image)
 {
-	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+	MGP_ASSERT(image.getInfo().getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
 
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -308,10 +310,10 @@ void CommandBuffer::generateMipmaps(Image &image)
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = image.getLayerCount();
+	barrier.subresourceRange.layerCount = image.getInfo().getLayerCount();
 	barrier.subresourceRange.levelCount = 1;
 
-	for (int i = 1; i < image.getMipmapCount(); i++)
+	for (int i = 1; i < image.getInfo().getMipmapCount(); i++)
 	{
 		barrier.subresourceRange.baseMipLevel = i - 1;
 
@@ -329,12 +331,12 @@ void CommandBuffer::generateMipmaps(Image &image)
 			{}, {}, { barrier }
 		);
 
-		for (int face = 0; face < image.getFaceCount(); face++)
+		for (int face = 0; face < image.getInfo().getFaceCount(); face++)
 		{
-			int srcMipWidth  = (int)image.getWidth()  >> (i - 1);
-			int srcMipHeight = (int)image.getHeight() >> (i - 1);
-			int dstMipWidth  = (int)image.getWidth()  >> (i - 0);
-			int dstMipHeight = (int)image.getHeight() >> (i - 0);
+			int srcMipWidth  = (int)image.getInfo().getWidth()	>> (i - 1);
+			int srcMipHeight = (int)image.getInfo().getHeight()	>> (i - 1);
+			int dstMipWidth  = (int)image.getInfo().getWidth()	>> (i - 0);
+			int dstMipHeight = (int)image.getInfo().getHeight()	>> (i - 0);
 
 			VkImageBlit blit = {};
 
@@ -375,7 +377,7 @@ void CommandBuffer::generateMipmaps(Image &image)
 		);
 	}
 
-	barrier.subresourceRange.baseMipLevel = image.getMipmapCount() - 1;
+	barrier.subresourceRange.baseMipLevel = image.getInfo().getMipmapCount() - 1;
 
 	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -391,7 +393,7 @@ void CommandBuffer::generateMipmaps(Image &image)
 		{}, {}, { barrier }
 	);
 
-	image.m_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image.m_info.m_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 void CommandBuffer::blitImage(

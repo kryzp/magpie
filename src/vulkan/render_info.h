@@ -17,11 +17,8 @@ namespace mgp
 
 		void clear();
 
-		void addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view);
-		void addColourAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve);
-
-		void addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view);
-		void addDepthAttachmentWithResolve(VkAttachmentLoadOp loadOp, const ImageView &view, const VkImageView &resolve);
+		void addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
+		void addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
 
 		VkRenderingAttachmentInfoKHR &getColourAttachment(int idx);
 		VkRenderingAttachmentInfoKHR &getDepthAttachment();

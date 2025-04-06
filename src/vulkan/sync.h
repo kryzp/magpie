@@ -15,13 +15,8 @@ namespace mgp
 
 		void destroy();
 
-		CommandBuffer &begin();
-		void present(const VkSemaphore *waitOn = nullptr); // should be a list
-
-		/*
-		CommandBuffer &beginCompute();
-		void dispatch(const VkSemaphore *signal = nullptr);
-		*/
+		void begin();
+		void present();
 
 		Swapchain *getSwapchain();
 		const Swapchain *getSwapchain() const;

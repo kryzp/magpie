@@ -9,6 +9,7 @@
 #include "pipeline_cache.h"
 #include "surface.h"
 #include "queue.h"
+#include "render_graph.h"
 
 namespace mgp
 {
@@ -53,17 +54,20 @@ namespace mgp
 		Queue &getGraphicsQueue();
 		const Queue &getGraphicsQueue() const;
 		
-		std::vector<Queue> &getComputeQueues();
-		const std::vector<Queue> &getComputeQueues() const;
-		
-		std::vector<Queue> &getTransferQueues();
-		const std::vector<Queue> &getTransferQueues() const;
+//		std::vector<Queue> &getComputeQueues();
+//		const std::vector<Queue> &getComputeQueues() const;
+
+//		std::vector<Queue> &getTransferQueues();
+//		const std::vector<Queue> &getTransferQueues() const;
 
 		BindlessResources &getBindlessResources();
 		const BindlessResources &getBindlessResources() const;
 
 		void nextFrame();
 		int getCurrentFrameIndex() const;
+
+		RenderGraph &getRenderGraph();
+		const RenderGraph &getRenderGraph() const;
 
 		void initImGui();
 
@@ -107,8 +111,10 @@ namespace mgp
 
 //		Queue m_presentQueue;
 		Queue m_graphicsQueue;
-		std::vector<Queue> m_computeQueues;
-		std::vector<Queue> m_transferQueues;
+//		std::vector<Queue> m_computeQueues;
+//		std::vector<Queue> m_transferQueues;
+
+		RenderGraph m_renderGraph;
 
 		const Platform *m_platform;
 

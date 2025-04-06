@@ -9,6 +9,7 @@
 namespace mgp
 {
 	class Image;
+	class ImageInfo;
 
 	class CommandBuffer
 	{
@@ -100,6 +101,7 @@ namespace mgp
 		);
 
 		void transitionLayout(Image &image, VkImageLayout newLayout);
+		void transitionLayout(ImageInfo &info, VkImageLayout newLayout);
 
 		void generateMipmaps(Image &image);
 
