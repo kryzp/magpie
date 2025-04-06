@@ -15,8 +15,6 @@ namespace mgp
 		RenderInfo(const VulkanCore *core);
 		~RenderInfo();
 
-		void clear();
-
 		void addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
 		void addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
 

@@ -21,7 +21,6 @@ RenderInfo::RenderInfo(const VulkanCore *core)
 
 RenderInfo::~RenderInfo()
 {
-	clear();
 }
 
 VkRenderingInfo RenderInfo::getInfo() const
@@ -101,13 +100,6 @@ VkRenderingAttachmentInfoKHR &RenderInfo::getColourAttachment(int idx)
 VkRenderingAttachmentInfoKHR &RenderInfo::getDepthAttachment()
 {
 	return m_depthAttachment;
-}
-
-void RenderInfo::clear()
-{
-	m_colourAttachments.clear();
-	m_depthAttachment = {};
-	m_attachmentCount = 0;
 }
 
 void RenderInfo::setClearColour(int idx, VkClearValue value)
