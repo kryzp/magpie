@@ -346,7 +346,6 @@ ImageView *Image::getStandardView()
 	return createView(m_info.getLayerCount(), 0, 0);
 }
 
-
 const VkImage &Image::getHandle() const
 {
 	return m_info.getHandle();
