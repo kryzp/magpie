@@ -51,6 +51,7 @@ namespace mgp
 			bool persistent = true;
 		};
 
+
 		class RenderPassDefinition
 		{
 			friend class RenderGraph;
@@ -59,27 +60,21 @@ namespace mgp
 			RenderPassDefinition() = default;
 			~RenderPassDefinition() = default;
 
-			RenderPassDefinition &addAttachments(const std::vector<AttachmentInfo> &attachments)
+			RenderPassDefinition &setColourAttachments(const std::vector<AttachmentInfo> &attachments)
 			{
-				m_attachments.insert(m_attachments.end(), attachments.begin(), attachments.end());
+				m_colourAttachments = attachments;
 				return *this;
 			}
 
-			RenderPassDefinition &addColourOutputs(const std::vector<AttachmentInfo> &outputs)
+			RenderPassDefinition &setDepthStencilAttachment(const AttachmentInfo &attachment)
 			{
-				m_colourOutputs.insert(m_colourOutputs.end(), outputs.begin(), outputs.end());
+				m_depthStencilAttachment = attachment;
 				return *this;
 			}
 
-			RenderPassDefinition &setDepthStencilInput(const AttachmentInfo &attachment)
+			RenderPassDefinition &setInputViews(const std::vector<ImageView *> &views)
 			{
-				m_depthStencilInput = attachment;
-				return *this;
-			}
-
-			RenderPassDefinition &setDepthStencilOutput(const AttachmentInfo &attachment)
-			{
-				m_depthStencilOutput = attachment;
+				m_inputViews = views;
 				return *this;
 			}
 
@@ -90,17 +85,38 @@ namespace mgp
 			}
 
 		private:
-			std::vector<AttachmentInfo> m_attachments;
-			std::vector<AttachmentInfo> m_colourOutputs;
+			std::vector<AttachmentInfo> m_colourAttachments;
+			AttachmentInfo m_depthStencilAttachment;
 
-			AttachmentInfo m_depthStencilInput;
-			AttachmentInfo m_depthStencilOutput;
+			std::vector<ImageView *> m_inputViews;
 
 			std::function<void(CommandBuffer &, const RenderInfo &)> m_buildFunc = nullptr;
 		};
 
 		class ComputeTaskDefinition
 		{
+			friend class RenderGraph;
+
+		public:
+			ComputeTaskDefinition() = default;
+			~ComputeTaskDefinition() = default;
+
+			ComputeTaskDefinition &setInputStorageViews(const std::vector<ImageView *> &views)
+			{
+				m_inputStorageViews = views;
+				return *this;
+			}
+
+			ComputeTaskDefinition &setBuildFn(const std::function<void(CommandBuffer &)> &fn)
+			{
+				m_buildFunc = fn;
+				return *this;
+			}
+
+		private:
+			std::vector<ImageView *> m_inputStorageViews;
+
+			std::function<void(CommandBuffer &)> m_buildFunc = nullptr;
 		};
 
 		RenderGraph(const VulkanCore *core);
@@ -109,14 +125,31 @@ namespace mgp
 		void record(CommandBuffer &cmd, Swapchain *swapchain);
 
 		void addPass(const RenderPassDefinition &passDef);
-//		void addTask(const ComputeTaskDefinition &taskDef);
-
+		void addTask(const ComputeTaskDefinition &taskDef);
+		
 	private:
 		bool validate() const;
-		void reorderPasses();
+
+		struct PassHandle
+		{
+			enum Type
+			{
+				PASS_TYPE_RENDER,
+				PASS_TYPE_COMPUTE
+			};
+
+			Type type;
+			int index;
+		};
+
+		void handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const RenderPassDefinition &pass);
+		void handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const ComputeTaskDefinition &task);
 
 		const VulkanCore *m_core;
 
-		std::vector<RenderPassDefinition> m_passes;
+		std::vector<PassHandle> m_passes;
+
+		std::vector<RenderPassDefinition> m_renderPasses;
+		std::vector<ComputeTaskDefinition> m_computeTasks;
 	};
 }

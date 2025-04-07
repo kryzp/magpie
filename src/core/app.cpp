@@ -335,12 +335,12 @@ void App::run()
 			RenderGraph::AttachmentInfo targetColourAttachment;
 			targetColourAttachment.view = m_targetColour->getStandardView();
 			targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			targetColourAttachment.clear = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			targetColourAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 			RenderGraph::AttachmentInfo targetDepthAttachment;
 			targetDepthAttachment.view = m_targetDepth->getStandardView();
 			targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			targetDepthAttachment.clear = { { 1.0f, 0 } };
+			targetDepthAttachment.clear = { .depthStencil = { 1.0f, 0 } };
 
 			RenderGraph::AttachmentInfo swapchainColourAttachment;
 			swapchainColourAttachment.view = inFlightSync.getSwapchain()->getColourAttachment().getStandardView();
@@ -355,24 +355,24 @@ void App::run()
 			swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
 			// forward render
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.addColourOutputs({ targetColourAttachment })
-				.setDepthStencilOutput(targetDepthAttachment)
+			RenderGraph::RenderPassDefinition forwardPass = RenderGraph::RenderPassDefinition()
+				.setColourAttachments({ targetColourAttachment })
+				.setDepthStencilAttachment(targetDepthAttachment)
 				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 				{
 					// model
 					{
-						PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], info);
+						PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], info);
 
 						cmd.bindPipeline(
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineContext.pipeline
+							pipelineData.pipeline
 						);
 
 						cmd.bindDescriptorSets(
 							0,
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineContext.layout,
+							pipelineData.layout,
 							{ m_vulkanCore->getBindlessResources().getSet() },
 							{}
 						);
@@ -397,7 +397,7 @@ void App::run()
 						}
 
 						cmd.pushConstants(
-							pipelineContext.layout,
+							pipelineData.layout,
 							VK_SHADER_STAGE_ALL_GRAPHICS,
 							sizeof(BindlessPushConstants),
 							&pc
@@ -408,7 +408,7 @@ void App::run()
 
 					// skybox
 					{
-						PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
+						PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
 
 						struct
 						{
@@ -422,19 +422,19 @@ void App::run()
 
 						cmd.bindPipeline(
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineContext.pipeline
+							pipelineData.pipeline
 						);
 
 						cmd.bindDescriptorSets(
 							0,
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineContext.layout,
+							pipelineData.layout,
 							{ m_skyboxSet },
 							{}
 						);
 
 						cmd.pushConstants(
-							pipelineContext.layout,
+							pipelineData.layout,
 							VK_SHADER_STAGE_ALL_GRAPHICS,
 							sizeof(params),
 							&params
@@ -442,28 +442,25 @@ void App::run()
 
 						m_skyboxMesh->render(cmd);
 					}
-				})
-			);
+				});
 
-			// compute post processing compute shader (target = read / write)
-			/*
-			m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
-				.setStage(VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT)
-				.addAttachmentInput(colourAttachment)
-				.addColourOutput(colourAttachment)
+
+			// compute HDR pass
+			RenderGraph::ComputeTaskDefinition hdrTonemapTask = RenderGraph::ComputeTaskDefinition()
+				.setInputStorageViews({ targetColourAttachment.view })
 				.setBuildFn([&](CommandBuffer &cmd) -> void
 				{
-					PipelineContext computepipelineContext = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
 
 					cmd.bindPipeline(
 						VK_PIPELINE_BIND_POINT_COMPUTE,
-						computepipelineContext.pipeline
+						pipelineData.pipeline
 					);
 
 					cmd.bindDescriptorSets(
 						0,
 						VK_PIPELINE_BIND_POINT_COMPUTE,
-						computepipelineContext.layout,
+						pipelineData.layout,
 						{ hdrTonemappingSet },
 						{}
 					);
@@ -481,50 +478,51 @@ void App::run()
 					pc.exposure = 2.5f;
 
 					cmd.pushConstants(
-						computepipelineContext.layout,
+						pipelineData.layout,
 						VK_SHADER_STAGE_COMPUTE_BIT,
 						sizeof(pc),
 						&pc
 					);
 
 					cmd.dispatch(160, 90, 1);
-				})
-			);
-			*/
+				});
 
 			// output to swapchain
 			swapchainColourAttachment.resolve = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
 
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.addAttachments({ targetColourAttachment })
-				.setDepthStencilInput(targetDepthAttachment)
-				.addColourOutputs({ swapchainColourAttachment })
+			RenderGraph::RenderPassDefinition swapchainRender = RenderGraph::RenderPassDefinition()
+				.setColourAttachments({ swapchainDirectAttachment })
+				.setDepthStencilAttachment(targetDepthAttachment)
+				.setInputViews({ targetColourAttachment.view })
 				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 				{
-					PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, info);
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, info);
 
 					cmd.bindPipeline(
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						pipelineContext.pipeline
+						pipelineData.pipeline
 					);
 
 					cmd.bindDescriptorSets(
 						0,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						pipelineContext.layout,
+						pipelineData.layout,
 						{ textureUVSet },
 						{}
 					);
 
 					cmd.draw(3);
-				})
-			);
+				});
 
 			// editor ui pass
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.addColourOutputs({ swapchainDirectAttachment })
-				.setBuildFn(editor_ui::render)
-			);
+			RenderGraph::RenderPassDefinition editorUIPass = RenderGraph::RenderPassDefinition()
+				.setColourAttachments({ swapchainDirectAttachment })
+				.setBuildFn(editor_ui::render);
+
+			m_vulkanCore->getRenderGraph().addPass(forwardPass);
+			m_vulkanCore->getRenderGraph().addTask(hdrTonemapTask);
+			m_vulkanCore->getRenderGraph().addPass(swapchainRender);
+			m_vulkanCore->getRenderGraph().addPass(editorUIPass);
 		}
 		inFlightSync.present();
 
@@ -988,15 +986,15 @@ void App::precomputeBRDF()
 		brdfIntegrationPipeline.setDepthTest(false);
 		brdfIntegrationPipeline.setDepthWrite(false);
 
-		PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
+		PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
 
 		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		cmd.beginRendering(info);
 		{
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { set }, {});
+			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { set }, {});
 
 			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 
@@ -1087,19 +1085,19 @@ void App::generateEnvironmentProbe()
 			targetInfo.setSize(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION);
 			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { eqrToCbmSet }, {});
+				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { eqrToCbmSet }, {});
 
 				cmd.setViewport({ 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION });
 
 				cmd.pushConstants(
-					pipelineContext.layout,
+					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
 					sizeof(pc),
 					&pc
@@ -1175,19 +1173,19 @@ void App::generateEnvironmentProbe()
 			targetInfo.setSize(IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION);
 			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
 			{
-				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
+				cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
-				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.layout, { irradianceSet }, {});
+				cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { irradianceSet }, {});
 
 				cmd.setViewport({ 0, 0, IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION });
 
 				cmd.pushConstants(
-					pipelineContext.layout,
+					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
 					sizeof(pc),
 					&pc
@@ -1256,17 +1254,17 @@ void App::generateEnvironmentProbe()
 				info.setSize(width, height);
 				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-				PipelineContext pipelineContext = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
 
 				// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 				cmd.beginRendering(info);
 				{
-					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineContext.pipeline);
+					cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
 					cmd.bindDescriptorSets(
 						0,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						pipelineContext.layout,
+						pipelineData.layout,
 						{ prefilterSet },
 						{ dynamicOffset }
 					);
@@ -1274,7 +1272,7 @@ void App::generateEnvironmentProbe()
 					cmd.setViewport({ 0, 0, (float)width, (float)height });
 
 					cmd.pushConstants(
-						pipelineContext.layout,
+						pipelineData.layout,
 						VK_SHADER_STAGE_ALL_GRAPHICS,
 						sizeof(pc),
 						&pc

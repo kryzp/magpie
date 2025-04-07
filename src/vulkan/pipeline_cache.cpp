@@ -252,7 +252,7 @@ void PipelineCache::dispose()
 	m_layouts.clear();
 }
 
-PipelineContext PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
+PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
 {
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -366,7 +366,7 @@ PipelineContext PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefin
 	{
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
-		PipelineContext data = {};
+		PipelineData data = {};
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -423,14 +423,14 @@ PipelineContext PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefin
 
 	MGP_LOG("Created new graphics pipeline!");
 
-	PipelineContext data = {};
+	PipelineData data = {};
 	data.pipeline = pipeline;
 	data.layout = layout;
 
 	return data;
 }
 
-PipelineContext PipelineCache::fetchComputePipeline(const ComputePipelineDefinition &definition)
+PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition &definition)
 {
 	uint64_t createdPipelineHash = 0;
 
@@ -440,7 +440,7 @@ PipelineContext PipelineCache::fetchComputePipeline(const ComputePipelineDefinit
 	{
 		VkPipelineLayout layout = fetchPipelineLayout(definition.getShader());
 
-		PipelineContext data = {};
+		PipelineData data = {};
 		data.pipeline = m_pipelines[createdPipelineHash];
 		data.layout = layout;
 
@@ -468,7 +468,7 @@ PipelineContext PipelineCache::fetchComputePipeline(const ComputePipelineDefinit
 
 	MGP_LOG("Created new compute pipeline!");
 
-	PipelineContext data = {};
+	PipelineData data = {};
 	data.pipeline = pipeline;
 	data.layout = layout;
 

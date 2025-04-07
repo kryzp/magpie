@@ -93,7 +93,7 @@ namespace mgp
 		VkPipelineShaderStageCreateInfo m_stage;
 	};
 
-	struct PipelineContext
+	struct PipelineData
 	{
 		VkPipeline pipeline;
 		VkPipelineLayout layout;
@@ -114,8 +114,8 @@ namespace mgp
 		void init(const VulkanCore *core);
 		void dispose();
 
-		PipelineContext fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo);
-		PipelineContext fetchComputePipeline(const ComputePipelineDefinition &definition);
+		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo);
+		PipelineData fetchComputePipeline(const ComputePipelineDefinition &definition);
 
 		VkPipelineLayout fetchPipelineLayout(const Shader *shader);
 

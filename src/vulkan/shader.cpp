@@ -99,4 +99,3 @@ uint64_t Shader::getPushConstantsSize() const
 {
 	return m_pushConstantsSize;
 }
-
