@@ -355,7 +355,7 @@ void App::run()
 			swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
 			// forward render
-			RenderGraph::RenderPassDefinition forwardPass = RenderGraph::RenderPassDefinition()
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 				.setColourAttachments({ targetColourAttachment })
 				.setDepthStencilAttachment(targetDepthAttachment)
 				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
@@ -442,55 +442,55 @@ void App::run()
 
 						m_skyboxMesh->render(cmd);
 					}
-				});
-
+				}));
 
 			// compute HDR pass
-			RenderGraph::ComputeTaskDefinition hdrTonemapTask = RenderGraph::ComputeTaskDefinition()
+			
+			m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
 				.setInputStorageViews({ targetColourAttachment.view })
 				.setBuildFn([&](CommandBuffer &cmd) -> void
+			{
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+
+				cmd.bindPipeline(
+					VK_PIPELINE_BIND_POINT_COMPUTE,
+					pipelineData.pipeline
+				);
+
+				cmd.bindDescriptorSets(
+					0,
+					VK_PIPELINE_BIND_POINT_COMPUTE,
+					pipelineData.layout,
+					{ hdrTonemappingSet },
+					{}
+				);
+
+				struct
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+					uint32_t width;
+					uint32_t height;
+					float exposure;
+				}
+				pc;
 
-					cmd.bindPipeline(
-						VK_PIPELINE_BIND_POINT_COMPUTE,
-						pipelineData.pipeline
-					);
+				pc.width = 1280;
+				pc.height = 720;
+				pc.exposure = 2.5f;
 
-					cmd.bindDescriptorSets(
-						0,
-						VK_PIPELINE_BIND_POINT_COMPUTE,
-						pipelineData.layout,
-						{ hdrTonemappingSet },
-						{}
-					);
+				cmd.pushConstants(
+					pipelineData.layout,
+					VK_SHADER_STAGE_COMPUTE_BIT,
+					sizeof(pc),
+					&pc
+				);
 
-					struct
-					{
-						uint32_t width;
-						uint32_t height;
-						float exposure;
-					}
-					pc;
-
-					pc.width = 1280;
-					pc.height = 720;
-					pc.exposure = 2.5f;
-
-					cmd.pushConstants(
-						pipelineData.layout,
-						VK_SHADER_STAGE_COMPUTE_BIT,
-						sizeof(pc),
-						&pc
-					);
-
-					cmd.dispatch(160, 90, 1);
-				});
+				cmd.dispatch(160, 90, 1);
+			}));
 
 			// output to swapchain
 			swapchainColourAttachment.resolve = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
 
-			RenderGraph::RenderPassDefinition swapchainRender = RenderGraph::RenderPassDefinition()
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 				.setColourAttachments({ swapchainDirectAttachment })
 				.setDepthStencilAttachment(targetDepthAttachment)
 				.setInputViews({ targetColourAttachment.view })
@@ -512,17 +512,12 @@ void App::run()
 					);
 
 					cmd.draw(3);
-				});
+				}));
 
 			// editor ui pass
-			RenderGraph::RenderPassDefinition editorUIPass = RenderGraph::RenderPassDefinition()
+			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 				.setColourAttachments({ swapchainDirectAttachment })
-				.setBuildFn(editor_ui::render);
-
-			m_vulkanCore->getRenderGraph().addPass(forwardPass);
-			m_vulkanCore->getRenderGraph().addTask(hdrTonemapTask);
-			m_vulkanCore->getRenderGraph().addPass(swapchainRender);
-			m_vulkanCore->getRenderGraph().addPass(editorUIPass);
+				.setBuildFn(editor_ui::render));
 		}
 		inFlightSync.present();
 
