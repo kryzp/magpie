@@ -14,7 +14,7 @@ namespace mgp
 	public:
 		ImageView(
 			VulkanCore *core,
-			const ImageInfo &info,
+			Image *parent,
 			int layerCount,
 			int layer,
 			int baseMipLevel
@@ -24,15 +24,15 @@ namespace mgp
 
 		const VkImageView &getHandle() const;
 
-		ImageInfo &getInfo();
-		const ImageInfo &getInfo() const;
+		Image *getImage();
+		const Image *getImage() const;
 
 		bindless::Handle getBindlessHandle() const;
 
 	private:
 		VkImageView m_view;
 
-		ImageInfo m_imageInfo;
+		Image *m_parent; // todo: use a handle here instead
 
 		bindless::Handle m_bindlessHandle;
 

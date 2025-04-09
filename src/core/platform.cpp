@@ -108,7 +108,6 @@ void Platform::pollEvents(InputState *input)
 				input->onTextUtf8(ev.text.text);
 				break;
 
-#if _WIN32
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
 				input->onGamepadButtonDown(ev.gbutton.button, SDL_GetGamepadPlayerIndexForID(ev.gbutton.which));
 				break;
@@ -124,7 +123,6 @@ void Platform::pollEvents(InputState *input)
 					(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.0f : 0.0f))
 				);
 				break;
-#endif // _WIN32
 
 			case SDL_EVENT_GAMEPAD_ADDED:
 				MGP_LOG("Gamepad added, trying to reconnect all gamepads...");
@@ -299,9 +297,7 @@ void Platform::setCursorVisible(bool toggle) const
 
 void Platform::lockCursor(bool toggle) const
 {
-#if _WIN32
 	SDL_SetWindowRelativeMouseMode(m_window, toggle);
-#endif // _WIN32
 }
 
 void Platform::setCursorPosition(int x, int y, InputState *input)
@@ -382,81 +378,47 @@ uint64_t Platform::getPerformanceFrequency() const
 
 void *Platform::streamFromFile(const char *filepath, const char *mode) const
 {
-#if _WIN32
 	return SDL_IOFromFile(filepath, mode);
-#else
-	return nullptr;
-#endif // _WIN32
 }
 
 void *Platform::streamFromMemory(void *memory, uint64_t size) const
 {
-#if _WIN32
 	return SDL_IOFromMem(memory, size);
-#else
-	return nullptr;
-#endif // _WIN32
 }
 
 void *Platform::streamFromConstMemory(const void *memory, uint64_t size) const
 {
-#if _WIN32
 	return SDL_IOFromConstMem(memory, size);
-#else
-	return nullptr;
-#endif // _WIN32
 }
 
 int64_t Platform::streamRead(void *stream, void *dst, uint64_t size) const
 {
-#if _WIN32
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
-#else
-	return 0;
-#endif // _WIN32
 }
 
 int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size) const
 {
-#if _WIN32
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
-#else
-	return 0;
-#endif // _WIN32
 }
 
 int64_t Platform::streamSeek(void *stream, int64_t offset) const
 {
-#if _WIN32
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
-#else
-	return 0;
-#endif // _WIN32
 }
 
 int64_t Platform::streamSize(void *stream) const
 {
-#if _WIN32
 	return SDL_GetIOSize((SDL_IOStream *)stream);
-#else
-	return 0;
-#endif // _WIN32
 }
 
 int64_t Platform::streamPosition(void *stream) const
 {
-#if _WIN32
 	return SDL_TellIO((SDL_IOStream *)stream);
-#else
-	return 0;
-#endif // _WIN32
 }
 
 void Platform::streamClose(void *stream) const
 {
-#if _WIN32
 	SDL_CloseIO((SDL_IOStream *)stream);
-#endif // _WIN32
 }
 
 void Platform::initImGui()
@@ -471,6 +433,5 @@ const char *const *Platform::vkGetInstanceExtensions(uint32_t *count) const
 
 bool Platform::vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface) const
 {
-	MGP_LOG("Created Vulkan surface!");
 	return SDL_Vulkan_CreateSurface(m_window, instance, NULL, surface);
 }

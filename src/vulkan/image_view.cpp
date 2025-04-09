@@ -9,36 +9,36 @@ using namespace mgp;
 
 ImageView::ImageView(
 	VulkanCore *core,
-	const ImageInfo &info,
+	Image *parent,
 	int layerCount,
 	int layer,
 	int baseMipLevel
 )
 	: m_view(VK_NULL_HANDLE)
-	, m_imageInfo(info)
+	, m_parent(parent)
 	, m_bindlessHandle(bindless::INVALID_HANDLE)
 	, m_core(core)
 {
-	VkImageViewType viewType = info.getType();
+	VkImageViewType viewType = m_parent->getType();
 
-	if (info.isCubemap() && layerCount == 1)
+	if (m_parent->isCubemap() && layerCount == 1)
 	{
 		viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 	}
 
 	VkImageViewCreateInfo viewCreateInfo = {};
 	viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	viewCreateInfo.image = info.getHandle();
+	viewCreateInfo.image = m_parent->getHandle();
 	viewCreateInfo.viewType = viewType;
-	viewCreateInfo.format = info.getFormat();
+	viewCreateInfo.format = m_parent->getFormat();
 
 	viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	viewCreateInfo.subresourceRange.baseMipLevel = baseMipLevel;
-	viewCreateInfo.subresourceRange.levelCount = info.getMipmapCount() - baseMipLevel;
+	viewCreateInfo.subresourceRange.levelCount = m_parent->getMipmapCount() - baseMipLevel;
 	viewCreateInfo.subresourceRange.baseArrayLayer = layer;
 	viewCreateInfo.subresourceRange.layerCount = layerCount;
 
-	if (info.isDepth())
+	if (m_parent->isDepth())
 	{
 		// depth AND stencil is not allowed for sampling!
 		// so, use depth instead.
@@ -55,13 +55,13 @@ ImageView::ImageView(
 		"Failed to create texture image view."
 	);
 
-	if (info.getUsage() & VK_IMAGE_USAGE_SAMPLED_BIT)
+	if (m_parent->getUsage() & VK_IMAGE_USAGE_SAMPLED_BIT)
 	{
-		if (info.getType() == VK_IMAGE_VIEW_TYPE_2D)
+		if (m_parent->getType() == VK_IMAGE_VIEW_TYPE_2D)
 		{
 			m_bindlessHandle = m_core->getBindlessResources().registerTexture2D(*this);
 		}
-		else if (info.getType() == VK_IMAGE_VIEW_TYPE_CUBE)
+		else if (m_parent->getType() == VK_IMAGE_VIEW_TYPE_CUBE)
 		{
 			m_bindlessHandle = m_core->getBindlessResources().registerCubemap(*this);
 		}
@@ -79,14 +79,14 @@ const VkImageView &ImageView::getHandle() const
 	return m_view;
 }
 
-ImageInfo &ImageView::getInfo()
+Image *ImageView::getImage()
 {
-	return m_imageInfo;
+	return m_parent;
 }
 
-const ImageInfo &ImageView::getInfo() const
+const Image *ImageView::getImage() const
 {
-	return m_imageInfo;
+	return m_parent;
 }
 
 bindless::Handle ImageView::getBindlessHandle() const

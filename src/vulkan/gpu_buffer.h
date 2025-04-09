@@ -17,11 +17,8 @@ namespace mgp
 		GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, uint64_t size);
 		~GPUBuffer();
 
-		void readDataFromMe(void *dst, uint64_t length, uint64_t offset) const;
-		void writeDataToMe(const void *src, uint64_t length, uint64_t offset) const;
-
-		void writeToBuffer(CommandBuffer &cmd, const GPUBuffer *other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset);
-		void writeToImage(CommandBuffer &cmd, const Image *image, uint64_t size, uint64_t offset = 0, uint32_t baseArrayLayer = 0);
+		void read(void *dst, uint64_t length, uint64_t offset) const;
+		void write(const void *src, uint64_t length, uint64_t offset) const;
 
 		VkDescriptorBufferInfo getDescriptorInfo(uint32_t offset = 0) const;
 		VkDescriptorBufferInfo getDescriptorInfoRange(uint32_t range, uint32_t offset = 0) const;

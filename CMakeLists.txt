@@ -18,6 +18,8 @@ add_executable(${PROJECT_NAME}
     src/rendering/model.cpp
     src/rendering/model_loader.cpp
 
+	src/rendering/renderers/deferred_renderer.cpp
+
     src/vulkan/core.cpp
     src/vulkan/toolbox.cpp
     src/vulkan/swapchain.cpp

@@ -45,47 +45,14 @@ GPUBuffer::~GPUBuffer()
 	m_buffer = VK_NULL_HANDLE;
 }
 
-void GPUBuffer::readDataFromMe(void *dst, uint64_t length, uint64_t offset) const
+void GPUBuffer::read(void *dst, uint64_t length, uint64_t offset) const
 {
 	vmaCopyAllocationToMemory(m_core->getVMAAllocator(), m_allocation, offset, dst, length);
 }
 
-void GPUBuffer::writeDataToMe(const void *src, uint64_t length, uint64_t offset) const
+void GPUBuffer::write(const void *src, uint64_t length, uint64_t offset) const
 {
 	vmaCopyMemoryToAllocation(m_core->getVMAAllocator(), src, m_allocation, offset, length);
-}
-
-void GPUBuffer::writeToBuffer(CommandBuffer &cmd, const GPUBuffer *other, uint64_t length, uint64_t srcOffset, uint64_t dstOffset)
-{
-	VkBufferCopy region = {};
-	region.srcOffset = srcOffset;
-	region.dstOffset = dstOffset;
-	region.size = length;
-
-	cmd.copyBufferToBuffer(
-		m_buffer, other->m_buffer,
-		{ region }
-	);
-}
-
-void GPUBuffer::writeToImage(CommandBuffer &cmd, const Image *image, uint64_t size, uint64_t offset, uint32_t baseArrayLayer)
-{
-	VkBufferImageCopy region = {};
-	region.bufferOffset = offset;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = baseArrayLayer;
-	region.imageSubresource.layerCount = 1;
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = { image->getInfo().getWidth(), image->getInfo().getHeight(), 1 };
-
-	cmd.copyBufferToImage(
-		m_buffer, image->getHandle(),
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		{ region }
-	);
 }
 
 VkDescriptorBufferInfo GPUBuffer::getDescriptorInfo(uint32_t offset) const

@@ -27,6 +27,8 @@
 #include "rendering/model_loader.h"
 #include "rendering/model.h"
 
+#include "rendering/renderers/deferred_renderer.h"
+
 #include "input/input.h"
 
 #include "math/timer.h"
@@ -57,24 +59,6 @@ struct BindlessMaterialHandles
 	bindless::Handle emissiveTexture_ID;
 };
 
-struct BindlessPushConstants // todo: this should use instance id instead
-{
-	int frameDataBuffer_ID;
-	int transformBuffer_ID;
-	int materialDataBuffer_ID;
-
-	int transform_ID;
-
-	int irradianceMap_ID;
-	int prefilterMap_ID;
-	int brdfLUT_ID;
-
-	int material_ID;
-
-	int cubemapSampler_ID;
-	int textureSampler_ID;
-};
-
 App::App(const Config &config)
 	: m_linearSampler(nullptr)
 	, m_loadedImageCache()
@@ -90,11 +74,11 @@ App::App(const Config &config)
 	, m_textureUVSet(VK_NULL_HANDLE)
 	, m_hdrTonemappingPipeline()
 	, m_hdrTonemappingSet(VK_NULL_HANDLE)
+	, m_scene()
 	, m_skyboxMesh(nullptr)
 	, m_skyboxShader(nullptr)
 	, m_skyboxSet(VK_NULL_HANDLE)
 	, m_skyboxPipeline()
-	, m_brdfLUT(nullptr)
 	, m_environmentMap(nullptr)
 	, m_environmentProbe()
 	, m_descriptorPool()
@@ -156,7 +140,8 @@ App::App(const Config &config)
 
 	createSkyboxMesh();
 
-	precomputeBRDF();
+	DeferredRenderer::init(m_vulkanCore, this);
+
 	generateEnvironmentProbe();
 
 	createSkybox();
@@ -188,11 +173,23 @@ App::App(const Config &config)
 	m_textureUVPipeline.setShader(textureUVShader);
 	m_textureUVPipeline.setDepthTest(false);
 	m_textureUVPipeline.setDepthWrite(false);
-	m_textureUVSet = m_descriptorPool.allocate(textureUVShader->getDescriptorSetLayouts());
+	m_textureUVSet = allocateSet(textureUVShader->getDescriptorSetLayouts());
 
 	Shader *hdrTonemappingShader = getShader("hdr_tonemapping");
 	m_hdrTonemappingPipeline.setShader(hdrTonemappingShader);
-	m_hdrTonemappingSet = m_descriptorPool.allocate(hdrTonemappingShader->getDescriptorSetLayouts());
+	m_hdrTonemappingSet = allocateSet(hdrTonemappingShader->getDescriptorSetLayouts());
+
+	ModelLoader modelLoader(m_vulkanCore, this);
+	Model *model = modelLoader.loadModel("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+
+	auto obj = m_scene.createRenderObject();
+
+	obj->model = model;
+
+	obj->transform.setPosition({ 0.0f, 0.0f, 0.0f });
+	obj->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
+	obj->transform.setScale({ 1.0f, 1.0f, 1.0f });
+	obj->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
 
 	m_running = true;
 }
@@ -200,6 +197,8 @@ App::App(const Config &config)
 App::~App()
 {
 	m_descriptorPool.cleanUp();
+
+	delete m_scene.getRenderList()[0]->getParent(); // crap
 
 	delete m_skyboxMesh;
 
@@ -218,7 +217,7 @@ App::~App()
 	delete m_environmentProbe.irradiance;
 	delete m_environmentProbe.prefilter;
 
-	delete m_brdfLUT;
+	DeferredRenderer::destroy();
 
 	delete m_targetColour;
 	delete m_targetDepth;
@@ -267,6 +266,8 @@ void App::run()
 		true
 	);
 
+	m_targetColour->allocate();
+
 	m_targetDepth = new Image(
 		m_vulkanCore,
 		inFlightSync.getSwapchain()->getWidth(),
@@ -281,6 +282,8 @@ void App::run()
 		false
 	);
 
+	m_targetDepth->allocate();
+
 	DescriptorWriter()
 		.writeCombinedImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
 		.updateSet(m_vulkanCore, m_textureUVSet);
@@ -288,9 +291,6 @@ void App::run()
 	DescriptorWriter()
 		.writeStorageImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_GENERAL)
 		.updateSet(m_vulkanCore, m_hdrTonemappingSet);
-
-	ModelLoader meshLoader(m_vulkanCore, this);
-	Model *mesh = meshLoader.loadMesh("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
 
 	double accumulator = 0.0;
 	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
@@ -322,205 +322,7 @@ void App::run()
 		}
 
 		inFlightSync.begin();
-		{
-			FrameConstants constants = {
-				.proj = m_camera.getProj(),
-				.view = m_camera.getView(),
-				.cameraPosition = glm::vec4(m_camera.position, 1.0f)
-			};
-
-			TransformData transform = {
-				.model = glm::identity<glm::mat4>(),
-				.normalMatrix = glm::transpose(glm::inverse(transform.model))
-			};
-
-			m_frameConstantsBuffer->writeDataToMe(&constants, sizeof(FrameConstants), 0);
-			m_transformDataBuffer->writeDataToMe(&transform, sizeof(TransformData), 0);
-
-			RenderGraph::AttachmentInfo targetColourAttachment;
-			targetColourAttachment.view = m_targetColour->getStandardView();
-			targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			targetColourAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
-
-			RenderGraph::AttachmentInfo targetDepthAttachment;
-			targetDepthAttachment.view = m_targetDepth->getStandardView();
-			targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			targetDepthAttachment.clear = { .depthStencil = { 1.0f, 0 } };
-
-			RenderGraph::AttachmentInfo swapchainColourAttachment;
-			swapchainColourAttachment.view = inFlightSync.getSwapchain()->getColourAttachment().getStandardView();
-			swapchainColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-			RenderGraph::AttachmentInfo swapchainDepthAttachment;
-			swapchainDepthAttachment.view = inFlightSync.getSwapchain()->getDepthAttachment().getStandardView();
-			swapchainDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-			RenderGraph::AttachmentInfo swapchainDirectAttachment;
-			swapchainDirectAttachment.view = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
-			swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-			// forward render
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.setColourAttachments({ targetColourAttachment })
-				.setDepthStencilAttachment(targetDepthAttachment)
-				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
-				{
-					// model
-					{
-						PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(mesh->getSubmesh(0)->getMaterial()->passes[SHADER_PASS_FORWARD], info);
-
-						cmd.bindPipeline(
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineData.pipeline
-						);
-
-						cmd.bindDescriptorSets(
-							0,
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineData.layout,
-							{ m_vulkanCore->getBindlessResources().getSet() },
-							{}
-						);
-
-						BindlessPushConstants pc = {
-							.frameDataBuffer_ID			= m_frameConstantsBuffer->getBindlessHandle(),
-							.transformBuffer_ID			= m_transformDataBuffer->getBindlessHandle(),
-							.materialDataBuffer_ID		= m_bindlessMaterialTable->getBindlessHandle(),
-
-							.transform_ID				= 0,
-
-							.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle(),
-							.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle(),
-
-							.brdfLUT_ID					= m_brdfLUT->getStandardView()->getBindlessHandle(),
-
-							.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle,
-
-							.cubemapSampler_ID			= m_linearSampler->getBindlessHandle(),
-							.textureSampler_ID			= m_linearSampler->getBindlessHandle()
-						};
-
-						cmd.pushConstants(
-							pipelineData.layout,
-							VK_SHADER_STAGE_ALL_GRAPHICS,
-							sizeof(BindlessPushConstants),
-							&pc
-						);
-
-						mesh->getSubmesh(0)->render(cmd);
-					}
-
-					// skybox
-					{
-						PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
-
-						struct
-						{
-							glm::mat4 proj;
-							glm::mat4 view;
-						}
-						params;
-
-						params.proj = m_camera.getProj();
-						params.view = m_camera.getRotationMatrix();
-
-						cmd.bindPipeline(
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineData.pipeline
-						);
-
-						cmd.bindDescriptorSets(
-							0,
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipelineData.layout,
-							{ m_skyboxSet },
-							{}
-						);
-
-						cmd.pushConstants(
-							pipelineData.layout,
-							VK_SHADER_STAGE_ALL_GRAPHICS,
-							sizeof(params),
-							&params
-						);
-
-						m_skyboxMesh->render(cmd);
-					}
-				}));
-
-			// compute HDR pass
-			m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
-				.setInputStorageViews({ targetColourAttachment.view })
-				.setBuildFn([&](CommandBuffer &cmd) -> void
-			{
-				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
-
-				cmd.bindPipeline(
-					VK_PIPELINE_BIND_POINT_COMPUTE,
-					pipelineData.pipeline
-				);
-
-				cmd.bindDescriptorSets(
-					0,
-					VK_PIPELINE_BIND_POINT_COMPUTE,
-					pipelineData.layout,
-					{ m_hdrTonemappingSet },
-					{}
-				);
-
-				struct
-				{
-					uint32_t width;
-					uint32_t height;
-					float exposure = 2.25f;
-				}
-				pc {
-					.width = (uint32_t)m_platform->getWindowSizeInPixels().x,
-					.height = (uint32_t)m_platform->getWindowSizeInPixels().y
-				};
-
-				cmd.pushConstants(
-					pipelineData.layout,
-					VK_SHADER_STAGE_COMPUTE_BIT,
-					sizeof(pc),
-					&pc
-				);
-
-				cmd.dispatch(pc.width / 8, pc.height / 8, 1);
-			}));
-
-			// output to swapchain
-			swapchainColourAttachment.resolve = inFlightSync.getSwapchain()->getCurrentSwapchainImageView();
-
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.setColourAttachments({ swapchainDirectAttachment })
-				.setDepthStencilAttachment(targetDepthAttachment)
-				.setInputViews({ targetColourAttachment.view })
-				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
-				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
-
-					cmd.bindPipeline(
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						pipelineData.pipeline
-					);
-
-					cmd.bindDescriptorSets(
-						0,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						pipelineData.layout,
-						{ m_textureUVSet },
-						{}
-					);
-
-					cmd.draw(3);
-				}));
-
-			// editor ui pass
-			m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-				.setColourAttachments({ swapchainDirectAttachment })
-				.setBuildFn(editor_ui::render));
-		}
+		render(inFlightSync.getSwapchain());
 		inFlightSync.present();
 
 		m_vulkanCore->nextFrame();
@@ -528,16 +330,7 @@ void App::run()
 
 	m_vulkanCore->deviceWaitIdle();
 
-	delete mesh;
-
 	inFlightSync.destroy();
-}
-
-void App::exit()
-{
-	MGP_LOG("Detected window close event, quitting...");
-
-	m_running = false;
 }
 
 void App::tick(float dt)
@@ -559,8 +352,181 @@ void App::tickFixed(float dt)
 	}
 }
 
-void App::render(CommandBuffer &inFlightCmd, const Swapchain *swapchain)
+void App::render(Swapchain *swapchain)
 {
+	RenderGraph::AttachmentInfo targetColourAttachment;
+	targetColourAttachment.view = m_targetColour->getStandardView();
+	targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	targetColourAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
+
+	RenderGraph::AttachmentInfo targetDepthAttachment;
+	targetDepthAttachment.view = m_targetDepth->getStandardView();
+	targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	targetDepthAttachment.clear = { .depthStencil = { 1.0f, 0 } };
+
+	RenderGraph::AttachmentInfo swapchainColourAttachment;
+	swapchainColourAttachment.view = swapchain->getColourAttachment().getStandardView();
+	swapchainColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+	RenderGraph::AttachmentInfo swapchainDepthAttachment;
+	swapchainDepthAttachment.view = swapchain->getDepthAttachment().getStandardView();
+	swapchainDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+	RenderGraph::AttachmentInfo swapchainDirectAttachment;
+	swapchainDirectAttachment.view = swapchain->getCurrentSwapchainImageView();
+	swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+	FrameConstants constants = {
+		.proj = m_camera.getProj(),
+		.view = m_camera.getView(),
+		.cameraPosition = glm::vec4(m_camera.position, 1.0f)
+	};
+
+	TransformData transform = {
+		.model = glm::identity<glm::mat4>(),
+		.normalMatrix = glm::transpose(glm::inverse(transform.model))
+	};
+
+	m_frameConstantsBuffer->write(&constants,
+		sizeof(FrameConstants),
+		0);
+	m_transformDataBuffer->write(&transform,
+		sizeof(TransformData),
+		0);
+
+	// forward render
+	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setColourAttachments({ targetColourAttachment })
+		.setDepthStencilAttachment(targetDepthAttachment)
+		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
+		{
+			DeferredRenderer::render(cmd, info, m_camera, m_scene);
+
+			// skybox
+			{
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
+
+				struct
+				{
+					glm::mat4 proj;
+					glm::mat4 view;
+				}
+				params;
+
+				params.proj = m_camera.getProj();
+				params.view = m_camera.getRotationMatrix();
+
+				cmd.bindPipeline(
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineData.pipeline
+				);
+
+				cmd.bindDescriptorSets(
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineData.layout,
+					{ m_skyboxSet },
+					{}
+				);
+
+				cmd.pushConstants(
+					pipelineData.layout,
+					VK_SHADER_STAGE_ALL_GRAPHICS,
+					sizeof(params),
+					&params
+				);
+
+				m_skyboxMesh->bind(cmd);
+
+				cmd.drawIndexed(m_skyboxMesh->getIndexCount());
+			}
+		}));
+
+	// compute HDR pass
+	m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
+		.setInputStorageViews({ targetColourAttachment.view })
+		.setBuildFn([&](CommandBuffer &cmd) -> void
+		{
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
+
+			cmd.bindPipeline(
+				VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipelineData.pipeline
+			);
+
+			cmd.bindDescriptorSets(
+				0,
+				VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipelineData.layout,
+				{ m_hdrTonemappingSet },
+				{}
+			);
+
+			struct
+			{
+				uint32_t width;
+				uint32_t height;
+				float exposure;
+			}
+			pc;
+
+			pc.width = (uint32_t)m_platform->getWindowSizeInPixels().x;
+			pc.height = (uint32_t)m_platform->getWindowSizeInPixels().y;
+			pc.exposure = 2.25f;
+
+			cmd.pushConstants(
+				pipelineData.layout,
+				VK_SHADER_STAGE_COMPUTE_BIT,
+				sizeof(pc),
+				&pc
+			);
+
+			cmd.dispatch(pc.width / 8, pc.height / 8, 1);
+		}));
+
+	// output to swapchain
+	swapchainColourAttachment.resolve = swapchain->getCurrentSwapchainImageView();
+
+	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setColourAttachments({ swapchainDirectAttachment })
+		.setDepthStencilAttachment(targetDepthAttachment)
+		.setInputViews({ targetColourAttachment.view })
+		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
+		{
+			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
+
+			cmd.bindPipeline(
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineData.pipeline
+			);
+
+			cmd.bindDescriptorSets(
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineData.layout,
+				{ m_textureUVSet },
+				{}
+			);
+
+			cmd.draw(3);
+		}));
+
+	// editor ui pass
+	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setColourAttachments({ swapchainDirectAttachment })
+		.setBuildFn(editor_ui::render));
+}
+
+void App::exit()
+{
+	MGP_LOG("Detected window close event, quitting...");
+
+	m_running = false;
+}
+
+VkDescriptorSet App::allocateSet(const std::vector<VkDescriptorSetLayout> &layouts)
+{
+	return m_descriptorPool.allocate(layouts);
 }
 
 void App::loadTextures()
@@ -809,7 +775,9 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 		false
 	);
 
-	GPUBuffer *stagingBuffer = new GPUBuffer(
+	image->allocate();
+
+	GPUBuffer stagingBuffer(
 		m_vulkanCore,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VMA_MEMORY_USAGE_CPU_TO_GPU,
@@ -821,16 +789,17 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 	{
 		cmd.transitionLayout(*image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		stagingBuffer->writeDataToMe(bitmap.getData(), bitmap.getMemorySize(), 0);
-		stagingBuffer->writeToImage(cmd, image, bitmap.getMemorySize());
+		stagingBuffer.write(bitmap.getData(),
+			bitmap.getMemorySize(),
+			0);
+
+		cmd.copyBufferToImage(stagingBuffer, *image);
 
 		cmd.generateMipmaps(*image);
 	}
 	instantSubmit.submit();
 
 	m_vulkanCore->deviceWaitIdle();
-
-	delete stagingBuffer;
 
 	m_loadedImageCache.insert({ name, image });
 
@@ -935,7 +904,7 @@ Material *App::buildMaterial(MaterialData &data)
 
 	material->bindlessHandle = m_materialHandle_UID++;
 
-	m_bindlessMaterialTable->writeDataToMe(
+	m_bindlessMaterialTable->write(
 		&handles,
 		sizeof(BindlessMaterialHandles),
 		sizeof(BindlessMaterialHandles) * material->bindlessHandle
@@ -947,61 +916,6 @@ Material *App::buildMaterial(MaterialData &data)
 void App::addTechnique(const std::string &name, const Technique &technique)
 {
 	m_techniques.insert({ name, technique });
-}
-
-void App::precomputeBRDF()
-{
-	InstantSubmitSync instantSubmit(m_vulkanCore);
-	CommandBuffer &cmd = instantSubmit.begin();
-	{
-		MGP_LOG("Precomputing BRDF...");
-
-		const int BRDF_RESOLUTION = 512;
-
-		m_brdfLUT = new Image(
-			m_vulkanCore,
-			BRDF_RESOLUTION, BRDF_RESOLUTION, 1,
-			VK_FORMAT_R32G32_SFLOAT,
-			VK_IMAGE_VIEW_TYPE_2D,
-			VK_IMAGE_TILING_OPTIMAL,
-			1,
-			VK_SAMPLE_COUNT_1_BIT,
-			false,
-			false
-		);
-
-		RenderInfo info(m_vulkanCore);
-		info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);
-		info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *m_brdfLUT->getStandardView(), nullptr);
-
-		Shader *brdfLUTShader = getShader("brdf_lut");
-
-		VkDescriptorSet set = m_descriptorPool.allocate(brdfLUTShader->getDescriptorSetLayouts());
-
-		GraphicsPipelineDefinition brdfIntegrationPipeline;
-		brdfIntegrationPipeline.setShader(brdfLUTShader);
-		brdfIntegrationPipeline.setDepthTest(false);
-		brdfIntegrationPipeline.setDepthWrite(false);
-
-		PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
-
-		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-		cmd.beginRendering(info);
-		{
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
-
-			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { set }, {});
-
-			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
-
-			cmd.draw(3);
-		}
-		cmd.endRendering();
-
-		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
-	instantSubmit.submit();
 }
 
 void App::generateEnvironmentProbe()
@@ -1050,12 +964,14 @@ void App::generateEnvironmentProbe()
 			false
 		);
 
+		m_environmentMap->allocate();
+
 		pc.proj = captureProjectionMatrix;
 		pc.view = glm::identity<glm::mat4>();
 
 		Shader *eqrToCbmShader = getShader("equirectangular_to_cubemap");
 
-		VkDescriptorSet eqrToCbmSet = m_descriptorPool.allocate(eqrToCbmShader->getDescriptorSetLayouts());
+		VkDescriptorSet eqrToCbmSet = allocateSet(eqrToCbmShader->getDescriptorSetLayouts());
 
 		Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
 
@@ -1099,7 +1015,9 @@ void App::generateEnvironmentProbe()
 					&pc
 				);
 
-				m_skyboxMesh->render(cmd);
+				m_skyboxMesh->bind(cmd);
+
+				cmd.drawIndexed(m_skyboxMesh->getIndexCount());
 			}
 			cmd.endRendering();
 		}
@@ -1142,9 +1060,11 @@ void App::generateEnvironmentProbe()
 			false
 		);
 
+		m_environmentProbe.irradiance->allocate();
+
 		Shader *irradianceGenShader = getShader("irradiance_convolution");
 
-		VkDescriptorSet irradianceSet = m_descriptorPool.allocate(irradianceGenShader->getDescriptorSetLayouts());
+		VkDescriptorSet irradianceSet = allocateSet(irradianceGenShader->getDescriptorSetLayouts());
 
 		DescriptorWriter()
 			.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
@@ -1186,7 +1106,9 @@ void App::generateEnvironmentProbe()
 					&pc
 				);
 
-				m_skyboxMesh->render(cmd);
+				m_skyboxMesh->bind(cmd);
+
+				cmd.drawIndexed(m_skyboxMesh->getIndexCount());
 			}
 			cmd.endRendering();
 		}
@@ -1210,9 +1132,11 @@ void App::generateEnvironmentProbe()
 			false
 		);
 
+		m_environmentProbe.prefilter->allocate();
+
 		Shader *prefilterShader = getShader("prefilter_convolution");
 
-		VkDescriptorSet prefilterSet = m_descriptorPool.allocate(prefilterShader->getDescriptorSetLayouts());
+		VkDescriptorSet prefilterSet = allocateSet(prefilterShader->getDescriptorSetLayouts());
 
 		DescriptorWriter()
 			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
@@ -1236,7 +1160,9 @@ void App::generateEnvironmentProbe()
 
 			prefilterParams.roughness = roughness;
 			uint32_t dynamicOffset = sizeof(prefilterParams) * mipLevel;
-			pfParameterBuffer->writeDataToMe(&prefilterParams, sizeof(prefilterParams), dynamicOffset);
+			pfParameterBuffer->write(&prefilterParams,
+				sizeof(prefilterParams),
+				dynamicOffset);
 
 			for (int i = 0; i < 6; i++)
 			{
@@ -1272,7 +1198,9 @@ void App::generateEnvironmentProbe()
 						&pc
 					);
 
-					m_skyboxMesh->render(cmd);
+					m_skyboxMesh->bind(cmd);
+
+					cmd.drawIndexed(m_skyboxMesh->getIndexCount());
 				}
 				cmd.endRendering();
 			}
@@ -1335,7 +1263,7 @@ void App::createSkybox()
 {
 	m_skyboxShader = getShader("skybox");
 
-	m_skyboxSet = m_descriptorPool.allocate(m_skyboxShader->getDescriptorSetLayouts());
+	m_skyboxSet = allocateSet(m_skyboxShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
 		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())

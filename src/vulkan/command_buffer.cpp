@@ -3,6 +3,7 @@
 #include "core/common.h"
 
 #include "image.h"
+#include "gpu_buffer.h"
 #include "toolbox.h"
 
 using namespace mgp;
@@ -274,12 +275,7 @@ void CommandBuffer::pipelineBarrier(
 
 void CommandBuffer::transitionLayout(Image &image, VkImageLayout newLayout)
 {
-	transitionLayout(image.m_info, newLayout);
-}
-
-void CommandBuffer::transitionLayout(ImageInfo &info, VkImageLayout newLayout)
-{
-	VkImageMemoryBarrier2 barrier = info.getBarrier(newLayout);
+	VkImageMemoryBarrier2 barrier = image.getBarrier(newLayout);
 
 	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;//vkutil::getTransferAccessFlags(m_imageLayout);
 	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;//vkutil::getTransferAccessFlags(newLayout);
@@ -292,12 +288,12 @@ void CommandBuffer::transitionLayout(ImageInfo &info, VkImageLayout newLayout)
 		{}, {}, { barrier }
 	);
 
-	info.m_layout = newLayout;
+	image.m_layout = newLayout;
 }
 
 void CommandBuffer::generateMipmaps(Image &image)
 {
-	MGP_ASSERT(image.getInfo().getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
 
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -306,10 +302,10 @@ void CommandBuffer::generateMipmaps(Image &image)
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = image.getInfo().getLayerCount();
+	barrier.subresourceRange.layerCount = image.getLayerCount();
 	barrier.subresourceRange.levelCount = 1;
 
-	for (int i = 1; i < image.getInfo().getMipmapCount(); i++)
+	for (int i = 1; i < image.getMipmapCount(); i++)
 	{
 		barrier.subresourceRange.baseMipLevel = i - 1;
 
@@ -327,12 +323,12 @@ void CommandBuffer::generateMipmaps(Image &image)
 			{}, {}, { barrier }
 		);
 
-		for (int face = 0; face < image.getInfo().getFaceCount(); face++)
+		for (int face = 0; face < image.getFaceCount(); face++)
 		{
-			int srcMipWidth  = (int)image.getInfo().getWidth()	>> (i - 1);
-			int srcMipHeight = (int)image.getInfo().getHeight()	>> (i - 1);
-			int dstMipWidth  = (int)image.getInfo().getWidth()	>> (i - 0);
-			int dstMipHeight = (int)image.getInfo().getHeight()	>> (i - 0);
+			int srcMipWidth  = (int)image.getWidth()	>> (i - 1);
+			int srcMipHeight = (int)image.getHeight()	>> (i - 1);
+			int dstMipWidth  = (int)image.getWidth()	>> (i - 0);
+			int dstMipHeight = (int)image.getHeight()	>> (i - 0);
 
 			VkImageBlit blit = {};
 
@@ -373,7 +369,7 @@ void CommandBuffer::generateMipmaps(Image &image)
 		);
 	}
 
-	barrier.subresourceRange.baseMipLevel = image.getInfo().getMipmapCount() - 1;
+	barrier.subresourceRange.baseMipLevel = image.getMipmapCount() - 1;
 
 	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -389,7 +385,7 @@ void CommandBuffer::generateMipmaps(Image &image)
 		{}, {}, { barrier }
 	);
 
-	image.m_info.m_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	image.m_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 void CommandBuffer::blitImage(
@@ -410,6 +406,19 @@ void CommandBuffer::blitImage(
 }
 
 void CommandBuffer::copyBufferToBuffer(
+	const GPUBuffer &srcBuffer,
+	const GPUBuffer &dstBuffer,
+	const std::vector<VkBufferCopy> &regions
+)
+{
+	copyBufferToBuffer(
+		srcBuffer.getHandle(),
+		dstBuffer.getHandle(),
+		regions
+	);
+}
+
+void CommandBuffer::copyBufferToBuffer(
 	VkBuffer srcBuffer,
 	VkBuffer dstBuffer,
 	const std::vector<VkBufferCopy> &regions
@@ -425,9 +434,48 @@ void CommandBuffer::copyBufferToBuffer(
 }
 
 void CommandBuffer::copyBufferToImage(
+	const GPUBuffer &buffer,
+	const Image &image
+)
+{
+	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+
+	VkBufferImageCopy region = {};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { image.getWidth(), image.getHeight(), 1 };
+
+	copyBufferToImage(
+		buffer.getHandle(),
+		image.getHandle(),
+		{ region }
+	);
+}
+
+void CommandBuffer::copyBufferToImage(
+	const GPUBuffer &buffer,
+	const Image &image,
+	const std::vector<VkBufferImageCopy> &regions
+)
+{
+	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+
+	copyBufferToImage(
+		buffer.getHandle(),
+		image.getHandle(),
+		regions
+	);
+}
+
+void CommandBuffer::copyBufferToImage(
 	VkBuffer srcBuffer,
 	VkImage dstImage,
-	VkImageLayout dstImageLayout,
 	const std::vector<VkBufferImageCopy> &regions
 )
 {
@@ -435,7 +483,7 @@ void CommandBuffer::copyBufferToImage(
 		m_buffer,
 		srcBuffer,
 		dstImage,
-		dstImageLayout,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		regions.size(),
 		regions.data()
 	);

@@ -61,7 +61,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 	for (cauto &cout : pass.m_colourAttachments)
 	{
 		cmd.transitionLayout(
-			cout.view->getInfo(),
+			*cout.view->getImage(),
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 		);
 	}
@@ -69,7 +69,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 	if (pass.m_depthStencilAttachment.view)
 	{
 		cmd.transitionLayout(
-			pass.m_depthStencilAttachment.view->getInfo(),
+			*pass.m_depthStencilAttachment.view->getImage(),
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 		);
 	}
@@ -77,7 +77,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 	for (cauto &view : pass.m_inputViews)
 	{
 		cmd.transitionLayout(
-			view->getInfo(),
+			*view->getImage(),
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		);
 	}
@@ -88,8 +88,8 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 	{
 		cauto &attachment = pass.m_colourAttachments[i];
 
-		info.setSize(attachment.view->getInfo().getWidth(), attachment.view->getInfo().getHeight());
-		info.setMSAA(attachment.view->getInfo().getSamples());
+		info.setSize(attachment.view->getImage()->getWidth(), attachment.view->getImage()->getHeight());
+		info.setMSAA(attachment.view->getImage()->getSamples());
 
 		info.addColourAttachment(
 			attachment.loadOp,
@@ -121,7 +121,7 @@ void RenderGraph::handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, co
 	for (cauto &view : task.m_inputStorageViews)
 	{
 		cmd.transitionLayout(
-			view->getInfo(),
+			*view->getImage(),
 			VK_IMAGE_LAYOUT_GENERAL
 		);
 	}

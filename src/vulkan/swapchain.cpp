@@ -13,7 +13,6 @@ Swapchain::Swapchain(VulkanCore *core, const Platform *platform)
 	, m_imageAvailableSemaphores()
 	, m_swapchain()
 	, m_swapchainImages()
-	, m_swapchainImageViews()
 	, m_swapchainImageFormat()
 	, m_currSwapchainImageIdx()
 	, m_colour()
@@ -39,69 +38,8 @@ void Swapchain::destroy()
 		vkDestroySemaphore(m_core->getLogicalDevice(), m_imageAvailableSemaphores[i], nullptr);
 	}
 
-	for (auto &view : m_swapchainImageViews)
-	{
-		delete view;
-	}
-
 	vkDestroySwapchainKHR(m_core->getLogicalDevice(), m_swapchain, nullptr);
 }
-
-/*
-void Swapchain::beginRendering(CommandBuffer &cmd)
-{
-	VkImageMemoryBarrier2 barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-
-	barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-	barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	barrier.image = getCurrentSwapchainImage();
-
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = 1;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-
-	cmd.pipelineBarrier(
-		0,
-		{}, {}, { barrier }
-	);
-}
-
-void Swapchain::endRendering(CommandBuffer &cmd)
-{
-	VkImageMemoryBarrier2 barrier = {};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-
-	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-	barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
-
-	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	barrier.image = getCurrentSwapchainImage();
-
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = 1;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-
-	cmd.pipelineBarrier(
-		0,
-		{}, {}, { barrier }
-	);
-}
-*/
 
 void Swapchain::acquireNextImage()
 {
@@ -137,14 +75,14 @@ Image &Swapchain::getDepthAttachment()
 	return m_depth;
 }
 
-ImageInfo &Swapchain::getCurrentSwapchainImage()
+Image &Swapchain::getCurrentSwapchainImage()
 {
 	return m_swapchainImages[m_currSwapchainImageIdx];
 }
 
-ImageView *Swapchain::getCurrentSwapchainImageView() const
+ImageView *Swapchain::getCurrentSwapchainImageView()
 {
-	return m_swapchainImageViews[m_currSwapchainImageIdx];
+	return m_swapchainImages[m_currSwapchainImageIdx].getStandardView();
 }
 
 unsigned Swapchain::getCurrentSwapchainImageIndex() const
@@ -217,24 +155,22 @@ void Swapchain::createSwapchain()
 
 	for (int i = 0; i < images.size(); i++)
 	{
-		ImageInfo &imageInfo = m_swapchainImages[i];
+		Image &imageInfo = m_swapchainImages[i];
+
+		imageInfo.init(
+			m_core,
+			m_width, m_height, 1,
+			m_swapchainImageFormat,
+			VK_IMAGE_VIEW_TYPE_2D,
+			VK_IMAGE_TILING_OPTIMAL,
+			1,
+			VK_SAMPLE_COUNT_1_BIT,
+			false,
+			false
+		);
 
 		imageInfo.m_image = images[i];
 		imageInfo.m_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-		imageInfo.m_width = m_width;
-		imageInfo.m_height = m_height;
-		imageInfo.m_depth = 1;
-
-		imageInfo.m_format = m_swapchainImageFormat;
-		imageInfo.m_type = VK_IMAGE_VIEW_TYPE_2D;
-		imageInfo.m_tiling = VK_IMAGE_TILING_OPTIMAL;
-
-		imageInfo.m_mipmapCount = 1;
-		imageInfo.m_samples = VK_SAMPLE_COUNT_1_BIT;
-
-		imageInfo.m_transient = false;
-		imageInfo.m_storage = false;
 
 		imageInfo.m_usage =
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -242,27 +178,11 @@ void Swapchain::createSwapchain()
 	}
 
 	createSwapchainSyncObjects();
-	createSwapchainImageViews();
 
 	createDepthResources();
 	createColourResources();
 
 	MGP_LOG("Created the swap chain!");
-}
-
-void Swapchain::createSwapchainImageViews()
-{
-	m_swapchainImageViews.resize(m_swapchainImages.size());
-
-	// create an image view for each swap chain image
-	for (uint64_t i = 0; i < m_swapchainImages.size(); i++)
-	{
-		m_swapchainImageViews[i] = new ImageView(
-			m_core,
-			m_swapchainImages[i],
-			1, 0, 0
-		);
-	}
 }
 
 void Swapchain::createSwapchainSyncObjects()
@@ -352,7 +272,7 @@ const VkFormat &Swapchain::getSwapchainImageFormat() const
 
 void Swapchain::createColourResources()
 {
-	m_colour.create(
+	m_colour.init(
 		m_core,
 		m_width, m_height, 1,
 		m_swapchainImageFormat,
@@ -364,20 +284,14 @@ void Swapchain::createColourResources()
 		false
 	);
 
-	/*
-	m_renderInfo.addColourAttachmentWithResolve(
-		VK_ATTACHMENT_LOAD_OP_CLEAR,
-		*m_colour.getStandardView(),
-		getCurrentSwapchainImageView()->getHandle()
-	);
-	*/
+	m_colour.allocate();
 }
 
 void Swapchain::createDepthResources()
 {
 	VkFormat format = vk_toolbox::findDepthFormat(m_core->getPhysicalDevice());
 
-	m_depth.create(
+	m_depth.init(
 		m_core,
 		m_width, m_height, 1,
 		format,
@@ -388,4 +302,6 @@ void Swapchain::createDepthResources()
 		false,
 		false
 	);
+
+	m_depth.allocate();
 }

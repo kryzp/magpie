@@ -62,7 +62,7 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView 
 	}
 
 	m_colourAttachments.push_back(attachment);
-	m_colourFormats.push_back(view.getInfo().getFormat());
+	m_colourFormats.push_back(view.getImage()->getFormat());
 
 	m_attachmentCount++;
 }

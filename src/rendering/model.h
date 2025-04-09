@@ -51,7 +51,7 @@ namespace mgp
 
 		void build(const VertexFormat &format, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
 
-		void render(CommandBuffer &cmd) const;
+		void bind(CommandBuffer &cmd) const;
 
 		Model *getParent();
 		const Model *getParent() const;

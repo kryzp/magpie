@@ -28,8 +28,8 @@ namespace mgp
 		Image &getColourAttachment();
 		Image &getDepthAttachment();
 
-		ImageInfo &getCurrentSwapchainImage();
-		ImageView *getCurrentSwapchainImageView() const;
+		Image &getCurrentSwapchainImage();
+		ImageView *getCurrentSwapchainImageView();
 
 		unsigned getCurrentSwapchainImageIndex() const;
 
@@ -50,7 +50,6 @@ namespace mgp
 		void destroy();
 
 		void createSwapchain();
-		void createSwapchainImageViews();
 		void createSwapchainSyncObjects();
 
 		void createColourResources();
@@ -61,7 +60,7 @@ namespace mgp
 
 		VkSwapchainKHR m_swapchain;
 
-		std::vector<ImageInfo> m_swapchainImages;
+		std::vector<Image> m_swapchainImages;
 		std::vector<ImageView *> m_swapchainImageViews;
 
 		VkFormat m_swapchainImageFormat;

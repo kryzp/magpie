@@ -25,7 +25,7 @@ ModelLoader::~ModelLoader()
 {
 }
 
-Model *ModelLoader::loadMesh(const std::string &path)
+Model *ModelLoader::loadModel(const std::string &path)
 {
 	const aiScene *scene = m_importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate |

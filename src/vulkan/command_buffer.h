@@ -9,7 +9,7 @@
 namespace mgp
 {
 	class Image;
-	class ImageInfo;
+	class GPUBuffer;
 
 	class CommandBuffer
 	{
@@ -101,8 +101,6 @@ namespace mgp
 		);
 
 		void transitionLayout(Image &image, VkImageLayout newLayout);
-		void transitionLayout(ImageInfo &info, VkImageLayout newLayout);
-
 		void generateMipmaps(Image &image);
 
 		void blitImage(
@@ -113,15 +111,31 @@ namespace mgp
 		);
 
 		void copyBufferToBuffer(
+			const GPUBuffer &srcBuffer,
+			const GPUBuffer &dstBuffer,
+			const std::vector<VkBufferCopy> &regions
+		);
+
+		void copyBufferToBuffer(
 			VkBuffer srcBuffer,
 			VkBuffer dstBuffer,
 			const std::vector<VkBufferCopy> &regions
 		);
 
 		void copyBufferToImage(
+			const GPUBuffer &buffer,
+			const Image &image
+		);
+
+		void copyBufferToImage(
+			const GPUBuffer &buffer,
+			const Image &image,
+			const std::vector<VkBufferImageCopy> &regions
+		);
+
+		void copyBufferToImage(
 			VkBuffer srcBuffer,
 			VkImage dstImage,
-			VkImageLayout dstImageLayout,
 			const std::vector<VkBufferImageCopy> &regions
 		);
 

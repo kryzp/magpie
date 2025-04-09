@@ -12,12 +12,8 @@ namespace mgp
 	class Model;
 	class Mesh;
 
-	class RenderObject
+	struct RenderObject
 	{
-	public:
-		RenderObject();
-		~RenderObject();
-
 		Transform transform;
 		Model *model;
 	};
@@ -28,10 +24,10 @@ namespace mgp
 		Scene();
 		~Scene();
 
-		std::vector<RenderObject>::iterator createRenderObject();
+		RenderObject *createRenderObject();
 
-		void foreachObject(const std::function<void(RenderObject &)> &fn);
-		void foreachMesh(const std::function<void(Mesh &)> &fn);
+		void foreachObject(const std::function<bool(uint32_t, RenderObject &)> &fn);
+		void foreachMesh(const std::function<bool(uint32_t, Mesh *)> &fn);
 
 		const std::vector<Mesh *> &getRenderList();
 

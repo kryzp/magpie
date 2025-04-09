@@ -8,6 +8,7 @@
 #include "common.h"
 
 #include "rendering/camera.h"
+#include "rendering/scene.h"
 
 #include "vulkan/bindless.h"
 #include "vulkan/pipeline_cache.h"
@@ -16,16 +17,19 @@ namespace mgp
 {
 	enum WindowMode
 	{
-		WINDOW_MODE_WINDOWED_BIT	= 0 << 0,
-		WINDOW_MODE_BORDERLESS_BIT	= 1 << 0,
-		WINDOW_MODE_FULLSCREEN_BIT	= 1 << 1,
+		WINDOW_MODE_NONE = 0,
+
+		WINDOW_MODE_WINDOWED_BIT	= 1 << 0,
+		WINDOW_MODE_BORDERLESS_BIT	= 1 << 1,
+		WINDOW_MODE_FULLSCREEN_BIT	= 1 << 2,
 
 //		WINDOW_MODE_BORDERLESS_FULLSCREEN_BIT = WINDOW_MODE_BORDERLESS_BIT | WINDOW_MODE_FULLSCREEN_BIT
 	};
 
 	enum ConfigFlag
 	{
-		CONFIG_FLAG_NONE_BIT				= 0 << 0,
+		CONFIG_FLAG_NONE					= 0,
+
 		CONFIG_FLAG_RESIZABLE_BIT			= 1 << 0,
 		CONFIG_FLAG_VSYNC_BIT				= 1 << 1,
 		CONFIG_FLAG_CURSOR_INVISIBLE_BIT	= 1 << 2,
@@ -70,13 +74,13 @@ namespace mgp
 	class CommandBuffer;
 	class ShaderStage;
 	class Shader;
-	class Image;
 	class Sampler;
 	class Material;
 	class MaterialData;
 	class Mesh;
 	class Technique;
 	class GPUBuffer;
+	class Image;
 
 	struct EnvironmentProbe
 	{
@@ -86,6 +90,8 @@ namespace mgp
 
 	class App
 	{
+		friend class DeferredRenderer; // todo: temporary
+
 	public:
 		App(const Config &config);
 		~App();
@@ -93,13 +99,17 @@ namespace mgp
 		void run();
 		void exit();
 
+		VkDescriptorSet allocateSet(const std::vector<VkDescriptorSetLayout> &layouts);
+
 		Image *loadTexture(const std::string &name, const std::string &path);
 		Material *buildMaterial(MaterialData &data);
+
+		Shader *getShader(const std::string &name);
 
 	private:
 		void tick(float dt);
 		void tickFixed(float dt);
-		void render(CommandBuffer &inFlightCmd, const Swapchain *swapchain);
+		void render(Swapchain *swapchain);
 
 		Config m_config;
 
@@ -120,7 +130,6 @@ namespace mgp
 		void loadTechniques();
 
 		ShaderStage *getShaderStage(const std::string &name);
-		Shader *getShader(const std::string &name);
 		ShaderStage *loadShaderStage(const std::string &name, const std::string &path, VkShaderStageFlagBits stageType);
 		Shader *createShader(const std::string &name);
 
@@ -147,6 +156,8 @@ namespace mgp
 		ComputePipelineDefinition m_hdrTonemappingPipeline;
 		VkDescriptorSet m_hdrTonemappingSet;
 
+		Scene m_scene;
+
 		void createSkyboxMesh();
 		void createSkybox();
 
@@ -157,10 +168,7 @@ namespace mgp
 
 		DescriptorPoolDynamic m_descriptorPool;
 
-		void precomputeBRDF();
 		void generateEnvironmentProbe();
-
-		Image *m_brdfLUT;
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;

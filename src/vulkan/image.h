@@ -9,24 +9,70 @@ namespace mgp
 {
 	class VulkanCore;
 	class ImageView;
+	class Image;
 
-	/*
-		vulkan image wrapper
-	*/
-	class ImageInfo
+	class ImageAlloc
 	{
-		friend class Image;
-		friend class Swapchain;
+	public:
+		ImageAlloc(Image *image);
+		~ImageAlloc();
 
+	private:
+		Image *m_parent;
+
+		VmaAllocation m_allocation;
+		VmaAllocationInfo m_allocationInfo;
+	};
+
+	class Image
+	{
+		friend class ImageAlloc;
+		friend class Swapchain;
 		friend class CommandBuffer;
 
 	public:
-		ImageInfo();
-		~ImageInfo();
+		Image() = default;
+
+		Image(
+			VulkanCore *core,
+			unsigned width, unsigned height, unsigned depth,
+			VkFormat format,
+			VkImageViewType type,
+			VkImageTiling tiling,
+			uint32_t mipmaps,
+			VkSampleCountFlagBits samples,
+			bool transient,
+			bool storage
+		);
+
+		~Image();
+
+		void init(
+			VulkanCore *core,
+			unsigned width, unsigned height, unsigned depth,
+			VkFormat format,
+			VkImageViewType type,
+			VkImageTiling tiling,
+			uint32_t mipmaps,
+			VkSampleCountFlagBits samples,
+			bool transient,
+			bool storage
+		);
+
+		void allocate();
+
+		ImageView *createView(
+			int layerCount,
+			int layer,
+			int baseMipLevel
+		);
+
+		ImageView *getStandardView();
 
 		VkImageMemoryBarrier2 getBarrier(VkImageLayout newLayout) const;
 
 		const VkImage &getHandle() const;
+
 		const VkImageLayout &getLayout() const;
 
 		unsigned getWidth() const;
@@ -55,6 +101,12 @@ namespace mgp
 		VkImage m_image;
 		VkImageLayout m_layout;
 
+		VulkanCore *m_core;
+
+		std::unordered_map<uint64_t, ImageView *> m_viewCache;
+
+		ImageAlloc *m_allocation;
+
 		unsigned m_width;
 		unsigned m_height;
 		unsigned m_depth;
@@ -68,66 +120,7 @@ namespace mgp
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_samples;
 
-		bool m_transient;
-		bool m_storage;
-	};
-
-	/*
-		memory allocated image
-	*/
-	class Image
-	{
-		friend class CommandBuffer;
-
-	public:
-		Image();
-
-		Image(
-			VulkanCore *core,
-			unsigned width, unsigned height, unsigned depth,
-			VkFormat format,
-			VkImageViewType type,
-			VkImageTiling tiling,
-			uint32_t mipmaps,
-			VkSampleCountFlagBits samples,
-			bool transient,
-			bool storage
-		);
-
-		~Image();
-
-		void create(
-			VulkanCore *core,
-			unsigned width, unsigned height, unsigned depth,
-			VkFormat format,
-			VkImageViewType type,
-			VkImageTiling tiling,
-			uint32_t mipmaps,
-			VkSampleCountFlagBits samples,
-			bool transient,
-			bool storage
-		);
-
-		ImageView *createView(
-			int layerCount,
-			int layer,
-			int baseMipLevel
-		);
-
-		ImageView *getStandardView();
-
-		const VkImage &getHandle() const;
-
-		ImageInfo &getInfo();
-		const ImageInfo &getInfo() const;
-
-	private:
-		ImageInfo m_info;
-		std::unordered_map<uint64_t, ImageView *> m_viewCache;
-
-		VmaAllocation m_allocation;
-		VmaAllocationInfo m_allocationInfo;
-
-		VulkanCore *m_core;
+		bool m_isTransient;
+		bool m_isStorage;
 	};
 }

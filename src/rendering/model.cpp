@@ -113,41 +113,60 @@ void Mesh::build(
 	);
 
 	// read data to the stage (todo: yes, i know making a new staging buffer per submesh is idiotic, i just want to get this running quick and cba)
-	GPUBuffer *stagingBuffer = new GPUBuffer(
+	GPUBuffer stagingBuffer(
 		m_core,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VMA_MEMORY_USAGE_CPU_TO_GPU,
 		vertexBufferSize + indexBufferSize
 	);
 
-	stagingBuffer->writeDataToMe(pVertices, vertexBufferSize, 0);
-	stagingBuffer->writeDataToMe(pIndices, indexBufferSize, vertexBufferSize);
+	stagingBuffer.write(pVertices,
+		vertexBufferSize,
+		0);
+	stagingBuffer.write(pIndices,
+		indexBufferSize,
+		vertexBufferSize);
 
 	// make the stage write that data to the gpu buffers
 	InstantSubmitSync instantSubmit(m_core);
 	CommandBuffer &cmd = instantSubmit.begin();
 	{
-		stagingBuffer->writeToBuffer(cmd, m_vertexBuffer, vertexBufferSize, 0, 0);
-		stagingBuffer->writeToBuffer(cmd, m_indexBuffer, indexBufferSize, vertexBufferSize, 0);
+		cmd.copyBufferToBuffer(
+			stagingBuffer,
+			*m_vertexBuffer,
+			{{
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = vertexBufferSize
+			}}
+		);
+
+		cmd.copyBufferToBuffer(
+			stagingBuffer,
+			*m_indexBuffer,
+			{{
+					.srcOffset = vertexBufferSize,
+					.dstOffset = 0,
+					.size = indexBufferSize
+			}}
+		);
 	}
 	instantSubmit.submit();
 
 	m_core->deviceWaitIdle();
-
-	delete stagingBuffer;
 }
 
-void Mesh::render(CommandBuffer &cmd) const
+void Mesh::bind(CommandBuffer &cmd) const
 {
 	cauto &bindings = m_vertexFormat->getBindingDescriptions();
 
-	VkDeviceSize vertexBufferOffsets = 0;
+	VkDeviceSize vertexBufferOffset = 0;
 
 	cmd.bindVertexBuffers(
 		bindings[0].binding,
 		1,
 		&m_vertexBuffer->getHandle(),
-		&vertexBufferOffsets
+		&vertexBufferOffset
 	);
 
 	cmd.bindIndexBuffer(
@@ -155,8 +174,6 @@ void Mesh::render(CommandBuffer &cmd) const
 		0,
 		VK_INDEX_TYPE_UINT16
 	);
-
-	cmd.drawIndexed(m_nIndices);
 }
 
 Model *Mesh::getParent()

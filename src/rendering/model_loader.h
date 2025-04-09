@@ -24,7 +24,7 @@ namespace mgp
 		ModelLoader(VulkanCore *core, App *app);
 		~ModelLoader();
 
-		Model *loadMesh(const std::string &path);
+		Model *loadModel(const std::string &path);
 
 	private:
 		void processNodes(Model *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
