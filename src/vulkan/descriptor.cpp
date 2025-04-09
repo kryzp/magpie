@@ -12,14 +12,12 @@ void DescriptorPoolStatic::init(const VulkanCore *core, uint32_t maxSets, VkDesc
 {
 	m_core = core;
 
-	std::vector<VkDescriptorPoolSize> poolSizes;
+	std::vector<VkDescriptorPoolSize> poolSizes(sizes.size());
 
-	for (auto &ratio : sizes)
+	for (int i = 0; i < sizes.size(); i++)
 	{
-		poolSizes.emplace_back(
-			ratio.first,
-			(uint32_t)(ratio.second * maxSets)
-		);
+		poolSizes[i].type = sizes[i].type;
+		poolSizes[i].descriptorCount = (uint32_t)(sizes[i].max * maxSets);
 	}
 
 	VkDescriptorPoolCreateInfo poolCreateInfo = {};
@@ -165,22 +163,20 @@ VkDescriptorPool DescriptorPoolDynamic::fetchPool()
 	return newPool;
 }
 
-VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t setCount, const std::vector<DescriptorPoolSizeRatio> &sizes)
+VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSizeRatio> &sizes)
 {
-	std::vector<VkDescriptorPoolSize> poolSizes;
+	std::vector<VkDescriptorPoolSize> poolSizes(sizes.size());
 
-	for (auto &ratio : sizes)
+	for (int i = 0; i < sizes.size(); i++)
 	{
-		poolSizes.emplace_back(
-			ratio.first,
-			(uint32_t)(ratio.second * setCount)
-		);
+		poolSizes[i].type = sizes[i].type;
+		poolSizes[i].descriptorCount = (uint32_t)(sizes[i].max * maxSets);
 	}
 
 	VkDescriptorPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.flags = 0;
-	pool_info.maxSets = setCount;
+	pool_info.maxSets = maxSets;
 	pool_info.poolSizeCount = (uint32_t)poolSizes.size();
 	pool_info.pPoolSizes = poolSizes.data();
 

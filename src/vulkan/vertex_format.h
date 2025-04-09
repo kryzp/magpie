@@ -1,5 +1,4 @@
-#ifndef VERTEX_DESCRIPTOR_H_
-#define VERTEX_DESCRIPTOR_H_
+#pragma once
 
 #include <vector>
 
@@ -12,23 +11,27 @@
 
 namespace mgp
 {
-	struct AttributeDescription
-	{
-		VkFormat format;
-		uint32_t offset;
-	};
-
 	class VertexFormat
 	{
 	public:
-		VertexFormat();
-		~VertexFormat();
+		struct Attribute
+		{
+			VkFormat format;
+			uint32_t offset;
+		};
 
-		void addBinding(uint32_t stride, VkVertexInputRate inputRate, const std::vector<AttributeDescription> &attributes);
+		struct Binding
+		{
+			uint32_t stride;
+			VkVertexInputRate rate;
+			std::vector<Attribute> attributes;
+		};
 
-		void clearAttributes();
-		void clearBindings();
-		
+		VertexFormat() = default;
+		~VertexFormat() = default;
+
+		void setBindings(const std::vector<Binding> &bindings);
+
 		const std::vector<VkVertexInputAttributeDescription> &getAttributeDescriptions() const;
 		const std::vector<VkVertexInputBindingDescription> &getBindingDescriptions() const;
 
@@ -38,7 +41,7 @@ namespace mgp
 		std::vector<VkVertexInputAttributeDescription> m_attributes;
 		std::vector<VkVertexInputBindingDescription> m_bindings;
 
-		uint64_t m_size;
+		uint64_t m_vertexSize;
 	};
 
 	namespace vtx
@@ -65,11 +68,9 @@ namespace mgp
 		};
 
 		extern VertexFormat PRIMITIVE_VERTEX_FORMAT;
-		extern VertexFormat PRIMTIIVE_UV_VERTEX_FORMAT;
+		extern VertexFormat PRIMITIVE_UV_VERTEX_FORMAT;
 		extern VertexFormat MODEL_VERTEX_FORMAT;
 
 		void initVertexTypes();
 	}
 }
-
-#endif // VERTEX_DESCRIPTOR_H_

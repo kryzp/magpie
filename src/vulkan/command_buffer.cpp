@@ -11,7 +11,6 @@ CommandBuffer::CommandBuffer(VkCommandBuffer buffer)
 	: m_buffer(buffer)
 	, m_viewport()
 	, m_scissor()
-	, m_isRendering(false)
 {
 }
 
@@ -63,15 +62,12 @@ void CommandBuffer::beginRendering(const RenderInfo &target)
 	m_scissor.offset = { 0, 0 };
 	m_scissor.extent = { target.getWidth(), target.getHeight() };
 
-	m_isRendering = true;
-
-	vkCmdBeginRendering(m_buffer, &renderInfo);
+	vkCmdBeginRenderingKHR(m_buffer, &renderInfo);
 }
 
 void CommandBuffer::endRendering()
 {
-	vkCmdEndRendering(m_buffer);
-	m_isRendering = false;
+	vkCmdEndRenderingKHR(m_buffer);
 }
 
 void CommandBuffer::bindPipeline(
@@ -270,7 +266,7 @@ void CommandBuffer::pipelineBarrier(
 	dependency.imageMemoryBarrierCount = imageMemoryBarriers.size();
 	dependency.pImageMemoryBarriers = imageMemoryBarriers.data();
 
-	vkCmdPipelineBarrier2(
+	vkCmdPipelineBarrier2KHR(
 		m_buffer,
 		&dependency
 	);

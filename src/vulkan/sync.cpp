@@ -65,7 +65,7 @@ void InFlightSync::present()
 	submitInfo.pWaitSemaphoreInfos = &imageAvailableSemaphore;
 	
 	MGP_VK_CHECK(
-		vkQueueSubmit2(queue.getHandle(), 1, &submitInfo, fence),
+		vkQueueSubmit2KHR(queue.getHandle(), 1, &submitInfo, fence),
 		"Failed to submit in-flight draw command to buffer"
 	);
 
@@ -147,7 +147,7 @@ void InstantSubmitSync::submit()
 	submitInfo.waitSemaphoreInfoCount = 0;
 
 	MGP_VK_CHECK(
-		vkQueueSubmit2(m_core->getGraphicsQueue().getHandle(), 1, &submitInfo, fence),
+		vkQueueSubmit2KHR(m_core->getGraphicsQueue().getHandle(), 1, &submitInfo, fence),
 		"Failed to submit instant draw command to buffer"
 	);
 }

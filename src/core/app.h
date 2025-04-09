@@ -135,8 +135,17 @@ namespace mgp
 		std::unordered_map<uint64_t, Material *> m_materials;
 		std::unordered_map<std::string, Technique> m_techniques;
 
+		GPUBuffer *m_frameConstantsBuffer;
+		GPUBuffer *m_transformDataBuffer;
+
 		GPUBuffer *m_bindlessMaterialTable;
 		bindless::Handle m_materialHandle_UID;
+
+		GraphicsPipelineDefinition m_textureUVPipeline;
+		VkDescriptorSet m_textureUVSet;
+
+		ComputePipelineDefinition m_hdrTonemappingPipeline;
+		VkDescriptorSet m_hdrTonemappingSet;
 
 		void createSkyboxMesh();
 		void createSkybox();

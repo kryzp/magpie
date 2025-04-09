@@ -10,7 +10,11 @@ namespace mgp
 {
 	class VulkanCore;
 
-	using DescriptorPoolSizeRatio = std::pair<VkDescriptorType, float>;
+	struct DescriptorPoolSizeRatio
+	{
+		VkDescriptorType type;
+		float max;
+	};
 
 	class DescriptorPoolStatic
 	{
@@ -53,7 +57,7 @@ namespace mgp
 
 	private:
 		VkDescriptorPool fetchPool();
-		VkDescriptorPool createNewPool(uint32_t setCount, const std::vector<DescriptorPoolSizeRatio> &sizes);
+		VkDescriptorPool createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSizeRatio> &sizes);
 
 		std::vector<VkDescriptorPool> m_usedPools;
 		std::vector<VkDescriptorPool> m_freePools;

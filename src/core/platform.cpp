@@ -23,14 +23,7 @@ Platform::Platform(const Config &config)
 		SDL_INIT_SENSOR |
 		SDL_INIT_CAMERA;
 
-	// i have no idea why this is the case but whatever
-#ifdef _WIN32
-	bool failedInit = SDL_Init(initFlags) == 0;
-#else
-	bool failedInit = SDL_Init(initFlags) != 0;
-#endif // _WIN32
-
-	if (failedInit)
+	if (SDL_Init(initFlags) == 0)
 		MGP_ERROR("Failed to initialize: %s", SDL_GetError());
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
@@ -391,6 +384,8 @@ void *Platform::streamFromFile(const char *filepath, const char *mode) const
 {
 #if _WIN32
 	return SDL_IOFromFile(filepath, mode);
+#else
+	return nullptr;
 #endif // _WIN32
 }
 
@@ -398,6 +393,8 @@ void *Platform::streamFromMemory(void *memory, uint64_t size) const
 {
 #if _WIN32
 	return SDL_IOFromMem(memory, size);
+#else
+	return nullptr;
 #endif // _WIN32
 }
 
@@ -405,6 +402,8 @@ void *Platform::streamFromConstMemory(const void *memory, uint64_t size) const
 {
 #if _WIN32
 	return SDL_IOFromConstMem(memory, size);
+#else
+	return nullptr;
 #endif // _WIN32
 }
 
@@ -412,6 +411,8 @@ int64_t Platform::streamRead(void *stream, void *dst, uint64_t size) const
 {
 #if _WIN32
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
+#else
+	return 0;
 #endif // _WIN32
 }
 
@@ -419,6 +420,8 @@ int64_t Platform::streamWrite(void *stream, const void *src, uint64_t size) cons
 {
 #if _WIN32
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
+#else
+	return 0;
 #endif // _WIN32
 }
 
@@ -426,6 +429,8 @@ int64_t Platform::streamSeek(void *stream, int64_t offset) const
 {
 #if _WIN32
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
+#else
+	return 0;
 #endif // _WIN32
 }
 
@@ -433,6 +438,8 @@ int64_t Platform::streamSize(void *stream) const
 {
 #if _WIN32
 	return SDL_GetIOSize((SDL_IOStream *)stream);
+#else
+	return 0;
 #endif // _WIN32
 }
 
@@ -440,6 +447,8 @@ int64_t Platform::streamPosition(void *stream) const
 {
 #if _WIN32
 	return SDL_TellIO((SDL_IOStream *)stream);
+#else
+	return 0;
 #endif // _WIN32
 }
 

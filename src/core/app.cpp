@@ -35,6 +35,46 @@
 
 using namespace mgp;
 
+struct FrameConstants
+{
+	glm::mat4 proj;
+	glm::mat4 view;
+	glm::vec4 cameraPosition;
+};
+
+struct TransformData
+{
+	glm::mat4 model;
+	glm::mat4 normalMatrix;
+};
+
+struct BindlessMaterialHandles
+{
+	bindless::Handle diffuseTexture_ID;
+	bindless::Handle aoTexture_ID;
+	bindless::Handle armTexture_ID;
+	bindless::Handle normalTexture_ID;
+	bindless::Handle emissiveTexture_ID;
+};
+
+struct BindlessPushConstants // todo: this should use instance id instead
+{
+	int frameDataBuffer_ID;
+	int transformBuffer_ID;
+	int materialDataBuffer_ID;
+
+	int transform_ID;
+
+	int irradianceMap_ID;
+	int prefilterMap_ID;
+	int brdfLUT_ID;
+
+	int material_ID;
+
+	int cubemapSampler_ID;
+	int textureSampler_ID;
+};
+
 App::App(const Config &config)
 	: m_linearSampler(nullptr)
 	, m_loadedImageCache()
@@ -42,8 +82,14 @@ App::App(const Config &config)
 	, m_shaderCache()
 	, m_materials()
 	, m_techniques()
+	, m_frameConstantsBuffer(nullptr)
+	, m_transformDataBuffer(nullptr)
 	, m_bindlessMaterialTable()
 	, m_materialHandle_UID()
+	, m_textureUVPipeline()
+	, m_textureUVSet(VK_NULL_HANDLE)
+	, m_hdrTonemappingPipeline()
+	, m_hdrTonemappingSet(VK_NULL_HANDLE)
 	, m_skyboxMesh(nullptr)
 	, m_skyboxShader(nullptr)
 	, m_skyboxSet(VK_NULL_HANDLE)
@@ -115,9 +161,40 @@ App::App(const Config &config)
 
 	createSkybox();
 
-	m_running = true;
-
 	m_platform->onExit = [this]() { exit(); };
+
+	m_frameConstantsBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(FrameConstants)
+	);
+
+	m_transformDataBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(TransformData)
+	);
+
+	m_bindlessMaterialTable = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(BindlessMaterialHandles)
+	);
+
+	Shader *textureUVShader = getShader("texture_uv");
+	m_textureUVPipeline.setShader(textureUVShader);
+	m_textureUVPipeline.setDepthTest(false);
+	m_textureUVPipeline.setDepthWrite(false);
+	m_textureUVSet = m_descriptorPool.allocate(textureUVShader->getDescriptorSetLayouts());
+
+	Shader *hdrTonemappingShader = getShader("hdr_tonemapping");
+	m_hdrTonemappingPipeline.setShader(hdrTonemappingShader);
+	m_hdrTonemappingSet = m_descriptorPool.allocate(hdrTonemappingShader->getDescriptorSetLayouts());
+
+	m_running = true;
 }
 
 App::~App()
@@ -125,6 +202,9 @@ App::~App()
 	m_descriptorPool.cleanUp();
 
 	delete m_skyboxMesh;
+
+	delete m_frameConstantsBuffer;
+	delete m_transformDataBuffer;
 
 	delete m_bindlessMaterialTable;
 
@@ -162,83 +242,16 @@ App::~App()
 	delete m_platform;
 }
 
-struct FrameConstants
-{
-	glm::mat4 proj;
-	glm::mat4 view;
-	glm::vec4 cameraPosition;
-};
-
-struct TransformData
-{
-	glm::mat4 model;
-	glm::mat4 normalMatrix;
-};
-
-struct BindlessMaterialHandles
-{
-	bindless::Handle diffuseTexture_ID;
-	bindless::Handle aoTexture_ID;
-	bindless::Handle armTexture_ID;
-	bindless::Handle normalTexture_ID;
-	bindless::Handle emissiveTexture_ID;
-};
-
-struct BindlessPushConstants // todo: this should use instance id instead
-{
-	int frameDataBuffer_ID;
-	int transformBuffer_ID;
-	int materialDataBuffer_ID;
-
-	int transform_ID;
-
-	int irradianceMap_ID;
-	int prefilterMap_ID;
-	int brdfLUT_ID;
-
-	int material_ID;
-
-	int cubemapSampler_ID;
-	int textureSampler_ID;
-};
-
 void App::run()
 {
-	GPUBuffer frameConstants(
-		m_vulkanCore, 
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(FrameConstants)
-	);
-
-	GPUBuffer transformData(
-		m_vulkanCore,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(TransformData)
-	);
-
-	m_bindlessMaterialTable = new GPUBuffer(
-		m_vulkanCore,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(BindlessMaterialHandles)
-	);
-
-	double accumulator = 0.0;
-	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
-	
-	Timer deltaTimer(m_platform);
-	deltaTimer.start();
-
 	InFlightSync inFlightSync(m_vulkanCore);
+
+	editor_ui::init(m_platform, m_vulkanCore);
 
 	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
 		MGP_LOG("Detected window resize!");
 		inFlightSync.onWindowResize(w, h);
 	};
-
-	editor_ui::init(m_platform, m_vulkanCore);
 
 	m_targetColour = new Image(
 		m_vulkanCore,
@@ -268,32 +281,22 @@ void App::run()
 		false
 	);
 
-	ModelLoader meshLoader(m_vulkanCore, this);
-	Model *mesh = meshLoader.loadMesh("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
-
-	Shader *textureUVShader = getShader("texture_uv");
-
-	GraphicsPipelineDefinition textureUVPipeline;
-	textureUVPipeline.setShader(textureUVShader);
-	textureUVPipeline.setDepthTest(false);
-	textureUVPipeline.setDepthWrite(false);
-
-	VkDescriptorSet textureUVSet = m_descriptorPool.allocate(textureUVShader->getDescriptorSetLayouts());
-
 	DescriptorWriter()
 		.writeCombinedImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
-		.updateSet(m_vulkanCore, textureUVSet);
-
-	Shader *hdrTonemappingShader = getShader("hdr_tonemapping");
-
-	ComputePipelineDefinition hdrTonemappingPipeline;
-	hdrTonemappingPipeline.setShader(hdrTonemappingShader);
-
-	VkDescriptorSet hdrTonemappingSet = m_descriptorPool.allocate(hdrTonemappingShader->getDescriptorSetLayouts());
+		.updateSet(m_vulkanCore, m_textureUVSet);
 
 	DescriptorWriter()
 		.writeStorageImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_GENERAL)
-		.updateSet(m_vulkanCore, hdrTonemappingSet);
+		.updateSet(m_vulkanCore, m_hdrTonemappingSet);
+
+	ModelLoader meshLoader(m_vulkanCore, this);
+	Model *mesh = meshLoader.loadMesh("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+
+	double accumulator = 0.0;
+	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
+
+	Timer deltaTimer(m_platform);
+	deltaTimer.start();
 
 	while (m_running)
 	{
@@ -320,17 +323,19 @@ void App::run()
 
 		inFlightSync.begin();
 		{
-			FrameConstants constants;
-			constants.proj = m_camera.getProj();
-			constants.view = m_camera.getView();
-			constants.cameraPosition = glm::vec4(m_camera.position, 1.0f);
+			FrameConstants constants = {
+				.proj = m_camera.getProj(),
+				.view = m_camera.getView(),
+				.cameraPosition = glm::vec4(m_camera.position, 1.0f)
+			};
 
-			TransformData transform;
-			transform.model = glm::identity<glm::mat4>();
-			transform.normalMatrix = glm::transpose(glm::inverse(transform.model));
+			TransformData transform = {
+				.model = glm::identity<glm::mat4>(),
+				.normalMatrix = glm::transpose(glm::inverse(transform.model))
+			};
 
-			frameConstants.writeDataToMe(&constants, sizeof(FrameConstants), 0);
-			transformData.writeDataToMe(&transform, sizeof(TransformData), 0);
+			m_frameConstantsBuffer->writeDataToMe(&constants, sizeof(FrameConstants), 0);
+			m_transformDataBuffer->writeDataToMe(&transform, sizeof(TransformData), 0);
 
 			RenderGraph::AttachmentInfo targetColourAttachment;
 			targetColourAttachment.view = m_targetColour->getStandardView();
@@ -377,24 +382,23 @@ void App::run()
 							{}
 						);
 
-						BindlessPushConstants pc;
-						{
-							pc.frameDataBuffer_ID		= frameConstants.getBindlessHandle();
-							pc.transformBuffer_ID		= transformData.getBindlessHandle();
-							pc.materialDataBuffer_ID	= m_bindlessMaterialTable->getBindlessHandle();
+						BindlessPushConstants pc = {
+							.frameDataBuffer_ID			= m_frameConstantsBuffer->getBindlessHandle(),
+							.transformBuffer_ID			= m_transformDataBuffer->getBindlessHandle(),
+							.materialDataBuffer_ID		= m_bindlessMaterialTable->getBindlessHandle(),
 
-							pc.transform_ID				= 0;
+							.transform_ID				= 0,
 
-							pc.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
-							pc.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+							.irradianceMap_ID			= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle(),
+							.prefilterMap_ID			= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle(),
 
-							pc.brdfLUT_ID				= m_brdfLUT->getStandardView()->getBindlessHandle();
+							.brdfLUT_ID					= m_brdfLUT->getStandardView()->getBindlessHandle(),
 
-							pc.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle;
+							.material_ID				= mesh->getSubmesh(0)->getMaterial()->bindlessHandle,
 
-							pc.cubemapSampler_ID		= m_linearSampler->getBindlessHandle();
-							pc.textureSampler_ID		= m_linearSampler->getBindlessHandle();
-						}
+							.cubemapSampler_ID			= m_linearSampler->getBindlessHandle(),
+							.textureSampler_ID			= m_linearSampler->getBindlessHandle()
+						};
 
 						cmd.pushConstants(
 							pipelineData.layout,
@@ -445,12 +449,11 @@ void App::run()
 				}));
 
 			// compute HDR pass
-			
 			m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
 				.setInputStorageViews({ targetColourAttachment.view })
 				.setBuildFn([&](CommandBuffer &cmd) -> void
 			{
-				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+				PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
 
 				cmd.bindPipeline(
 					VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -461,7 +464,7 @@ void App::run()
 					0,
 					VK_PIPELINE_BIND_POINT_COMPUTE,
 					pipelineData.layout,
-					{ hdrTonemappingSet },
+					{ m_hdrTonemappingSet },
 					{}
 				);
 
@@ -469,13 +472,12 @@ void App::run()
 				{
 					uint32_t width;
 					uint32_t height;
-					float exposure;
+					float exposure = 2.25f;
 				}
-				pc;
-
-				pc.width = 1280;
-				pc.height = 720;
-				pc.exposure = 2.5f;
+				pc {
+					.width = (uint32_t)m_platform->getWindowSizeInPixels().x,
+					.height = (uint32_t)m_platform->getWindowSizeInPixels().y
+				};
 
 				cmd.pushConstants(
 					pipelineData.layout,
@@ -484,7 +486,7 @@ void App::run()
 					&pc
 				);
 
-				cmd.dispatch(160, 90, 1);
+				cmd.dispatch(pc.width / 8, pc.height / 8, 1);
 			}));
 
 			// output to swapchain
@@ -496,7 +498,7 @@ void App::run()
 				.setInputViews({ targetColourAttachment.view })
 				.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 				{
-					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, info);
+					PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
 
 					cmd.bindPipeline(
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -507,7 +509,7 @@ void App::run()
 						0,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
 						pipelineData.layout,
-						{ textureUVSet },
+						{ m_textureUVSet },
 						{}
 					);
 
@@ -591,7 +593,7 @@ void App::loadShaders()
 		loadShaderStage("prefilter_convolution_ps",			"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("brdf_integrator_ps",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("texturedPBR_ps",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("subsurface_refraction_ps",			"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
+//		loadShaderStage("subsurface_refraction_ps",			"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("skybox_ps",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
 //		loadShaderStage("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 //		loadShaderStage("bloom_upsample_ps",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -1073,7 +1075,6 @@ void App::generateEnvironmentProbe()
 		{
 			pc.view = captureViewMatrices[i];
 
-			// todo: these aren't being deleted lmaooooooo
 			ImageView *view = m_environmentMap->createView(1, i, 0);
 
 			RenderInfo targetInfo(m_vulkanCore);
@@ -1161,7 +1162,6 @@ void App::generateEnvironmentProbe()
 		{
 			pc.view = captureViewMatrices[i];
 
-			// todo: these aren't being deleted lmaooooooo
 			ImageView *view = m_environmentProbe.irradiance->createView(1, i, 0);
 
 			RenderInfo targetInfo(m_vulkanCore);
@@ -1242,7 +1242,6 @@ void App::generateEnvironmentProbe()
 			{
 				pc.view = captureViewMatrices[i];
 
-				// todo: these aren't being deleted lmaooooooo
 				ImageView *view = m_environmentProbe.prefilter->createView(1, i, mipLevel);
 
 				RenderInfo info(m_vulkanCore);

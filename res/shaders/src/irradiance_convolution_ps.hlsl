@@ -15,7 +15,7 @@ float4 main(PSInput input) : SV_Target
 	float3 right = normalize(cross(float3(0.0, 1.0, 0.0), normal));
 	float3 up = normalize(cross(normal, right));
 	
-	float dt = 0.005;
+	float dt = 0.05;
 	float nSamples = 0.0;
 	
 	float3 irradiance = 0.0;
@@ -41,6 +41,6 @@ float4 main(PSInput input) : SV_Target
 	}
 	
 	irradiance *= MATH_PI / nSamples;
-	
+
 	return float4(irradiance, 1.0);
 }

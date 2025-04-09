@@ -195,8 +195,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
-	vkGetPhysicalDeviceProperties2(devices[0], &properties);
-	vkGetPhysicalDeviceFeatures2(devices[0], &features);
+	vkGetPhysicalDeviceProperties2KHR(devices[0], &properties);
+	vkGetPhysicalDeviceFeatures2KHR(devices[0], &features);
 
 	m_physicalDevice = devices[0];
 	m_physicalDeviceProperties = properties;
@@ -210,8 +210,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	int i = 1;
 	for (; i < deviceCount; i++)
 	{
-		vkGetPhysicalDeviceProperties2(devices[i], &m_physicalDeviceProperties);
-		vkGetPhysicalDeviceFeatures2(devices[i], &m_physicalDeviceFeatures);
+		vkGetPhysicalDeviceProperties2KHR(devices[i], &m_physicalDeviceProperties);
+		vkGetPhysicalDeviceFeatures2KHR(devices[i], &m_physicalDeviceFeatures);
 
 		uint32_t usability1 = vk_toolbox::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &hasEssentials);
 
@@ -530,7 +530,6 @@ const VkPhysicalDeviceFeatures2 &VulkanCore::getPhysicalDeviceFeatures() const
 
 const VkSampleCountFlagBits VulkanCore::getMaxMSAASamples() const
 {
-//	return VK_SAMPLE_COUNT_1_BIT;
 	return m_maxMsaaSamples;
 }
 

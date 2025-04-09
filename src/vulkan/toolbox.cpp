@@ -243,10 +243,11 @@ VkPipelineStageFlags2 vk_toolbox::getTransferPipelineStageFlags(VkImageLayout la
 			return VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
 
 		case VK_IMAGE_LAYOUT_UNDEFINED:
-			return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			return VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 
 		default:
 			MGP_ERROR("Unknown/Unsupported image layout for pipeline stage flags: %d", layout);
+			return VK_PIPELINE_STAGE_2_NONE;
 	}
 }
 
@@ -280,6 +281,7 @@ VkAccessFlags2 vk_toolbox::getTransferAccessFlags(VkImageLayout layout)
 
 		default:
 			MGP_ERROR("Unknown/Unsupported image layout for access flags: %d", layout);
+			return VK_ACCESS_2_NONE;
 	}
 }
 

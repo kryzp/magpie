@@ -138,7 +138,5 @@ namespace mgp
 
 		VkViewport m_viewport;
 		VkRect2D m_scissor;
-
-		bool m_isRendering;
 	};
 }

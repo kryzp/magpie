@@ -2,6 +2,9 @@
 
 #include <vector>
 
+#include "core/common.h"
+
+#include "core.h"
 #include "gpu_buffer.h"
 #include "sampler.h"
 #include "image_view.h"
@@ -28,40 +31,48 @@ void BindlessResources::init(VulkanCore *core)
 {
 	m_core = core;
 
-	const uint32_t BINDLESS_MAX_BUFFERS = 65536;
-	const uint32_t BINDLESS_MAX_SAMPLERS = 65536;
-	const uint32_t BINDLESS_MAX_IMAGES = 65536;
+	cauto &limits = core->getPhysicalDeviceProperties().properties.limits;
 
-	std::vector<VkDescriptorBindingFlags> flags = {
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+	std::vector<DescriptorPoolSizeRatio> resources = {
+		// buffers
+		{
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			(float)limits.maxDescriptorSetStorageBuffers
+		},
+		// samplers
+		{
+			VK_DESCRIPTOR_TYPE_SAMPLER,
+			(float)limits.maxDescriptorSetSamplers
+		},
+		// 2d textures
+		{
+			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			(float)limits.maxDescriptorSetSampledImages
+		},
+		// cubemaps
+		{
+			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			(float)limits.maxDescriptorSetSampledImages
+		}
 	};
+
+	std::vector<VkDescriptorBindingFlags> flags;
+	DescriptorLayoutBuilder layoutBuilder;
+
+	for (int i = 0; i < resources.size(); i++)
+	{
+		flags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT);
+		layoutBuilder.bind(i, resources[i].type, (uint32_t)resources[i].max);
+	}
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {};
 	bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 	bindingFlags.bindingCount = flags.size();
 	bindingFlags.pBindingFlags = flags.data();
 
-	m_bindlessLayout = DescriptorLayoutBuilder()
-		.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,		BINDLESS_MAX_BUFFERS)	// buffers
-		.bind(1, VK_DESCRIPTOR_TYPE_SAMPLER,			BINDLESS_MAX_SAMPLERS)	// samplers
-		.bind(2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		BINDLESS_MAX_IMAGES)	// 2d textures
-		.bind(3, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		BINDLESS_MAX_IMAGES)	// cubemaps
-		.build(
-			m_core,
-			VK_SHADER_STAGE_ALL_GRAPHICS,
-			&bindingFlags,
-			VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT
-		);
+	m_bindlessLayout = layoutBuilder.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS, &bindingFlags, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
-	m_bindlessPool.init(m_core, 1, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT, {
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,	(float)BINDLESS_MAX_BUFFERS },	// buffers
-		{ VK_DESCRIPTOR_TYPE_SAMPLER,			(float)BINDLESS_MAX_SAMPLERS },	// samplers
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		(float)BINDLESS_MAX_IMAGES },	// 2d textures
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,		(float)BINDLESS_MAX_IMAGES }	// cubemaps
-	});
+	m_bindlessPool.init(m_core, 1, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT, resources);
 
 	m_bindlessSet = m_bindlessPool.allocate(m_bindlessLayout);
 }

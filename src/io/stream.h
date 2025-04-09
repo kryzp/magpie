@@ -1,5 +1,4 @@
-#ifndef STREAM_H_
-#define STREAM_H_
+#pragma once
 
 #include "core/common.h"
 
@@ -31,5 +30,3 @@ namespace mgp
 		void *p_stream;
 	};
 }
-
-#endif // STREAM_H_

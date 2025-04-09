@@ -1,77 +1,80 @@
 #include "vertex_format.h"
 
 mgp::VertexFormat mgp::vtx::PRIMITIVE_VERTEX_FORMAT;
-mgp::VertexFormat mgp::vtx::PRIMTIIVE_UV_VERTEX_FORMAT;
+mgp::VertexFormat mgp::vtx::PRIMITIVE_UV_VERTEX_FORMAT;
 mgp::VertexFormat mgp::vtx::MODEL_VERTEX_FORMAT;
 
 using namespace mgp;
 
 void vtx::initVertexTypes()
 {
-	PRIMITIVE_VERTEX_FORMAT.addBinding(sizeof(PrimitiveVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveVertex, position) }
-	});
+	PRIMITIVE_VERTEX_FORMAT.setBindings(
+		{
+			{
+				sizeof(PrimitiveVertex),
+				VK_VERTEX_INPUT_RATE_VERTEX,
+				{
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveVertex, position) }
+				}
+			}
+		});
 
-	PRIMTIIVE_UV_VERTEX_FORMAT.addBinding(sizeof(PrimitiveUVVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveUVVertex, position) },
-		{ VK_FORMAT_R32G32_SFLOAT,		offsetof(PrimitiveUVVertex, uv) }
-	});
+	PRIMITIVE_UV_VERTEX_FORMAT.setBindings(
+		{
+			{
+				sizeof(PrimitiveUVVertex),
+				VK_VERTEX_INPUT_RATE_VERTEX,
+				{
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(PrimitiveUVVertex, position) },
+					{ VK_FORMAT_R32G32_SFLOAT,		offsetof(PrimitiveUVVertex, uv) }
+				}
+			}
+		});
 
-	MODEL_VERTEX_FORMAT.addBinding(sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX, {
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, position) },
-		{ VK_FORMAT_R32G32_SFLOAT,		offsetof(ModelVertex, uv) },
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, colour) },
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, normal) },
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, tangent) },
-		{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, bitangent) }
-	});
+	MODEL_VERTEX_FORMAT.setBindings(
+		{
+			{
+				sizeof(ModelVertex),
+				VK_VERTEX_INPUT_RATE_VERTEX,
+				{
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, position) },
+					{ VK_FORMAT_R32G32_SFLOAT,		offsetof(ModelVertex, uv) },
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, colour) },
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, normal) },
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, tangent) },
+					{ VK_FORMAT_R32G32B32_SFLOAT,	offsetof(ModelVertex, bitangent) }
+				}
+			}
+		});
 }
 
-VertexFormat::VertexFormat()
-	: m_attributes()
-	, m_bindings()
-	, m_size(0)
+void VertexFormat::setBindings(const std::vector<Binding> &bindings)
 {
-}
-
-VertexFormat::~VertexFormat()
-{
-}
-
-void VertexFormat::addBinding(uint32_t stride, VkVertexInputRate inputRate, const std::vector<AttributeDescription> &attributes)
-{
-	if (inputRate == VK_VERTEX_INPUT_RATE_VERTEX)
-		m_size = stride;
-
-	uint32_t binding = m_bindings.size();
-
-	VkVertexInputBindingDescription bindingDescription = {};
-	bindingDescription.binding = binding;
-	bindingDescription.stride = stride;
-	bindingDescription.inputRate = inputRate;
-
-	for (auto &attrib : attributes)
+	for (int i = 0; i < bindings.size(); i++)
 	{
-		VkVertexInputAttributeDescription attributeDescription = {};
-		attributeDescription.binding = binding;
-		attributeDescription.location = m_attributes.size();
-		attributeDescription.format = attrib.format;
-		attributeDescription.offset = attrib.offset;
+		cauto &binding = bindings[i];
 
-		m_attributes.push_back(attributeDescription);
+		if (binding.rate == VK_VERTEX_INPUT_RATE_VERTEX)
+			m_vertexSize = binding.stride;
+
+		VkVertexInputBindingDescription bindingDescription = {};
+		bindingDescription.binding = i;
+		bindingDescription.stride = binding.stride;
+		bindingDescription.inputRate = binding.rate;
+
+		for (cauto &attribute : binding.attributes)
+		{
+			VkVertexInputAttributeDescription attributeDescription = {};
+			attributeDescription.binding = i;
+			attributeDescription.location = m_attributes.size();
+			attributeDescription.format = attribute.format;
+			attributeDescription.offset = attribute.offset;
+
+			m_attributes.push_back(attributeDescription);
+		}
+
+		m_bindings.push_back(bindingDescription);
 	}
-
-	m_bindings.push_back(bindingDescription);
-}
-
-void VertexFormat::clearAttributes()
-{
-	m_attributes.clear();
-}
-
-void VertexFormat::clearBindings()
-{
-	m_bindings.clear();
 }
 
 const std::vector<VkVertexInputAttributeDescription> &VertexFormat::getAttributeDescriptions() const
@@ -86,5 +89,5 @@ const std::vector<VkVertexInputBindingDescription> &VertexFormat::getBindingDesc
 
 uint64_t VertexFormat::getVertexSize() const
 {
-	return m_size;
+	return m_vertexSize;
 }
