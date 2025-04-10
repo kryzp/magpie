@@ -42,9 +42,9 @@ struct VSOutput
 
 VSOutput main(VSInput input)
 {
-	FrameConstants frameData = bufferTable[pc.frameDataBuffer_ID].Load<FrameConstants>(0);
-    TransformData transform = bufferTable[pc.transformBuffer_ID].Load<TransformData>(pc.transform_ID);
-    
+	FrameConstants frameData = frameConstantsTable[pc.frameDataBuffer_ID][0];
+    TransformData transform = transformTable[pc.transformBuffer_ID][pc.transform_ID];
+
     float4x4 modelMatrix = transform.modelMatrix;
     float3x3 normalMatrix = (float3x3)transform.normalMatrix;
     

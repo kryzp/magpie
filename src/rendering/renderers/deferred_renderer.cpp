@@ -15,47 +15,58 @@
 #include "vulkan/sampler.h"
 #include "vulkan/shader.h"
 
+using namespace mgp;
+
 // todo: this should use instance id instead
 struct BindlessPushConstants
 {
-	int frameDataBuffer_ID;
-	int transformBuffer_ID;
-	int materialDataBuffer_ID;
+	bindless::Handle frameDataBuffer_ID;
+	bindless::Handle transformBuffer_ID;
+	bindless::Handle materialDataBuffer_ID;
+	bindless::Handle lightBuffer_ID;
 
-	int transform_ID;
+	bindless::Handle transform_ID;
 
-	int irradianceMap_ID;
-	int prefilterMap_ID;
-	int brdfLUT_ID;
+	bindless::Handle irradianceMap_ID;
+	bindless::Handle prefilterMap_ID;
+	bindless::Handle brdfLUT_ID;
 
-	int material_ID;
+	bindless::Handle material_ID;
 
-	int cubemapSampler_ID;
-	int textureSampler_ID;
+	bindless::Handle cubemapSampler_ID;
+	bindless::Handle textureSampler_ID;
 };
-
-using namespace mgp;
 
 VulkanCore *DeferredRenderer::m_core = nullptr;
 App *DeferredRenderer::m_app = nullptr;
-
 Image *DeferredRenderer::m_brdfLUT = nullptr;
+GPUBuffer *DeferredRenderer::m_lightsBuffer = nullptr;
 
 void DeferredRenderer::init(VulkanCore *core, App *app)
 {
 	m_core = core;
 	m_app = app;
 
+	m_lightsBuffer = new GPUBuffer(
+		m_core,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(ShaderPointLight) * MAX_POINT_LIGHTS
+	);
+
 	precomputeBRDF();
 }
 
 void DeferredRenderer::destroy()
 {
+	delete m_lightsBuffer;
 	delete m_brdfLUT;
 }
 
 void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene)
 {
+	populateLightsBuffer(scene);
+
 	uint64_t currentPipelineHash = 0;
 
 	scene.foreachMesh([&](uint32_t meshIndex, Mesh *mesh) -> bool
@@ -89,6 +100,7 @@ void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const 
 			.frameDataBuffer_ID			= m_app->m_frameConstantsBuffer->getBindlessHandle(),
 			.transformBuffer_ID			= m_app->m_transformDataBuffer->getBindlessHandle(),
 			.materialDataBuffer_ID		= m_app->m_bindlessMaterialTable->getBindlessHandle(),
+			.lightBuffer_ID				= m_lightsBuffer->getBindlessHandle(),
 
 			.transform_ID				= 0,
 
@@ -116,6 +128,17 @@ void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const 
 
 		return true; // continue
 	});
+}
+
+void DeferredRenderer::populateLightsBuffer(const Scene& scene)
+{
+	auto &lights = scene.getPointLights();
+
+	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+	{
+		ShaderPointLight light = lights[i].getShaderLight();
+		m_lightsBuffer->write(&light, sizeof(ShaderPointLight), i * sizeof(ShaderPointLight));
+	}
 }
 
 void DeferredRenderer::precomputeBRDF()
@@ -161,11 +184,8 @@ void DeferredRenderer::precomputeBRDF()
 		cmd.beginRendering(info);
 		{
 			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
-
 			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { set }, {});
-
 			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
-
 			cmd.draw(3);
 		}
 		cmd.endRendering();

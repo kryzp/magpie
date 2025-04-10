@@ -11,6 +11,8 @@ Scene::Scene()
 	: m_renderObjects()
 	, m_renderList()
 	, m_renderListDirty(true)
+	, m_pointsLights{}
+	, m_pointLightCount(0)
 {
 }
 
@@ -65,6 +67,12 @@ RenderObject *Scene::createRenderObject()
 	return &m_renderObjects.back(); // bad
 }
 
+void Scene::addPointLight(const PointLight& light)
+{
+	m_pointsLights[m_pointLightCount] = light;
+	m_pointLightCount = (m_pointLightCount + 1) % MAX_POINT_LIGHTS;
+}
+
 void Scene::foreachObject(const std::function<bool(uint32_t, RenderObject &)> &fn)
 {
 	for (uint32_t i = 0; i < m_renderObjects.size(); i++)
@@ -85,6 +93,11 @@ void Scene::foreachMesh(const std::function<bool(uint32_t, Mesh *)> &fn)
 	}
 }
 
+const std::vector<RenderObject> &Scene::getRenderObjects() const
+{
+	return m_renderObjects;
+}
+
 const std::vector<Mesh *> &Scene::getRenderList()
 {
 	if (m_renderListDirty)
@@ -96,4 +109,9 @@ const std::vector<Mesh *> &Scene::getRenderList()
 	}
 
 	return m_renderList;
+}
+
+const std::array<PointLight, MAX_POINT_LIGHTS> &Scene::getPointLights() const
+{
+	return m_pointsLights;
 }

@@ -120,12 +120,8 @@ void Mesh::build(
 		vertexBufferSize + indexBufferSize
 	);
 
-	stagingBuffer.write(pVertices,
-		vertexBufferSize,
-		0);
-	stagingBuffer.write(pIndices,
-		indexBufferSize,
-		vertexBufferSize);
+	stagingBuffer.write(pVertices, vertexBufferSize, 0);
+	stagingBuffer.write(pIndices, indexBufferSize, vertexBufferSize);
 
 	// make the stage write that data to the gpu buffers
 	InstantSubmitSync instantSubmit(m_core);
@@ -145,9 +141,9 @@ void Mesh::build(
 			stagingBuffer,
 			*m_indexBuffer,
 			{{
-					.srcOffset = vertexBufferSize,
-					.dstOffset = 0,
-					.size = indexBufferSize
+				.srcOffset = vertexBufferSize,
+				.dstOffset = 0,
+				.size = indexBufferSize
 			}}
 		);
 	}

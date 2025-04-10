@@ -7,6 +7,8 @@
 
 #include "math/transform.h"
 
+#include "light.h"
+
 namespace mgp
 {
 	class Model;
@@ -26,10 +28,15 @@ namespace mgp
 
 		RenderObject *createRenderObject();
 
+		void addPointLight(const PointLight &light);
+
 		void foreachObject(const std::function<bool(uint32_t, RenderObject &)> &fn);
 		void foreachMesh(const std::function<bool(uint32_t, Mesh *)> &fn);
 
+		const std::vector<RenderObject> &getRenderObjects() const;
 		const std::vector<Mesh *> &getRenderList();
+
+		const std::array<PointLight, MAX_POINT_LIGHTS> &getPointLights() const;
 
 	private:
 		void aggregateMeshes();
@@ -39,5 +46,8 @@ namespace mgp
 
 		std::vector<Mesh *> m_renderList;
 		bool m_renderListDirty;
+
+		std::array<PointLight, MAX_POINT_LIGHTS> m_pointsLights;
+		int m_pointLightCount;
 	};
 }

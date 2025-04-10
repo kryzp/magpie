@@ -183,13 +183,17 @@ App::App(const Config &config)
 	Model *model = modelLoader.loadModel("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
 
 	auto obj = m_scene.createRenderObject();
-
 	obj->model = model;
-
 	obj->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 	obj->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
 	obj->transform.setScale({ 1.0f, 1.0f, 1.0f });
 	obj->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
+
+	PointLight light;
+	light.setPosition({ 0.0f, 2.0f, 0.0f });
+	light.setColour({ 1.0f, 1.0f, 1.0f });
+
+	m_scene.addPointLight(light);
 
 	m_running = true;
 }
@@ -387,12 +391,8 @@ void App::render(Swapchain *swapchain)
 		.normalMatrix = glm::transpose(glm::inverse(transform.model))
 	};
 
-	m_frameConstantsBuffer->write(&constants,
-		sizeof(FrameConstants),
-		0);
-	m_transformDataBuffer->write(&transform,
-		sizeof(TransformData),
-		0);
+	m_frameConstantsBuffer->write(&constants, sizeof(FrameConstants), 0);
+	m_transformDataBuffer->write(&transform, sizeof(TransformData), 0);
 
 	// forward render
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
@@ -784,17 +784,13 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 		bitmap.getMemorySize()
 	);
 
+	stagingBuffer.write(bitmap.getData(), bitmap.getMemorySize(), 0);
+
 	InstantSubmitSync instantSubmit(m_vulkanCore);
 	CommandBuffer &cmd = instantSubmit.begin();
 	{
 		cmd.transitionLayout(*image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-		stagingBuffer.write(bitmap.getData(),
-			bitmap.getMemorySize(),
-			0);
-
 		cmd.copyBufferToImage(stagingBuffer, *image);
-
 		cmd.generateMipmaps(*image);
 	}
 	instantSubmit.submit();
@@ -1159,10 +1155,10 @@ void App::generateEnvironmentProbe()
 			float roughness = (float)mipLevel / (float)(PREFILTER_MAP_MIP_LEVELS - 1);
 
 			prefilterParams.roughness = roughness;
+
 			uint32_t dynamicOffset = sizeof(prefilterParams) * mipLevel;
-			pfParameterBuffer->write(&prefilterParams,
-				sizeof(prefilterParams),
-				dynamicOffset);
+
+			pfParameterBuffer->write(&prefilterParams, sizeof(prefilterParams), dynamicOffset);
 
 			for (int i = 0; i < 6; i++)
 			{

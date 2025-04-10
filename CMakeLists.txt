@@ -17,6 +17,7 @@ add_executable(${PROJECT_NAME}
     src/rendering/scene.cpp
     src/rendering/model.cpp
     src/rendering/model_loader.cpp
+    src/rendering/light.cpp
 
 	src/rendering/renderers/deferred_renderer.cpp
 
