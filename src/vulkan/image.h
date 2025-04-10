@@ -119,8 +119,5 @@ namespace mgp
 
 		uint32_t m_mipmapCount;
 		VkSampleCountFlagBits m_samples;
-
-		bool m_isTransient;
-		bool m_isStorage;
 	};
 }

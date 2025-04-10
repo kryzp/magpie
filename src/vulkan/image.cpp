@@ -137,10 +137,7 @@ void Image::init(
 	m_mipmapCount = mipmaps;
 	m_samples = samples;
 
-	m_isTransient = transient;
-	m_isStorage = storage;
-
-	if (isTransient())
+	if (transient)
 	{
 		m_usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	}
@@ -149,7 +146,7 @@ void Image::init(
 		m_usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	if (isStorage())
+	if (storage)
 	{
 		m_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
@@ -290,12 +287,12 @@ VkSampleCountFlagBits Image::getSamples() const
 
 bool Image::isTransient() const
 {
-	return m_isTransient;
+	return m_usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 }
 
 bool Image::isStorage() const
 {
-	return m_isStorage;
+	return m_usage & VK_IMAGE_USAGE_STORAGE_BIT;
 }
 
 bool Image::isCubemap() const
