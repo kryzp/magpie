@@ -76,10 +76,20 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 
 	for (cauto &view : pass.m_inputViews)
 	{
-		cmd.transitionLayout(
-			*view->getImage(),
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		if (view->getImage()->isDepth())
+		{
+			cmd.transitionLayout(
+				*view->getImage(),
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+			);
+		}
+		else
+		{
+			cmd.transitionLayout(
+				*view->getImage(),
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			);
+		}
 	}
 
 	RenderInfo info(m_core);
@@ -102,6 +112,8 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 
 	if (pass.m_depthStencilAttachment.view)
 	{
+		info.setSize(pass.m_depthStencilAttachment.view->getImage()->getWidth(), pass.m_depthStencilAttachment.view->getImage()->getHeight());
+
 		info.addDepthAttachment(
 			pass.m_depthStencilAttachment.loadOp,
 			*pass.m_depthStencilAttachment.view,

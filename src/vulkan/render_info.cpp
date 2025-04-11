@@ -145,7 +145,7 @@ const std::vector<VkFormat> &RenderInfo::getColourAttachmentFormats() const
 
 VkFormat RenderInfo::getDepthAttachmentFormat() const
 {
-	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? vk_toolbox::findDepthFormat(m_core->getPhysicalDevice()) : VK_FORMAT_UNDEFINED;
+	return (m_depthAttachment.imageView != VK_NULL_HANDLE) ? m_core->getDepthFormat() : VK_FORMAT_UNDEFINED;
 }
 
 uint32_t RenderInfo::getWidth() const

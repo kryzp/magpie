@@ -1,6 +1,6 @@
 #include "bindless.hlsl"
 
-#include "model_common.inc"
+#include "model_common.hlsl"
 
 struct PSInput
 {
@@ -8,7 +8,7 @@ struct PSInput
     float3 colour : COLOR;
     
 	[[vk::location(VS_MODEL_OUT_SLOT_POSITION)]]
-    float3 position : TEXCOORD0;
+    float4 position : TEXCOORD0;
     
 	[[vk::location(VS_MODEL_OUT_SLOT_UV)]]
     float2 texCoord : TEXCOORD1;

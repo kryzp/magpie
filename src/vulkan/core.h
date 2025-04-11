@@ -69,6 +69,8 @@ namespace mgp
 		RenderGraph &getRenderGraph();
 		const RenderGraph &getRenderGraph() const;
 
+		VkFormat getDepthFormat() const;
+
 		void initImGui();
 
 	private:
@@ -90,6 +92,8 @@ namespace mgp
 		VkPhysicalDevice m_physicalDevice;
 		VkPhysicalDeviceProperties2 m_physicalDeviceProperties;
 		VkPhysicalDeviceFeatures2 m_physicalDeviceFeatures;
+
+		VkFormat m_depthFormat;
 
 		BindlessResources m_bindlessResources;
 

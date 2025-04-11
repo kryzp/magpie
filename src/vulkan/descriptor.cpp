@@ -5,6 +5,9 @@
 #include "math/calc.h"
 
 #include "core.h"
+#include "image_view.h"
+#include "sampler.h"
+#include "gpu_buffer.h"
 
 using namespace mgp;
 
@@ -194,7 +197,8 @@ void DescriptorLayoutCache::init(const VulkanCore *core)
 
 void DescriptorLayoutCache::dispose()
 {
-	for (auto &[id, layout] : m_layoutCache) {
+	for (auto &[id, layout] : m_layoutCache)
+	{
 		vkDestroyDescriptorSetLayout(m_core->getLogicalDevice(), layout, nullptr);
 	}
 
@@ -207,7 +211,8 @@ VkDescriptorSetLayout DescriptorLayoutCache::createLayout(const VkDescriptorSetL
 
 	hash::combine(&hash, &layoutCreateInfo.bindingCount);
 
-	for (int i = 0; i < layoutCreateInfo.bindingCount; i++) {
+	for (int i = 0; i < layoutCreateInfo.bindingCount; i++)
+	{
 		hash::combine(&hash, &layoutCreateInfo.pBindings[i]);
 	}
 
@@ -276,7 +281,7 @@ void DescriptorWriter::updateSet(const VulkanCore *core, const VkDescriptorSet &
 	);
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t arrayIndex)
 {
 	m_bufferInfos[m_nBufferInfos] = info;
 
@@ -284,7 +289,7 @@ DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescrip
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
 	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
-	write.dstArrayElement = dstArrayElement;
+	write.dstArrayElement = arrayIndex;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
 	write.pBufferInfo = &m_bufferInfos[m_nBufferInfos];
@@ -296,19 +301,7 @@ DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescrip
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset, uint32_t dstArrayElement)
-{
-	VkDescriptorBufferInfo info = {};
-	info.buffer = buffer;
-	info.offset = offset;
-	info.range = size;
-
-	writeBuffer(bindingIndex, type, info, dstArrayElement);
-
-	return *this;
-}
-
-DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t arrayIndex)
 {
 	m_imageInfos[m_nImageInfos] = info;
 
@@ -316,7 +309,7 @@ DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescript
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
 	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
-	write.dstArrayElement = dstArrayElement;
+	write.dstArrayElement = arrayIndex;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
 	write.pImageInfo = &m_imageInfos[m_nImageInfos];
@@ -328,50 +321,42 @@ DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescript
 	return *this;
 }
 
-DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeCombinedImage(uint32_t bindingIndex, const ImageView &view, const Sampler &sampler, uint32_t arrayIndex)
 {
 	VkDescriptorImageInfo info = {};
-	info.imageView = image;
-	info.imageLayout = layout;
-	info.sampler = sampler;
+	info.imageView = view.getHandle();
+	info.imageLayout = view.getImage()->isDepth() ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	info.sampler = sampler.getHandle();
 
-	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info, dstArrayElement);
-
-	return *this;
+	return writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, info, arrayIndex);
 }
 
-DescriptorWriter &DescriptorWriter::writeSampledImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeSampledImage(uint32_t bindingIndex, const ImageView &view, uint32_t arrayIndex)
 {
 	VkDescriptorImageInfo info = {};
-	info.imageView = image;
-	info.imageLayout = layout;
+	info.imageView = view.getHandle();
+	info.imageLayout = view.getImage()->isDepth() ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	info.sampler = VK_NULL_HANDLE;
 
-	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, info, dstArrayElement);
-
-	return *this;
+	return writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, info, arrayIndex);
 }
 
-DescriptorWriter &DescriptorWriter::writeStorageImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeStorageImage(uint32_t bindingIndex, const ImageView &view, uint32_t arrayIndex)
 {
 	VkDescriptorImageInfo info = {};
-	info.imageView = image;
-	info.imageLayout = layout;
+	info.imageView = view.getHandle();
+	info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	info.sampler = VK_NULL_HANDLE;
 
-	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, info, dstArrayElement);
-
-	return *this;
+	return writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, info, arrayIndex);
 }
 
-DescriptorWriter &DescriptorWriter::writeSampler(uint32_t bindingIndex, VkSampler sampler, uint32_t dstArrayElement)
+DescriptorWriter &DescriptorWriter::writeSampler(uint32_t bindingIndex, const Sampler &sampler, uint32_t arrayIndex)
 {
 	VkDescriptorImageInfo info = {};
 	info.imageView = VK_NULL_HANDLE;
 	info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	info.sampler = sampler;
+	info.sampler = sampler.getHandle();
 
-	writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLER, info, dstArrayElement);
-
-	return *this;
+	return writeImage(bindingIndex, VK_DESCRIPTOR_TYPE_SAMPLER, info, arrayIndex);
 }

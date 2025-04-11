@@ -27,7 +27,8 @@
 #include "rendering/model_loader.h"
 #include "rendering/model.h"
 
-#include "rendering/renderers/deferred_renderer.h"
+#include "rendering/passes/deferred_pass.h"
+#include "rendering/passes/shadow_pass.h"
 
 #include "input/input.h"
 
@@ -61,6 +62,7 @@ struct BindlessMaterialHandles
 
 App::App(const Config &config)
 	: m_linearSampler(nullptr)
+	, m_nearestSampler(nullptr)
 	, m_loadedImageCache()
 	, m_shaderStageCache()
 	, m_shaderCache()
@@ -87,7 +89,7 @@ App::App(const Config &config)
 	, m_platform(nullptr)
 	, m_inputSt(nullptr)
 	, m_running(false)
-	, m_camera(config.width, config.height, 75.0f, 0.01f, 100.0f)
+	, m_camera((float)config.width / (float)config.height, 75.0f, 0.01f, 100.0f)
 	, m_targetColour(nullptr)
 	, m_targetDepth(nullptr)
 {
@@ -140,7 +142,8 @@ App::App(const Config &config)
 
 	createSkyboxMesh();
 
-	DeferredRenderer::init(m_vulkanCore, this);
+	ShadowPass::init(m_vulkanCore, this);
+	DeferredPass::init(m_vulkanCore, this);
 
 	generateEnvironmentProbe();
 
@@ -189,11 +192,16 @@ App::App(const Config &config)
 	obj->transform.setScale({ 1.0f, 1.0f, 1.0f });
 	obj->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
 
-	PointLight light;
-	light.setPosition({ 0.0f, 2.0f, 0.0f });
-	light.setColour({ 1.0f, 1.0f, 1.0f });
+	Light light;
+	light.setType(Light::TYPE_POINT);
+	light.setIntensity(10.0f);
+	light.setFalloff(1.0f);
+	light.setDirection(glm::normalize((glm::vec3) { 1.0f, -1.0f, -1.0f }));
+	light.setPosition({ -2.0f, 2.0f, 1.0f });
+	light.setColour(Colour::white());
+	light.toggleShadows(true);
 
-	m_scene.addPointLight(light);
+	m_scene.addLight(light);
 
 	m_running = true;
 }
@@ -215,13 +223,15 @@ App::~App()
 		delete material;
 
 	delete m_linearSampler;
+	delete m_nearestSampler;
 
 	delete m_environmentMap;
 
 	delete m_environmentProbe.irradiance;
 	delete m_environmentProbe.prefilter;
 
-	DeferredRenderer::destroy();
+	ShadowPass::destroy();
+	DeferredPass::destroy();
 
 	delete m_targetColour;
 	delete m_targetDepth;
@@ -277,7 +287,7 @@ void App::run()
 		inFlightSync.getSwapchain()->getWidth(),
 		inFlightSync.getSwapchain()->getHeight(),
 		1,
-		vk_toolbox::findDepthFormat(m_vulkanCore->getPhysicalDevice()),
+		m_vulkanCore->getDepthFormat(),
 		VK_IMAGE_VIEW_TYPE_2D,
 		VK_IMAGE_TILING_OPTIMAL,
 		1,
@@ -289,11 +299,11 @@ void App::run()
 	m_targetDepth->allocate();
 
 	DescriptorWriter()
-		.writeCombinedImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+		.writeCombinedImage(0, *m_targetColour->getStandardView(), *m_linearSampler)
 		.updateSet(m_vulkanCore, m_textureUVSet);
 
 	DescriptorWriter()
-		.writeStorageImage(0, m_targetColour->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_GENERAL)
+		.writeStorageImage(0, *m_targetColour->getStandardView())
 		.updateSet(m_vulkanCore, m_hdrTonemappingSet);
 
 	double accumulator = 0.0;
@@ -358,6 +368,20 @@ void App::tickFixed(float dt)
 
 void App::render(Swapchain *swapchain)
 {
+	FrameConstants constants = {
+		.proj = m_camera.getProj(),
+		.view = m_camera.getView(),
+		.cameraPosition = glm::vec4(m_camera.position, 1.0f)
+	};
+
+	TransformData transform = {
+		.model = glm::identity<glm::mat4>(),
+		.normalMatrix = glm::transpose(glm::inverse(transform.model))
+	};
+
+	m_frameConstantsBuffer->write(&constants, sizeof(FrameConstants), 0);
+	m_transformDataBuffer->write(&transform, sizeof(TransformData), 0);
+
 	RenderGraph::AttachmentInfo targetColourAttachment;
 	targetColourAttachment.view = m_targetColour->getStandardView();
 	targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -380,27 +404,19 @@ void App::render(Swapchain *swapchain)
 	swapchainDirectAttachment.view = swapchain->getCurrentSwapchainImageView();
 	swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
-	FrameConstants constants = {
-		.proj = m_camera.getProj(),
-		.view = m_camera.getView(),
-		.cameraPosition = glm::vec4(m_camera.position, 1.0f)
-	};
+	// render shadows
+	ShadowPass::renderShadows(m_scene);
 
-	TransformData transform = {
-		.model = glm::identity<glm::mat4>(),
-		.normalMatrix = glm::transpose(glm::inverse(transform.model))
-	};
-
-	m_frameConstantsBuffer->write(&constants, sizeof(FrameConstants), 0);
-	m_transformDataBuffer->write(&transform, sizeof(TransformData), 0);
+	// render g-buffer
 
 	// forward render
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 		.setColourAttachments({ targetColourAttachment })
 		.setDepthStencilAttachment(targetDepthAttachment)
+		.setInputViews({ ShadowPass::getShadowMapManager().getAtlas()->getStandardView() })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
-			DeferredRenderer::render(cmd, info, m_camera, m_scene);
+			DeferredPass::render(cmd, info, m_camera, m_scene, ShadowPass::getShadowMapManager().getAtlas()->getStandardView());
 
 			// skybox
 			{
@@ -532,6 +548,7 @@ VkDescriptorSet App::allocateSet(const std::vector<VkDescriptorSetLayout> &layou
 void App::loadTextures()
 {
 	m_linearSampler = new Sampler(m_vulkanCore, Sampler::Style(VK_FILTER_LINEAR));
+	m_nearestSampler = new Sampler(m_vulkanCore, Sampler::Style(VK_FILTER_NEAREST));
 
 	loadTexture("fallback_white",	"../../res/textures/standard/white.png");
 	loadTexture("fallback_black",	"../../res/textures/standard/black.png");
@@ -552,6 +569,7 @@ void App::loadShaders()
 		loadShaderStage("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
 		loadShaderStage("fullscreen_triangle_vs",			"../../res/shaders/compiled/fullscreen_triangle_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
 		loadShaderStage("model_vs",							"../../res/shaders/compiled/model_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("model_shadow_map_vs",				"../../res/shaders/compiled/model_shadow_map_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
 
 		// pixel shaders
 		loadShaderStage("equirectangular_to_cubemap_ps",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -564,6 +582,7 @@ void App::loadShaders()
 //		loadShaderStage("bloom_downsample_ps",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
 //		loadShaderStage("bloom_upsample_ps",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("texture_uv_ps",					"../../res/shaders/compiled/texture_uv_ps.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("shadow_map_ps",					"../../res/shaders/compiled/shadow_map_ps.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		// compute shaders
 		loadShaderStage("hdr_tonemapping_cs",				"../../res/shaders/compiled/hdr_tonemapping_cs.spv",				VK_SHADER_STAGE_COMPUTE_BIT);
@@ -582,8 +601,8 @@ void App::loadShaders()
 		}
 
 		// SUBSURFACE REFRACTION
+		/*
 		{
-			/*
 			DescriptorLayoutBuilder descriptorLayoutBuilder;
 
 			// bind all buffers
@@ -601,7 +620,20 @@ void App::loadShaders()
 			pbr->setPushConstantsSize(0);
 			pbr->addStage(g_shaderManager->get("model_vs"));
 			pbr->addStage(g_shaderManager->get("subsurface_refraction_ps"));
-			*/
+		}
+		*/
+
+		// SHADOW MAPPING
+		{
+			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
+				.build(m_vulkanCore, VK_SHADER_STAGE_ALL_GRAPHICS);
+
+			Shader *shadowMap = createShader("shadow_map");
+
+			shadowMap->setDescriptorSetLayouts({ layout });
+			shadowMap->setPushConstantsSize(sizeof(float)*16 * 2);
+			shadowMap->addStage(getShaderStage("model_shadow_map_vs"));
+			shadowMap->addStage(getShaderStage("shadow_map_ps"));
 		}
 
 		// SKYBOX
@@ -972,7 +1004,7 @@ void App::generateEnvironmentProbe()
 		Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
 
 		DescriptorWriter()
-			.writeCombinedImage(0, environmentHDRImage->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+			.writeCombinedImage(0, *environmentHDRImage->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, eqrToCbmSet);
 
 		GraphicsPipelineDefinition equirectangularToCubemapPipeline;
@@ -1063,7 +1095,7 @@ void App::generateEnvironmentProbe()
 		VkDescriptorSet irradianceSet = allocateSet(irradianceGenShader->getDescriptorSetLayouts());
 
 		DescriptorWriter()
-			.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+			.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, irradianceSet);
 
 		GraphicsPipelineDefinition irradiancePipeline;
@@ -1136,7 +1168,7 @@ void App::generateEnvironmentProbe()
 
 		DescriptorWriter()
 			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
-			.writeCombinedImage(1, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+			.writeCombinedImage(1, *m_environmentMap->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, prefilterSet);
 
 		GraphicsPipelineDefinition prefilterPipeline;
@@ -1262,7 +1294,7 @@ void App::createSkybox()
 	m_skyboxSet = allocateSet(m_skyboxShader->getDescriptorSetLayouts());
 
 	DescriptorWriter()
-		.writeCombinedImage(0, m_environmentMap->getStandardView()->getHandle(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_linearSampler->getHandle())
+		.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_linearSampler)
 		.updateSet(m_vulkanCore, m_skyboxSet);
 
 	m_skyboxPipeline.setShader(m_skyboxShader);

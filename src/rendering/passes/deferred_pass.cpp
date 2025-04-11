@@ -1,4 +1,4 @@
-#include "deferred_renderer.h"
+#include "deferred_pass.h"
 
 #include "core/app.h"
 #include "core/common.h"
@@ -35,14 +35,17 @@ struct BindlessPushConstants
 
 	bindless::Handle cubemapSampler_ID;
 	bindless::Handle textureSampler_ID;
+	bindless::Handle shadowAtlasSampler_ID;
+
+	bindless::Handle shadowAtlas_ID;
 };
 
-VulkanCore *DeferredRenderer::m_core = nullptr;
-App *DeferredRenderer::m_app = nullptr;
-Image *DeferredRenderer::m_brdfLUT = nullptr;
-GPUBuffer *DeferredRenderer::m_lightsBuffer = nullptr;
+VulkanCore *DeferredPass::m_core = nullptr;
+App *DeferredPass::m_app = nullptr;
+Image *DeferredPass::m_brdfLUT = nullptr;
+GPUBuffer *DeferredPass::m_lightsBuffer = nullptr;
 
-void DeferredRenderer::init(VulkanCore *core, App *app)
+void DeferredPass::init(VulkanCore *core, App *app)
 {
 	m_core = core;
 	m_app = app;
@@ -51,19 +54,19 @@ void DeferredRenderer::init(VulkanCore *core, App *app)
 		m_core,
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(ShaderPointLight) * MAX_POINT_LIGHTS
+		sizeof(GPUPointLight) * MAX_POINT_LIGHTS
 	);
 
 	precomputeBRDF();
 }
 
-void DeferredRenderer::destroy()
+void DeferredPass::destroy()
 {
 	delete m_lightsBuffer;
 	delete m_brdfLUT;
 }
 
-void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene)
+void DeferredPass::render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene, const ImageView *shadowAtlas)
 {
 	populateLightsBuffer(scene);
 
@@ -112,7 +115,10 @@ void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const 
 			.material_ID				= mat->bindlessHandle,
 
 			.cubemapSampler_ID			= m_app->m_linearSampler->getBindlessHandle(),
-			.textureSampler_ID			= m_app->m_linearSampler->getBindlessHandle()
+			.textureSampler_ID			= m_app->m_linearSampler->getBindlessHandle(),
+			.shadowAtlasSampler_ID		= m_app->m_nearestSampler->getBindlessHandle(),
+
+			.shadowAtlas_ID				= shadowAtlas->getBindlessHandle()
 		};
 
 		cmd.pushConstants(
@@ -130,18 +136,48 @@ void DeferredRenderer::render(CommandBuffer &cmd, const RenderInfo &info, const 
 	});
 }
 
-void DeferredRenderer::populateLightsBuffer(const Scene& scene)
+void DeferredPass::populateLightsBuffer(const Scene& scene)
 {
 	auto &lights = scene.getPointLights();
 
-	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+	for (int i = 0; i < scene.getPointLightCount(); i++)
 	{
-		ShaderPointLight light = lights[i].getShaderLight();
-		m_lightsBuffer->write(&light, sizeof(ShaderPointLight), i * sizeof(ShaderPointLight));
+		auto &light = lights[i];
+
+		glm::vec3 pos = light.getPosition();
+		glm::vec3 col = light.getColour().getPremultiplied().getDisplayColour();
+
+		auto &region = light.getShadowAtlasRegion();
+
+		Camera lightCamera(1.0f, 75.0f, 0.01f, 25.0f);
+		lightCamera.position = light.getPosition();
+		lightCamera.direction = light.getDirection();
+
+		GPUPointLight gpuLight = {};
+		gpuLight.position = { pos.x, pos.y, pos.z, 0.0f };
+		gpuLight.colour = { col.x * light.getIntensity(), col.y * light.getIntensity(), col.z * light.getIntensity(), 0.0f };
+
+		if (light.isShadowCaster())
+		{
+			float regionX = (float)region.area.x / (float)ShadowMapManager::ATLAS_SIZE;
+			float regionY = (float)region.area.y / (float)ShadowMapManager::ATLAS_SIZE;
+			float regionW = (float)region.area.w / (float)ShadowMapManager::ATLAS_SIZE;
+			float regionH = (float)region.area.h / (float)ShadowMapManager::ATLAS_SIZE;
+
+			gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
+
+			gpuLight.lightSpaceMatrix = lightCamera.getProj() * lightCamera.getView();
+		}
+
+		m_lightsBuffer->write(
+			&gpuLight,
+			sizeof(GPUPointLight),
+			sizeof(GPUPointLight) * i
+		);
 	}
 }
 
-void DeferredRenderer::precomputeBRDF()
+void DeferredPass::precomputeBRDF()
 {
 	InstantSubmitSync instantSubmit(m_core);
 	CommandBuffer &cmd = instantSubmit.begin();
@@ -170,8 +206,6 @@ void DeferredRenderer::precomputeBRDF()
 
 		Shader *brdfLUTShader = m_app->getShader("brdf_lut");
 
-		VkDescriptorSet set = m_app->allocateSet(brdfLUTShader->getDescriptorSetLayouts());
-
 		GraphicsPipelineDefinition brdfIntegrationPipeline;
 		brdfIntegrationPipeline.setShader(brdfLUTShader);
 		brdfIntegrationPipeline.setDepthTest(false);
@@ -184,8 +218,6 @@ void DeferredRenderer::precomputeBRDF()
 		cmd.beginRendering(info);
 		{
 			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
-			cmd.bindDescriptorSets(0, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.layout, { set }, {});
-			cmd.setViewport({ 0, 0, BRDF_RESOLUTION, BRDF_RESOLUTION });
 			cmd.draw(3);
 		}
 		cmd.endRendering();

@@ -11,6 +11,8 @@ struct PointLight
 {
     float4 position;
     float4 colour;
+    float4 atlasRegion;
+    float4x4 lightSpaceMatrix;
 };
 
 struct MaterialData

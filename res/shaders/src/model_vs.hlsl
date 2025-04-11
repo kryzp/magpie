@@ -1,27 +1,6 @@
 #include "bindless.hlsl"
 
-#include "model_common.inc"
-
-struct VSInput
-{
-	[[vk::location(VS_MODEL_ATT_SLOT_POSITION)]]
-    float3 position : POSITION;
-    
-	[[vk::location(VS_MODEL_ATT_SLOT_UV)]]
-    float2 uv : TEXCOORD0;
-    
-	[[vk::location(VS_MODEL_ATT_SLOT_COLOUR)]]
-    float3 colour : COLOR;
-    
-    [[vk::location(VS_MODEL_ATT_SLOT_NORMAL)]]
-    float3 normal : NORMAL;
-    
-	[[vk::location(VS_MODEL_ATT_SLOT_TANGENT)]]
-    float3 tangent : TANGENT;
-    
-	[[vk::location(VS_MODEL_ATT_SLOT_BITANGENT)]]
-    float3 bitangent : BITANGENT;
-};
+#include "model_common.hlsl"
 
 struct VSOutput
 {
@@ -31,7 +10,7 @@ struct VSOutput
     float3 colour : COLOR;
     
 	[[vk::location(VS_MODEL_OUT_SLOT_POSITION)]]
-    float3 position : TEXCOORD0;
+    float4 position : TEXCOORD0;
     
 	[[vk::location(VS_MODEL_OUT_SLOT_UV)]]
     float2 texCoord : TEXCOORD1;
@@ -55,8 +34,8 @@ VSOutput main(VSInput input)
     VSOutput output;
 	output.colour = input.colour;
     output.texCoord = input.uv;
-	output.position = mul(modelMatrix, float4(input.position, 1.0)).xyz;
-	output.tbn = float3x3(T, B, N);
+	output.position = mul(modelMatrix, float4(input.position, 1.0));
+	output.tbn = transpose(float3x3(T, B, N));
 	output.svPosition = mul(frameData.projMatrix, mul(frameData.viewMatrix, mul(modelMatrix, float4(input.position, 1.0))));
 
     return output;

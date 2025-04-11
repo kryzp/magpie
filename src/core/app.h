@@ -90,7 +90,7 @@ namespace mgp
 
 	class App
 	{
-		friend class DeferredRenderer; // todo: temporary
+		friend class DeferredPass; // todo: temporary
 
 	public:
 		App(const Config &config);
@@ -136,6 +136,8 @@ namespace mgp
 		void addTechnique(const std::string &name, const Technique &technique);
 
 		Sampler *m_linearSampler;
+		Sampler *m_nearestSampler;
+
 		std::unordered_map<std::string, Image *> m_loadedImageCache;
 
 		std::unordered_map<std::string, ShaderStage *> m_shaderStageCache;

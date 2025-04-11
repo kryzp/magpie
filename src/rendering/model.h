@@ -49,12 +49,18 @@ namespace mgp
 		Mesh(VulkanCore *core);
 		~Mesh();
 
-		void build(const VertexFormat &format, void *pVertices, uint32_t nVertices, uint16_t *pIndices, uint32_t nIndices);
+		void build(
+			const VertexFormat &format,
+			void *pVertices, uint32_t nVertices,
+			uint16_t *pIndices, uint32_t nIndices
+		);
 
 		void bind(CommandBuffer &cmd) const;
 
 		Model *getParent();
 		const Model *getParent() const;
+
+		const VertexFormat *getVertexFormat() const;
 
 		void setMaterial(Material *material);
 

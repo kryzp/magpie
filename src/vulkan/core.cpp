@@ -48,6 +48,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	, m_physicalDevice()
 	, m_physicalDeviceProperties()
 	, m_physicalDeviceFeatures()
+	, m_depthFormat()
 	, m_maxMsaaSamples()
 	, m_bindlessResources()
 	, m_vmaAllocator()
@@ -137,6 +138,9 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	m_surface.create(this, m_platform);
 
 	enumeratePhysicalDevices(m_surface.getHandle());
+
+	m_depthFormat = vk_toolbox::findDepthFormat(m_physicalDevice);
+
 	findQueueFamilies(m_physicalDevice, m_surface.getHandle());
 	createLogicalDevice();
 	createPipelineProcessCache();
@@ -655,6 +659,11 @@ RenderGraph &VulkanCore::getRenderGraph()
 const RenderGraph &VulkanCore::getRenderGraph() const
 {
 	return m_renderGraph;
+}
+
+VkFormat VulkanCore::getDepthFormat() const
+{
+	return m_depthFormat;
 }
 
 void VulkanCore::initImGui()

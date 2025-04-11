@@ -289,12 +289,10 @@ void Swapchain::createColourResources()
 
 void Swapchain::createDepthResources()
 {
-	VkFormat format = vk_toolbox::findDepthFormat(m_core->getPhysicalDevice());
-
 	m_depth.init(
 		m_core,
 		m_width, m_height, 1,
-		format,
+		m_core->getDepthFormat(),
 		VK_IMAGE_VIEW_TYPE_2D,
 		VK_IMAGE_TILING_OPTIMAL,
 		1,

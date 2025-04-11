@@ -11,12 +11,11 @@
 
 using namespace mgp;
 
-Camera::Camera(float width, float height, float fov, float near, float far)
+Camera::Camera(float aspect, float fov, float near, float far)
 	: position(0.0f, 0.0f, 0.0f)
 	, up(0.0f, 1.0f, 0.0f)
 	, direction(0.0f, 0.0f, -1.0f)
-	, width(width)
-	, height(height)
+	, aspect(aspect)
 	, fov(fov)
 	, near(near)
 	, far(far)
@@ -55,9 +54,18 @@ void Camera::update(const InputState *input, const Platform *platform, float dt)
 	float yaw = m_yaw + glm::half_pi<float>();
 	float pitch = m_pitch;
 
-	direction.x = glm::cos(yaw) * glm::cos(pitch);
-	direction.y = glm::sin(pitch);
-	direction.z = -glm::sin(yaw) * glm::cos(pitch);
+
+	if (input->isDown(KB_KEY_L))
+	{
+		position = { -2.0f, 2.0f, 1.0f };
+		direction = glm::normalize((glm::vec3) { 1.0f, -1.0f, -1.0f });
+	}
+	else
+	{
+		direction.x = glm::cos(yaw) * glm::cos(pitch);
+		direction.y = glm::sin(pitch);
+		direction.z = -glm::sin(yaw) * glm::cos(pitch);
+	}
 
 	glm::vec3 v1 = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
 	glm::vec3 v2 = glm::normalize(glm::cross(v1, direction));
@@ -93,7 +101,7 @@ glm::mat4 Camera::getRotationMatrix() const
 
 glm::mat4 Camera::getProj() const
 {
-	return glm::perspective(glm::radians(fov), width / height, near, far);
+	return glm::perspective(glm::radians(fov), aspect, near, far);
 }
 
 void Camera::setYaw(double yaw)

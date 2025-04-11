@@ -18,6 +18,9 @@ struct PushConstants
 	
 	int cubemapSampler_ID;
 	int textureSampler_ID;
+	int shadowAtlasSampler_ID;
+
+	int shadowAtlas_ID;
 };
 
 PUSH_CONSTANTS(PushConstants, pc);

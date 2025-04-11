@@ -83,6 +83,16 @@ VkBufferUsageFlags GPUBuffer::getUsage() const
 	return m_usage;
 }
 
+bool GPUBuffer::isUniform() const
+{
+	return m_usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+}
+
+bool GPUBuffer::isStorage() const
+{
+	return m_usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+}
+
 VmaMemoryUsage GPUBuffer::getMemoryUsage() const
 {
 	return m_memoryUsage;

@@ -26,7 +26,7 @@ VSOutput main(VSInput input)
 {
 	VSOutput output;
 	output.svPosition = mul(pc.proj, mul(pc.view, float4(input.position, 1.0)));
-	output.worldPos = input.position;// * float3(1.0, -1.0, 1.0);
+	output.worldPos = input.position;
 
 	return output;
 }

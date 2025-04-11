@@ -87,12 +87,7 @@ bindless::Handle BindlessResources::registerBuffer(const GPUBuffer &buffer)
 	bindless::Handle handle = m_bufferHandle_UID++;
 
 	DescriptorWriter()
-		.writeBuffer(
-			0,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			buffer.getDescriptorInfo(),
-			handle
-		)
+		.writeBuffer(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffer.getDescriptorInfo(), handle)
 		.updateSet(m_core, m_bindlessSet);
 
 	return handle;
@@ -103,11 +98,7 @@ bindless::Handle BindlessResources::registerSampler(const Sampler &sampler)
 	bindless::Handle handle = m_samplerHandle_UID++;
 
 	DescriptorWriter()
-		.writeSampler(
-			1,
-			sampler.getHandle(),
-			handle
-		)
+		.writeSampler(1, sampler, handle)
 		.updateSet(m_core, m_bindlessSet);
 
 	return handle;
@@ -118,12 +109,7 @@ bindless::Handle BindlessResources::registerTexture2D(const ImageView &view)
 	bindless::Handle handle = m_textureHandle_UID++;
 
 	DescriptorWriter()
-		.writeSampledImage(
-			2,
-			view.getHandle(),
-			VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-			handle
-		)
+		.writeSampledImage(2, view, handle)
 		.updateSet(m_core, m_bindlessSet);
 
 	return handle;
@@ -134,12 +120,7 @@ bindless::Handle BindlessResources::registerCubemap(const ImageView &cubemap)
 	bindless::Handle handle = m_cubeHandle_UID++;
 
 	DescriptorWriter()
-		.writeSampledImage(
-			3,
-			cubemap.getHandle(),
-			VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-			handle
-		)
+		.writeSampledImage(3, cubemap, handle)
 		.updateSet(m_core, m_bindlessSet);
 
 	return handle;

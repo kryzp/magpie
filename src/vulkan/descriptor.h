@@ -9,6 +9,9 @@
 namespace mgp
 {
 	class VulkanCore;
+	class ImageView;
+	class Sampler;
+	class GPUBuffer;
 
 	struct DescriptorPoolSizeRatio
 	{
@@ -109,15 +112,14 @@ namespace mgp
 		void clear();
 		void updateSet(const VulkanCore *core, const VkDescriptorSet &set);
 
-		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t dstArrayElement = 0);
-		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, VkBuffer buffer, uint64_t size, uint64_t offset, uint32_t dstArrayElement = 0);
+		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t arrayIndex = 0);
+//		DescriptorWriter &writeBuffer(uint32_t bindingIndex, const GPUBuffer &buffer, bool dynamic, uint32_t arrayIndex = 0);
 
-		DescriptorWriter &writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t dstArrayElement = 0);
-
-		DescriptorWriter &writeCombinedImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, VkSampler sampler, uint32_t dstArrayElement = 0);
-		DescriptorWriter &writeSampledImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement = 0);
-		DescriptorWriter &writeStorageImage(uint32_t bindingIndex, VkImageView image, VkImageLayout layout, uint32_t dstArrayElement = 0);
-		DescriptorWriter &writeSampler(uint32_t bindingIndex, VkSampler sampler, uint32_t dstArrayElement = 0);
+		DescriptorWriter &writeImage(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorImageInfo &info, uint32_t arrayIndex = 0);
+		DescriptorWriter &writeCombinedImage(uint32_t bindingIndex, const ImageView &view, const Sampler &sampler, uint32_t arrayIndex = 0);
+		DescriptorWriter &writeSampledImage(uint32_t bindingIndex, const ImageView &view, uint32_t arrayIndex = 0);
+		DescriptorWriter &writeStorageImage(uint32_t bindingIndex, const ImageView &view, uint32_t arrayIndex = 0);
+		DescriptorWriter &writeSampler(uint32_t bindingIndex, const Sampler &sampler, uint32_t arrayIndex = 0);
 
 	private:
 		std::vector<VkWriteDescriptorSet> m_writes;

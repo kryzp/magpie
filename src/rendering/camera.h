@@ -10,7 +10,7 @@ namespace mgp
 	class Camera
 	{
 	public:
-		Camera(float width, float height, float fov, float near, float far);
+		Camera(float aspect, float fov, float near, float far);
 		~Camera();
 
 		void update(const InputState *input, const Platform *platform, float dt);
@@ -26,9 +26,7 @@ namespace mgp
 		glm::vec3 up;
 		glm::vec3 direction;
 
-		float width;
-		float height;
-
+		float aspect;
 		float fov;
 		float near;
 		float far;

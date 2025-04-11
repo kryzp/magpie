@@ -42,9 +42,9 @@ float3 importanceSampleGGX(float2 Xi, float3 normal, float roughness)
 	float3 tangent = normalize(cross(up, normal));
 	float3 bitangent = cross(normal, tangent);
 	
-	float3x3 TBN = transpose(float3x3(tangent, bitangent, normal));
+	float3x3 inverseTBN = transpose(float3x3(tangent, bitangent, normal));
 	
-	float3 sampleVec = mul(TBN, H);
+	float3 sampleVec = mul(inverseTBN, H);
 	
 	return normalize(sampleVec);
 }

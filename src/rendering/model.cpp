@@ -151,7 +151,6 @@ void Mesh::build(
 
 	m_core->deviceWaitIdle();
 }
-
 void Mesh::bind(CommandBuffer &cmd) const
 {
 	cauto &bindings = m_vertexFormat->getBindingDescriptions();
@@ -180,6 +179,11 @@ Model *Mesh::getParent()
 const Model *Mesh::getParent() const
 {
 	return m_parent;
+}
+
+const VertexFormat *Mesh::getVertexFormat() const
+{
+	return m_vertexFormat;
 }
 
 void Mesh::setMaterial(Material *material)

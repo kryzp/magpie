@@ -5,6 +5,7 @@ namespace mgp
 	class Scene;
 	class Camera;
 	class Image;
+	class ImageView;
 	class VulkanCore;
 	class CommandBuffer;
 	class RenderInfo;
@@ -19,13 +20,13 @@ namespace mgp
 	 * Still just a forward renderer lmao
 	 * Will be deferred at some point!!!
 	 */
-	class DeferredRenderer
+	class DeferredPass
 	{
 	public:
 		static void init(VulkanCore *core, App *app);
 		static void destroy();
 
-		static void render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene);
+		static void render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene, const ImageView *shadowAtlas);
 
 	private:
 		static void populateLightsBuffer(const Scene &scene);
