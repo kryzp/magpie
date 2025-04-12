@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
     src/core/common.cpp
     src/core/app.cpp
     src/core/platform.cpp
+    src/core/cvar.cpp
     src/core/editor_ui.cpp
 
     src/rendering/camera.cpp

@@ -2,7 +2,6 @@
 
 #include "third_party/volk.h"
 #include "third_party/vk_mem_alloc.h"
-#include "third_party/imgui/imgui_impl_vulkan.h"
 
 #include "bindless.h"
 #include "descriptor.h"
