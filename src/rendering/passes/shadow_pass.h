@@ -12,6 +12,7 @@ namespace mgp
 	class Image;
 	class Scene;
 	class App;
+	class GPUBuffer;
 
 	class ShadowMapManager
 	{
@@ -39,8 +40,8 @@ namespace mgp
 
 		void clear();
 
-		Image *getAtlas();
-		const Image *getAtlas() const;
+		Image *getAtlas() { return m_atlas; }
+		const Image *getAtlas() const { return m_atlas; }
 
 	private:
 		Image *m_atlas;
@@ -59,10 +60,14 @@ namespace mgp
 
 		static ShadowMapManager &getShadowMapManager();
 
+		static GPUBuffer *getLightBuffer() { return m_lightsBuffer; }
+
 	private:
 		static VulkanCore *m_core;
 		static App *m_app;
 
 		static ShadowMapManager m_shadowMaps;
+
+		static GPUBuffer *m_lightsBuffer;
 	};
 }

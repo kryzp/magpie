@@ -155,12 +155,9 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
         r.w = 1;
         r.h = (int)data->InputLineHeight;
 
-		// i have no idea why this function of all things only works on windows
-#if _WIN32
         SDL_SetTextInputArea(window, &r, 0);
-#endif // _WIN32
-
         SDL_StartTextInput(window);
+
         bd->ImeWindow = window;
     }
 }

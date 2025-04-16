@@ -770,8 +770,8 @@ void App::loadTechniques()
 	// PBR
 	{
 		Technique texturedPBR;
-		texturedPBR.passes[SHADER_PASS_FORWARD] = getShader("texturedPBR");
-		texturedPBR.passes[SHADER_PASS_SHADOW] = nullptr;
+		texturedPBR.passes[SHADER_PASS_DEFERRED] = getShader("texturedPBR");
+		texturedPBR.passes[SHADER_PASS_FORWARD] = nullptr;
 		texturedPBR.vertexFormat = &vtx::MODEL_VERTEX_FORMAT;
 		addTechnique("texturedPBR_opaque", texturedPBR);
 	}

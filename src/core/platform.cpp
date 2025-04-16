@@ -40,9 +40,8 @@ Platform::Platform(const Config &config)
 
 	m_window = SDL_CreateWindow(config.windowName, config.width, config.height, flags);
 
-	if (!m_window) {
+	if (!m_window)
 		MGP_ERROR("Failed to create window.");
-	}
 
 	MGP_LOG("SDL Initialized!");
 }

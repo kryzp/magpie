@@ -73,9 +73,6 @@ namespace mgp
 		int64_t streamPosition(void *stream) const;
 		void streamClose(void *stream) const;
 
-		// os-generic file open, close, write, read, etc... functions
-		// (streamX functions only work on windows :( )
-
 		const char *const *vkGetInstanceExtensions(uint32_t *count) const;
 		bool vkCreateSurface(VkInstance instance, VkSurfaceKHR *surface) const;
 

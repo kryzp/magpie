@@ -30,6 +30,7 @@ void editor_ui::update()
 {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL3_NewFrame();
+
 	ImGui::NewFrame();
 }
 

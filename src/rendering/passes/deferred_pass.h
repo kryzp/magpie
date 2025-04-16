@@ -10,7 +10,6 @@ namespace mgp
 	class CommandBuffer;
 	class RenderInfo;
 	class App;
-	class GPUBuffer;
 
 	class GBuffer
 	{
@@ -29,15 +28,11 @@ namespace mgp
 		static void render(CommandBuffer &cmd, const RenderInfo &info, const Camera& camera, Scene& scene, const ImageView *shadowAtlas);
 
 	private:
-		static void populateLightsBuffer(const Scene &scene);
-
 		static void precomputeBRDF();
 
 		static VulkanCore *m_core;
 		static App *m_app;
 
 		static Image *m_brdfLUT;
-
-		static GPUBuffer *m_lightsBuffer;
 	};
 }

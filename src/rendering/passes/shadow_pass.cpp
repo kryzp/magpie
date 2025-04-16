@@ -7,6 +7,7 @@
 #include "vulkan/core.h"
 #include "vulkan/command_buffer.h"
 #include "vulkan/vertex_format.h"
+#include "vulkan/gpu_buffer.h"
 
 #include "../scene.h"
 #include "../light.h"
@@ -91,19 +92,10 @@ void ShadowMapManager::clear()
 	m_regions.clear();
 }
 
-Image *ShadowMapManager::getAtlas()
-{
-	return m_atlas;
-}
-
-const Image *ShadowMapManager::getAtlas() const
-{
-	return m_atlas;
-}
-
 VulkanCore *ShadowPass::m_core = nullptr;
 App *ShadowPass::m_app = nullptr;
 ShadowMapManager ShadowPass::m_shadowMaps;
+GPUBuffer *ShadowPass::m_lightsBuffer = nullptr;
 
 void ShadowPass::init(VulkanCore *core, App *app)
 {
@@ -111,10 +103,19 @@ void ShadowPass::init(VulkanCore *core, App *app)
 	m_app = app;
 
 	m_shadowMaps.init(core);
+
+	m_lightsBuffer = new GPUBuffer(
+		m_core,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		sizeof(GPUPointLight) * MAX_POINT_LIGHTS
+	);
 }
 
 void ShadowPass::destroy()
 {
+	delete m_lightsBuffer;
+
 	m_shadowMaps.destroy();
 }
 
@@ -147,6 +148,14 @@ void ShadowPass::renderShadows(Scene& scene)
 			{
 				auto &light = scene.getPointLights()[i];
 
+				glm::vec3 pos = light.getPosition();
+				glm::vec3 col = light.getColour().getDisplayColour();
+				glm::vec3 dir = light.getDirection();
+
+				GPUPointLight gpuLight = {};
+				gpuLight.position = { pos.x, pos.y, pos.z, 0.0f };
+				gpuLight.colour = { col.x * light.getIntensity(), col.y * light.getIntensity(), col.z * light.getIntensity(), 0.0f };
+
 				if (light.isShadowCaster())
 				{
 					ShadowMapManager::AtlasRegion region;
@@ -156,8 +165,8 @@ void ShadowPass::renderShadows(Scene& scene)
 						light.setShadowAtlasRegion(region);
 
 						Camera lightCamera((float)region.area.w / (float)region.area.h, 75.0f, 0.01f, 25.0f);
-						lightCamera.position = light.getPosition();
-						lightCamera.direction = light.getDirection();
+						lightCamera.position = pos;
+						lightCamera.direction = dir;
 
 						struct
 						{
@@ -186,6 +195,15 @@ void ShadowPass::renderShadows(Scene& scene)
 
 							return true; // continue
 						});
+
+						float regionX = (float)region.area.x / (float)ShadowMapManager::ATLAS_SIZE;
+						float regionY = (float)region.area.y / (float)ShadowMapManager::ATLAS_SIZE;
+						float regionW = (float)region.area.w / (float)ShadowMapManager::ATLAS_SIZE;
+						float regionH = (float)region.area.h / (float)ShadowMapManager::ATLAS_SIZE;
+
+						gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
+
+						gpuLight.lightSpaceMatrix = lightCamera.getProj() * lightCamera.getView();
 					}
 					else
 					{
@@ -193,7 +211,11 @@ void ShadowPass::renderShadows(Scene& scene)
 					}
 				}
 
-				// todo: move deferred light stuff here
+				m_lightsBuffer->write(
+					&gpuLight,
+					sizeof(GPUPointLight),
+					sizeof(GPUPointLight) * i
+				);
 			}
 		}));
 }

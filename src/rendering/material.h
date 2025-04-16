@@ -16,8 +16,8 @@ namespace mgp
 
 	enum ShaderPassType
 	{
+		SHADER_PASS_DEFERRED,
 		SHADER_PASS_FORWARD,
-		SHADER_PASS_SHADOW,
 		SHADER_PASS_MAX_ENUM
 	};
 
@@ -75,8 +75,8 @@ namespace mgp
 			for (auto &t : textures)
 				hash::combine(&result, &t);
 
-			hash::combine(&result, &passes[SHADER_PASS_FORWARD]);
-			hash::combine(&result, &passes[SHADER_PASS_SHADOW]);
+			for (auto &pass : passes)
+				hash::combine(&result, &pass);
 
 			return result;
 		}
