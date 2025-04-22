@@ -154,7 +154,7 @@ void DeferredPass::precomputeBRDF()
 
 		Shader *brdfLUTShader = m_app->getShader("brdf_lut");
 
-		GraphicsPipelineDefinition brdfIntegrationPipeline;
+		GraphicsPipelineDef brdfIntegrationPipeline;
 		brdfIntegrationPipeline.setShader(brdfLUTShader);
 		brdfIntegrationPipeline.setDepthTest(false);
 		brdfIntegrationPipeline.setDepthWrite(false);

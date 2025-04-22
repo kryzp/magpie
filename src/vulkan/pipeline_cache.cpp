@@ -10,7 +10,7 @@
 
 using namespace mgp;
 
-GraphicsPipelineDefinition::GraphicsPipelineDefinition()
+GraphicsPipelineDef::GraphicsPipelineDef()
 	: m_shader(nullptr)
 	, m_vertexFormat(nullptr)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
@@ -45,11 +45,11 @@ GraphicsPipelineDefinition::GraphicsPipelineDefinition()
 	m_colourBlendState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 }
 
-GraphicsPipelineDefinition::~GraphicsPipelineDefinition()
+GraphicsPipelineDef::~GraphicsPipelineDef()
 {
 }
 
-void GraphicsPipelineDefinition::setShader(const Shader *shader)
+void GraphicsPipelineDef::setShader(const Shader *shader)
 {
 	m_shader = shader;
 
@@ -59,94 +59,94 @@ void GraphicsPipelineDefinition::setShader(const Shader *shader)
 	}
 }
 
-const Shader *GraphicsPipelineDefinition::getShader() const
+const Shader *GraphicsPipelineDef::getShader() const
 {
 	return m_shader;
 }
 
-void GraphicsPipelineDefinition::setVertexFormat(const VertexFormat *format)
+void GraphicsPipelineDef::setVertexFormat(const VertexFormat *format)
 {
 	m_vertexFormat = format;
 }
 
-const VertexFormat *GraphicsPipelineDefinition::getVertexFormat() const
+const VertexFormat *GraphicsPipelineDef::getVertexFormat() const
 {
 	return m_vertexFormat;
 }
 
-void GraphicsPipelineDefinition::setSampleShading(bool enabled, float minSampleShading)
+void GraphicsPipelineDef::setSampleShading(bool enabled, float minSampleShading)
 {
 	m_sampleShadingEnabled = enabled;
 	m_minSampleShading = minSampleShading;
 }
 
-bool GraphicsPipelineDefinition::isSampleShadingEnabled() const
+bool GraphicsPipelineDef::isSampleShadingEnabled() const
 {
 	return m_sampleShadingEnabled;
 }
 
-float GraphicsPipelineDefinition::getMinSampleShading() const
+float GraphicsPipelineDef::getMinSampleShading() const
 {
 	return m_minSampleShading;
 }
 
-void GraphicsPipelineDefinition::setCullMode(VkCullModeFlagBits cull)
+void GraphicsPipelineDef::setCullMode(VkCullModeFlagBits cull)
 {
 	m_cullMode = cull;
 }
 
-VkCullModeFlagBits GraphicsPipelineDefinition::getCullMode() const
+VkCullModeFlagBits GraphicsPipelineDef::getCullMode() const
 {
 	return m_cullMode;
 }
 
-void GraphicsPipelineDefinition::setFrontFace(VkFrontFace front)
+void GraphicsPipelineDef::setFrontFace(VkFrontFace front)
 {
 	m_frontFace = front;
 }
 
-VkFrontFace GraphicsPipelineDefinition::getFrontFace() const
+VkFrontFace GraphicsPipelineDef::getFrontFace() const
 {
 	return m_frontFace;
 }
 
-const std::vector<VkPipelineShaderStageCreateInfo> &GraphicsPipelineDefinition::getShaderStages() const
+const std::vector<VkPipelineShaderStageCreateInfo> &GraphicsPipelineDef::getShaderStages() const
 {
 	return m_shaderStages;
 }
 
-void GraphicsPipelineDefinition::setDepthOp(VkCompareOp op)
+void GraphicsPipelineDef::setDepthOp(VkCompareOp op)
 {
 	m_depthStencilInfo.depthCompareOp = op;
 }
 
-void GraphicsPipelineDefinition::setDepthTest(bool enabled)
+void GraphicsPipelineDef::setDepthTest(bool enabled)
 {
 	m_depthStencilInfo.depthTestEnable = enabled ? VK_TRUE : VK_FALSE;
 }
 
-void GraphicsPipelineDefinition::setDepthWrite(bool enabled)
+void GraphicsPipelineDef::setDepthWrite(bool enabled)
 {
 	m_depthStencilInfo.depthWriteEnable = enabled ? VK_TRUE : VK_FALSE;
 }
 
-void GraphicsPipelineDefinition::setDepthBounds(float min, float max)
+void GraphicsPipelineDef::setDepthBounds(float min, float max)
 {
 	m_depthStencilInfo.minDepthBounds = min;
 	m_depthStencilInfo.maxDepthBounds = max;
 }
 
-void GraphicsPipelineDefinition::setDepthStencilTest(bool enabled)
+void GraphicsPipelineDef::setDepthStencilTest(bool enabled)
 {
 	m_depthStencilInfo.stencilTestEnable = enabled ? VK_TRUE : VK_FALSE;
 }
 
-const VkPipelineDepthStencilStateCreateInfo &GraphicsPipelineDefinition::getDepthStencilState() const
+const VkPipelineDepthStencilStateCreateInfo &GraphicsPipelineDef::getDepthStencilState() const
 {
 	return m_depthStencilInfo;
 }
 
-void GraphicsPipelineDefinition::setBlendState(const BlendState &state)
+void GraphicsPipelineDef::setBlendState(const BlendState &state)
 {
 	m_blendConstants[0] = state.blendConstants[0];
 	m_blendConstants[1] = state.blendConstants[1];
@@ -174,49 +174,49 @@ void GraphicsPipelineDefinition::setBlendState(const BlendState &state)
 	m_colourBlendState.blendEnable = state.enabled ? VK_TRUE : VK_FALSE;
 }
 
-const VkPipelineColorBlendAttachmentState &GraphicsPipelineDefinition::getColourBlendState() const
+const VkPipelineColorBlendAttachmentState &GraphicsPipelineDef::getColourBlendState() const
 {
 	return m_colourBlendState;
 }
 
-bool GraphicsPipelineDefinition::isBlendStateLogicOpEnabled() const
+bool GraphicsPipelineDef::isBlendStateLogicOpEnabled() const
 {
 	return m_blendStateLogicOpEnabled;
 }
 
-VkLogicOp GraphicsPipelineDefinition::getBlendStateLogicOp() const
+VkLogicOp GraphicsPipelineDef::getBlendStateLogicOp() const
 {
 	return m_blendStateLogicOp;
 }
 
-const std::array<float, 4> &GraphicsPipelineDefinition::getBlendConstants() const
+const std::array<float, 4> &GraphicsPipelineDef::getBlendConstants() const
 {
 	return m_blendConstants;
 }
 
-float GraphicsPipelineDefinition::getBlendConstant(int idx) const
+float GraphicsPipelineDef::getBlendConstant(int idx) const
 {
 	return m_blendConstants[idx];
 }
 
-ComputePipelineDefinition::ComputePipelineDefinition()
+ComputePipelineDef::ComputePipelineDef()
 	: m_shader(nullptr)
 	, m_stage()
 {
 }
 
-void ComputePipelineDefinition::setShader(const Shader *shader)
+void ComputePipelineDef::setShader(const Shader *shader)
 {
 	m_shader = shader;
 	m_stage = shader->getStage(0)->getShaderStageCreateInfo();
 }
 
-const Shader *ComputePipelineDefinition::getShader() const
+const Shader *ComputePipelineDef::getShader() const
 {
 	return m_shader;
 }
 
-const VkPipelineShaderStageCreateInfo &ComputePipelineDefinition::getStage() const
+const VkPipelineShaderStageCreateInfo &ComputePipelineDef::getStage() const
 {
 	return m_stage;
 }
@@ -252,7 +252,7 @@ void PipelineCache::dispose()
 	m_layouts.clear();
 }
 
-PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo)
+PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &definition, const RenderInfo &renderInfo)
 {
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -430,7 +430,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDefiniti
 	return data;
 }
 
-PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDefinition &definition)
+PipelineData PipelineCache::fetchComputePipeline(const ComputePipelineDef &definition)
 {
 	uint64_t createdPipelineHash = 0;
 

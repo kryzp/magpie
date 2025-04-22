@@ -1011,7 +1011,7 @@ void App::generateEnvironmentProbe()
 			.writeCombinedImage(0, *environmentHDRImage->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, eqrToCbmSet);
 
-		GraphicsPipelineDefinition equirectangularToCubemapPipeline;
+		GraphicsPipelineDef equirectangularToCubemapPipeline;
 		equirectangularToCubemapPipeline.setShader(eqrToCbmShader);
 		equirectangularToCubemapPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
 		equirectangularToCubemapPipeline.setDepthTest(false);
@@ -1102,7 +1102,7 @@ void App::generateEnvironmentProbe()
 			.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, irradianceSet);
 
-		GraphicsPipelineDefinition irradiancePipeline;
+		GraphicsPipelineDef irradiancePipeline;
 		irradiancePipeline.setShader(irradianceGenShader);
 		irradiancePipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
 		irradiancePipeline.setDepthTest(false);
@@ -1175,7 +1175,7 @@ void App::generateEnvironmentProbe()
 			.writeCombinedImage(1, *m_environmentMap->getStandardView(), *m_linearSampler)
 			.updateSet(m_vulkanCore, prefilterSet);
 
-		GraphicsPipelineDefinition prefilterPipeline;
+		GraphicsPipelineDef prefilterPipeline;
 		prefilterPipeline.setShader(prefilterShader);
 		prefilterPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
 		prefilterPipeline.setDepthTest(false);

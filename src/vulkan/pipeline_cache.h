@@ -14,11 +14,11 @@ namespace mgp
 	class RenderInfo;
 	class VulkanCore;
 
-	class GraphicsPipelineDefinition
+	class GraphicsPipelineDef
 	{
 	public:
-		GraphicsPipelineDefinition();
-		~GraphicsPipelineDefinition();
+		GraphicsPipelineDef();
+		~GraphicsPipelineDef();
 
 		void setShader(const Shader *shader);
 		const Shader *getShader() const;
@@ -79,10 +79,10 @@ namespace mgp
 		float m_minSampleShading;
 	};
 
-	class ComputePipelineDefinition
+	class ComputePipelineDef
 	{
 	public:
-		ComputePipelineDefinition();
+		ComputePipelineDef();
 
 		void setShader(const Shader *shader);
 		const Shader *getShader() const;
@@ -115,8 +115,8 @@ namespace mgp
 		void init(const VulkanCore *core);
 		void dispose();
 
-		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDefinition &definition, const RenderInfo &renderInfo);
-		PipelineData fetchComputePipeline(const ComputePipelineDefinition &definition);
+		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDef &definition, const RenderInfo &renderInfo);
+		PipelineData fetchComputePipeline(const ComputePipelineDef &definition);
 
 		VkPipelineLayout fetchPipelineLayout(const Shader *shader);
 

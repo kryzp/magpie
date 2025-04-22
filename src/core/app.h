@@ -154,10 +154,10 @@ namespace mgp
 		GPUBuffer *m_bindlessMaterialTable;
 		bindless::Handle m_materialHandle_UID;
 
-		GraphicsPipelineDefinition m_textureUVPipeline;
+		GraphicsPipelineDef m_textureUVPipeline;
 		VkDescriptorSet m_textureUVSet;
 
-		ComputePipelineDefinition m_hdrTonemappingPipeline;
+		ComputePipelineDef m_hdrTonemappingPipeline;
 		VkDescriptorSet m_hdrTonemappingSet;
 
 		Scene m_scene;
@@ -168,7 +168,7 @@ namespace mgp
 		Mesh *m_skyboxMesh;
 		Shader *m_skyboxShader;
 		VkDescriptorSet m_skyboxSet;
-		GraphicsPipelineDefinition m_skyboxPipeline;
+		GraphicsPipelineDef m_skyboxPipeline;
 
 		DescriptorPoolDynamic m_descriptorPool;
 

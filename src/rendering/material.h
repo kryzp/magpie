@@ -83,7 +83,7 @@ namespace mgp
 
 		std::vector<bindless::Handle> textures;
 		GPUBuffer *parameterBuffer;
-		GraphicsPipelineDefinition passes[SHADER_PASS_MAX_ENUM];
+		GraphicsPipelineDef passes[SHADER_PASS_MAX_ENUM];
 		bindless::Handle bindlessHandle;
 	};
 }

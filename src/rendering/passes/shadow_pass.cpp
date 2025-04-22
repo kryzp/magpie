@@ -126,7 +126,7 @@ void ShadowPass::destroy()
 
 void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas)
 {
-	GraphicsPipelineDefinition shadowMapPipeline;
+	GraphicsPipelineDef shadowMapPipeline;
 	shadowMapPipeline.setShader(m_app->getShader("shadow_map"));
 	shadowMapPipeline.setVertexFormat(&vtx::MODEL_VERTEX_FORMAT);
 
