@@ -267,7 +267,17 @@ void DescriptorWriter::clear()
 	m_writes.clear();
 }
 
-void DescriptorWriter::updateSet(const VulkanCore *core, const VkDescriptorSet &set)
+DescriptorWriter::DescriptorWriter(const VulkanCore *core)
+	: m_core(core)
+	, m_writes()
+	, m_bufferInfos{}
+	, m_imageInfos{}
+	, m_nBufferInfos(0)
+	, m_nImageInfos(0)
+{
+}
+
+void DescriptorWriter::writeTo(const VkDescriptorSet &set)
 {
 	for (auto &write : m_writes)
 	{
@@ -275,7 +285,7 @@ void DescriptorWriter::updateSet(const VulkanCore *core, const VkDescriptorSet &
 	}
 
 	vkUpdateDescriptorSets(
-		core->getLogicalDevice(),
+		m_core->getLogicalDevice(),
 		m_writes.size(), m_writes.data(),
 		0, nullptr
 	);
@@ -288,7 +298,7 @@ DescriptorWriter &DescriptorWriter::writeBuffer(uint32_t bindingIndex, VkDescrip
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
-	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
+	write.dstSet = VK_NULL_HANDLE; // set on calling writeTo()
 	write.dstArrayElement = arrayIndex;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
@@ -308,7 +318,7 @@ DescriptorWriter &DescriptorWriter::writeImage(uint32_t bindingIndex, VkDescript
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstBinding = bindingIndex;
-	write.dstSet = VK_NULL_HANDLE; // set on updateSet()
+	write.dstSet = VK_NULL_HANDLE; // set on calling writeTo()
 	write.dstArrayElement = arrayIndex;
 	write.descriptorCount = 1;
 	write.descriptorType = type;

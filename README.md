@@ -31,6 +31,7 @@ Feel free to use any of the code in personal / professional / public / private p
 
 ### Stuff to implement
     [ ] Well commented codebase
+    [ ] Integrate spirv-reflect or spirv-cross to automatically generate descriptor set layouts from shaders
     [ ] Assertations to make bugs easier to catch
     [ ] Volumetrics
     [ ] Bone Animation

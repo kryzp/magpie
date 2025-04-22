@@ -105,12 +105,15 @@ namespace mgp
 
 	class DescriptorWriter
 	{
+		constexpr static int MAX_BUFFER_INFOS = 32;
+		constexpr static int MAX_IMAGE_INFOS = 32;
+
 	public:
-		DescriptorWriter() = default;
+		DescriptorWriter(const VulkanCore *core);
 		~DescriptorWriter() = default;
 
 		void clear();
-		void updateSet(const VulkanCore *core, const VkDescriptorSet &set);
+		void writeTo(const VkDescriptorSet &set);
 
 		DescriptorWriter &writeBuffer(uint32_t bindingIndex, VkDescriptorType type, const VkDescriptorBufferInfo &info, uint32_t arrayIndex = 0);
 //		DescriptorWriter &writeBuffer(uint32_t bindingIndex, const GPUBuffer &buffer, bool dynamic, uint32_t arrayIndex = 0);
@@ -122,10 +125,12 @@ namespace mgp
 		DescriptorWriter &writeSampler(uint32_t bindingIndex, const Sampler &sampler, uint32_t arrayIndex = 0);
 
 	private:
+		const VulkanCore *m_core;
+
 		std::vector<VkWriteDescriptorSet> m_writes;
 
-		VkDescriptorBufferInfo m_bufferInfos[128];
-		VkDescriptorImageInfo m_imageInfos[128];
+		VkDescriptorBufferInfo m_bufferInfos[MAX_BUFFER_INFOS];
+		VkDescriptorImageInfo m_imageInfos[MAX_IMAGE_INFOS];
 
 		int m_nBufferInfos;
 		int m_nImageInfos;

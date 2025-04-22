@@ -88,9 +88,9 @@ bindless::Handle BindlessResources::registerBuffer(const GPUBuffer &buffer)
 {
 	bindless::Handle handle = m_bufferHandle_UID++;
 
-	DescriptorWriter()
+	DescriptorWriter(m_core)
 		.writeBuffer(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffer.getDescriptorInfo(), handle)
-		.updateSet(m_core, m_bindlessSet);
+		.writeTo(m_bindlessSet);
 
 	return handle;
 }
@@ -99,9 +99,9 @@ bindless::Handle BindlessResources::registerSampler(const Sampler &sampler)
 {
 	bindless::Handle handle = m_samplerHandle_UID++;
 
-	DescriptorWriter()
+	DescriptorWriter(m_core)
 		.writeSampler(1, sampler, handle)
-		.updateSet(m_core, m_bindlessSet);
+		.writeTo(m_bindlessSet);
 
 	return handle;
 }
@@ -110,9 +110,9 @@ bindless::Handle BindlessResources::registerTexture2D(const ImageView &view)
 {
 	bindless::Handle handle = m_textureHandle_UID++;
 
-	DescriptorWriter()
+	DescriptorWriter(m_core)
 		.writeSampledImage(2, view, handle)
-		.updateSet(m_core, m_bindlessSet);
+		.writeTo(m_bindlessSet);
 
 	return handle;
 }
@@ -121,9 +121,9 @@ bindless::Handle BindlessResources::registerCubemap(const ImageView &cubemap)
 {
 	bindless::Handle handle = m_cubeHandle_UID++;
 
-	DescriptorWriter()
+	DescriptorWriter(m_core)
 		.writeSampledImage(3, cubemap, handle)
-		.updateSet(m_core, m_bindlessSet);
+		.writeTo(m_bindlessSet);
 
 	return handle;
 }

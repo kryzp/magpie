@@ -303,13 +303,13 @@ void App::run()
 
 	m_targetDepth->allocate();
 
-	DescriptorWriter()
+	DescriptorWriter(m_vulkanCore)
 		.writeCombinedImage(0, *m_targetColour->getStandardView(), *m_linearSampler)
-		.updateSet(m_vulkanCore, m_textureUVSet);
+		.writeTo(m_textureUVSet);
 
-	DescriptorWriter()
+	DescriptorWriter(m_vulkanCore)
 		.writeStorageImage(0, *m_targetColour->getStandardView())
-		.updateSet(m_vulkanCore, m_hdrTonemappingSet);
+		.writeTo(m_hdrTonemappingSet);
 
 	double accumulator = 0.0;
 	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
@@ -1007,9 +1007,9 @@ void App::generateEnvironmentProbe()
 
 		Image *environmentHDRImage = m_loadedImageCache.at("environmentHDR");
 
-		DescriptorWriter()
+		DescriptorWriter(m_vulkanCore)
 			.writeCombinedImage(0, *environmentHDRImage->getStandardView(), *m_linearSampler)
-			.updateSet(m_vulkanCore, eqrToCbmSet);
+			.writeTo(eqrToCbmSet);
 
 		GraphicsPipelineDef equirectangularToCubemapPipeline;
 		equirectangularToCubemapPipeline.setShader(eqrToCbmShader);
@@ -1098,9 +1098,9 @@ void App::generateEnvironmentProbe()
 
 		VkDescriptorSet irradianceSet = allocateSet(irradianceGenShader->getDescriptorSetLayouts());
 
-		DescriptorWriter()
+		DescriptorWriter(m_vulkanCore)
 			.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_linearSampler)
-			.updateSet(m_vulkanCore, irradianceSet);
+			.writeTo(irradianceSet);
 
 		GraphicsPipelineDef irradiancePipeline;
 		irradiancePipeline.setShader(irradianceGenShader);
@@ -1170,10 +1170,10 @@ void App::generateEnvironmentProbe()
 
 		VkDescriptorSet prefilterSet = allocateSet(prefilterShader->getDescriptorSetLayouts());
 
-		DescriptorWriter()
+		DescriptorWriter(m_vulkanCore)
 			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
 			.writeCombinedImage(1, *m_environmentMap->getStandardView(), *m_linearSampler)
-			.updateSet(m_vulkanCore, prefilterSet);
+			.writeTo(prefilterSet);
 
 		GraphicsPipelineDef prefilterPipeline;
 		prefilterPipeline.setShader(prefilterShader);
@@ -1297,9 +1297,9 @@ void App::createSkybox()
 
 	m_skyboxSet = allocateSet(m_skyboxShader->getDescriptorSetLayouts());
 
-	DescriptorWriter()
+	DescriptorWriter(m_vulkanCore)
 		.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_linearSampler)
-		.updateSet(m_vulkanCore, m_skyboxSet);
+		.writeTo(m_skyboxSet);
 
 	m_skyboxPipeline.setShader(m_skyboxShader);
 	m_skyboxPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
