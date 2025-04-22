@@ -47,8 +47,8 @@ namespace mgp
 
 		const VmaAllocator &getVMAAllocator() const;
 
-//		Queue &getPresentQueue();
-//		const Queue &getPresentQueue() const;
+		Queue &getPresentQueue();
+		const Queue &getPresentQueue() const;
 
 		Queue &getGraphicsQueue();
 		const Queue &getGraphicsQueue() const;
@@ -77,13 +77,7 @@ namespace mgp
 		void createLogicalDevice();
 		void createPipelineProcessCache();
 		void createVmaAllocator();
-
-		void createQueues();
-		void destroyQueues();
-
-		void populateQueueCreateInfos(std::vector<VkDeviceQueueCreateInfo> &infos, const std::vector<float> &priorities);
-
-		void findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+		void findQueueFamilies();
 
 		VkInstance m_instance;
 		VkDevice m_device;
@@ -92,9 +86,9 @@ namespace mgp
 		VkPhysicalDeviceProperties2 m_physicalDeviceProperties;
 		VkPhysicalDeviceFeatures2 m_physicalDeviceFeatures;
 
-		VkFormat m_depthFormat;
+		const Platform *m_platform;
 
-		BindlessResources m_bindlessResources;
+		VkFormat m_depthFormat;
 
 		VkSampleCountFlagBits m_maxMsaaSamples;
 		
@@ -112,14 +106,13 @@ namespace mgp
 
 		Surface m_surface;
 
-//		Queue m_presentQueue;
+		Queue m_presentQueue;
 		Queue m_graphicsQueue;
 //		std::vector<Queue> m_computeQueues;
 //		std::vector<Queue> m_transferQueues;
 
 		RenderGraph m_renderGraph;
-
-		const Platform *m_platform;
+		BindlessResources m_bindlessResources;
 
 #if MGP_DEBUG
 		VkDebugUtilsMessengerEXT m_debugMessenger;

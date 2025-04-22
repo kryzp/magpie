@@ -256,6 +256,10 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &def
 {
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {};
 	vertexInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
+	vertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
+	vertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
+	vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
 
 	if (definition.getVertexFormat())
 	{
@@ -266,13 +270,6 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &def
 		vertexInputStateCreateInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 		vertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
 		vertexInputStateCreateInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-	}
-	else
-	{
-		vertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
-		vertexInputStateCreateInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputStateCreateInfo.pVertexAttributeDescriptions = nullptr;
 	}
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};

@@ -831,9 +831,12 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 	}
 	instantSubmit.submit();
 
-	m_vulkanCore->deviceWaitIdle();
-
 	m_loadedImageCache.insert({ name, image });
+
+	// wait when staging buffer needs to delete
+	// todo: yes, this is terrible and there really should just
+	//       be a single staging buffer used for the whole program
+	m_vulkanCore->deviceWaitIdle();
 
 	return image;
 }
@@ -858,12 +861,10 @@ ShaderStage *App::loadShaderStage(const std::string &name, const std::string &pa
 	std::streamsize size = file.tellg();
 	file.seekg(0, std::ios::beg);
 
-	std::vector<char> sourceData(size);
-	file.read(sourceData.data(), size);
+	std::vector<char> source(size);
+	file.read(source.data(), size);
 
-	ShaderStage *stage = new ShaderStage(m_vulkanCore);
-	stage->setStage(stageType);
-	stage->loadFromSource(sourceData.data(), sourceData.size());
+	ShaderStage *stage = new ShaderStage(m_vulkanCore, stageType, source.data(), source.size());
 
 	m_shaderStageCache.insert({ name, stage });
 
@@ -1242,7 +1243,7 @@ void App::generateEnvironmentProbe()
 	}
 	instantSubmit.submit();
 
-	vkQueueWaitIdle(m_vulkanCore->getGraphicsQueue().getHandle());
+	m_vulkanCore->deviceWaitIdle();
 
 	delete pfParameterBuffer;
 }

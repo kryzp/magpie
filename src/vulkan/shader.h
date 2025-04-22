@@ -12,6 +12,7 @@ namespace mgp
 	{
 	public:
 		ShaderStage(const VulkanCore *core);
+		ShaderStage(const VulkanCore *core, VkShaderStageFlagBits stage, const char *source, uint32_t size);
 		~ShaderStage();
 
 		void loadFromSource(const char *source, uint64_t size);

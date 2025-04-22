@@ -21,8 +21,8 @@ void InFlightSync::destroy()
 
 void InFlightSync::begin()
 {
-	auto &queue = m_core->getGraphicsQueue();
-	auto &currentFrame = queue.getFrame(m_core->getCurrentFrameIndex());
+	auto &graphicsQueue = m_core->getGraphicsQueue();
+	auto &currentFrame = graphicsQueue.getFrame(m_core->getCurrentFrameIndex());
 
 	m_core->waitForFence(currentFrame.inFlightFence);
 	m_core->resetFence(currentFrame.inFlightFence);
@@ -36,7 +36,8 @@ void InFlightSync::begin()
 
 void InFlightSync::present()
 {
-	auto &queue = m_core->getGraphicsQueue();
+	auto &presentQueue = m_core->getPresentQueue();
+	auto &graphicsQueue = m_core->getGraphicsQueue();
 
 	m_core->getRenderGraph().record(m_cmd, m_swapchain);
 
@@ -44,7 +45,7 @@ void InFlightSync::present()
 
 	m_cmd.end();
 
-	VkFence fence = queue.getFrame(m_core->getCurrentFrameIndex()).inFlightFence;
+	VkFence fence = graphicsQueue.getFrame(m_core->getCurrentFrameIndex()).inFlightFence;
 
 	VkSemaphoreSubmitInfo imageAvailableSemaphore = m_swapchain->getImageAvailableSemaphoreSubmitInfo();
 	VkSemaphoreSubmitInfo renderFinishedSemaphore = m_swapchain->getRenderFinishedSemaphoreSubmitInfo();
@@ -65,7 +66,7 @@ void InFlightSync::present()
 	submitInfo.pWaitSemaphoreInfos = &imageAvailableSemaphore;
 	
 	MGP_VK_CHECK(
-		vkQueueSubmit2KHR(queue.getHandle(), 1, &submitInfo, fence),
+		vkQueueSubmit2KHR(graphicsQueue.getHandle(), 1, &submitInfo, fence),
 		"Failed to submit in-flight draw command to buffer"
 	);
 
@@ -81,7 +82,7 @@ void InFlightSync::present()
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr;
 
-	VkResult result = vkQueuePresentKHR(queue.getHandle(), &presentInfo);
+	VkResult result = vkQueuePresentKHR(presentQueue.getHandle(), &presentInfo);
 
 	// rebuild swapchain if failure
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)

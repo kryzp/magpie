@@ -35,6 +35,8 @@ namespace mgp
 		void create(const VulkanCore *core, unsigned index);
 		void destroy();
 
+		VkDeviceQueueCreateInfo getCreateInfo(const std::vector<float> &priorities);
+
 		void setFamilyIndex(unsigned index);
 
 		const VkQueue &getHandle() const;

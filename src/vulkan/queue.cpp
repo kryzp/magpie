@@ -78,6 +78,17 @@ void Queue::destroy()
 		f.destroy();
 }
 
+VkDeviceQueueCreateInfo Queue::getCreateInfo(const std::vector<float> &priorities)
+{
+	VkDeviceQueueCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	createInfo.queueFamilyIndex = m_familyIndex;
+	createInfo.queueCount = (unsigned)priorities.size();
+	createInfo.pQueuePriorities = priorities.data();
+
+	return createInfo;
+}
+
 void Queue::setFamilyIndex(unsigned index)
 {
 	m_familyIndex = index;

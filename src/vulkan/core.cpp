@@ -141,10 +141,9 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 
 	m_depthFormat = vk_toolbox::findDepthFormat(m_physicalDevice);
 
-	findQueueFamilies(m_physicalDevice, m_surface.getHandle());
+	findQueueFamilies();
 	createLogicalDevice();
 	createPipelineProcessCache();
-	createQueues();
 
 	m_bindlessResources.init(this);
 
@@ -153,6 +152,8 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 
 VulkanCore::~VulkanCore()
 {
+	deviceWaitIdle();
+
 	m_pipelineCache.dispose();
 	m_descriptorLayoutCache.dispose();
 	m_bindlessResources.destroy();
@@ -161,7 +162,14 @@ VulkanCore::~VulkanCore()
 
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 
-	destroyQueues();
+	m_presentQueue.destroy();
+	m_graphicsQueue.destroy();
+
+//	for (auto &q : m_computeQueues)
+//		q.destroy();
+
+//	for (auto &q : m_transferQueues)
+//		q.destroy();
 
 	m_surface.destroy();
 
@@ -211,8 +219,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	uint32_t usability0 = vk_toolbox::assignPhysicalDeviceUsability(surface, m_physicalDevice, properties, features, &hasEssentials);
 
 	// select the device of the highest usability
-	int i = 1;
-	for (; i < deviceCount; i++)
+	int iSelected = 0;
+	for (int i = 1; i < deviceCount; i++)
 	{
 		vkGetPhysicalDeviceProperties2KHR(devices[i], &m_physicalDeviceProperties);
 		vkGetPhysicalDeviceFeatures2KHR(devices[i], &m_physicalDeviceFeatures);
@@ -226,6 +234,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 			m_physicalDevice = devices[i];
 			m_physicalDeviceProperties = properties;
 			m_physicalDeviceFeatures = features;
+
+			iSelected = i;
 		}
 	}
 
@@ -235,7 +245,7 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	if (m_physicalDevice == VK_NULL_HANDLE)
 		MGP_ERROR("Unable to find a suitable GPU!");
 
-	MGP_LOG("Selected a suitable GPU: %d", i);
+	MGP_LOG("Selected a suitable GPU: %d", iSelected);
 }
 
 void VulkanCore::createLogicalDevice()
@@ -243,7 +253,17 @@ void VulkanCore::createLogicalDevice()
 	const std::vector<float> QUEUE_PRIORITIES = { 1.0f };
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	populateQueueCreateInfos(queueCreateInfos, QUEUE_PRIORITIES);
+
+	queueCreateInfos.push_back(m_presentQueue.getCreateInfo(QUEUE_PRIORITIES));
+	queueCreateInfos.push_back(m_graphicsQueue.getCreateInfo(QUEUE_PRIORITIES));
+
+	/*
+	for (auto &q : m_computeQueues)
+		queueCreateInfos.push_back(q.getCreateInfo(QUEUE_PRIORITIES));
+
+	for (auto &q : m_transferQueues)
+		queueCreateInfos.push_back(q.getCreateInfo(QUEUE_PRIORITIES));
+	*/
 
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
 	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
@@ -284,7 +304,6 @@ void VulkanCore::createLogicalDevice()
 	createInfo.pNext = &synchronisation2FeaturesExt;
 
 #if MGP_DEBUG
-	
 	// enable the validation layers on the device
 	if (vk_validation::hasValidationLayers())
 	{
@@ -293,7 +312,6 @@ void VulkanCore::createLogicalDevice()
 	}
 
 	MGP_LOG("Enabled validation layers!");
-
 #endif
 
 	// create it
@@ -302,6 +320,17 @@ void VulkanCore::createLogicalDevice()
 		"Failed to create logical device"
 	);
 
+	// create queues
+	m_presentQueue.create(this, 0);
+	m_graphicsQueue.create(this, 0);
+
+//	for (int i = 0; i < m_computeQueues.size(); i++)
+//		m_computeQueues[i].create(this, i);
+
+//	for (int i = 0; i < m_transferQueues.size(); i++)
+//		m_transferQueues[i].create(this, i);
+
+	// init volk
 	volkLoadDevice(m_device);
 
 	// init memory allocator
@@ -364,106 +393,39 @@ void VulkanCore::createVmaAllocator()
 	MGP_LOG("Created memory allocator!");
 }
 
-void VulkanCore::createQueues()
-{
-//	m_presentQueue.create(this, 0);
-	m_graphicsQueue.create(this, 0);
-
-//	for (int i = 0; i < m_computeQueues.size(); i++)
-//		m_computeQueues[i].create(this, i);
-
-//	for (int i = 0; i < m_transferQueues.size(); i++)
-//		m_transferQueues[i].create(this, i);
-}
-
-void VulkanCore::destroyQueues()
-{
-//	m_presentQueue.destroy();
-	m_graphicsQueue.destroy();
-
-//	for (auto &q : m_computeQueues)
-//		q.destroy();
-
-//	for (auto &q : m_transferQueues)
-//		q.destroy();
-}
-
-void VulkanCore::populateQueueCreateInfos(std::vector<VkDeviceQueueCreateInfo> &infos, const std::vector<float> &priorities)
-{
-	/*
-	infos.push_back((VkDeviceQueueCreateInfo) {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = m_presentQueue.getFamilyIndex(),
-			.queueCount = (unsigned)priorities.size(),
-			.pQueuePriorities = priorities.data()
-	});
-	*/
-
-	infos.push_back((VkDeviceQueueCreateInfo) {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.queueFamilyIndex = m_graphicsQueue.getFamilyIndex(),
-		.queueCount = (unsigned)priorities.size(),
-		.pQueuePriorities = priorities.data()
-	});
-
-	/*
-	for (auto &q : m_computeQueues)
-	{
-		infos.push_back((VkDeviceQueueCreateInfo) {
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = q.getFamilyIndex(),
-			.queueCount = (unsigned)priorities.size(),
-			.pQueuePriorities = priorities.data()
-		});
-	}
-
-	for (auto &q : m_transferQueues)
-	{
-		infos.push_back((VkDeviceQueueCreateInfo) {
-			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = q.getFamilyIndex(),
-			.queueCount = (unsigned)priorities.size(),
-			.pQueuePriorities = priorities.data()
-		});
-	}
-	*/
-}
-
-// todo: move into vk_toolbox
-void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+void VulkanCore::findQueueFamilies()
 {
 	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, nullptr);
 
 	if (!queueFamilyCount)
 		MGP_ERROR("Failed to find any queue families!");
 
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-	struct QueuesFound
-	{
-//		int present;
-		int graphics;
-//		int compute;
-//		int transfer;
-	};
-
-	QueuesFound numQueuesFound = {};
+	int nPresentQueues = 0;
+	int nGraphicsQueues = 0;
+//	int nComputeQueues = 0;
+//	int nTransferQueues = 0;
 
 	for (int i = 0; i < queueFamilyCount; i++)
 	{
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && numQueuesFound.graphics == 0)
+		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
 		{
 			VkBool32 presentSupport = VK_FALSE;
-			vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+			vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_surface.getHandle(), &presentSupport);
 
-			if (presentSupport)
+			if (presentSupport && nPresentQueues == 0)
+			{
+				m_presentQueue.setFamilyIndex(i);
+				nPresentQueues++;
+				continue;
+			}
+			else if (nGraphicsQueues == 0)
 			{
 				m_graphicsQueue.setFamilyIndex(i);
-
-				numQueuesFound.graphics++;
-
+				nGraphicsQueues++;
 				continue;
 			}
 		}
@@ -473,9 +435,7 @@ void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 		{
 			m_computeQueues.emplace_back();
 			m_computeQueues.back().setFamilyIndex(i);
-
 			numQueuesFound.compute++;
-
 			continue;
 		}
 
@@ -483,9 +443,7 @@ void VulkanCore::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR
 		{
 			m_transferQueues.emplace_back();
 			m_transferQueues.back().setFamilyIndex(i);
-
 			numQueuesFound.transfer++;
-
 			continue;
 		}
 		*/
@@ -567,7 +525,6 @@ const VmaAllocator &VulkanCore::getVMAAllocator() const
 	return m_vmaAllocator;
 }
 
-/*
 Queue &VulkanCore::getPresentQueue()
 {
 	return m_presentQueue;
@@ -577,7 +534,6 @@ const Queue &VulkanCore::getPresentQueue() const
 {
 	return m_presentQueue;
 }
-*/
 
 Queue &VulkanCore::getGraphicsQueue()
 {
@@ -625,8 +581,8 @@ void VulkanCore::nextFrame()
 {
 	m_currentFrameIndex = (m_currentFrameIndex + 1) % Queue::FRAMES_IN_FLIGHT;
 
-//	vkQueueWaitIdle(m_presentQueue.getHandle());
-//	m_presentQueue.getFrame(m_currentFrameIndex).pool.reset();
+	vkQueueWaitIdle(m_presentQueue.getHandle());
+	m_presentQueue.getFrame(m_currentFrameIndex).pool.reset();
 
 	vkQueueWaitIdle(m_graphicsQueue.getHandle());
 	m_graphicsQueue.getFrame(m_currentFrameIndex).pool.reset();

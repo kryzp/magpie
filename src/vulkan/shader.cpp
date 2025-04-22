@@ -13,6 +13,14 @@ ShaderStage::ShaderStage(const VulkanCore *core)
 {
 }
 
+ShaderStage::ShaderStage(const VulkanCore *core, VkShaderStageFlagBits stage, const char *source, uint32_t size)
+	: m_stage(stage)
+	, m_module(VK_NULL_HANDLE)
+	, m_core(core)
+{
+	loadFromSource(source, size);
+}
+
 ShaderStage::~ShaderStage()
 {
 	vkDestroyShaderModule(m_core->getLogicalDevice(), m_module, nullptr);

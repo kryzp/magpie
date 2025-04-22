@@ -149,8 +149,12 @@ void Mesh::build(
 	}
 	instantSubmit.submit();
 
+	// wait when staging buffer needs to delete
+	// todo: yes, this is terrible and there really should just
+	//       be a single staging buffer used for the whole program
 	m_core->deviceWaitIdle();
 }
+
 void Mesh::bind(CommandBuffer &cmd) const
 {
 	cauto &bindings = m_vertexFormat->getBindingDescriptions();

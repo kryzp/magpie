@@ -277,12 +277,6 @@ void CommandBuffer::transitionLayout(Image &image, VkImageLayout newLayout)
 {
 	VkImageMemoryBarrier2 barrier = image.getBarrier(newLayout);
 
-	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;//vkutil::getTransferAccessFlags(m_imageLayout);
-	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;//vkutil::getTransferAccessFlags(newLayout);
-
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;//vk_toolbox::getTransferPipelineStageFlags(image.getLayout());
-	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;//vk_toolbox::getTransferPipelineStageFlags(newLayout);
-
 	pipelineBarrier(
 		0,
 		{}, {}, { barrier }
