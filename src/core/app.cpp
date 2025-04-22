@@ -92,6 +92,7 @@ App::App(const Config &config)
 	, m_camera((float)config.width / (float)config.height, 75.0f, 0.01f, 100.0f)
 	, m_targetColour(nullptr)
 	, m_targetDepth(nullptr)
+	, m_shadowAtlas()
 {
 	m_platform = new Platform(config);
 	m_vulkanCore = new VulkanCore(config, m_platform);
@@ -127,20 +128,22 @@ App::App(const Config &config)
 	loadTechniques();
 
 	m_descriptorPool.init(m_vulkanCore, 64 * Queue::FRAMES_IN_FLIGHT, {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					0.5f },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	4.0f },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			4.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			1.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		1.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		1.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			2.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			2.0f },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	1.0f },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	1.0f },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			0.5f }
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) }
 	});
 
 	createSkyboxMesh();
+
+	m_shadowAtlas.init(m_vulkanCore);
 
 	ShadowPass::init(m_vulkanCore, this);
 	DeferredPass::init(m_vulkanCore, this);
@@ -229,6 +232,8 @@ App::~App()
 
 	delete m_environmentProbe.irradiance;
 	delete m_environmentProbe.prefilter;
+
+	m_shadowAtlas.destroy();
 
 	ShadowPass::destroy();
 	DeferredPass::destroy();
@@ -405,18 +410,18 @@ void App::render(Swapchain *swapchain)
 	swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
 	// render shadows
-	ShadowPass::renderShadows(m_scene);
+	ShadowPass::renderShadows(m_scene, m_shadowAtlas);
 
 	// render g-buffer
+	// ...
 
 	// forward render
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setColourAttachments({ targetColourAttachment })
-		.setDepthStencilAttachment(targetDepthAttachment)
-		.setInputViews({ ShadowPass::getShadowMapManager().getAtlas()->getStandardView() })
+		.setOutputAttachments({ targetColourAttachment, targetDepthAttachment })
+		.setInputAttachments({ m_shadowAtlas.getAtlasAttachment()})
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
-			DeferredPass::render(cmd, info, m_camera, m_scene, ShadowPass::getShadowMapManager().getAtlas()->getStandardView());
+			DeferredPass::render(cmd, info, m_camera, m_scene, m_shadowAtlas.getAtlasAttachment().view);
 
 			// skybox
 			{
@@ -460,7 +465,7 @@ void App::render(Swapchain *swapchain)
 
 	// compute HDR pass
 	m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
-		.setInputStorageViews({ targetColourAttachment.view })
+		.setStorageAttachments({ targetColourAttachment })
 		.setBuildFn([&](CommandBuffer &cmd) -> void
 		{
 			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
@@ -504,9 +509,8 @@ void App::render(Swapchain *swapchain)
 	swapchainColourAttachment.resolve = swapchain->getCurrentSwapchainImageView();
 
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setColourAttachments({ swapchainDirectAttachment })
-		.setDepthStencilAttachment(targetDepthAttachment)
-		.setInputViews({ targetColourAttachment.view })
+		.setOutputAttachments({ swapchainDirectAttachment, targetDepthAttachment })
+		.setInputAttachments({ targetColourAttachment })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
@@ -529,7 +533,7 @@ void App::render(Swapchain *swapchain)
 
 	// editor ui pass
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setColourAttachments({ swapchainDirectAttachment })
+		.setOutputAttachments({ swapchainDirectAttachment })
 		.setBuildFn(editor_ui::render));
 }
 

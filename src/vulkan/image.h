@@ -45,6 +45,8 @@ namespace mgp
 			bool storage
 		);
 
+//		static Image wrapperOf(VkImage image); todo something like this, then remove allocate();
+
 		~Image();
 
 		void init(

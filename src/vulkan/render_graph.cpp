@@ -26,7 +26,34 @@ void RenderGraph::record(CommandBuffer &cmd, Swapchain *swapchain)
 		return;
 	}
 
-	for (cauto &p : m_passes)
+//	std::vector<PassHandle> passStack = flattenGraphRecursive(m_passes[m_passes.size() - 1]);
+
+//	std::reverse(passStack.begin(), passStack.end());
+
+//	std::vector<PassHandle> leanPassStack;
+
+	/*
+	for (auto &p1 : passStack)
+	{
+		bool seen = false;
+
+		for (auto &p2 : leanPassStack)
+		{
+			if (p1 == p2)
+			{
+				seen = true;
+				break;
+			}
+		}
+
+		if (!seen)
+		{
+			leanPassStack.push_back(p1);
+		}
+	}
+	*/
+
+	for (cauto &p : m_passes /*leanPassStack*/)
 	{
 		// very scuffed right now just to get the ball rolling i guess
 		// JIT transitions
@@ -36,12 +63,16 @@ void RenderGraph::record(CommandBuffer &cmd, Swapchain *swapchain)
 		switch (p.type)
 		{
 			case PassHandle::PASS_TYPE_RENDER:
-				handleRenderPass(cmd, swapchain, m_renderPasses[p.index]);
+			{
+				handleRenderPass(cmd, swapchain, p);
 				break;
+			}
 
 			case PassHandle::PASS_TYPE_COMPUTE:
-				handleComputeTask(cmd, swapchain, m_computeTasks[p.index]);
+			{
+				handleComputeTask(cmd, swapchain, p);
 				break;
+			}
 		}
 	}
 
@@ -56,25 +87,97 @@ bool RenderGraph::validate() const
 	return true;
 }
 
-void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const RenderPassDefinition &pass)
+/*
+std::vector<RenderGraph::PassHandle> RenderGraph::flattenGraphRecursive(const PassHandle &handle)
 {
-	for (cauto &cout : pass.m_colourAttachments)
+	std::vector<PassHandle> flattened = { handle };
+	std::vector<PassHandle> dependencies;
+
+	switch (handle.type)
 	{
-		cmd.transitionLayout(
-			*cout.view->getImage(),
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		);
+		case PassHandle::PASS_TYPE_RENDER:
+		{
+			RenderPassDefinition *renderPass = &m_renderPasses[handle.index];
+
+			for (auto &input : renderPass->m_inputAttachments)
+				dependencies.push_back(input.parent);
+
+			break;
+		}
+
+		case PassHandle::PASS_TYPE_COMPUTE:
+		{
+			ComputeTaskDefinition *computeTask = &m_computeTasks[handle.index];
+
+			for (auto &input : computeTask->m_storageAttachments)
+				dependencies.push_back(input.parent);
+
+			break;
+		}
 	}
 
-	if (pass.m_depthStencilAttachment.view)
+	for (auto &dependency : dependencies)
 	{
-		cmd.transitionLayout(
-			*pass.m_depthStencilAttachment.view->getImage(),
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		);
+		std::vector<PassHandle> subgraph = flattenGraphRecursive(dependency);
+		flattened.insert(flattened.end(), subgraph.begin(), subgraph.end());
 	}
 
-	for (cauto &view : pass.m_inputViews)
+	return flattened;
+}
+*/
+
+void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle)
+{
+	const RenderPassDefinition &pass = m_renderPasses[handle.index];
+
+	RenderInfo info(m_core);
+
+	int nColourAttachments = 0;
+
+	for (auto &attachment : pass.m_outputAttachments)
+	{
+		Image *image = attachment.view->getImage();
+
+		// currently we assume all attachments have the same size and MSAA sample count
+		// however, in the future, we could try to automatically resize all attachments
+		// depending on either a given size or to be consistent with the size of the
+		// first attachment in the list or something i dont really know right now
+		info.setSize(image->getWidth(), image->getHeight());
+		info.setMSAA(image->getSamples());
+
+		if (image->isDepth())
+		{
+			info.addDepthAttachment(
+				attachment.loadOp,
+				*attachment.view,
+				attachment.resolve
+			);
+
+			info.setClearDepth(attachment.clear);
+
+			cmd.transitionLayout(
+				*attachment.view->getImage(),
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			);
+		}
+		else
+		{
+			info.addColourAttachment(
+				attachment.loadOp,
+				*attachment.view,
+				attachment.resolve
+			);
+
+			info.setClearColour(nColourAttachments++, attachment.clear);
+
+			cmd.transitionLayout(
+				*attachment.view->getImage(),
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			);
+		}
+	}
+
+	for (cauto &view : pass.m_views)
 	{
 		if (view->getImage()->isDepth())
 		{
@@ -92,35 +195,22 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 		}
 	}
 
-	RenderInfo info(m_core);
-
-	for (int i = 0; i < pass.m_colourAttachments.size(); i++)
+	for (cauto &attachment : pass.m_inputAttachments)
 	{
-		cauto &attachment = pass.m_colourAttachments[i];
-
-		info.setSize(attachment.view->getImage()->getWidth(), attachment.view->getImage()->getHeight());
-		info.setMSAA(attachment.view->getImage()->getSamples());
-
-		info.addColourAttachment(
-			attachment.loadOp,
-			*attachment.view,
-			attachment.resolve
-		);
-
-		info.setClearColour(i, attachment.clear);
-	}
-
-	if (pass.m_depthStencilAttachment.view)
-	{
-		info.setSize(pass.m_depthStencilAttachment.view->getImage()->getWidth(), pass.m_depthStencilAttachment.view->getImage()->getHeight());
-
-		info.addDepthAttachment(
-			pass.m_depthStencilAttachment.loadOp,
-			*pass.m_depthStencilAttachment.view,
-			pass.m_depthStencilAttachment.resolve
-		);
-
-		info.setClearDepth(pass.m_depthStencilAttachment.clear);
+		if (attachment.view->getImage()->isDepth())
+		{
+			cmd.transitionLayout(
+				*attachment.view->getImage(),
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+			);
+		}
+		else
+		{
+			cmd.transitionLayout(
+				*attachment.view->getImage(),
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			);
+		}
 	}
 
 	cmd.beginRendering(info);
@@ -128,9 +218,19 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 	cmd.endRendering();
 }
 
-void RenderGraph::handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const ComputeTaskDefinition &task)
+void RenderGraph::handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle)
 {
-	for (cauto &view : task.m_inputStorageViews)
+	const ComputeTaskDefinition &task = m_computeTasks[handle.index];
+
+	for (cauto &attachment : task.m_storageAttachments)
+	{
+		cmd.transitionLayout(
+			*attachment.view->getImage(),
+			VK_IMAGE_LAYOUT_GENERAL
+		);
+	}
+
+	for (cauto &view : task.m_storageViews)
 	{
 		cmd.transitionLayout(
 			*view->getImage(),

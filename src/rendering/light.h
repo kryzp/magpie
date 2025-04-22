@@ -45,8 +45,8 @@ namespace mgp
 		bool isShadowCaster() const;
 		void toggleShadows(bool enabled);
 
-		const ShadowMapManager::AtlasRegion &getShadowAtlasRegion() const;
-		void setShadowAtlasRegion(const ShadowMapManager::AtlasRegion &region);
+		const ShadowMapAtlas::AtlasRegion &getShadowAtlasRegion() const;
+		void setShadowAtlasRegion(const ShadowMapAtlas::AtlasRegion &region);
 
 		float getFalloff() const;
 		void setFalloff(float falloff);
@@ -66,7 +66,7 @@ namespace mgp
 		Colour m_colour;
 
 		bool m_shadowsEnabled;
-		ShadowMapManager::AtlasRegion m_shadowAtlasRegion;
+		ShadowMapAtlas::AtlasRegion m_shadowAtlasRegion;
 
 		float m_intensity;
 		float m_falloff;

@@ -15,6 +15,8 @@
 
 #include "third_party/volk.h"
 
+#include "math/calc.h"
+
 #include "image_view.h"
 
 namespace mgp
@@ -28,13 +30,28 @@ namespace mgp
 
 	class RenderGraph
 	{
-	public:
-		enum class SizeClass
+		struct PassHandle
 		{
-			SWAPCHAIN_RELATIVE,
-			ABSOLUTE
+			enum Type
+			{
+				PASS_TYPE_RENDER,
+				PASS_TYPE_COMPUTE
+			};
+
+			Type type;
+			int index;
+
+			PassHandle()
+				: type(PASS_TYPE_RENDER)
+				, index(-1)
+			{
+			}
+
+			bool operator == (const PassHandle &other) { return this->type == other.type && this->index == other.index; }
+			bool operator != (const PassHandle &other) { return this->type != other.type || this->index != other.index; }
 		};
 
+	public:
 		struct AttachmentInfo
 		{
 			ImageView *view = nullptr;
@@ -44,13 +61,34 @@ namespace mgp
 			VkClearValue clear = {};
 		};
 
+		// once buffer info also added
+		// can move GPUBuffer's like the lights
+		// buffer into the App, and then static pass
+		// classes like ShadowPass and DeferredPass
+		// don't need to maintain any variables
+
+		/* todo
 		struct BufferInfo
 		{
 			VkDeviceSize size = 0;
 			VkBufferUsageFlags usage = 0;
 			bool persistent = true;
 		};
+		*/
 
+		struct Resource
+		{
+			enum Type
+			{
+				TYPE_IMAGE,
+				TYPE_BUFFER
+			};
+
+			ImageView *view;
+			GPUBuffer *buffer;
+
+			std::vector<PassHandle> writes; // passes that write to me
+		};
 
 		class RenderPassDefinition
 		{
@@ -60,21 +98,21 @@ namespace mgp
 			RenderPassDefinition() = default;
 			~RenderPassDefinition() = default;
 
-			RenderPassDefinition &setColourAttachments(const std::vector<AttachmentInfo> &attachments)
+			RenderPassDefinition &setOutputAttachments(const std::vector<AttachmentInfo> &attachments)
 			{
-				m_colourAttachments = attachments;
+				m_outputAttachments = attachments;
 				return *this;
 			}
 
-			RenderPassDefinition &setDepthStencilAttachment(const AttachmentInfo &attachment)
+			RenderPassDefinition &setInputAttachments(const std::vector<AttachmentInfo> &attachments)
 			{
-				m_depthStencilAttachment = attachment;
+				m_inputAttachments = attachments;
 				return *this;
 			}
 
-			RenderPassDefinition &setInputViews(const std::vector<ImageView *> &views)
+			RenderPassDefinition &setViews(const std::vector<ImageView *> &views)
 			{
-				m_inputViews = views;
+				m_views = views;
 				return *this;
 			}
 
@@ -85,10 +123,10 @@ namespace mgp
 			}
 
 		private:
-			std::vector<AttachmentInfo> m_colourAttachments;
-			AttachmentInfo m_depthStencilAttachment;
+			std::vector<AttachmentInfo> m_outputAttachments;
+			std::vector<AttachmentInfo> m_inputAttachments;
 
-			std::vector<ImageView *> m_inputViews;
+			std::vector<ImageView *> m_views;
 
 			std::function<void(CommandBuffer &, const RenderInfo &)> m_buildFunc = nullptr;
 		};
@@ -100,10 +138,16 @@ namespace mgp
 		public:
 			ComputeTaskDefinition() = default;
 			~ComputeTaskDefinition() = default;
-
-			ComputeTaskDefinition &setInputStorageViews(const std::vector<ImageView *> &views)
+			
+			ComputeTaskDefinition &setStorageAttachments(const std::vector<AttachmentInfo> &attachments)
 			{
-				m_inputStorageViews = views;
+				m_storageAttachments = attachments;
+				return *this;
+			}
+
+			ComputeTaskDefinition &setStorageViews(const std::vector<ImageView *> &views)
+			{
+				m_storageViews = views;
 				return *this;
 			}
 
@@ -114,7 +158,8 @@ namespace mgp
 			}
 
 		private:
-			std::vector<ImageView *> m_inputStorageViews;
+			std::vector<AttachmentInfo> m_storageAttachments;
+			std::vector<ImageView *> m_storageViews;
 
 			std::function<void(CommandBuffer &)> m_buildFunc = nullptr;
 		};
@@ -130,20 +175,10 @@ namespace mgp
 	private:
 		bool validate() const;
 
-		struct PassHandle
-		{
-			enum Type
-			{
-				PASS_TYPE_RENDER,
-				PASS_TYPE_COMPUTE
-			};
+//		std::vector<PassHandle> flattenGraphRecursive(const PassHandle &handle);
 
-			Type type;
-			int index;
-		};
-
-		void handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const RenderPassDefinition &pass);
-		void handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const ComputeTaskDefinition &task);
+		void handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle);
+		void handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle);
 
 		const VulkanCore *m_core;
 

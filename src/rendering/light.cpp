@@ -47,12 +47,12 @@ void Light::toggleShadows(bool enabled)
 	m_shadowsEnabled = enabled;
 }
 
-const ShadowMapManager::AtlasRegion &Light::getShadowAtlasRegion() const
+const ShadowMapAtlas::AtlasRegion &Light::getShadowAtlasRegion() const
 {
 	return m_shadowAtlasRegion;
 }
 
-void Light::setShadowAtlasRegion(const ShadowMapManager::AtlasRegion &region)
+void Light::setShadowAtlasRegion(const ShadowMapAtlas::AtlasRegion &region)
 {
 	m_shadowAtlasRegion = region;
 }

@@ -13,10 +13,10 @@ namespace mgp
 	class Sampler;
 	class GPUBuffer;
 
-	struct DescriptorPoolSizeRatio
+	struct DescriptorPoolSize
 	{
 		VkDescriptorType type;
-		float max;
+		uint32_t max;
 	};
 
 	class DescriptorPoolStatic
@@ -25,7 +25,7 @@ namespace mgp
 		DescriptorPoolStatic() = default;
 		~DescriptorPoolStatic() = default;
 
-		void init(const VulkanCore *core, uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const std::vector<DescriptorPoolSizeRatio> &sizes);
+		void init(const VulkanCore *core, uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const std::vector<DescriptorPoolSize> &sizes);
 
 		void cleanUp();
 
@@ -50,7 +50,7 @@ namespace mgp
 		DescriptorPoolDynamic() = default;
 		~DescriptorPoolDynamic() = default;
 
-		void init(const VulkanCore *core, uint32_t initialSets, const std::vector<DescriptorPoolSizeRatio> &sizes);
+		void init(const VulkanCore *core, uint32_t initialSets, const std::vector<DescriptorPoolSize> &sizes);
 
 		void cleanUp();
 
@@ -60,14 +60,14 @@ namespace mgp
 
 	private:
 		VkDescriptorPool fetchPool();
-		VkDescriptorPool createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSizeRatio> &sizes);
+		VkDescriptorPool createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSize> &sizes);
 
 		std::vector<VkDescriptorPool> m_usedPools;
 		std::vector<VkDescriptorPool> m_freePools;
 
 		uint32_t m_setsPerPool;
 
-		std::vector<DescriptorPoolSizeRatio> m_sizes;
+		std::vector<DescriptorPoolSize> m_sizes;
 
 		const VulkanCore *m_core;
 	};

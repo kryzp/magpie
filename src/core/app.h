@@ -125,6 +125,8 @@ namespace mgp
 		Image *m_targetColour;
 		Image *m_targetDepth;
 
+		ShadowMapAtlas m_shadowAtlas;
+
 		void loadTextures();
 		void loadShaders();
 		void loadTechniques();

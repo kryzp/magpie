@@ -11,7 +11,7 @@
 
 using namespace mgp;
 
-void DescriptorPoolStatic::init(const VulkanCore *core, uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const std::vector<DescriptorPoolSizeRatio> &sizes)
+void DescriptorPoolStatic::init(const VulkanCore *core, uint32_t maxSets, VkDescriptorPoolCreateFlags flags, const std::vector<DescriptorPoolSize> &sizes)
 {
 	m_core = core;
 
@@ -20,7 +20,7 @@ void DescriptorPoolStatic::init(const VulkanCore *core, uint32_t maxSets, VkDesc
 	for (int i = 0; i < sizes.size(); i++)
 	{
 		poolSizes[i].type = sizes[i].type;
-		poolSizes[i].descriptorCount = (uint32_t)(sizes[i].max * maxSets);
+		poolSizes[i].descriptorCount = sizes[i].max;
 	}
 
 	VkDescriptorPoolCreateInfo poolCreateInfo = {};
@@ -72,7 +72,7 @@ VkDescriptorPool DescriptorPoolStatic::getPool() const
 }
 
 // ack: mostly just vkguide, thank you!
-void DescriptorPoolDynamic::init(const VulkanCore *core, uint32_t initialSets, const std::vector<DescriptorPoolSizeRatio> &sizes)
+void DescriptorPoolDynamic::init(const VulkanCore *core, uint32_t initialSets, const std::vector<DescriptorPoolSize> &sizes)
 {
 	m_sizes = sizes;
 	m_core = core;
@@ -166,14 +166,14 @@ VkDescriptorPool DescriptorPoolDynamic::fetchPool()
 	return newPool;
 }
 
-VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSizeRatio> &sizes)
+VkDescriptorPool DescriptorPoolDynamic::createNewPool(uint32_t maxSets, const std::vector<DescriptorPoolSize> &sizes)
 {
 	std::vector<VkDescriptorPoolSize> poolSizes(sizes.size());
 
 	for (int i = 0; i < sizes.size(); i++)
 	{
 		poolSizes[i].type = sizes[i].type;
-		poolSizes[i].descriptorCount = (uint32_t)(sizes[i].max * maxSets);
+		poolSizes[i].descriptorCount = sizes[i].max;
 	}
 
 	VkDescriptorPoolCreateInfo pool_info = {};

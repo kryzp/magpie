@@ -33,26 +33,28 @@ void BindlessResources::init(VulkanCore *core)
 
 	cauto &limits = core->getPhysicalDeviceProperties().properties.limits;
 
-	std::vector<DescriptorPoolSizeRatio> resources = {
+	const uint32_t HARD_CAP_ON_SIZE = 65536;
+
+	std::vector<DescriptorPoolSize> resources = {
 		// buffers
 		{
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			(float)limits.maxDescriptorSetStorageBuffers
+			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetStorageBuffers)
 		},
 		// samplers
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLER,
-			(float)limits.maxDescriptorSetSamplers
+			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSamplers)
 		},
 		// 2d textures
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			(float)limits.maxDescriptorSetSampledImages
+			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSampledImages)
 		},
 		// cubemaps
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			(float)limits.maxDescriptorSetSampledImages
+			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSampledImages)
 		}
 	};
 

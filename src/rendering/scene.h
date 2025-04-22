@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <functional>
+#include <array>
 
 #include <glm/glm.hpp>
 

@@ -15,7 +15,7 @@
 
 using namespace mgp;
 
-void ShadowMapManager::init(VulkanCore *core)
+void ShadowMapAtlas::init(VulkanCore *core)
 {
 	m_atlas = new Image(
 		core,
@@ -32,12 +32,12 @@ void ShadowMapManager::init(VulkanCore *core)
 	m_atlas->allocate();
 }
 
-void ShadowMapManager::destroy()
+void ShadowMapAtlas::destroy()
 {
 	delete m_atlas;
 }
 
-bool ShadowMapManager::allocate(ShadowMapManager::AtlasRegion* region, unsigned quality)
+bool ShadowMapAtlas::allocate(ShadowMapAtlas::AtlasRegion* region, unsigned quality)
 {
 	unsigned width = m_atlas->getWidth() >> quality;
 	unsigned height = m_atlas->getHeight() >> quality;
@@ -76,7 +76,7 @@ bool ShadowMapManager::allocate(ShadowMapManager::AtlasRegion* region, unsigned 
 	return false;
 }
 
-bool ShadowMapManager::adaptiveAlloc(AtlasRegion *region, unsigned idealQuality, int worstQuality)
+bool ShadowMapAtlas::adaptiveAlloc(AtlasRegion *region, unsigned idealQuality, int worstQuality)
 {
 	if (idealQuality >= worstQuality)
 		return false;
@@ -87,22 +87,29 @@ bool ShadowMapManager::adaptiveAlloc(AtlasRegion *region, unsigned idealQuality,
 	return true;
 }
 
-void ShadowMapManager::clear()
+RenderGraph::AttachmentInfo ShadowMapAtlas::getAtlasAttachment() const
+{
+	RenderGraph::AttachmentInfo attachment;
+	attachment.view = m_atlas->getStandardView();
+	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment.clear = { .depthStencil = { 1.0f, 0 } };
+
+	return attachment;
+}
+
+void ShadowMapAtlas::clear()
 {
 	m_regions.clear();
 }
 
 VulkanCore *ShadowPass::m_core = nullptr;
 App *ShadowPass::m_app = nullptr;
-ShadowMapManager ShadowPass::m_shadowMaps;
 GPUBuffer *ShadowPass::m_lightsBuffer = nullptr;
 
 void ShadowPass::init(VulkanCore *core, App *app)
 {
 	m_core = core;
 	m_app = app;
-
-	m_shadowMaps.init(core);
 
 	m_lightsBuffer = new GPUBuffer(
 		m_core,
@@ -115,29 +122,22 @@ void ShadowPass::init(VulkanCore *core, App *app)
 void ShadowPass::destroy()
 {
 	delete m_lightsBuffer;
-
-	m_shadowMaps.destroy();
 }
 
-void ShadowPass::renderShadows(Scene& scene)
+void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas)
 {
 	GraphicsPipelineDefinition shadowMapPipeline;
 	shadowMapPipeline.setShader(m_app->getShader("shadow_map"));
 	shadowMapPipeline.setVertexFormat(&vtx::MODEL_VERTEX_FORMAT);
 
-	RenderGraph::AttachmentInfo atlasAttachment;
-	atlasAttachment.view = m_shadowMaps.getAtlas()->getStandardView();
-	atlasAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	atlasAttachment.clear = { .depthStencil = { 1.0f, 0 } };
-
 	// this is bad but im doing it to get stuff running
 	// ideally shadow maps would be drawn once and only updated when they
 	// actually have to change
 	// also they shouldn't allocate a new space every time
-	m_shadowMaps.clear();
+	atlas.clear();
 
 	m_core->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setDepthStencilAttachment(atlasAttachment)
+		.setOutputAttachments({ atlas.getAtlasAttachment() })
 		.setBuildFn([&, shadowMapPipeline](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_core->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
@@ -158,9 +158,9 @@ void ShadowPass::renderShadows(Scene& scene)
 
 				if (light.isShadowCaster())
 				{
-					ShadowMapManager::AtlasRegion region;
+					ShadowMapAtlas::AtlasRegion region;
 
-					if (m_shadowMaps.adaptiveAlloc(&region, 3, 6))
+					if (atlas.adaptiveAlloc(&region, 3, 6))
 					{
 						light.setShadowAtlasRegion(region);
 
@@ -196,10 +196,10 @@ void ShadowPass::renderShadows(Scene& scene)
 							return true; // continue
 						});
 
-						float regionX = (float)region.area.x / (float)ShadowMapManager::ATLAS_SIZE;
-						float regionY = (float)region.area.y / (float)ShadowMapManager::ATLAS_SIZE;
-						float regionW = (float)region.area.w / (float)ShadowMapManager::ATLAS_SIZE;
-						float regionH = (float)region.area.h / (float)ShadowMapManager::ATLAS_SIZE;
+						float regionX = (float)region.area.x / (float)ShadowMapAtlas::ATLAS_SIZE;
+						float regionY = (float)region.area.y / (float)ShadowMapAtlas::ATLAS_SIZE;
+						float regionW = (float)region.area.w / (float)ShadowMapAtlas::ATLAS_SIZE;
+						float regionH = (float)region.area.h / (float)ShadowMapAtlas::ATLAS_SIZE;
 
 						gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
 
@@ -218,9 +218,4 @@ void ShadowPass::renderShadows(Scene& scene)
 				);
 			}
 		}));
-}
-
-ShadowMapManager &ShadowPass::getShadowMapManager()
-{
-	return m_shadowMaps;
 }

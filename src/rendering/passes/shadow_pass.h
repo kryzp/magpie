@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "vulkan/render_graph.h"
+
 #include "math/rect.h"
 
 namespace mgp
@@ -14,7 +16,7 @@ namespace mgp
 	class App;
 	class GPUBuffer;
 
-	class ShadowMapManager
+	class ShadowMapAtlas
 	{
 	public:
 		constexpr static int ATLAS_SIZE = 4096;
@@ -31,7 +33,7 @@ namespace mgp
 		// 1 - okay (ATLAS_SIZE / 4)
 		// ...
 		// returns TRUE on successful alloc, FALSE if no space.
-		bool allocate(ShadowMapManager::AtlasRegion* region, unsigned quality);
+		bool allocate(AtlasRegion* region, unsigned quality);
 
 		// tries to allocate a light of a given quality, and if it cant
 		// it recursively tries to allocate of a worse quality until it can
@@ -40,8 +42,7 @@ namespace mgp
 
 		void clear();
 
-		Image *getAtlas() { return m_atlas; }
-		const Image *getAtlas() const { return m_atlas; }
+		RenderGraph::AttachmentInfo getAtlasAttachment() const;
 
 	private:
 		Image *m_atlas;
@@ -56,17 +57,13 @@ namespace mgp
 		static void init(VulkanCore *core, App *app);
 		static void destroy();
 
-		static void renderShadows(Scene& scene);
-
-		static ShadowMapManager &getShadowMapManager();
+		static void renderShadows(Scene& scene, ShadowMapAtlas &atlas);
 
 		static GPUBuffer *getLightBuffer() { return m_lightsBuffer; }
 
 	private:
 		static VulkanCore *m_core;
 		static App *m_app;
-
-		static ShadowMapManager m_shadowMaps;
 
 		static GPUBuffer *m_lightsBuffer;
 	};
