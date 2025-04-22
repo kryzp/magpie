@@ -59,7 +59,6 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	, m_imGuiDescriptorPool()
 	, m_imGuiImageFormat()
 	, m_surface()
-//	, m_presentQueue()
 	, m_graphicsQueue()
 //	, m_computeQueues()
 //	, m_transferQueues()
@@ -162,7 +161,6 @@ VulkanCore::~VulkanCore()
 
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 
-	m_presentQueue.destroy();
 	m_graphicsQueue.destroy();
 
 //	for (auto &q : m_computeQueues)
@@ -254,7 +252,6 @@ void VulkanCore::createLogicalDevice()
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
-	queueCreateInfos.push_back(m_presentQueue.getCreateInfo(QUEUE_PRIORITIES));
 	queueCreateInfos.push_back(m_graphicsQueue.getCreateInfo(QUEUE_PRIORITIES));
 
 	/*
@@ -321,7 +318,6 @@ void VulkanCore::createLogicalDevice()
 	);
 
 	// create queues
-	m_presentQueue.create(this, 0);
 	m_graphicsQueue.create(this, 0);
 
 //	for (int i = 0; i < m_computeQueues.size(); i++)
@@ -404,11 +400,6 @@ void VulkanCore::findQueueFamilies()
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-	int nPresentQueues = 0;
-	int nGraphicsQueues = 0;
-//	int nComputeQueues = 0;
-//	int nTransferQueues = 0;
-
 	for (int i = 0; i < queueFamilyCount; i++)
 	{
 		if ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
@@ -416,18 +407,12 @@ void VulkanCore::findQueueFamilies()
 			VkBool32 presentSupport = VK_FALSE;
 			vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_surface.getHandle(), &presentSupport);
 
-			if (presentSupport && nPresentQueues == 0)
-			{
-				m_presentQueue.setFamilyIndex(i);
-				nPresentQueues++;
-				continue;
-			}
-			else if (nGraphicsQueues == 0)
+			if (presentSupport)
 			{
 				m_graphicsQueue.setFamilyIndex(i);
-				nGraphicsQueues++;
-				continue;
 			}
+
+			continue;
 		}
 
 		/*
@@ -525,16 +510,6 @@ const VmaAllocator &VulkanCore::getVMAAllocator() const
 	return m_vmaAllocator;
 }
 
-Queue &VulkanCore::getPresentQueue()
-{
-	return m_presentQueue;
-}
-
-const Queue &VulkanCore::getPresentQueue() const
-{
-	return m_presentQueue;
-}
-
 Queue &VulkanCore::getGraphicsQueue()
 {
 	return m_graphicsQueue;
@@ -580,9 +555,6 @@ const BindlessResources &VulkanCore::getBindlessResources() const
 void VulkanCore::nextFrame()
 {
 	m_currentFrameIndex = (m_currentFrameIndex + 1) % Queue::FRAMES_IN_FLIGHT;
-
-	vkQueueWaitIdle(m_presentQueue.getHandle());
-	m_presentQueue.getFrame(m_currentFrameIndex).pool.reset();
 
 	vkQueueWaitIdle(m_graphicsQueue.getHandle());
 	m_graphicsQueue.getFrame(m_currentFrameIndex).pool.reset();

@@ -36,7 +36,6 @@ void InFlightSync::begin()
 
 void InFlightSync::present()
 {
-	auto &presentQueue = m_core->getPresentQueue();
 	auto &graphicsQueue = m_core->getGraphicsQueue();
 
 	m_core->getRenderGraph().record(m_cmd, m_swapchain);
@@ -82,7 +81,7 @@ void InFlightSync::present()
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr;
 
-	VkResult result = vkQueuePresentKHR(presentQueue.getHandle(), &presentInfo);
+	VkResult result = vkQueuePresentKHR(graphicsQueue.getHandle(), &presentInfo);
 
 	// rebuild swapchain if failure
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)

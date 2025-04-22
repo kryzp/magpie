@@ -47,9 +47,6 @@ namespace mgp
 
 		const VmaAllocator &getVMAAllocator() const;
 
-		Queue &getPresentQueue();
-		const Queue &getPresentQueue() const;
-
 		Queue &getGraphicsQueue();
 		const Queue &getGraphicsQueue() const;
 		
@@ -106,7 +103,6 @@ namespace mgp
 
 		Surface m_surface;
 
-		Queue m_presentQueue;
 		Queue m_graphicsQueue;
 //		std::vector<Queue> m_computeQueues;
 //		std::vector<Queue> m_transferQueues;
