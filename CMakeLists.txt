@@ -19,7 +19,8 @@ add_executable(${PROJECT_NAME}
     src/rendering/model.cpp
     src/rendering/model_loader.cpp
     src/rendering/light.cpp
-
+    
+	src/rendering/passes/shadow_pass.cpp
 	src/rendering/passes/deferred_pass.cpp
 
     src/vulkan/core.cpp
@@ -64,7 +65,6 @@ add_executable(${PROJECT_NAME}
     src/third_party/imgui/imgui_widgets.cpp
     src/third_party/imgui/imgui_impl_sdl3.cpp
     src/third_party/imgui/imgui_impl_vulkan.cpp
-	src/rendering/passes/shadow_pass.cpp
 )
 
 add_compile_definitions(MGP_DEBUG)
