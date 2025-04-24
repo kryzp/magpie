@@ -75,8 +75,8 @@ namespace mgp
 	class ShaderStage;
 	class Shader;
 	class Sampler;
-	class Material;
-	class MaterialData;
+	struct Material;
+	struct MaterialData;
 	class Mesh;
 	class Technique;
 	class GPUBuffer;
@@ -126,6 +126,7 @@ namespace mgp
 		Image *m_targetDepth;
 
 		ShadowMapAtlas m_shadowAtlas;
+		GPUBuffer *m_lightBuffer;
 
 		void loadTextures();
 		void loadShaders();

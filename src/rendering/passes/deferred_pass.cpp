@@ -92,7 +92,7 @@ void DeferredPass::render(CommandBuffer &cmd, const RenderInfo &info, const Came
 			.frameDataBuffer_ID			= m_app->m_frameConstantsBuffer->getBindlessHandle(),
 			.transformBuffer_ID			= m_app->m_transformDataBuffer->getBindlessHandle(),
 			.materialDataBuffer_ID		= m_app->m_bindlessMaterialTable->getBindlessHandle(),
-			.lightBuffer_ID				= ShadowPass::getLightBuffer()->getBindlessHandle(),
+			.lightBuffer_ID				= m_app->m_lightBuffer->getBindlessHandle(),
 
 			.transform_ID				= 0,
 
@@ -134,7 +134,8 @@ void DeferredPass::precomputeBRDF()
 
 		const int BRDF_RESOLUTION = 512;
 
-		m_brdfLUT = new Image(
+		m_brdfLUT = new Image();
+		m_brdfLUT->allocate(
 			m_core,
 			BRDF_RESOLUTION, BRDF_RESOLUTION, 1,
 			VK_FORMAT_R32G32_SFLOAT,
@@ -145,8 +146,6 @@ void DeferredPass::precomputeBRDF()
 			false,
 			false
 		);
-
-		m_brdfLUT->allocate();
 
 		RenderInfo info(m_core);
 		info.setSize(BRDF_RESOLUTION, BRDF_RESOLUTION);

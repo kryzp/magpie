@@ -18,8 +18,8 @@ namespace mgp
 		void addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
 		void addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve);
 
-		VkRenderingAttachmentInfoKHR &getColourAttachment(int idx);
-		VkRenderingAttachmentInfoKHR &getDepthAttachment();
+		VkRenderingAttachmentInfo &getColourAttachment(int idx);
+		VkRenderingAttachmentInfo &getDepthAttachment();
 
 		VkRenderingInfo getInfo() const;
 
@@ -46,8 +46,8 @@ namespace mgp
 
 		const VulkanCore *m_core;
 
-		std::vector<VkRenderingAttachmentInfoKHR> m_colourAttachments;
-		VkRenderingAttachmentInfoKHR m_depthAttachment;
+		std::vector<VkRenderingAttachmentInfo> m_colourAttachments;
+		VkRenderingAttachmentInfo m_depthAttachment;
 
 		std::vector<VkFormat> m_colourFormats;
 

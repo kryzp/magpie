@@ -205,8 +205,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
 
-	vkGetPhysicalDeviceProperties2KHR(devices[0], &properties);
-	vkGetPhysicalDeviceFeatures2KHR(devices[0], &features);
+	vkGetPhysicalDeviceProperties2(devices[0], &properties);
+	vkGetPhysicalDeviceFeatures2(devices[0], &features);
 
 	m_physicalDevice = devices[0];
 	m_physicalDeviceProperties = properties;
@@ -220,8 +220,8 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	int iSelected = 0;
 	for (int i = 1; i < deviceCount; i++)
 	{
-		vkGetPhysicalDeviceProperties2KHR(devices[i], &m_physicalDeviceProperties);
-		vkGetPhysicalDeviceFeatures2KHR(devices[i], &m_physicalDeviceFeatures);
+		vkGetPhysicalDeviceProperties2(devices[i], &m_physicalDeviceProperties);
+		vkGetPhysicalDeviceFeatures2(devices[i], &m_physicalDeviceFeatures);
 
 		uint32_t usability1 = vk_toolbox::assignPhysicalDeviceUsability(surface, devices[i], properties, features, &hasEssentials);
 

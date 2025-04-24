@@ -17,7 +17,8 @@ using namespace mgp;
 
 void ShadowMapAtlas::init(VulkanCore *core)
 {
-	m_atlas = new Image(
+	m_atlas = new Image();
+	m_atlas->allocate(
 		core,
 		ATLAS_SIZE, ATLAS_SIZE, 1,
 		core->getDepthFormat(),
@@ -28,8 +29,6 @@ void ShadowMapAtlas::init(VulkanCore *core)
 		false,
 		false
 	);
-
-	m_atlas->allocate();
 }
 
 void ShadowMapAtlas::destroy()
@@ -104,27 +103,18 @@ void ShadowMapAtlas::clear()
 
 VulkanCore *ShadowPass::m_core = nullptr;
 App *ShadowPass::m_app = nullptr;
-GPUBuffer *ShadowPass::m_lightsBuffer = nullptr;
 
 void ShadowPass::init(VulkanCore *core, App *app)
 {
 	m_core = core;
 	m_app = app;
-
-	m_lightsBuffer = new GPUBuffer(
-		m_core,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(GPUPointLight) * MAX_POINT_LIGHTS
-	);
 }
 
 void ShadowPass::destroy()
 {
-	delete m_lightsBuffer;
 }
 
-void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas)
+void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *lightBuffer)
 {
 	GraphicsPipelineDef shadowMapPipeline;
 	shadowMapPipeline.setShader(m_app->getShader("shadow_map"));
@@ -138,7 +128,7 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas)
 
 	m_core->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 		.setOutputAttachments({ atlas.getAtlasAttachment() })
-		.setBuildFn([&, shadowMapPipeline](CommandBuffer &cmd, const RenderInfo &info) -> void
+		.setBuildFn([&, shadowMapPipeline, lightBuffer](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_core->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
 
@@ -211,7 +201,7 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas)
 					}
 				}
 
-				m_lightsBuffer->write(
+				lightBuffer->write(
 					&gpuLight,
 					sizeof(GPUPointLight),
 					sizeof(GPUPointLight) * i

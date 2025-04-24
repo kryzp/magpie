@@ -25,9 +25,6 @@ namespace mgp
 
 		void acquireNextImage();
 
-		Image &getColourAttachment();
-		Image &getDepthAttachment();
-
 		Image &getCurrentSwapchainImage();
 		ImageView *getCurrentSwapchainImageView();
 
@@ -52,9 +49,6 @@ namespace mgp
 		void createSwapchain();
 		void createSwapchainSyncObjects();
 
-		void createColourResources();
-		void createDepthResources();
-
 		std::array<VkSemaphore, Queue::FRAMES_IN_FLIGHT> m_renderFinishedSemaphores;
 		std::array<VkSemaphore, Queue::FRAMES_IN_FLIGHT> m_imageAvailableSemaphores;
 
@@ -66,9 +60,6 @@ namespace mgp
 		VkFormat m_swapchainImageFormat;
 
 		unsigned m_currSwapchainImageIdx;
-
-		Image m_colour;
-		Image m_depth;
 
 		unsigned m_width;
 		unsigned m_height;

@@ -8,12 +8,12 @@
 
 using namespace mgp;
 
-GPUBuffer::GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, uint64_t size)
+GPUBuffer::GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaAllocationCreateFlagBits flags, uint64_t size)
 	: m_buffer(VK_NULL_HANDLE)
 	, m_allocation()
 	, m_allocationInfo()
 	, m_usage(usage)
-	, m_memoryUsage(memoryUsage)
+	, m_flags(flags)
 	, m_size(size)
 	, m_bindlessHandle(bindless::INVALID_HANDLE)
 	, m_core(core)
@@ -27,8 +27,8 @@ GPUBuffer::GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaMemoryUsage 
 	bufferCreateInfo.pQueueFamilyIndices = nullptr;//queueFamilyIndices.data();
 
 	VmaAllocationCreateInfo vmaAllocInfo = {};
-	vmaAllocInfo.usage = m_memoryUsage;
-	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	vmaAllocInfo.flags = m_flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	MGP_VK_CHECK(
 		vmaCreateBuffer(m_core->getVMAAllocator(), &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
@@ -78,6 +78,11 @@ const VkBuffer &GPUBuffer::getHandle() const
 	return m_buffer;
 }
 
+VmaAllocationCreateFlagBits GPUBuffer::getFlags() const
+{
+	return m_flags;
+}
+
 VkBufferUsageFlags GPUBuffer::getUsage() const
 {
 	return m_usage;
@@ -91,11 +96,6 @@ bool GPUBuffer::isUniform() const
 bool GPUBuffer::isStorage() const
 {
 	return m_usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-}
-
-VmaMemoryUsage GPUBuffer::getMemoryUsage() const
-{
-	return m_memoryUsage;
 }
 
 uint64_t GPUBuffer::getSize() const

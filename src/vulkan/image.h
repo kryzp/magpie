@@ -32,24 +32,9 @@ namespace mgp
 
 	public:
 		Image() = default;
-
-		Image(
-			VulkanCore *core,
-			unsigned width, unsigned height, unsigned depth,
-			VkFormat format,
-			VkImageViewType type,
-			VkImageTiling tiling,
-			uint32_t mipmaps,
-			VkSampleCountFlagBits samples,
-			bool transient,
-			bool storage
-		);
-
-//		static Image wrapperOf(VkImage image); todo something like this, then remove allocate();
-
 		~Image();
 
-		void init(
+		void allocate(
 			VulkanCore *core,
 			unsigned width, unsigned height, unsigned depth,
 			VkFormat format,
@@ -61,7 +46,18 @@ namespace mgp
 			bool storage
 		);
 
-		void allocate();
+		void wrapAround(
+			VulkanCore *core,
+			VkImage image,
+			VkImageLayout layout,
+			unsigned width, unsigned height, unsigned depth,
+			VkFormat format,
+			VkImageViewType type,
+			VkImageTiling tiling,
+			uint32_t mipmaps,
+			VkSampleCountFlagBits samples,
+			VkImageUsageFlags usage
+		);
 
 		ImageView *createView(
 			int layerCount,

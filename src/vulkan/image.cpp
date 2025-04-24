@@ -59,49 +59,20 @@ ImageAlloc::ImageAlloc(Image *image)
 	}
 
 	VmaAllocationCreateInfo vmaAllocInfo = {};
-	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-	vmaAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+	vmaAllocInfo.priority = 1.0f;
 
 	MGP_VK_CHECK(
 		vmaCreateImage(m_parent->m_core->getVMAAllocator(), &createInfo, &vmaAllocInfo, &m_parent->m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);
-
-//	getStandardView(); // cache the standard view
 };
 
 ImageAlloc::~ImageAlloc()
 {
 	vmaDestroyImage(m_parent->m_core->getVMAAllocator(), m_parent->m_image, m_allocation);
 	m_parent->m_image = VK_NULL_HANDLE;
-}
-
-Image::Image(
-	VulkanCore *core,
-	unsigned width, unsigned height, unsigned depth,
-	VkFormat format,
-	VkImageViewType type,
-	VkImageTiling tiling,
-	uint32_t mipmaps,
-	VkSampleCountFlagBits samples,
-	bool transient,
-	bool storage
-)
-	: m_image(VK_NULL_HANDLE)
-	, m_layout()
-	, m_allocation(nullptr)
-{
-	init(
-		core,
-		width, height, depth,
-		format,
-		type,
-		tiling,
-		mipmaps,
-		samples,
-		transient,
-		storage
-	);
 }
 
 Image::~Image()
@@ -112,7 +83,7 @@ Image::~Image()
 	delete m_allocation;
 }
 
-void Image::init(
+void Image::allocate(
 	VulkanCore *core,
 	unsigned width, unsigned height, unsigned depth,
 	VkFormat format,
@@ -159,11 +130,45 @@ void Image::init(
 	{
 		m_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
+
+	m_allocation = new ImageAlloc(this);
+
+//	getStandardView(); // cache the standard view
 }
 
-void Image::allocate()
+void Image::wrapAround(
+	VulkanCore *core,
+	VkImage image,
+	VkImageLayout layout,
+	unsigned width, unsigned height, unsigned depth,
+	VkFormat format,
+	VkImageViewType type,
+	VkImageTiling tiling,
+	uint32_t mipmaps,
+	VkSampleCountFlagBits samples,
+	VkImageUsageFlags usage
+)
 {
-	m_allocation = new ImageAlloc(this);
+	m_core = core;
+
+	m_image = image;
+	m_layout = layout;
+
+	m_allocation = nullptr;
+
+	m_width = width;
+	m_height = height;
+	m_depth = depth;
+
+	m_format = format;
+	m_type = type;
+	m_tiling = tiling;
+
+	m_mipmapCount = mipmaps;
+	m_samples = samples;
+	m_usage = usage;
+
+//	getStandardView(); // cache the standard view
 }
 
 ImageView *Image::createView(

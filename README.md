@@ -49,6 +49,7 @@ Feel free to use any of the code in personal / professional / public / private p
         - Shaders
     [ ] Good macOS support
     [ ] Half Life: Alyx-style reticle/gun scope effect
+    [ ] Stencil Rendering
 
 ### Project Structure
 	- /core/            Core modules resposible for opening the window, main game loop, polling for events, etc...

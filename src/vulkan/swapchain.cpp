@@ -15,8 +15,6 @@ Swapchain::Swapchain(VulkanCore *core, const Platform *platform)
 	, m_swapchainImages()
 	, m_swapchainImageFormat()
 	, m_currSwapchainImageIdx()
-	, m_colour()
-	, m_depth()
 	, m_width(0)
 	, m_height(0)
 	, m_core(core)
@@ -63,16 +61,6 @@ void Swapchain::acquireNextImage()
 	{
 		MGP_ERROR("Failed to acquire next image in swap chain: %d", result);
 	}
-}
-
-Image &Swapchain::getColourAttachment()
-{
-	return m_colour;
-}
-
-Image &Swapchain::getDepthAttachment()
-{
-	return m_depth;
 }
 
 Image &Swapchain::getCurrentSwapchainImage()
@@ -157,30 +145,21 @@ void Swapchain::createSwapchain()
 	{
 		Image &imageInfo = m_swapchainImages[i];
 
-		imageInfo.init(
+		imageInfo.wrapAround(
 			m_core,
+			images[i],
+			VK_IMAGE_LAYOUT_UNDEFINED,
 			m_width, m_height, 1,
 			m_swapchainImageFormat,
 			VK_IMAGE_VIEW_TYPE_2D,
 			VK_IMAGE_TILING_OPTIMAL,
 			1,
 			VK_SAMPLE_COUNT_1_BIT,
-			false,
-			false
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
 		);
-
-		imageInfo.m_image = images[i];
-		imageInfo.m_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-		imageInfo.m_usage =
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-			VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 	}
 
 	createSwapchainSyncObjects();
-
-	createDepthResources();
-	createColourResources();
 
 	MGP_LOG("Created the swap chain!");
 }
@@ -268,38 +247,4 @@ const VkSwapchainKHR &Swapchain::getHandle() const
 const VkFormat &Swapchain::getSwapchainImageFormat() const
 {
 	return m_swapchainImageFormat;
-}
-
-void Swapchain::createColourResources()
-{
-	m_colour.init(
-		m_core,
-		m_width, m_height, 1,
-		m_swapchainImageFormat,
-		VK_IMAGE_VIEW_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		1,
-		m_core->getMaxMSAASamples(),
-		false,
-		false
-	);
-
-	m_colour.allocate();
-}
-
-void Swapchain::createDepthResources()
-{
-	m_depth.init(
-		m_core,
-		m_width, m_height, 1,
-		m_core->getDepthFormat(),
-		VK_IMAGE_VIEW_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		1,
-		m_core->getMaxMSAASamples(),
-		false,
-		false
-	);
-
-	m_depth.allocate();
 }

@@ -93,6 +93,7 @@ App::App(const Config &config)
 	, m_targetColour(nullptr)
 	, m_targetDepth(nullptr)
 	, m_shadowAtlas()
+	, m_lightBuffer(nullptr)
 {
 	m_platform = new Platform(config);
 	m_vulkanCore = new VulkanCore(config, m_platform);
@@ -145,6 +146,34 @@ App::App(const Config &config)
 
 	m_shadowAtlas.init(m_vulkanCore);
 
+	m_lightBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(GPUPointLight) * MAX_POINT_LIGHTS
+	);
+
+	m_frameConstantsBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(FrameConstants)
+	);
+
+	m_transformDataBuffer = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(TransformData)
+	);
+
+	m_bindlessMaterialTable = new GPUBuffer(
+		m_vulkanCore,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(BindlessMaterialHandles)
+	);
+
 	ShadowPass::init(m_vulkanCore, this);
 	DeferredPass::init(m_vulkanCore, this);
 
@@ -153,27 +182,6 @@ App::App(const Config &config)
 	createSkybox();
 
 	m_platform->onExit = [this]() { exit(); };
-
-	m_frameConstantsBuffer = new GPUBuffer(
-		m_vulkanCore,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(FrameConstants)
-	);
-
-	m_transformDataBuffer = new GPUBuffer(
-		m_vulkanCore,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(TransformData)
-	);
-
-	m_bindlessMaterialTable = new GPUBuffer(
-		m_vulkanCore,
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		sizeof(BindlessMaterialHandles)
-	);
 
 	Shader *textureUVShader = getShader("texture_uv");
 	m_textureUVPipeline.setShader(textureUVShader);
@@ -235,6 +243,8 @@ App::~App()
 
 	m_shadowAtlas.destroy();
 
+	delete m_lightBuffer;
+
 	ShadowPass::destroy();
 	DeferredPass::destroy();
 
@@ -271,7 +281,8 @@ void App::run()
 		inFlightSync.onWindowResize(w, h);
 	};
 
-	m_targetColour = new Image(
+	m_targetColour = new Image();
+	m_targetColour->allocate(
 		m_vulkanCore,
 		inFlightSync.getSwapchain()->getWidth(),
 		inFlightSync.getSwapchain()->getHeight(),
@@ -285,9 +296,8 @@ void App::run()
 		true
 	);
 
-	m_targetColour->allocate();
-
-	m_targetDepth = new Image(
+	m_targetDepth = new Image();
+	m_targetDepth->allocate(
 		m_vulkanCore,
 		inFlightSync.getSwapchain()->getWidth(),
 		inFlightSync.getSwapchain()->getHeight(),
@@ -300,8 +310,6 @@ void App::run()
 		false,
 		false
 	);
-
-	m_targetDepth->allocate();
 
 	DescriptorWriter(m_vulkanCore)
 		.writeCombinedImage(0, *m_targetColour->getStandardView(), *m_linearSampler)
@@ -325,7 +333,7 @@ void App::run()
 		if (m_inputSt->isPressed(KB_KEY_ESCAPE))
 			exit();
 
-		editor_ui::update();
+		//editor_ui::update();
 
 		double deltaTime = deltaTimer.reset();
 
@@ -391,26 +399,19 @@ void App::render(Swapchain *swapchain)
 	targetColourAttachment.view = m_targetColour->getStandardView();
 	targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	targetColourAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
-
+	
 	RenderGraph::AttachmentInfo targetDepthAttachment;
 	targetDepthAttachment.view = m_targetDepth->getStandardView();
 	targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	targetDepthAttachment.clear = { .depthStencil = { 1.0f, 0 } };
 
-	RenderGraph::AttachmentInfo swapchainColourAttachment;
-	swapchainColourAttachment.view = swapchain->getColourAttachment().getStandardView();
-	swapchainColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-	RenderGraph::AttachmentInfo swapchainDepthAttachment;
-	swapchainDepthAttachment.view = swapchain->getDepthAttachment().getStandardView();
-	swapchainDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-	RenderGraph::AttachmentInfo swapchainDirectAttachment;
-	swapchainDirectAttachment.view = swapchain->getCurrentSwapchainImageView();
-	swapchainDirectAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	RenderGraph::AttachmentInfo swapchainAttachment;
+	swapchainAttachment.view = swapchain->getCurrentSwapchainImageView();
+	swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	swapchainAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 	// render shadows
-	ShadowPass::renderShadows(m_scene, m_shadowAtlas);
+	ShadowPass::renderShadows(m_scene, m_shadowAtlas, m_lightBuffer);
 
 	// render g-buffer
 	// ...
@@ -505,11 +506,9 @@ void App::render(Swapchain *swapchain)
 			cmd.dispatch(pc.width / 8, pc.height / 8, 1);
 		}));
 
-	// output to swapchain
-	swapchainColourAttachment.resolve = swapchain->getCurrentSwapchainImageView();
-
+	// draw to tonemap target
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ swapchainDirectAttachment, targetDepthAttachment })
+		.setOutputAttachments({ swapchainAttachment })
 		.setInputAttachments({ targetColourAttachment })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
@@ -532,9 +531,9 @@ void App::render(Swapchain *swapchain)
 		}));
 
 	// editor ui pass
-	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ swapchainDirectAttachment })
-		.setBuildFn(editor_ui::render));
+//	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+//		.setOutputAttachments({ swapchainDirectAttachment })
+//		.setBuildFn(editor_ui::render));
 }
 
 void App::exit()
@@ -799,7 +798,8 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 
 	Bitmap bitmap(path);
 
-	Image *image = new Image(
+	Image *image = new Image();
+	image->allocate(
 		m_vulkanCore,
 		bitmap.getWidth(), bitmap.getHeight(), 1,
 		bitmap.getFormat() == Bitmap::FORMAT_RGBA8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -811,12 +811,10 @@ Image *App::loadTexture(const std::string &name, const std::string &path)
 		false
 	);
 
-	image->allocate();
-
 	GPUBuffer stagingBuffer(
 		m_vulkanCore,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		bitmap.getMemorySize()
 	);
 
@@ -985,7 +983,8 @@ void App::generateEnvironmentProbe()
 	{
 		MGP_LOG("Generating environment map...");
 
-		m_environmentMap = new Image(
+		m_environmentMap = new Image();
+		m_environmentMap->allocate(
 			m_vulkanCore,
 			ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -996,8 +995,6 @@ void App::generateEnvironmentProbe()
 			false,
 			false
 		);
-
-		m_environmentMap->allocate();
 
 		pc.proj = captureProjectionMatrix;
 		pc.view = glm::identity<glm::mat4>();
@@ -1072,7 +1069,7 @@ void App::generateEnvironmentProbe()
 	GPUBuffer *pfParameterBuffer = new GPUBuffer(
 		m_vulkanCore,
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(prefilterParams) * PREFILTER_MAP_MIP_LEVELS
 	);
 
@@ -1081,7 +1078,8 @@ void App::generateEnvironmentProbe()
 	{
 		MGP_LOG("Generating irradiance map...");
 
-		m_environmentProbe.irradiance = new Image(
+		m_environmentProbe.irradiance = new Image();
+		m_environmentProbe.irradiance->allocate(
 			m_vulkanCore,
 			IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -1092,8 +1090,6 @@ void App::generateEnvironmentProbe()
 			false,
 			false
 		);
-
-		m_environmentProbe.irradiance->allocate();
 
 		Shader *irradianceGenShader = getShader("irradiance_convolution");
 
@@ -1153,7 +1149,8 @@ void App::generateEnvironmentProbe()
 
 		MGP_LOG("Generating prefilter map...");
 
-		m_environmentProbe.prefilter = new Image(
+		m_environmentProbe.prefilter = new Image();
+		m_environmentProbe.prefilter->allocate(
 			m_vulkanCore,
 			PREFILTER_MAP_RESOLUTION, PREFILTER_MAP_RESOLUTION, 1,
 			VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -1164,8 +1161,6 @@ void App::generateEnvironmentProbe()
 			false,
 			false
 		);
-
-		m_environmentProbe.prefilter->allocate();
 
 		Shader *prefilterShader = getShader("prefilter_convolution");
 

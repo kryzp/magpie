@@ -14,7 +14,7 @@ namespace mgp
 	class GPUBuffer
 	{
 	public:
-		GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, uint64_t size);
+		GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaAllocationCreateFlagBits flags, uint64_t size);
 		~GPUBuffer();
 
 		void read(void *dst, uint64_t length, uint64_t offset) const;
@@ -28,12 +28,11 @@ namespace mgp
 
 		const VkBuffer &getHandle() const;
 
+		VmaAllocationCreateFlagBits getFlags() const;
 		VkBufferUsageFlags getUsage() const;
 
 		bool isUniform() const;
 		bool isStorage() const;
-
-		VmaMemoryUsage getMemoryUsage() const;
 
 		uint64_t getSize() const;
 
@@ -46,7 +45,7 @@ namespace mgp
 		VmaAllocationInfo m_allocationInfo;
 
 		VkBufferUsageFlags m_usage;
-		VmaMemoryUsage m_memoryUsage;
+		VmaAllocationCreateFlagBits m_flags;
 
 		uint64_t m_size;
 

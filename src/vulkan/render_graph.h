@@ -9,6 +9,14 @@
 	list, we can be certain whatever pass we reach will not be dependent on passes in front of it.
 */
 
+/*
+Current Todo:
+- proper actual dependency system
+- have an intermediary "GraphResource" components that can have writers, from which we can then flatten the graph and proceed as normal
+- getImageViewResource(<view>), getBufferResource(<buffer>), etc...
+- 
+*/
+
 #include <vector>
 #include <string>
 #include <functional>
@@ -61,20 +69,13 @@ namespace mgp
 			VkClearValue clear = {};
 		};
 
-		// once buffer info also added
-		// can move GPUBuffer's like the lights
-		// buffer into the App, and then static pass
-		// classes like ShadowPass and DeferredPass
-		// don't need to maintain any variables
-
-		/* todo
+		// todo
 		struct BufferInfo
 		{
 			VkDeviceSize size = 0;
 			VkBufferUsageFlags usage = 0;
 			bool persistent = true;
 		};
-		*/
 
 		struct Resource
 		{

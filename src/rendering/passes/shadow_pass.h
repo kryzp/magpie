@@ -57,14 +57,10 @@ namespace mgp
 		static void init(VulkanCore *core, App *app);
 		static void destroy();
 
-		static void renderShadows(Scene& scene, ShadowMapAtlas &atlas);
-
-		static GPUBuffer *getLightBuffer() { return m_lightsBuffer; }
-
+		static void renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *lightBuffer);
+		
 	private:
 		static VulkanCore *m_core;
 		static App *m_app;
-
-		static GPUBuffer *m_lightsBuffer;
 	};
 }

@@ -40,13 +40,13 @@ VkRenderingInfo RenderInfo::getInfo() const
 
 void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve)
 {
-	VkRenderingAttachmentInfoKHR attachment = {};
+	VkRenderingAttachmentInfo attachment = {};
 	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 	attachment.imageView = view.getHandle();
 	attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	attachment.loadOp = loadOp;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clearValue = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+	attachment.clearValue = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
 
 	if (resolve)
 	{
@@ -74,7 +74,7 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &
 	m_depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	m_depthAttachment.loadOp = loadOp;
 	m_depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	m_depthAttachment.clearValue = { { 1.0f, 0 } };
+	m_depthAttachment.clearValue = { .depthStencil = { 1.0f, 0 } };
 
 	if (resolve)
 	{
@@ -92,12 +92,12 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &
 	m_attachmentCount++;
 }
 
-VkRenderingAttachmentInfoKHR &RenderInfo::getColourAttachment(int idx)
+VkRenderingAttachmentInfo &RenderInfo::getColourAttachment(int idx)
 {
 	return m_colourAttachments[idx];
 }
 
-VkRenderingAttachmentInfoKHR &RenderInfo::getDepthAttachment()
+VkRenderingAttachmentInfo &RenderInfo::getDepthAttachment()
 {
 	return m_depthAttachment;
 }
