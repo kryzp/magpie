@@ -132,12 +132,12 @@ Colour Bitmap::getPixelAt(uint32_t x, uint32_t y) const
 
 void Bitmap::setPixels(const Colour *data)
 {
-	mem::copy(m_pixels, data, sizeof(Colour) * getPixelCount());
+	setPixels(0, data, 0, getPixelCount());
 }
 
 void Bitmap::setPixels(uint64_t dstFirst, const Colour *data, uint64_t srcFirst, uint64_t count)
 {
-	mem::copy((Colour *)m_pixels + sizeof(Colour) * dstFirst, data + sizeof(Colour) * srcFirst, sizeof(Colour) * count);
+	mem::copy(&((Colour *)m_pixels)[dstFirst], &data[srcFirst], sizeof(Colour) * count);
 }
 
 bool Bitmap::saveToPng(const Platform *platform, const char *file) const

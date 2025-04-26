@@ -26,7 +26,7 @@ FileStream &FileStream::open(const char *filename, const char *mode)
 	return *this;
 }
 
-bool FileStream::getLine(std::string &str, int32_t &pointer)
+bool FileStream::getLine(std::string &str, int32_t &pointer) const
 {
 	str.clear();
 

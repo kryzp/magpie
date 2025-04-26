@@ -6,9 +6,6 @@
 
 namespace mgp
 {
-	/**
-	 * File-specialized stream.
-	 */
 	class FileStream : public Stream
 	{
 	public:
@@ -18,6 +15,6 @@ namespace mgp
 		FileStream &open(const std::string &filename, const char *mode);
 		FileStream &open(const char *filename, const char *mode);
 
-		bool getLine(std::string &str, int32_t &pointer);
+		bool getLine(std::string &str, int32_t &pointer) const;
 	};
 }

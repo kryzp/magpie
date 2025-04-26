@@ -4,9 +4,6 @@
 
 namespace mgp
 {
-	/**
-	 * Memory-specialized stream.
-	 */
 	class MemoryStream : public Stream
 	{
 	public:
@@ -16,9 +13,6 @@ namespace mgp
 		MemoryStream &open(void *memory, uint64_t length);
 	};
 
-	/**
-	 * Const-memory-specialized stream.
-	 */
 	class ConstMemoryStream : public Stream
 	{
 	public:

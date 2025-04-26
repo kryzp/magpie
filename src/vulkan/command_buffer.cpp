@@ -285,6 +285,7 @@ void CommandBuffer::transitionLayout(Image &image, VkImageLayout newLayout)
 	image.m_layout = newLayout;
 }
 
+/*
 void CommandBuffer::generateMipmaps(Image &image)
 {
 	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
