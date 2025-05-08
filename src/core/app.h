@@ -3,7 +3,7 @@
 #include <functional>
 #include <unordered_map>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "common.h"
 
@@ -101,10 +101,18 @@ namespace mgp
 
 		VkDescriptorSet allocateSet(const std::vector<VkDescriptorSetLayout> &layouts);
 
+		Image *getFallbackDiffuse();
+		Image *getFallbackAmbient();
+		Image *getFallbackRoughnessMetallic();
+		Image *getFallbackNormals();
+		Image *getFallbackEmissive();
+
+		Image *getTexture(const std::string &name);
 		Image *loadTexture(const std::string &name, const std::string &path);
-		Material *buildMaterial(MaterialData &data);
 
 		Shader *getShader(const std::string &name);
+
+		Material *buildMaterial(MaterialData &data);
 
 	private:
 		void tick(float dt);

@@ -10,7 +10,6 @@
 #include "third_party/imgui/imgui_impl_vulkan.h"
 
 #include "platform.h"
-#include "editor_ui.h"
 
 #include "vulkan/core.h"
 #include "vulkan/toolbox.h"
@@ -38,20 +37,20 @@
 
 using namespace mgp;
 
-struct FrameConstants
+struct GPUFrameConstants
 {
 	glm::mat4 proj;
 	glm::mat4 view;
 	glm::vec4 cameraPosition;
 };
 
-struct TransformData
+struct GPUTransformData
 {
 	glm::mat4 model;
 	glm::mat4 normalMatrix;
 };
 
-struct BindlessMaterialHandles
+struct GPUBindlessMaterial
 {
 	bindless::Handle diffuseTexture_ID;
 	bindless::Handle aoTexture_ID;
@@ -157,21 +156,21 @@ App::App(const Config &config)
 		m_vulkanCore,
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(FrameConstants)
+		sizeof(GPUFrameConstants)
 	);
 
 	m_transformDataBuffer = new GPUBuffer(
 		m_vulkanCore,
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(TransformData)
+		sizeof(GPUTransformData)
 	);
 
 	m_bindlessMaterialTable = new GPUBuffer(
 		m_vulkanCore,
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(BindlessMaterialHandles)
+		sizeof(GPUBindlessMaterial) * 128
 	);
 
 	ShadowPass::init(m_vulkanCore, this);
@@ -194,7 +193,7 @@ App::App(const Config &config)
 	m_hdrTonemappingSet = allocateSet(hdrTonemappingShader->getDescriptorSetLayouts());
 
 	ModelLoader modelLoader(m_vulkanCore, this);
-	Model *model = modelLoader.loadModel("../../res/models/GLTF/DamagedHelmet/DamagedHelmet.gltf");
+	Model *model = modelLoader.loadModel("../../res/models/GLTF/Sponza/Sponza.gltf");
 
 	auto obj = m_scene.createRenderObject();
 	obj->model = model;
@@ -274,7 +273,18 @@ void App::run()
 {
 	InFlightSync inFlightSync(m_vulkanCore);
 
-	editor_ui::init(m_platform, m_vulkanCore);
+	// init imgui
+	{
+		IMGUI_CHECKVERSION();
+
+		ImGui::CreateContext();
+		//ImGuiIO &io = ImGui::GetIO();
+
+		ImGui::StyleColorsClassic();
+
+		m_platform->initImGui();
+		m_vulkanCore->initImGui();
+	}
 
 	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
 		MGP_LOG("Detected window resize!");
@@ -333,7 +343,10 @@ void App::run()
 		if (m_inputSt->isPressed(KB_KEY_ESCAPE))
 			exit();
 
-		//editor_ui::update();
+//		ImGui_ImplVulkan_NewFrame();
+//		ImGui_ImplSDL3_NewFrame();
+//		ImGui::NewFrame();
+//		ImGui::ShowDemoWindow();
 
 		double deltaTime = deltaTimer.reset();
 
@@ -381,48 +394,37 @@ void App::tickFixed(float dt)
 
 void App::render(Swapchain *swapchain)
 {
-	FrameConstants constants = {
+	GPUFrameConstants constants = {
 		.proj = m_camera.getProj(),
 		.view = m_camera.getView(),
 		.cameraPosition = glm::vec4(m_camera.position, 1.0f)
 	};
 
-	TransformData transform = {
+	m_frameConstantsBuffer->write(&constants, sizeof(GPUFrameConstants), 0);
+
+	GPUTransformData transform = {
 		.model = glm::identity<glm::mat4>(),
 		.normalMatrix = glm::transpose(glm::inverse(transform.model))
 	};
 
-	m_frameConstantsBuffer->write(&constants, sizeof(FrameConstants), 0);
-	m_transformDataBuffer->write(&transform, sizeof(TransformData), 0);
-
-	RenderGraph::AttachmentInfo targetColourAttachment;
-	targetColourAttachment.view = m_targetColour->getStandardView();
-	targetColourAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	targetColourAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
-	
-	RenderGraph::AttachmentInfo targetDepthAttachment;
-	targetDepthAttachment.view = m_targetDepth->getStandardView();
-	targetDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	targetDepthAttachment.clear = { .depthStencil = { 1.0f, 0 } };
-
-	RenderGraph::AttachmentInfo swapchainAttachment;
-	swapchainAttachment.view = swapchain->getCurrentSwapchainImageView();
-	swapchainAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	swapchainAttachment.clear = { .color = { 0.0f, 0.0f, 0.0f, 1.0f } };
+	m_transformDataBuffer->write(&transform, sizeof(GPUTransformData), 0);
 
 	// render shadows
 	ShadowPass::renderShadows(m_scene, m_shadowAtlas, m_lightBuffer);
 
 	// render g-buffer
-	// ...
+	// ... todo
 
 	// forward render
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ targetColourAttachment, targetDepthAttachment })
-		.setInputAttachments({ m_shadowAtlas.getAtlasAttachment()})
+		.setOutputAttachments({
+			{ m_targetColour->getStandardView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } },
+			{ m_targetDepth->getStandardView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .depthStencil = { 1.0f, 0 } } }
+		})
+		.setInputViews({ m_shadowAtlas.getAtlasView() })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
-			DeferredPass::render(cmd, info, m_camera, m_scene, m_shadowAtlas.getAtlasAttachment().view);
+			DeferredPass::render(cmd, info, m_camera, m_scene, m_shadowAtlas.getAtlasView());
 
 			// skybox
 			{
@@ -464,13 +466,13 @@ void App::render(Swapchain *swapchain)
 			}
 		}));
 
-	// compute HDR pass
+	// compute tonemapping
 	m_vulkanCore->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
-		.setStorageAttachments({ targetColourAttachment })
+		.setStorageViews({ m_targetColour->getStandardView() })
 		.setBuildFn([&](CommandBuffer &cmd) -> void
 		{
 			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
-
+			
 			cmd.bindPipeline(
 				VK_PIPELINE_BIND_POINT_COMPUTE,
 				pipelineData.pipeline
@@ -489,6 +491,7 @@ void App::render(Swapchain *swapchain)
 				uint32_t width;
 				uint32_t height;
 				float exposure;
+//				float blurIntensity;
 			}
 			pc;
 
@@ -503,13 +506,13 @@ void App::render(Swapchain *swapchain)
 				&pc
 			);
 
-			cmd.dispatch(pc.width / 8, pc.height / 8, 1);
+			cmd.dispatch(pc.width, pc.height, 1);
 		}));
 
-	// draw to tonemap target
+	// draw colour target to swapchain
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ swapchainAttachment })
-		.setInputAttachments({ targetColourAttachment })
+		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } } })
+		.setInputViews({ { m_targetColour->getStandardView() } })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
@@ -530,10 +533,20 @@ void App::render(Swapchain *swapchain)
 			cmd.draw(3);
 		}));
 
-	// editor ui pass
-//	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-//		.setOutputAttachments({ swapchainDirectAttachment })
-//		.setBuildFn(editor_ui::render));
+	// imgui pass
+	/*
+	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_LOAD } })
+		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
+		{
+			ImGui::Render();
+
+			ImGui_ImplVulkan_RenderDrawData(
+				ImGui::GetDrawData(),
+				cmd.getHandle()
+			);
+		}));
+	*/
 }
 
 void App::exit()
@@ -546,6 +559,31 @@ void App::exit()
 VkDescriptorSet App::allocateSet(const std::vector<VkDescriptorSetLayout> &layouts)
 {
 	return m_descriptorPool.allocate(layouts);
+}
+
+Image *App::getFallbackDiffuse()
+{
+	return getTexture("fallback_white");
+}
+
+Image *App::getFallbackAmbient()
+{
+	return getTexture("fallback_white");
+}
+
+Image *App::getFallbackRoughnessMetallic()
+{
+	return getTexture("fallback_black");
+}
+
+Image *App::getFallbackNormals()
+{
+	return getTexture("fallback_normals");
+}
+
+Image *App::getFallbackEmissive()
+{
+	return getTexture("fallback_black");
 }
 
 void App::loadTextures()
@@ -791,6 +829,14 @@ void App::loadTechniques()
 	}
 }
 
+Image *App::getTexture(const std::string &name)
+{
+	if (m_loadedImageCache.contains(name))
+		return m_loadedImageCache.at(name);
+
+	return nullptr;
+}
+
 Image *App::loadTexture(const std::string &name, const std::string &path)
 {
 	if (m_loadedImageCache.contains(name))
@@ -926,7 +972,7 @@ Material *App::buildMaterial(MaterialData &data)
 
 	m_materials.insert({ data.getHash(), material });
 
-	BindlessMaterialHandles handles = {};
+	GPUBindlessMaterial handles = {};
 	handles.diffuseTexture_ID		= material->textures[0];
 	handles.aoTexture_ID			= material->textures[1];
 	handles.armTexture_ID			= material->textures[2];
@@ -937,8 +983,8 @@ Material *App::buildMaterial(MaterialData &data)
 
 	m_bindlessMaterialTable->write(
 		&handles,
-		sizeof(BindlessMaterialHandles),
-		sizeof(BindlessMaterialHandles) * material->bindlessHandle
+		sizeof(GPUBindlessMaterial),
+		sizeof(GPUBindlessMaterial) * material->bindlessHandle
 	);
 
 	return material;

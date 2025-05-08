@@ -1,7 +1,7 @@
 #pragma once
 
-#include "third_party/volk.h"
-#include "third_party/vk_mem_alloc.h"
+#include <Volk/volk.h>
+#include <vma/vk_mem_alloc.h>
 
 #include "bindless.h"
 

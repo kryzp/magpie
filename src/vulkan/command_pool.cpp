@@ -77,7 +77,7 @@ const VkCommandPool &CommandPoolDynamic::getCommandPool() const
 void CommandPoolDynamic::expandBuffers(int n)
 {
 	uint64_t oldSize = m_freeBuffers.size();
-	uint64_t count = n - m_freeBuffers.size();
+	uint64_t count = n - oldSize;
 
 	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
 	commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

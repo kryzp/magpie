@@ -11,7 +11,7 @@ namespace mgp
 	class CommandBuffer;
 	class VertexFormat;
 	struct Material;
-	class RenderObject;
+	struct RenderObject;
 	class Mesh;
 
 	class Model

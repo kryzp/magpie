@@ -1,7 +1,7 @@
 #pragma once
 
-#include "third_party/volk.h"
-#include "third_party/vk_mem_alloc.h"
+#include <Volk/volk.h>
+#include <vma/vk_mem_alloc.h>
 
 #include "bindless.h"
 #include "descriptor.h"
@@ -47,17 +47,20 @@ namespace mgp
 
 		const VmaAllocator &getVMAAllocator() const;
 
-		Queue &getGraphicsQueue();
-		const Queue &getGraphicsQueue() const;
-		
-//		std::vector<Queue> &getComputeQueues();
-//		const std::vector<Queue> &getComputeQueues() const;
-
-//		std::vector<Queue> &getTransferQueues();
-//		const std::vector<Queue> &getTransferQueues() const;
-
 		BindlessResources &getBindlessResources();
 		const BindlessResources &getBindlessResources() const;
+
+		VkPipelineCache getProcessCache();
+		const VkPipelineCache &getProcessCache() const;
+
+		Queue& getGraphicsQueue();
+		const Queue& getGraphicsQueue() const;
+
+		//std::vector<Queue> &getComputeQueues();
+		//const std::vector<Queue> &getComputeQueues() const;
+
+		//std::vector<Queue> &getTransferQueues();
+		//const std::vector<Queue> &getTransferQueues() const;
 
 		void nextFrame();
 		int getCurrentFrameIndex() const;

@@ -4,13 +4,13 @@
 #include <array>
 #include <unordered_map>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 namespace mgp
 {
 	class Shader;
 	class VertexFormat;
-	class BlendState;
+	struct BlendState;
 	class RenderInfo;
 	class VulkanCore;
 

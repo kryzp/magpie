@@ -45,6 +45,16 @@ bool ShadowMapAtlas::allocate(ShadowMapAtlas::AtlasRegion* region, unsigned qual
 	{
 		for (int j = 0; j < quality + 1; j++)
 		{
+			if (i == quality && j == quality)
+			{
+				// this means the last possible space it could fit
+				// would be the bottom right corner, but we don't ever
+				// want to completely fill the shadow map, so just
+				// refuse to allocate here and exit
+
+				return false;
+			}
+
 			AtlasRegion potential;
 			potential.area.x = j * width;
 			potential.area.y = i * height;
@@ -86,14 +96,9 @@ bool ShadowMapAtlas::adaptiveAlloc(AtlasRegion *region, unsigned idealQuality, i
 	return true;
 }
 
-RenderGraph::AttachmentInfo ShadowMapAtlas::getAtlasAttachment() const
+ImageView *ShadowMapAtlas::getAtlasView()
 {
-	RenderGraph::AttachmentInfo attachment;
-	attachment.view = m_atlas->getStandardView();
-	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	attachment.clear = { .depthStencil = { 1.0f, 0 } };
-
-	return attachment;
+	return m_atlas->getStandardView();
 }
 
 void ShadowMapAtlas::clear()
@@ -127,7 +132,7 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *l
 	atlas.clear();
 
 	m_core->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ atlas.getAtlasAttachment() })
+		.setOutputAttachments({ { atlas.getAtlasView(), VK_ATTACHMENT_LOAD_OP_CLEAR, {.depthStencil = { 1.0f, 0 } } } })
 		.setBuildFn([&, shadowMapPipeline, lightBuffer](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_core->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);

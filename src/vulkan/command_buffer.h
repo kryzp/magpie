@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "render_info.h"
 

@@ -9,19 +9,17 @@
 	list, we can be certain whatever pass we reach will not be dependent on passes in front of it.
 */
 
-/*
-Current Todo:
-- proper actual dependency system
-- have an intermediary "GraphResource" components that can have writers, from which we can then flatten the graph and proceed as normal
-- getImageViewResource(<view>), getBufferResource(<buffer>), etc...
-- 
+/* Current Todo:
+	- proper actual dependency system
+	- have an intermediary "GraphResource" components that can have writers, from which we can then flatten the graph and proceed as normal
+	- getImageViewResource(<view>), getBufferResource(<buffer>), etc...
 */
 
 #include <vector>
 #include <string>
 #include <functional>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "math/calc.h"
 
@@ -62,34 +60,35 @@ namespace mgp
 	public:
 		struct AttachmentInfo
 		{
-			ImageView *view = nullptr;
-			ImageView *resolve = nullptr;
-
+			ImageView *view;
+//			ImageView *resolve;
 			VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 			VkClearValue clear = {};
 		};
 
 		// todo
+		/*
 		struct BufferInfo
 		{
-			VkDeviceSize size = 0;
-			VkBufferUsageFlags usage = 0;
-			bool persistent = true;
+		VkDeviceSize size = 0;
+		VkBufferUsageFlags usage = 0;
+		bool persistent = true;
 		};
 
 		struct Resource
 		{
-			enum Type
-			{
-				TYPE_IMAGE,
-				TYPE_BUFFER
-			};
-
-			ImageView *view;
-			GPUBuffer *buffer;
-
-			std::vector<PassHandle> writes; // passes that write to me
+		enum Type
+		{
+		TYPE_IMAGE,
+		TYPE_BUFFER
 		};
+
+		ImageView *view;
+		GPUBuffer *buffer;
+
+		std::vector<PassHandle> writes; // passes that write to me
+		};
+		*/
 
 		class RenderPassDefinition
 		{
@@ -105,13 +104,7 @@ namespace mgp
 				return *this;
 			}
 
-			RenderPassDefinition &setInputAttachments(const std::vector<AttachmentInfo> &attachments)
-			{
-				m_inputAttachments = attachments;
-				return *this;
-			}
-
-			RenderPassDefinition &setViews(const std::vector<ImageView *> &views)
+			RenderPassDefinition &setInputViews(const std::vector<ImageView *> &views)
 			{
 				m_views = views;
 				return *this;
@@ -125,7 +118,6 @@ namespace mgp
 
 		private:
 			std::vector<AttachmentInfo> m_outputAttachments;
-			std::vector<AttachmentInfo> m_inputAttachments;
 
 			std::vector<ImageView *> m_views;
 
@@ -140,12 +132,6 @@ namespace mgp
 			ComputeTaskDefinition() = default;
 			~ComputeTaskDefinition() = default;
 			
-			ComputeTaskDefinition &setStorageAttachments(const std::vector<AttachmentInfo> &attachments)
-			{
-				m_storageAttachments = attachments;
-				return *this;
-			}
-
 			ComputeTaskDefinition &setStorageViews(const std::vector<ImageView *> &views)
 			{
 				m_storageViews = views;
@@ -159,7 +145,6 @@ namespace mgp
 			}
 
 		private:
-			std::vector<AttachmentInfo> m_storageAttachments;
 			std::vector<ImageView *> m_storageViews;
 
 			std::function<void(CommandBuffer &)> m_buildFunc = nullptr;
@@ -180,6 +165,11 @@ namespace mgp
 
 		void handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle);
 		void handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle);
+
+		ImageView *getResolve(ImageView *view)
+		{
+			return nullptr;
+		}
 
 		const VulkanCore *m_core;
 

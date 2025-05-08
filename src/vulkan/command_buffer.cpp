@@ -254,7 +254,7 @@ void CommandBuffer::pipelineBarrier(
 )
 {
 	VkDependencyInfo dependency = {};
-	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR;
+	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
 
 	dependency.dependencyFlags = dependencyFlags;
 
@@ -286,6 +286,8 @@ void CommandBuffer::transitionLayout(Image &image, VkImageLayout newLayout)
 }
 
 /*
+	also transitions to shader read only layout :p
+*/
 void CommandBuffer::generateMipmaps(Image &image)
 {
 	MGP_ASSERT(image.getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");

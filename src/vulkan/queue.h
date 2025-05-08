@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "command_pool.h"
 

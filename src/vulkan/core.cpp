@@ -84,7 +84,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 			config.engineVersion.minor,
 			config.engineVersion.patch
 		),
-		.apiVersion = VK_API_VERSION_1_3
+		.apiVersion = VK_API_VERSION_1_4
 	};
 
 	VkInstanceCreateInfo createInfo = {};
@@ -96,7 +96,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 #if MGP_DEBUG
 	VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
 	debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugInfo.pfnUserCallback = vk_validation::vkDebugCallback;
 	debugInfo.pUserData = nullptr;
@@ -141,7 +141,13 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	m_depthFormat = vk_toolbox::findDepthFormat(m_physicalDevice);
 
 	findQueueFamilies();
+
 	createLogicalDevice();
+
+	volkLoadDevice(m_device);
+
+	createVmaAllocator();
+
 	createPipelineProcessCache();
 
 	m_bindlessResources.init(this);
@@ -192,15 +198,11 @@ void VulkanCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
 
 	// no viable physical device found, exit program
-	if (!deviceCount) {
+	if (!deviceCount)
 		MGP_ERROR("Failed to find GPUs with Vulkan support!");
-	}
 
-	VkPhysicalDeviceProperties2 properties = {};
-	properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-
-	VkPhysicalDeviceFeatures2 features = {};
-	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	VkPhysicalDeviceProperties2 properties		= { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+	VkPhysicalDeviceFeatures2 features			= { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
 	std::vector<VkPhysicalDevice> devices(deviceCount);
 	vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
@@ -326,12 +328,6 @@ void VulkanCore::createLogicalDevice()
 //	for (int i = 0; i < m_transferQueues.size(); i++)
 //		m_transferQueues[i].create(this, i);
 
-	// init volk
-	volkLoadDevice(m_device);
-
-	// init memory allocator
-	createVmaAllocator();
-
 	// print out current device version
 	uint32_t version = 0;
 	VkResult result = vkEnumerateInstanceVersion(&version);
@@ -370,9 +366,24 @@ void VulkanCore::createPipelineProcessCache()
 
 void VulkanCore::createVmaAllocator()
 {
-	VmaVulkanFunctions vulkanFunctions = {};
-	vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
-	vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+	VmaVulkanFunctions vulkanFunctions;
+	vulkanFunctions.vkAllocateMemory = vkAllocateMemory;
+	vulkanFunctions.vkBindBufferMemory = vkBindBufferMemory;
+	vulkanFunctions.vkBindImageMemory = vkBindImageMemory;
+	vulkanFunctions.vkCreateBuffer = vkCreateBuffer;
+	vulkanFunctions.vkCreateImage = vkCreateImage;
+	vulkanFunctions.vkDestroyBuffer = vkDestroyBuffer;
+	vulkanFunctions.vkDestroyImage = vkDestroyImage;
+	vulkanFunctions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+	vulkanFunctions.vkFreeMemory = vkFreeMemory;
+	vulkanFunctions.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+	vulkanFunctions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+	vulkanFunctions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+	vulkanFunctions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
+	vulkanFunctions.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+	vulkanFunctions.vkMapMemory = vkMapMemory;
+	vulkanFunctions.vkUnmapMemory = vkUnmapMemory;
+	vulkanFunctions.vkCmdCopyBuffer = vkCmdCopyBuffer;
 
 	VmaAllocatorCreateInfo allocatorCreateInfo = {};
 	allocatorCreateInfo.physicalDevice = m_physicalDevice;
@@ -510,12 +521,32 @@ const VmaAllocator &VulkanCore::getVMAAllocator() const
 	return m_vmaAllocator;
 }
 
-Queue &VulkanCore::getGraphicsQueue()
+BindlessResources &VulkanCore::getBindlessResources()
+{
+	return m_bindlessResources;
+}
+
+const BindlessResources &VulkanCore::getBindlessResources() const
+{
+	return m_bindlessResources;
+}
+
+VkPipelineCache VulkanCore::getProcessCache()
+{
+	return m_pipelineProcessCache;
+}
+
+const VkPipelineCache& VulkanCore::getProcessCache() const
+{
+	return m_pipelineProcessCache;
+}
+
+Queue& VulkanCore::getGraphicsQueue()
 {
 	return m_graphicsQueue;
 }
 
-const Queue &VulkanCore::getGraphicsQueue() const
+const Queue& VulkanCore::getGraphicsQueue() const
 {
 	return m_graphicsQueue;
 }
@@ -541,16 +572,6 @@ const std::vector<Queue> &VulkanCore::getTransferQueues() const
 	return m_transferQueues;
 }
 */
-
-BindlessResources &VulkanCore::getBindlessResources()
-{
-	return m_bindlessResources;
-}
-
-const BindlessResources &VulkanCore::getBindlessResources() const
-{
-	return m_bindlessResources;
-}
 
 void VulkanCore::nextFrame()
 {

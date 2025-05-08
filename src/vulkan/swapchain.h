@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "math/colour.h"
 

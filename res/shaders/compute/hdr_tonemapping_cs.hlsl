@@ -13,7 +13,7 @@ PushConstants pc;
 RWTexture2D<float4> target : register(u0);
 //Texture2D<float4> bloom : register(t1);
 
-[numthreads(8, 8, 1)]
+[numthreads(1, 1, 1)]
 void main(uint3 dispatchThread : SV_DispatchThreadID)
 {
 	if (dispatchThread.x < 0 ||

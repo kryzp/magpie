@@ -42,7 +42,7 @@ namespace mgp
 
 		void clear();
 
-		RenderGraph::AttachmentInfo getAtlasAttachment() const;
+		ImageView *getAtlasView();
 
 	private:
 		Image *m_atlas;

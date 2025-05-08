@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 namespace mgp
 {
@@ -20,6 +20,7 @@ namespace mgp
 	{
 		static constexpr const char *DEVICE_EXTENSIONS[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 #ifdef MGP_MAC_SUPPORT
 			"VK_KHR_portability_subset"
 #endif

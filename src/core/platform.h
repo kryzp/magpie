@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <glm/vec2.hpp>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "input/input.h"
 

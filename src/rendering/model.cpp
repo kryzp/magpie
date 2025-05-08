@@ -1,6 +1,6 @@
 #include "model.h"
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "vulkan/core.h"
 #include "vulkan/command_buffer.h"

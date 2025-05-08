@@ -107,7 +107,7 @@ float4 main(PSInput input) : SV_Target
 	float NdotV = max(0.0, dot(normal, viewDir));
 	
 	float3 Lo = 0.0;
-
+	
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
 	    PointLight light = lightsTable[pc.lightBuffer_ID][i];
@@ -134,12 +134,12 @@ float4 main(PSInput input) : SV_Target
 		float3 kD = (1.0 - F) * (1.0 - metallicValue);
 		
 		float3 diffuse = albedo;
-		float3 specular = (F * G * NDF) / (4.0 * NdotL * NdotV + 0.0001);
+		float3 specular = (F * G * NDF) / (4.0*NdotL*NdotV + 0.0001);
 
 		float shadow = calculateShadow(mul(light.lightSpaceMatrix, input.position), NdotL, light.atlasRegion);
 		
-		Lo += radiance * NdotL * (kD * diffuse + specular) * (1.0 - shadow);
-	}
+        Lo += radiance * NdotL * (kD * diffuse + specular) * (1.0 - shadow);
+    }
 
 	float3 F = fresnelSchlick(NdotV, F0, roughnessValue);
 	float3 kD = (1.0 - F) * (1.0 - metallicValue);
@@ -161,5 +161,5 @@ float4 main(PSInput input) : SV_Target
 	
 	finalColour *= input.colour;
 	
-	return float4(finalColour, 1.0);
+    return float4(finalColour, 1.0);
 }

@@ -379,7 +379,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &def
 	VkFormat depthStencilFormat = renderInfo.getDepthAttachmentFormat();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
-	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 	pipelineRenderingCreateInfo.colorAttachmentCount = colourFormats.size();
 	pipelineRenderingCreateInfo.pColorAttachmentFormats = colourFormats.data();
 	pipelineRenderingCreateInfo.depthAttachmentFormat = depthStencilFormat;
@@ -409,7 +409,7 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &def
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
 	MGP_VK_CHECK(
-		vkCreateGraphicsPipelines(m_core->getLogicalDevice(), VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr, &pipeline),
+		vkCreateGraphicsPipelines(m_core->getLogicalDevice(), m_core->getProcessCache(), 1, &graphicsPipelineCreateInfo, nullptr, &pipeline),
 		"Failed to create new graphics pipeline"
 	);
 

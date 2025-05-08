@@ -12,7 +12,6 @@ add_executable(${PROJECT_NAME}
     src/core/app.cpp
     src/core/platform.cpp
     src/core/cvar.cpp
-    src/core/editor_ui.cpp
 
     src/rendering/camera.cpp
     src/rendering/scene.cpp
@@ -55,8 +54,8 @@ add_executable(${PROJECT_NAME}
     src/io/file_stream.cpp
     src/io/memory_stream.cpp
 
-    src/third_party/vk_mem_alloc.cpp
     src/third_party/volk_impl.cpp
+    src/third_party/vma_impl.cpp
 
     src/third_party/imgui/imgui.cpp
     src/third_party/imgui/imgui_demo.cpp
@@ -74,12 +73,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 if(WIN32)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
-	set(GLM_INCLUDE_DIRS "D:/DevLibs/glm/")
-
 	set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
 	set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Release/SDL3.lib")
 
-	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.3.296.0/Include/")
+	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.4.309.0/Include/")
 
 	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")

@@ -5,7 +5,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 #include "core/common.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "third_party/volk.h"
+#include <Volk/volk.h>
 
 namespace mgp
 {

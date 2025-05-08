@@ -150,7 +150,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 			info.addDepthAttachment(
 				attachment.loadOp,
 				*attachment.view,
-				attachment.resolve
+				getResolve(attachment.view)
 			);
 
 			info.setClearDepth(attachment.clear);
@@ -165,7 +165,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 			info.addColourAttachment(
 				attachment.loadOp,
 				*attachment.view,
-				attachment.resolve
+				getResolve(attachment.view)
 			);
 
 			info.setClearColour(nColourAttachments++, attachment.clear);
@@ -195,24 +195,6 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 		}
 	}
 
-	for (cauto &attachment : pass.m_inputAttachments)
-	{
-		if (attachment.view->getImage()->isDepth())
-		{
-			cmd.transitionLayout(
-				*attachment.view->getImage(),
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-			);
-		}
-		else
-		{
-			cmd.transitionLayout(
-				*attachment.view->getImage(),
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			);
-		}
-	}
-
 	cmd.beginRendering(info);
 	pass.m_buildFunc(cmd, info);
 	cmd.endRendering();
@@ -221,14 +203,6 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 void RenderGraph::handleComputeTask(CommandBuffer &cmd, Swapchain *swapchain, const PassHandle &handle)
 {
 	const ComputeTaskDefinition &task = m_computeTasks[handle.index];
-
-	for (cauto &attachment : task.m_storageAttachments)
-	{
-		cmd.transitionLayout(
-			*attachment.view->getImage(),
-			VK_IMAGE_LAYOUT_GENERAL
-		);
-	}
 
 	for (cauto &view : task.m_storageViews)
 	{

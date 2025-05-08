@@ -8,6 +8,11 @@
 
 using namespace mgp;
 
+uint32_t clampMipmaps(uint32_t mipmaps, uint32_t w, uint32_t h, uint32_t d)
+{
+	return CalcU::min(mipmaps, CalcU::floor(CalcU::log2(CalcU::max(w, CalcU::max(h, d)))) + 1);
+}
+
 ImageAlloc::ImageAlloc(Image *image)
 	: m_parent(image)
 	, m_allocation()
@@ -105,7 +110,7 @@ void Image::allocate(
 	m_type = type;
 	m_tiling = tiling;
 
-	m_mipmapCount = mipmaps;
+	m_mipmapCount = clampMipmaps(mipmaps, width, height, depth);
 	m_samples = samples;
 
 	if (transient)
@@ -164,7 +169,7 @@ void Image::wrapAround(
 	m_type = type;
 	m_tiling = tiling;
 
-	m_mipmapCount = mipmaps;
+	m_mipmapCount = clampMipmaps(mipmaps, width, height, depth);
 	m_samples = samples;
 	m_usage = usage;
 
@@ -220,11 +225,11 @@ VkImageMemoryBarrier2 Image::getBarrier(VkImageLayout newLayout) const
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = getLayerCount();
 
-	barrier.srcAccessMask = 0;
-	barrier.dstAccessMask = 0;
+	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
 
-	barrier.srcStageMask = 0;
-	barrier.dstStageMask = 0;
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
 		newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
