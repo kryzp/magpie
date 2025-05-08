@@ -312,7 +312,7 @@ bool Image::isCubemap() const
 
 bool Image::isDepth() const
 {
-	return vk_toolbox::hasStencilComponent(m_format);
+	return m_format == m_core->getDepthFormat();
 }
 
 unsigned Image::getLayerCount() const
