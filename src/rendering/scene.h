@@ -32,7 +32,7 @@ namespace mgp
 		void foreachObject(const std::function<bool(uint32_t, RenderObject &)> &fn);
 		void foreachMesh(const std::function<bool(uint32_t, Mesh *)> &fn);
 
-		const std::vector<RenderObject> &getRenderObjects() const;
+		std::vector<RenderObject> &getRenderObjects();
 		const std::vector<Mesh *> &getRenderList();
 
 		void addLight(const Light &light);

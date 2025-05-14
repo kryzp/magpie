@@ -197,14 +197,15 @@ App::App(const Config &config)
 
 	auto obj = m_scene.createRenderObject();
 	obj->model = model;
+	obj->model->setOwner(obj);
 	obj->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 	obj->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
-	obj->transform.setScale({ 1.0f, 1.0f, 1.0f });
+	obj->transform.setScale({ 3.0f, 3.0f, 3.0f });
 	obj->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
 
 	Light light;
 	light.setType(Light::TYPE_POINT);
-	light.setIntensity(10.0f);
+	light.setIntensity(1.0f);
 	light.setFalloff(1.0f);
 	light.setDirection(glm::normalize((glm::vec3) { 1.0f, -1.0f, -1.0f }));
 	light.setPosition({ -2.0f, 2.0f, 1.0f });
@@ -400,14 +401,14 @@ void App::render(Swapchain *swapchain)
 		.cameraPosition = glm::vec4(m_camera.position, 1.0f)
 	};
 
-	m_frameConstantsBuffer->write(&constants, sizeof(GPUFrameConstants), 0);
+	m_frameConstantsBuffer->writeStruct(constants);
 
 	GPUTransformData transform = {
-		.model = glm::identity<glm::mat4>(),
+		.model = m_scene.getRenderObjects()[0].transform.getMatrix(),
 		.normalMatrix = glm::transpose(glm::inverse(transform.model))
 	};
 
-	m_transformDataBuffer->write(&transform, sizeof(GPUTransformData), 0);
+	m_transformDataBuffer->writeStruct(transform);
 
 	// render shadows
 	ShadowPass::renderShadows(m_scene, m_shadowAtlas, m_lightBuffer);
@@ -512,7 +513,7 @@ void App::render(Swapchain *swapchain)
 	// draw colour target to swapchain
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } } })
-		.setInputViews({ { m_targetColour->getStandardView() } })
+		.setInputViews({ m_targetColour->getStandardView() })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			PipelineData pipelineData = m_vulkanCore->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
@@ -672,7 +673,7 @@ void App::loadShaders()
 			Shader *shadowMap = createShader("shadow_map");
 
 			shadowMap->setDescriptorSetLayouts({ layout });
-			shadowMap->setPushConstantsSize(sizeof(float)*16 * 2);
+			shadowMap->setPushConstantsSize(sizeof(float)*16);
 			shadowMap->addStage(getShaderStage("model_shadow_map_vs"));
 			shadowMap->addStage(getShaderStage("shadow_map_ps"));
 		}

@@ -32,7 +32,6 @@ namespace mgp
 		void setMSAA(VkSampleCountFlagBits samples);
 
 		int getColourAttachmentCount() const;
-		int getAttachmentCount() const;
 
 		const std::vector<VkFormat> &getColourAttachmentFormats() const;
 		VkFormat getDepthAttachmentFormat() const;
@@ -50,8 +49,6 @@ namespace mgp
 		VkRenderingAttachmentInfo m_depthAttachment;
 
 		std::vector<VkFormat> m_colourFormats;
-
-		int m_attachmentCount;
 
 		VkSampleCountFlagBits m_samples;
 	};

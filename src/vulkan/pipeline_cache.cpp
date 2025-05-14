@@ -306,11 +306,10 @@ PipelineData PipelineCache::fetchGraphicsPipeline(const GraphicsPipelineDef &def
 	multisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 	multisampleStateCreateInfo.alphaToOneEnable = VK_FALSE;
 
-	// todo: bad
-	std::vector<VkPipelineColorBlendAttachmentState> blendStates;
+	std::vector<VkPipelineColorBlendAttachmentState> blendStates(renderInfo.getColourAttachmentCount());
 
 	for (int i = 0; i < renderInfo.getColourAttachmentCount(); i++) {
-		blendStates.push_back(definition.getColourBlendState());
+		blendStates[i] = definition.getColourBlendState();
 	}
 
 	VkPipelineColorBlendStateCreateInfo colourBlendStateCreateInfo = {};

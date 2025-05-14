@@ -11,7 +11,6 @@ RenderInfo::RenderInfo(const VulkanCore *core)
 	: m_colourAttachments()
 	, m_depthAttachment()
 	, m_colourFormats()
-	, m_attachmentCount(0)
 	, m_width(0)
 	, m_height(0)
 	, m_samples(VK_SAMPLE_COUNT_1_BIT)
@@ -63,8 +62,6 @@ void RenderInfo::addColourAttachment(VkAttachmentLoadOp loadOp, const ImageView 
 
 	m_colourAttachments.push_back(attachment);
 	m_colourFormats.push_back(view.getImage()->getFormat());
-
-	m_attachmentCount++;
 }
 
 void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &view, const ImageView *resolve)
@@ -88,8 +85,6 @@ void RenderInfo::addDepthAttachment(VkAttachmentLoadOp loadOp, const ImageView &
 		m_depthAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		m_depthAttachment.resolveMode = VK_RESOLVE_MODE_NONE;
 	}
-
-	m_attachmentCount++;
 }
 
 VkRenderingAttachmentInfo &RenderInfo::getColourAttachment(int idx)
@@ -131,11 +126,6 @@ void RenderInfo::setMSAA(VkSampleCountFlagBits samples)
 int RenderInfo::getColourAttachmentCount() const
 {
 	return m_colourAttachments.size();
-}
-
-int RenderInfo::getAttachmentCount() const
-{
-	return m_attachmentCount;
 }
 
 const std::vector<VkFormat> &RenderInfo::getColourAttachmentFormats() const

@@ -70,7 +70,7 @@ add_compile_definitions(MGP_DEBUG)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-if(WIN32)
+if (WIN32)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
 	set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
@@ -82,7 +82,6 @@ if(WIN32)
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
 
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
-
 	target_include_directories(${PROJECT_NAME} PRIVATE ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
 	add_compile_definitions(MGP_MAC_SUPPORT)
@@ -91,6 +90,7 @@ else()
 	find_package(Vulkan REQUIRED)
 	find_package(glm REQUIRED)
 	find_package(assimp REQUIRED)
+	find_package(volk CONFIG REQUIRED)
 
-	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp)
+	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3 Vulkan::Vulkan glm::glm assimp::assimp volk::volk)
 endif()

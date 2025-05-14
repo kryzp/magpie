@@ -124,6 +124,7 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *l
 	GraphicsPipelineDef shadowMapPipeline;
 	shadowMapPipeline.setShader(m_app->getShader("shadow_map"));
 	shadowMapPipeline.setVertexFormat(&vtx::MODEL_VERTEX_FORMAT);
+	shadowMapPipeline.setCullMode(VK_CULL_MODE_FRONT_BIT);
 
 	// this is bad but im doing it to get stuff running
 	// ideally shadow maps would be drawn once and only updated when they
@@ -135,10 +136,6 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *l
 		.setOutputAttachments({ { atlas.getAtlasView(), VK_ATTACHMENT_LOAD_OP_CLEAR, {.depthStencil = { 1.0f, 0 } } } })
 		.setBuildFn([&, shadowMapPipeline, lightBuffer](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
-			PipelineData pipelineData = m_core->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
-
-			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
-
 			for (int i = 0; i < scene.getPointLightCount(); i++)
 			{
 				auto &light = scene.getPointLights()[i];
@@ -163,28 +160,24 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *l
 						lightCamera.position = pos;
 						lightCamera.direction = dir;
 
-						struct
-						{
-							glm::mat4 proj;
-							glm::mat4 view;
-						}
-						pc;
+						PipelineData pipelineData = m_core->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
 
-						pc.proj = lightCamera.getProj();
-						pc.view = lightCamera.getView();
-
-						cmd.pushConstants(
-							pipelineData.layout,
-							VK_SHADER_STAGE_ALL_GRAPHICS,
-							sizeof(pc),
-							&pc
-						);
+						cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
 
 						cmd.setViewport({ (float)region.area.x, (float)region.area.y, (float)region.area.w, (float)region.area.h });
 						cmd.setScissor({ { (int)region.area.x, (int)region.area.y }, { region.area.w, region.area.h } });
 
 						scene.foreachMesh([&](uint32_t meshIndex, Mesh *mesh) -> bool
 						{
+							glm::mat4 transform = lightCamera.getProj() * lightCamera.getView() * mesh->getParent()->getOwner()->transform.getMatrix();
+
+							cmd.pushConstants(
+								pipelineData.layout,
+								VK_SHADER_STAGE_ALL_GRAPHICS,
+								sizeof(glm::mat4),
+								&transform
+							);
+
 							mesh->bind(cmd);
 							cmd.drawIndexed(mesh->getIndexCount());
 
@@ -206,11 +199,8 @@ void ShadowPass::renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *l
 					}
 				}
 
-				lightBuffer->write(
-					&gpuLight,
-					sizeof(GPUPointLight),
-					sizeof(GPUPointLight) * i
-				);
+				lightBuffer->writeStruct(gpuLight, i);
 			}
-		}));
+		})
+	);
 }

@@ -87,7 +87,7 @@ void Scene::foreachMesh(const std::function<bool(uint32_t, Mesh *)> &fn)
 	}
 }
 
-const std::vector<RenderObject> &Scene::getRenderObjects() const
+std::vector<RenderObject> &Scene::getRenderObjects()
 {
 	return m_renderObjects;
 }

@@ -3,7 +3,6 @@
 #include "model_common.hlsl"
 
 #define MAX_REFLECTION_LOD 4.0
-#define SHADOW_BIAS_MIN 0.0005
 
 struct PSInput
 {
@@ -53,11 +52,18 @@ float geometrySmith(float NdotV, float NdotL, float roughness)
 	return ggx1 * ggx2;
 }
 
-float calculateShadow(in float4 lightSpacePosition, float NdotL, float4 region)
+#define SHADOW_BIAS_MIN 0.0001
+#define SHADOW_BIAS_MAX 0.001
+
+float calculateShadow(in float4 lightSpacePosition, float NdotL, float3 normal, float4 region)
 {
     Texture2D shadowAtlas = texture2DTable[pc.shadowAtlas_ID];
 
-    float3 projCoords = lightSpacePosition.xyz / lightSpacePosition.w;
+    float3 modifiedLightPosition = lightSpacePosition.xyz;
+
+    modifiedLightPosition += 0.025 * normal * NdotL;
+
+    float3 projCoords = modifiedLightPosition / lightSpacePosition.w;
 
     projCoords.xy = (projCoords.xy * 0.5) + 0.5;
     projCoords.y = 1.0 - projCoords.y;
@@ -67,8 +73,8 @@ float calculateShadow(in float4 lightSpacePosition, float NdotL, float4 region)
     float depthHere = projCoords.z;
     float depthScreen = shadowAtlas.Sample(samplerTable[pc.shadowAtlasSampler_ID], uv).x;
 
-    float bias = max(SHADOW_BIAS_MIN * (1.0 - NdotL), SHADOW_BIAS_MIN);
-    return depthHere - bias > depthScreen ? 1.0 : 0.0;
+    //float bias = max(SHADOW_BIAS_MAX * (1.0 - NdotL), SHADOW_BIAS_MIN);
+    return depthHere > depthScreen ? 1.0 : 0.0;
 }
 
 float4 main(PSInput input) : SV_Target
@@ -115,7 +121,7 @@ float4 main(PSInput input) : SV_Target
 		float3 deltaX = light.position.xyz - input.position.xyz;
 		float distanceSquared = dot(deltaX, deltaX);
 
-		float attenuation = 1.0 / (1.0 * distanceSquared);
+		float attenuation = 1.0 / (0.01 * distanceSquared);
 		float3 radiance = light.colour.rgb * attenuation;
 		
 		float3 lightDir = normalize(deltaX);
@@ -136,7 +142,7 @@ float4 main(PSInput input) : SV_Target
 		float3 diffuse = albedo;
 		float3 specular = (F * G * NDF) / (4.0*NdotL*NdotV + 0.0001);
 
-		float shadow = calculateShadow(mul(light.lightSpaceMatrix, input.position), NdotL, light.atlasRegion);
+		float shadow = calculateShadow(mul(light.lightSpaceMatrix, input.position), NdotL, normal, light.atlasRegion);
 		
         Lo += radiance * NdotL * (kD * diffuse + specular) * (1.0 - shadow);
     }

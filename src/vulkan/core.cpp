@@ -96,7 +96,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 #if MGP_DEBUG
 	VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
 	debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	debugInfo.pfnUserCallback = vk_validation::vkDebugCallback;
 	debugInfo.pUserData = nullptr;
@@ -290,6 +290,8 @@ void VulkanCore::createLogicalDevice()
 	synchronisation2FeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
 	synchronisation2FeaturesExt.synchronization2 = VK_TRUE;
 	synchronisation2FeaturesExt.pNext = &bufferDeviceAddressFeaturesExt;
+
+	m_physicalDeviceFeatures.features.robustBufferAccess = VK_FALSE;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

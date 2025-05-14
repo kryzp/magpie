@@ -20,8 +20,11 @@ namespace mgp
 		void read(void *dst, uint64_t length, uint64_t offset) const;
 		void write(const void *src, uint64_t length, uint64_t offset) const;
 
-//		template <typename T>
-//		void writeStruct(const T &data, uint64_t index) const;
+		template <typename T>
+		void writeStruct(const T &data, uint64_t index = 0) const
+		{
+			write(&data, sizeof(T), sizeof(T) * index);
+		}
 
 		VkDescriptorBufferInfo getDescriptorInfo(uint32_t offset = 0) const;
 		VkDescriptorBufferInfo getDescriptorInfoRange(uint32_t range, uint32_t offset = 0) const;

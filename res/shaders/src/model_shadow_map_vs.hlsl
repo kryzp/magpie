@@ -4,13 +4,12 @@
 
 struct PushConstants
 {
-	float4x4 proj;
-	float4x4 view;
+	float4x4 transform;
 };
 
 PUSH_CONSTANTS(PushConstants, pc);
 
 float4 main(VSInput input) : SV_Position
 {
-	return mul(pc.proj, mul(pc.view, float4(input.position, 1.0)));
+	return mul(pc.transform, float4(input.position, 1.0));
 }
