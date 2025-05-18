@@ -28,13 +28,8 @@ Platform::Platform(const Config &config)
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	if (config.hasFlag(CONFIG_FLAG_RESIZABLE_BIT)) {
-		flags |= SDL_WINDOW_RESIZABLE;
-	}
-
-	if (config.hasFlag(CONFIG_FLAG_HIGH_PIXEL_DENSITY_BIT)) {
-		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	}
+	if (config.hasFlag(CONFIG_FLAG_RESIZABLE_BIT))				flags |= SDL_WINDOW_RESIZABLE;
+	if (config.hasFlag(CONFIG_FLAG_HIGH_PIXEL_DENSITY_BIT))		flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
 	flags |= SDL_WINDOW_VULKAN;
 
@@ -63,7 +58,7 @@ void Platform::pollEvents(InputState *input)
 
 	while (SDL_PollEvent(&ev))
 	{
-		ImGui_ImplSDL3_ProcessEvent(&ev);
+//		ImGui_ImplSDL3_ProcessEvent(&ev);
 
 		switch (ev.type)
 		{
@@ -145,9 +140,8 @@ void Platform::pollEvents(InputState *input)
 void Platform::reconnectAllGamepads()
 {
 	// if we already have some gamepads connected disconnect them
-	if (m_gamepads[0] != nullptr) {
+	if (m_gamepads[0] != nullptr)
 		closeAllGamepads();
-	}
 
 	// find all connected gamepads
 	SDL_JoystickID *gamepadIDs = SDL_GetGamepads(&m_gamepadCount);
@@ -170,9 +164,7 @@ void Platform::reconnectAllGamepads()
 
 		// check if we actually managed to open the gamepad
 		if (m_gamepads[i]) {
-			MGP_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i,
-				SDL_GetGamepadPlayerIndex(m_gamepads[i])
-			);
+			MGP_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i, SDL_GetGamepadPlayerIndex(m_gamepads[i]));
 		} else {
 			MGP_LOG("Failed to open gamepad with id: %d, and internal index: %d.", id, i);
 		}
@@ -184,7 +176,8 @@ finished:
 
 void Platform::closeAllGamepads()
 {
-	for (int i = 0; i < m_gamepadCount; i++) {
+	for (int i = 0; i < m_gamepadCount; i++)
+	{
 		SDL_CloseGamepad(m_gamepads[i]);
 		MGP_LOG("Closed gamepad with internal index %d.", i);
 	}
@@ -249,9 +242,9 @@ glm::ivec2 Platform::getScreenSize() const
 
 	if (out) {
 		return { out->w, out->h };
+	} else {
+		return { 0, 0 };
 	}
-
-	return { 0, 0 };
 }
 
 float Platform::getWindowOpacity() const
@@ -317,37 +310,50 @@ WindowMode Platform::getWindowMode() const
 {
 	auto flags = SDL_GetWindowFlags(m_window);
 
-	if (flags & SDL_WINDOW_FULLSCREEN) {
-		return WINDOW_MODE_FULLSCREEN_BIT;
-	} else if (flags & SDL_WINDOW_BORDERLESS) {
-		return WINDOW_MODE_BORDERLESS_BIT;
+	if (flags & SDL_WINDOW_FULLSCREEN)
+	{
+		if (flags & SDL_WINDOW_BORDERLESS)
+		{
+			return WINDOW_MODE_BORDERLESS_FULLSCREEN;
+		}
+		else
+		{
+			return WINDOW_MODE_FULLSCREEN;
+		}
 	}
-
-	return WINDOW_MODE_WINDOWED_BIT;
+	else if (flags & SDL_WINDOW_BORDERLESS)
+	{
+		return WINDOW_MODE_BORDERLESS;
+	}
+	else
+	{
+		return WINDOW_MODE_WINDOWED;
+	}
 }
 
 void Platform::setWindowMode(WindowMode toggle)
 {
 	switch (toggle)
 	{
-		case WINDOW_MODE_FULLSCREEN_BIT:
+		case WINDOW_MODE_FULLSCREEN:
 			SDL_SetWindowFullscreen(m_window, true);
 			SDL_SetWindowBordered(m_window, false);
 			break;
 
-//		case WINDOW_MODE_BORDERLESS_FULLSCREEN_BIT:
-//			SDL_SetWindowFullscreen(m_window, true);
-//			SDL_SetWindowBordered(m_window, true);
-//			break;
-
-		case WINDOW_MODE_BORDERLESS_BIT:
+		case WINDOW_MODE_BORDERLESS:
 			SDL_SetWindowFullscreen(m_window, false);
 			SDL_SetWindowBordered(m_window, false);
 			break;
 
-		case WINDOW_MODE_WINDOWED_BIT:
+		case WINDOW_MODE_WINDOWED:
 			SDL_SetWindowFullscreen(m_window, false);
 			SDL_SetWindowBordered(m_window, true);
+			break;
+
+		case WINDOW_MODE_BORDERLESS_FULLSCREEN:
+			SDL_SetWindowFullscreen(m_window, true);
+			SDL_SetWindowBordered(m_window, false);
+			break;
 
 		default:
 			return;

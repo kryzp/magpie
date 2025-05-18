@@ -158,13 +158,13 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 		MaterialData data;
 		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
 
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getFallbackDiffuse());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getFallbackAmbient());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	m_app->getFallbackRoughnessMetallic());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				m_app->getFallbackNormals());
-		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				m_app->getFallbackEmissive());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getTextures().getFallbackDiffuse());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getTextures().getFallbackAmbient());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	m_app->getTextures().getFallbackRoughnessMetallic());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				m_app->getTextures().getFallbackNormals());
+		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				m_app->getTextures().getFallbackEmissive());
 
-		submesh->setMaterial(m_app->buildMaterial(data));
+		submesh->setMaterial(m_app->getRenderer().buildMaterial(data));
 	}
 }
 
@@ -197,7 +197,7 @@ std::vector<Image *> ModelLoader::loadMaterialTextures(const aiMaterial *materia
 		aiString basePath = aiString(localPath.c_str());
 		basePath.Append(texturePath.C_Str());
 
-		result.push_back(m_app->loadTexture(basePath.C_Str(), basePath.C_Str()));
+		result.push_back(m_app->getTextures().loadTexture(basePath.C_Str(), basePath.C_Str()));
 	}
 
 	return result;

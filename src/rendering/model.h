@@ -10,7 +10,7 @@ namespace mgp
 	class GPUBuffer;
 	class CommandBuffer;
 	class VertexFormat;
-	struct Material;
+	class Material;
 	struct RenderObject;
 	class Mesh;
 

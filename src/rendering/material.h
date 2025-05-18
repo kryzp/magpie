@@ -63,8 +63,9 @@ namespace mgp
 		}
 	};
 
-	struct Material
+	class Material
 	{
+	public:
 		Material() = default;
 		~Material() = default;
 

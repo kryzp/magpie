@@ -54,7 +54,6 @@ void Camera::update(const InputState *input, const Platform *platform, float dt)
 	float yaw = m_yaw + glm::half_pi<float>();
 	float pitch = m_pitch;
 
-
 	if (input->isDown(KB_KEY_L))
 	{
 		position = { -2.0f, 2.0f, 1.0f };

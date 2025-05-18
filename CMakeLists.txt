@@ -18,9 +18,10 @@ add_executable(${PROJECT_NAME}
     src/rendering/model.cpp
     src/rendering/model_loader.cpp
     src/rendering/light.cpp
-    
-	src/rendering/passes/shadow_pass.cpp
-	src/rendering/passes/deferred_pass.cpp
+    src/rendering/texture_manager.cpp
+    src/rendering/shader_manager.cpp
+    src/rendering/renderer.cpp
+    src/rendering/shadow_map_atlas.cpp
 
     src/vulkan/core.cpp
     src/vulkan/toolbox.cpp

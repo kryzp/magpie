@@ -1,0 +1,30 @@
+::mgp (magpie)
+{
+	::os
+	/os/
+
+	::
+	/third_party/
+
+	::pigs
+	/pigs/ (platform independent game systems)
+
+	::
+	/engine/core/network/							::net
+	/engine/core/rendering/							::gfx
+	/engine/core/vulkan/							::vk
+	/engine/core/io/								::io
+	/engine/core/input/								::inp
+	/engine/core/math/								::<none>
+	/engine/core/job/								::job
+	/engine/core/physics/							::phys
+	/engine/core/entity/<engine specific code>		::ent
+	/engine/core/assets/							::ast
+	/engine/core/audio/								::au or ::snd
+	/engine/core/devenv/							::dev
+	/engine/core/time/								::ti or ::tm or ::chr
+	/engine/core/animation/							::anim
+}
+
+::dw (darkwreath)
+/game/entity/<game specific code>		::ent

@@ -135,4 +135,18 @@ namespace mgp
 		int m_nBufferInfos;
 		int m_nImageInfos;
 	};
+
+	/*
+		bland wrapper
+	class DescriptorSet
+	{
+	public:
+		DescriptorSet(const VkDescriptorSet &set);
+
+		const VkDescriptorSet &getSet() const;
+
+	private:
+		VkDescriptorSet m_set;
+	};
+	*/
 }

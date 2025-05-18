@@ -2,19 +2,13 @@
 
 #include <vector>
 
-#include "vulkan/render_graph.h"
-
 #include "math/rect.h"
 
 namespace mgp
 {
-	class CommandBuffer;
-	class RenderInfo;
 	class VulkanCore;
 	class Image;
-	class Scene;
-	class App;
-	class GPUBuffer;
+	class ImageView;
 
 	class ShadowMapAtlas
 	{
@@ -47,20 +41,5 @@ namespace mgp
 	private:
 		Image *m_atlas;
 		std::vector<AtlasRegion> m_regions;
-	};
-
-	// todo: have separate classes like PointLightShadowMap and CascadedShadowMap for different use cases?
-
-	class ShadowPass
-	{
-	public:
-		static void init(VulkanCore *core, App *app);
-		static void destroy();
-
-		static void renderShadows(Scene& scene, ShadowMapAtlas &atlas, GPUBuffer *lightBuffer);
-		
-	private:
-		static VulkanCore *m_core;
-		static App *m_app;
 	};
 }

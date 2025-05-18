@@ -5,7 +5,7 @@
 
 #include "math/colour.h"
 
-#include "./passes/shadow_pass.h"
+#include "shadow_map_atlas.h"
 
 namespace mgp
 {
@@ -17,7 +17,7 @@ namespace mgp
 	{
 		glm::vec4 position; // [x,y,z]: position, [w]: unused
 		glm::vec4 colour; // [x,y,z]: colour, [w]: 0/1 depending on shadows
-		glm::vec4 atlasRegion; // [x,y]: top left, [z,w]: bottom right
+		glm::vec4 atlasRegion; // [x,y]: top left, [z,w]: width, height
 		glm::mat4 lightSpaceMatrix;
 	};
 

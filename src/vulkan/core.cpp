@@ -163,7 +163,7 @@ VulkanCore::~VulkanCore()
 	m_descriptorLayoutCache.dispose();
 	m_bindlessResources.destroy();
 
-	m_imGuiDescriptorPool.cleanUp();
+//	m_imGuiDescriptorPool.cleanUp();
 
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 
