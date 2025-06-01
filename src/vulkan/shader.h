@@ -12,17 +12,17 @@ namespace mgp
 	{
 	public:
 		ShaderStage(const VulkanCore *core);
-		ShaderStage(const VulkanCore *core, VkShaderStageFlagBits stage, const char *source, uint32_t size);
+		ShaderStage(const VulkanCore *core, VkShaderStageFlagBits stage, const char *path);
 		~ShaderStage();
 
-		void loadFromSource(const char *source, uint64_t size);
+		void compileFromSource(const char *path);
 
 		VkPipelineShaderStageCreateInfo getShaderStageCreateInfo() const;
 
-		VkShaderStageFlagBits getStage() const;
-		void setStage(VkShaderStageFlagBits stage);
+		VkShaderStageFlagBits getStage() const { return m_stage; }
+		void setStage(VkShaderStageFlagBits stage) { m_stage = stage; }
 
-		VkShaderModule getModule() const;
+		VkShaderModule getModule() const { return m_module; }
 
 	private:
 		VkShaderStageFlagBits m_stage;

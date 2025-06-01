@@ -16,7 +16,7 @@ ImageView::ImageView(
 )
 	: m_view(VK_NULL_HANDLE)
 	, m_parent(parent)
-	, m_bindlessHandle(bindless::INVALID_HANDLE)
+	, m_bindlessHandle(BindlessResources::INVALID_HANDLE)
 	, m_core(core)
 {
 	VkImageViewType viewType = m_parent->getType();
@@ -89,7 +89,7 @@ const Image *ImageView::getImage() const
 	return m_parent;
 }
 
-bindless::Handle ImageView::getBindlessHandle() const
+uint32_t ImageView::getBindlessHandle() const
 {
 	return m_bindlessHandle;
 }

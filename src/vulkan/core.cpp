@@ -60,8 +60,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	, m_imGuiImageFormat()
 	, m_surface()
 	, m_graphicsQueue()
-//	, m_computeQueues()
-//	, m_transferQueues()
+	, m_slangSession()
 	, m_renderGraph(this)
 	, m_platform(platform)
 #if MGP_DEBUG
@@ -152,32 +151,54 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 
 	m_bindlessResources.init(this);
 
+	initSlang();
+
 	MGP_LOG("Vulkan Core Initialized!");
 }
 
 VulkanCore::~VulkanCore()
 {
+	MGP_LOG("0");
+
 	deviceWaitIdle();
+	
+	MGP_LOG("1");
+
+	m_slangSession.setNull(); // destroy
+	
+	MGP_LOG("2");
 
 	m_pipelineCache.dispose();
-	m_descriptorLayoutCache.dispose();
-	m_bindlessResources.destroy();
+	
+	MGP_LOG("3");
 
-//	m_imGuiDescriptorPool.cleanUp();
+	m_descriptorLayoutCache.dispose();
+	
+	MGP_LOG("4");
+
+	m_bindlessResources.destroy();
+	
+	MGP_LOG("5");
+	
+	m_imGuiDescriptorPool.cleanUp();
+	
+	MGP_LOG("6");
 
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
+	
+	MGP_LOG("7");
 
 	m_graphicsQueue.destroy();
-
-//	for (auto &q : m_computeQueues)
-//		q.destroy();
-
-//	for (auto &q : m_transferQueues)
-//		q.destroy();
+	
+	MGP_LOG("8");
 
 	m_surface.destroy();
+	
+	MGP_LOG("9");
 
 	vmaDestroyAllocator(m_vmaAllocator);
+	
+	MGP_LOG("10");
 
 	vkDestroyDevice(m_device, nullptr);
 
@@ -256,14 +277,6 @@ void VulkanCore::createLogicalDevice()
 
 	queueCreateInfos.push_back(m_graphicsQueue.getCreateInfo(QUEUE_PRIORITIES));
 
-	/*
-	for (auto &q : m_computeQueues)
-		queueCreateInfos.push_back(q.getCreateInfo(QUEUE_PRIORITIES));
-
-	for (auto &q : m_transferQueues)
-		queueCreateInfos.push_back(q.getCreateInfo(QUEUE_PRIORITIES));
-	*/
-
 	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
 	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 	descriptorIndexingFeaturesExt.runtimeDescriptorArray = VK_TRUE;
@@ -323,12 +336,6 @@ void VulkanCore::createLogicalDevice()
 
 	// create queues
 	m_graphicsQueue.create(this, 0);
-
-//	for (int i = 0; i < m_computeQueues.size(); i++)
-//		m_computeQueues[i].create(this, i);
-
-//	for (int i = 0; i < m_transferQueues.size(); i++)
-//		m_transferQueues[i].create(this, i);
 
 	// print out current device version
 	uint32_t version = 0;
@@ -421,30 +428,10 @@ void VulkanCore::findQueueFamilies()
 			vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_surface.getHandle(), &presentSupport);
 
 			if (presentSupport)
-			{
 				m_graphicsQueue.setFamilyIndex(i);
-			}
 
 			continue;
 		}
-
-		/*
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && numQueuesFound.compute < queueFamilies[i].queueCount)
-		{
-			m_computeQueues.emplace_back();
-			m_computeQueues.back().setFamilyIndex(i);
-			numQueuesFound.compute++;
-			continue;
-		}
-
-		if ((queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && numQueuesFound.transfer < queueFamilies[i].queueCount)
-		{
-			m_transferQueues.emplace_back();
-			m_transferQueues.back().setFamilyIndex(i);
-			numQueuesFound.transfer++;
-			continue;
-		}
-		*/
 	}
 }
 
@@ -463,158 +450,17 @@ void VulkanCore::resetFence(const VkFence &fence) const
 	vkResetFences(m_device, 1, &fence);
 }
 
-const VkInstance &VulkanCore::getInstance() const
-{
-	return m_instance;
-}
-
-const VkDevice &VulkanCore::getLogicalDevice() const
-{
-	return m_device;
-}
-
-const VkPhysicalDevice &VulkanCore::getPhysicalDevice() const
-{
-	return m_physicalDevice;
-}
-
-const VkPhysicalDeviceProperties2 &VulkanCore::getPhysicalDeviceProperties() const
-{
-	return m_physicalDeviceProperties;
-}
-
-const VkPhysicalDeviceFeatures2 &VulkanCore::getPhysicalDeviceFeatures() const
-{
-	return m_physicalDeviceFeatures;
-}
-
-const VkSampleCountFlagBits VulkanCore::getMaxMSAASamples() const
-{
-	return m_maxMsaaSamples;
-}
-
-PipelineCache &VulkanCore::getPipelineCache()
-{
-	return m_pipelineCache;
-}
-
-const PipelineCache &VulkanCore::getPipelineCache() const
-{
-	return m_pipelineCache;
-}
-
-DescriptorLayoutCache &VulkanCore::getDescriptorLayoutCache()
-{
-	return m_descriptorLayoutCache;
-}
-
-const DescriptorLayoutCache &VulkanCore::getDescriptorLayoutCache() const
-{
-	return m_descriptorLayoutCache;
-}
-
-const Surface &VulkanCore::getSurface() const
-{
-	return m_surface;
-}
-
-const VmaAllocator &VulkanCore::getVMAAllocator() const
-{
-	return m_vmaAllocator;
-}
-
-BindlessResources &VulkanCore::getBindlessResources()
-{
-	return m_bindlessResources;
-}
-
-const BindlessResources &VulkanCore::getBindlessResources() const
-{
-	return m_bindlessResources;
-}
-
-VkPipelineCache VulkanCore::getProcessCache()
-{
-	return m_pipelineProcessCache;
-}
-
-const VkPipelineCache& VulkanCore::getProcessCache() const
-{
-	return m_pipelineProcessCache;
-}
-
-Queue& VulkanCore::getGraphicsQueue()
-{
-	return m_graphicsQueue;
-}
-
-const Queue& VulkanCore::getGraphicsQueue() const
-{
-	return m_graphicsQueue;
-}
-
-/*
-std::vector<Queue> &VulkanCore::getComputeQueues()
-{
-	return m_computeQueues;
-}
-
-const std::vector<Queue> &VulkanCore::getComputeQueues() const
-{
-	return m_computeQueues;
-}
-
-std::vector<Queue> &VulkanCore::getTransferQueues()
-{
-	return m_transferQueues;
-}
-
-const std::vector<Queue> &VulkanCore::getTransferQueues() const
-{
-	return m_transferQueues;
-}
-*/
-
 void VulkanCore::nextFrame()
 {
 	m_currentFrameIndex = (m_currentFrameIndex + 1) % Queue::FRAMES_IN_FLIGHT;
 
 	vkQueueWaitIdle(m_graphicsQueue.getHandle());
 	m_graphicsQueue.getFrame(m_currentFrameIndex).pool.reset();
-
-	/*
-	for (auto &q : m_computeQueues)
-	{
-		vkQueueWaitIdle(q.getHandle());
-		q.getFrame(m_currentFrameIndex).pool.reset();
-	}
-
-	for (auto &q : m_transferQueues)
-	{
-		vkQueueWaitIdle(q.getHandle());
-		q.getFrame(m_currentFrameIndex).pool.reset();
-	}
-	*/
 }
 
 int VulkanCore::getCurrentFrameIndex() const
 {
 	return m_currentFrameIndex;
-}
-
-RenderGraph &VulkanCore::getRenderGraph()
-{
-	return m_renderGraph;
-}
-
-const RenderGraph &VulkanCore::getRenderGraph() const
-{
-	return m_renderGraph;
-}
-
-VkFormat VulkanCore::getDepthFormat() const
-{
-	return m_depthFormat;
 }
 
 void VulkanCore::initImGui()
@@ -654,4 +500,55 @@ void VulkanCore::initImGui()
 	ImGui_ImplVulkan_Init(&info);
 
 	ImGui_ImplVulkan_CreateFontsTexture();
+}
+
+void VulkanCore::initSlang()
+{
+	Slang::ComPtr<slang::IGlobalSession> globalSession;
+	slang::createGlobalSession(globalSession.writeRef());
+
+	slang::SessionDesc sessionDesc = {};
+
+	slang::TargetDesc targetDesc = {};
+	targetDesc.format = SLANG_SPIRV;
+	targetDesc.profile = globalSession->findProfile("spirv_1_5");
+
+	sessionDesc.targets = &targetDesc;
+	sessionDesc.targetCount = 1;
+	
+	std::vector<slang::CompilerOptionEntry> options = 
+	{
+		{
+			slang::CompilerOptionName::EmitSpirvDirectly,
+			{ slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
+		},
+		{
+			slang::CompilerOptionName::MatrixLayoutColumn,
+			{ slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
+		}
+	};
+
+	sessionDesc.compilerOptionEntries = options.data();
+	sessionDesc.compilerOptionEntryCount = options.size();
+	
+	const char* searchPath = "../../res/shaders/src/";
+
+	sessionDesc.searchPaths = &searchPath;
+	sessionDesc.searchPathCount = 1;
+
+	/*
+	std::array<slang::PreprocessorMacroDesc, 2> preprocessorMacroDesc =
+	{
+		{ "BIAS_VALUE", "1138" },
+		{ "OTHER_MACRO", "float" }
+	};
+
+	sessionDesc.preprocessorMacros = preprocessorMacroDesc.data();
+	sessionDesc.preprocessorMacroCount = preprocessorMacroDesc.size();
+	*/
+
+	sessionDesc.preprocessorMacros = nullptr;
+	sessionDesc.preprocessorMacroCount = 0;
+
+	globalSession->createSession(sessionDesc, m_slangSession.writeRef());
 }

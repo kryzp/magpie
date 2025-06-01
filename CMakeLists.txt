@@ -79,10 +79,12 @@ if (WIN32)
 
 	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.4.309.0/Include/")
 
+	set(SLANG_LIBRARIES "D:/VulkanSDK/1.4.309.0/Lib/slang.lib")
+
 	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")
 
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${SDL3_LIBRARIES} ${ASSIMP_LIBRARIES} ${SLANG_LIBRARIES})
 	target_include_directories(${PROJECT_NAME} PRIVATE ${SDL3_INCLUDE_DIRS} ${VK_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS})
 else()
 	add_compile_definitions(MGP_MAC_SUPPORT)

@@ -9,7 +9,7 @@ using namespace mgp;
 Sampler::Sampler(VulkanCore *core, const Sampler::Style &style)
 	: m_sampler(VK_NULL_HANDLE)
 	, m_style(style)
-	, m_bindlessHandle(bindless::INVALID_HANDLE)
+	, m_bindlessHandle(BindlessResources::INVALID_HANDLE)
 	, m_core(core)
 {
 	cauto &properties = m_core->getPhysicalDeviceProperties().properties;
@@ -56,7 +56,7 @@ const Sampler::Style &Sampler::getStyle() const
 	return m_style;
 }
 
-bindless::Handle Sampler::getBindlessHandle() const
+uint32_t Sampler::getBindlessHandle() const
 {
 	return m_bindlessHandle;
 }

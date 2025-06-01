@@ -21,10 +21,8 @@ namespace mgp
 		void write(const void *src, uint64_t length, uint64_t offset) const;
 
 		template <typename T>
-		void writeStruct(const T &data, uint64_t index = 0) const
-		{
-			write(&data, sizeof(T), sizeof(T) * index);
-		}
+		void writeType(const T &data, uint64_t index = 0) const
+		{ write(&data, sizeof(T), sizeof(T) * index); }
 
 		VkDescriptorBufferInfo getDescriptorInfo(uint32_t offset = 0) const;
 		VkDescriptorBufferInfo getDescriptorInfoRange(uint32_t range, uint32_t offset = 0) const;
@@ -34,12 +32,14 @@ namespace mgp
 		VmaAllocationCreateFlagBits getFlags() const;
 		VkBufferUsageFlags getUsage() const;
 
-		bool isUniform() const;
-		bool isStorage() const;
+		VkDeviceAddress getGPUAddress() const;
+
+		bool isUniformBuffer() const;
+		bool isStorageBuffer() const;
 
 		uint64_t getSize() const;
 
-		bindless::Handle getBindlessHandle() const;
+		uint32_t getBindlessHandle() const;
 
 	private:
 		VkBuffer m_buffer;
@@ -50,9 +50,11 @@ namespace mgp
 		VkBufferUsageFlags m_usage;
 		VmaAllocationCreateFlagBits m_flags;
 
+		VkDeviceAddress m_gpuAddress;
+
 		uint64_t m_size;
 
-		bindless::Handle m_bindlessHandle;
+		uint32_t m_bindlessHandle;
 
 		VulkanCore *m_core;
 	};

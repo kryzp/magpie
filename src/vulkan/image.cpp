@@ -40,6 +40,7 @@ ImageAlloc::ImageAlloc(Image *image)
 
 	default:
 		MGP_ERROR("Failed to find VkImageType given VkImageViewType: %d", m_parent->getType());
+		break;
 	}
 
 	VkImageCreateInfo createInfo = {};

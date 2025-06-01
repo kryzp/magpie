@@ -15,9 +15,12 @@ GPUBuffer::GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaAllocationCr
 	, m_usage(usage)
 	, m_flags(flags)
 	, m_size(size)
-	, m_bindlessHandle(bindless::INVALID_HANDLE)
+	, m_bindlessHandle(BindlessResources::INVALID_HANDLE)
 	, m_core(core)
 {
+	if (isStorageBuffer())
+		m_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT; // enable for all ssbo's
+
 	VkBufferCreateInfo bufferCreateInfo = {};
 	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferCreateInfo.size = m_size;
@@ -35,8 +38,14 @@ GPUBuffer::GPUBuffer(VulkanCore *core, VkBufferUsageFlags usage, VmaAllocationCr
 		"Failed to create buffer"
 	);
 
-	if (usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-		m_bindlessHandle = m_core->getBindlessResources().registerBuffer(*this);
+	if (isStorageBuffer())
+	{
+		VkBufferDeviceAddressInfo addressInfo;
+		addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+		addressInfo.buffer = m_buffer;
+
+		m_gpuAddress = vkGetBufferDeviceAddress(m_core->getLogicalDevice(), &addressInfo);
+	}
 }
 
 GPUBuffer::~GPUBuffer()
@@ -88,12 +97,17 @@ VkBufferUsageFlags GPUBuffer::getUsage() const
 	return m_usage;
 }
 
-bool GPUBuffer::isUniform() const
+VkDeviceAddress GPUBuffer::getGPUAddress() const
+{
+	return m_gpuAddress;
+}
+
+bool GPUBuffer::isUniformBuffer() const
 {
 	return m_usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 }
 
-bool GPUBuffer::isStorage() const
+bool GPUBuffer::isStorageBuffer() const
 {
 	return m_usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 }
@@ -103,7 +117,7 @@ uint64_t GPUBuffer::getSize() const
 	return m_size;
 }
 
-bindless::Handle GPUBuffer::getBindlessHandle() const
+uint32_t GPUBuffer::getBindlessHandle() const
 {
 	return m_bindlessHandle;
 }

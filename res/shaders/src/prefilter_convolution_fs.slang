@@ -1,23 +1,18 @@
-#include "common.hlsl"
+#include "primitive_vs.slang"
 
-struct PSInput
-{
-	[[vk::location(0)]]
-	float3 worldPos : TEXCOORD0;
-};
+const static float PI = 3.14159265;
+const static int SAMPLE_COUNT = 1024;
 
-struct DataUBO
+struct Data
 {
 	float roughness;
-	float _padding[3];
+	float _padding0;
+	float _padding1;
+	float _padding2;
 };
 
-ConstantBuffer<DataUBO> ubo : register(b0);
-
-#define SAMPLE_COUNT 1024
-
-TextureCube environmentMap : register(t1);
-SamplerState samplerState : register(s1);
+[[vk::binding(0)]] ConstantBuffer<Data> ubo;
+[[vk::binding(1)]] SamplerCube environmentMap;
 
 float radicalInverse_VdC(uint bits) 
 {
@@ -38,7 +33,7 @@ float3 importanceSampleGGX(float2 Xi, float3 normal, float roughness)
 {
 	float a = roughness * roughness;
 	
-	float phi = 2.0 * MATH_PI * Xi.x;
+	float phi = 2.0 * PI * Xi.x;
 	
 	float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
@@ -67,15 +62,16 @@ float distributionGGX(float NdotH, float roughness)
 	
 	float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
 
-	return a2 / (denom * denom * MATH_PI);
+	return a2 / (denom * denom * PI);
 }
 
-float4 main(PSInput input) : SV_Target
+[shader("fragment")]
+float4 fragmentMain(VS_Output input) : SV_Target
 {
-	uint envWidth, envHeight;
-	environmentMap.GetDimensions(envWidth, envHeight);
+    uint envWidth, envHeight;
+    environmentMap.GetDimensions(envWidth, envHeight);
 	
-	float3 normal = normalize(input.worldPos);
+	float3 normal = normalize(input.worldPosition);
 	float3 R = normal;
 	float3 V = R;
 	
@@ -100,12 +96,12 @@ float4 main(PSInput input) : SV_Target
 			
 			float pdf = D * NdotH / (4.0 * HdotV) + 0.0001;
 			
-			float saTexel = 4.0 * MATH_PI / (6.0 * float(envWidth) * float(envHeight));
+			float saTexel = 4.0 * PI / (6.0 * float(envWidth) * float(envHeight));
 			float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
 			float mipLevel = ubo.roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
-            
-			result += min(10.0, environmentMap.SampleLevel(samplerState, L, mipLevel).rgb) * NdotL;
+
+            result += min(10.0, environmentMap.SampleLevel(L, mipLevel).rgb) * NdotL;
 			totalWeight += NdotL;
 		}
 	}

@@ -107,10 +107,14 @@ const std::vector<Mesh *> &Scene::getRenderList()
 
 void Scene::addLight(const Light& light)
 {
-	if (light.getType() == Light::TYPE_POINT)
+	switch (light.getType())
 	{
-		m_pointsLights[m_pointLightCount] = light;
-		m_pointLightCount = (m_pointLightCount + 1) % MAX_POINT_LIGHTS;
+		case Light::TYPE_POINT:
+		{
+			m_pointsLights[m_pointLightCount] = light;
+			m_pointLightCount++;
+		}
+		break;
 	}
 }
 

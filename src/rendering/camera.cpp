@@ -86,8 +86,6 @@ void Camera::update(const InputState *input, const Platform *platform, float dt)
 	} else if (input->isDown(KB_KEY_SPACE)) {
 		position += +v2 * MOVE_SPEED * dt;
 	}
-
-	MGP_LOG("%f %f %f", position.x, position.y, position.z);
 }
 
 glm::mat4 Camera::getView() const

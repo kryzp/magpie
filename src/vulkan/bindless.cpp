@@ -11,22 +11,6 @@
 
 using namespace mgp;
 
-BindlessResources::BindlessResources()
-	: m_core(nullptr)
-	, m_bindlessPool()
-	, m_bindlessSet()
-	, m_bindlessLayout()
-	, m_textureHandle_UID(0)
-	, m_cubeHandle_UID(0)
-	, m_samplerHandle_UID(0)
-	, m_bufferHandle_UID(0)
-{
-}
-
-BindlessResources::~BindlessResources()
-{
-}
-
 void BindlessResources::init(VulkanCore *core)
 {
 	m_core = core;
@@ -36,11 +20,6 @@ void BindlessResources::init(VulkanCore *core)
 	const uint32_t HARD_CAP_ON_SIZE = 65536;
 
 	std::vector<DescriptorPoolSize> resources = {
-		// buffers
-		{
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetStorageBuffers)
-		},
 		// samplers
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLER,
@@ -73,9 +52,7 @@ void BindlessResources::init(VulkanCore *core)
 	bindingFlags.pBindingFlags = flags.data();
 
 	m_bindlessLayout = layoutBuilder.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS, &bindingFlags, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
-
 	m_bindlessPool.init(m_core, 1, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT, resources);
-
 	m_bindlessSet = m_bindlessPool.allocate(m_bindlessLayout);
 }
 
@@ -84,45 +61,34 @@ void BindlessResources::destroy()
 	m_bindlessPool.cleanUp();
 }
 
-bindless::Handle BindlessResources::registerBuffer(const GPUBuffer &buffer)
+uint32_t BindlessResources::registerSampler(const Sampler &sampler)
 {
-	bindless::Handle handle = m_bufferHandle_UID++;
+	uint32_t handle = m_samplerHandle_UID++;
 
 	DescriptorWriter(m_core)
-		.writeBuffer(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffer.getDescriptorInfo(), handle)
+		.writeSampler(0, sampler, handle)
 		.writeTo(m_bindlessSet);
 
 	return handle;
 }
 
-bindless::Handle BindlessResources::registerSampler(const Sampler &sampler)
+uint32_t BindlessResources::registerTexture2D(const ImageView &view)
 {
-	bindless::Handle handle = m_samplerHandle_UID++;
+	uint32_t handle = m_textureHandle_UID++;
 
 	DescriptorWriter(m_core)
-		.writeSampler(1, sampler, handle)
+		.writeSampledImage(1, view, handle)
 		.writeTo(m_bindlessSet);
 
 	return handle;
 }
 
-bindless::Handle BindlessResources::registerTexture2D(const ImageView &view)
+uint32_t BindlessResources::registerCubemap(const ImageView &cubemap)
 {
-	bindless::Handle handle = m_textureHandle_UID++;
+	uint32_t handle = m_cubeHandle_UID++;
 
 	DescriptorWriter(m_core)
-		.writeSampledImage(2, view, handle)
-		.writeTo(m_bindlessSet);
-
-	return handle;
-}
-
-bindless::Handle BindlessResources::registerCubemap(const ImageView &cubemap)
-{
-	bindless::Handle handle = m_cubeHandle_UID++;
-
-	DescriptorWriter(m_core)
-		.writeSampledImage(3, cubemap, handle)
+		.writeSampledImage(2, cubemap, handle)
 		.writeTo(m_bindlessSet);
 
 	return handle;

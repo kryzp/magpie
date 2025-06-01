@@ -30,7 +30,7 @@ namespace mgp
 		void processNodes(Model *mesh, aiNode *node, const aiScene *scene, const aiMatrix4x4& transform);
 		void processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform);
 
-		void fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback);
+		void fetchMaterialBoundTextures(std::vector<uint32_t> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback);
 		std::vector<Image *> loadMaterialTextures(const aiMaterial *material, aiTextureType type, const std::string &localPath);
 
 		Assimp::Importer m_importer;

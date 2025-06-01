@@ -94,16 +94,16 @@ namespace mgp
 		VkPipelineShaderStageCreateInfo m_stage;
 	};
 
-	struct PipelineData
-	{
-		VkPipeline pipeline;
-		VkPipelineLayout layout;
-	};
-
 	static constexpr VkDynamicState PIPELINE_DYNAMIC_STATES[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR,
 		//VK_DYNAMIC_STATE_BLEND_CONSTANTS // todo: add dynamic blend constants
+	};
+
+	struct PipelineState
+	{
+		VkPipeline pipeline;
+		VkPipelineLayout layout;
 	};
 
 	class PipelineCache
@@ -115,8 +115,8 @@ namespace mgp
 		void init(const VulkanCore *core);
 		void dispose();
 
-		PipelineData fetchGraphicsPipeline(const GraphicsPipelineDef &definition, const RenderInfo &renderInfo);
-		PipelineData fetchComputePipeline(const ComputePipelineDef &definition);
+		PipelineState fetchGraphicsPipeline(const GraphicsPipelineDef &definition, const RenderInfo &renderInfo);
+		PipelineState fetchComputePipeline(const ComputePipelineDef &definition);
 
 		VkPipelineLayout fetchPipelineLayout(const Shader *shader);
 

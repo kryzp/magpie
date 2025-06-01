@@ -53,6 +53,8 @@ Model *ModelLoader::loadModel(const std::string &path)
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
+	MGP_LOG("Loading model...");
+
 	processNodes(mesh, scene->mRootNode, scene, identity);
 
 	return mesh;
@@ -168,7 +170,7 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 	}
 }
 
-void ModelLoader::fetchMaterialBoundTextures(std::vector<bindless::Handle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
+void ModelLoader::fetchMaterialBoundTextures(std::vector<uint32_t> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
 {
 	std::vector<Image *> maps = loadMaterialTextures(material, type, localPath);
 

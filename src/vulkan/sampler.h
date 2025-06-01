@@ -53,7 +53,7 @@ namespace mgp
 		VkSampler getHandle() const;
 		const Style &getStyle() const;
 
-		bindless::Handle getBindlessHandle() const;
+		uint32_t getBindlessHandle() const;
 
 		bool operator == (const Sampler &other) const { return this->m_style == other.m_style; }
 		bool operator != (const Sampler &other) const { return this->m_style != other.m_style; }
@@ -62,7 +62,7 @@ namespace mgp
 		VkSampler m_sampler;
 		Style m_style;
 
-		bindless::Handle m_bindlessHandle;
+		uint32_t m_bindlessHandle;
 
 		VulkanCore *m_core;
 	};

@@ -37,7 +37,7 @@ namespace mgp
 	struct MaterialData
 	{
 		std::string technique;
-		std::vector<bindless::Handle> textures;
+		std::vector<uint32_t> textures;
 
 		void *parameters;
 		uint64_t parameterSize;
@@ -82,9 +82,9 @@ namespace mgp
 			return result;
 		}
 
-		std::vector<bindless::Handle> textures;
+		std::vector<uint32_t> textures;
 		GPUBuffer *parameterBuffer;
 		GraphicsPipelineDef passes[SHADER_PASS_MAX_ENUM];
-		bindless::Handle bindlessHandle;
+		uint32_t bindlessHandle;
 	};
 }

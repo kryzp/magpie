@@ -91,9 +91,9 @@ App::~App()
 
 	delete m_inputSt;
 
-//	ImGui_ImplVulkan_Shutdown();
-//	ImGui_ImplSDL3_Shutdown();
-//	ImGui::DestroyContext();
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
 
 	delete m_vulkanCore;
 	delete m_platform;
@@ -104,7 +104,6 @@ void App::run()
 	InFlightSync inFlightSync(m_vulkanCore);
 
 	// init imgui
-	/*
 	{
 		IMGUI_CHECKVERSION();
 
@@ -116,7 +115,6 @@ void App::run()
 		m_platform->initImGui();
 		m_vulkanCore->initImGui();
 	}
-	*/
 
 	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
 		MGP_LOG("Detected window resize!");
@@ -144,7 +142,7 @@ void App::run()
 
 	Light light;
 	light.setType(Light::TYPE_POINT);
-	light.setIntensity(1.0f);
+	light.setIntensity(5.0f);
 	light.setFalloff(1.0f);
 	light.setDirection(glm::normalize((glm::vec3) { 1.0f, -1.0f, -1.0f }));
 	light.setPosition({ -2.0f, 2.0f, 1.0f });
@@ -152,6 +150,8 @@ void App::run()
 	light.toggleShadows(true);
 
 	m_scene.addLight(light);
+
+	MGP_LOG("Entering main game loop...");
 
 	while (m_running)
 	{
@@ -161,10 +161,10 @@ void App::run()
 		if (m_inputSt->isPressed(KB_KEY_ESCAPE))
 			exit();
 
-//		ImGui_ImplVulkan_NewFrame();
-//		ImGui_ImplSDL3_NewFrame();
-//		ImGui::NewFrame();
-//		ImGui::ShowDemoWindow();
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+		ImGui::ShowDemoWindow();
 
 		double deltaTime = deltaTimer.reset();
 
@@ -193,10 +193,6 @@ void App::run()
 
 void App::tick(float dt)
 {
-}
-
-void App::tickFixed(float dt)
-{
 	if (m_inputSt->isDown(KB_KEY_F))
 	{
 		m_platform->setCursorVisible(false);
@@ -210,12 +206,15 @@ void App::tickFixed(float dt)
 	}
 }
 
+void App::tickFixed(float dt)
+{
+}
+
 void App::render(Swapchain *swapchain)
 {
 	m_renderer.render(m_scene, m_camera, swapchain);
 
 	// imgui pass
-	/*
 	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
 		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_LOAD } })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
@@ -227,7 +226,6 @@ void App::render(Swapchain *swapchain)
 				cmd.getHandle()
 			);
 		}));
-	*/
 }
 
 void App::applyConfig(const Config &config)

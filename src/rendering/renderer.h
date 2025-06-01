@@ -64,12 +64,13 @@ namespace mgp
 
 		GPUBuffer *m_frameConstantsBuffer;
 		GPUBuffer *m_transformDataBuffer;
-		GPUBuffer *m_lightBuffer;
+		GPUBuffer *m_bindlessMaterialTable;
+		GPUBuffer *m_pointLightBuffer;
+		GPUBuffer *m_bufferPointersBuffer;
 
 		std::unordered_map<uint64_t, Material *> m_materials;
 		std::unordered_map<std::string, Technique> m_techniques;
-		GPUBuffer *m_bindlessMaterialTable;
-		bindless::Handle m_materialHandle_UID;
+		uint32_t m_materialHandle_UID;
 
 		GraphicsPipelineDef m_textureUVPipeline;
 		VkDescriptorSet m_textureUVSet;

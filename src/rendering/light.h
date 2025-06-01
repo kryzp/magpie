@@ -1,7 +1,6 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 
 #include "math/colour.h"
 
@@ -13,7 +12,7 @@ namespace mgp
 
 	constexpr static unsigned MAX_POINT_LIGHTS = 16;
 
-	struct GPUPointLight
+	struct GPU_PointLight
 	{
 		glm::vec4 position; // [x,y,z]: position, [w]: unused
 		glm::vec4 colour; // [x,y,z]: colour, [w]: 0/1 depending on shadows

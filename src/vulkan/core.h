@@ -3,6 +3,10 @@
 #include <Volk/volk.h>
 #include <vma/vk_mem_alloc.h>
 
+#include <slang/slang.h>
+#include <slang/slang-com-ptr.h>
+#include <slang/slang-com-helper.h>
+
 #include "bindless.h"
 #include "descriptor.h"
 #include "pipeline_cache.h"
@@ -27,34 +31,40 @@ namespace mgp
 		void deviceWaitIdle() const;
 		void waitForFence(const VkFence &fence) const;
 		void resetFence(const VkFence &fence) const;
+
+		void nextFrame();
+		int getCurrentFrameIndex() const;
+
+		void initImGui();
 		
-		const VkInstance &getInstance() const;
-		const VkDevice &getLogicalDevice() const;
+	public:
+		const VkInstance &getInstance() const { return m_instance; }
+		const VkDevice &getLogicalDevice() const { return m_device; }
 
-		const VkPhysicalDevice &getPhysicalDevice() const;
-		const VkPhysicalDeviceProperties2 &getPhysicalDeviceProperties() const;
-		const VkPhysicalDeviceFeatures2 &getPhysicalDeviceFeatures() const;
+		const VkPhysicalDevice &getPhysicalDevice() const { return m_physicalDevice; }
+		const VkPhysicalDeviceProperties2 &getPhysicalDeviceProperties() const { return m_physicalDeviceProperties; }
+		const VkPhysicalDeviceFeatures2 &getPhysicalDeviceFeatures() const { return m_physicalDeviceFeatures; }
 
-		const VkSampleCountFlagBits getMaxMSAASamples() const;
+		const VkSampleCountFlagBits getMaxMSAASamples() const { return m_maxMsaaSamples; }
 
-		PipelineCache &getPipelineCache();
-		const PipelineCache &getPipelineCache() const;
+		PipelineCache &getPipelineCache() { return m_pipelineCache; }
+		const PipelineCache &getPipelineCache() const { return m_pipelineCache; }
 
-		DescriptorLayoutCache &getDescriptorLayoutCache();
-		const DescriptorLayoutCache &getDescriptorLayoutCache() const;
+		DescriptorLayoutCache &getDescriptorLayoutCache() { return m_descriptorLayoutCache; }
+		const DescriptorLayoutCache &getDescriptorLayoutCache() const { return m_descriptorLayoutCache; }
 
-		const Surface &getSurface() const;
+		const Surface &getSurface() const { return m_surface; }
 
-		const VmaAllocator &getVMAAllocator() const;
+		const VmaAllocator &getVMAAllocator() const { return m_vmaAllocator; }
 
-		BindlessResources &getBindlessResources();
-		const BindlessResources &getBindlessResources() const;
+		BindlessResources &getBindlessResources() { return m_bindlessResources; }
+		const BindlessResources &getBindlessResources() const { return m_bindlessResources; }
 
-		VkPipelineCache getProcessCache();
-		const VkPipelineCache &getProcessCache() const;
+		VkPipelineCache getProcessCache() { return m_pipelineProcessCache; }
+		const VkPipelineCache &getProcessCache() const { return m_pipelineProcessCache; }
 
-		Queue& getGraphicsQueue();
-		const Queue& getGraphicsQueue() const;
+		Queue& getGraphicsQueue() { return m_graphicsQueue; }
+		const Queue& getGraphicsQueue() const { return m_graphicsQueue; }
 
 		//std::vector<Queue> &getComputeQueues();
 		//const std::vector<Queue> &getComputeQueues() const;
@@ -62,15 +72,12 @@ namespace mgp
 		//std::vector<Queue> &getTransferQueues();
 		//const std::vector<Queue> &getTransferQueues() const;
 
-		void nextFrame();
-		int getCurrentFrameIndex() const;
+		RenderGraph &getRenderGraph() { return m_renderGraph; }
+		const RenderGraph &getRenderGraph() const { return m_renderGraph; }
 
-		RenderGraph &getRenderGraph();
-		const RenderGraph &getRenderGraph() const;
+		VkFormat getDepthFormat() const { return m_depthFormat; }
 
-		VkFormat getDepthFormat() const;
-
-		void initImGui();
+		const Slang::ComPtr<slang::ISession> &getSlangSession() const { return m_slangSession; }
 
 	private:
 		void enumeratePhysicalDevices(VkSurfaceKHR surface);
@@ -78,6 +85,7 @@ namespace mgp
 		void createPipelineProcessCache();
 		void createVmaAllocator();
 		void findQueueFamilies();
+		void initSlang();
 
 		VkInstance m_instance;
 		VkDevice m_device;
@@ -112,6 +120,8 @@ namespace mgp
 
 		RenderGraph m_renderGraph;
 		BindlessResources m_bindlessResources;
+
+		Slang::ComPtr<slang::ISession> m_slangSession;
 
 #if MGP_DEBUG
 		VkDebugUtilsMessengerEXT m_debugMessenger;

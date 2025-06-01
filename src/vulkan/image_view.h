@@ -27,14 +27,14 @@ namespace mgp
 		Image *getImage();
 		const Image *getImage() const;
 
-		bindless::Handle getBindlessHandle() const;
+		uint32_t getBindlessHandle() const;
 
 	private:
 		VkImageView m_view;
 
 		Image *m_parent; // todo: use a handle here instead
 
-		bindless::Handle m_bindlessHandle;
+		uint32_t m_bindlessHandle;
 
 		VulkanCore *m_core;
 	};

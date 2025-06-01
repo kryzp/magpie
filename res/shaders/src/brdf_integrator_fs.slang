@@ -1,11 +1,7 @@
-struct PSInput
-{
-	[[vk::location(0)]]
-	float2 texCoord : TEXCOORD0;
-};
+#include "fullscreen_triangle_vs.slang"
 
-#define MATH_PI 3.14159265359
-#define SAMPLE_COUNT 1024
+const static float PI = 3.14159265;
+const static int SAMPLE_COUNT = 1024;
 
 float radicalInverse_VdC(uint bits) 
 {
@@ -26,7 +22,7 @@ float3 importanceSampleGGX(float2 Xi, float3 normal, float roughness)
 {
 	float a = roughness * roughness;
 	
-	float phi = 2.0 * MATH_PI * Xi.x;
+	float phi = 2.0 * PI * Xi.x;
 	float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	
@@ -52,7 +48,7 @@ float3 importanceSampleGGX(float2 Xi, float3 normal, float roughness)
 float geometrySchlickGGX(float NdotV, float roughness)
 {
 	float r = roughness;
-	float k = r * r / 2.0;
+	float k = r * r * 0.5;
 	
 	return NdotV / lerp(k, 1.0, NdotV);
 }
@@ -65,48 +61,49 @@ float geometrySmith(float NdotV, float NdotL, float roughness)
 	return ggx1 * ggx2;
 }
 
-float4 main(PSInput input) : SV_Target
+[shader("fragment")]
+float4 fragmentMain(VS_Output input) : SV_Target
 {
-	float NdotV = input.texCoord.x;
-	float roughness = input.texCoord.y;
-	
-	float3 V = float3(
-		sqrt(1.0 - NdotV * NdotV),
-		0.0,
-		NdotV
-	);
+    float NdotV = input.uv.x;
+    float roughness = input.uv.y;
 
-	float A = 0.0;
-	float B = 0.0;
+    float3 V = float3(
+        sqrt(1.0 - NdotV * NdotV),
+        0.0,
+        NdotV
+    );
 
-	float3 N = float3(0.0, 0.0, 1.0);
-    
-	for (int i = 0; i < SAMPLE_COUNT; ++i)
+    float A = 0.0;
+    float B = 0.0;
+
+    float3 N = float3(0.0, 0.0, 1.0);
+
+    for (int i = 0; i < SAMPLE_COUNT; ++i)
     {
         // generates a sample vector that's biased towards the
         // preferred alignment direction (importance sampling).
-		float2 Xi = hammersley(i, SAMPLE_COUNT);
-		float3 H = importanceSampleGGX(Xi, N, roughness);
-		float3 L = normalize(2.0 * dot(V, H) * H - V);
-		
-		float NdotL = max(0.0, dot(N, L));
-		
-		if (NdotL > 0.0)
-        {
-			float NdotH = max(0.0, H.z);
-			float VdotH = max(0.0, dot(V, H));
-			
-			float G = geometrySmith(NdotV, NdotL, roughness);
-			float G_Vis = (G * VdotH) / (NdotH * NdotV);
-			float Fc = pow(1.0 - VdotH, 5.0);
+        float2 Xi = hammersley(i, SAMPLE_COUNT);
+        float3 H = importanceSampleGGX(Xi, N, roughness);
+        float3 L = normalize(2.0 * dot(V, H) * H - V);
 
-			A += (1.0 - Fc) * G_Vis;
-			B += Fc * G_Vis;
-		}
-	}
-	
-	A /= float(SAMPLE_COUNT);
-	B /= float(SAMPLE_COUNT);
-	
-	return float4(A, B, 0.0, 1.0);
+        float NdotL = max(0.0, dot(N, L));
+
+        if (NdotL > 0.0)
+        {
+            float NdotH = max(0.0, H.z);
+            float VdotH = max(0.0, dot(V, H));
+
+            float G = geometrySmith(NdotV, NdotL, roughness);
+            float G_Vis = (G * VdotH) / (NdotH * NdotV);
+            float Fc = pow(1.0 - VdotH, 5.0);
+
+            A += (1.0 - Fc) * G_Vis;
+            B += Fc * G_Vis;
+        }
+    }
+
+    A /= float(SAMPLE_COUNT);
+    B /= float(SAMPLE_COUNT);
+
+    return float4(A, B, 0.0, 1.0);
 }

@@ -9,8 +9,8 @@
 #include "vulkan/gpu_buffer.h"
 #include "vulkan/image.h"
 #include "vulkan/image_view.h"
-#include "vulkan/sampler.h"
 #include "vulkan/bindless.h"
+#include "vulkan/sampler.h"
 #include "vulkan/shader.h"
 #include "vulkan/vertex_format.h"
 #include "vulkan/command_buffer.h"
@@ -25,48 +25,48 @@
 
 using namespace mgp;
 
-struct GPUFrameConstants
+struct GPU_FrameData
 {
 	glm::mat4 proj;
 	glm::mat4 view;
-	glm::vec4 cameraPosition;
+	glm::vec4 view_position;
 };
 
-struct GPUTransformData
+struct GPU_TransformData
 {
 	glm::mat4 model;
-	glm::mat4 normalMatrix;
+	glm::mat4 normal_matrix;
 };
 
-struct GPUBindlessMaterial
+struct GPU_BindlessMaterial
 {
-	bindless::Handle diffuseTexture_ID;
-	bindless::Handle aoTexture_ID;
-	bindless::Handle armTexture_ID;
-	bindless::Handle normalTexture_ID;
-	bindless::Handle emissiveTexture_ID;
+    uint32_t diffuse_id;
+    uint32_t ambient_id;
+    uint32_t ambient_rough_metallic_id;
+    uint32_t normal_id;
+    uint32_t emissive_id;
 };
 
-struct GPUBindlessPushConstants
+struct GPU_BufferPointers
 {
-	bindless::Handle frameDataBuffer_ID;
-	bindless::Handle transformBuffer_ID;
-	bindless::Handle materialDataBuffer_ID;
-	bindless::Handle lightBuffer_ID;
+	VkDeviceAddress frame_data;
+	VkDeviceAddress transforms;
+	VkDeviceAddress materials;
+	VkDeviceAddress point_lights;
+};
 
-	bindless::Handle transform_ID;
-
-	bindless::Handle irradianceMap_ID;
-	bindless::Handle prefilterMap_ID;
-	bindless::Handle brdfLUT_ID;
-
-	bindless::Handle material_ID;
-
-	bindless::Handle cubemapSampler_ID;
-	bindless::Handle textureSampler_ID;
-	bindless::Handle shadowAtlasSampler_ID;
-
-	bindless::Handle shadowAtlas_ID;
+struct GPU_ModelPushConstants
+{
+	VkDeviceAddress buffers;
+    uint32_t transform_id;
+    uint32_t irradiance_map_id;
+    uint32_t prefilter_map_id;
+    uint32_t brdf_lut_id;
+    uint32_t material_id;
+    uint32_t shadow_atlas_id;
+    uint32_t cubemap_sampler_id;
+    uint32_t texture_sampler_id;
+    uint32_t shadow_atlas_sampler_id;
 };
 
 void Renderer::init(App *app, Swapchain *swapchain)
@@ -77,34 +77,49 @@ void Renderer::init(App *app, Swapchain *swapchain)
 
 	m_shadowAtlas.init(app->getVkCore());
 
-	m_lightBuffer = new GPUBuffer(
-		app->getVkCore(),
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPUPointLight) * MAX_POINT_LIGHTS
-	);
-
 	m_frameConstantsBuffer = new GPUBuffer(
 		app->getVkCore(),
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPUFrameConstants)
+		sizeof(GPU_FrameData)
 	);
 
 	m_transformDataBuffer = new GPUBuffer(
 		app->getVkCore(),
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPUTransformData)
+		sizeof(GPU_TransformData)
 	);
 
 	m_bindlessMaterialTable = new GPUBuffer(
 		app->getVkCore(),
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPUBindlessMaterial) * 128
+		sizeof(GPU_BindlessMaterial) * 128
+	);
+
+	m_pointLightBuffer = new GPUBuffer(
+		app->getVkCore(),
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(GPU_PointLight) * MAX_POINT_LIGHTS
 	);
 	
+	m_bufferPointersBuffer = new GPUBuffer(
+		app->getVkCore(),
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(GPU_BufferPointers)
+	);
+
+	GPU_BufferPointers pointers = {};
+	pointers.frame_data = m_frameConstantsBuffer->getGPUAddress();
+	pointers.transforms = m_transformDataBuffer->getGPUAddress();
+	pointers.materials = m_bindlessMaterialTable->getGPUAddress();
+	pointers.point_lights = m_pointLightBuffer->getGPUAddress();
+
+	m_bufferPointersBuffer->writeType(pointers);
+
 	createSkyboxMesh();
 
 	precomputeBRDF();
@@ -171,8 +186,9 @@ void Renderer::destroy()
 
 	delete m_frameConstantsBuffer;
 	delete m_transformDataBuffer;
-	delete m_lightBuffer;
+	delete m_pointLightBuffer;
 	delete m_bindlessMaterialTable;
+	delete m_bufferPointersBuffer;
 
 	for (auto &[id, material] : m_materials)
 		delete material;
@@ -184,27 +200,26 @@ void Renderer::destroy()
 
 	m_shadowAtlas.destroy();
 
-
 	delete m_targetColour;
 	delete m_targetDepth;
 }
 
 void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
 {
-	GPUFrameConstants constants = {
+	GPU_FrameData constants = {
 		.proj = camera.getProj(),
 		.view = camera.getView(),
-		.cameraPosition = glm::vec4(camera.position, 1.0f)
+		.view_position = glm::vec4(camera.position, 1.0f)
 	};
 
-	m_frameConstantsBuffer->writeStruct(constants);
+	m_frameConstantsBuffer->writeType(constants);
 
-	GPUTransformData transform = {
+	GPU_TransformData transform = {
 		.model = scene.getRenderObjects()[0].transform.getMatrix(),
-		.normalMatrix = glm::transpose(glm::inverse(transform.model))
+		.normal_matrix = glm::transpose(glm::inverse(transform.model))
 	};
 
-	m_transformDataBuffer->writeStruct(transform);
+	m_transformDataBuffer->writeType(transform);
 
 	shadowPass(scene, camera);
 
@@ -217,7 +232,7 @@ void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
 			.setStorageViews({ m_targetColour->getStandardView() })
 			.setBuildFn([&](CommandBuffer &cmd) -> void
 			{
-				PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
 			
 				cmd.bindPipeline(
 					VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -262,7 +277,7 @@ void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
 		.setInputViews({ m_targetColour->getStandardView() })
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
-			PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
 
 			cmd.bindPipeline(
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -298,6 +313,10 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 		.setOutputAttachments({ { m_shadowAtlas.getAtlasView(), VK_ATTACHMENT_LOAD_OP_CLEAR, {.depthStencil = { 1.0f, 0 } } } })
 		.setBuildFn([&, shadowMapPipeline](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
+
+			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+
 			for (int i = 0; i < scene.getPointLightCount(); i++)
 			{
 				auto &light = scene.getPointLights()[i];
@@ -306,7 +325,7 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 				glm::vec3 col = light.getColour().getDisplayColour();
 				glm::vec3 dir = light.getDirection();
 
-				GPUPointLight gpuLight = {};
+				GPU_PointLight gpuLight = {};
 				gpuLight.position = { pos.x, pos.y, pos.z, 0.0f };
 				gpuLight.colour = { col.x * light.getIntensity(), col.y * light.getIntensity(), col.z * light.getIntensity(), 0.0f };
 
@@ -314,24 +333,22 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 				{
 					ShadowMapAtlas::AtlasRegion region;
 
-					if (m_shadowAtlas.adaptiveAlloc(&region, 3, 6))
+					if (m_shadowAtlas.adaptiveAlloc(&region, 2, 6))
 					{
 						light.setShadowAtlasRegion(region);
 
 						Camera lightCamera((float)region.area.w / (float)region.area.h, 75.0f, 0.01f, 25.0f);
-						lightCamera.position = pos;
+						lightCamera.position = gpuLight.position;
 						lightCamera.direction = dir;
 
-						PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
-
-						cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
+						gpuLight.lightSpaceMatrix = lightCamera.getProj() * lightCamera.getView();
 
 						cmd.setViewport({ (float)region.area.x, (float)region.area.y, (float)region.area.w, (float)region.area.h });
 						cmd.setScissor({ { (int)region.area.x, (int)region.area.y }, { region.area.w, region.area.h } });
 
 						scene.foreachMesh([&](uint32_t meshIndex, Mesh *mesh) -> bool
 						{
-							glm::mat4 transform = lightCamera.getProj() * lightCamera.getView() * mesh->getParent()->getOwner()->transform.getMatrix();
+							glm::mat4 transform = gpuLight.lightSpaceMatrix * mesh->getParent()->getOwner()->transform.getMatrix();
 
 							cmd.pushConstants(
 								pipelineData.layout,
@@ -341,6 +358,7 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 							);
 
 							mesh->bind(cmd);
+
 							cmd.drawIndexed(mesh->getIndexCount());
 
 							return true; // continue
@@ -352,8 +370,6 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 						float regionH = (float)region.area.h / (float)ShadowMapAtlas::ATLAS_SIZE;
 
 						gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
-
-						gpuLight.lightSpaceMatrix = lightCamera.getProj() * lightCamera.getView();
 					}
 					else
 					{
@@ -361,7 +377,7 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 					}
 				}
 
-				m_lightBuffer->writeStruct(gpuLight, i);
+				m_pointLightBuffer->writeType(gpuLight, i);
 			}
 		})
 	);
@@ -383,7 +399,7 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 			{
 				Material *mat = mesh->getMaterial();
 
-				PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(mat->passes[SHADER_PASS_DEFERRED], info);
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(mat->passes[SHADER_PASS_DEFERRED], info);
 
 				if (meshIndex == 0)
 				{
@@ -406,32 +422,23 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 					currentPipelineHash = mat->getHash();
 				}
 
-				GPUBindlessPushConstants pc = {};
-				pc.frameDataBuffer_ID			= m_frameConstantsBuffer->getBindlessHandle();
-				pc.transformBuffer_ID			= m_transformDataBuffer->getBindlessHandle();
-				pc.materialDataBuffer_ID		= m_bindlessMaterialTable->getBindlessHandle();
-				pc.lightBuffer_ID				= m_lightBuffer->getBindlessHandle();
-
-				pc.transform_ID					= 0;
-
-				pc.irradianceMap_ID				= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
-				pc.prefilterMap_ID				= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
-
-				pc.brdfLUT_ID					= m_brdfLUT->getStandardView()->getBindlessHandle();
-
-				pc.material_ID					= mat->bindlessHandle;
-
-				pc.cubemapSampler_ID			= m_app->getTextures().getLinearSampler()->getBindlessHandle();
-				pc.textureSampler_ID			= m_app->getTextures().getLinearSampler()->getBindlessHandle();
-				pc.shadowAtlasSampler_ID		= m_app->getTextures().getNearestSampler()->getBindlessHandle();
-
-				pc.shadowAtlas_ID				= m_shadowAtlas.getAtlasView()->getBindlessHandle();
+				GPU_ModelPushConstants pushConstants = {};
+				pushConstants.buffers = m_bufferPointersBuffer->getGPUAddress();
+				pushConstants.transform_id = 0;
+				pushConstants.irradiance_map_id = m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+				pushConstants.prefilter_map_id = m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+				pushConstants.brdf_lut_id = m_brdfLUT->getStandardView()->getBindlessHandle();
+				pushConstants.material_id = mat->bindlessHandle;
+				pushConstants.shadow_atlas_id = m_shadowAtlas.getAtlasView()->getBindlessHandle();
+				pushConstants.cubemap_sampler_id = m_app->getTextures().getLinearSampler()->getBindlessHandle();
+				pushConstants.texture_sampler_id = m_app->getTextures().getLinearSampler()->getBindlessHandle();
+				pushConstants.shadow_atlas_sampler_id = m_app->getTextures().getNearestSampler()->getBindlessHandle();
 
 				cmd.pushConstants(
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(GPUBindlessPushConstants),
-					&pc
+					sizeof(GPU_ModelPushConstants),
+					&pushConstants
 				);
 
 				mesh->bind(cmd);
@@ -443,17 +450,9 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 
 			// skybox
 			{
-				PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
 
-				struct
-				{
-					glm::mat4 proj;
-					glm::mat4 view;
-				}
-				params;
-
-				params.proj = camera.getProj();
-				params.view = camera.getRotationMatrix();
+				glm::mat4 view_proj = camera.getProj() * camera.getRotationMatrix();
 
 				cmd.bindPipeline(
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -471,8 +470,8 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 				cmd.pushConstants(
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(params),
-					&params
+					sizeof(glm::mat4),
+					&view_proj
 				);
 
 				m_skyboxMesh->bind(cmd);
@@ -515,7 +514,7 @@ void Renderer::precomputeBRDF()
 		brdfIntegrationPipeline.setDepthTest(false);
 		brdfIntegrationPipeline.setDepthWrite(false);
 
-		PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
+		PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(brdfIntegrationPipeline, info);
 
 		cmd.transitionLayout(*m_brdfLUT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -551,12 +550,7 @@ void Renderer::generateEnvironmentProbe()
 		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
 	};
 
-	struct
-	{
-		glm::mat4 proj;
-		glm::mat4 view;
-	}
-	pc;
+	glm::mat4 view_proj_pc = glm::identity<glm::mat4>();
 
 	InstantSubmitSync instantSubmit(m_app->getVkCore());
 
@@ -578,9 +572,6 @@ void Renderer::generateEnvironmentProbe()
 			false
 		);
 
-		pc.proj = captureProjectionMatrix;
-		pc.view = glm::identity<glm::mat4>();
-
 		Shader *eqrToCbmShader = m_app->getShaders().getShader("equirectangular_to_cubemap");
 		Image *environmentHDRImage = m_app->getTextures().getTexture("environmentHDR");
 
@@ -600,7 +591,7 @@ void Renderer::generateEnvironmentProbe()
 
 		for (int i = 0; i < 6; i++)
 		{
-			pc.view = captureViewMatrices[i];
+			view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
 
 			ImageView *view = m_environmentMap->createView(1, i, 0);
 
@@ -608,7 +599,7 @@ void Renderer::generateEnvironmentProbe()
 			targetInfo.setSize(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION);
 			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(equirectangularToCubemapPipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
@@ -622,8 +613,8 @@ void Renderer::generateEnvironmentProbe()
 				cmd.pushConstants(
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(pc),
-					&pc
+					sizeof(glm::mat4),
+					&view_proj_pc
 				);
 
 				m_skyboxMesh->bind(cmd);
@@ -690,7 +681,7 @@ void Renderer::generateEnvironmentProbe()
 		
 		for (int i = 0; i < 6; i++)
 		{
-			pc.view = captureViewMatrices[i];
+			view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
 
 			ImageView *view = m_environmentProbe.irradiance->createView(1, i, 0);
 
@@ -698,7 +689,7 @@ void Renderer::generateEnvironmentProbe()
 			targetInfo.setSize(IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION);
 			targetInfo.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-			PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(irradiancePipeline, targetInfo);
 
 			// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 			cmd.beginRendering(targetInfo);
@@ -712,8 +703,8 @@ void Renderer::generateEnvironmentProbe()
 				cmd.pushConstants(
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(pc),
-					&pc
+					sizeof(glm::mat4),
+					&view_proj_pc
 				);
 
 				m_skyboxMesh->bind(cmd);
@@ -775,7 +766,7 @@ void Renderer::generateEnvironmentProbe()
 
 			for (int i = 0; i < 6; i++)
 			{
-				pc.view = captureViewMatrices[i];
+				view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
 
 				ImageView *view = m_environmentProbe.prefilter->createView(1, i, mipLevel);
 
@@ -783,7 +774,7 @@ void Renderer::generateEnvironmentProbe()
 				info.setSize(width, height);
 				info.addColourAttachment(VK_ATTACHMENT_LOAD_OP_LOAD, *view, nullptr);
 
-				PipelineData pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(prefilterPipeline, info);
 
 				// todo: this is unoptimal: https://www.reddit.com/r/vulkan/comments/17rhrrc/question_about_rendering_to_cubemaps/
 				cmd.beginRendering(info);
@@ -803,8 +794,8 @@ void Renderer::generateEnvironmentProbe()
 					cmd.pushConstants(
 						pipelineData.layout,
 						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(pc),
-						&pc
+						sizeof(glm::mat4),
+						&view_proj_pc
 					);
 
 					m_skyboxMesh->bind(cmd);
@@ -955,19 +946,19 @@ Material *Renderer::buildMaterial(MaterialData &data)
 
 	m_materials.insert({ data.getHash(), material });
 
-	GPUBindlessMaterial handles = {};
-	handles.diffuseTexture_ID		= material->textures[0];
-	handles.aoTexture_ID			= material->textures[1];
-	handles.armTexture_ID			= material->textures[2];
-	handles.normalTexture_ID		= material->textures[3];
-	handles.emissiveTexture_ID		= material->textures[4];
+	GPU_BindlessMaterial handles = {};
+	handles.diffuse_id = material->textures[0];
+	handles.ambient_id = material->textures[1];
+	handles.ambient_rough_metallic_id = material->textures[2];
+	handles.normal_id = material->textures[3];
+	handles.emissive_id = material->textures[4];
 
 	material->bindlessHandle = m_materialHandle_UID++;
 
 	m_bindlessMaterialTable->write(
 		&handles,
-		sizeof(GPUBindlessMaterial),
-		sizeof(GPUBindlessMaterial) * material->bindlessHandle
+		sizeof(GPU_BindlessMaterial),
+		sizeof(GPU_BindlessMaterial) * material->bindlessHandle
 	);
 
 	return material;
