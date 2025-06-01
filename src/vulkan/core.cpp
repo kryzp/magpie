@@ -60,6 +60,7 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 	, m_imGuiImageFormat()
 	, m_surface()
 	, m_graphicsQueue()
+	, m_slangGlobalSession()
 	, m_slangSession()
 	, m_renderGraph(this)
 	, m_platform(platform)
@@ -163,6 +164,10 @@ VulkanCore::~VulkanCore()
 	deviceWaitIdle();
 	
 	MGP_LOG("1");
+
+	m_slangGlobalSession.setNull(); // destroy
+
+	MGP_LOG("1.5");
 
 	m_slangSession.setNull(); // destroy
 	
@@ -504,14 +509,13 @@ void VulkanCore::initImGui()
 
 void VulkanCore::initSlang()
 {
-	Slang::ComPtr<slang::IGlobalSession> globalSession;
-	slang::createGlobalSession(globalSession.writeRef());
+	slang::createGlobalSession(m_slangGlobalSession.writeRef());
 
 	slang::SessionDesc sessionDesc = {};
 
 	slang::TargetDesc targetDesc = {};
 	targetDesc.format = SLANG_SPIRV;
-	targetDesc.profile = globalSession->findProfile("spirv_1_5");
+	targetDesc.profile = m_slangGlobalSession->findProfile("spirv_1_5");
 
 	sessionDesc.targets = &targetDesc;
 	sessionDesc.targetCount = 1;
@@ -550,5 +554,5 @@ void VulkanCore::initSlang()
 	sessionDesc.preprocessorMacros = nullptr;
 	sessionDesc.preprocessorMacroCount = 0;
 
-	globalSession->createSession(sessionDesc, m_slangSession.writeRef());
+	m_slangGlobalSession->createSession(sessionDesc, m_slangSession.writeRef());
 }

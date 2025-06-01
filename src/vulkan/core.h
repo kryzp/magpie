@@ -121,6 +121,7 @@ namespace mgp
 		RenderGraph m_renderGraph;
 		BindlessResources m_bindlessResources;
 
+		Slang::ComPtr<slang::IGlobalSession> m_slangGlobalSession;
 		Slang::ComPtr<slang::ISession> m_slangSession;
 
 #if MGP_DEBUG
