@@ -14,10 +14,11 @@ namespace mgp
 
 	struct GPU_PointLight
 	{
-		glm::vec4 position; // [x,y,z]: position, [w]: unused
-		glm::vec4 colour; // [x,y,z]: colour, [w]: 0/1 depending on shadows
-		glm::vec4 atlasRegion; // [x,y]: top left, [z,w]: width, height
-		glm::mat4 lightSpaceMatrix;
+		glm::vec4 position; // [x,y,z]: position
+		glm::vec4 colour; // [x,y,z]: colour, [w]: intensity
+		glm::vec4 attenuation; // [x]*dist^2 + [y]*dist + [z], [w]: has shadows? 0/1
+//		glm::mat4 lightSpaceMatrix;
+//		glm::uvec4 shadowMap_id;
 	};
 
 	using LightId = unsigned;
@@ -32,32 +33,32 @@ namespace mgp
 			TYPE_POINT
 		};
 
-		Light();
-		~Light();
+		Light() = default;
+		~Light() = default;
 
-		LightType getType() const;
-		void setType(LightType type);
+		LightType getType() const { return m_type; }
+		void setType(LightType type) { m_type = type; }
 
-		const Colour &getColour() const;
-		void setColour(const Colour &colour);
+		const Colour &getColour() const { return m_colour; }
+		void setColour(const Colour &colour) { m_colour = colour; }
 
-		bool isShadowCaster() const;
-		void toggleShadows(bool enabled);
+		bool isShadowCaster() const { return m_shadowsEnabled; }
+		void toggleShadows(bool enabled) { m_shadowsEnabled = enabled; }
 
-		const ShadowMapAtlas::AtlasRegion &getShadowAtlasRegion() const;
-		void setShadowAtlasRegion(const ShadowMapAtlas::AtlasRegion &region);
+//		const ShadowMapAtlas::AtlasRegion &getShadowAtlasRegion() const;
+//		void setShadowAtlasRegion(const ShadowMapAtlas::AtlasRegion &region);
 
-		float getFalloff() const;
-		void setFalloff(float falloff);
+		float getFalloff() const { return m_falloff; }
+		void setFalloff(float falloff) { m_falloff = falloff; }
 
-		float getIntensity() const;
-		void setIntensity(float intensity);
+		float getIntensity() const { return m_intensity; }
+		void setIntensity(float intensity) { m_intensity = intensity; }
 
-		const glm::vec3 &getDirection() const;
-		void setDirection(const glm::vec3 &direction);
+		const glm::vec3 &getDirection() const { return m_direction; }
+		void setDirection(const glm::vec3 &direction) { m_direction = direction; }
 
-		const glm::vec3 &getPosition() const;
-		void setPosition(const glm::vec3 &position);
+		const glm::vec3 &getPosition() const { return m_position; }
+		void setPosition(const glm::vec3 &position) { m_position = position; }
 
 	private:
 		LightType m_type;
@@ -65,7 +66,7 @@ namespace mgp
 		Colour m_colour;
 
 		bool m_shadowsEnabled;
-		ShadowMapAtlas::AtlasRegion m_shadowAtlasRegion;
+//		ShadowMapAtlas::AtlasRegion m_shadowAtlasRegion;
 
 		float m_intensity;
 		float m_falloff;

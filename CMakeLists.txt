@@ -17,7 +17,6 @@ add_executable(${PROJECT_NAME}
     src/rendering/scene.cpp
     src/rendering/model.cpp
     src/rendering/model_loader.cpp
-    src/rendering/light.cpp
     src/rendering/texture_manager.cpp
     src/rendering/shader_manager.cpp
     src/rendering/renderer.cpp
@@ -77,9 +76,8 @@ if (WIN32)
 	set(SDL3_INCLUDE_DIRS "D:/DevLibs/SDL3/include/")
 	set(SDL3_LIBRARIES "D:/DevLibs/SDL3/VisualC/x64/Release/SDL3.lib")
 
-	set(VK_INCLUDE_DIRS "D:/VulkanSDK/1.4.309.0/Include/")
-
-	set(SLANG_LIBRARIES "D:/VulkanSDK/1.4.309.0/Lib/slang.lib")
+	set(VK_INCLUDE_DIRS "C:/VulkanSDK/1.4.313.1/Include/")
+	set(SLANG_LIBRARIES "C:/VulkanSDK/1.4.313.1/Lib/slang.lib")
 
 	set(ASSIMP_INCLUDE_DIRS "D:/DevLibs/assimp/include/")
 	set(ASSIMP_LIBRARIES "D:/DevLibs/assimp/lib/Release/assimp-vc143-mt.lib")

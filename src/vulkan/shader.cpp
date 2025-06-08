@@ -7,29 +7,9 @@
 #include "core/common.h"
 
 #include "core.h"
+#include "bindless.h"
 
 using namespace mgp;
-
-ShaderStage::ShaderStage(const VulkanCore *core)
-	: m_stage()
-	, m_module(VK_NULL_HANDLE)
-	, m_core(core)
-{
-}
-
-ShaderStage::ShaderStage(const VulkanCore *core, VkShaderStageFlagBits stage, const char *path)
-	: m_stage(stage)
-	, m_module(VK_NULL_HANDLE)
-	, m_core(core)
-{
-	compileFromSource(path);
-}
-
-ShaderStage::~ShaderStage()
-{
-	vkDestroyShaderModule(m_core->getLogicalDevice(), m_module, nullptr);
-	m_module = VK_NULL_HANDLE;
-}
 
 const char *VERTEX_ENTRY_POINT = "vertexMain";
 const char *FRAGMENT_ENTRY_POINT = "fragmentMain";
@@ -54,6 +34,31 @@ const char *getShaderStageName(VkShaderStageFlagBits stage)
 	}
 
 	return nullptr;
+}
+
+ShaderStage::ShaderStage(VulkanCore *core)
+	: m_stage()
+	, m_module(VK_NULL_HANDLE)
+//	, m_compiler(nullptr)
+//	, m_resources()
+	, m_core(core)
+{
+}
+
+ShaderStage::ShaderStage(VulkanCore *core, VkShaderStageFlagBits stage, const char *path)
+	: m_stage(stage)
+	, m_module(VK_NULL_HANDLE)
+//	, m_compiler(nullptr)
+//	, m_resources()
+	, m_core(core)
+{
+	compileFromSource(path);
+}
+
+ShaderStage::~ShaderStage()
+{
+	vkDestroyShaderModule(m_core->getLogicalDevice(), m_module, nullptr);
+	m_module = VK_NULL_HANDLE;
 }
 
 VkPipelineShaderStageCreateInfo ShaderStage::getShaderStageCreateInfo() const
@@ -85,7 +90,7 @@ void ShaderStage::compileFromSource(const char *path)
 			MGP_ERROR("Error getting entry point from shader: %s", path);
 	}
 
-	std::array<slang::IComponentType*, 2> componentTypes =
+	std::array<slang::IComponentType *, 2> componentTypes =
 	{
 		slangModule,
 		entryPoint
@@ -93,10 +98,13 @@ void ShaderStage::compileFromSource(const char *path)
 
 	Slang::ComPtr<slang::IComponentType> composedProgram;
 	{
+		Slang::ComPtr<slang::IBlob> diagnosticsBlob;
+
 		SlangResult result = m_core->getSlangSession()->createCompositeComponentType(
 			componentTypes.data(),
 			componentTypes.size(),
-			composedProgram.writeRef()
+			composedProgram.writeRef(),
+			diagnosticsBlob.writeRef()
 		);
 
 		if (SLANG_FAILED(result))
@@ -132,10 +140,14 @@ void ShaderStage::compileFromSource(const char *path)
 		vkCreateShaderModule(m_core->getLogicalDevice(), &moduleCreateInfo, nullptr, &m_module),
 		"Failed to create shader module"
 	);
+
+//	m_compiler = new spirv_cross::Compiler(moduleCreateInfo.pCode, moduleCreateInfo.codeSize / sizeof(uint32_t));
+//	m_resources = m_compiler->get_shader_resources();
 }
 
-Shader::Shader()
-	: m_stages()
+Shader::Shader(VulkanCore *core)
+	: m_core(core)
+	, m_stages()
 	, m_descriptorSetLayouts()
 	, m_pushConstantsSize(0)
 {
@@ -144,6 +156,71 @@ Shader::Shader()
 void Shader::addStage(ShaderStage *stage)
 {
 	m_stages.push_back(stage);
+}
+
+void Shader::finalize()
+{
+	/*
+	DescriptorLayoutBuilder layoutBuilder;
+
+	std::vector<VkDescriptorBindingFlags> flags;
+
+	auto processModule = [&](const spirv_cross::Compiler &compiler, const spirv_cross::ShaderResources &resources, VkShaderStageFlagBits stage) -> void
+	{
+		auto processResources = [&](const spirv_cross::SmallVector<spirv_cross::Resource> &res, VkDescriptorType descriptorType) -> void
+		{
+			for (cauto &r : res)
+			{
+				uint32_t binding = compiler.get_decoration(r.id, spv::DecorationBinding);
+				auto type = compiler.get_type(r.type_id);
+				
+				int descriptorCount = 1;
+				VkDescriptorBindingFlags f = 0;
+
+				if (!type.array.empty())
+				{
+					if (type.array[0] == 0)
+					{
+						// bindless array
+
+						descriptorCount = m_core->getBindlessResources().getMaxDescriptorSize(descriptorType);
+
+						f |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+					}
+					else if (type.array_size_literal[0])
+					{
+						// fixed-size array
+
+						descriptorCount = type.array[0];
+					}
+					else
+					{
+						// specialization constant
+
+						MGP_ERROR("Resource %s has array size specialization constant, not currently handled.", compiler.get_name(r.id).c_str());
+					}
+				}
+
+				layoutBuilder.bind(binding, descriptorType, descriptorCount);
+				flags.push_back(f);
+			}
+		};
+
+		processResources(resources.uniform_buffers,		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		processResources(resources.storage_buffers,		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		processResources(resources.separate_samplers,	VK_DESCRIPTOR_TYPE_SAMPLER);
+		processResources(resources.separate_images,		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+		processResources(resources.sampled_images,		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	};
+
+	for (auto &stage : m_stages) {
+		processModule(*stage->getCompiler(), stage->getResources(), stage->getType());
+	}
+	
+	VkDescriptorSetLayout layout = layoutBuilder.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS, flags.data(), VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
+
+	m_descriptorSetLayouts.push_back(layout);
+	*/
 }
 
 const std::vector<ShaderStage *> &Shader::getStages() const

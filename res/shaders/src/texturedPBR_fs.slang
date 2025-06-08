@@ -3,9 +3,11 @@
 #include "shared/bindless.slang"
 #include "shared/types.slang"
 
-const static float MAX_REFLECTION_LOD = 4.0;
-const static int MAX_POINT_LIGHTS = 16;
-const static float PI = 3.14159265;
+#define PI 3.14159265
+
+#define MAX_REFLECTION_LOD 4.0
+#define MAX_POINT_LIGHTS 16
+#define SHADOW_BIAS 0.01
 
 float3 fresnelSchlick(float VdotH, float3 F0, float roughness)
 {
@@ -40,12 +42,12 @@ float geometrySmith(float NdotV, float NdotL, float roughness)
 	return ggx1 * ggx2;
 }
 
-#define SHADOW_BIAS 0.01
-
+/*
 float calculateShadow(float4 position, float4x4 lightSpaceMatrix, float3 lightDirection, float3 geometryNormal, float4 region)
 {
 	float NdotL = dot(lightDirection, geometryNormal);
 	float tanT = sqrt(1.0 - NdotL * NdotL) / NdotL;
+
 	position.xyz += geometryNormal * tanT * SHADOW_BIAS;
 
 	float4 lightSpacePosition = mul(lightSpaceMatrix, position);
@@ -62,6 +64,7 @@ float calculateShadow(float4 position, float4x4 lightSpaceMatrix, float3 lightDi
 
 	return depthHere > depthScreen ? 1.0 : 0.0;
 }
+*/
 
 float calculateAttenuation(float distanceSquared, float3 params)
 {
@@ -72,29 +75,29 @@ float calculateAttenuation(float distanceSquared, float3 params)
 float4 fragmentMain(VS_Output input) : SV_Target
 {
 	float2 uv = frac(input.uv);
-	
+
 	SamplerState textureSampler = g_bindlessSamplers[g_bindless.textureSampler_id];
 	SamplerState cubemapSampler = g_bindlessSamplers[g_bindless.cubemapSampler_id];
-	
-	FrameData *frameData			= g_bindless.buffers.frameData;
-	MaterialData *materialData		= g_bindless.buffers.materials + g_bindless.material_id;
-	
-	float3 albedo					= g_bindlessTexture2D[materialData.diffuse_id]						.Sample(textureSampler, uv).rgb;
-	float  ambientOcclusion			= g_bindlessTexture2D[materialData.ambient_id]						.Sample(textureSampler, uv).r;
-	float3 ambientRoughnessMetallic	= g_bindlessTexture2D[materialData.ambientRoughnessMetallic_id]		.Sample(textureSampler, uv).rgb;
-	float3 normal					= g_bindlessTexture2D[materialData.normal_id]						.Sample(textureSampler, uv).rgb;
-	float3 emissive					= g_bindlessTexture2D[materialData.emissive_id]						.Sample(textureSampler, uv).rgb;
+
+	FrameData frameData			= g_bindless.buffers.frameData[0];
+	MaterialData materialData	= g_bindless.buffers.materials[g_bindless.material_id];
+
+	float3 albedo					= g_bindlessTexture2D[materialData.diffuse_id]		.Sample(textureSampler, uv).rgb;
+    float ambientOcclusion			= g_bindlessTexture2D[materialData.ambient_id]		.Sample(textureSampler, uv).r;
+    float3 pbrTexture				= g_bindlessTexture2D[materialData.material_id]		.Sample(textureSampler, uv).rgb;
+	float3 normal					= g_bindlessTexture2D[materialData.normal_id]		.Sample(textureSampler, uv).rgb;
+	float3 emissive					= g_bindlessTexture2D[materialData.emissive_id]		.Sample(textureSampler, uv).rgb;
 	
 	// light testing white surface
 //	albedo = 1.0;
-//	ambientOcclusion			= g_bindless_texture2D[materialData.ambient_id]							.Sample(textureSampler, uv).r;
-//	ambientRoughnessMetallic	= float3(g_bindless_texture2D[materialData.ambient_rough_metallic_id]	.Sample(textureSampler, uv).r, 1.0, 0.0);
-//	normal					    = float3(0.5, 0.5, 1.0);
-//	emissive					= 0.0;
-	
-	ambientOcclusion		+= ambientRoughnessMetallic.r;
-	float roughnessValue	 = ambientRoughnessMetallic.g;
-	float metallicValue		 = ambientRoughnessMetallic.b;
+//	ambientOcclusion				= g_bindlessTexture2D[materialData.ambient_id]							.Sample(textureSampler, uv).r;
+//	ambientRoughnessMetallic		= float3(g_bindlessTexture2D[materialData.material_id]	.Sample(textureSampler, uv).r, 1.0, 0.0);
+//	normal							= float3(0.5, 0.5, 1.0);
+//	emissive						= 0.0;
+
+    ambientOcclusion		+= pbrTexture.r;
+    float roughnessValue	 = pbrTexture.g;
+    float metallicValue		 = pbrTexture.b;
 	
 	float3 F0 = lerp(0.04, albedo, metallicValue);
 
@@ -106,20 +109,21 @@ float4 fragmentMain(VS_Output input) : SV_Target
 	float NdotV = max(0.0, dot(normal, viewDir));
 	
 	float3 Lo = 0.0;
-	
-	for (int i = 0; i < 1; i++)
+
+    for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
 		PointLight light = g_bindless.buffers.pointLights[i];
+
+        if (dot(light.colour.xyz, light.colour.xyz) < 0.001)
+            continue;
 
 		float3 deltaX = light.position.xyz - input.position.xyz;
 		float distanceSquared = dot(deltaX, deltaX);
 
-		float a = 1.0;
-		float b = 0.0;
-		float c = 0.0;
+        float attenuation = calculateAttenuation(distanceSquared, light.attenuation.xyz);
+        float intensity = light.colour.a;
 
-		float attenuation = calculateAttenuation(distanceSquared, float3(a, b, c));
-		float3 radiance = light.colour.rgb * attenuation;
+		float3 radiance = light.colour.rgb * intensity * attenuation;
 		
 		float3 lightDir = normalize(deltaX);
 		float3 halfwayDir = normalize(lightDir + viewDir);
@@ -139,7 +143,15 @@ float4 fragmentMain(VS_Output input) : SV_Target
 		float3 diffuse = albedo;
 		float3 specular = (F * G * NDF) / (4.0*NdotL*NdotV + 0.0001);
 
-		float shadow = calculateShadow(input.position, light.lightSpaceMatrix, lightDir, geomNormal, light.atlasRegion);
+		/*
+        float isShadowCaster = light.attenuation.w;
+
+        float shadow = (isShadowCaster >= 0.99)
+			? calculateShadow(input.position, light.lightSpaceMatrix, lightDir, geomNormal, light.atlasRegion)
+			: 0.0;
+		*/
+
+        float shadow = 0.0;
 
 		Lo += radiance * NdotL * (kD * diffuse + specular) * (1.0 - shadow);
 	}

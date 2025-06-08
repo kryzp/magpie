@@ -31,9 +31,9 @@ bool ShadowMapAtlas::allocate(ShadowMapAtlas::AtlasRegion* region, unsigned qual
 	unsigned width = m_atlas->getWidth() >> quality;
 	unsigned height = m_atlas->getHeight() >> quality;
 
-	for (int i = 0; i < quality + 1; i++)
+	for (int i = 0; i < m_atlas->getHeight() / height; i++)
 	{
-		for (int j = 0; j < quality + 1; j++)
+		for (int j = 0; j < m_atlas->getWidth() / width; j++)
 		{
 			if (i == quality && j == quality)
 			{

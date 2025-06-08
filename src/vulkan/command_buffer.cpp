@@ -188,7 +188,7 @@ void CommandBuffer::bindDescriptorSets(
 void CommandBuffer::setViewport(const VkViewport &viewport)
 {
 	m_viewport.x = viewport.x;
-	m_viewport.y = viewport.height - viewport.y;
+	m_viewport.y = viewport.height + viewport.y;
 	m_viewport.width = viewport.width;
 	m_viewport.height = -viewport.height;
 }

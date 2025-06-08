@@ -4,6 +4,10 @@
 
 #include "math/rect.h"
 
+/*
+ * Currently being unused.
+ */
+
 namespace mgp
 {
 	class VulkanCore;

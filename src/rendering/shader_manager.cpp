@@ -38,12 +38,18 @@ void ShaderManager::destroy()
 
 ShaderStage *ShaderManager::getShaderStage(const std::string &name)
 {
-	return m_shaderStageCache.at(name);
+	if (m_shaderStageCache.contains(name))
+		return m_shaderStageCache.at(name);
+
+	return nullptr;
 }
 
 Shader *ShaderManager::getShader(const std::string &name)
 {
-	return m_shaderCache.at(name);
+	if (m_shaderCache.contains(name))
+		return m_shaderCache.at(name);
+
+	return nullptr;
 }
 
 ShaderStage *ShaderManager::loadShaderStage(const std::string &name, const std::string &path, VkShaderStageFlagBits stageType)
@@ -57,19 +63,16 @@ ShaderStage *ShaderManager::loadShaderStage(const std::string &name, const std::
 	return stage;
 }
 
-Shader *ShaderManager::createShader(const std::string &name)
+void ShaderManager::addShader(const std::string &name, Shader *shader)
 {
-	if (m_shaderCache.contains(name))
-		return m_shaderCache.at(name);
-
-	Shader *s = new Shader();
-	m_shaderCache.insert({ name, s });
-	
-	return s;
+	shader->finalize();
+	m_shaderCache.insert({ name, shader });
 }
 
 void ShaderManager::loadShaders()
 {
+	MGP_LOG("Compiling shaders...");
+
 	// shader stages
 	{
 		// vertex shaders
@@ -85,48 +88,52 @@ void ShaderManager::loadShaders()
 		loadShaderStage("prefilter_convolution_fs",			"prefilter_convolution_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("brdf_integrator_fs",				"brdf_integrator_fs",					VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("texturedPBR_fs",					"texturedPBR_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("texturedPBR_gbuffer_fs",			"texturedPBR_gbuffer_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("deferred_lighting_ambient_fs",		"deferred_lighting_ambient_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("skybox_fs",						"skybox",								VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("texture_uv_fs",					"texture_uv_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("shadow_map_fs",					"shadow_map_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		// compute shaders
 		loadShaderStage("hdr_tonemapping_cs", "hdr_tonemapping_cs",									VK_SHADER_STAGE_COMPUTE_BIT);
-		
-		/*
-		loadShaderStage("primitive_vs",						"../../res/shaders/compiled/primitive_vs.spv",						VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("skybox_vs",						"../../res/shaders/compiled/skybox_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("fullscreen_triangle_vs",			"../../res/shaders/compiled/fullscreen_triangle_vs.spv",			VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("model_vs",							"../../res/shaders/compiled/model_vs.spv",							VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("model_shadow_map_vs",				"../../res/shaders/compiled/model_shadow_map_vs.spv",				VK_SHADER_STAGE_VERTEX_BIT);
-
-		loadShaderStage("equirectangular_to_cubemap_fs",	"../../res/shaders/compiled/equirectangular_to_cubemap_ps.spv",		VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("irradiance_convolution_fs",		"../../res/shaders/compiled/irradiance_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("prefilter_convolution_fs",			"../../res/shaders/compiled/prefilter_convolution_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("brdf_integrator_fs",				"../../res/shaders/compiled/brdf_integrator_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("texturedPBR_fs",					"../../res/shaders/compiled/texturedPBR_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-//		loadShaderStage("subsurface_refraction_fs",			"../../res/shaders/compiled/subsurface_refraction_ps.spv",			VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("skybox_fs",						"../../res/shaders/compiled/skybox_ps.spv",							VK_SHADER_STAGE_FRAGMENT_BIT);
-//		loadShaderStage("bloom_downsample_fs",				"../../res/shaders/compiled/bloom_downsample_ps.spv",				VK_SHADER_STAGE_FRAGMENT_BIT);
-//		loadShaderStage("bloom_upsample_fs",				"../../res/shaders/compiled/bloom_upsample_ps.spv",					VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("texture_uv_fs",					"../../res/shaders/compiled/texture_uv_ps.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("shadow_map_fs",					"../../res/shaders/compiled/shadow_map_ps.spv",						VK_SHADER_STAGE_FRAGMENT_BIT);
-
-		loadShaderStage("hdr_tonemapping_cs",				"../../res/shaders/compiled/hdr_tonemapping_cs.spv",				VK_SHADER_STAGE_COMPUTE_BIT);
-		*/
-
-		MGP_LOG("Compiled all shaders.");
 	}
 
 	// effects
 	{
 		// PBR
 		{
-			Shader *pbr = createShader("texturedPBR");
+			Shader *pbr = new Shader(m_core);
+			{
+				pbr->setPushConstantsSize(sizeof(int) * 16);
+				pbr->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
+				pbr->addStage(getShaderStage("model_vs"));
+				pbr->addStage(getShaderStage("texturedPBR_fs"));
+			}
+			addShader("texturedPBR", pbr);
+		}
 
-			pbr->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout()});
-			pbr->setPushConstantsSize(sizeof(int) * 16);
-			pbr->addStage(getShaderStage("model_vs"));
-			pbr->addStage(getShaderStage("texturedPBR_fs"));
+		// PBR G-BUFFER
+		{
+			Shader *pbr_gbuffer = new Shader(m_core);
+			{
+				pbr_gbuffer->setPushConstantsSize(sizeof(int) * 16);
+				pbr_gbuffer->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
+				pbr_gbuffer->addStage(getShaderStage("model_vs"));
+				pbr_gbuffer->addStage(getShaderStage("texturedPBR_gbuffer_fs"));
+			}
+			addShader("texturedPBR_gbuffer", pbr_gbuffer);
+		}
+
+		// DEFERRED LIGHTING
+		{
+			Shader *dlighting = new Shader(m_core);
+			{
+				dlighting->setPushConstantsSize(sizeof(int)*12 + sizeof(float)*4);
+				dlighting->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
+				dlighting->addStage(getShaderStage("fullscreen_triangle_vs"));
+				dlighting->addStage(getShaderStage("deferred_lighting_ambient_fs"));
+			}
+			addShader("deferred_lighting_ambient", dlighting);
 		}
 
 		// SHADOW MAPPING
@@ -134,12 +141,14 @@ void ShaderManager::loadShaders()
 			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *shadowMap = createShader("shadow_map");
-
-			shadowMap->setDescriptorSetLayouts({ layout });
-			shadowMap->setPushConstantsSize(sizeof(float)*16);
-			shadowMap->addStage(getShaderStage("model_shadow_map_vs"));
-			shadowMap->addStage(getShaderStage("shadow_map_fs"));
+			Shader *shadowMap = new Shader(m_core);
+			{
+				shadowMap->setPushConstantsSize(sizeof(float)*16);
+				shadowMap->setDescriptorSetLayouts({ layout });
+				shadowMap->addStage(getShaderStage("model_shadow_map_vs"));
+				shadowMap->addStage(getShaderStage("shadow_map_fs"));
+			}
+			addShader("shadow_map", shadowMap);
 		}
 
 		// SKYBOX
@@ -148,12 +157,14 @@ void ShaderManager::loadShaders()
 				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *skybox = createShader("skybox");
-
-			skybox->setDescriptorSetLayouts({ layout });
-			skybox->setPushConstantsSize(sizeof(float)*16 * 2);
-			skybox->addStage(getShaderStage("skybox_vs"));
-			skybox->addStage(getShaderStage("skybox_fs"));
+			Shader *skybox = new Shader(m_core);
+			{
+				skybox->setPushConstantsSize(sizeof(float)*16 * 2);
+				skybox->setDescriptorSetLayouts({ layout });
+				skybox->addStage(getShaderStage("skybox_vs"));
+				skybox->addStage(getShaderStage("skybox_fs"));
+			}
+			addShader("skybox", skybox);
 		}
 
 		// EQUIRECTANGULAR TO CUBEMAP
@@ -162,12 +173,14 @@ void ShaderManager::loadShaders()
 				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *equirectangularToCubemap = createShader("equirectangular_to_cubemap");
-
-			equirectangularToCubemap->setDescriptorSetLayouts({ layout });
-			equirectangularToCubemap->setPushConstantsSize(sizeof(float)*16 * 2);
-			equirectangularToCubemap->addStage(getShaderStage("primitive_vs"));
-			equirectangularToCubemap->addStage(getShaderStage("equirectangular_to_cubemap_fs"));
+			Shader *equirectangularToCubemap = new Shader(m_core);
+			{
+				equirectangularToCubemap->setPushConstantsSize(sizeof(float)*16 * 2);
+				equirectangularToCubemap->setDescriptorSetLayouts({ layout });
+				equirectangularToCubemap->addStage(getShaderStage("primitive_vs"));
+				equirectangularToCubemap->addStage(getShaderStage("equirectangular_to_cubemap_fs"));
+			}
+			addShader("equirectangular_to_cubemap", equirectangularToCubemap);
 		}
 
 		// IRRADIANCE CONVOLUTION
@@ -176,12 +189,14 @@ void ShaderManager::loadShaders()
 				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *irradianceConvolution = createShader("irradiance_convolution");
-
-			irradianceConvolution->setDescriptorSetLayouts({ layout });
-			irradianceConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-			irradianceConvolution->addStage(getShaderStage("primitive_vs"));
-			irradianceConvolution->addStage(getShaderStage("irradiance_convolution_fs"));
+			Shader *irradianceConvolution = new Shader(m_core);
+			{
+				irradianceConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
+				irradianceConvolution->setDescriptorSetLayouts({ layout });
+				irradianceConvolution->addStage(getShaderStage("primitive_vs"));
+				irradianceConvolution->addStage(getShaderStage("irradiance_convolution_fs"));
+			}
+			addShader("irradiance_convolution", irradianceConvolution);
 		}
 
 		// PREFILTER CONVOLUTION
@@ -191,12 +206,14 @@ void ShaderManager::loadShaders()
 				.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *prefilterConvolution = createShader("prefilter_convolution");
-
-			prefilterConvolution->setDescriptorSetLayouts({ layout });
-			prefilterConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-			prefilterConvolution->addStage(getShaderStage("primitive_vs"));
-			prefilterConvolution->addStage(getShaderStage("prefilter_convolution_fs"));
+			Shader *prefilterConvolution = new Shader(m_core);
+			{
+				prefilterConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
+				prefilterConvolution->setDescriptorSetLayouts({ layout });
+				prefilterConvolution->addStage(getShaderStage("primitive_vs"));
+				prefilterConvolution->addStage(getShaderStage("prefilter_convolution_fs"));
+			}
+			addShader("prefilter_convolution", prefilterConvolution);
 		}
 
 		// BRDF LUT GENERATION
@@ -204,12 +221,14 @@ void ShaderManager::loadShaders()
 			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *brdfLUT = createShader("brdf_lut");
-
-			brdfLUT->setDescriptorSetLayouts({ layout });
-			brdfLUT->setPushConstantsSize(0);
-			brdfLUT->addStage(getShaderStage("fullscreen_triangle_vs"));
-			brdfLUT->addStage(getShaderStage("brdf_integrator_fs"));
+			Shader *brdfLUT = new Shader(m_core);
+			{
+				brdfLUT->setPushConstantsSize(0);
+				brdfLUT->setDescriptorSetLayouts({ layout });
+				brdfLUT->addStage(getShaderStage("fullscreen_triangle_vs"));
+				brdfLUT->addStage(getShaderStage("brdf_integrator_fs"));
+			}
+			addShader("brdf_lut", brdfLUT);
 		}
 
 		// HDR TONEMAPPING
@@ -218,11 +237,13 @@ void ShaderManager::loadShaders()
 				.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 				.build(m_core, VK_SHADER_STAGE_COMPUTE_BIT);
 
-			Shader *hdrTonemapping = createShader("hdr_tonemapping");
-
-			hdrTonemapping->setDescriptorSetLayouts({ layout });
-			hdrTonemapping->setPushConstantsSize(sizeof(uint32_t)*2 + sizeof(float)*1);
-			hdrTonemapping->addStage(getShaderStage("hdr_tonemapping_cs"));
+			Shader *hdrTonemapping = new Shader(m_core);
+			{
+				hdrTonemapping->setPushConstantsSize(sizeof(uint32_t)*2 + sizeof(float)*1);
+				hdrTonemapping->setDescriptorSetLayouts({ layout });
+				hdrTonemapping->addStage(getShaderStage("hdr_tonemapping_cs"));
+			}
+			addShader("hdr_tonemapping", hdrTonemapping);
 		}
 
 		// TEXTURE UV
@@ -231,12 +252,14 @@ void ShaderManager::loadShaders()
 				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
 
-			Shader *textureUV = createShader("texture_uv");
-
-			textureUV->setDescriptorSetLayouts({ layout });
-			textureUV->setPushConstantsSize(0);
-			textureUV->addStage(getShaderStage("fullscreen_triangle_vs"));
-			textureUV->addStage(getShaderStage("texture_uv_fs"));
+			Shader *textureUV = new Shader(m_core);
+			{
+				textureUV->setPushConstantsSize(0);
+				textureUV->setDescriptorSetLayouts({ layout });
+				textureUV->addStage(getShaderStage("fullscreen_triangle_vs"));
+				textureUV->addStage(getShaderStage("texture_uv_fs"));
+			}
+			addShader("texture_uv", textureUV);
 		}
 	}
 }

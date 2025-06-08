@@ -2,26 +2,15 @@
 #include "shared/bindless.slang"
 #include "shared/vertices.slang"
 
-struct BufferPointers
-{
-    FrameData *frameData;
-    TransformData *transforms;
-    MaterialData *materials;
-    PointLight *pointLights;
-};
-
 struct ModelPushConstants
 {
     BufferPointers *buffers;
-    uint transform_id;
     uint irradianceMap_id;
     uint prefilterMap_id;
     uint brdfLUT_id;
     uint material_id;
-    uint shadowAtlas_id;
-    uint cubemapSampler_id;
     uint textureSampler_id;
-    uint shadowAtlasSampler_id;
+    uint cubemapSampler_id;
 };
 
 [[vk::push_constant]]
@@ -38,10 +27,10 @@ struct VS_Output
 };
 
 [shader("vertex")]
-VS_Output vertexMain(ModelVertex vertex)
+VS_Output vertexMain(ModelVertex vertex, uint instanceID : SV_InstanceID)
 {
     FrameData *frameData = g_bindless.buffers.frameData;
-    TransformData *transform = g_bindless.buffers.transforms + g_bindless.transform_id;
+    TransformData *transform = g_bindless.buffers.transforms + instanceID;
 
     float4x4 projMatrix = frameData.proj;
     float4x4 viewMatrix = frameData.view;

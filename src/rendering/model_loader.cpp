@@ -82,10 +82,17 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
 	{
 		const aiVector3D &vtx = transform * assimpMesh->mVertices[i];
-
+		
 		vtx::ModelVertex vertex = {};
 
-		vertex.position = { vtx.x, vtx.y, vtx.z };
+		if (assimpMesh->HasPositions())
+		{
+			vertex.position = { vtx.x, vtx.y, vtx.z };
+		}
+		else
+		{
+			vertex.position = { 0.0f, 0.0f, 0.0f };
+		}
 
 		if (assimpMesh->HasTextureCoords(0))
 		{
@@ -158,7 +165,7 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 		const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
 
 		MaterialData data;
-		data.technique = "texturedPBR_opaque"; // temporarily just the forced material type
+		data.technique = "texturedPBR_gbuffer_opaque"; // temporarily just the forced material type
 
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getTextures().getFallbackDiffuse());
 		fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getTextures().getFallbackAmbient());

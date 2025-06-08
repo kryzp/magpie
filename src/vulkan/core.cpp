@@ -93,39 +93,30 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 
 	volkInitialize();
 
-#if MGP_DEBUG
-	VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
-	debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	debugInfo.pfnUserCallback = vk_validation::vkDebugCallback;
-	debugInfo.pUserData = nullptr;
-
-	vk_validation::trySetValidationLayers(createInfo, &debugInfo);
-#endif
-
-	// get our extensions
 	auto extensions = getInstanceExtensions(m_platform);
 	createInfo.enabledExtensionCount = extensions.size();
 	createInfo.ppEnabledExtensionNames = extensions.data();
+	
+#if MGP_DEBUG
+	vk_validation::trySetValidationLayers(createInfo);
+#endif
 
 #if MGP_MAC_SUPPORT
 	createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-	// create the vulkan instance
 	MGP_VK_CHECK(
 		vkCreateInstance(&createInfo, nullptr, &m_instance),
 		"Failed to create instance"
 	);
-
+	
 	volkLoadInstance(m_instance);
 
 #if MGP_DEBUG
 	if (vk_validation::hasValidationLayers())
 	{
 		MGP_VK_CHECK(
-			vk_validation::createDebugUtilsMessengerExt(m_instance, &debugInfo, nullptr, &m_debugMessenger),
+			vk_validation::createDebugUtilsMessengerExt(m_instance, nullptr, &m_debugMessenger),
 			"Failed to create debug messenger"
 		);
 	}
@@ -159,52 +150,24 @@ VulkanCore::VulkanCore(const Config &config, const Platform *platform)
 
 VulkanCore::~VulkanCore()
 {
-	MGP_LOG("0");
-
 	deviceWaitIdle();
 	
-	MGP_LOG("1");
-
-	m_slangGlobalSession.setNull(); // destroy
-
-	MGP_LOG("1.5");
-
-	m_slangSession.setNull(); // destroy
-	
-	MGP_LOG("2");
-
 	m_pipelineCache.dispose();
 	
-	MGP_LOG("3");
-
 	m_descriptorLayoutCache.dispose();
 	
-	MGP_LOG("4");
-
 	m_bindlessResources.destroy();
-	
-	MGP_LOG("5");
 	
 	m_imGuiDescriptorPool.cleanUp();
 	
-	MGP_LOG("6");
-
 	vkDestroyPipelineCache(m_device, m_pipelineProcessCache, nullptr);
 	
-	MGP_LOG("7");
-
 	m_graphicsQueue.destroy();
 	
-	MGP_LOG("8");
-
 	m_surface.destroy();
 	
-	MGP_LOG("9");
-
 	vmaDestroyAllocator(m_vmaAllocator);
 	
-	MGP_LOG("10");
-
 	vkDestroyDevice(m_device, nullptr);
 
 	MGP_LOG("Vulkan Core Destroyed!");
@@ -282,34 +245,31 @@ void VulkanCore::createLogicalDevice()
 
 	queueCreateInfos.push_back(m_graphicsQueue.getCreateInfo(QUEUE_PRIORITIES));
 
-	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeaturesExt = {};
-	descriptorIndexingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-	descriptorIndexingFeaturesExt.runtimeDescriptorArray = VK_TRUE;
-	descriptorIndexingFeaturesExt.descriptorBindingPartiallyBound = VK_TRUE;
-	descriptorIndexingFeaturesExt.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
-	descriptorIndexingFeaturesExt.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-	descriptorIndexingFeaturesExt.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	descriptorIndexingFeaturesExt.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
-	descriptorIndexingFeaturesExt.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-	descriptorIndexingFeaturesExt.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-	descriptorIndexingFeaturesExt.pNext = nullptr;
-
-	VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeaturesExt = {};
-	dynamicRenderingFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
-	dynamicRenderingFeaturesExt.dynamicRendering = VK_TRUE;
-	dynamicRenderingFeaturesExt.pNext = &descriptorIndexingFeaturesExt;
-
-	VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeaturesExt = {};
-	bufferDeviceAddressFeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-	bufferDeviceAddressFeaturesExt.bufferDeviceAddress = VK_TRUE;
-	bufferDeviceAddressFeaturesExt.pNext = &dynamicRenderingFeaturesExt;
-
-	VkPhysicalDeviceSynchronization2Features synchronisation2FeaturesExt = {};
-	synchronisation2FeaturesExt.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-	synchronisation2FeaturesExt.synchronization2 = VK_TRUE;
-	synchronisation2FeaturesExt.pNext = &bufferDeviceAddressFeaturesExt;
-
 	m_physicalDeviceFeatures.features.robustBufferAccess = VK_FALSE;
+
+	VkPhysicalDeviceVulkan11Features vulkan11Features = {};
+	vulkan11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+	vulkan11Features.shaderDrawParameters = VK_TRUE;
+	vulkan11Features.pNext = nullptr;
+
+	VkPhysicalDeviceVulkan12Features vulkan12Features = {};
+	vulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	vulkan12Features.runtimeDescriptorArray = VK_TRUE;
+	vulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
+	vulkan12Features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+	vulkan12Features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+	vulkan12Features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+	vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+	vulkan12Features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	vulkan12Features.bufferDeviceAddress = VK_TRUE;
+	vulkan12Features.pNext = &vulkan11Features;
+
+	VkPhysicalDeviceVulkan13Features vulkan13Features = {};
+	vulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	vulkan13Features.dynamicRendering = VK_TRUE;
+	vulkan13Features.synchronization2 = VK_TRUE;
+	vulkan13Features.pNext = &vulkan12Features;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -320,7 +280,7 @@ void VulkanCore::createLogicalDevice()
 	createInfo.enabledExtensionCount = MGP_ARRAY_LENGTH(vk_toolbox::DEVICE_EXTENSIONS);
 	createInfo.ppEnabledExtensionNames = vk_toolbox::DEVICE_EXTENSIONS;
 	createInfo.pEnabledFeatures = &m_physicalDeviceFeatures.features;
-	createInfo.pNext = &synchronisation2FeaturesExt;
+	createInfo.pNext = &vulkan13Features;
 
 #if MGP_DEBUG
 	// enable the validation layers on the device

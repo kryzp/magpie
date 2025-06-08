@@ -26,6 +26,8 @@ namespace mgp
 		void init(VulkanCore *core);
 		void destroy();
 
+		uint32_t getMaxDescriptorSize(VkDescriptorType type);
+
 		uint32_t registerSampler(const Sampler &sampler);
 		uint32_t registerTexture2D(const ImageView &view);
 		uint32_t registerCubemap(const ImageView &cubemap);

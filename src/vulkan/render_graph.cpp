@@ -134,7 +134,7 @@ void RenderGraph::handleRenderPass(CommandBuffer &cmd, Swapchain *swapchain, con
 
 	int nColourAttachments = 0;
 
-	for (auto &attachment : pass.m_outputAttachments)
+	for (auto &attachment : pass.m_attachments)
 	{
 		Image *image = attachment.view->getImage();
 

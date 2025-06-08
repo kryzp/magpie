@@ -7,6 +7,7 @@
 using namespace mgp;
 
 static bool g_hasValidationLayers = false;
+static VkDebugUtilsMessengerCreateInfoEXT g_debugInfo = {};
 
 bool checkForValidationLayerSupport()
 {
@@ -39,9 +40,14 @@ bool checkForValidationLayerSupport()
 	return true;
 }
 
-void vk_validation::trySetValidationLayers(VkInstanceCreateInfo &createInfo, VkDebugUtilsMessengerCreateInfoEXT *debugInfo)
+void vk_validation::trySetValidationLayers(VkInstanceCreateInfo &createInfo)
 {
-#if MGP_DEBUG
+	g_debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	g_debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	g_debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	g_debugInfo.pfnUserCallback = vk_validation::vkDebugCallback;
+	g_debugInfo.pUserData = nullptr;
+
 	g_hasValidationLayers = checkForValidationLayerSupport();
 
 	if (g_hasValidationLayers)
@@ -50,7 +56,7 @@ void vk_validation::trySetValidationLayers(VkInstanceCreateInfo &createInfo, VkD
 
 		createInfo.enabledLayerCount = MGP_ARRAY_LENGTH(VALIDATION_LAYERS);
 		createInfo.ppEnabledLayerNames = VALIDATION_LAYERS;
-		createInfo.pNext = debugInfo;
+		createInfo.pNext = &g_debugInfo;
 	}
 	else
 	{
@@ -60,7 +66,6 @@ void vk_validation::trySetValidationLayers(VkInstanceCreateInfo &createInfo, VkD
 		createInfo.ppEnabledLayerNames = nullptr;
 		createInfo.pNext = nullptr;
 	}
-#endif // MGP_DEBUG
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_validation::vkDebugCallback(
@@ -83,7 +88,6 @@ bool vk_validation::hasValidationLayers()
 
 VkResult vk_validation::createDebugUtilsMessengerExt(
 	VkInstance instance,
-	const VkDebugUtilsMessengerCreateInfoEXT *createInfo,
 	const VkAllocationCallbacks *allocator,
 	VkDebugUtilsMessengerEXT *debugMessenger
 )
@@ -91,7 +95,7 @@ VkResult vk_validation::createDebugUtilsMessengerExt(
 	auto fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
 	if (fn)
-		return fn(instance, createInfo, allocator, debugMessenger);
+		return fn(instance, &g_debugInfo, allocator, debugMessenger);
 
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }

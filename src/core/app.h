@@ -92,16 +92,14 @@ namespace mgp
 		void run();
 		void exit();
 
-		TextureManager &getTextures() { return m_textures; }
-		ShaderManager &getShaders() { return m_shaders; }
-
-		Renderer &getRenderer() { return m_renderer; }
-
 		Platform *getPlatform() { return m_platform; }
 		VulkanCore *getVkCore() { return m_vulkanCore; }
+
+		Renderer &getRenderer() { return m_renderer; }
 		InputState *getInput() { return m_inputSt; }
 		
-		VkDescriptorSet allocateSet(const std::vector<VkDescriptorSetLayout> &layouts);
+		TextureManager &getTextures() { return m_textures; }
+		ShaderManager &getShaders() { return m_shaders; }
 
 	private:
 		void tick(float dt);
@@ -111,20 +109,17 @@ namespace mgp
 		void applyConfig(const Config &config);
 
 		Config m_config;
+		bool m_running;
 
 		Platform *m_platform;
 		VulkanCore *m_vulkanCore;
+
 		InputState *m_inputSt;
-
-		bool m_running;
-
 		Renderer m_renderer;
 		Scene m_scene;
 		Camera m_camera;
 
 		TextureManager m_textures;
 		ShaderManager m_shaders;
-
-		DescriptorPoolDynamic m_descriptorPool;
 	};
 }

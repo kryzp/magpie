@@ -35,7 +35,6 @@ App::App(const Config &config)
 	, m_shaders()
 	, m_renderer()
 	, m_scene()
-	, m_descriptorPool()
 	, m_config(config)
 	, m_vulkanCore(nullptr)
 	, m_platform(nullptr)
@@ -59,20 +58,6 @@ App::App(const Config &config)
 	m_textures.init(m_vulkanCore);
 	m_shaders.init(m_vulkanCore);
 
-	m_descriptorPool.init(m_vulkanCore, 64 * Queue::FRAMES_IN_FLIGHT, {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) }
-	});
-
 	m_platform->onExit = [this]() { exit(); };
 
 	m_running = true;
@@ -80,8 +65,6 @@ App::App(const Config &config)
 
 App::~App()
 {
-	m_descriptorPool.cleanUp();
-
 	delete m_scene.getRenderList()[0]->getParent(); // crap
 
 	m_renderer.destroy();
@@ -108,6 +91,7 @@ void App::run()
 		IMGUI_CHECKVERSION();
 
 		ImGui::CreateContext();
+
 		//ImGuiIO &io = ImGui::GetIO();
 
 		ImGui::StyleColorsClassic();
@@ -140,16 +124,31 @@ void App::run()
 	obj->transform.setScale({ 3.0f, 3.0f, 3.0f });
 	obj->transform.setOrigin({ 0.0f, 0.0f, 0.0f });
 
-	Light light;
-	light.setType(Light::TYPE_POINT);
-	light.setIntensity(5.0f);
-	light.setFalloff(1.0f);
-	light.setDirection(glm::normalize((glm::vec3) { 1.0f, -1.0f, -1.0f }));
-	light.setPosition({ -2.0f, 2.0f, 1.0f });
-	light.setColour(Colour::white());
-	light.toggleShadows(true);
+	Colour colours[] = {
+		Colour::white(),
+		Colour::red(),
+		Colour::green(),
+		Colour::blue(),
+		Colour::cyan(),
+		Colour::magenta(),
+		Colour::yellow()
+	};
 
-	m_scene.addLight(light);
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			Light light;
+			light.setType(Light::TYPE_POINT);
+			light.setIntensity(3.0f);
+			light.setFalloff(1.0f);
+			light.setPosition({ i*4.0f, 1.0f, j*4.0f - 2.0f });
+			light.setColour(colours[(j*4 + i) % MGP_ARRAY_LENGTH(colours)]);
+			light.toggleShadows(false);
+
+			m_scene.addLight(light);
+		}
+	}
 
 	MGP_LOG("Entering main game loop...");
 
@@ -164,7 +163,6 @@ void App::run()
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
 
 		double deltaTime = deltaTimer.reset();
 
@@ -213,19 +211,6 @@ void App::tickFixed(float dt)
 void App::render(Swapchain *swapchain)
 {
 	m_renderer.render(m_scene, m_camera, swapchain);
-
-	// imgui pass
-	m_vulkanCore->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_LOAD } })
-		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
-		{
-			ImGui::Render();
-
-			ImGui_ImplVulkan_RenderDrawData(
-				ImGui::GetDrawData(),
-				cmd.getHandle()
-			);
-		}));
 }
 
 void App::applyConfig(const Config &config)
@@ -254,9 +239,4 @@ void App::exit()
 	MGP_LOG("Detected window close event, quitting...");
 
 	m_running = false;
-}
-
-VkDescriptorSet App::allocateSet(const std::vector<VkDescriptorSetLayout> &layouts)
-{
-	return m_descriptorPool.allocate(layouts);
 }

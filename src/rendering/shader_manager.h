@@ -25,7 +25,7 @@ namespace mgp
 
 		ShaderStage *loadShaderStage(const std::string &name, const std::string &path, VkShaderStageFlagBits stageType);
 		
-		Shader *createShader(const std::string &name);
+		void addShader(const std::string &name, Shader *shader);
 
 	private:
 		void loadShaders();

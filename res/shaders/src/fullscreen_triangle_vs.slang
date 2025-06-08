@@ -1,4 +1,3 @@
-
 struct VS_Output
 {
     float4 sv_position : SV_Position;

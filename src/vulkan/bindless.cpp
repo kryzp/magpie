@@ -15,30 +15,27 @@ void BindlessResources::init(VulkanCore *core)
 {
 	m_core = core;
 
-	cauto &limits = core->getPhysicalDeviceProperties().properties.limits;
-
-	const uint32_t HARD_CAP_ON_SIZE = 65536;
-
 	std::vector<DescriptorPoolSize> resources = {
 		// samplers
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLER,
-			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSamplers)
+			getMaxDescriptorSize(VK_DESCRIPTOR_TYPE_SAMPLER)
 		},
 		// 2d textures
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSampledImages)
+			getMaxDescriptorSize(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
 		},
 		// cubemaps
 		{
 			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSampledImages)
+			getMaxDescriptorSize(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
 		}
 	};
 
-	std::vector<VkDescriptorBindingFlags> flags;
 	DescriptorLayoutBuilder layoutBuilder;
+
+	std::vector<VkDescriptorBindingFlags> flags;
 
 	for (int i = 0; i < resources.size(); i++)
 	{
@@ -59,6 +56,24 @@ void BindlessResources::init(VulkanCore *core)
 void BindlessResources::destroy()
 {
 	m_bindlessPool.cleanUp();
+}
+
+uint32_t BindlessResources::getMaxDescriptorSize(VkDescriptorType type)
+{
+	cauto &limits = m_core->getPhysicalDeviceProperties().properties.limits;
+
+	const uint32_t HARD_CAP_ON_SIZE = 65536;
+
+	switch (type)
+	{
+		case VK_DESCRIPTOR_TYPE_SAMPLER:
+			return CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSamplers);
+
+		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+			return CalcU::min(HARD_CAP_ON_SIZE, limits.maxDescriptorSetSampledImages);
+	}
+
+	return 0;
 }
 
 uint32_t BindlessResources::registerSampler(const Sampler &sampler)

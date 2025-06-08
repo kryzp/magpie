@@ -8,12 +8,8 @@ namespace mgp::vk_validation
 		"VK_LAYER_KHRONOS_validation"
 	};
 
-	void trySetValidationLayers(
-		VkInstanceCreateInfo &createInfo,
-		VkDebugUtilsMessengerCreateInfoEXT *debugInfo
-	);
-
 	bool hasValidationLayers();
+	void trySetValidationLayers(VkInstanceCreateInfo &createInfo);
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL vkDebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -24,7 +20,6 @@ namespace mgp::vk_validation
 
 	VkResult createDebugUtilsMessengerExt(
 		VkInstance instance,
-		const VkDebugUtilsMessengerCreateInfoEXT *createInfo,
 		const VkAllocationCallbacks *allocator,
 		VkDebugUtilsMessengerEXT *debugMessenger
 	);

@@ -12,10 +12,10 @@ using namespace mgp;
 
 GraphicsPipelineDef::GraphicsPipelineDef()
 	: m_shader(nullptr)
+	, m_shaderStages()
 	, m_vertexFormat(nullptr)
 	, m_cullMode(VK_CULL_MODE_BACK_BIT)
 	, m_frontFace(VK_FRONT_FACE_CLOCKWISE)
-	, m_shaderStages()
 	, m_depthStencilInfo()
 	, m_blendConstants{ 0.0f, 0.0f, 0.0f, 0.0f }
 	, m_colourBlendState()
@@ -473,7 +473,7 @@ PipelineState PipelineCache::fetchComputePipeline(const ComputePipelineDef &defi
 
 VkPipelineLayout PipelineCache::fetchPipelineLayout(const Shader *shader)
 {
-	VkShaderStageFlagBits shaderStage = shader->getStage(0)->getStage() == VK_SHADER_STAGE_COMPUTE_BIT ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
+	VkShaderStageFlagBits shaderStage = shader->getStage(0)->getType() == VK_SHADER_STAGE_COMPUTE_BIT ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
 
 	cauto &setLayouts = shader->getDescriptorSetLayouts();
 

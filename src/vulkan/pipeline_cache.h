@@ -59,13 +59,12 @@ namespace mgp
 
 	private:
 		const Shader *m_shader;
+		std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
 		const VertexFormat *m_vertexFormat;
 
 		VkCullModeFlagBits m_cullMode;
 		VkFrontFace m_frontFace;
-
-		std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
 
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilInfo;
 

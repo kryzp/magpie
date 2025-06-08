@@ -21,18 +21,33 @@ namespace mgp
 	class Mesh;
 	class Swapchain;
 
-	class GBuffer
+	struct GBuffer
 	{
+		Image *position;
+		Image *albedo;
+		Image *normal;
+		Image *material;
+		Image *emissive;
+		
+		Image *lighting;
+
+		Image *depth;
+	};
+
+	struct EnvironmentProbe
+	{
+		Image *prefilter;
+		Image *irradiance;
+	};
+
+	struct RenderContext
+	{
+		// scene
+		// camera
 	};
 
 	class Renderer
 	{
-		struct EnvironmentProbe
-		{
-			Image *prefilter;
-			Image *irradiance;
-		};
-
 	public:
 		Renderer() = default;
 		~Renderer() = default;
@@ -43,24 +58,27 @@ namespace mgp
 		void render(Scene &scene, const Camera &camera, Swapchain *swapchain);
 		
 		Material *buildMaterial(MaterialData &data);
-
+		
+		VkDescriptorSet allocateSet(const std::vector<VkDescriptorSetLayout> &layouts);
+		
 	private:
 		void shadowPass(Scene &scene, const Camera &camera);
 		void deferredPass(Scene &scene, const Camera &camera);
+		void lightingPass(Scene &scene, const Camera &camera);
+		void tonemappingPass(float exposure);
 
-		void precomputeBRDF();
-		void generateEnvironmentProbe();
+		void createGBuffer(Swapchain *swapchain);
 
 		void createSkyboxMesh();
-		void createSkybox();
+		void precomputeBRDF();
+		void generateEnvironmentProbe();
 		
 		void loadTechniques();
 		void addTechnique(const std::string &name, const Technique &technique);
 
 		App *m_app;
 
-		Image *m_targetColour;
-		Image *m_targetDepth;
+		GBuffer m_gBuffer;
 
 		GPUBuffer *m_frameConstantsBuffer;
 		GPUBuffer *m_transformDataBuffer;
@@ -72,22 +90,19 @@ namespace mgp
 		std::unordered_map<std::string, Technique> m_techniques;
 		uint32_t m_materialHandle_UID;
 
-		GraphicsPipelineDef m_textureUVPipeline;
 		VkDescriptorSet m_textureUVSet;
-
-		ComputePipelineDef m_hdrTonemappingPipeline;
 		VkDescriptorSet m_hdrTonemappingSet;
+
+		DescriptorPoolDynamic m_descriptorPool;
 
 		Image *m_brdfLUT;
 
-		ShadowMapAtlas m_shadowAtlas;
+//		ShadowMapAtlas m_shadowAtlas;
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;
 
 		Mesh *m_skyboxMesh;
-		Shader *m_skyboxShader;
 		VkDescriptorSet m_skyboxSet;
-		GraphicsPipelineDef m_skyboxPipeline;
 	};
 }

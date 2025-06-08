@@ -2,10 +2,14 @@
 
 #include <glm/glm.hpp>
 
+#include "third_party/imgui/imgui.h"
+#include "third_party/imgui/imgui_impl_vulkan.h"
+
 #include "core/app.h"
 #include "core/platform.h"
 
 #include "vulkan/core.h"
+#include "vulkan/bindless.h"
 #include "vulkan/gpu_buffer.h"
 #include "vulkan/image.h"
 #include "vulkan/image_view.h"
@@ -25,26 +29,56 @@
 
 using namespace mgp;
 
+glm::mat4 CUBEMAP_CAPTURE_VIEW_MATRICES[] =
+{
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+};
+
+glm::vec3 CUBEMAP_CAPTURE_VIEW_DIRECTIONS[] =
+{
+	 glm::vec3( 1.0f, 0.0f, 0.0f),
+	 glm::vec3(-1.0f, 0.0f, 0.0f),
+	 glm::vec3( 0.0f, 1.0f, 0.0f),
+	 glm::vec3( 0.0f,-1.0f, 0.0f),
+	-glm::vec3( 0.0f, 0.0f, 1.0f),
+	-glm::vec3( 0.0f, 0.0f,-1.0f)
+};
+
+glm::vec3 CUBEMAP_CAPTURE_VIEW_UP[] =
+{
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 0.0f, 1.0f),
+	glm::vec3(0.0f, 0.0f,-1.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	glm::vec3(0.0f, 1.0f, 0.0f)
+};
+
 struct GPU_FrameData
 {
 	glm::mat4 proj;
 	glm::mat4 view;
-	glm::vec4 view_position;
+	glm::vec4 viewPosition;
 };
 
 struct GPU_TransformData
 {
 	glm::mat4 model;
-	glm::mat4 normal_matrix;
+	glm::mat4 normalMatrix;
 };
 
 struct GPU_BindlessMaterial
 {
-    uint32_t diffuse_id;
-    uint32_t ambient_id;
-    uint32_t ambient_rough_metallic_id;
-    uint32_t normal_id;
-    uint32_t emissive_id;
+	uint32_t diffuse_id;
+	uint32_t ambient_id;
+	uint32_t material_id;
+	uint32_t normal_id;
+	uint32_t emissive_id;
 };
 
 struct GPU_BufferPointers
@@ -52,30 +86,61 @@ struct GPU_BufferPointers
 	VkDeviceAddress frame_data;
 	VkDeviceAddress transforms;
 	VkDeviceAddress materials;
-	VkDeviceAddress point_lights;
+	VkDeviceAddress pointLights;
 };
 
 struct GPU_ModelPushConstants
 {
 	VkDeviceAddress buffers;
-    uint32_t transform_id;
-    uint32_t irradiance_map_id;
-    uint32_t prefilter_map_id;
-    uint32_t brdf_lut_id;
-    uint32_t material_id;
-    uint32_t shadow_atlas_id;
-    uint32_t cubemap_sampler_id;
-    uint32_t texture_sampler_id;
-    uint32_t shadow_atlas_sampler_id;
+	uint32_t irradianceMap_id;
+	uint32_t prefilterMap_id;
+	uint32_t brdfLUT_id;
+	uint32_t material_id;
+	uint32_t textureSampler_id;
+	uint32_t cubemapSampler_id;
+};
+
+struct GPU_DeferredLightingPushConstants
+{
+	uint32_t position_id;
+	uint32_t albedo_id;
+	uint32_t normal_id;
+	uint32_t material_id;
+	uint32_t emissive_id;
+
+	uint32_t irradianceMap_id;
+	uint32_t prefilterMap_id;
+	uint32_t brdfLUT_id;
+	
+	uint32_t textureSampler_id;
+	uint32_t cubemapSampler_id;
+
+	uint32_t _padding[2];
+
+	glm::vec4 cameraPosition;
 };
 
 void Renderer::init(App *app, Swapchain *swapchain)
 {
 	m_app = app;
 
+	m_descriptorPool.init(app->getVkCore(), 64 * Queue::FRAMES_IN_FLIGHT, {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 					(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 	(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 			(uint32_t)(4.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 			(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 		(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 			(uint32_t)(2.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	(uint32_t)(1.0f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 			(uint32_t)(0.5f * 64.0f * (float)Queue::FRAMES_IN_FLIGHT) }
+	});
+
 	loadTechniques();
 
-	m_shadowAtlas.init(app->getVkCore());
+//	m_shadowAtlas.init(app->getVkCore());
 
 	m_frameConstantsBuffer = new GPUBuffer(
 		app->getVkCore(),
@@ -116,19 +181,45 @@ void Renderer::init(App *app, Swapchain *swapchain)
 	pointers.frame_data = m_frameConstantsBuffer->getGPUAddress();
 	pointers.transforms = m_transformDataBuffer->getGPUAddress();
 	pointers.materials = m_bindlessMaterialTable->getGPUAddress();
-	pointers.point_lights = m_pointLightBuffer->getGPUAddress();
+	pointers.pointLights = m_pointLightBuffer->getGPUAddress();
 
 	m_bufferPointersBuffer->writeType(pointers);
 
 	createSkyboxMesh();
-
 	precomputeBRDF();
 	generateEnvironmentProbe();
 	
-	createSkybox();
+	m_skyboxSet = allocateSet(m_app->getShaders().getShader("skybox")->getDescriptorSetLayouts());
 
-	m_targetColour = new Image();
-	m_targetColour->allocate(
+	DescriptorWriter(m_app->getVkCore())
+		.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_app->getTextures().getLinearSampler())
+		.writeTo(m_skyboxSet);
+
+	createGBuffer(swapchain);
+
+	m_textureUVSet = allocateSet(app->getShaders().getShader("texture_uv")->getDescriptorSetLayouts());
+	m_hdrTonemappingSet = allocateSet(app->getShaders().getShader("hdr_tonemapping")->getDescriptorSetLayouts());
+	
+	DescriptorWriter(m_app->getVkCore())
+		.writeCombinedImage(0, *m_gBuffer.lighting->getStandardView(), *m_app->getTextures().getLinearSampler())
+		.writeTo(m_textureUVSet);
+
+	DescriptorWriter(m_app->getVkCore())
+		.writeStorageImage(0, *m_gBuffer.lighting->getStandardView())
+		.writeTo(m_hdrTonemappingSet);
+}
+
+void Renderer::createGBuffer(Swapchain *swapchain)
+{
+	m_gBuffer.position = new Image();
+	m_gBuffer.albedo = new Image();
+	m_gBuffer.normal = new Image();
+	m_gBuffer.material = new Image();
+	m_gBuffer.emissive = new Image();
+	m_gBuffer.lighting = new Image();
+	m_gBuffer.depth = new Image();
+
+	m_gBuffer.position->allocate(
 		m_app->getVkCore(),
 		swapchain->getWidth(),
 		swapchain->getHeight(),
@@ -142,13 +233,82 @@ void Renderer::init(App *app, Swapchain *swapchain)
 		true
 	);
 
-	m_targetDepth = new Image();
-	m_targetDepth->allocate(
+	m_gBuffer.albedo->allocate(
 		m_app->getVkCore(),
 		swapchain->getWidth(),
 		swapchain->getHeight(),
 		1,
-		app->getVkCore()->getDepthFormat(),
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_gBuffer.normal->allocate(
+		m_app->getVkCore(),
+		swapchain->getWidth(),
+		swapchain->getHeight(),
+		1,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_gBuffer.material->allocate(
+		m_app->getVkCore(),
+		swapchain->getWidth(),
+		swapchain->getHeight(),
+		1,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_gBuffer.emissive->allocate(
+		m_app->getVkCore(),
+		swapchain->getWidth(),
+		swapchain->getHeight(),
+		1,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_gBuffer.lighting->allocate(
+		m_app->getVkCore(),
+		swapchain->getWidth(),
+		swapchain->getHeight(),
+		1,
+		VK_FORMAT_R32G32B32A32_SFLOAT,
+		VK_IMAGE_VIEW_TYPE_2D,
+		VK_IMAGE_TILING_OPTIMAL,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		false,
+		true
+	);
+
+	m_gBuffer.depth->allocate(
+		m_app->getVkCore(),
+		swapchain->getWidth(),
+		swapchain->getHeight(),
+		1,
+		m_app->getVkCore()->getDepthFormat(),
 		VK_IMAGE_VIEW_TYPE_2D,
 		VK_IMAGE_TILING_OPTIMAL,
 		1,
@@ -156,30 +316,12 @@ void Renderer::init(App *app, Swapchain *swapchain)
 		false,
 		false
 	);
-
-	Shader *textureUVShader = app->getShaders().getShader("texture_uv");
-	m_textureUVPipeline.setShader(textureUVShader);
-	m_textureUVPipeline.setDepthTest(false);
-	m_textureUVPipeline.setDepthWrite(false);
-	m_textureUVSet = app->allocateSet(textureUVShader->getDescriptorSetLayouts());
-	
-	DescriptorWriter(m_app->getVkCore())
-		.writeCombinedImage(0, *m_targetColour->getStandardView(), *m_app->getTextures().getLinearSampler())
-		.writeTo(m_textureUVSet);
-
-	Shader *hdrTonemappingShader = app->getShaders().getShader("hdr_tonemapping");
-	m_hdrTonemappingPipeline.setShader(hdrTonemappingShader);
-
-	m_hdrTonemappingSet = app->allocateSet(hdrTonemappingShader->getDescriptorSetLayouts());
-	//m_hdrTonemappingSet.writeStorageImage(0, *m_targetColour->getStandardView());
-
-	DescriptorWriter(m_app->getVkCore())
-		.writeStorageImage(0, *m_targetColour->getStandardView())
-		.writeTo(m_hdrTonemappingSet);
 }
 
 void Renderer::destroy()
 {
+	m_descriptorPool.cleanUp();
+
 	delete m_brdfLUT;
 
 	delete m_skyboxMesh;
@@ -198,10 +340,15 @@ void Renderer::destroy()
 	delete m_environmentProbe.irradiance;
 	delete m_environmentProbe.prefilter;
 
-	m_shadowAtlas.destroy();
+//	m_shadowAtlas.destroy();
 
-	delete m_targetColour;
-	delete m_targetDepth;
+	delete m_gBuffer.position;
+	delete m_gBuffer.albedo;
+	delete m_gBuffer.normal;
+	delete m_gBuffer.material;
+	delete m_gBuffer.emissive;
+	delete m_gBuffer.lighting;
+	delete m_gBuffer.depth;
 }
 
 void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
@@ -209,14 +356,14 @@ void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
 	GPU_FrameData constants = {
 		.proj = camera.getProj(),
 		.view = camera.getView(),
-		.view_position = glm::vec4(camera.position, 1.0f)
+		.viewPosition = glm::vec4(camera.position, 1.0f)
 	};
 
 	m_frameConstantsBuffer->writeType(constants);
 
 	GPU_TransformData transform = {
 		.model = scene.getRenderObjects()[0].transform.getMatrix(),
-		.normal_matrix = glm::transpose(glm::inverse(transform.model))
+		.normalMatrix = glm::transpose(glm::inverse(transform.model))
 	};
 
 	m_transformDataBuffer->writeType(transform);
@@ -225,84 +372,74 @@ void Renderer::render(Scene &scene, const Camera &camera, Swapchain *swapchain)
 
 	deferredPass(scene, camera);
 
-	// compute tonemapping
-	if (m_app->getInput()->alt())
+	lightingPass(scene, camera);
+
+	// tonemapping
 	{
-		m_app->getVkCore()->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
-			.setStorageViews({ m_targetColour->getStandardView() })
-			.setBuildFn([&](CommandBuffer &cmd) -> void
+		static float EXPOSURE = 1.12f;
+		static bool ENABLED = true;
+
+		ImGui::Begin("Tonemapping");
+		{
+			ImGui::Checkbox("Enabled", &ENABLED);
+			ImGui::SliderFloat("Exposure", &EXPOSURE, 1.0f, 2.0f);
+		}
+		ImGui::End();
+
+		// compute tonemapping
+		if (ENABLED)
+		{
+			tonemappingPass(EXPOSURE);
+		}
+	}
+
+	// draw colour target to swapchain
+	GraphicsPipelineDef textureUVPipeline;
+	textureUVPipeline.setShader(m_app->getShaders().getShader("texture_uv"));
+	textureUVPipeline.setDepthTest(false);
+	textureUVPipeline.setDepthWrite(false);
+
+	m_app->getVkCore()->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } } })
+		.setInputViews({ m_gBuffer.lighting->getStandardView() })
+		.setBuildFn([&, textureUVPipeline](CommandBuffer &cmd, const RenderInfo &info) -> void
+		{
+			// render target
 			{
-				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchComputePipeline(m_hdrTonemappingPipeline);
-			
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(textureUVPipeline, info);
+
 				cmd.bindPipeline(
-					VK_PIPELINE_BIND_POINT_COMPUTE,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					pipelineData.pipeline
 				);
 
 				cmd.bindDescriptorSets(
 					0,
-					VK_PIPELINE_BIND_POINT_COMPUTE,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					pipelineData.layout,
-					{ m_hdrTonemappingSet },
+					{ m_textureUVSet },
 					{}
 				);
 
-				struct
-				{
-					uint32_t width;
-					uint32_t height;
-					float exposure;
-	//				float blurIntensity;
-				}
-				pc;
+				cmd.draw(3);
+			}
 
-				pc.width = (uint32_t)m_app->getPlatform()->getWindowSizeInPixels().x;
-				pc.height = (uint32_t)m_app->getPlatform()->getWindowSizeInPixels().y;
-				pc.exposure = 2.25f;
+			// imgui
+			{
+				ImGui::Render();
 
-				cmd.pushConstants(
-					pipelineData.layout,
-					VK_SHADER_STAGE_COMPUTE_BIT,
-					sizeof(pc),
-					&pc
+				ImGui_ImplVulkan_RenderDrawData(
+					ImGui::GetDrawData(),
+					cmd.getHandle()
 				);
-
-				cmd.dispatch(pc.width, pc.height, 1);
-			}));
-	}
-
-	// draw colour target to swapchain
-	m_app->getVkCore()->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ { swapchain->getCurrentSwapchainImageView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } } })
-		.setInputViews({ m_targetColour->getStandardView() })
-		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
-		{
-			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_textureUVPipeline, info);
-
-			cmd.bindPipeline(
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineData.pipeline
-			);
-
-			cmd.bindDescriptorSets(
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineData.layout,
-				{ m_textureUVSet },
-				{}
-			);
-
-			cmd.draw(3);
-		}));
+			}
+		})
+	);
 }
 
 void Renderer::shadowPass(Scene &scene, const Camera &camera)
 {
-	GraphicsPipelineDef shadowMapPipeline;
-	shadowMapPipeline.setShader(m_app->getShaders().getShader("shadow_map"));
-	shadowMapPipeline.setVertexFormat(&vtx::MODEL_VERTEX_FORMAT);
-	shadowMapPipeline.setCullMode(VK_CULL_MODE_FRONT_BIT);
-
+	/*
 	// this is bad but im doing it to get stuff running
 	// ideally shadow maps would be drawn once and only updated when they
 	// actually have to change
@@ -310,9 +447,14 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 	m_shadowAtlas.clear();
 
 	m_app->getVkCore()->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({ { m_shadowAtlas.getAtlasView(), VK_ATTACHMENT_LOAD_OP_CLEAR, {.depthStencil = { 1.0f, 0 } } } })
-		.setBuildFn([&, shadowMapPipeline](CommandBuffer &cmd, const RenderInfo &info) -> void
+		.setAttachments({ { m_shadowAtlas.getAtlasView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .depthStencil = { 1.0f, 0 } } } })
+		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
+			GraphicsPipelineDef shadowMapPipeline;
+			shadowMapPipeline.setShader(m_app->getShaders().getShader("shadow_map"));
+			shadowMapPipeline.setVertexFormat(&vtx::MODEL_VERTEX_FORMAT);
+			shadowMapPipeline.setCullMode(VK_CULL_MODE_FRONT_BIT);
+
 			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(shadowMapPipeline, info);
 
 			cmd.bindPipeline(VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineData.pipeline);
@@ -327,53 +469,53 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 
 				GPU_PointLight gpuLight = {};
 				gpuLight.position = { pos.x, pos.y, pos.z, 0.0f };
-				gpuLight.colour = { col.x * light.getIntensity(), col.y * light.getIntensity(), col.z * light.getIntensity(), 0.0f };
+				gpuLight.colour = { col.x, col.y, col.z, light.getIntensity() };
+				gpuLight.attenuation = { 1.0f, 0.0f, 0.0f, light.isShadowCaster() };
 
 				if (light.isShadowCaster())
 				{
-					ShadowMapAtlas::AtlasRegion region;
-
-					if (m_shadowAtlas.adaptiveAlloc(&region, 2, 6))
+					for (int i = 0; i < 6; i++)
 					{
-						light.setShadowAtlasRegion(region);
+						ShadowMapAtlas::AtlasRegion region;
 
-						Camera lightCamera((float)region.area.w / (float)region.area.h, 75.0f, 0.01f, 25.0f);
-						lightCamera.position = gpuLight.position;
-						lightCamera.direction = dir;
-
-						gpuLight.lightSpaceMatrix = lightCamera.getProj() * lightCamera.getView();
-
-						cmd.setViewport({ (float)region.area.x, (float)region.area.y, (float)region.area.w, (float)region.area.h });
-						cmd.setScissor({ { (int)region.area.x, (int)region.area.y }, { region.area.w, region.area.h } });
-
-						scene.foreachMesh([&](uint32_t meshIndex, Mesh *mesh) -> bool
+						if (m_shadowAtlas.adaptiveAlloc(&region, 3, 6))
 						{
-							glm::mat4 transform = gpuLight.lightSpaceMatrix * mesh->getParent()->getOwner()->transform.getMatrix();
+							light.setShadowAtlasRegion(region);
 
-							cmd.pushConstants(
-								pipelineData.layout,
-								VK_SHADER_STAGE_ALL_GRAPHICS,
-								sizeof(glm::mat4),
-								&transform
-							);
+							gpuLight.lightSpaceMatrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.01f, 25.0f) * glm::lookAt(pos, pos + CUBEMAP_CAPTURE_VIEW_DIRECTIONS[i], CUBEMAP_CAPTURE_VIEW_UP[i]);
 
-							mesh->bind(cmd);
+							cmd.setViewport({ (float)region.area.x, (float)region.area.y, (float)region.area.w, (float)region.area.h });
+							cmd.setScissor({ { (int)region.area.x, (int)region.area.y }, { region.area.w, region.area.h } });
 
-							cmd.drawIndexed(mesh->getIndexCount());
+							scene.foreachMesh([&](uint32_t meshIndex, Mesh *mesh) -> bool
+							{
+								glm::mat4 transform = gpuLight.lightSpaceMatrix * mesh->getParent()->getOwner()->transform.getMatrix();
 
-							return true; // continue
-						});
+								cmd.pushConstants(
+									pipelineData.layout,
+									VK_SHADER_STAGE_ALL_GRAPHICS,
+									sizeof(glm::mat4),
+									&transform
+								);
 
-						float regionX = (float)region.area.x / (float)ShadowMapAtlas::ATLAS_SIZE;
-						float regionY = (float)region.area.y / (float)ShadowMapAtlas::ATLAS_SIZE;
-						float regionW = (float)region.area.w / (float)ShadowMapAtlas::ATLAS_SIZE;
-						float regionH = (float)region.area.h / (float)ShadowMapAtlas::ATLAS_SIZE;
+								mesh->bind(cmd);
 
-						gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
-					}
-					else
-					{
-						MGP_ERROR("couldn't allocate enough room on shadowmap for light");
+								cmd.drawIndexed(mesh->getIndexCount());
+
+								return true; // continue
+							});
+
+							float regionX = (float)region.area.x / (float)ShadowMapAtlas::ATLAS_SIZE;
+							float regionY = (float)region.area.y / (float)ShadowMapAtlas::ATLAS_SIZE;
+							float regionW = (float)region.area.w / (float)ShadowMapAtlas::ATLAS_SIZE;
+							float regionH = (float)region.area.h / (float)ShadowMapAtlas::ATLAS_SIZE;
+
+							gpuLight.atlasRegion = { regionX, regionY, regionW, regionH };
+						}
+						else
+						{
+							MGP_ERROR("Couldn't allocate enough room on shadow map atlas for point light");
+						}
 					}
 				}
 
@@ -381,16 +523,37 @@ void Renderer::shadowPass(Scene &scene, const Camera &camera)
 			}
 		})
 	);
+	*/
 }
 
 void Renderer::deferredPass(Scene &scene, const Camera &camera)
 {
+	for (int i = 0; i < scene.getPointLightCount(); i++)
+	{
+		auto &light = scene.getPointLights()[i];
+
+		glm::vec3 pos = light.getPosition();
+		glm::vec3 col = light.getColour().getDisplayColour();
+		glm::vec3 dir = light.getDirection();
+
+		GPU_PointLight gpuLight = {};
+		gpuLight.position		= { pos.x, pos.y, pos.z, 0.0f };
+		gpuLight.colour			= { col.x, col.y, col.z, light.getIntensity() };
+		gpuLight.attenuation	= { 1.0f, 0.0f, 0.0f, light.isShadowCaster() };
+
+		m_pointLightBuffer->writeType(gpuLight, i);
+	}
+
+	std::vector<RenderGraph::AttachmentInfo> attachments;
+	attachments.push_back({ m_gBuffer.position->getStandardView(),	VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } });
+	attachments.push_back({ m_gBuffer.albedo->getStandardView(),	VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } });
+	attachments.push_back({ m_gBuffer.normal->getStandardView(),	VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } });
+	attachments.push_back({ m_gBuffer.material->getStandardView(),	VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } });
+	attachments.push_back({ m_gBuffer.emissive->getStandardView(),	VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } });
+	attachments.push_back({ m_gBuffer.depth->getStandardView(),		VK_ATTACHMENT_LOAD_OP_CLEAR, { .depthStencil = { 1.0f, 0 } } });
+
 	m_app->getVkCore()->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
-		.setOutputAttachments({
-			{ m_targetColour->getStandardView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } },
-			{ m_targetDepth->getStandardView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .depthStencil = { 1.0f, 0 } } }
-		})
-		.setInputViews({ m_shadowAtlas.getAtlasView() })
+		.setAttachments(attachments)
 		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
 		{
 			uint64_t currentPipelineHash = 0;
@@ -423,16 +586,13 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 				}
 
 				GPU_ModelPushConstants pushConstants = {};
-				pushConstants.buffers = m_bufferPointersBuffer->getGPUAddress();
-				pushConstants.transform_id = 0;
-				pushConstants.irradiance_map_id = m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
-				pushConstants.prefilter_map_id = m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
-				pushConstants.brdf_lut_id = m_brdfLUT->getStandardView()->getBindlessHandle();
-				pushConstants.material_id = mat->bindlessHandle;
-				pushConstants.shadow_atlas_id = m_shadowAtlas.getAtlasView()->getBindlessHandle();
-				pushConstants.cubemap_sampler_id = m_app->getTextures().getLinearSampler()->getBindlessHandle();
-				pushConstants.texture_sampler_id = m_app->getTextures().getLinearSampler()->getBindlessHandle();
-				pushConstants.shadow_atlas_sampler_id = m_app->getTextures().getNearestSampler()->getBindlessHandle();
+				pushConstants.buffers							= m_bufferPointersBuffer->getGPUAddress();
+				pushConstants.irradianceMap_id					= m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+				pushConstants.prefilterMap_id					= m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+				pushConstants.brdfLUT_id						= m_brdfLUT->getStandardView()->getBindlessHandle();
+				pushConstants.material_id						= mat->bindlessHandle;
+				pushConstants.cubemapSampler_id					= m_app->getTextures().getLinearSampler()->getBindlessHandle();
+				pushConstants.textureSampler_id					= m_app->getTextures().getLinearSampler()->getBindlessHandle();
 
 				cmd.pushConstants(
 					pipelineData.layout,
@@ -443,16 +603,90 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 
 				mesh->bind(cmd);
 
-				cmd.drawIndexed(mesh->getIndexCount());
+				int id = 0;
+
+				cmd.drawIndexed(mesh->getIndexCount(), 1, 0, 0, id);
 
 				return true; // continue
 			});
+		})
+	);
+}
+
+void Renderer::lightingPass(Scene &scene, const Camera &camera)
+{
+	std::vector<RenderGraph::AttachmentInfo> attachments = {
+		{ m_gBuffer.lighting->getStandardView(), VK_ATTACHMENT_LOAD_OP_CLEAR, { .color = { 0.0f, 0.0f, 0.0f, 1.0f } } },
+		{ m_gBuffer.depth->getStandardView(), VK_ATTACHMENT_LOAD_OP_LOAD, {} }
+	};
+
+	std::vector<ImageView *> inputViews = {
+		m_gBuffer.position->getStandardView(),
+		m_gBuffer.albedo->getStandardView(),
+		m_gBuffer.normal->getStandardView(),
+		m_gBuffer.material->getStandardView(),
+		m_gBuffer.emissive->getStandardView()
+	};
+
+	m_app->getVkCore()->getRenderGraph().addPass(RenderGraph::RenderPassDefinition()
+		.setAttachments(attachments)
+		.setInputViews(inputViews)
+		.setBuildFn([&](CommandBuffer &cmd, const RenderInfo &info) -> void
+		{
+			GraphicsPipelineDef ambientDeferredLightingPipeline;
+			ambientDeferredLightingPipeline.setShader(m_app->getShaders().getShader("deferred_lighting_ambient"));
+			ambientDeferredLightingPipeline.setDepthTest(false);
+			ambientDeferredLightingPipeline.setDepthWrite(false);
+
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(ambientDeferredLightingPipeline, info);
+
+			cmd.bindPipeline(
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineData.pipeline
+			);
+
+			cmd.bindDescriptorSets(
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineData.layout,
+				{ m_app->getVkCore()->getBindlessResources().getSet() },
+				{}
+			);
+
+			GPU_DeferredLightingPushConstants pc = {};
+			pc.position_id						 = m_gBuffer.position->getStandardView()->getBindlessHandle();
+			pc.albedo_id						 = m_gBuffer.albedo->getStandardView()->getBindlessHandle();
+			pc.normal_id						 = m_gBuffer.normal->getStandardView()->getBindlessHandle();
+			pc.material_id						 = m_gBuffer.material->getStandardView()->getBindlessHandle();
+			pc.emissive_id						 = m_gBuffer.emissive->getStandardView()->getBindlessHandle();
+			pc.irradianceMap_id					 = m_environmentProbe.irradiance->getStandardView()->getBindlessHandle();
+			pc.prefilterMap_id					 = m_environmentProbe.prefilter->getStandardView()->getBindlessHandle();
+			pc.brdfLUT_id						 = m_brdfLUT->getStandardView()->getBindlessHandle();
+			pc.textureSampler_id				 = m_app->getTextures().getLinearSampler()->getBindlessHandle();
+			pc.cubemapSampler_id				 = m_app->getTextures().getLinearSampler()->getBindlessHandle();
+			pc.cameraPosition					 = { camera.position.x, camera.position.y, camera.position.z, 0.0f };
+			
+			cmd.pushConstants(
+				pipelineData.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(GPU_DeferredLightingPushConstants),
+				&pc
+			);
+
+			cmd.draw(3);
 
 			// skybox
 			{
-				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(m_skyboxPipeline, info);
+				GraphicsPipelineDef skyboxPipeline;
+				skyboxPipeline.setShader(m_app->getShaders().getShader("skybox"));
+				skyboxPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
+				skyboxPipeline.setDepthTest(true);
+				skyboxPipeline.setDepthWrite(false);
+				skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
 
-				glm::mat4 view_proj = camera.getProj() * camera.getRotationMatrix();
+				PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchGraphicsPipeline(skyboxPipeline, info);
+
+				glm::mat4 viewProj = camera.getProj() * camera.getRotationMatrix();
 
 				cmd.bindPipeline(
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -471,14 +705,65 @@ void Renderer::deferredPass(Scene &scene, const Camera &camera)
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
 					sizeof(glm::mat4),
-					&view_proj
+					&viewProj
 				);
 
 				m_skyboxMesh->bind(cmd);
 
 				cmd.drawIndexed(m_skyboxMesh->getIndexCount());
 			}
-		}));
+		})
+	);
+}
+
+void Renderer::tonemappingPass(float exposure)
+{
+	Shader *hdrTonemappingShader = m_app->getShaders().getShader("hdr_tonemapping");
+	
+	ComputePipelineDef hdrTonemappingPipeline;
+	hdrTonemappingPipeline.setShader(hdrTonemappingShader);
+
+	m_app->getVkCore()->getRenderGraph().addTask(RenderGraph::ComputeTaskDefinition()
+		.setStorageViews({ m_gBuffer.lighting->getStandardView() })
+		.setBuildFn([&, hdrTonemappingPipeline, exposure](CommandBuffer &cmd) -> void
+		{
+			PipelineState pipelineData = m_app->getVkCore()->getPipelineCache().fetchComputePipeline(hdrTonemappingPipeline);
+			
+			cmd.bindPipeline(
+				VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipelineData.pipeline
+			);
+
+			cmd.bindDescriptorSets(
+				0,
+				VK_PIPELINE_BIND_POINT_COMPUTE,
+				pipelineData.layout,
+				{ m_hdrTonemappingSet },
+				{}
+			);
+
+			struct
+			{
+				uint32_t width;
+				uint32_t height;
+				float exposure;
+			}
+			pc;
+
+			pc.width = (uint32_t)m_app->getPlatform()->getWindowSizeInPixels().x;
+			pc.height = (uint32_t)m_app->getPlatform()->getWindowSizeInPixels().y;
+			pc.exposure = exposure;
+
+			cmd.pushConstants(
+				pipelineData.layout,
+				VK_SHADER_STAGE_COMPUTE_BIT,
+				sizeof(pc),
+				&pc
+			);
+
+			cmd.dispatch(pc.width, pc.height, 1);
+		})
+	);
 }
 
 void Renderer::precomputeBRDF()
@@ -540,16 +825,6 @@ void Renderer::generateEnvironmentProbe()
 
 	glm::mat4 captureProjectionMatrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
-	glm::mat4 captureViewMatrices[] =
-	{
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
-	};
-
 	glm::mat4 view_proj_pc = glm::identity<glm::mat4>();
 
 	InstantSubmitSync instantSubmit(m_app->getVkCore());
@@ -575,7 +850,7 @@ void Renderer::generateEnvironmentProbe()
 		Shader *eqrToCbmShader = m_app->getShaders().getShader("equirectangular_to_cubemap");
 		Image *environmentHDRImage = m_app->getTextures().getTexture("environmentHDR");
 
-		VkDescriptorSet eqrToCbmSet = m_app->allocateSet(eqrToCbmShader->getDescriptorSetLayouts());
+		VkDescriptorSet eqrToCbmSet = allocateSet(eqrToCbmShader->getDescriptorSetLayouts());
 
 		DescriptorWriter(m_app->getVkCore())
 			.writeCombinedImage(0, *environmentHDRImage->getStandardView(), *m_app->getTextures().getLinearSampler())
@@ -591,7 +866,7 @@ void Renderer::generateEnvironmentProbe()
 
 		for (int i = 0; i < 6; i++)
 		{
-			view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
+			view_proj_pc = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 			ImageView *view = m_environmentMap->createView(1, i, 0);
 
@@ -665,7 +940,7 @@ void Renderer::generateEnvironmentProbe()
 
 		Shader *irradianceGenShader = m_app->getShaders().getShader("irradiance_convolution");
 
-		VkDescriptorSet irradianceSet = m_app->allocateSet(irradianceGenShader->getDescriptorSetLayouts());
+		VkDescriptorSet irradianceSet = allocateSet(irradianceGenShader->getDescriptorSetLayouts());
 
 		DescriptorWriter(m_app->getVkCore())
 			.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_app->getTextures().getLinearSampler())
@@ -681,7 +956,7 @@ void Renderer::generateEnvironmentProbe()
 		
 		for (int i = 0; i < 6; i++)
 		{
-			view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
+			view_proj_pc = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 			ImageView *view = m_environmentProbe.irradiance->createView(1, i, 0);
 
@@ -736,7 +1011,7 @@ void Renderer::generateEnvironmentProbe()
 
 		Shader *prefilterShader = m_app->getShaders().getShader("prefilter_convolution");
 
-		VkDescriptorSet prefilterSet = m_app->allocateSet(prefilterShader->getDescriptorSetLayouts());
+		VkDescriptorSet prefilterSet = allocateSet(prefilterShader->getDescriptorSetLayouts());
 
 		DescriptorWriter(m_app->getVkCore())
 			.writeBuffer(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, pfParameterBuffer->getDescriptorInfoRange(sizeof(prefilterParams)))
@@ -766,7 +1041,7 @@ void Renderer::generateEnvironmentProbe()
 
 			for (int i = 0; i < 6; i++)
 			{
-				view_proj_pc = captureProjectionMatrix * captureViewMatrices[i];
+				view_proj_pc = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 				ImageView *view = m_environmentProbe.prefilter->createView(1, i, mipLevel);
 
@@ -860,32 +1135,15 @@ void Renderer::createSkyboxMesh()
 	);
 }
 
-void Renderer::createSkybox()
-{
-	m_skyboxShader = m_app->getShaders().getShader("skybox");
-
-	m_skyboxSet = m_app->allocateSet(m_skyboxShader->getDescriptorSetLayouts());
-
-	DescriptorWriter(m_app->getVkCore())
-		.writeCombinedImage(0, *m_environmentMap->getStandardView(), *m_app->getTextures().getLinearSampler())
-		.writeTo(m_skyboxSet);
-
-	m_skyboxPipeline.setShader(m_skyboxShader);
-	m_skyboxPipeline.setVertexFormat(&vtx::PRIMITIVE_VERTEX_FORMAT);
-	m_skyboxPipeline.setDepthTest(true);
-	m_skyboxPipeline.setDepthWrite(false);
-	m_skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
-}
-
 void Renderer::loadTechniques()
 {
 	// PBR
 	{
-		Technique texturedPBR;
-		texturedPBR.passes[SHADER_PASS_DEFERRED] = m_app->getShaders().getShader("texturedPBR");
-		texturedPBR.passes[SHADER_PASS_FORWARD] = nullptr;
-		texturedPBR.vertexFormat = &vtx::MODEL_VERTEX_FORMAT;
-		addTechnique("texturedPBR_opaque", texturedPBR);
+		Technique texturedPBR_gbuffer;
+		texturedPBR_gbuffer.passes[SHADER_PASS_DEFERRED] = m_app->getShaders().getShader("texturedPBR_gbuffer");
+		texturedPBR_gbuffer.passes[SHADER_PASS_FORWARD] = nullptr;
+		texturedPBR_gbuffer.vertexFormat = &vtx::MODEL_VERTEX_FORMAT;
+		addTechnique("texturedPBR_gbuffer_opaque", texturedPBR_gbuffer);
 	}
 
 	// SUBSURFACE REFRACTION
@@ -949,7 +1207,7 @@ Material *Renderer::buildMaterial(MaterialData &data)
 	GPU_BindlessMaterial handles = {};
 	handles.diffuse_id = material->textures[0];
 	handles.ambient_id = material->textures[1];
-	handles.ambient_rough_metallic_id = material->textures[2];
+	handles.material_id = material->textures[2];
 	handles.normal_id = material->textures[3];
 	handles.emissive_id = material->textures[4];
 
@@ -969,3 +1227,7 @@ void Renderer::addTechnique(const std::string &name, const Technique &technique)
 	m_techniques.insert({ name, technique });
 }
 
+VkDescriptorSet Renderer::allocateSet(const std::vector<VkDescriptorSetLayout> &layouts)
+{
+	return m_descriptorPool.allocate(layouts);
+}

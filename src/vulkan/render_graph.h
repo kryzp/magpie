@@ -98,9 +98,9 @@ namespace mgp
 			RenderPassDefinition() = default;
 			~RenderPassDefinition() = default;
 
-			RenderPassDefinition &setOutputAttachments(const std::vector<AttachmentInfo> &attachments)
+			RenderPassDefinition &setAttachments(const std::vector<AttachmentInfo> &attachments)
 			{
-				m_outputAttachments = attachments;
+				m_attachments = attachments;
 				return *this;
 			}
 
@@ -117,7 +117,7 @@ namespace mgp
 			}
 
 		private:
-			std::vector<AttachmentInfo> m_outputAttachments;
+			std::vector<AttachmentInfo> m_attachments;
 
 			std::vector<ImageView *> m_views;
 
