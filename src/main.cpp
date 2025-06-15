@@ -16,11 +16,8 @@ int main(void)
 	config.windowMode = WINDOW_MODE_WINDOWED;
 	config.flags = CONFIG_FLAG_CENTRE_WINDOW_BIT | CONFIG_FLAG_RESIZABLE_BIT;
 
-	App *app = new App(config);
-
-	app->run();
+	App app;
+	app.run(config);
 	
-	delete app;
-
 	return 0;
 }

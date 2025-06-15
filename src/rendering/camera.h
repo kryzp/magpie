@@ -5,15 +5,17 @@
 namespace mgp
 {
 	class InputState;
-	class Platform;
+	class PlatformCore;
 
 	class Camera
 	{
 	public:
+		Camera() = default;
 		Camera(float aspect, float fov, float near, float far);
-		~Camera();
 
-		void update(const InputState *input, const Platform *platform, float dt);
+		~Camera() = default;
+
+		void update(const InputState *input, const PlatformCore *platform, float dt);
 
 		glm::mat4 getView() const;
 		glm::mat4 getRotationMatrix() const;

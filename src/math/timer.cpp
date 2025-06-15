@@ -1,15 +1,15 @@
 #include "timer.h"
 
-#include "core/platform.h"
+#include "platform/platform_core.h"
 
 using namespace mgp;
 
-Timer::Timer(Platform *platform)
-	: m_startTicks(0)
+Timer::Timer(PlatformCore *platform)
+	: m_platform(platform)
+	, m_startTicks(0)
 	, m_started(platform->getPerformanceCounter())
 	, m_pausedTicks(0)
 	, m_paused(false)
-	, m_platform(platform)
 {
 }
 

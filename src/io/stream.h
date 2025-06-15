@@ -4,12 +4,12 @@
 
 namespace mgp
 {
-	class Platform;
+	class PlatformCore;
 
 	class Stream
 	{
 	public:
-		Stream(const Platform *platform);
+		Stream(PlatformCore *platform);
 		virtual ~Stream();
 
 		virtual void read(void *buffer, uint64_t length) const;
@@ -26,7 +26,7 @@ namespace mgp
 		const void *getStream() const;
 
 	protected:
-		const Platform *p_platform;
+		PlatformCore *p_platform;
 		void *p_stream;
 	};
 }

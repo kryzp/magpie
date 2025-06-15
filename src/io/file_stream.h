@@ -9,8 +9,8 @@ namespace mgp
 	class FileStream : public Stream
 	{
 	public:
-		FileStream(const Platform *platform);
-		FileStream(const Platform *platform, const char *filename, const char *mode);
+		FileStream(PlatformCore *platform);
+		FileStream(PlatformCore *platform, const char *filename, const char *mode);
 
 		FileStream &open(const std::string &filename, const char *mode);
 		FileStream &open(const char *filename, const char *mode);

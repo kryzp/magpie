@@ -4,12 +4,12 @@
 
 namespace mgp
 {
-	class Platform;
+	class PlatformCore;
 
 	class Timer
 	{
 	public:
-		Timer(Platform *platform);
+		Timer(PlatformCore *platform);
 
 		void start();
 		void stop();
@@ -25,12 +25,12 @@ namespace mgp
 		bool isPaused() const;
 
 	private:
+		PlatformCore *m_platform;
+
 		uint64_t m_startTicks;
 		bool m_started;
 
 		uint64_t m_pausedTicks;
 		bool m_paused;
-
-		Platform *m_platform;
 	};
 }

@@ -2,37 +2,26 @@
 
 #include "core/common.h"
 
-#include "vulkan/core.h"
-#include "vulkan/bitmap.h"
-#include "vulkan/image.h"
-#include "vulkan/sampler.h"
-#include "vulkan/gpu_buffer.h"
-#include "vulkan/sync.h"
+#include "graphics/graphics_core.h"
+#include "graphics/bitmap.h"
+#include "graphics/gpu_buffer.h"
+#include "graphics/image.h"
 
 using namespace mgp;
 
-TextureManager::TextureManager()
-	: m_loadedImageCache()
-	, m_linearSampler(nullptr)
-	, m_nearestSampler(nullptr)
+void TextureManager::init(GraphicsCore *gfx)
 {
-}
-
-TextureManager::~TextureManager()
-{
-}
-
-void TextureManager::init(VulkanCore *core)
-{
-	m_core = core;
+	m_gfx = gfx;
 
 	loadTextures();
 }
 
 void TextureManager::destroy()
 {
-	for (cauto &[name, image] : m_loadedImageCache)
+	for (auto &[name, image] : m_loadedImageCache)
 		delete image;
+
+	m_loadedImageCache.clear();
 
 	delete m_linearSampler;
 	delete m_nearestSampler;
@@ -53,11 +42,9 @@ Image *TextureManager::loadTexture(const std::string &name, const std::string &p
 
 	Bitmap bitmap(path);
 
-	Image *image = new Image();
-	image->allocate(
-		m_core,
+	Image *image = m_gfx->createImage(
 		bitmap.getWidth(), bitmap.getHeight(), 1,
-		bitmap.getFormat() == Bitmap::FORMAT_RGBA8 ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R32G32B32A32_SFLOAT,
+		(bitmap.getFormat() == Bitmap::FORMAT_RGBA8) ? VK_FORMAT_R8G8B8A8_UNORM : VK_FORMAT_R32G32B32A32_SFLOAT,
 		VK_IMAGE_VIEW_TYPE_2D,
 		VK_IMAGE_TILING_OPTIMAL,
 		4,
@@ -66,38 +53,40 @@ Image *TextureManager::loadTexture(const std::string &name, const std::string &p
 		false
 	);
 
-	GPUBuffer stagingBuffer(
-		m_core,
+	GPUBuffer *stagingBuffer = m_gfx->createGPUBuffer(
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		bitmap.getMemorySize()
 	);
 
-	stagingBuffer.write(bitmap.getData(), bitmap.getMemorySize(), 0);
+	stagingBuffer->write(bitmap.getData(), bitmap.getMemorySize(), 0);
 
-	InstantSubmitSync instantSubmit(m_core);
-	CommandBuffer &cmd = instantSubmit.begin();
+	CommandBuffer *cmd = m_gfx->beginInstantSubmit();
 	{
-		cmd.transitionLayout(*image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		cmd.copyBufferToImage(stagingBuffer, *image);
-		cmd.generateMipmaps(*image);
+		cmd->transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		cmd->copyBufferToImage(stagingBuffer, image);
+		cmd->generateMipmaps(image);
 	}
-	instantSubmit.submit();
+	m_gfx->submit(cmd);
 
 	m_loadedImageCache.insert({ name, image });
 
 	// wait when staging buffer needs to delete
 	// todo: yes, this is terrible and there really should just
 	//       be a single staging buffer used for the whole program
-	m_core->deviceWaitIdle();
+	m_gfx->waitIdle();
+
+	delete stagingBuffer;
 
 	return image;
 }
 
 void TextureManager::loadTextures()
 {
-	m_linearSampler = new Sampler(m_core, Sampler::Style(VK_FILTER_LINEAR));
-	m_nearestSampler = new Sampler(m_core, Sampler::Style(VK_FILTER_NEAREST));
+	MGP_LOG("Loading textures...");
+
+	m_linearSampler		= m_gfx->createSampler(SamplerStyle(VK_FILTER_LINEAR));
+	m_nearestSampler	= m_gfx->createSampler(SamplerStyle(VK_FILTER_NEAREST));
 
 	loadTexture("fallback_white",	"../../res/textures/standard/white.png");
 	loadTexture("fallback_black",	"../../res/textures/standard/black.png");

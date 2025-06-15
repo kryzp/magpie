@@ -5,7 +5,7 @@
 #include <glm/vec3.hpp>
 #include <glm/glm.hpp>
 
-#include "core/platform.h"
+#include "platform/platform_core.h"
 
 #include "input/input.h"
 
@@ -26,11 +26,7 @@ Camera::Camera(float aspect, float fov, float near, float far)
 {
 }
 
-Camera::~Camera()
-{
-}
-
-void Camera::update(const InputState *input, const Platform *platform, float dt)
+void Camera::update(const InputState *input, const PlatformCore *platform, float dt)
 {
 	const float MOUSE_DEADZONE = 0.001f;
 	const float TURN_SPEED = 1.0f;

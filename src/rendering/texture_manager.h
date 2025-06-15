@@ -5,17 +5,18 @@
 
 namespace mgp
 {
-	class VulkanCore;
+	class GraphicsCore;
+
 	class Image;
 	class Sampler;
 
 	class TextureManager
 	{
 	public:
-		TextureManager();
-		~TextureManager();
+		TextureManager() = default;
+		~TextureManager() = default;
 
-		void init(VulkanCore *core);
+		void init(GraphicsCore *gfx);
 		void destroy();
 		
 		Image *getTexture(const std::string &name);
@@ -31,9 +32,9 @@ namespace mgp
 		Image *getFallbackEmissive();
 
 	private:
-		void loadTextures();
+		GraphicsCore *m_gfx;
 
-		VulkanCore *m_core;
+		void loadTextures();
 
 		std::unordered_map<std::string, Image *> m_loadedImageCache;
 

@@ -1,3 +1,5 @@
+#if 0
+
 #include "shadow_map_atlas.h"
 
 #include "vulkan/core.h"
@@ -95,3 +97,5 @@ void ShadowMapAtlas::clear()
 {
 	m_regions.clear();
 }
+
+#endif

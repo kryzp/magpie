@@ -1,123 +1,32 @@
 #include "app.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #include "third_party/imgui/imgui.h"
 #include "third_party/imgui/imgui_impl_sdl3.h"
 #include "third_party/imgui/imgui_impl_vulkan.h"
 
-#include "platform.h"
+#include "platform/platform_core.h"
+#include "graphics/graphics_core.h"
 
-#include "vulkan/core.h"
-#include "vulkan/toolbox.h"
-#include "vulkan/gpu_buffer.h"
-#include "vulkan/swapchain.h"
-#include "vulkan/sync.h"
-#include "vulkan/shader.h"
-#include "vulkan/image.h"
-#include "vulkan/sampler.h"
-#include "vulkan/vertex_format.h"
-
-#include "rendering/model_loader.h"
-#include "rendering/model.h"
-
-#include "input/input.h"
-
-#include "math/timer.h"
 #include "math/calc.h"
 #include "math/colour.h"
+#include "math/timer.h"
+
+#include "rendering/light.h"
+#include "rendering/vertex_types.h"
+#include "rendering/model.h"
 
 using namespace mgp;
 
-App::App(const Config &config)
-	: m_textures()
-	, m_shaders()
-	, m_renderer()
-	, m_scene()
-	, m_config(config)
-	, m_vulkanCore(nullptr)
-	, m_platform(nullptr)
-	, m_inputSt(nullptr)
-	, m_running(false)
-	, m_camera((float)config.width / (float)config.height, 75.0f, 0.01f, 100.0f)
+void App::run(const Config &config)
 {
-	m_platform = new Platform(config);
-	m_vulkanCore = new VulkanCore(config, m_platform);
-	
-	applyConfig(config);
+	m_config = config;
 
-	m_inputSt = new InputState();
-
-	vtx::initVertexTypes();
-
-	m_camera.position = glm::vec3(0.0f, 2.75f, 3.5f);
-	m_camera.setPitch(-glm::radians(30.0f));
-	m_camera.update(m_inputSt, m_platform, 0.0f);
-
-	m_textures.init(m_vulkanCore);
-	m_shaders.init(m_vulkanCore);
-
-	m_platform->onExit = [this]() { exit(); };
+	init();
 
 	m_running = true;
-}
-
-App::~App()
-{
-	delete m_scene.getRenderList()[0]->getParent(); // crap
-
-	m_renderer.destroy();
-
-	m_textures.destroy();
-	m_shaders.destroy();
-
-	delete m_inputSt;
-
-	ImGui_ImplVulkan_Shutdown();
-	ImGui_ImplSDL3_Shutdown();
-	ImGui::DestroyContext();
-
-	delete m_vulkanCore;
-	delete m_platform;
-}
-
-void App::run()
-{
-	InFlightSync inFlightSync(m_vulkanCore);
-
-	// init imgui
-	{
-		IMGUI_CHECKVERSION();
-
-		ImGui::CreateContext();
-
-		//ImGuiIO &io = ImGui::GetIO();
-
-		ImGui::StyleColorsClassic();
-
-		m_platform->initImGui();
-		m_vulkanCore->initImGui();
-	}
-
-	m_platform->onWindowResize = [&inFlightSync](int w, int h) -> void {
-		MGP_LOG("Detected window resize!");
-		inFlightSync.onWindowResize(w, h);
-	};
-
-	double accumulator = 0.0;
-	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
-
-	Timer deltaTimer(m_platform);
-	deltaTimer.start();
-	
-	m_renderer.init(this, inFlightSync.getSwapchain());
-
-	ModelLoader modelLoader(m_vulkanCore, this);
-	Model *model = modelLoader.loadModel("../../res/models/GLTF/Sponza/Sponza.gltf");
 
 	auto obj = m_scene.createRenderObject();
-	obj->model = model;
+	obj->model = m_modelLoader->loadModel("../../res/models/GLTF/Sponza/Sponza.gltf");
 	obj->model->setOwner(obj);
 	obj->transform.setPosition({ 0.0f, 0.0f, 0.0f });
 	obj->transform.setRotation(0.0f, { 0.0f, 1.0f, 0.0f });
@@ -144,20 +53,25 @@ void App::run()
 			light.setFalloff(1.0f);
 			light.setPosition({ i*4.0f, 1.0f, j*4.0f - 2.0f });
 			light.setColour(colours[(j*4 + i) % MGP_ARRAY_LENGTH(colours)]);
-			light.toggleShadows(false);
 
 			m_scene.addLight(light);
 		}
 	}
 
+	double accumulator = 0.0;
+	const double fixedDeltaTime = 1.0 / static_cast<double>(CalcU::min(m_config.targetFPS, m_platform->getWindowRefreshRate()));
+
+	Timer deltaTimer(m_platform);
+	deltaTimer.start();
+
 	MGP_LOG("Entering main game loop...");
 
 	while (m_running)
 	{
-		m_platform->pollEvents(m_inputSt);
-		m_inputSt->update();
+		m_platform->pollEvents(&m_inputSt, [&]() { exit(); }, nullptr);
+		m_inputSt.update();
 
-		if (m_inputSt->isPressed(KB_KEY_ESCAPE))
+		if (m_inputSt.isPressed(KB_KEY_ESCAPE))
 			exit();
 
 		ImGui_ImplVulkan_NewFrame();
@@ -177,26 +91,88 @@ void App::run()
 			accumulator -= fixedDeltaTime;
 		}
 
-		inFlightSync.begin();
-		render(inFlightSync.getSwapchain());
-		inFlightSync.present();
-
-		m_vulkanCore->nextFrame();
+		CommandBuffer *cmd = m_graphics->beginPresent();
+		render(cmd);
+		m_graphics->present();
 	}
 
-	m_vulkanCore->deviceWaitIdle();
+	m_graphics->waitIdle();
 
-	inFlightSync.destroy();
+	destroy();
+}
+
+void App::init()
+{
+	m_platform = new PlatformCore(m_config);
+	m_graphics = new GraphicsCore(m_config, m_platform);
+	
+	m_pipelines.init(m_graphics);
+	m_descriptorLayouts.init(m_graphics);
+	m_imageViews.init(m_graphics);
+
+	configure(m_config);
+	
+	vertex_types::initVertexTypes();
+
+	// init imgui
+	{
+		IMGUI_CHECKVERSION();
+
+		ImGui::CreateContext();
+
+		//ImGuiIO &io = ImGui::GetIO();
+
+		ImGui::StyleColorsClassic();
+
+		m_platform->initImGui();
+		m_graphics->initImGui();
+	}
+
+	m_modelLoader = new ModelLoader(this);
+	
+	m_bindlessResources = new BindlessResources(m_graphics);
+
+	m_textures.init(m_graphics);
+	m_shaders.init(this);
+
+	m_renderer.init(this);
+
+	m_camera = Camera(1280.0f / 720.0f, 70.0f, 0.01f, 50.0f);
+}
+
+void App::destroy()
+{
+	delete m_scene.getRenderObjects()[0].model; // kys
+	
+	delete m_modelLoader;
+
+	delete m_bindlessResources;
+
+	m_renderer.destroy();
+
+	m_shaders.destroy();
+	m_textures.destroy();
+	
+	m_imageViews.destroy();
+	m_descriptorLayouts.destroy();
+	m_pipelines.destroy();
+
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
+
+	delete m_graphics;
+	delete m_platform;
 }
 
 void App::tick(float dt)
 {
-	if (m_inputSt->isDown(KB_KEY_F))
+	if (m_inputSt.isDown(KB_KEY_F))
 	{
 		m_platform->setCursorVisible(false);
-		m_platform->setCursorPosition(m_config.width / 2, m_config.height / 2, m_inputSt);
+		m_platform->setCursorPosition(m_config.width / 2, m_config.height / 2, &m_inputSt);
 
-		m_camera.update(m_inputSt, m_platform, dt);
+		m_camera.update(&m_inputSt, m_platform, dt);
 	}
 	else
 	{
@@ -208,12 +184,18 @@ void App::tickFixed(float dt)
 {
 }
 
-void App::render(Swapchain *swapchain)
+void App::render(CommandBuffer *cmd)
 {
-	m_renderer.render(m_scene, m_camera, swapchain);
+	RenderContext context;
+	context.cmd = cmd;
+	context.swapchain = m_graphics->getSwapchain();
+	context.scene = &m_scene;
+	context.camera = &m_camera;
+
+	m_renderer.render(context);
 }
 
-void App::applyConfig(const Config &config)
+void App::configure(const Config &config)
 {
 	m_platform->setWindowName(config.windowName);
 	m_platform->setWindowSize({ config.width, config.height });
@@ -236,7 +218,5 @@ void App::applyConfig(const Config &config)
 
 void App::exit()
 {
-	MGP_LOG("Detected window close event, quitting...");
-
 	m_running = false;
 }

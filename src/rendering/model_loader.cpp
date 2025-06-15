@@ -2,26 +2,18 @@
 
 #include <filesystem>
 
-#include "core/app.h"
 #include "core/common.h"
+#include "core/app.h"
 
-#include "vulkan/vertex_format.h"
-#include "vulkan/image.h"
-#include "vulkan/image_view.h"
-
-#include "model.h"
-#include "material.h"
+#include "rendering/vertex_types.h"
+#include "rendering/model.h"
+#include "rendering/material.h"
 
 using namespace mgp;
 
-ModelLoader::ModelLoader(VulkanCore *core, App *app)
-	: m_importer()
-	, m_core(core)
-	, m_app(app)
-{
-}
-
-ModelLoader::~ModelLoader()
+ModelLoader::ModelLoader(App *app)
+	: m_app(app)
+	, m_importer()
 {
 }
 
@@ -43,7 +35,7 @@ Model *ModelLoader::loadModel(const std::string &path)
 	std::filesystem::path filePath(path);
 	std::string directory = filePath.parent_path().string() + "/";
 
-	Model *mesh = new Model(m_core);
+	Model *mesh = new Model(m_app->getGraphics());
 	mesh->setDirectory(directory);
 
 	aiMatrix4x4 identity(
@@ -76,14 +68,14 @@ void ModelLoader::processNodes(Model *mesh, aiNode *node, const aiScene *scene, 
 
 void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScene *scene, const aiMatrix4x4& transform)
 {
-	std::vector<vtx::ModelVertex> vertices(assimpMesh->mNumVertices);
+	std::vector<ModelVertex> vertices(assimpMesh->mNumVertices);
 	std::vector<uint16_t> indices;
 
 	for (int i = 0; i < assimpMesh->mNumVertices; i++)
 	{
 		const aiVector3D &vtx = transform * assimpMesh->mVertices[i];
 		
-		vtx::ModelVertex vertex = {};
+		ModelVertex vertex = {};
 
 		if (assimpMesh->HasPositions())
 		{
@@ -155,7 +147,7 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 	}
 
 	submesh->build(
-		vtx::MODEL_VERTEX_FORMAT,
+		&vertex_types::MODEL_VERTEX_FORMAT,
 		vertices.data(), vertices.size(),
 		indices.data(), indices.size()
 	);
@@ -177,19 +169,19 @@ void ModelLoader::processSubMesh(Mesh *submesh, aiMesh *assimpMesh, const aiScen
 	}
 }
 
-void ModelLoader::fetchMaterialBoundTextures(std::vector<uint32_t> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
+void ModelLoader::fetchMaterialBoundTextures(std::vector<BindlessHandle> &textures, const std::string &localPath, const aiMaterial *material, aiTextureType type, Image *fallback)
 {
 	std::vector<Image *> maps = loadMaterialTextures(material, type, localPath);
 
 	if (maps.size() >= 1)
 	{
-		textures.push_back(maps[0]->getStandardView()->getBindlessHandle());
+		textures.push_back(m_app->getBindlessResources()->fromTexture2D(m_app->getImageViews().fetchStdView(maps[0])));
 	}
 	else
 	{
 		if (fallback)
 		{
-			textures.push_back(fallback->getStandardView()->getBindlessHandle());
+			textures.push_back(m_app->getBindlessResources()->fromTexture2D(m_app->getImageViews().fetchStdView(fallback)));
 		}
 	}
 }

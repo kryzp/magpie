@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
-#include <functional>
-#include <array>
+#include <inttypes.h>
 
-#include <glm/glm.hpp>
+#include <vector>
+#include <array>
+#include <functional>
 
 #include "math/transform.h"
 
@@ -12,11 +12,12 @@
 
 namespace mgp
 {
-	class Model;
 	class Mesh;
+	class Model;
 
-	struct RenderObject
+	class RenderObject
 	{
+	public:
 		Transform transform;
 		Model *model;
 	};

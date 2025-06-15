@@ -1,23 +1,21 @@
 #pragma once
 
-#include <Volk/volk.h>
-
 #include <string>
 #include <unordered_map>
 
+#include "graphics/shader.h"
+
 namespace mgp
 {
-	class VulkanCore;
-	class ShaderStage;
-	class Shader;
+	class App;
 
 	class ShaderManager
 	{
 	public:
-		ShaderManager();
-		~ShaderManager();
+		ShaderManager() = default;
+		~ShaderManager() = default;
 
-		void init(VulkanCore *core);
+		void init(App *app);
 		void destroy();
 		
 		Shader *getShader(const std::string &name);
@@ -28,9 +26,9 @@ namespace mgp
 		void addShader(const std::string &name, Shader *shader);
 
 	private:
-		void loadShaders();
+		App *m_app;
 
-		VulkanCore *m_core;
+		void loadShaders();
 
 		std::unordered_map<std::string, ShaderStage *> m_shaderStageCache;
 		std::unordered_map<std::string, Shader *> m_shaderCache;

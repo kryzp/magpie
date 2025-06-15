@@ -1,10 +1,10 @@
 #include "stream.h"
 
-#include "core/platform.h"
+#include "platform/platform_core.h"
 
 using namespace mgp;
 
-Stream::Stream(const Platform *platform)
+Stream::Stream(PlatformCore *platform)
 	: p_platform(platform)
 	, p_stream(nullptr)
 {

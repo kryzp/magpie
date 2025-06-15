@@ -1,7 +1,5 @@
 #include "scene.h"
 
-#include "core/common.h"
-
 #include "material.h"
 #include "model.h"
 

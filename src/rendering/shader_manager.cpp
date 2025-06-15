@@ -1,28 +1,13 @@
 #include "shader_manager.h"
 
-#include <fstream>
-
+#include "core/app.h"
 #include "core/common.h"
-
-#include "vulkan/core.h"
-#include "vulkan/descriptor.h"
-#include "vulkan/shader.h"
 
 using namespace mgp;
 
-ShaderManager::ShaderManager()
-	: m_shaderStageCache()
-	, m_shaderCache()
+void ShaderManager::init(App *app)
 {
-}
-
-ShaderManager::~ShaderManager()
-{
-}
-
-void ShaderManager::init(VulkanCore *core)
-{
-	m_core = core;
+	m_app = app;
 
 	loadShaders();
 }
@@ -57,7 +42,7 @@ ShaderStage *ShaderManager::loadShaderStage(const std::string &name, const std::
 	if (m_shaderStageCache.contains(name))
 		return m_shaderStageCache.at(name);
 
-	ShaderStage *stage = new ShaderStage(m_core, stageType, path.c_str());
+	ShaderStage *stage = m_app->getGraphics()->createShaderStage(stageType, path);
 	m_shaderStageCache.insert({ name, stage });
 
 	return stage;
@@ -65,7 +50,6 @@ ShaderStage *ShaderManager::loadShaderStage(const std::string &name, const std::
 
 void ShaderManager::addShader(const std::string &name, Shader *shader)
 {
-	shader->finalize();
 	m_shaderCache.insert({ name, shader });
 }
 
@@ -101,165 +85,149 @@ void ShaderManager::loadShaders()
 	// effects
 	{
 		// PBR
-		{
-			Shader *pbr = new Shader(m_core);
+		addShader("texturedPBR", m_app->getGraphics()->createShader(
+			sizeof(int)*16,
+			{ m_app->getBindlessResources()->getLayout() },
 			{
-				pbr->setPushConstantsSize(sizeof(int) * 16);
-				pbr->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
-				pbr->addStage(getShaderStage("model_vs"));
-				pbr->addStage(getShaderStage("texturedPBR_fs"));
+				getShaderStage("model_vs"),
+				getShaderStage("texturedPBR_fs")
 			}
-			addShader("texturedPBR", pbr);
-		}
+		));
 
 		// PBR G-BUFFER
-		{
-			Shader *pbr_gbuffer = new Shader(m_core);
+		addShader("texturedPBR_gbuffer", m_app->getGraphics()->createShader(
+			sizeof(int)*16,
+			{ m_app->getBindlessResources()->getLayout() },
 			{
-				pbr_gbuffer->setPushConstantsSize(sizeof(int) * 16);
-				pbr_gbuffer->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
-				pbr_gbuffer->addStage(getShaderStage("model_vs"));
-				pbr_gbuffer->addStage(getShaderStage("texturedPBR_gbuffer_fs"));
+				getShaderStage("model_vs"),
+				getShaderStage("texturedPBR_gbuffer_fs")
 			}
-			addShader("texturedPBR_gbuffer", pbr_gbuffer);
-		}
+		));
 
 		// DEFERRED LIGHTING
-		{
-			Shader *dlighting = new Shader(m_core);
+		addShader("deferred_lighting_ambient", m_app->getGraphics()->createShader(
+			sizeof(int)*12 + sizeof(float)*4,
+			{ m_app->getBindlessResources()->getLayout() },
 			{
-				dlighting->setPushConstantsSize(sizeof(int)*12 + sizeof(float)*4);
-				dlighting->setDescriptorSetLayouts({ m_core->getBindlessResources().getLayout() });
-				dlighting->addStage(getShaderStage("fullscreen_triangle_vs"));
-				dlighting->addStage(getShaderStage("deferred_lighting_ambient_fs"));
+				getShaderStage("fullscreen_triangle_vs"),
+				getShaderStage("deferred_lighting_ambient_fs")
 			}
-			addShader("deferred_lighting_ambient", dlighting);
-		}
+		));
 
 		// SHADOW MAPPING
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { }, 0);
 
-			Shader *shadowMap = new Shader(m_core);
-			{
-				shadowMap->setPushConstantsSize(sizeof(float)*16);
-				shadowMap->setDescriptorSetLayouts({ layout });
-				shadowMap->addStage(getShaderStage("model_shadow_map_vs"));
-				shadowMap->addStage(getShaderStage("shadow_map_fs"));
-			}
-			addShader("shadow_map", shadowMap);
+			addShader("shadow_map", m_app->getGraphics()->createShader(
+				sizeof(float)*16,
+				{ layout },
+				{
+					getShaderStage("model_shadow_map_vs"),
+					getShaderStage("shadow_map_fs")
+				}
+			));
 		}
 
 		// SKYBOX
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-			Shader *skybox = new Shader(m_core);
-			{
-				skybox->setPushConstantsSize(sizeof(float)*16 * 2);
-				skybox->setDescriptorSetLayouts({ layout });
-				skybox->addStage(getShaderStage("skybox_vs"));
-				skybox->addStage(getShaderStage("skybox_fs"));
-			}
-			addShader("skybox", skybox);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) }, 0);
+			
+			addShader("skybox", m_app->getGraphics()->createShader(
+				sizeof(float)*16 * 2,
+				{ layout },
+				{
+					getShaderStage("skybox_vs"),
+					getShaderStage("skybox_fs")
+				}
+			));
 		}
 
 		// EQUIRECTANGULAR TO CUBEMAP
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-			Shader *equirectangularToCubemap = new Shader(m_core);
-			{
-				equirectangularToCubemap->setPushConstantsSize(sizeof(float)*16 * 2);
-				equirectangularToCubemap->setDescriptorSetLayouts({ layout });
-				equirectangularToCubemap->addStage(getShaderStage("primitive_vs"));
-				equirectangularToCubemap->addStage(getShaderStage("equirectangular_to_cubemap_fs"));
-			}
-			addShader("equirectangular_to_cubemap", equirectangularToCubemap);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) }, 0);
+			
+			addShader("equirectangular_to_cubemap", m_app->getGraphics()->createShader(
+				sizeof(float)*16 * 2,
+				{ layout },
+				{
+					getShaderStage("primitive_vs"),
+					getShaderStage("equirectangular_to_cubemap_fs")
+				}
+			));
 		}
 
 		// IRRADIANCE CONVOLUTION
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-			Shader *irradianceConvolution = new Shader(m_core);
-			{
-				irradianceConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-				irradianceConvolution->setDescriptorSetLayouts({ layout });
-				irradianceConvolution->addStage(getShaderStage("primitive_vs"));
-				irradianceConvolution->addStage(getShaderStage("irradiance_convolution_fs"));
-			}
-			addShader("irradiance_convolution", irradianceConvolution);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) }, 0);
+			
+			addShader("irradiance_convolution", m_app->getGraphics()->createShader(
+				sizeof(float)*16 * 2,
+				{ layout },
+				{
+					getShaderStage("primitive_vs"),
+					getShaderStage("irradiance_convolution_fs")
+				}
+			));
 		}
 
 		// PREFILTER CONVOLUTION
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-				.bind(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				{
+					DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC),
+					DescriptorLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				},
+				0
+			);
 
-			Shader *prefilterConvolution = new Shader(m_core);
-			{
-				prefilterConvolution->setPushConstantsSize(sizeof(float)*16 * 2);
-				prefilterConvolution->setDescriptorSetLayouts({ layout });
-				prefilterConvolution->addStage(getShaderStage("primitive_vs"));
-				prefilterConvolution->addStage(getShaderStage("prefilter_convolution_fs"));
-			}
-			addShader("prefilter_convolution", prefilterConvolution);
+			addShader("prefilter_convolution", m_app->getGraphics()->createShader(
+				sizeof(float)*16 * 2,
+				{ layout },
+				{
+					getShaderStage("primitive_vs"),
+					getShaderStage("prefilter_convolution_fs")
+				}
+			));
 		}
 
 		// BRDF LUT GENERATION
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
-
-			Shader *brdfLUT = new Shader(m_core);
-			{
-				brdfLUT->setPushConstantsSize(0);
-				brdfLUT->setDescriptorSetLayouts({ layout });
-				brdfLUT->addStage(getShaderStage("fullscreen_triangle_vs"));
-				brdfLUT->addStage(getShaderStage("brdf_integrator_fs"));
-			}
-			addShader("brdf_lut", brdfLUT);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { }, 0);
+			
+			addShader("brdf_lut", m_app->getGraphics()->createShader(
+				0,
+				{ layout },
+				{
+					getShaderStage("fullscreen_triangle_vs"),
+					getShaderStage("brdf_integrator_fs")
+				}
+			));
 		}
 
 		// HDR TONEMAPPING
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-				.build(m_core, VK_SHADER_STAGE_COMPUTE_BIT);
-
-			Shader *hdrTonemapping = new Shader(m_core);
-			{
-				hdrTonemapping->setPushConstantsSize(sizeof(uint32_t)*2 + sizeof(float)*1);
-				hdrTonemapping->setDescriptorSetLayouts({ layout });
-				hdrTonemapping->addStage(getShaderStage("hdr_tonemapping_cs"));
-			}
-			addShader("hdr_tonemapping", hdrTonemapping);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_COMPUTE_BIT, { DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ) }, 0);
+			
+			addShader("hdr_tonemapping", m_app->getGraphics()->createShader(
+				sizeof(uint32_t)*2 + sizeof(float),
+				{ layout },
+				{ getShaderStage("hdr_tonemapping_cs") }
+			));
 		}
 
 		// TEXTURE UV
 		{
-			VkDescriptorSetLayout layout = DescriptorLayoutBuilder()
-				.bind(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				.build(m_core, VK_SHADER_STAGE_ALL_GRAPHICS);
+			DescriptorLayout *layout = m_app->getDescriptorLayouts().fetchLayout(VK_SHADER_STAGE_ALL_GRAPHICS, { DescriptorLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ) }, 0);
 
-			Shader *textureUV = new Shader(m_core);
-			{
-				textureUV->setPushConstantsSize(0);
-				textureUV->setDescriptorSetLayouts({ layout });
-				textureUV->addStage(getShaderStage("fullscreen_triangle_vs"));
-				textureUV->addStage(getShaderStage("texture_uv_fs"));
-			}
-			addShader("texture_uv", textureUV);
+			addShader("texture_uv", m_app->getGraphics()->createShader(
+				0,
+				{ layout },
+				{
+					getShaderStage("fullscreen_triangle_vs"),
+					getShaderStage("texture_uv_fs")
+				}
+			));
 		}
 	}
 }

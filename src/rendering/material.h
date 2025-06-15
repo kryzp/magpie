@@ -1,18 +1,22 @@
 #pragma once
 
-#include <vector>
-#include <string>
+#include <inttypes.h>
 
-#include "vulkan/image_view.h"
-#include "vulkan/vertex_format.h"
-#include "vulkan/pipeline_cache.h"
-#include "vulkan/bindless.h"
+#include <string>
+#include <vector>
+
+#include "core/common.h"
+
+#include "graphics/pipeline.h"
+
+#include "bindless.h"
 
 namespace mgp
 {
-	class Mesh;
-	class Shader;
+	class VertexFormat;
+
 	class GPUBuffer;
+	class Shader;
 
 	enum ShaderPassType
 	{
@@ -21,23 +25,16 @@ namespace mgp
 		SHADER_PASS_MAX_ENUM
 	};
 
-	class Technique
+	struct Technique
 	{
-	public:
-		Technique() = default;
-		~Technique() = default;
-
 		VertexFormat *vertexFormat;
-
 		Shader *passes[SHADER_PASS_MAX_ENUM];
-
-		// todo: default parameters
 	};
 
 	struct MaterialData
 	{
 		std::string technique;
-		std::vector<uint32_t> textures;
+		std::vector<BindlessHandle> textures;
 
 		void *parameters;
 		uint64_t parameterSize;
@@ -66,25 +63,41 @@ namespace mgp
 	class Material
 	{
 	public:
-		Material() = default;
-		~Material() = default;
+		Material(uint32_t tableIndex, const std::vector<BindlessHandle> &textures, const std::array<GraphicsPipelineDef, SHADER_PASS_MAX_ENUM> &pipelines, GPUBuffer *parameters)
+			: m_textures(textures)
+			, m_passes(pipelines)
+			, m_parameterBuffer(parameters)
+			, m_tableIndex(tableIndex)
+		{
+		}
 
+		~Material() = default;
+		
 		uint64_t getHash() const
 		{
 			uint64_t result = 0;
 
-			for (auto &t : textures)
+			for (auto &t : m_textures)
 				hash::combine(&result, &t);
 
-			for (auto &pass : passes)
+			for (auto &pass : m_passes)
 				hash::combine(&result, &pass);
 
 			return result;
 		}
 
-		std::vector<uint32_t> textures;
-		GPUBuffer *parameterBuffer;
-		GraphicsPipelineDef passes[SHADER_PASS_MAX_ENUM];
-		uint32_t bindlessHandle;
+		const std::vector<BindlessHandle> &getTextures() const { return m_textures; }
+		const BindlessHandle &getTexture(uint32_t index) const { return m_textures[index]; }
+
+		const GPUBuffer *getParameterBuffer() const { return m_parameterBuffer; }
+		const GraphicsPipelineDef &getPipeline(ShaderPassType pass) const { return m_passes[pass]; }
+
+		uint32_t getTableIndex() const { return m_tableIndex; }
+
+	private:
+		std::vector<BindlessHandle> m_textures;
+		std::array<GraphicsPipelineDef, SHADER_PASS_MAX_ENUM> m_passes;
+		GPUBuffer *m_parameterBuffer;
+		uint32_t m_tableIndex;
 	};
 }

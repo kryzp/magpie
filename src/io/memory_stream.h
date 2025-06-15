@@ -7,8 +7,8 @@ namespace mgp
 	class MemoryStream : public Stream
 	{
 	public:
-		MemoryStream(const Platform *platform);
-		MemoryStream(const Platform *platform, void *memory, uint64_t length);
+		MemoryStream(PlatformCore *platform);
+		MemoryStream(PlatformCore *platform, void *memory, uint64_t length);
 
 		MemoryStream &open(void *memory, uint64_t length);
 	};
@@ -16,8 +16,8 @@ namespace mgp
 	class ConstMemoryStream : public Stream
 	{
 	public:
-		ConstMemoryStream(const Platform *platform);
-		ConstMemoryStream(const Platform *platform, const void *memory, uint64_t length);
+		ConstMemoryStream(PlatformCore *platform);
+		ConstMemoryStream(PlatformCore *platform, const void *memory, uint64_t length);
 
 		ConstMemoryStream &open(const void *memory, uint64_t length);
 	};

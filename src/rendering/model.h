@@ -1,43 +1,41 @@
 #pragma once
 
-#include <inttypes.h>
 #include <string>
 #include <vector>
 
 namespace mgp
 {
-	class VulkanCore;
 	class GPUBuffer;
 	class CommandBuffer;
-	class VertexFormat;
+	class GraphicsCore;
+
 	class Material;
-	struct RenderObject;
 	class Mesh;
+	class RenderObject;
+	class VertexFormat;
 
 	class Model
 	{
 	public:
-		Model(VulkanCore *core);
+		Model(GraphicsCore *gfx);
 		~Model();
 
 		Mesh *createMesh();
 
-		uint64_t getSubmeshCount() const;
-		Mesh *getSubmesh(int idx) const;
+		uint64_t getSubmeshCount() const { return m_meshes.size(); }
+		Mesh *getSubmesh(int idx) const { return m_meshes[idx]; }
 
-		void setOwner(RenderObject *owner);
-		RenderObject *getOwner();
+		void setOwner(RenderObject *owner) { m_owner = owner; }
+		RenderObject *getOwner() { return m_owner; }
 
-		void setDirectory(const std::string &directory);
-		const std::string &getDirectory() const;
+		void setDirectory(const std::string &directory) { m_directory = directory; }
+		const std::string &getDirectory() const { return m_directory; }
 
 	private:
+		GraphicsCore *m_gfx;
+
 		RenderObject *m_owner;
-
-		VulkanCore *m_core;
-		
-		std::vector<Mesh *> m_subMeshes;
-
+		std::vector<Mesh *> m_meshes;
 		std::string m_directory;
 	};
 
@@ -46,37 +44,33 @@ namespace mgp
 		friend class Model;
 
 	public:
-		Mesh(VulkanCore *core);
+		Mesh(GraphicsCore *gfx);
 		~Mesh();
 
 		void build(
-			const VertexFormat &format,
+			const VertexFormat *format,
 			void *pVertices, uint32_t nVertices,
 			uint16_t *pIndices, uint32_t nIndices
 		);
 
-		void bind(CommandBuffer &cmd) const;
+		void bind(CommandBuffer *cmd) const;
 
-		Model *getParent();
-		const Model *getParent() const;
+		Model *getParent() { return m_parent; }
 
-		const VertexFormat *getVertexFormat() const;
+		const VertexFormat *getVertexFormat() const { return m_vertexFormat; }
 
-		void setMaterial(Material *material);
+		void setMaterial(Material *material) { m_material = material; }
+		Material *getMaterial() { return m_material; }
 
-		Material *getMaterial();
-		const Material *getMaterial() const;
+		GPUBuffer *getVertexBuffer() { return m_vertexBuffer; }
+		GPUBuffer *getIndexBuffer() { return m_indexBuffer; }
 
-		GPUBuffer *getVertexBuffer() const;
-		GPUBuffer *getIndexBuffer() const;
-
-		uint64_t getVertexCount() const;
-		uint64_t getIndexCount() const;
+		uint64_t getVertexCount() const { return m_nVertices; }
+		uint64_t getIndexCount() const { return m_nIndices; }
 
 	private:
+		GraphicsCore *m_gfx;
 		Model *m_parent;
-
-		VulkanCore *m_core;
 
 		const VertexFormat *m_vertexFormat;
 

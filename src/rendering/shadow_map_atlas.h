@@ -1,3 +1,5 @@
+#if 0
+
 #pragma once
 
 #include <vector>
@@ -47,3 +49,5 @@ namespace mgp
 		std::vector<AtlasRegion> m_regions;
 	};
 }
+
+#endif

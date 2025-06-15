@@ -1,15 +1,15 @@
 #include "file_stream.h"
 
-#include "core/platform.h"
+#include "platform/platform_core.h"
 
 using namespace mgp;
 
-FileStream::FileStream(const Platform *platform)
+FileStream::FileStream(PlatformCore *platform)
 	: Stream(platform)
 {
 }
 
-FileStream::FileStream(const Platform *platform, const char *filename, const char *mode)
+FileStream::FileStream(PlatformCore *platform, const char *filename, const char *mode)
 	: Stream(platform)
 {
 	open(filename, mode);

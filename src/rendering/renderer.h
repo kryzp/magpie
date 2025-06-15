@@ -1,82 +1,89 @@
 #pragma once
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
-#include "shadow_map_atlas.h"
+#include "graphics/render_graph.h"
+
 #include "material.h"
-
-#include "vulkan/pipeline_cache.h"
-#include "vulkan/descriptor.h"
-#include "vulkan/bindless.h"
 
 namespace mgp
 {
-	class App;
 	class Image;
+	class ImageView;
+	class Sampler;
+	class GPUBuffer;
+	class CommandBuffer;
+	class Swapchain;
+	class Descriptor;
+	class DescriptorLayout;
+	class DescriptorPool;
+
 	class Camera;
 	class Scene;
-	class GPUBuffer;
-	class Shader;
+	class App;
 	class Mesh;
-	class Swapchain;
 
 	struct GBuffer
 	{
-		Image *position;
-		Image *albedo;
-		Image *normal;
-		Image *material;
-		Image *emissive;
-		
-		Image *lighting;
-
-		Image *depth;
+		Image *position, *albedo, *normal, *material, *emissive, *lighting, *depth;
 	};
 
 	struct EnvironmentProbe
 	{
-		Image *prefilter;
-		Image *irradiance;
+		Image *prefilter, *irradiance;
 	};
 
 	struct RenderContext
 	{
-		// scene
-		// camera
+		CommandBuffer *cmd;
+		Swapchain *swapchain;
+		Scene *scene;
+		Camera *camera;
 	};
 
 	class Renderer
 	{
 	public:
-		Renderer() = default;
+		Renderer();
 		~Renderer() = default;
 
-		void init(App *app, Swapchain *swapchain);
+		void init(App *app);
 		void destroy();
+		void render(const RenderContext &context);
+		
+		Material *buildMaterial(const MaterialData &data);
 
-		void render(Scene &scene, const Camera &camera, Swapchain *swapchain);
-		
-		Material *buildMaterial(MaterialData &data);
-		
-		VkDescriptorSet allocateSet(const std::vector<VkDescriptorSetLayout> &layouts);
-		
 	private:
-		void shadowPass(Scene &scene, const Camera &camera);
-		void deferredPass(Scene &scene, const Camera &camera);
-		void lightingPass(Scene &scene, const Camera &camera);
-		void tonemappingPass(float exposure);
+		void createGBuffer();
+		void createSkyboxResources();
 
-		void createGBuffer(Swapchain *swapchain);
+		void precomputeBRDF_LUT();
+		void generateEnvironmentMaps();
 
-		void createSkyboxMesh();
-		void precomputeBRDF();
-		void generateEnvironmentProbe();
-		
 		void loadTechniques();
 		void addTechnique(const std::string &name, const Technique &technique);
 
+		Descriptor *allocateDescriptor(const std::vector<DescriptorLayout *> &layouts);
+
+		// world
+		void shadowPass(const RenderContext &context);
+		void deferredPass(const RenderContext &context);
+		void lightingPass(const RenderContext &context);
+
+		// post-processing
+		void tonemappingPass(float exposure);
+
+		// utils
+		ImageView *stdView(Image *image);
+
+		uint32_t smpIdx(Sampler *sampler);
+		uint32_t tex2DIdx(ImageView *view);
+		uint32_t cbmIdx(ImageView *cubemap);
+
 		App *m_app;
+
+		RenderGraph *m_renderGraph;
 
 		GBuffer m_gBuffer;
 
@@ -84,25 +91,23 @@ namespace mgp
 		GPUBuffer *m_transformDataBuffer;
 		GPUBuffer *m_bindlessMaterialTable;
 		GPUBuffer *m_pointLightBuffer;
-		GPUBuffer *m_bufferPointersBuffer;
+		GPUBuffer *m_bufferPointersTable;
 
-		std::unordered_map<uint64_t, Material *> m_materials;
-		std::unordered_map<std::string, Technique> m_techniques;
-		uint32_t m_materialHandle_UID;
+		DescriptorPool *m_descriptorPool;
 
-		VkDescriptorSet m_textureUVSet;
-		VkDescriptorSet m_hdrTonemappingSet;
-
-		DescriptorPoolDynamic m_descriptorPool;
+		Descriptor *m_textureUV_descriptor;
+		Descriptor *m_hdrTonemapping_descriptor;
 
 		Image *m_brdfLUT;
-
-//		ShadowMapAtlas m_shadowAtlas;
 
 		Image *m_environmentMap;
 		EnvironmentProbe m_environmentProbe;
 
 		Mesh *m_skyboxMesh;
-		VkDescriptorSet m_skyboxSet;
+		Descriptor *m_skybox_descriptor;
+
+		std::unordered_map<uint64_t, Material *> m_materials;
+		std::unordered_map<std::string, Technique> m_techniques;
+		uint32_t m_materialFreeIndex;
 	};
 }
