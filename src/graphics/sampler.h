@@ -35,9 +35,6 @@ namespace mgp
 			, borderColour(borderColour)
 		{
 		}
-
-		bool operator == (const SamplerStyle &other) const { return this->filter == other.filter && this->wrapX == other.wrapX && this->wrapY == other.wrapY && this->wrapZ == other.wrapZ; }
-		bool operator != (const SamplerStyle &other) const { return !(*this == other); }
 	};
 	
 	class GraphicsCore;

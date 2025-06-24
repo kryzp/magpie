@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "camera.h"
 
 #include "platform/platform_core.h"
 #include "graphics/graphics_core.h"
@@ -15,7 +16,6 @@
 #include "rendering/texture_manager.h"
 #include "rendering/shader_manager.h"
 #include "rendering/renderer.h"
-#include "rendering/camera.h"
 #include "rendering/scene.h"
 #include "rendering/bindless.h"
 

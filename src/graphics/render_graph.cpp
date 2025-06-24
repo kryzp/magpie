@@ -113,7 +113,7 @@ void RenderGraph::handleRenderPass(CommandBuffer *cmd, Swapchain *swapchain, con
 			info.addDepthAttachment(
 				attachment.loadOp,
 				attachment.view,
-				nullptr,
+				attachment.resolve,
 				attachment.depthClear,
 				attachment.stencilClear
 			);
@@ -128,7 +128,7 @@ void RenderGraph::handleRenderPass(CommandBuffer *cmd, Swapchain *swapchain, con
 			info.addColourAttachment(
 				attachment.loadOp,
 				attachment.view,
-				nullptr,
+				attachment.resolve,
 				attachment.colourClear
 			);
 

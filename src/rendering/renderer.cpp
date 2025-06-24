@@ -12,9 +12,9 @@
 #include "graphics/swapchain.h"
 
 #include "core/app.h"
+#include "core/camera.h"
 
 #include "vertex_types.h"
-#include "camera.h"
 #include "light.h"
 #include "model.h"
 #include "material.h"
@@ -22,35 +22,39 @@
 
 using namespace mgp;
 
+// we have to flip the Z eye positions because
+// RENDERMAN couldn't stick to the script
 glm::mat4 CUBEMAP_CAPTURE_VIEW_MATRICES[] =
 {
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3( 0.0f,-1.0f, 0.0f), glm::vec3(0.0f, 0.0f,-1.0f)),
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-	glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f),-glm::vec3( 0.0f, 0.0f,-1.0f), glm::vec3(0.0f, 1.0f, 0.0f))
+	glm::lookAt(glm::vec3(0.0f), glm::vec3(  1.0f,  0.0f,  0.0f), glm::vec3(  0.0f,  1.0f,  0.0f)),	// X+ (right)
+	glm::lookAt(glm::vec3(0.0f), glm::vec3( -1.0f,  0.0f,  0.0f), glm::vec3(  0.0f,  1.0f,  0.0f)),	// X- (left)
+	glm::lookAt(glm::vec3(0.0f), glm::vec3(  0.0f,  1.0f,  0.0f), glm::vec3(  0.0f,  0.0f,  1.0f)),	// Y+ (up)
+	glm::lookAt(glm::vec3(0.0f), glm::vec3(  0.0f, -1.0f,  0.0f), glm::vec3(  0.0f,  0.0f, -1.0f)),	// Y- (down)
+	glm::lookAt(glm::vec3(0.0f),-glm::vec3(  0.0f,  0.0f,  1.0f), glm::vec3(  0.0f,  1.0f,  0.0f)),	// Z+ (back)
+	glm::lookAt(glm::vec3(0.0f),-glm::vec3(  0.0f,  0.0f, -1.0f), glm::vec3(  0.0f,  1.0f,  0.0f)),	// Z- (forward)
 };
 
+/*
 glm::vec3 CUBEMAP_CAPTURE_VIEW_DIRECTIONS[] =
 {
-	 glm::vec3( 1.0f, 0.0f, 0.0f),
-	 glm::vec3(-1.0f, 0.0f, 0.0f),
-	 glm::vec3( 0.0f, 1.0f, 0.0f),
-	 glm::vec3( 0.0f,-1.0f, 0.0f),
-	-glm::vec3( 0.0f, 0.0f, 1.0f),
-	-glm::vec3( 0.0f, 0.0f,-1.0f)
+	 glm::vec3(  1.0f,  0.0f,  0.0f),
+	 glm::vec3( -1.0f,  0.0f,  0.0f),
+	 glm::vec3(  0.0f,  1.0f,  0.0f),
+	 glm::vec3(  0.0f, -1.0f,  0.0f),
+	-glm::vec3(  0.0f,  0.0f,  1.0f),
+	-glm::vec3(  0.0f,  0.0f, -1.0f)
 };
 
 glm::vec3 CUBEMAP_CAPTURE_VIEW_UP[] =
 {
-	glm::vec3(0.0f, 1.0f, 0.0f),
-	glm::vec3(0.0f, 1.0f, 0.0f),
-	glm::vec3(0.0f, 0.0f, 1.0f),
-	glm::vec3(0.0f, 0.0f,-1.0f),
-	glm::vec3(0.0f, 1.0f, 0.0f),
-	glm::vec3(0.0f, 1.0f, 0.0f)
+	glm::vec3( 0.0f,  1.0f,  0.0f),
+	glm::vec3( 0.0f,  1.0f,  0.0f),
+	glm::vec3( 0.0f,  0.0f,  1.0f),
+	glm::vec3( 0.0f,  0.0f, -1.0f),
+	glm::vec3( 0.0f,  1.0f,  0.0f),
+	glm::vec3( 0.0f,  1.0f,  0.0f)
 };
+*/
 
 struct GPU_FrameData
 {
@@ -76,15 +80,15 @@ struct GPU_BindlessMaterial
 
 struct GPU_BufferPointers
 {
-	VkDeviceAddress frame_data;
+	VkDeviceAddress frameData;
 	VkDeviceAddress transforms;
 	VkDeviceAddress materials;
-	VkDeviceAddress pointLights;
 };
 
 struct GPU_ModelPushConstants
 {
 	VkDeviceAddress buffers;
+
 	uint32_t irradianceMap_id;
 	uint32_t prefilterMap_id;
 	uint32_t brdfLUT_id;
@@ -113,6 +117,15 @@ struct GPU_DeferredLightingPushConstants
 	glm::vec4 cameraPosition;
 };
 
+struct GPU_PrimitiveVSPushConstants
+{
+	glm::mat4 viewProj;
+};
+
+struct GPU_DeferredLightingPointLightPushConstants
+{
+};
+
 Renderer::Renderer()
 	: m_app(nullptr)
 	, m_renderGraph(nullptr)
@@ -120,7 +133,6 @@ Renderer::Renderer()
 	, m_frameConstantsBuffer(nullptr)
 	, m_transformDataBuffer(nullptr)
 	, m_bindlessMaterialTable(nullptr)
-	, m_pointLightBuffer(nullptr)
 	, m_bufferPointersTable(nullptr)
 	, m_descriptorPool(nullptr)
 	, m_textureUV_descriptor(nullptr)
@@ -176,12 +188,6 @@ void Renderer::init(App *app)
 		sizeof(GPU_BindlessMaterial) * 128
 	);
 
-	m_pointLightBuffer = m_app->getGraphics()->createGPUBuffer(
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPU_PointLight) * MAX_POINT_LIGHTS
-	);
-
 	m_bufferPointersTable = m_app->getGraphics()->createGPUBuffer(
 		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
@@ -190,10 +196,9 @@ void Renderer::init(App *app)
 	
 	GPU_BufferPointers pointers = {};
 	{
-		pointers.frame_data		= m_frameConstantsBuffer	->getDeviceAddress();
-		pointers.transforms		= m_transformDataBuffer		->getDeviceAddress();
-		pointers.materials		= m_bindlessMaterialTable	->getDeviceAddress();
-		pointers.pointLights	= m_pointLightBuffer		->getDeviceAddress();
+		pointers.frameData		= bufAddr(m_frameConstantsBuffer);
+		pointers.transforms		= bufAddr(m_transformDataBuffer);
+		pointers.materials		= bufAddr(m_bindlessMaterialTable);
 	}
 	m_bufferPointersTable->writeType<GPU_BufferPointers>(pointers);
 
@@ -224,7 +229,6 @@ void Renderer::destroy()
 
 	delete m_frameConstantsBuffer;
 	delete m_transformDataBuffer;
-	delete m_pointLightBuffer;
 	delete m_bindlessMaterialTable;
 	delete m_bufferPointersTable;
 
@@ -285,7 +289,9 @@ void Renderer::render(const RenderContext &context)
 	}
 	*/
 
-	tonemappingPass(1.12f);
+	renderSkybox(context);
+
+//	tonemappingPass(1.12f);
 	
 	m_renderGraph->addPass(RenderPassDef()
 		.setAttachments({ RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, context.swapchain->getCurrentView(), nullptr, Colour::black()) })
@@ -423,6 +429,7 @@ void Renderer::shadowPass(const RenderContext &context)
 
 void Renderer::deferredPass(const RenderContext &context)
 {
+	/*
 	for (int i = 0; i < context.scene->getPointLightCount(); i++)
 	{
 		auto &light = context.scene->getPointLights()[i];
@@ -438,18 +445,17 @@ void Renderer::deferredPass(const RenderContext &context)
 
 		m_pointLightBuffer->writeType(gpuLight, i);
 	}
-
-	std::vector<RenderGraphAttachment> attachments = {
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.position), nullptr, Colour::black()),
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.albedo), nullptr, Colour::black()),
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.normal), nullptr, Colour::black()),
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.material), nullptr, Colour::black()),
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.emissive), nullptr, Colour::black()),
-		RenderGraphAttachment::getDepth(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.depth), nullptr, 1.0f, 0),
-	};
+	*/
 
 	m_renderGraph->addPass(RenderPassDef()
-		.setAttachments(attachments)
+		.setAttachments({
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.position), nullptr, Colour::black()),
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.albedo), nullptr, Colour::black()),
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.normal), nullptr, Colour::black()),
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.material), nullptr, Colour::black()),
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.emissive), nullptr, Colour::black()),
+			RenderGraphAttachment::getDepth(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.depth), nullptr, 1.0f, 0)
+		})
 		.setRecordFn([&](CommandBuffer *cmd, const RenderInfo &info) -> void
 		{
 			uint64_t currentPipelineHash = 0;
@@ -482,7 +488,7 @@ void Renderer::deferredPass(const RenderContext &context)
 				}
 
 				GPU_ModelPushConstants pushConstants = {};
-				pushConstants.buffers							= m_bufferPointersTable->getDeviceAddress();
+				pushConstants.buffers							= bufAddr(m_bufferPointersTable);
 				pushConstants.irradianceMap_id					= cbmIdx(stdView(m_environmentProbe.irradiance));
 				pushConstants.prefilterMap_id					= cbmIdx(stdView(m_environmentProbe.prefilter));
 				pushConstants.brdfLUT_id						= tex2DIdx(stdView(m_brdfLUT));
@@ -511,79 +517,31 @@ void Renderer::deferredPass(const RenderContext &context)
 
 void Renderer::lightingPass(const RenderContext &context)
 {
-	std::vector<RenderGraphAttachment> attachments = {
-		RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.lighting), nullptr, Colour::black()),
-		RenderGraphAttachment::getDepth(VK_ATTACHMENT_LOAD_OP_LOAD, stdView(m_gBuffer.depth), nullptr, 1.0f, 0)
-	};
-
 	std::vector<ImageView *> inputViews = {
 		stdView(m_gBuffer.position),
 		stdView(m_gBuffer.albedo),
 		stdView(m_gBuffer.normal),
 		stdView(m_gBuffer.material),
-		stdView(m_gBuffer.emissive),
-		stdView(m_environmentMap)
+		stdView(m_gBuffer.emissive)
 	};
 
+	// lighting pass
 	m_renderGraph->addPass(RenderPassDef()
-		.setAttachments(attachments)
+		.setAttachments({
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_CLEAR, stdView(m_gBuffer.lighting), nullptr, Colour::black()),
+			RenderGraphAttachment::getDepth(VK_ATTACHMENT_LOAD_OP_LOAD, stdView(m_gBuffer.depth))
+		})
 		.setInputViews(inputViews)
 		.setRecordFn([&](CommandBuffer *cmd, const RenderInfo &info) -> void
 		{
-			GraphicsPipelineDef ambientDeferredLightingPipeline;
-			ambientDeferredLightingPipeline.setShader(m_app->getShaders().getShader("deferred_lighting_ambient"));
-			ambientDeferredLightingPipeline.setDepthTest(false);
-			ambientDeferredLightingPipeline.setDepthWrite(false);
-
-			PipelineState pipelineData = m_app->getPipelines().fetchGraphicsPipeline(ambientDeferredLightingPipeline, info);
-
-			cmd->bindPipeline(
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineData.pipeline
-			);
-
-			cmd->bindDescriptors(
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipelineData.layout,
-				{ m_app->getBindlessResources()->getDescriptor() },
-				{}
-			);
-
-			GPU_DeferredLightingPushConstants pc = {};
-			pc.position_id						 = tex2DIdx(stdView(m_gBuffer.position));
-			pc.albedo_id						 = tex2DIdx(stdView(m_gBuffer.albedo));
-			pc.normal_id						 = tex2DIdx(stdView(m_gBuffer.normal));
-			pc.material_id						 = tex2DIdx(stdView(m_gBuffer.material));
-			pc.emissive_id						 = tex2DIdx(stdView(m_gBuffer.emissive));
-			pc.irradianceMap_id					 = cbmIdx(stdView(m_environmentProbe.irradiance));
-			pc.prefilterMap_id					 = cbmIdx(stdView(m_environmentProbe.prefilter));
-			pc.brdfLUT_id						 = tex2DIdx(stdView(m_brdfLUT));
-			pc.textureSampler_id				 = smpIdx(m_app->getTextures().getLinearSampler());
-			pc.cubemapSampler_id				 = smpIdx(m_app->getTextures().getLinearSampler());
-			pc.cameraPosition					 = { context.camera->position.x, context.camera->position.y, context.camera->position.z, 0.0f };
-			
-			cmd->pushConstants(
-				pipelineData.layout,
-				VK_SHADER_STAGE_ALL_GRAPHICS,
-				sizeof(GPU_DeferredLightingPushConstants),
-				&pc
-			);
-
-			cmd->draw(3);
-
-			// skybox
+			// ambient lighting
 			{
-				GraphicsPipelineDef skyboxPipeline;
-				skyboxPipeline.setShader(m_app->getShaders().getShader("skybox"));
-				skyboxPipeline.setVertexFormat(&vertex_types::PRIMITIVE_VERTEX_FORMAT);
-				skyboxPipeline.setDepthTest(true);
-				skyboxPipeline.setDepthWrite(false);
-				skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+				GraphicsPipelineDef ambientLightingPipeline;
+				ambientLightingPipeline.setShader(m_app->getShaders().getShader("deferred_lighting_ambient"));
+				ambientLightingPipeline.setDepthTest(false);
+				ambientLightingPipeline.setDepthWrite(false);
 
-				PipelineState pipelineData = m_app->getPipelines().fetchGraphicsPipeline(skyboxPipeline, info);
-
-				glm::mat4 viewProj = context.camera->getProj() * context.camera->getRotationMatrix();
+				PipelineState pipelineData = m_app->getPipelines().fetchGraphicsPipeline(ambientLightingPipeline, info);
 
 				cmd->bindPipeline(
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -594,21 +552,134 @@ void Renderer::lightingPass(const RenderContext &context)
 					0,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					pipelineData.layout,
-					{ m_skybox_descriptor },
+					{ m_app->getBindlessResources()->getDescriptor() },
 					{}
 				);
 
+				GPU_DeferredLightingPushConstants pc = {};
+				pc.position_id						 = tex2DIdx(stdView(m_gBuffer.position));
+				pc.albedo_id						 = tex2DIdx(stdView(m_gBuffer.albedo));
+				pc.normal_id						 = tex2DIdx(stdView(m_gBuffer.normal));
+				pc.material_id						 = tex2DIdx(stdView(m_gBuffer.material));
+				pc.emissive_id						 = tex2DIdx(stdView(m_gBuffer.emissive));
+				pc.irradianceMap_id					 = cbmIdx(stdView(m_environmentProbe.irradiance));
+				pc.prefilterMap_id					 = cbmIdx(stdView(m_environmentProbe.prefilter));
+				pc.brdfLUT_id						 = tex2DIdx(stdView(m_brdfLUT));
+				pc.textureSampler_id				 = smpIdx(m_app->getTextures().getLinearSampler());
+				pc.cubemapSampler_id				 = smpIdx(m_app->getTextures().getLinearSampler());
+				pc.cameraPosition					 = { context.camera->position.x, context.camera->position.y, context.camera->position.z, 0.0f };
+			
 				cmd->pushConstants(
 					pipelineData.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(glm::mat4),
-					&viewProj
+					sizeof(GPU_DeferredLightingPushConstants),
+					&pc
 				);
 
-				m_skyboxMesh->bind(cmd);
-
-				cmd->drawIndexed(m_skyboxMesh->getIndexCount());
+				cmd->draw(3);
 			}
+
+			/*
+			// direct lighting
+			{
+				GraphicsPipelineDef directLightingPipeline;
+				directLightingPipeline.setShader(m_app->getShaders().getShader("deferred_lighting_point_light"));
+				directLightingPipeline.setVertexFormat(&vertex_types::PRIMITIVE_VERTEX_FORMAT);
+				directLightingPipeline.setDepthTest(true);
+				directLightingPipeline.setDepthWrite(false);
+
+				PipelineState pipelineSt = m_app->getPipelines().fetchGraphicsPipeline(directLightingPipeline, info);
+
+				cmd->bindPipeline(
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineSt.pipeline
+				);
+
+				cmd->bindDescriptors(
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					pipelineSt.layout,
+					{},
+					{}
+				);
+
+				Mesh *m_sphereMesh = nullptr;
+
+				m_sphereMesh->bind(cmd);
+
+				// todo: instanced rendering
+				for (auto &l : context.scene->getPointLights())
+				{
+					GPU_PrimitiveVSPushConstants pc = {};
+					pc.viewProj = glm::identity<glm::mat4>();
+					pc.model = glm::identity<glm::mat4>();
+
+					cmd->pushConstants(
+						pipelineSt.layout,
+						VK_SHADER_STAGE_ALL_GRAPHICS,
+						sizeof(GPU_PrimitiveVSPushConstants),
+						&pc
+					);
+
+					cmd->drawIndexed(m_sphereMesh->getIndexCount());
+				}
+			}
+			*/
+		})
+	);
+}
+
+void Renderer::renderSkybox(const RenderContext &context)
+{
+	m_renderGraph->addPass(RenderPassDef()
+		.setAttachments({	
+			RenderGraphAttachment::getColour(VK_ATTACHMENT_LOAD_OP_LOAD, stdView(m_gBuffer.lighting)),
+			RenderGraphAttachment::getDepth(VK_ATTACHMENT_LOAD_OP_LOAD, stdView(m_gBuffer.depth))
+		})
+		.setInputViews({ stdView(m_environmentMap) })
+		.setRecordFn([&](CommandBuffer *cmd, const RenderInfo &info) -> void
+		{
+			GraphicsPipelineDef skyboxPipeline;
+			skyboxPipeline.setShader(m_app->getShaders().getShader("skybox"));
+			skyboxPipeline.setVertexFormat(&vertex_types::PRIMITIVE_VERTEX_FORMAT);
+			skyboxPipeline.setDepthTest(true);
+			skyboxPipeline.setDepthWrite(false);
+			skyboxPipeline.setDepthOp(VK_COMPARE_OP_LESS_OR_EQUAL);
+
+			PipelineState pipelineSt = m_app->getPipelines().fetchGraphicsPipeline(skyboxPipeline, info);
+
+			cmd->bindPipeline(
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineSt.pipeline
+			);
+
+			cmd->bindDescriptors(
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipelineSt.layout,
+				{ m_skybox_descriptor },
+				{}
+			);
+
+			struct
+			{
+				glm::mat4 viewProj;
+				glm::vec4 param;
+			}
+			pc;
+
+			pc.viewProj = context.camera->getProj() * context.camera->getRotationMatrix();
+
+			cmd->pushConstants(
+				pipelineSt.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(pc),
+				&pc
+			);
+
+			m_skyboxMesh->bind(cmd);
+
+			cmd->drawIndexed(m_skyboxMesh->getIndexCount());
 		})
 	);
 }
@@ -841,9 +912,7 @@ void Renderer::generateEnvironmentMaps()
 {
 	const int ENVIRONMENT_MAP_RESOLUTION = 1024;
 	const int IRRADIANCE_MAP_RESOLUTION = 32;
-
 	const int PREFILTER_MAP_RESOLUTION = 128;
-	const int PREFILTER_MAP_MIP_LEVELS = 5;
 
 	glm::mat4 captureProjectionMatrix = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
@@ -874,7 +943,7 @@ void Renderer::generateEnvironmentMaps()
 		VK_FORMAT_R32G32B32A32_SFLOAT,
 		VK_IMAGE_VIEW_TYPE_CUBE,
 		VK_IMAGE_TILING_OPTIMAL,
-		PREFILTER_MAP_MIP_LEVELS,
+		5,
 		VK_SAMPLE_COUNT_1_BIT,
 		false,
 		false
@@ -928,14 +997,15 @@ void Renderer::generateEnvironmentMaps()
 					0, 0,
 					ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION
 				});
-
-				glm::mat4 viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
+				
+				GPU_PrimitiveVSPushConstants pc = {};
+				pc.viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 				cmd->pushConstants(
 					pipelineSt.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(glm::mat4),
-					&viewProj
+					sizeof(GPU_PrimitiveVSPushConstants),
+					&pc
 				);
 
 				m_skyboxMesh->bind(cmd);
@@ -962,7 +1032,7 @@ void Renderer::generateEnvironmentMaps()
 	GPUBuffer *prefilterParameters = m_app->getGraphics()->createGPUBuffer(
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(prefilterParams) * PREFILTER_MAP_MIP_LEVELS
+		sizeof(prefilterParams) * m_environmentProbe.prefilter->getMipmapCount()
 	);
 	
 	cmd = m_app->getGraphics()->beginInstantSubmit();
@@ -1012,14 +1082,15 @@ void Renderer::generateEnvironmentMaps()
 					0, 0,
 					IRRADIANCE_MAP_RESOLUTION, IRRADIANCE_MAP_RESOLUTION
 				});
-
-				glm::mat4 viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
+				
+				GPU_PrimitiveVSPushConstants pc = {};
+				pc.viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 				cmd->pushConstants(
 					pipelineSt.layout,
 					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(glm::mat4),
-					&viewProj
+					sizeof(GPU_PrimitiveVSPushConstants),
+					&pc
 				);
 
 				m_skyboxMesh->bind(cmd);
@@ -1050,12 +1121,12 @@ void Renderer::generateEnvironmentMaps()
 
 		cmd->transitionLayout(m_environmentProbe.prefilter, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-		for (int mipLevel = 0; mipLevel < PREFILTER_MAP_MIP_LEVELS; mipLevel++)
+		for (int mipLevel = 0; mipLevel < m_environmentProbe.prefilter->getMipmapCount(); mipLevel++)
 		{
 			int width = PREFILTER_MAP_RESOLUTION >> mipLevel;
 			int height = PREFILTER_MAP_RESOLUTION >> mipLevel;
 
-			float roughness = (float)mipLevel / (float)(PREFILTER_MAP_MIP_LEVELS - 1);
+			float roughness = (float)mipLevel / (float)(m_environmentProbe.prefilter->getMipmapCount() - 1);
 
 			prefilterParams.roughness = roughness;
 
@@ -1093,14 +1164,15 @@ void Renderer::generateEnvironmentMaps()
 						0, 0,
 						(float)width, (float)height
 					});
-
-					glm::mat4 viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
+				
+					GPU_PrimitiveVSPushConstants pc = {};
+					pc.viewProj = captureProjectionMatrix * CUBEMAP_CAPTURE_VIEW_MATRICES[i];
 
 					cmd->pushConstants(
 						pipelineSt.layout,
 						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(glm::mat4),
-						&viewProj
+						sizeof(GPU_PrimitiveVSPushConstants),
+						&pc
 					);
 
 					m_skyboxMesh->bind(cmd);
@@ -1180,6 +1252,11 @@ Descriptor *Renderer::allocateDescriptor(const std::vector<DescriptorLayout *> &
 ImageView *Renderer::stdView(Image *image)
 {
 	return m_app->getImageViews().fetchStdView(image);
+}
+
+VkDeviceAddress Renderer::bufAddr(GPUBuffer *buffer)
+{
+	return buffer->getDeviceAddress();
 }
 
 uint32_t Renderer::smpIdx(Sampler *sampler)

@@ -2,7 +2,8 @@
 
 struct Arguments
 {
-	float4x4 viewProj;
+    float4x4 viewProj;
+    float4 param;
 };
 
 [[vk::push_constant]]
@@ -16,7 +17,7 @@ struct VS_Output
 	float4 sv_position : SV_Position;
 
     [[vk::location(0)]]
-    float3 worldPosition;
+    float3 position;
 };
 
 [shader("vertex")]
@@ -24,10 +25,10 @@ VS_Output vertexMain(PrimitiveVertex vertex)
 {
 	VS_Output output;
 
-	output.worldPosition = vertex.position;
+    output.position = vertex.position;
 
     output.sv_position = mul(args.viewProj, float4(vertex.position, 1.0));
-	output.sv_position = output.sv_position.xyww;
+    output.sv_position = output.sv_position.xyww;
 
 	return output;
 }
@@ -35,6 +36,6 @@ VS_Output vertexMain(PrimitiveVertex vertex)
 [shader("fragment")]
 float4 fragmentMain(VS_Output input)
 {
-    float3 dir = normalize(input.worldPosition);
-	return float4(skybox.Sample(dir).rgb, 1.0);
+//    return float4(skybox.Sample(dir).rgb, 1.0);
+    return float4(skybox.Sample(normalize(input.position * float3(1.0, 1.0, -1.0))).rgb, 1.0);
 }

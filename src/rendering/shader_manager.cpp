@@ -71,7 +71,7 @@ void ShaderManager::loadShaders()
 		loadShaderStage("irradiance_convolution_fs",		"irradiance_convolution_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("prefilter_convolution_fs",			"prefilter_convolution_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("brdf_integrator_fs",				"brdf_integrator_fs",					VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("texturedPBR_fs",					"texturedPBR_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
+//		loadShaderStage("texturedPBR_fs",					"texturedPBR_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("texturedPBR_gbuffer_fs",			"texturedPBR_gbuffer_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("deferred_lighting_ambient_fs",		"deferred_lighting_ambient_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
 		loadShaderStage("skybox_fs",						"skybox",								VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -84,6 +84,7 @@ void ShaderManager::loadShaders()
 
 	// effects
 	{
+		/*
 		// PBR
 		addShader("texturedPBR", m_app->getGraphics()->createShader(
 			sizeof(int)*16,
@@ -93,6 +94,7 @@ void ShaderManager::loadShaders()
 				getShaderStage("texturedPBR_fs")
 			}
 		));
+		*/
 
 		// PBR G-BUFFER
 		addShader("texturedPBR_gbuffer", m_app->getGraphics()->createShader(

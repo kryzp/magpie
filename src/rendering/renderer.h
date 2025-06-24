@@ -71,12 +71,15 @@ namespace mgp
 		void deferredPass(const RenderContext &context);
 		void lightingPass(const RenderContext &context);
 
+		// skybox
+		void renderSkybox(const RenderContext &context);
+
 		// post-processing
 		void tonemappingPass(float exposure);
 
 		// utils
 		ImageView *stdView(Image *image);
-
+		VkDeviceAddress bufAddr(GPUBuffer *buffer);
 		uint32_t smpIdx(Sampler *sampler);
 		uint32_t tex2DIdx(ImageView *view);
 		uint32_t cbmIdx(ImageView *cubemap);
@@ -90,7 +93,6 @@ namespace mgp
 		GPUBuffer *m_frameConstantsBuffer;
 		GPUBuffer *m_transformDataBuffer;
 		GPUBuffer *m_bindlessMaterialTable;
-		GPUBuffer *m_pointLightBuffer;
 		GPUBuffer *m_bufferPointersTable;
 
 		DescriptorPool *m_descriptorPool;

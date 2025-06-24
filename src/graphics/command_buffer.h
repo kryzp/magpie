@@ -91,7 +91,7 @@ namespace mgp
 		void transitionLayout(Image *image, VkImageLayout newLayout);
 		void generateMipmaps(Image *image);
 
-		void blitImageVulkan(
+		void blitImage(
 			VkImage srcImage, VkImageLayout srcImageLayout,
 			VkImage dstImage, VkImageLayout dstImageLayout,
 			const std::vector<VkImageBlit> &regions,

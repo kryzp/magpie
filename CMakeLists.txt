@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
 
 	src/core/app.cpp
 	src/core/common.cpp
+	src/core/camera.cpp
 
 	src/input/input.cpp
 
@@ -44,7 +45,6 @@ add_executable(${PROJECT_NAME}
 	src/graphics/validation.cpp
 	
 	src/rendering/bindless.cpp
-	src/rendering/camera.cpp
 	src/rendering/model.cpp
 	src/rendering/renderer.cpp
 	src/rendering/scene.cpp

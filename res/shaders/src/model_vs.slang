@@ -5,6 +5,7 @@
 struct ModelPushConstants
 {
     BufferPointers *buffers;
+
     uint irradianceMap_id;
     uint prefilterMap_id;
     uint brdfLUT_id;

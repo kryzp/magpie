@@ -178,6 +178,14 @@ void App::tick(float dt)
 	{
 		m_platform->setCursorVisible(true);
 	}
+
+	if (m_inputSt.isPressed(KB_KEY_R))
+	{
+		m_camera.position = glm::vec3(0.0f);
+		m_camera.direction = glm::vec3(0.0f, 0.0f, -1.0f);
+		m_camera.setYaw(0.0f);
+		m_camera.setPitch(0.0f);
+	}
 }
 
 void App::tickFixed(float dt)

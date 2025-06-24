@@ -37,7 +37,6 @@ struct BufferPointers
     FrameData *frameData;
     TransformData *transforms;
     MaterialData *materials;
-    PointLight *pointLights;
 };
 
 #endif // TYPES_SLANG_

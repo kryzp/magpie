@@ -1,8 +1,8 @@
 #include "fullscreen_triangle_vs.slang"
 
 #include "shared/bindless.slang"
+#include "shared/pbr.slang"
 
-#define PI 3.14159265
 #define MAX_REFLECTION_LOD 4.0
 
 struct PushConstants
@@ -27,39 +27,6 @@ struct PushConstants
 
 [[vk::push_constant]]
 PushConstants pc;
-
-float3 fresnelSchlick(float VdotH, float3 F0, float roughness)
-{
-	float t = pow(1.0 - max(VdotH, 0.0), 5.0);
-	float3 F90 = max(1.0 - roughness, F0);
-	return lerp(F0, F90, t);
-}
-
-float distributionGGX(float NdotH, float roughness)
-{
-	float a = roughness * roughness;
-	float a2 = a * a;
-
-	float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
-
-	return a2 / max(0.0000001, denom * denom * PI);
-}
-
-float geometrySchlickGGX(float NdotV, float roughness)
-{
-	float r = roughness + 1.0;
-	float k = r * r / 8.0;
-
-	return NdotV / lerp(k, 1.0, NdotV);
-}
-
-float geometrySmith(float NdotV, float NdotL, float roughness)
-{
-	float ggx2 = geometrySchlickGGX(NdotV, roughness);
-	float ggx1 = geometrySchlickGGX(NdotL, roughness);
-
-	return ggx1 * ggx2;
-}
 
 [shader("fragment")]
 float4 fragmentMain(VS_Output input) : SV_Target
@@ -94,13 +61,13 @@ float4 fragmentMain(VS_Output input) : SV_Target
 	float3 reflected = reflect(-viewDir, normal);
 
 	float prefilterMipLevel = roughnessValue * MAX_REFLECTION_LOD;
-	float3 prefilteredColour = g_bindlessTextureCube[pc.prefilterMap_id].SampleLevel(cubemapSampler, reflected, prefilterMipLevel).rgb;
+	float3 prefilteredColour = g_bindlessTextureCube[pc.prefilterMap_id].SampleLevel(cubemapSampler, reflected * float3(1.0, 1.0, -1.0), prefilterMipLevel).rgb;
 
 	float2 environmentBRDF = g_bindlessTexture2D[pc.brdfLUT_id].Sample(textureSampler, float2(NdotV, roughnessValue)).xy;
 
 	float3 specular = prefilteredColour * (F * environmentBRDF.x + environmentBRDF.y);
 
-	float3 irradiance = g_bindlessTextureCube[pc.irradianceMap_id].Sample(cubemapSampler, normal).rgb;
+    float3 irradiance = g_bindlessTextureCube[pc.irradianceMap_id].Sample(cubemapSampler, normal * float3(1.0, 1.0, -1.0)).rgb;
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambientOcclusion;
 

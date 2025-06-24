@@ -27,7 +27,7 @@ namespace mgp
 		float depthClear;
 		uint32_t stencilClear;
 
-		static RenderGraphAttachment getColour(VkAttachmentLoadOp loadOp, ImageView *view, ImageView *resolve, const Colour &colourClear)
+		static RenderGraphAttachment getColour(VkAttachmentLoadOp loadOp, ImageView *view, ImageView *resolve = nullptr, const Colour &colourClear = Colour::black())
 		{
 			RenderGraphAttachment attachment = {};
 			attachment.view = view;
@@ -40,7 +40,7 @@ namespace mgp
 			return attachment;
 		}
 
-		static RenderGraphAttachment getDepth(VkAttachmentLoadOp loadOp, ImageView *view, ImageView *resolve, float depthClear, uint32_t stencilClear)
+		static RenderGraphAttachment getDepth(VkAttachmentLoadOp loadOp, ImageView *view, ImageView *resolve = nullptr, float depthClear = 1.0f, uint32_t stencilClear = 0)
 		{
 			RenderGraphAttachment attachment = {};
 			attachment.view = view;

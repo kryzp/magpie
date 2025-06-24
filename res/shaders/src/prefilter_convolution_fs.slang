@@ -49,7 +49,7 @@ float3 importanceSampleGGX(float2 Xi, float3 normal, float roughness)
 	float3 bitangent = cross(normal, tangent);
 	
 	float3x3 inverseTBN = transpose(float3x3(tangent, bitangent, normal));
-	
+
 	float3 sampleVec = mul(inverseTBN, H);
 	
 	return normalize(sampleVec);
@@ -71,7 +71,7 @@ float4 fragmentMain(VS_Output input) : SV_Target
     uint envWidth, envHeight;
     environmentMap.GetDimensions(envWidth, envHeight);
 	
-	float3 normal = normalize(input.worldPosition);
+	float3 normal = normalize(input.position);
 	float3 R = normal;
 	float3 V = R;
 	
@@ -86,22 +86,22 @@ float4 fragmentMain(VS_Output input) : SV_Target
 		float3 L = normalize(2.0*dot(V, H)*H - V);
 		
 		float NdotL = max(0.0, dot(normal, L));
-		
-		if (NdotL > 0.0)
-		{
+
+        if (NdotL > 0.0)
+        {
 			float NdotH = max(0.0, dot(normal, H));
 			float HdotV = max(0.0, dot(H, V));
 			
 			float D = distributionGGX(NdotH, ubo.roughness);
 			
-			float pdf = D * NdotH / (4.0 * HdotV) + 0.0001;
+			float pdf = (D * NdotH / (4.0 * HdotV)) + 0.0001;
 			
 			float saTexel = 4.0 * PI / (6.0 * float(envWidth) * float(envHeight));
 			float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
 			float mipLevel = ubo.roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
 
-            result += min(10.0, environmentMap.SampleLevel(L, mipLevel).rgb) * NdotL;
+            result += environmentMap.SampleLevel(L * float3(1.0, 1.0, -1.0), mipLevel).rgb * NdotL;
 			totalWeight += NdotL;
 		}
 	}

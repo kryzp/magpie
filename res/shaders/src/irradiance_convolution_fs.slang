@@ -7,7 +7,7 @@ const static float PI = 3.14159265;
 [shader("fragment")]
 float4 fragmentMain(VS_Output input)
 {
-	float3 normal = normalize(input.worldPosition);
+	float3 normal = normalize(input.position);
 	float3 right = normalize(cross(float3(0.0, 1.0, 0.0), normal));
 	float3 up = normalize(cross(normal, right));
 
@@ -30,7 +30,7 @@ float4 fragmentMain(VS_Output input)
 			
 			float3 sampleVec = mul(tangentToWorld, sample);
 
-			irradiance += environmentMap.Sample(sampleVec).rgb * cos(theta) * sin(theta);
+			irradiance += environmentMap.Sample(sampleVec * float3(1.0, 1.0, -1.0)).rgb * cos(theta) * sin(theta);
 			
 			n_samples++;
 		}

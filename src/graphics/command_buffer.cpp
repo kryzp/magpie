@@ -319,7 +319,7 @@ void CommandBuffer::generateMipmaps(Image *image)
 			blit.dstSubresource.baseArrayLayer = face;
 			blit.dstSubresource.layerCount = 1;
 
-			blitImageVulkan(
+			blitImage(
 				vkImage->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				vkImage->getHandle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				{ blit },
@@ -394,7 +394,7 @@ void CommandBuffer::blitImage(
 }
 */
 
-void CommandBuffer::blitImageVulkan(
+void CommandBuffer::blitImage(
 	VkImage srcImage, VkImageLayout srcImageLayout,
 	VkImage dstImage, VkImageLayout dstImageLayout,
 	const std::vector<VkImageBlit> &regions,
