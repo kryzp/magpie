@@ -72,7 +72,7 @@ float4 fragmentMain(VS_Output input) : SV_Target
 	normal = normalize(mul(input.tbn, 2.0*normal - 1.0));
 	float3 geomNormal = mul(input.tbn, float3(0.0, 0.0, 1.0));
 
-	float3 viewDir = normalize(frameData.viewPosition.xyz - input.position.xyz);
+    float3 viewDir = normalize(frameData.cameraPosition.xyz - input.position.xyz);
 	
 	float NdotV = max(0.0, dot(normal, viewDir));
 	

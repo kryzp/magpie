@@ -9,13 +9,6 @@ namespace mgp
 {
 	constexpr static unsigned MAX_POINT_LIGHTS = 16;
 
-	struct GPU_PointLight
-	{
-		glm::vec4 position; // [x,y,z]: position
-		glm::vec4 colour; // [x,y,z]: colour, [w]: intensity
-		glm::vec4 attenuation; // [x]*dist^2 + [y]*dist + [z], [w]: has shadows? 0/1
-	};
-
 	using LightId = unsigned;
 
 	class Light

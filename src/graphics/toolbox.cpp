@@ -13,12 +13,12 @@ VkSurfaceFormatKHR vk_toolbox::chooseSwapSurfaceFormat(const std::vector<VkSurfa
 	for (auto &availableFormat : availableSurfaceFormats)
 	{
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-			MGP_LOG("Found *desired* swapchain swap surface format & colour space!");
+			mgp_LOG("Found *desired* swapchain swap surface format & colour space!");
 			return availableFormat;
 		}
 	}
 
-	MGP_LOG("Could not find *desired* swapchain swap surface format & colour space, falling back...");
+	mgp_LOG("Could not find *desired* swapchain swap surface format & colour space, falling back...");
 
 	return availableSurfaceFormats[0];
 }
@@ -66,7 +66,7 @@ uint32_t vk_toolbox::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t fi
 		}
 	}
 
-	MGP_ERROR("Failed to find suitable memory type.");
+	mgp_ERROR("Failed to find suitable memory type.");
 
 	return 0;
 }
@@ -85,7 +85,7 @@ VkFormat vk_toolbox::findSupportedFormat(VkPhysicalDevice device, const std::vec
 		}
 	}
 
-	MGP_ERROR("Failed to find supported format.");
+	mgp_ERROR("Failed to find supported format.");
 
 	return VK_FORMAT_MAX_ENUM;
 }
@@ -150,7 +150,7 @@ bool vk_toolbox::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice)
 	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
 	if (!extensionCount) {
-		MGP_ERROR("Failed to find any device extension properties!");
+		mgp_ERROR("Failed to find any device extension properties!");
 	}
 
 	std::vector<VkExtensionProperties> availableExts(extensionCount);
@@ -249,7 +249,7 @@ VkSampleCountFlagBits vk_toolbox::getMaxUsableSampleCount(const VkPhysicalDevice
 		return VK_SAMPLE_COUNT_1_BIT;
 	}
 
-	MGP_ERROR("Could not find a maximum usable sample count!");
+	mgp_ERROR("Could not find a maximum usable sample count!");
 
 	return VK_SAMPLE_COUNT_1_BIT;
 }

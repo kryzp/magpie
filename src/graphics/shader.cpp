@@ -30,7 +30,7 @@ const char *getShaderStageName(VkShaderStageFlagBits stage)
 			return COMPUTE_ENTRY_POINT;
 
 		default:
-			MGP_ERROR("Unsupported shader stage: %d", stage);
+			mgp_ERROR("Unsupported shader stage: %d", stage);
 			break;
 	}
 
@@ -71,7 +71,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 		slangModule = m_gfx->getSlangSession()->loadModule(path.c_str());
 		
 		if (!slangModule)
-			MGP_ERROR("Error loading shader module: %s", path.c_str());
+			mgp_ERROR("Error loading shader module: %s", path.c_str());
 	}
 
 	Slang::ComPtr<slang::IEntryPoint> entryPoint;
@@ -79,7 +79,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 		slangModule->findEntryPointByName(getShaderStageName(m_stage), entryPoint.writeRef());
 		
 		if (!entryPoint)
-			MGP_ERROR("Error getting entry point from shader: %s", path.c_str());
+			mgp_ERROR("Error getting entry point from shader: %s", path.c_str());
 	}
 
 	std::array<slang::IComponentType *, 2> componentTypes =
@@ -100,7 +100,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 		);
 
 		if (SLANG_FAILED(result))
-			MGP_ERROR("Failed to compose module and entry point into shader program: %s", path.c_str());
+			mgp_ERROR("Failed to compose module and entry point into shader program: %s", path.c_str());
 	}
 
 	Slang::ComPtr<slang::IComponentType> linkedProgram;
@@ -108,7 +108,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 		SlangResult result = composedProgram->link(linkedProgram.writeRef());
 		
 		if (SLANG_FAILED(result))
-			MGP_ERROR("Failed to link composed shader program: %s", path.c_str());
+			mgp_ERROR("Failed to link composed shader program: %s", path.c_str());
 	}
 
 	Slang::ComPtr<slang::IBlob> spirvCode;
@@ -120,7 +120,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 		);
 		
 		if (SLANG_FAILED(result))
-			MGP_ERROR("Failed to compile composed shader program into SPIR-V: %s", path.c_str());
+			mgp_ERROR("Failed to compile composed shader program into SPIR-V: %s", path.c_str());
 	}
 
 	VkShaderModuleCreateInfo moduleCreateInfo = {};
@@ -128,7 +128,7 @@ void ShaderStage::compileFromSource(const std::string &path)
 	moduleCreateInfo.codeSize = spirvCode->getBufferSize();
 	moduleCreateInfo.pCode = (const uint32_t *)spirvCode->getBufferPointer();
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateShaderModule(m_gfx->getLogicalDevice(), &moduleCreateInfo, nullptr, &m_module),
 		"Failed to create shader module"
 	);
@@ -180,7 +180,7 @@ Shader::Shader(GraphicsCore *gfx, uint64_t pushConstantSize, const std::vector<D
 					{
 						// specialization constant
 
-						MGP_ERROR("Resource %s has array size specialization constant, not currently handled.", compiler.get_name(r.id).c_str());
+						mgp_ERROR("Resource %s has array size specialization constant, not currently handled.", compiler.get_name(r.id).c_str());
 					}
 				}
 

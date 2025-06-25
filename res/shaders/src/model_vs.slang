@@ -2,9 +2,16 @@
 #include "shared/bindless.slang"
 #include "shared/vertices.slang"
 
+struct ModelBuffers
+{
+    FrameData *frameData;
+    TransformData *transforms;
+    MaterialData *materials;
+}
+
 struct ModelPushConstants
 {
-    BufferPointers *buffers;
+    ModelBuffers *buffers;
 
     uint irradianceMap_id;
     uint prefilterMap_id;

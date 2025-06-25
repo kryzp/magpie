@@ -83,7 +83,7 @@ Image *TextureManager::loadTexture(const std::string &name, const std::string &p
 
 void TextureManager::loadTextures()
 {
-	MGP_LOG("Loading textures...");
+	mgp_LOG("Loading textures...");
 
 	m_linearSampler		= m_gfx->createSampler(SamplerStyle(VK_FILTER_LINEAR));
 	m_nearestSampler	= m_gfx->createSampler(SamplerStyle(VK_FILTER_NEAREST));
@@ -92,7 +92,7 @@ void TextureManager::loadTextures()
 	loadTexture("fallback_black",	"../../res/textures/standard/black.png");
 	loadTexture("fallback_normals",	"../../res/textures/standard/normal_fallback.png");
 
-	loadTexture("environmentHDR",	"../../res/textures/rogland_clear_night_greg_zaal.hdr");
+	loadTexture("environmentHDR",	"../../res/textures/flamingo_pan_4k.hdr");
 
 	loadTexture("stone",			"../../res/textures/smooth_stone.png");
 	loadTexture("wood",				"../../res/textures/wood.jpg");

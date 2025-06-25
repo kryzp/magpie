@@ -55,28 +55,30 @@ void ShaderManager::addShader(const std::string &name, Shader *shader)
 
 void ShaderManager::loadShaders()
 {
-	MGP_LOG("Compiling shaders...");
+	mgp_LOG("Compiling shaders...");
 
 	// shader stages
 	{
 		// vertex shaders
-		loadShaderStage("primitive_vs",						"primitive_vs",							VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("skybox_vs",						"skybox",								VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("fullscreen_triangle_vs",			"fullscreen_triangle_vs",				VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("model_vs",							"model_vs",								VK_SHADER_STAGE_VERTEX_BIT);
-		loadShaderStage("model_shadow_map_vs",				"model_shadow_map_vs",					VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("primitive_vs",							"primitive_vs",							VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("skybox_vs",							"skybox",								VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("fullscreen_triangle_vs",				"fullscreen_triangle_vs",				VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("model_vs",								"model_vs",								VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("model_shadow_map_vs",					"model_shadow_map_vs",					VK_SHADER_STAGE_VERTEX_BIT);
+		loadShaderStage("deferred_lighting_point_light_vs",		"deferred_lighting_point_light",		VK_SHADER_STAGE_VERTEX_BIT);
 
 		// fragment shaders
-		loadShaderStage("equirectangular_to_cubemap_fs",	"equirectangular_to_cubemap_fs",		VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("irradiance_convolution_fs",		"irradiance_convolution_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("prefilter_convolution_fs",			"prefilter_convolution_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("brdf_integrator_fs",				"brdf_integrator_fs",					VK_SHADER_STAGE_FRAGMENT_BIT);
-//		loadShaderStage("texturedPBR_fs",					"texturedPBR_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("texturedPBR_gbuffer_fs",			"texturedPBR_gbuffer_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("deferred_lighting_ambient_fs",		"deferred_lighting_ambient_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("skybox_fs",						"skybox",								VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("texture_uv_fs",					"texture_uv_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
-		loadShaderStage("shadow_map_fs",					"shadow_map_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("equirectangular_to_cubemap_fs",		"equirectangular_to_cubemap_fs",		VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("irradiance_convolution_fs",			"irradiance_convolution_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("prefilter_convolution_fs",				"prefilter_convolution_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("brdf_integrator_fs",					"brdf_integrator_fs",					VK_SHADER_STAGE_FRAGMENT_BIT);
+//		loadShaderStage("texturedPBR_fs",						"texturedPBR_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("texturedPBR_gbuffer_fs",				"texturedPBR_gbuffer_fs",				VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("deferred_lighting_ambient_fs",			"deferred_lighting_ambient_fs",			VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("deferred_lighting_point_light_fs",		"deferred_lighting_point_light",		VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("skybox_fs",							"skybox",								VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("texture_uv_fs",						"texture_uv_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
+		loadShaderStage("shadow_map_fs",						"shadow_map_fs",						VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		// compute shaders
 		loadShaderStage("hdr_tonemapping_cs", "hdr_tonemapping_cs",									VK_SHADER_STAGE_COMPUTE_BIT);
@@ -96,7 +98,7 @@ void ShaderManager::loadShaders()
 		));
 		*/
 
-		// PBR G-BUFFER
+		// DEFERRED GEOMETRY PASS
 		addShader("texturedPBR_gbuffer", m_app->getGraphics()->createShader(
 			sizeof(int)*16,
 			{ m_app->getBindlessResources()->getLayout() },
@@ -106,13 +108,23 @@ void ShaderManager::loadShaders()
 			}
 		));
 
-		// DEFERRED LIGHTING
+		// DEFERRED LIGHTING AMBIENT
 		addShader("deferred_lighting_ambient", m_app->getGraphics()->createShader(
 			sizeof(int)*12 + sizeof(float)*4,
 			{ m_app->getBindlessResources()->getLayout() },
 			{
 				getShaderStage("fullscreen_triangle_vs"),
 				getShaderStage("deferred_lighting_ambient_fs")
+			}
+		));
+
+		// DEFERRED LIGHTING POINT LIGHT
+		addShader("deferred_lighting_point_light", m_app->getGraphics()->createShader(
+			2*sizeof(VkDeviceAddress) + 16*sizeof(float) + 8*sizeof(uint32_t),
+			{ m_app->getBindlessResources()->getLayout() },
+			{
+				getShaderStage("deferred_lighting_point_light_vs"),
+				getShaderStage("deferred_lighting_point_light_fs")
 			}
 		));
 

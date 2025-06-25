@@ -13,9 +13,9 @@ void Surface::create(GraphicsCore *gfx, const PlatformCore *platform)
 	m_gfx = gfx;
 
 	if (!platform->vkCreateSurface((void *)gfx->getInstance(), (void **)(&m_surface)))
-		MGP_ERROR("Failed to create surface");
+		mgp_ERROR("Failed to create surface");
 
-	MGP_LOG("Created surface!");
+	mgp_LOG("Created surface!");
 }
 
 void Surface::destroy()

@@ -28,7 +28,7 @@ Model *ModelLoader::loadModel(const std::string &path)
 
 	if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		MGP_ERROR("Failed to load mesh at path: %s, Error: %s", path.c_str(), m_importer.GetErrorString());
+		mgp_ERROR("Failed to load mesh at path: %s, Error: %s", path.c_str(), m_importer.GetErrorString());
 		return nullptr;
 	}
 
@@ -45,7 +45,7 @@ Model *ModelLoader::loadModel(const std::string &path)
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
-	MGP_LOG("Loading model...");
+	mgp_LOG("Loading model...");
 
 	processNodes(mesh, scene->mRootNode, scene, identity);
 

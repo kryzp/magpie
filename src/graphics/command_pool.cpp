@@ -28,7 +28,7 @@ void CommandPoolDynamic::create(GraphicsCore *gfx, int queueFamilyIndex)
 	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	createInfo.queueFamilyIndex = queueFamilyIndex;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateCommandPool(
 			m_gfx->getLogicalDevice(),
 			&createInfo,
@@ -87,7 +87,7 @@ void CommandPoolDynamic::expandBuffers(int n)
 
 	m_freeBuffers.resize(n);
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkAllocateCommandBuffers(
 			m_gfx->getLogicalDevice(),
 			&commandBufferAllocateInfo,

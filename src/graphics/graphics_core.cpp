@@ -27,7 +27,7 @@ static std::vector<const char *> getInstanceExtensions(const PlatformCore *platf
 	const char *const *names = platform->vkGetInstanceExtensions(&extCount);
 
 	if (!names)
-		MGP_ERROR("Unable to get instance extension count.");
+		mgp_ERROR("Unable to get instance extension count.");
 
 	std::vector<const char *> extensions(extCount);
 
@@ -111,7 +111,7 @@ GraphicsCore::GraphicsCore(const Config &config, PlatformCore *platform)
 	createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateInstance(&createInfo, nullptr, &m_instance),
 		"Failed to create instance"
 	);
@@ -121,7 +121,7 @@ GraphicsCore::GraphicsCore(const Config &config, PlatformCore *platform)
 #if MGP_DEBUG
 	if (vk_validation::hasValidationLayers())
 	{
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vk_validation::createDebugUtilsMessengerExt(m_instance, nullptr, &m_debugMessenger),
 			"Failed to create debug messenger"
 		);
@@ -149,7 +149,7 @@ GraphicsCore::GraphicsCore(const Config &config, PlatformCore *platform)
 	m_swapchain = new Swapchain(this, m_platform);
 	m_imGuiImageFormat = m_swapchain->getSwapchainImageFormat();
 
-	MGP_LOG("Vulkan Core Initialized!");
+	mgp_LOG("Vulkan Core Initialized!");
 }
 
 GraphicsCore::~GraphicsCore()
@@ -170,7 +170,7 @@ GraphicsCore::~GraphicsCore()
 	
 	vkDestroyDevice(m_device, nullptr);
 
-	MGP_LOG("Vulkan Core Destroyed!");
+	mgp_LOG("Vulkan Core Destroyed!");
 }
 
 CommandBuffer *GraphicsCore::beginPresent()
@@ -214,7 +214,7 @@ void GraphicsCore::present()
 	submitInfo.waitSemaphoreInfoCount = 1;
 	submitInfo.pWaitSemaphoreInfos = &imageAvailableSemaphore;
 	
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkQueueSubmit2(m_graphicsQueue.getHandle(), 1, &submitInfo, fence),
 		"Failed to submit in-flight draw command to buffer"
 	);
@@ -242,7 +242,7 @@ void GraphicsCore::present()
 	// just crash if the error still not a success but not known
 	else if (result != VK_SUCCESS)
 	{
-		MGP_ERROR("Failed to present swap chain image: %d", result);
+		mgp_ERROR("Failed to present swap chain image: %d", result);
 	}
 
 	m_currentFrameIndex = (m_currentFrameIndex + 1) % gfx_constants::FRAMES_IN_FLIGHT;
@@ -284,7 +284,7 @@ void GraphicsCore::submit(CommandBuffer *cmd)
 	submitInfo.signalSemaphoreInfoCount = 0;
 	submitInfo.waitSemaphoreInfoCount = 0;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkQueueSubmit2(m_graphicsQueue.getHandle(), 1, &submitInfo, fence),
 		"Failed to submit instant draw command to buffer"
 	);
@@ -298,7 +298,7 @@ void GraphicsCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 
 	// no viable physical device found, exit program
 	if (!deviceCount)
-		MGP_ERROR("Failed to find GPUs with Vulkan support!");
+		mgp_ERROR("Failed to find GPUs with Vulkan support!");
 
 	VkPhysicalDeviceProperties2 properties		= { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 	VkPhysicalDeviceFeatures2 features			= { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
@@ -342,9 +342,9 @@ void GraphicsCore::enumeratePhysicalDevices(VkSurfaceKHR surface)
 	m_maxMsaaSamples = vk_toolbox::getMaxUsableSampleCount(m_physicalDeviceProperties);
 
 	if (m_physicalDevice == VK_NULL_HANDLE)
-		MGP_ERROR("Unable to find a suitable GPU!");
+		mgp_ERROR("Unable to find a suitable GPU!");
 
-	MGP_LOG("Selected a suitable GPU: %d", iSelected);
+	mgp_LOG("Selected a suitable GPU: %d", iSelected);
 }
 
 void GraphicsCore::createLogicalDevice()
@@ -387,7 +387,7 @@ void GraphicsCore::createLogicalDevice()
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.enabledLayerCount = 0;
 	createInfo.ppEnabledLayerNames = nullptr;
-	createInfo.enabledExtensionCount = MGP_ARRAY_LENGTH(vk_toolbox::DEVICE_EXTENSIONS);
+	createInfo.enabledExtensionCount = mgp_ARRAY_LENGTH(vk_toolbox::DEVICE_EXTENSIONS);
 	createInfo.ppEnabledExtensionNames = vk_toolbox::DEVICE_EXTENSIONS;
 	createInfo.pEnabledFeatures = &m_physicalDeviceFeatures.features;
 	createInfo.pNext = &vulkan13Features;
@@ -396,15 +396,15 @@ void GraphicsCore::createLogicalDevice()
 	// enable the validation layers on the device
 	if (vk_validation::hasValidationLayers())
 	{
-		createInfo.enabledLayerCount = MGP_ARRAY_LENGTH(vk_validation::VALIDATION_LAYERS);
+		createInfo.enabledLayerCount = mgp_ARRAY_LENGTH(vk_validation::VALIDATION_LAYERS);
 		createInfo.ppEnabledLayerNames = vk_validation::VALIDATION_LAYERS;
 	}
 
-	MGP_LOG("Enabled validation layers!");
+	mgp_LOG("Enabled validation layers!");
 #endif
 
 	// create it
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device),
 		"Failed to create logical device"
 	);
@@ -421,14 +421,14 @@ void GraphicsCore::createLogicalDevice()
 		uint32_t major = VK_API_VERSION_MAJOR(version);
 		uint32_t minor = VK_API_VERSION_MINOR(version);
 
-		MGP_LOG("Using Vulkan %d.%d", major, minor);
+		mgp_LOG("Using Vulkan %d.%d", major, minor);
 	}
 	else
 	{
-		MGP_LOG("Failed to retrieve Vulkan version.");
+		mgp_LOG("Failed to retrieve Vulkan version.");
 	}
 
-	MGP_LOG("Created logical device!");
+	mgp_LOG("Created logical device!");
 }
 
 void GraphicsCore::createPipelineProcessCache()
@@ -440,12 +440,12 @@ void GraphicsCore::createPipelineProcessCache()
 	pipelineCacheCreateInfo.initialDataSize = 0;
 	pipelineCacheCreateInfo.pInitialData = nullptr;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreatePipelineCache(m_device, &pipelineCacheCreateInfo, nullptr, &m_pipelineProcessCache),
 		"Failed to process pipeline cache"
 	);
 
-	MGP_LOG("Created graphics pipeline process cache!");
+	mgp_LOG("Created graphics pipeline process cache!");
 }
 
 void GraphicsCore::findQueueFamilies()
@@ -454,7 +454,7 @@ void GraphicsCore::findQueueFamilies()
 	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, nullptr);
 
 	if (!queueFamilyCount)
-		MGP_ERROR("Failed to find any queue families!");
+		mgp_ERROR("Failed to find any queue families!");
 
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &queueFamilyCount, queueFamilies.data());
@@ -502,12 +502,12 @@ void GraphicsCore::createVmaAllocator()
 	allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 	allocatorCreateInfo.pVulkanFunctions = &vulkanFunctions;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vmaCreateAllocator(&allocatorCreateInfo, &m_vmaAllocator),
 		"Failed to create memory allocator"
 	);
 
-	MGP_LOG("Created memory allocator!");
+	mgp_LOG("Created memory allocator!");
 }
 
 void GraphicsCore::initImGui()
@@ -730,7 +730,7 @@ DescriptorLayout *GraphicsCore::createDescriptorLayout(
 	
 	VkDescriptorSetLayout layout = {};
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateDescriptorSetLayout(m_device, &layoutCreateInfo, nullptr, &layout),
 		"Failed to create descriptor set layout"
 	);
@@ -780,7 +780,7 @@ VkPipelineLayout GraphicsCore::createPipelineLayout(const Shader *shader)
 
 	VkPipelineLayout layout = VK_NULL_HANDLE;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo, nullptr, &layout),
 		"Failed to create pipeline layout"
 	);
@@ -887,7 +887,7 @@ VkPipeline GraphicsCore::createGraphicsPipeline(VkPipelineLayout layout, const G
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
 	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamicStateCreateInfo.dynamicStateCount = MGP_ARRAY_LENGTH(PIPELINE_DYNAMIC_STATES);
+	dynamicStateCreateInfo.dynamicStateCount = mgp_ARRAY_LENGTH(PIPELINE_DYNAMIC_STATES);
 	dynamicStateCreateInfo.pDynamicStates = PIPELINE_DYNAMIC_STATES;
 
 	cauto &colourFormats = renderInfo.getColourAttachmentFormats();
@@ -928,7 +928,7 @@ VkPipeline GraphicsCore::createGraphicsPipeline(VkPipelineLayout layout, const G
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateGraphicsPipelines(m_device, m_pipelineProcessCache, 1, &graphicsPipelineCreateInfo, nullptr, &pipeline),
 		"Failed to create new graphics pipeline"
 	);
@@ -945,7 +945,7 @@ VkPipeline GraphicsCore::createComputePipeline(VkPipelineLayout layout, const Co
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &pipeline),
 		"Failed to create new compute pipeline"
 	);

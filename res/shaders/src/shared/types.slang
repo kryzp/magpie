@@ -5,7 +5,7 @@ struct FrameData
 {
 	float4x4 proj;
 	float4x4 view;
-	float4 viewPosition;
+	float4 cameraPosition;
 };
 
 struct TransformData
@@ -26,17 +26,8 @@ struct MaterialData
 struct PointLight
 {
 	float4 position;
-	float4 colour;
-	float4 attenuation;
-//	float4x4 lightSpaceMatrix;
-//	int4 shadowMap_id;
-};
-
-struct BufferPointers
-{
-    FrameData *frameData;
-    TransformData *transforms;
-    MaterialData *materials;
+    float4 colour;
+    float4 attenuation;
 };
 
 #endif // TYPES_SLANG_

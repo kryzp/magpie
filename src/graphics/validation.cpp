@@ -17,7 +17,7 @@ bool checkForValidationLayerSupport()
 	std::vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (int i = 0; i < MGP_ARRAY_LENGTH(vk_validation::VALIDATION_LAYERS); i++)
+	for (int i = 0; i < mgp_ARRAY_LENGTH(vk_validation::VALIDATION_LAYERS); i++)
 	{
 		bool hasLayer = false;
 		const char *layerName0 = vk_validation::VALIDATION_LAYERS[i];
@@ -52,15 +52,15 @@ void vk_validation::trySetValidationLayers(VkInstanceCreateInfo &createInfo)
 
 	if (g_hasValidationLayers)
 	{
-		MGP_LOG("Validation layer support verified.");
+		mgp_LOG("Validation layer support verified.");
 
-		createInfo.enabledLayerCount = MGP_ARRAY_LENGTH(VALIDATION_LAYERS);
+		createInfo.enabledLayerCount = mgp_ARRAY_LENGTH(VALIDATION_LAYERS);
 		createInfo.ppEnabledLayerNames = VALIDATION_LAYERS;
 		createInfo.pNext = &g_debugInfo;
 	}
 	else
 	{
-		MGP_LOG("No validation layer support.");
+		mgp_LOG("No validation layer support.");
 
 		createInfo.enabledLayerCount = 0;
 		createInfo.ppEnabledLayerNames = nullptr;
@@ -76,7 +76,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_validation::vkDebugCallback(
 )
 {
 	if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-		MGP_ERROR("Validation Layer (SEVERITY: %d) (TYPE: %d): %s", messageSeverity, messageType, pCallbackData->pMessage);
+		mgp_ERROR("Validation Layer (SEVERITY: %d) (TYPE: %d): %s", messageSeverity, messageType, pCallbackData->pMessage);
 
 	return VK_FALSE;
 }

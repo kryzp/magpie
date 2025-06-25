@@ -47,12 +47,12 @@ void Scene::sortRenderListByMaterialHash(int lo, int hi)
 		if (m_renderList[j]->getMaterial()->getHash() <= pivot)
 		{
 			i++;
-			MGP_SWAP(m_renderList[i], m_renderList[j]);
+			mgp_SWAP(m_renderList[i], m_renderList[j]);
 		}
 	}
 
 	int partition = i + 1;
-	MGP_SWAP(m_renderList[partition], m_renderList[hi]);
+	mgp_SWAP(m_renderList[partition], m_renderList[hi]);
 
 	sortRenderListByMaterialHash(lo, partition - 1);
 	sortRenderListByMaterialHash(partition + 1, hi);

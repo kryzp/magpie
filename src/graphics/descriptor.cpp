@@ -32,7 +32,7 @@ DescriptorPoolStatic::DescriptorPoolStatic(GraphicsCore *gfx, uint32_t maxSets, 
 	poolCreateInfo.poolSizeCount = poolSizes.size();
 	poolCreateInfo.pPoolSizes = poolSizes.data();
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateDescriptorPool(m_gfx->getLogicalDevice(), &poolCreateInfo, nullptr, &m_pool),
 		"Failed to create static descriptor pool"
 	);
@@ -76,7 +76,7 @@ Descriptor *DescriptorPoolStatic::allocate(const std::vector<DescriptorLayout *>
 
 	VkDescriptorSet set = VK_NULL_HANDLE;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkAllocateDescriptorSets(m_gfx->getLogicalDevice(), &allocInfo, &set),
 		"Failed to allocate descriptor set"
 	);
@@ -178,7 +178,7 @@ Descriptor *DescriptorPool::allocate(const std::vector<DescriptorLayout *> &layo
 		VkDescriptorPool allocatedPool = fetchPool();
 		allocInfo.descriptorPool = allocatedPool;
 
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vkAllocateDescriptorSets(m_gfx->getLogicalDevice(), &allocInfo, &set),
 			"Failed to allocate descriptor sets"
 		);

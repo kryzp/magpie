@@ -31,7 +31,7 @@ GPUBuffer::GPUBuffer(GraphicsCore *gfx, VkBufferUsageFlags usage, VmaAllocationC
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 	vmaAllocInfo.flags = m_flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vmaCreateBuffer(m_gfx->getVMAAllocator(), &bufferCreateInfo, &vmaAllocInfo, &m_buffer, &m_allocation, &m_allocationInfo),
 		"Failed to create buffer"
 	);

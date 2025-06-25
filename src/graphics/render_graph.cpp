@@ -26,7 +26,7 @@ void RenderGraph::recordTo(CommandBuffer *cmd, Swapchain *swapchain)
 {
 	if (!validate())
 	{
-		MGP_ERROR("Invalid render graph.");
+		mgp_ERROR("Invalid render graph.");
 		return;
 	}
 

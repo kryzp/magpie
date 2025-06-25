@@ -93,7 +93,7 @@ void Image::allocate(
 		break;
 
 	default:
-		MGP_ERROR("Failed to find VkImageType given VkImageViewType: %d", m_type);
+		mgp_ERROR("Failed to find VkImageType given VkImageViewType: %d", m_type);
 		break;
 	}
 
@@ -123,7 +123,7 @@ void Image::allocate(
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	vmaAllocInfo.priority = 1.0f;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vmaCreateImage(m_gfx->getVMAAllocator(), &createInfo, &vmaAllocInfo, &m_image, &m_allocation, &m_allocationInfo),
 		"Failed to create image"
 	);

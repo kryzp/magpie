@@ -49,10 +49,10 @@ void App::run(const Config &config)
 		{
 			Light light;
 			light.setType(Light::TYPE_POINT);
-			light.setIntensity(3.0f);
-			light.setFalloff(1.0f);
-			light.setPosition({ i*4.0f, 1.0f, j*4.0f - 2.0f });
-			light.setColour(colours[(j*4 + i) % MGP_ARRAY_LENGTH(colours)]);
+			light.setIntensity(1.0f);
+			light.setFalloff(2.0f);
+			light.setPosition({ i, 0.5f, j - 0.5f });
+			light.setColour(colours[(j*4 + i) % mgp_ARRAY_LENGTH(colours)]);
 
 			m_scene.addLight(light);
 		}
@@ -64,7 +64,7 @@ void App::run(const Config &config)
 	Timer deltaTimer(m_platform);
 	deltaTimer.start();
 
-	MGP_LOG("Entering main game loop...");
+	mgp_LOG("Entering main game loop...");
 
 	while (m_running)
 	{

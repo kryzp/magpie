@@ -19,7 +19,7 @@ void Queue::FrameData::create(GraphicsCore *gfx, int queueFamilyIndex)
 		inFlightFenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		inFlightFenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vkCreateFence(
 				m_gfx->getLogicalDevice(),
 				&inFlightFenceCreateInfo,
@@ -36,7 +36,7 @@ void Queue::FrameData::create(GraphicsCore *gfx, int queueFamilyIndex)
 		instantSubmitFenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		instantSubmitFenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vkCreateFence(
 				m_gfx->getLogicalDevice(),
 				&instantSubmitFenceCreateInfo,

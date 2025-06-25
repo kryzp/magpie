@@ -37,7 +37,7 @@ void CommandBuffer::begin()
 	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkBeginCommandBuffer(m_buffer, &commandBufferBeginInfo),
 		"Failed to begin recording instant command buffer"
 	);
@@ -45,7 +45,7 @@ void CommandBuffer::begin()
 
 void CommandBuffer::end()
 {
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkEndCommandBuffer(m_buffer),
 		"Failed to record command buffer"
 	);
@@ -266,7 +266,7 @@ void CommandBuffer::generateMipmaps(Image *image)
 {
 	Image *vkImage = (Image *)image;
 
-	MGP_ASSERT(vkImage->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+	mgp_ASSERT(vkImage->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
 
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -431,7 +431,7 @@ void CommandBuffer::copyBufferToImage(
 	const Image *image
 )
 {
-	MGP_ASSERT(((const Image *)image)->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+	mgp_ASSERT(((const Image *)image)->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
 
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
@@ -457,7 +457,7 @@ void CommandBuffer::copyBufferToImage(
 	const std::vector<VkBufferImageCopy> &regions
 )
 {
-	MGP_ASSERT(((const Image *)image)->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
+	mgp_ASSERT(((const Image *)image)->getLayout() == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL");
 
 	vkCmdCopyBufferToImage(
 		m_buffer,

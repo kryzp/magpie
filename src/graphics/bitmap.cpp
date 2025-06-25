@@ -69,7 +69,7 @@ void Bitmap::load(const char *path)
 		m_format = FORMAT_RGBAF;
 
 		if (!m_pixels)
-			MGP_ERROR("Couldn't load Bitmap HDR :(");
+			mgp_ERROR("Couldn't load Bitmap HDR :(");
 	}
 	else
 	{
@@ -77,7 +77,7 @@ void Bitmap::load(const char *path)
 		m_format = FORMAT_RGBA8;
 
 		if (!m_pixels)
-			MGP_ERROR("Couldn't load Bitmap LDR :(");
+			mgp_ERROR("Couldn't load Bitmap LDR :(");
 	}
 
 	this->m_width = w;
@@ -145,8 +145,8 @@ bool Bitmap::saveToPng(PlatformCore *platform, const char *file) const
 
 bool Bitmap::saveToPng(Stream &stream) const
 {
-	MGP_ASSERT(m_pixels, "Pixel data cannot be null.");
-	MGP_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
+	mgp_ASSERT(m_pixels, "Pixel data cannot be null.");
+	mgp_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
 
 	stbi_write_force_png_filter = 0;
 	stbi_write_png_compression_level = 0;
@@ -154,7 +154,7 @@ bool Bitmap::saveToPng(Stream &stream) const
 	if (stbi_write_png_to_func(stbiWriteCallback, &stream, m_width, m_height, 4, m_pixels, m_width * 4) != 0) {
 		return true;
 	} else {
-		MGP_ERROR("stbi_write_png_to_func(...) failed.");
+		mgp_ERROR("stbi_write_png_to_func(...) failed.");
 	}
 
 	return false;
@@ -168,21 +168,21 @@ bool Bitmap::saveToJpg(PlatformCore *platform, const char *file, int quality) co
 
 bool Bitmap::saveToJpg(Stream &stream, int quality) const
 {
-	MGP_ASSERT(m_pixels, "Pixel data cannot be null.");
-	MGP_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
+	mgp_ASSERT(m_pixels, "Pixel data cannot be null.");
+	mgp_ASSERT(m_width > 0 && m_height > 0, "Width and Height must be > 0.");
 
 	if (quality < 1) {
-		MGP_LOG("JPG quality value should be between [1, 100].");
+		mgp_LOG("JPG quality value should be between [1, 100].");
 		quality = 1;
 	} else if (quality > 100) {
-		MGP_LOG("JPG quality value should be between [1, 100].");
+		mgp_LOG("JPG quality value should be between [1, 100].");
 		quality = 100;
 	}
 
 	if (stbi_write_jpg_to_func(stbiWriteCallback, &stream, m_width, m_height, 4, m_pixels, quality) != 0) {
 		return true;
 	} else {
-		MGP_ERROR("stbi_write_jpg_to_func(...) failed.");
+		mgp_ERROR("stbi_write_jpg_to_func(...) failed.");
 	}
 
 	return false;

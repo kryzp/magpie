@@ -67,7 +67,7 @@ void Swapchain::acquireNextImage()
 	}
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 	{
-		MGP_ERROR("Failed to acquire next image in swap chain: %d", result);
+		mgp_ERROR("Failed to acquire next image in swap chain: %d", result);
 	}
 }
 
@@ -130,7 +130,7 @@ void Swapchain::createSwapchain()
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	// create the swapchain!
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateSwapchainKHR(m_gfx->getLogicalDevice(), &createInfo, nullptr, &m_swapchain),
 		"Failed to create swap chain"
 	);
@@ -139,7 +139,7 @@ void Swapchain::createSwapchain()
 
 	if (!imageCount)
 	{
-		MGP_ERROR("Failed to find any images in swap chain!");
+		mgp_ERROR("Failed to find any images in swap chain!");
 	}
 
 	m_swapchainImages.resize(imageCount);
@@ -171,7 +171,7 @@ void Swapchain::createSwapchain()
 
 	createSwapchainSyncObjects();
 
-	MGP_LOG("Created the swap chain!");
+	mgp_LOG("Created the swap chain!");
 }
 
 void Swapchain::createSwapchainSyncObjects()
@@ -182,12 +182,12 @@ void Swapchain::createSwapchainSyncObjects()
 	// go through all our frames in flight and create the semaphores for each frame
 	for (int i = 0; i < gfx_constants::FRAMES_IN_FLIGHT; i++)
 	{
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vkCreateSemaphore(m_gfx->getLogicalDevice(), &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[i]),
 			"Failed to create image available semaphore"
 		);
 
-		MGP_VK_CHECK(
+		mgp_VK_CHECK(
 			vkCreateSemaphore(m_gfx->getLogicalDevice(), &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[i]),
 			"Failed to create render finished semaphore"
 		);

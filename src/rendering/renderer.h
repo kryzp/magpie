@@ -26,7 +26,20 @@ namespace mgp
 
 	struct GBuffer
 	{
-		Image *position, *albedo, *normal, *material, *emissive, *lighting, *depth;
+		enum
+		{
+			ATTACHMENT_POSITION,
+			ATTACHMENT_ALBEDO,
+			ATTACHMENT_NORMAL,
+			ATTACHMENT_MATERIAL,
+			ATTACHMENT_EMISSIVE,
+			ATTACHMENT_LIGHTING,
+			ATTACHMENT_DEPTH,
+
+			ATTACHMENT_MAX_ENUM
+		};
+
+		Image *attachments[ATTACHMENT_MAX_ENUM];
 	};
 
 	struct EnvironmentProbe
@@ -55,16 +68,19 @@ namespace mgp
 		Material *buildMaterial(const MaterialData &data);
 
 	private:
+
+		// init
 		void createGBuffer();
 		void createSkyboxResources();
+		void createUnitSphereMesh();
 
+		// pbr
 		void precomputeBRDF_LUT();
 		void generateEnvironmentMaps();
 
+		// materials
 		void loadTechniques();
 		void addTechnique(const std::string &name, const Technique &technique);
-
-		Descriptor *allocateDescriptor(const std::vector<DescriptorLayout *> &layouts);
 
 		// world
 		void shadowPass(const RenderContext &context);
@@ -78,6 +94,7 @@ namespace mgp
 		void tonemappingPass(float exposure);
 
 		// utils
+		Descriptor *allocateDescriptor(const std::vector<DescriptorLayout *> &layouts);
 		ImageView *stdView(Image *image);
 		VkDeviceAddress bufAddr(GPUBuffer *buffer);
 		uint32_t smpIdx(Sampler *sampler);
@@ -93,7 +110,8 @@ namespace mgp
 		GPUBuffer *m_frameConstantsBuffer;
 		GPUBuffer *m_transformDataBuffer;
 		GPUBuffer *m_bindlessMaterialTable;
-		GPUBuffer *m_bufferPointersTable;
+		GPUBuffer *m_pointLightBuffer;
+		GPUBuffer *m_modelBuffersBuffer;
 
 		DescriptorPool *m_descriptorPool;
 
@@ -107,6 +125,8 @@ namespace mgp
 
 		Mesh *m_skyboxMesh;
 		Descriptor *m_skybox_descriptor;
+
+		Mesh *m_sphereMesh;
 
 		std::unordered_map<uint64_t, Material *> m_materials;
 		std::unordered_map<std::string, Technique> m_techniques;

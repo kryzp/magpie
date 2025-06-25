@@ -25,7 +25,7 @@ PlatformCore::PlatformCore(const Config &config)
 		SDL_INIT_CAMERA;
 
 	if (SDL_Init(initFlags) == 0)
-		MGP_ERROR("Failed to initialize: %s", SDL_GetError());
+		mgp_ERROR("Failed to initialize: %s", SDL_GetError());
 
 	uint64_t flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
@@ -37,11 +37,11 @@ PlatformCore::PlatformCore(const Config &config)
 	m_window = SDL_CreateWindow(config.windowName, config.width, config.height, flags);
 
 	if (!m_window)
-		MGP_ERROR("Failed to create window.");
+		mgp_ERROR("Failed to create window.");
 
 	m_config = config;
 
-	MGP_LOG("SDL Initialized!");
+	mgp_LOG("SDL Initialized!");
 }
 
 PlatformCore::~PlatformCore()
@@ -51,7 +51,7 @@ PlatformCore::~PlatformCore()
 	SDL_DestroyWindow(m_window);
 	SDL_Quit();
 
-	MGP_LOG("SDL Destroyed!");
+	mgp_LOG("SDL Destroyed!");
 }
 
 void PlatformCore::pollEvents(InputState *input, const std::function<void(void)> &onExit, const std::function<void(int, int)> &onWindowResize)
@@ -122,16 +122,16 @@ void PlatformCore::pollEvents(InputState *input, const std::function<void(void)>
 				break;
 
 			case SDL_EVENT_GAMEPAD_ADDED:
-				MGP_LOG("Gamepad added, trying to reconnect all gamepads...");
+				mgp_LOG("Gamepad added, trying to reconnect all gamepads...");
 				reconnectAllGamepads();
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				MGP_LOG("Gamepad removed.");
+				mgp_LOG("Gamepad removed.");
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMAPPED:
-				MGP_LOG("Gamepad remapped.");
+				mgp_LOG("Gamepad remapped.");
 				break;
 
 			default:
@@ -151,12 +151,12 @@ void PlatformCore::reconnectAllGamepads()
 
 	if (m_gamepadCount == 0)
 	{
-		MGP_LOG("No gamepads found!");
+		mgp_LOG("No gamepads found!");
 		goto finished;
 	}
 	else
 	{
-		MGP_LOG("Found %d gamepads!", m_gamepadCount);
+		mgp_LOG("Found %d gamepads!", m_gamepadCount);
 	}
 
 	// iterate through found gamepads
@@ -167,9 +167,9 @@ void PlatformCore::reconnectAllGamepads()
 
 		// check if we actually managed to open the gamepad
 		if (m_gamepads[i]) {
-			MGP_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i, SDL_GetGamepadPlayerIndex(m_gamepads[i]));
+			mgp_LOG("Opened gamepad with id: %d, internal index: %d, and player index: %d.", id, i, SDL_GetGamepadPlayerIndex(m_gamepads[i]));
 		} else {
-			MGP_LOG("Failed to open gamepad with id: %d, and internal index: %d.", id, i);
+			mgp_LOG("Failed to open gamepad with id: %d, and internal index: %d.", id, i);
 		}
 	}
 
@@ -182,7 +182,7 @@ void PlatformCore::closeAllGamepads()
 	for (int i = 0; i < m_gamepadCount; i++)
 	{
 		SDL_CloseGamepad(m_gamepads[i]);
-		MGP_LOG("Closed gamepad with internal index %d.", i);
+		mgp_LOG("Closed gamepad with internal index %d.", i);
 	}
 
 	m_gamepadCount = 0;

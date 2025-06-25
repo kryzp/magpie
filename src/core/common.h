@@ -1,37 +1,37 @@
 #pragma once
 
 #include <inttypes.h>
-#include <stdio.h>
 #include <string>
+#include <memory>
 
 #ifdef MGP_DEBUG
 
 #include <stdio.h>
 
 // todo: use static_assert
-#define MGP_ASSERT(_exp, _msg, ...) do{if(!(_exp)){::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}}while(0)
-#define MGP_ERROR(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}while(0)
-#define MGP_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
+#define mgp_ASSERT(_exp, _msg, ...) do{if(!(_exp)){::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}}while(0)
+#define mgp_ERROR(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);*((volatile int *)0)=0;}while(0)
+#define mgp_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
 
 #else
 
-#define MGP_ASSERT(_exp, _msg)
-#define MGP_ERROR(_msg)
-#define MGP_LOG(_msg, ...) do{::printf((_msg "\n"), ##__VA_ARGS__);}while(0)
+#define mgp_ASSERT(_exp, _msg)
+#define mgp_ERROR(_msg)
+#define mgp_LOG(_msg, ...)
 
 #endif
 
-#define MGP_VK_CHECK(_func_call, _error_msg) do{if(VkResult _VK_CHECK_RESULT_ABCDEFGH=_func_call;_VK_CHECK_RESULT_ABCDEFGH!=VK_SUCCESS){MGP_ERROR(_error_msg ": %d",_VK_CHECK_RESULT_ABCDEFGH);}}while(0);
+#define mgp_VK_CHECK(_func_call, _error_msg) do{if(VkResult _vk_check_result=_func_call;_vk_check_result!=VK_SUCCESS){mgp_ERROR(_error_msg ": %d",_vk_check_result);}}while(0);
 
-#define MGP_BYTES    (_x) (_x)
-#define MGP_KILOBYTES(_x) (_x * 1024LL)
-#define MGP_MEGABYTES(_x) (_x * 1024LL * 1024LL)
-#define MGP_GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
-#define MGP_TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
+#define mgp_BYTES    (_x) (_x)
+#define mgp_KILOBYTES(_x) (_x * 1024LL)
+#define mgp_MEGABYTES(_x) (_x * 1024LL * 1024LL)
+#define mgp_GIGABYTES(_x) (_x * 1024LL * 1024LL * 1024LL)
+#define mgp_TERABYTES(_x) (_x * 1024LL * 1024LL * 1024LL * 1024LL)
 
-#define MGP_ARRAY_LENGTH(_arr) (sizeof((_arr)) / sizeof((*_arr)))
-#define MGP_SWAP(_x, _y) (::__mgputils_swap((_x), (_y)))
-#define MGP_SID(_str) (hash::calc(0, (_str)))
+#define mgp_ARRAY_LENGTH(_arr) (sizeof((_arr)) / sizeof((*_arr)))
+#define mgp_SWAP(_x, _y) (::__mgputils_swap((_x), (_y)))
+#define mgp_SID(_str) (hash::calc(0, (_str)))
 
 template <typename T>
 inline void __mgputils_swap(T &x, T &y)
@@ -46,6 +46,16 @@ using ubyte = unsigned char;
 using byte  = unsigned char;
 
 #define cauto const auto
+
+template <typename T> using Unique = std::unique_ptr<T>;
+template <typename T, typename... Args>
+constexpr Unique<T> createScope(Args &&...args) { return std::make_unique<T>(std::forward<Args>(args)...); }
+
+template <typename T> using Ref = std::shared_ptr<T>;
+template <typename T, typename... Args>
+constexpr Ref<T> createRef(Args &&...args) { return std::make_shared<T>(std::forward<Args>(args)...); }
+
+template <typename T> using Weak = std::weak_ptr<T>;
 
 namespace mgp
 {

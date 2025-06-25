@@ -7,12 +7,12 @@ InputState::InputState()
 	, m_nextState()
 	, m_prevState()
 {
-	MGP_LOG("Input Initialized!");
+	mgp_LOG("Input Initialized!");
 }
 
 InputState::~InputState()
 {
-	MGP_LOG("Input Destroyed!");
+	mgp_LOG("Input Destroyed!");
 }
 
 void InputState::update()

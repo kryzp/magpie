@@ -47,7 +47,7 @@ ImageView::ImageView(
 	viewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 	viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateImageView(m_gfx->getLogicalDevice(), &viewCreateInfo, nullptr, &m_view),
 		"Failed to create texture image view."
 	);

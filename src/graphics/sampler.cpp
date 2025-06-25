@@ -31,7 +31,7 @@ Sampler::Sampler(GraphicsCore *gfx, const SamplerStyle &style)
 	createInfo.minLod = 0.0f;
 	createInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-	MGP_VK_CHECK(
+	mgp_VK_CHECK(
 		vkCreateSampler(m_gfx->getLogicalDevice(), &createInfo, nullptr, &m_sampler),
 		"Failed to create texture sampler"
 	);
