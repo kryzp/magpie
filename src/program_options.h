@@ -1,0 +1,20 @@
+
+#define WINDOW_TITLE             "Magpie"
+#define ENGINE_NAME              "Magpie"
+
+#define DEFAULT_WINDOW_WIDTH      1280
+#define DEFAULT_WINDOW_HEIGHT     720
+
+#define PERMANENT_MEMORY_SIZE     Megabytes(32)
+#define FRAME_MEMORY_SIZE         Megabytes(32)
+#define SCRATCH_MEMORY_SIZE       Megabytes(16)
+
+#define APP_VERSION_VARIANT       0
+#define APP_VERSION_MAJOR         0
+#define APP_VERSION_MINOR         1
+#define APP_VERSION_PATCH         0
+
+#define ENGINE_VERSION_VARIANT    0
+#define ENGINE_VERSION_MAJOR      0
+#define ENGINE_VERSION_MINOR      1
+#define ENGINE_VERSION_PATCH      0
