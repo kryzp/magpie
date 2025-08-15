@@ -29,12 +29,18 @@
 #include "assets.c"
 #include "renderer.c"
 
-void
-AppUpdate(Platform *p)
+internal void
+AppResetGlobals(Platform *p)
 {
 	platform = p;
 	app = platform->permanent_memory;
 	graphics_device = &app->graphics_device;
+}
+
+void
+AppUpdate(Platform *p)
+{
+	AppResetGlobals(p);
 	
 	if(platform->initializing)
 	{
@@ -96,9 +102,6 @@ AppDestroy(Platform *p)
 void
 AppHotReload(Platform *p)
 {
-	platform = p;
-	app = platform->permanent_memory;
-	graphics_device = &app->graphics_device;
-	
+	AppResetGlobals(p);
 	GraphicsDeviceHotReload();
 }

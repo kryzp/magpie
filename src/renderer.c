@@ -175,9 +175,12 @@ RendererBeginFrame(Renderer *renderer)
 		}
 		args;
 		
+		static f32 x = 0.f;
+		x += 0.02f;
+		
 		args.transform_matrix = m4(1.f);
-		args.transform_matrix = M4MultiplyM4(args.transform_matrix, M4Perspective(70.f, 1280.f/720.f, 0.1f, 10.f));
-		args.transform_matrix = M4MultiplyM4(args.transform_matrix, m4(1.f));
+		args.transform_matrix = M4MultiplyM4(M4TranslateV3(v3(x, 0.f, 0.f)), args.transform_matrix);
+		args.transform_matrix = M4MultiplyM4(M4Perspective(70.f, 1280.f/720.f, 0.1f, 10.f), args.transform_matrix);
 		
 		args.texture_id = 0;
 		
