@@ -1,4 +1,8 @@
-#include "assert.h"
+#define VOLK_IMPLEMENTATION
+#include "ext/volk.h"
+#include "ext/vk_mem_alloc.h"
+
+#include "abstraction_layer.h"
 
 #define STBI_ASSERT Assert
 #define STBIW_ASSERT Assert
@@ -8,6 +12,9 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "ext/stb_image_write.h"
+
+#include "program_options.h"
+#include "platform.h"
 
 #include "arena.h"
 #include "arena.c"
@@ -22,35 +29,32 @@
 #include "assets.c"
 #include "renderer.c"
 
-internal void
-Init(Platform *platform)
+void
+AppUpdate(Platform *p)
 {
-	MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
+	platform = p;
+	app = platform->permanent_memory;
+	graphics_device = &app->graphics_device;
 	
-	app = MemoryArenaPush(&permanent_arena, sizeof(App));
+	if(platform->initializing)
+	{
+		MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
+		
+		app = MemoryArenaPush(&permanent_arena, sizeof(App));
+		
+		app->permanent_arena = permanent_arena;
+		app->frame_arena = MemoryArenaInit(platform->transient_memory, platform->transient_memory_size);
+		
+		app->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
+		app->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
+		
+		GraphicsDeviceInit(platform, &app->permanent_arena);
+		RendererInit(&app->renderer, &app->permanent_arena);
+		
+		platform->initializing = 0;
+	}
 	
-	app->permanent_arena = permanent_arena;
-	app->frame_arena = MemoryArenaInit(platform->frame_memory, platform->frame_memory_size);
-	
-	app->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
-	app->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
-	
-	GraphicsDeviceInit(&app->permanent_arena, platform);
-	RendererInit(&app->renderer, &app->permanent_arena);
-}
-
-internal void
-Destroy(Platform *platform)
-{
-	RendererDestroy(&app->renderer);
-	GraphicsDeviceDestroy();
-}
-
-internal void
-Update(Platform *platform)
-{
 	MemoryArenaClear(&app->frame_arena);
-	
 	MemoryArenaClear(&app->scratch_arenas[0]);
 	MemoryArenaClear(&app->scratch_arenas[1]);
 	
@@ -59,10 +63,11 @@ Update(Platform *platform)
 		platform->exit = 1;
 	}
 	
-	f32 delta_time = 1.f / (f32)platform->target_fps;
+	//f32 delta_time = 1.f / (f32)platform->target_fps;
 	
 	RendererBeginFrame(&app->renderer);
 	{
+		//printf("Hello, World!\n");
 	}
 	RendererEndFrame(&app->renderer);
 	
@@ -81,7 +86,19 @@ Update(Platform *platform)
 		*/
 }
 
-internal void
-FixedUpdate(Platform *platform)
+void
+AppDestroy(Platform *p)
 {
+	RendererDestroy(&app->renderer);
+	GraphicsDeviceDestroy();
+}
+
+void
+AppHotReload(Platform *p)
+{
+	platform = p;
+	app = platform->permanent_memory;
+	graphics_device = &app->graphics_device;
+	
+	GraphicsDeviceHotReload();
 }

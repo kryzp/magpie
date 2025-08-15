@@ -331,8 +331,8 @@ typedef struct Platform
     void *permanent_memory;
     u64   permanent_memory_size;
     
-	void *frame_memory;
-	u64   frame_memory_size;
+	void *transient_memory;
+	u64   transient_memory_size;
 	
 	void *scratch_memory[2];
 	u64   scratch_memory_size;
@@ -351,6 +351,7 @@ typedef struct Platform
 	b32 cursor_visible;
 	b32 cursor_locked;
 	
+	b32 initializing;
 	b32 exit;
 	
 	InputState input;

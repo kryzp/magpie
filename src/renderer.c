@@ -1,13 +1,4 @@
 
-global VertexFormat my_vertex_format = {0};
-global GPUBuffer my_vertex_buffer = {0};
-global GPUBuffer my_index_buffer = {0};
-global ShaderProgram my_shader_program = {0};
-global VkPipeline my_pipeline = VK_NULL_HANDLE;
-global VkPipelineLayout my_pipeline_layout = VK_NULL_HANDLE;
-global Image my_image = {0};
-global ImageView my_image_view = {0};
-global Sampler my_sampler = {0};
 
 typedef struct MyVertex
 {
@@ -21,10 +12,10 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 {
 	// NOTE(kp): Vertex Format.
 	{
-		AddVertexBinding(&my_vertex_format, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+		AddVertexBinding(&renderer->my_vertex_format, sizeof(MyVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 		{
-			AddVertexAttribute(&my_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, position));
-			AddVertexAttribute(&my_vertex_format, VK_FORMAT_R32G32_SFLOAT,    offsetof(MyVertex, texcoord));
+			AddVertexAttribute(&renderer->my_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(MyVertex, position));
+			AddVertexAttribute(&renderer->my_vertex_format, VK_FORMAT_R32G32_SFLOAT,    offsetof(MyVertex, texcoord));
 		}
 	}
 	
@@ -43,13 +34,13 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 		u64 vertex_buffer_size = sizeof(vertices);
 		u64 index_buffer_size = sizeof(indices);
 		
-		my_vertex_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-											 vertex_buffer_size);
+		renderer->my_vertex_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+													   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+													   vertex_buffer_size);
 		
-		my_index_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-											VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-											index_buffer_size);
+		renderer->my_index_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+													  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+													  index_buffer_size);
 		
 		GPUBuffer staging_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 													 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
@@ -67,7 +58,7 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 				
 				CmdCopyBufferToBuffer(&cmd,
 									  &staging_buffer,
-									  &my_vertex_buffer,
+									  &renderer->my_vertex_buffer,
 									  1, &stage_to_vertex_copy);
 				
 				VkBufferCopy stage_to_index_copy = {0};
@@ -77,7 +68,7 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 				
 				CmdCopyBufferToBuffer(&cmd,
 									  &staging_buffer,
-									  &my_index_buffer,
+									  &renderer->my_index_buffer,
 									  1, &stage_to_index_copy);
 			}
 			EndGraphicsInstantSubmit(&cmd);
@@ -88,20 +79,20 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 	
 	// NOTE(kp): Shader.
 	{
-		my_shader_program.push_constant_size = sizeof(m4) + sizeof(u32);
-		my_shader_program.layout_count = 1;
-		my_shader_program.layouts[0] = graphics_device->bindless.bindless_layout;
+		renderer->my_shader_program.push_constant_size = sizeof(m4) + sizeof(u32);
+		renderer->my_shader_program.layout_count = 1;
+		renderer->my_shader_program.layouts[0] = graphics_device->bindless.bindless_layout;
 		
-		my_shader_program.stage_count = 2;
-		my_shader_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		my_shader_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+		renderer->my_shader_program.stage_count = 2;
+		renderer->my_shader_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->my_shader_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
 	
 	// NOTE(kp): Graphics Pipeline.
 	{
 		GraphicsPipelineDef definition = {0};
-		definition.program = &my_shader_program;
-		definition.vertex_format = &my_vertex_format;
+		definition.program = &renderer->my_shader_program;
+		definition.vertex_format = &renderer->my_vertex_format;
 		definition.cull_mode = VK_CULL_MODE_BACK_BIT;
 		definition.front_face = VK_FRONT_FACE_CLOCKWISE;
 		definition.blend_state = BlendStateDefault();
@@ -115,37 +106,37 @@ RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is tempo
 		definition.min_sample_shading = 0.2f;
 		definition.samples = VK_SAMPLE_COUNT_1_BIT;
 		
-		my_pipeline_layout = PipelineLayoutCreate(&my_shader_program);
-		my_pipeline = GraphicsPipelineCreate(my_pipeline_layout, &definition);
+		renderer->my_pipeline_layout = PipelineLayoutCreate(&renderer->my_shader_program);
+		renderer->my_pipeline = GraphicsPipelineCreate(renderer->my_pipeline_layout, &definition);
 	}
 	
 	// NOTE(kp): Combined Image Sampler.
 	{
-		my_image = ImageFromPath(str8("res/image.png"));
-		my_image_view = GetStandardImageView(&my_image);
+		renderer->my_image = ImageFromPath(str8("res/image.png"));
+		renderer->my_image_view = GetStandardImageView(&renderer->my_image);
 		
-		my_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
+		renderer->my_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
 		
 		BindlessResourcesBindCombinedImage(&graphics_device->bindless,
-										   0, &my_image_view, &my_sampler);
+										   0, &renderer->my_image_view, &renderer->my_sampler);
 	}
 }
 
 internal void
 RendererDestroy(Renderer *renderer)
 {
-	ImageViewDestroy(&my_image_view);
-	ImageDestroy(&my_image);
-	SamplerDestroy(&my_sampler);
+	ImageViewDestroy(&renderer->my_image_view);
+	ImageDestroy(&renderer->my_image);
+	SamplerDestroy(&renderer->my_sampler);
 	
-	GPUBufferDestroy(&my_vertex_buffer);
-	GPUBufferDestroy(&my_index_buffer);
+	GPUBufferDestroy(&renderer->my_vertex_buffer);
+	GPUBufferDestroy(&renderer->my_index_buffer);
 	
-	ShaderStageDestroy(&my_shader_program.stages[0]);
-	ShaderStageDestroy(&my_shader_program.stages[1]);
+	ShaderStageDestroy(&renderer->my_shader_program.stages[0]);
+	ShaderStageDestroy(&renderer->my_shader_program.stages[1]);
 	
-	PipelineLayoutDestroy(my_pipeline_layout);
-	PipelineDestroy(my_pipeline);
+	PipelineLayoutDestroy(renderer->my_pipeline_layout);
+	PipelineDestroy(renderer->my_pipeline);
 }
 
 internal void
@@ -153,12 +144,12 @@ RendererBeginFrame(Renderer *renderer)
 {
 	renderer->present_cmd = BeginGraphicsPresent();
 	
-	RenderInfo my_render_info = {0};
-	my_render_info.width = graphics_device->swapchain.width;
-	my_render_info.height = graphics_device->swapchain.height;
-	my_render_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	RenderInfo render_info = {0};
+	render_info.width = graphics_device->swapchain.width;
+	render_info.height = graphics_device->swapchain.height;
+	render_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	
-	RenderInfoAddColourAttachment(&my_render_info,
+	RenderInfoAddColourAttachment(&render_info,
 								  VK_ATTACHMENT_LOAD_OP_CLEAR,
 								  GetCurrentSwapchainImageView(&graphics_device->swapchain),
 								  0,
@@ -168,7 +159,7 @@ RendererBeginFrame(Renderer *renderer)
 							 GetCurrentSwapchainImage(&graphics_device->swapchain),
 							 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	
-	CmdBeginRendering(&renderer->present_cmd, &my_render_info);
+	CmdBeginRendering(&renderer->present_cmd, &render_info);
 	{
 		// 1. Bind the pipeline.
 		// 2. Bind the descriptor set.
@@ -190,11 +181,11 @@ RendererBeginFrame(Renderer *renderer)
 		
 		args.texture_id = 0;
 		
-		CmdBindDescriptors(&renderer->present_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, my_pipeline_layout, 0, 1, &graphics_device->bindless.bindless_set, 0, 0);
-		CmdBindPipeline(&renderer->present_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, my_pipeline);
-		CmdBindVertexBuffer(&renderer->present_cmd, my_vertex_format.bindings[0].binding, &my_vertex_buffer, 0);
-		CmdBindIndexBuffer(&renderer->present_cmd, &my_index_buffer, 0);
-		CmdPushConstants(&renderer->present_cmd, my_pipeline_layout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(args), &args);
+		CmdBindDescriptors(&renderer->present_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->my_pipeline_layout, 0, 1, &graphics_device->bindless.bindless_set, 0, 0);
+		CmdBindPipeline(&renderer->present_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->my_pipeline);
+		CmdBindVertexBuffer(&renderer->present_cmd, renderer->my_vertex_format.bindings[0].binding, &renderer->my_vertex_buffer, 0);
+		CmdBindIndexBuffer(&renderer->present_cmd, &renderer->my_index_buffer, 0);
+		CmdPushConstants(&renderer->present_cmd, renderer->my_pipeline_layout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(args), &args);
 		CmdDrawIndexed(&renderer->present_cmd, 3, 1, 0, 0, 0);
 	}
 	CmdEndRendering(&renderer->present_cmd);

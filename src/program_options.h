@@ -6,7 +6,7 @@
 #define DEFAULT_WINDOW_HEIGHT     720
 
 #define PERMANENT_MEMORY_SIZE     Megabytes(32)
-#define FRAME_MEMORY_SIZE         Megabytes(32)
+#define TRANSIENT_MEMORY_SIZE     Megabytes(32)
 #define SCRATCH_MEMORY_SIZE       Megabytes(16)
 
 #define APP_VERSION_VARIANT       0

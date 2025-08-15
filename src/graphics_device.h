@@ -311,7 +311,6 @@ typedef struct GraphicsDevice
 	VmaAllocator vma_allocator;
 	
 	VkDebugUtilsMessengerEXT debug_messenger;
+	b32 has_validation_layers;
 }
 GraphicsDevice;
-
-global GraphicsDevice *graphics_device = 0;

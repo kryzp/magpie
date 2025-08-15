@@ -1,6 +1,6 @@
 # Magpie
 
-It's a (vulkan) renderer written in C.
+It's a (vulkan) renderer written in C. It's got *complete* hot code reloading. That means the C code itself, not just shaders. :)
 
 I've noticed that most, if not *all* beginner tutorials to Vulkan are kind of terrible for learning what actual Vulkan rendering code looks like.
 They often just have long blocks of endless functions doing arbitrary things with very little abstraction and a completely fixed render loop - they show you how to make a coloured rotating cube, but good luck trying to make the program do anything else (looking at you, [vulkan-tutorial](https://vulkan-tutorial.com/), though regardless it's a good start for learning how Vulkan is fundamentally designed, even if it is pretty outdated by now (you really don't want to be going through the pain of framebuffers and renderpasses on your first engine, they're practically only used in mobile where they actually have a performance benefit)).

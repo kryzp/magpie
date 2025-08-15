@@ -63,5 +63,15 @@ typedef struct Renderer
 	
 	RenderPassDef internal_render_passes[MAX_RENDER_PASSES];
 	ComputePassDef internal_compute_passes[MAX_COMPUTE_PASSES];
+	
+	VertexFormat my_vertex_format;
+	GPUBuffer my_vertex_buffer;
+	GPUBuffer my_index_buffer;
+	ShaderProgram my_shader_program;
+	VkPipeline my_pipeline;
+	VkPipelineLayout my_pipeline_layout;
+	Image my_image;
+	ImageView my_image_view;
+	Sampler my_sampler;
 }
 Renderer;

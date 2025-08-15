@@ -4,7 +4,7 @@ do { \
 VkResult _vk_check_result = _func_call; \
 if(_vk_check_result != VK_SUCCESS) { \
 DebugLogCrash(_error_msg); \
-/*Assert(0 && _error_msg ": %d", _vk_check_result);*/ \
+/*DebugLogCrash(_error_msg ": %d", _vk_check_result);*/ \
 } \
 } while(0)
 
@@ -28,7 +28,7 @@ FindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 		
 	}
 	
-	Assert(0 && "Failed to find supported format.");
+	DebugLogCrash("Failed to find supported format.");
 	
 	return VK_FORMAT_MAX_ENUM;
 }
@@ -36,7 +36,7 @@ FindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 internal VkFormat
 FindGraphicsDepthFormat(VkPhysicalDevice physical_device)
 {
-	VkFormat candidates[] = {
+	static VkFormat candidates[] = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
 		VK_FORMAT_D24_UNORM_S8_UINT
 	};
@@ -83,7 +83,7 @@ FindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
 		return VK_SAMPLE_COUNT_1_BIT;
 	}
 	
-	Assert(0 && "Could not find a maximum usable sample count!");
+	DebugLogCrash("Could not find a maximum usable sample count!");
 	
 	return VK_SAMPLE_COUNT_1_BIT;
 }
@@ -149,12 +149,12 @@ GetInstanceExtensions(MemoryArena *arena, Platform *platform, u32 *extension_cou
 	
 	if(!names)
 	{
-		Assert(0 && "Unable to get instance extension count.");
+		DebugLogCrash("Unable to get instance extension count.");
 	}
 	
 	u32 extra_extension_count = 3;
 	
-#ifdef PLATFORM_MACOS
+#ifdef __APPLE__
 	extra_extension_count += 2;
 #endif
 	
@@ -169,7 +169,7 @@ GetInstanceExtensions(MemoryArena *arena, Platform *platform, u32 *extension_cou
 	extensions[*extension_count + 1] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 	extensions[*extension_count + 2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 	
-#ifdef PLATFORM_MACOS
+#ifdef __APPLE__
 	extensions[*extension_count + 3] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 	extensions[*extension_count + 4] = "VK_EXT_metal_surface";
 #endif
@@ -674,7 +674,7 @@ ShaderStageDestroy(ShaderStage *stage)
 internal void
 BindlessResourcesInit(BindlessResources *resources)
 {
-	VkDescriptorPoolSize pool_sizes[] = {
+	static VkDescriptorPoolSize pool_sizes[] = {
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
 	};
 	
@@ -837,12 +837,6 @@ AddVertexAttribute(VertexFormat *vertex, VkFormat format, u64 offset)
 	vertex->attribute_count++;
 }
 
-global VkDynamicState GRAPHICS_PIPELINE_DYNAMIC_STATES[] = {
-	VK_DYNAMIC_STATE_VIEWPORT,
-	VK_DYNAMIC_STATE_SCISSOR,
-	//VK_DYNAMIC_STATE_BLEND_CONSTANTS // TODO(kp): Add dynamic blend constants.
-};
-
 internal VkPipelineLayout
 PipelineLayoutCreate(ShaderProgram *program)
 {
@@ -1001,6 +995,12 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	depth_stencil_state_create_info.back.writeMask = definition->depth_stencil_state.stencil_back.write_mask;
 	depth_stencil_state_create_info.back.reference = definition->depth_stencil_state.stencil_back.reference;
 	
+	static VkDynamicState GRAPHICS_PIPELINE_DYNAMIC_STATES[] = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+		//VK_DYNAMIC_STATE_BLEND_CONSTANTS // TODO(kp): Add dynamic blend constants.
+	};
+	
 	VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {0};
 	dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamic_state_create_info.dynamicStateCount = ArraySize(GRAPHICS_PIPELINE_DYNAMIC_STATES);
@@ -1129,7 +1129,7 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 	
 	if(image_count <= 0)
 	{
-		Assert(0 && "Failed to find any images in swapchain!");
+		DebugLogCrash("Failed to find any images in swapchain!");
 	}
 	
 	swapchain->swapchain_image_count = image_count;
@@ -1193,11 +1193,11 @@ SwapchainAcquireNextImage(Swapchain *swapchain)
 	
 	if(result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		Assert(0 && "TODO We need to rebuild the entire swapchain here.");
+		DebugLogCrash("TODO We need to rebuild the entire swapchain here.");
 	}
 	else if(result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 	{
-		Assert(0 && "Failed to acquire next image in swapchain.");
+		DebugLogCrash("Failed to acquire next image in swapchain.");
 	}
 }
 
@@ -1765,18 +1765,8 @@ CommandPoolReset(CommandPool *pool)
 	pool->free_index = 0;
 }
 
-global b32 graphics_has_validation_layers = 0;
-
 global const char *GRAPHICS_VALIDATION_LAYERS[] = {
 	"VK_LAYER_KHRONOS_validation"
-};
-
-global const char *GRAPHICS_DEVICE_EXTENSIONS[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-#ifdef PLATFORM_MACOS
-	"VK_KHR_portability_subset"
-#endif
 };
 
 internal b32
@@ -1787,7 +1777,7 @@ CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkPhysicalDevice
 	
 	if(extension_count <= 0)
 	{
-		Assert(0 && "Failed to find any device extension properties!");
+		DebugLogCrash("Failed to find any device extension properties!");
 	}
 	
 	ScratchArena scratch = GetScratch(arena);
@@ -1878,7 +1868,7 @@ CheckForValidationLayerSupport(MemoryArena *arena)
 	
 	for(i32 i = 0; i < ArraySize(GRAPHICS_VALIDATION_LAYERS); i++)
 	{
-		bool has_layer = 0;
+		b32 has_layer = 0;
 		const char *layer_name_0 = GRAPHICS_VALIDATION_LAYERS[i];
 		
 		for(i32 j = 0; j < layer_count; j++)
@@ -1934,10 +1924,18 @@ CreateGraphicsDeviceDebugUtilsMessengerExt(VkInstance instance,
 }
 
 internal void
-GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
+GraphicsDeviceHotReload()
 {
-	graphics_device = MemoryArenaPush(arena, sizeof(GraphicsDevice));
+	volkInitialize();
+	volkLoadInstance(graphics_device->instance);
+	volkLoadDevice(graphics_device->device);
 	
+	GraphicsWaitIdle();
+}
+
+internal void
+GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
+{
 	VkApplicationInfo app_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = WINDOW_TITLE,
@@ -1978,9 +1976,9 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	debug_create_info.pfnUserCallback = GraphicsVulkanDebugCallback;
 	debug_create_info.pUserData = 0;
 	
-	graphics_has_validation_layers = CheckForValidationLayerSupport(scratch.arena);
+	graphics_device->has_validation_layers = CheckForValidationLayerSupport(scratch.arena);
 	
-	if(graphics_has_validation_layers)
+	if(graphics_device->has_validation_layers)
 	{
 		DebugLog("Validation layer support verified.");
 		
@@ -1997,7 +1995,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 		instance_create_info.pNext = 0;
 	}
 	
-#ifdef PLATFORM_MACOS
+#ifdef __APPLE__
 	instance_create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 	
@@ -2006,7 +2004,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	
 	volkLoadInstance(graphics_device->instance);
 	
-	if(graphics_has_validation_layers)
+	if(graphics_device->has_validation_layers)
 	{
 		VK_CHECK(CreateGraphicsDeviceDebugUtilsMessengerExt(graphics_device->instance,
 															&debug_create_info,
@@ -2025,7 +2023,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	
 	if(device_count <= 0)
 	{
-		Assert(0 && "Failed to find GPUs with Vulkan support.");
+		DebugLogCrash("Failed to find GPUs with Vulkan support.");
 	}
 	
 	VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
@@ -2077,7 +2075,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 		
 		if(!graphics_device->physical_device)
 		{
-			Assert(0 && "Unable to find a suitable GPU.");
+			DebugLogCrash("Unable to find a suitable GPU.");
 		}
 		
 		DebugLog("Selected a suitable GPU: %d", selected_index);
@@ -2091,7 +2089,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	
 	if(queue_family_count <= 0)
 	{
-		Assert(0 && "Failed to find any queue families.");
+		DebugLogCrash("Failed to find any queue families.");
 	}
 	
 	VkQueueFamilyProperties *queue_families = MemoryArenaPush(scratch.arena, sizeof(VkQueueFamilyProperties) * queue_family_count);
@@ -2151,6 +2149,14 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	vulkan13_features.synchronization2 = VK_TRUE;
 	vulkan13_features.pNext = &vulkan12_features;
 	
+	static const char *GRAPHICS_DEVICE_EXTENSIONS[] = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+#ifdef __APPLE__
+		"VK_KHR_portability_subset"
+#endif
+	};
+	
 	VkDeviceCreateInfo device_create_info = {0};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	device_create_info.queueCreateInfoCount = 1;
@@ -2162,7 +2168,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	device_create_info.pEnabledFeatures = &graphics_device->physical_device_features.features;
 	device_create_info.pNext = &vulkan13_features;
 	
-	if(graphics_has_validation_layers)
+	if(graphics_device->has_validation_layers)
 	{
 		device_create_info.enabledLayerCount = ArraySize(GRAPHICS_VALIDATION_LAYERS);
 		device_create_info.ppEnabledLayerNames = GRAPHICS_VALIDATION_LAYERS;
@@ -2396,11 +2402,11 @@ EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 	
 	if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		Assert(0 && "TODO We need to rebuild the entire swapchain here.");
+		DebugLogCrash("TODO We need to rebuild the entire swapchain here.");
 	}
 	else if(result != VK_SUCCESS)
 	{
-		Assert(0 && "Failed to present swapchain image.");
+		DebugLogCrash("Failed to present swapchain image.");
 	}
 	
 	graphics_device->current_frame_index = (graphics_device->current_frame_index + 1) % FRAMES_IN_FLIGHT;
