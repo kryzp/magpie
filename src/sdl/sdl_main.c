@@ -29,13 +29,13 @@ CreateVulkanSurface_SDL3(void *instance, void *surface)
 internal void
 ReconnectAllGamepads()
 {
-	// TODO
+	// TODO(kp)
 }
 
 internal void
 CloseAllGamepads()
 {
-	// TODO
+	// TODO(kp)
 }
 
 i32

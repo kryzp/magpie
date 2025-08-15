@@ -1,13 +1,25 @@
+#include "assert.h"
+
+#define STBI_ASSERT Assert
+#define STBIW_ASSERT Assert
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ext/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "ext/stb_image_write.h"
+
 #include "arena.h"
 #include "arena.c"
 
-#include "assert.h"
 #include "graphics_device.h"
+#include "assets.h"
 #include "renderer.h"
 #include "app.h"
 #include "scratch.h"
 
 #include "graphics_device.c"
+#include "assets.c"
 #include "renderer.c"
 
 internal void

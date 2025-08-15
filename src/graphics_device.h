@@ -83,13 +83,27 @@ typedef struct ShaderProgram
 }
 ShaderProgram;
 
-typedef struct GPUResources
+#define BINDLESS_COMBINED_IMAGE_BINDING 0
+#define BINDLESS_MAX_WRITES_PER_FRAME 16
+
+typedef struct BindlessCombinedImageUpdate
+{
+	u32 slot;
+	ImageView *view;
+	Sampler *sampler;
+}
+BindlessCombinedImageUpdate;
+
+typedef struct BindlessResources
 {
 	VkDescriptorSet bindless_set;
 	VkDescriptorSetLayout bindless_layout;
 	VkDescriptorPool bindless_pool;
+	
+	u32 n_combined_image_updates;
+	BindlessCombinedImageUpdate combined_image_updates[BINDLESS_MAX_WRITES_PER_FRAME];
 }
-GPUResources;
+BindlessResources;
 
 #define MAX_VERTEX_ATTRIBUTES 32
 
@@ -281,7 +295,7 @@ typedef struct GraphicsDevice
 	u32 current_frame_index;
 	
 	Swapchain swapchain;
-	GPUResources resources;
+	BindlessResources bindless;
 	
 	VkQueue graphics_queue;
 	u32 graphics_queue_family_index;

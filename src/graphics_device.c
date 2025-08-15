@@ -279,9 +279,8 @@ ClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 	return MinValue(mipmaps, 1u + (u32)(Log2F((f32)MaxValue(w, MaxValue(h, d)))));
 }
 
-internal void
-ImageAllocate(Image *image,
-			  u32 width, u32 height, u32 depth,
+internal Image
+ImageAllocate(u32 width, u32 height, u32 depth,
 			  VkFormat format,
 			  VkImageViewType type,
 			  VkImageTiling tiling,
@@ -290,43 +289,45 @@ ImageAllocate(Image *image,
 			  b32 is_transient,
 			  b32 is_storage)
 {
-	image->width = width;
-	image->height = height;
-	image->depth = depth;
+	Image image = {0};
 	
-	image->format = format;
-	image->type = type;
-	image->tiling = tiling;
+	image.width = width;
+	image.height = height;
+	image.depth = depth;
 	
-	image->mipmap_count = ClampMipmapCount(mipmaps, width, height, depth);
-	image->samples = samples;
+	image.format = format;
+	image.type = type;
+	image.tiling = tiling;
+	
+	image.mipmap_count = ClampMipmapCount(mipmaps, width, height, depth);
+	image.samples = samples;
 	
 	if(is_transient)
 	{
-		image->usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		image.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	}
 	else
 	{
-		image->usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		image.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 	
 	if(is_storage)
 	{
-		image->usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+		image.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
 	
-	if(ImageIsDepth(image))
+	if(ImageIsDepth(&image))
 	{
-		image->usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		image.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
 	else
 	{
-		image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		image.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 	
 	VkImageType image_type = VK_IMAGE_TYPE_MAX_ENUM;
 	
-	switch(image->type)
+	switch(image.type)
 	{
 		case VK_IMAGE_VIEW_TYPE_1D:
 		case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
@@ -352,7 +353,7 @@ ImageAllocate(Image *image,
 		
 		default:
 		{
-			DebugLogCrash("Failed to find VkImageType given VkImageViewType: %d", image->type);
+			DebugLogCrash("Failed to find VkImageType given VkImageViewType: %d", image.type);
 		}
 		break;
 	}
@@ -360,20 +361,20 @@ ImageAllocate(Image *image,
 	VkImageCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	create_info.imageType = image_type;
-	create_info.extent.width = image->width;
-	create_info.extent.height = image->height;
-	create_info.extent.depth = image->depth;
-	create_info.mipLevels = image->mipmap_count;
-	create_info.arrayLayers = GetImageFaceCount(image);
-	create_info.format = image->format;
-	create_info.tiling = image->tiling;
-	create_info.usage = image->usage;
+	create_info.extent.width = image.width;
+	create_info.extent.height = image.height;
+	create_info.extent.depth = image.depth;
+	create_info.mipLevels = image.mipmap_count;
+	create_info.arrayLayers = GetImageFaceCount(&image);
+	create_info.format = image.format;
+	create_info.tiling = image.tiling;
+	create_info.usage = image.usage;
 	create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	create_info.samples = image->samples;
+	create_info.samples = image.samples;
 	create_info.flags = 0;
 	
-	if(ImageIsCubemap(image))
+	if(ImageIsCubemap(&image))
 	{
 		create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 	}
@@ -383,8 +384,10 @@ ImageAllocate(Image *image,
 	vma_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	vma_alloc_info.priority = 1.f;
 	
-	VK_CHECK(vmaCreateImage(graphics_device->vma_allocator, &create_info, &vma_alloc_info, &image->image, &image->allocation, &image->allocation_info),
+	VK_CHECK(vmaCreateImage(graphics_device->vma_allocator, &create_info, &vma_alloc_info, &image.image, &image.allocation, &image.allocation_info),
 			 "Failed to create image");
+	
+	return image;
 }
 
 internal void
@@ -488,9 +491,8 @@ ImageViewDestroy(ImageView *view)
 	view->view = VK_NULL_HANDLE;
 }
 
-internal void
-SamplerInit(Sampler *sampler,
-			VkFilter filter,
+internal Sampler
+SamplerInit(VkFilter filter,
 			VkSamplerAddressMode wrap_x,
 			VkSamplerAddressMode wrap_y,
 			VkSamplerAddressMode wrap_z,
@@ -516,20 +518,28 @@ SamplerInit(Sampler *sampler,
 	create_info.minLod = 0.f;
 	create_info.maxLod = VK_LOD_CLAMP_NONE;
 	
-	VK_CHECK(vkCreateSampler(graphics_device->device, &create_info, 0, &sampler->handle),
+	Sampler sampler = {0};
+	
+	sampler.filter = filter;
+	sampler.wrap_x = wrap_x;
+	sampler.wrap_y = wrap_y;
+	sampler.wrap_z = wrap_z;
+	sampler.border_colour = border_colour;
+	
+	VK_CHECK(vkCreateSampler(graphics_device->device, &create_info, 0, &sampler.handle),
 			 "Failed to create texture sampler.");
+	
+	return sampler;
 }
 
-internal void
-SamplerInitFilter(Sampler *sampler,
-				  VkFilter filter)
+internal Sampler
+SamplerInitFilter(VkFilter filter)
 {
-	SamplerInit(sampler,
-				filter,
-				VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+	return SamplerInit(filter,
+					   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					   VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 }
 
 internal void
@@ -563,25 +573,26 @@ GPUBufferWrite(GPUBuffer *buffer, void *src, u64 length, u64 offset)
 	vmaCopyMemoryToAllocation(graphics_device->vma_allocator, src, buffer->allocation, offset, length);
 }
 
-internal void
-GPUBufferAllocate(GPUBuffer *buffer,
-				  VkBufferUsageFlags usage,
+internal GPUBuffer
+GPUBufferAllocate(VkBufferUsageFlags usage,
 				  VmaAllocationCreateFlagBits flags,
 				  u64 size)
 {
-	buffer->usage = usage;
-	buffer->size = size;
-	buffer->allocation_flags = flags;
+	GPUBuffer buffer = {0};
 	
-	if(GPUBufferIsStorage(buffer))
+	buffer.usage = usage;
+	buffer.size = size;
+	buffer.allocation_flags = flags;
+	
+	if(GPUBufferIsStorage(&buffer))
 	{
-		buffer->usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		buffer.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 	}
 	
 	VkBufferCreateInfo buffer_create_info = {0};
 	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_create_info.size = buffer->size;
-	buffer_create_info.usage = buffer->usage;
+	buffer_create_info.size = buffer.size;
+	buffer_create_info.usage = buffer.usage;
 	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	buffer_create_info.queueFamilyIndexCount = 0;//queueFamilyIndices.size();
 	buffer_create_info.pQueueFamilyIndices = 0;//queueFamilyIndices.data();
@@ -590,17 +601,19 @@ GPUBufferAllocate(GPUBuffer *buffer,
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.flags = flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 	
-	VK_CHECK(vmaCreateBuffer(graphics_device->vma_allocator, &buffer_create_info, &vma_alloc_info, &buffer->handle, &buffer->allocation, &buffer->allocation_info),
+	VK_CHECK(vmaCreateBuffer(graphics_device->vma_allocator, &buffer_create_info, &vma_alloc_info, &buffer.handle, &buffer.allocation, &buffer.allocation_info),
 			 "Failed to create buffer");
 	
-	if(GPUBufferIsStorage(buffer))
+	if(GPUBufferIsStorage(&buffer))
 	{
 		VkBufferDeviceAddressInfo address_info = {0};
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-		address_info.buffer = buffer->handle;
+		address_info.buffer = buffer.handle;
 		
-		buffer->device_address = vkGetBufferDeviceAddress(graphics_device->device, &address_info);
+		buffer.device_address = vkGetBufferDeviceAddress(graphics_device->device, &address_info);
 	}
+	
+	return buffer;
 }
 
 internal void
@@ -659,7 +672,7 @@ ShaderStageDestroy(ShaderStage *stage)
 #define MAX_BINDLESS_RESOURCES 512
 
 internal void
-GPUResourcesInit(GPUResources *resources)
+BindlessResourcesInit(BindlessResources *resources)
 {
 	VkDescriptorPoolSize pool_sizes[] = {
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
@@ -685,7 +698,7 @@ GPUResourcesInit(GPUResources *resources)
 	VkDescriptorSetLayoutBinding texture_binding = {0};
 	texture_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	texture_binding.descriptorCount = MAX_BINDLESS_RESOURCES;
-	texture_binding.binding = 0;
+	texture_binding.binding = BINDLESS_COMBINED_IMAGE_BINDING;
 	texture_binding.stageFlags = VK_SHADER_STAGE_ALL;
 	texture_binding.pImmutableSamplers = 0;
 	
@@ -727,10 +740,65 @@ GPUResourcesInit(GPUResources *resources)
 }
 
 internal void
-GPUResourcesDestroy(GPUResources *resources)
+BindlessResourcesDestroy(BindlessResources *resources)
 {
 	vkDestroyDescriptorSetLayout(graphics_device->device, resources->bindless_layout, 0);
 	vkDestroyDescriptorPool(graphics_device->device, resources->bindless_pool, 0);
+}
+
+internal void
+BindlessResourcesBindCombinedImage(BindlessResources *resources,
+								   u32 slot, ImageView *view, Sampler *sampler)
+{
+	BindlessCombinedImageUpdate *update = resources->combined_image_updates + resources->n_combined_image_updates;
+	update->slot = slot;
+	update->view = view;
+	update->sampler = sampler;
+	
+	resources->n_combined_image_updates++;
+}
+
+internal void
+BindlessResourcesUpdate(BindlessResources *resources)
+{
+	VkWriteDescriptorSet descriptor_writes[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
+	VkDescriptorImageInfo image_infos[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
+	
+	for(i32 i = 0; i < resources->n_combined_image_updates; i++)
+	{
+		BindlessCombinedImageUpdate *update = resources->combined_image_updates + i;
+		
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		
+		if(ImageIsDepth(update->view->image))
+		{
+			layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		}
+		else
+		{
+			layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		
+		VkDescriptorImageInfo *image_info = image_infos + i;
+		image_info->imageView = update->view->view;
+		image_info->imageLayout = layout;
+		image_info->sampler = update->sampler->handle;
+		
+		VkWriteDescriptorSet *write = descriptor_writes + i;
+		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write->descriptorCount = 1;
+		write->dstArrayElement = update->slot;
+		write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write->dstSet = resources->bindless_set;
+		write->dstBinding = BINDLESS_COMBINED_IMAGE_BINDING;
+		write->pImageInfo = image_info;
+	}
+	
+	if(resources->n_combined_image_updates > 0)
+	{
+		vkUpdateDescriptorSets(graphics_device->device, resources->n_combined_image_updates, descriptor_writes, 0, 0);
+		resources->n_combined_image_updates = 0;
+	}
 }
 
 internal void
@@ -1474,11 +1542,11 @@ CmdBlitImage(CommandBuffer *cmd,
 				   filter);
 }
 
+// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+// TODO(kp): Add Assert(...).
 internal void
 CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 {
-	Assert(image->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && "Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.");
-	
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	barrier.image = image->image;
@@ -1586,6 +1654,44 @@ CmdCopyBufferToBuffer(CommandBuffer *cmd,
 					dst->handle,
 					region_count,
 					regions);
+}
+
+// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+// TODO(kp): Add Assert(...).
+internal void
+CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
+								GPUBuffer *buffer,
+								Image *image,
+								u32 region_count,
+								VkBufferImageCopy *regions)
+{
+	vkCmdCopyBufferToImage(cmd->handle,
+						   buffer->handle,
+						   image->image,
+						   image->layout,
+						   region_count,
+						   regions);
+}
+
+// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+// TODO(kp): Add Assert(...).
+internal void
+CmdCopyBufferToImage(CommandBuffer *cmd,
+					 GPUBuffer *buffer,
+					 Image *image)
+{
+	VkBufferImageCopy region = {0};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = (VkOffset3D){ 0, 0, 0 };
+	region.imageExtent = (VkExtent3D){ image->width, image->height, 1 };
+	
+	CmdCopyBufferToImageMultiRegion(cmd, buffer, image, 1, &region);
 }
 
 internal void
@@ -2161,7 +2267,7 @@ GraphicsDeviceInit(MemoryArena *arena, Platform *platform)
 	DebugLog("Created graphics pipeline process cache.");
 	
 	SwapchainInit(&graphics_device->swapchain, arena, platform);
-	GPUResourcesInit(&graphics_device->resources);
+	BindlessResourcesInit(&graphics_device->bindless);
 	
 	VkSemaphoreCreateInfo semaphore_create_info = {0};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -2196,7 +2302,7 @@ GraphicsDeviceDestroy()
 		vkDestroySemaphore(graphics_device->device, graphics_device->frames[i].image_available_semaphore, 0);
 	}
 	
-	GPUResourcesDestroy(&graphics_device->resources);
+	BindlessResourcesDestroy(&graphics_device->bindless);
 	SwapchainDestroy(&graphics_device->swapchain);
 	
 	vkDestroyPipelineCache(graphics_device->device, graphics_device->pipeline_process_cache, 0);
@@ -2226,6 +2332,8 @@ BeginGraphicsPresent()
 internal void
 EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 {
+	BindlessResourcesUpdate(&graphics_device->bindless);
+	
 	CmdTransitionImageLayout(in_flight_cmd,
 							 GetCurrentSwapchainImage(&graphics_device->swapchain),
 							 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
