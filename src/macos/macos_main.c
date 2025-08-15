@@ -1,4 +1,5 @@
 #include <dlfcn.h>
+#include <sys/stat.h>
 #include <stdio.h>
 
 #include <SDL3/SDL.h>
@@ -35,16 +36,7 @@ LoadAppCode(MacOSAppCode *app_code)
 {
 	app_code->is_valid = 0;
 	
-	char temp_path[64] = {0};
-	snprintf(temp_path, sizeof(temp_path), "build/app_live_%lld.dylib", (u64)time(NULL));
-	
-    if(copyfile("build/app.dylib", temp_path, NULL, COPYFILE_ALL) != 0)
-	{
-        perror("copyfile");
-		DebugLogCrash("Failed to copy hot reload.");
-    }
-	
-	app_code->handle = dlopen(temp_path, RTLD_NOW | RTLD_LOCAL);
+	app_code->handle = dlopen("build/app.dylib", RTLD_NOW | RTLD_LOCAL);
 	
 	if(app_code->handle)
 	{
@@ -168,23 +160,22 @@ main(void)
 	MacOSAppCode app_code = {0};
 	LoadAppCode(&app_code);
 	
-	u64 hot_reload_counter = 0;
+	time_t last_reload = 0;
 	
 	while(!global_platform.exit)
 	{
-		if(hot_reload_counter > 500)
+		struct stat st_reload = {0};
+		stat("build/app.dylib", &st_reload);
+		
+		if(st_reload.st_mtime != last_reload && !global_platform.initializing)
 		{
-			printf("Reloading...\n");
-			
 			UnloadAppCode(&app_code);
 			LoadAppCode(&app_code);
 			
 			app_code.AppHotReload(&global_platform);
 			
-			hot_reload_counter = 0;
+			last_reload = st_reload.st_mtime;
 		}
-		
-		hot_reload_counter++;
 		
 		SDL_Event ev = {0};
 		
