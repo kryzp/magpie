@@ -46,7 +46,8 @@ LoadAppCode(MacOSAppCode *app_code)
 		app_code->AppBeforeHotReload = dlsym(app_code->handle, "AppBeforeHotReload");
 		app_code->AppAfterHotReload  = dlsym(app_code->handle, "AppAfterHotReload");
 		
-		app_code->is_valid = (app_code->AppUpdate &&
+		app_code->is_valid = (app_code->AppInit &&
+							  app_code->AppUpdate &&
 							  app_code->AppDestroy &&
 							  app_code->AppAfterHotReload &&
 							  app_code->AppBeforeHotReload);
