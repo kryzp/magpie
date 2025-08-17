@@ -9,8 +9,8 @@ RenderPassType;
 typedef struct RenderAttachment
 {
 	ImageView *view;
-	ImageView *resolve;
 	
+	ImageView *resolve;
 	VkResolveModeFlagBits resolve_mode;
 	
 	VkAttachmentLoadOp load_op;
@@ -22,56 +22,71 @@ typedef struct RenderAttachment
 }
 RenderAttachment;
 
+typedef struct Renderer Renderer;
+
 typedef struct RenderPassDef
 {
-	void (*Record)(CommandBuffer *cmd, const RenderInfo *info);
+	void (*Record)(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info);
 	
 	u32 attachment_count;
 	RenderAttachment attachments[32];
 	
 	u32 view_count;
 	ImageView views[32];
+	
+	u32 view_mask;
 }
 RenderPassDef;
 
 typedef struct ComputePassDef
 {
-	void (*Record)(CommandBuffer *cmd);
+	void (*Record)(Renderer *renderer, CommandBuffer *render_info);
 	
 	u32 storage_view_count;
 	ImageView *storage_views;
 }
 ComputePassDef;
 
-typedef struct RenderPassHandle
+typedef struct Mesh
 {
-	RenderPassType type;
-	u32 index;
+	VertexFormat *vertex_format;
+	
+	GPUBuffer vertex_buffer;
+	GPUBuffer index_buffer;
+	
+	u32 vertex_count;
+	u32 index_count;
 }
-RenderPassHandle;
-
-#define MAX_RENDER_PASSES 32
-#define MAX_COMPUTE_PASSES 32
-#define MAX_PASSES_TOTAL (MAX_RENDER_PASSES + MAX_COMPUTE_PASSES)
+Mesh;
 
 typedef struct Renderer
 {
 	CommandBuffer present_cmd;
 	
-	u32 render_pass_count;
-	RenderPassHandle passes[MAX_PASSES_TOTAL];
+	u32 pass_count;
 	
-	RenderPassDef internal_render_passes[MAX_RENDER_PASSES];
-	ComputePassDef internal_compute_passes[MAX_COMPUTE_PASSES];
+	struct
+	{
+		RenderPassType type;
+		u32 index;
+	}
+	passes[32];
 	
-	VertexFormat my_vertex_format;
-	GPUBuffer my_vertex_buffer;
-	GPUBuffer my_index_buffer;
-	ShaderProgram my_shader_program;
-	VkPipeline my_pipeline;
-	VkPipelineLayout my_pipeline_layout;
-	Image my_image;
-	ImageView my_image_view;
-	Sampler my_sampler;
+	u32 internal_render_pass_count;
+	RenderPassDef internal_render_passes[32];
+	
+	u32 internal_compute_pass_count;
+	ComputePassDef internal_compute_passes[32];
+	
+	VertexFormat environment_cube_vertex_format;
+	Mesh environment_cube_mesh;
+	ShaderProgram environment_map_program;
+	Image environment_map_hdr_image;
+	ImageView environment_map_hdr_image_view;
+	Image environment_map_cubemap;
+	ImageView environment_map_cubemap_view;
+	Sampler environment_map_sampler;
+	VkPipelineLayout environment_map_pipeline_layout;
+	VkPipeline environment_map_pipeline;
 }
 Renderer;

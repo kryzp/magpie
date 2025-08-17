@@ -65,7 +65,7 @@ if ! pgrep -x mgp_macos > /dev/null; then
 		$libs \
 		$rpaths \
 		-lSDL3 \
-		-o mgp_macos
+		-o magpie_macos
 fi
 
 cd - > /dev/null

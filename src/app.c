@@ -38,28 +38,27 @@ AppResetGlobals(Platform *p)
 }
 
 void
-AppUpdate(Platform *p)
+AppInit(Platform *p)
 {
 	AppResetGlobals(p);
 	
-	if(platform->initializing)
-	{
-		MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
-		
-		app = MemoryArenaPush(&permanent_arena, sizeof(App));
-		
-		app->permanent_arena = permanent_arena;
-		app->frame_arena = MemoryArenaInit(platform->transient_memory, platform->transient_memory_size);
-		
-		app->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
-		app->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
-		
-		GraphicsDeviceInit(platform, &app->permanent_arena);
-		RendererInit(&app->renderer, &app->permanent_arena);
-		
-		platform->initializing = 0;
-	}
+	MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
 	
+	app = MemoryArenaPush(&permanent_arena, sizeof(App));
+	
+	app->permanent_arena = permanent_arena;
+	app->frame_arena = MemoryArenaInit(platform->transient_memory, platform->transient_memory_size);
+	
+	app->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
+	app->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
+	
+	GraphicsDeviceInit(platform, &app->permanent_arena);
+	RendererInit(&app->renderer, &app->permanent_arena);
+}
+
+void
+AppUpdate(Platform *p)
+{
 	MemoryArenaClear(&app->frame_arena);
 	MemoryArenaClear(&app->scratch_arenas[0]);
 	MemoryArenaClear(&app->scratch_arenas[1]);
@@ -100,8 +99,14 @@ AppDestroy(Platform *p)
 }
 
 void
-AppHotReload(Platform *p)
+AppBeforeHotReload(Platform *p)
+{
+	GraphicsDeviceBeforeHotReload();
+}
+
+void
+AppAfterHotReload(Platform *p)
 {
 	AppResetGlobals(p);
-	GraphicsDeviceHotReload();
+	GraphicsDeviceAfterHotReload();
 }

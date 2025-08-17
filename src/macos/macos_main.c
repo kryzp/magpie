@@ -10,9 +10,7 @@
 #include "program_options.h"
 #include "platform.h"
 
-internal void AppUpdateStub(Platform *platform) { }
-internal void AppDestroyStub(Platform *platform) { }
-internal void AppHotReloadStub(Platform *platform) { }
+internal void AppNullStub(Platform *platform) { }
 
 global SDL_Window *window = 0;
 global Platform global_platform = {0};
@@ -23,9 +21,11 @@ typedef struct MacOSAppCode
 	void *handle;
 	b32 is_valid;
 	
+	void (*AppInit)(Platform *);
 	void (*AppUpdate)(Platform *);
 	void (*AppDestroy)(Platform *);
-	void (*AppHotReload)(Platform *);
+	void (*AppBeforeHotReload)(Platform *);
+	void (*AppAfterHotReload)(Platform *);
 }
 MacOSAppCode;
 
@@ -40,22 +40,27 @@ LoadAppCode(MacOSAppCode *app_code)
 	
 	if(app_code->handle)
 	{
-		app_code->AppUpdate    = dlsym(app_code->handle, "AppUpdate");
-		app_code->AppDestroy   = dlsym(app_code->handle, "AppDestroy");
-		app_code->AppHotReload = dlsym(app_code->handle, "AppHotReload");
+		app_code->AppInit            = dlsym(app_code->handle, "AppInit");
+		app_code->AppUpdate          = dlsym(app_code->handle, "AppUpdate");
+		app_code->AppDestroy         = dlsym(app_code->handle, "AppDestroy");
+		app_code->AppBeforeHotReload = dlsym(app_code->handle, "AppBeforeHotReload");
+		app_code->AppAfterHotReload  = dlsym(app_code->handle, "AppAfterHotReload");
 		
 		app_code->is_valid = (app_code->AppUpdate &&
 							  app_code->AppDestroy &&
-							  app_code->AppHotReload);
+							  app_code->AppAfterHotReload &&
+							  app_code->AppBeforeHotReload);
 	}
 }
 
 internal void
 UnloadAppCode(MacOSAppCode *app_code)
 {
-	app_code->AppUpdate = AppUpdateStub;
-	app_code->AppDestroy = AppDestroyStub;
-	app_code->AppHotReload = AppHotReloadStub;
+	app_code->AppInit = AppNullStub;
+	app_code->AppUpdate = AppNullStub;
+	app_code->AppDestroy = AppNullStub;
+	app_code->AppBeforeHotReload = AppNullStub;
+	app_code->AppAfterHotReload = AppNullStub;
 	
 	app_code->is_valid = 0;
 	
@@ -66,14 +71,8 @@ UnloadAppCode(MacOSAppCode *app_code)
 	}
 }
 
-internal const char * const*
-GetVulkanInstanceExtensions_SDL3(u32 *count)
-{
-	return SDL_Vulkan_GetInstanceExtensions(count);
-}
-
 internal b32
-CreateVulkanSurface_SDL3(void *instance, void *surface)
+CreateVulkanSurface(void *instance, void *surface)
 {
 	return SDL_Vulkan_CreateSurface(window, (VkInstance)instance, 0, (VkSurfaceKHR *)surface);
 }
@@ -146,11 +145,10 @@ main(void)
 		global_platform.cursor_visible = 1;
 		global_platform.cursor_locked = 0;
 		
-		global_platform.initializing = 1;
 		global_platform.exit = 0;
 		
-		global_platform.GetVulkanInstanceExtensions = GetVulkanInstanceExtensions_SDL3;
-		global_platform.CreateVulkanSurface = CreateVulkanSurface_SDL3;
+		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
+		global_platform.CreateVulkanSurface = CreateVulkanSurface;
 		
 		global_platform.GetTicks = SDL_GetTicks;
 		global_platform.GetPerformanceCounter = SDL_GetPerformanceCounter;
@@ -162,27 +160,14 @@ main(void)
 	
 	time_t last_reload = 0;
 	
+	app_code.AppInit(&global_platform);
+	
 	while(!global_platform.exit)
 	{
-		struct stat st_reload = {0};
-		stat("build/app.dylib", &st_reload);
-		
-		if(st_reload.st_mtime != last_reload && !global_platform.initializing)
-		{
-			UnloadAppCode(&app_code);
-			LoadAppCode(&app_code);
-			
-			app_code.AppHotReload(&global_platform);
-			
-			last_reload = st_reload.st_mtime;
-		}
-		
 		SDL_Event ev = {0};
 		
 		while(SDL_PollEvent(&ev))
 		{
-			f32 spx = 0.f, spy = 0.f;
-			
 			switch(ev.type)
 			{
 				case SDL_EVENT_QUIT:
@@ -226,6 +211,8 @@ main(void)
 				
 				case SDL_EVENT_MOUSE_MOTION:
 				{
+					f32 spx = 0.f, spy = 0.f;
+					
 					SDL_GetGlobalMouseState(&spx, &spy);
 					
 					global_platform.input.mouse_position = v2(ev.motion.x, ev.motion.y);
@@ -266,6 +253,21 @@ main(void)
 		}
 		
 		prev_input_st = global_platform.input;
+		
+		struct stat st_reload = {0};
+		stat("build/app.dylib", &st_reload);
+		
+		if(st_reload.st_mtime != last_reload)
+		{
+			app_code.AppBeforeHotReload(&global_platform);
+			
+			UnloadAppCode(&app_code);
+			LoadAppCode(&app_code);
+			
+			app_code.AppAfterHotReload(&global_platform);
+			
+			last_reload = st_reload.st_mtime;
+		}
 	}
 	
 	app_code.AppDestroy(&global_platform);

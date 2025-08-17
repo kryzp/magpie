@@ -672,7 +672,7 @@ ShaderStageDestroy(ShaderStage *stage)
 #define MAX_BINDLESS_RESOURCES 512
 
 internal void
-BindlessResourcesInit(BindlessResources *resources)
+BindlessInit(BindlessResources *resources)
 {
 	static VkDescriptorPoolSize pool_sizes[] = {
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
@@ -740,15 +740,15 @@ BindlessResourcesInit(BindlessResources *resources)
 }
 
 internal void
-BindlessResourcesDestroy(BindlessResources *resources)
+BindlessDestroy(BindlessResources *resources)
 {
 	vkDestroyDescriptorSetLayout(graphics_device->device, resources->bindless_layout, 0);
 	vkDestroyDescriptorPool(graphics_device->device, resources->bindless_pool, 0);
 }
 
 internal void
-BindlessResourcesBindCombinedImage(BindlessResources *resources,
-								   u32 slot, ImageView *view, Sampler *sampler)
+BindlessBindCombinedImage(BindlessResources *resources,
+						  u32 slot, ImageView *view, Sampler *sampler)
 {
 	BindlessCombinedImageUpdate *update = resources->combined_image_updates + resources->n_combined_image_updates;
 	update->slot = slot;
@@ -759,7 +759,7 @@ BindlessResourcesBindCombinedImage(BindlessResources *resources,
 }
 
 internal void
-BindlessResourcesUpdate(BindlessResources *resources)
+BindlessUpdate(BindlessResources *resources)
 {
 	VkWriteDescriptorSet descriptor_writes[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
 	VkDescriptorImageInfo image_infos[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
@@ -813,12 +813,12 @@ AddVertexBinding(VertexFormat *vertex, u64 stride, VkVertexInputRate input_rate)
 		vertex->instance_size = stride;
 	}
 	
-	u32 i = vertex->binding_count;
-	VkVertexInputBindingDescription *b = vertex->bindings + i;
-	
-	b->binding = i;
-	b->stride = stride;
-	b->inputRate = input_rate;
+	VkVertexInputBindingDescription *b = vertex->bindings + vertex->binding_count;
+	{
+		b->binding = vertex->binding_count;
+		b->stride = stride;
+		b->inputRate = input_rate;
+	}
 	
 	vertex->binding_count++;
 }
@@ -826,13 +826,13 @@ AddVertexBinding(VertexFormat *vertex, u64 stride, VkVertexInputRate input_rate)
 internal void
 AddVertexAttribute(VertexFormat *vertex, VkFormat format, u64 offset)
 {
-	u32 i = vertex->attribute_count;
-	VkVertexInputAttributeDescription *a = vertex->attributes + i;
-	
-	a->binding = vertex->binding_count - 1;
-	a->location = i;
-	a->format = format;
-	a->offset = offset;
+	VkVertexInputAttributeDescription *a = vertex->attributes + vertex->attribute_count;
+	{
+		a->binding = vertex->binding_count - 1;
+		a->location = vertex->attribute_count;
+		a->format = format;
+		a->offset = offset;
+	}
 	
 	vertex->attribute_count++;
 }
@@ -1015,6 +1015,7 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {0};
 	pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	pipeline_rendering_create_info.viewMask = definition->view_mask;
 	pipeline_rendering_create_info.colorAttachmentCount = definition->colour_attachment_count;
 	pipeline_rendering_create_info.pColorAttachmentFormats = definition->colour_attachment_formats;
 	pipeline_rendering_create_info.depthAttachmentFormat = depth_stencil_format;
@@ -1371,6 +1372,7 @@ CmdBeginRendering(CommandBuffer *cmd, RenderInfo *info)
 	rendering_info.renderArea.offset = (VkOffset2D){ 0, 0 };
 	rendering_info.renderArea.extent = (VkExtent2D){ info->width, info->height };
 	rendering_info.layerCount = 1;
+	rendering_info.viewMask = info->view_mask;
 	rendering_info.colorAttachmentCount = info->colour_attachment_count;
 	rendering_info.pColorAttachments = info->colour_attachments;
 	rendering_info.pDepthAttachment = info->depth_attachment.imageView ? &info->depth_attachment : 0;
@@ -1923,8 +1925,21 @@ CreateGraphicsDeviceDebugUtilsMessengerExt(VkInstance instance,
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
+// TODO(kp): We really shouldn't need to initialize
+//           and de-initialize volk like this. Surely
+//           we should load all fpointers into a table
+//           which we store in program memory (possible
+//           in volk) and just load that table back
+//           in after reloading?
+
 internal void
-GraphicsDeviceHotReload()
+GraphicsDeviceBeforeHotReload()
+{
+	volkFinalize();
+}
+
+internal void
+GraphicsDeviceAfterHotReload()
 {
 	volkInitialize();
 	volkLoadInstance(graphics_device->instance);
@@ -2128,6 +2143,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	VkPhysicalDeviceVulkan11Features vulkan11_features = {0};
 	vulkan11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 	vulkan11_features.shaderDrawParameters = VK_TRUE;
+	vulkan11_features.multiview = VK_TRUE;
 	
 	VkPhysicalDeviceVulkan12Features vulkan12_features = {0};
 	vulkan12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
@@ -2273,7 +2289,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	DebugLog("Created graphics pipeline process cache.");
 	
 	SwapchainInit(&graphics_device->swapchain, arena, platform);
-	BindlessResourcesInit(&graphics_device->bindless);
+	BindlessInit(&graphics_device->bindless);
 	
 	VkSemaphoreCreateInfo semaphore_create_info = {0};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -2308,7 +2324,7 @@ GraphicsDeviceDestroy()
 		vkDestroySemaphore(graphics_device->device, graphics_device->frames[i].image_available_semaphore, 0);
 	}
 	
-	BindlessResourcesDestroy(&graphics_device->bindless);
+	BindlessDestroy(&graphics_device->bindless);
 	SwapchainDestroy(&graphics_device->swapchain);
 	
 	vkDestroyPipelineCache(graphics_device->device, graphics_device->pipeline_process_cache, 0);
@@ -2338,7 +2354,7 @@ BeginGraphicsPresent()
 internal void
 EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 {
-	BindlessResourcesUpdate(&graphics_device->bindless);
+	BindlessUpdate(&graphics_device->bindless);
 	
 	CmdTransitionImageLayout(in_flight_cmd,
 							 GetCurrentSwapchainImage(&graphics_device->swapchain),

@@ -83,28 +83,6 @@ typedef struct ShaderProgram
 }
 ShaderProgram;
 
-#define BINDLESS_COMBINED_IMAGE_BINDING 0
-#define BINDLESS_MAX_WRITES_PER_FRAME 16
-
-typedef struct BindlessCombinedImageUpdate
-{
-	u32 slot;
-	ImageView *view;
-	Sampler *sampler;
-}
-BindlessCombinedImageUpdate;
-
-typedef struct BindlessResources
-{
-	VkDescriptorSet bindless_set;
-	VkDescriptorSetLayout bindless_layout;
-	VkDescriptorPool bindless_pool;
-	
-	u32 n_combined_image_updates;
-	BindlessCombinedImageUpdate combined_image_updates[BINDLESS_MAX_WRITES_PER_FRAME];
-}
-BindlessResources;
-
 #define MAX_VERTEX_ATTRIBUTES 32
 
 typedef struct VertexFormat
@@ -181,6 +159,8 @@ typedef struct RenderInfo
 	
 	VkSampleCountFlagBits samples;
 	
+	u32 view_mask;
+	
 	u32 colour_attachment_count;
 	VkRenderingAttachmentInfo colour_attachments[MAX_COLOUR_ATTACHMENTS];
 	
@@ -208,6 +188,8 @@ typedef struct GraphicsPipelineDef
 	
 	b32 min_sample_shading_enabled;
 	f32 min_sample_shading;
+	
+	u32 view_mask;
 }
 GraphicsPipelineDef;
 
@@ -216,6 +198,10 @@ typedef struct ComputePipelineDef
 	ShaderProgram *program;
 }
 ComputePipelineDef;
+
+// TODO(kp): Pipeline state caching, two seperate hash tables:
+//           1. Pipeline Layouts
+//           2. Pipelines
 
 typedef struct PipelineState
 {
@@ -270,6 +256,28 @@ typedef struct Swapchain
 	ImageView *swapchain_image_views;
 }
 Swapchain;
+
+#define BINDLESS_COMBINED_IMAGE_BINDING 0
+#define BINDLESS_MAX_WRITES_PER_FRAME 16
+
+typedef struct BindlessCombinedImageUpdate
+{
+	u32 slot;
+	ImageView *view;
+	Sampler *sampler;
+}
+BindlessCombinedImageUpdate;
+
+typedef struct BindlessResources
+{
+	VkDescriptorSet bindless_set;
+	VkDescriptorSetLayout bindless_layout;
+	VkDescriptorPool bindless_pool;
+	
+	u32 n_combined_image_updates;
+	BindlessCombinedImageUpdate combined_image_updates[BINDLESS_MAX_WRITES_PER_FRAME];
+}
+BindlessResources;
 
 typedef struct GraphicsFrameData
 {

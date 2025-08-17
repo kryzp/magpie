@@ -3,12 +3,14 @@ project_name = "magpie";
 
 patterns = {
 	"*.c",
+	"*.cpp",
 	"*.h",
 	"*.m",
 	"*.inc",
 	"*.bat",
 	"*.sh",
 	"*.4coder",
+	"*.slang",
 };
 
 blacklist_patterns = {
@@ -38,9 +40,9 @@ commands = {
 		.out = "*run*",
 		.footer_panel = false,
 		.save_dirty_files = false,
-		.win = "build\\mgp_win32",
-		.linux = "build/mgp_linux",
-		.mac = "build/mgp_macos",
+		.win = "build\\magpie_win32",
+		.linux = "build/magpie_linux",
+		.mac = "build/magpie_macos",
 	},
 };
 
