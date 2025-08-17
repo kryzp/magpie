@@ -29,8 +29,6 @@ typedef struct MacOSAppCode
 }
 MacOSAppCode;
 
-#include <copyfile.h>
-
 internal void
 LoadAppCode(MacOSAppCode *app_code)
 {
