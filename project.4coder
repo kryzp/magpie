@@ -1,4 +1,4 @@
-	version(2);
+version(2);
 project_name = "magpie";
 
 patterns = {
@@ -11,6 +11,8 @@ patterns = {
 	"*.sh",
 	"*.4coder",
 	"*.slang",
+	"*.md",
+	"*.txt",
 };
 
 blacklist_patterns = {

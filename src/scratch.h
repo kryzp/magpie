@@ -9,7 +9,7 @@ ScratchArena;
 internal ScratchArena
 GetScratch(MemoryArena *arena)
 {
-	MemoryArena *scratch = app->scratch_arenas;
+	MemoryArena *scratch = core->scratch_arenas;
 	
 	if(arena)
 	{

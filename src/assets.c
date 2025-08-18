@@ -72,8 +72,7 @@ ImageFromBitmap(BitmapImage *bitmap)
 								VK_IMAGE_TILING_OPTIMAL,
 								4,
 								VK_SAMPLE_COUNT_1_BIT,
-								0,
-								0);
+								false, false);
 	
 	GPUBuffer staging_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,

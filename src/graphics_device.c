@@ -244,6 +244,187 @@ GraphicsChooseSwapExtent(Platform *platform, const VkSurfaceCapabilitiesKHR *cap
 }
 
 internal b32
+BindlessIsValid(u32 resource_id)
+{
+	return resource_id != 0;
+}
+
+internal u32
+BindlessRegisterSampledImage(VkImageView view, b32 is_depth)
+{
+	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
+	
+	update->type = BindlessUpdateType_SampledImage;
+	update->slot = ++graphics_device->n_bindless_sampled_images;
+	
+	update->sampled_image.view = view;
+	update->sampled_image.is_depth = is_depth;
+	
+	graphics_device->n_bindless_updates++;
+	
+	return update->slot;
+}
+
+internal u32
+BindlessRegisterSampler(VkSampler sampler)
+{
+	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
+	
+	update->type = BindlessUpdateType_Sampler;
+	update->slot = ++graphics_device->n_bindless_samplers;
+	
+	update->sampler.sampler = sampler;
+	
+	graphics_device->n_bindless_updates++;
+	
+	return update->slot;
+}
+
+internal void
+BindlessInit()
+{
+	static VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_MAX_RESOURCES },
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,       BINDLESS_MAX_RESOURCES }
+	};
+	
+	VkDescriptorPoolCreateInfo pool_create_info = {0};
+	pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+	pool_create_info.maxSets = BINDLESS_MAX_RESOURCES * ArraySize(pool_sizes);
+	pool_create_info.poolSizeCount = ArraySize(pool_sizes);
+	pool_create_info.pPoolSizes = pool_sizes;
+	
+	VK_CHECK(vkCreateDescriptorPool(graphics_device->device, &pool_create_info, 0, &graphics_device->bindless_pool),
+			 "Failed to create bindless descriptor pool.");
+	
+	// ---
+	
+	VkDescriptorBindingFlags bindless_flags[2] = {
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT,
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT
+	};
+	
+	VkDescriptorSetLayoutBinding bindings[2] = {0};
+	{
+		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		bindings[0].descriptorCount = BINDLESS_MAX_RESOURCES;
+		bindings[0].binding = BINDLESS_SAMPLED_IMAGE_BINDING;
+		bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
+		bindings[0].pImmutableSamplers = 0;
+		
+		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+		bindings[1].descriptorCount = BINDLESS_MAX_RESOURCES;
+		bindings[1].binding = BINDLESS_SAMPLER_BINDING;
+		bindings[1].stageFlags = VK_SHADER_STAGE_ALL;
+		bindings[1].pImmutableSamplers = 0;
+	}
+	
+	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {0};
+	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+	binding_flags.bindingCount = 2;
+	binding_flags.pBindingFlags = bindless_flags;
+	
+	VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
+	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layout_create_info.bindingCount = 2;
+	layout_create_info.pBindings = bindings;
+	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+	layout_create_info.pNext = &binding_flags;
+	
+	VK_CHECK(vkCreateDescriptorSetLayout(graphics_device->device, &layout_create_info, 0, &graphics_device->bindless_layout),
+			 "Failed to create bindless descriptor layout.");
+	
+	// ---
+	
+	VkDescriptorSetAllocateInfo alloc_info = {0};
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	alloc_info.descriptorPool = graphics_device->bindless_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &graphics_device->bindless_layout;
+	
+	VK_CHECK(vkAllocateDescriptorSets(graphics_device->device, &alloc_info, &graphics_device->bindless_set),
+			 "Failed to allocate bindless descriptor set.");
+	
+	DebugLog("Initialized bindless resources.");
+}
+
+internal void
+BindlessDestroy()
+{
+	vkDestroyDescriptorSetLayout(graphics_device->device, graphics_device->bindless_layout, 0);
+	vkDestroyDescriptorPool(graphics_device->device, graphics_device->bindless_pool, 0);
+}
+
+internal void
+BindlessApplyUpdates()
+{
+	VkWriteDescriptorSet descriptor_writes[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
+	VkDescriptorImageInfo image_infos[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
+	
+	for(i32 i = 0; i < graphics_device->n_bindless_updates; i++)
+	{
+		BindlessUpdate *update = graphics_device->bindless_updates + i;
+		
+		switch(update->type)
+		{
+			case BindlessUpdateType_SampledImage:
+			{
+				VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+				
+				if(update->sampled_image.is_depth)
+				{
+					layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+				}
+				else
+				{
+					layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				}
+				
+				VkDescriptorImageInfo *image_info = image_infos + i;
+				image_info->imageView = update->sampled_image.view;
+				image_info->imageLayout = layout;
+				image_info->sampler = VK_NULL_HANDLE;
+				
+				VkWriteDescriptorSet *write = descriptor_writes + i;
+				write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write->descriptorCount = 1;
+				write->dstArrayElement = update->slot;
+				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				write->dstSet = graphics_device->bindless_set;
+				write->dstBinding = BINDLESS_SAMPLED_IMAGE_BINDING;
+				write->pImageInfo = image_info;
+			}
+			break;
+			
+			case BindlessUpdateType_Sampler:
+			{
+				VkDescriptorImageInfo *image_info = image_infos + i;
+				image_info->imageView = VK_NULL_HANDLE;
+				image_info->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				image_info->sampler = update->sampler.sampler;
+				
+				VkWriteDescriptorSet *write = descriptor_writes + i;
+				write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write->descriptorCount = 1;
+				write->dstArrayElement = update->slot;
+				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				write->dstSet = graphics_device->bindless_set;
+				write->dstBinding = BINDLESS_SAMPLER_BINDING;
+				write->pImageInfo = image_info;
+			}
+			break;
+		}
+	}
+	
+	if(graphics_device->n_bindless_updates > 0)
+	{
+		vkUpdateDescriptorSets(graphics_device->device, graphics_device->n_bindless_updates, descriptor_writes, 0, 0);
+		graphics_device->n_bindless_updates = 0;
+	}
+}
+
+internal b32
 ImageIsDepth(Image *image)
 {
 	return image->format == graphics_device->depth_format;
@@ -294,6 +475,8 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 	image.width = width;
 	image.height = height;
 	image.depth = depth;
+	
+	image.is_swapchain = false;
 	
 	image.format = format;
 	image.type = type;
@@ -432,6 +615,38 @@ GetImageMemoryBarrier(Image *image, VkImageLayout layout)
 	return barrier;
 }
 
+internal void
+ImageViewDestroy(ImageView *view)
+{
+	vkDestroyImageView(graphics_device->device, view->view, 0);
+	view->view = VK_NULL_HANDLE;
+}
+
+// NOTE(kp): Image view cache is global for the entire project
+//           so it's just a function call without any parameters
+//           since all the required data is just in graphics_device.
+
+internal void
+ImageViewCacheDestroy()
+{
+	ImageViewCacheNode *node = 0;
+	
+	for(i32 i = 0; i < ArraySize(graphics_device->image_view_cache); i++)
+	{
+		if(graphics_device->image_view_cache[i])
+		{
+			node = graphics_device->image_view_cache[i];
+			break;
+		}
+	}
+	
+	while(node)
+	{
+		ImageViewDestroy(&node->view);
+		node = node->next;
+	}
+}
+
 internal ImageView
 ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
@@ -475,20 +690,56 @@ ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 	VK_CHECK(vkCreateImageView(graphics_device->device, &view_create_info, 0, &view.view),
 			 "Failed to create texture image view.");
 	
+	// NOTE(kp): Swapchain images are omitted from being accessible bindlessly.
+	if(!image->is_swapchain)
+	{
+		view.resource_id = BindlessRegisterSampledImage(view.view, ImageIsDepth(image));
+	}
+	
 	return view;
 }
 
-internal ImageView
-GetStandardImageView(Image *image)
+internal ImageView *
+FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
-	return ImageViewFromImage(image, GetImageLayerCount(image), 0, 0);
+	u32 hash = 0;
+	hash = HashBytesGenericCombine(hash, image, sizeof(Image));
+	hash = HashBytesGenericCombine(hash, &layer_count, sizeof(u32));
+	hash = HashBytesGenericCombine(hash, &layer, sizeof(u32));
+	hash = HashBytesGenericCombine(hash, &base_mip_level, sizeof(u32));
+	
+	u32 cache_index = hash % ArraySize(graphics_device->image_view_cache);
+	ImageViewCacheNode *curr = graphics_device->image_view_cache[cache_index];
+	
+	while(curr)
+	{
+		if(curr->hash == hash)
+		{
+			return &curr->view;
+		}
+		
+		curr = curr->next;
+	}
+	
+	// ---
+	
+	ImageView view = ImageViewFromImage(image, layer_count, layer, base_mip_level);
+	
+	// NOTE(kp): Insert into the image view cache.
+	ImageViewCacheNode *node = MemoryArenaPush(graphics_device->cache_arena, sizeof(ImageViewCacheNode));
+	node->hash = hash;
+	node->view = view;
+	node->next = graphics_device->image_view_cache[cache_index];
+	
+	graphics_device->image_view_cache[cache_index] = node;
+	
+	return &graphics_device->image_view_cache[cache_index]->view;
 }
 
-internal void
-ImageViewDestroy(ImageView *view)
+internal ImageView *
+FetchStandardImageView(Image *image)
 {
-	vkDestroyImageView(graphics_device->device, view->view, 0);
-	view->view = VK_NULL_HANDLE;
+	return FetchImageView(image, GetImageLayerCount(image), 0, 0);
 }
 
 internal Sampler
@@ -519,7 +770,6 @@ SamplerInit(VkFilter filter,
 	create_info.maxLod = VK_LOD_CLAMP_NONE;
 	
 	Sampler sampler = {0};
-	
 	sampler.filter = filter;
 	sampler.wrap_x = wrap_x;
 	sampler.wrap_y = wrap_y;
@@ -528,6 +778,8 @@ SamplerInit(VkFilter filter,
 	
 	VK_CHECK(vkCreateSampler(graphics_device->device, &create_info, 0, &sampler.handle),
 			 "Failed to create texture sampler.");
+	
+	sampler.resource_id = BindlessRegisterSampler(sampler.handle);
 	
 	return sampler;
 }
@@ -669,135 +921,25 @@ ShaderStageDestroy(ShaderStage *stage)
 	stage->module = VK_NULL_HANDLE;
 }
 
-#define MAX_BINDLESS_RESOURCES 512
-
-internal void
-BindlessInit(BindlessResources *resources)
+internal ShaderProgram
+ShaderProgramInit(u32 push_constant_size, u32 stage_count)
 {
-	static VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_BINDLESS_RESOURCES }
-	};
+	ShaderProgram program = {0};
+	program.push_constant_size = push_constant_size;
+	program.stage_count = stage_count;
 	
-	VkDescriptorPoolCreateInfo pool_create_info = {0};
-	pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
-	pool_create_info.maxSets = MAX_BINDLESS_RESOURCES * ArraySize(pool_sizes);
-	pool_create_info.poolSizeCount = ArraySize(pool_sizes);
-	pool_create_info.pPoolSizes = pool_sizes;
-	
-	VK_CHECK(vkCreateDescriptorPool(graphics_device->device, &pool_create_info, 0, &resources->bindless_pool),
-			 "Failed to create bindless descriptor pool.");
-	
-	// ---
-	
-	VkDescriptorBindingFlags bindless_flags =
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
-		VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT |
-		VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-	
-	VkDescriptorSetLayoutBinding texture_binding = {0};
-	texture_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	texture_binding.descriptorCount = MAX_BINDLESS_RESOURCES;
-	texture_binding.binding = BINDLESS_COMBINED_IMAGE_BINDING;
-	texture_binding.stageFlags = VK_SHADER_STAGE_ALL;
-	texture_binding.pImmutableSamplers = 0;
-	
-	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {0};
-	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-	binding_flags.bindingCount = 1;
-	binding_flags.pBindingFlags = &bindless_flags;
-	
-	VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
-	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layout_create_info.bindingCount = 1;
-	layout_create_info.pBindings = &texture_binding;
-	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
-	layout_create_info.pNext = &binding_flags;
-	
-	VK_CHECK(vkCreateDescriptorSetLayout(graphics_device->device, &layout_create_info, 0, &resources->bindless_layout),
-			 "Failed to create bindless descriptor layout.");
-	
-	// ---
-	
-	u32 max_binding = MAX_BINDLESS_RESOURCES - 1;
-	
-	VkDescriptorSetVariableDescriptorCountAllocateInfo count_info = {0};
-	count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
-	count_info.descriptorSetCount = 1;
-	count_info.pDescriptorCounts = &max_binding;
-	
-	VkDescriptorSetAllocateInfo alloc_info = {0};
-	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	alloc_info.descriptorPool = resources->bindless_pool;
-	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts = &resources->bindless_layout;
-	alloc_info.pNext = &count_info;
-	
-	VK_CHECK(vkAllocateDescriptorSets(graphics_device->device, &alloc_info, &resources->bindless_set),
-			 "Failed to allocate bindless descriptor set.");
-	
-	DebugLog("Initialized bindless resources.");
+	return program;
 }
 
 internal void
-BindlessDestroy(BindlessResources *resources)
+ShaderProgramDestroy(ShaderProgram *program)
 {
-	vkDestroyDescriptorSetLayout(graphics_device->device, resources->bindless_layout, 0);
-	vkDestroyDescriptorPool(graphics_device->device, resources->bindless_pool, 0);
-}
-
-internal void
-BindlessBindCombinedImage(BindlessResources *resources,
-						  u32 slot, ImageView *view, Sampler *sampler)
-{
-	BindlessCombinedImageUpdate *update = resources->combined_image_updates + resources->n_combined_image_updates;
-	update->slot = slot;
-	update->view = view;
-	update->sampler = sampler;
-	
-	resources->n_combined_image_updates++;
-}
-
-internal void
-BindlessUpdate(BindlessResources *resources)
-{
-	VkWriteDescriptorSet descriptor_writes[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
-	VkDescriptorImageInfo image_infos[BINDLESS_MAX_WRITES_PER_FRAME] = {0};
-	
-	for(i32 i = 0; i < resources->n_combined_image_updates; i++)
+	for(i32 i = 0; i < 2; i++)
 	{
-		BindlessCombinedImageUpdate *update = resources->combined_image_updates + i;
-		
-		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		
-		if(ImageIsDepth(update->view->image))
+		if(program->stages + i)
 		{
-			layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			ShaderStageDestroy(program->stages + i);
 		}
-		else
-		{
-			layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		}
-		
-		VkDescriptorImageInfo *image_info = image_infos + i;
-		image_info->imageView = update->view->view;
-		image_info->imageLayout = layout;
-		image_info->sampler = update->sampler->handle;
-		
-		VkWriteDescriptorSet *write = descriptor_writes + i;
-		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write->descriptorCount = 1;
-		write->dstArrayElement = update->slot;
-		write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write->dstSet = resources->bindless_set;
-		write->dstBinding = BINDLESS_COMBINED_IMAGE_BINDING;
-		write->pImageInfo = image_info;
-	}
-	
-	if(resources->n_combined_image_updates > 0)
-	{
-		vkUpdateDescriptorSets(graphics_device->device, resources->n_combined_image_updates, descriptor_writes, 0, 0);
-		resources->n_combined_image_updates = 0;
 	}
 }
 
@@ -837,6 +979,51 @@ AddVertexAttribute(VertexFormat *vertex, VkFormat format, u64 offset)
 	vertex->attribute_count++;
 }
 
+internal BlendState
+BlendStateDefault()
+{
+	BlendState state = {0};
+	
+	state.enabled = true;
+	
+	state.constants[0] = 0.f;
+	state.constants[1] = 0.f;
+	state.constants[2] = 0.f;
+	state.constants[3] = 0.f;
+	
+	state.write_mask[0] = true;
+	state.write_mask[1] = true;
+	state.write_mask[2] = true;
+	state.write_mask[3] = true;
+	
+	state.colour.op = VK_BLEND_OP_ADD;
+	state.colour.src = VK_BLEND_FACTOR_ONE;
+	state.colour.dst = VK_BLEND_FACTOR_ZERO;
+	
+	state.alpha.op = VK_BLEND_OP_ADD;
+	state.alpha.src = VK_BLEND_FACTOR_ONE;
+	state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	
+	state.logic_op_enabled = false;
+	state.logic_op = VK_LOGIC_OP_COPY;
+	
+	return state;
+}
+
+internal DepthStencilState
+DepthStencilStateDefault()
+{
+	DepthStencilState state = {0};
+	
+	state.depth_test_enabled = true;
+	state.depth_write_enabled = true;
+	state.depth_compare_op = VK_COMPARE_OP_LESS;
+	state.depth_bounds_test_enabled = false;
+	state.stencil_test_enabled = false;
+	
+	return state;
+}
+
 internal VkPipelineLayout
 PipelineLayoutCreate(ShaderProgram *program)
 {
@@ -849,8 +1036,8 @@ PipelineLayoutCreate(ShaderProgram *program)
 	
 	VkPipelineLayoutCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	create_info.setLayoutCount = program->layout_count;
-	create_info.pSetLayouts = program->layouts;
+	create_info.setLayoutCount = 1;
+	create_info.pSetLayouts = &graphics_device->bindless_layout;
 	
 	if (push_constants.size > 0)
 	{
@@ -881,6 +1068,36 @@ internal void
 PipelineDestroy(VkPipeline pipeline)
 {
 	vkDestroyPipeline(graphics_device->device, pipeline, 0);
+}
+
+internal GraphicsPipelineDef
+GraphicsPipelineDefInitDefault(ShaderProgram *program,
+							   VertexFormat *vertex_format)
+{
+	GraphicsPipelineDef def = {0};
+	
+	def.program = program;
+	def.vertex_format = vertex_format;
+	def.cull_mode = VK_CULL_MODE_BACK_BIT;
+	def.front_face = VK_FRONT_FACE_CLOCKWISE;
+	def.blend_state = BlendStateDefault();
+	def.depth_stencil_state = DepthStencilStateDefault();
+	def.min_sample_shading_enabled = 1;
+	def.min_sample_shading = 0.2f;
+	def.samples = VK_SAMPLE_COUNT_1_BIT;
+	def.view_mask = 0;
+	
+	return def;
+}
+
+internal ComputePipelineDef
+ComputePipelineDefInit(ShaderProgram *program)
+{
+	ComputePipelineDef def = {0};
+	
+	def.program = program;
+	
+	return def;
 }
 
 internal VkPipeline
@@ -1153,6 +1370,8 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 		image->height = swapchain->height;
 		image->depth = 1;
 		
+		image->is_swapchain = true;
+		
 		image->format = swapchain->format;
 		image->type = VK_IMAGE_VIEW_TYPE_2D;
 		image->tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -1162,7 +1381,7 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 		image->mipmap_count = 1;
 		image->samples = VK_SAMPLE_COUNT_1_BIT;
 		
-		swapchain->swapchain_image_views[i] = GetStandardImageView(image);
+		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, GetImageLayerCount(image), 0, 0);
 	}
 	
 	ReleaseScratch(&scratch);
@@ -1212,112 +1431,6 @@ internal ImageView *
 GetCurrentSwapchainImageView(Swapchain *swapchain)
 {
 	return &swapchain->swapchain_image_views[swapchain->current_image_index];
-}
-
-internal void
-RenderInfoAddColourAttachment(RenderInfo *info,
-							  VkAttachmentLoadOp load_op,
-							  ImageView *view,
-							  ImageView *resolve,
-							  v4 clear)
-{
-	VkRenderingAttachmentInfo attachment = {};
-	attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	attachment.imageView = view->view;
-	attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	attachment.loadOp = load_op;
-	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clearValue = (VkClearValue){ .color = { clear.r, clear.g, clear.b, clear.a } };
-	
-	if(resolve)
-	{
-		attachment.resolveImageView = resolve->view;
-		attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		attachment.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-	}
-	else
-	{
-		attachment.resolveImageView = VK_NULL_HANDLE;
-		attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	}
-	
-	info->colour_attachments[info->colour_attachment_count] = attachment;
-	info->colour_attachment_count++;
-}
-
-internal void
-RenderInfoAddDepthAttachment(RenderInfo *info,
-							 VkAttachmentLoadOp load_op,
-							 ImageView *view,
-							 ImageView *resolve,
-							 f32 depth_clear,
-							 u32 stencil_clear)
-{
-	info->depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	info->depth_attachment.imageView = view->view;
-	info->depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	info->depth_attachment.loadOp = load_op;
-	info->depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	info->depth_attachment.clearValue = (VkClearValue){ .depthStencil = { depth_clear, stencil_clear } };
-	
-	if (resolve)
-	{
-		info->depth_attachment.resolveImageView = resolve->view;
-		info->depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		info->depth_attachment.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
-	}
-	else
-	{
-		info->depth_attachment.resolveImageView = VK_NULL_HANDLE;
-		info->depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		info->depth_attachment.resolveMode = VK_RESOLVE_MODE_NONE;
-	}
-}
-
-internal BlendState
-BlendStateDefault()
-{
-	BlendState state = {0};
-	
-	state.enabled = 1;
-	
-	state.constants[0] = 0.f;
-	state.constants[1] = 0.f;
-	state.constants[2] = 0.f;
-	state.constants[3] = 0.f;
-	
-	state.write_mask[0] = 1;
-	state.write_mask[1] = 1;
-	state.write_mask[2] = 1;
-	state.write_mask[3] = 1;
-	
-	state.colour.op = VK_BLEND_OP_ADD;
-	state.colour.src = VK_BLEND_FACTOR_ONE;
-	state.colour.dst = VK_BLEND_FACTOR_ZERO;
-	
-	state.alpha.op = VK_BLEND_OP_ADD;
-	state.alpha.src = VK_BLEND_FACTOR_ONE;
-	state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	
-	state.logic_op_enabled = 0;
-	state.logic_op = VK_LOGIC_OP_COPY;
-	
-	return state;
-}
-
-internal DepthStencilState
-DepthStencilStateDefault()
-{
-	DepthStencilState state = {0};
-	
-	state.depth_test_enabled = 1;
-	state.depth_write_enabled = 1;
-	state.depth_compare_op = VK_COMPARE_OP_LESS;
-	state.depth_bounds_test_enabled = 0;
-	state.stencil_test_enabled = 0;
-	
-	return state;
 }
 
 internal void
@@ -1451,6 +1564,19 @@ CmdBindDescriptors(CommandBuffer *cmd,
 }
 
 internal void
+CmdBindBindless(CommandBuffer *cmd,
+				VkPipelineBindPoint bind_point,
+				VkPipelineLayout layout)
+{
+	CmdBindDescriptors(cmd,
+					   bind_point,
+					   layout,
+					   0,
+					   1, &graphics_device->bindless_set,
+					   0, 0);
+}
+
+internal void
 CmdBindPipeline(CommandBuffer *cmd,
 				VkPipelineBindPoint bind_point,
 				VkPipeline pipeline)
@@ -1487,9 +1613,9 @@ internal void
 CmdPushConstants(CommandBuffer *cmd,
 				 VkPipelineLayout layout,
 				 VkShaderStageFlags shader_stage,
-				 u32 offset,
 				 u32 size,
-				 void *data)
+				 void *data,
+				 u32 offset)
 {
 	vkCmdPushConstants(cmd->handle,
 					   layout,
@@ -1516,6 +1642,20 @@ CmdDrawIndexed(CommandBuffer *cmd,
 }
 
 internal void
+CmdBlitImage(CommandBuffer *cmd,
+			 Image *src, VkImageLayout src_layout,
+			 Image *dst, VkImageLayout dst_layout,
+			 u32 region_count, VkImageBlit *regions,
+			 VkFilter filter)
+{
+	vkCmdBlitImage(cmd->handle,
+				   src->image, src_layout,
+				   dst->image, dst_layout,
+				   region_count, regions,
+				   filter);
+}
+
+internal void
 CmdTransitionImageLayout(CommandBuffer *cmd,
 						 Image *image,
 						 VkImageLayout layout)
@@ -1531,17 +1671,10 @@ CmdTransitionImageLayout(CommandBuffer *cmd,
 }
 
 internal void
-CmdBlitImage(CommandBuffer *cmd,
-			 Image *src, VkImageLayout src_layout,
-			 Image *dst, VkImageLayout dst_layout,
-			 u32 region_count, VkImageBlit *regions,
-			 VkFilter filter)
+CmdPrepareForMipmapping(CommandBuffer *cmd,
+						Image *image)
 {
-	vkCmdBlitImage(cmd->handle,
-				   src->image, src_layout,
-				   dst->image, dst_layout,
-				   region_count, regions,
-				   filter);
+	CmdTransitionImageLayout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 }
 
 // NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
@@ -1794,15 +1927,16 @@ CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkPhysicalDevice
 			if(CStringCompare(available_exts[i].extensionName, GRAPHICS_VALIDATION_LAYERS[j]) == 0)
 			{
 				ReleaseScratch(&scratch);
-				return 0;
+				return false;
 			}
 		}
 	}
 	
 	ReleaseScratch(&scratch);
-	return 1;
+	return true;
 }
 
+// TODO(kp): Frankly this whole function fucking sucks.
 internal u32
 AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 									  VkSurfaceKHR surface,
@@ -1813,7 +1947,7 @@ AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 {
 	u32 usability = 0;
 	
-	b32 adequate_swap_chain = 0;
+	b32 adequate_swap_chain = false;
 	b32 has_required_extensions = CheckGraphicsPhysicalDeviceExtensionSupport(arena, physical_device);
 	b32 has_anisotropy = features.features.samplerAnisotropy;
 	
@@ -1827,7 +1961,7 @@ AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 		usability += 1;
 	}
 	
-	// NOTE(kp): If we have anisotropy then that's good :))).
+	// NOTE(kp): If we have anisotropy then that's good... I guess :))).
 	if(has_anisotropy)
 	{
 		usability += 1;
@@ -1848,7 +1982,7 @@ AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 		ReleaseScratch(&scratch);
 	}
 	
-	// essential features must be satisfied
+	// NOTE(kp): Essential features must be satisfied.
 	if(has_essentials)
 	{
 		(*has_essentials) = has_required_extensions && adequate_swap_chain && has_anisotropy;
@@ -1870,7 +2004,7 @@ CheckForValidationLayerSupport(MemoryArena *arena)
 	
 	for(i32 i = 0; i < ArraySize(GRAPHICS_VALIDATION_LAYERS); i++)
 	{
-		b32 has_layer = 0;
+		b32 has_layer = false;
 		const char *layer_name_0 = GRAPHICS_VALIDATION_LAYERS[i];
 		
 		for(i32 j = 0; j < layer_count; j++)
@@ -1879,7 +2013,7 @@ CheckForValidationLayerSupport(MemoryArena *arena)
 			
 			if(CStringCompare(layer_name_0, layer_name_1) == 0)
 			{
-				has_layer = 1;
+				has_layer = true;
 				break;
 			}
 		}
@@ -1951,7 +2085,7 @@ GraphicsDeviceAfterHotReload()
 internal void
 GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 {
-	VkApplicationInfo app_info = {
+	VkApplicationInfo core_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = WINDOW_TITLE,
 		.applicationVersion = VK_MAKE_API_VERSION(APP_VERSION_VARIANT,
@@ -1968,7 +2102,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	
 	VkInstanceCreateInfo instance_create_info = {0};
 	instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instance_create_info.pApplicationInfo = &app_info;
+	instance_create_info.pApplicationInfo = &core_info;
 	
 	volkInitialize();
 	
@@ -2054,7 +2188,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	graphics_device->physical_device_properties = properties;
 	graphics_device->physical_device_features = features;
 	
-	b32 has_essentials = 0;
+	b32 has_essentials = false;
 	
 	u32 usability0 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
 														   graphics_device->surface,
@@ -2114,7 +2248,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	{
 		if((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
 		{
-			b32 present_support = 0;
+			b32 present_support = false;
 			
 			vkGetPhysicalDeviceSurfaceSupportKHR(graphics_device->physical_device,
 												 i,
@@ -2289,7 +2423,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	DebugLog("Created graphics pipeline process cache.");
 	
 	SwapchainInit(&graphics_device->swapchain, arena, platform);
-	BindlessInit(&graphics_device->bindless);
+	BindlessInit();
 	
 	VkSemaphoreCreateInfo semaphore_create_info = {0};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -2297,13 +2431,15 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
 	{
 		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].image_available_semaphore),
-				 "Failed to create image available semaphore");
+				 "Failed to create image available semaphore.");
 		
 		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].render_finished_semaphore),
-				 "Failed to create render finished semaphore");
+				 "Failed to create render finished semaphore.");
 	}
 	
 	DebugLog("Created sync objects.");
+	
+	graphics_device->cache_arena = arena;
 	
 	ReleaseScratch(&scratch);
 }
@@ -2312,6 +2448,8 @@ internal void
 GraphicsDeviceDestroy()
 {
 	GraphicsWaitIdle();
+	
+	ImageViewCacheDestroy();
 	
 	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
 	{
@@ -2324,7 +2462,7 @@ GraphicsDeviceDestroy()
 		vkDestroySemaphore(graphics_device->device, graphics_device->frames[i].image_available_semaphore, 0);
 	}
 	
-	BindlessDestroy(&graphics_device->bindless);
+	BindlessDestroy();
 	SwapchainDestroy(&graphics_device->swapchain);
 	
 	vkDestroyPipelineCache(graphics_device->device, graphics_device->pipeline_process_cache, 0);
@@ -2354,7 +2492,7 @@ BeginGraphicsPresent()
 internal void
 EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 {
-	BindlessUpdate(&graphics_device->bindless);
+	BindlessApplyUpdates();
 	
 	CmdTransitionImageLayout(in_flight_cmd,
 							 GetCurrentSwapchainImage(&graphics_device->swapchain),

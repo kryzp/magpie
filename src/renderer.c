@@ -1,4 +1,38 @@
 
+// TODO(kp): [ ]  1. Pipeline state caching, two seperate hash
+//                   tables for layouts and pipelines. Also cache
+//                   image views automaticlly.
+//           [ ]  2. Irradiance + Prefilter map generation.
+//           [x]  3. Remove Combined Image-Sampler from bindless
+//                   and add seperate image + sampler lists.
+//           [ ]  4. Proper asset system for shader, texture and model loading.
+//           [ ]  5. Bindless Material System from C++ pre-rework
+//                   (with bindless, a material is *just* data you pass to a
+//                   shader, since textures are just parameters
+//                   like any other into the material).
+//           [ ]  6. Debug renderer (lines, spheres, etc...) (seperate thing)
+//           [ ]  7. Text rendering (fonts)
+//           [ ]  8. Scene system (e.g: a scene might have some
+//                   objects to render, multiple lighting probes, etc...)
+//           [ ]  9. More Assert(...)'s in the codebase.
+//           [ ] 10. Well commented codebase.
+//           [ ] 11. Due to dynamic rendering, there is a lot of data you have to duplicate
+//                   between graphics pipelines and render info's (view mask, formats, etc...),
+//                   figure out a way to merge this together.
+//                   Maybe pass render info into GraphicsPipelineCreate(...)?
+//           [ ] 12. (This applies to all bindless resources.)
+//                   resource_id should *not* be assigned in the
+//                   graphics device. In fact, the graphics device
+//                   should not be managing bindless in the first
+//                   place, that should be a policy of the renderer.
+//                   --> Maybe in the future, have a BindlessResources
+//                       struct in the high level, that different renderers
+//                       can use to manage their bindless resources
+//           [ ] 13. Mipmap generation should happen automatically when executing render passes.
+//                   --> When that is achieved, automatically call CmdBeginRendering(...) and
+//                       CmdEndRendering(...) around the Record(...) function, since mipmaps
+//                       are pretty much the only reason I don't already do that.
+
 internal Mesh
 MeshInit(VertexFormat *format,
 		 u32 vertex_count, void *vertices,
@@ -64,63 +98,90 @@ MeshDestroy(Mesh *mesh)
 	GPUBufferDestroy(&mesh->index_buffer);
 }
 
-internal RenderAttachment
-RenderAttachmentInitColour(VkAttachmentLoadOp load_op,
-						   ImageView *view,
-						   ImageView *resolve,
-						   v4 clear_colour)
+internal void
+CmdBindMesh(CommandBuffer *cmd, Mesh *mesh)
 {
-	RenderAttachment attachment = {0};
-	attachment.view = view;
-	attachment.resolve = resolve;
-	attachment.resolve_mode = resolve ? VK_RESOLVE_MODE_AVERAGE_BIT : VK_RESOLVE_MODE_NONE;
-	attachment.load_op = load_op;
-	attachment.store_op = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clear_colour = clear_colour;
+	CmdBindVertexBuffer(cmd, 0, &mesh->vertex_buffer, 0);
+	CmdBindIndexBuffer(cmd, &mesh->index_buffer, 0);
+}
+
+internal RenderingAttachment
+RenderingAttachmentInitColour(VkAttachmentLoadOp load_op,
+							  ImageView *view,
+							  ImageView *resolve,
+							  v4 clear_colour)
+{
+	RenderingAttachment attachment = {0};
+	
+	attachment.info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	attachment.info.imageView = view->view;
+	attachment.info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	attachment.info.loadOp = load_op;
+	attachment.info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment.info.clearValue = (VkClearValue){ .color = { clear_colour.r, clear_colour.g, clear_colour.b, clear_colour.a } };
+	
+	if(resolve)
+	{
+		attachment.info.resolveImageView = resolve->view;
+		attachment.info.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachment.info.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+	}
+	else
+	{
+		attachment.info.resolveImageView = VK_NULL_HANDLE;
+		attachment.info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachment.info.resolveMode = VK_RESOLVE_MODE_NONE;
+	}
+	
+	attachment.image = view->image;
+	
+	attachment.width  = view->image->width  >> view->base_mip_level;
+	attachment.height = view->image->height >> view->base_mip_level;
 	
 	return attachment;
 }
 
-internal RenderAttachment
-RenderAttachmentInitDepth(VkAttachmentLoadOp load_op,
-						  ImageView *view,
-						  ImageView *resolve,
-						  f32 clear_depth,
-						  u32 clear_stencil)
+internal RenderingAttachment
+RenderingAttachmentInitDepth(VkAttachmentLoadOp load_op,
+							 ImageView *view,
+							 ImageView *resolve,
+							 f32 clear_depth,
+							 u32 clear_stencil)
 {
-	RenderAttachment attachment = {0};
-	attachment.view = view;
-	attachment.resolve = resolve;
-	attachment.resolve_mode = resolve ? VK_RESOLVE_MODE_SAMPLE_ZERO_BIT : VK_RESOLVE_MODE_NONE;
-	attachment.load_op = load_op;
-	attachment.store_op = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.clear_depth = clear_depth;
-	attachment.clear_stencil = clear_stencil;
+	RenderingAttachment attachment = {0};
+	
+	attachment.info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+	attachment.info.imageView = view->view;
+	attachment.info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	attachment.info.loadOp = load_op;
+	attachment.info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment.info.clearValue = (VkClearValue){ .depthStencil = { clear_depth, clear_stencil } };
+	
+	if (resolve)
+	{
+		attachment.info.resolveImageView = resolve->view;
+		attachment.info.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		attachment.info.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+	}
+	else
+	{
+		attachment.info.resolveImageView = VK_NULL_HANDLE;
+		attachment.info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		attachment.info.resolveMode = VK_RESOLVE_MODE_NONE;
+	}
+	
+	attachment.image = view->image;
+	
+	attachment.width  = view->image->width  >> view->base_mip_level;
+	attachment.height = view->image->height >> view->base_mip_level;
 	
 	return attachment;
 }
 
 internal void
-RendererPushRenderPass(Renderer *renderer, RenderPassDef *pass)
+RendererPushRenderPass(Renderer *renderer, RenderPass *pass)
 {
-	renderer->passes[renderer->pass_count].type = RenderPassType_Render;
-	renderer->passes[renderer->pass_count].index = renderer->internal_render_pass_count;
-	
-	renderer->internal_render_passes[renderer->internal_render_pass_count] = *pass;
-	renderer->internal_render_pass_count++;
-	
-	renderer->pass_count++;
-}
-
-internal void
-RendererPushComputePass(Renderer *renderer, ComputePassDef *pass)
-{
-	renderer->passes[renderer->pass_count].type = RenderPassType_Compute;
-	renderer->passes[renderer->pass_count].index = renderer->internal_compute_pass_count;
-	
-	renderer->internal_compute_passes[renderer->internal_compute_pass_count] = *pass;
-	renderer->internal_compute_pass_count++;
-	
+	renderer->passes[renderer->pass_count] = *pass;
 	renderer->pass_count++;
 }
 
@@ -129,96 +190,316 @@ RendererExecuteRenderPasses(Renderer *renderer, CommandBuffer *cmd)
 {
 	for(i32 i = 0; i < renderer->pass_count; i++)
 	{
-		RenderPassType pass_type = renderer->passes[i].type;
-		u32 pass_index = renderer->passes[i].index;
+		RenderPass pass = renderer->passes[i];
 		
-		switch(pass_type)
+		switch(pass.type)
 		{
-			case RenderPassType_Render:
+			case RenderPassType_Graphics:
 			{
-				RenderPassDef *render_pass = renderer->internal_render_passes + pass_index;
-				
 				RenderInfo render_info = {0};
+				render_info.view_mask = pass.graphics.view_mask;
 				
-				for(i32 j = 0; j < render_pass->attachment_count; j++)
+				for(i32 j = 0; j < pass.graphics.attachment_count; j++)
 				{
-					RenderAttachment *attachment = render_pass->attachments + j;
-					Image *attachment_image = attachment->view->image;
+					RenderingAttachment *attachment = pass.graphics.attachments + j;
 					
-					render_info.width = attachment_image->width;
-					render_info.height = attachment_image->height;
-					render_info.samples = attachment_image->samples;
+					render_info.width = attachment->width;
+					render_info.height = attachment->height;
 					
-					render_info.view_mask = render_pass->view_mask;
+					render_info.samples = attachment->image->samples;
 					
-					if(ImageIsDepth(attachment_image))
+					if(ImageIsDepth(attachment->image))
 					{
-						RenderInfoAddDepthAttachment(&render_info,
-													 attachment->load_op,
-													 attachment->view,
-													 attachment->resolve,
-													 attachment->clear_depth,
-													 attachment->clear_stencil);
+						render_info.depth_attachment = attachment->info;
 						
-						CmdTransitionImageLayout(cmd,
-												 attachment_image,
+						CmdTransitionImageLayout(cmd, attachment->image,
 												 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 					}
 					else
 					{
-						RenderInfoAddColourAttachment(&render_info,
-													  attachment->load_op,
-													  attachment->view,
-													  attachment->resolve,
-													  attachment->clear_colour);
+						render_info.colour_attachments[render_info.colour_attachment_count++] = attachment->info;
 						
-						CmdTransitionImageLayout(cmd,
-												 attachment_image,
+						CmdTransitionImageLayout(cmd, attachment->image,
 												 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 					}
 				}
 				
-				for(i32 j = 0; j < render_pass->view_count; j++)
+				for(i32 j = 0; j < pass.graphics.view_count; j++)
 				{
-					ImageView *view = render_pass->views + j;
+					ImageView *view = pass.graphics.views[j];
 					
 					if(ImageIsDepth(view->image))
 					{
-						CmdTransitionImageLayout(cmd,
-												 view->image,
+						CmdTransitionImageLayout(cmd, view->image,
 												 VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 					}
 					else
 					{
-						CmdTransitionImageLayout(cmd,
-												 view->image,
+						CmdTransitionImageLayout(cmd, view->image,
 												 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					}
 				}
 				
-				render_pass->Record(renderer, cmd, &render_info);
+				pass.graphics.Record(renderer, cmd, &render_info, pass.context);
 			}
 			break;
 			
 			case RenderPassType_Compute:
 			{
-				//ComputePassDef *compute_pass = renderer->internal_compute_passes + pass_index;
-				
 				// TODO(kp)
 			}
 			break;
 		}
 	}
+	
+	renderer->pass_count = 0;
 }
 
-#define ENVIRONMENT_MAP_RESOLUTION 1024
+internal void
+RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context)
+{
+	CmdBeginRendering(cmd, render_info);
+	{
+		struct
+		{
+			u64 transform_buffer;
+			u32 hdr_image_id;
+			u32 linear_sampler_id;
+			u32 _padding[2];
+		}
+		args;
+		
+		args.transform_buffer = renderer->cubemap_capture_transforms.device_address;
+		args.hdr_image_id = FetchStandardImageView(&renderer->environment_hdr_image)->resource_id;
+		args.linear_sampler_id = renderer->linear_sampler.resource_id;
+		
+		CmdBindBindless(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->environment_hdr_to_cubemap_pipeline_layout);
+		
+		CmdBindPipeline(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->environment_hdr_to_cubemap_pipeline);
+		
+		CmdPushConstants(cmd,
+						 renderer->environment_hdr_to_cubemap_pipeline_layout,
+						 VK_SHADER_STAGE_ALL_GRAPHICS,
+						 sizeof(args), &args, 0);
+		
+		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
+		
+		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+	}
+	CmdEndRendering(cmd);
+	
+	CmdPrepareForMipmapping(cmd, &renderer->environment_cubemap);
+	CmdGenerateMipmaps(cmd, &renderer->environment_cubemap);
+}
 
 internal void
-RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info)
+RendererGenerateEnvironmentMap(Renderer *renderer)
 {
-	BindlessBindCombinedImage(&graphics_device->bindless, 0,
-							  &renderer->environment_map_hdr_image_view,
-							  &renderer->environment_map_sampler);
+	renderer->environment_cubemap = ImageAllocate(1024, 1024, 1,
+												  VK_FORMAT_R32G32B32A32_SFLOAT,
+												  VK_IMAGE_VIEW_TYPE_CUBE,
+												  VK_IMAGE_TILING_OPTIMAL,
+												  4,
+												  VK_SAMPLE_COUNT_1_BIT,
+												  false, false);
+	
+	GraphicsPipelineDef env_map_pipeline_def = GraphicsPipelineDefInitDefault(&renderer->environment_hdr_to_cubemap_program, &renderer->environment_cube_vertex_format);
+	env_map_pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	env_map_pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	env_map_pipeline_def.colour_attachment_count = 1;
+	env_map_pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+	env_map_pipeline_def.view_mask = 0b111111;
+	
+	renderer->environment_hdr_to_cubemap_pipeline_layout = PipelineLayoutCreate(&renderer->environment_hdr_to_cubemap_program);
+	renderer->environment_hdr_to_cubemap_pipeline = GraphicsPipelineCreate(renderer->environment_hdr_to_cubemap_pipeline_layout, &env_map_pipeline_def);
+	
+	RenderPass render_pass = {0};
+	render_pass.type = RenderPassType_Graphics;
+	render_pass.graphics.Record = RendererRenderPassExportHDRCubemap;
+	render_pass.graphics.view_mask = 0b111111;
+	render_pass.graphics.view_count = 1;
+	render_pass.graphics.views[0] = FetchStandardImageView(&renderer->environment_hdr_image);
+	render_pass.graphics.attachment_count = 1;
+	render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
+																		FetchStandardImageView(&renderer->environment_cubemap),
+																		0, v4(0.f, 0.f, 0.f, 1.f));
+	
+	RendererPushRenderPass(renderer, &render_pass);
+}
+
+internal void
+RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context)
+{
+	CmdBeginRendering(cmd, render_info);
+	{
+		struct
+		{
+			u64 transform_buffer;
+			u32 environment_map_id;
+			u32 linear_sampler_id;
+			u32 _padding[2];
+		}
+		args;
+		
+		args.transform_buffer = renderer->cubemap_capture_transforms.device_address;
+		args.environment_map_id = FetchStandardImageView(&renderer->environment_cubemap)->resource_id;
+		args.linear_sampler_id = renderer->linear_sampler.resource_id;
+		
+		CmdBindBindless(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->irradiance_map_pipeline_layout);
+		
+		CmdBindPipeline(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->irradiance_map_pipeline);
+		
+		CmdPushConstants(cmd,
+						 renderer->irradiance_map_pipeline_layout,
+						 VK_SHADER_STAGE_ALL_GRAPHICS,
+						 sizeof(args), &args, 0);
+		
+		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
+		
+		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+	}
+	CmdEndRendering(cmd);
+	
+	CmdPrepareForMipmapping(cmd, &renderer->environment_probe.irradiance);
+	CmdGenerateMipmaps(cmd, &renderer->environment_probe.irradiance);
+}
+
+internal void
+RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context)
+{
+	CmdBeginRendering(cmd, render_info);
+	{
+		struct
+		{
+			u64 transform_buffer;
+			f32 roughness;
+			u32 environment_map_id;
+			u32 linear_sampler_id;
+			u32 _padding;
+		}
+		args;
+		
+		args.transform_buffer = renderer->cubemap_capture_transforms.device_address;
+		args.roughness = *((f32 *)context);
+		args.environment_map_id = FetchStandardImageView(&renderer->environment_cubemap)->resource_id;
+		args.linear_sampler_id = renderer->linear_sampler.resource_id;
+		
+		CmdBindBindless(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->prefilter_map_pipeline_layout);
+		
+		CmdBindPipeline(cmd,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						renderer->prefilter_map_pipeline);
+		
+		CmdPushConstants(cmd,
+						 renderer->prefilter_map_pipeline_layout,
+						 VK_SHADER_STAGE_ALL_GRAPHICS,
+						 sizeof(args), &args, 0);
+		
+		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
+		
+		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+	}
+	CmdEndRendering(cmd);
+}
+
+internal void
+RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image *environment_cubemap)
+{
+	// NOTE(kp): Irradiance Map.
+	{
+		renderer->environment_probe.irradiance = ImageAllocate(32, 32, 1,
+															   VK_FORMAT_R32G32B32A32_SFLOAT,
+															   VK_IMAGE_VIEW_TYPE_CUBE,
+															   VK_IMAGE_TILING_OPTIMAL,
+															   4,
+															   VK_SAMPLE_COUNT_1_BIT,
+															   false, false);
+		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->irradiance_map_program, &renderer->environment_cube_vertex_format);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+		pipeline_def.view_mask = 0b111111;
+		
+		renderer->irradiance_map_pipeline_layout = PipelineLayoutCreate(&renderer->irradiance_map_program);
+		renderer->irradiance_map_pipeline = GraphicsPipelineCreate(renderer->irradiance_map_pipeline_layout, &pipeline_def);
+		
+		RenderPass render_pass = {0};
+		render_pass.type = RenderPassType_Graphics;
+		render_pass.graphics.Record = RendererRenderPassGenerateIrradianceMap;
+		render_pass.graphics.view_mask = 0b111111;
+		render_pass.graphics.view_count = 1;
+		render_pass.graphics.views[0] = FetchStandardImageView(&renderer->environment_cubemap);
+		render_pass.graphics.attachment_count = 1;
+		render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
+																			FetchStandardImageView(&renderer->environment_probe.irradiance),
+																			0, v4(0.f, 0.f, 0.f, 1.f));
+		
+		RendererPushRenderPass(renderer, &render_pass);
+	}
+	
+	// NOTE(kp): Prefilter Map.
+	{
+		renderer->environment_probe.prefilter = ImageAllocate(128, 128, 1,
+															  VK_FORMAT_R32G32B32A32_SFLOAT,
+															  VK_IMAGE_VIEW_TYPE_CUBE,
+															  VK_IMAGE_TILING_OPTIMAL,
+															  4,
+															  VK_SAMPLE_COUNT_1_BIT,
+															  false, false);
+		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->prefilter_map_program, &renderer->environment_cube_vertex_format);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+		pipeline_def.view_mask = 0b111111;
+		
+		renderer->prefilter_map_pipeline_layout = PipelineLayoutCreate(&renderer->prefilter_map_program);
+		renderer->prefilter_map_pipeline = GraphicsPipelineCreate(renderer->prefilter_map_pipeline_layout, &pipeline_def);
+		
+		i32 mipmap_count = renderer->environment_probe.prefilter.mipmap_count;
+		
+		for(i32 mip_level = 0; mip_level < mipmap_count; mip_level++)
+		{
+			ImageView *prefilter_view = FetchImageView(&renderer->environment_probe.prefilter,
+													   GetImageLayerCount(&renderer->environment_probe.prefilter),
+													   0, mip_level);
+			
+			f32 roughness = (f32)(mip_level) / (f32)(mipmap_count - 1);
+			
+			RenderPass render_pass = {0};
+			render_pass.type = RenderPassType_Graphics;
+			MemoryCopy(render_pass.context, &roughness, sizeof(f32));
+			render_pass.graphics.Record = RendererRenderPassGeneratePrefilterMap;
+			render_pass.graphics.view_mask = 0b111111;
+			render_pass.graphics.view_count = 1;
+			render_pass.graphics.views[0] = FetchStandardImageView(&renderer->environment_cubemap);
+			render_pass.graphics.attachment_count = 1;
+			render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
+																				prefilter_view,
+																				0, v4(0.f, 0.f, 0.f, 1.f));
+			
+			RendererPushRenderPass(renderer, &render_pass);
+		}
+	}
+}
+
+internal void
+RendererInit(Renderer *renderer, MemoryArena *arena)
+{
+	renderer->linear_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
 	
 	m4 capture_projection_matrix = M4Perspective(90.0f, 1.0f, 0.1f, 10.0f);
 	
@@ -231,73 +512,34 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3(0.f, 1.f, 0.f)), // Z-
 	};
 	
-	CmdBeginRendering(cmd, render_info);
+	renderer->cubemap_capture_transforms = GPUBufferAllocate(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+															 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+															 sizeof(m4) * 6);
+	
+	for(i32 i = 0; i < 6; i++)
 	{
-		GPUBuffer transform_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-													   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-													   sizeof(m4) * 6);
-		
-		for(i32 i = 0; i < 6; i++)
-		{
-			m4 m = M4MultiplyM4(capture_projection_matrix, capture_view_matrices[i]);
-			GPUBufferWrite(&transform_buffer, &m, sizeof(m4), sizeof(m4) * i);
-		}
-		
-		CmdBindDescriptors(cmd,
-						   VK_PIPELINE_BIND_POINT_GRAPHICS,
-						   renderer->environment_map_pipeline_layout,
-						   0,
-						   1, &graphics_device->bindless.bindless_set,
-						   0, 0);
-		
-		CmdBindPipeline(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->environment_map_pipeline);
-		
-		VkViewport viewport = { 0, 0, ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION };
-		CmdSetViewport(cmd, viewport);
-		
-		CmdBindVertexBuffer(cmd, 0, &renderer->environment_cube_mesh.vertex_buffer, 0);
-		CmdBindIndexBuffer(cmd, &renderer->environment_cube_mesh.index_buffer, 0);
-		
-		CmdPushConstants(cmd,
-						 renderer->environment_map_pipeline_layout,
-						 VK_SHADER_STAGE_ALL_GRAPHICS,
-						 0,
-						 sizeof(u64), &transform_buffer.device_address);
-		
-		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
-		
-		GPUBufferDestroy(&transform_buffer);
+		m4 m = M4MultiplyM4(capture_projection_matrix, capture_view_matrices[i]);
+		GPUBufferWrite(&renderer->cubemap_capture_transforms, &m, sizeof(m4), sizeof(m4) * i);
 	}
-	CmdEndRendering(cmd);
 	
-	CmdTransitionImageLayout(cmd, &renderer->environment_map_cubemap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-	
-	CmdGenerateMipmaps(cmd, &renderer->environment_map_cubemap);
-}
-
-internal void
-RendererGenerateEnvironmentMap(Renderer *renderer, MemoryArena *arena)
-{
-	typedef struct EnvironmentMapVertex
+	typedef struct EnvironmentCubeVertex
 	{
 		v3 position;
 	}
-	EnvironmentMapVertex;
+	EnvironmentCubeVertex;
 	
-	AddVertexBinding(&renderer->environment_cube_vertex_format, sizeof(EnvironmentMapVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-	AddVertexAttribute(&renderer->environment_cube_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(EnvironmentMapVertex, position));
+	AddVertexBinding(&renderer->environment_cube_vertex_format, sizeof(EnvironmentCubeVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+	AddVertexAttribute(&renderer->environment_cube_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(EnvironmentCubeVertex, position));
 	
-	EnvironmentMapVertex vertices[] = {
-		{ { -1.0f,  1.0f, -1.0f } },
-		{ { -1.0f, -1.0f, -1.0f } },
-		{ {  1.0f, -1.0f, -1.0f } },
-		{ {  1.0f,  1.0f, -1.0f } },
-		{ { -1.0f,  1.0f,  1.0f } },
-		{ { -1.0f, -1.0f,  1.0f } },
-		{ {  1.0f, -1.0f,  1.0f } },
-		{ {  1.0f,  1.0f,  1.0f } }
+	EnvironmentCubeVertex vertices[] = {
+		{ { -1.f,  1.f, -1.f } },
+		{ { -1.f, -1.f, -1.f } },
+		{ {  1.f, -1.f, -1.f } },
+		{ {  1.f,  1.f, -1.f } },
+		{ { -1.f,  1.f,  1.f } },
+		{ { -1.f, -1.f,  1.f } },
+		{ {  1.f, -1.f,  1.f } },
+		{ {  1.f,  1.f,  1.f } }
 	};
 	
 	u16 indices[] = {
@@ -324,85 +566,36 @@ RendererGenerateEnvironmentMap(Renderer *renderer, MemoryArena *arena)
 											   ArraySize(vertices), vertices,
 											   ArraySize(indices), indices);
 	
-	renderer->environment_map_program.push_constant_size = sizeof(u64);
-	renderer->environment_map_program.layout_count = 1;
-	renderer->environment_map_program.layouts[0] = graphics_device->bindless.bindless_layout;
+	renderer->environment_hdr_image = ImageFromPath(str8("res/environment_map.hdr"));
 	
-	renderer->environment_map_program.stage_count = 2;
-	renderer->environment_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-	renderer->environment_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	{
+		renderer->environment_hdr_to_cubemap_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->environment_hdr_to_cubemap_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
 	
-	renderer->environment_map_hdr_image = ImageFromPath(str8("res/environment_map.hdr"));
+	renderer->irradiance_map_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	{
+		renderer->irradiance_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->irradiance_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
 	
-	renderer->environment_map_cubemap = ImageAllocate(ENVIRONMENT_MAP_RESOLUTION, ENVIRONMENT_MAP_RESOLUTION, 1,
-													  VK_FORMAT_R32G32B32A32_SFLOAT,
-													  VK_IMAGE_VIEW_TYPE_CUBE,
-													  VK_IMAGE_TILING_OPTIMAL,
-													  4,
-													  VK_SAMPLE_COUNT_1_BIT,
-													  0,
-													  0);
+	renderer->prefilter_map_program = ShaderProgramInit(sizeof(u64) + sizeof(f32) + sizeof(u32)*3, 2);
+	{
+		renderer->prefilter_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
 	
-	renderer->environment_map_hdr_image_view = GetStandardImageView(&renderer->environment_map_hdr_image);
-	renderer->environment_map_cubemap_view = GetStandardImageView(&renderer->environment_map_cubemap);
-	
-	renderer->environment_map_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
-	
-	GraphicsPipelineDef env_map_pipeline_def = {0};
-	env_map_pipeline_def.program = &renderer->environment_map_program;
-	env_map_pipeline_def.vertex_format = &renderer->environment_cube_vertex_format;
-	env_map_pipeline_def.cull_mode = VK_CULL_MODE_BACK_BIT;
-	env_map_pipeline_def.front_face = VK_FRONT_FACE_CLOCKWISE;
-	env_map_pipeline_def.blend_state = BlendStateDefault();
-	env_map_pipeline_def.depth_stencil_state = DepthStencilStateDefault();
-	env_map_pipeline_def.depth_stencil_state.depth_test_enabled = 0;
-	env_map_pipeline_def.depth_stencil_state.depth_write_enabled = 0;
-	env_map_pipeline_def.colour_attachment_count = 1;
-	env_map_pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-	env_map_pipeline_def.has_depth_attachment = 0;
-	env_map_pipeline_def.min_sample_shading_enabled = 1;
-	env_map_pipeline_def.min_sample_shading = 0.2f;
-	env_map_pipeline_def.samples = VK_SAMPLE_COUNT_1_BIT;
-	env_map_pipeline_def.view_mask = 0b111111;
-	
-	renderer->environment_map_pipeline_layout = PipelineLayoutCreate(&renderer->environment_map_program);
-	
-	renderer->environment_map_pipeline = GraphicsPipelineCreate(renderer->environment_map_pipeline_layout,
-																&env_map_pipeline_def);
-	
-	RenderPassDef render_pass = {0};
-	render_pass.view_count = 1;
-	render_pass.views[0] = renderer->environment_map_hdr_image_view;
-	render_pass.attachment_count = 1;
-	render_pass.attachments[0] = RenderAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
-															&renderer->environment_map_cubemap_view,
-															0,
-															v4(0.f, 0.f, 0.f, 1.f));
-	render_pass.view_mask = 0b111111;
-	render_pass.Record = RendererRenderPassExportHDRCubemap;
-	
-	RendererPushRenderPass(renderer, &render_pass);
-}
-
-internal void
-RendererInit(Renderer *renderer, MemoryArena *arena) // TODO(kp): Arena is temporarily passed in here to do loading in of shaders.
-{
-	RendererGenerateEnvironmentMap(renderer, arena);
+	RendererGenerateEnvironmentMap(renderer);
+	RendererGenerateEnvironmentProbeFromEnvironmentCubemap(renderer, &renderer->environment_cubemap);
 }
 
 internal void
 RendererDestroy(Renderer *renderer)
 {
+	GPUBufferDestroy(&renderer->cubemap_capture_transforms);
 	MeshDestroy(&renderer->environment_cube_mesh);
-	ShaderStageDestroy(&renderer->environment_map_program.stages[0]);
-	ShaderStageDestroy(&renderer->environment_map_program.stages[1]);
-	ImageDestroy(&renderer->environment_map_hdr_image);
-	ImageDestroy(&renderer->environment_map_cubemap);
-	ImageViewDestroy(&renderer->environment_map_hdr_image_view);
-	ImageViewDestroy(&renderer->environment_map_cubemap_view);
-	SamplerDestroy(&renderer->environment_map_sampler);
-	PipelineLayoutDestroy(renderer->environment_map_pipeline_layout);
-	PipelineDestroy(renderer->environment_map_pipeline);
+	SamplerDestroy(&renderer->linear_sampler);
 }
 
 internal void
@@ -414,12 +607,6 @@ RendererBeginFrame(Renderer *renderer)
 internal void
 RendererEndFrame(Renderer *renderer)
 {
-	// NOTE(kp): Perform render passes.
 	RendererExecuteRenderPasses(renderer, &renderer->present_cmd);
-	
 	EndGraphicsPresent(&renderer->present_cmd);
-	
-	renderer->pass_count = 0;
-	renderer->internal_render_pass_count = 0;
-	renderer->internal_compute_pass_count = 0;
 }

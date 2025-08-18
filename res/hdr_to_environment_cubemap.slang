@@ -6,13 +6,16 @@ struct EnvironmentMapVertex
 struct Arguments
 {
 	float4x4 *transform_matrices;
+	uint hdr_image_id;
+	uint linear_sampler_id;
+	uint _padding[2];
 };
 
 [[vk::push_constant]]
 Arguments args;
 
-[[vk::binding(0)]]
-Sampler2D bindless_textures[];
+[[vk::binding(0)]] Texture2D bindless_images[];
+[[vk::binding(1)]] SamplerState bindless_samplers[];
 
 struct VS_Output
 {
@@ -25,7 +28,7 @@ VS_Output VertexMain(EnvironmentMapVertex vertex, int view_id : SV_ViewID)
 {
 	VS_Output output;
     output.position = vertex.position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(vertex.position, 1.0));
+    output.sv_position = mul(args.transform_matrices[view_id], float4(vertex.position, 1.));
 
 	return output;
 }
@@ -43,6 +46,6 @@ float2 SampleSphericalMap(float3 v)
 float4 FragmentMain(VS_Output input) : SV_Target
 {
 	float2 uv = SampleSphericalMap(normalize(input.position));
-	float3 colour = bindless_textures[0].Sample(uv).rgb;
+	float3 colour = bindless_images[args.hdr_image_id].Sample(bindless_samplers[args.linear_sampler_id], uv).rgb;
 	return float4(colour, 1.);
 }

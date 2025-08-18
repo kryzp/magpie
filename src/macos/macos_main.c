@@ -10,63 +10,63 @@
 #include "program_options.h"
 #include "platform.h"
 
-internal void AppNullStub(Platform *platform) { }
+internal void CoreNullStub(Platform *platform) { }
 
 global SDL_Window *window = 0;
 global Platform global_platform = {0};
 global InputState prev_input_st = {0};
 
-typedef struct MacOSAppCode
+typedef struct MacOSCoreCode
 {
 	void *handle;
 	b32 is_valid;
 	
-	void (*AppInit)(Platform *);
-	void (*AppUpdate)(Platform *);
-	void (*AppDestroy)(Platform *);
-	void (*AppBeforeHotReload)(Platform *);
-	void (*AppAfterHotReload)(Platform *);
+	void (*CoreInit)(Platform *);
+	void (*CoreUpdate)(Platform *);
+	void (*CoreDestroy)(Platform *);
+	void (*CoreBeforeHotReload)(Platform *);
+	void (*CoreAfterHotReload)(Platform *);
 }
-MacOSAppCode;
+MacOSCoreCode;
 
 internal void
-LoadAppCode(MacOSAppCode *app_code)
+LoadCoreCode(MacOSCoreCode *core_code)
 {
-	app_code->is_valid = 0;
+	core_code->is_valid = 0;
 	
-	app_code->handle = dlopen("build/app.dylib", RTLD_NOW | RTLD_LOCAL);
+	core_code->handle = dlopen("build/core.dylib", RTLD_NOW | RTLD_LOCAL);
 	
-	if(app_code->handle)
+	if(core_code->handle)
 	{
-		app_code->AppInit            = dlsym(app_code->handle, "AppInit");
-		app_code->AppUpdate          = dlsym(app_code->handle, "AppUpdate");
-		app_code->AppDestroy         = dlsym(app_code->handle, "AppDestroy");
-		app_code->AppBeforeHotReload = dlsym(app_code->handle, "AppBeforeHotReload");
-		app_code->AppAfterHotReload  = dlsym(app_code->handle, "AppAfterHotReload");
+		core_code->CoreInit            = dlsym(core_code->handle, "CoreInit");
+		core_code->CoreUpdate          = dlsym(core_code->handle, "CoreUpdate");
+		core_code->CoreDestroy         = dlsym(core_code->handle, "CoreDestroy");
+		core_code->CoreBeforeHotReload = dlsym(core_code->handle, "CoreBeforeHotReload");
+		core_code->CoreAfterHotReload  = dlsym(core_code->handle, "CoreAfterHotReload");
 		
-		app_code->is_valid = (app_code->AppInit &&
-							  app_code->AppUpdate &&
-							  app_code->AppDestroy &&
-							  app_code->AppAfterHotReload &&
-							  app_code->AppBeforeHotReload);
+		core_code->is_valid = (core_code->CoreInit &&
+							   core_code->CoreUpdate &&
+							   core_code->CoreDestroy &&
+							   core_code->CoreAfterHotReload &&
+							   core_code->CoreBeforeHotReload);
 	}
 }
 
 internal void
-UnloadAppCode(MacOSAppCode *app_code)
+UnloadCoreCode(MacOSCoreCode *core_code)
 {
-	app_code->AppInit = AppNullStub;
-	app_code->AppUpdate = AppNullStub;
-	app_code->AppDestroy = AppNullStub;
-	app_code->AppBeforeHotReload = AppNullStub;
-	app_code->AppAfterHotReload = AppNullStub;
+	core_code->CoreInit = CoreNullStub;
+	core_code->CoreUpdate = CoreNullStub;
+	core_code->CoreDestroy = CoreNullStub;
+	core_code->CoreBeforeHotReload = CoreNullStub;
+	core_code->CoreAfterHotReload = CoreNullStub;
 	
-	app_code->is_valid = 0;
+	core_code->is_valid = false;
 	
-	if(app_code->handle)
+	if(core_code->handle)
 	{
-		dlclose(app_code->handle);
-		app_code->handle = 0;
+		dlclose(core_code->handle);
+		core_code->handle = 0;
 	}
 }
 
@@ -135,16 +135,16 @@ main(void)
 		
 		global_platform.window_opacity = 1.f;
 		
-		global_platform.fullscreen = 0;
-		global_platform.borderless = 0;
+		global_platform.fullscreen = false;
+		global_platform.borderless = false;
 		
 		global_platform.target_fps = 120;
 		global_platform.current_time = 0.f;
 		
-		global_platform.cursor_visible = 1;
-		global_platform.cursor_locked = 0;
+		global_platform.cursor_visible = true;
+		global_platform.cursor_locked = false;
 		
-		global_platform.exit = 0;
+		global_platform.exit = false;
 		
 		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
 		global_platform.CreateVulkanSurface = CreateVulkanSurface;
@@ -154,12 +154,12 @@ main(void)
 		global_platform.GetPerformanceFrequency = SDL_GetPerformanceFrequency;
 	}
 	
-	MacOSAppCode app_code = {0};
-	LoadAppCode(&app_code);
+	MacOSCoreCode core_code = {0};
+	LoadCoreCode(&core_code);
 	
 	time_t last_reload = 0;
 	
-	app_code.AppInit(&global_platform);
+	core_code.CoreInit(&global_platform);
 	
 	while(!global_platform.exit)
 	{
@@ -171,7 +171,7 @@ main(void)
 			{
 				case SDL_EVENT_QUIT:
 				{
-					global_platform.exit = 1;
+					global_platform.exit = true;
 				}
 				break;
 				
@@ -182,28 +182,28 @@ main(void)
 				
 				case SDL_EVENT_KEY_DOWN:
 				{
-					global_platform.input.kb_down[ev.key.scancode] = 1;
+					global_platform.input.kb_down[ev.key.scancode] = true;
 					global_platform.input.kb_pressed[ev.key.scancode] = !prev_input_st.kb_down[ev.key.scancode];
 				}
 				break;
 				
 				case SDL_EVENT_KEY_UP:
 				{
-					global_platform.input.kb_down[ev.key.scancode] = 0;
+					global_platform.input.kb_down[ev.key.scancode] = false;
 					global_platform.input.kb_released[ev.key.scancode] = prev_input_st.kb_down[ev.key.scancode];
 				}
 				break;
 				
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 				{
-					global_platform.input.mb_down[ev.button.button] = 1;
+					global_platform.input.mb_down[ev.button.button] = true;
 					global_platform.input.mb_pressed[ev.button.button] = !prev_input_st.mb_down[ev.button.button];
 				}
 				break;
 				
 				case SDL_EVENT_MOUSE_BUTTON_UP:
 				{
-					global_platform.input.mb_down[ev.button.button] = 0;
+					global_platform.input.mb_down[ev.button.button] = false;
 					global_platform.input.mb_released[ev.button.button] = prev_input_st.mb_down[ev.button.button];
 				}
 				break;
@@ -230,7 +230,7 @@ main(void)
 		
 		Platform prev_st = global_platform;
 		
-		app_code.AppUpdate(&global_platform);
+		core_code.CoreUpdate(&global_platform);
 		
 		if(global_platform.fullscreen != prev_st.fullscreen)
 		{
@@ -254,24 +254,24 @@ main(void)
 		prev_input_st = global_platform.input;
 		
 		struct stat st_reload = {0};
-		stat("build/app.dylib", &st_reload);
+		stat("build/core.dylib", &st_reload);
 		
 		if(st_reload.st_mtime != last_reload)
 		{
-			app_code.AppBeforeHotReload(&global_platform);
+			core_code.CoreBeforeHotReload(&global_platform);
 			
-			UnloadAppCode(&app_code);
-			LoadAppCode(&app_code);
+			UnloadCoreCode(&core_code);
+			LoadCoreCode(&core_code);
 			
-			app_code.AppAfterHotReload(&global_platform);
+			core_code.CoreAfterHotReload(&global_platform);
 			
 			last_reload = st_reload.st_mtime;
 		}
 	}
 	
-	app_code.AppDestroy(&global_platform);
+	core_code.CoreDestroy(&global_platform);
 	
-	UnloadAppCode(&app_code);
+	UnloadCoreCode(&core_code);
 	
 	CloseAllGamepads();
 	

@@ -1,51 +1,54 @@
 
+typedef struct Renderer Renderer;
+
+typedef struct RenderingAttachment
+{
+	VkRenderingAttachmentInfo info;
+	Image *image;
+	u32 width;
+	u32 height;
+}
+RenderingAttachment;
+
 typedef enum RenderPassType
 {
-	RenderPassType_Render,
+	RenderPassType_Graphics,
 	RenderPassType_Compute
 }
 RenderPassType;
 
-typedef struct RenderAttachment
+typedef struct RenderPass
 {
-	ImageView *view;
+	RenderPassType type;
+	u8 context[128];
 	
-	ImageView *resolve;
-	VkResolveModeFlagBits resolve_mode;
-	
-	VkAttachmentLoadOp load_op;
-	VkAttachmentStoreOp store_op;
-	
-	v4 clear_colour;
-	f32 clear_depth;
-	u32 clear_stencil;
+	union
+	{
+		struct
+		{
+			void (*Record)(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context);
+			
+			u32 view_mask;
+			
+			u32 attachment_count;
+			RenderingAttachment attachments[32];
+			
+			u32 view_count;
+			ImageView *views[32];
+		}
+		graphics;
+		
+		struct ComputePassDef
+		{
+			void (*Record)(Renderer *renderer, CommandBuffer *cmd, void *context);
+			
+			u32 view_count;
+			ImageView *views[32];
+		}
+		compute;
+	};
 }
-RenderAttachment;
-
-typedef struct Renderer Renderer;
-
-typedef struct RenderPassDef
-{
-	void (*Record)(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info);
-	
-	u32 attachment_count;
-	RenderAttachment attachments[32];
-	
-	u32 view_count;
-	ImageView views[32];
-	
-	u32 view_mask;
-}
-RenderPassDef;
-
-typedef struct ComputePassDef
-{
-	void (*Record)(Renderer *renderer, CommandBuffer *render_info);
-	
-	u32 storage_view_count;
-	ImageView *storage_views;
-}
-ComputePassDef;
+RenderPass;
 
 typedef struct Mesh
 {
@@ -59,34 +62,50 @@ typedef struct Mesh
 }
 Mesh;
 
+typedef struct EnvironmentProbe
+{
+	Image irradiance, prefilter;
+}
+EnvironmentProbe;
+
 typedef struct Renderer
 {
 	CommandBuffer present_cmd;
 	
-	u32 pass_count;
+	// ---
 	
-	struct
-	{
-		RenderPassType type;
-		u32 index;
-	}
-	passes[32];
+	Sampler linear_sampler;
 	
-	u32 internal_render_pass_count;
-	RenderPassDef internal_render_passes[32];
-	
-	u32 internal_compute_pass_count;
-	ComputePassDef internal_compute_passes[32];
+	// ---
 	
 	VertexFormat environment_cube_vertex_format;
 	Mesh environment_cube_mesh;
-	ShaderProgram environment_map_program;
-	Image environment_map_hdr_image;
-	ImageView environment_map_hdr_image_view;
-	Image environment_map_cubemap;
-	ImageView environment_map_cubemap_view;
-	Sampler environment_map_sampler;
-	VkPipelineLayout environment_map_pipeline_layout;
-	VkPipeline environment_map_pipeline;
+	GPUBuffer cubemap_capture_transforms;
+	
+	// ---
+	
+	ShaderProgram environment_hdr_to_cubemap_program;
+	VkPipelineLayout environment_hdr_to_cubemap_pipeline_layout;
+	VkPipeline environment_hdr_to_cubemap_pipeline;
+	
+	Image environment_hdr_image;
+	Image environment_cubemap;
+	
+	// ---
+	
+	ShaderProgram irradiance_map_program;
+	VkPipelineLayout irradiance_map_pipeline_layout;
+	VkPipeline irradiance_map_pipeline;
+	
+	ShaderProgram prefilter_map_program;
+	VkPipelineLayout prefilter_map_pipeline_layout;
+	VkPipeline prefilter_map_pipeline;
+	
+	EnvironmentProbe environment_probe;
+	
+	// ---
+	
+	u32 pass_count;
+	RenderPass passes[32];
 }
 Renderer;

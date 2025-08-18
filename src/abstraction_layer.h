@@ -8,6 +8,9 @@
 #define global         static
 #define internal       static
 
+#define true    1
+#define false   0
+
 #define Assert(s) do{if(!(s)){*(int*)0=0;}}while(0)
 #define DebugLog(m, ...) do{printf((m "\n"),##__VA_ARGS__);}while(0)
 #define DebugLogCrash(m, ...) do{DebugLog(m,##__VA_ARGS__);Assert(0);}while(0)
@@ -736,16 +739,42 @@ CharToUpper(u8 c)
     return c;
 }
 
-internal u32
-HashCString(char *string)
+// NOTE(kp): FNV-1a 64-bit hash.
+internal u64
+HashBytesGeneric(const void *key, u64 length)
 {
-    u32 hash = 5381;
-    int c = 0;
-    
-	while((c = *string++))
-    {
-        hash = ((hash << 5) + hash) + c;
+    const u8 *data = (const u8 *)key;
+	u64 hash = 1469598103934665603ULL;
+	
+    for(u64 i = 0; i < length; i++)
+	{
+        hash ^= (u64)data[i];
+        hash *= 1099511628211ULL;
     }
 	
     return hash;
+}
+
+// NOTE(kp): FNV-1a 64-bit hash.
+internal u64
+HashBytesGenericCombine(u64 start, const void *key, u64 length)
+{
+    const u8 *data = (const u8 *)key;
+	u64 hash = start;
+	
+    for(u64 i = 0; i < length; i++)
+	{
+        hash ^= (u64)data[i];
+        hash *= 1099511628211ULL;
+    }
+	
+    return hash;
+}
+
+internal u32
+HashCString(char *string)
+{
+	u64 length = 0;
+	while(string[length] != '\0') length++;
+	return HashBytesGeneric(string, length);
 }

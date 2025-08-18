@@ -99,7 +99,7 @@ typedef enum KeyboardKey
 	KeyboardKey_Kp0 = 98,
 	KeyboardKey_KpPeriod = 99,
 	KeyboardKey_NonUSBackslash = 100,
-	KeyboardKey_Application = 101,
+	KeyboardKey_Corelication = 101,
 	KeyboardKey_Power = 102,
 	KeyboardKey_KpEquals = 103,
 	KeyboardKey_F13 = 104,
@@ -351,7 +351,6 @@ typedef struct Platform
 	b32 cursor_visible;
 	b32 cursor_locked;
 	
-	b32 initializing;
 	b32 exit;
 	
 	InputState input;

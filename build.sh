@@ -10,6 +10,7 @@ mkdir -p build
 cd build
 
 # compile vulkan memory allocator seperately
+
 if [ ! -f "vk_mem_alloc.o" ]; then
 
 	echo "Compiling Vulkan Memory Allocator..."
@@ -27,33 +28,33 @@ fi
 # seperately from platform layer to enable
 # hot code reloading
 
-echo "Compiling app..."
+echo "Compiling core..."
 
 clang \
 	-arch arm64 \
-	$opts "$code/app.c" \
+	$opts "$code/core.c" \
 	-I"$code/" \
 	-fPIC \
-	-c -o app.o
+	-c -o core.o
 
-# link together
+# link together the core and vulkan memory allocator
 
-echo "Linking app..."
+echo "Linking core..."
 
 clang++ \
 	-arch arm64 \
-	app.o vk_mem_alloc.o \
+	core.o vk_mem_alloc.o \
 	$libs \
 	$rpaths \
 	-fPIC \
 	-dynamiclib \
-	-o app.dylib
+	-o core.dylib
 
 # compile platform dependent
 # layer as executable
 # (if it isn't currently open)
 
-if ! pgrep -x mgp_macos > /dev/null; then
+if ! pgrep -x magpie_macos > /dev/null; then
 
 	echo "Compiling platform layer..."
 

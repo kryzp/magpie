@@ -12,6 +12,8 @@ typedef struct Sampler
 	VkSamplerAddressMode wrap_z;
 	
 	VkBorderColor border_colour;
+	
+	u32 resource_id;
 }
 Sampler;
 
@@ -23,6 +25,8 @@ typedef struct Image
 	u32 width;
 	u32 height;
 	u32 depth;
+	
+	b32 is_swapchain;
 	
 	VkFormat format;
 	VkImageViewType type;
@@ -46,8 +50,19 @@ typedef struct ImageView
 	u32 layer_count;
 	u32 layer;
 	u32 base_mip_level;
+	
+	u32 resource_id;
 }
 ImageView;
+
+typedef struct ImageViewCacheNode
+{
+	struct ImageViewCacheNode *next;
+	
+	u32 hash;
+	ImageView view;
+}
+ImageViewCacheNode;
 
 typedef struct GPUBuffer
 {
@@ -71,13 +86,11 @@ typedef struct ShaderStage
 }
 ShaderStage;
 
+// NOTE(kp): Shaders are fully bindless.
+//           --> No layouts per shader.
 typedef struct ShaderProgram
 {
 	u64 push_constant_size;
-	
-	u32 layout_count;
-	VkDescriptorSetLayout layouts[8];
-	
 	u32 stage_count;
 	ShaderStage stages[2];
 }
@@ -199,16 +212,22 @@ typedef struct ComputePipelineDef
 }
 ComputePipelineDef;
 
-// TODO(kp): Pipeline state caching, two seperate hash tables:
-//           1. Pipeline Layouts
-//           2. Pipelines
-
 typedef struct PipelineState
 {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
+	VkPipelineBindPoint bind_point;
 }
 PipelineState;
+
+typedef struct PipelineCacheNode
+{
+	struct PipelineCacheNode *next;
+	
+	u32 hash;
+	PipelineState state;
+}
+PipelineCacheNode;
 
 typedef struct CommandBuffer
 {
@@ -257,27 +276,40 @@ typedef struct Swapchain
 }
 Swapchain;
 
-#define BINDLESS_COMBINED_IMAGE_BINDING 0
+#define BINDLESS_MAX_RESOURCES 256
 #define BINDLESS_MAX_WRITES_PER_FRAME 16
+#define BINDLESS_SAMPLED_IMAGE_BINDING 0
+#define BINDLESS_SAMPLER_BINDING 1
 
-typedef struct BindlessCombinedImageUpdate
+typedef enum BindlessUpdateType
 {
+	BindlessUpdateType_SampledImage,
+	BindlessUpdateType_Sampler
+}
+BindlessUpdateType;
+
+typedef struct BindlessUpdate
+{
+	BindlessUpdateType type;
 	u32 slot;
-	ImageView *view;
-	Sampler *sampler;
-}
-BindlessCombinedImageUpdate;
-
-typedef struct BindlessResources
-{
-	VkDescriptorSet bindless_set;
-	VkDescriptorSetLayout bindless_layout;
-	VkDescriptorPool bindless_pool;
 	
-	u32 n_combined_image_updates;
-	BindlessCombinedImageUpdate combined_image_updates[BINDLESS_MAX_WRITES_PER_FRAME];
+	union
+	{
+		struct
+		{
+			VkImageView view;
+			b32 is_depth;
+		}
+		sampled_image;
+		
+		struct
+		{
+			VkSampler sampler;
+		}
+		sampler;
+	};
 }
-BindlessResources;
+BindlessUpdate;
 
 typedef struct GraphicsFrameData
 {
@@ -296,14 +328,37 @@ typedef struct GraphicsDevice
 	VkInstance instance;
 	VkDevice device;
 	
+	// ---
+	
 	VkPhysicalDevice physical_device;
 	VkPhysicalDeviceProperties2 physical_device_properties;
 	VkPhysicalDeviceFeatures2 physical_device_features;
 	
+	// ---
+	
 	u32 current_frame_index;
 	
 	Swapchain swapchain;
-	BindlessResources bindless;
+	
+	// ---
+	
+	VkDescriptorSet bindless_set;
+	VkDescriptorSetLayout bindless_layout;
+	VkDescriptorPool bindless_pool;
+	
+	u32 n_bindless_updates;
+	BindlessUpdate bindless_updates[BINDLESS_MAX_WRITES_PER_FRAME];
+	
+	u32 n_bindless_sampled_images;
+	u32 n_bindless_samplers;
+	
+	// ---
+	
+	MemoryArena *cache_arena;
+	ImageViewCacheNode *image_view_cache[16];
+	PipelineCacheNode *pipeline_cache[16];
+	
+	// ---
 	
 	VkQueue graphics_queue;
 	u32 graphics_queue_family_index;
@@ -313,10 +368,16 @@ typedef struct GraphicsDevice
 	VkSurfaceKHR surface;
 	VkPipelineCache pipeline_process_cache;
 	
+	// ---
+	
 	VkFormat depth_format;
 	VkSampleCountFlagBits max_msaa_samples;
 	
+	// ---
+	
 	VmaAllocator vma_allocator;
+	
+	// ---
 	
 	VkDebugUtilsMessengerEXT debug_messenger;
 	b32 has_validation_layers;

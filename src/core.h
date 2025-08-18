@@ -1,5 +1,5 @@
 
-typedef struct App
+typedef struct Core
 {
 	MemoryArena permanent_arena;
 	MemoryArena frame_arena;
@@ -8,8 +8,8 @@ typedef struct App
 	GraphicsDevice graphics_device;
 	Renderer renderer;
 }
-App;
+Core;
 
-global App *app = 0;
+global Core *core = 0;
 global Platform *platform = 0;
 global GraphicsDevice *graphics_device = 0;
