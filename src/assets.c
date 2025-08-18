@@ -47,6 +47,8 @@ GetBitmapImageMemorySize(BitmapImage *image)
 internal Image
 ImageFromBitmap(BitmapImage *bitmap)
 {
+	Assert(bitmap && "Bitmap image must not be null.");
+	
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	
 	switch(bitmap->format)

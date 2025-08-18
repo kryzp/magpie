@@ -64,8 +64,9 @@ CoreUpdate(Platform *p)
 	MemoryArenaClear(&core->scratch_arenas[0]);
 	MemoryArenaClear(&core->scratch_arenas[1]);
 	
-	if(platform->input.kb_pressed[KeyboardKey_Escape])
+	if(platform->kb_pressed[KeyboardKey_Escape])
 	{
+		DebugLog("Quitting...");
 		platform->exit = 1;
 	}
 	

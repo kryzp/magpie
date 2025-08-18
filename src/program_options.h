@@ -14,7 +14,7 @@
 #define APP_VERSION_MINOR         1
 #define APP_VERSION_PATCH         0
 
-#define ENGINE_VERSION_VARIANT    0
+#define ENGINE_VERSION_VARIANT    1
 #define ENGINE_VERSION_MAJOR      0
 #define ENGINE_VERSION_MINOR      1
 #define ENGINE_VERSION_PATCH      0

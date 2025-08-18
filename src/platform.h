@@ -307,25 +307,6 @@ typedef struct GamepadState
 }
 GamepadState;
 
-typedef struct InputState
-{
-	b32 kb_down[KeyboardKey_MaxEnum];
-	b32 kb_pressed[KeyboardKey_MaxEnum];
-	b32 kb_released[KeyboardKey_MaxEnum];
-	
-	b32 mb_down[MouseButton_MaxEnum];
-	b32 mb_pressed[MouseButton_MaxEnum];
-	b32 mb_released[MouseButton_MaxEnum];
-	
-	v2 mouse_position;
-	v2 mouse_delta;
-	v2 mouse_screen_position;
-	v2 mouse_wheel;
-	
-	GamepadState gamepads[MAX_GAMEPADS];
-}
-InputState;
-
 typedef struct Platform
 {
     void *permanent_memory;
@@ -353,7 +334,20 @@ typedef struct Platform
 	
 	b32 exit;
 	
-	InputState input;
+	b32 kb_down[KeyboardKey_MaxEnum];
+	b32 kb_pressed[KeyboardKey_MaxEnum];
+	b32 kb_released[KeyboardKey_MaxEnum];
+	
+	b32 mb_down[MouseButton_MaxEnum];
+	b32 mb_pressed[MouseButton_MaxEnum];
+	b32 mb_released[MouseButton_MaxEnum];
+	
+	v2 mouse_position;
+	v2 mouse_delta;
+	v2 mouse_screen_position;
+	v2 mouse_wheel;
+	
+	GamepadState gamepads[MAX_GAMEPADS];
 	
 	const char *const *(*GetVulkanInstanceExtensions)(u32 *count);
 	b32 (*CreateVulkanSurface)(void *instance, void *surface);

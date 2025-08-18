@@ -21,6 +21,7 @@ typedef struct Image
 {
 	VkImage image;
 	VkImageLayout layout;
+	VkImageUsageFlags usage;
 	
 	u32 width;
 	u32 height;
@@ -31,8 +32,6 @@ typedef struct Image
 	VkFormat format;
 	VkImageViewType type;
 	VkImageTiling tiling;
-	
-	VkImageUsageFlags usage;
 	
 	u32 mipmap_count;
 	VkSampleCountFlagBits samples;
@@ -87,12 +86,10 @@ typedef struct ShaderProgram
 }
 ShaderProgram;
 
-#define MAX_VERTEX_ATTRIBUTES 32
-
 typedef struct VertexFormat
 {
 	u32 attribute_count;
-	VkVertexInputAttributeDescription attributes[MAX_VERTEX_ATTRIBUTES];
+	VkVertexInputAttributeDescription attributes[32];
 	
 	u32 binding_count;
 	VkVertexInputBindingDescription bindings[2];
@@ -216,14 +213,12 @@ typedef struct CommandBuffer
 }
 CommandBuffer;
 
-#define COMMAND_POOL_FREE_BUFFER_COUNT 16
-
 typedef struct CommandPool
 {
 	VkCommandPool handle;
 	
 	u32 free_index;
-	VkCommandBuffer free_buffers[COMMAND_POOL_FREE_BUFFER_COUNT];
+	VkCommandBuffer free_buffers[16];
 }
 CommandPool;
 
@@ -244,6 +239,9 @@ typedef struct Swapchain
 	VkSwapchainKHR handle;
 	
 	// NOTE(kp): This is *DIFFERENT* from GraphicsDevice::current_frame_index!
+	//           A swapchain might have, e.g: 3 frames while the graphics
+	//           device only has 2 frames in flight. They are *usually* the same
+	//           but not always!
 	u32 current_image_index;
 	
 	u32 width;

@@ -20,6 +20,10 @@ RenderPassType;
 typedef struct RenderPass
 {
 	RenderPassType type;
+	
+	// NOTE(kp): Generic data that can be set depending on whatever is required
+	//           by the pass. This is then given to the Record(...) function
+	//           as the "context".
 	u8 context[128];
 	
 	union

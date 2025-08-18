@@ -4,7 +4,6 @@ do { \
 VkResult _vk_check_result = _func_call; \
 if(_vk_check_result != VK_SUCCESS) { \
 DebugLogCrash(_error_msg); \
-/*DebugLogCrash(_error_msg ": %d", _vk_check_result);*/ \
 } \
 } while(0)
 
@@ -83,7 +82,7 @@ FindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
 		return VK_SAMPLE_COUNT_1_BIT;
 	}
 	
-	DebugLogCrash("Could not find a maximum usable sample count!");
+	DebugLogCrash("Could not find a maximum usable sample count.");
 	
 	return VK_SAMPLE_COUNT_1_BIT;
 }
@@ -346,7 +345,7 @@ BindlessInit()
 	VK_CHECK(vkAllocateDescriptorSets(graphics_device->device, &alloc_info, &graphics_device->bindless_set),
 			 "Failed to allocate bindless descriptor set.");
 	
-	DebugLog("Initialized bindless resources.");
+	DebugLog("Bindless resources created.");
 }
 
 internal void
@@ -437,13 +436,13 @@ ImageIsCubemap(Image *image)
 }
 
 internal u32
-GetImageFaceCount(Image *image)
+ImageFaceCount(Image *image)
 {
 	return ImageIsCubemap(image) ? 6 : 1;
 }
 
 internal u32
-GetImageLayerCount(Image *image)
+ImageLayerCount(Image *image)
 {
 	if(image->type == VK_IMAGE_VIEW_TYPE_1D_ARRAY ||
 	   image->type == VK_IMAGE_VIEW_TYPE_2D_ARRAY)
@@ -451,7 +450,7 @@ GetImageLayerCount(Image *image)
 		return image->depth;
 	}
 	
-	return GetImageFaceCount(image);
+	return ImageFaceCount(image);
 }
 
 internal u32
@@ -471,6 +470,8 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 			  b32 is_storage)
 {
 	Image image = {0};
+	
+	image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	
 	image.width = width;
 	image.height = height;
@@ -548,7 +549,7 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 	create_info.extent.height = image.height;
 	create_info.extent.depth = image.depth;
 	create_info.mipLevels = image.mipmap_count;
-	create_info.arrayLayers = GetImageFaceCount(&image);
+	create_info.arrayLayers = ImageFaceCount(&image);
 	create_info.format = image.format;
 	create_info.tiling = image.tiling;
 	create_info.usage = image.usage;
@@ -568,7 +569,7 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 	vma_alloc_info.priority = 1.f;
 	
 	VK_CHECK(vmaCreateImage(graphics_device->vma_allocator, &create_info, &vma_alloc_info, &image.image, &image.allocation, &image.allocation_info),
-			 "Failed to create image");
+			 "Failed to create image.");
 	
 	return image;
 }
@@ -598,11 +599,14 @@ GetImageMemoryBarrier(Image *image, VkImageLayout layout)
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = image->mipmap_count;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = GetImageLayerCount(image);
+	barrier.subresourceRange.layerCount = ImageLayerCount(image);
 	
+	// TODO(kp): This should ideally be a bit more granular.
+	//           Or maybe not...
 	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
 	
+	// TODO(kp): This as well.
 	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 	
@@ -647,7 +651,7 @@ ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 	if(ImageIsDepth(image))
 	{
 		// NOTE(kp): Depth AND stencil is not allowed for sampling!
-		// So, use depth instead.
+		//           --> So, use depth instead.
 		view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
 	
@@ -678,9 +682,9 @@ internal ImageView *
 FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
 	u64 hash = 0;
-	hash = HashBytesGenericCombine(hash, image, sizeof(Image));
-	hash = HashBytesGenericCombine(hash, &layer_count, sizeof(u32));
-	hash = HashBytesGenericCombine(hash, &layer, sizeof(u32));
+	hash = HashBytesGenericCombine(hash,  image,          sizeof(Image));
+	hash = HashBytesGenericCombine(hash, &layer_count,    sizeof(u32));
+	hash = HashBytesGenericCombine(hash, &layer,          sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &base_mip_level, sizeof(u32));
 	
 	ImageView *fetched_image_view = HashTableFetchElement(&graphics_device->image_view_cache, hash);
@@ -698,7 +702,7 @@ FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 internal ImageView *
 FetchStandardImageView(Image *image)
 {
-	return FetchImageView(image, GetImageLayerCount(image), 0, 0);
+	return FetchImageView(image, ImageLayerCount(image), 0, 0);
 }
 
 internal Sampler
@@ -834,15 +838,14 @@ GPUBufferDestroy(GPUBuffer *buffer)
 	buffer->handle = VK_NULL_HANDLE;
 }
 
-internal ShaderStage
-ShaderStageLoadFromBytecode(MemoryArena *arena, String8 path, VkShaderStageFlagBits type)
+// TODO(kp): Move elsewhere.
+internal String8
+LoadFileBytesAndNullTerminate(MemoryArena *dst, String8 path)
 {
-	b8 *source = 0;
+	b8 *bytes = 0;
 	
-	FILE *file = fopen((char *)path.str, "r");
-	size_t file_size = 0;
-	
-	ScratchArena scratch = GetScratch(arena);
+	FILE *file = fopen((char *)path.str, "rb");
+	u64 file_size = 0;
 	
 	if(file)
 	{
@@ -850,20 +853,29 @@ ShaderStageLoadFromBytecode(MemoryArena *arena, String8 path, VkShaderStageFlagB
 		file_size = ftell(file);
 		fseek(file, 0, SEEK_SET);
 		
-		source = MemoryArenaPush(scratch.arena, file_size + 1);
-		fread(source, file_size, 1, file);
-		source[file_size] = '\0';
+		bytes = MemoryArenaPush(dst, file_size + 1);
+		fread(bytes, file_size, 1, file);
+		bytes[file_size] = '\0';
 		
 		fclose(file);
 	}
+	
+	return String8Init(bytes, file_size);
+}
+
+internal ShaderStage
+ShaderStageLoadFromBytecode(MemoryArena *arena, String8 path, VkShaderStageFlagBits type)
+{
+	ScratchArena scratch = GetScratch(arena);
+	String8 source = LoadFileBytesAndNullTerminate(scratch.arena, path);
 	
 	ShaderStage stage = {0};
 	stage.stage = type;
 	
 	VkShaderModuleCreateInfo module_create_info = {0};
 	module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	module_create_info.codeSize = file_size;
-	module_create_info.pCode = (const u32 *)source;
+	module_create_info.codeSize = source.size;
+	module_create_info.pCode = (const u32 *)source.str;
 	
 	VK_CHECK(vkCreateShaderModule(graphics_device->device, &module_create_info, 0, &stage.module),
 			 "Failed to create shader module.");
@@ -893,12 +905,9 @@ ShaderProgramInit(u32 push_constant_size, u32 stage_count)
 internal void
 ShaderProgramDestroy(ShaderProgram *program)
 {
-	for(i32 i = 0; i < 2; i++)
+	for(i32 i = 0; i < program->stage_count; i++)
 	{
-		if(program->stages + i)
-		{
-			ShaderStageDestroy(program->stages + i);
-		}
+		ShaderStageDestroy(program->stages + i);
 	}
 }
 
@@ -1157,25 +1166,25 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	colour_blend_state_create_info.blendConstants[3] = definition->blend_state.constants[3];
 	
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {0};
-	depth_stencil_state_create_info.depthTestEnable = definition->depth_stencil_state.depth_test_enabled;
-	depth_stencil_state_create_info.depthWriteEnable = definition->depth_stencil_state.depth_write_enabled;
-	depth_stencil_state_create_info.depthCompareOp = definition->depth_stencil_state.depth_compare_op;
+	depth_stencil_state_create_info.depthTestEnable       = definition->depth_stencil_state.depth_test_enabled;
+	depth_stencil_state_create_info.depthWriteEnable      = definition->depth_stencil_state.depth_write_enabled;
+	depth_stencil_state_create_info.depthCompareOp        = definition->depth_stencil_state.depth_compare_op;
 	depth_stencil_state_create_info.depthBoundsTestEnable = definition->depth_stencil_state.depth_bounds_test_enabled;
-	depth_stencil_state_create_info.minDepthBounds = definition->depth_stencil_state.depth_bounds_min;
-	depth_stencil_state_create_info.maxDepthBounds = definition->depth_stencil_state.depth_bounds_max;
-	depth_stencil_state_create_info.stencilTestEnable = definition->depth_stencil_state.stencil_test_enabled;
-	depth_stencil_state_create_info.front.failOp = definition->depth_stencil_state.stencil_front.fail_op;
-	depth_stencil_state_create_info.front.passOp = definition->depth_stencil_state.stencil_front.pass_op;
-	depth_stencil_state_create_info.front.depthFailOp = definition->depth_stencil_state.stencil_front.depth_fail_op;
-	depth_stencil_state_create_info.front.compareOp = definition->depth_stencil_state.stencil_front.compare_op;
-	depth_stencil_state_create_info.front.writeMask = definition->depth_stencil_state.stencil_front.write_mask;
-	depth_stencil_state_create_info.front.reference = definition->depth_stencil_state.stencil_front.reference;
-	depth_stencil_state_create_info.back.failOp = definition->depth_stencil_state.stencil_back.fail_op;
-	depth_stencil_state_create_info.back.passOp = definition->depth_stencil_state.stencil_back.pass_op;
-	depth_stencil_state_create_info.back.depthFailOp = definition->depth_stencil_state.stencil_back.depth_fail_op;
-	depth_stencil_state_create_info.back.compareOp = definition->depth_stencil_state.stencil_back.compare_op;
-	depth_stencil_state_create_info.back.writeMask = definition->depth_stencil_state.stencil_back.write_mask;
-	depth_stencil_state_create_info.back.reference = definition->depth_stencil_state.stencil_back.reference;
+	depth_stencil_state_create_info.minDepthBounds        = definition->depth_stencil_state.depth_bounds_min;
+	depth_stencil_state_create_info.maxDepthBounds        = definition->depth_stencil_state.depth_bounds_max;
+	depth_stencil_state_create_info.stencilTestEnable     = definition->depth_stencil_state.stencil_test_enabled;
+	depth_stencil_state_create_info.front.failOp          = definition->depth_stencil_state.stencil_front.fail_op;
+	depth_stencil_state_create_info.front.passOp          = definition->depth_stencil_state.stencil_front.pass_op;
+	depth_stencil_state_create_info.front.depthFailOp     = definition->depth_stencil_state.stencil_front.depth_fail_op;
+	depth_stencil_state_create_info.front.compareOp       = definition->depth_stencil_state.stencil_front.compare_op;
+	depth_stencil_state_create_info.front.writeMask       = definition->depth_stencil_state.stencil_front.write_mask;
+	depth_stencil_state_create_info.front.reference       = definition->depth_stencil_state.stencil_front.reference;
+	depth_stencil_state_create_info.back.failOp           = definition->depth_stencil_state.stencil_back.fail_op;
+	depth_stencil_state_create_info.back.passOp           = definition->depth_stencil_state.stencil_back.pass_op;
+	depth_stencil_state_create_info.back.depthFailOp      = definition->depth_stencil_state.stencil_back.depth_fail_op;
+	depth_stencil_state_create_info.back.compareOp        = definition->depth_stencil_state.stencil_back.compare_op;
+	depth_stencil_state_create_info.back.writeMask        = definition->depth_stencil_state.stencil_back.write_mask;
+	depth_stencil_state_create_info.back.reference        = definition->depth_stencil_state.stencil_back.reference;
 	
 	static VkDynamicState GRAPHICS_PIPELINE_DYNAMIC_STATES[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -1188,12 +1197,7 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	dynamic_state_create_info.dynamicStateCount = ArraySize(GRAPHICS_PIPELINE_DYNAMIC_STATES);
 	dynamic_state_create_info.pDynamicStates = GRAPHICS_PIPELINE_DYNAMIC_STATES;
 	
-	VkFormat depth_stencil_format = VK_FORMAT_UNDEFINED;
-	
-	if(definition->has_depth_attachment)
-	{
-		depth_stencil_format = graphics_device->depth_format;
-	}
+	VkFormat depth_stencil_format = definition->has_depth_attachment ? graphics_device->depth_format : VK_FORMAT_UNDEFINED;
 	
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {0};
 	pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -1205,10 +1209,10 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	
 	VkPipelineShaderStageCreateInfo shader_stages[2] = {0};
 	
-	VkPipelineShaderStageCreateInfo *shader_stage = shader_stages;
-	
-	for(i32 i = 0; i < definition->program->stage_count; i++, shader_stage++)
+	for(i32 i = 0; i < definition->program->stage_count; i++)
 	{
+		VkPipelineShaderStageCreateInfo *shader_stage = shader_stages + i;
+		
 		shader_stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shader_stage->stage = definition->program->stages[i].stage;
 		shader_stage->module = definition->program->stages[i].module;
@@ -1288,11 +1292,12 @@ FetchPipelineLayout(ShaderProgram *program)
 	return layout;
 }
 
-internal u64
-CalculateGraphicsPipelineHash(GraphicsPipelineDef *definition)
+internal PipelineState
+FetchGraphicsPipeline(GraphicsPipelineDef *definition)
 {
-	u64 hash = 0;
+	VkPipelineLayout layout = FetchPipelineLayout(definition->program);
 	
+	u64 hash = 0;
 	hash = HashBytesGenericCombine(hash,  definition->program,                    sizeof(ShaderProgram));
 	hash = HashBytesGenericCombine(hash,  definition->vertex_format,              sizeof(VertexFormat));
 	hash = HashBytesGenericCombine(hash, &definition->cull_mode,                  sizeof(VkCullModeFlags));
@@ -1307,15 +1312,6 @@ CalculateGraphicsPipelineHash(GraphicsPipelineDef *definition)
 	hash = HashBytesGenericCombine(hash, &definition->min_sample_shading,         sizeof(f32));
 	hash = HashBytesGenericCombine(hash, &definition->view_mask,                  sizeof(u32));
 	
-	return hash;
-}
-
-internal PipelineState
-FetchGraphicsPipeline(GraphicsPipelineDef *definition)
-{
-	VkPipelineLayout layout = FetchPipelineLayout(definition->program);
-	
-	u64 hash = CalculateGraphicsPipelineHash(definition);
 	VkPipeline *fetched_pipeline = HashTableFetchElement(&graphics_device->pipeline_cache, hash);
 	
 	if(fetched_pipeline)
@@ -1336,18 +1332,13 @@ FetchGraphicsPipeline(GraphicsPipelineDef *definition)
 	return st;
 }
 
-internal u64
-CalculateComputePipelineHash(ComputePipelineDef *definition)
-{
-	return HashBytesGeneric(definition->program, sizeof(ShaderProgram));
-}
-
 internal PipelineState
 FetchComputePipeline(ComputePipelineDef *definition)
 {
 	VkPipelineLayout layout = FetchPipelineLayout(definition->program);
 	
-	u64 hash = CalculateComputePipelineHash(definition);
+	u64 hash = HashBytesGeneric(definition->program, sizeof(ShaderProgram));
+	
 	VkPipeline *fetched_pipeline = HashTableFetchElement(&graphics_device->pipeline_cache, hash);
 	
 	if(fetched_pipeline)
@@ -1376,7 +1367,7 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 	SwapchainSupportDetails details = QuerySwapchainSupport(scratch.arena, graphics_device->physical_device, graphics_device->surface);
 	
 	VkSurfaceFormatKHR surface_format = GraphicsChooseSwapSurfaceFormat(details.surface_formats, details.surface_format_count);
-	VkPresentModeKHR present_mode = GraphicsChooseSwapPresentMode(details.present_modes, details.present_mode_count, 1);
+	VkPresentModeKHR present_mode = GraphicsChooseSwapPresentMode(details.present_modes, details.present_mode_count, true);
 	VkExtent2D extent = GraphicsChooseSwapExtent(platform, &details.capabilities);
 	
 	swapchain->width = extent.width;
@@ -1415,7 +1406,7 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 	
 	if(image_count <= 0)
 	{
-		DebugLogCrash("Failed to find any images in swapchain!");
+		DebugLogCrash("Failed to find any images in swapchain.");
 	}
 	
 	swapchain->swapchain_image_count = image_count;
@@ -1449,10 +1440,12 @@ SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
 		image->mipmap_count = 1;
 		image->samples = VK_SAMPLE_COUNT_1_BIT;
 		
-		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, GetImageLayerCount(image), 0, 0);
+		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, ImageLayerCount(image), 0, 0);
 	}
 	
 	ReleaseScratch(&scratch);
+	
+	DebugLog("Swapchain created.");
 }
 
 internal void
@@ -1509,14 +1502,14 @@ CmdBegin(CommandBuffer *cmd)
 	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	
 	VK_CHECK(vkBeginCommandBuffer(cmd->handle, &begin_info),
-			 "Failed to begin recording instant command buffer");
+			 "Failed to begin recording instant command buffer.");
 }
 
 internal void
 CmdEnd(CommandBuffer *cmd)
 {
 	VK_CHECK(vkEndCommandBuffer(cmd->handle),
-			 "Failed to record command buffer");
+			 "Failed to record command buffer.");
 }
 
 internal void
@@ -1745,11 +1738,11 @@ CmdPrepareForMipmapping(CommandBuffer *cmd,
 	CmdTransitionImageLayout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 }
 
-// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
-// TODO(kp): Add Assert(...).
 internal void
 CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 {
+	Assert(image->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && "Image must be in layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.");
+	
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	barrier.image = image->image;
@@ -1757,7 +1750,7 @@ CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = GetImageLayerCount(image);
+	barrier.subresourceRange.layerCount = ImageLayerCount(image);
 	barrier.subresourceRange.levelCount = 1;
 	
 	for(i32 i = 1; i < image->mipmap_count; i++)
@@ -1779,7 +1772,7 @@ CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 						   0, 0,
 						   1, &barrier);
 		
-		for(i32 face = 0; face < GetImageFaceCount(image); face++)
+		for(i32 face = 0; face < ImageFaceCount(image); face++)
 		{
 			i32 src_mip_width  = (i32)image->width  >> (i - 1);
 			i32 src_mip_height = (i32)image->height >> (i - 1);
@@ -1859,8 +1852,6 @@ CmdCopyBufferToBuffer(CommandBuffer *cmd,
 					regions);
 }
 
-// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
-// TODO(kp): Add Assert(...).
 internal void
 CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 								GPUBuffer *buffer,
@@ -1868,6 +1859,8 @@ CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 								u32 region_count,
 								VkBufferImageCopy *regions)
 {
+	Assert(image->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && "Image must be in layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.");
+	
 	vkCmdCopyBufferToImage(cmd->handle,
 						   buffer->handle,
 						   image->image,
@@ -1876,8 +1869,6 @@ CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 						   regions);
 }
 
-// NOTE(kp): Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
-// TODO(kp): Add Assert(...).
 internal void
 CmdCopyBufferToImage(CommandBuffer *cmd,
 					 GPUBuffer *buffer,
@@ -1915,16 +1906,16 @@ CommandPoolInit(CommandPool *pool,
 	create_info.queueFamilyIndex = family_index;
 	
 	VK_CHECK(vkCreateCommandPool(graphics_device->device, &create_info, 0, &pool->handle),
-			 "Failed to create queue frame command pool");
+			 "Failed to create command pool.");
 	
 	VkCommandBufferAllocateInfo command_buffer_allocate_info = {0};
 	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	command_buffer_allocate_info.commandBufferCount = COMMAND_POOL_FREE_BUFFER_COUNT;
+	command_buffer_allocate_info.commandBufferCount = ArraySize(pool->free_buffers);
 	command_buffer_allocate_info.commandPool = pool->handle;
 	
 	VK_CHECK(vkAllocateCommandBuffers(graphics_device->device, &command_buffer_allocate_info, pool->free_buffers),
-			 "Failed to create queue frame command buffer");
+			 "Failed to allocate command pool command buffers.");
 }
 
 internal void
@@ -1937,24 +1928,6 @@ CommandPoolDestroy(CommandPool *pool)
 internal CommandBuffer
 FetchFreeCommandBuffer(CommandPool *pool)
 {
-	/*
-	if(pool->free_index >= pool->free_buffer_count)
-	{
-		VkCommandBufferAllocateInfo command_buffer_allocate_info = {0};
-		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		command_buffer_allocate_info.commandBufferCount = pool->free_buffer_count;
-		command_buffer_allocate_info.commandPool = pool->handle;
-		
-		VK_CHECK(vkAllocateCommandBuffers(graphics_device->device,
-													   &command_buffer_allocate_info,
-											   pool->free_buffers + pool->free_buffer_count),
-					 "Failed to create queue frame command buffer");
-		
-		pool->free_buffer_count *= 2;
-	}
-	*/
-	
 	CommandBuffer cmd = {0};
 	cmd.handle = pool->free_buffers[pool->free_index++];
 	
@@ -1980,7 +1953,7 @@ CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkPhysicalDevice
 	
 	if(extension_count <= 0)
 	{
-		DebugLogCrash("Failed to find any device extension properties!");
+		DebugLogCrash("Failed to find any device extension properties.");
 	}
 	
 	ScratchArena scratch = GetScratch(arena);
@@ -2134,6 +2107,10 @@ CreateGraphicsDeviceDebugUtilsMessengerExt(VkInstance instance,
 //           in volk) and just load that table back
 //           in after reloading?
 
+// TODO(kp): Also I'm 99% certain that VMA's function
+//           pointers also break down here, and I'm
+//           not setting them back... Need to test.
+
 internal void
 GraphicsDeviceBeforeHotReload()
 {
@@ -2235,100 +2212,107 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 		DebugLogCrash("Failed to create surface.");
 	}
 	
-	u32 device_count = 0;
-	vkEnumeratePhysicalDevices(graphics_device->instance, &device_count, 0);
-	
-	if(device_count <= 0)
+	// NOTE(kp): Enumerate physical devices.
 	{
-		DebugLogCrash("Failed to find GPUs with Vulkan support.");
-	}
-	
-	VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-	VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2   };
-	
-	VkPhysicalDevice *devices = MemoryArenaPush(scratch.arena, sizeof(VkPhysicalDevice) * device_count);
-	vkEnumeratePhysicalDevices(graphics_device->instance, &device_count, devices);
-	
-	vkGetPhysicalDeviceProperties2(devices[0], &properties);
-	vkGetPhysicalDeviceFeatures2(devices[0], &features);
-	
-	graphics_device->physical_device = devices[0];
-	graphics_device->physical_device_properties = properties;
-	graphics_device->physical_device_features = features;
-	
-	b32 has_essentials = false;
-	
-	u32 usability0 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
-														   graphics_device->surface,
-														   graphics_device->physical_device,
-														   properties,
-														   features,
-														   &has_essentials);
-	
-	u32 selected_index = 0;
-	
-	for(i32 i = 0; i < device_count; i++)
-	{
-		vkGetPhysicalDeviceProperties2(devices[i], &graphics_device->physical_device_properties);
-		vkGetPhysicalDeviceFeatures2(devices[i], &graphics_device->physical_device_features);
+		u32 device_count = 0;
+		vkEnumeratePhysicalDevices(graphics_device->instance, &device_count, 0);
 		
-		u32 usability1 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
+		if(device_count <= 0)
+		{
+			DebugLogCrash("Failed to find GPUs with Vulkan support.");
+		}
+		
+		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+		VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2   };
+		
+		VkPhysicalDevice *devices = MemoryArenaPush(scratch.arena, sizeof(VkPhysicalDevice) * device_count);
+		vkEnumeratePhysicalDevices(graphics_device->instance, &device_count, devices);
+		
+		vkGetPhysicalDeviceProperties2(devices[0], &properties);
+		vkGetPhysicalDeviceFeatures2(devices[0], &features);
+		
+		graphics_device->physical_device = devices[0];
+		graphics_device->physical_device_properties = properties;
+		graphics_device->physical_device_features = features;
+		
+		b32 has_essentials = false;
+		
+		u32 usability0 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
 															   graphics_device->surface,
-															   devices[i],
+															   graphics_device->physical_device,
 															   properties,
 															   features,
 															   &has_essentials);
 		
-		if(usability1 > usability0 && has_essentials)
-		{
-			usability0 = usability1;
-			
-			graphics_device->physical_device = devices[i];
-			graphics_device->physical_device_properties = properties;
-			graphics_device->physical_device_features = features;
-			
-			selected_index = i;
-		}
+		u32 selected_index = 0;
 		
-		if(!graphics_device->physical_device)
+		for(i32 i = 0; i < device_count; i++)
 		{
-			DebugLogCrash("Unable to find a suitable GPU.");
+			vkGetPhysicalDeviceProperties2(devices[i], &graphics_device->physical_device_properties);
+			vkGetPhysicalDeviceFeatures2(devices[i], &graphics_device->physical_device_features);
+			
+			u32 usability1 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
+																   graphics_device->surface,
+																   devices[i],
+																   properties,
+																   features,
+																   &has_essentials);
+			
+			if(usability1 > usability0 && has_essentials)
+			{
+				usability0 = usability1;
+				
+				graphics_device->physical_device = devices[i];
+				graphics_device->physical_device_properties = properties;
+				graphics_device->physical_device_features = features;
+				
+				selected_index = i;
+			}
+			
+			if(!graphics_device->physical_device)
+			{
+				DebugLogCrash("Unable to find a suitable GPU.");
+			}
+			
+			DebugLog("Selected a suitable GPU: %d", selected_index);
 		}
-		
-		DebugLog("Selected a suitable GPU: %d", selected_index);
 	}
 	
 	graphics_device->max_msaa_samples = FindGraphicsMaxUsableSampleCount(graphics_device->physical_device_properties);
 	graphics_device->depth_format = FindGraphicsDepthFormat(graphics_device->physical_device);
 	
-	u32 queue_family_count = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count, 0);
-	
-	if(queue_family_count <= 0)
+	// NOTE(kp): Locate the graphics queue.
 	{
-		DebugLogCrash("Failed to find any queue families.");
-	}
-	
-	VkQueueFamilyProperties *queue_families = MemoryArenaPush(scratch.arena, sizeof(VkQueueFamilyProperties) * queue_family_count);
-	vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count, queue_families);
-	
-	for(i32 i = 0; i < queue_family_count; i++)
-	{
-		if((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
+		u32 queue_family_count = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count, 0);
+		
+		if(queue_family_count <= 0)
 		{
-			b32 present_support = false;
-			
-			vkGetPhysicalDeviceSurfaceSupportKHR(graphics_device->physical_device,
-												 i,
-												 graphics_device->surface,
-												 &present_support);
-			
-			if(present_support)
+			DebugLogCrash("Failed to find any queue families.");
+		}
+		
+		VkQueueFamilyProperties *queue_families = MemoryArenaPush(scratch.arena, sizeof(VkQueueFamilyProperties) * queue_family_count);
+		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count, queue_families);
+		
+		for(i32 i = 0; i < queue_family_count; i++)
+		{
+			if((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
 			{
-				graphics_device->graphics_queue_family_index = i;
+				b32 present_support = false;
+				
+				vkGetPhysicalDeviceSurfaceSupportKHR(graphics_device->physical_device,
+													 i,
+													 graphics_device->surface,
+													 &present_support);
+				
+				if(present_support)
+				{
+					graphics_device->graphics_queue_family_index = i;
+					break;
+				}
+				
+				continue;
 			}
-			
-			continue;
 		}
 	}
 	
@@ -2395,35 +2379,44 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	}
 	
 	VK_CHECK(vkCreateDevice(graphics_device->physical_device, &device_create_info, 0, &graphics_device->device),
-			 "Failed to create logical device");
+			 "Failed to create logical device.");
 	
 	vkGetDeviceQueue(graphics_device->device,
 					 graphics_device->graphics_queue_family_index,
 					 0,
 					 &graphics_device->graphics_queue);
 	
+	DebugLog("Created logical device.");
+	
+	VkSemaphoreCreateInfo semaphore_create_info = {0};
+	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	
 	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
 	{
 		CommandPoolInit(&graphics_device->frames[i].command_pool, graphics_device->graphics_queue_family_index);
 		
-		{
-			VkFenceCreateInfo in_flight_fence_create_info = {0};
-			in_flight_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			in_flight_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			
-			VK_CHECK(vkCreateFence(graphics_device->device, &in_flight_fence_create_info, 0, &graphics_device->frames[i].in_flight_fence),
-					 "Failed to create queue frame in flight fence");
-		}
+		VkFenceCreateInfo in_flight_fence_create_info = {0};
+		in_flight_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		in_flight_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 		
-		{
-			VkFenceCreateInfo instant_submit_fence_create_info = {0};
-			instant_submit_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			instant_submit_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			
-			VK_CHECK(vkCreateFence(graphics_device->device, &instant_submit_fence_create_info, 0, &graphics_device->frames[i].instant_submit_fence),
-					 "Failed to create queue frame instant submit fence");
-		}
+		VK_CHECK(vkCreateFence(graphics_device->device, &in_flight_fence_create_info, 0, &graphics_device->frames[i].in_flight_fence),
+				 "Failed to create queue frame in flight fence.");
+		
+		VkFenceCreateInfo instant_submit_fence_create_info = {0};
+		instant_submit_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		instant_submit_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		
+		VK_CHECK(vkCreateFence(graphics_device->device, &instant_submit_fence_create_info, 0, &graphics_device->frames[i].instant_submit_fence),
+				 "Failed to create queue frame instant submit fence.");
+		
+		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].image_available_semaphore),
+				 "Failed to create image available semaphore.");
+		
+		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].render_finished_semaphore),
+				 "Failed to create render finished semaphore.");
 	}
+	
+	DebugLog("Created frame sync objects.");
 	
 	u32 version = 0;
 	VkResult result = vkEnumerateInstanceVersion(&version);
@@ -2439,8 +2432,6 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	{
 		DebugLog("Failed to retrieve Vulkan version.");
 	}
-	
-	DebugLog("Created logical device.");
 	
 	volkLoadDevice(graphics_device->device);
 	
@@ -2476,7 +2467,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	VK_CHECK(vmaCreateAllocator(&allocator_create_info, &graphics_device->vma_allocator),
 			 "Failed to create Vulkan Memory Allocator.");
 	
-	DebugLog("Created memory allocator.");
+	DebugLog("Created Vulkan Memory Allocator.");
 	
 	VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
 	pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -2493,23 +2484,11 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	SwapchainInit(&graphics_device->swapchain, arena, platform);
 	BindlessInit();
 	
-	VkSemaphoreCreateInfo semaphore_create_info = {0};
-	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	
-	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
-	{
-		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].image_available_semaphore),
-				 "Failed to create image available semaphore.");
-		
-		VK_CHECK(vkCreateSemaphore(graphics_device->device, &semaphore_create_info, 0, &graphics_device->frames[i].render_finished_semaphore),
-				 "Failed to create render finished semaphore.");
-	}
-	
-	DebugLog("Created sync objects.");
-	
 	HashTableInit(&graphics_device->image_view_cache, arena, sizeof(ImageView));
 	HashTableInit(&graphics_device->pipeline_cache, arena, sizeof(VkPipeline));
 	HashTableInit(&graphics_device->pipeline_layout_cache, arena, sizeof(VkPipelineLayout));
+	
+	DebugLog("Created graphics object caches.");
 	
 	ReleaseScratch(&scratch);
 }
@@ -2564,6 +2543,7 @@ GraphicsDeviceDestroy()
 		}
 	}
 	
+	// NOTE(kp): Clean up frame synchronization objects.
 	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
 	{
 		CommandPoolDestroy(&graphics_device->frames[i].command_pool);
@@ -2646,7 +2626,7 @@ EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 	}
 	
 	VK_CHECK(vkQueueSubmit2(graphics_device->graphics_queue, 1, &submit_info, fence),
-			 "Failed to submit in-flight draw command to buffer");
+			 "Failed to submit in-flight draw command to buffer.");
 	
 	u32 image_index = graphics_device->swapchain.current_image_index;
 	

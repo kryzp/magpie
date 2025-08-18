@@ -1,27 +1,35 @@
 
-// TODO(kp): (Not in order of importance)
+// TODO(kp): (In order of what to do next to achieve feature parity with magpie C++)
 //           [x]  1. Pipeline state caching, two seperate hash
 //                   tables for layouts and pipelines. Also cache
 //                   image views automaticlly.
 //           [x]  2. Irradiance + Prefilter map generation.
-//           [x]  3. Remove Combined Image-Sampler from bindless
-//                   and add seperate image + sampler lists.
-//           [ ]  4. Proper asset system for shader, texture and model loading.
-//           [ ]  5. Bindless material system from C++ pre-rework
+//           [x]  3. Remove combined image-sampler from bindless
+//                   and add seperate image + sampler tables.
+//           [x]  4. Generic hash table implementation.
+//           [x]  5. Well commented codebase (self commenting code counts).
+//           [x]  6. More Assert(...), DebugLog(...) and DebugLogCrash(...) in the codebase.
+//           [ ]  7. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
+//           [ ]  8. Proper asset system for shader, texture and model loading.
+//           [ ]  9. Bindless material system from C++ pre-rework
 //                   (with bindless, a material is *just* data you pass to a
 //                   shader, since textures are just parameters
 //                   like any other into the material).
-//           [ ]  6. Debug renderer (lines, spheres, etc...) (seperate thing)
-//           [ ]  7. Text rendering (fonts)
-//           [ ]  8. Scene system (e.g: a scene might have some
+//           [ ] 10. Scene system (e.g: a scene might have some
 //                   objects to render, multiple lighting probes, etc...)
-//           [ ]  9. More Assert(...)'s in the codebase.
-//           [ ] 10. Well commented codebase.
 //           [ ] 11. Due to dynamic rendering, there is a lot of data you have to duplicate
 //                   between graphics pipelines and render info's (view mask, formats, etc...),
 //                   figure out a way to merge this together. Maybe pass render info
 //                   into GraphicsPipelineCreate(...)?
-//           [ ] 12. (This applies to all bindless resources.)
+//           [ ] 12. Deferred Rendering.
+//                   --> Lighting.
+//
+//                   <<< MAGPIE C++ ENDS HERE >>>
+//
+//           [ ] 13. Split up files accordingly to make the code easier to manage.
+//           [ ] 14. Debug renderer (lines, spheres, etc...) (seperate thing)
+//           [ ] 15. Text rendering (fonts)
+//           [ ] 16. (This applies to all bindless resources.)
 //                   resource_id should *not* be assigned in the
 //                   graphics device. In fact, the graphics device
 //                   should not be managing bindless in the first
@@ -29,14 +37,11 @@
 //                   --> Maybe in the future, have a BindlessResources
 //                       struct in the high level, that different renderers
 //                       can use to manage their bindless resources
-//           [ ] 13. Mipmap generation should happen automatically when executing render passes.
+//           [ ] 17. Mipmap generation should happen automatically when executing render passes.
 //                   --> When that is achieved, automatically call CmdBeginRendering(...) and
 //                       CmdEndRendering(...) around the Record(...) function, since mipmaps
 //                       are pretty much the only reason I don't already do that.
-//           [ ] 14. Generic hash table implementation.
-//           [ ] 15. Deferred Rendering.
-//           [ ] 16. Split up files to make the code easier to manage.
-//           [ ] 17. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
+//           [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
 
 internal Mesh
 MeshInit(VertexFormat *format,
@@ -287,13 +292,8 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 		
 		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 		
-		CmdBindBindless(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.layout);
-		
-		CmdBindPipeline(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.pipeline);
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 		
 		CmdPushConstants(cmd,
 						 st.layout,
@@ -308,6 +308,8 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 	
 	CmdPrepareForMipmapping(cmd, &renderer->environment_cubemap);
 	CmdGenerateMipmaps(cmd, &renderer->environment_cubemap);
+	
+	DebugLog("Created Environment Cubemap.");
 }
 
 internal void
@@ -362,13 +364,8 @@ RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, 
 		
 		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 		
-		CmdBindBindless(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.layout);
-		
-		CmdBindPipeline(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.pipeline);
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 		
 		CmdPushConstants(cmd,
 						 st.layout,
@@ -383,6 +380,8 @@ RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, 
 	
 	CmdPrepareForMipmapping(cmd, &renderer->environment_probe.irradiance);
 	CmdGenerateMipmaps(cmd, &renderer->environment_probe.irradiance);
+	
+	DebugLog("Created Irradiance Cubemap.");
 }
 
 internal void
@@ -414,13 +413,8 @@ RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, R
 		
 		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 		
-		CmdBindBindless(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.layout);
-		
-		CmdBindPipeline(cmd,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						st.pipeline);
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 		
 		CmdPushConstants(cmd,
 						 st.layout,
@@ -432,6 +426,8 @@ RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, R
 		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
 	}
 	CmdEndRendering(cmd);
+	
+	DebugLog("Created a Prefilter Cubemap mip level.");
 }
 
 internal void
@@ -476,7 +472,7 @@ RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image
 		for(i32 mip_level = 0; mip_level < mipmap_count; mip_level++)
 		{
 			ImageView *prefilter_view = FetchImageView(&renderer->environment_probe.prefilter,
-													   GetImageLayerCount(&renderer->environment_probe.prefilter),
+													   ImageLayerCount(&renderer->environment_probe.prefilter),
 													   0, mip_level);
 			
 			f32 roughness = (f32)(mip_level) / (f32)(mipmap_count - 1);
@@ -505,6 +501,9 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	
 	m4 capture_projection_matrix = M4Perspective(90.0f, 1.0f, 0.1f, 10.0f);
 	
+	// NOTE(kp): We have to flip the Z lookat coordinate because cubemaps use
+	//           a left-handed sampling standard (thank you renderman) but
+	//           we use a right-handed coordinate system.
 	m4 capture_view_matrices[] = {
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3(0.f, 1.f, 0.f)), // X+
 		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3(0.f, 1.f, 0.f)), // X-
@@ -531,7 +530,9 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	EnvironmentCubeVertex;
 	
 	AddVertexBinding(&renderer->environment_cube_vertex_format, sizeof(EnvironmentCubeVertex), VK_VERTEX_INPUT_RATE_VERTEX);
-	AddVertexAttribute(&renderer->environment_cube_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(EnvironmentCubeVertex, position));
+	{
+		AddVertexAttribute(&renderer->environment_cube_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(EnvironmentCubeVertex, position));
+	}
 	
 	EnvironmentCubeVertex vertices[] = {
 		{ { -1.f,  1.f, -1.f } },
@@ -570,6 +571,9 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	
 	renderer->environment_hdr_image = ImageFromPath(str8("res/environment_map.hdr"));
 	
+	// NOTE(kp): Load in our shaders...
+	// TODO(kp): This should be done in a seperate asset system.
+	
 	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
 	{
 		renderer->environment_hdr_to_cubemap_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
@@ -587,6 +591,8 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 		renderer->prefilter_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
 		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
+	
+	DebugLog("Loaded shaders.");
 	
 	RendererGenerateEnvironmentMap(renderer);
 	RendererGenerateEnvironmentProbeFromEnvironmentCubemap(renderer, &renderer->environment_cubemap);
