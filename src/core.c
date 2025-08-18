@@ -19,6 +19,7 @@
 #include "arena.h"
 #include "arena.c"
 
+#include "hash_table.h"
 #include "graphics_device.h"
 #include "assets.h"
 #include "renderer.h"

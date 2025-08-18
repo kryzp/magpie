@@ -622,31 +622,6 @@ ImageViewDestroy(ImageView *view)
 	view->view = VK_NULL_HANDLE;
 }
 
-// NOTE(kp): Image view cache is global for the entire project
-//           so it's just a function call without any parameters
-//           since all the required data is just in graphics_device.
-
-internal void
-ImageViewCacheDestroy()
-{
-	ImageViewCacheNode *node = 0;
-	
-	for(i32 i = 0; i < ArraySize(graphics_device->image_view_cache); i++)
-	{
-		if(graphics_device->image_view_cache[i])
-		{
-			node = graphics_device->image_view_cache[i];
-			break;
-		}
-	}
-	
-	while(node)
-	{
-		ImageViewDestroy(&node->view);
-		node = node->next;
-	}
-}
-
 internal ImageView
 ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
@@ -702,38 +677,22 @@ ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 internal ImageView *
 FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
-	u32 hash = 0;
+	u64 hash = 0;
 	hash = HashBytesGenericCombine(hash, image, sizeof(Image));
 	hash = HashBytesGenericCombine(hash, &layer_count, sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &layer, sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &base_mip_level, sizeof(u32));
 	
-	u32 cache_index = hash % ArraySize(graphics_device->image_view_cache);
-	ImageViewCacheNode *curr = graphics_device->image_view_cache[cache_index];
+	ImageView *fetched_image_view = HashTableFetchElement(&graphics_device->image_view_cache, hash);
 	
-	while(curr)
+	if(fetched_image_view)
 	{
-		if(curr->hash == hash)
-		{
-			return &curr->view;
-		}
-		
-		curr = curr->next;
+		return fetched_image_view;
 	}
-	
-	// ---
 	
 	ImageView view = ImageViewFromImage(image, layer_count, layer, base_mip_level);
 	
-	// NOTE(kp): Insert into the image view cache.
-	ImageViewCacheNode *node = MemoryArenaPush(graphics_device->cache_arena, sizeof(ImageViewCacheNode));
-	node->hash = hash;
-	node->view = view;
-	node->next = graphics_device->image_view_cache[cache_index];
-	
-	graphics_device->image_view_cache[cache_index] = node;
-	
-	return &graphics_device->image_view_cache[cache_index]->view;
+	return HashTableAddElement(&graphics_device->image_view_cache, hash, &view);
 }
 
 internal ImageView *
@@ -943,6 +902,12 @@ ShaderProgramDestroy(ShaderProgram *program)
 	}
 }
 
+internal b32
+ShaderProgramIsCompute(ShaderProgram *program)
+{
+	return program->stages[0].stage == VK_SHADER_STAGE_COMPUTE_BIT;
+}
+
 internal void
 AddVertexBinding(VertexFormat *vertex, u64 stride, VkVertexInputRate input_rate)
 {
@@ -1027,7 +992,7 @@ DepthStencilStateDefault()
 internal VkPipelineLayout
 PipelineLayoutCreate(ShaderProgram *program)
 {
-	VkShaderStageFlags stage = (program->stages[0].stage == VK_SHADER_STAGE_COMPUTE_BIT) ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
+	VkShaderStageFlags stage = ShaderProgramIsCompute(program) ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
 	
 	VkPushConstantRange push_constants = {0};
 	push_constants.offset = 0;
@@ -1298,6 +1263,109 @@ ComputePipelineCreate(VkPipelineLayout layout,
 			 "Failed to create compute pipeline.");
 	
 	return pipeline;
+}
+
+internal VkPipelineLayout
+FetchPipelineLayout(ShaderProgram *program)
+{
+	b32 is_compute = ShaderProgramIsCompute(program);
+	
+	u64 hash = 0;
+	hash = HashBytesGenericCombine(hash, &is_compute, sizeof(b32));
+	hash = HashBytesGenericCombine(hash, &program->push_constant_size, sizeof(u32));
+	
+	VkPipelineLayout *fetched_layout = HashTableFetchElement(&graphics_device->pipeline_layout_cache, hash);
+	
+	if(fetched_layout)
+	{
+		return *fetched_layout;
+	}
+	
+	VkPipelineLayout layout = PipelineLayoutCreate(program);
+	
+	HashTableAddElement(&graphics_device->pipeline_layout_cache, hash, &layout);
+	
+	return layout;
+}
+
+internal u64
+CalculateGraphicsPipelineHash(GraphicsPipelineDef *definition)
+{
+	u64 hash = 0;
+	
+	hash = HashBytesGenericCombine(hash,  definition->program,                    sizeof(ShaderProgram));
+	hash = HashBytesGenericCombine(hash,  definition->vertex_format,              sizeof(VertexFormat));
+	hash = HashBytesGenericCombine(hash, &definition->cull_mode,                  sizeof(VkCullModeFlags));
+	hash = HashBytesGenericCombine(hash, &definition->front_face,                 sizeof(VkFrontFace));
+	hash = HashBytesGenericCombine(hash, &definition->blend_state,                sizeof(BlendState));
+	hash = HashBytesGenericCombine(hash, &definition->depth_stencil_state,        sizeof(DepthStencilState));
+	hash = HashBytesGenericCombine(hash, &definition->colour_attachment_count,    sizeof(u32));
+	hash = HashBytesGenericCombine(hash, &definition->colour_attachment_formats,  sizeof(VkFormat) * MAX_COLOUR_ATTACHMENTS);
+	hash = HashBytesGenericCombine(hash, &definition->has_depth_attachment,       sizeof(b32));
+	hash = HashBytesGenericCombine(hash, &definition->samples,                    sizeof(VkSampleCountFlagBits));
+	hash = HashBytesGenericCombine(hash, &definition->min_sample_shading_enabled, sizeof(b32));
+	hash = HashBytesGenericCombine(hash, &definition->min_sample_shading,         sizeof(f32));
+	hash = HashBytesGenericCombine(hash, &definition->view_mask,                  sizeof(u32));
+	
+	return hash;
+}
+
+internal PipelineState
+FetchGraphicsPipeline(GraphicsPipelineDef *definition)
+{
+	VkPipelineLayout layout = FetchPipelineLayout(definition->program);
+	
+	u64 hash = CalculateGraphicsPipelineHash(definition);
+	VkPipeline *fetched_pipeline = HashTableFetchElement(&graphics_device->pipeline_cache, hash);
+	
+	if(fetched_pipeline)
+	{
+		PipelineState st = {0};
+		st.pipeline = *fetched_pipeline;
+		st.layout = layout;
+		
+		return st;
+	}
+	
+	PipelineState st = {0};
+	st.pipeline = GraphicsPipelineCreate(layout, definition);
+	st.layout = layout;
+	
+	HashTableAddElement(&graphics_device->pipeline_cache, hash, &st.pipeline);
+	
+	return st;
+}
+
+internal u64
+CalculateComputePipelineHash(ComputePipelineDef *definition)
+{
+	return HashBytesGeneric(definition->program, sizeof(ShaderProgram));
+}
+
+internal PipelineState
+FetchComputePipeline(ComputePipelineDef *definition)
+{
+	VkPipelineLayout layout = FetchPipelineLayout(definition->program);
+	
+	u64 hash = CalculateComputePipelineHash(definition);
+	VkPipeline *fetched_pipeline = HashTableFetchElement(&graphics_device->pipeline_cache, hash);
+	
+	if(fetched_pipeline)
+	{
+		PipelineState st = {0};
+		st.pipeline = *fetched_pipeline;
+		st.layout = layout;
+		
+		return st;
+	}
+	
+	PipelineState st = {0};
+	st.pipeline = ComputePipelineCreate(layout, definition);
+	st.layout = layout;
+	
+	HashTableAddElement(&graphics_device->pipeline_cache, hash, &st.pipeline);
+	
+	return st;
 }
 
 internal void
@@ -2439,7 +2507,9 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	
 	DebugLog("Created sync objects.");
 	
-	graphics_device->cache_arena = arena;
+	HashTableInit(&graphics_device->image_view_cache, arena, sizeof(ImageView));
+	HashTableInit(&graphics_device->pipeline_cache, arena, sizeof(VkPipeline));
+	HashTableInit(&graphics_device->pipeline_layout_cache, arena, sizeof(VkPipelineLayout));
 	
 	ReleaseScratch(&scratch);
 }
@@ -2449,7 +2519,50 @@ GraphicsDeviceDestroy()
 {
 	GraphicsWaitIdle();
 	
-	ImageViewCacheDestroy();
+	// NOTE(kp): Destroy cached image views.
+	for(i32 i = 0; i < ArraySize(graphics_device->image_view_cache.buckets); i++)
+	{
+		if(graphics_device->image_view_cache.buckets[i])
+		{
+			HashTableNode *node = graphics_device->image_view_cache.buckets[i];
+			
+			while(node)
+			{
+				ImageViewDestroy((ImageView *)node->data);
+				node = node->next;
+			}
+		}
+	}
+	
+	// NOTE(kp): Destroy cached pipeline layouts.
+	for(i32 i = 0; i < ArraySize(graphics_device->pipeline_layout_cache.buckets); i++)
+	{
+		if(graphics_device->pipeline_layout_cache.buckets[i])
+		{
+			HashTableNode *node = graphics_device->pipeline_layout_cache.buckets[i];
+			
+			while(node)
+			{
+				PipelineLayoutDestroy(*((VkPipelineLayout *)node->data));
+				node = node->next;
+			}
+		}
+	}
+	
+	// NOTE(kp): Destroy cached pipelines.
+	for(i32 i = 0; i < ArraySize(graphics_device->pipeline_cache.buckets); i++)
+	{
+		if(graphics_device->pipeline_cache.buckets[i])
+		{
+			HashTableNode *node = graphics_device->pipeline_cache.buckets[i];
+			
+			while(node)
+			{
+				PipelineDestroy(*((VkPipeline *)node->data));
+				node = node->next;
+			}
+		}
+	}
 	
 	for(i32 i = 0; i < FRAMES_IN_FLIGHT; i++)
 	{

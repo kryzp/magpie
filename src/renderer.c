@@ -1,12 +1,13 @@
 
-// TODO(kp): [ ]  1. Pipeline state caching, two seperate hash
+// TODO(kp): (Not in order of importance)
+//           [x]  1. Pipeline state caching, two seperate hash
 //                   tables for layouts and pipelines. Also cache
 //                   image views automaticlly.
-//           [ ]  2. Irradiance + Prefilter map generation.
+//           [x]  2. Irradiance + Prefilter map generation.
 //           [x]  3. Remove Combined Image-Sampler from bindless
 //                   and add seperate image + sampler lists.
 //           [ ]  4. Proper asset system for shader, texture and model loading.
-//           [ ]  5. Bindless Material System from C++ pre-rework
+//           [ ]  5. Bindless material system from C++ pre-rework
 //                   (with bindless, a material is *just* data you pass to a
 //                   shader, since textures are just parameters
 //                   like any other into the material).
@@ -18,8 +19,8 @@
 //           [ ] 10. Well commented codebase.
 //           [ ] 11. Due to dynamic rendering, there is a lot of data you have to duplicate
 //                   between graphics pipelines and render info's (view mask, formats, etc...),
-//                   figure out a way to merge this together.
-//                   Maybe pass render info into GraphicsPipelineCreate(...)?
+//                   figure out a way to merge this together. Maybe pass render info
+//                   into GraphicsPipelineCreate(...)?
 //           [ ] 12. (This applies to all bindless resources.)
 //                   resource_id should *not* be assigned in the
 //                   graphics device. In fact, the graphics device
@@ -32,6 +33,10 @@
 //                   --> When that is achieved, automatically call CmdBeginRendering(...) and
 //                       CmdEndRendering(...) around the Record(...) function, since mipmaps
 //                       are pretty much the only reason I don't already do that.
+//           [ ] 14. Generic hash table implementation.
+//           [ ] 15. Deferred Rendering.
+//           [ ] 16. Split up files to make the code easier to manage.
+//           [ ] 17. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
 
 internal Mesh
 MeshInit(VertexFormat *format,
@@ -273,16 +278,25 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 		args.hdr_image_id = FetchStandardImageView(&renderer->environment_hdr_image)->resource_id;
 		args.linear_sampler_id = renderer->linear_sampler.resource_id;
 		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->environment_hdr_to_cubemap_program, &renderer->environment_cube_vertex_format);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+		pipeline_def.view_mask = 0b111111;
+		
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		
 		CmdBindBindless(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->environment_hdr_to_cubemap_pipeline_layout);
+						st.layout);
 		
 		CmdBindPipeline(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->environment_hdr_to_cubemap_pipeline);
+						st.pipeline);
 		
 		CmdPushConstants(cmd,
-						 renderer->environment_hdr_to_cubemap_pipeline_layout,
+						 st.layout,
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
@@ -306,16 +320,6 @@ RendererGenerateEnvironmentMap(Renderer *renderer)
 												  4,
 												  VK_SAMPLE_COUNT_1_BIT,
 												  false, false);
-	
-	GraphicsPipelineDef env_map_pipeline_def = GraphicsPipelineDefInitDefault(&renderer->environment_hdr_to_cubemap_program, &renderer->environment_cube_vertex_format);
-	env_map_pipeline_def.depth_stencil_state.depth_test_enabled = false;
-	env_map_pipeline_def.depth_stencil_state.depth_write_enabled = false;
-	env_map_pipeline_def.colour_attachment_count = 1;
-	env_map_pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-	env_map_pipeline_def.view_mask = 0b111111;
-	
-	renderer->environment_hdr_to_cubemap_pipeline_layout = PipelineLayoutCreate(&renderer->environment_hdr_to_cubemap_program);
-	renderer->environment_hdr_to_cubemap_pipeline = GraphicsPipelineCreate(renderer->environment_hdr_to_cubemap_pipeline_layout, &env_map_pipeline_def);
 	
 	RenderPass render_pass = {0};
 	render_pass.type = RenderPassType_Graphics;
@@ -349,16 +353,25 @@ RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, 
 		args.environment_map_id = FetchStandardImageView(&renderer->environment_cubemap)->resource_id;
 		args.linear_sampler_id = renderer->linear_sampler.resource_id;
 		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->irradiance_map_program, &renderer->environment_cube_vertex_format);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+		pipeline_def.view_mask = 0b111111;
+		
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		
 		CmdBindBindless(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->irradiance_map_pipeline_layout);
+						st.layout);
 		
 		CmdBindPipeline(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->irradiance_map_pipeline);
+						st.pipeline);
 		
 		CmdPushConstants(cmd,
-						 renderer->irradiance_map_pipeline_layout,
+						 st.layout,
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
@@ -392,16 +405,25 @@ RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, R
 		args.environment_map_id = FetchStandardImageView(&renderer->environment_cubemap)->resource_id;
 		args.linear_sampler_id = renderer->linear_sampler.resource_id;
 		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->prefilter_map_program, &renderer->environment_cube_vertex_format);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+		pipeline_def.view_mask = 0b111111;
+		
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		
 		CmdBindBindless(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->prefilter_map_pipeline_layout);
+						st.layout);
 		
 		CmdBindPipeline(cmd,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						renderer->prefilter_map_pipeline);
+						st.pipeline);
 		
 		CmdPushConstants(cmd,
-						 renderer->prefilter_map_pipeline_layout,
+						 st.layout,
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
@@ -424,16 +446,6 @@ RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image
 															   4,
 															   VK_SAMPLE_COUNT_1_BIT,
 															   false, false);
-		
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->irradiance_map_program, &renderer->environment_cube_vertex_format);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-		pipeline_def.view_mask = 0b111111;
-		
-		renderer->irradiance_map_pipeline_layout = PipelineLayoutCreate(&renderer->irradiance_map_program);
-		renderer->irradiance_map_pipeline = GraphicsPipelineCreate(renderer->irradiance_map_pipeline_layout, &pipeline_def);
 		
 		RenderPass render_pass = {0};
 		render_pass.type = RenderPassType_Graphics;
@@ -458,16 +470,6 @@ RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image
 															  4,
 															  VK_SAMPLE_COUNT_1_BIT,
 															  false, false);
-		
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->prefilter_map_program, &renderer->environment_cube_vertex_format);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-		pipeline_def.view_mask = 0b111111;
-		
-		renderer->prefilter_map_pipeline_layout = PipelineLayoutCreate(&renderer->prefilter_map_program);
-		renderer->prefilter_map_pipeline = GraphicsPipelineCreate(renderer->prefilter_map_pipeline_layout, &pipeline_def);
 		
 		i32 mipmap_count = renderer->environment_probe.prefilter.mipmap_count;
 		
@@ -593,9 +595,20 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 internal void
 RendererDestroy(Renderer *renderer)
 {
-	GPUBufferDestroy(&renderer->cubemap_capture_transforms);
-	MeshDestroy(&renderer->environment_cube_mesh);
 	SamplerDestroy(&renderer->linear_sampler);
+	
+	MeshDestroy(&renderer->environment_cube_mesh);
+	GPUBufferDestroy(&renderer->cubemap_capture_transforms);
+	
+	ImageDestroy(&renderer->environment_hdr_image);
+	ImageDestroy(&renderer->environment_cubemap);
+	
+	ImageDestroy(&renderer->environment_probe.irradiance);
+	ImageDestroy(&renderer->environment_probe.prefilter);
+	
+	ShaderProgramDestroy(&renderer->environment_hdr_to_cubemap_program);
+	ShaderProgramDestroy(&renderer->irradiance_map_program);
+	ShaderProgramDestroy(&renderer->prefilter_map_program);
 }
 
 internal void

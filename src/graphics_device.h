@@ -55,15 +55,6 @@ typedef struct ImageView
 }
 ImageView;
 
-typedef struct ImageViewCacheNode
-{
-	struct ImageViewCacheNode *next;
-	
-	u32 hash;
-	ImageView view;
-}
-ImageViewCacheNode;
-
 typedef struct GPUBuffer
 {
 	VkBuffer handle;
@@ -216,18 +207,8 @@ typedef struct PipelineState
 {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
-	VkPipelineBindPoint bind_point;
 }
 PipelineState;
-
-typedef struct PipelineCacheNode
-{
-	struct PipelineCacheNode *next;
-	
-	u32 hash;
-	PipelineState state;
-}
-PipelineCacheNode;
 
 typedef struct CommandBuffer
 {
@@ -354,9 +335,9 @@ typedef struct GraphicsDevice
 	
 	// ---
 	
-	MemoryArena *cache_arena;
-	ImageViewCacheNode *image_view_cache[16];
-	PipelineCacheNode *pipeline_cache[16];
+	HashTable image_view_cache;
+	HashTable pipeline_cache;
+	HashTable pipeline_layout_cache;
 	
 	// ---
 	

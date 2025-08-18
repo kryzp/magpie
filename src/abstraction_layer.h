@@ -771,7 +771,7 @@ HashBytesGenericCombine(u64 start, const void *key, u64 length)
     return hash;
 }
 
-internal u32
+internal u64
 HashCString(char *string)
 {
 	u64 length = 0;

@@ -85,8 +85,6 @@ typedef struct Renderer
 	// ---
 	
 	ShaderProgram environment_hdr_to_cubemap_program;
-	VkPipelineLayout environment_hdr_to_cubemap_pipeline_layout;
-	VkPipeline environment_hdr_to_cubemap_pipeline;
 	
 	Image environment_hdr_image;
 	Image environment_cubemap;
@@ -94,12 +92,7 @@ typedef struct Renderer
 	// ---
 	
 	ShaderProgram irradiance_map_program;
-	VkPipelineLayout irradiance_map_pipeline_layout;
-	VkPipeline irradiance_map_pipeline;
-	
 	ShaderProgram prefilter_map_program;
-	VkPipelineLayout prefilter_map_pipeline_layout;
-	VkPipeline prefilter_map_pipeline;
 	
 	EnvironmentProbe environment_probe;
 	
