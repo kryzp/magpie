@@ -874,7 +874,7 @@ ShaderStageLoadFromBytecode(MemoryArena *arena, String8 path, VkShaderStageFlagB
 	
 	VkShaderModuleCreateInfo module_create_info = {0};
 	module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	module_create_info.codeSize = source.size;
+	module_create_info.codeSize = source.len;
 	module_create_info.pCode = (const u32 *)source.str;
 	
 	VK_CHECK(vkCreateShaderModule(graphics_device->device, &module_create_info, 0, &stage.module),

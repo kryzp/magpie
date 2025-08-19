@@ -19,13 +19,12 @@
 //                   shader, since textures are just parameters
 //                   like any other into the material).
 //           [ ] 11. Scene system (e.g: a scene might have some
-//                   objects to render, multiple lighting probes, etc...)
-//           [ ] 12. Due to dynamic rendering, there is a lot of data you have to duplicate
+//                   objects to render, lights, etc...)
+//           [ ] 12. Deferred Rendering.
+//           [ ] 13. Due to dynamic rendering, there is a lot of data you have to duplicate
 //                   between graphics pipelines and render info's (view mask, formats, etc...),
 //                   figure out a way to merge this together. Maybe pass render info
 //                   into GraphicsPipelineCreate(...)?
-//           [ ] 13. Deferred Rendering.
-//                   --> Lighting.
 //
 //                   <<< MAGPIE C++ ENDS HERE >>>
 //
@@ -124,6 +123,8 @@ ModelCreateSubModel(Model *model)
 {
 	SubModel *sub_model = MemoryArenaPush(model->arena, sizeof(SubModel));
 	sub_model->next = model->sub_models;
+	sub_model->parent = model;
+	
 	model->sub_models = sub_model;
 	model->sub_model_count++;
 	
@@ -166,6 +167,37 @@ AssimpMeshHasVertexColours(struct aiMesh *mesh, u32 index)
 	return mesh->mColors[index] && mesh->mNumVertices > 0;
 }
 
+internal u32
+AssimpTryFetchMaterialTexture(MemoryArena *arena,
+							  String8 directory,
+							  const struct aiMaterial *material,
+							  enum aiTextureType type,
+							  u32 fallback)
+{
+	if(aiGetMaterialTextureCount(material, type) <= 0)
+	{
+		return fallback;
+	}
+	
+	ScratchArena scratch = GetScratch(arena);
+	
+	struct aiString texture_path = {0};
+	aiGetMaterialTexture(material, type, 0, &texture_path, 0, 0, 0, 0, 0, 0);
+	
+	String8 final_path = MemoryArenaAllocateString8(scratch.arena, directory.len + texture_path.length);
+	MemoryCopy(final_path.str, directory.str, directory.len);
+	MemoryCopy(final_path.str + directory.len, texture_path.data, texture_path.length);
+	
+	// TODO(kp): Temporarily I just don't even bother storing the images.
+	//           Memory leaks who?? Never heard of 'em.
+	
+	Image image = ImageLoadFromPath(final_path);
+	u32 id = FetchStandardImageView(&image)->resource_id;
+	
+	ReleaseScratch(&scratch);
+	return id;
+}
+
 typedef struct ModelVertex
 {
 	v3 position;
@@ -178,7 +210,12 @@ typedef struct ModelVertex
 ModelVertex;
 
 internal void
-ModelLoadProcessSubModel(Renderer *renderer, MemoryArena *arena, SubModel *sub_model, struct aiMesh *assimp_mesh, const struct aiScene *scene, struct aiMatrix4x4 transform)
+ModelLoadProcessSubModel(Renderer *renderer,
+						 MemoryArena *arena,
+						 SubModel *sub_model,
+						 struct aiMesh *assimp_mesh,
+						 const struct aiScene *scene,
+						 struct aiMatrix4x4 transform)
 {
 	ScratchArena scratch = GetScratch(arena);
 	
@@ -290,7 +327,16 @@ ModelLoadProcessSubModel(Renderer *renderer, MemoryArena *arena, SubModel *sub_m
 							   assimp_mesh->mNumVertices, vertices,
 							   index_count, indices);
 	
-	// TODO(kp): Material is currently unassigned.
+	if(assimp_mesh->mMaterialIndex >= 0)
+	{
+		const struct aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
+		
+		sub_model->material.diffuse  = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_DIFFUSE, 0);
+		sub_model->material.normal   = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_NORMALS, 0);
+		sub_model->material.emissive = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_EMISSIVE, 0);
+		sub_model->material.mr       = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_DIFFUSE_ROUGHNESS, 0);
+		sub_model->material.ambient  = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_LIGHTMAP, 0);
+	}
 	
 	ReleaseScratch(&scratch);
 }
@@ -349,7 +395,7 @@ ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
 	
 	Model model = {0};
 	model.arena = arena;
-	//model.directory = str8("...");
+	model.directory = String8BeforeFirstSubstringFromBackInclusive(path, str8("/"));
 	
 	struct aiMatrix4x4 identity = {
 		1.f, 0.f, 0.f, 0.f,
@@ -850,7 +896,7 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	
 	// NOTE(kp): Setup model related stuff.
 	
-	renderer->model_program = ShaderProgramInit(sizeof(m4), 2);
+	renderer->model_program = ShaderProgramInit(sizeof(m4) + sizeof(u32)*8, 2);
 	{
 		renderer->model_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/model_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
 		renderer->model_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/model_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -919,11 +965,23 @@ RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo
 		static f32 time = 0.f;
 		time -= .01f;
 		
-		m4 transform = m4(1.f);
-		transform = M4MultiplyM4(M4RotateAxis(time, v3(0.f, 1.f, 0.f)), transform);
-		transform = M4MultiplyM4(M4ScaleV3(v3(1.f, 1.f, 1.f)), transform);
-		transform = M4MultiplyM4(M4TranslateV3(v3(0.f, 0.f, -4.f)), transform);
-		transform = M4MultiplyM4(M4Perspective(70.f, 1280.f/720.f, .1f, 10.f), transform);
+		struct
+		{
+			m4 transform;
+			u32 diffuse;
+			u32 normal;
+			u32 emissive;
+			u32 mr;
+			u32 ambient;
+			u32 _padding[3];
+		}
+		args;
+		
+		args.transform = m4(1.f);
+		args.transform = M4MultiplyM4(M4RotateAxis (time, v3(0.f, 1.f, 0.f)),       args.transform);
+		args.transform = M4MultiplyM4(M4ScaleV3    (v3(1.f, 1.f, 1.f)),             args.transform);
+		args.transform = M4MultiplyM4(M4TranslateV3(v3(0.f, 0.f, -4.f)),            args.transform);
+		args.transform = M4MultiplyM4(M4Perspective(70.f, 1280.f/720.f, .1f, 10.f), args.transform);
 		
 		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->model_program, &renderer->model_vertex_format);
 		pipeline_def.colour_attachment_count = 1;
@@ -934,7 +992,7 @@ RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo
 		
 		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(m4), &transform, 0);
+		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 		CmdBindAndDrawMesh(cmd, &renderer->damaged_helmet_model.sub_models[0].mesh);
 	}
 	CmdEndRendering(cmd);

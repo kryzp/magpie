@@ -66,12 +66,14 @@ MemoryArenaZero(MemoryArena *arena)
     MemorySet(arena->memory, 0, arena->size);
 }
 
-internal char *
-MemoryArenaAllocateCStringCopy(MemoryArena *arena, char *str)
+internal String8
+MemoryArenaAllocateString8(MemoryArena *arena, u32 length)
 {
-    u32 str_length = CalculateCStringLength(str);
-    char *str_copy = (char *)MemoryArenaPush(arena, str_length + 1);
-    MemoryCopy(str_copy, str, str_length);
-    str_copy[str_length] = '\0';
-    return str_copy;
+	String8 string = {0};
+	string.len = length;
+	string.str = MemoryArenaPush(arena, length + 1);
+	
+	string.str[length] = '\0';
+	
+	return string;
 }

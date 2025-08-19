@@ -11,6 +11,12 @@ struct ModelVertex
 struct Arguments
 {
 	float4x4 transform;
+	uint diffuse;
+	uint normal;
+	uint emissive;
+	uint mr;
+	uint ambient;
+	uint _padding[3];
 };
 
 [[vk::push_constant]]
@@ -39,5 +45,5 @@ VS_Output VertexMain(ModelVertex vertex)
 float4 FragmentMain(VS_Output input) : SV_Target
 {
 	float3 colour = dot(input.normal, -float3(1., 0., 0.));
-	return float4(colour, 1.);
+	return float4(input.normal, 1.);
 }

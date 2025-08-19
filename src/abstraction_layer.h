@@ -682,21 +682,63 @@ M4RotateAxis(f32 angle, v3 axis)
 typedef struct String8
 {
 	u8 *str;
-	u64 size;
+	u64 len;
 }
 String8;
 
 internal String8
-String8Init(u8 *str, u64 size)
+String8Init(u8 *str, u64 len)
 {
 	String8 s = {0};
 	s.str = str;
-	s.size = size;
+	s.len = len;
 	
 	return s;
 }
 
 #define str8(s) String8Init((u8 *)(s), sizeof(s) - 1)
+
+internal b32
+String8Match(String8 a, String8 b)
+{
+	if(a.len != b.len)
+	{
+		return false;
+	}
+	
+	for(i32 i = 0; i < a.len; i++)
+	{
+		if(a.str[i] != b.str[i])
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+internal String8
+String8BeforeFirstSubstringFromBackInclusive(String8 string, String8 substring)
+{
+	Assert("Substring cannot be larger than string." && string.len >= substring.len);
+	
+	String8 result = {0};
+	result.str = string.str;
+	result.len = 0;
+	
+	for(i32 i = string.len - substring.len - 1; i >= 0; i--)
+	{
+		String8 here = String8Init(string.str + i, substring.len);
+		
+		if(String8Match(here, substring))
+		{
+			result.len = i + substring.len;
+			break;
+		}
+	}
+	
+	return result;
+}
 
 internal b32
 CharIsWhitespace(char c)

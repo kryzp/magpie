@@ -56,8 +56,11 @@ RenderPass;
 
 typedef struct Material
 {
-	PipelineState pipeline_state;
-	u32 table_index;
+	u32 diffuse;
+	u32 normal;
+	u32 emissive;
+	u32 mr;
+	u32 ambient;
 }
 Material;
 
@@ -73,10 +76,13 @@ typedef struct Mesh
 }
 Mesh;
 
+typedef struct Model Model;
+
 typedef struct SubModel
 {
 	struct SubModel *next;
 	
+	Model *parent;
 	Mesh mesh;
 	Material material;
 }
@@ -85,6 +91,8 @@ SubModel;
 typedef struct Model
 {
 	MemoryArena *arena;
+	
+	String8 directory;
 	
 	u32 sub_model_count;
 	SubModel *sub_models;
