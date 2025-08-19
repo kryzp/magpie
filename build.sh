@@ -46,6 +46,7 @@ clang++ \
 	core.o vk_mem_alloc.o \
 	$libs \
 	$rpaths \
+	-lassimp \
 	-fPIC \
 	-dynamiclib \
 	-o core.dylib

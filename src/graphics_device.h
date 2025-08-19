@@ -88,11 +88,11 @@ ShaderProgram;
 
 typedef struct VertexFormat
 {
-	u32 attribute_count;
-	VkVertexInputAttributeDescription attributes[32];
-	
 	u32 binding_count;
 	VkVertexInputBindingDescription bindings[2];
+	
+	u32 attribute_count;
+	VkVertexInputAttributeDescription attributes[32];
 	
 	u64 vertex_size;
 	u64 instance_size;

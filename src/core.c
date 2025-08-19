@@ -1,6 +1,11 @@
 #define VOLK_IMPLEMENTATION
 #include "ext/volk.h"
+
 #include "ext/vk_mem_alloc.h"
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include "abstraction_layer.h"
 
@@ -21,13 +26,13 @@
 
 #include "hash_table.h"
 #include "graphics_device.h"
-#include "assets.h"
+#include "bitmap_image.h"
 #include "renderer.h"
 #include "core.h"
 #include "scratch.h"
 
 #include "graphics_device.c"
-#include "assets.c"
+#include "bitmap_image.c"
 #include "renderer.c"
 
 internal void

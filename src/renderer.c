@@ -9,24 +9,26 @@
 //           [x]  4. Generic hash table implementation.
 //           [x]  5. Well commented codebase (self commenting code counts).
 //           [x]  6. More Assert(...), DebugLog(...) and DebugLogCrash(...) in the codebase.
-//           [ ]  7. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
-//           [ ]  8. Proper asset system for shader, texture and model loading.
-//           [ ]  9. Bindless material system from C++ pre-rework
+//           [x]  7. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
+//                   --> RenderPass is just a very big struct, and the renderer has 32
+//                       of them at all times.
+//           [x]  8. Model loading.
+//           [ ]  9. Split up files accordingly to make the code easier to manage.
+//           [ ] 10. Bindless material system from C++ pre-rework
 //                   (with bindless, a material is *just* data you pass to a
 //                   shader, since textures are just parameters
 //                   like any other into the material).
-//           [ ] 10. Scene system (e.g: a scene might have some
+//           [ ] 11. Scene system (e.g: a scene might have some
 //                   objects to render, multiple lighting probes, etc...)
-//           [ ] 11. Due to dynamic rendering, there is a lot of data you have to duplicate
+//           [ ] 12. Due to dynamic rendering, there is a lot of data you have to duplicate
 //                   between graphics pipelines and render info's (view mask, formats, etc...),
 //                   figure out a way to merge this together. Maybe pass render info
 //                   into GraphicsPipelineCreate(...)?
-//           [ ] 12. Deferred Rendering.
+//           [ ] 13. Deferred Rendering.
 //                   --> Lighting.
 //
 //                   <<< MAGPIE C++ ENDS HERE >>>
 //
-//           [ ] 13. Split up files accordingly to make the code easier to manage.
 //           [ ] 14. Debug renderer (lines, spheres, etc...) (seperate thing)
 //           [ ] 15. Text rendering (fonts)
 //           [ ] 16. (This applies to all bindless resources.)
@@ -109,10 +111,259 @@ MeshDestroy(Mesh *mesh)
 }
 
 internal void
-CmdBindMesh(CommandBuffer *cmd, Mesh *mesh)
+CmdBindAndDrawMesh(CommandBuffer *cmd,
+				   Mesh *mesh)
 {
 	CmdBindVertexBuffer(cmd, 0, &mesh->vertex_buffer, 0);
 	CmdBindIndexBuffer(cmd, &mesh->index_buffer, 0);
+	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
+}
+
+internal SubModel *
+ModelCreateSubModel(Model *model)
+{
+	SubModel *sub_model = MemoryArenaPush(model->arena, sizeof(SubModel));
+	sub_model->next = model->sub_models;
+	model->sub_models = sub_model;
+	model->sub_model_count++;
+	
+	return sub_model;
+}
+
+internal b32
+AssimpMeshHasPositions(struct aiMesh *mesh)
+{
+	return mesh->mVertices && mesh->mNumVertices > 0;
+}
+
+internal b32
+AssimpMeshHasFaces(struct aiMesh *mesh)
+{
+	return mesh->mFaces && mesh->mNumFaces > 0;
+}
+
+internal b32
+AssimpMeshHasNormals(struct aiMesh *mesh)
+{
+	return mesh->mNormals && mesh->mNumVertices > 0;
+}
+
+internal b32
+AssimpMeshHasTangentsAndBitangents(struct aiMesh *mesh)
+{
+	return mesh->mTangents && mesh->mBitangents && mesh->mNumVertices > 0;
+}
+
+internal b32
+AssimpMeshHasTextureCoords(struct aiMesh *mesh, u32 index)
+{
+	return mesh->mTextureCoords[index] && mesh->mNumVertices > 0;
+}
+
+internal b32
+AssimpMeshHasVertexColours(struct aiMesh *mesh, u32 index)
+{
+	return mesh->mColors[index] && mesh->mNumVertices > 0;
+}
+
+typedef struct ModelVertex
+{
+	v3 position;
+	v2 texcoord;
+	v3 colour;
+	v3 normal;
+	v3 tangent;
+	v3 bitangent;
+}
+ModelVertex;
+
+internal void
+ModelLoadProcessSubModel(Renderer *renderer, MemoryArena *arena, SubModel *sub_model, struct aiMesh *assimp_mesh, const struct aiScene *scene, struct aiMatrix4x4 transform)
+{
+	ScratchArena scratch = GetScratch(arena);
+	
+	ModelVertex *vertices = MemoryArenaPush(scratch.arena, sizeof(ModelVertex) * assimp_mesh->mNumVertices);
+	
+	// TODO(kp): Transforms should be applied when rendering (so be a member of a SubModel)
+	//           rather than being directly applied to vertices when loading them in.
+	for(i32 i = 0; i < assimp_mesh->mNumVertices; i++)
+	{
+		ModelVertex *vertex = vertices + i;
+		
+		if(AssimpMeshHasPositions(assimp_mesh))
+		{
+			struct aiVector3D position = assimp_mesh->mVertices[i];
+			aiTransformVecByMatrix4(&position, &transform);
+			
+			vertex->position = v3(position.x, position.y, position.z); 
+		}
+		else
+		{
+			vertex->position = v3(0.f, 0.f, 0.f);
+		}
+		
+		if(AssimpMeshHasTextureCoords(assimp_mesh, 0))
+		{
+			struct aiVector3D uv = assimp_mesh->mTextureCoords[0][i];
+			
+			vertex->texcoord = v2(uv.x, uv.y);
+		}
+		else
+		{
+			vertex->texcoord = v2(0.f, 0.f);
+		}
+		
+		if(AssimpMeshHasVertexColours(assimp_mesh, 0))
+		{
+			struct aiColor4D colour = assimp_mesh->mColors[0][i];
+			
+			vertex->colour = v3(colour.r, colour.g, colour.b);
+		}
+		else
+		{
+			vertex->colour = v3(1.f, 1.f, 1.f);
+		}
+		
+		if(AssimpMeshHasNormals(assimp_mesh))
+		{
+			// TODO(kp): This won't work.
+			//           Need to use a corrected transformation matrix for normals!
+			//           Unless assimp transformations are orthonormal?
+			//           --> Investigate this.
+			
+			struct aiVector3D normal = assimp_mesh->mNormals[i];
+			aiTransformVecByMatrix4(&normal, &transform);
+			
+			vertex->normal = v3(normal.x, normal.y, normal.z);
+		}
+		else
+		{
+			vertex->normal = v3(0.f, 0.f, 1.f);
+		}
+		
+		if(AssimpMeshHasTangentsAndBitangents(assimp_mesh))
+		{
+			struct aiVector3D tangent = assimp_mesh->mTangents[i];
+			struct aiVector3D bitangent = assimp_mesh->mBitangents[i];
+			
+			aiTransformVecByMatrix4(&tangent, &transform);
+			aiTransformVecByMatrix4(&bitangent, &transform);
+			
+			vertex->tangent = v3(tangent.x, tangent.y, tangent.z);
+			vertex->bitangent = v3(bitangent.x, bitangent.y, bitangent.z);
+		}
+		else
+		{
+			vertex->tangent = v3(1.f, 0.f, 0.f);
+			vertex->bitangent = v3(0.f, 1.f, 0.f);
+		}
+	}
+	
+	u32 index_count = 0;
+	
+	for(i32 i = 0; i < assimp_mesh->mNumFaces; i++)
+	{
+		struct aiFace *face = assimp_mesh->mFaces + i;
+		
+		for(i32 j = 0; j < face->mNumIndices; j++)
+		{
+			index_count++;
+		}
+	}
+	
+	u16 *indices = MemoryArenaPush(scratch.arena, sizeof(u16) * index_count);
+	
+	index_count = 0;
+	
+	for(i32 i = 0; i < assimp_mesh->mNumFaces; i++)
+	{
+		struct aiFace *face = assimp_mesh->mFaces + i;
+		
+		for(i32 j = 0; j < face->mNumIndices; j++)
+		{
+			indices[index_count] = face->mIndices[j];
+			index_count++;
+		}
+	}
+	
+	sub_model->mesh = MeshInit(&renderer->model_vertex_format,
+							   assimp_mesh->mNumVertices, vertices,
+							   index_count, indices);
+	
+	// TODO(kp): Material is currently unassigned.
+	
+	ReleaseScratch(&scratch);
+}
+
+/*
+const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
+
+MaterialData data;
+data.technique = "texturedPBR_gbuffer_opaque"; // temporarily just the forced material type
+
+fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getTextures().getFallbackDiffuse());
+fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getTextures().getFallbackAmbient());
+fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	m_app->getTextures().getFallbackRoughnessMetallic());
+fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				m_app->getTextures().getFallbackNormals());
+fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				m_app->getTextures().getFallbackEmissive());
+
+submesh->setMaterial(m_app->getRenderer().buildMaterial(data));
+*/
+
+internal void
+ModelLoadProcessNodes(Renderer *renderer, MemoryArena *arena, Model *model, struct aiNode *node, const struct aiScene *scene, struct aiMatrix4x4 transform)
+{
+	struct aiMatrix4x4 node_transform = node->mTransformation;
+	aiMultiplyMatrix4(&node_transform, &transform);
+	
+	for(i32 i = 0; i < node->mNumMeshes; i++)
+	{
+		struct aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
+		
+		SubModel *sub_model = ModelCreateSubModel(model);
+		
+		ModelLoadProcessSubModel(renderer, arena, sub_model, assimp_mesh, scene, node_transform);
+	}
+	
+	for (i32 i = 0; i < node->mNumChildren; i++)
+	{
+		ModelLoadProcessNodes(renderer, arena, model, node->mChildren[i], scene, node_transform);
+	}
+}
+
+internal Model
+ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
+{
+	const struct aiScene *scene = aiImportFile((char *)path.str,
+											   aiProcess_Triangulate |
+											   aiProcess_FlipWindingOrder |
+											   aiProcess_CalcTangentSpace |
+											   aiProcess_FlipUVs);
+	
+	if(!scene ||
+	   (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 ||
+	   !scene->mRootNode)
+	{
+		DebugLogCrash("Failed to load model.");
+	}
+	
+	Model model = {0};
+	model.arena = arena;
+	//model.directory = str8("...");
+	
+	struct aiMatrix4x4 identity = {
+		1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f,
+		0.f, 0.f, 0.f, 1.f
+	};
+	
+	DebugLog("Loading model...");
+	
+	ModelLoadProcessNodes(renderer, arena, &model, scene->mRootNode, scene, identity);
+	
+	aiReleaseImport(scene);
+	return model;
 }
 
 internal RenderingAttachment
@@ -300,9 +551,7 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
-		
-		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+		CmdBindAndDrawMesh(cmd, &renderer->environment_cube_mesh);
 	}
 	CmdEndRendering(cmd);
 	
@@ -372,9 +621,7 @@ RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, 
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
-		
-		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+		CmdBindAndDrawMesh(cmd, &renderer->environment_cube_mesh);
 	}
 	CmdEndRendering(cmd);
 	
@@ -421,9 +668,7 @@ RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, R
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		CmdBindMesh(cmd, &renderer->environment_cube_mesh);
-		
-		CmdDrawIndexed(cmd, renderer->environment_cube_mesh.index_count, 1, 0, 0, 0);
+		CmdBindAndDrawMesh(cmd, &renderer->environment_cube_mesh);
 	}
 	CmdEndRendering(cmd);
 	
@@ -499,6 +744,16 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 {
 	renderer->linear_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
 	
+	// ---
+	
+	// NOTE(kp): Generate BRDF lookup table.
+	
+	// TODO(kp)
+	
+	// ---
+	
+	// NOTE(kp): Setup environment buffer and irradiance + prefilter maps.
+	
 	m4 capture_projection_matrix = M4Perspective(90.0f, 1.0f, 0.1f, 10.0f);
 	
 	// NOTE(kp): We have to flip the Z lookat coordinate because cubemaps use
@@ -569,10 +824,9 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 											   ArraySize(vertices), vertices,
 											   ArraySize(indices), indices);
 	
-	renderer->environment_hdr_image = ImageFromPath(str8("res/environment_map.hdr"));
+	renderer->environment_hdr_image = ImageLoadFromPath(str8("res/environment_map.hdr"));
 	
-	// NOTE(kp): Load in our shaders...
-	// TODO(kp): This should be done in a seperate asset system.
+	// TODO(kp): Loading in of assets like shaders and images should be done via a seperate asset system.
 	
 	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
 	{
@@ -592,7 +846,43 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
 	
-	DebugLog("Loaded shaders.");
+	// ---
+	
+	// NOTE(kp): Setup model related stuff.
+	
+	renderer->model_program = ShaderProgramInit(sizeof(m4), 2);
+	{
+		renderer->model_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/model_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->model_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/model_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	AddVertexBinding(&renderer->model_vertex_format, sizeof(ModelVertex), VK_VERTEX_INPUT_RATE_VERTEX);
+	{
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, position));
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32_SFLOAT,    offsetof(ModelVertex, texcoord));
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, colour));
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, normal));
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, tangent));
+		AddVertexAttribute(&renderer->model_vertex_format, VK_FORMAT_R32G32B32_SFLOAT, offsetof(ModelVertex, bitangent));
+	}
+	
+	renderer->damaged_helmet_model = ModelLoadFromPath(renderer, arena, str8("res/DamagedHelmet/DamagedHelmet.gltf"));
+	
+	// ---
+	
+	// NOTE(kp): Depth buffer.
+	
+	renderer->depth_buffer = ImageAllocate(graphics_device->swapchain.width,
+										   graphics_device->swapchain.height,
+										   1,
+										   graphics_device->depth_format,
+										   VK_IMAGE_VIEW_TYPE_2D,
+										   VK_IMAGE_TILING_OPTIMAL,
+										   1,
+										   VK_SAMPLE_COUNT_1_BIT,
+										   false, false);
+	
+	// ---
 	
 	RendererGenerateEnvironmentMap(renderer);
 	RendererGenerateEnvironmentProbeFromEnvironmentCubemap(renderer, &renderer->environment_cubemap);
@@ -601,6 +891,7 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 internal void
 RendererDestroy(Renderer *renderer)
 {
+	ImageDestroy(&renderer->depth_buffer);
 	SamplerDestroy(&renderer->linear_sampler);
 	
 	MeshDestroy(&renderer->environment_cube_mesh);
@@ -615,12 +906,57 @@ RendererDestroy(Renderer *renderer)
 	ShaderProgramDestroy(&renderer->environment_hdr_to_cubemap_program);
 	ShaderProgramDestroy(&renderer->irradiance_map_program);
 	ShaderProgramDestroy(&renderer->prefilter_map_program);
+	ShaderProgramDestroy(&renderer->model_program);
+	
+	// TODO(kp): Destroy model.
+}
+
+internal void
+RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context)
+{
+	CmdBeginRendering(cmd, render_info);
+	{
+		static f32 time = 0.f;
+		time -= .01f;
+		
+		m4 transform = m4(1.f);
+		transform = M4MultiplyM4(M4RotateAxis(time, v3(0.f, 1.f, 0.f)), transform);
+		transform = M4MultiplyM4(M4ScaleV3(v3(1.f, 1.f, 1.f)), transform);
+		transform = M4MultiplyM4(M4TranslateV3(v3(0.f, 0.f, -4.f)), transform);
+		transform = M4MultiplyM4(M4Perspective(70.f, 1280.f/720.f, .1f, 10.f), transform);
+		
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->model_program, &renderer->model_vertex_format);
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+		pipeline_def.has_depth_attachment = true;
+		
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(m4), &transform, 0);
+		CmdBindAndDrawMesh(cmd, &renderer->damaged_helmet_model.sub_models[0].mesh);
+	}
+	CmdEndRendering(cmd);
 }
 
 internal void
 RendererBeginFrame(Renderer *renderer)
 {
 	renderer->present_cmd = BeginGraphicsPresent();
+	
+	RenderPass render_pass = {0};
+	render_pass.type = RenderPassType_Graphics;
+	render_pass.graphics.Record = RendererRenderPassRenderModel;
+	render_pass.graphics.attachment_count = 2;
+	render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
+																		GetCurrentSwapchainImageView(&graphics_device->swapchain),
+																		0, v4(0.f, 0.f, 0.f, 1.f));
+	render_pass.graphics.attachments[1] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
+																	   FetchStandardImageView(&renderer->depth_buffer),
+																	   0, 1.f, 0);
+	
+	RendererPushRenderPass(renderer, &render_pass);
 }
 
 internal void

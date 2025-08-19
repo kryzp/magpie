@@ -97,7 +97,7 @@ ImageFromBitmap(BitmapImage *bitmap)
 }
 
 internal Image
-ImageFromPath(String8 path)
+ImageLoadFromPath(String8 path)
 {
 	BitmapImage bitmap = BitmapImageLoadFromFile(path);
 	Image image = ImageFromBitmap(&bitmap);

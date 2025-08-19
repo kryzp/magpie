@@ -1056,9 +1056,10 @@ GraphicsPipelineDefInitDefault(ShaderProgram *program,
 	def.front_face = VK_FRONT_FACE_CLOCKWISE;
 	def.blend_state = BlendStateDefault();
 	def.depth_stencil_state = DepthStencilStateDefault();
+	def.has_depth_attachment = false;
+	def.samples = VK_SAMPLE_COUNT_1_BIT;
 	def.min_sample_shading_enabled = 1;
 	def.min_sample_shading = 0.2f;
-	def.samples = VK_SAMPLE_COUNT_1_BIT;
 	def.view_mask = 0;
 	
 	return def;

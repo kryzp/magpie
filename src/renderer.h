@@ -35,10 +35,10 @@ typedef struct RenderPass
 			u32 view_mask;
 			
 			u32 attachment_count;
-			RenderingAttachment attachments[32];
+			RenderingAttachment attachments[8];
 			
 			u32 view_count;
-			ImageView *views[32];
+			ImageView *views[16];
 		}
 		graphics;
 		
@@ -47,12 +47,19 @@ typedef struct RenderPass
 			void (*Record)(Renderer *renderer, CommandBuffer *cmd, void *context);
 			
 			u32 view_count;
-			ImageView *views[32];
+			ImageView *views[16];
 		}
 		compute;
 	};
 }
 RenderPass;
+
+typedef struct Material
+{
+	PipelineState pipeline_state;
+	u32 table_index;
+}
+Material;
 
 typedef struct Mesh
 {
@@ -66,6 +73,24 @@ typedef struct Mesh
 }
 Mesh;
 
+typedef struct SubModel
+{
+	struct SubModel *next;
+	
+	Mesh mesh;
+	Material material;
+}
+SubModel;
+
+typedef struct Model
+{
+	MemoryArena *arena;
+	
+	u32 sub_model_count;
+	SubModel *sub_models;
+}
+Model;
+
 typedef struct EnvironmentProbe
 {
 	Image irradiance, prefilter;
@@ -78,7 +103,22 @@ typedef struct Renderer
 	
 	// ---
 	
+	u32 pass_count;
+	RenderPass passes[32];
+	
+	// ---
+	
+	Image depth_buffer;
+	
+	// ---
+	
 	Sampler linear_sampler;
+	
+	// ---
+	
+	VertexFormat model_vertex_format;
+	ShaderProgram model_program;
+	Model damaged_helmet_model;
 	
 	// ---
 	
@@ -86,23 +126,14 @@ typedef struct Renderer
 	Mesh environment_cube_mesh;
 	GPUBuffer cubemap_capture_transforms;
 	
-	// ---
-	
 	ShaderProgram environment_hdr_to_cubemap_program;
 	
 	Image environment_hdr_image;
 	Image environment_cubemap;
 	
-	// ---
-	
 	ShaderProgram irradiance_map_program;
 	ShaderProgram prefilter_map_program;
 	
 	EnvironmentProbe environment_probe;
-	
-	// ---
-	
-	u32 pass_count;
-	RenderPass passes[32];
 }
 Renderer;

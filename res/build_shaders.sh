@@ -8,3 +8,6 @@ slangc irradiance_convolution.slang -profile glsl_450 -target spirv -o irradianc
 
 slangc prefilter_convolution.slang -profile glsl_450 -target spirv -o prefilter_convolution_vertex.spv -entry VertexMain
 slangc prefilter_convolution.slang -profile glsl_450 -target spirv -o prefilter_convolution_fragment.spv -entry FragmentMain
+
+slangc model.slang -profile glsl_450 -target spirv -o model_vertex.spv -entry VertexMain
+slangc model.slang -profile glsl_450 -target spirv -o model_fragment.spv -entry FragmentMain
