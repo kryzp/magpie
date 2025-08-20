@@ -1,7 +1,3 @@
-struct EnvironmentMapVertex
-{
-    [[vk::location(0)]] float3 position;
-};
 
 struct Arguments
 {
@@ -14,28 +10,29 @@ struct Arguments
 [[vk::push_constant]]
 Arguments args;
 
-[[vk::binding(0)]] Texture2D bindless_images[];
-[[vk::binding(1)]] SamplerState bindless_samplers[];
+[[vk::binding(0)]] SamplerState bindless_samplers[];
+[[vk::binding(1)]] Texture2D bindless_images[];
 
 struct VS_Output
 {
 	float4 sv_position : SV_Position;
+
 	[[vk::location(0)]] float3 position;
 };
 
 [shader("vertex")]
-VS_Output VertexMain(EnvironmentMapVertex vertex, int view_id : SV_ViewID)
+VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 {
 	VS_Output output;
-    output.position = vertex.position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(vertex.position, 1.));
+    output.position = position;
+    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
 
 	return output;
 }
 
 float2 SampleSphericalMap(float3 v)
 {
-	float2 uv = float2(atan2(v.z, v.x), asin(v.y));
+	float2 uv = float2(atan2(-v.y, v.x), asin(v.z));
 	uv *= float2(.1591, .3183);
 	uv += .5;
 	uv.y = 1. - uv.y;

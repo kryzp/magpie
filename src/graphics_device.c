@@ -249,24 +249,10 @@ BindlessIsValid(u32 resource_id)
 }
 
 internal u32
-BindlessRegisterSampledImage(VkImageView view, b32 is_depth)
-{
-	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
-	
-	update->type = BindlessUpdateType_SampledImage;
-	update->slot = ++graphics_device->n_bindless_sampled_images;
-	
-	update->sampled_image.view = view;
-	update->sampled_image.is_depth = is_depth;
-	
-	graphics_device->n_bindless_updates++;
-	
-	return update->slot;
-}
-
-internal u32
 BindlessRegisterSampler(VkSampler sampler)
 {
+	Assert(graphics_device->n_bindless_updates < ArraySize(graphics_device->bindless_updates) && "Cannot add more bindless updates.");
+	
 	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
 	
 	update->type = BindlessUpdateType_Sampler;
@@ -279,12 +265,49 @@ BindlessRegisterSampler(VkSampler sampler)
 	return update->slot;
 }
 
+internal u32
+BindlessRegisterImageView(VkImageView view, b32 is_depth)
+{
+	Assert(graphics_device->n_bindless_updates < ArraySize(graphics_device->bindless_updates) && "Cannot add more bindless updates.");
+	
+	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
+	
+	update->type = BindlessUpdateType_Image;
+	update->slot = ++graphics_device->n_bindless_images;
+	
+	update->sampled_image.view = view;
+	update->sampled_image.is_depth = is_depth;
+	
+	graphics_device->n_bindless_updates++;
+	
+	return update->slot;
+}
+
+internal u32
+BindlessRegisterCubemap(VkImageView view, b32 is_depth)
+{
+	Assert(graphics_device->n_bindless_updates < ArraySize(graphics_device->bindless_updates) && "Cannot add more bindless updates.");
+	
+	BindlessUpdate *update = graphics_device->bindless_updates + graphics_device->n_bindless_updates;
+	
+	update->type = BindlessUpdateType_Cubemap;
+	update->slot = ++graphics_device->n_bindless_cubemaps;
+	
+	update->sampled_image.view = view;
+	update->sampled_image.is_depth = is_depth;
+	
+	graphics_device->n_bindless_updates++;
+	
+	return update->slot;
+}
+
 internal void
 BindlessInit()
 {
 	static VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,       BINDLESS_MAX_RESOURCES }, // Samplers.
 		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_MAX_RESOURCES }, // Textures.
-		{ VK_DESCRIPTOR_TYPE_SAMPLER,       BINDLESS_MAX_RESOURCES }  // Samplers.
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_MAX_RESOURCES }  // Cubemaps.
 	};
 	
 	VkDescriptorPoolCreateInfo pool_create_info = {0};
@@ -299,34 +322,41 @@ BindlessInit()
 	
 	// ---
 	
-	VkDescriptorBindingFlags bindless_flags[2] = {
+	VkDescriptorBindingFlags bindless_flags[] = {
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT,
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT,
 		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT
 	};
 	
-	VkDescriptorSetLayoutBinding bindings[2] = {0};
+	VkDescriptorSetLayoutBinding bindings[3] = {0};
 	{
-		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 		bindings[0].descriptorCount = BINDLESS_MAX_RESOURCES;
-		bindings[0].binding = BINDLESS_SAMPLED_IMAGE_BINDING;
+		bindings[0].binding = BINDLESS_SAMPLER_BINDING;
 		bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
 		bindings[0].pImmutableSamplers = 0;
 		
-		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		bindings[1].descriptorCount = BINDLESS_MAX_RESOURCES;
-		bindings[1].binding = BINDLESS_SAMPLER_BINDING;
+		bindings[1].binding = BINDLESS_IMAGE_BINDING;
 		bindings[1].stageFlags = VK_SHADER_STAGE_ALL;
 		bindings[1].pImmutableSamplers = 0;
+		
+		bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		bindings[2].descriptorCount = BINDLESS_MAX_RESOURCES;
+		bindings[2].binding = BINDLESS_CUBEMAP_BINDING;
+		bindings[2].stageFlags = VK_SHADER_STAGE_ALL;
+		bindings[2].pImmutableSamplers = 0;
 	}
 	
 	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {0};
 	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-	binding_flags.bindingCount = 2;
+	binding_flags.bindingCount = ArraySize(bindless_flags);
 	binding_flags.pBindingFlags = bindless_flags;
 	
 	VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
 	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layout_create_info.bindingCount = 2;
+	layout_create_info.bindingCount = ArraySize(bindings);
 	layout_create_info.pBindings = bindings;
 	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 	layout_create_info.pNext = &binding_flags;
@@ -367,7 +397,25 @@ BindlessApplyUpdates()
 		
 		switch(update->type)
 		{
-			case BindlessUpdateType_SampledImage:
+			case BindlessUpdateType_Sampler:
+			{
+				VkDescriptorImageInfo *image_info = image_infos + i;
+				image_info->imageView = VK_NULL_HANDLE;
+				image_info->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				image_info->sampler = update->sampler.sampler;
+				
+				VkWriteDescriptorSet *write = descriptor_writes + i;
+				write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write->descriptorCount = 1;
+				write->dstArrayElement = update->slot;
+				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				write->dstSet = graphics_device->bindless_set;
+				write->dstBinding = BINDLESS_SAMPLER_BINDING;
+				write->pImageInfo = image_info;
+			}
+			break;
+			
+			case BindlessUpdateType_Image:
 			{
 				VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 				
@@ -391,25 +439,36 @@ BindlessApplyUpdates()
 				write->dstArrayElement = update->slot;
 				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 				write->dstSet = graphics_device->bindless_set;
-				write->dstBinding = BINDLESS_SAMPLED_IMAGE_BINDING;
+				write->dstBinding = BINDLESS_IMAGE_BINDING;
 				write->pImageInfo = image_info;
 			}
 			break;
 			
-			case BindlessUpdateType_Sampler:
+			case BindlessUpdateType_Cubemap:
 			{
+				VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+				
+				if(update->sampled_image.is_depth)
+				{
+					layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+				}
+				else
+				{
+					layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				}
+				
 				VkDescriptorImageInfo *image_info = image_infos + i;
-				image_info->imageView = VK_NULL_HANDLE;
-				image_info->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				image_info->sampler = update->sampler.sampler;
+				image_info->imageView = update->sampled_image.view;
+				image_info->imageLayout = layout;
+				image_info->sampler = VK_NULL_HANDLE;
 				
 				VkWriteDescriptorSet *write = descriptor_writes + i;
 				write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write->descriptorCount = 1;
 				write->dstArrayElement = update->slot;
-				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 				write->dstSet = graphics_device->bindless_set;
-				write->dstBinding = BINDLESS_SAMPLER_BINDING;
+				write->dstBinding = BINDLESS_CUBEMAP_BINDING;
 				write->pImageInfo = image_info;
 			}
 			break;
@@ -672,7 +731,14 @@ ImageViewFromImage(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 	// NOTE(kp): Swapchain images are omitted from being accessible bindlessly.
 	if(!image->is_swapchain)
 	{
-		view.resource_id = BindlessRegisterSampledImage(view.view, ImageIsDepth(image));
+		if(ImageIsCubemap(image))
+		{
+			view.resource_id = BindlessRegisterCubemap(view.view, ImageIsDepth(image));
+		}
+		else
+		{
+			view.resource_id = BindlessRegisterImageView(view.view, ImageIsDepth(image));
+		}
 	}
 	
 	return view;
@@ -682,6 +748,7 @@ internal ImageView *
 FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
 	u64 hash = 0;
+	
 	hash = HashBytesGenericCombine(hash,  image,          sizeof(Image));
 	hash = HashBytesGenericCombine(hash, &layer_count,    sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &layer,          sizeof(u32));
@@ -1685,6 +1752,12 @@ CmdPushConstants(CommandBuffer *cmd,
 					   offset,
 					   size,
 					   data);
+}
+
+internal void
+CmdDrawVerticesN(CommandBuffer *cmd, u32 vertex_count)
+{
+	vkCmdDraw(cmd->handle, vertex_count, 1, 0, 0);
 }
 
 internal void

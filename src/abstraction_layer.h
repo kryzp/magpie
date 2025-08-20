@@ -633,29 +633,29 @@ internal m4
 M4LookAt(v3 eye, v3 center, v3 up)
 {
     m4 result = {0};
+	
+    v3 yaxis = V3Normalize(V3MinusV3(center, eye));
+    v3 xaxis = V3Normalize(V3Cross(yaxis, up));
+    v3 zaxis = V3Cross(xaxis, yaxis);
     
-    v3 f = V3Normalize(V3MinusV3(center, eye));
-    v3 s = V3Normalize(V3Cross(f, up));
-    v3 u = V3Cross(s, f);
+    result.m00 = xaxis.x;
+    result.m01 = xaxis.y;
+    result.m02 = xaxis.z;
+    result.m03 = -V3Dot(xaxis, eye);
+	
+    result.m10 = yaxis.x;
+    result.m11 = yaxis.y;
+    result.m12 = yaxis.z;
+    result.m13 = -V3Dot(yaxis, eye);
     
-    result.m00 = s.x;
-    result.m10 = u.x;
-    result.m20 = -f.x;
+    result.m20 = zaxis.x;
+    result.m21 = zaxis.y;
+    result.m22 = zaxis.z;
+    result.m23 = -V3Dot(zaxis, eye);
+    
     result.m30 = 0.f;
-    
-    result.m01 = s.y;
-    result.m11 = u.y;
-    result.m21 = -f.y;
     result.m31 = 0.f;
-    
-    result.m02 = s.z;
-    result.m12 = u.z;
-    result.m22 = -f.z;
     result.m32 = 0.f;
-    
-    result.m03 = -V3Dot(s, eye);
-    result.m13 = -V3Dot(u, eye);
-    result.m23 = V3Dot(f, eye);
     result.m33 = 1.f;
     
     return result;
@@ -666,7 +666,7 @@ M4Perspective(f32 fov, f32 aspect_ratio, f32 z_near, f32 z_far)
 {
     m4 result = {0};
 	
-    f32 f = TanF(fov / 180.f * PIf);
+    f32 f = TanF(fov / 360.f * PIf);
 	
     result.m00 = f / aspect_ratio;
 	result.m12 = f;
@@ -690,6 +690,22 @@ M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 z_near, f32 z_far)
 	result.m13 =-(top + bottom) / (top - bottom);
 	result.m23 =-(z_far + z_near) / (z_far - z_near);
 	result.m33 = 1.f;
+	
+	return result;
+}
+
+internal m4
+M4Transpose(m4 m)
+{
+	m4 result = {0};
+	
+	for(i32 i = 0; i < 4; i++)
+	{
+		for(i32 j = 0; j < 4; j++)
+		{
+			m4c(result, i)[j] = m4c(m, j)[i];
+		}
+	}
 	
 	return result;
 }
@@ -789,7 +805,7 @@ M4RotateAxis(f32 angle, v3 axis)
     
     f32 sin_theta = SinF(angle);
     f32 cos_theta = CosF(angle);
-    f32 cos_inv   = 1.0f - cos_theta;
+    f32 cos_inv   = 1.f - cos_theta;
     
     result.m00 = (axis.x * axis.x * cos_inv) +           cos_theta;
     result.m10 = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);
@@ -831,8 +847,6 @@ internal m4
 M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
 {
 	m4 result = m4(1.f);
-	
-	printf("%f %f %f %f\n", rotation.x, rotation.y, rotation.z, rotation.w);
 	
 	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.f)), result);
 	result = M4MultiplyM4(M4RotateQuat(rotation), result);

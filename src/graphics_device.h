@@ -256,14 +256,17 @@ typedef struct Swapchain
 Swapchain;
 
 #define BINDLESS_MAX_RESOURCES 256
-#define BINDLESS_MAX_WRITES_PER_FRAME 16
-#define BINDLESS_SAMPLED_IMAGE_BINDING 0
-#define BINDLESS_SAMPLER_BINDING 1
+#define BINDLESS_MAX_WRITES_PER_FRAME 64
+
+#define BINDLESS_SAMPLER_BINDING 0
+#define BINDLESS_IMAGE_BINDING 1
+#define BINDLESS_CUBEMAP_BINDING 2
 
 typedef enum BindlessUpdateType
 {
-	BindlessUpdateType_SampledImage,
-	BindlessUpdateType_Sampler
+	BindlessUpdateType_Sampler,
+	BindlessUpdateType_Image,
+	BindlessUpdateType_Cubemap
 }
 BindlessUpdateType;
 
@@ -328,8 +331,9 @@ typedef struct GraphicsDevice
 	u32 n_bindless_updates;
 	BindlessUpdate bindless_updates[BINDLESS_MAX_WRITES_PER_FRAME];
 	
-	u32 n_bindless_sampled_images;
 	u32 n_bindless_samplers;
+	u32 n_bindless_images;
+	u32 n_bindless_cubemaps;
 	
 	// ---
 	

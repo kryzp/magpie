@@ -54,17 +54,45 @@ typedef struct RenderPass
 }
 RenderPass;
 
-typedef struct EnvironmentCubeVertex
-{
-	v3 position;
-}
-EnvironmentCubeVertex;
-
 typedef struct EnvironmentProbe
 {
 	Image irradiance, prefilter;
 }
 EnvironmentProbe;
+
+typedef enum GBufferAttachment
+{
+	GBufferAttachment_Position,
+	GBufferAttachment_Albedo,
+	GBufferAttachment_Normal,
+	GBufferAttachment_Material,
+	GBufferAttachment_Emissive,
+	GBufferAttachment_MaxEnum
+}
+GBufferAttachment;
+
+typedef struct GBuffer
+{
+	Image attachments[GBufferAttachment_MaxEnum];
+	Image depth;
+}
+GBuffer;
+
+typedef struct GPU_FrameData
+{
+	m4 projection_matrix;
+	m4 view_matrix;
+	v4 camera_position;
+	v4 window_resolution;
+}
+GPU_FrameData;
+
+typedef struct GPU_TransformData
+{
+	m4 model_matrix;
+	m4 normal_matrix;
+}
+GPU_TransformData;
 
 typedef struct Renderer
 {
@@ -77,21 +105,27 @@ typedef struct Renderer
 	
 	// ---
 	
-	Image depth_buffer;
+	GBuffer gbuffer;
+	
+	ShaderProgram ambient_lighting_program;
+	
+	GPUBuffer frame_data_buffer;
+	GPUBuffer transform_data_buffer;
 	
 	// ---
 	
 	Sampler linear_sampler;
 	
+	VertexFormat v3_vertex_format;
+	VertexFormat model_vertex_format;
+	
 	// ---
 	
-	VertexFormat model_vertex_format;
 	ShaderProgram model_program;
 	Model damaged_helmet_model;
 	
 	// ---
 	
-	VertexFormat environment_cube_vertex_format;
 	Mesh environment_cube_mesh;
 	GPUBuffer cubemap_capture_transforms;
 	

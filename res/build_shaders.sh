@@ -11,3 +11,6 @@ slangc prefilter_convolution.slang -profile glsl_450 -target spirv -o prefilter_
 
 slangc model.slang -profile glsl_450 -target spirv -o model_vertex.spv -entry VertexMain
 slangc model.slang -profile glsl_450 -target spirv -o model_fragment.spv -entry FragmentMain
+
+slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_vertex.spv -entry VertexMain
+slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_fragment.spv -entry FragmentMain
