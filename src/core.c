@@ -27,12 +27,16 @@
 #include "hash_table.h"
 #include "graphics_device.h"
 #include "bitmap_image.h"
+#include "model.h"
 #include "renderer.h"
 #include "core.h"
 #include "scratch.h"
 
+#include "scratch.c"
+#include "hash_table.c"
 #include "graphics_device.c"
 #include "bitmap_image.c"
+#include "model.c"
 #include "renderer.c"
 
 internal void
@@ -75,29 +79,7 @@ CoreUpdate(Platform *p)
 		platform->exit = 1;
 	}
 	
-	//f32 delta_time = 1.f / (f32)platform->target_fps;
-	
-	RendererBeginFrame(&core->renderer);
-	{
-		//RendererPushModel(&core->renderer, &cube_model);
-		
-		//printf("Hello, World!\n");
-	}
-	RendererEndFrame(&core->renderer);
-	
-	/*
-		CommandBuffer *cmd = BeginGraphicsPresent();
-		{
-			RenderContext context = {0};
-			context.cmd = cmd;
-			context.swapchain = GetGraphicsSwapchain();
-			context.scene = &core->scene;
-			context.camera = &core->camera;
-			
-			RendererRender(&core->renderer, &context);
-		}
-		EndGraphicsPresent(cmd);
-		*/
+	RendererDrawFrame(&core->renderer);
 }
 
 void

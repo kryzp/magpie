@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <float.h>
 
 #define global         static
 #define internal       static
@@ -18,6 +19,8 @@
 #define SinF                       sinf
 #define CosF                       cosf
 #define TanF                       tanf
+#define ASinF                      asinf
+#define ACosF                      acosf
 #define ATan2F                     atan2f
 #define PowF                       powf
 #define FModF                      fmodf
@@ -50,6 +53,8 @@
 #define ONE_OVER_SQUARE_ROOT_OF_TWO_PIf 0.3989422804f
 #define EULERS_NUMBER  2.7182818284590452353602874713527
 #define EULERS_NUMBERf 2.7182818284590452353602874713527f
+#define EPSILON DBL_EPSILON
+#define EPSILONf FLT_EPSILON
 
 typedef int8_t   i8;
 typedef int16_t  i16;
@@ -121,6 +126,7 @@ typedef union v4
                     f32 radius;
                 };
             };
+            
             struct
             {
                 f32 width;
@@ -156,15 +162,6 @@ V2Init(f32 x, f32 y)
 
 #define v2(x, y) V2Init(x, y)
 
-internal v3
-V3Init(f32 x, f32 y, f32 z)
-{
-    v3 v = { x, y, z };
-    return v;
-}
-
-#define v3(x, y, z) V3Init(x, y, z)
-
 internal f32
 V2Dot(v2 a, v2 b)
 {
@@ -186,6 +183,15 @@ V2Normalize(v2 v)
 	
     return v;
 }
+
+internal v3
+V3Init(f32 x, f32 y, f32 z)
+{
+    v3 v = { x, y, z };
+    return v;
+}
+
+#define v3(x, y, z) V3Init(x, y, z)
 
 internal v3
 V3AddV3(v3 a, v3 b)
@@ -212,32 +218,6 @@ V3MultiplyF32(v3 v, f32 f)
 }
 
 internal f32
-V3LengthSquared(v3 a)
-{
-    return a.x*a.x + a.y*a.y + a.z*a.z;
-}
-
-internal f32
-V3Length(v3 a)
-{
-    return SquareRoot(V3LengthSquared(a));
-}
-
-internal v3
-V3Normalize(v3 v)
-{
-    f32 length = V3Length(v);
-    
-	v3 result = {
-        v.x / length,
-        v.y / length,
-        v.z / length,
-    };
-	
-    return result;
-}
-
-internal f32
 V3Dot(v3 a, v3 b)
 {
     f32 dot =
@@ -255,6 +235,32 @@ V3Cross(v3 a, v3 b)
         a.y*b.z - a.z*b.y,
         a.z*b.x - a.x*b.z,
         a.x*b.y - a.y*b.x,
+    };
+	
+    return result;
+}
+
+internal f32
+V3LengthSquared(v3 a)
+{
+	return V3Dot(a, a);
+}
+
+internal f32
+V3Length(v3 a)
+{
+    return SquareRoot(V3LengthSquared(a));
+}
+
+internal v3
+V3Normalize(v3 v)
+{
+    f32 length = V3Length(v);
+    
+	v3 result = {
+        v.x / length,
+        v.y / length,
+        v.z / length,
     };
 	
     return result;
@@ -288,14 +294,142 @@ V4Init(f32 x, f32 y, f32 z, f32 w)
     v4 v = { x, y, z, w };
     return v;
 }
+
 #define v4(x, y, z, w) V4Init(x, y, z, w)
 #define v4u(x) v4(x, x, x, x)
 
 internal b32
 V4RectHasPoint(v4 r, v2 p)
 {
-    return(p.x >= r.x && p.x <= r.x + r.width &&
-           p.y >= r.y && p.y <= r.y + r.height);
+    return (p.x >= r.x && p.x <= r.x + r.width &&
+			p.y >= r.y && p.y <= r.y + r.height);
+}
+
+internal f32
+V4Dot(v4 a, v4 b)
+{
+    return (a.x * b.x +
+			a.y * b.y +
+			a.z * b.z +
+			a.w * b.w);
+}
+
+internal v4
+V4AddV4(v4 a, v4 b)
+{
+    return v4(a.x + b.x,
+			  a.y + b.y,
+			  a.z + b.z,
+			  a.w + b.w);
+}
+
+internal v4
+V4MinusV4(v4 a, v4 b)
+{
+    return v4(a.x - b.x,
+			  a.y - b.y,
+			  a.z - b.z,
+			  a.w - b.w);
+}
+
+internal v4
+V4MultiplyF32(v4 a, f32 f)
+{
+    return v4(a.x * f,
+			  a.y * f,
+			  a.z * f,
+			  a.w * f);
+}
+
+internal v4
+V4MultiplyV4(v4 a, v4 b)
+{
+    return v4(a.x * b.x,
+			  a.y * b.y,
+			  a.z * b.z,
+			  a.w * b.w);
+}
+
+internal f32
+V4LengthSquared(v4 v)
+{
+	return V4Dot(v, v);
+}
+
+internal f32
+V4Length(v4 v)
+{
+	return SquareRoot(V4LengthSquared(v));
+}
+
+internal v4
+QuatInitAngleAxis(f32 angle, v3 axis)
+{
+	v4 q = {0};
+	
+	q.w = CosF(angle * .5f);
+	q.x = SinF(angle * .5f) * axis.x;
+	q.y = SinF(angle * .5f) * axis.y;
+	q.z = SinF(angle * .5f) * axis.z;
+	
+	return q;
+}
+
+internal v4
+QuatInitEuler(f32 pitch, f32 yaw, f32 roll)
+{
+	f32 sr = SinF(roll  * .5f);
+	f32 cr = CosF(roll  * .5f);
+	f32 sp = SinF(pitch * .5f);
+	f32 cp = CosF(pitch * .5f);
+	f32 sy = SinF(yaw   * .5f);
+	f32 cy = CosF(yaw   * .5f);
+	
+	return v4((sr * cp * cy) - (cr * sp * sy),
+			  (cr * sp * cy) + (sr * cp * sy),
+			  (cr * cp * sy) - (sr * sp * cy),
+			  (cr * cp * cy) + (sr * sp * sy));
+}
+
+internal v3
+QuatToEuler(v4 q)
+{
+	f32 t0 =           (2.f + ((q.w * q.x) + (q.y * q.z)));
+	f32 t1 = 1.f -     (2.f * ((q.x * q.x) + (q.y * q.y)));
+	f32 t2 = ClampValue(2.f * ((q.w * q.y) - (q.z * q.x)), -1.f, 1.f);
+	f32 t3 =           (2.f * ((q.w * q.z) + (q.x * q.y)));
+	f32 t4 = 1.f -     (2.f * ((q.y * q.y) + (q.z * q.z)));
+	
+	f32 pitch = ASinF(t2);
+	f32 yaw   = ATan2F(t3, t4);
+	f32 roll  = ATan2F(t0, t1);
+	
+	return v3(pitch, yaw, roll);
+}
+
+internal v4
+QuatInverse(v4 q)
+{
+	v4 inverse = {0};
+	
+	f32 prod = V4LengthSquared(q);
+	
+	if(prod > EPSILONf)
+	{
+		inverse.x=-q.x / SquareRoot(prod);
+		inverse.x=-q.y / SquareRoot(prod);
+		inverse.x=-q.z / SquareRoot(prod);
+		inverse.w= q.w / SquareRoot(prod);
+	}
+	else
+	{
+		inverse.x =-q.x;
+		inverse.y =-q.y;
+		inverse.z =-q.z;
+		inverse.w = q.w;
+	}
+	
+	return inverse;
 }
 
 typedef struct v2i
@@ -304,6 +438,15 @@ typedef struct v2i
     i32 y;
 }
 v2i;
+
+internal v2i
+V2IInit(i32 x, i32 y)
+{
+    v2i v = { x, y };
+    return v;
+}
+
+#define v2i(x, y) V2IInit(x, y)
 
 typedef union v3i
 {
@@ -324,6 +467,15 @@ typedef union v3i
     i32 elements[3];
 }
 v3i;
+
+internal v3i
+V3IInit(i32 x, i32 y, i32 z)
+{
+    v3i v = { x, y, z };
+    return v;
+}
+
+#define v3i(x, y, z) V3IInit(x, y, z)
 
 typedef union v4i
 {
@@ -347,24 +499,6 @@ typedef union v4i
 }
 v4i;
 
-internal v2i
-V2IInit(i32 x, i32 y)
-{
-    v2i v = { x, y };
-    return v;
-}
-
-#define v2i(x, y) V2IInit(x, y)
-
-internal v3i
-V3IInit(i32 x, i32 y, i32 z)
-{
-    v3i v = { x, y, z };
-    return v;
-}
-
-#define v3i(x, y, z) V3IInit(x, y, z)
-
 internal v4i
 V4IInit(i32 x, i32 y, i32 z, i32 w)
 {
@@ -374,110 +508,99 @@ V4IInit(i32 x, i32 y, i32 z, i32 w)
 
 #define v4i(x, y, z, w) V4IInit(x, y, z, w)
 
-typedef struct m4
+// NOTE(kp): Column-major layout.
+typedef union m4
 {
-    f32 elements[4][4];
+    struct
+	{
+        f32 m00, m10, m20, m30;
+        f32 m01, m11, m21, m31;
+        f32 m02, m12, m22, m32;
+        f32 m03, m13, m23, m33;
+    };
+	
+    struct
+	{
+        f32 c0[4];
+        f32 c1[4];
+        f32 c2[4];
+        f32 c3[4];
+    };
 }
 m4;
 
 internal m4
-M4InitD(f32 dia)
+M4Init(f32 dia)
 {
     m4 m = {
-        {
-            { dia, 0.f, 0.f, 0.f },
-            { 0.f, dia, 0.f, 0.f },
-            { 0.f, 0.f, dia, 0.f },
-            { 0.f, 0.f, 0.f, dia },
-        }
+		dia, 0.f, 0.f, 0.f,
+		0.f, dia, 0.f, 0.f,
+		0.f, 0.f, dia, 0.f,
+		0.f, 0.f, 0.f, dia
     };
 	
     return m;
 }
 
-#define m4(d) M4InitD(d)
+#define m4(d) M4Init(d)
+#define m4c(m, __colindex) (((f32 *)(&m)) + (4*(__colindex)))
 
 internal m4
 M4MultiplyM4(m4 a, m4 b)
 {
-    m4 c = {0};
-    
-    for(i32 j = 0; j < 4; ++j)
-    {
-        for(i32 i = 0; i < 4; ++i)
-        {
-            c.elements[i][j] = (a.elements[0][j]*b.elements[i][0] +
-                                a.elements[1][j]*b.elements[i][1] +
-                                a.elements[2][j]*b.elements[i][2] +
-                                a.elements[3][j]*b.elements[i][3]);
-        }
-    }
-    
-    return c;
+	m4 c = {0};
+	
+	for(i32 k = 0; k < 4; k++)
+	{
+		for(i32 i = 0; i < 4; i++)
+		{
+			for(i32 j = 0; j < 4; j++)
+			{
+				m4c(c, k)[i] += m4c(a, j)[i] * m4c(b, k)[j]; 
+			}
+		}
+	}
+	
+	return c;
+}
+
+internal v4
+M4MultiplyV4(m4 m, v4 v)
+{
+	v4 r = {0};
+	
+	for(i32 i = 0; i < 4; i++)
+	{
+		for(i32 j = 0; j < 4; j++)
+		{
+			r.elements[i] += m4c(m, j)[i] * v.elements[j];
+		}
+	}
+	
+	return r;
+}
+
+internal v3
+M4MultiplyV3(m4 m, v3 v)
+{
+	v4 w = { v.x, v.y, v.z, 1.f };
+	return M4MultiplyV4(m, w).xyz;
 }
 
 internal m4
-M4MultiplyF32(m4 a, f32 b)
+M4MultiplyF32(m4 m, f32 f)
 {
-    for(i32 j = 0; j < 4; ++j)
-    {
-        for(i32 i = 0; i < 4; ++i)
-        {
-            a.elements[i][j] *= b;
-        }
-    }
-    
-    return a;
-}
-
-internal f32
-V4Dot(v4 a, v4 b)
-{
-    return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w;
-}
-
-internal v4
-V4AddV4(v4 a, v4 b)
-{
-    v4 c = { a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w };
-    return c;
-}
-
-internal v4
-V4MinusV4(v4 a, v4 b)
-{
-    v4 c = { a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w };
-    return c;
-}
-
-internal v4
-V4MultiplyF32(v4 a, f32 f)
-{
-    v4 c = { a.x * f, a.y * f, a.z * f, a.w * f };
-    return c;
-}
-
-internal v4
-V4MultiplyV4(v4 a, v4 b)
-{
-    v4 c = { a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w };
-    return c;
-}
-
-internal v4
-V4MultiplyM4(v4 v, m4 m)
-{
-    v4 result = {0};
-    
-    for(i32 i = 0; i < 4; ++i)
-    {
-        result.elements[i] = (v.elements[0]*m.elements[0][i] +
-                              v.elements[1]*m.elements[1][i] +
-                              v.elements[2]*m.elements[2][i] +
-                              v.elements[3]*m.elements[3][i]);
-    }
-    
-    return result;
+	m4 r = {0};
+	
+	for(i32 i = 0; i < 4; i++)
+	{
+		for(i32 j = 0; j < 4; j++)
+		{
+			m4c(r, i)[j] = m4c(m, i)[j] * f;
+		}
+	}
+	
+	return r;
 }
 
 internal m4
@@ -485,9 +608,10 @@ M4TranslateV3(v3 translation)
 {
     m4 result = m4(1.f);
 	
-    result.elements[3][0] = translation.x;
-    result.elements[3][1] = translation.y;
-    result.elements[3][2] = translation.z;
+	result.m03 = translation.x;
+	result.m13 = translation.y;
+	result.m23 = translation.z;
+	result.m33 = 1.f;
 	
     return result;
 }
@@ -497,42 +621,11 @@ M4ScaleV3(v3 scale)
 {
     m4 result = m4(1.f);
 	
-    result.elements[0][0] = scale.x;
-    result.elements[1][1] = scale.y;
-    result.elements[2][2] = scale.z;
+	result.m00 = scale.x;
+	result.m11 = scale.y;
+	result.m22 = scale.z;
+	result.m33 = 1.f;
 	
-    return result;
-}
-
-internal m4
-M4Perspective(f32 fov, f32 aspect_ratio, f32 near_z, f32 far_z)
-{
-    m4 result = {0};
-	
-    f32 tan_theta_over_2 = TanF((fov / 360.f) * PIf);
-    result.elements[0][0] = 1.f / tan_theta_over_2;
-    result.elements[1][1] = aspect_ratio / tan_theta_over_2;
-    result.elements[2][3] = -1.f;
-    result.elements[2][2] = (near_z + far_z) / (near_z - far_z);
-    result.elements[3][2] = (2.f * near_z * far_z) / (near_z - far_z);
-    result.elements[3][3] = 0.f;
-	
-    return result;
-}
-
-internal m4
-M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near_depth, f32 far_depth)
-{
-    m4 result = {0};
-    
-    result.elements[0][0] = 2.f / (right - left);
-    result.elements[1][1] = 2.f / (top - bottom);
-    result.elements[2][2] = -2.f / (far_depth - near_depth);
-    result.elements[3][3] = 1.f;
-    result.elements[3][0] = (left + right) / (left - right);
-    result.elements[3][1] = (bottom + top) / (bottom - top);
-    result.elements[3][2] = (far_depth + near_depth) / (near_depth - far_depth);
-    
     return result;
 }
 
@@ -545,50 +638,83 @@ M4LookAt(v3 eye, v3 center, v3 up)
     v3 s = V3Normalize(V3Cross(f, up));
     v3 u = V3Cross(s, f);
     
-    result.elements[0][0] = s.x;
-    result.elements[0][1] = u.x;
-    result.elements[0][2] = -f.x;
-    result.elements[0][3] = 0.0f;
+    result.m00 = s.x;
+    result.m10 = u.x;
+    result.m20 = -f.x;
+    result.m30 = 0.f;
     
-    result.elements[1][0] = s.y;
-    result.elements[1][1] = u.y;
-    result.elements[1][2] = -f.y;
-    result.elements[1][3] = 0.0f;
+    result.m01 = s.y;
+    result.m11 = u.y;
+    result.m21 = -f.y;
+    result.m31 = 0.f;
     
-    result.elements[2][0] = s.z;
-    result.elements[2][1] = u.z;
-    result.elements[2][2] = -f.z;
-    result.elements[2][3] = 0.0f;
+    result.m02 = s.z;
+    result.m12 = u.z;
+    result.m22 = -f.z;
+    result.m32 = 0.f;
     
-    result.elements[3][0] = -V3Dot(s, eye);
-    result.elements[3][1] = -V3Dot(u, eye);
-    result.elements[3][2] = V3Dot(f, eye);
-    result.elements[3][3] = 1.0f;
+    result.m03 = -V3Dot(s, eye);
+    result.m13 = -V3Dot(u, eye);
+    result.m23 = V3Dot(f, eye);
+    result.m33 = 1.f;
     
     return result;
 }
 
 internal m4
+M4Perspective(f32 fov, f32 aspect_ratio, f32 z_near, f32 z_far)
+{
+    m4 result = {0};
+	
+    f32 f = TanF(fov / 180.f * PIf);
+	
+    result.m00 = f / aspect_ratio;
+	result.m12 = f;
+	result.m21 = (z_far + z_near) / (z_far - z_near);
+	result.m23 =-(2.f * z_far * z_near) / (z_far - z_near);
+	result.m31 = 1.f;
+	
+    return result;
+}
+
+internal m4
+M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 z_near, f32 z_far)
+{
+	m4 result = {0};
+	
+	result.m00 = 2.f / (right - left);
+	result.m12 = 2.f / (top - bottom);
+	result.m21 = 2.f / (z_far - z_near);
+	
+	result.m03 =-(right + left) / (right - left);
+	result.m13 =-(top + bottom) / (top - bottom);
+	result.m23 =-(z_far + z_near) / (z_far - z_near);
+	result.m33 = 1.f;
+	
+	return result;
+}
+
+internal m4
 M4Inverse(m4 m)
 {
-    f32 coef00 = m.elements[2][2] * m.elements[3][3] - m.elements[3][2] * m.elements[2][3];
-    f32 coef02 = m.elements[1][2] * m.elements[3][3] - m.elements[3][2] * m.elements[1][3];
-    f32 coef03 = m.elements[1][2] * m.elements[2][3] - m.elements[2][2] * m.elements[1][3];
-    f32 coef04 = m.elements[2][1] * m.elements[3][3] - m.elements[3][1] * m.elements[2][3];
-    f32 coef06 = m.elements[1][1] * m.elements[3][3] - m.elements[3][1] * m.elements[1][3];
-    f32 coef07 = m.elements[1][1] * m.elements[2][3] - m.elements[2][1] * m.elements[1][3];
-    f32 coef08 = m.elements[2][1] * m.elements[3][2] - m.elements[3][1] * m.elements[2][2];
-    f32 coef10 = m.elements[1][1] * m.elements[3][2] - m.elements[3][1] * m.elements[1][2];
-    f32 coef11 = m.elements[1][1] * m.elements[2][2] - m.elements[2][1] * m.elements[1][2];
-    f32 coef12 = m.elements[2][0] * m.elements[3][3] - m.elements[3][0] * m.elements[2][3];
-    f32 coef14 = m.elements[1][0] * m.elements[3][3] - m.elements[3][0] * m.elements[1][3];
-    f32 coef15 = m.elements[1][0] * m.elements[2][3] - m.elements[2][0] * m.elements[1][3];
-    f32 coef16 = m.elements[2][0] * m.elements[3][2] - m.elements[3][0] * m.elements[2][2];
-    f32 coef18 = m.elements[1][0] * m.elements[3][2] - m.elements[3][0] * m.elements[1][2];
-    f32 coef19 = m.elements[1][0] * m.elements[2][2] - m.elements[2][0] * m.elements[1][2];
-    f32 coef20 = m.elements[2][0] * m.elements[3][1] - m.elements[3][0] * m.elements[2][1];
-    f32 coef22 = m.elements[1][0] * m.elements[3][1] - m.elements[3][0] * m.elements[1][1];
-    f32 coef23 = m.elements[1][0] * m.elements[2][1] - m.elements[2][0] * m.elements[1][1];
+    f32 coef00 = m.m22 * m.m33 - m.m23 * m.m32;
+    f32 coef02 = m.m21 * m.m33 - m.m23 * m.m31;
+    f32 coef03 = m.m21 * m.m32 - m.m22 * m.m31;
+    f32 coef04 = m.m12 * m.m33 - m.m13 * m.m32;
+    f32 coef06 = m.m11 * m.m33 - m.m13 * m.m31;
+    f32 coef07 = m.m11 * m.m32 - m.m12 * m.m31;
+    f32 coef08 = m.m12 * m.m23 - m.m13 * m.m22;
+    f32 coef10 = m.m11 * m.m23 - m.m13 * m.m21;
+    f32 coef11 = m.m11 * m.m22 - m.m12 * m.m21;
+    f32 coef12 = m.m02 * m.m33 - m.m03 * m.m32;
+    f32 coef14 = m.m01 * m.m33 - m.m03 * m.m31;
+    f32 coef15 = m.m01 * m.m32 - m.m02 * m.m31;
+    f32 coef16 = m.m02 * m.m23 - m.m03 * m.m22;
+    f32 coef18 = m.m01 * m.m23 - m.m03 * m.m21;
+    f32 coef19 = m.m01 * m.m22 - m.m02 * m.m21;
+    f32 coef20 = m.m02 * m.m13 - m.m03 * m.m12;
+    f32 coef22 = m.m01 * m.m13 - m.m03 * m.m11;
+    f32 coef23 = m.m01 * m.m12 - m.m02 * m.m11;
     
     v4 fac0 = { coef00, coef00, coef02, coef03 };
     v4 fac1 = { coef04, coef04, coef06, coef07 };
@@ -597,60 +723,61 @@ M4Inverse(m4 m)
     v4 fac4 = { coef16, coef16, coef18, coef19 };
     v4 fac5 = { coef20, coef20, coef22, coef23 };
     
-    v4 vec0 = { m.elements[1][0], m.elements[0][0], m.elements[0][0], m.elements[0][0] };
-    v4 vec1 = { m.elements[1][1], m.elements[0][1], m.elements[0][1], m.elements[0][1] };
-    v4 vec2 = { m.elements[1][2], m.elements[0][2], m.elements[0][2], m.elements[0][2] };
-    v4 vec3 = { m.elements[1][3], m.elements[0][3], m.elements[0][3], m.elements[0][3] };
+    v4 vec0 = { m.m01, m.m00, m.m00, m.m00 };
+    v4 vec1 = { m.m11, m.m10, m.m10, m.m10 };
+    v4 vec2 = { m.m21, m.m20, m.m20, m.m20 };
+    v4 vec3 = { m.m31, m.m30, m.m30, m.m30 };
     
     v4 inv0 = V4AddV4(V4MinusV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
     v4 inv1 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
     v4 inv2 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
     v4 inv3 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
     
-    v4 sign_a = { +1, -1, +1, -1 };
-    v4 sign_b = { -1, +1, -1, +1 };
+    v4 sign_a = { +1.f, -1.f, +1.f, -1.f };
+    v4 sign_b = { -1.f, +1.f, -1.f, +1.f };
     
     m4 inverse = {0};
-    for(i32 i = 0; i < 4; ++i)
+	
+    for(i32 i = 0; i < 4; i++)
     {
-        inverse.elements[0][i] = inv0.elements[i] * sign_a.elements[i];
-        inverse.elements[1][i] = inv1.elements[i] * sign_b.elements[i];
-        inverse.elements[2][i] = inv2.elements[i] * sign_a.elements[i];
-        inverse.elements[3][i] = inv3.elements[i] * sign_b.elements[i];
+        inverse.c0[i] = inv0.elements[i] * sign_a.elements[i];
+        inverse.c1[i] = inv1.elements[i] * sign_b.elements[i];
+        inverse.c2[i] = inv2.elements[i] * sign_a.elements[i];
+        inverse.c3[i] = inv3.elements[i] * sign_b.elements[i];
     }
     
-    v4 row0 = { inverse.elements[0][0], inverse.elements[1][0], inverse.elements[2][0], inverse.elements[3][0] };
-    v4 m0 = { m.elements[0][0], m.elements[0][1], m.elements[0][2], m.elements[0][3] };
+    v4 row0 = { inverse.m00, inverse.m01, inverse.m02, inverse.m03 };
+    v4 m0 = { m.m00, m.m10, m.m20, m.m30 };
     v4 dot0 = V4MultiplyV4(m0, row0);
     f32 dot1 = (dot0.x + dot0.y) + (dot0.z + dot0.w);
     
-    f32 one_over_det = 1 / dot1;
+    f32 one_over_det = 1.f / dot1;
     
     return M4MultiplyF32(inverse, one_over_det);
 }
 
 internal m4
-M4RemoveRotation(m4 mat)
+M4RemoveRotation(m4 m)
 {
     v3 scale = {
-        V3Length(v3(mat.elements[0][0], mat.elements[0][1], mat.elements[0][2])),
-        V3Length(v3(mat.elements[1][0], mat.elements[1][1], mat.elements[1][2])),
-        V3Length(v3(mat.elements[2][0], mat.elements[2][1], mat.elements[2][2])),
+        V3Length(v3(m.m00, m.m10, m.m20)),
+        V3Length(v3(m.m01, m.m11, m.m21)),
+        V3Length(v3(m.m02, m.m12, m.m22)),
     };
     
-    mat.elements[0][0] = scale.x;
-    mat.elements[1][0] = 0.f;
-    mat.elements[2][0] = 0.f;
+    m.m00 = scale.x;
+    m.m01 = 0.f;
+    m.m02 = 0.f;
     
-    mat.elements[0][1] = 0.f;
-    mat.elements[1][1] = scale.y;
-    mat.elements[2][1] = 0.f;
+    m.m10 = 0.f;
+    m.m11 = scale.y;
+    m.m12 = 0.f;
     
-    mat.elements[0][2] = 0.f;
-    mat.elements[1][2] = 0.f;
-    mat.elements[2][2] = scale.z;
+    m.m20 = 0.f;
+    m.m21 = 0.f;
+    m.m22 = scale.z;
     
-    return mat;
+    return m;
 }
 
 internal m4
@@ -664,19 +791,55 @@ M4RotateAxis(f32 angle, v3 axis)
     f32 cos_theta = CosF(angle);
     f32 cos_inv   = 1.0f - cos_theta;
     
-    result.elements[0][0] = (axis.x * axis.x * cos_inv) +           cos_theta;
-    result.elements[0][1] = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);
-    result.elements[0][2] = (axis.x * axis.z * cos_inv) - (axis.y * sin_theta);
+    result.m00 = (axis.x * axis.x * cos_inv) +           cos_theta;
+    result.m10 = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);
+    result.m20 = (axis.x * axis.z * cos_inv) - (axis.y * sin_theta);
     
-    result.elements[1][0] = (axis.y * axis.x * cos_inv) - (axis.z * sin_theta);
-    result.elements[1][1] = (axis.y * axis.y * cos_inv) +           cos_theta;
-    result.elements[1][2] = (axis.y * axis.z * cos_inv) + (axis.x * sin_theta);
+    result.m01 = (axis.y * axis.x * cos_inv) - (axis.z * sin_theta);
+    result.m11 = (axis.y * axis.y * cos_inv) +           cos_theta;
+    result.m21 = (axis.y * axis.z * cos_inv) + (axis.x * sin_theta);
     
-    result.elements[2][0] = (axis.z * axis.x * cos_inv) + (axis.y * sin_theta);
-    result.elements[2][1] = (axis.z * axis.y * cos_inv) - (axis.x * sin_theta);
-    result.elements[2][2] = (axis.z * axis.z * cos_inv) +           cos_theta;
+    result.m02 = (axis.z * axis.x * cos_inv) + (axis.y * sin_theta);
+    result.m12 = (axis.z * axis.y * cos_inv) - (axis.x * sin_theta);
+    result.m22 = (axis.z * axis.z * cos_inv) +           cos_theta;
     
     return result;
+}
+
+// NOTE(kp): Input quaternion must be normalized. 
+internal m4
+M4RotateQuat(v4 q)
+{
+	m4 result = m4(1.f);
+	
+	result.m00 = 1.f - 2.f * (q.y * q.y + q.z * q.z);
+	result.m01 =       2.f * (q.x * q.y - q.z * q.w);
+	result.m02 =       2.f * (q.x * q.z + q.y * q.w);
+	
+	result.m10 =       2.f * (q.x * q.y + q.z * q.w);
+	result.m11 = 1.f - 2.f * (q.x * q.x + q.z * q.z);
+	result.m12 =       2.f * (q.y * q.z - q.x * q.w);
+	
+	result.m20 =       2.f * (q.x * q.z - q.y * q.w);
+	result.m21 =       2.f * (q.y * q.z + q.x * q.w);
+	result.m22 = 1.f - 2.f * (q.x * q.x + q.y * q.y);
+	
+	return result;
+}
+
+internal m4
+M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
+{
+	m4 result = m4(1.f);
+	
+	printf("%f %f %f %f\n", rotation.x, rotation.y, rotation.z, rotation.w);
+	
+	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.f)), result);
+	result = M4MultiplyM4(M4RotateQuat(rotation), result);
+	result = M4MultiplyM4(M4ScaleV3(scale), result);
+	result = M4MultiplyM4(M4TranslateV3(position), result);
+	
+	return result;
 }
 
 typedef struct String8

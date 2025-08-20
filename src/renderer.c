@@ -13,7 +13,7 @@
 //                   --> RenderPass is just a very big struct, and the renderer has 32
 //                       of them at all times.
 //           [x]  8. Model loading.
-//           [ ]  9. Split up files accordingly to make the code easier to manage.
+//           [x]  9. Split up files accordingly to make the code easier to manage.
 //           [ ] 10. Bindless material system from C++ pre-rework
 //                   (with bindless, a material is *just* data you pass to a
 //                   shader, since textures are just parameters
@@ -43,374 +43,6 @@
 //                       CmdEndRendering(...) around the Record(...) function, since mipmaps
 //                       are pretty much the only reason I don't already do that.
 //           [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
-
-internal Mesh
-MeshInit(VertexFormat *format,
-		 u32 vertex_count, void *vertices,
-		 u32 index_count, u16 *indices)
-{
-	Mesh mesh = {0};
-	mesh.vertex_format = format;
-	mesh.vertex_count = vertex_count;
-	mesh.index_count = index_count;
-	
-	u64 vertex_buffer_size = vertex_count * format->vertex_size;
-	u64 index_buffer_size = index_count * sizeof(u16);
-	
-	mesh.vertex_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-										   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-										   vertex_buffer_size);
-	
-	mesh.index_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-										  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-										  index_buffer_size);
-	
-	GPUBuffer staging_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-												 vertex_buffer_size + index_buffer_size);
-	{
-		GPUBufferWrite(&staging_buffer, vertices, vertex_buffer_size, 0);
-		GPUBufferWrite(&staging_buffer, indices, index_buffer_size, vertex_buffer_size);
-		
-		CommandBuffer cmd = BeginGraphicsInstantSubmit();
-		{
-			VkBufferCopy stage_to_vertex_copy = {0};
-			stage_to_vertex_copy.srcOffset = 0;
-			stage_to_vertex_copy.dstOffset = 0;
-			stage_to_vertex_copy.size = vertex_buffer_size;
-			
-			CmdCopyBufferToBuffer(&cmd,
-								  &staging_buffer,
-								  &mesh.vertex_buffer,
-								  1, &stage_to_vertex_copy);
-			
-			VkBufferCopy stage_to_index_copy = {0};
-			stage_to_index_copy.srcOffset = vertex_buffer_size;
-			stage_to_index_copy.dstOffset = 0;
-			stage_to_index_copy.size = index_buffer_size;
-			
-			CmdCopyBufferToBuffer(&cmd,
-								  &staging_buffer,
-								  &mesh.index_buffer,
-								  1, &stage_to_index_copy);
-		}
-		EndGraphicsInstantSubmit(&cmd);
-	}
-	GraphicsWaitIdle();
-	GPUBufferDestroy(&staging_buffer);
-	
-	return mesh;
-}
-
-internal void
-MeshDestroy(Mesh *mesh)
-{
-	GPUBufferDestroy(&mesh->vertex_buffer);
-	GPUBufferDestroy(&mesh->index_buffer);
-}
-
-internal void
-CmdBindAndDrawMesh(CommandBuffer *cmd,
-				   Mesh *mesh)
-{
-	CmdBindVertexBuffer(cmd, 0, &mesh->vertex_buffer, 0);
-	CmdBindIndexBuffer(cmd, &mesh->index_buffer, 0);
-	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
-}
-
-internal SubModel *
-ModelCreateSubModel(Model *model)
-{
-	SubModel *sub_model = MemoryArenaPush(model->arena, sizeof(SubModel));
-	sub_model->next = model->sub_models;
-	sub_model->parent = model;
-	
-	model->sub_models = sub_model;
-	model->sub_model_count++;
-	
-	return sub_model;
-}
-
-internal b32
-AssimpMeshHasPositions(struct aiMesh *mesh)
-{
-	return mesh->mVertices && mesh->mNumVertices > 0;
-}
-
-internal b32
-AssimpMeshHasFaces(struct aiMesh *mesh)
-{
-	return mesh->mFaces && mesh->mNumFaces > 0;
-}
-
-internal b32
-AssimpMeshHasNormals(struct aiMesh *mesh)
-{
-	return mesh->mNormals && mesh->mNumVertices > 0;
-}
-
-internal b32
-AssimpMeshHasTangentsAndBitangents(struct aiMesh *mesh)
-{
-	return mesh->mTangents && mesh->mBitangents && mesh->mNumVertices > 0;
-}
-
-internal b32
-AssimpMeshHasTextureCoords(struct aiMesh *mesh, u32 index)
-{
-	return mesh->mTextureCoords[index] && mesh->mNumVertices > 0;
-}
-
-internal b32
-AssimpMeshHasVertexColours(struct aiMesh *mesh, u32 index)
-{
-	return mesh->mColors[index] && mesh->mNumVertices > 0;
-}
-
-internal u32
-AssimpTryFetchMaterialTexture(MemoryArena *arena,
-							  String8 directory,
-							  const struct aiMaterial *material,
-							  enum aiTextureType type,
-							  u32 fallback)
-{
-	if(aiGetMaterialTextureCount(material, type) <= 0)
-	{
-		return fallback;
-	}
-	
-	ScratchArena scratch = GetScratch(arena);
-	
-	struct aiString texture_path = {0};
-	aiGetMaterialTexture(material, type, 0, &texture_path, 0, 0, 0, 0, 0, 0);
-	
-	String8 final_path = MemoryArenaAllocateString8(scratch.arena, directory.len + texture_path.length);
-	MemoryCopy(final_path.str, directory.str, directory.len);
-	MemoryCopy(final_path.str + directory.len, texture_path.data, texture_path.length);
-	
-	// TODO(kp): Temporarily I just don't even bother storing the images.
-	//           Memory leaks who?? Never heard of 'em.
-	
-	Image image = ImageLoadFromPath(final_path);
-	u32 id = FetchStandardImageView(&image)->resource_id;
-	
-	ReleaseScratch(&scratch);
-	return id;
-}
-
-typedef struct ModelVertex
-{
-	v3 position;
-	v2 texcoord;
-	v3 colour;
-	v3 normal;
-	v3 tangent;
-	v3 bitangent;
-}
-ModelVertex;
-
-internal void
-ModelLoadProcessSubModel(Renderer *renderer,
-						 MemoryArena *arena,
-						 SubModel *sub_model,
-						 struct aiMesh *assimp_mesh,
-						 const struct aiScene *scene,
-						 struct aiMatrix4x4 transform)
-{
-	ScratchArena scratch = GetScratch(arena);
-	
-	ModelVertex *vertices = MemoryArenaPush(scratch.arena, sizeof(ModelVertex) * assimp_mesh->mNumVertices);
-	
-	// TODO(kp): Transforms should be applied when rendering (so be a member of a SubModel)
-	//           rather than being directly applied to vertices when loading them in.
-	for(i32 i = 0; i < assimp_mesh->mNumVertices; i++)
-	{
-		ModelVertex *vertex = vertices + i;
-		
-		if(AssimpMeshHasPositions(assimp_mesh))
-		{
-			struct aiVector3D position = assimp_mesh->mVertices[i];
-			aiTransformVecByMatrix4(&position, &transform);
-			
-			vertex->position = v3(position.x, position.y, position.z); 
-		}
-		else
-		{
-			vertex->position = v3(0.f, 0.f, 0.f);
-		}
-		
-		if(AssimpMeshHasTextureCoords(assimp_mesh, 0))
-		{
-			struct aiVector3D uv = assimp_mesh->mTextureCoords[0][i];
-			
-			vertex->texcoord = v2(uv.x, uv.y);
-		}
-		else
-		{
-			vertex->texcoord = v2(0.f, 0.f);
-		}
-		
-		if(AssimpMeshHasVertexColours(assimp_mesh, 0))
-		{
-			struct aiColor4D colour = assimp_mesh->mColors[0][i];
-			
-			vertex->colour = v3(colour.r, colour.g, colour.b);
-		}
-		else
-		{
-			vertex->colour = v3(1.f, 1.f, 1.f);
-		}
-		
-		if(AssimpMeshHasNormals(assimp_mesh))
-		{
-			// TODO(kp): This won't work.
-			//           Need to use a corrected transformation matrix for normals!
-			//           Unless assimp transformations are orthonormal?
-			//           --> Investigate this.
-			
-			struct aiVector3D normal = assimp_mesh->mNormals[i];
-			aiTransformVecByMatrix4(&normal, &transform);
-			
-			vertex->normal = v3(normal.x, normal.y, normal.z);
-		}
-		else
-		{
-			vertex->normal = v3(0.f, 0.f, 1.f);
-		}
-		
-		if(AssimpMeshHasTangentsAndBitangents(assimp_mesh))
-		{
-			struct aiVector3D tangent = assimp_mesh->mTangents[i];
-			struct aiVector3D bitangent = assimp_mesh->mBitangents[i];
-			
-			aiTransformVecByMatrix4(&tangent, &transform);
-			aiTransformVecByMatrix4(&bitangent, &transform);
-			
-			vertex->tangent = v3(tangent.x, tangent.y, tangent.z);
-			vertex->bitangent = v3(bitangent.x, bitangent.y, bitangent.z);
-		}
-		else
-		{
-			vertex->tangent = v3(1.f, 0.f, 0.f);
-			vertex->bitangent = v3(0.f, 1.f, 0.f);
-		}
-	}
-	
-	u32 index_count = 0;
-	
-	for(i32 i = 0; i < assimp_mesh->mNumFaces; i++)
-	{
-		struct aiFace *face = assimp_mesh->mFaces + i;
-		
-		for(i32 j = 0; j < face->mNumIndices; j++)
-		{
-			index_count++;
-		}
-	}
-	
-	u16 *indices = MemoryArenaPush(scratch.arena, sizeof(u16) * index_count);
-	
-	index_count = 0;
-	
-	for(i32 i = 0; i < assimp_mesh->mNumFaces; i++)
-	{
-		struct aiFace *face = assimp_mesh->mFaces + i;
-		
-		for(i32 j = 0; j < face->mNumIndices; j++)
-		{
-			indices[index_count] = face->mIndices[j];
-			index_count++;
-		}
-	}
-	
-	sub_model->mesh = MeshInit(&renderer->model_vertex_format,
-							   assimp_mesh->mNumVertices, vertices,
-							   index_count, indices);
-	
-	if(assimp_mesh->mMaterialIndex >= 0)
-	{
-		const struct aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-		
-		sub_model->material.diffuse  = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_DIFFUSE, 0);
-		sub_model->material.normal   = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_NORMALS, 0);
-		sub_model->material.emissive = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_EMISSIVE, 0);
-		sub_model->material.mr       = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_DIFFUSE_ROUGHNESS, 0);
-		sub_model->material.ambient  = AssimpTryFetchMaterialTexture(arena, sub_model->parent->directory, assimp_material, aiTextureType_LIGHTMAP, 0);
-	}
-	
-	ReleaseScratch(&scratch);
-}
-
-/*
-const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
-
-MaterialData data;
-data.technique = "texturedPBR_gbuffer_opaque"; // temporarily just the forced material type
-
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getTextures().getFallbackDiffuse());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getTextures().getFallbackAmbient());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	m_app->getTextures().getFallbackRoughnessMetallic());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				m_app->getTextures().getFallbackNormals());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				m_app->getTextures().getFallbackEmissive());
-
-submesh->setMaterial(m_app->getRenderer().buildMaterial(data));
-*/
-
-internal void
-ModelLoadProcessNodes(Renderer *renderer, MemoryArena *arena, Model *model, struct aiNode *node, const struct aiScene *scene, struct aiMatrix4x4 transform)
-{
-	struct aiMatrix4x4 node_transform = node->mTransformation;
-	aiMultiplyMatrix4(&node_transform, &transform);
-	
-	for(i32 i = 0; i < node->mNumMeshes; i++)
-	{
-		struct aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
-		
-		SubModel *sub_model = ModelCreateSubModel(model);
-		
-		ModelLoadProcessSubModel(renderer, arena, sub_model, assimp_mesh, scene, node_transform);
-	}
-	
-	for (i32 i = 0; i < node->mNumChildren; i++)
-	{
-		ModelLoadProcessNodes(renderer, arena, model, node->mChildren[i], scene, node_transform);
-	}
-}
-
-internal Model
-ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
-{
-	const struct aiScene *scene = aiImportFile((char *)path.str,
-											   aiProcess_Triangulate |
-											   aiProcess_FlipWindingOrder |
-											   aiProcess_CalcTangentSpace |
-											   aiProcess_FlipUVs);
-	
-	if(!scene ||
-	   (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 ||
-	   !scene->mRootNode)
-	{
-		DebugLogCrash("Failed to load model.");
-	}
-	
-	Model model = {0};
-	model.arena = arena;
-	model.directory = String8BeforeFirstSubstringFromBackInclusive(path, str8("/"));
-	
-	struct aiMatrix4x4 identity = {
-		1.f, 0.f, 0.f, 0.f,
-		0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 1.f, 0.f,
-		0.f, 0.f, 0.f, 1.f
-	};
-	
-	DebugLog("Loading model...");
-	
-	ModelLoadProcessNodes(renderer, arena, &model, scene->mRootNode, scene, identity);
-	
-	aiReleaseImport(scene);
-	return model;
-}
 
 internal RenderingAttachment
 RenderingAttachmentInitColour(VkAttachmentLoadOp load_op,
@@ -486,13 +118,6 @@ RenderingAttachmentInitDepth(VkAttachmentLoadOp load_op,
 }
 
 internal void
-RendererPushRenderPass(Renderer *renderer, RenderPass *pass)
-{
-	renderer->passes[renderer->pass_count] = *pass;
-	renderer->pass_count++;
-}
-
-internal void
 RendererExecuteRenderPasses(Renderer *renderer, CommandBuffer *cmd)
 {
 	for(i32 i = 0; i < renderer->pass_count; i++)
@@ -560,6 +185,13 @@ RendererExecuteRenderPasses(Renderer *renderer, CommandBuffer *cmd)
 	}
 	
 	renderer->pass_count = 0;
+}
+
+internal void
+RendererPushRenderPass(Renderer *renderer, RenderPass *pass)
+{
+	renderer->passes[renderer->pass_count] = *pass;
+	renderer->pass_count++;
 }
 
 internal void
@@ -802,16 +434,15 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	
 	m4 capture_projection_matrix = M4Perspective(90.0f, 1.0f, 0.1f, 10.0f);
 	
-	// NOTE(kp): We have to flip the Z lookat coordinate because cubemaps use
-	//           a left-handed sampling standard (thank you renderman) but
-	//           we use a right-handed coordinate system.
+	// NOTE(kp): Renderman introduced the left-handed Y-up cubemap in 1990
+	//           but we use right-handed Z-up so we have to flip these weirdly.
 	m4 capture_view_matrices[] = {
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3(0.f, 1.f, 0.f)), // X+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3(0.f, 1.f, 0.f)), // X-
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3(0.f, 0.f, 1.f)), // Y+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3(0.f, 0.f,-1.f)), // Y-
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3(0.f, 1.f, 0.f)), // Z+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3(0.f, 1.f, 0.f)), // Z-
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3(0.f, 0.f, 1.f)), // X+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3(0.f, 0.f, 1.f)), // X-
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3(0.f, 1.f, 0.f)), // Y+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3(0.f,-1.f, 0.f)), // Y-
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3(0.f, 0.f,-1.f)), // Z+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3(0.f, 0.f,-1.f)), // Z-
 	};
 	
 	renderer->cubemap_capture_transforms = GPUBufferAllocate(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -823,12 +454,6 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 		m4 m = M4MultiplyM4(capture_projection_matrix, capture_view_matrices[i]);
 		GPUBufferWrite(&renderer->cubemap_capture_transforms, &m, sizeof(m4), sizeof(m4) * i);
 	}
-	
-	typedef struct EnvironmentCubeVertex
-	{
-		v3 position;
-	}
-	EnvironmentCubeVertex;
 	
 	AddVertexBinding(&renderer->environment_cube_vertex_format, sizeof(EnvironmentCubeVertex), VK_VERTEX_INPUT_RATE_VERTEX);
 	{
@@ -963,7 +588,7 @@ RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo
 	CmdBeginRendering(cmd, render_info);
 	{
 		static f32 time = 0.f;
-		time -= .01f;
+		time += .01f;
 		
 		struct
 		{
@@ -977,10 +602,17 @@ RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo
 		}
 		args;
 		
-		args.transform = m4(1.f);
-		args.transform = M4MultiplyM4(M4RotateAxis (time, v3(0.f, 1.f, 0.f)),       args.transform);
-		args.transform = M4MultiplyM4(M4ScaleV3    (v3(1.f, 1.f, 1.f)),             args.transform);
-		args.transform = M4MultiplyM4(M4TranslateV3(v3(0.f, 0.f, -4.f)),            args.transform);
+		args.transform = M4Transform(v3(0.f, 5.f, 0.f),
+									 QuatInitEuler(time, time, time),
+									 v3(1.f, 1.f, 1.f),
+									 v3(0.f, 0.f, 0.f));
+		
+		/*
+		args.transform = M4MultiplyM4(M4ScaleV3    (v3(1.f, 1.f, 2.f)), args.transform);
+		args.transform = M4MultiplyM4(M4RotateAxis (time, v3(0.f, 0.f, 1.f)), args.transform);
+		args.transform = M4MultiplyM4(M4TranslateV3(v3(0.f, 5.f, 0.f)), args.transform);
+		*/
+		
 		args.transform = M4MultiplyM4(M4Perspective(70.f, 1280.f/720.f, .1f, 10.f), args.transform);
 		
 		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->model_program, &renderer->model_vertex_format);
@@ -999,27 +631,23 @@ RendererRenderPassRenderModel(Renderer *renderer, CommandBuffer *cmd, RenderInfo
 }
 
 internal void
-RendererBeginFrame(Renderer *renderer)
+RendererDrawFrame(Renderer *renderer)
 {
 	renderer->present_cmd = BeginGraphicsPresent();
-	
-	RenderPass render_pass = {0};
-	render_pass.type = RenderPassType_Graphics;
-	render_pass.graphics.Record = RendererRenderPassRenderModel;
-	render_pass.graphics.attachment_count = 2;
-	render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-																		GetCurrentSwapchainImageView(&graphics_device->swapchain),
-																		0, v4(0.f, 0.f, 0.f, 1.f));
-	render_pass.graphics.attachments[1] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
-																	   FetchStandardImageView(&renderer->depth_buffer),
-																	   0, 1.f, 0);
-	
-	RendererPushRenderPass(renderer, &render_pass);
-}
-
-internal void
-RendererEndFrame(Renderer *renderer)
-{
+	{
+		RenderPass render_pass = {0};
+		render_pass.type = RenderPassType_Graphics;
+		render_pass.graphics.Record = RendererRenderPassRenderModel;
+		render_pass.graphics.attachment_count = 2;
+		render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
+																			GetCurrentSwapchainImageView(&graphics_device->swapchain),
+																			0, v4(0.f, 0.f, 0.f, 1.f));
+		render_pass.graphics.attachments[1] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
+																		   FetchStandardImageView(&renderer->depth_buffer),
+																		   0, 1.f, 0);
+		
+		RendererPushRenderPass(renderer, &render_pass);
+	}
 	RendererExecuteRenderPasses(renderer, &renderer->present_cmd);
 	EndGraphicsPresent(&renderer->present_cmd);
 }

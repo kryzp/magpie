@@ -45,11 +45,11 @@ LoadCoreCode(MacOSCoreCode *core_code)
 internal void
 UnloadCoreCode(MacOSCoreCode *core_code)
 {
-	core_code->CoreInit = CoreNullStub;
-	core_code->CoreUpdate = CoreNullStub;
-	core_code->CoreDestroy = CoreNullStub;
+	core_code->CoreInit            = CoreNullStub;
+	core_code->CoreUpdate          = CoreNullStub;
+	core_code->CoreDestroy         = CoreNullStub;
 	core_code->CoreBeforeHotReload = CoreNullStub;
-	core_code->CoreAfterHotReload = CoreNullStub;
+	core_code->CoreAfterHotReload  = CoreNullStub;
 	
 	if(core_code->handle)
 	{

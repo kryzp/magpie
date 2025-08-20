@@ -283,8 +283,8 @@ internal void
 BindlessInit()
 {
 	static VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_MAX_RESOURCES },
-		{ VK_DESCRIPTOR_TYPE_SAMPLER,       BINDLESS_MAX_RESOURCES }
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_MAX_RESOURCES }, // Textures.
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,       BINDLESS_MAX_RESOURCES }  // Samplers.
 	};
 	
 	VkDescriptorPoolCreateInfo pool_create_info = {0};
@@ -817,7 +817,7 @@ GPUBufferAllocate(VkBufferUsageFlags usage,
 	vma_alloc_info.flags = flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 	
 	VK_CHECK(vmaCreateBuffer(graphics_device->vma_allocator, &buffer_create_info, &vma_alloc_info, &buffer.handle, &buffer.allocation, &buffer.allocation_info),
-			 "Failed to create buffer");
+			 "Failed to create buffer.");
 	
 	if(GPUBufferIsStorage(&buffer))
 	{
