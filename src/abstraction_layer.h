@@ -394,11 +394,11 @@ QuatInitEuler(f32 pitch, f32 yaw, f32 roll)
 internal v3
 QuatToEuler(v4 q)
 {
-	f32 t0 =           (2.f + ((q.w * q.x) + (q.y * q.z)));
-	f32 t1 = 1.f -     (2.f * ((q.x * q.x) + (q.y * q.y)));
-	f32 t2 = ClampValue(2.f * ((q.w * q.y) - (q.z * q.x)), -1.f, 1.f);
-	f32 t3 =           (2.f * ((q.w * q.z) + (q.x * q.y)));
-	f32 t4 = 1.f -     (2.f * ((q.y * q.y) + (q.z * q.z)));
+	f32 t0 =           (2.0f + ((q.w * q.x) + (q.y * q.z)));
+	f32 t1 = 1.0f -     (2.0f * ((q.x * q.x) + (q.y * q.y)));
+	f32 t2 = ClampValue(2.0f * ((q.w * q.y) - (q.z * q.x)), -1.0f, 1.0f);
+	f32 t3 =           (2.0f * ((q.w * q.z) + (q.x * q.y)));
+	f32 t4 = 1.0f -     (2.0f * ((q.y * q.y) + (q.z * q.z)));
 	
 	f32 pitch = ASinF(t2);
 	f32 yaw   = ATan2F(t3, t4);
@@ -530,13 +530,13 @@ typedef union m4
 m4;
 
 internal m4
-M4Init(f32 dia)
+M4Init(f32 diag)
 {
     m4 m = {
-		dia, 0.f, 0.f, 0.f,
-		0.f, dia, 0.f, 0.f,
-		0.f, 0.f, dia, 0.f,
-		0.f, 0.f, 0.f, dia
+		diag, 0.0f, 0.0f, 0.0f,
+		0.0f, diag, 0.0f, 0.0f,
+		0.0f, 0.0f, diag, 0.0f,
+		0.0f, 0.0f, 0.0f, diag
     };
 	
     return m;
@@ -583,7 +583,7 @@ M4MultiplyV4(m4 m, v4 v)
 internal v3
 M4MultiplyV3(m4 m, v3 v)
 {
-	v4 w = { v.x, v.y, v.z, 1.f };
+	v4 w = { v.x, v.y, v.z, 1.0f };
 	return M4MultiplyV4(m, w).xyz;
 }
 
@@ -606,12 +606,12 @@ M4MultiplyF32(m4 m, f32 f)
 internal m4
 M4TranslateV3(v3 translation)
 {
-    m4 result = m4(1.f);
+    m4 result = m4(1.0f);
 	
 	result.m03 = translation.x;
 	result.m13 = translation.y;
 	result.m23 = translation.z;
-	result.m33 = 1.f;
+	result.m33 = 1.0f;
 	
     return result;
 }
@@ -619,12 +619,12 @@ M4TranslateV3(v3 translation)
 internal m4
 M4ScaleV3(v3 scale)
 {
-    m4 result = m4(1.f);
+    m4 result = m4(1.0f);
 	
 	result.m00 = scale.x;
 	result.m11 = scale.y;
 	result.m22 = scale.z;
-	result.m33 = 1.f;
+	result.m33 = 1.0f;
 	
     return result;
 }
@@ -653,10 +653,10 @@ M4LookAt(v3 eye, v3 center, v3 up)
     result.m22 = zaxis.z;
     result.m23 = -V3Dot(zaxis, eye);
     
-    result.m30 = 0.f;
-    result.m31 = 0.f;
-    result.m32 = 0.f;
-    result.m33 = 1.f;
+    result.m30 = 0.0f;
+    result.m31 = 0.0f;
+    result.m32 = 0.0f;
+    result.m33 = 1.0f;
     
     return result;
 }
@@ -666,13 +666,13 @@ M4Perspective(f32 fov, f32 aspect_ratio, f32 z_near, f32 z_far)
 {
     m4 result = {0};
 	
-    f32 f = TanF(fov / 360.f * PIf);
+    f32 f = TanF(fov / 360.0f * PIf);
 	
     result.m00 = f / aspect_ratio;
 	result.m12 = f;
 	result.m21 = (z_far + z_near) / (z_far - z_near);
-	result.m23 =-(2.f * z_far * z_near) / (z_far - z_near);
-	result.m31 = 1.f;
+	result.m23 =-(2.0f * z_far * z_near) / (z_far - z_near);
+	result.m31 = 1.0f;
 	
     return result;
 }
@@ -682,14 +682,14 @@ M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 z_near, f32 z_far)
 {
 	m4 result = {0};
 	
-	result.m00 = 2.f / (right - left);
-	result.m12 = 2.f / (top - bottom);
-	result.m21 = 2.f / (z_far - z_near);
+	result.m00 = 2.0f / (right - left);
+	result.m12 = 2.0f / (top - bottom);
+	result.m21 = 2.0f / (z_far - z_near);
 	
 	result.m03 =-(right + left) / (right - left);
 	result.m13 =-(top + bottom) / (top - bottom);
 	result.m23 =-(z_far + z_near) / (z_far - z_near);
-	result.m33 = 1.f;
+	result.m33 = 1.0f;
 	
 	return result;
 }
@@ -749,8 +749,8 @@ M4Inverse(m4 m)
     v4 inv2 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
     v4 inv3 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
     
-    v4 sign_a = { +1.f, -1.f, +1.f, -1.f };
-    v4 sign_b = { -1.f, +1.f, -1.f, +1.f };
+    v4 sign_a = { +1.0f, -1.0f, +1.0f, -1.0f };
+    v4 sign_b = { -1.0f, +1.0f, -1.0f, +1.0f };
     
     m4 inverse = {0};
 	
@@ -767,7 +767,7 @@ M4Inverse(m4 m)
     v4 dot0 = V4MultiplyV4(m0, row0);
     f32 dot1 = (dot0.x + dot0.y) + (dot0.z + dot0.w);
     
-    f32 one_over_det = 1.f / dot1;
+    f32 one_over_det = 1.0f / dot1;
     
     return M4MultiplyF32(inverse, one_over_det);
 }
@@ -782,15 +782,15 @@ M4RemoveRotation(m4 m)
     };
     
     m.m00 = scale.x;
-    m.m01 = 0.f;
-    m.m02 = 0.f;
+    m.m01 = 0.0f;
+    m.m02 = 0.0f;
     
-    m.m10 = 0.f;
+    m.m10 = 0.0f;
     m.m11 = scale.y;
-    m.m12 = 0.f;
+    m.m12 = 0.0f;
     
-    m.m20 = 0.f;
-    m.m21 = 0.f;
+    m.m20 = 0.0f;
+    m.m21 = 0.0f;
     m.m22 = scale.z;
     
     return m;
@@ -799,13 +799,13 @@ M4RemoveRotation(m4 m)
 internal m4
 M4RotateAxis(f32 angle, v3 axis)
 {
-    m4 result = m4(1.f);
+    m4 result = m4(1.0f);
     
     axis = V3Normalize(axis);
     
     f32 sin_theta = SinF(angle);
     f32 cos_theta = CosF(angle);
-    f32 cos_inv   = 1.f - cos_theta;
+    f32 cos_inv   = 1.0f - cos_theta;
     
     result.m00 = (axis.x * axis.x * cos_inv) +           cos_theta;
     result.m10 = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);
@@ -826,19 +826,19 @@ M4RotateAxis(f32 angle, v3 axis)
 internal m4
 M4RotateQuat(v4 q)
 {
-	m4 result = m4(1.f);
+	m4 result = m4(1.0f);
 	
-	result.m00 = 1.f - 2.f * (q.y * q.y + q.z * q.z);
-	result.m01 =       2.f * (q.x * q.y - q.z * q.w);
-	result.m02 =       2.f * (q.x * q.z + q.y * q.w);
+	result.m00 = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
+	result.m01 =       2.0f * (q.x * q.y - q.z * q.w);
+	result.m02 =       2.0f * (q.x * q.z + q.y * q.w);
 	
-	result.m10 =       2.f * (q.x * q.y + q.z * q.w);
-	result.m11 = 1.f - 2.f * (q.x * q.x + q.z * q.z);
-	result.m12 =       2.f * (q.y * q.z - q.x * q.w);
+	result.m10 =       2.0f * (q.x * q.y + q.z * q.w);
+	result.m11 = 1.0f - 2.0f * (q.x * q.x + q.z * q.z);
+	result.m12 =       2.0f * (q.y * q.z - q.x * q.w);
 	
-	result.m20 =       2.f * (q.x * q.z - q.y * q.w);
-	result.m21 =       2.f * (q.y * q.z + q.x * q.w);
-	result.m22 = 1.f - 2.f * (q.x * q.x + q.y * q.y);
+	result.m20 =       2.0f * (q.x * q.z - q.y * q.w);
+	result.m21 =       2.0f * (q.y * q.z + q.x * q.w);
+	result.m22 = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
 	
 	return result;
 }
@@ -846,9 +846,9 @@ M4RotateQuat(v4 q)
 internal m4
 M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
 {
-	m4 result = m4(1.f);
+	m4 result = m4(1.0f);
 	
-	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.f)), result);
+	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.0f)), result);
 	result = M4MultiplyM4(M4RotateQuat(rotation), result);
 	result = M4MultiplyM4(M4ScaleV3(scale), result);
 	result = M4MultiplyM4(M4TranslateV3(position), result);

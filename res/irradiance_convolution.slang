@@ -26,7 +26,7 @@ VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 {
 	VS_Output output;
     output.position = position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
+    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.0));
 
 	return output;
 }
@@ -35,17 +35,17 @@ VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 float4 FragmentMain(VS_Output input)
 {
 	float3 forward = normalize(input.position);
-	float3 right = normalize(cross(forward, float3(0., 0., 1.)));
+	float3 right = normalize(cross(forward, float3(0.0, 0.0, 1.0)));
 	float3 up = normalize(cross(right, forward));
 
-	float dt = .1;
-	float n_samples = 0.;
+	float dt = 0.1;
+	float n_samples = 0.0;
 
-	float3 irradiance = 0.;
+	float3 irradiance = 0.0;
 	
-	for(float phi = 0.; phi < 2. * PI; phi += dt)
+	for(float phi = 0.0; phi < 2.0 * PI; phi += dt)
 	{
-		for(float theta = 0.; theta < .5 * PI; theta += dt)
+		for(float theta = 0.0; theta < 0.5 * PI; theta += dt)
 		{
 			float3 sample = float3(
 				sin(theta) * cos(phi),
@@ -65,5 +65,5 @@ float4 FragmentMain(VS_Output input)
 
 	irradiance *= PI / n_samples;
 
-	return float4(irradiance, 1.);
+	return float4(irradiance, 1.0);
 }

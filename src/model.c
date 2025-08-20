@@ -182,7 +182,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->position = v3(0.f, 0.f, 0.f);
+			vertex->position = v3(0.0f, 0.0f, 0.0f);
 		}
 		
 		if(AssimpMeshHasTextureCoords(assimp_mesh, 0))
@@ -193,7 +193,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->texcoord = v2(0.f, 0.f);
+			vertex->texcoord = v2(0.0f, 0.0f);
 		}
 		
 		if(AssimpMeshHasVertexColours(assimp_mesh, 0))
@@ -204,7 +204,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->colour = v3(1.f, 1.f, 1.f);
+			vertex->colour = v3(1.0f, 1.0f, 1.0f);
 		}
 		
 		if(AssimpMeshHasNormals(assimp_mesh))
@@ -221,7 +221,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->normal = v3(0.f, 0.f, 1.f);
+			vertex->normal = v3(0.0f, 0.0f, 1.0f);
 		}
 		
 		if(AssimpMeshHasTangentsAndBitangents(assimp_mesh))
@@ -237,8 +237,8 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->tangent = v3(1.f, 0.f, 0.f);
-			vertex->bitangent = v3(0.f, 1.f, 0.f);
+			vertex->tangent = v3(1.0f, 0.0f, 0.0f);
+			vertex->bitangent = v3(0.0f, 1.0f, 0.0f);
 		}
 	}
 	
@@ -347,10 +347,10 @@ ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
 	//           Assimp's coordinate system, which is right handed Y-up, into
 	//           our coordinate system, which is right handed Z-up.
 	struct aiMatrix4x4 identity = {
-		1.f, 0.f, 0.f, 0.f,
-		0.f, 0.f,-1.f, 0.f,
-		0.f, 1.f, 0.f, 0.f,
-		0.f, 0.f, 0.f, 1.f
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f,-1.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
 	};
 	
 	DebugLog("Loading model...");

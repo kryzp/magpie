@@ -258,7 +258,7 @@ RendererGenerateEnvironmentMap(Renderer *renderer)
 	render_pass.graphics.attachment_count = 1;
 	render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
 																		FetchStandardImageView(&renderer->environment_cubemap),
-																		0, v4(0.f, 0.f, 0.f, 1.f));
+																		0, v4(0.0f, 0.0f, 0.0f, 1.0f));
 	
 	RendererPushRenderPass(renderer, &render_pass);
 }
@@ -374,7 +374,7 @@ RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image
 		render_pass.graphics.attachment_count = 1;
 		render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
 																			FetchStandardImageView(&renderer->environment_probe.irradiance),
-																			0, v4(0.f, 0.f, 0.f, 1.f));
+																			0, v4(0.0f, 0.0f, 0.0f, 1.0f));
 		
 		RendererPushRenderPass(renderer, &render_pass);
 	}
@@ -409,7 +409,7 @@ RendererGenerateEnvironmentProbeFromEnvironmentCubemap(Renderer *renderer, Image
 			render_pass.graphics.attachment_count = 1;
 			render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
 																				prefilter_view,
-																				0, v4(0.f, 0.f, 0.f, 1.f));
+																				0, v4(0.0f, 0.0f, 0.0f, 1.0f));
 			
 			RendererPushRenderPass(renderer, &render_pass);
 		}
@@ -434,17 +434,17 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	
 	// NOTE(kp): Setup environment buffer and irradiance + prefilter maps.
 	
-	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
+	m4 capture_projection_matrix = M4Perspective(90.0f, 1.0f, 0.1f, 10.0f);
 	
 	// NOTE(kp): Renderman introduced the left-handed Y-up cubemap in 1990
 	//           but we use right-handed Z-up so we have to flip these weirdly.
 	m4 capture_view_matrices[] = {
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3(0.f, 0.f, 1.f)), // X+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3(0.f, 0.f, 1.f)), // X-
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3(0.f,-1.f, 0.f)), // Y+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3(0.f, 1.f, 0.f)), // Y-
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3(0.f, 0.f, 1.f)), // Z+
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3(0.f, 0.f, 1.f)), // Z-
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3( 1.0f, 0.0f, 0.0f), v3(0.0f, 0.0f, 1.0f)), // X+
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3(-1.0f, 0.0f, 0.0f), v3(0.0f, 0.0f, 1.0f)), // X-
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3( 0.0f, 0.0f, 1.0f), v3(0.0f,-1.0f, 0.0f)), // Y+
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3( 0.0f, 0.0f,-1.0f), v3(0.0f, 1.0f, 0.0f)), // Y-
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3( 0.0f, 1.0f, 0.0f), v3(0.0f, 0.0f, 1.0f)), // Z+
+		M4LookAt(v3(0.0f, 0.0f, 0.0f), v3( 0.0f,-1.0f, 0.0f), v3(0.0f, 0.0f, 1.0f)), // Z-
 	};
 	
 	renderer->cubemap_capture_transforms = GPUBufferAllocate(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -458,14 +458,14 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 	}
 	
 	v3 vertices[] = {
-		{ -1.f,  1.f,  1.f },
-		{ -1.f,  1.f, -1.f },
-		{  1.f,  1.f, -1.f },
-		{  1.f,  1.f,  1.f },
-		{ -1.f, -1.f,  1.f },
-		{ -1.f, -1.f, -1.f },
-		{  1.f, -1.f, -1.f },
-		{  1.f, -1.f,  1.f }
+		{ -1.0f,  1.0f,  1.0f },
+		{ -1.0f,  1.0f, -1.0f },
+		{  1.0f,  1.0f, -1.0f },
+		{  1.0f,  1.0f,  1.0f },
+		{ -1.0f, -1.0f,  1.0f },
+		{ -1.0f, -1.0f, -1.0f },
+		{  1.0f, -1.0f, -1.0f },
+		{  1.0f, -1.0f,  1.0f }
 	};
 	
 	u16 indices[] = {
@@ -734,10 +734,10 @@ internal void
 RendererUpdateFrameData(Renderer *renderer)
 {
 	GPU_FrameData frame_data = {0};
-	frame_data.projection_matrix = M4MultiplyM4(M4Perspective(100.f, 1280.f/720.f, .1f, 10.f), m4(1.f));
-	frame_data.view_matrix = m4(1.f);
-	frame_data.camera_position = v4(0.f, 0.f, 0.f, 0.f);
-	frame_data.window_resolution = v4(1280.f, 720.f, 0.f, 0.f);
+	frame_data.projection_matrix = M4MultiplyM4(M4Perspective(100.0f, 1280.0f/720.0f, .1f, 10.0f), m4(1.0f));
+	frame_data.view_matrix = m4(1.0f);
+	frame_data.camera_position = v4(0.0f, 0.0f, 0.0f, 0.0f);
+	frame_data.window_resolution = v4(1280.0f, 720.0f, 0.0f, 0.0f);
 	
 	GPUBufferWrite(&renderer->frame_data_buffer, &frame_data, sizeof(GPU_FrameData), 0);
 }
@@ -745,15 +745,15 @@ RendererUpdateFrameData(Renderer *renderer)
 internal void
 RendererUpdateModelTransformBuffer(Renderer *renderer)
 {
-	static f32 time = 0.f;
+	static f32 time = 0.0f;
 	time += .01f;
 	
 	GPU_TransformData transform_data = {0};
 	
-	transform_data.model_matrix = M4Transform(v3(0.f, 2.5f, 0.f),
-											  QuatInitEuler(0.f, time, 0.f),
-											  v3(1.f, 1.f, 1.f),
-											  v3(0.f, 0.f, 0.f));
+	transform_data.model_matrix = M4Transform(v3(0.0f, 2.5f, 0.0f),
+											  QuatInitEuler(0.0f, time, 0.0f),
+											  v3(1.0f, 1.0f, 1.0f),
+											  v3(0.0f, 0.0f, 0.0f));
 	
 	transform_data.normal_matrix = M4Inverse(M4Transpose(transform_data.model_matrix));
 	
@@ -780,13 +780,13 @@ RendererDrawFrame(Renderer *renderer)
 			gbuffer_render_pass.graphics.attachments[i] =
 				RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
 											  FetchStandardImageView(renderer->gbuffer.attachments + i),
-											  0, v4(0.f, 0.f, 0.f, 1.f));
+											  0, v4(0.0f, 0.0f, 0.0f, 1.0f));
 		}
 		
 		gbuffer_render_pass.graphics.attachments[GBufferAttachment_MaxEnum] =
 			RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
 										 FetchStandardImageView(&renderer->gbuffer.depth),
-										 0, 1.f, 0);
+										 0, 1.0f, 0);
 		
 		RendererPushRenderPass(renderer, &gbuffer_render_pass);
 		
@@ -810,7 +810,7 @@ RendererDrawFrame(Renderer *renderer)
 		lighting_render_pass.graphics.attachment_count = 1;
 		lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
 																					 GetCurrentSwapchainImageView(&graphics_device->swapchain),
-																					 0, v4(0.f, 0.f, 0.f, 1.f));
+																					 0, v4(0.0f, 0.0f, 0.0f, 1.0f));
 		
 		RendererPushRenderPass(renderer, &lighting_render_pass);
 	}

@@ -625,7 +625,7 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 	VmaAllocationCreateInfo vma_alloc_info = {0};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-	vma_alloc_info.priority = 1.f;
+	vma_alloc_info.priority = 1.0f;
 	
 	VK_CHECK(vmaCreateImage(graphics_device->vma_allocator, &create_info, &vma_alloc_info, &image.image, &image.allocation, &image.allocation_info),
 			 "Failed to create image.");
@@ -795,8 +795,8 @@ SamplerInit(VkFilter filter,
 	create_info.compareEnable = VK_FALSE;
 	create_info.compareOp = VK_COMPARE_OP_ALWAYS;
 	create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	create_info.mipLodBias = 0.f;
-	create_info.minLod = 0.f;
+	create_info.mipLodBias = 0.0f;
+	create_info.minLod = 0.0f;
 	create_info.maxLod = VK_LOD_CLAMP_NONE;
 	
 	Sampler sampler = {0};
@@ -1027,10 +1027,10 @@ BlendStateDefault()
 	
 	state.enabled = true;
 	
-	state.constants[0] = 0.f;
-	state.constants[1] = 0.f;
-	state.constants[2] = 0.f;
-	state.constants[3] = 0.f;
+	state.constants[0] = 0.0f;
+	state.constants[1] = 0.0f;
+	state.constants[2] = 0.0f;
+	state.constants[3] = 0.0f;
 	
 	state.write_mask[0] = true;
 	state.write_mask[1] = true;
@@ -1183,13 +1183,13 @@ GraphicsPipelineCreate(VkPipelineLayout layout,
 	rasterization_state_create_info.depthClampEnable = VK_FALSE;
 	rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE;
 	rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterization_state_create_info.lineWidth = 1.f;
+	rasterization_state_create_info.lineWidth = 1.0f;
 	rasterization_state_create_info.cullMode = definition->cull_mode;
 	rasterization_state_create_info.frontFace = definition->front_face;
 	rasterization_state_create_info.depthBiasEnable = VK_FALSE;
-	rasterization_state_create_info.depthBiasConstantFactor = 0.f;
-	rasterization_state_create_info.depthBiasClamp = 0.f;
-	rasterization_state_create_info.depthBiasSlopeFactor = 0.f;
+	rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
+	rasterization_state_create_info.depthBiasClamp = 0.0f;
+	rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
 	
 	VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {0};
 	multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -1623,12 +1623,12 @@ CmdBeginRendering(CommandBuffer *cmd, RenderInfo *info)
 	vkCmdBeginRendering(cmd->handle, &rendering_info);
 	
 	VkViewport viewport = {0};
-	viewport.x = 0.f;
-	viewport.y = 0.f;
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
 	viewport.width = (f32)info->width;
 	viewport.height = (f32)info->height;
-	viewport.minDepth = 0.f;
-	viewport.maxDepth = 1.f;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
 	
 	VkRect2D scissor = {0};
 	scissor.offset = (VkOffset2D){ 0, 0 };
@@ -2390,7 +2390,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 		}
 	}
 	
-	f32 queue_priority = 1.f;
+	f32 queue_priority = 1.0f;
 	
 	VkDeviceQueueCreateInfo graphics_queue_create_info = {0};
 	graphics_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;

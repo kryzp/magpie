@@ -38,7 +38,7 @@ VS_Output VertexMain(uint id : SV_VertexID)
 {
     VS_Output output;
     output.uv = float2((id << 1) & 2, id & 2);
-    output.sv_position = float4(output.uv.x*2. - 1., 1. - 2.*output.uv.y, 0., 1.);
+    output.sv_position = float4(output.uv.x*2.0 - 1.0, 1.0 - 2.0*output.uv.y, 0.0, 1.0);
 
     return output;
 }
@@ -57,9 +57,9 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 normal      = bindless_images[args.normal]      .Sample(sampler, uv).rgb;
 	float3 emissive    = bindless_images[args.emissive]    .Sample(sampler, uv).rgb;
 
-	normal = 2.*normal - 1.;
+	normal = 2.0*normal - 1.0;
 
-	float ambient_occlusion = 1.;
+	float ambient_occlusion = 1.0;
 	float roughness_value = material.g;
 	float metallic_value = material.b;
 
@@ -67,17 +67,17 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 view_dir = normalize(args.frame_data->camera_position.xyz - position);
 
-	float NdotV = max(0., dot(normal, view_dir));
+	float NdotV = max(0.0, dot(normal, view_dir));
 
 	float3 F = FresnelSchlick(NdotV, F0, roughness_value);
-	float3 kD = (1. - F) * (1. - metallic_value);
+	float3 kD = (1.0 - F) * (1.0 - metallic_value);
 
 	float3 reflected = reflect(-view_dir, normal);
 
 	float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
 	float3 prefiltered_colour = bindless_cubes[args.prefilter_map].SampleLevel(sampler, WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
-	float2 environment_brdf = float2(1., .2);//bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
+	float2 environment_brdf = float2(1.0, 0.2);//bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 
@@ -87,5 +87,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 final_colour = ambient + emissive;
 
-    return float4(final_colour, 1.);
+    return float4(final_colour, 1.0);
 }

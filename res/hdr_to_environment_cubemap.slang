@@ -25,7 +25,7 @@ VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 {
 	VS_Output output;
     output.position = position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
+    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.0));
 
 	return output;
 }
@@ -33,9 +33,9 @@ VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 float2 SampleSphericalMap(float3 v)
 {
 	float2 uv = float2(atan2(-v.y, v.x), asin(v.z));
-	uv *= float2(.1591, .3183);
-	uv += .5;
-	uv.y = 1. - uv.y;
+	uv *= float2(0.1591, 0.3183);
+	uv += 0.5;
+	uv.y = 1.0 - uv.y;
 	return uv;
 }
 
@@ -44,5 +44,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 {
 	float2 uv = SampleSphericalMap(normalize(input.position));
 	float3 colour = bindless_images[args.hdr_image_id].Sample(bindless_samplers[args.linear_sampler_id], uv).rgb;
-	return float4(colour, 1.);
+	return float4(colour, 1.0);
 }

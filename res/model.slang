@@ -56,7 +56,7 @@ VS_Output VertexMain(ModelVertex vertex, uint instance_id : SV_InstanceID)
 
     VS_Output output;
 
-    output.position = mul(transform.model_matrix, float4(vertex.position, 1.));
+    output.position = mul(transform.model_matrix, float4(vertex.position, 1.0));
     output.sv_position = mul(frame_data->projection_matrix, mul(frame_data->view_matrix, output.position));
     output.texcoord = vertex.texcoord;
     output.colour = vertex.colour;
@@ -92,18 +92,18 @@ FS_Output FragmentMain(VS_Output input)
         discard;
 	}
 
-    normal = normalize(mul(input.tbn, 2.*normal - 1.));
+    normal = normalize(mul(input.tbn, 2.0*normal - 1.0));
 	normal = normal*0.5 + 0.5;
 
 	material.r += ambient_occlusion;
 
 	FS_Output output;
 
-	output.position = float4(input.position.xyz, 1.);
-	output.albedo   = float4(albedo.rgb, 1.);
-	output.normal   = float4(normal, 1.);
-	output.material = float4(material, 1.);
-	output.emissive = float4(emissive, 1.);
+	output.position = float4(input.position.xyz, 1.0);
+	output.albedo   = float4(albedo.rgb, 1.0);
+	output.normal   = float4(normal, 1.0);
+	output.material = float4(material, 1.0);
+	output.emissive = float4(emissive, 1.0);
 
 	return output;
 }
