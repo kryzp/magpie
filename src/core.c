@@ -18,7 +18,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "ext/stb_image_write.h"
 
-#include "program_options.h"
+#include "program_constants.h"
 #include "platform.h"
 
 #include "arena.h"

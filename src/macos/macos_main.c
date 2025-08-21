@@ -7,7 +7,7 @@
 
 #include "assert.h"
 #include "abstraction_layer.h"
-#include "program_options.h"
+#include "program_constants.h"
 #include "platform.h"
 
 internal void CoreNullStub(Platform *platform) { }

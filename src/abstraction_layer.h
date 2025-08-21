@@ -165,19 +165,27 @@ V2Init(f32 x, f32 y)
 internal f32
 V2Dot(v2 a, v2 b)
 {
-    return a.x*b.x + a.y*b.y;
+    return (a.x * b.x +
+			a.y * b.y);
 }
 
 internal f32
 V2LengthSquared(v2 v)
 {
-    return v.x*v.x + v.y*v.y;
+    return V2Dot(v, v);
+}
+
+internal f32
+V2Length(v2 v)
+{
+	return SquareRoot(V2LengthSquared(v));
 }
 
 internal v2
 V2Normalize(v2 v)
 {
-    f32 length = SquareRoot(V2LengthSquared(v));
+    f32 length = V2Length(v);
+	
     v.x /= length;
     v.y /= length;
 	
@@ -196,15 +204,17 @@ V3Init(f32 x, f32 y, f32 z)
 internal v3
 V3AddV3(v3 a, v3 b)
 {
-    v3 c = { a.x + b.x, a.y + b.y, a.z + b.z };
-    return c;
+    return v3(a.x + b.x,
+			  a.y + b.y,
+			  a.z + b.z);
 }
 
 internal v3
 V3MinusV3(v3 a, v3 b)
 {
-    v3 c = { a.x - b.x, a.y - b.y, a.z - b.z };
-    return c;
+    return v3(a.x - b.x,
+			  a.y - b.y,
+			  a.z - b.z);
 }
 
 internal v3
@@ -220,10 +230,9 @@ V3MultiplyF32(v3 v, f32 f)
 internal f32
 V3Dot(v3 a, v3 b)
 {
-    f32 dot =
-        a.x * b.x + 
-        a.y * b.y +
-        a.z * b.z;
+    f32 dot = (a.x * b.x + 
+			   a.y * b.y +
+			   a.z * b.z);
 	
     return dot;
 }
@@ -231,11 +240,9 @@ V3Dot(v3 a, v3 b)
 internal v3
 V3Cross(v3 a, v3 b)
 {
-    v3 result = {
-        a.y*b.z - a.z*b.y,
-        a.z*b.x - a.x*b.z,
-        a.x*b.y - a.y*b.x,
-    };
+    v3 result = v3(a.y*b.z - a.z*b.y,
+				   a.z*b.x - a.x*b.z,
+				   a.x*b.y - a.y*b.x);
 	
     return result;
 }
@@ -521,10 +528,10 @@ typedef union m4
 	
     struct
 	{
-        f32 c0[4];
-        f32 c1[4];
-        f32 c2[4];
-        f32 c3[4];
+		v4 c0;
+		v4 c1;
+		v4 c2;
+		v4 c3;
     };
 }
 m4;
@@ -543,6 +550,8 @@ M4Init(f32 diag)
 }
 
 #define m4(d) M4Init(d)
+
+// NOTE(kp): Pointer hack to retrieve any column based on a variable index.
 #define m4c(m, __colindex) (((f32 *)(&m)) + (4*(__colindex)))
 
 internal m4
@@ -756,10 +765,10 @@ M4Inverse(m4 m)
 	
     for(i32 i = 0; i < 4; i++)
     {
-        inverse.c0[i] = inv0.elements[i] * sign_a.elements[i];
-        inverse.c1[i] = inv1.elements[i] * sign_b.elements[i];
-        inverse.c2[i] = inv2.elements[i] * sign_a.elements[i];
-        inverse.c3[i] = inv3.elements[i] * sign_b.elements[i];
+        inverse.c0.elements[i] = inv0.elements[i] * sign_a.elements[i];
+        inverse.c1.elements[i] = inv1.elements[i] * sign_b.elements[i];
+        inverse.c2.elements[i] = inv2.elements[i] * sign_a.elements[i];
+        inverse.c3.elements[i] = inv3.elements[i] * sign_b.elements[i];
     }
     
     v4 row0 = { inverse.m00, inverse.m01, inverse.m02, inverse.m03 };
