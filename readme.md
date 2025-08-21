@@ -13,6 +13,11 @@ The real test in learning Vulkan turns out to be whether you've got the passion 
 
 I hope maybe this project helps someone else. Feel free to use any of the code in personal / professional / public / private projects as long as you credit me. No gurantees on reliability though. Some (most) of this code is probably bad, some of it is maybe good, I'm just a beginner.
 
+### Neat Stuff
+	- Right-handed Z-up coordinates (as it SHOULD be)
+	- Fully bindless + BDA
+	- Hot reloading of source code!
+
 ### Ideas
 	- Compute frusutum culling
 	- Volumetrics
