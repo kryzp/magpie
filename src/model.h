@@ -21,17 +21,6 @@ typedef struct Material
 }
 Material;
 
-typedef struct ModelVertex
-{
-	v3 position;
-	v2 texcoord;
-	v3 colour;
-	v3 normal;
-	v3 tangent;
-	v3 bitangent;
-}
-ModelVertex;
-
 typedef struct Model Model;
 
 typedef struct SubModel
@@ -43,6 +32,17 @@ typedef struct SubModel
 	Material material;
 }
 SubModel;
+
+typedef struct ModelVertex
+{
+	v3 position;
+	v2 texcoord;
+	v3 colour;
+	v3 normal;
+	v3 tangent;
+	v3 bitangent;
+}
+ModelVertex;
 
 typedef struct Model
 {

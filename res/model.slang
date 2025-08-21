@@ -57,7 +57,7 @@ VS_Output VertexMain(ModelVertex vertex, uint instance_id : SV_InstanceID)
     VS_Output output;
 
     output.position = mul(transform.model_matrix, float4(vertex.position, 1.0));
-    output.sv_position = mul(frame_data->projection_matrix, mul(frame_data->view_matrix, output.position));
+    output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
     output.texcoord = vertex.texcoord;
     output.colour = vertex.colour;
     output.tbn = transpose(float3x3(T, B, N));

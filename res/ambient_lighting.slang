@@ -43,7 +43,7 @@ VS_Output VertexMain(uint id : SV_VertexID)
     return output;
 }
 
-#define MAX_REFLECTION_LOD 4.
+#define MAX_REFLECTION_LOD 4.0
 
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
@@ -77,7 +77,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
 	float3 prefiltered_colour = bindless_cubes[args.prefilter_map].SampleLevel(sampler, WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
-	float2 environment_brdf = float2(1.0, 0.2);//bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
+	float2 environment_brdf = bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 

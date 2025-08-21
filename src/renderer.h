@@ -1,4 +1,40 @@
 
+typedef struct GPU_FrameData
+{
+	m4 view;
+	m4 projection;
+	m4 view_projection;
+	m4 view_projection_no_translation;
+	
+	m4 inv_view;
+	m4 inv_projection;
+	
+	v4 camera_position;
+	
+	v4 window_resolution;
+	
+	f32 time;
+	f32 _padding[3];
+}
+GPU_FrameData;
+
+typedef struct GPU_TransformData
+{
+	m4 model_matrix;
+	m4 normal_matrix;
+}
+GPU_TransformData;
+
+typedef struct GPU_PointLight
+{
+	v4 position;    // x,y,z: position,    w: n/a
+	v4 colour;      // x,y,z: colour,      w: intensity
+	v4 attenuation; // x,y,z: attenuation, w: n/a
+}
+GPU_PointLight;
+
+// ---
+
 typedef struct Renderer Renderer;
 
 typedef struct RenderingAttachment
@@ -78,21 +114,16 @@ typedef struct GBuffer
 }
 GBuffer;
 
-typedef struct GPU_FrameData
+// NOTE(kp): This is how you actually get the
+//           renderer to draw something from
+//           the outside.
+typedef struct RenderCall
 {
-	m4 projection_matrix;
-	m4 view_matrix;
-	v4 camera_position;
-	v4 window_resolution;
+	Mesh *mesh;
+	Material *material;
+	m4 transform;
 }
-GPU_FrameData;
-
-typedef struct GPU_TransformData
-{
-	m4 model_matrix;
-	m4 normal_matrix;
-}
-GPU_TransformData;
+RenderCall;
 
 typedef struct Renderer
 {
@@ -103,39 +134,37 @@ typedef struct Renderer
 	u32 pass_count;
 	RenderPass passes[32];
 	
-	// ---
+	u32 render_call_count;
+	RenderCall render_calls[32];
 	
-	GBuffer gbuffer;
+	u32 light_count;
+	Light lights[16];
 	
-	ShaderProgram ambient_lighting_program;
-	
-	GPUBuffer frame_data_buffer;
-	GPUBuffer transform_data_buffer;
+	Camera *active_camera;
 	
 	// ---
 	
 	Sampler linear_sampler;
 	
-	VertexFormat v3_vertex_format;
-	VertexFormat model_vertex_format;
+	GBuffer gbuffer;
 	
-	// ---
+	GPUBuffer frame_data_buffer;
+	GPUBuffer transform_data_buffer;
 	
+	ShaderProgram ambient_lighting_program;
 	ShaderProgram model_program;
-	Model damaged_helmet_model;
-	
-	// ---
+	ShaderProgram environment_hdr_to_cubemap_program;
+	ShaderProgram irradiance_map_program;
+	ShaderProgram prefilter_map_program;
+	ShaderProgram skybox_program;
+	ShaderProgram brdf_lut_program;
 	
 	Mesh environment_cube_mesh;
 	GPUBuffer cubemap_capture_transforms;
 	
-	ShaderProgram environment_hdr_to_cubemap_program;
-	
+	Image brdf_lut_image;
 	Image environment_hdr_image;
 	Image environment_cubemap;
-	
-	ShaderProgram irradiance_map_program;
-	ShaderProgram prefilter_map_program;
 	
 	EnvironmentProbe environment_probe;
 }

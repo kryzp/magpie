@@ -14,3 +14,9 @@ slangc model.slang -profile glsl_450 -target spirv -o model_fragment.spv -entry 
 
 slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_vertex.spv -entry VertexMain
 slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_fragment.spv -entry FragmentMain
+
+slangc skybox.slang -profile glsl_450 -target spirv -o skybox_vertex.spv -entry VertexMain
+slangc skybox.slang -profile glsl_450 -target spirv -o skybox_fragment.spv -entry FragmentMain
+
+slangc brdf_lut.slang -profile glsl_450 -target spirv -o brdf_lut_vertex.spv -entry VertexMain
+slangc brdf_lut.slang -profile glsl_450 -target spirv -o brdf_lut_fragment.spv -entry FragmentMain

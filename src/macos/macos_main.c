@@ -121,13 +121,13 @@ main(void)
 		global_platform.window_width = DEFAULT_WINDOW_WIDTH;
 		global_platform.window_height = DEFAULT_WINDOW_HEIGHT;
 		
-		global_platform.window_opacity = 1.0f;
+		global_platform.window_opacity = 1.f;
 		
 		global_platform.fullscreen = false;
 		global_platform.borderless = false;
 		
 		global_platform.target_fps = 120;
-		global_platform.current_time = 0.0f;
+		global_platform.current_time = 0.f;
 		
 		global_platform.cursor_visible = true;
 		global_platform.cursor_locked = false;
@@ -222,7 +222,7 @@ main(void)
 				
 				case SDL_EVENT_MOUSE_MOTION:
 				{
-					f32 spx = 0.0f, spy = 0.0f;
+					f32 spx = 0.f, spy = 0.f;
 					
 					SDL_GetGlobalMouseState(&spx, &spy);
 					

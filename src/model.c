@@ -65,11 +65,15 @@ MeshDestroy(Mesh *mesh)
 }
 
 internal void
-CmdBindAndDrawMesh(CommandBuffer *cmd,
-				   Mesh *mesh)
+MeshBindCmd(Mesh *mesh, CommandBuffer *cmd)
 {
 	CmdBindVertexBuffer(cmd, 0, &mesh->vertex_buffer, 0);
 	CmdBindIndexBuffer(cmd, &mesh->index_buffer, 0);
+}
+
+internal void
+MeshDrawCmd(Mesh *mesh, CommandBuffer *cmd)
+{
 	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
 }
 
@@ -156,8 +160,7 @@ AssimpTryFetchMaterialTexture(MemoryArena *arena,
 }
 
 internal void
-ModelLoadProcessSubModel(Renderer *renderer,
-						 MemoryArena *arena,
+ModelLoadProcessSubModel(MemoryArena *arena,
 						 SubModel *sub_model,
 						 struct aiMesh *assimp_mesh,
 						 const struct aiScene *scene,
@@ -182,7 +185,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->position = v3(0.0f, 0.0f, 0.0f);
+			vertex->position = v3(0.f, 0.f, 0.f);
 		}
 		
 		if(AssimpMeshHasTextureCoords(assimp_mesh, 0))
@@ -193,7 +196,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->texcoord = v2(0.0f, 0.0f);
+			vertex->texcoord = v2(0.f, 0.f);
 		}
 		
 		if(AssimpMeshHasVertexColours(assimp_mesh, 0))
@@ -204,7 +207,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->colour = v3(1.0f, 1.0f, 1.0f);
+			vertex->colour = v3(1.f, 1.f, 1.f);
 		}
 		
 		if(AssimpMeshHasNormals(assimp_mesh))
@@ -221,7 +224,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->normal = v3(0.0f, 0.0f, 1.0f);
+			vertex->normal = v3(0.f, 0.f, 1.f);
 		}
 		
 		if(AssimpMeshHasTangentsAndBitangents(assimp_mesh))
@@ -237,8 +240,8 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 		else
 		{
-			vertex->tangent = v3(1.0f, 0.0f, 0.0f);
-			vertex->bitangent = v3(0.0f, 1.0f, 0.0f);
+			vertex->tangent = v3(1.f, 0.f, 0.f);
+			vertex->bitangent = v3(0.f, 1.f, 0.f);
 		}
 	}
 	
@@ -269,7 +272,7 @@ ModelLoadProcessSubModel(Renderer *renderer,
 		}
 	}
 	
-	sub_model->mesh = MeshInit(&renderer->model_vertex_format,
+	sub_model->mesh = MeshInit(&vertex_formats->model_format,
 							   assimp_mesh->mNumVertices, vertices,
 							   index_count, indices);
 	
@@ -287,23 +290,12 @@ ModelLoadProcessSubModel(Renderer *renderer,
 	ReleaseScratch(&scratch);
 }
 
-/*
-const aiMaterial *assimpMaterial = scene->mMaterials[assimpMesh->mMaterialIndex];
-
-MaterialData data;
-data.technique = "texturedPBR_gbuffer_opaque"; // temporarily just the forced material type
-
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE,				m_app->getTextures().getFallbackDiffuse());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_LIGHTMAP,				m_app->getTextures().getFallbackAmbient());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_DIFFUSE_ROUGHNESS,	m_app->getTextures().getFallbackRoughnessMetallic());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_NORMALS,				m_app->getTextures().getFallbackNormals());
-fetchMaterialBoundTextures(data.textures, submesh->getParent()->getDirectory(), assimpMaterial, aiTextureType_EMISSIVE,				m_app->getTextures().getFallbackEmissive());
-
-submesh->setMaterial(m_app->getRenderer().buildMaterial(data));
-*/
-
 internal void
-ModelLoadProcessNodes(Renderer *renderer, MemoryArena *arena, Model *model, struct aiNode *node, const struct aiScene *scene, struct aiMatrix4x4 transform)
+ModelLoadProcessNodes(MemoryArena *arena,
+					  Model *model,
+					  struct aiNode *node,
+					  const struct aiScene *scene,
+					  struct aiMatrix4x4 transform)
 {
 	struct aiMatrix4x4 node_transform = node->mTransformation;
 	aiMultiplyMatrix4(&node_transform, &transform);
@@ -314,17 +306,17 @@ ModelLoadProcessNodes(Renderer *renderer, MemoryArena *arena, Model *model, stru
 		
 		SubModel *sub_model = ModelCreateSubModel(model);
 		
-		ModelLoadProcessSubModel(renderer, arena, sub_model, assimp_mesh, scene, node_transform);
+		ModelLoadProcessSubModel(arena, sub_model, assimp_mesh, scene, node_transform);
 	}
 	
 	for (i32 i = 0; i < node->mNumChildren; i++)
 	{
-		ModelLoadProcessNodes(renderer, arena, model, node->mChildren[i], scene, node_transform);
+		ModelLoadProcessNodes(arena, model, node->mChildren[i], scene, node_transform);
 	}
 }
 
 internal Model
-ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
+ModelLoadFromPath(MemoryArena *arena, String8 path)
 {
 	const struct aiScene *scene = aiImportFile((char *)path.str,
 											   aiProcess_Triangulate |
@@ -347,16 +339,25 @@ ModelLoadFromPath(Renderer *renderer, MemoryArena *arena, String8 path)
 	//           Assimp's coordinate system, which is right handed Y-up, into
 	//           our coordinate system, which is right handed Z-up.
 	struct aiMatrix4x4 identity = {
-		1.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 0.0f,-1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		1.f, 0.f, 0.f, 0.f,
+		0.f, 0.f,-1.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 1.f
 	};
 	
 	DebugLog("Loading model...");
 	
-	ModelLoadProcessNodes(renderer, arena, &model, scene->mRootNode, scene, identity);
+	ModelLoadProcessNodes(arena, &model, scene->mRootNode, scene, identity);
 	
 	aiReleaseImport(scene);
 	return model;
+}
+
+internal void
+ModelDestroy(Model *model)
+{
+	for(i32 i = 0; i < model->sub_model_count; i++)
+	{
+		MeshDestroy(&model->sub_models[i].mesh);
+	}
 }

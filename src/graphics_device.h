@@ -140,7 +140,9 @@ typedef struct DepthStencilState
 {
 	b32 depth_test_enabled;
 	b32 depth_write_enabled;
+	
 	VkCompareOp depth_compare_op;
+	
 	b32 depth_bounds_test_enabled;
 	f32 depth_bounds_min;
 	f32 depth_bounds_max;

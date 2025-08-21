@@ -3,10 +3,16 @@ const static float PI = 3.14159265;
 
 struct FrameData
 {
-	float4x4 projection_matrix;
-	float4x4 view_matrix;
+	float4x4 view;
+	float4x4 projection;
+	float4x4 view_projection;
+	float4x4 view_projection_no_translation;
+	float4x4 inv_view;
+	float4x4 inv_projection;
 	float4 camera_position;
 	float4 window_resolution;
+	float time;
+	float _padding[3];
 };
 
 struct TransformData
@@ -21,6 +27,21 @@ struct TransformData
 float3 WorldToCubemap(float3 v)
 {
 	return float3(v.x, v.z, v.y);
+}
+
+float RadicalInverse_VdC(uint bits) 
+{
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10;
+}
+
+float2 Hammersley(uint i, uint N)
+{
+	return float2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
 float3 FresnelSchlick(float VdotH, float3 F0, float roughness)
