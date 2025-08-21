@@ -5,6 +5,8 @@ typedef struct Core
 	MemoryArena frame_arena;
 	MemoryArena scratch_arenas[2];
 	
+	u64 starting_ticks;
+	
 	GraphicsDevice graphics_device;
 	VertexFormats vertex_formats;
 	Renderer renderer;

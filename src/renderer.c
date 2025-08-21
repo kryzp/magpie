@@ -904,8 +904,12 @@ RendererUpdateFrameData(Renderer *renderer)
 									renderer->active_camera->position.y,
 									renderer->active_camera->position.z,
 									0.f);
-	frame_data.window_resolution = v4(1280.f, 720.f, 0.f, 0.f);
-	frame_data.time = 0.f;
+	frame_data.window_resolution = v4(platform->window_width,
+									  platform->window_height,
+									  0.f, 0.f);
+	frame_data.time = GetTotalElapsedSecondsF();
+	
+	printf("%f\n", frame_data.time);
 	
 	GPUBufferWrite(&renderer->frame_data_buffer, &frame_data, sizeof(GPU_FrameData), 0);
 }

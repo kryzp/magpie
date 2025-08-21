@@ -24,6 +24,7 @@
 #include "arena.h"
 #include "arena.c"
 
+#include "timer.h"
 #include "hash_table.h"
 #include "graphics_device.h"
 #include "bitmap_image.h"
@@ -34,6 +35,7 @@
 #include "core.h"
 #include "scratch.h"
 
+#include "timer.c"
 #include "scratch.c"
 #include "hash_table.c"
 #include "graphics_device.c"
@@ -79,6 +81,8 @@ CoreInit(Platform *p)
 											  v3(0.f, 1.f, 0.f),
 											  100.f, 1280.f/720.f,
 											  .1f, 10.f);
+	
+	core->starting_ticks = platform->GetPerformanceCounter();
 }
 
 void
