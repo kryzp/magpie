@@ -210,7 +210,7 @@ V3AddV3(v3 a, v3 b)
 }
 
 internal v3
-V3MinusV3(v3 a, v3 b)
+V3SubtractV3(v3 a, v3 b)
 {
     return v3(a.x - b.x,
 			  a.y - b.y,
@@ -331,7 +331,7 @@ V4AddV4(v4 a, v4 b)
 }
 
 internal v4
-V4MinusV4(v4 a, v4 b)
+V4SubtractV4(v4 a, v4 b)
 {
     return v4(a.x - b.x,
 			  a.y - b.y,
@@ -370,7 +370,13 @@ V4Length(v4 v)
 }
 
 internal v4
-QuatInitAngleAxis(f32 angle, v3 axis)
+QuatInitIdentity()
+{
+	return v4(0.f, 0.f, 0.f, 1.f);
+}
+
+internal v4
+QuatInitAxis(f32 angle, v3 axis)
 {
 	v4 q = {0};
 	
@@ -552,7 +558,7 @@ M4Init(f32 diag)
 #define m4(d) M4Init(d)
 
 // NOTE(kp): Pointer hack to retrieve any column based on a variable index.
-#define m4c(m, __colindex) (((f32 *)(&m)) + (4*(__colindex)))
+#define m4c(m, __colindex) (((f32 *)(&(m))) + (4*(__colindex)))
 
 internal m4
 M4MultiplyM4(m4 a, m4 b)
@@ -643,7 +649,7 @@ M4LookAt(v3 eye, v3 center, v3 up)
 {
     m4 result = {0};
 	
-    v3 yaxis = V3Normalize(V3MinusV3(center, eye));
+    v3 yaxis = V3Normalize(V3SubtractV3(center, eye));
     v3 xaxis = V3Normalize(V3Cross(yaxis, up));
     v3 zaxis = V3Cross(xaxis, yaxis);
     
@@ -753,10 +759,10 @@ M4Inverse(m4 m)
     v4 vec2 = { m.m21, m.m20, m.m20, m.m20 };
     v4 vec3 = { m.m31, m.m30, m.m30, m.m30 };
     
-    v4 inv0 = V4AddV4(V4MinusV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
-    v4 inv1 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
-    v4 inv2 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
-    v4 inv3 = V4AddV4(V4MinusV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
+    v4 inv0 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
+    v4 inv1 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
+    v4 inv2 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
+    v4 inv3 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
     
     v4 sign_a = { +1.f, -1.f, +1.f, -1.f };
     v4 sign_b = { -1.f, +1.f, -1.f, +1.f };

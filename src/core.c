@@ -94,10 +94,13 @@ CoreUpdate(Platform *p)
 		platform->exit = 1;
 	}
 	
-	if(core->main_camera.dirty)
-	{
-		CameraRecompute(&core->main_camera);
-	}
+	static f32 t = 0.f;
+	t += .005f;
+	
+	core->main_camera.position = v3(0.f, -2.f, 0.f);
+	core->main_camera.forward = v3(0.f, 1.f, 0.f);
+	
+	CameraRecompute(&core->main_camera);
 	
 	RendererSetCamera(&core->renderer, &core->main_camera);
 	RendererBeginFrame(&core->renderer);
@@ -105,8 +108,8 @@ CoreUpdate(Platform *p)
 		RenderCall call = {0};
 		call.mesh = &core->damaged_helmet_model.sub_models[0].mesh;
 		call.material = &core->damaged_helmet_model.sub_models[0].material;
-		call.transform = M4Transform(v3(0.f, 2.f, 0.f),
-									 QuatInitEuler(0.f, 0.f, 0.f),
+		call.transform = M4Transform(v3(0.f, t, 0.f),
+									 QuatInitIdentity(),
 									 v3(1.f, 1.f, 1.f),
 									 v3(0.f, 0.f, 0.f));
 		

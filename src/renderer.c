@@ -900,7 +900,10 @@ RendererUpdateFrameData(Renderer *renderer)
 	frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection, M4RemoveTranslation(frame_data.view));
 	frame_data.inv_view = M4Inverse(frame_data.view);
 	frame_data.inv_projection = M4Inverse(frame_data.projection);
-	frame_data.camera_position = v4(0.f, 0.f, 0.f, 0.f);
+	frame_data.camera_position = v4(renderer->active_camera->position.x,
+									renderer->active_camera->position.y,
+									renderer->active_camera->position.z,
+									0.f);
 	frame_data.window_resolution = v4(1280.f, 720.f, 0.f, 0.f);
 	frame_data.time = 0.f;
 	

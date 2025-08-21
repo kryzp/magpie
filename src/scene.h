@@ -21,8 +21,6 @@ typedef struct Camera
 	
 	m4 view;
 	m4 projection;
-	
-	b32 dirty;
 }
 Camera;
 

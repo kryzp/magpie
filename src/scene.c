@@ -23,8 +23,6 @@ CameraRecompute(Camera *camera)
 		}
 		break;
 	}
-	
-	camera->dirty = false;
 }
 
 internal Camera
