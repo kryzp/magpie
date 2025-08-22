@@ -121,6 +121,10 @@ main(void)
 		global_platform.window_width = DEFAULT_WINDOW_WIDTH;
 		global_platform.window_height = DEFAULT_WINDOW_HEIGHT;
 		
+		SDL_GetWindowSizeInPixels(window,
+								  &global_platform.window_pixel_width,
+								  &global_platform.window_pixel_height);
+		
 		global_platform.window_opacity = 1.f;
 		
 		global_platform.fullscreen = false;
@@ -255,9 +259,16 @@ main(void)
 		if(global_platform.window_width != prev_st.window_width ||
 		   global_platform.window_height != prev_st.window_height)
 		{
-			if(global_platform.window_width >= 0 && global_platform.window_height >= 0)
+			if(global_platform.window_width >= 0 &&
+			   global_platform.window_height >= 0)
 			{
-				SDL_SetWindowSize(window, global_platform.window_width, global_platform.window_height);
+				SDL_SetWindowSize(window,
+								  global_platform.window_width,
+								  global_platform.window_height);
+				
+				SDL_GetWindowSizeInPixels(window,
+										  &global_platform.window_pixel_width,
+										  &global_platform.window_pixel_height);
 			}
 		}
 		

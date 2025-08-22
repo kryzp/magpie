@@ -33,22 +33,9 @@ typedef struct SubModel
 }
 SubModel;
 
-typedef struct ModelVertex
-{
-	v3 position;
-	v2 texcoord;
-	v3 colour;
-	v3 normal;
-	v3 tangent;
-	v3 bitangent;
-}
-ModelVertex;
-
 typedef struct Model
 {
 	MemoryArena *arena;
-	
-	String8 directory;
 	
 	u32 sub_model_count;
 	SubModel *sub_models;

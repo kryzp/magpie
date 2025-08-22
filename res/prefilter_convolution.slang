@@ -43,31 +43,31 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 R = normal;
 	float3 V = R;
 	
-	float total_weight = 0.0;
+	float total_weight = 0.;
 	
-	float3 result = 0.0;
+	float3 result = 0.;
 	
 	for(int i = 0; i < SAMPLE_COUNT; i++)
 	{
 		float2 Xi = Hammersley(i, SAMPLE_COUNT);
 		float3 H = ImportanceSampleGGX(Xi, normal, args.roughness);
-		float3 L = normalize(2.0*dot(V, H)*H - V);
+		float3 L = normalize(2.*dot(V, H)*H - V);
 		
-		float NdotL = max(0.0, dot(normal, L));
+		float NdotL = max(0., dot(normal, L));
 
-        if(NdotL > 0.0)
+        if(NdotL > 0.)
         {
-			float NdotH = max(0.0, dot(normal, H));
-			float HdotV = max(0.0, dot(H, V));
+			float NdotH = max(0., dot(normal, H));
+			float HdotV = max(0., dot(H, V));
 			
 			float D = DistributionGGX(NdotH, args.roughness);
 			
-			float pdf = (D * NdotH / (4.0 * HdotV)) + 0.01;
+			float pdf = (D * NdotH / (4. * HdotV)) + .1;
 			
-			float sa_texel = 4.0 * PI / (6.0 * float(env_width) * float(env_height));
-			float sa_sample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.01);
+			float sa_texel = 4. * PI / (6. * float(env_width) * float(env_height));
+			float sa_sample = 1. / (float(SAMPLE_COUNT) * pdf + 0.1);
 
-			float mip_level = args.roughness <= 0.1 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);
+			float mip_level = args.roughness <= 0.1 ? 0. : .5 * log2(sa_sample / sa_texel);
 
             result += bindless_cubes[args.environment_map_id].SampleLevel(bindless_samplers[args.linear_sampler_id], WorldToCubemap(L), mip_level).rgb * NdotL;
 			total_weight += NdotL;
@@ -76,5 +76,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	
 	result /= total_weight;
 	
-	return float4(result, 1.0);
+	return float4(result, 1.);
 }

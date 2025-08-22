@@ -38,12 +38,12 @@ VS_Output VertexMain(uint id : SV_VertexID)
 {
     VS_Output output;
     output.uv = float2((id << 1) & 2, id & 2);
-    output.sv_position = float4(output.uv.x*2.0 - 1.0, 1.0 - 2.0*output.uv.y, 0.0, 1.0);
+    output.sv_position = float4(output.uv.x*2. - 1., 1. - 2.*output.uv.y, 0., 1.);
 
     return output;
 }
 
-#define MAX_REFLECTION_LOD 4.0
+#define MAX_REFLECTION_LOD 4.
 
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
@@ -57,9 +57,9 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 normal      = bindless_images[args.normal]      .Sample(sampler, uv).rgb;
 	float3 emissive    = bindless_images[args.emissive]    .Sample(sampler, uv).rgb;
 
-	normal = 2.0*normal - 1.0;
+	normal = 2.*normal - 1.;
 
-	float ambient_occlusion = 1.0;
+	float ambient_occlusion = 1.;
 	float roughness_value = material.g;
 	float metallic_value = material.b;
 
@@ -67,10 +67,10 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 view_dir = normalize(args.frame_data->camera_position.xyz - position);
 
-	float NdotV = max(0.0, dot(normal, view_dir));
+	float NdotV = max(0., dot(normal, view_dir));
 
 	float3 F = FresnelSchlick(NdotV, F0, roughness_value);
-	float3 kD = (1.0 - F) * (1.0 - metallic_value);
+	float3 kD = (1. - F) * (1. - metallic_value);
 
 	float3 reflected = reflect(-view_dir, normal);
 
@@ -87,5 +87,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 final_colour = ambient + emissive;
 
-    return float4(final_colour, 1.0);
+    return float4(final_colour, 1.);
 }

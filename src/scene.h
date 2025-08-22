@@ -37,6 +37,6 @@ typedef struct Light
 	v3 direction;
 	v3 colour;
 	f32 intensity;
-	f32 range;
+	f32 falloff;
 }
 Light;

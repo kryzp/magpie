@@ -321,6 +321,9 @@ typedef struct Platform
     i32 window_width;
     i32 window_height;
 	
+	i32 window_pixel_width;
+	i32 window_pixel_height;
+	
 	f32 window_opacity;
 	
     b32 fullscreen;

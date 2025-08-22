@@ -27,8 +27,8 @@
 #include "timer.h"
 #include "hash_table.h"
 #include "graphics_device.h"
-#include "bitmap_image.h"
 #include "model.h"
+#include "assets.h"
 #include "scene.h"
 #include "renderer.h"
 #include "vertex_formats.h"
@@ -40,8 +40,8 @@
 #include "hash_table.c"
 #include "graphics_device.c"
 #include "vertex_formats.c"
-#include "bitmap_image.c"
 #include "model.c"
+#include "assets.c"
 #include "renderer.c"
 #include "scene.c"
 
@@ -71,11 +71,16 @@ CoreInit(Platform *p)
 	core->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
 	core->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
 	
+	AssetsInit(&core->assets, &core->permanent_arena);
+	
 	GraphicsDeviceInit(platform, &core->permanent_arena);
 	VertexFormatsInit(&core->vertex_formats, &core->permanent_arena);
-	RendererInit(&core->renderer, &core->permanent_arena);
+	RendererInit(&core->renderer, &core->assets, &core->permanent_arena);
 	
-	core->damaged_helmet_model = ModelLoadFromPath(&core->permanent_arena, str8("res/DamagedHelmet/DamagedHelmet.gltf"));
+	u32 damaged_helmet_model_asset_handle = AssetsLoadModel(&core->assets,
+															str8("res/DamagedHelmet/DamagedHelmet.gltf"));
+	
+	core->damaged_helmet_model = core->assets.models[damaged_helmet_model_asset_handle].model;
 	
 	core->main_camera = CameraInitPerspective(v3(0.f, 0.f, 0.f),
 											  v3(0.f, 1.f, 0.f),
@@ -98,9 +103,6 @@ CoreUpdate(Platform *p)
 		platform->exit = 1;
 	}
 	
-	static f32 t = 0.f;
-	t += .005f;
-	
 	core->main_camera.position = v3(0.f, -2.f, 0.f);
 	core->main_camera.forward = v3(0.f, 1.f, 0.f);
 	
@@ -109,10 +111,12 @@ CoreUpdate(Platform *p)
 	RendererSetCamera(&core->renderer, &core->main_camera);
 	RendererBeginFrame(&core->renderer);
 	{
+		f32 t = GetTotalElapsedSecondsF();
+		
 		RenderCall call = {0};
 		call.mesh = &core->damaged_helmet_model.sub_models[0].mesh;
 		call.material = &core->damaged_helmet_model.sub_models[0].material;
-		call.transform = M4Transform(v3(0.f, t, 0.f),
+		call.transform = M4Transform(v3(0.f, 0.f, 0.f),
 									 QuatInitIdentity(),
 									 v3(1.f, 1.f, 1.f),
 									 v3(0.f, 0.f, 0.f));
@@ -123,7 +127,8 @@ CoreUpdate(Platform *p)
 		light.type = LightType_Point;
 		light.position = v3(0.f, 2.f, 2.f);
 		light.colour = v3(1.f, 1.f, 1.f);
-		light.intensity = 1.f;
+		light.intensity = 1.f + SinF(t)*.5f;
+		light.falloff = 1.f;
 		
 		RendererPushLight(&core->renderer, &light);
 	}
@@ -133,8 +138,7 @@ CoreUpdate(Platform *p)
 void
 CoreDestroy(Platform *p)
 {
-	ModelDestroy(&core->damaged_helmet_model);
-	
+	AssetsDestroy(&core->assets);
 	RendererDestroy(&core->renderer);
 	GraphicsDeviceDestroy();
 }

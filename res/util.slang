@@ -56,17 +56,17 @@ float DistributionGGX(float NdotH, float roughness)
 	float a = roughness * roughness;
 	float a2 = a * a;
 	
-	float denom = NdotH * NdotH * (a2 - 1.0) + 1.0;
+	float denom = NdotH * NdotH * (a2 - 1.) + 1.;
 	
-	return a2 / max(0.00001, denom * denom * PI);
+	return a2 / max(0.0001, denom * denom * PI);
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	float r = roughness + 1.0;
-	float k = r * r / 8.0;
+	float r = roughness + 1.;
+	float k = r * r / 8.;
 	
-	return NdotV / lerp(k, 1.0, NdotV);
+	return NdotV / lerp(k, 1., NdotV);
 }
 
 float GeometrySmith(float NdotV, float NdotL, float roughness)
@@ -81,10 +81,10 @@ float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 {
 	float a = roughness * roughness;
 	
-	float phi = 2.0 * PI * Xi.x;
+	float phi = 2. * PI * Xi.x;
 	
-	float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
-	float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+	float cos_theta = sqrt((1. - Xi.y) / (1. + (a * a - 1.) * Xi.y));
+	float sin_theta = sqrt(1. - cos_theta * cos_theta);
 	
 	float3 H = float3(
 		cos(phi) * sin_theta,
@@ -92,7 +92,7 @@ float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 		cos_theta
 	);
 	
-	float3 up = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+	float3 up = abs(normal.z) < 0.999 ? float3(0., 0., 1.) : float3(1., 0., 0.);
 	float3 tangent = normalize(cross(up, normal));
 	float3 bitangent = cross(normal, tangent);
 	

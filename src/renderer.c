@@ -24,7 +24,8 @@
 //                   into GraphicsPipelineCreate(...)?
 //           [ ] 13.5 Final Requirements
 //                   --> Texture Asset Manager to stop unfreed images when loading in models.
-//                   --> That's it.
+//                   --> Shaders should automatically assign their push constants sizes
+//                       rather than me having to do it manually.
 //
 //                   <<< MAGPIE C++ ENDS HERE >>>
 //
@@ -254,7 +255,7 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 		args;
 		
 		args.transform_buffer = renderer->cubemap_capture_transforms.device_address;
-		args.hdr_image_id = FetchStandardImageView(&renderer->environment_hdr_image)->resource_id;
+		args.hdr_image_id = FetchStandardImageView(&renderer->environment_hdr_texture)->resource_id;
 		args.linear_sampler_id = renderer->linear_sampler.resource_id;
 		
 		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->environment_hdr_to_cubemap_program, &vertex_formats->v3_format);
@@ -274,8 +275,8 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		MeshBindCmd(&renderer->environment_cube_mesh, cmd);
-		MeshDrawCmd(&renderer->environment_cube_mesh, cmd);
+		MeshBindCmd(&renderer->skybox_mesh, cmd);
+		MeshDrawCmd(&renderer->skybox_mesh, cmd);
 	}
 	CmdEndRendering(cmd);
 	
@@ -301,7 +302,7 @@ RendererGenerateEnvironmentMap(Renderer *renderer)
 	render_pass.graphics.Record = RendererRenderPassExportHDRCubemap;
 	render_pass.graphics.view_mask = 0b111111;
 	render_pass.graphics.view_count = 1;
-	render_pass.graphics.views[0] = FetchStandardImageView(&renderer->environment_hdr_image);
+	render_pass.graphics.views[0] = FetchStandardImageView(&renderer->environment_hdr_texture);
 	render_pass.graphics.attachment_count = 1;
 	render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
 																		FetchStandardImageView(&renderer->environment_cubemap),
@@ -345,8 +346,8 @@ RendererRenderPassGenerateIrradianceMap(Renderer *renderer, CommandBuffer *cmd, 
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		MeshBindCmd(&renderer->environment_cube_mesh, cmd);
-		MeshDrawCmd(&renderer->environment_cube_mesh, cmd);
+		MeshBindCmd(&renderer->skybox_mesh, cmd);
+		MeshDrawCmd(&renderer->skybox_mesh, cmd);
 	}
 	CmdEndRendering(cmd);
 	
@@ -393,8 +394,8 @@ RendererRenderPassGeneratePrefilterMap(Renderer *renderer, CommandBuffer *cmd, R
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 		
-		MeshBindCmd(&renderer->environment_cube_mesh, cmd);
-		MeshDrawCmd(&renderer->environment_cube_mesh, cmd);
+		MeshBindCmd(&renderer->skybox_mesh, cmd);
+		MeshDrawCmd(&renderer->skybox_mesh, cmd);
 	}
 	CmdEndRendering(cmd);
 	
@@ -532,127 +533,135 @@ RendererRenderPassLighting(Renderer *renderer, CommandBuffer *cmd, RenderInfo *r
 {
 	CmdBeginRendering(cmd, render_info);
 	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->ambient_lighting_program, 0);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-		
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-		
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-		
-		struct
+		// NOTE(kp): Ambient Lighting.
 		{
-			u64 frame_data_buffer;
+			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->ambient_lighting_program, 0);
+			pipeline_def.depth_stencil_state.depth_test_enabled = false;
+			pipeline_def.depth_stencil_state.depth_write_enabled = false;
+			pipeline_def.colour_attachment_count = 1;
+			pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
 			
-			u32 position;
-			u32 albedo;
-			u32 normal;
-			u32 material;
-			u32 emissive;
+			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 			
-			u32 irradiance_map;
-			u32 prefilter_map;
-			u32 brdf_lut;
+			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 			
-			u32 linear_sampler;
+			struct
+			{
+				u64 frame_data_buffer;
+				
+				u32 position;
+				u32 albedo;
+				u32 normal;
+				u32 material;
+				u32 emissive;
+				
+				u32 irradiance_map;
+				u32 prefilter_map;
+				u32 brdf_lut;
+				
+				u32 linear_sampler;
+				
+				u32 _padding[3];
+			}
+			args;
 			
-			u32 _padding[3];
+			args.frame_data_buffer = renderer->frame_data_buffer.device_address;
+			
+			args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
+			args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
+			args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
+			args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
+			args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
+			
+			args.irradiance_map = FetchStandardImageView(&renderer->environment_probe.irradiance)->resource_id;
+			args.prefilter_map  = FetchStandardImageView(&renderer->environment_probe.prefilter)->resource_id;
+			args.brdf_lut       = FetchStandardImageView(&renderer->brdf_lut_image)->resource_id;
+			
+			args.linear_sampler = renderer->linear_sampler.resource_id;
+			
+			CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+			
+			CmdDrawVerticesN(cmd, 3);
 		}
-		args;
 		
-		args.frame_data_buffer = renderer->frame_data_buffer.device_address;
-		
-		args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
-		args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
-		args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
-		args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
-		args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
-		
-		args.irradiance_map = FetchStandardImageView(&renderer->environment_probe.irradiance)->resource_id;
-		args.prefilter_map  = FetchStandardImageView(&renderer->environment_probe.prefilter)->resource_id;
-		args.brdf_lut       = FetchStandardImageView(&renderer->brdf_lut_image)->resource_id;
-		
-		args.linear_sampler = renderer->linear_sampler.resource_id;
-		
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-		
-		CmdDrawVerticesN(cmd, 3);
-		
-		for(i32 i = 0; i < renderer->light_count; i++)
+		// NOTE(kp): Direct lighting.
 		{
-			Light *light = renderer->lights + i;
+			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->direct_lighting_point_program, &vertex_formats->v3_format);
+			pipeline_def.depth_stencil_state.depth_test_enabled = false;
+			pipeline_def.depth_stencil_state.depth_write_enabled = false;
+			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
+			pipeline_def.colour_attachment_count = 1;
+			pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+			pipeline_def.blend_state.enabled = true;
+			pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
+			pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
+			pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
 			
-			/*
-			GPU_PointLight gpu_point_light = {0};
-			gpu_point_light.position.xyz = light->position;
-			gpu_point_light.colour.xyz = light->colour;
-			gpu_point_light.colour.w = light->intensity;
-			gpu_point_light.attenuation = v4(light->range, 0.f, 0.f, 0.f);
-			*/
+			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+			
+			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+			
+			MeshBindCmd(&renderer->light_sphere_mesh, cmd);
+			
+			for(i32 i = 0; i < renderer->light_count; i++)
+			{
+				Light *light = renderer->lights + i;
+				
+				f32 epsilon_intensity = .1f;
+				f32 light_max = V3MaxValue(light->colour);
+				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
+				
+				m4 transform = M4Transform(light->position,
+										   QuatInitIdentity(),
+										   v3u(heuristic_radius),
+										   v3u(0.f));
+				
+				struct
+				{
+					u64 frame_data;
+					u64 lights;
+					
+					m4 transform;
+					
+					u32 light_id;
+					
+					u32 position;
+					u32 albedo;
+					u32 normal;
+					u32 material;
+					u32 emissive;
+					
+					u32 linear_sampler;
+					
+					u32 _padding;
+				}
+				args;
+				
+				args.frame_data = renderer->frame_data_buffer.device_address;
+				args.lights = renderer->light_buffer.device_address;
+				
+				args.transform = transform;
+				
+				args.light_id = i;
+				
+				args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
+				args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
+				args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
+				args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
+				args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
+				
+				args.linear_sampler = renderer->linear_sampler.resource_id;
+				
+				CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+				
+				MeshDrawCmd(&renderer->light_sphere_mesh, cmd);
+			}
 		}
 	}
 	CmdEndRendering(cmd);
 }
-
-/*
-				for (int i = 0; i < context.scene->getPointLightCount(); i++)
-				{
-					cauto &l = context.scene->getPointLights()[i];
-
-					struct
-					{
-						VkDeviceAddress frameData;
-						VkDeviceAddress lights;
-
-						glm::mat4 model;
-
-						uint32_t position_id;
-						uint32_t albedo_id;
-						uint32_t normal_id;
-						uint32_t material_id;
-						uint32_t emissive_id;
-
-						uint32_t brdfLUT_id;
-
-						uint32_t textureSampler_id;
-						
-						uint32_t light_id;
-					}
-					pc;
-
-					float epsilonIntensity = 0.02f;
-					glm::vec3 col = l.getColour().getDisplayColour();
-					float lightMax = CalcF::max(CalcF::max(col.r, col.g), col.b);
-					float heuristicR = CalcF::sqrt((l.getIntensity() * lightMax) / (l.getFalloff() * epsilonIntensity));
-
-					pc.frameData			= bufAddr(m_frameConstantsBuffer);
-					pc.lights				= bufAddr(m_pointLightBuffer);
-					pc.position_id			= tex2DIdx(stdView(m_gBuffer.attachments[GBuffer::ATTACHMENT_POSITION]));
-					pc.albedo_id			= tex2DIdx(stdView(m_gBuffer.attachments[GBuffer::ATTACHMENT_ALBEDO]));
-					pc.normal_id			= tex2DIdx(stdView(m_gBuffer.attachments[GBuffer::ATTACHMENT_NORMAL]));
-					pc.material_id			= tex2DIdx(stdView(m_gBuffer.attachments[GBuffer::ATTACHMENT_MATERIAL]));
-					pc.emissive_id			= tex2DIdx(stdView(m_gBuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE]));
-					pc.brdfLUT_id			= tex2DIdx(stdView(m_brdfLUT));
-					pc.textureSampler_id	= smpIdx(m_app->getTextures().getLinearSampler());
-					
-					pc.model = glm::identity<glm::mat4>()
-						* glm::translate(glm::identity<glm::mat4>(), l.getPosition())
-						* glm::scale(glm::identity<glm::mat4>(), { heuristicR, heuristicR, heuristicR });
-
-					pc.light_id = i;
-
-					cmd->pushConstants(
-						pipelineSt.layout,
-						VK_SHADER_STAGE_ALL_GRAPHICS,
-						sizeof(pc),
-						&pc
-					);
-
-					cmd->drawIndexed(m_sphereMesh->getIndexCount());
-*/
 
 internal void
 RendererRenderPassSkybox(Renderer *renderer, CommandBuffer *cmd, RenderInfo *render_info, void *context)
@@ -660,12 +669,12 @@ RendererRenderPassSkybox(Renderer *renderer, CommandBuffer *cmd, RenderInfo *ren
 	CmdBeginRendering(cmd, render_info);
 	{
 		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->skybox_program, &vertex_formats->v3_format);
+		pipeline_def.has_depth_attachment = true;
 		pipeline_def.depth_stencil_state.depth_test_enabled = true;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
 		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
 		pipeline_def.colour_attachment_count = 1;
 		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-		pipeline_def.has_depth_attachment = true;
 		
 		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 		
@@ -684,14 +693,136 @@ RendererRenderPassSkybox(Renderer *renderer, CommandBuffer *cmd, RenderInfo *ren
 		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-		MeshBindCmd(&renderer->environment_cube_mesh, cmd);
-		MeshDrawCmd(&renderer->environment_cube_mesh, cmd);
+		MeshBindCmd(&renderer->skybox_mesh, cmd);
+		MeshDrawCmd(&renderer->skybox_mesh, cmd);
 	}
 	CmdEndRendering(cmd);
 }
 
+// NOTE(kp): https://songho.ca/opengl/gl_sphere.html
+// TODO(kp): Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
+void RendererCreateUnitSphereMesh(Renderer *renderer, MemoryArena *arena)
+{
+	ScratchArena scratch = GetScratch(arena);
+	
+	u32 sector_count = 10;
+	u32 stack_count = 10;
+	
+	f32 sector_step = 2.f * PIf / (f32)sector_count;
+	f32 stack_step  =       PIf / (f32)stack_count;
+	
+	u32 vertex_count = (stack_count + 1) * (sector_count + 1);
+	u32 index_count  = sector_count * (stack_count - 1) * 6;
+	
+	v3 *vertices = MemoryArenaPush(scratch.arena, sizeof(v3)  * vertex_count);
+	u16 *indices = MemoryArenaPush(scratch.arena, sizeof(u16) * index_count);
+	
+	u32 index = 0;
+	
+	for(i32 i = 0; i <= stack_count; i++)
+	{
+		f32 theta = PIf/2.f - i*stack_step;
+		
+		for(i32 j = 0; j <= sector_count; j++)
+		{
+			f32 phi = j*sector_step;
+			
+			vertices[index++] = SphericalToCartesian(1.f, phi, theta);
+		}
+	}
+	
+	index = 0;
+	
+	for(i32 i = 0; i < stack_count; i++)
+	{
+		u16 k1 = i  * (sector_count + 1); // NOTE(kp): Current stack.
+		u16 k2 = k1 + (sector_count + 1); // NOTE(kp): Next stack.
+		
+		for(i32 j = 0; j < sector_count; j++, k1++, k2++)
+		{
+			if(i != 0)
+			{
+				indices[index + 0] = k1;
+				indices[index + 1] = k2;
+				indices[index + 2] = k1 + 1u;
+				
+				index += 3;
+			}
+			
+			if(i != stack_count-1)
+			{
+				indices[index + 0] = k1 + 1u;
+				indices[index + 1] = k2;
+				indices[index + 2] = k2 + 1u;
+				
+				index += 3;
+			}
+		}
+	}
+	
+	renderer->light_sphere_mesh = MeshInit(&vertex_formats->v3_format,
+										   vertex_count, vertices,
+										   index_count, indices);
+	
+	ReleaseScratch(&scratch);
+}
+
 internal void
-RendererInit(Renderer *renderer, MemoryArena *arena)
+RendererLoadShaders(Renderer *renderer, MemoryArena *arena)
+{
+	// TODO(kp): Loading in of assets like shaders and images should be done via a seperate asset system.
+	
+	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	{
+		renderer->environment_hdr_to_cubemap_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->environment_hdr_to_cubemap_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->irradiance_map_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	{
+		renderer->irradiance_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->irradiance_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->prefilter_map_program = ShaderProgramInit(sizeof(u64) + sizeof(f32) + sizeof(u32)*3, 2);
+	{
+		renderer->prefilter_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->model_program = ShaderProgramInit(sizeof(m4) + sizeof(u32)*8, 2);
+	{
+		renderer->model_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/model_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->model_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/model_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->skybox_program = ShaderProgramInit(sizeof(u32)*4, 2);
+	{
+		renderer->skybox_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->skybox_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->ambient_lighting_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
+	{
+		renderer->ambient_lighting_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->ambient_lighting_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->direct_lighting_point_program = ShaderProgramInit(sizeof(m4) + sizeof(u64)*2 + sizeof(u32)*8, 2);
+	{
+		renderer->direct_lighting_point_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/direct_lighting_point_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->direct_lighting_point_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/direct_lighting_point_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	
+	renderer->brdf_lut_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
+	{
+		renderer->brdf_lut_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
+		renderer->brdf_lut_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+}
+
+internal void
+RendererInit(Renderer *renderer, Assets *assets, MemoryArena *arena)
 {
 	renderer->linear_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
 	
@@ -751,59 +882,12 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 		3, 4, 7
 	};
 	
-	renderer->environment_cube_mesh = MeshInit(&vertex_formats->v3_format,
-											   ArraySize(vertices), vertices,
-											   ArraySize(indices), indices);
+	renderer->skybox_mesh = MeshInit(&vertex_formats->v3_format,
+									 ArraySize(vertices), vertices,
+									 ArraySize(indices), indices);
 	
-	renderer->environment_hdr_image = ImageLoadFromPath(str8("res/environment_map.hdr"));
-	
-	// ---
-	
-	// NOTE(kp): Load in shaders.
-	
-	// TODO(kp): Loading in of assets like shaders and images should be done via a seperate asset system.
-	
-	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
-	{
-		renderer->environment_hdr_to_cubemap_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->environment_hdr_to_cubemap_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->irradiance_map_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
-	{
-		renderer->irradiance_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->irradiance_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->prefilter_map_program = ShaderProgramInit(sizeof(u64) + sizeof(f32) + sizeof(u32)*3, 2);
-	{
-		renderer->prefilter_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->model_program = ShaderProgramInit(sizeof(m4) + sizeof(u32)*8, 2);
-	{
-		renderer->model_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/model_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->model_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/model_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->skybox_program = ShaderProgramInit(sizeof(u32)*4, 2);
-	{
-		renderer->skybox_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->skybox_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->ambient_lighting_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
-	{
-		renderer->ambient_lighting_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->ambient_lighting_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->brdf_lut_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
-	{
-		renderer->brdf_lut_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->brdf_lut_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
+	u32 environment_asset_handle = AssetsLoadTexture(assets, str8("res/environment_map.hdr"));
+	renderer->environment_hdr_texture = assets->textures[environment_asset_handle].image;
 	
 	// ---
 	
@@ -842,8 +926,14 @@ RendererInit(Renderer *renderer, MemoryArena *arena)
 														VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 														sizeof(GPU_TransformData));
 	
+	renderer->light_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+											   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+											   sizeof(GPU_Light) * ArraySize(renderer->lights));
+	
 	// ---
 	
+	RendererLoadShaders(renderer, arena);
+	RendererCreateUnitSphereMesh(renderer, arena);
 	RendererGenerateBRDFLookUp(renderer);
 	RendererGenerateEnvironmentMap(renderer);
 	RendererGenerateEnvironmentProbeFromEnvironmentCubemap(renderer, &renderer->environment_cubemap);
@@ -861,23 +951,26 @@ RendererDestroy(Renderer *renderer)
 	
 	ImageDestroy(&renderer->gbuffer.depth);
 	
-	MeshDestroy(&renderer->environment_cube_mesh);
+	MeshDestroy(&renderer->light_sphere_mesh);
+	MeshDestroy(&renderer->skybox_mesh);
 	
 	GPUBufferDestroy(&renderer->cubemap_capture_transforms);
 	GPUBufferDestroy(&renderer->frame_data_buffer);
 	GPUBufferDestroy(&renderer->transform_data_buffer);
+	GPUBufferDestroy(&renderer->light_buffer);
 	
 	ImageDestroy(&renderer->brdf_lut_image);
-	ImageDestroy(&renderer->environment_hdr_image);
 	ImageDestroy(&renderer->environment_cubemap);
 	ImageDestroy(&renderer->environment_probe.irradiance);
 	ImageDestroy(&renderer->environment_probe.prefilter);
 	
+	ShaderProgramDestroy(&renderer->ambient_lighting_program);
+	ShaderProgramDestroy(&renderer->direct_lighting_point_program);
+	ShaderProgramDestroy(&renderer->model_program);
 	ShaderProgramDestroy(&renderer->environment_hdr_to_cubemap_program);
 	ShaderProgramDestroy(&renderer->irradiance_map_program);
 	ShaderProgramDestroy(&renderer->prefilter_map_program);
-	ShaderProgramDestroy(&renderer->model_program);
-	ShaderProgramDestroy(&renderer->ambient_lighting_program);
+	ShaderProgramDestroy(&renderer->skybox_program);
 	ShaderProgramDestroy(&renderer->brdf_lut_program);
 }
 
@@ -900,16 +993,10 @@ RendererUpdateFrameData(Renderer *renderer)
 	frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection, M4RemoveTranslation(frame_data.view));
 	frame_data.inv_view = M4Inverse(frame_data.view);
 	frame_data.inv_projection = M4Inverse(frame_data.projection);
-	frame_data.camera_position = v4(renderer->active_camera->position.x,
-									renderer->active_camera->position.y,
-									renderer->active_camera->position.z,
-									0.f);
-	frame_data.window_resolution = v4(platform->window_width,
-									  platform->window_height,
-									  0.f, 0.f);
+	frame_data.camera_position.xyz = renderer->active_camera->position;
+	frame_data.window_resolution.x = platform->window_pixel_width;
+	frame_data.window_resolution.y = platform->window_pixel_height;
 	frame_data.time = GetTotalElapsedSecondsF();
-	
-	printf("%f\n", frame_data.time);
 	
 	GPUBufferWrite(&renderer->frame_data_buffer, &frame_data, sizeof(GPU_FrameData), 0);
 }
@@ -930,10 +1017,28 @@ RendererUpdateModelTransformBuffer(Renderer *renderer)
 }
 
 internal void
+RendererUpdateLightBuffer(Renderer *renderer)
+{
+	for(i32 i = 0; i < renderer->light_count; i++)
+	{
+		Light *light = renderer->lights + i;
+		
+		GPU_Light gpu_light = {0};
+		gpu_light.position.xyz    = light->position;
+		gpu_light.colour.xyz      = light->colour;
+		gpu_light.colour.w        = light->intensity;
+		gpu_light.attenuation.xyz = v3(light->falloff, 0.f, 0.f);
+		
+		GPUBufferWrite(&renderer->light_buffer, &gpu_light, sizeof(GPU_Light), 0);
+	}
+}
+
+internal void
 RendererEndFrame(Renderer *renderer)
 {
 	RendererUpdateFrameData(renderer);
 	RendererUpdateModelTransformBuffer(renderer);
+	RendererUpdateLightBuffer(renderer);
 	{
 		// --- GEOMETRY PASS
 		

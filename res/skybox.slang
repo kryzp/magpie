@@ -27,7 +27,7 @@ VS_Output VertexMain(float3 position)
 
     output.position = position;
 
-    output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(position, 1.0));
+    output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(position, 1.));
     output.sv_position = output.sv_position.xyww;
 
 	return output;
@@ -36,5 +36,5 @@ VS_Output VertexMain(float3 position)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    return float4(bindless_cubes[args.cubemap].Sample(bindless_samplers[args.sampler], normalize(WorldToCubemap(input.position))).rgb, 1.0);
+    return float4(bindless_cubes[args.cubemap].Sample(bindless_samplers[args.sampler], normalize(WorldToCubemap(input.position))).rgb, 1.);
 }

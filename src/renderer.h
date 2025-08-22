@@ -25,13 +25,13 @@ typedef struct GPU_TransformData
 }
 GPU_TransformData;
 
-typedef struct GPU_PointLight
+typedef struct GPU_Light
 {
 	v4 position;    // x,y,z: position,    w: n/a
 	v4 colour;      // x,y,z: colour,      w: intensity
 	v4 attenuation; // x,y,z: attenuation, w: n/a
 }
-GPU_PointLight;
+GPU_Light;
 
 // ---
 
@@ -150,8 +150,10 @@ typedef struct Renderer
 	
 	GPUBuffer frame_data_buffer;
 	GPUBuffer transform_data_buffer;
+	GPUBuffer light_buffer;
 	
 	ShaderProgram ambient_lighting_program;
+	ShaderProgram direct_lighting_point_program;
 	ShaderProgram model_program;
 	ShaderProgram environment_hdr_to_cubemap_program;
 	ShaderProgram irradiance_map_program;
@@ -159,11 +161,13 @@ typedef struct Renderer
 	ShaderProgram skybox_program;
 	ShaderProgram brdf_lut_program;
 	
-	Mesh environment_cube_mesh;
+	Mesh skybox_mesh;
+	Mesh light_sphere_mesh;
+	
 	GPUBuffer cubemap_capture_transforms;
 	
 	Image brdf_lut_image;
-	Image environment_hdr_image;
+	Image environment_hdr_texture;
 	Image environment_cubemap;
 	
 	EnvironmentProbe environment_probe;

@@ -13,7 +13,7 @@ VS_Output VertexMain(uint id : SV_VertexID)
 {
     VS_Output output;
     output.uv = float2((id << 1) & 2, id & 2);
-    output.sv_position = float4(output.uv.x*2.0 - 1.0, 1.0 - 2.0*output.uv.y, 0.0, 1.0);
+    output.sv_position = float4(output.uv.x*2. - 1., 1. - 2.*output.uv.y, 0., 1.);
 
     return output;
 }
@@ -26,7 +26,7 @@ float GeometrySchlickGGX_BRDF_LUT(float NdotV, float roughness)
 	float r = roughness;
 	float k = r * r * 0.5;
 	
-	return NdotV / lerp(k, 1.0, NdotV);
+	return NdotV / lerp(k, 1., NdotV);
 }
 
 float GeometrySmith_BRDF_LUT(float NdotV, float NdotL, float roughness)
@@ -44,15 +44,15 @@ float4 FragmentMain(VS_Output input) : SV_Target
     float roughness = input.uv.y;
 
     float3 V = float3(
-        sqrt(1.0 - NdotV*NdotV),
-        0.0,
+        sqrt(1. - NdotV*NdotV),
+        0.,
         NdotV
     );
 
-    float A = 0.0;
-    float B = 0.0;
+    float A = 0.;
+    float B = 0.;
 
-    float3 N = float3(0.0, 0.0, 1.0);
+    float3 N = float3(0., 0., 1.);
 
     for (int i = 0; i < SAMPLE_COUNT; ++i)
     {
@@ -61,20 +61,20 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
         float2 Xi = Hammersley(i, SAMPLE_COUNT);
         float3 H = ImportanceSampleGGX(Xi, N, roughness);
-        float3 L = normalize(2.0 * dot(V, H) * H - V);
+        float3 L = normalize(2. * dot(V, H) * H - V);
 
-        float NdotL = max(0.0, dot(N, L));
+        float NdotL = max(0., dot(N, L));
 
-        if (NdotL > 0.0)
+        if (NdotL > 0.)
         {
-            float NdotH = max(0.0, H.z);
-            float VdotH = max(0.0, dot(V, H));
+            float NdotH = max(0., H.z);
+            float VdotH = max(0., dot(V, H));
 
             float G = GeometrySmith_BRDF_LUT(NdotV, NdotL, roughness);
             float G_Vis = (G * VdotH) / (NdotH * NdotV);
-            float Fc = pow(1.0 - VdotH, 5.0);
+            float Fc = pow(1. - VdotH, 5.);
 
-            A += (1.0 - Fc) * G_Vis;
+            A += (1. - Fc) * G_Vis;
             B += Fc * G_Vis;
         }
     }
@@ -82,5 +82,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
     A /= float(SAMPLE_COUNT);
     B /= float(SAMPLE_COUNT);
 
-    return float4(A, B, 0.0, 1.0);
+    return float4(A, B, 0., 1.);
 }

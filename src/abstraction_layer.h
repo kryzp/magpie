@@ -21,6 +21,7 @@
 #define TanF                       tanf
 #define ASinF                      asinf
 #define ACosF                      acosf
+#define ATanF                      atanf
 #define ATan2F                     atan2f
 #define PowF                       powf
 #define FModF                      fmodf
@@ -74,84 +75,12 @@ typedef uint64_t b64;
 typedef float    f32;
 typedef double   f64;
 
-internal f32
-MaximumF32(f32 a, f32 b)
-{
-    return a > b ? a : b;
-}
-
 typedef struct v2
 {
     f32 x;
     f32 y;
 }
 v2;
-
-typedef union v3
-{
-    struct
-    {
-        f32 x;
-        f32 y;
-        f32 z;
-    };
-    
-    struct
-    {
-        f32 r;
-        f32 g;
-        f32 b;
-    };
-    
-    f32 elements[3];
-}
-v3;
-
-typedef union v4
-{
-    struct
-    {
-        f32 x;
-        f32 y;
-		
-        union
-        {
-            struct
-            {
-                f32 z;
-                
-                union
-                {
-                    f32 w;
-                    f32 radius;
-                };
-            };
-            
-            struct
-            {
-                f32 width;
-                f32 height;
-            };
-        };
-    };
-    
-    struct
-    {
-        v3 xyz;
-        f32 _unused;
-    };
-    
-    struct
-    {
-        f32 r;
-        f32 g;
-        f32 b;
-        f32 a;
-    };
-    
-    f32 elements[4];
-}
-v4;
 
 internal v2
 V2Init(f32 x, f32 y)
@@ -161,6 +90,7 @@ V2Init(f32 x, f32 y)
 }
 
 #define v2(x, y) V2Init(x, y)
+#define v2u(x) V2Init(x, x)
 
 internal f32
 V2Dot(v2 a, v2 b)
@@ -192,6 +122,26 @@ V2Normalize(v2 v)
     return v;
 }
 
+typedef union v3
+{
+    struct
+    {
+        f32 x;
+        f32 y;
+        f32 z;
+    };
+    
+    struct
+    {
+        f32 r;
+        f32 g;
+        f32 b;
+    };
+    
+    f32 elements[3];
+}
+v3;
+
 internal v3
 V3Init(f32 x, f32 y, f32 z)
 {
@@ -200,6 +150,7 @@ V3Init(f32 x, f32 y, f32 z)
 }
 
 #define v3(x, y, z) V3Init(x, y, z)
+#define v3u(x) V3Init(x, x, x)
 
 internal v3
 V3AddV3(v3 a, v3 b)
@@ -274,26 +225,62 @@ V3Normalize(v3 v)
 }
 
 internal float
-MinimumInV3(v3 v)
+V3MaxValue(v3 v)
 {
-    float minimum = v.x;
-    
-	if(v.y < minimum) { minimum = v.y; }
-    if(v.z < minimum) { minimum = v.z; }
-	
-    return minimum;
+    return MaxValue(v.x, MaxValue(v.y, v.z));
 }
 
 internal float
-MaximumInV3(v3 v)
+V3MinValue(v3 v)
 {
-    float maximum = v.x;
-	
-    if(v.y > maximum) { maximum = v.y; }
-    if(v.z > maximum) { maximum = v.z; }
-    
-	return maximum;
+	return MinValue(v.x, MinValue(v.y, v.z));
 }
+
+typedef union v4
+{
+    struct
+    {
+        f32 x;
+        f32 y;
+		
+        union
+        {
+            struct
+            {
+                f32 z;
+                
+                union
+                {
+                    f32 w;
+                    f32 radius;
+                };
+            };
+            
+            struct
+            {
+                f32 width;
+                f32 height;
+            };
+        };
+    };
+    
+    struct
+    {
+        v3 xyz;
+        f32 _unused;
+    };
+    
+    struct
+    {
+        f32 r;
+        f32 g;
+        f32 b;
+        f32 a;
+    };
+    
+    f32 elements[4];
+}
+v4;
 
 internal v4
 V4Init(f32 x, f32 y, f32 z, f32 w)
@@ -496,8 +483,21 @@ typedef union v4i
     {
         i32 x;
         i32 y;
-        i32 z;
-        i32 w;
+		
+        union
+        {
+            struct
+            {
+                i32 z;
+				i32 w;
+            };
+            
+            struct
+            {
+                f32 width;
+                f32 height;
+            };
+        };
     };
     
     struct
@@ -508,7 +508,7 @@ typedef union v4i
         i32 a;
     };
     
-    i32 elements[4];
+    f32 elements[4];
 }
 v4i;
 
@@ -1022,4 +1022,12 @@ HashCString(char *string)
 	u64 length = 0;
 	while(string[length] != '\0') length++;
 	return HashBytesGeneric(string, length);
+}
+
+internal v3
+SphericalToCartesian(f32 r, f32 phi, f32 theta)
+{
+	return v3(r * CosF(theta) * CosF(phi),
+			  r * CosF(theta) * SinF(phi),
+			  r * SinF(theta));
 }

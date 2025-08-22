@@ -11,6 +11,8 @@ typedef struct Core
 	VertexFormats vertex_formats;
 	Renderer renderer;
 	
+	Assets assets;
+	
 	Camera main_camera;
 	
 	Model damaged_helmet_model;
