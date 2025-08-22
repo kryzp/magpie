@@ -77,3 +77,12 @@ MemoryArenaAllocateString8(MemoryArena *arena, u32 length)
 	
 	return string;
 }
+
+internal String8
+MemoryArenaAllocateString8Copy(MemoryArena *arena, String8 string)
+{
+	String8 copy = MemoryArenaAllocateString8(arena, string.len);
+	MemoryCopy(copy.str, string.str, string.len);
+	
+	return copy;
+}

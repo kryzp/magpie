@@ -16,15 +16,11 @@
 //           [x]  9. Split up files accordingly to make the code easier to manage.
 //           [x] 10. Material system.
 //           [x] 11. Deferred Rendering.
-//           [ ] 12. Scene.
+//           [x] 12. Scene.
 //                   --> Camera, lights, etc...
-//           [ ] 13. Due to dynamic rendering, there is a lot of data you have to duplicate
-//                   between graphics pipelines and render info's (view mask, formats, etc...),
-//                   figure out a way to merge this together. Maybe pass render info
-//                   into GraphicsPipelineCreate(...)?
-//           [ ] 13.5 Final Requirements
-//                   --> Texture Asset Manager to stop unfreed images when loading in models.
-//                   --> Shaders should automatically assign their push constants sizes
+//           [ ] 13 Final Requirements
+//                   [x] Asset system to stop unfreed images when loading in models.
+//                   [ ] Shaders should automatically assign their push constants sizes
 //                       rather than me having to do it manually.
 //
 //                   <<< MAGPIE C++ ENDS HERE >>>
@@ -44,6 +40,7 @@
 //                       CmdEndRendering(...) around the Record(...) function, since mipmaps
 //                       are pretty much the only reason I don't already do that.
 //           [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
+//           [ ] 19. Start going through ideas list in readme.md.
 
 internal RenderingAttachment
 RenderingAttachmentInitColour(VkAttachmentLoadOp load_op,
@@ -258,7 +255,7 @@ RendererRenderPassExportHDRCubemap(Renderer *renderer, CommandBuffer *cmd, Rende
 		args.hdr_image_id = FetchStandardImageView(&renderer->environment_hdr_texture)->resource_id;
 		args.linear_sampler_id = renderer->linear_sampler.resource_id;
 		
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->environment_hdr_to_cubemap_program, &vertex_formats->v3_format);
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&renderer->hdr_to_environment_cubemap_program, &vertex_formats->v3_format);
 		pipeline_def.depth_stencil_state.depth_test_enabled = false;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
 		pipeline_def.colour_attachment_count = 1;
@@ -770,54 +767,28 @@ void RendererCreateUnitSphereMesh(Renderer *renderer, MemoryArena *arena)
 internal void
 RendererLoadShaders(Renderer *renderer, MemoryArena *arena)
 {
-	// TODO(kp): Loading in of assets like shaders and images should be done via a seperate asset system.
-	
-	renderer->environment_hdr_to_cubemap_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	struct
 	{
-		renderer->environment_hdr_to_cubemap_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->environment_hdr_to_cubemap_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/hdr_to_environment_cubemap_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+		String8 vert;
+		String8 frag;
+		ShaderProgram *target;
 	}
-	
-	renderer->irradiance_map_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4, 2);
+	graphics_shaders[] =
 	{
-		renderer->irradiance_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->irradiance_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/irradiance_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
+		{ str8("res/brdf_lut_vertex.spv"),                    str8("res/brdf_lut_fragment.spv"),                    &renderer->brdf_lut_program },
+		{ str8("res/hdr_to_environment_cubemap_vertex.spv"),  str8("res/hdr_to_environment_cubemap_fragment.spv"),  &renderer->hdr_to_environment_cubemap_program },
+		{ str8("res/irradiance_convolution_vertex.spv"),      str8("res/irradiance_convolution_fragment.spv"),      &renderer->irradiance_map_program },
+		{ str8("res/prefilter_convolution_vertex.spv"),       str8("res/prefilter_convolution_fragment.spv"),       &renderer->prefilter_map_program },
+		{ str8("res/model_vertex.spv"),                       str8("res/model_fragment.spv"),                       &renderer->model_program },
+		{ str8("res/skybox_vertex.spv"),                      str8("res/skybox_fragment.spv"),                      &renderer->skybox_program },
+		{ str8("res/ambient_lighting_vertex.spv"),            str8("res/ambient_lighting_fragment.spv"),            &renderer->ambient_lighting_program },
+		{ str8("res/direct_lighting_point_vertex.spv"),       str8("res/direct_lighting_point_fragment.spv") ,      &renderer->direct_lighting_point_program },
+	};
 	
-	renderer->prefilter_map_program = ShaderProgramInit(sizeof(u64) + sizeof(f32) + sizeof(u32)*3, 2);
+	for(i32 i = 0; i < ArraySize(graphics_shaders); i++)
 	{
-		renderer->prefilter_map_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->prefilter_map_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/prefilter_convolution_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->model_program = ShaderProgramInit(sizeof(m4) + sizeof(u32)*8, 2);
-	{
-		renderer->model_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/model_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->model_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/model_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->skybox_program = ShaderProgramInit(sizeof(u32)*4, 2);
-	{
-		renderer->skybox_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->skybox_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/skybox_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->ambient_lighting_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
-	{
-		renderer->ambient_lighting_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->ambient_lighting_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/ambient_lighting_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->direct_lighting_point_program = ShaderProgramInit(sizeof(m4) + sizeof(u64)*2 + sizeof(u32)*8, 2);
-	{
-		renderer->direct_lighting_point_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/direct_lighting_point_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->direct_lighting_point_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/direct_lighting_point_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
-	
-	renderer->brdf_lut_program = ShaderProgramInit(sizeof(u64) + sizeof(u32)*4*3, 2);
-	{
-		renderer->brdf_lut_program.stages[0] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_vertex.spv"), VK_SHADER_STAGE_VERTEX_BIT);
-		renderer->brdf_lut_program.stages[1] = ShaderStageLoadFromBytecode(arena, str8("res/brdf_lut_fragment.spv"), VK_SHADER_STAGE_FRAGMENT_BIT);
+		String8 files[] = { graphics_shaders[i].vert, graphics_shaders[i].frag };
+		(*graphics_shaders[i].target) = ShaderProgramInit(arena, 2, files);
 	}
 }
 
@@ -967,7 +938,7 @@ RendererDestroy(Renderer *renderer)
 	ShaderProgramDestroy(&renderer->ambient_lighting_program);
 	ShaderProgramDestroy(&renderer->direct_lighting_point_program);
 	ShaderProgramDestroy(&renderer->model_program);
-	ShaderProgramDestroy(&renderer->environment_hdr_to_cubemap_program);
+	ShaderProgramDestroy(&renderer->hdr_to_environment_cubemap_program);
 	ShaderProgramDestroy(&renderer->irradiance_map_program);
 	ShaderProgramDestroy(&renderer->prefilter_map_program);
 	ShaderProgramDestroy(&renderer->skybox_program);

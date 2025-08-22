@@ -80,7 +80,7 @@ ShaderStage;
 //           --> No layouts per shader.
 typedef struct ShaderProgram
 {
-	u64 push_constant_size;
+	u32 push_constant_size;
 	u32 stage_count;
 	ShaderStage stages[2];
 }

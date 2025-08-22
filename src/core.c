@@ -3,6 +3,9 @@
 
 #include "ext/vk_mem_alloc.h"
 
+#define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
+#include "ext/spirv_reflect.c"
+
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -116,8 +119,8 @@ CoreUpdate(Platform *p)
 		RenderCall call = {0};
 		call.mesh = &core->damaged_helmet_model.sub_models[0].mesh;
 		call.material = &core->damaged_helmet_model.sub_models[0].material;
-		call.transform = M4Transform(v3(0.f, 0.f, 0.f),
-									 QuatInitIdentity(),
+		call.transform = M4Transform(v3(0.f, 0.f, .4f*SinF(t)),
+									 QuatInitEuler(0.f, t, 0.f),
 									 v3(1.f, 1.f, 1.f),
 									 v3(0.f, 0.f, 0.f));
 		

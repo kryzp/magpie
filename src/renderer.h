@@ -155,7 +155,7 @@ typedef struct Renderer
 	ShaderProgram ambient_lighting_program;
 	ShaderProgram direct_lighting_point_program;
 	ShaderProgram model_program;
-	ShaderProgram environment_hdr_to_cubemap_program;
+	ShaderProgram hdr_to_environment_cubemap_program;
 	ShaderProgram irradiance_map_program;
 	ShaderProgram prefilter_map_program;
 	ShaderProgram skybox_program;
