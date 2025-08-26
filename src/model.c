@@ -12,17 +12,17 @@ MeshInit(VertexFormat *format,
 	u64 vertex_buffer_size = vertex_count * format->vertex_size;
 	u64 index_buffer_size = index_count * sizeof(u16);
 	
-	mesh.vertex_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-										   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-										   vertex_buffer_size);
+	mesh.vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+										VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+										vertex_buffer_size);
 	
-	mesh.index_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-										  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-										  index_buffer_size);
+	mesh.index_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+									   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+									   index_buffer_size);
 	
-	GPUBuffer staging_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-												 vertex_buffer_size + index_buffer_size);
+	GPUBuffer staging_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+											  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+											  vertex_buffer_size + index_buffer_size);
 	{
 		GPUBufferWrite(&staging_buffer, vertices, vertex_buffer_size, 0);
 		GPUBufferWrite(&staging_buffer, indices, index_buffer_size, vertex_buffer_size);
@@ -75,6 +75,12 @@ internal void
 MeshDrawCmd(Mesh *mesh, CommandBuffer *cmd)
 {
 	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
+}
+
+internal void
+MeshDrawCmdID(Mesh *mesh, CommandBuffer *cmd, u32 instance_id)
+{
+	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, instance_id);
 }
 
 // ---

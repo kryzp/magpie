@@ -1,15 +1,19 @@
 
 internal ScratchArena
-GetScratch(MemoryArena *arena)
+GetScratch(MemoryArena *conflicts, u32 count)
 {
 	MemoryArena *scratch = core->scratch_arenas;
 	
-	if(arena)
+	for(u32 j = 0; j < count; j++)
 	{
+		MemoryArena *arena = conflicts + j;
+		
 		for(i32 i = 0; i < 2; i++, scratch += 1)
 		{
 			if(scratch != arena)
+			{
 				break;
+			}
 		}
 	}
 	

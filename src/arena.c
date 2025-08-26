@@ -37,6 +37,13 @@ MemoryArenaPush(MemoryArena *arena, u64 size)
     return mem;
 }
 
+// NOTE(kp): Create an arena within an arena.
+internal MemoryArena
+MemoryArenaSubArena(MemoryArena *arena, u64 size)
+{
+	return MemoryArenaInit(MemoryArenaPush(arena, size), size);
+}
+
 internal void
 MemoryArenaPopTo(MemoryArena *arena, u64 pos)
 {
@@ -67,7 +74,7 @@ MemoryArenaZero(MemoryArena *arena)
 }
 
 internal String8
-MemoryArenaAllocateString8(MemoryArena *arena, u32 length)
+MemoryArenaAllocateString8(MemoryArena *arena, u64 length)
 {
 	String8 string = {0};
 	string.len = length;

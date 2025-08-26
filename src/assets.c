@@ -66,17 +66,17 @@ BitmapCreateImage(BitmapImage *bitmap)
 	
 	u64 memory_size = GetBitmapImageMemorySize(bitmap);
 	
-	Image image = ImageAllocate(bitmap->width, bitmap->height, 1,
-								format,
-								VK_IMAGE_VIEW_TYPE_2D,
-								VK_IMAGE_TILING_OPTIMAL,
-								4,
-								VK_SAMPLE_COUNT_1_BIT,
-								false, false);
+	Image image = ImageAlloc(bitmap->width, bitmap->height, 1,
+							 format,
+							 VK_IMAGE_VIEW_TYPE_2D,
+							 VK_IMAGE_TILING_OPTIMAL,
+							 4,
+							 VK_SAMPLE_COUNT_1_BIT,
+							 false, false);
 	
-	GPUBuffer staging_buffer = GPUBufferAllocate(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-												 memory_size);
+	GPUBuffer staging_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+											  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+											  memory_size);
 	{
 		GPUBufferWrite(&staging_buffer, bitmap->pixels, memory_size, 0);
 		
@@ -100,6 +100,7 @@ AssetsInit(Assets *assets, MemoryArena *arena)
 	assets->arena = arena;
 	
 	assets->texture_count = 0;
+	assets->model_count = 0;
 }
 
 internal void
@@ -114,6 +115,18 @@ AssetsDestroy(Assets *assets)
 	{
 		ModelDestroy(&assets->models[i].model);
 	}
+}
+
+internal Image *
+AssetsImageFromHandle(Assets *assets, u32 handle)
+{
+	return &assets->textures[handle].image;
+}
+
+internal Model *
+AssetsModelFromHandle(Assets *assets, u32 handle)
+{
+	return &assets->models[handle].model;
 }
 
 internal u32
@@ -181,7 +194,7 @@ AssetsTryFetchAssimpMaterialTexture(Assets *assets,
 		return fallback;
 	}
 	
-	ScratchArena scratch = GetScratch(assets->arena);
+	ScratchArena scratch = GetScratch(assets->arena, 1);
 	
 	struct aiString texture_path = {0};
 	aiGetMaterialTexture(material, type, 0, &texture_path, 0, 0, 0, 0, 0, 0);
@@ -190,19 +203,26 @@ AssetsTryFetchAssimpMaterialTexture(Assets *assets,
 	MemoryCopy(final_path.str, directory.str, directory.len);
 	MemoryCopy(final_path.str + directory.len, texture_path.data, texture_path.length);
 	
-	// TODO(kp): Temporarily I just don't even bother storing the images.
-	//           Memory leaks who?? Never heard of 'em.
-	
-	
-	// TODO(kp): THERE SHOULD BE A Material AND A GPU_Material
-	//           WHERE THE NORMAL Material USES HANDLES INTO THE
-	//           ASSET SYSTEM RATHER THAN THE resource_id!!!!!
-	
 	u32 handle = AssetsLoadTexture(assets, final_path);
-	u32 id = FetchStandardImageView(&assets->textures[handle].image)->resource_id;
 	
 	ReleaseScratch(&scratch);
-	return id;
+	return handle;
+}
+
+internal Material
+AssetsLoadMaterialFromAssimp(Assets *assets,
+							 String8 directory,
+							 const struct aiMaterial *assimp_material)
+{
+	Material material = {0};
+	
+	material.diffuse_texture_handle            = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_DIFFUSE, 0);
+	material.normal_texture_handle             = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_NORMALS, 0);
+	material.emissive_texture_handle           = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_EMISSIVE, 0);
+	material.metallic_roughness_texture_handle = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_DIFFUSE_ROUGHNESS, 0);
+	material.ambient_texture_handle            = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_LIGHTMAP, 0);
+	
+	return material;
 }
 
 internal void
@@ -213,7 +233,7 @@ AssetsProcessSubModel(Assets *assets,
 					  const struct aiScene *scene,
 					  struct aiMatrix4x4 transform)
 {
-	ScratchArena scratch = GetScratch(assets->arena);
+	ScratchArena scratch = GetScratch(assets->arena, 1);
 	
 	ModelVertex *vertices = MemoryArenaPush(scratch.arena, sizeof(ModelVertex) * assimp_mesh->mNumVertices);
 	
@@ -326,14 +346,8 @@ AssetsProcessSubModel(Assets *assets,
 	if(assimp_mesh->mMaterialIndex >= 0)
 	{
 		const struct aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-		
 		String8 directory = String8BeforeFirstSubstringFromBackInclusive(path, str8("/"));
-		
-		sub_model->material.diffuse  = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_DIFFUSE, 0);
-		sub_model->material.normal   = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_NORMALS, 0);
-		sub_model->material.emissive = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_EMISSIVE, 0);
-		sub_model->material.mr       = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_DIFFUSE_ROUGHNESS, 0);
-		sub_model->material.ambient  = AssetsTryFetchAssimpMaterialTexture(assets, directory, assimp_material, aiTextureType_LIGHTMAP, 0);
+		sub_model->material = AssetsLoadMaterialFromAssimp(assets, directory, assimp_material);
 	}
 	
 	ReleaseScratch(&scratch);

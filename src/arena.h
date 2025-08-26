@@ -2,7 +2,7 @@
 typedef struct MemoryArena
 {
     void *memory;
-    u32 size;
-    u32 used;
+    u64 size;
+    u64 used;
 }
 MemoryArena;

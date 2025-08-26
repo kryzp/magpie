@@ -18,11 +18,13 @@ typedef struct BitmapImage
 }
 BitmapImage;
 
+/*
 typedef struct Font
 {
 	// TODO(kp)
 }
 Font;
+*/
 
 typedef struct AssetTexture
 {
@@ -49,3 +51,6 @@ typedef struct Assets
 	AssetModel models[64];
 }
 Assets;
+
+internal Image *AssetsImageFromHandle(Assets *assets, u32 handle);
+internal Model *AssetsModelFromHandle(Assets *assets, u32 handle);

@@ -32,6 +32,7 @@
 #define MemoryCopy                 memcpy
 #define MemorySet                  memset
 #define MemoryMove                 memmove
+#define MemoryZeroStruct(s)        MemorySet((s), 0, sizeof(*(s)))
 #define StringCopy                 strcpy
 #define StringCopyN                strncpy
 #define CStringCompare             strcmp
@@ -929,7 +930,7 @@ String8BeforeFirstSubstringFromBackInclusive(String8 string, String8 substring)
 	result.str = string.str;
 	result.len = 0;
 	
-	for(i32 i = string.len - substring.len - 1; i >= 0; i--)
+	for(u64 i = string.len - substring.len - 1; i >= 0; i--)
 	{
 		String8 here = String8Init(string.str + i, substring.len);
 		

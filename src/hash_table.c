@@ -1,4 +1,7 @@
 
+// NOTE(kp): This is not a complicated hash table implementation at all.
+//           Just a table of linked lists.
+
 internal void
 HashTableInit(HashTable *table, MemoryArena *arena, u64 node_size)
 {

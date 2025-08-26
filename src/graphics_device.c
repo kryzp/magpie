@@ -142,7 +142,7 @@ QuerySwapchainSupport(MemoryArena *arena, VkPhysicalDevice physical_device, VkSu
 }
 
 internal const char *const *
-GetInstanceExtensions(MemoryArena *arena, Platform *platform, u32 *extension_count)
+GetInstanceExtensions(MemoryArena *arena, u32 *extension_count)
 {
 	const char *const *names = platform->GetVulkanInstanceExtensions(extension_count);
 	
@@ -221,7 +221,7 @@ GraphicsChooseSwapPresentMode(VkPresentModeKHR *available_present_modes, u32 ava
 }
 
 internal VkExtent2D
-GraphicsChooseSwapExtent(Platform *platform, const VkSurfaceCapabilitiesKHR *capabilities)
+GraphicsChooseSwapExtent(const VkSurfaceCapabilitiesKHR *capabilities)
 {
 	if(capabilities->currentExtent.width != (u32)(-1) &&
 	   capabilities->currentExtent.height != (u32)(-1))
@@ -519,14 +519,14 @@ ClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 }
 
 internal Image
-ImageAllocate(u32 width, u32 height, u32 depth,
-			  VkFormat format,
-			  VkImageViewType type,
-			  VkImageTiling tiling,
-			  u32 mipmaps,
-			  VkSampleCountFlagBits samples,
-			  b32 is_transient,
-			  b32 is_storage)
+ImageAlloc(u32 width, u32 height, u32 depth,
+		   VkFormat format,
+		   VkImageViewType type,
+		   VkImageTiling tiling,
+		   u32 mipmaps,
+		   VkSampleCountFlagBits samples,
+		   b32 is_transient,
+		   b32 is_storage)
 {
 	Image image = {0};
 	
@@ -631,6 +631,30 @@ ImageAllocate(u32 width, u32 height, u32 depth,
 			 "Failed to create image.");
 	
 	return image;
+}
+
+internal Image
+ImageAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
+{
+	return ImageAlloc(width, height, 1u,
+					  format,
+					  VK_IMAGE_VIEW_TYPE_2D,
+					  VK_IMAGE_TILING_OPTIMAL,
+					  mipmaps,
+					  VK_SAMPLE_COUNT_1_BIT,
+					  false, false);
+}
+
+internal Image
+ImageAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
+{
+	return ImageAlloc(resolution, resolution, 1u,
+					  format,
+					  VK_IMAGE_VIEW_TYPE_CUBE,
+					  VK_IMAGE_TILING_OPTIMAL,
+					  mipmaps,
+					  VK_SAMPLE_COUNT_1_BIT,
+					  false, false);
 }
 
 internal void
@@ -749,7 +773,7 @@ FetchImageView(Image *image, u32 layer_count, u32 layer, u32 base_mip_level)
 {
 	u64 hash = 0;
 	
-	hash = HashBytesGenericCombine(hash,  image,          sizeof(Image));
+	hash = HashBytesGenericCombine(hash,  image,          sizeof(Image)); // TODO(kp): Hash with a HashImage() function that doesn't just hash the whole image incl. vulkan handle?
 	hash = HashBytesGenericCombine(hash, &layer_count,    sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &layer,          sizeof(u32));
 	hash = HashBytesGenericCombine(hash, &base_mip_level, sizeof(u32));
@@ -856,9 +880,9 @@ GPUBufferWrite(GPUBuffer *buffer, void *src, u64 length, u64 offset)
 }
 
 internal GPUBuffer
-GPUBufferAllocate(VkBufferUsageFlags usage,
-				  VmaAllocationCreateFlagBits flags,
-				  u64 size)
+GPUBufferAlloc(VkBufferUsageFlags usage,
+			   VmaAllocationCreateFlagBits flags,
+			   u64 size)
 {
 	GPUBuffer buffer = {0};
 	
@@ -932,7 +956,7 @@ LoadFileBytes(MemoryArena *dst, String8 path)
 internal ShaderStage
 ShaderStageLoadFromBytecode(MemoryArena *arena, String8 path, u32 *push_constant_size)
 {
-	ScratchArena scratch = GetScratch(arena);
+	ScratchArena scratch = GetScratch(arena, 1);
 	
 	String8 source = LoadFileBytes(scratch.arena, path);
 	
@@ -1035,7 +1059,7 @@ ShaderProgramIsCompute(ShaderProgram *program)
 }
 
 internal void
-AddVertexBinding(VertexFormat *vertex, u64 stride, VkVertexInputRate input_rate)
+AddVertexBinding(VertexFormat *vertex, u32 stride, VkVertexInputRate input_rate)
 {
 	if(input_rate == VK_VERTEX_INPUT_RATE_VERTEX)
 	{
@@ -1057,7 +1081,7 @@ AddVertexBinding(VertexFormat *vertex, u64 stride, VkVertexInputRate input_rate)
 }
 
 internal void
-AddVertexAttribute(VertexFormat *vertex, VkFormat format, u64 offset)
+AddVertexAttribute(VertexFormat *vertex, VkFormat format, u32 offset)
 {
 	VkVertexInputAttributeDescription *a = vertex->attributes + vertex->attribute_count;
 	{
@@ -1484,15 +1508,15 @@ FetchComputePipeline(ComputePipelineDef *definition)
 }
 
 internal void
-SwapchainInit(Swapchain *swapchain, MemoryArena *arena, Platform *platform)
+SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 {
-	ScratchArena scratch = GetScratch(arena);
+	ScratchArena scratch = GetScratch(arena, 1);
 	
 	SwapchainSupportDetails details = QuerySwapchainSupport(scratch.arena, graphics_device->physical_device, graphics_device->surface);
 	
 	VkSurfaceFormatKHR surface_format = GraphicsChooseSwapSurfaceFormat(details.surface_formats, details.surface_format_count);
 	VkPresentModeKHR present_mode = GraphicsChooseSwapPresentMode(details.present_modes, details.present_mode_count, true);
-	VkExtent2D extent = GraphicsChooseSwapExtent(platform, &details.capabilities);
+	VkExtent2D extent = GraphicsChooseSwapExtent(&details.capabilities);
 	
 	swapchain->width = extent.width;
 	swapchain->height = extent.height;
@@ -1833,6 +1857,20 @@ CmdDrawIndexed(CommandBuffer *cmd,
 }
 
 internal void
+CmdDrawIndexedIndirect(CommandBuffer *cmd,
+					   GPUBuffer *buffer,
+					   u64 offset,
+					   u32 count,
+					   u32 stride)
+{
+	vkCmdDrawIndexedIndirect(cmd->handle,
+							 buffer->handle,
+							 offset,
+							 count,
+							 stride);
+}
+
+internal void
 CmdBlitImage(CommandBuffer *cmd,
 			 Image *src, VkImageLayout src_layout,
 			 Image *dst, VkImageLayout dst_layout,
@@ -2086,7 +2124,7 @@ CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkPhysicalDevice
 		DebugLogCrash("Failed to find any device extension properties.");
 	}
 	
-	ScratchArena scratch = GetScratch(arena);
+	ScratchArena scratch = GetScratch(arena, 1);
 	
 	VkExtensionProperties *available_exts = MemoryArenaPush(scratch.arena, sizeof(VkExtensionProperties) * extension_count);
 	vkEnumerateDeviceExtensionProperties(physical_device, 0, &extension_count, available_exts);
@@ -2141,7 +2179,7 @@ AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 	// NOTE(kp): It must have the required extensions.
 	if(has_required_extensions)
 	{
-		ScratchArena scratch = GetScratch(arena);
+		ScratchArena scratch = GetScratch(arena, 1);
 		
 		SwapchainSupportDetails details = QuerySwapchainSupport(scratch.arena, physical_device, surface);
 		
@@ -2168,7 +2206,7 @@ CheckForValidationLayerSupport(MemoryArena *arena)
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);
 	
-	ScratchArena scratch = GetScratch(arena);
+	ScratchArena scratch = GetScratch(arena, 1);
 	
 	VkLayerProperties *available_layers = MemoryArenaPush(scratch.arena, sizeof(VkLayerProperties) * layer_count);
 	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
@@ -2258,7 +2296,7 @@ GraphicsDeviceAfterHotReload()
 }
 
 internal void
-GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
+GraphicsDeviceInit(MemoryArena *arena)
 {
 	VkApplicationInfo core_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -2281,9 +2319,9 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	
 	volkInitialize();
 	
-	ScratchArena scratch = GetScratch(arena);
+	ScratchArena scratch = GetScratch(arena, 1);
 	
-	instance_create_info.ppEnabledExtensionNames = GetInstanceExtensions(scratch.arena, platform, &instance_create_info.enabledExtensionCount);
+	instance_create_info.ppEnabledExtensionNames = GetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
 	
 	VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
 	debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -2454,6 +2492,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	graphics_queue_create_info.queueCount = 1;
 	graphics_queue_create_info.pQueuePriorities = &queue_priority;
 	
+	// NOTE(kp): Disable this so we get a clear indication if something's gone wrong.
 	graphics_device->physical_device_features.features.robustBufferAccess = VK_FALSE;
 	
 	VkPhysicalDeviceVulkan11Features vulkan11_features = {0};
@@ -2611,7 +2650,7 @@ GraphicsDeviceInit(Platform *platform, MemoryArena *arena)
 	
 	DebugLog("Created graphics pipeline process cache.");
 	
-	SwapchainInit(&graphics_device->swapchain, arena, platform);
+	SwapchainInit(&graphics_device->swapchain, arena);
 	BindlessInit();
 	
 	HashTableInit(&graphics_device->image_view_cache, arena, sizeof(ImageView));

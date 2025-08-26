@@ -2,6 +2,6 @@
 typedef struct ScratchArena
 {
 	MemoryArena *arena;
-	u32 pos;
+	u64 pos;
 }
 ScratchArena;

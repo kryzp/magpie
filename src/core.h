@@ -8,14 +8,20 @@ typedef struct Core
 	u64 starting_ticks;
 	
 	GraphicsDevice graphics_device;
-	VertexFormats vertex_formats;
+	
 	Renderer renderer;
+	RenderContext render_context;
+	RenderGraph render_graph;
+	
+	VertexFormats vertex_formats;
 	
 	Assets assets;
 	
 	Camera main_camera;
+	Scene scene;
 	
-	Model damaged_helmet_model;
+	u32 damaged_helmet_object;
+	Image environment_hdr_texture;
 }
 Core;
 

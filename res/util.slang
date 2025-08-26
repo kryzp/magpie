@@ -15,7 +15,7 @@ struct FrameData
 	float _padding[3];
 };
 
-struct TransformData
+struct ObjectData
 {
 	float4x4 model_matrix;
 	float4x4 normal_matrix;

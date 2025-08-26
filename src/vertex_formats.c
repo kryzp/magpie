@@ -1,6 +1,6 @@
 
 internal void
-VertexFormatsInit(VertexFormats *formats, MemoryArena *arena)
+VertexFormatsInit(VertexFormats *formats)
 {
 	AddVertexBinding(&formats->v3_format, sizeof(v3), VK_VERTEX_INPUT_RATE_VERTEX);
 	{
