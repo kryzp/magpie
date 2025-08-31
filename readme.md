@@ -2,6 +2,8 @@
 
 It's a (vulkan) renderer written in C. It's got *complete* hot code reloading. That means the C code itself, not just shaders. :)
 
+Currently it's in pretty early stages so it's missing a lot of polish, but the groundwork is there.
+
 I've noticed that most, if not *all* beginner tutorials to Vulkan are kind of terrible for learning what actual Vulkan rendering code looks like.
 They often just have long blocks of endless functions doing arbitrary things with very little abstraction and a completely fixed render loop - they show you how to make a coloured rotating cube, but good luck trying to make the program do anything else.
 
