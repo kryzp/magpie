@@ -35,6 +35,7 @@
 #include "render_context.h"
 #include "renderer.h"
 #include "vertex_formats.h"
+#include "shaders.h"
 #include "core.h"
 #include "scratch.h"
 
@@ -43,6 +44,7 @@
 #include "hash_table.c"
 #include "graphics_device.c"
 #include "vertex_formats.c"
+#include "shaders.c"
 #include "model.c"
 #include "assets.c"
 #include "render_graph.c"
@@ -50,131 +52,314 @@
 #include "scene.c"
 #include "mesh_pass.c"
 #include "renderer.c"
+#include "skybox.c"
+#include "ibl_renderer.c"
+#include "brdf_lut.c"
 
-internal void
-CoreResetGlobals(Platform *platform_)
+internal CoreFrameData *CoreGetCurrentFrameData()
+{
+	return core->per_frame_data + graphics_device->current_frame_index;
+}
+
+// NOTE(kp): https://songho.ca/opengl/gl_sphere.html
+// TODO(kp): Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
+internal void CoreCreateUnitSphereMesh()
+{
+	ScratchArena scratch = GetScratch(&core->permanent_arena, 1);
+
+	u16 sector_count = 10;
+	u16 stack_count = 10;
+
+	f32 sector_step = 2.f * PIf / (f32)sector_count;
+	f32 stack_step = PIf / (f32)stack_count;
+
+	u32 vertex_count = (stack_count + 1) * (sector_count + 1);
+	u32 index_count = sector_count * (stack_count - 1) * 6;
+
+	v3 *vertices = MemoryArenaPush(scratch.arena, sizeof(v3) * vertex_count);
+	u16 *indices = MemoryArenaPush(scratch.arena, sizeof(u16) * index_count);
+
+	u32 index = 0;
+
+	for (i32 i = 0; i <= stack_count; i++) {
+		f32 theta = PIf / 2.f - i * stack_step;
+		for (i32 j = 0; j <= sector_count; j++) {
+			f32 phi = j * sector_step;
+			vertices[index++] = SphericalToCartesian(1.f, phi, theta);
+		}
+	}
+
+	index = 0;
+
+	for (u16 i = 0; i < stack_count; i++) {
+		u16 k1 = i * (sector_count + 1); // NOTE(kp): Current stack.
+		u16 k2 = k1 + (sector_count + 1); // NOTE(kp): Next stack.
+
+		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
+			if (i != 0) {
+				indices[index + 0] = k1;
+				indices[index + 1] = k2;
+				indices[index + 2] = k1 + 1u;
+
+				index += 3;
+			}
+
+			if (i != stack_count - 1) {
+				indices[index + 0] = k1 + 1u;
+				indices[index + 1] = k2;
+				indices[index + 2] = k2 + 1u;
+
+				index += 3;
+			}
+		}
+	}
+
+	core->light_sphere_mesh = MeshInit(&vertex_formats->vec3,
+					   vertex_count, vertices,
+					   index_count, indices);
+
+	ReleaseScratch(&scratch);
+}
+
+internal void CoreCreatePerFrameObjects()
+{
+	for (i32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		CoreFrameData *frame = core->per_frame_data + i;
+
+		frame->frame_data_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							  sizeof(GPU_FrameData));
+		
+		frame->object_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+						      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+						      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+						      sizeof(GPU_ObjectData) * SCENE_MAX_OBJECTS);
+
+		/*
+		  frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		  sizeof(GPU_Light) * ArraySize(renderer->lights));
+		*/
+
+		frame->indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+							VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+							VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+							VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							sizeof(VkDrawIndexedIndirectCommand) *
+							SCENE_MAX_OBJECTS);
+	}
+}
+
+internal void CoreDestroyPerFrameObjects()
+{
+	for (i32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		CoreFrameData *current_frame = core->per_frame_data + i;
+
+		GPUBufferDestroy(&current_frame->frame_data_buffer);
+		GPUBufferDestroy(&current_frame->object_buffer);
+		//GPUBufferDestroy(&current_frame->light_buffer);
+		GPUBufferDestroy(&current_frame->indirect_buffer);
+	}
+}
+
+internal void CoreResetGlobals(Platform *platform_)
 {
 	platform = platform_;
 	core = platform->permanent_memory;
 	graphics_device = &core->graphics_device;
 	vertex_formats = &core->vertex_formats;
+	shaders = &core->shaders;
 }
 
-__declspec(dllexport) void
-CoreInit(Platform *platform_)
+__declspec(dllexport) void CoreInit(Platform *platform_)
 {
 	CoreResetGlobals(platform_);
-	
+
 	MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
-	
+
 	core = MemoryArenaPush(&permanent_arena, sizeof(Core));
-	
+
 	core->permanent_arena = permanent_arena;
-	core->frame_arena = MemoryArenaInit(platform->transient_memory, platform->transient_memory_size);
-	
+	core->frame_arena = MemoryArenaInit(platform->transient_memory,
+					    platform->transient_memory_size);
+
 	core->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
 	core->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
-	
+
 	AssetsInit(&core->assets, &core->permanent_arena);
 	GraphicsDeviceInit(&core->permanent_arena);
 	VertexFormatsInit(&core->vertex_formats);
-	RenderContextInit(&core->render_context, &core->permanent_arena);
+	ShadersInit(&core->shaders, &core->permanent_arena);
+
+	CoreCreateUnitSphereMesh();
+	CoreCreatePerFrameObjects();
+
+	core->linear_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
+
+	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
+
+	// NOTE(kp): Renderman introduced the left-handed Y-up cubemap in 1990
+	//           but we use right-handed Z-up so we have to flip these weirdly.
+	m4 capture_view_matrices[] = {
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f,  0.f,  0.f), v3(0.f,  0.f, 1.f)), // X+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f,  0.f,  0.f), v3(0.f,  0.f, 1.f)), // X-
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,  0.f,  1.f), v3(0.f, -1.f, 0.f)), // Y+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,  0.f, -1.f), v3(0.f,  1.f, 0.f)), // Y-
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,  1.f,  0.f), v3(0.f,  0.f, 1.f)), // Z+
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, -1.f,  0.f), v3(0.f,  0.f, 1.f)), // Z-
+	};
+
+	core->cubemap_capture_transforms = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							  sizeof(m4) * 6);
+
+	for (i32 i = 0; i < 6; i++) {
+		m4 m = M4MultiplyM4(capture_projection_matrix, capture_view_matrices[i]);
+		GPUBufferWrite(&core->cubemap_capture_transforms, &m,
+			       sizeof(m4),
+			       sizeof(m4) * i);
+	}
+
+	v3 vertices[] = {
+		{ -1.f,  1.f,  1.f },
+		{ -1.f,  1.f, -1.f },
+		{  1.f,  1.f, -1.f },
+		{  1.f,  1.f,  1.f },
+		{ -1.f, -1.f,  1.f },
+		{ -1.f, -1.f, -1.f },
+		{  1.f, -1.f, -1.f },
+		{  1.f, -1.f,  1.f }
+	};
+	
+	u16 indices[] = {
+		0, 2, 1,
+		2, 0, 3,
+		
+		7, 5, 6,
+		5, 7, 4,
+		
+		4, 1, 5,
+		1, 4, 0,
+		
+		3, 6, 2,
+		6, 3, 7,
+		
+		1, 6, 5,
+		6, 1, 2,
+		
+		4, 3, 0,
+		3, 4, 7
+	};
+
+	core->skybox_mesh = MeshInit(&vertex_formats->vec3,
+				     ArraySize(vertices), vertices,
+				     ArraySize(indices), indices);
+
+	core->render_context.material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+							      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							      sizeof(GPU_Material) * SCENE_MAX_GPU_MATERIALS);
+
 	RendererInit(&core->renderer);
-	
+
 	u32 environment_asset_handle = AssetsLoadTexture(&core->assets, str8("res/environment_map.hdr"));
-	RenderContextSetSkybox(&core->render_context, &core->render_graph, AssetsImageFromHandle(&core->assets, environment_asset_handle));
-	
-	RenderContextGenerateBRDFLookUp(&core->render_context, &core->render_graph);
-	
-	//BRDFRendererGenerateBRDFLookUp(&core->render_context.brdf_lut_image, &core->render_graph);
-	//IBLRendererGenerateEnvironmentProbe(&core->render_context.environment_probe, &core->render_graph);
-	
+
+	core->skybox_cubemap = ImageAllocCubemap(1024, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
+	EnvironmentMapFromHDR(&core->render_graph, &core->skybox_cubemap, AssetsImageFromHandle(&core->assets, environment_asset_handle));
+
+	core->brdf_lut_image = ImageAlloc2D(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+	BRDFLookUpGenerate(&core->render_graph, &core->brdf_lut_image);
+
+	core->environment_probe = EnvironmentProbeInit();
+	IBLRendererGenerateEnvironmentProbe(&core->render_graph, &core->environment_probe, FetchStandardImageView(&core->skybox_cubemap));
+
 	SceneInit(&core->scene);
-	
+
 	core->main_camera = CameraInitPerspective(v3(0.f, 0.f, 0.f),
-											  v3(0.f, 1.f, 0.f),
-											  100.f, 1280.f/720.f,
-											  .1f, 10.f);
-	
+						  v3(0.f, 1.f, 0.f), 100.f,
+						  1280.f / 720.f, .1f, 10.f);
+
 	u32 damaged_helmet_model_asset_handle = AssetsLoadModel(&core->assets, str8("res/DamagedHelmet/DamagedHelmet.gltf"));
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
-	
-	core->damaged_helmet_object = SceneRegisterObject(&core->scene, &core->render_context, &core->assets,
-													  &damaged_helmet_model->sub_models[0].mesh,
-													  &damaged_helmet_model->sub_models[0].material,
-													  m4(1.f),
-													  SceneObjectFlag_DrawForwardPass);
-	
+
+	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
+		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->render_context, &core->assets,
+								      &damaged_helmet_model->sub_models[0].mesh,
+								      &damaged_helmet_model->sub_models[0].material, m4(1.f),
+								      SceneObjectFlag_DrawDeferredPass);
+	}
+
 	core->starting_ticks = platform->GetPerformanceCounter();
 }
 
-__declspec(dllexport) void
-CoreUpdate(Platform *platform_)
+__declspec(dllexport) void CoreUpdate(Platform *platform_)
 {
 	f32 t = GetTotalElapsedSecondsF();
-	
+
 	MemoryArenaClear(&core->frame_arena);
 	MemoryArenaClear(&core->scratch_arenas[0]);
 	MemoryArenaClear(&core->scratch_arenas[1]);
-	
-	if(platform->kb_pressed[KeyboardKey_Escape])
-	{
+
+	if (platform->kb_pressed[KeyboardKey_Escape]) {
 		DebugLog("Quitting...");
 		platform->exit = 1;
 	}
-	
+
 	// NOTE(kp): Camera.
 	{
 		core->main_camera.position = v3(0.f, -2.f, 0.f);
 		core->main_camera.forward = v3(0.f, 1.f, 0.f);
-		
+
 		CameraRecompute(&core->main_camera);
 	}
-	
+
 	// NOTE(kp): Scene.
 	SceneResolveAdding(&core->scene);
 	{
-		SceneObjectFromHandle(&core->scene, core->damaged_helmet_object)
-			->transform = M4Transform(v3(0.f, 5.f, .4f*SinF(t)),
-									  QuatInitEuler(0.f, t, 0.f),
-									  v3(1.f, 1.f, 1.f),
-									  v3(0.f, 0.f, 0.f));
+		for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
+			SceneObjectFromHandle(&core->scene, core->damaged_helmet_objects[i])
+				->transform = M4Transform(v3(i, 5.f, .4f * SinF(t)),
+							  QuatInitEuler(0.f, t, 0.f), v3(1.f, 1.f, 1.f),
+							  v3(0.f, 0.f, 0.f));
+		}
 	}
 	SceneResolveRemoving(&core->scene);
-	
+
 	// NOTE(kp): Rendering.
 	core->render_context.cmd = BeginGraphicsPresent();
 	{
 		Camera *camera = &core->main_camera;
-		RenderContextPerFrameData *current_frame = RenderContextGetCurrentFrame(&core->render_context);
+		CoreFrameData *current_frame = CoreGetCurrentFrameData();
 		
-		core->render_context.mesh_pass = MeshPassInit(&core->scene,
-													  &core->frame_arena);
-		
-		for(i32 i = 0; i < core->scene.object_count; i++)
-		{
+		core->render_context.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
+
+		for (i32 i = 0; i < core->scene.object_count; i++) {
 			SceneObject *object = core->scene.objects + i;
-			
+
 			GPU_ObjectData object_data = {0};
 			object_data.model_matrix = object->transform;
 			object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
-			
-			GPUBufferWrite(&current_frame->object_buffer, &object_data,
-						   sizeof(GPU_ObjectData),
-						   sizeof(GPU_ObjectData) * i);
-			
+
+			GPUBufferWrite(&current_frame->object_buffer,
+				       &object_data,
+				       sizeof(GPU_ObjectData),
+				       sizeof(GPU_ObjectData) * i);
+
 			VkDrawIndexedIndirectCommand command = {0};
 			command.indexCount = core->render_context.meshes[object->mesh_id].index_count;
 			command.instanceCount = 1;
 			command.firstIndex = 0;
 			command.vertexOffset = 0;
 			command.firstInstance = i;
-			
+
 			GPUBufferWrite(&current_frame->indirect_buffer, &command,
-						   sizeof(VkDrawIndexedIndirectCommand),
-						   sizeof(VkDrawIndexedIndirectCommand) * i);
+				       sizeof(VkDrawIndexedIndirectCommand),
+				       sizeof(VkDrawIndexedIndirectCommand) * i);
 		}
-		
+
 		// NOTE(kp): Per-frame buffer
 		{
 			GPU_FrameData frame_data = {0};
@@ -188,40 +373,62 @@ CoreUpdate(Platform *platform_)
 			frame_data.window_resolution.x = platform->window_pixel_width;
 			frame_data.window_resolution.y = platform->window_pixel_height;
 			frame_data.time = GetTotalElapsedSecondsF();
-			
-			GPUBufferWrite(&current_frame->frame_data_buffer, &frame_data,
-						   sizeof(GPU_FrameData), 0);
+
+			GPUBufferWrite(&current_frame->frame_data_buffer,
+				       &frame_data, sizeof(GPU_FrameData), 0);
 		}
-		
-		
-		RendererRenderFrame(&core->renderer,
-							&core->render_context,
-							&core->render_graph,
-							&core->scene,
-							&core->main_camera);
+
+		RendererRenderFrame(&core->renderer, &core->render_context,
+				    &core->render_graph, &core->scene,
+				    &core->main_camera,
+				    &core->environment_probe);
+
+		SkyboxRender(&core->render_graph,
+			     FetchStandardImageView(&core->skybox_cubemap),
+			     FetchStandardImageView(&core->renderer.gbuffer.depth));
 	}
 	RenderGraphExecuteRenderPasses(&core->render_graph, &core->render_context);
 	EndGraphicsPresent(&core->render_context.cmd);
 }
 
-__declspec(dllexport) void
-CoreDestroy(Platform *platform_)
+__declspec(dllexport) void CoreDestroy(Platform *platform_)
 {
 	SceneDestroy(&core->scene);
+	ShadersDestroy(&core->shaders);
 	AssetsDestroy(&core->assets);
 	RendererDestroy(&core->renderer);
-	RenderContextDestroy(&core->render_context);
+
+	// ---
+	
+	CoreDestroyPerFrameObjects();
+
+	// ---
+	
+	GPUBufferDestroy(&core->render_context.material_buffer);
+
+	// ---
+	
+	SamplerDestroy(&core->linear_sampler);
+
+	MeshDestroy(&core->light_sphere_mesh);
+	MeshDestroy(&core->skybox_mesh);
+
+	GPUBufferDestroy(&core->cubemap_capture_transforms);
+
+	ImageDestroy(&core->brdf_lut_image);
+	ImageDestroy(&core->skybox_cubemap);
+	ImageDestroy(&core->environment_probe.irradiance);
+	ImageDestroy(&core->environment_probe.prefilter);
+
 	GraphicsDeviceDestroy();
 }
 
-__declspec(dllexport) void
-CoreBeforeHotReload(Platform *platform_)
+__declspec(dllexport) void CoreBeforeHotReload(Platform *platform_)
 {
 	GraphicsDeviceBeforeHotReload();
 }
 
-__declspec(dllexport) void
-CoreAfterHotReload(Platform *platform_)
+__declspec(dllexport) void CoreAfterHotReload(Platform *platform_)
 {
 	CoreResetGlobals(platform_);
 	GraphicsDeviceAfterHotReload();

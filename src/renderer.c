@@ -24,8 +24,6 @@
 //                       rather than me having to do it manually.
 //                   [x] Move render graph into core and command buffer into render context.
 //                   [ ] Get rid of global graphics_device.
-//                   [ ] Make all graphics device related functions have Gr/Grd/Gd prefix (pick one).
-//                       --> Such as ImageAlloc(...) => GdImageAlloc(graphics_device, ...).
 //                   [ ] RenderContext shouldn't have any associated functions like
 //                       RenderContextGenerateBRDFLookUp(...), rather there should be seperate
 //                       renderers for that sort of thing.
@@ -50,129 +48,136 @@
 //           [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
 //           [ ] 19. Start going through ideas list in readme.md.
 
-internal void
-RenderPassGeometry(RenderContext *render_context, RenderInfo *render_info, void *context)
+internal void RenderPassGeometry(RenderContext *render_context, RenderInfo *render_info, void *context)
 {
 	Renderer *renderer = *((Renderer **)context);
 	CommandBuffer *cmd = &render_context->cmd;
-	
-	RenderContextPerFrameData *current_frame = RenderContextGetCurrentFrame(render_context);
-	
+
+	CoreFrameData *current_frame = CoreGetCurrentFrameData();
+
 	CmdBeginRendering(cmd, render_info);
 	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&render_context->model_program, &vertex_formats->model_format);
+		GraphicsPipelineDef pipeline_def =
+			GraphicsPipelineDefInitDefault(&shaders->model_program,
+						       &vertex_formats->model);
 		{
 			pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
-			
-			for(i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-			{
+
+			for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 				pipeline_def.colour_attachment_formats[i] = renderer->gbuffer.attachments[i].format;
-			}
-			
+
 			pipeline_def.has_depth_attachment = true;
 		}
 		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-		
+
 		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-		
-		for(IndirectBatch *batch = render_context->mesh_pass.batches; batch; batch = batch->next)
-		{
-			struct
-			{
+
+		for (IndirectBatch *batch = render_context->mesh_pass.batches; batch; batch = batch->next) {
+			struct {
 				u64 frame_data_buffer;
 				u64 transform_buffer;
 				u64 material_buffer;
 				u32 material_id;
 				u32 sampler;
-			}
-			args;
-			
+			} args;
+
 			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
 			args.transform_buffer = current_frame->object_buffer.device_address;
 			args.material_buffer = render_context->material_buffer.device_address;
 			args.material_id = batch->material_id;
-			args.sampler = render_context->linear_sampler.resource_id;
-			
-			CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-			
-			MeshBindCmd(render_context->meshes[batch->mesh_id].original, cmd);
-			
-			CmdDrawIndexedIndirect(cmd,
-								   &current_frame->indirect_buffer,
-								   sizeof(VkDrawIndexedIndirectCommand) * batch->first,
-								   batch->count,
-								   sizeof(VkDrawIndexedIndirectCommand));
+			args.sampler = core->linear_sampler.resource_id;
+
+			CmdPushConstants(cmd, st.layout,
+					 VK_SHADER_STAGE_ALL_GRAPHICS,
+					 sizeof(args), &args, 0);
+
+			MeshBindCmd(render_context->meshes[batch->mesh_id].original,
+				    cmd);
+
+			CmdDrawIndexedIndirect(cmd, &current_frame->indirect_buffer,
+					       sizeof(VkDrawIndexedIndirectCommand) * batch->first,
+					       batch->count,
+					       sizeof(VkDrawIndexedIndirectCommand));
 		}
 	}
 	CmdEndRendering(cmd);
 }
 
-internal void
-RenderPassLighting(RenderContext *render_context, RenderInfo *render_info, void *context)
+struct lighting_pass_context {
+	Renderer *renderer;
+	EnvironmentProbe *probe;
+};
+
+internal void RenderPassLighting(RenderContext *render_context, RenderInfo *render_info, void *context)
 {
-	Renderer *renderer = *((Renderer **)context);
+	struct lighting_pass_context *pass_context = (struct lighting_pass_context *)context;
+	Renderer *renderer = pass_context->renderer;
+	EnvironmentProbe *probe = pass_context->probe;
+	
 	CommandBuffer *cmd = &render_context->cmd;
-	
-	RenderContextPerFrameData *current_frame = RenderContextGetCurrentFrame(render_context);
-	
+
+	CoreFrameData *current_frame = CoreGetCurrentFrameData();
+
 	CmdBeginRendering(cmd, render_info);
 	{
 		// NOTE(kp): Ambient Lighting.
 		{
-			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&render_context->ambient_lighting_program, 0);
+			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
 			pipeline_def.depth_stencil_state.depth_test_enabled = false;
 			pipeline_def.depth_stencil_state.depth_write_enabled = false;
 			pipeline_def.colour_attachment_count = 1;
 			pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-			
+
 			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-			
+
 			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-			
-			struct
-			{
+
+			struct {
 				u64 frame_data_buffer;
-				
+
 				u32 position;
 				u32 albedo;
 				u32 normal;
 				u32 material;
 				u32 emissive;
-				
+
 				u32 irradiance_map;
 				u32 prefilter_map;
 				u32 brdf_lut;
-				
+
 				u32 linear_sampler;
-				
+
 				u32 _padding[3];
-			}
-			args;
-			
-			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-			
+			} args;
+
+			args.frame_data_buffer =
+				current_frame->frame_data_buffer.device_address;
+
 			args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
 			args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
 			args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
 			args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
 			args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
-			
-			args.irradiance_map = FetchStandardImageView(&render_context->environment_probe.irradiance)->resource_id;
-			args.prefilter_map  = FetchStandardImageView(&render_context->environment_probe.prefilter)->resource_id;
-			args.brdf_lut       = FetchStandardImageView(&render_context->brdf_lut_image)->resource_id;
-			
-			args.linear_sampler = render_context->linear_sampler.resource_id;
-			
-			CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-			
+
+			args.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
+			args.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
+			args.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
+
+			args.linear_sampler = core->linear_sampler.resource_id;
+
+			CmdPushConstants(cmd, st.layout,
+					 VK_SHADER_STAGE_ALL_GRAPHICS,
+					 sizeof(args), &args, 0);
+
 			CmdDrawVerticesN(cmd, 3);
 		}
-		
+
 		// NOTE(kp): Direct lighting.
 		{
-			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&render_context->direct_lighting_point_program, &vertex_formats->v3_format);
+			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
+											  &vertex_formats->vec3);
 			pipeline_def.depth_stencil_state.depth_test_enabled = false;
 			pipeline_def.depth_stencil_state.depth_write_enabled = false;
 			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
@@ -182,16 +187,16 @@ RenderPassLighting(RenderContext *render_context, RenderInfo *render_info, void 
 			pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
 			pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
 			pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
-			
+
 			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-			
+
 			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-			
-			MeshBindCmd(&render_context->light_sphere_mesh, cmd);
-			
+
+			MeshBindCmd(&core->light_sphere_mesh, cmd);
+
 			/*
-			for(i32 i = 0; i < renderer->light_count; i++)
+			for (i32 i = 0; i < renderer->light_count; i++)
 			{
 				Light *light = renderer->lights + i;
 				
@@ -250,148 +255,80 @@ RenderPassLighting(RenderContext *render_context, RenderInfo *render_info, void 
 	CmdEndRendering(cmd);
 }
 
-internal void
-RenderPassSkybox(RenderContext *render_context, RenderInfo *render_info, void *context)
-{
-	Renderer *renderer = *((Renderer **)context);
-	CommandBuffer *cmd = &render_context->cmd;
-	
-	CmdBeginRendering(cmd, render_info);
-	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&render_context->skybox_program, &vertex_formats->v3_format);
-		pipeline_def.has_depth_attachment = true;
-		pipeline_def.depth_stencil_state.depth_test_enabled = true;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-		
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-		
-		struct
-		{
-			u64 frame_data_buffer;
-			u32 cubemap_id;
-			u32 sampler_id;
-		}
-		args;
-		
-		args.frame_data_buffer = RenderContextGetCurrentFrame(render_context)->frame_data_buffer.device_address;
-		args.cubemap_id = FetchStandardImageView(&render_context->skybox_cubemap)->resource_id;
-		args.sampler_id = render_context->linear_sampler.resource_id;
-		
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-		
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-		
-		MeshBindCmd(&render_context->skybox_mesh, cmd);
-		MeshDrawCmd(&render_context->skybox_mesh, cmd);
-	}
-	CmdEndRendering(cmd);
-}
-
 // ---
 
-internal void
-RendererInit(Renderer *renderer)
+internal void RendererInit(Renderer *renderer)
 {
-	for(i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-	{
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++) {
 		renderer->gbuffer.attachments[i] = ImageAlloc2D(graphics_device->swapchain.width,
-														graphics_device->swapchain.height,
-														VK_FORMAT_R32G32B32A32_SFLOAT, 1u);
+								graphics_device->swapchain.height,
+								VK_FORMAT_R32G32B32A32_SFLOAT, 1u);
 	}
-	
+
 	renderer->gbuffer.depth = ImageAlloc2D(graphics_device->swapchain.width,
-										   graphics_device->swapchain.height,
-										   graphics_device->depth_format, 1u);
+					       graphics_device->swapchain.height,
+					       graphics_device->depth_format, 1u);
 }
 
-internal void
-RendererDestroy(Renderer *renderer)
+internal void RendererDestroy(Renderer *renderer)
 {
-	for(i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-	{
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 		ImageDestroy(renderer->gbuffer.attachments + i);
-	}
-	
+
 	ImageDestroy(&renderer->gbuffer.depth);
 }
 
-internal void
-RendererRenderFrame(Renderer *renderer,
-					RenderContext *context,
-					RenderGraph *graph,
-					Scene *scene,
-					Camera *camera)
+internal void RendererRenderFrame(Renderer *renderer,
+				  RenderContext *context,
+				  RenderGraph *graph,
+				  Scene *scene,
+				  Camera *camera,
+				  EnvironmentProbe *probe)
 {
-	RenderContextPerFrameData *frame = RenderContextGetCurrentFrame(context);
-	
 	// --- GEOMETRY PASS
-	
-	RenderPass gbuffer_render_pass = {0};
+
+	RenderPass gbuffer_render_pass = { 0 };
 	gbuffer_render_pass.type = RenderPassType_Graphics;
 	gbuffer_render_pass.graphics.Record = RenderPassGeometry;
 	gbuffer_render_pass.graphics.attachment_count = GBufferAttachment_MaxEnum + 1;
-	
+
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
+		gbuffer_render_pass.graphics.attachments[i] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
+											    FetchStandardImageView(renderer->gbuffer.attachments + i),
+											    0, v4(0.f, 0.f, 0.f, 1.f));
+
+	gbuffer_render_pass.graphics.attachments[GBufferAttachment_MaxEnum] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
+													   FetchStandardImageView(&renderer->gbuffer.depth), 0,
+													   1.f, 0);
+
 	MemoryCopy(gbuffer_render_pass.context, &renderer, sizeof(Renderer *));
 	
-	for(i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-	{
-		gbuffer_render_pass.graphics.attachments[i] =
-			RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-										  FetchStandardImageView(renderer->gbuffer.attachments + i),
-										  0, v4(0.f, 0.f, 0.f, 1.f));
-	}
-	
-	gbuffer_render_pass.graphics.attachments[GBufferAttachment_MaxEnum] =
-		RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
-									 FetchStandardImageView(&renderer->gbuffer.depth),
-									 0, 1.f, 0);
-	
 	RenderGraphPush(graph, &gbuffer_render_pass);
-	
+
 	// --- LIGHTING PASS
+
+	struct lighting_pass_context lighting_context = {
+		.renderer = renderer,
+		.probe = probe
+	};
 	
-	RenderPass lighting_render_pass = {0};
+	RenderPass lighting_render_pass = { 0 };
 	lighting_render_pass.type = RenderPassType_Graphics;
 	lighting_render_pass.graphics.Record = RenderPassLighting;
 	lighting_render_pass.graphics.view_count = GBufferAttachment_MaxEnum + 2;
-	
-	MemoryCopy(lighting_render_pass.context, &renderer, sizeof(Renderer *));
-	
-	for(i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-	{
+
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 		lighting_render_pass.graphics.views[i] = FetchStandardImageView(renderer->gbuffer.attachments + i);
-	}
-	
-	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 0] = FetchStandardImageView(&context->environment_probe.irradiance);
-	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 1] = FetchStandardImageView(&context->environment_probe.prefilter);
-	
+
+	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 0] = FetchStandardImageView(&probe->irradiance);
+	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 1] = FetchStandardImageView(&probe->prefilter);
+
 	lighting_render_pass.graphics.attachment_count = 1;
 	lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-																				 GetCurrentSwapchainImageView(&graphics_device->swapchain),
-																				 0, v4(0.f, 0.f, 0.f, 1.f));
-	
+										     GetCurrentSwapchainImageView(&graphics_device->swapchain),
+										     0, v4(0.f, 0.f, 0.f, 1.f));
+
+	MemoryCopy(lighting_render_pass.context, &lighting_context, sizeof(lighting_context));
+
 	RenderGraphPush(graph, &lighting_render_pass);
-	
-	// --- SKYBOX
-	
-	RenderPass skybox_pass = {0};
-	skybox_pass.type = RenderPassType_Graphics;
-	skybox_pass.graphics.Record = RenderPassSkybox;
-	skybox_pass.graphics.view_count = 1;
-	skybox_pass.graphics.views[0] = FetchStandardImageView(&context->skybox_cubemap);
-	skybox_pass.graphics.attachment_count = 2;
-	skybox_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_LOAD,
-																		GetCurrentSwapchainImageView(&graphics_device->swapchain),
-																		0, v4(0.f, 0.f, 0.f, 1.f));
-	skybox_pass.graphics.attachments[1] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_LOAD,
-																	   FetchStandardImageView(&renderer->gbuffer.depth),
-																	   0, 1.f, 0);
-	
-	MemoryCopy(skybox_pass.context, &renderer, sizeof(Renderer *));
-	
-	RenderGraphPush(graph, &skybox_pass);
 }

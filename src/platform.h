@@ -1,6 +1,5 @@
 
-typedef enum KeyboardKey
-{
+typedef enum KeyboardKey {
 	KeyboardKey_Unknown = 0,
 	KeyboardKey_A = 4,
 	KeyboardKey_B = 5,
@@ -48,7 +47,7 @@ typedef enum KeyboardKey
 	KeyboardKey_LeftBracket = 47,
 	KeyboardKey_RightBracket = 48,
 	KeyboardKey_Backslash = 49,
-	KeyboardKey_NonUSHash= 50,
+	KeyboardKey_NonUSHash = 50,
 	KeyboardKey_Semicolon = 51,
 	KeyboardKey_Apostrophe = 52,
 	KeyboardKey_Grave = 53,
@@ -167,11 +166,11 @@ typedef enum KeyboardKey
 	KeyboardKey_CurrencyUnit = 180,
 	KeyboardKey_CurrencySubUnit = 181,
 	KeyboardKey_KpLeftParent = 182,
-	KeyboardKey_KpRightParent= 183,
+	KeyboardKey_KpRightParent = 183,
 	KeyboardKey_KpLeftBrace = 184,
 	KeyboardKey_KpRightBrace = 185,
 	KeyboardKey_KpTab = 186,
-	KeyboardKey_KpBackspace= 187,
+	KeyboardKey_KpBackspace = 187,
 	KeyboardKey_KpA = 188,
 	KeyboardKey_KpB = 189,
 	KeyboardKey_KpC = 190,
@@ -215,11 +214,9 @@ typedef enum KeyboardKey
 	KeyboardKey_RightAlt = 230,
 	KeyboardKey_RightSuper = 231,
 	KeyboardKey_MaxEnum
-}
-KeyboardKey;
+} KeyboardKey;
 
-typedef enum MouseButton
-{
+typedef enum MouseButton {
 	MouseButton_Unknown = 0,
 	MouseButton_Left = 1,
 	MouseButton_Middle = 2,
@@ -227,136 +224,125 @@ typedef enum MouseButton
 	MouseButton_SideBottom = 4,
 	MouseButton_SideTop = 5,
 	MouseButton_MaxEnum
-}
-MouseButton;
+} MouseButton;
 
 #define MAX_GAMEPADS 4
 
-typedef enum GamepadButton
-{
+typedef enum GamepadButton {
 	GamepadButton_A,
 	GamepadButton_B,
 	GamepadButton_X,
 	GamepadButton_Y,
-	
+
 	GamepadButton_Back,
 	GamepadButton_Select,
 	GamepadButton_Start,
-	
+
 	GamepadButton_LeftStick,
 	GamepadButton_RightStick,
-	
+
 	GamepadButton_LeftShoulder,
 	GamepadButton_RightShoulder,
-	
+
 	GamepadButton_Up,
 	GamepadButton_Down,
 	GamepadButton_Left,
 	GamepadButton_Right,
-	
-	GamepadButton_MaxEnum
-}
-GamepadButton;
 
-typedef enum GamepadAxis
-{
+	GamepadButton_MaxEnum
+} GamepadButton;
+
+typedef enum GamepadAxis {
 	GamepadAxis_LeftX,
 	GamepadAxis_LeftY,
-	
+
 	GamepadAxis_RightX,
 	GamepadAxis_RightY,
-	
+
 	GamepadAxis_TriggerLeft,
 	GamepadAxis_TriggerRight,
-	
-	GamepadAxis_MaxEnum
-}
-GamepadAxis;
 
-typedef enum GamepadType
-{
+	GamepadAxis_MaxEnum
+} GamepadAxis;
+
+typedef enum GamepadType {
 	GamepadType_Standard,
-	
+
 	GamepadType_Xbox360,
 	GamepadType_XboxOne,
-	
+
 	GamepadType_PS3,
 	GamepadType_PS4,
 	GamepadType_PS5,
-	
+
 	GamepadType_NintendoSwitchPro,
 	GamepadType_NintendoSwitchJoyconLeft,
 	GamepadType_NintendoSwitchJoyconRight,
 	GamepadType_NintendoSwitchJoyconPair,
-	
-	GamepadType_MaxEnum
-}
-GamepadType;
 
-typedef struct GamepadState
-{
+	GamepadType_MaxEnum
+} GamepadType;
+
+typedef struct GamepadState {
 	b32 down[GamepadButton_MaxEnum];
 	b32 pressed[GamepadButton_MaxEnum];
 	b32 released[GamepadButton_MaxEnum];
-	
+
 	v2 left_stick;
 	v2 right_stick;
-	
+
 	f32 left_trigger;
 	f32 right_trigger;
-}
-GamepadState;
+} GamepadState;
 
-typedef struct Platform
-{
-    void *permanent_memory;
-    u64   permanent_memory_size;
-    
+typedef struct Platform {
+	void *permanent_memory;
+	u64 permanent_memory_size;
+
 	void *transient_memory;
-	u64   transient_memory_size;
-	
+	u64 transient_memory_size;
+
 	void *scratch_memory[2];
-	u64   scratch_memory_size;
-	
-    i32 window_width;
-    i32 window_height;
-	
+	u64 scratch_memory_size;
+
+	i32 window_width;
+	i32 window_height;
+
 	i32 window_pixel_width;
 	i32 window_pixel_height;
-	
+
 	f32 window_opacity;
-	
-    b32 fullscreen;
-    b32 borderless;
-	
-    f32 target_fps;
-    f32 current_time;
-	
+
+	b32 fullscreen;
+	b32 borderless;
+
+	f32 target_fps;
+	f32 current_time;
+
 	b32 cursor_visible;
 	b32 cursor_locked;
-	
+
 	b32 exit;
-	
+
 	b32 kb_down[KeyboardKey_MaxEnum];
 	b32 kb_pressed[KeyboardKey_MaxEnum];
 	b32 kb_released[KeyboardKey_MaxEnum];
-	
+
 	b32 mb_down[MouseButton_MaxEnum];
 	b32 mb_pressed[MouseButton_MaxEnum];
 	b32 mb_released[MouseButton_MaxEnum];
-	
+
 	v2 mouse_position;
 	v2 mouse_delta;
 	v2 mouse_screen_position;
 	v2 mouse_wheel;
-	
+
 	GamepadState gamepads[MAX_GAMEPADS];
-	
+
 	const char *const *(*GetVulkanInstanceExtensions)(u32 *count);
 	b32 (*CreateVulkanSurface)(void *instance, void *surface);
-	
+
 	u64 (*GetTicks)(void);
 	u64 (*GetPerformanceCounter)(void);
 	u64 (*GetPerformanceFrequency)(void);
-}
-Platform;
+} Platform;

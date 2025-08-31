@@ -47,7 +47,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	
 	float3 result = 0.;
 	
-	for(int i = 0; i < SAMPLE_COUNT; i++)
+	for (int i = 0; i < SAMPLE_COUNT; i++)
 	{
 		float2 Xi = Hammersley(i, SAMPLE_COUNT);
 		float3 H = ImportanceSampleGGX(Xi, normal, args.roughness);
@@ -55,7 +55,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 		
 		float NdotL = max(0., dot(normal, L));
 
-        if(NdotL > 0.)
+        if (NdotL > 0.)
         {
 			float NdotH = max(0., dot(normal, H));
 			float HdotV = max(0., dot(H, V));

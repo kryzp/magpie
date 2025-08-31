@@ -8,7 +8,7 @@ set opts=-FC -GR- -EHa- -nologo -Zi -Od -W4
 set code=%cd%\src
 set libs=/LIBPATH:"D:\DevLibs\assimp\lib\Release" /LIBPATH:"D:\DevLibs\SDL3\VisualC\x64\Release"
 set includes=/I"%code%" /I"C:\VulkanSDK\1.4.313.1\Include" /I"D:\DevLibs\assimp\include" /I"D:\DevLibs\SDL3\include"
-set supwarn=/wd4201 /wd4018 /wd4996
+set supwarn=/wd4201 /wd4018 /wd4996 /wd4100 /wd4244
 
 if not exist build mkdir build
 pushd build

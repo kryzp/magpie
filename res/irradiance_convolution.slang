@@ -43,9 +43,9 @@ float4 FragmentMain(VS_Output input)
 
 	float3 irradiance = 0.;
 	
-	for(float phi = 0.; phi < 2. * PI; phi += dt)
+	for (float phi = 0.; phi < 2. * PI; phi += dt)
 	{
-		for(float theta = 0.; theta < .5 * PI; theta += dt)
+		for (float theta = 0.; theta < .5 * PI; theta += dt)
 		{
 			float3 sample = float3(
 				sin(theta) * cos(phi),
