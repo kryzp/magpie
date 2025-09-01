@@ -78,7 +78,6 @@ internal SceneObject *SceneObjectFromHandle(Scene *scene, u32 handle)
 
 internal void SceneResolveRemoving(Scene *scene)
 {
-	// We need to remove these from both objects and direct_batches.
 	for (i32 i = 0; i < scene->pending_removal_count; i++) {
 		u32 to_remove = scene->pending_removal[i];
 		scene->reusable_handles[scene->reusable_handle_count++] = to_remove;
