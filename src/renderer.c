@@ -23,8 +23,7 @@
 //               [x] Shaders should automatically assign their push constants sizes
 //                   rather than me having to do it manually.
 //               [x] Move render graph into core and command buffer into render context.
-//               [ ] Get rid of global graphics_device.
-//               [ ] RenderState shouldn't have any associated functions like
+//               [x] RenderState shouldn't have any associated functions like
 //                   RenderStateGenerateBRDFLookUp(...), rather there should be seperate
 //                   renderers for that sort of thing.
 //                   --> Same goes for e.g: updating per frame data.
@@ -53,7 +52,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 	Renderer *renderer = *((Renderer **)context);
 	CommandBuffer *cmd = &rs->cmd;
 
-	CoreFrameData *current_frame = CoreGetCurrentFrameData();
+	RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
 
 	CmdBeginRendering(cmd, render_info);
 	{
@@ -113,7 +112,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	Renderer *renderer = pass_context->renderer;
 	EnvironmentProbe *probe = pass_context->probe;
 	CommandBuffer *cmd = &rs->cmd;
-        CoreFrameData *current_frame = CoreGetCurrentFrameData();
+        RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
 
 	CmdBeginRendering(cmd, render_info);
 	{
@@ -148,8 +147,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 				u32 _padding[3];
 			} args;
 
-			args.frame_data_buffer =
-				current_frame->frame_data_buffer.device_address;
+			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
 
 			args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
 			args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
@@ -191,27 +189,24 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 
 			MeshBindCmd(&core->light_sphere_mesh, cmd);
 
-			/*
-			for (i32 i = 0; i < renderer->light_count; i++)
-			{
-				Light *light = renderer->lights + i;
-				
+			for (u32 i = 0; i < rs->light_count; i++) {
+				Light *light = rs->lights + i;
+
 				f32 epsilon_intensity = .1f;
 				f32 light_max = V3MaxValue(light->colour);
 				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
-				
+
 				m4 transform = M4Transform(light->position,
-										   QuatInitIdentity(),
-										   v3u(heuristic_radius),
-										   v3u(0.f));
-				
-				struct
-				{
-					u64 frame_data;
-					u64 lights;
-					
+							   QuatInitIdentity(),
+							   v3u(heuristic_radius),
+							   v3u(0.f));
+
+				struct {
+					u64 frame_data_buffer;
+					u64 lights_buffer;
+
 					m4 transform;
-					
+
 					u32 light_id;
 					
 					u32 position;
@@ -219,15 +214,14 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 					u32 normal;
 					u32 material;
 					u32 emissive;
-					
+
 					u32 linear_sampler;
-					
+
 					u32 _padding;
-				}
-				args;
-				
-				args.frame_data = current_frame->frame_data_buffer.device_address;
-				args.lights = current_frame->light_buffer.device_address;
+				} args;
+
+				args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
+				args.lights_buffer = current_frame->light_buffer.device_address;
 				
 				args.transform = transform;
 				
@@ -239,13 +233,14 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 				args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
 				args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
 				
-				args.linear_sampler = rs->linear_sampler.resource_id;
-				
-				CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-				
-				MeshDrawCmd(&rs->light_sphere_mesh, cmd);
+				args.linear_sampler = core->linear_sampler.resource_id;
+
+				CmdPushConstants(cmd, st.layout,
+						 VK_SHADER_STAGE_ALL_GRAPHICS,
+						 sizeof(args), &args, 0);
+
+				MeshDrawCmd(&core->light_sphere_mesh, cmd);
 			}
-*/
 		}
 	}
 	CmdEndRendering(cmd);
@@ -255,11 +250,10 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 
 internal void RendererInit(Renderer *renderer)
 {
-	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++) {
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 		renderer->gbuffer.attachments[i] = ImageAlloc2D(graphics_device->swapchain.width,
 								graphics_device->swapchain.height,
 								VK_FORMAT_R32G32B32A32_SFLOAT, 1u);
-	}
 
 	renderer->gbuffer.depth = ImageAlloc2D(graphics_device->swapchain.width,
 					       graphics_device->swapchain.height,

@@ -1,12 +1,4 @@
 
-// Per-frame data like shader buffers.
-typedef struct CoreFrameData {
-	GPUBuffer frame_data_buffer;
-	GPUBuffer object_buffer;
-	GPUBuffer light_buffer;
-	GPUBuffer indirect_buffer;
-} CoreFrameData;
-
 typedef struct Core {
 	MemoryArena permanent_arena;
 	MemoryArena frame_arena;
@@ -15,10 +7,9 @@ typedef struct Core {
 	u64 starting_ticks;
 
 	GraphicsDevice graphics_device;
-
-	Renderer renderer;
-	RenderState rs;
+	RenderState render_state;
 	RenderGraph render_graph;
+	Renderer renderer;
 
 	VertexFormats vertex_formats;
 	Shaders shaders;
@@ -42,15 +33,11 @@ typedef struct Core {
 
 	GPUBuffer cubemap_capture_transforms;
 
-	CoreFrameData per_frame_data[FRAMES_IN_FLIGHT];
-
 	Sampler linear_sampler;
 
 	Mesh skybox_mesh;
 	Mesh light_sphere_mesh;
 } Core;
-
-internal CoreFrameData *CoreGetCurrentFrameData();
 
 global Core *core = 0;
 global Platform *platform = 0;

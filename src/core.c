@@ -56,11 +56,6 @@
 #include "ibl_renderer.c"
 #include "brdf_lut.c"
 
-internal CoreFrameData *CoreGetCurrentFrameData()
-{
-	return core->per_frame_data + graphics_device->current_frame_index;
-}
-
 // https://songho.ca/opengl/gl_sphere.html
 // TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
 internal void CoreCreateUnitSphereMesh()
@@ -121,49 +116,6 @@ internal void CoreCreateUnitSphereMesh()
 	ReleaseScratch(&scratch);
 }
 
-internal void CoreCreatePerFrameObjects()
-{
-	for (i32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		CoreFrameData *frame = core->per_frame_data + i;
-
-		frame->frame_data_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-							  sizeof(GPU_FrameData));
-		
-		frame->object_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-						      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-						      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-						      sizeof(GPU_ObjectData) * SCENE_MAX_OBJECTS);
-
-		/*
-		  frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-		  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		  sizeof(GPU_Light) * ArraySize(renderer->lights));
-		*/
-
-		frame->indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-							VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
-							VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-							sizeof(VkDrawIndexedIndirectCommand) *
-							SCENE_MAX_OBJECTS);
-	}
-}
-
-internal void CoreDestroyPerFrameObjects()
-{
-	for (i32 i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		CoreFrameData *current_frame = core->per_frame_data + i;
-
-		GPUBufferDestroy(&current_frame->frame_data_buffer);
-		GPUBufferDestroy(&current_frame->object_buffer);
-		//GPUBufferDestroy(&current_frame->light_buffer);
-		GPUBufferDestroy(&current_frame->indirect_buffer);
-	}
-}
-
 internal void CoreResetGlobals(Platform *platform_)
 {
 	platform = platform_;
@@ -194,7 +146,6 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	ShadersInit(&core->shaders, &core->permanent_arena);
 
 	CoreCreateUnitSphereMesh();
-	CoreCreatePerFrameObjects();
 
 	core->linear_sampler = SamplerInitFilter(VK_FILTER_NEAREST);
 
@@ -258,11 +209,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 				     ArraySize(vertices), vertices,
 				     ArraySize(indices), indices);
 
-	core->rs.material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-							      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-							      sizeof(GPU_Material) * SCENE_MAX_GPU_MATERIALS);
-
+	RenderStateInit(&core->render_state);
 	RendererInit(&core->renderer);
 
 	u32 environment_asset_handle = AssetsLoadTexture(&core->assets, str8("res/environment_map.hdr"));
@@ -286,7 +233,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
 
 	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
-		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->rs, &core->assets,
+		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->render_state, &core->assets,
 								      &damaged_helmet_model->sub_models[0].mesh,
 								      &damaged_helmet_model->sub_models[0].material, m4(1.f),
 								      SceneObjectFlag_DrawDeferredPass);
@@ -329,12 +276,12 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 	SceneResolveRemoving(&core->scene);
 
 	// Rendering.
-	core->rs.cmd = BeginGraphicsPresent();
+	core->render_state.cmd = BeginGraphicsPresent();
 	{
 		Camera *camera = &core->main_camera;
-		CoreFrameData *current_frame = CoreGetCurrentFrameData();
+		RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(&core->render_state);
 		
-		core->rs.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
+		core->render_state.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
 
 		for (i32 i = 0; i < core->scene.object_count; i++) {
 			SceneObject *object = core->scene.objects + i;
@@ -349,7 +296,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				       sizeof(GPU_ObjectData) * i);
 
 			VkDrawIndexedIndirectCommand command = {0};
-			command.indexCount = core->rs.meshes[object->mesh_id].index_count;
+			command.indexCount = core->render_state.meshes[object->mesh_id].index_count;
 			command.instanceCount = 1;
 			command.firstIndex = 0;
 			command.vertexOffset = 0;
@@ -366,7 +313,8 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			frame_data.view = camera->view;
 			frame_data.projection = camera->projection;
 			frame_data.view_projection = M4MultiplyM4(frame_data.projection, frame_data.view);
-			frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection, M4RemoveTranslation(frame_data.view));
+			frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection,
+										 M4RemoveTranslation(frame_data.view));
 			frame_data.inv_view = M4Inverse(frame_data.view);
 			frame_data.inv_projection = M4Inverse(frame_data.projection);
 			frame_data.camera_position.xyz = camera->position;
@@ -378,7 +326,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				       &frame_data, sizeof(GPU_FrameData), 0);
 		}
 
-		RendererRenderFrame(&core->renderer, &core->rs,
+		RendererRenderFrame(&core->renderer, &core->render_state,
 				    &core->render_graph, &core->scene,
 				    &core->main_camera,
 				    &core->environment_probe);
@@ -387,8 +335,8 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			     FetchStandardImageView(&core->skybox_cubemap),
 			     FetchStandardImageView(&core->renderer.gbuffer.depth));
 	}
-	RenderGraphExecuteRenderPasses(&core->render_graph, &core->rs);
-	EndGraphicsPresent(&core->rs.cmd);
+	RenderGraphExecuteRenderPasses(&core->render_graph, &core->render_state);
+	EndGraphicsPresent(&core->render_state.cmd);
 }
 
 __declspec(dllexport) void CoreDestroy(Platform *platform_)
@@ -397,15 +345,8 @@ __declspec(dllexport) void CoreDestroy(Platform *platform_)
 	ShadersDestroy(&core->shaders);
 	AssetsDestroy(&core->assets);
 	RendererDestroy(&core->renderer);
-
-	// ---
+	RenderStateDestroy(&core->render_state);
 	
-	CoreDestroyPerFrameObjects();
-
-	// ---
-	
-	GPUBufferDestroy(&core->rs.material_buffer);
-
 	// ---
 	
 	SamplerDestroy(&core->linear_sampler);

@@ -1232,9 +1232,9 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 	dynamic_state_create_info.dynamicStateCount = ArraySize(GRAPHICS_PIPELINE_DYNAMIC_STATES);
 	dynamic_state_create_info.pDynamicStates = GRAPHICS_PIPELINE_DYNAMIC_STATES;
 
-	VkFormat depth_stencil_format = definition->has_depth_attachment ?
-		graphics_device->depth_format :
-		VK_FORMAT_UNDEFINED;
+	VkFormat depth_stencil_format = definition->has_depth_attachment
+		? graphics_device->depth_format
+		: VK_FORMAT_UNDEFINED;
 
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {0};
 	pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -1254,7 +1254,7 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 		shader_stage->module = definition->program->stages[i].module;
 		shader_stage->pName = "main";
 	}
-
+	
 	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {0};
 	graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	graphics_pipeline_create_info.stageCount = definition->program->stage_count;
@@ -1278,7 +1278,8 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 
 	VK_CHECK(vkCreateGraphicsPipelines(graphics_device->device,
 					   graphics_device->pipeline_process_cache, 1,
-					   &graphics_pipeline_create_info, 0, &pipeline),
+					   &graphics_pipeline_create_info, NULL,
+					   &pipeline),
 		 "Failed to create graphics pipeline.");
 
 	return pipeline;
@@ -1302,7 +1303,8 @@ internal VkPipeline ComputePipelineCreate(VkPipelineLayout layout,
 
 	VK_CHECK(vkCreateComputePipelines(graphics_device->device,
 					  graphics_device->pipeline_process_cache, 1,
-					  &compute_pipeline_create_info, 0, &pipeline),
+					  &compute_pipeline_create_info, NULL,
+					  &pipeline),
 		 "Failed to create compute pipeline.");
 
 	return pipeline;
@@ -2130,8 +2132,8 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	volkLoadInstance(graphics_device->instance);
 
 	if (graphics_device->has_validation_layers) {
-		VK_CHECK(CreateGraphicsDeviceDebugUtilsMessengerExt(graphics_device->instance, &debug_create_info,
-								    0, &graphics_device->debug_messenger),
+		VK_CHECK(CreateGraphicsDeviceDebugUtilsMessengerExt(graphics_device->instance, &debug_create_info, NULL,
+								    &graphics_device->debug_messenger),
 			 "Failed to create debug messenger.");
 	}
 
@@ -2206,8 +2208,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	// Locate the graphics queue.
 	{
 		u32 queue_family_count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count,
-							 0);
+		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device, &queue_family_count, 0);
 
 		if (queue_family_count <= 0)
 			DebugLogCrash("Failed to find any queue families.");
