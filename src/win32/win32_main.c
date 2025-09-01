@@ -121,7 +121,7 @@ i32 main(void)
 		return -1;
 	}
 
-	// NOTE(kp): Init platform.
+	//  Init platform.
 	{
 		global_platform.permanent_memory_size = PERMANENT_MEMORY_SIZE;
 		global_platform.transient_memory_size = TRANSIENT_MEMORY_SIZE;
@@ -169,7 +169,7 @@ i32 main(void)
 
 	Platform prev_st = global_platform;
 
-	// NOTE(kp): Load in our dynamically linked code seperately.
+	//  Load in our dynamically linked code seperately.
 	const char *source_dll = "build/core.dll";
 	Win32CoreCode core_code = {0};
 	Win32LoadCoreCode(&core_code, source_dll);

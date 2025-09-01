@@ -71,19 +71,19 @@ typedef struct EnvironmentProbe {
 #define SCENE_MAX_GPU_MATERIALS 32
 
 typedef struct Scene {
-	// NOTE(kp): Unsorted object data.
+	//  Unsorted object data.
 	u32 object_count;
 	SceneObject objects[SCENE_MAX_OBJECTS];
 
-	// NOTE(kp): Objects pending addition.
+	//  Objects pending addition.
 	u32 pending_addition_count;
 	SceneObject pending_addition[SCENE_MAX_OBJECTS];
 
-	// NOTE(kp): Object handles pending removal.
+	//  Object handles pending removal.
 	u32 pending_removal_count;
 	u32 pending_removal[SCENE_MAX_OBJECTS];
 
-	// NOTE(kp): Object handles available for reuse.
+	//  Object handles available for reuse.
 	u32 reusable_handle_count;
 	u32 reusable_handles[SCENE_MAX_OBJECTS];
 } Scene;

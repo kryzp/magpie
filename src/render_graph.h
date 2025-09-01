@@ -11,19 +11,19 @@ typedef enum RenderPassType {
 	RenderPassType_Compute
 } RenderPassType;
 
-typedef struct RenderContext RenderContext;
+typedef struct RenderState RenderState;
 
 typedef struct RenderPass {
 	RenderPassType type;
 
-	// NOTE(kp): Generic data that can be set depending on whatever is required
-	//           by the pass. This is then given to the Record(...) function
-	//           as the "context".
+	// Generic data that can be set depending on whatever is required
+	// by the pass. This is then given to the Record(...) function
+	// as the "context".
 	u8 context[128];
 
 	union {
 		struct {
-			void (*Record)(RenderContext *render_context,
+			void (*Record)(RenderState *rs,
 				       RenderInfo *render_info, void *context);
 
 			u32 view_mask;
@@ -36,7 +36,7 @@ typedef struct RenderPass {
 		} graphics;
 
 		struct ComputePassDef {
-			void (*Record)(RenderContext *render_context,
+			void (*Record)(RenderState *rs,
 				       void *context);
 
 			u32 view_count;

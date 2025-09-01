@@ -1,5 +1,5 @@
 
-internal u32 RenderContextUploadMesh(RenderContext *context, Mesh *mesh)
+internal u32 RenderStateUploadMesh(RenderState *context, Mesh *mesh)
 {
 	for (i32 i = 0; i < context->mesh_count; i++) {
 		if (MeshesEqual(context->meshes[i].original, mesh)) {
@@ -7,7 +7,7 @@ internal u32 RenderContextUploadMesh(RenderContext *context, Mesh *mesh)
 		}
 	}
 
-	RenderMesh render_mesh = { 0 };
+	RenderMesh render_mesh = {0};
 	{
 		render_mesh.original = mesh;
 
@@ -23,7 +23,7 @@ internal u32 RenderContextUploadMesh(RenderContext *context, Mesh *mesh)
 	return context->mesh_count++;
 }
 
-internal u32 RenderContextUploadMaterial(RenderContext *context, Assets *assets,
+internal u32 RenderStateUploadMaterial(RenderState *context, Assets *assets,
 					 Material *material)
 {
 	for (i32 i = 0; i < context->material_count; i++) {
@@ -34,7 +34,7 @@ internal u32 RenderContextUploadMaterial(RenderContext *context, Assets *assets,
 
 	context->materials[context->material_count] = *material;
 
-	GPU_Material gpu_material = { 0 };
+	GPU_Material gpu_material = {0};
 
 	gpu_material.diffuse_texture =
 		FetchStandardImageView(

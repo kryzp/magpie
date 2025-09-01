@@ -1,7 +1,7 @@
 
 internal MemoryArena MemoryArenaInit(void *memory, u64 size)
 {
-	MemoryArena arena = { 0 };
+	MemoryArena arena = {0};
 	arena.memory = memory;
 	arena.size = size;
 	arena.used = 0;
@@ -25,14 +25,13 @@ internal void *MemoryArenaPush(MemoryArena *arena, u64 size)
 {
 	void *mem = MemoryArenaPushNoZero(arena, size);
 
-	if (mem) {
+	if (mem)
 		MemorySet(mem, 0, size);
-	}
 
 	return mem;
 }
 
-// NOTE(kp): Create an arena within an arena.
+// Create an arena within an arena.
 internal MemoryArena MemoryArenaSubArena(MemoryArena *arena, u64 size)
 {
 	return MemoryArenaInit(MemoryArenaPush(arena, size), size);
@@ -64,7 +63,7 @@ internal void MemoryArenaZero(MemoryArena *arena)
 
 internal String8 MemoryArenaAllocateString8(MemoryArena *arena, u64 length)
 {
-	String8 string = { 0 };
+	String8 string = {0};
 	string.len = length;
 	string.str = MemoryArenaPush(arena, length + 1);
 

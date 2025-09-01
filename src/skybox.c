@@ -4,9 +4,9 @@ struct export_hdr_pass_context {
 	Image *output;
 };
 
-internal void RenderPassExportHDRCubemap(RenderContext *render_context, RenderInfo *render_info, void *context)
+internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_info, void *context)
 {
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 	struct export_hdr_pass_context *pass_context = (struct export_hdr_pass_context *)context;
 	
 	CmdBeginRendering(cmd, render_info);
@@ -57,7 +57,7 @@ internal void EnvironmentMapFromHDR(RenderGraph *graph, Image *out, Image *hdr_i
 		.output = out
 	};
 	
-	RenderPass render_pass = { 0 };
+	RenderPass render_pass = {0};
 	render_pass.type = RenderPassType_Graphics;
 	render_pass.graphics.Record = RenderPassExportHDRCubemap;
 	render_pass.graphics.view_mask = 0b111111;
@@ -77,9 +77,9 @@ struct skybox_pass_context {
 	ImageView *skybox;
 };
 
-internal void RenderPassSkybox(RenderContext *render_context, RenderInfo *render_info, void *context)
+internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *context)
 {
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 	CoreFrameData *current_frame = CoreGetCurrentFrameData();
 
 	struct skybox_pass_context pass_context = *((struct skybox_pass_context *)context);
@@ -125,7 +125,7 @@ internal void SkyboxRender(RenderGraph *graph, ImageView *skybox, ImageView *dep
 		.skybox = skybox
 	};
 	
-	RenderPass skybox_pass = { 0 };
+	RenderPass skybox_pass = {0};
 	skybox_pass.type = RenderPassType_Graphics;
 	skybox_pass.graphics.Record = RenderPassSkybox;
 	skybox_pass.graphics.view_count = 1;

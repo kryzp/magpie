@@ -18,56 +18,57 @@
 			*(int *)0 = 0; \
 		}                      \
 	} while (0)
+
 #define DebugLog(m, ...)                         \
 	do {                                     \
 		printf((m "\n"), ##__VA_ARGS__); \
 	} while (0)
+
 #define DebugLogCrash(m, ...)               \
 	do {                                \
 		DebugLog(m, ##__VA_ARGS__); \
 		Assert(0);                  \
 	} while (0)
 
-#define SinF sinf
-#define CosF cosf
-#define TanF tanf
-#define ASinF asinf
-#define ACosF acosf
-#define ATanF atanf
-#define ATan2F atan2f
-#define PowF powf
-#define FModF fmodf
-#define AbsoluteValue fabsf
-#define AbsoluteValueI abs
-#define SquareRoot sqrtf
-#define Log2F log2f
-#define MemoryCopy memcpy
-#define MemorySet memset
-#define MemoryMove memmove
-#define MemoryZeroStruct(s) MemorySet((s), 0, sizeof(*(s)))
-#define StringCopy strcpy
-#define StringCopyN strncpy
-#define CStringCompare strcmp
-#define CalculateCStringLength(s) ((u32)strlen(s))
-#define CStringToI32(s) ((i32)atoi(s))
-#define CStringToF32(s) ((f32)atof(s))
-#define MinValue(a, b) (((a) < (b)) ? (a) : (b))
-#define MaxValue(a, b) (((a) > (b)) ? (a) : (b))
-#define ClampValue(v, lo, hi) \
-	(((v) < (lo)) ? (lo) : (((v) > (hi)) ? (hi) : (v)))
-#define ArraySize(a) (sizeof(a) / sizeof((a)[0]))
+#define SinF                       sinf
+#define CosF                       cosf
+#define TanF                       tanf
+#define ASinF                      asinf
+#define ACosF                      acosf
+#define ATanF                      atanf
+#define ATan2F                     atan2f
+#define PowF                       powf
+#define FModF                      fmodf
+#define AbsoluteValue              fabsf
+#define AbsoluteValueI             abs
+#define SquareRoot                 sqrtf
+#define Log2F                      log2f
+#define MemoryCopy                 memcpy
+#define MemorySet                  memset
+#define MemoryMove                 memmove
+#define MemoryZeroStruct(s)        memset((s), 0, sizeof(*(s)))
+#define StringCopy                 strcpy
+#define StringCopyN                strncpy
+#define CStringCompare             strcmp
+#define CalculateCStringLength(s)  ((u32)strlen(s))
+#define CStringToI32(s)            ((i32)atoi(s))
+#define CStringToF32(s)            ((f32)atof(s))
+#define MinValue(a, b)             (((a) < (b)) ? (a) : (b))
+#define MaxValue(a, b)             (((a) > (b)) ? (a) : (b))
+#define ClampValue(v, lo, hi)      (((v) < (lo)) ? (lo) : (((v) > (hi)) ? (hi) : (v)))
+#define ArraySize(a)               (sizeof(a) / sizeof((a)[0]))
 
 #define Bytes(n) (n)
 #define Kilobytes(n) (Bytes(n) * 1024)
 #define Megabytes(n) (Kilobytes(n) * 1024)
 #define Gigabytes(n) (Megabytes(n) * 1024)
 
-#define PI 3.1415926535897
-#define PIf 3.1415926535897f
-#define ONE_OVER_SQUARE_ROOT_OF_TWO_PI 0.3989422804
-#define ONE_OVER_SQUARE_ROOT_OF_TWO_PIf 0.3989422804f
-#define EULERS_NUMBER 2.7182818284590452353602874713527
-#define EULERS_NUMBERf 2.7182818284590452353602874713527f
+#define PI                                  3.1415926535897
+#define PIf                                 3.1415926535897f
+#define ONE_OVER_SQUARE_ROOT_OF_TWO_PI      0.3989422804
+#define ONE_OVER_SQUARE_ROOT_OF_TWO_PIf     0.3989422804f
+#define EULERS_NUMBER                       2.718281828459045
+#define EULERS_NUMBERf                      2.718281828459045f
 #define EPSILON DBL_EPSILON
 #define EPSILONf FLT_EPSILON
 
@@ -155,12 +156,16 @@ internal v3 V3Init(f32 x, f32 y, f32 z)
 
 internal v3 V3AddV3(v3 a, v3 b)
 {
-	return v3(a.x + b.x, a.y + b.y, a.z + b.z);
+	return v3(a.x + b.x,
+		  a.y + b.y,
+		  a.z + b.z);
 }
 
 internal v3 V3SubtractV3(v3 a, v3 b)
 {
-	return v3(a.x - b.x, a.y - b.y, a.z - b.z);
+	return v3(a.x - b.x,
+		  a.y - b.y,
+		  a.z - b.z);
 }
 
 internal v3 V3MultiplyF32(v3 v, f32 f)
@@ -181,7 +186,8 @@ internal f32 V3Dot(v3 a, v3 b)
 
 internal v3 V3Cross(v3 a, v3 b)
 {
-	v3 result = v3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
+	v3 result = v3(a.y * b.z - a.z * b.y,
+		       a.z * b.x - a.x * b.z,
 		       a.x * b.y - a.y * b.x);
 
 	return result;
@@ -268,7 +274,9 @@ internal v4 V4Init(f32 x, f32 y, f32 z, f32 w)
 
 internal b32 V4RectHasPoint(v4 r, v2 p)
 {
-	return (p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y &&
+	return (p.x >= r.x &&
+		p.x <= r.x + r.width &&
+		p.y >= r.y &&
 		p.y <= r.y + r.height);
 }
 
@@ -279,22 +287,34 @@ internal f32 V4Dot(v4 a, v4 b)
 
 internal v4 V4AddV4(v4 a, v4 b)
 {
-	return v4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+	return v4(a.x + b.x,
+		  a.y + b.y,
+		  a.z + b.z,
+		  a.w + b.w);
 }
 
 internal v4 V4SubtractV4(v4 a, v4 b)
 {
-	return v4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+	return v4(a.x - b.x,
+		  a.y - b.y,
+		  a.z - b.z,
+		  a.w - b.w);
 }
 
 internal v4 V4MultiplyF32(v4 a, f32 f)
 {
-	return v4(a.x * f, a.y * f, a.z * f, a.w * f);
+	return v4(a.x * f,
+		  a.y * f,
+		  a.z * f,
+		  a.w * f);
 }
 
 internal v4 V4MultiplyV4(v4 a, v4 b)
 {
-	return v4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
+	return v4(a.x * b.x,
+		  a.y * b.y,
+		  a.z * b.z,
+		  a.w * b.w);
 }
 
 internal f32 V4LengthSquared(v4 v)
@@ -314,7 +334,7 @@ internal v4 QuatInitIdentity()
 
 internal v4 QuatInitAxis(f32 angle, v3 axis)
 {
-	v4 q = { 0 };
+	v4 q = {0};
 
 	q.w = CosF(angle * .5f);
 	q.x = SinF(angle * .5f) * axis.x;
@@ -326,12 +346,12 @@ internal v4 QuatInitAxis(f32 angle, v3 axis)
 
 internal v4 QuatInitEuler(f32 pitch, f32 yaw, f32 roll)
 {
-	f32 sr = SinF(roll * .5f);
-	f32 cr = CosF(roll * .5f);
+	f32 sr = SinF(roll  * .5f);
+	f32 cr = CosF(roll  * .5f);
 	f32 sp = SinF(pitch * .5f);
 	f32 cp = CosF(pitch * .5f);
-	f32 sy = SinF(yaw * .5f);
-	f32 cy = CosF(yaw * .5f);
+	f32 sy = SinF(yaw   * .5f);
+	f32 cy = CosF(yaw   * .5f);
 
 	return v4((sr * cp * cy) - (cr * sp * sy),
 		  (cr * sp * cy) + (sr * cp * sy),
@@ -341,22 +361,22 @@ internal v4 QuatInitEuler(f32 pitch, f32 yaw, f32 roll)
 
 internal v3 QuatToEuler(v4 q)
 {
-	f32 t0 = (2.f + ((q.w * q.x) + (q.y * q.z)));
-	f32 t1 = 1.f - (2.f * ((q.x * q.x) + (q.y * q.y)));
+	f32 t0 =           (2.f + ((q.w * q.x) + (q.y * q.z)));
+	f32 t1 = 1.f    -  (2.f * ((q.x * q.x) + (q.y * q.y)));
 	f32 t2 = ClampValue(2.f * ((q.w * q.y) - (q.z * q.x)), -1.f, 1.f);
-	f32 t3 = (2.f * ((q.w * q.z) + (q.x * q.y)));
-	f32 t4 = 1.f - (2.f * ((q.y * q.y) + (q.z * q.z)));
+	f32 t3 =           (2.f * ((q.w * q.z) + (q.x * q.y)));
+	f32 t4 = 1.f     - (2.f * ((q.y * q.y) + (q.z * q.z)));
 
 	f32 pitch = ASinF(t2);
-	f32 yaw = ATan2F(t3, t4);
-	f32 roll = ATan2F(t0, t1);
+	f32 yaw   = ATan2F(t3, t4);
+	f32 roll  = ATan2F(t0, t1);
 
 	return v3(pitch, yaw, roll);
 }
 
 internal v4 QuatInverse(v4 q)
 {
-	v4 inverse = { 0 };
+	v4 inverse = {0};
 
 	f32 prod = V4LengthSquared(q);
 
@@ -364,12 +384,12 @@ internal v4 QuatInverse(v4 q)
 		inverse.x = -q.x / SquareRoot(prod);
 		inverse.x = -q.y / SquareRoot(prod);
 		inverse.x = -q.z / SquareRoot(prod);
-		inverse.w = q.w / SquareRoot(prod);
+		inverse.w =  q.w / SquareRoot(prod);
 	} else {
 		inverse.x = -q.x;
 		inverse.y = -q.y;
 		inverse.z = -q.z;
-		inverse.w = q.w;
+		inverse.w =  q.w;
 	}
 
 	return inverse;
@@ -448,7 +468,7 @@ internal v4i V4IInit(i32 x, i32 y, i32 z, i32 w)
 
 #define v4i(x, y, z, w) V4IInit(x, y, z, w)
 
-// NOTE(kp): Column-major layout.
+// Column-major layout.
 typedef union m4 {
 	struct {
 		f32 m00, m10, m20, m30;
@@ -465,12 +485,12 @@ typedef union m4 {
 	};
 } m4;
 
-internal m4 M4Init(f32 diag)
+internal m4 M4Init(f32 dia)
 {
-	m4 m = { diag, 0.f, 0.f, 0.f,
-		 0.f, diag, 0.f, 0.f,
-		 0.f, 0.f, diag, 0.f,
-		 0.f, 0.f,  0.f, diag
+	m4 m = { dia, 0.f, 0.f, 0.f,
+		 0.f, dia, 0.f, 0.f,
+		 0.f, 0.f, dia, 0.f,
+		 0.f, 0.f,  0.f, dia
 	};
 
 	return m;
@@ -478,17 +498,17 @@ internal m4 M4Init(f32 diag)
 
 #define m4(d) M4Init(d)
 
-// NOTE(kp): Pointer hack to retrieve any column.
+// Pointer hack to retrieve any column.
 #define m4c(m, __colindex) \
 	(((f32 *)(&(m))) + (4 * (__colindex)))
 
-// NOTE(kp): Pointer hack to retrieve any element.
+// Pointer hack to retrieve any element.
 #define m4e(m, __rowindex, __colindex) \
 	(*(((f32 *)(&(m))) + (4 * (__colindex)) + (__rowindex)))
 
 internal m4 M4MultiplyM4(m4 a, m4 b)
 {
-	m4 c = { 0 };
+	m4 c = {0};
 
 	for (i32 k = 0; k < 4; k++) {
 		for (i32 i = 0; i < 4; i++) {
@@ -503,7 +523,7 @@ internal m4 M4MultiplyM4(m4 a, m4 b)
 
 internal v4 M4MultiplyV4(m4 m, v4 v)
 {
-	v4 r = { 0 };
+	v4 r = {0};
 
 	for (i32 i = 0; i < 4; i++) {
 		for (i32 j = 0; j < 4; j++) {
@@ -522,7 +542,7 @@ internal v3 M4MultiplyV3(m4 m, v3 v)
 
 internal m4 M4MultiplyF32(m4 m, f32 f)
 {
-	m4 r = { 0 };
+	m4 r = {0};
 
 	for (i32 i = 0; i < 4; i++) {
 		for (i32 j = 0; j < 4; j++) {
@@ -535,7 +555,7 @@ internal m4 M4MultiplyF32(m4 m, f32 f)
 
 internal m4 M4Transpose(m4 m)
 {
-	m4 result = { 0 };
+	m4 result = {0};
 
 	for (i32 i = 0; i < 4; i++) {
 		for (i32 j = 0; j < 4; j++) {
@@ -572,7 +592,7 @@ internal m4 M4ScaleV3(v3 scale)
 
 internal m4 M4LookAt(v3 eye, v3 center, v3 up)
 {
-	m4 result = { 0 };
+	m4 result = {0};
 
 	v3 yaxis = V3Normalize(V3SubtractV3(center, eye));
 	v3 xaxis = V3Normalize(V3Cross(yaxis, up));
@@ -603,7 +623,7 @@ internal m4 M4LookAt(v3 eye, v3 center, v3 up)
 
 internal m4 M4Perspective(f32 fov, f32 aspect, f32 z_near, f32 z_far)
 {
-	m4 result = { 0 };
+	m4 result = {0};
 
 	f32 f = TanF(fov / 360.f * PIf);
 
@@ -619,7 +639,7 @@ internal m4 M4Perspective(f32 fov, f32 aspect, f32 z_near, f32 z_far)
 internal m4 M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 z_near,
 			   f32 z_far)
 {
-	m4 result = { 0 };
+	m4 result = {0};
 
 	result.m00 = 2.f / (right - left);
 	result.m12 = 2.f / (top - bottom);
@@ -666,23 +686,15 @@ internal m4 M4Inverse(m4 m)
 	v4 vec2 = { m.m21, m.m20, m.m20, m.m20 };
 	v4 vec3 = { m.m31, m.m30, m.m30, m.m30 };
 
-	v4 inv0 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec1, fac0),
-				       V4MultiplyV4(vec2, fac1)),
-			  V4MultiplyV4(vec3, fac2));
-	v4 inv1 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac0),
-				       V4MultiplyV4(vec2, fac3)),
-			  V4MultiplyV4(vec3, fac4));
-	v4 inv2 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac1),
-				       V4MultiplyV4(vec1, fac3)),
-			  V4MultiplyV4(vec3, fac5));
-	v4 inv3 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac2),
-				       V4MultiplyV4(vec1, fac4)),
-			  V4MultiplyV4(vec2, fac5));
+	v4 inv0 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
+	v4 inv1 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
+	v4 inv2 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
+	v4 inv3 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
 
 	v4 sign_a = { +1.f, -1.f, +1.f, -1.f };
 	v4 sign_b = { -1.f, +1.f, -1.f, +1.f };
 
-	m4 inverse = { 0 };
+	m4 inverse = {0};
 
 	for (i32 i = 0; i < 4; i++) {
 		inverse.c0.elements[i] = inv0.elements[i] * sign_a.elements[i];
@@ -744,36 +756,36 @@ internal m4 M4RotateAxis(f32 angle, v3 axis)
 	f32 cos_theta = CosF(angle);
 	f32 cos_inv = 1.f - cos_theta;
 
-	result.m00 = (axis.x * axis.x * cos_inv) + cos_theta;
+	result.m00 = (axis.x * axis.x * cos_inv) +           cos_theta;
 	result.m10 = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);
 	result.m20 = (axis.x * axis.z * cos_inv) - (axis.y * sin_theta);
 
 	result.m01 = (axis.y * axis.x * cos_inv) - (axis.z * sin_theta);
-	result.m11 = (axis.y * axis.y * cos_inv) + cos_theta;
+	result.m11 = (axis.y * axis.y * cos_inv) +           cos_theta;
 	result.m21 = (axis.y * axis.z * cos_inv) + (axis.x * sin_theta);
 
 	result.m02 = (axis.z * axis.x * cos_inv) + (axis.y * sin_theta);
 	result.m12 = (axis.z * axis.y * cos_inv) - (axis.x * sin_theta);
-	result.m22 = (axis.z * axis.z * cos_inv) + cos_theta;
+	result.m22 = (axis.z * axis.z * cos_inv) +           cos_theta;
 
 	return result;
 }
 
-// NOTE(kp): Input quaternion must be normalized.
+// Input quaternion must be normalized.
 internal m4 M4RotateQuat(v4 q)
 {
 	m4 result = m4(1.f);
 
 	result.m00 = 1.f - 2.f * (q.y * q.y + q.z * q.z);
-	result.m01 = 2.f * (q.x * q.y - q.z * q.w);
-	result.m02 = 2.f * (q.x * q.z + q.y * q.w);
+	result.m01 =       2.f * (q.x * q.y - q.z * q.w);
+	result.m02 =       2.f * (q.x * q.z + q.y * q.w);
 
-	result.m10 = 2.f * (q.x * q.y + q.z * q.w);
+	result.m10 =       2.f * (q.x * q.y + q.z * q.w);
 	result.m11 = 1.f - 2.f * (q.x * q.x + q.z * q.z);
-	result.m12 = 2.f * (q.y * q.z - q.x * q.w);
+	result.m12 =       2.f * (q.y * q.z - q.x * q.w);
 
-	result.m20 = 2.f * (q.x * q.z - q.y * q.w);
-	result.m21 = 2.f * (q.y * q.z + q.x * q.w);
+	result.m20 =       2.f * (q.x * q.z - q.y * q.w);
+	result.m21 =       2.f * (q.y * q.z + q.x * q.w);
 	result.m22 = 1.f - 2.f * (q.x * q.x + q.y * q.y);
 
 	return result;
@@ -783,8 +795,7 @@ internal m4 M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
 {
 	m4 result = m4(1.f);
 
-	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.f)),
-			      result);
+	result = M4MultiplyM4(M4TranslateV3(V3MultiplyF32(origin, -1.f)), result);
 	result = M4MultiplyM4(M4RotateQuat(rotation), result);
 	result = M4MultiplyM4(M4ScaleV3(scale), result);
 	result = M4MultiplyM4(M4TranslateV3(position), result);
@@ -799,7 +810,7 @@ typedef struct String8 {
 
 internal String8 String8Init(u8 *str, u64 len)
 {
-	String8 s = { 0 };
+	String8 s = {0};
 	s.str = str;
 	s.len = len;
 
@@ -810,14 +821,12 @@ internal String8 String8Init(u8 *str, u64 len)
 
 internal b32 String8Match(String8 a, String8 b)
 {
-	if (a.len != b.len) {
+	if (a.len != b.len)
 		return false;
-	}
 
 	for (i32 i = 0; i < a.len; i++) {
-		if (a.str[i] != b.str[i]) {
+		if (a.str[i] != b.str[i])
 			return false;
-		}
 	}
 
 	return true;
@@ -829,7 +838,7 @@ internal String8 String8BeforeFirstSubstringFromBackInclusive(String8 string,
 	Assert("Substring cannot be larger than string." &&
 	       string.len >= substring.len);
 
-	String8 result = { 0 };
+	String8 result = {0};
 	result.str = string.str;
 	result.len = 0;
 
@@ -852,7 +861,18 @@ internal b32 CharIsWhitespace(char c)
 
 internal b32 CharIsAlpha(char c)
 {
-	return ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+	return ((c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z'));
+}
+
+internal b32 CharIsLower(char c)
+{
+	return c >= 'a' && c <= 'z';
+}
+
+internal b32 CharIsUpper(char c)
+{
+	return c >= 'A' && c <= 'Z';
 }
 
 internal b32 CharIsDigit(char c)
@@ -862,23 +882,21 @@ internal b32 CharIsDigit(char c)
 
 internal int CharToLower(u8 c)
 {
-	if (c >= 'A' && c <= 'Z') {
+	if (CharIsUpper(c))
 		c += 32;
-	}
 
 	return c;
 }
 
 internal int CharToUpper(u8 c)
 {
-	if (c >= 'a' && c <= 'z') {
+	if (CharIsLower(c))
 		c -= 32;
-	}
 
 	return c;
 }
 
-// NOTE(kp): FNV-1a 64-bit hash.
+// FNV-1a 64-bit hash.
 internal u64 HashBytesGeneric(const void *key, u64 length)
 {
 	const u8 *data = (const u8 *)key;
@@ -892,7 +910,7 @@ internal u64 HashBytesGeneric(const void *key, u64 length)
 	return hash;
 }
 
-// NOTE(kp): FNV-1a 64-bit hash.
+// FNV-1a 64-bit hash.
 internal u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
 {
 	const u8 *data = (const u8 *)key;
@@ -909,13 +927,13 @@ internal u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
 internal u64 HashCString(char *string)
 {
 	u64 length = 0;
-	while (string[length] != '\0')
-		length++;
+       	while (string[length] != '\0') length++;
 	return HashBytesGeneric(string, length);
 }
 
 internal v3 SphericalToCartesian(f32 r, f32 phi, f32 theta)
 {
-	return v3(r * CosF(theta) * CosF(phi), r * CosF(theta) * SinF(phi),
+	return v3(r * CosF(theta) * CosF(phi),
+		  r * CosF(theta) * SinF(phi),
 		  r * SinF(theta));
 }

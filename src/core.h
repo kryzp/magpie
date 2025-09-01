@@ -1,5 +1,5 @@
 
-// NOTE(kp): Per-frame data like shader buffers.
+// Per-frame data like shader buffers.
 typedef struct CoreFrameData {
 	GPUBuffer frame_data_buffer;
 	GPUBuffer object_buffer;
@@ -17,7 +17,7 @@ typedef struct Core {
 	GraphicsDevice graphics_device;
 
 	Renderer renderer;
-	RenderContext render_context;
+	RenderState rs;
 	RenderGraph render_graph;
 
 	VertexFormats vertex_formats;
@@ -36,7 +36,7 @@ typedef struct Core {
 
 	Image brdf_lut_image;
 
-	// TODO(kp): Skybox and environment probes should be local to a scene, not just part of the render context?
+	// TODO: Skybox and environment probes should be local to a scene, not just part of the render context?
 	Image skybox_cubemap;
 	EnvironmentProbe environment_probe;
 

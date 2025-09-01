@@ -17,7 +17,7 @@ typedef struct BitmapImage {
 /*
 typedef struct Font
 {
-	// TODO(kp)
+	// TODO
 }
 Font;
 */

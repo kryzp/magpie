@@ -2,7 +2,7 @@
 internal Mesh MeshInit(VertexFormat *format, u32 vertex_count, void *vertices,
 		       u32 index_count, u16 *indices)
 {
-	Mesh mesh = { 0 };
+	Mesh mesh = {0};
 	mesh.vertex_format = format;
 	mesh.vertex_count = vertex_count;
 	mesh.index_count = index_count;
@@ -10,31 +10,26 @@ internal Mesh MeshInit(VertexFormat *format, u32 vertex_count, void *vertices,
 	u64 vertex_buffer_size = vertex_count * format->vertex_size;
 	u64 index_buffer_size = index_count * sizeof(u16);
 
-	mesh.vertex_buffer = GPUBufferAlloc(
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		vertex_buffer_size);
+	mesh.vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+					    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+					    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+					    vertex_buffer_size);
 
-	mesh.index_buffer = GPUBufferAlloc(
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		index_buffer_size);
+	mesh.index_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+					   VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+					   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+					   index_buffer_size);
 
-	GPUBuffer staging_buffer = GPUBufferAlloc(
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		vertex_buffer_size + index_buffer_size);
+	GPUBuffer staging_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+						  vertex_buffer_size + index_buffer_size);
 	{
-		GPUBufferWrite(&staging_buffer, vertices, vertex_buffer_size,
-			       0);
-		GPUBufferWrite(&staging_buffer, indices, index_buffer_size,
-			       vertex_buffer_size);
+		GPUBufferWrite(&staging_buffer, vertices, vertex_buffer_size, 0);
+		GPUBufferWrite(&staging_buffer, indices, index_buffer_size, vertex_buffer_size);
 
 		CommandBuffer cmd = BeginGraphicsInstantSubmit();
 		{
-			VkBufferCopy stage_to_vertex_copy = { 0 };
+			VkBufferCopy stage_to_vertex_copy = {0};
 			stage_to_vertex_copy.srcOffset = 0;
 			stage_to_vertex_copy.dstOffset = 0;
 			stage_to_vertex_copy.size = vertex_buffer_size;
@@ -43,7 +38,7 @@ internal Mesh MeshInit(VertexFormat *format, u32 vertex_count, void *vertices,
 					      &mesh.vertex_buffer, 1,
 					      &stage_to_vertex_copy);
 
-			VkBufferCopy stage_to_index_copy = { 0 };
+			VkBufferCopy stage_to_index_copy = {0};
 			stage_to_index_copy.srcOffset = vertex_buffer_size;
 			stage_to_index_copy.dstOffset = 0;
 			stage_to_index_copy.size = index_buffer_size;
@@ -98,7 +93,6 @@ internal SubModel *ModelCreateSubModel(Model *model)
 
 internal void ModelDestroy(Model *model)
 {
-	for (i32 i = 0; i < model->sub_model_count; i++) {
+	for (i32 i = 0; i < model->sub_model_count; i++)
 		MeshDestroy(&model->sub_models[i].mesh);
-	}
 }

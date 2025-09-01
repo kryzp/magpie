@@ -7,13 +7,12 @@ internal ScratchArena GetScratch(MemoryArena *conflicts, u32 count)
 		MemoryArena *arena = conflicts + j;
 
 		for (i32 i = 0; i < 2; i++, scratch += 1) {
-			if (scratch != arena) {
+			if (scratch != arena)
 				break;
-			}
 		}
 	}
 
-	ScratchArena result = { 0 };
+	ScratchArena result = {0};
 	result.arena = scratch;
 	result.pos = scratch->used;
 

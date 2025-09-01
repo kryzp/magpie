@@ -9976,8 +9976,8 @@ private:
     VmaBlockVector* m_PoolBlockVector;
     VmaBlockVector** m_pBlockVectors;
     size_t m_ImmovableBlockCount = 0;
-    VmaDefragmentationStats m_GlobalStats = { 0 };
-    VmaDefragmentationStats m_PassStats = { 0 };
+    VmaDefragmentationStats m_GlobalStats = {0};
+    VmaDefragmentationStats m_PassStats = {0};
     void* m_AlgorithmState = VMA_NULL;
 
     static MoveAllocationData GetMoveData(VmaAllocHandle handle, VmaBlockMetadata* metadata);
@@ -10916,14 +10916,14 @@ VkResult VmaDeviceMemoryBlock::CreateWin32Handle(const VmaAllocator hAllocator, 
 #ifndef _VMA_ALLOCATION_T_FUNCTIONS
 VmaAllocation_T::VmaAllocation_T(bool mappingAllowed)
     : m_Alignment{ 1 },
-    m_Size{ 0 },
+    m_Size{0},
     m_pUserData{ VMA_NULL },
     m_pName{ VMA_NULL },
-    m_MemoryTypeIndex{ 0 },
+    m_MemoryTypeIndex{0},
     m_Type{ (uint8_t)ALLOCATION_TYPE_NONE },
     m_SuballocationType{ (uint8_t)VMA_SUBALLOCATION_TYPE_UNKNOWN },
-    m_MapCount{ 0 },
-    m_Flags{ 0 }
+    m_MapCount{0},
+    m_Flags{0}
 {
     if(mappingAllowed)
         m_Flags |= (uint8_t)FLAG_MAPPING_ALLOWED;
@@ -12236,7 +12236,7 @@ VkResult VmaDefragmentationContext_T::DefragmentPassEnd(VmaDefragmentationPassMo
     m_GlobalStats.bytesFreed += m_PassStats.bytesFreed;
     m_GlobalStats.bytesMoved += m_PassStats.bytesMoved;
     m_GlobalStats.deviceMemoryBlocksFreed += m_PassStats.deviceMemoryBlocksFreed;
-    m_PassStats = { 0 };
+    m_PassStats = {0};
 
     // Move blocks with immovable allocations according to algorithm
     if (!immovableBlocks.empty())

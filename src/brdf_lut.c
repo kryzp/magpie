@@ -1,9 +1,9 @@
 
-internal void RenderPassGenerateBRDFLookUp(RenderContext *render_context,
+internal void RenderPassGenerateBRDFLookUp(RenderState *rs,
 					   RenderInfo *render_info,
 					   void *context)
 {
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 
 	CmdBeginRendering(cmd, render_info);
 	{
@@ -25,7 +25,7 @@ internal void RenderPassGenerateBRDFLookUp(RenderContext *render_context,
 
 internal void BRDFLookUpGenerate(RenderGraph *graph, Image *out)
 {
-	RenderPass render_pass = { 0 };
+	RenderPass render_pass = {0};
 	render_pass.type = RenderPassType_Graphics;
 	render_pass.graphics.Record = RenderPassGenerateBRDFLookUp;
 	render_pass.graphics.attachment_count = 1;

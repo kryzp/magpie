@@ -66,8 +66,8 @@ typedef struct ShaderStage {
 	VkShaderModule module;
 } ShaderStage;
 
-// NOTE(kp): Shaders are fully bindless.
-//           --> No layouts per shader.
+// Shaders are fully bindless.
+// --> No layouts per shader.
 typedef struct ShaderProgram {
 	u32 push_constant_size;
 	u32 stage_count;
@@ -203,10 +203,10 @@ typedef struct SwapchainSupportDetails {
 typedef struct Swapchain {
 	VkSwapchainKHR handle;
 
-	// NOTE(kp): This is *DIFFERENT* from GraphicsDevice::current_frame_index!
-	//           A swapchain might have, e.g: 3 frames while the graphics
-	//           device only has 2 frames in flight. They are *usually* the same
-	//           but not always!
+	// This is *DIFFERENT* from GraphicsDevice::current_frame_index!
+	// A swapchain might have, e.g: 3 frames while the graphics
+	// device only has 2 frames in flight. They are *usually* the same
+	// but not always!
 	u32 current_image_index;
 
 	u32 width;

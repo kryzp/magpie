@@ -4,11 +4,11 @@ struct irradiance_pass_context {
 	ImageView *skybox;
 };
 
-internal void RenderPassGenerateIrradianceMap(RenderContext *render_context,
+internal void RenderPassGenerateIrradianceMap(RenderState *rs,
 					      RenderInfo *render_info,
 					      void *context)
 {
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 	struct irradiance_pass_context *pass_context = (struct irradiance_pass_context *)context;
 	
 	CmdBeginRendering(cmd, render_info);
@@ -55,11 +55,11 @@ struct prefilter_pass_context {
 	ImageView *skybox;
 };
 
-internal void RenderPassGeneratePrefilterMap(RenderContext *render_context,
+internal void RenderPassGeneratePrefilterMap(RenderState *rs,
 					     RenderInfo *render_info,
 					     void *context)
 {
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 	struct prefilter_pass_context *pass_context = (struct prefilter_pass_context *)context;
 	
 	CmdBeginRendering(cmd, render_info);
@@ -104,14 +104,14 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 						  EnvironmentProbe *probe,
 						  ImageView *skybox)
 {
-	// NOTE(kp): Irradiance Map.
+	// Irradiance Map.
 	{
 		struct irradiance_pass_context context = {
 			.target = &probe->irradiance,
 			.skybox = skybox
 		};
 		
-		RenderPass render_pass = { 0 };
+		RenderPass render_pass = {0};
 		render_pass.type = RenderPassType_Graphics;
 		render_pass.graphics.Record = RenderPassGenerateIrradianceMap;
 		render_pass.graphics.view_mask = 0b111111;
@@ -127,7 +127,7 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 		RenderGraphPush(graph, &render_pass);
 	}
 
-	// NOTE(kp): Prefilter Map.
+	// Prefilter Map.
 	{
 		i32 mipmap_count = probe->prefilter.mipmap_count;
 
@@ -141,7 +141,7 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 				.skybox = skybox
 			};
 			
-			RenderPass render_pass = { 0 };
+			RenderPass render_pass = {0};
 			render_pass.type = RenderPassType_Graphics;
 			render_pass.graphics.Record = RenderPassGeneratePrefilterMap;
 			render_pass.graphics.view_mask = 0b111111;

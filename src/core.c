@@ -32,7 +32,7 @@
 #include "scene.h"
 #include "mesh_pass.h"
 #include "render_graph.h"
-#include "render_context.h"
+#include "render_state.h"
 #include "renderer.h"
 #include "vertex_formats.h"
 #include "shaders.h"
@@ -48,7 +48,7 @@
 #include "model.c"
 #include "assets.c"
 #include "render_graph.c"
-#include "render_context.c"
+#include "render_state.c"
 #include "scene.c"
 #include "mesh_pass.c"
 #include "renderer.c"
@@ -61,8 +61,8 @@ internal CoreFrameData *CoreGetCurrentFrameData()
 	return core->per_frame_data + graphics_device->current_frame_index;
 }
 
-// NOTE(kp): https://songho.ca/opengl/gl_sphere.html
-// TODO(kp): Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
+// https://songho.ca/opengl/gl_sphere.html
+// TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
 internal void CoreCreateUnitSphereMesh()
 {
 	ScratchArena scratch = GetScratch(&core->permanent_arena, 1);
@@ -92,8 +92,8 @@ internal void CoreCreateUnitSphereMesh()
 	index = 0;
 
 	for (u16 i = 0; i < stack_count; i++) {
-		u16 k1 = i * (sector_count + 1); // NOTE(kp): Current stack.
-		u16 k2 = k1 + (sector_count + 1); // NOTE(kp): Next stack.
+		u16 k1 = i * (sector_count + 1); // Current stack.
+		u16 k2 = k1 + (sector_count + 1); // Next stack.
 
 		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
 			if (i != 0) {
@@ -200,8 +200,8 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 
 	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
 
-	// NOTE(kp): Renderman introduced the left-handed Y-up cubemap in 1990
-	//           but we use right-handed Z-up so we have to flip these weirdly.
+	// Renderman introduced the left-handed Y-up cubemap in 1990
+	// but we use right-handed Z-up so we have to flip these weirdly.
 	m4 capture_view_matrices[] = {
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f,  0.f,  0.f), v3(0.f,  0.f, 1.f)), // X+
 		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f,  0.f,  0.f), v3(0.f,  0.f, 1.f)), // X-
@@ -258,7 +258,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 				     ArraySize(vertices), vertices,
 				     ArraySize(indices), indices);
 
-	core->render_context.material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+	core->rs.material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 							      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 							      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 							      sizeof(GPU_Material) * SCENE_MAX_GPU_MATERIALS);
@@ -286,7 +286,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
 
 	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
-		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->render_context, &core->assets,
+		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->rs, &core->assets,
 								      &damaged_helmet_model->sub_models[0].mesh,
 								      &damaged_helmet_model->sub_models[0].material, m4(1.f),
 								      SceneObjectFlag_DrawDeferredPass);
@@ -308,7 +308,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 		platform->exit = 1;
 	}
 
-	// NOTE(kp): Camera.
+	// Camera.
 	{
 		core->main_camera.position = v3(0.f, -2.f, 0.f);
 		core->main_camera.forward = v3(0.f, 1.f, 0.f);
@@ -316,7 +316,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 		CameraRecompute(&core->main_camera);
 	}
 
-	// NOTE(kp): Scene.
+	// Scene.
 	SceneResolveAdding(&core->scene);
 	{
 		for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
@@ -328,13 +328,13 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 	}
 	SceneResolveRemoving(&core->scene);
 
-	// NOTE(kp): Rendering.
-	core->render_context.cmd = BeginGraphicsPresent();
+	// Rendering.
+	core->rs.cmd = BeginGraphicsPresent();
 	{
 		Camera *camera = &core->main_camera;
 		CoreFrameData *current_frame = CoreGetCurrentFrameData();
 		
-		core->render_context.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
+		core->rs.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
 
 		for (i32 i = 0; i < core->scene.object_count; i++) {
 			SceneObject *object = core->scene.objects + i;
@@ -349,7 +349,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				       sizeof(GPU_ObjectData) * i);
 
 			VkDrawIndexedIndirectCommand command = {0};
-			command.indexCount = core->render_context.meshes[object->mesh_id].index_count;
+			command.indexCount = core->rs.meshes[object->mesh_id].index_count;
 			command.instanceCount = 1;
 			command.firstIndex = 0;
 			command.vertexOffset = 0;
@@ -360,7 +360,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				       sizeof(VkDrawIndexedIndirectCommand) * i);
 		}
 
-		// NOTE(kp): Per-frame buffer
+		// Per-frame buffer
 		{
 			GPU_FrameData frame_data = {0};
 			frame_data.view = camera->view;
@@ -378,7 +378,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				       &frame_data, sizeof(GPU_FrameData), 0);
 		}
 
-		RendererRenderFrame(&core->renderer, &core->render_context,
+		RendererRenderFrame(&core->renderer, &core->rs,
 				    &core->render_graph, &core->scene,
 				    &core->main_camera,
 				    &core->environment_probe);
@@ -387,8 +387,8 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			     FetchStandardImageView(&core->skybox_cubemap),
 			     FetchStandardImageView(&core->renderer.gbuffer.depth));
 	}
-	RenderGraphExecuteRenderPasses(&core->render_graph, &core->render_context);
-	EndGraphicsPresent(&core->render_context.cmd);
+	RenderGraphExecuteRenderPasses(&core->render_graph, &core->rs);
+	EndGraphicsPresent(&core->rs.cmd);
 }
 
 __declspec(dllexport) void CoreDestroy(Platform *platform_)
@@ -404,7 +404,7 @@ __declspec(dllexport) void CoreDestroy(Platform *platform_)
 
 	// ---
 	
-	GPUBufferDestroy(&core->render_context.material_buffer);
+	GPUBufferDestroy(&core->rs.material_buffer);
 
 	// ---
 	

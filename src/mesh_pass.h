@@ -33,15 +33,15 @@ typedef enum MeshPassType
 MeshPassType;
 */
 
-// NOTE(kp): Ready mesh data for rendering.
+// Ready mesh data for rendering.
 typedef struct MeshPass {
-	// NOTE(kp): Instanced Draws.
+	// Instanced Draws.
 	MultiBatch *multi_batches;
 
-	// NOTE(kp): Indirect Draws.
+	// Indirect Draws.
 	IndirectBatch *batches;
 
-	// NOTE(kp): Direct draws.
-	// TODO(kp): This still needs to be actually sorted!
+	// Direct draws.
+	// TODO: This still needs to be actually sorted!
 	DirectBatch *direct_batches;
 } MeshPass;

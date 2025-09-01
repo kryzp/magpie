@@ -1,65 +1,64 @@
 
-// TODO(kp): (In order of what to do next to achieve feature parity with magpie C++)
-//           [x]  1. Pipeline state caching, two seperate hash
-//                   tables for layouts and pipelines. Also cache
-//                   image views automaticlly.
-//           [x]  2. Irradiance + Prefilter map generation.
-//           [x]  3. Remove combined image-sampler from bindless
-//                   and add seperate image + sampler tables.
-//           [x]  4. Generic hash table implementation.
-//           [x]  5. Well commented codebase (self commenting code counts).
-//           [x]  6. More Assert(...), DebugLog(...) and DebugLogCrash(...) in the codebase.
-//           [x]  7. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
-//                   --> RenderPass is just a very big struct, and the renderer has 32
-//                       of them at all times.
-//           [x]  8. Model loading.
-//           [x]  9. Split up files accordingly to make the code easier to manage.
-//           [x] 10. Material system.
-//           [x] 11. Deferred Rendering.
-//           [x] 12. Scene.
-//                   --> Camera, lights, etc...
-//           [x] 13. Final Requirements
-//                   [x] Asset system to stop unfreed images when loading in models.
-//                   [x] Shaders should automatically assign their push constants sizes
-//                       rather than me having to do it manually.
-//                   [x] Move render graph into core and command buffer into render context.
-//                   [ ] Get rid of global graphics_device.
-//                   [ ] RenderContext shouldn't have any associated functions like
-//                       RenderContextGenerateBRDFLookUp(...), rather there should be seperate
-//                       renderers for that sort of thing.
-//                       --> Same goes for e.g: updating per frame data.
+// TODO: (In order of what to do next to achieve feature parity with magpie C++)
+//       [x]  1. Pipeline state caching, two seperate hash
+//               tables for layouts and pipelines. Also cache
+//               image views automaticlly.
+//       [x]  2. Irradiance + Prefilter map generation.
+//       [x]  3. Remove combined image-sampler from bindless
+//               and add seperate image + sampler tables.
+//       [x]  4. Generic hash table implementation.
+//       [x]  5. Well commented codebase (self commenting code counts).
+//       [x]  6. More Assert(...), DebugLog(...) and DebugLogCrash(...) in the codebase.
+//       [x]  7. Investigate how I'm taking up ~100kb of memory in the allocated 32MB?
+//               --> RenderPass is just a very big struct, and the renderer has 32
+//                   of them at all times.
+//       [x]  8. Model loading.
+//       [x]  9. Split up files accordingly to make the code easier to manage.
+//       [x] 10. Material system.
+//       [x] 11. Deferred Rendering.
+//       [x] 12. Scene.
+//               --> Camera, lights, etc...
+//       [x] 13. Final Requirements
+//               [x] Asset system to stop unfreed images when loading in models.
+//               [x] Shaders should automatically assign their push constants sizes
+//                   rather than me having to do it manually.
+//               [x] Move render graph into core and command buffer into render context.
+//               [ ] Get rid of global graphics_device.
+//               [ ] RenderState shouldn't have any associated functions like
+//                   RenderStateGenerateBRDFLookUp(...), rather there should be seperate
+//                   renderers for that sort of thing.
+//                   --> Same goes for e.g: updating per frame data.
 //
-//                   <<< MAGPIE C++ ENDS HERE >>>
+//               <<< MAGPIE C++ ENDS HERE >>>
 //
-//           [ ] 14. Debug renderer (lines, spheres, etc...) (seperate thing)
-//           [ ] 15. Text rendering (fonts)
-//           [ ] 16. (This applies to all bindless resources.)
-//                   resource_id should *not* be assigned in the
-//                   graphics device. In fact, the graphics device
-//                   should not be managing bindless in the first
-//                   place, that should be a policy of the renderer.
-//                   --> Maybe in the future, have a BindlessResources
-//                       struct in the high level, that different renderers
-//                       can use to manage their bindless resources
-//           [ ] 17. Mipmap generation should happen automatically when executing render passes.
-//                   --> When that is achieved, automatically call CmdBeginRendering(...) and
-//                       CmdEndRendering(...) around the Record(...) function, since mipmaps
-//                       are pretty much the only reason I don't already do that.
-//           [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
-//           [ ] 19. Start going through ideas list in readme.md.
+//       [ ] 14. Debug renderer (lines, spheres, etc...) (seperate thing)
+//       [ ] 15. Text rendering (fonts)
+//       [ ] 16. (This applies to all bindless resources.)
+//               resource_id should *not* be assigned in the
+//               graphics device. In fact, the graphics device
+//               should not be managing bindless in the first
+//               place, that should be a policy of the renderer.
+//               --> Maybe in the future, have a BindlessResources
+//                   struct in the high level, that different renderers
+//                   can use to manage their bindless resources
+//       [ ] 17. Mipmap generation should happen automatically when executing render passes.
+//               --> When that is achieved, automatically call CmdBeginRendering(...) and
+//                   CmdEndRendering(...) around the Record(...) function, since mipmaps
+//                   are pretty much the only reason I don't already do that.
+//       [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
+//       [ ] 19. Start going through ideas list in readme.md.
 
-internal void RenderPassGeometry(RenderContext *render_context, RenderInfo *render_info, void *context)
+internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	Renderer *renderer = *((Renderer **)context);
-	CommandBuffer *cmd = &render_context->cmd;
+	CommandBuffer *cmd = &rs->cmd;
 
 	CoreFrameData *current_frame = CoreGetCurrentFrameData();
 
 	CmdBeginRendering(cmd, render_info);
 	{
-		GraphicsPipelineDef pipeline_def =
-			GraphicsPipelineDefInitDefault(&shaders->model_program,
-						       &vertex_formats->model);
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
+										  &vertex_formats->model);
 		{
 			pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
 
@@ -73,7 +72,7 @@ internal void RenderPassGeometry(RenderContext *render_context, RenderInfo *rend
 		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
 		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 
-		for (IndirectBatch *batch = render_context->mesh_pass.batches; batch; batch = batch->next) {
+		for (IndirectBatch *batch = rs->mesh_pass.batches; batch; batch = batch->next) {
 			struct {
 				u64 frame_data_buffer;
 				u64 transform_buffer;
@@ -84,7 +83,7 @@ internal void RenderPassGeometry(RenderContext *render_context, RenderInfo *rend
 
 			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
 			args.transform_buffer = current_frame->object_buffer.device_address;
-			args.material_buffer = render_context->material_buffer.device_address;
+			args.material_buffer = rs->material_buffer.device_address;
 			args.material_id = batch->material_id;
 			args.sampler = core->linear_sampler.resource_id;
 
@@ -92,8 +91,7 @@ internal void RenderPassGeometry(RenderContext *render_context, RenderInfo *rend
 					 VK_SHADER_STAGE_ALL_GRAPHICS,
 					 sizeof(args), &args, 0);
 
-			MeshBindCmd(render_context->meshes[batch->mesh_id].original,
-				    cmd);
+			MeshBindCmd(rs->meshes[batch->mesh_id].original, cmd);
 
 			CmdDrawIndexedIndirect(cmd, &current_frame->indirect_buffer,
 					       sizeof(VkDrawIndexedIndirectCommand) * batch->first,
@@ -109,19 +107,17 @@ struct lighting_pass_context {
 	EnvironmentProbe *probe;
 };
 
-internal void RenderPassLighting(RenderContext *render_context, RenderInfo *render_info, void *context)
+internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	struct lighting_pass_context *pass_context = (struct lighting_pass_context *)context;
 	Renderer *renderer = pass_context->renderer;
 	EnvironmentProbe *probe = pass_context->probe;
-	
-	CommandBuffer *cmd = &render_context->cmd;
-
-	CoreFrameData *current_frame = CoreGetCurrentFrameData();
+	CommandBuffer *cmd = &rs->cmd;
+        CoreFrameData *current_frame = CoreGetCurrentFrameData();
 
 	CmdBeginRendering(cmd, render_info);
 	{
-		// NOTE(kp): Ambient Lighting.
+		// Ambient Lighting.
 		{
 			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
 			pipeline_def.depth_stencil_state.depth_test_enabled = false;
@@ -174,7 +170,7 @@ internal void RenderPassLighting(RenderContext *render_context, RenderInfo *rend
 			CmdDrawVerticesN(cmd, 3);
 		}
 
-		// NOTE(kp): Direct lighting.
+		// Direct lighting.
 		{
 			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
 											  &vertex_formats->vec3);
@@ -243,11 +239,11 @@ internal void RenderPassLighting(RenderContext *render_context, RenderInfo *rend
 				args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
 				args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
 				
-				args.linear_sampler = render_context->linear_sampler.resource_id;
+				args.linear_sampler = rs->linear_sampler.resource_id;
 				
 				CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 				
-				MeshDrawCmd(&render_context->light_sphere_mesh, cmd);
+				MeshDrawCmd(&rs->light_sphere_mesh, cmd);
 			}
 */
 		}
@@ -279,7 +275,7 @@ internal void RendererDestroy(Renderer *renderer)
 }
 
 internal void RendererRenderFrame(Renderer *renderer,
-				  RenderContext *context,
+				  RenderState *context,
 				  RenderGraph *graph,
 				  Scene *scene,
 				  Camera *camera,
@@ -287,7 +283,7 @@ internal void RendererRenderFrame(Renderer *renderer,
 {
 	// --- GEOMETRY PASS
 
-	RenderPass gbuffer_render_pass = { 0 };
+	RenderPass gbuffer_render_pass = {0};
 	gbuffer_render_pass.type = RenderPassType_Graphics;
 	gbuffer_render_pass.graphics.Record = RenderPassGeometry;
 	gbuffer_render_pass.graphics.attachment_count = GBufferAttachment_MaxEnum + 1;
@@ -312,7 +308,7 @@ internal void RendererRenderFrame(Renderer *renderer,
 		.probe = probe
 	};
 	
-	RenderPass lighting_render_pass = { 0 };
+	RenderPass lighting_render_pass = {0};
 	lighting_render_pass.type = RenderPassType_Graphics;
 	lighting_render_pass.graphics.Record = RenderPassLighting;
 	lighting_render_pass.graphics.view_count = GBufferAttachment_MaxEnum + 2;
