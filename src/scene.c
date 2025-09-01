@@ -56,10 +56,12 @@ internal void SceneObjectInit(SceneObject *object)
 	object->flags       = 0;
 }
 
-internal void SceneInit(Scene *scene)
+internal void SceneInit(Scene *scene, MemoryArena *arena)
 {
-	for (i32 i = 0; i < ArraySize(scene->objects); i++)
-		SceneObjectInit(scene->objects + i);
+	scene->arena = arena;
+	
+	scene->object_count = 0;
+	scene->objects = NULL;
 }
 
 internal void SceneDestroy(Scene *scene)
@@ -68,19 +70,22 @@ internal void SceneDestroy(Scene *scene)
 
 internal SceneObject *SceneObjectFromHandle(Scene *scene, u32 handle)
 {
-	for (i32 i = 0; i < scene->object_count; i++) {
-		if (scene->objects[i].id == handle)
-			return scene->objects + i;
+	for (SceneObject *s = scene->objects; s; s = s->next) {
+		if (s->id == handle)
+			return s;
 	}
 
-	return 0;
+	return NULL;
 }
 
 internal void SceneResolveRemoving(Scene *scene)
 {
 	for (i32 i = 0; i < scene->pending_removal_count; i++) {
-		u32 to_remove = scene->pending_removal[i];
-		scene->reusable_handles[scene->reusable_handle_count++] = to_remove;
+		u32 to_remove_handle = scene->pending_removal[i];
+		SceneObject *to_remove = SceneObjectFromHandle(scene, to_remove_handle);
+		to_remove->next = scene->first_free_object;
+		scene->first_free_object = to_remove;
+		scene->reusable_handles[scene->reusable_handle_count++] = to_remove_handle;
 		scene->object_count--;
 	}
 
@@ -94,15 +99,31 @@ internal void SceneRemoveSceneObject(Scene *scene, u32 handle)
 
 internal u32 SceneRegisterObject(Scene *scene, m4 transform)
 {
+	Assert(scene->object_count < SCENE_MAX_OBJECTS &&
+	       "Reached scene object limit.");
+	
 	u32 handle = scene->object_count;
 
 	if (scene->reusable_handle_count > 0)
 		handle = scene->reusable_handles[--scene->reusable_handle_count];
 
-	SceneObject *object = scene->objects + handle;
+	SceneObject *object = scene->first_free_object;
+
+	if (object) {
+		scene->first_free_object = scene->first_free_object->next;
+		MemoryZeroStruct(object);
+	} else {
+		object = MemoryArenaPush(scene->arena, sizeof(SceneObject));
+	}
+	
+	SceneObjectInit(object);
+	
 	object->id = handle;
 	object->transform = transform;
 
+	object->next = scene->objects;
+	scene->objects = object;
+	
 	scene->object_count++;
 
 	return handle;

@@ -47,14 +47,18 @@ typedef enum SceneObjectFlags {
 } SceneObjectFlags;
 
 typedef struct SceneObject {
+	struct SceneObject *next;
+	
 	u32 id;
+	m4 transform;
+	
 	u32 mesh_id;
 	u32 material_id;
-	u32 light_id;
-	m4 transform;
 	//Bounds3D bounds;
 	u32 flags;
 	//u64 custom_sort_key;
+	
+	u32 light_id;
 } SceneObject;
 
 typedef struct EnvironmentProbe {
@@ -66,15 +70,18 @@ typedef struct EnvironmentProbe {
 #define SCENE_MAX_MATERIALS 32
 
 typedef struct Scene {
-	//  Unsorted object data.
-	u32 object_count;
-	SceneObject objects[SCENE_MAX_OBJECTS];
+	MemoryArena *arena;
 
-	//  Object handles pending removal.
+	// Linked list of objects.
+	u32 object_count;
+	SceneObject *first_free_object;
+	SceneObject *objects;
+
+	// Object handles pending removal.
 	u32 pending_removal_count;
 	u32 pending_removal[SCENE_MAX_OBJECTS];
 
-	//  Object handles available for reuse.
+	// Object handles available for reuse.
 	u32 reusable_handle_count;
 	u32 reusable_handles[SCENE_MAX_OBJECTS];
 } Scene;

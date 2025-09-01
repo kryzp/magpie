@@ -223,7 +223,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	core->environment_probe = EnvironmentProbeInit();
 	IBLRendererGenerateEnvironmentProbe(&core->render_graph, &core->environment_probe, FetchStandardImageView(&core->skybox_cubemap));
 
-	SceneInit(&core->scene);
+	SceneInit(&core->scene, &core->permanent_arena);
 
 	core->main_camera = CameraInitPerspective(v3(0.f, 0.f, 0.f),
 						  v3(0.f, 1.f, 0.f),
@@ -302,9 +302,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 		i32 mesh_count = 0;
 		i32 light_count = 0;
 
-		for (i32 i = 0; i < core->scene.object_count; i++) {
-			SceneObject *object = &core->scene.objects[i];
-			
+		for (SceneObject *object = core->scene.objects; object; object = object->next) {
 			// If the object has a mesh.
 			if (object->mesh_id != SCENE_INVALID_HANDLE) {
 				GPU_ObjectData object_data = {0};

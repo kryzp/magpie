@@ -40,13 +40,13 @@ internal MeshPass MeshPassInit(Scene *scene, MemoryArena *arena)
 
 	// RENDER BATCHES.
 	{
-		for (i32 i = 0; i < scene->object_count; i++) {
-			if (scene->objects[i].mesh_id == SCENE_INVALID_HANDLE)
+		for (SceneObject *s = scene->objects; s; s = s->next) {
+			if (s->mesh_id == SCENE_INVALID_HANDLE)
 				continue;
-			
+
 			DirectBatch *direct_batch = MemoryArenaPush(arena, sizeof(DirectBatch));
 			direct_batch->next = pass.direct_batches;
-			direct_batch->object_id = i;
+			direct_batch->object_id = s->id;
 			pass.direct_batches = direct_batch;
 		}
 	}
