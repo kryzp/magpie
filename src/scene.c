@@ -58,7 +58,7 @@ internal void SceneObjectInit(SceneObject *object)
 
 internal void SceneInit(Scene *scene)
 {
-	for (i32 i = 0; i < scene->object_count; i++)
+	for (i32 i = 0; i < ArraySize(scene->objects); i++)
 		SceneObjectInit(scene->objects + i);
 }
 
@@ -134,7 +134,8 @@ internal u32 SceneRegisterObject(Scene *scene, RenderState *rs,
 }
 
 internal u32 SceneRegisterLight(Scene *scene, RenderState *rs,
-				Light *light)
+				Light *light,
+				m4 transform)
 {
 	u32 handle = scene->object_count + scene->pending_addition_count;
 
@@ -144,7 +145,8 @@ internal u32 SceneRegisterLight(Scene *scene, RenderState *rs,
 	SceneObject *object = scene->objects + handle;
 	object->id = handle;
 	object->light_id = RenderStateMakeLight(rs, light);
-
+	object->transform = transform;
+	
 	scene->pending_addition[scene->pending_addition_count++] = *object;
 
 	return handle;

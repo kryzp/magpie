@@ -22,7 +22,8 @@ typedef struct Core {
 	// ---
 
 	u32 damaged_helmet_objects[5];
-
+	u32 light;
+	
 	// ---
 
 	Image brdf_lut_image;

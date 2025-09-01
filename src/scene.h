@@ -26,7 +26,6 @@ typedef enum LightType {
 
 typedef struct Light {
 	LightType type;
-	v3 position;
 	v3 direction;
 	v3 colour;
 	f32 intensity;

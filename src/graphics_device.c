@@ -22,7 +22,7 @@ internal VkFormat FindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 			return candidates[i];
 		}
 	}
-
+	
 	DebugLogCrash("Failed to find supported format.");
 
 	return VK_FORMAT_MAX_ENUM;

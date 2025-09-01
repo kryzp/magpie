@@ -93,16 +93,16 @@ internal void CoreCreateUnitSphereMesh()
 		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
 			if (i != 0) {
 				indices[index + 0] = k1;
-				indices[index + 1] = k2;
-				indices[index + 2] = k1 + 1u;
+				indices[index + 1] = k1 + 1u;
+				indices[index + 2] = k2;
 
 				index += 3;
 			}
 
 			if (i != stack_count - 1) {
 				indices[index + 0] = k1 + 1u;
-				indices[index + 1] = k2;
-				indices[index + 2] = k2 + 1u;
+				indices[index + 1] = k2 + 1u;
+				indices[index + 2] = k2;
 
 				index += 3;
 			}
@@ -226,8 +226,11 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	SceneInit(&core->scene);
 
 	core->main_camera = CameraInitPerspective(v3(0.f, 0.f, 0.f),
-						  v3(0.f, 1.f, 0.f), 100.f,
-						  1280.f / 720.f, .1f, 10.f);
+						  v3(0.f, 1.f, 0.f),
+						  100.f,
+						  1280.f / 720.f,
+						  .1f,
+						  20.f);
 
 	u32 damaged_helmet_model_asset_handle = AssetsLoadModel(&core->assets, str8("res/DamagedHelmet/DamagedHelmet.gltf"));
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
@@ -240,14 +243,13 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	}
 
 	Light my_light = {0};
-	my_light.position = v3(-1.f, 2.f, 1.f);
 	my_light.type = LightType_Point;
 	my_light.colour = v3(1.f, 1.f, 1.f);
 	my_light.intensity = 10.f;
-	my_light.falloff = 2.f;
+	my_light.falloff = 1.f;
 	
-	SceneRegisterLight(&core->scene, &core->render_state,
-			   &my_light);
+	core->light = SceneRegisterLight(&core->scene, &core->render_state,
+					 &my_light, m4(1.f));
 
 	core->starting_ticks = platform->GetPerformanceCounter();
 }
@@ -262,7 +264,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 
 	if (platform->kb_pressed[KeyboardKey_Escape]) {
 		DebugLog("Quitting...");
-		platform->exit = 1;
+		platform->exit = true;
 	}
 
 	// Camera.
@@ -279,9 +281,15 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 		for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
 			SceneObjectFromHandle(&core->scene, core->damaged_helmet_objects[i])
 				->transform = M4Transform(v3(i, 2.f, .4f * SinF(t)),
-							  QuatInitEuler(0.f, t, 0.f), v3(1.f, 1.f, 1.f),
-							  v3(0.f, 0.f, 0.f));
+							  QuatInitEuler(0.f, t, 0.f),
+							  v3u(1.f),
+							  v3u(0.f));
 		}
+
+		SceneObjectFromHandle(&core->scene, core->light)->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
+											  QuatInitIdentity(),
+											  v3u(1.f),
+											  v3u(0.f));
 	}
 	SceneResolveRemoving(&core->scene);
 
@@ -295,9 +303,10 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 
 		i32 mesh_count = 0;
 		i32 light_count = 0;
+
 		for (i32 i = 0; i < core->scene.object_count; i++) {
 			SceneObject *object = &core->scene.objects[i];
-
+			
 			// If the object has a mesh.
 			if (object->mesh_id != (u32)(-1)) {
 				// All objects have a transform.
@@ -309,7 +318,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 					       &object_data,
 					       sizeof(GPU_ObjectData),
 					       sizeof(GPU_ObjectData) * mesh_count);
-
+				
 				VkDrawIndexedIndirectCommand command = {0};
 				command.indexCount = core->render_state.meshes[object->mesh_id].index_count;
 				command.instanceCount = 1;
@@ -333,14 +342,12 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 				f32 light_max = V3MaxValue(light->colour);
 				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
 
-				heuristic_radius = 3.f;
-				
 				GPU_Light gpu_light = {0};
-				gpu_light.position.xyz = light->position; // Last column of transformation matrix is translation.
+				gpu_light.position     = object->transform.c3; // Last column of transformation matrix is translation.
 				gpu_light.colour.xyz   = light->colour;
 				gpu_light.colour.w     = light->intensity;
 				gpu_light.attenuation  = v4(light->falloff, 0.f, 0.f, 0.f);
-				gpu_light.transform    = M4Transform(light->position,
+				gpu_light.transform    = M4Transform(gpu_light.position.xyz,
 								     QuatInitIdentity(),
 								     v3u(heuristic_radius),
 								     v3u(0.f));
