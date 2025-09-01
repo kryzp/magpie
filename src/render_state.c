@@ -19,12 +19,10 @@ internal void RenderStateCreatePerFrameObjects(RenderState *st)
 						      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 						      sizeof(GPU_ObjectData) * SCENE_MAX_OBJECTS);
 
-		/*
-		  frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-		  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		  sizeof(GPU_Light) * ArraySize(renderer->lights));
-		*/
+		frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+						     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+						     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+						     sizeof(GPU_Light) * SCENE_MAX_OBJECTS);
 
 		frame->indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 							VK_BUFFER_USAGE_TRANSFER_DST_BIT |
@@ -42,7 +40,7 @@ internal void RenderStateDestroyPerFrameObjects(RenderState *rs)
 
 		GPUBufferDestroy(&frame->frame_data_buffer);
 		GPUBufferDestroy(&frame->object_buffer);
-		//GPUBufferDestroy(&frame->light_buffer);
+		GPUBufferDestroy(&frame->light_buffer);
 		GPUBufferDestroy(&frame->indirect_buffer);
 	}
 }
@@ -54,7 +52,7 @@ internal void RenderStateInit(RenderState *rs)
 	rs->material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 					     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-					     sizeof(GPU_Material) * SCENE_MAX_GPU_MATERIALS);
+					     sizeof(GPU_Material) * SCENE_MAX_MATERIALS);
 }
 
 internal void RenderStateDestroy(RenderState *rs)
@@ -74,9 +72,7 @@ internal u32 RenderStateUploadMesh(RenderState *rs, Mesh *mesh)
 	RenderMesh render_mesh = {0};
 	{
 		render_mesh.original = mesh;
-
 		render_mesh.is_merged = false;
-
 		render_mesh.first_vertex = 0;
 		render_mesh.first_index = 0;
 		render_mesh.index_count = mesh->index_count;
@@ -87,7 +83,8 @@ internal u32 RenderStateUploadMesh(RenderState *rs, Mesh *mesh)
 	return rs->mesh_count++;
 }
 
-internal u32 RenderStateUploadMaterial(RenderState *rs, Assets *assets, Material *material)
+internal u32 RenderStateUploadMaterial(RenderState *rs,
+				       Assets *assets, Material *material)
 {
 	for (i32 i = 0; i < rs->material_count; i++) {
 		if (MaterialsEqual(&rs->materials[i], material))
@@ -97,7 +94,6 @@ internal u32 RenderStateUploadMaterial(RenderState *rs, Assets *assets, Material
 	rs->materials[rs->material_count] = *material;
 
 	GPU_Material gpu_material = {0};
-
 	gpu_material.diffuse_texture            = FetchStandardImageView(AssetsImageFromHandle(assets, material->diffuse_texture_handle))->resource_id;
 	gpu_material.normal_texture             = FetchStandardImageView(AssetsImageFromHandle(assets, material->normal_texture_handle))->resource_id;
 	gpu_material.emissive_texture           = FetchStandardImageView(AssetsImageFromHandle(assets, material->emissive_texture_handle))->resource_id;
@@ -109,4 +105,10 @@ internal u32 RenderStateUploadMaterial(RenderState *rs, Assets *assets, Material
 		       sizeof(GPU_Material) * rs->material_count);
 
 	return rs->material_count++;
+}
+
+internal u32 RenderStateMakeLight(RenderState *rs, Light *light)
+{
+	rs->lights[rs->light_count] = *light;
+	return rs->light_count++;
 }

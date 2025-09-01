@@ -239,6 +239,16 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 								      SceneObjectFlag_DrawDeferredPass);
 	}
 
+	Light my_light = {0};
+	my_light.position = v3(-1.f, 2.f, 1.f);
+	my_light.type = LightType_Point;
+	my_light.colour = v3(1.f, 1.f, 1.f);
+	my_light.intensity = 10.f;
+	my_light.falloff = 2.f;
+	
+	SceneRegisterLight(&core->scene, &core->render_state,
+			   &my_light);
+
 	core->starting_ticks = platform->GetPerformanceCounter();
 }
 
@@ -268,7 +278,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 	{
 		for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
 			SceneObjectFromHandle(&core->scene, core->damaged_helmet_objects[i])
-				->transform = M4Transform(v3(i, 5.f, .4f * SinF(t)),
+				->transform = M4Transform(v3(i, 2.f, .4f * SinF(t)),
 							  QuatInitEuler(0.f, t, 0.f), v3(1.f, 1.f, 1.f),
 							  v3(0.f, 0.f, 0.f));
 		}
@@ -283,28 +293,69 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 		
 		core->render_state.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
 
+		i32 mesh_count = 0;
+		i32 light_count = 0;
 		for (i32 i = 0; i < core->scene.object_count; i++) {
-			SceneObject *object = core->scene.objects + i;
+			SceneObject *object = &core->scene.objects[i];
 
-			GPU_ObjectData object_data = {0};
-			object_data.model_matrix = object->transform;
-			object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
+			// If the object has a mesh.
+			if (object->mesh_id != (u32)(-1)) {
+				// All objects have a transform.
+				GPU_ObjectData object_data = {0};
+				object_data.model_matrix = object->transform;
+				object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
 
-			GPUBufferWrite(&current_frame->object_buffer,
-				       &object_data,
-				       sizeof(GPU_ObjectData),
-				       sizeof(GPU_ObjectData) * i);
+				GPUBufferWrite(&current_frame->object_buffer,
+					       &object_data,
+					       sizeof(GPU_ObjectData),
+					       sizeof(GPU_ObjectData) * mesh_count);
 
-			VkDrawIndexedIndirectCommand command = {0};
-			command.indexCount = core->render_state.meshes[object->mesh_id].index_count;
-			command.instanceCount = 1;
-			command.firstIndex = 0;
-			command.vertexOffset = 0;
-			command.firstInstance = i;
+				VkDrawIndexedIndirectCommand command = {0};
+				command.indexCount = core->render_state.meshes[object->mesh_id].index_count;
+				command.instanceCount = 1;
+				command.firstIndex = 0;
+				command.vertexOffset = 0;
+				command.firstInstance = mesh_count;
 
-			GPUBufferWrite(&current_frame->indirect_buffer, &command,
-				       sizeof(VkDrawIndexedIndirectCommand),
-				       sizeof(VkDrawIndexedIndirectCommand) * i);
+				GPUBufferWrite(&current_frame->indirect_buffer,
+					       &command,
+					       sizeof(VkDrawIndexedIndirectCommand),
+					       sizeof(VkDrawIndexedIndirectCommand) * mesh_count);
+
+				mesh_count++;
+			}
+
+			// If the object has a light.
+			if (object->light_id != (u32)(-1)) {
+				Light *light = &core->render_state.lights[object->light_id];
+			
+				f32 epsilon_intensity = .1f;
+				f32 light_max = V3MaxValue(light->colour);
+				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
+
+				heuristic_radius = 3.f;
+				
+				GPU_Light gpu_light = {0};
+				gpu_light.position.xyz = light->position; // Last column of transformation matrix is translation.
+				gpu_light.colour.xyz   = light->colour;
+				gpu_light.colour.w     = light->intensity;
+				gpu_light.attenuation  = v4(light->falloff, 0.f, 0.f, 0.f);
+				gpu_light.transform    = M4Transform(light->position,
+								     QuatInitIdentity(),
+								     v3u(heuristic_radius),
+								     v3u(0.f));
+
+				// Currently, since the light buffer is the same size as the object buffer anyway, we can keep it pretty
+				// sparse, and so just write to the current object index. Objects with no light (light id = (u32)(-1))
+				// will just not get written.
+				GPUBufferWrite(&current_frame->light_buffer,
+					       &gpu_light,
+					       sizeof(GPU_Light),
+					       sizeof(GPU_Light) * light_count);
+
+				light_count++;
+			}
+
 		}
 
 		// Per-frame buffer
@@ -323,11 +374,14 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			frame_data.time = GetTotalElapsedSecondsF();
 
 			GPUBufferWrite(&current_frame->frame_data_buffer,
-				       &frame_data, sizeof(GPU_FrameData), 0);
+				       &frame_data,
+				       sizeof(GPU_FrameData), 0);
 		}
 
-		RendererRenderFrame(&core->renderer, &core->render_state,
-				    &core->render_graph, &core->scene,
+		RendererRenderFrame(&core->renderer,
+				    &core->render_state,
+				    &core->render_graph,
+				    &core->scene,
 				    &core->main_camera,
 				    &core->environment_probe);
 

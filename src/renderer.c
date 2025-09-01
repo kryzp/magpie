@@ -190,24 +190,9 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 			MeshBindCmd(&core->light_sphere_mesh, cmd);
 
 			for (u32 i = 0; i < rs->light_count; i++) {
-				Light *light = rs->lights + i;
-
-				f32 epsilon_intensity = .1f;
-				f32 light_max = V3MaxValue(light->colour);
-				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
-
-				m4 transform = M4Transform(light->position,
-							   QuatInitIdentity(),
-							   v3u(heuristic_radius),
-							   v3u(0.f));
-
 				struct {
 					u64 frame_data_buffer;
-					u64 lights_buffer;
-
-					m4 transform;
-
-					u32 light_id;
+					u64 light_buffer;
 					
 					u32 position;
 					u32 albedo;
@@ -217,15 +202,11 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 
 					u32 linear_sampler;
 
-					u32 _padding;
+					u32 _padding[2];
 				} args;
 
-				args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-				args.lights_buffer = current_frame->light_buffer.device_address;
-				
-				args.transform = transform;
-				
-				args.light_id = i;
+				args.frame_data_buffer = current_frame->frame_data_buffer    .device_address;
+				args.light_buffer      = current_frame->light_buffer         .device_address;
 				
 				args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
 				args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
@@ -239,7 +220,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 						 VK_SHADER_STAGE_ALL_GRAPHICS,
 						 sizeof(args), &args, 0);
 
-				MeshDrawCmd(&core->light_sphere_mesh, cmd);
+				MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
 			}
 		}
 	}

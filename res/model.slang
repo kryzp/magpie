@@ -38,14 +38,14 @@ struct VS_Output
 {
 	float4 sv_position : SV_Position;
 
-    [[vk::location(0)]] float4 position;
-    [[vk::location(1)]] float2 texcoord;
-    [[vk::location(2)]] float3 colour;
-    [[vk::location(3)]] float3x3 tbn;
+	[[vk::location(0)]] float4 position;
+	[[vk::location(1)]] float2 texcoord;
+	[[vk::location(2)]] float3 colour;
+	[[vk::location(3)]] float3x3 tbn;
 };
 
-// NOTE(kp): Can also use uint instance_id : SV_VulkanInstanceID
-//           instead of uint baseInstance : SV_StartInstanceLocation
+// Can also use uint instance_id : SV_VulkanInstanceID
+// instead of uint baseInstance : SV_StartInstanceLocation
 
 [shader("vertex")]
 VS_Output VertexMain(ModelVertex vertex, uint base_instance : SV_StartInstanceLocation)
@@ -61,7 +61,7 @@ VS_Output VertexMain(ModelVertex vertex, uint base_instance : SV_StartInstanceLo
 
     VS_Output output;
 
-    output.position = mul(transform.model_matrix, float4(vertex.position, 1.));
+    output.position = mul(transform->model_matrix, float4(vertex.position, 1.));
     output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
     output.texcoord = vertex.texcoord;
     output.colour = vertex.colour;
@@ -72,7 +72,7 @@ VS_Output VertexMain(ModelVertex vertex, uint base_instance : SV_StartInstanceLo
 
 struct FS_Output
 {
-    float4 position : SV_Target0;
+	float4 position : SV_Target0;
 	float4 albedo   : SV_Target1;
 	float4 normal   : SV_Target2;
 	float4 material : SV_Target3;
@@ -90,17 +90,21 @@ FS_Output FragmentMain(VS_Output input)
 
 	float4 albedo              = bindless_images[material.diffuse]    .Sample(sampler, uv).rgba;
 	float3 normal              = bindless_images[material.normal]     .Sample(sampler, uv).rgb;
-    float3 emissive            = bindless_images[material.emissive]   .Sample(sampler, uv).rgb;
+   	float3 emissive            = bindless_images[material.emissive]   .Sample(sampler, uv).rgb;
 	float3 metallic_roughness  = bindless_images[material.mr]         .Sample(sampler, uv).rgb;
 	float  ambient_occlusion   = bindless_images[material.ambient]    .Sample(sampler, uv).r;
 
-    if (albedo.a < 0.99)
-	{
-        discard;
-	}
+	// Temporary for to make lighting debugging easier.
+	albedo = 1.;
+	emissive = 0.;
+	metallic_roughness = float3(0., .2, 1.);
+	ambient_occlusion = 1.;
 
-    normal = normalize(mul(input.tbn, 2.*normal - 1.));
-	normal = normal*0.5 + 0.5;
+	if (albedo.a < 0.)
+	        discard;
+
+	normal = normalize(mul(input.tbn, 2.*normal - 1.));
+	normal = normal*.5 + .5;
 
 	metallic_roughness.r += ambient_occlusion;
 

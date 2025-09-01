@@ -46,8 +46,20 @@ internal EnvironmentProbe EnvironmentProbeInit()
 	return probe;
 }
 
+internal void SceneObjectInit(SceneObject *object)
+{
+	object->id          = SCENE_INVALID_HANDLE;
+	object->mesh_id     = SCENE_INVALID_HANDLE;
+	object->material_id = SCENE_INVALID_HANDLE;
+	object->light_id    = SCENE_INVALID_HANDLE;
+	object->transform   = m4(1.f);
+	object->flags       = 0;
+}
+
 internal void SceneInit(Scene *scene)
 {
+	for (i32 i = 0; i < scene->object_count; i++)
+		SceneObjectInit(scene->objects + i);
 }
 
 internal void SceneDestroy(Scene *scene)
@@ -89,8 +101,15 @@ internal void SceneRemoveSceneObject(Scene *scene, u32 handle)
 	scene->pending_removal[scene->pending_removal_count++] = handle;
 }
 
+// TODO: Split into 3 functions
+//       --> SceneCreateObject(scene, ...)
+//       --> SceneObjectAddMesh(object_handle, ...)
+//       --> SceneObjectAddLight(object_handle, ...)
+
 internal u32 SceneRegisterObject(Scene *scene, RenderState *rs,
-				 Assets *assets, Mesh *mesh, Material *material,
+				 Assets *assets,
+				 Mesh *mesh,
+				 Material *material,
 				 m4 transform,
 				 //Bounds3D bounds,
 				 SceneObjectFlags flags)
@@ -108,6 +127,23 @@ internal u32 SceneRegisterObject(Scene *scene, RenderState *rs,
 	//object->bounds = bounds;
 	object->flags = flags;
 	//object->custom_sort_key = custom_sort_key;
+	
+	scene->pending_addition[scene->pending_addition_count++] = *object;
+
+	return handle;
+}
+
+internal u32 SceneRegisterLight(Scene *scene, RenderState *rs,
+				Light *light)
+{
+	u32 handle = scene->object_count + scene->pending_addition_count;
+
+	if (scene->reusable_handle_count > 0)
+		handle = scene->reusable_handles[--scene->reusable_handle_count];
+
+	SceneObject *object = scene->objects + handle;
+	object->id = handle;
+	object->light_id = RenderStateMakeLight(rs, light);
 
 	scene->pending_addition[scene->pending_addition_count++] = *object;
 

@@ -1,12 +1,4 @@
 
-typedef struct GPU_Material {
-	u32 diffuse_texture;
-	u32 normal_texture;
-	u32 emissive_texture;
-	u32 metallic_roughness_texture;
-	u32 ambient_texture;
-} GPU_Material;
-
 typedef enum CameraType {
 	CameraType_Perspective,
 	CameraType_Orthographic
@@ -28,7 +20,9 @@ typedef struct Camera {
 	m4 projection;
 } Camera;
 
-typedef enum LightType { LightType_Point } LightType;
+typedef enum LightType {
+	LightType_Point
+} LightType;
 
 typedef struct Light {
 	LightType type;
@@ -57,6 +51,7 @@ typedef struct SceneObject {
 	u32 id;
 	u32 mesh_id;
 	u32 material_id;
+	u32 light_id;
 	m4 transform;
 	//Bounds3D bounds;
 	u32 flags;
@@ -67,8 +62,9 @@ typedef struct EnvironmentProbe {
 	Image irradiance, prefilter;
 } EnvironmentProbe;
 
+#define SCENE_INVALID_HANDLE ((u32)(-1))
 #define SCENE_MAX_OBJECTS 64
-#define SCENE_MAX_GPU_MATERIALS 32
+#define SCENE_MAX_MATERIALS 32
 
 typedef struct Scene {
 	//  Unsorted object data.
