@@ -76,14 +76,6 @@ internal SceneObject *SceneObjectFromHandle(Scene *scene, u32 handle)
 	return 0;
 }
 
-internal void SceneResolveAdding(Scene *scene)
-{
-	for (i32 i = 0; i < scene->pending_addition_count; i++)
-		scene->objects[scene->object_count++] = scene->pending_addition[i];
-
-	scene->pending_addition_count = 0;
-}
-
 internal void SceneResolveRemoving(Scene *scene)
 {
 	// We need to remove these from both objects and direct_batches.
@@ -101,53 +93,43 @@ internal void SceneRemoveSceneObject(Scene *scene, u32 handle)
 	scene->pending_removal[scene->pending_removal_count++] = handle;
 }
 
-// TODO: Split into 3 functions
-//       --> SceneCreateObject(scene, ...)
-//       --> SceneObjectAddMesh(object_handle, ...)
-//       --> SceneObjectAddLight(object_handle, ...)
-
-internal u32 SceneRegisterObject(Scene *scene, RenderState *rs,
-				 Assets *assets,
-				 Mesh *mesh,
-				 Material *material,
-				 m4 transform,
-				 //Bounds3D bounds,
-				 SceneObjectFlags flags)
+internal u32 SceneRegisterObject(Scene *scene, m4 transform)
 {
-	u32 handle = scene->object_count + scene->pending_addition_count;
+	u32 handle = scene->object_count;
 
 	if (scene->reusable_handle_count > 0)
 		handle = scene->reusable_handles[--scene->reusable_handle_count];
 
 	SceneObject *object = scene->objects + handle;
 	object->id = handle;
-	object->mesh_id = RenderStateUploadMesh(rs, mesh);
-	object->material_id = RenderStateUploadMaterial(rs, assets, material);
 	object->transform = transform;
-	//object->bounds = bounds;
-	object->flags = flags;
-	//object->custom_sort_key = custom_sort_key;
-	
-	scene->pending_addition[scene->pending_addition_count++] = *object;
+
+	scene->object_count++;
 
 	return handle;
 }
 
-internal u32 SceneRegisterLight(Scene *scene, RenderState *rs,
-				Light *light,
-				m4 transform)
+internal void SceneObjectAddMesh(Scene *scene, u32 handle,
+				 RenderState *rs,
+				 Assets *assets,
+				 Mesh *mesh,
+				 Material *material,
+				 //Bounds3D bounds,
+				 SceneObjectFlags flags)
 {
-	u32 handle = scene->object_count + scene->pending_addition_count;
+	SceneObject *object = SceneObjectFromHandle(scene, handle);
 
-	if (scene->reusable_handle_count > 0)
-		handle = scene->reusable_handles[--scene->reusable_handle_count];
+	object->mesh_id     = RenderStateUploadMesh(rs, mesh);
+	object->material_id = RenderStateUploadMaterial(rs, assets, material);
 
-	SceneObject *object = scene->objects + handle;
-	object->id = handle;
+	object->flags = flags;
+}
+
+internal void SceneObjectAddLight(Scene *scene, u32 handle,
+				  RenderState *rs,
+				  Light *light)
+{
+	SceneObject *object = SceneObjectFromHandle(scene, handle);
+
 	object->light_id = RenderStateMakeLight(rs, light);
-	object->transform = transform;
-	
-	scene->pending_addition[scene->pending_addition_count++] = *object;
-
-	return handle;
 }

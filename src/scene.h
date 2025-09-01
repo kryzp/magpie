@@ -70,10 +70,6 @@ typedef struct Scene {
 	u32 object_count;
 	SceneObject objects[SCENE_MAX_OBJECTS];
 
-	//  Objects pending addition.
-	u32 pending_addition_count;
-	SceneObject pending_addition[SCENE_MAX_OBJECTS];
-
 	//  Object handles pending removal.
 	u32 pending_removal_count;
 	u32 pending_removal[SCENE_MAX_OBJECTS];

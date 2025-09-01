@@ -236,10 +236,12 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
 
 	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
-		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, &core->render_state, &core->assets,
-								      &damaged_helmet_model->sub_models[0].mesh,
-								      &damaged_helmet_model->sub_models[0].material, m4(1.f),
-								      SceneObjectFlag_DrawDeferredPass);
+		core->damaged_helmet_objects[i] = SceneRegisterObject(&core->scene, m4(1.f));
+		SceneObjectAddMesh(&core->scene, core->damaged_helmet_objects[i],
+				   &core->render_state, &core->assets,
+				   &damaged_helmet_model->sub_models[0].mesh,
+				   &damaged_helmet_model->sub_models[0].material,
+				   SceneObjectFlag_DrawDeferredPass);
 	}
 
 	Light my_light = {0};
@@ -247,9 +249,9 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	my_light.colour = v3(1.f, 1.f, 1.f);
 	my_light.intensity = 10.f;
 	my_light.falloff = 1.f;
-	
-	core->light = SceneRegisterLight(&core->scene, &core->render_state,
-					 &my_light, m4(1.f));
+
+	core->light = SceneRegisterObject(&core->scene, m4(1.f));
+	SceneObjectAddLight(&core->scene, core->light, &core->render_state, &my_light);
 
 	core->starting_ticks = platform->GetPerformanceCounter();
 }
@@ -268,29 +270,25 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 	}
 
 	// Camera.
-	{
-		core->main_camera.position = v3(0.f, -2.f, 0.f);
-		core->main_camera.forward = v3(0.f, 1.f, 0.f);
+	core->main_camera.position = v3(0.f, -2.f, 0.f);
+	core->main_camera.forward = v3(0.f, 1.f, 0.f);
 
-		CameraRecompute(&core->main_camera);
-	}
+	CameraRecompute(&core->main_camera);
 
 	// Scene.
-	SceneResolveAdding(&core->scene);
-	{
-		for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
-			SceneObjectFromHandle(&core->scene, core->damaged_helmet_objects[i])
-				->transform = M4Transform(v3(i, 2.f, .4f * SinF(t)),
-							  QuatInitEuler(0.f, t, 0.f),
-							  v3u(1.f),
-							  v3u(0.f));
-		}
-
-		SceneObjectFromHandle(&core->scene, core->light)->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
-											  QuatInitIdentity(),
-											  v3u(1.f),
-											  v3u(0.f));
+	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
+		SceneObjectFromHandle(&core->scene, core->damaged_helmet_objects[i])
+			->transform = M4Transform(v3(i, 2.f, .4f * SinF(t)),
+						  QuatInitEuler(0.f, t, 0.f),
+						  v3u(1.f),
+						  v3u(0.f));
 	}
+
+	SceneObjectFromHandle(&core->scene, core->light)->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
+										  QuatInitIdentity(),
+										  v3u(1.f),
+										  v3u(0.f));
+		
 	SceneResolveRemoving(&core->scene);
 
 	// Rendering.
@@ -308,8 +306,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			SceneObject *object = &core->scene.objects[i];
 			
 			// If the object has a mesh.
-			if (object->mesh_id != (u32)(-1)) {
-				// All objects have a transform.
+			if (object->mesh_id != SCENE_INVALID_HANDLE) {
 				GPU_ObjectData object_data = {0};
 				object_data.model_matrix = object->transform;
 				object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
@@ -335,7 +332,7 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 			}
 
 			// If the object has a light.
-			if (object->light_id != (u32)(-1)) {
+			if (object->light_id != SCENE_INVALID_HANDLE) {
 				Light *light = &core->render_state.lights[object->light_id];
 			
 				f32 epsilon_intensity = .1f;
