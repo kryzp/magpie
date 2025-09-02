@@ -6,8 +6,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "assert.h"
-#include "abstraction_layer.h"
-#include "program_constants.h"
+#include "kp.h"
 #include "platform.h"
 
 internal void CoreNullStub(Platform *platform)
@@ -27,7 +26,7 @@ typedef struct MacOSCoreCode {
 	void (*CoreAfterHotReload)(Platform *);
 } MacOSCoreCode;
 
-internal void LoadCoreCode(MacOSCoreCode *core_code)
+internal void MacOSLoadCoreCode(MacOSCoreCode *core_code)
 {
 	core_code->handle = dlopen("build/core.dylib", RTLD_NOW | RTLD_LOCAL);
 
@@ -40,7 +39,7 @@ internal void LoadCoreCode(MacOSCoreCode *core_code)
 	}
 }
 
-internal void UnloadCoreCode(MacOSCoreCode *core_code)
+internal void MacOSUnloadCoreCode(MacOSCoreCode *core_code)
 {
 	core_code->CoreInit = CoreNullStub;
 	core_code->CoreUpdate = CoreNullStub;
@@ -54,18 +53,18 @@ internal void UnloadCoreCode(MacOSCoreCode *core_code)
 	}
 }
 
-internal b32 CreateVulkanSurface(void *instance, void *surface)
+internal b32 MacOSCreateVulkanSurface(void *instance, void *surface)
 {
 	return SDL_Vulkan_CreateSurface(window, (VkInstance)instance, 0,
 					(VkSurfaceKHR *)surface);
 }
 
-internal void ReconnectAllGamepads()
+internal void MacOSReconnectAllGamepads()
 {
 	// TODO
 }
 
-internal void CloseAllGamepads()
+internal void MacOSCloseAllGamepads()
 {
 	// TODO
 }
@@ -129,7 +128,7 @@ i32 main(void)
 		global_platform.exit = false;
 
 		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
-		global_platform.CreateVulkanSurface = CreateVulkanSurface;
+		global_platform.CreateVulkanSurface = MacOSCreateVulkanSurface;
 
 		global_platform.GetTicks = SDL_GetTicks;
 		global_platform.GetPerformanceCounter = SDL_GetPerformanceCounter;
@@ -140,7 +139,7 @@ i32 main(void)
 
 	// Load in our dynamically linked code seperately.
 	MacOSCoreCode core_code = {0};
-	LoadCoreCode(&core_code);
+	MacOSLoadCoreCode(&core_code);
 	core_code.CoreInit(&global_platform);
 
 	struct stat st_reload = {0};
@@ -157,8 +156,8 @@ i32 main(void)
 		if (st_reload.st_mtime != last_reload) {
 			core_code.CoreBeforeHotReload(&global_platform);
 
-			UnloadCoreCode(&core_code);
-			LoadCoreCode(&core_code);
+			MacOSUnloadCoreCode(&core_code);
+			MacOSLoadCoreCode(&core_code);
 
 			core_code.CoreAfterHotReload(&global_platform);
 
@@ -245,9 +244,9 @@ i32 main(void)
 
 	core_code.CoreDestroy(&global_platform);
 
-	UnloadCoreCode(&core_code);
+	MacOSUnloadCoreCode(&core_code);
 
-	CloseAllGamepads();
+	MacOSCloseAllGamepads();
 
 	SDL_DestroyWindow(window);
 	SDL_Quit();

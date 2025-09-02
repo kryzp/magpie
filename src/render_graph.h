@@ -8,7 +8,8 @@ typedef struct RenderingAttachment {
 
 typedef enum RenderPassType {
 	RenderPassType_Graphics,
-	RenderPassType_Compute
+	RenderPassType_Compute,
+	RenderPassType_Mipmap
 } RenderPassType;
 
 typedef struct RenderState RenderState;
@@ -23,8 +24,7 @@ typedef struct RenderPass {
 
 	union {
 		struct {
-			void (*Record)(RenderState *rs,
-				       RenderInfo *render_info, void *context);
+			void (*Record)(RenderState *rs, RenderInfo *render_info, void *context);
 
 			u32 view_mask;
 
@@ -35,13 +35,16 @@ typedef struct RenderPass {
 			ImageView *views[16];
 		} graphics;
 
-		struct ComputePassDef {
-			void (*Record)(RenderState *rs,
-				       void *context);
+		struct {
+			void (*Record)(RenderState *rs, void *context);
 
 			u32 view_count;
 			ImageView *views[16];
 		} compute;
+
+		struct {
+			Image *image;
+		} mipmap;
 	};
 } RenderPass;
 

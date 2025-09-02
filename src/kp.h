@@ -39,8 +39,8 @@
 #define ATan2F                     atan2f
 #define PowF                       powf
 #define FModF                      fmodf
-#define AbsoluteValue              fabsf
-#define AbsoluteValueI             abs
+#define Abs                        fabsf
+#define AbsI                       abs
 #define SquareRoot                 sqrtf
 #define Log2F                      log2f
 #define MemoryCopy                 memcpy
@@ -56,7 +56,7 @@
 #define MinValue(a, b)             (((a) < (b)) ? (a) : (b))
 #define MaxValue(a, b)             (((a) > (b)) ? (a) : (b))
 #define ClampValue(v, lo, hi)      (((v) < (lo)) ? (lo) : (((v) > (hi)) ? (hi) : (v)))
-#define ArraySize(a)               (sizeof(a) / sizeof((a)[0]))
+#define ArraySize(a)               (sizeof(a) / sizeof(*(a)))
 
 #define Bytes(n) (n)
 #define Kilobytes(n) (Bytes(n) * 1024)
@@ -142,7 +142,7 @@ typedef union v3 {
 		f32 b;
 	};
 
-	f32 elements[3];
+	f32 v[3];
 } v3;
 
 internal v3 V3Init(f32 x, f32 y, f32 z)
@@ -260,7 +260,7 @@ typedef union v4 {
 		f32 a;
 	};
 
-	f32 elements[4];
+	f32 v[4];
 } v4;
 
 internal v4 V4Init(f32 x, f32 y, f32 z, f32 w)
@@ -421,7 +421,7 @@ typedef union v3i {
 		i32 b;
 	};
 
-	i32 elements[3];
+	i32 v[3];
 } v3i;
 
 internal v3i V3IInit(i32 x, i32 y, i32 z)
@@ -444,8 +444,8 @@ typedef union v4i {
 			};
 
 			struct {
-				f32 width;
-				f32 height;
+				i32 width;
+				i32 height;
 			};
 		};
 	};
@@ -457,7 +457,7 @@ typedef union v4i {
 		i32 a;
 	};
 
-	f32 elements[4];
+	i32 v[4];
 } v4i;
 
 internal v4i V4IInit(i32 x, i32 y, i32 z, i32 w)
@@ -527,7 +527,7 @@ internal v4 M4MultiplyV4(m4 m, v4 v)
 
 	for (i32 i = 0; i < 4; i++) {
 		for (i32 j = 0; j < 4; j++) {
-			r.elements[i] += m4e(m, i, j) * v.elements[j];
+			r.v[i] += m4e(m, i, j) * v.v[j];
 		}
 	}
 
@@ -691,16 +691,16 @@ internal m4 M4Inverse(m4 m)
 	v4 inv2 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
 	v4 inv3 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
 
-	v4 sign_a = { +1.f, -1.f, +1.f, -1.f };
-	v4 sign_b = { -1.f, +1.f, -1.f, +1.f };
+	f32 sign_a[] = { +1.f, -1.f, +1.f, -1.f };
+	f32 sign_b[] = { -1.f, +1.f, -1.f, +1.f };
 
 	m4 inverse = {0};
-
+	
 	for (i32 i = 0; i < 4; i++) {
-		inverse.c0.elements[i] = inv0.elements[i] * sign_a.elements[i];
-		inverse.c1.elements[i] = inv1.elements[i] * sign_b.elements[i];
-		inverse.c2.elements[i] = inv2.elements[i] * sign_a.elements[i];
-		inverse.c3.elements[i] = inv3.elements[i] * sign_b.elements[i];
+		inverse.c0.v[i] = inv0.v[i] * sign_a[i];
+		inverse.c1.v[i] = inv1.v[i] * sign_b[i];
+		inverse.c2.v[i] = inv2.v[i] * sign_a[i];
+		inverse.c3.v[i] = inv3.v[i] * sign_b[i];
 	}
 
 	v4 row0 = { inverse.m00, inverse.m01, inverse.m02, inverse.m03 };
@@ -877,7 +877,7 @@ internal b32 CharIsUpper(char c)
 
 internal b32 CharIsDigit(char c)
 {
-	return (c >= '0' && c <= '9');
+	return c >= '0' && c <= '9';
 }
 
 internal int CharToLower(u8 c)
@@ -927,7 +927,7 @@ internal u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
 internal u64 HashCString(char *string)
 {
 	u64 length = 0;
-       	while (string[length] != '\0') length++;
+	while (string[length] != '\0') length++;
 	return HashBytesGeneric(string, length);
 }
 

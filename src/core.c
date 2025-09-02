@@ -7,7 +7,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "abstraction_layer.h"
+#include "kp.h"
 
 #define STBI_ASSERT Assert
 #define STBIW_ASSERT Assert
@@ -18,7 +18,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "ext/stb_image_write.h"
 
-#include "program_constants.h"
 #include "platform.h"
 
 #include "arena.h"

@@ -109,8 +109,16 @@ internal void RenderGraphExecuteRenderPasses(RenderGraph *graph,
 				}
 			}
 
+			CmdBeginRendering(cmd, &render_info);
 			pass.graphics.Record(rs, &render_info, pass.context);
+			CmdEndRendering(cmd);
+			
+			break;
+		}
 
+		case RenderPassType_Mipmap: {
+			CmdPrepareForMipmapping(cmd, pass.mipmap.image);
+			CmdGenerateMipmaps(cmd, pass.mipmap.image);
 			break;
 		}
 

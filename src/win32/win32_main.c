@@ -5,9 +5,7 @@
 
 #include <stdio.h>
 
-#include "assert.h"
-#include "abstraction_layer.h"
-#include "program_constants.h"
+#include "kp.h"
 #include "platform.h"
 
 typedef void (*CoreFunctionType)(Platform *);
@@ -127,14 +125,10 @@ i32 main(void)
 		global_platform.transient_memory_size = TRANSIENT_MEMORY_SIZE;
 		global_platform.scratch_memory_size = SCRATCH_MEMORY_SIZE;
 
-		global_platform.permanent_memory =
-			malloc(global_platform.permanent_memory_size);
-		global_platform.transient_memory =
-			malloc(global_platform.transient_memory_size);
-		global_platform.scratch_memory[0] =
-			malloc(global_platform.scratch_memory_size);
-		global_platform.scratch_memory[1] =
-			malloc(global_platform.scratch_memory_size);
+		global_platform.permanent_memory = malloc(global_platform.permanent_memory_size);
+		global_platform.transient_memory = malloc(global_platform.transient_memory_size);
+		global_platform.scratch_memory[0] = malloc(global_platform.scratch_memory_size);
+		global_platform.scratch_memory[1] = malloc(global_platform.scratch_memory_size);
 
 		global_platform.window_width = DEFAULT_WINDOW_WIDTH;
 		global_platform.window_height = DEFAULT_WINDOW_HEIGHT;
@@ -156,15 +150,12 @@ i32 main(void)
 
 		global_platform.exit = false;
 
-		global_platform.GetVulkanInstanceExtensions =
-			SDL_Vulkan_GetInstanceExtensions;
+		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
 		global_platform.CreateVulkanSurface = Win32CreateVulkanSurface;
 
 		global_platform.GetTicks = SDL_GetTicks;
-		global_platform.GetPerformanceCounter =
-			SDL_GetPerformanceCounter;
-		global_platform.GetPerformanceFrequency =
-			SDL_GetPerformanceFrequency;
+		global_platform.GetPerformanceCounter = SDL_GetPerformanceCounter;
+		global_platform.GetPerformanceFrequency = SDL_GetPerformanceFrequency;
 	}
 
 	Platform prev_st = global_platform;

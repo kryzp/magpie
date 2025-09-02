@@ -11,42 +11,36 @@ internal void RenderPassGenerateIrradianceMap(RenderState *rs,
 	CommandBuffer *cmd = &rs->cmd;
 	struct irradiance_pass_context *pass_context = (struct irradiance_pass_context *)context;
 	
-	CmdBeginRendering(cmd, render_info);
-	{
-		struct {
-			u64 transform_buffer;
-			u32 environment_map_id;
-			u32 linear_sampler_id;
-			u32 _padding[2];
-		} args;
+	struct {
+		u64 transform_buffer;
+		u32 environment_map_id;
+		u32 linear_sampler_id;
+		u32 _padding[2];
+	} args;
 
-		args.transform_buffer = core->cubemap_capture_transforms.device_address;
-		args.environment_map_id = pass_context->skybox->resource_id;
-		args.linear_sampler_id = core->linear_sampler.resource_id;
+	args.transform_buffer = core->cubemap_capture_transforms.device_address;
+	args.environment_map_id = pass_context->skybox->resource_id;
+	args.linear_sampler_id = core->linear_sampler.resource_id;
 
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->irradiance_map_program, &vertex_formats->vec3);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-		pipeline_def.view_mask = 0b111111;
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->irradiance_map_program,
+									  &vertex_formats->vec3);
+	pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	pipeline_def.colour_attachment_count = 1;
+	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+	pipeline_def.view_mask = 0b111111;
+		
+	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
+			 sizeof(args), &args, 0);
 
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
-				 sizeof(args), &args, 0);
-
-		MeshBindCmd(&core->skybox_mesh, cmd);
-		MeshDrawCmd(&core->skybox_mesh, cmd);
-	}
-	CmdEndRendering(cmd);
-
-	CmdPrepareForMipmapping(cmd, pass_context->target);
-	CmdGenerateMipmaps(cmd, pass_context->target);
-
+	MeshBindCmd(&core->skybox_mesh, cmd);
+	MeshDrawCmd(&core->skybox_mesh, cmd);
+		
 	DebugLog("Created Irradiance Cubemap.");
 }
 
@@ -62,41 +56,37 @@ internal void RenderPassGeneratePrefilterMap(RenderState *rs,
 	CommandBuffer *cmd = &rs->cmd;
 	struct prefilter_pass_context *pass_context = (struct prefilter_pass_context *)context;
 	
-	CmdBeginRendering(cmd, render_info);
-	{
-		struct {
-			u64 transform_buffer;
-			f32 roughness;
-			u32 environment_map_id;
-			u32 linear_sampler_id;
-			u32 _padding;
-		} args;
+	struct {
+		u64 transform_buffer;
+		f32 roughness;
+		u32 environment_map_id;
+		u32 linear_sampler_id;
+		u32 _padding;
+	} args;
 
-		args.transform_buffer = core->cubemap_capture_transforms.device_address;
-		args.roughness = pass_context->roughness;
-		args.environment_map_id = pass_context->skybox->resource_id;
-		args.linear_sampler_id = core->linear_sampler.resource_id;
+	args.transform_buffer = core->cubemap_capture_transforms.device_address;
+	args.roughness = pass_context->roughness;
+	args.environment_map_id = pass_context->skybox->resource_id;
+	args.linear_sampler_id = core->linear_sampler.resource_id;
 
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->prefilter_map_program, &vertex_formats->vec3);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
-		pipeline_def.view_mask = 0b111111;
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->prefilter_map_program, &vertex_formats->vec3);
+	pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	pipeline_def.colour_attachment_count = 1;
+	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+	pipeline_def.view_mask = 0b111111;
 
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
-				 sizeof(args), &args, 0);
+	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
+			 sizeof(args), &args, 0);
 
-		MeshBindCmd(&core->skybox_mesh, cmd);
-		MeshDrawCmd(&core->skybox_mesh, cmd);
-	}
-	CmdEndRendering(cmd);
-
+	MeshBindCmd(&core->skybox_mesh, cmd);
+	MeshDrawCmd(&core->skybox_mesh, cmd);
+		
 	DebugLog("Created a Prefilter Cubemap mip level.");
 }
 
@@ -125,6 +115,11 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 		MemoryCopy(render_pass.context, &context, sizeof(context));
 		
 		RenderGraphPush(graph, &render_pass);
+
+		RenderPass mipmap_pass = {0};
+		mipmap_pass.type = RenderPassType_Mipmap;
+		mipmap_pass.mipmap.image = &probe->irradiance;
+		RenderGraphPush(graph, &mipmap_pass);
 	}
 
 	// Prefilter Map.

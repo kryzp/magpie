@@ -40,12 +40,8 @@
 //               --> Maybe in the future, have a BindlessResources
 //                   struct in the high level, that different renderers
 //                   can use to manage their bindless resources
-//       [ ] 17. Mipmap generation should happen automatically when executing render passes.
-//               --> When that is achieved, automatically call CmdBeginRendering(...) and
-//                   CmdEndRendering(...) around the Record(...) function, since mipmaps
-//                   are pretty much the only reason I don't already do that.
-//       [ ] 18. Switch to using timeline semaphores over fences for frame synchronisation.
-//       [ ] 19. Start going through ideas list in readme.md.
+//       [ ] 17. Switch to using timeline semaphores over fences for frame synchronisation.
+//       [ ] 18. Start going through ideas list in readme.md.
 
 internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void *context)
 {
@@ -54,51 +50,47 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 
 	RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
 
-	CmdBeginRendering(cmd, render_info);
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
+									  &vertex_formats->model);
 	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
-										  &vertex_formats->model);
-		{
-			pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
+		pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
 
-			for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-				pipeline_def.colour_attachment_formats[i] = renderer->gbuffer.attachments[i].format;
+		for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
+			pipeline_def.colour_attachment_formats[i] = renderer->gbuffer.attachments[i].format;
 
-			pipeline_def.has_depth_attachment = true;
-		}
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-
-		for (IndirectBatch *batch = rs->mesh_pass.batches; batch; batch = batch->next) {
-			struct {
-				u64 frame_data_buffer;
-				u64 transform_buffer;
-				u64 material_buffer;
-				u32 material_id;
-				u32 sampler;
-			} args;
-
-			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-			args.transform_buffer = current_frame->object_buffer.device_address;
-			args.material_buffer = rs->material_buffer.device_address;
-			args.material_id = batch->material_id;
-			args.sampler = core->linear_sampler.resource_id;
-
-			CmdPushConstants(cmd, st.layout,
-					 VK_SHADER_STAGE_ALL_GRAPHICS,
-					 sizeof(args), &args, 0);
-
-			MeshBindCmd(rs->meshes[batch->mesh_id].original, cmd);
-
-			CmdDrawIndexedIndirect(cmd, &current_frame->indirect_buffer,
-					       sizeof(VkDrawIndexedIndirectCommand) * batch->first,
-					       batch->count,
-					       sizeof(VkDrawIndexedIndirectCommand));
-		}
+		pipeline_def.has_depth_attachment = true;
 	}
-	CmdEndRendering(cmd);
+	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+
+	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+
+	for (IndirectBatch *batch = rs->mesh_pass.batches; batch; batch = batch->next) {
+		struct {
+			u64 frame_data_buffer;
+			u64 transform_buffer;
+			u64 material_buffer;
+			u32 material_id;
+			u32 sampler;
+		} args;
+
+		args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
+		args.transform_buffer = current_frame->object_buffer.device_address;
+		args.material_buffer = rs->material_buffer.device_address;
+		args.material_id = batch->material_id;
+		args.sampler = core->linear_sampler.resource_id;
+
+		CmdPushConstants(cmd, st.layout,
+				 VK_SHADER_STAGE_ALL_GRAPHICS,
+				 sizeof(args), &args, 0);
+
+		MeshBindCmd(rs->meshes[batch->mesh_id].original, cmd);
+
+		CmdDrawIndexedIndirect(cmd, &current_frame->indirect_buffer,
+				       sizeof(VkDrawIndexedIndirectCommand) * batch->first,
+				       batch->count,
+				       sizeof(VkDrawIndexedIndirectCommand));
+	}
 }
 
 struct lighting_pass_context {
@@ -114,117 +106,113 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	CommandBuffer *cmd = &rs->cmd;
         RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
 
-	CmdBeginRendering(cmd, render_info);
+	// Ambient Lighting.
 	{
-		// Ambient Lighting.
-		{
-			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
-			pipeline_def.depth_stencil_state.depth_test_enabled = false;
-			pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			pipeline_def.colour_attachment_count = 1;
-			pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
 
-			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
-			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 
+		struct {
+			u64 frame_data_buffer;
+
+			u32 position;
+			u32 albedo;
+			u32 normal;
+			u32 material;
+			u32 emissive;
+
+			u32 irradiance_map;
+			u32 prefilter_map;
+			u32 brdf_lut;
+
+			u32 linear_sampler;
+
+			u32 _padding[3];
+		} args;
+
+		args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
+
+		args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
+		args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
+		args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
+		args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
+		args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
+
+		args.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
+		args.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
+		args.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
+
+		args.linear_sampler = core->linear_sampler.resource_id;
+
+		CmdPushConstants(cmd, st.layout,
+				 VK_SHADER_STAGE_ALL_GRAPHICS,
+				 sizeof(args), &args, 0);
+
+		CmdDrawVerticesN(cmd, 3);
+	}
+
+	// Direct lighting.
+	{
+		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
+										  &vertex_formats->vec3);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
+		pipeline_def.colour_attachment_count = 1;
+		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+		pipeline_def.blend_state.enabled = true;
+		pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
+		pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
+		pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
+
+		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+
+		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+
+		MeshBindCmd(&core->light_sphere_mesh, cmd);
+
+		for (u32 i = 0; i < rs->light_count; i++) {
 			struct {
 				u64 frame_data_buffer;
-
+				u64 light_buffer;
+					
 				u32 position;
 				u32 albedo;
 				u32 normal;
 				u32 material;
 				u32 emissive;
 
-				u32 irradiance_map;
-				u32 prefilter_map;
-				u32 brdf_lut;
-
 				u32 linear_sampler;
 
-				u32 _padding[3];
+				u32 _padding[2];
 			} args;
 
-			args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-
+			args.frame_data_buffer = current_frame->frame_data_buffer    .device_address;
+			args.light_buffer      = current_frame->light_buffer         .device_address;
+				
 			args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
 			args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
 			args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
 			args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
 			args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
-
-			args.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
-			args.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
-			args.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
-
+				
 			args.linear_sampler = core->linear_sampler.resource_id;
 
 			CmdPushConstants(cmd, st.layout,
 					 VK_SHADER_STAGE_ALL_GRAPHICS,
 					 sizeof(args), &args, 0);
 
-			CmdDrawVerticesN(cmd, 3);
-		}
-
-		// Direct lighting.
-		{
-			GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
-											  &vertex_formats->vec3);
-			pipeline_def.depth_stencil_state.depth_test_enabled = false;
-			pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
-			pipeline_def.colour_attachment_count = 1;
-			pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-			pipeline_def.blend_state.enabled = true;
-			pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
-			pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
-			pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
-
-			PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-
-			CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-			CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-
-			MeshBindCmd(&core->light_sphere_mesh, cmd);
-
-			for (u32 i = 0; i < rs->light_count; i++) {
-				struct {
-					u64 frame_data_buffer;
-					u64 light_buffer;
-					
-					u32 position;
-					u32 albedo;
-					u32 normal;
-					u32 material;
-					u32 emissive;
-
-					u32 linear_sampler;
-
-					u32 _padding[2];
-				} args;
-
-				args.frame_data_buffer = current_frame->frame_data_buffer    .device_address;
-				args.light_buffer      = current_frame->light_buffer         .device_address;
-				
-				args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
-				args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
-				args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
-				args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
-				args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
-				
-				args.linear_sampler = core->linear_sampler.resource_id;
-
-				CmdPushConstants(cmd, st.layout,
-						 VK_SHADER_STAGE_ALL_GRAPHICS,
-						 sizeof(args), &args, 0);
-
-				MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
-			}
+			MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
 		}
 	}
-	CmdEndRendering(cmd);
 }
 
 // ---

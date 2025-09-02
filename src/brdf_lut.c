@@ -5,22 +5,18 @@ internal void RenderPassGenerateBRDFLookUp(RenderState *rs,
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	CmdBeginRendering(cmd, render_info);
-	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->brdf_lut_program, 0);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32_SFLOAT;
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->brdf_lut_program, NULL);
+	pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	pipeline_def.colour_attachment_count = 1;
+	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32_SFLOAT;
+		
+	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+		
+	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
+	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
 
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-
-		CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-		CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
-
-		CmdDrawVerticesN(cmd, 3);
-	}
-	CmdEndRendering(cmd);
+	CmdDrawVerticesN(cmd, 3);
 }
 
 internal void BRDFLookUpGenerate(RenderGraph *graph, Image *out)
