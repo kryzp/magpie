@@ -389,15 +389,9 @@ internal void BindlessApplyUpdates()
 		}
 
 		case BindlessUpdateType_Image: {
-			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-			if (update->sampled_image.is_depth) {
-				layout =
-					VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			} else {
-				layout =
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
+			VkImageLayout layout = update->sampled_image.is_depth
+				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			VkDescriptorImageInfo *image_info = image_infos + i;
 			image_info->imageView = update->sampled_image.view;
@@ -408,8 +402,7 @@ internal void BindlessApplyUpdates()
 			write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			write->descriptorCount = 1;
 			write->dstArrayElement = update->slot;
-			write->descriptorType =
-				VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 			write->dstSet = graphics_device->bindless_set;
 			write->dstBinding = BINDLESS_IMAGE_BINDING;
 			write->pImageInfo = image_info;
@@ -418,15 +411,9 @@ internal void BindlessApplyUpdates()
 		}
 
 		case BindlessUpdateType_Cubemap: {
-			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-			if (update->sampled_image.is_depth) {
-				layout =
-					VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			} else {
-				layout =
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
+			VkImageLayout layout = update->sampled_image.is_depth
+				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			VkDescriptorImageInfo *image_info = image_infos + i;
 			image_info->imageView = update->sampled_image.view;
@@ -437,8 +424,7 @@ internal void BindlessApplyUpdates()
 			write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			write->descriptorCount = 1;
 			write->dstArrayElement = update->slot;
-			write->descriptorType =
-				VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			write->descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 			write->dstSet = graphics_device->bindless_set;
 			write->dstBinding = BINDLESS_CUBEMAP_BINDING;
 			write->pImageInfo = image_info;
@@ -474,9 +460,8 @@ internal u32 ImageFaceCount(Image *image)
 internal u32 ImageLayerCount(Image *image)
 {
 	if (image->type == VK_IMAGE_VIEW_TYPE_1D_ARRAY ||
-	    image->type == VK_IMAGE_VIEW_TYPE_2D_ARRAY) {
+	    image->type == VK_IMAGE_VIEW_TYPE_2D_ARRAY)
 		return image->depth;
-	}
 
 	return ImageFaceCount(image);
 }
@@ -486,9 +471,12 @@ internal u32 ClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 	return MinValue(mipmaps, 1u + (u32)(Log2F((f32)MaxValue(w, MaxValue(h, d)))));
 }
 
-internal Image ImageAlloc(u32 width, u32 height, u32 depth, VkFormat format,
-			  VkImageViewType type, VkImageTiling tiling,
-			  u32 mipmaps, VkSampleCountFlagBits samples,
+internal Image ImageAlloc(u32 width, u32 height, u32 depth,
+			  VkFormat format,
+			  VkImageViewType type,
+			  VkImageTiling tiling,
+			  u32 mipmaps,
+			  VkSampleCountFlagBits samples,
 			  b32 is_transient, b32 is_storage)
 {
 	Image image = {0};
@@ -630,17 +618,15 @@ internal VkImageMemoryBarrier2 GetImageMemoryBarrier(Image *image, VkImageLayout
 
 	// TODO: This should ideally be a bit more granular.
 	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT |
-				VK_ACCESS_2_MEMORY_READ_BIT;
+	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
 
 	// TODO: This as well.
 	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 	if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-	    layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL) {
+	    layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-	}
 
 	return barrier;
 }
@@ -671,11 +657,10 @@ internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
 	view_create_info.subresourceRange.baseArrayLayer = layer;
 	view_create_info.subresourceRange.layerCount = layer_count;
 
-	if (ImageIsDepth(image)) {
-		// Depth AND stencil is not allowed for sampling!
-		// --> So, use depth instead.
+	// Depth AND stencil is not allowed for sampling!
+	// --> So, use depth instead.
+	if (ImageIsDepth(image))
 		view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	}
 
 	view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 	view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -856,7 +841,7 @@ internal void GPUBufferDestroy(GPUBuffer *buffer)
 // TODO: Move elsewhere.
 internal String8 LoadFileBytes(MemoryArena *dst, String8 path)
 {
-	b8 *bytes = 0;
+	b8 *bytes = NULL;
 
 	FILE *file = fopen((char *)path.str, "rb");
 	u64 file_size = 0;
@@ -1062,13 +1047,13 @@ internal VkPipelineLayout PipelineLayoutCreate(ShaderProgram *program)
 		create_info.pPushConstantRanges = &push_constants;
 	} else {
 		create_info.pushConstantRangeCount = 0;
-		create_info.pPushConstantRanges = 0;
+		create_info.pPushConstantRanges = NULL;
 	}
 
 	VkPipelineLayout layout = VK_NULL_HANDLE;
 
-	VK_CHECK(vkCreatePipelineLayout(graphics_device->device, &create_info,
-					0, &layout),
+	VK_CHECK(vkCreatePipelineLayout(graphics_device->device, &create_info, NULL,
+					&layout),
 		 "Failed to create pipeline layout.");
 
 	return layout;
@@ -1163,7 +1148,7 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 	multisample_state_create_info.sampleShadingEnable = definition->min_sample_shading_enabled;
 	multisample_state_create_info.minSampleShading = definition->min_sample_shading;
 	multisample_state_create_info.rasterizationSamples = definition->samples;
-	multisample_state_create_info.pSampleMask = 0;
+	multisample_state_create_info.pSampleMask = NULL;
 	multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
 	multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
@@ -1200,7 +1185,6 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 	colour_blend_state_create_info.blendConstants[2] = definition->blend_state.constants[2];
 	colour_blend_state_create_info.blendConstants[3] = definition->blend_state.constants[3];
 
-	// ass
 	VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {0};
 	depth_stencil_state_create_info.depthTestEnable = definition->depth_stencil_state.depth_test_enabled;
 	depth_stencil_state_create_info.depthWriteEnable = definition->depth_stencil_state.depth_write_enabled;
@@ -1970,17 +1954,20 @@ internal b32 CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkP
 	VkExtensionProperties *available_exts = MemoryArenaPush(scratch.arena, sizeof(VkExtensionProperties) * extension_count);
 	vkEnumerateDeviceExtensionProperties(physical_device, 0, &extension_count, available_exts);
 
+	b32 result = true;
+
 	for (i32 i = 0; i < extension_count; i++) {
 		for (i32 j = 0; j < ArraySize(GRAPHICS_VALIDATION_LAYERS); j++) {
 			if (CStringCompare(available_exts[i].extensionName, GRAPHICS_VALIDATION_LAYERS[j]) == 0) {
-				ReleaseScratch(&scratch);
-				return false;
+				result = false;
+				goto exit;
 			}
 		}
 	}
 
+exit:
 	ReleaseScratch(&scratch);
-	return true;
+	return result;
 }
 
 // fucking sucks.
@@ -2041,6 +2028,8 @@ internal b32 CheckForValidationLayerSupport(MemoryArena *arena)
 	VkLayerProperties *available_layers = MemoryArenaPush(scratch.arena, sizeof(VkLayerProperties) * layer_count);
 	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
 
+	b32 result = true;
+	
 	for (i32 i = 0; i < ArraySize(GRAPHICS_VALIDATION_LAYERS); i++) {
 		b32 has_layer = false;
 		const char *layer_name_0 = GRAPHICS_VALIDATION_LAYERS[i];
@@ -2055,13 +2044,14 @@ internal b32 CheckForValidationLayerSupport(MemoryArena *arena)
 		}
 
 		if (!has_layer) {
-			ReleaseScratch(&scratch);
-			return 0;
+			result = false;
+			goto exit;
 		}
 	}
 
+exit:
 	ReleaseScratch(&scratch);
-	return 1;
+	return result;
 }
 
 internal VKAPI_ATTR VkBool32 VKAPI_CALL GraphicsVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -2179,7 +2169,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	instance_create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-	VK_CHECK(vkCreateInstance(&instance_create_info, 0, &graphics_device->instance),
+	VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &graphics_device->instance),
 		 "Failed to create instance.");
 
 	volkLoadInstance(graphics_device->instance);
@@ -2227,10 +2217,8 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 		u32 selected_index = 0;
 
 		for (i32 i = 0; i < device_count; i++) {
-			vkGetPhysicalDeviceProperties2(devices[i],
-						       &graphics_device->physical_device_properties);
-			vkGetPhysicalDeviceFeatures2(devices[i],
-						     &graphics_device->physical_device_features);
+			vkGetPhysicalDeviceProperties2(devices[i], &graphics_device->physical_device_properties);
+			vkGetPhysicalDeviceFeatures2  (devices[i], &graphics_device->physical_device_features);
 
 			u32 usability1 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
 									       graphics_device->surface,

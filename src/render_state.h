@@ -68,13 +68,6 @@ typedef struct MeshPass {
 
 // ---
 
-typedef struct RenderStateFrameData {
-	GPUBuffer frame_data_buffer;
-	GPUBuffer object_buffer;
-	GPUBuffer light_buffer;
-	GPUBuffer indirect_buffer;
-} RenderStateFrameData;
-
 typedef struct PassMesh {
 	Mesh *original;
 	b32 is_merged;
@@ -84,26 +77,23 @@ typedef struct PassMesh {
 	u32 index_count;
 } PassMesh;
 
-// Internal rendering components.
 typedef struct RenderState {
 	CommandBuffer cmd;
 
 	u32 mesh_count;
 	PassMesh meshes[SCENE_MAX_OBJECTS];
 
-	MeshPass mesh_pass;
 	GPUBuffer merged_vertex_buffer;
 	GPUBuffer merged_index_buffer;
 	
 	u32 material_count;
 	Material materials[SCENE_MAX_OBJECTS];
-	GPUBuffer material_buffer;
+
+	GPUBuffer *material_buffer;
 	
 	u32 light_count;
 	Light lights[SCENE_MAX_OBJECTS];
 	
-	RenderStateFrameData per_frame_data[FRAMES_IN_FLIGHT];
-
 	// TODO: Move image view cache into here when adding
 	//       automatic mip-mapping into the render graph.
 } RenderState;

@@ -77,7 +77,7 @@ struct skybox_pass_context {
 internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
-	RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
+	CoreFrameData *current_frame = CoreCurrentFrame();
 
 	struct skybox_pass_context pass_context = *((struct skybox_pass_context *)context);
 

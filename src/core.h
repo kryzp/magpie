@@ -1,4 +1,11 @@
 
+typedef struct CoreFrameData {
+	GPUBuffer frame_data_buffer;
+	GPUBuffer object_buffer;
+	GPUBuffer light_buffer;
+	GPUBuffer indirect_buffer;
+} CoreFrameData;
+
 typedef struct Core {
 	MemoryArena permanent_arena;
 	MemoryArena frame_arena;
@@ -22,6 +29,12 @@ typedef struct Core {
 
 	// ---
 
+	CoreFrameData per_frame_data[FRAMES_IN_FLIGHT];
+	GPUBuffer material_buffer;
+	MeshPass mesh_pass;
+	
+	// ---
+
 	u32 damaged_helmet_objects[5];
 	u32 light;
 	
@@ -40,6 +53,8 @@ typedef struct Core {
 	Mesh skybox_mesh;
 	Mesh light_sphere_mesh;
 } Core;
+
+internal CoreFrameData *CoreCurrentFrame();
 
 global Core *core = NULL;
 global Platform *platform = NULL;

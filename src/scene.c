@@ -129,7 +129,8 @@ internal u32 SceneRegisterObject(Scene *scene, m4 transform)
 	return handle;
 }
 
-internal void SceneObjectAddMesh(Scene *scene, u32 handle,
+internal void SceneObjectAddMesh(Scene *scene,
+				 u32 handle,
 				 RenderState *rs,
 				 Assets *assets,
 				 Mesh *mesh,

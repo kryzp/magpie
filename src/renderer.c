@@ -43,13 +43,19 @@
 //       [ ] 17. Switch to using timeline semaphores over fences for frame synchronisation.
 //       [ ] 18. Start going through ideas list in readme.md.
 
+struct geometry_pass_context {
+	Renderer *renderer;
+	MeshPass *mesh_pass;
+};
+
 internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void *context)
 {
-	Renderer *renderer = *((Renderer **)context);
 	CommandBuffer *cmd = &rs->cmd;
+	CoreFrameData *current_frame = CoreCurrentFrame();
 
-	RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
-
+	struct geometry_pass_context *pass_context = (struct geometry_pass_context *)context;
+	Renderer *renderer = pass_context->renderer;
+	
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
 									  &vertex_formats->model);
 	{
@@ -65,7 +71,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 	CmdBindBindless(cmd, st.bind_point, st.layout);
 	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
 
-	for (IndirectBatch *batch = rs->mesh_pass.batches; batch; batch = batch->next) {
+	for (IndirectBatch *batch = pass_context->mesh_pass->batches; batch; batch = batch->next) {
 		struct {
 			u64 frame_data_buffer;
 			u64 transform_buffer;
@@ -76,7 +82,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 
 		args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
 		args.transform_buffer = current_frame->object_buffer.device_address;
-		args.material_buffer = rs->material_buffer.device_address;
+		args.material_buffer = rs->material_buffer->device_address;
 		args.material_id = batch->material_id;
 		args.sampler = core->linear_sampler.resource_id;
 
@@ -102,7 +108,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	Renderer *renderer = pass_context->renderer;
 	EnvironmentProbe *probe = pass_context->probe;
 	CommandBuffer *cmd = &rs->cmd;
-        RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(rs);
+	CoreFrameData *current_frame = CoreCurrentFrame();
 
 	// Ambient Lighting.
 	{
@@ -178,15 +184,15 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 			struct {
 				u64 frame_data_buffer;
 				u64 light_buffer;
-					
+				
 				u32 position;
 				u32 albedo;
 				u32 normal;
 				u32 material;
 				u32 emissive;
-
+				
 				u32 linear_sampler;
-
+				
 				u32 _padding[2];
 			} args;
 
@@ -237,14 +243,21 @@ struct deferred_renderer_input {
 	Scene *scene;
 	Camera *camera;
 	EnvironmentProbe *probe;
+	MeshPass *mesh_pass;
 	ImageView *target;
 };
 
-internal void DeferredRenderFrame(Renderer *renderer, RenderGraph *graph,
+internal void DeferredRenderFrame(Renderer *renderer,
+				  RenderGraph *graph,
 				  struct deferred_renderer_input *input)
 {
 	// --- GEOMETRY PASS
 
+	struct geometry_pass_context geometry_context = {
+		.renderer = renderer,
+		.mesh_pass = input->mesh_pass
+	};
+	
 	RenderPass gbuffer_render_pass = {0};
 	gbuffer_render_pass.type = RenderPassType_Graphics;
 	gbuffer_render_pass.graphics.Record = RenderPassGeometry;
@@ -259,7 +272,7 @@ internal void DeferredRenderFrame(Renderer *renderer, RenderGraph *graph,
 													   renderer->gbuffer.depth_view,
 													   NULL, 1.f, 0);
 
-	MemoryCopy(gbuffer_render_pass.context, &renderer, sizeof(Renderer *));
+	MemoryCopy(gbuffer_render_pass.context, &geometry_context, sizeof(geometry_context));
 	
 	RenderGraphPush(graph, &gbuffer_render_pass);
 
