@@ -29,7 +29,6 @@
 #include "model.h"
 #include "assets.h"
 #include "scene.h"
-#include "mesh_pass.h"
 #include "render_graph.h"
 #include "render_state.h"
 #include "renderer.h"
@@ -49,7 +48,6 @@
 #include "render_graph.c"
 #include "render_state.c"
 #include "scene.c"
-#include "mesh_pass.c"
 #include "renderer.c"
 #include "skybox.c"
 #include "ibl_renderer.c"
@@ -62,15 +60,15 @@ internal void CoreCreateUnitSphereMesh()
 	ScratchArena scratch = GetScratch(&core->permanent_arena, 1);
 
 	u16 sector_count = 10;
-	u16 stack_count = 10;
+	u16 stack_count  = 10;
 
 	f32 sector_step = 2.f * PIf / (f32)sector_count;
-	f32 stack_step = PIf / (f32)stack_count;
+	f32 stack_step  =       PIf / (f32)stack_count;
 
 	u32 vertex_count = (stack_count + 1) * (sector_count + 1);
-	u32 index_count = sector_count * (stack_count - 1) * 6;
+	u32 index_count  = (stack_count - 1) * (sector_count + 0) * 6;
 
-	v3 *vertices = MemoryArenaPush(scratch.arena, sizeof(v3) * vertex_count);
+	v3 *vertices = MemoryArenaPush(scratch.arena, sizeof(v3)  * vertex_count);
 	u16 *indices = MemoryArenaPush(scratch.arena, sizeof(u16) * index_count);
 
 	u32 index = 0;
@@ -86,8 +84,8 @@ internal void CoreCreateUnitSphereMesh()
 	index = 0;
 
 	for (u16 i = 0; i < stack_count; i++) {
-		u16 k1 = i * (sector_count + 1); // Current stack.
-		u16 k2 = k1 + (sector_count + 1); // Next stack.
+		u16 k1 = (sector_count + 1) * (i + 0); // Current stack.
+		u16 k2 = (sector_count + 1) * (i + 1); // Next stack.
 
 		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
 			if (i != 0) {
@@ -124,21 +122,33 @@ internal void CoreResetGlobals(Platform *platform_)
 	shaders = &core->shaders;
 }
 
+internal void CoreInitArenas()
+{
+	// This is a bit fiddly, but we essentially create a temporary arena,
+	// around the permanent memory and allocate core onto it, then set the
+	// cores arena to that arena. So core maintains an arena that contains itself.
+	// --> I'd say thats pretty neat. :)
+	MemoryArena tmp = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
+	core = MemoryArenaPush(&tmp, sizeof(Core));
+	core->permanent_arena = tmp;
+
+	// Frame arena is just the transient memory.
+	core->frame_arena = MemoryArenaInit(platform->transient_memory, platform->transient_memory_size);
+
+	// Scene arena is a section of the permanent memory arena.
+	core->scene_arena = MemoryArenaSubArena(&core->permanent_arena, Megabytes(4));
+
+	// Scratch arenas are allocated onto the scratch memories.
+	core->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
+	core->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
+}
+
 __declspec(dllexport) void CoreInit(Platform *platform_)
 {
 	CoreResetGlobals(platform_);
 
-	MemoryArena permanent_arena = MemoryArenaInit(platform->permanent_memory, platform->permanent_memory_size);
-
-	core = MemoryArenaPush(&permanent_arena, sizeof(Core));
-
-	core->permanent_arena = permanent_arena;
-	core->frame_arena = MemoryArenaInit(platform->transient_memory,
-					    platform->transient_memory_size);
-
-	core->scratch_arenas[0] = MemoryArenaInit(platform->scratch_memory[0], platform->scratch_memory_size);
-	core->scratch_arenas[1] = MemoryArenaInit(platform->scratch_memory[1], platform->scratch_memory_size);
-
+	CoreInitArenas();
+	
 	AssetsInit(&core->assets, &core->permanent_arena);
 	GraphicsDeviceInit(&core->permanent_arena);
 	VertexFormatsInit(&core->vertex_formats);
@@ -208,9 +218,13 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 				     ArraySize(vertices), vertices,
 				     ArraySize(indices), indices);
 
+	// ---
+	
 	RenderStateInit(&core->render_state);
 	RendererInit(&core->renderer);
 
+	// ---
+	
 	u32 environment_asset_handle = AssetsLoadTexture(&core->assets, str8("res/environment_map.hdr"));
 
 	core->skybox_cubemap = ImageAllocCubemap(1024, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
@@ -220,16 +234,24 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	BRDFLookUpGenerate(&core->render_graph, &core->brdf_lut_image);
 
 	core->environment_probe = EnvironmentProbeInit();
-	IBLRendererGenerateEnvironmentProbe(&core->render_graph, &core->environment_probe, FetchStandardImageView(&core->skybox_cubemap));
 
-	SceneInit(&core->scene, &core->permanent_arena);
+	struct ibl_renderer_input ibl_renderer_input = {0};
+	ibl_renderer_input.probe = &core->environment_probe;
+	ibl_renderer_input.skybox = FetchStandardImageView(&core->skybox_cubemap);
+	
+	IBLRendererGenerateEnvironmentProbe(&core->render_graph, &ibl_renderer_input);
 
+	// ---
+	
 	core->main_camera = CameraInitPerspective(v3(0.f, 0.f, 0.f),
 						  v3(0.f, 1.f, 0.f),
 						  100.f,
 						  1280.f / 720.f,
-						  .1f,
-						  20.f);
+						  .1f, 20.f);
+	
+	// ---
+
+	SceneInit(&core->scene, &core->scene_arena);
 
 	u32 damaged_helmet_model_asset_handle = AssetsLoadModel(&core->assets, str8("res/DamagedHelmet/DamagedHelmet.gltf"));
 	Model *damaged_helmet_model = AssetsModelFromHandle(&core->assets, damaged_helmet_model_asset_handle);
@@ -252,6 +274,8 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	core->light = SceneRegisterObject(&core->scene, m4(1.f));
 	SceneObjectAddLight(&core->scene, core->light, &core->render_state, &my_light);
 
+	// ---
+	
 	core->starting_ticks = platform->GetPerformanceCounter();
 }
 
@@ -287,109 +311,34 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 										  QuatInitIdentity(),
 										  v3u(1.f),
 										  v3u(0.f));
-		
+	
 	SceneResolveRemoving(&core->scene);
 
 	// Rendering.
 	core->render_state.cmd = BeginGraphicsPresent();
-	{
-		Camera *camera = &core->main_camera;
-		RenderStateFrameData *current_frame = RenderStateGetCurrentFrameData(&core->render_state);
+	
+	RenderStateUpdate(&core->render_state,
+			  &core->frame_arena,
+			  &core->scene,
+			  &core->main_camera);
 		
-		core->render_state.mesh_pass = MeshPassInit(&core->scene, &core->frame_arena);
+	struct deferred_renderer_input deferred_renderer_input = {0};
+	deferred_renderer_input.scene  = &core->scene;
+	deferred_renderer_input.camera = &core->main_camera;
+	deferred_renderer_input.probe  = &core->environment_probe;
+	deferred_renderer_input.target = GetCurrentSwapchainImageView(&graphics_device->swapchain);
 
-		i32 mesh_count = 0;
-		i32 light_count = 0;
+	DeferredRenderFrame(&core->renderer, &core->render_graph,
+			    &deferred_renderer_input);
 
-		for (SceneObject *object = core->scene.objects; object; object = object->next) {
-			// If the object has a mesh.
-			if (object->mesh_id != SCENE_INVALID_HANDLE) {
-				GPU_ObjectData object_data = {0};
-				object_data.model_matrix = object->transform;
-				object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
-
-				GPUBufferWrite(&current_frame->object_buffer,
-					       &object_data,
-					       sizeof(GPU_ObjectData),
-					       sizeof(GPU_ObjectData) * mesh_count);
-				
-				VkDrawIndexedIndirectCommand command = {0};
-				command.indexCount = core->render_state.meshes[object->mesh_id].index_count;
-				command.instanceCount = 1;
-				command.firstIndex = 0;
-				command.vertexOffset = 0;
-				command.firstInstance = mesh_count;
-
-				GPUBufferWrite(&current_frame->indirect_buffer,
-					       &command,
-					       sizeof(VkDrawIndexedIndirectCommand),
-					       sizeof(VkDrawIndexedIndirectCommand) * mesh_count);
-
-				mesh_count++;
-			}
-
-			// If the object has a light.
-			if (object->light_id != SCENE_INVALID_HANDLE) {
-				Light *light = &core->render_state.lights[object->light_id];
-			
-				f32 epsilon_intensity = .1f;
-				f32 light_max = V3MaxValue(light->colour);
-				f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
-
-				GPU_Light gpu_light = {0};
-				gpu_light.position     = object->transform.c3; // Last column of transformation matrix is translation.
-				gpu_light.colour.xyz   = light->colour;
-				gpu_light.colour.w     = light->intensity;
-				gpu_light.attenuation  = v4(light->falloff, 0.f, 0.f, 0.f);
-				gpu_light.transform    = M4Transform(gpu_light.position.xyz,
-								     QuatInitIdentity(),
-								     v3u(heuristic_radius),
-								     v3u(0.f));
-
-				// Currently, since the light buffer is the same size as the object buffer anyway, we can keep it pretty
-				// sparse, and so just write to the current object index. Objects with no light (light id = (u32)(-1))
-				// will just not get written.
-				GPUBufferWrite(&current_frame->light_buffer,
-					       &gpu_light,
-					       sizeof(GPU_Light),
-					       sizeof(GPU_Light) * light_count);
-
-				light_count++;
-			}
-
-		}
-
-		// Per-frame buffer
-		{
-			GPU_FrameData frame_data = {0};
-			frame_data.view = camera->view;
-			frame_data.projection = camera->projection;
-			frame_data.view_projection = M4MultiplyM4(frame_data.projection, frame_data.view);
-			frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection,
-										 M4RemoveTranslation(frame_data.view));
-			frame_data.inv_view = M4Inverse(frame_data.view);
-			frame_data.inv_projection = M4Inverse(frame_data.projection);
-			frame_data.camera_position.xyz = camera->position;
-			frame_data.window_resolution.x = platform->window_pixel_width;
-			frame_data.window_resolution.y = platform->window_pixel_height;
-			frame_data.time = GetTotalElapsedSecondsF();
-
-			GPUBufferWrite(&current_frame->frame_data_buffer,
-				       &frame_data,
-				       sizeof(GPU_FrameData), 0);
-		}
-
-		RendererRenderFrame(&core->renderer,
-				    &core->render_state,
-				    &core->render_graph,
-				    &core->scene,
-				    &core->main_camera,
-				    &core->environment_probe);
-
-		SkyboxRender(&core->render_graph,
-			     FetchStandardImageView(&core->skybox_cubemap),
-			     FetchStandardImageView(&core->renderer.gbuffer.depth));
-	}
+	struct skybox_renderer_input skybox_renderer_input = {0};
+	skybox_renderer_input.skybox = FetchStandardImageView(&core->skybox_cubemap);
+	skybox_renderer_input.target = GetCurrentSwapchainImageView(&graphics_device->swapchain);
+	skybox_renderer_input.depth  = FetchStandardImageView(&core->renderer.gbuffer.depth);
+		
+	SkyboxRender(&core->render_graph,
+		     &skybox_renderer_input);
+		
 	RenderGraphExecuteRenderPasses(&core->render_graph, &core->render_state);
 	EndGraphicsPresent(&core->render_state.cmd);
 }

@@ -1359,6 +1359,7 @@ internal PipelineState FetchGraphicsPipeline(GraphicsPipelineDef *definition)
 		PipelineState st = {0};
 		st.pipeline = *fetched_pipeline;
 		st.layout = layout;
+		st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 		return st;
 	}
@@ -1366,6 +1367,7 @@ internal PipelineState FetchGraphicsPipeline(GraphicsPipelineDef *definition)
 	PipelineState st = {0};
 	st.pipeline = GraphicsPipelineCreate(layout, definition);
 	st.layout = layout;
+	st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	HashTableAddElement(&graphics_device->pipeline_cache, hash, &st.pipeline);
 
@@ -1384,6 +1386,7 @@ internal PipelineState FetchComputePipeline(ComputePipelineDef *definition)
 		PipelineState st = {0};
 		st.pipeline = *fetched_pipeline;
 		st.layout = layout;
+		st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 
 		return st;
 	}
@@ -1391,7 +1394,8 @@ internal PipelineState FetchComputePipeline(ComputePipelineDef *definition)
 	PipelineState st = {0};
 	st.pipeline = ComputePipelineCreate(layout, definition);
 	st.layout = layout;
-
+	st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+	
 	HashTableAddElement(&graphics_device->pipeline_cache, hash, &st.pipeline);
 
 	return st;
@@ -1602,12 +1606,9 @@ internal void CmdEndRendering(CommandBuffer *cmd)
 
 internal void CmdPipelineBarrier(CommandBuffer *cmd,
 				 VkDependencyFlags dependency_flags,
-				 u32 memory_barrier_count,
-				 VkMemoryBarrier2 *memory_barriers,
-				 u32 buffer_memory_barrier_count,
-				 VkBufferMemoryBarrier2 *buffer_memory_barriers,
-				 u32 image_memory_barrier_count,
-				 VkImageMemoryBarrier2 *image_memory_barriers)
+				 u32 memory_barrier_count,        VkMemoryBarrier2       *memory_barriers,
+				 u32 buffer_memory_barrier_count, VkBufferMemoryBarrier2 *buffer_memory_barriers,
+				 u32 image_memory_barrier_count,  VkImageMemoryBarrier2  *image_memory_barriers)
 {
 	VkDependencyInfo dependency = {0};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -1632,67 +1633,114 @@ internal void CmdBindDescriptors(CommandBuffer *cmd,
 				 VkDescriptorSet *descriptors,
 				 u32 dynamic_offset_count, u32 *dynamic_offsets)
 {
-	vkCmdBindDescriptorSets(cmd->handle, bind_point, layout, first,
-				descriptor_count, descriptors,
-				dynamic_offset_count, dynamic_offsets);
+	vkCmdBindDescriptorSets(cmd->handle,
+				bind_point,
+				layout, first,
+				descriptor_count,
+				descriptors,
+				dynamic_offset_count,
+				dynamic_offsets);
 }
 
 internal void CmdBindBindless(CommandBuffer *cmd,
 			      VkPipelineBindPoint bind_point,
 			      VkPipelineLayout layout)
 {
-	CmdBindDescriptors(cmd, bind_point, layout, 0, 1,
-			   &graphics_device->bindless_set, 0, 0);
+	CmdBindDescriptors(cmd,
+			   bind_point,
+			   layout,
+			   0,
+			   1, &graphics_device->bindless_set,
+			   0, NULL);
 }
 
 internal void CmdBindPipeline(CommandBuffer *cmd,
 			      VkPipelineBindPoint bind_point,
 			      VkPipeline pipeline)
 {
-	vkCmdBindPipeline(cmd->handle, bind_point, pipeline);
+	vkCmdBindPipeline(cmd->handle,
+			  bind_point,
+			  pipeline);
 }
 
-internal void CmdBindVertexBuffer(CommandBuffer *cmd, u32 binding,
-				  GPUBuffer *buffer, u64 offset)
+internal void CmdBindVertexBuffer(CommandBuffer *cmd,
+				  u32 binding,
+				  GPUBuffer *buffer,
+				  u64 offset)
 {
-	vkCmdBindVertexBuffers(cmd->handle, binding, 1, &buffer->handle, &offset);
+	vkCmdBindVertexBuffers(cmd->handle,
+			       binding,
+			       1, &buffer->handle,
+			       &offset);
 }
 
-internal void CmdBindIndexBuffer(CommandBuffer *cmd, GPUBuffer *buffer,
+internal void CmdBindIndexBuffer(CommandBuffer *cmd,
+				 GPUBuffer *buffer,
 				 u64 offset)
 {
-	vkCmdBindIndexBuffer(cmd->handle, buffer->handle, offset, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(cmd->handle,
+			     buffer->handle,
+			     offset,
+			     VK_INDEX_TYPE_UINT16);
 }
 
-internal void CmdPushConstants(CommandBuffer *cmd, VkPipelineLayout layout,
-			       VkShaderStageFlags shader_stage, u32 size,
-			       void *data, u32 offset)
+internal void CmdPushConstants(CommandBuffer *cmd,
+			       VkPipelineLayout layout,
+			       VkShaderStageFlags stage_flags,
+			       u32 size, void *data)
 {
-	vkCmdPushConstants(cmd->handle, layout, shader_stage, offset, size, data);
+	vkCmdPushConstants(cmd->handle,
+			   layout,
+			   stage_flags,
+			   0,
+			   size, data);
 }
 
+internal void CmdPushConstantsOffset(CommandBuffer *cmd,
+				     VkPipelineLayout layout,
+				     VkShaderStageFlags stage_flags,
+				     u32 size, void *data, u32 offset)
+{
+	vkCmdPushConstants(cmd->handle,
+			   layout,
+			   stage_flags,
+			   offset,
+			   size, data);
+}
+	
 internal void CmdDrawVerticesN(CommandBuffer *cmd, u32 vertex_count)
 {
 	vkCmdDraw(cmd->handle, vertex_count, 1, 0, 0);
 }
 
-internal void CmdDrawIndexed(CommandBuffer *cmd, u32 index_count,
-			     u32 instance_count, u32 first_index,
-			     i32 vertex_offset, u32 first_instance)
+internal void CmdDrawIndexed(CommandBuffer *cmd,
+			     u32 index_count,
+			     u32 instance_count,
+			     u32 first_index,
+			     i32 vertex_offset,
+			     u32 first_instance)
 {
 	vkCmdDrawIndexed(cmd->handle, index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
-internal void CmdDrawIndexedIndirect(CommandBuffer *cmd, GPUBuffer *buffer,
-				     u64 offset, u32 count, u32 stride)
+internal void CmdDrawIndexedIndirect(CommandBuffer *cmd,
+				     GPUBuffer *buffer,
+				     u64 offset,
+				     u32 count,
+				     u32 stride)
 {
-	vkCmdDrawIndexedIndirect(cmd->handle, buffer->handle, offset, count, stride);
+	vkCmdDrawIndexedIndirect(cmd->handle,
+				 buffer->handle,
+				 offset,
+				 count,
+				 stride);
 }
 
-internal void CmdBlitImage(CommandBuffer *cmd, Image *src,
-			   VkImageLayout src_layout, Image *dst,
-			   VkImageLayout dst_layout, u32 region_count,
-			   VkImageBlit *regions, VkFilter filter)
+internal void CmdBlitImage(CommandBuffer *cmd,
+			   Image *src, VkImageLayout src_layout,
+			   Image *dst, VkImageLayout dst_layout,
+			   u32 region_count, VkImageBlit *regions,
+			   VkFilter filter)
 {
 	vkCmdBlitImage(cmd->handle, src->image, src_layout,
 		                    dst->image, dst_layout,
@@ -1715,7 +1763,8 @@ internal void CmdTransitionImageLayout(CommandBuffer *cmd, Image *image,
 
 internal void CmdPrepareForMipmapping(CommandBuffer *cmd, Image *image)
 {
-	CmdTransitionImageLayout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	CmdTransitionImageLayout(cmd, image,
+				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 }
 
 internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
@@ -1745,7 +1794,10 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 		barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 		barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-		CmdPipelineBarrier(cmd, 0, 0, 0, 0, 0, 1, &barrier);
+		CmdPipelineBarrier(cmd, 0,
+				   0, NULL,
+				   0, NULL,
+				   1, &barrier);
 
 		for (i32 face = 0; face < ImageFaceCount(image); face++) {
 			i32 src_mip_width  = (i32)image->width  >> (i - 1);
@@ -1770,11 +1822,11 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 			blit.dstSubresource.baseArrayLayer = face;
 			blit.dstSubresource.layerCount = 1;
 
-			CmdBlitImage(cmd, image,
-				     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				     image,
-				     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-				     &blit, VK_FILTER_LINEAR);
+			CmdBlitImage(cmd,
+				     image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				     image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				     1, &blit,
+				     VK_FILTER_LINEAR);
 		}
 
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -1822,7 +1874,8 @@ internal void CmdCopyBufferToBuffer(CommandBuffer *cmd, GPUBuffer *src,
 }
 
 internal void CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
-					      GPUBuffer *buffer, Image *image,
+					      GPUBuffer *buffer,
+					      Image *image,
 					      u32 region_count,
 					      VkBufferImageCopy *regions)
 {

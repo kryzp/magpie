@@ -177,6 +177,7 @@ typedef struct ComputePipelineDef {
 typedef struct PipelineState {
 	VkPipeline pipeline;
 	VkPipelineLayout layout;
+	VkPipelineBindPoint bind_point;
 } PipelineState;
 
 typedef struct CommandBuffer {

@@ -31,7 +31,7 @@ internal void *MemoryArenaPush(MemoryArena *arena, u64 size)
 	return mem;
 }
 
-// Create an arena within an arena.
+// Allows for partitioning of an arena into multiple arenas.
 internal MemoryArena MemoryArenaSubArena(MemoryArena *arena, u64 size)
 {
 	return MemoryArenaInit(MemoryArenaPush(arena, size), size);
@@ -46,9 +46,8 @@ internal void MemoryArenaPop(MemoryArena *arena, u64 size)
 {
 	arena->used -= size;
 
-	if (arena->used - size < 0) {
+	if (arena->used - size < 0)
 		arena->used = 0;
-	}
 }
 
 internal void MemoryArenaClear(MemoryArena *arena)

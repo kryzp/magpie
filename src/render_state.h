@@ -13,6 +13,7 @@ typedef struct GPU_FrameData {
 	v4 window_resolution;
 
 	f32 time;
+	
 	f32 _padding[3];
 } GPU_FrameData;
 
@@ -38,13 +39,34 @@ typedef struct GPU_Material {
 
 // ---
 
-typedef struct RenderMesh {
-	Mesh *original;
-	b32 is_merged;
-	u32 first_vertex;
-	u32 first_index;
-	u32 index_count;
-} RenderMesh;
+typedef struct MultiBatch {
+	struct MultiBatch *next;
+	u32 first;
+	u32 count;
+} MultiBatch;
+
+typedef struct IndirectBatch {
+	struct IndirectBatch *next;
+	u32 mesh_id;
+	u32 material_id;
+	u32 first;
+	u32 count;
+} IndirectBatch;
+
+typedef struct DirectBatch {
+	struct DirectBatch *next;
+	u32 object_id;
+	//u64 sort_key;
+} DirectBatch;
+
+// Ready mesh data for rendering.
+typedef struct MeshPass {
+	MultiBatch *multi_batches; // Instanced Draws.
+	IndirectBatch *batches;    // Indirect Draws.
+	DirectBatch *direct_batches; // Direct Draws. TODO: This still needs to be actually sorted!
+} MeshPass;
+
+// ---
 
 typedef struct RenderStateFrameData {
 	GPUBuffer frame_data_buffer;
@@ -53,25 +75,29 @@ typedef struct RenderStateFrameData {
 	GPUBuffer indirect_buffer;
 } RenderStateFrameData;
 
-// Maintains rendering state that gets
-// used between multiple renderers.
-// I.e: Anything needed to render the scene,
-//      that varies after init.
-// --> Doesn't contain per-renderer information.
-// --> Doesn't contain permanent "static" data,
-//     like shaders or vertex formats.
+typedef struct PassMesh {
+	Mesh *original;
+	b32 is_merged;
+	u32 first_vertex;
+	u32 first_index;
+	u32 vertex_count;
+	u32 index_count;
+} PassMesh;
+
+// Internal rendering components.
 typedef struct RenderState {
 	CommandBuffer cmd;
 
 	u32 mesh_count;
-	RenderMesh meshes[SCENE_MAX_OBJECTS];
+	PassMesh meshes[SCENE_MAX_OBJECTS];
 
+	MeshPass mesh_pass;
+	GPUBuffer merged_vertex_buffer;
+	GPUBuffer merged_index_buffer;
+	
 	u32 material_count;
 	Material materials[SCENE_MAX_OBJECTS];
-
 	GPUBuffer material_buffer;
-	
-	MeshPass mesh_pass;
 	
 	u32 light_count;
 	Light lights[SCENE_MAX_OBJECTS];

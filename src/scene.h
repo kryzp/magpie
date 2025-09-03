@@ -33,12 +33,10 @@ typedef struct Light {
 } Light;
 
 /*
-typedef struct Bounds3D
-{
+typedef struct Bounds3D {
 	v3 position;
 	v3 size;
-}
-Bounds3D;
+} Bounds3D;
 */
 
 typedef enum SceneObjectFlags {
@@ -85,3 +83,5 @@ typedef struct Scene {
 	u32 reusable_handle_count;
 	u32 reusable_handles[SCENE_MAX_OBJECTS];
 } Scene;
+
+internal SceneObject *SceneObjectFromHandle(Scene *scene, u32 handle);

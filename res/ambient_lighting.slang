@@ -16,7 +16,7 @@ struct PushConstants
 
 	uint linear_sampler;
 
-	uint _padding[3];
+	uint _padding;
 };
 
 [[vk::push_constant]]

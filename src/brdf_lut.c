@@ -13,8 +13,8 @@ internal void RenderPassGenerateBRDFLookUp(RenderState *rs,
 		
 	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 		
-	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+	CmdBindBindless(cmd, st.bind_point, st.layout);
+	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
 
 	CmdDrawVerticesN(cmd, 3);
 }

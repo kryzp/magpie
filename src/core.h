@@ -2,8 +2,9 @@
 typedef struct Core {
 	MemoryArena permanent_arena;
 	MemoryArena frame_arena;
+	MemoryArena scene_arena;
 	MemoryArena scratch_arenas[2];
-
+	
 	u64 starting_ticks;
 
 	GraphicsDevice graphics_device;
@@ -40,8 +41,8 @@ typedef struct Core {
 	Mesh light_sphere_mesh;
 } Core;
 
-global Core *core = 0;
-global Platform *platform = 0;
-global GraphicsDevice *graphics_device = 0;
-global VertexFormats *vertex_formats = 0;
-global Shaders *shaders = 0;
+global Core *core = NULL;
+global Platform *platform = NULL;
+global GraphicsDevice *graphics_device = NULL;
+global VertexFormats *vertex_formats = NULL;
+global Shaders *shaders = NULL;

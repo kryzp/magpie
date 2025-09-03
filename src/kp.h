@@ -17,18 +17,18 @@
 		if (!(s)) {            \
 			*(int *)0 = 0; \
 		}                      \
-	} while (0)
+	} while (false)
 
 #define DebugLog(m, ...)                         \
 	do {                                     \
 		printf((m "\n"), ##__VA_ARGS__); \
-	} while (0)
+	} while (false)
 
 #define DebugLogCrash(m, ...)               \
 	do {                                \
 		DebugLog(m, ##__VA_ARGS__); \
 		Assert(0);                  \
-	} while (0)
+	} while (false)
 
 #define SinF                       sinf
 #define CosF                       cosf
@@ -282,7 +282,10 @@ internal b32 V4RectHasPoint(v4 r, v2 p)
 
 internal f32 V4Dot(v4 a, v4 b)
 {
-	return (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
+	return (a.x * b.x +
+		a.y * b.y +
+		a.z * b.z +
+		a.w * b.w);
 }
 
 internal v4 V4AddV4(v4 a, v4 b)

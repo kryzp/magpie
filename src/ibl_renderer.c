@@ -32,11 +32,10 @@ internal void RenderPassGenerateIrradianceMap(RenderState *rs,
 		
 	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
-	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+	CmdBindBindless(cmd, st.bind_point, st.layout);
+	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
 
-	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
-			 sizeof(args), &args, 0);
+	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
 	MeshBindCmd(&core->skybox_mesh, cmd);
 	MeshDrawCmd(&core->skybox_mesh, cmd);
@@ -78,11 +77,10 @@ internal void RenderPassGeneratePrefilterMap(RenderState *rs,
 
 	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
-	CmdBindBindless(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.layout);
-	CmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, st.pipeline);
+	CmdBindBindless(cmd, st.bind_point, st.layout);
+	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
 
-	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS,
-			 sizeof(args), &args, 0);
+	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
 	MeshBindCmd(&core->skybox_mesh, cmd);
 	MeshDrawCmd(&core->skybox_mesh, cmd);
@@ -90,15 +88,19 @@ internal void RenderPassGeneratePrefilterMap(RenderState *rs,
 	DebugLog("Created a Prefilter Cubemap mip level.");
 }
 
+struct ibl_renderer_input {
+	EnvironmentProbe *probe;
+	ImageView *skybox;
+};
+
 internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
-						  EnvironmentProbe *probe,
-						  ImageView *skybox)
+						  struct ibl_renderer_input *input)
 {
 	// Irradiance Map.
 	{
 		struct irradiance_pass_context context = {
-			.target = &probe->irradiance,
-			.skybox = skybox
+			.target = &input->probe->irradiance,
+			.skybox = input->skybox
 		};
 		
 		RenderPass render_pass = {0};
@@ -106,11 +108,11 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 		render_pass.graphics.Record = RenderPassGenerateIrradianceMap;
 		render_pass.graphics.view_mask = 0b111111;
 		render_pass.graphics.view_count = 1;
-		render_pass.graphics.views[0] = skybox;
+		render_pass.graphics.views[0] = input->skybox;
 		render_pass.graphics.attachment_count = 1;
 		render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-										    FetchStandardImageView(&probe->irradiance), 0,
-										    v4(0.f, 0.f, 0.f, 1.f));
+										    FetchStandardImageView(&input->probe->irradiance),
+										    NULL, v4(0.f, 0.f, 0.f, 1.f));
 
 		MemoryCopy(render_pass.context, &context, sizeof(context));
 		
@@ -118,22 +120,23 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 
 		RenderPass mipmap_pass = {0};
 		mipmap_pass.type = RenderPassType_Mipmap;
-		mipmap_pass.mipmap.image = &probe->irradiance;
+		mipmap_pass.mipmap.image = &input->probe->irradiance;
+
 		RenderGraphPush(graph, &mipmap_pass);
 	}
 
 	// Prefilter Map.
 	{
-		i32 mipmap_count = probe->prefilter.mipmap_count;
+		i32 mipmap_count = input->probe->prefilter.mipmap_count;
 
 		for (i32 mip_level = 0; mip_level < mipmap_count; mip_level++) {
-			ImageView *prefilter_view = FetchImageView(&probe->prefilter,
-								   ImageLayerCount(&probe->prefilter), 0,
+			ImageView *prefilter_view = FetchImageView(&input->probe->prefilter,
+								   ImageLayerCount(&input->probe->prefilter), 0,
 								   mip_level);
 
 			struct prefilter_pass_context context = {
 				.roughness = (f32)(mip_level) / (f32)(mipmap_count - 1),
-				.skybox = skybox
+				.skybox = input->skybox
 			};
 			
 			RenderPass render_pass = {0};
@@ -141,11 +144,11 @@ internal void IBLRendererGenerateEnvironmentProbe(RenderGraph *graph,
 			render_pass.graphics.Record = RenderPassGeneratePrefilterMap;
 			render_pass.graphics.view_mask = 0b111111;
 			render_pass.graphics.view_count = 1;
-			render_pass.graphics.views[0] = skybox;
+			render_pass.graphics.views[0] = input->skybox;
 			render_pass.graphics.attachment_count = 1;
 			render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-											    prefilter_view, 0,
-											    v4(0.f, 0.f, 0.f, 1.f));
+											    prefilter_view,
+											    NULL, v4(0.f, 0.f, 0.f, 1.f));
 
 			MemoryCopy(render_pass.context, &context, sizeof(context));
 
