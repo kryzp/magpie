@@ -1,3 +1,4 @@
+#include "bindless.slang"
 
 struct Arguments
 {
@@ -10,13 +11,9 @@ struct Arguments
 [[vk::push_constant]]
 Arguments args;
 
-[[vk::binding(0)]] SamplerState bindless_samplers[];
-[[vk::binding(1)]] Texture2D bindless_images[];
-
 struct VS_Output
 {
 	float4 sv_position : SV_Position;
-
 	[[vk::location(0)]] float3 position;
 };
 
@@ -24,8 +21,8 @@ struct VS_Output
 VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 {
 	VS_Output output;
-    output.position = position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
+	output.position = position;
+	output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
 
 	return output;
 }

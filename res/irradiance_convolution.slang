@@ -1,4 +1,5 @@
 #include "util.slang"
+#include "bindless.slang"
 
 struct Arguments
 {
@@ -11,13 +12,9 @@ struct Arguments
 [[vk::push_constant]]
 Arguments args;
 
-[[vk::binding(0)]] SamplerState bindless_samplers[];
-[[vk::binding(2)]] TextureCube bindless_cubes[];
-
 struct VS_Output
 {
 	float4 sv_position : SV_Position;
-
 	[[vk::location(0)]] float3 position;
 };
 

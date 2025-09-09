@@ -64,7 +64,7 @@ FindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
 	}
 
 	DebugLogCrash("Could not find a maximum usable sample count.");
-
+	
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
@@ -104,14 +104,14 @@ QuerySwapchainSupport(MemoryArena *arena, VkPhysicalDevice physical_device,
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &result.present_mode_count, 0);
 
 	if (result.surface_format_count >= 0) {
-		result.surface_formats = MemoryArenaPush(arena, sizeof(VkSurfaceFormatKHR) * result.surface_format_count);
+		result.surface_formats = MemoryArenaPushC(arena, sizeof(VkSurfaceFormatKHR), result.surface_format_count);
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface,
 						     &result.surface_format_count,
 						     result.surface_formats);
 	}
 
 	if (result.present_mode_count >= 0) {
-		result.present_modes = MemoryArenaPush(arena, sizeof(VkPresentModeKHR) * result.present_mode_count);
+		result.present_modes = MemoryArenaPushC(arena, sizeof(VkPresentModeKHR), result.present_mode_count);
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface,
 							  &result.present_mode_count,
 							  result.present_modes);
@@ -134,7 +134,7 @@ internal const char *const *GetInstanceExtensions(MemoryArena *arena,
 	extra_extension_count += 2;
 #endif
 
-	const char **extensions = MemoryArenaPush(arena, sizeof(const char *) * (*extension_count + extra_extension_count));
+	const char **extensions = MemoryArenaPushC(arena, sizeof(const char *), *extension_count + extra_extension_count);
 
 	for (i32 i = 0; i < *extension_count; i++)
 		extensions[i] = names[i];
@@ -153,9 +153,8 @@ internal const char *const *GetInstanceExtensions(MemoryArena *arena,
 	return extensions;
 }
 
-internal VkSurfaceFormatKHR
-GraphicsChooseSwapSurfaceFormat(VkSurfaceFormatKHR *available_surface_formats,
-				u32 available_surface_format_count)
+internal VkSurfaceFormatKHR GraphicsChooseSwapSurfaceFormat(VkSurfaceFormatKHR *available_surface_formats,
+							    u32 available_surface_format_count)
 {
 	VkSurfaceFormatKHR *format = available_surface_formats;
 
@@ -189,8 +188,7 @@ internal VkPresentModeKHR GraphicsChooseSwapPresentMode(VkPresentModeKHR *availa
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-internal VkExtent2D
-GraphicsChooseSwapExtent(const VkSurfaceCapabilitiesKHR *capabilities)
+internal VkExtent2D GraphicsChooseSwapExtent(const VkSurfaceCapabilitiesKHR *capabilities)
 {
 	if (capabilities->currentExtent.width != (u32)(-1) &&
 	    capabilities->currentExtent.height != (u32)(-1)) {
@@ -290,7 +288,7 @@ internal void BindlessInit()
 	pool_create_info.pPoolSizes = pool_sizes;
 
 	VK_CHECK(vkCreateDescriptorPool(graphics_device->device,
-					&pool_create_info, 0,
+					&pool_create_info, NULL,
 					&graphics_device->bindless_pool),
 		 "Failed to create bindless descriptor pool.");
 
@@ -303,25 +301,23 @@ internal void BindlessInit()
 	};
 
 	VkDescriptorSetLayoutBinding bindings[3] = {0};
-	{
-		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		bindings[0].descriptorCount = BINDLESS_MAX_RESOURCES;
-		bindings[0].binding = BINDLESS_SAMPLER_BINDING;
-		bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
-		bindings[0].pImmutableSamplers = 0;
+	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	bindings[0].descriptorCount = BINDLESS_MAX_RESOURCES;
+	bindings[0].binding = BINDLESS_SAMPLER_BINDING;
+	bindings[0].stageFlags = VK_SHADER_STAGE_ALL;
+	bindings[0].pImmutableSamplers = NULL;
 
-		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		bindings[1].descriptorCount = BINDLESS_MAX_RESOURCES;
-		bindings[1].binding = BINDLESS_IMAGE_BINDING;
-		bindings[1].stageFlags = VK_SHADER_STAGE_ALL;
-		bindings[1].pImmutableSamplers = 0;
+	bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	bindings[1].descriptorCount = BINDLESS_MAX_RESOURCES;
+	bindings[1].binding = BINDLESS_IMAGE_BINDING;
+	bindings[1].stageFlags = VK_SHADER_STAGE_ALL;
+	bindings[1].pImmutableSamplers = NULL;
 
-		bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		bindings[2].descriptorCount = BINDLESS_MAX_RESOURCES;
-		bindings[2].binding = BINDLESS_CUBEMAP_BINDING;
-		bindings[2].stageFlags = VK_SHADER_STAGE_ALL;
-		bindings[2].pImmutableSamplers = 0;
-	}
+	bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	bindings[2].descriptorCount = BINDLESS_MAX_RESOURCES;
+	bindings[2].binding = BINDLESS_CUBEMAP_BINDING;
+	bindings[2].stageFlags = VK_SHADER_STAGE_ALL;
+	bindings[2].pImmutableSamplers = NULL;
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {0};
 	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -442,6 +438,212 @@ internal void BindlessApplyUpdates()
 	}
 }
 
+internal ImageAccessInfo SyncGetSrcImageAccessInfo(ImageAccessType access)
+{
+	ImageAccessInfo info = {0};
+	
+	switch (access) {
+	case ImageAccessType_Undefined:
+		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		break;
+	case ImageAccessType_GraphicsRead:
+		info.stage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+	case ImageAccessType_ColourWrite:
+		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		info.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		break;
+	case ImageAccessType_DepthWrite:
+		info.stage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		info.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		break;
+	case ImageAccessType_TransferSrc:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		break;
+	case ImageAccessType_TransferDst:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		break;
+	case ImageAccessType_Present:
+		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		break;
+	}
+
+	return info;
+}
+
+internal ImageAccessInfo SyncGetDstImageAccessInfo(ImageAccessType access)
+{
+	ImageAccessInfo info = {0};
+	
+	switch (access) {
+	case ImageAccessType_Undefined:
+		info.stage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		break;
+	case ImageAccessType_GraphicsRead:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT;
+		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+	case ImageAccessType_ColourWrite:
+		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		info.access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		break;
+	case ImageAccessType_DepthWrite:
+		info.stage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		info.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		break;
+	case ImageAccessType_TransferSrc:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+		info.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		break;
+	case ImageAccessType_TransferDst:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		break;
+	case ImageAccessType_Present:
+		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		break;
+	}
+
+	return info;
+}
+
+internal GPUBufferAccessInfo SyncGetSrcBufferAccessInfo(GPUBufferAccessType access)
+{
+	GPUBufferAccessInfo info = {0};
+	
+	switch (access) {
+	case GPUBufferAccessType_Undefined:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		break;
+	case GPUBufferAccessType_GraphicsReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+		break;
+	case GPUBufferAccessType_ComputeReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+		break;
+	case GPUBufferAccessType_TransferSrc:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		break;
+	case GPUBufferAccessType_TransferDst:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	}
+
+	return info;
+}
+
+internal GPUBufferAccessInfo SyncGetDstBufferAccessInfo(GPUBufferAccessType access)
+{
+	GPUBufferAccessInfo info = {0};
+	
+	switch (access) {
+	case GPUBufferAccessType_Undefined:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		break;
+	case GPUBufferAccessType_GraphicsReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_SHADER_READ_BIT;
+		break;
+	case GPUBufferAccessType_ComputeReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_SHADER_READ_BIT;
+		break;
+	case GPUBufferAccessType_TransferSrc:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+		break;
+	case GPUBufferAccessType_TransferDst:
+		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	}
+
+	return info;
+}
+
+internal Sampler SamplerInit(VkFilter filter, VkSamplerAddressMode wrap_x,
+			     VkSamplerAddressMode wrap_y,
+			     VkSamplerAddressMode wrap_z,
+			     VkBorderColor border_colour)
+{
+	VkPhysicalDeviceProperties properties =	graphics_device->physical_device_properties.properties;
+
+	VkSamplerCreateInfo create_info = {0};
+	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	create_info.minFilter = filter;
+	create_info.magFilter = filter;
+	create_info.addressModeU = wrap_x;
+	create_info.addressModeV = wrap_z;
+	create_info.addressModeW = wrap_z;
+	create_info.anisotropyEnable = VK_TRUE;
+	create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+	create_info.borderColor = border_colour;
+	create_info.unnormalizedCoordinates = VK_FALSE;
+	create_info.compareEnable = VK_FALSE;
+	create_info.compareOp = VK_COMPARE_OP_ALWAYS;
+	create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	create_info.mipLodBias = 0.f;
+	create_info.minLod = 0.f;
+	create_info.maxLod = VK_LOD_CLAMP_NONE;
+
+	Sampler sampler = {0};
+	sampler.filter = filter;
+	sampler.wrap_x = wrap_x;
+	sampler.wrap_y = wrap_y;
+	sampler.wrap_z = wrap_z;
+	sampler.border_colour = border_colour;
+
+	VK_CHECK(vkCreateSampler(graphics_device->device, &create_info, 0,
+				 &sampler.handle),
+		 "Failed to create texture sampler.");
+
+	sampler.resource_id = BindlessRegisterSampler(sampler.handle);
+
+	return sampler;
+}
+
+internal Sampler SamplerInitFilter(VkFilter filter)
+{
+	return SamplerInit(filter,
+			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			   VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+}
+
+internal void SamplerDestroy(Sampler *sampler)
+{
+	vkDestroySampler(graphics_device->device, sampler->handle, NULL);
+	sampler->handle = VK_NULL_HANDLE;
+}
+
 internal b32 ImageIsDepth(Image *image)
 {
 	return image->format == graphics_device->depth_format;
@@ -481,8 +683,8 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 {
 	Image image = {0};
 
-	image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
+	image.access_type = ImageAccessType_Undefined;
+	
 	image.width = width;
 	image.height = height;
 	image.depth = depth;
@@ -597,13 +799,21 @@ internal void ImageDestroy(Image *image)
 	image->image = VK_NULL_HANDLE;
 }
 
-internal VkImageMemoryBarrier2 GetImageMemoryBarrier(Image *image, VkImageLayout layout)
+internal VkImageMemoryBarrier2 ImageGetMemoryBarrier(Image *image,
+						     ImageAccessInfo src_access_info,
+						     ImageAccessInfo dst_access_info)
 {
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 
-	barrier.oldLayout = image->layout;
-	barrier.newLayout = layout;
+	barrier.oldLayout = src_access_info.layout;
+	barrier.newLayout = dst_access_info.layout;
+
+	barrier.srcAccessMask = src_access_info.access;
+	barrier.dstAccessMask = dst_access_info.access;
+
+	barrier.srcStageMask = src_access_info.stage;
+	barrier.dstStageMask = dst_access_info.stage;
 
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -616,16 +826,8 @@ internal VkImageMemoryBarrier2 GetImageMemoryBarrier(Image *image, VkImageLayout
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = ImageLayerCount(image);
 
-	// TODO: This should ideally be a bit more granular.
-	barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
-
-	// TODO: This as well.
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-	barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-
-	if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-	    layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+	if (dst_access_info.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+	    dst_access_info.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
 		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
 	return barrier;
@@ -713,86 +915,34 @@ internal ImageView *FetchStandardImageView(Image *image)
 	return FetchImageView(image, ImageLayerCount(image), 0, 0);
 }
 
-internal Sampler SamplerInit(VkFilter filter, VkSamplerAddressMode wrap_x,
-			     VkSamplerAddressMode wrap_y,
-			     VkSamplerAddressMode wrap_z,
-			     VkBorderColor border_colour)
-{
-	VkPhysicalDeviceProperties properties =	graphics_device->physical_device_properties.properties;
-
-	VkSamplerCreateInfo create_info = {0};
-	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	create_info.minFilter = filter;
-	create_info.magFilter = filter;
-	create_info.addressModeU = wrap_x;
-	create_info.addressModeV = wrap_z;
-	create_info.addressModeW = wrap_z;
-	create_info.anisotropyEnable = VK_TRUE;
-	create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-	create_info.borderColor = border_colour;
-	create_info.unnormalizedCoordinates = VK_FALSE;
-	create_info.compareEnable = VK_FALSE;
-	create_info.compareOp = VK_COMPARE_OP_ALWAYS;
-	create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	create_info.mipLodBias = 0.f;
-	create_info.minLod = 0.f;
-	create_info.maxLod = VK_LOD_CLAMP_NONE;
-
-	Sampler sampler = {0};
-	sampler.filter = filter;
-	sampler.wrap_x = wrap_x;
-	sampler.wrap_y = wrap_y;
-	sampler.wrap_z = wrap_z;
-	sampler.border_colour = border_colour;
-
-	VK_CHECK(vkCreateSampler(graphics_device->device, &create_info, 0,
-				 &sampler.handle),
-		 "Failed to create texture sampler.");
-
-	sampler.resource_id = BindlessRegisterSampler(sampler.handle);
-
-	return sampler;
-}
-
-internal Sampler SamplerInitFilter(VkFilter filter)
-{
-	return SamplerInit(filter,
-			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			   VK_BORDER_COLOR_INT_OPAQUE_BLACK);
-}
-
-internal void SamplerDestroy(Sampler *sampler)
-{
-	vkDestroySampler(graphics_device->device, sampler->handle, NULL);
-	sampler->handle = VK_NULL_HANDLE;
-}
-
 internal b32 GPUBufferIsUniform(GPUBuffer *buffer)
 {
-	return (buffer->usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) != 0;
+	return (buffer->usage & VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT) != 0;
 }
 
 internal b32 GPUBufferIsStorage(GPUBuffer *buffer)
 {
-	return (buffer->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) != 0;
+	return (buffer->usage & VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT) != 0;
 }
 
-internal void GPUBufferRead(GPUBuffer *buffer, void *dst, u64 length,
-			    u64 offset)
+internal void GPUBufferRead(GPUBuffer *buffer, void *dst, u64 length, u64 offset)
 {
 	vmaCopyAllocationToMemory(graphics_device->vma_allocator, buffer->allocation, offset, dst, length);
 }
 
-internal void GPUBufferWrite(GPUBuffer *buffer, void *src, u64 length,
-			     u64 offset)
+internal void GPUBufferWrite(GPUBuffer *buffer, void *src, u64 length, u64 offset)
 {
 	vmaCopyMemoryToAllocation(graphics_device->vma_allocator, src, buffer->allocation, offset, length);
 }
 
-internal GPUBuffer GPUBufferAlloc(VkBufferUsageFlags usage,
-				  VmaAllocationCreateFlagBits flags, u64 size)
+internal void *GPUBufferData(GPUBuffer *buffer)
+{
+	return buffer->allocation_info.pMappedData;
+}
+
+internal GPUBuffer GPUBufferAlloc(VkBufferUsageFlags2 usage,
+				  VmaAllocationCreateFlagBits flags,
+				  u64 size)
 {
 	GPUBuffer buffer = {0};
 
@@ -801,7 +951,7 @@ internal GPUBuffer GPUBufferAlloc(VkBufferUsageFlags usage,
 	buffer.allocation_flags = flags;
 
 	if (GPUBufferIsStorage(&buffer))
-		buffer.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		buffer.usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
 
 	VkBufferCreateInfo buffer_create_info = {0};
 	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -816,8 +966,10 @@ internal GPUBuffer GPUBufferAlloc(VkBufferUsageFlags usage,
 	vma_alloc_info.flags = flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	VK_CHECK(vmaCreateBuffer(graphics_device->vma_allocator,
-				 &buffer_create_info, &vma_alloc_info,
-				 &buffer.handle, &buffer.allocation,
+				 &buffer_create_info,
+				 &vma_alloc_info,
+				 &buffer.handle,
+				 &buffer.allocation,
 				 &buffer.allocation_info),
 		 "Failed to create buffer.");
 
@@ -836,6 +988,29 @@ internal void GPUBufferDestroy(GPUBuffer *buffer)
 {
 	vmaDestroyBuffer(graphics_device->vma_allocator, buffer->handle, buffer->allocation);
 	buffer->handle = VK_NULL_HANDLE;
+}
+
+internal VkBufferMemoryBarrier2 GPUBufferGetMemoryBarrier(GPUBuffer *buffer,
+							  GPUBufferAccessInfo src_access_info,
+							  GPUBufferAccessInfo dst_access_info)
+{
+	VkBufferMemoryBarrier2 barrier = {0};
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+
+	barrier.srcAccessMask = src_access_info.access;
+	barrier.dstAccessMask = src_access_info.access;
+
+	barrier.srcStageMask = src_access_info.stage;
+	barrier.dstStageMask = dst_access_info.stage;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	
+	barrier.buffer = buffer->handle;
+	barrier.offset = 0;
+	barrier.size = VK_WHOLE_SIZE;
+	
+	return barrier;
 }
 
 // TODO: Move elsewhere.
@@ -890,8 +1065,9 @@ internal ShaderStage ShaderStageLoadFromBytecode(MemoryArena *arena,
 		reflect_result = spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, 0);
 
 		if (reflect_result == SPV_REFLECT_RESULT_SUCCESS && push_constant_count > 0) {
-			SpvReflectBlockVariable **pcs = MemoryArenaPush(scratch.arena,
-									sizeof(SpvReflectBlockVariable *) * push_constant_count);
+			SpvReflectBlockVariable **pcs = MemoryArenaPushC(scratch.arena,
+									 sizeof(SpvReflectBlockVariable *),
+									 push_constant_count);
 
 			spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, pcs);
 
@@ -936,7 +1112,7 @@ internal ShaderProgram ShaderProgramInit(MemoryArena *arena, u32 stage_count, St
 
 	for (i32 i = 0; i < stage_count; i++)
 		program.stages[i] = ShaderStageLoadFromBytecode(arena, stage_paths[i], &program.push_constant_size);
-
+	
 	return program;
 }
 
@@ -1041,7 +1217,7 @@ internal VkPipelineLayout PipelineLayoutCreate(ShaderProgram *program)
 	create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	create_info.setLayoutCount = 1;
 	create_info.pSetLayouts = &graphics_device->bindless_layout;
-
+	
 	if (push_constants.size > 0) {
 		create_info.pushConstantRangeCount = 1;
 		create_info.pPushConstantRanges = &push_constants;
@@ -1435,10 +1611,10 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 
 	swapchain->swapchain_image_count = image_count;
 
-	swapchain->swapchain_images = MemoryArenaPush(arena, sizeof(Image) * image_count);
-	swapchain->swapchain_image_views = MemoryArenaPush(arena, sizeof(ImageView) * image_count);
+	swapchain->swapchain_images      = MemoryArenaPushC(arena, sizeof(Image),     image_count);
+	swapchain->swapchain_image_views = MemoryArenaPushC(arena, sizeof(ImageView), image_count);
 
-	VkImage *vk_images = MemoryArenaPush(scratch.arena, sizeof(VkImage) * image_count);
+	VkImage *vk_images = MemoryArenaPushC(scratch.arena, sizeof(VkImage), image_count);
 
 	vkGetSwapchainImagesKHR(graphics_device->device, swapchain->handle, &image_count, vk_images);
 
@@ -1447,8 +1623,9 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 		Image *image = swapchain->swapchain_images + i;
 
 		image->image = vk_images[i];
-		image->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+		image->access_type = ImageAccessType_Undefined;
+		
 		image->width = swapchain->width;
 		image->height = swapchain->height;
 		image->depth = 1;
@@ -1456,7 +1633,7 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 		image->is_swapchain = true;
 
 		image->format = swapchain->format;
-		image->type = VK_IMAGE_VIEW_TYPE_2D;
+		image->type   = VK_IMAGE_VIEW_TYPE_2D;
 		image->tiling = VK_IMAGE_TILING_OPTIMAL;
 
 		image->usage =
@@ -1495,11 +1672,10 @@ internal void SwapchainAcquireNextImage(Swapchain *swapchain)
 	VkResult result = vkAcquireNextImage2KHR(graphics_device->device, &info,
 						 &swapchain->current_image_index);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		DebugLogCrash("TODO We need to rebuild the entire swapchain here.");
-	} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		DebugLogCrash("Failed to acquire next image in swapchain.");
-	}
 }
 
 internal Image *GetCurrentSwapchainImage(Swapchain *swapchain)
@@ -1704,7 +1880,12 @@ internal void CmdDrawIndexed(CommandBuffer *cmd,
 			     i32 vertex_offset,
 			     u32 first_instance)
 {
-	vkCmdDrawIndexed(cmd->handle, index_count, instance_count, first_index, vertex_offset, first_instance);
+	vkCmdDrawIndexed(cmd->handle,
+			 index_count,
+			 instance_count,
+			 first_index,
+			 vertex_offset,
+			 first_instance);
 }
 
 internal void CmdDrawIndexedIndirect(CommandBuffer *cmd,
@@ -1726,36 +1907,17 @@ internal void CmdBlitImage(CommandBuffer *cmd,
 			   u32 region_count, VkImageBlit *regions,
 			   VkFilter filter)
 {
-	vkCmdBlitImage(cmd->handle, src->image, src_layout,
-		                    dst->image, dst_layout,
+	vkCmdBlitImage(cmd->handle,
+		       src->image, src_layout,
+		       dst->image, dst_layout,
 		       region_count, regions,
 		       filter);
 }
 
-internal void CmdTransitionImageLayout(CommandBuffer *cmd, Image *image,
-				       VkImageLayout layout)
-{
-	VkImageMemoryBarrier2 barrier = GetImageMemoryBarrier(image, layout);
-
-	CmdPipelineBarrier(cmd, 0,
-			   0, NULL,
-			   0, NULL,
-			   1, &barrier);
-
-	image->layout = layout;
-}
-
-internal void CmdPrepareForMipmapping(CommandBuffer *cmd, Image *image)
-{
-	CmdTransitionImageLayout(cmd, image,
-				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-}
-
+// Input:  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+// Output: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 {
-	Assert(image->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-	       "Image must be in layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.");
-
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 	barrier.image = image->image;
@@ -1843,13 +2005,12 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 			   0, NULL,
 			   0, NULL,
 			   1, &barrier);
-
-	image->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
-internal void CmdCopyBufferToBuffer(CommandBuffer *cmd, GPUBuffer *src,
-				    GPUBuffer *dst, u32 region_count,
-				    VkBufferCopy *regions)
+internal void CmdCopyBufferToBuffer(CommandBuffer *cmd,
+				    GPUBuffer *src,
+				    GPUBuffer *dst,
+				    u32 region_count, VkBufferCopy *regions)
 {
 	vkCmdCopyBuffer(cmd->handle,
 			src->handle,
@@ -1857,18 +2018,16 @@ internal void CmdCopyBufferToBuffer(CommandBuffer *cmd, GPUBuffer *src,
 			region_count, regions);
 }
 
+// Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+// TODO: An image could also be in VK_IMAGE_LAYOUT_GENERAL.
 internal void CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 					      GPUBuffer *buffer,
 					      Image *image,
-					      u32 region_count,
-					      VkBufferImageCopy *regions)
+					      u32 region_count, VkBufferImageCopy *regions)
 {
-	Assert(image->layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-	       "Image must be in layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.");
-
 	vkCmdCopyBufferToImage(cmd->handle,
 			       buffer->handle,
-			       image->image, image->layout,
+			       image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			       region_count, regions);
 }
 
@@ -1951,7 +2110,10 @@ internal b32 CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkP
 
 	ScratchArena scratch = GetScratch(arena, 1);
 
-	VkExtensionProperties *available_exts = MemoryArenaPush(scratch.arena, sizeof(VkExtensionProperties) * extension_count);
+	VkExtensionProperties *available_exts = MemoryArenaPushC(scratch.arena,
+								sizeof(VkExtensionProperties),
+								extension_count);
+	
 	vkEnumerateDeviceExtensionProperties(physical_device, 0, &extension_count, available_exts);
 
 	b32 result = true;
@@ -2061,7 +2223,7 @@ internal VKAPI_ATTR VkBool32 VKAPI_CALL GraphicsVulkanDebugCallback(VkDebugUtils
 {
 	if (message_severity >=
 	    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-		DebugLogCrash("Severity=%d, Type=%d, Message=\"%s\"",
+		DebugLogCrash("Severity = %d, Type = %d, Message = \"%s\"",
 			      message_severity, message_type,
 			      p_callback_data->pMessage);
 	}
@@ -2194,7 +2356,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 		VkPhysicalDeviceFeatures2 features     = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-		VkPhysicalDevice *devices = MemoryArenaPush(scratch.arena, sizeof(VkPhysicalDevice) * device_count);
+		VkPhysicalDevice *devices = MemoryArenaPushC(scratch.arena, sizeof(VkPhysicalDevice), device_count);
 		
 		vkEnumeratePhysicalDevices(graphics_device->instance,
 					   &device_count, devices);
@@ -2254,7 +2416,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 		if (queue_family_count <= 0)
 			DebugLogCrash("Failed to find any queue families.");
 
-		VkQueueFamilyProperties *queue_families = MemoryArenaPush(scratch.arena, sizeof(VkQueueFamilyProperties) * queue_family_count);
+		VkQueueFamilyProperties *queue_families = MemoryArenaPushC(scratch.arena, sizeof(VkQueueFamilyProperties), queue_family_count);
 		
 		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device,
 							 &queue_family_count,
@@ -2542,16 +2704,10 @@ internal CommandBuffer BeginGraphicsPresent()
 internal void EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 {
 	BindlessApplyUpdates();
-
-	CmdTransitionImageLayout(in_flight_cmd,
-				 GetCurrentSwapchainImage(&graphics_device->swapchain),
-				 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
+	
 	CmdEnd(in_flight_cmd);
 
-	VkFence fence =
-		graphics_device->frames[graphics_device->current_frame_index]
-			.in_flight_fence;
+	VkFence fence = graphics_device->frames[graphics_device->current_frame_index].in_flight_fence;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore = {0};
 	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -2569,19 +2725,17 @@ internal void EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 	buffer_info.commandBuffer = in_flight_cmd->handle;
 
 	VkSubmitInfo2 submit_info = {0};
-	{
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-		submit_info.flags = 0;
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+	submit_info.flags = 0;
 
-		submit_info.commandBufferInfoCount = 1;
-		submit_info.pCommandBufferInfos = &buffer_info;
+	submit_info.commandBufferInfoCount = 1;
+	submit_info.pCommandBufferInfos = &buffer_info;
 
-		submit_info.signalSemaphoreInfoCount = 1;
-		submit_info.pSignalSemaphoreInfos = &render_finished_semaphore;
+	submit_info.signalSemaphoreInfoCount = 1;
+	submit_info.pSignalSemaphoreInfos = &render_finished_semaphore;
 
-		submit_info.waitSemaphoreInfoCount = 1;
-		submit_info.pWaitSemaphoreInfos = &image_available_semaphore;
-	}
+	submit_info.waitSemaphoreInfoCount = 1;
+	submit_info.pWaitSemaphoreInfos = &image_available_semaphore;
 
 	VK_CHECK(vkQueueSubmit2(graphics_device->graphics_queue, 1,
 				&submit_info, fence),
@@ -2590,28 +2744,24 @@ internal void EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 	u32 image_index = graphics_device->swapchain.current_image_index;
 
 	VkPresentInfoKHR present_info = {0};
-	{
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.pResults = NULL;
 
-		present_info.waitSemaphoreCount = 1;
-		present_info.pWaitSemaphores = &render_finished_semaphore.semaphore;
+	present_info.pImageIndices = &image_index;
 
-		present_info.swapchainCount = 1;
-		present_info.pSwapchains = &graphics_device->swapchain.handle;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = &render_finished_semaphore.semaphore;
 
-		present_info.pImageIndices = &image_index;
-
-		present_info.pResults = NULL;
-	}
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &graphics_device->swapchain.handle;
 
 	VkResult result = vkQueuePresentKHR(graphics_device->graphics_queue,
 					    &present_info);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		DebugLogCrash("TODO We need to rebuild the entire swapchain here.");
-	} else if (result != VK_SUCCESS) {
+	else if (result != VK_SUCCESS)
 		DebugLogCrash("Failed to present swapchain image.");
-	}
 
 	graphics_device->current_frame_index = (graphics_device->current_frame_index + 1) % FRAMES_IN_FLIGHT;
 

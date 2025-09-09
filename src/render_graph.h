@@ -9,7 +9,9 @@ typedef struct RenderingAttachment {
 typedef enum RenderPassType {
 	RenderPassType_Graphics,
 	RenderPassType_Compute,
-	RenderPassType_Mipmap
+	RenderPassType_Mipmap,
+	RenderPassType_Present,
+	RenderPassType_MaxEnum
 } RenderPassType;
 
 typedef struct RenderState RenderState;
@@ -33,18 +35,29 @@ typedef struct RenderPass {
 
 			u32 view_count;
 			ImageView *views[16];
+
+			// TODO: In the future when adding vertex buffers just make a seperate list
+			u32 buffer_count;
+			GPUBuffer *buffers[16];
 		} graphics;
 
 		struct {
 			void (*Record)(RenderState *rs, void *context);
 
-			u32 view_count;
-			ImageView *views[16];
+			// TODO: Haven't added views yet since i havent needed to do that.
+			//       Use multiple view lists for different types like with buffers.
+			
+			u32 buffer_count;
+			GPUBuffer *buffers[16];
 		} compute;
 
 		struct {
 			Image *image;
 		} mipmap;
+
+		struct {
+			Image *swapchain;
+		} present;
 	};
 } RenderPass;
 

@@ -27,6 +27,11 @@
 //                   RenderStateGenerateBRDFLookUp(...), rather there should be seperate
 //                   renderers for that sort of thing.
 //                   --> Same goes for e.g: updating per frame data.
+//               [x] Proper layout transitions and synchronization in render graph.
+//               [x] GPU driven rendering.
+//               [ ] Use multiple sets for bindless.
+//                   --> This way we can use DESCRIPTOR_VARIABLE_COUNT, instead of
+//                       a fixed size set of 256.
 //
 //               <<< MAGPIE C++ ENDS HERE >>>
 //
@@ -44,199 +49,207 @@
 //       [ ] 18. Start going through ideas list in readme.md.
 
 struct geometry_pass_context {
-	Renderer *renderer;
+	GBuffer *gbuffer;
 	MeshPass *mesh_pass;
+	GPUBuffer *frame_data_buffer;
+	GPUBuffer *object_buffer;
+	GPUBuffer *instance_buffer;
+	GPUBuffer *indirect_buffer;
 };
 
 internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
-	CoreFrameData *current_frame = CoreCurrentFrame();
-
-	struct geometry_pass_context *pass_context = (struct geometry_pass_context *)context;
-	Renderer *renderer = pass_context->renderer;
 	
+	struct geometry_pass_context *pass_context = (struct geometry_pass_context *)context;
+
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
 									  &vertex_formats->model);
-	{
-		pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
+	pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
+		pipeline_def.colour_attachment_formats[i] = pass_context->gbuffer->attachments[i].format;
+	pipeline_def.has_depth_attachment = true;
 
-		for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-			pipeline_def.colour_attachment_formats[i] = renderer->gbuffer.attachments[i].format;
+	PipelineState pipeline_st = FetchGraphicsPipeline(&pipeline_def);
 
-		pipeline_def.has_depth_attachment = true;
-	}
-	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+	CmdBindBindless(cmd, pipeline_st.bind_point, pipeline_st.layout);
+	CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
-	CmdBindBindless(cmd, st.bind_point, st.layout);
-	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
+	for (MultiBatch *multi_batch = pass_context->mesh_pass->multi_batches; multi_batch; multi_batch = multi_batch->next) {
 
-	for (IndirectBatch *batch = pass_context->mesh_pass->batches; batch; batch = batch->next) {
+		IndirectBatch *batch = pass_context->mesh_pass->batches;
+		for (u32 k = 0; k < multi_batch->first; k++, batch = batch->next);
+		
 		struct {
 			u64 frame_data_buffer;
 			u64 transform_buffer;
 			u64 material_buffer;
+			u64 instance_buffer;
 			u32 material_id;
 			u32 sampler;
 		} args;
-
-		args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-		args.transform_buffer = current_frame->object_buffer.device_address;
+		
+		// TODO: material_id should be inferred by indexing into a gpu buffer
+		//       with instance id, rather than being given by push constants.
+		
+		args.frame_data_buffer = pass_context->frame_data_buffer->device_address;
+		args.transform_buffer = pass_context->object_buffer->device_address;
 		args.material_buffer = rs->material_buffer->device_address;
+		args.instance_buffer = pass_context->instance_buffer->device_address;
 		args.material_id = batch->material_id;
 		args.sampler = core->linear_sampler.resource_id;
 
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
 		MeshBindCmd(rs->meshes[batch->mesh_id].original, cmd);
-
-		CmdDrawIndexedIndirect(cmd, &current_frame->indirect_buffer,
-				       sizeof(VkDrawIndexedIndirectCommand) * batch->first,
-				       batch->count,
-				       sizeof(VkDrawIndexedIndirectCommand));
+	
+		CmdDrawIndexedIndirect(cmd, pass_context->indirect_buffer,
+				       sizeof(GPU_Indirect) * multi_batch->first,
+				       multi_batch->count,
+				       sizeof(GPU_Indirect));
 	}
 }
 
 struct lighting_pass_context {
-	Renderer *renderer;
+	GBuffer *gbuffer;
 	EnvironmentProbe *probe;
+	GPUBuffer *frame_data_buffer;
+	GPUBuffer *light_buffer;
 };
 
 internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void *context)
 {
-	struct lighting_pass_context *pass_context = (struct lighting_pass_context *)context;
-	Renderer *renderer = pass_context->renderer;
-	EnvironmentProbe *probe = pass_context->probe;
 	CommandBuffer *cmd = &rs->cmd;
-	CoreFrameData *current_frame = CoreCurrentFrame();
 
+	struct lighting_pass_context *pass_context = (struct lighting_pass_context *)context;
+	GBuffer *gbuffer = pass_context->gbuffer;
+	EnvironmentProbe *probe = pass_context->probe;
+
+	PipelineState pipeline_st = {0};
+	
 	// Ambient Lighting.
-	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+	GraphicsPipelineDef ambient_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
+	ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	ambient_pipeline_def.colour_attachment_count = 1;
+	ambient_pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
 		
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
+	pipeline_st = FetchGraphicsPipeline(&ambient_pipeline_def);
 
-		CmdBindBindless(cmd, st.bind_point, st.layout);
-		CmdBindPipeline(cmd, st.bind_point, st.pipeline);
+	CmdBindBindless(cmd, pipeline_st.bind_point, pipeline_st.layout);
+	CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
+	struct {
+		u64 frame_data_buffer;
+
+		u32 position;
+		u32 albedo;
+		u32 normal;
+		u32 material;
+		u32 emissive;
+
+		u32 irradiance_map;
+		u32 prefilter_map;
+		u32 brdf_lut;
+
+		u32 linear_sampler;
+
+		u32 _padding;
+	} pc_ambient;
+
+	pc_ambient.frame_data_buffer = pass_context->frame_data_buffer->device_address;
+
+	pc_ambient.position = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Position)->resource_id;
+	pc_ambient.albedo   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Albedo)->resource_id;
+	pc_ambient.normal   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Normal)->resource_id;
+	pc_ambient.material = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_MetallicRoughness)->resource_id;
+	pc_ambient.emissive = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Emissive)->resource_id;
+
+	pc_ambient.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
+	pc_ambient.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
+	pc_ambient.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
+
+	pc_ambient.linear_sampler = core->linear_sampler.resource_id;
+
+	CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_ambient), &pc_ambient);
+	CmdDrawVerticesN(cmd, 3);
+
+	// Direct lighting.
+	GraphicsPipelineDef direct_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
+										 &vertex_formats->vec3);
+	direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
+	direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;
+	direct_pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
+	direct_pipeline_def.colour_attachment_count = 1;
+	direct_pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+	direct_pipeline_def.blend_state.enabled = true;
+	direct_pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
+	direct_pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
+	direct_pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
+
+	pipeline_st = FetchGraphicsPipeline(&direct_pipeline_def);
+
+	CmdBindBindless(cmd, pipeline_st.bind_point, pipeline_st.layout);
+	CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+
+	MeshBindCmd(&core->light_sphere_mesh, cmd);
+	
+	for (u32 i = 0; i < rs->light_count; i++) {
 		struct {
 			u64 frame_data_buffer;
-
+			u64 light_buffer;
+				
 			u32 position;
 			u32 albedo;
 			u32 normal;
 			u32 material;
 			u32 emissive;
-
-			u32 irradiance_map;
-			u32 prefilter_map;
-			u32 brdf_lut;
-
+				
 			u32 linear_sampler;
-
-			u32 _padding;
-		} args;
-
-		args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-
-		args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
-		args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
-		args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
-		args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
-		args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
-
-		args.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
-		args.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
-		args.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
-
-		args.linear_sampler = core->linear_sampler.resource_id;
-
-		CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-		CmdDrawVerticesN(cmd, 3);
-	}
-
-	// Direct lighting.
-	{
-		GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
-										  &vertex_formats->vec3);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
-		pipeline_def.colour_attachment_count = 1;
-		pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-		pipeline_def.blend_state.enabled = true;
-		pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
-		pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
-		pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
-
-		PipelineState st = FetchGraphicsPipeline(&pipeline_def);
-
-		CmdBindBindless(cmd, st.bind_point, st.layout);
-		CmdBindPipeline(cmd, st.bind_point, st.pipeline);
-
-		MeshBindCmd(&core->light_sphere_mesh, cmd);
-
-		for (u32 i = 0; i < rs->light_count; i++) {
-			struct {
-				u64 frame_data_buffer;
-				u64 light_buffer;
 				
-				u32 position;
-				u32 albedo;
-				u32 normal;
-				u32 material;
-				u32 emissive;
-				
-				u32 linear_sampler;
-				
-				u32 _padding[2];
-			} args;
+			u32 _padding[2];
+		} pc_direct;
 
-			args.frame_data_buffer = current_frame->frame_data_buffer    .device_address;
-			args.light_buffer      = current_frame->light_buffer         .device_address;
+		pc_direct.frame_data_buffer = pass_context->frame_data_buffer->device_address;
+		pc_direct.light_buffer      = pass_context->light_buffer->device_address;
 				
-			args.position = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Position)->resource_id;
-			args.albedo   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Albedo)->resource_id;
-			args.normal   = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Normal)->resource_id;
-			args.material = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Material)->resource_id;
-			args.emissive = FetchStandardImageView(renderer->gbuffer.attachments + GBufferAttachment_Emissive)->resource_id;
+		pc_direct.position = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Position)->resource_id;
+		pc_direct.albedo   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Albedo)->resource_id;
+		pc_direct.normal   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Normal)->resource_id;
+		pc_direct.material = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_MetallicRoughness)->resource_id;
+		pc_direct.emissive = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Emissive)->resource_id;
 				
-			args.linear_sampler = core->linear_sampler.resource_id;
+		pc_direct.linear_sampler = core->linear_sampler.resource_id;
 
-			CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_direct), &pc_direct);
 
-			MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
-		}
+		MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
 	}
 }
 
 // ---
 
-internal void RendererInit(Renderer *renderer)
+internal void GBufferInit(GBuffer *gbuffer)
 {
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++) {
-		renderer->gbuffer.attachments[i] = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
-								VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+		gbuffer->attachments[i] = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
+						       VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 		
-		renderer->gbuffer.views[i] = FetchStandardImageView(&renderer->gbuffer.attachments[i]);
+		gbuffer->views[i] = FetchStandardImageView(&gbuffer->attachments[i]);
 	}
 	
-	renderer->gbuffer.depth = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
-					       graphics_device->depth_format, 1);
+	gbuffer->depth = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
+				      graphics_device->depth_format, 1);
 
-	renderer->gbuffer.depth_view = FetchStandardImageView(&renderer->gbuffer.depth);
+	gbuffer->depth_view = FetchStandardImageView(&gbuffer->depth);
 }
 
-internal void RendererDestroy(Renderer *renderer)
+internal void GBufferDestroy(GBuffer *gbuffer)
 {
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-		ImageDestroy(renderer->gbuffer.attachments + i);
+		ImageDestroy(gbuffer->attachments + i);
 
-	ImageDestroy(&renderer->gbuffer.depth);
+	ImageDestroy(&gbuffer->depth);
 }
 
 struct deferred_renderer_input {
@@ -244,32 +257,45 @@ struct deferred_renderer_input {
 	Camera *camera;
 	EnvironmentProbe *probe;
 	MeshPass *mesh_pass;
-	ImageView *target;
+	GPUBuffer *frame_data_buffer;
+	GPUBuffer *object_buffer;
+	GPUBuffer *instance_buffer;
+	GPUBuffer *indirect_buffer;
+	GPUBuffer *light_buffer;
+	GBuffer *gbuffer;
+	ImageView *lighting;
 };
 
-internal void DeferredRenderFrame(Renderer *renderer,
-				  RenderGraph *graph,
+internal void DeferredRenderFrame(RenderGraph *graph,
 				  struct deferred_renderer_input *input)
 {
 	// --- GEOMETRY PASS
 
 	struct geometry_pass_context geometry_context = {
-		.renderer = renderer,
-		.mesh_pass = input->mesh_pass
+		.gbuffer = input->gbuffer,
+		.mesh_pass = input->mesh_pass,
+		.frame_data_buffer = input->frame_data_buffer,
+		.object_buffer = input->object_buffer,
+		.instance_buffer = input->instance_buffer,
+		.indirect_buffer = input->indirect_buffer
 	};
 	
 	RenderPass gbuffer_render_pass = {0};
 	gbuffer_render_pass.type = RenderPassType_Graphics;
 	gbuffer_render_pass.graphics.Record = RenderPassGeometry;
+	gbuffer_render_pass.graphics.buffer_count = 3;
+	gbuffer_render_pass.graphics.buffers[0] = input->frame_data_buffer;
+	gbuffer_render_pass.graphics.buffers[1] = input->object_buffer;
+	gbuffer_render_pass.graphics.buffers[2] = input->indirect_buffer;
 	gbuffer_render_pass.graphics.attachment_count = GBufferAttachment_MaxEnum + 1;
 
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 		gbuffer_render_pass.graphics.attachments[i] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
-											    renderer->gbuffer.views[i],
+											    input->gbuffer->views[i],
 											    NULL, v4(0.f, 0.f, 0.f, 1.f));
 
 	gbuffer_render_pass.graphics.attachments[GBufferAttachment_MaxEnum] = RenderingAttachmentInitDepth(VK_ATTACHMENT_LOAD_OP_CLEAR,
-													   renderer->gbuffer.depth_view,
+													   input->gbuffer->depth_view,
 													   NULL, 1.f, 0);
 
 	MemoryCopy(gbuffer_render_pass.context, &geometry_context, sizeof(geometry_context));
@@ -279,23 +305,28 @@ internal void DeferredRenderFrame(Renderer *renderer,
 	// --- LIGHTING PASS
 
 	struct lighting_pass_context lighting_context = {
-		.renderer = renderer,
-		.probe = input->probe
+		.gbuffer = input->gbuffer,
+		.probe = input->probe,
+		.frame_data_buffer = input->frame_data_buffer,
+		.light_buffer = input->light_buffer
 	};
 	
 	RenderPass lighting_render_pass = {0};
 	lighting_render_pass.type = RenderPassType_Graphics;
 	lighting_render_pass.graphics.Record = RenderPassLighting;
+	lighting_render_pass.graphics.buffer_count = 2;
+	lighting_render_pass.graphics.buffers[0] = input->frame_data_buffer;
+	lighting_render_pass.graphics.buffers[1] = input->light_buffer;
 	lighting_render_pass.graphics.view_count = GBufferAttachment_MaxEnum + 2;
 
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-		lighting_render_pass.graphics.views[i] = FetchStandardImageView(renderer->gbuffer.attachments + i);
+		lighting_render_pass.graphics.views[i] = FetchStandardImageView(input->gbuffer->attachments + i);
 
 	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 0] = FetchStandardImageView(&input->probe->irradiance);
 	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 1] = FetchStandardImageView(&input->probe->prefilter);
 
 	lighting_render_pass.graphics.attachment_count = 1;
-	lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR, input->target,
+	lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR, input->lighting,
 										     NULL, v4(0.f, 0.f, 0.f, 1.f));
 
 	MemoryCopy(lighting_render_pass.context, &lighting_context, sizeof(lighting_context));

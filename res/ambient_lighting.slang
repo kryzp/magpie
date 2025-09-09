@@ -1,4 +1,5 @@
 #include "util.slang"
+#include "bindless.slang"
 
 struct PushConstants
 {
@@ -21,10 +22,6 @@ struct PushConstants
 
 [[vk::push_constant]]
 PushConstants args;
-
-[[vk::binding(0)]] SamplerState bindless_samplers[];
-[[vk::binding(1)]] Texture2D bindless_images[];
-[[vk::binding(2)]] TextureCube bindless_cubes[];
 
 struct VS_Output
 {

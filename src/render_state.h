@@ -4,16 +4,11 @@ typedef struct GPU_FrameData {
 	m4 projection;
 	m4 view_projection;
 	m4 view_projection_no_translation;
-
 	m4 inv_view;
 	m4 inv_projection;
-
 	v4 camera_position;
-
 	v4 window_resolution;
-
-	f32 time;
-	
+	f32 time;	
 	f32 _padding[3];
 } GPU_FrameData;
 
@@ -36,6 +31,16 @@ typedef struct GPU_Material {
 	u32 metallic_roughness_texture;
 	u32 ambient_texture;
 } GPU_Material;
+
+typedef struct GPU_Instance {
+	u32 object_id;
+	u32 batch_id;
+} GPU_Instance;
+
+typedef struct GPU_Indirect {
+	VkDrawIndexedIndirectCommand command;
+	u32 batch_id;
+} GPU_Indirect;
 
 // ---
 
@@ -60,9 +65,13 @@ typedef struct DirectBatch {
 } DirectBatch;
 
 // Ready mesh data for rendering.
+// TODO: These should be arrays instead of linked lists
+//       given how many times they're indexed into.
 typedef struct MeshPass {
 	MultiBatch *multi_batches; // Instanced Draws.
+	u32 batch_count;
 	IndirectBatch *batches;    // Indirect Draws.
+	u32 direct_batch_count;
 	DirectBatch *direct_batches; // Direct Draws. TODO: This still needs to be actually sorted!
 } MeshPass;
 
@@ -76,6 +85,10 @@ typedef struct PassMesh {
 	u32 vertex_count;
 	u32 index_count;
 } PassMesh;
+
+// TODO: Currently meshes and materials just use an indexed handle,
+//       which is all well and good but becomes troublesome when
+//       removing things, so fix that :/.
 
 typedef struct RenderState {
 	CommandBuffer cmd;

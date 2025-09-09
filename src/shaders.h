@@ -1,11 +1,8 @@
 
 typedef struct Shaders {
-	ShaderProgram ambient_lighting_program;
-	ShaderProgram direct_lighting_point_program;
-	ShaderProgram model_program;
-	ShaderProgram hdr_to_environment_cubemap_program;
-	ShaderProgram irradiance_map_program;
-	ShaderProgram prefilter_map_program;
-	ShaderProgram skybox_program;
-	ShaderProgram brdf_lut_program;
+#define GraphicsShaderDef(__path_vert, __path_comp, __field) ShaderProgram __field;
+#define ComputeShaderDef(__path_comp, __field) ShaderProgram __field;
+#include "shaders.inc"
+#undef GraphicsShaderDef
+#undef ComputeShaderDef
 } Shaders;

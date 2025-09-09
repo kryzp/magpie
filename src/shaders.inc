@@ -1,0 +1,10 @@
+GraphicsShaderDef("res/brdf_lut.vert.spv",                   "res/brdf_lut.frag.spv",                   brdf_lut_program)
+GraphicsShaderDef("res/hdr_to_environment_cubemap.vert.spv", "res/hdr_to_environment_cubemap.frag.spv", hdr_to_environment_cubemap_program)
+GraphicsShaderDef("res/irradiance_convolution.vert.spv",     "res/irradiance_convolution.frag.spv",     irradiance_map_program)
+GraphicsShaderDef("res/prefilter_convolution.vert.spv",      "res/prefilter_convolution.frag.spv",      prefilter_map_program)
+GraphicsShaderDef("res/model.vert.spv",                      "res/model.frag.spv",                      model_program)
+GraphicsShaderDef("res/skybox.vert.spv",                     "res/skybox.frag.spv",                     skybox_program)
+GraphicsShaderDef("res/ambient_lighting.vert.spv",           "res/ambient_lighting.frag.spv",           ambient_lighting_program)
+GraphicsShaderDef("res/direct_lighting_point.vert.spv",      "res/direct_lighting_point.frag.spv",      direct_lighting_point_program)
+
+ComputeShaderDef("res/frustum_culling.comp.spv", compute_frustum_culling_program)

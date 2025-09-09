@@ -1,11 +1,12 @@
 #define VOLK_IMPLEMENTATION
-#include "ext/volk.h"
-#include "ext/vk_mem_alloc.h"
-#include "ext/spirv_reflect.c"
+#include <volk/volk.h>
+#include <vma/vk_mem_alloc.h>
 
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
+#include "ext/spirv_reflect.c"
 
 #include "kp.h"
 
@@ -52,6 +53,7 @@
 #include "skybox.c"
 #include "ibl_renderer.c"
 #include "brdf_lut.c"
+#include "frustum_culling.c"
 
 // https://songho.ca/opengl/gl_sphere.html
 // TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
@@ -122,27 +124,20 @@ internal void CoreCreatePerFrameObjects()
 {
 	CoreFrameData *frame = core->per_frame_data;
 	for (i32 i = 0; i < FRAMES_IN_FLIGHT; i++, frame++) {
-		frame->frame_data_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		frame->frame_data_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+							  VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 							  sizeof(GPU_FrameData));
 		
-		frame->object_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-						      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		frame->object_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+						      VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 						      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 						      sizeof(GPU_ObjectData) * SCENE_MAX_OBJECTS);
 
-		frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-						     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		frame->light_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+						     VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 						     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 						     sizeof(GPU_Light) * SCENE_MAX_OBJECTS);
-
-		frame->indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-							VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
-							VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-							sizeof(VkDrawIndexedIndirectCommand) *
-							SCENE_MAX_OBJECTS);
 	}
 }
 
@@ -153,7 +148,6 @@ internal void CoreDestroyPerFrameObjects()
 		GPUBufferDestroy(&frame->frame_data_buffer);
 		GPUBufferDestroy(&frame->object_buffer);
 		GPUBufferDestroy(&frame->light_buffer);
-		GPUBufferDestroy(&frame->indirect_buffer);
 	}
 }
 
@@ -190,13 +184,10 @@ internal void CoreInitArenas()
 __declspec(dllexport) void CoreInit(Platform *platform_)
 {
 	CoreResetGlobals(platform_);
-
 	CoreInitArenas();
 
 	AssetsInit(&core->assets, &core->permanent_arena);
-
 	GraphicsDeviceInit(&core->permanent_arena);
-
 	VertexFormatsInit(&core->vertex_formats);
 	ShadersInit(&core->shaders, &core->permanent_arena);
 
@@ -217,8 +208,8 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, -1.f,  0.f), v3(0.f,  0.f, 1.f)), // Z-
 	};
 
-	core->cubemap_capture_transforms = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+	core->cubemap_capture_transforms = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+							  VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 							  sizeof(m4) * 6);
 
@@ -266,14 +257,38 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 
 	CoreCreatePerFrameObjects();
 
-	core->material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-					       VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+	RenderStateInit(&core->render_state, &core->material_buffer);
+	
+	core->material_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+					       VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 					       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 					       sizeof(GPU_Material) * SCENE_MAX_MATERIALS);
 
-	RenderStateInit(&core->render_state, &core->material_buffer);
+	core->compacted_instance_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
+							 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							 sizeof(u32) * SCENE_MAX_OBJECTS);
+
+	core->instance_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+					       VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+					       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+					       sizeof(GPU_Instance) * SCENE_MAX_OBJECTS);
 	
-	RendererInit(&core->renderer);
+	core->draw_indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+						    VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+						    VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+						    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+						    sizeof(GPU_Indirect) * SCENE_MAX_OBJECTS);
+	
+	core->clear_indirect_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+						     VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+						     VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+						     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+						     sizeof(GPU_Indirect) * SCENE_MAX_OBJECTS);
+
+	core->instance_buffer_dirty = true;
+	core->indirect_buffer_dirty = true;
+	
+	GBufferInit(&core->gbuffer);
 	
 	u32 environment_asset_handle = AssetsLoadTexture(&core->assets, str8("res/environment_map.hdr"));
 
@@ -332,13 +347,10 @@ internal void _CoreUpdate()
 	Scene *scene = &core->scene;
 	Camera *camera = &core->main_camera;
 	
-	// Camera.
 	camera->position = v3(0.f, -2.f, 0.f);
 	camera->forward = v3(0.f, 1.f, 0.f);
-
 	CameraRecompute(camera);
 
-	// Scene.
 	for (i32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
 		SceneObjectFromHandle(scene, core->damaged_helmet_objects[i])
 			->transform = M4Transform(v3(i, 2.f, .4f * SinF(t)),
@@ -347,24 +359,41 @@ internal void _CoreUpdate()
 						  v3u(0.f));
 	}
 
-	SceneObjectFromHandle(scene, core->light)->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
-										  QuatInitIdentity(),
-										  v3u(1.f),
-										  v3u(0.f));
+	SceneObjectFromHandle(scene, core->light)
+		->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
+					  QuatInitIdentity(),
+					  v3u(1.f),
+					  v3u(0.f));
 
 	SceneResolveRemoving(scene);
 }
 
-internal void CorePopulateRenderData()
+internal void CoreFrameDataUploadPerFrameBuffer(CoreFrameData *frame, Camera *camera)
 {
-	CoreFrameData *current_frame = CoreCurrentFrame();
-	Scene *scene = &core->scene;
-	Camera *camera = &core->main_camera;
-	RenderState *rs = &core->render_state;
-	
-	RenderStateMergeMeshes(rs);
-	PopulateMeshPass(&core->mesh_pass, rs, &core->frame_arena, scene);
-	
+	GPU_FrameData frame_data = {0};
+	frame_data.view = camera->view;
+	frame_data.projection = camera->projection;
+	frame_data.view_projection = M4MultiplyM4(frame_data.projection, frame_data.view);
+	frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection,
+								 M4RemoveTranslation(frame_data.view));
+	frame_data.inv_view = M4Inverse(frame_data.view);
+	frame_data.inv_projection = M4Inverse(frame_data.projection);
+	frame_data.camera_position.xyz = camera->position;
+	frame_data.window_resolution.x = platform->window_pixel_width;
+	frame_data.window_resolution.y = platform->window_pixel_height;
+	frame_data.time = GetTotalElapsedSecondsF();
+
+	GPUBufferWrite(&frame->frame_data_buffer,
+		       &frame_data,
+		       sizeof(GPU_FrameData), 0);
+}
+
+// TODO: This is kind of a placeholder.
+//       At least, the code is pretty bad.
+//       --> Shouldn't be calling GPUBufferWrite() for every
+//           object individually, at the very least.
+internal void CoreFrameDataUploadObjects(CoreFrameData *frame, RenderState *rs, Scene *scene)
+{
 	u32 mesh_count = 0;
 	u32 light_count = 0;
 	
@@ -376,22 +405,10 @@ internal void CorePopulateRenderData()
 			object_data.model_matrix = object->transform;
 			object_data.normal_matrix = M4Inverse(M4Transpose(object->transform));
 
-			GPUBufferWrite(&current_frame->object_buffer,
+			GPUBufferWrite(&frame->object_buffer,
 				       &object_data,
 				       sizeof(GPU_ObjectData),
 				       sizeof(GPU_ObjectData) * mesh_count);
-
-			VkDrawIndexedIndirectCommand command = {0};
-			command.indexCount = rs->meshes[object->mesh_id].index_count;
-			command.instanceCount = 1;
-			command.firstIndex = 0;
-			command.vertexOffset = 0;
-			command.firstInstance = mesh_count;
-
-			GPUBufferWrite(&current_frame->indirect_buffer,
-				       &command,
-				       sizeof(VkDrawIndexedIndirectCommand),
-				       sizeof(VkDrawIndexedIndirectCommand) * mesh_count);
 
 			mesh_count++;
 		}
@@ -405,7 +422,7 @@ internal void CorePopulateRenderData()
 			f32 heuristic_radius = SquareRoot((light->intensity * light_max) / (light->falloff * epsilon_intensity));
 
 			GPU_Light gpu_light = {0};
-			gpu_light.position     = object->transform.c3; // Last column of transformation matrix is translation.
+			gpu_light.position     = object->transform.c[3]; // Last column of transformation matrix is translation.
 			gpu_light.colour.xyz   = light->colour;
 			gpu_light.colour.w     = light->intensity;
 			gpu_light.attenuation  = v4(light->falloff, 0.f, 0.f, 0.f);
@@ -414,7 +431,7 @@ internal void CorePopulateRenderData()
 							     v3u(heuristic_radius),
 							     v3u(0.f));
 
-			GPUBufferWrite(&current_frame->light_buffer,
+			GPUBufferWrite(&frame->light_buffer,
 				       &gpu_light,
 				       sizeof(GPU_Light),
 				       sizeof(GPU_Light) * light_count);
@@ -422,54 +439,98 @@ internal void CorePopulateRenderData()
 			light_count++;
 		}
 	}
+}
 
-	// Per-frame buffer
-	GPU_FrameData frame_data = {0};
-	frame_data.view = camera->view;
-	frame_data.projection = camera->projection;
-	frame_data.view_projection = M4MultiplyM4(frame_data.projection, frame_data.view);
-	frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection, M4RemoveTranslation(frame_data.view));
-	frame_data.inv_view = M4Inverse(frame_data.view);
-	frame_data.inv_projection = M4Inverse(frame_data.projection);
-	frame_data.camera_position.xyz = camera->position;
-	frame_data.window_resolution.x = platform->window_pixel_width;
-	frame_data.window_resolution.y = platform->window_pixel_height;
-	frame_data.time = GetTotalElapsedSecondsF();
-
-	GPUBufferWrite(&current_frame->frame_data_buffer,
-		       &frame_data,
-		       sizeof(GPU_FrameData), 0);
+internal void CoreClearDrawIndirectBuffer(CommandBuffer *cmd, MeshPass *mesh_pass)
+{
+	VkBufferCopy indirect_region = {0};
+	indirect_region.srcOffset = 0;
+	indirect_region.dstOffset = 0;
+	indirect_region.size = mesh_pass->batch_count * sizeof(GPU_Indirect);
+	
+	CmdCopyBufferToBuffer(cmd,
+			      &core->clear_indirect_buffer,
+			      &core->draw_indirect_buffer,
+			      1, &indirect_region);
 }
 
 internal void _CoreRender()
 {
-	core->render_state.cmd = BeginGraphicsPresent();
+	Scene *scene = &core->scene;
+	RenderState *rs = &core->render_state;
+	CoreFrameData *frame = CoreCurrentFrame();
+	
+	rs->cmd = BeginGraphicsPresent();
 
-	CorePopulateRenderData();
+	CoreFrameDataUploadPerFrameBuffer(frame, &core->main_camera);
+	CoreFrameDataUploadObjects(frame, rs, scene);
 
+	RenderStateMergeMeshes(rs);
+
+	// TODO: Only bother recomputing mesh_pass (and its derivatives)
+	//       when the scene actually changes.
+	MeshPass mesh_pass = {0};
+	MeshPassPopulate(&mesh_pass, &core->frame_arena, rs, scene);
+
+	if (core->instance_buffer_dirty) {
+		GPU_Instance *instances_array = GPUBufferData(&core->instance_buffer);
+		RenderStateFillInstancesArray(rs, &mesh_pass, instances_array);
+		core->instance_buffer_dirty = false;
+	}
+	
+	if (core->indirect_buffer_dirty) {
+		GPU_Indirect *indirect_array = GPUBufferData(&core->clear_indirect_buffer);
+		RenderStateFillIndirectArray(rs, &mesh_pass, indirect_array);
+		core->indirect_buffer_dirty = false;
+	}
+	
+	CoreClearDrawIndirectBuffer(&rs->cmd, &mesh_pass);
+	
 	// ---
+
+	struct frustum_culling_input frustum_culling_input = {0};
+	frustum_culling_input.camera          = &core->main_camera;
+	frustum_culling_input.mesh_pass       = &mesh_pass;
+	frustum_culling_input.instance_buffer = &core->instance_buffer;
+	frustum_culling_input.indirect_buffer = &core->draw_indirect_buffer;
+	frustum_culling_input.output_buffer   = &core->compacted_instance_buffer;
+	
+	ComputeFrustumCulling(&core->render_graph, &frustum_culling_input);
 	
 	struct deferred_renderer_input deferred_renderer_input = {0};
-	deferred_renderer_input.scene     = &core->scene;
-	deferred_renderer_input.camera    = &core->main_camera;
-	deferred_renderer_input.probe     = &core->environment_probe;
-	deferred_renderer_input.mesh_pass = &core->mesh_pass;
-	deferred_renderer_input.target    = GetCurrentSwapchainImageView(&graphics_device->swapchain);
-
-	DeferredRenderFrame(&core->renderer, &core->render_graph,
-			    &deferred_renderer_input);
-
+	deferred_renderer_input.scene             = &core->scene;
+	deferred_renderer_input.camera            = &core->main_camera;
+	deferred_renderer_input.probe             = &core->environment_probe;
+	deferred_renderer_input.mesh_pass         = &mesh_pass;
+	deferred_renderer_input.frame_data_buffer = &frame->frame_data_buffer;
+	deferred_renderer_input.object_buffer     = &frame->object_buffer;
+	deferred_renderer_input.instance_buffer   = &core->compacted_instance_buffer;
+        deferred_renderer_input.indirect_buffer   = &core->draw_indirect_buffer;
+	deferred_renderer_input.light_buffer      = &frame->light_buffer;
+	deferred_renderer_input.gbuffer           = &core->gbuffer;
+	deferred_renderer_input.lighting          = GetCurrentSwapchainImageView(&graphics_device->swapchain);
+	
+	DeferredRenderFrame(&core->render_graph, &deferred_renderer_input);
+	
 	struct skybox_renderer_input skybox_renderer_input = {0};
-	skybox_renderer_input.skybox = FetchStandardImageView(&core->skybox_cubemap);
-	skybox_renderer_input.target = GetCurrentSwapchainImageView(&graphics_device->swapchain);
-	skybox_renderer_input.depth  = FetchStandardImageView(&core->renderer.gbuffer.depth);
-		
-	SkyboxRender(&core->render_graph,
-		     &skybox_renderer_input);
+	skybox_renderer_input.skybox            = FetchStandardImageView(&core->skybox_cubemap);
+	skybox_renderer_input.frame_data_buffer = &frame->frame_data_buffer;
+	skybox_renderer_input.target            = GetCurrentSwapchainImageView(&graphics_device->swapchain);
+	skybox_renderer_input.depth             = FetchStandardImageView(&core->gbuffer.depth);
+	
+	SkyboxRender(&core->render_graph, &skybox_renderer_input);
+	
+	// ---
 
+	RenderPass present_pass = {0};
+	present_pass.type = RenderPassType_Present;
+	present_pass.present.swapchain = GetCurrentSwapchainImage(&graphics_device->swapchain);
+
+	RenderGraphPush(&core->render_graph, &present_pass);
+	
 	// ---
 	
-	RenderGraphExecuteRenderPasses(&core->render_graph, &core->render_state);
+	RenderGraphExecute(&core->render_graph, &core->render_state, &core->frame_arena);
 	EndGraphicsPresent(&core->render_state.cmd);
 }
 
@@ -490,18 +551,17 @@ __declspec(dllexport) void CoreUpdate(Platform *platform_)
 
 __declspec(dllexport) void CoreDestroy(Platform *platform_)
 {
-	SceneDestroy(&core->scene);
-	ShadersDestroy(&core->shaders);
-	AssetsDestroy(&core->assets);
-	RendererDestroy(&core->renderer);
-	RenderStateDestroy(&core->render_state);
-	
-	// ---
-
 	CoreDestroyPerFrameObjects();
 	
+	GBufferDestroy(&core->gbuffer);
+
 	GPUBufferDestroy(&core->material_buffer);
 	GPUBufferDestroy(&core->cubemap_capture_transforms);
+
+	GPUBufferDestroy(&core->compacted_instance_buffer);
+	GPUBufferDestroy(&core->instance_buffer);
+	GPUBufferDestroy(&core->draw_indirect_buffer);
+	GPUBufferDestroy(&core->clear_indirect_buffer);
 
 	SamplerDestroy(&core->linear_sampler);
 
@@ -513,6 +573,15 @@ __declspec(dllexport) void CoreDestroy(Platform *platform_)
 	ImageDestroy(&core->environment_probe.irradiance);
 	ImageDestroy(&core->environment_probe.prefilter);
 
+	// ---
+	
+	SceneDestroy(&core->scene);
+	ShadersDestroy(&core->shaders);
+	AssetsDestroy(&core->assets);
+	RenderStateDestroy(&core->render_state);
+
+	// ---
+	
 	GraphicsDeviceDestroy();
 }
 

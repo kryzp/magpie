@@ -92,13 +92,13 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 		GPUBufferDestroy(&rs->merged_vertex_buffer);
 		GPUBufferDestroy(&rs->merged_index_buffer);
 		
-		rs->merged_vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-							  VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		rs->merged_vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT |
+							  VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 							  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 							  vb_size);
 	
-		rs->merged_index_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-							 VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		rs->merged_index_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
+							 VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 							 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 							 ib_size);
 	}
@@ -132,101 +132,132 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 	EndGraphicsInstantSubmit(&cmd);
 }
 
-internal IndirectBatch *MeshPassCompactDrawsToBatches(MeshPass *pass,
-						      Scene *scene,
-						      MemoryArena *arena)
+internal void RenderStateFillInstancesArray(RenderState *rs, MeshPass *pass, GPU_Instance *instances)
 {
-	SceneObject *render_object = SceneObjectFromHandle(scene, pass->direct_batches->object_id);
+	i32 i = 0;
+	i32 index = 0;
+	for (IndirectBatch *b = pass->batches; b; b = b->next) {
+		DirectBatch *direct_batch = pass->direct_batches;
+	        for (i32 j = 0; j < b->first; j++, direct_batch = direct_batch->next); // Iterate up to b->first'th batch.
+		for (i32 k = 0; k < b->count; k++) {
+			instances[index].object_id = direct_batch->object_id;
+			instances[index].batch_id = i;
+			direct_batch = direct_batch->next;
+			index++;
+		}
+		i++;
+	}
+}
+
+internal void RenderStateFillIndirectArray(RenderState *rs, MeshPass *pass, GPU_Indirect *indirects)
+{
+	i32 i = 0;
+	for (IndirectBatch *b = pass->batches; b; b = b->next) {
+		PassMesh *mesh = rs->meshes + b->mesh_id;
+		
+		indirects[i].command.firstInstance = b->first;
+		indirects[i].command.instanceCount = 0; // This gets filled-in in the compute shader.
+		indirects[i].command.vertexOffset = mesh->first_vertex;
+		indirects[i].command.firstIndex = mesh->first_index;
+		indirects[i].command.indexCount = mesh->index_count;
+
+		indirects[i].batch_id = i;
+		
+		i++;
+	}
+}
+
+internal IndirectBatch *MeshPassCompactDrawsToBatches(MeshPass *mesh_pass,
+						      MemoryArena *arena,
+						      Scene *scene)
+{
+	SceneObject *object = SceneObjectFromHandle(scene, mesh_pass->direct_batches->object_id);
 
 	IndirectBatch *batch = MemoryArenaPush(arena, sizeof(IndirectBatch));
-	batch->mesh_id = render_object->mesh_id;
-	batch->material_id = render_object->material_id;
+	batch->mesh_id = object->mesh_id;
+	batch->material_id = object->material_id;
 	batch->first = 0;
 	batch->count = 1;
 
+	mesh_pass->batch_count = 1;
+	
 	u32 i = 1;
-	for (DirectBatch *curr = pass->direct_batches->next; curr; curr = curr->next, i++) {
+	for (DirectBatch *curr = mesh_pass->direct_batches->next; curr; curr = curr->next, i++) {
 		
-		render_object = SceneObjectFromHandle(scene, curr->object_id);
+		object = SceneObjectFromHandle(scene, curr->object_id);
 
-		b32 are_same_mesh     = render_object->mesh_id     == batch->mesh_id;
-		b32 are_same_material = render_object->material_id == batch->material_id;
+		b32 are_same_mesh     = object->mesh_id     == batch->mesh_id;
+		b32 are_same_material = object->material_id == batch->material_id;
 
 		if (are_same_mesh && are_same_material) {
 			batch->count++;
 		} else {
 			IndirectBatch *new_batch = MemoryArenaPush(arena, sizeof(IndirectBatch));
 			new_batch->next = batch;
-			new_batch->mesh_id = render_object->mesh_id;
-			new_batch->material_id = render_object->material_id;
+			new_batch->mesh_id = object->mesh_id;
+			new_batch->material_id = object->material_id;
 			new_batch->first = i;
 			new_batch->count = 1;
 
-			batch = new_batch;
+			mesh_pass->batch_count++;
 		}
 	}
 
 	return batch;
 }
 
-internal void PopulateMeshPass(MeshPass *pass,
-			       RenderState *rs,
+internal void MeshPassPopulate(MeshPass *pass,
 			       MemoryArena *arena,
+			       RenderState *rs,
 			       Scene *scene)
 {
 	// RENDER BATCHES.
-	{
-		pass->direct_batches = NULL;
-		
-		for (SceneObject *s = scene->objects; s; s = s->next) {
-			if (s->mesh_id == SCENE_INVALID_HANDLE)
-				continue;
+	pass->direct_batch_count = 0;
+	pass->direct_batches = NULL;
+	
+	for (SceneObject *s = scene->objects; s; s = s->next) {
+		if (s->mesh_id == SCENE_INVALID_HANDLE)
+			continue;
 
-			DirectBatch *direct_batch = MemoryArenaPush(arena, sizeof(DirectBatch));
-			direct_batch->next = pass->direct_batches;
-			direct_batch->object_id = s->id;
-			pass->direct_batches = direct_batch;
-		}
+		DirectBatch *direct_batch = MemoryArenaPush(arena, sizeof(DirectBatch));
+		direct_batch->next = pass->direct_batches;
+		direct_batch->object_id = s->id;
+		pass->direct_batches = direct_batch;
+
+		pass->direct_batch_count++;
 	}
 
 	// BATCHES.
-	{
-		pass->batches = MeshPassCompactDrawsToBatches(pass, scene, arena);
-	}
+	pass->batches = MeshPassCompactDrawsToBatches(pass, arena, scene);
 
 	// MULTI BATCHES.
-	{
-		MultiBatch *multi_batch = MemoryArenaPush(arena, sizeof(MultiBatch));
-		multi_batch->next = 0;
-		multi_batch->count = 1;
-		multi_batch->first = 0;
-		pass->multi_batches = multi_batch;
+	MultiBatch *multi_batch = MemoryArenaPush(arena, sizeof(MultiBatch));
+	multi_batch->next = 0;
+	multi_batch->count = 1;
+	multi_batch->first = 0;
+	pass->multi_batches = multi_batch;
 		
-		u32 i = 1;
-		for (IndirectBatch *batch = pass->batches->next; batch; batch = batch->next, i++)
-		{
-			// Iterate up to the (multi_batch->first)'th batch.
-			IndirectBatch *join_batch = pass->batches;
-			for (i32 j = 0; j < multi_batch->first; j++, join_batch = join_batch->next);
+	u32 i = 1;
+	for (IndirectBatch *batch = pass->batches->next; batch; batch = batch->next, i++) {
 
-			b32 compatible_mesh = rs->meshes[join_batch->mesh_id].is_merged;
-			b32 same_material = join_batch->material_id == batch->material_id;
+		// Iterate up to the (multi_batch->first)'th batch.
+		IndirectBatch *join_batch = pass->batches;
+		for (i32 j = 0; j < multi_batch->first; j++, join_batch = join_batch->next);
+
+		b32 compatible_mesh = rs->meshes[join_batch->mesh_id].is_merged;
+		b32 same_material = join_batch->material_id == batch->material_id;
 			
-			// As long as the materials are the same and the mesh
-			// has been merged then we can combine the rendering
-			// calls together.
-			if (compatible_mesh && same_material)
-			{
-				multi_batch->count++;
-			}
-			else
-			{
-				multi_batch = MemoryArenaPush(arena, sizeof(MultiBatch));
-				multi_batch->next = pass->multi_batches;
-				multi_batch->count = 1u;
-				multi_batch->first = i;
-				pass->multi_batches = multi_batch;
-			}
+		// As long as the materials are the same and the mesh
+		// has been merged then we can combine the rendering
+		// calls together.
+		if (compatible_mesh && same_material) {
+			multi_batch->count++;
+		} else {
+			multi_batch = MemoryArenaPush(arena, sizeof(MultiBatch));
+			multi_batch->next = pass->multi_batches;
+			multi_batch->count = 1;
+			multi_batch->first = i;
+			pass->multi_batches = multi_batch;
 		}
 	}
 }

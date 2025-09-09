@@ -9,6 +9,8 @@ internal MemoryArena MemoryArenaInit(void *memory, u64 size)
 	return arena;
 }
 
+#define MemoryArenaPushCNoZero(__arena, __elem_size, __count) MemoryArenaPushNoZero(__arena, (__elem_size) * (__count))
+
 internal void *MemoryArenaPushNoZero(MemoryArena *arena, u64 size)
 {
 	void *mem = 0;
@@ -20,6 +22,8 @@ internal void *MemoryArenaPushNoZero(MemoryArena *arena, u64 size)
 
 	return mem;
 }
+
+#define MemoryArenaPushC(__arena, __elem_size, __count) MemoryArenaPush(__arena, (__elem_size) * (__count))
 
 internal void *MemoryArenaPush(MemoryArena *arena, u64 size)
 {

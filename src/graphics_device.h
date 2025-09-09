@@ -15,11 +15,28 @@ typedef struct Sampler {
 	u32 resource_id;
 } Sampler;
 
+typedef enum ImageAccessType {
+	ImageAccessType_Undefined,
+	ImageAccessType_GraphicsRead,
+	ImageAccessType_ColourWrite,
+	ImageAccessType_DepthWrite,
+	ImageAccessType_TransferSrc,
+	ImageAccessType_TransferDst,
+	ImageAccessType_Present,
+	ImageAccessType_MaxEnum
+} ImageAccessType;
+
+typedef struct ImageAccessInfo {
+	VkPipelineStageFlags stage;
+	VkAccessFlags2 access;
+	VkImageLayout layout;
+} ImageAccessInfo;
+
 typedef struct Image {
 	VkImage image;
-	VkImageLayout layout;
 	VkImageUsageFlags usage;
-
+	ImageAccessType access_type;
+	
 	u32 width;
 	u32 height;
 	u32 depth;
@@ -31,6 +48,7 @@ typedef struct Image {
 	VkImageTiling tiling;
 
 	u32 mipmap_count;
+	
 	VkSampleCountFlagBits samples;
 
 	VmaAllocation allocation;
@@ -48,9 +66,25 @@ typedef struct ImageView {
 	u32 resource_id;
 } ImageView;
 
+typedef enum GPUBufferAccessType {
+	GPUBufferAccessType_Undefined,
+	GPUBufferAccessType_GraphicsReadWrite,
+	GPUBufferAccessType_ComputeReadWrite,
+	GPUBufferAccessType_TransferSrc,
+	GPUBufferAccessType_TransferDst,
+	GPUBufferAccessType_MaxEnum
+} GPUBufferAccessType;
+
+typedef struct GPUBufferAccessInfo {
+	VkPipelineStageFlags stage;
+	VkAccessFlags2 access;
+} GPUBufferAccessInfo;
+
 typedef struct GPUBuffer {
 	VkBuffer handle;
-	VkBufferUsageFlags usage;
+	VkBufferUsageFlags2 usage;
+	
+	GPUBufferAccessType access_type;
 
 	u64 size;
 

@@ -3,7 +3,7 @@ typedef enum GBufferAttachment {
 	GBufferAttachment_Position,
 	GBufferAttachment_Albedo,
 	GBufferAttachment_Normal,
-	GBufferAttachment_Material,
+	GBufferAttachment_MetallicRoughness,
 	GBufferAttachment_Emissive,
 	GBufferAttachment_MaxEnum
 } GBufferAttachment;
@@ -15,7 +15,3 @@ typedef struct GBuffer {
 	Image depth;
 	ImageView *depth_view;
 } GBuffer;
-
-typedef struct Renderer {
-	GBuffer gbuffer;
-} Renderer;

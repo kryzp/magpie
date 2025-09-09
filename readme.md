@@ -9,21 +9,23 @@ They often just have long blocks of endless functions doing arbitrary things wit
 
 The real test in learning Vulkan turns out to be whether you've got the passion (or perhaps more aptly, willpower) to spend hours reading through blog posts and other pre-existing codebases and parsing out their approach to abstractions and rendering.
 
-I hope maybe this project helps someone else. Feel free to use any of the code in personal / professional / public / private projects as long as you credit me. No gurantees on quality though. Some of this code is probably bad, some of it is maybe good.
+I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me. No gurantees on quality though. Some of this code is probably bad, some of it is maybe good.
 
-### Why C?
-Exercise in simplicty. Nothing against OOP/C++ though.
+### Pictures
+TODO (It looks super cool and awesome trust me).
 
 ### Notable Features
 	- Right-handed Z-up coordinates (as it SHOULD be)
 	- Fully bindless + BDA
 	- Hot reloading of source code
 	- IBL (Image-Based Lighting)
-	- GPU driven rendering
+	- GPU Driven Rendering
+	- Compute Frustum Culling
+	- Render Graph that handles pipeline barriers and synchronization
+	- Deferred Rendering
 
 ### Ideas
 	- Generic Job System
-	- Compute frusutum culling
 	- Volumetrics
 	- Irradiance probes
 	- Reflective mirrors
@@ -37,3 +39,6 @@ Exercise in simplicty. Nothing against OOP/C++ though.
 	- Hybrid Clustered Deferred + Forward Rendering (for transparency)
 	- Refraction
 	- Half Life: Alyx style reticle / gun scope effect (scope is only visible through the front holographic "lens", probably done through stencil magic)
+
+### Why C?
+I like the language.

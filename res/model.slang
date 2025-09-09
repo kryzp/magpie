@@ -1,4 +1,5 @@
 #include "util.slang"
+#include "bindless.slang"
 
 struct ModelVertex
 {
@@ -24,15 +25,13 @@ struct Arguments
 	FrameData *frame_data;
 	ObjectData *object_transforms;
 	Material *materials;
+	uint *instance_buffer;
 	uint material_id;
 	uint sampler;
 };
 
 [[vk::push_constant]]
 Arguments args;
-
-[[vk::binding(0)]] SamplerState bindless_samplers[];
-[[vk::binding(1)]] Texture2D bindless_images[];
 
 struct VS_Output
 {
@@ -48,26 +47,27 @@ struct VS_Output
 // instead of uint baseInstance : SV_StartInstanceLocation
 
 [shader("vertex")]
-VS_Output VertexMain(ModelVertex vertex, uint base_instance : SV_StartInstanceLocation)
+VS_Output VertexMain(ModelVertex vertex, uint instance : SV_InstanceID)
 {
-    FrameData *frame_data = args.frame_data;
-    ObjectData *transform = args.object_transforms + base_instance;
+	uint index = args.instance_buffer[instance];
+	
+	FrameData *frame_data = args.frame_data;
+	ObjectData *transform = args.object_transforms + index;
 
 	float3x3 normal_matrix = (float3x3)transform->normal_matrix;
 
-    float3 T = normalize(mul(normal_matrix, vertex.tangent));
-    float3 B = normalize(mul(normal_matrix, vertex.bitangent));
-    float3 N = normalize(mul(normal_matrix, vertex.normal));
+	float3 T = normalize(mul(normal_matrix, vertex.tangent));
+	float3 B = normalize(mul(normal_matrix, vertex.bitangent));
+	float3 N = normalize(mul(normal_matrix, vertex.normal));
 
-    VS_Output output;
+	VS_Output output;
+	output.position = mul(transform->model_matrix, float4(vertex.position, 1.));
+	output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
+	output.texcoord = vertex.texcoord;
+	output.colour = vertex.colour;
+	output.tbn = transpose(float3x3(T, B, N));
 
-    output.position = mul(transform->model_matrix, float4(vertex.position, 1.));
-    output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
-    output.texcoord = vertex.texcoord;
-    output.colour = vertex.colour;
-    output.tbn = transpose(float3x3(T, B, N));
-
-    return output;
+	return output;
 }
 
 struct FS_Output
@@ -75,7 +75,7 @@ struct FS_Output
 	float4 position : SV_Target0;
 	float4 albedo   : SV_Target1;
 	float4 normal   : SV_Target2;
-	float4 material : SV_Target3;
+	float4 pbr      : SV_Target3;
 	float4 emissive : SV_Target4;
 };
 
@@ -113,7 +113,7 @@ FS_Output FragmentMain(VS_Output input)
 	output.position = float4(input.position.xyz, 1.);
 	output.albedo   = float4(albedo.rgb, 1.);
 	output.normal   = float4(normal, 1.);
-	output.material = float4(metallic_roughness, 1.);
+	output.pbr      = float4(metallic_roughness, 1.);
 	output.emissive = float4(emissive, 1.);
 
 	return output;

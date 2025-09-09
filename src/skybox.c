@@ -7,6 +7,7 @@ struct export_hdr_pass_context {
 internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
+
 	struct export_hdr_pass_context *pass_context = (struct export_hdr_pass_context *)context;
 	
 	struct {
@@ -72,14 +73,14 @@ internal void EnvironmentMapFromHDR(RenderGraph *graph, Image *out, Image *hdr_i
 
 struct skybox_pass_context {
 	ImageView *skybox;
+	GPUBuffer *frame_data_buffer;
 };
 
 internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
-	CoreFrameData *current_frame = CoreCurrentFrame();
 
-	struct skybox_pass_context pass_context = *((struct skybox_pass_context *)context);
+	struct skybox_pass_context *pass_context = (struct skybox_pass_context *)context;
 
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->skybox_program,
 									  &vertex_formats->vec3);
@@ -98,8 +99,8 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 		u32 sampler_id;
 	} args;
 
-	args.frame_data_buffer = current_frame->frame_data_buffer.device_address;
-	args.cubemap_id = pass_context.skybox->resource_id;
+	args.frame_data_buffer = pass_context->frame_data_buffer->device_address;
+	args.cubemap_id = pass_context->skybox->resource_id;
 	args.sampler_id = core->linear_sampler.resource_id;
 
 	CmdBindBindless(cmd, st.bind_point, st.layout);
@@ -113,6 +114,7 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 
 struct skybox_renderer_input {
 	ImageView *skybox;
+	GPUBuffer *frame_data_buffer;
 	ImageView *target;
 	ImageView *depth;
 };
@@ -121,7 +123,8 @@ internal void SkyboxRender(RenderGraph *graph,
 			   struct skybox_renderer_input *input)
 {
 	struct skybox_pass_context context = {
-		.skybox = input->skybox
+		.skybox = input->skybox,
+		.frame_data_buffer = input->frame_data_buffer
 	};
 	
 	RenderPass skybox_pass = {0};

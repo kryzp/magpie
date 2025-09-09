@@ -3,7 +3,6 @@ typedef struct CoreFrameData {
 	GPUBuffer frame_data_buffer;
 	GPUBuffer object_buffer;
 	GPUBuffer light_buffer;
-	GPUBuffer indirect_buffer;
 } CoreFrameData;
 
 typedef struct Core {
@@ -17,7 +16,6 @@ typedef struct Core {
 	GraphicsDevice graphics_device;
 	RenderState render_state;
 	RenderGraph render_graph;
-	Renderer renderer;
 
 	VertexFormats vertex_formats;
 	Shaders shaders;
@@ -29,9 +27,19 @@ typedef struct Core {
 
 	// ---
 
+	GBuffer gbuffer;
+
 	CoreFrameData per_frame_data[FRAMES_IN_FLIGHT];
+
 	GPUBuffer material_buffer;
-	MeshPass mesh_pass;
+
+	GPUBuffer compacted_instance_buffer; // <u32>
+	GPUBuffer instance_buffer;           // <GPU_Instance>
+	GPUBuffer draw_indirect_buffer;      // <GPU_IndirectObject>
+	GPUBuffer clear_indirect_buffer;     // <GPU_IndirectObject>
+
+	b32 instance_buffer_dirty;
+	b32 indirect_buffer_dirty;
 	
 	// ---
 
@@ -40,21 +48,16 @@ typedef struct Core {
 	
 	// ---
 
-	Image brdf_lut_image;
-
-	// TODO: Skybox and environment probes should be local to a scene, not just part of the render context?
+	// TODO: Skybox and environment probes should be local to a scene, not just part of the core.
 	Image skybox_cubemap;
 	EnvironmentProbe environment_probe;
 
+	Image brdf_lut_image;
 	GPUBuffer cubemap_capture_transforms;
-
 	Sampler linear_sampler;
-
 	Mesh skybox_mesh;
 	Mesh light_sphere_mesh;
 } Core;
-
-internal CoreFrameData *CoreCurrentFrame();
 
 global Core *core = NULL;
 global Platform *platform = NULL;

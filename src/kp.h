@@ -272,6 +272,12 @@ internal v4 V4Init(f32 x, f32 y, f32 z, f32 w)
 #define v4(x, y, z, w) V4Init(x, y, z, w)
 #define v4u(x) v4(x, x, x, x)
 
+/*
+#define C_BLACK v4(0.f, 0.f, 0.f, 1.f)
+#define C_EMPTY v4(0.f, 0.f, 0.f, 0.f)
+#define C_WHITE v4(1.f, 1.f, 1.f, 1.f)
+*/
+
 internal b32 V4RectHasPoint(v4 r, v2 p)
 {
 	return (p.x >= r.x &&
@@ -365,7 +371,7 @@ internal v4 QuatInitEuler(f32 pitch, f32 yaw, f32 roll)
 internal v3 QuatToEuler(v4 q)
 {
 	f32 t0 =           (2.f + ((q.w * q.x) + (q.y * q.z)));
-	f32 t1 = 1.f    -  (2.f * ((q.x * q.x) + (q.y * q.y)));
+	f32 t1 = 1.f     - (2.f * ((q.x * q.x) + (q.y * q.y)));
 	f32 t2 = ClampValue(2.f * ((q.w * q.y) - (q.z * q.x)), -1.f, 1.f);
 	f32 t3 =           (2.f * ((q.w * q.z) + (q.x * q.y)));
 	f32 t4 = 1.f     - (2.f * ((q.y * q.y) + (q.z * q.z)));
@@ -480,12 +486,8 @@ typedef union m4 {
 		f32 m03, m13, m23, m33;
 	};
 
-	struct {
-		v4 c0;
-		v4 c1;
-		v4 c2;
-		v4 c3;
-	};
+	v4 c[4];
+	f32 e[4][4];
 } m4;
 
 internal m4 M4Init(f32 dia)
@@ -500,14 +502,7 @@ internal m4 M4Init(f32 dia)
 }
 
 #define m4(d) M4Init(d)
-
-// Pointer hack to retrieve any column.
-#define m4c(m, __colindex) \
-	(((f32 *)(&(m))) + (4 * (__colindex)))
-
-// Pointer hack to retrieve any element.
-#define m4e(m, __rowindex, __colindex) \
-	(*(((f32 *)(&(m))) + (4 * (__colindex)) + (__rowindex)))
+#define m4e(__matrix, __row_index, __col_index) (__matrix.e[(__col_index)][(__row_index)])
 
 internal m4 M4MultiplyM4(m4 a, m4 b)
 {
@@ -700,10 +695,10 @@ internal m4 M4Inverse(m4 m)
 	m4 inverse = {0};
 	
 	for (i32 i = 0; i < 4; i++) {
-		inverse.c0.v[i] = inv0.v[i] * sign_a[i];
-		inverse.c1.v[i] = inv1.v[i] * sign_b[i];
-		inverse.c2.v[i] = inv2.v[i] * sign_a[i];
-		inverse.c3.v[i] = inv3.v[i] * sign_b[i];
+		m4e(inverse, i, 0) = inv0.v[i] * sign_a[i];
+		m4e(inverse, i, 1) = inv1.v[i] * sign_b[i];
+		m4e(inverse, i, 2) = inv2.v[i] * sign_a[i];
+		m4e(inverse, i, 3) = inv3.v[i] * sign_b[i];
 	}
 
 	v4 row0 = { inverse.m00, inverse.m01, inverse.m02, inverse.m03 };
@@ -757,7 +752,7 @@ internal m4 M4RotateAxis(f32 angle, v3 axis)
 
 	f32 sin_theta = SinF(angle);
 	f32 cos_theta = CosF(angle);
-	f32 cos_inv = 1.f - cos_theta;
+	f32 cos_inv   = 1.f - cos_theta;
 
 	result.m00 = (axis.x * axis.x * cos_inv) +           cos_theta;
 	result.m10 = (axis.x * axis.y * cos_inv) + (axis.z * sin_theta);

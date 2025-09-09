@@ -4,16 +4,16 @@ internal BitmapImage BitmapImageLoadFromFile(String8 path)
 	BitmapImage image = {0};
 
 	if (stbi_is_hdr((char *)path.str)) {
-		image.pixels = stbi_loadf((char *)path.str, &image.width,
-					  &image.height, &image.channels, 4);
+		image.pixels = stbi_loadf((char *)path.str,
+					  &image.width, &image.height, &image.channels, 4);
 
 		if (!image.pixels)
 			DebugLogCrash("Couldn't load Bitmap HDR: %s", path.str);
 
 		image.format = BitmapImageFormat_RGBAF;
 	} else {
-		image.pixels = stbi_load((char *)path.str, &image.width,
-					 &image.height, &image.channels, 4);
+		image.pixels = stbi_load((char *)path.str,
+					 &image.width, &image.height, &image.channels, 4);
 
 		if (!image.pixels)
 			DebugLogCrash("Couldn't load Bitmap LDR: %s", path.str);
@@ -27,7 +27,7 @@ internal BitmapImage BitmapImageLoadFromFile(String8 path)
 internal void BitmapImageDestroy(BitmapImage *image)
 {
 	stbi_image_free(image->pixels);
-	image->pixels = 0;
+	image->pixels = NULL;
 }
 
 internal u64 GetBitmapImageMemorySize(BitmapImage *image)
@@ -44,7 +44,6 @@ internal Image BitmapCreateImage(BitmapImage *bitmap)
 	case BitmapImageFormat_RGBA8:
 		format = VK_FORMAT_R8G8B8A8_UNORM;
 		break;
-
 	case BitmapImageFormat_RGBAF:
 		format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		break;
@@ -60,20 +59,31 @@ internal Image BitmapCreateImage(BitmapImage *bitmap)
 				 VK_SAMPLE_COUNT_1_BIT,
 				 false, false);
 
-	GPUBuffer staging_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+	GPUBuffer staging_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
 						  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 						  memory_size);
-	{
-		GPUBufferWrite(&staging_buffer, bitmap->pixels, memory_size, 0);
+	
+	GPUBufferWrite(&staging_buffer, bitmap->pixels, memory_size, 0);
 
-		CommandBuffer cmd = BeginGraphicsInstantSubmit();
-		{
-			CmdTransitionImageLayout(&cmd, &image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			CmdCopyBufferToImage(&cmd, &staging_buffer, &image);
-			CmdGenerateMipmaps(&cmd, &image);
-		}
-		EndGraphicsInstantSubmit(&cmd);
-	}
+	CommandBuffer cmd = BeginGraphicsInstantSubmit();
+		
+	ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(image.access_type);
+	ImageAccessInfo dst_access_info = SyncGetDstImageAccessInfo(ImageAccessType_TransferDst);
+	
+	VkImageMemoryBarrier2 transition_barrier = ImageGetMemoryBarrier(&image, src_access_info, dst_access_info);
+
+	CmdPipelineBarrier(&cmd, 0,
+			   0, NULL,
+			   0, NULL,
+			   1, &transition_barrier);
+			
+	CmdCopyBufferToImage(&cmd, &staging_buffer, &image);
+	CmdGenerateMipmaps(&cmd, &image);
+	
+	image.access_type = ImageAccessType_GraphicsRead;
+			
+	EndGraphicsInstantSubmit(&cmd);
+		
 	GraphicsWaitIdle();
 	GPUBufferDestroy(&staging_buffer);
 
@@ -162,23 +172,21 @@ internal u32 AssetsTryFetchAssimpMaterialTexture(Assets *assets,
 	if (aiGetMaterialTextureCount(material, type) <= 0)
 		return fallback;
 
-	ScratchArena scratch = GetScratch(assets->arena, 1);
-
 	struct aiString texture_path = {0};
 	aiGetMaterialTexture(material, type, 0, &texture_path, 0, 0, 0, 0, 0, 0);
 
-	String8 final_path = MemoryArenaAllocateString8(scratch.arena, directory.len + texture_path.length);
+	String8 final_path = MemoryArenaAllocateString8(assets->arena, directory.len + texture_path.length);
 	MemoryCopy(final_path.str, directory.str, directory.len);
 	MemoryCopy(final_path.str + directory.len, texture_path.data, texture_path.length);
 
 	u32 handle = AssetsLoadTexture(assets, final_path);
 
-	ReleaseScratch(&scratch);
 	return handle;
 }
 
 internal Material
-AssetsLoadMaterialFromAssimp(Assets *assets, String8 directory,
+AssetsLoadMaterialFromAssimp(Assets *assets,
+			     String8 directory,
 			     const struct aiMaterial *assimp_material)
 {
 	Material material = {0};
