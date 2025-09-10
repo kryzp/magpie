@@ -359,10 +359,16 @@ typedef struct Platform {
 
 	GamepadState gamepads[MAX_GAMEPADS];
 
-	const char *const *(*GetVulkanInstanceExtensions)(u32 *count);
-	b32 (*CreateVulkanSurface)(void *instance, void *surface);
+	void (*SetWindowSize)(u32 w, u32 h);
+	void (*SetWindowFullscreen)(b32 b);
+	void (*SetWindowBorderless)(b32 b);
+
+	void (*SetMousePosition)(u32 x, u32 y);
 
 	u64 (*GetTicks)(void);
 	u64 (*GetPerformanceCounter)(void);
 	u64 (*GetPerformanceFrequency)(void);
+
+	const char *const *(*GetVulkanInstanceExtensions)(u32 *count);
+	b32 (*CreateVulkanSurface)(void *instance, void *surface);
 } Platform;

@@ -22,7 +22,7 @@ typedef struct Win32CoreCode {
 	FILETIME last_write_time;
 
 	void (*CoreInit)(Platform *platform);
-	void (*CoreUpdate)(Platform *platform);
+	void (*CoreTick)(Platform *platform);
 	void (*CoreDestroy)(Platform *platform);
 	void (*CoreBeforeHotReload)(Platform *platform);
 	void (*CoreAfterHotReload)(Platform *platform);
@@ -43,8 +43,7 @@ internal FILETIME Win32GetLastWriteTime(const char *filename)
 	return last_write_time;
 }
 
-internal void Win32LoadCoreCode(Win32CoreCode *core_code,
-				const char *source_dll)
+internal void Win32LoadCoreCode(Win32CoreCode *core_code, const char *source_dll)
 {
 	const char *dll_name_hot = "build/hot_reload.dll";
 
@@ -55,7 +54,7 @@ internal void Win32LoadCoreCode(Win32CoreCode *core_code,
 
 	if (core_code->handle) {
 		core_code->CoreInit            = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreInit");
-		core_code->CoreUpdate          = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreUpdate");
+		core_code->CoreTick            = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreTick");
 		core_code->CoreDestroy         = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreDestroy");
 		core_code->CoreBeforeHotReload = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreBeforeHotReload");
 		core_code->CoreAfterHotReload  = (CoreFunctionType)GetProcAddress(core_code->handle, "CoreAfterHotReload");
@@ -65,7 +64,7 @@ internal void Win32LoadCoreCode(Win32CoreCode *core_code,
 internal void Win32UnloadCoreCode(Win32CoreCode *core_code)
 {
 	core_code->CoreInit = CoreNullStub;
-	core_code->CoreUpdate = CoreNullStub;
+	core_code->CoreTick = CoreNullStub;
 	core_code->CoreDestroy = CoreNullStub;
 	core_code->CoreBeforeHotReload = CoreNullStub;
 	core_code->CoreAfterHotReload = CoreNullStub;
@@ -89,6 +88,35 @@ internal void Win32ReconnectAllGamepads()
 internal void Win32CloseAllGamepads()
 {
 	// TODO(kp)
+}
+
+internal void Win32SetWindowSize(u32 w, u32 h)
+{
+	SDL_SetWindowSize(window, w, h);
+
+	SDL_GetWindowSizeInPixels(window,
+				  &global_platform.window_pixel_width,
+				  &global_platform.window_pixel_height);
+}
+
+internal void Win32SetWindowFullscreen(b32 b)
+{
+	SDL_SetWindowFullscreen(window, b);
+}
+
+internal void Win32SetWindowBorderless(b32 b)
+{
+	SDL_SetWindowBordered(window, !b);
+}
+
+internal void Win32SetMousePosition(u32 x, u32 y)
+{
+	SDL_WarpMouseInWindow(window, x, y);
+	
+	global_platform.mouse_position = v2(x, y);
+
+	SDL_GetGlobalMouseState(&global_platform.mouse_screen_position.x,
+				&global_platform.mouse_screen_position.y);
 }
 
 i32 main(void)
@@ -150,12 +178,18 @@ i32 main(void)
 
 		global_platform.exit = false;
 
-		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
-		global_platform.CreateVulkanSurface = Win32CreateVulkanSurface;
+		global_platform.SetWindowSize = Win32SetWindowSize;
+		global_platform.SetWindowFullscreen = Win32SetWindowFullscreen;
+		global_platform.SetWindowBorderless = Win32SetWindowBorderless;
+
+		global_platform.SetMousePosition = Win32SetMousePosition;
 
 		global_platform.GetTicks = SDL_GetTicks;
 		global_platform.GetPerformanceCounter = SDL_GetPerformanceCounter;
 		global_platform.GetPerformanceFrequency = SDL_GetPerformanceFrequency;
+
+		global_platform.GetVulkanInstanceExtensions = SDL_Vulkan_GetInstanceExtensions;
+		global_platform.CreateVulkanSurface = Win32CreateVulkanSurface;
 	}
 
 	Platform prev_st = global_platform;
@@ -233,29 +267,7 @@ i32 main(void)
 			}
 		}
 
-		core_code.CoreUpdate(&global_platform);
-
-		if (global_platform.fullscreen != prev_st.fullscreen)
-			SDL_SetWindowFullscreen(window, global_platform.fullscreen);
-
-		if (global_platform.borderless != prev_st.borderless)
-			SDL_SetWindowBordered(window, global_platform.borderless);
-
-		if (global_platform.window_width != prev_st.window_width ||
-		    global_platform.window_height != prev_st.window_height) {
-
-			if (global_platform.window_width >= 0 &&
-			    global_platform.window_height >= 0) {
-				
-				SDL_SetWindowSize(window,
-						  global_platform.window_width,
-						  global_platform.window_height);
-
-				SDL_GetWindowSizeInPixels(window,
-							  &global_platform.window_pixel_width,
-							  &global_platform.window_pixel_height);
-			}
-		}
+		core_code.CoreTick(&global_platform);
 
 		prev_st = global_platform;
 	}

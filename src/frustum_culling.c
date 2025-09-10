@@ -117,7 +117,7 @@ internal void RenderPassComputeFrustumCulling(RenderState *rs, void *context)
 	
 	CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(draw_cull_data), &draw_cull_data);
 
-	CmdDispatch(cmd, (draw_cull_data.draw_count / 64) + 1, 1, 1);
+	CmdDispatch(cmd, (draw_cull_data.draw_count / 256) + 1, 1, 1);
 }
 
 internal void ComputeFrustumCulling(RenderGraph *graph, struct frustum_culling_input *input)

@@ -12,6 +12,9 @@ typedef struct Core {
 	MemoryArena scratch_arenas[2];
 	
 	u64 starting_ticks;
+	
+	Timer delta_timer;
+	f32 delta_accumulator;
 
 	GraphicsDevice graphics_device;
 	RenderState render_state;
@@ -19,10 +22,12 @@ typedef struct Core {
 
 	VertexFormats vertex_formats;
 	Shaders shaders;
-
+	
 	Assets assets;
 
 	Camera main_camera;
+	CameraDriver main_camera_driver;
+	
 	Scene scene;
 
 	// ---
@@ -32,6 +37,16 @@ typedef struct Core {
 	CoreFrameData per_frame_data[FRAMES_IN_FLIGHT];
 
 	GPUBuffer material_buffer;
+
+	Image brdf_lut_image;
+	GPUBuffer cubemap_capture_transforms;
+	Sampler linear_sampler;
+	Mesh skybox_mesh;
+	Mesh light_sphere_mesh;
+
+	// TODO: Skybox and environment probes should be local to a scene, not just part of the core.
+	Image skybox_cubemap;
+	EnvironmentProbe environment_probe;
 
 	GPUBuffer compacted_instance_buffer; // <u32>
 	GPUBuffer instance_buffer;           // <GPU_Instance>
@@ -43,20 +58,8 @@ typedef struct Core {
 	
 	// ---
 
-	u32 damaged_helmet_objects[5];
+	u32 damaged_helmet_objects[16][16];
 	u32 light;
-	
-	// ---
-
-	// TODO: Skybox and environment probes should be local to a scene, not just part of the core.
-	Image skybox_cubemap;
-	EnvironmentProbe environment_probe;
-
-	Image brdf_lut_image;
-	GPUBuffer cubemap_capture_transforms;
-	Sampler linear_sampler;
-	Mesh skybox_mesh;
-	Mesh light_sphere_mesh;
 } Core;
 
 global Core *core = NULL;

@@ -43,11 +43,8 @@ struct VS_Output
 	[[vk::location(3)]] float3x3 tbn;
 };
 
-// Can also use uint instance_id : SV_VulkanInstanceID
-// instead of uint baseInstance : SV_StartInstanceLocation
-
 [shader("vertex")]
-VS_Output VertexMain(ModelVertex vertex, uint instance : SV_InstanceID)
+VS_Output VertexMain(ModelVertex vertex, uint instance : SV_VulkanInstanceID)
 {
 	uint index = args.instance_buffer[instance];
 	
@@ -93,12 +90,6 @@ FS_Output FragmentMain(VS_Output input)
    	float3 emissive            = bindless_images[material.emissive]   .Sample(sampler, uv).rgb;
 	float3 metallic_roughness  = bindless_images[material.mr]         .Sample(sampler, uv).rgb;
 	float  ambient_occlusion   = bindless_images[material.ambient]    .Sample(sampler, uv).r;
-
-	// Temporary for to make lighting debugging easier.
-	albedo = 1.;
-	emissive = 0.;
-	metallic_roughness = float3(0., .2, 1.);
-	ambient_occlusion = 1.;
 
 	if (albedo.a < 0.)
 	        discard;

@@ -64,7 +64,7 @@ bool IsVisible(uint object_id)
 }
 
 [shader("compute")]
-[numthreads(64, 1, 1)]
+[numthreads(256, 1, 1)]
 void ComputeMain(uint3 tid : SV_DispatchThreadID)
 {
 	uint gid = tid.x;

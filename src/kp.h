@@ -161,7 +161,7 @@ internal v3 V3AddV3(v3 a, v3 b)
 		  a.z + b.z);
 }
 
-internal v3 V3SubtractV3(v3 a, v3 b)
+internal v3 V3SubV3(v3 a, v3 b)
 {
 	return v3(a.x - b.x,
 		  a.y - b.y,
@@ -592,7 +592,7 @@ internal m4 M4LookAt(v3 eye, v3 center, v3 up)
 {
 	m4 result = {0};
 
-	v3 yaxis = V3Normalize(V3SubtractV3(center, eye));
+	v3 yaxis = V3Normalize(V3SubV3(center, eye));
 	v3 xaxis = V3Normalize(V3Cross(yaxis, up));
 	v3 zaxis = V3Cross(xaxis, yaxis);
 

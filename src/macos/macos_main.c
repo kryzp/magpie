@@ -20,7 +20,7 @@ typedef struct MacOSCoreCode {
 	void *handle;
 
 	void (*CoreInit)(Platform *);
-	void (*CoreUpdate)(Platform *);
+	void (*CoreTick)(Platform *);
 	void (*CoreDestroy)(Platform *);
 	void (*CoreBeforeHotReload)(Platform *);
 	void (*CoreAfterHotReload)(Platform *);
@@ -32,7 +32,7 @@ internal void MacOSLoadCoreCode(MacOSCoreCode *core_code)
 
 	if (core_code->handle) {
 		core_code->CoreInit            = dlsym(core_code->handle, "CoreInit");
-		core_code->CoreUpdate          = dlsym(core_code->handle, "CoreUpdate");
+		core_code->CoreTick            = dlsym(core_code->handle, "CoreTick");
 		core_code->CoreDestroy         = dlsym(core_code->handle, "CoreDestroy");
 		core_code->CoreBeforeHotReload = dlsym(core_code->handle, "CoreBeforeHotReload");
 		core_code->CoreAfterHotReload  = dlsym(core_code->handle, "CoreAfterHotReload");
@@ -42,7 +42,7 @@ internal void MacOSLoadCoreCode(MacOSCoreCode *core_code)
 internal void MacOSUnloadCoreCode(MacOSCoreCode *core_code)
 {
 	core_code->CoreInit = CoreNullStub;
-	core_code->CoreUpdate = CoreNullStub;
+	core_code->CoreTick = CoreNullStub;
 	core_code->CoreDestroy = CoreNullStub;
 	core_code->CoreBeforeHotReload = CoreNullStub;
 	core_code->CoreAfterHotReload = CoreNullStub;
@@ -215,7 +215,7 @@ i32 main(void)
 			}
 		}
 
-		core_code.CoreUpdate(&global_platform);
+		core_code.CoreTick(&global_platform);
 
 		if (global_platform.fullscreen != prev_st.fullscreen)
 			SDL_SetWindowFullscreen(window, global_platform.fullscreen);

@@ -1,6 +1,14 @@
 
 #define FRAMES_IN_FLIGHT 3
 
+#define VK_CHECK(_func_call, _error_msg)                \
+	do {                                            \
+		VkResult _vk_check_result = _func_call; \
+		if (_vk_check_result != VK_SUCCESS) {   \
+			DebugLogCrash(_error_msg);      \
+		}                                       \
+	} while (0)
+
 typedef struct Sampler {
 	VkSampler handle;
 
@@ -257,18 +265,15 @@ typedef struct Swapchain {
 #define BINDLESS_MAX_RESOURCES 256
 #define BINDLESS_MAX_WRITES_PER_FRAME 64
 
-#define BINDLESS_SAMPLER_BINDING 0
-#define BINDLESS_IMAGE_BINDING 1
-#define BINDLESS_CUBEMAP_BINDING 2
-
-typedef enum BindlessUpdateType {
-	BindlessUpdateType_Sampler,
-	BindlessUpdateType_Image,
-	BindlessUpdateType_Cubemap
-} BindlessUpdateType;
+typedef enum BindlessSetBinding {
+	BindlessSetBinding_Sampler,
+	BindlessSetBinding_Image,
+	BindlessSetBinding_Cubemap,
+	BindlessSetBinding_MaxEnum
+} BindlessSetBinding;
 
 typedef struct BindlessUpdate {
-	BindlessUpdateType type;
+	BindlessSetBinding type;
 	u32 slot;
 
 	union {
@@ -282,6 +287,17 @@ typedef struct BindlessUpdate {
 		} sampler;
 	};
 } BindlessUpdate;
+
+typedef struct BindlessResources {
+	VkDescriptorSet sets[BindlessSetBinding_MaxEnum];
+	VkDescriptorSetLayout layouts[BindlessSetBinding_MaxEnum];
+	VkDescriptorPool pool;
+
+	u32 update_count;
+	BindlessUpdate updates[BINDLESS_MAX_WRITES_PER_FRAME];
+
+	u32 resource_counts[BindlessSetBinding_MaxEnum];
+} BindlessResources;
 
 typedef struct GraphicsFrameData {
 	CommandPool command_pool;
@@ -305,50 +321,36 @@ typedef struct GraphicsDevice {
 
 	// ---
 
-	u32 current_frame_index;
-
-	Swapchain swapchain;
-
-	// ---
-
-	VkDescriptorSet bindless_set;
-	VkDescriptorSetLayout bindless_layout;
-	VkDescriptorPool bindless_pool;
-
-	u32 n_bindless_updates;
-	BindlessUpdate bindless_updates[BINDLESS_MAX_WRITES_PER_FRAME];
-
-	u32 n_bindless_samplers;
-	u32 n_bindless_images;
-	u32 n_bindless_cubemaps;
-
-	// ---
-
-	HashTable image_view_cache;
-	HashTable pipeline_cache;
-	HashTable pipeline_layout_cache;
-
-	// ---
-
-	VkQueue graphics_queue;
-	u32 graphics_queue_family_index;
-
-	GraphicsFrameData frames[FRAMES_IN_FLIGHT];
-
-	VkSurfaceKHR surface;
-	VkPipelineCache pipeline_process_cache;
-
-	// ---
-
-	VkFormat depth_format;
-	VkSampleCountFlagBits max_msaa_samples;
-
-	// ---
-
 	VmaAllocator vma_allocator;
 
 	// ---
 
 	VkDebugUtilsMessengerEXT debug_messenger;
 	b32 has_validation_layers;
+
+	// ---
+
+	u32 current_frame_index;
+
+	// ---
+
+	Swapchain swapchain;
+	BindlessResources bindless;
+
+	GraphicsFrameData frames[FRAMES_IN_FLIGHT];
+
+	VkQueue graphics_queue;
+	u32 graphics_queue_family_index;
+
+	VkSurfaceKHR surface;
+	VkPipelineCache pipeline_process_cache;
+
+	VkFormat depth_format;
+	VkSampleCountFlagBits max_msaa_samples;
+	
+	// ---
+
+	HashTable image_view_cache;
+	HashTable pipeline_cache;
+	HashTable pipeline_layout_cache;
 } GraphicsDevice;

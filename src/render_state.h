@@ -44,47 +44,14 @@ typedef struct GPU_Indirect {
 
 // ---
 
-typedef struct MultiBatch {
-	struct MultiBatch *next;
-	u32 first;
-	u32 count;
-} MultiBatch;
-
-typedef struct IndirectBatch {
-	struct IndirectBatch *next;
-	u32 mesh_id;
-	u32 material_id;
-	u32 first;
-	u32 count;
-} IndirectBatch;
-
-typedef struct DirectBatch {
-	struct DirectBatch *next;
-	u32 object_id;
-	//u64 sort_key;
-} DirectBatch;
-
-// Ready mesh data for rendering.
-// TODO: These should be arrays instead of linked lists
-//       given how many times they're indexed into.
-typedef struct MeshPass {
-	MultiBatch *multi_batches; // Instanced Draws.
-	u32 batch_count;
-	IndirectBatch *batches;    // Indirect Draws.
-	u32 direct_batch_count;
-	DirectBatch *direct_batches; // Direct Draws. TODO: This still needs to be actually sorted!
-} MeshPass;
-
-// ---
-
-typedef struct PassMesh {
+typedef struct RenderMesh {
 	Mesh *original;
 	b32 is_merged;
 	u32 first_vertex;
 	u32 first_index;
 	u32 vertex_count;
 	u32 index_count;
-} PassMesh;
+} RenderMesh;
 
 // TODO: Currently meshes and materials just use an indexed handle,
 //       which is all well and good but becomes troublesome when
@@ -94,7 +61,7 @@ typedef struct RenderState {
 	CommandBuffer cmd;
 
 	u32 mesh_count;
-	PassMesh meshes[SCENE_MAX_OBJECTS];
+	RenderMesh meshes[SCENE_MAX_OBJECTS];
 
 	GPUBuffer merged_vertex_buffer;
 	GPUBuffer merged_index_buffer;

@@ -26,7 +26,6 @@ PushConstants args;
 struct VS_Output
 {
     float4 sv_position : SV_Position;
-
     [[vk::location(0)]] float2 uv;
 };
 
@@ -78,11 +77,11 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 
-    float3 irradiance = bindless_cubes[args.irradiance_map].Sample(sampler, WorldToCubemap(normal)).rgb;
+	float3 irradiance = bindless_cubes[args.irradiance_map].Sample(sampler, WorldToCubemap(normal)).rgb;
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambient_occlusion;
 
 	float3 final_colour = ambient + emissive;
 
-    return float4(final_colour, 1.);
+	return float4(final_colour, 1.);
 }

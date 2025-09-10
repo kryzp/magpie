@@ -52,7 +52,7 @@ internal f32 TimerGetElapsedSecondsF(Timer *timer)
 		if (timer->paused)
 			return (f32)timer->paused_ticks / (f32)platform->GetPerformanceFrequency();
 
-		return (f32)(platform->GetPerformanceFrequency() - timer->start_ticks) / (f32)platform->GetPerformanceFrequency();
+		return (f32)(platform->GetPerformanceCounter() - timer->start_ticks) / (f32)platform->GetPerformanceFrequency();
 	}
 
 	return 0.f;
