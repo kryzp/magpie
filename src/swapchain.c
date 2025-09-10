@@ -101,6 +101,8 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 	if (details.capabilities.maxImageCount > 0 && image_count > details.capabilities.maxImageCount)
 		image_count = details.capabilities.maxImageCount;
 
+	const VkImageUsageFlags swapchain_image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	
 	VkSwapchainCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	create_info.surface = graphics_device->surface;
@@ -109,7 +111,7 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 	create_info.imageColorSpace = surface_format.colorSpace;
 	create_info.imageExtent = extent;
 	create_info.imageArrayLayers = 1;
-	create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	create_info.imageUsage = swapchain_image_usage;
 	create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	create_info.queueFamilyIndexCount = 0;
 	create_info.pQueueFamilyIndices = 0;
@@ -155,9 +157,7 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 		image->type   = VK_IMAGE_VIEW_TYPE_2D;
 		image->tiling = VK_IMAGE_TILING_OPTIMAL;
 
-		image->usage =
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-			VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		image->usage = swapchain_image_usage;
 
 		image->mipmap_count = 1;
 		image->samples = VK_SAMPLE_COUNT_1_BIT;

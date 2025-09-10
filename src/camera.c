@@ -37,7 +37,13 @@ internal Camera CameraInitPerspective(v3 position, v3 forward, f32 fov,
 }
 
 internal void CameraDriverUpdate(CameraDriver *driver, Camera *camera, f32 dt)
-{
+{	
+	if (platform->kb_pressed[KeyboardKey_Tab])
+		driver->active = !driver->active;
+
+	if (!driver->active)
+		return;
+	
 	const f32 mouse_deadzone = .001f;
 	const f32 turn_speed = 1.f;
 	const f32 move_speed = 2.5f;

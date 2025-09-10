@@ -1,18 +1,16 @@
 #include "util.slang"
 #include "bindless.slang"
 
-struct ModelVertex
-{
-    [[vk::location(0)]] float3 position;
-    [[vk::location(1)]] float2 texcoord;
-    [[vk::location(2)]] float3 colour;
-    [[vk::location(3)]] float3 normal;
-    [[vk::location(4)]] float3 tangent;
-    [[vk::location(5)]] float3 bitangent;
+struct ModelVertex {
+	[vk::location(0)] float3 position;
+	[vk::location(1)] float2 texcoord;
+	[vk::location(2)] float3 colour;
+	[vk::location(3)] float3 normal;
+	[vk::location(4)] float3 tangent;
+	[vk::location(5)] float3 bitangent;
 };
 
-struct Material
-{
+struct Material {
 	uint diffuse;
 	uint normal;
 	uint emissive;
@@ -20,8 +18,7 @@ struct Material
 	uint ambient;
 };
 
-struct Arguments
-{
+struct Arguments {
 	FrameData *frame_data;
 	ObjectData *object_transforms;
 	Material *materials;
@@ -30,17 +27,15 @@ struct Arguments
 	uint sampler;
 };
 
-[[vk::push_constant]]
+[vk::push_constant]
 Arguments args;
 
-struct VS_Output
-{
+struct VS_Output {
 	float4 sv_position : SV_Position;
-
-	[[vk::location(0)]] float4 position;
-	[[vk::location(1)]] float2 texcoord;
-	[[vk::location(2)]] float3 colour;
-	[[vk::location(3)]] float3x3 tbn;
+	[vk::location(0)] float4 position;
+	[vk::location(1)] float2 texcoord;
+	[vk::location(2)] float3 colour;
+	[vk::location(3)] float3x3 tbn;
 };
 
 [shader("vertex")]

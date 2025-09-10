@@ -1,8 +1,7 @@
 #include "util.slang"
 #include "bindless.slang"
 
-struct PushConstants
-{
+struct PushConstants {
 	FrameData *frame_data;
 
 	uint position;
@@ -20,13 +19,12 @@ struct PushConstants
 	uint _padding;
 };
 
-[[vk::push_constant]]
+[vk::push_constant]
 PushConstants args;
 
-struct VS_Output
-{
+struct VS_Output {
     float4 sv_position : SV_Position;
-    [[vk::location(0)]] float2 uv;
+    [vk::location(0)] float2 uv;
 };
 
 [shader("vertex")]

@@ -21,6 +21,7 @@ typedef struct Camera {
 } Camera;
 
 typedef struct CameraDriver {
+	b32 active;
 	f32 yaw;
 	f32 pitch;
 	f32 target_yaw;

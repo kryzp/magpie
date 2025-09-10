@@ -230,22 +230,18 @@ i32 main(void)
 
 			case SDL_EVENT_KEY_DOWN:
 				global_platform.kb_down[ev.key.scancode] = true;
-				global_platform.kb_pressed[ev.key.scancode] = !prev_st.kb_down[ev.key.scancode];
 				break;
 
 			case SDL_EVENT_KEY_UP:
 				global_platform.kb_down[ev.key.scancode] = false;
-				global_platform.kb_released[ev.key.scancode] = prev_st.kb_down[ev.key.scancode];
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
 				global_platform.mb_down[ev.button.button] = true;
-				global_platform.mb_pressed[ev.button.button] = !prev_st.mb_down[ev.button.button];
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
 				global_platform.mb_down[ev.button.button] = false;
-				global_platform.mb_released[ev.button.button] = prev_st.mb_down[ev.button.button];
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION: {
@@ -264,6 +260,25 @@ i32 main(void)
 			case SDL_EVENT_MOUSE_WHEEL:
 				global_platform.mouse_wheel = v2(ev.wheel.x, ev.wheel.y);
 				break;
+			}
+		}
+
+		for (u32 i = 0; i < KeyboardKey_MaxEnum; i++) {
+			global_platform.kb_pressed[i]  =  global_platform.kb_down[i] && !prev_st.kb_down[i];
+			global_platform.kb_released[i] = !global_platform.kb_down[i] &&  prev_st.kb_down[i];
+		}
+
+		for (u32 i = 0; i < MouseButton_MaxEnum; i++) {
+			global_platform.mb_pressed[i]  =  global_platform.mb_down[i] && !prev_st.mb_down[i];
+			global_platform.mb_released[i] = !global_platform.mb_down[i] &&  prev_st.mb_down[i];
+		}
+
+		for (u32 i = 0; i < MAX_GAMEPADS; i++) {
+			GamepadState *st = global_platform.gamepads + i;
+			GamepadState *p_st = prev_st.gamepads + i;
+			for (u32 j = 0; j < GamepadButton_MaxEnum; j++) {
+				st->pressed[i]  =  st->down[i] && !p_st->down[i];
+				st->released[i] = !st->down[i] &&  p_st->down[i];
 			}
 		}
 

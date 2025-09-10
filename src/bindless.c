@@ -1,4 +1,8 @@
 
+// TODO: Implement a system where the bindless resources "defer"
+//       updates to the next frame if they spill over the
+//       BINDLESS_MAX_WRITES_PER_FRAME.
+
 internal b32 BindlessIsValid(u32 resource_id)
 {
 	return resource_id != 0;
@@ -7,9 +11,11 @@ internal b32 BindlessIsValid(u32 resource_id)
 internal VkDescriptorType BindlessGetDescriptorTypeFromBinding(BindlessSetBinding binding)
 {
 	switch (binding) {
-	case BindlessSetBinding_Sampler: return VK_DESCRIPTOR_TYPE_SAMPLER;
-	case BindlessSetBinding_Image:   return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case BindlessSetBinding_Cubemap: return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case BindlessSetBinding_Sampler:    return VK_DESCRIPTOR_TYPE_SAMPLER;
+	case BindlessSetBinding_Image:      return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case BindlessSetBinding_Cubemap:    return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case BindlessSetBinding_RWImage:    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	//case BindlessSetBinding_RWCubemap:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	}
 
 	DebugLogCrash("Could not find descriptor type from binding type.");
@@ -25,6 +31,7 @@ internal u32 BindlessPushUpdate(BindlessResources *bindless, BindlessUpdate *upd
 	BindlessUpdate *p_update = bindless->updates + bindless->update_count;
 	*p_update = *update;
 	p_update->slot = ++bindless->resource_counts[p_update->type];
+	
 	bindless->update_count++;
 	return p_update->slot;
 }
@@ -58,22 +65,31 @@ internal u32 BindlessRegisterCubemap(BindlessResources *bindless, VkImageView vi
 	return BindlessPushUpdate(bindless, &update);
 }
 
+internal u32 BindlessRegisterRWImageView(BindlessResources *bindless, VkImageView view)
+{
+	BindlessUpdate update = {0};
+	update.type = BindlessSetBinding_RWImage;
+	update.storage_image.view = view;
+
+	return BindlessPushUpdate(bindless, &update);
+}
+
 internal void BindlessInit(BindlessResources *bindless)
 {
 	VkDescriptorPoolSize pool_sizes[BindlessSetBinding_MaxEnum] = {0};
-
+	
 	for (u32 i = 0; i < BindlessSetBinding_MaxEnum; i++) {
 		pool_sizes[i].type = BindlessGetDescriptorTypeFromBinding((BindlessSetBinding)i);
 		pool_sizes[i].descriptorCount = BINDLESS_MAX_RESOURCES;
 	}
-
+	
 	VkDescriptorPoolCreateInfo pool_create_info = {0};
 	pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
 	pool_create_info.maxSets = BINDLESS_MAX_RESOURCES * ArraySize(pool_sizes);
 	pool_create_info.poolSizeCount = ArraySize(pool_sizes);
 	pool_create_info.pPoolSizes = pool_sizes;
-
+	
 	VK_CHECK(vkCreateDescriptorPool(graphics_device->device,
 					&pool_create_info, NULL,
 					&bindless->pool),
@@ -85,7 +101,7 @@ internal void BindlessInit(BindlessResources *bindless)
 	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 	binding_flags.bindingCount = 1;
 	binding_flags.pBindingFlags = &bindless_flags;
-
+	
 	for (u32 i = 0; i < BindlessSetBinding_MaxEnum; i++) {
 		VkDescriptorSetLayoutBinding binding = {0};
 		binding.descriptorType = BindlessGetDescriptorTypeFromBinding((BindlessSetBinding)i);
@@ -100,7 +116,7 @@ internal void BindlessInit(BindlessResources *bindless)
 		layout_create_info.pBindings = &binding;
 		layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 		layout_create_info.pNext = &binding_flags;
-
+		
 		VK_CHECK(vkCreateDescriptorSetLayout(graphics_device->device,
 						     &layout_create_info, NULL,
 						     &bindless->layouts[i]),
@@ -108,16 +124,16 @@ internal void BindlessInit(BindlessResources *bindless)
 	}
 	
 	// ---
-
+	
 	VkDescriptorSetAllocateInfo alloc_info = {0};
 	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	alloc_info.descriptorPool = bindless->pool;
 	alloc_info.descriptorSetCount = BindlessSetBinding_MaxEnum;
 	alloc_info.pSetLayouts = bindless->layouts;
-
+	
 	VK_CHECK(vkAllocateDescriptorSets(graphics_device->device, &alloc_info, bindless->sets),
 		 "Failed to allocate bindless descriptor set.");
-		
+	
 	DebugLog("Bindless resources created.");
 }
 
@@ -161,6 +177,12 @@ internal void BindlessApplyUpdates(BindlessResources *bindless)
 			image_info->imageLayout = update->sampled_image.is_depth
 				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			break;
+
+		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+			image_info->sampler = VK_NULL_HANDLE;
+			image_info->imageView = update->storage_image.view;
+			image_info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			break;
 		}
 	}

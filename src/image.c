@@ -9,6 +9,11 @@ internal b32 ImageIsCubemap(Image *image)
 	return image->type == VK_IMAGE_VIEW_TYPE_CUBE;
 }
 
+internal b32 ImageIsStorage(Image *image)
+{
+	return (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) != 0;
+}
+
 internal u32 ImageFaceCount(Image *image)
 {
 	return ImageIsCubemap(image) ? 6 : 1;
@@ -137,6 +142,17 @@ internal Image ImageAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
 			  false, false);
 }
 
+internal Image ImageAlloc2D_RW(u32 width, u32 height, VkFormat format, u32 mipmaps)
+{
+	return ImageAlloc(width, height, 1u,
+			  format,
+			  VK_IMAGE_VIEW_TYPE_2D,
+			  VK_IMAGE_TILING_OPTIMAL,
+			  mipmaps,
+			  VK_SAMPLE_COUNT_1_BIT,
+			  false, true);
+}
+
 internal Image ImageAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
 	return ImageAlloc(resolution, resolution, 1u,
@@ -236,10 +252,15 @@ internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
 
 	// Swapchain images are omitted from being accessible bindlessly.
 	if (!image->is_swapchain) {
-		if (ImageIsCubemap(image))
+		if (ImageIsCubemap(image)) {
 			view.resource_id = BindlessRegisterCubemap(&graphics_device->bindless, view.view, ImageIsDepth(image));
-		else
-			view.resource_id = BindlessRegisterImageView(&graphics_device->bindless, view.view, ImageIsDepth(image));
+		} else {
+			if (ImageIsStorage(image)) {
+				view.resource_id = BindlessRegisterRWImageView(&graphics_device->bindless, view.view);
+			} else {
+				view.resource_id = BindlessRegisterImageView(&graphics_device->bindless, view.view, ImageIsDepth(image));
+			}
+		}
 	}
 
 	return view;

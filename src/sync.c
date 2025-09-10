@@ -14,6 +14,21 @@ internal ImageAccessInfo SyncGetSrcImageAccessInfo(ImageAccessType access)
 		info.access = VK_ACCESS_2_NONE;
 		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		break;
+	case ImageAccessType_GraphicsReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		break;
+	case ImageAccessType_ComputeRead:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_NONE;
+		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+	case ImageAccessType_ComputeReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		break;
 	case ImageAccessType_ColourWrite:
 		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		info.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
@@ -58,6 +73,21 @@ internal ImageAccessInfo SyncGetDstImageAccessInfo(ImageAccessType access)
 		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT;
 		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+	case ImageAccessType_GraphicsReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		break;
+	case ImageAccessType_ComputeRead:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT;
+		info.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+	case ImageAccessType_ComputeReadWrite:
+		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
 		break;
 	case ImageAccessType_ColourWrite:
 		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;

@@ -149,6 +149,20 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		}
 
 		case RenderPassType_Compute: {
+			u32 image_barrier_count = 0;
+			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkImageMemoryBarrier2),
+										 pass->compute.read_only_image_count + pass->compute.rw_image_count);
+
+			for (i32 j = 0; j < pass->compute.read_only_image_count; j++) {
+				Image *image = pass->compute.read_only_images[j];
+				image_barriers[image_barrier_count++] = RenderGraphTransitionImage(image, ImageAccessType_ComputeRead);
+			}
+
+			for (i32 j = 0; j < pass->compute.rw_image_count; j++) {
+				Image *image = pass->compute.rw_images[j];
+				image_barriers[image_barrier_count++] = RenderGraphTransitionImage(image, ImageAccessType_ComputeReadWrite);
+			}
+			
 			u32 buffer_barrier_count = 0;
 			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkBufferMemoryBarrier2),
 										   pass->compute.buffer_count);
@@ -161,13 +175,38 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 			CmdPipelineBarrier(cmd, 0,
 					   0, NULL,
 					   buffer_barrier_count, buffer_barriers,
-					   0, NULL);
+					   image_barrier_count, image_barriers);
 
 			pass->compute.Record(rs, pass->context);
 			
 			break;
 		}
 
+		case RenderPassType_Transfer: {
+			u32 image_barrier_count = 0;
+			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkImageMemoryBarrier2),
+										 pass->transfer.src_count + pass->transfer.dst_count);
+
+			for (i32 j = 0; j < pass->transfer.src_count; j++) {
+				Image *image = pass->transfer.src[j];
+				image_barriers[image_barrier_count++] = RenderGraphTransitionImage(image, ImageAccessType_TransferSrc);
+			}
+
+			for (i32 j = 0; j < pass->transfer.dst_count; j++) {
+				Image *image = pass->transfer.dst[j];
+				image_barriers[image_barrier_count++] = RenderGraphTransitionImage(image, ImageAccessType_TransferDst);
+			}
+			
+			CmdPipelineBarrier(cmd, 0,
+					   0, NULL,
+					   0, NULL,
+					   image_barrier_count, image_barriers);
+			
+			pass->transfer.Record(rs, pass->context);
+			
+			break;
+		}
+			
 		case RenderPassType_Mipmap: {
 			Image *image = pass->mipmap.image;
 			

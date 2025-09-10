@@ -8,13 +8,13 @@ struct Arguments
 	uint _padding[2];
 };
 
-[[vk::push_constant]]
+[vk::push_constant]
 Arguments args;
 
 struct VS_Output
 {
 	float4 sv_position : SV_Position;
-	[[vk::location(0)]] float3 position;
+	[vk::location(0)] float3 position;
 };
 
 [shader("vertex")]

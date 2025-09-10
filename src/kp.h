@@ -302,7 +302,7 @@ internal v4 V4AddV4(v4 a, v4 b)
 		  a.w + b.w);
 }
 
-internal v4 V4SubtractV4(v4 a, v4 b)
+internal v4 V4SubV4(v4 a, v4 b)
 {
 	return v4(a.x - b.x,
 		  a.y - b.y,
@@ -684,10 +684,10 @@ internal m4 M4Inverse(m4 m)
 	v4 vec2 = { m.m21, m.m20, m.m20, m.m20 };
 	v4 vec3 = { m.m31, m.m30, m.m30, m.m30 };
 
-	v4 inv0 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
-	v4 inv1 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
-	v4 inv2 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
-	v4 inv3 = V4AddV4(V4SubtractV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
+	v4 inv0 = V4AddV4(V4SubV4(V4MultiplyV4(vec1, fac0), V4MultiplyV4(vec2, fac1)), V4MultiplyV4(vec3, fac2));
+	v4 inv1 = V4AddV4(V4SubV4(V4MultiplyV4(vec0, fac0), V4MultiplyV4(vec2, fac3)), V4MultiplyV4(vec3, fac4));
+	v4 inv2 = V4AddV4(V4SubV4(V4MultiplyV4(vec0, fac1), V4MultiplyV4(vec1, fac3)), V4MultiplyV4(vec3, fac5));
+	v4 inv3 = V4AddV4(V4SubV4(V4MultiplyV4(vec0, fac2), V4MultiplyV4(vec1, fac4)), V4MultiplyV4(vec2, fac5));
 
 	f32 sign_a[] = { +1.f, -1.f, +1.f, -1.f };
 	f32 sign_b[] = { -1.f, +1.f, -1.f, +1.f };

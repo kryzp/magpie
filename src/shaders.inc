@@ -8,3 +8,4 @@ GraphicsShaderDef("res/ambient_lighting.vert.spv",           "res/ambient_lighti
 GraphicsShaderDef("res/direct_lighting_point.vert.spv",      "res/direct_lighting_point.frag.spv",      direct_lighting_point_program)
 
 ComputeShaderDef("res/frustum_culling.comp.spv", compute_frustum_culling_program)
+ComputeShaderDef("res/hdr_tonemapping.comp.spv", hdr_tonemapping_program)

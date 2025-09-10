@@ -63,6 +63,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 
 struct lighting_pass_context {
 	GBuffer *gbuffer;
+	ImageView *target;
 	EnvironmentProbe *probe;
 	GPUBuffer *frame_data_buffer;
 	GPUBuffer *light_buffer;
@@ -83,8 +84,8 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	ambient_pipeline_def.colour_attachment_count = 1;
-	ambient_pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
-		
+	ambient_pipeline_def.colour_attachment_formats[0] = pass_context->target->image->format;
+	
 	pipeline_st = FetchGraphicsPipeline(&ambient_pipeline_def);
 
 	CmdBindBindless(cmd, pipeline_st.bind_point, pipeline_st.layout);
@@ -132,7 +133,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	direct_pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
 	direct_pipeline_def.colour_attachment_count = 1;
-	direct_pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+	direct_pipeline_def.colour_attachment_formats[0] = pass_context->target->image->format;
 	direct_pipeline_def.blend_state.enabled = true;
 	direct_pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
 	direct_pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
@@ -257,6 +258,7 @@ internal void DeferredRenderFrame(RenderGraph *graph,
 
 	struct lighting_pass_context lighting_context = {
 		.gbuffer = input->gbuffer,
+		.target = input->lighting,
 		.probe = input->probe,
 		.frame_data_buffer = input->frame_data_buffer,
 		.light_buffer = input->light_buffer
@@ -277,7 +279,8 @@ internal void DeferredRenderFrame(RenderGraph *graph,
 	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 1] = FetchStandardImageView(&input->probe->prefilter);
 
 	lighting_render_pass.graphics.attachment_count = 1;
-	lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR, input->lighting,
+	lighting_render_pass.graphics.attachments[0] = RenderingAttachmentInitColour(VK_ATTACHMENT_LOAD_OP_CLEAR,
+										     input->lighting,
 										     NULL, v4(0.f, 0.f, 0.f, 1.f));
 
 	MemoryCopy(lighting_render_pass.context, &lighting_context, sizeof(lighting_context));

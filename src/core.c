@@ -107,6 +107,7 @@
 #include "ibl_renderer.c"
 #include "brdf_lut.c"
 #include "frustum_culling.c"
+#include "post_processing.c"
 
 // https://songho.ca/opengl/gl_sphere.html
 // TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
@@ -166,6 +167,33 @@ internal void CoreCreateUnitSphereMesh()
 					   index_count, indices);
 
 	ReleaseScratch(&scratch);
+}
+
+internal void CoreLightingAttachmentBlitToSwapchain(RenderState *rs, void *context)
+{
+	Image *src = &core->lighting_attachment;
+	Image *dst = SwapchainCurrentImage(&graphics_device->swapchain);
+	
+	VkImageBlit region = {0};
+	region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.srcSubresource.mipLevel = 0;
+	region.srcSubresource.baseArrayLayer = 0;
+	region.srcSubresource.layerCount = 1;
+	region.srcOffsets[0] = (VkOffset3D){ 0, 0, 0 };
+	region.srcOffsets[1] = (VkOffset3D){ src->width, src->height, 1 };
+
+	region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.dstSubresource.mipLevel = 0;
+	region.dstSubresource.baseArrayLayer = 0;
+	region.dstSubresource.layerCount = 1;
+	region.dstOffsets[0] = (VkOffset3D){ 0, 0, 0 };
+	region.dstOffsets[1] = (VkOffset3D){ dst->width, dst->height, 1 };
+
+	CmdBlitImage(&rs->cmd,
+		     src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		     dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		     1, &region,
+		     VK_FILTER_LINEAR);
 }
 
 internal CoreFrameData *CoreCurrentFrame()
@@ -342,6 +370,9 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	core->indirect_buffer_dirty = true;
 	
 	GBufferInit(&core->gbuffer);
+
+	core->lighting_attachment = ImageAlloc2D_RW(graphics_device->swapchain.width, graphics_device->swapchain.height,
+						    VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	
 	u32 environment_asset_handle = AssetsLoadTexture(&core->assets, str8("res/environment_map.hdr"));
 
@@ -386,8 +417,8 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 	Light my_light = {0};
 	my_light.type = LightType_Point;
 	my_light.colour = v3(1.f, 1.f, 1.f);
-	my_light.intensity = 1.f;
-	my_light.falloff = 1.f;
+	my_light.intensity = 0.5f;
+	my_light.falloff = 0.5f;
 
 	core->light = SceneRegisterObject(&core->scene, m4(1.f));
 	SceneObjectAddLight(&core->scene, core->light, &core->render_state, &my_light);
@@ -401,7 +432,6 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 
 internal void CoreFixedUpdate(f32 dt)
 {
-	CameraDriverUpdate(&core->main_camera_driver, &core->main_camera, dt);
 }
 
 internal void CoreUpdate(f32 dt)
@@ -409,8 +439,10 @@ internal void CoreUpdate(f32 dt)
 	f32 t = GetTotalElapsedSecondsF();
 
 	Scene *scene = &core->scene;
+	Camera *camera = &core->main_camera;
 
-
+	CameraDriverUpdate(&core->main_camera_driver, camera, 1.f / 120.f);
+	
 	for (u32 i = 0; i < ArraySize(core->damaged_helmet_objects); i++) {
 		for (u32 j = 0; j < ArraySize(core->damaged_helmet_objects[0]); j++) {
 			f32 d = SquareRoot(i*i + j*j);
@@ -421,9 +453,12 @@ internal void CoreUpdate(f32 dt)
 							  v3u(0.f));
 		}
 	}
+
+	v3 position = V3SubV3(camera->position, V3MultiplyF32(camera->forward, camera->position.z / camera->forward.z));
+	position.z = 1.f;
 	
 	SceneObjectFromHandle(scene, core->light)
-		->transform = M4Transform(v3(SinF(t), 2.f, 1.f),
+		->transform = M4Transform(position,
 					  QuatInitIdentity(),
 					  v3u(1.f),
 					  v3u(0.f));
@@ -570,20 +605,37 @@ internal void CoreRender()
         deferred_renderer_input.indirect_buffer   = &core->draw_indirect_buffer;
 	deferred_renderer_input.light_buffer      = &frame->light_buffer;
 	deferred_renderer_input.gbuffer           = &core->gbuffer;
-	deferred_renderer_input.lighting          = SwapchainCurrentImageView(&graphics_device->swapchain);
+	deferred_renderer_input.lighting          = FetchStandardImageView(&core->lighting_attachment);
 	
 	DeferredRenderFrame(&core->render_graph, &deferred_renderer_input);
 	
 	struct skybox_renderer_input skybox_renderer_input = {0};
 	skybox_renderer_input.skybox            = FetchStandardImageView(&core->skybox_cubemap);
 	skybox_renderer_input.frame_data_buffer = &frame->frame_data_buffer;
-	skybox_renderer_input.target            = SwapchainCurrentImageView(&graphics_device->swapchain);
+	skybox_renderer_input.target            = FetchStandardImageView(&core->lighting_attachment);
 	skybox_renderer_input.depth             = FetchStandardImageView(&core->gbuffer.depth);
 	
 	SkyboxRender(&core->render_graph, &skybox_renderer_input);
+
+	struct post_processing_input post_processing_input = {0};
+	post_processing_input.exposure = 1.15f;
+	post_processing_input.input = &core->lighting_attachment;
+	post_processing_input.output = &core->lighting_attachment;
+
+	PostProcessingPass(&core->render_graph, &post_processing_input);
 	
 	// ---
 
+	RenderPass lighting_to_swapchain_pass = {0};
+	lighting_to_swapchain_pass.type = RenderPassType_Transfer;
+	lighting_to_swapchain_pass.transfer.Record = CoreLightingAttachmentBlitToSwapchain;
+	lighting_to_swapchain_pass.transfer.src_count = 1;
+	lighting_to_swapchain_pass.transfer.src[0] = &core->lighting_attachment;
+	lighting_to_swapchain_pass.transfer.dst_count = 1;
+	lighting_to_swapchain_pass.transfer.dst[0] = SwapchainCurrentImage(&graphics_device->swapchain);
+	
+	RenderGraphPush(&core->render_graph, &lighting_to_swapchain_pass);
+	
 	RenderPass present_pass = {0};
 	present_pass.type = RenderPassType_Present;
 	present_pass.present.swapchain = SwapchainCurrentImage(&graphics_device->swapchain);
@@ -613,7 +665,7 @@ __declspec(dllexport) void CoreTick(Platform *platform_)
 	CoreUpdate(dt);
 
 	core->delta_accumulator += MinValue(dt, fixed_dt);
-
+	
 	while (core->delta_accumulator >= fixed_dt) {
 		CoreFixedUpdate(fixed_dt);
 		core->delta_accumulator -= fixed_dt;
@@ -627,6 +679,7 @@ __declspec(dllexport) void CoreDestroy(Platform *platform_)
 	CoreDestroyPerFrameObjects();
 	
 	GBufferDestroy(&core->gbuffer);
+	ImageDestroy(&core->lighting_attachment);
 
 	GPUBufferDestroy(&core->material_buffer);
 	GPUBufferDestroy(&core->cubemap_capture_transforms);

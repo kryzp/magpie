@@ -13,8 +13,7 @@ struct Indirect {
 	uint batch_id;
 };
 
-struct Arguments
-{
+struct Arguments {
 	float4x4 view_matrix;
 	
 	float P00;

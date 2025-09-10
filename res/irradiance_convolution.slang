@@ -1,29 +1,27 @@
 #include "util.slang"
 #include "bindless.slang"
 
-struct Arguments
-{
+struct Arguments {
 	float4x4 *transform_matrices;
 	uint environment_map_id;
 	uint linear_sampler_id;
 	uint _padding[2];
 };
 
-[[vk::push_constant]]
+[vk::push_constant]
 Arguments args;
 
-struct VS_Output
-{
+struct VS_Output {
 	float4 sv_position : SV_Position;
-	[[vk::location(0)]] float3 position;
+	[vk::location(0)] float3 position;
 };
 
 [shader("vertex")]
 VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
 {
 	VS_Output output;
-    output.position = position;
-    output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
+	output.position = position;
+	output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
 
 	return output;
 }

@@ -26,6 +26,9 @@ typedef struct Sampler {
 typedef enum ImageAccessType {
 	ImageAccessType_Undefined,
 	ImageAccessType_GraphicsRead,
+	ImageAccessType_GraphicsReadWrite,
+	ImageAccessType_ComputeRead,
+	ImageAccessType_ComputeReadWrite,
 	ImageAccessType_ColourWrite,
 	ImageAccessType_DepthWrite,
 	ImageAccessType_TransferSrc,
@@ -269,6 +272,8 @@ typedef enum BindlessSetBinding {
 	BindlessSetBinding_Sampler,
 	BindlessSetBinding_Image,
 	BindlessSetBinding_Cubemap,
+	BindlessSetBinding_RWImage,
+       	//BindlessSetBinding_RWCubemap, TODO: Currently unsupported by Slang, BUT RWTexture2DArray would work I think.
 	BindlessSetBinding_MaxEnum
 } BindlessSetBinding;
 
@@ -278,13 +283,17 @@ typedef struct BindlessUpdate {
 
 	union {
 		struct {
+			VkSampler sampler;
+		} sampler;
+		
+		struct {
 			VkImageView view;
 			b32 is_depth;
 		} sampled_image;
 
 		struct {
-			VkSampler sampler;
-		} sampler;
+			VkImageView view;
+		} storage_image;
 	};
 } BindlessUpdate;
 

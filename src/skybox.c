@@ -73,6 +73,7 @@ internal void EnvironmentMapFromHDR(RenderGraph *graph, Image *out, Image *hdr_i
 
 struct skybox_pass_context {
 	ImageView *skybox;
+	ImageView *target;
 	GPUBuffer *frame_data_buffer;
 };
 
@@ -89,7 +90,7 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
 	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = graphics_device->swapchain.format;
+	pipeline_def.colour_attachment_formats[0] = pass_context->target->image->format;
 
 	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
@@ -124,6 +125,7 @@ internal void SkyboxRender(RenderGraph *graph,
 {
 	struct skybox_pass_context context = {
 		.skybox = input->skybox,
+		.target = input->target,
 		.frame_data_buffer = input->frame_data_buffer
 	};
 	

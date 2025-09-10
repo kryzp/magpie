@@ -470,6 +470,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	vulkan12_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
 	vulkan12_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
 	vulkan12_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	vulkan12_features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	vulkan12_features.bufferDeviceAddress = VK_TRUE;
 	vulkan12_features.pNext = &vulkan11_features;
 

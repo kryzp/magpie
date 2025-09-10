@@ -33,7 +33,8 @@ typedef struct Core {
 	// ---
 
 	GBuffer gbuffer;
-
+	Image lighting_attachment;
+	
 	CoreFrameData per_frame_data[FRAMES_IN_FLIGHT];
 
 	GPUBuffer material_buffer;
