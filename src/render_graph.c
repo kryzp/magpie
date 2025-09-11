@@ -95,8 +95,9 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		switch (pass->type) {
 		case RenderPassType_Graphics: {
 			u32 image_barrier_count = 0;
-			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkImageMemoryBarrier2),
-										 pass->graphics.attachment_count + pass->graphics.view_count);
+			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
+										 pass->graphics.attachment_count + pass->graphics.view_count,
+										 sizeof(VkImageMemoryBarrier2));
 			
 			RenderInfo render_info = {0};
 			render_info.view_mask = pass->graphics.view_mask;
@@ -128,8 +129,9 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 			}
 			
 			u32 buffer_barrier_count = 0;
-			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkBufferMemoryBarrier2),
-										   pass->graphics.buffer_count);
+			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena,
+										   pass->graphics.buffer_count,
+										   sizeof(VkBufferMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->graphics.buffer_count; j++) {
 				GPUBuffer *buffer = pass->graphics.buffers[j];
@@ -150,8 +152,9 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 
 		case RenderPassType_Compute: {
 			u32 image_barrier_count = 0;
-			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkImageMemoryBarrier2),
-										 pass->compute.read_only_image_count + pass->compute.rw_image_count);
+			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
+										 pass->compute.read_only_image_count + pass->compute.rw_image_count,
+										 sizeof(VkImageMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->compute.read_only_image_count; j++) {
 				Image *image = pass->compute.read_only_images[j];
@@ -164,8 +167,9 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 			}
 			
 			u32 buffer_barrier_count = 0;
-			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkBufferMemoryBarrier2),
-										   pass->compute.buffer_count);
+			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena,
+										   pass->compute.buffer_count,
+										   sizeof(VkBufferMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->compute.buffer_count; j++) {
 				GPUBuffer *buffer = pass->compute.buffers[j];
@@ -184,8 +188,9 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 
 		case RenderPassType_Transfer: {
 			u32 image_barrier_count = 0;
-			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena, sizeof(VkImageMemoryBarrier2),
-										 pass->transfer.src_count + pass->transfer.dst_count);
+			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
+										 pass->transfer.src_count + pass->transfer.dst_count,
+										 sizeof(VkImageMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->transfer.src_count; j++) {
 				Image *image = pass->transfer.src[j];

@@ -1,16 +1,17 @@
 
-internal Mesh MeshInit(VertexFormat *format, u32 vertex_count, void *vertices,
+internal Mesh MeshInit(u64 vertex_size,
+		       u32 vertex_count, void *vertices,
 		       u32 index_count, u16 *indices)
 {
 	Mesh mesh = {0};
-	mesh.vertex_format = format;
+	mesh.vertex_size = vertex_size;
 	mesh.vertex_count = vertex_count;
 	mesh.index_count = index_count;
 
-	u64 vertex_buffer_size = vertex_count * format->vertex_size;
+	u64 vertex_buffer_size = vertex_count * vertex_size;
 	u64 index_buffer_size = index_count * sizeof(u16);
 
-	mesh.vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+	mesh.vertex_buffer = GPUBufferAlloc(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
 					    VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
 					    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
@@ -65,18 +66,17 @@ internal void MeshDestroy(Mesh *mesh)
 	GPUBufferDestroy(&mesh->index_buffer);
 }
 
-internal void MeshBindCmd(Mesh *mesh, CommandBuffer *cmd)
+internal void MeshBindIndices(Mesh *mesh, CommandBuffer *cmd)
 {
-	CmdBindVertexBuffer(cmd, 0, &mesh->vertex_buffer, 0);
 	CmdBindIndexBuffer(cmd, &mesh->index_buffer, 0);
 }
 
-internal void MeshDrawCmd(Mesh *mesh, CommandBuffer *cmd)
+internal void MeshDrawIndexed(Mesh *mesh, CommandBuffer *cmd)
 {
 	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
 }
 
-internal void MeshDrawCmdID(Mesh *mesh, CommandBuffer *cmd, u32 instance_id)
+internal void MeshDrawIndexedID(Mesh *mesh, CommandBuffer *cmd, u32 instance_id)
 {
 	CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, instance_id);
 }

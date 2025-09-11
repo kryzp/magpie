@@ -42,13 +42,10 @@ internal void PipelineDestroy(VkPipeline pipeline)
 	vkDestroyPipeline(graphics_device->device, pipeline, NULL);
 }
 
-internal GraphicsPipelineDef GraphicsPipelineDefInitDefault(
-	ShaderProgram *program, VertexFormat *vertex_format)
+internal GraphicsPipelineDef GraphicsPipelineDefInitDefault(ShaderProgram *program)
 {
 	GraphicsPipelineDef def = {0};
-
 	def.program = program;
-	def.vertex_format = vertex_format;
 	def.cull_mode = VK_CULL_MODE_BACK_BIT;
 	def.front_face = VK_FRONT_FACE_CLOCKWISE;
 	def.blend_state = BlendStateDefault();
@@ -62,34 +59,15 @@ internal GraphicsPipelineDef GraphicsPipelineDefInitDefault(
 	return def;
 }
 
-internal ComputePipelineDef ComputePipelineDefInit(ShaderProgram *program)
-{
-	ComputePipelineDef def = {0};
-
-	def.program = program;
-
-	return def;
-}
-
 internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 					   GraphicsPipelineDef *definition)
 {
 	VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
 	vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-	if (definition->vertex_format) {
-		vertex_input_state_create_info.vertexBindingDescriptionCount = definition->vertex_format->binding_count;
-		vertex_input_state_create_info.pVertexBindingDescriptions = definition->vertex_format->bindings;
-
-		vertex_input_state_create_info.vertexAttributeDescriptionCount = definition->vertex_format->attribute_count;
-		vertex_input_state_create_info.pVertexAttributeDescriptions = definition->vertex_format->attributes;
-	} else {
-		vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
-		vertex_input_state_create_info.pVertexBindingDescriptions = NULL;
-
-		vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
-		vertex_input_state_create_info.pVertexAttributeDescriptions = NULL;
-	}
+	vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
+	vertex_input_state_create_info.pVertexBindingDescriptions = NULL;
+	vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
+	vertex_input_state_create_info.pVertexAttributeDescriptions = NULL;
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {0};
 	input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -242,6 +220,14 @@ internal VkPipeline GraphicsPipelineCreate(VkPipelineLayout layout,
 	return pipeline;
 }
 
+internal ComputePipelineDef ComputePipelineDefInit(ShaderProgram *program)
+{
+	ComputePipelineDef def = {0};
+	def.program = program;
+
+	return def;
+}
+
 internal VkPipeline ComputePipelineCreate(VkPipelineLayout layout,
 					  ComputePipelineDef *definition)
 {
@@ -306,9 +292,6 @@ internal PipelineState FetchGraphicsPipeline(GraphicsPipelineDef *definition)
 	hash = HashBytesGenericCombine(hash, &definition->min_sample_shading_enabled, sizeof(b32));
 	hash = HashBytesGenericCombine(hash, &definition->min_sample_shading,         sizeof(f32));
 	hash = HashBytesGenericCombine(hash, &definition->view_mask,                  sizeof(u32));
-
-	if (definition->vertex_format)
-		hash = HashBytesGenericCombine(hash, definition->vertex_format, sizeof(VertexFormat));
 
 	VkPipeline *fetched_pipeline = HashTableFetchElement(&graphics_device->pipeline_cache, hash);
 

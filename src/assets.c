@@ -209,12 +209,14 @@ internal void AssetsProcessSubModel(Assets *assets,
 {
 	ScratchArena scratch = GetScratch(assets->arena, 1);
 
-	ModelVertex *vertices = MemoryArenaPush(scratch.arena, sizeof(ModelVertex) * assimp_mesh->mNumVertices);
+	GPU_ModelVertex *vertices = MemoryArenaPushC(scratch.arena,
+						     assimp_mesh->mNumVertices,
+						     sizeof(GPU_ModelVertex));
 
 	// TODO: Transforms should be applied when rendering (so be a member of a SubModel)
 	//       rather than being directly applied to vertices when loading them in.
 	for (i32 i = 0; i < assimp_mesh->mNumVertices; i++) {
-		ModelVertex *vertex = vertices + i;
+		GPU_ModelVertex *vertex = vertices + i;
 
 		if (AssimpMeshHasPositions(assimp_mesh)) {
 			struct aiVector3D position = assimp_mesh->mVertices[i];
@@ -288,7 +290,7 @@ internal void AssetsProcessSubModel(Assets *assets,
 		}
 	}
 
-	sub_model->mesh = MeshInit(&vertex_formats->model,
+	sub_model->mesh = MeshInit(sizeof(GPU_ModelVertex),
 				   assimp_mesh->mNumVertices, vertices,
 				   index_count, indices);
 

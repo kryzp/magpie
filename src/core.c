@@ -82,9 +82,9 @@
 #include "scene.h"
 #include "render_graph.h"
 #include "mesh_pass.h"
+#include "gpu_types.h"
 #include "render_state.h"
 #include "deferred.h"
-#include "vertex_formats.h"
 #include "shaders.h"
 #include "core.h"
 #include "scratch.h"
@@ -93,7 +93,6 @@
 #include "scratch.c"
 #include "hash_table.c"
 #include "graphics.c"
-#include "vertex_formats.c"
 #include "shaders.c"
 #include "model.c"
 #include "assets.c"
@@ -162,7 +161,7 @@ internal void CoreCreateUnitSphereMesh()
 		}
 	}
 
-	core->light_sphere_mesh = MeshInit(&vertex_formats->vec3,
+	core->light_sphere_mesh = MeshInit(sizeof(v3),
 					   vertex_count, vertices,
 					   index_count, indices);
 
@@ -237,7 +236,6 @@ internal void CoreResetGlobals(Platform *platform_)
 	platform = platform_;
 	core = platform->permanent_memory;
 	graphics_device = &core->graphics_device;
-	vertex_formats = &core->vertex_formats;
 	shaders = &core->shaders;
 }
 
@@ -269,7 +267,6 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 
 	AssetsInit(&core->assets, &core->permanent_arena);
 	GraphicsDeviceInit(&core->permanent_arena);
-	VertexFormatsInit(&core->vertex_formats);
 	ShadersInit(&core->shaders, &core->permanent_arena);
 
 	CoreCreateUnitSphereMesh();
@@ -332,7 +329,7 @@ __declspec(dllexport) void CoreInit(Platform *platform_)
 		3, 4, 7
 	};
 
-	core->skybox_mesh = MeshInit(&vertex_formats->vec3,
+	core->skybox_mesh = MeshInit(sizeof(v3),
 				     ArraySize(vertices), vertices,
 				     ArraySize(indices), indices);
 
@@ -475,7 +472,7 @@ internal void CoreFrameDataUploadPerFrameBuffer(CoreFrameData *frame, Camera *ca
 	frame_data.view_projection_no_translation = M4MultiplyM4(frame_data.projection, M4RemoveTranslation(frame_data.view));
 	frame_data.inv_view = M4Inverse(frame_data.view);
 	frame_data.inv_projection = M4Inverse(frame_data.projection);
-	frame_data.camera_position.xyz = camera->position;
+	frame_data.camera_position = camera->position;
 	frame_data.window_resolution.x = platform->window_pixel_width;
 	frame_data.window_resolution.y = platform->window_pixel_height;
 	frame_data.time = GetTotalElapsedSecondsF();

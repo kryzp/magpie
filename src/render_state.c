@@ -64,9 +64,9 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 	if (rs->mesh_count <= 0)
 		return;
 
-	// All meshes in the list *should* have the same vertex format.
+	// All meshes in the list *should* have the same vertex type.
 	// If they don't we have a bit of a problem :/.
-	VertexFormat *vertex_format = rs->meshes->original->vertex_format;
+	u64 vertex_size = rs->meshes->original->vertex_size;
 
 	u32 total_vertices = 0;
 	u32 total_indices = 0;
@@ -83,7 +83,7 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 		mesh->is_merged = true;
 	}
 
-	u64 vb_size = total_vertices * vertex_format->vertex_size;
+	u64 vb_size = total_vertices * vertex_size;
 	u64 ib_size  = total_indices * sizeof(u16);
 	
 	if (rs->merged_vertex_buffer.size < vb_size ||
@@ -110,8 +110,8 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 
 		VkBufferCopy vertex_copy = {0};
 		vertex_copy.srcOffset = 0;
-		vertex_copy.dstOffset = mesh->first_vertex * vertex_format->vertex_size;
-		vertex_copy.size      = mesh->vertex_count * vertex_format->vertex_size;
+		vertex_copy.dstOffset = mesh->first_vertex * vertex_size;
+		vertex_copy.size      = mesh->vertex_count * vertex_size;
 
 		CmdCopyBufferToBuffer(&cmd,
 				      &mesh->original->vertex_buffer,
@@ -161,8 +161,6 @@ internal void RenderStateFillIndirectArray(RenderState *rs, MeshPass *pass, GPU_
 		indirects[i].command.firstIndex = mesh->first_index;
 		indirects[i].command.indexCount = mesh->index_count;
 
-		indirects[i].batch_id = i;
-		
 		i++;
 	}
 }

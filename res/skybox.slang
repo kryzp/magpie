@@ -1,8 +1,10 @@
 #include "util.slang"
 #include "bindless.slang"
+#include "types.slang"
 
 struct Arguments {
 	FrameData *frame_data;
+	float3 *vertices;
 	uint cubemap;
 	uint sampler;
 };
@@ -16,13 +18,12 @@ struct VS_Output {
 };
 
 [shader("vertex")]
-VS_Output VertexMain(float3 position)
+VS_Output VertexMain(uint vertex_id : SV_VertexID)
 {
 	VS_Output output;
-
-	output.position = position;
+	output.position = args.vertices[vertex_id];
 	
-	output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(position, 1.));
+	output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(output.position, 1.));
 	output.sv_position = output.sv_position.xyww;
 	
 	return output;

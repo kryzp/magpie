@@ -20,7 +20,6 @@ typedef struct Core {
 	RenderState render_state;
 	RenderGraph render_graph;
 
-	VertexFormats vertex_formats;
 	Shaders shaders;
 	
 	Assets assets;
@@ -66,5 +65,4 @@ typedef struct Core {
 global Core *core = NULL;
 global Platform *platform = NULL;
 global GraphicsDevice *graphics_device = NULL;
-global VertexFormats *vertex_formats = NULL;
 global Shaders *shaders = NULL;

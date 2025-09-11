@@ -1,26 +1,6 @@
 
 const static float PI = 3.14159265;
 
-struct FrameData
-{
-	float4x4 view;
-	float4x4 projection;
-	float4x4 view_projection;
-	float4x4 view_projection_no_translation;
-	float4x4 inv_view;
-	float4x4 inv_projection;
-	float4 camera_position;
-	float4 window_resolution;
-	float time;
-	float _padding[3];
-};
-
-struct ObjectData
-{
-	float4x4 model_matrix;
-	float4x4 normal_matrix;
-};
-
 // NOTE(kp): We use a right-handed Z-up world
 //           coordinate system, but cubemap
 //           sampling requires Y-up left handed.

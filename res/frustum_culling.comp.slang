@@ -1,17 +1,4 @@
-
-struct Instance {
-	uint object_id;
-	uint batch_id;
-};
-
-struct Indirect {
-	uint index_count;
-	uint instance_count;
-	uint first_index;
-	uint vertex_offset;
-	uint first_instance;
-	uint batch_id;
-};
+#include "types.slang"
 
 struct Arguments {
 	float4x4 view_matrix;
@@ -50,8 +37,6 @@ struct Arguments {
 	Instance *instance_buffer;
 	Indirect *indirect_buffer;
 	uint *final_instance_buffer;
-	
-	//uint _padding[2];
 };
 
 [vk::push_constant]

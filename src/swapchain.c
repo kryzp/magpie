@@ -64,14 +64,14 @@ internal SwapchainSupportDetails QuerySwapchainSupport(MemoryArena *arena, VkPhy
 	vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &result.present_mode_count, 0);
 
 	if (result.surface_format_count >= 0) {
-		result.surface_formats = MemoryArenaPushC(arena, sizeof(VkSurfaceFormatKHR), result.surface_format_count);
+		result.surface_formats = MemoryArenaPushC(arena, result.surface_format_count, sizeof(VkSurfaceFormatKHR));
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface,
 						     &result.surface_format_count,
 						     result.surface_formats);
 	}
 
 	if (result.present_mode_count >= 0) {
-		result.present_modes = MemoryArenaPushC(arena, sizeof(VkPresentModeKHR), result.present_mode_count);
+		result.present_modes = MemoryArenaPushC(arena, result.present_mode_count, sizeof(VkPresentModeKHR));
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface,
 							  &result.present_mode_count,
 							  result.present_modes);
@@ -132,8 +132,8 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 
 	swapchain->swapchain_image_count = image_count;
 
-	swapchain->swapchain_images      = MemoryArenaPushC(arena, sizeof(Image),     image_count);
-	swapchain->swapchain_image_views = MemoryArenaPushC(arena, sizeof(ImageView), image_count);
+	swapchain->swapchain_images      = MemoryArenaPushC(arena, image_count, sizeof(Image));
+	swapchain->swapchain_image_views = MemoryArenaPushC(arena, image_count, sizeof(ImageView));
 
 	VkImage *vk_images = MemoryArenaPushC(scratch.arena, sizeof(VkImage), image_count);
 

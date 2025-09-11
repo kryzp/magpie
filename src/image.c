@@ -28,7 +28,7 @@ internal u32 ImageLayerCount(Image *image)
 	return ImageFaceCount(image);
 }
 
-internal u32 ClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
+internal u32 ImageClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 {
 	return MinValue(mipmaps, 1u + (u32)(Log2F((f32)MaxValue(w, MaxValue(h, d)))));
 }
@@ -55,17 +55,16 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 	image.type = type;
 	image.tiling = tiling;
 
-	image.mipmap_count = ClampMipmapCount(mipmaps, width, height, depth);
+	image.mipmap_count = ImageClampMipmapCount(mipmaps, width, height, depth);
 	image.samples = samples;
 
-	if (is_transient) {
+	if (is_transient)
 		image.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-	} else {
+	else
 		image.usage =
 			VK_IMAGE_USAGE_SAMPLED_BIT |
 			VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	}
 
 	if (is_storage)
 		image.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
@@ -82,7 +81,7 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 	case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
 		image_type = VK_IMAGE_TYPE_1D;
 		break;
-
+		
 	case VK_IMAGE_VIEW_TYPE_2D:
 	case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
 	case VK_IMAGE_VIEW_TYPE_CUBE:
@@ -246,27 +245,25 @@ internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
 	view.layer = layer;
 	view.base_mip_level = base_mip_level;
 
-	VK_CHECK(vkCreateImageView(graphics_device->device, &view_create_info,
-				   0, &view.view),
+	VK_CHECK(vkCreateImageView(graphics_device->device,
+				   &view_create_info, NULL,
+				   &view.view),
 		 "Failed to create texture image view.");
 
 	// Swapchain images are omitted from being accessible bindlessly.
 	if (!image->is_swapchain) {
-		if (ImageIsCubemap(image)) {
-			view.resource_id = BindlessRegisterCubemap(&graphics_device->bindless, view.view, ImageIsDepth(image));
-		} else {
-			if (ImageIsStorage(image)) {
-				view.resource_id = BindlessRegisterRWImageView(&graphics_device->bindless, view.view);
-			} else {
-				view.resource_id = BindlessRegisterImageView(&graphics_device->bindless, view.view, ImageIsDepth(image));
-			}
-		}
+		if (ImageIsStorage(image))
+			view.resource_id = BindlessRegisterStorage(&graphics_device->bindless, view.view);
+		else
+			view.resource_id = BindlessRegisterSampled(&graphics_device->bindless, view.view, ImageIsDepth(image));
 	}
 
 	return view;
 }
 
-internal ImageView *FetchImageView(Image *image, u32 layer_count, u32 layer,
+internal ImageView *FetchImageView(Image *image,
+				   u32 layer_count,
+				   u32 layer,
 				   u32 base_mip_level)
 {
 	u64 hash = 0;

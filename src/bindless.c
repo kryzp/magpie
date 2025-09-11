@@ -11,11 +11,9 @@ internal b32 BindlessIsValid(u32 resource_id)
 internal VkDescriptorType BindlessGetDescriptorTypeFromBinding(BindlessSetBinding binding)
 {
 	switch (binding) {
-	case BindlessSetBinding_Sampler:    return VK_DESCRIPTOR_TYPE_SAMPLER;
-	case BindlessSetBinding_Image:      return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case BindlessSetBinding_Cubemap:    return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case BindlessSetBinding_RWImage:    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	//case BindlessSetBinding_RWCubemap:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	case BindlessSetBinding_Sampler:  return VK_DESCRIPTOR_TYPE_SAMPLER;
+	case BindlessSetBinding_Sampled:  return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	case BindlessSetBinding_Storage:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	}
 
 	DebugLogCrash("Could not find descriptor type from binding type.");
@@ -45,30 +43,20 @@ internal u32 BindlessRegisterSampler(BindlessResources *bindless, VkSampler samp
 	return BindlessPushUpdate(bindless, &update);
 }
 
-internal u32 BindlessRegisterImageView(BindlessResources *bindless, VkImageView view, b32 is_depth)
+internal u32 BindlessRegisterSampled(BindlessResources *bindless, VkImageView view, b32 is_depth)
 {
 	BindlessUpdate update = {0};
-	update.type = BindlessSetBinding_Image;
+	update.type = BindlessSetBinding_Sampled;
 	update.sampled_image.view = view;
 	update.sampled_image.is_depth = is_depth;
 
 	return BindlessPushUpdate(bindless, &update);
 }
 
-internal u32 BindlessRegisterCubemap(BindlessResources *bindless, VkImageView view, b32 is_depth)
+internal u32 BindlessRegisterStorage(BindlessResources *bindless, VkImageView view)
 {
 	BindlessUpdate update = {0};
-	update.type = BindlessSetBinding_Cubemap;
-	update.sampled_image.view = view;
-	update.sampled_image.is_depth = is_depth;
-
-	return BindlessPushUpdate(bindless, &update);
-}
-
-internal u32 BindlessRegisterRWImageView(BindlessResources *bindless, VkImageView view)
-{
-	BindlessUpdate update = {0};
-	update.type = BindlessSetBinding_RWImage;
+	update.type = BindlessSetBinding_Storage;
 	update.storage_image.view = view;
 
 	return BindlessPushUpdate(bindless, &update);
@@ -164,14 +152,14 @@ internal void BindlessApplyUpdates(BindlessResources *bindless)
 		write->dstBinding = 0;
 		write->pImageInfo = image_info;
 
-		switch (write->descriptorType) {
-		case VK_DESCRIPTOR_TYPE_SAMPLER:
+		switch (update->type) {
+		case BindlessSetBinding_Sampler:
 			image_info->sampler = update->sampler.sampler;
 			image_info->imageView = VK_NULL_HANDLE;
 			image_info->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			break;
 
-		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+		case BindlessSetBinding_Sampled:
 			image_info->sampler = VK_NULL_HANDLE;
 			image_info->imageView = update->sampled_image.view;
 			image_info->imageLayout = update->sampled_image.is_depth
@@ -179,7 +167,7 @@ internal void BindlessApplyUpdates(BindlessResources *bindless)
 				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			break;
 
-		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		case BindlessSetBinding_Storage:
 			image_info->sampler = VK_NULL_HANDLE;
 			image_info->imageView = update->storage_image.view;
 			image_info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;

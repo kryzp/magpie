@@ -134,6 +134,7 @@ internal void CmdBindPipeline(CommandBuffer *cmd,
 			  pipeline);
 }
 
+/*
 internal void CmdBindVertexBuffer(CommandBuffer *cmd,
 				  u32 binding,
 				  GPUBuffer *buffer,
@@ -144,6 +145,7 @@ internal void CmdBindVertexBuffer(CommandBuffer *cmd,
 			       1, &buffer->handle,
 			       &offset);
 }
+*/
 
 internal void CmdBindIndexBuffer(CommandBuffer *cmd,
 				 GPUBuffer *buffer,

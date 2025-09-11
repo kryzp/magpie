@@ -5,7 +5,7 @@ internal void RenderPassGenerateBRDFLookUp(RenderState *rs,
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->brdf_lut_program, NULL);
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->brdf_lut_program);
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.colour_attachment_count = 1;

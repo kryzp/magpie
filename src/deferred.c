@@ -14,8 +14,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 	
 	struct geometry_pass_context *pass_context = (struct geometry_pass_context *)context;
 
-	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program,
-									  &vertex_formats->model);
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program);
 	pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
 		pipeline_def.colour_attachment_formats[i] = pass_context->gbuffer->attachments[i].format;
@@ -35,24 +34,26 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 			u64 frame_data_buffer;
 			u64 transform_buffer;
 			u64 material_buffer;
+			u64 vertex_buffer;
 			u64 instance_buffer;
 			u32 material_id;
 			u32 sampler;
 		} args;
 		
 		// TODO: material_id should be inferred by indexing into a gpu buffer
-		//       with instance id, rather than being given by push constants.
+		//       with instance_id, rather than being given by push constants.
 		
 		args.frame_data_buffer = pass_context->frame_data_buffer->device_address;
 		args.transform_buffer = pass_context->object_buffer->device_address;
 		args.material_buffer = rs->material_buffer->device_address;
+		args.vertex_buffer = rs->meshes[batch->mesh_id].original->vertex_buffer.device_address;
 		args.instance_buffer = pass_context->instance_buffer->device_address;
 		args.material_id = batch->material_id;
 		args.sampler = core->linear_sampler.resource_id;
 
 		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-		MeshBindCmd(rs->meshes[batch->mesh_id].original, cmd);
+		MeshBindIndices(rs->meshes[batch->mesh_id].original, cmd);
 	
 		CmdDrawIndexedIndirect(cmd, pass_context->indirect_buffer,
 				       sizeof(GPU_Indirect) * multi_batch->first,
@@ -80,7 +81,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	PipelineState pipeline_st = {0};
 	
 	// Ambient Lighting.
-	GraphicsPipelineDef ambient_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program, 0);
+	GraphicsPipelineDef ambient_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->ambient_lighting_program);
 	ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	ambient_pipeline_def.colour_attachment_count = 1;
@@ -105,8 +106,6 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 		u32 brdf_lut;
 
 		u32 linear_sampler;
-
-		u32 _padding;
 	} pc_ambient;
 
 	pc_ambient.frame_data_buffer = pass_context->frame_data_buffer->device_address;
@@ -127,8 +126,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	CmdDrawVerticesN(cmd, 3);
 
 	// Direct lighting.
-	GraphicsPipelineDef direct_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program,
-										 &vertex_formats->vec3);
+	GraphicsPipelineDef direct_pipeline_def = GraphicsPipelineDefInitDefault(&shaders->direct_lighting_point_program);
 	direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	direct_pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
@@ -144,12 +142,13 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 	CmdBindBindless(cmd, pipeline_st.bind_point, pipeline_st.layout);
 	CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
-	MeshBindCmd(&core->light_sphere_mesh, cmd);
+	MeshBindIndices(&core->light_sphere_mesh, cmd);
 	
 	for (u32 i = 0; i < rs->light_count; i++) {
 		struct {
 			u64 frame_data_buffer;
 			u64 light_buffer;
+			u64 vertex_buffer;
 				
 			u32 position;
 			u32 albedo;
@@ -158,12 +157,11 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 			u32 emissive;
 				
 			u32 linear_sampler;
-				
-			u32 _padding[2];
 		} pc_direct;
 
 		pc_direct.frame_data_buffer = pass_context->frame_data_buffer->device_address;
 		pc_direct.light_buffer      = pass_context->light_buffer->device_address;
+		pc_direct.vertex_buffer     = core->light_sphere_mesh.vertex_buffer.device_address;
 				
 		pc_direct.position = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Position)->resource_id;
 		pc_direct.albedo   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Albedo)->resource_id;
@@ -175,7 +173,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 
 		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_direct), &pc_direct);
 
-		MeshDrawCmdID(&core->light_sphere_mesh, cmd, i);
+		MeshDrawIndexedID(&core->light_sphere_mesh, cmd, i);
 	}
 }
 

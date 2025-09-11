@@ -3,6 +3,7 @@
 struct Arguments
 {
 	float4x4 *transform_matrices;
+	float3 *vertices;
 	uint hdr_image_id;
 	uint linear_sampler_id;
 	uint _padding[2];
@@ -18,11 +19,11 @@ struct VS_Output
 };
 
 [shader("vertex")]
-VS_Output VertexMain(float3 position, int view_id : SV_ViewID)
+VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 {
 	VS_Output output;
-	output.position = position;
-	output.sv_position = mul(args.transform_matrices[view_id], float4(position, 1.));
+	output.position = args.vertices[vertex_id];
+	output.sv_position = mul(args.transform_matrices[view_id], float4(output.position, 1.));
 
 	return output;
 }

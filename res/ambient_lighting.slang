@@ -1,5 +1,6 @@
 #include "util.slang"
 #include "bindless.slang"
+#include "types.slang"
 
 struct PushConstants {
 	FrameData *frame_data;
@@ -15,8 +16,6 @@ struct PushConstants {
 	uint brdf_lut;
 
 	uint linear_sampler;
-
-	uint _padding;
 };
 
 [vk::push_constant]

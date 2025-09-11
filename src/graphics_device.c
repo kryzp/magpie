@@ -83,7 +83,9 @@ internal const char *const *GetInstanceExtensions(MemoryArena *arena, u32 *exten
 	extra_extension_count += 2;
 #endif
 
-	const char **extensions = MemoryArenaPushC(arena, sizeof(const char *), *extension_count + extra_extension_count);
+	const char **extensions = MemoryArenaPushC(arena,
+						   *extension_count + extra_extension_count,
+						   sizeof(const char *));
 
 	for (i32 i = 0; i < *extension_count; i++)
 		extensions[i] = names[i];
@@ -106,7 +108,7 @@ internal b32 CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkP
 {
 	u32 extension_count = 0;
 	vkEnumerateDeviceExtensionProperties(physical_device, 0,
-					     &extension_count, 0);
+					     &extension_count, NULL);
 
 	if (extension_count <= 0)
 		DebugLogCrash("Failed to find any device extension properties.");
@@ -117,7 +119,8 @@ internal b32 CheckGraphicsPhysicalDeviceExtensionSupport(MemoryArena *arena, VkP
 								sizeof(VkExtensionProperties),
 								extension_count);
 	
-	vkEnumerateDeviceExtensionProperties(physical_device, 0, &extension_count, available_exts);
+	vkEnumerateDeviceExtensionProperties(physical_device, 0,
+					     &extension_count, available_exts);
 
 	b32 result = true;
 
@@ -136,10 +139,12 @@ exit:
 }
 
 // fucking sucks.
-internal u32 AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena, VkSurfaceKHR surface,
+internal u32 AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
+						   VkSurfaceKHR surface,
 						   VkPhysicalDevice physical_device,
 						   VkPhysicalDeviceProperties2 properties,
-						   VkPhysicalDeviceFeatures2 features, b32 *has_essentials)
+						   VkPhysicalDeviceFeatures2 features,
+						   b32 *has_essentials)
 {
 	u32 usability = 0;
 
@@ -359,13 +364,15 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 		VkPhysicalDeviceFeatures2 features     = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-		VkPhysicalDevice *devices = MemoryArenaPushC(scratch.arena, sizeof(VkPhysicalDevice), device_count);
+		VkPhysicalDevice *devices = MemoryArenaPushC(scratch.arena,
+							     device_count,
+							     sizeof(VkPhysicalDevice));
 		
 		vkEnumeratePhysicalDevices(graphics_device->instance,
 					   &device_count, devices);
 
 		vkGetPhysicalDeviceProperties2(devices[0], &properties);
-		vkGetPhysicalDeviceFeatures2(devices[0], &features);
+		vkGetPhysicalDeviceFeatures2  (devices[0], &features);
 
 		graphics_device->physical_device = devices[0];
 		graphics_device->physical_device_properties = properties;
@@ -419,7 +426,9 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 		if (queue_family_count <= 0)
 			DebugLogCrash("Failed to find any queue families.");
 
-		VkQueueFamilyProperties *queue_families = MemoryArenaPushC(scratch.arena, sizeof(VkQueueFamilyProperties), queue_family_count);
+		VkQueueFamilyProperties *queue_families = MemoryArenaPushC(scratch.arena,
+									   queue_family_count,
+									   sizeof(VkQueueFamilyProperties));
 		
 		vkGetPhysicalDeviceQueueFamilyProperties(graphics_device->physical_device,
 							 &queue_family_count,
@@ -472,6 +481,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	vulkan12_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 	vulkan12_features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	vulkan12_features.bufferDeviceAddress = VK_TRUE;
+	vulkan12_features.scalarBlockLayout = VK_TRUE;
 	vulkan12_features.pNext = &vulkan11_features;
 
 	VkPhysicalDeviceVulkan13Features vulkan13_features = {0};
@@ -502,7 +512,6 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	if (graphics_device->has_validation_layers) {
 		device_create_info.enabledLayerCount = ArraySize(GRAPHICS_VALIDATION_LAYERS);
 		device_create_info.ppEnabledLayerNames = GRAPHICS_VALIDATION_LAYERS;
-
 		DebugLog("Enabled validation layers.");
 	}
 

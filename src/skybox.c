@@ -12,17 +12,17 @@ internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_inf
 	
 	struct {
 		u64 transform_buffer;
+		u64 vertex_buffer;
 		u32 hdr_image_id;
 		u32 linear_sampler_id;
-		u32 _padding[2];
 	} args;
 
 	args.transform_buffer = core->cubemap_capture_transforms.device_address;
+	args.vertex_buffer = core->skybox_mesh.vertex_buffer.device_address;
 	args.hdr_image_id = pass_context->input->resource_id;
 	args.linear_sampler_id = core->linear_sampler.resource_id;
 
-	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->hdr_to_environment_cubemap_program,
-									  &vertex_formats->vec3);
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->hdr_to_environment_cubemap_program);
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.colour_attachment_count = 1;
@@ -36,8 +36,8 @@ internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_inf
 
 	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-	MeshBindCmd(&core->skybox_mesh, cmd);
-	MeshDrawCmd(&core->skybox_mesh, cmd);
+	MeshBindIndices(&core->skybox_mesh, cmd);
+	MeshDrawIndexed(&core->skybox_mesh, cmd);
 	
 	DebugLog("Created Environment Cubemap.");
 }
@@ -83,8 +83,7 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 
 	struct skybox_pass_context *pass_context = (struct skybox_pass_context *)context;
 
-	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->skybox_program,
-									  &vertex_formats->vec3);
+	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->skybox_program);
 	pipeline_def.has_depth_attachment = true;
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
@@ -96,11 +95,13 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 
 	struct {
 		u64 frame_data_buffer;
+		u64 vertex_buffer;
 		u32 cubemap_id;
 		u32 sampler_id;
 	} args;
 
 	args.frame_data_buffer = pass_context->frame_data_buffer->device_address;
+	args.vertex_buffer = core->skybox_mesh.vertex_buffer.device_address;
 	args.cubemap_id = pass_context->skybox->resource_id;
 	args.sampler_id = core->linear_sampler.resource_id;
 
@@ -109,8 +110,8 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 
 	CmdPushConstants(cmd, st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-	MeshBindCmd(&core->skybox_mesh, cmd);
-	MeshDrawCmd(&core->skybox_mesh, cmd);
+	MeshBindIndices(&core->skybox_mesh, cmd);
+	MeshDrawIndexed(&core->skybox_mesh, cmd);
 }
 
 struct skybox_renderer_input {

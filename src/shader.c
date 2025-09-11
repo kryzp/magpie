@@ -21,6 +21,11 @@ internal String8 LoadFileBytes(MemoryArena *dst, String8 path)
 	return String8Init(bytes, file_size);
 }
 
+internal u32 ShaderStageAlignUp(u32 value, u32 alignment)
+{
+	return (value + alignment - 1) & ~(alignment - 1);
+}
+
 internal ShaderStage ShaderStageLoadFromBytecode(MemoryArena *arena,
 						 String8 path,
 						 u32 *push_constant_size)
@@ -52,20 +57,21 @@ internal ShaderStage ShaderStageLoadFromBytecode(MemoryArena *arena,
 
 		if (reflect_result == SPV_REFLECT_RESULT_SUCCESS && push_constant_count > 0) {
 			SpvReflectBlockVariable **pcs = MemoryArenaPushC(scratch.arena,
-									 sizeof(SpvReflectBlockVariable *),
-									 push_constant_count);
+									 push_constant_count,
+									 sizeof(SpvReflectBlockVariable *));
 
 			spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, pcs);
 
 			for (u32 i = 0; i < push_constant_count; i++) {
 				SpvReflectBlockVariable *pc = pcs[i];
 
-				// Push constants can *technically* have multiple blocks
-				// in the SPIR-V code, so we just take the largest one.
+				u32 alignment = 4;
 				
-				// TODO: Should I be summing their sizes up instead?
+				for (u32 j = 0; j < pc->member_count; j++)
+					alignment = MaxValue(alignment, pc->members[j].size);
 
-				*push_constant_size = MaxValue(*push_constant_size, pc->size);
+				u32 padded = ShaderStageAlignUp(pc->size, alignment);
+				*push_constant_size = MaxValue(*push_constant_size, padded);
 			}
 		}
 	}
@@ -96,8 +102,10 @@ internal ShaderProgram ShaderProgramInit(MemoryArena *arena, u32 stage_count, St
 	ShaderProgram program = {0};
 	program.stage_count = stage_count;
 
-	for (i32 i = 0; i < stage_count; i++)
+	for (i32 i = 0; i < stage_count; i++) {
+		printf("Loading shader stage: %.*s\n", (u32)stage_paths[i].len, stage_paths[i].str);
 		program.stages[i] = ShaderStageLoadFromBytecode(arena, stage_paths[i], &program.push_constant_size);
+	}
 	
 	return program;
 }

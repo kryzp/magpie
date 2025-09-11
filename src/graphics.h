@@ -194,7 +194,6 @@ typedef struct RenderInfo {
 
 typedef struct GraphicsPipelineDef {
 	ShaderProgram *program;
-	VertexFormat *vertex_format;
 
 	VkCullModeFlags cull_mode;
 	VkFrontFace front_face;
@@ -270,10 +269,8 @@ typedef struct Swapchain {
 
 typedef enum BindlessSetBinding {
 	BindlessSetBinding_Sampler,
-	BindlessSetBinding_Image,
-	BindlessSetBinding_Cubemap,
-	BindlessSetBinding_RWImage,
-       	//BindlessSetBinding_RWCubemap, TODO: Currently unsupported by Slang, BUT RWTexture2DArray would work I think.
+	BindlessSetBinding_Sampled,
+	BindlessSetBinding_Storage,
 	BindlessSetBinding_MaxEnum
 } BindlessSetBinding;
 

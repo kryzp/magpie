@@ -70,8 +70,6 @@ internal void RenderPassComputeFrustumCulling(RenderState *rs, void *context)
 		u64 instance_buffer;
 		u64 indirect_buffer;
 		u64 output_buffer;
-		
-		//u32 _padding[2];
 	} draw_cull_data;
 
 	draw_cull_data.view_matrix = view;

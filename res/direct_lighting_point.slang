@@ -1,16 +1,11 @@
 #include "util.slang"
 #include "bindless.slang"
-
-struct Light {
-	float4 position;
-	float4 colour;
-	float4 attenuation;
-	float4x4 transform;
-};
+#include "types.slang"
 
 struct PushConstants {
 	FrameData *frame_data;
 	Light *lights;
+	float3 *vertices;
 
 	uint position;
 	uint albedo;
@@ -19,8 +14,6 @@ struct PushConstants {
 	uint emissive;
 
 	uint linear_sampler;
-
-	uint _padding[2];
 };
 
 [vk::push_constant]
@@ -32,15 +25,14 @@ struct VS_Output {
 };
 
 [shader("vertex")]
-VS_Output VertexMain(float3 position, uint base_instance : SV_InstanceID)
+VS_Output VertexMain(uint vertex_id : SV_VertexID, uint base_instance : SV_InstanceID)
 {
 	FrameData *frame_data = args.frame_data;
 	Light light = args.lights[base_instance];
+	float3 position = args.vertices[vertex_id];
 
 	VS_Output output;
-	
 	output.sv_position = mul(frame_data->projection, mul(frame_data->view, mul(light.transform, float4(position, 1.))));
-	
 	output.light_id = base_instance;
 
 	return output;
