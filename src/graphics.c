@@ -10,7 +10,6 @@ internal VkSemaphore GetCurrentRenderFinishedSemaphore()
 }
 
 #include "bindless.c"
-#include "vertex_format.c"
 #include "sync.c"
 #include "sampler.c"
 #include "image.c"
