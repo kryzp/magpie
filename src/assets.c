@@ -67,12 +67,9 @@ internal Image BitmapCreateImage(BitmapImage *bitmap)
 
 	CommandBuffer cmd = GraphicsBeginInstantSubmit();
 	
-	ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(ImageAccessType_General);
-	ImageAccessInfo dst_access_info = SyncGetDstImageAccessInfo(ImageAccessType_TransferDst);
-	
 	VkImageMemoryBarrier2 transition_barrier = ImageGetMemoryBarrier(&image,
-									 src_access_info,
-									 dst_access_info,
+									 SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
+									 SyncGetDstImageAccessInfo(ImageAccessType_TransferDst),
 									 0, image.mipmap_count,
 									 0, ImageLayerCount(&image));
 

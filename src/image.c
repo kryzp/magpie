@@ -191,19 +191,6 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 				&vma_alloc_info, &image.handle,
 				&image.allocation, &image.allocation_info),
 		 "Failed to create image.");
-
-	VkImageMemoryBarrier2 general_layout_barrier = ImageGetMemoryBarrier(&image,
-									     SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
-									     SyncGetDstImageAccessInfo(ImageAccessType_General),
-									     0, image.mipmap_count,
-									     0, ImageLayerCount(&image));
-
-	CommandBuffer cmd = GraphicsBeginInstantSubmit();
-	CmdPipelineBarrier(&cmd, 0, 0, NULL, 0, NULL, 1, &general_layout_barrier);
-	GraphicsEndInstantSubmit(&cmd);
-	
-	for (u32 i = 0; i < image.access_count; i++)
-		image.access_types[i] = ImageAccessType_General;
 	
 	return image;
 }

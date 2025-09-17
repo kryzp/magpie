@@ -13,6 +13,7 @@ internal ImageAccessInfo SyncGetSrcImageAccessInfo(ImageAccessType access)
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
 		info.stage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+		break;
 	case ImageAccessType_GraphicsRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
 		info.stage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
@@ -77,6 +78,7 @@ internal ImageAccessInfo SyncGetDstImageAccessInfo(ImageAccessType access)
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
 		info.stage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+		break;
 	case ImageAccessType_GraphicsRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
 		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;

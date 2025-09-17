@@ -167,18 +167,6 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 		image->samples = VK_SAMPLE_COUNT_1_BIT;
 
 		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, ImageLayerCount(image), 0, 0, VK_IMAGE_ASPECT_COLOR_BIT);
-		
-		VkImageMemoryBarrier2 general_layout_barrier = ImageGetMemoryBarrier(image,
-										     SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
-										     SyncGetDstImageAccessInfo(ImageAccessType_General),
-										     0, image->mipmap_count,
-										     0, ImageLayerCount(image));
-
-		CommandBuffer cmd = GraphicsBeginInstantSubmit();
-		CmdPipelineBarrier(&cmd, 0, 0, NULL, 0, NULL, 1, &general_layout_barrier);
-		GraphicsEndInstantSubmit(&cmd);
-
-		image->access_types[0] = ImageAccessType_General;
 	}
 
 	ReleaseScratch(&scratch);
