@@ -143,9 +143,9 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 		
 		Image *image = swapchain->swapchain_images + i;
 
-		image->image = vk_images[i];
+		image->handle = vk_images[i];
 
-		image->access_type = ImageAccessType_Undefined;
+		image->access_types = MemoryArenaPushC(arena, 1, sizeof(ImageAccessType));
 		
 		image->width = swapchain->width;
 		image->height = swapchain->height;
@@ -159,10 +159,26 @@ internal void SwapchainInit(Swapchain *swapchain, MemoryArena *arena)
 
 		image->usage = swapchain_image_usage;
 
+		image->aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+		
+		image->aspect_count = 1;
 		image->mipmap_count = 1;
+		
 		image->samples = VK_SAMPLE_COUNT_1_BIT;
 
-		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, ImageLayerCount(image), 0, 0);
+		swapchain->swapchain_image_views[i] = ImageViewFromImage(image, ImageLayerCount(image), 0, 0, VK_IMAGE_ASPECT_COLOR_BIT);
+		
+		VkImageMemoryBarrier2 general_layout_barrier = ImageGetMemoryBarrier(image,
+										     SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
+										     SyncGetDstImageAccessInfo(ImageAccessType_General),
+										     0, image->mipmap_count,
+										     0, ImageLayerCount(image));
+
+		CommandBuffer cmd = GraphicsBeginInstantSubmit();
+		CmdPipelineBarrier(&cmd, 0, 0, NULL, 0, NULL, 1, &general_layout_barrier);
+		GraphicsEndInstantSubmit(&cmd);
+
+		image->access_types[0] = ImageAccessType_General;
 	}
 
 	ReleaseScratch(&scratch);

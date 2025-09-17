@@ -134,19 +134,6 @@ internal void CmdBindPipeline(CommandBuffer *cmd,
 			  pipeline);
 }
 
-/*
-internal void CmdBindVertexBuffer(CommandBuffer *cmd,
-				  u32 binding,
-				  GPUBuffer *buffer,
-				  u64 offset)
-{
-	vkCmdBindVertexBuffers(cmd->handle,
-			       binding,
-			       1, &buffer->handle,
-			       &offset);
-}
-*/
-
 internal void CmdBindIndexBuffer(CommandBuffer *cmd,
 				 GPUBuffer *buffer,
 				 u64 offset)
@@ -180,7 +167,7 @@ internal void CmdPushConstantsOffset(CommandBuffer *cmd,
 			   offset,
 			   size, data);
 }
-	
+
 internal void CmdDrawVerticesN(CommandBuffer *cmd, u32 vertex_count)
 {
 	vkCmdDraw(cmd->handle, vertex_count, 1, 0, 0);
@@ -215,28 +202,25 @@ internal void CmdDrawIndexedIndirect(CommandBuffer *cmd,
 }
 
 internal void CmdBlitImage(CommandBuffer *cmd,
-			   Image *src, VkImageLayout src_layout,
-			   Image *dst, VkImageLayout dst_layout,
+			   Image *src, Image *dst,
 			   u32 region_count, VkImageBlit *regions,
 			   VkFilter filter)
 {
 	vkCmdBlitImage(cmd->handle,
-		       src->image, src_layout,
-		       dst->image, dst_layout,
+		       src->handle, VK_IMAGE_LAYOUT_GENERAL,
+		       dst->handle, VK_IMAGE_LAYOUT_GENERAL,
 		       region_count, regions,
 		       filter);
 }
 
-// Input:  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-// Output: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 {
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	barrier.image = image->image;
+	barrier.image = image->handle;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.aspectMask = image->aspect_flags;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = ImageLayerCount(image);
 	barrier.subresourceRange.levelCount = 1;
@@ -244,8 +228,8 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 	for (i32 i = 1; i < image->mipmap_count; i++) {
 		barrier.subresourceRange.baseMipLevel = i - 1;
 
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -282,14 +266,13 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 			blit.dstSubresource.layerCount = 1;
 
 			CmdBlitImage(cmd,
-				     image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				     image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				     image, image,
 				     1, &blit,
 				     VK_FILTER_LINEAR);
 		}
 
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
 		barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
@@ -301,12 +284,15 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 				   0, NULL,
 				   0, NULL,
 				   1, &barrier);
+
+		for (u32 k = 0; k < ImageLayerCount(image); k++)
+			ImageSetAccessType(image, i, k, 0, ImageAccessType_GraphicsRead);
 	}
 
 	barrier.subresourceRange.baseMipLevel = image->mipmap_count - 1;
 
-	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 	barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
@@ -318,6 +304,9 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 			   0, NULL,
 			   0, NULL,
 			   1, &barrier);
+	
+	for (u32 k = 0; k < ImageLayerCount(image); k++)
+		ImageSetAccessType(image, 0, k, 0, ImageAccessType_GraphicsRead);
 }
 
 internal void CmdCopyBufferToBuffer(CommandBuffer *cmd,
@@ -331,8 +320,6 @@ internal void CmdCopyBufferToBuffer(CommandBuffer *cmd,
 			region_count, regions);
 }
 
-// Image must be in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
-// TODO: An image could also be in VK_IMAGE_LAYOUT_GENERAL.
 internal void CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 					      GPUBuffer *buffer,
 					      Image *image,
@@ -340,7 +327,7 @@ internal void CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 {
 	vkCmdCopyBufferToImage(cmd->handle,
 			       buffer->handle,
-			       image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			       image->handle, VK_IMAGE_LAYOUT_GENERAL,
 			       region_count, regions);
 }
 

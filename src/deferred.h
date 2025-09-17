@@ -11,7 +11,7 @@ typedef enum GBufferAttachment {
 // Geometry Buffer for deferred rendering.
 typedef struct GBuffer {
 	Image attachments[GBufferAttachment_MaxEnum];
-	ImageView *views[GBufferAttachment_MaxEnum];
 	Image depth;
+	ImageView *views[GBufferAttachment_MaxEnum];
 	ImageView *depth_view;
 } GBuffer;

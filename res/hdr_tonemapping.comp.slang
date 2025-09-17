@@ -4,7 +4,8 @@ struct Arguments {
 	uint width;
 	uint height;
 	float exposure;
-	uint image_id;
+	uint input_image_id;
+	uint output_image_id;
 };
 
 [vk::push_constant]
@@ -23,7 +24,8 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 	    tid.y < 0 || tid.y >= args.height)
 		return;
 
-	RWTexture2D image = bindless_rw_images[args.image_id];
-
-	image[tid.xy] = float4(Tonemapping(image[tid.xy].rgb).rgb, 1.);
+	Texture2D input = bindless_images[args.input_image_id];
+	RWTexture2D output = bindless_rw_images[args.output_image_id];
+	
+	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.);
 }

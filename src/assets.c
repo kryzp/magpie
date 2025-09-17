@@ -65,25 +65,30 @@ internal Image BitmapCreateImage(BitmapImage *bitmap)
 	
 	GPUBufferWrite(&staging_buffer, bitmap->pixels, memory_size, 0);
 
-	CommandBuffer cmd = BeginGraphicsInstantSubmit();
-		
-	ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(image.access_type);
+	CommandBuffer cmd = GraphicsBeginInstantSubmit();
+	
+	ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(ImageAccessType_General);
 	ImageAccessInfo dst_access_info = SyncGetDstImageAccessInfo(ImageAccessType_TransferDst);
 	
-	VkImageMemoryBarrier2 transition_barrier = ImageGetMemoryBarrier(&image, src_access_info, dst_access_info);
+	VkImageMemoryBarrier2 transition_barrier = ImageGetMemoryBarrier(&image,
+									 src_access_info,
+									 dst_access_info,
+									 0, image.mipmap_count,
+									 0, ImageLayerCount(&image));
 
 	CmdPipelineBarrier(&cmd, 0,
 			   0, NULL,
 			   0, NULL,
 			   1, &transition_barrier);
-			
+
+	for (u32 i = 0; i < image.access_count; i++)
+		image.access_types[i] = ImageAccessType_TransferDst;
+	
 	CmdCopyBufferToImage(&cmd, &staging_buffer, &image);
 	CmdGenerateMipmaps(&cmd, &image);
-	
-	image.access_type = ImageAccessType_GraphicsRead;
-			
-	EndGraphicsInstantSubmit(&cmd);
 		
+	GraphicsEndInstantSubmit(&cmd);
+	
 	GraphicsWaitIdle();
 	GPUBufferDestroy(&staging_buffer);
 
@@ -319,9 +324,8 @@ internal void AssetsProcessModelNodes(Assets *assets,
 		AssetsProcessSubModel(assets, sub_model, path, assimp_mesh, scene, node_transform);
 	}
 
-	for (i32 i = 0; i < node->mNumChildren; i++) {
+	for (i32 i = 0; i < node->mNumChildren; i++)
 		AssetsProcessModelNodes(assets, model, path, node->mChildren[i], scene, node_transform);
-	}
 }
 
 internal u32 AssetsLoadModel(Assets *assets, String8 path)

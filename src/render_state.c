@@ -40,11 +40,11 @@ internal u32 RenderStateUploadMaterial(RenderState *rs, Assets *assets, Material
 	rs->materials[rs->material_count] = *material;
 	
 	GPU_Material gpu_material = {0};
-	gpu_material.diffuse_texture            = FetchStandardImageView(AssetsImageFromHandle(assets, material->diffuse_texture_handle))->resource_id;
-	gpu_material.normal_texture             = FetchStandardImageView(AssetsImageFromHandle(assets, material->normal_texture_handle))->resource_id;
-	gpu_material.emissive_texture           = FetchStandardImageView(AssetsImageFromHandle(assets, material->emissive_texture_handle))->resource_id;
-	gpu_material.metallic_roughness_texture = FetchStandardImageView(AssetsImageFromHandle(assets, material->metallic_roughness_texture_handle))->resource_id;
-	gpu_material.ambient_texture            = FetchStandardImageView(AssetsImageFromHandle(assets, material->ambient_texture_handle))->resource_id;
+	gpu_material.diffuse_texture            = FetchStandardImageViewID(AssetsImageFromHandle(assets, material->diffuse_texture_handle)).sampled;
+	gpu_material.normal_texture             = FetchStandardImageViewID(AssetsImageFromHandle(assets, material->normal_texture_handle)).sampled;
+	gpu_material.emissive_texture           = FetchStandardImageViewID(AssetsImageFromHandle(assets, material->emissive_texture_handle)).sampled;
+	gpu_material.metallic_roughness_texture = FetchStandardImageViewID(AssetsImageFromHandle(assets, material->metallic_roughness_texture_handle)).sampled;
+	gpu_material.ambient_texture            = FetchStandardImageViewID(AssetsImageFromHandle(assets, material->ambient_texture_handle)).sampled;
 
 	GPUBufferWrite(rs->material_buffer, &gpu_material,
 		       sizeof(GPU_Material),
@@ -103,7 +103,7 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 							 ib_size);
 	}
 	
-	CommandBuffer cmd = BeginGraphicsInstantSubmit();
+	CommandBuffer cmd = GraphicsBeginInstantSubmit();
 
 	for (i32 i = 0; i < rs->mesh_count; i++) {
 		RenderMesh *mesh = &rs->meshes[i];
@@ -129,7 +129,7 @@ internal void RenderStateMergeMeshes(RenderState *rs)
 				      1, &index_copy);
 	}
 
-	EndGraphicsInstantSubmit(&cmd);
+	GraphicsEndInstantSubmit(&cmd);
 }
 
 internal void RenderStateFillInstancesArray(RenderState *rs, MeshPass *pass, GPU_Instance *instances)

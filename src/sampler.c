@@ -35,7 +35,7 @@ internal Sampler SamplerInit(VkFilter filter, VkSamplerAddressMode wrap_x,
 				 &sampler.handle),
 		 "Failed to create texture sampler.");
 
-	sampler.resource_id = BindlessRegisterSampler(&graphics_device->bindless, sampler.handle);
+	sampler.bindless = BindlessRegisterSampler(&graphics_device->bindless, sampler.handle);
 
 	return sampler;
 }

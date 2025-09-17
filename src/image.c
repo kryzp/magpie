@@ -33,6 +33,57 @@ internal u32 ImageClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 	return MinValue(mipmaps, 1u + (u32)(Log2F((f32)MaxValue(w, MaxValue(h, d)))));
 }
 
+internal ImageAccessType ImageGetAccessType(Image *image,
+					    u32 mip_level,
+					    u32 layer,
+					    u32 aspect)
+{
+	return image->access_types[((aspect * ImageLayerCount(image)) + layer) * image->mipmap_count + mip_level];
+}
+
+internal void ImageSetAccessType(Image *image,
+				 u32 mip_level,
+				 u32 layer,
+				 u32 aspect,
+				 ImageAccessType type)
+{
+	image->access_types[((aspect * ImageLayerCount(image)) + layer) * image->mipmap_count + mip_level] = type;
+}
+
+internal VkImageMemoryBarrier2 ImageGetMemoryBarrier(Image *image,
+						     ImageAccessInfo src_access_info,
+						     ImageAccessInfo dst_access_info,
+						     u32 base_mip_level,
+						     u32 level_count,
+						     u32 base_array_layer,
+						     u32 layer_count)
+{
+	VkImageMemoryBarrier2 barrier = {0};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+
+	barrier.image = image->handle;
+
+	barrier.oldLayout = src_access_info.layout;
+	barrier.newLayout = dst_access_info.layout;
+
+	barrier.srcAccessMask = src_access_info.access;
+	barrier.dstAccessMask = dst_access_info.access;
+
+	barrier.srcStageMask = src_access_info.stage;
+	barrier.dstStageMask = dst_access_info.stage;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.subresourceRange.baseMipLevel = base_mip_level;
+	barrier.subresourceRange.levelCount = level_count;
+	barrier.subresourceRange.baseArrayLayer = base_array_layer;
+	barrier.subresourceRange.layerCount = layer_count;
+	barrier.subresourceRange.aspectMask = image->aspect_flags;
+
+	return barrier;
+}
+
 internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 			  VkFormat format,
 			  VkImageViewType type,
@@ -43,17 +94,15 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 {
 	Image image = {0};
 
-	image.access_type = ImageAccessType_Undefined;
-	
 	image.width = width;
 	image.height = height;
 	image.depth = depth;
 
-	image.is_swapchain = false;
-
 	image.format = format;
 	image.type = type;
 	image.tiling = tiling;
+
+	image.is_swapchain = false;
 
 	image.mipmap_count = ImageClampMipmapCount(mipmaps, width, height, depth);
 	image.samples = samples;
@@ -98,6 +147,22 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 		break;
 	}
 
+	image.aspect_flags = ImageIsDepth(&image)
+		? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
+		: VK_IMAGE_ASPECT_COLOR_BIT;
+
+	image.aspect_count = 0;
+	
+	for (VkImageAspectFlags b = 1; b <= image.aspect_flags; b <<= 1) {
+		if (image.aspect_flags & b)
+			image.aspect_count++;
+	}
+
+	image.access_count = image.aspect_count * image.mipmap_count * ImageLayerCount(&image);
+	image.access_types = MemoryArenaPushC(graphics_device->arena,
+					      image.access_count,
+					      sizeof(ImageAccessType));
+		
 	VkImageCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	create_info.imageType = image_type;
@@ -105,7 +170,7 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 	create_info.extent.height = image.height;
 	create_info.extent.depth = image.depth;
 	create_info.mipLevels = image.mipmap_count;
-	create_info.arrayLayers = ImageFaceCount(&image);
+	create_info.arrayLayers = ImageLayerCount(&image);
 	create_info.format = image.format;
 	create_info.tiling = image.tiling;
 	create_info.usage = image.usage;
@@ -123,16 +188,29 @@ internal Image ImageAlloc(u32 width, u32 height, u32 depth,
 	vma_alloc_info.priority = 1.f;
 
 	VK_CHECK(vmaCreateImage(graphics_device->vma_allocator, &create_info,
-				&vma_alloc_info, &image.image,
+				&vma_alloc_info, &image.handle,
 				&image.allocation, &image.allocation_info),
 		 "Failed to create image.");
 
+	VkImageMemoryBarrier2 general_layout_barrier = ImageGetMemoryBarrier(&image,
+									     SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
+									     SyncGetDstImageAccessInfo(ImageAccessType_General),
+									     0, image.mipmap_count,
+									     0, ImageLayerCount(&image));
+
+	CommandBuffer cmd = GraphicsBeginInstantSubmit();
+	CmdPipelineBarrier(&cmd, 0, 0, NULL, 0, NULL, 1, &general_layout_barrier);
+	GraphicsEndInstantSubmit(&cmd);
+	
+	for (u32 i = 0; i < image.access_count; i++)
+		image.access_types[i] = ImageAccessType_General;
+	
 	return image;
 }
 
 internal Image ImageAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
-	return ImageAlloc(width, height, 1u,
+	return ImageAlloc(width, height, 1,
 			  format,
 			  VK_IMAGE_VIEW_TYPE_2D,
 			  VK_IMAGE_TILING_OPTIMAL,
@@ -143,7 +221,7 @@ internal Image ImageAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
 
 internal Image ImageAlloc2D_RW(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
-	return ImageAlloc(width, height, 1u,
+	return ImageAlloc(width, height, 1,
 			  format,
 			  VK_IMAGE_VIEW_TYPE_2D,
 			  VK_IMAGE_TILING_OPTIMAL,
@@ -152,9 +230,19 @@ internal Image ImageAlloc2D_RW(u32 width, u32 height, VkFormat format, u32 mipma
 			  false, true);
 }
 
+internal Image ImageAllocDepth2D(u32 width, u32 height, u32 mipmaps)
+{
+	return ImageAlloc2D(width, height, graphics_device->depth_format, mipmaps);
+}
+
+internal Image ImageAllocDepth2D_RW(u32 width, u32 height, u32 mipmaps)
+{
+	return ImageAlloc2D_RW(width, height, graphics_device->depth_format, mipmaps);
+}
+
 internal Image ImageAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
-	return ImageAlloc(resolution, resolution, 1u,
+	return ImageAlloc(resolution, resolution, 1,
 			  format,
 			  VK_IMAGE_VIEW_TYPE_CUBE,
 			  VK_IMAGE_TILING_OPTIMAL,
@@ -165,52 +253,21 @@ internal Image ImageAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
 
 internal void ImageDestroy(Image *image)
 {
-	vmaDestroyImage(graphics_device->vma_allocator, image->image, image->allocation);
-	image->image = VK_NULL_HANDLE;
-}
-
-internal VkImageMemoryBarrier2 ImageGetMemoryBarrier(Image *image,
-						     ImageAccessInfo src_access_info,
-						     ImageAccessInfo dst_access_info)
-{
-	VkImageMemoryBarrier2 barrier = {0};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-
-	barrier.oldLayout = src_access_info.layout;
-	barrier.newLayout = dst_access_info.layout;
-
-	barrier.srcAccessMask = src_access_info.access;
-	barrier.dstAccessMask = dst_access_info.access;
-
-	barrier.srcStageMask = src_access_info.stage;
-	barrier.dstStageMask = dst_access_info.stage;
-
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-	barrier.image = image->image;
-
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = image->mipmap_count;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = ImageLayerCount(image);
-
-	if (dst_access_info.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-	    dst_access_info.layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
-	return barrier;
+	vmaDestroyImage(graphics_device->vma_allocator, image->handle, image->allocation);
+	image->handle = VK_NULL_HANDLE;
 }
 
 internal void ImageViewDestroy(ImageView *view)
 {
-	vkDestroyImageView(graphics_device->device, view->view, NULL);
-	view->view = VK_NULL_HANDLE;
+	vkDestroyImageView(graphics_device->device, view->handle, NULL);
+	view->handle = VK_NULL_HANDLE;
 }
 
-internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
-				      u32 base_mip_level)
+internal ImageView ImageViewFromImage(Image *image,
+				      u32 layer_count,
+				      u32 layer,
+				      u32 base_mip_level,
+				      VkImageAspectFlags aspect)
 {
 	VkImageViewType view_type = image->type;
 
@@ -219,20 +276,15 @@ internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
 
 	VkImageViewCreateInfo view_create_info = {0};
 	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_create_info.image = image->image;
+	view_create_info.image = image->handle;
 	view_create_info.viewType = view_type;
 	view_create_info.format = image->format;
 
-	view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view_create_info.subresourceRange.aspectMask = aspect;
 	view_create_info.subresourceRange.baseMipLevel = base_mip_level;
 	view_create_info.subresourceRange.levelCount = image->mipmap_count - base_mip_level;
 	view_create_info.subresourceRange.baseArrayLayer = layer;
 	view_create_info.subresourceRange.layerCount = layer_count;
-
-	// Depth AND stencil is not allowed for sampling!
-	// --> So, use depth instead.
-	if (ImageIsDepth(image))
-		view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 	view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 	view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -243,21 +295,20 @@ internal ImageView ImageViewFromImage(Image *image, u32 layer_count, u32 layer,
 	view.image = image;
 	view.layer_count = layer_count;
 	view.layer = layer;
+	view.mip_level_count = image->mipmap_count - base_mip_level;
 	view.base_mip_level = base_mip_level;
-
+	view.aspect = aspect;
+	
 	VK_CHECK(vkCreateImageView(graphics_device->device,
 				   &view_create_info, NULL,
-				   &view.view),
+				   &view.handle),
 		 "Failed to create texture image view.");
 
 	// Swapchain images are omitted from being accessible bindlessly.
-	if (!image->is_swapchain) {
-		if (ImageIsStorage(image))
-			view.resource_id = BindlessRegisterStorage(&graphics_device->bindless, view.view);
-		else
-			view.resource_id = BindlessRegisterSampled(&graphics_device->bindless, view.view, ImageIsDepth(image));
-	}
-
+	if (!image->is_swapchain)
+		view.bindless = BindlessRegisterImage(&graphics_device->bindless, view.handle,
+						      true, ImageIsStorage(image));
+	
 	return view;
 }
 
@@ -278,7 +329,12 @@ internal ImageView *FetchImageView(Image *image,
 	if (fetched_image_view)
 		return fetched_image_view;
 
-	ImageView view = ImageViewFromImage(image, layer_count, layer, base_mip_level);
+	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+	if (ImageIsDepth(image))
+		aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+	
+	ImageView view = ImageViewFromImage(image, layer_count, layer, base_mip_level, aspect);
 
 	return HashTableAddElement(&graphics_device->image_view_cache, hash, &view);
 }
@@ -286,4 +342,9 @@ internal ImageView *FetchImageView(Image *image,
 internal ImageView *FetchStandardImageView(Image *image)
 {
 	return FetchImageView(image, ImageLayerCount(image), 0, 0);
+}
+
+internal BindlessImageHandle FetchStandardImageViewID(Image *image)
+{
+	return FetchStandardImageView(image)->bindless;
 }

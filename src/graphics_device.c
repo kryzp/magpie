@@ -14,9 +14,8 @@ internal VkFormat FindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 		vkGetPhysicalDeviceFormatProperties(physical_device, candidates[i], &properties);
 
 		if ((tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) ||
-		    (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features)) {
+		    (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features))
 			return candidates[i];
-		}
 	}
 	
 	DebugLogCrash("Failed to find supported format.");
@@ -138,7 +137,42 @@ exit:
 	return result;
 }
 
-// fucking sucks.
+internal b32 CheckForValidationLayerSupport(MemoryArena *arena)
+{
+	u32 layer_count = 0;
+	vkEnumerateInstanceLayerProperties(&layer_count, 0);
+
+	ScratchArena scratch = GetScratch(arena, 1);
+
+	VkLayerProperties *available_layers = MemoryArenaPush(scratch.arena, sizeof(VkLayerProperties) * layer_count);
+	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
+
+	b32 result = true;
+	
+	for (i32 i = 0; i < ArraySize(GRAPHICS_VALIDATION_LAYERS); i++) {
+		b32 has_layer = false;
+		const char *layer_name_0 = GRAPHICS_VALIDATION_LAYERS[i];
+
+		for (i32 j = 0; j < layer_count; j++) {
+			const char *layer_name_1 = available_layers[j].layerName;
+
+			if (CStringCompare(layer_name_0, layer_name_1) == 0) {
+				has_layer = true;
+				break;
+			}
+		}
+
+		if (!has_layer) {
+			result = false;
+			goto exit;
+		}
+	}
+
+exit:
+	ReleaseScratch(&scratch);
+	return result;
+}
+
 internal u32 AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 						   VkSurfaceKHR surface,
 						   VkPhysicalDevice physical_device,
@@ -188,52 +222,16 @@ internal u32 AssignGraphicsPhysicalDeviceUsability(MemoryArena *arena,
 	return usability;
 }
 
-internal b32 CheckForValidationLayerSupport(MemoryArena *arena)
-{
-	u32 layer_count = 0;
-	vkEnumerateInstanceLayerProperties(&layer_count, 0);
-
-	ScratchArena scratch = GetScratch(arena, 1);
-
-	VkLayerProperties *available_layers = MemoryArenaPush(scratch.arena, sizeof(VkLayerProperties) * layer_count);
-	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
-
-	b32 result = true;
-	
-	for (i32 i = 0; i < ArraySize(GRAPHICS_VALIDATION_LAYERS); i++) {
-		b32 has_layer = false;
-		const char *layer_name_0 = GRAPHICS_VALIDATION_LAYERS[i];
-
-		for (i32 j = 0; j < layer_count; j++) {
-			const char *layer_name_1 = available_layers[j].layerName;
-
-			if (CStringCompare(layer_name_0, layer_name_1) == 0) {
-				has_layer = true;
-				break;
-			}
-		}
-
-		if (!has_layer) {
-			result = false;
-			goto exit;
-		}
-	}
-
-exit:
-	ReleaseScratch(&scratch);
-	return result;
-}
-
 internal VKAPI_ATTR VkBool32 VKAPI_CALL GraphicsVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 								    VkDebugUtilsMessageTypeFlagsEXT message_type,
-								    const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data,
-								    void *p_user_data)
+								    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+								    void *user_data)
 {
 	if (message_severity >=
 	    VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 		DebugLogCrash("Severity = %d, Type = %d, Message = \"%s\"",
 			      message_severity, message_type,
-			      p_callback_data->pMessage);
+			      callback_data->pMessage);
 	}
 
 	return VK_FALSE;
@@ -279,6 +277,8 @@ internal void GraphicsDeviceAfterHotReload()
 
 internal void GraphicsDeviceInit(MemoryArena *arena)
 {
+	graphics_device->arena = arena;
+	
 	VkApplicationInfo core_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = WINDOW_TITLE,
@@ -345,7 +345,8 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	volkLoadInstance(graphics_device->instance);
 
 	if (graphics_device->has_validation_layers) {
-		VK_CHECK(CreateGraphicsDeviceDebugUtilsMessengerExt(graphics_device->instance, &debug_create_info, NULL,
+		VK_CHECK(CreateGraphicsDeviceDebugUtilsMessengerExt(graphics_device->instance,
+								    &debug_create_info, NULL,
 								    &graphics_device->debug_messenger),
 			 "Failed to create debug messenger.");
 	}
@@ -372,7 +373,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 					   &device_count, devices);
 
 		vkGetPhysicalDeviceProperties2(devices[0], &properties);
-		vkGetPhysicalDeviceFeatures2  (devices[0], &features);
+		vkGetPhysicalDeviceFeatures2(devices[0], &features);
 
 		graphics_device->physical_device = devices[0];
 		graphics_device->physical_device_properties = properties;
@@ -390,7 +391,7 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 
 		for (i32 i = 0; i < device_count; i++) {
 			vkGetPhysicalDeviceProperties2(devices[i], &graphics_device->physical_device_properties);
-			vkGetPhysicalDeviceFeatures2  (devices[i], &graphics_device->physical_device_features);
+			vkGetPhysicalDeviceFeatures2(devices[i], &graphics_device->physical_device_features);
 
 			u32 usability1 = AssignGraphicsPhysicalDeviceUsability(scratch.arena,
 									       graphics_device->surface,
@@ -569,7 +570,6 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 	if (result == VK_SUCCESS) {
 		u32 major = VK_API_VERSION_MAJOR(version);
 		u32 minor = VK_API_VERSION_MINOR(version);
-
 		DebugLog("Using Vulkan %d.%d", major, minor);
 	} else {
 		DebugLog("Failed to retrieve Vulkan version.");
@@ -613,10 +613,10 @@ internal void GraphicsDeviceInit(MemoryArena *arena)
 
 	VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
 	pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-	pipeline_cache_create_info.pNext = 0;
+	pipeline_cache_create_info.pNext = NULL;
 	pipeline_cache_create_info.flags = 0;
 	pipeline_cache_create_info.initialDataSize = 0;
-	pipeline_cache_create_info.pInitialData = 0;
+	pipeline_cache_create_info.pInitialData = NULL;
 
 	VK_CHECK(vkCreatePipelineCache(graphics_device->device,
 				       &pipeline_cache_create_info, NULL,
@@ -698,7 +698,7 @@ internal void GraphicsDeviceDestroy()
 	vkDestroyDevice(graphics_device->device, NULL);
 }
 
-internal CommandBuffer BeginGraphicsPresent()
+internal CommandBuffer GraphicsBeginPresent()
 {
 	GraphicsFrameData *current_frame = graphics_device->frames + graphics_device->current_frame_index;
 
@@ -714,7 +714,7 @@ internal CommandBuffer BeginGraphicsPresent()
 	return in_flight_cmd;
 }
 
-internal void EndGraphicsPresent(CommandBuffer *in_flight_cmd)
+internal void GraphicsEndPresent(CommandBuffer *in_flight_cmd)
 {
 	BindlessApplyUpdates(&graphics_device->bindless);
 	
@@ -783,7 +783,7 @@ internal void EndGraphicsPresent(CommandBuffer *in_flight_cmd)
 	CommandPoolReset(&graphics_device->frames[graphics_device->current_frame_index].command_pool);
 }
 
-internal CommandBuffer BeginGraphicsInstantSubmit()
+internal CommandBuffer GraphicsBeginInstantSubmit()
 {
 	GraphicsFrameData *current_frame = graphics_device->frames + graphics_device->current_frame_index;
 
@@ -797,7 +797,7 @@ internal CommandBuffer BeginGraphicsInstantSubmit()
 	return instant_submit_cmd;
 }
 
-internal void EndGraphicsInstantSubmit(CommandBuffer *instant_submit_cmd)
+internal void GraphicsEndInstantSubmit(CommandBuffer *instant_submit_cmd)
 {
 	GraphicsFrameData *current_frame = graphics_device->frames + graphics_device->current_frame_index;
 

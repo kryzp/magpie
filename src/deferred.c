@@ -1,4 +1,26 @@
 
+internal void GBufferInit(GBuffer *gbuffer)
+{
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++) {
+		gbuffer->attachments[i] = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
+						       VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+		gbuffer->views[i] = FetchStandardImageView(&gbuffer->attachments[i]);
+	}
+	
+	gbuffer->depth = ImageAllocDepth2D(graphics_device->swapchain.width, graphics_device->swapchain.height, 1);
+	gbuffer->depth_view = FetchStandardImageView(&gbuffer->depth);
+}
+
+internal void GBufferDestroy(GBuffer *gbuffer)
+{
+	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
+		ImageDestroy(gbuffer->attachments + i);
+
+	ImageDestroy(&gbuffer->depth);
+}
+
+// ---
+
 struct geometry_pass_context {
 	GBuffer *gbuffer;
 	MeshPass *mesh_pass;
@@ -49,7 +71,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 		args.vertex_buffer = rs->meshes[batch->mesh_id].original->vertex_buffer.device_address;
 		args.instance_buffer = pass_context->instance_buffer->device_address;
 		args.material_id = batch->material_id;
-		args.sampler = core->linear_sampler.resource_id;
+		args.sampler = core->linear_sampler.bindless.id;
 
 		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
@@ -94,33 +116,31 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 
 	struct {
 		u64 frame_data_buffer;
-
 		u32 position;
 		u32 albedo;
 		u32 normal;
 		u32 material;
 		u32 emissive;
-
 		u32 irradiance_map;
 		u32 prefilter_map;
 		u32 brdf_lut;
-
 		u32 linear_sampler;
 	} pc_ambient;
 
 	pc_ambient.frame_data_buffer = pass_context->frame_data_buffer->device_address;
 
-	pc_ambient.position = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Position)->resource_id;
-	pc_ambient.albedo   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Albedo)->resource_id;
-	pc_ambient.normal   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Normal)->resource_id;
-	pc_ambient.material = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_MetallicRoughness)->resource_id;
-	pc_ambient.emissive = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Emissive)->resource_id;
+	pc_ambient.position = gbuffer->views[GBufferAttachment_Position]->bindless.sampled;
+	pc_ambient.albedo   = gbuffer->views[GBufferAttachment_Albedo]->bindless.sampled;
+	pc_ambient.normal   = gbuffer->views[GBufferAttachment_Normal]->bindless.sampled;
+	pc_ambient.material = gbuffer->views[GBufferAttachment_MetallicRoughness]->bindless.sampled;
+	pc_ambient.emissive = gbuffer->views[GBufferAttachment_Emissive]->bindless.sampled;
 
-	pc_ambient.irradiance_map = FetchStandardImageView(&probe->irradiance)->resource_id;
-	pc_ambient.prefilter_map = FetchStandardImageView(&probe->prefilter)->resource_id;
-	pc_ambient.brdf_lut = FetchStandardImageView(&core->brdf_lut_image)->resource_id;
+	pc_ambient.irradiance_map = FetchStandardImageViewID(&probe->irradiance).sampled;
+	pc_ambient.prefilter_map  = FetchStandardImageViewID(&probe->prefilter).sampled;
 
-	pc_ambient.linear_sampler = core->linear_sampler.resource_id;
+	pc_ambient.brdf_lut = FetchStandardImageViewID(&core->brdf_lut_image).sampled;
+
+	pc_ambient.linear_sampler = core->linear_sampler.bindless.id;
 
 	CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_ambient), &pc_ambient);
 	CmdDrawVerticesN(cmd, 3);
@@ -149,13 +169,11 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 			u64 frame_data_buffer;
 			u64 light_buffer;
 			u64 vertex_buffer;
-				
 			u32 position;
 			u32 albedo;
 			u32 normal;
 			u32 material;
 			u32 emissive;
-				
 			u32 linear_sampler;
 		} pc_direct;
 
@@ -163,13 +181,13 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 		pc_direct.light_buffer      = pass_context->light_buffer->device_address;
 		pc_direct.vertex_buffer     = core->light_sphere_mesh.vertex_buffer.device_address;
 				
-		pc_direct.position = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Position)->resource_id;
-		pc_direct.albedo   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Albedo)->resource_id;
-		pc_direct.normal   = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Normal)->resource_id;
-		pc_direct.material = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_MetallicRoughness)->resource_id;
-		pc_direct.emissive = FetchStandardImageView(gbuffer->attachments + GBufferAttachment_Emissive)->resource_id;
+		pc_direct.position = gbuffer->views[GBufferAttachment_Position]->bindless.sampled;
+		pc_direct.albedo   = gbuffer->views[GBufferAttachment_Albedo]->bindless.sampled;
+		pc_direct.normal   = gbuffer->views[GBufferAttachment_Normal]->bindless.sampled;
+		pc_direct.material = gbuffer->views[GBufferAttachment_MetallicRoughness]->bindless.sampled;
+		pc_direct.emissive = gbuffer->views[GBufferAttachment_Emissive]->bindless.sampled;
 				
-		pc_direct.linear_sampler = core->linear_sampler.resource_id;
+		pc_direct.linear_sampler = core->linear_sampler.bindless.id;
 
 		CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_direct), &pc_direct);
 
@@ -178,29 +196,6 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 }
 
 // ---
-
-internal void GBufferInit(GBuffer *gbuffer)
-{
-	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++) {
-		gbuffer->attachments[i] = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
-						       VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-		
-		gbuffer->views[i] = FetchStandardImageView(&gbuffer->attachments[i]);
-	}
-	
-	gbuffer->depth = ImageAlloc2D(graphics_device->swapchain.width, graphics_device->swapchain.height,
-				      graphics_device->depth_format, 1);
-
-	gbuffer->depth_view = FetchStandardImageView(&gbuffer->depth);
-}
-
-internal void GBufferDestroy(GBuffer *gbuffer)
-{
-	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-		ImageDestroy(gbuffer->attachments + i);
-
-	ImageDestroy(&gbuffer->depth);
-}
 
 struct deferred_renderer_input {
 	Scene *scene;
@@ -271,7 +266,7 @@ internal void DeferredRenderFrame(RenderGraph *graph,
 	lighting_render_pass.graphics.view_count = GBufferAttachment_MaxEnum + 2;
 
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)
-		lighting_render_pass.graphics.views[i] = FetchStandardImageView(input->gbuffer->attachments + i);
+		lighting_render_pass.graphics.views[i] = input->gbuffer->views[i];
 
 	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 0] = FetchStandardImageView(&input->probe->irradiance);
 	lighting_render_pass.graphics.views[GBufferAttachment_MaxEnum + 1] = FetchStandardImageView(&input->probe->prefilter);

@@ -3,11 +3,6 @@
 //       updates to the next frame if they spill over the
 //       BINDLESS_MAX_WRITES_PER_FRAME.
 
-internal b32 BindlessIsValid(u32 resource_id)
-{
-	return resource_id != 0;
-}
-
 internal VkDescriptorType BindlessGetDescriptorTypeFromBinding(BindlessSetBinding binding)
 {
 	switch (binding) {
@@ -21,7 +16,12 @@ internal VkDescriptorType BindlessGetDescriptorTypeFromBinding(BindlessSetBindin
 	return (VkDescriptorType)0;
 }
 
-internal u32 BindlessPushUpdate(BindlessResources *bindless, BindlessUpdate *update)
+internal b32 BindlessIsValid(bindless_handle handle)
+{
+	return handle != 0;
+}
+
+internal bindless_handle BindlessPushUpdate(BindlessResources *bindless, BindlessUpdate *update)
 {
 	Assert(bindless->update_count < ArraySize(bindless->updates) &&
 	       "Cannot add more bindless updates.");
@@ -34,32 +34,40 @@ internal u32 BindlessPushUpdate(BindlessResources *bindless, BindlessUpdate *upd
 	return p_update->slot;
 }
 
-internal u32 BindlessRegisterSampler(BindlessResources *bindless, VkSampler sampler)
+internal BindlessSamplerHandle BindlessRegisterSampler(BindlessResources *bindless, VkSampler sampler)
 {
 	BindlessUpdate update = {0};
 	update.type = BindlessSetBinding_Sampler;
-	update.sampler.sampler = sampler;
+	update.sampler = sampler;
 
-	return BindlessPushUpdate(bindless, &update);
+	BindlessSamplerHandle handle = {0};
+	handle.id = BindlessPushUpdate(bindless, &update);
+
+	return handle;
 }
 
-internal u32 BindlessRegisterSampled(BindlessResources *bindless, VkImageView view, b32 is_depth)
+internal BindlessImageHandle BindlessRegisterImage(BindlessResources *bindless, VkImageView view,
+				    b32 is_sampled, b32 is_storage)
 {
-	BindlessUpdate update = {0};
-	update.type = BindlessSetBinding_Sampled;
-	update.sampled_image.view = view;
-	update.sampled_image.is_depth = is_depth;
+	BindlessImageHandle handle = {0};
 
-	return BindlessPushUpdate(bindless, &update);
-}
+	if (is_sampled) {
+		BindlessUpdate update = {0};
+		update.type = BindlessSetBinding_Sampled;
+		update.view = view;
+		
+		handle.sampled = BindlessPushUpdate(bindless, &update);
+	}
 
-internal u32 BindlessRegisterStorage(BindlessResources *bindless, VkImageView view)
-{
-	BindlessUpdate update = {0};
-	update.type = BindlessSetBinding_Storage;
-	update.storage_image.view = view;
+	if (is_storage) {
+		BindlessUpdate update = {0};
+		update.type = BindlessSetBinding_Storage;
+		update.view = view;
+		
+		handle.storage = BindlessPushUpdate(bindless, &update);
+	}
 
-	return BindlessPushUpdate(bindless, &update);
+	return handle;
 }
 
 internal void BindlessInit(BindlessResources *bindless)
@@ -154,22 +162,20 @@ internal void BindlessApplyUpdates(BindlessResources *bindless)
 
 		switch (update->type) {
 		case BindlessSetBinding_Sampler:
-			image_info->sampler = update->sampler.sampler;
+			image_info->sampler = update->sampler;
 			image_info->imageView = VK_NULL_HANDLE;
 			image_info->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			break;
 
 		case BindlessSetBinding_Sampled:
 			image_info->sampler = VK_NULL_HANDLE;
-			image_info->imageView = update->sampled_image.view;
-			image_info->imageLayout = update->sampled_image.is_depth
-				? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-				: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			image_info->imageView = update->view;
+			image_info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			break;
 
 		case BindlessSetBinding_Storage:
 			image_info->sampler = VK_NULL_HANDLE;
-			image_info->imageView = update->storage_image.view;
+			image_info->imageView = update->view;
 			image_info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			break;
 		}

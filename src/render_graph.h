@@ -1,7 +1,7 @@
 
 typedef struct RenderingAttachment {
 	VkRenderingAttachmentInfo info;
-	Image *image;
+	ImageView *view;
 	u32 width;
 	u32 height;
 } RenderingAttachment;
@@ -45,11 +45,11 @@ typedef struct RenderPass {
 		struct {
 			void (*Record)(RenderState *rs, void *context);
 
-			u32 read_only_image_count;
-			Image *read_only_images[16];
+			u32 read_only_view_count;
+			ImageView *read_only_views[16];
 
-			u32 rw_image_count;
-			Image *rw_images[16];
+			u32 rw_view_count;
+			ImageView *rw_views[16];
 			
 			u32 buffer_count;
 			GPUBuffer *buffers[16];
@@ -59,10 +59,10 @@ typedef struct RenderPass {
 			void (*Record)(RenderState *rs, void *context);
 
 			u32 src_count;
-			Image *src[16];
+			ImageView *src[16];
 
 			u32 dst_count;
-			Image *dst[16];
+			ImageView *dst[16];
 		} transfer;
 
 		struct {

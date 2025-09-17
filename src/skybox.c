@@ -1,7 +1,6 @@
 
 struct export_hdr_pass_context {
-	ImageView *input;
-	Image *output;
+	bindless_handle input;
 };
 
 internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_info, void *context)
@@ -19,8 +18,8 @@ internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_inf
 
 	args.transform_buffer = core->cubemap_capture_transforms.device_address;
 	args.vertex_buffer = core->skybox_mesh.vertex_buffer.device_address;
-	args.hdr_image_id = pass_context->input->resource_id;
-	args.linear_sampler_id = core->linear_sampler.resource_id;
+	args.hdr_image_id = pass_context->input;
+	args.linear_sampler_id = core->linear_sampler.bindless.id;
 
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->hdr_to_environment_cubemap_program);
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
@@ -45,8 +44,7 @@ internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_inf
 internal void EnvironmentMapFromHDR(RenderGraph *graph, Image *out, Image *hdr_image)
 {
 	struct export_hdr_pass_context context = {
-		.input = FetchStandardImageView(hdr_image),
-		.output = out
+		.input = FetchStandardImageViewID(hdr_image).sampled
 	};
 	
 	RenderPass render_pass = {0};
@@ -72,8 +70,8 @@ internal void EnvironmentMapFromHDR(RenderGraph *graph, Image *out, Image *hdr_i
 }
 
 struct skybox_pass_context {
-	ImageView *skybox;
-	ImageView *target;
+	bindless_handle skybox;
+	Image *target;
 	GPUBuffer *frame_data_buffer;
 };
 
@@ -89,7 +87,7 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
 	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = pass_context->target->image->format;
+	pipeline_def.colour_attachment_formats[0] = pass_context->target->format;
 
 	PipelineState st = FetchGraphicsPipeline(&pipeline_def);
 
@@ -102,8 +100,8 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 
 	args.frame_data_buffer = pass_context->frame_data_buffer->device_address;
 	args.vertex_buffer = core->skybox_mesh.vertex_buffer.device_address;
-	args.cubemap_id = pass_context->skybox->resource_id;
-	args.sampler_id = core->linear_sampler.resource_id;
+	args.cubemap_id = pass_context->skybox;
+	args.sampler_id = core->linear_sampler.bindless.id;
 
 	CmdBindBindless(cmd, st.bind_point, st.layout);
 	CmdBindPipeline(cmd, st.bind_point, st.pipeline);
@@ -125,8 +123,8 @@ internal void SkyboxRender(RenderGraph *graph,
 			   struct skybox_renderer_input *input)
 {
 	struct skybox_pass_context context = {
-		.skybox = input->skybox,
-		.target = input->target,
+		.skybox = input->skybox->bindless.sampled,
+		.target = input->target->image,
 		.frame_data_buffer = input->frame_data_buffer
 	};
 	

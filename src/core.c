@@ -28,7 +28,7 @@
 //                   --> Same goes for e.g: updating per frame data.
 //               [x] Proper layout transitions and synchronization in render graph.
 //               [x] GPU driven rendering.
-//               [ ] Use multiple sets for bindless.
+//               [x] Use multiple sets for bindless.
 //                   --> This way we can use DESCRIPTOR_VARIABLE_COUNT, instead of
 //                       a fixed size set of 256.
 //
@@ -174,6 +174,7 @@ internal void CoreLightingAttachmentBlitToSwapchain(RenderState *rs, void *conte
 	Image *dst = SwapchainCurrentImage(&graphics_device->swapchain);
 	
 	VkImageBlit region = {0};
+	
 	region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.srcSubresource.mipLevel = 0;
 	region.srcSubresource.baseArrayLayer = 0;
@@ -189,8 +190,7 @@ internal void CoreLightingAttachmentBlitToSwapchain(RenderState *rs, void *conte
 	region.dstOffsets[1] = (VkOffset3D){ dst->width, dst->height, 1 };
 
 	CmdBlitImage(&rs->cmd,
-		     src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		     dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		     src, dst,
 		     1, &region,
 		     VK_FILTER_LINEAR);
 }
@@ -554,7 +554,7 @@ internal void CoreRender()
 	RenderState *rs = &core->render_state;
 	CoreFrameData *frame = CoreCurrentFrame();
 	
-	rs->cmd = BeginGraphicsPresent();
+	rs->cmd = GraphicsBeginPresent();
 
 	CoreFrameDataUploadPerFrameBuffer(frame, &core->main_camera);
 	CoreFrameDataUploadObjects(frame, rs, scene);
@@ -616,8 +616,8 @@ internal void CoreRender()
 
 	struct post_processing_input post_processing_input = {0};
 	post_processing_input.exposure = 1.15f;
-	post_processing_input.input = &core->lighting_attachment;
-	post_processing_input.output = &core->lighting_attachment;
+	post_processing_input.input = FetchStandardImageView(&core->lighting_attachment);
+	post_processing_input.output = FetchStandardImageView(&core->lighting_attachment);
 
 	PostProcessingPass(&core->render_graph, &post_processing_input);
 	
@@ -627,9 +627,9 @@ internal void CoreRender()
 	lighting_to_swapchain_pass.type = RenderPassType_Transfer;
 	lighting_to_swapchain_pass.transfer.Record = CoreLightingAttachmentBlitToSwapchain;
 	lighting_to_swapchain_pass.transfer.src_count = 1;
-	lighting_to_swapchain_pass.transfer.src[0] = &core->lighting_attachment;
+	lighting_to_swapchain_pass.transfer.src[0] = FetchStandardImageView(&core->lighting_attachment);
 	lighting_to_swapchain_pass.transfer.dst_count = 1;
-	lighting_to_swapchain_pass.transfer.dst[0] = SwapchainCurrentImage(&graphics_device->swapchain);
+	lighting_to_swapchain_pass.transfer.dst[0] = SwapchainCurrentImageView(&graphics_device->swapchain);
 	
 	RenderGraphPush(&core->render_graph, &lighting_to_swapchain_pass);
 	
@@ -642,7 +642,7 @@ internal void CoreRender()
 	// ---
 	
 	RenderGraphExecute(&core->render_graph, &core->render_state, &core->frame_arena);
-	EndGraphicsPresent(&core->render_state.cmd);
+	GraphicsEndPresent(&core->render_state.cmd);
 }
 
 __declspec(dllexport) void CoreTick(Platform *platform_)

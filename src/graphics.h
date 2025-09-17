@@ -9,6 +9,47 @@
 		}                                       \
 	} while (0)
 
+#define BINDLESS_MAX_RESOURCES 256
+#define BINDLESS_MAX_WRITES_PER_FRAME 64
+
+typedef enum BindlessSetBinding {
+	BindlessSetBinding_Sampler,
+	BindlessSetBinding_Sampled,
+	BindlessSetBinding_Storage,
+	BindlessSetBinding_MaxEnum
+} BindlessSetBinding;
+
+typedef u32 bindless_handle;
+
+typedef struct BindlessSamplerHandle {
+	bindless_handle id;
+} BindlessSamplerHandle;
+
+typedef struct BindlessImageHandle {
+	bindless_handle sampled;
+	bindless_handle storage;
+} BindlessImageHandle;
+
+typedef struct BindlessUpdate {
+	BindlessSetBinding type;
+	bindless_handle slot;
+	union {
+		VkSampler sampler;
+		VkImageView view;
+	};
+} BindlessUpdate;
+
+typedef struct BindlessResources {
+	VkDescriptorSet sets[BindlessSetBinding_MaxEnum];
+	VkDescriptorSetLayout layouts[BindlessSetBinding_MaxEnum];
+	VkDescriptorPool pool;
+
+	u32 update_count;
+	BindlessUpdate updates[BINDLESS_MAX_WRITES_PER_FRAME];
+
+	u32 resource_counts[BindlessSetBinding_MaxEnum];
+} BindlessResources;
+
 typedef struct Sampler {
 	VkSampler handle;
 
@@ -20,11 +61,12 @@ typedef struct Sampler {
 
 	VkBorderColor border_colour;
 
-	u32 resource_id;
+	BindlessSamplerHandle bindless;
 } Sampler;
 
 typedef enum ImageAccessType {
 	ImageAccessType_Undefined,
+	ImageAccessType_General,
 	ImageAccessType_GraphicsRead,
 	ImageAccessType_GraphicsReadWrite,
 	ImageAccessType_ComputeRead,
@@ -38,16 +80,18 @@ typedef enum ImageAccessType {
 } ImageAccessType;
 
 typedef struct ImageAccessInfo {
+	VkImageLayout layout;
 	VkPipelineStageFlags stage;
 	VkAccessFlags2 access;
-	VkImageLayout layout;
 } ImageAccessInfo;
 
 typedef struct Image {
-	VkImage image;
+	VkImage handle;
 	VkImageUsageFlags usage;
-	ImageAccessType access_type;
-	
+
+	u32 access_count;
+	ImageAccessType *access_types;
+
 	u32 width;
 	u32 height;
 	u32 depth;
@@ -58,6 +102,9 @@ typedef struct Image {
 	VkImageViewType type;
 	VkImageTiling tiling;
 
+	u32 aspect_count;
+	VkImageAspectFlags aspect_flags;
+	
 	u32 mipmap_count;
 	
 	VkSampleCountFlagBits samples;
@@ -67,14 +114,18 @@ typedef struct Image {
 } Image;
 
 typedef struct ImageView {
+	VkImageView handle;
+	
 	Image *image;
-	VkImageView view;
 
 	u32 layer_count;
 	u32 layer;
+	u32 mip_level_count;
 	u32 base_mip_level;
 
-	u32 resource_id;
+	VkImageAspectFlags aspect;
+
+	BindlessImageHandle bindless;
 } ImageView;
 
 typedef enum GPUBufferAccessType {
@@ -228,11 +279,16 @@ typedef struct CommandBuffer {
 	VkCommandBuffer handle;
 } CommandBuffer;
 
+internal void CmdPipelineBarrier(CommandBuffer *cmd,
+				 VkDependencyFlags dependency_flags,
+				 u32 memory_barrier_count,        VkMemoryBarrier2       *memory_barriers,
+				 u32 buffer_memory_barrier_count, VkBufferMemoryBarrier2 *buffer_memory_barriers,
+				 u32 image_memory_barrier_count,  VkImageMemoryBarrier2  *image_memory_barriers);
+
 typedef struct CommandPool {
 	VkCommandPool handle;
-
 	u32 free_index;
-	VkCommandBuffer free_buffers[16];
+	VkCommandBuffer free_buffers[64];
 } CommandPool;
 
 typedef struct SwapchainSupportDetails {
@@ -264,47 +320,6 @@ typedef struct Swapchain {
 	ImageView *swapchain_image_views;
 } Swapchain;
 
-#define BINDLESS_MAX_RESOURCES 256
-#define BINDLESS_MAX_WRITES_PER_FRAME 64
-
-typedef enum BindlessSetBinding {
-	BindlessSetBinding_Sampler,
-	BindlessSetBinding_Sampled,
-	BindlessSetBinding_Storage,
-	BindlessSetBinding_MaxEnum
-} BindlessSetBinding;
-
-typedef struct BindlessUpdate {
-	BindlessSetBinding type;
-	u32 slot;
-
-	union {
-		struct {
-			VkSampler sampler;
-		} sampler;
-		
-		struct {
-			VkImageView view;
-			b32 is_depth;
-		} sampled_image;
-
-		struct {
-			VkImageView view;
-		} storage_image;
-	};
-} BindlessUpdate;
-
-typedef struct BindlessResources {
-	VkDescriptorSet sets[BindlessSetBinding_MaxEnum];
-	VkDescriptorSetLayout layouts[BindlessSetBinding_MaxEnum];
-	VkDescriptorPool pool;
-
-	u32 update_count;
-	BindlessUpdate updates[BINDLESS_MAX_WRITES_PER_FRAME];
-
-	u32 resource_counts[BindlessSetBinding_MaxEnum];
-} BindlessResources;
-
 typedef struct GraphicsFrameData {
 	CommandPool command_pool;
 
@@ -316,6 +331,10 @@ typedef struct GraphicsFrameData {
 } GraphicsFrameData;
 
 typedef struct GraphicsDevice {
+	MemoryArena *arena;
+
+	// ---
+	
 	VkInstance instance;
 	VkDevice device;
 
@@ -360,3 +379,7 @@ typedef struct GraphicsDevice {
 	HashTable pipeline_cache;
 	HashTable pipeline_layout_cache;
 } GraphicsDevice;
+
+internal CommandBuffer GraphicsBeginInstantSubmit();
+internal void GraphicsEndInstantSubmit(CommandBuffer *cmd);
+internal void GraphicsWaitIdle();

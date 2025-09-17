@@ -30,7 +30,7 @@ internal Mesh MeshInit(u64 vertex_size,
 		GPUBufferWrite(&staging_buffer, vertices, vertex_buffer_size, 0);
 		GPUBufferWrite(&staging_buffer, indices, index_buffer_size, vertex_buffer_size);
 
-		CommandBuffer cmd = BeginGraphicsInstantSubmit();
+		CommandBuffer cmd = GraphicsBeginInstantSubmit();
 		{
 			VkBufferCopy stage_to_vertex_copy = {0};
 			stage_to_vertex_copy.srcOffset = 0;
@@ -52,7 +52,7 @@ internal Mesh MeshInit(u64 vertex_size,
 					      &mesh.index_buffer,
 					      1, &stage_to_index_copy);
 		}
-		EndGraphicsInstantSubmit(&cmd);
+		GraphicsEndInstantSubmit(&cmd);
 	}
 	GraphicsWaitIdle();
 	GPUBufferDestroy(&staging_buffer);

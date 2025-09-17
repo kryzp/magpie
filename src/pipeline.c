@@ -1,9 +1,9 @@
 
 internal VkPipelineLayout PipelineLayoutCreate(ShaderProgram *program)
 {
-	VkShaderStageFlags stage = ShaderProgramIsCompute(program) ?
-		VK_SHADER_STAGE_COMPUTE_BIT :
-		VK_SHADER_STAGE_ALL_GRAPHICS;
+	VkShaderStageFlags stage = ShaderProgramIsCompute(program)
+		? VK_SHADER_STAGE_COMPUTE_BIT
+		: VK_SHADER_STAGE_ALL_GRAPHICS;
 
 	VkPushConstantRange push_constants = {0};
 	push_constants.offset = 0;
