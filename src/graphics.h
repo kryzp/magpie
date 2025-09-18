@@ -73,15 +73,17 @@ typedef enum ImageAccessType {
 	ImageAccessType_ComputeReadWrite,
 	ImageAccessType_ColourWrite,
 	ImageAccessType_DepthWrite,
-	ImageAccessType_TransferSrc,
-	ImageAccessType_TransferDst,
+	ImageAccessType_BlitSrc,
+	ImageAccessType_BlitDst,
+	ImageAccessType_CopySrc,
+	ImageAccessType_CopyDst,
 	ImageAccessType_Present,
 	ImageAccessType_MaxEnum
 } ImageAccessType;
 
 typedef struct ImageAccessInfo {
 	VkImageLayout layout;
-	VkPipelineStageFlags stage;
+	VkPipelineStageFlags2 stage;
 	VkAccessFlags2 access;
 } ImageAccessInfo;
 
@@ -90,6 +92,11 @@ typedef struct Image {
 	VkImageUsageFlags usage;
 
 	u32 access_count;
+
+	// Access types are arranged into a 3D matrix: MIPS x LAYERS x ASPECTS.
+	// TODO: Use a proper blobbing algorithm for generating pipeline barriers.
+	//       Right now I just go through the columns of the matrix.
+	//       --> Could be a fun project.
 	ImageAccessType *access_types;
 
 	u32 width;
@@ -132,13 +139,14 @@ typedef enum GPUBufferAccessType {
 	GPUBufferAccessType_Undefined,
 	GPUBufferAccessType_GraphicsReadWrite,
 	GPUBufferAccessType_ComputeReadWrite,
-	GPUBufferAccessType_TransferSrc,
-	GPUBufferAccessType_TransferDst,
+	GPUBufferAccessType_CopySrc,
+	GPUBufferAccessType_CopyDst,
+	GPUBufferAccessType_IndirectDraw,
 	GPUBufferAccessType_MaxEnum
 } GPUBufferAccessType;
 
 typedef struct GPUBufferAccessInfo {
-	VkPipelineStageFlags stage;
+	VkPipelineStageFlags2 stage;
 	VkAccessFlags2 access;
 } GPUBufferAccessInfo;
 

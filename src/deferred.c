@@ -34,7 +34,7 @@ internal void RenderPassGeometry(RenderState *rs, RenderInfo *render_info, void 
 {
 	CommandBuffer *cmd = &rs->cmd;
 	
-	struct geometry_pass_context *pass_context = (struct geometry_pass_context *)context;
+	struct geometry_pass_context *pass_context = context;
 
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->model_program);
 	pipeline_def.colour_attachment_count = GBufferAttachment_MaxEnum;
@@ -96,7 +96,7 @@ internal void RenderPassLighting(RenderState *rs, RenderInfo *render_info, void 
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct lighting_pass_context *pass_context = (struct lighting_pass_context *)context;
+	struct lighting_pass_context *pass_context = context;
 	GBuffer *gbuffer = pass_context->gbuffer;
 	EnvironmentProbe *probe = pass_context->probe;
 
@@ -228,10 +228,11 @@ internal void DeferredRenderFrame(RenderGraph *graph,
 	RenderPass gbuffer_render_pass = {0};
 	gbuffer_render_pass.type = RenderPassType_Graphics;
 	gbuffer_render_pass.graphics.Record = RenderPassGeometry;
-	gbuffer_render_pass.graphics.buffer_count = 3;
+	gbuffer_render_pass.graphics.buffer_count = 2;
 	gbuffer_render_pass.graphics.buffers[0] = input->frame_data_buffer;
 	gbuffer_render_pass.graphics.buffers[1] = input->object_buffer;
-	gbuffer_render_pass.graphics.buffers[2] = input->indirect_buffer;
+	gbuffer_render_pass.graphics.indirect_buffer_count = 1;
+	gbuffer_render_pass.graphics.indirect_buffers[0] = input->indirect_buffer;
 	gbuffer_render_pass.graphics.attachment_count = GBufferAttachment_MaxEnum + 1;
 
 	for (i32 i = 0; i < GBufferAttachment_MaxEnum; i++)

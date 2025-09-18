@@ -63,6 +63,8 @@
 #define Megabytes(n) (Kilobytes(n) * 1024)
 #define Gigabytes(n) (Megabytes(n) * 1024)
 
+#define typeof(x) __typeof__(x)
+
 #define PI                                  3.1415926535897
 #define PIf                                 3.1415926535897f
 #define ONE_OVER_SQUARE_ROOT_OF_TWO_PI      0.3989422804
@@ -935,3 +937,10 @@ internal v3 SphericalToCartesian(f32 r, f32 phi, f32 theta)
 		  r * CosF(theta) * SinF(phi),
 		  r * SinF(theta));
 }
+
+#define PrintBitFlag(b)							\
+	do {								\
+		for (i32 __PrintBitFlag_i = sizeof(b)*8 - 1; __PrintBitFlag_i >= 0; __PrintBitFlag_i--) \
+			putchar((b & ((typeof(b))(1) << __PrintBitFlag_i)) ? '1' : '0'); \
+		printf("\n"); \
+	} while (0)

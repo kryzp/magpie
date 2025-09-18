@@ -9,7 +9,7 @@ internal void RenderPassHDRTonemapping(RenderState *rs, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
 	
-	struct post_processing_input *pass_context = (struct post_processing_input *)context;
+	struct post_processing_input *pass_context = context;
 
 	ComputePipelineDef pipeline_def = ComputePipelineDefInit(&shaders->hdr_tonemapping_program);
 	PipelineState pipeline_st = FetchComputePipeline(&pipeline_def);

@@ -7,7 +7,7 @@ internal void RenderPassExportHDRCubemap(RenderState *rs, RenderInfo *render_inf
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct export_hdr_pass_context *pass_context = (struct export_hdr_pass_context *)context;
+	struct export_hdr_pass_context *pass_context = context;
 	
 	struct {
 		u64 transform_buffer;
@@ -79,7 +79,7 @@ internal void RenderPassSkybox(RenderState *rs, RenderInfo *render_info, void *c
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct skybox_pass_context *pass_context = (struct skybox_pass_context *)context;
+	struct skybox_pass_context *pass_context = context;
 
 	GraphicsPipelineDef pipeline_def = GraphicsPipelineDefInitDefault(&shaders->skybox_program);
 	pipeline_def.has_depth_attachment = true;

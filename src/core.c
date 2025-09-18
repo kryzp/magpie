@@ -535,14 +535,20 @@ internal void CoreFrameDataUploadObjects(CoreFrameData *frame, RenderState *rs, 
 	}
 }
 
-internal void CoreClearDrawIndirectBuffer(CommandBuffer *cmd, MeshPass *mesh_pass)
+struct clear_draw_indirect_buffer_pass_context {
+	MeshPass *mesh_pass;
+};
+
+internal void CoreClearDrawIndirectBuffer(RenderState *rs, void *context)
 {
+	struct clear_draw_indirect_buffer_pass_context *pass_context = context;
+	
 	VkBufferCopy indirect_region = {0};
 	indirect_region.srcOffset = 0;
 	indirect_region.dstOffset = 0;
-	indirect_region.size = mesh_pass->batch_count * sizeof(GPU_Indirect);
+	indirect_region.size = pass_context->mesh_pass->batch_count * sizeof(GPU_Indirect);
 	
-	CmdCopyBufferToBuffer(cmd,
+	CmdCopyBufferToBuffer(&rs->cmd,
 			      &core->clear_indirect_buffer,
 			      &core->draw_indirect_buffer,
 			      1, &indirect_region);
@@ -578,9 +584,22 @@ internal void CoreRender()
 		core->indirect_buffer_dirty = false;
 	}
 	
-	CoreClearDrawIndirectBuffer(&rs->cmd, &mesh_pass);
-	
 	// ---
+
+	struct clear_draw_indirect_buffer_pass_context clear_draw_pass_context = {0};
+	clear_draw_pass_context.mesh_pass = &mesh_pass;
+	
+	RenderPass clear_draw_indirect_buffer_pass = {0};
+	clear_draw_indirect_buffer_pass.type = RenderPassType_Transfer;
+	clear_draw_indirect_buffer_pass.transfer.Record = CoreClearDrawIndirectBuffer;
+	clear_draw_indirect_buffer_pass.transfer.src_buffer_copy_count = 1;
+	clear_draw_indirect_buffer_pass.transfer.src_buffer_copies[0] = &core->clear_indirect_buffer;
+	clear_draw_indirect_buffer_pass.transfer.dst_buffer_copy_count = 1;
+	clear_draw_indirect_buffer_pass.transfer.dst_buffer_copies[0] = &core->draw_indirect_buffer;
+
+	MemoryCopy(clear_draw_indirect_buffer_pass.context, &clear_draw_pass_context, sizeof(clear_draw_pass_context));
+
+	RenderGraphPush(&core->render_graph, &clear_draw_indirect_buffer_pass);
 
 	struct frustum_culling_input frustum_culling_input = {0};
 	frustum_culling_input.camera          = &core->main_camera;
@@ -626,10 +645,10 @@ internal void CoreRender()
 	RenderPass lighting_to_swapchain_pass = {0};
 	lighting_to_swapchain_pass.type = RenderPassType_Transfer;
 	lighting_to_swapchain_pass.transfer.Record = CoreLightingAttachmentBlitToSwapchain;
-	lighting_to_swapchain_pass.transfer.src_count = 1;
-	lighting_to_swapchain_pass.transfer.src[0] = FetchStandardImageView(&core->lighting_attachment);
-	lighting_to_swapchain_pass.transfer.dst_count = 1;
-	lighting_to_swapchain_pass.transfer.dst[0] = SwapchainCurrentImageView(&graphics_device->swapchain);
+	lighting_to_swapchain_pass.transfer.src_view_blit_count = 1;
+	lighting_to_swapchain_pass.transfer.src_view_blits[0] = FetchStandardImageView(&core->lighting_attachment);
+	lighting_to_swapchain_pass.transfer.dst_view_blit_count = 1;
+	lighting_to_swapchain_pass.transfer.dst_view_blits[0] = SwapchainCurrentImageView(&graphics_device->swapchain);
 	
 	RenderGraphPush(&core->render_graph, &lighting_to_swapchain_pass);
 	

@@ -740,13 +740,10 @@ internal void GraphicsEndPresent(CommandBuffer *in_flight_cmd)
 	VkSubmitInfo2 submit_info = {0};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 	submit_info.flags = 0;
-
 	submit_info.commandBufferInfoCount = 1;
 	submit_info.pCommandBufferInfos = &buffer_info;
-
 	submit_info.signalSemaphoreInfoCount = 1;
 	submit_info.pSignalSemaphoreInfos = &render_finished_semaphore;
-
 	submit_info.waitSemaphoreInfoCount = 1;
 	submit_info.pWaitSemaphoreInfos = &image_available_semaphore;
 
@@ -759,17 +756,13 @@ internal void GraphicsEndPresent(CommandBuffer *in_flight_cmd)
 	VkPresentInfoKHR present_info = {0};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pResults = NULL;
-
 	present_info.pImageIndices = &image_index;
-
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &render_finished_semaphore.semaphore;
-
 	present_info.swapchainCount = 1;
 	present_info.pSwapchains = &graphics_device->swapchain.handle;
 
-	VkResult result = vkQueuePresentKHR(graphics_device->graphics_queue,
-					    &present_info);
+	VkResult result = vkQueuePresentKHR(graphics_device->graphics_queue, &present_info);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		DebugLogCrash("TODO We need to rebuild the entire swapchain here.");
@@ -813,13 +806,10 @@ internal void GraphicsEndInstantSubmit(CommandBuffer *instant_submit_cmd)
 	VkSubmitInfo2 submit_info = {0};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
 	submit_info.flags = 0;
-
 	submit_info.commandBufferInfoCount = 1;
 	submit_info.pCommandBufferInfos = &buffer_info;
-
 	submit_info.signalSemaphoreInfoCount = 0;
 	submit_info.pSignalSemaphoreInfos = NULL;
-	
 	submit_info.waitSemaphoreInfoCount = 0;
 	submit_info.pWaitSemaphoreInfos = NULL;
 

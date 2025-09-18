@@ -16,7 +16,7 @@ internal void RenderPassComputeFrustumCulling(RenderState *rs, void *context)
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct frustum_culling_input *pass_context = (struct frustum_culling_input *)context;
+	struct frustum_culling_input *pass_context = context;
 
 	ComputePipelineDef pipeline_def = ComputePipelineDefInit(&shaders->compute_frustum_culling_program);
 	PipelineState pipeline_st = FetchComputePipeline(&pipeline_def);
@@ -125,8 +125,8 @@ internal void ComputeFrustumCulling(RenderGraph *graph, struct frustum_culling_i
 	compute_pass.compute.Record = RenderPassComputeFrustumCulling;
 	compute_pass.compute.buffer_count = 3;
 	compute_pass.compute.buffers[0] = input->instance_buffer;
-	compute_pass.compute.buffers[1] = input->indirect_buffer;
-	compute_pass.compute.buffers[2] = input->output_buffer;
+	compute_pass.compute.buffers[1] = input->output_buffer;
+	compute_pass.compute.buffers[2] = input->indirect_buffer;
 	
 	MemoryCopy(compute_pass.context, input, sizeof(struct frustum_culling_input));
 	

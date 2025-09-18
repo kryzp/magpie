@@ -1,4 +1,8 @@
 
+// TODO: The info.stage and info.access is identical for gpu buffers and images.
+//       Only difference is images also have a layout.
+//       --> Merge into a single function.
+
 internal ImageAccessInfo SyncGetSrcImageAccessInfo(ImageAccessType access)
 {
 	ImageAccessInfo info = {0};
@@ -6,57 +10,67 @@ internal ImageAccessInfo SyncGetSrcImageAccessInfo(ImageAccessType access)
 	switch (access) {
 	case ImageAccessType_Undefined:
 		info.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case ImageAccessType_General:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_GraphicsRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case ImageAccessType_GraphicsReadWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_ComputeRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case ImageAccessType_ComputeReadWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_ColourWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		info.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 		break;
 	case ImageAccessType_DepthWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
 		info.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		break;
-	case ImageAccessType_TransferSrc:
+	case ImageAccessType_BlitSrc:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_BLIT_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
-	case ImageAccessType_TransferDst:
+	case ImageAccessType_BlitDst:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_BLIT_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	case ImageAccessType_CopySrc:
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+		break;
+	case ImageAccessType_CopyDst:
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		break;
 	case ImageAccessType_Present:
 		info.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	}
@@ -71,57 +85,67 @@ internal ImageAccessInfo SyncGetDstImageAccessInfo(ImageAccessType access)
 	switch (access) {
 	case ImageAccessType_Undefined:
 		info.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		info.stage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case ImageAccessType_General:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_GraphicsRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT;
 		break;
 	case ImageAccessType_GraphicsReadWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_ComputeRead:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT;
 		break;
 	case ImageAccessType_ComputeReadWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case ImageAccessType_ColourWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		info.access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
 		break;
 	case ImageAccessType_DepthWrite:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
 		info.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		break;
-	case ImageAccessType_TransferSrc:
+	case ImageAccessType_BlitSrc:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_BLIT_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
 		break;
-	case ImageAccessType_TransferDst:
+	case ImageAccessType_BlitDst:
 		info.layout = VK_IMAGE_LAYOUT_GENERAL;
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_BLIT_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	case ImageAccessType_CopySrc:
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+		break;
+	case ImageAccessType_CopyDst:
+		info.layout = VK_IMAGE_LAYOUT_GENERAL;
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		break;
 	case ImageAccessType_Present:
 		info.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		info.stage  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	}
@@ -135,24 +159,28 @@ internal GPUBufferAccessInfo SyncGetSrcBufferAccessInfo(GPUBufferAccessType acce
 	
 	switch (access) {
 	case GPUBufferAccessType_Undefined:
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_NONE;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case GPUBufferAccessType_GraphicsReadWrite:
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case GPUBufferAccessType_ComputeReadWrite:
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
 		info.access = VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
-	case GPUBufferAccessType_TransferSrc:
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		info.access = VK_ACCESS_2_NONE;
+	case GPUBufferAccessType_CopySrc:
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
+		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
 		break;
-	case GPUBufferAccessType_TransferDst:
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	case GPUBufferAccessType_CopyDst:
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	case GPUBufferAccessType_IndirectDraw:
+		info.stage  = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+		info.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 		break;
 	}
 
@@ -165,24 +193,28 @@ internal GPUBufferAccessInfo SyncGetDstBufferAccessInfo(GPUBufferAccessType acce
 	
 	switch (access) {
 	case GPUBufferAccessType_Undefined:
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
 		info.access = VK_ACCESS_2_NONE;
 		break;
 	case GPUBufferAccessType_GraphicsReadWrite:
-		info.stage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		info.access = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_SHADER_READ_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
 	case GPUBufferAccessType_ComputeReadWrite:
-		info.stage  = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-		info.access = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_SHADER_READ_BIT;
+		info.stage  = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+		info.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 		break;
-	case GPUBufferAccessType_TransferSrc:
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	case GPUBufferAccessType_CopySrc:
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
 		break;
-	case GPUBufferAccessType_TransferDst:
-		info.stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	case GPUBufferAccessType_CopyDst:
+		info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 		info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		break;
+	case GPUBufferAccessType_IndirectDraw:
+		info.stage  = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+		info.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 		break;
 	}
 

@@ -82,7 +82,7 @@ internal VkBufferMemoryBarrier2 GPUBufferGetMemoryBarrier(GPUBuffer *buffer,
 	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 
 	barrier.srcAccessMask = src_access_info.access;
-	barrier.dstAccessMask = src_access_info.access;
+	barrier.dstAccessMask = dst_access_info.access;
 
 	barrier.srcStageMask = src_access_info.stage;
 	barrier.dstStageMask = dst_access_info.stage;

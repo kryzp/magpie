@@ -10,7 +10,7 @@ internal void RenderPassGenerateIrradianceMap(RenderState *rs,
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct irradiance_pass_context *pass_context = (struct irradiance_pass_context *)context;
+	struct irradiance_pass_context *pass_context = context;
 	
 	struct {
 		u64 transform_buffer;
@@ -55,7 +55,7 @@ internal void RenderPassGeneratePrefilterMap(RenderState *rs,
 {
 	CommandBuffer *cmd = &rs->cmd;
 
-	struct prefilter_pass_context *pass_context = (struct prefilter_pass_context *)context;
+	struct prefilter_pass_context *pass_context = context;
 	
 	struct {
 		u64 transform_buffer;

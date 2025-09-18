@@ -74,31 +74,56 @@ internal void RenderGraphTransitionImageView(ImageView *view, ImageAccessType ds
 {
 	ImageAccessInfo dst_access_info = SyncGetDstImageAccessInfo(dst_access);
 
-	for (u32 i = 0; i < view->layer_count; i++) {
-		for (u32 j = 0; j < view->mip_level_count; j++) {
-			ImageAccessType src_access = ImageGetAccessType(view->image,
-									view->base_mip_level + j,
-									view->layer + i,
-									0);
+	for (u32 j = 0; j < view->layer_count; j++) {
+		ImageAccessType curr_src_access = ImageGetAccessType(view->image,
+								     view->base_mip_level,
+								     view->layer + j, 0);
+			
+		ImageSetAccessType(view->image,
+				   view->base_mip_level,
+				   view->layer + j, 0,
+				   dst_access);
 
-			if (src_access == dst_access)
-				continue;
+		u32 chain_length = 1;
+		u32 curr_mip = 0;
 		
-			ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(src_access);
-		
-			VkImageMemoryBarrier2 b = ImageGetMemoryBarrier(view->image,
-									src_access_info,
-									dst_access_info,
-									view->base_mip_level + j, 1,
-									view->layer + i, 1);
+		for (u32 i = 1; i < view->mip_level_count; i++) {
+			ImageAccessType new_src_access = ImageGetAccessType(view->image,
+									    view->base_mip_level + i,
+									    view->layer + j, 0);
 			
 			ImageSetAccessType(view->image,
-					   j, i, 0,
+					   view->base_mip_level + i,
+					   view->layer + j, 0,
 					   dst_access);
+
+			if (curr_src_access == new_src_access) {
+				// Continue the chain.
+				chain_length++;
+			} else {
+				// Generate a new pipeline barrier.
+				curr_src_access = new_src_access;
+				
+				barriers[*barrier_count] = ImageGetMemoryBarrier(view->image,
+										 SyncGetSrcImageAccessInfo(curr_src_access),
+										 dst_access_info,
+										 view->base_mip_level + curr_mip, chain_length,
+										 view->layer + j, 1);
 			
-			barriers[*barrier_count] = b;
-			*barrier_count = *barrier_count + 1;
+				*barrier_count = *barrier_count + 1;
+
+				chain_length = 1;
+				curr_mip = i;
+			}
 		}
+				
+		barriers[*barrier_count] = ImageGetMemoryBarrier(view->image,
+								 SyncGetSrcImageAccessInfo(curr_src_access),
+								 dst_access_info,
+								 view->base_mip_level + curr_mip, chain_length,
+								 view->layer + j, 1);
+			
+		*barrier_count = *barrier_count + 1;
 	}
 }
 
@@ -113,20 +138,17 @@ internal void RenderGraphTransitionImage(Image *image, ImageAccessType dst_acces
 
 			if (src_access == dst_access)
 				continue;
+			
+			ImageSetAccessType(image, i, j, 0, dst_access);
 		
 			ImageAccessInfo src_access_info = SyncGetSrcImageAccessInfo(src_access);
 
-			VkImageMemoryBarrier2 b = ImageGetMemoryBarrier(image,
-									src_access_info,
-									dst_access_info,
-									i, 1,
-									j, 1);
-
-			ImageSetAccessType(image,
-					   i, j, 0,
-					   dst_access);
-				
-			barriers[*barrier_count] = b;
+			barriers[*barrier_count] = ImageGetMemoryBarrier(image,
+									 src_access_info,
+									 dst_access_info,
+									 i, 1,
+									 j, 1);
+			
 			*barrier_count = *barrier_count + 1;
 		}
 	}
@@ -137,7 +159,7 @@ internal void RenderGraphTransitionBuffer(GPUBuffer *buffer, GPUBufferAccessType
 {
 	GPUBufferAccessInfo src_access_info = SyncGetSrcBufferAccessInfo(buffer->access_type);
 	GPUBufferAccessInfo dst_access_info = SyncGetDstBufferAccessInfo(dst_access);
-	
+
 	buffer->access_type = dst_access;
 
 	barriers[*barrier_count] = GPUBufferGetMemoryBarrier(buffer, src_access_info, dst_access_info);
@@ -157,8 +179,7 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		case RenderPassType_Graphics: {
 			u32 image_barrier_count = 0;
 			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
-										 64,
-										 sizeof(VkImageMemoryBarrier2));
+										 64, sizeof(VkImageMemoryBarrier2));
 			
 			RenderInfo render_info = {0};
 			render_info.view_mask = pass->graphics.view_mask;
@@ -193,12 +214,18 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 			
 			u32 buffer_barrier_count = 0;
 			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena,
-										   pass->graphics.buffer_count,
+										   pass->graphics.buffer_count + pass->graphics.indirect_buffer_count,
 										   sizeof(VkBufferMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->graphics.buffer_count; j++) {
 				GPUBuffer *buffer = pass->graphics.buffers[j];
 				RenderGraphTransitionBuffer(buffer, GPUBufferAccessType_GraphicsReadWrite,
+							    buffer_barriers, &buffer_barrier_count);
+			}
+
+			for (u32 j = 0; j < pass->graphics.indirect_buffer_count; j++) {
+				GPUBuffer *buffer = pass->graphics.indirect_buffers[j];
+				RenderGraphTransitionBuffer(buffer, GPUBufferAccessType_IndirectDraw,
 							    buffer_barriers, &buffer_barrier_count);
 			}
 
@@ -217,8 +244,7 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		case RenderPassType_Compute: {
 			u32 image_barrier_count = 0;
 			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
-										 64,
-										 sizeof(VkImageMemoryBarrier2));
+										 64, sizeof(VkImageMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->compute.read_only_view_count; j++) {
 				ImageView *view = pass->compute.read_only_views[j];
@@ -234,8 +260,7 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 			
 			u32 buffer_barrier_count = 0;
 			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena,
-										   64,
-										   sizeof(VkBufferMemoryBarrier2));
+										   64, sizeof(VkBufferMemoryBarrier2));
 
 			for (i32 j = 0; j < pass->compute.buffer_count; j++) {
 				GPUBuffer *buffer = pass->compute.buffers[j];
@@ -256,24 +281,40 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		case RenderPassType_Transfer: {
 			u32 image_barrier_count = 0;
 			VkImageMemoryBarrier2 *image_barriers = MemoryArenaPushC(scratch.arena,
-										 64,
-										 sizeof(VkImageMemoryBarrier2));
+										 64, sizeof(VkImageMemoryBarrier2));
 
-			for (i32 j = 0; j < pass->transfer.src_count; j++) {
-				ImageView *view = pass->transfer.src[j];
-				RenderGraphTransitionImageView(view, ImageAccessType_TransferSrc,
+			for (i32 j = 0; j < pass->transfer.src_view_blit_count; j++) {
+				ImageView *view = pass->transfer.src_view_blits[j];
+				RenderGraphTransitionImageView(view, ImageAccessType_BlitSrc,
 							       image_barriers, &image_barrier_count);
 			}
 
-			for (i32 j = 0; j < pass->transfer.dst_count; j++) {
-				ImageView *view = pass->transfer.dst[j];
-				RenderGraphTransitionImageView(view, ImageAccessType_TransferDst,
+			for (i32 j = 0; j < pass->transfer.dst_view_blit_count; j++) {
+				ImageView *view = pass->transfer.dst_view_blits[j];
+				RenderGraphTransitionImageView(view, ImageAccessType_BlitDst,
 							       image_barriers, &image_barrier_count);
+			}
+			
+			u32 buffer_barrier_count = 0;
+			VkBufferMemoryBarrier2 *buffer_barriers = MemoryArenaPushC(scratch.arena,
+										   pass->transfer.src_buffer_copy_count + pass->transfer.dst_buffer_copy_count,
+										   sizeof(VkBufferMemoryBarrier2));
+
+			for (i32 j = 0; j < pass->transfer.src_buffer_copy_count; j++) {
+				GPUBuffer *buffer = pass->transfer.src_buffer_copies[j];
+				RenderGraphTransitionBuffer(buffer, GPUBufferAccessType_CopySrc,
+							    buffer_barriers, &buffer_barrier_count);
+			}
+
+			for (i32 j = 0; j < pass->transfer.dst_buffer_copy_count; j++) {
+				GPUBuffer *buffer = pass->transfer.dst_buffer_copies[j];
+				RenderGraphTransitionBuffer(buffer, GPUBufferAccessType_CopyDst,
+							    buffer_barriers, &buffer_barrier_count);
 			}
 			
 			CmdPipelineBarrier(cmd, 0,
 					   0, NULL,
-					   0, NULL,
+					   buffer_barrier_count, buffer_barriers,
 					   image_barrier_count, image_barriers);
 			
 			pass->transfer.Record(rs, pass->context);
@@ -284,18 +325,17 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		case RenderPassType_Mipmap: {
 			Image *image = pass->mipmap.image;
 
-			u32 count = 0;
+			u32 n = 0;
 			VkImageMemoryBarrier2 *barriers = MemoryArenaPushC(scratch.arena,
-									   64,
-									   sizeof(VkImageMemoryBarrier2));
+									   64, sizeof(VkImageMemoryBarrier2));
 
-			RenderGraphTransitionImage(image, ImageAccessType_TransferDst,
-						   barriers, &count);
+			RenderGraphTransitionImage(image, ImageAccessType_BlitDst,
+						   barriers, &n);
 
 			CmdPipelineBarrier(cmd, 0,
 					   0, NULL,
 					   0, NULL,
-					   count, barriers);
+					   n, barriers);
 			
 			CmdGenerateMipmaps(cmd, image);
 
@@ -305,16 +345,16 @@ internal void RenderGraphExecute(RenderGraph *graph, RenderState *rs, MemoryAren
 		case RenderPassType_Present: {
 			Image *swapchain = pass->present.swapchain;
 
-			u32 count = 0;
-			VkImageMemoryBarrier2 present_barrier = {0};
-
+			u32 n = 0;
+			VkImageMemoryBarrier2 barrier = {0};
+			
 			RenderGraphTransitionImage(swapchain, ImageAccessType_Present,
-						   &present_barrier, &count);
+						   &barrier, &n);
 
 			CmdPipelineBarrier(cmd, 0,
 					   0, NULL,
 					   0, NULL,
-					   1, &present_barrier);
+					   n, &barrier);
 
 			break;
 		}

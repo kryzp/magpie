@@ -37,9 +37,11 @@ typedef struct RenderPass {
 			u32 view_count;
 			ImageView *views[16];
 
-			// TODO: In the future when adding vertex buffers just make a seperate list
 			u32 buffer_count;
 			GPUBuffer *buffers[16];
+
+			u32 indirect_buffer_count;
+			GPUBuffer *indirect_buffers[16];
 		} graphics;
 
 		struct {
@@ -58,11 +60,17 @@ typedef struct RenderPass {
 		struct {
 			void (*Record)(RenderState *rs, void *context);
 
-			u32 src_count;
-			ImageView *src[16];
+			u32 src_view_blit_count;
+			ImageView *src_view_blits[16];
 
-			u32 dst_count;
-			ImageView *dst[16];
+			u32 dst_view_blit_count;
+			ImageView *dst_view_blits[16];
+
+			u32 src_buffer_copy_count;
+			GPUBuffer *src_buffer_copies[16];
+
+			u32 dst_buffer_copy_count;
+			GPUBuffer *dst_buffer_copies[16];
 		} transfer;
 
 		struct {

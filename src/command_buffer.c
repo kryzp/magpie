@@ -234,8 +234,8 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
 
-		barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-		barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
 
 		CmdPipelineBarrier(cmd, 0,
 				   0, NULL,
@@ -277,7 +277,7 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
 		barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
 
-		barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
 		barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
 		CmdPipelineBarrier(cmd, 0,
@@ -285,7 +285,7 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 				   0, NULL,
 				   1, &barrier);
 
-		for (u32 k = 0; k < ImageLayerCount(image); k++)
+		for (u32 k = 0; k < ImageFaceCount(image); k++)
 			ImageSetAccessType(image, i, k, 0, ImageAccessType_GraphicsRead);
 	}
 
@@ -297,7 +297,7 @@ internal void CmdGenerateMipmaps(CommandBuffer *cmd, Image *image)
 	barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
 
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+	barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
 	CmdPipelineBarrier(cmd, 0,
@@ -331,7 +331,8 @@ internal void CmdCopyBufferToImageMultiRegion(CommandBuffer *cmd,
 			       region_count, regions);
 }
 
-internal void CmdCopyBufferToImage(CommandBuffer *cmd, GPUBuffer *buffer,
+internal void CmdCopyBufferToImage(CommandBuffer *cmd,
+				   GPUBuffer *buffer,
 				   Image *image)
 {
 	VkBufferImageCopy region = {0};
@@ -345,10 +346,14 @@ internal void CmdCopyBufferToImage(CommandBuffer *cmd, GPUBuffer *buffer,
 	region.imageOffset = (VkOffset3D){ 0, 0, 0 };
 	region.imageExtent = (VkExtent3D){ image->width, image->height, 1 };
 
-	CmdCopyBufferToImageMultiRegion(cmd, buffer, image, 1, &region);
+	CmdCopyBufferToImageMultiRegion(cmd,
+					buffer, image,
+					1, &region);
 }
 
-internal void CmdDispatch(CommandBuffer *cmd, u32 x, u32 y, u32 z)
+internal void CmdDispatch(CommandBuffer *cmd,
+			  u32 x, u32 y, u32 z)
 {
-	vkCmdDispatch(cmd->handle, x, y, z);
+	vkCmdDispatch(cmd->handle,
+		      x, y, z);
 }

@@ -67,21 +67,30 @@ internal Image BitmapCreateImage(BitmapImage *bitmap)
 
 	CommandBuffer cmd = GraphicsBeginInstantSubmit();
 	
-	VkImageMemoryBarrier2 transition_barrier = ImageGetMemoryBarrier(&image,
-									 SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
-									 SyncGetDstImageAccessInfo(ImageAccessType_TransferDst),
-									 0, image.mipmap_count,
-									 0, ImageLayerCount(&image));
-
+	VkImageMemoryBarrier2 copy_barrier = ImageGetMemoryBarrier(&image,
+								   SyncGetSrcImageAccessInfo(ImageAccessType_Undefined),
+								   SyncGetDstImageAccessInfo(ImageAccessType_CopyDst),
+								   0, image.mipmap_count,
+								   0, ImageLayerCount(&image));
+	
 	CmdPipelineBarrier(&cmd, 0,
 			   0, NULL,
 			   0, NULL,
-			   1, &transition_barrier);
-
-	for (u32 i = 0; i < image.access_count; i++)
-		image.access_types[i] = ImageAccessType_TransferDst;
+			   1, &copy_barrier);
 	
 	CmdCopyBufferToImage(&cmd, &staging_buffer, &image);
+
+	VkImageMemoryBarrier2 blit_barrier = ImageGetMemoryBarrier(&image,
+								   SyncGetSrcImageAccessInfo(ImageAccessType_CopyDst),
+								   SyncGetDstImageAccessInfo(ImageAccessType_BlitDst),
+								   0, image.mipmap_count,
+								   0, ImageLayerCount(&image));
+	
+	CmdPipelineBarrier(&cmd, 0,
+			   0, NULL,
+			   0, NULL,
+			   1, &blit_barrier);
+	
 	CmdGenerateMipmaps(&cmd, &image);
 		
 	GraphicsEndInstantSubmit(&cmd);
