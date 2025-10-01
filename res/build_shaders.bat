@@ -6,10 +6,10 @@ for %%f in (*.slang) do (
   set "ending=!filename:~-5!"
   echo !filename!
   if /i "!ending!"==".comp" (
-    slangc "%%f" -profile glsl_450 -target spirv -o "!filename!.spv" -entry ComputeMain
+    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.spv" -entry ComputeMain
   ) else (
-    slangc "%%f" -profile glsl_450 -target spirv -o "!filename!.vert.spv" -entry VertexMain
-    slangc "%%f" -profile glsl_450 -target spirv -o "!filename!.frag.spv" -entry FragmentMain
+    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.vert.spv" -entry VertexMain
+    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.frag.spv" -entry FragmentMain
   )
 )
 

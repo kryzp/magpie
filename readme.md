@@ -13,6 +13,7 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 
 ### Pictures
 TODO (It looks super cool and awesome trust me).
+![Indirect Deferred PBR Rendering](images/indirect_deferred.png)
 
 ### Notable Features
 	- Right-handed Z-up coordinates (as it SHOULD be)
@@ -42,3 +43,11 @@ TODO (It looks super cool and awesome trust me).
 
 ### Why C?
 I like the language.
+
+### Structure (This is mostly for my own reference)
+/entity/ and /job/ are just prototypes and aren't actually integrated.
+Rendering is pretty much entirely managed with a render graph system which synchronizes everything.
+A render graph consists of multiple "render stages".
+Each stage takes in a list of inputs and outputs, and also contains a list of function pointers called "features".
+Typically most stages have unique features but they're split out like this because some stages, like the geometry pass
+and shadow pass effectively have the same "feature" that renders all objects using some indirect buffer.

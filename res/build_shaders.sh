@@ -1,25 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 
-slangc hdr_to_environment_cubemap.slang -profile glsl_450 -target spirv -o hdr_to_environment_cubemap_vertex.spv -entry VertexMain
-slangc hdr_to_environment_cubemap.slang -profile glsl_450 -target spirv -o hdr_to_environment_cubemap_fragment.spv -entry FragmentMain
+for f in *.slang; do
+    filename="${f%.*}" # filename w/o extension
+    ending="${filename: -5}" # last 5 characters
+    
+    echo "$filename"
+    
+    if [[ "$ending" == ".comp" ]]; then
+        slangc "$f" -Wno-39001 -profile glsl_450 -target spirv -o "$filename.spv" -entry ComputeMain
+    else
+        slangc "$f" -Wno-39001 -profile glsl_450 -target spirv -o "$filename.vert.spv" -entry VertexMain
+        slangc "$f" -Wno-39001 -profile glsl_450 -target spirv -o "$filename.frag.spv" -entry FragmentMain
+    fi
+done
 
-slangc irradiance_convolution.slang -profile glsl_450 -target spirv -o irradiance_convolution_vertex.spv -entry VertexMain
-slangc irradiance_convolution.slang -profile glsl_450 -target spirv -o irradiance_convolution_fragment.spv -entry FragmentMain
-
-slangc prefilter_convolution.slang -profile glsl_450 -target spirv -o prefilter_convolution_vertex.spv -entry VertexMain
-slangc prefilter_convolution.slang -profile glsl_450 -target spirv -o prefilter_convolution_fragment.spv -entry FragmentMain
-
-slangc model.slang -profile glsl_450 -target spirv -o model_vertex.spv -entry VertexMain
-slangc model.slang -profile glsl_450 -target spirv -o model_fragment.spv -entry FragmentMain
-
-slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_vertex.spv -entry VertexMain
-slangc ambient_lighting.slang -profile glsl_450 -target spirv -o ambient_lighting_fragment.spv -entry FragmentMain
-
-slangc direct_lighting_point.slang -profile glsl_450 -target spirv -o direct_lighting_point_vertex.spv -entry VertexMain
-slangc direct_lighting_point.slang -profile glsl_450 -target spirv -o direct_lighting_point_fragment.spv -entry FragmentMain
-
-slangc skybox.slang -profile glsl_450 -target spirv -o skybox_vertex.spv -entry VertexMain
-slangc skybox.slang -profile glsl_450 -target spirv -o skybox_fragment.spv -entry FragmentMain
-
-slangc brdf_lut.slang -profile glsl_450 -target spirv -o brdf_lut_vertex.spv -entry VertexMain
-slangc brdf_lut.slang -profile glsl_450 -target spirv -o brdf_lut_fragment.spv -entry FragmentMain
+echo "All shaders compiled!"

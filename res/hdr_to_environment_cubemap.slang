@@ -6,7 +6,6 @@ struct Arguments
 	float3 *vertices;
 	uint hdr_image_id;
 	uint linear_sampler_id;
-	uint _padding[2];
 };
 
 [vk::push_constant]
