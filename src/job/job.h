@@ -1,125 +1,148 @@
-#ifndef JOB_H
-#define JOB_H
+#pragma once
 
-#include "core/core_types.h"
+// Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
+
+#include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+#include "core/types.h"
 
 #if defined(__x86_64__)
 # define JOB_SPIN_PAUSE() _mm_pause()
-#elif defined(__aarch64__)
-# define JOB_SPIN_PAUSE() __yield()
 #else
-# define JOB_SPIN_PAUSE()
+# define JOB_SPIN_PAUSE() std::this_thread::yield()
 #endif
 
-struct thread_job;
-typedef void (*thread_job_fn_t)(struct thread_job *job);
+namespace job
+{
 
-struct thread_job {
-	thread_job_fn_t fn;
-	void *data;
-	_Atomic(struct thread_job *) next;
-	atomic_uint *counter;
+enum JobPriority {
+	PRIORITY_LOW,
+	PRIORITY_HIGH,
+	PRIORITY_MAX_ENUM
 };
 
-// TODO: ONLY IMPLEMENT IN THE .C FILE!!!
-//       --> THIS DECL IS JUST A REMINDER!
-void thread_job_complete_internal(struct thread_job *job);
+// Lockless atomic job counter.
+class JobCounter {
+public:
+	JobCounter(u32 initial_count = 0);
+	~JobCounter();
 
-struct thread_job_pool {
-	_Atomic(struct thread_job *) free_list;
-	struct thread_job *buffer;
-	u64 capacity;
+    JobCounter(JobCounter &&other) noexcept;
+    JobCounter &operator = (JobCounter &&other) noexcept;
+    JobCounter(const JobCounter &) = delete;
+    JobCounter &operator = (const JobCounter &) = delete;
+
+	void inc(u32 n = 1);
+	void dec(u32 n = 1);
+
+	void wait();
+	bool is_complete() const;
+	u32 get_count() const;
+
+private:
+	std::atomic<u32> count;
 };
 
-struct thread_job *thread_job_pool_alloc(struct thread_job_pool *pool);
-void thread_job_pool_free(struct thread_job_pool *pool, struct thread_job_pool *pool);
+using EntryPoint = std::function<void(void)>;
 
-struct thread_job_counter {
-	atomic_uint counter;
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
+struct JobDecl {
+	EntryPoint entry_point;
+	JobPriority priority;
+	JobCounter *counter;
 };
 
-void thread_job_counter_init(struct thread_job_counter *counter, u32 initial);
-void thread_job_counter_destroy(struct thread_job_counter *counter);
+class JobList {
+	constexpr static u32 MAX_CAPACITY = 512;
 
-void thread_job_counter_inc(struct thread_job_counter *counter, u32 i);
-void thread_job_counter_dec(struct thread_job_counter *counter, u32 i);
+public:
+	JobList();
+	~JobList();
 
-void thread_job_counter_wait(struct thread_job_counter *counter);
-
-enum thread_job_priority {
-	THREAD_JOB_PRIORITY_low,
-	THREAD_JOB_PRIORITY_medium,
-	THREAD_JOB_PRIORITY_high,
-	THREAD_JOB_PRIORITY_critical,
-	THREAD_JOB_PRIORITY_max_enum,
-};
-
-struct thread_worker_deque {
-	struct thread_job *buffer[16];
-
-	atomic_uint head; // For stealing.
-	atomic_uint tail; // For owner pushes/pops.
+	void add_job(const JobDecl &decl);
+	JobDecl *get_job(u32 index);
+	JobDecl *peek_job();
 	
-	pthread_mutext_t park_mutex;
-	pthread_cond_t park_cond;
+	u32 get_size() const;
 
-	// Number of parked threads waiting on this deque.
-	atomic_uint parked_count;
+private:
+	JobDecl *buffer;
+	u32 size;
 };
 
-struct thread_worker_deque_set {
-	struct thread_worker_deque deques[THREAD_JOB_PRIORITY_max_enum];
+struct JobWorker {
+	JobDecl *job;
+	std::thread thread;
 };
 
-void thread_worker_deque_init(struct thread_worker_deque *dq);
-void thread_worker_deque_destroy(struct thread_worker_deque *dq);
+class JobSystem {
+public:
+	JobSystem();
+	~JobSystem();
 
-inline u32 thread_worker_deque_size(struct thread_worker_deque *dq);
+	void init(u32 initial_worker_count);
+	void shutdown();
 
-int thread_worker_deque_push_tail(struct thread_worker_deque *dq, struct thread_job *job);
-struct thread_job *thread_worker_deque_pop_tail(struct thread_worker_deque *dq);
+	bool is_spin_mode_enabled() const;
+	void set_spin_mode(bool enabled);
 
-struct thread_job *thread_worker_deque_steal_head(struct thread_worker_deque *dq);
+	//void push_spin_mode();
+	//void pop_spin_mode();
 
-struct thread_job_system {
-	struct memory_arena *arena;
-	int worker_count;
-	struct thread_worker_deque_set workers;
-	pthread_t *threads;
-	atomic_uint shutdown;
-	atomic_uint rr_counter; // Round-robin pushes from external threads.
+	u32 get_worker_count() const;
+	
+	static u32 get_current_worker_id();
+
+	void parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority = PRIORITY_LOW);
+
+	void kick_job(const JobDecl &decl);
+
+private:
+	void worker_thread(u32 worker_id);
+
+	void wait_job_spin(JobDecl *job);
+	void wait_job_lock();
+	
+	JobDecl *try_get_job();
+
+	thread_local static u32 current_worker_id;
+
+	u32 worker_count;
+	JobWorker *workers;
+
+	JobList jobs;
+
+	std::atomic<bool> running;
+	std::mutex mutex;
+	std::condition_variable cond_begin;
+
+	std::atomic<u32> taken_task_count;
+	std::atomic<u32> added_task_count;
+
+	std::atomic<JobDecl *> next_job;
+
+	std::atomic<bool> spin_mode;
 };
 
-void thread_job_system_init(struct thread_job_system *sys, struct memory_arena *arena, int worker_count);
-void thread_job_system_shutdown(struct thread_job_system *sys);
+class SpinScope {
+public:
+	SpinScope(JobSystem &system)
+		: job_system(system)
+	{
+		original_value = system.is_spin_mode_enabled();
+		job_system.set_spin_mode(true);
+	}
 
-void thread_job_system_for(struct thread_job_system *sys,
-			   thread_job_fn_t fn,
-			   u32 count, void **data);
+	~SpinScope()
+	{
+		job_system.set_spin_mode(original_value);
+	}
 
-void thread_job_system_for_range(struct thread_job_system *sys,
-				 thread_job_fn_t fn,
-				 void *context,
-				 u32 start, u32 end, u32 stride);
-
-
-
-void thread_job_system_submit(struct thread_job_system *sys, struct thread_job *job);
-
-struct thread_job *thread_job_system_alloc_and_submit(struct thread_job_system *sys,
-						      thread_job_fn_t fn,
-						      void *data,
-						      struct thread_job_counter *counter);
-
-void thread_job_system_get_job_for_worker(struct thread_job_system *sys, int index);
-
-struct thread_worker_thread_state {
-	struct thread_job_system *system;
-	int worker_index;
+private:
+	JobSystem &job_system;
+	bool original_value;
 };
 
-void *job_worker_thread_entry(void *arg);
-
-#endif // JOB_H
+}

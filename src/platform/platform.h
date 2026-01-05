@@ -1,16 +1,13 @@
-#ifndef PLATFORM_H
-#define PLATFORM_H
+#pragma once
 
-#include "core/core_types.h"
-#include "core/core_math.h"
+#include "core/types.h"
+#include "math/vec2.h"
 
-#define WINDOW_TITLE            "Demo"
+#define DEFAULT_WINDOW_TITLE    "Demo"
 #define ENGINE_NAME             "Magpie"
 
 #define DEFAULT_WINDOW_WIDTH     1280
 #define DEFAULT_WINDOW_HEIGHT    720
-
-#define MEMORY_SIZE              MEGABYTES(64)
 
 #define APP_VERSION_VARIANT      0
 #define APP_VERSION_MAJOR        0
@@ -22,7 +19,7 @@
 #define ENGINE_VERSION_MINOR     1
 #define ENGINE_VERSION_PATCH     0
 
-enum keyboard_key {
+enum KeyboardKey {
 	KEYBOARD_KEY_unknown = 0,
 	KEYBOARD_KEY_a = 4,
 	KEYBOARD_KEY_b = 5,
@@ -236,22 +233,22 @@ enum keyboard_key {
 	KEYBOARD_KEY_right_shift = 229,
 	KEYBOARD_KEY_right_alt = 230,
 	KEYBOARD_KEY_right_super = 231,
-	KEYBOARD_KEY_max_enum
+	KEYBOARD_KEY_MAX_ENUM
 };
 
-enum mouse_button {
+enum MouseButton {
 	MBUTTON_unknown = 0,
 	MBUTTON_left = 1,
 	MBUTTON_middle = 2,
 	MBUTTON_right = 3,
 	MBUTTON_side_bottom = 4,
 	MBUTTON_side_top = 5,
-	MBUTTON_max_enum
+	MBUTTON_MAX_ENUM
 };
 
 #define MAX_GAMEPADS 4
 
-enum gamepad_button {
+enum GamepadButton {
 	GAMEPAD_BUTTON_a,
 	GAMEPAD_BUTTON_b,
 	GAMEPAD_BUTTON_x,
@@ -267,20 +264,20 @@ enum gamepad_button {
 	GAMEPAD_BUTTON_down,
 	GAMEPAD_BUTTON_left,
 	GAMEPAD_BUTTON_right,
-	GAMEPAD_BUTTON_max_enum
+	GAMEPAD_BUTTON_MAX_ENUM
 };
 
-enum gamepad_axis {
+enum GamepadAxis {
 	GAMEPAD_AXIS_left_x,
 	GAMEPAD_AXIS_left_y,
 	GAMEPAD_AXIS_right_x,
 	GAMEPAD_AXIS_right_y,
 	GAMEPAD_AXIS_trigger_left,
 	GAMEPAD_AXIS_trigger_right,
-	GAMEPAD_AXIS_max_enum
+	GAMEPAD_AXIS_MAX_ENUM
 };
 
-enum gamepad_type {
+enum GamepadType {
 	GAMEPAD_TYPE_standard,
 	GAMEPAD_TYPE_xbox_360,
 	GAMEPAD_TYPE_xbox_one,
@@ -291,30 +288,29 @@ enum gamepad_type {
 	GAMEPAD_TYPE_nintendo_switch_joycon_left,
 	GAMEPAD_TYPE_nintendo_switch_joycon_right,
 	GAMEPAD_TYPE_nintendo_switch_joycon_pair,
-	GAMEPAD_TYPE_max_enum
+	GAMEPAD_TYPE_MAX_ENUM
 };
 
-struct gamepad_st {
-	bool down[GAMEPAD_BUTTON_max_enum];
-	bool pressed[GAMEPAD_BUTTON_max_enum];
-	bool released[GAMEPAD_BUTTON_max_enum];
+struct GamepadState {
+	bool down[GAMEPAD_BUTTON_MAX_ENUM];
+	bool pressed[GAMEPAD_BUTTON_MAX_ENUM];
+	bool released[GAMEPAD_BUTTON_MAX_ENUM];
 
-	v2 left_stick;
-	v2 right_stick;
+	Vec2 left_stick;
+	Vec2 right_stick;
 
 	float left_trigger;
 	float right_trigger;
 };
 
-struct platform {
-	void *memory;
-	u64 memory_size;
-	
+struct Platform {
+	const char *window_title;
+
 	u32 window_width;
 	u32 window_height;
 
-	u32 window_pixel_width;
-	u32 window_pixel_height;
+	int window_pixel_width;
+	int window_pixel_height;
 
 	float window_opacity;
 
@@ -327,36 +323,51 @@ struct platform {
 	bool cursor_visible;
 	bool cursor_locked;
 
-	bool initializing;
+	bool kb_down[KEYBOARD_KEY_MAX_ENUM];
+	bool kb_pressed[KEYBOARD_KEY_MAX_ENUM];
+	bool kb_released[KEYBOARD_KEY_MAX_ENUM];
 
-	bool kb_down[KEYBOARD_KEY_max_enum];
-	bool kb_pressed[KEYBOARD_KEY_max_enum];
-	bool kb_released[KEYBOARD_KEY_max_enum];
+	bool mb_down[MBUTTON_MAX_ENUM];
+	bool mb_pressed[MBUTTON_MAX_ENUM];
+	bool mb_released[MBUTTON_MAX_ENUM];
 
-	bool mb_down[MBUTTON_max_enum];
-	bool mb_pressed[MBUTTON_max_enum];
-	bool mb_released[MBUTTON_max_enum];
+	Vec2 mouse_position;
+	Vec2 mouse_delta;
+	Vec2 mouse_screen_position;
+	Vec2 mouse_wheel;
 
-	v2 mouse_position;
-	v2 mouse_delta;
-	v2 mouse_screen_position;
-	v2 mouse_wheel;
-
-	struct gamepad_st gamepads[MAX_GAMEPADS];
+	GamepadState gamepads[MAX_GAMEPADS];
 
 	void (*set_window_size)(u32 width, u32 height);
 	void (*set_window_fullscreen)(bool b);
 	void (*set_window_borderless)(bool b);
 
 	void (*set_mouse_position)(u32 x, u32 y);
-	
+
 	u64 (*get_ticks)(void);
 	u64 (*get_performance_counter)(void);
 	u64 (*get_performance_frequency)(void);
+
+	bool (*file_delete)(const char *path);
+	bool (*file_exists)(const char *path);
+
+	bool (*dir_create)(const char *path);
+	bool (*dir_delete)(const char *path);
+	bool (*dir_exists)(const char *path);
+
+	void *(*stream_from_file)(const char *path, const char *mode);
+	void *(*stream_from_memory)(void *data, u64 size);
+	void *(*stream_from_const_memory)(const void *data, u64 size);
+	s64 (*stream_read)(void *stream, void *dst, u64 size);
+	s64 (*stream_write)(void *stream, const void *src, u64 size);
+	s64 (*stream_seek)(void *stream, s64 offset);
+	s64 (*stream_size)(void *stream);
+	s64 (*stream_position)(void *stream);
+	bool (*stream_close)(void *stream);
+
+	void (*open_in_explorer)(const char *path);
 
 	bool (*create_vulkan_surface)(void *instance, void *surface_pointer);
 	void (*destroy_vulkan_surface)(void *instance, void *surface);
 	const char *const *(*get_vulkan_instance_extensions)(u32 *count);
 };
-
-#endif // PLATFORM_H

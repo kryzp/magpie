@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.8)
-project(magpie C CXX)
+project(magpie CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+
+set(CMAKE_BUILD_TYPE Debug)
 
 set(CODE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-# Tell volk we're compiling for Win32.
-set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
-
 if(WIN32)
+
+	# Tell volk we're compiling for Win32.
+	set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
 
 	# Compiler options.
 	set(COMMON_COMPILE_OPTIONS
@@ -42,19 +48,18 @@ if(WIN32)
 		"D:/DevLibs/SDL3/VisualC/x64/Release"
 		"D:/DevLibs/assimp/lib/Release"
 	)
-	
+
 elseif(APPLE)
 
-	# Compiler options.
-	set(COMMON_COMPILE_OPTIONS
+	# Tell volk we're compiling for macOS.
+	set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_MACOS_MVK)
+
+	# Compiler Options.
+	set(COMPILE_OPTIONS
 		-Wall
 		-Wextra
 		-fno-rtti
 		-fexceptions
-	)
-
-	# Suppressed warnings.
-	set(SUPPRESSED_WARNINGS
 		-Wno-unused-parameter
 		-Wno-deprecated-declarations
 		-Wno-missing-braces
@@ -62,93 +67,71 @@ elseif(APPLE)
 		-Wno-pointer-sign
 		-Wno-switch
 		-Wno-missing-field-initializers
+		-Wno-nullability-completeness
+		-Wno-missing-field-initializers
+		-Wno-unused-parameter
+		-Wno-unused-variable
+		-Wno-unused-private-field
+		-Wno-switch
 	)
 
 	# Find required packages.
 	find_package(Assimp REQUIRED)
-
-	# Include directories.
-	include_directories(game PRIVATE "${CODE_DIR}")
+	find_package(Vulkan REQUIRED)
+	find_package(SDL3 REQUIRED)
 endif()
 
-# Vulkan Memory Allocator Compilation.
-add_library(vk_mem_alloc OBJECT "${CODE_DIR}/ext/vk_mem_alloc.cpp")
-target_compile_options(vk_mem_alloc PRIVATE
-	-Wno-nullability-completeness
-	-Wno-missing-field-initializers
-	-Wno-unused-parameter
-	-Wno-unused-variable
-	-Wno-unused-private-field
+# Program.
+add_executable(magpie
+	"${CODE_DIR}/platform/macos/macos_main.cpp"
+
+	"${CODE_DIR}/app.cpp"
+
+	"${CODE_DIR}/core/hash.cpp"
+	"${CODE_DIR}/core/memory_arena.cpp"
+	"${CODE_DIR}/core/scratch.cpp"
+
+	"${CODE_DIR}/math/timer.cpp"
+	"${CODE_DIR}/math/matrix.cpp"
+	"${CODE_DIR}/math/vec2.cpp"
+	"${CODE_DIR}/math/vec3.cpp"
+
+	"${CODE_DIR}/io/filesystem.cpp"
+
+	"${CODE_DIR}/assets/assets.cpp"
+	"${CODE_DIR}/assets/texture_serializer.cpp"
+	"${CODE_DIR}/assets/shader_serializer.cpp"
+	"${CODE_DIR}/assets/model_serializer.cpp"
+
+	"${CODE_DIR}/job/job.cpp"
+
+	"${CODE_DIR}/graphics/bindless.cpp"
+	"${CODE_DIR}/graphics/camera.cpp"
+	"${CODE_DIR}/graphics/command_buffer.cpp"
+	"${CODE_DIR}/graphics/command_pool.cpp"
+	"${CODE_DIR}/graphics/device.cpp"
+	"${CODE_DIR}/graphics/gpu_buffer.cpp"
+	"${CODE_DIR}/graphics/queue.cpp"
+	"${CODE_DIR}/graphics/render_graph.cpp"
+	"${CODE_DIR}/graphics/render_scene.cpp"
+	"${CODE_DIR}/graphics/sync.cpp"
+	"${CODE_DIR}/graphics/model.cpp"
+
+	"${CODE_DIR}/graphics/renderers/skybox_renderer.cpp"
+	"${CODE_DIR}/graphics/renderers/post_processing.cpp"
+
+	"${CODE_DIR}/ext/vk_mem_alloc.cpp"
+	"${CODE_DIR}/ext/spirv_reflect.cpp"
+	"${CODE_DIR}/ext/volk.cpp"
 )
 
-# Debug build.
-set(CMAKE_BUILD_TYPE Debug)
-
-# Game DLL.
-add_library(game SHARED
-	"${CODE_DIR}/app.c"
-	"${CODE_DIR}/timer.c"
-
-	"${CODE_DIR}/core/core.c"
-	"${CODE_DIR}/core/core_hash.c"
-	"${CODE_DIR}/core/core_math.c"
-	"${CODE_DIR}/core/core_memory_arena.c"
-	"${CODE_DIR}/core/core_scratch.c"
-	"${CODE_DIR}/core/core_string.c"
-
-	"${CODE_DIR}/data/hash_table.c"
-	
-	"${CODE_DIR}/assets/assets.c"
-
-	"${CODE_DIR}/rendering/device.c"
-	"${CODE_DIR}/rendering/bindless.c"
-	"${CODE_DIR}/rendering/texture.c"
-	"${CODE_DIR}/rendering/buffer.c"
-	"${CODE_DIR}/rendering/pipeline.c"
-	"${CODE_DIR}/rendering/command_buffer.c"
-	"${CODE_DIR}/rendering/command_pool.c"
-	"${CODE_DIR}/rendering/shader.c"
-	"${CODE_DIR}/rendering/sync.c"
-	"${CODE_DIR}/rendering/swapchain.c"
-	"${CODE_DIR}/rendering/queue.c"
-	"${CODE_DIR}/rendering/blend.c"
-
-	"${CODE_DIR}/rendering/camera.c"
-	"${CODE_DIR}/rendering/model.c"
-	"${CODE_DIR}/rendering/render_graph.c"
-	"${CODE_DIR}/rendering/shaders.c"
-	"${CODE_DIR}/rendering/gbuffer.c"
-	"${CODE_DIR}/rendering/render_scene.c"
-	
-	"${CODE_DIR}/rendering/stages/stage_clear_draw_indirect.c"
-#	"${CODE_DIR}/rendering/stages/stage_compute_frustum_culling.c"
-#	"${CODE_DIR}/rendering/stages/stage_deferred.c"
-	"${CODE_DIR}/rendering/stages/stage_skybox.c"
-	"${CODE_DIR}/rendering/stages/stage_post_processing.c"
-	"${CODE_DIR}/rendering/stages/stage_blit_lighting_to_swapchain.c"
-	"${CODE_DIR}/rendering/stages/stage_hdr_texture_to_cubemap.c"
-
-	"${CODE_DIR}/ext/spirv_reflect.c"
-
-	$<TARGET_OBJECTS:vk_mem_alloc>
-)
-
-target_compile_options(game PRIVATE ${COMMON_COMPILE_OPTIONS} ${SUPPRESSED_WARNINGS})
-	
-# Platform-dependent executable.
-if(WIN32)
-	target_link_libraries(game PRIVATE assimp-vc143-mt volk slang)
-	add_executable(magpie "${CODE_DIR}/platform/win32/win32_main.c")
-elseif(APPLE)
-	target_link_libraries(game PRIVATE assimp::assimp volk slang)
-	add_executable(magpie "${CODE_DIR}/platform/macos/macos_main.c")
-endif()
-
+target_compile_definitions(magpie PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
+target_include_directories(magpie PRIVATE "${CODE_DIR}" "${Vulkan_INCLUDE_DIRS}")
+target_link_libraries(magpie SDL3::SDL3 Vulkan::Vulkan assimp::assimp slang)
 target_compile_options(magpie PRIVATE ${COMMON_COMPILE_OPTIONS} ${SUPPRESSED_WARNINGS})
-target_link_libraries(magpie PRIVATE game SDL3)
 
 # Output directories.
-set_target_properties(game magpie vk_mem_alloc PROPERTIES
+set_target_properties(magpie PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"

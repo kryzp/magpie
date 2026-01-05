@@ -1,0 +1,65 @@
+#include "r3d.h"
+
+void gfx_r3d_init(struct gfx_r3d *r3d, struct gfx_device *device, struct gfx_swapchain *swapchain)
+{
+	r3d->frame_data_buffer = gfx_device_buffer_alloc(device,
+							 VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+							 VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+							 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+							 sizeof(struct gfx_gpu_frame_data));
+	
+	r3d->brdf_lut_texture = gfx_device_texture_alloc_2d(device, 512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+}
+
+void gfx_r3d_destroy(struct gfx_r3d *r3d, struct gfx_device *device)
+{
+	gfx_device_buffer_destroy(device, &r3d->frame_data_buffer);
+	gfx_device_texture_destroy(device, &r3d->brdf_lut_texture);
+	gfx_mesh_destroy(&r3d->light_sphere_mesh, device);
+	gfx_environment_probe_destroy(&r3d->environment_probe, device);
+}
+
+void gfx_r3d_render(void *state, const struct gfx_render_context *ctx)
+{
+	struct gfx_r3d *r3d = state;
+
+	struct gfx_texture_view *lighting_view = hash_table_fetch(&ctx->attachments, hash_cstr("lighting"));
+
+	/*
+	struct gfx_gpu_frame_data frame_data = {0};
+	frame_data.view = camera->view;
+	frame_data.projection = camera->projection;
+	frame_data.view_projection = m4_mul_m4(frame_data.projection, frame_data.view);
+	frame_data.view_projection_no_translation = m4_mul_m4(frame_data.projection, m4_remove_translation(frame_data.view));
+	frame_data.inv_view = m4_inverse(frame_data.view);
+	frame_data.inv_projection = m4_inverse(frame_data.projection);
+	frame_data.camera_position = camera->position;
+	frame_data.window_resolution.x = 10;//platform->window_pixel_width;
+	frame_data.window_resolution.y = 10;//platform->window_pixel_height;
+	frame_data.time = 0.0f;//timer_elapsed_seconds(&app->global_timer);
+
+	gfx_buffer_write(&r3d->frame_data_buffer, &frame_data,
+			 sizeof(struct gfx_gpu_frame_data), 0);
+	
+	struct gfx_render_view view = {
+		.scene = r3d->scene,
+		.camera = camera
+	};
+	
+	gfx_render_scene_build_batches(r3d->scene);
+
+	struct stage_deferred_input input = {
+		.probe = NULL,
+		.gbuffer = NULL,
+		.lighting = NULL,
+		.frame_data_buffer = NULL,
+		.object_buffer = &r3d->scene->object_buffer,
+		.instance_buffer = &r3d->scene->passes[GFX_MESH_PASS_forward].compacted_instance_buffer,
+		.indirect_buffer = &r3d->scene->passes[GFX_MESH_PASS_forward].draw_indirect_buffer,
+		.light_buffer = &r3d->scene->light_buffer
+	};
+	
+	stage_add_deferred(g, &input);
+
+	*/
+}

@@ -1,60 +1,273 @@
-#ifndef ASSETS_H
-#define ASSETS_H
+#pragma once
 
-#include "core/core_types.h"
-#include "core/core_string.h"
-#include "core/core_memory_arena.h"
+#include "core/types.h"
 
-#include "rendering/device.h"
-#include "rendering/model.h"
+#include "container/vector.h"
+#include "container/string.h"
+#include "container/hash_map.h"
+#include "container/stack.h"
 
-#include "asset_handle.h"
+#include "graphics/device.h"
 
-enum bitmap_image_format {
-	BITMAP_IMAGE_FORMAT_RGBA8, // LDR
-	BITMAP_IMAGE_FORMAT_RGBAF // HDR
+class FileStream;
+
+namespace ast
+{
+
+//	ASSET_TYPE_SOUND,
+//	ASSET_TYPE_MATERIAL,
+//	ASSET_TYPE_MESH,
+//	ASSET_TYPE_MAP,
+
+// I <3 X-MACROS!!
+#define ASSET_DEFINITIONS \
+	ASSET_DEF(TEXTURE, Texture) \
+	ASSET_DEF(SHADER, Shader) \
+	ASSET_DEF(MODEL, Model)
+
+enum AssetType {
+	ASSET_TYPE_UNKNOWN = 0,
+#define ASSET_DEF(capitals, name) ASSET_TYPE_##capitals,
+	ASSET_DEFINITIONS
+#undef ASSET_DEF
+	ASSET_TYPE_MAX_ENUM
 };
 
-struct bitmap_image {
-	void *pixels;
-	enum bitmap_image_format format;
-	int width;
-	int height;
-	int channels;
+enum AssetFlag {
+	ASSET_FLAG_NONE    = 0,
+	ASSET_FLAG_INVALID = 1 << 0
 };
 
-struct bitmap_image bitmap_image_load_from_file(struct string8 path);
-void bitmap_image_destroy(struct bitmap_image *bitmap);
-u64 bitmap_image_get_memory_size(const struct bitmap_image *bitmap);
-struct gfx_texture bitmap_create_gfx_texture(struct bitmap_image *bitmap, struct gfx_device *device);
+inline AssetType get_asset_type_from_string(const String &name)
+{
+#define ASSET_DEF(capitals_, name_) if (name == "##name_##") return ASSET_TYPE_##capitals_;
+	ASSET_DEFINITIONS
+#undef ASSET_DEF
 
-struct asset_texture {
-	struct string8 path;
-	struct gfx_texture texture;
+	debug_log_crash("Unknown Asset Name: %s", name.c_str());
+
+	return ASSET_TYPE_MAX_ENUM;
+}
+
+inline String get_string_from_asset_type(AssetType type)
+{
+#define ASSET_DEF(capitals_, name_) if (type == ASSET_TYPE_##capitals_) return "##name_##";
+	ASSET_DEFINITIONS
+#undef ASSET_DEF
+
+	debug_log_crash("Unknown Asset Type: %d", type);
+
+	return "Unknown";
+}
+
+struct AssetHandle {
+	u32 index;
+	u32 generation;
 };
 
-struct asset_model {
-	struct string8 path;
-	struct gfx_model model;
+struct AssetMetaData {
+	String file_path;
 };
 
-struct asset_store {
-	struct memory_arena *arena;
+#define AST_DEFINE_ASSET(type) \
+	static AssetType get_static_type() { return type; } \
+	virtual AssetType get_asset_type() const override { return type; }
 
-	u32 texture_count;
-	struct asset_texture textures[128];
+struct Asset {
+	friend class AssetManager;
 
-	u32 model_count;
-	struct asset_model models[64];
+	Asset()
+		: handle()
+		, flags(0)
+	{
+	}
+
+	virtual ~Asset() = default;
+
+	virtual AssetType get_asset_type() const = 0;
+
+	template <typename T>
+	T *as()
+	{
+		return (T *)this;
+	}
+
+	const AssetHandle &get_handle() const
+	{
+		return handle;
+	}
+
+	bool has_flag(AssetFlag flag) const
+	{
+		return flags & flag;
+	}
+
+	void set_flag(AssetFlag flag, bool enabled)
+	{
+		if (enabled)
+			flags |= flag;
+		else
+			flags &= ~flag;
+	}
+
+private:
+	AssetHandle handle;
+	u32 flags;
 };
 
-void asset_store_init(struct asset_store *assets, struct memory_arena *arena);
-void asset_store_destroy(struct asset_store *assets, struct gfx_device *device);
+class AssetManager;
 
-struct asset_handle asset_store_load_texture(struct asset_store *assets, struct gfx_device *device, struct string8 path);
-struct asset_handle asset_store_load_model(struct asset_store *assets, struct gfx_device *device, struct string8 path);
-	
-struct gfx_texture *asset_store_texture_from_handle(struct asset_store *assets, struct asset_handle handle);
-struct gfx_model *asset_store_model_from_handle(struct asset_store *assets, struct asset_handle handle);
+// Asset serializers are just pairs of function pointers
+// for serializing and de-serializing an asset.
+struct AssetSerializer {
+	void (*serialize)(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle);
+	Asset *(*try_load_data)(AssetManager &assets, const AssetMetaData &metadata);
+};
 
-#endif // ASSETS_H
+class AssetImporter {
+public:
+	AssetImporter();
+	~AssetImporter();
+
+	Asset *import(AssetManager &assets, AssetType type, const AssetMetaData &metadata);
+
+private:
+	AssetSerializer serializers[ASSET_TYPE_MAX_ENUM];
+};
+
+class AssetManager {
+public:
+	AssetManager();
+	~AssetManager();
+
+	void init(const Platform *platform, gfx::Device *device);
+	void destroy();
+
+	template <typename T, typename ...Args>
+	T *create_new_asset(const String &name, const String &path, Args &&...args);
+
+	template <typename T>
+	T *get_asset(const AssetHandle &handle);
+
+	void destroy_asset(const AssetHandle &handle);
+
+	AssetHandle from_file_path(const String &path, AssetType type);
+
+	String get_system_file_path(const String &path) const;
+	bool is_handle_valid(const AssetHandle &handle) const;
+
+	const Platform *get_platform() const
+	{
+		return platform;
+	}
+
+	gfx::Device *get_device() const
+	{
+		return device;
+	}
+
+private:
+	const Platform *platform = nullptr;
+	gfx::Device *device = nullptr;
+
+	class AssetList {
+	public:
+		constexpr static u32 INITIAL_CAPACITY = 16;
+
+		AssetList()
+			: list()
+			, generations()
+			, free_indices()
+			, capacity()
+			, curr_id()
+		{
+			list.resize(INITIAL_CAPACITY);
+			generations.resize(INITIAL_CAPACITY);
+		}
+
+		~AssetList()
+		{
+		}
+
+		void destroy_all()
+		{
+			for (auto &asset : list)
+				delete asset;
+		}
+
+		AssetHandle add(Asset *asset)
+		{
+			u32 index = 0;
+
+			if (!free_indices.empty()) {
+				index = free_indices.top();
+				free_indices.pop();
+			} else {
+				index = curr_id++;
+				assert(index < list.size());
+			}
+
+			AssetHandle handle = {};
+			handle.index = index;
+			handle.generation = generations[index];
+
+			list[index] = asset;
+			generations[index]++;
+
+			asset->handle = handle;
+
+			return handle;
+		}
+
+		void remove(const AssetHandle &handle)
+		{
+			if (is_valid(handle)) {
+				delete list[handle.index];
+				list[handle.index] = nullptr;
+				free_indices.push(handle.index);
+			}
+		}
+
+		Asset *get(const AssetHandle &handle) const
+		{
+			assert(is_valid(handle));
+			if (!is_valid(handle))
+				return nullptr;
+			return list[handle.index];
+		}
+
+		bool is_valid(const AssetHandle &handle) const
+		{
+			return
+				(handle.index < list.size()) &&
+				(generations[handle.index] == (handle.generation + 1));
+		}
+
+		Vector<Asset *> list;
+		Vector<u32> generations;
+		Stack<u32> free_indices;
+		u64 capacity;
+		u32 curr_id;
+	};
+
+	AssetImporter importer;
+	HashMap<String, AssetHandle> path_to_handle;
+	AssetList assets;
+};
+
+template <typename T, typename ...Args>
+T *AssetManager::create_new_asset(const String &name, const String &path, Args &&...args)
+{
+	T *asset = new T(std::forward<Args>(args)...);
+	asset->handle = assets.add(asset);
+
+	return asset;
+}
+
+template <typename T>
+T *AssetManager::get_asset(const AssetHandle &handle)
+{
+	return assets.get(handle)->as<T>();
+}
+
+}

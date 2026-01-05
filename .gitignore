@@ -1,8 +1,0 @@
-build/
-.git/
-.idea/
-*.spv
-.DS_Store
-\#*.*\#
-*~
-*\.rdbg

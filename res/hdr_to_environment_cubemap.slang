@@ -40,6 +40,6 @@ float2 SampleSphericalMap(float3 v)
 float4 FragmentMain(VS_Output input) : SV_Target
 {
 	float2 uv = SampleSphericalMap(normalize(input.position));
-	float3 colour = bindless_images[args.hdr_image_id].Sample(bindless_samplers[args.linear_sampler_id], uv).rgb;
+    float3 colour = bindless_images[args.hdr_image_id].Sample(bindless_samplers[args.linear_sampler_id], uv).rgb;
 	return float4(colour, 1.);
 }

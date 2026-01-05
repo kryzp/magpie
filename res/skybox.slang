@@ -3,8 +3,8 @@
 #include "types.slang"
 
 struct Arguments {
-	FrameData *frame_data;
-	float3 *vertices;
+    FrameData *frame_data;
+    float3 *vertices;
 	uint cubemap;
 	uint sampler;
 };
@@ -22,15 +22,15 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID)
 {
 	VS_Output output;
 	output.position = args.vertices[vertex_id];
-	
+
 	output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(output.position, 1.));
 	output.sv_position = output.sv_position.xyww;
-	
+
 	return output;
 }
 
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-	return float4(bindless_cubes[args.cubemap].Sample(bindless_samplers[args.sampler], normalize(WorldToCubemap(input.position))).rgb, 1.);
+    return float4(bindless_cubes[args.cubemap].Sample(bindless_samplers[args.sampler], normalize(WorldToCubemap(input.position))).rgb, 1.);
 }

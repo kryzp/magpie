@@ -1,0 +1,29 @@
+#ifndef GFX_R3D_H
+#define GFX_R3D_H
+
+#include "../texture.h"
+#include "../buffer.h"
+#include "../model.h"
+#include "../camera.h"
+#include "../gpu_types.h"
+#include "../device.h"
+#include "../gbuffer.h"
+#include "../swapchain.h"
+#include "../render_scene.h"
+#include "../render_graph.h"
+
+struct gfx_render_graph;
+struct gfx_render_scene;
+
+struct gfx_r3d {	
+	struct gfx_texture brdf_lut_texture;
+	struct gfx_buffer frame_data_buffer;
+	struct gfx_mesh light_sphere_mesh;
+	struct gfx_environment_probe environment_probe;
+};
+
+void gfx_r3d_init(struct gfx_r3d *r3d, struct gfx_device *device, struct gfx_swapchain *swapchain);
+void gfx_r3d_destroy(struct gfx_r3d *r3d, struct gfx_device *device);
+void gfx_r3d_render(void *state, const struct gfx_render_context *ctx);
+
+#endif // GFX_R3D_H

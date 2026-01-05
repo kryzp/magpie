@@ -1,0 +1,3 @@
+/Users/kryzp/Documents/Projects/magpie_cpp/build/CMakeFiles/magpie.dir
+/Users/kryzp/Documents/Projects/magpie_cpp/build/CMakeFiles/edit_cache.dir
+/Users/kryzp/Documents/Projects/magpie_cpp/build/CMakeFiles/rebuild_cache.dir

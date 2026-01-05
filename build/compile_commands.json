@@ -1,0 +1,188 @@
+[
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/platform/macos/macos_main.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/platform/macos/macos_main.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/platform/macos/macos_main.cpp",
+  "output": "CMakeFiles/magpie.dir/src/platform/macos/macos_main.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/app.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/app.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/app.cpp",
+  "output": "CMakeFiles/magpie.dir/src/app.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/core/hash.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/core/hash.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/core/hash.cpp",
+  "output": "CMakeFiles/magpie.dir/src/core/hash.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/core/memory_arena.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/core/memory_arena.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/core/memory_arena.cpp",
+  "output": "CMakeFiles/magpie.dir/src/core/memory_arena.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/core/scratch.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/core/scratch.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/core/scratch.cpp",
+  "output": "CMakeFiles/magpie.dir/src/core/scratch.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/math/timer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/math/timer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/math/timer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/math/timer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/math/matrix.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/math/matrix.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/math/matrix.cpp",
+  "output": "CMakeFiles/magpie.dir/src/math/matrix.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/math/vec2.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/math/vec2.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/math/vec2.cpp",
+  "output": "CMakeFiles/magpie.dir/src/math/vec2.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/math/vec3.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/math/vec3.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/math/vec3.cpp",
+  "output": "CMakeFiles/magpie.dir/src/math/vec3.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/io/filesystem.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/io/filesystem.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/io/filesystem.cpp",
+  "output": "CMakeFiles/magpie.dir/src/io/filesystem.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/assets/assets.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/assets/assets.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/assets/assets.cpp",
+  "output": "CMakeFiles/magpie.dir/src/assets/assets.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/assets/texture_serializer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/assets/texture_serializer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/assets/texture_serializer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/assets/texture_serializer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/assets/shader_serializer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/assets/shader_serializer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/assets/shader_serializer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/assets/shader_serializer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/assets/model_serializer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/assets/model_serializer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/assets/model_serializer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/assets/model_serializer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/job/job.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/job/job.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/job/job.cpp",
+  "output": "CMakeFiles/magpie.dir/src/job/job.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/bindless.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/bindless.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/bindless.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/bindless.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/camera.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/camera.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/camera.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/camera.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/command_buffer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/command_buffer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/command_buffer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/command_buffer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/command_pool.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/command_pool.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/command_pool.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/command_pool.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/device.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/device.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/device.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/device.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/gpu_buffer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/gpu_buffer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/gpu_buffer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/gpu_buffer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/queue.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/queue.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/queue.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/queue.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/render_graph.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/render_graph.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/render_graph.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/render_graph.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/render_scene.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/render_scene.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/render_scene.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/render_scene.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/sync.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/sync.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/sync.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/sync.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/model.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/model.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/model.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/model.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/renderers/skybox_renderer.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/renderers/skybox_renderer.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/renderers/skybox_renderer.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/renderers/skybox_renderer.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/graphics/renderers/post_processing.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/renderers/post_processing.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/graphics/renderers/post_processing.cpp",
+  "output": "CMakeFiles/magpie.dir/src/graphics/renderers/post_processing.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/ext/vk_mem_alloc.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/ext/vk_mem_alloc.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/ext/vk_mem_alloc.cpp",
+  "output": "CMakeFiles/magpie.dir/src/ext/vk_mem_alloc.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/ext/spirv_reflect.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/ext/spirv_reflect.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/ext/spirv_reflect.cpp",
+  "output": "CMakeFiles/magpie.dir/src/ext/spirv_reflect.cpp.o"
+},
+{
+  "directory": "/Users/kryzp/Documents/Projects/magpie_cpp/build",
+  "command": "/usr/bin/clang++ -DSPIRV_REFLECT_USE_SYSTEM_SPIRV_H -I/Users/kryzp/Documents/Projects/magpie_cpp/src -isystem /Users/kryzp/VulkanSDK/1.4.335.1/macOS/include -isystem /opt/homebrew/include  -std=c++20 -g -std=gnu++20 -arch arm64 -o CMakeFiles/magpie.dir/src/ext/volk.cpp.o -c /Users/kryzp/Documents/Projects/magpie_cpp/src/ext/volk.cpp",
+  "file": "/Users/kryzp/Documents/Projects/magpie_cpp/src/ext/volk.cpp",
+  "output": "CMakeFiles/magpie.dir/src/ext/volk.cpp.o"
+}
+]
