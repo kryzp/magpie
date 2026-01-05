@@ -1,0 +1,9 @@
+build/
+.git/
+.idea/
+.vscode/
+*.spv
+.DS_Store
+\#*.*\#
+*~
+*\.rdbg
