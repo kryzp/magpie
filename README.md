@@ -17,7 +17,7 @@ TODO (It looks super cool and awesome trust me).
 	- Material system
 	- Mesh merging
 	- Compute Frustum Culling
-	- Render Graph that handles resource management, pipeline barriers and synchronization
+	- Render Graph that handles resource management, pipeline barriers and synchronization inspired by "Render graphs and Vulkan — a deep dive" and "FrameGraph: Extensible Rendering Architecture in Frostbite"
 	- Indirect Deferred Rendering
 	- Parallel threaded job system, with low-latency spin mode
 
