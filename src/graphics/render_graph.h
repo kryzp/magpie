@@ -417,8 +417,7 @@ private:
 
 	Vector<RenderStage> stages;
 
-	// TODO: Switch to using handles for resources, then don't need to dynamically allocate them.
-	Vector<RenderResource *> resources;
+	Vector<RenderResource> resources;
 
 	Vector<bool> physical_slot_used;
 	Vector<ResourceAttributes> physical_attributes;

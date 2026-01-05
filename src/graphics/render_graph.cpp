@@ -159,9 +159,6 @@ void RenderGraph::init(Device *device)
 
 void RenderGraph::destroy()
 {
-	for (auto &resource : resources)
-		delete resource;
-
 	for (auto &texture : physical_textures)
 		device->destroy_texture(texture);
 
@@ -511,8 +508,8 @@ ResourceAttributes RenderGraph::get_resource_attributes(const RenderResource &re
 RenderResourceHandle RenderGraph::create_texture_resource(const AttachmentInfo &info)
 {
 	u32 index = resources.size();
-	RenderResource *resource = resources.emplace_back(new RenderResource(RenderResource::KIND_TEXTURE, index));
-	resource->texture_info = info;
+	RenderResource &resource = resources.emplace_back(RenderResource::KIND_TEXTURE, index);
+	resource.texture_info = info;
 
 	RenderResourceHandle handle;
 	handle.index = index;
@@ -523,8 +520,8 @@ RenderResourceHandle RenderGraph::create_texture_resource(const AttachmentInfo &
 RenderResourceHandle RenderGraph::create_buffer_resource(const GpuBufferInfo &info)
 {
 	u32 index = resources.size();
-	RenderResource *resource = resources.emplace_back(new RenderResource(RenderResource::KIND_BUFFER, index));
-	resource->buffer_info = info;
+	RenderResource &resource = resources.emplace_back(RenderResource::KIND_BUFFER, index);
+	resource.buffer_info = info;
 
 	RenderResourceHandle handle;
 	handle.index = index;
@@ -534,7 +531,7 @@ RenderResourceHandle RenderGraph::create_buffer_resource(const GpuBufferInfo &in
 
 RenderResource &RenderGraph::get_resource(const RenderResourceHandle &handle)
 {
-	return *resources[handle.index];
+	return resources[handle.index];
 }
 
 Texture &RenderGraph::get_physical_texture(const RenderResource &resource)
@@ -672,7 +669,7 @@ void RenderGraph::setup_attachments()
 void RenderGraph::setup_aliases()
 {
     for (int i = 0; i < resources.size(); i++) {
-        RenderResource &child = *resources[i];
+        RenderResource &child = resources[i];
 
 		if (child.alias_of.parent.index == RENDER_INVALID_INDEX)
 			continue;
