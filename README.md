@@ -22,7 +22,7 @@ TODO (It looks super cool and awesome trust me).
 	- Parallel threaded job system, with low-latency spin mode
 
 ### Ideas / Todo List
-	- Generic Job System (scratch arenas per thread?)
+	- More sophisticated debug logging / tracing system
 	- ImGui Integration
 	- CPU and GPU profilers (with ImGui visualisation)
 	- Volumetrics

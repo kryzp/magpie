@@ -70,7 +70,7 @@ struct AssetMetaData {
 };
 
 #define AST_DEFINE_ASSET(type) \
-	static AssetType get_static_type() { return type; } \
+	static AssetType get_asset_type_static() { return type; } \
 	virtual AssetType get_asset_type() const override { return type; }
 
 struct Asset {

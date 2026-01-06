@@ -8,6 +8,8 @@
 #include <cfloat>
 #include <cassert>
 
+#include <memory>
+
 #define STRINGIFY(x) #x
 
 #define debug_log(m, ...)				\
@@ -54,3 +56,21 @@ typedef uint8_t  b8;
 typedef uint16_t b16;
 typedef uint32_t b32;
 typedef uint64_t b64;
+
+template <typename T> using Unique = std::unique_ptr<T>;
+
+template <typename T, typename... TArgs>
+constexpr Unique<T> create_scope(TArgs&& ... args)
+{
+	return std::make_unique<T>(std::forward<TArgs>(args)...);
+}
+
+template <typename T> using Ref = std::shared_ptr<T>;
+
+template <typename T, typename... TArgs>
+constexpr Ref<T> create_ref(TArgs&& ... args)
+{
+	return std::make_shared<T>(std::forward<TArgs>(args)...);
+}
+
+template <typename T> using Weak = std::weak_ptr<T>;
