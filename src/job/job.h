@@ -82,7 +82,7 @@ public:
 	JobSystem();
 	~JobSystem();
 
-	void init(u32 initial_worker_count);
+	void start(u32 initial_worker_count);
 	void shutdown();
 
 	bool is_spin_mode_enabled() const;

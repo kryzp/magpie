@@ -502,7 +502,7 @@ void Device::init(const Platform &platform)
 	depth_format = find_graphics_depth_format(physical_device);
 
 	// Locate the graphics queue.
-	// TODO: move this init stuff into the queue class!!!!!
+	// TODO: move this start stuff into the queue class!!!!!
 	{
 		graphics_queue.device = this;
 
