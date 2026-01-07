@@ -31,6 +31,8 @@ public:
 
 	void wait_idle() const;
 
+	void reset_command_pool();
+
 	void present(const Swapchain &swapchain, const VkSemaphore &wait);
 
 	CommandBuffer begin_submit(VkFence fence);

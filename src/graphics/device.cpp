@@ -816,7 +816,7 @@ VkSemaphore Device::get_current_image_available_semaphore()
 
 CommandBuffer Device::begin_frame(Swapchain &swapchain)
 {
-	reset_command_pool(graphics_queue.get_current_sync_data().command_pool);
+	graphics_queue.reset_command_pool();
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;

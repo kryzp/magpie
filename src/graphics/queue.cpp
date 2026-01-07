@@ -28,6 +28,11 @@ void Queue::wait_idle() const
 	vkQueueWaitIdle(handle);
 }
 
+void Queue::reset_command_pool()
+{
+	device->reset_command_pool(get_current_sync_data().command_pool);
+}
+
 void Queue::present(const Swapchain &swapchain, const VkSemaphore &wait)
 {
 	u32 image_index = swapchain.get_current_texture_index();
