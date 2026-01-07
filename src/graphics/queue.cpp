@@ -28,7 +28,7 @@ void Queue::wait_idle() const
 	vkQueueWaitIdle(handle);
 }
 
-void Queue::reset_command_pool()
+void Queue::next_frame()
 {
 	device->reset_command_pool(get_current_sync_data().command_pool);
 }
@@ -83,8 +83,6 @@ void Queue::end_submit(
 	
 	SyncData &current_sync = get_current_sync_data();
 
-	fence = fence != VK_NULL_HANDLE ? fence : current_sync.instant_submit_fence;
-
 	VkCommandBufferSubmitInfo buffer_info = {};
 	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 	buffer_info.deviceMask = 0;
@@ -112,6 +110,8 @@ void Queue::end_submit(
 		submit_info.waitSemaphoreInfoCount = 0;
 		submit_info.pWaitSemaphoreInfos = nullptr;
 	}
+
+	fence = fence != VK_NULL_HANDLE ? fence : current_sync.instant_submit_fence;
 
 	GFX_VK_CHECK(
 		vkQueueSubmit2(handle, 1, &submit_info, fence),

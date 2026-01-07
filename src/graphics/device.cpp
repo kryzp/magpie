@@ -831,11 +831,9 @@ CommandBuffer Device::begin_frame(Swapchain &swapchain)
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		debug_log_crash("Failed to acquire next image in swapchain.");
 	
-	graphics_queue.reset_command_pool();
+	graphics_queue.next_frame();
 
-	CommandBuffer cmd = graphics_queue.begin_submit(per_frame_data[current_frame_index].in_flight_fence);
-
-	return cmd;
+	return graphics_queue.begin_submit(per_frame_data[current_frame_index].in_flight_fence);
 }
 
 void Device::end_frame(const Swapchain &swapchain, CommandBuffer &cmd)
