@@ -18,12 +18,12 @@
 
 #include "app.h"
 
-static SDL_Window *win32_sdl_window = nullptr;
-static Platform win32_platform = {};
+static SDL_Window *macos_sdl_window = nullptr;
+static Platform macos_platform = {};
 
 static bool macos_create_vulkan_surface(void *instance, void *surface_pointer)
 {
-	return SDL_Vulkan_CreateSurface(win32_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
+	return SDL_Vulkan_CreateSurface(macos_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
 }
 
 static void macos_destroy_vulkan_surface(void *instance, void *surface)
@@ -43,33 +43,33 @@ static void macos_close_all_gamepads()
 
 static void macos_set_window_size(u32 width, u32 height)
 {
-	SDL_SetWindowSize(win32_sdl_window, width, height);
+	SDL_SetWindowSize(macos_sdl_window, width, height);
 
-	SDL_GetWindowSizeInPixels(win32_sdl_window,
-		&win32_platform.window_pixel_width,
-		&win32_platform.window_pixel_height
+	SDL_GetWindowSizeInPixels(macos_sdl_window,
+		&macos_platform.window_pixel_width,
+		&macos_platform.window_pixel_height
 	);
 }
 
 static void macos_set_window_fullscreen(bool b)
 {
-	SDL_SetWindowFullscreen(win32_sdl_window, b);
+	SDL_SetWindowFullscreen(macos_sdl_window, b);
 }
 
 static void macos_set_window_borderless(bool b)
 {
-	SDL_SetWindowBordered(win32_sdl_window, !b);
+	SDL_SetWindowBordered(macos_sdl_window, !b);
 }
 
 static void macos_set_mouse_position(u32 x, u32 y)
 {
-	win32_platform.mouse_position = Vec2(x, y);
+	macos_platform.mouse_position = Vec2(x, y);
 
-	SDL_WarpMouseInWindow(win32_sdl_window, x, y);
+	SDL_WarpMouseInWindow(macos_sdl_window, x, y);
 
 	SDL_GetGlobalMouseState(
-		&win32_platform.mouse_screen_position.x,
-		&win32_platform.mouse_screen_position.y
+		&macos_platform.mouse_screen_position.x,
+		&macos_platform.mouse_screen_position.y
 	);
 }
 
@@ -152,59 +152,59 @@ static void macos_open_in_explorer(const char *path)
 
 static void init_platform()
 {
-	win32_platform.window_title = DEFAULT_WINDOW_TITLE;
+	macos_platform.window_title = DEFAULT_WINDOW_TITLE;
 
-	win32_platform.window_width = DEFAULT_WINDOW_WIDTH;
-	win32_platform.window_height = DEFAULT_WINDOW_HEIGHT;
+	macos_platform.window_width = DEFAULT_WINDOW_WIDTH;
+	macos_platform.window_height = DEFAULT_WINDOW_HEIGHT;
 
-	SDL_GetWindowSizeInPixels(win32_sdl_window,
-		&win32_platform.window_pixel_width,
-		&win32_platform.window_pixel_height
+	SDL_GetWindowSizeInPixels(macos_sdl_window,
+		&macos_platform.window_pixel_width,
+		&macos_platform.window_pixel_height
 	);
 
-	win32_platform.window_opacity = 1.f;
+	macos_platform.window_opacity = 1.f;
 
-	win32_platform.fullscreen = false;
-	win32_platform.borderless = false;
+	macos_platform.fullscreen = false;
+	macos_platform.borderless = false;
 
-	win32_platform.target_fps = 120;
-	win32_platform.current_time = 0.f;
+	macos_platform.target_fps = 120;
+	macos_platform.current_time = 0.f;
 
-	win32_platform.cursor_visible = true;
-	win32_platform.cursor_locked = false;
+	macos_platform.cursor_visible = true;
+	macos_platform.cursor_locked = false;
 
-	win32_platform.set_window_size = macos_set_window_size;
-	win32_platform.set_window_fullscreen = macos_set_window_fullscreen;
-	win32_platform.set_window_borderless = macos_set_window_borderless;
+	macos_platform.set_window_size = macos_set_window_size;
+	macos_platform.set_window_fullscreen = macos_set_window_fullscreen;
+	macos_platform.set_window_borderless = macos_set_window_borderless;
 
-	win32_platform.set_mouse_position = macos_set_mouse_position;
+	macos_platform.set_mouse_position = macos_set_mouse_position;
 
-	win32_platform.get_ticks = SDL_GetTicks;
-	win32_platform.get_performance_counter = SDL_GetPerformanceCounter;
-	win32_platform.get_performance_frequency = SDL_GetPerformanceFrequency;
+	macos_platform.get_ticks = SDL_GetTicks;
+	macos_platform.get_performance_counter = SDL_GetPerformanceCounter;
+	macos_platform.get_performance_frequency = SDL_GetPerformanceFrequency;
 
-	win32_platform.file_delete = macos_file_delete;
-	win32_platform.file_exists = macos_file_exists;
+	macos_platform.file_delete = macos_file_delete;
+	macos_platform.file_exists = macos_file_exists;
 
-	win32_platform.dir_create = macos_dir_create;
-	win32_platform.dir_delete = macos_dir_delete;
-	win32_platform.dir_exists = macos_dir_exists;
+	macos_platform.dir_create = macos_dir_create;
+	macos_platform.dir_delete = macos_dir_delete;
+	macos_platform.dir_exists = macos_dir_exists;
 
-	win32_platform.stream_from_file = macos_stream_from_file;
-	win32_platform.stream_from_memory = macos_stream_from_memory;
-	win32_platform.stream_from_const_memory = macos_stream_from_const_memory;
-	win32_platform.stream_read = macos_stream_read;
-	win32_platform.stream_write = macos_stream_write;
-	win32_platform.stream_seek = macos_stream_seek;
-	win32_platform.stream_size = macos_stream_size;
-	win32_platform.stream_position = macos_stream_position;
-	win32_platform.stream_close = macos_stream_close;
+	macos_platform.stream_from_file = macos_stream_from_file;
+	macos_platform.stream_from_memory = macos_stream_from_memory;
+	macos_platform.stream_from_const_memory = macos_stream_from_const_memory;
+	macos_platform.stream_read = macos_stream_read;
+	macos_platform.stream_write = macos_stream_write;
+	macos_platform.stream_seek = macos_stream_seek;
+	macos_platform.stream_size = macos_stream_size;
+	macos_platform.stream_position = macos_stream_position;
+	macos_platform.stream_close = macos_stream_close;
 
-	win32_platform.open_in_explorer = macos_open_in_explorer;
+	macos_platform.open_in_explorer = macos_open_in_explorer;
 
-	win32_platform.create_vulkan_surface = macos_create_vulkan_surface;
-	win32_platform.destroy_vulkan_surface = macos_destroy_vulkan_surface;
-	win32_platform.get_vulkan_instance_extensions = SDL_Vulkan_GetInstanceExtensions;
+	macos_platform.create_vulkan_surface = macos_create_vulkan_surface;
+	macos_platform.destroy_vulkan_surface = macos_destroy_vulkan_surface;
+	macos_platform.get_vulkan_instance_extensions = SDL_Vulkan_GetInstanceExtensions;
 }
 
 int main(int argc, char **argv)
@@ -228,23 +228,23 @@ int main(int argc, char **argv)
 		SDL_WINDOW_VULKAN |
 		SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	win32_sdl_window = SDL_CreateWindow(
+	macos_sdl_window = SDL_CreateWindow(
 		DEFAULT_WINDOW_TITLE,
 		DEFAULT_WINDOW_WIDTH,
 		DEFAULT_WINDOW_HEIGHT,
 		window_flags
 	);
 
-	if (!win32_sdl_window) {
+	if (!macos_sdl_window) {
 		debug_log_crash("Failed to create SDL window: %s", SDL_GetError());
 		return -1;
 	}
 
 	init_platform();
 
-	Platform prev_st = win32_platform;
+	Platform prev_st = macos_platform;
 
-	App app(win32_platform);
+	App app(macos_platform);
 	app.init();
 
 	debug_log("Entering main loop...");
@@ -264,19 +264,19 @@ int main(int argc, char **argv)
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
-				win32_platform.kb_down[ev.key.scancode] = true;
+				macos_platform.kb_down[ev.key.scancode] = true;
 				break;
 
 			case SDL_EVENT_KEY_UP:
-				win32_platform.kb_down[ev.key.scancode] = false;
+				macos_platform.kb_down[ev.key.scancode] = false;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
-				win32_platform.mb_down[ev.button.button] = true;
+				macos_platform.mb_down[ev.button.button] = true;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
-				win32_platform.mb_down[ev.button.button] = false;
+				macos_platform.mb_down[ev.button.button] = false;
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION: {
@@ -285,29 +285,29 @@ int main(int argc, char **argv)
 
 				SDL_GetGlobalMouseState(&spx, &spy);
 
-				win32_platform.mouse_position = Vec2(ev.motion.x, ev.motion.y);
-				win32_platform.mouse_delta = Vec2(ev.motion.xrel, ev.motion.yrel);
-				win32_platform.mouse_screen_position = Vec2(spx, spy);
+				macos_platform.mouse_position = Vec2(ev.motion.x, ev.motion.y);
+				macos_platform.mouse_delta = Vec2(ev.motion.xrel, ev.motion.yrel);
+				macos_platform.mouse_screen_position = Vec2(spx, spy);
 			} break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
-				win32_platform.mouse_wheel = Vec2(ev.wheel.x, ev.wheel.y);
+				macos_platform.mouse_wheel = Vec2(ev.wheel.x, ev.wheel.y);
 				break;
 			}
 		}
 
 		for (int i = 0; i < KEYBOARD_KEY_MAX_ENUM; i++) {
-			win32_platform.kb_pressed [i] =  win32_platform.kb_down[i] && !prev_st.kb_down[i];
-			win32_platform.kb_released[i] = !win32_platform.kb_down[i] &&  prev_st.kb_down[i];
+			macos_platform.kb_pressed [i] =  macos_platform.kb_down[i] && !prev_st.kb_down[i];
+			macos_platform.kb_released[i] = !macos_platform.kb_down[i] &&  prev_st.kb_down[i];
 		}
 
 		for (int i = 0; i < MBUTTON_MAX_ENUM; i++) {
-			win32_platform.mb_pressed [i] =  win32_platform.mb_down[i] && !prev_st.mb_down[i];
-			win32_platform.mb_released[i] = !win32_platform.mb_down[i] &&  prev_st.mb_down[i];
+			macos_platform.mb_pressed [i] =  macos_platform.mb_down[i] && !prev_st.mb_down[i];
+			macos_platform.mb_released[i] = !macos_platform.mb_down[i] &&  prev_st.mb_down[i];
 		}
 
 		for (int i = 0; i < MAX_GAMEPADS; i++) {
-			GamepadState *st = &win32_platform.gamepads[i];
+			GamepadState *st = &macos_platform.gamepads[i];
 			GamepadState *p_st = &prev_st.gamepads[i];
 
 			for (int j = 0; j < GAMEPAD_BUTTON_MAX_ENUM; j++) {
@@ -319,14 +319,14 @@ int main(int argc, char **argv)
 		if (app.tick())
 			break;
 
-		prev_st = win32_platform;
+		prev_st = macos_platform;
 	}
 
 	app.destroy();
 
 	macos_close_all_gamepads();
 
-	SDL_DestroyWindow(win32_sdl_window);
+	SDL_DestroyWindow(macos_sdl_window);
 	SDL_Quit();
 
 	return 0;
