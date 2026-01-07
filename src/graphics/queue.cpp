@@ -28,7 +28,7 @@ void Queue::wait_idle() const
 	vkQueueWaitIdle(handle);
 }
 
-void Queue::reset_command_pool()
+void Queue::next_frame()
 {
 	device->reset_command_pool(get_current_sync_data().command_pool);
 }
