@@ -14,7 +14,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 
 	bool failed_to_load = false;
 
-	Vector<String> paths = {};
+	Vector<String> paths;
 
 	// TODO: This is just a temporary solution.
 	//       In the future, create an intermediary

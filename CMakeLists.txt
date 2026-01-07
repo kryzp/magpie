@@ -1,38 +1,38 @@
 cmake_minimum_required(VERSION 3.10)
 project(magpie CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
 
 set(CMAKE_BUILD_TYPE Debug)
 
 set(CODE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+# Compiler Options.
+set(COMPILE_OPTIONS
+	-fno-rtti
+	-fexceptions
+	-Wno-unused-parameter
+	-Wno-deprecated-declarations
+	-Wno-missing-braces
+	-Wno-sign-compare
+	-Wno-pointer-sign
+	-Wno-switch
+	-Wno-missing-field-initializers
+	-Wno-nullability-completeness
+	-Wno-missing-field-initializers
+	-Wno-unused-parameter
+	-Wno-unused-variable
+	-Wno-unused-private-field
+	-Wno-switch
+	-Wno-c++98-compat
+	-Wno-c++98-compat-pedantic
+)
+
 if(WIN32)
 
 	# Tell volk we're compiling for Win32.
 	set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
-
-	# Compiler options.
-	set(COMMON_COMPILE_OPTIONS
-		/FC
-		/GR-
-		/EHa-
-		/nologo
-		/Zi
-		/Od
-		/W4
-	)
-
-	# Suppressed warnings.
-	set(SUPPRESSED_WARNINGS
-		/wd4201
-		/wd4018
-		/wd4996
-		/wd4100
-		/wd4244
-	)
 
 	# Include directories.
 	include_directories(
@@ -54,36 +54,16 @@ elseif(APPLE)
 	# Tell volk we're compiling for macOS.
 	set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_MACOS_MVK)
 
-	# Compiler Options.
-	set(COMPILE_OPTIONS
-		-Wall
-		-Wextra
-		-fno-rtti
-		-fexceptions
-		-Wno-unused-parameter
-		-Wno-deprecated-declarations
-		-Wno-missing-braces
-		-Wno-sign-compare
-		-Wno-pointer-sign
-		-Wno-switch
-		-Wno-missing-field-initializers
-		-Wno-nullability-completeness
-		-Wno-missing-field-initializers
-		-Wno-unused-parameter
-		-Wno-unused-variable
-		-Wno-unused-private-field
-		-Wno-switch
-	)
-
 	# Find required packages.
 	find_package(Assimp REQUIRED)
 	find_package(Vulkan REQUIRED)
 	find_package(SDL3 REQUIRED)
+
 endif()
 
 # Program.
 add_executable(magpie
-	"${CODE_DIR}/platform/macos/macos_main.cpp"
+	"${CODE_DIR}/platform/win32/win32_main.cpp"
 
 	"${CODE_DIR}/app.cpp"
 
@@ -127,8 +107,15 @@ add_executable(magpie
 
 target_compile_definitions(magpie PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
 target_include_directories(magpie PRIVATE "${CODE_DIR}" "${Vulkan_INCLUDE_DIRS}")
-target_link_libraries(magpie SDL3::SDL3 Vulkan::Vulkan assimp::assimp slang)
-target_compile_options(magpie PRIVATE ${COMMON_COMPILE_OPTIONS} ${SUPPRESSED_WARNINGS})
+
+if(WIN32)
+	target_link_libraries(magpie assimp-vc143-mt volk slang SDL3)
+	set_property(TARGET magpie PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+elseif(APPLE)
+	target_link_libraries(magpie SDL3 volk assimp slang)
+endif()
+
+target_compile_options(magpie PRIVATE ${COMPILE_OPTIONS})
 
 # Output directories.
 set_target_properties(magpie PROPERTIES

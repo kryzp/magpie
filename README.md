@@ -23,6 +23,7 @@ TODO (It looks super cool and awesome trust me).
 
 ### Ideas / Todo List
 	- More sophisticated debug logging / tracing system
+	- Switch to using timeline semaphores instead of fences
 	- ImGui Integration
 	- CPU and GPU profilers (with ImGui visualisation)
 	- Volumetrics

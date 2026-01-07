@@ -12,30 +12,29 @@
 
 #define STRINGIFY(x) #x
 
-#define debug_log(m, ...)				\
-	do {						\
+#define debug_log(m, ...)					\
+	do {									\
 		printf((m "\n"), ##__VA_ARGS__);	\
 	} while (0)
 
 #define debug_log_crash(m, ...)			\
-	do {					\
+	do {								\
 		debug_log(m, ##__VA_ARGS__);	\
-		assert(0);			\
+		assert(0);						\
 	} while (0)
 
-#define memory_copy                memcpy
-#define memory_set                 memset
-#define memory_move                memmove
-#define memory_zero_struct(s)      memset((s), 0, sizeof(*(s)))
-#define cstr_copy                  strcpy
-#define cstr_copy_n                strncpy
-#define cstr_compare               strcmp
-#define cstr_length                strlen
-#define cstr_to_int(s)             ((int)atoi(s))
-#define cstr_to_float(s)           ((float)atof(s))
-#define array_size(a)              (sizeof(a) / sizeof(*(a)))
-
-#define MEMORY_ALIGN_UP(value, alignment) (((value) + (alignment) - 1) & ~((alignment) - 1))
+#define memory_copy                              memcpy
+#define memory_set                               memset
+#define memory_move                              memmove
+#define memory_zero_struct(s)                    memset((s), 0, sizeof(*(s)))
+#define cstr_copy                                strcpy
+#define cstr_copy_n                              strncpy
+#define cstr_compare                             strcmp
+#define cstr_length                              strlen
+#define cstr_to_int(s)                           ((int)atoi(s))
+#define cstr_to_float(s)                         ((float)atof(s))
+#define array_size(a)                            (sizeof(a) / sizeof(*(a)))
+#define memory_align_up(value, alignment)        (((value) + (alignment) - 1) & ~((alignment) - 1))
 
 #define BYTES(n) (n)
 #define KILOBYTES(n) (BYTES(n)     * 1024ULL)
@@ -60,7 +59,7 @@ typedef uint64_t b64;
 template <typename T> using Unique = std::unique_ptr<T>;
 
 template <typename T, typename... TArgs>
-constexpr Unique<T> create_scope(TArgs&& ... args)
+constexpr Unique<T> create_unique(TArgs&& ... args)
 {
 	return std::make_unique<T>(std::forward<TArgs>(args)...);
 }

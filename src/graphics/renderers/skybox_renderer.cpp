@@ -38,15 +38,14 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets, RenderGraph
 
 	Mat4 capture_projection_matrix = Mat4::perspective(90.f, 1.f, 0.1f, 10.f);
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 6; i++)
 		capture_view_matrices[i] = capture_projection_matrix * capture_view_matrices[i];
-	}
 
 	cubemap_capture_transforms = device->alloc_gpu_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(Mat4) * 6
+		sizeof(capture_view_matrices)
 	);
 
 	cubemap_capture_transforms.write(capture_view_matrices, sizeof(capture_view_matrices), 0);

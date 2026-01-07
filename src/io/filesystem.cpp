@@ -9,14 +9,14 @@ using namespace io;
 String path::get_file_name(const String &path)
 {
 	std::filesystem::path file_path(path);
-	std::string name = file_path.filename();
+	std::string name = file_path.filename().string();
 	return name;
 }
 
 String path::get_file_extension(const String &path)
 {
 	std::filesystem::path file_path(path);
-	std::string ext = file_path.extension();
+	std::string ext = file_path.extension().string();
 	return ext;
 }
 

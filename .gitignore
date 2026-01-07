@@ -2,8 +2,10 @@ build/
 .git/
 .idea/
 .vscode/
+.vs/
 *.spv
 .DS_Store
 \#*.*\#
 *~
 *\.rdbg
+CMakeSettings.json

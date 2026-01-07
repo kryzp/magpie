@@ -35,8 +35,8 @@ struct BlendState {
 
 	BlendState()
 		: enabled(true)
-		, constants(0.f, 0.f, 0.f, 0.f)
-		, write_mask(true, true, true, true)
+		, constants{0.f, 0.f, 0.f, 0.f}
+		, write_mask{true, true, true, true}
 	    , colour(VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO)
         , alpha(VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
         , logic_op_enabled(false)

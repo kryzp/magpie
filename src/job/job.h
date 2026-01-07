@@ -54,12 +54,12 @@ struct JobDecl {
 	JobCounter *counter;
 };
 
-class JobList {
+class JobQueue {
 	constexpr static u32 MAX_CAPACITY = 512;
 
 public:
-	JobList();
-	~JobList();
+	JobQueue();
+	~JobQueue();
 
 	void add_job(const JobDecl &decl);
 	JobDecl *get_job(u32 index);
@@ -95,7 +95,7 @@ public:
 	
 	static u32 get_current_worker_id();
 
-	void parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority = PRIORITY_LOW);
+	void parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority = PRIORITY_LOW, u32 batch_size = 64);
 
 	void kick_job(const JobDecl &decl);
 
@@ -112,7 +112,7 @@ private:
 	u32 worker_count;
 	JobWorker *workers;
 
-	JobList jobs;
+	JobQueue jobs;
 
 	std::atomic<bool> running;
 	std::mutex mutex;

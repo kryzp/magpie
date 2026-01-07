@@ -28,25 +28,12 @@
 		VkResult _gfx_vk_check_result = (fn); \
 		if (_gfx_vk_check_result != VK_SUCCESS) \
 			debug_log_crash(msg " (%d)", _gfx_vk_check_result); \
-	} while (0);
+	} while (0)
 
 namespace gfx
 {
 
-constexpr u32 FRAMES_IN_FLIGHT = 3;
-
 class Device {
-
-	// TODO: Should be part of the Queue
-	struct SyncData {
-		CommandPool command_pool;
-
-		VkFence in_flight_fence;
-		VkFence instant_submit_fence;
-
-		VkSemaphore image_available_semaphore;
-		VkSemaphore render_finished_semaphore;
-	};
 
 public:
 	Device();
@@ -59,15 +46,13 @@ public:
 	void wait_for_fence(VkFence fence);
 	void reset_fence(VkFence fence);
 
-	VkSemaphore get_current_render_finished_semaphore();
-	VkSemaphore get_current_image_available_semaphore();
-
-	void acquire_next_image(Swapchain &swapchain);
+	void destroy_fence(VkFence fence);
+	void destroy_semaphore(VkSemaphore semaphore);
 
 	// ---
 
-	CommandBuffer begin_present(Swapchain &swapchain);
-	void end_present(const Swapchain &swapchain, CommandBuffer &cmd);
+	CommandBuffer begin_frame(Swapchain &swapchain);
+	void end_frame(const Swapchain &swapchain, CommandBuffer &cmd);
 
 	CommandBuffer begin_submit();
 	void end_submit(CommandBuffer &cmd);
@@ -192,10 +177,8 @@ private:
 	void destroy_bindless();
 	void apply_bindless_updates();
 
-	SyncData &get_current_sync_data()
-	{
-		return frames[current_frame_index];
-	}
+	VkSemaphore get_current_render_finished_semaphore();
+	VkSemaphore get_current_image_available_semaphore();
 
 	VkInstance instance;
 	VkDevice device;
@@ -213,7 +196,14 @@ private:
 	bool has_validation_layers;
 
 	u32 current_frame_index;
-	SyncData frames[FRAMES_IN_FLIGHT];
+
+	struct PerFrameData {
+		VkFence in_flight_fence;
+		VkSemaphore image_available_semaphore;
+		VkSemaphore render_finished_semaphore;
+	};
+
+	PerFrameData per_frame_data[FRAMES_IN_FLIGHT];
 
 	Queue graphics_queue;
 

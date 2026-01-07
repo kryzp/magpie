@@ -4,10 +4,14 @@
 
 #include <filesystem>
 
-#include <sys/types.h>
-#include <sys/event.h>
-#include <sys/time.h>
-#include <sys/stat.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shellapi.h>
+
+// minwindef.h wtf???
+// What stupid programmer decided to make these defines global ffs.
+#undef near
+#undef far
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -21,27 +25,27 @@
 static SDL_Window *win32_sdl_window = nullptr;
 static Platform win32_platform = {};
 
-static bool macos_create_vulkan_surface(void *instance, void *surface_pointer)
+static bool win32_create_vulkan_surface(void *instance, void *surface_pointer)
 {
 	return SDL_Vulkan_CreateSurface(win32_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
 }
 
-static void macos_destroy_vulkan_surface(void *instance, void *surface)
+static void win32_destroy_vulkan_surface(void *instance, void *surface)
 {
 	SDL_Vulkan_DestroySurface((VkInstance)instance, (VkSurfaceKHR)surface, nullptr);
 }
 
-static void macos_reconnect_all_gamepads()
+static void win32_reconnect_all_gamepads()
 {
 	// TODO
 }
 
-static void macos_close_all_gamepads()
+static void win32_close_all_gamepads()
 {
 	// TODO
 }
 
-static void macos_set_window_size(u32 width, u32 height)
+static void win32_set_window_size(u32 width, u32 height)
 {
 	SDL_SetWindowSize(win32_sdl_window, width, height);
 
@@ -51,17 +55,17 @@ static void macos_set_window_size(u32 width, u32 height)
 	);
 }
 
-static void macos_set_window_fullscreen(bool b)
+static void win32_set_window_fullscreen(bool b)
 {
 	SDL_SetWindowFullscreen(win32_sdl_window, b);
 }
 
-static void macos_set_window_borderless(bool b)
+static void win32_set_window_borderless(bool b)
 {
 	SDL_SetWindowBordered(win32_sdl_window, !b);
 }
 
-static void macos_set_mouse_position(u32 x, u32 y)
+static void win32_set_mouse_position(u32 x, u32 y)
 {
 	win32_platform.mouse_position = Vec2(x, y);
 
@@ -73,81 +77,79 @@ static void macos_set_mouse_position(u32 x, u32 y)
 	);
 }
 
-static bool macos_file_delete(const char *path)
+static bool win32_file_delete(const char *path)
 {
 	return std::filesystem::remove(path);
 }
 
-static bool macos_file_exists(const char *path)
+static bool win32_file_exists(const char *path)
 {
 	return std::filesystem::exists(path);
 }
 
-static bool macos_dir_create(const char *path)
+static bool win32_dir_create(const char *path)
 {
 	return std::filesystem::create_directory(path);
 }
 
-static bool macos_dir_delete(const char *path)
+static bool win32_dir_delete(const char *path)
 {
 	return std::filesystem::remove_all(path) > 0;
 }
 
-static bool macos_dir_exists(const char *path)
+static bool win32_dir_exists(const char *path)
 {
 	return std::filesystem::is_directory(path);
 }
 
-static void *macos_stream_from_file(const char *path, const char *mode)
+static void *win32_stream_from_file(const char *path, const char *mode)
 {
 	return SDL_IOFromFile(path, mode);
 }
 
-static void *macos_stream_from_memory(void *data, u64 size)
+static void *win32_stream_from_memory(void *data, u64 size)
 {
 	return SDL_IOFromMem(data, size);
 }
 
-static void *macos_stream_from_const_memory(const void *data, u64 size)
+static void *win32_stream_from_const_memory(const void *data, u64 size)
 {
 	return SDL_IOFromConstMem(data, size);
 }
 
-static s64 macos_stream_read(void *stream, void *dst, u64 size)
+static s64 win32_stream_read(void *stream, void *dst, u64 size)
 {
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
 }
 
-static s64 macos_stream_write(void *stream, const void *src, u64 size)
+static s64 win32_stream_write(void *stream, const void *src, u64 size)
 {
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
 }
 
-static s64 macos_stream_seek(void *stream, s64 offset)
+static s64 win32_stream_seek(void *stream, s64 offset)
 {
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
 }
 
-static s64 macos_stream_size(void *stream)
+static s64 win32_stream_size(void *stream)
 {
 	return SDL_GetIOSize((SDL_IOStream *)stream);
 }
 
-static s64 macos_stream_position(void *stream)
+static s64 win32_stream_position(void *stream)
 {
 	return SDL_TellIO((SDL_IOStream *)stream);
 }
 
-static bool macos_stream_close(void *stream)
+static bool win32_stream_close(void *stream)
 {
 	return SDL_CloseIO((SDL_IOStream *)stream);
 }
 
-static void macos_open_in_explorer(const char *path)
+static void win32_open_in_explorer(const char *path)
 {
-	char call[512] = {};
-	snprintf(call, sizeof(call), "open \"%s\"", path);
-	system(call);
+	ShellExecute(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
 }
 
 static void init_platform()
@@ -173,37 +175,37 @@ static void init_platform()
 	win32_platform.cursor_visible = true;
 	win32_platform.cursor_locked = false;
 
-	win32_platform.set_window_size = macos_set_window_size;
-	win32_platform.set_window_fullscreen = macos_set_window_fullscreen;
-	win32_platform.set_window_borderless = macos_set_window_borderless;
+	win32_platform.set_window_size = win32_set_window_size;
+	win32_platform.set_window_fullscreen = win32_set_window_fullscreen;
+	win32_platform.set_window_borderless = win32_set_window_borderless;
 
-	win32_platform.set_mouse_position = macos_set_mouse_position;
+	win32_platform.set_mouse_position = win32_set_mouse_position;
 
 	win32_platform.get_ticks = SDL_GetTicks;
 	win32_platform.get_performance_counter = SDL_GetPerformanceCounter;
 	win32_platform.get_performance_frequency = SDL_GetPerformanceFrequency;
 
-	win32_platform.file_delete = macos_file_delete;
-	win32_platform.file_exists = macos_file_exists;
+	win32_platform.file_delete = win32_file_delete;
+	win32_platform.file_exists = win32_file_exists;
 
-	win32_platform.dir_create = macos_dir_create;
-	win32_platform.dir_delete = macos_dir_delete;
-	win32_platform.dir_exists = macos_dir_exists;
+	win32_platform.dir_create = win32_dir_create;
+	win32_platform.dir_delete = win32_dir_delete;
+	win32_platform.dir_exists = win32_dir_exists;
 
-	win32_platform.stream_from_file = macos_stream_from_file;
-	win32_platform.stream_from_memory = macos_stream_from_memory;
-	win32_platform.stream_from_const_memory = macos_stream_from_const_memory;
-	win32_platform.stream_read = macos_stream_read;
-	win32_platform.stream_write = macos_stream_write;
-	win32_platform.stream_seek = macos_stream_seek;
-	win32_platform.stream_size = macos_stream_size;
-	win32_platform.stream_position = macos_stream_position;
-	win32_platform.stream_close = macos_stream_close;
+	win32_platform.stream_from_file = win32_stream_from_file;
+	win32_platform.stream_from_memory = win32_stream_from_memory;
+	win32_platform.stream_from_const_memory = win32_stream_from_const_memory;
+	win32_platform.stream_read = win32_stream_read;
+	win32_platform.stream_write = win32_stream_write;
+	win32_platform.stream_seek = win32_stream_seek;
+	win32_platform.stream_size = win32_stream_size;
+	win32_platform.stream_position = win32_stream_position;
+	win32_platform.stream_close = win32_stream_close;
 
-	win32_platform.open_in_explorer = macos_open_in_explorer;
+	win32_platform.open_in_explorer = win32_open_in_explorer;
 
-	win32_platform.create_vulkan_surface = macos_create_vulkan_surface;
-	win32_platform.destroy_vulkan_surface = macos_destroy_vulkan_surface;
+	win32_platform.create_vulkan_surface = win32_create_vulkan_surface;
+	win32_platform.destroy_vulkan_surface = win32_destroy_vulkan_surface;
 	win32_platform.get_vulkan_instance_extensions = SDL_Vulkan_GetInstanceExtensions;
 }
 
@@ -324,7 +326,7 @@ int main(int argc, char **argv)
 
 	app.destroy();
 
-	macos_close_all_gamepads();
+	win32_close_all_gamepads();
 
 	SDL_DestroyWindow(win32_sdl_window);
 	SDL_Quit();

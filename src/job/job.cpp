@@ -7,7 +7,7 @@ thread_local u32 JobSystem::current_worker_id = UINT32_MAX;
 JobCounter::JobCounter(u32 initial_count)
 	: count()
 {
-    count.store(initial_count, std::memory_order::relaxed);
+    count.store(initial_count, std::memory_order_relaxed);
 }
 
 JobCounter::~JobCounter()
@@ -31,63 +31,63 @@ JobCounter &JobCounter::operator = (JobCounter &&other) noexcept
 
 void JobCounter::inc(u32 n)
 {
-	count.fetch_add(n, std::memory_order::seq_cst);
+	count.fetch_add(n, std::memory_order_seq_cst);
 }
 
 void JobCounter::dec(u32 n)
 {
-	count.fetch_sub(n, std::memory_order::acq_rel);
-//	u32 prev = count.fetch_sub(n, std::memory_order::acq_rel);
+	count.fetch_sub(n, std::memory_order_acq_rel);
+//	u32 prev = count.fetch_sub(n, std::memory_order_acq_rel);
 //	if (prev <= n && on_complete_callback)
 //		on_complete_callback();
 }
 
 void JobCounter::wait()
 {
-	while (count.load(std::memory_order::acquire) > 0)
+	while (count.load(std::memory_order_acquire) > 0)
 		JOB_SPIN_PAUSE();
 }
 
 bool JobCounter::is_complete() const
 {
-	return count.load(std::memory_order::acquire) == 0;
+	return count.load(std::memory_order_acquire) == 0;
 }
 
 u32 JobCounter::get_count() const
 {
-	return count.load(std::memory_order::acquire);
+	return count.load(std::memory_order_acquire);
 }
 
-JobList::JobList()
+JobQueue::JobQueue()
 	: buffer(nullptr)
 	, size(0)
 {
 	buffer = new JobDecl[MAX_CAPACITY];
 }
 
-JobList::~JobList()
+JobQueue::~JobQueue()
 {
 	delete[] buffer;
 }
 
-void JobList::add_job(const JobDecl &decl)
+void JobQueue::add_job(const JobDecl &decl)
 {
 	buffer[size % MAX_CAPACITY] = decl;
 	size++;
 }
 
-JobDecl *JobList::get_job(u32 index)
+JobDecl *JobQueue::get_job(u32 index)
 {
 	return &buffer[index % MAX_CAPACITY];
 }
 
-JobDecl *JobList::peek_job()
+JobDecl *JobQueue::peek_job()
 {
 	assert(size > 0);
 	return &buffer[(size - 1) % MAX_CAPACITY];
 }
 
-u32 JobList::get_size() const
+u32 JobQueue::get_size() const
 {
 	return size;
 }
@@ -148,7 +148,7 @@ bool JobSystem::is_spin_mode_enabled() const
 
 void JobSystem::set_spin_mode(bool enabled)
 {
-	spin_mode.store(enabled, std::memory_order::relaxed);
+	spin_mode.store(enabled, std::memory_order_relaxed);
 }
 
 u32 JobSystem::get_worker_count() const
@@ -161,13 +161,20 @@ u32 JobSystem::get_current_worker_id()
 	return current_worker_id;
 }
 
-void JobSystem::parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority)
+void JobSystem::parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority, u32 batch_size)
 {
+	assert(batch_size > 0);
+
 	JobCounter counter;
 
-	for (int i = 0; i < count; i++) {
+	for (int i = 0; i < count; i += batch_size) {
+		u32 loop_size = count - i;
+
+		if (loop_size > batch_size)
+			loop_size = batch_size;
+
 		JobDecl decl = {};
-		decl.entry_point = [fn, i] { fn(i); };
+		decl.entry_point = [fn, i, loop_size] () { for (int k = 0; k < loop_size; k++) { fn(k + i); } };
 		decl.priority = priority;
 		decl.counter = &counter;
 
@@ -184,7 +191,7 @@ void JobSystem::kick_job(const JobDecl &decl)
 	if (decl.counter)
 		decl.counter->inc();
 
-	added_task_count.fetch_add(1, std::memory_order::relaxed);
+	added_task_count.fetch_add(1, std::memory_order_relaxed);
 	cond_begin.notify_one();
 
 	next_job = jobs.peek_job();
@@ -231,9 +238,9 @@ JobDecl *JobSystem::try_get_job()
 {
 	// Lockless thread pool.
 	while (true) {
-		u32 t = taken_task_count.load(std::memory_order::relaxed);
-		if (t < added_task_count.load(std::memory_order::acquire)) {
-			if (taken_task_count.compare_exchange_weak(t, t + 1, std::memory_order::relaxed))
+		u32 t = taken_task_count.load(std::memory_order_relaxed);
+		if (t < added_task_count.load(std::memory_order_acquire)) {
+			if (taken_task_count.compare_exchange_weak(t, t + 1, std::memory_order_relaxed))
 				return jobs.get_job(t);
 		} else if (t == jobs.get_size()) {
 			return nullptr;

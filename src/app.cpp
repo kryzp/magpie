@@ -19,12 +19,12 @@ void CameraDriver::update(gfx::Camera &camera, const Platform &platform, float d
 	float dy = (float)(platform.mouse_position.y - platform.window_height/2);
 
 	if (dx*dx + dy*dy > mouse_deadzone*mouse_deadzone) {
-		target_yaw -= dx * turn_speed * 0.005f;
-		target_pitch -= dy * turn_speed * 0.005f;
+		target_yaw -= dx * turn_speed * 3500.f * dt;
+		target_pitch -= dy * turn_speed * 3500.f * dt;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, dt * 500000.f);
-	yaw = CalcF::lerp(yaw, target_yaw, dt * 500000.f);
+	pitch = CalcF::lerp(pitch, target_pitch, dt * 50000.f);
+	yaw = CalcF::lerp(yaw, target_yaw, dt * 50000.f);
 
 	float corrected_pitch = pitch;
 	float corrected_yaw = yaw + CalcF::PI/2.f;
@@ -95,11 +95,10 @@ App::~App()
 
 void App::init()
 {
-	u64 scratch_memory_size = MEGABYTES(2);
-	scratch_memory = malloc(scratch_memory_size * array_size(scratch_arenas));
-	MemoryArena arena(scratch_memory, scratch_memory_size * array_size(scratch_arenas));
-	scratch_arenas[0] = arena.sub_arena(scratch_memory_size);
-	scratch_arenas[1] = arena.sub_arena(scratch_memory_size);
+	scratch_memory = malloc(SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
+	MemoryArena arena(scratch_memory, SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
+	scratch_arenas[0] = arena.sub_arena(SCRATCH_MEMORY_SIZE);
+	scratch_arenas[1] = arena.sub_arena(SCRATCH_MEMORY_SIZE);
 	ScratchArena::select(scratch_arenas, array_size(scratch_arenas));
 
 	graphics_device.init(platform);
@@ -135,15 +134,13 @@ void App::init()
 	job_system.init(std::thread::hardware_concurrency());
 
 	// Test out the job system.
-	/*
 	{
 		job::SpinScope spin_scope(job_system);
 
 		job_system.parallel_for(100, [&](int index) -> void {
 			printf("(%d) Hello, World! From: %d\n", index, job::JobSystem::get_current_worker_id());
-		});
+		}, job::PRIORITY_LOW, 1);
 	}
-	*/
 
 	global_timer.start();
 	delta_timer.start();
@@ -188,12 +185,12 @@ bool App::tick()
 		delta_accumulator -= fixed_dt;
 	}
 
-	gfx::CommandBuffer cmd = graphics_device.begin_present(swapchain);
+	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	render(dt, elapsed_time, cmd);
 	render_graph.set_swapchain_source(swapchain_src);
 	render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
 	render_graph.execute(cmd, swapchain, dt, elapsed_time);
-	graphics_device.end_present(swapchain, cmd);
+	graphics_device.end_frame(swapchain, cmd);
 
 	return false;
 }

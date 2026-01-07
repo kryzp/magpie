@@ -25,7 +25,7 @@ Asset *AssetImporter::import(AssetManager &assets, AssetType type, const AssetMe
 	if (asset->has_flag(ASSET_FLAG_INVALID))
 		debug_log("Failed to load asset: %s", metadata.file_path.c_str());
 	else
-		debug_log("Loaded asset: %s", metadata.file_path.c_str());
+		debug_log("Loaded %s Asset: %s", get_string_from_asset_type(type).c_str(), metadata.file_path.c_str());
 	
 	return asset;
 }
@@ -58,7 +58,7 @@ void AssetManager::destroy_asset(const AssetHandle &handle)
 
 AssetHandle AssetManager::from_file_path(const String &path, AssetType type)
 {
-	if (path_to_handle.contains(path)) {
+	if (path_to_handle.find(path) != path_to_handle.end()) {
 		return path_to_handle[path];
 	} else {
 		AssetMetaData metadata = {};
@@ -75,7 +75,7 @@ AssetHandle AssetManager::from_file_path(const String &path, AssetType type)
 
 String AssetManager::get_system_file_path(const String &path) const
 {
-	return "res/" + path;
+	return "../../res/" + path;
 }
 
 bool AssetManager::is_handle_valid(const AssetHandle &handle) const

@@ -27,7 +27,7 @@ namespace ast
 
 enum AssetType {
 	ASSET_TYPE_UNKNOWN = 0,
-#define ASSET_DEF(capitals, name) ASSET_TYPE_##capitals,
+#define ASSET_DEF(capitals_, name_) ASSET_TYPE_##capitals_,
 	ASSET_DEFINITIONS
 #undef ASSET_DEF
 	ASSET_TYPE_MAX_ENUM
@@ -40,7 +40,7 @@ enum AssetFlag {
 
 inline AssetType get_asset_type_from_string(const String &name)
 {
-#define ASSET_DEF(capitals_, name_) if (name == "##name_##") return ASSET_TYPE_##capitals_;
+#define ASSET_DEF(capitals_, name_) if (name == String(#name_)) return ASSET_TYPE_##capitals_;
 	ASSET_DEFINITIONS
 #undef ASSET_DEF
 
@@ -51,7 +51,7 @@ inline AssetType get_asset_type_from_string(const String &name)
 
 inline String get_string_from_asset_type(AssetType type)
 {
-#define ASSET_DEF(capitals_, name_) if (type == ASSET_TYPE_##capitals_) return "##name_##";
+#define ASSET_DEF(capitals_, name_) if (type == ASSET_TYPE_##capitals_) return #name_;
 	ASSET_DEFINITIONS
 #undef ASSET_DEF
 

@@ -71,6 +71,8 @@ public:
 		return format;
 	}
 
+	// TODO: Add recreate(VkExtent2D new_extent) function.
+
 private:
 	VkSwapchainKHR handle;
 

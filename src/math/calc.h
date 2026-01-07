@@ -40,7 +40,7 @@ public:
 
 	static T approach(T from, T to, T amount);
 	static T lerp(T from, T to, T t);
-	static T smooth(T from, T to, T amount, T time);
+	static T smooth(T from, T to, T amount, T t);
 	static T spring(T bounciness, T tension, T t);
 
 	static T sin(T x);
@@ -201,9 +201,9 @@ T Calc<T>::lerp(T from, T to, T t)
 }
 
 template <typename T>
-T Calc<T>::smooth(T from, T to, T amount, T time)
+T Calc<T>::smooth(T from, T to, T amount, T t)
 {
-	return (std::exp(amount * time / (amount - 1.0)) * (from - to)) + to;
+	return (std::exp(amount * t / (amount - 1.0)) * (from - to)) + to;
 }
 
 template <typename T>

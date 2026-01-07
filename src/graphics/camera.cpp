@@ -46,6 +46,17 @@ Camera Camera::orthographic(
 }
 
 Camera::Camera()
+	: type()
+	, position()
+	, forward()
+	, up()
+	, fov()
+	, aspect()
+	, ortho()
+	, near_plane()
+	, far_plane()
+	, view()
+	, proj()
 {
 }
 

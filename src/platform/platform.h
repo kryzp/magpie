@@ -19,6 +19,8 @@
 #define ENGINE_VERSION_MINOR     1
 #define ENGINE_VERSION_PATCH     0
 
+#define SCRATCH_MEMORY_SIZE      MEGABYTES(2)
+
 enum KeyboardKey {
 	KEYBOARD_KEY_unknown = 0,
 	KEYBOARD_KEY_a = 4,

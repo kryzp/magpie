@@ -347,8 +347,8 @@ Device::Device()
 	, debug_messenger()
 	, has_validation_layers()
 	, current_frame_index()
-	, frames{}
 	, graphics_queue()
+	, per_frame_data{}
 	, depth_format()
 	, max_msaa_samples()
 	, swapchain_details()
@@ -502,7 +502,10 @@ void Device::init(const Platform &platform)
 	depth_format = find_graphics_depth_format(physical_device);
 
 	// Locate the graphics queue.
+	// TODO: move this init stuff into the queue class!!!!!
 	{
+		graphics_queue.device = this;
+
 		u32 queue_family_count = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, 0);
 
@@ -618,10 +621,28 @@ void Device::init(const Platform &platform)
 
 	VkSemaphoreCreateInfo semaphore_create_info = {};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	
+	// TODO: MOVE THIS SHIT INTO THE QUEUE CLASS!!!!
+	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		graphics_queue.frames[i].command_pool = create_command_pool(graphics_queue.family_index);
+
+		VkFenceCreateInfo instant_submit_fence_create_info = {};
+		instant_submit_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		instant_submit_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		
+		GFX_VK_CHECK(
+			vkCreateFence(
+				device,
+				&instant_submit_fence_create_info, nullptr,
+				&graphics_queue.frames[i].instant_submit_fence
+			),
+			"Failed to create queue frame instant submit fence."
+		);
+	}
+	
+	debug_log("Initialised graphics queue.");
 
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		frames[i].command_pool = create_command_pool(graphics_queue.family_index);
-
 		VkFenceCreateInfo in_flight_fence_create_info = {};
 		in_flight_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		in_flight_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -630,29 +651,16 @@ void Device::init(const Platform &platform)
 			vkCreateFence(
 				device,
 				&in_flight_fence_create_info, nullptr,
-				&frames[i].in_flight_fence
+				&per_frame_data[i].in_flight_fence
 			),
 			"Failed to create queue frame in flight fence."
-		);
-
-		VkFenceCreateInfo instant_submit_fence_create_info = {};
-		instant_submit_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		instant_submit_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		GFX_VK_CHECK(
-			vkCreateFence(
-				device,
-				&instant_submit_fence_create_info, nullptr,
-				&frames[i].instant_submit_fence
-			),
-			"Failed to create queue frame instant submit fence."
 		);
 
 		GFX_VK_CHECK(
 			vkCreateSemaphore(
 				device,
 				&semaphore_create_info, nullptr,
-				&frames[i].image_available_semaphore
+				&per_frame_data[i].image_available_semaphore
 			),
 			"Failed to create image available semaphore."
 		);
@@ -661,7 +669,7 @@ void Device::init(const Platform &platform)
 			vkCreateSemaphore(
 				device,
 				&semaphore_create_info, nullptr,
-				&frames[i].render_finished_semaphore
+				&per_frame_data[i].render_finished_semaphore
 			),
 			"Failed to create render finished semaphore."
 		);
@@ -754,18 +762,15 @@ void Device::destroy(const Platform &platform)
 	pipeline_cache.clear();
 	pipeline_layout_cache.clear();
 
-	// Clean up frame synchronization objects.
-	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		destroy_command_pool(frames[i].command_pool);
-
-		vkDestroyFence(device, frames[i].in_flight_fence, nullptr);
-		vkDestroyFence(device, frames[i].instant_submit_fence, nullptr);
-
-		vkDestroySemaphore(device, frames[i].render_finished_semaphore, nullptr);
-		vkDestroySemaphore(device, frames[i].image_available_semaphore, nullptr);
-	}
-
 	destroy_bindless();
+	
+	graphics_queue.destroy();
+
+	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		destroy_fence(per_frame_data[i].in_flight_fence);
+		destroy_semaphore(per_frame_data[i].render_finished_semaphore);
+		destroy_semaphore(per_frame_data[i].image_available_semaphore);
+	}
 
 	vkDestroyPipelineCache(device, pipeline_process_cache, nullptr);
 	platform.destroy_vulkan_surface(instance, surface);
@@ -789,60 +794,53 @@ void Device::reset_fence(VkFence fence)
 	vkResetFences(device, 1, &fence);
 }
 
+void Device::destroy_fence(VkFence fence)
+{
+	vkDestroyFence(device, fence, nullptr);
+}
+
+void Device::destroy_semaphore(VkSemaphore semaphore)
+{
+	vkDestroySemaphore(device, semaphore, nullptr);
+}
+
 VkSemaphore Device::get_current_render_finished_semaphore()
 {
-	return get_current_sync_data().render_finished_semaphore;
+	return per_frame_data[current_frame_index].render_finished_semaphore;
 }
 
 VkSemaphore Device::get_current_image_available_semaphore()
 {
-	return get_current_sync_data().image_available_semaphore;
+	return per_frame_data[current_frame_index].image_available_semaphore;
 }
 
-void Device::acquire_next_image(Swapchain &swapchain)
+CommandBuffer Device::begin_frame(Swapchain &swapchain)
 {
-	VkAcquireNextImageInfoKHR info = {};
-	info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
-	info.swapchain = swapchain.get_handle();
-	info.timeout = UINT64_MAX;
-	info.semaphore = get_current_image_available_semaphore();
-	info.fence = VK_NULL_HANDLE;
-	info.deviceMask = 1;
+	reset_command_pool(graphics_queue.get_current_sync_data().command_pool);
 
-	VkResult result = vkAcquireNextImage2KHR(device, &info, &swapchain.current_texture_index);
+	VkAcquireNextImageInfoKHR acquire_next_image_info = {};
+	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+	acquire_next_image_info.swapchain = swapchain.get_handle();
+	acquire_next_image_info.timeout = UINT64_MAX;
+	acquire_next_image_info.semaphore = get_current_image_available_semaphore();
+	acquire_next_image_info.fence = VK_NULL_HANDLE;
+	acquire_next_image_info.deviceMask = 1;
+
+	VkResult result = vkAcquireNextImage2KHR(device, &acquire_next_image_info, &swapchain.current_texture_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		debug_log_crash("TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		debug_log_crash("Failed to acquire next image in swapchain.");
-}
-
-CommandBuffer Device::begin_present(Swapchain &swapchain)
-{
-	SyncData &current_sync = get_current_sync_data();
-
-	wait_for_fence(current_sync.in_flight_fence);
-	reset_fence(current_sync.in_flight_fence);
-
-	acquire_next_image(swapchain);
-
-	reset_command_pool(current_sync.command_pool);
-
-	CommandBuffer cmd = current_sync.command_pool.fetch_free();
-	cmd.begin();
+	
+	CommandBuffer cmd = graphics_queue.begin_submit(per_frame_data[current_frame_index].in_flight_fence);
 
 	return cmd;
 }
 
-void Device::end_present(const Swapchain &swapchain, CommandBuffer &cmd)
+void Device::end_frame(const Swapchain &swapchain, CommandBuffer &cmd)
 {
-	SyncData &current_sync = get_current_sync_data();
-
 	apply_bindless_updates();
-
-	cmd.end();
-
-	VkFence fence = current_sync.in_flight_fence;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore = {};
 	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -854,40 +852,17 @@ void Device::end_present(const Swapchain &swapchain, CommandBuffer &cmd)
 	image_available_semaphore.semaphore = get_current_image_available_semaphore();
 	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-	VkCommandBufferSubmitInfo buffer_info = {};
-	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-	buffer_info.deviceMask = 0;
-	buffer_info.commandBuffer = cmd.get_handle();
-
-	VkSubmitInfo2 submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-	submit_info.flags = 0;
-	submit_info.commandBufferInfoCount = 1;
-	submit_info.pCommandBufferInfos = &buffer_info;
-	submit_info.signalSemaphoreInfoCount = 1;
-	submit_info.pSignalSemaphoreInfos = &render_finished_semaphore;
-	submit_info.waitSemaphoreInfoCount = 1;
-	submit_info.pWaitSemaphoreInfos = &image_available_semaphore;
-
-	graphics_queue.submit(submit_info, fence);
-
-	u32 texture_index = swapchain.get_current_texture_index();
-
-	VkPresentInfoKHR present_info = {};
-	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present_info.pResults = nullptr;
-	present_info.pImageIndices = &texture_index;
-	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = &render_finished_semaphore.semaphore;
-	present_info.swapchainCount = 1;
-	present_info.pSwapchains = &swapchain.get_handle();
-
-	VkResult result = graphics_queue.present(present_info);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-		debug_log_crash("TODO We need to rebuild the entire swapchain here.");
-	else if (result != VK_SUCCESS)
-		debug_log_crash("Failed to present swapchain image.");
+	graphics_queue.end_submit(
+		cmd,
+		&render_finished_semaphore,
+		&image_available_semaphore,
+		per_frame_data[current_frame_index].in_flight_fence
+	);
+	
+	graphics_queue.present(
+		swapchain,
+		render_finished_semaphore.semaphore
+	);
 
 	current_frame_index = (current_frame_index + 1) % FRAMES_IN_FLIGHT;
 
@@ -896,39 +871,12 @@ void Device::end_present(const Swapchain &swapchain, CommandBuffer &cmd)
 
 CommandBuffer Device::begin_submit()
 {
-	SyncData &current_sync = get_current_sync_data();
-
-	wait_for_fence(current_sync.instant_submit_fence);
-	reset_fence(current_sync.instant_submit_fence);
-
-	CommandBuffer cmd = current_sync.command_pool.fetch_free();
-	cmd.begin();
-
-	return cmd;
+	return graphics_queue.begin_submit(VK_NULL_HANDLE);
 }
 
 void Device::end_submit(CommandBuffer &cmd)
 {
-	SyncData &current_sync = get_current_sync_data();
-
-	cmd.end();
-
-	VkCommandBufferSubmitInfo buffer_info = {};
-	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-	buffer_info.deviceMask = 0;
-	buffer_info.commandBuffer = cmd.get_handle();
-
-	VkSubmitInfo2 submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-	submit_info.flags = 0;
-	submit_info.commandBufferInfoCount = 1;
-	submit_info.pCommandBufferInfos = &buffer_info;
-	submit_info.signalSemaphoreInfoCount = 0;
-	submit_info.pSignalSemaphoreInfos = nullptr;
-	submit_info.waitSemaphoreInfoCount = 0;
-	submit_info.pWaitSemaphoreInfos = nullptr;
-
-	graphics_queue.submit(submit_info, current_sync.instant_submit_fence);
+	graphics_queue.end_submit(cmd, nullptr, nullptr, VK_NULL_HANDLE);
 }
 
 CommandPool Device::create_command_pool(u32 family_index)
@@ -1126,7 +1074,7 @@ VkPipelineLayout Device::fetch_pipeline_layout(const ShaderProgram &program)
 {
 	u64 hash = hash::generic(&program, sizeof(ShaderProgram));
 
-	if (!pipeline_layout_cache.contains(hash))
+	if (pipeline_layout_cache.find(hash) == pipeline_layout_cache.end())
 		pipeline_layout_cache[hash] = create_pipeline_layout(program);
 
 	return pipeline_layout_cache[hash];
@@ -1355,7 +1303,7 @@ PipelineState Device::fetch_pipeline(const GraphicsPipelineDef &def)
 	for (auto &format : def.colour_attachment_formats)
 		hash = hash::generic_combine(hash, &format, sizeof(format));
 
-	if (!pipeline_cache.contains(hash))
+	if (pipeline_cache.find(hash) == pipeline_cache.end())
 		pipeline_cache[hash] = create_pipeline(def, layout);
 
 	PipelineState st = {};
@@ -1372,7 +1320,7 @@ PipelineState Device::fetch_pipeline(const ComputePipelineDef &def)
 
 	u64 hash = hash::generic(&def.program, sizeof(ShaderProgram));
 
-	if (!pipeline_cache.contains(hash))
+	if (pipeline_cache.find(hash) == pipeline_cache.end())
 		pipeline_cache[hash] = create_pipeline(def, layout);
 
 	PipelineState st = {};
@@ -1683,7 +1631,7 @@ TextureView Device::fetch_texture_view(
 	hash = hash::generic_combine(hash, &base_layer,               sizeof(u32));
 	hash = hash::generic_combine(hash, &base_mip,               sizeof(u32));
 
-	if (!texture_view_cache.contains(hash)) {
+	if (texture_view_cache.find(hash) == texture_view_cache.end()) {
 		texture_view_cache[hash] = create_texture_view(
 			texture,
 			type,
@@ -1777,7 +1725,7 @@ struct FileBytes {
 	u64 length;
 };
 
-FileBytes load_file_bytes(MemoryArena &dst, const String &path)
+static FileBytes load_file_bytes(MemoryArena &dst, const String &path)
 {
 	b8 *bytes = nullptr;
 
@@ -1830,7 +1778,7 @@ ShaderStage Device::load_shader_stage_from_bytecode(const String &path)
 				for (u32 j = 0; j < pc->member_count; j++)
 					alignment = CalcU::max(alignment, pc->members[j].size);
 
-				u32 padded = MEMORY_ALIGN_UP(pc->size, alignment);
+				u32 padded = memory_align_up(pc->size, alignment);
 				stage.push_constant_size = CalcU::max(stage.push_constant_size, padded);
 			}
 		}
@@ -1868,7 +1816,6 @@ ShaderProgram Device::create_shader_program(const Vector<String> &stage_paths)
 
 	for (int i = 0; i < program.stage_count; i++) {
 		const String &path = stage_paths[i];
-		debug_log("Loading shader stage: %s", path.c_str());
 		program.stages[i] = load_shader_stage_from_bytecode(path);
 		program.push_constant_size = CalcU::max(program.push_constant_size, program.stages[i].push_constant_size);
 	}

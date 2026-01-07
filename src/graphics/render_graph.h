@@ -24,11 +24,14 @@ struct AttachmentInfo {
 	};
 
 	VkFormat format;
+	
 	SizeClass size_class;
 	float size_x, size_y;
+	
 	u32 samples;
 	u32 mips;
 	u32 layers;
+
 	bool is_cubemap;
 	bool is_transient;
 	bool is_storage;
@@ -61,6 +64,8 @@ struct AttachmentInfo {
 
 	void get_absolute_size(const Swapchain &swapchain, u32 *width, u32 *height) const
 	{
+		assert(width && height);
+
 		switch (size_class) {
 			case SIZE_CLASS_ABSOLUTE:
 				*width = size_x;
@@ -104,6 +109,7 @@ struct RenderResourceHandle {
 	u32 index;
 	RenderResourceHandle() : index(RENDER_INVALID_INDEX) { }
 	RenderResourceHandle(u32 index) : index(index) { }
+	bool is_valid() const { return index != RENDER_INVALID_INDEX; }
 };
 
 struct SubresourceAlias {
@@ -163,11 +169,13 @@ struct RenderResource {
 	AttachmentInfo texture_info;
 	GpuBufferInfo buffer_info;
 
+	// TODO: drop this garbage.
 	Deque<sync::TextureAccessType> texture_accesses;
 	Deque<sync::GpuBufferAccessType> buffer_accesses;
 
-	bool is_alias() const {
-		return alias_of.parent.index != RENDER_INVALID_INDEX;
+	bool is_alias() const
+	{
+		return alias_of.parent.is_valid();
 	}
 };
 

@@ -159,11 +159,16 @@ void RenderGraph::init(Device *device)
 
 void RenderGraph::destroy()
 {
-	for (auto &texture : physical_textures)
-		device->destroy_texture(texture);
+	for (auto &resource : resources) {
+		if (resource.physical_index != RENDER_INVALID_INDEX && !resource.is_alias()) {
+			switch (resource.kind) {
+				case RenderResource::KIND_TEXTURE:  device->destroy_texture(physical_textures[resource.physical_index]); break;
+				case RenderResource::KIND_BUFFER:   device->destroy_gpu_buffer(physical_buffers[resource.physical_index]); break;
+			}
+		}
+	}
 
-	for (auto &buffer : physical_buffers)
-		device->destroy_gpu_buffer(buffer);
+	resources.clear();
 }
 
 void RenderGraph::transition_texture(Texture &texture, sync::TextureAccessType dst_access, Vector<VkImageMemoryBarrier2> &barriers)
@@ -275,17 +280,18 @@ void RenderGraph::execute(
 	build_physical_resources(swapchain);
 	setup_attachments();
 	setup_aliases();
-
-	/*
+	
 	// This handles the case where swapchain source
 	// is only used for presentation and not actually
 	// referenced in any of the stages.
 	if (swapchain_source->physical_index == RENDER_INVALID_INDEX) {
         swapchain_source->physical_index = physical_attributes.size();
         physical_attributes.push_back(get_resource_attributes(*swapchain_source, swapchain));
+		physical_slot_used.resize(physical_attributes.size());
+		physical_textures.resize(physical_attributes.size());
+		physical_texture_views.resize(physical_attributes.size());
         setup_physical_texture(swapchain_source->physical_index);
-    }
-	*/
+	}
 
 	for (auto &stage : stages)
 		execute_stage(stage, cmd, swapchain, delta_time, elapsed_time);
@@ -655,13 +661,8 @@ void RenderGraph::setup_attachments()
 	for (int i = 0; i < physical_attributes.size(); i++) {
 		const auto &att = physical_attributes[i];
 		switch (att.kind) {
-			case RenderResource::KIND_TEXTURE: {
-				setup_physical_texture(i);
-			} break;
-
-			case RenderResource::KIND_BUFFER: {
-				setup_physical_buffer(i);
-			} break;
+			case RenderResource::KIND_TEXTURE:  setup_physical_texture(i); break;
+			case RenderResource::KIND_BUFFER:   setup_physical_buffer(i); break;
 		}
 	}
 }
@@ -671,7 +672,7 @@ void RenderGraph::setup_aliases()
     for (int i = 0; i < resources.size(); i++) {
         RenderResource &child = resources[i];
 
-		if (child.alias_of.parent.index == RENDER_INVALID_INDEX)
+		if (!child.is_alias())
 			continue;
 
 		RenderResource &parent = get_resource(child.alias_of.parent);

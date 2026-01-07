@@ -65,7 +65,7 @@ public:
 		return allocation_info;
 	}
 
-	const VmaAllocationCreateFlagBits get_allocation_flags() const
+	VmaAllocationCreateFlagBits get_allocation_flags() const
 	{
 		return allocation_flags;
 	}

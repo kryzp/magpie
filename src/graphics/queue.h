@@ -4,20 +4,43 @@
 
 #include "core/types.h"
 
+#include "command_pool.h"
+
 namespace gfx
 {
 
+class CommandBuffer;
+class Swapchain;
+class Device;
+
+constexpr u32 FRAMES_IN_FLIGHT = 3;
+
 class Queue {
 	friend class Device;
+
+	struct SyncData {
+		VkFence instant_submit_fence;
+		CommandPool command_pool;
+	};
 
 public:
 	Queue();
 	~Queue();
 
-	void wait_idle();
+	void destroy();
 
-	void submit(const VkSubmitInfo2 &submit_info, VkFence fence);
-	VkResult present(const VkPresentInfoKHR &present_info);
+	void wait_idle() const;
+
+	void present(const Swapchain &swapchain, const VkSemaphore &wait);
+
+	CommandBuffer begin_submit(VkFence fence);
+
+	void end_submit(
+		CommandBuffer &cmd,
+		const VkSemaphoreSubmitInfo *signal,
+		const VkSemaphoreSubmitInfo *wait,
+		VkFence fence
+	);
 
 	const VkQueue &get_handle() const
 	{
@@ -30,8 +53,14 @@ public:
 	}
 
 private:
+	SyncData &get_current_sync_data();
+
+	Device *device;
+
 	VkQueue handle;
 	u32 family_index;
+
+	SyncData frames[FRAMES_IN_FLIGHT];
 };
 
 }
