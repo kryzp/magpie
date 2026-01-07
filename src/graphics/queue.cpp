@@ -60,7 +60,8 @@ CommandBuffer Queue::begin_submit(VkFence fence)
 {
 	SyncData &current_sync = get_current_sync_data();
 
-	fence = fence != VK_NULL_HANDLE ? fence : current_sync.instant_submit_fence;
+	if (fence == VK_NULL_HANDLE)
+		fence = current_sync.instant_submit_fence;
 
 	device->wait_for_fence(fence);
 	device->reset_fence(fence);
@@ -82,6 +83,9 @@ void Queue::end_submit(
 	cmd.end();
 	
 	SyncData &current_sync = get_current_sync_data();
+	
+	if (fence == VK_NULL_HANDLE)
+		fence = current_sync.instant_submit_fence;
 
 	VkCommandBufferSubmitInfo buffer_info = {};
 	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -110,8 +114,6 @@ void Queue::end_submit(
 		submit_info.waitSemaphoreInfoCount = 0;
 		submit_info.pWaitSemaphoreInfos = nullptr;
 	}
-
-	fence = fence != VK_NULL_HANDLE ? fence : current_sync.instant_submit_fence;
 
 	GFX_VK_CHECK(
 		vkQueueSubmit2(handle, 1, &submit_info, fence),
