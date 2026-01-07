@@ -869,12 +869,12 @@ void Device::end_frame(const Swapchain &swapchain, CommandBuffer &cmd)
 
 CommandBuffer Device::begin_submit()
 {
-	return graphics_queue.begin_submit(VK_NULL_HANDLE);
+	return graphics_queue.begin_submit();
 }
 
 void Device::end_submit(CommandBuffer &cmd)
 {
-	graphics_queue.end_submit(cmd, nullptr, nullptr, VK_NULL_HANDLE);
+	graphics_queue.end_submit(cmd, nullptr, nullptr);
 }
 
 CommandPool Device::create_command_pool(u32 family_index)

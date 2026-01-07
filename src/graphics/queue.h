@@ -35,13 +35,13 @@ public:
 
 	void present(const Swapchain &swapchain, const VkSemaphore &wait);
 
-	CommandBuffer begin_submit(VkFence fence);
+	CommandBuffer begin_submit(VkFence fence = VK_NULL_HANDLE);
 
 	void end_submit(
 		CommandBuffer &cmd,
 		const VkSemaphoreSubmitInfo *signal,
 		const VkSemaphoreSubmitInfo *wait,
-		VkFence fence
+		VkFence fence = VK_NULL_HANDLE
 	);
 
 	const VkQueue &get_handle() const
