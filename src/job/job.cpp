@@ -110,7 +110,7 @@ JobSystem::~JobSystem()
 	shutdown();
 }
 
-void JobSystem::init(u32 initial_worker_count)
+void JobSystem::start(u32 initial_worker_count)
 {
 	running = true;
 
@@ -118,6 +118,7 @@ void JobSystem::init(u32 initial_worker_count)
 	workers = new JobWorker[worker_count];
 
 	for (int i = 0; i < worker_count; i++) {
+		workers[i].job = nullptr;
 		workers[i].thread = std::thread(&JobSystem::worker_thread, this, i);
 	}
 }

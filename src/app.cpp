@@ -127,11 +127,11 @@ void App::init()
 	swapchain_src = render_graph.create_texture_resource(swapchain_attachment_info);
 
 	skybox_renderer.init(&graphics_device, assets, render_graph);
-//	post_processing.init(&graphics_device, assets, render_graph);
+//	post_processing.start(&graphics_device, assets, render_graph);
 
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
-	job_system.init(std::thread::hardware_concurrency());
+	job_system.start(std::thread::hardware_concurrency());
 
 	// Test out the job system.
 	{
