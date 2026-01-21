@@ -68,14 +68,14 @@ Vec3 Vec3::approach(const Vec3 &from, const Vec3 &to, float amount)
 
 Vec3 Vec3::reflect(const Vec3 &v, const Vec3 &n)
 {
-	return v - (2.0 * dot(v, n) * n);
+	return v - (2.f * dot(v, n) * n);
 }
 
-Vec3 Vec3::refract(const Vec3 &uv, const Vec3 &n, double n21)
+Vec3 Vec3::refract(const Vec3 &uv, const Vec3 &n, double eta21)
 {
-	double cost = CalcF::min(dot(-uv, n), 1.0);
-	Vec3 out_perp = n21 * (uv + (cost * n));
-	Vec3 out_para = -CalcF::sqrt(CalcF::abs(1.0 - out_perp.length_squared())) * n;
+	double cost = CalcF::min(dot(-uv, n), 1.f);
+	Vec3 out_perp = eta21 * (uv + (cost * n));
+	Vec3 out_para = -CalcF::sqrt(CalcF::abs(1.f - out_perp.length_squared())) * n;
 	return out_perp + out_para;
 }
 
@@ -112,9 +112,8 @@ Vec3 Vec3::normalized() const
 {
 	float len = length();
 
-	if (len <= 0.0) {
+	if (len <= CalcF::epsilon())
 		return zero();
-	}
 
 	return Vec3(
 		x / len,

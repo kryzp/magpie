@@ -13,6 +13,7 @@ public:
 	constexpr static T DEG2RAD                        =  0.01745329251;
 	constexpr static T SQRT2                          =  1.41421356240;
 	constexpr static T ONE_OVER_SQUARE_ROOT_OF_TWO_PI =  0.39894228040;
+
 	static T abs(T x);
 	static T mod(T x, T y);
 	static T sqrt(T x);
@@ -36,8 +37,6 @@ public:
 	static T ceil(T x);
 	static T fract(T x);
 
-	static bool within_epsilon(T lhs, T rhs, T epsilon = std::numeric_limits<T>::epsilon());
-
 	static T approach(T from, T to, T amount);
 	static T lerp(T from, T to, T t);
 	static T smooth(T from, T to, T amount, T t);
@@ -55,6 +54,8 @@ public:
 	static T acos(T x);
 	static T atan(T x);
 	static T atan2(T y, T x);
+
+	static bool within_epsilon(T lhs, T rhs, T epsilon = std::numeric_limits<T>::epsilon());
 
 	static constexpr T epsilon();
 	static constexpr T lowest();
@@ -183,12 +184,6 @@ T Calc<T>::fract(T x)
 }
 
 template <typename T>
-bool Calc<T>::within_epsilon(T lhs, T rhs, T epsilon)
-{
-	return std::fabs(rhs - lhs) <= epsilon;
-}
-
-template <typename T>
 T Calc<T>::approach(T from, T to, T amount)
 {
 	return (to > from) ? min(from + amount, to) : max(from - amount, to);
@@ -271,6 +266,12 @@ template <typename T>
 T Calc<T>::atan2(T y, T x)
 {
 	return std::atan2(y, x);
+}
+
+template <typename T>
+bool Calc<T>::within_epsilon(T lhs, T rhs, T epsilon)
+{
+	return std::fabs(rhs - lhs) <= epsilon;
 }
 
 template <typename T>

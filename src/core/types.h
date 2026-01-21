@@ -4,13 +4,16 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
-#include <ctime>
-#include <cfloat>
 #include <cassert>
 
 #include <memory>
 
 #define STRINGIFY(x) #x
+#define MCONCAT(a, b) a##b
+
+// We need this because of expansion order in macros.
+// e.g: MCONCAT_EXP(x, __LINE__) != MCONCAT(x, __LINE__)
+#define MCONCAT_EXP(a, b) MCONCAT(a, b)
 
 #define debug_log(m, ...)					\
 	do {									\
@@ -55,6 +58,9 @@ typedef uint8_t  b8;
 typedef uint16_t b16;
 typedef uint32_t b32;
 typedef uint64_t b64;
+
+typedef unsigned long ulong;
+typedef uintptr_t uptr;
 
 template <typename T> using Unique = std::unique_ptr<T>;
 

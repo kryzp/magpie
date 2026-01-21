@@ -16,14 +16,20 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <mutex>
+
 #include "platform/platform.h"
 #include "math/vec2.h"
 #include "core/types.h"
+#include "job/job.h"
 
 #include "app.h"
 
 static SDL_Window *win32_sdl_window = nullptr;
 static Platform win32_platform = {};
+static inp::InputState win32_input_st = {};
+static std::atomic<bool> app_running { true };
+static std::mutex input_mutex;
 
 static bool win32_create_vulkan_surface(void *instance, void *surface_pointer)
 {
@@ -49,6 +55,9 @@ static void win32_set_window_size(u32 width, u32 height)
 {
 	SDL_SetWindowSize(win32_sdl_window, width, height);
 
+	win32_platform.window_width = width;
+	win32_platform.window_height = height;
+
 	SDL_GetWindowSizeInPixels(win32_sdl_window,
 		&win32_platform.window_pixel_width,
 		&win32_platform.window_pixel_height
@@ -57,24 +66,52 @@ static void win32_set_window_size(u32 width, u32 height)
 
 static void win32_set_window_fullscreen(bool b)
 {
+	win32_platform.fullscreen = b;
 	SDL_SetWindowFullscreen(win32_sdl_window, b);
 }
 
 static void win32_set_window_borderless(bool b)
 {
+	win32_platform.borderless = b;
 	SDL_SetWindowBordered(win32_sdl_window, !b);
 }
 
 static void win32_set_mouse_position(u32 x, u32 y)
 {
-	win32_platform.mouse_position = Vec2(x, y);
+	win32_input_st.mouse_position = Vec2(x, y);
 
 	SDL_WarpMouseInWindow(win32_sdl_window, x, y);
 
 	SDL_GetGlobalMouseState(
-		&win32_platform.mouse_screen_position.x,
-		&win32_platform.mouse_screen_position.y
+		&win32_input_st.mouse_screen_position.x,
+		&win32_input_st.mouse_screen_position.y
 	);
+}
+
+static void *win32_create_thread(ulong (*entry)(void *param), void *param)
+{
+	return CreateThread(NULL, 0, entry, param, 0, NULL);
+}
+
+static void win32_join_thread(void *handle)
+{
+	WaitForSingleObject(handle, INFINITE);
+	CloseHandle(handle);
+}
+
+static void win32_detach_thread(void *handle)
+{
+	CloseHandle(handle);
+}
+
+static void *win32_convert_thread_to_fiber()
+{
+	return ConvertThreadToFiber(nullptr);
+}
+
+static void *win32_create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param)
+{
+	return CreateFiber(stack_size, entry, param);
 }
 
 static bool win32_file_delete(const char *path)
@@ -185,6 +222,16 @@ static void init_platform()
 	win32_platform.get_performance_counter = SDL_GetPerformanceCounter;
 	win32_platform.get_performance_frequency = SDL_GetPerformanceFrequency;
 
+	win32_platform.create_thread = win32_create_thread;
+	win32_platform.join_thread = win32_join_thread;
+	win32_platform.detach_thread = win32_detach_thread;
+
+	win32_platform.convert_thread_to_fiber = win32_convert_thread_to_fiber;
+	win32_platform.convert_fiber_to_thread = ConvertFiberToThread;
+	win32_platform.create_fiber = win32_create_fiber;
+	win32_platform.delete_fiber = DeleteFiber;
+	win32_platform.switch_to_fiber = SwitchToFiber;
+
 	win32_platform.file_delete = win32_file_delete;
 	win32_platform.file_exists = win32_file_exists;
 
@@ -207,6 +254,56 @@ static void init_platform()
 	win32_platform.create_vulkan_surface = win32_create_vulkan_surface;
 	win32_platform.destroy_vulkan_surface = win32_destroy_vulkan_surface;
 	win32_platform.get_vulkan_instance_extensions = SDL_Vulkan_GetInstanceExtensions;
+}
+
+static JOB_ENTRY_POINT(root_entry_point)
+{
+	App *app = (App *)param;
+
+	app->init();
+
+	debug_log("Entering main loop...");
+
+	inp::InputState prev_input_st = {};
+
+	while (app_running.load()) {
+		inp::InputState curr_input_st = {};
+		{
+			std::lock_guard<std::mutex> lock(input_mutex);
+			curr_input_st = win32_input_st;
+
+			// Reset accumulated values.
+			win32_input_st.mouse_delta = Vec2::zero();
+			win32_input_st.mouse_wheel = Vec2::zero();
+		}
+
+		for (int i = 0; i < inp::KEYBOARD_KEY_MAX_ENUM; i++) {
+			curr_input_st.kb_pressed [i] =  curr_input_st.kb_down[i] && !prev_input_st.kb_down[i];
+			curr_input_st.kb_released[i] = !curr_input_st.kb_down[i] &&  prev_input_st.kb_down[i];
+		}
+
+		for (int i = 0; i < inp::MBUTTON_MAX_ENUM; i++) {
+			curr_input_st.mb_pressed [i] =  curr_input_st.mb_down[i] && !prev_input_st.mb_down[i];
+			curr_input_st.mb_released[i] = !curr_input_st.mb_down[i] &&  prev_input_st.mb_down[i];
+		}
+
+		for (int i = 0; i < MAX_GAMEPADS; i++) {
+			inp::GamepadState *st   = &curr_input_st.gamepads[i];
+			inp::GamepadState *p_st = &prev_input_st.gamepads[i];
+
+			for (int j = 0; j < inp::GAMEPAD_BUTTON_MAX_ENUM; j++) {
+				st->pressed [j] =  st->down[j] && !p_st->down[j];
+				st->released[j] = !st->down[j] &&  p_st->down[j];
+			}
+		}
+
+		if (app->tick(curr_input_st))
+			app_running = false;
+
+		prev_input_st = curr_input_st;
+	}
+
+	app->destroy();
 }
 
 int main(int argc, char **argv)
@@ -244,87 +341,69 @@ int main(int argc, char **argv)
 
 	init_platform();
 
-	Platform prev_st = win32_platform;
-
+	/*
+	 * As a note to myself and to anyone reading this.
+	 *
+	 * Because I am using a fiber-based job system architecture, we need
+	 * the "main" thread to be able to yield, to wait for jobs to complete.
+	 * 
+	 * This means that the main app code has to be actually ran from a "root"
+	 * job that we launch here.
+	 */
+	
 	App app(win32_platform);
-	app.init();
 
-	debug_log("Entering main loop...");
+	job::init(&win32_platform, std::thread::hardware_concurrency() - 1);
+	job::kick_job(job::JobDecl(root_entry_point, &app), nullptr);
 
-	bool running = true;
-
-	while (running) {
-		SDL_Event ev = {0};
+	while (app_running.load()) {
+		SDL_Event ev = {};
 
 		while (SDL_PollEvent(&ev)) {
+			std::lock_guard<std::mutex> lock(input_mutex);
+
 			switch (ev.type) {
-			case SDL_EVENT_QUIT:
-				running = false;
-				break;
+				case SDL_EVENT_QUIT:
+					app_running.store(false);
+					break;
 
-			case SDL_EVENT_WINDOW_RESIZED:
-				break;
+				case SDL_EVENT_KEY_DOWN:
+					win32_input_st.kb_down[ev.key.scancode] = true;
+					break;
 
-			case SDL_EVENT_KEY_DOWN:
-				win32_platform.kb_down[ev.key.scancode] = true;
-				break;
+				case SDL_EVENT_KEY_UP:
+					win32_input_st.kb_down[ev.key.scancode] = false;
+					break;
 
-			case SDL_EVENT_KEY_UP:
-				win32_platform.kb_down[ev.key.scancode] = false;
-				break;
+				case SDL_EVENT_MOUSE_BUTTON_DOWN:
+					win32_input_st.mb_down[ev.button.button] = true;
+					break;
 
-			case SDL_EVENT_MOUSE_BUTTON_DOWN:
-				win32_platform.mb_down[ev.button.button] = true;
-				break;
+				case SDL_EVENT_MOUSE_BUTTON_UP:
+					win32_input_st.mb_down[ev.button.button] = false;
+					break;
 
-			case SDL_EVENT_MOUSE_BUTTON_UP:
-				win32_platform.mb_down[ev.button.button] = false;
-				break;
+				case SDL_EVENT_MOUSE_MOTION: {
+					float spx = 0.f;
+					float spy = 0.f;
 
-			case SDL_EVENT_MOUSE_MOTION: {
-				float spx = 0.f;
-				float spy = 0.f;
+					SDL_GetGlobalMouseState(&spx, &spy);
 
-				SDL_GetGlobalMouseState(&spx, &spy);
+					win32_input_st.mouse_position = Vec2(ev.motion.x, ev.motion.y);
+					win32_input_st.mouse_screen_position = Vec2(spx, spy);
+					win32_input_st.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
+				} break;
 
-				win32_platform.mouse_position = Vec2(ev.motion.x, ev.motion.y);
-				win32_platform.mouse_delta = Vec2(ev.motion.xrel, ev.motion.yrel);
-				win32_platform.mouse_screen_position = Vec2(spx, spy);
-			} break;
-
-			case SDL_EVENT_MOUSE_WHEEL:
-				win32_platform.mouse_wheel = Vec2(ev.wheel.x, ev.wheel.y);
-				break;
+				case SDL_EVENT_MOUSE_WHEEL:
+					win32_input_st.mouse_wheel += Vec2(ev.wheel.x, ev.wheel.y);
+					break;
 			}
 		}
 
-		for (int i = 0; i < KEYBOARD_KEY_MAX_ENUM; i++) {
-			win32_platform.kb_pressed [i] =  win32_platform.kb_down[i] && !prev_st.kb_down[i];
-			win32_platform.kb_released[i] = !win32_platform.kb_down[i] &&  prev_st.kb_down[i];
-		}
-
-		for (int i = 0; i < MBUTTON_MAX_ENUM; i++) {
-			win32_platform.mb_pressed [i] =  win32_platform.mb_down[i] && !prev_st.mb_down[i];
-			win32_platform.mb_released[i] = !win32_platform.mb_down[i] &&  prev_st.mb_down[i];
-		}
-
-		for (int i = 0; i < MAX_GAMEPADS; i++) {
-			GamepadState *st = &win32_platform.gamepads[i];
-			GamepadState *p_st = &prev_st.gamepads[i];
-
-			for (int j = 0; j < GAMEPAD_BUTTON_MAX_ENUM; j++) {
-				st->pressed [i] =  st->down[i] && !p_st->down[i];
-				st->released[i] = !st->down[i] &&  p_st->down[i];
-			}
-		}
-
-		if (app.tick())
-			break;
-
-		prev_st = win32_platform;
+		JOB_SPIN_PAUSE();
 	}
 
-	app.destroy();
+	job::shutdown();
 
 	win32_close_all_gamepads();
 

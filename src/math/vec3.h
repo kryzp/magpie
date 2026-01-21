@@ -34,7 +34,7 @@ struct Vec3
 	static Vec3 lerp(const Vec3 &from, const Vec3 &to, float amount);
 	static Vec3 approach(const Vec3 &from, const Vec3 &to, float amount);
 	static Vec3 reflect(const Vec3 &v, const Vec3 &n);
-	static Vec3 refract(const Vec3 &uv, const Vec3 &n, double n21);
+	static Vec3 refract(const Vec3 &uv, const Vec3 &n, double eta21);
 
 	float length() const;
 	float length_squared() const;

@@ -1,13 +1,17 @@
 #pragma once
 
-// Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
-
-#include <functional>
+#include <atomic>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 
 #include "core/types.h"
+#include "platform/platform.h"
+#include "container/vector.h"
+
+// Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
+//         https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine
+
+namespace job
+{
 
 #if defined(__x86_64__)
 # define JOB_SPIN_PAUSE() _mm_pause()
@@ -15,134 +19,114 @@
 # define JOB_SPIN_PAUSE() std::this_thread::yield()
 #endif
 
-namespace job
-{
-
 enum JobPriority {
 	PRIORITY_LOW,
+	PRIORITY_NORMAL,
 	PRIORITY_HIGH,
 	PRIORITY_MAX_ENUM
 };
 
-// Lockless atomic job counter.
-class JobCounter {
-public:
-	JobCounter(u32 initial_count = 0);
-	~JobCounter();
+struct JobFiber;
 
-    JobCounter(JobCounter &&other) noexcept;
-    JobCounter &operator = (JobCounter &&other) noexcept;
-    JobCounter(const JobCounter &) = delete;
-    JobCounter &operator = (const JobCounter &) = delete;
-
-	void inc(u32 n = 1);
-	void dec(u32 n = 1);
-
-	void wait();
-	bool is_complete() const;
-	u32 get_count() const;
-
-private:
+struct JobCounter {
 	std::atomic<u32> count;
+	std::atomic_flag locked = ATOMIC_FLAG_INIT;
+	Vector<JobFiber *> wait_list;
 };
 
-using EntryPoint = std::function<void(void)>;
+JobCounter *alloc_counter(u32 initial_count = 0);
+void free_counter(JobCounter *counter);
+void yield_on_counter(JobCounter *counter, u32 value = 0);
+void yield_on_counter_and_free(JobCounter *counter, u32 value = 0);
+
+#define JOB_ENTRY_POINT(fname_) void fname_(uptr param)
+
+typedef void EntryPoint(uptr param);
 
 struct JobDecl {
-	EntryPoint entry_point;
+	EntryPoint *entry_point;
+	uptr param;
 	JobPriority priority;
-	JobCounter *counter;
-};
 
-class JobQueue {
-	constexpr static u32 MAX_CAPACITY = 512;
+	JobDecl()
+		: entry_point(nullptr)
+		, param(0)
+		, priority(PRIORITY_NORMAL)
+	{
+	}
 
-public:
-	JobQueue();
-	~JobQueue();
-
-	void add_job(const JobDecl &decl);
-	JobDecl *get_job(u32 index);
-	JobDecl *peek_job();
-	
-	u32 get_size() const;
-
-private:
-	JobDecl *buffer;
-	u32 size;
+	JobDecl(EntryPoint *entry_point, void *param, JobPriority priority = PRIORITY_NORMAL)
+		: entry_point(entry_point)
+		, param((uptr)param)
+		, priority(priority)
+	{
+	}
 };
 
 struct JobWorker {
+	u32 id;
+	void *thread;
+	void *scheduler_fiber;
+};
+
+struct JobFiber {
+	void *handle;
 	JobDecl *job;
-	std::thread thread;
+	JobCounter *counter;
+	bool is_finished;
+	JobFiber *next; // Lockless stack
 };
 
-class JobSystem {
-public:
-	JobSystem();
-	~JobSystem();
+static constexpr u32 MAX_JOBS_IN_QUEUE = 4096;
+static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
 
-	void start(u32 initial_worker_count);
-	void shutdown();
+void init(const Platform *p, u32 initial_worker_count);
+void shutdown();
 
-	bool is_spin_mode_enabled() const;
-	void set_spin_mode(bool enabled);
+void kick_job(
+	const JobDecl &job,
+	JobCounter **counter
+);
 
-	//void push_spin_mode();
-	//void pop_spin_mode();
+void kick_job_batch(
+	const JobDecl *jobs, u32 count,
+	JobCounter **counter
+);
 
-	u32 get_worker_count() const;
-	
-	static u32 get_current_worker_id();
+void parallel_for(
+	u32 count,
+	void (*fn)(u32 index),
+	JobPriority priority = PRIORITY_NORMAL,
+	u32 batch_size = 64
+);
 
-	void parallel_for(u32 count, const std::function<void(int)> &fn, JobPriority priority = PRIORITY_LOW, u32 batch_size = 64);
+bool is_spin_mode_enabled();
+bool set_spin_mode(bool enabled);
 
-	void kick_job(const JobDecl &decl);
+u32 get_current_worker_id();
+bool is_main_thread();
 
-private:
-	void worker_thread(u32 worker_id);
-
-	void wait_job_spin(JobDecl *job);
-	void wait_job_lock();
-	
-	JobDecl *try_get_job();
-
-	thread_local static u32 current_worker_id;
-
-	u32 worker_count;
-	JobWorker *workers;
-
-	JobQueue jobs;
-
-	std::atomic<bool> running;
-	std::mutex mutex;
-	std::condition_variable cond_begin;
-
-	std::atomic<u32> taken_task_count;
-	std::atomic<u32> added_task_count;
-
-	std::atomic<JobDecl *> next_job;
-
-	std::atomic<bool> spin_mode;
-};
-
-class SpinScope {
-public:
-	SpinScope(JobSystem &system)
-		: job_system(system)
+struct SpinScope {
+	SpinScope()
 	{
-		original_value = system.is_spin_mode_enabled();
-		job_system.set_spin_mode(true);
+		original_value = is_spin_mode_enabled();
+		set_spin_mode(true);
 	}
 
 	~SpinScope()
 	{
-		job_system.set_spin_mode(original_value);
+		set_spin_mode(original_value);
 	}
 
-private:
-	JobSystem &job_system;
 	bool original_value;
 };
+
+#define JOB_SPIN_MODE_ALLOWED 1
+
+#if JOB_SPIN_MODE_ALLOWED
+#  define JOB_SPIN_SCOPE() ::job::SpinScope MCONCAT_EXP(job_spin_scope_, __LINE__)
+#else
+#  define JOB_SPIN_SCOPE()
+#endif
 
 }

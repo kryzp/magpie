@@ -98,6 +98,8 @@ public:
 
 	// ---
 
+	// TODO: The parameters here should be put into a struct like TextureAllocInfo.
+
 	Texture alloc_texture(
 		u32 width, u32 height, u32 depth,
 		VkFormat format, VkImageType type, VkImageTiling tiling,
@@ -122,6 +124,7 @@ public:
 		VkImageViewType type,
 		u32 layer_count,
 		u32 base_layer,
+		u32 mipmap_count,
 		u32 base_mip
 	);
 
@@ -130,6 +133,7 @@ public:
 		VkImageViewType type,
 		u32 layer_count,
 		u32 base_layer,
+		u32 mipmap_count,
 		u32 base_mip
 	);
 
@@ -138,6 +142,8 @@ public:
 	void destroy_texture_view(const TextureView &texture_view);
 
 	// ---
+
+	// TODO: The parameters here should be put into a struct like GPUBufferAllocInfo.
 
 	GpuBuffer alloc_gpu_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size);
 	void destroy_gpu_buffer(const GpuBuffer &gpu_buffer);

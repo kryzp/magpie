@@ -62,7 +62,6 @@ class Model {
 public:
 	Model()
 		: sub_models()
-		, directory()
 	{
 	}
 
@@ -78,19 +77,8 @@ public:
 		return sub_models[index];
 	}
 
-	const String &get_directory() const
-	{
-		return directory;
-	}
-
-	void set_directory(const String &dir)
-	{
-		directory = dir;
-	}
-
 private:
 	Vector<SubModel> sub_models;
-	String directory;
 };
 
 }

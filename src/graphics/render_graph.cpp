@@ -3,6 +3,8 @@
 #include "core/hash.h"
 #include "core/scratch.h"
 
+#include "math/calc.h"
+
 using namespace gfx;
 
 RenderStage::RenderStage(RenderGraph &graph, Type type)
@@ -160,7 +162,7 @@ void RenderGraph::init(Device *device)
 void RenderGraph::destroy()
 {
 	for (auto &resource : resources) {
-		if (resource.physical_index != RENDER_INVALID_INDEX && !resource.is_alias()) {
+		if (resource.is_allocated() && !resource.is_alias()) {
 			switch (resource.kind) {
 				case RenderResource::KIND_TEXTURE:  device->destroy_texture(physical_textures[resource.physical_index]); break;
 				case RenderResource::KIND_BUFFER:   device->destroy_gpu_buffer(physical_buffers[resource.physical_index]); break;
@@ -284,7 +286,7 @@ void RenderGraph::execute(
 	// This handles the case where swapchain source
 	// is only used for presentation and not actually
 	// referenced in any of the stages.
-	if (swapchain_source->physical_index == RENDER_INVALID_INDEX) {
+	if (!swapchain_source->is_allocated()) {
         swapchain_source->physical_index = physical_attributes.size();
         physical_attributes.push_back(get_resource_attributes(*swapchain_source, swapchain));
 		physical_slot_used.resize(physical_attributes.size());
@@ -575,17 +577,14 @@ void RenderGraph::build_physical_resources(const Swapchain &swapchain)
 	auto setup_physical_index = [&](const RenderResourceHandle &handle) -> void {
 		RenderResource &resource = get_resource(handle);
 		
-		bool is_alias = resource.is_alias();
-		bool is_allocated = resource.physical_index != RENDER_INVALID_INDEX;
-
-		if (!is_allocated && !is_alias) {
+		if (!resource.is_allocated() && !resource.is_alias()) {
 			resource.physical_index = physical_attributes.size();
 			physical_attributes.push_back(get_resource_attributes(resource, swapchain));
-		} else if (is_alias) {
+		} else if (resource.is_alias()) {
 			RenderResource &parent_resource = get_resource(resource.alias_of.parent);
 
 			// If the parent doesn't exist yet then create it.
-			if (parent_resource.physical_index == RENDER_INVALID_INDEX) {
+			if (!parent_resource.is_allocated()) {
 				parent_resource.physical_index = physical_attributes.size();
 				physical_attributes.push_back(get_resource_attributes(parent_resource, swapchain));
 			}
@@ -678,7 +677,7 @@ void RenderGraph::setup_aliases()
 		RenderResource &parent = get_resource(child.alias_of.parent);
 		
 		// SHOULDN'T HAPPEN. PARENT SHOULD BE ALLOCATED FIRST!
-		assert(parent.physical_index != RENDER_INVALID_INDEX);
+		assert(parent.is_allocated());
 		
 		Texture &src_texture = physical_textures[parent.physical_index];
 		
@@ -686,8 +685,8 @@ void RenderGraph::setup_aliases()
 		u32 mip_height = src_texture.get_height();
 		
 		for (u32 m = 0; m < child.alias_of.base_mip; m++) {
-			mip_width = std::max(1u, mip_width >> 1);
-			mip_height = std::max(1u, mip_height >> 1);
+			mip_width = CalcU::max(1u, mip_width >> 1);
+			mip_height = CalcU::max(1u, mip_height >> 1);
 		}
 		
 		physical_texture_views[child.physical_index] = device->fetch_texture_view(
@@ -695,6 +694,7 @@ void RenderGraph::setup_aliases()
 			child.alias_of.view_type,
 			child.texture_info.layers,
 			child.alias_of.base_layer,
+			child.texture_info.mips,
 			child.alias_of.base_mip
 		);
 		

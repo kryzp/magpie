@@ -33,8 +33,8 @@ public:
 		, tiling()
 		, aspect_count()
 		, aspect_flags()
-		, mipmap_count()
 		, layer_count()
+		, mipmap_count()
 		, sample_count()
 	{
 	}
@@ -131,14 +131,14 @@ public:
 		return aspect_flags;
 	}
 
-	u32 get_mipmap_count() const
-	{
-		return mipmap_count;
-	}
-
 	u32 get_layer_count() const
 	{
 		return layer_count;
+	}
+
+	u32 get_mipmap_count() const
+	{
+		return mipmap_count;
 	}
 
 	VkSampleCountFlags get_sample_count() const
@@ -171,8 +171,8 @@ private:
 	u32 aspect_count;
 	VkImageAspectFlags aspect_flags;
 
-	u32 mipmap_count;
 	u32 layer_count;
+	u32 mipmap_count;
 
 	VkSampleCountFlags sample_count;
 };
@@ -188,7 +188,7 @@ public:
 		, base_layer()
 		, layer_count()
 		, base_mip()
-		, mip_count()
+		, mipmap_count()
 		, aspect()
 		, bindless()
 	{
@@ -226,9 +226,9 @@ public:
 		return base_layer;
 	}
 
-	u32 get_mip_count() const
+	u32 get_mipmap_count() const
 	{
-		return layer_count;
+		return mipmap_count;
 	}
 
 	VkImageAspectFlags get_aspect() const
@@ -251,7 +251,7 @@ private:
 	u32 layer_count;
 
 	u32 base_mip;
-	u32 mip_count;
+	u32 mipmap_count;
 
 	VkImageAspectFlags aspect;
 

@@ -874,7 +874,7 @@ CommandBuffer Device::begin_submit()
 
 void Device::end_submit(CommandBuffer &cmd)
 {
-	graphics_queue.end_submit(cmd, nullptr, nullptr);
+	graphics_queue.end_submit(cmd);
 }
 
 CommandPool Device::create_command_pool(u32 family_index)
@@ -1010,11 +1010,11 @@ Swapchain Device::create_swapchain(const Platform &platform)
 		texture.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
 		texture.aspect_count = 1;
 
-		texture.mipmap_count = 1;
 		texture.layer_count = 1;
+		texture.mipmap_count = 1;
 		texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-		swapchain.views[i] = create_texture_view(texture, VK_IMAGE_VIEW_TYPE_2D, texture.layer_count, 0, 0);
+		swapchain.views[i] = create_texture_view(texture, VK_IMAGE_VIEW_TYPE_2D, texture.layer_count, 0, texture.mipmap_count, 0);
 	}
 
 	debug_log("Swapchain created.");
@@ -1563,6 +1563,7 @@ TextureView Device::create_texture_view(
 	VkImageViewType type,
 	u32 layer_count,
 	u32 base_layer,
+	u32 mipmap_count,
 	u32 base_mip
 )
 {
@@ -1576,11 +1577,9 @@ TextureView Device::create_texture_view(
 	view_create_info.viewType = type;
 	view_create_info.format = texture.get_format();
 
-	u32 mip_count = texture.get_mipmap_count() - base_mip;
-
 	view_create_info.subresourceRange.aspectMask = aspect;
 	view_create_info.subresourceRange.baseMipLevel = base_mip;
-	view_create_info.subresourceRange.levelCount = mip_count;
+	view_create_info.subresourceRange.levelCount = mipmap_count;
 	view_create_info.subresourceRange.baseArrayLayer = base_layer;
 	view_create_info.subresourceRange.layerCount = layer_count;
 
@@ -1595,7 +1594,7 @@ TextureView Device::create_texture_view(
 	view.base_layer = base_layer;
 	view.layer_count = layer_count;
 	view.base_mip = base_mip;
-	view.mip_count = mip_count;
+	view.mipmap_count = mipmap_count;
 	view.aspect = aspect;
 
 	GFX_VK_CHECK(
@@ -1619,6 +1618,7 @@ TextureView Device::fetch_texture_view(
 	VkImageViewType type,
 	u32 layer_count,
 	u32 base_layer,
+	u32 mipmap_count,
 	u32 base_mip
 )
 {
@@ -1627,7 +1627,8 @@ TextureView Device::fetch_texture_view(
 	hash = hash::generic_combine(hash, &type,                     sizeof(VkImageViewType));
 	hash = hash::generic_combine(hash, &layer_count,              sizeof(u32));
 	hash = hash::generic_combine(hash, &base_layer,               sizeof(u32));
-	hash = hash::generic_combine(hash, &base_mip,               sizeof(u32));
+	hash = hash::generic_combine(hash, &mipmap_count,             sizeof(u32));
+	hash = hash::generic_combine(hash, &base_mip,				  sizeof(u32));
 
 	if (texture_view_cache.find(hash) == texture_view_cache.end()) {
 		texture_view_cache[hash] = create_texture_view(
@@ -1635,6 +1636,7 @@ TextureView Device::fetch_texture_view(
 			type,
 			layer_count,
 			base_layer,
+			mipmap_count,
 			base_mip
 		);
 	}
@@ -1658,7 +1660,11 @@ TextureView Device::fetch_texture_view_std(const Texture &texture)
 	if (texture.is_cubemap())
 		view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 
-	return fetch_texture_view(texture, view_type, texture.get_layer_count(), 0, 0);
+	return fetch_texture_view(
+		texture, view_type,
+		texture.get_layer_count(), 0,
+		texture.get_mipmap_count(), 0
+	);
 }
 
 void Device::destroy_texture_view(const TextureView &texture_view)

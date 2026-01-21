@@ -3,10 +3,9 @@
 #include "platform/platform.h"
 #include "core/scratch.h"
 #include "math/calc.h"
-
 #include "assets/model_serializer.h"
 
-void CameraDriver::update(gfx::Camera &camera, const Platform &platform, float dt)
+void CameraDriver::update(gfx::Camera &camera, const Platform &platform, const inp::InputState &input, float dt)
 {
 	if (!active)
 		return;
@@ -15,16 +14,16 @@ void CameraDriver::update(gfx::Camera &camera, const Platform &platform, float d
 	const float turn_speed = 1.f;
 	const float move_speed = 5000.f;
 
-	float dx = (float)(platform.mouse_position.x - platform.window_width/2);
-	float dy = (float)(platform.mouse_position.y - platform.window_height/2);
+	float dx = (float)(input.mouse_position.x - platform.window_width/2);
+	float dy = (float)(input.mouse_position.y - platform.window_height/2);
 
 	if (dx*dx + dy*dy > mouse_deadzone*mouse_deadzone) {
-		target_yaw -= dx * turn_speed * 3500.f * dt;
-		target_pitch -= dy * turn_speed * 3500.f * dt;
+		target_yaw -= dx * turn_speed * 50000.f * dt;
+		target_pitch -= dy * turn_speed * 50000.f * dt;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, dt * 50000.f);
-	yaw = CalcF::lerp(yaw, target_yaw, dt * 50000.f);
+	pitch = CalcF::lerp(pitch, target_pitch, dt * 5000000.f);
+	yaw = CalcF::lerp(yaw, target_yaw, dt * 5000000.f);
 
 	float corrected_pitch = pitch;
 	float corrected_yaw = yaw + CalcF::PI/2.f;
@@ -36,25 +35,25 @@ void CameraDriver::update(gfx::Camera &camera, const Platform &platform, float d
 	basis[1] = camera.get_forward();
 	basis[2] = Vec3::cross(basis[0], basis[1]).normalized();
 
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < array_size(basis); i++)
 		basis[i] *= move_speed * dt;
 	
-	if (platform.kb_down[KEYBOARD_KEY_d])
+	if (input.kb_down[inp::KEYBOARD_KEY_d])
 		camera.move_by(basis[0]);
 
-	if (platform.kb_down[KEYBOARD_KEY_a])
+	if (input.kb_down[inp::KEYBOARD_KEY_a])
 		camera.move_by(-basis[0]);
 
-	if (platform.kb_down[KEYBOARD_KEY_w])
+	if (input.kb_down[inp::KEYBOARD_KEY_w])
 		camera.move_by(basis[1]);
 
-	if (platform.kb_down[KEYBOARD_KEY_s])
+	if (input.kb_down[inp::KEYBOARD_KEY_s])
 		camera.move_by(-basis[1]);
 
-	if (platform.kb_down[KEYBOARD_KEY_space])
+	if (input.kb_down[inp::KEYBOARD_KEY_space])
 		camera.move_by(basis[2]);
 
-	if (platform.kb_down[KEYBOARD_KEY_left_shift] || platform.kb_down[KEYBOARD_KEY_right_shift])
+	if (input.kb_down[inp::KEYBOARD_KEY_left_shift] || input.kb_down[inp::KEYBOARD_KEY_right_shift])
 		camera.move_by(-basis[2]);
 
 	camera.recompute();
@@ -86,11 +85,17 @@ App::App(const Platform &platform)
 	, render_graph()
 	, skybox_renderer()
 //	, post_processing()
+//	, profiler(platform)
 {
 }
 
 App::~App()
 {
+}
+
+static void my_parallel_for_test(u32 i)
+{
+	printf("(%d) From: %d\n", i, job::get_current_worker_id());
 }
 
 void App::init()
@@ -131,25 +136,12 @@ void App::init()
 
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
-	job_system.start(std::thread::hardware_concurrency());
-
-	// Test out the job system.
-	{
-		job::SpinScope spin_scope(job_system);
-
-		job_system.parallel_for(100, [&](int index) -> void {
-			printf("(%d) Hello, World! From: %d\n", index, job::JobSystem::get_current_worker_id());
-		}, job::PRIORITY_LOW, 1);
-	}
-
 	global_timer.start();
 	delta_timer.start();
 }
 
 void App::destroy()
 {
-	job_system.shutdown();
-
 	skybox_renderer.destroy();
 //	post_processing.destroy();
 
@@ -165,42 +157,60 @@ void App::destroy()
 	free(scratch_memory);
 }
 
-bool App::tick()
+bool App::tick(const inp::InputState &input)
 {
-	if (platform.kb_pressed[KEYBOARD_KEY_escape]) {
+	if (input.kb_pressed[inp::KEYBOARD_KEY_escape]) {
 		debug_log("Quitting...");
 		return true;
 	}
-
+	
 	const float elapsed_time = global_timer.get_elapsed_seconds();
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)platform.target_fps;
 
-	update(dt);
+	// Test out the job system.
+	{
+		job::parallel_for(100, my_parallel_for_test);
 
-	delta_accumulator += CalcF::min(dt, fixed_dt);
-
-	while (delta_accumulator >= fixed_dt) {
-		fixed_update(fixed_dt);
-		delta_accumulator -= fixed_dt;
+		/*
+		job::JobSystem::get_singleton()->parallel_for(100, [&](int index) -> void {
+			DEV_PROFILE_FUNCTION();
+			printf("(%d) Hello, World! From: %d\n", index, job::JobSystem::get_current_worker_id());
+		}, job::PRIORITY_LOW, 1);
+		*/
 	}
 
-	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
-	render(dt, elapsed_time, cmd);
-	render_graph.set_swapchain_source(swapchain_src);
-	render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
-	render_graph.execute(cmd, swapchain, dt, elapsed_time);
-	graphics_device.end_frame(swapchain, cmd);
+	{
+		update(dt, input);
+	}
+
+	{
+		delta_accumulator += CalcF::min(dt, fixed_dt);
+
+		while (delta_accumulator >= fixed_dt) {
+			fixed_update(fixed_dt);
+			delta_accumulator -= fixed_dt;
+		}
+	}
+
+	{
+		gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
+		render(dt, elapsed_time, cmd);
+		render_graph.set_swapchain_source(swapchain_src);
+		render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
+		render_graph.execute(cmd, swapchain, dt, elapsed_time);
+		graphics_device.end_frame(swapchain, cmd);
+	}
 
 	return false;
 }
 
-void App::update(float dt)
+void App::update(float dt, const inp::InputState &input)
 {
-	if (platform.kb_pressed[KEYBOARD_KEY_tab])
+	if (input.kb_pressed[inp::KEYBOARD_KEY_tab])
 		camera_driver.toggle(!camera_driver.is_active());
 
-	camera_driver.update(camera, platform, dt);
+	camera_driver.update(camera, platform, input, dt);
 
 	render_scene.resolve_removing();
 	render_scene.update();
@@ -219,6 +229,7 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	view.camera = &this->camera;
 
 	skybox_renderer.add_render_stages(render_graph, bb, view);
+//	post_processing.add_render_stages(render_graph, bb, view);
 
 	gfx::SubresourceAlias alias = {};
 	alias.parent = swapchain_src;
@@ -227,19 +238,4 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	alias.view_type = VK_IMAGE_VIEW_TYPE_2D;
 	
 	render_graph.move_subresource(skybox_renderer.output_attachment, alias);
-
-//	post_processing.add_render_stages(render_graph, bb, view);
-
-/*
-	RenderResource cubemap = render_graph.create_texture_resource(...);
-
-	gfx::MoveSubresourceDecl move_sub;
-	move_sub.src = &output;
-	move_sub.dst = &cubemap;
-	move_sub.layer = 1;
-
-	render_graph.move_subresource(move_sub);
-
-	environment_probe_renderer.add_render_stages(render_graph, bb, view, cubemap);
-*/
 }

@@ -39,8 +39,8 @@ public:
 
 	void end_submit(
 		CommandBuffer &cmd,
-		const VkSemaphoreSubmitInfo *signal,
-		const VkSemaphoreSubmitInfo *wait,
+		const VkSemaphoreSubmitInfo *signal = nullptr,
+		const VkSemaphoreSubmitInfo *wait = nullptr,
 		VkFence fence = VK_NULL_HANDLE
 	);
 

@@ -177,6 +177,11 @@ struct RenderResource {
 	{
 		return alias_of.parent.is_valid();
 	}
+
+	bool is_allocated() const
+	{
+		return physical_index != RENDER_INVALID_INDEX;
+	}
 };
 
 struct ResourceAttributes {
@@ -310,7 +315,7 @@ public:                                        \
 	static inline u32 type_id() { return id; } \
 private:                                       \
 	static u32 id;                             \
-}
+}                                              \
 
 #define IMPLEMENT_RG_BLACKBOARD_DATA(_name) \
 u32 _name::Meta::id = RenderGraphBlackboard::assign_id()

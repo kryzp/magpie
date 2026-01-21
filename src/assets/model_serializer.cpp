@@ -12,8 +12,8 @@ using namespace ast;
 
 static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle);
 static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata);
-static void process_nodes(gfx::Model &model, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
-static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
+static void process_nodes(gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
+static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
 static gfx::Material load_material_from_assimp(const String &directory, const aiMaterial *ai_material);
 
 static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle)
@@ -24,6 +24,8 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 {
 	String system_file_path = assets.get_system_file_path(metadata.file_path);
 
+	// TODO: Move this out into the global scope, creating an
+	//       Importer every time a new model is loaded is super slow.
 	Assimp::Importer ai_importer;
 
 	const aiScene *scene = ai_importer.ReadFile(
@@ -50,31 +52,30 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 		};
 
 		String directory = io::path::get_file_directory(system_file_path) + "/";
-		asset->model.set_directory(directory);
 
-		process_nodes(asset->model, assets.get_device(), scene->mRootNode, scene, identity);
+		process_nodes(asset->model, directory, assets.get_device(), scene->mRootNode, scene, identity);
 	}
 
 	return asset;
 }
 
-static void process_nodes(gfx::Model &model, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_nodes(gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	aiMatrix4x4 node_transform = node->mTransformation * transform;
 
 	for (int i = 0; i < node->mNumMeshes; i++) {
 		const aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
 		gfx::SubModel &sub_model = model.add_sub_model();
-		process_sub_model(model, sub_model, device, assimp_mesh, scene, node_transform);
+		process_sub_model(model, sub_model, directory, device, assimp_mesh, scene, node_transform);
 	}
 
 	for (int i = 0; i < node->mNumChildren; i++) {
 		const aiNode *child = node->mChildren[i];
-		process_nodes(model, device, child, scene, node_transform);
+		process_nodes(model, directory, device, child, scene, node_transform);
 	}
 }
 
-static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	ScratchArena scratch;
 
@@ -160,8 +161,7 @@ static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, gfx::
 
 	if (assimp_mesh->mMaterialIndex >= 0) {
 		const aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-		//struct string8 directory = string8_before_first_substring_from_back_inclusive(path, str8("/"));
-		sub_model.material = load_material_from_assimp(model.get_directory(), assimp_material);
+		sub_model.material = load_material_from_assimp(directory, assimp_material);
 	}
 }
 
