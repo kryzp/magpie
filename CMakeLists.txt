@@ -112,7 +112,7 @@ if(WIN32)
 	target_link_libraries(magpie assimp-vc143-mt volk slang SDL3)
 	set_property(TARGET magpie PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 elseif(APPLE)
-	target_link_libraries(magpie SDL3 volk assimp slang)
+	target_link_libraries(magpie SDL3::SDL3 Vulkan::Vulkan assimp::assimp slang)
 endif()
 
 target_compile_options(magpie PRIVATE ${COMPILE_OPTIONS})
