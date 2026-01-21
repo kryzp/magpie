@@ -138,6 +138,12 @@ void App::init()
 
 	global_timer.start();
 	delta_timer.start();
+	
+	// Test out the job system.
+	{
+		JOB_SPIN_SCOPE();
+		job::parallel_for(100, my_parallel_for_test);
+	}
 }
 
 void App::destroy()
@@ -168,39 +174,21 @@ bool App::tick(const inp::InputState &input)
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)platform.target_fps;
 
-	// Test out the job system.
-	{
-		job::parallel_for(100, my_parallel_for_test);
+	update(dt, input);
 
-		/*
-		job::JobSystem::get_singleton()->parallel_for(100, [&](int index) -> void {
-			DEV_PROFILE_FUNCTION();
-			printf("(%d) Hello, World! From: %d\n", index, job::JobSystem::get_current_worker_id());
-		}, job::PRIORITY_LOW, 1);
-		*/
+	delta_accumulator += CalcF::min(dt, fixed_dt);
+
+	while (delta_accumulator >= fixed_dt) {
+		fixed_update(fixed_dt);
+		delta_accumulator -= fixed_dt;
 	}
 
-	{
-		update(dt, input);
-	}
-
-	{
-		delta_accumulator += CalcF::min(dt, fixed_dt);
-
-		while (delta_accumulator >= fixed_dt) {
-			fixed_update(fixed_dt);
-			delta_accumulator -= fixed_dt;
-		}
-	}
-
-	{
-		gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
-		render(dt, elapsed_time, cmd);
-		render_graph.set_swapchain_source(swapchain_src);
-		render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
-		render_graph.execute(cmd, swapchain, dt, elapsed_time);
-		graphics_device.end_frame(swapchain, cmd);
-	}
+	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
+	render(dt, elapsed_time, cmd);
+	render_graph.set_swapchain_source(swapchain_src);
+	render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
+	render_graph.execute(cmd, swapchain, dt, elapsed_time);
+	graphics_device.end_frame(swapchain, cmd);
 
 	return false;
 }

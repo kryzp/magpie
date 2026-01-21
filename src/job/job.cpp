@@ -406,7 +406,7 @@ bool job::is_spin_mode_enabled()
 	return spin_mode;
 }
 
-bool job::set_spin_mode(bool enabled)
+void job::set_spin_mode(bool enabled)
 {
 	spin_mode.store(enabled);
 }

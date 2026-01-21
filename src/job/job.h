@@ -101,7 +101,7 @@ void parallel_for(
 );
 
 bool is_spin_mode_enabled();
-bool set_spin_mode(bool enabled);
+void set_spin_mode(bool enabled);
 
 u32 get_current_worker_id();
 bool is_main_thread();
