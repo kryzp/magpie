@@ -2,10 +2,9 @@
 
 #include "platform/platform.h"
 
-Timer::Timer(const Platform &platform)
-	: platform(platform)
-	, start_ticks(0)
-	, started(platform.get_performance_counter())
+Timer::Timer()
+	: start_ticks(0)
+	, started(platform::get_performance_counter())
 	, paused_ticks(0)
 	, paused(false)
 {
@@ -16,7 +15,7 @@ void Timer::start()
 	started = true;
 	paused = false;
 
-	start_ticks = platform.get_performance_counter();
+	start_ticks = platform::get_performance_counter();
 	paused_ticks = 0;
 }
 
@@ -35,7 +34,7 @@ void Timer::pause()
 		return;
 
 	paused = true;
-	paused_ticks = platform.get_performance_counter() - start_ticks;
+	paused_ticks = platform::get_performance_counter() - start_ticks;
 
 	start_ticks = 0;
 }
@@ -46,7 +45,7 @@ void Timer::resume()
 		return;
 
 	paused = false;
-	start_ticks = platform.get_performance_counter() - paused_ticks;
+	start_ticks = platform::get_performance_counter() - paused_ticks;
 
 	paused_ticks = 0;
 }
@@ -66,9 +65,9 @@ double Timer::get_elapsed_seconds() const
 	if (started)
 	{
 		if (paused)
-			return (double)paused_ticks / (double)platform.get_performance_counter();
+			return (double)paused_ticks / (double)platform::get_performance_frequency();
 
-		return (double)(platform.get_performance_counter() - start_ticks) / (double)platform.get_performance_counter();
+		return (double)(platform::get_performance_counter() - start_ticks) / (double)platform::get_performance_frequency();
 	}
 
 	return 0.0;

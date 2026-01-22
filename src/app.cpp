@@ -1,29 +1,32 @@
 #include "app.h"
 
-#include "platform/platform.h"
 #include "core/scratch.h"
+#include "platform/platform.h"
 #include "math/calc.h"
 #include "assets/model_serializer.h"
 
-void CameraDriver::update(gfx::Camera &camera, const Platform &platform, const inp::InputState &input, float dt)
+void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
 	if (!active)
 		return;
 	
 	const float mouse_deadzone = .001f;
-	const float turn_speed = 1.f;
+	const float turn_speed = 0.7f;
 	const float move_speed = 5000.f;
 
-	float dx = (float)(input.mouse_position.x - platform.window_width/2);
-	float dy = (float)(input.mouse_position.y - platform.window_height/2);
+	int window_width, window_height;
+	platform::get_window_size(&window_width, &window_height);
+
+	float dx = (float)(input.mouse_position.x - window_width/2);
+	float dy = (float)(input.mouse_position.y - window_height/2);
 
 	if (dx*dx + dy*dy > mouse_deadzone*mouse_deadzone) {
-		target_yaw -= dx * turn_speed * 50000.f * dt;
-		target_pitch -= dy * turn_speed * 50000.f * dt;
+		target_yaw -= dx * turn_speed * dt;
+		target_pitch -= dy * turn_speed * dt;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, dt * 5000000.f);
-	yaw = CalcF::lerp(yaw, target_yaw, dt * 5000000.f);
+	pitch = CalcF::lerp(pitch, target_pitch, dt * 20.f);
+	yaw = CalcF::lerp(yaw, target_yaw, dt * 20.f);
 
 	float corrected_pitch = pitch;
 	float corrected_yaw = yaw + CalcF::PI/2.f;
@@ -58,7 +61,7 @@ void CameraDriver::update(gfx::Camera &camera, const Platform &platform, const i
 
 	camera.recompute();
 
-	platform.set_mouse_position(platform.window_width / 2, platform.window_height / 2);
+	platform::set_mouse_position(window_width / 2, window_height / 2);
 }
 
 void CameraDriver::toggle(bool enabled)
@@ -71,13 +74,12 @@ bool CameraDriver::is_active() const
 	return active;
 }
 
-App::App(const Platform &platform)
-	: platform(platform)
-	, assets()
+App::App()
+	: assets()
 	, scratch_memory()
 	, scratch_arenas()
-	, global_timer(platform)
-	, delta_timer(platform)
+	, global_timer()
+	, delta_timer()
 	, delta_accumulator()
 	, graphics_device()
 	, swapchain()
@@ -95,7 +97,7 @@ App::~App()
 
 static void my_parallel_for_test(u32 i)
 {
-	printf("(%d) From: %d\n", i, job::get_current_worker_id());
+	debug_log("(%d) From: %d", i, job::get_current_worker_id());
 }
 
 void App::init()
@@ -106,11 +108,11 @@ void App::init()
 	scratch_arenas[1] = arena.sub_arena(SCRATCH_MEMORY_SIZE);
 	ScratchArena::select(scratch_arenas, array_size(scratch_arenas));
 
-	graphics_device.init(platform);
-	swapchain = graphics_device.create_swapchain(platform);
+	graphics_device.init();
+	swapchain = graphics_device.create_swapchain();
 	render_graph.init(&graphics_device);
 
-	assets.init(&platform, &graphics_device);
+	assets.init(&graphics_device);
 
 	render_scene.init(&graphics_device);
 
@@ -136,14 +138,14 @@ void App::init()
 
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
-	global_timer.start();
-	delta_timer.start();
-	
 	// Test out the job system.
 	{
 		JOB_SPIN_SCOPE();
 		job::parallel_for(100, my_parallel_for_test);
 	}
+
+	global_timer.start();
+	delta_timer.start();
 }
 
 void App::destroy()
@@ -158,7 +160,7 @@ void App::destroy()
 	render_graph.destroy();
 
 	graphics_device.destroy_swapchain(swapchain);
-	graphics_device.destroy(platform);
+	graphics_device.destroy();
 
 	free(scratch_memory);
 }
@@ -172,7 +174,9 @@ bool App::tick(const inp::InputState &input)
 	
 	const float elapsed_time = global_timer.get_elapsed_seconds();
 	const float dt = delta_timer.reset();
-	const float fixed_dt = 1.f / (float)platform.target_fps;
+	const float fixed_dt = 1.f / (float)TARGET_FPS;
+	
+	debug_log("%f", 1.f / dt);
 
 	update(dt, input);
 
@@ -198,7 +202,7 @@ void App::update(float dt, const inp::InputState &input)
 	if (input.kb_pressed[inp::KEYBOARD_KEY_tab])
 		camera_driver.toggle(!camera_driver.is_active());
 
-	camera_driver.update(camera, platform, input, dt);
+	camera_driver.update(camera, input, dt);
 
 	render_scene.resolve_removing();
 	render_scene.update();

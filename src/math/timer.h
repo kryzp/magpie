@@ -6,7 +6,7 @@ class Platform;
 
 class Timer {
 public:
-	Timer(const Platform &platform);
+	Timer();
 	~Timer() = default;
 
 	void start();
@@ -23,8 +23,6 @@ public:
 	bool is_paused() const;
 
 private:
-	const Platform &platform;
-
 	u64 start_ticks;
 	bool started;
 

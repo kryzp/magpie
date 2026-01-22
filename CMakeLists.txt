@@ -84,6 +84,8 @@ add_executable(magpie
 	"${CODE_DIR}/assets/model_serializer.cpp"
 
 	"${CODE_DIR}/job/job.cpp"
+	
+	"${CODE_DIR}/dev/cpu_profiler.cpp"
 
 	"${CODE_DIR}/graphics/bindless.cpp"
 	"${CODE_DIR}/graphics/camera.cpp"

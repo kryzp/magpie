@@ -5,6 +5,8 @@
 #include "core/scratch.h"
 #include "core/hash.h"
 
+#include "platform/platform.h"
+
 #include "math/calc.h"
 
 using namespace gfx;
@@ -69,9 +71,9 @@ static VkSampleCountFlagBits find_graphics_max_usable_sample_count(VkPhysicalDev
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-static const char *const *get_instance_extensions(MemoryArena &arena, const Platform &platform, u32 *extension_count)
+static const char *const *get_instance_extensions(MemoryArena &arena, u32 *extension_count)
 {
-	const char *const *names = platform.get_vulkan_instance_extensions(extension_count);
+	const char *const *names = platform::get_vulkan_instance_extensions(extension_count);
 
 	if (!names)
 		debug_log_crash("Unable to get instance extension count.");
@@ -309,15 +311,18 @@ static VkPresentModeKHR _choose_swapchain_present_mode(const Vector<VkPresentMod
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-static VkExtent2D _choose_swapchain_extent(const Platform &platform, const VkSurfaceCapabilitiesKHR *capabilities)
+static VkExtent2D _choose_swapchain_extent(const VkSurfaceCapabilitiesKHR *capabilities)
 {
 	if (capabilities->currentExtent.width != -1u &&
 	    capabilities->currentExtent.height != -1u)
 		return capabilities->currentExtent;
 
+	int window_width, window_height;
+	platform::get_window_size(&window_width, &window_height);
+
 	VkExtent2D actual_extent = {
-		platform.window_width,
-		platform.window_height
+		(u32)window_width,
+		(u32)window_height
 	};
 
 	actual_extent.width = CalcU::clamp(
@@ -363,7 +368,7 @@ Device::~Device()
 {
 }
 
-void Device::init(const Platform &platform)
+void Device::init()
 {
 	VkApplicationInfo core_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -388,7 +393,7 @@ void Device::init(const Platform &platform)
 
 	ScratchArena scratch;
 
-	instance_create_info.ppEnabledExtensionNames = get_instance_extensions(scratch.get_arena(), platform, &instance_create_info.enabledExtensionCount);
+	instance_create_info.ppEnabledExtensionNames = get_instance_extensions(scratch.get_arena(), &instance_create_info.enabledExtensionCount);
 
 	VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {};
 	debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -443,7 +448,7 @@ void Device::init(const Platform &platform)
 		);
 	}
 
-	if (!platform.create_vulkan_surface(instance, &surface))
+	if (!platform::create_vulkan_surface(instance, &surface))
 		debug_log_crash("Failed to create surface.");
 
 	// Enumerate physical devices.
@@ -747,7 +752,7 @@ void Device::init(const Platform &platform)
 	swapchain_details = query_swapchain_support(physical_device, surface);
 }
 
-void Device::destroy(const Platform &platform)
+void Device::destroy()
 {
 	for (auto &[key, view] : texture_view_cache)
 		destroy_texture_view(view);
@@ -773,7 +778,7 @@ void Device::destroy(const Platform &platform)
 	}
 
 	vkDestroyPipelineCache(device, pipeline_process_cache, nullptr);
-	platform.destroy_vulkan_surface(instance, surface);
+	platform::destroy_vulkan_surface(instance, surface);
 	vmaDestroyAllocator(vma_allocator);
 	vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
 	vkDestroyDevice(device, nullptr);
@@ -924,7 +929,7 @@ void Device::reset_command_pool(CommandPool &pool)
 	vkResetCommandPool(device, pool.get_handle(), 0);
 }
 
-Swapchain Device::create_swapchain(const Platform &platform)
+Swapchain Device::create_swapchain()
 {
 	ScratchArena scratch;
 
@@ -932,7 +937,7 @@ Swapchain Device::create_swapchain(const Platform &platform)
 
 	VkSurfaceFormatKHR surface_format = _choose_swapchain_surface_format(details.surface_formats);
 	VkPresentModeKHR present_mode = _choose_swapchain_present_mode(details.present_modes, true);
-	VkExtent2D extent = _choose_swapchain_extent(platform, &details.capabilities);
+	VkExtent2D extent = _choose_swapchain_extent(&details.capabilities);
 
 	Swapchain swapchain;
 

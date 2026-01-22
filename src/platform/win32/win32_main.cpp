@@ -25,58 +25,47 @@
 
 #include "app.h"
 
-static SDL_Window *win32_sdl_window = nullptr;
-static Platform win32_platform = {};
-static inp::InputState win32_input_st = {};
-static std::atomic<bool> app_running { true };
-static std::mutex input_mutex;
-
-static bool win32_create_vulkan_surface(void *instance, void *surface_pointer)
+namespace
 {
-	return SDL_Vulkan_CreateSurface(win32_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
+
+SDL_Window *win32_sdl_window = nullptr;
+inp::InputState win32_input_st = {};
+std::atomic<bool> app_running { true };
+std::mutex input_mutex;
+
 }
 
-static void win32_destroy_vulkan_surface(void *instance, void *surface)
+void platform::set_window_title(const char *title)
 {
-	SDL_Vulkan_DestroySurface((VkInstance)instance, (VkSurfaceKHR)surface, nullptr);
+	SDL_SetWindowTitle(win32_sdl_window, title);
 }
 
-static void win32_reconnect_all_gamepads()
+void platform::get_window_size(int *width, int *height)
 {
-	// TODO
+	SDL_GetWindowSize(win32_sdl_window, width, height);
 }
 
-static void win32_close_all_gamepads()
+void get_window_size_in_pixels(int *pixel_width, int *pixel_height)
 {
-	// TODO
+	SDL_GetWindowSizeInPixels(win32_sdl_window, pixel_width, pixel_height);
 }
 
-static void win32_set_window_size(u32 width, u32 height)
+void platform::set_window_size(u32 width, u32 height)
 {
 	SDL_SetWindowSize(win32_sdl_window, width, height);
-
-	win32_platform.window_width = width;
-	win32_platform.window_height = height;
-
-	SDL_GetWindowSizeInPixels(win32_sdl_window,
-		&win32_platform.window_pixel_width,
-		&win32_platform.window_pixel_height
-	);
 }
 
-static void win32_set_window_fullscreen(bool b)
+void platform::set_window_fullscreen(bool b)
 {
-	win32_platform.fullscreen = b;
 	SDL_SetWindowFullscreen(win32_sdl_window, b);
 }
 
-static void win32_set_window_borderless(bool b)
+void platform::set_window_borderless(bool b)
 {
-	win32_platform.borderless = b;
 	SDL_SetWindowBordered(win32_sdl_window, !b);
 }
 
-static void win32_set_mouse_position(u32 x, u32 y)
+void platform::set_mouse_position(u32 x, u32 y)
 {
 	win32_input_st.mouse_position = Vec2(x, y);
 
@@ -88,172 +77,178 @@ static void win32_set_mouse_position(u32 x, u32 y)
 	);
 }
 
-static void *win32_create_thread(ulong (*entry)(void *param), void *param)
+void platform::set_mouse_visible(bool visible)
+{
+	if (visible)
+		SDL_ShowCursor();
+	else
+		SDL_HideCursor();
+}
+
+void platform::set_mouse_locked(bool locked)
+{
+	SDL_SetWindowRelativeMouseMode(win32_sdl_window, locked);
+}
+
+void platform::set_window_opacity(float opacity)
+{
+	SDL_SetWindowOpacity(win32_sdl_window, opacity);
+}
+
+u64 platform::get_ticks()
+{
+	return SDL_GetTicks();
+}
+
+u64 platform::get_performance_counter()
+{
+	return SDL_GetPerformanceCounter();
+}
+
+u64 platform::get_performance_frequency()
+{
+	return SDL_GetPerformanceFrequency();
+}
+
+void *platform::create_thread(ulong (*entry)(void *param), void *param)
 {
 	return CreateThread(NULL, 0, entry, param, 0, NULL);
 }
 
-static void win32_join_thread(void *handle)
+void platform::join_thread(void *handle)
 {
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 }
 
-static void win32_detach_thread(void *handle)
+void platform::detach_thread(void *handle)
 {
 	CloseHandle(handle);
 }
 
-static void *win32_convert_thread_to_fiber()
+void *platform::convert_thread_to_fiber()
 {
 	return ConvertThreadToFiber(nullptr);
 }
 
-static void *win32_create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param)
+int platform::convert_fiber_to_thread()
+{
+	return ConvertFiberToThread();
+}
+
+void *platform::create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param)
 {
 	return CreateFiber(stack_size, entry, param);
 }
 
-static bool win32_file_delete(const char *path)
+void platform::delete_fiber(void *handle)
+{
+	DeleteFiber(handle);
+}
+
+void platform::switch_to_fiber(void *handle)
+{
+	SwitchToFiber(handle);
+}
+
+bool platform::file_delete(const char *path)
 {
 	return std::filesystem::remove(path);
 }
 
-static bool win32_file_exists(const char *path)
+bool platform::file_exists(const char *path)
 {
 	return std::filesystem::exists(path);
 }
 
-static bool win32_dir_create(const char *path)
+bool platform::dir_create(const char *path)
 {
 	return std::filesystem::create_directory(path);
 }
 
-static bool win32_dir_delete(const char *path)
+bool platform::dir_delete(const char *path)
 {
 	return std::filesystem::remove_all(path) > 0;
 }
 
-static bool win32_dir_exists(const char *path)
+bool platform::dir_exists(const char *path)
 {
 	return std::filesystem::is_directory(path);
 }
 
-static void *win32_stream_from_file(const char *path, const char *mode)
+void *platform::stream_from_file(const char *path, const char *mode)
 {
 	return SDL_IOFromFile(path, mode);
 }
 
-static void *win32_stream_from_memory(void *data, u64 size)
+void *platform::stream_from_memory(void *data, u64 size)
 {
 	return SDL_IOFromMem(data, size);
 }
 
-static void *win32_stream_from_const_memory(const void *data, u64 size)
+void *platform::stream_from_const_memory(const void *data, u64 size)
 {
 	return SDL_IOFromConstMem(data, size);
 }
 
-static s64 win32_stream_read(void *stream, void *dst, u64 size)
+s64 platform::stream_read(void *stream, void *dst, u64 size)
 {
 	return SDL_ReadIO((SDL_IOStream *)stream, dst, size);
 }
 
-static s64 win32_stream_write(void *stream, const void *src, u64 size)
+s64 platform::stream_write(void *stream, const void *src, u64 size)
 {
 	return SDL_WriteIO((SDL_IOStream *)stream, src, size);
 }
 
-static s64 win32_stream_seek(void *stream, s64 offset)
+s64 platform::stream_seek(void *stream, s64 offset)
 {
 	return SDL_SeekIO((SDL_IOStream *)stream, offset, SDL_IO_SEEK_SET);
 }
 
-static s64 win32_stream_size(void *stream)
+s64 platform::stream_size(void *stream)
 {
 	return SDL_GetIOSize((SDL_IOStream *)stream);
 }
 
-static s64 win32_stream_position(void *stream)
+s64 platform::stream_position(void *stream)
 {
 	return SDL_TellIO((SDL_IOStream *)stream);
 }
 
-static bool win32_stream_close(void *stream)
+bool platform::stream_close(void *stream)
 {
 	return SDL_CloseIO((SDL_IOStream *)stream);
 }
 
-static void win32_open_in_explorer(const char *path)
+void platform::open_in_explorer(const char *path)
 {
 	ShellExecute(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
 }
 
-static void init_platform()
+bool platform::create_vulkan_surface(void *instance, void *surface_pointer)
 {
-	win32_platform.window_title = DEFAULT_WINDOW_TITLE;
+	return SDL_Vulkan_CreateSurface(win32_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
+}
 
-	win32_platform.window_width = DEFAULT_WINDOW_WIDTH;
-	win32_platform.window_height = DEFAULT_WINDOW_HEIGHT;
+void platform::destroy_vulkan_surface(void *instance, void *surface)
+{
+	SDL_Vulkan_DestroySurface((VkInstance)instance, (VkSurfaceKHR)surface, nullptr);
+}
 
-	SDL_GetWindowSizeInPixels(win32_sdl_window,
-		&win32_platform.window_pixel_width,
-		&win32_platform.window_pixel_height
-	);
+const char *const *platform::get_vulkan_instance_extensions(u32 *count)
+{
+	return SDL_Vulkan_GetInstanceExtensions(count);
+}
 
-	win32_platform.window_opacity = 1.f;
+static void reconnect_all_gamepads()
+{
+	// TODO
+}
 
-	win32_platform.fullscreen = false;
-	win32_platform.borderless = false;
-
-	win32_platform.target_fps = 120;
-	win32_platform.current_time = 0.f;
-
-	win32_platform.cursor_visible = true;
-	win32_platform.cursor_locked = false;
-
-	win32_platform.set_window_size = win32_set_window_size;
-	win32_platform.set_window_fullscreen = win32_set_window_fullscreen;
-	win32_platform.set_window_borderless = win32_set_window_borderless;
-
-	win32_platform.set_mouse_position = win32_set_mouse_position;
-
-	win32_platform.get_ticks = SDL_GetTicks;
-	win32_platform.get_performance_counter = SDL_GetPerformanceCounter;
-	win32_platform.get_performance_frequency = SDL_GetPerformanceFrequency;
-
-	win32_platform.create_thread = win32_create_thread;
-	win32_platform.join_thread = win32_join_thread;
-	win32_platform.detach_thread = win32_detach_thread;
-
-	win32_platform.convert_thread_to_fiber = win32_convert_thread_to_fiber;
-	win32_platform.convert_fiber_to_thread = ConvertFiberToThread;
-	win32_platform.create_fiber = win32_create_fiber;
-	win32_platform.delete_fiber = DeleteFiber;
-	win32_platform.switch_to_fiber = SwitchToFiber;
-
-	win32_platform.file_delete = win32_file_delete;
-	win32_platform.file_exists = win32_file_exists;
-
-	win32_platform.dir_create = win32_dir_create;
-	win32_platform.dir_delete = win32_dir_delete;
-	win32_platform.dir_exists = win32_dir_exists;
-
-	win32_platform.stream_from_file = win32_stream_from_file;
-	win32_platform.stream_from_memory = win32_stream_from_memory;
-	win32_platform.stream_from_const_memory = win32_stream_from_const_memory;
-	win32_platform.stream_read = win32_stream_read;
-	win32_platform.stream_write = win32_stream_write;
-	win32_platform.stream_seek = win32_stream_seek;
-	win32_platform.stream_size = win32_stream_size;
-	win32_platform.stream_position = win32_stream_position;
-	win32_platform.stream_close = win32_stream_close;
-
-	win32_platform.open_in_explorer = win32_open_in_explorer;
-
-	win32_platform.create_vulkan_surface = win32_create_vulkan_surface;
-	win32_platform.destroy_vulkan_surface = win32_destroy_vulkan_surface;
-	win32_platform.get_vulkan_instance_extensions = SDL_Vulkan_GetInstanceExtensions;
+static void win32_close_all_gamepads()
+{
+	// TODO
 }
 
 static JOB_ENTRY_POINT(root_entry_point)
@@ -339,7 +334,14 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	init_platform();
+	// Init platform.
+	platform::set_window_title(DEFAULT_WINDOW_TITLE);
+	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	platform::set_window_opacity(1.f);
+	platform::set_window_fullscreen(false);
+	platform::set_window_borderless(false);
+	platform::set_mouse_visible(true);
+	platform::set_mouse_locked(false);
 
 	/*
 	 * As a note to myself and to anyone reading this.
@@ -351,9 +353,9 @@ int main(int argc, char **argv)
 	 * job that we launch here.
 	 */
 	
-	App app(win32_platform);
+	App app;
 
-	job::init(&win32_platform, std::thread::hardware_concurrency() - 1);
+	job::init(std::thread::hardware_concurrency() - 1);
 	job::kick_job(job::JobDecl(root_entry_point, &app), nullptr);
 
 	while (app_running.load()) {

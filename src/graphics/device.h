@@ -9,8 +9,6 @@
 #include "container/hash_map.h"
 #include "container/string.h"
 
-#include "platform/platform.h"
-
 #include "bindless.h"
 #include "command_pool.h"
 #include "swapchain.h"
@@ -39,8 +37,8 @@ public:
 	Device();
 	~Device();
 
-	void init(const Platform &platform);
-	void destroy(const Platform &platform);
+	void init();
+	void destroy();
 
 	void wait_idle();
 	void wait_for_fence(VkFence fence);
@@ -65,7 +63,7 @@ public:
 
 	// ---
 
-	Swapchain create_swapchain(const Platform &platform);
+	Swapchain create_swapchain();
 	void destroy_swapchain(const Swapchain &swapchain);
 
 	// ---

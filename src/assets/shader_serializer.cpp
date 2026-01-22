@@ -1,5 +1,6 @@
 #include "shader_serializer.h"
 
+#include "platform/platform.h"
 #include "io/filesystem.h"
 
 using namespace ast;
@@ -23,9 +24,9 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 	//       -----
 	//       kind: Graphics
 	//       paths: model.vert.spv, model.frag.spv
-	if (assets.get_platform()->file_exists((file_path + ".comp.spv").c_str())) {
+	if (platform::file_exists((file_path + ".comp.spv").c_str())) {
 		paths.push_back(file_path + ".comp.spv");
-	} else if (assets.get_platform()->file_exists((file_path + ".frag.spv").c_str())) {
+	} else if (platform::file_exists((file_path + ".frag.spv").c_str())) {
 		// TODO: Shader stage order should not matter in the paths ffs.
 		paths.push_back(file_path + ".vert.spv");
 		paths.push_back(file_path + ".frag.spv");

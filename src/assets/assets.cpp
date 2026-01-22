@@ -40,9 +40,8 @@ AssetManager::~AssetManager()
 {
 }
 
-void AssetManager::init(const Platform *platform, gfx::Device *device)
+void AssetManager::init(gfx::Device *device)
 {
-	this->platform = platform;
 	this->device = device;
 }
 

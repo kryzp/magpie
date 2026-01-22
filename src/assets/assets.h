@@ -140,7 +140,7 @@ public:
 	AssetManager();
 	~AssetManager();
 
-	void init(const Platform *platform, gfx::Device *device);
+	void init(gfx::Device *device);
 	void destroy();
 
 	template <typename T, typename ...Args>
@@ -156,18 +156,12 @@ public:
 	String get_system_file_path(const String &path) const;
 	bool is_handle_valid(const AssetHandle &handle) const;
 
-	const Platform *get_platform() const
-	{
-		return platform;
-	}
-
 	gfx::Device *get_device() const
 	{
 		return device;
 	}
 
 private:
-	const Platform *platform = nullptr;
 	gfx::Device *device = nullptr;
 
 	class AssetList {

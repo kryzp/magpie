@@ -13,13 +13,13 @@
 #include "graphics/renderers/skybox_renderer.h"
 #include "graphics/renderers/post_processing.h"
 
-#include "job/job.h"
+#include "platform/input.h"
 
-struct Platform;
+#include "job/job.h"
 
 class CameraDriver {
 public:
-	void update(gfx::Camera &camera, const Platform &platform, const inp::InputState &input, float dt);
+	void update(gfx::Camera &camera, const inp::InputState &input, float dt);
 
 	void toggle(bool enabled);
 	bool is_active() const;
@@ -33,8 +33,10 @@ private:
 };
 
 class App {
+	constexpr static u32 TARGET_FPS = 120;
+
 public:
-	App(const Platform &platform);
+	App();
 	~App();
 
 	void init();
@@ -45,8 +47,6 @@ private:
 	void update(float dt, const inp::InputState &input);
 	void fixed_update(float dt);
 	void render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd);
-
-	const Platform &platform;
 
 	ast::AssetManager assets;
 

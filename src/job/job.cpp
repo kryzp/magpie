@@ -8,6 +8,7 @@
 #include <condition_variable>
 
 #include "core/scratch.h"
+#include "platform/platform.h"
 
 namespace job
 {
@@ -52,8 +53,6 @@ namespace
 {
 
 thread_local ThreadLocalState tls;
-
-const Platform *platform;
 
 u32 worker_count;
 job::JobWorker *workers;
@@ -106,10 +105,12 @@ static void job::dec_counter(JobCounter *counter, u32 n)
 	if (p == n) {
 		lock_counter(counter);
 
-		for (JobFiber *f : counter->wait_list)
-			job::kick_waiting_fiber(f);
+		Vector<JobFiber *> wait_list_copy = counter->wait_list;
 
 		counter->wait_list.clear();
+
+		for (JobFiber *f : wait_list_copy)
+			job::kick_waiting_fiber(f);
 
 		unlock_counter(counter);
 	}
@@ -182,7 +183,7 @@ static ulong scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
 
-	void *fiber_handle = platform->convert_thread_to_fiber();
+	void *fiber_handle = platform::convert_thread_to_fiber();
 
 	tls.current_worker_id = *worker_id;
 	tls.current_worker = &workers[*worker_id];
@@ -206,7 +207,7 @@ static ulong scheduler_thread(void *param)
 				tls.current_fiber->is_finished = false;
 			}
 
-			platform->switch_to_fiber(tls.current_fiber->handle);
+			platform::switch_to_fiber(tls.current_fiber->handle);
 
 			if (tls.current_fiber->is_finished)
 				return_fiber(tls.current_fiber);
@@ -214,8 +215,11 @@ static ulong scheduler_thread(void *param)
 			tls.current_fiber = nullptr;
 		} else {
 			if (spin_mode) {
-				while (spin_mode && !job::has_job_available())
+				while (!job::has_job_available()) {
+					if (!spin_mode)
+						break;
 					JOB_SPIN_PAUSE();
+				}
 			} else {
 				std::unique_lock<std::mutex> lock(mutex);
 				cond_begin.wait(lock);
@@ -223,15 +227,13 @@ static ulong scheduler_thread(void *param)
 		}
 	}
 
-	platform->convert_fiber_to_thread();
+	platform::convert_fiber_to_thread();
 
 	return 0;
 }
 
-void job::init(const Platform *p, u32 initial_worker_count)
+void job::init(u32 initial_worker_count)
 {
-	platform = p;
-
 	if (running)
 		return;
 
@@ -242,13 +244,13 @@ void job::init(const Platform *p, u32 initial_worker_count)
 
 	for (int i = 0; i < worker_count; i++) {
 		workers[i].id = i;
-		workers[i].thread = platform->create_thread(scheduler_thread, &workers[i].id);
+		workers[i].thread = platform::create_thread(scheduler_thread, &workers[i].id);
 		workers[i].scheduler_fiber = nullptr;
 	}
 
 	for (int i = 0; i < MAX_CONCURRENT_FIBERS; i++) {
 		JobFiber *f = new JobFiber();
-		f->handle = platform->create_fiber(0, fiber_entry_point, nullptr);
+		f->handle = platform::create_fiber(0, fiber_entry_point, nullptr);
 		f->job = nullptr;
 		f->is_finished = true;
 
@@ -270,7 +272,7 @@ void job::shutdown()
 	cond_begin.notify_all();
 	
 	for (int i = 0; i < worker_count; i++)
-		platform->join_thread(workers[i].thread);
+		platform::join_thread(workers[i].thread);
 	
 	for (int i = 0; i < PRIORITY_MAX_ENUM; i++)
 		delete[] job_queues[i].buffer;
@@ -283,7 +285,7 @@ void job::shutdown()
 
 	while (curr) {
 		JobFiber *next = curr->next;
-		platform->delete_fiber(curr->handle);
+		platform::delete_fiber(curr->handle);
 		delete curr;
 		curr = next;
 	}
@@ -424,13 +426,13 @@ bool job::is_main_thread()
 static void job::yield_current_fiber()
 {
 	tls.current_fiber->is_finished = false;
-	platform->switch_to_fiber(tls.current_worker->scheduler_fiber);
+	platform::switch_to_fiber(tls.current_worker->scheduler_fiber);
 }
 
 static void job::return_current_fiber()
 {
 	tls.current_fiber->is_finished = true;
-	platform->switch_to_fiber(tls.current_worker->scheduler_fiber);
+	platform::switch_to_fiber(tls.current_worker->scheduler_fiber);
 }
 
 static job::JobFiber *job::get_free_fiber()
@@ -494,10 +496,11 @@ static job::JobRequest *job::try_get_job()
 
 static bool job::has_job_available()
 {
-	for (int i = PRIORITY_MAX_ENUM; i >= 0; i--) {
+	for (int i = PRIORITY_MAX_ENUM - 1; i >= 0; i--) {
 		JobQueue *queue = &job_queues[i];
+
 		u32 t = queue->taken_task_count.load(std::memory_order_relaxed);
-		u32 a = queue->added_task_count.load(std::memory_order_acquire);
+		u32 a = queue->added_task_count.load(std::memory_order_relaxed);
 
 		if ((int)(a - t) > 0)
 			return true;

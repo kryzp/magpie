@@ -4,7 +4,6 @@
 #include <thread>
 
 #include "core/types.h"
-#include "platform/platform.h"
 #include "container/vector.h"
 
 // Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
@@ -80,7 +79,7 @@ struct JobFiber {
 static constexpr u32 MAX_JOBS_IN_QUEUE = 4096;
 static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
 
-void init(const Platform *p, u32 initial_worker_count);
+void init(u32 initial_worker_count);
 void shutdown();
 
 void kick_job(

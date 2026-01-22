@@ -1,9 +1,6 @@
 #pragma once
 
 #include "core/types.h"
-#include "math/vec2.h"
-
-#include "input.h"
 
 #define DEFAULT_WINDOW_TITLE    "Demo"
 #define ENGINE_NAME             "Magpie"
@@ -25,66 +22,56 @@
 
 typedef void (*fiber_entry_point_fn)(void *param);
 
-struct Platform {
-	const char *window_title;
+namespace platform
+{
 
-	u32 window_width;
-	u32 window_height;
+void set_window_title(const char *title);
+void get_window_size(int *width, int *height);
+void get_window_size_in_pixels(int *pixel_width, int *pixel_height);
+void set_window_size(u32 width, u32 height);
+void set_window_fullscreen(bool b);
+void set_window_borderless(bool b);
+void set_window_opacity(float opacity);
 
-	int window_pixel_width;
-	int window_pixel_height;
+void set_mouse_position(u32 x, u32 y);
+void set_mouse_visible(bool visible);
+void set_mouse_locked(bool locked);
 
-	float window_opacity;
+u64 get_ticks();
+u64 get_performance_counter();
+u64 get_performance_frequency();
 
-	bool fullscreen;
-	bool borderless;
+void *create_thread(ulong (*entry)(void *param), void *param);
+void join_thread(void *handle);
+void detach_thread(void *handle);
 
-	float target_fps;
-	float current_time;
+void *convert_thread_to_fiber();
+int convert_fiber_to_thread();
+void *create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param);
+void delete_fiber(void *handle);
+void switch_to_fiber(void *handle);
 
-	bool cursor_visible;
-	bool cursor_locked;
+bool file_delete(const char *path);
+bool file_exists(const char *path);
 
-	void (*set_window_size)(u32 width, u32 height);
-	void (*set_window_fullscreen)(bool b);
-	void (*set_window_borderless)(bool b);
+bool dir_create(const char *path);
+bool dir_delete(const char *path);
+bool dir_exists(const char *path);
 
-	void (*set_mouse_position)(u32 x, u32 y);
+void *stream_from_file(const char *path, const char *mode);
+void *stream_from_memory(void *data, u64 size);
+void *stream_from_const_memory(const void *data, u64 size);
+s64 stream_read(void *stream, void *dst, u64 size);
+s64 stream_write(void *stream, const void *src, u64 size);
+s64 stream_seek(void *stream, s64 offset);
+s64 stream_size(void *stream);
+s64 stream_position(void *stream);
+bool stream_close(void *stream);
 
-	u64 (*get_ticks)(void);
-	u64 (*get_performance_counter)(void);
-	u64 (*get_performance_frequency)(void);
+void open_in_explorer(const char *path);
 
-	void *(*create_thread)(ulong (*entry)(void *param), void *param);
-	void (*join_thread)(void *handle);
-	void (*detach_thread)(void *handle);
+bool create_vulkan_surface(void *instance, void *surface_pointer);
+void destroy_vulkan_surface(void *instance, void *surface);
+const char *const *get_vulkan_instance_extensions(u32 *count);
 
-	void *(*convert_thread_to_fiber)(void);
-	int (*convert_fiber_to_thread)(void);
-	void *(*create_fiber)(u32 stack_size, fiber_entry_point_fn entry, void *param);
-	void (*delete_fiber)(void *handle);
-	void (*switch_to_fiber)(void *handle);
-
-	bool (*file_delete)(const char *path);
-	bool (*file_exists)(const char *path);
-
-	bool (*dir_create)(const char *path);
-	bool (*dir_delete)(const char *path);
-	bool (*dir_exists)(const char *path);
-
-	void *(*stream_from_file)(const char *path, const char *mode);
-	void *(*stream_from_memory)(void *data, u64 size);
-	void *(*stream_from_const_memory)(const void *data, u64 size);
-	s64 (*stream_read)(void *stream, void *dst, u64 size);
-	s64 (*stream_write)(void *stream, const void *src, u64 size);
-	s64 (*stream_seek)(void *stream, s64 offset);
-	s64 (*stream_size)(void *stream);
-	s64 (*stream_position)(void *stream);
-	bool (*stream_close)(void *stream);
-
-	void (*open_in_explorer)(const char *path);
-
-	bool (*create_vulkan_surface)(void *instance, void *surface_pointer);
-	void (*destroy_vulkan_surface)(void *instance, void *surface);
-	const char *const *(*get_vulkan_instance_extensions)(u32 *count);
-};
+}

@@ -3,6 +3,8 @@
 #include "assets/texture_serializer.h"
 #include "assets/shader_serializer.h"
 
+#include "platform/platform.h"
+
 using namespace gfx;
 
 struct FrameData {
