@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/types.h"
 #include "math/vec2.h"
 
 namespace inp
@@ -250,7 +251,13 @@ enum GamepadButton {
 	GAMEPAD_BUTTON_down,
 	GAMEPAD_BUTTON_left,
 	GAMEPAD_BUTTON_right,
-	GAMEPAD_BUTTON_MAX_ENUM
+	GAMEPAD_BUTTON_MAX_ENUM,
+	
+	// PlayStation Equivalents.
+	GAMEPAD_BUTTON_cross = GAMEPAD_BUTTON_a,
+	GAMEPAD_BUTTON_circle = GAMEPAD_BUTTON_b,
+	GAMEPAD_BUTTON_square = GAMEPAD_BUTTON_x,
+	GAMEPAD_BUTTON_triangle = GAMEPAD_BUTTON_y
 };
 
 enum GamepadAxis {
@@ -287,6 +294,35 @@ struct GamepadState {
 
 	float left_trigger;
 	float right_trigger;
+
+	void set_axis_value(GamepadAxis axis, float value)
+	{
+		switch (axis) {
+			case GAMEPAD_AXIS_left_x:
+				left_stick.x = value;
+				break;
+
+			case GAMEPAD_AXIS_left_y:
+				left_stick.y = value;
+				break;
+
+			case GAMEPAD_AXIS_right_x:
+				right_stick.x = value;
+				break;
+
+			case GAMEPAD_AXIS_right_y:
+				right_stick.y = value;
+				break;
+
+			case GAMEPAD_AXIS_trigger_left:
+				left_trigger = value;
+				break;
+
+			case GAMEPAD_AXIS_trigger_right:
+				right_trigger = value;
+				break;
+		}
+	}
 };
 
 struct InputState {
@@ -305,5 +341,10 @@ struct InputState {
 
 	GamepadState gamepads[MAX_GAMEPADS];
 };
+
+// Implemented in platform.
+// 0 <= lo, hi <= 1
+// Duration in seconds
+void rumble_gamepad(u32 index, float lo, float hi, float duration);
 
 }

@@ -67,9 +67,6 @@ public:
 using CalcI = Calc<int>;
 using CalcU = Calc<unsigned>;
 using CalcF = Calc<float>;
-using CalcD = Calc<double>;
-using CalcF32 = Calc<float>;
-using CalcF64 = Calc<double>;
 
 template <typename T>
 T Calc<T>::abs(T x)

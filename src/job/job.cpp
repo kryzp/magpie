@@ -145,20 +145,17 @@ static void job::push_job(JobPriority priority, const JobRequest &request)
 		u32 t = queue->taken_task_count.load(std::memory_order_relaxed);
 		u32 a = queue->added_task_count.load(std::memory_order_relaxed);
 
-		if ((a - t) < MAX_JOBS_IN_QUEUE) {
-			u32 index = a % MAX_JOBS_IN_QUEUE;
+		bool overflow = (a - t) >= MAX_JOBS_IN_QUEUE;
 
-			queue->buffer[index] = request;
-
-			queue->added_task_count.fetch_add(1, std::memory_order_release);
-
+		if (overflow) {
 			queue->locked.clear(std::memory_order_release);
-			return;
+			JOB_SPIN_PAUSE();
+		} else {
+			queue->buffer[a % MAX_JOBS_IN_QUEUE] = request;
+			queue->added_task_count.fetch_add(1, std::memory_order_release);
+			queue->locked.clear(std::memory_order_release);
+			break;
 		}
-
-		queue->locked.clear(std::memory_order_release);
-
-		JOB_SPIN_PAUSE();
 	}
 }
 

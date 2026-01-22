@@ -33,11 +33,6 @@ struct JobCounter {
 	Vector<JobFiber *> wait_list;
 };
 
-JobCounter *alloc_counter(u32 initial_count = 0);
-void free_counter(JobCounter *counter);
-void yield_on_counter(JobCounter *counter, u32 value = 0);
-void yield_on_counter_and_free(JobCounter *counter, u32 value = 0);
-
 #define JOB_ENTRY_POINT(fname_) void fname_(uptr param)
 
 typedef void EntryPoint(uptr param);
@@ -81,6 +76,12 @@ static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
 
 void init(u32 initial_worker_count);
 void shutdown();
+
+JobCounter *alloc_counter(u32 initial_count = 0);
+void free_counter(JobCounter *counter);
+
+void yield_on_counter(JobCounter *counter, u32 value = 0);
+void yield_on_counter_and_free(JobCounter *counter, u32 value = 0);
 
 void kick_job(
 	const JobDecl &job,

@@ -10,6 +10,8 @@
 
 // minwindef.h wtf???
 // What stupid programmer decided to make these defines global ffs.
+#undef min
+#undef max
 #undef near
 #undef far
 
@@ -18,8 +20,10 @@
 
 #include <mutex>
 
+#include "container/vector.h"
 #include "platform/platform.h"
 #include "math/vec2.h"
+#include "math/calc.h"
 #include "core/types.h"
 #include "job/job.h"
 
@@ -28,52 +32,54 @@
 namespace
 {
 
-SDL_Window *win32_sdl_window = nullptr;
-inp::InputState win32_input_st = {};
+SDL_Window *sdl_window = nullptr;
+inp::InputState input_st = {};
 std::atomic<bool> app_running { true };
 std::mutex input_mutex;
+SDL_Gamepad *gamepads[MAX_GAMEPADS] = {};
+int gamepad_count = 0;
 
 }
 
 void platform::set_window_title(const char *title)
 {
-	SDL_SetWindowTitle(win32_sdl_window, title);
+	SDL_SetWindowTitle(sdl_window, title);
 }
 
 void platform::get_window_size(int *width, int *height)
 {
-	SDL_GetWindowSize(win32_sdl_window, width, height);
+	SDL_GetWindowSize(sdl_window, width, height);
 }
 
-void get_window_size_in_pixels(int *pixel_width, int *pixel_height)
+void platform::get_window_size_in_pixels(int *pixel_width, int *pixel_height)
 {
-	SDL_GetWindowSizeInPixels(win32_sdl_window, pixel_width, pixel_height);
+	SDL_GetWindowSizeInPixels(sdl_window, pixel_width, pixel_height);
 }
 
 void platform::set_window_size(u32 width, u32 height)
 {
-	SDL_SetWindowSize(win32_sdl_window, width, height);
+	SDL_SetWindowSize(sdl_window, width, height);
 }
 
 void platform::set_window_fullscreen(bool b)
 {
-	SDL_SetWindowFullscreen(win32_sdl_window, b);
+	SDL_SetWindowFullscreen(sdl_window, b);
 }
 
 void platform::set_window_borderless(bool b)
 {
-	SDL_SetWindowBordered(win32_sdl_window, !b);
+	SDL_SetWindowBordered(sdl_window, !b);
 }
 
 void platform::set_mouse_position(u32 x, u32 y)
 {
-	win32_input_st.mouse_position = Vec2(x, y);
+	input_st.mouse_position = Vec2(x, y);
 
-	SDL_WarpMouseInWindow(win32_sdl_window, x, y);
+	SDL_WarpMouseInWindow(sdl_window, x, y);
 
 	SDL_GetGlobalMouseState(
-		&win32_input_st.mouse_screen_position.x,
-		&win32_input_st.mouse_screen_position.y
+		&input_st.mouse_screen_position.x,
+		&input_st.mouse_screen_position.y
 	);
 }
 
@@ -87,12 +93,12 @@ void platform::set_mouse_visible(bool visible)
 
 void platform::set_mouse_locked(bool locked)
 {
-	SDL_SetWindowRelativeMouseMode(win32_sdl_window, locked);
+	SDL_SetWindowRelativeMouseMode(sdl_window, locked);
 }
 
 void platform::set_window_opacity(float opacity)
 {
-	SDL_SetWindowOpacity(win32_sdl_window, opacity);
+	SDL_SetWindowOpacity(sdl_window, opacity);
 }
 
 u64 platform::get_ticks()
@@ -228,7 +234,7 @@ void platform::open_in_explorer(const char *path)
 
 bool platform::create_vulkan_surface(void *instance, void *surface_pointer)
 {
-	return SDL_Vulkan_CreateSurface(win32_sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
+	return SDL_Vulkan_CreateSurface(sdl_window, (VkInstance)instance, nullptr, (VkSurfaceKHR *)surface_pointer);
 }
 
 void platform::destroy_vulkan_surface(void *instance, void *surface)
@@ -241,14 +247,47 @@ const char *const *platform::get_vulkan_instance_extensions(u32 *count)
 	return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-static void reconnect_all_gamepads()
+void inp::rumble_gamepad(u32 index, float lo, float hi, float duration)
 {
-	// TODO
+	lo = CalcF::clamp(lo, 0.f, 1.f);
+	hi = CalcF::clamp(hi, 0.f, 1.f);
+
+	u16 freq_lo = (u16)(lo * (float)0xFFFF);
+	u16 freq_hi = (u16)(hi * (float)0xFFFF);
+	u64 dur_ms = duration * 1000.f;
+
+	SDL_Gamepad *gp = gamepads[index];
+
+	SDL_RumbleGamepad(gp, freq_lo, freq_hi, dur_ms);
 }
 
-static void win32_close_all_gamepads()
+static void close_all_gamepads()
 {
-	// TODO
+	for (int i = 0; i < gamepad_count; i++) {
+		SDL_CloseGamepad(gamepads[i]);
+		gamepads[i] = nullptr;
+	}
+
+	gamepad_count = 0;
+}
+
+static void reconnect_all_gamepads()
+{
+	if (gamepad_count > 0)
+		close_all_gamepads();
+
+	SDL_JoystickID *ids = SDL_GetGamepads(&gamepad_count);
+
+	for (int i = 0; i < gamepad_count; i++) {
+		gamepads[i] = SDL_OpenGamepad(ids[i]);
+
+		if (gamepads[i])
+			debug_log("Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(gamepads[i]));
+		else
+			debug_log("Failed to open gamepad.", SDL_GetGamepadPlayerIndex(gamepads[i]));
+	}
+
+	SDL_free(ids);
 }
 
 static JOB_ENTRY_POINT(root_entry_point)
@@ -265,11 +304,11 @@ static JOB_ENTRY_POINT(root_entry_point)
 		inp::InputState curr_input_st = {};
 		{
 			std::lock_guard<std::mutex> lock(input_mutex);
-			curr_input_st = win32_input_st;
+			curr_input_st = input_st;
 
 			// Reset accumulated values.
-			win32_input_st.mouse_delta = Vec2::zero();
-			win32_input_st.mouse_wheel = Vec2::zero();
+			input_st.mouse_delta = Vec2::zero();
+			input_st.mouse_wheel = Vec2::zero();
 		}
 
 		for (int i = 0; i < inp::KEYBOARD_KEY_MAX_ENUM; i++) {
@@ -322,14 +361,14 @@ int main(int argc, char **argv)
 		SDL_WINDOW_VULKAN |
 		SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	win32_sdl_window = SDL_CreateWindow(
+	sdl_window = SDL_CreateWindow(
 		DEFAULT_WINDOW_TITLE,
 		DEFAULT_WINDOW_WIDTH,
 		DEFAULT_WINDOW_HEIGHT,
 		window_flags
 	);
 
-	if (!win32_sdl_window) {
+	if (!sdl_window) {
 		debug_log_crash("Failed to create SDL window: %s", SDL_GetError());
 		return -1;
 	}
@@ -370,19 +409,19 @@ int main(int argc, char **argv)
 					break;
 
 				case SDL_EVENT_KEY_DOWN:
-					win32_input_st.kb_down[ev.key.scancode] = true;
+					input_st.kb_down[ev.key.scancode] = true;
 					break;
 
 				case SDL_EVENT_KEY_UP:
-					win32_input_st.kb_down[ev.key.scancode] = false;
+					input_st.kb_down[ev.key.scancode] = false;
 					break;
 
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
-					win32_input_st.mb_down[ev.button.button] = true;
+					input_st.mb_down[ev.button.button] = true;
 					break;
 
 				case SDL_EVENT_MOUSE_BUTTON_UP:
-					win32_input_st.mb_down[ev.button.button] = false;
+					input_st.mb_down[ev.button.button] = false;
 					break;
 
 				case SDL_EVENT_MOUSE_MOTION: {
@@ -391,13 +430,45 @@ int main(int argc, char **argv)
 
 					SDL_GetGlobalMouseState(&spx, &spy);
 
-					win32_input_st.mouse_position = Vec2(ev.motion.x, ev.motion.y);
-					win32_input_st.mouse_screen_position = Vec2(spx, spy);
-					win32_input_st.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
+					input_st.mouse_position = Vec2(ev.motion.x, ev.motion.y);
+					input_st.mouse_screen_position = Vec2(spx, spy);
+					input_st.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
 				} break;
 
 				case SDL_EVENT_MOUSE_WHEEL:
-					win32_input_st.mouse_wheel += Vec2(ev.wheel.x, ev.wheel.y);
+					input_st.mouse_wheel += Vec2(ev.wheel.x, ev.wheel.y);
+					break;
+					
+				case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = true;
+					break;
+
+				case SDL_EVENT_GAMEPAD_BUTTON_UP:
+					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = false;
+					break;
+
+				case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gaxis.which)].set_axis_value(
+						(inp::GamepadAxis)ev.gaxis.axis,
+						(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.f : 0.f))
+					);
+					break;
+
+				case SDL_EVENT_GAMEPAD_ADDED:
+					reconnect_all_gamepads();
+					break;
+
+				case SDL_EVENT_GAMEPAD_REMOVED:
+					debug_log("Removed gamepad.");
+					reconnect_all_gamepads();
+					break;
+
+				case SDL_EVENT_GAMEPAD_REMAPPED:
+					SDL_ReloadGamepadMappings();
+					reconnect_all_gamepads();
+					break;
+
+				default:
 					break;
 			}
 		}
@@ -407,9 +478,9 @@ int main(int argc, char **argv)
 
 	job::shutdown();
 
-	win32_close_all_gamepads();
+	close_all_gamepads();
 
-	SDL_DestroyWindow(win32_sdl_window);
+	SDL_DestroyWindow(sdl_window);
 	SDL_Quit();
 
 	return 0;
