@@ -77,6 +77,7 @@ add_executable(magpie
 	"${CODE_DIR}/math/vec3.cpp"
 
 	"${CODE_DIR}/io/filesystem.cpp"
+	"${CODE_DIR}/io/stream.cpp"
 
 	"${CODE_DIR}/assets/assets.cpp"
 	"${CODE_DIR}/assets/texture_serializer.cpp"

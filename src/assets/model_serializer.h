@@ -6,22 +6,20 @@
 
 namespace ast
 {
+	struct ModelAsset : public Asset {
+		AST_DEFINE_ASSET(ASSET_TYPE_MODEL);
 
-struct ModelAsset : public Asset {
-	AST_DEFINE_ASSET(ASSET_TYPE_MODEL);
+		ModelAsset()
+		{
+		}
 
-	ModelAsset()
-	{
-	}
+		~ModelAsset() override
+		{
+			model.get_sub_model(0).mesh.destroy();
+		}
 
-	~ModelAsset() override
-	{
-		model.get_sub_model(0).mesh.destroy();
-	}
+		gfx::Model model;
+	};
 
-	gfx::Model model;
-};
-
-AssetSerializer get_model_serializer();
-
+	AssetSerializer get_model_serializer();
 }

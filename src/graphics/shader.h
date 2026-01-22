@@ -6,53 +6,51 @@
 
 namespace gfx
 {
+	struct ShaderStage {
+		VkShaderStageFlags type;
+		VkShaderModule module;
+		u32 push_constant_size;
+	};
 
-struct ShaderStage {
-	VkShaderStageFlags type;
-	VkShaderModule module;
-	u32 push_constant_size;
-};
+	/*
+	 * Shaders are assumed to be fully bindless.
+	 */
+	class ShaderProgram {
+		friend class Device;
 
-/*
- * Shaders are assumed to be fully bindless.
- */
-class ShaderProgram {
-	friend class Device;
+	public:
+		ShaderProgram()
+			: push_constant_size(0)
+			, stage_count(0)
+			, stages{}
+		{
+		}
 
-public:
-	ShaderProgram()
-		: push_constant_size(0)
-		, stage_count(0)
-		, stages{}
-	{
-	}
+		~ShaderProgram() = default;
 
-	~ShaderProgram() = default;
+		bool is_compute() const
+		{
+			return stage_count == 1;
+		}
 
-	bool is_compute() const
-	{
-		return stage_count == 1;
-	}
+		u32 get_push_constant_size() const
+		{
+			return push_constant_size;
+		}
 
-	u32 get_push_constant_size() const
-	{
-		return push_constant_size;
-	}
+		u32 get_stage_count() const
+		{
+			return stage_count;
+		}
 
-	u32 get_stage_count() const
-	{
-		return stage_count;
-	}
+		const ShaderStage &get_stage(u32 stage) const
+		{
+			return stages[stage];
+		}
 
-	const ShaderStage &get_stage(u32 stage) const
-	{
-		return stages[stage];
-	}
-
-private:
-	u32 push_constant_size;
-	u32 stage_count;
-	ShaderStage stages[2];
-};
-
+	private:
+		u32 push_constant_size;
+		u32 stage_count;
+		ShaderStage stages[2];
+	};
 }

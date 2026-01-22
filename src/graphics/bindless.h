@@ -8,66 +8,64 @@
 
 namespace gfx
 {
+	using BindlessHandle = u32;
 
-using BindlessHandle = u32;
-
-enum BindlessSetKind {
-	BINDLESS_SET_SAMPLER,
-	BINDLESS_SET_SAMPLED,
-	BINDLESS_SET_STORAGE,
-	BINDLESS_SET_MAX_ENUM
-};
-
-struct BindlessSampler {
-	BindlessHandle sampler;
-};
-
-struct BindlessView {
-	BindlessHandle sampled;
-	BindlessHandle storage;
-};
-
-class BindlessResources {
-	friend class Device;
-
-	struct BindlessUpdate {
-		BindlessSetKind kind;
-		BindlessHandle slot;
-		VkSampler sampler;
-		VkImageView view;
+	enum BindlessSetKind {
+		BINDLESS_SET_SAMPLER,
+		BINDLESS_SET_SAMPLED,
+		BINDLESS_SET_STORAGE,
+		BINDLESS_SET_MAX_ENUM
 	};
 
-public:
-	constexpr static u32 MAX_RESOURCES = 256;
+	struct BindlessSampler {
+		BindlessHandle sampler;
+	};
 
-	BindlessResources();
-	~BindlessResources();
+	struct BindlessView {
+		BindlessHandle sampled;
+		BindlessHandle storage;
+	};
 
-	bool is_valid(BindlessHandle handle) const;
+	class BindlessResources {
+		friend class Device;
 
-	BindlessSampler register_sampler(VkSampler sampler);
-	BindlessView register_view(VkImageView view, bool is_sampled, bool is_storage);
+		struct BindlessUpdate {
+			BindlessSetKind kind;
+			BindlessHandle slot;
+			VkSampler sampler;
+			VkImageView view;
+		};
 
-	const VkDescriptorSetLayout *get_layouts() const
-	{
-		return layouts;
-	}
+	public:
+		constexpr static u32 MAX_RESOURCES = 256;
 
-	const VkDescriptorSet *get_sets() const
-	{
-		return sets;
-	}
+		BindlessResources();
+		~BindlessResources();
 
-private:
-	BindlessHandle push_update(BindlessSetKind kind, VkSampler sampler, VkImageView view);
+		bool is_valid(BindlessHandle handle) const;
 
-	VkDescriptorPool pool;
-	VkDescriptorSetLayout layouts[BINDLESS_SET_MAX_ENUM];
-	VkDescriptorSet sets[BINDLESS_SET_MAX_ENUM];
+		BindlessSampler register_sampler(VkSampler sampler);
+		BindlessView register_view(VkImageView view, bool is_sampled, bool is_storage);
 
-	u32 resource_counts[BINDLESS_SET_MAX_ENUM];
+		const VkDescriptorSetLayout *get_layouts() const
+		{
+			return layouts;
+		}
 
-	Vector<BindlessUpdate> updates;
-};
+		const VkDescriptorSet *get_sets() const
+		{
+			return sets;
+		}
 
+	private:
+		BindlessHandle push_update(BindlessSetKind kind, VkSampler sampler, VkImageView view);
+
+		VkDescriptorPool pool;
+		VkDescriptorSetLayout layouts[BINDLESS_SET_MAX_ENUM];
+		VkDescriptorSet sets[BINDLESS_SET_MAX_ENUM];
+
+		u32 resource_counts[BINDLESS_SET_MAX_ENUM];
+
+		Vector<BindlessUpdate> updates;
+	};
 }

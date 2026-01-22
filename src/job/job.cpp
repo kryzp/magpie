@@ -12,35 +12,33 @@
 
 namespace job
 {
+	struct JobRequest {
+		JobDecl decl;
+		JobCounter *counter = nullptr;
+		JobFiber *fiber = nullptr;
+	};
 
-struct JobRequest {
-	JobDecl decl;
-	JobCounter *counter = nullptr;
-	JobFiber *fiber = nullptr;
-};
+	struct JobQueue {
+		JobRequest *buffer;
+		std::atomic_flag locked = ATOMIC_FLAG_INIT;
+		std::atomic<u32> taken_task_count {0};
+		std::atomic<u32> added_task_count {0};
+	};
 
-struct JobQueue {
-	JobRequest *buffer;
-	std::atomic_flag locked = ATOMIC_FLAG_INIT;
-	std::atomic<u32> taken_task_count {0};
-	std::atomic<u32> added_task_count {0};
-};
+	static void lock_counter(JobCounter *counter);
+	static void unlock_counter(JobCounter *counter);
+	static void inc_counter(JobCounter *counter, u32 n = 1);
+	static void dec_counter(JobCounter *counter, u32 n = 1);
 
-static void lock_counter(JobCounter *counter);
-static void unlock_counter(JobCounter *counter);
-static void inc_counter(JobCounter *counter, u32 n = 1);
-static void dec_counter(JobCounter *counter, u32 n = 1);
+	static void push_job(JobPriority priority, const JobRequest &request);
 
-static void push_job(JobPriority priority, const JobRequest &request);
-
-static void kick_waiting_fiber(JobFiber *fiber);
-static void yield_current_fiber();
-static void return_current_fiber();
-static JobFiber *get_free_fiber();
-static void return_fiber(JobFiber *fiber);
-static JobRequest *try_get_job();
-static bool has_job_available();
-
+	static void kick_waiting_fiber(JobFiber *fiber);
+	static void yield_current_fiber();
+	static void return_current_fiber();
+	static JobFiber *get_free_fiber();
+	static void return_fiber(JobFiber *fiber);
+	static JobRequest *try_get_job();
+	static bool has_job_available();
 }
 
 struct ThreadLocalState {
@@ -49,25 +47,15 @@ struct ThreadLocalState {
 	job::JobWorker *current_worker = nullptr;
 };
 
-namespace
-{
-
-thread_local ThreadLocalState tls;
-
-u32 worker_count;
-job::JobWorker *workers;
-
-std::atomic<job::JobFiber *> fiber_pool_head {nullptr};
-
-job::JobQueue job_queues[job::PRIORITY_MAX_ENUM];
-
-std::atomic<bool> running;
-std::mutex mutex;
-std::condition_variable cond_begin;
-
-std::atomic<bool> spin_mode;
-
-}
+static thread_local ThreadLocalState tls;
+static u32 worker_count;
+static job::JobWorker *workers;
+static std::atomic<job::JobFiber *> fiber_pool_head {nullptr};
+static job::JobQueue job_queues[job::PRIORITY_MAX_ENUM];
+static std::atomic<bool> running;
+static std::mutex mutex;
+static std::condition_variable cond_begin;
+static std::atomic<bool> spin_mode;
 
 job::JobCounter *job::alloc_counter(u32 initial_count)
 {

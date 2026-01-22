@@ -8,61 +8,59 @@
 
 namespace gfx
 {
+	class CommandBuffer;
+	class Swapchain;
+	class Device;
 
-class CommandBuffer;
-class Swapchain;
-class Device;
+	constexpr u32 FRAMES_IN_FLIGHT = 3;
 
-constexpr u32 FRAMES_IN_FLIGHT = 3;
+	class Queue {
+		friend class Device;
 
-class Queue {
-	friend class Device;
+		struct SyncData {
+			VkFence instant_submit_fence;
+			CommandPool command_pool;
+		};
 
-	struct SyncData {
-		VkFence instant_submit_fence;
-		CommandPool command_pool;
+	public:
+		Queue();
+		~Queue();
+
+		void destroy();
+
+		void wait_idle() const;
+
+		void next_frame();
+
+		void present(const Swapchain &swapchain, const VkSemaphore &wait);
+
+		CommandBuffer begin_submit(VkFence fence = VK_NULL_HANDLE);
+
+		void end_submit(
+			CommandBuffer &cmd,
+			const VkSemaphoreSubmitInfo *signal = nullptr,
+			const VkSemaphoreSubmitInfo *wait = nullptr,
+			VkFence fence = VK_NULL_HANDLE
+		);
+
+		const VkQueue &get_handle() const
+		{
+			return handle;
+		}
+
+		u32 get_family_index() const
+		{
+			return family_index;
+		}
+
+	private:
+		SyncData &get_current_sync_data();
+
+		Device *device;
+
+		VkQueue handle;
+		u32 family_index;
+
+		SyncData frames[FRAMES_IN_FLIGHT];
 	};
-
-public:
-	Queue();
-	~Queue();
-
-	void destroy();
-
-	void wait_idle() const;
-
-	void next_frame();
-
-	void present(const Swapchain &swapchain, const VkSemaphore &wait);
-
-	CommandBuffer begin_submit(VkFence fence = VK_NULL_HANDLE);
-
-	void end_submit(
-		CommandBuffer &cmd,
-		const VkSemaphoreSubmitInfo *signal = nullptr,
-		const VkSemaphoreSubmitInfo *wait = nullptr,
-		VkFence fence = VK_NULL_HANDLE
-	);
-
-	const VkQueue &get_handle() const
-	{
-		return handle;
-	}
-
-	u32 get_family_index() const
-	{
-		return family_index;
-	}
-
-private:
-	SyncData &get_current_sync_data();
-
-	Device *device;
-
-	VkQueue handle;
-	u32 family_index;
-
-	SyncData frames[FRAMES_IN_FLIGHT];
-};
-
 }

@@ -29,17 +29,12 @@
 
 #include "app.h"
 
-namespace
-{
-
-SDL_Window *sdl_window = nullptr;
-inp::InputState input_st = {};
-std::atomic<bool> app_running { true };
-std::mutex input_mutex;
-SDL_Gamepad *gamepads[MAX_GAMEPADS] = {};
-int gamepad_count = 0;
-
-}
+static SDL_Window *sdl_window = nullptr;
+static inp::InputState input_st = {};
+static std::atomic<bool> app_running { true };
+static std::mutex input_mutex;
+static SDL_Gamepad *gamepads[MAX_GAMEPADS] = {};
+static int gamepad_count = 0;
 
 void platform::set_window_title(const char *title)
 {
