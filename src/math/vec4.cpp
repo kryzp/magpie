@@ -1,5 +1,7 @@
 #include "vec4.h"
 
+#include "calc.h"
+
 Vec4::Vec4()
 	: x(0.f), y(0.f), z(0.f), w(0.f)
 {
@@ -13,6 +15,12 @@ Vec4::Vec4(float s)
 Vec4::Vec4(float x, float y, float z, float w)
 	: x(x), y(y), z(z), w(w)
 {
+}
+
+Vec4 Vec4::frustum_normalize_plane() const
+{
+	float length = CalcF::sqrt(x*x + y*y + z*z);
+	return *this / length;
 }
 
 Vec3 Vec4::get_xyz() const

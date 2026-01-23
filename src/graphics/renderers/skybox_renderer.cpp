@@ -43,13 +43,13 @@ void SkyboxRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
 
 	linear_sampler = device->create_sampler(VK_FILTER_LINEAR);
 
-	ast::TextureAsset *hdr_texture_asset = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr", ast::ASSET_TYPE_TEXTURE));
+	ast::TextureAsset *hdr_texture_asset = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr"));
 	hdr_texture = hdr_texture_asset->texture;
 
-	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"));
 	shader = shader_asset->shader;
 
-	ast::ShaderAsset *shader_hdr_cubemap_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *shader_hdr_cubemap_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap"));
 	hdr_to_cubemap_shader = shader_hdr_cubemap_asset->shader;
 
 	Vec3 vertices[] = {

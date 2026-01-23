@@ -61,6 +61,7 @@ namespace dev
 		const char *name;
 		u32 start_time;
 	};
+}
 
 #define DEV_PROFILE_ENABLED 1
 
@@ -71,4 +72,3 @@ namespace dev
 #  define DEV_PROFILE_SCOPE(name_)
 #  define DEV_PROFILE_FUNCTION()
 #endif
-}

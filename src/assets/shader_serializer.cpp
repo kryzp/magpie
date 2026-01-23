@@ -5,7 +5,7 @@
 
 using namespace ast;
 
-static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle)
+static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs)
 {
 }
 

@@ -12,6 +12,19 @@
 #include "device.h"
 #include "sync.h"
 
+// Name isn't necessary but I like symmetry.
+#define GFX_DEFINE_BLACKBOARD_DATA(_name)			\
+public:												\
+class Meta {										\
+public:												\
+	static inline u32 type_id() { return id; }		\
+private:											\
+	static u32 id;									\
+}													\
+
+#define GFX_IMPLEMENT_BLACKBOARD_DATA(_name) \
+u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
+
 namespace gfx
 {
 	struct AttachmentInfo {
@@ -311,19 +324,6 @@ namespace gfx
 		Vector<RenderResourceHandle> textures;
 		Vector<RenderResourceHandle> buffers;
 	};
-
-	// Name isn't necessary but I like symmetry.
-	#define GFX_DEFINE_BLACKBOARD_DATA(_name)       \
-	public:                                        \
-	class Meta {                                   \
-	public:                                        \
-		static inline u32 type_id() { return id; } \
-	private:                                       \
-		static u32 id;                             \
-	}                                              \
-
-	#define GFX_IMPLEMENT_BLACKBOARD_DATA(_name) \
-	u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
 
 	struct RenderGraphBlackboardData {
 		virtual ~RenderGraphBlackboardData() = default;
