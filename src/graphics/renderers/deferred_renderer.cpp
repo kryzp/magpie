@@ -14,13 +14,13 @@ void DeferredRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
 
 	linear_sampler = device->create_sampler(VK_FILTER_LINEAR);
 
-	ast::ShaderAsset *model_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("model", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *model_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("model"));
 	model_shader = model_shader_asset->shader;
 
-	ast::ShaderAsset *ambient_lighting_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("ambient_lighting", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *ambient_lighting_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("ambient_lighting"));
 	ambient_lighting_shader = ambient_lighting_shader_asset->shader;
 
-	ast::ShaderAsset *direct_lighting_point_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("direct_lighting_point", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *direct_lighting_point_shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("direct_lighting_point"));
 	direct_lighting_point_shader = direct_lighting_point_shader_asset->shader;
 
 	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {

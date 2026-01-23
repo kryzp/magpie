@@ -10,7 +10,7 @@ void PostProcessingRenderer::init(RenderGraph &graph, ast::AssetManager &assets,
 {
 	this->device = &graph.get_device();
 
-	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_tonemapping", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_tonemapping"));
 	shader = shader_asset->shader;
 	
 	output_attachment = output;

@@ -9,13 +9,17 @@
 // Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
 //         https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine
 
-namespace job
-{
 #if defined(__x86_64__)
 # define JOB_SPIN_PAUSE() _mm_pause()
 #else
 # define JOB_SPIN_PAUSE() std::this_thread::yield()
 #endif
+
+#define JOB_ENTRY_POINT(fname_) void fname_(uptr param)
+
+namespace job
+{
+	typedef void EntryPoint(uptr param);
 
 	enum JobPriority {
 		PRIORITY_LOW,
@@ -23,18 +27,6 @@ namespace job
 		PRIORITY_HIGH,
 		PRIORITY_MAX_ENUM
 	};
-
-	struct JobFiber;
-
-	struct JobCounter {
-		std::atomic<u32> count;
-		std::atomic_flag locked = ATOMIC_FLAG_INIT;
-		Vector<JobFiber *> wait_list;
-	};
-
-	#define JOB_ENTRY_POINT(fname_) void fname_(uptr param)
-
-	typedef void EntryPoint(uptr param);
 
 	struct JobDecl {
 		EntryPoint *entry_point;
@@ -54,6 +46,14 @@ namespace job
 			, priority(priority)
 		{
 		}
+	};
+	
+	struct JobFiber;
+
+	struct JobCounter {
+		std::atomic<u32> count;
+		std::atomic_flag locked = ATOMIC_FLAG_INIT;
+		Vector<JobFiber *> wait_list;
 	};
 
 	struct JobWorker {

@@ -132,7 +132,7 @@ void App::init()
 
 	render_scene.init(render_graph);
 
-	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf", ast::ASSET_TYPE_MODEL);
+	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
 
 	u32 object_handle = render_scene.create_object(Mat4::identity());

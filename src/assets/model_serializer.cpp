@@ -10,13 +10,13 @@
 
 using namespace ast;
 
-static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle);
+static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs);
 static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata);
 static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
 static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
 static gfx::Material load_material_from_assimp(AssetManager &assets, const String &directory, const aiMaterial *ai_material);
 
-static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle)
+static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs)
 {
 }
 
@@ -177,7 +177,7 @@ static AssetHandle try_fetch_assimp_material_texture(AssetManager &assets, const
 
 	String path = directory + String(texture_path.C_Str());
 
-	return assets.from_file_path(path, ASSET_TYPE_TEXTURE);
+	return assets.from_file_path(path);
 }
 
 static gfx::Material load_material_from_assimp(AssetManager &assets, const String &directory, const aiMaterial *ai_material)

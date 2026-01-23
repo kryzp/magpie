@@ -55,21 +55,15 @@ void AssetManager::destroy_asset(const AssetHandle &handle)
 	assets.remove(handle);
 }
 
-AssetHandle AssetManager::from_file_path(const String &path, AssetType type)
+AssetHandle AssetManager::from_file_path(const String &path)
 {
-	if (path_to_handle.find(path) != path_to_handle.end()) {
+	if (path_to_handle.find(path) != path_to_handle.end())
 		return path_to_handle[path];
-	} else {
-		AssetMetaData metadata = {};
-		metadata.file_path = path;
 
-		Asset *asset = importer.import(*this, type, metadata);
-
-		AssetHandle handle = assets.add(asset);
-
-		path_to_handle[path] = handle;
-		return handle;
-	}
+	AssetHandle handle = assets.add(nullptr, path);
+	
+	path_to_handle[path] = handle;
+	return handle;
 }
 
 String AssetManager::get_system_file_path(const String &path) const

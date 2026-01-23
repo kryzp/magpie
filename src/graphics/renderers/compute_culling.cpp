@@ -11,17 +11,12 @@ using namespace gfx;
 
 void ComputeCulling::init(ast::AssetManager &assets)
 {
-	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("frustum_culling", ast::ASSET_TYPE_SHADER));
+	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("frustum_culling"));
 	compute_frustum_culling_program = shader_asset->shader;
 }
 
 void ComputeCulling::destroy()
 {
-}
-
-static Vec4 frustum_normalize_plane(const Vec4 &p)
-{
-	return p / Vec3(p.x, p.y, p.z).length();
 }
 
 void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &scene_view)
@@ -53,8 +48,8 @@ void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard
 		Mat4 proj_t = proj.transpose();
 
 		// TODO: Might not need to transpose.
-		Vec4 frustum_x = frustum_normalize_plane(proj_t.c[3] + proj_t.c[0]);
-		Vec4 frustum_y = frustum_normalize_plane(proj_t.c[3] + proj_t.c[1]);
+		Vec4 frustum_x = (proj_t.c[3] + proj_t.c[0]).frustum_normalize_plane();
+		Vec4 frustum_y = (proj_t.c[3] + proj_t.c[1]).frustum_normalize_plane();
 
 		struct {
 			Mat4 view_matrix;

@@ -18,6 +18,8 @@ struct Vec4
 	Vec4(float s);
 	Vec4(float x, float y, float z, float w);
 
+	Vec4 frustum_normalize_plane() const;
+
 	Vec3 get_xyz() const;
 
 	bool operator == (const Vec4 &other) const;

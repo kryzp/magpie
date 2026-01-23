@@ -11,19 +11,23 @@
 
 class FileStream;
 
+//	ASSET_TYPE_SOUND,
+//	ASSET_TYPE_MATERIAL,
+//	ASSET_TYPE_MESH,
+//	ASSET_TYPE_MAP,
+
+// I <3 X-MACROS!!
+#define ASSET_DEFINITIONS \
+	ASSET_DEF(TEXTURE, Texture) \
+	ASSET_DEF(SHADER, Shader) \
+	ASSET_DEF(MODEL, Model)
+
+#define AST_DEFINE_ASSET(type) \
+	static AssetType get_asset_type_static() { return type; } \
+	virtual AssetType get_asset_type() const override { return type; }
+
 namespace ast
 {
-	//	ASSET_TYPE_SOUND,
-	//	ASSET_TYPE_MATERIAL,
-	//	ASSET_TYPE_MESH,
-	//	ASSET_TYPE_MAP,
-
-	// I <3 X-MACROS!!
-	#define ASSET_DEFINITIONS \
-		ASSET_DEF(TEXTURE, Texture) \
-		ASSET_DEF(SHADER, Shader) \
-		ASSET_DEF(MODEL, Model)
-
 	enum AssetType {
 		ASSET_TYPE_UNKNOWN = 0,
 	#define ASSET_DEF(capitals_, name_) ASSET_TYPE_##capitals_,
@@ -59,18 +63,19 @@ namespace ast
 		return "Unknown";
 	}
 
-	struct AssetHandle {
-		u32 index;
-		u32 generation;
-	};
-
 	struct AssetMetaData {
 		String file_path;
 	};
 
-	#define AST_DEFINE_ASSET(type) \
-		static AssetType get_asset_type_static() { return type; } \
-		virtual AssetType get_asset_type() const override { return type; }
+	struct AssetHandle {
+		u32 index;
+		u32 generation;
+
+		bool is_null() const
+		{
+			return index == 0 && generation == 0;
+		}
+	};
 
 	struct Asset {
 		friend class AssetManager;
@@ -119,7 +124,7 @@ namespace ast
 	// Asset serializers are just pairs of function pointers
 	// for serializing and de-serializing an asset.
 	struct AssetSerializer {
-		void (*serialize)(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle);
+		void (*serialize)(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs);
 		Asset *(*try_load_data)(AssetManager &assets, const AssetMetaData &metadata);
 	};
 
@@ -150,7 +155,7 @@ namespace ast
 
 		void destroy_asset(const AssetHandle &handle);
 
-		AssetHandle from_file_path(const String &path, AssetType type);
+		AssetHandle from_file_path(const String &path);
 
 		String get_system_file_path(const String &path) const;
 		bool is_handle_valid(const AssetHandle &handle) const;
@@ -185,10 +190,12 @@ namespace ast
 			void destroy_all()
 			{
 				for (auto &asset : list)
-					delete asset;
+					delete asset.asset;
+
+				list.clear();
 			}
 
-			AssetHandle add(Asset *asset)
+			AssetHandle add(Asset *asset, const String &path)
 			{
 				u32 index = 0;
 
@@ -204,10 +211,10 @@ namespace ast
 				handle.index = index;
 				handle.generation = generations[index];
 
-				list[index] = asset;
-				generations[index]++;
+				list[index].asset = asset;
+				list[index].path = path;
 
-				asset->handle = handle;
+				generations[index]++;
 
 				return handle;
 			}
@@ -215,8 +222,8 @@ namespace ast
 			void remove(const AssetHandle &handle)
 			{
 				if (is_valid(handle)) {
-					delete list[handle.index];
-					list[handle.index] = nullptr;
+					delete list[handle.index].asset;
+					list[handle.index].asset = nullptr;
 					free_indices.push(handle.index);
 				}
 			}
@@ -224,9 +231,19 @@ namespace ast
 			Asset *get(const AssetHandle &handle) const
 			{
 				assert(is_valid(handle));
+
 				if (!is_valid(handle))
 					return nullptr;
-				return list[handle.index];
+				
+				return list[handle.index].asset;
+			}
+
+			void set(const AssetHandle &handle, Asset *asset)
+			{
+				assert(is_valid(handle));
+
+				if (is_valid(handle))
+					list[handle.index].asset = asset;
 			}
 
 			bool is_valid(const AssetHandle &handle) const
@@ -236,23 +253,43 @@ namespace ast
 					(generations[handle.index] == (handle.generation + 1));
 			}
 
-			Vector<Asset *> list;
+			String get_path(const AssetHandle &handle) const
+			{
+				assert(is_valid(handle));
+
+				if (!is_valid(handle))
+					return "INVALID HANDLE";
+
+				return list[handle.index].path;
+			}
+
+			struct AssetRecord {
+				Asset *asset;
+				String path;
+			};
+
+			Vector<AssetRecord> list;
+
 			Vector<u32> generations;
 			Stack<u32> free_indices;
+			
 			u64 capacity;
 			u32 curr_id;
 		};
 
 		AssetImporter importer;
-		HashMap<String, AssetHandle> path_to_handle;
 		AssetList assets;
+
+		HashMap<String, AssetHandle> path_to_handle;
 	};
 
 	template <typename T, typename ...Args>
 	T *AssetManager::create_new_asset(const String &name, const String &path, Args &&...args)
 	{
 		T *asset = new T(std::forward<Args>(args)...);
-		asset->handle = assets.add(asset);
+		asset->handle = assets.add(asset, path);
+
+		path_to_handle[path] = asset->handle;
 
 		return asset;
 	}
@@ -260,6 +297,19 @@ namespace ast
 	template <typename T>
 	T *AssetManager::get_asset(const AssetHandle &handle)
 	{
-		return assets.get(handle)->as<T>();
+		Asset *here = assets.get(handle);
+
+		if (here)
+			return (T *)here;
+
+		AssetMetaData metadata = {};
+		metadata.file_path = assets.get_path(handle);
+
+		Asset *asset = importer.import(*this, T::get_asset_type_static(), metadata);
+		asset->handle = handle;
+
+		assets.set(handle, asset);
+
+		return (T *)asset;
 	}
 }

@@ -232,7 +232,7 @@ namespace inp
 		MBUTTON_MAX_ENUM
 	};
 
-	#define MAX_GAMEPADS 4
+	constexpr static u32 MAX_GAMEPADS = 4;
 
 	enum GamepadButton {
 		GAMEPAD_BUTTON_a,
