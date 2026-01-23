@@ -11,6 +11,8 @@
 #include "graphics/render_graph.h"
 #include "graphics/camera.h"
 
+#include "graphics/renderers/compute_culling.h"
+#include "graphics/renderers/deferred_renderer.h"
 #include "graphics/renderers/skybox_renderer.h"
 #include "graphics/renderers/post_processing.h"
 
@@ -49,6 +51,8 @@ private:
 	void fixed_update(float dt);
 	void render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd);
 
+	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
+
 	ast::AssetManager assets;
 
 	void *scratch_memory;
@@ -67,6 +71,10 @@ private:
 	gfx::Camera camera;
 	CameraDriver camera_driver;
 
+	gfx::GpuBuffer frame_data_buffer;
+	
+	gfx::ComputeCulling compute_culling;
+	gfx::DeferredRenderer deferred_renderer;
 	gfx::SkyboxRenderer skybox_renderer;
 	gfx::PostProcessingRenderer post_processing;
 

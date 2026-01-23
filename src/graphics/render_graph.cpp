@@ -87,7 +87,8 @@ void RenderStage::add_colour_output(const RenderResourceHandle &handle, const Re
 	outputs.push_back(output_attachment);
 }
 
-void RenderStage::add_depth_stencil_output(const RenderResourceHandle &handle, const RenderClear *clear)
+
+void RenderStage::set_depth_stencil(const RenderResourceHandle &handle, const RenderClear *clear)
 {
 	RenderResource &resource = graph.get_resource(handle);
 	resource.texture_accesses.push_back(sync::TEXTURE_ACCESS_depth);
@@ -101,18 +102,11 @@ void RenderStage::add_depth_stencil_output(const RenderResourceHandle &handle, c
 	outputs.push_back(output_attachment);
 }
 
-void RenderStage::add_buffer_output(const RenderResourceHandle &handle, sync::GpuBufferAccessType access)
+void RenderStage::add_buffer(const RenderResourceHandle &handle, sync::GpuBufferAccessType access)
 {
 	RenderResource &resource = graph.get_resource(handle);
 	resource.buffer_accesses.push_back(access);
 	buffers.push_back(handle);
-}
-
-void RenderStage::add_buffer_input(const RenderResourceHandle &handle, sync::GpuBufferAccessType access)
-{
-	RenderResource &resource = graph.get_resource(handle);
-	resource.buffer_accesses.push_back(access);
-	textures.push_back(handle);
 }
 
 void RenderStage::add_texture(const RenderResourceHandle &handle, sync::TextureAccessType access)
@@ -451,35 +445,12 @@ RenderStage &RenderGraph::add_stage(RenderStage::Type type)
 
 void RenderGraph::resize(u32 width, u32 height)
 {
+	// TODO
 }
 
 void RenderGraph::set_swapchain_source(const RenderResourceHandle &source)
 {
 	swapchain_source = &get_resource(source);
-}
-
-void RenderGraph::move_subresource(const RenderResourceHandle &child, const SubresourceAlias &alias)
-{
-	RenderResource &parent_resource = get_resource(alias.parent);
-	RenderResource &child_resource = get_resource(child);
-
-	assert(parent_resource.kind == RenderResource::KIND_TEXTURE);
-	assert(child_resource.kind == RenderResource::KIND_TEXTURE);
-
-	child_resource.alias_of = alias;
-
-	/*
-	child_resource.texture_info = parent_resource.texture_info;
-    
-    if (alias.base_mip > 0)
-        child_resource.texture_info.mips = 1;
-    
-    if (alias.view_type == VK_IMAGE_VIEW_TYPE_CUBE || 
-        alias.view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
-        child_resource.texture_info.is_cubemap = true;
-        child_resource.texture_info.layers = 6;
-    }
-	*/
 }
 
 ResourceAttributes RenderGraph::get_resource_attributes(const RenderResource &resource, const Swapchain &swapchain)
@@ -511,6 +482,37 @@ ResourceAttributes RenderGraph::get_resource_attributes(const RenderResource &re
 	}
 
 	return att;
+}
+
+RenderResourceHandle RenderGraph::move_subresource(const SubresourceAlias &alias)
+{
+	// We have to do get_resource for parent twice because the reference may
+	// become invalid after adding a new child because vectors resize.
+	AttachmentInfo info = get_resource(alias.parent).texture_info;
+	RenderResourceHandle child = create_texture_resource(info);
+
+	RenderResource &parent_resource = get_resource(alias.parent);
+	RenderResource &child_resource = get_resource(child);
+	
+	assert(parent_resource.kind == RenderResource::KIND_TEXTURE);
+	assert(child_resource.kind == RenderResource::KIND_TEXTURE);
+
+	child_resource.alias_of = alias;
+
+	return child;
+
+	/*
+	child_resource.texture_info = parent_resource.texture_info;
+    
+    if (alias.base_mip > 0)
+        child_resource.texture_info.mips = 1;
+    
+    if (alias.view_type == VK_IMAGE_VIEW_TYPE_CUBE || 
+        alias.view_type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+        child_resource.texture_info.is_cubemap = true;
+        child_resource.texture_info.layers = 6;
+    }
+	*/
 }
 
 RenderResourceHandle RenderGraph::create_texture_resource(const AttachmentInfo &info)

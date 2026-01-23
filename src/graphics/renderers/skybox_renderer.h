@@ -3,20 +3,20 @@
 #include "assets/assets.h"
 
 #include "../render_graph.h"
+#include "../model.h"
 
 namespace gfx
 {
 	class SkyboxRenderer {
 	public:
-		void init(Device *device, ast::AssetManager &assets, RenderGraph &graph);
+		void init(RenderGraph &graph, ast::AssetManager &assets);
 		void destroy();
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const SceneView &view
+			const SceneView &view,
+			const GpuBuffer &frame_data
 		);
-
-		RenderResourceHandle output_attachment;
 
 	private:
 		void add_create_cubemap_stage(RenderGraph &graph);
@@ -27,7 +27,6 @@ namespace gfx
 		Texture hdr_texture;
 		bool created_cubemap = false;
 
-		GpuBuffer frame_data_buffer;
 		GpuBuffer cubemap_capture_transforms;
 
 		RenderResourceHandle cubemap_attachment;

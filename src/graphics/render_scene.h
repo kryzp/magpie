@@ -11,6 +11,7 @@
 #include "camera.h"
 #include "device.h"
 #include "gpu_types.h"
+#include "render_graph.h"
 
 namespace gfx
 {
@@ -28,8 +29,8 @@ namespace gfx
 	};
 
 	struct EnvironmentProbe {
-		Texture irradiance;
-		Texture prefilter;
+		RenderResourceHandle irradiance;
+		RenderResourceHandle prefilter;
 	};
 
 	class RenderScene;
@@ -61,56 +62,50 @@ namespace gfx
 		u32 light_handle = RS_HANDLE_INVALID_INDEX;
 	};
 
-	struct SceneView {
-		const RenderScene *scene;
-		const Camera *camera;
+	struct MeshPass {
+		enum Type {
+			TYPE_FORWARD,
+			TYPE_MAX_ENUM
+		};
+
+		struct MultiBatch {
+			u32 first;
+			u32 count;
+		};
+
+		struct IndirectBatch {
+			u32 mesh_id;
+			u32 material_id;
+			u32 first;
+			u32 count;
+		};
+
+		struct DirectBatch {
+			u32 object_id;
+			//u64 sort_key;
+		};
+
+		Vector<MultiBatch> multi_batches;
+		Vector<IndirectBatch> batches;
+		Vector<DirectBatch> direct_batches;
+
+		RenderResourceHandle compacted_instance_buffer; // <u32>
+		RenderResourceHandle instance_buffer;           // <gpu_types::Instance>
+		RenderResourceHandle draw_indirect_buffer;      // <gpu_types::Indirect>
+		RenderResourceHandle clear_indirect_buffer;     // <gpu_types::Indirect>
+
+		bool instance_buffer_needs_refresh;
+		bool indirect_buffer_needs_refresh;
+
+		void init(RenderGraph &graph);
+
+		void populate(RenderScene &scene);
+
+		void fill_instance_array(const RenderScene &scene, gpu_types::GpuInstance *instances);
+		void fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndirect *indirects);
 	};
 
 	class RenderScene {
-		struct MeshPass {
-			struct MultiBatch {
-				u32 first;
-				u32 count;
-			};
-
-			struct IndirectBatch {
-				u32 mesh_id;
-				u32 material_id;
-				u32 first;
-				u32 count;
-			};
-
-			struct DirectBatch {
-				u32 object_id;
-				//u64 sort_key;
-			};
-
-			enum MeshPassType {
-				TYPE_FORWARD,
-				TYPE_MAX_ENUM
-			};
-
-			Vector<MultiBatch> multi_batches;
-			Vector<IndirectBatch> batches;
-			Vector<DirectBatch> direct_batches;
-
-			GpuBuffer compacted_instance_buffer; // <u32>
-			GpuBuffer instance_buffer;           // <gpu_types::Instance>
-			GpuBuffer draw_indirect_buffer;      // <gpu_types::Indirect>
-			GpuBuffer clear_indirect_buffer;     // <gpu_types::Indirect>
-
-			bool instance_buffer_needs_refresh;
-			bool indirect_buffer_needs_refresh;
-
-			void init(Device *device);
-			void destroy(Device *device);
-
-			void populate(RenderScene &scene);
-
-			void fill_instance_array(const RenderScene &scene, gpu_types::GpuInstance *instances);
-			void fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndirect *indirects);
-		};
-
 	public:
 		constexpr static u32 MAX_OBJECTS = 128;
 		constexpr static u32 MAX_MATERIALS = 64;
@@ -118,7 +113,7 @@ namespace gfx
 		RenderScene() = default;
 		~RenderScene() = default;
 
-		void init(Device *device);
+		void init(RenderGraph &graph);
 		void destroy();
 
 		void update();
@@ -129,16 +124,37 @@ namespace gfx
 		u32 create_object(const Mat4 &transform);
 
 		u32 upload_mesh(const Mesh &mesh);
-		u32 upload_material(const Material &material);
+		u32 upload_material(const Material &material, ast::AssetManager &assets);
 		u32 upload_light(const Light &light);
+
+		RenderMesh *get_mesh(u32 handle);
+		const RenderMesh *get_mesh(u32 handle) const;
+		
+		Material *get_material(u32 handle);
+		const Material *get_material(u32 handle) const;
+		
+		Light *get_light(u32 handle);
+		const Light *get_light(u32 handle) const;
 
 		void build_batches();
 		void merge_meshes();
 
 		RenderSceneObject &get_object_from_handle(u32 handle);
+		
+		MeshPass &get_pass(MeshPass::Type type);
+		const MeshPass &get_pass(MeshPass::Type type) const;
+
+		const Vector<RenderSceneObject> &get_objects() const;
+
+		GpuBuffer &get_object_buffer();
+		GpuBuffer &get_material_buffer();
+		GpuBuffer &get_light_buffer();
+
+		GpuBuffer &get_merged_vertex_buffer();
+		GpuBuffer &get_merged_index_buffer();
 
 	private:
-		Device *device;
+		RenderGraph *graph;
 
 		Vector<RenderSceneObject> objects;
 

@@ -12,9 +12,9 @@ using namespace ast;
 
 static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle);
 static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata);
-static void process_nodes(gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
-static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
-static gfx::Material load_material_from_assimp(const String &directory, const aiMaterial *ai_material);
+static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
+static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
+static gfx::Material load_material_from_assimp(AssetManager &assets, const String &directory, const aiMaterial *ai_material);
 
 static void serialize(AssetManager &assets, const FileStream &fs, const AssetMetaData &metadata, const AssetHandle &handle)
 {
@@ -51,31 +51,31 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 			0.f, 0.f, 0.f, 1.f
 		};
 
-		String directory = io::path::get_file_directory(system_file_path) + "/";
+		String directory = io::path::get_file_directory(metadata.file_path) + "/";
 
-		process_nodes(asset->model, directory, assets.get_device(), scene->mRootNode, scene, identity);
+		process_nodes(assets, asset->model, directory, assets.get_device(), scene->mRootNode, scene, identity);
 	}
 
 	return asset;
 }
 
-static void process_nodes(gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	aiMatrix4x4 node_transform = node->mTransformation * transform;
 
 	for (int i = 0; i < node->mNumMeshes; i++) {
 		const aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
 		gfx::SubModel &sub_model = model.add_sub_model();
-		process_sub_model(model, sub_model, directory, device, assimp_mesh, scene, node_transform);
+		process_sub_model(assets, model, sub_model, directory, device, assimp_mesh, scene, node_transform);
 	}
 
 	for (int i = 0; i < node->mNumChildren; i++) {
 		const aiNode *child = node->mChildren[i];
-		process_nodes(model, directory, device, child, scene, node_transform);
+		process_nodes(assets, model, directory, device, child, scene, node_transform);
 	}
 }
 
-static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	ScratchArena scratch;
 
@@ -161,19 +161,33 @@ static void process_sub_model(gfx::Model &model, gfx::SubModel &sub_model, const
 
 	if (assimp_mesh->mMaterialIndex >= 0) {
 		const aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-		sub_model.material = load_material_from_assimp(directory, assimp_material);
+		sub_model.material = load_material_from_assimp(assets, directory, assimp_material);
 	}
 }
 
-static gfx::Material load_material_from_assimp(const String &directory, const aiMaterial *ai_material)
+static AssetHandle try_fetch_assimp_material_texture(AssetManager &assets, const String &directory, const aiMaterial *ai_material, aiTextureType type)
+{
+	if (ai_material->GetTextureCount(type) <= 0) {
+		AssetHandle fallback = {};
+		return fallback;
+	}
+
+	aiString texture_path = {};
+	ai_material->GetTexture(type, 0, &texture_path);
+
+	String path = directory + String(texture_path.C_Str());
+
+	return assets.from_file_path(path, ASSET_TYPE_TEXTURE);
+}
+
+static gfx::Material load_material_from_assimp(AssetManager &assets, const String &directory, const aiMaterial *ai_material)
 {
 	gfx::Material material = {};
-
-//	material.diffuse_texture_handle            = assets_try_fetch_assimp_material_texture(assets, device, directory, assimp_material, aiTextureType_DIFFUSE);
-//	material.normal_texture_handle             = assets_try_fetch_assimp_material_texture(assets, device, directory, assimp_material, aiTextureType_NORMALS);
-//	material.emissive_texture_handle           = assets_try_fetch_assimp_material_texture(assets, device, directory, assimp_material, aiTextureType_EMISSIVE);
-//	material.metallic_roughness_texture_handle = assets_try_fetch_assimp_material_texture(assets, device, directory, assimp_material, aiTextureType_DIFFUSE_ROUGHNESS);
-//	material.ambient_texture_handle            = assets_try_fetch_assimp_material_texture(assets, device, directory, assimp_material, aiTextureType_LIGHTMAP);
+	material.diffuse            = try_fetch_assimp_material_texture(assets, directory, ai_material, aiTextureType_DIFFUSE);
+	material.normal             = try_fetch_assimp_material_texture(assets, directory, ai_material, aiTextureType_NORMALS);
+	material.emissive           = try_fetch_assimp_material_texture(assets, directory, ai_material, aiTextureType_EMISSIVE);
+	material.metallic_roughness = try_fetch_assimp_material_texture(assets, directory, ai_material, aiTextureType_DIFFUSE_ROUGHNESS);
+	material.ambient            = try_fetch_assimp_material_texture(assets, directory, ai_material, aiTextureType_LIGHTMAP);
 
 	return material;
 }

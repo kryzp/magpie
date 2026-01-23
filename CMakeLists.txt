@@ -75,6 +75,7 @@ add_executable(magpie
 	"${CODE_DIR}/math/matrix.cpp"
 	"${CODE_DIR}/math/vec2.cpp"
 	"${CODE_DIR}/math/vec3.cpp"
+	"${CODE_DIR}/math/vec4.cpp"
 
 	"${CODE_DIR}/io/filesystem.cpp"
 	"${CODE_DIR}/io/stream.cpp"
@@ -99,7 +100,9 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/render_scene.cpp"
 	"${CODE_DIR}/graphics/sync.cpp"
 	"${CODE_DIR}/graphics/model.cpp"
-
+	
+	"${CODE_DIR}/graphics/renderers/compute_culling.cpp"
+	"${CODE_DIR}/graphics/renderers/deferred_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/skybox_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/post_processing.cpp"
 

@@ -10,7 +10,6 @@
 #include "container/hash_map.h"
 
 #include "device.h"
-#include "render_scene.h"
 #include "sync.h"
 
 namespace gfx
@@ -242,6 +241,14 @@ namespace gfx
 		};
 	};
 
+	class RenderScene;
+	class Camera;
+
+	struct SceneView {
+		RenderScene *scene;
+		const Camera *camera;
+	};
+
 	struct RenderContext {
 		Device &device;
 		CommandBuffer &cmd;
@@ -286,11 +293,10 @@ namespace gfx
 		void set_record(const RenderStageRecordFn &fn);
 
 		void add_colour_output(const RenderResourceHandle &handle, const RenderClear *clear = nullptr);
-		void add_depth_stencil_output(const RenderResourceHandle &handle, const RenderClear *clear = nullptr);
+		
+		void set_depth_stencil(const RenderResourceHandle &handle, const RenderClear *clear = nullptr);
 
-		void add_buffer_output(const RenderResourceHandle &handle, sync::GpuBufferAccessType access);
-		void add_buffer_input(const RenderResourceHandle &handle, sync::GpuBufferAccessType access);
-
+		void add_buffer(const RenderResourceHandle &handle, sync::GpuBufferAccessType access);
 		void add_texture(const RenderResourceHandle &handle, sync::TextureAccessType access);
 
 	private:
@@ -307,7 +313,7 @@ namespace gfx
 	};
 
 	// Name isn't necessary but I like symmetry.
-	#define DEFINE_RG_BLACKBOARD_DATA(_name)       \
+	#define GFX_DEFINE_BLACKBOARD_DATA(_name)       \
 	public:                                        \
 	class Meta {                                   \
 	public:                                        \
@@ -316,7 +322,7 @@ namespace gfx
 		static u32 id;                             \
 	}                                              \
 
-	#define IMPLEMENT_RG_BLACKBOARD_DATA(_name) \
+	#define GFX_IMPLEMENT_BLACKBOARD_DATA(_name) \
 	u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
 
 	struct RenderGraphBlackboardData {
@@ -382,7 +388,7 @@ namespace gfx
 
 		void set_swapchain_source(const RenderResourceHandle &source);
 
-		void move_subresource(const RenderResourceHandle &child, const SubresourceAlias &alias);
+		RenderResourceHandle move_subresource(const SubresourceAlias &alias);
 
 		RenderResourceHandle create_texture_resource(const AttachmentInfo &info);
 		RenderResourceHandle create_buffer_resource(const GpuBufferInfo &info);

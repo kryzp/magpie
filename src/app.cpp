@@ -7,6 +7,18 @@
 #include "math/calc.h"
 #include "assets/model_serializer.h"
 
+struct FrameData {
+	Mat4 view;
+	Mat4 projection;
+	Mat4 view_projection;
+	Mat4 view_projection_no_translation;
+	Mat4 inv_view;
+	Mat4 inv_projection;
+	Vec3 camera_position;
+	Vec2 window_resolution;
+	float time;
+};
+
 void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
 	if (!active)
@@ -14,7 +26,7 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 	
 	const float mouse_deadzone = .001f;
 	const float turn_speed = 0.7f;
-	const float move_speed = 5000.f;
+	const float move_speed = 2.5f;
 
 	int window_width, window_height;
 	platform::get_window_size(&window_width, &window_height);
@@ -118,7 +130,7 @@ void App::init()
 
 	assets.init(&graphics_device);
 
-	render_scene.init(&graphics_device);
+	render_scene.init(render_graph);
 
 	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf", ast::ASSET_TYPE_MODEL);
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
@@ -126,19 +138,34 @@ void App::init()
 	u32 object_handle = render_scene.create_object(Mat4::identity());
 	gfx::RenderSceneObject &object = render_scene.get_object_from_handle(object_handle);
 	object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
-	object.material_handle = render_scene.upload_material(model.get_sub_model(0).material);
+	object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
 
 	render_scene.build_batches();
 //	render_scene.merge_meshes();
+	
+	frame_data_buffer = graphics_device.alloc_gpu_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(FrameData)
+	);
 
 	gfx::AttachmentInfo swapchain_attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
 	swapchain_attachment_info.size_class = gfx::AttachmentInfo::SIZE_CLASS_SWAPCHAIN_RELATIVE;
 	swapchain_attachment_info.size_x = 1.f;
 	swapchain_attachment_info.size_y = 1.f;
 	swapchain_src = render_graph.create_texture_resource(swapchain_attachment_info);
+	
+	// Testing out aliases.
+	gfx::SubresourceAlias alias = {};
+	alias.parent = swapchain_src;
+	alias.base_layer = 0;
+	alias.base_mip = 0;
+	alias.view_type = VK_IMAGE_VIEW_TYPE_2D;
 
-	skybox_renderer.init(&graphics_device, assets, render_graph);
-	post_processing.init(&graphics_device, assets, render_graph);
+	compute_culling.init(assets);
+	deferred_renderer.init(render_graph, assets);
+	skybox_renderer.init(render_graph, assets);
+	post_processing.init(render_graph, assets, render_graph.move_subresource(alias));
 	
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
@@ -154,10 +181,14 @@ void App::init()
 
 void App::destroy()
 {
+	compute_culling.destroy();
+	deferred_renderer.destroy();
 	skybox_renderer.destroy();
 	post_processing.destroy();
 
 	render_scene.destroy();
+
+	graphics_device.destroy_gpu_buffer(frame_data_buffer);
 
 	assets.destroy();
 
@@ -194,6 +225,7 @@ bool App::tick(const inp::InputState &input)
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	render(dt, elapsed_time, cmd);
+	add_imgui_render_stage(render_graph, swapchain_src);
 	render_graph.set_swapchain_source(swapchain_src);
 	render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
 	render_graph.execute(cmd, swapchain, dt, elapsed_time);
@@ -234,30 +266,44 @@ void App::fixed_update(float dt)
 
 void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 {
+	FrameData data = {};
+	data.view = camera.get_view();
+	data.projection = camera.get_projection();
+	data.view_projection = camera.get_projection() * camera.get_view();
+	data.view_projection_no_translation = camera.get_projection() * camera.get_view().remove_translation();
+	data.inv_view = data.view.inverse();
+	data.inv_projection = data.projection.inverse();
+	data.camera_position = camera.get_position();
+	data.window_resolution = Vec2(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	data.time = elapsed_time;
+
+	this->frame_data_buffer.write(&data, sizeof(FrameData), 0);
+
 	gfx::RenderGraphBlackboard bb;
 
 	gfx::SceneView view = {};
 	view.scene = &render_scene;
 	view.camera = &this->camera;
 
-	skybox_renderer.add_render_stages(render_graph, bb, view);
-	post_processing.add_render_stages(render_graph, bb, view, skybox_renderer.output_attachment);
-	
+	gfx::EnvironmentProbe probe = {};
+
+	gfx::RenderResourceHandle brdf;
+
+	compute_culling.add_render_stages(render_graph, bb, view);
+	deferred_renderer.add_render_stages(render_graph, bb, view, frame_data_buffer, probe, brdf);
+	skybox_renderer.add_render_stages(render_graph, bb, view, frame_data_buffer);
+	post_processing.add_render_stages(render_graph, bb, view);
+}
+
+void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)
+{
 	gfx::RenderStage &stage = render_graph.add_stage(gfx::RenderStage::TYPE_GRAPHICS);
 
-	stage.add_colour_output(post_processing.output_attachment);
+	stage.add_colour_output(output_attachment);
 
 	stage.set_record([&](const gfx::RenderContext &ctx) -> void {
 		gfx::CommandBuffer &cmd = ctx.cmd;
 		ImGui::Render();
 		graphics_device.imgui_record_draw_data(cmd);
 	});
-
-	gfx::SubresourceAlias alias = {};
-	alias.parent = swapchain_src;
-	alias.base_layer = 0;
-	alias.base_mip = 0;
-	alias.view_type = VK_IMAGE_VIEW_TYPE_2D;
-	
-	render_graph.move_subresource(post_processing.output_attachment, alias);
 }

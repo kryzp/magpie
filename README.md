@@ -20,16 +20,16 @@ TODO (It looks super cool and awesome trust me).
 	- Render Graph that handles resource management, pipeline barriers and synchronization inspired by "Render graphs and Vulkan — a deep dive" and "FrameGraph: Extensible Rendering Architecture in Frostbite"
 	- Indirect Deferred Rendering
 	- Multi-Threaded (almost) lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
-	- Multi-Threaded CPU profiler integrated with job system
+	- ImGui Integration
 
 ### Ideas / Todo List
 	- More sophisticated debug logging / tracing system
 	- Switch to using timeline semaphores instead of fences
-	- ImGui Integration
 	- GPU profiler
+	- Multi-Threaded CPU profiler integrated with job system
 	- ImGui visualisation for profilers
 	- Volumetrics
-	- Irradiance probes
+	- Irradiance probes with spherical harmonics
 	- Reflective mirrors
 	- Bone / Joint based animation
 	- Fur / Hair Rendering

@@ -1,11 +1,13 @@
 #pragma once
 
 #include "vec3.h"
+#include "vec4.h"
 #include "quat.h"
 
 struct Mat4 {
 	union {
 		float v[4][4];
+		Vec4 c[4];
 
 		struct {
 			float m00, m10, m20, m30;

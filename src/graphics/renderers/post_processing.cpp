@@ -2,18 +2,22 @@
 
 #include "assets/shader_serializer.h"
 
+#include "deferred_renderer.h"
+
 using namespace gfx;
 
-void PostProcessingRenderer::init(Device *device, ast::AssetManager &assets, RenderGraph &graph)
+void PostProcessingRenderer::init(RenderGraph &graph, ast::AssetManager &assets, const RenderResourceHandle &output)
 {
+	this->device = &graph.get_device();
+
 	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_tonemapping", ast::ASSET_TYPE_SHADER));
 	shader = shader_asset->shader;
+	
+	output_attachment = output;
 
-	AttachmentInfo output_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-	AttachmentInfo colour_info(VK_FORMAT_R32G32B32A32_SFLOAT);
+	AttachmentInfo colour_info = graph.get_resource(output).texture_info;
 	colour_info.is_storage = true;
 
-	output_attachment = graph.create_texture_resource(output_info);
 	colour_attachment = graph.create_texture_resource(colour_info);
 
 	exposure = 1.2f;
@@ -23,16 +27,18 @@ void PostProcessingRenderer::destroy()
 {
 }
 
-void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &view, const RenderResourceHandle &skybox)
+void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &view)
 {
-	RenderStage &stage = graph.add_stage(RenderStage::TYPE_COMPUTE);
-	stage.add_colour_output(colour_attachment);
-	stage.add_texture(skybox, sync::TEXTURE_ACCESS_graphics_r);
+	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
 
-	stage.set_record([&, skybox](const RenderContext &ctx) -> void {
+	RenderStage &tonemapping_stage = graph.add_stage(RenderStage::TYPE_COMPUTE);
+	tonemapping_stage.add_colour_output(colour_attachment);
+	tonemapping_stage.add_texture(deferred_info.lighting, sync::TEXTURE_ACCESS_graphics_r);
+
+	tonemapping_stage.set_record([&, deferred_info](const RenderContext &ctx) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		RenderResource &skybox_attachment_resource = graph.get_resource(skybox);
+		RenderResource &skybox_attachment_resource = graph.get_resource(deferred_info.lighting);
 		RenderResource &colour_attachment_resource = graph.get_resource(colour_attachment);
 
 		Texture &in_texture = graph.get_physical_texture(skybox_attachment_resource);
@@ -103,6 +109,11 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			VK_FILTER_LINEAR
 		);
 	});
+}
+
+float PostProcessingRenderer::get_exposure() const
+{
+	return exposure;
 }
 
 void PostProcessingRenderer::set_exposure(float exp)

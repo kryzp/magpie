@@ -1,16 +1,40 @@
 #include "render_scene.h"
 
+#include "assets/texture_serializer.h"
+
+#include "render_graph.h"
+
 using namespace gfx;
 
-void RenderScene::MeshPass::init(Device *device)
+void MeshPass::init(RenderGraph &graph)
 {
+	GpuBufferInfo compacted_instance_info = {};
+	compacted_instance_info.size = sizeof(u32) * RenderScene::MAX_OBJECTS;
+	compacted_instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	compacted_instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	
+	GpuBufferInfo instance_info = {};
+	instance_info.size = sizeof(gpu_types::GpuInstance) * RenderScene::MAX_OBJECTS;
+	instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	
+	GpuBufferInfo draw_indirect_info = {};
+	draw_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
+	draw_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	draw_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+	
+	GpuBufferInfo clear_indirect_info = {};
+	clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
+	clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+
+	compacted_instance_buffer = graph.create_buffer_resource(compacted_instance_info);
+	instance_buffer = graph.create_buffer_resource(instance_info);
+	draw_indirect_buffer = graph.create_buffer_resource(draw_indirect_info);
+	clear_indirect_buffer = graph.create_buffer_resource(clear_indirect_info);
 }
 
-void RenderScene::MeshPass::destroy(Device *device)
-{
-}
-
-void RenderScene::MeshPass::populate(RenderScene &scene)
+void MeshPass::populate(RenderScene &scene)
 {
 	// RESET.
 	multi_batches.clear();
@@ -18,7 +42,7 @@ void RenderScene::MeshPass::populate(RenderScene &scene)
 	direct_batches.clear();
 
 	// DIRECT BATCHES.
-	for (auto &s : scene.objects) {
+	for (auto &s : scene.get_objects()) {
 		if (!render_scene_handle_valid(s.mesh_handle))
 			continue;
 		
@@ -68,7 +92,7 @@ void RenderScene::MeshPass::populate(RenderScene &scene)
 		// As long as the materials are the same and the mesh
 		// has been merged then we can combine the rendering
 		// calls together.
-		bool compatible_mesh = scene.meshes[join_batch.mesh_id].is_merged;
+		bool compatible_mesh = scene.get_mesh(join_batch.mesh_id)->is_merged;
 		bool same_material = curr_batch.material_id == join_batch.material_id;
 
 		if (compatible_mesh && same_material) {
@@ -81,7 +105,7 @@ void RenderScene::MeshPass::populate(RenderScene &scene)
 	}
 }
 
-void RenderScene::MeshPass::fill_instance_array(const RenderScene &scene, gpu_types::GpuInstance *instances)
+void MeshPass::fill_instance_array(const RenderScene &scene, gpu_types::GpuInstance *instances)
 {
 	int index = 0;
 
@@ -96,23 +120,25 @@ void RenderScene::MeshPass::fill_instance_array(const RenderScene &scene, gpu_ty
 	}
 }
 
-void RenderScene::MeshPass::fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndirect *indirects)
+void MeshPass::fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndirect *indirects)
 {
 	for (int i = 0; i < batches.size(); i++) {
 		IndirectBatch &indirect_batch = batches[i];
-		const RenderMesh &mesh = scene.meshes[indirect_batch.mesh_id];
+		const RenderMesh *mesh = scene.get_mesh(indirect_batch.mesh_id);
 
 		indirects[i].command.firstInstance = indirect_batch.first;
 		indirects[i].command.instanceCount = 0; // This gets filled in the compute shader.
-		indirects[i].command.vertexOffset = mesh.first_vertex;
-		indirects[i].command.firstIndex = mesh.first_index;
-		indirects[i].command.indexCount = mesh.index_count;
+		indirects[i].command.vertexOffset = mesh->first_vertex;
+		indirects[i].command.firstIndex = mesh->first_index;
+		indirects[i].command.indexCount = mesh->index_count;
 	}
 }
 
-void RenderScene::init(Device *device)
+void RenderScene::init(RenderGraph &graph)
 {
-	this->device = device;
+	this->graph = &graph;
+
+	Device *device = &graph.get_device();
 
 	object_buffer = device->alloc_gpu_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
@@ -136,20 +162,19 @@ void RenderScene::init(Device *device)
 	);
 
 	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
-		passes[i].init(device);
+		passes[i].init(graph);
 }
 
 void RenderScene::destroy()
 {
+	Device *device = &graph->get_device();
+
 	device->destroy_gpu_buffer(merged_vertex_buffer);
 	device->destroy_gpu_buffer(merged_index_buffer);
 
 	device->destroy_gpu_buffer(object_buffer);
 	device->destroy_gpu_buffer(material_buffer);
 	device->destroy_gpu_buffer(light_buffer);
-
-	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
-		passes[i].destroy(device);
 }
 
 void RenderScene::update()
@@ -216,7 +241,7 @@ u32 RenderScene::upload_mesh(const Mesh &mesh)
 	return meshes.size() - 1;
 }
 
-u32 RenderScene::upload_material(const Material &material)
+u32 RenderScene::upload_material(const Material &material, ast::AssetManager &assets)
 {
 	/*
 	for (int i = 0; i < scene->material_count; i++) {
@@ -226,11 +251,11 @@ u32 RenderScene::upload_material(const Material &material)
 	*/
 
 	gpu_types::GpuMaterial gpu_material = {};
-//	gpu_material.diffuse_texture            = gfx_device_texture_view_fetch_std(device, asset_store_texture_from_handle(assets, material->diffuse_texture_handle))->bindless.sampled;
-//	gpu_material.normal_texture             = gfx_device_texture_view_fetch_std(device, asset_store_texture_from_handle(assets, material->normal_texture_handle))->bindless.sampled;
-//	gpu_material.emissive_texture           = gfx_device_texture_view_fetch_std(device, asset_store_texture_from_handle(assets, material->emissive_texture_handle))->bindless.sampled;
-//	gpu_material.metallic_roughness_texture = gfx_device_texture_view_fetch_std(device, asset_store_texture_from_handle(assets, material->metallic_roughness_texture_handle))->bindless.sampled;
-//	gpu_material.ambient_texture            = gfx_device_texture_view_fetch_std(device, asset_store_texture_from_handle(assets, material->ambient_texture_handle))->bindless.sampled;
+	gpu_material.diffuse_texture            = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)->texture).get_bindless().sampled;
+	gpu_material.normal_texture             = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)->texture).get_bindless().sampled;
+	gpu_material.emissive_texture           = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)->texture).get_bindless().sampled;
+	gpu_material.metallic_roughness_texture = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)->texture).get_bindless().sampled;
+	gpu_material.ambient_texture            = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)->texture).get_bindless().sampled;
 
 	u64 stride = sizeof(gpu_types::GpuMaterial);
 
@@ -251,8 +276,45 @@ u32 RenderScene::upload_light(const Light &light)
 	return handle;
 }
 
+RenderMesh *RenderScene::get_mesh(u32 handle)
+{
+	return &meshes[handle];
+}
+
+const RenderMesh *RenderScene::get_mesh(u32 handle) const
+{
+	return &meshes[handle];
+}
+
+Material *RenderScene::get_material(u32 handle)
+{
+	return &materials[handle];
+}
+
+const Material *RenderScene::get_material(u32 handle) const
+{
+	return &materials[handle];
+}
+
+Light *RenderScene::get_light(u32 handle)
+{
+	return &lights[handle];
+}
+
+const Light *RenderScene::get_light(u32 handle) const
+{
+	return &lights[handle];
+}
+
 void RenderScene::build_batches()
 {
+	for (auto &o : objects) {
+		gpu_types::GpuObjectData o_data = {};
+		o_data.model_matrix = o.transform;
+		o_data.normal_matrix = o.transform.inverse().transpose();
+		object_buffer.write(&o_data, sizeof(o_data), sizeof(o_data) * o.id);
+	}
+
 	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
 		passes[i].populate(*this);
 }
@@ -261,6 +323,8 @@ void RenderScene::merge_meshes()
 {
 	if (meshes.size() <= 0)
 		return;
+
+	Device *device = &graph->get_device();
 
 	// All meshes in the list *should* have the same vertex type.
 	// If they don't we have a bit of a problem :/.
@@ -336,4 +400,44 @@ RenderSceneObject &RenderScene::get_object_from_handle(u32 handle)
 {
 	assert(handle >= 0 && handle < objects.size());
 	return objects[handle];
+}
+
+MeshPass &RenderScene::get_pass(MeshPass::Type type)
+{
+	return passes[type];
+}
+
+const MeshPass &RenderScene::get_pass(MeshPass::Type type) const
+{
+	return passes[type];
+}
+
+const Vector<RenderSceneObject> &RenderScene::get_objects() const
+{
+	return objects;
+}
+
+GpuBuffer &RenderScene::get_object_buffer()
+{
+	return object_buffer;
+}
+
+GpuBuffer &RenderScene::get_material_buffer()
+{
+	return material_buffer;
+}
+
+GpuBuffer &RenderScene::get_light_buffer()
+{
+	return light_buffer;
+}
+
+GpuBuffer &RenderScene::get_merged_vertex_buffer()
+{
+	return merged_vertex_buffer;
+}
+
+GpuBuffer &RenderScene::get_merged_index_buffer()
+{
+	return merged_index_buffer;
 }

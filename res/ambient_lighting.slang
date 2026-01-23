@@ -5,8 +5,8 @@
 struct PushConstants {
 	FrameData *frame_data;
 
-	uint position;
-	uint albedo;
+    uint position;
+    uint albedo;
 	uint normal;
 	uint material;
 	uint emissive;
@@ -44,11 +44,11 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	SamplerState sampler = bindless_samplers[args.linear_sampler];
 	float2 uv = input.uv;
 
-	float3 position    = bindless_images[args.position]    .Sample(sampler, uv).rgb;
-	float3 albedo      = bindless_images[args.albedo]      .Sample(sampler, uv).rgb;
-	float3 material    = bindless_images[args.material]    .Sample(sampler, uv).rgb;
-	float3 normal      = bindless_images[args.normal]      .Sample(sampler, uv).rgb;
-	float3 emissive    = bindless_images[args.emissive]    .Sample(sampler, uv).rgb;
+    float3 position    = bindless_images[args.position]   .Sample(sampler, uv).rgb;
+    float3 albedo      = bindless_images[args.albedo]     .Sample(sampler, uv).rgb;
+	float3 material    = bindless_images[args.material]   .Sample(sampler, uv).rgb;
+	float3 normal      = bindless_images[args.normal]     .Sample(sampler, uv).rgb;
+	float3 emissive    = bindless_images[args.emissive]   .Sample(sampler, uv).rgb;
 
 	normal = 2.*normal - 1.;
 
@@ -67,14 +67,14 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 reflected = reflect(-view_dir, normal);
 
-	float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
-	float3 prefiltered_colour = bindless_cubes[args.prefilter_map].SampleLevel(sampler, WorldToCubemap(reflected), prefilter_mip_level).rgb;
+    float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
+    float3 prefiltered_colour = bindless_cubes[args.prefilter_map].SampleLevel(sampler, WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
-	float2 environment_brdf = bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
+    float2 environment_brdf = bindless_images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 
-	float3 irradiance = bindless_cubes[args.irradiance_map].Sample(sampler, WorldToCubemap(normal)).rgb;
+    float3 irradiance = bindless_cubes[args.irradiance_map].Sample(sampler, WorldToCubemap(normal)).rgb;
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambient_occlusion;
 

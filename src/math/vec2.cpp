@@ -107,9 +107,10 @@ bool Vec2::operator != (const Vec2 &other) const { return !(*this == other); }
 
 Vec2 Vec2::operator + (const Vec2 &other) const { return Vec2( this->x + other.x,  this->y + other.y); }
 Vec2 Vec2::operator - (const Vec2 &other) const { return Vec2( this->x - other.x,  this->y - other.y); }
-Vec2 Vec2::operator - ()                  const { return Vec2(-this->x,           -this->y          ); }
 Vec2 Vec2::operator * (const Vec2 &other) const { return Vec2( this->x * other.x,  this->y * other.y); }
 Vec2 Vec2::operator / (const Vec2 &other) const { return Vec2( this->x / other.x,  this->y / other.y); }
+
+Vec2 Vec2::operator - () const { return Vec2(-this->x, -this->y); }
 
 Vec2 &Vec2::operator += (const Vec2 &other) { this->x += other.x; this->y += other.y; return *this; }
 Vec2 &Vec2::operator -= (const Vec2 &other) { this->x -= other.x; this->y -= other.y; return *this; }

@@ -3,31 +3,20 @@
 #include "assets/texture_serializer.h"
 #include "assets/shader_serializer.h"
 
+#include "math/matrix.h"
+#include "math/vec3.h"
+
 #include "platform/platform.h"
+
+#include "deferred_renderer.h"
+
+#include "../camera.h"
 
 using namespace gfx;
 
-struct FrameData {
-	Mat4 view;
-	Mat4 projection;
-	Mat4 view_projection;
-	Mat4 view_projection_no_translation;
-	Mat4 inv_view;
-	Mat4 inv_projection;
-	Vec3 camera_position;
-	Vec2 window_resolution;
-	float time;
-};
-
-void SkyboxRenderer::init(Device *device, ast::AssetManager &assets, RenderGraph &graph)
+void SkyboxRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
 {
-	this->device = device;
-
-	frame_data_buffer = device->alloc_gpu_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(FrameData)
-	);
+	this->device = &graph.get_device();
 
 	Mat4 capture_view_matrices[] = {
 		Mat4::lookat(Vec3::zero(), Vec3( 1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Right
@@ -107,13 +96,6 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets, RenderGraph
 	environment_cubemap_info.is_cubemap = true;
 
 	cubemap_attachment = graph.create_texture_resource(environment_cubemap_info);
-
-	gfx::AttachmentInfo output_attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-	output_attachment_info.size_class = gfx::AttachmentInfo::SIZE_CLASS_SWAPCHAIN_RELATIVE;
-	output_attachment_info.size_x = 1.f;
-	output_attachment_info.size_y = 1.f;
-
-	output_attachment = graph.create_texture_resource(output_attachment_info);
 }
 
 void SkyboxRenderer::destroy()
@@ -122,49 +104,38 @@ void SkyboxRenderer::destroy()
 
 	device->destroy_sampler(linear_sampler);
 	device->destroy_gpu_buffer(cubemap_capture_transforms);
-	device->destroy_gpu_buffer(frame_data_buffer);
 }
 
 void SkyboxRenderer::add_render_stages(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
-	const SceneView &view
+	const SceneView &view,
+	const GpuBuffer &frame_data
 )
 {
+	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
+
 	if (!created_cubemap) {
 		add_create_cubemap_stage(graph);
 		created_cubemap = true;
 	}
 
-	RenderClear clear(0.f, 1.f, 0.f, 1.f);
-
 	RenderStage &stage = graph.add_stage(RenderStage::TYPE_GRAPHICS);
 	stage.set_scene_view(view);
-	stage.add_colour_output(output_attachment, &clear);
+	stage.add_colour_output(deferred_info.lighting);
+	stage.set_depth_stencil(deferred_info.depth);
 	stage.add_texture(cubemap_attachment, sync::TEXTURE_ACCESS_graphics_r);
 
-	stage.set_record([&](const RenderContext &ctx) -> void {
+	stage.set_record([&, frame_data, deferred_info](const RenderContext &ctx) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
 		const Camera &camera = *ctx.view.camera;
 
-		FrameData data = {};
-		data.view = camera.get_view();
-		data.projection = camera.get_projection();
-		data.view_projection = camera.get_projection() * camera.get_view();
-		data.view_projection_no_translation = camera.get_projection() * camera.get_view().remove_translation();
-		data.inv_view = data.view.inverse();
-		data.inv_projection = data.projection.inverse();
-		data.camera_position = camera.get_position();
-		data.window_resolution = Vec2(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-		data.time = ctx.elapsed_time;
-		this->frame_data_buffer.write(&data, sizeof(FrameData), 0);
-
 		GraphicsPipelineDef pipeline_def(shader);
-//		pipeline_def.has_depth_attachment = true;
-//		pipeline_def.depth_stencil_state.depth_test_enabled = true;
-//		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-//		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
-		pipeline_def.colour_attachment_formats.push_back(graph.get_physical_texture(graph.get_resource(output_attachment)).get_format());
+		pipeline_def.has_depth_attachment = true;
+		pipeline_def.depth_stencil_state.depth_test_enabled = true;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
+		pipeline_def.colour_attachment_formats.push_back(graph.get_physical_texture(graph.get_resource(deferred_info.lighting)).get_format());
 
 		PipelineState st = ctx.device.fetch_pipeline(pipeline_def);
 
@@ -177,7 +148,7 @@ void SkyboxRenderer::add_render_stages(
 
 		TextureView cubemap_view = graph.get_physical_texture_view(graph.get_resource(cubemap_attachment));
 
-		args.frame_data_buffer = this->frame_data_buffer.get_device_address();
+		args.frame_data_buffer = frame_data.get_device_address();
 		args.vertex_buffer = this->mesh.vertex_buffer.get_device_address();
 		args.cubemap_id = cubemap_view.get_bindless().sampled;
 		args.sampler_id = this->linear_sampler.get_bindless().sampler;
