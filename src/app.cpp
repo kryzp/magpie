@@ -1,5 +1,7 @@
 #include "app.h"
 
+#include "ext/imgui/imgui.h"
+
 #include "core/scratch.h"
 #include "platform/platform.h"
 #include "math/calc.h"
@@ -86,8 +88,7 @@ App::App()
 	, render_scene()
 	, render_graph()
 	, skybox_renderer()
-//	, post_processing()
-//	, profiler(platform)
+	, post_processing()
 {
 }
 
@@ -110,6 +111,9 @@ void App::init()
 
 	graphics_device.init();
 	swapchain = graphics_device.create_swapchain();
+
+	graphics_device.init_imgui();
+
 	render_graph.init(&graphics_device);
 
 	assets.init(&graphics_device);
@@ -134,8 +138,8 @@ void App::init()
 	swapchain_src = render_graph.create_texture_resource(swapchain_attachment_info);
 
 	skybox_renderer.init(&graphics_device, assets, render_graph);
-//	post_processing.start(&graphics_device, assets, render_graph);
-
+	post_processing.init(&graphics_device, assets, render_graph);
+	
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
 	// Test out the job system.
@@ -151,7 +155,7 @@ void App::init()
 void App::destroy()
 {
 	skybox_renderer.destroy();
-//	post_processing.destroy();
+	post_processing.destroy();
 
 	render_scene.destroy();
 
@@ -172,6 +176,9 @@ bool App::tick(const inp::InputState &input)
 		return true;
 	}
 	
+	graphics_device.imgui_new_frame();
+	ImGui::NewFrame();
+
 	const float elapsed_time = global_timer.get_elapsed_seconds();
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)TARGET_FPS;
@@ -208,6 +215,15 @@ void App::update(float dt, const inp::InputState &input)
 			inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
 	}
 
+	ImGui::Begin("Params");
+	{
+		static float exp = 1.5f;
+
+		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
+			post_processing.set_exposure(exp);
+	}
+	ImGui::End();
+
 	render_scene.resolve_removing();
 	render_scene.update();
 }
@@ -225,7 +241,17 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	view.camera = &this->camera;
 
 	skybox_renderer.add_render_stages(render_graph, bb, view);
-//	post_processing.add_render_stages(render_graph, bb, view);
+	post_processing.add_render_stages(render_graph, bb, view, skybox_renderer.output_attachment);
+	
+	gfx::RenderStage &stage = render_graph.add_stage(gfx::RenderStage::TYPE_GRAPHICS);
+
+	stage.add_colour_output(post_processing.output_attachment);
+
+	stage.set_record([&](const gfx::RenderContext &ctx) -> void {
+		gfx::CommandBuffer &cmd = ctx.cmd;
+		ImGui::Render();
+		graphics_device.imgui_record_draw_data(cmd);
+	});
 
 	gfx::SubresourceAlias alias = {};
 	alias.parent = swapchain_src;
@@ -233,5 +259,5 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	alias.base_mip = 0;
 	alias.view_type = VK_IMAGE_VIEW_TYPE_2D;
 	
-	render_graph.move_subresource(skybox_renderer.output_attachment, alias);
+	render_graph.move_subresource(post_processing.output_attachment, alias);
 }

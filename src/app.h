@@ -10,6 +10,7 @@
 #include "graphics/render_scene.h"
 #include "graphics/render_graph.h"
 #include "graphics/camera.h"
+
 #include "graphics/renderers/skybox_renderer.h"
 #include "graphics/renderers/post_processing.h"
 
@@ -67,7 +68,7 @@ private:
 	CameraDriver camera_driver;
 
 	gfx::SkyboxRenderer skybox_renderer;
-//	gfx::PostProcessingRenderer post_processing;
+	gfx::PostProcessingRenderer post_processing;
 
 	gfx::RenderResourceHandle swapchain_src;
 };

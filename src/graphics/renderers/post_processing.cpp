@@ -23,18 +23,20 @@ void PostProcessingRenderer::destroy()
 {
 }
 
-void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &view)
+void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &view, const RenderResourceHandle &skybox)
 {
-	/*
 	RenderStage &stage = graph.add_stage(RenderStage::TYPE_COMPUTE);
 	stage.add_colour_output(colour_attachment);
-	stage.add_texture(*skybox_data.colour_attachment, sync::TEXTURE_ACCESS_graphics_r);
+	stage.add_texture(skybox, sync::TEXTURE_ACCESS_graphics_r);
 
-	stage.set_record([&, skybox_data](const RenderContext &ctx) -> void {
+	stage.set_record([&, skybox](const RenderContext &ctx) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		Texture &in_texture = graph.get_physical_texture(*skybox_data.colour_attachment);
-		Texture &out_texture = graph.get_physical_texture(colour_attachment);
+		RenderResource &skybox_attachment_resource = graph.get_resource(skybox);
+		RenderResource &colour_attachment_resource = graph.get_resource(colour_attachment);
+
+		Texture &in_texture = graph.get_physical_texture(skybox_attachment_resource);
+		Texture &out_texture = graph.get_physical_texture(colour_attachment_resource);
 
 		ComputePipelineDef pipeline_def(shader);
 		PipelineState pipeline_st = ctx.device.fetch_pipeline(pipeline_def);
@@ -54,7 +56,7 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 		args.height = in_texture.get_height();
 		args.exposure = this->exposure;
 		args.input_image_id = ctx.device.fetch_texture_view_std(in_texture).get_bindless().sampled;
-		args.output_image_id = ctx.device.fetch_texture_view_std(in_texture).get_bindless().storage;
+		args.output_image_id = ctx.device.fetch_texture_view_std(out_texture).get_bindless().storage;
 		
 		cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(args), &args);
 
@@ -69,11 +71,14 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 	blit_to_swapchain.add_colour_output(output_attachment);
 	blit_to_swapchain.add_texture(colour_attachment, sync::TEXTURE_ACCESS_blit_src);
 
-	blit_to_swapchain.set_record([&, skybox_data](const RenderContext &ctx) -> void {
+	blit_to_swapchain.set_record([&](const RenderContext &ctx) -> void {
 		CommandBuffer &cmd = ctx.cmd;
+		
+		RenderResource &colour_attachment_resource = graph.get_resource(colour_attachment);
+		RenderResource &output_attachment_resource = graph.get_resource(output_attachment);
 
-		Texture &in_texture = graph.get_physical_texture(*skybox_data.colour_attachment);
-		Texture &out_texture = graph.get_physical_texture(colour_attachment);
+		Texture &src_texture = graph.get_physical_texture(colour_attachment_resource);
+		Texture &dst_texture = graph.get_physical_texture(output_attachment_resource);
 
 		VkImageBlit2 region = {};
 		region.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
@@ -81,26 +86,23 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 		region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		region.srcSubresource.mipLevel = 0;
 		region.srcSubresource.baseArrayLayer = 0;
-		region.srcSubresource.layerCount = in_texture.get_layer_count();
+		region.srcSubresource.layerCount = src_texture.get_layer_count();
 		region.srcOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-		region.srcOffsets[1] = (VkOffset3D){ (int)in_texture.get_width(), (int)in_texture.get_height(), 1 };
+		region.srcOffsets[1] = (VkOffset3D){ (int)src_texture.get_width(), (int)src_texture.get_height(), 1 };
 
 		region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		region.dstSubresource.mipLevel = 0;
 		region.dstSubresource.baseArrayLayer = 0;
-		region.dstSubresource.layerCount = out_texture.get_layer_count();
+		region.dstSubresource.layerCount = dst_texture.get_layer_count();
 		region.dstOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-		region.dstOffsets[1] = (VkOffset3D){ (int)out_texture.get_width(), (int)out_texture.get_height(), 1 };
+		region.dstOffsets[1] = (VkOffset3D){ (int)dst_texture.get_width(), (int)dst_texture.get_height(), 1 };
 
 		cmd.blit(
-			in_texture, out_texture,
+			src_texture, dst_texture,
 			{ region },
 			VK_FILTER_LINEAR
 		);
 	});
-
-	graph.set_swapchain_source(output_attachment);
-	*/
 }
 
 void PostProcessingRenderer::set_exposure(float exp)

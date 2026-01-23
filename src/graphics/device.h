@@ -154,6 +154,17 @@ namespace gfx
 		void destroy_shader_program(const ShaderProgram &program);
 
 		// ---
+		
+		void init_imgui();
+		void imgui_new_frame();
+		void imgui_record_draw_data(const CommandBuffer &cmd);
+
+		// ---
+
+		const VkDevice &get_handle() const
+		{
+			return device;
+		}
 
 		u32 get_current_frame_index() const
 		{
@@ -182,6 +193,8 @@ namespace gfx
 
 		VkSemaphore get_current_render_finished_semaphore();
 		VkSemaphore get_current_image_available_semaphore();
+		
+		void destroy_imgui();
 
 		VkInstance instance;
 		VkDevice device;
@@ -222,5 +235,7 @@ namespace gfx
 		HashMap<u64, TextureView> texture_view_cache;
 		HashMap<u64, VkPipeline> pipeline_cache;
 		HashMap<u64, VkPipelineLayout> pipeline_layout_cache;
+
+		VkDescriptorPool imgui_pool;
 	};
 }

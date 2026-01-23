@@ -20,6 +20,8 @@
 
 #include <mutex>
 
+#include "ext/imgui/imgui_impl_sdl3.h"
+
 #include "container/vector.h"
 #include "platform/platform.h"
 #include "math/vec2.h"
@@ -285,6 +287,35 @@ static void reconnect_all_gamepads()
 	SDL_free(ids);
 }
 
+static void init_platform()
+{
+	platform::set_window_title(DEFAULT_WINDOW_TITLE);
+	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	platform::set_window_opacity(1.f);
+	platform::set_window_fullscreen(false);
+	platform::set_window_borderless(false);
+	platform::set_mouse_visible(true);
+	platform::set_mouse_locked(false);
+}
+
+static void init_imgui()
+{
+	IMGUI_CHECKVERSION();
+
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+	ImGui_ImplSDL3_InitForVulkan(sdl_window);
+}
+
+static void destroy_imgui()
+{
+	ImGui_ImplSDL3_Shutdown();
+	ImGui::DestroyContext();
+}
+
 static JOB_ENTRY_POINT(root_entry_point)
 {
 	App *app = (App *)param;
@@ -325,6 +356,8 @@ static JOB_ENTRY_POINT(root_entry_point)
 				st->released[j] = !st->down[j] &&  p_st->down[j];
 			}
 		}
+
+		ImGui_ImplSDL3_NewFrame();
 
 		if (app->tick(curr_input_st))
 			app_running = false;
@@ -368,14 +401,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	// Init platform.
-	platform::set_window_title(DEFAULT_WINDOW_TITLE);
-	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-	platform::set_window_opacity(1.f);
-	platform::set_window_fullscreen(false);
-	platform::set_window_borderless(false);
-	platform::set_mouse_visible(true);
-	platform::set_mouse_locked(false);
+	init_platform();
+
+	init_imgui();
 
 	/*
 	 * As a note to myself and to anyone reading this.
@@ -397,6 +425,8 @@ int main(int argc, char **argv)
 
 		while (SDL_PollEvent(&ev)) {
 			std::lock_guard<std::mutex> lock(input_mutex);
+
+			ImGui_ImplSDL3_ProcessEvent(&ev);
 
 			switch (ev.type) {
 				case SDL_EVENT_QUIT:
@@ -474,6 +504,8 @@ int main(int argc, char **argv)
 	job::shutdown();
 
 	close_all_gamepads();
+
+	destroy_imgui();
 
 	SDL_DestroyWindow(sdl_window);
 	SDL_Quit();

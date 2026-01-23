@@ -2,6 +2,9 @@
 
 #include "ext/spirv_reflect.h"
 
+#include "ext/imgui/imgui.h"
+#include "ext/imgui/imgui_impl_vulkan.h"
+
 #include "core/scratch.h"
 #include "core/hash.h"
 
@@ -361,6 +364,7 @@ Device::Device()
 	, texture_view_cache()
 	, pipeline_cache()
 	, pipeline_layout_cache()
+	, imgui_pool(VK_NULL_HANDLE)
 {
 }
 
@@ -776,6 +780,8 @@ void Device::destroy()
 		destroy_semaphore(per_frame_data[i].render_finished_semaphore);
 		destroy_semaphore(per_frame_data[i].image_available_semaphore);
 	}
+
+	destroy_imgui();
 
 	vkDestroyPipelineCache(device, pipeline_process_cache, nullptr);
 	platform::destroy_vulkan_surface(instance, surface);
@@ -1963,4 +1969,74 @@ void Device::apply_bindless_updates()
 	);
 
 	bindless.updates.clear();
+}
+
+void Device::init_imgui()
+{
+	const u32 max_sets = 1000;
+
+	VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER,                max_sets },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       max_sets }
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = max_sets;
+	pool_info.poolSizeCount = array_size(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	GFX_VK_CHECK(
+		vkCreateDescriptorPool(device, &pool_info, nullptr, &imgui_pool),
+		"Failed to create ImGui descriptor pool."
+	);
+
+	VkFormat swapchain_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = instance;
+	init_info.PhysicalDevice = physical_device;
+	init_info.Device = device;
+	init_info.QueueFamily = graphics_queue.get_family_index();
+	init_info.Queue = graphics_queue.get_handle();
+	init_info.PipelineCache = pipeline_process_cache;
+	init_info.DescriptorPool = imgui_pool;
+	init_info.Allocator = nullptr;
+	init_info.MinImageCount = FRAMES_IN_FLIGHT;
+	init_info.ImageCount = FRAMES_IN_FLIGHT;
+	init_info.CheckVkResultFn = nullptr;
+	init_info.UseDynamicRendering = true;
+	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchain_image_format;
+
+	ImGui_ImplVulkan_Init(&init_info);
+}
+
+void Device::destroy_imgui()
+{
+	ImGui_ImplVulkan_Shutdown();
+	vkDestroyDescriptorPool(device, imgui_pool, nullptr);
+}
+
+void Device::imgui_new_frame()
+{
+	ImGui_ImplVulkan_NewFrame();
+}
+
+void Device::imgui_record_draw_data(const CommandBuffer &cmd)
+{
+	ImDrawData *draw_data = ImGui::GetDrawData();
+	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd.get_handle());
 }

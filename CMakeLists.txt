@@ -106,6 +106,14 @@ add_executable(magpie
 	"${CODE_DIR}/ext/vk_mem_alloc.cpp"
 	"${CODE_DIR}/ext/spirv_reflect.cpp"
 	"${CODE_DIR}/ext/volk.cpp"
+
+	"${CODE_DIR}/ext/imgui/imgui.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_demo.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_draw.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_impl_sdl3.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_impl_vulkan.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_tables.cpp"
+	"${CODE_DIR}/ext/imgui/imgui_widgets.cpp"
 )
 
 target_compile_definitions(magpie PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
