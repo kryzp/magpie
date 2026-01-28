@@ -16,16 +16,16 @@ void Mesh::init(
 	u64 vertex_buffer_size = vertex_count * vertex_size;
 	u64 index_buffer_size = index_count * sizeof(u16);
 
-	GpuBuffer staging_buffer = device->alloc_gpu_buffer(
+	GpuBuffer *staging_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		vertex_buffer_size + index_buffer_size
 	);
 
-	staging_buffer.write(vertices, vertex_buffer_size, 0);
-	staging_buffer.write(indices, index_buffer_size, vertex_buffer_size);
+	staging_buffer->write(vertices, vertex_buffer_size, 0);
+	staging_buffer->write(indices, index_buffer_size, vertex_buffer_size);
 
-	this->vertex_buffer = device->alloc_gpu_buffer(
+	this->vertex_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
@@ -33,7 +33,7 @@ void Mesh::init(
 		vertex_buffer_size
 	);
 
-	this->index_buffer = device->alloc_gpu_buffer(
+	this->index_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
@@ -59,11 +59,11 @@ void Mesh::init(
 	device->end_submit(cmd);
 
 	device->wait_idle();
-	device->destroy_gpu_buffer(staging_buffer);
+	device->destroy_buffer(staging_buffer);
 }
 
 void Mesh::destroy() const
 {
-	device->destroy_gpu_buffer(vertex_buffer);
-	device->destroy_gpu_buffer(index_buffer);
+	device->destroy_buffer(vertex_buffer);
+	device->destroy_buffer(index_buffer);
 }

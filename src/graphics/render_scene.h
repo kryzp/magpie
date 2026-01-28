@@ -28,11 +28,6 @@ namespace gfx
 		float falloff;
 	};
 
-	struct EnvironmentProbe {
-		RenderResourceHandle irradiance;
-		RenderResourceHandle prefilter;
-	};
-
 	class RenderScene;
 
 	struct RenderMesh {
@@ -44,11 +39,11 @@ namespace gfx
 		u32 index_count;
 	};
 
-	constexpr static u32 RS_HANDLE_INVALID_INDEX = (u32)(-1);
+	constexpr static u32 RENDER_SCENE_INVALID_HANDLE = -1u;
 
 	static inline bool render_scene_handle_valid(u32 h)
 	{
-		return h != RS_HANDLE_INVALID_INDEX && h >= 0;
+		return h != RENDER_SCENE_INVALID_HANDLE && h >= 0;
 	};
 
 	struct RenderSceneObject {
@@ -57,9 +52,9 @@ namespace gfx
 		//Bounds3D bounds;
 		u32 flags = 0;
 		u64 custom_sort_key = 0;
-		u32 mesh_handle = RS_HANDLE_INVALID_INDEX;
-		u32 material_handle = RS_HANDLE_INVALID_INDEX;
-		u32 light_handle = RS_HANDLE_INVALID_INDEX;
+		u32 mesh_handle = RENDER_SCENE_INVALID_HANDLE;
+		u32 material_handle = RENDER_SCENE_INVALID_HANDLE;
+		u32 light_handle = RENDER_SCENE_INVALID_HANDLE;
 	};
 
 	struct MeshPass {
@@ -89,15 +84,15 @@ namespace gfx
 		Vector<IndirectBatch> batches;
 		Vector<DirectBatch> direct_batches;
 
-		RenderResourceHandle compacted_instance_buffer; // <u32>
 		RenderResourceHandle instance_buffer;           // <gpu_types::Instance>
+		RenderResourceHandle compacted_instance_buffer; // <u32>
 		RenderResourceHandle draw_indirect_buffer;      // <gpu_types::Indirect>
 		RenderResourceHandle clear_indirect_buffer;     // <gpu_types::Indirect>
 
 		bool instance_buffer_needs_refresh;
 		bool indirect_buffer_needs_refresh;
 
-		void init(RenderGraph &graph);
+		void push_stage(RenderGraph &graph);
 
 		void populate(RenderScene &scene);
 
@@ -113,10 +108,12 @@ namespace gfx
 		RenderScene() = default;
 		~RenderScene() = default;
 
-		void init(RenderGraph &graph);
+		void init(Device *device);
 		void destroy();
 
 		void update();
+
+		void mesh_pass_stages(RenderGraph &graph);
 
 		void remove_object(u32 handle);
 		void resolve_removing();
@@ -146,15 +143,15 @@ namespace gfx
 
 		const Vector<RenderSceneObject> &get_objects() const;
 
-		GpuBuffer &get_object_buffer();
-		GpuBuffer &get_material_buffer();
-		GpuBuffer &get_light_buffer();
+		const GpuBuffer *get_object_buffer() const;
+		const GpuBuffer *get_material_buffer() const;
+		const GpuBuffer *get_light_buffer() const;
 
-		GpuBuffer &get_merged_vertex_buffer();
-		GpuBuffer &get_merged_index_buffer();
+		const GpuBuffer *get_merged_vertex_buffer() const;
+		const GpuBuffer *get_merged_index_buffer() const;
 
 	private:
-		RenderGraph *graph;
+		Device *device;
 
 		Vector<RenderSceneObject> objects;
 
@@ -167,11 +164,11 @@ namespace gfx
 		Vector<Material> materials;
 		Vector<Light> lights;
 
-		GpuBuffer object_buffer;
-		GpuBuffer material_buffer;
-		GpuBuffer light_buffer;
+		GpuBuffer *object_buffer;
+		GpuBuffer *material_buffer;
+		GpuBuffer *light_buffer;
 
-		GpuBuffer merged_vertex_buffer;
-		GpuBuffer merged_index_buffer;
+		GpuBuffer *merged_vertex_buffer;
+		GpuBuffer *merged_index_buffer;
 	};
 }

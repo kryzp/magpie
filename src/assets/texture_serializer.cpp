@@ -1,5 +1,7 @@
 #include "texture_serializer.h"
 
+#include "graphics/sync.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb_image.h"
 
@@ -34,7 +36,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 		unit = sizeof(u8);
 	}
 
-	gfx::Texture gfx_texture = {};
+	gfx::Texture *gfx_texture = nullptr;
 	gfx::Device *device = assets.get_device();
 
 	if (pixels) {
@@ -42,31 +44,33 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 
 		u64 memory_size = width * height * 4 * unit;
 
-		gfx::GpuBuffer staging_buffer = device->alloc_gpu_buffer(
+		gfx::GpuBuffer *staging_buffer = device->alloc_buffer(
 			VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
 			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 			memory_size
 		);
 
-		staging_buffer.write(pixels, memory_size, 0);
+		staging_buffer->write(pixels, memory_size, 0);
 
 		gfx::CommandBuffer cmd = device->begin_submit();
 
-		auto copy_barrier = gfx::sync::texture_memory_barrier(gfx_texture,
-			gfx::sync::get_src_texture_access(gfx::sync::TEXTURE_ACCESS_undefined),
-			gfx::sync::get_dst_texture_access(gfx::sync::TEXTURE_ACCESS_copy_dst),
-			0, gfx_texture.get_mipmap_count(),
-			0, gfx_texture.get_layer_count()
+		auto copy_barrier = gfx::sync::texture_memory_barrier(
+			gfx_texture,
+			gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_UNDEFINED),
+			gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
+			0, gfx_texture->get_mipmap_count(),
+			0, gfx_texture->get_layer_count()
 		);
 
 		cmd.pipeline_barrier(0, {}, {}, { copy_barrier });
 		cmd.copy_buffer_to_texture(staging_buffer, gfx_texture);
 
-		auto blit_barrier = gfx::sync::texture_memory_barrier(gfx_texture,
-			gfx::sync::get_src_texture_access(gfx::sync::TEXTURE_ACCESS_copy_dst),
-			gfx::sync::get_dst_texture_access(gfx::sync::TEXTURE_ACCESS_blit_dst),
-			0, gfx_texture.get_mipmap_count(),
-			0, gfx_texture.get_layer_count()
+		auto blit_barrier = gfx::sync::texture_memory_barrier(
+			gfx_texture,
+			gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
+			gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_BLIT_DST),
+			0, gfx_texture->get_mipmap_count(),
+			0, gfx_texture->get_layer_count()
 		);
 
 		cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
@@ -75,7 +79,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 		device->end_submit(cmd);
 
 		device->wait_idle();
-		device->destroy_gpu_buffer(staging_buffer);
+		device->destroy_buffer(staging_buffer);
 	} else {
 		failed_to_load = true;
 	}

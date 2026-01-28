@@ -13,6 +13,7 @@ struct PushConstants {
 
 	uint irradiance_map;
 	uint prefilter_map;
+
 	uint brdf_lut;
 
 	uint linear_sampler;
@@ -46,8 +47,8 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
     float3 position    = bindless_images[args.position]   .Sample(sampler, uv).rgb;
     float3 albedo      = bindless_images[args.albedo]     .Sample(sampler, uv).rgb;
-	float3 material    = bindless_images[args.material]   .Sample(sampler, uv).rgb;
-	float3 normal      = bindless_images[args.normal]     .Sample(sampler, uv).rgb;
+    float3 normal      = bindless_images[args.normal]     .Sample(sampler, uv).rgb;
+    float3 material    = bindless_images[args.material]   .Sample(sampler, uv).rgb;
 	float3 emissive    = bindless_images[args.emissive]   .Sample(sampler, uv).rgb;
 
 	normal = 2.*normal - 1.;
@@ -80,5 +81,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 final_colour = ambient + emissive;
 
-	return float4(final_colour, 1.);
+    return float4(final_colour, 1.);
 }

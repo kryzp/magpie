@@ -4,6 +4,8 @@
  * ATROCIOUS CODE.
  */
 
+#include <atomic>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 
@@ -12,12 +14,32 @@
 
 namespace job
 {
+	struct JobWorker {
+		u32 id;
+		void *thread;
+		void *scheduler_fiber;
+	};
+
+	struct JobFiber {
+		void *handle;
+		JobDecl *job;
+		JobCounter *counter;
+		bool is_finished;
+		JobFiber *next; // Lockless stack
+	};
+	
+	struct JobCounter {
+		std::atomic<u32> count;
+		std::atomic_flag locked = ATOMIC_FLAG_INIT;
+		Vector<JobFiber *> wait_list;
+	};
+
 	struct JobRequest {
 		JobDecl decl;
 		JobCounter *counter = nullptr;
 		JobFiber *fiber = nullptr;
 	};
-
+	
 	struct JobQueue {
 		JobRequest *buffer;
 		std::atomic_flag locked = ATOMIC_FLAG_INIT;
@@ -337,7 +359,7 @@ static void job::kick_waiting_fiber(JobFiber *fiber)
 }
 
 struct ParallelForInternalParam {
-	void (*fn)(u32 index);
+	job::EntryPointParallelFor *fn;
 	u32 loop_size;
 	u32 base_index;
 };
@@ -352,7 +374,7 @@ static JOB_ENTRY_POINT(parallel_for_batch_internal)
 
 void job::parallel_for(
 	u32 count,
-	void (*fn)(u32 index),
+	EntryPointParallelFor *fn,
 	JobPriority priority,
 	u32 batch_size
 )

@@ -6,32 +6,44 @@
 
 using namespace gfx;
 
-void MeshPass::init(RenderGraph &graph)
+void MeshPass::push_stage(RenderGraph &graph)
 {
-	GpuBufferInfo compacted_instance_info = {};
-	compacted_instance_info.size = sizeof(u32) * RenderScene::MAX_OBJECTS;
-	compacted_instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	compacted_instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
-	
-	GpuBufferInfo instance_info = {};
-	instance_info.size = sizeof(gpu_types::GpuInstance) * RenderScene::MAX_OBJECTS;
-	instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	
-	GpuBufferInfo draw_indirect_info = {};
-	draw_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
-	draw_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	draw_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
-	
-	GpuBufferInfo clear_indirect_info = {};
-	clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
-	clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+	struct MeshPassStageData {
+		int foo;
+	};
 
-	compacted_instance_buffer = graph.create_buffer_resource(compacted_instance_info);
-	instance_buffer = graph.create_buffer_resource(instance_info);
-	draw_indirect_buffer = graph.create_buffer_resource(draw_indirect_info);
-	clear_indirect_buffer = graph.create_buffer_resource(clear_indirect_info);
+	graph.push_stage<MeshPassStageData>(
+		"Mesh Pass push buffers",
+		RenderStage::TYPE_TRANSFER,
+		[&](RenderGraphBuilder &builder, MeshPassStageData &data) {
+			GpuBufferInfo instance_info = {};
+			instance_info.size = sizeof(gpu_types::GpuInstance) * RenderScene::MAX_OBJECTS;
+			instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+
+			GpuBufferInfo compacted_instance_info = {};
+			compacted_instance_info.size = sizeof(u32) * RenderScene::MAX_OBJECTS;
+			compacted_instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			compacted_instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	
+			GpuBufferInfo draw_indirect_info = {};
+			draw_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
+			draw_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			draw_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+	
+			GpuBufferInfo clear_indirect_info = {};
+			clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
+			clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+			
+			instance_buffer           = builder.create_buffer(instance_info);
+			compacted_instance_buffer = builder.create_buffer(compacted_instance_info);
+			draw_indirect_buffer      = builder.create_buffer(draw_indirect_info);
+			clear_indirect_buffer     = builder.create_buffer(clear_indirect_info);
+		},
+		[=](const RenderContext &ctx, const RenderStageResources &resources, const MeshPassStageData &data) {
+		}
+	);
 }
 
 void MeshPass::populate(RenderScene &scene)
@@ -134,51 +146,50 @@ void MeshPass::fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndir
 	}
 }
 
-void RenderScene::init(RenderGraph &graph)
+void RenderScene::init(Device *device)
 {
-	this->graph = &graph;
+	this->device = device;
 
-	Device *device = &graph.get_device();
-
-	object_buffer = device->alloc_gpu_buffer(
+	object_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(gpu_types::GpuObjectData) * MAX_OBJECTS
 	);
 
-	material_buffer = device->alloc_gpu_buffer(
+	material_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS
 	);
 
-	light_buffer = device->alloc_gpu_buffer(
+	light_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(gpu_types::GpuLight) * MAX_OBJECTS
 	);
-
-	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
-		passes[i].init(graph);
 }
 
 void RenderScene::destroy()
 {
-	Device *device = &graph->get_device();
+	device->destroy_buffer(merged_vertex_buffer);
+	device->destroy_buffer(merged_index_buffer);
 
-	device->destroy_gpu_buffer(merged_vertex_buffer);
-	device->destroy_gpu_buffer(merged_index_buffer);
-
-	device->destroy_gpu_buffer(object_buffer);
-	device->destroy_gpu_buffer(material_buffer);
-	device->destroy_gpu_buffer(light_buffer);
+	device->destroy_buffer(object_buffer);
+	device->destroy_buffer(material_buffer);
+	device->destroy_buffer(light_buffer);
 }
 
 void RenderScene::update()
 {
+}
+
+void RenderScene::mesh_pass_stages(RenderGraph &graph)
+{
+	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
+		passes[i].push_stage(graph);
 }
 
 void RenderScene::remove_object(u32 handle)
@@ -251,15 +262,15 @@ u32 RenderScene::upload_material(const Material &material, ast::AssetManager &as
 	*/
 
 	gpu_types::GpuMaterial gpu_material = {};
-	gpu_material.diffuse_texture            = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)->texture).get_bindless().sampled;
-	gpu_material.normal_texture             = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)->texture).get_bindless().sampled;
-	gpu_material.emissive_texture           = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)->texture).get_bindless().sampled;
-	gpu_material.metallic_roughness_texture = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)->texture).get_bindless().sampled;
-	gpu_material.ambient_texture            = graph->get_device().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)->texture).get_bindless().sampled;
+	gpu_material.diffuse_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture).get_bindless().sampled;
+	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture).get_bindless().sampled;
+	gpu_material.emissive_texture           = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)            ->texture).get_bindless().sampled;
+	gpu_material.metallic_roughness_texture = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)  ->texture).get_bindless().sampled;
+	gpu_material.ambient_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)             ->texture).get_bindless().sampled;
 
 	u64 stride = sizeof(gpu_types::GpuMaterial);
 
-	material_buffer.write(
+	material_buffer->write(
 		&gpu_material,
 		stride, stride * materials.size()
 	);
@@ -312,7 +323,7 @@ void RenderScene::build_batches()
 		gpu_types::GpuObjectData o_data = {};
 		o_data.model_matrix = o.transform;
 		o_data.normal_matrix = o.transform.inverse().transpose();
-		object_buffer.write(&o_data, sizeof(o_data), sizeof(o_data) * o.id);
+		object_buffer->write(&o_data, sizeof(o_data), sizeof(o_data) * o.id);
 	}
 
 	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
@@ -323,8 +334,6 @@ void RenderScene::merge_meshes()
 {
 	if (meshes.size() <= 0)
 		return;
-
-	Device *device = &graph->get_device();
 
 	// All meshes in the list *should* have the same vertex type.
 	// If they don't we have a bit of a problem :/.
@@ -346,20 +355,20 @@ void RenderScene::merge_meshes()
 	u64 vb_size = total_vertices * vertex_size;
 	u64 ib_size = total_indices  * sizeof(u16);
 	
-	if (merged_vertex_buffer.get_size() < vb_size ||
-	    merged_index_buffer.get_size() < ib_size) {
+	if (merged_vertex_buffer->get_size() < vb_size ||
+	    merged_index_buffer->get_size() < ib_size) {
 		
-		device->destroy_gpu_buffer(merged_vertex_buffer);
-		device->destroy_gpu_buffer(merged_index_buffer);
+		device->destroy_buffer(merged_vertex_buffer);
+		device->destroy_buffer(merged_index_buffer);
 
-		merged_vertex_buffer = device->alloc_gpu_buffer(
+		merged_vertex_buffer = device->alloc_buffer(
 			VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 			vb_size
 		);
 
-		merged_vertex_buffer = device->alloc_gpu_buffer(
+		merged_vertex_buffer = device->alloc_buffer(
 			VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
 			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
@@ -398,7 +407,6 @@ void RenderScene::merge_meshes()
 
 RenderSceneObject &RenderScene::get_object_from_handle(u32 handle)
 {
-	assert(handle >= 0 && handle < objects.size());
 	return objects[handle];
 }
 
@@ -417,27 +425,27 @@ const Vector<RenderSceneObject> &RenderScene::get_objects() const
 	return objects;
 }
 
-GpuBuffer &RenderScene::get_object_buffer()
+const GpuBuffer *RenderScene::get_object_buffer() const
 {
 	return object_buffer;
 }
 
-GpuBuffer &RenderScene::get_material_buffer()
+const GpuBuffer *RenderScene::get_material_buffer() const
 {
 	return material_buffer;
 }
 
-GpuBuffer &RenderScene::get_light_buffer()
+const GpuBuffer *RenderScene::get_light_buffer() const
 {
 	return light_buffer;
 }
 
-GpuBuffer &RenderScene::get_merged_vertex_buffer()
+const GpuBuffer *RenderScene::get_merged_vertex_buffer() const
 {
 	return merged_vertex_buffer;
 }
 
-GpuBuffer &RenderScene::get_merged_index_buffer()
+const GpuBuffer *RenderScene::get_merged_index_buffer() const
 {
 	return merged_index_buffer;
 }

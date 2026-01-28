@@ -1,6 +1,6 @@
 #include "util.slang"
 
-const static int SAMPLE_COUNT = 1024;
+const static uint SAMPLE_COUNT = 1024u;
 
 struct VS_Output {
 	float4 sv_position : SV_Position;
@@ -17,15 +17,15 @@ VS_Output VertexMain(uint id : SV_VertexID)
 	return output;
 }
 
-// NOTE(kp): The Geometry-Schlick GGX function is slightly different
-//           for BRDF since we compute k differently for better precision.
-//           (I think??)
+// The Geometry-Schlick GGX function is slightly different
+// for BRDF since we compute k differently for better precision.
+// (I think??)
 float GeometrySchlickGGX_BRDF_LUT(float NdotV, float roughness)
 {
 	float r = roughness;
 	float k = r * r * 0.5;
 	
-	return NdotV / lerp(k, 1., NdotV);
+	return NdotV / (NdotV * (1.0 - k) + k);
 }
 
 float GeometrySmith_BRDF_LUT(float NdotV, float NdotL, float roughness)
@@ -40,42 +40,43 @@ float GeometrySmith_BRDF_LUT(float NdotV, float NdotL, float roughness)
 float4 FragmentMain(VS_Output input) : SV_Target
 {
 	float NdotV = input.uv.x;
-	float roughness = input.uv.y;
+	float roughness = max(input.uv.y, 0.04);
 
-	float3 V = float3(sqrt(1. - NdotV*NdotV),
-			  0.,
-			  NdotV);
+	float3 V = float3(
+		sqrt(1.0 - NdotV * NdotV),
+		0.0,
+		NdotV
+	);
 
-	float A = 0.;
-	float B = 0.;
+	float A = 0.0;
+	float B = 0.0;
 
-	float3 N = float3(0., 0., 1.);
+	float3 N = float3(0.0, 0.0, 1.0);
 
-	for (int i = 0; i < SAMPLE_COUNT; ++i) {
-		// NOTE(kp): Generates a sample vector that's biased towards the
-		//           preferred alignment direction (importance sampling).
+	for (uint i = 0u; i < SAMPLE_COUNT; i++) {
+		// Generates a sample vector that's biased towards the
+		// preferred alignment direction (importance sampling).
 
 		float2 Xi = Hammersley(i, SAMPLE_COUNT);
 		float3 H = ImportanceSampleGGX(Xi, N, roughness);
-		float3 L = normalize(2. * dot(V, H) * H - V);
+		float3 L = normalize(2.0 * dot(V, H) * H - V);
 
-		float NdotL = max(0., dot(N, L));
+		float NdotL = max(0.0, L.z);
+		float NdotH = max(0.0, H.z);
+		float VdotH = max(0.0, dot(V, H));
 
-		if (NdotL > 0.) {
-			float NdotH = max(0., H.z);
-			float VdotH = max(0., dot(V, H));
-
+		if (NdotL > 0.0) {
 			float G = GeometrySmith_BRDF_LUT(NdotV, NdotL, roughness);
 			float G_Vis = (G * VdotH) / (NdotH * NdotV);
-			float Fc = pow(1. - VdotH, 5.);
+			float Fc = pow(1.0 - VdotH, 5.0);
 
-			A += (1. - Fc) * G_Vis;
-			B += Fc * G_Vis;
+			A += G_Vis * (1.0 - Fc);
+			B += G_Vis * Fc;
 		}
 	}
 
 	A /= float(SAMPLE_COUNT);
 	B /= float(SAMPLE_COUNT);
 
-	return float4(A, B, 0., 1.);
+	return float4(A, B, 0.0, 1.0);
 }

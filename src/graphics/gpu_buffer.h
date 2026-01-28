@@ -5,8 +5,6 @@
 
 #include "core/types.h"
 
-#include "sync.h"
-
 namespace gfx
 {
 	class GpuBuffer {
@@ -19,7 +17,7 @@ namespace gfx
 		void read(void *dst, u64 length, u64 offset);
 		void write(const void *src, u64 length, u64 offset);
 
-		void *map();
+		void *map() const;
 
 		bool is_storage() const;
 		bool is_uniform() const;
@@ -32,16 +30,6 @@ namespace gfx
 		VkBufferUsageFlags2 get_usage() const
 		{
 			return usage;
-		}
-
-		sync::GpuBufferAccessType get_access_type() const
-		{
-			return access_type;
-		}
-
-		void set_access_type(sync::GpuBufferAccessType type)
-		{
-			access_type = type;
 		}
 
 		u64 get_size() const
@@ -72,8 +60,6 @@ namespace gfx
 	private:
 		VkBuffer handle;
 		VkBufferUsageFlags2 usage;
-
-		sync::GpuBufferAccessType access_type;
 
 		u64 size;
 

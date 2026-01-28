@@ -45,12 +45,22 @@ namespace gfx
 			return current_texture_index;
 		}
 
-		Texture &get_current_texture()
+		Texture *get_current_texture()
 		{
-			return textures[current_texture_index];
+			return &textures[current_texture_index];
+		}
+
+		const Texture *get_current_texture() const
+		{
+			return &textures[current_texture_index];
 		}
 
 		TextureView &get_current_view()
+		{
+			return views[current_texture_index];
+		}
+
+		const TextureView &get_current_view() const
 		{
 			return views[current_texture_index];
 		}

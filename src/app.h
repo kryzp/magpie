@@ -11,14 +11,13 @@
 #include "graphics/render_graph.h"
 #include "graphics/camera.h"
 
+#include "graphics/renderers/ibl_renderer.h"
 #include "graphics/renderers/compute_culling.h"
 #include "graphics/renderers/deferred_renderer.h"
 #include "graphics/renderers/skybox_renderer.h"
 #include "graphics/renderers/post_processing.h"
 
 #include "platform/input.h"
-
-#include "job/job.h"
 
 class CameraDriver {
 public:
@@ -71,8 +70,14 @@ private:
 	gfx::Camera camera;
 	CameraDriver camera_driver;
 
-	gfx::GpuBuffer frame_data_buffer;
+	gfx::GpuBuffer *frame_data_buffer;
+
+	gfx::Texture *irradiance_cubemap;
+	gfx::Texture *prefilter_cubemap;
 	
+	gfx::Texture *brdf_texture;
+
+	gfx::IBLRenderer ibl_renderer;
 	gfx::ComputeCulling compute_culling;
 	gfx::DeferredRenderer deferred_renderer;
 	gfx::SkyboxRenderer skybox_renderer;

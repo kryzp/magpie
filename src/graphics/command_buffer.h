@@ -65,7 +65,10 @@ namespace gfx
 			VkPipeline pipeline
 		);
 
-		void bind_index_buffer(const GpuBuffer &buffer, u64 offset);
+		void bind_index_buffer(
+			const GpuBuffer *buffer,
+			u64 offset
+		);
 
 		void push_constants(
 			VkPipelineLayout layout,
@@ -87,7 +90,7 @@ namespace gfx
 		);
 
 		void draw_indexed_indirect(
-			const GpuBuffer &buffer,
+			const GpuBuffer *buffer,
 			u64 offset,
 			u32 count,
 			u32 stride
@@ -96,30 +99,30 @@ namespace gfx
 		// ---
 
 		void blit(
-			const Texture &src,
-			const Texture &dst,
+			const Texture *src,
+			const Texture *dst,
 			const Vector<VkImageBlit2> &regions,
 			VkFilter filter
 		);
 
-		void generate_mipmaps(Texture &texture);
+		void generate_mipmaps(Texture *texture);
 
 		// ---
 
 		void copy_buffer_to_buffer(
-			const GpuBuffer &src,
-			const GpuBuffer &dst,
+			const GpuBuffer *src,
+			const GpuBuffer *dst,
 			const Vector<VkBufferCopy> &regions
 		);
 
 		void copy_buffer_to_texture(
-			const GpuBuffer &src,
-			const Texture &dst
+			const GpuBuffer *src,
+			const Texture *dst
 		);
 
 		void copy_buffer_to_texture_regions(
-			const GpuBuffer &src,
-			const Texture &dst,
+			const GpuBuffer *src,
+			const Texture *dst,
 			const Vector<VkBufferImageCopy> &regions
 		);
 

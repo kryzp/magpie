@@ -37,14 +37,14 @@ if(WIN32)
 	# Include directories.
 	include_directories(
 		"${CODE_DIR}"
-		"C:/VulkanSDK/1.4.328.1/Include"
+		"C:/VulkanSDK/1.4.335.0/Include"
 		"D:/DevLibs/SDL3/include"
 		"D:/DevLibs/assimp/include"
 	)
 
 	# Library directories.
 	link_directories(
-		"C:/VulkanSDK/1.4.328.1/Lib"
+		"C:/VulkanSDK/1.4.335.0/Lib"
 		"D:/DevLibs/SDL3/VisualC/x64/Release"
 		"D:/DevLibs/assimp/lib/Release"
 	)
@@ -100,7 +100,9 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/render_scene.cpp"
 	"${CODE_DIR}/graphics/sync.cpp"
 	"${CODE_DIR}/graphics/model.cpp"
+	"${CODE_DIR}/graphics/sampler.cpp"
 	
+	"${CODE_DIR}/graphics/renderers/ibl_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/compute_culling.cpp"
 	"${CODE_DIR}/graphics/renderers/deferred_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/skybox_renderer.cpp"

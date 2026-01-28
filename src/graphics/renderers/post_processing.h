@@ -8,22 +8,19 @@ namespace gfx
 {
 	class PostProcessingRenderer {
 	public:
-		void init(RenderGraph &graph, ast::AssetManager &assets, const RenderResourceHandle &output);
+		void init(ast::AssetManager &assets);
 		void destroy();
 
-		void add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const SceneView &view);
+		void add_render_stages(
+			RenderGraph &graph, RenderGraphBlackboard &bb,
+			RenderResourceHandle output_attachment
+		);
 
 		float get_exposure() const;
 		void set_exposure(float exp);
 		
 	private:
-		Device *device;
-	
-		RenderResourceHandle output_attachment;
-		RenderResourceHandle colour_attachment;
-
 		ShaderProgram shader;
-	
 		float exposure;
 	};
 }

@@ -1,9 +1,10 @@
 
 const static float PI = 3.14159265;
 
-// NOTE(kp): We use a right-handed Z-up world
-//           coordinate system, but cubemap
-//           sampling requires Y-up left handed.
+// We use a right-handed Z-up world
+// coordinate system, but cubemap
+// sampling requires Y-up left handed.
+// Thanks RenderMan!!
 float3 WorldToCubemap(float3 v)
 {
 	return float3(v.x, v.z, v.y);
@@ -43,10 +44,10 @@ float DistributionGGX(float NdotH, float roughness)
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	float r = roughness + 1.;
-	float k = r * r / 8.;
-	
-	return NdotV / lerp(k, 1., NdotV);
+	float r = roughness + 1.0;
+	float k = r * r / 8.0;
+
+    return NdotV / (NdotV * (1.0 - k) + k);
 }
 
 float GeometrySmith(float NdotV, float NdotL, float roughness)
@@ -61,18 +62,18 @@ float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 {
 	float a = roughness * roughness;
 	
-	float phi = 2. * PI * Xi.x;
+	float phi = 2.0 * PI * Xi.x;
 	
-	float cos_theta = sqrt((1. - Xi.y) / (1. + (a * a - 1.) * Xi.y));
-	float sin_theta = sqrt(1. - cos_theta * cos_theta);
-	
-	float3 H = float3(
-		cos(phi) * sin_theta,
-		sin(phi) * sin_theta,
+	float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+	float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+    float3 H = float3(
+		sin_theta * cos(phi),
+		sin_theta * sin(phi),
 		cos_theta
 	);
 	
-	float3 up = abs(normal.z) < 0.999 ? float3(0., 0., 1.) : float3(1., 0., 0.);
+	float3 up = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
 	float3 tangent = normalize(cross(up, normal));
 	float3 bitangent = cross(normal, tangent);
 	

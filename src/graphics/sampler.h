@@ -10,6 +10,8 @@ namespace gfx
 		friend class Device;
 
 	public:
+		static Sampler linear;
+
 		Sampler()
 			: handle()
 			, filter()

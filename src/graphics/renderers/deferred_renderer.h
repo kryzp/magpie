@@ -15,19 +15,19 @@ namespace gfx
 
 	class DeferredRenderer {
 	public:
-		void init(RenderGraph &graph, ast::AssetManager &assets);
+		void init(ast::AssetManager &assets);
 		void destroy();
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const SceneView &scene_view,
-			const GpuBuffer &frame_data,
-			const EnvironmentProbe &probe, const RenderResourceHandle &brdf // TEMPORARY !!!
+			const MeshPass &forward_pass,
+			const GpuBuffer *frame_data,
+			RenderResourceHandle irradiance,
+			RenderResourceHandle prefilter,
+			RenderResourceHandle brdf // TEMPORARY !!!
 		);
 
 	private:
-		Device *device;
-
 		struct GBuffer {
 			enum AttachmentType {
 				ATTACHMENT_POSITION,
@@ -35,21 +35,18 @@ namespace gfx
 				ATTACHMENT_NORMAL,
 				ATTACHMENT_EMISSIVE,
 				ATTACHMENT_METALLIC_ROUGHNESS,
-				ATTACHMENT_LIGHTING,
 				ATTACHMENT_MAX_ENUM
 			};
 
 			RenderResourceHandle attachments[ATTACHMENT_MAX_ENUM];
+			RenderResourceHandle lighting;
 			RenderResourceHandle depth;
 		};
 
 		GBuffer gbuffer;
 
 		ShaderProgram model_shader;
-
 		ShaderProgram ambient_lighting_shader;
 		ShaderProgram direct_lighting_point_shader;
-		
-		Sampler linear_sampler;
 	};
 }

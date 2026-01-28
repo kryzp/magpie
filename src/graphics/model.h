@@ -37,8 +37,8 @@ namespace gfx
 		u32 vertex_count;
 		u32 index_count;
 
-		GpuBuffer vertex_buffer;
-		GpuBuffer index_buffer;
+		GpuBuffer *vertex_buffer;
+		GpuBuffer *index_buffer;
 
 	private:
 		Device *device;

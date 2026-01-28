@@ -14,9 +14,9 @@
 
 using namespace gfx;
 
-void SkyboxRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
+void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
-	this->device = &graph.get_device();
+	this->device = device;
 
 	Mat4 capture_view_matrices[] = {
 		Mat4::lookat(Vec3::zero(), Vec3( 1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Right
@@ -32,25 +32,19 @@ void SkyboxRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
 	for (int i = 0; i < 6; i++)
 		capture_view_matrices[i] = capture_projection_matrix * capture_view_matrices[i];
 
-	cubemap_capture_transforms = device->alloc_gpu_buffer(
+	cubemap_capture_transforms = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(capture_view_matrices)
 	);
 
-	cubemap_capture_transforms.write(capture_view_matrices, sizeof(capture_view_matrices), 0);
+	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
 
-	linear_sampler = device->create_sampler(VK_FILTER_LINEAR);
+	hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr"))->texture;
 
-	ast::TextureAsset *hdr_texture_asset = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr"));
-	hdr_texture = hdr_texture_asset->texture;
-
-	ast::ShaderAsset *shader_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"));
-	shader = shader_asset->shader;
-
-	ast::ShaderAsset *shader_hdr_cubemap_asset = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap"));
-	hdr_to_cubemap_shader = shader_hdr_cubemap_asset->shader;
+	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"))->shader;
+	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap"))->shader;
 
 	Vec3 vertices[] = {
 		{ -1.f,  1.f,  1.f },
@@ -88,118 +82,136 @@ void SkyboxRenderer::init(RenderGraph &graph, ast::AssetManager &assets)
 		array_size(indices), indices
 	);
 
-	AttachmentInfo environment_cubemap_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-	environment_cubemap_info.size_class = AttachmentInfo::SIZE_CLASS_ABSOLUTE;
-	environment_cubemap_info.size_x = 1024.f;
-	environment_cubemap_info.size_y = 1024.f;
-	environment_cubemap_info.layers = 6;
-	environment_cubemap_info.is_cubemap = true;
-
-	cubemap_attachment = graph.create_texture_resource(environment_cubemap_info);
+	cubemap = device->alloc_texture_cubemap(1024, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 }
 
 void SkyboxRenderer::destroy()
 {
 	mesh.destroy();
-
-	device->destroy_sampler(linear_sampler);
-	device->destroy_gpu_buffer(cubemap_capture_transforms);
+	
+	device->destroy_texture(cubemap);
+	device->destroy_buffer(cubemap_capture_transforms);
 }
 
 void SkyboxRenderer::add_render_stages(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
-	const SceneView &view,
-	const GpuBuffer &frame_data
+	const GpuBuffer *frame_data
 )
 {
 	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
 
-	if (!created_cubemap) {
-		add_create_cubemap_stage(graph);
-		created_cubemap = true;
-	}
+	struct SkyboxStageData {
+		RenderResourceHandle colour;
+		RenderResourceHandle depth;
+		RenderResourceHandle cubemap;
+	};
 
-	RenderStage &stage = graph.add_stage(RenderStage::TYPE_GRAPHICS);
-	stage.set_scene_view(view);
-	stage.add_colour_output(deferred_info.lighting);
-	stage.set_depth_stencil(deferred_info.depth);
-	stage.add_texture(cubemap_attachment, sync::TEXTURE_ACCESS_graphics_r);
+	graph.push_stage<SkyboxStageData>(
+		"Skybox Rendering",
+		RenderStage::TYPE_GRAPHICS,
+		[&](RenderGraphBuilder &builder, SkyboxStageData &data) -> void {
+			data.colour = builder.write_colour(deferred_info.lighting);
+			data.depth = builder.write_depth(deferred_info.depth);
+			data.cubemap = builder.read_texture(graph.import_texture(cubemap));
+		},
+		[=](const RenderContext &ctx, const RenderStageResources &resources, const SkyboxStageData &data) -> void {
+			CommandBuffer &cmd = ctx.cmd;
 
-	stage.set_record([&, frame_data, deferred_info](const RenderContext &ctx) -> void {
-		CommandBuffer &cmd = ctx.cmd;
+			const Camera &camera = *ctx.scene_view.camera;
+			
+			const Texture *colour = resources.get_texture(data.colour);
+			TextureView cubemap_view = resources.get_texture_view(data.cubemap);
 
-		const Camera &camera = *ctx.view.camera;
+			GraphicsPipelineDef pipeline_def(shader);
+			pipeline_def.has_depth_attachment = true;
+			pipeline_def.depth_stencil_state.depth_test_enabled = true;
+			pipeline_def.depth_stencil_state.depth_write_enabled = false;
+			pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
+			pipeline_def.colour_attachment_formats.push_back(colour->get_format());
 
-		GraphicsPipelineDef pipeline_def(shader);
-		pipeline_def.has_depth_attachment = true;
-		pipeline_def.depth_stencil_state.depth_test_enabled = true;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
-		pipeline_def.colour_attachment_formats.push_back(graph.get_physical_texture(graph.get_resource(deferred_info.lighting)).get_format());
+			PipelineState st = ctx.device.fetch_pipeline(pipeline_def);
 
-		PipelineState st = ctx.device.fetch_pipeline(pipeline_def);
+			struct {
+				u64 frame_data_buffer;
+				u64 vertex_buffer;
+				u32 cubemap_id;
+				u32 sampler_id;
+			} args;
 
-		struct {
-			u64 frame_data_buffer;
-			u64 vertex_buffer;
-			u32 cubemap_id;
-			u32 sampler_id;
-		} args;
+			args.frame_data_buffer = frame_data->get_device_address();
+			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
+			args.cubemap_id = cubemap_view.get_bindless().sampled;
+			args.sampler_id = Sampler::linear.get_bindless().sampler;
 
-		TextureView cubemap_view = graph.get_physical_texture_view(graph.get_resource(cubemap_attachment));
+			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+			cmd.bind_pipeline(st.bind_point, st.pipeline);
 
-		args.frame_data_buffer = frame_data.get_device_address();
-		args.vertex_buffer = this->mesh.vertex_buffer.get_device_address();
-		args.cubemap_id = cubemap_view.get_bindless().sampled;
-		args.sampler_id = this->linear_sampler.get_bindless().sampler;
+			cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-		cmd.bind_bindless(st.bind_point, st.layout, graph.get_device().get_bindless());
-		cmd.bind_pipeline(st.bind_point, st.pipeline);
-
-		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-
-		this->mesh.bind_indices(cmd);
-		this->mesh.draw_indexed(cmd);
-	});
+			this->mesh.bind_indices(cmd);
+			this->mesh.draw_indexed(cmd);
+		}
+	);
 }
 
-void SkyboxRenderer::add_create_cubemap_stage(RenderGraph &graph)
+void SkyboxRenderer::render_hdr_to_skybox(RenderGraph &graph)
 {
-	RenderStage &stage = graph.add_stage(RenderStage::TYPE_GRAPHICS);
+	struct HdrToSkyboxData {
+		int foo;
+	};
 
-	stage.set_multi_view_mask(0b111111);
+	graph.push_stage<HdrToSkyboxData>(
+		"HDR to Skybox",
+		RenderStage::TYPE_GRAPHICS,
+		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
+			builder.set_multi_view_mask(0b111111);
+			builder.write_colour(graph.import_texture(cubemap));
+		},
+		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
+			CommandBuffer &cmd = ctx.cmd;
 
-	stage.add_colour_output(cubemap_attachment);
+			struct {
+				u64 transform_matrix_buffer;
+				u64 vertex_buffer;
+				u32 hdr_image_id;
+				u32 linear_sampler_id;
+			} args;
 
-	stage.set_record([&](const RenderContext &ctx) -> void {
-		CommandBuffer &cmd = ctx.cmd;
+			args.transform_matrix_buffer = this->cubemap_capture_transforms->get_device_address();
+			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
+			args.hdr_image_id = ctx.device.fetch_texture_view_std(this->hdr_texture).get_bindless().sampled;
+			args.linear_sampler_id = Sampler::linear.get_bindless().sampler;
 
-		struct {
-			u64 transform_matrix_buffer;
-			u64 vertex_buffer;
-			u32 hdr_image_id;
-			u32 linear_sampler_id;
-		} args;
+			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
+			pipeline_def.depth_stencil_state.depth_test_enabled = false;
+			pipeline_def.depth_stencil_state.depth_write_enabled = false;
+			pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+			pipeline_def.view_mask = 0b111111;
 
-		args.transform_matrix_buffer = this->cubemap_capture_transforms.get_device_address();
-		args.vertex_buffer = this->mesh.vertex_buffer.get_device_address();
-		args.hdr_image_id = this->device->fetch_texture_view_std(this->hdr_texture).get_bindless().sampled;
-		args.linear_sampler_id = this->linear_sampler.get_bindless().sampler;
+			PipelineState st = ctx.device.fetch_pipeline(pipeline_def);
 
-		GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
-		pipeline_def.depth_stencil_state.depth_test_enabled = false;
-		pipeline_def.depth_stencil_state.depth_write_enabled = false;
-		pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-		pipeline_def.view_mask = 0b111111;
+			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+			cmd.bind_pipeline(st.bind_point, st.pipeline);
 
-		PipelineState st = device->fetch_pipeline(pipeline_def);
+			cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-		cmd.bind_bindless(st.bind_point, st.layout, device->get_bindless());
-		cmd.bind_pipeline(st.bind_point, st.pipeline);
+			this->mesh.bind_indices(cmd);
+			this->mesh.draw_indexed(cmd);
+		}
+	);
+}
 
-		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+const Mesh &SkyboxRenderer::get_mesh() const
+{
+	return mesh;
+}
 
-		this->mesh.bind_indices(cmd);
-		this->mesh.draw_indexed(cmd);
-	});
+const GpuBuffer *SkyboxRenderer::get_capture_transforms() const
+{
+	return cubemap_capture_transforms;
+}
+
+const Texture *SkyboxRenderer::get_environment_map() const
+{
+	return cubemap;
 }

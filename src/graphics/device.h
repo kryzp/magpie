@@ -97,7 +97,7 @@ namespace gfx
 
 		// TODO: The parameters here should be put into a struct like TextureAllocInfo.
 
-		Texture alloc_texture(
+		Texture *alloc_texture(
 			u32 width, u32 height, u32 depth,
 			VkFormat format, VkImageType type, VkImageTiling tiling,
 			u32 mipmaps, u32 layers,
@@ -105,19 +105,19 @@ namespace gfx
 			bool is_transient, bool is_storage, bool is_cubemap
 		);
 
-		Texture alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps);
-		Texture alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps);
-		Texture alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps);
-		Texture alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps);
-		Texture alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipmaps);
-		Texture alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps);
+		Texture *alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps);
+		Texture *alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps);
+		Texture *alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps);
+		Texture *alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps);
+		Texture *alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipmaps);
+		Texture *alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps);
 
-		void destroy_texture(const Texture &texture);
+		void destroy_texture(const Texture *texture);
 
 		// ---
 
 		TextureView create_texture_view(
-			const Texture &texture,
+			const Texture *texture,
 			VkImageViewType type,
 			u32 layer_count,
 			u32 base_layer,
@@ -126,7 +126,7 @@ namespace gfx
 		);
 
 		TextureView fetch_texture_view(
-			const Texture &texture,
+			const Texture *texture,
 			VkImageViewType type,
 			u32 layer_count,
 			u32 base_layer,
@@ -134,7 +134,7 @@ namespace gfx
 			u32 base_mip
 		);
 
-		TextureView fetch_texture_view_std(const Texture &texture);
+		TextureView fetch_texture_view_std(const Texture *texture);
 
 		void destroy_texture_view(const TextureView &texture_view);
 
@@ -142,8 +142,8 @@ namespace gfx
 
 		// TODO: The parameters here should be put into a struct like GPUBufferAllocInfo.
 
-		GpuBuffer alloc_gpu_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size);
-		void destroy_gpu_buffer(const GpuBuffer &gpu_buffer);
+		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size);
+		void destroy_buffer(const GpuBuffer *gpu_buffer);
 
 		// ---
 
@@ -228,7 +228,6 @@ namespace gfx
 
 		SwapchainSupportDetails swapchain_details;
 
-		// Bindless is built into the device.
 		// TODO: Should this be moved out?
 		BindlessResources bindless;
 

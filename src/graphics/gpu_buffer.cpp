@@ -20,7 +20,7 @@ void GpuBuffer::write(const void *src, u64 length, u64 offset)
 	vmaCopyMemoryToAllocation(*allocator, src, allocation, offset, length);
 }
 
-void *GpuBuffer::map()
+void *GpuBuffer::map() const
 {
 	return allocation_info.pMappedData;
 }

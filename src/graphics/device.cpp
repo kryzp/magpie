@@ -1001,7 +1001,7 @@ Swapchain Device::create_swapchain()
 
 		texture.handle = vk_images[i];
 
-		texture.access_types[0][0][0] = sync::TEXTURE_ACCESS_undefined;
+//		texture.access_types[0][0][0] = sync::TEXTURE_ACCESS_undefined;
 
 		texture.width = swapchain.width;
 		texture.height = swapchain.height;
@@ -1025,7 +1025,7 @@ Swapchain Device::create_swapchain()
 		texture.mipmap_count = 1;
 		texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-		swapchain.views[i] = create_texture_view(texture, VK_IMAGE_VIEW_TYPE_2D, texture.layer_count, 0, texture.mipmap_count, 0);
+		swapchain.views[i] = create_texture_view(&texture, VK_IMAGE_VIEW_TYPE_2D, texture.layer_count, 0, texture.mipmap_count, 0);
 	}
 
 	debug_log("Swapchain created.");
@@ -1404,7 +1404,7 @@ static u32 clamp_mimap_count(u32 mipmaps, u32 w, u32 h, u32 d)
 	return CalcF::min(mipmaps, 1u + (u32)log2f((float)CalcF::max(w, CalcF::max(h, d))));
 }
 
-Texture Device::alloc_texture(
+Texture *Device::alloc_texture(
 	u32 width, u32 height, u32 depth,
 	VkFormat format, VkImageType type, VkImageTiling tiling,
 	u32 mipmaps, u32 layers,
@@ -1412,66 +1412,67 @@ Texture Device::alloc_texture(
 	bool is_transient, bool is_storage, bool is_cubemap
 )
 {
-	Texture texture;
+	Texture *texture = new Texture();
 
-	texture.width = width;
-	texture.height = height;
-	texture.depth = depth;
+	texture->width = width;
+	texture->height = height;
+	texture->depth = depth;
 
-	texture.format = format;
-	texture.type = type;
-	texture.tiling = tiling;
+	texture->format = format;
+	texture->type = type;
+	texture->tiling = tiling;
 
-	texture.mipmap_count = clamp_mimap_count(mipmaps, width, height, depth);
-	texture.layer_count = layers;
-	texture.sample_count = samples;
+	texture->mipmap_count = clamp_mimap_count(mipmaps, width, height, depth);
+	texture->layer_count = layers;
+	texture->sample_count = samples;
 
 	if (is_transient)
-		texture.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		texture->usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	else
-		texture.usage =
+		texture->usage =
 			VK_IMAGE_USAGE_SAMPLED_BIT |
 			VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-	texture.is_depth_texture = format == get_depth_format();
-	texture.is_cubemap_texture = is_cubemap;
-	texture.is_storage_texture = is_storage;
-	texture.is_swapchain_texture = false;
+	texture->is_transient_texture = is_transient;
+	texture->is_depth_texture = format == get_depth_format();
+	texture->is_cubemap_texture = is_cubemap;
+	texture->is_storage_texture = is_storage;
+	texture->is_swapchain_texture = false;
 
 	if (is_storage)
-		texture.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+		texture->usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
-	if (texture.is_depth())
-		texture.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	if (texture->is_depth())
+		texture->usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	else
-		texture.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		texture->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	texture.aspect_flags = texture.is_depth()
+	texture->aspect_flags = texture->is_depth()
 		? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
 		: VK_IMAGE_ASPECT_COLOR_BIT;
 
-	texture.aspect_count = 0;
+	texture->aspect_count = 0;
 
-	for (VkImageAspectFlags b = 1; b <= texture.aspect_flags; b <<= 1) {
-		if (texture.aspect_flags & b)
-			texture.aspect_count++;
+	for (VkImageAspectFlags b = 1; b <= texture->aspect_flags; b <<= 1) {
+		if (texture->aspect_flags & b)
+			texture->aspect_count++;
 	}
 
 	VkImageCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	create_info.imageType = type;
-	create_info.extent.width = texture.width;
-	create_info.extent.height = texture.height;
-	create_info.extent.depth = texture.depth;
-	create_info.mipLevels = texture.mipmap_count;
-	create_info.arrayLayers = texture.layer_count;
-	create_info.format = texture.format;
-	create_info.tiling = texture.tiling;
-	create_info.usage = texture.usage;
+	create_info.extent.width = texture->width;
+	create_info.extent.height = texture->height;
+	create_info.extent.depth = texture->depth;
+	create_info.mipLevels = texture->mipmap_count;
+	create_info.arrayLayers = texture->layer_count;
+	create_info.format = texture->format;
+	create_info.tiling = texture->tiling;
+	create_info.usage = texture->usage;
 	create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	create_info.samples = (VkSampleCountFlagBits)texture.sample_count;
+	create_info.samples = (VkSampleCountFlagBits)texture->sample_count;
 	create_info.flags = 0;
 
 	if (is_cubemap)
@@ -1485,8 +1486,8 @@ Texture Device::alloc_texture(
 	GFX_VK_CHECK(
 		vmaCreateImage(
 			vma_allocator, &create_info,
-			&vma_alloc_info, &texture.handle,
-			&texture.allocation, &texture.allocation_info
+			&vma_alloc_info, &texture->handle,
+			&texture->allocation, &texture->allocation_info
 		),
 		"Failed to allocate texture."
 	);
@@ -1494,7 +1495,7 @@ Texture Device::alloc_texture(
 	return texture;
 }
 
-Texture Device::alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps)
+Texture *Device::alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	return alloc_texture(
 		width, height, 1,
@@ -1507,7 +1508,7 @@ Texture Device::alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mip
 	);
 }
 
-Texture Device::alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps)
+Texture *Device::alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	return alloc_texture(
 		width, height, 1,
@@ -1520,7 +1521,7 @@ Texture Device::alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 
 	);
 }
 
-Texture Device::alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps)
+Texture *Device::alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps)
 {
 	return alloc_texture_2d(
 		width, height,
@@ -1529,7 +1530,7 @@ Texture Device::alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps)
 	);
 }
 
-Texture Device::alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps)
+Texture *Device::alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps)
 {
 	return alloc_texture_2d_rw(
 		width, height,
@@ -1538,7 +1539,7 @@ Texture Device::alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps)
 	);
 }
 
-Texture Device::alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipmaps)
+Texture *Device::alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
 	return alloc_texture(
 		resolution, resolution, 1,
@@ -1551,7 +1552,7 @@ Texture Device::alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipma
 	);
 }
 
-Texture Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
+Texture *Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
 {
 	return alloc_texture(
 		resolution, resolution, 1,
@@ -1564,13 +1565,17 @@ Texture Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
 	);
 }
 
-void Device::destroy_texture(const Texture &texture)
+void Device::destroy_texture(const Texture *texture)
 {
-	vmaDestroyImage(vma_allocator, texture.get_handle(), texture.get_allocation());
+	if (!texture)
+		return;
+
+	vmaDestroyImage(vma_allocator, texture->get_handle(), texture->get_allocation());
+	delete texture;
 }
 
 TextureView Device::create_texture_view(
-	const Texture &texture,
+	const Texture *texture,
 	VkImageViewType type,
 	u32 layer_count,
 	u32 base_layer,
@@ -1578,15 +1583,15 @@ TextureView Device::create_texture_view(
 	u32 base_mip
 )
 {
-	VkImageAspectFlags aspect = texture.is_depth()
+	VkImageAspectFlags aspect = texture->is_depth()
 		? VK_IMAGE_ASPECT_DEPTH_BIT
 		: VK_IMAGE_ASPECT_COLOR_BIT;
 
 	VkImageViewCreateInfo view_create_info = {};
 	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_create_info.image = texture.get_handle();
+	view_create_info.image = texture->get_handle();
 	view_create_info.viewType = type;
-	view_create_info.format = texture.get_format();
+	view_create_info.format = texture->get_format();
 
 	view_create_info.subresourceRange.aspectMask = aspect;
 	view_create_info.subresourceRange.baseMipLevel = base_mip;
@@ -1600,7 +1605,6 @@ TextureView Device::create_texture_view(
 	view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
 	TextureView view;
-	view.parent = &texture;
 	view.type = type;
 	view.base_layer = base_layer;
 	view.layer_count = layer_count;
@@ -1618,14 +1622,14 @@ TextureView Device::create_texture_view(
 	);
 
 	// Swapchain images are omitted from being accessible bindlessly.
-	if (!texture.is_swapchain())
-		view.bindless = bindless.register_view(view.handle, true, texture.is_storage());
+	if (!texture->is_swapchain())
+		view.bindless = bindless.register_view(view.handle, true, texture->is_storage());
 
 	return view;
 }
 
 TextureView Device::fetch_texture_view(
-	const Texture &texture,
+	const Texture *texture,
 	VkImageViewType type,
 	u32 layer_count,
 	u32 base_layer,
@@ -1634,12 +1638,12 @@ TextureView Device::fetch_texture_view(
 )
 {
 	u64 hash = 0;
-	hash = hash::generic_combine(hash, &texture.get_handle(),     sizeof(VkImage)); // TODO: texture.get_cookie() function
-	hash = hash::generic_combine(hash, &type,                     sizeof(VkImageViewType));
-	hash = hash::generic_combine(hash, &layer_count,              sizeof(u32));
-	hash = hash::generic_combine(hash, &base_layer,               sizeof(u32));
-	hash = hash::generic_combine(hash, &mipmap_count,             sizeof(u32));
-	hash = hash::generic_combine(hash, &base_mip,				  sizeof(u32));
+	hash = hash::generic_combine(hash, &texture->get_handle(),  sizeof(VkImage)); // TODO: texture.get_cookie() function
+	hash = hash::generic_combine(hash, &type,                   sizeof(VkImageViewType));
+	hash = hash::generic_combine(hash, &layer_count,            sizeof(u32));
+	hash = hash::generic_combine(hash, &base_layer,             sizeof(u32));
+	hash = hash::generic_combine(hash, &mipmap_count,           sizeof(u32));
+	hash = hash::generic_combine(hash, &base_mip,			 	sizeof(u32));
 
 	if (texture_view_cache.find(hash) == texture_view_cache.end()) {
 		texture_view_cache[hash] = create_texture_view(
@@ -1655,26 +1659,26 @@ TextureView Device::fetch_texture_view(
 	return texture_view_cache[hash];
 }
 
-TextureView Device::fetch_texture_view_std(const Texture &texture)
+TextureView Device::fetch_texture_view_std(const Texture *texture)
 {
 	VkImageViewType view_type;
 	
-	switch (texture.get_type()) {
+	switch (texture->get_type()) {
 		case VK_IMAGE_TYPE_1D: view_type = VK_IMAGE_VIEW_TYPE_1D; break;
 		case VK_IMAGE_TYPE_2D: view_type = VK_IMAGE_VIEW_TYPE_2D; break;
 		case VK_IMAGE_TYPE_3D: view_type = VK_IMAGE_VIEW_TYPE_3D; break;
-		default: debug_log_crash("Failed to link texture type to standard image view: %d", texture.get_type());
+		default: debug_log_crash("Failed to link texture type to standard image view: %d", texture->get_type());
 	}
 
 	// TODO: Automatically select VK_IMAGE_VIEW_TYPE_*_ARRAY for multi-layer textures.
 
-	if (texture.is_cubemap())
+	if (texture->is_cubemap())
 		view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 
 	return fetch_texture_view(
 		texture, view_type,
-		texture.get_layer_count(), 0,
-		texture.get_mipmap_count(), 0
+		texture->get_layer_count(), 0,
+		texture->get_mipmap_count(), 0
 	);
 }
 
@@ -1683,21 +1687,21 @@ void Device::destroy_texture_view(const TextureView &texture_view)
 	vkDestroyImageView(device, texture_view.get_handle(), nullptr);
 }
 
-GpuBuffer Device::alloc_gpu_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size)
+GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size)
 {
-	GpuBuffer buffer;
-	buffer.usage = usage;
-	buffer.size = size;
-	buffer.allocator = &vma_allocator;
-	buffer.allocation_flags = flags;
+	GpuBuffer *buffer = new GpuBuffer();
+	buffer->usage = usage;
+	buffer->size = size;
+	buffer->allocator = &vma_allocator;
+	buffer->allocation_flags = flags;
 
-	if (buffer.is_storage())
-		buffer.usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
+	if (buffer->is_storage())
+		buffer->usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
 
 	VkBufferCreateInfo buffer_create_info = {};
 	buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_create_info.size = buffer.size;
-	buffer_create_info.usage = buffer.usage;
+	buffer_create_info.size = buffer->size;
+	buffer_create_info.usage = buffer->usage;
 	buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	buffer_create_info.queueFamilyIndexCount = 0;
 	buffer_create_info.pQueueFamilyIndices = nullptr;
@@ -1711,27 +1715,31 @@ GpuBuffer Device::alloc_gpu_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreat
 			vma_allocator,
 			&buffer_create_info,
 			&vma_alloc_info,
-			&buffer.handle,
-			&buffer.allocation,
-			&buffer.allocation_info
+			&buffer->handle,
+			&buffer->allocation,
+			&buffer->allocation_info
 		),
 		"Failed to allocate buffer."
 	);
 
-	if (buffer.is_storage()) {
+	if (buffer->is_storage()) {
 		VkBufferDeviceAddressInfo address_info = {};
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-		address_info.buffer = buffer.handle;
+		address_info.buffer = buffer->handle;
 
-		buffer.device_address = vkGetBufferDeviceAddress(device, &address_info);
+		buffer->device_address = vkGetBufferDeviceAddress(device, &address_info);
 	}
 
 	return buffer;
 }
 
-void Device::destroy_gpu_buffer(const GpuBuffer &gpu_buffer)
+void Device::destroy_buffer(const GpuBuffer *buffer)
 {
-	vmaDestroyBuffer(vma_allocator, gpu_buffer.get_handle(), gpu_buffer.get_allocation());
+	if (!buffer)
+		return;
+
+	vmaDestroyBuffer(vma_allocator, buffer->get_handle(), buffer->get_allocation());
+	delete buffer;
 }
 
 // TODO: Move elsewhere.

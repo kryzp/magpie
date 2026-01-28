@@ -4,9 +4,9 @@
 struct Arguments {
 	float4x4 *transform_matrices;
 	float3 *vertices;
-	float roughness;
-	uint environment_map_id;
-	uint linear_sampler_id;
+    uint environment_map_id;
+    uint linear_sampler_id;
+    float roughness;
 };
 
 [vk::push_constant]

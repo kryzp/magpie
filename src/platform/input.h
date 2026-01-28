@@ -342,7 +342,7 @@ namespace inp
 	};
 
 	// Implemented in platform.
-	// 0 <= lo, hi <= 1
-	// Duration in seconds
+	// - lo, hi <- [0, 1]
+	// - Duration in seconds
 	void rumble_gamepad(u32 index, float lo, float hi, float duration);
 }

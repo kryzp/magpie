@@ -9,29 +9,29 @@ namespace gfx
 {
 	class SkyboxRenderer {
 	public:
-		void init(RenderGraph &graph, ast::AssetManager &assets);
+		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const SceneView &view,
-			const GpuBuffer &frame_data
+			const GpuBuffer *frame_data
 		);
 
-	private:
-		void add_create_cubemap_stage(RenderGraph &graph);
+		void render_hdr_to_skybox(RenderGraph &graph);
+		
+		const Mesh &get_mesh() const;
+		const GpuBuffer *get_capture_transforms() const;
+		const Texture *get_environment_map() const;
 
+	private:
 		Device *device;
 		Mesh mesh;
 
-		Texture hdr_texture;
-		bool created_cubemap = false;
+		const Texture *hdr_texture;
+		
+		GpuBuffer *cubemap_capture_transforms;
 
-		GpuBuffer cubemap_capture_transforms;
-
-		RenderResourceHandle cubemap_attachment;
-
-		Sampler linear_sampler;
+		Texture *cubemap;
 
 		ShaderProgram shader;
 		ShaderProgram hdr_to_cubemap_shader;

@@ -1,25 +1,25 @@
 #pragma once
 
-#include <atomic>
-#include <thread>
+// Resources:
+//  * Parallelizing the Naughty Dog engine using fibers by Christian Gyrling
+//  * Parallelizing the Physics Solver by Dennis Gustafsson
 
 #include "core/types.h"
 #include "container/vector.h"
 
-// Credit: https://www.youtube.com/watch?v=Kvsvd67XUKw
-//         https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine
-
 #if defined(__x86_64__)
-# define JOB_SPIN_PAUSE() _mm_pause()
+#  define JOB_SPIN_PAUSE() _mm_pause()
 #else
-# define JOB_SPIN_PAUSE() std::this_thread::yield()
+#  define JOB_SPIN_PAUSE() std::this_thread::yield()
 #endif
 
 #define JOB_ENTRY_POINT(fname_) void fname_(uptr param)
+#define JOB_PARALLEL_FOR(fname_, index_) void fname_(u32 index_)
 
 namespace job
 {
-	typedef void EntryPoint(uptr param);
+	typedef JOB_ENTRY_POINT(EntryPoint);
+	typedef JOB_PARALLEL_FOR(EntryPointParallelFor, index);
 
 	enum JobPriority {
 		PRIORITY_LOW,
@@ -48,27 +48,7 @@ namespace job
 		}
 	};
 	
-	struct JobFiber;
-
-	struct JobCounter {
-		std::atomic<u32> count;
-		std::atomic_flag locked = ATOMIC_FLAG_INIT;
-		Vector<JobFiber *> wait_list;
-	};
-
-	struct JobWorker {
-		u32 id;
-		void *thread;
-		void *scheduler_fiber;
-	};
-
-	struct JobFiber {
-		void *handle;
-		JobDecl *job;
-		JobCounter *counter;
-		bool is_finished;
-		JobFiber *next; // Lockless stack
-	};
+	struct JobCounter;
 
 	static constexpr u32 MAX_JOBS_IN_QUEUE = 4096;
 	static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
@@ -94,7 +74,7 @@ namespace job
 
 	void parallel_for(
 		u32 count,
-		void (*fn)(u32 index),
+		EntryPointParallelFor *fn,
 		JobPriority priority = PRIORITY_NORMAL,
 		u32 batch_size = 64
 	);
@@ -119,6 +99,7 @@ namespace job
 
 		bool original_value;
 	};
+}
 
 #define JOB_SPIN_MODE_ALLOWED 1
 
@@ -127,4 +108,3 @@ namespace job
 #else
 #  define JOB_SPIN_SCOPE()
 #endif
-}

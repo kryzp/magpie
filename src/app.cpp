@@ -6,6 +6,7 @@
 #include "platform/platform.h"
 #include "math/calc.h"
 #include "assets/model_serializer.h"
+#include "job/job.h"
 
 struct FrameData {
 	Mat4 view;
@@ -25,7 +26,7 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 		return;
 	
 	const float mouse_deadzone = .001f;
-	const float turn_speed = 0.7f;
+	const float turn_speed = 0.6f;
 	const float move_speed = 2.5f;
 
 	int window_width, window_height;
@@ -39,8 +40,8 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 		target_pitch -= dy * turn_speed * dt;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, dt * 20.f);
-	yaw = CalcF::lerp(yaw, target_yaw, dt * 20.f);
+	pitch = CalcF::lerp(pitch, target_pitch, dt * 40.f);
+	yaw = CalcF::lerp(yaw, target_yaw, dt * 40.f);
 
 	float corrected_pitch = pitch;
 	float corrected_yaw = yaw + CalcF::PI/2.f;
@@ -108,9 +109,9 @@ App::~App()
 {
 }
 
-static void my_parallel_for_test(u32 i)
+static JOB_PARALLEL_FOR(my_parallel_for_test, i)
 {
-	debug_log("(%d) From: %d", i, job::get_current_worker_id());
+	debug_log("(%d) %d", job::get_current_worker_id(), i);
 }
 
 void App::init()
@@ -126,11 +127,10 @@ void App::init()
 
 	graphics_device.init_imgui();
 
-	render_graph.init(&graphics_device);
-
 	assets.init(&graphics_device);
-
-	render_scene.init(render_graph);
+	render_scene.init(&graphics_device);
+	
+	render_graph.init(&graphics_device);
 
 	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
@@ -143,31 +143,21 @@ void App::init()
 	render_scene.build_batches();
 //	render_scene.merge_meshes();
 	
-	frame_data_buffer = graphics_device.alloc_gpu_buffer(
+	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
+
+	frame_data_buffer = graphics_device.alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(FrameData)
 	);
 
-	gfx::AttachmentInfo swapchain_attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-	swapchain_attachment_info.size_class = gfx::AttachmentInfo::SIZE_CLASS_SWAPCHAIN_RELATIVE;
-	swapchain_attachment_info.size_x = 1.f;
-	swapchain_attachment_info.size_y = 1.f;
-	swapchain_src = render_graph.create_texture_resource(swapchain_attachment_info);
-	
-	// Testing out aliases.
-	gfx::SubresourceAlias alias = {};
-	alias.parent = swapchain_src;
-	alias.base_layer = 0;
-	alias.base_mip = 0;
-	alias.view_type = VK_IMAGE_VIEW_TYPE_2D;
-
+	ibl_renderer.init(assets);
 	compute_culling.init(assets);
-	deferred_renderer.init(render_graph, assets);
-	skybox_renderer.init(render_graph, assets);
-	post_processing.init(render_graph, assets, render_graph.move_subresource(alias));
+	deferred_renderer.init(assets);
+	skybox_renderer.init(&graphics_device, assets);
+	post_processing.init(assets);
 	
-	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 70.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
+	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
 	// Test out the job system.
 	{
@@ -177,10 +167,34 @@ void App::init()
 
 	global_timer.start();
 	delta_timer.start();
+
+	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+	irradiance_cubemap = graphics_device.alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
+
+	skybox_renderer.render_hdr_to_skybox(render_graph);
+
+	ibl_renderer.render_brdf(render_graph, brdf_texture);
+
+	ibl_renderer.render_environment_map(
+		render_graph,
+		irradiance_cubemap,
+		prefilter_cubemap,
+		skybox_renderer.get_environment_map(),
+		skybox_renderer.get_mesh(),
+		skybox_renderer.get_capture_transforms()
+	);
 }
 
 void App::destroy()
 {
+	graphics_device.destroy_texture(brdf_texture);
+	graphics_device.destroy_texture(irradiance_cubemap);
+	graphics_device.destroy_texture(prefilter_cubemap);
+
+	graphics_device.destroy_sampler(gfx::Sampler::linear);
+
+	ibl_renderer.destroy();
 	compute_culling.destroy();
 	deferred_renderer.destroy();
 	skybox_renderer.destroy();
@@ -188,7 +202,7 @@ void App::destroy()
 
 	render_scene.destroy();
 
-	graphics_device.destroy_gpu_buffer(frame_data_buffer);
+	graphics_device.destroy_buffer(frame_data_buffer);
 
 	assets.destroy();
 
@@ -202,6 +216,8 @@ void App::destroy()
 
 bool App::tick(const inp::InputState &input)
 {
+	static u32 current_frame_index = 0;
+	
 	if (input.kb_pressed[inp::KEYBOARD_KEY_escape]) {
 		debug_log("Quitting...");
 		return true;
@@ -224,12 +240,24 @@ bool App::tick(const inp::InputState &input)
 	}
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
-	render(dt, elapsed_time, cmd);
-	add_imgui_render_stage(render_graph, swapchain_src);
-	render_graph.set_swapchain_source(swapchain_src);
-	render_graph.add_stage(gfx::RenderStage::TYPE_PRESENT);
-	render_graph.execute(cmd, swapchain, dt, elapsed_time);
+	{
+		gfx::SceneView scene_view = {
+			.scene = &this->render_scene,
+			.camera = &this->camera
+		};
+
+		render(dt, elapsed_time, cmd);
+		add_imgui_render_stage(render_graph, swapchain_src);
+
+		render_graph.set_backbuffer_source(swapchain_src);
+
+		render_graph.compile(swapchain);
+		render_graph.execute(cmd, swapchain, scene_view, dt, elapsed_time);
+		render_graph.reset(current_frame_index);
+	}
 	graphics_device.end_frame(swapchain, cmd);
+	
+	current_frame_index++;
 
 	return false;
 }
@@ -241,15 +269,14 @@ void App::update(float dt, const inp::InputState &input)
 
 	camera_driver.update(camera, input, dt);
 
-	// Test out gamepad support.
-	{
-		if (input.gamepads[0].pressed[inp::GAMEPAD_BUTTON_cross])
-			inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
-	}
+	if (input.gamepads[0].pressed[inp::GAMEPAD_BUTTON_cross])
+		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
 
 	ImGui::Begin("Params");
 	{
-		static float exp = 1.5f;
+		static float exp = 1.2f;
+
+		ImGui::Text("FPS: %f", 1.f / dt);
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
 			post_processing.set_exposure(exp);
@@ -277,33 +304,57 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	data.window_resolution = Vec2(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 	data.time = elapsed_time;
 
-	this->frame_data_buffer.write(&data, sizeof(FrameData), 0);
+	frame_data_buffer->write(&data, sizeof(FrameData), 0);
 
+//	ibl_renderer.render_brdf(render_graph, brdf_texture);
+//
+//	ibl_renderer.render_environment_map(
+//		render_graph,
+//		irradiance_cubemap,
+//		prefilter_cubemap,
+//		skybox_renderer.get_environment_map(),
+//		skybox_renderer.get_mesh(),
+//		skybox_renderer.get_capture_transforms()
+//	);
+
+	struct FooBar { int baz; };
+
+	render_graph.push_stage<FooBar>(
+		"Swapchain Src",
+		gfx::RenderStage::TYPE_TRANSFER,
+		[&](gfx::RenderGraphBuilder &builder, FooBar &data) {
+			swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT));
+			builder.write_colour(swapchain_src);
+		},
+		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) {
+		}
+	);
+	
 	gfx::RenderGraphBlackboard bb;
 
-	gfx::SceneView view = {};
-	view.scene = &render_scene;
-	view.camera = &this->camera;
+	render_scene.mesh_pass_stages(render_graph);
 
-	gfx::EnvironmentProbe probe = {};
-
-	gfx::RenderResourceHandle brdf;
-
-	compute_culling.add_render_stages(render_graph, bb, view);
-	deferred_renderer.add_render_stages(render_graph, bb, view, frame_data_buffer, probe, brdf);
-	skybox_renderer.add_render_stages(render_graph, bb, view, frame_data_buffer);
-	post_processing.add_render_stages(render_graph, bb, view);
+	compute_culling.add_render_stages(render_graph, bb, render_scene.get_pass(gfx::MeshPass::TYPE_FORWARD));
+	deferred_renderer.add_render_stages(render_graph, bb, render_scene.get_pass(gfx::MeshPass::TYPE_FORWARD), frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
+	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
+	post_processing.add_render_stages(render_graph, bb, swapchain_src);
 }
 
 void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)
 {
-	gfx::RenderStage &stage = render_graph.add_stage(gfx::RenderStage::TYPE_GRAPHICS);
+	struct ImGuiStageData {
+		int foo;
+	};
 
-	stage.add_colour_output(output_attachment);
-
-	stage.set_record([&](const gfx::RenderContext &ctx) -> void {
-		gfx::CommandBuffer &cmd = ctx.cmd;
-		ImGui::Render();
-		graphics_device.imgui_record_draw_data(cmd);
-	});
+	graph.push_stage<ImGuiStageData>(
+		"ImGui",
+		gfx::RenderStage::TYPE_GRAPHICS,
+		[&](gfx::RenderGraphBuilder &builder, ImGuiStageData &data) {
+			builder.write_colour(output_attachment);
+		},
+		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const ImGuiStageData &data) {
+			ImGui::Render();
+			ctx.device.imgui_record_draw_data(ctx.cmd);
+		}
+	);
 }

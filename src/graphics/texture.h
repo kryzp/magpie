@@ -5,7 +5,6 @@
 
 #include "core/types.h"
 
-#include "sync.h"
 #include "bindless.h"
 
 namespace gfx
@@ -19,7 +18,7 @@ namespace gfx
 			, usage()
 			, allocation()
 			, allocation_info()
-			, access_types{}
+//			, access_types{}
 			, width()
 			, height()
 			, depth()
@@ -60,16 +59,6 @@ namespace gfx
 			return allocation_info;
 		}
 
-		sync::TextureAccessType get_access(u32 level, u32 layer, u32 aspect) const
-		{
-			return access_types[level][layer][aspect];
-		}
-
-		void set_access(u32 level, u32 layer, u32 aspect, sync::TextureAccessType type)
-		{
-			access_types[level][layer][aspect] = type;
-		}
-
 		u32 get_width() const
 		{
 			return width;
@@ -83,6 +72,11 @@ namespace gfx
 		u32 get_depth() const
 		{
 			return depth;
+		}
+
+		bool is_transient() const
+		{
+			return is_transient_texture;
 		}
 
 		bool is_depth() const
@@ -152,12 +146,14 @@ namespace gfx
 		VmaAllocation allocation;
 		VmaAllocationInfo allocation_info;
 
-		sync::TextureAccessType access_types[16][16][16];
+//		TextureAccessType access_types[16][16][16];
 
 		u32 width;
 		u32 height;
 		u32 depth;
 
+		// TODO: Convert to flags.
+		bool is_transient_texture;
 		bool is_depth_texture;
 		bool is_storage_texture;
 		bool is_cubemap_texture;
@@ -181,8 +177,7 @@ namespace gfx
 
 	public:
 		TextureView()
-			: parent()
-			, handle()
+			: handle()
 			, type()
 			, base_layer()
 			, layer_count()
@@ -194,11 +189,6 @@ namespace gfx
 		}
 
 		~TextureView() = default;
-
-		const Texture &get_parent() const
-		{
-			return *parent;
-		}
 
 		const VkImageView &get_handle() const
 		{
@@ -241,8 +231,6 @@ namespace gfx
 		}
 
 	private:
-		const Texture *parent;
-
 		VkImageView handle;
 		VkImageViewType type;
 

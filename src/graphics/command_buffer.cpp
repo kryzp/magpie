@@ -36,8 +36,8 @@ void CommandBuffer::begin_rendering(const RenderInfo &info)
 {
 	VkRenderingInfo rendering_info = {};
 	rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-	rendering_info.renderArea.offset = (VkOffset2D){ 0, 0 };
-	rendering_info.renderArea.extent = (VkExtent2D){ info.width, info.height };
+	rendering_info.renderArea.offset = { 0, 0 };
+	rendering_info.renderArea.extent = { info.width, info.height };
 	rendering_info.layerCount = 1;
 	rendering_info.viewMask = info.view_mask;
 	rendering_info.colorAttachmentCount = info.colour_attachments.size();
@@ -56,8 +56,8 @@ void CommandBuffer::begin_rendering(const RenderInfo &info)
 	viewport.maxDepth = 1.f;
 
 	VkRect2D scissor = {};
-	scissor.offset = (VkOffset2D){ 0, 0 };
-	scissor.extent = (VkExtent2D){ info.width, info.height };
+	scissor.offset = { 0, 0 };
+	scissor.extent = { info.width, info.height };
 
 	// We have to update the dynamic states
 	// every time we draw something.
@@ -163,11 +163,14 @@ void CommandBuffer::bind_pipeline(
 	);
 }
 
-void CommandBuffer::bind_index_buffer(const GpuBuffer &buffer, u64 offset)
+void CommandBuffer::bind_index_buffer(
+	const GpuBuffer *buffer,
+	u64 offset
+)
 {
 	vkCmdBindIndexBuffer(
 		handle,
-		buffer.get_handle(),
+		buffer->get_handle(),
 		offset,
 		VK_INDEX_TYPE_UINT16
 	);
@@ -213,7 +216,7 @@ void CommandBuffer::draw_indexed(
 }
 
 void CommandBuffer::draw_indexed_indirect(
-	const GpuBuffer &buffer,
+	const GpuBuffer *buffer,
 	u64 offset,
 	u32 count,
 	u32 stride
@@ -221,7 +224,7 @@ void CommandBuffer::draw_indexed_indirect(
 {
 	vkCmdDrawIndexedIndirect(
 		handle,
-		buffer.get_handle(),
+		buffer->get_handle(),
 		offset,
 		count,
 		stride
@@ -229,16 +232,16 @@ void CommandBuffer::draw_indexed_indirect(
 }
 
 void CommandBuffer::blit(
-	const Texture &src,
-	const Texture &dst,
+	const Texture *src,
+	const Texture *dst,
 	const Vector<VkImageBlit2> &regions,
 	VkFilter filter
 )
 {
 	VkBlitImageInfo2 info = {};
 	info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
-	info.srcImage = src.get_handle();
-	info.dstImage = dst.get_handle();
+	info.srcImage = src->get_handle();
+	info.dstImage = dst->get_handle();
 	info.srcImageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	info.dstImageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	info.regionCount = regions.size();
@@ -249,19 +252,19 @@ void CommandBuffer::blit(
 }
 
 // Transitions the texture to SHADER_READ_ONLY.
-void CommandBuffer::generate_mipmaps(Texture &texture)
+void CommandBuffer::generate_mipmaps(Texture *texture)
 {
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-	barrier.image = texture.get_handle();
+	barrier.image = texture->get_handle();
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.subresourceRange.aspectMask = texture.get_aspects();
+	barrier.subresourceRange.aspectMask = texture->get_aspects();
 	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = texture.get_layer_count();
+	barrier.subresourceRange.layerCount = texture->get_layer_count();
 	barrier.subresourceRange.levelCount = 1;
 
-	for (int i = 1; i < texture.get_mipmap_count(); i++) {
+	for (int i = 1; i < texture->get_mipmap_count(); i++) {
 		barrier.subresourceRange.baseMipLevel = i - 1;
 
 		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -275,20 +278,20 @@ void CommandBuffer::generate_mipmaps(Texture &texture)
 
 		this->pipeline_barrier(0, {}, {}, { barrier });
 
-		for (int face = 0; face < texture.get_layer_count(); face++) {
-			int src_mip_width  = (int)texture.get_width()  >> (i - 1);
-			int src_mip_height = (int)texture.get_height() >> (i - 1);
-			int dst_mip_width  = (int)texture.get_width()  >> (i - 0);
-			int dst_mip_height = (int)texture.get_height() >> (i - 0);
+		for (int face = 0; face < texture->get_layer_count(); face++) {
+			int src_mip_width  = (int)texture->get_width()  >> (i - 1);
+			int src_mip_height = (int)texture->get_height() >> (i - 1);
+			int dst_mip_width  = (int)texture->get_width()  >> (i - 0);
+			int dst_mip_height = (int)texture->get_height() >> (i - 0);
 
 			VkImageBlit2 blit = {};
 			blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
 
-			blit.srcOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-			blit.srcOffsets[1] = (VkOffset3D){ src_mip_width, src_mip_height, 1 };
+			blit.srcOffsets[0] = { 0, 0, 0 };
+			blit.srcOffsets[1] = { src_mip_width, src_mip_height, 1 };
 
-			blit.dstOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-			blit.dstOffsets[1] = (VkOffset3D){ dst_mip_width, dst_mip_height, 1 };
+			blit.dstOffsets[0] = { 0, 0, 0 };
+			blit.dstOffsets[1] = { dst_mip_width, dst_mip_height, 1 };
 
 			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			blit.srcSubresource.mipLevel = i - 1;
@@ -314,11 +317,11 @@ void CommandBuffer::generate_mipmaps(Texture &texture)
 
 		this->pipeline_barrier(0, {}, {}, { barrier });
 
-		for (u32 k = 0; k < texture.get_layer_count(); k++)
-			texture.set_access(i, k, 0, sync::TEXTURE_ACCESS_graphics_r);
+//		for (u32 k = 0; k < texture.get_layer_count(); k++)
+//			texture.set_access(i, k, 0, sync::TEXTURE_ACCESS_graphics_r);
 	}
 
-	barrier.subresourceRange.baseMipLevel = texture.get_mipmap_count() - 1;
+	barrier.subresourceRange.baseMipLevel = texture->get_mipmap_count() - 1;
 
 	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -331,28 +334,28 @@ void CommandBuffer::generate_mipmaps(Texture &texture)
 
 	this->pipeline_barrier(0, {}, {}, { barrier });
 
-	for (u32 k = 0; k < texture.get_layer_count(); k++)
-		texture.set_access(0, k, 0, sync::TEXTURE_ACCESS_graphics_r);
+//	for (u32 k = 0; k < texture.get_layer_count(); k++)
+//		texture.set_access(0, k, 0, sync::TEXTURE_ACCESS_graphics_r);
 }
 
 void CommandBuffer::copy_buffer_to_buffer(
-	const GpuBuffer &src,
-	const GpuBuffer &dst,
+	const GpuBuffer *src,
+	const GpuBuffer *dst,
 	const Vector<VkBufferCopy> &regions
 )
 {
 	vkCmdCopyBuffer(
 		handle,
-		src.get_handle(),
-		dst.get_handle(),
+		src->get_handle(),
+		dst->get_handle(),
 		regions.size(),
 		regions.data()
 	);
 }
 
 void CommandBuffer::copy_buffer_to_texture(
-	const GpuBuffer &src,
-	const Texture &dst
+	const GpuBuffer *src,
+	const Texture *dst
 )
 {
 	VkBufferImageCopy region = {};
@@ -363,22 +366,22 @@ void CommandBuffer::copy_buffer_to_texture(
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
-	region.imageOffset = (VkOffset3D){ 0, 0, 0 };
-	region.imageExtent = (VkExtent3D){ dst.get_width(), dst.get_height(), 1 };
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { dst->get_width(), dst->get_height(), 1 };
 
 	copy_buffer_to_texture_regions(src, dst, { region });
 }
 
 void CommandBuffer::copy_buffer_to_texture_regions(
-	const GpuBuffer &src,
-	const Texture &dst,
+	const GpuBuffer *src,
+	const Texture *dst,
 	const Vector<VkBufferImageCopy> &regions
 )
 {
 	vkCmdCopyBufferToImage(
 		handle,
-		src.get_handle(),
-		dst.get_handle(),
+		src->get_handle(),
+		dst->get_handle(),
 		VK_IMAGE_LAYOUT_GENERAL,
 		regions.size(), regions.data()
 	);

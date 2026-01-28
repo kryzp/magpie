@@ -174,13 +174,11 @@ namespace ast
 
 			AssetList()
 				: list()
-				, generations()
 				, free_indices()
 				, capacity()
 				, curr_id()
 			{
 				list.resize(INITIAL_CAPACITY);
-				generations.resize(INITIAL_CAPACITY);
 			}
 
 			~AssetList()
@@ -204,17 +202,18 @@ namespace ast
 					free_indices.pop();
 				} else {
 					index = curr_id++;
-					assert(index < list.size());
 				}
+
+				if (index >= list.size())
+					list.resize(list.size() * 2);
 
 				AssetHandle handle = {};
 				handle.index = index;
-				handle.generation = generations[index];
+				handle.generation = list[index].generation;
 
 				list[index].asset = asset;
 				list[index].path = path;
-
-				generations[index]++;
+				list[index].generation++;
 
 				return handle;
 			}
@@ -250,7 +249,7 @@ namespace ast
 			{
 				return
 					(handle.index < list.size()) &&
-					(generations[handle.index] == (handle.generation + 1));
+					(list[handle.index].generation == (handle.generation + 1));
 			}
 
 			String get_path(const AssetHandle &handle) const
@@ -266,13 +265,11 @@ namespace ast
 			struct AssetRecord {
 				Asset *asset;
 				String path;
+				u32 generation;
 			};
 
 			Vector<AssetRecord> list;
-
-			Vector<u32> generations;
 			Stack<u32> free_indices;
-			
 			u64 capacity;
 			u32 curr_id;
 		};

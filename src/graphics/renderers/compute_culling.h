@@ -6,6 +6,8 @@
 
 namespace gfx
 {
+	class MeshPass;
+
 	class ComputeCulling {
 	public:
 		void init(ast::AssetManager &assets);
@@ -13,7 +15,7 @@ namespace gfx
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const SceneView &scene_view
+			const MeshPass &forward_pass
 		);
 
 	private:
