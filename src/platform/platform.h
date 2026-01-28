@@ -44,11 +44,13 @@ namespace platform
 	void join_thread(void *handle);
 	void detach_thread(void *handle);
 
+	u32 get_num_cores();
 	void *convert_thread_to_fiber();
 	int convert_fiber_to_thread();
 	void *create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param);
 	void delete_fiber(void *handle);
 	void switch_to_fiber(void *handle);
+	void set_thread_affinity(void *handle, u64 mask);
 
 	bool file_delete(const char *path);
 	bool file_exists(const char *path);

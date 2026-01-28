@@ -129,6 +129,11 @@ void platform::detach_thread(void *handle)
 	CloseHandle(handle);
 }
 
+u32 platform::get_num_cores()
+{
+	return std::thread::hardware_concurrency();
+}
+
 void *platform::convert_thread_to_fiber()
 {
 	return ConvertThreadToFiber(nullptr);
@@ -152,6 +157,11 @@ void platform::delete_fiber(void *handle)
 void platform::switch_to_fiber(void *handle)
 {
 	SwitchToFiber(handle);
+}
+
+void platform::set_thread_affinity(void *handle, u64 mask)
+{
+	SetThreadAffinityMask(handle, mask);
 }
 
 bool platform::file_delete(const char *path)
@@ -417,7 +427,7 @@ int main(int argc, char **argv)
 	
 	App app;
 
-	job::init(std::thread::hardware_concurrency() - 1);
+	job::init();
 	job::kick_job(job::JobDecl(root_entry_point, &app), nullptr);
 
 	while (app_running.load()) {

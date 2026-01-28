@@ -189,12 +189,15 @@ static void fiber_entry_point(void *param)
 static ulong scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
-
+	
 	void *fiber_handle = platform::convert_thread_to_fiber();
 
 	tls.current_worker_id = *worker_id;
 	tls.current_worker = &workers[*worker_id];
 	tls.current_worker->scheduler_fiber = fiber_handle;
+
+	// Lock thread to core.
+	platform::set_thread_affinity(tls.current_worker->thread, 1ull << tls.current_worker_id);
 
 	while (running) {
 		job::JobRequest *request = job::try_get_job();
@@ -239,14 +242,14 @@ static ulong scheduler_thread(void *param)
 	return 0;
 }
 
-void job::init(u32 initial_worker_count)
+void job::init()
 {
 	if (running)
 		return;
 
 	running = true;
 
-	worker_count = initial_worker_count;
+	worker_count = platform::get_num_cores() - 1; // Leave one core free for OS.
 	workers = new JobWorker[worker_count];
 
 	for (int i = 0; i < worker_count; i++) {
