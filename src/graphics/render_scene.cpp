@@ -225,7 +225,7 @@ u32 RenderScene::create_object(const Mat4 &transform)
 		reusable_handles.pop_back();
 	}
 	
-	RenderSceneObject object = objects.emplace_back();
+	RenderSceneObject &object = objects.emplace_back();
 	object.id = handle;
 	object.transform = transform;
 
@@ -234,6 +234,9 @@ u32 RenderScene::create_object(const Mat4 &transform)
 
 u32 RenderScene::upload_mesh(const Mesh &mesh)
 {
+	if (meshes.size() >= 1)
+		return 0;
+
 	/*
 	for (int i = 0; i < meshes.size(); i++) {
 		if (meshes[i] == mesh)
@@ -254,6 +257,9 @@ u32 RenderScene::upload_mesh(const Mesh &mesh)
 
 u32 RenderScene::upload_material(const Material &material, ast::AssetManager &assets)
 {
+	if (materials.size() >= 1)
+		return 0;
+
 	/*
 	for (int i = 0; i < scene->material_count; i++) {
 		if (gfx_materials_equal(&scene->materials[i], material))

@@ -149,10 +149,21 @@ void App::init()
 	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
 
-	u32 object_handle = render_scene.create_object(Mat4::identity());
-	gfx::RenderSceneObject &object = render_scene.get_object_from_handle(object_handle);
-	object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
-	object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
+	for (int i = 0; i < 16; i++) {
+		for (int j = 0; j < 16; j++) {
+			Mat4 transform = Mat4::transform(
+				Vec3(i, j, 0.f),
+				Quat(),
+				Vec3::unit(),
+				Vec3::zero()
+			);
+
+			gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
+
+			object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
+			object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
+		}
+	}
 
 	render_scene.build_batches();
 //	render_scene.merge_meshes();
@@ -263,10 +274,8 @@ bool App::tick(const inp::InputState &input)
 			.camera = &this->camera
 		};
 
-		ImGui::Render();
-
 		render(dt, elapsed_time, cmd);
-//		add_imgui_render_stage(render_graph, swapchain_src);
+		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
 

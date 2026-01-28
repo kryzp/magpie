@@ -15,7 +15,7 @@ struct Quat {
 	static Quat identity();
 	static Quat from_axis(float angle, const Vec3 &axis);
 	static Quat from_euler(float pitch, float yaw, float roll);
-	static Vec3 to_euler(const Quat &quat);
+	static Vec3 to_euler(const Quat &q);
 
 	Quat inverse() const;
 };

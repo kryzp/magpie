@@ -157,11 +157,15 @@ RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &in
 	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_TEXTURE;
 	resource.is_imported = false;
-	resource.initial_access = TEXTURE_ACCESS_UNDEFINED;
+
 	resource.first_stage_index = current_stage.index;
 	resource.last_stage_index = -1u;
-	resource.texture_info = info;
+	
+	resource.initial_access = TEXTURE_ACCESS_UNDEFINED;
+	resource.subresource_states.resize(info.mips * info.layers, resource.initial_access);
 
+	resource.texture_info = info;
+	
 	graph.resources.push_back(resource);
 
 	return handle;
@@ -174,9 +178,13 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_BUFFER;
 	resource.is_imported = false;
-	resource.initial_access = GPU_BUFFER_ACCESS_UNDEFINED;
+
 	resource.first_stage_index = current_stage.index;
 	resource.last_stage_index = -1u;
+	
+	resource.initial_access = GPU_BUFFER_ACCESS_UNDEFINED;
+	resource.subresource_states.resize(1, resource.initial_access);
+	
 	resource.buffer_info = info;
 
 	graph.resources.push_back(resource);
@@ -431,7 +439,7 @@ RenderGraph::RenderGraph()
 	, stages()
 	, pool(*this)
 	, import_cache()
-	, resource_access_cache()
+	, imported_access_cache()
 	, backbuffer_handle(RENDER_INVALID_HANDLE)
 {
 }
@@ -553,8 +561,10 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 
 void RenderGraph::generate_barriers()
 {
-	for (auto &r : resources)
-		r.final_access = r.initial_access;
+	for (auto &r : resources) {
+		for (auto &s : r.subresource_states)
+			s = r.initial_access;
+	}
 
 	for (auto &stage : stages) {
 		if (stage.is_culled)
@@ -577,78 +587,142 @@ void RenderGraph::process_edge(RenderStage &stage, const RenderResourceEdge &edg
 
 	switch (r.kind) {
 		case RenderResource::KIND_TEXTURE:
-			transition_texture(stage, r, edge.texture.access, edge.texture.range);
+			transition_texture(stage.texture_barriers, r, edge.texture.access, edge.texture.range);
 			break;
 
 		case RenderResource::KIND_BUFFER:
-			transition_buffer(stage, r, edge.buffer.access);
+			transition_buffer(stage.buffer_barriers, r, edge.buffer.access);
 			break;
 	}
 }
 
-void RenderGraph::transition_texture(RenderStage &stage, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range)
+void RenderGraph::transition_texture(Vector<VkImageMemoryBarrier2> &barriers, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range)
 {
-#if 0
 	/*
-	 * Could this be optimized with a flood-fill style algorithm?
-	 * Right now it just moves horizontally.
+	 * Right now we just use a run-length encoding style algorithm,
+	 * but could this be optimized with a flood-fill style algorithm?
+	 * 
+	 * Must be only squares though.
+	 *
+	 * Kinda like this (MIP x LAYER, { A, B, C, ... } are access states):
+	 *
+	 *          0   1   2   3
+	 *        +---+----------
+	 *      0 | A | B   B   B
+	 *        +---+
+	 *      1 | C | B   B   B   ...
+	 *        |   +-----------
+	 *      2 | C | E | F   F
+	 *        +---+   |
+	 *      3 | D | E | F   F
+	 *              ...
+	 *
+	 * Then each "block" gets a pipeline barrier.
 	 */
-
-	int base_mip = range.base_mip;
-	int base_layer = range.base_layer;
-
-	for (int layer = 0; layer < range.layers; layer++) {
-		TextureAccessType curr_src_access = t.texture.final_accesses[base_mip][base_layer + layer][0];
-		t.texture.final_accesses[base_mip][base_layer + layer][0] = dst_access_type;
-
-		int chain_length = 1;
-		int curr_mip = 1;
-
-		for (int mip = 1; mip < range.mips; mip++) {
-			TextureAccessType new_src_access = t.texture.final_accesses[base_mip + mip][base_layer + layer][0];
-
-			
-		}
-	}
-#endif
 
 	const Texture *physical_texture = (const Texture *)t.physical_resource;
 
-	TextureAccess src_access = sync::get_src_texture_access((TextureAccessType)t.final_access);
-	TextureAccess dst_access = sync::get_dst_texture_access(dst_access_type);
+	const u32 total_mips = t.texture_info.mips;
+	const int base_mip = range.base_mip;
+	const int base_layer = range.base_layer;
 
-	bool needs_barrier =
-		(src_access.layout != dst_access.layout) ||
-		(sync::texture_access_is_write((TextureAccessType)t.final_access)) ||
-		(sync::texture_access_is_write(dst_access_type));
+	SubresourceRange texture_range = range.of_texture(physical_texture);
 
-	needs_barrier = true; // TODO: temp
+	auto subresource_idx = [&](u32 mip, u32 layer) -> u32 {
+		return (layer * total_mips) + mip;
+	};
 
-	if (needs_barrier) {
-		stage.texture_barriers.push_back(sync::texture_memory_barrier(
+	auto push_barrier = [&](TextureAccessType src, u32 base_mip, u32 mips, u32 base_layer, u32 layers) -> void {
+		barriers.push_back(sync::texture_memory_barrier(
 			physical_texture,
-			src_access, dst_access,
-			0, physical_texture->get_mipmap_count(),
-			0, physical_texture->get_layer_count()
+			sync::get_src_texture_access(src),
+			sync::get_dst_texture_access(dst_access_type),
+			base_mip, mips,
+			base_layer, layers
 		));
-		
-		t.final_access = dst_access_type;
+	};
+
+	for (int l = 0; l < texture_range.layers; l++) {
+		u32 layer = base_layer + l;
+
+		// Run-Length Encoding
+		u32 batch_count = 0;
+		u32 batch_base = base_mip;
+		TextureAccessType batch_src_access = TEXTURE_ACCESS_UNDEFINED;
+		bool active_batch = false;
+
+		for (int m = 0; m < texture_range.mips; m++) {
+			u32 mip = base_mip + m;
+			
+			u32 idx = subresource_idx(mip, layer);
+
+			TextureAccessType current_src = (TextureAccessType)t.subresource_states[idx];
+
+			TextureAccess src_access = sync::get_src_texture_access(current_src);
+			TextureAccess dst_access = sync::get_dst_texture_access(dst_access_type);
+			
+			bool needs_barrier =
+				(src_access.layout != dst_access.layout) ||
+				(sync::texture_access_is_write(current_src)) ||
+				(sync::texture_access_is_write(dst_access_type));
+
+			if (current_src == dst_access_type && !sync::texture_access_is_write(dst_access_type))
+				needs_barrier = false;
+
+			needs_barrier = true; // TODO: temp
+
+			if (active_batch) {
+				if (needs_barrier && current_src == batch_src_access) {
+					batch_count++;
+				} else {
+					push_barrier(
+						batch_src_access,
+						batch_base, batch_count,
+						layer, 1
+					);
+
+					if (needs_barrier) {
+						batch_src_access = current_src;
+						batch_base = mip;
+						batch_count = 1;
+						active_batch = true;
+					} else {
+						active_batch = false;
+					}
+				}
+			} else if (needs_barrier) {
+				batch_src_access = current_src;
+				batch_base = mip;
+				batch_count = 1;
+				active_batch = true;
+			}
+
+			t.subresource_states[idx] = dst_access_type;
+		}
+
+		if (active_batch) {
+			push_barrier(
+				batch_src_access,
+				batch_base, batch_count,
+				layer, 1
+			);
+		}
 	}
 }
 
-void RenderGraph::transition_buffer(RenderStage &stage, RenderResource &b, GpuBufferAccessType dst_access_type)
+void RenderGraph::transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, RenderResource &b, GpuBufferAccessType dst_access_type)
 {
 	const GpuBuffer *physical_buffer = (const GpuBuffer *)b.physical_resource;
 
-	GpuBufferAccess src_access = sync::get_src_buffer_access((GpuBufferAccessType)b.final_access);
+	GpuBufferAccess src_access = sync::get_src_buffer_access((GpuBufferAccessType)b.subresource_states[0]);
 	GpuBufferAccess dst_access = sync::get_dst_buffer_access(dst_access_type);
 
-	stage.buffer_barriers.push_back(sync::buffer_memory_barrier(
+	barriers.push_back(sync::buffer_memory_barrier(
 		physical_buffer,
 		src_access, dst_access
 	));
 
-	b.final_access = dst_access_type;
+	b.subresource_states[0] = dst_access_type;
 }
 
 void RenderGraph::execute(
@@ -736,7 +810,7 @@ void RenderGraph::execute(
 		if (!r.physical_resource || !r.is_imported)
 			continue;
 
-		resource_access_cache[r.physical_resource] = r.final_access;
+		imported_access_cache[r.physical_resource] = r.subresource_states;
 	}
 }
 
@@ -747,20 +821,22 @@ void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swap
 	
 	Vector<VkImageMemoryBarrier2> image_barriers = {
 		sync::texture_memory_barrier(
-			swapchain_src_texture,
-			sync::get_src_texture_access((TextureAccessType)resources[backbuffer_handle].final_access),
-			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_SRC),
-			0, swapchain_src_texture->get_mipmap_count(),
-			0, swapchain_src_texture->get_layer_count()
-		),
-		sync::texture_memory_barrier(
 			swapchain_dst_texture,
 			sync::get_src_texture_access(TEXTURE_ACCESS_UNDEFINED),
 			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_DST),
 			0, swapchain_dst_texture->get_mipmap_count(),
 			0, swapchain_dst_texture->get_layer_count()
+		),
+		sync::texture_memory_barrier(
+			swapchain_src_texture,
+			sync::get_src_texture_access((TextureAccessType)resources[backbuffer_handle].subresource_states[0]),
+			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_SRC),
+			0, swapchain_src_texture->get_mipmap_count(),
+			0, swapchain_src_texture->get_layer_count()
 		)
 	};
+
+	//transition_texture(image_barriers, resources[backbuffer_handle], TEXTURE_ACCESS_BLIT_SRC, SubresourceRange::all_colour());
 
 	cmd.pipeline_barrier(0, {}, {}, image_barriers);
 
@@ -814,9 +890,12 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 
 	resource.physical_resource = texture;
 
-	resource.initial_access = resource_access_cache.find(texture) != resource_access_cache.end()
-		? resource_access_cache[texture]
-		: TEXTURE_ACCESS_UNDEFINED;
+	if (imported_access_cache.find(texture) != imported_access_cache.end())
+		resource.subresource_states = imported_access_cache[texture];
+	else
+		resource.subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), TEXTURE_ACCESS_UNDEFINED);
+
+	resource.initial_access = resource.subresource_states[0];
 
 	resource.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
 	resource.texture_info.size_x = texture->get_width();
@@ -851,9 +930,12 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 
 	resource.physical_resource = buffer;
 
-	resource.initial_access = resource_access_cache.find(buffer) != resource_access_cache.end()
-		? resource_access_cache[buffer]
-		: GPU_BUFFER_ACCESS_UNDEFINED;
+	if (imported_access_cache.find(buffer) != imported_access_cache.end())
+		resource.subresource_states = imported_access_cache[buffer];
+	else
+		resource.subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
+
+	resource.initial_access = resource.subresource_states[0];
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();

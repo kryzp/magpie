@@ -102,7 +102,7 @@ namespace gfx
 
 	class RenderScene {
 	public:
-		constexpr static u32 MAX_OBJECTS = 128;
+		constexpr static u32 MAX_OBJECTS = 512;
 		constexpr static u32 MAX_MATERIALS = 64;
 
 		RenderScene() = default;

@@ -210,7 +210,10 @@ namespace gfx
 		const void *physical_resource;
 
 		u32 initial_access;
-		u32 final_access;
+
+		// For textures this takes the form of a flat 2D array [MIPS][LAYERS]
+		// For buffers this just contains one state
+		Vector<u32> subresource_states;
 
 		union {
 			AttachmentInfo texture_info;
@@ -423,8 +426,9 @@ namespace gfx
 		void generate_barriers();
 
 		void process_edge(RenderStage &stage, const RenderResourceEdge &edge);
-		void transition_texture(RenderStage &stage, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range);
-		void transition_buffer(RenderStage &stage, RenderResource &b, GpuBufferAccessType dst_access_type);
+
+		void transition_texture(Vector<VkImageMemoryBarrier2> &barriers, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range);
+		void transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, RenderResource &b, GpuBufferAccessType dst_access_type);
 
 		void present_to_swapchain(CommandBuffer &cmd, const Swapchain &swapchain);
 
@@ -434,7 +438,7 @@ namespace gfx
 		RenderResourcePool pool;
 
 		HashMap<const void *, RenderResourceHandle> import_cache;
-		HashMap<const void *, u32> resource_access_cache;
+		HashMap<const void *, Vector<u32>> imported_access_cache;
 
 		RenderResourceHandle backbuffer_handle;
 	};

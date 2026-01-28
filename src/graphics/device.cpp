@@ -1591,9 +1591,7 @@ TextureView Device::create_texture_view(
 	view_create_info.viewType = type;
 	view_create_info.format = texture->get_format();
 	
-	SubresourceRange r = range;
-	r.mips   = range.mips   == SubresourceRange::REMAINING_COUNT ? texture->get_mipmap_count() - range.base_mip   : range.mips;
-	r.layers = range.layers == SubresourceRange::REMAINING_COUNT ? texture->get_layer_count()  - range.base_layer : range.layers;
+	SubresourceRange r = range.of_texture(texture);
 
 	view_create_info.subresourceRange.aspectMask = r.aspects;
 	view_create_info.subresourceRange.baseMipLevel = r.base_mip;

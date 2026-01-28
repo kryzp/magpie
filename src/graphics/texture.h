@@ -178,6 +178,15 @@ namespace gfx
 		u32 base_layer;
 		u32 layers;
 
+		SubresourceRange of_texture(const Texture *texture) const
+		{
+			SubresourceRange range = *this;
+			range.mips   = mips   == REMAINING_COUNT ? texture->get_mipmap_count() - range.base_mip   : range.mips;
+			range.layers = layers == REMAINING_COUNT ? texture->get_layer_count()  - range.base_layer : range.layers;
+
+			return range;
+		}
+
 		static SubresourceRange all(VkImageAspectFlags aspects)
 		{
 			return {
