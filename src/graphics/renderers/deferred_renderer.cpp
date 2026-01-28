@@ -44,14 +44,14 @@ void DeferredRenderer::add_render_stages(
 				gbuffer.attachments[i] = builder.create_texture(attachment_info);
 
 				RenderClear clear(0.f, 0.f, 0.f, 1.f);
-				builder.write_colour(gbuffer.attachments[i], SubresourceRange::all(), &clear);
+				builder.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &clear);
 			}
 			
 			AttachmentInfo depth_info(builder.get_depth_format());
 			gbuffer.depth = builder.create_texture(depth_info);
 
 			RenderClear depth_clear(1.f, 0);
-			builder.write_depth(gbuffer.depth, SubresourceRange::all(), &depth_clear);
+			builder.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
 			
 			data.indirect_buffer = builder.read_buffer(forward_pass.draw_indirect_buffer, GPU_BUFFER_ACCESS_INDIRECT);
 			data.instance_buffer = builder.read_buffer(forward_pass.compacted_instance_buffer, GPU_BUFFER_ACCESS_GRAPHICS_READ_WRITE);

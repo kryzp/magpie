@@ -7,7 +7,7 @@ namespace ast
 	struct TextureAsset : public Asset {
 		AST_DEFINE_ASSET(ASSET_TYPE_TEXTURE);
 
-		TextureAsset(const gfx::Texture *texture, gfx::Device *device)
+		TextureAsset(const gfx::Texture *texture, gfx::Device &device)
 			: texture(texture)
 			, device(device)
 		{
@@ -16,13 +16,13 @@ namespace ast
 		~TextureAsset() override
 		{
 			if (!has_flag(ASSET_FLAG_INVALID))
-				device->destroy_texture(texture);
+				device.destroy_texture(texture);
 		}
 
 		const gfx::Texture *texture;
 
 	private:
-		gfx::Device *device;
+		gfx::Device &device;
 	};
 
 	AssetSerializer get_texture_serializer();

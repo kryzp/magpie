@@ -160,9 +160,10 @@ namespace ast
 		String get_system_file_path(const String &path) const;
 		bool is_handle_valid(const AssetHandle &handle) const;
 
-		gfx::Device *get_device() const
+		gfx::Device &get_device() const
 		{
-			return device;
+			assert(device);
+			return *device;
 		}
 
 	private:

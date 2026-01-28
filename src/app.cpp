@@ -114,6 +114,20 @@ static JOB_PARALLEL_FOR(my_parallel_for_test, i)
 	debug_log("(%d) %d", job::get_current_worker_id(), i);
 }
 
+static JOB_ENTRY_POINT(my_bar_job)
+{
+	debug_log("BAR");
+}
+
+static JOB_ENTRY_POINT(my_foo_job)
+{
+	debug_log("FOO");
+
+	job::JobCounter *c;
+	job::kick_job(job::JobDecl(my_bar_job, nullptr), &c);
+	job::yield_on_counter_and_free(c);
+}
+
 void App::init()
 {
 	scratch_memory = malloc(SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
@@ -162,6 +176,11 @@ void App::init()
 	// Test out the job system.
 	{
 		JOB_SPIN_SCOPE();
+
+		job::JobCounter *c;
+		job::kick_job(job::JobDecl(my_foo_job, nullptr), &c);
+		job::yield_on_counter_and_free(c);
+
 		job::parallel_for(100, my_parallel_for_test);
 	}
 

@@ -37,14 +37,14 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 	}
 
 	gfx::Texture *gfx_texture = nullptr;
-	gfx::Device *device = assets.get_device();
+	gfx::Device &device = assets.get_device();
 
 	if (pixels) {
-		gfx_texture = device->alloc_texture_2d(width, height, format, 4);
+		gfx_texture = device.alloc_texture_2d(width, height, format, 4);
 
 		u64 memory_size = width * height * 4 * unit;
 
-		gfx::GpuBuffer *staging_buffer = device->alloc_buffer(
+		gfx::GpuBuffer *staging_buffer = device.alloc_buffer(
 			VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
 			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 			memory_size
@@ -52,7 +52,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 
 		staging_buffer->write(pixels, memory_size, 0);
 
-		gfx::CommandBuffer cmd = device->begin_submit();
+		gfx::CommandBuffer cmd = device.begin_submit();
 
 		auto copy_barrier = gfx::sync::texture_memory_barrier(
 			gfx_texture,
@@ -76,10 +76,10 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 		cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
 		cmd.generate_mipmaps(gfx_texture);
 
-		device->end_submit(cmd);
+		device.end_submit(cmd);
 
-		device->wait_idle();
-		device->destroy_buffer(staging_buffer);
+		device.wait_idle();
+		device.destroy_buffer(staging_buffer);
 	} else {
 		failed_to_load = true;
 	}

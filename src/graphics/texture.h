@@ -18,7 +18,6 @@ namespace gfx
 			, usage()
 			, allocation()
 			, allocation_info()
-//			, access_types{}
 			, width()
 			, height()
 			, depth()
@@ -146,8 +145,6 @@ namespace gfx
 		VmaAllocation allocation;
 		VmaAllocationInfo allocation_info;
 
-//		TextureAccessType access_types[16][16][16];
-
 		u32 width;
 		u32 height;
 		u32 depth;
@@ -171,6 +168,43 @@ namespace gfx
 
 		VkSampleCountFlags sample_count;
 	};
+	
+	struct SubresourceRange {
+		constexpr static u32 REMAINING_COUNT = -1u;
+
+		VkImageAspectFlags aspects;
+		u32 base_mip;
+		u32 mips;
+		u32 base_layer;
+		u32 layers;
+
+		static SubresourceRange all(VkImageAspectFlags aspects)
+		{
+			return {
+				aspects,
+				0, REMAINING_COUNT,
+				0, REMAINING_COUNT
+			};
+		}
+
+		static SubresourceRange all_colour()
+		{
+			return {
+				VK_IMAGE_ASPECT_COLOR_BIT,
+				0, REMAINING_COUNT,
+				0, REMAINING_COUNT
+			};
+		}
+
+		static SubresourceRange all_depth()
+		{
+			return {
+				VK_IMAGE_ASPECT_DEPTH_BIT,
+				0, REMAINING_COUNT,
+				0, REMAINING_COUNT
+			};
+		}
+	};
 
 	class TextureView {
 		friend class Device;
@@ -179,11 +213,7 @@ namespace gfx
 		TextureView()
 			: handle()
 			, type()
-			, base_layer()
-			, layer_count()
-			, base_mip()
-			, mipmap_count()
-			, aspect()
+			, range()
 			, bindless()
 		{
 		}
@@ -200,29 +230,9 @@ namespace gfx
 			return type;
 		}
 
-		u32 get_base_layer() const
+		const SubresourceRange &get_subresource_range() const
 		{
-			return base_layer;
-		}
-
-		u32 get_layer_count() const
-		{
-			return layer_count;
-		}
-
-		u32 get_base_mip() const
-		{
-			return base_layer;
-		}
-
-		u32 get_mipmap_count() const
-		{
-			return mipmap_count;
-		}
-
-		VkImageAspectFlags get_aspect() const
-		{
-			return aspect;
+			return range;
 		}
 
 		const BindlessView &get_bindless() const
@@ -233,15 +243,7 @@ namespace gfx
 	private:
 		VkImageView handle;
 		VkImageViewType type;
-
-		u32 base_layer;
-		u32 layer_count;
-
-		u32 base_mip;
-		u32 mipmap_count;
-
-		VkImageAspectFlags aspect;
-
+		SubresourceRange range;
 		BindlessView bindless;
 	};
 }

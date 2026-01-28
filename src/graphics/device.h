@@ -119,19 +119,13 @@ namespace gfx
 		TextureView create_texture_view(
 			const Texture *texture,
 			VkImageViewType type,
-			u32 layer_count,
-			u32 base_layer,
-			u32 mipmap_count,
-			u32 base_mip
+			const SubresourceRange &range
 		);
 
 		TextureView fetch_texture_view(
 			const Texture *texture,
 			VkImageViewType type,
-			u32 layer_count,
-			u32 base_layer,
-			u32 mipmap_count,
-			u32 base_mip
+			const SubresourceRange &range
 		);
 
 		TextureView fetch_texture_view_std(const Texture *texture);

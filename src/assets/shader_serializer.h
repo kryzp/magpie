@@ -7,7 +7,7 @@ namespace ast
 	struct ShaderAsset : public Asset {
 		AST_DEFINE_ASSET(ASSET_TYPE_SHADER);
 
-		ShaderAsset(const gfx::ShaderProgram &shader, gfx::Device *device)
+		ShaderAsset(const gfx::ShaderProgram &shader, gfx::Device &device)
 			: shader(shader)
 			, device(device)
 		{
@@ -16,13 +16,13 @@ namespace ast
 		~ShaderAsset() override
 		{
 			if (!has_flag(ASSET_FLAG_INVALID))
-				device->destroy_shader_program(shader);
+				device.destroy_shader_program(shader);
 		}
 
 		gfx::ShaderProgram shader;
 
 	private:
-		gfx::Device *device;
+		gfx::Device &device;
 	};
 
 	AssetSerializer get_shader_serializer();

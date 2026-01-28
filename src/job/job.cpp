@@ -307,19 +307,16 @@ void job::kick_job(
 	JobCounter **counter
 )
 {
-	JobCounter *c = nullptr;
-
-	if (counter) {
-		if (*counter == nullptr)
-			*counter = alloc_counter();
-		inc_counter(*counter);
-		c = *counter;
-	}
-
 	JobRequest request = {};
 	request.decl = job;
-	request.counter = c;
+	request.counter = nullptr;
 	request.fiber = nullptr;
+
+	if (counter) {
+		*counter = alloc_counter();
+		inc_counter(*counter);
+		request.counter = *counter;
+	}
 
 	push_job(job.priority, request);
 
@@ -334,9 +331,8 @@ void job::kick_job_batch(
 	JobCounter *c = nullptr;
 
 	if (counter) {
-		if (*counter == nullptr)
-			*counter = alloc_counter();
-		inc_counter(*counter, count);
+		*counter = alloc_counter();
+		inc_counter(*counter);
 		c = *counter;
 	}
 

@@ -10,10 +10,12 @@
 
 using namespace ast;
 
+static Assimp::Importer ai_importer;
+
 static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs);
 static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata);
-static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
-static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
+static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device &device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform);
+static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device &device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform);
 static gfx::Material load_material_from_assimp(AssetManager &assets, const String &directory, const aiMaterial *ai_material);
 
 static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs)
@@ -23,10 +25,6 @@ static void serialize(AssetManager &assets, const AssetMetaData &metadata, const
 static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 {
 	String system_file_path = assets.get_system_file_path(metadata.file_path);
-
-	// TODO: Move this out into the global scope, creating an
-	//       Importer every time a new model is loaded is super slow.
-	Assimp::Importer ai_importer;
 
 	const aiScene *scene = ai_importer.ReadFile(
 		system_file_path,
@@ -59,7 +57,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 	return asset;
 }
 
-static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device *device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_nodes(AssetManager &assets, gfx::Model &model, const String &directory, gfx::Device &device, const aiNode *node, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	aiMatrix4x4 node_transform = node->mTransformation * transform;
 
@@ -75,11 +73,12 @@ static void process_nodes(AssetManager &assets, gfx::Model &model, const String 
 	}
 }
 
-static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device *device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
+static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubModel &sub_model, const String &directory, gfx::Device &device, const aiMesh *assimp_mesh, const aiScene *scene, const aiMatrix4x4 &transform)
 {
 	ScratchArena scratch;
 
-	gfx::gpu_types::GpuModelVertex *vertices = scratch.get_arena()
+	gfx::gpu_types::GpuModelVertex *vertices = scratch
+		.get_arena()
 		.push_array<gfx::gpu_types::GpuModelVertex>(assimp_mesh->mNumVertices);
 
 	// TODO: Transforms should be applied when rendering (so be a member of a Sub_model)
@@ -154,7 +153,7 @@ static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubM
 		}
 	}
 
-	sub_model.mesh.init(device, sizeof(gfx::gpu_types::GpuModelVertex),
+	sub_model.mesh.init(&device, sizeof(gfx::gpu_types::GpuModelVertex),
 		assimp_mesh->mNumVertices, vertices,
 		index_count, indices
 	);

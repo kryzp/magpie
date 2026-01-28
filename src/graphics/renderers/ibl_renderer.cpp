@@ -116,6 +116,7 @@ void IBLRenderer::render_environment_map(
 				builder.set_multi_view_mask(0b111111);
 
 				SubresourceRange range = {};
+				range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
 				range.base_mip = i;
 				range.mips = 1;
 				range.base_layer = 0;

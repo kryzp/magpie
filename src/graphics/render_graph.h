@@ -171,21 +171,6 @@ namespace gfx
 		};
 	};
 
-	struct SubresourceRange {
-		u32 base_mip;
-		u32 mips;
-		u32 base_layer;
-		u32 layers;
-
-		static SubresourceRange all()
-		{
-			return {
-				0, VK_REMAINING_MIP_LEVELS,
-				0, VK_REMAINING_ARRAY_LAYERS
-			};
-		}
-	};
-
 	typedef u32 RenderResourceHandle;
 	constexpr RenderResourceHandle RENDER_INVALID_HANDLE = -1u;
 
@@ -204,12 +189,6 @@ namespace gfx
 				GpuBufferAccessType access;
 			} buffer;
 		};
-
-		RenderResourceEdge()
-			: handle()
-			, texture()
-		{
-		}
 	};
 
 	struct RenderResource {
@@ -227,21 +206,15 @@ namespace gfx
 		u32 last_stage_index;
 
 		u32 ref_count;
+		
+		const void *physical_resource;
+
+		u32 initial_access;
+		u32 final_access;
 
 		union {
-			struct {
-				const Texture *physical_resource;
-				AttachmentInfo info;
-				TextureAccessType initial_access;
-				TextureAccessType final_access;
-			} texture;
-
-			struct {
-				const GpuBuffer *physical_resource;
-				GpuBufferInfo info;
-				GpuBufferAccessType initial_access;
-				GpuBufferAccessType final_access;
-			} buffer;
+			AttachmentInfo texture_info;
+			GpuBufferInfo buffer_info;
 		};
 	};
 
@@ -333,7 +306,7 @@ namespace gfx
 		Vector<RenderResourceEdge> inputs;
 		Vector<RenderResourceEdge> outputs;
 
-		Vector<VkImageMemoryBarrier2> image_barriers;
+		Vector<VkImageMemoryBarrier2> texture_barriers;
 		Vector<VkBufferMemoryBarrier2> buffer_barriers;
 
 		bool is_culled;
@@ -352,13 +325,13 @@ namespace gfx
 		RenderResourceHandle create_texture(const AttachmentInfo &info) const;
 		RenderResourceHandle create_buffer(const GpuBufferInfo &info) const;
 
-		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all(), const RenderClear *clear = nullptr) const;
-		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all(), const RenderClear *clear = nullptr) const;
+		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour(), const RenderClear *clear = nullptr) const;
+		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_depth(), const RenderClear *clear = nullptr) const;
 		
-		RenderResourceHandle read_texture(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all()) const;
+		RenderResourceHandle read_texture(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
 
-		RenderResourceHandle blit_texture_src(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all()) const;
-		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all()) const;
+		RenderResourceHandle blit_texture_src(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
+		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
 
 		RenderResourceHandle write_buffer(RenderResourceHandle handle, GpuBufferAccessType usage);
 		RenderResourceHandle read_buffer(RenderResourceHandle handle, GpuBufferAccessType usage);
@@ -450,6 +423,8 @@ namespace gfx
 		void generate_barriers();
 
 		void process_edge(RenderStage &stage, const RenderResourceEdge &edge);
+		void transition_texture(RenderStage &stage, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range);
+		void transition_buffer(RenderStage &stage, RenderResource &b, GpuBufferAccessType dst_access_type);
 
 		void present_to_swapchain(CommandBuffer &cmd, const Swapchain &swapchain);
 
