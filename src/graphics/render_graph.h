@@ -207,6 +207,7 @@ namespace gfx
 
 		RenderResourceEdge()
 			: handle()
+			, texture()
 		{
 		}
 	};
@@ -229,28 +230,19 @@ namespace gfx
 
 		union {
 			struct {
-				const Texture *physical_texture;
-				AttachmentInfo texture_info;
-				TextureAccessType texture_access_type;
-			};
+				const Texture *physical_resource;
+				AttachmentInfo info;
+				TextureAccessType initial_access;
+				TextureAccessType final_access;
+			} texture;
 
 			struct {
-				const GpuBuffer *physical_buffer;
-				GpuBufferInfo buffer_info;
-				GpuBufferAccessType buffer_access_type;
-			};
+				const GpuBuffer *physical_resource;
+				GpuBufferInfo info;
+				GpuBufferAccessType initial_access;
+				GpuBufferAccessType final_access;
+			} buffer;
 		};
-
-		RenderResource()
-			: kind(KIND_MAX_ENUM)
-			, is_imported(false)
-			, first_stage_index(-1u)
-			, last_stage_index(-1u)
-			, ref_count(0)
-			, physical_texture(nullptr)
-			, texture_info()
-		{
-		}
 	};
 
 	struct RenderGraphBlackboardData {
@@ -312,48 +304,6 @@ namespace gfx
 	private:
 		RenderGraph &graph;
 		const RenderStage &stage;
-
-		/*
-		RenderGraph &graph;
-		
-		void resolve(RenderResourceHandle handle, const Swapchain &swapchain);
-
-		void alloc_resources();
-
-		u32 acquire_texture(const ResourceAttributes &att);
-		u32 acquire_buffer(const ResourceAttributes &att);
-
-		void setup_aliases();
-
-		Vector<RenderResourceHandle> active_handles;
-		
-		HashMap<const void *, u32> external_cache;
-
-		Vector<Texture> external_textures;
-		Vector<TextureView> external_texture_views;
-		Vector<GpuBuffer> external_buffers;
-
-		Vector<ResourceAttributes> physical_attributes;
-
-		Vector<u32> physical_textures;
-		Vector<TextureView> physical_texture_views;
-		Vector<u32> physical_buffers;
-
-		struct PooledTexture {
-			Texture texture;
-			ResourceAttributes desc;
-			bool in_use = false;
-		};
-
-		struct PooledBuffer {
-			GpuBuffer buffer;
-			ResourceAttributes desc;
-			bool in_use = false;
-		};
-
-		Vector<PooledTexture> texture_pool;
-		Vector<PooledBuffer> buffer_pool;
-		*/
 	};
 
 	struct RenderContext {
@@ -401,10 +351,6 @@ namespace gfx
 		// Create a virtual resource without GPU memory backing.
 		RenderResourceHandle create_texture(const AttachmentInfo &info) const;
 		RenderResourceHandle create_buffer(const GpuBufferInfo &info) const;
-		
-		// Import an existing resource outside of render graph.
-		RenderResourceHandle import_texture(Texture *texture);
-		RenderResourceHandle import_buffer(GpuBuffer *buffer);
 
 		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all(), const RenderClear *clear = nullptr) const;
 		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all(), const RenderClear *clear = nullptr) const;
@@ -427,7 +373,7 @@ namespace gfx
 		RenderResourcePool(RenderGraph &graph);
 		~RenderResourcePool();
 		
-		void flush(u64 frame_index);
+		void flush();
 		void destroy();
 
 		const Texture *acquire_texture(const AttachmentInfo &info);
@@ -441,21 +387,18 @@ namespace gfx
 
 		struct PooledTexture {
 			const Texture *texture;
-			AttachmentInfo texture_info;
-			u64 last_frame_used;
+			AttachmentInfo info;
 			bool in_use;
 		};
 
 		struct PooledBuffer {
 			const GpuBuffer *buffer;
-			GpuBufferInfo buffer_info;
+			GpuBufferInfo info;
 			bool in_use;
 		};
 
 		Vector<PooledTexture> texture_pool;
 		Vector<PooledBuffer> buffer_pool;
-
-		u64 current_frame;
 	};
 
 	class RenderGraph {
@@ -469,7 +412,7 @@ namespace gfx
 		void init(Device *device);
 		void destroy();
 
-		void reset(u64 current_frame_index);
+		void reset();
 
 		template <typename T>
 		void push_stage(
@@ -516,6 +459,7 @@ namespace gfx
 		RenderResourcePool pool;
 
 		HashMap<const void *, RenderResourceHandle> import_cache;
+		HashMap<const void *, u32> resource_access_cache;
 
 		RenderResourceHandle backbuffer_handle;
 	};
@@ -528,10 +472,10 @@ namespace gfx
 		const std::function<void(const RenderContext &ctx, const RenderStageResources &resources, const T &data)> &execute
 	)
 	{
-		RenderStage &stage = stages.emplace_back();
+		RenderStage stage = {};
 		stage.name = name;
 		stage.type = type;
-		stage.index = stages.size() - 1;
+		stage.index = stages.size();
 
 		RenderGraphBuilder builder(*this, stage);
 
@@ -541,5 +485,7 @@ namespace gfx
 		stage.record = [=](const RenderContext &ctx, const RenderStageResources &resources) {
 			execute(ctx, resources, data);
 		};
+
+		stages.push_back(stage);
 	}
 }

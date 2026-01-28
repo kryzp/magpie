@@ -216,8 +216,6 @@ void App::destroy()
 
 bool App::tick(const inp::InputState &input)
 {
-	static u32 current_frame_index = 0;
-	
 	if (input.kb_pressed[inp::KEYBOARD_KEY_escape]) {
 		debug_log("Quitting...");
 		return true;
@@ -246,18 +244,18 @@ bool App::tick(const inp::InputState &input)
 			.camera = &this->camera
 		};
 
+		ImGui::Render();
+
 		render(dt, elapsed_time, cmd);
-		add_imgui_render_stage(render_graph, swapchain_src);
+//		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
 
 		render_graph.compile(swapchain);
 		render_graph.execute(cmd, swapchain, scene_view, dt, elapsed_time);
-		render_graph.reset(current_frame_index);
+		render_graph.reset();
 	}
 	graphics_device.end_frame(swapchain, cmd);
-	
-	current_frame_index++;
 
 	return false;
 }
@@ -305,17 +303,6 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	data.time = elapsed_time;
 
 	frame_data_buffer->write(&data, sizeof(FrameData), 0);
-
-//	ibl_renderer.render_brdf(render_graph, brdf_texture);
-//
-//	ibl_renderer.render_environment_map(
-//		render_graph,
-//		irradiance_cubemap,
-//		prefilter_cubemap,
-//		skybox_renderer.get_environment_map(),
-//		skybox_renderer.get_mesh(),
-//		skybox_renderer.get_capture_transforms()
-//	);
 
 	struct FooBar { int baz; };
 

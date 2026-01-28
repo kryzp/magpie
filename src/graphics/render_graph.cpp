@@ -37,15 +37,15 @@ RenderInfo RenderStageResources::build_rendering_info() const
 	for (auto &output : stage.outputs) {
 		RenderResource &resource = graph.resources[output.handle];
 
-		const AttachmentInfo &attachment_info = resource.texture_info;
+		const AttachmentInfo &attachment_info = resource.texture.info;
 
 		// TODO: Right now it's just based on the last attachments sample count.
 		//       Assumption is that all attachments will already have the same sample count.
 		//       --> Ideally I should have resolving implemented so they automatically have their resolves.
 		render_info.samples = attachment_info.samples;
 
-		render_info.width = resource.texture_info.size_x;
-		render_info.height = resource.texture_info.size_y;
+		render_info.width = resource.texture.info.size_x;
+		render_info.height = resource.texture.info.size_y;
 
 		VkRenderingAttachmentInfo vk_attachment_info = {};
 		vk_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -56,11 +56,11 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		// TODO: SUCKS AND VERY SIMPLISTIC
 		VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
 
-		if (resource.physical_texture->is_cubemap())
+		if (resource.texture.physical_resource->is_cubemap())
 			view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 
 		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(
-			resource.physical_texture,
+			resource.texture.physical_resource,
 			view_type,
 			output.texture.range.layers,
 			output.texture.range.base_layer,
@@ -101,7 +101,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 
 const Texture *RenderStageResources::get_texture(RenderResourceHandle handle) const
 {
-	return graph.resources[handle].physical_texture;
+	return graph.resources[handle].texture.physical_resource;
 }
 
 TextureView RenderStageResources::get_texture_view(RenderResourceHandle handle) const
@@ -119,14 +119,14 @@ TextureView RenderStageResources::get_texture_view(RenderResourceHandle handle) 
 	// TODO: SUCKS AND VERY SIMPLISTIC
 	VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
 
-	if (resource.physical_texture->is_cubemap())
+	if (resource.texture.physical_resource->is_cubemap())
 		view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 
-	u32 layer_count = range.layers == VK_REMAINING_ARRAY_LAYERS ? resource.physical_texture->get_layer_count()  - range.base_mip   : range.mips;
-	u32 mip_count   = range.mips   == VK_REMAINING_MIP_LEVELS   ? resource.physical_texture->get_mipmap_count() - range.base_layer : range.layers;
+	u32 layer_count = range.layers == VK_REMAINING_ARRAY_LAYERS ? resource.texture.physical_resource->get_layer_count()  - range.base_mip   : range.mips;
+	u32 mip_count   = range.mips   == VK_REMAINING_MIP_LEVELS   ? resource.texture.physical_resource->get_mipmap_count() - range.base_layer : range.layers;
 
 	return graph.get_device().fetch_texture_view(
-		resource.physical_texture,
+		resource.texture.physical_resource,
 		view_type,
 		layer_count,
 		range.base_layer,
@@ -137,7 +137,7 @@ TextureView RenderStageResources::get_texture_view(RenderResourceHandle handle) 
 
 const GpuBuffer *RenderStageResources::get_buffer(RenderResourceHandle handle) const
 {
-	return graph.resources[handle].physical_buffer;
+	return graph.resources[handle].buffer.physical_resource;
 }
 
 RenderGraphBuilder::RenderGraphBuilder(RenderGraph &graph, RenderStage &stage)
@@ -164,10 +164,15 @@ RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &in
 {
 	RenderResourceHandle handle = graph.resources.size();
 
-	RenderResource &resource = graph.resources.emplace_back();
+	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_TEXTURE;
-	resource.texture_info = info;
+	resource.is_imported = false;
 	resource.first_stage_index = current_stage.index;
+	resource.last_stage_index = -1u;
+	resource.texture.info = info;
+	resource.texture.initial_access = TEXTURE_ACCESS_UNDEFINED;
+
+	graph.resources.push_back(resource);
 
 	return handle;
 }
@@ -176,27 +181,22 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 {
 	RenderResourceHandle handle = graph.resources.size();
 
-	RenderResource &resource = graph.resources.emplace_back();
+	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_BUFFER;
-	resource.buffer_info = info;
+	resource.is_imported = false;
 	resource.first_stage_index = current_stage.index;
+	resource.last_stage_index = -1u;
+	resource.buffer.info = info;
+	resource.buffer.initial_access = GPU_BUFFER_ACCESS_UNDEFINED;
+
+	graph.resources.push_back(resource);
 
 	return handle;
 }
 
-RenderResourceHandle RenderGraphBuilder::import_texture(Texture *texture)
-{
-	return graph.import_texture(texture);
-}
-
-RenderResourceHandle RenderGraphBuilder::import_buffer(GpuBuffer *buffer)
-{
-	return graph.import_buffer(buffer);
-}
-
 RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
 {
-	RenderResourceEdge &edge = current_stage.outputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.texture.access = TEXTURE_ACCESS_COLOUR_ATTACHMENT;
 	edge.texture.range = range;
@@ -208,12 +208,14 @@ RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handl
 		edge.texture.clear_enabled = false;
 	}
 
+	current_stage.outputs.push_back(edge);
+
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::write_depth(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
 {
-	RenderResourceEdge &edge = current_stage.outputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.texture.access = TEXTURE_ACCESS_DEPTH_ATTACHMENT;
 	edge.texture.range = range;
@@ -225,60 +227,71 @@ RenderResourceHandle RenderGraphBuilder::write_depth(RenderResourceHandle handle
 		edge.texture.clear_enabled = false;
 	}
 
+	current_stage.outputs.push_back(edge);
+
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::read_texture(RenderResourceHandle handle, const SubresourceRange &range) const
 {
-	RenderResourceEdge &edge = current_stage.inputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.texture.access = TEXTURE_ACCESS_SAMPLED;
 	edge.texture.range = range;
+
+	current_stage.inputs.push_back(edge);
 
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::blit_texture_src(RenderResourceHandle handle, const SubresourceRange &range) const
 {
-	RenderResourceEdge &edge = current_stage.inputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.texture.access = TEXTURE_ACCESS_BLIT_SRC;
 	edge.texture.range = range;
+
+	current_stage.inputs.push_back(edge);
 
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::blit_texture_dst(RenderResourceHandle handle, const SubresourceRange &range) const
 {
-	RenderResourceEdge &edge = current_stage.outputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.texture.access = TEXTURE_ACCESS_BLIT_DST;
 	edge.texture.range = range;
+
+	current_stage.outputs.push_back(edge);
 
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::write_buffer(RenderResourceHandle handle, GpuBufferAccessType usage)
 {
-	RenderResourceEdge &edge = current_stage.outputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.buffer.access = usage;
+
+	current_stage.outputs.push_back(edge);
 
 	return handle;
 }
 
 RenderResourceHandle RenderGraphBuilder::read_buffer(RenderResourceHandle handle, GpuBufferAccessType usage)
 {
-	RenderResourceEdge &edge = current_stage.inputs.emplace_back();
+	RenderResourceEdge edge;
 	edge.handle = handle;
 	edge.buffer.access = usage;
+
+	current_stage.inputs.push_back(edge);
 
 	return handle;
 }
 
 RenderResourcePool::RenderResourcePool(RenderGraph &graph)
 	: graph(graph)
-	, current_frame(0)
 {
 }
 
@@ -286,10 +299,8 @@ RenderResourcePool::~RenderResourcePool()
 {
 }
 
-void RenderResourcePool::flush(u64 frame_index)
+void RenderResourcePool::flush()
 {
-	current_frame = frame_index;
-
 	for (auto &t : texture_pool)
 		t.in_use = false;
 
@@ -346,7 +357,7 @@ void RenderResourcePool::destroy()
 const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
 {
 	for (auto &t : texture_pool) {
-		if (!t.in_use && t.texture_info == info) {
+		if (!t.in_use && t.info == info) {
 			t.in_use = true;
 			return t.texture;
 		}
@@ -369,7 +380,7 @@ const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
 		info.is_cubemap
 	);
 
-	texture.texture_info = info;
+	texture.info = info;
 	texture.in_use = true;
 
 	texture_pool.push_back(texture);
@@ -391,7 +402,7 @@ void RenderResourcePool::release_texture(const Texture *texture, const Attachmen
 const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
 {
 	for (auto &b : buffer_pool) {
-		if (!b.in_use && b.buffer_info == info) {
+		if (!b.in_use && b.info == info) {
 			b.in_use = true;
 			return b.buffer;
 		}
@@ -405,7 +416,7 @@ const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
 		info.size
 	);
 
-	buffer.buffer_info = info;
+	buffer.info = info;
 	buffer.in_use = true;
 
 	buffer_pool.push_back(buffer);
@@ -430,6 +441,7 @@ RenderGraph::RenderGraph()
 	, stages()
 	, pool(*this)
 	, import_cache()
+	, resource_access_cache()
 	, backbuffer_handle(RENDER_INVALID_HANDLE)
 {
 }
@@ -452,13 +464,13 @@ void RenderGraph::destroy()
 	import_cache.clear();
 }
 
-void RenderGraph::reset(u64 current_frame_index)
+void RenderGraph::reset()
 {
 	stages.clear();
 	resources.clear();
 	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
-	pool.flush(current_frame_index);
+	pool.flush();
 }
 
 void RenderGraph::set_backbuffer_source(RenderResourceHandle handle)
@@ -469,12 +481,8 @@ void RenderGraph::set_backbuffer_source(RenderResourceHandle handle)
 void RenderGraph::compile(const Swapchain &swapchain)
 {
 	for (auto &r : resources) {
-		r.first_stage_index = -1u;
-
 		if (r.is_imported)
 			r.ref_count = 1;
-		else
-			r.ref_count = 0;
 	}
 
 	if (backbuffer_handle != RENDER_INVALID_HANDLE)
@@ -532,24 +540,24 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 
 			switch (r.kind) {
 				case RenderResource::KIND_TEXTURE: {
-					if (r.physical_texture)
+					if (r.buffer.physical_resource)
 						continue;
 					
 					// Resolve rleative size.
-					if (r.texture_info.size_class == SIZE_CLASS_SWAPCHAIN_RELATIVE) {
-						r.texture_info.size_x *= swapchain.get_width();
-						r.texture_info.size_y *= swapchain.get_height();
-						r.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
+					if (r.texture.info.size_class == SIZE_CLASS_SWAPCHAIN_RELATIVE) {
+						r.texture.info.size_x *= swapchain.get_width();
+						r.texture.info.size_y *= swapchain.get_height();
+						r.texture.info.size_class = SIZE_CLASS_ABSOLUTE;
 					}
 
-					r.physical_texture = pool.acquire_texture(r.texture_info);
+					r.texture.physical_resource = pool.acquire_texture(r.texture.info);
 				} break;
 
 				case RenderResource::KIND_BUFFER: {
-					if (r.physical_buffer)
+					if (r.buffer.physical_resource)
 						continue;
 
-					r.physical_buffer = pool.acquire_buffer(r.buffer_info);
+					r.buffer.physical_resource = pool.acquire_buffer(r.buffer.info);
 				} break;
 			}
 		}
@@ -558,6 +566,13 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 
 void RenderGraph::generate_barriers()
 {
+	for (auto &r : resources) {
+		switch (r.kind) {
+			case RenderResource::KIND_TEXTURE:  r.texture.final_access = r.texture.initial_access; break;
+			case RenderResource::KIND_BUFFER:   r.buffer.final_access  = r.buffer.initial_access; break;
+		}
+	}
+
 	for (auto &stage : stages) {
 		if (stage.is_culled)
 			continue;
@@ -577,43 +592,44 @@ void RenderGraph::process_edge(RenderStage &stage, const RenderResourceEdge &edg
 	
 	switch (r.kind) {
 		case RenderResource::KIND_TEXTURE: {
-			if (!r.physical_texture)
+			if (!r.texture.physical_resource)
 				return;
 
-			TextureAccess src_access = sync::get_src_texture_access(r.texture_access_type);
+			TextureAccess src_access = sync::get_src_texture_access(r.texture.final_access);
 			TextureAccess dst_access = sync::get_dst_texture_access(edge.texture.access);
 
 			bool needs_barrier =
 				(src_access.layout != dst_access.layout) ||
+				(sync::texture_access_is_write(r.texture.final_access)) ||
 				(sync::texture_access_is_write(edge.texture.access));
 
 			needs_barrier = true; // TODO: temp
 
 			if (needs_barrier) {
 				stage.image_barriers.push_back(sync::texture_memory_barrier(
-					r.physical_texture,
+					r.texture.physical_resource,
 					src_access, dst_access,
-					0, r.physical_texture->get_mipmap_count(),
-					0, r.physical_texture->get_layer_count()
+					0, r.texture.physical_resource->get_mipmap_count(),
+					0, r.texture.physical_resource->get_layer_count()
 				));
 
-				r.texture_access_type = edge.texture.access;
+				r.texture.final_access = edge.texture.access;
 			}
 		} break;
 
 		case RenderResource::KIND_BUFFER: {
-			if (!r.physical_buffer)
+			if (!r.buffer.physical_resource)
 				return;
 
-			GpuBufferAccess src_access = sync::get_src_buffer_access(r.buffer_access_type);
+			GpuBufferAccess src_access = sync::get_src_buffer_access(r.buffer.final_access);
 			GpuBufferAccess dst_access = sync::get_dst_buffer_access(edge.buffer.access);
 
 			stage.buffer_barriers.push_back(sync::buffer_memory_barrier(
-				r.physical_buffer,
+				r.buffer.physical_resource,
 				src_access, dst_access
 			));
 
-			r.buffer_access_type = edge.buffer.access;
+			r.buffer.final_access = edge.buffer.access;
 		} break;
 	}
 }
@@ -696,37 +712,35 @@ void RenderGraph::execute(
 		}
 		*/
 	}
-
+	
 	present_to_swapchain(cmd, swapchain);
 
-	/*
 	for (auto &r : resources) {
-		if (!r.is_imported) {
+		if (r.is_imported) {
 			switch (r.kind) {
 				case RenderResource::KIND_TEXTURE: {
-					pool.release_texture(r.physical_texture, r.texture_info);
-					r.physical_texture = nullptr;
+					if (r.texture.physical_resource)
+						resource_access_cache[r.texture.physical_resource] = r.texture.final_access;
 				} break;
 
 				case RenderResource::KIND_BUFFER: {
-					pool.release_buffer(r.physical_buffer, r.buffer_info);
-					r.physical_buffer = nullptr;
+					if (r.buffer.physical_resource)
+						resource_access_cache[r.buffer.physical_resource] = r.buffer.final_access;
 				} break;
 			}
 		}
 	}
-	*/
 }
 
 void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swapchain)
 {
-	const Texture *swapchain_src_texture = resources[backbuffer_handle].physical_texture;
+	const Texture *swapchain_src_texture = resources[backbuffer_handle].texture.physical_resource;
 	const Texture *swapchain_dst_texture = swapchain.get_current_texture();
 	
 	Vector<VkImageMemoryBarrier2> image_barriers = {
 		sync::texture_memory_barrier(
 			swapchain_src_texture,
-			sync::get_src_texture_access(TEXTURE_ACCESS_COLOUR_ATTACHMENT),
+			sync::get_src_texture_access(resources[backbuffer_handle].texture.final_access),
 			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_SRC),
 			0, swapchain_src_texture->get_mipmap_count(),
 			0, swapchain_src_texture->get_layer_count()
@@ -783,21 +797,30 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 
 	RenderResourceHandle handle = resources.size();
 	
-	RenderResource &res = resources.emplace_back();
-	res.kind = RenderResource::KIND_TEXTURE;
-	res.is_imported = true;
+	RenderResource resource = {};
+	resource.kind = RenderResource::KIND_TEXTURE;
+	resource.is_imported = true;
 
-	res.physical_texture = texture;
+	resource.first_stage_index = -1u;
+	resource.last_stage_index = -1u;
 
-	res.texture_info.format = texture->get_format();
-	res.texture_info.samples = texture->get_sample_count();
-	res.texture_info.mips = texture->get_mipmap_count();
-	res.texture_info.layers = texture->get_layer_count();
+	resource.texture.physical_resource = texture;
 
-	res.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
-	res.texture_info.size_x = texture->get_width();
-	res.texture_info.size_y = texture->get_height();
-	res.texture_info.size_z = texture->get_depth();
+	resource.texture.initial_access = resource_access_cache.find(texture) != resource_access_cache.end()
+		? (TextureAccessType)resource_access_cache[texture]
+		: TEXTURE_ACCESS_UNDEFINED;
+
+	resource.texture.info.format = texture->get_format();
+	resource.texture.info.samples = texture->get_sample_count();
+	resource.texture.info.mips = texture->get_mipmap_count();
+	resource.texture.info.layers = texture->get_layer_count();
+
+	resource.texture.info.size_class = SIZE_CLASS_ABSOLUTE;
+	resource.texture.info.size_x = texture->get_width();
+	resource.texture.info.size_y = texture->get_height();
+	resource.texture.info.size_z = texture->get_depth();
+
+	resources.push_back(resource);
 
 	import_cache[texture] = handle;
 
@@ -811,15 +834,24 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 
 	RenderResourceHandle handle = resources.size();
 
-	RenderResource &resource = resources.emplace_back();
+	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_BUFFER;
 	resource.is_imported = true;
 
-	resource.physical_buffer = buffer;
-	
-	resource.buffer_info.flags = buffer->get_allocation_flags();
-	resource.buffer_info.usage = buffer->get_usage();
-	resource.buffer_info.size = buffer->get_size();
+	resource.first_stage_index = -1u;
+	resource.last_stage_index = -1u;
+
+	resource.buffer.physical_resource = buffer;
+
+	resource.buffer.initial_access = resource_access_cache.find(buffer) != resource_access_cache.end()
+		? (GpuBufferAccessType)resource_access_cache[buffer]
+		: GPU_BUFFER_ACCESS_UNDEFINED;
+
+	resource.buffer.info.flags = buffer->get_allocation_flags();
+	resource.buffer.info.usage = buffer->get_usage();
+	resource.buffer.info.size = buffer->get_size();
+
+	resources.push_back(resource);
 
 	import_cache[buffer] = handle;
 

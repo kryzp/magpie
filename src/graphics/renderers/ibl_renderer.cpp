@@ -57,7 +57,6 @@ void IBLRenderer::render_environment_map(
 {
 	struct IrradianceStageData {
 		RenderResourceHandle environment_map;
-		RenderResourceHandle capture_transforms;
 	};
 
 	graph.push_stage<IrradianceStageData>(
@@ -69,7 +68,6 @@ void IBLRenderer::render_environment_map(
 			builder.write_colour(graph.import_texture(irradiance));
 			
 			data.environment_map = builder.read_texture(graph.import_texture(environment_map));
-			data.capture_transforms = builder.read_buffer(graph.import_buffer(capture_transforms), GPU_BUFFER_ACCESS_GRAPHICS_READ_WRITE);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const IrradianceStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -91,8 +89,8 @@ void IBLRenderer::render_environment_map(
 				u32 environment_map;
 				u32 linear_sampler;
 			} args;
-
-			args.transform_matrices = resources.get_buffer(data.capture_transforms)->get_device_address();
+			
+			args.transform_matrices = capture_transforms->get_device_address();
 			args.vertices = skybox.vertex_buffer->get_device_address();
 			args.environment_map = environment_map_texture.get_bindless().sampled;
 			args.linear_sampler = Sampler::linear.get_bindless().sampler;
@@ -104,7 +102,7 @@ void IBLRenderer::render_environment_map(
 		}
 	);
 	
-	u32 mip_levels = 4;
+	const u32 mip_levels = 4;
 
 	for (int i = 0; i < mip_levels; i++) {
 		struct PrefilterStageData {
@@ -148,7 +146,7 @@ void IBLRenderer::render_environment_map(
 					u32 linear_sampler;
 					float roughness;
 				} args;
-
+				
 				args.transform_matrices = capture_transforms->get_device_address();
 				args.vertices = skybox.vertex_buffer->get_device_address();
 				args.environment_map = environment_map_texture.get_bindless().sampled;

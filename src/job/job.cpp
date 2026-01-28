@@ -59,6 +59,7 @@ namespace job
 	static void return_current_fiber();
 	static JobFiber *get_free_fiber();
 	static void return_fiber(JobFiber *fiber);
+
 	static JobRequest *try_get_job();
 	static bool has_job_available();
 }

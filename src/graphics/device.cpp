@@ -455,7 +455,7 @@ void Device::init()
 	if (!platform::create_vulkan_surface(instance, &surface))
 		debug_log_crash("Failed to create surface.");
 
-	// Enumerate physical devices.
+	// Enumerate physical_resource devices.
 	{
 		u32 device_count = 0;
 		vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
