@@ -17,10 +17,12 @@ namespace gfx
 			const GpuBuffer *frame_data
 		);
 
-		void render_hdr_to_skybox(RenderGraph &graph);
+		void render_hdr_to_skybox(
+			RenderGraph &graph,
+			const GpuBuffer *cubemap_capture_transforms
+		);
 		
 		const Mesh &get_mesh() const;
-		const GpuBuffer *get_capture_transforms() const;
 		const Texture *get_environment_map() const;
 
 	private:
@@ -28,8 +30,6 @@ namespace gfx
 		Mesh mesh;
 
 		const Texture *hdr_texture;
-		
-		GpuBuffer *cubemap_capture_transforms;
 
 		Texture *cubemap;
 

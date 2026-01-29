@@ -70,12 +70,14 @@ add_executable(magpie
 	"${CODE_DIR}/core/hash.cpp"
 	"${CODE_DIR}/core/memory_arena.cpp"
 	"${CODE_DIR}/core/scratch.cpp"
+	"${CODE_DIR}/core/class_db.cpp"
 
 	"${CODE_DIR}/math/timer.cpp"
 	"${CODE_DIR}/math/matrix.cpp"
 	"${CODE_DIR}/math/vec2.cpp"
 	"${CODE_DIR}/math/vec3.cpp"
 	"${CODE_DIR}/math/vec4.cpp"
+	"${CODE_DIR}/math/quat.cpp"
 
 	"${CODE_DIR}/io/filesystem.cpp"
 	"${CODE_DIR}/io/stream.cpp"

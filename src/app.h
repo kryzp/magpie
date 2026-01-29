@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/memory_arena.h"
+#include "core/class_db.h"
 
 #include "math/timer.h"
 
@@ -57,6 +58,8 @@ private:
 	void *scratch_memory;
 	MemoryArena scratch_arenas[2];
 
+	ClassDB class_db;
+
 	Timer global_timer;
 	Timer delta_timer;
 	float delta_accumulator;
@@ -71,6 +74,8 @@ private:
 	CameraDriver camera_driver;
 
 	gfx::GpuBuffer *frame_data_buffer;
+
+	gfx::GpuBuffer *cubemap_capture_transforms;
 
 	gfx::Texture *irradiance_cubemap;
 	gfx::Texture *prefilter_cubemap;

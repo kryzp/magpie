@@ -18,29 +18,6 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
 
-	Mat4 capture_view_matrices[] = {
-		Mat4::lookat(Vec3::zero(), Vec3( 1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Right
-		Mat4::lookat(Vec3::zero(), Vec3(-1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Left
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f,  1.f), Vec3(0.f, -1.f, 0.f)), // Up
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f, -1.f), Vec3(0.f,  1.f, 0.f)), // Down
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Forward
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f, -1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Backwards
-	};
-
-	Mat4 capture_projection_matrix = Mat4::perspective(90.f, 1.f, 0.1f, 10.f);
-
-	for (int i = 0; i < 6; i++)
-		capture_view_matrices[i] = capture_projection_matrix * capture_view_matrices[i];
-
-	cubemap_capture_transforms = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(capture_view_matrices)
-	);
-
-	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
-
 	hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr"))->texture;
 
 	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"))->shader;
@@ -90,7 +67,6 @@ void SkyboxRenderer::destroy()
 	mesh.destroy();
 	
 	device->destroy_texture(cubemap);
-	device->destroy_buffer(cubemap_capture_transforms);
 }
 
 void SkyboxRenderer::add_render_stages(
@@ -154,7 +130,10 @@ void SkyboxRenderer::add_render_stages(
 	);
 }
 
-void SkyboxRenderer::render_hdr_to_skybox(RenderGraph &graph)
+void SkyboxRenderer::render_hdr_to_skybox(
+	RenderGraph &graph,
+	const GpuBuffer *cubemap_capture_transforms
+)
 {
 	struct HdrToSkyboxData {
 		int foo;
@@ -177,7 +156,7 @@ void SkyboxRenderer::render_hdr_to_skybox(RenderGraph &graph)
 				u32 linear_sampler_id;
 			} args;
 
-			args.transform_matrix_buffer = this->cubemap_capture_transforms->get_device_address();
+			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
 			args.hdr_image_id = ctx.device.fetch_texture_view_std(this->hdr_texture).get_bindless().sampled;
 			args.linear_sampler_id = Sampler::linear.get_bindless().sampler;
@@ -204,11 +183,6 @@ void SkyboxRenderer::render_hdr_to_skybox(RenderGraph &graph)
 const Mesh &SkyboxRenderer::get_mesh() const
 {
 	return mesh;
-}
-
-const GpuBuffer *SkyboxRenderer::get_capture_transforms() const
-{
-	return cubemap_capture_transforms;
 }
 
 const Texture *SkyboxRenderer::get_environment_map() const

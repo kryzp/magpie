@@ -17,9 +17,10 @@ TODO (It looks super cool and awesome trust me).
 	- Material system
 	- Mesh merging
 	- Compute Frustum Culling
-	- Render Graph that handles resource management, pipeline barriers and synchronization inspired by "Render graphs and Vulkan — a deep dive" and "FrameGraph: Extensible Rendering Architecture in Frostbite"
+	- Render Graph that handles resource management, pipeline barriers and synchronization
 	- Indirect Deferred Rendering
 	- Multi-Threaded (almost) lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
+	- RTTI macro system allowing for type introspection and other cool stuff
 	- ImGui Integration
 
 ### Ideas / Todo List

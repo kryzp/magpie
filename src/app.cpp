@@ -176,6 +176,29 @@ void App::init()
 		sizeof(FrameData)
 	);
 
+	Mat4 capture_view_matrices[] = {
+		Mat4::lookat(Vec3::zero(), Vec3( 1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Right
+		Mat4::lookat(Vec3::zero(), Vec3(-1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Left
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f,  1.f), Vec3(0.f, -1.f, 0.f)), // Up
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f, -1.f), Vec3(0.f,  1.f, 0.f)), // Down
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Forward
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, -1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Backwards
+	};
+
+	Mat4 capture_projection_matrix = Mat4::perspective(90.f, 1.f, 0.1f, 10.f);
+
+	for (int i = 0; i < 6; i++)
+		capture_view_matrices[i] = capture_projection_matrix * capture_view_matrices[i];
+
+	cubemap_capture_transforms = graphics_device.alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(capture_view_matrices)
+	);
+
+	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
+
 	ibl_renderer.init(assets);
 	compute_culling.init(assets);
 	deferred_renderer.init(assets);
@@ -202,9 +225,15 @@ void App::init()
 	irradiance_cubemap = graphics_device.alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
 
-	skybox_renderer.render_hdr_to_skybox(render_graph);
+	skybox_renderer.render_hdr_to_skybox(
+		render_graph,
+		cubemap_capture_transforms
+	);
 
-	ibl_renderer.render_brdf(render_graph, brdf_texture);
+	ibl_renderer.render_brdf(
+		render_graph,
+		brdf_texture
+	);
 
 	ibl_renderer.render_environment_map(
 		render_graph,
@@ -212,7 +241,7 @@ void App::init()
 		prefilter_cubemap,
 		skybox_renderer.get_environment_map(),
 		skybox_renderer.get_mesh(),
-		skybox_renderer.get_capture_transforms()
+		cubemap_capture_transforms
 	);
 }
 
@@ -221,6 +250,8 @@ void App::destroy()
 	graphics_device.destroy_texture(brdf_texture);
 	graphics_device.destroy_texture(irradiance_cubemap);
 	graphics_device.destroy_texture(prefilter_cubemap);
+	
+	graphics_device.destroy_buffer(cubemap_capture_transforms);
 
 	graphics_device.destroy_sampler(gfx::Sampler::linear);
 
