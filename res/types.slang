@@ -1,13 +1,4 @@
 
-struct ModelVertex {
-	float3 position;
-	float2 texcoord;
-	float3 colour;
-	float3 normal;
-	float3 tangent;
-	float3 bitangent;
-};
-
 struct FrameData {
 	float4x4 view;
 	float4x4 projection;
@@ -20,24 +11,35 @@ struct FrameData {
 	float time;
 };
 
-struct ObjectData {
-	float4x4 model_matrix;
-	float4x4 normal_matrix;
+struct ModelVertex {
+	float3 position;
+	float2 texcoord;
+	float3 colour;
+	float3 normal;
+	float3 tangent;
+	float3 bitangent;
 };
 
-struct Light {
-	float4 position;
-	float4 colour;
-	float4 attenuation;
-	float4x4 transform;
+struct ObjectData {
+	float4x4 model_matrix;
+    float4x4 normal_matrix;
 };
 
 struct Material {
-	uint diffuse;
-	uint normal;
-	uint emissive;
-	uint mr;
-	uint ambient;
+    uint diffuse;
+    uint normal;
+    uint emissive;
+    uint mr;
+    uint ambient;
+};
+
+struct Light {
+	float3 position;
+    float3 colour;
+    float intensity;
+	float3 attenuation;
+	float radius;
+	float4x4 transform;
 };
 
 struct Instance {

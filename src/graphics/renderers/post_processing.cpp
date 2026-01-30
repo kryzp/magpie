@@ -36,7 +36,7 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			colour_info.is_storage = true;
 			colour_attachment = builder.create_texture(colour_info);
 
-			data.lighting = builder.read_texture(deferred_info.lighting);
+			data.lighting = builder.read_texture(deferred_info.gbuffer.lighting);
 			data.colour = builder.write_colour(colour_attachment);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const PostProcessingInfo &data) -> void {

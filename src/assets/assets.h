@@ -22,7 +22,7 @@ class FileStream;
 	ASSET_DEF(SHADER, Shader) \
 	ASSET_DEF(MODEL, Model)
 
-#define AST_DEFINE_ASSET(type) \
+#define ASSET_DECLARE(type) \
 	static AssetType get_asset_type_static() { return type; } \
 	virtual AssetType get_asset_type() const override { return type; }
 

@@ -40,8 +40,8 @@ namespace platform
 	u64 get_performance_counter();
 	u64 get_performance_frequency();
 
-	void *create_thread(ulong (*entry)(void *param), void *param);
-	void join_thread(void *handle);
+	void *create_thread(uptr (*entry)(void *param), void *param);
+	uptr join_thread(void *handle);
 	void detach_thread(void *handle);
 
 	u32 get_num_cores();

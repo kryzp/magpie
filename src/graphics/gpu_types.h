@@ -36,15 +36,6 @@ namespace gfx
 			Mat4 normal_matrix;
 		};
 
-		struct GpuInstance {
-			u32 object_id;
-			u32 batch_id;
-		};
-
-		struct GpuIndirect {
-			VkDrawIndexedIndirectCommand command;
-		};
-
 		struct GpuMaterial {
 			u32 diffuse_texture;
 			u32 normal_texture;
@@ -56,9 +47,19 @@ namespace gfx
 		struct GpuLight {
 			Vec3 position;
 			Vec3 colour;
+			float intensity;
 			Vec3 attenuation;
 			float radius;
 			Mat4 transform;
+		};
+
+		struct GpuInstance {
+			u32 object_id;
+			u32 batch_id;
+		};
+
+		struct GpuIndirect {
+			VkDrawIndexedIndirectCommand command;
 		};
 	}
 }

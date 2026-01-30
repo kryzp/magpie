@@ -1,5 +1,7 @@
 #pragma once
 
+// Implementation inspired by Source engine.
+
 #include "types.h"
 #include "hash.h"
 
@@ -43,8 +45,27 @@ struct TypeInfo {
 class Object {
 public:
 	virtual ~Object() = default;
-	static const TypeInfo *get_class_static();
-	virtual const TypeInfo *get_class_info() const;
+
+	static const TypeInfo *get_class_static()
+	{
+		// Lambda trick to make this thread safe (C++ static lock)
+		static TypeInfo info = []() {
+			TypeInfo i = {};
+			i.name = "Object";
+			i.parent = nullptr;
+			i.type_id = hash::cstr(i.name);
+			i.field_count = 0;
+			i.fields = nullptr;
+			return i;
+		}();
+
+		return &info;
+	}
+
+	virtual const TypeInfo *get_class_info() const
+	{
+		return get_class_static();
+	}
 
 	template <typename T>
 	bool is_class() const

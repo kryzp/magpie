@@ -5,7 +5,7 @@
 namespace ast
 {
 	struct ShaderAsset : public Asset {
-		AST_DEFINE_ASSET(ASSET_TYPE_SHADER);
+		ASSET_DECLARE(ASSET_TYPE_SHADER);
 
 		ShaderAsset(const gfx::ShaderProgram *shader, gfx::Device &device)
 			: shader(shader)

@@ -1,6 +1,7 @@
 #include "render_scene.h"
 
 #include "assets/texture_serializer.h"
+#include "math/calc.h"
 
 #include "render_graph.h"
 
@@ -31,15 +32,15 @@ void MeshPass::push_stage(RenderGraph &graph)
 			draw_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 			draw_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
 	
-			GpuBufferInfo clear_indirect_info = {};
-			clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
-			clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-			clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
+//			GpuBufferInfo clear_indirect_info = {};
+//			clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
+//			clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+//			clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
 			
 			instance_buffer           = builder.create_buffer(instance_info);
 			compacted_instance_buffer = builder.create_buffer(compacted_instance_info);
 			draw_indirect_buffer      = builder.create_buffer(draw_indirect_info);
-			clear_indirect_buffer     = builder.create_buffer(clear_indirect_info);
+//			clear_indirect_buffer     = builder.create_buffer(clear_indirect_info);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const MeshPassStageData &data) {
 		}
@@ -237,6 +238,8 @@ u32 RenderScene::upload_mesh(const Mesh &mesh)
 	if (meshes.size() >= 1)
 		return 0;
 
+	u32 handle = meshes.size();
+
 	/*
 	for (int i = 0; i < meshes.size(); i++) {
 		if (meshes[i] == mesh)
@@ -252,7 +255,7 @@ u32 RenderScene::upload_mesh(const Mesh &mesh)
 	render_mesh.vertex_count = mesh.vertex_count;
 	render_mesh.index_count = mesh.index_count;
 
-	return meshes.size() - 1;
+	return handle;
 }
 
 u32 RenderScene::upload_material(const Material &material, ast::AssetManager &assets)
@@ -267,6 +270,8 @@ u32 RenderScene::upload_material(const Material &material, ast::AssetManager &as
 	}
 	*/
 
+	u32 handle = materials.size();
+
 	gpu_types::GpuMaterial gpu_material = {};
 	gpu_material.diffuse_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture)->get_bindless_sampled();
 	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture)->get_bindless_sampled();
@@ -278,18 +283,20 @@ u32 RenderScene::upload_material(const Material &material, ast::AssetManager &as
 
 	material_buffer->write(
 		&gpu_material,
-		stride, stride * materials.size()
+		stride, stride * handle
 	);
 
 	materials.push_back(material);
 
-	return materials.size() - 1;
+	return handle;
 }
 
 u32 RenderScene::upload_light(const Light &light)
 {
 	u32 handle = lights.size();
+
 	lights.push_back(light);
+	
 	return handle;
 }
 
@@ -330,6 +337,26 @@ void RenderScene::build_batches()
 		o_data.model_matrix = o.transform;
 		o_data.normal_matrix = o.transform.inverse().transpose();
 		object_buffer->write(&o_data, sizeof(o_data), sizeof(o_data) * o.id);
+
+		if (o.light_handle != RENDER_INVALID_HANDLE) {
+			const Light &light = lights[o.light_handle];
+			
+			Vec3 light_colour = Vec3(1.f, 1.f, 1.f);
+
+			const float epsilon_intensity = 0.1f;
+			const float light_max = light_colour.max_value();
+			const float heuristic_radius = CalcF::sqrt((light.intensity * light_max) / (light.falloff * epsilon_intensity));
+
+			gpu_types::GpuLight gpu_light = {};
+			gpu_light.position = o.transform.c[3].get_xyz();
+			gpu_light.colour = light_colour;
+			gpu_light.intensity = light.intensity;
+			gpu_light.attenuation = Vec3(light.falloff, 0.f, 0.f);
+			gpu_light.radius = heuristic_radius;
+			gpu_light.transform = Mat4::transform(gpu_light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
+
+			light_buffer->write(&gpu_light, sizeof(gpu_light), sizeof(gpu_light) * o.light_handle);
+		}
 	}
 
 	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
@@ -428,6 +455,11 @@ const MeshPass &RenderScene::get_pass(MeshPass::Type type) const
 const Vector<RenderSceneObject> &RenderScene::get_objects() const
 {
 	return objects;
+}
+
+u32 RenderScene::get_light_count() const
+{
+	return lights.size();
 }
 
 const GpuBuffer *RenderScene::get_object_buffer() const

@@ -1642,20 +1642,6 @@ TextureView *Device::fetch_texture_view(
 
 TextureView *Device::fetch_texture_view_std(const Texture *texture)
 {
-	VkImageViewType view_type;
-	
-	switch (texture->get_type()) {
-		case VK_IMAGE_TYPE_1D: view_type = VK_IMAGE_VIEW_TYPE_1D; break;
-		case VK_IMAGE_TYPE_2D: view_type = VK_IMAGE_VIEW_TYPE_2D; break;
-		case VK_IMAGE_TYPE_3D: view_type = VK_IMAGE_VIEW_TYPE_3D; break;
-		default: debug_log_crash("Failed to link texture type to standard image view: %d", texture->get_type());
-	}
-
-	// TODO: Automatically select VK_IMAGE_VIEW_TYPE_*_ARRAY for multi-layer textures.
-
-	if (texture->is_cubemap())
-		view_type = VK_IMAGE_VIEW_TYPE_CUBE;
-
 	SubresourceRange range = {};
 	range.aspects = texture->is_depth() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
 	range.base_mip = 0;
@@ -1663,7 +1649,10 @@ TextureView *Device::fetch_texture_view_std(const Texture *texture)
 	range.base_layer = 0;
 	range.layers = texture->get_layer_count();
 
-	return fetch_texture_view(texture, view_type, range);
+	return fetch_texture_view(
+		texture, texture->get_default_view_type(),
+		range
+	);
 }
 
 void Device::destroy_texture_view(const TextureView *texture_view)

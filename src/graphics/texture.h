@@ -138,6 +138,34 @@ namespace gfx
 			return sample_count;
 		}
 
+		VkImageViewType get_default_view_type() const
+		{
+			if (is_cubemap_texture) {
+				if (layer_count > 6)
+					return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+				return VK_IMAGE_VIEW_TYPE_CUBE;
+			}
+
+			switch (type) {
+				case VK_IMAGE_TYPE_1D:
+					return layer_count > 1
+						? VK_IMAGE_VIEW_TYPE_1D_ARRAY
+						: VK_IMAGE_VIEW_TYPE_1D;
+
+				case VK_IMAGE_TYPE_2D:
+					return layer_count > 1
+						? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+						: VK_IMAGE_VIEW_TYPE_2D;
+
+				case VK_IMAGE_TYPE_3D:
+					return VK_IMAGE_VIEW_TYPE_3D;
+			}
+
+			debug_log_crash("Failed to find default view type for texture of type: %d\n", type);
+
+			return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+		}
+
 	private:
 		VkImage handle;
 		VkImageUsageFlags usage;

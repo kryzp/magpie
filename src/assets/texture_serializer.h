@@ -5,7 +5,7 @@
 namespace ast
 {
 	struct TextureAsset : public Asset {
-		AST_DEFINE_ASSET(ASSET_TYPE_TEXTURE);
+		ASSET_DECLARE(ASSET_TYPE_TEXTURE);
 
 		TextureAsset(const gfx::Texture *texture, gfx::Device &device)
 			: texture(texture)

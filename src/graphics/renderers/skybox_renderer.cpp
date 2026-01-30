@@ -86,8 +86,8 @@ void SkyboxRenderer::add_render_stages(
 		"Skybox Rendering",
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, SkyboxStageData &data) -> void {
-			data.colour = builder.write_colour(deferred_info.lighting);
-			data.depth = builder.write_depth(deferred_info.depth);
+			data.colour = builder.write_colour(deferred_info.gbuffer.lighting);
+			data.depth = builder.write_depth(deferred_info.gbuffer.depth);
 			data.cubemap = builder.read_texture(graph.import_texture(cubemap));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const SkyboxStageData &data) -> void {

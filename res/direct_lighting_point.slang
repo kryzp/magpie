@@ -10,8 +10,8 @@ struct PushConstants {
 	uint position;
 	uint albedo;
 	uint normal;
-	uint material;
 	uint emissive;
+	uint material;
 
 	uint linear_sampler;
 };
@@ -64,17 +64,16 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 F0 = lerp(.04, albedo, metallic_value);
 
-	float3 view_dir = normalize(args.frame_data->camera_position.xyz - position);
+	float3 view_dir = normalize(args.frame_data->camera_position - position);
 
 	float NdotV = max(0., dot(normal, view_dir));
 
-	float3 delta_x = light.position.xyz - position;
+	float3 delta_x = light.position - position;
 	float distance_squared = dot(delta_x, delta_x);
 
-	float attenuation = CalculateAttenuation(distance_squared, light.attenuation.xyz);
-	float intensity = light.colour.a;
+	float attenuation = CalculateAttenuation(distance_squared, light.attenuation);
 
-	float3 radiance = light.colour.rgb * intensity * attenuation;
+	float3 radiance = light.colour * light.intensity * attenuation;
 
 	float3 light_dir = normalize(delta_x);
 	float3 halfway_dir = normalize(light_dir + view_dir);

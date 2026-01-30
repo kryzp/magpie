@@ -7,15 +7,29 @@
 
 namespace gfx
 {
-	struct DeferredRendererInfo : public RenderGraphBlackboardData {
-		GFX_DEFINE_BLACKBOARD_DATA(DeferredRendererInfo);
+	struct GBuffer {
+		enum AttachmentType {
+			ATTACHMENT_POSITION,
+			ATTACHMENT_ALBEDO,
+			ATTACHMENT_NORMAL,
+			ATTACHMENT_EMISSIVE,
+			ATTACHMENT_METALLIC_ROUGHNESS,
+			ATTACHMENT_MAX_ENUM
+		};
+
+		RenderResourceHandle attachments[ATTACHMENT_MAX_ENUM];
 		RenderResourceHandle lighting;
 		RenderResourceHandle depth;
 	};
 
+	struct DeferredRendererInfo : public RenderGraphBlackboardData {
+		GFX_DECLARE_BLACKBOARD_DATA(DeferredRendererInfo);
+		GBuffer gbuffer;
+	};
+
 	class DeferredRenderer {
 	public:
-		void init(ast::AssetManager &assets);
+		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
 		void add_render_stages(
@@ -28,22 +42,11 @@ namespace gfx
 		);
 
 	private:
-		struct GBuffer {
-			enum AttachmentType {
-				ATTACHMENT_POSITION,
-				ATTACHMENT_ALBEDO,
-				ATTACHMENT_NORMAL,
-				ATTACHMENT_EMISSIVE,
-				ATTACHMENT_METALLIC_ROUGHNESS,
-				ATTACHMENT_MAX_ENUM
-			};
-
-			RenderResourceHandle attachments[ATTACHMENT_MAX_ENUM];
-			RenderResourceHandle lighting;
-			RenderResourceHandle depth;
-		};
+		void create_light_sphere_mesh(Device *device);
 
 		GBuffer gbuffer;
+
+		Mesh light_sphere_mesh;
 
 		const ShaderProgram *model_shader;
 		const ShaderProgram *ambient_lighting_shader;

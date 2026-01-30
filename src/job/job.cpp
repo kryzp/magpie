@@ -187,7 +187,7 @@ static void fiber_entry_point(void *param)
 	}
 }
 
-static ulong scheduler_thread(void *param)
+static uptr scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
 	

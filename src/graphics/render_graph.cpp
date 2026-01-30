@@ -54,13 +54,11 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		vk_attachment_info.loadOp = output.texture.clear_enabled ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		// TODO: SUCKS AND VERY SIMPLISTIC
-		VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
-
-		if (physical_texture->is_cubemap())
-			view_type = VK_IMAGE_VIEW_TYPE_CUBE;
-
-		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(physical_texture, view_type, output.texture.range)->get_handle();
+		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(
+			physical_texture, physical_texture->get_default_view_type(),
+			output.texture.range
+		)->get_handle();
+		
 		vk_attachment_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		
 		// TODO: MSAA isn't supported yet.
@@ -116,13 +114,10 @@ const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle h
 
 	assert(found);
 
-	// TODO: SUCKS AND VERY SIMPLISTIC
-	VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
-
-	if (physical_texture->is_cubemap())
-		view_type = VK_IMAGE_VIEW_TYPE_CUBE;
-
-	return graph.get_device().fetch_texture_view(physical_texture, view_type, range);
+	return graph.get_device().fetch_texture_view(
+		physical_texture, physical_texture->get_default_view_type(),
+		range
+	);
 }
 
 const GpuBuffer *RenderStageResources::get_buffer(RenderResourceHandle handle) const

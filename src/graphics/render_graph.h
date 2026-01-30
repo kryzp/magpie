@@ -16,7 +16,7 @@
 #include "device.h"
 #include "sync.h"
 
-#define GFX_DEFINE_BLACKBOARD_DATA(_name)			\
+#define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
 public:												\
 class Meta {										\
 public:												\
@@ -25,7 +25,7 @@ private:											\
 	static u32 id;									\
 }													\
 
-#define GFX_IMPLEMENT_BLACKBOARD_DATA(_name) \
+#define GFX_BLACKBOARD_DATA(_name) \
 u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
 
 namespace gfx

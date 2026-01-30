@@ -7,7 +7,7 @@
 namespace ast
 {
 	struct ModelAsset : public Asset {
-		AST_DEFINE_ASSET(ASSET_TYPE_MODEL);
+		ASSET_DECLARE(ASSET_TYPE_MODEL);
 
 		ModelAsset()
 		{

@@ -1,23 +1,89 @@
 #include "deferred_renderer.h"
 
+#include "core/scratch.h"
 #include "assets/shader_serializer.h"
+#include "math/calc.h"
+#include "math/vec3.h"
 
 #include "../render_scene.h"
 
 using namespace gfx;
 
-GFX_IMPLEMENT_BLACKBOARD_DATA(DeferredRendererInfo);
+GFX_BLACKBOARD_DATA(DeferredRendererInfo);
 
-void DeferredRenderer::init(ast::AssetManager &assets)
+void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	model_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("model"))->shader;
 
 	ambient_lighting_shader      = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("ambient_lighting"))->shader;
 	direct_lighting_point_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("direct_lighting_point"))->shader;
+
+	create_light_sphere_mesh(device);
+}
+
+// https://songho.ca/opengl/gl_sphere.html
+// TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
+void DeferredRenderer::create_light_sphere_mesh(Device *device)
+{
+	ScratchArena scratch;
+
+	u16 sector_count = 10;
+	u16 stack_count  = 10;
+
+	float sector_step = 2.f * CalcF::PI / (float)sector_count;
+	float stack_step  =       CalcF::PI / (float)stack_count;
+
+	u32 vertex_count = (stack_count + 1) * (sector_count + 1);
+	u32 index_count  = (stack_count - 1) * (sector_count + 0) * 6;
+
+	Vec3 *vertices = scratch.get_arena().push_array<Vec3>(vertex_count);
+	u16  *indices  = scratch.get_arena().push_array<u16>(index_count);
+
+	u32 index = 0;
+
+	for (int i = 0; i <= stack_count; i++) {
+		float theta = CalcF::PI*0.5f - i*stack_step;
+		for (int j = 0; j <= sector_count; j++) {
+			float phi = j * sector_step;
+			vertices[index++] = Vec3::spherical_to_cartesian(1.f, phi, theta);
+		}
+	}
+
+	index = 0;
+
+	for (u16 i = 0; i < stack_count; i++) {
+		u16 k1 = (sector_count + 1) * (i + 0); // Current stack.
+		u16 k2 = (sector_count + 1) * (i + 1); // Next stack.
+
+		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
+			if (i != 0) {
+				indices[index + 0] = k1;
+				indices[index + 1] = k1 + 1u;
+				indices[index + 2] = k2;
+
+				index += 3;
+			}
+
+			if (i != stack_count - 1) {
+				indices[index + 0] = k1 + 1u;
+				indices[index + 1] = k2 + 1u;
+				indices[index + 2] = k2;
+
+				index += 3;
+			}
+		}
+	}
+
+	light_sphere_mesh.init(
+		device, sizeof(Vec3),
+		vertex_count, vertices,
+		index_count, indices
+	);
 }
 
 void DeferredRenderer::destroy()
 {
+	light_sphere_mesh.destroy();
 }
 
 void DeferredRenderer::add_render_stages(
@@ -29,6 +95,8 @@ void DeferredRenderer::add_render_stages(
 	RenderResourceHandle brdf
 )
 {
+	// TODO: GBuffer should be local to this scope?
+
 	struct GeometryStageData {
 		RenderResourceHandle indirect_buffer;
 		RenderResourceHandle instance_buffer;
@@ -133,9 +201,8 @@ void DeferredRenderer::add_render_stages(
 			builder.write_colour(gbuffer.lighting);
 			builder.write_depth(gbuffer.depth);
 
-			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
+			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
 				builder.read_texture(gbuffer.attachments[i]);
-			}
 			
 			data.irradiance = builder.read_texture(irradiance);
 			data.prefilter = builder.read_texture(prefilter);
@@ -189,12 +256,15 @@ void DeferredRenderer::add_render_stages(
 
 			pc_ambient.linear_sampler = Sampler::linear->get_bindless_handle();
 
-			cmd.push_constants(ambient_pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_ambient), &pc_ambient);
+			cmd.push_constants(
+				ambient_pipeline_st.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(pc_ambient), &pc_ambient
+			);
 
 			cmd.draw_vertices_n(3);
 
 			// --- DIRECT
-			/*
 			GraphicsPipelineDef direct_pipeline_def(direct_lighting_point_shader);
 			direct_pipeline_def.has_depth_attachment = true;
 			direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
@@ -210,15 +280,52 @@ void DeferredRenderer::add_render_stages(
 
 			cmd.bind_bindless(direct_pipeline_st.bind_point, direct_pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(direct_pipeline_st.bind_point, direct_pipeline_st.pipeline);
-			*/
+
+			light_sphere_mesh.bind_indices(cmd);
+
+			// TODO: Instanced / Indirect Rendering?
+			for (int i = 0; i < ctx.scene_view.scene->get_light_count(); i++) {
+				struct {
+					u64 frame_data_buffer;
+					u64 light_buffer;
+					u64 vertex_buffer;
+					
+					u32 position;
+					u32 albedo;
+					u32 normal;
+					u32 emissive;
+					u32 material;
+
+					u32 linear_sampler;
+				} pc_direct;
+
+				pc_direct.frame_data_buffer = frame_data->get_device_address();
+				pc_direct.light_buffer = ctx.scene_view.scene->get_light_buffer()->get_device_address();
+				pc_direct.vertex_buffer = light_sphere_mesh.vertex_buffer->get_device_address();
+			
+				pc_direct.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION])             ->get_bindless_sampled();
+				pc_direct.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO])               ->get_bindless_sampled();
+				pc_direct.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL])               ->get_bindless_sampled();
+				pc_direct.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE])             ->get_bindless_sampled();
+				pc_direct.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS])   ->get_bindless_sampled();
+			
+				pc_direct.linear_sampler = Sampler::linear->get_bindless_handle();
+				
+				cmd.push_constants(
+					ambient_pipeline_st.layout,
+					VK_SHADER_STAGE_ALL_GRAPHICS,
+					sizeof(pc_direct), &pc_direct
+				);
+
+				light_sphere_mesh.draw_indexed(cmd, i);
+			}
 		}
 	);
 
 	// ----------------------
 	
 	DeferredRendererInfo info = {};
-	info.lighting = gbuffer.lighting;
-	info.depth = gbuffer.depth;
+	info.gbuffer = gbuffer;
 
 	bb.add<DeferredRendererInfo>(info);
 }

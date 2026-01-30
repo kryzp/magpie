@@ -113,15 +113,33 @@ u64 platform::get_performance_frequency()
 	return SDL_GetPerformanceFrequency();
 }
 
-void *platform::create_thread(ulong (*entry)(void *param), void *param)
+struct Win32ThreadStart {
+	uptr (*entry)(void *param);
+	void *param;
+};
+
+static DWORD WINAPI thread_trampoline(LPVOID param)
 {
-	return CreateThread(NULL, 0, entry, param, 0, NULL);
+	Win32ThreadStart *thread_start = (Win32ThreadStart *)param;
+	uptr result = thread_start->entry(thread_start->param);
+	free(thread_start);
+	return (DWORD)result;
 }
 
-void platform::join_thread(void *handle)
+void *platform::create_thread(uptr (*entry)(void *param), void *param)
 {
-	WaitForSingleObject(handle, INFINITE);
+	Win32ThreadStart *thread_start = (Win32ThreadStart *)malloc(sizeof(Win32ThreadStart));
+	thread_start->entry = entry;
+	thread_start->param = param;
+
+	return CreateThread(NULL, 0, thread_trampoline, thread_start, 0, NULL);
+}
+
+uptr platform::join_thread(void *handle)
+{
+	uptr result = WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
+	return result;
 }
 
 void platform::detach_thread(void *handle)

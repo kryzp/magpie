@@ -130,23 +130,29 @@ void App::init()
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 16; j++) {
-			for (int k = 0; k < 16; k++) {
-				float angle = CalcF::sqrt(i*i + j*j + k*k);
+			float angle = CalcF::sqrt(i*i + j*j);
 
-				Mat4 transform = Mat4::transform(
-					Vec3(i, j, k),
-					Quat::from_axis(angle, Vec3::up()),
-					Vec3::unit(),
-					Vec3::zero()
-				);
+			Mat4 transform = Mat4::transform(
+				Vec3(i, j, 0.f),
+				Quat::from_axis(angle, Vec3::up()),
+				Vec3::unit(),
+				Vec3::zero()
+			);
 
-				gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
-
-				object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
-				object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
-			}
+			gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
+			object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
+			object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
 		}
 	}
+
+	gfx::Light light = {};
+	light.type = gfx::Light::TYPE_POINT;
+	light.colour = { 255, 255, 255, 255 };
+	light.intensity = 2.f;
+	light.falloff = 1.f;
+
+	gfx::RenderSceneObject &light_object = render_scene.get_object_from_handle(render_scene.create_object(Mat4::translate(Vec3(0.f, 0.f, 1.f))));
+	light_object.light_handle = render_scene.upload_light(light);
 
 	render_scene.build_batches();
 //	render_scene.merge_meshes();
@@ -184,7 +190,7 @@ void App::init()
 
 	ibl_renderer.init(assets);
 	compute_culling.init(assets);
-	deferred_renderer.init(assets);
+	deferred_renderer.init(&graphics_device, assets);
 	skybox_renderer.init(&graphics_device, assets);
 	post_processing.init(assets);
 	

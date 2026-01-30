@@ -87,7 +87,7 @@ namespace gfx
 		RenderResourceHandle instance_buffer;           // <gpu_types::Instance>
 		RenderResourceHandle compacted_instance_buffer; // <u32>
 		RenderResourceHandle draw_indirect_buffer;      // <gpu_types::Indirect>
-		RenderResourceHandle clear_indirect_buffer;     // <gpu_types::Indirect>
+//		RenderResourceHandle clear_indirect_buffer;     // <gpu_types::Indirect>
 
 		bool instance_buffer_needs_refresh;
 		bool indirect_buffer_needs_refresh;
@@ -142,6 +142,8 @@ namespace gfx
 		const MeshPass &get_pass(MeshPass::Type type) const;
 
 		const Vector<RenderSceneObject> &get_objects() const;
+
+		u32 get_light_count() const;
 
 		const GpuBuffer *get_object_buffer() const;
 		const GpuBuffer *get_material_buffer() const;
