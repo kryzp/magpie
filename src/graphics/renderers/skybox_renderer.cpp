@@ -96,7 +96,7 @@ void SkyboxRenderer::add_render_stages(
 			const Camera &camera = *ctx.scene_view.camera;
 			
 			const Texture *colour = resources.get_texture(data.colour);
-			TextureView cubemap_view = resources.get_texture_view(data.cubemap);
+			const TextureView *cubemap_view = resources.get_texture_view(data.cubemap);
 
 			GraphicsPipelineDef pipeline_def(shader);
 			pipeline_def.has_depth_attachment = true;
@@ -116,8 +116,8 @@ void SkyboxRenderer::add_render_stages(
 
 			args.frame_data_buffer = frame_data->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.cubemap_id = cubemap_view.get_bindless().sampled;
-			args.sampler_id = Sampler::linear.get_bindless().sampler;
+			args.cubemap_id = cubemap_view->get_bindless_sampled();
+			args.sampler_id = Sampler::linear->get_bindless_handle();
 
 			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(st.bind_point, st.pipeline);
@@ -158,8 +158,8 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.hdr_image_id = ctx.device.fetch_texture_view_std(this->hdr_texture).get_bindless().sampled;
-			args.linear_sampler_id = Sampler::linear.get_bindless().sampler;
+			args.hdr_image_id = ctx.device.fetch_texture_view_std(this->hdr_texture)->get_bindless_sampled();
+			args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
 			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
 			pipeline_def.depth_stencil_state.depth_test_enabled = false;

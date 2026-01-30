@@ -33,21 +33,17 @@ bool BindlessResources::is_valid(BindlessHandle handle) const
 	return handle != 0;
 }
 
-BindlessSampler BindlessResources::register_sampler(VkSampler sampler)
+BindlessHandle BindlessResources::register_sampler(VkSampler sampler)
 {
-	BindlessSampler bindless_sampler = {};
-
-	bindless_sampler.sampler = push_update(BINDLESS_SET_SAMPLER, sampler, VK_NULL_HANDLE);
-
-	return bindless_sampler;
+	return push_update(BINDLESS_SET_SAMPLER, sampler, VK_NULL_HANDLE);
 }
 
-BindlessView BindlessResources::register_view(VkImageView view, bool is_sampled, bool is_storage)
+BindlessHandle BindlessResources::register_sampled(VkImageView view)
 {
-	BindlessView bindless_view = {};
+	return push_update(BINDLESS_SET_SAMPLED, VK_NULL_HANDLE, view);
+}
 
-	if (is_sampled) bindless_view.sampled = push_update(BINDLESS_SET_SAMPLED, VK_NULL_HANDLE, view);
-	if (is_storage) bindless_view.storage = push_update(BINDLESS_SET_STORAGE, VK_NULL_HANDLE, view);
-
-	return bindless_view;
+BindlessHandle BindlessResources::register_storage(VkImageView view)
+{
+	return push_update(BINDLESS_SET_STORAGE, VK_NULL_HANDLE, view);
 }

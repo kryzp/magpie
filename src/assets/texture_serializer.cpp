@@ -52,33 +52,30 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 
 		staging_buffer->write(pixels, memory_size, 0);
 
-		gfx::CommandBuffer cmd = device.begin_submit();
+		device.graphics().submit_immediate([&](gfx::CommandBuffer &cmd) -> void {
+			auto copy_barrier = gfx::sync::texture_memory_barrier(
+				gfx_texture,
+				gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_UNDEFINED),
+				gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
+				0, gfx_texture->get_mipmap_count(),
+				0, gfx_texture->get_layer_count()
+			);
 
-		auto copy_barrier = gfx::sync::texture_memory_barrier(
-			gfx_texture,
-			gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_UNDEFINED),
-			gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
-			0, gfx_texture->get_mipmap_count(),
-			0, gfx_texture->get_layer_count()
-		);
+			cmd.pipeline_barrier(0, {}, {}, { copy_barrier });
+			cmd.copy_buffer_to_texture(staging_buffer, gfx_texture);
 
-		cmd.pipeline_barrier(0, {}, {}, { copy_barrier });
-		cmd.copy_buffer_to_texture(staging_buffer, gfx_texture);
+			auto blit_barrier = gfx::sync::texture_memory_barrier(
+				gfx_texture,
+				gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
+				gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_BLIT_DST),
+				0, gfx_texture->get_mipmap_count(),
+				0, gfx_texture->get_layer_count()
+			);
 
-		auto blit_barrier = gfx::sync::texture_memory_barrier(
-			gfx_texture,
-			gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
-			gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_BLIT_DST),
-			0, gfx_texture->get_mipmap_count(),
-			0, gfx_texture->get_layer_count()
-		);
+			cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
+			cmd.generate_mipmaps(gfx_texture);
+		});
 
-		cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
-		cmd.generate_mipmaps(gfx_texture);
-
-		device.end_submit(cmd);
-
-		device.wait_idle();
 		device.destroy_buffer(staging_buffer);
 	} else {
 		failed_to_load = true;

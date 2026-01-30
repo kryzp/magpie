@@ -59,18 +59,16 @@ public:
 	}
 };
 
-#define DECLARE_CLASS(class_, inherits_)						\
-	typedef inherits_ BaseClass;								\
-	typedef class_ ThisClass;									\
-
-#define DB_DATA_DECLARE(class_)									\
+#define DB_DATA_DECLARE(class_, inherits_)						\
 public:															\
 	static const TypeInfo *get_class_static();					\
 	virtual const TypeInfo *get_class_info() const override		\
 	{															\
 		return get_class_static();								\
 	}															\
-private:
+private:														\
+	typedef inherits_ BaseClass;								\
+	typedef class_ ThisClass
 
 #define DB_DATA_BEGIN(class_)									\
 	struct class_##_TYPE_REG {									\

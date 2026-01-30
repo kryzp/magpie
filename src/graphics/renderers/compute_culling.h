@@ -19,6 +19,6 @@ namespace gfx
 		);
 
 	private:
-		gfx::ShaderProgram compute_frustum_culling_program;
+		const ShaderProgram *compute_frustum_culling_program;
 	};
 }

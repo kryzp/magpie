@@ -20,7 +20,7 @@ namespace gfx
 	};
 
 	struct GraphicsPipelineDef {
-		const ShaderProgram &program;
+		const ShaderProgram *program;
 		VkCullModeFlags cull_mode;
 		VkFrontFace front_face;
 		BlendState blend_state;
@@ -38,7 +38,7 @@ namespace gfx
 		float min_sample_shading;
 		u32 view_mask;
 
-		GraphicsPipelineDef(const ShaderProgram &program)
+		GraphicsPipelineDef(const ShaderProgram *program)
 			: program(program)
 			, cull_mode(VK_CULL_MODE_BACK_BIT)
 			, front_face(VK_FRONT_FACE_CLOCKWISE)
@@ -54,9 +54,9 @@ namespace gfx
 	};
 
 	struct ComputePipelineDef {
-		const ShaderProgram &program;
+		const ShaderProgram *program;
 
-		ComputePipelineDef(const ShaderProgram &program)
+		ComputePipelineDef(const ShaderProgram *program)
 			: program(program)
 		{
 		}

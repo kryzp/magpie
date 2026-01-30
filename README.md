@@ -22,10 +22,10 @@ TODO (It looks super cool and awesome trust me).
 	- Multi-Threaded (almost) lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
 	- RTTI macro system allowing for type introspection and other cool stuff
 	- ImGui Integration
+	- Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
 
 ### Ideas / Todo List
 	- More sophisticated debug logging / tracing system
-	- Switch to using timeline semaphores instead of fences
 	- GPU profiler
 	- Multi-Threaded CPU profiler integrated with job system
 	- ImGui visualisation for profilers

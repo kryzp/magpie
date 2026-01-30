@@ -13,7 +13,7 @@ void MeshPass::push_stage(RenderGraph &graph)
 	};
 
 	graph.push_stage<MeshPassStageData>(
-		"Mesh Pass push buffers",
+		"Mesh Pass",
 		RenderStage::TYPE_TRANSFER,
 		[&](RenderGraphBuilder &builder, MeshPassStageData &data) {
 			GpuBufferInfo instance_info = {};
@@ -268,11 +268,11 @@ u32 RenderScene::upload_material(const Material &material, ast::AssetManager &as
 	*/
 
 	gpu_types::GpuMaterial gpu_material = {};
-	gpu_material.diffuse_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture).get_bindless().sampled;
-	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture).get_bindless().sampled;
-	gpu_material.emissive_texture           = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)            ->texture).get_bindless().sampled;
-	gpu_material.metallic_roughness_texture = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)  ->texture).get_bindless().sampled;
-	gpu_material.ambient_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)             ->texture).get_bindless().sampled;
+	gpu_material.diffuse_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture)->get_bindless_sampled();
+	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture)->get_bindless_sampled();
+	gpu_material.emissive_texture           = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)            ->texture)->get_bindless_sampled();
+	gpu_material.metallic_roughness_texture = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)  ->texture)->get_bindless_sampled();
+	gpu_material.ambient_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)             ->texture)->get_bindless_sampled();
 
 	u64 stride = sizeof(gpu_types::GpuMaterial);
 
@@ -343,7 +343,8 @@ void RenderScene::merge_meshes()
 
 	// All meshes in the list *should* have the same vertex type.
 	// If they don't we have a bit of a problem :/.
-	u64 vertex_size = meshes.front().original->vertex_size;
+	const u64 vertex_size = meshes.front().original->vertex_size;
+	const u64 index_size = sizeof(u16);
 
 	u32 total_vertices = 0;
 	u32 total_indices = 0;
@@ -358,8 +359,8 @@ void RenderScene::merge_meshes()
 		mesh.is_merged = true;
 	}
 
-	u64 vb_size = total_vertices * vertex_size;
-	u64 ib_size = total_indices  * sizeof(u16);
+	const u64 vb_size = total_vertices * vertex_size;
+	const u64 ib_size = total_indices  * index_size;
 	
 	if (merged_vertex_buffer->get_size() < vb_size ||
 	    merged_index_buffer->get_size() < ib_size) {
@@ -368,7 +369,7 @@ void RenderScene::merge_meshes()
 		device->destroy_buffer(merged_index_buffer);
 
 		merged_vertex_buffer = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT |
+			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 			vb_size
@@ -382,33 +383,31 @@ void RenderScene::merge_meshes()
 		);
 	}
 	
-	CommandBuffer cmd = device->begin_submit();
-
-	for (auto &mesh : meshes) {
-		VkBufferCopy vertex_copy = {};
-		vertex_copy.srcOffset = 0;
-		vertex_copy.dstOffset = mesh.first_vertex * vertex_size;
-		vertex_copy.size      = mesh.vertex_count * vertex_size;
+	device->graphics().submit_immediate([&](CommandBuffer &cmd) -> void {
+		for (auto &mesh : meshes) {
+			VkBufferCopy vertex_copy = {};
+			vertex_copy.srcOffset = 0;
+			vertex_copy.dstOffset = mesh.first_vertex * vertex_size;
+			vertex_copy.size      = mesh.vertex_count * vertex_size;
 		
-		VkBufferCopy index_copy = {};
-		index_copy.srcOffset = 0;
-		index_copy.dstOffset = mesh.first_index * sizeof(u16);
-		index_copy.size      = mesh.index_count * sizeof(u16);
+			VkBufferCopy index_copy = {};
+			index_copy.srcOffset = 0;
+			index_copy.dstOffset = mesh.first_index * index_size;
+			index_copy.size      = mesh.index_count * index_size;
 
-		cmd.copy_buffer_to_buffer(
-			mesh.original->vertex_buffer,
-			merged_vertex_buffer,
-			{ vertex_copy }
-		);
+			cmd.copy_buffer_to_buffer(
+				mesh.original->vertex_buffer,
+				merged_vertex_buffer,
+				{ vertex_copy }
+			);
 
-		cmd.copy_buffer_to_buffer(
-			mesh.original->index_buffer,
-			merged_index_buffer,
-			{ index_copy }
-		);
-	}
-
-	device->end_submit(cmd);
+			cmd.copy_buffer_to_buffer(
+				mesh.original->index_buffer,
+				merged_index_buffer,
+				{ index_copy }
+			);
+		}
+	});
 }
 
 RenderSceneObject &RenderScene::get_object_from_handle(u32 handle)

@@ -60,7 +60,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		if (physical_texture->is_cubemap())
 			view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 
-		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(physical_texture, view_type, output.texture.range).get_handle();
+		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(physical_texture, view_type, output.texture.range)->get_handle();
 		vk_attachment_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		
 		// TODO: MSAA isn't supported yet.
@@ -97,7 +97,7 @@ const Texture *RenderStageResources::get_texture(RenderResourceHandle handle) co
 	return (const Texture *)graph.resources[handle].physical_resource;
 }
 
-TextureView RenderStageResources::get_texture_view(RenderResourceHandle handle) const
+const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle handle) const
 {
 	RenderResource &resource = graph.resources[handle];
 
@@ -161,8 +161,8 @@ RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &in
 	resource.first_stage_index = current_stage.index;
 	resource.last_stage_index = -1u;
 	
-	resource.initial_access = TEXTURE_ACCESS_UNDEFINED;
-	resource.subresource_states.resize(info.mips * info.layers, resource.initial_access);
+	resource.initial_subresource_states.resize(info.mips * info.layers, TEXTURE_ACCESS_UNDEFINED);
+	resource.subresource_states.resize(info.mips * info.layers, TEXTURE_ACCESS_UNDEFINED);
 
 	resource.texture_info = info;
 	
@@ -182,8 +182,8 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 	resource.first_stage_index = current_stage.index;
 	resource.last_stage_index = -1u;
 	
-	resource.initial_access = GPU_BUFFER_ACCESS_UNDEFINED;
-	resource.subresource_states.resize(1, resource.initial_access);
+	resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
+	resource.subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
 	
 	resource.buffer_info = info;
 
@@ -290,6 +290,10 @@ RenderResourceHandle RenderGraphBuilder::read_buffer(RenderResourceHandle handle
 
 RenderResourcePool::RenderResourcePool(RenderGraph &graph)
 	: graph(graph)
+	, current_time(0)
+	, gpu_completed_time(0)
+	, texture_pool()
+	, buffer_pool()
 {
 }
 
@@ -297,8 +301,29 @@ RenderResourcePool::~RenderResourcePool()
 {
 }
 
+void RenderResourcePool::destroy()
+{
+	for (auto &t : texture_pool) {
+		assert(t.in_use == false);
+		graph.get_device().destroy_texture(t.texture);
+		t.texture = nullptr;
+	}
+
+	for (auto &b : buffer_pool) {
+		assert(b.in_use == false);
+		graph.get_device().destroy_buffer(b.buffer);
+		b.buffer = nullptr;
+	}
+
+	texture_pool.clear();
+	buffer_pool.clear();
+}
+
 void RenderResourcePool::flush()
 {
+	current_time = graph.get_device().graphics().get_timeline_value() + 1;
+	gpu_completed_time = graph.get_device().graphics().get_completed_timeline_value();
+
 	for (auto &t : texture_pool)
 		t.in_use = false;
 
@@ -334,29 +359,13 @@ void RenderResourcePool::flush()
 	*/
 }
 
-void RenderResourcePool::destroy()
-{
-	for (auto &t : texture_pool) {
-		assert(t.in_use == false);
-		graph.get_device().destroy_texture(t.texture);
-		t.texture = nullptr;
-	}
-
-	for (auto &b : buffer_pool) {
-		assert(b.in_use == false);
-		graph.get_device().destroy_buffer(b.buffer);
-		b.buffer = nullptr;
-	}
-
-	texture_pool.clear();
-	buffer_pool.clear();
-}
-
 const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
 {
 	for (auto &t : texture_pool) {
-		if (!t.in_use && t.info == info) {
+		bool gpu_done = t.last_frame_used <= gpu_completed_time;
+		if (!t.in_use && gpu_done && t.info == info) {
 			t.in_use = true;
+			t.last_frame_used = current_time;
 			return t.texture;
 		}
 	}
@@ -379,7 +388,9 @@ const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
 	);
 
 	texture.info = info;
+
 	texture.in_use = true;
+	texture.last_frame_used = current_time;
 
 	texture_pool.push_back(texture);
 
@@ -400,8 +411,10 @@ void RenderResourcePool::release_texture(const Texture *texture, const Attachmen
 const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
 {
 	for (auto &b : buffer_pool) {
-		if (!b.in_use && b.info == info) {
+		bool gpu_done = b.last_frame_used <= gpu_completed_time;
+		if (!b.in_use && gpu_done && b.info == info) {
 			b.in_use = true;
+			b.last_frame_used = current_time;
 			return b.buffer;
 		}
 	}
@@ -415,7 +428,9 @@ const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
 	);
 
 	buffer.info = info;
+
 	buffer.in_use = true;
+	buffer.last_frame_used = current_time;
 
 	buffer_pool.push_back(buffer);
 
@@ -555,16 +570,18 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 					r.physical_resource = pool.acquire_buffer(r.buffer_info);
 					break;
 			}
+
+			auto access = imported_access_cache.find(r.physical_resource);
+			if (access != imported_access_cache.end())
+				r.initial_subresource_states = access->second;
 		}
 	}
 }
 
 void RenderGraph::generate_barriers()
 {
-	for (auto &r : resources) {
-		for (auto &s : r.subresource_states)
-			s = r.initial_access;
-	}
+	for (auto &r : resources)
+		r.subresource_states = r.initial_subresource_states;
 
 	for (auto &stage : stages) {
 		if (stage.is_culled)
@@ -807,7 +824,7 @@ void RenderGraph::execute(
 	present_to_swapchain(cmd, swapchain);
 
 	for (auto &r : resources) {
-		if (!r.physical_resource || !r.is_imported)
+		if (!r.physical_resource)
 			continue;
 
 		imported_access_cache[r.physical_resource] = r.subresource_states;
@@ -826,17 +843,10 @@ void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swap
 			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_DST),
 			0, swapchain_dst_texture->get_mipmap_count(),
 			0, swapchain_dst_texture->get_layer_count()
-		),
-		sync::texture_memory_barrier(
-			swapchain_src_texture,
-			sync::get_src_texture_access((TextureAccessType)resources[backbuffer_handle].subresource_states[0]),
-			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_SRC),
-			0, swapchain_src_texture->get_mipmap_count(),
-			0, swapchain_src_texture->get_layer_count()
 		)
 	};
 
-	//transition_texture(image_barriers, resources[backbuffer_handle], TEXTURE_ACCESS_BLIT_SRC, SubresourceRange::all_colour());
+	transition_texture(image_barriers, resources[backbuffer_handle], TEXTURE_ACCESS_BLIT_SRC, SubresourceRange::all_colour());
 
 	cmd.pipeline_barrier(0, {}, {}, image_barriers);
 
@@ -889,13 +899,14 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 	resource.last_stage_index = -1u;
 
 	resource.physical_resource = texture;
-
-	if (imported_access_cache.find(texture) != imported_access_cache.end())
-		resource.subresource_states = imported_access_cache[texture];
+	
+	auto access = imported_access_cache.find(texture);
+	if (access != imported_access_cache.end())
+		resource.initial_subresource_states = access->second;
 	else
-		resource.subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), TEXTURE_ACCESS_UNDEFINED);
+		resource.initial_subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), TEXTURE_ACCESS_UNDEFINED);
 
-	resource.initial_access = resource.subresource_states[0];
+	resource.subresource_states = resource.subresource_states;
 
 	resource.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
 	resource.texture_info.size_x = texture->get_width();
@@ -930,12 +941,13 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 
 	resource.physical_resource = buffer;
 
-	if (imported_access_cache.find(buffer) != imported_access_cache.end())
-		resource.subresource_states = imported_access_cache[buffer];
+	auto access = imported_access_cache.find(buffer);
+	if (access != imported_access_cache.end())
+		resource.initial_subresource_states = access->second;
 	else
-		resource.subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
+		resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
 
-	resource.initial_access = resource.subresource_states[0];
+	resource.subresource_states = resource.subresource_states;
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();

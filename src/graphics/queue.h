@@ -2,7 +2,10 @@
 
 #include <volk/volk.h>
 
+#include <functional>
+
 #include "core/types.h"
+#include "container/vector.h"
 
 #include "command_pool.h"
 
@@ -17,31 +20,36 @@ namespace gfx
 	class Queue {
 		friend class Device;
 
-		struct SyncData {
-			VkFence instant_submit_fence;
-			CommandPool command_pool;
-		};
-
 	public:
 		Queue();
 		~Queue();
 
 		void destroy();
 
+		void reset_pool();
+
 		void wait_idle() const;
+		void wait_until(u64 value) const;
 
-		void next_frame();
+		CommandBuffer get_command_buffer();
 
-		void present(const Swapchain &swapchain, const VkSemaphore &wait);
-
-		CommandBuffer begin_submit(VkFence fence = VK_NULL_HANDLE);
-
-		void end_submit(
+		// Returns the new timeline value that marks this frames' completion.
+		u64 submit(
 			CommandBuffer &cmd,
-			const VkSemaphoreSubmitInfo *signal = nullptr,
-			const VkSemaphoreSubmitInfo *wait = nullptr,
-			VkFence fence = VK_NULL_HANDLE
+			const Vector<VkSemaphoreSubmitInfo> &waits,
+			const Vector<VkSemaphoreSubmitInfo> &signals,
+			VkFence fence
 		);
+
+		void submit_immediate(const std::function<void(CommandBuffer &cmd)> &record);
+
+		void present(
+			const Swapchain &swapchain,
+			const Vector<VkSemaphore> &waits
+		);
+
+		u64 get_timeline_value() const;
+		u64 get_completed_timeline_value() const;
 
 		const VkQueue &get_handle() const
 		{
@@ -54,12 +62,19 @@ namespace gfx
 		}
 
 	private:
-		SyncData &get_current_sync_data();
-
 		Device *device;
 
 		VkQueue handle;
 		u32 family_index;
+
+		VkSemaphore timeline_semaphore;
+		u64 timeline_value;
+
+		struct SyncData {
+			CommandPool command_pool;
+		};
+
+		SyncData &get_current_sync_data();
 
 		SyncData frames[FRAMES_IN_FLIGHT];
 	};

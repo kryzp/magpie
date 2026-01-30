@@ -27,8 +27,8 @@ namespace gfx
 		);
 
 	private:
-		ShaderProgram brdf_shader;
-		ShaderProgram irradiance_shader;
-		ShaderProgram prefilter_shader;
+		const ShaderProgram *brdf_shader;
+		const ShaderProgram *irradiance_shader;
+		const ShaderProgram *prefilter_shader;
 	};
 }

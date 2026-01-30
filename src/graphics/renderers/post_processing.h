@@ -20,7 +20,7 @@ namespace gfx
 		void set_exposure(float exp);
 		
 	private:
-		ShaderProgram shader;
+		const ShaderProgram *tonemapping_program;
 		float exposure;
 	};
 }

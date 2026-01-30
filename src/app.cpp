@@ -5,20 +5,9 @@
 #include "core/scratch.h"
 #include "platform/platform.h"
 #include "math/calc.h"
-#include "assets/model_serializer.h"
 #include "job/job.h"
-
-struct FrameData {
-	Mat4 view;
-	Mat4 projection;
-	Mat4 view_projection;
-	Mat4 view_projection_no_translation;
-	Mat4 inv_view;
-	Mat4 inv_projection;
-	Vec3 camera_position;
-	Vec2 window_resolution;
-	float time;
-};
+#include "assets/model_serializer.h"
+#include "graphics/gpu_types.h"
 
 void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
@@ -56,23 +45,13 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 	for (int i = 0; i < array_size(basis); i++)
 		basis[i] *= move_speed * dt;
 	
-	if (input.kb_down[inp::KEYBOARD_KEY_d])
-		camera.move_by(basis[0]);
+	float hori = input.kb_down[inp::KEYBOARD_KEY_d]	    -  input.kb_down[inp::KEYBOARD_KEY_a];
+	float frwd = input.kb_down[inp::KEYBOARD_KEY_w]	    -  input.kb_down[inp::KEYBOARD_KEY_s];
+	float vert = input.kb_down[inp::KEYBOARD_KEY_space] - (input.kb_down[inp::KEYBOARD_KEY_left_shift] + input.kb_down[inp::KEYBOARD_KEY_right_shift]);
 
-	if (input.kb_down[inp::KEYBOARD_KEY_a])
-		camera.move_by(-basis[0]);
-
-	if (input.kb_down[inp::KEYBOARD_KEY_w])
-		camera.move_by(basis[1]);
-
-	if (input.kb_down[inp::KEYBOARD_KEY_s])
-		camera.move_by(-basis[1]);
-
-	if (input.kb_down[inp::KEYBOARD_KEY_space])
-		camera.move_by(basis[2]);
-
-	if (input.kb_down[inp::KEYBOARD_KEY_left_shift] || input.kb_down[inp::KEYBOARD_KEY_right_shift])
-		camera.move_by(-basis[2]);
+	camera.move_by(basis[0] * hori);
+	camera.move_by(basis[1] * frwd);
+	camera.move_by(basis[2] * vert);
 
 	camera.recompute();
 
@@ -173,7 +152,7 @@ void App::init()
 	frame_data_buffer = graphics_device.alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(FrameData)
+		sizeof(gfx::gpu_types::GpuFrameData)
 	);
 
 	Mat4 capture_view_matrices[] = {
@@ -208,6 +187,7 @@ void App::init()
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
 
 	// Test out the job system.
+	/*
 	{
 		JOB_SPIN_SCOPE();
 
@@ -217,6 +197,7 @@ void App::init()
 
 		job::parallel_for(100, my_parallel_for_test);
 	}
+	*/
 
 	global_timer.start();
 	delta_timer.start();
@@ -247,6 +228,8 @@ void App::init()
 
 void App::destroy()
 {
+	graphics_device.graphics().wait_idle();
+
 	graphics_device.destroy_texture(brdf_texture);
 	graphics_device.destroy_texture(irradiance_cubemap);
 	graphics_device.destroy_texture(prefilter_cubemap);
@@ -298,12 +281,16 @@ bool App::tick(const inp::InputState &input)
 		delta_accumulator -= fixed_dt;
 	}
 
+	const float alpha = delta_accumulator / fixed_dt;
+
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	{
 		gfx::SceneView scene_view = {
 			.scene = &this->render_scene,
 			.camera = &this->camera
 		};
+
+		ImGui::Render();
 
 		render(dt, elapsed_time, cmd);
 		add_imgui_render_stage(render_graph, swapchain_src);
@@ -350,7 +337,7 @@ void App::fixed_update(float dt)
 
 void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 {
-	FrameData data = {};
+	gfx::gpu_types::GpuFrameData data = {};
 	data.view = camera.get_view();
 	data.projection = camera.get_projection();
 	data.view_projection = camera.get_projection() * camera.get_view();
@@ -361,7 +348,7 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	data.window_resolution = Vec2(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 	data.time = elapsed_time;
 
-	frame_data_buffer->write(&data, sizeof(FrameData), 0);
+	frame_data_buffer->write(&data, sizeof(gfx::gpu_types::GpuFrameData), 0);
 
 	struct FooBar { int baz; };
 

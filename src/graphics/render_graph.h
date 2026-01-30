@@ -209,7 +209,7 @@ namespace gfx
 		
 		const void *physical_resource;
 
-		u32 initial_access;
+		Vector<u32> initial_subresource_states;
 
 		// For textures this takes the form of a flat 2D array [MIPS][LAYERS]
 		// For buffers this just contains one state
@@ -274,7 +274,7 @@ namespace gfx
 		RenderInfo build_rendering_info() const;
 		
 		const Texture *get_texture(RenderResourceHandle handle) const;
-		TextureView get_texture_view(RenderResourceHandle handle) const;
+		const TextureView *get_texture_view(RenderResourceHandle handle) const;
 		const GpuBuffer *get_buffer(RenderResourceHandle handle) const;
 
 	private:
@@ -348,9 +348,10 @@ namespace gfx
 	public:
 		RenderResourcePool(RenderGraph &graph);
 		~RenderResourcePool();
+
+		void destroy();
 		
 		void flush();
-		void destroy();
 
 		const Texture *acquire_texture(const AttachmentInfo &info);
 //		void release_texture(const Texture *texture, const AttachmentInfo &info);
@@ -361,16 +362,21 @@ namespace gfx
 	private:
 		RenderGraph &graph;
 
+		u64 current_time;
+		u64 gpu_completed_time;
+
 		struct PooledTexture {
 			const Texture *texture;
 			AttachmentInfo info;
 			bool in_use;
+			u64 last_frame_used;
 		};
 
 		struct PooledBuffer {
 			const GpuBuffer *buffer;
 			GpuBufferInfo info;
 			bool in_use;
+			u64 last_frame_used;
 		};
 
 		Vector<PooledTexture> texture_pool;

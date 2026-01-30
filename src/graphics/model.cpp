@@ -41,24 +41,21 @@ void Mesh::init(
 		index_buffer_size
 	);
 
-	CommandBuffer cmd = device->begin_submit();
+	device->graphics().submit_immediate([&](CommandBuffer &cmd) -> void {
+		VkBufferCopy stage_to_vertex_copy = {};
+		stage_to_vertex_copy.srcOffset = 0;
+		stage_to_vertex_copy.dstOffset = 0;
+		stage_to_vertex_copy.size = vertex_buffer_size;
 
-	VkBufferCopy stage_to_vertex_copy = {};
-	stage_to_vertex_copy.srcOffset = 0;
-	stage_to_vertex_copy.dstOffset = 0;
-	stage_to_vertex_copy.size = vertex_buffer_size;
+		VkBufferCopy stage_to_index_copy = {};
+		stage_to_index_copy.srcOffset = vertex_buffer_size;
+		stage_to_index_copy.dstOffset = 0;
+		stage_to_index_copy.size = index_buffer_size;
 
-	VkBufferCopy stage_to_index_copy = {};
-	stage_to_index_copy.srcOffset = vertex_buffer_size;
-	stage_to_index_copy.dstOffset = 0;
-	stage_to_index_copy.size = index_buffer_size;
+		cmd.copy_buffer_to_buffer(staging_buffer, vertex_buffer, { stage_to_vertex_copy });
+		cmd.copy_buffer_to_buffer(staging_buffer, index_buffer, { stage_to_index_copy });
+	});
 
-	cmd.copy_buffer_to_buffer(staging_buffer, vertex_buffer, { stage_to_vertex_copy });
-	cmd.copy_buffer_to_buffer(staging_buffer, index_buffer, { stage_to_index_copy });
-
-	device->end_submit(cmd);
-
-	device->wait_idle();
 	device->destroy_buffer(staging_buffer);
 }
 

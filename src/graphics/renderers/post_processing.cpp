@@ -10,7 +10,7 @@ void PostProcessingRenderer::init(ast::AssetManager &assets)
 {
 	exposure = 1.2f;
 
-	shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_tonemapping"))->shader;
+	tonemapping_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_tonemapping"))->shader;
 }
 
 void PostProcessingRenderer::destroy()
@@ -45,7 +45,7 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			const Texture *in_texture = resources.get_texture(data.lighting);
 			const Texture *out_texture = resources.get_texture(data.colour);
 
-			ComputePipelineDef pipeline_def(shader);
+			ComputePipelineDef pipeline_def(tonemapping_program);
 			PipelineState pipeline_st = ctx.device.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
@@ -62,8 +62,8 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			args.width = in_texture->get_width();
 			args.height = in_texture->get_height();
 			args.exposure = this->exposure;
-			args.input_image_id = ctx.device.fetch_texture_view_std(in_texture).get_bindless().sampled;
-			args.output_image_id = ctx.device.fetch_texture_view_std(out_texture).get_bindless().storage;
+			args.input_image_id = ctx.device.fetch_texture_view_std(in_texture)->get_bindless_sampled();
+			args.output_image_id = ctx.device.fetch_texture_view_std(out_texture)->get_bindless_storage();
 		
 			cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(args), &args);
 

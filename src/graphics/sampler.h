@@ -10,7 +10,7 @@ namespace gfx
 		friend class Device;
 
 	public:
-		static Sampler linear;
+		static Sampler *linear;
 
 		Sampler()
 			: handle()
@@ -19,7 +19,7 @@ namespace gfx
 			, wrap_y()
 			, wrap_z()
 			, border_colour()
-			, bindless()
+			, bindless_handle()
 		{
 		}
 
@@ -55,9 +55,9 @@ namespace gfx
 			return border_colour;
 		}
 
-		const BindlessSampler &get_bindless() const
+		BindlessHandle get_bindless_handle() const
 		{
-			return bindless;
+			return bindless_handle;
 		}
 
 	private:
@@ -70,6 +70,6 @@ namespace gfx
 
 		VkBorderColor border_colour;
 
-		BindlessSampler bindless;
+		BindlessHandle bindless_handle;
 	};
 }

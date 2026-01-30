@@ -72,7 +72,7 @@ void IBLRenderer::render_environment_map(
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const IrradianceStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 
-			TextureView environment_map_texture = resources.get_texture_view(data.environment_map);
+			const TextureView *environment_map_texture = resources.get_texture_view(data.environment_map);
 
 			GraphicsPipelineDef pipeline_def(irradiance_shader);
 			pipeline_def.view_mask = 0b111111;
@@ -92,8 +92,8 @@ void IBLRenderer::render_environment_map(
 			
 			args.transform_matrices = capture_transforms->get_device_address();
 			args.vertices = skybox.vertex_buffer->get_device_address();
-			args.environment_map = environment_map_texture.get_bindless().sampled;
-			args.linear_sampler = Sampler::linear.get_bindless().sampler;
+			args.environment_map = environment_map_texture->get_bindless_sampled();
+			args.linear_sampler = Sampler::linear->get_bindless_handle();
 
 			cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
@@ -129,7 +129,7 @@ void IBLRenderer::render_environment_map(
 			[=](const RenderContext &ctx, const RenderStageResources &resources, const PrefilterStageData &data) -> void {
 				CommandBuffer &cmd = ctx.cmd;
 
-				TextureView environment_map_texture = resources.get_texture_view(data.environment_map);
+				const TextureView *environment_map_view = resources.get_texture_view(data.environment_map);
 
 				GraphicsPipelineDef pipeline_def(prefilter_shader);
 				pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
@@ -150,8 +150,8 @@ void IBLRenderer::render_environment_map(
 				
 				args.transform_matrices = capture_transforms->get_device_address();
 				args.vertices = skybox.vertex_buffer->get_device_address();
-				args.environment_map = environment_map_texture.get_bindless().sampled;
-				args.linear_sampler = Sampler::linear.get_bindless().sampler;
+				args.environment_map = environment_map_view->get_bindless_sampled();
+				args.linear_sampler = Sampler::linear->get_bindless_handle();
 				args.roughness = (float)i / (float)(mip_levels - 1);
 
 				cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);

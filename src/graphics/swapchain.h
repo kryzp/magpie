@@ -55,12 +55,12 @@ namespace gfx
 			return &textures[current_texture_index];
 		}
 
-		TextureView &get_current_view()
+		TextureView *get_current_view()
 		{
 			return views[current_texture_index];
 		}
 
-		const TextureView &get_current_view() const
+		const TextureView *get_current_view() const
 		{
 			return views[current_texture_index];
 		}
@@ -92,7 +92,7 @@ namespace gfx
 		u32 current_texture_index;
 
 		Vector<Texture> textures;
-		Vector<TextureView> views;
+		Vector<TextureView *> views;
 
 		u32 width;
 		u32 height;

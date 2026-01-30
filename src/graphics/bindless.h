@@ -17,15 +17,6 @@ namespace gfx
 		BINDLESS_SET_MAX_ENUM
 	};
 
-	struct BindlessSampler {
-		BindlessHandle sampler;
-	};
-
-	struct BindlessView {
-		BindlessHandle sampled;
-		BindlessHandle storage;
-	};
-
 	class BindlessResources {
 		friend class Device;
 
@@ -44,8 +35,9 @@ namespace gfx
 
 		bool is_valid(BindlessHandle handle) const;
 
-		BindlessSampler register_sampler(VkSampler sampler);
-		BindlessView register_view(VkImageView view, bool is_sampled, bool is_storage);
+		BindlessHandle register_sampler(VkSampler sampler);
+		BindlessHandle register_sampled(VkImageView view);
+		BindlessHandle register_storage(VkImageView view);
 
 		const VkDescriptorSetLayout *get_layouts() const
 		{

@@ -35,7 +35,7 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 	}
 
 	gfx::Device &device = assets.get_device();
-	gfx::ShaderProgram gfx_shader = device.create_shader_program(paths);
+	gfx::ShaderProgram *gfx_shader = device.create_shader_program(paths);
 	ShaderAsset *asset = new ShaderAsset(gfx_shader, device);
 
 	if (failed_to_load)

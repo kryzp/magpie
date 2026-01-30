@@ -29,11 +29,11 @@ namespace gfx
 		Device *device;
 		Mesh mesh;
 
-		const Texture *hdr_texture;
-
 		Texture *cubemap;
 
-		ShaderProgram shader;
-		ShaderProgram hdr_to_cubemap_shader;
+		const Texture *hdr_texture;
+
+		const ShaderProgram *shader;
+		const ShaderProgram *hdr_to_cubemap_shader;
 	};
 }

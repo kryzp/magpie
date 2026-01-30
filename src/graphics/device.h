@@ -51,8 +51,7 @@ namespace gfx
 		CommandBuffer begin_frame(Swapchain &swapchain);
 		void end_frame(const Swapchain &swapchain, CommandBuffer &cmd);
 
-		CommandBuffer begin_submit();
-		void end_submit(CommandBuffer &cmd);
+		Queue &graphics();
 
 		// ---
 
@@ -67,8 +66,8 @@ namespace gfx
 
 		// ---
 
-		VkPipelineLayout create_pipeline_layout(const ShaderProgram &program);
-		VkPipelineLayout fetch_pipeline_layout(const ShaderProgram &program);
+		VkPipelineLayout create_pipeline_layout(const ShaderProgram *program);
+		VkPipelineLayout fetch_pipeline_layout(const ShaderProgram *program);
 		void destroy_pipeline_layout(VkPipelineLayout layout);
 
 		// ---
@@ -83,7 +82,7 @@ namespace gfx
 
 		// ---
 
-		Sampler create_sampler(
+		Sampler *create_sampler(
 			VkFilter filter,
 			VkSamplerAddressMode wrap_x = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 			VkSamplerAddressMode wrap_y = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -91,7 +90,7 @@ namespace gfx
 			VkBorderColor border_colour = VK_BORDER_COLOR_INT_OPAQUE_BLACK
 		);
 
-		void destroy_sampler(const Sampler &sampler);
+		void destroy_sampler(const Sampler *sampler);
 
 		// ---
 
@@ -116,21 +115,21 @@ namespace gfx
 
 		// ---
 
-		TextureView create_texture_view(
+		TextureView *create_texture_view(
 			const Texture *texture,
 			VkImageViewType type,
 			const SubresourceRange &range
 		);
 
-		TextureView fetch_texture_view(
+		TextureView *fetch_texture_view(
 			const Texture *texture,
 			VkImageViewType type,
 			const SubresourceRange &range
 		);
 
-		TextureView fetch_texture_view_std(const Texture *texture);
+		TextureView *fetch_texture_view_std(const Texture *texture);
 
-		void destroy_texture_view(const TextureView &texture_view);
+		void destroy_texture_view(const TextureView *texture_view);
 
 		// ---
 
@@ -144,8 +143,8 @@ namespace gfx
 		ShaderStage load_shader_stage_from_bytecode(const String &path);
 		void destroy_shader_stage(const ShaderStage &stage);
 
-		ShaderProgram create_shader_program(const Vector<String> &stage_paths);
-		void destroy_shader_program(const ShaderProgram &program);
+		ShaderProgram *create_shader_program(const Vector<String> &stage_paths);
+		void destroy_shader_program(const ShaderProgram *program);
 
 		// ---
 		
@@ -185,9 +184,6 @@ namespace gfx
 		void destroy_bindless();
 		void apply_bindless_updates();
 
-		VkSemaphore get_current_render_finished_semaphore();
-		VkSemaphore get_current_image_available_semaphore();
-		
 		void destroy_imgui();
 
 		VkInstance instance;
@@ -208,9 +204,9 @@ namespace gfx
 		u32 current_frame_index;
 
 		struct PerFrameData {
-			VkFence in_flight_fence;
-			VkSemaphore image_available_semaphore;
-			VkSemaphore render_finished_semaphore;
+			u64 expected_timeline_value;
+			VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
+			VkSemaphore render_finished_semaphore; // Signaled when OS allows us to present.
 		};
 
 		PerFrameData per_frame_data[FRAMES_IN_FLIGHT];
@@ -225,7 +221,7 @@ namespace gfx
 		// TODO: Should this be moved out?
 		BindlessResources bindless;
 
-		HashMap<u64, TextureView> texture_view_cache;
+		HashMap<u64, TextureView *> texture_view_cache;
 		HashMap<u64, VkPipeline> pipeline_cache;
 		HashMap<u64, VkPipelineLayout> pipeline_layout_cache;
 

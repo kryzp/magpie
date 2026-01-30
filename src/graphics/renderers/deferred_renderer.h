@@ -45,8 +45,8 @@ namespace gfx
 
 		GBuffer gbuffer;
 
-		ShaderProgram model_shader;
-		ShaderProgram ambient_lighting_shader;
-		ShaderProgram direct_lighting_point_shader;
+		const ShaderProgram *model_shader;
+		const ShaderProgram *ambient_lighting_shader;
+		const ShaderProgram *direct_lighting_point_shader;
 	};
 }

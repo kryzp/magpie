@@ -10,6 +10,18 @@ namespace gfx
 {
 	namespace gpu_types
 	{
+		struct GpuFrameData {
+			Mat4 view;
+			Mat4 projection;
+			Mat4 view_projection;
+			Mat4 view_projection_no_translation;
+			Mat4 inv_view;
+			Mat4 inv_projection;
+			Vec3 camera_position;
+			Vec2 window_resolution;
+			float time;
+		};
+
 		struct GpuModelVertex {
 			Vec3 position;
 			Vec2 texcoord;

@@ -97,7 +97,7 @@ void DeferredRenderer::add_render_stages(
 				args.vertex_buffer = mesh->original->vertex_buffer->get_device_address();
 				args.instance_buffer = instance_buffer->get_device_address();
 				args.material_id = b.material_id;
-				args.sampler = Sampler::linear.get_bindless().sampler;
+				args.sampler = Sampler::linear->get_bindless_handle();
 
 				cmd.push_constants(
 					pipeline_st.layout,
@@ -176,18 +176,18 @@ void DeferredRenderer::add_render_stages(
 
 			pc_ambient.frame_data_buffer = frame_data->get_device_address();
 			
-			pc_ambient.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION]).get_bindless().sampled;
-			pc_ambient.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO]).get_bindless().sampled;
-			pc_ambient.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL]).get_bindless().sampled;
-			pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE]).get_bindless().sampled;
-			pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS]).get_bindless().sampled;
+			pc_ambient.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION])             ->get_bindless_sampled();
+			pc_ambient.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO])               ->get_bindless_sampled();
+			pc_ambient.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL])               ->get_bindless_sampled();
+			pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE])             ->get_bindless_sampled();
+			pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS])   ->get_bindless_sampled();
 			
-			pc_ambient.irradiance_map = resources.get_texture_view(data.irradiance).get_bindless().sampled;
-			pc_ambient.prefilter_map = resources.get_texture_view(data.prefilter).get_bindless().sampled;
+			pc_ambient.irradiance_map = resources.get_texture_view(data.irradiance)->get_bindless_sampled();
+			pc_ambient.prefilter_map = resources.get_texture_view(data.prefilter)->get_bindless_sampled();
 
-			pc_ambient.brdf_lut = resources.get_texture_view(data.brdf).get_bindless().sampled;
+			pc_ambient.brdf_lut = resources.get_texture_view(data.brdf)->get_bindless_sampled();
 
-			pc_ambient.linear_sampler = Sampler::linear.get_bindless().sampler;
+			pc_ambient.linear_sampler = Sampler::linear->get_bindless_handle();
 
 			cmd.push_constants(ambient_pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc_ambient), &pc_ambient);
 

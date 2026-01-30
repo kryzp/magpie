@@ -7,7 +7,7 @@ namespace ast
 	struct ShaderAsset : public Asset {
 		AST_DEFINE_ASSET(ASSET_TYPE_SHADER);
 
-		ShaderAsset(const gfx::ShaderProgram &shader, gfx::Device &device)
+		ShaderAsset(const gfx::ShaderProgram *shader, gfx::Device &device)
 			: shader(shader)
 			, device(device)
 		{
@@ -19,7 +19,7 @@ namespace ast
 				device.destroy_shader_program(shader);
 		}
 
-		gfx::ShaderProgram shader;
+		const gfx::ShaderProgram *shader;
 
 	private:
 		gfx::Device &device;

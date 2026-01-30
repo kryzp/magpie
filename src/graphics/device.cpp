@@ -377,15 +377,19 @@ void Device::init()
 	VkApplicationInfo core_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = DEFAULT_WINDOW_TITLE,
-		.applicationVersion = VK_MAKE_API_VERSION(APP_VERSION_VARIANT,
-							  APP_VERSION_MAJOR,
-							  APP_VERSION_MINOR,
-							  APP_VERSION_PATCH),
+		.applicationVersion = VK_MAKE_API_VERSION(
+			APP_VERSION_VARIANT,
+			APP_VERSION_MAJOR,
+			APP_VERSION_MINOR,
+			APP_VERSION_PATCH
+		),
 		.pEngineName = ENGINE_NAME,
-		.engineVersion = VK_MAKE_API_VERSION(ENGINE_VERSION_VARIANT,
-						     ENGINE_VERSION_MAJOR,
-						     ENGINE_VERSION_MINOR,
-						     ENGINE_VERSION_PATCH),
+		.engineVersion = VK_MAKE_API_VERSION(
+			ENGINE_VERSION_VARIANT,
+			ENGINE_VERSION_MAJOR,
+			ENGINE_VERSION_MINOR,
+			ENGINE_VERSION_PATCH
+		),
 		.apiVersion = VK_API_VERSION_1_4
 	};
 
@@ -579,6 +583,7 @@ void Device::init()
 	vulkan12_features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	vulkan12_features.bufferDeviceAddress = VK_TRUE;
 	vulkan12_features.scalarBlockLayout = VK_TRUE;
+	vulkan12_features.timelineSemaphore = VK_TRUE;
 	vulkan12_features.pNext = &vulkan11_features;
 
 	VkPhysicalDeviceVulkan13Features vulkan13_features = {};
@@ -627,27 +632,31 @@ void Device::init()
 	);
 
 	debug_log("Created logical device.");
-
-	VkSemaphoreCreateInfo semaphore_create_info = {};
-	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	
-	// TODO: MOVE THIS SHIT INTO THE QUEUE CLASS!!!!
-	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		graphics_queue.frames[i].command_pool = create_command_pool(graphics_queue.family_index);
+	// TODO: MOVE THIS INTO THE QUEUE CLASS!!!!
+	graphics_queue.timeline_value = 0;
 
-		VkFenceCreateInfo instant_submit_fence_create_info = {};
-		instant_submit_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		instant_submit_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	VkSemaphoreTypeCreateInfo timeline_type_create_info = {};
+	timeline_type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+	timeline_type_create_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+	timeline_type_create_info.initialValue = graphics_queue.timeline_value;
+
+	VkSemaphoreCreateInfo timeline_semaphore_create_info = {};
+	timeline_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	timeline_semaphore_create_info.flags = 0;
+	timeline_semaphore_create_info.pNext = &timeline_type_create_info;
 		
-		GFX_VK_CHECK(
-			vkCreateFence(
-				device,
-				&instant_submit_fence_create_info, nullptr,
-				&graphics_queue.frames[i].instant_submit_fence
-			),
-			"Failed to create queue frame instant submit fence."
-		);
-	}
+	GFX_VK_CHECK(
+		vkCreateSemaphore(
+			device,
+			&timeline_semaphore_create_info, nullptr,
+			&graphics_queue.timeline_semaphore
+		),
+		"Failed to create timeline semaphore for queue."
+	);
+	
+	for (int i = 0; i < FRAMES_IN_FLIGHT; i++)
+		graphics_queue.frames[i].command_pool = create_command_pool(graphics_queue.family_index);
 	
 	debug_log("Initialised graphics queue.");
 
@@ -656,19 +665,17 @@ void Device::init()
 		in_flight_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		in_flight_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		GFX_VK_CHECK(
-			vkCreateFence(
-				device,
-				&in_flight_fence_create_info, nullptr,
-				&per_frame_data[i].in_flight_fence
-			),
-			"Failed to create queue frame in flight fence."
-		);
+		per_frame_data[i].expected_timeline_value = 0;
+
+		VkSemaphoreCreateInfo binary_semaphore_create_info = {};
+		binary_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		binary_semaphore_create_info.flags = 0;
+		binary_semaphore_create_info.pNext = nullptr;
 
 		GFX_VK_CHECK(
 			vkCreateSemaphore(
 				device,
-				&semaphore_create_info, nullptr,
+				&binary_semaphore_create_info, nullptr,
 				&per_frame_data[i].image_available_semaphore
 			),
 			"Failed to create image available semaphore."
@@ -677,7 +684,7 @@ void Device::init()
 		GFX_VK_CHECK(
 			vkCreateSemaphore(
 				device,
-				&semaphore_create_info, nullptr,
+				&binary_semaphore_create_info, nullptr,
 				&per_frame_data[i].render_finished_semaphore
 			),
 			"Failed to create render finished semaphore."
@@ -776,9 +783,8 @@ void Device::destroy()
 	graphics_queue.destroy();
 
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		destroy_fence(per_frame_data[i].in_flight_fence);
-		destroy_semaphore(per_frame_data[i].render_finished_semaphore);
 		destroy_semaphore(per_frame_data[i].image_available_semaphore);
+		destroy_semaphore(per_frame_data[i].render_finished_semaphore);
 	}
 
 	destroy_imgui();
@@ -815,23 +821,18 @@ void Device::destroy_semaphore(VkSemaphore semaphore)
 	vkDestroySemaphore(device, semaphore, nullptr);
 }
 
-VkSemaphore Device::get_current_render_finished_semaphore()
-{
-	return per_frame_data[current_frame_index].render_finished_semaphore;
-}
-
-VkSemaphore Device::get_current_image_available_semaphore()
-{
-	return per_frame_data[current_frame_index].image_available_semaphore;
-}
-
 CommandBuffer Device::begin_frame(Swapchain &swapchain)
 {
+	PerFrameData &frame_data = per_frame_data[current_frame_index];
+
+	if (frame_data.expected_timeline_value > 0)
+		graphics_queue.wait_until(frame_data.expected_timeline_value);
+
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
 	acquire_next_image_info.swapchain = swapchain.get_handle();
 	acquire_next_image_info.timeout = UINT64_MAX;
-	acquire_next_image_info.semaphore = get_current_image_available_semaphore();
+	acquire_next_image_info.semaphore = frame_data.image_available_semaphore;
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
@@ -841,61 +842,53 @@ CommandBuffer Device::begin_frame(Swapchain &swapchain)
 		debug_log_crash("TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		debug_log_crash("Failed to acquire next image in swapchain.");
-	
-	graphics_queue.next_frame();
 
-	return graphics_queue.begin_submit(per_frame_data[current_frame_index].in_flight_fence);
+	graphics_queue.reset_pool();
+
+	return graphics_queue.get_command_buffer();
 }
 
 void Device::end_frame(const Swapchain &swapchain, CommandBuffer &cmd)
 {
-	apply_bindless_updates();
+	PerFrameData &frame_data = per_frame_data[current_frame_index];
 
-	VkSemaphoreSubmitInfo render_finished_semaphore = {};
-	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	render_finished_semaphore.semaphore = get_current_render_finished_semaphore();
-	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	apply_bindless_updates();
 
 	VkSemaphoreSubmitInfo image_available_semaphore = {};
 	image_available_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	image_available_semaphore.semaphore = get_current_image_available_semaphore();
+	image_available_semaphore.semaphore = frame_data.image_available_semaphore;
 	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-	graphics_queue.end_submit(
+	VkSemaphoreSubmitInfo render_finished_semaphore = {};
+	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+	render_finished_semaphore.semaphore = frame_data.render_finished_semaphore;
+	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	frame_data.expected_timeline_value = graphics_queue.submit(
 		cmd,
-		&render_finished_semaphore,
-		&image_available_semaphore,
-		per_frame_data[current_frame_index].in_flight_fence
+		{ image_available_semaphore },
+		{ render_finished_semaphore },
+		VK_NULL_HANDLE
 	);
-	
-	graphics_queue.present(
-		swapchain,
-		render_finished_semaphore.semaphore
-	);
+
+	graphics_queue.present(swapchain, { render_finished_semaphore.semaphore });
 
 	current_frame_index = (current_frame_index + 1) % FRAMES_IN_FLIGHT;
-
-	graphics_queue.wait_idle();
 }
 
-CommandBuffer Device::begin_submit()
+Queue &Device::graphics()
 {
-	return graphics_queue.begin_submit();
-}
-
-void Device::end_submit(CommandBuffer &cmd)
-{
-	graphics_queue.end_submit(cmd);
+	return graphics_queue;
 }
 
 CommandPool Device::create_command_pool(u32 family_index)
 {
-	CommandPool pool;
-
 	VkCommandPoolCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	create_info.queueFamilyIndex = family_index;
+	
+	CommandPool pool;
 
 	GFX_VK_CHECK(
 		vkCreateCommandPool(
@@ -1046,15 +1039,15 @@ void Device::destroy_swapchain(const Swapchain &swapchain)
 	vkDestroySwapchainKHR(device, swapchain.get_handle(), nullptr);
 }
 
-VkPipelineLayout Device::create_pipeline_layout(const ShaderProgram &program)
+VkPipelineLayout Device::create_pipeline_layout(const ShaderProgram *program)
 {
-	VkShaderStageFlags stage = program.is_compute()
+	VkShaderStageFlags stage = program->is_compute()
 		? VK_SHADER_STAGE_COMPUTE_BIT
 		: VK_SHADER_STAGE_ALL_GRAPHICS;
 
 	VkPushConstantRange push_constants = {};
 	push_constants.offset = 0;
-	push_constants.size = program.get_push_constant_size();
+	push_constants.size = program->get_push_constant_size();
 	push_constants.stageFlags = stage;
 
 	VkPipelineLayoutCreateInfo create_info = {};
@@ -1084,9 +1077,9 @@ VkPipelineLayout Device::create_pipeline_layout(const ShaderProgram &program)
 	return layout;
 }
 
-VkPipelineLayout Device::fetch_pipeline_layout(const ShaderProgram &program)
+VkPipelineLayout Device::fetch_pipeline_layout(const ShaderProgram *program)
 {
-	u64 hash = hash::generic(&program, sizeof(ShaderProgram));
+	u64 hash = hash::generic(program, sizeof(ShaderProgram));
 
 	if (pipeline_layout_cache.find(hash) == pipeline_layout_cache.end())
 		pipeline_layout_cache[hash] = create_pipeline_layout(program);
@@ -1101,7 +1094,7 @@ void Device::destroy_pipeline_layout(VkPipelineLayout layout)
 
 VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLayout layout)
 {
-	assert(!def.program.is_compute());
+	assert(!def.program->is_compute());
 
 	static const VkDynamicState graphics_pipeline_dynamic_states[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -1226,17 +1219,17 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 
 	VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 
-	for (int i = 0; i < def.program.get_stage_count(); i++) {
+	for (int i = 0; i < def.program->get_stage_count(); i++) {
 		VkPipelineShaderStageCreateInfo *shader_stage = &shader_stages[i];
 		shader_stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		shader_stage->stage = (VkShaderStageFlagBits)def.program.get_stage(i).type;
-		shader_stage->module = def.program.get_stage(i).module;
+		shader_stage->stage = (VkShaderStageFlagBits)def.program->get_stage(i).type;
+		shader_stage->module = def.program->get_stage(i).module;
 		shader_stage->pName = "main";
 	}
 
 	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
 	graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphics_pipeline_create_info.stageCount = def.program.get_stage_count();
+	graphics_pipeline_create_info.stageCount = def.program->get_stage_count();
 	graphics_pipeline_create_info.pStages = shader_stages;
 	graphics_pipeline_create_info.pVertexInputState = &vertex_input_state_create_info;
 	graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
@@ -1270,12 +1263,12 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 
 VkPipeline Device::create_pipeline(const ComputePipelineDef &def, VkPipelineLayout layout)
 {
-	assert(def.program.is_compute());
+	assert(def.program->is_compute());
 
 	VkPipelineShaderStageCreateInfo shader_stage = {};
 	shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shader_stage.stage = (VkShaderStageFlagBits)def.program.get_stage(0).type;
-	shader_stage.module = def.program.get_stage(0).module;
+	shader_stage.stage = (VkShaderStageFlagBits)def.program->get_stage(0).type;
+	shader_stage.module = def.program->get_stage(0).module;
 	shader_stage.pName = "main";
 
 	VkComputePipelineCreateInfo compute_pipeline_create_info = {};
@@ -1303,16 +1296,16 @@ PipelineState Device::fetch_pipeline(const GraphicsPipelineDef &def)
 	VkPipelineLayout layout = fetch_pipeline_layout(def.program);
 
 	u64 hash = 0;
-	hash = hash::generic_combine(hash, &def.program,                   sizeof(ShaderProgram));
-	hash = hash::generic_combine(hash, &def.cull_mode,                 sizeof(VkCullModeFlags));
-	hash = hash::generic_combine(hash, &def.front_face,                sizeof(VkFrontFace));
-	hash = hash::generic_combine(hash, &def.blend_state,               sizeof(BlendState));
-	hash = hash::generic_combine(hash, &def.depth_stencil_state,       sizeof(DepthStencilState));
-	hash = hash::generic_combine(hash, &def.has_depth_attachment,      sizeof(bool));
-	hash = hash::generic_combine(hash, &def.samples,                   sizeof(VkSampleCountFlagBits));
-	hash = hash::generic_combine(hash, &def.min_sample_shading_enabled,sizeof(bool));
-	hash = hash::generic_combine(hash, &def.min_sample_shading,        sizeof(float));
-	hash = hash::generic_combine(hash, &def.view_mask,                 sizeof(u32));
+	hash = hash::generic_combine(hash, &def.program,                    sizeof(ShaderProgram));
+	hash = hash::generic_combine(hash, &def.cull_mode,                  sizeof(VkCullModeFlags));
+	hash = hash::generic_combine(hash, &def.front_face,                 sizeof(VkFrontFace));
+	hash = hash::generic_combine(hash, &def.blend_state,                sizeof(BlendState));
+	hash = hash::generic_combine(hash, &def.depth_stencil_state,        sizeof(DepthStencilState));
+	hash = hash::generic_combine(hash, &def.has_depth_attachment,       sizeof(bool));
+	hash = hash::generic_combine(hash, &def.samples,                    sizeof(VkSampleCountFlagBits));
+	hash = hash::generic_combine(hash, &def.min_sample_shading_enabled, sizeof(bool));
+	hash = hash::generic_combine(hash, &def.min_sample_shading,         sizeof(float));
+	hash = hash::generic_combine(hash, &def.view_mask,                  sizeof(u32));
 
 	for (auto &format : def.colour_attachment_formats)
 		hash = hash::generic_combine(hash, &format, sizeof(format));
@@ -1350,7 +1343,7 @@ void Device::destroy_pipeline(VkPipeline pipeline)
 	vkDestroyPipeline(device, pipeline, nullptr);
 }
 
-Sampler Device::create_sampler(
+Sampler *Device::create_sampler(
 	VkFilter filter,
 	VkSamplerAddressMode wrap_x,
 	VkSamplerAddressMode wrap_y,
@@ -1378,35 +1371,36 @@ Sampler Device::create_sampler(
 	create_info.minLod = 0.f;
 	create_info.maxLod = VK_LOD_CLAMP_NONE;
 
-	Sampler sampler;
-	sampler.filter = filter;
-	sampler.wrap_x = wrap_x;
-	sampler.wrap_y = wrap_y;
-	sampler.wrap_z = wrap_z;
-	sampler.border_colour = border_colour;
+	Sampler *sampler = new Sampler();
+	sampler->filter = filter;
+	sampler->wrap_x = wrap_x;
+	sampler->wrap_y = wrap_y;
+	sampler->wrap_z = wrap_z;
+	sampler->border_colour = border_colour;
 
 	GFX_VK_CHECK(
 		vkCreateSampler(
 			device,
 			&create_info, nullptr,
-			&sampler.handle
+			&sampler->handle
 		),
 		"Failed to create texture sampler."
 	);
 
-	sampler.bindless = bindless.register_sampler(sampler.handle);
+	sampler->bindless_handle = bindless.register_sampler(sampler->handle);
 
 	return sampler;
 }
 
-void Device::destroy_sampler(const Sampler &sampler)
+void Device::destroy_sampler(const Sampler *sampler)
 {
-	vkDestroySampler(device, sampler.handle, nullptr);
+	vkDestroySampler(device, sampler->handle, nullptr);
+	delete sampler;
 }
 
 static u32 clamp_mimap_count(u32 mipmaps, u32 w, u32 h, u32 d)
 {
-	return CalcF::min(mipmaps, 1u + (u32)log2f((float)CalcF::max(w, CalcF::max(h, d))));
+	return CalcF::min(mipmaps, 1u + (u32)CalcF::log2(CalcF::max(w, CalcF::max(h, d))));
 }
 
 Texture *Device::alloc_texture(
@@ -1432,7 +1426,8 @@ Texture *Device::alloc_texture(
 	texture->sample_count = samples;
 
 	if (is_transient)
-		texture->usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		texture->usage =
+			VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	else
 		texture->usage =
 			VK_IMAGE_USAGE_SAMPLED_BIT |
@@ -1579,7 +1574,7 @@ void Device::destroy_texture(const Texture *texture)
 	delete texture;
 }
 
-TextureView Device::create_texture_view(
+TextureView *Device::create_texture_view(
 	const Texture *texture,
 	VkImageViewType type,
 	const SubresourceRange &range
@@ -1604,27 +1599,31 @@ TextureView Device::create_texture_view(
 	view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 	view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-	TextureView view;
-	view.type = type;
-	view.range = r;
+	TextureView *view = new TextureView();
+	view->type = type;
+	view->range = r;
 
 	GFX_VK_CHECK(
 		vkCreateImageView(
 			device,
 			&view_create_info, nullptr,
-			&view.handle
+			&view->handle
 		),
 		"Failed to create texture image view."
 	);
 
 	// Swapchain images are omitted from being accessible bindlessly.
-	if (!texture->is_swapchain())
-		view.bindless = bindless.register_view(view.handle, true, texture->is_storage());
+	if (!texture->is_swapchain()) {
+		view->bindless_handle_sampled = bindless.register_sampled(view->handle);
+
+		if (texture->is_storage())
+			view->bindless_handle_storage = bindless.register_storage(view->handle);
+	}
 
 	return view;
 }
 
-TextureView Device::fetch_texture_view(
+TextureView *Device::fetch_texture_view(
 	const Texture *texture,
 	VkImageViewType type,
 	const SubresourceRange &range
@@ -1641,7 +1640,7 @@ TextureView Device::fetch_texture_view(
 	return texture_view_cache[hash];
 }
 
-TextureView Device::fetch_texture_view_std(const Texture *texture)
+TextureView *Device::fetch_texture_view_std(const Texture *texture)
 {
 	VkImageViewType view_type;
 	
@@ -1667,9 +1666,10 @@ TextureView Device::fetch_texture_view_std(const Texture *texture)
 	return fetch_texture_view(texture, view_type, range);
 }
 
-void Device::destroy_texture_view(const TextureView &texture_view)
+void Device::destroy_texture_view(const TextureView *texture_view)
 {
-	vkDestroyImageView(device, texture_view.get_handle(), nullptr);
+	vkDestroyImageView(device, texture_view->get_handle(), nullptr);
+	delete texture_view;
 }
 
 GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size)
@@ -1817,24 +1817,26 @@ void Device::destroy_shader_stage(const ShaderStage &stage)
 	vkDestroyShaderModule(device, stage.module, nullptr);
 }
 
-ShaderProgram Device::create_shader_program(const Vector<String> &stage_paths)
+ShaderProgram *Device::create_shader_program(const Vector<String> &stage_paths)
 {
-	ShaderProgram program;
-	program.stage_count = stage_paths.size();
+	ShaderProgram *program = new ShaderProgram();
+	program->stage_count = stage_paths.size();
 
-	for (int i = 0; i < program.stage_count; i++) {
+	for (int i = 0; i < program->stage_count; i++) {
 		const String &path = stage_paths[i];
-		program.stages[i] = load_shader_stage_from_bytecode(path);
-		program.push_constant_size = CalcU::max(program.push_constant_size, program.stages[i].push_constant_size);
+		program->stages[i] = load_shader_stage_from_bytecode(path);
+		program->push_constant_size = CalcU::max(program->push_constant_size, program->stages[i].push_constant_size);
 	}
 
 	return program;
 }
 
-void Device::destroy_shader_program(const ShaderProgram &program)
+void Device::destroy_shader_program(const ShaderProgram *program)
 {
-	for (int i = 0; i < program.stage_count; i++)
-		destroy_shader_stage(program.stages[i]);
+	for (int i = 0; i < program->stage_count; i++)
+		destroy_shader_stage(program->stages[i]);
+
+	delete program;
 }
 
 static VkDescriptorType get_descriptor_type_from_bindless_set(BindlessSetKind kind)
