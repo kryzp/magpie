@@ -130,17 +130,21 @@ void App::init()
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 16; j++) {
-			Mat4 transform = Mat4::transform(
-				Vec3(i, j, 0.f),
-				Quat(),
-				Vec3::unit(),
-				Vec3::zero()
-			);
+			for (int k = 0; k < 16; k++) {
+				float angle = CalcF::sqrt(i*i + j*j + k*k);
 
-			gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
+				Mat4 transform = Mat4::transform(
+					Vec3(i, j, k),
+					Quat::from_axis(angle, Vec3::up()),
+					Vec3::unit(),
+					Vec3::zero()
+				);
 
-			object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
-			object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
+				gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
+
+				object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
+				object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
+			}
 		}
 	}
 
@@ -184,7 +188,7 @@ void App::init()
 	skybox_renderer.init(&graphics_device, assets);
 	post_processing.init(assets);
 	
-	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 10.f);
+	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
 
 	// Test out the job system.
 	/*
