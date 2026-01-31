@@ -135,7 +135,7 @@ namespace gfx
 
 		// TODO: The parameters here should be put into a struct like GPUBufferAllocInfo.
 
-		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size);
+		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size);
 		void destroy_buffer(const GpuBuffer *gpu_buffer);
 
 		// ---

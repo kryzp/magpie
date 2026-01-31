@@ -49,7 +49,7 @@ public:
 private:
 	void update(float dt, const inp::InputState &input);
 	void fixed_update(float dt);
-	void render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd);
+	void render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources);
 
 	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
 

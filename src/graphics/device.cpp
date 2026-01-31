@@ -858,12 +858,12 @@ void Device::end_frame(const Swapchain &swapchain, CommandBuffer &cmd)
 	VkSemaphoreSubmitInfo image_available_semaphore = {};
 	image_available_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	image_available_semaphore.semaphore = frame_data.image_available_semaphore;
-	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore = {};
 	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	render_finished_semaphore.semaphore = frame_data.render_finished_semaphore;
-	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 	frame_data.expected_timeline_value = graphics_queue.submit(
 		cmd,
@@ -1662,7 +1662,7 @@ void Device::destroy_texture_view(const TextureView *texture_view)
 	delete texture_view;
 }
 
-GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlagBits flags, u64 size)
+GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size)
 {
 	GpuBuffer *buffer = new GpuBuffer();
 	buffer->usage = usage;

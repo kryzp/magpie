@@ -15,6 +15,7 @@
 
 #include "device.h"
 #include "sync.h"
+#include "gpu_arena.h"
 
 #define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
 public:												\
@@ -33,11 +34,6 @@ namespace gfx
 	class RenderGraph;
 	class RenderScene;
 	class Camera;
-
-	struct SceneView {
-		RenderScene *scene;
-		const Camera *camera;
-	};
 
 	enum SizeClass {
 		SIZE_CLASS_ABSOLUTE,
@@ -109,7 +105,7 @@ namespace gfx
 
 	struct GpuBufferInfo {
 		VkDeviceSize size;
-		VmaAllocationCreateFlagBits flags;
+		VmaAllocationCreateFlags flags;
 		VkBufferUsageFlags2 usage;
 
 		GpuBufferInfo()
@@ -121,7 +117,7 @@ namespace gfx
 
 		GpuBufferInfo(
 			VkDeviceSize size,
-			VmaAllocationCreateFlagBits flags,
+			VmaAllocationCreateFlags flags,
 			VkBufferUsageFlags2 usage
 		)
 			: size(size)
@@ -173,6 +169,11 @@ namespace gfx
 
 	typedef u32 RenderResourceHandle;
 	constexpr RenderResourceHandle RENDER_INVALID_HANDLE = -1u;
+	
+	struct TransientBuffer {
+		RenderResourceHandle handle;
+		GpuArenaAlloc alloc;
+	};
 
 	struct RenderResourceEdge {
 		RenderResourceHandle handle;
@@ -208,6 +209,9 @@ namespace gfx
 		u32 ref_count;
 		
 		const void *physical_resource;
+
+		// For linear allocator slices.
+		u64 physical_offset;
 
 		Vector<u32> initial_subresource_states;
 
@@ -275,7 +279,13 @@ namespace gfx
 		
 		const Texture *get_texture(RenderResourceHandle handle) const;
 		const TextureView *get_texture_view(RenderResourceHandle handle) const;
+
 		const GpuBuffer *get_buffer(RenderResourceHandle handle) const;
+
+		// The view is NOT the same as saying get_buffer(handle)->get_device_address()!!
+		// This also applies the physical_offset to the output.
+		// Required for situations where multiple resources lie on different sections of a physical buffer.
+		GpuBufferView get_buffer_view(RenderResourceHandle handle) const;
 
 	private:
 		RenderGraph &graph;
@@ -285,7 +295,8 @@ namespace gfx
 	struct RenderContext {
 		Device &device;
 		CommandBuffer &cmd;
-		SceneView scene_view;
+		RenderScene &scene;
+		const Camera &camera;
 		float delta_time;
 		float elapsed_time;
 	};
@@ -387,6 +398,8 @@ namespace gfx
 		friend class RenderGraphBuilder;
 		friend class RenderStageResources;
 
+		static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(128);
+
 	public:
 		RenderGraph();
 		~RenderGraph();
@@ -411,12 +424,14 @@ namespace gfx
 		void execute(
 			CommandBuffer &cmd,
 			const Swapchain &swapchain,
-			const SceneView &scene_view,
+			RenderScene &scene, const Camera &camera,
 			float delta_time, float elapsed_time
 		);
 
 		RenderResourceHandle import_texture(const Texture *texture);
 		RenderResourceHandle import_buffer(const GpuBuffer *buffer);
+
+		TransientBuffer create_transient_buffer(u64 size, u64 alignment = 16);
 
 		Device &get_device()
 		{
@@ -426,6 +441,8 @@ namespace gfx
 
 	private:
 		Device *device;
+
+		PerFrame<GpuArena> transient_arenas;
 
 		void backpropogate_dependencies();
 		void allocate_resources(const Swapchain &swapchain);

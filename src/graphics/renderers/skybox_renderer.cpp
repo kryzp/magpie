@@ -2,15 +2,9 @@
 
 #include "assets/texture_serializer.h"
 #include "assets/shader_serializer.h"
-
-#include "math/matrix.h"
 #include "math/vec3.h"
 
-#include "platform/platform.h"
-
 #include "deferred_renderer.h"
-
-#include "../camera.h"
 
 using namespace gfx;
 
@@ -92,8 +86,6 @@ void SkyboxRenderer::add_render_stages(
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const SkyboxStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
-
-			const Camera &camera = *ctx.scene_view.camera;
 			
 			const Texture *colour = resources.get_texture(data.colour);
 			const TextureView *cubemap_view = resources.get_texture_view(data.cubemap);

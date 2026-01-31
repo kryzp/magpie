@@ -10,14 +10,11 @@ RenderScene::RenderScene()
 	, objects()
 	, lights()
 	, geometry_pages()
-	, page_table_buffer()
 	, mesh_registry()
 	, meshes()
-	, mesh_buffer()
 	, materials()
-	, material_buffers{}
-	, object_buffers()
-	, light_buffers{}
+	, mesh_buffer()
+	, material_buffer()
 {
 }
 
@@ -36,93 +33,119 @@ void RenderScene::init(Device *device)
 		sizeof(gpu_types::GpuMesh) * INITIAL_MAX_MESHES
 	);
 
-	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		material_buffers[i] = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			sizeof(gpu_types::GpuMaterial) * INITIAL_MAX_MATERIALS
-		);
-
-		object_buffers[i] = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			sizeof(gpu_types::GpuObjectData) * INITIAL_MAX_OBJECTS
-		);
-
-		light_buffers[i] = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			sizeof(gpu_types::GpuLight) * INITIAL_MAX_LIGHTS
-		);
-	}
-
-	page_table_buffer = device->alloc_buffer(
+	material_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuPagePointers) * INITIAL_MAX_PAGES
+		sizeof(gpu_types::GpuMaterial) * INITIAL_MAX_MATERIALS
 	);
+
 }
 
 void RenderScene::destroy()
 {
 	device->destroy_buffer(mesh_buffer);
-	
-	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
-		device->destroy_buffer(material_buffers[i]);
-		device->destroy_buffer(object_buffers[i]);
-		device->destroy_buffer(light_buffers[i]);
-	}
+	device->destroy_buffer(material_buffer);
 
 	for (auto &page : geometry_pages) {
 		device->destroy_buffer(page.vertex_buffer);
 		device->destroy_buffer(page.index_buffer);
-		device->destroy_buffer(page.indirect_buffer);
-		device->destroy_buffer(page.draw_count_buffer);
 	}
-
-	device->destroy_buffer(page_table_buffer);
 }
 
-void RenderScene::update_gpu_buffers()
+RenderSceneResources RenderScene::update_transient_resources(RenderGraph &graph)
 {
-	const u32 current_frame = device->get_current_frame_index();
-	const u32 count = objects.transforms.size();
+	RenderSceneResources resources = {};
 
-	if (count <= 0)
-		return;
+	update_page_buffer(graph, resources);
 
-	GpuBuffer *object_buffer = object_buffers[current_frame];
-	gpu_types::GpuObjectData *mapped = (gpu_types::GpuObjectData *)object_buffer->map();
+	if (!objects.transforms.empty())
+		update_object_buffer(graph, resources);
+
+	if (!lights.data.empty())
+		update_light_buffer(graph, resources);
+
+	if (!materials.empty())
+		update_material_buffer();
+
+	if (!meshes.empty())
+		update_mesh_buffer();
+
+	return resources;
+}
+
+void RenderScene::update_object_buffer(RenderGraph &graph, RenderSceneResources &resources)
+{
+	TransientBuffer object_buffer = graph.create_transient_buffer(objects.transforms.size() * sizeof(gpu_types::GpuObjectData), 16);
+
+	resources.object_buffer = object_buffer.handle;
+
+	gpu_types::GpuObjectData *mapped_objects = (gpu_types::GpuObjectData *)object_buffer.alloc.cpu;
 
 	// Cache friendly - Yay!!!
-	for (int i = 0; i < count; i++) {
-		mapped[i].model_matrix = objects.transforms[i];
-		mapped[i].normal_matrix = objects.transforms[i].inverse().transpose();
-		mapped[i].material_index = objects.materials[i];
-		mapped[i].mesh_index = objects.meshes[i];
-		mapped[i].page_index = objects.page_indices[i];
+	for (int i = 0; i < objects.transforms.size(); i++) {
+		mapped_objects[i].model_matrix = objects.transforms[i];
+		mapped_objects[i].normal_matrix = objects.transforms[i].inverse().transpose();
+		mapped_objects[i].sphere_bounds = Vec4(0.f, 0.f, 0.f, 1.f);
+		mapped_objects[i].material_index = objects.materials[i];
+		mapped_objects[i].mesh_index = objects.meshes[i];
+		mapped_objects[i].page_index = objects.page_indices[i];
 	}
+}
 
-	if (!meshes.empty()) {
-		gpu_types::GpuMesh *mapped_meshes = (gpu_types::GpuMesh *)mesh_buffer->map();
-		memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuMesh));
-	}
+void RenderScene::update_light_buffer(RenderGraph &graph, RenderSceneResources &resources)
+{
+	TransientBuffer light_buffer = graph.create_transient_buffer(lights.data.size() * sizeof(gpu_types::GpuLight), 16);
 
-	if (!lights.data.empty()) {
-		GpuBuffer *light_buffer = light_buffers[current_frame];
-		gpu_types::GpuLight *mapped_lights = (gpu_types::GpuLight *)light_buffer->map();
-		memory_copy(mapped_lights, lights.data.data(), lights.data.size() * sizeof(gpu_types::GpuLight));
-	}
+	resources.light_buffer = light_buffer.handle;
 
-	if (!materials.empty()) {
-		GpuBuffer *material_buffer = material_buffers[current_frame];
-		gpu_types::GpuMaterial *mapped_materials = (gpu_types::GpuMaterial *)material_buffer->map();
-		memory_copy(mapped_materials, materials.data(), materials.size() * sizeof(gpu_types::GpuMaterial));
+	gpu_types::GpuLight *mapped_lights = (gpu_types::GpuLight *)light_buffer.alloc.cpu;
+	memory_copy(mapped_lights, lights.data.data(), lights.data.size() * sizeof(gpu_types::GpuLight));
+}
+
+void RenderScene::update_page_buffer(RenderGraph &graph, RenderSceneResources &resources)
+{
+	TransientBuffer page_table_buffer = graph.create_transient_buffer(geometry_pages.size() * sizeof(gpu_types::GpuPagePointers), 32);
+
+	resources.page_table_buffer = page_table_buffer.handle;
+
+	gpu_types::GpuPagePointers *mapped_ptrs = (gpu_types::GpuPagePointers *)page_table_buffer.alloc.cpu;
+
+	for (int i = 0; i < geometry_pages.size(); i++) {
+		GeometryPage &page = geometry_pages[i];
+
+		// Indirect buffers like 256-byte alignment!
+		TransientBuffer page_indirect_buffer = graph.create_transient_buffer(sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS, 256);
+		TransientBuffer page_counter_buffer  = graph.create_transient_buffer(sizeof(u32), 4);
+		
+		// Ensure counter is zero.
+		*(u32 *)page_counter_buffer.alloc.cpu = 0;
+
+		// Register handles for graph barriers.
+		resources.indirect_buffers.push_back(page_indirect_buffer.handle);
+		resources.counter_buffers.push_back(page_counter_buffer.handle);
+
+		// Update page struct allocation.
+		page.indirect_offset = page_indirect_buffer.alloc.offset;
+		page.count_offset = page_counter_buffer.alloc.offset;
+
+		// Fill buffer table entry.
+		mapped_ptrs[i].indirect_buffer = page_indirect_buffer.alloc.gpu;
+		mapped_ptrs[i].count_buffer    = page_counter_buffer.alloc.gpu;
+		mapped_ptrs[i].vertex_buffer   = page.vertex_buffer->get_device_address();
 	}
+}
+
+void RenderScene::update_material_buffer()
+{
+	gpu_types::GpuMaterial *mapped_materials = (gpu_types::GpuMaterial *)material_buffer->map();
+	memory_copy(mapped_materials, materials.data(), materials.size() * sizeof(gpu_types::GpuMaterial));
+}
+
+void RenderScene::update_mesh_buffer()
+{
+	gpu_types::GpuMesh *mapped_meshes = (gpu_types::GpuMesh *)mesh_buffer->map();
+	memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuMesh));
 }
 
 bool RenderScene::is_valid_object(RenderHandle handle) const
@@ -364,29 +387,14 @@ u32 RenderScene::get_light_count() const
 	return lights.handles.size();
 }
 
-const GpuBuffer *RenderScene::get_object_buffer() const
-{
-	return object_buffers[device->get_current_frame_index()];
-}
-
-const GpuBuffer *RenderScene::get_light_buffer() const
-{
-	return light_buffers[device->get_current_frame_index()];
-}
-
-const GpuBuffer *RenderScene::get_material_buffer() const
-{
-	return material_buffers[device->get_current_frame_index()];
-}
-
 const GpuBuffer *RenderScene::get_mesh_buffer() const
 {
 	return mesh_buffer;
 }
 
-const GpuBuffer *RenderScene::get_page_buffer() const
+const GpuBuffer *RenderScene::get_material_buffer() const
 {
-	return page_table_buffer;
+	return material_buffer;
 }
 
 const Vector<GeometryPage> &RenderScene::get_geometry_pages() const
@@ -427,17 +435,6 @@ u32 RenderScene::find_suitable_page(u32 vertex_count, u32 index_count)
 
 	u32 index = geometry_pages.size();
 
-	gpu_types::GpuPagePointers ptrs = {};
-	ptrs.indirect_buffer = page.indirect_buffer->get_device_address();
-	ptrs.count_buffer = page.draw_count_buffer->get_device_address();
-	ptrs.vertex_buffer = page.vertex_buffer->get_device_address();
-
-	page_table_buffer->write(
-		&ptrs,
-		sizeof(gpu_types::GpuPagePointers),
-		sizeof(gpu_types::GpuPagePointers) * index
-	);
-
 	geometry_pages.push_back(page);
 
 	return index;
@@ -445,9 +442,6 @@ u32 RenderScene::find_suitable_page(u32 vertex_count, u32 index_count)
 
 GeometryPage RenderScene::create_new_page()
 {
-	const u64 vertex_buffer_size = MEGABYTES(64);
-	const u64 index_buffer_size = MEGABYTES(32);
-
 	GeometryPage page = {};
 	
 	// Doesn't need to be VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT
@@ -456,7 +450,7 @@ GeometryPage RenderScene::create_new_page()
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		vertex_buffer_size
+		PAGE_VERTEX_BUFFER_SIZE
 	);
 	
 	page.index_buffer = device->alloc_buffer(
@@ -464,26 +458,17 @@ GeometryPage RenderScene::create_new_page()
 		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		index_buffer_size
+		PAGE_INDEX_BUFFER_SIZE
 	);
 
-	page.indirect_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS
-	);
+	page.indirect_offset = 0;
+	page.count_offset = 0;
 
-	page.draw_count_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(u32)
-	);
+	page.vertex_offset = 0;
+	page.index_offset = 0;
 
-	page.max_vertices = vertex_buffer_size / sizeof(gpu_types::GpuModelVertex);
-	page.max_indices = index_buffer_size / sizeof(u32);
+	page.max_vertices = PAGE_VERTEX_BUFFER_SIZE / sizeof(gpu_types::GpuModelVertex);
+	page.max_indices = PAGE_INDEX_BUFFER_SIZE / sizeof(u32);
 
 	return page;
 }

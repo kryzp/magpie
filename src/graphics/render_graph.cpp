@@ -125,6 +125,14 @@ const GpuBuffer *RenderStageResources::get_buffer(RenderResourceHandle handle) c
 	return (const GpuBuffer *)graph.resources[handle].physical_resource;
 }
 
+GpuBufferView RenderStageResources::get_buffer_view(RenderResourceHandle handle) const
+{
+	RenderResource &resource = graph.resources[handle];
+	const GpuBuffer *physical_buffer = (const GpuBuffer *)graph.resources[handle].physical_resource;
+
+	return GpuBufferView(physical_buffer, resource.buffer_info.size, resource.physical_offset);
+}
+
 RenderGraphBuilder::RenderGraphBuilder(RenderGraph &graph, RenderStage &stage)
 	: graph(graph)
 	, current_stage(stage)
@@ -451,6 +459,7 @@ RenderGraph::RenderGraph()
 	, import_cache()
 	, imported_access_cache()
 	, backbuffer_handle(RENDER_INVALID_HANDLE)
+	, transient_arenas()
 {
 }
 
@@ -461,6 +470,22 @@ RenderGraph::~RenderGraph()
 void RenderGraph::init(Device *device)
 {
 	this->device = device;
+
+	transient_arenas.init(device, [&] {
+		GpuArena arena;
+
+		arena.allocate(
+			device,
+			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
+			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
+			VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			TRANSIENT_ARENA_SIZE
+		);
+
+		return arena;
+	});
 }
 
 void RenderGraph::destroy()
@@ -470,6 +495,9 @@ void RenderGraph::destroy()
 	stages.clear();
 	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
+
+	for (auto &a : transient_arenas)
+		a.destroy();
 }
 
 void RenderGraph::reset()
@@ -479,6 +507,7 @@ void RenderGraph::reset()
 	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
 	pool.flush();
+	transient_arenas.get().reset();
 }
 
 void RenderGraph::set_backbuffer_source(RenderResourceHandle handle)
@@ -731,7 +760,8 @@ void RenderGraph::transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, Re
 
 	barriers.push_back(sync::buffer_memory_barrier(
 		physical_buffer,
-		src_access, dst_access
+		src_access, dst_access,
+		b.physical_offset, b.buffer_info.size
 	));
 
 	b.subresource_states[0] = dst_access_type;
@@ -740,7 +770,7 @@ void RenderGraph::transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, Re
 void RenderGraph::execute(
 	CommandBuffer &cmd,
 	const Swapchain &swapchain,
-	const SceneView &scene_view,
+	RenderScene &scene, const Camera &camera,
 	float delta_time, float elapsed_time
 )
 {
@@ -764,7 +794,8 @@ void RenderGraph::execute(
 		RenderContext ctx = {
 			.device = *device,
 			.cmd = cmd,
-			.scene_view = scene_view,
+			.scene = scene,
+			.camera = camera,
 			.delta_time = delta_time,
 			.elapsed_time = elapsed_time
 		};
@@ -901,7 +932,7 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 	else
 		resource.initial_subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), TEXTURE_ACCESS_UNDEFINED);
 
-	resource.subresource_states = resource.subresource_states;
+	resource.subresource_states = resource.initial_subresource_states;
 
 	resource.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
 	resource.texture_info.size_x = texture->get_width();
@@ -942,7 +973,7 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 	else
 		resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
 
-	resource.subresource_states = resource.subresource_states;
+	resource.subresource_states = resource.initial_subresource_states;
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();
@@ -953,4 +984,35 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 	import_cache[buffer] = handle;
 
 	return handle;
+}
+
+TransientBuffer RenderGraph::create_transient_buffer(u64 size, u64 alignment)
+{
+	GpuArenaAlloc alloc = transient_arenas.get().push(size, alignment);
+
+	RenderResourceHandle handle = resources.size();
+
+	RenderResource resource = {};
+	resource.kind = RenderResource::KIND_BUFFER;
+	resource.is_imported = true; // Graph manages the lifetime, not the pool, so we treat it as imported.
+
+	resource.first_stage_index = -1u;
+	resource.last_stage_index = -1u;
+
+	resource.physical_resource = transient_arenas.get().get_buffer();
+	resource.physical_offset = alloc.offset;
+
+	resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
+	resource.subresource_states = resource.initial_subresource_states;
+
+	resource.buffer_info.size = size;
+	resource.buffer_info.usage = transient_arenas.get().get_buffer()->get_usage();
+
+	resources.push_back(resource);
+
+	TransientBuffer transient_buffer = {};
+	transient_buffer.handle = handle;
+	transient_buffer.alloc = alloc;
+
+	return transient_buffer;
 }

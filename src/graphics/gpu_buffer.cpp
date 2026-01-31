@@ -1,5 +1,7 @@
 #include "gpu_buffer.h"
 
+#include "device.h"
+
 using namespace gfx;
 
 GpuBuffer::GpuBuffer()
@@ -20,9 +22,9 @@ void GpuBuffer::write(const void *src, u64 length, u64 offset)
 	vmaCopyMemoryToAllocation(*allocator, src, allocation, offset, length);
 }
 
-void *GpuBuffer::map() const
+uptr GpuBuffer::map() const
 {
-	return allocation_info.pMappedData;
+	return (uptr)allocation_info.pMappedData;
 }
 
 bool GpuBuffer::is_storage() const

@@ -17,7 +17,7 @@ namespace gfx
 		void read(void *dst, u64 length, u64 offset);
 		void write(const void *src, u64 length, u64 offset);
 
-		void *map() const;
+		uptr map() const;
 
 		bool is_storage() const;
 		bool is_uniform() const;
@@ -37,7 +37,7 @@ namespace gfx
 			return size;
 		}
 
-		VkDeviceAddress get_device_address() const
+		u64 get_device_address() const
 		{
 			return device_address;
 		}
@@ -52,7 +52,7 @@ namespace gfx
 			return allocation_info;
 		}
 
-		VmaAllocationCreateFlagBits get_allocation_flags() const
+		VmaAllocationCreateFlags get_allocation_flags() const
 		{
 			return allocation_flags;
 		}
@@ -68,6 +68,47 @@ namespace gfx
 		VmaAllocator *allocator;
 		VmaAllocation allocation;
 		VmaAllocationInfo allocation_info;
-		VmaAllocationCreateFlagBits allocation_flags;
+		VmaAllocationCreateFlags allocation_flags;
+	};
+
+	/*
+	 * Not part of core "Vulkan" but useful as an "equivalent" of texture views.
+	 *
+	 * In some cases, we might find we want to use the same buffer for multiple purposes.
+	 * In those situations, we need a way to refer to subsections of a buffer.
+	 */
+	class GpuBufferView {
+	public:
+		GpuBufferView(const GpuBuffer *parent, u64 size, u64 offset)
+			: parent(parent)
+			, size(size)
+			, offset(offset)
+		{
+		}
+
+		~GpuBufferView()
+		{
+		}
+
+		u64 get_device_address() const
+		{
+			return parent->get_device_address() + offset;
+		}
+
+		u64 get_size() const
+		{
+			return size;
+		}
+
+		u64 get_offset() const
+		{
+			return offset;
+		}
+
+	private:
+		const GpuBuffer *parent;
+
+		u64 size;
+		u64 offset;
 	};
 }

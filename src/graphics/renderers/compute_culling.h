@@ -3,6 +3,7 @@
 #include "assets/assets.h"
 
 #include "../render_graph.h"
+#include "../render_scene.h"
 
 namespace gfx
 {
@@ -15,7 +16,8 @@ namespace gfx
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const RenderScene &scene
+			const RenderScene &scene,
+			const RenderSceneResources &scene_resources
 		);
 
 	private:

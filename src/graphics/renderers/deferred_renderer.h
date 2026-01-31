@@ -34,7 +34,7 @@ namespace gfx
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const RenderScene &scene,
+			const RenderSceneResources &scene_resources,
 			const GpuBuffer *frame_data,
 			RenderResourceHandle irradiance,
 			RenderResourceHandle prefilter,

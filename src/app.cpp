@@ -293,20 +293,17 @@ bool App::tick(const inp::InputState &input)
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	{
-		gfx::SceneView scene_view = {
-			.scene = &this->render_scene,
-			.camera = &this->camera
-		};
-
 		ImGui::Render();
+		
+		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(render_graph);
 
-		render(dt, elapsed_time, cmd);
+		render(dt, elapsed_time, cmd, scene_resources);
 		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
 
 		render_graph.compile(swapchain);
-		render_graph.execute(cmd, swapchain, scene_view, dt, elapsed_time);
+		render_graph.execute(cmd, swapchain, render_scene, camera, dt, elapsed_time);
 		render_graph.reset();
 	}
 	graphics_device.end_frame(swapchain, cmd);
@@ -345,7 +342,7 @@ void App::fixed_update(float dt)
 {
 }
 
-void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
+void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources)
 {
 	gfx::gpu_types::GpuFrameData data = {};
 	data.view = camera.get_view();
@@ -359,8 +356,6 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	data.time = elapsed_time;
 
 	frame_data_buffer->write(&data, sizeof(gfx::gpu_types::GpuFrameData), 0);
-
-	render_scene.update_gpu_buffers();
 
 	struct FooBar { int baz; };
 
@@ -377,8 +372,8 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	
 	gfx::RenderGraphBlackboard bb;
 
-	compute_culling.add_render_stages(render_graph, bb, render_scene);
-	deferred_renderer.add_render_stages(render_graph, bb, render_scene, frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
+	compute_culling.add_render_stages(render_graph, bb, render_scene, scene_resources);
+	deferred_renderer.add_render_stages(render_graph, bb, scene_resources, frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
 	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
 	post_processing.add_render_stages(render_graph, bb, swapchain_src);
 }

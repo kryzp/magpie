@@ -1,5 +1,7 @@
 #pragma once
 
+#include <volk/volk.h>
+
 #include "core/types.h"
 #include "container/vector.h"
 #include "math/matrix.h"
@@ -7,6 +9,8 @@
 #include "math/colour.h"
 
 #include "gpu_types.h"
+#include "gpu_arena.h"
+#include "render_graph.h"
 #include "model.h"
 
 namespace gfx
@@ -41,23 +45,33 @@ namespace gfx
 		const GpuBuffer *vertex_buffer;
 		const GpuBuffer *index_buffer;
 
-		const GpuBuffer *indirect_buffer;
-		const GpuBuffer *draw_count_buffer;
+		u32 indirect_offset = 0;
+		u32 count_offset = 0;
 
 		u32 vertex_offset = 0;
 		u32 index_offset = 0;
+
 		u32 max_vertices;
 		u32 max_indices;
+	};
+
+	struct RenderSceneResources {
+		RenderResourceHandle object_buffer;
+		RenderResourceHandle light_buffer;
+		RenderResourceHandle page_table_buffer;
+
+		Vector<RenderResourceHandle> indirect_buffers;
+		Vector<RenderResourceHandle> counter_buffers;
 	};
 
 	class RenderScene {
 	public:
 		static constexpr u32 PAGE_MAX_OBJECTS = 512;
-		static constexpr u32 INITIAL_MAX_OBJECTS = 512;
-		static constexpr u32 INITIAL_MAX_LIGHTS = 1024;
+		static constexpr u64 PAGE_VERTEX_BUFFER_SIZE = MEGABYTES(64);
+		static constexpr u64 PAGE_INDEX_BUFFER_SIZE = MEGABYTES(32);
+
 		static constexpr u32 INITIAL_MAX_MESHES = 1024;
 		static constexpr u32 INITIAL_MAX_MATERIALS = 128;
-		static constexpr u32 INITIAL_MAX_PAGES = 64;
 
 		RenderScene();
 		~RenderScene();
@@ -65,7 +79,7 @@ namespace gfx
 		void init(Device *device);
 		void destroy();
 
-		void update_gpu_buffers();
+		RenderSceneResources update_transient_resources(RenderGraph &graph);
 
 		bool is_valid_object(RenderHandle handle) const;
 		bool is_valid_light(RenderHandle handle) const;
@@ -94,16 +108,20 @@ namespace gfx
 		u32 get_object_count() const;
 		u32 get_light_count() const;
 
-		const GpuBuffer *get_object_buffer() const;
-		const GpuBuffer *get_light_buffer() const;
-		const GpuBuffer *get_material_buffer() const;
 		const GpuBuffer *get_mesh_buffer() const;
-		const GpuBuffer *get_page_buffer() const;
+		const GpuBuffer *get_material_buffer() const;
 
 		const Vector<GeometryPage> &get_geometry_pages() const;
 
 	private:
 		Device *device;
+
+		void update_object_buffer(RenderGraph &graph, RenderSceneResources &resources);
+		void update_light_buffer(RenderGraph &graph, RenderSceneResources &resources);
+		void update_page_buffer(RenderGraph &graph, RenderSceneResources &resources);
+
+		void update_material_buffer();
+		void update_mesh_buffer();
 
 		/*
 		 * This is a little confusing so for later reference:
@@ -152,7 +170,6 @@ namespace gfx
 		} lights;
 
 		Vector<GeometryPage> geometry_pages;
-		GpuBuffer *page_table_buffer;
 		
 		struct MeshMemoryLocation {
 			u32 page;
@@ -162,13 +179,10 @@ namespace gfx
 		Vector<MeshMemoryLocation> mesh_registry;
 
 		Vector<gpu_types::GpuMesh> meshes;
-		GpuBuffer *mesh_buffer;
-
 		Vector<gpu_types::GpuMaterial> materials;
-		GpuBuffer *material_buffers[FRAMES_IN_FLIGHT];
 
-		GpuBuffer *object_buffers[FRAMES_IN_FLIGHT];
-		GpuBuffer *light_buffers[FRAMES_IN_FLIGHT];
+		GpuBuffer *mesh_buffer;
+		GpuBuffer *material_buffer;
 
 		u32 alloc_handle_index(Vector<HandleEntry> &map, Vector<u32> &free_list);
 

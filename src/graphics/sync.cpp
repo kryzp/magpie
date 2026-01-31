@@ -356,15 +356,16 @@ VkImageMemoryBarrier2 sync::texture_memory_barrier(
 VkBufferMemoryBarrier2 sync::buffer_memory_barrier(
 	const GpuBuffer *buffer,
 	const GpuBufferAccess &src_access_info,
-	const GpuBufferAccess &dst_access_info
+	const GpuBufferAccess &dst_access_info,
+	u64 offset, u64 size
 )
 {
 	VkBufferMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 
 	barrier.buffer = buffer->get_handle();
-	barrier.offset = 0;
-	barrier.size = VK_WHOLE_SIZE;
+	barrier.offset = offset;
+	barrier.size = size;
 
 	barrier.srcAccessMask = src_access_info.access;
 	barrier.dstAccessMask = dst_access_info.access;

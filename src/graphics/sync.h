@@ -77,7 +77,8 @@ namespace gfx
 		VkBufferMemoryBarrier2 buffer_memory_barrier(
 			const GpuBuffer *buffer,
 			const GpuBufferAccess &src_access_info,
-			const GpuBufferAccess &dst_access_info
+			const GpuBufferAccess &dst_access_info,
+			u64 offset, u64 size // VK_WHOLE_SIZE for entire buffer
 		);
 	}
 }

@@ -4,8 +4,14 @@ Vulkan renderer written in C++, with some other features added on (basically a t
 
 I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me. No gurantees on quality though. Some of this code is (probably) bad, some of it is (maybe) good ;).
 
-### Pictures
-![Indirect Deferred PBR Rendering](images/indirect_deferred.png)
+### Interesting Parts
+- `app`
+- `core/class_db`
+- `graphics/render_graph`
+- `graphics/render_scene`
+- `graphics/device`
+- `graphics/renderers/*`
+- `job/*`
 
 ### Notable Features
 - Right-handed Z-up coordinates (as it SHOULD be)
@@ -17,10 +23,11 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - Indirect Deferred Rendering
 - Page-allocated Render Scene
 - High-performance lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
-- RTTI macro system allowing for type introspection and other cool stuff
+- RTTI macro system allowing for type introspection and other cool stuff like iterating over fields
 - ImGui Integration
 - Controller support I guess :p
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
+- Linear GPU allocators
 
 ### Ideas / Todo List
 - More sophisticated debug logging / tracing system
@@ -40,3 +47,6 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - Hybrid Clustered Deferred + Forward Rendering (for transparency)
 - Refraction
 - Half Life: Alyx style reticle / gun scope effect (scope is only visible through the front holographic "lens", probably done through stencil magic)
+
+### Pictures
+![Indirect Deferred PBR Rendering](images/indirect_deferred.png)
