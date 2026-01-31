@@ -236,6 +236,16 @@ GpuBufferAccess sync::get_src_buffer_access(GpuBufferAccessType usage)
 			info.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
 			break;
 
+		case GPU_BUFFER_ACCESS_TRANSFER_SRC:
+			info.stage  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+			break;
+
+		case GPU_BUFFER_ACCESS_TRANSFER_DST:
+			info.stage  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+			break;
+
 		case GPU_BUFFER_ACCESS_COPY_SRC:
 			info.stage  = VK_PIPELINE_STAGE_2_COPY_BIT;
 			info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
@@ -283,6 +293,16 @@ GpuBufferAccess sync::get_dst_buffer_access(GpuBufferAccessType usage)
 		case GPU_BUFFER_ACCESS_INDIRECT:
 			info.stage  = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
 			info.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+			break;
+
+		case GPU_BUFFER_ACCESS_TRANSFER_SRC:
+			info.stage  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			info.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+			break;
+
+		case GPU_BUFFER_ACCESS_TRANSFER_DST:
+			info.stage  = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			info.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 			break;
 
 		case GPU_BUFFER_ACCESS_COPY_SRC:
