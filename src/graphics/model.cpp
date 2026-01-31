@@ -5,7 +5,7 @@ using namespace gfx;
 void Mesh::init(
 	Device *device, u64 vertex_size,
 	u32 vertex_count, void *vertices,
-	u32 index_count, void *indices
+	u32 index_count, u32 *indices
 )
 {
 	this->device = device;
@@ -14,7 +14,7 @@ void Mesh::init(
 	this->index_count = index_count;
 
 	u64 vertex_buffer_size = vertex_count * vertex_size;
-	u64 index_buffer_size = index_count * sizeof(u16);
+	u64 index_buffer_size = index_count * sizeof(u32);
 
 	GpuBuffer *staging_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,

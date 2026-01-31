@@ -23,14 +23,24 @@ struct ModelVertex {
 struct ObjectData {
 	float4x4 model_matrix;
     float4x4 normal_matrix;
+    float4 sphere_bounds;
+	uint material_index;
+    uint page_index;
+    uint mesh_index;
+};
+
+struct Mesh {
+    uint index_count;
+    uint first_index;
+    ModelVertex *vertex_buffer;
 };
 
 struct Material {
-    uint diffuse;
-    uint normal;
-    uint emissive;
-    uint mr;
-    uint ambient;
+    uint albedo_texture;
+    uint normal_texture;
+    uint emissive_texture;
+    uint mr_texture;
+    uint ambient_texture;
 };
 
 struct Light {
@@ -42,15 +52,16 @@ struct Light {
 	float4x4 transform;
 };
 
-struct Instance {
-	uint object_id;
-	uint batch_id;
-};
-
-struct Indirect {
+struct IndirectDraw {
 	uint index_count;
 	uint instance_count;
 	uint first_index;
 	uint vertex_offset;
 	uint first_instance;
+};
+
+struct PagePointers {
+    IndirectDraw *indirect_buffer;
+    uint *count_buffer;
+    ModelVertex *vertex_buffer;
 };

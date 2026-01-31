@@ -119,14 +119,20 @@ void App::init()
 	swapchain = graphics_device.create_swapchain();
 
 	graphics_device.init_imgui();
+	
+	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
 	assets.init(&graphics_device);
-	render_scene.init(&graphics_device);
 	
 	render_graph.init(&graphics_device);
+	
+	render_scene.init(&graphics_device);
 
 	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
+
+	u32 mesh = render_scene.register_mesh(model.get_sub_model(0).mesh);
+	u32 material = render_scene.register_material(model.get_sub_model(0).material, assets);
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 16; j++) {
@@ -139,25 +145,17 @@ void App::init()
 				Vec3::zero()
 			);
 
-			gfx::RenderSceneObject &object = render_scene.get_object_from_handle(render_scene.create_object(transform));
-			object.mesh_handle = render_scene.upload_mesh(model.get_sub_model(0).mesh);
-			object.material_handle = render_scene.upload_material(model.get_sub_model(0).material, assets);
+			render_scene.create_object(transform, mesh, material);
 		}
 	}
 
-	gfx::Light light = {};
-	light.type = gfx::Light::TYPE_POINT;
-	light.colour = { 255, 255, 255, 255 };
-	light.intensity = 2.f;
-	light.falloff = 1.f;
-
-	gfx::RenderSceneObject &light_object = render_scene.get_object_from_handle(render_scene.create_object(Mat4::translate(Vec3(0.f, 0.f, 1.f))));
-	light_object.light_handle = render_scene.upload_light(light);
-
-	render_scene.build_batches();
-//	render_scene.merge_meshes();
-	
-	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
+	light_handle = render_scene.create_light({
+		.type = gfx::Light::TYPE_POINT,
+		.position = Vec3(0.f, 0.f, 1.f),
+		.colour = { 255, 255, 255, 255 },
+		.intensity = 1.f,
+		.falloff = 1.f
+	});
 
 	frame_data_buffer = graphics_device.alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
@@ -334,11 +332,13 @@ void App::update(float dt, const inp::InputState &input)
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
 			post_processing.set_exposure(exp);
+
+		static float intens = 1.f;
+
+		if (ImGui::SliderFloat("Light Intensity", &intens, 0.f, 5.f))
+			render_scene.set_light_intensity(light_handle, intens);
 	}
 	ImGui::End();
-
-	render_scene.resolve_removing();
-	render_scene.update();
 }
 
 void App::fixed_update(float dt)
@@ -360,6 +360,8 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 
 	frame_data_buffer->write(&data, sizeof(gfx::gpu_types::GpuFrameData), 0);
 
+	render_scene.update_gpu_buffers();
+
 	struct FooBar { int baz; };
 
 	render_graph.push_stage<FooBar>(
@@ -375,10 +377,8 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd)
 	
 	gfx::RenderGraphBlackboard bb;
 
-	render_scene.mesh_pass_stages(render_graph);
-
-	compute_culling.add_render_stages(render_graph, bb, render_scene.get_pass(gfx::MeshPass::TYPE_FORWARD));
-	deferred_renderer.add_render_stages(render_graph, bb, render_scene.get_pass(gfx::MeshPass::TYPE_FORWARD), frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
+	compute_culling.add_render_stages(render_graph, bb, render_scene);
+	deferred_renderer.add_render_stages(render_graph, bb, render_scene, frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
 	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
 	post_processing.add_render_stages(render_graph, bb, swapchain_src);
 }

@@ -89,4 +89,6 @@ private:
 	gfx::PostProcessingRenderer post_processing;
 
 	gfx::RenderResourceHandle swapchain_src;
+
+	gfx::RenderHandle light_handle;
 };

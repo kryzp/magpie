@@ -90,10 +90,14 @@ namespace gfx
 		);
 
 		void draw_indexed_indirect(
-			const GpuBuffer *buffer,
-			u64 offset,
-			u32 count,
-			u32 stride
+			const GpuBuffer *buffer, u64 offset,
+			u32 count, u32 stride
+		);
+
+		void draw_indexed_indirect_count(
+			const GpuBuffer *buffer, u64 offset,
+			const GpuBuffer *count_buffer, u64 count_offset,
+			u32 count, u32 stride
 		);
 
 		// ---
@@ -124,6 +128,13 @@ namespace gfx
 			const GpuBuffer *src,
 			const Texture *dst,
 			const Vector<VkBufferImageCopy> &regions
+		);
+
+		// ---
+
+		void fill_buffer(
+			const GpuBuffer *buffer,
+			u64 offset, u64 size, u32 data
 		);
 
 		// ---

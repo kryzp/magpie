@@ -8,6 +8,9 @@ namespace gfx
 {
 	class CommandBuffer;
 
+	// TODO: AUTOMATIC RESIZING O(2^n)
+	//       VECTOR STYLE
+
 	class CommandPool {
 		friend class Device;
 

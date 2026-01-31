@@ -17,7 +17,7 @@ namespace gfx
 		void init(
 			Device *device, u64 vertex_size,
 			u32 vertex_count, void *vertices,
-			u32 index_count, void *indices
+			u32 index_count, u32 *indices
 		);
 
 		void destroy() const;

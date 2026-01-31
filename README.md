@@ -1,27 +1,25 @@
 # Magpie
 
-It's a (vulkan) renderer written in C++, with some other features added on (basically a testing ground for whatever programming project I wanna try at any point).
+Vulkan renderer written in C++, with some other features added on (basically a testing ground for whatever programming project I wanna try at any point).
 
 I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me. No gurantees on quality though. Some of this code is (probably) bad, some of it is (maybe) good ;).
 
 ### Pictures
-TODO (It looks super cool and awesome trust me).
 ![Indirect Deferred PBR Rendering](images/indirect_deferred.png)
 
 ### Notable Features
 	- Right-handed Z-up coordinates (as it SHOULD be)
-	- Fully bindless + BDA
-	- Vulkan hardware abstraction layer
+	- Modern bindless resource design
+	- GPU Driven Rendering: Bindless materials and meshes (global vertex buffer, vertex pulling, etc...)
 	- IBL (Image-Based Lighting)
-	- GPU Driven Rendering
-	- Material system
-	- Mesh merging
 	- Compute Frustum Culling
 	- Render Graph that handles resource management, pipeline barriers and synchronization
 	- Indirect Deferred Rendering
-	- Multi-Threaded (almost) lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
+	- Page-allocated Render Scene
+	- High-performance lockless fiber-based job system (allowing for job yielding!!), with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
 	- RTTI macro system allowing for type introspection and other cool stuff
 	- ImGui Integration
+	- Controller support I guess :p
 	- Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
 
 ### Ideas / Todo List

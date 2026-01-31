@@ -172,7 +172,7 @@ void CommandBuffer::bind_index_buffer(
 		handle,
 		buffer->get_handle(),
 		offset,
-		VK_INDEX_TYPE_UINT16
+		VK_INDEX_TYPE_UINT32
 	);
 }
 
@@ -216,18 +216,28 @@ void CommandBuffer::draw_indexed(
 }
 
 void CommandBuffer::draw_indexed_indirect(
-	const GpuBuffer *buffer,
-	u64 offset,
-	u32 count,
-	u32 stride
+	const GpuBuffer *buffer, u64 offset,
+	u32 count, u32 stride
 )
 {
 	vkCmdDrawIndexedIndirect(
 		handle,
-		buffer->get_handle(),
-		offset,
-		count,
-		stride
+		buffer->get_handle(), offset,
+		count, stride
+	);
+}
+
+void CommandBuffer::draw_indexed_indirect_count(
+	const GpuBuffer *buffer, u64 offset,
+	const GpuBuffer *count_buffer, u64 count_offset,
+	u32 count, u32 stride
+)
+{
+	vkCmdDrawIndexedIndirectCount(
+		handle,
+		buffer->get_handle(), offset,
+		count_buffer->get_handle(), count_offset,
+		count, stride
 	);
 }
 
@@ -384,6 +394,18 @@ void CommandBuffer::copy_buffer_to_texture_regions(
 		dst->get_handle(),
 		VK_IMAGE_LAYOUT_GENERAL,
 		regions.size(), regions.data()
+	);
+}
+
+void CommandBuffer::fill_buffer(
+	const GpuBuffer *buffer,
+	u64 offset, u64 size, u32 data
+)
+{
+	vkCmdFillBuffer(
+		handle,
+		buffer->get_handle(),
+		offset, size, data
 	);
 }
 

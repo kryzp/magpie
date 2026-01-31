@@ -6,6 +6,15 @@
 #include "math/vec3.h"
 #include "math/matrix.h"
 
+// TODO: Make gpu_types one file between both the SLANG and C++ codebases.
+/*
+#ifdef __cplusplus
+#  define SLANG_PTR(T) u64
+#else
+#  define SLANG_PTR(T) T *
+#endif
+*/
+
 namespace gfx
 {
 	namespace gpu_types
@@ -34,10 +43,20 @@ namespace gfx
 		struct GpuObjectData {
 			Mat4 model_matrix;
 			Mat4 normal_matrix;
+			Vec4 sphere_bounds; // xyz = centre, w = radius
+			u32 material_index;
+			u32 page_index; // Which geometry page this object belongs to.
+			u32 mesh_index;
+		};
+
+		struct GpuMesh {
+			u32 index_count;
+			u32 first_index;
+			u64 vertex_buffer;
 		};
 
 		struct GpuMaterial {
-			u32 diffuse_texture;
+			u32 albedo_texture;
 			u32 normal_texture;
 			u32 emissive_texture;
 			u32 metallic_roughness_texture;
@@ -53,13 +72,14 @@ namespace gfx
 			Mat4 transform;
 		};
 
-		struct GpuInstance {
-			u32 object_id;
-			u32 batch_id;
+		struct GpuIndirectDraw {
+			VkDrawIndexedIndirectCommand vk_command;
 		};
 
-		struct GpuIndirect {
-			VkDrawIndexedIndirectCommand command;
+		struct GpuPagePointers {
+			u64 indirect_buffer;
+			u64 count_buffer;
+			u64 vertex_buffer;
 		};
 	}
 }

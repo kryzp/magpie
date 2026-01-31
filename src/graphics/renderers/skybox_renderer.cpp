@@ -34,7 +34,7 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 		{  1.f, -1.f,  1.f }
 	};
 
-	u16 indices[] = {
+	u32 indices[] = {
 		0, 2, 1,
 		2, 0, 3,
 

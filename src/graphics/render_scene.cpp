@@ -3,486 +3,487 @@
 #include "assets/texture_serializer.h"
 #include "math/calc.h"
 
-#include "render_graph.h"
-
 using namespace gfx;
 
-void MeshPass::push_stage(RenderGraph &graph)
+RenderScene::RenderScene()
+	: device(nullptr)
+	, objects()
+	, lights()
+	, geometry_pages()
+	, page_table_buffer()
+	, mesh_registry()
+	, meshes()
+	, mesh_buffer()
+	, materials()
+	, material_buffers{}
+	, object_buffers()
+	, light_buffers{}
 {
-	struct MeshPassStageData {
-		int foo;
-	};
-
-	graph.push_stage<MeshPassStageData>(
-		"Mesh Pass",
-		RenderStage::TYPE_TRANSFER,
-		[&](RenderGraphBuilder &builder, MeshPassStageData &data) {
-			GpuBufferInfo instance_info = {};
-			instance_info.size = sizeof(gpu_types::GpuInstance) * RenderScene::MAX_OBJECTS;
-			instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-			instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-
-			GpuBufferInfo compacted_instance_info = {};
-			compacted_instance_info.size = sizeof(u32) * RenderScene::MAX_OBJECTS;
-			compacted_instance_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-			compacted_instance_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
-	
-			GpuBufferInfo draw_indirect_info = {};
-			draw_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
-			draw_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-			draw_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
-	
-//			GpuBufferInfo clear_indirect_info = {};
-//			clear_indirect_info.size = sizeof(gpu_types::GpuIndirect) * RenderScene::MAX_OBJECTS;
-//			clear_indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-//			clear_indirect_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT;
-			
-			instance_buffer           = builder.create_buffer(instance_info);
-			compacted_instance_buffer = builder.create_buffer(compacted_instance_info);
-			draw_indirect_buffer      = builder.create_buffer(draw_indirect_info);
-//			clear_indirect_buffer     = builder.create_buffer(clear_indirect_info);
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const MeshPassStageData &data) {
-		}
-	);
 }
 
-void MeshPass::populate(RenderScene &scene)
+RenderScene::~RenderScene()
 {
-	// RESET.
-	multi_batches.clear();
-	batches.clear();
-	direct_batches.clear();
-
-	// DIRECT BATCHES.
-	for (auto &s : scene.get_objects()) {
-		if (!render_scene_handle_valid(s.mesh_handle))
-			continue;
-		
-		DirectBatch &direct_batch = direct_batches.emplace_back();
-		direct_batch.object_id = s.id;
-	}
-
-	if (direct_batches.empty())
-		return;
-
-	// BATCHES.
-	RenderSceneObject *object = &scene.get_object_from_handle(direct_batches[0].object_id);
-
-	IndirectBatch *batch = &batches.emplace_back();
-	batch->mesh_id = object->mesh_handle;
-	batch->material_id = object->material_handle;
-	batch->first = 0;
-	batch->count = 1;
-
-	for (int i = 1; i < direct_batches.size(); i++) {
-		DirectBatch &curr = direct_batches[i];
-		object = &scene.get_object_from_handle(curr.object_id);
-
-		bool are_same_mesh = object->mesh_handle == batch->mesh_id;
-		bool are_same_material = object->material_handle == batch->material_id;
-
-		if (are_same_mesh && are_same_material) {
-			batch->count++;
-		} else {
-			batch = &batches.emplace_back();
-			batch->mesh_id = object->mesh_handle;
-			batch->material_id = object->material_handle;
-			batch->first = i;
-			batch->count = 1;
-		}
-	}
-
-	// MULTI BATCHES.
-	MultiBatch *multi_batch = &multi_batches.emplace_back();
-	multi_batch->count = 1;
-	multi_batch->first = 0;
-
-	for (int i = 1; i < batches.size(); i++) {
-		IndirectBatch &curr_batch = batches[i];
-		IndirectBatch &join_batch = batches[multi_batch->first];
-
-		// As long as the materials are the same and the mesh
-		// has been merged then we can combine the rendering
-		// calls together.
-		bool compatible_mesh = scene.get_mesh(join_batch.mesh_id)->is_merged;
-		bool same_material = curr_batch.material_id == join_batch.material_id;
-
-		if (compatible_mesh && same_material) {
-			multi_batch->count++;
-		} else {
-			multi_batch = &multi_batches.emplace_back();
-			multi_batch->count = 1;
-			multi_batch->first = i;
-		}
-	}
-}
-
-void MeshPass::fill_instance_array(const RenderScene &scene, gpu_types::GpuInstance *instances)
-{
-	int index = 0;
-
-	for (int i = 0; i < batches.size(); i++) {
-		IndirectBatch &batch = batches[i];
-		for (int k = 0; k < batch.count; k++) {
-			DirectBatch &direct_batch = direct_batches[batch.first + k];
-			instances[index].object_id = direct_batch.object_id;
-			instances[index].batch_id = i;
-			index++;
-		}
-	}
-}
-
-void MeshPass::fill_indirect_array(const RenderScene &scene, gpu_types::GpuIndirect *indirects)
-{
-	for (int i = 0; i < batches.size(); i++) {
-		IndirectBatch &indirect_batch = batches[i];
-		const RenderMesh *mesh = scene.get_mesh(indirect_batch.mesh_id);
-
-		indirects[i].command.firstInstance = indirect_batch.first;
-		indirects[i].command.instanceCount = 0; // This gets filled in the compute shader.
-		indirects[i].command.vertexOffset = mesh->first_vertex;
-		indirects[i].command.firstIndex = mesh->first_index;
-		indirects[i].command.indexCount = mesh->index_count;
-	}
 }
 
 void RenderScene::init(Device *device)
 {
 	this->device = device;
-
-	object_buffer = device->alloc_buffer(
+	
+	mesh_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuObjectData) * MAX_OBJECTS
+		sizeof(gpu_types::GpuMesh) * INITIAL_MAX_MESHES
 	);
 
-	material_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS
-	);
+	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		material_buffers[i] = device->alloc_buffer(
+			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(gpu_types::GpuMaterial) * INITIAL_MAX_MATERIALS
+		);
 
-	light_buffer = device->alloc_buffer(
+		object_buffers[i] = device->alloc_buffer(
+			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(gpu_types::GpuObjectData) * INITIAL_MAX_OBJECTS
+		);
+
+		light_buffers[i] = device->alloc_buffer(
+			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
+			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(gpu_types::GpuLight) * INITIAL_MAX_LIGHTS
+		);
+	}
+
+	page_table_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuLight) * MAX_OBJECTS
+		sizeof(gpu_types::GpuPagePointers) * INITIAL_MAX_PAGES
 	);
 }
 
 void RenderScene::destroy()
 {
-	device->destroy_buffer(merged_vertex_buffer);
-	device->destroy_buffer(merged_index_buffer);
-
-	device->destroy_buffer(object_buffer);
-	device->destroy_buffer(material_buffer);
-	device->destroy_buffer(light_buffer);
-}
-
-void RenderScene::update()
-{
-}
-
-void RenderScene::mesh_pass_stages(RenderGraph &graph)
-{
-	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
-		passes[i].push_stage(graph);
-}
-
-void RenderScene::remove_object(u32 handle)
-{
-	pending_removals.push_back(handle);
-}
-
-void RenderScene::resolve_removing()
-{
-	Vector<u32> removals;
+	device->destroy_buffer(mesh_buffer);
 	
-	for (int i = 0; i < pending_removals.size(); i++) {
-		u32 to_remove_handle = pending_removals[i];
-		RenderSceneObject &to_remove = get_object_from_handle(to_remove_handle);
-		reusable_handles.push_back(to_remove_handle);
-		removals.push_back(to_remove_handle);
+	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
+		device->destroy_buffer(material_buffers[i]);
+		device->destroy_buffer(object_buffers[i]);
+		device->destroy_buffer(light_buffers[i]);
 	}
 
-	// Remove in back->front order.
-	for (int i = removals.size() - 1; i >= 0; i--) {
-		objects.erase(objects.begin() + removals[i]);
+	for (auto &page : geometry_pages) {
+		device->destroy_buffer(page.vertex_buffer);
+		device->destroy_buffer(page.index_buffer);
+		device->destroy_buffer(page.indirect_buffer);
+		device->destroy_buffer(page.draw_count_buffer);
 	}
 
-	pending_removals.clear();
+	device->destroy_buffer(page_table_buffer);
 }
 
-u32 RenderScene::create_object(const Mat4 &transform)
+void RenderScene::update_gpu_buffers()
 {
-	u32 handle = objects.size();
+	const u32 current_frame = device->get_current_frame_index();
+	const u32 count = objects.transforms.size();
 
-	if (reusable_handles.size() > 0) {
-		handle = reusable_handles.back();
-		reusable_handles.pop_back();
+	if (count <= 0)
+		return;
+
+	GpuBuffer *object_buffer = object_buffers[current_frame];
+	gpu_types::GpuObjectData *mapped = (gpu_types::GpuObjectData *)object_buffer->map();
+
+	// Cache friendly - Yay!!!
+	for (int i = 0; i < count; i++) {
+		mapped[i].model_matrix = objects.transforms[i];
+		mapped[i].normal_matrix = objects.transforms[i].inverse().transpose();
+		mapped[i].material_index = objects.materials[i];
+		mapped[i].mesh_index = objects.meshes[i];
+		mapped[i].page_index = objects.page_indices[i];
 	}
+
+	if (!meshes.empty()) {
+		gpu_types::GpuMesh *mapped_meshes = (gpu_types::GpuMesh *)mesh_buffer->map();
+		memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuMesh));
+	}
+
+	if (!lights.data.empty()) {
+		GpuBuffer *light_buffer = light_buffers[current_frame];
+		gpu_types::GpuLight *mapped_lights = (gpu_types::GpuLight *)light_buffer->map();
+		memory_copy(mapped_lights, lights.data.data(), lights.data.size() * sizeof(gpu_types::GpuLight));
+	}
+
+	if (!materials.empty()) {
+		GpuBuffer *material_buffer = material_buffers[current_frame];
+		gpu_types::GpuMaterial *mapped_materials = (gpu_types::GpuMaterial *)material_buffer->map();
+		memory_copy(mapped_materials, materials.data(), materials.size() * sizeof(gpu_types::GpuMaterial));
+	}
+}
+
+bool RenderScene::is_valid_object(RenderHandle handle) const
+{
+	return
+		handle.index < objects.handles.size() && // Is it out of range.
+		handle.generation == objects.handles[handle.index].generation; // Is it stale.
+}
+
+bool RenderScene::is_valid_light(RenderHandle handle) const
+{
+	return
+		handle.index < lights.handles.size() && // Is it out of range.
+		handle.generation == lights.handles[handle.index].generation; // Is it stale.
+}
+
+RenderHandle RenderScene::create_object(
+	const Mat4 &transform,
+	u32 mesh, u32 material
+)
+{
+	RenderHandle handle = {};
+	handle.index = alloc_handle_index(objects.handles, objects.free_indices);
+	handle.generation = objects.handles[handle.index].generation;
+
+	u32 dense_index = objects.transforms.size();
 	
-	RenderSceneObject &object = objects.emplace_back();
-	object.id = handle;
-	object.transform = transform;
+	const MeshMemoryLocation mesh_memory = mesh_registry[mesh];
+
+	objects.back_references.push_back(handle);
+	objects.transforms.push_back(transform);
+	objects.meshes.push_back(mesh_memory.index);
+	objects.materials.push_back(material);
+	objects.sphere_bounds.push_back(Vec4(0.f, 0.f, 0.f, 1.f)); // <-- TODO: TEMP
+	objects.page_indices.push_back(mesh_memory.page);
+
+	objects.handles[handle.index].dense_index = dense_index;
 
 	return handle;
 }
 
-u32 RenderScene::upload_mesh(const Mesh &mesh)
+void RenderScene::remove_object(RenderHandle handle)
 {
-	if (meshes.size() >= 1)
-		return 0;
+	if (!is_valid_object(handle))
+		return;
 
-	u32 handle = meshes.size();
+	HandleEntry &entry = objects.handles[handle.index];
 
-	/*
-	for (int i = 0; i < meshes.size(); i++) {
-		if (meshes[i] == mesh)
-			return i;
+	u32 curr_dense_index = entry.dense_index;
+	u32 prev_dense_index = objects.transforms.size() - 1;
+
+	if (curr_dense_index != prev_dense_index) {
+
+		// Previous slot user is now the current slot.
+		RenderHandle prev_handle = objects.back_references[prev_dense_index];
+
+		objects.transforms      [curr_dense_index] = objects.transforms      [prev_dense_index];
+		objects.sphere_bounds   [curr_dense_index] = objects.sphere_bounds   [prev_dense_index];
+		objects.meshes          [curr_dense_index] = objects.meshes          [prev_dense_index];
+		objects.materials       [curr_dense_index] = objects.materials       [prev_dense_index];
+		objects.page_indices    [curr_dense_index] = objects.page_indices    [prev_dense_index];
+		objects.back_references [curr_dense_index] = objects.back_references [prev_dense_index];
+
+		objects.handles[prev_handle.index].dense_index = curr_dense_index;
 	}
-	*/
 
-	RenderMesh &render_mesh = meshes.emplace_back();
-	render_mesh.original = &mesh;
-	render_mesh.is_merged = false;
-	render_mesh.first_vertex = 0;
-	render_mesh.first_index = 0;
-	render_mesh.vertex_count = mesh.vertex_count;
-	render_mesh.index_count = mesh.index_count;
+	objects.transforms.pop_back();
+	objects.sphere_bounds.pop_back();
+	objects.meshes.pop_back();
+	objects.materials.pop_back();
+	objects.page_indices.pop_back();
+	objects.back_references.pop_back();
+
+	objects.free_indices.push_back(handle.index);
+}
+
+void RenderScene::set_transform(RenderHandle handle, const Mat4 &transform)
+{
+	if (!is_valid_object(handle))
+		return;
+
+	u32 dense_index = objects.handles[handle.index].dense_index;
+
+	objects.transforms[dense_index] = transform;
+}
+
+RenderHandle RenderScene::create_light(const Light &light)
+{
+	RenderHandle handle = {};
+	handle.index = alloc_handle_index(lights.handles, lights.free_indices);
+	handle.generation = lights.handles[handle.index].generation;
+
+	u32 dense_index = lights.data.size();
+
+	Vec3 light_colour = Vec3(1.f, 1.f, 1.f);
+
+	const float epsilon_intensity = 0.1f;
+	const float light_max = light_colour.max_value();
+	const float heuristic_radius = CalcF::sqrt((light.intensity * light_max) / (light.falloff * epsilon_intensity));
+
+	gpu_types::GpuLight gpu_light = {};
+	gpu_light.position = light.position;
+	gpu_light.colour = light_colour;
+	gpu_light.intensity = light.intensity;
+	gpu_light.attenuation = Vec3(light.falloff, 0.f, 0.f);
+	gpu_light.radius = heuristic_radius;
+	gpu_light.transform = Mat4::transform(light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
+
+	lights.data.push_back(gpu_light);
+
+	lights.handles[handle.index].dense_index = dense_index;
 
 	return handle;
 }
 
-u32 RenderScene::upload_material(const Material &material, ast::AssetManager &assets)
+void RenderScene::remove_light(RenderHandle handle)
 {
-	if (materials.size() >= 1)
-		return 0;
+	if (!is_valid_light(handle))
+		return;
 
-	/*
-	for (int i = 0; i < scene->material_count; i++) {
-		if (gfx_materials_equal(&scene->materials[i], material))
-			return i;
-	}
-	*/
+	// TODO
+}
 
-	u32 handle = materials.size();
+void RenderScene::set_light_colour(RenderHandle handle, const Vec3 &colour)
+{
+	if (!is_valid_light(handle))
+		return;
 
+	// TODO
+}
+
+void RenderScene::set_light_intensity(RenderHandle handle, float intensity)
+{
+	if (!is_valid_light(handle))
+		return;
+
+	u32 dense_index = lights.handles[handle.index].dense_index;
+	gpu_types::GpuLight &light = lights.data[dense_index];
+
+	light.intensity = intensity;
+
+	const float epsilon_intensity = 0.1f;
+	const float light_max = light.colour.max_value();
+	const float heuristic_radius = CalcF::sqrt((light.intensity * light_max) / (light.attenuation.x * epsilon_intensity));
+
+	light.transform = Mat4::transform(light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
+}
+
+Mat4 RenderScene::get_light_view(RenderHandle handle) const
+{
+	return Mat4::identity();
+}
+
+Mat4 RenderScene::get_light_proj(RenderHandle handle) const
+{
+	return Mat4::identity();
+}
+
+u32 RenderScene::register_mesh(const Mesh &mesh)
+{
+	u32 page_index = find_suitable_page(mesh.vertex_count, mesh.index_count);
+
+	GeometryPage &page = geometry_pages[page_index];
+
+	u32 index = meshes.size();
+
+	device->graphics().submit_immediate([&](CommandBuffer &cmd) -> void {
+		const u64 vertex_stride = sizeof(gpu_types::GpuModelVertex);
+		const u64 index_stride = sizeof(u32);
+
+		VkBufferCopy vertex_copy = {};
+		vertex_copy.srcOffset = 0;
+		vertex_copy.dstOffset = page.vertex_offset * vertex_stride;
+		vertex_copy.size      = mesh.vertex_count * vertex_stride;
+		
+		VkBufferCopy index_copy = {};
+		index_copy.srcOffset = 0;
+		index_copy.dstOffset = page.index_offset * index_stride;
+		index_copy.size      = mesh.index_count * index_stride;
+
+		cmd.copy_buffer_to_buffer(
+			mesh.vertex_buffer,
+			page.vertex_buffer,
+			{ vertex_copy }
+		);
+
+		cmd.copy_buffer_to_buffer(
+			mesh.index_buffer,
+			page.index_buffer,
+			{ index_copy }
+		);
+	});
+
+	gpu_types::GpuMesh gpu_mesh = {};
+	gpu_mesh.index_count = mesh.index_count;
+	gpu_mesh.first_index = page.index_offset;
+	gpu_mesh.vertex_buffer = page.vertex_buffer->get_device_address() + (page.vertex_offset * sizeof(gpu_types::GpuModelVertex));
+
+	meshes.push_back(gpu_mesh);
+
+	// Move forward on allocator.
+	page.vertex_offset += mesh.vertex_count;
+	page.index_offset += mesh.index_count;
+
+	u32 handle = mesh_registry.size();
+
+	MeshMemoryLocation location = {};
+	location.page = page_index;
+	location.index = index;
+
+	mesh_registry.push_back(location);
+
+	return handle;
+}
+
+u32 RenderScene::register_material(const Material &material, ast::AssetManager &assets)
+{
 	gpu_types::GpuMaterial gpu_material = {};
-	gpu_material.diffuse_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture)->get_bindless_sampled();
+	gpu_material.albedo_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture)->get_bindless_sampled();
 	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture)->get_bindless_sampled();
 	gpu_material.emissive_texture           = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)            ->texture)->get_bindless_sampled();
 	gpu_material.metallic_roughness_texture = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)  ->texture)->get_bindless_sampled();
 	gpu_material.ambient_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)             ->texture)->get_bindless_sampled();
 
-	u64 stride = sizeof(gpu_types::GpuMaterial);
+	u32 index = materials.size();
 
-	material_buffer->write(
-		&gpu_material,
-		stride, stride * handle
-	);
+	materials.push_back(gpu_material);
 
-	materials.push_back(material);
-
-	return handle;
+	return index;
 }
 
-u32 RenderScene::upload_light(const Light &light)
+u32 RenderScene::get_object_count() const
 {
-	u32 handle = lights.size();
-
-	lights.push_back(light);
-	
-	return handle;
-}
-
-RenderMesh *RenderScene::get_mesh(u32 handle)
-{
-	return &meshes[handle];
-}
-
-const RenderMesh *RenderScene::get_mesh(u32 handle) const
-{
-	return &meshes[handle];
-}
-
-Material *RenderScene::get_material(u32 handle)
-{
-	return &materials[handle];
-}
-
-const Material *RenderScene::get_material(u32 handle) const
-{
-	return &materials[handle];
-}
-
-Light *RenderScene::get_light(u32 handle)
-{
-	return &lights[handle];
-}
-
-const Light *RenderScene::get_light(u32 handle) const
-{
-	return &lights[handle];
-}
-
-void RenderScene::build_batches()
-{
-	for (auto &o : objects) {
-		gpu_types::GpuObjectData o_data = {};
-		o_data.model_matrix = o.transform;
-		o_data.normal_matrix = o.transform.inverse().transpose();
-		object_buffer->write(&o_data, sizeof(o_data), sizeof(o_data) * o.id);
-
-		if (o.light_handle != RENDER_INVALID_HANDLE) {
-			const Light &light = lights[o.light_handle];
-			
-			Vec3 light_colour = Vec3(1.f, 1.f, 1.f);
-
-			const float epsilon_intensity = 0.1f;
-			const float light_max = light_colour.max_value();
-			const float heuristic_radius = CalcF::sqrt((light.intensity * light_max) / (light.falloff * epsilon_intensity));
-
-			gpu_types::GpuLight gpu_light = {};
-			gpu_light.position = o.transform.c[3].get_xyz();
-			gpu_light.colour = light_colour;
-			gpu_light.intensity = light.intensity;
-			gpu_light.attenuation = Vec3(light.falloff, 0.f, 0.f);
-			gpu_light.radius = heuristic_radius;
-			gpu_light.transform = Mat4::transform(gpu_light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
-
-			light_buffer->write(&gpu_light, sizeof(gpu_light), sizeof(gpu_light) * o.light_handle);
-		}
-	}
-
-	for (int i = 0; i < MeshPass::TYPE_MAX_ENUM; i++)
-		passes[i].populate(*this);
-}
-
-void RenderScene::merge_meshes()
-{
-	if (meshes.size() <= 0)
-		return;
-
-	// All meshes in the list *should* have the same vertex type.
-	// If they don't we have a bit of a problem :/.
-	const u64 vertex_size = meshes.front().original->vertex_size;
-	const u64 index_size = sizeof(u16);
-
-	u32 total_vertices = 0;
-	u32 total_indices = 0;
-
-	for (auto &mesh : meshes) {
-		mesh.first_vertex = total_vertices;
-		mesh.first_index = total_indices;
-
-		total_vertices += mesh.vertex_count;
-		total_indices += mesh.index_count;
-
-		mesh.is_merged = true;
-	}
-
-	const u64 vb_size = total_vertices * vertex_size;
-	const u64 ib_size = total_indices  * index_size;
-	
-	if (merged_vertex_buffer->get_size() < vb_size ||
-	    merged_index_buffer->get_size() < ib_size) {
-		
-		device->destroy_buffer(merged_vertex_buffer);
-		device->destroy_buffer(merged_index_buffer);
-
-		merged_vertex_buffer = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			vb_size
-		);
-
-		merged_vertex_buffer = device->alloc_buffer(
-			VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			ib_size
-		);
-	}
-	
-	device->graphics().submit_immediate([&](CommandBuffer &cmd) -> void {
-		for (auto &mesh : meshes) {
-			VkBufferCopy vertex_copy = {};
-			vertex_copy.srcOffset = 0;
-			vertex_copy.dstOffset = mesh.first_vertex * vertex_size;
-			vertex_copy.size      = mesh.vertex_count * vertex_size;
-		
-			VkBufferCopy index_copy = {};
-			index_copy.srcOffset = 0;
-			index_copy.dstOffset = mesh.first_index * index_size;
-			index_copy.size      = mesh.index_count * index_size;
-
-			cmd.copy_buffer_to_buffer(
-				mesh.original->vertex_buffer,
-				merged_vertex_buffer,
-				{ vertex_copy }
-			);
-
-			cmd.copy_buffer_to_buffer(
-				mesh.original->index_buffer,
-				merged_index_buffer,
-				{ index_copy }
-			);
-		}
-	});
-}
-
-RenderSceneObject &RenderScene::get_object_from_handle(u32 handle)
-{
-	return objects[handle];
-}
-
-MeshPass &RenderScene::get_pass(MeshPass::Type type)
-{
-	return passes[type];
-}
-
-const MeshPass &RenderScene::get_pass(MeshPass::Type type) const
-{
-	return passes[type];
-}
-
-const Vector<RenderSceneObject> &RenderScene::get_objects() const
-{
-	return objects;
+	return objects.handles.size();
 }
 
 u32 RenderScene::get_light_count() const
 {
-	return lights.size();
+	return lights.handles.size();
 }
 
 const GpuBuffer *RenderScene::get_object_buffer() const
 {
-	return object_buffer;
-}
-
-const GpuBuffer *RenderScene::get_material_buffer() const
-{
-	return material_buffer;
+	return object_buffers[device->get_current_frame_index()];
 }
 
 const GpuBuffer *RenderScene::get_light_buffer() const
 {
-	return light_buffer;
+	return light_buffers[device->get_current_frame_index()];
 }
 
-const GpuBuffer *RenderScene::get_merged_vertex_buffer() const
+const GpuBuffer *RenderScene::get_material_buffer() const
 {
-	return merged_vertex_buffer;
+	return material_buffers[device->get_current_frame_index()];
 }
 
-const GpuBuffer *RenderScene::get_merged_index_buffer() const
+const GpuBuffer *RenderScene::get_mesh_buffer() const
 {
-	return merged_index_buffer;
+	return mesh_buffer;
+}
+
+const GpuBuffer *RenderScene::get_page_buffer() const
+{
+	return page_table_buffer;
+}
+
+const Vector<GeometryPage> &RenderScene::get_geometry_pages() const
+{
+	return geometry_pages;
+}
+
+u32 RenderScene::alloc_handle_index(Vector<HandleEntry> &map, Vector<u32> &free_list)
+{
+	u32 index;
+
+	if (!free_list.empty()) {
+		index = free_list.back();
+		free_list.pop_back();
+		map[index].generation++;
+	} else {
+		index = map.size();
+		map.push_back({ 0, 1 });
+	}
+
+	return index;
+}
+
+u32 RenderScene::find_suitable_page(u32 vertex_count, u32 index_count)
+{
+	if (!geometry_pages.empty()) {
+		auto &last = geometry_pages.back();
+
+		bool large_enough =
+			last.vertex_offset + vertex_count <= last.max_vertices &&
+			last.index_offset + index_count <= last.max_indices;
+
+		if (large_enough)
+			return geometry_pages.size() - 1;
+	}
+
+	GeometryPage page = create_new_page();
+
+	u32 index = geometry_pages.size();
+
+	gpu_types::GpuPagePointers ptrs = {};
+	ptrs.indirect_buffer = page.indirect_buffer->get_device_address();
+	ptrs.count_buffer = page.draw_count_buffer->get_device_address();
+	ptrs.vertex_buffer = page.vertex_buffer->get_device_address();
+
+	page_table_buffer->write(
+		&ptrs,
+		sizeof(gpu_types::GpuPagePointers),
+		sizeof(gpu_types::GpuPagePointers) * index
+	);
+
+	geometry_pages.push_back(page);
+
+	return index;
+}
+
+GeometryPage RenderScene::create_new_page()
+{
+	const u64 vertex_buffer_size = MEGABYTES(64);
+	const u64 index_buffer_size = MEGABYTES(32);
+
+	GeometryPage page = {};
+	
+	// Doesn't need to be VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT
+	// because we use vertex pulling.
+	page.vertex_buffer = device->alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		vertex_buffer_size
+	);
+	
+	page.index_buffer = device->alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		index_buffer_size
+	);
+
+	page.indirect_buffer = device->alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS
+	);
+
+	page.draw_count_buffer = device->alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(u32)
+	);
+
+	page.max_vertices = vertex_buffer_size / sizeof(gpu_types::GpuModelVertex);
+	page.max_indices = index_buffer_size / sizeof(u32);
+
+	return page;
 }

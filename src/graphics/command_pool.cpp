@@ -17,5 +17,6 @@ CommandPool::~CommandPool()
 
 CommandBuffer CommandPool::fetch_free()
 {
+	assert(free_index < MAX_BUFFERS);
 	return CommandBuffer(free_buffers[free_index++]);
 }

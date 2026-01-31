@@ -140,7 +140,7 @@ static void process_sub_model(AssetManager &assets, gfx::Model &model, gfx::SubM
 			index_count++;
 	}
 
-	u16 *indices = scratch.get_arena().push_array<u16>(index_count);
+	u32 *indices = scratch.get_arena().push_array<u32>(index_count);
 
 	index_count = 0;
 

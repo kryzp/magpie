@@ -584,6 +584,7 @@ void Device::init()
 	vulkan12_features.bufferDeviceAddress = VK_TRUE;
 	vulkan12_features.scalarBlockLayout = VK_TRUE;
 	vulkan12_features.timelineSemaphore = VK_TRUE;
+	vulkan12_features.drawIndirectCount = VK_TRUE;
 	vulkan12_features.pNext = &vulkan11_features;
 
 	VkPhysicalDeviceVulkan13Features vulkan13_features = {};

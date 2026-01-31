@@ -37,7 +37,7 @@ void DeferredRenderer::create_light_sphere_mesh(Device *device)
 	u32 index_count  = (stack_count - 1) * (sector_count + 0) * 6;
 
 	Vec3 *vertices = scratch.get_arena().push_array<Vec3>(vertex_count);
-	u16  *indices  = scratch.get_arena().push_array<u16>(index_count);
+	u32  *indices  = scratch.get_arena().push_array<u32>(index_count);
 
 	u32 index = 0;
 
@@ -51,11 +51,11 @@ void DeferredRenderer::create_light_sphere_mesh(Device *device)
 
 	index = 0;
 
-	for (u16 i = 0; i < stack_count; i++) {
-		u16 k1 = (sector_count + 1) * (i + 0); // Current stack.
-		u16 k2 = (sector_count + 1) * (i + 1); // Next stack.
+	for (u32 i = 0; i < stack_count; i++) {
+		u32 k1 = (sector_count + 1) * (i + 0); // Current stack.
+		u32 k2 = (sector_count + 1) * (i + 1); // Next stack.
 
-		for (u16 j = 0; j < sector_count; j++, k1++, k2++) {
+		for (u32 j = 0; j < sector_count; j++, k1++, k2++) {
 			if (i != 0) {
 				indices[index + 0] = k1;
 				indices[index + 1] = k1 + 1u;
@@ -88,7 +88,7 @@ void DeferredRenderer::destroy()
 
 void DeferredRenderer::add_render_stages(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
-	const MeshPass &forward_pass,
+	const RenderScene &scene,
 	const GpuBuffer *frame_data,
 	RenderResourceHandle irradiance,
 	RenderResourceHandle prefilter,
@@ -99,14 +99,13 @@ void DeferredRenderer::add_render_stages(
 
 	struct GeometryStageData {
 		RenderResourceHandle indirect_buffer;
-		RenderResourceHandle instance_buffer;
+		RenderResourceHandle count_buffer;
 	};
 
 	graph.push_stage<GeometryStageData>(
 		"Geometry",
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, GeometryStageData &data) -> void {
-
 			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
 				AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
 				gbuffer.attachments[i] = builder.create_texture(attachment_info);
@@ -120,15 +119,17 @@ void DeferredRenderer::add_render_stages(
 
 			RenderClear depth_clear(1.f, 0);
 			builder.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
-			
-			data.indirect_buffer = builder.read_buffer(forward_pass.draw_indirect_buffer, GPU_BUFFER_ACCESS_INDIRECT);
-			data.instance_buffer = builder.read_buffer(forward_pass.compacted_instance_buffer, GPU_BUFFER_ACCESS_GRAPHICS_READ_WRITE);
+
+			for (auto &page : scene.get_geometry_pages()) {
+				data.indirect_buffer = builder.read_buffer(graph.import_buffer(page.indirect_buffer), GPU_BUFFER_ACCESS_GRAPHICS_READ_WRITE);
+				data.count_buffer = builder.read_buffer(graph.import_buffer(page.draw_count_buffer), GPU_BUFFER_ACCESS_GRAPHICS_READ_WRITE);
+			}
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const GeometryStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 			
 			const GpuBuffer *indirect_buffer = resources.get_buffer(data.indirect_buffer);
-			const GpuBuffer *instance_buffer = resources.get_buffer(data.instance_buffer);
+			const GpuBuffer *count_buffer = resources.get_buffer(data.count_buffer);
 
 			GraphicsPipelineDef pipeline_def(model_shader);
 			pipeline_def.has_depth_attachment = true;
@@ -141,43 +142,34 @@ void DeferredRenderer::add_render_stages(
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
-			MeshPass &pass = ctx.scene_view.scene->get_pass(MeshPass::TYPE_FORWARD);
+			struct {
+				u64 frame_data_buffer;
+				u64 object_buffer;
+				u64 material_buffer;
+				u64 mesh_buffer;
+				u32 sampler;
+			} args;
 
-			for (auto &mb : pass.multi_batches) {
-				const MeshPass::IndirectBatch &b = pass.batches[mb.first];
-			
-				RenderMesh *mesh = ctx.scene_view.scene->get_mesh(b.mesh_id);
-				mesh->original->bind_indices(cmd);
-			
-				struct {
-					u64 frame_data_buffer;
-					u64 transform_buffer;
-					u64 material_buffer;
-					u64 vertex_buffer;
-					u64 instance_buffer;
-					u32 material_id;
-					u32 sampler;
-				} args;
-			
-				args.frame_data_buffer = frame_data->get_device_address();
-				args.transform_buffer = ctx.scene_view.scene->get_object_buffer()->get_device_address();
-				args.material_buffer = ctx.scene_view.scene->get_material_buffer()->get_device_address();
-				args.vertex_buffer = mesh->original->vertex_buffer->get_device_address();
-				args.instance_buffer = instance_buffer->get_device_address();
-				args.material_id = b.material_id;
-				args.sampler = Sampler::linear->get_bindless_handle();
+			args.frame_data_buffer = frame_data->get_device_address();
+			args.object_buffer = ctx.scene_view.scene->get_object_buffer()->get_device_address();
+			args.material_buffer = ctx.scene_view.scene->get_material_buffer()->get_device_address();
+			args.mesh_buffer = ctx.scene_view.scene->get_mesh_buffer()->get_device_address();
+			args.sampler = Sampler::linear->get_bindless_handle();
 
-				cmd.push_constants(
-					pipeline_st.layout,
-					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(args), &args
-				);
+			cmd.push_constants(
+				pipeline_st.layout,
+				VK_SHADER_STAGE_ALL_GRAPHICS,
+				sizeof(args), &args
+			);
 
-				cmd.draw_indexed_indirect(
-					indirect_buffer,
-					mb.first * sizeof(gpu_types::GpuIndirect),
-					mb.count,
-					sizeof(gpu_types::GpuIndirect)
+			for (auto &page : ctx.scene_view.scene->get_geometry_pages()) {
+				cmd.bind_index_buffer(page.index_buffer, 0);
+				
+				cmd.draw_indexed_indirect_count(
+					indirect_buffer, 0,
+					count_buffer, 0,
+					RenderScene::PAGE_MAX_OBJECTS,
+					sizeof(gpu_types::GpuIndirectDraw)
 				);
 			}
 		}

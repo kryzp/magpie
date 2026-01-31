@@ -18,30 +18,43 @@ void ComputeCulling::destroy()
 {
 }
 
-void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, const MeshPass &forward_pass)
+void ComputeCulling::add_render_stages(
+	RenderGraph &graph, RenderGraphBlackboard &bb,
+	const RenderScene &scene
+)
 {
 	struct ComputeCullingStageData {
-		RenderResourceHandle instance_buffer;
-		RenderResourceHandle draw_indirect_buffer;
-		RenderResourceHandle compacted_instance_buffer;
+		RenderResourceHandle object_buffer;
+		RenderResourceHandle mesh_buffer;
+		RenderResourceHandle page_buffer;
+		Vector<RenderResourceHandle> count_buffers;
 	};
 
 	graph.push_stage<ComputeCullingStageData>(
 		"Compute Frustum Culling",
 		RenderStage::TYPE_COMPUTE,
 		[&](RenderGraphBuilder &builder, ComputeCullingStageData &data) -> void {
-			data.instance_buffer = builder.write_buffer(forward_pass.instance_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
-			data.draw_indirect_buffer = builder.write_buffer(forward_pass.draw_indirect_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
-			data.compacted_instance_buffer = builder.write_buffer(forward_pass.compacted_instance_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+			data.object_buffer = builder.read_buffer(graph.import_buffer(scene.get_object_buffer()), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+			data.mesh_buffer = builder.read_buffer(graph.import_buffer(scene.get_mesh_buffer()), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+			data.page_buffer = builder.read_buffer(graph.import_buffer(scene.get_page_buffer()), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+
+			for (auto &page : scene.get_geometry_pages()) {
+				builder.write_buffer(graph.import_buffer(page.indirect_buffer), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+				data.count_buffers.push_back(builder.write_buffer(graph.import_buffer(page.draw_count_buffer), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE));
+			}
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const ComputeCullingStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 
-			MeshPass &pass = ctx.scene_view.scene->get_pass(MeshPass::TYPE_FORWARD);
-		
-			const GpuBuffer *instance_buffer = resources.get_buffer(data.instance_buffer);
-			const GpuBuffer *indirect_buffer = resources.get_buffer(data.draw_indirect_buffer);
-			const GpuBuffer *output_buffer   = resources.get_buffer(data.compacted_instance_buffer);
+			// Clear count buffers.
+			for (auto &b : data.count_buffers) {
+				const GpuBuffer *gpu_buffer = resources.get_buffer(b);
+				cmd.fill_buffer(gpu_buffer, 0, gpu_buffer->get_size(), 0);
+			}
+
+			const GpuBuffer *object_buffer   = resources.get_buffer(data.object_buffer);
+			const GpuBuffer *mesh_buffer     = resources.get_buffer(data.mesh_buffer);
+			const GpuBuffer *page_buffer     = resources.get_buffer(data.page_buffer);
 
 			ComputePipelineDef pipeline_def(compute_frustum_culling_program);
 			PipelineState pipeline_st = ctx.device.fetch_pipeline(pipeline_def);
@@ -49,6 +62,7 @@ void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
+#if 0
 			Mat4 proj = ctx.scene_view.camera->get_projection();
 			Mat4 view = ctx.scene_view.camera->get_view();
 
@@ -69,11 +83,13 @@ void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard
 
 				float frustum[4];
 
-				//float lod_base;
-				//float lod_step;
+				/*
+				float lod_base;
+				float lod_step;
 
-				//float pyramid_width;
-				//float pyramid_height;
+				float pyramid_width;
+				float pyramid_height;
+				*/
 
 				u32 draw_count;
 
@@ -146,8 +162,29 @@ void ComputeCulling::add_render_stages(RenderGraph &graph, RenderGraphBlackboard
 				VK_SHADER_STAGE_COMPUTE_BIT,
 				sizeof(draw_cull_data), &draw_cull_data
 			);
+#endif
 
-			cmd.dispatch((draw_cull_data.draw_count / 256) + 1, 1, 1);
+			struct {
+				u64 object_buffer;
+				u64 mesh_buffer;
+				u64 page_buffer;
+				u32 object_count;
+			} pc;
+
+			pc.object_buffer = object_buffer->get_device_address();
+			pc.mesh_buffer = mesh_buffer->get_device_address();
+			pc.page_buffer = page_buffer->get_device_address();
+			pc.object_count = ctx.scene_view.scene->get_object_count();
+
+			cmd.push_constants(
+				pipeline_st.layout,
+				VK_SHADER_STAGE_COMPUTE_BIT,
+				sizeof(pc), &pc
+			);
+			
+			const u32 threads = 64;
+
+			cmd.dispatch((pc.object_count + threads - 1) / threads, 1, 1);
 		}
 	);
 }
