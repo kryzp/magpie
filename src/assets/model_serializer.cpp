@@ -60,7 +60,7 @@ static AssetHandle try_fetch_assimp_material_texture(
 	String path = directory + String(texture_path.C_Str());
 
 	AssetHandle handle = ctx.assets.from_file_path(path);
-	ctx.assets.request_asset_load_now(handle, ast::ASSET_TYPE_TEXTURE);
+	ctx.assets.load_async(handle, ast::ASSET_TYPE_TEXTURE);
 
 	return handle;
 }

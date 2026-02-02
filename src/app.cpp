@@ -128,8 +128,8 @@ void App::init()
 	
 	render_scene.init(&graphics_device);
 
-	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
-//	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("Cube/scene.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <mutex>
 
 #include "core/types.h"
@@ -176,7 +177,15 @@ namespace ast
 	class AssetManager {
 	public:
 		// What sized chunks of data are sent to the GPU at a time.
-		constexpr static u64 GPU_UPLOAD_CHUNK_SIZE = MEGABYTES(256);
+		constexpr static u64 GPU_UPLOAD_CHUNK_SIZE = MEGABYTES(128);
+
+		/*
+		// Maximum amount of memory on the CPU before we stop
+		// to give time to upload it to the GPU.
+		constexpr static u64 MAX_MEMORY_PRESSURE = MEGABYTES(512);
+		
+		std::atomic<u64> memory_pressure;
+		*/
 
 		AssetManager();
 		~AssetManager();
@@ -190,12 +199,15 @@ namespace ast
 		void destroy_asset(const AssetHandle &handle);
 
 		AssetHandle from_file_path(const String &path);
+
+		bool is_loaded(const AssetHandle &handle) const;
+		bool is_loading(const AssetHandle &handle);
 		
 		template <typename T>
 		T *get_asset(const AssetHandle &handle);
 
-		void request_asset_load_now(const AssetHandle &handle, AssetType type);
-		void request_asset_load_async(const AssetHandle &handle, AssetType type);
+		void load_now(const AssetHandle &handle, AssetType type);
+		void load_async(const AssetHandle &handle, AssetType type);
 
 		void wait_for_async_uploads();
 
@@ -205,7 +217,7 @@ namespace ast
 
 		String get_system_file_path(const String &path) const;
 
-		bool is_valid(const AssetHandle &handle) const;
+		bool is_valid(const AssetHandle &handle);
 		bool is_placeholder(const AssetHandle &handle) const;
 
 		const AssetSerializer &get_serializer(AssetType type) const;
@@ -279,8 +291,6 @@ namespace ast
 
 			Asset *get(const AssetHandle &handle) const
 			{
-				assert(is_valid(handle));
-
 				if (!is_valid(handle))
 					return nullptr;
 				
@@ -289,8 +299,6 @@ namespace ast
 
 			void set(const AssetHandle &handle, Asset *asset)
 			{
-				assert(is_valid(handle));
-
 				if (is_valid(handle))
 					list[handle.index].asset = asset;
 			}
@@ -326,12 +334,18 @@ namespace ast
 		};
 
 		AssetList assets;
+
 		AssetSerializer serializers[ASSET_TYPE_MAX_ENUM];
+
 		HashMap<String, AssetHandle> path_to_handle;
 
-		std::mutex upload_mutex;
 		Vector<AssetUpload> upload_queue;
 		job::JobCounter *upload_counter;
+		std::mutex upload_mutex;
+
+		HashMap<u32, bool> loading_assets;
+		std::condition_variable loading_cv;
+		std::mutex loading_mutex;
 	};
 
 	template <typename T, typename ...Args>
@@ -353,8 +367,7 @@ namespace ast
 		if (here)
 			return here;
 
-		request_asset_load_now(handle, T::get_asset_type_static());
-
+		load_now(handle, T::get_asset_type_static());
 		return assets.get(handle)->as<T>();
 	}
 }

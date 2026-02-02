@@ -4,9 +4,9 @@
 
 using namespace ast;
 
-static Vector<b8> load_file_bytes(const String &path)
+static Vector<u8> load_file_bytes(const String &path)
 {
-	Vector<b8> bytes;
+	Vector<u8> bytes;
 
 	FILE *file = fopen(path.c_str(), "rb");
 	u64 file_size = 0;
@@ -26,7 +26,8 @@ static Vector<b8> load_file_bytes(const String &path)
 }
 
 struct ShaderLoadData {
-	Vector<b8> stages[2];
+	int stage_count;
+	Vector<u8> stages[2];
 };
 
 static AssetLoadResult shader_load(const AssetLoadContext &ctx)
@@ -55,10 +56,12 @@ static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 	}
 
 	ShaderLoadData *load_data = new ShaderLoadData();
+
+	load_data->stage_count = paths.size();
 	
 	for (int i = 0; i < paths.size(); i++)
 		load_data->stages[i] = load_file_bytes(paths[i]);
-	
+
 	AssetLoadResult result = {};
 	result.data = load_data;
 	result.stage_size = 0; // We don't need a gpu staging buffer for loading shaders.
@@ -77,7 +80,9 @@ static Asset *shader_finalize(
 
 	Vector<gfx::ShaderBytecode> stages;
 
-	for (auto &stage : load_data->stages) {
+	for (int i = 0; i < load_data->stage_count; i++) {
+		Vector<u8> &stage = load_data->stages[i];
+
 		gfx::ShaderBytecode bytecode = {};
 		bytecode.bytes = stage.data();
 		bytecode.size = stage.size();

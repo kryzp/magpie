@@ -54,4 +54,5 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - Shader Permutations?
 
 ### Pictures
-![Indirect Deferred PBR Rendering](images/indirect_deferred.png)
+![](images/indirect_deferred.png)
+![](images/cool.png)

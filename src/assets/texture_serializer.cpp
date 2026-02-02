@@ -60,7 +60,7 @@ static Asset *texture_finalize(
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 4);
+	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 1);
 
 	stage->write(load_data->pixels, result.stage_size, stage_base);
 

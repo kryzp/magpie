@@ -40,6 +40,7 @@ float4 DemoMap(float3 position)
 {
 //	return float4(position, 1.0);
 
+	/*
     if (position.x >= 1.0)
         return float4(position.z, 0.0, 0.0, 1.0);
 
@@ -47,7 +48,17 @@ float4 DemoMap(float3 position)
         return float4(0.0, position.z, 0.0, 1.0);
 
     if (position.z >= 1.0)
-        return float4(0.0, 0.0, position.x, 1.0);
+        return float4(0.0, 0.0, (max(position.y, 0.0) + max(position.x, 0.0)) * 0.5, 1.0);
+	*/
+
+    if (position.x >= 1.0)
+        return float4(1.0, 0.0, 0.0, 1.0);
+
+    if (position.y >= 1.0)
+        return float4(0.0, 1.0, 0.0, 1.0);
+
+    if (position.z >= 1.0)
+        return float4(0.0, 0.0, 1.0, 1.0);
 
     return float4(0.0, 0.0, 0.0, 1.0);
 }

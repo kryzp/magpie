@@ -54,11 +54,6 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-typedef uint8_t  b8;
-typedef uint16_t b16;
-typedef uint32_t b32;
-typedef uint64_t b64;
-
 typedef unsigned long ulong;
 typedef uintptr_t uptr;
 

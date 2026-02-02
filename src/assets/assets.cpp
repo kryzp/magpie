@@ -4,6 +4,8 @@
 #include "shader_serializer.h"
 #include "model_serializer.h"
 
+#include "platform/platform.h"
+
 using namespace ast;
 
 String AssetLoadContext::system_file_path() const
@@ -16,9 +18,12 @@ AssetManager::AssetManager()
 	, assets()
 	, serializers{}
 	, path_to_handle()
-	, upload_mutex()
 	, upload_queue()
 	, upload_counter(nullptr)
+	, upload_mutex()
+	, loading_assets()
+	, loading_cv()
+	, loading_mutex()
 {
 	serializers[ASSET_TYPE_TEXTURE] = get_texture_serializer();
 	serializers[ASSET_TYPE_SHADER] = get_shader_serializer();
@@ -47,24 +52,64 @@ void AssetManager::destroy_asset(const AssetHandle &handle)
 	assets.remove(handle);
 }
 
-void AssetManager::request_asset_load_now(const AssetHandle &handle, AssetType type)
+AssetHandle AssetManager::from_file_path(const String &path)
 {
-	assert(is_valid(handle));
+	if (path_to_handle.find(path) != path_to_handle.end())
+		return path_to_handle[path];
 
-	if (!is_valid(handle))
+	std::lock_guard<std::mutex> lock(loading_mutex);
+
+	AssetHandle handle = assets.add(nullptr, path);
+
+	loading_assets[handle.index] = false;
+	path_to_handle[path] = handle;
+
+	return handle;
+}
+
+bool AssetManager::is_loaded(const AssetHandle &handle) const
+{
+	if (!assets.is_valid(handle))
+		return false;
+
+	Asset *a = assets.get(handle);
+
+	return a != nullptr; // TODO: also check if a != placeholder when adding those.
+}
+
+bool AssetManager::is_loading(const AssetHandle &handle)
+{
+	std::lock_guard<std::mutex> lock(loading_mutex);
+	return loading_assets[handle.index];
+}
+
+void AssetManager::load_now(const AssetHandle &handle, AssetType type)
+{
+	if (is_loaded(handle) || is_loading(handle))
 		return;
 
-	const AssetSerializer &serializer = serializers[type];
+	{
+		std::unique_lock<std::mutex> lock(loading_mutex);
+
+		if (loading_assets.at(handle.index)) {
+			loading_cv.wait(lock, [&] {
+				return !loading_assets.at(handle.index);
+			});
+			return;
+		}
+
+		loading_assets[handle.index] = true;
+	}
 
 	AssetMetaData metadata = {};
 	metadata.file_path = assets.get_path(handle);
-	
+
 	AssetLoadContext context = {
 		.assets = *this,
 		.metadata = metadata
 	};
 	
-	AssetLoadResult result = serializer.load(context);
+	AssetLoadResult result = serializers[type].load(context);
 
 	if (result.failed)
 		debug_log("Failed to load %s asset: %s", get_string_from_asset_type(type).c_str(), metadata.file_path.c_str());
@@ -92,12 +137,11 @@ static JOB_ENTRY_POINT(asset_load_job)
 	AssetLoadJobParam *load_param = (AssetLoadJobParam *)param;
 
 	/*
-	while (load_param->assets->memory_pressure.load() >= AssetManager::MAX_MEMORY_PRESSURE) {
-		if (job::is_main_thread()) {
+	while (load_param->assets->memory_pressure > AssetManager::MAX_MEMORY_PRESSURE) {
+		if (job::is_main_thread())
 			load_param->assets->flush_uploads();
-		} else {
+		else
 			platform::yield_thread();
-		}
 	}
 	*/
 
@@ -129,12 +173,19 @@ static JOB_ENTRY_POINT(asset_load_job)
 	delete load_param;
 }
 
-void AssetManager::request_asset_load_async(const AssetHandle &handle, AssetType type)
+void AssetManager::load_async(const AssetHandle &handle, AssetType type)
 {
-	assert(is_valid(handle));
-
-	if (!is_valid(handle))
+	if (is_loaded(handle) || is_loading(handle))
 		return;
+	
+	{
+		std::unique_lock<std::mutex> lock(loading_mutex);
+
+		if (loading_assets.at(handle.index))
+			return;
+
+		loading_assets[handle.index] = true;
+	}
 
 	AssetMetaData metadata = {};
 	metadata.file_path = assets.get_path(handle);
@@ -171,7 +222,7 @@ void AssetManager::flush_uploads()
 	assert(device);
 
 	const u32 uploads_pending_count = uploads_pending.size();
-
+	
 	u32 base_index = 0;
 
 	while (base_index < uploads_pending_count) {
@@ -207,7 +258,7 @@ void AssetManager::flush_uploads()
 		device->graphics().submit_immediate([&](gfx::CommandBuffer &cmd) {
 			for (int i = 0; i < batch_count; i++) {
 				auto &req = uploads_pending[base_index + i];
-			
+
 				const AssetSerializer &serializer = serializers[req.type];
 
 				Asset *asset = nullptr;
@@ -237,9 +288,17 @@ void AssetManager::flush_uploads()
 				}
 			
 				assets.set(req.handle, asset);
+				
+				{
+					std::unique_lock<std::mutex> lock(loading_mutex);
+					loading_assets[req.handle.index] = false;
+					loading_cv.notify_all();
+				}
 
 				if (req.result.data)
 					serializer.clean_up(req.result.data);
+
+//				memory_pressure -= req.result.stage_size;
 			}
 		});
 
@@ -251,16 +310,10 @@ void AssetManager::flush_uploads()
 
 void AssetManager::push_upload(const AssetUpload &upload)
 {
-	std::unique_lock<std::mutex> lock(upload_mutex);
+	std::lock_guard<std::mutex> lock(upload_mutex);
 	upload_queue.push_back(upload);
-}
 
-AssetHandle AssetManager::from_file_path(const String &path)
-{
-	if (path_to_handle.find(path) != path_to_handle.end())
-		return path_to_handle[path];
-
-	return assets.add(nullptr, path);
+//	memory_pressure += upload.result.stage_size;
 }
 
 String AssetManager::get_system_file_path(const String &path) const
@@ -268,7 +321,7 @@ String AssetManager::get_system_file_path(const String &path) const
 	return "../../res/" + path;
 }
 
-bool AssetManager::is_valid(const AssetHandle &handle) const
+bool AssetManager::is_valid(const AssetHandle &handle)
 {
 	return assets.is_valid(handle);
 }
