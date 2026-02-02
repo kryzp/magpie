@@ -88,25 +88,6 @@ App::~App()
 {
 }
 
-static JOB_PARALLEL_FOR(my_parallel_for_test, i)
-{
-	debug_log("(%d) %d", job::get_current_worker_id(), i);
-}
-
-static JOB_ENTRY_POINT(my_bar_job)
-{
-	debug_log("BAR");
-}
-
-static JOB_ENTRY_POINT(my_foo_job)
-{
-	debug_log("FOO");
-
-	job::JobCounter *c;
-	job::kick_job(job::JobDecl(my_bar_job, nullptr), &c);
-	job::yield_on_counter_and_free(c);
-}
-
 void App::init()
 {
 	scratch_memory = malloc(SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
@@ -128,8 +109,8 @@ void App::init()
 	
 	render_scene.init(&graphics_device);
 
-//	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
-	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("Cube/scene.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
@@ -190,19 +171,6 @@ void App::init()
 	post_processing.init(assets);
 	
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
-
-	// Test out the job system.
-	/*
-	{
-		JOB_SPIN_SCOPE();
-
-		job::JobCounter *c;
-		job::kick_job(job::JobDecl(my_foo_job, nullptr), &c);
-		job::yield_on_counter_and_free(c);
-
-		job::parallel_for(100, my_parallel_for_test);
-	}
-	*/
 
 	global_timer.start();
 	delta_timer.start();
@@ -335,7 +303,7 @@ void App::update(float dt, const inp::InputState &input)
 {
 	if (input.kb_pressed[inp::KEYBOARD_KEY_tab]) {
 		camera_driver.toggle(!camera_driver.is_active());
-		platform::set_mouse_visible(!camera_driver.is_active());
+		platform::set_mouse_visible(false);
 	}
 
 	camera_driver.update(camera, input, dt);

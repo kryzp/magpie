@@ -43,9 +43,11 @@ namespace platform
 	void *create_thread(uptr (*entry)(void *param), void *param);
 	uptr join_thread(void *handle);
 	void detach_thread(void *handle);
+	void yield_thread();
+	void *get_current_thread();
 
 	u32 get_num_cores();
-	void yield_thread();
+
 	void *convert_thread_to_fiber();
 	int convert_fiber_to_thread();
 	void *create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param);

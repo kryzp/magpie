@@ -71,6 +71,7 @@ struct ThreadLocalState {
 };
 
 static thread_local ThreadLocalState tls;
+static void (*platform_message_pump)(void);
 static u32 worker_count;
 static job::JobWorker *workers;
 static std::atomic<job::JobFiber *> fiber_pool_head {nullptr};
@@ -198,6 +199,9 @@ static uptr scheduler_thread(void *param)
 	platform::set_thread_affinity(tls.current_worker->thread, 1ull << tls.current_worker_id);
 
 	while (running) {
+		if (job::is_main_thread())
+			platform_message_pump();
+
 		job::JobRequest *request = job::try_get_job();
 
 		if (request) {
@@ -224,13 +228,19 @@ static uptr scheduler_thread(void *param)
 		} else {
 			if (spin_mode) {
 				while (!job::has_job_available()) {
+					if (job::is_main_thread())
+						platform_message_pump();
 					if (!spin_mode)
 						break;
 					JOB_SPIN_PAUSE();
 				}
 			} else {
-				std::unique_lock<std::mutex> lock(mutex);
-				cond_begin.wait(lock);
+				if (job::is_main_thread()) {
+					platform::yield_thread();
+				} else {
+					std::unique_lock<std::mutex> lock(mutex);
+					cond_begin.wait(lock);
+				}
 			}
 		}
 	}
@@ -240,17 +250,23 @@ static uptr scheduler_thread(void *param)
 	return 0;
 }
 
-void job::init()
+void job::init(void (*message_pump)(void))
 {
 	if (running)
 		return;
 
+	platform_message_pump = message_pump;
+
 	running = true;
 
-	worker_count = platform::get_num_cores() - 1; // Leave one core free for OS.
+	worker_count = platform::get_num_cores(); // Note we use all cores.
 	workers = new JobWorker[worker_count];
 
-	for (int i = 0; i < worker_count; i++) {
+	workers[0].id = 0;
+	workers[0].thread = platform::get_current_thread();
+	workers[0].scheduler_fiber = nullptr;
+
+	for (int i = 1; i < worker_count; i++) {
 		workers[i].id = i;
 		workers[i].thread = platform::create_thread(scheduler_thread, &workers[i].id);
 		workers[i].scheduler_fiber = nullptr;
@@ -272,14 +288,7 @@ void job::init()
 
 void job::shutdown()
 {
-	if (!running)
-		return;
-
-	running = false;
-
-	cond_begin.notify_all();
-	
-	for (int i = 0; i < worker_count; i++)
+	for (int i = 1; i < worker_count; i++)
 		platform::join_thread(workers[i].thread);
 	
 	for (int i = 0; i < PRIORITY_MAX_ENUM; i++)
@@ -297,6 +306,17 @@ void job::shutdown()
 		delete curr;
 		curr = next;
 	}
+}
+
+void job::enter_main_worker()
+{
+	scheduler_thread(&workers[0].id);
+}
+
+void job::halt_scheduler()
+{
+	running = false;
+	cond_begin.notify_all();
 }
 
 void job::kick_job(

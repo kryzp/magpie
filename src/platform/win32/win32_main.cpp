@@ -22,7 +22,6 @@
 
 #include "ext/imgui/imgui_impl_sdl3.h"
 
-#include "container/vector.h"
 #include "platform/platform.h"
 #include "math/vec2.h"
 #include "math/calc.h"
@@ -32,9 +31,11 @@
 #include "app.h"
 
 static SDL_Window *sdl_window = nullptr;
-static inp::InputState input_st = {};
-static std::atomic<bool> app_running { true };
-static std::mutex input_mutex;
+static std::atomic<bool> is_running { true };
+
+static Vector<SDL_Event> pending_events;
+static std::mutex event_mutex;
+
 static SDL_Gamepad *gamepads[inp::MAX_GAMEPADS] = {};
 static int gamepad_count = 0;
 
@@ -70,14 +71,7 @@ void platform::set_window_borderless(bool b)
 
 void platform::set_mouse_position(u32 x, u32 y)
 {
-	input_st.mouse_position = Vec2(x, y);
-
 	SDL_WarpMouseInWindow(sdl_window, x, y);
-
-	SDL_GetGlobalMouseState(
-		&input_st.mouse_screen_position.x,
-		&input_st.mouse_screen_position.y
-	);
 }
 
 void platform::set_mouse_visible(bool visible)
@@ -147,14 +141,19 @@ void platform::detach_thread(void *handle)
 	CloseHandle(handle);
 }
 
-u32 platform::get_num_cores()
-{
-	return std::thread::hardware_concurrency();
-}
-
 void platform::yield_thread()
 {
 	std::this_thread::yield();
+}
+
+void *platform::get_current_thread()
+{
+	return GetCurrentThread();
+}
+
+u32 platform::get_num_cores()
+{
+	return std::thread::hardware_concurrency();
 }
 
 void *platform::convert_thread_to_fiber()
@@ -320,17 +319,6 @@ static void reconnect_all_gamepads()
 	SDL_free(ids);
 }
 
-static void init_platform()
-{
-	platform::set_window_title(DEFAULT_WINDOW_TITLE);
-	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-	platform::set_window_opacity(1.f);
-	platform::set_window_fullscreen(false);
-	platform::set_window_borderless(false);
-	platform::set_mouse_visible(true);
-	platform::set_mouse_locked(false);
-}
-
 static void init_imgui()
 {
 	IMGUI_CHECKVERSION();
@@ -343,62 +331,196 @@ static void init_imgui()
 	ImGui_ImplSDL3_InitForVulkan(sdl_window);
 }
 
+static void init_platform()
+{
+	platform::set_window_title(DEFAULT_WINDOW_TITLE);
+	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	platform::set_window_opacity(1.f);
+	platform::set_window_fullscreen(false);
+	platform::set_window_borderless(false);
+	platform::set_mouse_visible(true);
+	platform::set_mouse_locked(false);
+}
+
 static void destroy_imgui()
 {
 	ImGui_ImplSDL3_Shutdown();
 	ImGui::DestroyContext();
 }
 
-static JOB_ENTRY_POINT(root_entry_point)
+static void win32_message_pump()
+{
+	std::lock_guard<std::mutex> lock(event_mutex);
+	
+	SDL_Event ev = {};
+
+	while (SDL_PollEvent(&ev)) {
+		if (ev.type == SDL_EVENT_QUIT) {
+			is_running.store(false);
+			job::halt_scheduler();
+		} else {
+			pending_events.push_back(ev);
+		}
+	}
+
+	JOB_SPIN_PAUSE();
+}
+
+static void reset_input_state(inp::InputState &input)
+{
+	memory_set(input.kb_pressed, 0, sizeof(input.kb_pressed));
+	memory_set(input.kb_released, 0, sizeof(input.kb_released));
+	
+	memory_set(input.mb_pressed, 0, sizeof(input.mb_pressed));
+	memory_set(input.mb_released, 0, sizeof(input.mb_released));
+
+	input.mouse_delta = Vec2::zero();
+	input.mouse_wheel = Vec2::zero();
+}
+
+static void process_events(inp::InputState &input)
+{
+	event_mutex.lock();
+	Vector<SDL_Event> events = std::move(pending_events);
+	pending_events.clear();
+	event_mutex.unlock();
+
+	float spx = 0.f;
+	float spy = 0.f;
+	SDL_GetGlobalMouseState(&spx, &spy);
+	input.mouse_screen_position = Vec2(spx, spy);
+
+	for (auto &ev : events) {
+		ImGui_ImplSDL3_ProcessEvent(&ev);
+
+		switch (ev.type) {
+			case SDL_EVENT_QUIT:
+				is_running.store(false);
+				job::halt_scheduler();
+				break;
+
+			case SDL_EVENT_KEY_DOWN:
+				input.kb_down[ev.key.scancode] = true;
+				input.kb_pressed[ev.key.scancode] = true;
+				break;
+
+			case SDL_EVENT_KEY_UP:
+				input.kb_down[ev.key.scancode] = false;
+				input.kb_released[ev.key.scancode] = true;
+				break;
+
+			case SDL_EVENT_MOUSE_BUTTON_DOWN:
+				input.mb_down[ev.button.button] = true;
+				input.mb_pressed[ev.button.button] = true;
+				break;
+
+			case SDL_EVENT_MOUSE_BUTTON_UP:
+				input.mb_down[ev.button.button] = false;
+				input.mb_released[ev.button.button] = true;
+				break;
+
+			case SDL_EVENT_MOUSE_MOTION:
+				input.mouse_position = Vec2(ev.motion.x, ev.motion.y);
+				input.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
+				break;
+
+			case SDL_EVENT_MOUSE_WHEEL:
+				input.mouse_wheel += Vec2(ev.wheel.x, ev.wheel.y);
+				break;
+					
+			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+				input.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = true;
+				input.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].pressed[ev.gbutton.button] = true;
+				break;
+
+			case SDL_EVENT_GAMEPAD_BUTTON_UP:
+				input.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = false;
+				input.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].released[ev.gbutton.button] = true;
+				break;
+
+			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+				input.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gaxis.which)].set_axis_value(
+					(inp::GamepadAxis)ev.gaxis.axis,
+					(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.f : 0.f))
+				);
+				break;
+
+			case SDL_EVENT_GAMEPAD_ADDED:
+				reconnect_all_gamepads();
+				break;
+
+			case SDL_EVENT_GAMEPAD_REMOVED:
+				debug_log("Removed gamepad.");
+				reconnect_all_gamepads();
+				break;
+
+			case SDL_EVENT_GAMEPAD_REMAPPED:
+				SDL_ReloadGamepadMappings();
+				reconnect_all_gamepads();
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
+static JOB_ENTRY_POINT(frame_job_entry)
 {
 	App *app = (App *)param;
 
-	app->init();
+	static inp::InputState prev_input_st = {};
 
-	debug_log("Entering main loop...");
+	inp::InputState curr_input_st = prev_input_st;
+	reset_input_state(curr_input_st);
 
-	inp::InputState prev_input_st = {};
+	ImGui_ImplSDL3_NewFrame();
 
-	while (app_running.load()) {
-		inp::InputState curr_input_st = {};
-		{
-			std::lock_guard<std::mutex> lock(input_mutex);
-			curr_input_st = input_st;
+	process_events(curr_input_st);
 
-			// Reset accumulated values.
-			input_st.mouse_delta = Vec2::zero();
-			input_st.mouse_wheel = Vec2::zero();
-		}
-
-		for (int i = 0; i < inp::KEYBOARD_KEY_MAX_ENUM; i++) {
-			curr_input_st.kb_pressed [i] =  curr_input_st.kb_down[i] && !prev_input_st.kb_down[i];
-			curr_input_st.kb_released[i] = !curr_input_st.kb_down[i] &&  prev_input_st.kb_down[i];
-		}
-
-		for (int i = 0; i < inp::MBUTTON_MAX_ENUM; i++) {
-			curr_input_st.mb_pressed [i] =  curr_input_st.mb_down[i] && !prev_input_st.mb_down[i];
-			curr_input_st.mb_released[i] = !curr_input_st.mb_down[i] &&  prev_input_st.mb_down[i];
-		}
-
-		for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
-			inp::GamepadState *st   = &curr_input_st.gamepads[i];
-			inp::GamepadState *p_st = &prev_input_st.gamepads[i];
-
-			for (int j = 0; j < inp::GAMEPAD_BUTTON_MAX_ENUM; j++) {
-				st->pressed [j] =  st->down[j] && !p_st->down[j];
-				st->released[j] = !st->down[j] &&  p_st->down[j];
-			}
-		}
-
-		ImGui_ImplSDL3_NewFrame();
-
-		if (app->tick(curr_input_st))
-			app_running = false;
-
-		prev_input_st = curr_input_st;
+	/*
+	for (int i = 0; i < inp::KEYBOARD_KEY_MAX_ENUM; i++) {
+		curr_input_st.kb_pressed [i] =  curr_input_st.kb_down[i] && !prev_input_st.kb_down[i];
+		curr_input_st.kb_released[i] = !curr_input_st.kb_down[i] &&  prev_input_st.kb_down[i];
 	}
 
-	app->destroy();
+	for (int i = 0; i < inp::MBUTTON_MAX_ENUM; i++) {
+		curr_input_st.mb_pressed [i] =  curr_input_st.mb_down[i] && !prev_input_st.mb_down[i];
+		curr_input_st.mb_released[i] = !curr_input_st.mb_down[i] &&  prev_input_st.mb_down[i];
+	}
+
+	for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
+		inp::GamepadState *st   = &curr_input_st.gamepads[i];
+		inp::GamepadState *p_st = &prev_input_st.gamepads[i];
+
+		for (int j = 0; j < inp::GAMEPAD_BUTTON_MAX_ENUM; j++) {
+			st->pressed [j] =  st->down[j] && !p_st->down[j];
+			st->released[j] = !st->down[j] &&  p_st->down[j];
+		}
+	}
+	*/
+
+	if (app->tick(curr_input_st))
+		is_running = false;
+
+	prev_input_st = curr_input_st;
+
+	if (is_running)
+		job::kick_job(job::JobDecl(frame_job_entry, app), nullptr);
+	else
+		job::halt_scheduler();
+}
+
+static JOB_ENTRY_POINT(root_job_entry)
+{
+	App *app = (App *)param;
+	app->init();
+
+	debug_log("Kicking off main game loop...");
+
+	is_running.store(true);
+
+	job::kick_job(job::JobDecl(frame_job_entry, app), nullptr);
 }
 
 int main(int argc, char **argv)
@@ -433,107 +555,18 @@ int main(int argc, char **argv)
 		debug_log_crash("Failed to create SDL window: %s", SDL_GetError());
 		return -1;
 	}
-
+	
 	init_platform();
-
 	init_imgui();
 
-	/*
-	 * As a note to myself and to anyone reading this.
-	 *
-	 * Because I am using a fiber-based job system architecture, we need
-	 * the "main" thread to be able to yield, to wait for jobs to complete.
-	 * 
-	 * This means that the main app code has to be actually ran from a "root"
-	 * job that we launch here.
-	 */
-	
 	App app;
 
-	job::init();
-	job::kick_job(job::JobDecl(root_entry_point, &app), nullptr);
+	job::init(win32_message_pump);
+	job::kick_job(job::JobDecl(root_job_entry, &app), nullptr);
 
-	while (app_running.load()) {
-		SDL_Event ev = {};
+	job::enter_main_worker();
 
-		while (SDL_PollEvent(&ev)) {
-			std::lock_guard<std::mutex> lock(input_mutex);
-
-			ImGui_ImplSDL3_ProcessEvent(&ev);
-
-			switch (ev.type) {
-				case SDL_EVENT_QUIT:
-					app_running.store(false);
-					break;
-
-				case SDL_EVENT_KEY_DOWN:
-					input_st.kb_down[ev.key.scancode] = true;
-					break;
-
-				case SDL_EVENT_KEY_UP:
-					input_st.kb_down[ev.key.scancode] = false;
-					break;
-
-				case SDL_EVENT_MOUSE_BUTTON_DOWN:
-					input_st.mb_down[ev.button.button] = true;
-					break;
-
-				case SDL_EVENT_MOUSE_BUTTON_UP:
-					input_st.mb_down[ev.button.button] = false;
-					break;
-
-				case SDL_EVENT_MOUSE_MOTION: {
-					float spx = 0.f;
-					float spy = 0.f;
-
-					SDL_GetGlobalMouseState(&spx, &spy);
-
-					input_st.mouse_position = Vec2(ev.motion.x, ev.motion.y);
-					input_st.mouse_screen_position = Vec2(spx, spy);
-					input_st.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
-				} break;
-
-				case SDL_EVENT_MOUSE_WHEEL:
-					input_st.mouse_wheel += Vec2(ev.wheel.x, ev.wheel.y);
-					break;
-					
-				case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = true;
-					break;
-
-				case SDL_EVENT_GAMEPAD_BUTTON_UP:
-					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = false;
-					break;
-
-				case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-					input_st.gamepads[SDL_GetGamepadPlayerIndexForID(ev.gaxis.which)].set_axis_value(
-						(inp::GamepadAxis)ev.gaxis.axis,
-						(float)(ev.gaxis.value) / (float)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0) ? 1.f : 0.f))
-					);
-					break;
-
-				case SDL_EVENT_GAMEPAD_ADDED:
-					reconnect_all_gamepads();
-					break;
-
-				case SDL_EVENT_GAMEPAD_REMOVED:
-					debug_log("Removed gamepad.");
-					reconnect_all_gamepads();
-					break;
-
-				case SDL_EVENT_GAMEPAD_REMAPPED:
-					SDL_ReloadGamepadMappings();
-					reconnect_all_gamepads();
-					break;
-
-				default:
-					break;
-			}
-		}
-
-		JOB_SPIN_PAUSE();
-	}
-
+	app.destroy();
 	job::shutdown();
 
 	close_all_gamepads();
