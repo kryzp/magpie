@@ -28,7 +28,7 @@ namespace gfx
 		};
 
 	public:
-		constexpr static u32 MAX_RESOURCES = 256;
+		constexpr static u32 MAX_RESOURCES = 16384;
 
 		BindlessResources();
 		~BindlessResources();

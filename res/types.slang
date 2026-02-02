@@ -29,7 +29,7 @@ struct ObjectData {
     uint mesh_index;
 };
 
-struct Mesh {
+struct RenderMesh {
     uint index_count;
     uint first_index;
     ModelVertex *vertex_buffer;
@@ -61,7 +61,7 @@ struct IndirectDraw {
 };
 
 struct PagePointers {
-    IndirectDraw *indirect_buffer;
-    uint *count_buffer;
     ModelVertex *vertex_buffer;
+    IndirectDraw *opaque_indirect_buffer;
+    uint *opaque_count_buffer;
 };

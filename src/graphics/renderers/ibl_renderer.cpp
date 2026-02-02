@@ -102,7 +102,7 @@ void IBLRenderer::render_environment_map(
 		}
 	);
 	
-	const u32 mip_levels = 4;
+	const u32 mip_levels = prefilter->get_mipmap_count();
 
 	for (int i = 0; i < mip_levels; i++) {
 		struct PrefilterStageData {

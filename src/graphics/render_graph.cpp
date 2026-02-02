@@ -1,5 +1,7 @@
 #include "render_graph.h"
 
+#include "math/calc.h"
+
 using namespace gfx;
 
 RenderGraphBlackboard::RenderGraphBlackboard()
@@ -40,13 +42,14 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		const Texture *physical_texture = (const Texture *)resource.physical_resource;
 		const AttachmentInfo &attachment_info = resource.texture_info;
 
-		// TODO: Right now it's just based on the last attachments sample count.
-		//       Assumption is that all attachments will already have the same sample count.
+		// TODO: Right now it's just based on the last attachments sample count_offset.
+		//       Assumption is that all attachments will already have the same sample count_offset.
 		//       --> Ideally I should have resolving implemented so they automatically have their resolves.
 		render_info.samples = attachment_info.samples;
 
-		render_info.width = resource.texture_info.size_x;
-		render_info.height = resource.texture_info.size_y;
+		u32 mip = output.texture.range.base_mip;
+		render_info.width = CalcU::max(1u, (u32)resource.texture_info.size_x >> mip);
+		render_info.height = CalcU::max(1u, (u32)resource.texture_info.size_y >> mip);
 
 		VkRenderingAttachmentInfo vk_attachment_info = {};
 		vk_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -115,7 +118,8 @@ const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle h
 	assert(found);
 
 	return graph.get_device().fetch_texture_view(
-		physical_texture, physical_texture->get_default_view_type(),
+		physical_texture,
+		physical_texture->get_default_view_type(),
 		range
 	);
 }
@@ -709,8 +713,6 @@ void RenderGraph::transition_texture(Vector<VkImageMemoryBarrier2> &barriers, Re
 
 			if (current_src == dst_access_type && !sync::texture_access_is_write(dst_access_type))
 				needs_barrier = false;
-
-			needs_barrier = true; // TODO: temp
 
 			if (active_batch) {
 				if (needs_barrier && current_src == batch_src_access) {

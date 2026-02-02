@@ -2,9 +2,6 @@
 
 #include "assets/shader_serializer.h"
 
-#include "math/matrix.h"
-#include "math/vec4.h"
-
 #include "../render_scene.h"
 
 using namespace gfx;
@@ -38,10 +35,12 @@ void ComputeCulling::add_render_stages(
 			data.page_table_buffer = builder.read_buffer(scene_resources.page_table_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
 			data.mesh_buffer = builder.read_buffer(graph.import_buffer(scene.get_mesh_buffer()), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
 
-			for (auto &b : scene_resources.indirect_buffers)
+			auto &pass = scene_resources.opaque_pass;
+
+			for (auto &b : pass.indirect_buffers)
 				builder.write_buffer(b, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
 			
-			for (auto &b : scene_resources.counter_buffers)
+			for (auto &b : pass.counter_buffers)
 				builder.write_buffer(b, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const ComputeCullingStageData &data) -> void {

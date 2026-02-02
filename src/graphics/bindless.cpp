@@ -22,6 +22,8 @@ BindlessHandle BindlessResources::push_update(BindlessSetKind kind, VkSampler sa
 	update.sampler = sampler;
 	update.view = view;
 	update.slot = ++resource_counts[kind];
+	
+	assert(update.slot < BindlessResources::MAX_RESOURCES);
 
 	updates.push_back(update);
 

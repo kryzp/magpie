@@ -1,21 +1,41 @@
 #include "shader_serializer.h"
 
 #include "platform/platform.h"
-#include "io/filesystem.h"
 
 using namespace ast;
 
-static void serialize(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs)
+static Vector<b8> load_file_bytes(const String &path)
 {
+	Vector<b8> bytes;
+
+	FILE *file = fopen(path.c_str(), "rb");
+	u64 file_size = 0;
+
+	if (file) {
+		fseek(file, 0, SEEK_END);
+		file_size = ftell(file);
+		fseek(file, 0, SEEK_SET);
+
+		bytes.resize(file_size);
+		fread(bytes.data(), file_size, 1, file);
+
+		fclose(file);
+	}
+
+	return bytes;
 }
 
-static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
+struct ShaderLoadData {
+	Vector<b8> stages[2];
+};
+
+static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 {
-	const String &file_path = assets.get_system_file_path(metadata.file_path);
+	String file_path = ctx.system_file_path();
+	
+	Vector<String> paths;
 
 	bool failed_to_load = false;
-
-	Vector<String> paths;
 
 	// TODO: This is just a temporary solution.
 	//       In the future, create an intermediary
@@ -34,21 +54,54 @@ static Asset *try_load_data(AssetManager &assets, const AssetMetaData &metadata)
 		failed_to_load = true;
 	}
 
-	gfx::Device &device = assets.get_device();
-	gfx::ShaderProgram *gfx_shader = device.create_shader_program(paths);
-	ShaderAsset *asset = new ShaderAsset(gfx_shader, device);
+	ShaderLoadData *load_data = new ShaderLoadData();
+	
+	for (int i = 0; i < paths.size(); i++)
+		load_data->stages[i] = load_file_bytes(paths[i]);
+	
+	AssetLoadResult result = {};
+	result.data = load_data;
+	result.stage_size = 0; // We don't need a gpu staging buffer for loading shaders.
+	result.failed = failed_to_load;
 
-	if (failed_to_load)
-		asset->set_flag(ASSET_FLAG_INVALID, true);
+	return result;
+}
 
-	return asset;
+static Asset *shader_finalize(
+	const AssetLoadContext &ctx, const AssetLoadResult &load,
+	gfx::Device &device, gfx::CommandBuffer &cmd,
+	gfx::GpuBuffer *stage, u64 stage_base
+)
+{
+	ShaderLoadData *load_data = (ShaderLoadData *)load.data;
+
+	Vector<gfx::ShaderBytecode> stages;
+
+	for (auto &stage : load_data->stages) {
+		gfx::ShaderBytecode bytecode = {};
+		bytecode.bytes = stage.data();
+		bytecode.size = stage.size();
+
+		stages.push_back(bytecode);
+	}
+
+	gfx::ShaderProgram *gfx_shader = device.create_shader_program(stages);
+
+	return new ShaderAsset(gfx_shader, device);
+}
+
+static void shader_clean_up(void *data)
+{
+	ShaderLoadData *load_data = (ShaderLoadData *)data;
+	delete load_data;
 }
 
 AssetSerializer ast::get_shader_serializer()
 {
 	AssetSerializer shader_serializer = {};
-	shader_serializer.serialize = serialize;
-	shader_serializer.try_load_data = try_load_data;
+	shader_serializer.load = shader_load;
+	shader_serializer.finalize = shader_finalize;
+	shader_serializer.clean_up = shader_clean_up;
 
 	return shader_serializer;
 }

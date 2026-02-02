@@ -128,32 +128,29 @@ void App::init()
 	
 	render_scene.init(&graphics_device);
 
-	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("Cube/scene.gltf");
+
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
 
-	u32 mesh = render_scene.register_mesh(model.get_sub_model(0).mesh);
-	u32 material = render_scene.register_material(model.get_sub_model(0).material, assets);
+	assets.wait_for_async_uploads();
 
-	for (int i = 0; i < 16; i++) {
-		for (int j = 0; j < 16; j++) {
-			float angle = CalcF::sqrt(i*i + j*j);
+	assets.flush_uploads();
 
-			Mat4 transform = Mat4::transform(
-				Vec3(i, j, 0.f),
-				Quat::from_axis(angle, Vec3::up()),
-				Vec3::unit(),
-				Vec3::zero()
-			);
+	for (auto &sub : model.sub_models) {
+		Mat4 transform = sub.transform;
+		u32 mesh = render_scene.register_mesh(sub.mesh);
+		u32 material = render_scene.register_material(sub.material, assets);
 
-			render_scene.create_object(transform, mesh, material);
-		}
+		render_scene.create_object(transform, mesh, material);
 	}
 
 	light_handle = render_scene.create_light({
 		.type = gfx::Light::TYPE_POINT,
 		.position = Vec3(0.f, 0.f, 1.f),
 		.colour = { 255, 255, 255, 255 },
-		.intensity = 1.f,
+		.intensity = 0.f,
 		.falloff = 1.f
 	});
 
@@ -211,8 +208,8 @@ void App::init()
 	delta_timer.start();
 
 	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
-	irradiance_cubemap = graphics_device.alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 4);
+	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
 
 	skybox_renderer.render_hdr_to_skybox(
 		render_graph,
@@ -223,7 +220,7 @@ void App::init()
 		render_graph,
 		brdf_texture
 	);
-
+	
 	ibl_renderer.render_environment_map(
 		render_graph,
 		irradiance_cubemap,
@@ -280,6 +277,8 @@ bool App::tick(const inp::InputState &input)
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)TARGET_FPS;
 	
+	assets.flush_uploads();
+	
 	update(dt, input);
 
 	delta_accumulator += CalcF::min(dt, fixed_dt);
@@ -289,15 +288,36 @@ bool App::tick(const inp::InputState &input)
 		delta_accumulator -= fixed_dt;
 	}
 
-	const float alpha = delta_accumulator / fixed_dt;
+	ImGui::Begin("Params");
+	{
+		static float exp = 1.5f;
+
+		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
+			post_processing.set_exposure(exp);
+
+		static float intens = 0.0f;
+
+		if (ImGui::SliderFloat("Light Intensity", &intens, 0.f, 5.f))
+			render_scene.set_light_intensity(light_handle, intens);
+	}
+	ImGui::End();
+
+	ImGui::Begin("Info");
+	{
+		ImGui::Text("FPS: %f", 1.f / dt);
+		ImGui::Text("Alpha: %f", delta_accumulator / fixed_dt);
+		ImGui::Text("Time: %f", elapsed_time);
+		ImGui::SameLine();
+		if (ImGui::Button("Reset"))
+			global_timer.reset();
+	}
+	ImGui::End();
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	{
-		ImGui::Render();
-		
 		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(render_graph);
 
-		render(dt, elapsed_time, cmd, scene_resources);
+		render(dt, input, elapsed_time, cmd, scene_resources);
 		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
@@ -313,36 +333,22 @@ bool App::tick(const inp::InputState &input)
 
 void App::update(float dt, const inp::InputState &input)
 {
-	if (input.kb_pressed[inp::KEYBOARD_KEY_tab])
+	if (input.kb_pressed[inp::KEYBOARD_KEY_tab]) {
 		camera_driver.toggle(!camera_driver.is_active());
+		platform::set_mouse_visible(!camera_driver.is_active());
+	}
 
 	camera_driver.update(camera, input, dt);
 
 	if (input.gamepads[0].pressed[inp::GAMEPAD_BUTTON_cross])
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
-
-	ImGui::Begin("Params");
-	{
-		static float exp = 1.2f;
-
-		ImGui::Text("FPS: %f", 1.f / dt);
-
-		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
-			post_processing.set_exposure(exp);
-
-		static float intens = 1.f;
-
-		if (ImGui::SliderFloat("Light Intensity", &intens, 0.f, 5.f))
-			render_scene.set_light_intensity(light_handle, intens);
-	}
-	ImGui::End();
 }
 
 void App::fixed_update(float dt)
 {
 }
 
-void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources)
+void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources)
 {
 	gfx::gpu_types::GpuFrameData data = {};
 	data.view = camera.get_view();
@@ -362,12 +368,8 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd, 
 	render_graph.push_stage<FooBar>(
 		"Swapchain Src",
 		gfx::RenderStage::TYPE_TRANSFER,
-		[&](gfx::RenderGraphBuilder &builder, FooBar &data) {
-			swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT));
-			builder.write_colour(swapchain_src);
-		},
-		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) {
-		}
+		[&](gfx::RenderGraphBuilder &builder, FooBar &data) { swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT)); },
+		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) { }
 	);
 	
 	gfx::RenderGraphBlackboard bb;
@@ -376,6 +378,15 @@ void App::render(float dt, float elapsed_time, gfx::CommandBuffer &present_cmd, 
 	deferred_renderer.add_render_stages(render_graph, bb, scene_resources, frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
 	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
 	post_processing.add_render_stages(render_graph, bb, swapchain_src);
+	
+	auto &gbuffer = bb.get<gfx::DeferredRendererInfo>().gbuffer;
+
+	     if (input.kb_down[inp::KEYBOARD_KEY_d1]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_POSITION];
+	else if (input.kb_down[inp::KEYBOARD_KEY_d2]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_ALBEDO];
+	else if (input.kb_down[inp::KEYBOARD_KEY_d3]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_NORMAL];
+	else if (input.kb_down[inp::KEYBOARD_KEY_d4]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_EMISSIVE];
+	else if (input.kb_down[inp::KEYBOARD_KEY_d5]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_METALLIC_ROUGHNESS];
+	else if (input.kb_down[inp::KEYBOARD_KEY_d6]) swapchain_src = gbuffer.lighting;
 }
 
 void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)

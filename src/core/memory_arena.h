@@ -2,6 +2,8 @@
 
 #include "types.h"
 
+// TODO: Why isn't this in /container/
+
 class MemoryArena {
 public:
 	MemoryArena();

@@ -41,7 +41,7 @@ struct Arguments {
 
 struct Arguments {
     ObjectData *objects;
-    Mesh *meshes;
+    RenderMesh *meshes;
     PagePointers *pages;
     uint object_count;
 };
@@ -49,9 +49,29 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-bool IsVisible(ObjectData obj)
+bool IsVisible(in ObjectData obj)
 {
 	return true;
+}
+
+bool IsTransparent(in ObjectData obj)
+{
+    return false;
+}
+
+IndirectDraw GetDrawFor(uint gid)
+{
+    ObjectData obj = args.objects[gid];
+    RenderMesh mesh = args.meshes[obj.mesh_index];
+
+    IndirectDraw draw;
+    draw.index_count = mesh.index_count;
+    draw.instance_count = 1;
+    draw.first_index = mesh.first_index;
+    draw.vertex_offset = 0; // We use BDA instead.
+    draw.first_instance = gid;
+
+    return draw;
 }
 
 [shader("compute")]
@@ -67,19 +87,13 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 
     if (IsVisible(obj)) {
         PagePointers page = args.pages[obj.page_index];
-
-        uint slot;
-        InterlockedAdd(*page.count_buffer, 1, slot);
-
-        Mesh mesh = args.meshes[obj.mesh_index];
-
-        IndirectDraw draw;
-        draw.index_count = mesh.index_count;
-		draw.instance_count = 1;
-        draw.first_index = mesh.first_index;
-        draw.vertex_offset = 0; // We use BDA instead.
-        draw.first_instance = gid;
-
-        page.indirect_buffer[slot] = draw;
+        if (IsTransparent(obj)) {
+            // Add to transparent pass.
+        } else {
+            // Add to opaque pass.
+            uint slot;
+            InterlockedAdd(*page.opaque_count_buffer, 1, slot);
+            page.opaque_indirect_buffer[slot] = GetDrawFor(gid);
+		}
 	}
 }

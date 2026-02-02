@@ -4,7 +4,7 @@
 
 #include "core/types.h"
 #include "math/vec3.h"
-#include "math/matrix.h"
+#include "math/mat4.h"
 
 // TODO: Make gpu_types one file between both the SLANG and C++ codebases.
 /*
@@ -49,7 +49,7 @@ namespace gfx
 			u32 mesh_index;
 		};
 
-		struct GpuMesh {
+		struct GpuRenderMesh {
 			u32 index_count;
 			u32 first_index;
 			u64 vertex_buffer;
@@ -77,9 +77,10 @@ namespace gfx
 		};
 
 		struct GpuPagePointers {
-			u64 indirect_buffer;
-			u64 count_buffer;
 			u64 vertex_buffer;
+
+			u64 opaque_indirect_buffer;
+			u64 opaque_count_buffer;
 		};
 	}
 }

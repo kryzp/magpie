@@ -41,7 +41,7 @@ namespace gfx
 		GraphicsPipelineDef(const ShaderProgram *program)
 			: program(program)
 			, cull_mode(VK_CULL_MODE_BACK_BIT)
-			, front_face(VK_FRONT_FACE_CLOCKWISE)
+			, front_face(VK_FRONT_FACE_COUNTER_CLOCKWISE)
 			, blend_state()
 			, depth_stencil_state()
 			, has_depth_attachment(false)

@@ -30,14 +30,14 @@ void RenderScene::init(Device *device)
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuMesh) * INITIAL_MAX_MESHES
+		sizeof(gpu_types::GpuRenderMesh) * MAX_MESHES
 	);
 
 	material_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuMaterial) * INITIAL_MAX_MATERIALS
+		sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS
 	);
 
 }
@@ -85,7 +85,7 @@ void RenderScene::update_object_buffer(RenderGraph &graph, RenderSceneResources 
 	// Cache friendly - Yay!!!
 	for (int i = 0; i < objects.transforms.size(); i++) {
 		mapped_objects[i].model_matrix = objects.transforms[i];
-		mapped_objects[i].normal_matrix = objects.transforms[i].inverse().transpose();
+		mapped_objects[i].normal_matrix = objects.transforms[i].remove_translation().inverse().transpose();
 		mapped_objects[i].sphere_bounds = Vec4(0.f, 0.f, 0.f, 1.f);
 		mapped_objects[i].material_index = objects.materials[i];
 		mapped_objects[i].mesh_index = objects.meshes[i];
@@ -113,39 +113,49 @@ void RenderScene::update_page_buffer(RenderGraph &graph, RenderSceneResources &r
 
 	for (int i = 0; i < geometry_pages.size(); i++) {
 		GeometryPage &page = geometry_pages[i];
+		
+		// ==================================
+		// OPAQUE PASS
+		// ==================================
 
 		// Indirect buffers like 256-byte alignment!
-		TransientBuffer page_indirect_buffer = graph.create_transient_buffer(sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS, 256);
-		TransientBuffer page_counter_buffer  = graph.create_transient_buffer(sizeof(u32), 4);
-		
-		// Ensure counter is zero.
-		*(u32 *)page_counter_buffer.alloc.cpu = 0;
+		TransientBuffer opaque_indirect_buffer = graph.create_transient_buffer(sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS, 256);
+		TransientBuffer opaque_counter_buffer  = graph.create_transient_buffer(sizeof(u32), 4);
+		*(u32 *)opaque_counter_buffer.alloc.cpu = 0; // Reset the counter to zero.
 
 		// Register handles for graph barriers.
-		resources.indirect_buffers.push_back(page_indirect_buffer.handle);
-		resources.counter_buffers.push_back(page_counter_buffer.handle);
+		resources.opaque_pass.indirect_buffers.push_back(opaque_indirect_buffer.handle);
+		resources.opaque_pass.counter_buffers.push_back(opaque_counter_buffer.handle);
 
 		// Update page struct allocation.
-		page.indirect_offset = page_indirect_buffer.alloc.offset;
-		page.count_offset = page_counter_buffer.alloc.offset;
+		page.opaque_pass.indirect_offset = opaque_indirect_buffer.alloc.offset;
+		page.opaque_pass.count_offset = opaque_counter_buffer.alloc.offset;
+		
+		// ==================================
+		// FILL BUFFER TABLE ENTRY
+		// ==================================
 
-		// Fill buffer table entry.
-		mapped_ptrs[i].indirect_buffer = page_indirect_buffer.alloc.gpu;
-		mapped_ptrs[i].count_buffer    = page_counter_buffer.alloc.gpu;
-		mapped_ptrs[i].vertex_buffer   = page.vertex_buffer->get_device_address();
+		mapped_ptrs[i].vertex_buffer = page.vertex_buffer->get_device_address();
+
+		mapped_ptrs[i].opaque_indirect_buffer = opaque_indirect_buffer.alloc.gpu;
+		mapped_ptrs[i].opaque_count_buffer = opaque_counter_buffer.alloc.gpu;
 	}
 }
 
 void RenderScene::update_material_buffer()
 {
+	assert(materials.size() < MAX_MATERIALS);
+
 	gpu_types::GpuMaterial *mapped_materials = (gpu_types::GpuMaterial *)material_buffer->map();
 	memory_copy(mapped_materials, materials.data(), materials.size() * sizeof(gpu_types::GpuMaterial));
 }
 
 void RenderScene::update_mesh_buffer()
 {
-	gpu_types::GpuMesh *mapped_meshes = (gpu_types::GpuMesh *)mesh_buffer->map();
-	memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuMesh));
+	assert(meshes.size() < MAX_MESHES);
+
+	gpu_types::GpuRenderMesh *mapped_meshes = (gpu_types::GpuRenderMesh *)mesh_buffer->map();
+	memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuRenderMesh));
 }
 
 bool RenderScene::is_valid_object(RenderHandle handle) const
@@ -306,6 +316,8 @@ Mat4 RenderScene::get_light_proj(RenderHandle handle) const
 
 u32 RenderScene::register_mesh(const Mesh &mesh)
 {
+	assert(meshes.size() < MAX_MESHES);
+
 	u32 page_index = find_suitable_page(mesh.vertex_count, mesh.index_count);
 
 	GeometryPage &page = geometry_pages[page_index];
@@ -339,7 +351,7 @@ u32 RenderScene::register_mesh(const Mesh &mesh)
 		);
 	});
 
-	gpu_types::GpuMesh gpu_mesh = {};
+	gpu_types::GpuRenderMesh gpu_mesh = {};
 	gpu_mesh.index_count = mesh.index_count;
 	gpu_mesh.first_index = page.index_offset;
 	gpu_mesh.vertex_buffer = page.vertex_buffer->get_device_address() + (page.vertex_offset * sizeof(gpu_types::GpuModelVertex));
@@ -363,12 +375,20 @@ u32 RenderScene::register_mesh(const Mesh &mesh)
 
 u32 RenderScene::register_material(const Material &material, ast::AssetManager &assets)
 {
+	assert(materials.size() < MAX_MATERIALS);
+
+	auto load_texture = [&](ast::AssetHandle handle) -> u32 {
+		if (assets.is_valid(handle))
+			return device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_sampled();
+		return 0;
+	};
+
 	gpu_types::GpuMaterial gpu_material = {};
-	gpu_material.albedo_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.diffuse)             ->texture)->get_bindless_sampled();
-	gpu_material.normal_texture             = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.normal)              ->texture)->get_bindless_sampled();
-	gpu_material.emissive_texture           = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.emissive)            ->texture)->get_bindless_sampled();
-	gpu_material.metallic_roughness_texture = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.metallic_roughness)  ->texture)->get_bindless_sampled();
-	gpu_material.ambient_texture            = device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(material.ambient)             ->texture)->get_bindless_sampled();
+	gpu_material.albedo_texture = load_texture(material.albedo);
+	gpu_material.normal_texture = load_texture(material.normal);
+	gpu_material.emissive_texture = load_texture(material.emissive);
+	gpu_material.metallic_roughness_texture = load_texture(material.metallic_roughness);
+	gpu_material.ambient_texture = load_texture(material.ambient);
 
 	u32 index = materials.size();
 
@@ -461,14 +481,14 @@ GeometryPage RenderScene::create_new_page()
 		PAGE_INDEX_BUFFER_SIZE
 	);
 
-	page.indirect_offset = 0;
-	page.count_offset = 0;
+	page.opaque_pass.indirect_offset = 0;
+	page.opaque_pass.count_offset = 0;
 
 	page.vertex_offset = 0;
 	page.index_offset = 0;
 
 	page.max_vertices = PAGE_VERTEX_BUFFER_SIZE / sizeof(gpu_types::GpuModelVertex);
-	page.max_indices = PAGE_INDEX_BUFFER_SIZE / sizeof(u32);
+	page.max_indices = PAGE_INDEX_BUFFER_SIZE / sizeof(IndexType);
 
 	return page;
 }

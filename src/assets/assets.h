@@ -1,6 +1,9 @@
 #pragma once
 
+#include <mutex>
+
 #include "core/types.h"
+#include "core/memory_arena.h"
 
 #include "container/vector.h"
 #include "container/string.h"
@@ -8,6 +11,8 @@
 #include "container/stack.h"
 
 #include "graphics/device.h"
+
+#include "job/job.h"
 
 class FileStream;
 
@@ -37,7 +42,7 @@ namespace ast
 	};
 
 	enum AssetFlag {
-		ASSET_FLAG_NONE    = 0,
+		ASSET_FLAG_NONE    = 0 << 0,
 		ASSET_FLAG_INVALID = 1 << 0
 	};
 
@@ -74,6 +79,14 @@ namespace ast
 		bool is_null() const
 		{
 			return index == 0 && generation == 0;
+		}
+
+		static AssetHandle invalid()
+		{
+			return {
+				.index = 0,
+				.generation = 0
+			};
 		}
 	};
 
@@ -121,26 +134,50 @@ namespace ast
 
 	class AssetManager;
 
-	// Asset serializers are just pairs of function pointers
-	// for serializing and de-serializing an asset.
-	struct AssetSerializer {
-		void (*serialize)(AssetManager &assets, const AssetMetaData &metadata, const AssetHandle &handle, const FileStream &fs);
-		Asset *(*try_load_data)(AssetManager &assets, const AssetMetaData &metadata);
+	struct AssetLoadResult {
+		void *data;     // For use by serializers.
+		u64 stage_size; // Gpu buffer size required.
+		bool failed;    // Did we fail in loading?
 	};
 
-	class AssetImporter {
-	public:
-		AssetImporter();
-		~AssetImporter();
+	struct AssetLoadContext {
+		AssetManager &assets;
+		const AssetMetaData &metadata;
 
-		Asset *import(AssetManager &assets, AssetType type, const AssetMetaData &metadata);
+		String system_file_path() const;
+	};
 
-	private:
-		AssetSerializer serializers[ASSET_TYPE_MAX_ENUM];
+	struct AssetSerializer {
+		// Thread-safe.
+		// Loads in the file into a blob.
+		// "Phase 1"
+		AssetLoadResult (*load)(const AssetLoadContext &ctx);
+
+		// Not thread-safe
+		// Uploads the blob onto the GPU (if necessary)
+		// "Phase 2"
+		Asset *(*finalize)(
+			const AssetLoadContext &ctx, const AssetLoadResult &result,
+			gfx::Device &device, gfx::CommandBuffer &cmd,
+			gfx::GpuBuffer *stage, u64 stage_base
+		);
+
+		// Clean up.
+		void (*clean_up)(void *data);
+	};
+
+	struct AssetUpload {
+		AssetMetaData metadata;
+		AssetHandle handle;
+		AssetType type;
+		AssetLoadResult result;
 	};
 
 	class AssetManager {
 	public:
+		// What sized chunks of data are sent to the GPU at a time.
+		constexpr static u64 GPU_UPLOAD_CHUNK_SIZE = MEGABYTES(256);
+
 		AssetManager();
 		~AssetManager();
 
@@ -150,25 +187,35 @@ namespace ast
 		template <typename T, typename ...Args>
 		T *create_new_asset(const String &name, const String &path, Args &&...args);
 
-		template <typename T>
-		T *get_asset(const AssetHandle &handle);
-
 		void destroy_asset(const AssetHandle &handle);
 
 		AssetHandle from_file_path(const String &path);
+		
+		template <typename T>
+		T *get_asset(const AssetHandle &handle);
+
+		void request_asset_load_now(const AssetHandle &handle, AssetType type);
+		void request_asset_load_async(const AssetHandle &handle, AssetType type);
+
+		void wait_for_async_uploads();
+
+		void flush_uploads();
+
+		void push_upload(const AssetUpload &upload);
 
 		String get_system_file_path(const String &path) const;
-		bool is_handle_valid(const AssetHandle &handle) const;
 
-		gfx::Device &get_device() const
-		{
-			assert(device);
-			return *device;
-		}
+		bool is_valid(const AssetHandle &handle) const;
+		bool is_placeholder(const AssetHandle &handle) const;
+
+		const AssetSerializer &get_serializer(AssetType type) const;
 
 	private:
 		gfx::Device *device = nullptr;
 
+		void create_fallbacks();
+		Asset *get_fallback_asset(AssetType type);
+		
 		class AssetList {
 		public:
 			constexpr static u32 INITIAL_CAPACITY = 16;
@@ -177,7 +224,7 @@ namespace ast
 				: list()
 				, free_indices()
 				, capacity()
-				, curr_id()
+				, curr_index(1) // index = 0 is an invalid handle.
 			{
 				list.resize(INITIAL_CAPACITY);
 			}
@@ -196,13 +243,13 @@ namespace ast
 
 			AssetHandle add(Asset *asset, const String &path)
 			{
-				u32 index = 0;
+				u32 index;
 
 				if (!free_indices.empty()) {
 					index = free_indices.top();
 					free_indices.pop();
 				} else {
-					index = curr_id++;
+					index = curr_index++;
 				}
 
 				if (index >= list.size())
@@ -221,11 +268,13 @@ namespace ast
 
 			void remove(const AssetHandle &handle)
 			{
-				if (is_valid(handle)) {
-					delete list[handle.index].asset;
-					list[handle.index].asset = nullptr;
-					free_indices.push(handle.index);
-				}
+				if (!is_valid(handle))
+					return;
+
+				delete list[handle.index].asset;
+				list[handle.index].asset = nullptr;
+
+				free_indices.push(handle.index);
 			}
 
 			Asset *get(const AssetHandle &handle) const
@@ -249,6 +298,7 @@ namespace ast
 			bool is_valid(const AssetHandle &handle) const
 			{
 				return
+					(handle.index > 0) &&
 					(handle.index < list.size()) &&
 					(list[handle.index].generation == (handle.generation + 1));
 			}
@@ -272,13 +322,16 @@ namespace ast
 			Vector<AssetRecord> list;
 			Stack<u32> free_indices;
 			u64 capacity;
-			u32 curr_id;
+			u32 curr_index;
 		};
 
-		AssetImporter importer;
 		AssetList assets;
-
+		AssetSerializer serializers[ASSET_TYPE_MAX_ENUM];
 		HashMap<String, AssetHandle> path_to_handle;
+
+		std::mutex upload_mutex;
+		Vector<AssetUpload> upload_queue;
+		job::JobCounter *upload_counter;
 	};
 
 	template <typename T, typename ...Args>
@@ -295,19 +348,13 @@ namespace ast
 	template <typename T>
 	T *AssetManager::get_asset(const AssetHandle &handle)
 	{
-		Asset *here = assets.get(handle);
+		T *here = assets.get(handle)->as<T>();
 
 		if (here)
-			return (T *)here;
+			return here;
 
-		AssetMetaData metadata = {};
-		metadata.file_path = assets.get_path(handle);
+		request_asset_load_now(handle, T::get_asset_type_static());
 
-		Asset *asset = importer.import(*this, T::get_asset_type_static(), metadata);
-		asset->handle = handle;
-
-		assets.set(handle, asset);
-
-		return (T *)asset;
+		return assets.get(handle)->as<T>();
 	}
 }

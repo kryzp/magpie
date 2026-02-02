@@ -4,6 +4,8 @@
 
 #include "container/stack.h"
 
+// TODO: Why isn't this in /container/
+
 /*
  * TODO: THIS ISN'T FIXED TO WORK FOR MULTIPLE THREADS YET!!
  *       DO NOT USE ON ANYTHING OTHER THAN THE MAIN THREAD

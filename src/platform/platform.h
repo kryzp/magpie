@@ -18,7 +18,7 @@
 #define ENGINE_VERSION_MINOR     1
 #define ENGINE_VERSION_PATCH     0
 
-#define SCRATCH_MEMORY_SIZE      MEGABYTES(2)
+#define SCRATCH_MEMORY_SIZE      MEGABYTES(32)
 
 typedef void (*fiber_entry_point_fn)(void *param);
 
@@ -45,6 +45,7 @@ namespace platform
 	void detach_thread(void *handle);
 
 	u32 get_num_cores();
+	void yield_thread();
 	void *convert_thread_to_fiber();
 	int convert_fiber_to_thread();
 	void *create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param);

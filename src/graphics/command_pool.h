@@ -3,13 +3,11 @@
 #include <volk/volk.h>
 
 #include "core/types.h"
+#include "container/vector.h"
 
 namespace gfx
 {
 	class CommandBuffer;
-
-	// TODO: AUTOMATIC RESIZING O(2^n)
-	//       VECTOR STYLE
 
 	class CommandPool {
 		friend class Device;
@@ -20,22 +18,14 @@ namespace gfx
 		CommandPool();
 		~CommandPool();
 
-		CommandBuffer fetch_free();
-
 		const VkCommandPool &get_handle() const
 		{
 			return handle;
 		}
 
-		u32 get_family_index() const
-		{
-			return family_index;
-		}
-
 	private:
 		VkCommandPool handle;
-		u32 family_index;
-		u32 free_index;
-		VkCommandBuffer free_buffers[MAX_BUFFERS];
+		u32 used_count;
+		Vector<VkCommandBuffer> buffers;
 	};
 }

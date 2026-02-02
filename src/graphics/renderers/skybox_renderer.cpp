@@ -12,7 +12,7 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
 
-	hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map.hdr"))->texture;
+	hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map_2.hdr"))->texture;
 
 	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"))->shader;
 	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap"))->shader;
@@ -28,37 +28,50 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 		{  1.f, -1.f,  1.f }
 	};
 
-	u32 indices[] = {
-		0, 2, 1,
-		2, 0, 3,
+	gfx::IndexType indices[] = {
+		1, 2, 0,
+		3, 0, 2,
 
-		7, 5, 6,
-		5, 7, 4,
+		6, 5, 7,
+		4, 7, 5,
 
-		4, 1, 5,
-		1, 4, 0,
+		5, 1, 4,
+		0, 4, 1,
 
-		3, 6, 2,
-		6, 3, 7,
+		2, 6, 3,
+		7, 3, 6,
 
-		1, 6, 5,
-		6, 1, 2,
+		5, 6, 1,
+		2, 1, 6,
 
-		4, 3, 0,
-		3, 4, 7
+		0, 3, 4,
+		7, 4, 3
 	};
 
-	mesh.init(device, sizeof(Vec3),
-		array_size(vertices), vertices,
-		array_size(indices), indices
+	mesh.create_buffers(
+		device, sizeof(Vec3),
+		array_size(vertices),
+		array_size(indices)
 	);
 
-	cubemap = device->alloc_texture_cubemap(1024, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	GpuBuffer *staging_buffer = device->alloc_stage(
+		mesh.get_vertex_buffer_size() + mesh.get_index_buffer_size()
+	);
+	
+	mesh.write_to_staging_buffer(staging_buffer, 0, vertices, indices);
+
+	device->graphics().submit_immediate([&](CommandBuffer &cmd) {
+		mesh.batch_upload(cmd, staging_buffer, 0);
+	});
+
+	device->destroy_buffer(staging_buffer);
+
+	cubemap = device->alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
 }
 
 void SkyboxRenderer::destroy()
 {
-	mesh.destroy();
+	mesh.destroy_buffers();
 	
 	device->destroy_texture(cubemap);
 }
@@ -128,7 +141,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 )
 {
 	struct HdrToSkyboxData {
-		int foo;
+		RenderResourceHandle cubemap;
 	};
 
 	graph.push_stage<HdrToSkyboxData>(
@@ -136,7 +149,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
 			builder.set_multi_view_mask(0b111111);
-			builder.write_colour(graph.import_texture(cubemap));
+			data.cubemap = builder.write_colour(graph.import_texture(cubemap));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -168,6 +181,18 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 			this->mesh.bind_indices(cmd);
 			this->mesh.draw_indexed(cmd);
+		}
+	);
+
+	graph.push_stage<HdrToSkyboxData>(
+		"HDR to Skybox Mipmapping",
+		RenderStage::TYPE_TRANSFER,
+		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
+			data.cubemap = builder.blit_texture_dst(graph.import_texture(cubemap));
+		},
+		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
+			CommandBuffer &cmd = ctx.cmd;
+			cmd.generate_mipmaps(resources.get_texture(data.cubemap));
 		}
 	);
 }

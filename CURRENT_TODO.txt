@@ -1,6 +1,9 @@
- * FINISH FIBER BASED JOB SYSTEM (https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
- * NAUGHTY-DOG STYLE FRAMEPARAMS (https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
- * CUSTOM LINEAR MEMORY ALLOCATORS + TAG BASED (https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
- * GPU AND CPU PROFILERS
- * LOGGING SYSTEM
- * IMGUI INTEGRATION
+* MODELS / SUB MODELS SUCK. NO HIERARCHY, NO NOTHING!
+* NAUGHTY-DOG STYLE FRAMEPARAMS (https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
+* CUSTOM LINEAR MEMORY ALLOCATORS + TAG BASED (https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)
+* GPU AND CPU PROFILERS
+* LOGGING SYSTEM
+* IMGUI INTEGRATION
+* STANDARDIZE SLANG (SLANG_PTR(T) y, SLANG_BINDLESS(x) MACROS, TYPEDEFS FOR float<x>, BindlessHandle = uint = u32)
+* REALTIME MATERIAL EDITOR (IMGUI LIST DROPDOWN, MODIFY PARAMS, WRITE CHANGES TO MATERIAL BUFFER)
+* SWITCH TO SLANG MODULES OVER #INCLUDES

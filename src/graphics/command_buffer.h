@@ -109,7 +109,7 @@ namespace gfx
 			VkFilter filter
 		);
 
-		void generate_mipmaps(Texture *texture);
+		void generate_mipmaps(const Texture *texture);
 
 		// ---
 
@@ -119,12 +119,12 @@ namespace gfx
 			const Vector<VkBufferCopy> &regions
 		);
 
-		void copy_buffer_to_texture(
+		void copy_entire_buffer_to_texture(
 			const GpuBuffer *src,
 			const Texture *dst
 		);
 
-		void copy_buffer_to_texture_regions(
+		void copy_buffer_to_texture(
 			const GpuBuffer *src,
 			const Texture *dst,
 			const Vector<VkBufferImageCopy> &regions

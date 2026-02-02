@@ -884,6 +884,8 @@ Queue &Device::graphics()
 
 CommandPool Device::create_command_pool(u32 family_index)
 {
+	const u32 initial_buffer_count = 64;
+
 	VkCommandPoolCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -900,17 +902,19 @@ CommandPool Device::create_command_pool(u32 family_index)
 		"Failed to create command pool."
 	);
 
-	VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-	command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	command_buffer_allocate_info.commandBufferCount = array_size(pool.free_buffers);
-	command_buffer_allocate_info.commandPool = pool.handle;
+	VkCommandBufferAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandBufferCount = initial_buffer_count;
+	alloc_info.commandPool = pool.handle;
+
+	pool.buffers.resize(initial_buffer_count);
 
 	GFX_VK_CHECK(
 		vkAllocateCommandBuffers(
 			device,
-			&command_buffer_allocate_info,
-			pool.free_buffers
+			&alloc_info,
+			pool.buffers.data()
 		),
 		"Failed to allocate command pool command buffers."
 	);
@@ -925,8 +929,38 @@ void Device::destroy_command_pool(const CommandPool &pool)
 
 void Device::reset_command_pool(CommandPool &pool)
 {
-	pool.free_index = 0;
+	pool.used_count = 0;
 	vkResetCommandPool(device, pool.get_handle(), 0);
+}
+
+CommandBuffer Device::fetch_free_buffer(CommandPool &pool)
+{
+	if (pool.used_count < pool.buffers.size())
+		return CommandBuffer(pool.buffers[pool.used_count++]);
+
+	const u32 alloc_count = 32;
+
+	VkCommandBufferAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandPool = pool.handle;
+	alloc_info.commandBufferCount = alloc_count;
+
+	Vector<VkCommandBuffer> new_buffers(alloc_count);
+
+	GFX_VK_CHECK(
+		vkAllocateCommandBuffers(
+			device,
+			&alloc_info,
+			new_buffers.data()
+		),
+		"Failed to allocate command pool command buffers when expanding pool."
+	);
+
+	for (auto &b : new_buffers)
+		pool.buffers.push_back(b);
+
+	return CommandBuffer(pool.buffers[pool.used_count++]);
 }
 
 Swapchain Device::create_swapchain()
@@ -1359,7 +1393,7 @@ Sampler *Device::create_sampler(
 	create_info.minFilter = filter;
 	create_info.magFilter = filter;
 	create_info.addressModeU = wrap_x;
-	create_info.addressModeV = wrap_z;
+	create_info.addressModeV = wrap_y;
 	create_info.addressModeW = wrap_z;
 	create_info.anisotropyEnable = VK_TRUE;
 	create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
@@ -1481,8 +1515,10 @@ Texture *Device::alloc_texture(
 
 	VmaAllocationCreateInfo vma_alloc_info = {};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-	vma_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	vma_alloc_info.priority = 1.f;
+
+	if (is_storage)
+		vma_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
 	GFX_VK_CHECK(
 		vmaCreateImage(
@@ -1717,44 +1753,24 @@ void Device::destroy_buffer(const GpuBuffer *buffer)
 	delete buffer;
 }
 
-// TODO: Move elsewhere.
-struct FileBytes {
-	b8 *data;
-	u64 length;
-};
-
-static FileBytes load_file_bytes(MemoryArena &dst, const String &path)
+GpuBuffer *Device::alloc_stage(u64 size)
 {
-	b8 *bytes = nullptr;
-
-	FILE *file = fopen(path.c_str(), "rb");
-	u64 file_size = 0;
-
-	if (file) {
-		fseek(file, 0, SEEK_END);
-		file_size = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytes = (b8 *)dst.push(file_size);
-		fread(bytes, file_size, 1, file);
-
-		fclose(file);
-	}
-
-	return { .data = bytes, .length = file_size };
+	return alloc_buffer(
+		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		size
+	);
 }
 
-ShaderStage Device::load_shader_stage_from_bytecode(const String &path)
+ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 {
-	ScratchArena scratch;
-
-	FileBytes source = load_file_bytes(scratch.get_arena(), path);
-
 	SpvReflectShaderModule reflect_module = {};
-	SpvReflectResult reflect_result = spvReflectCreateShaderModule(source.length, source.data, &reflect_module);
+	SpvReflectResult reflect_result = spvReflectCreateShaderModule(data.size, data.bytes, &reflect_module);
 
 	if (reflect_result != SPV_REFLECT_RESULT_SUCCESS)
 		debug_log_crash("Failed to reflect SPIR-V module: %d\n", reflect_result);
+
+	ScratchArena scratch;
 
 	ShaderStage stage = {};
 
@@ -1783,8 +1799,8 @@ ShaderStage Device::load_shader_stage_from_bytecode(const String &path)
 
 		VkShaderModuleCreateInfo module_create_info = {};
 		module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		module_create_info.codeSize = source.length;
-		module_create_info.pCode = (const u32 *)source.data;
+		module_create_info.codeSize = data.size;
+		module_create_info.pCode = (const u32 *)data.bytes;
 
 		GFX_VK_CHECK(
 			vkCreateShaderModule(device,
@@ -1807,14 +1823,13 @@ void Device::destroy_shader_stage(const ShaderStage &stage)
 	vkDestroyShaderModule(device, stage.module, nullptr);
 }
 
-ShaderProgram *Device::create_shader_program(const Vector<String> &stage_paths)
+ShaderProgram *Device::create_shader_program(const Vector<ShaderBytecode> &stages)
 {
 	ShaderProgram *program = new ShaderProgram();
-	program->stage_count = stage_paths.size();
+	program->stage_count = stages.size();
 
-	for (int i = 0; i < program->stage_count; i++) {
-		const String &path = stage_paths[i];
-		program->stages[i] = load_shader_stage_from_bytecode(path);
+	for (int i = 0; i < stages.size(); i++) {
+		program->stages[i] = create_shader_stage(stages[i]);
 		program->push_constant_size = CalcU::max(program->push_constant_size, program->stages[i].push_constant_size);
 	}
 

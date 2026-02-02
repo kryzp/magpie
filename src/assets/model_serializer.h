@@ -9,13 +9,15 @@ namespace ast
 	struct ModelAsset : public Asset {
 		ASSET_DECLARE(ASSET_TYPE_MODEL);
 
-		ModelAsset()
+		ModelAsset(const gfx::Model model)
+			: model(model)
 		{
 		}
 
 		~ModelAsset() override
 		{
-			model.get_sub_model(0).mesh.destroy();
+			for (auto &s : model.sub_models)
+				s.mesh.destroy_buffers();
 		}
 
 		gfx::Model model;

@@ -4,7 +4,7 @@
 
 #include "core/types.h"
 #include "container/vector.h"
-#include "math/matrix.h"
+#include "math/mat4.h"
 #include "math/vec3.h"
 #include "math/colour.h"
 
@@ -45,8 +45,12 @@ namespace gfx
 		const GpuBuffer *vertex_buffer;
 		const GpuBuffer *index_buffer;
 
-		u32 indirect_offset = 0;
-		u32 count_offset = 0;
+		struct MeshPassOffset {
+			u32 indirect_offset;
+			u32 count_offset;
+		};
+
+		MeshPassOffset opaque_pass;
 
 		u32 vertex_offset = 0;
 		u32 index_offset = 0;
@@ -60,8 +64,12 @@ namespace gfx
 		RenderResourceHandle light_buffer;
 		RenderResourceHandle page_table_buffer;
 
-		Vector<RenderResourceHandle> indirect_buffers;
-		Vector<RenderResourceHandle> counter_buffers;
+		struct MeshPass {
+			Vector<RenderResourceHandle> indirect_buffers;
+			Vector<RenderResourceHandle> counter_buffers;
+		};
+
+		MeshPass opaque_pass;
 	};
 
 	class RenderScene {
@@ -70,8 +78,8 @@ namespace gfx
 		static constexpr u64 PAGE_VERTEX_BUFFER_SIZE = MEGABYTES(64);
 		static constexpr u64 PAGE_INDEX_BUFFER_SIZE = MEGABYTES(32);
 
-		static constexpr u32 INITIAL_MAX_MESHES = 1024;
-		static constexpr u32 INITIAL_MAX_MATERIALS = 128;
+		static constexpr u32 MAX_MESHES = 1024;
+		static constexpr u32 MAX_MATERIALS = 512;
 
 		RenderScene();
 		~RenderScene();
@@ -150,9 +158,7 @@ namespace gfx
 		struct {
 			Vector<HandleEntry> handles;
 			Vector<u32> free_indices;
-
 			Vector<RenderHandle> back_references;
-
 			Vector<Mat4> transforms;
 			Vector<Vec4> sphere_bounds;
 			Vector<u32> meshes;
@@ -163,9 +169,7 @@ namespace gfx
 		struct {
 			Vector<HandleEntry> handles;
 			Vector<u32> free_indices;
-
 			Vector<RenderHandle> back_references;
-
 			Vector<gpu_types::GpuLight> data;
 		} lights;
 
@@ -178,7 +182,7 @@ namespace gfx
 
 		Vector<MeshMemoryLocation> mesh_registry;
 
-		Vector<gpu_types::GpuMesh> meshes;
+		Vector<gpu_types::GpuRenderMesh> meshes;
 		Vector<gpu_types::GpuMaterial> materials;
 
 		GpuBuffer *mesh_buffer;

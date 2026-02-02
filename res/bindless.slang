@@ -7,3 +7,8 @@
 // TODO: Slang currently doesn't support RWTextureCube
 //       --> Would RWTexture2DArray suffice here?
 //[vk::binding(0, 4)] RWTextureCube bindless_rw_cubes[];
+
+bool is_bindless_valid(uint handle)
+{
+	return handle != 0;
+}

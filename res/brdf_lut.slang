@@ -11,29 +11,10 @@ struct VS_Output {
 VS_Output VertexMain(uint id : SV_VertexID)
 {
 	VS_Output output;
-	output.uv = float2((id << 1) & 2, id & 2);
-	output.sv_position = float4(output.uv.x*2. - 1., 1. - 2.*output.uv.y, 0., 1.);
+    output.uv = float2(id & 2, (id << 1) & 2);
+    output.sv_position = float4(output.uv.x*2.0 - 1.0, 1.0 - 2.0*output.uv.y, 0.0, 1.0);
 
 	return output;
-}
-
-// The Geometry-Schlick GGX function is slightly different
-// for BRDF since we compute k differently for better precision.
-// (I think??)
-float GeometrySchlickGGX_BRDF_LUT(float NdotV, float roughness)
-{
-	float r = roughness;
-	float k = r * r * 0.5;
-	
-	return NdotV / (NdotV * (1.0 - k) + k);
-}
-
-float GeometrySmith_BRDF_LUT(float NdotV, float NdotL, float roughness)
-{
-	float ggx2 = GeometrySchlickGGX_BRDF_LUT(NdotV, roughness);
-	float ggx1 = GeometrySchlickGGX_BRDF_LUT(NdotL, roughness);
-	
-	return ggx1 * ggx2;
 }
 
 [shader("fragment")]
@@ -61,12 +42,12 @@ float4 FragmentMain(VS_Output input) : SV_Target
 		float3 H = ImportanceSampleGGX(Xi, N, roughness);
 		float3 L = normalize(2.0 * dot(V, H) * H - V);
 
-		float NdotL = max(0.0, L.z);
-		float NdotH = max(0.0, H.z);
+		float NdotL = max(0.0, dot(N, L));
+		float NdotH = max(0.0, dot(N, H));
 		float VdotH = max(0.0, dot(V, H));
 
 		if (NdotL > 0.0) {
-			float G = GeometrySmith_BRDF_LUT(NdotV, NdotL, roughness);
+			float G = GeometrySmith_PHYSACC(NdotV, NdotL, roughness);
 			float G_Vis = (G * VdotH) / (NdotH * NdotV);
 			float Fc = pow(1.0 - VdotH, 5.0);
 

@@ -10,8 +10,6 @@ set(CODE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # Compiler Options.
 set(COMPILE_OPTIONS
-	-fno-rtti
-	-fexceptions
 	-Wno-unused-parameter
 	-Wno-deprecated-declarations
 	-Wno-missing-braces
@@ -73,7 +71,7 @@ add_executable(magpie
 	"${CODE_DIR}/core/class_db.cpp"
 
 	"${CODE_DIR}/math/timer.cpp"
-	"${CODE_DIR}/math/matrix.cpp"
+	"${CODE_DIR}/math/mat4.cpp"
 	"${CODE_DIR}/math/vec2.cpp"
 	"${CODE_DIR}/math/vec3.cpp"
 	"${CODE_DIR}/math/vec4.cpp"

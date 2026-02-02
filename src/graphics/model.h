@@ -3,24 +3,47 @@
 #include "core/types.h"
 #include "assets/assets.h"
 #include "container/vector.h"
+#include "math/mat4.h"
 
 #include "command_buffer.h"
 #include "gpu_buffer.h"
 
 namespace gfx
 {
+	typedef u32 IndexType;
+
 	class Mesh {
 	public:
-		Mesh() = default;
-		~Mesh() = default;
+		Mesh();
+		~Mesh();
 
-		void init(
+		void create_buffers(
 			Device *device, u64 vertex_size,
-			u32 vertex_count, void *vertices,
-			u32 index_count, u32 *indices
+			u32 vertex_count, u32 index_count
 		);
 
-		void destroy() const;
+		void destroy_buffers() const;
+
+		void write_to_staging_buffer(
+			GpuBuffer *staging_buffer, u64 offset,
+			void *vertices, IndexType *indices
+		);
+
+		// Returns the offset for this mesh.
+		u64 batch_upload(
+			CommandBuffer &cmd,
+			GpuBuffer *staging_buffer, u64 offset
+		);
+
+		u64 get_vertex_buffer_size() const
+		{
+			return vertex_count * vertex_size;
+		}
+
+		u64 get_index_buffer_size() const
+		{
+			return index_count * sizeof(IndexType);
+		}
 
 		void bind_indices(CommandBuffer &cmd) const
 		{
@@ -45,7 +68,7 @@ namespace gfx
 	};
 
 	struct Material {
-		ast::AssetHandle diffuse;
+		ast::AssetHandle albedo;
 		ast::AssetHandle normal;
 		ast::AssetHandle emissive;
 		ast::AssetHandle metallic_roughness;
@@ -53,30 +76,12 @@ namespace gfx
 	};
 
 	struct SubModel {
+		Mat4 transform;
 		Mesh mesh;
 		Material material;
 	};
 
-	class Model {
-	public:
-		Model()
-			: sub_models()
-		{
-		}
-
-		~Model() = default;
-
-		SubModel &add_sub_model()
-		{
-			return sub_models.emplace_back();
-		}
-
-		const SubModel &get_sub_model(int index) const
-		{
-			return sub_models[index];
-		}
-
-	private:
+	struct Model {
 		Vector<SubModel> sub_models;
 	};
 }

@@ -58,6 +58,7 @@ namespace gfx
 		CommandPool create_command_pool(u32 family_index);
 		void destroy_command_pool(const CommandPool &pool);
 		void reset_command_pool(CommandPool &pool);
+		CommandBuffer fetch_free_buffer(CommandPool &pool);
 
 		// ---
 
@@ -87,7 +88,7 @@ namespace gfx
 			VkSamplerAddressMode wrap_x = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 			VkSamplerAddressMode wrap_y = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 			VkSamplerAddressMode wrap_z = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			VkBorderColor border_colour = VK_BORDER_COLOR_INT_OPAQUE_BLACK
+			VkBorderColor border_colour = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
 		);
 
 		void destroy_sampler(const Sampler *sampler);
@@ -138,12 +139,14 @@ namespace gfx
 		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size);
 		void destroy_buffer(const GpuBuffer *gpu_buffer);
 
+		GpuBuffer *alloc_stage(u64 size);
+
 		// ---
 
-		ShaderStage load_shader_stage_from_bytecode(const String &path);
+		ShaderStage create_shader_stage(const ShaderBytecode &data);
 		void destroy_shader_stage(const ShaderStage &stage);
 
-		ShaderProgram *create_shader_program(const Vector<String> &stage_paths);
+		ShaderProgram *create_shader_program(const Vector<ShaderBytecode> &stages);
 		void destroy_shader_program(const ShaderProgram *program);
 
 		// ---

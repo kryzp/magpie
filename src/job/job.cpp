@@ -115,15 +115,12 @@ static void job::dec_counter(JobCounter *counter, u32 n)
 
 	if (p == n) {
 		lock_counter(counter);
-
-		Vector<JobFiber *> wait_list_copy = counter->wait_list;
-
+		Vector<JobFiber *> wait_list = std::move(counter->wait_list);
 		counter->wait_list.clear();
-
-		for (JobFiber *f : wait_list_copy)
-			job::kick_waiting_fiber(f);
-
 		unlock_counter(counter);
+
+		for (JobFiber *f : wait_list)
+			job::kick_waiting_fiber(f);
 	}
 }
 
@@ -313,7 +310,8 @@ void job::kick_job(
 	request.fiber = nullptr;
 
 	if (counter) {
-		*counter = alloc_counter();
+		if (!(*counter))
+			*counter = alloc_counter();
 		inc_counter(*counter);
 		request.counter = *counter;
 	}
@@ -331,7 +329,8 @@ void job::kick_job_batch(
 	JobCounter *c = nullptr;
 
 	if (counter) {
-		*counter = alloc_counter();
+		if (!(*counter))
+			*counter = alloc_counter();
 		inc_counter(*counter);
 		c = *counter;
 	}

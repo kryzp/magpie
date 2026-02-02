@@ -6,6 +6,11 @@
 
 namespace gfx
 {
+	struct ShaderBytecode {
+		u8 *bytes;
+		u64 size;
+	};
+
 	struct ShaderStage {
 		VkShaderStageFlags type;
 		VkShaderModule module;

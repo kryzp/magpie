@@ -6,7 +6,7 @@ struct Arguments {
     FrameData *frame_data;
     ObjectData *objects;
     Material *materials;
-	Mesh *meshes;
+    RenderMesh *meshes;
 //	uint *instance_buffer;
 	uint sampler;
 };
@@ -18,7 +18,7 @@ struct VS_Output {
 	float4 sv_position : SV_Position;
 	[vk::location(0)] float4 position;
 	[vk::location(1)] float2 texcoord;
-	[vk::location(2)] float3 colour;
+    [vk::location(2)] float3 colour;
     [vk::location(3)] float3x3 tbn;
     [vk::location(6)] uint material_index; // TBN matrix takes 3 locations.
 };
@@ -31,22 +31,26 @@ VS_Output VertexMain(uint vertex_id: SV_VertexID, uint instance: SV_VulkanInstan
     FrameData *frame_data = args.frame_data;
     ObjectData object_data = args.objects[index];
 
-    Mesh mesh = args.meshes[object_data.mesh_index];
+    RenderMesh mesh = args.meshes[object_data.mesh_index];
 
     ModelVertex vertex = mesh.vertex_buffer[vertex_id];
 
     float3x3 normal_matrix = (float3x3)object_data.normal_matrix;
 
-	float3 T = normalize(mul(normal_matrix, vertex.tangent));
-	float3 B = normalize(mul(normal_matrix, vertex.bitangent));
-	float3 N = normalize(mul(normal_matrix, vertex.normal));
+    float3 T = normalize(mul(normal_matrix, vertex.tangent));
+    float3 B = normalize(mul(normal_matrix, vertex.bitangent));
+    float3 N = normalize(mul(normal_matrix, vertex.normal));
+
+	// Orthonormalize
+//	T = normalize(T - dot(T, N) * N);
+//	B = normalize(B - dot(B, N) * N);
 
     VS_Output output;
     output.position = mul(object_data.model_matrix, float4(vertex.position, 1.));
 	output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
 	output.texcoord = vertex.texcoord;
-	output.colour = vertex.colour;
-    output.tbn = transpose(float3x3(T, B, N));
+    output.colour = vertex.colour;
+    output.tbn = transpose(float3x3(T, B, N)); // float3x3(T,B,N) gives a row-major matrix, so transpose it to make it column-major.
     output.material_index = object_data.material_index;
 
 	return output;
@@ -70,19 +74,35 @@ FS_Output FragmentMain(VS_Output input)
 
 	SamplerState sampler = bindless_samplers[args.sampler];
 
-	float4 albedo              = bindless_images[material.albedo_texture]    .Sample(sampler, uv).rgba;
-	float3 normal              = bindless_images[material.normal_texture]    .Sample(sampler, uv).rgb;
-   	float3 emissive            = bindless_images[material.emissive_texture]  .Sample(sampler, uv).rgb;
-	float3 metallic_roughness  = bindless_images[material.mr_texture]        .Sample(sampler, uv).rgb;
-	float  ambient_occlusion   = bindless_images[material.ambient_texture]   .Sample(sampler, uv).r;
+	float4 albedo = float4(1.0, 1.0, 1.0, 1.0);
+	float3 normal = float3(0.0, 0.0, 1.0);
+	float3 emissive = float3(0.0, 0.0, 0.0);
+    float3 metallic_roughness = float3(1.0, 1.0, 1.0);
+    float ambient_occlusion = 0.0;
 
-	if (albedo.a < 0.)
-	        discard;
+    if (is_bindless_valid(material.albedo_texture))
+        albedo = bindless_images[material.albedo_texture].Sample(sampler, uv).rgba;
 
-	normal = normalize(mul(input.tbn, 2.*normal - 1.));
-	normal = normal*.5 + .5;
+    if (is_bindless_valid(material.normal_texture))
+        normal = bindless_images[material.normal_texture].Sample(sampler, uv).rgb;
 
-	metallic_roughness.r += ambient_occlusion;
+    if (is_bindless_valid(material.emissive_texture))
+        emissive = bindless_images[material.emissive_texture].Sample(sampler, uv).rgb;
+
+    if (is_bindless_valid(material.mr_texture))
+        metallic_roughness = bindless_images[material.mr_texture].Sample(sampler, uv).rgb;
+
+    if (is_bindless_valid(material.ambient_texture))
+        ambient_occlusion = bindless_images[material.ambient_texture].Sample(sampler, uv).r;
+
+    if (albedo.a <= 0.01)
+        discard;
+
+	normal = 2.0*normal - 1.0;
+	normal = normalize(mul(input.tbn, normal));
+    normal = mul(input.tbn, float3(0.0, 0.0, 1.0));
+
+    metallic_roughness.r += ambient_occlusion;
 
 	FS_Output output;
 

@@ -261,8 +261,8 @@ void CommandBuffer::blit(
 	vkCmdBlitImage2(handle, &info);
 }
 
-// Transitions the texture to SHADER_READ_ONLY.
-void CommandBuffer::generate_mipmaps(Texture *texture)
+// Transitions the texture to SHADER_READ.
+void CommandBuffer::generate_mipmaps(const Texture *texture)
 {
 	VkImageMemoryBarrier2 barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -326,9 +326,6 @@ void CommandBuffer::generate_mipmaps(Texture *texture)
 		barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
 		this->pipeline_barrier(0, {}, {}, { barrier });
-
-//		for (u32 k = 0; k < texture.get_layer_count(); k++)
-//			texture.set_access(i, k, 0, sync::TEXTURE_ACCESS_graphics_r);
 	}
 
 	barrier.subresourceRange.baseMipLevel = texture->get_mipmap_count() - 1;
@@ -343,10 +340,10 @@ void CommandBuffer::generate_mipmaps(Texture *texture)
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
 	this->pipeline_barrier(0, {}, {}, { barrier });
-
-//	for (u32 k = 0; k < texture.get_layer_count(); k++)
-//		texture.set_access(0, k, 0, sync::TEXTURE_ACCESS_graphics_r);
 }
+
+// TODO: Convert to VkBufferCopy2
+// TODO: Convert to VkBufferImageCopy2
 
 void CommandBuffer::copy_buffer_to_buffer(
 	const GpuBuffer *src,
@@ -363,7 +360,7 @@ void CommandBuffer::copy_buffer_to_buffer(
 	);
 }
 
-void CommandBuffer::copy_buffer_to_texture(
+void CommandBuffer::copy_entire_buffer_to_texture(
 	const GpuBuffer *src,
 	const Texture *dst
 )
@@ -379,10 +376,10 @@ void CommandBuffer::copy_buffer_to_texture(
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { dst->get_width(), dst->get_height(), 1 };
 
-	copy_buffer_to_texture_regions(src, dst, { region });
+	copy_buffer_to_texture(src, dst, { region });
 }
 
-void CommandBuffer::copy_buffer_to_texture_regions(
+void CommandBuffer::copy_buffer_to_texture(
 	const GpuBuffer *src,
 	const Texture *dst,
 	const Vector<VkBufferImageCopy> &regions

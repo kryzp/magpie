@@ -32,8 +32,13 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
-	uint env_width, env_height;
-	bindless_cubes[args.environment_map_id].GetDimensions(env_width, env_height);
+    TextureCube environment_map = bindless_cubes[args.environment_map_id];
+    SamplerState sampler = bindless_samplers[args.linear_sampler_id];
+
+    float roughness = args.roughness;
+
+    uint env_width, env_height;
+    environment_map.GetDimensions(env_width, env_height);
 	
 	float3 normal = normalize(input.position);
 	float3 R = normal;
@@ -44,31 +49,35 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 result = 0.;
 	
 	for (int i = 0; i < SAMPLE_COUNT; i++) {
-		float2 Xi = Hammersley(i, SAMPLE_COUNT);
-		float3 H = ImportanceSampleGGX(Xi, normal, args.roughness);
+        float2 Xi = Hammersley(i, SAMPLE_COUNT);
+        float3 H = ImportanceSampleGGX(Xi, normal, roughness);
 		float3 L = normalize(2.*dot(V, H)*H - V);
-		
-		float NdotL = max(0., dot(normal, L));
 
-		if (NdotL > 0.) {
-			float NdotH = max(0., dot(normal, H));
-			float HdotV = max(0., dot(H, V));
-			
-			float D = DistributionGGX(NdotH, args.roughness);
-			
-			float pdf = (D * NdotH / (4. * HdotV)) + .1;
-			
-			float sa_texel = 4. * PI / (6. * float(env_width) * float(env_height));
-			float sa_sample = 1. / (float(SAMPLE_COUNT) * pdf + 0.1);
+        float NdotL = max(0.0, dot(normal, L));
+        float NdotH = max(0.0, dot(normal, H));
+        float HdotV = max(0.0, dot(H, V));
 
-			float mip_level = args.roughness <= 0.1 ? 0. : .5 * log2(sa_sample / sa_texel);
+        if (NdotL > 0.0) {
+            float D = DistributionGGX(NdotH, roughness);
+			
+			float pdf = ((D * NdotH) / (4.0 * HdotV)) + 0.0001;
+			
+			float sa_texel = 4.0 * PI / (6.0 * float(env_width) * float(env_height));
+			float sa_sample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
-			result += bindless_cubes[args.environment_map_id].SampleLevel(bindless_samplers[args.linear_sampler_id], WorldToCubemap(L), mip_level).rgb * NdotL;
+            float mip_level = roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);
+
+            result += environment_map.SampleLevel(
+				sampler,
+				WorldToCubemap(L),
+				mip_level
+			).rgb * NdotL;
+
 			total_weight += NdotL;
 		}
 	}
 	
 	result /= total_weight;
 	
-	return float4(result, 1.);
+	return float4(result, 1.0);
 }

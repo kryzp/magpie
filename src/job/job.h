@@ -10,7 +10,7 @@
 #if defined(__x86_64__)
 #  define JOB_SPIN_PAUSE() _mm_pause()
 #else
-#  define JOB_SPIN_PAUSE() std::this_thread::yield()
+#  define JOB_SPIN_PAUSE() platform::yield_thread()
 #endif
 
 #define JOB_ENTRY_POINT(fname_) void fname_(uptr param)

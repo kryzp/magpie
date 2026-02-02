@@ -35,8 +35,9 @@ float4 FragmentMain(VS_Output input)
     float3 irradiance = 0.0;
 
     float3 forward = normalize(input.position);
-    float3 right = normalize(cross(forward, float3(0.0, 0.0, 1.0)));
-    float3 up = normalize(cross(right, forward));
+
+    float3 right, up;
+    BuildOrthonormalBasis(forward, right, up);
 
     float dt = 0.025;
     float n_samples = 0.0;
@@ -49,7 +50,7 @@ float4 FragmentMain(VS_Output input)
                 cos(theta)
             );
 
-            float3x3 tangent_to_world = float3x3(right, up, forward);
+            float3x3 tangent_to_world = transpose(float3x3(right, up, forward));
 
             float3 sample_direction = mul(tangent_to_world, sample);
 

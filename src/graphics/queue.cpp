@@ -54,7 +54,7 @@ void Queue::reset_pool()
 
 CommandBuffer Queue::get_command_buffer()
 {
-	CommandBuffer cmd = get_current_sync_data().command_pool.fetch_free();
+	CommandBuffer cmd = device->fetch_free_buffer(get_current_sync_data().command_pool);
 	cmd.begin();
 	return cmd;
 }

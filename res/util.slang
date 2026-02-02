@@ -5,6 +5,7 @@ const static float PI = 3.14159265;
 // coordinate system, but cubemap
 // sampling requires Y-up left handed.
 // Thanks RenderMan!!
+// Warning: Does NOT normalize.
 float3 WorldToCubemap(float3 v)
 {
 	return float3(v.x, v.z, v.y);
@@ -28,7 +29,7 @@ float2 Hammersley(uint i, uint N)
 float3 FresnelSchlick(float VdotH, float3 F0, float roughness)
 {
 	float t = pow(1.0 - max(VdotH, 0.0), 5.0);
-	float3 F90 = max(1. - roughness, F0);
+	float3 F90 = max(1.0 - roughness, F0);
 	return lerp(F0, F90, t);
 }
 
@@ -36,13 +37,34 @@ float DistributionGGX(float NdotH, float roughness)
 {
 	float a = roughness * roughness;
 	float a2 = a * a;
+
+    float d = max(NdotH, 0.0);
+    float d2 = d * d;
+
+	float denom = d2 * (a2 - 1.0) + 1.0;
 	
-	float denom = NdotH * NdotH * (a2 - 1.) + 1.;
-	
-	return a2 / max(0.0001, denom * denom * PI);
+	return a2 / (denom * denom * PI);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+// Actual physically-accurate equation.
+float GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
+{
+    float r = roughness;
+    float k = r * r * 0.5;
+
+    return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+float GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
+{
+    float ggx2 = GeometrySchlickGGX_PHYSACC(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX_PHYSACC(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+// Modified because this looks better for lighting.
+float GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
 {
 	float r = roughness + 1.0;
 	float k = r * r / 8.0;
@@ -50,12 +72,39 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith(float NdotV, float NdotL, float roughness)
+float GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
 {
-	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+    float ggx2 = GeometrySchlickGGX_ARTISTIC(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX_ARTISTIC(NdotL, roughness);
 	
 	return ggx1 * ggx2;
+}
+
+void BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitangent)
+{
+	float3 u = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+
+    tangent = normalize(cross(normal, u));
+    bitangent = normalize(cross(tangent, normal));
+
+	/*
+    float s = normal.z >= 0.0 ? 1.0 : -1.0;
+
+    float a = -1.0 / (s + normal.z);
+    float b = normal.x * normal.y * a;
+
+    tangent = float3(
+		1.0 + (s * normal.x * normal.x * a),
+		s * b,
+		-s * normal.x
+	);
+
+    bitangent = float3(
+		b,
+		s + (normal.y * normal.y * a),
+		-normal.y
+	);
+	*/
 }
 
 float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
@@ -72,13 +121,12 @@ float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 		sin_theta * sin(phi),
 		cos_theta
 	);
-	
-	float3 up = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
-	float3 tangent = normalize(cross(up, normal));
-	float3 bitangent = cross(normal, tangent);
-	
-	float3x3 inverse_tbn = transpose(float3x3(tangent, bitangent, normal));
-	float3 sample_vector = mul(inverse_tbn, H);
+
+    float3 tangent, bitangent;
+    BuildOrthonormalBasis(normal, tangent, bitangent);
+
+	float3x3 tbn = transpose(float3x3(tangent, bitangent, normal));
+	float3 sample_vector = mul(tbn, H);
 	
 	return normalize(sample_vector);
 }

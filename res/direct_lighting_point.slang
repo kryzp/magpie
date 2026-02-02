@@ -31,8 +31,8 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint base_instance : SV_Insta
 	Light light = args.lights[base_instance];
 	float3 position = args.vertices[vertex_id];
 
-	VS_Output output;
-	output.sv_position = mul(frame_data->projection, mul(frame_data->view, mul(light.transform, float4(position, 1.))));
+    VS_Output output;
+    output.sv_position = mul(frame_data->view_projection, mul(light.transform, float4(position, 1.0)));
 	output.light_id = base_instance;
 
 	return output;
@@ -54,8 +54,6 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 material    = bindless_images[args.material]    .Sample(sampler, uv).rgb;
 	float3 normal      = bindless_images[args.normal]      .Sample(sampler, uv).rgb;
 	float3 emissive    = bindless_images[args.emissive]    .Sample(sampler, uv).rgb;
-
-	normal = 2.*normal - 1.;
 
 	Light light = args.lights[input.light_id];
 
@@ -84,7 +82,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 F = FresnelSchlick(VdotH, F0, 0.0);
 	float NDF = DistributionGGX(NdotH, roughness_value);
-	float G = GeometrySmith(NdotV, NdotL, roughness_value);
+	float G = GeometrySmith_ARTISTIC(NdotV, NdotL, roughness_value);
 
 	float3 kD = (1. - F) * (1. - metallic_value);
 

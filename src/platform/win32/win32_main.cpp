@@ -152,6 +152,11 @@ u32 platform::get_num_cores()
 	return std::thread::hardware_concurrency();
 }
 
+void platform::yield_thread()
+{
+	std::this_thread::yield();
+}
+
 void *platform::convert_thread_to_fiber()
 {
 	return ConvertThreadToFiber(nullptr);
