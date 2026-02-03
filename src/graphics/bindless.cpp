@@ -15,19 +15,17 @@ BindlessResources::~BindlessResources()
 {
 }
 
-BindlessHandle BindlessResources::push_update(BindlessSetKind kind, VkSampler sampler, VkImageView view)
+void BindlessResources::push_update(BindlessSetKind kind, BindlessHandle handle, VkSampler sampler, VkImageView view)
 {
+	assert(handle < BindlessResources::MAX_RESOURCES);
+
 	BindlessUpdate update = {};
 	update.kind = kind;
 	update.sampler = sampler;
 	update.view = view;
-	update.slot = ++resource_counts[kind];
+	update.slot = handle;
 	
-	assert(update.slot < BindlessResources::MAX_RESOURCES);
-
 	updates.push_back(update);
-
-	return update.slot;
 }
 
 bool BindlessResources::is_valid(BindlessHandle handle) const
@@ -37,15 +35,36 @@ bool BindlessResources::is_valid(BindlessHandle handle) const
 
 BindlessHandle BindlessResources::register_sampler(VkSampler sampler)
 {
-	return push_update(BINDLESS_SET_SAMPLER, sampler, VK_NULL_HANDLE);
+	BindlessHandle handle = ++resource_counts[BINDLESS_SET_SAMPLER];
+	update_sampler(handle, sampler);
+	return handle;
 }
 
 BindlessHandle BindlessResources::register_sampled(VkImageView view)
 {
-	return push_update(BINDLESS_SET_SAMPLED, VK_NULL_HANDLE, view);
+	BindlessHandle handle = ++resource_counts[BINDLESS_SET_SAMPLED];
+	update_sampled(handle, view);
+	return handle;
 }
 
 BindlessHandle BindlessResources::register_storage(VkImageView view)
 {
-	return push_update(BINDLESS_SET_STORAGE, VK_NULL_HANDLE, view);
+	BindlessHandle handle = ++resource_counts[BINDLESS_SET_STORAGE];
+	update_storage(handle, view);
+	return handle;
+}
+
+void BindlessResources::update_sampler(BindlessHandle handle, VkSampler sampler)
+{
+	push_update(BINDLESS_SET_SAMPLER, handle, sampler, VK_NULL_HANDLE);
+}
+
+void BindlessResources::update_sampled(BindlessHandle handle, VkImageView view)
+{
+	push_update(BINDLESS_SET_SAMPLED, handle, VK_NULL_HANDLE, view);
+}
+
+void BindlessResources::update_storage(BindlessHandle handle, VkImageView view)
+{
+	push_update(BINDLESS_SET_STORAGE, handle, VK_NULL_HANDLE, view);
 }

@@ -1961,30 +1961,30 @@ void Device::apply_bindless_updates()
 	if (bindless.updates.empty())
 		return;
 
-	Vector<VkWriteDescriptorSet> descriptor_writes(bindless.updates.size());
-	Vector<VkDescriptorImageInfo> image_infos(bindless.updates.size());
+	Vector<VkWriteDescriptorSet> writes(bindless.updates.size());
+	Vector<VkDescriptorImageInfo> infos(bindless.updates.size());
 
 	for (int i = 0; i < bindless.updates.size(); i++) {
 		BindlessResources::BindlessUpdate &update = bindless.updates[i];
 
-		VkDescriptorImageInfo *image_info = &image_infos[i];
-		image_info->sampler = update.sampler;
-		image_info->imageView = update.view;
-		image_info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		VkDescriptorImageInfo *info = &infos[i];
+		info->sampler = update.sampler;
+		info->imageView = update.view;
+		info->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-		VkWriteDescriptorSet *write = &descriptor_writes[i];
+		VkWriteDescriptorSet *write = &writes[i];
 		write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write->descriptorCount = 1;
 		write->dstArrayElement = update.slot;
 		write->descriptorType = get_descriptor_type_from_bindless_set(update.kind);
 		write->dstSet = bindless.sets[update.kind];
 		write->dstBinding = 0;
-		write->pImageInfo = image_info;
+		write->pImageInfo = info;
 	}
 
 	vkUpdateDescriptorSets(
 		device,
-		descriptor_writes.size(), descriptor_writes.data(),
+		writes.size(), writes.data(),
 		0, nullptr
 	);
 

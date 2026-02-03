@@ -13,7 +13,7 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 {
 	const float mouse_deadzone = .001f;
 	const float turn_speed = 0.1f;
-	const float move_speed = 2.5f;
+	const float move_speed = input.ctrl() ? 0.5f : 2.5f;
 
 	const float dx = input.mouse_delta.x;
 	const float dy = input.mouse_delta.y;
@@ -39,9 +39,9 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 	for (int i = 0; i < array_size(basis); i++)
 		basis[i] *= move_speed * dt;
 
-	float hori = input.kb_down[inp::KEYBOARD_KEY_d]	    -  input.kb_down[inp::KEYBOARD_KEY_a];
-	float frwd = input.kb_down[inp::KEYBOARD_KEY_w]	    -  input.kb_down[inp::KEYBOARD_KEY_s];
-	float vert = input.kb_down[inp::KEYBOARD_KEY_space] - (input.kb_down[inp::KEYBOARD_KEY_left_shift] + input.kb_down[inp::KEYBOARD_KEY_right_shift]);
+	float hori = input.down(inp::KEYBOARD_KEY_d)     - input.down(inp::KEYBOARD_KEY_a);
+	float frwd = input.down(inp::KEYBOARD_KEY_w)     - input.down(inp::KEYBOARD_KEY_s);
+	float vert = input.down(inp::KEYBOARD_KEY_space) - input.shift();
 
 	camera.move_by(basis[0] * hori);
 	camera.move_by(basis[1] * frwd);
@@ -105,7 +105,8 @@ void App::init()
 	
 	render_scene.init(&graphics_device);
 
-	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("Models/FlightHelmet/glTF/FlightHelmet.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
@@ -231,7 +232,7 @@ void App::destroy()
 
 bool App::tick(const inp::InputState &input)
 {
-	if (input.kb_pressed[inp::KEYBOARD_KEY_escape]) {
+	if (input.pressed(inp::KEYBOARD_KEY_escape)) {
 		debug_log("Quitting...");
 		return true;
 	}
@@ -313,7 +314,7 @@ bool App::tick(const inp::InputState &input)
 
 void App::update(float dt, const inp::InputState &input)
 {
-	if (input.kb_pressed[inp::KEYBOARD_KEY_tab]) {
+	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;
 		platform::set_mouse_locked(camera_driver_active);
 	}
@@ -323,11 +324,10 @@ void App::update(float dt, const inp::InputState &input)
 
 		int window_width, window_height;
 		platform::get_window_size(&window_width, &window_height);
-
 		platform::set_mouse_position(window_width / 2.f, window_height / 2.f);
 	}
 
-	if (input.gamepads[0].pressed[inp::GAMEPAD_BUTTON_cross])
+	if (input.pressed(inp::GAMEPAD_BUTTON_cross))
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
 }
 
@@ -368,12 +368,12 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 	
 	auto &gbuffer = bb.get<gfx::DeferredRendererInfo>().gbuffer;
 
-	     if (input.kb_down[inp::KEYBOARD_KEY_d1]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_POSITION];
-	else if (input.kb_down[inp::KEYBOARD_KEY_d2]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_ALBEDO];
-	else if (input.kb_down[inp::KEYBOARD_KEY_d3]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_NORMAL];
-	else if (input.kb_down[inp::KEYBOARD_KEY_d4]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_EMISSIVE];
-	else if (input.kb_down[inp::KEYBOARD_KEY_d5]) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_METALLIC_ROUGHNESS];
-	else if (input.kb_down[inp::KEYBOARD_KEY_d6]) swapchain_src = gbuffer.lighting;
+	     if (input.down(inp::KEYBOARD_KEY_d1)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_POSITION];
+	else if (input.down(inp::KEYBOARD_KEY_d2)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_ALBEDO];
+	else if (input.down(inp::KEYBOARD_KEY_d3)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_NORMAL];
+	else if (input.down(inp::KEYBOARD_KEY_d4)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_EMISSIVE];
+	else if (input.down(inp::KEYBOARD_KEY_d5)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_METALLIC_ROUGHNESS];
+	else if (input.down(inp::KEYBOARD_KEY_d6)) swapchain_src = gbuffer.lighting;
 }
 
 void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)

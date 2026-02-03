@@ -28,7 +28,7 @@ namespace gfx
 		};
 
 	public:
-		constexpr static u32 MAX_RESOURCES = 16384;
+		constexpr static u32 MAX_RESOURCES = 16384; // TODO: Get this from physical properties.
 
 		BindlessResources();
 		~BindlessResources();
@@ -38,6 +38,10 @@ namespace gfx
 		BindlessHandle register_sampler(VkSampler sampler);
 		BindlessHandle register_sampled(VkImageView view);
 		BindlessHandle register_storage(VkImageView view);
+
+		void update_sampler(BindlessHandle handle, VkSampler sampler);
+		void update_sampled(BindlessHandle handle, VkImageView view);
+		void update_storage(BindlessHandle handle, VkImageView view);
 
 		const VkDescriptorSetLayout *get_layouts() const
 		{
@@ -50,7 +54,7 @@ namespace gfx
 		}
 
 	private:
-		BindlessHandle push_update(BindlessSetKind kind, VkSampler sampler, VkImageView view);
+		void push_update(BindlessSetKind kind, BindlessHandle handle, VkSampler sampler, VkImageView view);
 
 		VkDescriptorPool pool;
 		VkDescriptorSetLayout layouts[BINDLESS_SET_MAX_ENUM];

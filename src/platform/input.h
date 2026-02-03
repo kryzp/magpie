@@ -339,6 +339,66 @@ namespace inp
 		Vec2 mouse_wheel;
 
 		GamepadState gamepads[MAX_GAMEPADS];
+
+		bool down(KeyboardKey kb) const
+		{
+			return kb_down[kb];
+		}
+
+		bool down(MouseButton mb) const
+		{
+			return mb_down[mb];
+		}
+
+		bool down(GamepadButton btn, u32 player_index = 0) const
+		{
+			return gamepads[0].down[btn];
+		}
+
+		bool pressed(KeyboardKey kb) const
+		{
+			return kb_pressed[kb];
+		}
+
+		bool pressed(MouseButton mb) const
+		{
+			return mb_pressed[mb];
+		}
+
+		bool pressed(GamepadButton btn, u32 player_index = 0) const
+		{
+			return gamepads[0].pressed[btn];
+		}
+
+		bool released(KeyboardKey kb) const
+		{
+			return kb_released[kb];
+		}
+
+		bool released(MouseButton mb) const
+		{
+			return mb_released[mb];
+		}
+
+		bool released(GamepadButton btn, u32 player_index = 0) const
+		{
+			return gamepads[0].released[btn];
+		}
+		
+		bool shift() const
+		{
+			return kb_down[KEYBOARD_KEY_left_shift] || kb_down[KEYBOARD_KEY_right_shift];
+		}
+		
+		bool ctrl() const
+		{
+			return kb_down[KEYBOARD_KEY_left_control] || kb_down[KEYBOARD_KEY_right_control];
+		}
+
+		bool alt() const
+		{
+			return kb_down[KEYBOARD_KEY_left_alt] || kb_down[KEYBOARD_KEY_right_alt];
+		}
 	};
 
 	// Implemented in platform.
