@@ -259,7 +259,7 @@ void job::init(void (*message_pump)(void))
 
 	running = true;
 
-	worker_count = platform::get_num_cores(); // Note we use all cores.
+	worker_count = platform::get_num_cores() - 1;
 	workers = new JobWorker[worker_count];
 
 	workers[0].id = 0;

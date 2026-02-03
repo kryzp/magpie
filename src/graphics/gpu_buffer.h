@@ -77,16 +77,16 @@ namespace gfx
 	 * In some cases, we might find we want to use the same buffer for multiple purposes.
 	 * In those situations, we need a way to refer to subsections of a buffer.
 	 */
-	class GpuBufferView {
+	class GpuBufferRange {
 	public:
-		GpuBufferView(const GpuBuffer *parent, u64 size, u64 offset)
+		GpuBufferRange(const GpuBuffer *parent, u64 size, u64 offset)
 			: parent(parent)
 			, size(size)
 			, offset(offset)
 		{
 		}
 
-		~GpuBufferView()
+		~GpuBufferRange()
 		{
 		}
 

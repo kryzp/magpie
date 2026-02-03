@@ -33,6 +33,7 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - Async Asset Streaming (integrated with job system)
 
 ### Ideas / Todo List
+- Better file system organisation (e.g: "assets://" vs "engine://" point to two different directories)
 - Asset Hot-Reloading
 - More sophisticated debug logging / tracing system
 - GPU profiler

@@ -113,11 +113,10 @@ T Calc<T>::sign(T x)
 template <typename T>
 T Calc<T>::snap(T x, T interval)
 {
-	if (interval <= 1.0) {
+	if (interval <= 1.0)
 		return std::floor(x) + std::round(x - std::floor(x));
-	} else {
+	else
 		return std::round(x / interval) * interval;
-	}
 }
 
 template <typename T>

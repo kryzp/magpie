@@ -145,7 +145,7 @@ void DeferredRenderer::add_render_stages(
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const GeometryStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 
-			GpuBufferView object_buffer = resources.get_buffer_view(data.object_buffer);
+			GpuBufferRange object_buffer = resources.get_buffer_range(data.object_buffer);
 
 			GraphicsPipelineDef pipeline_def(model_shader);
 			pipeline_def.has_depth_attachment = true;
@@ -301,7 +301,7 @@ void DeferredRenderer::add_render_stages(
 
 			light_sphere_mesh.bind_indices(cmd);
 
-			GpuBufferView light_buffer = resources.get_buffer_view(data.light_buffer);
+			GpuBufferRange light_buffer = resources.get_buffer_range(data.light_buffer);
 
 			// TODO: Instanced / Indirect Rendering?
 			for (int i = 0; i < ctx.scene.get_light_count(); i++) {

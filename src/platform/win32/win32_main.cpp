@@ -30,10 +30,13 @@
 
 #include "app.h"
 
+#define MAX_PENDING_EVENTS 512
+
 static SDL_Window *sdl_window = nullptr;
 static std::atomic<bool> is_running { true };
 
-static Vector<SDL_Event> pending_events;
+static SDL_Event pending_events[MAX_PENDING_EVENTS] = {};
+static u32 pending_event_count = 0;
 static std::mutex event_mutex;
 
 static SDL_Gamepad *gamepads[inp::MAX_GAMEPADS] = {};
@@ -54,7 +57,7 @@ void platform::get_window_size_in_pixels(int *pixel_width, int *pixel_height)
 	SDL_GetWindowSizeInPixels(sdl_window, pixel_width, pixel_height);
 }
 
-void platform::set_window_size(u32 width, u32 height)
+void platform::set_window_size(int width, int height)
 {
 	SDL_SetWindowSize(sdl_window, width, height);
 }
@@ -69,22 +72,34 @@ void platform::set_window_borderless(bool b)
 	SDL_SetWindowBordered(sdl_window, !b);
 }
 
-void platform::set_mouse_position(u32 x, u32 y)
+void platform::set_mouse_position(float x, float y)
 {
 	SDL_WarpMouseInWindow(sdl_window, x, y);
 }
 
 void platform::set_mouse_visible(bool visible)
 {
+//	ImGui::SetMouseCursor(visible ? ImGuiMouseSource_Mouse : ImGuiMouseCursor_None);
+
 	if (visible)
 		SDL_ShowCursor();
 	else
 		SDL_HideCursor();
 }
 
+bool platform::is_mouse_visible()
+{
+	return SDL_CursorVisible();
+}
+
 void platform::set_mouse_locked(bool locked)
 {
 	SDL_SetWindowRelativeMouseMode(sdl_window, locked);
+}
+
+bool platform::is_mouse_locked()
+{
+	return SDL_GetWindowRelativeMouseMode(sdl_window);
 }
 
 void platform::set_window_opacity(float opacity)
@@ -331,17 +346,6 @@ static void init_imgui()
 	ImGui_ImplSDL3_InitForVulkan(sdl_window);
 }
 
-static void init_platform()
-{
-	platform::set_window_title(DEFAULT_WINDOW_TITLE);
-	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-	platform::set_window_opacity(1.f);
-	platform::set_window_fullscreen(false);
-	platform::set_window_borderless(false);
-	platform::set_mouse_visible(true);
-	platform::set_mouse_locked(false);
-}
-
 static void destroy_imgui()
 {
 	ImGui_ImplSDL3_Shutdown();
@@ -350,47 +354,55 @@ static void destroy_imgui()
 
 static void win32_message_pump()
 {
-	std::lock_guard<std::mutex> lock(event_mutex);
-	
+	SDL_Event local_events[MAX_PENDING_EVENTS] = {};
+	u32 local_event_count = 0;
+
 	SDL_Event ev = {};
 
-	while (SDL_PollEvent(&ev)) {
-		if (ev.type == SDL_EVENT_QUIT) {
-			is_running.store(false);
-			job::halt_scheduler();
-		} else {
-			pending_events.push_back(ev);
-		}
-	}
+	while (SDL_PollEvent(&ev) && local_event_count < array_size(local_events))
+		local_events[local_event_count++] = ev;
 
-	JOB_SPIN_PAUSE();
+	if (local_event_count > 0) {
+		std::lock_guard<std::mutex> lock(event_mutex);
+		u32 available_space = MAX_PENDING_EVENTS - pending_event_count;
+		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
+		memory_copy(pending_events + pending_event_count, local_events, copy_count * sizeof(SDL_Event));
+		pending_event_count += copy_count;
+	}
 }
 
-static void reset_input_state(inp::InputState &input)
+static void process_events(inp::InputState &input)
 {
+	SDL_Event events[MAX_PENDING_EVENTS] = {};
+	u32 event_count = 0;
+
+	{
+		std::lock_guard<std::mutex> lock(event_mutex);
+		memory_copy(events, pending_events, pending_event_count * sizeof(SDL_Event));
+		event_count = pending_event_count;
+		pending_event_count = 0;
+	}
+
+	// Reset button input states.
 	memory_set(input.kb_pressed, 0, sizeof(input.kb_pressed));
 	memory_set(input.kb_released, 0, sizeof(input.kb_released));
 	
 	memory_set(input.mb_pressed, 0, sizeof(input.mb_pressed));
 	memory_set(input.mb_released, 0, sizeof(input.mb_released));
 
+	for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
+		auto &gp = input.gamepads[i];
+		memory_set(gp.pressed, 0, sizeof(gp.pressed));
+		memory_set(gp.released, 0, sizeof(gp.released));
+	}
+
+	// Reset mouse state.
 	input.mouse_delta = Vec2::zero();
 	input.mouse_wheel = Vec2::zero();
-}
 
-static void process_events(inp::InputState &input)
-{
-	event_mutex.lock();
-	Vector<SDL_Event> events = std::move(pending_events);
-	pending_events.clear();
-	event_mutex.unlock();
+	for (int i = 0; i < event_count; i++) {
+		const SDL_Event &ev = events[i];
 
-	float spx = 0.f;
-	float spy = 0.f;
-	SDL_GetGlobalMouseState(&spx, &spy);
-	input.mouse_screen_position = Vec2(spx, spy);
-
-	for (auto &ev : events) {
 		ImGui_ImplSDL3_ProcessEvent(&ev);
 
 		switch (ev.type) {
@@ -420,6 +432,7 @@ static void process_events(inp::InputState &input)
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
+				SDL_GetGlobalMouseState(&input.mouse_screen_position.x, &input.mouse_screen_position.y);
 				input.mouse_position = Vec2(ev.motion.x, ev.motion.y);
 				input.mouse_delta += Vec2(ev.motion.xrel, ev.motion.yrel);
 				break;
@@ -469,41 +482,15 @@ static JOB_ENTRY_POINT(frame_job_entry)
 {
 	App *app = (App *)param;
 
-	static inp::InputState prev_input_st = {};
-
-	inp::InputState curr_input_st = prev_input_st;
-	reset_input_state(curr_input_st);
-
 	ImGui_ImplSDL3_NewFrame();
 
+	static inp::InputState prev_input_st = {};
+	inp::InputState curr_input_st = prev_input_st;
 	process_events(curr_input_st);
-
-	/*
-	for (int i = 0; i < inp::KEYBOARD_KEY_MAX_ENUM; i++) {
-		curr_input_st.kb_pressed [i] =  curr_input_st.kb_down[i] && !prev_input_st.kb_down[i];
-		curr_input_st.kb_released[i] = !curr_input_st.kb_down[i] &&  prev_input_st.kb_down[i];
-	}
-
-	for (int i = 0; i < inp::MBUTTON_MAX_ENUM; i++) {
-		curr_input_st.mb_pressed [i] =  curr_input_st.mb_down[i] && !prev_input_st.mb_down[i];
-		curr_input_st.mb_released[i] = !curr_input_st.mb_down[i] &&  prev_input_st.mb_down[i];
-	}
-
-	for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
-		inp::GamepadState *st   = &curr_input_st.gamepads[i];
-		inp::GamepadState *p_st = &prev_input_st.gamepads[i];
-
-		for (int j = 0; j < inp::GAMEPAD_BUTTON_MAX_ENUM; j++) {
-			st->pressed [j] =  st->down[j] && !p_st->down[j];
-			st->released[j] = !st->down[j] &&  p_st->down[j];
-		}
-	}
-	*/
+	prev_input_st = curr_input_st;
 
 	if (app->tick(curr_input_st))
 		is_running = false;
-
-	prev_input_st = curr_input_st;
 
 	if (is_running)
 		job::kick_job(job::JobDecl(frame_job_entry, app), nullptr);
@@ -556,7 +543,14 @@ int main(int argc, char **argv)
 		return -1;
 	}
 	
-	init_platform();
+	platform::set_window_title(DEFAULT_WINDOW_TITLE);
+	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	platform::set_window_opacity(1.f);
+	platform::set_window_fullscreen(false);
+	platform::set_window_borderless(false);
+	platform::set_mouse_locked(false);
+	platform::set_mouse_visible(true);
+
 	init_imgui();
 
 	App app;

@@ -285,7 +285,7 @@ namespace gfx
 		// The view is NOT the same as saying get_buffer(handle)->get_device_address()!!
 		// This also applies the physical_offset to the output.
 		// Required for situations where multiple resources lie on different sections of a physical buffer.
-		GpuBufferView get_buffer_view(RenderResourceHandle handle) const;
+		GpuBufferRange get_buffer_range(RenderResourceHandle handle) const;
 
 	private:
 		RenderGraph &graph;
@@ -428,8 +428,8 @@ namespace gfx
 			float delta_time, float elapsed_time
 		);
 
-		RenderResourceHandle import_texture(const Texture *texture);
-		RenderResourceHandle import_buffer(const GpuBuffer *buffer);
+		RenderResourceHandle import_texture(const Texture *texture, TextureAccessType initial_access = TEXTURE_ACCESS_UNDEFINED);
+		RenderResourceHandle import_buffer(const GpuBuffer *buffer, GpuBufferAccessType intial_access = GPU_BUFFER_ACCESS_UNDEFINED);
 
 		TransientBuffer create_transient_buffer(u64 size, u64 alignment = 16);
 

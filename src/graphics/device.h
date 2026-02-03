@@ -210,6 +210,23 @@ namespace gfx
 			u64 expected_timeline_value;
 			VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
 			VkSemaphore render_finished_semaphore; // Signaled when OS allows us to present.
+
+			struct ImageDestroy {
+				VkImage handle;
+				VmaAllocation allocation;
+			};
+
+			struct BufferDestroy {
+				VkBuffer handle;
+				VmaAllocation allocation;
+			};
+
+			Vector<VkSampler> destroyed_samplers;
+			Vector<ImageDestroy> destroyed_images;
+			Vector<VkImageView> destroyed_image_views;
+			Vector<BufferDestroy> destroyed_buffers;
+
+			void clean_up(VkDevice vk_device, const VmaAllocator &vma_allocator);
 		};
 
 		PerFrameData per_frame_data[FRAMES_IN_FLIGHT];

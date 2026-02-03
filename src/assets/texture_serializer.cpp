@@ -20,10 +20,10 @@ static AssetLoadResult texture_load(const AssetLoadContext &ctx)
 {
 	const String &file_path = ctx.system_file_path();
 
-	int width = 0, height = 0, n_channels = 0;
-	void *pixels = nullptr;
-
+	int width, height, n_channels;
+	void *pixels;
 	u64 unit;
+	
 	bool is_hdr = stbi_is_hdr(file_path.c_str());
 
 	if (stbi_is_hdr(file_path.c_str())) {
@@ -60,7 +60,7 @@ static Asset *texture_finalize(
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 1);
+	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
 
 	stage->write(load_data->pixels, result.stage_size, stage_base);
 

@@ -1,6 +1,5 @@
 #include "skybox_renderer.h"
 
-#include "assets/texture_serializer.h"
 #include "assets/shader_serializer.h"
 #include "math/vec3.h"
 
@@ -11,8 +10,6 @@ using namespace gfx;
 void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
-
-	hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map_2.hdr"))->texture;
 
 	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("skybox"))->shader;
 	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("hdr_to_environment_cubemap"))->shader;
@@ -137,10 +134,12 @@ void SkyboxRenderer::add_render_stages(
 
 void SkyboxRenderer::render_hdr_to_skybox(
 	RenderGraph &graph,
+	const Texture *hdr_texture,
 	const GpuBuffer *cubemap_capture_transforms
 )
 {
 	struct HdrToSkyboxData {
+		RenderResourceHandle hdr_texture;
 		RenderResourceHandle cubemap;
 	};
 
@@ -149,6 +148,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
 			builder.set_multi_view_mask(0b111111);
+			data.hdr_texture = builder.read_texture(graph.import_texture(hdr_texture, TEXTURE_ACCESS_SAMPLED));
 			data.cubemap = builder.write_colour(graph.import_texture(cubemap));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
@@ -163,7 +163,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.hdr_image_id = ctx.device.fetch_texture_view_std(this->hdr_texture)->get_bindless_sampled();
+			args.hdr_image_id = resources.get_texture_view(data.hdr_texture)->get_bindless_sampled();
 			args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
 			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);

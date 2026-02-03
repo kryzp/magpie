@@ -4,8 +4,6 @@
 #include "shader_serializer.h"
 #include "model_serializer.h"
 
-#include "platform/platform.h"
-
 using namespace ast;
 
 String AssetLoadContext::system_file_path() const
@@ -225,6 +223,8 @@ void AssetManager::flush_uploads()
 	
 	u32 base_index = 0;
 
+	gfx::GpuBuffer *staging_buffer = device->alloc_stage(GPU_UPLOAD_CHUNK_SIZE * 2);
+
 	while (base_index < uploads_pending_count) {
 		u64 batch_stage_size = 0;
 		u32 batch_count = 0;
@@ -247,11 +247,6 @@ void AssetManager::flush_uploads()
 			batch_stage_size += aligned_size;
 			batch_count++;
 		}
-
-		gfx::GpuBuffer *staging_buffer = nullptr;
-
-		if (batch_stage_size > 0)
-			staging_buffer = device->alloc_stage(batch_stage_size);
 		
 		u64 stage_base = 0;
 
@@ -302,10 +297,10 @@ void AssetManager::flush_uploads()
 			}
 		});
 
-		device->destroy_buffer(staging_buffer);
-
 		base_index += batch_count;
 	}
+	
+	device->destroy_buffer(staging_buffer);
 }
 
 void AssetManager::push_upload(const AssetUpload &upload)

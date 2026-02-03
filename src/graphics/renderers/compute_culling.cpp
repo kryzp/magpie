@@ -154,9 +154,9 @@ void ComputeCulling::add_render_stages(
 			);
 #endif
 			
-			GpuBufferView object_buffer = resources.get_buffer_view(data.object_buffer);
-			GpuBufferView mesh_buffer = resources.get_buffer_view(data.mesh_buffer);
-			GpuBufferView page_table_buffer = resources.get_buffer_view(data.page_table_buffer);
+			GpuBufferRange object_buffer = resources.get_buffer_range(data.object_buffer);
+			GpuBufferRange mesh_buffer = resources.get_buffer_range(data.mesh_buffer);
+			GpuBufferRange page_table_buffer = resources.get_buffer_range(data.page_table_buffer);
 
 			struct {
 				u64 object_buffer;

@@ -19,6 +19,7 @@ namespace gfx
 
 		void render_hdr_to_skybox(
 			RenderGraph &graph,
+			const Texture *hdr_texture,
 			const GpuBuffer *cubemap_capture_transforms
 		);
 		
@@ -30,8 +31,6 @@ namespace gfx
 		Mesh mesh;
 
 		Texture *cubemap;
-
-		const Texture *hdr_texture;
 
 		const ShaderProgram *shader;
 		const ShaderProgram *hdr_to_cubemap_shader;

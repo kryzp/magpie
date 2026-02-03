@@ -261,7 +261,7 @@ void CommandBuffer::blit(
 	vkCmdBlitImage2(handle, &info);
 }
 
-// Transitions the texture to SHADER_READ.
+// Transitions the texture to TEXTURE_ACCESS_SAMPLED.
 void CommandBuffer::generate_mipmaps(const Texture *texture)
 {
 	VkImageMemoryBarrier2 barrier = {};

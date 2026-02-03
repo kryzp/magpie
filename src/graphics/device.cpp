@@ -786,6 +786,8 @@ void Device::destroy()
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 		destroy_semaphore(per_frame_data[i].image_available_semaphore);
 		destroy_semaphore(per_frame_data[i].render_finished_semaphore);
+
+		per_frame_data[i].clean_up(device, vma_allocator);
 	}
 
 	destroy_imgui();
@@ -822,9 +824,31 @@ void Device::destroy_semaphore(VkSemaphore semaphore)
 	vkDestroySemaphore(device, semaphore, nullptr);
 }
 
+void Device::PerFrameData::clean_up(VkDevice vk_device, const VmaAllocator &vma_allocator)
+{
+	for (auto &sampler : destroyed_samplers)
+		vkDestroySampler(vk_device, sampler, nullptr);
+
+	for (auto &image : destroyed_images)
+		vmaDestroyImage(vma_allocator, image.handle, image.allocation);
+
+	for (auto &view : destroyed_image_views)
+		vkDestroyImageView(vk_device, view, nullptr);
+
+	for (auto &buffer : destroyed_buffers)
+		vmaDestroyBuffer(vma_allocator, buffer.handle, buffer.allocation);
+
+	destroyed_samplers.clear();
+	destroyed_images.clear();
+	destroyed_image_views.clear();
+	destroyed_buffers.clear();
+}
+
 CommandBuffer Device::begin_frame(Swapchain &swapchain)
 {
 	PerFrameData &frame_data = per_frame_data[current_frame_index];
+
+	frame_data.clean_up(device, vma_allocator);
 
 	if (frame_data.expected_timeline_value > 0)
 		graphics_queue.wait_until(frame_data.expected_timeline_value);
@@ -970,7 +994,7 @@ Swapchain Device::create_swapchain()
 	SwapchainSupportDetails details = swapchain_details;
 
 	VkSurfaceFormatKHR surface_format = _choose_swapchain_surface_format(details.surface_formats);
-	VkPresentModeKHR present_mode = _choose_swapchain_present_mode(details.present_modes, true);
+	VkPresentModeKHR present_mode = _choose_swapchain_present_mode(details.present_modes, false); // TODO: for now disable vsync
 	VkExtent2D extent = _choose_swapchain_extent(&details.capabilities);
 
 	Swapchain swapchain;
@@ -1429,7 +1453,7 @@ Sampler *Device::create_sampler(
 
 void Device::destroy_sampler(const Sampler *sampler)
 {
-	vkDestroySampler(device, sampler->handle, nullptr);
+	per_frame_data[current_frame_index].destroyed_samplers.push_back(sampler->handle);
 	delete sampler;
 }
 
@@ -1604,10 +1628,7 @@ Texture *Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
 
 void Device::destroy_texture(const Texture *texture)
 {
-	if (!texture)
-		return;
-
-	vmaDestroyImage(vma_allocator, texture->get_handle(), texture->get_allocation());
+	per_frame_data[current_frame_index].destroyed_images.push_back({ texture->handle, texture->allocation });
 	delete texture;
 }
 
@@ -1694,7 +1715,7 @@ TextureView *Device::fetch_texture_view_std(const Texture *texture)
 
 void Device::destroy_texture_view(const TextureView *texture_view)
 {
-	vkDestroyImageView(device, texture_view->get_handle(), nullptr);
+	per_frame_data[current_frame_index].destroyed_image_views.push_back(texture_view->handle);
 	delete texture_view;
 }
 
@@ -1706,6 +1727,7 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 	buffer->allocator = &vma_allocator;
 	buffer->allocation_flags = flags;
 
+	// All storage buffers automatically get BDA because its the big '26.
 	if (buffer->is_storage())
 		buffer->usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
 
@@ -1733,6 +1755,7 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 		"Failed to allocate buffer."
 	);
 
+	// All storage buffers automatically get BDA because its the big '26.
 	if (buffer->is_storage()) {
 		VkBufferDeviceAddressInfo address_info = {};
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -1746,10 +1769,7 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 
 void Device::destroy_buffer(const GpuBuffer *buffer)
 {
-	if (!buffer)
-		return;
-
-	vmaDestroyBuffer(vma_allocator, buffer->get_handle(), buffer->get_allocation());
+	per_frame_data[current_frame_index].destroyed_buffers.push_back({ buffer->handle, buffer->allocation });
 	delete buffer;
 }
 

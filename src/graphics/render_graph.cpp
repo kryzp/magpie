@@ -129,12 +129,12 @@ const GpuBuffer *RenderStageResources::get_buffer(RenderResourceHandle handle) c
 	return (const GpuBuffer *)graph.resources[handle].physical_resource;
 }
 
-GpuBufferView RenderStageResources::get_buffer_view(RenderResourceHandle handle) const
+GpuBufferRange RenderStageResources::get_buffer_range(RenderResourceHandle handle) const
 {
 	RenderResource &resource = graph.resources[handle];
 	const GpuBuffer *physical_buffer = (const GpuBuffer *)graph.resources[handle].physical_resource;
 
-	return GpuBufferView(physical_buffer, resource.buffer_info.size, resource.physical_offset);
+	return GpuBufferRange(physical_buffer, resource.buffer_info.size, resource.physical_offset);
 }
 
 RenderGraphBuilder::RenderGraphBuilder(RenderGraph &graph, RenderStage &stage)
@@ -912,7 +912,7 @@ void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swap
 	image_barriers.clear();
 }
 
-RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
+RenderResourceHandle RenderGraph::import_texture(const Texture *texture, TextureAccessType initial_access)
 {
 	if (import_cache.find(texture) != import_cache.end())
 		return import_cache[texture];
@@ -932,7 +932,7 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 	if (access != imported_access_cache.end())
 		resource.initial_subresource_states = access->second;
 	else
-		resource.initial_subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), TEXTURE_ACCESS_UNDEFINED);
+		resource.initial_subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), initial_access);
 
 	resource.subresource_states = resource.initial_subresource_states;
 
@@ -953,7 +953,7 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 	return handle;
 }
 
-RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
+RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, GpuBufferAccessType intial_access)
 {
 	if (import_cache.find(buffer) != import_cache.end())
 		return import_cache[buffer];
@@ -973,7 +973,7 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 	if (access != imported_access_cache.end())
 		resource.initial_subresource_states = access->second;
 	else
-		resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
+		resource.initial_subresource_states.resize(1, intial_access);
 
 	resource.subresource_states = resource.initial_subresource_states;
 

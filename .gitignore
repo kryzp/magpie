@@ -9,3 +9,4 @@ build/
 *~
 *\.rdbg
 CMakeSettings.json
+/res/Models

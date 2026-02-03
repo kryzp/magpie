@@ -53,7 +53,7 @@ namespace job
 	static constexpr u32 MAX_JOBS_IN_QUEUE = 4096;
 	static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
 
-	void init(void (*pump)(void));
+	void init(void (*message_pump)(void));
 	void shutdown();
 
 	void enter_main_worker();

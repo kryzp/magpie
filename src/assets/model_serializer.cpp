@@ -191,15 +191,6 @@ static void process_nodes(
 
 	for (int i = 0; i < node->mNumMeshes; i++) {
 		const aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
-
-		float opacity = 1.f;
-
-		if (scene->mMaterials[assimp_mesh->mMaterialIndex]->Get(AI_MATKEY_OPACITY, opacity) != AI_SUCCESS)
-			opacity = 1.f;
-
-		if (opacity <= 0.9f)
-			continue;
-
 		load_data.model.sub_models.emplace_back();
 		gfx::SubModel &sub_model = load_data.model.sub_models.back();
 		process_sub_model(ctx, load_data, sub_model, load_data.model.sub_models.size() - 1, directory, assimp_mesh, scene, current_transform);

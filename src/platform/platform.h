@@ -27,14 +27,16 @@ namespace platform
 	void set_window_title(const char *title);
 	void get_window_size(int *width, int *height);
 	void get_window_size_in_pixels(int *pixel_width, int *pixel_height);
-	void set_window_size(u32 width, u32 height);
+	void set_window_size(int width, int height);
 	void set_window_fullscreen(bool b);
 	void set_window_borderless(bool b);
 	void set_window_opacity(float opacity);
 
-	void set_mouse_position(u32 x, u32 y);
+	void set_mouse_position(float x, float y);
 	void set_mouse_visible(bool visible);
+	bool is_mouse_visible();
 	void set_mouse_locked(bool locked);
+	bool is_mouse_locked();
 
 	u64 get_ticks();
 	u64 get_performance_counter();

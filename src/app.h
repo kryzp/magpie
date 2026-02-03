@@ -24,11 +24,7 @@ class CameraDriver {
 public:
 	void update(gfx::Camera &camera, const inp::InputState &input, float dt);
 
-	void toggle(bool enabled);
-	bool is_active() const;
-
 private:
-	bool active = false;
 	float yaw = 0.f;
 	float target_yaw = 0.f;
 	float pitch = 0.f;
@@ -52,9 +48,7 @@ private:
 	void render(float dt, const inp::InputState &input, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources);
 
 	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
-
-	ast::AssetManager assets;
-
+	
 	void *scratch_memory;
 	MemoryArena scratch_arenas[2];
 
@@ -64,6 +58,8 @@ private:
 	Timer delta_timer;
 	float delta_accumulator;
 
+	ast::AssetManager assets;
+
 	gfx::Device graphics_device;
 	gfx::Swapchain swapchain;
 
@@ -72,15 +68,15 @@ private:
 
 	gfx::Camera camera;
 	CameraDriver camera_driver;
+	bool camera_driver_active;
 
 	gfx::GpuBuffer *frame_data_buffer;
-
 	gfx::GpuBuffer *cubemap_capture_transforms;
+	
+	gfx::Texture *brdf_texture;
 
 	gfx::Texture *irradiance_cubemap;
 	gfx::Texture *prefilter_cubemap;
-	
-	gfx::Texture *brdf_texture;
 
 	gfx::IBLRenderer ibl_renderer;
 	gfx::ComputeCulling compute_culling;

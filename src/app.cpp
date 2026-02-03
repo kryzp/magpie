@@ -5,37 +5,31 @@
 #include "core/scratch.h"
 #include "platform/platform.h"
 #include "math/calc.h"
-#include "job/job.h"
 #include "assets/model_serializer.h"
+#include "assets/texture_serializer.h"
 #include "graphics/gpu_types.h"
 
 void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
-	if (!active)
-		return;
-	
 	const float mouse_deadzone = .001f;
-	const float turn_speed = 0.6f;
+	const float turn_speed = 0.1f;
 	const float move_speed = 2.5f;
 
-	int window_width, window_height;
-	platform::get_window_size(&window_width, &window_height);
-
-	float dx = (float)(input.mouse_position.x - window_width/2);
-	float dy = (float)(input.mouse_position.y - window_height/2);
+	const float dx = input.mouse_delta.x;
+	const float dy = input.mouse_delta.y;
 
 	if (dx*dx + dy*dy > mouse_deadzone*mouse_deadzone) {
-		target_yaw -= dx * turn_speed * dt;
-		target_pitch -= dy * turn_speed * dt;
+		target_yaw -= dx * turn_speed;
+		target_pitch -= dy * turn_speed;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, dt * 40.f);
-	yaw = CalcF::lerp(yaw, target_yaw, dt * 40.f);
+	pitch = CalcF::lerp(pitch, target_pitch, 35.f * dt);
+	yaw = CalcF::lerp(yaw, target_yaw, 35.f * dt);
 
 	float corrected_pitch = pitch;
-	float corrected_yaw = yaw + CalcF::PI/2.f;
+	float corrected_yaw = yaw + CalcF::PI*0.5f;
 
-	camera.set_forward(Vec3::spherical_to_cartesian(1.f, corrected_yaw, corrected_pitch));
+	camera.set_forward(Vec3::spherical_to_cartesian(1.f, corrected_yaw * CalcF::DEG2RAD, corrected_pitch * CalcF::DEG2RAD));
 
 	Vec3 basis[3] = {};
 	basis[0] = Vec3::cross(camera.get_forward(), Vec3::up()).normalized();
@@ -44,7 +38,7 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 
 	for (int i = 0; i < array_size(basis); i++)
 		basis[i] *= move_speed * dt;
-	
+
 	float hori = input.kb_down[inp::KEYBOARD_KEY_d]	    -  input.kb_down[inp::KEYBOARD_KEY_a];
 	float frwd = input.kb_down[inp::KEYBOARD_KEY_w]	    -  input.kb_down[inp::KEYBOARD_KEY_s];
 	float vert = input.kb_down[inp::KEYBOARD_KEY_space] - (input.kb_down[inp::KEYBOARD_KEY_left_shift] + input.kb_down[inp::KEYBOARD_KEY_right_shift]);
@@ -54,33 +48,35 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 	camera.move_by(basis[2] * vert);
 
 	camera.recompute();
-
-	platform::set_mouse_position(window_width / 2, window_height / 2);
-}
-
-void CameraDriver::toggle(bool enabled)
-{
-	active = enabled;
-}
-
-bool CameraDriver::is_active() const
-{
-	return active;
 }
 
 App::App()
-	: assets()
-	, scratch_memory()
-	, scratch_arenas()
+	: scratch_memory(nullptr)
+	, scratch_arenas{}
+	, class_db()
 	, global_timer()
 	, delta_timer()
 	, delta_accumulator()
+	, assets()
 	, graphics_device()
 	, swapchain()
 	, render_scene()
 	, render_graph()
+	, camera()
+	, camera_driver()
+	, camera_driver_active(false)
+	, frame_data_buffer(nullptr)
+	, cubemap_capture_transforms(nullptr)
+	, brdf_texture(nullptr)
+	, irradiance_cubemap(nullptr)
+	, prefilter_cubemap(nullptr)
+	, ibl_renderer()
+	, compute_culling()
+	, deferred_renderer()
 	, skybox_renderer()
 	, post_processing()
+	, swapchain_src()
+	, light_handle()
 {
 }
 
@@ -109,9 +105,8 @@ void App::init()
 	
 	render_scene.init(&graphics_device);
 
-	ast::AssetHandle model_handle = assets.from_file_path("Sponza/NewSponza_Main_glTF_003.gltf");
-//	ast::AssetHandle model_handle = assets.from_file_path("DamagedHelmet/DamagedHelmet.gltf");
-//	ast::AssetHandle model_handle = assets.from_file_path("Cube/scene.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
 
@@ -178,9 +173,12 @@ void App::init()
 	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
+	
+	const gfx::Texture *hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map_1.hdr"))->texture;
 
 	skybox_renderer.render_hdr_to_skybox(
 		render_graph,
+		hdr_texture,
 		cubemap_capture_transforms
 	);
 
@@ -258,7 +256,7 @@ bool App::tick(const inp::InputState &input)
 
 	ImGui::Begin("Params");
 	{
-		static float exp = 1.5f;
+		static float exp = 1.2f;
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
 			post_processing.set_exposure(exp);
@@ -272,7 +270,21 @@ bool App::tick(const inp::InputState &input)
 
 	ImGui::Begin("Info");
 	{
-		ImGui::Text("FPS: %f", 1.f / dt);
+		static float fps_samples[512] = {};
+		static unsigned current_sample = 0;
+
+		fps_samples[current_sample % array_size(fps_samples)] = 1.f / dt;
+
+		float fps_average = 0.f;
+
+		for (int i = 0; i < array_size(fps_samples); i++)
+			fps_average += fps_samples[i];
+
+		fps_average /= (float)array_size(fps_samples);
+
+		current_sample++;
+
+		ImGui::Text("FPS Average: %d", (int)fps_average);
 		ImGui::Text("Alpha: %f", delta_accumulator / fixed_dt);
 		ImGui::Text("Time: %f", elapsed_time);
 		ImGui::SameLine();
@@ -302,11 +314,18 @@ bool App::tick(const inp::InputState &input)
 void App::update(float dt, const inp::InputState &input)
 {
 	if (input.kb_pressed[inp::KEYBOARD_KEY_tab]) {
-		camera_driver.toggle(!camera_driver.is_active());
-		platform::set_mouse_visible(false);
+		camera_driver_active = !camera_driver_active;
+		platform::set_mouse_locked(camera_driver_active);
 	}
 
-	camera_driver.update(camera, input, dt);
+	if (camera_driver_active) {
+		camera_driver.update(camera, input, dt);
+
+		int window_width, window_height;
+		platform::get_window_size(&window_width, &window_height);
+
+		platform::set_mouse_position(window_width / 2.f, window_height / 2.f);
+	}
 
 	if (input.gamepads[0].pressed[inp::GAMEPAD_BUTTON_cross])
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
