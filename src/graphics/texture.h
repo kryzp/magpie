@@ -251,8 +251,7 @@ namespace gfx
 			: handle()
 			, type()
 			, range()
-			, bindless_handle_sampled()
-			, bindless_handle_storage()
+			, bindless_handle()
 		{
 		}
 
@@ -273,14 +272,9 @@ namespace gfx
 			return range;
 		}
 
-		BindlessHandle get_bindless_sampled() const
+		BindlessHandle get_bindless_handle() const
 		{
-			return bindless_handle_sampled;
-		}
-
-		BindlessHandle get_bindless_storage() const
-		{
-			return bindless_handle_storage;
+			return bindless_handle;
 		}
 
 	private:
@@ -289,7 +283,6 @@ namespace gfx
 		VkImageViewType type;
 		SubresourceRange range;
 
-		BindlessHandle bindless_handle_sampled;
-		BindlessHandle bindless_handle_storage;
+		BindlessHandle bindless_handle;
 	};
 }

@@ -2,7 +2,9 @@
 
 Vulkan renderer written in C++, with some other features added on (basically a testing ground for whatever programming project I wanna try at any point).
 
-I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me. No gurantees on quality though. Some of this code is (probably) bad, some of it is (maybe) good ;).
+I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me.
+
+No gurantees on quality though, I'm still a student. This code is (probably) bad, some of it is (maybe) good :).
 
 ### Interesting Parts
 - `app`
@@ -14,6 +16,7 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - `graphics/renderers/*`
 - `job/*`
 - `res/frustum_culling`
+- `platform/*`
 
 ### Notable Features
 - Right-handed Z-up coordinates (as it SHOULD be)
@@ -24,12 +27,12 @@ I hope maybe this project helps someone else. Feel free to use any of the code i
 - Render Graph that handles resource management, pipeline barriers and synchronization
 - Indirect Deferred Rendering
 - Page-allocated Render Scene
-- High-performance lockless fiber-based job system, with low-latency spin mode. Input and OS-events are handled on the main thread while the main game loop runs on a seperate "root".
+- High-performance (almost) lockless fiber-based job system, with low-latency spin mode.
 - RTTI macro system allowing for type introspection and other cool stuff like iterating over fields
 - ImGui Integration
 - Controller support I guess :p
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
-- Linear GPU allocators
+- Ring Allocators
 - Async Asset Streaming (integrated with job system)
 
 ### Ideas / Todo List

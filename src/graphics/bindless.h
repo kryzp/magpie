@@ -36,12 +36,10 @@ namespace gfx
 		bool is_valid(BindlessHandle handle) const;
 
 		BindlessHandle register_sampler(VkSampler sampler);
-		BindlessHandle register_sampled(VkImageView view);
-		BindlessHandle register_storage(VkImageView view);
+		BindlessHandle register_view(VkImageView view, bool storage);
 
 		void update_sampler(BindlessHandle handle, VkSampler sampler);
-		void update_sampled(BindlessHandle handle, VkImageView view);
-		void update_storage(BindlessHandle handle, VkImageView view);
+		void update_view(BindlessHandle handle, VkImageView, bool storage);
 
 		const VkDescriptorSetLayout *get_layouts() const
 		{
@@ -60,7 +58,8 @@ namespace gfx
 		VkDescriptorSetLayout layouts[BINDLESS_SET_MAX_ENUM];
 		VkDescriptorSet sets[BINDLESS_SET_MAX_ENUM];
 
-		u32 resource_counts[BINDLESS_SET_MAX_ENUM];
+		u32 samplers;
+		u32 views;
 
 		Vector<BindlessUpdate> updates;
 	};

@@ -90,6 +90,11 @@ namespace gfx
 		{
 		}
 
+		const GpuBuffer *get_buffer() const
+		{
+			return parent;
+		}
+
 		u64 get_device_address() const
 		{
 			return parent->get_device_address() + offset;
