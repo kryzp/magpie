@@ -1455,6 +1455,7 @@ Sampler *Device::create_sampler(
 
 void Device::destroy_sampler(const Sampler *sampler)
 {
+	assert(sampler);
 	per_frame_data[current_frame_index].destroyed_samplers.push_back(sampler->handle);
 	delete sampler;
 }
@@ -1630,6 +1631,7 @@ Texture *Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
 
 void Device::destroy_texture(const Texture *texture)
 {
+	assert(texture);
 	per_frame_data[current_frame_index].destroyed_images.push_back({ texture->handle, texture->allocation });
 	delete texture;
 }
@@ -1713,6 +1715,7 @@ TextureView *Device::fetch_texture_view_std(const Texture *texture)
 
 void Device::destroy_texture_view(const TextureView *texture_view)
 {
+	assert(texture_view);
 	per_frame_data[current_frame_index].destroyed_image_views.push_back(texture_view->handle);
 	delete texture_view;
 }
@@ -1767,6 +1770,7 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 
 void Device::destroy_buffer(const GpuBuffer *buffer)
 {
+	assert(buffer);
 	per_frame_data[current_frame_index].destroyed_buffers.push_back({ buffer->handle, buffer->allocation });
 	delete buffer;
 }

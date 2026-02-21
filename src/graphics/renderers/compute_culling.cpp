@@ -6,6 +6,8 @@
 
 using namespace gfx;
 
+GFX_BLACKBOARD_DATA(ComputeCullingPassData);
+
 void ComputeCulling::init(ast::AssetManager &assets)
 {
 	compute_frustum_culling_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("frustum_culling"))->shader;
@@ -21,30 +23,57 @@ void ComputeCulling::add_render_stages(
 	const RenderSceneResources &scene_resources
 )
 {
+	ComputeCullingPassData pass_data = {};
+
 	struct ComputeCullingStageData {
-		RenderResourceHandle object_buffer;
-		RenderResourceHandle page_table_buffer;
 		RenderResourceHandle mesh_buffer;
+		Vector<RenderResourceHandle> indirect_buffers;
+		Vector<RenderResourceHandle> count_buffers;
 	};
 
 	graph.push_stage<ComputeCullingStageData>(
 		"Compute Frustum Culling",
 		RenderStage::TYPE_COMPUTE,
 		[&](RenderGraphBuilder &builder, ComputeCullingStageData &data) -> void {
-			data.object_buffer = builder.read_buffer_compute(scene_resources.object_buffer);
-			data.page_table_buffer = builder.read_buffer_compute(scene_resources.page_table_buffer);
 			data.mesh_buffer = builder.read_buffer_compute(graph.import_buffer(scene.get_mesh_buffer(), { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
 
-			auto &pass = scene_resources.opaque_pass;
+			for (int i = 0; i < scene.get_geometry_pages().size(); i++) {
+				GpuBufferInfo indirect_info(
+					RenderScene::PAGE_MAX_OBJECTS * sizeof(gpu_types::GpuIndirectDraw),
+					VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+					VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
+				);
 
-			for (auto &b : pass.indirect_buffers)
-				builder.write_buffer_compute(b);
+				RenderResourceHandle indirect_handle = builder.create_buffer(indirect_info);
+				data.indirect_buffers.push_back(builder.write_buffer_compute(indirect_handle));
 
-			for (auto &b : pass.counter_buffers)
-				builder.write_buffer_compute(b);
+				GpuBufferInfo counter_info(
+					sizeof(u32),
+					VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+					VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
+				);
+
+				RenderResourceHandle counter_handle = builder.create_buffer(counter_info);
+				data.count_buffers.push_back(builder.write_buffer_compute(counter_handle));
+			}
+
+			pass_data.indirect_buffers = data.indirect_buffers;
+			pass_data.count_buffers = data.count_buffers;
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const ComputeCullingStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
+
+			gpu_types::GpuPagePointers *mapped_ptrs = scene_resources.page_table_buffer.cpu;
+
+			for (int i = 0; i < data.indirect_buffers.size(); i++) {
+				const GpuBuffer *indirect_buffer = resources.get_buffer(data.indirect_buffers[i]);
+				const GpuBuffer *count_buffer = resources.get_buffer(data.count_buffers[i]);
+
+				mapped_ptrs[i].opaque_indirect_buffer = indirect_buffer->get_device_address();
+				mapped_ptrs[i].opaque_count_buffer = count_buffer->get_device_address();
+
+				*((u32 *)count_buffer->map()) = 0; // Reset counter buffer.
+			}
 
 			ComputePipelineDef pipeline_def(compute_frustum_culling_program);
 			PipelineState pipeline_st = ctx.device.fetch_pipeline(pipeline_def);
@@ -154,9 +183,7 @@ void ComputeCulling::add_render_stages(
 			);
 #endif
 			
-			GpuBufferRange object_buffer = resources.get_buffer_range(data.object_buffer);
 			GpuBufferRange mesh_buffer = resources.get_buffer_range(data.mesh_buffer);
-			GpuBufferRange page_table_buffer = resources.get_buffer_range(data.page_table_buffer);
 
 			struct {
 				u64 object_buffer;
@@ -165,9 +192,9 @@ void ComputeCulling::add_render_stages(
 				u32 object_count;
 			} pc;
 
-			pc.object_buffer = object_buffer.get_device_address();
+			pc.object_buffer = scene_resources.object_buffer.gpu;
 			pc.mesh_buffer = mesh_buffer.get_device_address();
-			pc.page_buffer = page_table_buffer.get_device_address();
+			pc.page_buffer = scene_resources.page_table_buffer.gpu;
 			pc.object_count = ctx.scene.get_object_count();
 
 			cmd.push_constants(
@@ -181,4 +208,6 @@ void ComputeCulling::add_render_stages(
 			cmd.dispatch((pc.object_count + threads - 1) / threads, 1, 1);
 		}
 	);
+
+	bb.add<ComputeCullingPassData>(pass_data);
 }

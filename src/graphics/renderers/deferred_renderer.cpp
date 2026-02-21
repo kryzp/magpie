@@ -7,6 +7,8 @@
 
 #include "../render_scene.h"
 
+#include "compute_culling.h"
+
 using namespace gfx;
 
 GFX_BLACKBOARD_DATA(DeferredRendererInfo);
@@ -108,8 +110,9 @@ void DeferredRenderer::add_render_stages(
 {
 	// TODO: GBuffer should be local to this scope?
 
+	ComputeCullingPassData culling_pass_data = bb.get<ComputeCullingPassData>();
+
 	struct GeometryStageData {
-		RenderResourceHandle object_buffer;
 		Vector<RenderResourceHandle> indirect_buffers;
 		Vector<RenderResourceHandle> counter_buffers;
 	};
@@ -132,20 +135,14 @@ void DeferredRenderer::add_render_stages(
 			RenderClear depth_clear(1.f, 0);
 			builder.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
 
-			data.object_buffer = builder.read_buffer_graphics(scene_resources.object_buffer);
-			
-			auto &pass = scene_resources.opaque_pass;
-
-			for (auto &b : pass.indirect_buffers)
+			for (auto &b : culling_pass_data.indirect_buffers)
 				data.indirect_buffers.push_back(builder.indirect_buffer(b));
 
-			for (auto &b : pass.counter_buffers)
+			for (auto &b : culling_pass_data.count_buffers)
 				data.counter_buffers.push_back(builder.indirect_buffer(b));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const GeometryStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
-
-			GpuBufferRange object_buffer = resources.get_buffer_range(data.object_buffer);
 
 			GraphicsPipelineDef pipeline_def(model_shader);
 			pipeline_def.has_depth_attachment = true;
@@ -167,7 +164,7 @@ void DeferredRenderer::add_render_stages(
 			} args;
 
 			args.frame_data_buffer = frame_data->get_device_address();
-			args.object_buffer = object_buffer.get_device_address();
+			args.object_buffer = scene_resources.object_buffer.gpu;
 			args.material_buffer = ctx.scene.get_material_buffer()->get_device_address();
 			args.mesh_buffer = ctx.scene.get_mesh_buffer()->get_device_address();
 			args.sampler = Sampler::linear->get_bindless_handle();
@@ -189,8 +186,8 @@ void DeferredRenderer::add_render_stages(
 				cmd.bind_index_buffer(page.index_buffer, 0);
 				
 				cmd.draw_indexed_indirect_count(
-					indirect_buffer, page.opaque_pass.indirect_offset,
-					counter_buffer, page.opaque_pass.count_offset,
+					indirect_buffer, 0,
+					counter_buffer, 0,
 					RenderScene::PAGE_MAX_OBJECTS,
 					sizeof(gpu_types::GpuIndirectDraw)
 				);
@@ -201,7 +198,6 @@ void DeferredRenderer::add_render_stages(
 	// ----------------------
 
 	struct LightingStageData {
-		RenderResourceHandle light_buffer;
 		RenderResourceHandle irradiance;
 		RenderResourceHandle prefilter;
 		RenderResourceHandle brdf;
@@ -220,8 +216,6 @@ void DeferredRenderer::add_render_stages(
 			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
 				builder.read_texture(gbuffer.attachments[i]);
 
-			data.light_buffer = builder.read_buffer_graphics(scene_resources.light_buffer);
-			
 			data.irradiance = builder.read_texture(irradiance);
 			data.prefilter = builder.read_texture(prefilter);
 
@@ -301,8 +295,6 @@ void DeferredRenderer::add_render_stages(
 
 			light_sphere_mesh.bind_indices(cmd);
 
-			GpuBufferRange light_buffer = resources.get_buffer_range(data.light_buffer);
-
 			// TODO: Instanced / Indirect Rendering?
 			for (int i = 0; i < ctx.scene.get_light_count(); i++) {
 				struct {
@@ -320,7 +312,7 @@ void DeferredRenderer::add_render_stages(
 				} pc_direct;
 
 				pc_direct.frame_data_buffer = frame_data->get_device_address();
-				pc_direct.light_buffer = light_buffer.get_device_address();
+				pc_direct.light_buffer = scene_resources.light_buffer.gpu;
 				pc_direct.vertex_buffer = light_sphere_mesh.vertex_buffer->get_device_address();
 			
 				pc_direct.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();

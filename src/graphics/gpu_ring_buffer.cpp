@@ -41,6 +41,7 @@ GpuAlloc<u8> GpuRingBuffer::push(u64 bytes, u64 alignment)
 
 	GpuAlloc<u8> alloc = {};
 	alloc.offset = used;
+	alloc.size = bytes;
 	alloc.cpu = (u8 *)cpu_addr(used);
 	alloc.gpu = gpu_addr(used);
 

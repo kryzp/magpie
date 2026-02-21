@@ -62,6 +62,7 @@ App::App()
 	, swapchain()
 	, render_scene()
 	, render_graph()
+	, frame_buffer()
 	, camera()
 	, camera_driver()
 	, camera_driver_active(false)
@@ -101,10 +102,20 @@ void App::init()
 	
 	render_graph.init(&graphics_device);
 	
+	frame_buffer.allocate(
+		&graphics_device,
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		TRANSIENT_ARENA_SIZE * gfx::FRAMES_IN_FLIGHT
+	);
+
 	render_scene.init(&graphics_device);
 
-	ast::AssetHandle model_handle = assets.from_file_path("Models/FlightHelmet/glTF/FlightHelmet.gltf");
-//	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("Models/FlightHelmet/glTF/FlightHelmet.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
@@ -200,6 +211,8 @@ void App::destroy()
 {
 	graphics_device.graphics().wait_idle();
 
+	frame_buffer.destroy();
+
 	graphics_device.destroy_texture(brdf_texture);
 	graphics_device.destroy_texture(irradiance_cubemap);
 	graphics_device.destroy_texture(prefilter_cubemap);
@@ -294,7 +307,7 @@ bool App::tick(const inp::InputState &input)
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	{
-		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(render_graph);
+		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(frame_buffer);
 
 		struct FooBar { int baz; };
 

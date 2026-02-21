@@ -34,6 +34,8 @@ private:
 class App {
 	constexpr static u32 TARGET_FPS = 120;
 
+	static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(128);
+
 public:
 	App();
 	~App();
@@ -65,6 +67,8 @@ private:
 
 	gfx::RenderScene render_scene;
 	gfx::RenderGraph render_graph;
+
+	gfx::GpuRingBuffer frame_buffer;
 
 	gfx::Camera camera;
 	CameraDriver camera_driver;

@@ -12,6 +12,7 @@ namespace gfx
 	template <typename T>
 	struct GpuAlloc {
 		u64 offset;
+		u64 size;
 		T *cpu;
 		u64 gpu;
 	};
@@ -50,6 +51,7 @@ namespace gfx
 		
 		GpuAlloc<T> alloc = {};
 		alloc.offset = bytes.offset;
+		alloc.size = bytes.size;
 		alloc.cpu = (T *)bytes.cpu;
 		alloc.gpu = bytes.gpu;
 

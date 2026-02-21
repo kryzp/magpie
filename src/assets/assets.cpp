@@ -247,7 +247,11 @@ void AssetManager::flush_uploads()
 		}
 		
 		u64 stage_base = 0;
-		gfx::GpuBuffer *staging_buffer = device->alloc_stage(batch_stage_size);
+	
+		gfx::GpuBuffer *staging_buffer = nullptr;
+
+		if (batch_stage_size)
+			staging_buffer = device->alloc_stage(batch_stage_size);
 
 		device->graphics().submit_immediate([&](gfx::CommandBuffer &cmd) {
 			for (int i = 0; i < batch_count; i++) {
@@ -298,7 +302,8 @@ void AssetManager::flush_uploads()
 
 		base_index += batch_count;
 
-		device->destroy_buffer(staging_buffer);
+		if (staging_buffer)
+			device->destroy_buffer(staging_buffer);
 	}
 }
 

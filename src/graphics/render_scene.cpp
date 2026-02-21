@@ -53,17 +53,17 @@ void RenderScene::destroy()
 	}
 }
 
-RenderSceneResources RenderScene::update_transient_resources(RenderGraph &graph)
+RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &frame_arena)
 {
 	RenderSceneResources resources = {};
 
-	update_page_buffer(graph, resources);
+	update_page_buffer(frame_arena, resources);
 
 	if (!objects.transforms.empty())
-		update_object_buffer(graph, resources);
+		update_object_buffer(frame_arena, resources);
 
 	if (!lights.data.empty())
-		update_light_buffer(graph, resources);
+		update_light_buffer(frame_arena, resources);
 
 	if (!materials.empty())
 		update_material_buffer();
@@ -74,13 +74,11 @@ RenderSceneResources RenderScene::update_transient_resources(RenderGraph &graph)
 	return resources;
 }
 
-void RenderScene::update_object_buffer(RenderGraph &graph, RenderSceneResources &resources)
+void RenderScene::update_object_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources)
 {
-	TransientBuffer object_buffer = graph.create_transient_buffer(objects.transforms.size() * sizeof(gpu_types::GpuObjectData), 16);
+	resources.object_buffer = frame_arena.push<gpu_types::GpuObjectData>(objects.transforms.size());
 
-	resources.object_buffer = object_buffer.handle;
-
-	gpu_types::GpuObjectData *mapped_objects = (gpu_types::GpuObjectData *)object_buffer.alloc.cpu;
+	gpu_types::GpuObjectData *mapped_objects = resources.object_buffer.cpu;
 
 	// Cache friendly - Yay!!!
 	for (int i = 0; i < objects.transforms.size(); i++) {
@@ -93,52 +91,51 @@ void RenderScene::update_object_buffer(RenderGraph &graph, RenderSceneResources 
 	}
 }
 
-void RenderScene::update_light_buffer(RenderGraph &graph, RenderSceneResources &resources)
+void RenderScene::update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources)
 {
-	TransientBuffer light_buffer = graph.create_transient_buffer(lights.data.size() * sizeof(gpu_types::GpuLight), 16);
+	resources.light_buffer = frame_arena.push<gpu_types::GpuLight>(lights.data.size());
 
-	resources.light_buffer = light_buffer.handle;
-
-	gpu_types::GpuLight *mapped_lights = (gpu_types::GpuLight *)light_buffer.alloc.cpu;
+	gpu_types::GpuLight *mapped_lights = resources.light_buffer.cpu;
 	memory_copy(mapped_lights, lights.data.data(), lights.data.size() * sizeof(gpu_types::GpuLight));
 }
 
-void RenderScene::update_page_buffer(RenderGraph &graph, RenderSceneResources &resources)
+void RenderScene::update_page_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources)
 {
-	TransientBuffer page_table_buffer = graph.create_transient_buffer(geometry_pages.size() * sizeof(gpu_types::GpuPagePointers), 32);
+	resources.page_table_buffer = frame_arena.push<gpu_types::GpuPagePointers>(geometry_pages.size());
 
-	resources.page_table_buffer = page_table_buffer.handle;
-
-	gpu_types::GpuPagePointers *mapped_ptrs = (gpu_types::GpuPagePointers *)page_table_buffer.alloc.cpu;
+	gpu_types::GpuPagePointers *mapped_ptrs = resources.page_table_buffer.cpu;
 
 	for (int i = 0; i < geometry_pages.size(); i++) {
 		GeometryPage &page = geometry_pages[i];
 		
+		/*
 		// ==================================
 		// OPAQUE PASS
 		// ==================================
 
 		// Indirect buffers like 256-byte alignment!
-		TransientBuffer opaque_indirect_buffer = graph.create_transient_buffer(sizeof(gpu_types::GpuIndirectDraw) * PAGE_MAX_OBJECTS, 256);
-		TransientBuffer opaque_counter_buffer  = graph.create_transient_buffer(sizeof(u32), 4);
-		*(u32 *)opaque_counter_buffer.alloc.cpu = 0; // Reset the counter to zero.
+		GpuAlloc<gpu_types::GpuIndirectDraw> opaque_indirect_buffer = frame_arena.push<gpu_types::GpuIndirectDraw>(PAGE_MAX_OBJECTS);
+		GpuAlloc<u32> opaque_counter_buffer = frame_arena.push<u32>(1);
+		*opaque_counter_buffer.cpu = 0; // Reset the counter to zero.
 
 		// Register handles for graph barriers.
-		resources.opaque_pass.indirect_buffers.push_back(opaque_indirect_buffer.handle);
-		resources.opaque_pass.counter_buffers.push_back(opaque_counter_buffer.handle);
+		resources.opaque_pass.indirect_buffers.push_back(opaque_indirect_buffer);
+		resources.opaque_pass.counter_buffers.push_back(opaque_counter_buffer);
 
 		// Update page struct allocation.
-		page.opaque_pass.indirect_offset = opaque_indirect_buffer.alloc.offset;
-		page.opaque_pass.count_offset = opaque_counter_buffer.alloc.offset;
-		
+		page.opaque_pass.indirect_offset = opaque_indirect_buffer.offset;
+		page.opaque_pass.count_offset = opaque_counter_buffer.offset;
+		*/
+
 		// ==================================
 		// FILL BUFFER TABLE ENTRY
 		// ==================================
 
 		mapped_ptrs[i].vertex_buffer = page.vertex_buffer->get_device_address();
 
-		mapped_ptrs[i].opaque_indirect_buffer = opaque_indirect_buffer.alloc.gpu;
-		mapped_ptrs[i].opaque_count_buffer = opaque_counter_buffer.alloc.gpu;
+		// Filled in dynamically during culling pass.
+		mapped_ptrs[i].opaque_indirect_buffer = 0;
+		mapped_ptrs[i].opaque_count_buffer = 0;
 	}
 }
 
@@ -480,9 +477,6 @@ GeometryPage RenderScene::create_new_page()
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		PAGE_INDEX_BUFFER_SIZE
 	);
-
-	page.opaque_pass.indirect_offset = 0;
-	page.opaque_pass.count_offset = 0;
 
 	page.vertex_offset = 0;
 	page.index_offset = 0;

@@ -8,6 +8,12 @@
 namespace gfx
 {
 	class MeshPass;
+	
+	struct ComputeCullingPassData : public RenderGraphBlackboardData {
+		GFX_DECLARE_BLACKBOARD_DATA(ComputeCullingPassData);
+		Vector<RenderResourceHandle> indirect_buffers;
+		Vector<RenderResourceHandle> count_buffers;
+	};
 
 	class ComputeCulling {
 	public:

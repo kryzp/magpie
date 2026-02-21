@@ -170,11 +170,6 @@ namespace gfx
 
 	typedef u32 RenderResourceHandle;
 	constexpr RenderResourceHandle RENDER_INVALID_HANDLE = -1u;
-	
-	struct TransientBuffer {
-		RenderResourceHandle handle;
-		GpuAlloc<u8> alloc;
-	};
 
 	struct RenderResourceEdge {
 		RenderResourceHandle handle;
@@ -416,8 +411,6 @@ namespace gfx
 		friend class RenderGraphBuilder;
 		friend class RenderStageResources;
 
-		static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(128);
-
 	public:
 		RenderGraph();
 		~RenderGraph();
@@ -449,8 +442,6 @@ namespace gfx
 		RenderResourceHandle import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 		RenderResourceHandle import_buffer(const GpuBuffer *buffer, const AccessState &access_state);
 
-		TransientBuffer create_transient_buffer(u64 size, u64 alignment = 16);
-
 		Device &get_device()
 		{
 			assert(device);
@@ -459,8 +450,6 @@ namespace gfx
 
 	private:
 		Device *device;
-
-		PerFrame<GpuRingBuffer> transient_arenas;
 
 		void backpropogate_dependencies();
 		void allocate_resources(const Swapchain &swapchain);

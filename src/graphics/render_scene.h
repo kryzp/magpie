@@ -45,13 +45,6 @@ namespace gfx
 		const GpuBuffer *vertex_buffer;
 		const GpuBuffer *index_buffer;
 
-		struct MeshPassOffset {
-			u32 indirect_offset;
-			u32 count_offset;
-		};
-
-		MeshPassOffset opaque_pass;
-
 		u32 vertex_offset = 0;
 		u32 index_offset = 0;
 
@@ -60,16 +53,9 @@ namespace gfx
 	};
 
 	struct RenderSceneResources {
-		RenderResourceHandle object_buffer;
-		RenderResourceHandle light_buffer;
-		RenderResourceHandle page_table_buffer;
-
-		struct MeshPass {
-			Vector<RenderResourceHandle> indirect_buffers;
-			Vector<RenderResourceHandle> counter_buffers;
-		};
-
-		MeshPass opaque_pass;
+		GpuAlloc<gpu_types::GpuObjectData> object_buffer;
+		GpuAlloc<gpu_types::GpuLight> light_buffer;
+		GpuAlloc<gpu_types::GpuPagePointers> page_table_buffer;
 	};
 
 	class RenderScene {
@@ -87,7 +73,7 @@ namespace gfx
 		void init(Device *device);
 		void destroy();
 
-		RenderSceneResources update_transient_resources(RenderGraph &graph);
+		RenderSceneResources update_transient_resources(GpuRingBuffer &frame_arena);
 
 		bool is_valid_object(RenderHandle handle) const;
 		bool is_valid_light(RenderHandle handle) const;
@@ -124,9 +110,9 @@ namespace gfx
 	private:
 		Device *device;
 
-		void update_object_buffer(RenderGraph &graph, RenderSceneResources &resources);
-		void update_light_buffer(RenderGraph &graph, RenderSceneResources &resources);
-		void update_page_buffer(RenderGraph &graph, RenderSceneResources &resources);
+		void update_object_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources);
+		void update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources);
+		void update_page_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources);
 
 		void update_material_buffer();
 		void update_mesh_buffer();

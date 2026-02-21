@@ -167,6 +167,7 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 	resource.last_stage_index = -1u;
 
 	resource.buffer_info = info;
+	resource.buffer_offset = 0;
 
 	graph.resources.push_back(resource);
 
@@ -570,7 +571,6 @@ RenderGraph::RenderGraph()
 	, stages()
 	, pool(*this)
 	, import_cache()
-	, transient_arenas()
 	, backbuffer_handle(RENDER_INVALID_HANDLE)
 {
 }
@@ -582,22 +582,6 @@ RenderGraph::~RenderGraph()
 void RenderGraph::init(Device *device)
 {
 	this->device = device;
-
-	transient_arenas.init(device, [&] {
-		GpuRingBuffer arena;
-
-		arena.allocate(
-			device,
-			VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-			VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
-			VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT,
-			VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-			TRANSIENT_ARENA_SIZE
-		);
-
-		return arena;
-	});
 }
 
 void RenderGraph::destroy()
@@ -607,9 +591,6 @@ void RenderGraph::destroy()
 	stages.clear();
 	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
-
-	for (auto &a : transient_arenas)
-		a.destroy();
 }
 
 void RenderGraph::reset()
@@ -634,7 +615,6 @@ void RenderGraph::reset()
 	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
 	pool.flush();
-	transient_arenas.get().reset();
 }
 
 void RenderGraph::set_backbuffer_source(RenderResourceHandle handle)
@@ -749,7 +729,7 @@ void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdg
 	if (!r.physical_texture && !r.physical_buffer)
 		return;
 
-	VkImageLayout target_layout = VK_IMAGE_LAYOUT_GENERAL;
+	const VkImageLayout target_layout = VK_IMAGE_LAYOUT_GENERAL;
 
 	bool layout_change = (r.kind == RenderResource::KIND_TEXTURE) && (r.tracking.layout != target_layout);
 
@@ -775,7 +755,7 @@ void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdg
 				r.physical_buffer,
 				{ src_stage, src_access },
 				edge.access_state,
-				0, VK_WHOLE_SIZE
+				r.buffer_offset, r.buffer_info.size
 			));
 		}
 
@@ -1140,33 +1120,4 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const A
 	import_cache[buffer] = handle;
 
 	return handle;
-}
-
-TransientBuffer RenderGraph::create_transient_buffer(u64 size, u64 alignment)
-{
-	GpuAlloc<u8> alloc = transient_arenas.get().push(size, alignment);
-
-	RenderResourceHandle handle = resources.size();
-
-	RenderResource resource = {};
-	resource.kind = RenderResource::KIND_BUFFER;
-	resource.is_imported = true; // Graph manages the lifetime, not the pool, so we treat it as imported.
-
-	resource.first_stage_index = -1u;
-	resource.last_stage_index = -1u;
-
-	resource.physical_buffer = transient_arenas.get().get_buffer();
-
-	resource.buffer_info.size = size;
-	resource.buffer_info.usage = transient_arenas.get().get_buffer()->get_usage();
-
-	resource.buffer_offset = alloc.offset;
-
-	resources.push_back(resource);
-
-	TransientBuffer transient_buffer = {};
-	transient_buffer.handle = handle;
-	transient_buffer.alloc = alloc;
-
-	return transient_buffer;
 }
