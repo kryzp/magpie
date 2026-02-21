@@ -28,7 +28,7 @@ void IBLRenderer::render_brdf(
 		"BRDF LUT Generation",
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, RenderBrdfData &data) -> void {
-			data.output = builder.write_colour(graph.import_texture(brdf));
+			data.output = builder.write_colour(graph.import_texture(brdf, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const RenderBrdfData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -65,14 +65,14 @@ void IBLRenderer::render_environment_map(
 		[&](RenderGraphBuilder &builder, IrradianceStageData &data) -> void {
 			builder.set_multi_view_mask(0b111111);
 
-			builder.write_colour(graph.import_texture(irradiance));
+			builder.write_colour(graph.import_texture(irradiance, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED));
 			
-			data.environment_map = builder.read_texture(graph.import_texture(environment_map));
+			data.environment_map = builder.read_texture(graph.import_texture(environment_map, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const IrradianceStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 
-			const TextureView *environment_map_texture = resources.get_texture_view(data.environment_map);
+			const TextureView *environment_map_texture = resources.get_texture_view(data.environment_map, SubresourceRange::all_colour());
 
 			GraphicsPipelineDef pipeline_def(irradiance_shader);
 			pipeline_def.view_mask = 0b111111;
@@ -92,7 +92,7 @@ void IBLRenderer::render_environment_map(
 			
 			args.transform_matrices = capture_transforms->get_device_address();
 			args.vertices = skybox.vertex_buffer->get_device_address();
-			args.environment_map = environment_map_texture->get_bindless_sampled();
+			args.environment_map = environment_map_texture->get_bindless_handle();
 			args.linear_sampler = Sampler::linear->get_bindless_handle();
 
 			cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
@@ -122,14 +122,14 @@ void IBLRenderer::render_environment_map(
 				range.base_layer = 0;
 				range.layers = 6;
 
-				builder.write_colour(graph.import_texture(prefilter), range);
+				builder.write_colour(graph.import_texture(prefilter, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED), range);
 
-				data.environment_map = builder.read_texture(graph.import_texture(environment_map));
+				data.environment_map = builder.read_texture(graph.import_texture(environment_map, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
 			},
 			[=](const RenderContext &ctx, const RenderStageResources &resources, const PrefilterStageData &data) -> void {
 				CommandBuffer &cmd = ctx.cmd;
 
-				const TextureView *environment_map_view = resources.get_texture_view(data.environment_map);
+				const TextureView *environment_map_view = resources.get_texture_view(data.environment_map, SubresourceRange::all_colour());
 
 				GraphicsPipelineDef pipeline_def(prefilter_shader);
 				pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
@@ -150,7 +150,7 @@ void IBLRenderer::render_environment_map(
 				
 				args.transform_matrices = capture_transforms->get_device_address();
 				args.vertices = skybox.vertex_buffer->get_device_address();
-				args.environment_map = environment_map_view->get_bindless_sampled();
+				args.environment_map = environment_map_view->get_bindless_handle();
 				args.linear_sampler = Sampler::linear->get_bindless_handle();
 				args.roughness = (float)i / (float)(mip_levels - 1);
 

@@ -9,6 +9,49 @@ namespace gfx
 	class Texture;
 	class GpuBuffer;
 	
+	struct AccessState {
+		VkPipelineStageFlags2 stage;
+		VkAccessFlags2 access;
+	};
+
+	namespace sync
+	{
+		inline bool is_write_access(VkAccessFlags2 access_flags)
+		{
+			constexpr static VkAccessFlags2 WRITE_BITS = 
+				VK_ACCESS_2_SHADER_WRITE_BIT |
+				VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_2_TRANSFER_WRITE_BIT |
+				VK_ACCESS_2_HOST_WRITE_BIT |
+				VK_ACCESS_2_MEMORY_WRITE_BIT |
+				VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+
+			return (access_flags & WRITE_BITS) != 0;
+		}
+
+		VkImageMemoryBarrier2 texture_memory_barrier(
+			const Texture *texture,
+			const AccessState &src,
+			const AccessState &dst,
+			VkImageLayout src_layout,
+			VkImageLayout dst_layout,
+			u32 base_mip, u32 mip_count,     // VK_REMAINING_MIP_LEVELS for all mip levels
+			u32 base_layer, u32 layer_count  // VK_REMAINING_ARRAY_LAYERS for all array layers
+		);
+
+		VkBufferMemoryBarrier2 buffer_memory_barrier(
+			const GpuBuffer *buffer,
+			const AccessState &src,
+			const AccessState &dst,
+			u64 offset, u64 size // VK_WHOLE_SIZE for entire buffer
+		);
+	}
+
+#if 0
+	class Texture;
+	class GpuBuffer;
+	
 	enum TextureAccessType {
 		TEXTURE_ACCESS_UNDEFINED,
 		
@@ -81,4 +124,5 @@ namespace gfx
 			u64 offset, u64 size // VK_WHOLE_SIZE for entire buffer
 		);
 	}
+#endif
 }

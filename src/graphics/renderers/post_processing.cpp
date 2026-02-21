@@ -36,8 +36,8 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			colour_info.is_storage = true;
 			colour_attachment = builder.create_texture(colour_info);
 
-			data.lighting = builder.read_texture(deferred_info.gbuffer.lighting);
-			data.colour = builder.write_colour(colour_attachment);
+			data.lighting = builder.read_texture_compute(deferred_info.gbuffer.lighting);
+			data.colour = builder.write_texture_compute(colour_attachment);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const PostProcessingInfo &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -62,8 +62,8 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 			args.width = in_texture->get_width();
 			args.height = in_texture->get_height();
 			args.exposure = this->exposure;
-			args.input_image_id = ctx.device.fetch_texture_view_std(in_texture)->get_bindless_sampled();
-			args.output_image_id = ctx.device.fetch_texture_view_std(out_texture)->get_bindless_storage();
+			args.input_image_id = ctx.device.fetch_texture_view_std(in_texture)->get_bindless_handle();
+			args.output_image_id = ctx.device.fetch_texture_view_std(out_texture)->get_bindless_handle();
 		
 			cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(args), &args);
 

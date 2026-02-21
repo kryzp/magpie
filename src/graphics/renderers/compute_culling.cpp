@@ -31,17 +31,17 @@ void ComputeCulling::add_render_stages(
 		"Compute Frustum Culling",
 		RenderStage::TYPE_COMPUTE,
 		[&](RenderGraphBuilder &builder, ComputeCullingStageData &data) -> void {
-			data.object_buffer = builder.read_buffer(scene_resources.object_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
-			data.page_table_buffer = builder.read_buffer(scene_resources.page_table_buffer, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
-			data.mesh_buffer = builder.read_buffer(graph.import_buffer(scene.get_mesh_buffer()), GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+			data.object_buffer = builder.read_buffer_compute(scene_resources.object_buffer);
+			data.page_table_buffer = builder.read_buffer_compute(scene_resources.page_table_buffer);
+			data.mesh_buffer = builder.read_buffer_compute(graph.import_buffer(scene.get_mesh_buffer(), { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
 
 			auto &pass = scene_resources.opaque_pass;
 
 			for (auto &b : pass.indirect_buffers)
-				builder.write_buffer(b, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
-			
+				builder.write_buffer_compute(b);
+
 			for (auto &b : pass.counter_buffers)
-				builder.write_buffer(b, GPU_BUFFER_ACCESS_COMPUTE_READ_WRITE);
+				builder.write_buffer_compute(b);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const ComputeCullingStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;

@@ -64,12 +64,14 @@ static Asset *texture_finalize(
 
 	stage->write(load_data->pixels, result.stage_size, stage_base);
 
-	auto copy_barrier = gfx::sync::texture_memory_barrier(
+	VkImageMemoryBarrier2 copy_barrier = gfx::sync::texture_memory_barrier(
 		gfx_texture,
-		gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_UNDEFINED),
-		gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
-		0, gfx_texture->get_mipmap_count(),
-		0, gfx_texture->get_layer_count()
+		{ VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE },
+		{ VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_GENERAL,
+		0, VK_REMAINING_MIP_LEVELS,
+		0, VK_REMAINING_ARRAY_LAYERS
 	);
 
 	cmd.pipeline_barrier(0, {}, {}, { copy_barrier });
@@ -87,12 +89,14 @@ static Asset *texture_finalize(
 
 	cmd.copy_buffer_to_texture(stage, gfx_texture, { region });
 
-	auto blit_barrier = gfx::sync::texture_memory_barrier(
+	VkImageMemoryBarrier2 blit_barrier = gfx::sync::texture_memory_barrier(
 		gfx_texture,
-		gfx::sync::get_src_texture_access(gfx::TEXTURE_ACCESS_COPY_DST),
-		gfx::sync::get_dst_texture_access(gfx::TEXTURE_ACCESS_BLIT_DST),
-		0, gfx_texture->get_mipmap_count(),
-		0, gfx_texture->get_layer_count()
+		{ VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
+		{ VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_GENERAL,
+		0, VK_REMAINING_MIP_LEVELS,
+		0, VK_REMAINING_ARRAY_LAYERS
 	);
 
 	cmd.pipeline_barrier(0, {}, {}, { blit_barrier });

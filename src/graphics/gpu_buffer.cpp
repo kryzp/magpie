@@ -4,14 +4,6 @@
 
 using namespace gfx;
 
-GpuBuffer::GpuBuffer()
-{
-}
-
-GpuBuffer::~GpuBuffer()
-{
-}
-
 void GpuBuffer::read(void *dst, u64 length, u64 offset)
 {
 	vmaCopyAllocationToMemory(*allocator, allocation, offset, dst, length);

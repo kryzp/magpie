@@ -151,7 +151,6 @@ namespace gfx
 
 		// ---
 		
-		void init_imgui();
 		void imgui_new_frame();
 		void imgui_record_draw_data(const CommandBuffer &cmd);
 
@@ -186,7 +185,8 @@ namespace gfx
 		void create_bindless();
 		void destroy_bindless();
 		void apply_bindless_updates();
-
+		
+		void init_imgui();
 		void destroy_imgui();
 
 		VkInstance instance;
@@ -208,6 +208,7 @@ namespace gfx
 
 		struct PerFrameData {
 			u64 expected_timeline_value;
+
 			VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
 			VkSemaphore render_finished_semaphore; // Signaled when OS allows us to present.
 

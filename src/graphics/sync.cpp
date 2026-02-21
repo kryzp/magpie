@@ -5,6 +5,70 @@
 
 using namespace gfx;
 
+VkImageMemoryBarrier2 sync::texture_memory_barrier(
+	const Texture *texture,
+	const AccessState &src,
+	const AccessState &dst,
+	VkImageLayout src_layout,
+	VkImageLayout dst_layout,
+	u32 base_mip, u32 mip_count,
+	u32 base_layer, u32 layer_count
+)
+{
+	VkImageMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+
+	barrier.image = texture->get_handle();
+	
+	barrier.subresourceRange.aspectMask = texture->get_aspects();
+	barrier.subresourceRange.baseMipLevel = base_mip;
+	barrier.subresourceRange.levelCount = mip_count;
+	barrier.subresourceRange.baseArrayLayer = base_layer;
+	barrier.subresourceRange.layerCount = layer_count;
+
+	barrier.oldLayout = src_layout;
+	barrier.newLayout = dst_layout;
+
+	barrier.srcAccessMask = src.access;
+	barrier.dstAccessMask = dst.access;
+
+	barrier.srcStageMask = src.stage;
+	barrier.dstStageMask = dst.stage;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	return barrier;
+}
+
+VkBufferMemoryBarrier2 sync::buffer_memory_barrier(
+	const GpuBuffer *buffer,
+	const AccessState &src,
+	const AccessState &dst,
+	u64 offset, u64 size
+)
+{
+	VkBufferMemoryBarrier2 barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+
+	barrier.buffer = buffer->get_handle();
+	barrier.offset = offset;
+	barrier.size = size;
+
+	barrier.srcAccessMask = src.access;
+	barrier.dstAccessMask = dst.access;
+
+	barrier.srcStageMask = src.stage;
+	barrier.dstStageMask = dst.stage;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	return barrier;
+}
+
+#if 0
+
 bool sync::texture_access_is_write(TextureAccessType type)
 {
 	return
@@ -378,3 +442,5 @@ VkBufferMemoryBarrier2 sync::buffer_memory_barrier(
 
 	return barrier;
 }
+
+#endif

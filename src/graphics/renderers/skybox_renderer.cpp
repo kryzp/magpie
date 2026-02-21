@@ -92,13 +92,13 @@ void SkyboxRenderer::add_render_stages(
 		[&](RenderGraphBuilder &builder, SkyboxStageData &data) -> void {
 			data.colour = builder.write_colour(deferred_info.gbuffer.lighting);
 			data.depth = builder.write_depth(deferred_info.gbuffer.depth);
-			data.cubemap = builder.read_texture(graph.import_texture(cubemap));
+			data.cubemap = builder.read_texture(graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT }));
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const SkyboxStageData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 			
 			const Texture *colour = resources.get_texture(data.colour);
-			const TextureView *cubemap_view = resources.get_texture_view(data.cubemap);
+			const TextureView *cubemap_view = resources.get_texture_view(data.cubemap, SubresourceRange::all_colour());
 
 			GraphicsPipelineDef pipeline_def(shader);
 			pipeline_def.has_depth_attachment = true;
@@ -118,7 +118,7 @@ void SkyboxRenderer::add_render_stages(
 
 			args.frame_data_buffer = frame_data->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.cubemap_id = cubemap_view->get_bindless_sampled();
+			args.cubemap_id = cubemap_view->get_bindless_handle();
 			args.sampler_id = Sampler::linear->get_bindless_handle();
 
 			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
@@ -138,8 +138,9 @@ void SkyboxRenderer::render_hdr_to_skybox(
 	const GpuBuffer *cubemap_capture_transforms
 )
 {
+	RenderResourceHandle cubemap_handle = graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED);
+
 	struct HdrToSkyboxData {
-		RenderResourceHandle hdr_texture;
 		RenderResourceHandle cubemap;
 	};
 
@@ -148,8 +149,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		RenderStage::TYPE_GRAPHICS,
 		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
 			builder.set_multi_view_mask(0b111111);
-			data.hdr_texture = builder.read_texture(graph.import_texture(hdr_texture, TEXTURE_ACCESS_SAMPLED));
-			data.cubemap = builder.write_colour(graph.import_texture(cubemap));
+			data.cubemap = builder.write_colour(cubemap_handle);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -163,7 +163,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.hdr_image_id = resources.get_texture_view(data.hdr_texture)->get_bindless_sampled();
+			args.hdr_image_id = ctx.device.fetch_texture_view_std(hdr_texture)->get_bindless_handle();
 			args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
 			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
@@ -188,7 +188,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		"HDR to Skybox Mipmapping",
 		RenderStage::TYPE_TRANSFER,
 		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
-			data.cubemap = builder.blit_texture_dst(graph.import_texture(cubemap));
+			data.cubemap = builder.blit_texture_dst(cubemap_handle);
 		},
 		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
 			CommandBuffer &cmd = ctx.cmd;

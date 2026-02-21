@@ -94,8 +94,6 @@ void App::init()
 
 	graphics_device.init();
 	swapchain = graphics_device.create_swapchain();
-
-	graphics_device.init_imgui();
 	
 	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
@@ -138,12 +136,12 @@ void App::init()
 	);
 
 	Mat4 capture_view_matrices[] = {
-		Mat4::lookat(Vec3::zero(), Vec3( 1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Right
-		Mat4::lookat(Vec3::zero(), Vec3(-1.f,  0.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Left
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f,  1.f), Vec3(0.f, -1.f, 0.f)), // Up
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  0.f, -1.f), Vec3(0.f,  1.f, 0.f)), // Down
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,  1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Forward
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f, -1.f,  0.f), Vec3(0.f,  0.f, 1.f)), // Backwards
+		Mat4::lookat(Vec3::zero(), Vec3( 1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Right
+		Mat4::lookat(Vec3::zero(), Vec3(-1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Left
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f, 1.f), Vec3( 0.f,-1.f, 0.f)), // Up
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f,-1.f), Vec3( 0.f, 1.f, 0.f)), // Down
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Forward
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f,-1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Backwards
 	};
 
 	Mat4 capture_projection_matrix = Mat4::perspective(90.f, 1.f, 0.1f, 10.f);
@@ -298,6 +296,15 @@ bool App::tick(const inp::InputState &input)
 	{
 		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(render_graph);
 
+		struct FooBar { int baz; };
+
+		render_graph.push_stage<FooBar>(
+			"Swapchain Src",
+			gfx::RenderStage::TYPE_GRAPHICS,
+			[&](gfx::RenderGraphBuilder &builder, FooBar &data) { swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT)); builder.write_colour(swapchain_src); },
+			[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) { }
+		);
+	
 		render(dt, input, elapsed_time, cmd, scene_resources);
 		add_imgui_render_stage(render_graph, swapchain_src);
 
@@ -350,22 +357,20 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 	frame_data_buffer->write(&data, sizeof(gfx::gpu_types::GpuFrameData), 0);
 
-	struct FooBar { int baz; };
-
-	render_graph.push_stage<FooBar>(
-		"Swapchain Src",
-		gfx::RenderStage::TYPE_TRANSFER,
-		[&](gfx::RenderGraphBuilder &builder, FooBar &data) { swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT)); },
-		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) { }
-	);
-	
 	gfx::RenderGraphBlackboard bb;
 
 	compute_culling.add_render_stages(render_graph, bb, render_scene, scene_resources);
-	deferred_renderer.add_render_stages(render_graph, bb, scene_resources, frame_data_buffer, render_graph.import_texture(irradiance_cubemap), render_graph.import_texture(prefilter_cubemap), render_graph.import_texture(brdf_texture));
+	
+	deferred_renderer.add_render_stages(render_graph, bb, scene_resources,
+		frame_data_buffer,
+		render_graph.import_texture(irradiance_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
+		render_graph.import_texture(prefilter_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
+		render_graph.import_texture(brdf_texture, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE })
+	);
+	
 	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
 	post_processing.add_render_stages(render_graph, bb, swapchain_src);
-	
+
 	auto &gbuffer = bb.get<gfx::DeferredRendererInfo>().gbuffer;
 
 	     if (input.down(inp::KEYBOARD_KEY_d1)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_POSITION];

@@ -223,6 +223,7 @@ void AssetManager::flush_uploads()
 	
 	u32 base_index = 0;
 
+	// TODO: Switch to ring buffer. push() using batch_stage_size.
 	gfx::GpuBuffer *staging_buffer = device->alloc_stage(GPU_UPLOAD_CHUNK_SIZE * 2);
 
 	while (base_index < uploads_pending_count) {

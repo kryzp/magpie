@@ -39,7 +39,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 	for (auto &output : stage.outputs) {
 		RenderResource &resource = graph.resources[output.handle];
 
-		const Texture *physical_texture = (const Texture *)resource.physical_resource;
+		const Texture *physical_texture = resource.physical_texture;
 		const AttachmentInfo &attachment_info = resource.texture_info;
 
 		// TODO: Right now it's just based on the last attachments sample count_offset.
@@ -47,21 +47,17 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		//       --> Ideally I should have resolving implemented so they automatically have their resolves.
 		render_info.samples = attachment_info.samples;
 
-		u32 mip = output.texture.range.base_mip;
+		u32 mip = output.range.base_mip;
 		render_info.width = CalcU::max(1u, (u32)resource.texture_info.size_x >> mip);
 		render_info.height = CalcU::max(1u, (u32)resource.texture_info.size_y >> mip);
 
 		VkRenderingAttachmentInfo vk_attachment_info = {};
 		vk_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 
-		vk_attachment_info.loadOp = output.texture.clear_enabled ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+		vk_attachment_info.loadOp = output.clear_enabled ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(
-			physical_texture, physical_texture->get_default_view_type(),
-			output.texture.range
-		)->get_handle();
-		
+		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(physical_texture, physical_texture->get_default_view_type(), output.range)->get_handle();
 		vk_attachment_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		
 		// TODO: MSAA isn't supported yet.
@@ -69,7 +65,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		vk_attachment_info.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		vk_attachment_info.resolveMode = VK_RESOLVE_MODE_NONE;
 
-		const RenderClear &clear = output.texture.clear;
+		const RenderClear &clear = output.clear;
 
 		if (attachment_info.format == graph.get_device().get_depth_format()) {
 			vk_attachment_info.clearValue.depthStencil = {
@@ -95,27 +91,12 @@ RenderInfo RenderStageResources::build_rendering_info() const
 
 const Texture *RenderStageResources::get_texture(RenderResourceHandle handle) const
 {
-	return (const Texture *)graph.resources[handle].physical_resource;
+	return graph.resources[handle].physical_texture;
 }
 
-const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle handle) const
+const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle handle, const SubresourceRange &range) const
 {
-	RenderResource &resource = graph.resources[handle];
-
-	const Texture *physical_texture = (const Texture *)resource.physical_resource;
-	
-	SubresourceRange range = {};
-	bool found = false;
-
-	for (auto &in : stage.inputs) {
-		if (in.handle == handle) {
-			range = in.texture.range;
-			found = true;
-			break;
-		}
-	}
-
-	assert(found);
+	const Texture *physical_texture = graph.resources[handle].physical_texture;
 
 	return graph.get_device().fetch_texture_view(
 		physical_texture,
@@ -126,20 +107,19 @@ const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle h
 
 const GpuBuffer *RenderStageResources::get_buffer(RenderResourceHandle handle) const
 {
-	return (const GpuBuffer *)graph.resources[handle].physical_resource;
+	return graph.resources[handle].physical_buffer;
 }
 
 GpuBufferRange RenderStageResources::get_buffer_range(RenderResourceHandle handle) const
 {
 	RenderResource &resource = graph.resources[handle];
-	const GpuBuffer *physical_buffer = (const GpuBuffer *)graph.resources[handle].physical_resource;
-
-	return GpuBufferRange(physical_buffer, resource.buffer_info.size, resource.physical_offset);
+	const GpuBuffer *physical_buffer = graph.resources[handle].physical_buffer;
+	return GpuBufferRange(physical_buffer, resource.buffer_info.size, resource.buffer_offset);
 }
 
 RenderGraphBuilder::RenderGraphBuilder(RenderGraph &graph, RenderStage &stage)
 	: graph(graph)
-	, current_stage(stage)
+	, stage(stage)
 {
 }
 
@@ -154,7 +134,7 @@ VkFormat RenderGraphBuilder::get_depth_format() const
 
 void RenderGraphBuilder::set_multi_view_mask(u32 mask)
 {
-	current_stage.multi_view_mask = mask;
+	stage.multi_view_mask = mask;
 }
 
 RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &info) const
@@ -165,11 +145,8 @@ RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &in
 	resource.kind = RenderResource::KIND_TEXTURE;
 	resource.is_imported = false;
 
-	resource.first_stage_index = current_stage.index;
+	resource.first_stage_index = stage.index;
 	resource.last_stage_index = -1u;
-	
-	resource.initial_subresource_states.resize(info.mips * info.layers, TEXTURE_ACCESS_UNDEFINED);
-	resource.subresource_states.resize(info.mips * info.layers, TEXTURE_ACCESS_UNDEFINED);
 
 	resource.texture_info = info;
 	
@@ -186,12 +163,9 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 	resource.kind = RenderResource::KIND_BUFFER;
 	resource.is_imported = false;
 
-	resource.first_stage_index = current_stage.index;
+	resource.first_stage_index = stage.index;
 	resource.last_stage_index = -1u;
-	
-	resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
-	resource.subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
-	
+
 	resource.buffer_info = info;
 
 	graph.resources.push_back(resource);
@@ -199,100 +173,176 @@ RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info
 	return handle;
 }
 
-RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
+RenderResourceHandle RenderGraphBuilder::add_edge(
+	RenderResourceHandle handle,
+	const AccessState &state,
+	const SubresourceRange &range,
+	bool is_output, const RenderClear *clear
+) const
 {
 	RenderResourceEdge edge = {};
 	edge.handle = handle;
-	edge.texture.access = TEXTURE_ACCESS_COLOUR_ATTACHMENT;
-	edge.texture.range = range;
-
+	edge.access_state = state;
+	edge.range = range;
+	
 	if (clear) {
-		edge.texture.clear_enabled = true;
-		edge.texture.clear = *clear;
+		edge.clear_enabled = true;
+		edge.clear = *clear;
 	} else {
-		edge.texture.clear_enabled = false;
+		edge.clear_enabled = false;
 	}
 
-	current_stage.outputs.push_back(edge);
+	if (is_output) {
+		stage.outputs.push_back(edge);
+	} else {
+		stage.inputs.push_back(edge);
+	}
 
 	return handle;
+}
+
+RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+		},
+		range, true, clear
+	);
 }
 
 RenderResourceHandle RenderGraphBuilder::write_depth(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.texture.access = TEXTURE_ACCESS_DEPTH_ATTACHMENT;
-	edge.texture.range = range;
-
-	if (clear) {
-		edge.texture.clear_enabled = true;
-		edge.texture.clear = *clear;
-	} else {
-		edge.texture.clear_enabled = false;
-	}
-
-	current_stage.outputs.push_back(edge);
-
-	return handle;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+		},
+		range, true, clear
+	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_texture(RenderResourceHandle handle, const SubresourceRange &range) const
+RenderResourceHandle RenderGraphBuilder::read_texture(RenderResourceHandle handle) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.texture.access = TEXTURE_ACCESS_SAMPLED;
-	edge.texture.range = range;
-
-	current_stage.inputs.push_back(edge);
-
-	return handle;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_2_SHADER_READ_BIT
+		},
+		{}, false, nullptr
+	);
 }
 
-RenderResourceHandle RenderGraphBuilder::blit_texture_src(RenderResourceHandle handle, const SubresourceRange &range) const
+RenderResourceHandle RenderGraphBuilder::read_texture_compute(RenderResourceHandle handle) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.texture.access = TEXTURE_ACCESS_BLIT_SRC;
-	edge.texture.range = range;
-
-	current_stage.inputs.push_back(edge);
-
-	return handle;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_READ_BIT
+		},
+		{}, false, nullptr
+	);
 }
 
-RenderResourceHandle RenderGraphBuilder::blit_texture_dst(RenderResourceHandle handle, const SubresourceRange &range) const
+RenderResourceHandle RenderGraphBuilder::write_texture_compute(RenderResourceHandle handle) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.texture.access = TEXTURE_ACCESS_BLIT_DST;
-	edge.texture.range = range;
-
-	current_stage.outputs.push_back(edge);
-
-	return handle;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_WRITE_BIT
+		},
+		{}, true, nullptr
+	);
 }
 
-RenderResourceHandle RenderGraphBuilder::write_buffer(RenderResourceHandle handle, GpuBufferAccessType usage)
+RenderResourceHandle RenderGraphBuilder::blit_texture_src(RenderResourceHandle handle) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.buffer.access = usage;
-
-	current_stage.outputs.push_back(edge);
-
-	return handle;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_BLIT_BIT,
+			VK_ACCESS_2_TRANSFER_READ_BIT
+		},
+		{}, false, nullptr
+	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_buffer(RenderResourceHandle handle, GpuBufferAccessType usage)
+RenderResourceHandle RenderGraphBuilder::blit_texture_dst(RenderResourceHandle handle) const
 {
-	RenderResourceEdge edge = {};
-	edge.handle = handle;
-	edge.buffer.access = usage;
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_BLIT_BIT,
+			VK_ACCESS_2_TRANSFER_WRITE_BIT
+		},
+		{}, true, nullptr
+	);
+}
 
-	current_stage.inputs.push_back(edge);
+RenderResourceHandle RenderGraphBuilder::write_buffer_graphics(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_2_SHADER_WRITE_BIT
+		},
+		{}, true, nullptr
+	);
+}
 
-	return handle;
+RenderResourceHandle RenderGraphBuilder::read_buffer_graphics(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_2_SHADER_READ_BIT
+		},
+		{}, false, nullptr
+	);
+}
+
+RenderResourceHandle RenderGraphBuilder::write_buffer_compute(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_WRITE_BIT
+		},
+		{}, true, nullptr
+	);
+}
+
+RenderResourceHandle RenderGraphBuilder::read_buffer_compute(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+			VK_ACCESS_2_SHADER_READ_BIT
+		},
+		{}, false, nullptr
+	);
+}
+
+RenderResourceHandle RenderGraphBuilder::indirect_buffer(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle, 
+		{
+			VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
+			VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT
+		},
+		{}, false, nullptr
+	);
 }
 
 RenderResourcePool::RenderResourcePool(RenderGraph &graph)
@@ -366,13 +416,17 @@ void RenderResourcePool::flush()
 	*/
 }
 
-const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
+const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info, ResourceTrackingState *out_state)
 {
 	for (auto &t : texture_pool) {
 		bool gpu_done = t.last_frame_used <= gpu_completed_time;
 		if (!t.in_use && gpu_done && t.info == info) {
 			t.in_use = true;
 			t.last_frame_used = current_time;
+
+			if (out_state)
+				*out_state = t.state;
+
 			return t.texture;
 		}
 	}
@@ -399,6 +453,15 @@ const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info)
 	texture.in_use = true;
 	texture.last_frame_used = current_time;
 
+	texture.state.pipeline_barrier_stage_flags = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+	texture.state.to_flush_access = VK_ACCESS_2_NONE;
+	texture.state.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	memory_set(texture.state.invalidated_in_stage, 0, sizeof(texture.state.invalidated_in_stage));
+	
+	if (out_state)
+		*out_state = texture.state;
+
 	texture_pool.push_back(texture);
 
 	return texture.texture;
@@ -415,13 +478,17 @@ void RenderResourcePool::release_texture(const Texture *texture, const Attachmen
 }
 */
 
-const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
+const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info, ResourceTrackingState *out_state)
 {
 	for (auto &b : buffer_pool) {
 		bool gpu_done = b.last_frame_used <= gpu_completed_time;
 		if (!b.in_use && gpu_done && b.info == info) {
 			b.in_use = true;
 			b.last_frame_used = current_time;
+
+			if (out_state)
+				*out_state = b.state;
+
 			return b.buffer;
 		}
 	}
@@ -439,9 +506,37 @@ const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info)
 	buffer.in_use = true;
 	buffer.last_frame_used = current_time;
 
+	buffer.state.pipeline_barrier_stage_flags = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+	buffer.state.to_flush_access = VK_ACCESS_2_NONE;
+
+	memory_set(buffer.state.invalidated_in_stage, 0, sizeof(buffer.state.invalidated_in_stage));
+	
+	if (out_state)
+		*out_state = buffer.state;
+
 	buffer_pool.push_back(buffer);
 
 	return buffer.buffer;
+}
+
+void RenderResourcePool::update_texture_state(const Texture *texture, const ResourceTrackingState &state)
+{
+	for (auto &t : texture_pool) {
+		if (t.texture == texture) {
+			t.state = state;
+			return;
+		}
+	}
+}
+
+void RenderResourcePool::update_buffer_state(const GpuBuffer *buffer, const ResourceTrackingState &state)
+{
+	for (auto &b : buffer_pool) {
+		if (b.buffer == buffer) {
+			b.state = state;
+			return;
+		}
+	}
 }
 
 /*
@@ -455,15 +550,28 @@ void RenderResourcePool::release_buffer(const GpuBuffer *buffer, const GpuBuffer
 }
 */
 
+static bool resource_needs_invalidation(const AccessState &barrier, const ResourceTrackingState &tracking)
+{
+	const u64 stages = barrier.stage;
+
+	for (int b = 0; b < 64 && stages != 0; b++) {
+		if ((stages >> b) & 1) {
+			if (barrier.access & ~tracking.invalidated_in_stage[b])
+				return true;
+		}
+	}
+
+	return false;
+}
+
 RenderGraph::RenderGraph()
 	: device(nullptr)
 	, resources()
 	, stages()
 	, pool(*this)
 	, import_cache()
-	, imported_access_cache()
-	, backbuffer_handle(RENDER_INVALID_HANDLE)
 	, transient_arenas()
+	, backbuffer_handle(RENDER_INVALID_HANDLE)
 {
 }
 
@@ -476,7 +584,7 @@ void RenderGraph::init(Device *device)
 	this->device = device;
 
 	transient_arenas.init(device, [&] {
-		GpuArena arena;
+		GpuRingBuffer arena;
 
 		arena.allocate(
 			device,
@@ -506,6 +614,21 @@ void RenderGraph::destroy()
 
 void RenderGraph::reset()
 {
+	for (auto &r : resources) {
+		if (r.is_imported)
+			continue;
+
+		switch (r.kind) {
+			case RenderResource::KIND_TEXTURE:
+				pool.update_texture_state(r.physical_texture, r.tracking);
+				break;
+
+			case RenderResource::KIND_BUFFER:
+				pool.update_buffer_state(r.physical_buffer, r.tracking);
+				break;
+		}
+	}
+
 	stages.clear();
 	resources.clear();
 	backbuffer_handle = RENDER_INVALID_HANDLE;
@@ -579,10 +702,10 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 			if (r.is_imported)
 				continue;
 
-			switch (r.kind) {
-				if (r.physical_resource)
-					continue;
+			if (r.physical_texture || r.physical_buffer)
+				continue;
 
+			switch (r.kind) {
 				case RenderResource::KIND_TEXTURE:
 					// Resolve rleative size.
 					if (r.texture_info.size_class == SIZE_CLASS_SWAPCHAIN_RELATIVE) {
@@ -591,58 +714,100 @@ void RenderGraph::allocate_resources(const Swapchain &swapchain)
 						r.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
 					}
 
-					r.physical_resource = pool.acquire_texture(r.texture_info);
+					r.physical_texture = pool.acquire_texture(r.texture_info, &r.tracking);
 					break;
 
 				case RenderResource::KIND_BUFFER:
-					r.physical_resource = pool.acquire_buffer(r.buffer_info);
+					r.physical_buffer = pool.acquire_buffer(r.buffer_info, &r.tracking);
 					break;
 			}
-
-			auto access = imported_access_cache.find(r.physical_resource);
-			if (access != imported_access_cache.end())
-				r.initial_subresource_states = access->second;
 		}
 	}
 }
 
 void RenderGraph::generate_barriers()
 {
-	for (auto &r : resources)
-		r.subresource_states = r.initial_subresource_states;
-
 	for (auto &stage : stages) {
 		if (stage.is_culled)
 			continue;
-
+		
 		for (auto &in : stage.inputs)
-			process_edge(stage, in);
+			process_invalidate(stage, in);
 
 		for (auto &out : stage.outputs)
-			process_edge(stage, out);
+			process_invalidate(stage, out);
+
+		for (auto &out : stage.outputs)
+			process_flush(stage, out);
 	}
 }
 
-void RenderGraph::process_edge(RenderStage &stage, const RenderResourceEdge &edge)
+void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdge &edge)
 {
 	RenderResource &r = resources[edge.handle];
 	
-	if (!r.physical_resource)
+	if (!r.physical_texture && !r.physical_buffer)
 		return;
 
-	switch (r.kind) {
-		case RenderResource::KIND_TEXTURE:
-			transition_texture(stage.texture_barriers, r, edge.texture.access, edge.texture.range);
-			break;
+	VkImageLayout target_layout = VK_IMAGE_LAYOUT_GENERAL;
 
-		case RenderResource::KIND_BUFFER:
-			transition_buffer(stage.buffer_barriers, r, edge.buffer.access);
-			break;
+	bool layout_change = (r.kind == RenderResource::KIND_TEXTURE) && (r.tracking.layout != target_layout);
+
+	bool needs_sync = layout_change || (r.tracking.to_flush_access != 0) || resource_needs_invalidation(edge.access_state, r.tracking);
+
+	if (needs_sync) {
+		VkPipelineStageFlags2 src_stage = r.tracking.pipeline_barrier_stage_flags ? r.tracking.pipeline_barrier_stage_flags : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		VkAccessFlags2 src_access = r.tracking.to_flush_access;
+
+		if (r.kind == RenderResource::KIND_TEXTURE) {
+			stage.texture_barriers.push_back(sync::texture_memory_barrier(
+				r.physical_texture,
+				{ src_stage, src_access },
+				edge.access_state,
+				r.tracking.layout, target_layout,
+				0, VK_REMAINING_MIP_LEVELS,
+				0, VK_REMAINING_ARRAY_LAYERS
+			));
+
+			r.tracking.layout = target_layout;
+		} else if (r.kind == RenderResource::KIND_BUFFER) {
+			stage.buffer_barriers.push_back(sync::buffer_memory_barrier(
+				r.physical_buffer,
+				{ src_stage, src_access },
+				edge.access_state,
+				0, VK_WHOLE_SIZE
+			));
+		}
+
+		if (r.tracking.to_flush_access || layout_change)
+			memory_set(r.tracking.invalidated_in_stage, 0, sizeof(r.tracking.invalidated_in_stage));
+
+		r.tracking.to_flush_access = 0;
+
+		u64 dst_stages = edge.access_state.stage;
+
+		for (int i = 0; i < array_size(r.tracking.invalidated_in_stage); i++) {
+			if ((dst_stages >> i) & 1) {
+				r.tracking.invalidated_in_stage[i] |= layout_change
+					? edge.access_state.access
+					: ~0ull;
+			}
+		}
 	}
 }
 
-void RenderGraph::transition_texture(Vector<VkImageMemoryBarrier2> &barriers, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range)
+void RenderGraph::process_flush(RenderStage &stage, const RenderResourceEdge &edge)
 {
+	RenderResource &r = resources[edge.handle];
+	
+	if (!r.physical_texture && !r.physical_buffer)
+		return;
+
+	r.tracking.to_flush_access = edge.access_state.access;
+	r.tracking.pipeline_barrier_stage_flags = edge.access_state.stage;
+}
+
+#if 0
 	/*
 	 * Right now we just use a run-length encoding style algorithm,
 	 * but could this be optimized with a flood-fill style algorithm?
@@ -751,23 +916,7 @@ void RenderGraph::transition_texture(Vector<VkImageMemoryBarrier2> &barriers, Re
 			);
 		}
 	}
-}
-
-void RenderGraph::transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, RenderResource &b, GpuBufferAccessType dst_access_type)
-{
-	const GpuBuffer *physical_buffer = (const GpuBuffer *)b.physical_resource;
-
-	GpuBufferAccess src_access = sync::get_src_buffer_access((GpuBufferAccessType)b.subresource_states[0]);
-	GpuBufferAccess dst_access = sync::get_dst_buffer_access(dst_access_type);
-
-	barriers.push_back(sync::buffer_memory_barrier(
-		physical_buffer,
-		src_access, dst_access,
-		b.physical_offset, b.buffer_info.size
-	));
-
-	b.subresource_states[0] = dst_access_type;
-}
+#endif
 
 void RenderGraph::execute(
 	CommandBuffer &cmd,
@@ -784,6 +933,8 @@ void RenderGraph::execute(
 
 		if (stage.is_culled)
 			continue;
+
+//		debug_log("Executing Render Stage: %s", stage.name);
 
 		cmd.pipeline_barrier(
 			0, {},
@@ -851,42 +1002,48 @@ void RenderGraph::execute(
 	
 	present_to_swapchain(cmd, swapchain);
 
-	for (auto &r : resources) {
-		if (!r.physical_resource)
-			continue;
-
-		imported_access_cache[r.physical_resource] = r.subresource_states;
-	}
+//	debug_log("");
 }
 
 void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swapchain)
 {
-	const Texture *swapchain_src_texture = (const Texture *)resources[backbuffer_handle].physical_resource;
+	const RenderResource &backbuffer_resource = resources[backbuffer_handle];
+
+	const Texture *swapchain_src_texture = backbuffer_resource.physical_texture;
 	const Texture *swapchain_dst_texture = swapchain.get_current_texture();
-	
+
 	Vector<VkImageMemoryBarrier2> image_barriers = {
 		sync::texture_memory_barrier(
+			swapchain_src_texture,
+			{ backbuffer_resource.tracking.pipeline_barrier_stage_flags, backbuffer_resource.tracking.to_flush_access },
+			{ VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT },
+			backbuffer_resource.tracking.layout,
+			VK_IMAGE_LAYOUT_GENERAL,
+			0, VK_REMAINING_MIP_LEVELS,
+			0, VK_REMAINING_ARRAY_LAYERS
+		),
+		sync::texture_memory_barrier(
 			swapchain_dst_texture,
-			sync::get_src_texture_access(TEXTURE_ACCESS_UNDEFINED),
-			sync::get_dst_texture_access(TEXTURE_ACCESS_BLIT_DST),
-			0, swapchain_dst_texture->get_mipmap_count(),
-			0, swapchain_dst_texture->get_layer_count()
+			{ VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE },
+			{ VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_GENERAL,
+			0, VK_REMAINING_MIP_LEVELS,
+			0, VK_REMAINING_ARRAY_LAYERS
 		)
 	};
-
-	transition_texture(image_barriers, resources[backbuffer_handle], TEXTURE_ACCESS_BLIT_SRC, SubresourceRange::all_colour());
 
 	cmd.pipeline_barrier(0, {}, {}, image_barriers);
 
 	VkImageBlit2 blit = {};
 	blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
-
+	
 	blit.srcOffsets[0] = { 0, 0, 0 };
 	blit.srcOffsets[1] = { (int)swapchain_src_texture->get_width(), (int)swapchain_src_texture->get_height(), 1 };
-
+	
 	blit.dstOffsets[0] = { 0, 0, 0 };
 	blit.dstOffsets[1] = { (int)swapchain_dst_texture->get_width(), (int)swapchain_dst_texture->get_height(), 1 };
-
+	
 	blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	blit.srcSubresource.mipLevel = 0;
 	blit.srcSubresource.baseArrayLayer = 0;
@@ -898,21 +1055,21 @@ void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swap
 	blit.dstSubresource.layerCount = 1;
 
 	cmd.blit(swapchain_src_texture, swapchain_dst_texture, { blit }, VK_FILTER_LINEAR);
-
+	
 	VkImageMemoryBarrier2 present_barrier = sync::texture_memory_barrier(
 		swapchain_dst_texture,
-		sync::get_src_texture_access(TEXTURE_ACCESS_BLIT_DST),
-		sync::get_dst_texture_access(TEXTURE_ACCESS_PRESENT),
-		0, swapchain_dst_texture->get_mipmap_count(),
-		0, swapchain_dst_texture->get_layer_count()
+		{ VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
+		{ VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_NONE },
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		0, 1,
+		0, 1
 	);
 
 	cmd.pipeline_barrier(0, {}, {}, { present_barrier });
-
-	image_barriers.clear();
 }
 
-RenderResourceHandle RenderGraph::import_texture(const Texture *texture, TextureAccessType initial_access)
+RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout)
 {
 	if (import_cache.find(texture) != import_cache.end())
 		return import_cache[texture];
@@ -926,15 +1083,13 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture, Texture
 	resource.first_stage_index = -1u;
 	resource.last_stage_index = -1u;
 
-	resource.physical_resource = texture;
-	
-	auto access = imported_access_cache.find(texture);
-	if (access != imported_access_cache.end())
-		resource.initial_subresource_states = access->second;
-	else
-		resource.initial_subresource_states.resize(texture->get_mipmap_count() * texture->get_layer_count(), initial_access);
+	resource.tracking.pipeline_barrier_stage_flags = access_state.stage;
+	resource.tracking.to_flush_access = access_state.access;
+	resource.tracking.layout = layout;
 
-	resource.subresource_states = resource.initial_subresource_states;
+	memory_set(resource.tracking.invalidated_in_stage, 0, sizeof(resource.tracking.invalidated_in_stage));
+
+	resource.physical_texture = texture;
 
 	resource.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
 	resource.texture_info.size_x = texture->get_width();
@@ -953,7 +1108,7 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture, Texture
 	return handle;
 }
 
-RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, GpuBufferAccessType intial_access)
+RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const AccessState &access_state)
 {
 	if (import_cache.find(buffer) != import_cache.end())
 		return import_cache[buffer];
@@ -966,20 +1121,19 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, GpuBuff
 
 	resource.first_stage_index = -1u;
 	resource.last_stage_index = -1u;
+	
+	resource.tracking.pipeline_barrier_stage_flags = access_state.stage;
+	resource.tracking.to_flush_access = access_state.access;
 
-	resource.physical_resource = buffer;
+	memory_set(resource.tracking.invalidated_in_stage, 0, sizeof(resource.tracking.invalidated_in_stage));
 
-	auto access = imported_access_cache.find(buffer);
-	if (access != imported_access_cache.end())
-		resource.initial_subresource_states = access->second;
-	else
-		resource.initial_subresource_states.resize(1, intial_access);
-
-	resource.subresource_states = resource.initial_subresource_states;
+	resource.physical_buffer = buffer;
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();
 	resource.buffer_info.size = buffer->get_size();
+
+	resource.buffer_offset = 0;
 
 	resources.push_back(resource);
 
@@ -990,7 +1144,7 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, GpuBuff
 
 TransientBuffer RenderGraph::create_transient_buffer(u64 size, u64 alignment)
 {
-	GpuArenaAlloc alloc = transient_arenas.get().push(size, alignment);
+	GpuAlloc<u8> alloc = transient_arenas.get().push(size, alignment);
 
 	RenderResourceHandle handle = resources.size();
 
@@ -1001,14 +1155,12 @@ TransientBuffer RenderGraph::create_transient_buffer(u64 size, u64 alignment)
 	resource.first_stage_index = -1u;
 	resource.last_stage_index = -1u;
 
-	resource.physical_resource = transient_arenas.get().get_buffer();
-	resource.physical_offset = alloc.offset;
-
-	resource.initial_subresource_states.resize(1, GPU_BUFFER_ACCESS_UNDEFINED);
-	resource.subresource_states = resource.initial_subresource_states;
+	resource.physical_buffer = transient_arenas.get().get_buffer();
 
 	resource.buffer_info.size = size;
 	resource.buffer_info.usage = transient_arenas.get().get_buffer()->get_usage();
+
+	resource.buffer_offset = alloc.offset;
 
 	resources.push_back(resource);
 

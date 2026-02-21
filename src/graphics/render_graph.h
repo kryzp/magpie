@@ -13,9 +13,10 @@
 #include "container/deque.h"
 #include "container/hash_map.h"
 
+#include "per_frame.h"
 #include "device.h"
 #include "sync.h"
-#include "gpu_arena.h"
+#include "gpu_ring_buffer.h"
 
 #define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
 public:												\
@@ -172,24 +173,22 @@ namespace gfx
 	
 	struct TransientBuffer {
 		RenderResourceHandle handle;
-		GpuArenaAlloc alloc;
+		GpuAlloc<u8> alloc;
 	};
 
 	struct RenderResourceEdge {
 		RenderResourceHandle handle;
+		AccessState access_state;
+		SubresourceRange range;
+		bool clear_enabled;
+		RenderClear clear;
+	};
 
-		union {
-			struct {
-				TextureAccessType access;
-				SubresourceRange range;
-				bool clear_enabled;
-				RenderClear clear;
-			} texture;
-
-			struct {
-				GpuBufferAccessType access;
-			} buffer;
-		};
+	struct ResourceTrackingState {
+		VkPipelineStageFlags2 pipeline_barrier_stage_flags = 0;
+		VkAccessFlags2 to_flush_access = 0; // Access masks that need to be made available.
+		VkAccessFlags2 invalidated_in_stage[64] = {}; // Bitmask of access flags that have been made visible to a specific pipeline.
+		VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
 	};
 
 	struct RenderResource {
@@ -207,21 +206,20 @@ namespace gfx
 		u32 last_stage_index;
 
 		u32 ref_count;
+
+		ResourceTrackingState tracking;
 		
-		const void *physical_resource;
-
-		// For linear allocator slices.
-		u64 physical_offset;
-
-		Vector<u32> initial_subresource_states;
-
-		// For textures this takes the form of a flat 2D array [MIPS][LAYERS]
-		// For buffers this just contains one state
-		Vector<u32> subresource_states;
-
 		union {
-			AttachmentInfo texture_info;
-			GpuBufferInfo buffer_info;
+			struct {
+				const Texture *physical_texture;
+				AttachmentInfo texture_info;
+			};
+
+			struct {
+				const GpuBuffer *physical_buffer;
+				GpuBufferInfo buffer_info;
+				u64 buffer_offset;
+			};
 		};
 	};
 
@@ -278,7 +276,7 @@ namespace gfx
 		RenderInfo build_rendering_info() const;
 		
 		const Texture *get_texture(RenderResourceHandle handle) const;
-		const TextureView *get_texture_view(RenderResourceHandle handle) const;
+		const TextureView *get_texture_view(RenderResourceHandle handle, const SubresourceRange &range) const;
 
 		const GpuBuffer *get_buffer(RenderResourceHandle handle) const;
 
@@ -342,17 +340,32 @@ namespace gfx
 		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour(), const RenderClear *clear = nullptr) const;
 		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_depth(), const RenderClear *clear = nullptr) const;
 		
-		RenderResourceHandle read_texture(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
+		RenderResourceHandle read_texture(RenderResourceHandle handle) const;
 
-		RenderResourceHandle blit_texture_src(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
-		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour()) const;
+		RenderResourceHandle read_texture_compute(RenderResourceHandle handle) const;
+		RenderResourceHandle write_texture_compute(RenderResourceHandle handle) const;
 
-		RenderResourceHandle write_buffer(RenderResourceHandle handle, GpuBufferAccessType usage);
-		RenderResourceHandle read_buffer(RenderResourceHandle handle, GpuBufferAccessType usage);
+		RenderResourceHandle blit_texture_src(RenderResourceHandle handle) const;
+		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle) const;
+
+		RenderResourceHandle write_buffer_graphics(RenderResourceHandle handle);
+		RenderResourceHandle read_buffer_graphics(RenderResourceHandle handle);
+
+		RenderResourceHandle write_buffer_compute(RenderResourceHandle handle);
+		RenderResourceHandle read_buffer_compute(RenderResourceHandle handle);
+
+		RenderResourceHandle indirect_buffer(RenderResourceHandle handle);
 
 	private:
+		RenderResourceHandle add_edge(
+			RenderResourceHandle handle,
+			const AccessState &state,
+			const SubresourceRange &range,
+			bool is_output, const RenderClear *clear
+		) const;
+
 		RenderGraph &graph;
-		RenderStage &current_stage;
+		RenderStage &stage;
 	};
 
 	class RenderResourcePool {
@@ -364,11 +377,14 @@ namespace gfx
 		
 		void flush();
 
-		const Texture *acquire_texture(const AttachmentInfo &info);
+		const Texture *acquire_texture(const AttachmentInfo &info, ResourceTrackingState *out_state);
 //		void release_texture(const Texture *texture, const AttachmentInfo &info);
 
-		const GpuBuffer *acquire_buffer(const GpuBufferInfo &info);
+		const GpuBuffer *acquire_buffer(const GpuBufferInfo &info, ResourceTrackingState *out_state);
 //		void release_buffer(const GpuBuffer *buffer, const GpuBufferInfo &info);
+
+		void update_texture_state(const Texture *texture, const ResourceTrackingState &state);
+		void update_buffer_state(const GpuBuffer *buffer, const ResourceTrackingState &state);
 
 	private:
 		RenderGraph &graph;
@@ -381,6 +397,7 @@ namespace gfx
 			AttachmentInfo info;
 			bool in_use;
 			u64 last_frame_used;
+			ResourceTrackingState state;
 		};
 
 		struct PooledBuffer {
@@ -388,6 +405,7 @@ namespace gfx
 			GpuBufferInfo info;
 			bool in_use;
 			u64 last_frame_used;
+			ResourceTrackingState state;
 		};
 
 		Vector<PooledTexture> texture_pool;
@@ -428,8 +446,8 @@ namespace gfx
 			float delta_time, float elapsed_time
 		);
 
-		RenderResourceHandle import_texture(const Texture *texture, TextureAccessType initial_access = TEXTURE_ACCESS_UNDEFINED);
-		RenderResourceHandle import_buffer(const GpuBuffer *buffer, GpuBufferAccessType intial_access = GPU_BUFFER_ACCESS_UNDEFINED);
+		RenderResourceHandle import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
+		RenderResourceHandle import_buffer(const GpuBuffer *buffer, const AccessState &access_state);
 
 		TransientBuffer create_transient_buffer(u64 size, u64 alignment = 16);
 
@@ -442,16 +460,14 @@ namespace gfx
 	private:
 		Device *device;
 
-		PerFrame<GpuArena> transient_arenas;
+		PerFrame<GpuRingBuffer> transient_arenas;
 
 		void backpropogate_dependencies();
 		void allocate_resources(const Swapchain &swapchain);
 		void generate_barriers();
 
-		void process_edge(RenderStage &stage, const RenderResourceEdge &edge);
-
-		void transition_texture(Vector<VkImageMemoryBarrier2> &barriers, RenderResource &t, TextureAccessType dst_access_type, const SubresourceRange &range);
-		void transition_buffer(Vector<VkBufferMemoryBarrier2> &barriers, RenderResource &b, GpuBufferAccessType dst_access_type);
+		void process_invalidate(RenderStage &stage, const RenderResourceEdge &edge);
+		void process_flush(RenderStage &stage, const RenderResourceEdge &edge);
 
 		void present_to_swapchain(CommandBuffer &cmd, const Swapchain &swapchain);
 
@@ -461,7 +477,6 @@ namespace gfx
 		RenderResourcePool pool;
 
 		HashMap<const void *, RenderResourceHandle> import_cache;
-		HashMap<const void *, Vector<u32>> imported_access_cache;
 
 		RenderResourceHandle backbuffer_handle;
 	};

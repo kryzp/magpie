@@ -108,7 +108,7 @@ u64 Queue::submit(
 
 void Queue::submit_immediate(const std::function<void(CommandBuffer &cmd)> &record)
 {
-	wait_idle();
+	wait_idle(); // TODO: is wait_idle() necessary?
 	CommandBuffer cmd = get_command_buffer();
 	record(cmd);
 	wait_until(submit(cmd, {}, {}, VK_NULL_HANDLE));

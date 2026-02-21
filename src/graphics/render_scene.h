@@ -9,7 +9,7 @@
 #include "math/colour.h"
 
 #include "gpu_types.h"
-#include "gpu_arena.h"
+#include "gpu_ring_buffer.h"
 #include "render_graph.h"
 #include "model.h"
 

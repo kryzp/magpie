@@ -762,6 +762,8 @@ void Device::init()
 	create_bindless();
 
 	swapchain_details = query_swapchain_support(physical_device, surface);
+
+	init_imgui();
 }
 
 void Device::destroy()
@@ -1671,12 +1673,8 @@ TextureView *Device::create_texture_view(
 	);
 
 	// Swapchain images are omitted from being accessible bindlessly.
-	if (!texture->is_swapchain()) {
-		view->bindless_handle_sampled = bindless.register_sampled(view->handle);
-
-		if (texture->is_storage())
-			view->bindless_handle_storage = bindless.register_storage(view->handle);
-	}
+	if (!texture->is_swapchain())
+		view->bindless_handle = bindless.register_view(view->handle, texture->is_storage());
 
 	return view;
 }

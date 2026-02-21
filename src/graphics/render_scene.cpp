@@ -379,7 +379,7 @@ u32 RenderScene::register_material(const Material &material, ast::AssetManager &
 
 	auto load_texture = [&](ast::AssetHandle handle) -> u32 {
 		if (assets.is_valid(handle))
-			return device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_sampled();
+			return device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_handle();
 		return 0;
 	};
 

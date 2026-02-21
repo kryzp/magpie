@@ -101,7 +101,7 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/sync.cpp"
 	"${CODE_DIR}/graphics/model.cpp"
 	"${CODE_DIR}/graphics/sampler.cpp"
-	"${CODE_DIR}/graphics/gpu_arena.cpp"
+	"${CODE_DIR}/graphics/gpu_ring_buffer.cpp"
 	
 	"${CODE_DIR}/graphics/renderers/ibl_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/compute_culling.cpp"

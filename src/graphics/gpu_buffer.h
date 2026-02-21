@@ -11,8 +11,19 @@ namespace gfx
 		friend class Device;
 
 	public:
-		GpuBuffer();
-		~GpuBuffer();
+		GpuBuffer()
+			: handle()
+			, usage()
+			, allocator()
+			, allocation()
+			, allocation_info()
+			, allocation_flags()
+			, size()
+			, device_address()
+		{
+		}
+
+		~GpuBuffer() = default;
 
 		void read(void *dst, u64 length, u64 offset);
 		void write(const void *src, u64 length, u64 offset);
@@ -32,16 +43,6 @@ namespace gfx
 			return usage;
 		}
 
-		u64 get_size() const
-		{
-			return size;
-		}
-
-		u64 get_device_address() const
-		{
-			return device_address;
-		}
-
 		const VmaAllocation &get_allocation() const
 		{
 			return allocation;
@@ -57,18 +58,28 @@ namespace gfx
 			return allocation_flags;
 		}
 
+		u64 get_size() const
+		{
+			return size;
+		}
+
+		u64 get_device_address() const
+		{
+			return device_address;
+		}
+
 	private:
 		VkBuffer handle;
 		VkBufferUsageFlags2 usage;
-
-		u64 size;
-
-		VkDeviceAddress device_address;
 
 		VmaAllocator *allocator;
 		VmaAllocation allocation;
 		VmaAllocationInfo allocation_info;
 		VmaAllocationCreateFlags allocation_flags;
+
+		u64 size;
+
+		VkDeviceAddress device_address;
 	};
 
 	/*
