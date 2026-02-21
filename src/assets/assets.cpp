@@ -223,9 +223,6 @@ void AssetManager::flush_uploads()
 	
 	u32 base_index = 0;
 
-	// TODO: Switch to ring buffer. push() using batch_stage_size.
-	gfx::GpuBuffer *staging_buffer = device->alloc_stage(GPU_UPLOAD_CHUNK_SIZE * 2);
-
 	while (base_index < uploads_pending_count) {
 		u64 batch_stage_size = 0;
 		u32 batch_count = 0;
@@ -250,6 +247,7 @@ void AssetManager::flush_uploads()
 		}
 		
 		u64 stage_base = 0;
+		gfx::GpuBuffer *staging_buffer = device->alloc_stage(batch_stage_size);
 
 		device->graphics().submit_immediate([&](gfx::CommandBuffer &cmd) {
 			for (int i = 0; i < batch_count; i++) {
@@ -299,9 +297,9 @@ void AssetManager::flush_uploads()
 		});
 
 		base_index += batch_count;
+
+		device->destroy_buffer(staging_buffer);
 	}
-	
-	device->destroy_buffer(staging_buffer);
 }
 
 void AssetManager::push_upload(const AssetUpload &upload)
