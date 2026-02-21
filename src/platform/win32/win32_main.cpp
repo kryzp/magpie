@@ -489,8 +489,7 @@ static JOB_ENTRY_POINT(frame_job_entry)
 	process_events(curr_input_st);
 	prev_input_st = curr_input_st;
 
-	if (app->tick(curr_input_st))
-		is_running = false;
+	is_running = !app->tick(curr_input_st);
 
 	if (is_running)
 		job::kick_job(job::JobDecl(frame_job_entry, app), nullptr);
