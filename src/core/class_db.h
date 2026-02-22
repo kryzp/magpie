@@ -111,10 +111,9 @@ public:
 			info.fields = nullptr;
 
 			node.info = &info;
-
 			class_db_static_init::register_class(&node);
-
-			return false;
+			
+			return true;
 		}();
 
 		return &info;
