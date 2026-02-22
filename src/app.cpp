@@ -53,7 +53,6 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 App::App()
 	: scratch_memory(nullptr)
 	, scratch_arenas{}
-	, class_db()
 	, global_timer()
 	, delta_timer()
 	, delta_accumulator()
@@ -87,6 +86,8 @@ App::~App()
 
 void App::init()
 {
+	ClassDB::get_singleton()->build_registry();
+
 	scratch_memory = malloc(SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
 	MemoryArena arena(scratch_memory, SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
 	scratch_arenas[0] = arena.sub_arena(SCRATCH_MEMORY_SIZE);

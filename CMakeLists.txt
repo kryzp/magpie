@@ -65,7 +65,6 @@ add_executable(magpie
 
 	"${CODE_DIR}/app.cpp"
 
-	"${CODE_DIR}/core/hash.cpp"
 	"${CODE_DIR}/core/memory_arena.cpp"
 	"${CODE_DIR}/core/scratch.cpp"
 	"${CODE_DIR}/core/class_db.cpp"

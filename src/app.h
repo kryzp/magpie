@@ -54,8 +54,6 @@ private:
 	void *scratch_memory;
 	MemoryArena scratch_arenas[2];
 
-	ClassDB class_db;
-
 	Timer global_timer;
 	Timer delta_timer;
 	float delta_accumulator;
