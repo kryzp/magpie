@@ -266,8 +266,11 @@ bool App::tick(const inp::InputState &input)
 		delta_accumulator -= fixed_dt;
 	}
 
-	ImGui::Begin("Params");
+	ImGui::Begin("Controls");
 	{
+		if (ImGui::Button("Hot-Reload Assets"))
+			assets.poll_hot_reloads();
+
 		static float exp = 1.2f;
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))

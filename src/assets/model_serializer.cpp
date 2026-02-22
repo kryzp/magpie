@@ -248,10 +248,9 @@ static AssetLoadResult model_load(const AssetLoadContext &ctx)
 	return result;
 }
 
-static Asset *model_finalize(
+static Asset *model_asset_allocate(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
-	gfx::Device &device, gfx::CommandBuffer &cmd,
-	gfx::GpuBuffer *stage, u64 stage_base
+	gfx::Device &device
 )
 {
 	ModelLoadData *load_data = (ModelLoadData *)result.data;
@@ -266,6 +265,25 @@ static Asset *model_finalize(
 			sizeof(gfx::gpu_types::GpuModelVertex),
 			parsed.vertices.size(), parsed.indices.size()
 		);
+	}
+
+	return new ModelAsset(load_data->model);
+}
+
+static void model_upload(
+	Asset *asset,
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::CommandBuffer &cmd,
+	gfx::GpuBuffer *stage, u64 stage_base
+)
+{
+	ModelLoadData *load_data = (ModelLoadData *)result.data;
+	ModelAsset *model_asset = asset->as<ModelAsset>();
+
+	u64 sub_offset = 0;
+
+	for (auto &parsed : load_data->meshes) {
+		gfx::Mesh &mesh = model_asset->model.sub_models[parsed.target_sub_model].mesh;
 
 		mesh.write_to_staging_buffer(
 			stage, stage_base + sub_offset,
@@ -276,8 +294,6 @@ static Asset *model_finalize(
 			cmd, stage, stage_base + sub_offset
 		);
 	}
-
-	return new ModelAsset(load_data->model);
 }
 
 static void model_clean_up(void *data)
@@ -290,7 +306,8 @@ AssetSerializer ast::get_model_serializer()
 {
 	AssetSerializer model_serializer = {};
 	model_serializer.load = model_load;
-	model_serializer.finalize = model_finalize;
+	model_serializer.allocate = model_asset_allocate;
+	model_serializer.upload = model_upload;
 	model_serializer.clean_up = model_clean_up;
 
 	return model_serializer;

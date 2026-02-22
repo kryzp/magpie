@@ -60,6 +60,8 @@ namespace platform
 	bool file_delete(const char *path);
 	bool file_exists(const char *path);
 
+	u64 file_last_write_time(const char *path);
+
 	bool dir_create(const char *path);
 	bool dir_delete(const char *path);
 	bool dir_exists(const char *path);

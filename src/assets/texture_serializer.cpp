@@ -48,24 +48,36 @@ static AssetLoadResult texture_load(const AssetLoadContext &ctx)
 	return result;
 }
 
-static Asset *texture_finalize(
+static Asset *texture_asset_allocate(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
-	gfx::Device &device, gfx::CommandBuffer &cmd,
-	gfx::GpuBuffer *stage, u64 stage_base
+	gfx::Device &device
 )
 {
 	TextureLoadData *load_data = (TextureLoadData *)result.data;
-
+	
 	VkFormat format = load_data->is_hdr
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
 	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
 
+	return new TextureAsset(gfx_texture, device);
+}
+
+static void texture_upload(
+	Asset *asset,
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::CommandBuffer &cmd,
+	gfx::GpuBuffer *stage, u64 stage_base
+)
+{
+	TextureLoadData *load_data = (TextureLoadData *)result.data;
+	TextureAsset *texture_asset = asset->as<TextureAsset>();
+
 	stage->write(load_data->pixels, result.stage_size, stage_base);
 
 	VkImageMemoryBarrier2 copy_barrier = gfx::sync::texture_memory_barrier(
-		gfx_texture,
+		texture_asset->texture,
 		{ VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE },
 		{ VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
 		VK_IMAGE_LAYOUT_UNDEFINED,
@@ -87,10 +99,10 @@ static Asset *texture_finalize(
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { load_data->width, load_data->height, 1 };
 
-	cmd.copy_buffer_to_texture(stage, gfx_texture, { region });
+	cmd.copy_buffer_to_texture(stage, texture_asset->texture, { region });
 
 	VkImageMemoryBarrier2 blit_barrier = gfx::sync::texture_memory_barrier(
-		gfx_texture,
+		texture_asset->texture,
 		{ VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
 		{ VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT },
 		VK_IMAGE_LAYOUT_GENERAL,
@@ -100,9 +112,7 @@ static Asset *texture_finalize(
 	);
 
 	cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
-	cmd.generate_mipmaps(gfx_texture);
-	
-	return new TextureAsset(gfx_texture, device);
+	cmd.generate_mipmaps(texture_asset->texture);
 }
 
 static void texture_clean_up(void *data)
@@ -116,7 +126,8 @@ AssetSerializer ast::get_texture_serializer()
 {
 	AssetSerializer texture_serializer = {};
 	texture_serializer.load = texture_load;
-	texture_serializer.finalize = texture_finalize;
+	texture_serializer.allocate = texture_asset_allocate;
+	texture_serializer.upload = texture_upload;
 	texture_serializer.clean_up = texture_clean_up;
 
 	return texture_serializer;

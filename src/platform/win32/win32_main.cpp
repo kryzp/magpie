@@ -211,6 +211,17 @@ bool platform::file_exists(const char *path)
 	return std::filesystem::exists(path);
 }
 
+u64 platform::file_last_write_time(const char *path)
+{
+	std::error_code ec;
+	auto ftime = std::filesystem::last_write_time(path, ec);
+	
+	if (ec)
+		return 0;
+
+	return ftime.time_since_epoch().count();
+}
+
 bool platform::dir_create(const char *path)
 {
 	return std::filesystem::create_directory(path);

@@ -110,13 +110,12 @@ static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 	return result;
 }
 
-static Asset *shader_finalize(
-	const AssetLoadContext &ctx, const AssetLoadResult &load,
-	gfx::Device &device, gfx::CommandBuffer &cmd,
-	gfx::GpuBuffer *stage, u64 stage_base
+static Asset *shader_asset_allocate(
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::Device &device
 )
 {
-	ShaderLoadData *load_data = (ShaderLoadData *)load.data;
+	ShaderLoadData *load_data = (ShaderLoadData *)result.data;
 
 	Vector<gfx::ShaderBytecode> stages;
 
@@ -131,8 +130,17 @@ static Asset *shader_finalize(
 	}
 
 	gfx::ShaderProgram *gfx_shader = device.create_shader_program(stages);
-
 	return new ShaderAsset(gfx_shader, device);
+}
+
+static void shader_upload(
+	Asset *asset,
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::CommandBuffer &cmd,
+	gfx::GpuBuffer *stage, u64 stage_base
+)
+{
+	// We don't need to do any uploading for shaders.
 }
 
 static void shader_clean_up(void *data)
@@ -145,7 +153,8 @@ AssetSerializer ast::get_shader_serializer()
 {
 	AssetSerializer shader_serializer = {};
 	shader_serializer.load = shader_load;
-	shader_serializer.finalize = shader_finalize;
+	shader_serializer.allocate = shader_asset_allocate;
+	shader_serializer.upload = shader_upload;
 	shader_serializer.clean_up = shader_clean_up;
 
 	return shader_serializer;

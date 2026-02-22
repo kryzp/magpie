@@ -78,7 +78,7 @@ bool AssetManager::is_loaded(const AssetHandle &handle) const
 bool AssetManager::is_loading(const AssetHandle &handle)
 {
 	std::lock_guard<std::mutex> lock(loading_mutex);
-	return loading_assets[handle.index];
+	return loading_assets.at(handle.index);
 }
 
 void AssetManager::load_now(const AssetHandle &handle, AssetType type)
@@ -173,15 +173,20 @@ static JOB_ENTRY_POINT(asset_load_job)
 
 void AssetManager::load_async(const AssetHandle &handle, AssetType type)
 {
-	if (is_loaded(handle) || is_loading(handle))
-		return;
-	
+	if (!is_loaded(handle) && !is_loading(handle))
+		load_asset_internal(handle, type);
+}
+
+void AssetManager::reload_async(const AssetHandle &handle, AssetType type)
+{
+	if (!is_loading(handle))
+		load_asset_internal(handle, type);
+}
+
+void AssetManager::load_asset_internal(const AssetHandle &handle, AssetType type)
+{
 	{
 		std::unique_lock<std::mutex> lock(loading_mutex);
-
-		if (loading_assets.at(handle.index))
-			return;
-
 		loading_assets[handle.index] = true;
 	}
 
@@ -198,9 +203,44 @@ void AssetManager::load_async(const AssetHandle &handle, AssetType type)
 	job::kick_job(decl, &upload_counter);
 }
 
+void AssetManager::poll_hot_reloads()
+{
+	for (int i = 0; i < assets.list.size(); i++) {
+		auto &record = assets.list[i];
+
+		if (!record.asset)
+			continue;
+
+		String path = get_system_file_path(record.path);
+		u64 current_time = platform::file_last_write_time(path.c_str());
+
+		if (current_time > record.last_write_time && current_time != 0) {
+			AssetHandle handle = record.asset->get_handle();
+			AssetType type = record.asset->get_asset_type();
+
+			debug_log("Hot-Reloading %s Asset: %s...",
+				get_string_from_asset_type(type).c_str(),
+				record.path.c_str()
+			);
+
+			record.last_write_time = current_time;
+
+			reload_async(handle, type);
+		}
+	}
+}
+
 void AssetManager::wait_for_async_uploads()
 {
 	job::yield_on_counter(upload_counter);
+}
+
+void AssetManager::push_upload(const AssetUpload &upload)
+{
+	std::lock_guard<std::mutex> lock(upload_mutex);
+	upload_queue.push_back(upload);
+
+//	memory_pressure += upload.result.stage_size;
 }
 
 void AssetManager::flush_uploads()
@@ -259,21 +299,36 @@ void AssetManager::flush_uploads()
 
 				const AssetSerializer &serializer = serializers[req.type];
 
-				Asset *asset = nullptr;
+				Asset *asset = assets.get(req.handle);
+				
+				AssetLoadContext context = {
+					.assets = *this,
+					.metadata = req.metadata
+				};
 
 				if (req.result.failed) {
 					asset = get_fallback_asset(req.type);
 				} else {
-					AssetLoadContext context = {
-						.assets = *this,
-						.metadata = req.metadata
-					};
+					if (!asset) {
+						debug_log("Allocating %s Asset: %s...",
+							get_string_from_asset_type(req.type).c_str(),
+							req.metadata.file_path.c_str()
+						);
 
-					debug_log("Finalizing %s Asset: %s...", get_string_from_asset_type(req.type).c_str(), req.metadata.file_path.c_str());
+						asset = serializer.allocate(context, req.result, *device);
+						asset->handle = req.handle;
+						assets.set(req.handle, asset);
+					}
 
-					asset = serializer.finalize(
+					debug_log("Uploading %s Asset: %s...",
+						get_string_from_asset_type(req.type).c_str(),
+						req.metadata.file_path.c_str()
+					);
+
+					serializer.upload(
+						asset,
 						context, req.result,
-						*device, cmd,
+						cmd,
 						staging_buffer, stage_base
 					);
 
@@ -281,12 +336,8 @@ void AssetManager::flush_uploads()
 						debug_log("Invalid Asset!");
 
 					stage_base += memory_align_up(req.result.stage_size, 16);
-
-					asset->handle = req.handle;
 				}
 			
-				assets.set(req.handle, asset);
-				
 				{
 					std::unique_lock<std::mutex> lock(loading_mutex);
 					loading_assets[req.handle.index] = false;
@@ -305,14 +356,6 @@ void AssetManager::flush_uploads()
 		if (staging_buffer)
 			device->destroy_buffer(staging_buffer);
 	}
-}
-
-void AssetManager::push_upload(const AssetUpload &upload)
-{
-	std::lock_guard<std::mutex> lock(upload_mutex);
-	upload_queue.push_back(upload);
-
-//	memory_pressure += upload.result.stage_size;
 }
 
 bool AssetManager::is_valid(const AssetHandle &handle)

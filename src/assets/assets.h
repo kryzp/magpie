@@ -4,7 +4,8 @@
 #include <mutex>
 
 #include "core/types.h"
-#include "core/memory_arena.h"
+
+#include "platform/platform.h"
 
 #include "container/vector.h"
 #include "container/string.h"
@@ -107,7 +108,7 @@ namespace ast
 		template <typename T>
 		T *as()
 		{
-			return (T *)this;
+			return static_cast<T *>(this);
 		}
 
 		const AssetHandle &get_handle() const
@@ -135,31 +136,37 @@ namespace ast
 
 	class AssetManager;
 
+	struct AssetLoadContext {
+		AssetManager &assets;
+		const AssetMetaData &metadata;
+		String system_file_path() const;
+	};
+
 	struct AssetLoadResult {
 		void *data;     // For use by serializers.
 		u64 stage_size; // Gpu buffer size required.
 		bool failed;    // Did we fail in loading?
 	};
 
-	struct AssetLoadContext {
-		AssetManager &assets;
-		const AssetMetaData &metadata;
-
-		String system_file_path() const;
-	};
-
 	struct AssetSerializer {
-		// Thread-safe.
-		// Loads in the file into a blob.
-		// "Phase 1"
+		// Phase 1 - Thread-Safe, Load in file into a blob.
+		// Phase 2 - Not Thread-Safe a. Allocate the actual asset.
+		//                           b. Upload the asset onto the GPU.
+
+		// Phase 1
 		AssetLoadResult (*load)(const AssetLoadContext &ctx);
 
-		// Not thread-safe
-		// Uploads the blob onto the GPU (if necessary)
-		// "Phase 2"
-		Asset *(*finalize)(
+		// Phase 2a
+		Asset *(*allocate)(
 			const AssetLoadContext &ctx, const AssetLoadResult &result,
-			gfx::Device &device, gfx::CommandBuffer &cmd,
+			gfx::Device &device
+		);
+
+		// Phase 2b
+		void (*upload)(
+			Asset *asset,
+			const AssetLoadContext &ctx, const AssetLoadResult &result,
+			gfx::CommandBuffer &cmd,
 			gfx::GpuBuffer *stage, u64 stage_base
 		);
 
@@ -208,12 +215,18 @@ namespace ast
 
 		void load_now(const AssetHandle &handle, AssetType type);
 		void load_async(const AssetHandle &handle, AssetType type);
+		
+		void reload_async(const AssetHandle &handle, AssetType type);
+
+	private:
+		void load_asset_internal(const AssetHandle &handle, AssetType type);
+
+	public:
+		void poll_hot_reloads();
 
 		void wait_for_async_uploads();
-
-		void flush_uploads();
-
 		void push_upload(const AssetUpload &upload);
+		void flush_uploads();
 
 		bool is_valid(const AssetHandle &handle);
 		bool is_placeholder(const AssetHandle &handle) const;
@@ -276,14 +289,14 @@ namespace ast
 				list[index].asset = asset;
 				list[index].path = path;
 				list[index].generation++;
+				list[index].last_write_time = 0;
 
 				return handle;
 			}
 
 			void remove(const AssetHandle &handle)
 			{
-				if (!is_valid(handle))
-					return;
+				assert(is_valid(handle));
 
 				delete list[handle.index].asset;
 				list[handle.index].asset = nullptr;
@@ -293,16 +306,21 @@ namespace ast
 
 			Asset *get(const AssetHandle &handle) const
 			{
-				if (!is_valid(handle))
-					return nullptr;
-				
-				return list[handle.index].asset;
+				return is_valid(handle)
+					? list[handle.index].asset
+					: nullptr;
 			}
 
 			void set(const AssetHandle &handle, Asset *asset)
 			{
-				if (is_valid(handle))
-					list[handle.index].asset = asset;
+				assert(is_valid(handle));
+				list[handle.index].asset = asset;
+			}
+
+			String get_path(const AssetHandle &handle) const
+			{
+				assert(is_valid(handle));
+				return list[handle.index].path;
 			}
 
 			bool is_valid(const AssetHandle &handle) const
@@ -313,20 +331,11 @@ namespace ast
 					(list[handle.index].generation == (handle.generation + 1));
 			}
 
-			String get_path(const AssetHandle &handle) const
-			{
-				assert(is_valid(handle));
-
-				if (!is_valid(handle))
-					return "INVALID HANDLE";
-
-				return list[handle.index].path;
-			}
-
 			struct AssetRecord {
 				Asset *asset;
 				String path;
 				u32 generation;
+				u64 last_write_time;
 			};
 
 			Vector<AssetRecord> list;
