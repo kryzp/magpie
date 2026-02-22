@@ -37,26 +37,24 @@ void ComputeCulling::add_render_stages(
 		[&](RenderGraphBuilder &builder, ComputeCullingStageData &data) -> void {
 			data.mesh_buffer = builder.read_buffer_compute(graph.import_buffer(scene.get_mesh_buffer(), { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
 
-			for (int i = 0; i < scene.get_geometry_pages().size(); i++) {
-				GpuBufferInfo indirect_info(
-					RenderScene::PAGE_MAX_OBJECTS * sizeof(gpu_types::GpuIndirectDraw),
-					VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-					VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
-				);
+			GpuBufferInfo opaque_indirect_info(
+				RenderScene::PAGE_MAX_OBJECTS * sizeof(gpu_types::GpuIndirectDraw),
+				VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+				VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
+			);
 
-				RenderResourceHandle indirect_handle = builder.create_buffer(indirect_info);
-				data.indirect_buffers.push_back(builder.write_buffer_compute(indirect_handle));
+			RenderResourceHandle opaque_indirect_handle = builder.create_buffer(opaque_indirect_info);
+			data.indirect_buffers.push_back(builder.write_buffer_compute(opaque_indirect_handle));
 
-				GpuBufferInfo counter_info(
-					sizeof(u32),
-					VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-					VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
-				);
+			GpuBufferInfo opaque_counter_info(
+				sizeof(u32),
+				VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+				VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT
+			);
 
-				RenderResourceHandle counter_handle = builder.create_buffer(counter_info);
-				data.count_buffers.push_back(builder.write_buffer_compute(counter_handle));
-			}
-
+			RenderResourceHandle opaque_counter_handle = builder.create_buffer(opaque_counter_info);
+			data.count_buffers.push_back(builder.write_buffer_compute(opaque_counter_handle));
+		
 			pass_data.indirect_buffers = data.indirect_buffers;
 			pass_data.count_buffers = data.count_buffers;
 		},
