@@ -6,6 +6,12 @@
 
 namespace gfx
 {
+	enum ShaderKind {
+		SHADER_KIND_UNKNOWN,
+		SHADER_KIND_GRAPHICS,
+		SHADER_KIND_COMPUTE
+	};
+
 	struct ShaderBytecode {
 		u8 *bytes;
 		u64 size;

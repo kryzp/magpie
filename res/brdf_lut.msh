@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/brdf_lut.vert.spv
+frag: assets://shaders/brdf_lut.frag.spv

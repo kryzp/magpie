@@ -1,0 +1,2 @@
+Compute
+comp: assets://shaders/frustum_culling.comp.spv

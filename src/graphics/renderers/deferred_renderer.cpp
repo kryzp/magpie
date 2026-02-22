@@ -15,10 +15,10 @@ GFX_BLACKBOARD_DATA(DeferredRendererInfo);
 
 void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 {
-	model_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://model"))->shader;
+	model_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://model.msh"))->shader;
 
-	ambient_lighting_shader      = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://ambient_lighting"))->shader;
-	direct_lighting_point_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://direct_lighting_point"))->shader;
+	ambient_lighting_shader      = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://ambient_lighting.msh"))->shader;
+	direct_lighting_point_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://direct_lighting_point.msh"))->shader;
 
 	create_light_sphere_mesh(device);
 }

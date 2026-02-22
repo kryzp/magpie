@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/ambient_lighting.vert.spv
+frag: assets://shaders/ambient_lighting.frag.spv

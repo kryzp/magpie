@@ -10,7 +10,7 @@ void PostProcessingRenderer::init(ast::AssetManager &assets)
 {
 	exposure = 1.2f;
 
-	tonemapping_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_tonemapping"))->shader;
+	tonemapping_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_tonemapping.msh"))->shader;
 }
 
 void PostProcessingRenderer::destroy()

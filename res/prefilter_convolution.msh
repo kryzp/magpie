@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/prefilter_convolution.vert.spv
+frag: assets://shaders/prefilter_convolution.frag.spv

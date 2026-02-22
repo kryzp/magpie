@@ -6,9 +6,9 @@ using namespace gfx;
 
 void IBLRenderer::init(ast::AssetManager &assets)
 {
-	brdf_shader       = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://brdf_lut"))->shader;
-	irradiance_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://irradiance_convolution"))->shader;
-	prefilter_shader  = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://prefilter_convolution"))->shader;
+	brdf_shader       = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://brdf_lut.msh"))->shader;
+	irradiance_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://irradiance_convolution.msh"))->shader;
+	prefilter_shader  = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://prefilter_convolution.msh"))->shader;
 }
 
 void IBLRenderer::destroy()

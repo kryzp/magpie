@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/model.vert.spv
+frag: assets://shaders/model.frag.spv

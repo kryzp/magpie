@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/irradiance_convolution.vert.spv
+frag: assets://shaders/irradiance_convolution.frag.spv

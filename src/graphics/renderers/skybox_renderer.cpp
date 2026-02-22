@@ -11,8 +11,8 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
 
-	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://skybox"))->shader;
-	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_to_environment_cubemap"))->shader;
+	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://skybox.msh"))->shader;
+	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_to_environment_cubemap.msh"))->shader;
 
 	Vec3 vertices[] = {
 		{ -1.f,  1.f,  1.f },

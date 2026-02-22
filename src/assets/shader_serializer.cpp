@@ -1,5 +1,6 @@
 #include "shader_serializer.h"
 
+#include "core/hash.h"
 #include "platform/platform.h"
 
 using namespace ast;
@@ -26,6 +27,7 @@ static Vector<u8> load_file_bytes(const String &path)
 }
 
 struct ShaderLoadData {
+	gfx::ShaderKind kind;
 	int stage_count;
 	Vector<u8> stages[2];
 };
@@ -34,38 +36,76 @@ static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 {
 	String file_path = ctx.system_file_path();
 	
-	Vector<String> paths;
-
-	bool failed_to_load = false;
-
-	// TODO: This is just a temporary solution.
-	//       In the future, create an intermediary
-	//       shader file listing the type and names.
-	//       E.g:
-	//       -----
-	//       kind: Graphics
-	//       paths: model.vert.spv, model.frag.spv
-	if (platform::file_exists((file_path + ".comp.spv").c_str())) {
-		paths.push_back(file_path + ".comp.spv");
-	} else if (platform::file_exists((file_path + ".frag.spv").c_str())) {
-		// TODO: Shader stage order should not matter in the paths ffs.
-		paths.push_back(file_path + ".vert.spv");
-		paths.push_back(file_path + ".frag.spv");
-	} else {
-		failed_to_load = true;
-	}
-
 	ShaderLoadData *load_data = new ShaderLoadData();
-
-	load_data->stage_count = paths.size();
+	load_data->kind = gfx::SHADER_KIND_UNKNOWN;
+	load_data->stage_count = 0;
 	
-	for (int i = 0; i < paths.size(); i++)
-		load_data->stages[i] = load_file_bytes(paths[i]);
-
 	AssetLoadResult result = {};
 	result.data = load_data;
-	result.stage_size = 0; // We don't need a gpu staging buffer for loading shaders.
-	result.failed = failed_to_load;
+	result.stage_size = 0; // We don't need a staging buffer for shaders.
+	result.failed = false;
+
+	FILE *file = fopen(file_path.c_str(), "r");
+
+	if (!file) {
+		result.failed = true;
+		return result;
+	}
+
+	char line[256] = {};
+	Vector<String> spv_paths;
+
+	while (fgets(line, sizeof(line), file)) {
+		String line_str(line);
+
+		line_str.erase(std::remove(line_str.begin(), line_str.end(), '\n'), line_str.end());
+		line_str.erase(std::remove(line_str.begin(), line_str.end(), '\r'), line_str.end());
+
+		if (line_str.empty() || line_str[0] == '#')
+			continue;
+
+		switch (hash::c_str(line_str.c_str())) {
+			case hash::c_str("Graphics"):
+				load_data->kind = gfx::SHADER_KIND_GRAPHICS;
+				break;
+
+			case hash::c_str("Compute"):
+				load_data->kind = gfx::SHADER_KIND_COMPUTE;
+				break;
+
+			default:
+				// Find delimeter ':'
+				u64 colon_index = line_str.find(':');
+
+				if (colon_index != String::npos) {
+					String path = line_str.substr(colon_index + 1);
+
+					// Get rid of the leading spaces.
+					u64 first_char_idx = path.find_first_not_of(' ');
+					if (first_char_idx != String::npos)
+						path = path.substr(first_char_idx);
+
+					// Resolve relative path.
+					String absolute_spv_path = ctx.assets.get_system_file_path(path);
+					spv_paths.push_back(absolute_spv_path);
+				}
+
+				break;
+		}
+	}
+
+	fclose(file);
+
+	load_data->stage_count = spv_paths.size();
+
+	if (load_data->stage_count == 0)
+		result.failed = true;
+	
+	for (int i = 0; i < load_data->stage_count; i++) {
+		load_data->stages[i] = load_file_bytes(spv_paths[i]);
+		if (load_data->stages[i].empty())
+			result.failed = true;
+	}
 
 	return result;
 }

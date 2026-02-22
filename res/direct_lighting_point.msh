@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/direct_lighting_point.vert.spv
+frag: assets://shaders/direct_lighting_point.frag.spv
