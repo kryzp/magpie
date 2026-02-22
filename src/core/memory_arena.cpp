@@ -29,12 +29,12 @@ MemoryArena::~MemoryArena()
 
 MemoryArena MemoryArena::sub_arena(u64 size)
 {
-	return MemoryArena(this->push(size), size);
+	return MemoryArena(this->push_bytes(size), size);
 }
 
-void *MemoryArena::push(u64 size)
+void *MemoryArena::push_bytes(u64 size)
 {
-	void *buf = push_no_zero(size);
+	void *buf = push_bytes_no_zero(size);
 
 	if (buf)
 		memory_set(buf, 0, size);
@@ -42,7 +42,7 @@ void *MemoryArena::push(u64 size)
 	return buf;
 }
 
-void *MemoryArena::push_no_zero(u64 size)
+void *MemoryArena::push_bytes_no_zero(u64 size)
 {
 	void *buf = nullptr;
 

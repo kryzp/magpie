@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "types.h"
 
 // TODO: Why isn't this in /container/
@@ -13,15 +15,23 @@ public:
 
 	MemoryArena sub_arena(u64 size);
 
-	void *push(u64 size);
-	void *push_no_zero(u64 size);
+	void *push_bytes(u64 size);
+	void *push_bytes_no_zero(u64 size);
 
-	template <typename T>
-	T *push_array(u32 count)
+	template <typename T, typename ...Args>
+	T *push_array(u32 count, Args &&...args)
 	{
-		T *buf = (T *)push(sizeof(T) * count);
+		T *buf = (T *)push_bytes(sizeof(T) * count);
 		for (int i = 0; i < count; i++)
-			new (buf + i) T();
+			new (buf + i) T(std::forward<Args>(args)...);
+		return buf;
+	}
+
+	template <typename T, typename ...Args>
+	T *push(Args &&...args)
+	{
+		T *buf = (T *)push_bytes(sizeof(T) * count);
+		new (buf) T(std::forward<Args>(args)...);
 		return buf;
 	}
 
