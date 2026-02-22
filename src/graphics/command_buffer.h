@@ -119,12 +119,13 @@ namespace gfx
 			const Vector<VkBufferCopy> &regions
 		);
 
-		void copy_entire_buffer_to_texture(
+		void copy_buffer_to_texture(
 			const GpuBuffer *src,
-			const Texture *dst
+			const Texture *dst,
+			u64 buffer_offset = 0
 		);
 
-		void copy_buffer_to_texture(
+		void copy_buffer_to_texture_region(
 			const GpuBuffer *src,
 			const Texture *dst,
 			const Vector<VkBufferImageCopy> &regions

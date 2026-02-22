@@ -360,13 +360,14 @@ void CommandBuffer::copy_buffer_to_buffer(
 	);
 }
 
-void CommandBuffer::copy_entire_buffer_to_texture(
+void CommandBuffer::copy_buffer_to_texture(
 	const GpuBuffer *src,
-	const Texture *dst
+	const Texture *dst,
+	u64 buffer_offset
 )
 {
 	VkBufferImageCopy region = {};
-	region.bufferOffset = 0;
+	region.bufferOffset = buffer_offset;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -376,10 +377,10 @@ void CommandBuffer::copy_entire_buffer_to_texture(
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { dst->get_width(), dst->get_height(), 1 };
 
-	copy_buffer_to_texture(src, dst, { region });
+	copy_buffer_to_texture_region(src, dst, { region });
 }
 
-void CommandBuffer::copy_buffer_to_texture(
+void CommandBuffer::copy_buffer_to_texture_region(
 	const GpuBuffer *src,
 	const Texture *dst,
 	const Vector<VkBufferImageCopy> &regions

@@ -88,18 +88,7 @@ static void texture_upload(
 
 	cmd.pipeline_barrier(0, {}, {}, { copy_barrier });
 	
-	VkBufferImageCopy region = {};
-	region.bufferOffset = stage_base;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-	region.imageOffset = { 0, 0, 0 };
-	region.imageExtent = { load_data->width, load_data->height, 1 };
-
-	cmd.copy_buffer_to_texture(stage, texture_asset->texture, { region });
+	cmd.copy_buffer_to_texture(stage, texture_asset->texture, stage_base);
 
 	VkImageMemoryBarrier2 blit_barrier = gfx::sync::texture_memory_barrier(
 		texture_asset->texture,

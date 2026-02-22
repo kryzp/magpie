@@ -34,6 +34,7 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
 - Ring Allocators
 - Async Asset Streaming (integrated with job system)
+- Asset Hot-Reloading
 
 ### Ideas / Todo List
 - More sophisticated debug logging / tracing system
