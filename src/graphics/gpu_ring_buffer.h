@@ -3,7 +3,6 @@
 #include "core/types.h"
 
 #include "gpu_buffer.h"
-#include "queue.h"
 
 namespace gfx
 {

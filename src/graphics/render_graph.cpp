@@ -555,7 +555,7 @@ static bool resource_needs_invalidation(const AccessState &barrier, const Resour
 {
 	const u64 stages = barrier.stage;
 
-	for (int b = 0; b < 64 && stages != 0; b++) {
+	for (int b = 0; b < array_size(tracking.invalidated_in_stage) && stages != 0; b++) {
 		if ((stages >> b) & 1) {
 			if (barrier.access & ~tracking.invalidated_in_stage[b])
 				return true;
@@ -764,13 +764,12 @@ void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdg
 
 		r.tracking.to_flush_access = 0;
 
-		u64 dst_stages = edge.access_state.stage;
+		if (layout_change) {
+			const u64 dst_stages = edge.access_state.stage;
 
-		for (int i = 0; i < array_size(r.tracking.invalidated_in_stage); i++) {
-			if ((dst_stages >> i) & 1) {
-				r.tracking.invalidated_in_stage[i] |= layout_change
-					? edge.access_state.access
-					: ~0ull;
+			for (int i = 0; i < array_size(r.tracking.invalidated_in_stage); i++) {
+				if ((dst_stages >> i) & 1)
+					r.tracking.invalidated_in_stage[i] |= edge.access_state.access;
 			}
 		}
 	}
