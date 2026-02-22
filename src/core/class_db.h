@@ -77,7 +77,6 @@ namespace class_db_static_init
 
 class ClassDB {
 public:
-
 	ClassDB() = default;
 	~ClassDB() = default;
 
