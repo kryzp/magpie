@@ -36,8 +36,6 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - Async Asset Streaming (integrated with job system)
 
 ### Ideas / Todo List
-- Better file system organisation (e.g: "assets://" vs "engine://" point to two different directories)
-- Asset Hot-Reloading
 - More sophisticated debug logging / tracing system
 - GPU profiler
 - Multi-Threaded CPU profiler integrated with job system
