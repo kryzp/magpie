@@ -315,11 +315,6 @@ void AssetManager::push_upload(const AssetUpload &upload)
 //	memory_pressure += upload.result.stage_size;
 }
 
-String AssetManager::get_system_file_path(const String &path) const
-{
-	return "../../res/" + path;
-}
-
 bool AssetManager::is_valid(const AssetHandle &handle)
 {
 	return assets.is_valid(handle);
@@ -344,4 +339,34 @@ const AssetSerializer &AssetManager::get_serializer(AssetType type) const
 {
 	assert(0 <= type && type < ASSET_TYPE_MAX_ENUM);
 	return serializers[type];
+}
+
+void AssetManager::mount(const String &prefix, const String &physical_directory)
+{
+	String dir = physical_directory;
+
+	if (dir.back() != '/' && dir.back() != '\\')
+		dir += "/";
+
+	mount_points[prefix] = dir;
+}
+
+String AssetManager::get_system_file_path(const String &path) const
+{
+	u64 separator_index = path.find("://");
+
+	if (separator_index != String::npos) {
+		String prefix = path.substr(0, separator_index); // assets, engine, ...
+		String relative_path = path.substr(separator_index + 3);
+
+		auto it = mount_points.find(prefix);
+
+		if (it != mount_points.end())
+			return it->second + relative_path;
+		else
+			debug_log("Unrecognised asset prefix in path: \"%s\"", path.c_str());
+	}
+
+	// Fallback...
+	return path;
 }

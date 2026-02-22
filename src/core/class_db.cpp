@@ -31,7 +31,7 @@ Object *ClassDB::instantiate(u64 type_id)
 
 const TypeInfo *ClassDB::get_type(const char *name) const
 {
-	return get_type_by_id(hash::cstr(name));
+	return get_type_by_id(hash::c_str(name));
 }
 
 const TypeInfo *ClassDB::get_type_by_id(u64 type_id) const

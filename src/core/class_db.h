@@ -106,7 +106,7 @@ public:
 		static bool init = []() {
 			info.name = "Object";
 			info.parent = nullptr;
-			info.type_id = hash::cstr(info.name);
+			info.type_id = hash::c_str(info.name);
 			info.field_count = 0;
 			info.fields = nullptr;
 
@@ -166,7 +166,7 @@ private:														\
 		static bool init = []() {								\
 			info.name = #class_;								\
 			info.parent = BaseClass::get_class_static();		\
-			info.type_id = hash::cstr(#class_);					\
+			info.type_id = hash::c_str(#class_);					\
 			info.factory = []() -> Object * { return new class_(); }; \
 			static FieldInfo fields[] = {
 
@@ -174,7 +174,7 @@ private:														\
 				{ #name_, type_, offsetof(ThisClass, name_), 0, std::is_pointer<decltype(ThisClass::name_)>::value },
 
 #define DB_DATA_OBJECT(name_, type_, target_class_)				\
-				{ #name_, type_, offsetof(ThisClass, name_), hash::cstr(#target_class_), std::is_pointer<decltype(ThisClass::name_)>::value },
+				{ #name_, type_, offsetof(ThisClass, name_), hash::c_str(#target_class_), std::is_pointer<decltype(ThisClass::name_)>::value },
 
 #define DB_DATA_END()											\
 			};													\
@@ -199,7 +199,7 @@ private:														\
 		static bool init = []() {								\
 			info.name = #class_;								\
 			info.parent = BaseClass::get_class_static();		\
-			info.type_id = hash::cstr(#class_);					\
+			info.type_id = hash::c_str(#class_);					\
 			info.factory = []() -> Object * { return new class_(); }; \
 			info.field_count = 0;								\
 			info.fields = nullptr;								\

@@ -34,7 +34,7 @@ namespace hash
 		return hash;
 	}
 
-	constexpr u64 cstr(const char *string)
+	constexpr u64 c_str(const char *string)
 	{
 		u64 hash = FNV_OFFSET_BASIS;
 

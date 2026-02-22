@@ -10,7 +10,7 @@ GFX_BLACKBOARD_DATA(ComputeCullingPassData);
 
 void ComputeCulling::init(ast::AssetManager &assets)
 {
-	compute_frustum_culling_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("frustum_culling"))->shader;
+	compute_frustum_culling_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://frustum_culling"))->shader;
 }
 
 void ComputeCulling::destroy()

@@ -215,12 +215,14 @@ namespace ast
 
 		void push_upload(const AssetUpload &upload);
 
-		String get_system_file_path(const String &path) const;
-
 		bool is_valid(const AssetHandle &handle);
 		bool is_placeholder(const AssetHandle &handle) const;
 
 		const AssetSerializer &get_serializer(AssetType type) const;
+		
+		void mount(const String &prefix, const String &physical_directory);
+
+		String get_system_file_path(const String &path) const;
 
 	private:
 		gfx::Device *device = nullptr;
@@ -346,6 +348,8 @@ namespace ast
 		HashMap<u32, bool> loading_assets;
 		std::condition_variable loading_cv;
 		std::mutex loading_mutex;
+
+		HashMap<String, String> mount_points;
 	};
 
 	template <typename T, typename ...Args>

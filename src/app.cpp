@@ -100,6 +100,7 @@ void App::init()
 	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
 	assets.init(&graphics_device);
+	assets.mount("assets", "../../res/");
 	
 	render_graph.init(&graphics_device);
 	
@@ -114,8 +115,8 @@ void App::init()
 
 	render_scene.init(&graphics_device);
 
-//	ast::AssetHandle model_handle = assets.from_file_path("Models/Sponza/glTF/Sponza.gltf");
-	ast::AssetHandle model_handle = assets.from_file_path("Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 
 	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
 
@@ -183,7 +184,7 @@ void App::init()
 	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
 	
-	const gfx::Texture *hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("environment_map_1.hdr"))->texture;
+	const gfx::Texture *hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("assets://environment_map_1.hdr"))->texture;
 
 	skybox_renderer.render_hdr_to_skybox(
 		render_graph,
