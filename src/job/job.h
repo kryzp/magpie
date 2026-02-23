@@ -5,6 +5,8 @@
 //  * Parallelizing the Physics Solver by Dennis Gustafsson
 
 #include "core/types.h"
+#include "core/memory_arena.h"
+
 #include "container/vector.h"
 
 #if defined(__x86_64__)
@@ -53,7 +55,7 @@ namespace job
 	static constexpr u32 MAX_JOBS_IN_QUEUE = 4096;
 	static constexpr u32 MAX_CONCURRENT_FIBERS = 128;
 
-	void init(void (*message_pump)(void));
+	void init(VirtualArena &arena, void (*message_pump)(void));
 	void shutdown();
 
 	void enter_main_worker();

@@ -20,10 +20,11 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - `graphics/renderers/*`
 - `res/frustum_culling`
 
-### Notable Features
+### Features
 - Arena Memory Allocation System
 - Async Asset Streaming (integrated with job system)
 - Asset Hot-Reloading
+- ImGui Integration
 - Right-handed Z-up coordinates (as it SHOULD be)
 - Modern bindless resource design
 - GPU Driven Rendering: Bindless materials and meshes (global vertex buffer, vertex pulling, etc...)
@@ -34,11 +35,10 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - Page-allocated Render Scene
 - High-performance (almost) lockless fiber-based job system, with low-latency spin mode.
 - RTTI macro system allowing for type introspection and other cool stuff like iterating over fields
-- ImGui Integration
 - Controller support I guess :p
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
 
-### Ideas / Todo List
+### TODO
 - Custom (Arena-Based) Container Library
 - More sophisticated debug logging / tracing system
 - GPU profiler

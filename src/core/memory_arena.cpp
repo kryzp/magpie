@@ -2,13 +2,12 @@
 
 #include "platform/platform.h"
 
-VirtualArena global_arena;
-
 VirtualArena::VirtualArena()
 	: memory(0)
 	, memory_used(0)
 	, memory_reserved(0)
 	, memory_committed(0)
+	, allocation_mutex()
 {
 }
 
@@ -33,6 +32,8 @@ void VirtualArena::commit(u64 size)
 
 void *VirtualArena::allocate(u64 size, u64 alignment)
 {
+	std::lock_guard<std::mutex> lock(allocation_mutex);
+
 	memory_used = memory_align_up(memory_used, alignment);
 
 	uptr mem = memory + memory_used;
@@ -69,6 +70,7 @@ MemoryArena::MemoryArena()
 	, memory_used(0)
 	, memory_size(0)
 	, destructor_head(nullptr)
+	, allocation_mutex()
 {
 }
 
@@ -77,6 +79,7 @@ MemoryArena::MemoryArena(void *memory, u64 size)
 	, memory_used(0)
 	, memory_size(size)
 	, destructor_head(nullptr)
+	, allocation_mutex()
 {
 }
 
@@ -123,6 +126,11 @@ void MemoryArena::destroy()
 	destructor_head = nullptr;
 }
 
+MemoryArena MemoryArena::sub_arena(u64 size, u64 alignment)
+{
+	return MemoryArena(push_bytes(size, alignment), size);
+}
+
 void *MemoryArena::push_bytes(u64 size, u64 alignment)
 {
 	void *mem = push_bytes_no_zero(size, alignment);
@@ -133,6 +141,8 @@ void *MemoryArena::push_bytes(u64 size, u64 alignment)
 
 void *MemoryArena::push_bytes_no_zero(u64 size, u64 alignment)
 {
+	std::lock_guard<std::mutex> lock(allocation_mutex);
+
 	uptr mem = 0;
 
 	memory_used = memory_align_up(memory_used, alignment);

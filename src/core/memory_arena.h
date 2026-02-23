@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <mutex>
 
 #include "types.h"
 
@@ -27,9 +28,9 @@ private:
 	u64 memory_used;
 	u64 memory_reserved;
 	u64 memory_committed;
+	
+	std::mutex allocation_mutex;
 };
-
-extern VirtualArena global_arena;
 
 class MemoryArena {
 public:
@@ -43,6 +44,8 @@ public:
 
 	void init(void *memory, u64 size);
 	void destroy();
+
+	MemoryArena sub_arena(u64 size, u64 alignment = 16);
 
 	void *push_bytes(u64 size, u64 alignment = 16);
 	void *push_bytes_no_zero(u64 size, u64 alignment = 16);
@@ -111,4 +114,6 @@ private:
 	u64 memory_size;
 
 	DestructorNode *destructor_head;
+	
+	std::mutex allocation_mutex;
 };

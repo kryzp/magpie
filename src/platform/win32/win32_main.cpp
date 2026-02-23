@@ -18,15 +18,18 @@
 
 #include "ext/imgui/imgui_impl_sdl3.h"
 
+#include "core/types.h"
+#include "core/memory_arena.h"
 #include "platform/platform.h"
 #include "math/vec2.h"
 #include "math/calc.h"
-#include "core/types.h"
 #include "job/job.h"
 
 #include "app.h"
 
 #define MAX_PENDING_EVENTS 512
+
+static VirtualArena global_arena;
 
 static SYSTEM_INFO system_info;
 
@@ -539,7 +542,7 @@ static JOB_ENTRY_POINT(frame_job_entry)
 static JOB_ENTRY_POINT(root_job_entry)
 {
 	App *app = (App *)param;
-	app->init();
+	app->init(global_arena);
 
 	debug_log("Kicking off main game loop...");
 
@@ -597,7 +600,7 @@ int main(int argc, char **argv)
 
 	App app;
 
-	job::init(win32_message_pump);
+	job::init(global_arena, win32_message_pump);
 	job::kick_job(job::JobDecl(root_job_entry, &app), nullptr);
 
 	job::enter_main_worker();

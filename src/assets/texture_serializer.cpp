@@ -34,7 +34,7 @@ static AssetLoadResult texture_load(const AssetLoadContext &ctx)
 		unit = sizeof(u8);
 	}
 
-	TextureLoadData *load_data = new TextureLoadData();
+	TextureLoadData *load_data = ctx.arena.push<TextureLoadData>();
 	load_data->width = width;
 	load_data->height = height;
 	load_data->pixels = pixels;
@@ -59,9 +59,9 @@ static Asset *texture_asset_allocate(
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	gfx::Texture *gfx_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
+	gfx::Texture *texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
 
-	return new TextureAsset(gfx_texture, device);
+	return ctx.arena.push<TextureAsset>(texture, device);
 }
 
 static void texture_upload(
@@ -102,13 +102,8 @@ static void texture_upload(
 
 	cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
 	cmd.generate_mipmaps(texture_asset->texture);
-}
 
-static void texture_clean_up(void *data)
-{
-	TextureLoadData *load_data = (TextureLoadData *)data;
 	stbi_image_free(load_data->pixels);
-	delete load_data;
 }
 
 AssetSerializer ast::get_texture_serializer()
@@ -117,7 +112,6 @@ AssetSerializer ast::get_texture_serializer()
 	texture_serializer.load = texture_load;
 	texture_serializer.allocate = texture_asset_allocate;
 	texture_serializer.upload = texture_upload;
-	texture_serializer.clean_up = texture_clean_up;
 
 	return texture_serializer;
 }

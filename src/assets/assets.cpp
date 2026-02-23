@@ -1,5 +1,7 @@
 #include "assets.h"
 
+#include "platform/platform.h"
+
 #include "texture_serializer.h"
 #include "shader_serializer.h"
 #include "model_serializer.h"
@@ -22,6 +24,9 @@ AssetManager::AssetManager()
 	, loading_assets()
 	, loading_cv()
 	, loading_mutex()
+	, mount_points()
+	, asset_arena()
+	, load_arena()
 {
 	serializers[ASSET_TYPE_TEXTURE] = get_texture_serializer();
 	serializers[ASSET_TYPE_SHADER] = get_shader_serializer();
@@ -32,16 +37,21 @@ AssetManager::~AssetManager()
 {
 }
 
-void AssetManager::init(gfx::Device *device)
+void AssetManager::init(const MemoryArena &arena, gfx::Device *device)
 {
 	this->device = device;
+	
+	this->asset_arena = arena;
+	this->load_arena = this->asset_arena.sub_arena(MEGABYTES(700));
 
 	upload_counter = job::alloc_counter();
 }
 
 void AssetManager::destroy()
 {
-	assets.destroy_all();
+	load_arena.destroy();
+	asset_arena.destroy();
+
 	job::free_counter(upload_counter);
 }
 
@@ -104,7 +114,8 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 
 	AssetLoadContext context = {
 		.assets = *this,
-		.metadata = metadata
+		.metadata = metadata,
+		.arena = asset_arena
 	};
 	
 	AssetLoadResult result = serializers[type].load(context);
@@ -144,10 +155,13 @@ static JOB_ENTRY_POINT(asset_load_job)
 	*/
 
 	const AssetSerializer &serializer = load_param->assets->get_serializer(load_param->type);
+	
+	MemoryArena arena = load_param->assets->get_load_arena().sub_arena(MEGABYTES(64));
 
 	AssetLoadContext context = {
 		.assets = *load_param->assets,
-		.metadata = load_param->metadata
+		.metadata = load_param->metadata,
+		.arena = arena
 	};
 
 	AssetLoadResult result = serializer.load(context);
@@ -156,6 +170,7 @@ static JOB_ENTRY_POINT(asset_load_job)
 		debug_log("Failed to load %s asset: %s", get_string_from_asset_type(load_param->type).c_str(), load_param->metadata.file_path.c_str());
 	
 	AssetUpload upload = {
+		.arena = arena,
 		.metadata = load_param->metadata,
 		.handle = load_param->handle,
 		.type = load_param->type,
@@ -217,11 +232,6 @@ void AssetManager::poll_hot_reloads()
 		if (current_time > record.last_write_time && current_time != 0) {
 			AssetHandle handle = record.asset->get_handle();
 			AssetType type = record.asset->get_asset_type();
-
-			debug_log("Hot-Reloading %s Asset: %s...",
-				get_string_from_asset_type(type).c_str(),
-				record.path.c_str()
-			);
 
 			record.last_write_time = current_time;
 
@@ -303,7 +313,8 @@ void AssetManager::flush_uploads()
 				
 				AssetLoadContext context = {
 					.assets = *this,
-					.metadata = req.metadata
+					.metadata = req.metadata,
+					.arena = asset_arena
 				};
 
 				if (req.result.failed) {
@@ -317,6 +328,7 @@ void AssetManager::flush_uploads()
 
 						asset = serializer.allocate(context, req.result, *device);
 						asset->handle = req.handle;
+
 						assets.set(req.handle, asset);
 					} else {
 						debug_log("Reloading %s Asset: %s...",
@@ -337,15 +349,19 @@ void AssetManager::flush_uploads()
 
 					stage_base += memory_align_up(req.result.stage_size, 16);
 				}
-			
+
+				/*
+				if (req.result.data)
+					serializer.clean_up(req.result.data);
+				*/
+
+				req.arena.destroy();
+
 				{
 					std::unique_lock<std::mutex> lock(loading_mutex);
 					loading_assets[req.handle.index] = false;
 					loading_cv.notify_all();
 				}
-
-				if (req.result.data)
-					serializer.clean_up(req.result.data);
 
 //				memory_pressure -= req.result.stage_size;
 			}
@@ -356,6 +372,8 @@ void AssetManager::flush_uploads()
 		if (staging_buffer)
 			device->destroy_buffer(staging_buffer);
 	}
+
+	load_arena.reset();
 }
 
 bool AssetManager::is_valid(const AssetHandle &handle)
@@ -412,4 +430,9 @@ String AssetManager::get_system_file_path(const String &path) const
 
 	// Fallback...
 	return path;
+}
+
+MemoryArena &AssetManager::get_load_arena()
+{
+	return load_arena;
 }

@@ -4,8 +4,7 @@
 #include <mutex>
 
 #include "core/types.h"
-
-#include "platform/platform.h"
+#include "core/memory_arena.h"
 
 #include "container/vector.h"
 #include "container/string.h"
@@ -139,13 +138,14 @@ namespace ast
 	struct AssetLoadContext {
 		AssetManager &assets;
 		const AssetMetaData &metadata;
+		MemoryArena &arena;
 		String system_file_path() const;
 	};
 
 	struct AssetLoadResult {
-		void *data;     // For use by serializers.
-		u64 stage_size; // Gpu buffer size required.
-		bool failed;    // Did we fail in loading?
+		void *data;        // For use by serializers.
+		u64 stage_size;    // Gpu buffer size required.
+		bool failed;       // Did we fail in loading?
 	};
 
 	struct AssetSerializer {
@@ -169,12 +169,10 @@ namespace ast
 			gfx::CommandBuffer &cmd,
 			gfx::GpuBuffer *stage, u64 stage_base
 		);
-
-		// Clean up.
-		void (*clean_up)(void *data);
 	};
 
 	struct AssetUpload {
+		MemoryArena arena; // Memory asset_arena used specifically for this upload.
 		AssetMetaData metadata;
 		AssetHandle handle;
 		AssetType type;
@@ -197,7 +195,7 @@ namespace ast
 		AssetManager();
 		~AssetManager();
 
-		void init(gfx::Device *device);
+		void init(const MemoryArena &arena, gfx::Device *device);
 		void destroy();
 
 		template <typename T, typename ...Args>
@@ -234,8 +232,9 @@ namespace ast
 		const AssetSerializer &get_serializer(AssetType type) const;
 		
 		void mount(const String &prefix, const String &physical_directory);
-
 		String get_system_file_path(const String &path) const;
+
+		MemoryArena &get_load_arena();
 
 	private:
 		gfx::Device *device = nullptr;
@@ -258,14 +257,6 @@ namespace ast
 
 			~AssetList()
 			{
-			}
-
-			void destroy_all()
-			{
-				for (auto &asset : list)
-					delete asset.asset;
-
-				list.clear();
 			}
 
 			AssetHandle add(Asset *asset, const String &path)
@@ -359,6 +350,9 @@ namespace ast
 		std::mutex loading_mutex;
 
 		HashMap<String, String> mount_points;
+
+		MemoryArena asset_arena;
+		MemoryArena load_arena;
 	};
 
 	template <typename T, typename ...Args>

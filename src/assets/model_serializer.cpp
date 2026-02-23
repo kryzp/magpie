@@ -221,7 +221,7 @@ static AssetLoadResult model_load(const AssetLoadContext &ctx)
 		(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 ||
 		!scene->mRootNode;
 
-	ModelLoadData *load_data = new ModelLoadData();
+	ModelLoadData *load_data = ctx.arena.push<ModelLoadData>();
 
 	AssetLoadResult result = {};
 	result.data = load_data;
@@ -267,7 +267,7 @@ static Asset *model_asset_allocate(
 		);
 	}
 
-	return new ModelAsset(load_data->model);
+	return ctx.arena.push<ModelAsset>(load_data->model);
 }
 
 static void model_upload(
@@ -296,19 +296,12 @@ static void model_upload(
 	}
 }
 
-static void model_clean_up(void *data)
-{
-	ModelLoadData *load_data = (ModelLoadData *)data;
-	delete load_data;
-}
-
 AssetSerializer ast::get_model_serializer()
 {
 	AssetSerializer model_serializer = {};
 	model_serializer.load = model_load;
 	model_serializer.allocate = model_asset_allocate;
 	model_serializer.upload = model_upload;
-	model_serializer.clean_up = model_clean_up;
 
 	return model_serializer;
 }

@@ -80,6 +80,7 @@ static std::atomic<bool> running;
 static std::mutex mutex;
 static std::condition_variable cond_begin;
 static std::atomic<bool> spin_mode;
+static VirtualArena *global_job_arena;
 
 job::JobCounter *job::alloc_counter(u32 initial_count)
 {
@@ -189,7 +190,7 @@ static uptr scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
 
-	scratch::init();
+	scratch::init(*global_job_arena);
 	
 	void *fiber_handle = platform::convert_thread_to_fiber();
 
@@ -254,10 +255,12 @@ static uptr scheduler_thread(void *param)
 	return 0;
 }
 
-void job::init(void (*message_pump)(void))
+void job::init(VirtualArena &arena, void (*message_pump)(void))
 {
 	if (running)
 		return;
+
+	global_job_arena = &arena;
 
 	platform_message_pump = message_pump;
 

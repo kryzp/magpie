@@ -1,13 +1,12 @@
 #include "shader_serializer.h"
 
 #include "core/hash.h"
-#include "platform/platform.h"
 
 using namespace ast;
 
-static Vector<u8> load_file_bytes(const String &path)
+static gfx::ShaderBytecode load_file_bytes(MemoryArena &arena, const String &path)
 {
-	Vector<u8> bytes;
+	gfx::ShaderBytecode bytecode = {};
 
 	FILE *file = fopen(path.c_str(), "rb");
 	u64 file_size = 0;
@@ -17,26 +16,28 @@ static Vector<u8> load_file_bytes(const String &path)
 		file_size = ftell(file);
 		fseek(file, 0, SEEK_SET);
 
-		bytes.resize(file_size);
-		fread(bytes.data(), file_size, 1, file);
+		bytecode.size = file_size;
+		bytecode.bytes = (u8 *)arena.push_bytes_no_zero(file_size);
+
+		fread(bytecode.bytes, file_size, 1, file);
 
 		fclose(file);
 	}
 
-	return bytes;
+	return bytecode;
 }
 
 struct ShaderLoadData {
 	gfx::ShaderKind kind;
 	int stage_count;
-	Vector<u8> stages[2];
+	gfx::ShaderBytecode stages[2];
 };
 
 static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 {
 	String file_path = ctx.system_file_path();
 	
-	ShaderLoadData *load_data = new ShaderLoadData();
+	ShaderLoadData *load_data = ctx.arena.push<ShaderLoadData>();
 	load_data->kind = gfx::SHADER_KIND_UNKNOWN;
 	load_data->stage_count = 0;
 	
@@ -102,9 +103,8 @@ static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 		result.failed = true;
 	
 	for (int i = 0; i < load_data->stage_count; i++) {
-		load_data->stages[i] = load_file_bytes(spv_paths[i]);
-		if (load_data->stages[i].empty())
-			result.failed = true;
+		load_data->stages[i] = load_file_bytes(ctx.arena, spv_paths[i]);
+		result.failed |= load_data->stages[i].size == 0;
 	}
 
 	return result;
@@ -119,18 +119,12 @@ static Asset *shader_asset_allocate(
 
 	Vector<gfx::ShaderBytecode> stages;
 
-	for (int i = 0; i < load_data->stage_count; i++) {
-		Vector<u8> &stage = load_data->stages[i];
+	for (int i = 0; i < load_data->stage_count; i++)
+		stages.push_back(load_data->stages[i]);
 
-		gfx::ShaderBytecode bytecode = {};
-		bytecode.bytes = stage.data();
-		bytecode.size = stage.size();
+	gfx::ShaderProgram *shader = device.create_shader_program(stages);
 
-		stages.push_back(bytecode);
-	}
-
-	gfx::ShaderProgram *gfx_shader = device.create_shader_program(stages);
-	return new ShaderAsset(gfx_shader, device);
+	return ctx.arena.push<ShaderAsset>(shader, device);
 }
 
 static void shader_upload(
@@ -140,13 +134,6 @@ static void shader_upload(
 	gfx::GpuBuffer *stage, u64 stage_base
 )
 {
-	// We don't need to do any uploading for shaders.
-}
-
-static void shader_clean_up(void *data)
-{
-	ShaderLoadData *load_data = (ShaderLoadData *)data;
-	delete load_data;
 }
 
 AssetSerializer ast::get_shader_serializer()
@@ -155,7 +142,6 @@ AssetSerializer ast::get_shader_serializer()
 	shader_serializer.load = shader_load;
 	shader_serializer.allocate = shader_asset_allocate;
 	shader_serializer.upload = shader_upload;
-	shader_serializer.clean_up = shader_clean_up;
 
 	return shader_serializer;
 }

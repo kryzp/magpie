@@ -13,7 +13,15 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 {
 	const float mouse_deadzone = .001f;
 	const float turn_speed = 0.1f;
-	const float move_speed = input.ctrl() ? 0.5f : 2.5f;
+	const float turn_interp = 35.f;
+	
+	float move_speed = 2.5f;
+
+	if (input.ctrl())
+		move_speed *= 0.25f;
+
+	if (input.alt())
+		move_speed *= 2.0f;
 
 	const float dx = input.mouse_delta.x;
 	const float dy = input.mouse_delta.y;
@@ -23,8 +31,8 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 		target_pitch -= dy * turn_speed;
 	}
 
-	pitch = CalcF::lerp(pitch, target_pitch, 35.f * dt);
-	yaw = CalcF::lerp(yaw, target_yaw, 35.f * dt);
+	pitch = CalcF::lerp(pitch, target_pitch, turn_interp * dt);
+	yaw = CalcF::lerp(yaw, target_yaw, turn_interp * dt);
 
 	float corrected_pitch = pitch;
 	float corrected_yaw = yaw + CalcF::PI*0.5f;
@@ -59,7 +67,7 @@ App::App()
 	, swapchain()
 	, render_scene()
 	, render_graph()
-	, frame_buffer()
+	, ring_upload_buffer()
 	, camera()
 	, camera_driver()
 	, camera_driver_active(false)
@@ -82,29 +90,25 @@ App::~App()
 {
 }
 
-void App::init()
+void App::init(VirtualArena &global_arena)
 {
 	ClassDB::get_singleton()->build_registry();
 
-	frame_arena = global_arena.arena(MEGABYTES(128));
-
 	graphics_device.init();
 	swapchain = graphics_device.create_swapchain();
-	
-	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
-	assets.init(&graphics_device);
+	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
 	assets.mount("assets", "../../res/");
 	
 	render_graph.init(&graphics_device);
 	
-	frame_buffer.allocate(
+	ring_upload_buffer.allocate(
 		&graphics_device,
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		TRANSIENT_ARENA_SIZE * gfx::FRAMES_IN_FLIGHT
+		TRANSIENT_ARENA_SIZE
 	);
 
 	render_scene.init(&graphics_device);
@@ -162,6 +166,8 @@ void App::init()
 	);
 
 	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
+	
+	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
 	ibl_renderer.init(assets);
 	compute_culling.init(assets);
@@ -205,7 +211,7 @@ void App::destroy()
 {
 	graphics_device.graphics().wait_idle();
 
-	frame_buffer.destroy();
+	ring_upload_buffer.destroy();
 
 	graphics_device.destroy_texture(brdf_texture);
 	graphics_device.destroy_texture(irradiance_cubemap);
@@ -302,7 +308,7 @@ bool App::tick(const inp::InputState &input)
 
 	gfx::CommandBuffer cmd = graphics_device.begin_frame(swapchain);
 	{
-		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(frame_buffer);
+		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(ring_upload_buffer);
 
 		struct FooBar { int baz; };
 

@@ -30,7 +30,7 @@ namespace scratch
 {
 	static constexpr u32 SCRATCH_MEMORY_SIZE = MEGABYTES(32);
 
-	void init();
+	void init(VirtualArena &arena);
 	void destroy();
 
 	ScratchScope get(MemoryArena **conflicts, u32 count);

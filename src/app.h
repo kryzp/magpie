@@ -33,13 +33,13 @@ private:
 class App {
 	constexpr static u32 TARGET_FPS = 120;
 
-	static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(128);
+	static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(512);
 
 public:
 	App();
 	~App();
 
-	void init();
+	void init(VirtualArena &global_arena);
 	void destroy();
 	bool tick(const inp::InputState &input);
 
@@ -50,8 +50,6 @@ private:
 
 	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
 	
-	MemoryArena frame_arena;
-
 	Timer global_timer;
 	Timer delta_timer;
 	float delta_accumulator;
@@ -64,7 +62,7 @@ private:
 	gfx::RenderScene render_scene;
 	gfx::RenderGraph render_graph;
 
-	gfx::GpuRingBuffer frame_buffer;
+	gfx::GpuRingBuffer ring_upload_buffer;
 
 	gfx::Camera camera;
 	CameraDriver camera_driver;
