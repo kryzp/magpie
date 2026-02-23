@@ -115,7 +115,7 @@ static bool check_graphics_physical_device_extension_support(VkPhysicalDevice ph
 	if (extension_count <= 0)
 		debug_log_crash("Failed to find any device extension properties.");
 
-	ScratchArena scratch;
+	ScratchScope scratch = scratch::get();
 
 	VkExtensionProperties *available_exts = scratch.get_arena().push_array<VkExtensionProperties>(extension_count);
 
@@ -144,7 +144,7 @@ static bool check_for_validation_layer_support(MemoryArena &arena)
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);
 
-	ScratchArena scratch;
+	ScratchScope scratch = scratch::get();
 
 	VkLayerProperties *available_layers = scratch.get_arena().push_array<VkLayerProperties>(layer_count);
 	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
@@ -398,8 +398,8 @@ void Device::init()
 	instance_create_info.pApplicationInfo = &core_info;
 
 	volkInitialize();
-
-	ScratchArena scratch;
+	
+	ScratchScope scratch = scratch::get();
 
 	instance_create_info.ppEnabledExtensionNames = get_instance_extensions(scratch.get_arena(), &instance_create_info.enabledExtensionCount);
 
@@ -991,7 +991,7 @@ CommandBuffer Device::fetch_free_buffer(CommandPool &pool)
 
 Swapchain Device::create_swapchain()
 {
-	ScratchArena scratch;
+	ScratchScope scratch = scratch::get();
 
 	SwapchainSupportDetails details = swapchain_details;
 
@@ -1204,8 +1204,8 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 	multisample_state_create_info.pSampleMask = nullptr;
 	multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
 	multisample_state_create_info.alphaToOneEnable = VK_FALSE;
-
-	ScratchArena scratch;
+	
+	ScratchScope scratch = scratch::get();
 
 	VkPipelineColorBlendAttachmentState *blend_states = scratch.get_arena().push_array<VkPipelineColorBlendAttachmentState>(def.colour_attachment_formats.size());
 
@@ -1791,8 +1791,8 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 
 	if (reflect_result != SPV_REFLECT_RESULT_SUCCESS)
 		debug_log_crash("Failed to reflect SPIR-V module: %d\n", reflect_result);
-
-	ScratchArena scratch;
+	
+	ScratchScope scratch = scratch::get();
 
 	ShaderStage stage = {};
 

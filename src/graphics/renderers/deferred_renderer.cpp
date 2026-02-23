@@ -27,7 +27,7 @@ void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 // TODO: Use a more efficient sphere shape like an ICOSPHERE or CUBESPHERE.
 void DeferredRenderer::create_light_sphere_mesh(Device *device)
 {
-	ScratchArena scratch;
+	ScratchScope scratch = scratch::get();
 
 	u16 sector_count = 10;
 	u16 stack_count  = 10;

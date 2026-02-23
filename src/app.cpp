@@ -2,7 +2,7 @@
 
 #include "ext/imgui/imgui.h"
 
-#include "core/scratch.h"
+#include "core/class_db.h"
 #include "platform/platform.h"
 #include "math/calc.h"
 #include "assets/model_serializer.h"
@@ -51,9 +51,7 @@ void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, flo
 }
 
 App::App()
-	: scratch_memory(nullptr)
-	, scratch_arenas{}
-	, global_timer()
+	: global_timer()
 	, delta_timer()
 	, delta_accumulator()
 	, assets()
@@ -88,11 +86,7 @@ void App::init()
 {
 	ClassDB::get_singleton()->build_registry();
 
-	scratch_memory = malloc(SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
-	MemoryArena arena(scratch_memory, SCRATCH_MEMORY_SIZE * array_size(scratch_arenas));
-	scratch_arenas[0] = arena.sub_arena(SCRATCH_MEMORY_SIZE);
-	scratch_arenas[1] = arena.sub_arena(SCRATCH_MEMORY_SIZE);
-	ScratchArena::select(scratch_arenas, array_size(scratch_arenas));
+	frame_arena = global_arena.arena(MEGABYTES(128));
 
 	graphics_device.init();
 	swapchain = graphics_device.create_swapchain();
@@ -237,8 +231,6 @@ void App::destroy()
 
 	graphics_device.destroy_swapchain(swapchain);
 	graphics_device.destroy();
-
-	free(scratch_memory);
 }
 
 bool App::tick(const inp::InputState &input)

@@ -58,7 +58,7 @@ namespace gfx
 			return allocation_flags;
 		}
 
-		u64 get_size() const
+		u64 capacity() const
 		{
 			return size;
 		}
@@ -111,7 +111,7 @@ namespace gfx
 			return parent->get_device_address() + offset;
 		}
 
-		u64 get_size() const
+		u64 capacity() const
 		{
 			return size;
 		}

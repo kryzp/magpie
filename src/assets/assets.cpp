@@ -310,7 +310,7 @@ void AssetManager::flush_uploads()
 					asset = get_fallback_asset(req.type);
 				} else {
 					if (!asset) {
-						debug_log("Allocating %s Asset: %s...",
+						debug_log("Creating %s Asset: %s...",
 							get_string_from_asset_type(req.type).c_str(),
 							req.metadata.file_path.c_str()
 						);
@@ -318,12 +318,12 @@ void AssetManager::flush_uploads()
 						asset = serializer.allocate(context, req.result, *device);
 						asset->handle = req.handle;
 						assets.set(req.handle, asset);
+					} else {
+						debug_log("Reloading %s Asset: %s...",
+							get_string_from_asset_type(req.type).c_str(),
+							req.metadata.file_path.c_str()
+						);
 					}
-
-					debug_log("Uploading %s Asset: %s...",
-						get_string_from_asset_type(req.type).c_str(),
-						req.metadata.file_path.c_str()
-					);
 
 					serializer.upload(
 						asset,

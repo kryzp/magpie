@@ -188,6 +188,8 @@ static void fiber_entry_point(void *param)
 static uptr scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
+
+	scratch::init();
 	
 	void *fiber_handle = platform::convert_thread_to_fiber();
 
@@ -197,7 +199,7 @@ static uptr scheduler_thread(void *param)
 
 	// Lock thread to core.
 	platform::set_thread_affinity(tls.current_worker->thread, 1ull << tls.current_worker_id);
-
+	
 	while (running) {
 		if (job::is_main_thread())
 			platform_message_pump();
@@ -246,6 +248,8 @@ static uptr scheduler_thread(void *param)
 	}
 
 	platform::convert_fiber_to_thread();
+
+	scratch::destroy();
 
 	return 0;
 }
@@ -404,8 +408,8 @@ void job::parallel_for(
 	assert(batch_size > 0);
 
 	u32 job_count = count / batch_size + 1;
-
-	ScratchArena scratch;
+	
+	ScratchScope scratch = scratch::get();
 
 	ParallelForInternalParam *params = scratch.get_arena().push_array<ParallelForInternalParam>(job_count);
 	JobDecl *decls =  scratch.get_arena().push_array<JobDecl>(job_count);

@@ -8,17 +8,22 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 
 ### Interesting Parts
 - `app`
+- `core/memory_arena`
+- `core/scratch`
 - `core/class_db`
+- `platform/*`
+- `job/*`
 - `assets/*`
 - `graphics/render_graph`
 - `graphics/render_scene`
 - `graphics/device`
 - `graphics/renderers/*`
-- `job/*`
 - `res/frustum_culling`
-- `platform/*`
 
 ### Notable Features
+- Arena Memory Allocation System
+- Async Asset Streaming (integrated with job system)
+- Asset Hot-Reloading
 - Right-handed Z-up coordinates (as it SHOULD be)
 - Modern bindless resource design
 - GPU Driven Rendering: Bindless materials and meshes (global vertex buffer, vertex pulling, etc...)
@@ -32,11 +37,9 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - ImGui Integration
 - Controller support I guess :p
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
-- Ring Allocators
-- Async Asset Streaming (integrated with job system)
-- Asset Hot-Reloading
 
 ### Ideas / Todo List
+- Custom (Arena-Based) Container Library
 - More sophisticated debug logging / tracing system
 - GPU profiler
 - Multi-Threaded CPU profiler integrated with job system

@@ -1,83 +1,197 @@
 #include "memory_arena.h"
 
-#include "math/calc.h"
+#include "platform/platform.h"
+
+VirtualArena global_arena;
+
+VirtualArena::VirtualArena()
+	: memory(0)
+	, memory_used(0)
+	, memory_reserved(0)
+	, memory_committed(0)
+{
+}
+
+VirtualArena::~VirtualArena()
+{
+}
+
+void VirtualArena::reserve(u64 size)
+{
+	memory = (uptr)platform::virtual_reserve(size);
+	memory_used = 0;
+	memory_reserved = size;
+	memory_committed = 0;
+}
+
+void VirtualArena::commit(u64 size)
+{
+	size = align_to_page(size);
+	platform::virtual_commit((void *)(memory + memory_committed), size);
+	memory_committed += size;
+}
+
+void *VirtualArena::allocate(u64 size, u64 alignment)
+{
+	memory_used = memory_align_up(memory_used, alignment);
+
+	uptr mem = memory + memory_used;
+
+	memory_used += size;
+
+	if (memory_used > memory_committed)
+		commit(memory_used - memory_committed);
+
+	return (void *)mem;
+}
+
+void VirtualArena::destroy()
+{
+	if (!memory)
+		return;
+
+	platform::virtual_free((void *)memory);
+	memory = 0;
+}
+
+MemoryArena VirtualArena::arena(u64 size, u64 alignment)
+{
+	return MemoryArena(allocate(size, alignment), size);
+}
+
+u64 VirtualArena::align_to_page(u64 size)
+{
+	return memory_align_up(size, platform::get_page_size());
+}
 
 MemoryArena::MemoryArena()
-	: memory(nullptr)
-	, memory_size(0)
+	: memory(0)
 	, memory_used(0)
+	, memory_size(0)
+	, destructor_head(nullptr)
 {
 }
 
 MemoryArena::MemoryArena(void *memory, u64 size)
-	: memory(memory)
-	, memory_size(size)
+	: memory((uptr)memory)
 	, memory_used(0)
+	, memory_size(size)
+	, destructor_head(nullptr)
 {
 }
 
 MemoryArena::MemoryArena(const MemoryArena &other)
 {
 	this->memory = other.memory;
-	this->memory_size = other.memory_size;
 	this->memory_used = other.memory_used;
+	this->memory_size = other.memory_size;
+	this->destructor_head = other.destructor_head;
+}
+
+MemoryArena &MemoryArena::operator = (const MemoryArena &other)
+{
+	this->memory = other.memory;
+	this->memory_used = other.memory_used;
+	this->memory_size = other.memory_size;
+	this->destructor_head = other.destructor_head;
+
+	return *this;
 }
 
 MemoryArena::~MemoryArena()
 {
 }
 
-MemoryArena MemoryArena::sub_arena(u64 size)
+void MemoryArena::init(void *memory, u64 size)
 {
-	return MemoryArena(this->push_bytes(size), size);
+	this->memory = (uptr)memory;
+	this->memory_used = 0;
+	this->memory_size = size;
+	this->destructor_head = nullptr;
 }
 
-void *MemoryArena::push_bytes(u64 size)
+void MemoryArena::destroy()
 {
-	void *buf = push_bytes_no_zero(size);
+	if (!memory)
+		return;
+	
+	invoke_destructors(0);
 
-	if (buf)
-		memory_set(buf, 0, size);
-
-	return buf;
+	memory = 0;
+	memory_used = 0;
+	memory_size = 0;
+	destructor_head = nullptr;
 }
 
-void *MemoryArena::push_bytes_no_zero(u64 size)
+void *MemoryArena::push_bytes(u64 size, u64 alignment)
 {
-	void *buf = nullptr;
+	void *mem = push_bytes_no_zero(size, alignment);
+	assert(mem);
+	memory_set(mem, 0, size);
+	return mem;
+}
+
+void *MemoryArena::push_bytes_no_zero(u64 size, u64 alignment)
+{
+	uptr mem = 0;
+
+	memory_used = memory_align_up(memory_used, alignment);
 
 	if (memory_used + size <= memory_size) {
-		buf = (void *)((u8 *)memory + memory_used);
+		mem = memory + memory_used;
 		memory_used += size;
-	} else {
-		debug_log_crash("Ran out of space in memory arena.");
 	}
 
-	return buf;
+	assert(mem);
+	return (void *)mem;
 }
 
-void MemoryArena::pop(u64 size)
+void MemoryArena::rewind(u64 marker)
 {
-	memory_used = Calc<u64>::max(0, memory_used - size);
+	invoke_destructors(marker);
+	memory_used = marker;
 }
 
-void MemoryArena::pop_to(u64 pos)
+void MemoryArena::reset()
 {
-	memory_used = pos;
+	invoke_destructors(0);
+	memory_used = 0;
 }
 
 void MemoryArena::clear()
 {
 	reset();
-	zero();
+	memory_set((void *)memory, 0, memory_size);
 }
 
-void MemoryArena::reset()
+void *MemoryArena::buffer() const
 {
-	memory_used = 0;
+	return (void *)memory;
 }
 
-void MemoryArena::zero() const
+u64 MemoryArena::capacity() const
 {
-	memory_set(memory, 0, memory_size);
+	return memory_size;
+}
+
+u64 MemoryArena::marker() const
+{
+	return memory_used;
+}
+
+u64 MemoryArena::remaining_space() const
+{
+	return memory_size - memory_used;
+}
+
+void MemoryArena::invoke_destructors(u64 target_marker)
+{
+	uptr target_address = memory + target_marker;
+
+	while (destructor_head) {
+		if ((uptr)destructor_head < target_address)
+			break;
+		destructor_head->destroy(destructor_head->object);
+		destructor_head = destructor_head->next;
+	}
 }

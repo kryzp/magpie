@@ -1,7 +1,3 @@
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-
 #include <filesystem>
 
 #define WIN32_LEAN_AND_MEAN
@@ -32,6 +28,8 @@
 
 #define MAX_PENDING_EVENTS 512
 
+static SYSTEM_INFO system_info;
+
 static SDL_Window *sdl_window = nullptr;
 static std::atomic<bool> is_running { true };
 
@@ -41,6 +39,36 @@ static std::mutex event_mutex;
 
 static SDL_Gamepad *gamepads[inp::MAX_GAMEPADS] = {};
 static int gamepad_count = 0;
+
+void *platform::virtual_reserve(u64 bytes)
+{
+	return VirtualAlloc(
+		nullptr,
+		bytes,
+		MEM_RESERVE,
+		PAGE_READWRITE
+	);
+}
+
+void platform::virtual_commit(void *address, u64 bytes)
+{
+	VirtualAlloc(
+		address,
+		bytes,
+		MEM_COMMIT,
+		PAGE_READWRITE
+	);
+}
+
+void platform::virtual_free(void *memory)
+{
+	VirtualFree(memory, 0, MEM_RELEASE);
+}
+
+u64 platform::get_page_size()
+{
+	return system_info.dwPageSize;
+}
 
 void platform::set_window_title(const char *title)
 {
@@ -522,6 +550,8 @@ static JOB_ENTRY_POINT(root_job_entry)
 
 int main(int argc, char **argv)
 {
+	GetSystemInfo(&system_info);
+	
 	SDL_InitFlags init_flags =
 		SDL_INIT_VIDEO |
 		SDL_INIT_AUDIO |
@@ -552,7 +582,9 @@ int main(int argc, char **argv)
 		debug_log_crash("Failed to create SDL window: %s", SDL_GetError());
 		return -1;
 	}
-	
+
+	global_arena.reserve(GLOBAL_MEMORY_RESERVED);
+
 	platform::set_window_title(DEFAULT_WINDOW_TITLE);
 	platform::set_window_size(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 	platform::set_window_opacity(1.f);
@@ -579,6 +611,8 @@ int main(int argc, char **argv)
 
 	SDL_DestroyWindow(sdl_window);
 	SDL_Quit();
+
+	global_arena.destroy();
 
 	return 0;
 }

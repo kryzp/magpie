@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/memory_arena.h"
-#include "core/class_db.h"
 
 #include "math/timer.h"
 
@@ -51,8 +50,7 @@ private:
 
 	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
 	
-	void *scratch_memory;
-	MemoryArena scratch_arenas[2];
+	MemoryArena frame_arena;
 
 	Timer global_timer;
 	Timer delta_timer;

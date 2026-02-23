@@ -1110,7 +1110,7 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const A
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();
-	resource.buffer_info.size = buffer->get_size();
+	resource.buffer_info.size = buffer->capacity();
 
 	resource.buffer_offset = 0;
 

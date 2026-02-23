@@ -18,12 +18,18 @@
 #define ENGINE_VERSION_MINOR     1
 #define ENGINE_VERSION_PATCH     0
 
-#define SCRATCH_MEMORY_SIZE      MEGABYTES(32)
+#define GLOBAL_MEMORY_RESERVED   GIGABYTES(8)
 
 typedef void (*fiber_entry_point_fn)(void *param);
 
 namespace platform
 {
+	void *virtual_reserve(u64 bytes);
+	void virtual_commit(void *address, u64 bytes);
+	void virtual_free(void *memory);
+
+	u64 get_page_size();
+
 	void set_window_title(const char *title);
 	void get_window_size(int *width, int *height);
 	void get_window_size_in_pixels(int *pixel_width, int *pixel_height);
