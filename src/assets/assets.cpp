@@ -363,7 +363,7 @@ void AssetManager::flush_uploads()
 				
 				req.arena.destroy();
 
-				req.scratch->destroy();
+				req.scratch->free();
 				delete req.scratch;
 
 				{

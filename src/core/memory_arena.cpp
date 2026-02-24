@@ -50,7 +50,7 @@ void *VirtualArena::allocate_no_lock(u64 size, u64 alignment)
 	return (void *)mem;
 }
 
-void VirtualArena::destroy()
+void VirtualArena::free()
 {
 	if (!memory)
 		return;

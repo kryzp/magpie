@@ -19,7 +19,7 @@ public:
 	void *allocate(u64 size, u64 alignment = 16);
 	void *allocate_no_lock(u64 size, u64 alignment = 16);
 	
-	void destroy();
+	void free();
 
 	ArenaView view(u64 size, u64 alignment = 16);
 

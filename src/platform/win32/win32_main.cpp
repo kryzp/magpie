@@ -614,7 +614,7 @@ int main(int argc, char **argv)
 	SDL_DestroyWindow(sdl_window);
 	SDL_Quit();
 
-	global_arena.destroy();
+	global_arena.free();
 
 	return 0;
 }
