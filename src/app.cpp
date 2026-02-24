@@ -98,7 +98,7 @@ void App::init(VirtualArena &global_arena)
 
 	swapchain = graphics_device.create_swapchain();
 
-	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
+	assets.init(global_arena.view(GIGABYTES(1)), &graphics_device);
 	assets.mount("assets", "../../res/");
 	
 	render_graph.init(&graphics_device);

@@ -26,7 +26,6 @@ AssetManager::AssetManager()
 	, loading_mutex()
 	, mount_points()
 	, asset_arena()
-	, load_arena()
 {
 	serializers[ASSET_TYPE_TEXTURE] = get_texture_serializer();
 	serializers[ASSET_TYPE_SHADER] = get_shader_serializer();
@@ -37,21 +36,18 @@ AssetManager::~AssetManager()
 {
 }
 
-void AssetManager::init(const MemoryArena &arena, gfx::Device *device)
+void AssetManager::init(ArenaView &&arena, gfx::Device *device)
 {
 	this->device = device;
 	
-	this->asset_arena = arena;
-	this->load_arena = this->asset_arena.sub_arena(MEGABYTES(512));
+	this->asset_arena = std::move(arena);
 
 	upload_counter = job::alloc_counter();
 }
 
 void AssetManager::destroy()
 {
-	load_arena.destroy();
 	asset_arena.destroy();
-
 	job::free_counter(upload_counter);
 }
 
@@ -112,10 +108,15 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 	AssetMetaData metadata = {};
 	metadata.file_path = assets.get_path(handle);
 
+	VirtualArena *virtual_arena = new VirtualArena();
+	virtual_arena->reserve(MEGABYTES(64));
+
+	ArenaView arena = virtual_arena->view(MEGABYTES(64));
+
 	AssetLoadContext context = {
 		.assets = *this,
 		.metadata = metadata,
-		.arena = asset_arena
+		.arena = arena
 	};
 	
 	AssetLoadResult result = serializers[type].load(context);
@@ -124,12 +125,14 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 		debug_log("Failed to load %s asset: %s", get_string_from_asset_type(type).c_str(), metadata.file_path.c_str());
 
 	AssetUpload upload = {};
-	upload.type = type;
+	upload.scratch = virtual_arena;
+	upload.arena = std::move(arena);
 	upload.metadata = metadata;
 	upload.handle = handle;
+	upload.type = type;
 	upload.result = result;
 
-	push_upload(upload);
+	push_upload(std::move(upload));
 
 	flush_uploads();
 }
@@ -154,9 +157,10 @@ static JOB_ENTRY_POINT(asset_load_job)
 	}
 	*/
 
-	const AssetSerializer &serializer = load_param->assets->get_serializer(load_param->type);
-	
-	MemoryArena arena = load_param->assets->get_load_arena().sub_arena(MEGABYTES(64));
+	VirtualArena *virtual_arena = new VirtualArena();
+	virtual_arena->reserve(MEGABYTES(64));
+
+	ArenaView arena = virtual_arena->view(MEGABYTES(64));
 
 	AssetLoadContext context = {
 		.assets = *load_param->assets,
@@ -164,24 +168,26 @@ static JOB_ENTRY_POINT(asset_load_job)
 		.arena = arena
 	};
 
+	const AssetSerializer &serializer = load_param->assets->get_serializer(load_param->type);
+
 	AssetLoadResult result = serializer.load(context);
 
 	if (result.failed)
 		debug_log("Failed to load %s asset: %s", get_string_from_asset_type(load_param->type).c_str(), load_param->metadata.file_path.c_str());
 	
-	AssetUpload upload = {
-		.arena = arena,
-		.metadata = load_param->metadata,
-		.handle = load_param->handle,
-		.type = load_param->type,
-		.result = result
-	};
+	AssetUpload upload = {};
+	upload.scratch = virtual_arena;
+	upload.arena = std::move(arena);
+	upload.metadata = load_param->metadata;
+	upload.handle = load_param->handle;
+	upload.type = load_param->type;
+	upload.result = result;
 
 	// Have to push regardless of failure because of promise that
 	// will get loaded one way or another.
 	// If we didn't do this, assets that fail to load will have
 	// their associated handles in a permanent loading state.
-	load_param->assets->push_upload(upload);
+	load_param->assets->push_upload(std::move(upload));
 	
 	delete load_param;
 }
@@ -245,10 +251,10 @@ void AssetManager::wait_for_async_uploads()
 	job::yield_on_counter(upload_counter);
 }
 
-void AssetManager::push_upload(const AssetUpload &upload)
+void AssetManager::push_upload(AssetUpload &&upload)
 {
 	std::lock_guard<std::mutex> lock(upload_mutex);
-	upload_queue.push_back(upload);
+	upload_queue.push_back(std::move(upload));
 
 //	memory_pressure += upload.result.stage_size;
 }
@@ -354,8 +360,11 @@ void AssetManager::flush_uploads()
 				if (req.result.data)
 					serializer.clean_up(req.result.data);
 				*/
-
+				
 				req.arena.destroy();
+
+				req.scratch->destroy();
+				delete req.scratch;
 
 				{
 					std::unique_lock<std::mutex> lock(loading_mutex);
@@ -372,8 +381,6 @@ void AssetManager::flush_uploads()
 		if (staging_buffer)
 			device->destroy_buffer(staging_buffer);
 	}
-
-	load_arena.reset();
 }
 
 bool AssetManager::is_valid(const AssetHandle &handle)
@@ -430,9 +437,4 @@ String AssetManager::get_system_file_path(const String &path) const
 
 	// Fallback...
 	return path;
-}
-
-MemoryArena &AssetManager::get_load_arena()
-{
-	return load_arena;
 }

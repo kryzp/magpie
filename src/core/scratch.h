@@ -5,7 +5,7 @@
 
 class ScratchScope {
 public:
-	ScratchScope(MemoryArena &arena)
+	ScratchScope(ArenaView &arena)
 		: arena(arena)
 		, marker(arena.marker())
 	{
@@ -16,13 +16,13 @@ public:
 		arena.rewind(marker);
 	}
 
-	MemoryArena &get_arena()
+	ArenaView &get_arena()
 	{
 		return arena;
 	}
 
 private:
-	MemoryArena &arena;
+	ArenaView &arena;
 	u64 marker;
 };
 
@@ -33,16 +33,16 @@ namespace scratch
 	void init(VirtualArena &arena);
 	void destroy();
 
-	ScratchScope get(MemoryArena **conflicts, u32 count);
+	ScratchScope get(ArenaView **conflicts, u32 count);
 
 	inline ScratchScope get()
 	{
 		return get(nullptr, 0);
 	}
 
-	inline ScratchScope get(MemoryArena &conflict)
+	inline ScratchScope get(ArenaView &conflict)
 	{
-		MemoryArena *ptr = &conflict;
+		ArenaView *ptr = &conflict;
 		return get(&ptr, 1);
 	}
 }

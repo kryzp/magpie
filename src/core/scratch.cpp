@@ -1,7 +1,7 @@
 #include "scratch.h"
 
 struct ThreadScratch {
-	MemoryArena arenas[2];
+	ArenaView arenas[2];
 };
 
 static thread_local ThreadScratch thread_scratch_context;
@@ -10,8 +10,8 @@ void scratch::init(VirtualArena &arena)
 {
 	auto &ctx = thread_scratch_context;
 
-	ctx.arenas[0] = arena.arena(SCRATCH_MEMORY_SIZE);
-	ctx.arenas[1] = arena.arena(SCRATCH_MEMORY_SIZE);
+	ctx.arenas[0] = arena.view(SCRATCH_MEMORY_SIZE);
+	ctx.arenas[1] = arena.view(SCRATCH_MEMORY_SIZE);
 }
 
 void scratch::destroy()
@@ -22,7 +22,7 @@ void scratch::destroy()
 	ctx.arenas[1].destroy();
 }
 
-ScratchScope scratch::get(MemoryArena **conflicts, u32 count)
+ScratchScope scratch::get(ArenaView **conflicts, u32 count)
 {
 	auto &ctx = thread_scratch_context;
 

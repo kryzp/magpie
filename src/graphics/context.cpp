@@ -66,7 +66,7 @@ static VkSampleCountFlagBits find_graphics_max_usable_sample_count(VkPhysicalDev
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-static const char *const *get_instance_extensions(MemoryArena &arena, u32 *extension_count)
+static const char *const *get_instance_extensions(ArenaView &arena, u32 *extension_count)
 {
 	const char *const *names = platform::get_vulkan_instance_extensions(extension_count);
 
@@ -134,7 +134,7 @@ exit:
 	return result;
 }
 
-static bool check_for_validation_layer_support(MemoryArena &arena)
+static bool check_for_validation_layer_support(ArenaView &arena)
 {
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);

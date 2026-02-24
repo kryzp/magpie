@@ -138,7 +138,7 @@ namespace ast
 	struct AssetLoadContext {
 		AssetManager &assets;
 		const AssetMetaData &metadata;
-		MemoryArena &arena;
+		ArenaView &arena;
 		String system_file_path() const;
 	};
 
@@ -172,7 +172,8 @@ namespace ast
 	};
 
 	struct AssetUpload {
-		MemoryArena arena; // Memory asset_arena used specifically for this upload.
+		VirtualArena *scratch; // Arena upon which the arena lies.
+		ArenaView arena; // Used specifically for this upload.
 		AssetMetaData metadata;
 		AssetHandle handle;
 		AssetType type;
@@ -195,7 +196,7 @@ namespace ast
 		AssetManager();
 		~AssetManager();
 
-		void init(const MemoryArena &arena, gfx::Device *device);
+		void init(ArenaView &&arena, gfx::Device *device);
 		void destroy();
 
 		template <typename T, typename ...Args>
@@ -223,7 +224,7 @@ namespace ast
 		void poll_hot_reloads();
 
 		void wait_for_async_uploads();
-		void push_upload(const AssetUpload &upload);
+		void push_upload(AssetUpload &&upload);
 		void flush_uploads();
 
 		bool is_valid(const AssetHandle &handle);
@@ -233,8 +234,6 @@ namespace ast
 		
 		void mount(const String &prefix, const String &physical_directory);
 		String get_system_file_path(const String &path) const;
-
-		MemoryArena &get_load_arena();
 
 	private:
 		gfx::Device *device = nullptr;
@@ -351,8 +350,7 @@ namespace ast
 
 		HashMap<String, String> mount_points;
 
-		MemoryArena asset_arena;
-		MemoryArena load_arena;
+		ArenaView asset_arena;
 	};
 
 	template <typename T, typename ...Args>

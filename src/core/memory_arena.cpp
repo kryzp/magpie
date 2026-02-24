@@ -33,7 +33,11 @@ void VirtualArena::commit(u64 size)
 void *VirtualArena::allocate(u64 size, u64 alignment)
 {
 	std::lock_guard<std::mutex> lock(allocation_mutex);
+	return allocate_no_lock(size, alignment);
+}
 
+void *VirtualArena::allocate_no_lock(u64 size, u64 alignment)
+{
 	memory_used = memory_align_up(memory_used, alignment);
 
 	uptr mem = memory + memory_used;
@@ -52,12 +56,16 @@ void VirtualArena::destroy()
 		return;
 
 	platform::virtual_free((void *)memory);
+
 	memory = 0;
+	memory_used = 0;
+	memory_reserved = 0;
+	memory_committed = 0;
 }
 
-MemoryArena VirtualArena::arena(u64 size, u64 alignment)
+ArenaView VirtualArena::view(u64 size, u64 alignment)
 {
-	return MemoryArena(allocate(size, alignment), size);
+	return ArenaView(allocate(size, alignment), size);
 }
 
 u64 VirtualArena::align_to_page(u64 size)
@@ -65,47 +73,56 @@ u64 VirtualArena::align_to_page(u64 size)
 	return memory_align_up(size, platform::get_page_size());
 }
 
-MemoryArena::MemoryArena()
+ArenaView::ArenaView()
 	: memory(0)
 	, memory_used(0)
 	, memory_size(0)
 	, destructor_head(nullptr)
-	, allocation_mutex()
 {
 }
 
-MemoryArena::MemoryArena(void *memory, u64 size)
+ArenaView::ArenaView(void *memory, u64 size)
 	: memory((uptr)memory)
 	, memory_used(0)
 	, memory_size(size)
 	, destructor_head(nullptr)
-	, allocation_mutex()
 {
 }
 
-MemoryArena::MemoryArena(const MemoryArena &other)
+ArenaView::ArenaView(ArenaView &&other) noexcept
+	: memory(other.memory)
+	, memory_used(other.memory_used)
+	, memory_size(other.memory_size)
+	, destructor_head(other.destructor_head)
 {
-	this->memory = other.memory;
-	this->memory_used = other.memory_used;
-	this->memory_size = other.memory_size;
-	this->destructor_head = other.destructor_head;
+	other.memory = 0;
+	other.memory_used = 0;
+	other.memory_size = 0;
+	other.destructor_head = nullptr;
 }
 
-MemoryArena &MemoryArena::operator = (const MemoryArena &other)
+ArenaView &ArenaView::operator = (ArenaView &&other) noexcept
 {
-	this->memory = other.memory;
-	this->memory_used = other.memory_used;
-	this->memory_size = other.memory_size;
-	this->destructor_head = other.destructor_head;
+	if (this != &other) {
+		this->memory = other.memory;
+		this->memory_used = other.memory_used;
+		this->memory_size = other.memory_size;
+		this->destructor_head = other.destructor_head;
+
+		other.memory = 0;
+		other.memory_used = 0;
+		other.memory_size = 0;
+		other.destructor_head = nullptr;
+	}
 
 	return *this;
 }
 
-MemoryArena::~MemoryArena()
+ArenaView::~ArenaView()
 {
 }
 
-void MemoryArena::init(void *memory, u64 size)
+void ArenaView::init(void *memory, u64 size)
 {
 	this->memory = (uptr)memory;
 	this->memory_used = 0;
@@ -113,7 +130,7 @@ void MemoryArena::init(void *memory, u64 size)
 	this->destructor_head = nullptr;
 }
 
-void MemoryArena::destroy()
+void ArenaView::destroy()
 {
 	if (!memory)
 		return;
@@ -126,12 +143,12 @@ void MemoryArena::destroy()
 	destructor_head = nullptr;
 }
 
-MemoryArena MemoryArena::sub_arena(u64 size, u64 alignment)
+ArenaView ArenaView::sub_arena(u64 size, u64 alignment)
 {
-	return MemoryArena(push_bytes(size, alignment), size);
+	return ArenaView(push_bytes(size, alignment), size);
 }
 
-void *MemoryArena::push_bytes(u64 size, u64 alignment)
+void *ArenaView::push_bytes(u64 size, u64 alignment)
 {
 	void *mem = push_bytes_no_zero(size, alignment);
 	assert(mem);
@@ -139,69 +156,70 @@ void *MemoryArena::push_bytes(u64 size, u64 alignment)
 	return mem;
 }
 
-void *MemoryArena::push_bytes_no_zero(u64 size, u64 alignment)
+void *ArenaView::push_bytes_no_zero(u64 size, u64 alignment)
 {
-	std::lock_guard<std::mutex> lock(allocation_mutex);
-
 	uptr mem = 0;
 
-	memory_used = memory_align_up(memory_used, alignment);
+	u64 aligned = memory_align_up(memory_used, alignment);
 
-	if (memory_used + size <= memory_size) {
-		mem = memory + memory_used;
+	if (aligned + size <= memory_size) {
+		mem = memory + aligned;
+		memory_used = aligned;
 		memory_used += size;
 	}
 
 	assert(mem);
+
 	return (void *)mem;
 }
 
-void MemoryArena::rewind(u64 marker)
+void ArenaView::rewind(u64 marker)
 {
 	invoke_destructors(marker);
 	memory_used = marker;
 }
 
-void MemoryArena::reset()
+void ArenaView::reset()
 {
 	invoke_destructors(0);
 	memory_used = 0;
 }
 
-void MemoryArena::clear()
+void ArenaView::clear()
 {
 	reset();
 	memory_set((void *)memory, 0, memory_size);
 }
 
-void *MemoryArena::buffer() const
+void *ArenaView::buffer() const
 {
 	return (void *)memory;
 }
 
-u64 MemoryArena::capacity() const
+u64 ArenaView::capacity() const
 {
 	return memory_size;
 }
 
-u64 MemoryArena::marker() const
+u64 ArenaView::marker() const
 {
 	return memory_used;
 }
 
-u64 MemoryArena::remaining_space() const
+u64 ArenaView::remaining_space() const
 {
 	return memory_size - memory_used;
 }
 
-void MemoryArena::invoke_destructors(u64 target_marker)
+void ArenaView::invoke_destructors(u64 target_marker)
 {
 	uptr target_address = memory + target_marker;
 
 	while (destructor_head) {
 		if ((uptr)destructor_head < target_address)
 			break;
-		destructor_head->destroy(destructor_head->object);
+		for (int i = 0; i < destructor_head->count; i++)
+			destructor_head->destroy((void *)((uptr)destructor_head->object + i*destructor_head->stride));
 		destructor_head = destructor_head->next;
 	}
 }

@@ -6,7 +6,7 @@
 
 #include "types.h"
 
-class MemoryArena;
+class ArenaView;
 
 class VirtualArena {
 public:
@@ -15,11 +15,13 @@ public:
 
 	void reserve(u64 size);
 	void commit(u64 size);
+
 	void *allocate(u64 size, u64 alignment = 16);
+	void *allocate_no_lock(u64 size, u64 alignment = 16);
 	
 	void destroy();
 
-	MemoryArena arena(u64 size, u64 alignment = 16);
+	ArenaView view(u64 size, u64 alignment = 16);
 
 private:
 	u64 align_to_page(u64 size);
@@ -32,20 +34,26 @@ private:
 	std::mutex allocation_mutex;
 };
 
-class MemoryArena {
+/*
+ * NOT THREAD SAFE!!!
+ */
+class ArenaView {
 public:
-	MemoryArena();
-	MemoryArena(void *memory, u64 size);
+	ArenaView();
+	ArenaView(void *memory, u64 size);
 
-	MemoryArena(const MemoryArena &other);
-	MemoryArena &operator = (const MemoryArena &other);
+	ArenaView(const ArenaView &other) = delete;
+	ArenaView &operator = (const ArenaView &other) = delete;
+
+	ArenaView(ArenaView &&other) noexcept;
+	ArenaView &operator = (ArenaView &&other) noexcept;
 	
-	~MemoryArena();
+	~ArenaView();
 
 	void init(void *memory, u64 size);
 	void destroy();
 
-	MemoryArena sub_arena(u64 size, u64 alignment = 16);
+	ArenaView sub_arena(u64 size, u64 alignment = 16);
 
 	void *push_bytes(u64 size, u64 alignment = 16);
 	void *push_bytes_no_zero(u64 size, u64 alignment = 16);
@@ -58,10 +66,8 @@ public:
 		for (int i = 0; i < count; i++)
 			new (buf + i) T(std::forward<Args>(args)...);
 
-		if constexpr (!std::is_trivially_destructible_v<T>) {
-			for (int i = 0; i < count; i++)
-				register_destructor<T>(buf + i);
-		}
+		if constexpr (!std::is_trivially_destructible_v<T>)
+			register_destructors<T>(buf, count);
 
 		return buf;
 	}
@@ -69,13 +75,7 @@ public:
 	template <typename T, typename ...Args>
 	T *push(Args &&...args)
 	{
-		T *buf = (T *)push_bytes(sizeof(T), alignof(T));
-		new (buf) T(std::forward<Args>(args)...);
-
-		if constexpr (!std::is_trivially_destructible_v<T>)
-			register_destructor<T>(buf);
-
-		return buf;
+		return push_array<T>(1, std::forward<Args>(args)...);
 	}
 
 	void rewind(u64 marker);
@@ -92,16 +92,20 @@ private:
 	struct DestructorNode {
 		void (*destroy)(void *);
 		void *object;
+		u64 stride;
+		u64 count;
 		DestructorNode *next;
 	};
 
 	template <typename T>
-	void register_destructor(T *object)
+	void register_destructors(T *object, u64 count)
 	{
 		// Allocate the node onto ourselves 'cuz we're cool like that.
 		DestructorNode *node = (DestructorNode *)push_bytes_no_zero(sizeof(DestructorNode), alignof(DestructorNode));
 		node->destroy = [](void *ptr) { static_cast<T *>(ptr)->~T(); };
 		node->object = object;
+		node->stride = sizeof(T);
+		node->count = count;
 		node->next = destructor_head;
 
 		destructor_head = node;
@@ -114,6 +118,4 @@ private:
 	u64 memory_size;
 
 	DestructorNode *destructor_head;
-	
-	std::mutex allocation_mutex;
 };

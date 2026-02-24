@@ -4,7 +4,7 @@
 
 using namespace ast;
 
-static gfx::ShaderBytecode load_file_bytes(MemoryArena &arena, const String &path)
+static gfx::ShaderBytecode load_file_bytes(ArenaView &arena, const String &path)
 {
 	gfx::ShaderBytecode bytecode = {};
 
