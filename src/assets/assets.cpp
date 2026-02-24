@@ -303,7 +303,7 @@ void AssetManager::flush_uploads()
 		if (batch_stage_size)
 			staging_buffer = device->alloc_stage(batch_stage_size);
 
-		device->graphics().submit_immediate([&](gfx::CommandBuffer &cmd) {
+		device->submit_graphics_immediate([&](gfx::CommandBuffer &cmd) {
 			for (int i = 0; i < batch_count; i++) {
 				auto &req = uploads_pending[base_index + i];
 

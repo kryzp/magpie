@@ -12,12 +12,6 @@ namespace gfx
 	class Texture;
 	class TextureView;
 
-	struct SwapchainSupportDetails {
-		VkSurfaceCapabilitiesKHR capabilities;
-		Vector<VkSurfaceFormatKHR> surface_formats;
-		Vector<VkPresentModeKHR> present_modes;
-	};
-
 	class Swapchain {
 		friend class Device;
 

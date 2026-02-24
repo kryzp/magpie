@@ -3,11 +3,9 @@
 using namespace gfx;
 
 BindlessResources::BindlessResources()
-	: pool()
-	, layouts{}
-	, sets{}
-	, samplers(0)
-	, views(0)
+	: pool(), layouts{} , sets{}
+	, samplers(0), views(0)
+	, free_samplers(), free_views()
 	, updates()
 {
 }
@@ -36,14 +34,30 @@ bool BindlessResources::is_valid(BindlessHandle handle) const
 
 BindlessHandle BindlessResources::register_sampler(VkSampler sampler)
 {
-	BindlessHandle handle = ++samplers;
+	BindlessHandle handle;
+
+	if (!free_samplers.empty()) {
+		handle = free_samplers.back();
+		free_samplers.pop_back();
+	} else {
+		handle = ++samplers;
+	}
+
 	update_sampler(handle, sampler);
 	return handle;
 }
 
 BindlessHandle BindlessResources::register_view(VkImageView view, bool storage)
 {
-	BindlessHandle handle = ++views;
+	BindlessHandle handle;
+
+	if (!free_views.empty()) {
+		handle = free_views.back();
+		free_views.pop_back();
+	} else {
+		handle = ++samplers;
+	}
+
 	update_view(handle, view, storage);
 	return handle;
 }
@@ -59,4 +73,14 @@ void BindlessResources::update_view(BindlessHandle handle, VkImageView view, boo
 
 	if (storage)
 		push_update(BINDLESS_SET_STORAGE, handle, VK_NULL_HANDLE, view);
+}
+
+void BindlessResources::free_sampler(BindlessHandle handle)
+{
+	free_samplers.push_back(handle);
+}
+
+void BindlessResources::free_view(BindlessHandle handle)
+{
+	free_views.push_back(handle);
 }

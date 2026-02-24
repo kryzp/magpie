@@ -10,13 +10,10 @@
 
 #include "core/types.h"
 #include "math/colour.h"
-#include "container/deque.h"
 #include "container/hash_map.h"
 
-#include "per_frame.h"
 #include "device.h"
 #include "sync.h"
-#include "gpu_ring_buffer.h"
 
 #define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
 public:												\

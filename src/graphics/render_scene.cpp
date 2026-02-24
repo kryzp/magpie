@@ -321,7 +321,7 @@ u32 RenderScene::register_mesh(const Mesh &mesh)
 
 	u32 index = meshes.size();
 
-	device->graphics().submit_immediate([&](CommandBuffer &cmd) -> void {
+	device->submit_graphics_immediate([&](CommandBuffer &cmd) -> void {
 		const u64 vertex_stride = sizeof(gpu_types::GpuModelVertex);
 		const u64 index_stride = sizeof(u32);
 
@@ -376,7 +376,7 @@ u32 RenderScene::register_material(const Material &material, ast::AssetManager &
 
 	auto load_texture = [&](ast::AssetHandle handle) -> u32 {
 		if (assets.is_valid(handle))
-			return device->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_handle();
+			return device->get_cache().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_handle();
 		return 0;
 	};
 

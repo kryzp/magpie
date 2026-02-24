@@ -72,7 +72,7 @@ namespace gfx
 		VkBuffer handle;
 		VkBufferUsageFlags2 usage;
 
-		VmaAllocator *allocator;
+		VmaAllocator allocator;
 		VmaAllocation allocation;
 		VmaAllocationInfo allocation_info;
 		VmaAllocationCreateFlags allocation_flags;

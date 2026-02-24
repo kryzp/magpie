@@ -57,7 +57,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		vk_attachment_info.loadOp = output.clear_enabled ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_attachment_info.imageView = graph.get_device().fetch_texture_view(physical_texture, physical_texture->get_default_view_type(), output.range)->get_handle();
+		vk_attachment_info.imageView = graph.get_device().get_cache().fetch_texture_view(physical_texture, physical_texture->get_default_view_type(), output.range)->get_handle();
 		vk_attachment_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		
 		// TODO: MSAA isn't supported yet.
@@ -67,7 +67,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 
 		const RenderClear &clear = output.clear;
 
-		if (attachment_info.format == graph.get_device().get_depth_format()) {
+		if (attachment_info.format == graph.get_device().get_context().get_depth_format()) {
 			vk_attachment_info.clearValue.depthStencil = {
 				clear.depth,
 				clear.stencil
@@ -98,7 +98,7 @@ const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle h
 {
 	const Texture *physical_texture = graph.resources[handle].physical_texture;
 
-	return graph.get_device().fetch_texture_view(
+	return graph.get_device().get_cache().fetch_texture_view(
 		physical_texture,
 		physical_texture->get_default_view_type(),
 		range
@@ -129,7 +129,7 @@ RenderGraphBuilder::~RenderGraphBuilder()
 
 VkFormat RenderGraphBuilder::get_depth_format() const
 {
-	return graph.get_device().get_depth_format();
+	return graph.get_device().get_context().get_depth_format();
 }
 
 void RenderGraphBuilder::set_multi_view_mask(u32 mask)
@@ -379,8 +379,8 @@ void RenderResourcePool::destroy()
 
 void RenderResourcePool::flush()
 {
-	current_time = graph.get_device().graphics().get_timeline_value() + 1;
-	gpu_completed_time = graph.get_device().graphics().get_completed_timeline_value();
+	current_time = graph.get_device().get_graphics_timeline_value() + 1;
+	gpu_completed_time = graph.get_device().get_graphics_completed_timeline_value();
 
 	for (auto &t : texture_pool)
 		t.in_use = false;

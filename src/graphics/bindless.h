@@ -41,6 +41,9 @@ namespace gfx
 		void update_sampler(BindlessHandle handle, VkSampler sampler);
 		void update_view(BindlessHandle handle, VkImageView, bool storage);
 
+		void free_sampler(BindlessHandle handle);
+		void free_view(BindlessHandle handle);
+
 		const VkDescriptorSetLayout *get_layouts() const
 		{
 			return layouts;
@@ -60,6 +63,9 @@ namespace gfx
 
 		u32 samplers;
 		u32 views;
+
+		Vector<BindlessHandle> free_samplers;
+		Vector<BindlessHandle> free_views;
 
 		Vector<BindlessUpdate> updates;
 	};

@@ -57,6 +57,7 @@ private:
 	ast::AssetManager assets;
 
 	gfx::Device graphics_device;
+
 	gfx::Swapchain swapchain;
 
 	gfx::RenderScene render_scene;

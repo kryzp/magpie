@@ -6,12 +6,12 @@ using namespace gfx;
 
 void GpuBuffer::read(void *dst, u64 length, u64 offset)
 {
-	vmaCopyAllocationToMemory(*allocator, allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(allocator, allocation, offset, dst, length);
 }
 
 void GpuBuffer::write(const void *src, u64 length, u64 offset)
 {
-	vmaCopyMemoryToAllocation(*allocator, src, allocation, offset, length);
+	vmaCopyMemoryToAllocation(allocator, src, allocation, offset, length);
 }
 
 uptr GpuBuffer::map() const

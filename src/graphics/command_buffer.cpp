@@ -1,5 +1,6 @@
 #include "command_buffer.h"
 #include "device.h"
+#include "vk_check.h"
 
 using namespace gfx;
 

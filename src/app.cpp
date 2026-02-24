@@ -95,6 +95,7 @@ void App::init(VirtualArena &global_arena)
 	ClassDB::get_singleton()->build_registry();
 
 	graphics_device.init();
+
 	swapchain = graphics_device.create_swapchain();
 
 	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
@@ -209,7 +210,7 @@ void App::init(VirtualArena &global_arena)
 
 void App::destroy()
 {
-	graphics_device.graphics().wait_idle();
+	graphics_device.wait_idle();
 
 	ring_upload_buffer.destroy();
 
@@ -236,6 +237,7 @@ void App::destroy()
 	render_graph.destroy();
 
 	graphics_device.destroy_swapchain(swapchain);
+
 	graphics_device.destroy();
 }
 

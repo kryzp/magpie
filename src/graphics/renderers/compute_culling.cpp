@@ -74,7 +74,7 @@ void ComputeCulling::add_render_stages(
 			}
 
 			ComputePipelineDef pipeline_def(compute_frustum_culling_program);
-			PipelineState pipeline_st = ctx.device.fetch_pipeline(pipeline_def);
+			PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);

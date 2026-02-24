@@ -1,37 +1,28 @@
 #pragma once
 
-#include <volk/volk.h>
-#include <vma/vk_mem_alloc.h>
+#include <functional>
 
 #include "core/types.h"
 
 #include "container/vector.h"
-#include "container/hash_map.h"
-#include "container/string.h"
 
+#include "context.h"
+#include "resource_cache.h"
 #include "bindless.h"
 #include "command_pool.h"
 #include "swapchain.h"
-#include "command_pool.h"
 #include "command_buffer.h"
-#include "queue.h"
 #include "gpu_buffer.h"
 #include "texture.h"
 #include "shader.h"
 #include "pipeline.h"
 #include "sampler.h"
 
-#define GFX_VK_CHECK(fn, msg) \
-	do { \
-		VkResult _gfx_vk_check_result = (fn); \
-		if (_gfx_vk_check_result != VK_SUCCESS) \
-			debug_log_crash(msg " (%d)", _gfx_vk_check_result); \
-	} while (0)
-
 namespace gfx
 {
-	class Device {
+	class Context;
 
+	class Device {
 	public:
 		Device();
 		~Device();
@@ -40,18 +31,38 @@ namespace gfx
 		void destroy();
 
 		void wait_idle();
-		void wait_for_fence(VkFence fence);
-		void reset_fence(VkFence fence);
 
-		void destroy_fence(VkFence fence);
-		void destroy_semaphore(VkSemaphore semaphore);
+		void wait_for_fence(VkFence fence) const;
+		void reset_fence(VkFence fence) const;
+		void destroy_fence(VkFence fence) const;
+
+		VkSemaphore create_timeline_semaphore(u64 initial_value) const;
+		void wait_for_timeline_semaphore(VkSemaphore semaphore, u64 value) const;
+		u64 get_timeline_semaphore_value(VkSemaphore semaphore) const;
+		void destroy_semaphore(VkSemaphore semaphore) const;
 
 		// ---
 
 		CommandBuffer begin_frame(Swapchain &swapchain);
 		void end_frame(const Swapchain &swapchain, CommandBuffer &cmd);
 
-		Queue &graphics();
+		// ---
+
+		u64 submit_graphics(
+			CommandBuffer &cmd,
+			const Vector<VkSemaphoreSubmitInfo> &waits,
+			const Vector<VkSemaphoreSubmitInfo> &signals,
+			VkFence fence
+		);
+
+		void submit_graphics_immediate(
+			const std::function<void(CommandBuffer &cmd)> &record
+		);
+		
+		void present(
+			const Swapchain &swapchain,
+			const Vector<VkSemaphore> &waits
+		);
 
 		// ---
 
@@ -66,18 +77,12 @@ namespace gfx
 		void destroy_swapchain(const Swapchain &swapchain);
 
 		// ---
-
+		
 		VkPipelineLayout create_pipeline_layout(const ShaderProgram *program);
-		VkPipelineLayout fetch_pipeline_layout(const ShaderProgram *program);
 		void destroy_pipeline_layout(VkPipelineLayout layout);
-
-		// ---
 
 		VkPipeline create_pipeline(const GraphicsPipelineDef &def, VkPipelineLayout layout);
 		VkPipeline create_pipeline(const ComputePipelineDef &def, VkPipelineLayout layout);
-
-		PipelineState fetch_pipeline(const GraphicsPipelineDef &def);
-		PipelineState fetch_pipeline(const ComputePipelineDef &def);
 
 		void destroy_pipeline(VkPipeline pipeline);
 
@@ -114,21 +119,11 @@ namespace gfx
 
 		void destroy_texture(const Texture *texture);
 
-		// ---
-
 		TextureView *create_texture_view(
 			const Texture *texture,
 			VkImageViewType type,
 			const SubresourceRange &range
 		);
-
-		TextureView *fetch_texture_view(
-			const Texture *texture,
-			VkImageViewType type,
-			const SubresourceRange &range
-		);
-
-		TextureView *fetch_texture_view_std(const Texture *texture);
 
 		void destroy_texture_view(const TextureView *texture_view);
 
@@ -137,9 +132,9 @@ namespace gfx
 		// TODO: The parameters here should be put into a struct like GPUBufferAllocInfo.
 
 		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size);
-		void destroy_buffer(const GpuBuffer *gpu_buffer);
-
 		GpuBuffer *alloc_stage(u64 size);
+
+		void destroy_buffer(const GpuBuffer *gpu_buffer);
 
 		// ---
 
@@ -156,32 +151,42 @@ namespace gfx
 
 		// ---
 
-		const VkDevice &get_handle() const
-		{
-			return device;
-		}
-
 		u32 get_current_frame_index() const
 		{
 			return current_frame_index;
 		}
 
-		VkFormat get_depth_format() const
+		u64 get_graphics_timeline_value() const
 		{
-			return depth_format;
+			return graphics_timeline_value;
 		}
 
-		VkSampleCountFlagBits get_max_sample_count() const
+		u64 get_graphics_completed_timeline_value() const
 		{
-			return max_msaa_samples;
+			return get_timeline_semaphore_value(graphics_timeline_semaphore);
 		}
 
-		const BindlessResources &get_bindless() const
+		// ---
+
+		const Context &get_context() const
+		{
+			return context;
+		}
+
+		ResourceCache &get_cache()
+		{
+			return cache;
+		}
+
+		BindlessResources &get_bindless()
 		{
 			return bindless;
 		}
 
 	private:
+		void create_sync_resources();
+		void destroy_sync_resources();
+
 		void create_bindless();
 		void destroy_bindless();
 		void apply_bindless_updates();
@@ -189,28 +194,23 @@ namespace gfx
 		void init_imgui();
 		void destroy_imgui();
 
-		VkInstance instance;
-		VkDevice device;
-
-		VkPhysicalDevice physical_device;
-		VkPhysicalDeviceProperties2 physical_device_properties;
-		VkPhysicalDeviceFeatures2 physical_device_features;
-
-		VmaAllocator vma_allocator;
-
-		VkSurfaceKHR surface;
-		VkPipelineCache pipeline_process_cache;
-
-		VkDebugUtilsMessengerEXT debug_messenger;
-		bool has_validation_layers;
+		Context context;
+		ResourceCache cache;
 
 		u32 current_frame_index;
+		
+		VkPipelineCache pipeline_process_cache;
+
+		VkSemaphore graphics_timeline_semaphore;
+		u64 graphics_timeline_value;
 
 		struct PerFrameData {
 			u64 expected_timeline_value;
 
 			VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
 			VkSemaphore render_finished_semaphore; // Signaled when OS allows us to present.
+
+			CommandPool command_pool;
 
 			struct ImageDestroy {
 				VkImage handle;
@@ -224,27 +224,17 @@ namespace gfx
 
 			Vector<VkSampler> destroyed_samplers;
 			Vector<ImageDestroy> destroyed_images;
-			Vector<VkImageView> destroyed_image_views;
+			Vector<VkImageView> destroyed_views;
 			Vector<BufferDestroy> destroyed_buffers;
+			Vector<BindlessHandle> destroyed_bindless_samplers;
+			Vector<BindlessHandle> destroyed_bindless_views;
 
-			void clean_up(VkDevice vk_device, const VmaAllocator &vma_allocator);
+			void flush(VkDevice vk_device, VmaAllocator vma_allocator, BindlessResources &bindless);
 		};
 
 		PerFrameData per_frame_data[FRAMES_IN_FLIGHT];
 
-		Queue graphics_queue;
-
-		VkFormat depth_format;
-		VkSampleCountFlagBits max_msaa_samples;
-
-		SwapchainSupportDetails swapchain_details;
-
-		// TODO: Should this be moved out?
 		BindlessResources bindless;
-
-		HashMap<u64, TextureView *> texture_view_cache;
-		HashMap<u64, VkPipeline> pipeline_cache;
-		HashMap<u64, VkPipelineLayout> pipeline_layout_cache;
 
 		VkDescriptorPool imgui_pool;
 	};
