@@ -212,7 +212,7 @@ int platform::convert_fiber_to_thread()
 	return ConvertFiberToThread();
 }
 
-void *platform::create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param)
+void *platform::create_fiber(u32 stack_size, void (*entry)(void *param), void *param)
 {
 	return CreateFiber(stack_size, entry, param);
 }

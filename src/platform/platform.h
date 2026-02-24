@@ -20,8 +20,6 @@
 
 #define GLOBAL_MEMORY_RESERVED   GIGABYTES(8)
 
-typedef void (*fiber_entry_point_fn)(void *param);
-
 namespace platform
 {
 	void *virtual_reserve(u64 bytes);
@@ -58,7 +56,7 @@ namespace platform
 
 	void *convert_thread_to_fiber();
 	int convert_fiber_to_thread();
-	void *create_fiber(u32 stack_size, fiber_entry_point_fn entry, void *param);
+	void *create_fiber(u32 stack_size, void (*entry)(void *param), void *param);
 	void delete_fiber(void *handle);
 	void switch_to_fiber(void *handle);
 	void set_thread_affinity(void *handle, u64 mask);
