@@ -458,7 +458,7 @@ const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info, R
 	texture.state.to_flush_access = VK_ACCESS_2_NONE;
 	texture.state.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	memory_set(texture.state.invalidated_in_stage, 0, sizeof(texture.state.invalidated_in_stage));
+	memory_zero_array(texture.state.invalidated_in_stage);
 	
 	if (out_state)
 		*out_state = texture.state;
@@ -509,8 +509,8 @@ const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info, R
 
 	buffer.state.pipeline_barrier_stage_flags = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 	buffer.state.to_flush_access = VK_ACCESS_2_NONE;
-
-	memory_set(buffer.state.invalidated_in_stage, 0, sizeof(buffer.state.invalidated_in_stage));
+	
+	memory_zero_array(buffer.state.invalidated_in_stage);
 	
 	if (out_state)
 		*out_state = buffer.state;
@@ -760,7 +760,7 @@ void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdg
 		}
 
 		if (r.tracking.to_flush_access || layout_change)
-			memory_set(r.tracking.invalidated_in_stage, 0, sizeof(r.tracking.invalidated_in_stage));
+			memory_zero_array(r.tracking.invalidated_in_stage);
 
 		r.tracking.to_flush_access = 0;
 
@@ -1066,7 +1066,7 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const A
 	resource.tracking.to_flush_access = access_state.access;
 	resource.tracking.layout = layout;
 
-	memory_set(resource.tracking.invalidated_in_stage, 0, sizeof(resource.tracking.invalidated_in_stage));
+	memory_zero_array(resource.tracking.invalidated_in_stage);
 
 	resource.physical_texture = texture;
 
@@ -1103,8 +1103,8 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const A
 	
 	resource.tracking.pipeline_barrier_stage_flags = access_state.stage;
 	resource.tracking.to_flush_access = access_state.access;
-
-	memory_set(resource.tracking.invalidated_in_stage, 0, sizeof(resource.tracking.invalidated_in_stage));
+	
+	memory_zero_array(resource.tracking.invalidated_in_stage);
 
 	resource.physical_buffer = buffer;
 

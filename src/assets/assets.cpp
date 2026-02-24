@@ -42,7 +42,7 @@ void AssetManager::init(const MemoryArena &arena, gfx::Device *device)
 	this->device = device;
 	
 	this->asset_arena = arena;
-	this->load_arena = this->asset_arena.sub_arena(MEGABYTES(700));
+	this->load_arena = this->asset_arena.sub_arena(MEGABYTES(512));
 
 	upload_counter = job::alloc_counter();
 }

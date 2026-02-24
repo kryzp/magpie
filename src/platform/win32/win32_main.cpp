@@ -426,16 +426,15 @@ static void process_events(inp::InputState &input)
 	}
 
 	// Reset button input states.
-	memory_set(input.kb_pressed, 0, sizeof(input.kb_pressed));
-	memory_set(input.kb_released, 0, sizeof(input.kb_released));
-	
-	memory_set(input.mb_pressed, 0, sizeof(input.mb_pressed));
-	memory_set(input.mb_released, 0, sizeof(input.mb_released));
+	memory_zero_array(input.kb_pressed);
+	memory_zero_array(input.kb_released);
+	memory_zero_array(input.mb_pressed);
+	memory_zero_array(input.mb_released);
 
 	for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
 		auto &gp = input.gamepads[i];
-		memory_set(gp.pressed, 0, sizeof(gp.pressed));
-		memory_set(gp.released, 0, sizeof(gp.released));
+		memory_zero_array(gp.pressed);
+		memory_zero_array(gp.released);
 	}
 
 	// Reset mouse state.

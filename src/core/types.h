@@ -29,6 +29,7 @@
 #define memory_copy                              memcpy
 #define memory_set                               memset
 #define memory_move                              memmove
+#define memory_zero_array(a)                     memset((a), 0, sizeof(a))
 #define memory_zero_struct(s)                    memset((s), 0, sizeof(*(s)))
 #define cstr_copy                                strcpy
 #define cstr_copy_n                              strncpy
