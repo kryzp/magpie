@@ -3,10 +3,14 @@
 #include "assets/texture_serializer.h"
 #include "math/calc.h"
 
+#include "device.h"
+#include "resource_cache.h"
+
 using namespace gfx;
 
 RenderScene::RenderScene()
 	: device(nullptr)
+	, cache(nullptr)
 	, objects()
 	, lights()
 	, geometry_pages()
@@ -22,9 +26,12 @@ RenderScene::~RenderScene()
 {
 }
 
-void RenderScene::init(Device *device)
+void RenderScene::init(Device *device, ResourceCache *cache)
 {
+	assert(device && cache);
+
 	this->device = device;
+	this->cache = cache;
 	
 	mesh_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
@@ -376,7 +383,7 @@ u32 RenderScene::register_material(const Material &material, ast::AssetManager &
 
 	auto load_texture = [&](ast::AssetHandle handle) -> u32 {
 		if (assets.is_valid(handle))
-			return device->get_cache().fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_handle();
+			return cache->fetch_texture_view_std(assets.get_asset<ast::TextureAsset>(handle)->texture)->get_bindless_handle();
 		return 0;
 	};
 

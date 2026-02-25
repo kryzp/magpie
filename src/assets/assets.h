@@ -23,14 +23,14 @@ class FileStream;
 //	ASSET_TYPE_MAP,
 
 // I <3 X-MACROS!!
-#define ASSET_DEFINITIONS \
-	ASSET_DEF(TEXTURE, Texture) \
-	ASSET_DEF(SHADER, Shader) \
+#define ASSET_DEFINITIONS			\
+	ASSET_DEF(TEXTURE, Texture)		\
+	ASSET_DEF(SHADER, Shader)		\
 	ASSET_DEF(MODEL, Model)
 
-#define ASSET_DECLARE(type) \
-	static AssetType get_asset_type_static() { return type; } \
-	virtual AssetType get_asset_type() const override { return type; }
+#define ASSET_DECLARE(type_)												\
+	static AssetType get_asset_type_static() { return type_; }				\
+	virtual AssetType get_asset_type() const override { return type_; }
 
 namespace ast
 {
@@ -94,13 +94,9 @@ namespace ast
 	struct Asset {
 		friend class AssetManager;
 
-		Asset()
-			: handle()
-			, flags(0)
-		{
-		}
+		Asset() : handle(), flags(0) { }
 
-		virtual ~Asset() = default;
+		virtual void unload() = 0;
 
 		virtual AssetType get_asset_type() const = 0;
 
@@ -243,15 +239,12 @@ namespace ast
 		
 		class AssetList {
 		public:
-			constexpr static u32 INITIAL_CAPACITY = 16;
-
 			AssetList()
 				: list()
 				, free_indices()
 				, capacity()
-				, curr_index(1) // index = 0 is an invalid handle.
+				, curr_index(0)
 			{
-				list.resize(INITIAL_CAPACITY);
 			}
 
 			~AssetList()
@@ -266,11 +259,9 @@ namespace ast
 					index = free_indices.top();
 					free_indices.pop();
 				} else {
-					index = curr_index++;
+					index = list.size();
+					list.emplace_back();
 				}
-
-				if (index >= list.size())
-					list.resize(list.size() * 2);
 
 				AssetHandle handle = {};
 				handle.index = index;
@@ -288,7 +279,7 @@ namespace ast
 			{
 				assert(is_valid(handle));
 
-				delete list[handle.index].asset;
+				list[handle.index].asset->unload();
 				list[handle.index].asset = nullptr;
 
 				free_indices.push(handle.index);
@@ -316,7 +307,6 @@ namespace ast
 			bool is_valid(const AssetHandle &handle) const
 			{
 				return
-					(handle.index > 0) &&
 					(handle.index < list.size()) &&
 					(list[handle.index].generation == (handle.generation + 1));
 			}

@@ -414,8 +414,8 @@ void job::parallel_for(
 	
 	ScratchScope scratch = scratch::get();
 
-	ParallelForInternalParam *params = scratch.get_arena().push_array<ParallelForInternalParam>(job_count);
-	JobDecl *decls =  scratch.get_arena().push_array<JobDecl>(job_count);
+	ParallelForInternalParam *params = scratch.arena().array<ParallelForInternalParam>(job_count);
+	JobDecl *decls =  scratch.arena().array<JobDecl>(job_count);
 
 	for (int i = 0; i < job_count; i++) {
 		u32 base_index = batch_size * i;

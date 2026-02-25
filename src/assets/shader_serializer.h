@@ -13,7 +13,7 @@ namespace ast
 		{
 		}
 
-		~ShaderAsset() override
+		void unload() override
 		{
 			if (!has_flag(ASSET_FLAG_INVALID))
 				device.destroy_shader_program(shader);

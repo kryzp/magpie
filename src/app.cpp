@@ -95,13 +95,9 @@ void App::init(VirtualArena &global_arena)
 	ClassDB::get_singleton()->build_registry();
 
 	graphics_device.init();
+	graphics_cache.init(&graphics_device);
 
 	swapchain = graphics_device.create_swapchain();
-
-	assets.init(global_arena.view(GIGABYTES(1)), &graphics_device);
-	assets.mount("assets", "../../res/");
-	
-	render_graph.init(&graphics_device);
 	
 	ring_upload_buffer.allocate(
 		&graphics_device,
@@ -112,7 +108,11 @@ void App::init(VirtualArena &global_arena)
 		TRANSIENT_ARENA_SIZE
 	);
 
-	render_scene.init(&graphics_device);
+	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
+	assets.mount("assets", "../../res/");
+	
+	render_graph.init(&graphics_device, &graphics_cache);
+	render_scene.init(&graphics_device, &graphics_cache);
 
 //	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
 	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
@@ -236,8 +236,9 @@ void App::destroy()
 
 	render_graph.destroy();
 
-	graphics_device.destroy_swapchain(swapchain);
+	graphics_cache.destroy();
 
+	graphics_device.destroy_swapchain(swapchain);
 	graphics_device.destroy();
 }
 

@@ -107,7 +107,7 @@ void SkyboxRenderer::add_render_stages(
 			pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
 			pipeline_def.colour_attachment_formats.push_back(colour->get_format());
 
-			PipelineState st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			struct {
 				u64 frame_data_buffer;
@@ -163,7 +163,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
 			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.hdr_image_id = ctx.device.get_cache().fetch_texture_view_std(hdr_texture)->get_bindless_handle();
+			args.hdr_image_id = ctx.cache.fetch_texture_view_std(hdr_texture)->get_bindless_handle();
 			args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
 			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
@@ -172,7 +172,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 			pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 			pipeline_def.view_mask = 0b111111;
 
-			PipelineState st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(st.bind_point, st.pipeline);

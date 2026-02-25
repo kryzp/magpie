@@ -74,14 +74,14 @@ void ComputeCulling::add_render_stages(
 			}
 
 			ComputePipelineDef pipeline_def(compute_frustum_culling_program);
-			PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
 #if 0
 			Mat4 proj = ctx.scene_view.camera->get_projection();
-			Mat4 view = ctx.scene_view.camera->get_view();
+			Mat4 arena = ctx.scene_view.camera->get_view();
 
 			Mat4 proj_t = proj.transpose();
 
@@ -130,7 +130,7 @@ void ComputeCulling::add_render_stages(
 				u64 output_buffer;
 			} draw_cull_data;
 
-			draw_cull_data.view_matrix = view;
+			draw_cull_data.view_matrix = arena;
 	
 			draw_cull_data.P00 = proj.m00;
 			draw_cull_data.P11 = proj.m11;

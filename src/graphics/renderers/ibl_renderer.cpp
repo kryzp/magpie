@@ -36,7 +36,7 @@ void IBLRenderer::render_brdf(
 			GraphicsPipelineDef pipeline_def(brdf_shader);
 			pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32_SFLOAT };
 
-			PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
@@ -78,7 +78,7 @@ void IBLRenderer::render_environment_map(
 			pipeline_def.view_mask = 0b111111;
 			pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 
-			PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
@@ -135,7 +135,7 @@ void IBLRenderer::render_environment_map(
 				pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 				pipeline_def.view_mask = 0b111111;
 
-				PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+				PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 				cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 				cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);

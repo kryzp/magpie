@@ -63,7 +63,7 @@ void VirtualArena::free()
 	memory_committed = 0;
 }
 
-ArenaView VirtualArena::view(u64 size, u64 alignment)
+ArenaView VirtualArena::arena(u64 size, u64 alignment)
 {
 	return ArenaView(allocate(size, alignment), size);
 }
@@ -77,7 +77,6 @@ ArenaView::ArenaView()
 	: memory(0)
 	, memory_used(0)
 	, memory_size(0)
-	, destructor_head(nullptr)
 {
 }
 
@@ -85,7 +84,6 @@ ArenaView::ArenaView(void *memory, u64 size)
 	: memory((uptr)memory)
 	, memory_used(0)
 	, memory_size(size)
-	, destructor_head(nullptr)
 {
 }
 
@@ -93,12 +91,10 @@ ArenaView::ArenaView(ArenaView &&other) noexcept
 	: memory(other.memory)
 	, memory_used(other.memory_used)
 	, memory_size(other.memory_size)
-	, destructor_head(other.destructor_head)
 {
 	other.memory = 0;
 	other.memory_used = 0;
 	other.memory_size = 0;
-	other.destructor_head = nullptr;
 }
 
 ArenaView &ArenaView::operator = (ArenaView &&other) noexcept
@@ -107,12 +103,10 @@ ArenaView &ArenaView::operator = (ArenaView &&other) noexcept
 		this->memory = other.memory;
 		this->memory_used = other.memory_used;
 		this->memory_size = other.memory_size;
-		this->destructor_head = other.destructor_head;
 
 		other.memory = 0;
 		other.memory_used = 0;
 		other.memory_size = 0;
-		other.destructor_head = nullptr;
 	}
 
 	return *this;
@@ -127,7 +121,6 @@ void ArenaView::init(void *memory, u64 size)
 	this->memory = (uptr)memory;
 	this->memory_used = 0;
 	this->memory_size = size;
-	this->destructor_head = nullptr;
 }
 
 void ArenaView::destroy()
@@ -135,15 +128,12 @@ void ArenaView::destroy()
 	if (!memory)
 		return;
 	
-	invoke_destructors(0);
-
 	memory = 0;
 	memory_used = 0;
 	memory_size = 0;
-	destructor_head = nullptr;
 }
 
-ArenaView ArenaView::sub_arena(u64 size, u64 alignment)
+ArenaView ArenaView::arena(u64 size, u64 alignment)
 {
 	return ArenaView(push_bytes(size, alignment), size);
 }
@@ -175,13 +165,11 @@ void *ArenaView::push_bytes_no_zero(u64 size, u64 alignment)
 
 void ArenaView::rewind(u64 marker)
 {
-	invoke_destructors(marker);
 	memory_used = marker;
 }
 
 void ArenaView::reset()
 {
-	invoke_destructors(0);
 	memory_used = 0;
 }
 
@@ -211,6 +199,7 @@ u64 ArenaView::remaining_space() const
 	return memory_size - memory_used;
 }
 
+/*
 void ArenaView::invoke_destructors(u64 target_marker)
 {
 	uptr target_address = memory + target_marker;
@@ -223,3 +212,4 @@ void ArenaView::invoke_destructors(u64 target_marker)
 		destructor_head = destructor_head->next;
 	}
 }
+*/

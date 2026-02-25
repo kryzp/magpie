@@ -6,23 +6,23 @@
 class ScratchScope {
 public:
 	ScratchScope(ArenaView &arena)
-		: arena(arena)
+		: arena_ref(arena)
 		, marker(arena.marker())
 	{
 	}
 
 	~ScratchScope()
 	{
-		arena.rewind(marker);
+		arena_ref.rewind(marker);
 	}
 
-	ArenaView &get_arena()
+	ArenaView &arena()
 	{
-		return arena;
+		return arena_ref;
 	}
 
 private:
-	ArenaView &arena;
+	ArenaView &arena_ref;
 	u64 marker;
 };
 

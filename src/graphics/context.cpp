@@ -79,7 +79,7 @@ static const char *const *get_instance_extensions(ArenaView &arena, u32 *extensi
 	extra_extension_count += 2;
 #endif
 
-	const char **extensions = arena.push_array<const char *>(*extension_count + extra_extension_count);
+	const char **extensions = arena.array<const char *>(*extension_count + extra_extension_count);
 
 	for (int i = 0; i < *extension_count; i++)
 		extensions[i] = names[i];
@@ -112,7 +112,7 @@ static bool check_graphics_physical_device_extension_support(VkPhysicalDevice ph
 
 	ScratchScope scratch = scratch::get();
 
-	VkExtensionProperties *available_exts = scratch.get_arena().push_array<VkExtensionProperties>(extension_count);
+	VkExtensionProperties *available_exts = scratch.arena().array<VkExtensionProperties>(extension_count);
 
 	vkEnumerateDeviceExtensionProperties(
 		physical_device, nullptr,
@@ -141,7 +141,7 @@ static bool check_for_validation_layer_support(ArenaView &arena)
 
 	ScratchScope scratch = scratch::get();
 
-	VkLayerProperties *available_layers = scratch.get_arena().push_array<VkLayerProperties>(layer_count);
+	VkLayerProperties *available_layers = scratch.arena().array<VkLayerProperties>(layer_count);
 	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
 
 	bool result = true;
@@ -331,7 +331,7 @@ void Context::init()
 	
 	ScratchScope scratch = scratch::get();
 
-	instance_create_info.ppEnabledExtensionNames = get_instance_extensions(scratch.get_arena(), &instance_create_info.enabledExtensionCount);
+	instance_create_info.ppEnabledExtensionNames = get_instance_extensions(scratch.arena(), &instance_create_info.enabledExtensionCount);
 
 	VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {};
 	debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -348,7 +348,7 @@ void Context::init()
 	debug_create_info.pfnUserCallback = graphics_vulkan_debug_callback;
 	debug_create_info.pUserData = nullptr;
 
-	has_validation_layers = check_for_validation_layer_support(scratch.get_arena());
+	has_validation_layers = check_for_validation_layer_support(scratch.arena());
 
 	if (has_validation_layers) {
 		debug_log("Validation layer support verified.");
@@ -400,7 +400,7 @@ void Context::init()
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 		VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-		VkPhysicalDevice *devices = scratch.get_arena().push_array<VkPhysicalDevice>(device_count);
+		VkPhysicalDevice *devices = scratch.arena().array<VkPhysicalDevice>(device_count);
 
 		vkEnumeratePhysicalDevices(instance, &device_count, devices);
 
@@ -450,7 +450,7 @@ void Context::init()
 	if (queue_family_count <= 0)
 		debug_log_crash("Failed to find any queue families.");
 
-	VkQueueFamilyProperties *queue_families = scratch.get_arena().push_array<VkQueueFamilyProperties>(queue_family_count);
+	VkQueueFamilyProperties *queue_families = scratch.arena().array<VkQueueFamilyProperties>(queue_family_count);
 
 	vkGetPhysicalDeviceQueueFamilyProperties(
 		physical_device,

@@ -10,8 +10,8 @@ void scratch::init(VirtualArena &arena)
 {
 	auto &ctx = thread_scratch_context;
 
-	ctx.arenas[0] = arena.view(SCRATCH_MEMORY_SIZE);
-	ctx.arenas[1] = arena.view(SCRATCH_MEMORY_SIZE);
+	ctx.arenas[0] = arena.arena(SCRATCH_MEMORY_SIZE);
+	ctx.arenas[1] = arena.arena(SCRATCH_MEMORY_SIZE);
 }
 
 void scratch::destroy()

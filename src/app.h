@@ -7,6 +7,7 @@
 #include "assets/assets.h"
 
 #include "graphics/device.h"
+#include "graphics/resource_cache.h"
 #include "graphics/render_scene.h"
 #include "graphics/render_graph.h"
 #include "graphics/camera.h"
@@ -57,6 +58,7 @@ private:
 	ast::AssetManager assets;
 
 	gfx::Device graphics_device;
+	gfx::ResourceCache graphics_cache;
 
 	gfx::Swapchain swapchain;
 

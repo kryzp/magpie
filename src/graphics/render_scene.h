@@ -1,7 +1,5 @@
 #pragma once
 
-#include <volk/volk.h>
-
 #include "core/types.h"
 #include "container/vector.h"
 #include "math/mat4.h"
@@ -10,12 +8,12 @@
 
 #include "gpu_types.h"
 #include "gpu_ring_buffer.h"
-#include "render_graph.h"
 #include "model.h"
 
 namespace gfx
 {
 	class Device;
+	class ResourceCache;
 	class GpuBuffer;
 	class CommandBuffer;
 
@@ -70,7 +68,7 @@ namespace gfx
 		RenderScene();
 		~RenderScene();
 
-		void init(Device *device);
+		void init(Device *device, ResourceCache *cache);
 		void destroy();
 
 		RenderSceneResources update_transient_resources(GpuRingBuffer &frame_arena);
@@ -109,6 +107,7 @@ namespace gfx
 
 	private:
 		Device *device;
+		ResourceCache *cache;
 
 		void update_object_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources);
 		void update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources);

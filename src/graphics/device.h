@@ -7,7 +7,6 @@
 #include "container/vector.h"
 
 #include "context.h"
-#include "resource_cache.h"
 #include "bindless.h"
 #include "command_pool.h"
 #include "swapchain.h"
@@ -173,11 +172,6 @@ namespace gfx
 			return context;
 		}
 
-		ResourceCache &get_cache()
-		{
-			return cache;
-		}
-
 		BindlessResources &get_bindless()
 		{
 			return bindless;
@@ -195,8 +189,7 @@ namespace gfx
 		void destroy_imgui();
 
 		Context context;
-		ResourceCache cache;
-
+		
 		u32 current_frame_index;
 		
 		VkPipelineCache pipeline_process_cache;

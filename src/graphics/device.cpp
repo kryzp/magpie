@@ -69,7 +69,6 @@ static VkExtent2D _choose_swapchain_extent(const VkSurfaceCapabilitiesKHR *capab
 
 Device::Device()
 	: context()
-	, cache()
 	, current_frame_index(0)
 	, pipeline_process_cache(VK_NULL_HANDLE)
 	, graphics_timeline_semaphore(VK_NULL_HANDLE)
@@ -108,14 +107,10 @@ void Device::init()
 	create_sync_resources();
 	create_bindless();
 	init_imgui();
-
-	cache.init(this);
 }
 
 void Device::destroy()
 {
-	cache.destroy();
-
 	destroy_sync_resources();
 	destroy_bindless();
 	destroy_imgui();
@@ -520,7 +515,7 @@ Swapchain Device::create_swapchain()
 	if (texture_count <= 0)
 		debug_log_crash("Failed to find any images in swapchain.");
 
-	VkImage *vk_images = scratch.get_arena().push_array<VkImage>(texture_count);
+	VkImage *vk_images = scratch.arena().array<VkImage>(texture_count);
 
 	vkGetSwapchainImagesKHR(context.get_device(), swapchain.handle, &texture_count, vk_images);
 
@@ -676,7 +671,7 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 	
 	ScratchScope scratch = scratch::get();
 
-	VkPipelineColorBlendAttachmentState *blend_states = scratch.get_arena().push_array<VkPipelineColorBlendAttachmentState>(def.colour_attachment_formats.size());
+	VkPipelineColorBlendAttachmentState *blend_states = scratch.arena().array<VkPipelineColorBlendAttachmentState>(def.colour_attachment_formats.size());
 
 	VkPipelineColorBlendAttachmentState *blend_state = blend_states;
 
@@ -1196,7 +1191,7 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 		reflect_result = spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, nullptr);
 
 		if (reflect_result == SPV_REFLECT_RESULT_SUCCESS && push_constant_count > 0) {
-			SpvReflectBlockVariable **pcs = scratch.get_arena().push_array<SpvReflectBlockVariable *>(push_constant_count);
+			SpvReflectBlockVariable **pcs = scratch.arena().array<SpvReflectBlockVariable *>(push_constant_count);
 			spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, pcs);
 
 			for (u32 i = 0; i < push_constant_count; i++) {

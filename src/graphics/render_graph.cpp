@@ -37,10 +37,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 	render_info.view_mask = stage.multi_view_mask;
 
 	for (auto &output : stage.outputs) {
-		RenderResource &resource = graph.resources[output.handle];
-
-		const Texture *physical_texture = resource.physical_texture;
-		const AttachmentInfo &attachment_info = resource.texture_info;
+		auto &attachment_info = graph.resources[output.handle].texture_info;
 
 		// TODO: Right now it's just based on the last attachments sample count_offset.
 		//       Assumption is that all attachments will already have the same sample count_offset.
@@ -48,8 +45,8 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		render_info.samples = attachment_info.samples;
 
 		u32 mip = output.range.base_mip;
-		render_info.width = CalcU::max(1u, (u32)resource.texture_info.size_x >> mip);
-		render_info.height = CalcU::max(1u, (u32)resource.texture_info.size_y >> mip);
+		render_info.width = CalcU::max(1u, (u32)attachment_info.size_x >> mip);
+		render_info.height = CalcU::max(1u, (u32)attachment_info.size_y >> mip);
 
 		VkRenderingAttachmentInfo vk_attachment_info = {};
 		vk_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -57,7 +54,7 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		vk_attachment_info.loadOp = output.clear_enabled ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_attachment_info.imageView = graph.get_device().get_cache().fetch_texture_view(physical_texture, physical_texture->get_default_view_type(), output.range)->get_handle();
+		vk_attachment_info.imageView = get_texture_view(output.handle, output.range)->get_handle();
 		vk_attachment_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 		
 		// TODO: MSAA isn't supported yet.
@@ -98,7 +95,7 @@ const TextureView *RenderStageResources::get_texture_view(RenderResourceHandle h
 {
 	const Texture *physical_texture = graph.resources[handle].physical_texture;
 
-	return graph.get_device().get_cache().fetch_texture_view(
+	return graph.cache->fetch_texture_view(
 		physical_texture,
 		physical_texture->get_default_view_type(),
 		range
@@ -567,6 +564,7 @@ static bool resource_needs_invalidation(const AccessState &barrier, const Resour
 
 RenderGraph::RenderGraph()
 	: device(nullptr)
+	, cache(nullptr)
 	, resources()
 	, stages()
 	, pool(*this)
@@ -579,9 +577,12 @@ RenderGraph::~RenderGraph()
 {
 }
 
-void RenderGraph::init(Device *device)
+void RenderGraph::init(Device *device, ResourceCache *cache)
 {
+	assert(device && cache);
+
 	this->device = device;
+	this->cache = cache;
 }
 
 void RenderGraph::destroy()
@@ -925,6 +926,7 @@ void RenderGraph::execute(
 
 		RenderContext ctx = {
 			.device = *device,
+			.cache = *cache,
 			.cmd = cmd,
 			.scene = scene,
 			.camera = camera,

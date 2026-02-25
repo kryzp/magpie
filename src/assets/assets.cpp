@@ -39,7 +39,6 @@ AssetManager::~AssetManager()
 void AssetManager::init(ArenaView &&arena, gfx::Device *device)
 {
 	this->device = device;
-	
 	this->asset_arena = std::move(arena);
 
 	upload_counter = job::alloc_counter();
@@ -47,6 +46,9 @@ void AssetManager::init(ArenaView &&arena, gfx::Device *device)
 
 void AssetManager::destroy()
 {
+	for (auto &asset : assets.list)
+		asset.asset->unload();
+
 	asset_arena.destroy();
 	job::free_counter(upload_counter);
 }
@@ -111,7 +113,7 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 	VirtualArena *virtual_arena = new VirtualArena();
 	virtual_arena->reserve(MEGABYTES(64));
 
-	ArenaView arena = virtual_arena->view(MEGABYTES(64));
+	ArenaView arena = virtual_arena->arena(MEGABYTES(64));
 
 	AssetLoadContext context = {
 		.assets = *this,
@@ -160,7 +162,7 @@ static JOB_ENTRY_POINT(asset_load_job)
 	VirtualArena *virtual_arena = new VirtualArena();
 	virtual_arena->reserve(MEGABYTES(64));
 
-	ArenaView arena = virtual_arena->view(MEGABYTES(64));
+	ArenaView arena = virtual_arena->arena(MEGABYTES(64));
 
 	AssetLoadContext context = {
 		.assets = *load_param->assets,

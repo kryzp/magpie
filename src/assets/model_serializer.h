@@ -14,7 +14,7 @@ namespace ast
 		{
 		}
 
-		~ModelAsset() override
+		void unload() override
 		{
 			for (auto &s : model.sub_models)
 				s.mesh.destroy_buffers();

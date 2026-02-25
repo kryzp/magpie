@@ -13,6 +13,7 @@
 #include "container/hash_map.h"
 
 #include "device.h"
+#include "resource_cache.h"
 #include "sync.h"
 
 #define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
@@ -284,6 +285,7 @@ namespace gfx
 
 	struct RenderContext {
 		Device &device;
+		ResourceCache &cache;
 		CommandBuffer &cmd;
 		RenderScene &scene;
 		const Camera &camera;
@@ -412,7 +414,7 @@ namespace gfx
 		RenderGraph();
 		~RenderGraph();
 
-		void init(Device *device);
+		void init(Device *device, ResourceCache *cache);
 		void destroy();
 
 		void reset();
@@ -447,6 +449,7 @@ namespace gfx
 
 	private:
 		Device *device;
+		ResourceCache *cache;
 
 		void backpropogate_dependencies();
 		void allocate_resources(const Swapchain &swapchain);

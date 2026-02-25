@@ -21,7 +21,7 @@ public:
 	
 	void free();
 
-	ArenaView view(u64 size, u64 alignment = 16);
+	ArenaView arena(u64 size, u64 alignment = 16);
 
 private:
 	u64 align_to_page(u64 size);
@@ -53,21 +53,23 @@ public:
 	void init(void *memory, u64 size);
 	void destroy();
 
-	ArenaView sub_arena(u64 size, u64 alignment = 16);
+	ArenaView arena(u64 size, u64 alignment = 16);
 
 	void *push_bytes(u64 size, u64 alignment = 16);
 	void *push_bytes_no_zero(u64 size, u64 alignment = 16);
 
 	template <typename T, typename ...Args>
-	T *push_array(u32 count, Args &&...args)
+	T *array(u32 count, Args &&...args)
 	{
 		T *buf = (T *)push_bytes(sizeof(T) * count, alignof(T));
 		
 		for (int i = 0; i < count; i++)
 			new (buf + i) T(std::forward<Args>(args)...);
 
+		/*
 		if constexpr (!std::is_trivially_destructible_v<T>)
 			register_destructors<T>(buf, count);
+		*/
 
 		return buf;
 	}
@@ -75,7 +77,7 @@ public:
 	template <typename T, typename ...Args>
 	T *push(Args &&...args)
 	{
-		return push_array<T>(1, std::forward<Args>(args)...);
+		return array<T>(1, std::forward<Args>(args)...);
 	}
 
 	void rewind(u64 marker);
@@ -89,6 +91,11 @@ public:
 	u64 remaining_space() const;
 
 private:
+	uptr memory;
+	u64 memory_used;
+	u64 memory_size;
+	
+#if 0
 	struct DestructorNode {
 		void (*destroy)(void *);
 		void *object;
@@ -112,10 +119,6 @@ private:
 	}
 
 	void invoke_destructors(u64 target_marker);
-
-	uptr memory;
-	u64 memory_used;
-	u64 memory_size;
-
 	DestructorNode *destructor_head;
+#endif
 };

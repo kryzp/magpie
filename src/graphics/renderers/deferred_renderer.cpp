@@ -38,8 +38,8 @@ void DeferredRenderer::create_light_sphere_mesh(Device *device)
 	u32 vertex_count = (stack_count + 1) * (sector_count + 1);
 	u32 index_count  = (stack_count - 1) * (sector_count + 0) * 6;
 
-	Vec3      *vertices = scratch.get_arena().push_array<Vec3>(vertex_count);
-	IndexType *indices  = scratch.get_arena().push_array<IndexType>(index_count);
+	Vec3      *vertices = scratch.arena().array<Vec3>(vertex_count);
+	IndexType *indices  = scratch.arena().array<IndexType>(index_count);
 
 	u32 index = 0;
 
@@ -150,7 +150,7 @@ void DeferredRenderer::add_render_stages(
 			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
 				pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-			PipelineState pipeline_st = ctx.device.get_cache().fetch_pipeline(pipeline_def);
+			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
@@ -231,7 +231,7 @@ void DeferredRenderer::add_render_stages(
 			ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
 			ambient_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 
-			PipelineState ambient_pipeline_st = ctx.device.get_cache().fetch_pipeline(ambient_pipeline_def);
+			PipelineState ambient_pipeline_st = ctx.cache.fetch_pipeline(ambient_pipeline_def);
 
 			cmd.bind_bindless(ambient_pipeline_st.bind_point, ambient_pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(ambient_pipeline_st.bind_point, ambient_pipeline_st.pipeline);
@@ -288,7 +288,7 @@ void DeferredRenderer::add_render_stages(
 			direct_pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
 			direct_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 		
-			PipelineState direct_pipeline_st = ctx.device.get_cache().fetch_pipeline(direct_pipeline_def);
+			PipelineState direct_pipeline_st = ctx.cache.fetch_pipeline(direct_pipeline_def);
 
 			cmd.bind_bindless(direct_pipeline_st.bind_point, direct_pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(direct_pipeline_st.bind_point, direct_pipeline_st.pipeline);
