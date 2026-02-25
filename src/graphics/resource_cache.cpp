@@ -56,6 +56,7 @@ PipelineState ResourceCache::fetch_pipeline(const GraphicsPipelineDef &def)
 	VkPipelineLayout layout = fetch_pipeline_layout(def.program);
 
 	u64 hash = 0;
+
 	hash = hash::generic_combine(hash, &def.program,                    sizeof(ShaderProgram *));
 	hash = hash::generic_combine(hash, &def.cull_mode,                  sizeof(VkCullModeFlags));
 	hash = hash::generic_combine(hash, &def.front_face,                 sizeof(VkFrontFace));
