@@ -62,6 +62,7 @@ App::App()
 	: global_timer()
 	, delta_timer()
 	, delta_accumulator()
+	, hot_reload_timer()
 	, assets()
 	, graphics_device()
 	, swapchain()
@@ -178,9 +179,6 @@ void App::init(VirtualArena &global_arena)
 	
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
 
-	global_timer.start();
-	delta_timer.start();
-
 	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
@@ -206,6 +204,10 @@ void App::init(VirtualArena &global_arena)
 		skybox_renderer.get_mesh(),
 		cubemap_capture_transforms
 	);
+
+	global_timer.start();
+	delta_timer.start();
+	hot_reload_timer.start();
 }
 
 void App::destroy()
@@ -256,6 +258,11 @@ bool App::tick(const inp::InputState &input)
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)TARGET_FPS;
 	
+	if (hot_reload_timer.get_elapsed_seconds() >= HOT_RELOAD_INTERVAL) {
+		hot_reload_timer.reset();
+		assets.poll_hot_reloads();
+	}
+
 	assets.flush_uploads();
 	
 	update(dt, input);
@@ -269,9 +276,6 @@ bool App::tick(const inp::InputState &input)
 
 	ImGui::Begin("Controls");
 	{
-		if (ImGui::Button("Hot-Reload Assets"))
-			assets.poll_hot_reloads();
-
 		static float exp = 1.2f;
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))

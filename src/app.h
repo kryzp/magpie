@@ -32,9 +32,9 @@ private:
 };
 
 class App {
-	constexpr static u32 TARGET_FPS = 120;
-
+	static constexpr u32 TARGET_FPS = 120;
 	static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(512);
+	static constexpr float HOT_RELOAD_INTERVAL = 0.5f;
 
 public:
 	App();
@@ -54,6 +54,7 @@ private:
 	Timer global_timer;
 	Timer delta_timer;
 	float delta_accumulator;
+	Timer hot_reload_timer;
 
 	ast::AssetManager assets;
 
