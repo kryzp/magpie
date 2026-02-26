@@ -648,13 +648,11 @@ void RenderGraph::backpropogate_dependencies()
 		stage.is_culled = false;
 
 		for (auto &out : stage.outputs) {
-			/*
 			if (out.handle == backbuffer_handle)
 				stage.is_culled = false;
 
 			if (resources[out.handle].ref_count > 0)
 				stage.is_culled = false;
-			*/
 
 			if (resources[out.handle].last_stage_index == -1u)
 				resources[out.handle].last_stage_index = i;
@@ -911,8 +909,10 @@ void RenderGraph::execute(
 	for (int i = 0; i < stages.size(); i++) {
 		RenderStage &stage = stages[i];
 
-		if (stage.is_culled)
+		if (stage.is_culled) {
+			printf("%s\n", stage.name);
 			continue;
+		}
 
 //		debug_log("Executing Render Stage: %s", stage.name);
 
