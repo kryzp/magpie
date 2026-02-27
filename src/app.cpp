@@ -9,6 +9,9 @@
 #include "assets/texture_serializer.h"
 #include "graphics/gpu_types.h"
 
+#include "dev/cpu_profiler.h"
+#include "graphics/gpu_profiler.h"
+
 void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
 	const float mouse_deadzone = .001f;
@@ -100,6 +103,8 @@ void App::init(VirtualArena &global_arena)
 
 	swapchain = graphics_device.create_swapchain();
 	
+	gfx::GpuProfiler::get_singleton()->init(&graphics_device);
+
 	ring_upload_buffer.allocate(
 		&graphics_device,
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
@@ -238,6 +243,8 @@ void App::destroy()
 
 	render_graph.destroy();
 
+	gfx::GpuProfiler::get_singleton()->destroy();
+
 	graphics_cache.destroy();
 
 	graphics_device.destroy_swapchain(swapchain);
@@ -330,6 +337,12 @@ bool App::tick(const inp::InputState &input)
 		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
+
+		GFX_PROFILE_COLLECT(cmd);
+
+		ImGui::Begin("Profile Data");
+		ImGui::Text("Lighting: %f", gfx::GpuProfiler::get_singleton()->get_timer("Lighting"));
+		ImGui::End();
 
 		render_graph.compile(swapchain);
 		render_graph.execute(cmd, swapchain, render_scene, camera, dt, elapsed_time);

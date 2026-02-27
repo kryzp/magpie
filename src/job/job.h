@@ -90,6 +90,8 @@ namespace job
 	u32 get_current_worker_id();
 	bool is_main_thread();
 
+	void *get_current_fiber_handle();
+
 	struct SpinScope {
 		SpinScope()
 		{

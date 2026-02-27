@@ -1,48 +1,68 @@
 #include "cpu_profiler.h"
 
 #include "platform/platform.h"
-#include "job/job.h"
 
 using namespace dev;
 
-CpuProfiler *singleton = nullptr;
-
 CpuProfiler::CpuProfiler()
+	: events()
+	, mutex()
 {
-	singleton = this;
 }
 
 CpuProfiler::~CpuProfiler()
 {
-	singleton = nullptr;
 }
 
 CpuProfiler *CpuProfiler::get_singleton()
 {
-	return singleton;
+	static CpuProfiler instance;
+	return &instance;
 }
 
-void CpuProfiler::frame(const char *name, u32 worker_count)
+void CpuProfiler::add_event(const ProfileEvent &event)
+{
+	std::lock_guard<std::mutex> lock(mutex);
+	events.push_back(event);
+}
+
+void CpuProfiler::dump_to_file(const char *filepath)
 {
 	std::lock_guard<std::mutex> lock(mutex);
 
-	per_worker_samples.clear();
-	per_worker_samples.resize(worker_count + 1);
+	FILE *file = fopen(filepath, "w");
 
-	for (auto &v : per_worker_samples)
-		v.resize(INITAL_SAMPLE_STORAGE_SIZE);
+	if (!file)
+		return;
+
+	fprintf(file, "{\"traceEvents\":[\n");
+
+	for (int i = 0; i < events.size(); i++) {
+		const auto& e = events[i];
+
+		fprintf(
+			file, 
+			"{"
+			"\"name\":\"%s\","
+			"\"ph\":\"X\","
+			"\"pid\":%u,"
+			"\"tid\":%u,"
+			"\"ts\":%llu,"
+			"\"dur\":%llu"
+			"}",
+			e.name, 1, e.fiber_id, e.start_us, e.get_duration_us()
+		);
+
+		if (i < events.size() - 1)
+			fprintf(file, ",\n");
+	}
+	
+	fprintf(file, "\n]}\n");
+
+	fclose(file);
 }
 
-void CpuProfiler::store_sample(const CpuProfileSample &sample)
-{
-	per_worker_samples[job::get_current_worker_id()].push_back(sample);
-}
-
-void CpuProfiler::dump_to_json(const char *filename)
-{
-}
-
-u64 CpuProfiler::get_timestamp() const
+u64 CpuProfiler::get_timestamp_us() const
 {
 	return platform::get_performance_counter();
 }

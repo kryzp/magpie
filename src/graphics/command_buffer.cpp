@@ -412,3 +412,23 @@ void CommandBuffer::dispatch(u32 x, u32 y, u32 z)
 {
 	vkCmdDispatch(handle, x, y, z);
 }
+
+void CommandBuffer::begin_query(VkQueryPool pool, u32 query, VkQueryControlFlags flags)
+{
+	vkCmdBeginQuery(handle, pool, query, flags);
+}
+
+void CommandBuffer::end_query(VkQueryPool pool, u32 query)
+{
+	vkCmdEndQuery(handle, pool, query);
+}
+
+void CommandBuffer::reset_queries(VkQueryPool pool, u32 first, u32 count)
+{
+	vkCmdResetQueryPool(handle, pool, first, count);
+}
+
+void CommandBuffer::write_timestamp(VkPipelineStageFlags2 stage, VkQueryPool pool, u32 index)
+{
+	vkCmdWriteTimestamp2(handle, stage, pool, index);
+}

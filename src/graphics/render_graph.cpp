@@ -2,6 +2,8 @@
 
 #include "math/calc.h"
 
+#include "gpu_profiler.h"
+
 using namespace gfx;
 
 RenderGraphBlackboard::RenderGraphBlackboard()
@@ -915,6 +917,8 @@ void RenderGraph::execute(
 		}
 
 //		debug_log("Executing Render Stage: %s", stage.name);
+
+		GFX_PROFILE_SCOPE(cmd, stage.name);
 
 		cmd.pipeline_barrier(
 			0, {},

@@ -180,7 +180,7 @@ void ComputeCulling::add_render_stages(
 				sizeof(draw_cull_data), &draw_cull_data
 			);
 #endif
-			
+
 			GpuBufferRange mesh_buffer = resources.get_buffer_range(data.mesh_buffer);
 
 			struct {

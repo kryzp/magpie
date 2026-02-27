@@ -38,7 +38,7 @@ namespace gfx
 		VkDevice get_device() const;
 		
 		VkPhysicalDevice get_physical_device() const;
-		const VkPhysicalDeviceProperties2 &get_physical_properties() const;
+		const VkPhysicalDeviceProperties &get_physical_properties() const;
 
 		VkSurfaceKHR get_surface() const;
 

@@ -87,6 +87,7 @@ add_executable(magpie
 	"${CODE_DIR}/job/job.cpp"
 	
 	"${CODE_DIR}/dev/cpu_profiler.cpp"
+	"${CODE_DIR}/graphics/gpu_profiler.cpp"
 
 	"${CODE_DIR}/graphics/bindless.cpp"
 	"${CODE_DIR}/graphics/camera.cpp"
@@ -122,7 +123,11 @@ add_executable(magpie
 	"${CODE_DIR}/ext/imgui/imgui_widgets.cpp"
 )
 
-target_compile_definitions(magpie PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
+target_compile_definitions(magpie PUBLIC
+	DEV_PROFILING_ENABLED
+	SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
+)
+
 target_include_directories(magpie PRIVATE "${CODE_DIR}" "${Vulkan_INCLUDE_DIRS}")
 
 if(WIN32)

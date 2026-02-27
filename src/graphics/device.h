@@ -29,6 +29,8 @@ namespace gfx
 		void init();
 		void destroy();
 
+		// ---
+
 		void wait_idle();
 
 		void wait_for_fence(VkFence fence) const;
@@ -39,6 +41,10 @@ namespace gfx
 		void wait_for_timeline_semaphore(VkSemaphore semaphore, u64 value) const;
 		u64 get_timeline_semaphore_value(VkSemaphore semaphore) const;
 		void destroy_semaphore(VkSemaphore semaphore) const;
+
+		// ---
+
+		void destroy_query_pool(VkQueryPool pool) const;
 
 		// ---
 

@@ -201,6 +201,11 @@ void Device::destroy_semaphore(VkSemaphore semaphore) const
 	vkDestroySemaphore(context.get_device(), semaphore, nullptr);
 }
 
+void Device::destroy_query_pool(VkQueryPool pool) const
+{
+	vkDestroyQueryPool(context.get_device(), pool, nullptr);
+}
+
 void Device::PerFrameData::flush(VkDevice vk_device, VmaAllocator vma_allocator, BindlessResources &bindless)
 {
 	for (auto &sampler : destroyed_samplers)
@@ -829,7 +834,7 @@ Sampler *Device::create_sampler(
 	VkBorderColor border_colour
 )
 {
-	VkPhysicalDeviceProperties properties =	context.get_physical_properties().properties;
+	VkPhysicalDeviceProperties properties =	context.get_physical_properties();
 
 	VkSamplerCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

@@ -639,9 +639,9 @@ VkPhysicalDevice Context::get_physical_device() const
 	return physical_device;
 }
 
-const VkPhysicalDeviceProperties2 &Context::get_physical_properties() const
+const VkPhysicalDeviceProperties &Context::get_physical_properties() const
 {
-	return physical_device_properties;
+	return physical_device_properties.properties;
 }
 
 VkSurfaceKHR Context::get_surface() const

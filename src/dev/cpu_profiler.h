@@ -2,70 +2,75 @@
 
 #include <mutex>
 
-#include "core/types.h"
-#include "container/stack.h"
 #include "container/vector.h"
+#include "job/job.h"
 
 namespace dev
 {
-	struct CpuProfileSample {
+	struct ProfileEvent {
 		const char *name;
-		u64 t_start;
-		u64 t_end;
+		u64 start_us;
+		u64 end_us;
+		u32 worker_id;
+		u64 fiber_id;
 
-		constexpr u64 get_duration() const
+		u64 get_duration_us() const
 		{
-			return t_end - t_start;
+			return end_us - start_us;
 		}
 	};
 
 	class CpuProfiler {
-		constexpr static u32 INITAL_SAMPLE_STORAGE_SIZE = 1024;
-
 	public:
 		CpuProfiler();
 		~CpuProfiler();
 
 		static CpuProfiler *get_singleton();
 
-		void frame(const char *name, u32 worker_count);
+		void add_event(const ProfileEvent &event);
 
-		void store_sample(const CpuProfileSample &sample);
-	
-		void dump_to_json(const char *filename);
+		void dump_to_file(const char *filepath);
 
-		u64 get_timestamp() const;
+		u64 get_timestamp_us() const;
 
 	private:
 		std::mutex mutex;
-		Vector<Vector<CpuProfileSample>> per_worker_samples;
+		Vector<ProfileEvent> events;
 	};
 
-	struct CpuProfileScope {
+	class CpuProfileScope {
+	public:
 		CpuProfileScope(const char *name)
 			: name(name)
 		{
-			start_time = CpuProfiler::get_singleton()->get_timestamp();
+			start_time_us = CpuProfiler::get_singleton()->get_timestamp_us();
+			worker_id = job::get_current_worker_id();
+			fiber_id = (u64)job::get_current_fiber_handle();
 		}
 
 		~CpuProfileScope()
 		{
-			CpuProfileSample sample = {};
-			sample.name = name;
-			sample.t_start = start_time;
-			sample.t_end = CpuProfiler::get_singleton()->get_timestamp();
+			u64 end_time_us = CpuProfiler::get_singleton()->get_timestamp_us();
 
-			CpuProfiler::get_singleton()->store_sample(sample);
+			ProfileEvent event = {};
+			event.name = name;
+			event.start_us = start_time_us;
+			event.end_us = end_time_us;
+			event.worker_id = worker_id;
+			event.fiber_id = fiber_id;
+
+			CpuProfiler::get_singleton()->add_event(event);
 		}
 
+	private:
 		const char *name;
-		u32 start_time;
+		u64 start_time_us;
+		u32 worker_id;
+		u64 fiber_id;
 	};
 }
 
-#define DEV_PROFILE_ENABLED 1
-
-#if DEV_PROFILE_ENABLED
+#ifdef DEV_PROFILING_ENABLED
 #  define DEV_PROFILE_SCOPE(name_) ::dev::CpuProfileScope MCONCAT_EXP(profile_scope_, __LINE__)(name_);
 #  define DEV_PROFILE_FUNCTION() DEV_PROFILE_SCOPE(__FUNCTION__)
 #else

@@ -142,6 +142,15 @@ namespace gfx
 
 		void dispatch(u32 x, u32 y, u32 z);
 
+		// ---
+
+		void begin_query(VkQueryPool pool, u32 query, VkQueryControlFlags flags);
+		void end_query(VkQueryPool pool, u32 query);
+
+		void reset_queries(VkQueryPool pool, u32 first, u32 count);
+
+		void write_timestamp(VkPipelineStageFlags2 stage, VkQueryPool pool, u32 index);
+
 	private:
 		VkCommandBuffer handle;
 	};

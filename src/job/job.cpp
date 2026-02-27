@@ -11,6 +11,7 @@
 
 #include "core/scratch.h"
 #include "platform/platform.h"
+#include "dev/cpu_profiler.h"
 
 namespace job
 {
@@ -190,8 +191,14 @@ static uptr scheduler_thread(void *param)
 {
 	u32 *worker_id = (u32 *)param;
 
+	/*
+	char thread_name[64] = {};
+	snprintf(thread_name, sizeof(thread_name), "Job Worker: %u", *worker_id);
+	DEV_PROFILE_THREAD(thread_name);
+	*/
+
 	scratch::init(*global_job_arena);
-	
+
 	void *fiber_handle = platform::convert_thread_to_fiber();
 
 	tls.current_worker_id = *worker_id;
@@ -454,6 +461,11 @@ u32 job::get_current_worker_id()
 bool job::is_main_thread()
 {
 	return tls.current_worker_id == 0;
+}
+
+void *job::get_current_fiber_handle()
+{
+	return tls.current_fiber;
 }
 
 static void job::yield_current_fiber()
