@@ -88,6 +88,12 @@ namespace ast
 			state == ASSET_STATE_FAILED;
 	}
 
+	inline bool asset_state_is_loaded(AssetState state)
+	{
+		return
+			state == ASSET_STATE_READY;
+	}
+
 	inline bool asset_state_is_finalized(AssetState state)
 	{
 		return
@@ -105,13 +111,13 @@ namespace ast
 
 		bool is_null() const
 		{
-			return index == 0 && generation == 0;
+			return index == -1u && generation == 0;
 		}
 
 		static AssetHandle invalid()
 		{
 			return {
-				.index = 0,
+				.index = -1u,
 				.generation = 0
 			};
 		}
@@ -176,18 +182,9 @@ namespace ast
 	};
 
 	class AssetManager {
-	public:
-		// What sized chunks of data are sent to the GPU at a time.
 		constexpr static u64 GPU_UPLOAD_CHUNK_SIZE = MEGABYTES(128);
 
-		/*
-		// Maximum amount of memory on the CPU before we stop
-		// to give time to upload it to the GPU.
-		constexpr static u64 MAX_MEMORY_PRESSURE = MEGABYTES(512);
-		
-		std::atomic<u64> memory_pressure;
-		*/
-
+	public:
 		AssetManager();
 		~AssetManager();
 
@@ -213,10 +210,7 @@ namespace ast
 		void reload_async(const AssetHandle &handle, AssetType type);
 
 	private:
-		void load_asset_internal(const AssetHandle &handle, AssetType type);
-
-		job::JobCounter *get_loading_counter(const AssetHandle &handle);
-		void set_loading_counter(const AssetHandle &handle, job::JobCounter *counter);
+		void load_asset_internal(const AssetHandle &handle, AssetType type, job::JobCounter *counter);
 
 	public:
 		void poll_hot_reloads();
@@ -226,7 +220,10 @@ namespace ast
 		void push_upload(AssetUpload &&upload);
 		void push_for_dependency_resolution(AssetUpload &&upload);
 		
-		void resolve_pending_dependencies();
+	private:
+		void resolve_pending_dependencies(job::JobCounter *counter);
+
+	public:
 		void flush_uploads();
 
 		bool is_valid(const AssetHandle &handle) const;
@@ -247,6 +244,7 @@ namespace ast
 		AssetHandle allocate_asset(const String &path);
 
 		void notify_dependents(const AssetHandle &handle, bool failed);
+		void notify_dependents_no_lock(const AssetHandle &handle, bool failed);
 
 		IAssetSerializer *serializers[ASSET_TYPE_MAX_ENUM];
 
@@ -260,7 +258,6 @@ namespace ast
 		Vector<AssetUpload> dependency_queue;
 		std::mutex dependency_mutex;
 		
-		HashMap<u32, job::JobCounter *> load_counters;
 		std::condition_variable loading_cv;
 		std::mutex loading_mutex;
 

@@ -120,8 +120,8 @@ void App::init(VirtualArena &global_arena)
 	render_graph.init(&graphics_device, &graphics_cache);
 	render_scene.init(&graphics_device, &graphics_cache);
 
-//	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
-	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 	
 	ast::ModelAsset *model_asset = assets.get_asset<ast::ModelAsset>(model_handle);
 
@@ -266,7 +266,6 @@ bool App::tick(const inp::InputState &input)
 		assets.poll_hot_reloads();
 	}
 
-	assets.resolve_pending_dependencies();
 	assets.flush_uploads();
 	
 	update(dt, input);

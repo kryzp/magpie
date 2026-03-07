@@ -22,7 +22,6 @@ AssetManager::AssetManager()
 	, upload_mutex()
 	, dependency_queue()
 	, dependency_mutex()
-	, load_counters()
 	, loading_cv()
 	, loading_mutex()
 	, mount_points()
@@ -76,7 +75,6 @@ AssetHandle AssetManager::from_file_path(const String &path)
 
 	AssetHandle handle = allocate_asset(path);
 
-	set_loading_counter(handle, nullptr);
 	path_to_handle[path] = handle;
 
 	return handle;
@@ -85,7 +83,7 @@ AssetHandle AssetManager::from_file_path(const String &path)
 bool AssetManager::is_loaded(const AssetHandle &handle) const
 {
 	assert(is_valid(handle));
-	return asset_records[handle.index].state == ASSET_STATE_READY; // TODO: also check if asset != placeholder.
+	return asset_state_is_loaded(asset_records[handle.index].state); // TODO: also check if asset != placeholder.
 }
 
 bool AssetManager::is_loading(const AssetHandle &handle)
@@ -97,33 +95,29 @@ bool AssetManager::is_loading(const AssetHandle &handle)
 void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 {
 	assert(is_valid(handle));
-	
-	AssetRecord &record = asset_records[handle.index];
 
-	{
-		std::unique_lock<std::mutex> lock(loading_mutex);
+	if (!asset_state_needs_load(asset_records[handle.index].state))
+		return;
 
-		if (record.state == ASSET_STATE_READY)
-			return;
+	asset_records[handle.index].state = ASSET_STATE_LOADING_DATA;
 
-		if (asset_state_needs_load(record.state)) {
-			record.state = ASSET_STATE_LOADING_DATA;
-			lock.unlock();
-			load_asset_internal(handle, type);
-		}
-	}
+	job::JobCounter *counter = job::alloc_counter();
+
+	load_asset_internal(handle, type, counter);
+
+	job::yield_on_counter(counter);
 
 	while (true) {
-		AssetState curr = asset_records[handle.index].state;
-
-		if (asset_state_is_finalized(curr))
+		if (asset_records[handle.index].state == ASSET_STATE_READY)
 			break;
+		
+		resolve_pending_dependencies(counter);
+		job::yield_on_counter(counter);
 
-		resolve_pending_dependencies();
 		flush_uploads();
-
-		platform::yield_thread();
 	}
+
+	job::free_counter(counter);
 }
 
 struct AssetLoadJobParam {
@@ -136,15 +130,6 @@ struct AssetLoadJobParam {
 static JOB_ENTRY_POINT(asset_load_job)
 {
 	AssetLoadJobParam *load_param = (AssetLoadJobParam *)param;
-
-	/*
-	while (load_param->assets->memory_pressure > AssetManager::MAX_MEMORY_PRESSURE) {
-		if (job::is_main_thread())
-			load_param->assets->flush_uploads();
-		else
-			platform::yield_thread();
-	}
-	*/
 
 	VirtualArena *virtual_arena = new VirtualArena();
 	virtual_arena->reserve(MEGABYTES(64));
@@ -185,14 +170,11 @@ void AssetManager::load_async(const AssetHandle &handle, AssetType type)
 {
 	assert(is_valid(handle));
 
-	std::unique_lock<std::mutex> lock(loading_mutex);
-
 	AssetRecord &record = asset_records[handle.index];
 
-	if (record.state == ASSET_STATE_UNLOADED || asset_state_is_finalized(record.state)) {
+	if (asset_state_needs_load(record.state)) {
 		record.state = ASSET_STATE_LOADING_DATA;
-		lock.unlock();
-		load_asset_internal(handle, type);
+		load_asset_internal(handle, type, async_upload_counter);
 	}
 }
 
@@ -200,18 +182,15 @@ void AssetManager::reload_async(const AssetHandle &handle, AssetType type)
 {
 	assert(is_valid(handle));
 
-	std::unique_lock<std::mutex> lock(loading_mutex);
-
 	AssetRecord &record = asset_records[handle.index];
 
 	if (record.state == ASSET_STATE_UNLOADED || record.state == ASSET_STATE_FAILED) {
 		record.state = ASSET_STATE_LOADING_DATA;
-		lock.unlock();
-		load_asset_internal(handle, type);
+		load_asset_internal(handle, type, async_upload_counter);
 	}
 }
 
-void AssetManager::load_asset_internal(const AssetHandle &handle, AssetType type)
+void AssetManager::load_asset_internal(const AssetHandle &handle, AssetType type, job::JobCounter *counter)
 {
 	AssetMetaData metadata = {};
 	metadata.file_path = get_path(handle);
@@ -223,30 +202,7 @@ void AssetManager::load_asset_internal(const AssetHandle &handle, AssetType type
 	param->type = type;
 
 	job::JobDecl decl(asset_load_job, param);
-	job::kick_job(decl, &async_upload_counter);
-	
-	set_loading_counter(handle, async_upload_counter);
-}
-
-job::JobCounter *AssetManager::get_loading_counter(const AssetHandle &handle)
-{
-	std::lock_guard<std::mutex> lock(loading_mutex);
-
-	auto it = load_counters.find(handle.index);
-	if (it != load_counters.end())
-		return it->second;
-	else
-		return nullptr;
-}
-
-void AssetManager::set_loading_counter(const AssetHandle &handle, job::JobCounter *counter)
-{
-	std::lock_guard<std::mutex> lock(loading_mutex);
-
-	if (counter == nullptr)
-		load_counters.erase(handle.index);
-	else
-		load_counters[handle.index] = counter;
+	job::kick_job(decl, &counter);
 }
 
 void AssetManager::poll_hot_reloads()
@@ -278,9 +234,8 @@ void AssetManager::wait_for_async_uploads()
 
 void AssetManager::push_upload(AssetUpload &&upload)
 {
+	std::lock_guard<std::mutex> lock(upload_mutex);
 	upload_queue.push_back(std::move(upload));
-
-//	memory_pressure += upload.result.stage_size;
 }
 
 void AssetManager::push_for_dependency_resolution(AssetUpload &&upload)
@@ -291,6 +246,12 @@ void AssetManager::push_for_dependency_resolution(AssetUpload &&upload)
 
 void AssetManager::notify_dependents(const AssetHandle &handle, bool failed)
 {
+	std::lock_guard<std::mutex> lock(dependency_mutex);
+	notify_dependents_no_lock(handle, failed);
+}
+
+void AssetManager::notify_dependents_no_lock(const AssetHandle &handle, bool failed)
+{
 	assert(is_valid(handle));
 
 	AssetRecord &record = asset_records[handle.index];
@@ -300,10 +261,12 @@ void AssetManager::notify_dependents(const AssetHandle &handle, bool failed)
 
 		if (failed) {
 			parent.state = ASSET_STATE_FAILED;
-			notify_dependents(parent_handle, true);
-		} else if (parent.pending_dependencies > 0) {
-			parent.pending_dependencies--;
-			if (parent.pending_dependencies == 0) {
+			notify_dependents_no_lock(parent_handle, true);
+		} else {
+			if (parent.pending_dependencies > 0)
+				parent.pending_dependencies--;
+
+			if (parent.pending_dependencies == 0 && parent.state == ASSET_STATE_WAITING_FOR_DEPENDENCIES) {
 				parent.state = ASSET_STATE_WAITING_FOR_GPU;
 				push_upload(std::move(parent.stashed_upload_data));
 			}
@@ -313,7 +276,7 @@ void AssetManager::notify_dependents(const AssetHandle &handle, bool failed)
 	record.dependents.clear();
 }
 
-void AssetManager::resolve_pending_dependencies()
+void AssetManager::resolve_pending_dependencies(job::JobCounter *counter)
 {
 	std::lock_guard<std::mutex> lock(dependency_mutex);
 
@@ -322,7 +285,7 @@ void AssetManager::resolve_pending_dependencies()
 	
 		if (upload.result.failed) {
 			record.state = ASSET_STATE_FAILED;
-			notify_dependents(upload.handle, true);
+			notify_dependents_no_lock(upload.handle, true);
 			continue;
 		}
 
@@ -330,6 +293,8 @@ void AssetManager::resolve_pending_dependencies()
 
 		for (auto &dep_handle : upload.result.dependencies) {
 			AssetRecord &dep_record = asset_records[dep_handle.index];
+
+			load_asset_internal(dep_handle, ASSET_TYPE_TEXTURE, counter);
 
 			if (!asset_state_is_finalized(dep_record.state)) {
 				unresolved_count++;
@@ -399,7 +364,7 @@ void AssetManager::flush_uploads()
 	
 		gfx::GpuBuffer *staging_buffer = nullptr;
 
-		if (batch_stage_size)
+		if (batch_stage_size > 0)
 			staging_buffer = device->alloc_stage(batch_stage_size);
 
 		device->submit_graphics_immediate([&](gfx::CommandBuffer &cmd) {
@@ -461,10 +426,7 @@ void AssetManager::flush_uploads()
 				upload.scratch->free();
 				delete upload.scratch;
 
-				set_loading_counter(upload.handle, nullptr);
 				loading_cv.notify_all();
-
-//				memory_pressure -= req.result.stage_size;
 			}
 		});
 

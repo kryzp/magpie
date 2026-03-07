@@ -124,7 +124,15 @@ AssetLoadResult ModelSerializer::load(const AssetLoadContext &ctx)
 			0.f, 0.f, 0.f, 1.f
 		};
 
-		process_nodes(ctx, *load_data, directory, scene->mRootNode, scene, identity, result.dependencies);
+		process_nodes(
+			ctx,
+			*load_data,
+			directory,
+			scene->mRootNode,
+			scene,
+			identity,
+			result.dependencies
+		);
 
 		result.stage_size =
 			load_data->total_vertex_size +
@@ -289,7 +297,6 @@ void ModelSerializer::process_sub_model(
 
 	const aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
 	sub_model.material = load_material_from_assimp(ctx, directory, assimp_material, dependencies);
-	dependencies.push_back(sub_model.material.ambient);
 
 	sub_model.transform = aiMatrix4x4_to_Mat4(transform);
 }
@@ -340,8 +347,6 @@ AssetHandle ModelSerializer::try_fetch_assimp_material_texture(
 	String path = directory + String(texture_path.C_Str());
 	
 	AssetHandle handle = ctx.assets.from_file_path(path);
-
-	ctx.assets.load_async(handle, ASSET_TYPE_TEXTURE);
 
 	dependencies.push_back(handle);
 
