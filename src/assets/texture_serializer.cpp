@@ -16,7 +16,15 @@ struct TextureLoadData {
 	void *pixels;
 };
 
-static AssetLoadResult texture_load(const AssetLoadContext &ctx)
+class TextureSerializer : public IAssetSerializer {
+public:
+	AssetLoadResult load(const AssetLoadContext &ctx) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+	void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) override;
+	void dispose(const AssetLoadResult &result) override;
+};
+
+AssetLoadResult TextureSerializer::load(const AssetLoadContext &ctx)
 {
 	const String &file_path = ctx.system_file_path();
 
@@ -48,7 +56,7 @@ static AssetLoadResult texture_load(const AssetLoadContext &ctx)
 	return result;
 }
 
-static Asset *texture_asset_allocate(
+Asset *TextureSerializer::finalize(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
 	gfx::Device &device
 )
@@ -64,7 +72,7 @@ static Asset *texture_asset_allocate(
 	return ctx.arena.push<TextureAsset>(texture, device);
 }
 
-static void texture_upload(
+void TextureSerializer::gpu_upload(
 	Asset *asset,
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
 	gfx::CommandBuffer &cmd,
@@ -102,16 +110,16 @@ static void texture_upload(
 
 	cmd.pipeline_barrier(0, {}, {}, { blit_barrier });
 	cmd.generate_mipmaps(texture_asset->texture);
+}
 
+void TextureSerializer::dispose(const AssetLoadResult &result)
+{
+	TextureLoadData *load_data = (TextureLoadData *)result.data;
 	stbi_image_free(load_data->pixels);
 }
 
-AssetSerializer ast::get_texture_serializer()
+IAssetSerializer *ast::get_texture_serializer()
 {
-	AssetSerializer texture_serializer = {};
-	texture_serializer.load = texture_load;
-	texture_serializer.allocate = texture_asset_allocate;
-	texture_serializer.upload = texture_upload;
-
-	return texture_serializer;
+	static TextureSerializer texture_serializer;
+	return &texture_serializer;
 }

@@ -15,8 +15,7 @@ namespace ast
 
 		void unload() override
 		{
-			if (!has_flag(ASSET_FLAG_INVALID))
-				device.destroy_texture(texture);
+			device.destroy_texture(texture);
 		}
 
 		const gfx::Texture *texture;
@@ -25,5 +24,5 @@ namespace ast
 		gfx::Device &device;
 	};
 
-	AssetSerializer get_texture_serializer();
+	IAssetSerializer *get_texture_serializer();
 }

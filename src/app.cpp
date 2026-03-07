@@ -122,14 +122,10 @@ void App::init(VirtualArena &global_arena)
 
 //	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
 	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+	
+	ast::ModelAsset *model_asset = assets.get_asset<ast::ModelAsset>(model_handle);
 
-	gfx::Model &model = assets.get_asset<ast::ModelAsset>(model_handle)->model;
-
-	assets.wait_for_async_uploads();
-
-	assets.flush_uploads();
-
-	for (auto &sub : model.sub_models) {
+	for (auto &sub : model_asset->model.sub_models) {
 		Mat4 transform = sub.transform;
 		u32 mesh = render_scene.register_mesh(sub.mesh);
 		u32 material = render_scene.register_material(sub.material, assets);
@@ -270,6 +266,7 @@ bool App::tick(const inp::InputState &input)
 		assets.poll_hot_reloads();
 	}
 
+	assets.resolve_pending_dependencies();
 	assets.flush_uploads();
 	
 	update(dt, input);

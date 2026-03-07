@@ -15,8 +15,7 @@ namespace ast
 
 		void unload() override
 		{
-			if (!has_flag(ASSET_FLAG_INVALID))
-				device.destroy_shader_program(shader);
+			device.destroy_shader_program(shader);
 		}
 
 		const gfx::ShaderProgram *shader;
@@ -25,5 +24,5 @@ namespace ast
 		gfx::Device &device;
 	};
 
-	AssetSerializer get_shader_serializer();
+	IAssetSerializer *get_shader_serializer();
 }

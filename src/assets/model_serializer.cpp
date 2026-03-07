@@ -29,8 +29,6 @@ static Mat4 aiMatrix4x4_to_Mat4(const aiMatrix4x4 &m)
 	);
 }
 
-static Assimp::Importer ai_importer;
-
 struct ParsedMesh {
 	u32 target_sub_model;
 	Vector<gfx::gpu_types::GpuModelVertex> vertices;
@@ -44,63 +42,181 @@ struct ModelLoadData {
 	u64 total_index_size = 0;
 };
 
-static AssetHandle try_fetch_assimp_material_texture(
-	const AssetLoadContext &ctx,
-	const String &directory,
-	const aiMaterial *ai_material,
-	aiTextureType type
-)
+class ModelSerializer : public IAssetSerializer {
+public:
+	AssetLoadResult load(const AssetLoadContext &ctx) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+	void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) override;
+
+private:
+	Assimp::Importer ai_importer;
+
+	void process_nodes(
+		const AssetLoadContext &ctx,
+		ModelLoadData &load_data,
+		const String &directory,
+		const aiNode *node,
+		const aiScene *scene,
+		const aiMatrix4x4 &parent_transform,
+		Vector<AssetHandle> &dependencies
+	);
+
+	void process_sub_model(
+		const AssetLoadContext &ctx,
+		ModelLoadData &load_data,
+		gfx::SubModel &sub_model, u32 sub_model_index,
+		const String &directory,
+		const aiMesh *assimp_mesh,
+		const aiScene *scene,
+		const aiMatrix4x4 &transform,
+		Vector<AssetHandle> &dependencies
+	);
+	
+	gfx::Material load_material_from_assimp(
+		const AssetLoadContext &ctx,
+		const String &directory,
+		const aiMaterial *ai_material,
+		Vector<AssetHandle> &dependencies
+	);
+
+	AssetHandle try_fetch_assimp_material_texture(
+		const AssetLoadContext &ctx,
+		const String &directory,
+		const aiMaterial *ai_material,
+		aiTextureType type,
+		Vector<AssetHandle> &dependencies
+	);
+};
+
+AssetLoadResult ModelSerializer::load(const AssetLoadContext &ctx)
 {
-	if (ai_material->GetTextureCount(type) <= 0)
-		return AssetHandle::invalid();
+	String system_file_path = ctx.system_file_path();
 
-	aiString texture_path = {};
-	ai_material->GetTexture(type, 0, &texture_path);
+	const aiScene *scene = ai_importer.ReadFile(
+		system_file_path,
+		aiProcess_Triangulate |
+		aiProcess_CalcTangentSpace |
+		aiProcess_FlipUVs |
+		aiProcess_JoinIdenticalVertices |
+		aiProcess_GenSmoothNormals |
+		aiProcess_PreTransformVertices
+	);
 
-	String path = directory + String(texture_path.C_Str());
+	bool failed_to_load =
+		!scene ||
+		(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 ||
+		!scene->mRootNode;
 
-	AssetHandle handle = ctx.assets.from_file_path(path);
-	ctx.assets.load_async(handle, ast::ASSET_TYPE_TEXTURE);
+	ModelLoadData *load_data = ctx.arena.push<ModelLoadData>();
 
-	return handle;
-}
+	AssetLoadResult result = {};
+	result.data = load_data;
+	result.stage_size = 0;
+	result.failed = failed_to_load;
 
-static gfx::Material load_material_from_assimp(
-	const AssetLoadContext &ctx,
-	const String &directory,
-	const aiMaterial *ai_material
-)
-{
-	/*
-	debug_log("PROPERTIES OF %s:", ai_material->GetName().C_Str());
+	if (!failed_to_load) {
+		String directory = io::path::get_file_directory(ctx.metadata.file_path) + "/";
 
-	for (int i = 0; i < ai_material->mNumProperties; i++) {
-		auto property = ai_material->mProperties[i];
+		const static aiMatrix4x4 identity = {
+			1.f, 0.f, 0.f, 0.f,
+			0.f, 1.f, 0.f, 0.f,
+			0.f, 0.f, 1.f, 0.f,
+			0.f, 0.f, 0.f, 1.f
+		};
 
-		debug_log("* %s: %f", property->mKey.C_Str(), *(float *)property->mData);
+		process_nodes(ctx, *load_data, directory, scene->mRootNode, scene, identity, result.dependencies);
+
+		result.stage_size =
+			load_data->total_vertex_size +
+			load_data->total_index_size;
 	}
 
-	debug_log();
-	*/
-
-	gfx::Material material = {};
-	material.albedo             = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_DIFFUSE);
-	material.normal             = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_NORMALS);
-	material.emissive           = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_EMISSIVE);
-	material.metallic_roughness = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_DIFFUSE_ROUGHNESS);
-	material.ambient            = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_LIGHTMAP);
-
-	return material;
+	return result;
 }
 
-static void process_sub_model(
+Asset *ModelSerializer::finalize(
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::Device &device
+)
+{
+	ModelLoadData *load_data = (ModelLoadData *)result.data;
+
+	u64 sub_offset = 0;
+
+	for (auto &parsed : load_data->meshes) {
+		gfx::Mesh &mesh = load_data->model.sub_models[parsed.target_sub_model].mesh;
+
+		mesh.create_buffers(
+			&device,
+			sizeof(gfx::gpu_types::GpuModelVertex),
+			parsed.vertices.size(), parsed.indices.size()
+		);
+	}
+
+	return ctx.arena.push<ModelAsset>(load_data->model);
+}
+
+void ModelSerializer::gpu_upload(
+	Asset *asset,
+	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	gfx::CommandBuffer &cmd,
+	gfx::GpuBuffer *stage, u64 stage_base
+)
+{
+	ModelLoadData *load_data = (ModelLoadData *)result.data;
+	ModelAsset *model_asset = asset->as<ModelAsset>();
+
+	u64 sub_offset = 0;
+
+	for (auto &parsed : load_data->meshes) {
+		gfx::Mesh &mesh = model_asset->model.sub_models[parsed.target_sub_model].mesh;
+
+		mesh.write_to_staging_buffer(
+			stage, stage_base + sub_offset,
+			parsed.vertices.data(), parsed.indices.data()
+		);
+
+		sub_offset += mesh.batch_upload(
+			cmd, stage, stage_base + sub_offset
+		);
+	}
+}
+
+void ModelSerializer::process_nodes(
+	const AssetLoadContext &ctx,
+	ModelLoadData &load_data,
+	const String &directory,
+	const aiNode *node,
+	const aiScene *scene,
+	const aiMatrix4x4 &parent_transform,
+	Vector<AssetHandle> &dependencies
+)
+{
+	aiMatrix4x4 node_transform = node->mTransformation;
+	aiMatrix4x4 current_transform = parent_transform * node_transform;
+
+	for (int i = 0; i < node->mNumMeshes; i++) {
+		const aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
+		load_data.model.sub_models.emplace_back();
+		gfx::SubModel &sub_model = load_data.model.sub_models.back();
+		process_sub_model(ctx, load_data, sub_model, load_data.model.sub_models.size() - 1, directory, assimp_mesh, scene, current_transform, dependencies);
+	}
+
+	for (int i = 0; i < node->mNumChildren; i++) {
+		const aiNode *child = node->mChildren[i];
+		process_nodes(ctx, load_data, directory, child, scene, current_transform, dependencies);
+	}
+}
+
+void ModelSerializer::process_sub_model(
 	const AssetLoadContext &ctx,
 	ModelLoadData &load_data,
 	gfx::SubModel &sub_model, u32 sub_model_index,
 	const String &directory,
 	const aiMesh *assimp_mesh,
 	const aiScene *scene,
-	const aiMatrix4x4 &transform
+	const aiMatrix4x4 &transform,
+	Vector<AssetHandle> &dependencies
 )
 {
 	Vector<gfx::gpu_types::GpuModelVertex> vertices;
@@ -172,136 +288,68 @@ static void process_sub_model(
 	load_data.total_index_size += parsed_mesh.indices.size() * sizeof(gfx::IndexType);
 
 	const aiMaterial *assimp_material = scene->mMaterials[assimp_mesh->mMaterialIndex];
-	sub_model.material = load_material_from_assimp(ctx, directory, assimp_material);
+	sub_model.material = load_material_from_assimp(ctx, directory, assimp_material, dependencies);
+	dependencies.push_back(sub_model.material.ambient);
 
 	sub_model.transform = aiMatrix4x4_to_Mat4(transform);
 }
-
-static void process_nodes(
+	
+gfx::Material ModelSerializer::load_material_from_assimp(
 	const AssetLoadContext &ctx,
-	ModelLoadData &load_data,
 	const String &directory,
-	const aiNode *node,
-	const aiScene *scene,
-	const aiMatrix4x4 &parent_transform
+	const aiMaterial *ai_material,
+	Vector<AssetHandle> &dependencies
 )
 {
-	aiMatrix4x4 node_transform = node->mTransformation;
-	aiMatrix4x4 current_transform = parent_transform * node_transform;
+	/*
+	debug_log("PROPERTIES OF %s:", ai_material->GetName().C_Str());
 
-	for (int i = 0; i < node->mNumMeshes; i++) {
-		const aiMesh *assimp_mesh = scene->mMeshes[node->mMeshes[i]];
-		load_data.model.sub_models.emplace_back();
-		gfx::SubModel &sub_model = load_data.model.sub_models.back();
-		process_sub_model(ctx, load_data, sub_model, load_data.model.sub_models.size() - 1, directory, assimp_mesh, scene, current_transform);
+	for (int i = 0; i < ai_material->mNumProperties; i++) {
+		auto property = ai_material->mProperties[i];
+
+		debug_log("* %s: %f", property->mKey.C_Str(), *(float *)property->mData);
 	}
 
-	for (int i = 0; i < node->mNumChildren; i++) {
-		const aiNode *child = node->mChildren[i];
-		process_nodes(ctx, load_data, directory, child, scene, current_transform);
-	}
+	debug_log();
+	*/
+
+	gfx::Material material = {};
+	material.albedo             = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_DIFFUSE, dependencies);
+	material.normal             = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_NORMALS, dependencies);
+	material.emissive           = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_EMISSIVE, dependencies);
+	material.metallic_roughness = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_DIFFUSE_ROUGHNESS, dependencies);
+	material.ambient            = try_fetch_assimp_material_texture(ctx, directory, ai_material, aiTextureType_LIGHTMAP, dependencies);
+
+	return material;
 }
 
-static AssetLoadResult model_load(const AssetLoadContext &ctx)
-{
-	String system_file_path = ctx.system_file_path();
-
-	const aiScene *scene = ai_importer.ReadFile(
-		system_file_path,
-		aiProcess_Triangulate |
-		aiProcess_CalcTangentSpace |
-		aiProcess_FlipUVs |
-		aiProcess_JoinIdenticalVertices |
-		aiProcess_GenSmoothNormals |
-		aiProcess_PreTransformVertices
-	);
-
-	bool failed_to_load =
-		!scene ||
-		(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0 ||
-		!scene->mRootNode;
-
-	ModelLoadData *load_data = ctx.arena.push<ModelLoadData>();
-
-	AssetLoadResult result = {};
-	result.data = load_data;
-	result.stage_size = 0;
-	result.failed = failed_to_load;
-
-	if (!failed_to_load) {
-		String directory = io::path::get_file_directory(ctx.metadata.file_path) + "/";
-
-		const static aiMatrix4x4 identity = {
-			1.f, 0.f, 0.f, 0.f,
-			0.f, 1.f, 0.f, 0.f,
-			0.f, 0.f, 1.f, 0.f,
-			0.f, 0.f, 0.f, 1.f
-		};
-
-		process_nodes(ctx, *load_data, directory, scene->mRootNode, scene, identity);
-
-		result.stage_size =
-			load_data->total_vertex_size +
-			load_data->total_index_size;
-	}
-
-	return result;
-}
-
-static Asset *model_asset_allocate(
-	const AssetLoadContext &ctx, const AssetLoadResult &result,
-	gfx::Device &device
+AssetHandle ModelSerializer::try_fetch_assimp_material_texture(
+	const AssetLoadContext &ctx,
+	const String &directory,
+	const aiMaterial *ai_material,
+	aiTextureType type,
+	Vector<AssetHandle> &dependencies
 )
 {
-	ModelLoadData *load_data = (ModelLoadData *)result.data;
+	if (ai_material->GetTextureCount(type) <= 0)
+		return AssetHandle::invalid();
 
-	u64 sub_offset = 0;
+	aiString texture_path = {};
+	ai_material->GetTexture(type, 0, &texture_path);
 
-	for (auto &parsed : load_data->meshes) {
-		gfx::Mesh &mesh = load_data->model.sub_models[parsed.target_sub_model].mesh;
+	String path = directory + String(texture_path.C_Str());
+	
+	AssetHandle handle = ctx.assets.from_file_path(path);
 
-		mesh.create_buffers(
-			&device,
-			sizeof(gfx::gpu_types::GpuModelVertex),
-			parsed.vertices.size(), parsed.indices.size()
-		);
-	}
+	ctx.assets.load_async(handle, ASSET_TYPE_TEXTURE);
 
-	return ctx.arena.push<ModelAsset>(load_data->model);
+	dependencies.push_back(handle);
+
+	return handle;
 }
 
-static void model_upload(
-	Asset *asset,
-	const AssetLoadContext &ctx, const AssetLoadResult &result,
-	gfx::CommandBuffer &cmd,
-	gfx::GpuBuffer *stage, u64 stage_base
-)
+IAssetSerializer *ast::get_model_serializer()
 {
-	ModelLoadData *load_data = (ModelLoadData *)result.data;
-	ModelAsset *model_asset = asset->as<ModelAsset>();
-
-	u64 sub_offset = 0;
-
-	for (auto &parsed : load_data->meshes) {
-		gfx::Mesh &mesh = model_asset->model.sub_models[parsed.target_sub_model].mesh;
-
-		mesh.write_to_staging_buffer(
-			stage, stage_base + sub_offset,
-			parsed.vertices.data(), parsed.indices.data()
-		);
-
-		sub_offset += mesh.batch_upload(
-			cmd, stage, stage_base + sub_offset
-		);
-	}
-}
-
-AssetSerializer ast::get_model_serializer()
-{
-	AssetSerializer model_serializer = {};
-	model_serializer.load = model_load;
-	model_serializer.allocate = model_asset_allocate;
-	model_serializer.upload = model_upload;
-
-	return model_serializer;
+	static ModelSerializer model_serializer;
+	return &model_serializer;
 }

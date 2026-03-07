@@ -42,11 +42,6 @@ namespace ast
 		ASSET_TYPE_MAX_ENUM
 	};
 
-	enum AssetFlag {
-		ASSET_FLAG_NONE    = 0 << 0,
-		ASSET_FLAG_INVALID = 1 << 0
-	};
-
 	inline AssetType get_asset_type_from_string(const String &name)
 	{
 	#define ASSET_DEF(capitals_, name_) if (name == String(#name_)) return ASSET_TYPE_##capitals_;
@@ -67,6 +62,37 @@ namespace ast
 		debug_log_crash("Unknown Asset Type: %d", type);
 
 		return "Unknown";
+	}
+
+	enum AssetState {
+		ASSET_STATE_UNLOADED,
+		ASSET_STATE_LOADING_DATA,
+		ASSET_STATE_WAITING_FOR_DEPENDENCIES,
+		ASSET_STATE_WAITING_FOR_GPU,
+		ASSET_STATE_READY,
+		ASSET_STATE_FAILED
+	};
+
+	inline bool asset_state_is_loading(AssetState state)
+	{
+		return
+			state == ASSET_STATE_LOADING_DATA ||
+			state == ASSET_STATE_WAITING_FOR_DEPENDENCIES ||
+			state == ASSET_STATE_WAITING_FOR_GPU;
+	}
+	
+	inline bool asset_state_needs_load(AssetState state)
+	{
+		return
+			state == ASSET_STATE_UNLOADED ||
+			state == ASSET_STATE_FAILED;
+	}
+
+	inline bool asset_state_is_finalized(AssetState state)
+	{
+		return
+			state == ASSET_STATE_READY ||
+			state == ASSET_STATE_FAILED;
 	}
 
 	struct AssetMetaData {
@@ -94,7 +120,7 @@ namespace ast
 	struct Asset {
 		friend class AssetManager;
 
-		Asset() : handle(), flags(0) { }
+		Asset() : handle() { }
 
 		virtual void unload() = 0;
 
@@ -111,22 +137,8 @@ namespace ast
 			return handle;
 		}
 
-		bool has_flag(AssetFlag flag) const
-		{
-			return flags & flag;
-		}
-
-		void set_flag(AssetFlag flag, bool enabled)
-		{
-			if (enabled)
-				flags |= flag;
-			else
-				flags &= ~flag;
-		}
-
 	private:
 		AssetHandle handle;
-		u32 flags;
 	};
 
 	class AssetManager;
@@ -139,32 +151,19 @@ namespace ast
 	};
 
 	struct AssetLoadResult {
-		void *data;        // For use by serializers.
-		u64 stage_size;    // Gpu buffer size required.
-		bool failed;       // Did we fail in loading?
+		void *data;                       // For use by serializers.
+		u64 stage_size;                   // Gpu buffer size required.
+		bool failed;                      // Did we fail in loading?
+		Vector<AssetHandle> dependencies; // Assets we depend on.
 	};
 
-	struct AssetSerializer {
-		// Phase 1 - Thread-Safe, Load in file into a blob.
-		// Phase 2 - Not Thread-Safe a. Allocate the actual asset.
-		//                           b. Upload the asset onto the GPU.
-
-		// Phase 1
-		AssetLoadResult (*load)(const AssetLoadContext &ctx);
-
-		// Phase 2a
-		Asset *(*allocate)(
-			const AssetLoadContext &ctx, const AssetLoadResult &result,
-			gfx::Device &device
-		);
-
-		// Phase 2b
-		void (*upload)(
-			Asset *asset,
-			const AssetLoadContext &ctx, const AssetLoadResult &result,
-			gfx::CommandBuffer &cmd,
-			gfx::GpuBuffer *stage, u64 stage_base
-		);
+	class IAssetSerializer {
+	public:
+		virtual ~IAssetSerializer() = default;
+		virtual AssetLoadResult load(const AssetLoadContext &ctx) = 0;
+		virtual Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) = 0;
+		virtual void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) { }
+		virtual void dispose(const AssetLoadResult &result) { }
 	};
 
 	struct AssetUpload {
@@ -205,28 +204,36 @@ namespace ast
 		bool is_loaded(const AssetHandle &handle) const;
 		bool is_loading(const AssetHandle &handle);
 		
+		// Blocks until loaded.
 		template <typename T>
 		T *get_asset(const AssetHandle &handle);
 
 		void load_now(const AssetHandle &handle, AssetType type);
 		void load_async(const AssetHandle &handle, AssetType type);
-		
 		void reload_async(const AssetHandle &handle, AssetType type);
 
 	private:
 		void load_asset_internal(const AssetHandle &handle, AssetType type);
 
+		job::JobCounter *get_loading_counter(const AssetHandle &handle);
+		void set_loading_counter(const AssetHandle &handle, job::JobCounter *counter);
+
 	public:
 		void poll_hot_reloads();
 
 		void wait_for_async_uploads();
+		
 		void push_upload(AssetUpload &&upload);
+		void push_for_dependency_resolution(AssetUpload &&upload);
+		
+		void resolve_pending_dependencies();
 		void flush_uploads();
 
-		bool is_valid(const AssetHandle &handle);
+		bool is_valid(const AssetHandle &handle) const;
 		bool is_placeholder(const AssetHandle &handle) const;
+		String get_path(const AssetHandle &handle) const;
 
-		const AssetSerializer &get_serializer(AssetType type) const;
+		IAssetSerializer *get_serializer(AssetType type) const;
 		
 		void mount(const String &prefix, const String &physical_directory);
 		String get_system_file_path(const String &path) const;
@@ -237,117 +244,51 @@ namespace ast
 		void create_fallbacks();
 		Asset *get_fallback_asset(AssetType type);
 		
-		class AssetList {
-		public:
-			AssetList()
-				: list()
-				, free_indices()
-				, capacity()
-				, curr_index(0)
-			{
-			}
+		AssetHandle allocate_asset(const String &path);
 
-			~AssetList()
-			{
-			}
+		void notify_dependents(const AssetHandle &handle, bool failed);
 
-			AssetHandle add(Asset *asset, const String &path)
-			{
-				u32 index;
-
-				if (!free_indices.empty()) {
-					index = free_indices.top();
-					free_indices.pop();
-				} else {
-					index = list.size();
-					list.emplace_back();
-				}
-
-				AssetHandle handle = {};
-				handle.index = index;
-				handle.generation = list[index].generation;
-
-				list[index].asset = asset;
-				list[index].path = path;
-				list[index].generation++;
-				list[index].last_write_time = 0;
-
-				return handle;
-			}
-
-			void remove(const AssetHandle &handle)
-			{
-				assert(is_valid(handle));
-
-				list[handle.index].asset->unload();
-				list[handle.index].asset = nullptr;
-
-				free_indices.push(handle.index);
-			}
-
-			Asset *get(const AssetHandle &handle) const
-			{
-				return is_valid(handle)
-					? list[handle.index].asset
-					: nullptr;
-			}
-
-			void set(const AssetHandle &handle, Asset *asset)
-			{
-				assert(is_valid(handle));
-				list[handle.index].asset = asset;
-			}
-
-			String get_path(const AssetHandle &handle) const
-			{
-				assert(is_valid(handle));
-				return list[handle.index].path;
-			}
-
-			bool is_valid(const AssetHandle &handle) const
-			{
-				return
-					(handle.index < list.size()) &&
-					(list[handle.index].generation == (handle.generation + 1));
-			}
-
-			struct AssetRecord {
-				Asset *asset;
-				String path;
-				u32 generation;
-				u64 last_write_time;
-			};
-
-			Vector<AssetRecord> list;
-			Stack<u32> free_indices;
-			u64 capacity;
-			u32 curr_index;
-		};
-
-		AssetList assets;
-
-		AssetSerializer serializers[ASSET_TYPE_MAX_ENUM];
+		IAssetSerializer *serializers[ASSET_TYPE_MAX_ENUM];
 
 		HashMap<String, AssetHandle> path_to_handle;
+		
+		job::JobCounter *async_upload_counter;
 
 		Vector<AssetUpload> upload_queue;
-		job::JobCounter *upload_counter;
 		std::mutex upload_mutex;
 
-		HashMap<u32, bool> loading_assets;
+		Vector<AssetUpload> dependency_queue;
+		std::mutex dependency_mutex;
+		
+		HashMap<u32, job::JobCounter *> load_counters;
 		std::condition_variable loading_cv;
 		std::mutex loading_mutex;
 
 		HashMap<String, String> mount_points;
 
 		ArenaView asset_arena;
+		std::mutex allocation_mutex;
+
+		struct AssetRecord {
+			Asset *asset = nullptr;
+			String path;
+			u32 generation = 0;
+			u64 last_write_time = 0;
+			AssetState state = ASSET_STATE_UNLOADED;
+			u32 pending_dependencies = 0;
+			Vector<AssetHandle> dependents; // Assets that depend on this asset.
+			AssetUpload stashed_upload_data;
+		};
+
+		Vector<AssetRecord> asset_records;
+		Stack<u32> free_asset_indices;
 	};
 
 	template <typename T, typename ...Args>
 	T *AssetManager::create_new_asset(const String &name, const String &path, Args &&...args)
 	{
 		T *asset = new T(std::forward<Args>(args)...);
-		asset->handle = assets.add(asset, path);
+		asset->handle = asset_records.add(asset, path);
 
 		path_to_handle[path] = asset->handle;
 
@@ -357,12 +298,15 @@ namespace ast
 	template <typename T>
 	T *AssetManager::get_asset(const AssetHandle &handle)
 	{
-		T *here = assets.get(handle)->as<T>();
+		assert(is_valid(handle));
 
-		if (here)
-			return here;
+		if (asset_records[handle.index].state == ASSET_STATE_READY)
+			return asset_records[handle.index].asset->as<T>();
 
-		load_now(handle, T::get_asset_type_static());
-		return assets.get(handle)->as<T>();
+		if (asset_records[handle.index].state == ASSET_STATE_UNLOADED ||
+			asset_records[handle.index].state == ASSET_STATE_FAILED)
+			load_now(handle, T::get_asset_type_static());
+
+		return asset_records[handle.index].asset->as<T>();
 	}
 }

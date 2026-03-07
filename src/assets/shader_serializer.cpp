@@ -33,7 +33,13 @@ struct ShaderLoadData {
 	gfx::ShaderBytecode stages[2];
 };
 
-static AssetLoadResult shader_load(const AssetLoadContext &ctx)
+class ShaderSerializer : public IAssetSerializer {
+public:
+	AssetLoadResult load(const AssetLoadContext &ctx) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+};
+
+AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 {
 	String file_path = ctx.system_file_path();
 	
@@ -110,7 +116,7 @@ static AssetLoadResult shader_load(const AssetLoadContext &ctx)
 	return result;
 }
 
-static Asset *shader_asset_allocate(
+Asset *ShaderSerializer::finalize(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
 	gfx::Device &device
 )
@@ -127,21 +133,8 @@ static Asset *shader_asset_allocate(
 	return ctx.arena.push<ShaderAsset>(shader, device);
 }
 
-static void shader_upload(
-	Asset *asset,
-	const AssetLoadContext &ctx, const AssetLoadResult &result,
-	gfx::CommandBuffer &cmd,
-	gfx::GpuBuffer *stage, u64 stage_base
-)
+IAssetSerializer *ast::get_shader_serializer()
 {
-}
-
-AssetSerializer ast::get_shader_serializer()
-{
-	AssetSerializer shader_serializer = {};
-	shader_serializer.load = shader_load;
-	shader_serializer.allocate = shader_asset_allocate;
-	shader_serializer.upload = shader_upload;
-
-	return shader_serializer;
+	static ShaderSerializer shader_serializer;
+	return &shader_serializer;
 }

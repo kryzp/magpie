@@ -23,5 +23,5 @@ namespace ast
 		gfx::Model model;
 	};
 
-	AssetSerializer get_model_serializer();
+	IAssetSerializer *get_model_serializer();
 }

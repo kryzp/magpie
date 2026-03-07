@@ -370,7 +370,7 @@ static void reconnect_all_gamepads()
 		if (gamepads[i])
 			debug_log("Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(gamepads[i]));
 		else
-			debug_log("Failed to open gamepad.", SDL_GetGamepadPlayerIndex(gamepads[i]));
+			debug_log("Failed to open gamepad: %d.", SDL_GetGamepadPlayerIndex(gamepads[i]));
 	}
 
 	SDL_free(ids);
