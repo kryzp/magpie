@@ -294,12 +294,53 @@ namespace gfx
 	};
 
 	struct RenderStage {
+		friend class RenderGraph;
+
+	public:
 		enum Type {
 			TYPE_GRAPHICS,
 			TYPE_COMPUTE,
 			TYPE_TRANSFER,
 			TYPE_MAX_ENUM
 		};
+
+		RenderStage();
+		~RenderStage();
+
+		void set_record(std::function<void(const RenderContext &ctx, const RenderStageResources &resources)> fn);
+		void set_multi_view_mask(u32 mask);
+
+		u32 get_multi_view_mask() const;
+		
+		const Vector<RenderResourceEdge> &get_inputs() const;
+		const Vector<RenderResourceEdge> &get_outputs() const;
+
+		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour(), const RenderClear *clear = nullptr);
+		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_depth(), const RenderClear *clear = nullptr);
+		
+		RenderResourceHandle read_texture(RenderResourceHandle handle);
+
+		RenderResourceHandle read_texture_compute(RenderResourceHandle handle);
+		RenderResourceHandle write_texture_compute(RenderResourceHandle handle);
+
+		RenderResourceHandle blit_texture_src(RenderResourceHandle handle);
+		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle);
+
+		RenderResourceHandle write_buffer_graphics(RenderResourceHandle handle);
+		RenderResourceHandle read_buffer_graphics(RenderResourceHandle handle);
+
+		RenderResourceHandle write_buffer_compute(RenderResourceHandle handle);
+		RenderResourceHandle read_buffer_compute(RenderResourceHandle handle);
+
+		RenderResourceHandle indirect_buffer(RenderResourceHandle handle);
+
+	private:
+		RenderResourceHandle add_edge(
+			RenderResourceHandle handle,
+			const AccessState &state,
+			const SubresourceRange &range,
+			bool is_output, const RenderClear *clear
+		);
 
 		const char *name;
 		Type type;
@@ -316,50 +357,6 @@ namespace gfx
 		Vector<VkBufferMemoryBarrier2> buffer_barriers;
 
 		bool is_culled;
-	};
-
-	class RenderGraphBuilder {
-	public:
-		RenderGraphBuilder(RenderGraph &graph, RenderStage &stage);
-		~RenderGraphBuilder();
-
-		VkFormat get_depth_format() const;
-
-		void set_multi_view_mask(u32 mask);
-
-		// Create a virtual resource without GPU memory backing.
-		RenderResourceHandle create_texture(const AttachmentInfo &info) const;
-		RenderResourceHandle create_buffer(const GpuBufferInfo &info) const;
-
-		RenderResourceHandle write_colour(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_colour(), const RenderClear *clear = nullptr) const;
-		RenderResourceHandle write_depth(RenderResourceHandle handle, const SubresourceRange &range = SubresourceRange::all_depth(), const RenderClear *clear = nullptr) const;
-		
-		RenderResourceHandle read_texture(RenderResourceHandle handle) const;
-
-		RenderResourceHandle read_texture_compute(RenderResourceHandle handle) const;
-		RenderResourceHandle write_texture_compute(RenderResourceHandle handle) const;
-
-		RenderResourceHandle blit_texture_src(RenderResourceHandle handle) const;
-		RenderResourceHandle blit_texture_dst(RenderResourceHandle handle) const;
-
-		RenderResourceHandle write_buffer_graphics(RenderResourceHandle handle);
-		RenderResourceHandle read_buffer_graphics(RenderResourceHandle handle);
-
-		RenderResourceHandle write_buffer_compute(RenderResourceHandle handle);
-		RenderResourceHandle read_buffer_compute(RenderResourceHandle handle);
-
-		RenderResourceHandle indirect_buffer(RenderResourceHandle handle);
-
-	private:
-		RenderResourceHandle add_edge(
-			RenderResourceHandle handle,
-			const AccessState &state,
-			const SubresourceRange &range,
-			bool is_output, const RenderClear *clear
-		) const;
-
-		RenderGraph &graph;
-		RenderStage &stage;
 	};
 
 	class RenderResourcePool {
@@ -407,7 +404,7 @@ namespace gfx
 	};
 
 	class RenderGraph {
-		friend class RenderGraphBuilder;
+		friend class RenderStage;
 		friend class RenderStageResources;
 
 	public:
@@ -419,13 +416,7 @@ namespace gfx
 
 		void reset();
 
-		template <typename T>
-		void push_stage(
-			const char *name,
-			RenderStage::Type type,
-			const std::function<void(RenderGraphBuilder &builder, T &data)> &setup,
-			const std::function<void(const RenderContext &ctx, const RenderStageResources &resources, const T &data)> &execute
-		);
+		RenderStage &push_stage(const char *name, RenderStage::Type type);
 
 		void set_backbuffer_source(RenderResourceHandle handle);
 
@@ -437,6 +428,9 @@ namespace gfx
 			RenderScene &scene, const Camera &camera,
 			float delta_time, float elapsed_time
 		);
+
+		RenderResourceHandle create_texture(const AttachmentInfo &info);
+		RenderResourceHandle create_buffer(const GpuBufferInfo &info);
 
 		RenderResourceHandle import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
 		RenderResourceHandle import_buffer(const GpuBuffer *buffer, const AccessState &access_state);
@@ -451,6 +445,7 @@ namespace gfx
 		Device *device;
 		ResourceCache *cache;
 
+		void propogate_dependencies();
 		void backpropogate_dependencies();
 		void allocate_resources(const Swapchain &swapchain);
 		void generate_barriers();
@@ -469,29 +464,4 @@ namespace gfx
 
 		RenderResourceHandle backbuffer_handle;
 	};
-	
-	template <typename T>
-	void RenderGraph::push_stage(
-		const char *name,
-		RenderStage::Type type,
-		const std::function<void(RenderGraphBuilder &builder, T &data)> &setup,
-		const std::function<void(const RenderContext &ctx, const RenderStageResources &resources, const T &data)> &execute
-	)
-	{
-		RenderStage stage = {};
-		stage.name = name;
-		stage.type = type;
-		stage.index = stages.size();
-
-		RenderGraphBuilder builder(*this, stage);
-
-		T data = {};
-		setup(builder, data);
-		
-		stage.record = [=](const RenderContext &ctx, const RenderStageResources &resources) {
-			execute(ctx, resources, data);
-		};
-
-		stages.push_back(stage);
-	}
 }

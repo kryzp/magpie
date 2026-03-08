@@ -36,9 +36,9 @@ RenderInfo RenderStageResources::build_rendering_info() const
 {
 	RenderInfo render_info = {};
 
-	render_info.view_mask = stage.multi_view_mask;
+	render_info.view_mask = stage.get_multi_view_mask();
 
-	for (auto &output : stage.outputs) {
+	for (auto &output : stage.get_outputs()) {
 		auto &attachment_info = graph.resources[output.handle].texture_info;
 
 		// TODO: Right now it's just based on the last attachments sample count_offset.
@@ -116,69 +116,55 @@ GpuBufferRange RenderStageResources::get_buffer_range(RenderResourceHandle handl
 	return GpuBufferRange(physical_buffer, resource.buffer_info.size, resource.buffer_offset);
 }
 
-RenderGraphBuilder::RenderGraphBuilder(RenderGraph &graph, RenderStage &stage)
-	: graph(graph)
-	, stage(stage)
+RenderStage::RenderStage()
+	: name(nullptr)
+	, type(TYPE_MAX_ENUM)
+	, index(-1u)
+	, record()
+	, multi_view_mask(0)
+	, inputs()
+	, outputs()
+	, texture_barriers()
+	, buffer_barriers()
+	, is_culled(false)
 {
 }
 
-RenderGraphBuilder::~RenderGraphBuilder()
+RenderStage::~RenderStage()
 {
 }
 
-VkFormat RenderGraphBuilder::get_depth_format() const
+void RenderStage::set_record(std::function<void(const RenderContext &ctx, const RenderStageResources &resources)> fn)
 {
-	return graph.get_device().get_context().get_depth_format();
+	record = fn;
 }
 
-void RenderGraphBuilder::set_multi_view_mask(u32 mask)
+void RenderStage::set_multi_view_mask(u32 mask)
 {
-	stage.multi_view_mask = mask;
+	multi_view_mask = mask;
 }
 
-RenderResourceHandle RenderGraphBuilder::create_texture(const AttachmentInfo &info) const
+u32 RenderStage::get_multi_view_mask() const
 {
-	RenderResourceHandle handle = graph.resources.size();
-
-	RenderResource resource = {};
-	resource.kind = RenderResource::KIND_TEXTURE;
-	resource.is_imported = false;
-
-	resource.first_stage_index = stage.index;
-	resource.last_stage_index = -1u;
-
-	resource.texture_info = info;
-	
-	graph.resources.push_back(resource);
-
-	return handle;
+	return multi_view_mask;
 }
 
-RenderResourceHandle RenderGraphBuilder::create_buffer(const GpuBufferInfo &info) const
+const Vector<RenderResourceEdge> &RenderStage::get_inputs() const
 {
-	RenderResourceHandle handle = graph.resources.size();
-
-	RenderResource resource = {};
-	resource.kind = RenderResource::KIND_BUFFER;
-	resource.is_imported = false;
-
-	resource.first_stage_index = stage.index;
-	resource.last_stage_index = -1u;
-
-	resource.buffer_info = info;
-	resource.buffer_offset = 0;
-
-	graph.resources.push_back(resource);
-
-	return handle;
+	return inputs;
 }
 
-RenderResourceHandle RenderGraphBuilder::add_edge(
+const Vector<RenderResourceEdge> &RenderStage::get_outputs() const
+{
+	return outputs;
+}
+
+RenderResourceHandle RenderStage::add_edge(
 	RenderResourceHandle handle,
 	const AccessState &state,
 	const SubresourceRange &range,
 	bool is_output, const RenderClear *clear
-) const
+)
 {
 	RenderResourceEdge edge = {};
 	edge.handle = handle;
@@ -193,15 +179,15 @@ RenderResourceHandle RenderGraphBuilder::add_edge(
 	}
 
 	if (is_output) {
-		stage.outputs.push_back(edge);
+		outputs.push_back(edge);
 	} else {
-		stage.inputs.push_back(edge);
+		inputs.push_back(edge);
 	}
 
 	return handle;
 }
 
-RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
+RenderResourceHandle RenderStage::write_colour(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear)
 {
 	return add_edge(
 		handle, 
@@ -213,7 +199,7 @@ RenderResourceHandle RenderGraphBuilder::write_colour(RenderResourceHandle handl
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::write_depth(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear) const
+RenderResourceHandle RenderStage::write_depth(RenderResourceHandle handle, const SubresourceRange &range, const RenderClear *clear)
 {
 	return add_edge(
 		handle, 
@@ -225,7 +211,7 @@ RenderResourceHandle RenderGraphBuilder::write_depth(RenderResourceHandle handle
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_texture(RenderResourceHandle handle) const
+RenderResourceHandle RenderStage::read_texture(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -237,7 +223,7 @@ RenderResourceHandle RenderGraphBuilder::read_texture(RenderResourceHandle handl
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_texture_compute(RenderResourceHandle handle) const
+RenderResourceHandle RenderStage::read_texture_compute(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -249,7 +235,7 @@ RenderResourceHandle RenderGraphBuilder::read_texture_compute(RenderResourceHand
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::write_texture_compute(RenderResourceHandle handle) const
+RenderResourceHandle RenderStage::write_texture_compute(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -261,7 +247,7 @@ RenderResourceHandle RenderGraphBuilder::write_texture_compute(RenderResourceHan
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::blit_texture_src(RenderResourceHandle handle) const
+RenderResourceHandle RenderStage::blit_texture_src(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -273,7 +259,7 @@ RenderResourceHandle RenderGraphBuilder::blit_texture_src(RenderResourceHandle h
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::blit_texture_dst(RenderResourceHandle handle) const
+RenderResourceHandle RenderStage::blit_texture_dst(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -285,7 +271,7 @@ RenderResourceHandle RenderGraphBuilder::blit_texture_dst(RenderResourceHandle h
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::write_buffer_graphics(RenderResourceHandle handle)
+RenderResourceHandle RenderStage::write_buffer_graphics(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -297,7 +283,7 @@ RenderResourceHandle RenderGraphBuilder::write_buffer_graphics(RenderResourceHan
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_buffer_graphics(RenderResourceHandle handle)
+RenderResourceHandle RenderStage::read_buffer_graphics(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -309,7 +295,7 @@ RenderResourceHandle RenderGraphBuilder::read_buffer_graphics(RenderResourceHand
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::write_buffer_compute(RenderResourceHandle handle)
+RenderResourceHandle RenderStage::write_buffer_compute(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -321,7 +307,7 @@ RenderResourceHandle RenderGraphBuilder::write_buffer_compute(RenderResourceHand
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::read_buffer_compute(RenderResourceHandle handle)
+RenderResourceHandle RenderStage::read_buffer_compute(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -333,7 +319,7 @@ RenderResourceHandle RenderGraphBuilder::read_buffer_compute(RenderResourceHandl
 	);
 }
 
-RenderResourceHandle RenderGraphBuilder::indirect_buffer(RenderResourceHandle handle)
+RenderResourceHandle RenderStage::indirect_buffer(RenderResourceHandle handle)
 {
 	return add_edge(
 		handle, 
@@ -620,6 +606,18 @@ void RenderGraph::reset()
 	pool.flush();
 }
 
+RenderStage &RenderGraph::push_stage(const char *name, RenderStage::Type type)
+{
+	RenderStage stage = {};
+	stage.name = name;
+	stage.type = type;
+	stage.index = stages.size();
+
+	stages.push_back(stage);
+
+	return stages.back();
+}
+
 void RenderGraph::set_backbuffer_source(RenderResourceHandle handle)
 {
 	backbuffer_handle = handle;
@@ -635,11 +633,31 @@ void RenderGraph::compile(const Swapchain &swapchain)
 	if (backbuffer_handle != RENDER_INVALID_HANDLE)
 		resources[backbuffer_handle].ref_count++;
 
+	propogate_dependencies();
 	backpropogate_dependencies();
 
 	allocate_resources(swapchain);
 
 	generate_barriers();
+}
+
+void RenderGraph::propogate_dependencies()
+{
+	for (int i = 0; i < stages.size(); i++) {
+		RenderStage &stage = stages[i];
+		
+		for (auto &out : stage.outputs) {
+			if (resources[out.handle].first_stage_index == -1u)
+				resources[out.handle].first_stage_index = i;
+		}
+
+		if (!stage.is_culled) {
+			for (auto &in : stage.inputs) {
+				if (resources[in.handle].first_stage_index == -1u)
+					resources[in.handle].first_stage_index = i;
+			}
+		}
+	}
 }
 
 void RenderGraph::backpropogate_dependencies()
@@ -915,10 +933,10 @@ void RenderGraph::execute(
 			printf("%s\n", stage.name);
 			continue;
 		}
+		
+		GFX_PROFILE_SCOPE(cmd, stage.name);
 
 //		debug_log("Executing Render Stage: %s", stage.name);
-
-		GFX_PROFILE_SCOPE(cmd, stage.name);
 
 		cmd.pipeline_barrier(
 			0, {},
@@ -1052,6 +1070,43 @@ void RenderGraph::present_to_swapchain(CommandBuffer &cmd, const Swapchain &swap
 	);
 
 	cmd.pipeline_barrier(0, {}, {}, { present_barrier });
+}
+
+RenderResourceHandle RenderGraph::create_texture(const AttachmentInfo &info)
+{
+	RenderResourceHandle handle = resources.size();
+
+	RenderResource resource = {};
+	resource.kind = RenderResource::KIND_TEXTURE;
+	resource.is_imported = false;
+
+	resource.first_stage_index = -1u;
+	resource.last_stage_index = -1u;
+
+	resource.texture_info = info;
+	
+	resources.push_back(resource);
+
+	return handle;
+}
+
+RenderResourceHandle RenderGraph::create_buffer(const GpuBufferInfo &info)
+{
+	RenderResourceHandle handle = resources.size();
+
+	RenderResource resource = {};
+	resource.kind = RenderResource::KIND_BUFFER;
+	resource.is_imported = false;
+
+	resource.first_stage_index = -1u;
+	resource.last_stage_index = -1u;
+
+	resource.buffer_info = info;
+	resource.buffer_offset = 0;
+
+	resources.push_back(resource);
+
+	return handle;
 }
 
 RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout)

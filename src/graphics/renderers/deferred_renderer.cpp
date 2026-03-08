@@ -111,228 +111,212 @@ void DeferredRenderer::add_render_stages(
 	// TODO: GBuffer should be local to this scope?
 
 	ComputeCullingPassData culling_pass_data = bb.get<ComputeCullingPassData>();
+	
+	Vector<RenderResourceHandle> geometry_indirect_buffers;
+	Vector<RenderResourceHandle> geometry_counter_buffers;
 
-	struct GeometryStageData {
-		Vector<RenderResourceHandle> indirect_buffers;
-		Vector<RenderResourceHandle> counter_buffers;
-	};
+	RenderStage &geometry_stage = graph.push_stage("Geometry", RenderStage::TYPE_GRAPHICS);
+	
+	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
+		AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
+		gbuffer.attachments[i] = graph.create_texture(attachment_info);
 
-	graph.push_stage<GeometryStageData>(
-		"Geometry",
-		RenderStage::TYPE_GRAPHICS,
-		[&](RenderGraphBuilder &builder, GeometryStageData &data) -> void {
-			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
-				AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-				gbuffer.attachments[i] = builder.create_texture(attachment_info);
-
-				RenderClear clear(0.f, 0.f, 0.f, 1.f);
-				builder.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &clear);
-			}
+		RenderClear clear(0.f, 0.f, 0.f, 1.f);
+		geometry_stage.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &clear);
+	}
 			
-			AttachmentInfo depth_info(builder.get_depth_format());
-			gbuffer.depth = builder.create_texture(depth_info);
+	AttachmentInfo depth_info(graph.get_device().get_context().get_depth_format());
+	gbuffer.depth = graph.create_texture(depth_info);
 
-			RenderClear depth_clear(1.f, 0);
-			builder.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
+	RenderClear depth_clear(1.f, 0);
+	geometry_stage.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
 
-			for (auto &b : culling_pass_data.indirect_buffers)
-				data.indirect_buffers.push_back(builder.indirect_buffer(b));
+	for (auto &b : culling_pass_data.indirect_buffers)
+		geometry_indirect_buffers.push_back(geometry_stage.indirect_buffer(b));
 
-			for (auto &b : culling_pass_data.count_buffers)
-				data.counter_buffers.push_back(builder.indirect_buffer(b));
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const GeometryStageData &data) -> void {
-			CommandBuffer &cmd = ctx.cmd;
+	for (auto &b : culling_pass_data.count_buffers)
+		geometry_counter_buffers.push_back(geometry_stage.indirect_buffer(b));
 
-			GraphicsPipelineDef pipeline_def(model_shader);
-			pipeline_def.has_depth_attachment = true;
+	geometry_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
 
-			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
-				pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+		GraphicsPipelineDef pipeline_def(model_shader);
+		pipeline_def.has_depth_attachment = true;
 
-			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
+		for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
+			pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
-			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
+		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
-			struct {
-				u64 frame_data_buffer;
-				u64 object_buffer;
-				u64 material_buffer;
-				u64 mesh_buffer;
-				u32 sampler;
-			} args;
+		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
-			args.frame_data_buffer = frame_data->get_device_address();
-			args.object_buffer = scene_resources.object_buffer.gpu;
-			args.material_buffer = ctx.scene.get_material_buffer()->get_device_address();
-			args.mesh_buffer = ctx.scene.get_mesh_buffer()->get_device_address();
-			args.sampler = Sampler::linear->get_bindless_handle();
+		struct {
+			u64 frame_data_buffer;
+			u64 object_buffer;
+			u64 material_buffer;
+			u64 mesh_buffer;
+			u32 sampler;
+		} args;
 
-			cmd.push_constants(
-				pipeline_st.layout,
-				VK_SHADER_STAGE_ALL_GRAPHICS,
-				sizeof(args), &args
-			);
+		args.frame_data_buffer = frame_data->get_device_address();
+		args.object_buffer = scene_resources.object_buffer.gpu;
+		args.material_buffer = ctx.scene.get_material_buffer()->get_device_address();
+		args.mesh_buffer = ctx.scene.get_mesh_buffer()->get_device_address();
+		args.sampler = Sampler::linear->get_bindless_handle();
 
-			auto &pages = ctx.scene.get_geometry_pages();
+		cmd.push_constants(
+			pipeline_st.layout,
+			VK_SHADER_STAGE_ALL_GRAPHICS,
+			sizeof(args), &args
+		);
 
-			for (int i = 0; i < pages.size(); i++) {
-				const GeometryPage &page = pages[i];
+		auto &pages = ctx.scene.get_geometry_pages();
 
-				const GpuBuffer *indirect_buffer = resources.get_buffer(data.indirect_buffers[i]);
-				const GpuBuffer *counter_buffer = resources.get_buffer(data.counter_buffers[i]);
+		for (int i = 0; i < pages.size(); i++) {
+			const GeometryPage &page = pages[i];
 
-				cmd.bind_index_buffer(page.index_buffer, 0);
+			const GpuBuffer *indirect_buffer = resources.get_buffer(geometry_indirect_buffers[i]);
+			const GpuBuffer *counter_buffer = resources.get_buffer(geometry_counter_buffers[i]);
+
+			cmd.bind_index_buffer(page.index_buffer, 0);
 				
-				cmd.draw_indexed_indirect_count(
-					indirect_buffer, 0,
-					counter_buffer, 0,
-					RenderScene::PAGE_MAX_OBJECTS,
-					sizeof(gpu_types::GpuIndirectDraw)
-				);
-			}
+			cmd.draw_indexed_indirect_count(
+				indirect_buffer, 0,
+				counter_buffer, 0,
+				RenderScene::PAGE_MAX_OBJECTS,
+				sizeof(gpu_types::GpuIndirectDraw)
+			);
 		}
-	);
+	});
 
 	// ----------------------
 
-	struct LightingStageData {
-		RenderResourceHandle irradiance;
-		RenderResourceHandle prefilter;
-		RenderResourceHandle brdf;
-	};
+	RenderStage &lighting_stage = graph.push_stage("Lighting", RenderStage::TYPE_GRAPHICS);
+	
+	AttachmentInfo lighting_info(VK_FORMAT_R32G32B32A32_SFLOAT);
+	gbuffer.lighting = graph.create_texture(lighting_info);
 
-	graph.push_stage<LightingStageData>(
-		"Lighting",
-		RenderStage::TYPE_GRAPHICS,
-		[&](RenderGraphBuilder &builder, LightingStageData &data) -> void {
-			AttachmentInfo lighting_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-			gbuffer.lighting = builder.create_texture(lighting_info);
+	lighting_stage.write_colour(gbuffer.lighting);
+	lighting_stage.write_depth(gbuffer.depth);
 
-			builder.write_colour(gbuffer.lighting);
-			builder.write_depth(gbuffer.depth);
+	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
+		lighting_stage.read_texture(gbuffer.attachments[i]);
 
-			for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
-				builder.read_texture(gbuffer.attachments[i]);
+	RenderResourceHandle lighting_irradiance_handle = lighting_stage.read_texture(irradiance);
+	RenderResourceHandle lighting_prefilter_handle = lighting_stage.read_texture(prefilter);
+	RenderResourceHandle lighting_brdf_handle = lighting_stage.read_texture(brdf);
 
-			data.irradiance = builder.read_texture(irradiance);
-			data.prefilter = builder.read_texture(prefilter);
-
-			data.brdf = builder.read_texture(brdf);
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const LightingStageData &data) -> void {
-			CommandBuffer &cmd = ctx.cmd;
+	lighting_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
 		
-			// --- AMBIENT
-			GraphicsPipelineDef ambient_pipeline_def(ambient_lighting_shader);
-			ambient_pipeline_def.has_depth_attachment = true;
-			ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
-			ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			ambient_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
+		// --- AMBIENT
+		GraphicsPipelineDef ambient_pipeline_def(ambient_lighting_shader);
+		ambient_pipeline_def.has_depth_attachment = true;
+		ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		ambient_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 
-			PipelineState ambient_pipeline_st = ctx.cache.fetch_pipeline(ambient_pipeline_def);
+		PipelineState ambient_pipeline_st = ctx.cache.fetch_pipeline(ambient_pipeline_def);
 
-			cmd.bind_bindless(ambient_pipeline_st.bind_point, ambient_pipeline_st.layout, ctx.device.get_bindless());
-			cmd.bind_pipeline(ambient_pipeline_st.bind_point, ambient_pipeline_st.pipeline);
+		cmd.bind_bindless(ambient_pipeline_st.bind_point, ambient_pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_pipeline(ambient_pipeline_st.bind_point, ambient_pipeline_st.pipeline);
 
+		struct {
+			u64 frame_data_buffer;
+		
+			u32 position;
+			u32 albedo;
+			u32 normal;
+			u32 material;
+			u32 emissive;
+			
+			u32 irradiance_map;
+			u32 prefilter_map;
+
+			u32 brdf_lut;
+			
+			u32 linear_sampler;
+		} pc_ambient;
+
+		pc_ambient.frame_data_buffer = frame_data->get_device_address();
+			
+		pc_ambient.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
+		pc_ambient.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
+		pc_ambient.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
+		pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
+		pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
+			
+		pc_ambient.irradiance_map = resources.get_texture_view(lighting_irradiance_handle, SubresourceRange::all_colour())->get_bindless_handle();
+		pc_ambient.prefilter_map = resources.get_texture_view(lighting_prefilter_handle, SubresourceRange::all_colour())->get_bindless_handle();
+		pc_ambient.brdf_lut = resources.get_texture_view(lighting_brdf_handle, SubresourceRange::all_colour())->get_bindless_handle();
+
+		pc_ambient.linear_sampler = Sampler::linear->get_bindless_handle();
+
+		cmd.push_constants(
+			ambient_pipeline_st.layout,
+			VK_SHADER_STAGE_ALL_GRAPHICS,
+			sizeof(pc_ambient), &pc_ambient
+		);
+
+		cmd.draw_vertices_n(3);
+
+		// --- DIRECT
+		GraphicsPipelineDef direct_pipeline_def(direct_lighting_point_shader);
+		direct_pipeline_def.has_depth_attachment = true;
+		direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		direct_pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
+		direct_pipeline_def.blend_state.enabled = true;
+		direct_pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
+		direct_pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
+		direct_pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
+		direct_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
+		
+		PipelineState direct_pipeline_st = ctx.cache.fetch_pipeline(direct_pipeline_def);
+
+		cmd.bind_bindless(direct_pipeline_st.bind_point, direct_pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_pipeline(direct_pipeline_st.bind_point, direct_pipeline_st.pipeline);
+
+		light_sphere_mesh.bind_indices(cmd);
+
+		// TODO: Instanced / Indirect Rendering?
+		for (int i = 0; i < ctx.scene.get_light_count(); i++) {
 			struct {
 				u64 frame_data_buffer;
-		
+				u64 light_buffer;
+				u64 vertex_buffer;
+					
 				u32 position;
 				u32 albedo;
 				u32 normal;
-				u32 material;
 				u32 emissive;
-			
-				u32 irradiance_map;
-				u32 prefilter_map;
+				u32 material;
 
-				u32 brdf_lut;
-			
 				u32 linear_sampler;
-			} pc_ambient;
+			} pc_direct;
 
-			pc_ambient.frame_data_buffer = frame_data->get_device_address();
+			pc_direct.frame_data_buffer = frame_data->get_device_address();
+			pc_direct.light_buffer = scene_resources.light_buffer.gpu;
+			pc_direct.vertex_buffer = light_sphere_mesh.vertex_buffer->get_device_address();
 			
-			pc_ambient.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
-			pc_ambient.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
-			pc_ambient.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
-			pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
-			pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
+			pc_direct.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
+			pc_direct.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
+			pc_direct.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
+			pc_direct.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
+			pc_direct.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
 			
-			pc_ambient.irradiance_map = resources.get_texture_view(data.irradiance, SubresourceRange::all_colour())->get_bindless_handle();
-			pc_ambient.prefilter_map = resources.get_texture_view(data.prefilter, SubresourceRange::all_colour())->get_bindless_handle();
-
-			pc_ambient.brdf_lut = resources.get_texture_view(data.brdf, SubresourceRange::all_colour())->get_bindless_handle();
-
-			pc_ambient.linear_sampler = Sampler::linear->get_bindless_handle();
-
+			pc_direct.linear_sampler = Sampler::linear->get_bindless_handle();
+				
 			cmd.push_constants(
 				ambient_pipeline_st.layout,
 				VK_SHADER_STAGE_ALL_GRAPHICS,
-				sizeof(pc_ambient), &pc_ambient
+				sizeof(pc_direct), &pc_direct
 			);
 
-			cmd.draw_vertices_n(3);
-
-			// --- DIRECT
-			GraphicsPipelineDef direct_pipeline_def(direct_lighting_point_shader);
-			direct_pipeline_def.has_depth_attachment = true;
-			direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
-			direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			direct_pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
-			direct_pipeline_def.blend_state.enabled = true;
-			direct_pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
-			direct_pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE;
-			direct_pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_ONE;
-			direct_pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
-		
-			PipelineState direct_pipeline_st = ctx.cache.fetch_pipeline(direct_pipeline_def);
-
-			cmd.bind_bindless(direct_pipeline_st.bind_point, direct_pipeline_st.layout, ctx.device.get_bindless());
-			cmd.bind_pipeline(direct_pipeline_st.bind_point, direct_pipeline_st.pipeline);
-
-			light_sphere_mesh.bind_indices(cmd);
-
-			// TODO: Instanced / Indirect Rendering?
-			for (int i = 0; i < ctx.scene.get_light_count(); i++) {
-				struct {
-					u64 frame_data_buffer;
-					u64 light_buffer;
-					u64 vertex_buffer;
-					
-					u32 position;
-					u32 albedo;
-					u32 normal;
-					u32 emissive;
-					u32 material;
-
-					u32 linear_sampler;
-				} pc_direct;
-
-				pc_direct.frame_data_buffer = frame_data->get_device_address();
-				pc_direct.light_buffer = scene_resources.light_buffer.gpu;
-				pc_direct.vertex_buffer = light_sphere_mesh.vertex_buffer->get_device_address();
-			
-				pc_direct.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
-				pc_direct.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
-				pc_direct.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
-				pc_direct.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
-				pc_direct.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
-			
-				pc_direct.linear_sampler = Sampler::linear->get_bindless_handle();
-				
-				cmd.push_constants(
-					ambient_pipeline_st.layout,
-					VK_SHADER_STAGE_ALL_GRAPHICS,
-					sizeof(pc_direct), &pc_direct
-				);
-
-				light_sphere_mesh.draw_indexed(cmd, i);
-			}
+			light_sphere_mesh.draw_indexed(cmd, i);
 		}
-	);
+	});
 
 	// ----------------------
 	

@@ -80,56 +80,47 @@ void SkyboxRenderer::add_render_stages(
 {
 	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
 
-	struct SkyboxStageData {
-		RenderResourceHandle colour;
-		RenderResourceHandle depth;
-		RenderResourceHandle cubemap;
-	};
+	RenderStage &skybox_stage = graph.push_stage("Skybox Rendering", RenderStage::TYPE_GRAPHICS);
 
-	graph.push_stage<SkyboxStageData>(
-		"Skybox Rendering",
-		RenderStage::TYPE_GRAPHICS,
-		[&](RenderGraphBuilder &builder, SkyboxStageData &data) -> void {
-			data.colour = builder.write_colour(deferred_info.gbuffer.lighting);
-			data.depth = builder.write_depth(deferred_info.gbuffer.depth);
-			data.cubemap = builder.read_texture(graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT }));
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const SkyboxStageData &data) -> void {
-			CommandBuffer &cmd = ctx.cmd;
+	RenderResourceHandle colour_handle = skybox_stage.write_colour(deferred_info.gbuffer.lighting);
+	RenderResourceHandle depth_handle = skybox_stage.write_depth(deferred_info.gbuffer.depth);
+	RenderResourceHandle cubemap_handle = skybox_stage.read_texture(graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT }));
+
+	skybox_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
 			
-			const Texture *colour = resources.get_texture(data.colour);
-			const TextureView *cubemap_view = resources.get_texture_view(data.cubemap, SubresourceRange::all_colour());
+		const Texture *colour = resources.get_texture(colour_handle);
+		const TextureView *cubemap_view = resources.get_texture_view(cubemap_handle, SubresourceRange::all_colour());
 
-			GraphicsPipelineDef pipeline_def(shader);
-			pipeline_def.has_depth_attachment = true;
-			pipeline_def.depth_stencil_state.depth_test_enabled = true;
-			pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
-			pipeline_def.colour_attachment_formats.push_back(colour->get_format());
+		GraphicsPipelineDef pipeline_def(shader);
+		pipeline_def.has_depth_attachment = true;
+		pipeline_def.depth_stencil_state.depth_test_enabled = true;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
+		pipeline_def.colour_attachment_formats.push_back(colour->get_format());
 
-			PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
+		PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 
-			struct {
-				u64 frame_data_buffer;
-				u64 vertex_buffer;
-				u32 cubemap_id;
-				u32 sampler_id;
-			} args;
+		struct {
+			u64 frame_data_buffer;
+			u64 vertex_buffer;
+			u32 cubemap_id;
+			u32 sampler_id;
+		} args;
 
-			args.frame_data_buffer = frame_data->get_device_address();
-			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.cubemap_id = cubemap_view->get_bindless_handle();
-			args.sampler_id = Sampler::linear->get_bindless_handle();
+		args.frame_data_buffer = frame_data->get_device_address();
+		args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
+		args.cubemap_id = cubemap_view->get_bindless_handle();
+		args.sampler_id = Sampler::linear->get_bindless_handle();
 
-			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
-			cmd.bind_pipeline(st.bind_point, st.pipeline);
+		cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+		cmd.bind_pipeline(st.bind_point, st.pipeline);
 
-			cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-			this->mesh.bind_indices(cmd);
-			this->mesh.draw_indexed(cmd);
-		}
-	);
+		this->mesh.bind_indices(cmd);
+		this->mesh.draw_indexed(cmd);
+	});
 }
 
 void SkyboxRenderer::render_hdr_to_skybox(
@@ -140,61 +131,49 @@ void SkyboxRenderer::render_hdr_to_skybox(
 {
 	RenderResourceHandle cubemap_handle = graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED);
 
-	struct HdrToSkyboxData {
-		RenderResourceHandle cubemap;
-	};
+	RenderStage &hdr_to_skybox_stage = graph.push_stage("HDR to Skybox", RenderStage::TYPE_GRAPHICS);
+	hdr_to_skybox_stage.set_multi_view_mask(0b111111);
+	hdr_to_skybox_stage.write_colour(cubemap_handle);
 
-	graph.push_stage<HdrToSkyboxData>(
-		"HDR to Skybox",
-		RenderStage::TYPE_GRAPHICS,
-		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
-			builder.set_multi_view_mask(0b111111);
-			data.cubemap = builder.write_colour(cubemap_handle);
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
-			CommandBuffer &cmd = ctx.cmd;
+	hdr_to_skybox_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
 
-			struct {
-				u64 transform_matrix_buffer;
-				u64 vertex_buffer;
-				u32 hdr_image_id;
-				u32 linear_sampler_id;
-			} args;
+		struct {
+			u64 transform_matrix_buffer;
+			u64 vertex_buffer;
+			u32 hdr_image_id;
+			u32 linear_sampler_id;
+		} args;
 
-			args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
-			args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
-			args.hdr_image_id = ctx.cache.fetch_texture_view_std(hdr_texture)->get_bindless_handle();
-			args.linear_sampler_id = Sampler::linear->get_bindless_handle();
+		args.transform_matrix_buffer = cubemap_capture_transforms->get_device_address();
+		args.vertex_buffer = this->mesh.vertex_buffer->get_device_address();
+		args.hdr_image_id = ctx.cache.fetch_texture_view_std(hdr_texture)->get_bindless_handle();
+		args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
-			GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
-			pipeline_def.depth_stencil_state.depth_test_enabled = false;
-			pipeline_def.depth_stencil_state.depth_write_enabled = false;
-			pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-			pipeline_def.view_mask = 0b111111;
+		GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
+		pipeline_def.depth_stencil_state.depth_test_enabled = false;
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
+		pipeline_def.view_mask = 0b111111;
 
-			PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
+		PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 
-			cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
-			cmd.bind_pipeline(st.bind_point, st.pipeline);
+		cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+		cmd.bind_pipeline(st.bind_point, st.pipeline);
 
-			cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
-			this->mesh.bind_indices(cmd);
-			this->mesh.draw_indexed(cmd);
-		}
-	);
+		this->mesh.bind_indices(cmd);
+		this->mesh.draw_indexed(cmd);
+	});
 
-	graph.push_stage<HdrToSkyboxData>(
-		"HDR to Skybox Mipmapping",
-		RenderStage::TYPE_TRANSFER,
-		[&](RenderGraphBuilder &builder, HdrToSkyboxData &data) -> void {
-			data.cubemap = builder.blit_texture_dst(cubemap_handle);
-		},
-		[=](const RenderContext &ctx, const RenderStageResources &resources, const HdrToSkyboxData &data) -> void {
-			CommandBuffer &cmd = ctx.cmd;
-			cmd.generate_mipmaps(resources.get_texture(data.cubemap));
-		}
-	);
+	RenderStage &hdr_to_skybox_mipmapping = graph.push_stage("HDR to Skybox (Mipmapping)", RenderStage::TYPE_TRANSFER);
+	RenderResourceHandle cubemap_blit_dst_handle = hdr_to_skybox_mipmapping.blit_texture_dst(cubemap_handle);
+
+	hdr_to_skybox_mipmapping.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
+		cmd.generate_mipmaps(resources.get_texture(cubemap_blit_dst_handle));
+	});
 }
 
 const Mesh &SkyboxRenderer::get_mesh() const

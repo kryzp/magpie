@@ -115,9 +115,23 @@ void MiniAudioBackend::shutdown()
 
 void MiniAudioBackend::tick(float dt, const AudioListener &listener)
 {
-	ma_engine_listener_set_position(&engine, 0, listener.eye.x, listener.eye.y, listener.eye.z);
-	ma_engine_listener_set_direction(&engine, 0, listener.forward.x, listener.forward.y, listener.forward.z);
-	ma_engine_listener_set_world_up(&engine, 0, listener.up.x, listener.up.y, listener.up.z);
+	ma_engine_listener_set_position(&engine, 0,
+		listener.eye.x,
+		listener.eye.y,
+		listener.eye.z
+	);
+
+	ma_engine_listener_set_direction(&engine, 0,
+		listener.forward.x,
+		listener.forward.y,
+		listener.forward.z
+	);
+
+	ma_engine_listener_set_world_up(&engine, 0,
+		listener.up.x,
+		listener.up.y,
+		listener.up.z
+	);
 }
 
 AudioBufferHandle MiniAudioBackend::create_buffer(const void *data, u64 size, u32 channels, u16 sample_rate, AudioFormat format)

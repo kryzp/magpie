@@ -126,7 +126,7 @@ void App::init(VirtualArena &global_arena)
 
 	audio_system.init();
 
-	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.wav");
+	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.mp3");
 	ast::SoundAsset *test_sound_asset = assets.get_asset<ast::SoundAsset>(test_sound_handle);
 
 	this->test_sound = test_sound_asset->buffer;
@@ -301,6 +301,9 @@ bool App::tick(const inp::InputState &input)
 
 		if (ImGui::SliderFloat("Light Intensity", &intens, 0.f, 5.f))
 			render_scene.set_light_intensity(light_handle, intens);
+
+		if (ImGui::Button("Hit that shi"))
+			audio_system.play_sound(test_sound, audio::BUS_SFX);
 	}
 	ImGui::End();
 
@@ -333,14 +336,7 @@ bool App::tick(const inp::InputState &input)
 	{
 		gfx::RenderSceneResources scene_resources = render_scene.update_transient_resources(ring_upload_buffer);
 
-		struct FooBar { int baz; };
-
-		render_graph.push_stage<FooBar>(
-			"Swapchain Src",
-			gfx::RenderStage::TYPE_GRAPHICS,
-			[&](gfx::RenderGraphBuilder &builder, FooBar &data) { swapchain_src = builder.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT)); builder.write_colour(swapchain_src); },
-			[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const FooBar &data) { }
-		);
+		swapchain_src = render_graph.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT));
 	
 		render(dt, input, elapsed_time, cmd, scene_resources);
 		add_imgui_render_stage(render_graph, swapchain_src);
@@ -381,9 +377,6 @@ void App::update(float dt, const inp::InputState &input)
 
 	if (input.pressed(inp::GAMEPAD_BUTTON_cross))
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
-
-	if (input.pressed(inp::KEYBOARD_KEY_enter))
-		audio_system.play_sound(test_sound, audio::BUS_SFX);
 }
 
 void App::fixed_update(float dt)
@@ -431,19 +424,10 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)
 {
-	struct ImGuiStageData {
-		int foo;
-	};
-
-	graph.push_stage<ImGuiStageData>(
-		"ImGui",
-		gfx::RenderStage::TYPE_GRAPHICS,
-		[&](gfx::RenderGraphBuilder &builder, ImGuiStageData &data) {
-			builder.write_colour(output_attachment);
-		},
-		[=](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources, const ImGuiStageData &data) {
-			ImGui::Render();
-			ctx.device.imgui_record_draw_data(ctx.cmd);
-		}
-	);
+	gfx::RenderStage &imgui_stage = graph.push_stage("ImGui", gfx::RenderStage::TYPE_GRAPHICS);
+	imgui_stage.write_colour(output_attachment);
+	imgui_stage.set_record([&](const gfx::RenderContext &ctx, const gfx::RenderStageResources &resources) {
+		ImGui::Render();
+		ctx.device.imgui_record_draw_data(ctx.cmd);
+	});
 }
