@@ -83,6 +83,10 @@ add_executable(magpie
 	"${CODE_DIR}/assets/texture_serializer.cpp"
 	"${CODE_DIR}/assets/shader_serializer.cpp"
 	"${CODE_DIR}/assets/model_serializer.cpp"
+	"${CODE_DIR}/assets/sound_serializer.cpp"
+
+	"${CODE_DIR}/audio/audio_system.cpp"
+	"${CODE_DIR}/audio/audio_backend.cpp"
 
 	"${CODE_DIR}/job/job.cpp"
 
@@ -123,6 +127,8 @@ add_executable(magpie
 	"${CODE_DIR}/ext/imgui/imgui_impl_vulkan.cpp"
 	"${CODE_DIR}/ext/imgui/imgui_tables.cpp"
 	"${CODE_DIR}/ext/imgui/imgui_widgets.cpp"
+
+	"${CODE_DIR}/ext/miniaudio.cpp"
 )
 
 target_compile_definitions(magpie PUBLIC

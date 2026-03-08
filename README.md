@@ -4,7 +4,7 @@ Vulkan renderer written in C++, with some other features added on (basically a t
 
 I hope maybe this project helps someone else. Feel free to use any of the code in any projects as long as you credit me.
 
-No gurantees on quality though, I'm still a student. This code is (probably) bad, some of it is (maybe) good :).
+No gurantees on quality though, I'm still a student. Most of this code is probably bad, some of it is maybe good :).
 
 ### Interesting Parts
 - `app`
@@ -37,6 +37,8 @@ No gurantees on quality though, I'm still a student. This code is (probably) bad
 - RTTI macro system allowing for type introspection and other cool stuff like iterating over fields
 - Controller support I guess :p
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
+- Custom intermediary file format for shaders to streamline asset loading
+- Audio because I was bored and wanted to do something else
 
 ### TODO
 - Custom (Arena-Based) Container Library

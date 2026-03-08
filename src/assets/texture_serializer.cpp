@@ -19,7 +19,7 @@ struct TextureLoadData {
 class TextureSerializer : public IAssetSerializer {
 public:
 	AssetLoadResult load(const AssetLoadContext &ctx) override;
-	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, Asset *existing_asset, gfx::Device &device) override;
 	void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) override;
 	void dispose(const AssetLoadResult &result) override;
 };
@@ -58,6 +58,7 @@ AssetLoadResult TextureSerializer::load(const AssetLoadContext &ctx)
 
 Asset *TextureSerializer::finalize(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	Asset *existing_asset,
 	gfx::Device &device
 )
 {
@@ -67,9 +68,16 @@ Asset *TextureSerializer::finalize(
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	gfx::Texture *texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
+	gfx::Texture *new_texture = device.alloc_texture_2d(load_data->width, load_data->height, format, 5);
 
-	return ctx.arena.push<TextureAsset>(texture, device);
+	if (existing_asset) {
+		TextureAsset *texture_asset = existing_asset->as<TextureAsset>();
+		device.destroy_texture(texture_asset->texture);
+		texture_asset->texture = new_texture;
+		return texture_asset;
+	}
+
+	return ctx.arena.push<TextureAsset>(new_texture, device);
 }
 
 void TextureSerializer::gpu_upload(

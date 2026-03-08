@@ -1,5 +1,11 @@
 #pragma once
 
+/*
+ * This whole system is alright but kind of a mess overall.
+ * I feel like I'm using wayyy too many mutexes and sync objects all around.
+ * idk
+ */
+
 #include <condition_variable>
 #include <mutex>
 
@@ -26,7 +32,8 @@ class FileStream;
 #define ASSET_DEFINITIONS			\
 	ASSET_DEF(TEXTURE, Texture)		\
 	ASSET_DEF(SHADER, Shader)		\
-	ASSET_DEF(MODEL, Model)
+	ASSET_DEF(MODEL, Model)			\
+	ASSET_DEF(SOUND, Sound)
 
 #define ASSET_DECLARE(type_)												\
 	static AssetType get_asset_type_static() { return type_; }				\
@@ -167,7 +174,7 @@ namespace ast
 	public:
 		virtual ~IAssetSerializer() = default;
 		virtual AssetLoadResult load(const AssetLoadContext &ctx) = 0;
-		virtual Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) = 0;
+		virtual Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, Asset *existing_asset, gfx::Device &device) = 0;
 		virtual void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) { }
 		virtual void dispose(const AssetLoadResult &result) { }
 	};

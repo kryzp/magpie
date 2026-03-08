@@ -45,7 +45,7 @@ struct ModelLoadData {
 class ModelSerializer : public IAssetSerializer {
 public:
 	AssetLoadResult load(const AssetLoadContext &ctx) override;
-	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, Asset *existing_asset, gfx::Device &device) override;
 	void gpu_upload(Asset *asset, const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::CommandBuffer &cmd, gfx::GpuBuffer *stage, u64 stage_base) override;
 
 private:
@@ -144,10 +144,27 @@ AssetLoadResult ModelSerializer::load(const AssetLoadContext &ctx)
 
 Asset *ModelSerializer::finalize(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	Asset *existing_asset,
 	gfx::Device &device
 )
 {
 	ModelLoadData *load_data = (ModelLoadData *)result.data;
+
+	if (existing_asset) {
+		ModelAsset *model_asset = existing_asset->as<ModelAsset>();
+		
+		for (auto &s : model_asset->model.sub_models)
+			s.mesh.destroy_buffers();
+
+		for (auto &parsed : load_data->meshes) {
+			gfx::Mesh &mesh = load_data->model.sub_models[parsed.target_sub_model].mesh;
+			mesh.create_buffers(&device, sizeof(gfx::gpu_types::GpuModelVertex), parsed.vertices.size(), parsed.indices.size());
+		}
+
+		model_asset->model = load_data->model;
+		
+		return model_asset;
+	}
 
 	u64 sub_offset = 0;
 

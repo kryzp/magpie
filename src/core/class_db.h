@@ -22,8 +22,8 @@ enum FieldType {
 struct FieldInfo {
 	const char *name;
 	FieldType type;
+	u64 type_id; // For non-primitive field types.
 	u64 offset;
-	u64 target_type_id; // For non-primitive field types.
 	bool is_pointer;
 };
 
@@ -166,15 +166,15 @@ private:														\
 		static bool init = []() {								\
 			info.name = #class_;								\
 			info.parent = BaseClass::get_class_static();		\
-			info.type_id = hash::c_str(#class_);					\
+			info.type_id = hash::c_str(#class_);				\
 			info.factory = []() -> Object * { return new class_(); }; \
 			static FieldInfo fields[] = {
 
 #define DB_DATA_FIELD(name_, type_)								\
 				{ #name_, type_, offsetof(ThisClass, name_), 0, std::is_pointer<decltype(ThisClass::name_)>::value },
 
-#define DB_DATA_OBJECT(name_, type_, target_class_)				\
-				{ #name_, type_, offsetof(ThisClass, name_), hash::c_str(#target_class_), std::is_pointer<decltype(ThisClass::name_)>::value },
+#define DB_DATA_OBJECT(name_, target_class_)				\
+				{ #name_, FIELD_OBJECT, offsetof(ThisClass, name_), hash::c_str(#target_class_), std::is_pointer<decltype(ThisClass::name_)>::value },
 
 #define DB_DATA_END()											\
 			};													\
@@ -199,7 +199,7 @@ private:														\
 		static bool init = []() {								\
 			info.name = #class_;								\
 			info.parent = BaseClass::get_class_static();		\
-			info.type_id = hash::c_str(#class_);					\
+			info.type_id = hash::c_str(#class_);				\
 			info.factory = []() -> Object * { return new class_(); }; \
 			info.field_count = 0;								\
 			info.fields = nullptr;								\

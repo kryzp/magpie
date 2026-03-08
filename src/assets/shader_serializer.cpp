@@ -36,7 +36,7 @@ struct ShaderLoadData {
 class ShaderSerializer : public IAssetSerializer {
 public:
 	AssetLoadResult load(const AssetLoadContext &ctx) override;
-	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, gfx::Device &device) override;
+	Asset *finalize(const AssetLoadContext &ctx, const AssetLoadResult &result, Asset *existing_asset, gfx::Device &device) override;
 };
 
 AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
@@ -118,6 +118,7 @@ AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 
 Asset *ShaderSerializer::finalize(
 	const AssetLoadContext &ctx, const AssetLoadResult &result,
+	Asset *existing_asset,
 	gfx::Device &device
 )
 {
@@ -128,9 +129,16 @@ Asset *ShaderSerializer::finalize(
 	for (int i = 0; i < load_data->stage_count; i++)
 		stages.push_back(load_data->stages[i]);
 
-	gfx::ShaderProgram *shader = device.create_shader_program(stages);
+	gfx::ShaderProgram *new_shader = device.create_shader_program(stages);
 
-	return ctx.arena.push<ShaderAsset>(shader, device);
+	if (existing_asset) {
+		ShaderAsset *shader_asset = existing_asset->as<ShaderAsset>();
+		device.destroy_shader_program(shader_asset->shader);
+		shader_asset->shader = new_shader;
+		return shader_asset;
+	}
+
+	return ctx.arena.push<ShaderAsset>(new_shader, device);
 }
 
 IAssetSerializer *ast::get_shader_serializer()

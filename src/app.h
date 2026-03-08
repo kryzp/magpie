@@ -6,6 +6,8 @@
 
 #include "assets/assets.h"
 
+#include "audio/audio_system.h"
+
 #include "graphics/device.h"
 #include "graphics/resource_cache.h"
 #include "graphics/render_scene.h"
@@ -89,4 +91,7 @@ private:
 	gfx::RenderResourceHandle swapchain_src;
 
 	gfx::RenderHandle light_handle;
+
+	audio::AudioSystem audio_system;
+	audio::AudioBufferHandle test_sound;
 };

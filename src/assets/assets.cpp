@@ -5,6 +5,7 @@
 #include "texture_serializer.h"
 #include "shader_serializer.h"
 #include "model_serializer.h"
+#include "sound_serializer.h"
 
 using namespace ast;
 
@@ -33,6 +34,7 @@ AssetManager::AssetManager()
 	serializers[ASSET_TYPE_TEXTURE] = get_texture_serializer();
 	serializers[ASSET_TYPE_SHADER] = get_shader_serializer();
 	serializers[ASSET_TYPE_MODEL] = get_model_serializer();
+	serializers[ASSET_TYPE_SOUND] = get_sound_serializer();
 }
 
 AssetManager::~AssetManager()
@@ -184,7 +186,7 @@ void AssetManager::reload_async(const AssetHandle &handle, AssetType type)
 
 	AssetRecord &record = asset_records[handle.index];
 
-	if (record.state == ASSET_STATE_UNLOADED || record.state == ASSET_STATE_FAILED) {
+	if (!asset_state_is_loading(record.state)) {
 		record.state = ASSET_STATE_LOADING_DATA;
 		load_asset_internal(handle, type, async_upload_counter);
 	}
@@ -375,6 +377,8 @@ void AssetManager::flush_uploads()
 				
 				AssetRecord &record = asset_records[upload.handle.index];
 				Asset *asset = record.asset;
+				
+				bool need_new_asset = asset == nullptr;
 
 				AssetLoadContext context = {
 					.assets = *this,
@@ -385,18 +389,11 @@ void AssetManager::flush_uploads()
 				if (upload.result.failed) {
 					asset = get_fallback_asset(upload.type);
 				} else {
-					bool need_allocation = asset == nullptr;
-
-					if (need_allocation) {
+					if (need_new_asset) {
 						debug_log("Creating %s Asset: %s...",
 							get_string_from_asset_type(upload.type).c_str(),
 							upload.metadata.file_path.c_str()
 						);
-
-						asset = serializer->finalize(context, upload.result, *device);
-						asset->handle = upload.handle;
-
-						record.asset = asset;
 					} else {
 						debug_log("Reloading %s Asset: %s...",
 							get_string_from_asset_type(upload.type).c_str(),
@@ -404,15 +401,15 @@ void AssetManager::flush_uploads()
 						);
 					}
 
-					serializer->gpu_upload(
-						asset,
-						context, upload.result,
-						cmd,
-						staging_buffer, stage_base
-					);
+					asset = serializer->finalize(context, upload.result, asset, *device);
 
-					if (need_allocation)
-						serializer->dispose(upload.result);
+					if (need_new_asset) {
+						asset->handle = upload.handle;
+						record.asset = asset;
+					}
+
+					serializer->gpu_upload(asset, context, upload.result, cmd, staging_buffer, stage_base);
+					serializer->dispose(upload.result);
 				
 					record.state = ASSET_STATE_READY;
 

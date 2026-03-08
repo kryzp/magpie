@@ -5,12 +5,14 @@
 #include "core/class_db.h"
 #include "platform/platform.h"
 #include "math/calc.h"
+#include "dev/cpu_profiler.h"
+
+#include "graphics/gpu_types.h"
+#include "graphics/gpu_profiler.h"
+
 #include "assets/model_serializer.h"
 #include "assets/texture_serializer.h"
-#include "graphics/gpu_types.h"
-
-#include "dev/cpu_profiler.h"
-#include "graphics/gpu_profiler.h"
+#include "assets/sound_serializer.h"
 
 void CameraDriver::update(gfx::Camera &camera, const inp::InputState &input, float dt)
 {
@@ -87,6 +89,8 @@ App::App()
 	, post_processing()
 	, swapchain_src()
 	, light_handle()
+	, audio_system()
+	, test_sound(audio::INVALID_AUDIO_SOURCE)
 {
 }
 
@@ -119,6 +123,13 @@ void App::init(VirtualArena &global_arena)
 	
 	render_graph.init(&graphics_device, &graphics_cache);
 	render_scene.init(&graphics_device, &graphics_cache);
+
+	audio_system.init();
+
+	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.wav");
+	ast::SoundAsset *test_sound_asset = assets.get_asset<ast::SoundAsset>(test_sound_handle);
+
+	this->test_sound = test_sound_asset->buffer;
 
 	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
@@ -236,6 +247,8 @@ void App::destroy()
 	graphics_device.destroy_buffer(frame_data_buffer);
 
 	assets.destroy();
+	
+	audio_system.shutdown();
 
 	render_graph.destroy();
 
@@ -253,7 +266,7 @@ bool App::tick(const inp::InputState &input)
 		debug_log("Quitting...");
 		return true;
 	}
-	
+
 	graphics_device.imgui_new_frame();
 	ImGui::NewFrame();
 
@@ -267,7 +280,7 @@ bool App::tick(const inp::InputState &input)
 	}
 
 	assets.flush_uploads();
-	
+
 	update(dt, input);
 
 	delta_accumulator += CalcF::min(dt, fixed_dt);
@@ -345,6 +358,8 @@ bool App::tick(const inp::InputState &input)
 		render_graph.reset();
 	}
 	graphics_device.end_frame(swapchain, cmd);
+	
+	audio_system.tick(dt);
 
 	return false;
 }
@@ -355,7 +370,7 @@ void App::update(float dt, const inp::InputState &input)
 		camera_driver_active = !camera_driver_active;
 		platform::set_mouse_locked(camera_driver_active);
 	}
-
+	
 	if (camera_driver_active) {
 		camera_driver.update(camera, input, dt);
 
@@ -366,6 +381,9 @@ void App::update(float dt, const inp::InputState &input)
 
 	if (input.pressed(inp::GAMEPAD_BUTTON_cross))
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
+
+	if (input.pressed(inp::KEYBOARD_KEY_enter))
+		audio_system.play_sound(test_sound, audio::BUS_SFX);
 }
 
 void App::fixed_update(float dt)
