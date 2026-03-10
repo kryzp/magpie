@@ -77,8 +77,12 @@ namespace gfx
 
 	struct SubModel {
 		Mat4 transform;
+		
 		Mesh mesh;
 		Material material;
+
+		Vec3 sphere_centre;
+		float sphere_radius;
 	};
 
 	struct Model {

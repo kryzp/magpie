@@ -89,12 +89,12 @@ void RenderScene::update_object_buffer(GpuRingBuffer &frame_arena, RenderSceneRe
 
 	// Cache friendly - Yay!!!
 	for (int i = 0; i < objects.transforms.size(); i++) {
-		mapped_objects[i].model_matrix = objects.transforms[i];
-		mapped_objects[i].normal_matrix = objects.transforms[i].remove_translation().inverse().transpose();
-		mapped_objects[i].sphere_bounds = Vec4(0.f, 0.f, 0.f, 1.f);
-		mapped_objects[i].material_index = objects.materials[i];
-		mapped_objects[i].mesh_index = objects.meshes[i];
-		mapped_objects[i].page_index = objects.page_indices[i];
+		mapped_objects[i].model_matrix   = objects.transforms    [i];
+		mapped_objects[i].normal_matrix  = objects.transforms    [i].remove_translation().inverse().transpose();
+		mapped_objects[i].sphere_bounds  = objects.sphere_bounds [i];
+		mapped_objects[i].material_index = objects.materials     [i];
+		mapped_objects[i].mesh_index     = objects.meshes        [i];
+		mapped_objects[i].page_index     = objects.page_indices  [i];
 	}
 }
 
@@ -178,7 +178,8 @@ bool RenderScene::is_valid_light(RenderHandle handle) const
 
 RenderHandle RenderScene::create_object(
 	const Mat4 &transform,
-	u32 mesh, u32 material
+	u32 mesh, u32 material,
+	const Vec4 &sphere_bounds
 )
 {
 	RenderHandle handle = {};
@@ -193,7 +194,7 @@ RenderHandle RenderScene::create_object(
 	objects.transforms.push_back(transform);
 	objects.meshes.push_back(mesh_memory.index);
 	objects.materials.push_back(material);
-	objects.sphere_bounds.push_back(Vec4(0.f, 0.f, 0.f, 1.f)); // <-- TODO: TEMP
+	objects.sphere_bounds.push_back(sphere_bounds);
 	objects.page_indices.push_back(mesh_memory.page);
 
 	objects.handles[handle.index].dense_index = dense_index;

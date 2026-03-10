@@ -286,7 +286,7 @@ void DeferredRenderer::add_render_stages(
 				u64 frame_data_buffer;
 				u64 light_buffer;
 				u64 vertex_buffer;
-					
+				
 				u32 position;
 				u32 albedo;
 				u32 normal;

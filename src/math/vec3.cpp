@@ -34,6 +34,24 @@ Vec3 Vec3::spherical_to_cartesian(float radius, float azimuth, float elevation)
 	);
 }
 
+Vec3 Vec3::min(const Vec3 &a, const Vec3 &b)
+{
+	return Vec3(
+		CalcF::min(a.x, b.x),
+		CalcF::min(a.y, b.y),
+		CalcF::min(a.z, b.z)
+	);
+}
+
+Vec3 Vec3::max(const Vec3 &a, const Vec3 &b)
+{
+	return Vec3(
+		CalcF::max(a.x, b.x),
+		CalcF::max(a.y, b.y),
+		CalcF::max(a.z, b.z)
+	);
+}
+
 float Vec3::dot(const Vec3 &a, const Vec3 &b)
 {
 	return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);

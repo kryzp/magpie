@@ -6,6 +6,7 @@
 
 #include "io/filesystem.h"
 #include "graphics/gpu_types.h"
+#include "math/calc.h"
 
 using namespace ast;
 
@@ -98,8 +99,7 @@ AssetLoadResult ModelSerializer::load(const AssetLoadContext &ctx)
 		aiProcess_CalcTangentSpace |
 		aiProcess_FlipUVs |
 		aiProcess_JoinIdenticalVertices |
-		aiProcess_GenSmoothNormals |
-		aiProcess_PreTransformVertices
+		aiProcess_GenSmoothNormals
 	);
 
 	bool failed_to_load =
@@ -246,6 +246,9 @@ void ModelSerializer::process_sub_model(
 {
 	Vector<gfx::gpu_types::GpuModelVertex> vertices;
 
+	Vec3 min_bounds =  Vec3(CalcF::max_value());
+	Vec3 max_bounds = -Vec3(CalcF::max_value());
+
 	// TODO: Transforms should be applied when rendering (so be a member of a Sub_model)
 	//       rather than being directly applied to vertices when loading them in.
 	for (int i = 0; i < assimp_mesh->mNumVertices; i++) {
@@ -254,6 +257,9 @@ void ModelSerializer::process_sub_model(
 		if (assimp_mesh->HasPositions()) {
 			aiVector3D position = assimp_basis * assimp_mesh->mVertices[i];
 			vertex.position = Vec3(position.x, position.y, position.z);
+
+			min_bounds = Vec3::min(min_bounds, vertex.position);
+			max_bounds = Vec3::max(max_bounds, vertex.position);
 		} else {
 			vertex.position = Vec3(0.f, 0.f, 0.f);
 		}
@@ -293,6 +299,9 @@ void ModelSerializer::process_sub_model(
 		vertices.push_back(vertex);
 	}
 	
+	sub_model.sphere_centre = (max_bounds + min_bounds) * 0.5f;
+	sub_model.sphere_radius = (max_bounds - sub_model.sphere_centre).length();
+
 	Vector<gfx::IndexType> indices;
 
 	for (int i = 0; i < assimp_mesh->mNumFaces; i++) {

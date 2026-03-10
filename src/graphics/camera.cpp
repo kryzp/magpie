@@ -10,7 +10,7 @@ Camera Camera::perspective(
 )
 {
 	Camera camera;
-	camera.type = CAMERA_PERSPECTIVE;
+	camera.type = TYPE_PERSPECTIVE;
 	camera.position = position;
 	camera.forward = forward;
 	camera.up = Vec3::up();
@@ -32,7 +32,7 @@ Camera Camera::orthographic(
 )
 {
 	Camera camera;
-	camera.type = CAMERA_ORTHOGRAPHIC;
+	camera.type = TYPE_ORTHOGRAPHIC;
 	camera.position = position;
 	camera.forward = forward;
 	camera.up = Vec3::up();
@@ -68,12 +68,12 @@ void Camera::recompute()
 {
 	view = Mat4::lookat(position, position + forward, up);
 
-	if (type == CAMERA_PERSPECTIVE) {
+	if (type == TYPE_PERSPECTIVE) {
 		proj = Mat4::perspective(
 			fov, aspect,
 			near_plane, far_plane
 		);
-	} else if (type == CAMERA_ORTHOGRAPHIC) {
+	} else if (type == TYPE_ORTHOGRAPHIC) {
 		proj = Mat4::orthographic(
 			ortho.x, ortho.x + ortho.w,
 			ortho.y, ortho.y + ortho.h,

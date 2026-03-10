@@ -84,4 +84,3 @@ u64 Mesh::batch_upload(
 
 	return vertex_buffer_size + index_buffer_size;
 }
-

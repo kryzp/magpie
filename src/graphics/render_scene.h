@@ -78,7 +78,8 @@ namespace gfx
 
 		RenderHandle create_object(
 			const Mat4 &transform,
-			u32 mesh, u32 material
+			u32 mesh, u32 material,
+			const Vec4 &sphere_bounds
 		);
 
 		void remove_object(RenderHandle handle);

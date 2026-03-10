@@ -8,7 +8,7 @@ using namespace gfx;
 
 void PostProcessingRenderer::init(ast::AssetManager &assets)
 {
-	exposure = 1.2f;
+	exposure = 1.f;
 
 	tonemapping_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_tonemapping.msh"))->shader;
 }

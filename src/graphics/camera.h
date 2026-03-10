@@ -9,8 +9,8 @@ namespace gfx
 	class Camera {
 	public:
 		enum Type {
-			CAMERA_PERSPECTIVE,
-			CAMERA_ORTHOGRAPHIC
+			TYPE_PERSPECTIVE,
+			TYPE_ORTHOGRAPHIC
 		};
 
 		Camera();

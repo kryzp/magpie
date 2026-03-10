@@ -126,22 +126,23 @@ void App::init(VirtualArena &global_arena)
 
 	audio_system.init();
 
-	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.mp3");
-	ast::SoundAsset *test_sound_asset = assets.get_asset<ast::SoundAsset>(test_sound_handle);
-
-	this->test_sound = test_sound_asset->buffer;
-
 	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
 //	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 	
 	ast::ModelAsset *model_asset = assets.get_asset<ast::ModelAsset>(model_handle);
 
 	for (auto &sub : model_asset->model.sub_models) {
-		Mat4 transform = sub.transform;
-		u32 mesh = render_scene.register_mesh(sub.mesh);
-		u32 material = render_scene.register_material(sub.material, assets);
-
-		render_scene.create_object(transform, mesh, material);
+		render_scene.create_object(
+			sub.transform,
+			render_scene.register_mesh(sub.mesh),
+			render_scene.register_material(sub.material, assets),
+			Vec4(
+				sub.sphere_centre.x,
+				sub.sphere_centre.y,
+				sub.sphere_centre.z,
+				sub.sphere_radius
+			)
+		);
 	}
 
 	light_handle = render_scene.create_light({
@@ -151,6 +152,11 @@ void App::init(VirtualArena &global_arena)
 		.intensity = 0.f,
 		.falloff = 1.f
 	});
+
+	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.mp3");
+	ast::SoundAsset *test_sound_asset = assets.get_asset<ast::SoundAsset>(test_sound_handle);
+
+	this->test_sound = test_sound_asset->buffer;
 
 	frame_data_buffer = graphics_device.alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
@@ -292,7 +298,7 @@ bool App::tick(const inp::InputState &input)
 
 	ImGui::Begin("Controls");
 	{
-		static float exp = 1.2f;
+		static float exp = post_processing.get_exposure();
 
 		if (ImGui::SliderFloat("Exposure", &exp, 0.f, 2.5f))
 			post_processing.set_exposure(exp);

@@ -78,7 +78,6 @@ namespace gfx
 
 		struct GpuPagePointers {
 			u64 vertex_buffer;
-
 			u64 opaque_indirect_buffer;
 			u64 opaque_count_buffer;
 		};

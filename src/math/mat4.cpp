@@ -72,7 +72,7 @@ Mat4 Mat4::perspective(float fov, float aspect, float near, float far)
 {
 	Mat4 result = {};
 
-	float f = CalcF::tan(fov / 360.f * CalcF::PI);
+	float f = 1.f / CalcF::tan(fov / 360.f * CalcF::PI);
 
 	result.m00 = f / aspect;
 	result.m12 = f;

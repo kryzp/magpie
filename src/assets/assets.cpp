@@ -101,8 +101,6 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 	if (!asset_state_needs_load(asset_records[handle.index].state))
 		return;
 
-	asset_records[handle.index].state = ASSET_STATE_LOADING_DATA;
-
 	job::JobCounter *counter = job::alloc_counter();
 
 	load_asset_internal(handle, type, counter);
@@ -114,6 +112,7 @@ void AssetManager::load_now(const AssetHandle &handle, AssetType type)
 			break;
 		
 		resolve_pending_dependencies(counter);
+
 		job::yield_on_counter(counter);
 
 		flush_uploads();
@@ -174,10 +173,8 @@ void AssetManager::load_async(const AssetHandle &handle, AssetType type)
 
 	AssetRecord &record = asset_records[handle.index];
 
-	if (asset_state_needs_load(record.state)) {
-		record.state = ASSET_STATE_LOADING_DATA;
+	if (asset_state_needs_load(record.state))
 		load_asset_internal(handle, type, async_upload_counter);
-	}
 }
 
 void AssetManager::reload_async(const AssetHandle &handle, AssetType type)
@@ -186,14 +183,14 @@ void AssetManager::reload_async(const AssetHandle &handle, AssetType type)
 
 	AssetRecord &record = asset_records[handle.index];
 
-	if (!asset_state_is_loading(record.state)) {
-		record.state = ASSET_STATE_LOADING_DATA;
+	if (!asset_state_is_loading(record.state))
 		load_asset_internal(handle, type, async_upload_counter);
-	}
 }
 
 void AssetManager::load_asset_internal(const AssetHandle &handle, AssetType type, job::JobCounter *counter)
 {
+	asset_records[handle.index].state = ASSET_STATE_LOADING_DATA;
+
 	AssetMetaData metadata = {};
 	metadata.file_path = get_path(handle);
 
@@ -295,8 +292,9 @@ void AssetManager::resolve_pending_dependencies(job::JobCounter *counter)
 
 		for (auto &dep_handle : upload.result.dependencies) {
 			AssetRecord &dep_record = asset_records[dep_handle.index];
-
-			load_asset_internal(dep_handle, ASSET_TYPE_TEXTURE, counter);
+			
+			if (!asset_state_is_loading(dep_record.state) && asset_state_needs_load(dep_record.state))
+				load_asset_internal(dep_handle, ASSET_TYPE_TEXTURE, counter);
 
 			if (!asset_state_is_finalized(dep_record.state)) {
 				unresolved_count++;

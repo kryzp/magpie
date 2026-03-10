@@ -404,7 +404,6 @@ namespace gfx
 	};
 
 	class RenderGraph {
-		friend class RenderStage;
 		friend class RenderStageResources;
 
 	public:

@@ -41,6 +41,7 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - Audio because I was bored and wanted to do something else
 
 ### TODO
+- Debug Rendering!!!!!!
 - Custom (Arena-Based) Container Library
 - More sophisticated debug logging / tracing system
 - GPU profiler
