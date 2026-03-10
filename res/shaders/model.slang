@@ -24,7 +24,7 @@ struct VS_Output {
 };
 
 [shader("vertex")]
-VS_Output VertexMain(uint vertex_id: SV_VertexID, uint instance: SV_VulkanInstanceID)
+VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 {
     uint index = instance;//args.instance_buffer[instance];
 

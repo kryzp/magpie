@@ -17,13 +17,15 @@
 namespace gfx
 {
 	class DebugRenderer {
+		constexpr static u32 MAX_DEBUG_DRAWS = 1024;
+
 	public:
 		static DebugRenderer *get_singleton();
 
 		DebugRenderer();
 		~DebugRenderer();
 
-		void init(ast::AssetManager &assets);
+		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
 		void clear();
@@ -92,6 +94,8 @@ namespace gfx
 		);
 
 	private:
+		Device *device;
+
 		enum DrawCallType {
 			DRAW_CALL_LINE,
 			DRAW_CALL_CROSS,
@@ -170,9 +174,10 @@ namespace gfx
 
 		const ShaderProgram *shader;
 
-		VkPipelineLayout current_layout;
-		Mat4 current_view_proj;
+		GpuBuffer *call_buffer;
+		u32 current_id;
+
 		Colour current_colour;
-		float current_line_width;
+		float current_thickness;
 	};
 }

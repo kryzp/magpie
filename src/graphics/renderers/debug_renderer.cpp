@@ -14,12 +14,13 @@ DebugRenderer *DebugRenderer::get_singleton()
 }
 
 DebugRenderer::DebugRenderer()
-	: draw_calls()
+	: device(nullptr)
+	, draw_calls()
 	, shader(nullptr)
-	, current_layout()
-	, current_view_proj()
+	, call_buffer(nullptr)
+	, current_id(0)
 	, current_colour()
-	, current_line_width()
+	, current_thickness()
 {
 }
 
@@ -27,31 +28,41 @@ DebugRenderer::~DebugRenderer()
 {
 }
 
-void DebugRenderer::init(ast::AssetManager &assets)
-{
-	this->shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://debug_rendering.msh"))->shader;
-}
-
-void DebugRenderer::destroy()
-{
-}
-
-void DebugRenderer::clear()
-{
-	draw_calls.clear();
-}
-
-struct DebugLineDraw {
+struct GPU_DebugLineDraw {
 	Vec4 from;
 	Vec4 to;
 	Vec4 colour;
 	float thickness;
 };
 
+void DebugRenderer::init(Device *device, ast::AssetManager &assets)
+{
+	this->device = device;
+
+	this->shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://debug_rendering.msh"))->shader;
+
+	this->call_buffer = device->alloc_buffer(
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+		sizeof(GPU_DebugLineDraw) * MAX_DEBUG_DRAWS
+	);
+}
+
+void DebugRenderer::destroy()
+{
+	device->destroy_buffer(call_buffer);
+}
+
+void DebugRenderer::clear()
+{
+	draw_calls.clear();
+	current_id = 0;
+}
+
 void DebugRenderer::render(RenderGraph &graph, RenderResourceHandle target)
 {
 	RenderStage &debug_rendering_stage = graph.push_stage("Debug Rendering", RenderStage::TYPE_GRAPHICS);
-
 	debug_rendering_stage.write_colour(target);
 
 	debug_rendering_stage.set_record([&](const RenderContext &ctx, const RenderStageResources &resources) -> void {
@@ -67,14 +78,31 @@ void DebugRenderer::render(RenderGraph &graph, RenderResourceHandle target)
 
 		cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
-		current_layout = pipeline_st.layout;
-		current_view_proj = ctx.camera.get_projection() * ctx.camera.get_view();
+		struct {
+			Mat4 view_proj;
+			u64 calls_buffer;
+			Vec2 resolution;
+		} args;
+	
+		args.view_proj = ctx.camera.get_projection() * ctx.camera.get_view();
+		args.calls_buffer = call_buffer->get_device_address();
+		args.resolution.x = 1280.f;
+		args.resolution.y = 720.f;
+
+		cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
 
 		for (auto &call : draw_calls) {
 			current_colour = call.colour;
-			current_line_width = call.line_width;
+			current_thickness = call.line_width;
 			render_call(call, cmd);
 		}
+
+		int instance_count = current_id;
+
+		if (instance_count > MAX_DEBUG_DRAWS)
+			instance_count = MAX_DEBUG_DRAWS;
+
+		cmd.draw_indexed(4, instance_count, 0, 0, 0);
 	});
 }
 
@@ -282,39 +310,23 @@ void DebugRenderer::render_line_internal(
 	const Vec3 &to
 )
 {
-	struct {
-		Mat4 view_proj;
-		Vec4 from_position;
-		Vec4 to_position;
-		Vec4 colour;
-		Vec2 resolution;
-		float thickness;
-	} args;
-	
-	args.view_proj = current_view_proj;
+	assert(current_id < MAX_DEBUG_DRAWS);
 
-	args.from_position.x = from.x;
-	args.from_position.y = from.y;
-	args.from_position.z = from.z;
-	args.from_position.w = 1.f;
+	GPU_DebugLineDraw *draws = (GPU_DebugLineDraw *)call_buffer->map();
 
-	args.to_position.x = to.x;
-	args.to_position.y = to.y;
-	args.to_position.z = to.z;
-	args.to_position.w = 1.f;
+	Vec4 colour = Vec4(
+		(float)current_colour.r / 255.f,
+		(float)current_colour.g / 255.f,
+		(float)current_colour.b / 255.f,
+		1.f
+	);
 
-	args.colour.x = (float)current_colour.r / 255.f;
-	args.colour.y = (float)current_colour.g / 255.f;
-	args.colour.z = (float)current_colour.b / 255.f;
-	args.colour.w = 1.f;
+	draws[current_id].from      = Vec4(from.x, from.y, from.z, 1.f);
+	draws[current_id].to        = Vec4(to.x,   to.y,   to.z,   1.f);
+	draws[current_id].colour    = colour;
+	draws[current_id].thickness = current_thickness;
 
-	args.resolution.x = 1280.f;
-	args.resolution.y = 720.f;
-
-	args.thickness = current_line_width;
-
-	cmd.push_constants(current_layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-	cmd.draw_vertices_n(4);
+	current_id++;
 }
 
 void DebugRenderer::push_line(

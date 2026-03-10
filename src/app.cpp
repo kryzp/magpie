@@ -191,7 +191,7 @@ void App::init(VirtualArena &global_arena)
 	
 	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
-	gfx::DebugRenderer::get_singleton()->init(assets);
+	gfx::DebugRenderer::get_singleton()->init(&graphics_device, assets);
 
 	ibl_renderer.init(assets);
 	compute_culling.init(assets);
