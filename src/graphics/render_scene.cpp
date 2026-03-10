@@ -60,10 +60,9 @@ void RenderScene::destroy()
 	}
 }
 
-#include "renderers/debug_renderer.h"
-
 RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &frame_arena)
 {
+	/*
 	for (int i = 0; i < objects.sphere_bounds.size(); i++) {
 		auto &b = objects.sphere_bounds[i];
 		auto &t = objects.transforms[i];
@@ -83,6 +82,7 @@ RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &fram
 			Colour(255, 255, 255, 100), 0.f, false
 		);
 	}
+	*/
 
 	RenderSceneResources resources = {};
 
