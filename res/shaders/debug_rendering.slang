@@ -2,8 +2,7 @@
 #include "bindless.slang"
 
 struct DebugLineDraw {
-    float4 from;
-    float4 to;
+    float4x4 transform;
     float4 colour;
     float thickness;
 };
@@ -11,7 +10,7 @@ struct DebugLineDraw {
 struct Arguments {
     float4x4 view_proj;
     DebugLineDraw *calls;
-    float2 resolution;
+    float3 *vertices;
 };
 
 [vk::push_constant]
@@ -27,28 +26,9 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 {
     DebugLineDraw call = args.calls[instance];
 
-    float4 clip0 = mul(args.view_proj, call.from);
-    float4 clip1 = mul(args.view_proj, call.to);
-
-    float2 p0 = clip0.xy / clip0.w * args.resolution;
-    float2 p1 = clip1.xy / clip1.w * args.resolution;
-
-    float2 dir = normalize(p1 - p0);
-    float2 norm = float2(-dir.y, dir.x);
-
-    float2 offset = norm * call.thickness / args.resolution;
-
-    bool start = vertex_id == 0 || vertex_id == 1;
-    bool left  = vertex_id == 0 || vertex_id == 2;
-
-    float4 pos = start ? clip0 : clip1;
-    float2 off = left ? offset : -offset;
-
-    pos.xy += off * pos.w;
-
     VS_Output output;
     output.colour = call.colour;
-    output.sv_position = pos;
+    output.sv_position = mul(args.view_proj, mul(call.transform, float4(args.vertices[vertex_id], 1.0)));
 
 	return output;
 }

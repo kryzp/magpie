@@ -13,6 +13,7 @@
 #include "assets/assets.h"
 
 #include "../render_graph.h"
+#include "../model.h"
 
 namespace gfx
 {
@@ -107,12 +108,10 @@ namespace gfx
 		};
 
 		struct DebugDrawCall {
-			DrawCallType type;
 			Colour colour;
 			float line_width;
 			float duration;
 			float initial_duration;
-			bool depth_enabled;
 
 			union {
 				struct {
@@ -154,8 +153,6 @@ namespace gfx
 			};
 		};
 
-		void render_call(const DebugDrawCall &call);
-
 		void render_line(const DebugDrawCall &call);
 		void render_cross(const DebugDrawCall &call);
 		void render_sphere(const DebugDrawCall &cal);
@@ -164,9 +161,14 @@ namespace gfx
 		void render_aabb(const DebugDrawCall &call);
 		void render_obb(const DebugDrawCall &call);
 
-		void render_line_internal(const Vec3 &from, const Vec3 &to);
+		void push_instance_data(const Mat4 &transform);
 
-		Vector<DebugDrawCall> draw_calls;
+		void create_cube_mesh();
+		void create_circle_mesh();
+		void create_sphere_mesh();
+
+		Vector<DebugDrawCall> depth_buckets[DRAW_CALL_MAX_ENUM];
+		Vector<DebugDrawCall> no_depth_buckets[DRAW_CALL_MAX_ENUM];
 
 		const ShaderProgram *shader;
 
@@ -176,9 +178,13 @@ namespace gfx
 		GpuBuffer *no_depth_call_buffer;
 		u32 no_depth_id;
 
+		Mesh cube_mesh;
+		Mesh circle_mesh;
+		Mesh sphere_mesh;
+
+		bool current_depth_enabled;
 		Colour current_colour;
 		float current_thickness;
-		bool current_depth_enabled;
 		float current_alpha;
 	};
 }

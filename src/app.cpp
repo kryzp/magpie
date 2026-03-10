@@ -375,51 +375,6 @@ bool App::tick(const inp::InputState &input)
 
 void App::update(float dt, const inp::InputState &input)
 {
-	gfx::DebugRenderer::get_singleton()->push_line(
-		Vec3(0.f, 0.f, 1.f),
-		Vec3(0.f, 0.f, 2.f),
-		Colour::red()
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_cross(
-		Vec3(1.f, 0.f, 1.f),
-		1.f,
-		Colour::green()
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_sphere(
-		Vec3(2.f, 0.f, 1.f),
-		0.5f,
-		Colour::blue(),
-		0.f,
-		false
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_circle(
-		Vec3(3.f, 0.f, 1.f),
-		0.5f, Vec3::up(),
-		Colour::yellow()
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_triangle(
-		Vec3(4.f, 0.f, 1.f),
-		Vec3(5.f, 0.f, 1.f),
-		Vec3(4.5f, 0.f, 2.f),
-		Colour::magenta()
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_aabb(
-		Vec3(6.f, 0.f, 1.f),
-		Vec3(7.f, 1.f, 2.f),
-		Colour::cyan()
-	);
-
-	gfx::DebugRenderer::get_singleton()->push_obb(
-		Mat4::translate(Vec3(9.f, 0.f, 1.f)),
-		Vec3::one(),
-		Colour::white()
-	);
-
 	if (input.pressed(inp::KEYBOARD_KEY_enter)) {
 		gfx::DebugRenderer::get_singleton()->push_sphere(
 			Vec3(0.f, 0.f, 3.f),

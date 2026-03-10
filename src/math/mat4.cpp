@@ -339,7 +339,7 @@ Vec3 Mat4::operator * (const Vec3 &vector) const
 {
 	float elements[] = { vector.x, vector.y, vector.z, 1.f };
 
-	Vec3 v = {};
+	Vec4 v = {};
 
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -347,7 +347,7 @@ Vec3 Mat4::operator * (const Vec3 &vector) const
 		}
 	}
 
-	return v;
+	return Vec3(v.x, v.y, v.z);
 }
 
 Mat4 Mat4::operator * (float scalar) const

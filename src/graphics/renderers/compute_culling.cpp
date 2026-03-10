@@ -87,7 +87,7 @@ void ComputeCulling::add_render_stages(
 		pc.page_buffer = scene_resources.page_table_buffer.gpu;
 		pc.object_count = ctx.scene.get_object_count();
 
-		const float aggressiveness = 1.05f;
+		const float aggressiveness = 1.0f;
 
 		Camera camera = ctx.camera;
 		camera.set_fov(ctx.camera.get_fov() * aggressiveness);

@@ -60,8 +60,30 @@ void RenderScene::destroy()
 	}
 }
 
+#include "renderers/debug_renderer.h"
+
 RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &frame_arena)
 {
+	for (int i = 0; i < objects.sphere_bounds.size(); i++) {
+		auto &b = objects.sphere_bounds[i];
+		auto &t = objects.transforms[i];
+
+		Vec3 world_centre = t * b.get_xyz();
+
+		float scale_x = t.c[0].get_xyz().length();
+		float scale_y = t.c[1].get_xyz().length();
+		float scale_z = t.c[2].get_xyz().length();
+
+		float max_scale = CalcF::max(scale_x, CalcF::max(scale_y, scale_z));
+
+		float world_radius = b.w * max_scale;
+
+		DebugRenderer::get_singleton()->push_sphere(
+			world_centre, world_radius,
+			Colour(255, 255, 255, 100), 0.f, false
+		);
+	}
+
 	RenderSceneResources resources = {};
 
 	update_page_buffer(frame_arena, resources);
