@@ -29,12 +29,16 @@ struct Vec3
 	static const Vec3 &backward();
 
 	static Vec3 spherical_to_cartesian(float radius, float azimuth, float elevation);
+	
 	static Vec3 min(const Vec3 &a, const Vec3 &b);
 	static Vec3 max(const Vec3 &a, const Vec3 &b);
+
 	static float dot(const Vec3 &a, const Vec3 &b);
 	static Vec3 cross(const Vec3 &a, const Vec3 &b);
+	
 	static Vec3 lerp(const Vec3 &from, const Vec3 &to, float amount);
 	static Vec3 approach(const Vec3 &from, const Vec3 &to, float amount);
+	
 	static Vec3 reflect(const Vec3 &v, const Vec3 &n);
 	static Vec3 refract(const Vec3 &uv, const Vec3 &n, double eta21);
 	

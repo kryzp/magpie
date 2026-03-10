@@ -193,6 +193,11 @@ void CommandBuffer::push_constants(
 	);
 }
 
+void CommandBuffer::set_line_width(float thickness)
+{
+	vkCmdSetLineWidth(handle, thickness);
+}
+
 void CommandBuffer::draw_vertices_n(u64 count)
 {
 	vkCmdDraw(handle, count, 1, 0, 0);

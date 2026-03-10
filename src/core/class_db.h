@@ -1,6 +1,8 @@
 #pragma once
 
-// Implementation inspired by Source engine.
+/*
+ * Inspired by Source engine.
+ */
 
 #include <atomic>
 #include <type_traits>

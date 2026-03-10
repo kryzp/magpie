@@ -39,9 +39,10 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - Timeline semaphores for synchronization (except for swapchain, that still has to use binary ones...)
 - Custom intermediary file format for shaders to streamline asset loading
 - Audio because I was bored and wanted to do something else
+- Debug Rendering (lines, circles, spheres, AABB, etc...)
 
 ### TODO
-- Debug Rendering!!!!!!
+- Text / Font rendering
 - Custom (Arena-Based) Container Library
 - More sophisticated debug logging / tracing system
 - GPU profiler
@@ -52,7 +53,7 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - Reflective mirrors
 - Bone / Joint based animation
 - Fur / Hair Rendering
-- Text / UI Rendering
+- UI system
 - Realistic ocean water based on FFT
 - Terrain Generator based on No Man's Sky GDC Talk
 - Compositive Post Processing Pipeline

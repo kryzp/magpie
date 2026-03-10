@@ -21,6 +21,7 @@ namespace gfx
 
 	struct GraphicsPipelineDef {
 		const ShaderProgram *program;
+		VkPrimitiveTopology topology;
 		VkCullModeFlags cull_mode;
 		VkFrontFace front_face;
 		BlendState blend_state;
@@ -40,6 +41,7 @@ namespace gfx
 
 		GraphicsPipelineDef(const ShaderProgram *program)
 			: program(program)
+			, topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
 			, cull_mode(VK_CULL_MODE_BACK_BIT)
 			, front_face(VK_FRONT_FACE_COUNTER_CLOCKWISE)
 			, blend_state()

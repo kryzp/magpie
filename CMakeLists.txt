@@ -75,6 +75,7 @@ add_executable(magpie
 	"${CODE_DIR}/math/vec3.cpp"
 	"${CODE_DIR}/math/vec4.cpp"
 	"${CODE_DIR}/math/quat.cpp"
+	"${CODE_DIR}/math/colour.cpp"
 
 	"${CODE_DIR}/io/filesystem.cpp"
 	"${CODE_DIR}/io/stream.cpp"
@@ -115,6 +116,8 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/renderers/deferred_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/skybox_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/post_processing.cpp"
+
+	"${CODE_DIR}/graphics/renderers/debug_renderer.cpp"
 
 	"${CODE_DIR}/ext/vk_mem_alloc.cpp"
 	"${CODE_DIR}/ext/spirv_reflect.cpp"

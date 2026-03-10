@@ -10,6 +10,8 @@
 #include "graphics/gpu_types.h"
 #include "graphics/gpu_profiler.h"
 
+#include "graphics/renderers/debug_renderer.h"
+
 #include "assets/model_serializer.h"
 #include "assets/texture_serializer.h"
 #include "assets/sound_serializer.h"
@@ -189,6 +191,8 @@ void App::init(VirtualArena &global_arena)
 	
 	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
 
+	gfx::DebugRenderer::get_singleton()->init(assets);
+
 	ibl_renderer.init(assets);
 	compute_culling.init(assets);
 	deferred_renderer.init(&graphics_device, assets);
@@ -247,6 +251,8 @@ void App::destroy()
 	deferred_renderer.destroy();
 	skybox_renderer.destroy();
 	post_processing.destroy();
+	
+	gfx::DebugRenderer::get_singleton()->destroy();
 
 	render_scene.destroy();
 
@@ -275,6 +281,8 @@ bool App::tick(const inp::InputState &input)
 
 	graphics_device.imgui_new_frame();
 	ImGui::NewFrame();
+
+	gfx::DebugRenderer::get_singleton()->clear();
 
 	const float elapsed_time = global_timer.get_elapsed_seconds();
 	const float dt = delta_timer.reset();
@@ -345,6 +353,9 @@ bool App::tick(const inp::InputState &input)
 		swapchain_src = render_graph.create_texture(gfx::AttachmentInfo(VK_FORMAT_R32G32B32A32_SFLOAT));
 	
 		render(dt, input, elapsed_time, cmd, scene_resources);
+
+		gfx::DebugRenderer::get_singleton()->render(render_graph, swapchain_src);
+
 		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
@@ -368,6 +379,49 @@ bool App::tick(const inp::InputState &input)
 
 void App::update(float dt, const inp::InputState &input)
 {
+	gfx::DebugRenderer::get_singleton()->push_line(
+		Vec3(0.f, 0.f, 1.f),
+		Vec3(0.f, 0.f, 2.f),
+		Colour::red()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_cross(
+		Vec3(1.f, 0.f, 1.f),
+		1.f,
+		Colour::green()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_sphere(
+		Vec3(2.f, 0.f, 1.f),
+		0.5f,
+		Colour::blue()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_circle(
+		Vec3(3.f, 0.f, 1.f),
+		0.5f, Vec3::up(),
+		Colour::yellow()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_triangle(
+		Vec3(4.f, 0.f, 1.f),
+		Vec3(5.f, 0.f, 1.f),
+		Vec3(4.5f, 0.f, 2.f),
+		Colour::magenta()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_aabb(
+		Vec3(6.f, 0.f, 1.f),
+		Vec3(7.f, 1.f, 2.f),
+		Colour::cyan()
+	);
+
+	gfx::DebugRenderer::get_singleton()->push_obb(
+		Mat4::translate(Vec3(9.f, 0.f, 1.f)),
+		Vec3::one(),
+		Colour::white()
+	);
+
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;
 		platform::set_mouse_locked(camera_driver_active);

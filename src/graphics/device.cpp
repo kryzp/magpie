@@ -642,7 +642,7 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {};
 	input_assembly_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	input_assembly_state_create_info.topology = def.topology;
 	input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
 
 	VkPipelineViewportStateCreateInfo viewport_state_create_info = {};

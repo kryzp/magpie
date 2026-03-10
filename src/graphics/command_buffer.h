@@ -79,6 +79,10 @@ namespace gfx
 
 		// ---
 
+		void set_line_width(float thickness);
+
+		// ---
+
 		void draw_vertices_n(u64 count);
 
 		void draw_indexed(
