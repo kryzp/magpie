@@ -282,8 +282,6 @@ bool App::tick(const inp::InputState &input)
 	graphics_device.imgui_new_frame();
 	ImGui::NewFrame();
 
-	gfx::DebugRenderer::get_singleton()->clear();
-
 	const float elapsed_time = global_timer.get_elapsed_seconds();
 	const float dt = delta_timer.reset();
 	const float fixed_dt = 1.f / (float)TARGET_FPS;
@@ -354,8 +352,6 @@ bool App::tick(const inp::InputState &input)
 	
 		render(dt, input, elapsed_time, cmd, scene_resources);
 
-		gfx::DebugRenderer::get_singleton()->render(render_graph, swapchain_src);
-
 		add_imgui_render_stage(render_graph, swapchain_src);
 
 		render_graph.set_backbuffer_source(swapchain_src);
@@ -394,7 +390,9 @@ void App::update(float dt, const inp::InputState &input)
 	gfx::DebugRenderer::get_singleton()->push_sphere(
 		Vec3(2.f, 0.f, 1.f),
 		0.5f,
-		Colour::blue()
+		Colour::blue(),
+		0.f,
+		false
 	);
 
 	gfx::DebugRenderer::get_singleton()->push_circle(
@@ -421,6 +419,16 @@ void App::update(float dt, const inp::InputState &input)
 		Vec3::one(),
 		Colour::white()
 	);
+
+	if (input.pressed(inp::KEYBOARD_KEY_enter)) {
+		gfx::DebugRenderer::get_singleton()->push_sphere(
+			Vec3(0.f, 0.f, 3.f),
+			2.f,
+			Colour::yellow(),
+			1.f,
+			true
+		);
+	}
 
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;
@@ -473,6 +481,8 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 	post_processing.add_render_stages(render_graph, bb, swapchain_src);
 
 	auto &gbuffer = bb.get<gfx::DeferredRendererInfo>().gbuffer;
+
+	gfx::DebugRenderer::get_singleton()->render(dt, render_graph, swapchain_src, gbuffer.depth);
 
 	     if (input.down(inp::KEYBOARD_KEY_d1)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_POSITION];
 	else if (input.down(inp::KEYBOARD_KEY_d2)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_ALBEDO];

@@ -17,7 +17,7 @@
 namespace gfx
 {
 	class DebugRenderer {
-		constexpr static u32 MAX_DEBUG_DRAWS = 1024;
+		constexpr static u32 MAX_DEBUG_DRAWS = 65536;
 
 	public:
 		static DebugRenderer *get_singleton();
@@ -28,8 +28,7 @@ namespace gfx
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
-		void clear();
-		void render(RenderGraph &graph, RenderResourceHandle target);
+		void render(float dt, RenderGraph &graph, RenderResourceHandle target_colour, RenderResourceHandle target_depth);
 
 		void push_line(
 			const Vec3 &from,
@@ -112,6 +111,7 @@ namespace gfx
 			Colour colour;
 			float line_width;
 			float duration;
+			float initial_duration;
 			bool depth_enabled;
 
 			union {
@@ -154,30 +154,31 @@ namespace gfx
 			};
 		};
 
-		void render_call(const DebugDrawCall &call, CommandBuffer &cmd);
+		void render_call(const DebugDrawCall &call);
 
-		void render_line(const DebugDrawCall &call, CommandBuffer &cmd);
-		void render_cross(const DebugDrawCall &call, CommandBuffer &cmd);
-		void render_sphere(const DebugDrawCall &cal, CommandBuffer &cmd);
-		void render_circle(const DebugDrawCall &call, CommandBuffer &cmd);
-		void render_triangle(const DebugDrawCall &call, CommandBuffer &cmd);
-		void render_aabb(const DebugDrawCall &call, CommandBuffer &cmd);
-		void render_obb(const DebugDrawCall &call, CommandBuffer &cmd);
+		void render_line(const DebugDrawCall &call);
+		void render_cross(const DebugDrawCall &call);
+		void render_sphere(const DebugDrawCall &cal);
+		void render_circle(const DebugDrawCall &call);
+		void render_triangle(const DebugDrawCall &call);
+		void render_aabb(const DebugDrawCall &call);
+		void render_obb(const DebugDrawCall &call);
 
-		void render_line_internal(
-			CommandBuffer &cmd,
-			const Vec3 &from,
-			const Vec3 &to
-		);
+		void render_line_internal(const Vec3 &from, const Vec3 &to);
 
 		Vector<DebugDrawCall> draw_calls;
 
 		const ShaderProgram *shader;
 
-		GpuBuffer *call_buffer;
-		u32 current_id;
+		GpuBuffer *depth_enabled_call_buffer;
+		u32 depth_enabled_id;
+
+		GpuBuffer *no_depth_call_buffer;
+		u32 no_depth_id;
 
 		Colour current_colour;
 		float current_thickness;
+		bool current_depth_enabled;
+		float current_alpha;
 	};
 }
