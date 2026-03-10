@@ -102,7 +102,7 @@ void DebugRenderer::render(RenderGraph &graph, RenderResourceHandle target)
 		if (instance_count > MAX_DEBUG_DRAWS)
 			instance_count = MAX_DEBUG_DRAWS;
 
-		cmd.draw_indexed(4, instance_count, 0, 0, 0);
+		cmd.draw(4, instance_count, 0, 0);
 	});
 }
 

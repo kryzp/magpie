@@ -259,7 +259,7 @@ void DeferredRenderer::add_render_stages(
 			sizeof(pc_ambient), &pc_ambient
 		);
 
-		cmd.draw_vertices_n(3);
+		cmd.draw(3);
 
 		// --- DIRECT
 		GraphicsPipelineDef direct_pipeline_def(direct_lighting_point_shader);

@@ -83,8 +83,11 @@ namespace gfx
 
 		// ---
 
-		void draw_vertices_n(
-			u64 count
+		void draw(
+			u32 vertex_count,
+			u32 instance_count = 1,
+			u32 first_vertex = 0,
+			u32 first_instance = 0
 		);
 
 		void draw_indexed(

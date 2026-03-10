@@ -33,7 +33,7 @@ void IBLRenderer::render_brdf(
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
-		cmd.draw_vertices_n(3);
+		cmd.draw(3);
 	});
 }
 

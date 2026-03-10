@@ -198,9 +198,14 @@ void CommandBuffer::set_line_width(float thickness)
 	vkCmdSetLineWidth(handle, thickness);
 }
 
-void CommandBuffer::draw_vertices_n(u64 count)
+void CommandBuffer::draw(
+	u32 vertex_count,
+	u32 instance_count,
+	u32 first_vertex,
+	u32 first_instance
+)
 {
-	vkCmdDraw(handle, count, 1, 0, 0);
+	vkCmdDraw(handle, vertex_count, instance_count, first_vertex, first_instance);
 }
 
 void CommandBuffer::draw_indexed(
