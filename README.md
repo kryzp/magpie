@@ -21,17 +21,18 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - `res/frustum_culling`
 
 ### Features
-- Arena Memory Allocation System
-- Async Asset Streaming (integrated with job system)
-- Asset Hot-Reloading
-- ImGui Integration
-- Right-handed Z-up coordinates (as it SHOULD be)
+- Render Graph that handles resource management, pipeline barriers and synchronization
 - Modern bindless resource design
 - GPU Driven Rendering: Bindless materials and meshes (global vertex buffer, vertex pulling, etc...)
 - IBL (Image-Based Lighting)
 - Compute Frustum Culling
-- Render Graph that handles resource management, pipeline barriers and synchronization
 - Indirect Deferred Rendering
+- Point Lights with compute-culled shadow-mapping
+- ImGui Integration
+- Right-handed Z-up coordinates (as it SHOULD be)
+- Async Asset Streaming (integrated with job system)
+- Asset Hot-Reloading
+- Arena Memory Allocation System
 - Page-allocated Render Scene
 - High-performance (almost) lockless fiber-based job system, with low-latency spin mode.
 - RTTI macro system allowing for type introspection and other cool stuff like iterating over fields

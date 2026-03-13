@@ -81,3 +81,19 @@ void Camera::recompute()
 		);
 	}
 }
+
+FrustumVolume Camera::frustum_volume() const
+{
+	Mat4 vpt = (get_projection() * get_view()).transpose();
+
+	FrustumVolume volume = {};
+
+	volume.frustum_planes[0] = (vpt.c[3] + vpt.c[0]).frustum_normalize_plane(); // left
+	volume.frustum_planes[1] = (vpt.c[3] - vpt.c[0]).frustum_normalize_plane(); // right
+	volume.frustum_planes[2] = (vpt.c[3] + vpt.c[1]).frustum_normalize_plane(); // bottom
+	volume.frustum_planes[3] = (vpt.c[3] - vpt.c[1]).frustum_normalize_plane(); // top
+	volume.frustum_planes[4] = (           vpt.c[2]).frustum_normalize_plane(); // near
+	volume.frustum_planes[5] = (vpt.c[3] - vpt.c[2]).frustum_normalize_plane(); // far
+
+	return volume;
+}

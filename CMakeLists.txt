@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(magpie CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -10,7 +10,6 @@ set(CODE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # Compiler Options.
 set(COMPILE_OPTIONS
-	-Wno-unused-parameter
 	-Wno-deprecated-declarations
 	-Wno-missing-braces
 	-Wno-sign-compare
@@ -116,6 +115,7 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/renderers/deferred_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/skybox_renderer.cpp"
 	"${CODE_DIR}/graphics/renderers/post_processing.cpp"
+	"${CODE_DIR}/graphics/renderers/shadow_renderer.cpp"
 
 	"${CODE_DIR}/graphics/renderers/debug_renderer.cpp"
 
@@ -148,7 +148,7 @@ elseif(APPLE)
 	target_link_libraries(magpie SDL3::SDL3 Vulkan::Vulkan assimp::assimp slang)
 endif()
 
-target_compile_options(magpie PRIVATE ${COMPILE_OPTIONS})
+target_compile_options(magpie PRIVATE /W3)
 
 # Output directories.
 set_target_properties(magpie PROPERTIES

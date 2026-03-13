@@ -11,6 +11,7 @@ namespace gfx
 
 	public:
 		static Sampler *linear;
+		static Sampler *nearest;
 
 		Sampler()
 			: handle()

@@ -304,24 +304,26 @@ Context::~Context()
 
 void Context::init()
 {
-	VkApplicationInfo core_info = {
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pApplicationName = DEFAULT_WINDOW_TITLE,
-		.applicationVersion = VK_MAKE_API_VERSION(
-			APP_VERSION_VARIANT,
-			APP_VERSION_MAJOR,
-			APP_VERSION_MINOR,
-			APP_VERSION_PATCH
-		),
-		.pEngineName = ENGINE_NAME,
-		.engineVersion = VK_MAKE_API_VERSION(
-			ENGINE_VERSION_VARIANT,
-			ENGINE_VERSION_MAJOR,
-			ENGINE_VERSION_MINOR,
-			ENGINE_VERSION_PATCH
-		),
-		.apiVersion = VK_API_VERSION_1_4
-	};
+	VkApplicationInfo core_info = {};
+	core_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+
+	core_info.pApplicationName = DEFAULT_WINDOW_TITLE;
+	core_info.applicationVersion = VK_MAKE_API_VERSION(
+		APP_VERSION_VARIANT,
+		APP_VERSION_MAJOR,
+		APP_VERSION_MINOR,
+		APP_VERSION_PATCH
+	);
+
+	core_info.pEngineName = ENGINE_NAME;
+	core_info.engineVersion = VK_MAKE_API_VERSION(
+		ENGINE_VERSION_VARIANT,
+		ENGINE_VERSION_MAJOR,
+		ENGINE_VERSION_MINOR,
+		ENGINE_VERSION_PATCH
+	);
+
+	core_info.apiVersion = VK_API_VERSION_1_4;
 
 	VkInstanceCreateInfo instance_create_info = {};
 	instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

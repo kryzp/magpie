@@ -2,7 +2,7 @@
 
 // Resources:
 //  * FrameGraph: Extensible Rendering Architecture in Frostbite by Yuriy O'Donnell
-//  * Render graphs and Vulkan — A Deep Dive by Hans-Kristian Arntzen
+//  * Render graphs and Vulkan ï¿½ A Deep Dive by Hans-Kristian Arntzen
 
 #include <volk/volk.h>
 
@@ -10,6 +10,8 @@
 
 #include "core/types.h"
 #include "math/colour.h"
+
+#include "container/string.h"
 #include "container/hash_map.h"
 
 #include "device.h"
@@ -201,19 +203,13 @@ namespace gfx
 		u32 ref_count;
 
 		ResourceTrackingState tracking;
-		
-		union {
-			struct {
-				const Texture *physical_texture;
-				AttachmentInfo texture_info;
-			};
 
-			struct {
-				const GpuBuffer *physical_buffer;
-				GpuBufferInfo buffer_info;
-				u64 buffer_offset;
-			};
-		};
+		const Texture *physical_texture;
+		AttachmentInfo texture_info;
+
+		const GpuBuffer *physical_buffer;
+		GpuBufferInfo buffer_info;
+		u64 buffer_offset;
 	};
 
 	struct RenderGraphBlackboardData {
@@ -294,7 +290,7 @@ namespace gfx
 	};
 
 	struct RenderStage {
-		friend class RenderGraph;
+		friend class RenderGraph; // TODO: remove ts
 
 	public:
 		enum Type {
@@ -334,6 +330,8 @@ namespace gfx
 
 		RenderResourceHandle indirect_buffer(RenderResourceHandle handle);
 
+		RenderResourceHandle clear_buffer(RenderResourceHandle handle);
+
 	private:
 		RenderResourceHandle add_edge(
 			RenderResourceHandle handle,
@@ -342,7 +340,7 @@ namespace gfx
 			bool is_output, const RenderClear *clear
 		);
 
-		const char *name;
+		String name;
 		Type type;
 		u32 index;
 		
@@ -353,8 +351,9 @@ namespace gfx
 		Vector<RenderResourceEdge> inputs;
 		Vector<RenderResourceEdge> outputs;
 
-		Vector<VkImageMemoryBarrier2> texture_barriers;
+		Vector<VkMemoryBarrier2> memory_barriers;
 		Vector<VkBufferMemoryBarrier2> buffer_barriers;
+		Vector<VkImageMemoryBarrier2> texture_barriers;
 
 		bool is_culled;
 	};
@@ -415,7 +414,7 @@ namespace gfx
 
 		void reset();
 
-		RenderStage &push_stage(const char *name, RenderStage::Type type);
+		RenderStage &push_stage(const String &name, RenderStage::Type type);
 
 		void set_backbuffer_source(RenderResourceHandle handle);
 

@@ -10,6 +10,7 @@
 #include "container/vector.h"
 
 #if defined(__x86_64__)
+#include <immintrin.h>
 #  define JOB_SPIN_PAUSE() _mm_pause()
 #else
 #  define JOB_SPIN_PAUSE() platform::yield_thread()

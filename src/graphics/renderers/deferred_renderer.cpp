@@ -7,7 +7,7 @@
 
 #include "../render_scene.h"
 
-#include "compute_culling.h"
+#include "shadow_renderer.h"
 
 using namespace gfx;
 
@@ -103,39 +103,37 @@ void DeferredRenderer::add_render_stages(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderSceneResources &scene_resources,
 	const GpuBuffer *frame_data,
+	const DrawStream &draw_stream,
 	RenderResourceHandle irradiance,
 	RenderResourceHandle prefilter,
 	RenderResourceHandle brdf
 )
 {
-	// TODO: GBuffer should be local to this scope?
+	auto &shadow_info = bb.get<ShadowRendererInfo>();
 
-	ComputeCullingPassData culling_pass_data = bb.get<ComputeCullingPassData>();
+	RenderClear depth_clear(1.f, 0);
+	AttachmentInfo depth_info(graph.get_device().get_context().get_depth_format());
 	
-	Vector<RenderResourceHandle> geometry_indirect_buffers;
-	Vector<RenderResourceHandle> geometry_counter_buffers;
+	RenderClear colour_clear(0.f, 0.f, 0.f, 1.f);
+	AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
+
+	// ----------------------
+
+	// TODO: GBuffer should be local to this scope?
 
 	RenderStage &geometry_stage = graph.push_stage("Geometry", RenderStage::TYPE_GRAPHICS);
 	
 	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
-		AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
 		gbuffer.attachments[i] = graph.create_texture(attachment_info);
-
-		RenderClear clear(0.f, 0.f, 0.f, 1.f);
-		geometry_stage.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &clear);
+		geometry_stage.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &colour_clear);
 	}
 			
-	AttachmentInfo depth_info(graph.get_device().get_context().get_depth_format());
 	gbuffer.depth = graph.create_texture(depth_info);
 
-	RenderClear depth_clear(1.f, 0);
 	geometry_stage.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
 
-	for (auto &b : culling_pass_data.indirect_buffers)
-		geometry_indirect_buffers.push_back(geometry_stage.indirect_buffer(b));
-
-	for (auto &b : culling_pass_data.count_buffers)
-		geometry_counter_buffers.push_back(geometry_stage.indirect_buffer(b));
+	geometry_stage.indirect_buffer(draw_stream.indirect_buffer);
+	geometry_stage.indirect_buffer(draw_stream.count_buffer);
 
 	geometry_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
@@ -173,14 +171,12 @@ void DeferredRenderer::add_render_stages(
 
 		auto &pages = ctx.scene.get_geometry_pages();
 
-		for (int i = 0; i < pages.size(); i++) {
-			const GeometryPage &page = pages[i];
+		const GpuBuffer *indirect_buffer = resources.get_buffer(draw_stream.indirect_buffer);
+		const GpuBuffer *counter_buffer = resources.get_buffer(draw_stream.count_buffer);
 
-			const GpuBuffer *indirect_buffer = resources.get_buffer(geometry_indirect_buffers[i]);
-			const GpuBuffer *counter_buffer = resources.get_buffer(geometry_counter_buffers[i]);
-
+		for (auto &page : pages) {
 			cmd.bind_index_buffer(page.index_buffer, 0);
-				
+
 			cmd.draw_indexed_indirect_count(
 				indirect_buffer, 0,
 				counter_buffer, 0,
@@ -228,9 +224,9 @@ void DeferredRenderer::add_render_stages(
 			u32 position;
 			u32 albedo;
 			u32 normal;
-			u32 material;
 			u32 emissive;
-			
+			u32 material;
+
 			u32 irradiance_map;
 			u32 prefilter_map;
 
@@ -244,9 +240,9 @@ void DeferredRenderer::add_render_stages(
 		pc_ambient.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
 		pc_ambient.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
 		pc_ambient.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
-		pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
-		pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
-			
+		pc_ambient.emissive = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_EMISSIVE], SubresourceRange::all_colour())             ->get_bindless_handle();
+		pc_ambient.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
+
 		pc_ambient.irradiance_map = resources.get_texture_view(lighting_irradiance_handle, SubresourceRange::all_colour())->get_bindless_handle();
 		pc_ambient.prefilter_map = resources.get_texture_view(lighting_prefilter_handle, SubresourceRange::all_colour())->get_bindless_handle();
 		pc_ambient.brdf_lut = resources.get_texture_view(lighting_brdf_handle, SubresourceRange::all_colour())->get_bindless_handle();
@@ -286,7 +282,8 @@ void DeferredRenderer::add_render_stages(
 				u64 frame_data_buffer;
 				u64 light_buffer;
 				u64 vertex_buffer;
-				
+				u64 shadow_caster_buffer;
+
 				u32 position;
 				u32 albedo;
 				u32 normal;
@@ -294,12 +291,14 @@ void DeferredRenderer::add_render_stages(
 				u32 material;
 
 				u32 linear_sampler;
+				u32 shadow_sampler;
 			} pc_direct;
 
 			pc_direct.frame_data_buffer = frame_data->get_device_address();
 			pc_direct.light_buffer = scene_resources.light_buffer.gpu;
 			pc_direct.vertex_buffer = light_sphere_mesh.vertex_buffer->get_device_address();
-			
+			pc_direct.shadow_caster_buffer = shadow_info.shadow_caster_table->get_device_address();
+
 			pc_direct.position = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_POSITION], SubresourceRange::all_colour())             ->get_bindless_handle();
 			pc_direct.albedo   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_ALBEDO], SubresourceRange::all_colour())               ->get_bindless_handle();
 			pc_direct.normal   = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_NORMAL], SubresourceRange::all_colour())               ->get_bindless_handle();
@@ -307,9 +306,10 @@ void DeferredRenderer::add_render_stages(
 			pc_direct.material = resources.get_texture_view(gbuffer.attachments[GBuffer::ATTACHMENT_METALLIC_ROUGHNESS], SubresourceRange::all_colour())   ->get_bindless_handle();
 			
 			pc_direct.linear_sampler = Sampler::linear->get_bindless_handle();
-				
+			pc_direct.shadow_sampler = Sampler::nearest->get_bindless_handle();
+
 			cmd.push_constants(
-				ambient_pipeline_st.layout,
+				direct_pipeline_st.layout,
 				VK_SHADER_STAGE_ALL_GRAPHICS,
 				sizeof(pc_direct), &pc_direct
 			);

@@ -1,0 +1,3 @@
+Graphics
+vert: assets://shaders/shadow_mapping.vert.spv
+frag: assets://shaders/shadow_mapping.frag.spv

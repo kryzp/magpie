@@ -741,7 +741,7 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {};
 	pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-	pipeline_rendering_create_info.viewMask = def.view_mask;
+	pipeline_rendering_create_info.viewMask = def.multi_view_mask;
 	pipeline_rendering_create_info.colorAttachmentCount = def.colour_attachment_formats.size();
 	pipeline_rendering_create_info.pColorAttachmentFormats = def.colour_attachment_formats.data();
 	pipeline_rendering_create_info.depthAttachmentFormat = depth_stencil_format;

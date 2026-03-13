@@ -5,6 +5,8 @@
 #include "../render_graph.h"
 #include "../render_scene.h"
 
+#include "compute_culling.h"
+
 namespace gfx
 {
 	struct GBuffer {
@@ -36,9 +38,10 @@ namespace gfx
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderSceneResources &scene_resources,
 			const GpuBuffer *frame_data,
+			const DrawStream &draw_stream,
 			RenderResourceHandle irradiance,
 			RenderResourceHandle prefilter,
-			RenderResourceHandle brdf // TEMPORARY !!!
+			RenderResourceHandle brdf
 		);
 
 	private:

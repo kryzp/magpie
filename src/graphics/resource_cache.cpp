@@ -66,7 +66,7 @@ PipelineState ResourceCache::fetch_pipeline(const GraphicsPipelineDef &def)
 	hash = hash::generic_combine(hash, &def.samples,                    sizeof(VkSampleCountFlagBits));
 	hash = hash::generic_combine(hash, &def.min_sample_shading_enabled, sizeof(bool));
 	hash = hash::generic_combine(hash, &def.min_sample_shading,         sizeof(float));
-	hash = hash::generic_combine(hash, &def.view_mask,                  sizeof(u32));
+	hash = hash::generic_combine(hash, &def.multi_view_mask,                  sizeof(u32));
 
 	for (auto &format : def.colour_attachment_formats)
 		hash = hash::generic_combine(hash, &format, sizeof(format));

@@ -117,15 +117,16 @@ GpuBufferRange RenderStageResources::get_buffer_range(RenderResourceHandle handl
 }
 
 RenderStage::RenderStage()
-	: name(nullptr)
+	: name()
 	, type(TYPE_MAX_ENUM)
 	, index(-1u)
 	, record()
 	, multi_view_mask(0)
 	, inputs()
 	, outputs()
-	, texture_barriers()
+	, memory_barriers()
 	, buffer_barriers()
+	, texture_barriers()
 	, is_culled(false)
 {
 }
@@ -328,6 +329,18 @@ RenderResourceHandle RenderStage::indirect_buffer(RenderResourceHandle handle)
 			VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT
 		},
 		{}, false, nullptr
+	);
+}
+
+RenderResourceHandle RenderStage::clear_buffer(RenderResourceHandle handle)
+{
+	return add_edge(
+		handle,
+		{
+			VK_PIPELINE_STAGE_2_CLEAR_BIT,
+			VK_ACCESS_2_TRANSFER_WRITE_BIT
+		},
+		{}, true, nullptr
 	);
 }
 
@@ -606,7 +619,7 @@ void RenderGraph::reset()
 	pool.flush();
 }
 
-RenderStage &RenderGraph::push_stage(const char *name, RenderStage::Type type)
+RenderStage &RenderGraph::push_stage(const String &name, RenderStage::Type type)
 {
 	RenderStage stage = {};
 	stage.name = name;
@@ -929,17 +942,16 @@ void RenderGraph::execute(
 	for (int i = 0; i < stages.size(); i++) {
 		RenderStage &stage = stages[i];
 
-		if (stage.is_culled) {
-			printf("%s\n", stage.name);
+		if (stage.is_culled)
 			continue;
-		}
 		
-		GFX_PROFILE_SCOPE(cmd, stage.name);
+		GFX_PROFILE_SCOPE(cmd, stage.name.c_str());
 
-//		debug_log("Executing Render Stage: %s", stage.name);
+//		debug_log("Executing Render Stage: %s", stage.name.c_str());
 
 		cmd.pipeline_barrier(
-			0, {},
+			0,
+			stage.memory_barriers,
 			stage.buffer_barriers,
 			stage.texture_barriers
 		);

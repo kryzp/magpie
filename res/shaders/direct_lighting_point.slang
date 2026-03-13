@@ -6,6 +6,7 @@ struct PushConstants {
 	FrameData *frame_data;
 	Light *lights;
 	float3 *vertices;
+	ShadowCaster *shadow_casters;
 
 	uint position;
 	uint albedo;
@@ -14,6 +15,7 @@ struct PushConstants {
 	uint material;
 
 	uint linear_sampler;
+	uint shadow_sampler;
 };
 
 [vk::push_constant]
@@ -21,7 +23,7 @@ PushConstants args;
 
 struct VS_Output {
 	float4 sv_position : SV_Position;
-	uint light_id;
+	[vk::location(0)] uint light_id;
 };
 
 [shader("vertex")]
@@ -40,7 +42,26 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint base_instance : SV_Insta
 
 float CalculateAttenuation(float distance_squared, float3 params)
 {
-	return 1. / dot(float3(distance_squared, sqrt(distance_squared), 1.), params);
+	return 1.0 / dot(float3(distance_squared, sqrt(distance_squared), 1.0), params);
+}
+
+float CalculateShadow(float3 light_to_frag, in Light light)
+{
+    ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
+
+    SamplerState shadow_sampler = bindless_samplers[args.shadow_sampler];
+    TextureCube shadow_map = bindless_cubes[caster.shadow_map];
+
+    float3 sample_dir = normalize(light_to_frag);
+
+    float current_depth = length(light_to_frag);
+    float sampled_depth = shadow_map.Sample(shadow_sampler, WorldToCubemap(sample_dir)).r;
+
+    sampled_depth = caster.near_plane + sampled_depth * (caster.far_plane - caster.near_plane);
+
+    float bias = 0.05;
+
+    return current_depth - bias > sampled_depth ? 0.0 : 1.0;
 }
 
 [shader("fragment")]
@@ -60,11 +81,11 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float roughness_value = material.g;
 	float metallic_value = material.b;
 
-	float3 F0 = lerp(.04, albedo, metallic_value);
+	float3 F0 = lerp(0.04, albedo, metallic_value);
 
 	float3 view_dir = normalize(args.frame_data->camera_position - position);
 
-	float NdotV = max(0., dot(normal, view_dir));
+	float NdotV = max(0.0, dot(normal, view_dir));
 
 	float3 delta_x = light.position - position;
 	float distance_squared = dot(delta_x, delta_x);
@@ -76,9 +97,9 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 light_dir = normalize(delta_x);
 	float3 halfway_dir = normalize(light_dir + view_dir);
 
-	float NdotL = max(0., dot(normal, light_dir));
-	float NdotH = max(0., dot(normal, halfway_dir));
-	float VdotH = max(0., dot(halfway_dir, view_dir));
+	float NdotL = max(0.0, dot(normal, light_dir));
+	float NdotH = max(0.0, dot(normal, halfway_dir));
+	float VdotH = max(0.0, dot(halfway_dir, view_dir));
 
 	float3 F = FresnelSchlick(VdotH, F0, 0.0);
 	float NDF = DistributionGGX(NdotH, roughness_value);
@@ -87,9 +108,14 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 kD = (1. - F) * (1. - metallic_value);
 
 	float3 diffuse = albedo;
-	float3 specular = (F * G * NDF) / (4. * NdotL * NdotV + .0001);
+	float3 specular = (F * G * NDF) / (4. * NdotL * NdotV + 0.0001);
 
-	float3 Lo = radiance * NdotL * (kD * diffuse + specular);
+    float shadow_factor = 1.0;
+
+    if (light.shadow_slot_index != -1)
+        shadow_factor = CalculateShadow(-delta_x, light);
+
+	float3 Lo = radiance * NdotL * (kD * diffuse + specular) * shadow_factor;
 
 	return float4(Lo, 1.);
 }

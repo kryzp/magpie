@@ -58,7 +58,7 @@ void IBLRenderer::render_environment_map(
 		const TextureView *environment_map_texture = resources.get_texture_view(irradiance_environment_map_handle, SubresourceRange::all_colour());
 
 		GraphicsPipelineDef pipeline_def(irradiance_shader);
-		pipeline_def.view_mask = 0b111111;
+		pipeline_def.multi_view_mask = 0b111111;
 		pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
@@ -108,7 +108,7 @@ void IBLRenderer::render_environment_map(
 
 			GraphicsPipelineDef pipeline_def(prefilter_shader);
 			pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
-			pipeline_def.view_mask = 0b111111;
+			pipeline_def.multi_view_mask = 0b111111;
 
 			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 

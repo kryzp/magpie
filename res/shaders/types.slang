@@ -44,12 +44,21 @@ struct Material {
 };
 
 struct Light {
+    float4x4 transform;
 	float3 position;
+	float radius;
     float3 colour;
     float intensity;
 	float3 attenuation;
-	float radius;
-	float4x4 transform;
+    int shadow_slot_index; // -1 to disable shadows
+};
+
+struct ShadowCaster {
+    float4x4 face_matrices[6];
+    float3 position;
+    float near_plane;
+    float far_plane;
+    int shadow_map;
 };
 
 struct IndirectDraw {
@@ -62,6 +71,4 @@ struct IndirectDraw {
 
 struct PagePointers {
     ModelVertex *vertex_buffer;
-    IndirectDraw *opaque_indirect_buffer;
-    uint *opaque_count_buffer;
 };

@@ -7,29 +7,23 @@
 
 using namespace gfx;
 
-GFX_BLACKBOARD_DATA(ComputeCullingPassData);
-
 void ComputeCulling::init(ast::AssetManager &assets)
 {
-	compute_frustum_culling_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://frustum_culling.msh"))->shader;
+	culling_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://frustum_culling.msh"))->shader;
 }
 
 void ComputeCulling::destroy()
 {
 }
 
-void ComputeCulling::add_render_stages(
+DrawStream ComputeCulling::cull_geometry(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderScene &scene,
-	const RenderSceneResources &scene_resources
+	const RenderSceneResources &scene_resources,
+	const CullingVolume &volume
 )
 {
-	Vector<RenderResourceHandle> indirect_buffers;
-	Vector<RenderResourceHandle> count_buffers;
-
-	RenderStage &compute_stage = graph.push_stage("Compute Frustum Culling", RenderStage::TYPE_COMPUTE);
-
-	RenderResourceHandle mesh_buffer_handle = compute_stage.read_buffer_compute(graph.import_buffer(scene.get_mesh_buffer(), { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
+	DrawStream stream = {};
 
 	GpuBufferInfo opaque_indirect_info(
 		RenderScene::PAGE_MAX_OBJECTS * sizeof(gpu_types::GpuIndirectDraw),
@@ -46,28 +40,27 @@ void ComputeCulling::add_render_stages(
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT
 	);
 
-	RenderResourceHandle opaque_indirect_handle = graph.create_buffer(opaque_indirect_info);
-	RenderResourceHandle opaque_counter_handle = graph.create_buffer(opaque_counter_info);
+	RenderResourceHandle indirect_buffer_handle = graph.create_buffer(opaque_indirect_info);
+	RenderResourceHandle counter_buffer_handle = graph.create_buffer(opaque_counter_info);
 
-	indirect_buffers.push_back(compute_stage.write_buffer_compute(opaque_indirect_handle));
-	count_buffers.push_back(compute_stage.write_buffer_compute(opaque_counter_handle));
+	RenderStage &clear_counter_stage = graph.push_stage("Compute Frustum Culling (Clear Counter)", RenderStage::TYPE_TRANSFER);
+
+	clear_counter_stage.clear_buffer(counter_buffer_handle);
+
+	clear_counter_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
+		CommandBuffer &cmd = ctx.cmd;
+		cmd.fill_buffer(resources.get_buffer(counter_buffer_handle), 0, sizeof(u32), 0);
+	});
+
+	RenderStage &compute_stage = graph.push_stage("Compute Frustum Culling", RenderStage::TYPE_COMPUTE);
+
+	stream.indirect_buffer = compute_stage.write_buffer_compute(indirect_buffer_handle);
+	stream.count_buffer = compute_stage.write_buffer_compute(counter_buffer_handle);
 
 	compute_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		gpu_types::GpuPagePointers *mapped_ptrs = scene_resources.page_table_buffer.cpu;
-
-		for (int i = 0; i < indirect_buffers.size(); i++) {
-			const GpuBuffer *indirect_buffer = resources.get_buffer(indirect_buffers[i]);
-			const GpuBuffer *count_buffer = resources.get_buffer(count_buffers[i]);
-
-			mapped_ptrs[i].opaque_indirect_buffer = indirect_buffer->get_device_address();
-			mapped_ptrs[i].opaque_count_buffer = count_buffer->get_device_address();
-
-			cmd.fill_buffer(count_buffer, 0, sizeof(u32), 0); // Reset counter buffer.
-		}
-
-		ComputePipelineDef pipeline_def(compute_frustum_culling_program);
+		ComputePipelineDef pipeline_def(culling_shader);
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
@@ -77,30 +70,30 @@ void ComputeCulling::add_render_stages(
 			u64 object_buffer;
 			u64 mesh_buffer;
 			u64 page_buffer;
-			u32 object_count;
-			u32 _padding;
+
+			u64 indirect_buffer;
+			u64 count_buffer;
+
+			u32 object_count; u32 _padding;
+
 			Vec4 frustum_planes[6];
 		} pc;
 
 		pc.object_buffer = scene_resources.object_buffer.gpu;
-		pc.mesh_buffer = resources.get_buffer_range(mesh_buffer_handle).get_device_address();
+		pc.mesh_buffer = scene.get_mesh_buffer()->get_device_address();
 		pc.page_buffer = scene_resources.page_table_buffer.gpu;
+
+		pc.indirect_buffer = resources.get_buffer_range(indirect_buffer_handle).get_device_address();
+		pc.count_buffer = resources.get_buffer_range(counter_buffer_handle).get_device_address();
+
 		pc.object_count = ctx.scene.get_object_count();
 
-		const float aggressiveness = 1.0f;
-
-		Camera camera = ctx.camera;
-		camera.set_fov(ctx.camera.get_fov() * aggressiveness);
-		camera.recompute();
-
-		Mat4 vpt = (camera.get_projection() * camera.get_view()).transpose();
-
-		pc.frustum_planes[0] = (vpt.c[3] + vpt.c[0]).frustum_normalize_plane(); // left
-		pc.frustum_planes[1] = (vpt.c[3] - vpt.c[0]).frustum_normalize_plane(); // right
-		pc.frustum_planes[2] = (vpt.c[3] + vpt.c[1]).frustum_normalize_plane(); // bottom
-		pc.frustum_planes[3] = (vpt.c[3] - vpt.c[1]).frustum_normalize_plane(); // top
-		pc.frustum_planes[4] = (           vpt.c[2]).frustum_normalize_plane(); // near
-		pc.frustum_planes[5] = (vpt.c[3] - vpt.c[2]).frustum_normalize_plane(); // far
+		pc.frustum_planes[0] = volume.frustum.frustum_planes[0];
+		pc.frustum_planes[1] = volume.frustum.frustum_planes[1];
+		pc.frustum_planes[2] = volume.frustum.frustum_planes[2];
+		pc.frustum_planes[3] = volume.frustum.frustum_planes[3];
+		pc.frustum_planes[4] = volume.frustum.frustum_planes[4];
+		pc.frustum_planes[5] = volume.frustum.frustum_planes[5];
 
 		cmd.push_constants(
 			pipeline_st.layout,
@@ -113,9 +106,5 @@ void ComputeCulling::add_render_stages(
 		cmd.dispatch((pc.object_count + threads - 1) / threads, 1, 1);
 	});
 	
-	ComputeCullingPassData pass_data = {};
-	pass_data.indirect_buffers = indirect_buffers;
-	pass_data.count_buffers = count_buffers;
-
-	bb.add<ComputeCullingPassData>(pass_data);
+	return stream;
 }

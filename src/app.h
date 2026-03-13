@@ -19,6 +19,7 @@
 #include "graphics/renderers/deferred_renderer.h"
 #include "graphics/renderers/skybox_renderer.h"
 #include "graphics/renderers/post_processing.h"
+#include "graphics/renderers/shadow_renderer.h"
 
 #include "platform/input.h"
 
@@ -87,6 +88,7 @@ private:
 	gfx::DeferredRenderer deferred_renderer;
 	gfx::SkyboxRenderer skybox_renderer;
 	gfx::PostProcessingRenderer post_processing;
+	gfx::ShadowRenderer shadow_renderer;
 
 	gfx::RenderResourceHandle swapchain_src;
 

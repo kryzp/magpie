@@ -89,6 +89,7 @@ App::App()
 	, deferred_renderer()
 	, skybox_renderer()
 	, post_processing()
+	, shadow_renderer()
 	, swapchain_src()
 	, light_handle()
 	, audio_system()
@@ -121,7 +122,7 @@ void App::init(VirtualArena &global_arena)
 	);
 
 	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
-	assets.mount("assets", "../../res/");
+	assets.mount("assets", "../res/");
 	
 	render_graph.init(&graphics_device, &graphics_cache);
 	render_scene.init(&graphics_device, &graphics_cache);
@@ -150,9 +151,12 @@ void App::init(VirtualArena &global_arena)
 	light_handle = render_scene.create_light({
 		.type = gfx::Light::TYPE_POINT,
 		.position = Vec3(0.f, 0.f, 1.f),
-		.colour = { 255, 255, 255, 255 },
+		.colour = Vec3(1.f, 1.f, 1.f),
 		.intensity = 0.f,
-		.falloff = 1.f
+		.falloff = 1.f,
+		.casts_shadows = true,
+		.shadow_near = 0.1f,
+		.shadow_far = 100.f
 	});
 
 	ast::AssetHandle test_sound_handle = assets.from_file_path("assets://sounds/test_sound.mp3");
@@ -167,12 +171,12 @@ void App::init(VirtualArena &global_arena)
 	);
 
 	Mat4 capture_view_matrices[] = {
-		Mat4::lookat(Vec3::zero(), Vec3( 1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Right
-		Mat4::lookat(Vec3::zero(), Vec3(-1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Left
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f, 1.f), Vec3( 0.f,-1.f, 0.f)), // Up
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f,-1.f), Vec3( 0.f, 1.f, 0.f)), // Down
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Forward
-		Mat4::lookat(Vec3::zero(), Vec3( 0.f,-1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Backwards
+		Mat4::lookat(Vec3::zero(), Vec3( 1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Right.
+		Mat4::lookat(Vec3::zero(), Vec3(-1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Left.
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f, 1.f), Vec3( 0.f,-1.f, 0.f)), // Up.
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 0.f,-1.f), Vec3( 0.f, 1.f, 0.f)), // Down.
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f, 1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Forward.
+		Mat4::lookat(Vec3::zero(), Vec3( 0.f,-1.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Backwards.
 	};
 
 	Mat4 capture_projection_matrix = Mat4::perspective(90.f, 1.f, 0.1f, 10.f);
@@ -190,6 +194,7 @@ void App::init(VirtualArena &global_arena)
 	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
 	
 	gfx::Sampler::linear = graphics_device.create_sampler(VK_FILTER_LINEAR);
+	gfx::Sampler::nearest = graphics_device.create_sampler(VK_FILTER_NEAREST);
 
 	gfx::DebugRenderer::get_singleton()->init(&graphics_device, assets);
 
@@ -198,6 +203,7 @@ void App::init(VirtualArena &global_arena)
 	deferred_renderer.init(&graphics_device, assets);
 	skybox_renderer.init(&graphics_device, assets);
 	post_processing.init(assets);
+	shadow_renderer.init(&graphics_device, assets);
 	
 	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
 
@@ -245,12 +251,14 @@ void App::destroy()
 	graphics_device.destroy_buffer(cubemap_capture_transforms);
 
 	graphics_device.destroy_sampler(gfx::Sampler::linear);
+	graphics_device.destroy_sampler(gfx::Sampler::nearest);
 
 	ibl_renderer.destroy();
 	compute_culling.destroy();
 	deferred_renderer.destroy();
 	skybox_renderer.destroy();
 	post_processing.destroy();
+	shadow_renderer.destroy();
 	
 	gfx::DebugRenderer::get_singleton()->destroy();
 
@@ -313,6 +321,16 @@ bool App::tick(const inp::InputState &input)
 
 		if (ImGui::SliderFloat("Light Intensity", &intens, 0.f, 5.f))
 			render_scene.set_light_intensity(light_handle, intens);
+
+		static Vec3 col = Vec3(1.f, 1.f, 1.f);
+
+		if (ImGui::SliderFloat3("Light Colour", &col.x, 0.f, 1.f))
+			render_scene.set_light_colour(light_handle, col);
+
+		/*
+		static Vec3 pos_x = 0.f;
+
+		if (ImGui::SliderFloat3("Light Position", &pos_x, -2.f, 2.f))*/
 
 		if (ImGui::Button("Hit that shi"))
 			audio_system.play_sound(test_sound, audio::BUS_SFX);
@@ -385,6 +403,8 @@ void App::update(float dt, const inp::InputState &input)
 		);
 	}
 
+	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds() * 1.f)*2.f - 1.f, 0.f, 1.f));
+
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;
 		platform::set_mouse_locked(camera_driver_active);
@@ -423,10 +443,34 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 	gfx::RenderGraphBlackboard bb;
 
-	compute_culling.add_render_stages(render_graph, bb, render_scene, scene_resources);
-	
-	deferred_renderer.add_render_stages(render_graph, bb, scene_resources,
+	gfx::CullingVolume light_shadow_culling_volume(Vec3(0.f, 0.f, 1.f), 10.f);
+
+	gfx::DrawStream light_draw_stream = compute_culling.cull_geometry(
+		render_graph, bb,
+		render_scene, scene_resources,
+		light_shadow_culling_volume
+	);
+
+	shadow_renderer.render_shadows(
+		render_graph, bb,
+		render_scene, scene_resources,
+		light_draw_stream
+	);
+
+	camera.recompute();
+
+	gfx::CullingVolume main_camera_culling_volume(camera.frustum_volume());
+
+	gfx::DrawStream draw_stream = compute_culling.cull_geometry(
+		render_graph, bb,
+		render_scene, scene_resources,
+		main_camera_culling_volume
+	);
+
+	deferred_renderer.add_render_stages(
+		render_graph, bb, scene_resources,
 		frame_data_buffer,
+		draw_stream,
 		render_graph.import_texture(irradiance_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
 		render_graph.import_texture(prefilter_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
 		render_graph.import_texture(brdf_texture, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE })

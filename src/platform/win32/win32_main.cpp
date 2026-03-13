@@ -14,6 +14,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <atomic>
+#include <thread>
 #include <mutex>
 
 #include "ext/imgui/imgui_impl_sdl3.h"

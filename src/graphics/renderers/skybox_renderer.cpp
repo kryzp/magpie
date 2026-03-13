@@ -154,7 +154,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		pipeline_def.depth_stencil_state.depth_test_enabled = false;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
 		pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-		pipeline_def.view_mask = 0b111111;
+		pipeline_def.multi_view_mask = 0b111111;
 
 		PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 

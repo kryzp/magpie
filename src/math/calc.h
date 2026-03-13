@@ -6,13 +6,13 @@
 template <typename T>
 class Calc {
 public:
-	constexpr static T E                              =  2.71828182845;
-	constexpr static T PI                             =  3.14159265359;
-	constexpr static T TAU                            =  6.28318530718;
-	constexpr static T RAD2DEG                        = 57.29577951310;
-	constexpr static T DEG2RAD                        =  0.01745329251;
-	constexpr static T SQRT2                          =  1.41421356240;
-	constexpr static T ONE_OVER_SQUARE_ROOT_OF_TWO_PI =  0.39894228040;
+	constexpr static T E                              = static_cast<T>( 2.71828182845);
+	constexpr static T PI                             = static_cast<T>( 3.14159265359);
+	constexpr static T TAU                            = static_cast<T>( 6.28318530718);
+	constexpr static T RAD2DEG                        = static_cast<T>(57.29577951310);
+	constexpr static T DEG2RAD                        = static_cast<T>( 0.01745329251);
+	constexpr static T SQRT2                          = static_cast<T>( 1.41421356240);
+	constexpr static T ONE_OVER_SQUARE_ROOT_OF_TWO_PI = static_cast<T>( 0.39894228040);
 
 	static T abs(T x);
 	static T mod(T x, T y);

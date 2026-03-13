@@ -6,6 +6,10 @@
 
 namespace gfx
 {
+	struct FrustumVolume {
+		Vec4 frustum_planes[6];
+	};
+
 	class Camera {
 	public:
 		enum Type {
@@ -31,6 +35,8 @@ namespace gfx
 		);
 
 		void recompute();
+
+		FrustumVolume frustum_volume() const;
 
 		const Vec3 &get_position() const
 		{

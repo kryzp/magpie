@@ -10,7 +10,7 @@
 
 using namespace ast;
 
-// This is a coordanate transformation converting
+// This is a coordinate transformation converting
 // Assimp's coordinate system, which is right-handed Y+ up
 // into our coordinate system, which is right-handed Z+ up.
 const static aiMatrix4x4 assimp_basis = {

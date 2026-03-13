@@ -30,9 +30,11 @@ String path::get_file_directory(const String &path)
 String path::join(const String &path_a, String path_b)
 {
 	assert(false);
+	return "";
 }
 
 String path::normalize(const String &path)
 {
 	assert(false);
+	return "";
 }

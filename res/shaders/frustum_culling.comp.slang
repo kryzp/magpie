@@ -4,8 +4,9 @@ struct Arguments {
     ObjectData *objects;
     RenderMesh *meshes;
     PagePointers *pages;
-    uint object_count;
-    uint _padding;
+    IndirectDraw *indirect_buffer;
+    uint *count_buffer;
+    uint object_count; uint _padding;
     float4 frustum_planes[6]; // xyz = normal, w = distance
 };
 
@@ -14,6 +15,8 @@ Arguments args;
 
 bool IsVisible(in ObjectData obj)
 {
+    return true; // TODO: TEMP, THERE ISNT ANY SPHERE CULLING FOR LIGHTS YET
+
     float3 world_centre = mul(obj.model_matrix, float4(obj.sphere_bounds.xyz, 1.0)).xyz;
 
     float scale_x = length(obj.model_matrix[0].xyz);
@@ -31,11 +34,6 @@ bool IsVisible(in ObjectData obj)
     }
 
 	return true;
-}
-
-bool IsTransparent(in ObjectData obj)
-{
-    return false;
 }
 
 IndirectDraw GetDrawFor(uint gid)
@@ -65,13 +63,8 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 
     if (IsVisible(obj)) {
         PagePointers page = args.pages[obj.page_index];
-        if (IsTransparent(obj)) {
-            // Add to transparent pass.
-        } else {
-            // Add to opaque pass.
-            uint slot;
-            InterlockedAdd(*page.opaque_count_buffer, 1, slot);
-            page.opaque_indirect_buffer[slot] = GetDrawFor(gid);
-		}
+        uint slot;
+        InterlockedAdd(*args.count_buffer, 1, slot);
+        args.indirect_buffer[slot] = GetDrawFor(gid);
 	}
 }

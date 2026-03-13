@@ -123,10 +123,7 @@ namespace ast
 
 		static AssetHandle invalid()
 		{
-			return {
-				.index = -1u,
-				.generation = 0
-			};
+			return { -1u, 0 };
 		}
 	};
 
@@ -199,7 +196,7 @@ namespace ast
 		void destroy();
 
 		template <typename T, typename ...Args>
-		T *create_new_asset(const String &name, const String &path, Args &&...args);
+		T *create_new_asset(const String &path, Args &&...args);
 
 		void destroy_asset(const AssetHandle &handle);
 
@@ -289,11 +286,12 @@ namespace ast
 	};
 
 	template <typename T, typename ...Args>
-	T *AssetManager::create_new_asset(const String &name, const String &path, Args &&...args)
+	T *AssetManager::create_new_asset(const String &path, Args &&...args)
 	{
 		T *asset = new T(std::forward<Args>(args)...);
-		asset->handle = asset_records.add(asset, path);
+		asset->handle = allocate_asset(path);
 
+		asset_records[asset->handle.index] = asset;
 		path_to_handle[path] = asset->handle;
 
 		return asset;

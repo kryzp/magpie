@@ -64,12 +64,21 @@ namespace gfx
 		};
 
 		struct GpuLight {
+			Mat4 transform;
 			Vec3 position;
+			float radius;
 			Vec3 colour;
 			float intensity;
 			Vec3 attenuation;
-			float radius;
-			Mat4 transform;
+			int shadow_slot_index; // -1 to disable shadows
+		};
+
+		struct GpuShadowCaster {
+			Mat4 face_matrices[6];
+			Vec3 position;
+			float near_plane;
+			float far_plane;
+			u32 shadow_map;
 		};
 
 		struct GpuIndirectDraw {
@@ -78,8 +87,6 @@ namespace gfx
 
 		struct GpuPagePointers {
 			u64 vertex_buffer;
-			u64 opaque_indirect_buffer;
-			u64 opaque_count_buffer;
 		};
 	}
 }

@@ -9,6 +9,7 @@
 #include "gpu_types.h"
 #include "gpu_ring_buffer.h"
 #include "model.h"
+#include "light.h"
 
 namespace gfx
 {
@@ -16,20 +17,6 @@ namespace gfx
 	class ResourceCache;
 	class GpuBuffer;
 	class CommandBuffer;
-
-	struct Light {
-		enum LightType {
-			TYPE_POINT,
-			TYPE_MAX_ENUM
-		};
-
-		LightType type;
-		Vec3 position;
-		Vec3 direction;
-		Colour colour;
-		float intensity;
-		float falloff;
-	};
 
 	struct RenderHandle {
 		u32 index;
@@ -50,10 +37,19 @@ namespace gfx
 		u32 max_indices;
 	};
 
+	// todo: all instances where we pass const RenderScene &scene into
+	//       renderers shouldn't be necessary eventually. all of the required
+	//       data to draw the render scene should be in this struct!!!
 	struct RenderSceneResources {
 		GpuAlloc<gpu_types::GpuObjectData> object_buffer;
 		GpuAlloc<gpu_types::GpuLight> light_buffer;
 		GpuAlloc<gpu_types::GpuPagePointers> page_table_buffer;
+	};
+
+	struct ShadowCasterInfo {
+		Vec3 position;
+		float near_plane;
+		float far_plane;
 	};
 
 	class RenderScene {
@@ -89,6 +85,7 @@ namespace gfx
 		RenderHandle create_light(const Light &light);
 		void remove_light(RenderHandle handle);
 
+		void set_light_position(RenderHandle handle, const Vec3 &position);
 		void set_light_colour(RenderHandle handle, const Vec3 &colour);
 		void set_light_intensity(RenderHandle handle, float intensity);
 
@@ -105,6 +102,8 @@ namespace gfx
 		const GpuBuffer *get_material_buffer() const;
 
 		const Vector<GeometryPage> &get_geometry_pages() const;
+
+		const Vector<ShadowCasterInfo> &get_shadow_casters() const;
 
 	private:
 		Device *device;
@@ -141,23 +140,29 @@ namespace gfx
 			u32 generation;
 		};
 
+		struct RS_Object {
+			Mat4 transform;
+			Vec4 sphere_bounds;
+			u32 mesh;
+			u32 material;
+			u32 page_index;
+		};
+
 		struct {
 			Vector<HandleEntry> handles;
 			Vector<u32> free_indices;
 			Vector<RenderHandle> back_references;
-			Vector<Mat4> transforms;
-			Vector<Vec4> sphere_bounds;
-			Vector<u32> meshes;
-			Vector<u32> materials;
-			Vector<u32> page_indices;
+			Vector<RS_Object> data;
 		} objects;
 		
 		struct {
 			Vector<HandleEntry> handles;
 			Vector<u32> free_indices;
 			Vector<RenderHandle> back_references;
-			Vector<gpu_types::GpuLight> data;
+			Vector<Light> data;
 		} lights;
+
+		Vector<ShadowCasterInfo> shadow_casters;
 
 		Vector<GeometryPage> geometry_pages;
 		

@@ -37,7 +37,7 @@ namespace gfx
 		VkSampleCountFlagBits samples;
 		bool min_sample_shading_enabled;
 		float min_sample_shading;
-		u32 view_mask;
+		u32 multi_view_mask;
 
 		GraphicsPipelineDef(const ShaderProgram *program)
 			: program(program)
@@ -50,7 +50,7 @@ namespace gfx
 			, samples(VK_SAMPLE_COUNT_1_BIT)
 			, min_sample_shading_enabled(true)
 			, min_sample_shading(0.2f)
-			, view_mask(0)
+			, multi_view_mask(0)
 		{
 		}
 	};
