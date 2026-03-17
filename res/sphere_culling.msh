@@ -1,0 +1,2 @@
+Compute
+comp: assets://shaders/sphere_culling.comp.spv

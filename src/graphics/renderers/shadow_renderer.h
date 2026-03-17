@@ -17,7 +17,7 @@ namespace gfx
 	class ShadowRenderer {
 	public:
 		static constexpr u32 MAX_SHADOW_CASTERS = 6;
-		static constexpr u32 SHADOW_MAP_RESOLUTION = 512;
+		static constexpr u32 SHADOW_MAP_RESOLUTION = 1024;
 
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();

@@ -110,6 +110,7 @@ void ShadowRenderer::render_shadows(
 			GraphicsPipelineDef pipeline_def(depth_shader);
 			pipeline_def.has_depth_attachment = true;
 			pipeline_def.multi_view_mask = 0b111111;
+			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
 
 			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 

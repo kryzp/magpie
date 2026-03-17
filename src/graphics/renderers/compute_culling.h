@@ -14,33 +14,6 @@ namespace gfx
 {
 	class MeshPass;
 
-	struct CullingVolume {
-		enum Type {
-			TYPE_FRUSTUM,
-			TYPE_SPHERE
-		};
-
-		Type type;
-
-		FrustumVolume frustum;
-
-		Vec3 sphere_centre;
-		float sphere_radius;
-
-		CullingVolume(const FrustumVolume &volume)
-			: type(TYPE_FRUSTUM)
-			, frustum(volume)
-		{
-		}
-
-		CullingVolume(const Vec3 &centre, float radius)
-			: type(TYPE_SPHERE)
-			, sphere_centre(centre)
-			, sphere_radius(radius)
-		{
-		}
-	};
-
 	struct DrawStream {
 		RenderResourceHandle indirect_buffer;
 		RenderResourceHandle count_buffer;
@@ -51,14 +24,22 @@ namespace gfx
 		void init(ast::AssetManager &assets);
 		void destroy();
 
-		DrawStream cull_geometry(
+		DrawStream cull_frustum(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderScene &scene,
 			const RenderSceneResources &scene_resources,
-			const CullingVolume &volume
+			const FrustumVolume &volume
+		);
+
+		DrawStream cull_sphere(
+			RenderGraph &graph, RenderGraphBlackboard &bb,
+			const RenderScene &scene,
+			const RenderSceneResources &scene_resources,
+			const Vec3 &sphere_centre, float sphere_radius
 		);
 
 	private:
-		const ShaderProgram *culling_shader;
+		const ShaderProgram *frustum_culling_shader;
+		const ShaderProgram *sphere_culling_shader;
 	};
 }

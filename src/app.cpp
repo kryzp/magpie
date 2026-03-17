@@ -122,7 +122,7 @@ void App::init(VirtualArena &global_arena)
 	);
 
 	assets.init(global_arena.arena(GIGABYTES(1)), &graphics_device);
-	assets.mount("assets", "../res/");
+	assets.mount("assets", "../../res/");
 	
 	render_graph.init(&graphics_device, &graphics_cache);
 	render_scene.init(&graphics_device, &graphics_cache);
@@ -155,7 +155,7 @@ void App::init(VirtualArena &global_arena)
 		.intensity = 0.f,
 		.falloff = 1.f,
 		.casts_shadows = true,
-		.shadow_near = 0.1f,
+		.shadow_near = 0.001f,
 		.shadow_far = 100.f
 	});
 
@@ -443,12 +443,10 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 	gfx::RenderGraphBlackboard bb;
 
-	gfx::CullingVolume light_shadow_culling_volume(Vec3(0.f, 0.f, 1.f), 10.f);
-
-	gfx::DrawStream light_draw_stream = compute_culling.cull_geometry(
+	gfx::DrawStream light_draw_stream = compute_culling.cull_sphere(
 		render_graph, bb,
 		render_scene, scene_resources,
-		light_shadow_culling_volume
+		Vec3(0.f, 0.f, 0.f), 10.f
 	);
 
 	shadow_renderer.render_shadows(
@@ -459,12 +457,10 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 	camera.recompute();
 
-	gfx::CullingVolume main_camera_culling_volume(camera.frustum_volume());
-
-	gfx::DrawStream draw_stream = compute_culling.cull_geometry(
+	gfx::DrawStream draw_stream = compute_culling.cull_frustum(
 		render_graph, bb,
 		render_scene, scene_resources,
-		main_camera_culling_volume
+		camera.frustum_volume()
 	);
 
 	deferred_renderer.add_render_stages(

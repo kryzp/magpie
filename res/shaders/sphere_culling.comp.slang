@@ -7,7 +7,7 @@ struct Arguments {
     IndirectDraw *indirect_buffer;
     uint *count_buffer;
     uint object_count; uint _padding;
-    float4 frustum_planes[6]; // xyz = normal, w = distance
+    float4 sphere; // x,y,z = position | w = radius
 };
 
 [vk::push_constant]
@@ -25,13 +25,12 @@ bool IsVisible(in ObjectData obj)
 
     float radius = obj.sphere_bounds.w * max_scale;
 
-    for (int i = 0; i < 6; i++) {
-        float D = dot(args.frustum_planes[i].xyz, world_centre) + args.frustum_planes[i].w;
-        if (D < -radius)
-            return false;
-    }
+    float3 delta = world_centre - args.sphere.xyz;
+    
+    float dist_sq = dot(delta, delta);
+    float radius_sum = radius + args.sphere.w;
 
-	return true;
+	return dist_sq < radius_sum*radius_sum;
 }
 
 IndirectDraw GetDrawFor(uint gid)

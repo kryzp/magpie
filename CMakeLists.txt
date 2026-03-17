@@ -34,14 +34,14 @@ if(WIN32)
 	# Include directories.
 	include_directories(
 		"${CODE_DIR}"
-		"C:/VulkanSDK/1.4.335.0/Include"
+		"D:/VulkanSDK/1.4.341.1/Include"
 		"D:/DevLibs/SDL3/include"
 		"D:/DevLibs/assimp/include"
 	)
 
 	# Library directories.
 	link_directories(
-		"C:/VulkanSDK/1.4.335.0/Lib"
+		"D:/VulkanSDK/1.4.341.1/Lib"
 		"D:/DevLibs/SDL3/VisualC/x64/Release"
 		"D:/DevLibs/assimp/lib/Release"
 	)
