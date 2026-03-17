@@ -10,7 +10,6 @@
 namespace gfx
 {
 	struct ShadowRendererInfo : public RenderGraphBlackboardData {
-		GFX_DECLARE_BLACKBOARD_DATA(DeferredRendererInfo);
 		const GpuBuffer *shadow_caster_table;
 	};
 

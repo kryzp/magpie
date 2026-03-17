@@ -25,7 +25,6 @@ namespace gfx
 	};
 
 	struct DeferredRendererInfo : public RenderGraphBlackboardData {
-		GFX_DECLARE_BLACKBOARD_DATA(DeferredRendererInfo);
 		GBuffer gbuffer;
 	};
 

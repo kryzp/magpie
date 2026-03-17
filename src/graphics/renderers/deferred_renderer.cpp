@@ -11,8 +11,6 @@
 
 using namespace gfx;
 
-GFX_BLACKBOARD_DATA(DeferredRendererInfo);
-
 void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	model_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://model.msh"))->shader;

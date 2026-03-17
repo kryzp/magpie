@@ -5,8 +5,6 @@
 
 using namespace gfx;
 
-GFX_BLACKBOARD_DATA(ShadowRendererInfo);
-
 void ShadowRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;

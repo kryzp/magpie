@@ -7,6 +7,8 @@
 #include <volk/volk.h>
 
 #include <functional>
+#include <typeinfo>
+#include <typeindex>
 
 #include "core/types.h"
 #include "math/colour.h"
@@ -18,6 +20,7 @@
 #include "resource_cache.h"
 #include "sync.h"
 
+/*
 #define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
 public:												\
 class Meta {										\
@@ -29,6 +32,7 @@ private:											\
 
 #define GFX_BLACKBOARD_DATA(_name) \
 u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
+*/
 
 namespace gfx
 {
@@ -229,30 +233,23 @@ namespace gfx
 		template <typename T>
 		T &get();
 
-		static inline int assign_id()
-		{
-			return id_counter++;
-		}
-
 	private:
-		static inline int id_counter = 0;
-		HashMap<u32, RenderGraphBlackboardData *> items;
+		HashMap<std::type_index, Unique<RenderGraphBlackboardData>> items;
 	};
 
 	template <typename T, typename ...Args>
 	T &RenderGraphBlackboard::add(Args &&...args)
 	{
-		u32 id = T::Meta::type_id();
-		T *data = new T(std::forward<Args>(args)...);
-		items[id] = data;
-		return *data;
+		Unique<T> data = create_unique<T>(std::forward<Args>(args)...);
+		T &ref = *data;
+		items[std::type_index(typeid(T))] = std::move(data);
+		return ref;
 	}
 
 	template <typename T>
 	T &RenderGraphBlackboard::get()
 	{
-		u32 id = T::Meta::type_id();
-		return *static_cast<T *>(items[id]);
+		return *static_cast<T *>(items.at(std::type_index(typeid(T))).get());
 	}
 
 	struct RenderStage;

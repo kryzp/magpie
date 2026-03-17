@@ -13,8 +13,6 @@ RenderGraphBlackboard::RenderGraphBlackboard()
 
 RenderGraphBlackboard::~RenderGraphBlackboard()
 {
-	for (auto &[id, item] : items)
-		delete item;
 }
 
 void RenderGraphBlackboard::clean()
