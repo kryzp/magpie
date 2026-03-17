@@ -79,7 +79,6 @@ RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &fram
 	if (!meshes.empty())
 		update_mesh_buffer();
 
-
 	return resources;
 }
 
