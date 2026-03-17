@@ -154,7 +154,7 @@ DrawStream ComputeCulling::cull_sphere(
 	compute_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		ComputePipelineDef pipeline_def(frustum_culling_shader);
+		ComputePipelineDef pipeline_def(sphere_culling_shader);
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());

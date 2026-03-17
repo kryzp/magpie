@@ -76,7 +76,7 @@ App::App()
 	, render_scene()
 	, render_graph()
 	, ring_upload_buffer()
-	, camera()
+	, main_camera()
 	, camera_driver()
 	, camera_driver_active(false)
 	, frame_data_buffer(nullptr)
@@ -205,7 +205,7 @@ void App::init(VirtualArena &global_arena)
 	post_processing.init(assets);
 	shadow_renderer.init(&graphics_device, assets);
 	
-	camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
+	main_camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
 
 	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
@@ -381,7 +381,7 @@ bool App::tick(const inp::InputState &input)
 		ImGui::End();
 
 		render_graph.compile(swapchain);
-		render_graph.execute(cmd, swapchain, render_scene, camera, dt, elapsed_time);
+		render_graph.execute(cmd, swapchain, render_scene, main_camera, dt, elapsed_time);
 		render_graph.reset();
 	}
 	graphics_device.end_frame(swapchain, cmd);
@@ -411,7 +411,7 @@ void App::update(float dt, const inp::InputState &input)
 	}
 	
 	if (camera_driver_active) {
-		camera_driver.update(camera, input, dt);
+		camera_driver.update(main_camera, input, dt);
 
 		int window_width, window_height;
 		platform::get_window_size(&window_width, &window_height);
@@ -429,13 +429,13 @@ void App::fixed_update(float dt)
 void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources)
 {
 	gfx::gpu_types::GpuFrameData data = {};
-	data.view = camera.get_view();
-	data.projection = camera.get_projection();
-	data.view_projection = camera.get_projection() * camera.get_view();
-	data.view_projection_no_translation = camera.get_projection() * camera.get_view().remove_translation();
+	data.view = main_camera.get_view();
+	data.projection = main_camera.get_projection();
+	data.view_projection = main_camera.get_projection() * main_camera.get_view();
+	data.view_projection_no_translation = main_camera.get_projection() * main_camera.get_view().remove_translation();
 	data.inv_view = data.view.inverse();
 	data.inv_projection = data.projection.inverse();
-	data.camera_position = camera.get_position();
+	data.camera_position = main_camera.get_position();
 	data.window_resolution = Vec2(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
 	data.time = elapsed_time;
 
@@ -455,12 +455,12 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 		light_draw_stream
 	);
 
-	camera.recompute();
+	main_camera.recompute();
 
 	gfx::DrawStream draw_stream = compute_culling.cull_frustum(
 		render_graph, bb,
 		render_scene, scene_resources,
-		camera.frustum_volume()
+		main_camera.frustum_volume()
 	);
 
 	deferred_renderer.add_render_stages(

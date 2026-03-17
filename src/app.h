@@ -71,7 +71,7 @@ private:
 
 	gfx::GpuRingBuffer ring_upload_buffer;
 
-	gfx::Camera camera;
+	gfx::Camera main_camera;
 	CameraDriver camera_driver;
 	bool camera_driver_active;
 
