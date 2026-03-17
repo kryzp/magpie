@@ -58,8 +58,8 @@ void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBl
 		cmd.push_constants(pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(args), &args);
 
 		cmd.dispatch(
-			out_texture->get_width(),
-			out_texture->get_height(),
+			compute_group_count(out_texture->get_width(), 1),
+			compute_group_count(out_texture->get_height(), 1),
 			1
 		);
 	});

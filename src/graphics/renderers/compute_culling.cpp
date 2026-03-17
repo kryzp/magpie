@@ -102,9 +102,7 @@ DrawStream ComputeCulling::cull_frustum(
 			sizeof(pc), &pc
 		);
 
-		const u32 threads = 64;
-
-		cmd.dispatch((pc.object_count + threads - 1) / threads, 1, 1);
+		cmd.dispatch(compute_group_count(pc.object_count, 64), 1, 1);
 	});
 
 	return stream;

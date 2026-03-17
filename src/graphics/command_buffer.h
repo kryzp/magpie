@@ -13,6 +13,11 @@
 
 namespace gfx
 {
+	inline u32 compute_group_count(u32 count, u32 tile)
+	{
+		return (count + tile - 1) / tile;
+	}
+
 	class CommandBuffer {
 	public:
 		CommandBuffer(VkCommandBuffer handle);

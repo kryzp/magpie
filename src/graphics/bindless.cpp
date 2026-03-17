@@ -55,7 +55,7 @@ BindlessHandle BindlessResources::register_view(VkImageView view, bool storage)
 		handle = free_views.back();
 		free_views.pop_back();
 	} else {
-		handle = ++samplers;
+		handle = ++views;
 	}
 
 	update_view(handle, view, storage);
