@@ -34,7 +34,14 @@ namespace gfx
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
-		void add_render_stages(
+		void render_geometry(
+			RenderGraph &graph, RenderGraphBlackboard &bb,
+			const RenderSceneResources &scene_resources,
+			const GpuBuffer *frame_data,
+			const DrawStream &draw_stream
+		);
+
+		void render_lighting(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderSceneResources &scene_resources,
 			const GpuBuffer *frame_data,

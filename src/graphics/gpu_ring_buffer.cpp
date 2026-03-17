@@ -37,7 +37,8 @@ GpuAlloc<u8> GpuRingBuffer::push(u64 bytes, u64 alignment)
 	used = memory_align_up(used, alignment);
 
 	if (used + bytes > buffer->capacity())
-		used = 0;
+		assert(0);
+//		used = 0;
 
 	GpuAlloc<u8> alloc = {};
 	alloc.offset = used;

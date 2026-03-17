@@ -1,7 +1,10 @@
 #pragma once
 
 #include "core/types.h"
+
 #include "container/vector.h"
+#include "container/dhm.h"
+
 #include "math/mat4.h"
 #include "math/vec3.h"
 #include "math/colour.h"
@@ -17,11 +20,6 @@ namespace gfx
 	class ResourceCache;
 	class GpuBuffer;
 	class CommandBuffer;
-
-	struct RenderHandle {
-		u32 index;
-		u32 generation;
-	};
 
 	/*
 	 * Memory is allocated in pages.
@@ -52,6 +50,11 @@ namespace gfx
 		float far_plane;
 	};
 
+	struct RenderHandle {
+		u32 index;
+		u32 generation;
+	};
+
 	class RenderScene {
 	public:
 		static constexpr u32 PAGE_MAX_OBJECTS = 512;
@@ -69,8 +72,7 @@ namespace gfx
 
 		RenderSceneResources update_transient_resources(GpuRingBuffer &frame_arena);
 
-		bool is_valid_object(RenderHandle handle) const;
-		bool is_valid_light(RenderHandle handle) const;
+		void on_debug();
 
 		RenderHandle create_object(
 			const Mat4 &transform,
@@ -88,9 +90,6 @@ namespace gfx
 		void set_light_position(RenderHandle handle, const Vec3 &position);
 		void set_light_colour(RenderHandle handle, const Vec3 &colour);
 		void set_light_intensity(RenderHandle handle, float intensity);
-
-		Mat4 get_light_view(RenderHandle handle) const;
-		Mat4 get_light_proj(RenderHandle handle) const;
 
 		u32 register_mesh(const Mesh &mesh);
 		u32 register_material(const Material &material, ast::AssetManager &assets);
@@ -116,30 +115,6 @@ namespace gfx
 		void update_material_buffer();
 		void update_mesh_buffer();
 
-		/*
-		 * This is a little confusing so for later reference:
-		 *
-		 * --> We need tight memory packing for the GPU upload but we need
-		 *     stable pointers at the same time.
-		 *
-		 *     So basically, we store an extra level of indirection, which
-		 *     we call a handle entry.
-		 *
-		 *     It maps from the "user" handle (RenderHandle)
-		 *     to the actual internal index of the resource.
-		 *
-		 *         RenderHandle (index, generation)
-		 *      => HandleEntry[index] (dense_index, generation)
-		 *      => ObjectData[dense_index] (gpu data)
-		 *
-		 *     The generation parameter is used to make sure the handle
-		 *     hasn't gone stale.
-		 */
-		struct HandleEntry {
-			u32 dense_index;
-			u32 generation;
-		};
-
 		struct RS_Object {
 			Mat4 transform;
 			Vec4 sphere_bounds;
@@ -148,19 +123,8 @@ namespace gfx
 			u32 page_index;
 		};
 
-		struct {
-			Vector<HandleEntry> handles;
-			Vector<u32> free_indices;
-			Vector<RenderHandle> back_references;
-			Vector<RS_Object> data;
-		} objects;
-		
-		struct {
-			Vector<HandleEntry> handles;
-			Vector<u32> free_indices;
-			Vector<RenderHandle> back_references;
-			Vector<Light> data;
-		} lights;
+		DenseHandleMap<RS_Object, RenderHandle> objects;
+		DenseHandleMap<Light, RenderHandle> lights;
 
 		Vector<ShadowCasterInfo> shadow_casters;
 
@@ -178,8 +142,6 @@ namespace gfx
 
 		GpuBuffer *mesh_buffer;
 		GpuBuffer *material_buffer;
-
-		u32 alloc_handle_index(Vector<HandleEntry> &map, Vector<u32> &free_list);
 
 		u32 find_suitable_page(u32 vertex_count, u32 index_count);
 		GeometryPage create_new_page();

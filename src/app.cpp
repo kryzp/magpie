@@ -420,6 +420,8 @@ void App::update(float dt, const inp::InputState &input)
 
 	if (input.pressed(inp::GAMEPAD_BUTTON_cross))
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
+
+	render_scene.on_debug();
 }
 
 void App::fixed_update(float dt)
@@ -463,7 +465,13 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 		main_camera.frustum_volume()
 	);
 
-	deferred_renderer.add_render_stages(
+	deferred_renderer.render_geometry(
+		render_graph, bb, scene_resources,
+		frame_data_buffer,
+		draw_stream
+	);
+
+	deferred_renderer.render_lighting(
 		render_graph, bb, scene_resources,
 		frame_data_buffer,
 		draw_stream,

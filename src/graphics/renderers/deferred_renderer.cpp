@@ -99,35 +99,26 @@ void DeferredRenderer::destroy()
 	light_sphere_mesh.destroy_buffers();
 }
 
-void DeferredRenderer::add_render_stages(
+void DeferredRenderer::render_geometry(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderSceneResources &scene_resources,
 	const GpuBuffer *frame_data,
-	const DrawStream &draw_stream,
-	RenderResourceHandle irradiance,
-	RenderResourceHandle prefilter,
-	RenderResourceHandle brdf
+	const DrawStream &draw_stream
 )
 {
-	auto &shadow_info = bb.get<ShadowRendererInfo>();
-
 	RenderClear depth_clear(1.f, 0);
 	AttachmentInfo depth_info(graph.get_device().get_context().get_depth_format());
-	
+
 	RenderClear colour_clear(0.f, 0.f, 0.f, 1.f);
 	AttachmentInfo attachment_info(VK_FORMAT_R32G32B32A32_SFLOAT);
 
-	// ----------------------
-
-	// TODO: GBuffer should be local to this scope?
-
 	RenderStage &geometry_stage = graph.push_stage("Geometry", RenderStage::TYPE_GRAPHICS);
-	
+
 	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++) {
 		gbuffer.attachments[i] = graph.create_texture(attachment_info);
 		geometry_stage.write_colour(gbuffer.attachments[i], SubresourceRange::all_colour(), &colour_clear);
 	}
-			
+
 	gbuffer.depth = graph.create_texture(depth_info);
 
 	geometry_stage.write_depth(gbuffer.depth, SubresourceRange::all_depth(), &depth_clear);
@@ -185,8 +176,19 @@ void DeferredRenderer::add_render_stages(
 			);
 		}
 	});
+}
 
-	// ----------------------
+void DeferredRenderer::render_lighting(
+	RenderGraph &graph, RenderGraphBlackboard &bb,
+	const RenderSceneResources &scene_resources,
+	const GpuBuffer *frame_data,
+	const DrawStream &draw_stream,
+	RenderResourceHandle irradiance,
+	RenderResourceHandle prefilter,
+	RenderResourceHandle brdf
+)
+{
+	auto &shadow_info = bb.get<ShadowRendererInfo>();
 
 	RenderStage &lighting_stage = graph.push_stage("Lighting", RenderStage::TYPE_GRAPHICS);
 	

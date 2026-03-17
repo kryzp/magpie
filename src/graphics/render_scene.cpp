@@ -61,10 +61,33 @@ void RenderScene::destroy()
 	}
 }
 
+RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &frame_arena)
+{
+	RenderSceneResources resources = {};
+
+	update_page_buffer(frame_arena, resources);
+
+	if (!objects.data.empty())
+		update_object_buffer(frame_arena, resources);
+
+	if (!lights.data.empty())
+		update_light_buffer(frame_arena, resources);
+
+	if (!materials.empty())
+		update_material_buffer();
+
+	if (!meshes.empty())
+		update_mesh_buffer();
+
+
+	return resources;
+}
+
+// yes the headers are here fuck you
 #include "ext/imgui/imgui.h"
 #include "renderers/debug_renderer.h"
 
-RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &frame_arena)
+void RenderScene::on_debug()
 {
 	ImGui::Begin("Render Scene");
 	{
@@ -95,25 +118,6 @@ RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &fram
 		}
 	}
 	ImGui::End();
-
-	RenderSceneResources resources = {};
-
-	update_page_buffer(frame_arena, resources);
-
-	if (!objects.data.empty())
-		update_object_buffer(frame_arena, resources);
-
-	if (!lights.data.empty())
-		update_light_buffer(frame_arena, resources);
-
-	if (!materials.empty())
-		update_material_buffer();
-
-	if (!meshes.empty())
-		update_mesh_buffer();
-
-
-	return resources;
 }
 
 void RenderScene::update_object_buffer(GpuRingBuffer &frame_arena, RenderSceneResources &resources)
@@ -201,35 +205,13 @@ void RenderScene::update_mesh_buffer()
 	memory_copy(mapped_meshes, meshes.data(), meshes.size() * sizeof(gpu_types::GpuRenderMesh));
 }
 
-bool RenderScene::is_valid_object(RenderHandle handle) const
-{
-	return
-		handle.index < objects.handles.size() && // Is it out of range.
-		handle.generation == objects.handles[handle.index].generation; // Is it stale.
-}
-
-bool RenderScene::is_valid_light(RenderHandle handle) const
-{
-	return
-		handle.index < lights.handles.size() && // Is it out of range.
-		handle.generation == lights.handles[handle.index].generation; // Is it stale.
-}
-
 RenderHandle RenderScene::create_object(
 	const Mat4 &transform,
 	u32 mesh, u32 material,
 	const Vec4 &sphere_bounds
 )
 {
-	RenderHandle handle = {};
-	handle.index = alloc_handle_index(objects.handles, objects.free_indices);
-	handle.generation = objects.handles[handle.index].generation;
-
-	u32 dense_index = objects.data.size();
-	
 	const MeshMemoryLocation mesh_memory = mesh_registry[mesh];
-
-	objects.back_references.push_back(handle);
 
 	RS_Object rs_object = {};
 	rs_object.transform = transform;
@@ -238,110 +220,42 @@ RenderHandle RenderScene::create_object(
 	rs_object.sphere_bounds = sphere_bounds;
 	rs_object.page_index = mesh_memory.page;
 
-	objects.data.push_back(rs_object);
-
-	objects.handles[handle.index].dense_index = dense_index;
-
-	return handle;
+	return objects.insert(rs_object);
 }
 
 void RenderScene::remove_object(RenderHandle handle)
 {
-	if (!is_valid_object(handle))
-		return;
-
-	HandleEntry &entry = objects.handles[handle.index];
-
-	u32 curr_dense_index = entry.dense_index;
-	u32 prev_dense_index = objects.data.size() - 1;
-
-	if (curr_dense_index != prev_dense_index) {
-		// Previous slot user is now the current slot.
-		RenderHandle prev_handle = objects.back_references[prev_dense_index];
-
-		objects.data            [curr_dense_index] = objects.data            [prev_dense_index];
-		objects.back_references [curr_dense_index] = objects.back_references [prev_dense_index];
-
-		objects.handles[prev_handle.index].dense_index = curr_dense_index;
-	}
-
-	objects.data.pop_back();
-	objects.back_references.pop_back();
-
-	objects.free_indices.push_back(handle.index);
+	objects.remove(handle);
 }
 
 void RenderScene::set_transform(RenderHandle handle, const Mat4 &transform)
 {
-	if (!is_valid_object(handle))
-		return;
-
-	u32 dense_index = objects.handles[handle.index].dense_index;
-
-	objects.data[dense_index].transform = transform;
+	objects.get(handle).transform = transform;
 }
 
 RenderHandle RenderScene::create_light(const Light &light)
 {
-	RenderHandle handle = {};
-	handle.index = alloc_handle_index(lights.handles, lights.free_indices);
-	handle.generation = lights.handles[handle.index].generation;
-
-	u32 dense_index = lights.data.size();
-
-	lights.data.push_back(light);
-
-	lights.handles[handle.index].dense_index = dense_index;
-
-	return handle;
+	return lights.insert(light);
 }
 
 void RenderScene::remove_light(RenderHandle handle)
 {
-	if (!is_valid_light(handle))
-		return;
-
-	// TODO
+	lights.remove(handle);
 }
 
 void RenderScene::set_light_position(RenderHandle handle, const Vec3 &position)
 {
-	if (!is_valid_light(handle))
-		return;
-
-	u32 dense_index = lights.handles[handle.index].dense_index;
-
-	lights.data[dense_index].position = position;
+	lights.get(handle).position = position;
 }
 
 void RenderScene::set_light_colour(RenderHandle handle, const Vec3 &colour)
 {
-	if (!is_valid_light(handle))
-		return;
-
-	u32 dense_index = lights.handles[handle.index].dense_index;
-
-	lights.data[dense_index].colour = colour;
+	lights.get(handle).colour = colour;
 }
 
 void RenderScene::set_light_intensity(RenderHandle handle, float intensity)
 {
-	if (!is_valid_light(handle))
-		return;
-
-	u32 dense_index = lights.handles[handle.index].dense_index;
-
-	lights.data[dense_index].intensity = intensity;
-}
-
-Mat4 RenderScene::get_light_view(RenderHandle handle) const
-{
-	return Mat4::identity();
-}
-
-Mat4 RenderScene::get_light_proj(RenderHandle handle) const
-{
-	return Mat4::identity();
+	lights.get(handle).intensity = intensity;
 }
 
 u32 RenderScene::register_mesh(const Mesh &mesh)
@@ -455,22 +369,6 @@ const Vector<GeometryPage> &RenderScene::get_geometry_pages() const
 const Vector<ShadowCasterInfo> &RenderScene::get_shadow_casters() const
 {
 	return shadow_casters;
-}
-
-u32 RenderScene::alloc_handle_index(Vector<HandleEntry> &map, Vector<u32> &free_list)
-{
-	u32 index;
-
-	if (!free_list.empty()) {
-		index = free_list.back();
-		free_list.pop_back();
-		map[index].generation++;
-	} else {
-		index = map.size();
-		map.push_back({ 0, 1 });
-	}
-
-	return index;
 }
 
 u32 RenderScene::find_suitable_page(u32 vertex_count, u32 index_count)
