@@ -13,6 +13,7 @@ namespace gfx
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
+			RenderResourceHandle input_attachment,
 			RenderResourceHandle output_attachment
 		);
 

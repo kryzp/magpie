@@ -465,14 +465,15 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 		main_camera.frustum_volume()
 	);
 
-	deferred_renderer.render_geometry(
+	gfx::GBuffer gbuffer = deferred_renderer.render_geometry(
 		render_graph, bb, scene_resources,
 		frame_data_buffer,
 		draw_stream
 	);
 
-	deferred_renderer.render_lighting(
+	gfx::RenderResourceHandle lighting_attachment = deferred_renderer.render_lighting(
 		render_graph, bb, scene_resources,
+		gbuffer,
 		frame_data_buffer,
 		draw_stream,
 		render_graph.import_texture(irradiance_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
@@ -480,10 +481,8 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 		render_graph.import_texture(brdf_texture, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE })
 	);
 	
-	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer);
-	post_processing.add_render_stages(render_graph, bb, swapchain_src);
-
-	auto &gbuffer = bb.get<gfx::DeferredRendererInfo>().gbuffer;
+	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer, lighting_attachment, gbuffer.depth);
+	post_processing.add_render_stages(render_graph, bb, lighting_attachment, swapchain_src);
 
 	gfx::DebugRenderer::get_singleton()->render(dt, render_graph, swapchain_src, gbuffer.depth);
 
@@ -492,7 +491,7 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 	else if (input.down(inp::KEYBOARD_KEY_d3)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_NORMAL];
 	else if (input.down(inp::KEYBOARD_KEY_d4)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_EMISSIVE];
 	else if (input.down(inp::KEYBOARD_KEY_d5)) swapchain_src = gbuffer.attachments[gfx::GBuffer::ATTACHMENT_METALLIC_ROUGHNESS];
-	else if (input.down(inp::KEYBOARD_KEY_d6)) swapchain_src = gbuffer.lighting;
+	else if (input.down(inp::KEYBOARD_KEY_d6)) swapchain_src = lighting_attachment;
 }
 
 void App::add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment)

@@ -97,13 +97,15 @@ void DeferredRenderer::destroy()
 	light_sphere_mesh.destroy_buffers();
 }
 
-void DeferredRenderer::render_geometry(
+GBuffer DeferredRenderer::render_geometry(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderSceneResources &scene_resources,
 	const GpuBuffer *frame_data,
 	const DrawStream &draw_stream
 )
 {
+	GBuffer gbuffer = {};
+
 	RenderClear depth_clear(1.f, 0);
 	AttachmentInfo depth_info(graph.get_device().get_context().get_depth_format());
 
@@ -174,11 +176,14 @@ void DeferredRenderer::render_geometry(
 			);
 		}
 	});
+
+	return gbuffer;
 }
 
-void DeferredRenderer::render_lighting(
+RenderResourceHandle DeferredRenderer::render_lighting(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderSceneResources &scene_resources,
+	const GBuffer &gbuffer,
 	const GpuBuffer *frame_data,
 	const DrawStream &draw_stream,
 	RenderResourceHandle irradiance,
@@ -191,9 +196,9 @@ void DeferredRenderer::render_lighting(
 	RenderStage &lighting_stage = graph.push_stage("Lighting", RenderStage::TYPE_GRAPHICS);
 	
 	AttachmentInfo lighting_info(VK_FORMAT_R32G32B32A32_SFLOAT);
-	gbuffer.lighting = graph.create_texture(lighting_info);
+	RenderResourceHandle lighting = graph.create_texture(lighting_info);
 
-	lighting_stage.write_colour(gbuffer.lighting);
+	lighting_stage.write_colour(lighting);
 	lighting_stage.write_depth(gbuffer.depth);
 
 	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
@@ -318,10 +323,5 @@ void DeferredRenderer::render_lighting(
 		}
 	});
 
-	// ----------------------
-	
-	DeferredRendererInfo info = {};
-	info.gbuffer = gbuffer;
-
-	bb.add<DeferredRendererInfo>(info);
+	return lighting;
 }

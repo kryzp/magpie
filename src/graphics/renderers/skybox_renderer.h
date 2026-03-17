@@ -14,7 +14,9 @@ namespace gfx
 
 		void add_render_stages(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
-			const GpuBuffer *frame_data
+			const GpuBuffer *frame_data,
+			RenderResourceHandle output_attachment,
+			RenderResourceHandle output_depth
 		);
 
 		void render_hdr_to_skybox(

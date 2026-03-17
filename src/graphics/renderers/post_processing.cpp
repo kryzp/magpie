@@ -17,16 +17,18 @@ void PostProcessingRenderer::destroy()
 {
 }
 
-void PostProcessingRenderer::add_render_stages(RenderGraph &graph, RenderGraphBlackboard &bb, RenderResourceHandle output_attachment)
+void PostProcessingRenderer::add_render_stages(
+	RenderGraph &graph, RenderGraphBlackboard &bb,
+	RenderResourceHandle input_attachment,
+	RenderResourceHandle output_attachment
+)
 {
-	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
-	
 	AttachmentInfo colour_info(VK_FORMAT_R32G32B32A32_SFLOAT);
 	colour_info.is_storage = true;
 	RenderResourceHandle colour_attachment = graph.create_texture(colour_info);
 
 	RenderStage &tonemapping_stage = graph.push_stage("Post Processing (Tonemapping)", RenderStage::TYPE_COMPUTE);
-	RenderResourceHandle lighting_handle = tonemapping_stage.read_texture_compute(deferred_info.gbuffer.lighting);
+	RenderResourceHandle lighting_handle = tonemapping_stage.read_texture_compute(input_attachment);
 	RenderResourceHandle colour_handle = tonemapping_stage.write_texture_compute(colour_attachment);
 
 	tonemapping_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {

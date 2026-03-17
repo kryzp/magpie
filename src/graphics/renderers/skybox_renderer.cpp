@@ -75,15 +75,15 @@ void SkyboxRenderer::destroy()
 
 void SkyboxRenderer::add_render_stages(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
-	const GpuBuffer *frame_data
+	const GpuBuffer *frame_data,
+	RenderResourceHandle output_attachment,
+	RenderResourceHandle output_depth
 )
 {
-	DeferredRendererInfo deferred_info = bb.get<DeferredRendererInfo>();
-
 	RenderStage &skybox_stage = graph.push_stage("Skybox Rendering", RenderStage::TYPE_GRAPHICS);
 
-	RenderResourceHandle colour_handle = skybox_stage.write_colour(deferred_info.gbuffer.lighting);
-	RenderResourceHandle depth_handle = skybox_stage.write_depth(deferred_info.gbuffer.depth);
+	RenderResourceHandle colour_handle = skybox_stage.write_colour(output_attachment);
+	RenderResourceHandle depth_handle = skybox_stage.write_depth(output_depth);
 	RenderResourceHandle cubemap_handle = skybox_stage.read_texture(graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT }));
 
 	skybox_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {

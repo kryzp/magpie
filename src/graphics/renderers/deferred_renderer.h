@@ -20,12 +20,7 @@ namespace gfx
 		};
 
 		RenderResourceHandle attachments[ATTACHMENT_MAX_ENUM];
-		RenderResourceHandle lighting;
 		RenderResourceHandle depth;
-	};
-
-	struct DeferredRendererInfo : public RenderGraphBlackboardData {
-		GBuffer gbuffer;
 	};
 
 	class DeferredRenderer {
@@ -33,16 +28,17 @@ namespace gfx
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
 
-		void render_geometry(
+		GBuffer render_geometry(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderSceneResources &scene_resources,
 			const GpuBuffer *frame_data,
 			const DrawStream &draw_stream
 		);
 
-		void render_lighting(
+		RenderResourceHandle render_lighting(
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderSceneResources &scene_resources,
+			const GBuffer &gbuffer,
 			const GpuBuffer *frame_data,
 			const DrawStream &draw_stream,
 			RenderResourceHandle irradiance,
@@ -52,8 +48,6 @@ namespace gfx
 
 	private:
 		void create_light_sphere_mesh(Device *device);
-
-		GBuffer gbuffer;
 
 		Mesh light_sphere_mesh;
 
