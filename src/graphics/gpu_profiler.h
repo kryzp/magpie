@@ -42,7 +42,7 @@ namespace gfx
 		void grab_queries(CommandBuffer &cmd);
 
 		template <typename T>
-		T get_statistic(GpuProfileType type, const char *name)
+		T get_statistic(GpuProfileType type, const char *name) const
 		{
 			auto it = data[type].find(name);
 			if (it != data[type].end())
@@ -51,13 +51,13 @@ namespace gfx
 				return (T)0;
 		}
 
-		double get_timer(const char *name)
+		double get_timer(const char *name) const
 		{
 			double duration = get_statistic<double>(GPU_PROFILE_TIMESTAMP, name);
 			return duration * (double)period / 1'000'000.0;
 		}
 
-		s32 get_pipeline_stats(const char *name)
+		s32 get_pipeline_stats(const char *name) const
 		{
 			s32 stats = get_statistic<s32>(GPU_PROFILE_PIPELINE_STATS, name);
 			return stats;
