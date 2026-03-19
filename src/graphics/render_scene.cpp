@@ -87,13 +87,24 @@ RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &fram
 
 void RenderScene::on_debug()
 {
-	ImGui::Begin("Render Scene");
+	ImGui::Begin("Scene Debug");
 	{
-		static bool debug_enabled = false;
+		static bool debug_bounds_enabled = false;
+		static bool debug_lights_enabled = false;
 
-		ImGui::Checkbox("Visualize Object Sphere Bounds", &debug_enabled);
+		ImGui::Checkbox("Visualize Lights", &debug_lights_enabled);
+		ImGui::Checkbox("Visualize Object Sphere Bounds", &debug_bounds_enabled);
 
-		if (debug_enabled) {
+		if (debug_lights_enabled) {
+			for (int i = 0; i < lights.data.size(); i++) {
+				auto &l = lights.data[i];
+
+				gfx::DebugRenderer::get_singleton()->push_cross(l.position, 0.25f, Colour::yellow());
+				gfx::DebugRenderer::get_singleton()->push_sphere(l.position, l.get_heuristic_radius(0.05f) , Colour(255, 255, 0, 100));
+			}
+		}
+
+		if (debug_bounds_enabled) {
 			for (int i = 0; i < objects.data.size(); i++) {
 				auto &b = objects.data[i].sphere_bounds;
 				auto &t = objects.data[i].transform;
@@ -147,7 +158,7 @@ void RenderScene::update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneRes
 	for (int i = 0; i < lights.data.size(); i++) {
 		const Light &light = lights.data[i];
 
-		float heuristic_radius = light.get_heuristic_radius(0.01f);
+		float heuristic_radius = light.get_heuristic_radius(0.05f);
 
 		mapped_lights[i].transform = Mat4::transform(light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
 		mapped_lights[i].position = lights.data[i].position;
@@ -163,7 +174,7 @@ void RenderScene::update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneRes
 			shadow_caster.position = light.position;
 			shadow_caster.near_plane = light.shadow_near;
 			shadow_caster.far_plane = light.shadow_far;
-			shadow_caster.radius = light.get_heuristic_radius(0.01f);
+			shadow_caster.radius = light.get_heuristic_radius(0.05f);
 
 			shadow_casters.push_back(shadow_caster);
 

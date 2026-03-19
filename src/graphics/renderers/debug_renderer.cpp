@@ -8,12 +8,6 @@
 
 using namespace gfx;
 
-DebugRenderer *DebugRenderer::get_singleton()
-{
-	static DebugRenderer instance;
-	return &instance;
-}
-
 DebugRenderer::DebugRenderer()
 	: device(nullptr)
 	, depth_buckets{}
@@ -23,9 +17,10 @@ DebugRenderer::DebugRenderer()
 	, depth_enabled_id(0)
 	, no_depth_call_buffer(nullptr)
 	, no_depth_id(0)
-	, cube_mesh()
-	, circle_mesh()
+	, cross_mesh()
 	, sphere_mesh()
+	, circle_mesh()
+	, cube_mesh()
 	, current_depth_enabled(false)
 	, current_colour()
 	, current_thickness()
@@ -35,6 +30,12 @@ DebugRenderer::DebugRenderer()
 
 DebugRenderer::~DebugRenderer()
 {
+}
+
+DebugRenderer *DebugRenderer::get_singleton()
+{
+	static DebugRenderer instance;
+	return &instance;
 }
 
 struct GPU_DebugLineDraw {
@@ -63,56 +64,96 @@ void DebugRenderer::init(Device *device, ast::AssetManager &assets)
 		sizeof(GPU_DebugLineDraw) * MAX_DEBUG_DRAWS
 	);
 
-	create_cube_mesh();
+	create_cross_mesh();
 	create_circle_mesh();
 	create_sphere_mesh();
+	create_cube_mesh();
 }
 
 void DebugRenderer::destroy()
 {
-	cube_mesh.destroy_buffers();
+	cross_mesh.destroy_buffers();
 	circle_mesh.destroy_buffers();
 	sphere_mesh.destroy_buffers();
+	cube_mesh.destroy_buffers();
 
 	device->destroy_buffer(depth_enabled_call_buffer);
 	device->destroy_buffer(no_depth_call_buffer);
 }
 
-void DebugRenderer::create_cube_mesh()
+void DebugRenderer::create_cross_mesh()
 {
 	ScratchScope scratch = scratch::get();
 
-	u32 vertex_count = 8;
-	u32 index_count  = 24;
+	Vec3 *vertices = scratch.arena().array<Vec3>(8);
+	IndexType *indices = scratch.arena().array<IndexType>(8);
 
-	Vec3      *vertices = scratch.arena().array<Vec3>(vertex_count);
-	IndexType *indices  = scratch.arena().array<IndexType>(index_count);
+	vertices[0] = Vec3( 1.f,  1.f,  1.f);
+	vertices[1] = Vec3(-1.f, -1.f, -1.f);
+	vertices[2] = Vec3(-1.f,  1.f,  1.f);
+	vertices[3] = Vec3( 1.f, -1.f, -1.f);
+	vertices[4] = Vec3( 1.f, -1.f,  1.f);
+	vertices[5] = Vec3(-1.f,  1.f, -1.f);
+	vertices[6] = Vec3(-1.f, -1.f,  1.f);
+	vertices[7] = Vec3( 1.f,  1.f, -1.f);
 
-	vertices[0] = Vec3(-1.f, -1.f, -1.f);
-	vertices[1] = Vec3( 1.f, -1.f, -1.f);
-	vertices[2] = Vec3( 1.f,  1.f, -1.f);
-	vertices[3] = Vec3(-1.f,  1.f, -1.f);
-	vertices[4] = Vec3(-1.f, -1.f,  1.f);
-	vertices[5] = Vec3( 1.f, -1.f,  1.f);
-	vertices[6] = Vec3( 1.f,  1.f,  1.f);
-	vertices[7] = Vec3(-1.f,  1.f,  1.f);
+	for (int i = 0; i < 8; i++)
+		indices[i] = i;
 
-	IndexType line_indices[] = {
-		0, 1, 1, 2, 2, 3, 3, 0,
-		4, 5, 5, 6, 6, 7, 7, 4,
-		0, 4, 1, 5, 2, 6, 3, 7 
-	};
+	cross_mesh.create_buffers(device, sizeof(Vec3), 8, 8);
 
-	memcpy(indices, line_indices, sizeof(line_indices));
-	
-	cube_mesh.create_buffers(device, sizeof(Vec3), vertex_count, index_count);
-	
-	GpuBuffer *staging = device->alloc_stage(cube_mesh.get_vertex_buffer_size() + cube_mesh.get_index_buffer_size());
-	
-	cube_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
-	
+	GpuBuffer *staging = device->alloc_stage(cross_mesh.get_vertex_buffer_size() + cross_mesh.get_index_buffer_size());
+
+	cross_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
+
 	device->submit_graphics_immediate([&](CommandBuffer &cmd) {
-		cube_mesh.batch_upload(cmd, staging, 0);
+		cross_mesh.batch_upload(cmd, staging, 0);
+	});
+
+	device->destroy_buffer(staging);
+}
+
+void DebugRenderer::create_sphere_mesh()
+{
+	ScratchScope scratch = scratch::get();
+
+	u32 segments = 32;
+	u32 vertex_count = segments * 3;
+	u32 index_count = segments * 6;
+
+	Vec3 *vertices = scratch.arena().array<Vec3>(vertex_count);
+	IndexType *indices = scratch.arena().array<IndexType>(index_count);
+
+	u32 v_idx = 0;
+	u32 i_idx = 0;
+
+	for (u32 ring = 0; ring < 3; ring++) {
+		u32 ring_start = v_idx;
+		for (u32 i = 0; i < segments; i++) {
+			float angle = ((float)i / segments) * CalcF::TAU;
+
+			float c = CalcF::cos(angle);
+			float s = CalcF::sin(angle);
+
+			if (ring == 0) vertices[v_idx] = Vec3(c, s, 0.f);
+			if (ring == 1) vertices[v_idx] = Vec3(c, 0.f, s);
+			if (ring == 2) vertices[v_idx] = Vec3(0.f, c, s);
+
+			indices[i_idx++] = v_idx;
+			indices[i_idx++] = ring_start + ((i + 1) % segments);
+
+			v_idx++;
+		}
+	}
+
+	sphere_mesh.create_buffers(device, sizeof(Vec3), vertex_count, index_count);
+
+	GpuBuffer *staging = device->alloc_stage(sphere_mesh.get_vertex_buffer_size() + sphere_mesh.get_index_buffer_size());
+
+	sphere_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
+
+	device->submit_graphics_immediate([&](CommandBuffer &cmd) {
+		sphere_mesh.batch_upload(cmd, staging, 0);
 	});
 
 	device->destroy_buffer(staging);
@@ -152,47 +193,41 @@ void DebugRenderer::create_circle_mesh()
 	device->destroy_buffer(staging);
 }
 
-void DebugRenderer::create_sphere_mesh()
+void DebugRenderer::create_cube_mesh()
 {
 	ScratchScope scratch = scratch::get();
 
-	u32 segments = 32;
-	u32 vertex_count = segments * 3;
-	u32 index_count  = segments * 6;
-	
-	Vec3      *vertices = scratch.arena().array<Vec3>(vertex_count);
-	IndexType *indices  = scratch.arena().array<IndexType>(index_count);
-	
-	u32 v_idx = 0;
-	u32 i_idx = 0;
-	
-	for (u32 ring = 0; ring < 3; ring++) {
-		u32 ring_start = v_idx;
-		for (u32 i = 0; i < segments; i++) {
-			float angle = ((float)i / segments) * CalcF::TAU;
+	u32 vertex_count = 8;
+	u32 index_count = 24;
 
-			float c = CalcF::cos(angle);
-			float s = CalcF::sin(angle);
+	Vec3 *vertices = scratch.arena().array<Vec3>(vertex_count);
+	IndexType *indices = scratch.arena().array<IndexType>(index_count);
 
-			if (ring == 0) vertices[v_idx] = Vec3(c,   s,   0.f);
-			if (ring == 1) vertices[v_idx] = Vec3(c,   0.f, s);
-			if (ring == 2) vertices[v_idx] = Vec3(0.f, c,   s);
+	vertices[0] = Vec3(-1.f, -1.f, -1.f);
+	vertices[1] = Vec3( 1.f, -1.f, -1.f);
+	vertices[2] = Vec3( 1.f,  1.f, -1.f);
+	vertices[3] = Vec3(-1.f,  1.f, -1.f);
+	vertices[4] = Vec3(-1.f, -1.f,  1.f);
+	vertices[5] = Vec3( 1.f, -1.f,  1.f);
+	vertices[6] = Vec3( 1.f,  1.f,  1.f);
+	vertices[7] = Vec3(-1.f,  1.f,  1.f);
 
-			indices[i_idx++] = v_idx;
-			indices[i_idx++] = ring_start + ((i + 1) % segments);
+	IndexType line_indices[] = {
+		0, 1, 1, 2, 2, 3, 3, 0,
+		4, 5, 5, 6, 6, 7, 7, 4,
+		0, 4, 1, 5, 2, 6, 3, 7
+	};
 
-			v_idx++;
-		}
-	}
+	memcpy(indices, line_indices, sizeof(line_indices));
 
-	sphere_mesh.create_buffers(device, sizeof(Vec3), vertex_count, index_count);
-	
-	GpuBuffer *staging = device->alloc_stage(sphere_mesh.get_vertex_buffer_size() + sphere_mesh.get_index_buffer_size());
-	
-	sphere_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
-	
+	cube_mesh.create_buffers(device, sizeof(Vec3), vertex_count, index_count);
+
+	GpuBuffer *staging = device->alloc_stage(cube_mesh.get_vertex_buffer_size() + cube_mesh.get_index_buffer_size());
+
+	cube_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
+
 	device->submit_graphics_immediate([&](CommandBuffer &cmd) {
-		sphere_mesh.batch_upload(cmd, staging, 0);
+		cube_mesh.batch_upload(cmd, staging, 0);
 	});
 
 	device->destroy_buffer(staging);
@@ -303,43 +338,21 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 			args.calls_buffer = buffer_addr;
 
 			for (const auto &batch : batches) {
+				auto render_batch = [&](Mesh &mesh) -> void {
+					args.vertex_buffer = mesh.vertex_buffer->get_device_address();
+					cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
+					cmd.bind_index_buffer(mesh.index_buffer, 0);
+					cmd.draw_indexed(mesh.index_count, batch.count, 0, 0, batch.start);
+				};
+
 				switch (batch.type) {
-					case DRAW_CALL_LINE:
-						break;
-
-					case DRAW_CALL_CROSS:
-						break;
-
-					case DRAW_CALL_SPHERE:
-						args.vertex_buffer = sphere_mesh.vertex_buffer->get_device_address();
-						cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-						cmd.bind_index_buffer(sphere_mesh.index_buffer, 0);
-						cmd.draw_indexed(sphere_mesh.index_count, batch.count, 0, 0, batch.start);
-						break;
-
-					case DRAW_CALL_CIRCLE:
-						args.vertex_buffer = circle_mesh.vertex_buffer->get_device_address();
-						cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-						cmd.bind_index_buffer(circle_mesh.index_buffer, 0);
-						cmd.draw_indexed(circle_mesh.index_count, batch.count, 0, 0, batch.start);
-						break;
-
-					case DRAW_CALL_TRIANGLE:
-						break;
-
-					case DRAW_CALL_AABB:
-						args.vertex_buffer = cube_mesh.vertex_buffer->get_device_address();
-						cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-						cmd.bind_index_buffer(cube_mesh.index_buffer, 0);
-						cmd.draw_indexed(cube_mesh.index_count, batch.count, 0, 0, batch.start);
-						break;
-
-					case DRAW_CALL_OBB:
-						args.vertex_buffer = cube_mesh.vertex_buffer->get_device_address();
-						cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
-						cmd.bind_index_buffer(cube_mesh.index_buffer, 0);
-						cmd.draw_indexed(cube_mesh.index_count, batch.count, 0, 0, batch.start);
-						break;
+					case DRAW_CALL_LINE:      break;
+					case DRAW_CALL_CROSS:     render_batch(cross_mesh); break;
+					case DRAW_CALL_SPHERE:    render_batch(sphere_mesh); break;
+					case DRAW_CALL_CIRCLE:    render_batch(circle_mesh); break;
+					case DRAW_CALL_TRIANGLE:  break;
+					case DRAW_CALL_AABB:      render_batch(cube_mesh); break;
+					case DRAW_CALL_OBB:       render_batch(cube_mesh); break;
 				}
 			}
 		};
@@ -351,6 +364,8 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 
 void DebugRenderer::render_line(const DebugDrawCall &call)
 {
+	// TODO
+
 	/*
 	render_line_internal(
 		call.line.from,
@@ -361,11 +376,12 @@ void DebugRenderer::render_line(const DebugDrawCall &call)
 
 void DebugRenderer::render_cross(const DebugDrawCall &call)
 {
-	// sqrt(d^2 + d^2) = 1/2
-	// d = 1/(2 * sqrt(2)) = sqrt(2) / 4
-
 	const Vec3 &point = call.cross.point;
-	const float size = call.cross.size * CalcF::SQRT2 * 0.25f;
+	const float size = call.cross.size * 0.5f;
+
+	Mat4 transform = Mat4::translate(point) * Mat4::scale(Vec3(size));
+
+	push_instance_data(transform);
 
 	/*
 	render_line_internal(
@@ -406,6 +422,8 @@ void DebugRenderer::render_circle(const DebugDrawCall &call)
 	const float radius = call.circle.radius;
 	const Vec3 &normal = call.circle.normal;
 
+	// TODO
+
 	Mat4 transform = Mat4::translate(centre) * Mat4::scale(Vec3(radius));// * Mat4::rotate_quat(Quat(normal.x, normal.y, normal.z, 1.f));
 	
 	push_instance_data(transform);
@@ -413,6 +431,8 @@ void DebugRenderer::render_circle(const DebugDrawCall &call)
 
 void DebugRenderer::render_triangle(const DebugDrawCall &call)
 {
+	// TODO
+
 	/*
 	const Vec3 &v0 = call.triangle.v0;
 	const Vec3 &v1 = call.triangle.v1;
@@ -426,6 +446,8 @@ void DebugRenderer::render_triangle(const DebugDrawCall &call)
 
 void DebugRenderer::render_aabb(const DebugDrawCall &call)
 {
+	// TODO
+
 	/*
 	const Vec3 &lo = call.aabb.min;
 	const Vec3 &hi = call.aabb.max;
@@ -559,10 +581,7 @@ void DebugRenderer::push_line(
 	call.line.from = from;
 	call.line.to = to;
 
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_LINE].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_LINE].push_back(call);
+	push_draw_call(call, DRAW_CALL_LINE, depth_enabled);
 }
 
 void DebugRenderer::push_cross(
@@ -582,10 +601,7 @@ void DebugRenderer::push_cross(
 	call.cross.point = point;
 	call.cross.size = size;
 	
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_CROSS].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_CROSS].push_back(call);
+	push_draw_call(call, DRAW_CALL_CROSS, depth_enabled);
 }
 
 void DebugRenderer::push_sphere(
@@ -605,10 +621,7 @@ void DebugRenderer::push_sphere(
 	call.sphere.centre = centre;
 	call.sphere.radius = radius;
 	
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_SPHERE].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_SPHERE].push_back(call);
+	push_draw_call(call, DRAW_CALL_SPHERE, depth_enabled);
 }
 
 void DebugRenderer::push_circle(
@@ -630,10 +643,7 @@ void DebugRenderer::push_circle(
 	call.circle.radius = radius;
 	call.circle.normal = plane_normal;
 	
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_CIRCLE].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_CIRCLE].push_back(call);
+	push_draw_call(call, DRAW_CALL_CIRCLE, depth_enabled);
 }
 
 void DebugRenderer::push_triangle(
@@ -656,10 +666,7 @@ void DebugRenderer::push_triangle(
 	call.triangle.v1 = v1;
 	call.triangle.v2 = v2;
 	
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_TRIANGLE].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_TRIANGLE].push_back(call);
+	push_draw_call(call, DRAW_CALL_TRIANGLE, depth_enabled);
 }
 
 void DebugRenderer::push_aabb(
@@ -680,10 +687,7 @@ void DebugRenderer::push_aabb(
 	call.aabb.min = min;
 	call.aabb.max = max;
 	
-	if (depth_enabled)
-		depth_buckets[DRAW_CALL_AABB].push_back(call);
-	else
-		no_depth_buckets[DRAW_CALL_AABB].push_back(call);
+	push_draw_call(call, DRAW_CALL_AABB, depth_enabled);
 }
 
 void DebugRenderer::push_obb(
@@ -704,8 +708,17 @@ void DebugRenderer::push_obb(
 	call.obb.transform = transform;
 	call.obb.scale = scale;
 	
+	push_draw_call(call, DRAW_CALL_OBB, depth_enabled);
+}
+
+void DebugRenderer::push_draw_call(
+	const DebugDrawCall &call,
+	DrawCallType type,
+	bool depth_enabled
+)
+{
 	if (depth_enabled)
-		depth_buckets[DRAW_CALL_OBB].push_back(call);
+		depth_buckets[type].push_back(call);
 	else
-		no_depth_buckets[DRAW_CALL_OBB].push_back(call);
+		no_depth_buckets[type].push_back(call);
 }

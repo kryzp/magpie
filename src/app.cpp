@@ -320,8 +320,6 @@ bool App::tick(const inp::InputState &input)
 
 		if (audio_system.is_valid(audio_handle))
 			audio_system.set_sound_position(audio_handle, render_scene.get_light_position(light_handle));
-
-		gfx::DebugRenderer::get_singleton()->push_sphere(render_scene.get_light_position(light_handle), 0.25f, Colour::yellow());
 	}
 	ImGui::End();
 

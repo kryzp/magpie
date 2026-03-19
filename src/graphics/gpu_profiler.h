@@ -105,7 +105,7 @@ namespace gfx
 
 			u64 end = profiler->get_new_id(GPU_PROFILE_TIMESTAMP);
 
-			cmd.write_timestamp(VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, profiler->get_pool(GPU_PROFILE_TIMESTAMP), end);
+			cmd.write_timestamp(VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, profiler->get_pool(GPU_PROFILE_TIMESTAMP), end);
 
 			GpuProfileEvent event = {};
 			event.name = name;
@@ -151,7 +151,7 @@ namespace gfx
 	private:
 		CommandBuffer &cmd;
 		const char *name;
-		u32 query;
+		u64 query;
 	};
 }
 

@@ -21,10 +21,10 @@ namespace gfx
 		constexpr static u32 MAX_DEBUG_DRAWS = 65536;
 
 	public:
-		static DebugRenderer *get_singleton();
-
 		DebugRenderer();
 		~DebugRenderer();
+
+		static DebugRenderer *get_singleton();
 
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
@@ -153,6 +153,8 @@ namespace gfx
 			};
 		};
 
+		void push_draw_call(const DebugDrawCall &call, DrawCallType type, bool depth_enabled);
+
 		void render_line(const DebugDrawCall &call);
 		void render_cross(const DebugDrawCall &call);
 		void render_sphere(const DebugDrawCall &cal);
@@ -163,9 +165,10 @@ namespace gfx
 
 		void push_instance_data(const Mat4 &transform);
 
-		void create_cube_mesh();
-		void create_circle_mesh();
+		void create_cross_mesh();
 		void create_sphere_mesh();
+		void create_circle_mesh();
+		void create_cube_mesh();
 
 		Vector<DebugDrawCall> depth_buckets[DRAW_CALL_MAX_ENUM];
 		Vector<DebugDrawCall> no_depth_buckets[DRAW_CALL_MAX_ENUM];
@@ -178,9 +181,10 @@ namespace gfx
 		GpuBuffer *no_depth_call_buffer;
 		u32 no_depth_id;
 
-		Mesh cube_mesh;
-		Mesh circle_mesh;
+		Mesh cross_mesh;
 		Mesh sphere_mesh;
+		Mesh circle_mesh;
+		Mesh cube_mesh;
 
 		bool current_depth_enabled;
 		Colour current_colour;

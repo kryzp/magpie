@@ -12,6 +12,7 @@ public:
 	constexpr static T RAD2DEG                        = static_cast<T>(57.29577951310);
 	constexpr static T DEG2RAD                        = static_cast<T>( 0.01745329251);
 	constexpr static T SQRT2                          = static_cast<T>( 1.41421356240);
+	constexpr static T SQRT3                          = static_cast<T>( 1.73205080757);
 	constexpr static T ONE_OVER_SQUARE_ROOT_OF_TWO_PI = static_cast<T>( 0.39894228040);
 
 	static T abs(T x);

@@ -33,18 +33,19 @@ void GpuProfiler::init(Device *device)
 		VK_QUERY_TYPE_PIPELINE_STATISTICS
 	};
 
-	VkQueryPoolCreateInfo query_pool_info = {};
-	query_pool_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-	query_pool_info.queryCount = MAX_QUERY_TIMESTAMPS_PER_FRAME;
-	query_pool_info.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT;
-
 	for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 		auto &frame = frames[i];
 		
 		for (int j = 0; j < GPU_PROFILE_MAX_ENUM; j++) {
 			auto &pool = frame.pools[j];
 
+			VkQueryPoolCreateInfo query_pool_info = {};
+			query_pool_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+			query_pool_info.queryCount = MAX_QUERY_TIMESTAMPS_PER_FRAME;
 			query_pool_info.queryType = pool_types[j];
+
+			if (pool_types[j] == VK_QUERY_TYPE_PIPELINE_STATISTICS)
+				query_pool_info.pipelineStatistics = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT;
 		
 			GFX_VK_CHECK(
 				vkCreateQueryPool(
@@ -96,7 +97,7 @@ void GpuProfiler::grab_queries(CommandBuffer &cmd)
 
 			switch (ev.type) {
 				case GPU_PROFILE_TIMESTAMP:
-					result = queries[ev.start] - queries[ev.end];
+					result = queries[ev.end] - queries[ev.start];
 					break;
 
 				case GPU_PROFILE_PIPELINE_STATS:
