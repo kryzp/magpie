@@ -160,12 +160,12 @@ Vec3 &Vec3::operator -= (const Vec3 &other) { this->x -= other.x; this->y -= oth
 Vec3 &Vec3::operator *= (const Vec3 &other) { this->x *= other.x; this->y *= other.y; this->z *= other.z; return *this; }
 Vec3 &Vec3::operator /= (const Vec3 &other) { this->x /= other.x; this->y /= other.y; this->z /= other.z; return *this; }
 
-const Vec3 &Vec3::unit()		{ static const Vec3 UNIT		= Vec3( 1,  1,  1); return UNIT;        }
-const Vec3 &Vec3::zero()		{ static const Vec3 ZERO		= Vec3( 0,  0,  0); return ZERO;        }
-const Vec3 &Vec3::one()			{ static const Vec3 ONE			= Vec3( 1,  1,  1); return ONE;         }
-const Vec3 &Vec3::right()		{ static const Vec3 RIGHT		= Vec3( 1,  0,  0); return RIGHT;       }
-const Vec3 &Vec3::left()		{ static const Vec3 LEFT		= Vec3(-1,  0,  0); return LEFT;        }
-const Vec3 &Vec3::up()			{ static const Vec3 UP			= Vec3( 0,  0,  1); return UP;          }
-const Vec3 &Vec3::down()		{ static const Vec3 DOWN		= Vec3( 0,  0, -1); return DOWN;        }
-const Vec3 &Vec3::forward()		{ static const Vec3 FORWARD		= Vec3( 0,  1,  0); return FORWARD;     }
-const Vec3 &Vec3::backward()	{ static const Vec3 BACKWARD	= Vec3( 0, -1,  0); return BACKWARD;    }
+const Vec3 &Vec3::unit()		{ static const Vec3 UNIT		= Vec3( 1.f,  1.f,  1.f); return UNIT;        }
+const Vec3 &Vec3::zero()		{ static const Vec3 ZERO		= Vec3( 0.f,  0.f,  0.f); return ZERO;        }
+const Vec3 &Vec3::one()			{ static const Vec3 ONE			= Vec3( 1.f,  1.f,  1.f); return ONE;         }
+const Vec3 &Vec3::right()		{ static const Vec3 RIGHT		= Vec3( 1.f,  0.f,  0.f); return RIGHT;       }
+const Vec3 &Vec3::left()		{ static const Vec3 LEFT		= Vec3(-1.f,  0.f,  0.f); return LEFT;        }
+const Vec3 &Vec3::forward()		{ static const Vec3 FORWARD		= Vec3( 0.f,  1.f,  0.f); return FORWARD;     }
+const Vec3 &Vec3::backward()	{ static const Vec3 BACKWARD	= Vec3( 0.f, -1.f,  0.f); return BACKWARD;    }
+const Vec3 &Vec3::up()			{ static const Vec3 UP			= Vec3( 0.f,  0.f,  1.f); return UP;          }
+const Vec3 &Vec3::down()		{ static const Vec3 DOWN		= Vec3( 0.f,  0.f, -1.f); return DOWN;        }

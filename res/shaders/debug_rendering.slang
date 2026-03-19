@@ -1,7 +1,7 @@
 #include "util.slang"
 #include "bindless.slang"
 
-struct DebugLineDraw {
+struct DebugObjectDraw {
     float4x4 transform;
     float4 colour;
     float thickness;
@@ -9,7 +9,7 @@ struct DebugLineDraw {
 
 struct Arguments {
     float4x4 view_proj;
-    DebugLineDraw *calls;
+    DebugObjectDraw *calls;
     float3 *vertices;
 };
 
@@ -24,7 +24,7 @@ struct VS_Output {
 [shader("vertex")]
 VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 {
-    DebugLineDraw call = args.calls[instance];
+    DebugObjectDraw call = args.calls[instance];
 
     VS_Output output;
     output.colour = call.colour;

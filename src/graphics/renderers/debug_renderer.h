@@ -163,8 +163,11 @@ namespace gfx
 		void render_aabb(const DebugDrawCall &call);
 		void render_obb(const DebugDrawCall &call);
 
+		void render_line_internal(const Vec3 &from, const Vec3 &to);
+
 		void push_instance_data(const Mat4 &transform);
 
+		void create_line_mesh();
 		void create_cross_mesh();
 		void create_sphere_mesh();
 		void create_circle_mesh();
@@ -181,6 +184,7 @@ namespace gfx
 		GpuBuffer *no_depth_call_buffer;
 		u32 no_depth_id;
 
+		Mesh line_mesh;
 		Mesh cross_mesh;
 		Mesh sphere_mesh;
 		Mesh circle_mesh;

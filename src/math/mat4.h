@@ -32,6 +32,7 @@ struct Mat4 {
 	static Mat4 perspective(float fov, float aspect, float near, float far);
 	static Mat4 orthographic(float left, float right, float bottom, float top, float near, float far);
 
+	static Mat4 rotate_around(float angle, const Vec3 &normal);
 	static Mat4 rotate_axis(float angle, const Vec3 &axis);
 	static Mat4 rotate_quat(const Quat &q);
 

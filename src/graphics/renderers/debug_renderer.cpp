@@ -17,6 +17,7 @@ DebugRenderer::DebugRenderer()
 	, depth_enabled_id(0)
 	, no_depth_call_buffer(nullptr)
 	, no_depth_id(0)
+	, line_mesh()
 	, cross_mesh()
 	, sphere_mesh()
 	, circle_mesh()
@@ -38,7 +39,7 @@ DebugRenderer *DebugRenderer::get_singleton()
 	return &instance;
 }
 
-struct GPU_DebugLineDraw {
+struct GPU_DebugObjectDraw {
 	Mat4 transform;
 	Vec4 colour;
 	float thickness;
@@ -54,16 +55,17 @@ void DebugRenderer::init(Device *device, ast::AssetManager &assets)
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPU_DebugLineDraw) * MAX_DEBUG_DRAWS
+		sizeof(GPU_DebugObjectDraw) * MAX_DEBUG_DRAWS
 	);
 
 	this->no_depth_call_buffer = device->alloc_buffer(
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPU_DebugLineDraw) * MAX_DEBUG_DRAWS
+		sizeof(GPU_DebugObjectDraw) * MAX_DEBUG_DRAWS
 	);
 
+	create_line_mesh();
 	create_cross_mesh();
 	create_circle_mesh();
 	create_sphere_mesh();
@@ -72,6 +74,7 @@ void DebugRenderer::init(Device *device, ast::AssetManager &assets)
 
 void DebugRenderer::destroy()
 {
+	line_mesh.destroy_buffers();
 	cross_mesh.destroy_buffers();
 	circle_mesh.destroy_buffers();
 	sphere_mesh.destroy_buffers();
@@ -79,6 +82,32 @@ void DebugRenderer::destroy()
 
 	device->destroy_buffer(depth_enabled_call_buffer);
 	device->destroy_buffer(no_depth_call_buffer);
+}
+
+void DebugRenderer::create_line_mesh()
+{
+	ScratchScope scratch = scratch::get();
+
+	Vec3 *vertices = scratch.arena().array<Vec3>(2);
+	IndexType *indices = scratch.arena().array<IndexType>(2);
+
+	vertices[0] = Vec3(0.f, 0.f, 1.f);
+	vertices[1] = Vec3(0.f, 0.f, 0.f);
+
+	indices[0] = 0;
+	indices[1] = 1;
+
+	line_mesh.create_buffers(device, sizeof(Vec3), 2, 2);
+
+	GpuBuffer *staging = device->alloc_stage(line_mesh.get_vertex_buffer_size() + line_mesh.get_index_buffer_size());
+
+	line_mesh.write_to_staging_buffer(staging, 0, vertices, indices);
+
+	device->submit_graphics_immediate([&](CommandBuffer &cmd) {
+		line_mesh.batch_upload(cmd, staging, 0);
+	});
+
+	device->destroy_buffer(staging);
 }
 
 void DebugRenderer::create_cross_mesh()
@@ -346,13 +375,18 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 				};
 
 				switch (batch.type) {
-					case DRAW_CALL_LINE:      break;
-					case DRAW_CALL_CROSS:     render_batch(cross_mesh); break;
-					case DRAW_CALL_SPHERE:    render_batch(sphere_mesh); break;
-					case DRAW_CALL_CIRCLE:    render_batch(circle_mesh); break;
-					case DRAW_CALL_TRIANGLE:  break;
-					case DRAW_CALL_AABB:      render_batch(cube_mesh); break;
-					case DRAW_CALL_OBB:       render_batch(cube_mesh); break;
+					case DRAW_CALL_LINE:    render_batch(line_mesh);    break;
+					case DRAW_CALL_CROSS:   render_batch(cross_mesh);   break;
+					case DRAW_CALL_SPHERE:  render_batch(sphere_mesh);  break;
+					case DRAW_CALL_CIRCLE:  render_batch(circle_mesh);  break;
+					case DRAW_CALL_AABB:    render_batch(cube_mesh);    break;
+					case DRAW_CALL_OBB:     render_batch(cube_mesh);    break;
+
+					case DRAW_CALL_TRIANGLE: {
+						render_batch(line_mesh);
+						render_batch(line_mesh);
+						render_batch(line_mesh);
+					} break;
 				}
 			}
 		};
@@ -364,14 +398,7 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 
 void DebugRenderer::render_line(const DebugDrawCall &call)
 {
-	// TODO
-
-	/*
-	render_line_internal(
-		call.line.from,
-		call.line.to
-	);
-	*/
+	render_line_internal(call.line.from, call.line.to);
 }
 
 void DebugRenderer::render_cross(const DebugDrawCall &call)
@@ -382,28 +409,6 @@ void DebugRenderer::render_cross(const DebugDrawCall &call)
 	Mat4 transform = Mat4::translate(point) * Mat4::scale(Vec3(size));
 
 	push_instance_data(transform);
-
-	/*
-	render_line_internal(
-		point - Vec3(size, size, size),
-		point + Vec3(size, size, size)
-	);
-
-	render_line_internal(
-		point - Vec3(-size, size, size),
-		point + Vec3(-size, size, size)
-	);
-	
-	render_line_internal(
-		point - Vec3(size, -size, size),
-		point + Vec3(size, -size, size)
-	);
-	
-	render_line_internal(
-		point - Vec3(size, size, -size),
-		point + Vec3(size, size, -size)
-	);
-	*/
 }
 
 void DebugRenderer::render_sphere(const DebugDrawCall &call)
@@ -422,18 +427,13 @@ void DebugRenderer::render_circle(const DebugDrawCall &call)
 	const float radius = call.circle.radius;
 	const Vec3 &normal = call.circle.normal;
 
-	// TODO
+	Mat4 transform = Mat4::translate(centre) * Mat4::rotate_around(0.f, normal) * Mat4::scale(Vec3(radius));
 
-	Mat4 transform = Mat4::translate(centre) * Mat4::scale(Vec3(radius));// * Mat4::rotate_quat(Quat(normal.x, normal.y, normal.z, 1.f));
-	
 	push_instance_data(transform);
 }
 
 void DebugRenderer::render_triangle(const DebugDrawCall &call)
 {
-	// TODO
-
-	/*
 	const Vec3 &v0 = call.triangle.v0;
 	const Vec3 &v1 = call.triangle.v1;
 	const Vec3 &v2 = call.triangle.v2;
@@ -441,92 +441,33 @@ void DebugRenderer::render_triangle(const DebugDrawCall &call)
 	render_line_internal(v0, v1);
 	render_line_internal(v1, v2);
 	render_line_internal(v2, v0);
-	*/
 }
 
 void DebugRenderer::render_aabb(const DebugDrawCall &call)
 {
-	// TODO
+	Vec3 centre = (call.aabb.max + call.aabb.min) * 0.5f;
+	Vec3 size = (call.aabb.max - call.aabb.min);
 
-	/*
-	const Vec3 &lo = call.aabb.min;
-	const Vec3 &hi = call.aabb.max;
+	Mat4 transform = Mat4::translate(centre) * Mat4::scale(size);
 
-	// ---
-
-	render_line_internal(
-		Vec3(lo.x, lo.y, lo.z),
-		Vec3(hi.x, lo.y, lo.z)
-	);
-
-	render_line_internal(
-		Vec3(lo.x, lo.y, lo.z),
-		Vec3(lo.x, hi.y, lo.z)
-	);
-
-	render_line_internal(
-		Vec3(lo.x, lo.y, lo.z),
-		Vec3(lo.x, lo.y, hi.z)
-	);
-
-	// ---
-
-	render_line_internal(
-		Vec3(hi.x, hi.y, hi.z),
-		Vec3(lo.x, hi.y, hi.z)
-	);
-
-	render_line_internal(
-		Vec3(hi.x, hi.y, hi.z),
-		Vec3(hi.x, lo.y, hi.z)
-	);
-
-	render_line_internal(
-		Vec3(hi.x, hi.y, hi.z),
-		Vec3(hi.x, hi.y, lo.z)
-	);
-
-	// ---
-
-	render_line_internal(
-		Vec3(lo.x, hi.y, lo.z),
-		Vec3(hi.x, hi.y, lo.z)
-	);
-
-	render_line_internal(
-		Vec3(lo.x, hi.y, lo.z),
-		Vec3(lo.x, hi.y, hi.z)
-	);
-
-	// ---
-
-	render_line_internal(
-		Vec3(hi.x, lo.y, lo.z),
-		Vec3(hi.x, hi.y, lo.z)
-	);
-
-	render_line_internal(
-		Vec3(hi.x, lo.y, lo.z),
-		Vec3(hi.x, lo.y, hi.z)
-	);
-
-	// ---
-
-	render_line_internal(
-		Vec3(lo.x, lo.y, hi.z),
-		Vec3(lo.x, hi.y, hi.z)
-	);
-
-	render_line_internal(
-		Vec3(lo.x, lo.y, hi.z),
-		Vec3(hi.x, lo.y, hi.z)
-	);
-	*/
+	push_instance_data(transform);
 }
 
 void DebugRenderer::render_obb(const DebugDrawCall &call)
 {
-	// TODO
+	Mat4 transform = call.obb.transform * Mat4::scale(call.obb.scale);
+
+	push_instance_data(transform);
+}
+
+void DebugRenderer::render_line_internal(const Vec3 &from, const Vec3 &to)
+{
+	Vec3 direction = (to - from).normalized();
+	float length = (to - from).length();
+
+	Mat4 transform = Mat4::translate(from) * Mat4::rotate_around(0.f, direction) * Mat4::scale(Vec3(length));
+
+	push_instance_data(transform);
 }
 
 void DebugRenderer::push_instance_data(const Mat4 &transform)
@@ -543,7 +484,7 @@ void DebugRenderer::push_instance_data(const Mat4 &transform)
 	if (current_depth_enabled) {
 		assert(depth_enabled_id < MAX_DEBUG_DRAWS);
 
-		GPU_DebugLineDraw *draws = (GPU_DebugLineDraw *)depth_enabled_call_buffer->map();
+		GPU_DebugObjectDraw *draws = (GPU_DebugObjectDraw *)depth_enabled_call_buffer->map();
 
 		draws[depth_enabled_id].transform = transform;
 		draws[depth_enabled_id].colour    = colour;
@@ -553,7 +494,7 @@ void DebugRenderer::push_instance_data(const Mat4 &transform)
 	} else {
 		assert(no_depth_id < MAX_DEBUG_DRAWS);
 
-		GPU_DebugLineDraw *draws = (GPU_DebugLineDraw *)no_depth_call_buffer->map();
+		GPU_DebugObjectDraw *draws = (GPU_DebugObjectDraw *)no_depth_call_buffer->map();
 
 		draws[no_depth_id].transform = transform;
 		draws[no_depth_id].colour    = colour;

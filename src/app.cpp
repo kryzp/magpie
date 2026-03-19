@@ -389,7 +389,9 @@ void App::update(float dt, const inp::InputState &input)
 		);
 	}
 
-	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds() * 1.f) * 2.f - 1.f, 0.f, 1.f));
+	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds())*2.f - 1.f, 0.f, 1.f));
+
+	gfx::DebugRenderer::get_singleton()->push_line(Vec3::zero(), render_scene.get_light_position(light_handle), Colour::white());
 
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;

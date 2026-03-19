@@ -99,6 +99,32 @@ Mat4 Mat4::orthographic(float left, float right, float bottom, float top, float 
 	return result;
 }
 
+// Normal must be normalized.
+Mat4 Mat4::rotate_around(float angle, const Vec3 &normal)
+{
+	Mat4 result = identity();
+
+	Vec3 up = normal.z > 0.999f ? Vec3::right() : Vec3::up();
+
+	Vec3 F = normal;
+	Vec3 R = Vec3::cross(up, F).normalized();
+	Vec3 U = Vec3::cross(F, R).normalized();
+
+	result.m00 = R.x;
+	result.m10 = R.y;
+	result.m20 = R.z;
+
+	result.m01 = U.x;
+	result.m11 = U.y;
+	result.m21 = U.z;
+
+	result.m02 = F.x;
+	result.m12 = F.y;
+	result.m22 = F.z;
+
+	return result;
+}
+
 // Axis must be normalized.
 Mat4 Mat4::rotate_axis(float angle, const Vec3 &axis)
 {
