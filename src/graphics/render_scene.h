@@ -48,6 +48,7 @@ namespace gfx
 		Vec3 position;
 		float near_plane;
 		float far_plane;
+		float radius;
 	};
 
 	struct RenderHandle {

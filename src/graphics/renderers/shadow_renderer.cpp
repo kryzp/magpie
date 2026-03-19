@@ -91,7 +91,7 @@ void ShadowRenderer::render_shadows(
 
 		DrawStream draw_stream = culling.cull_sphere(
 			graph, bb, scene, scene_resources,
-			info.position, 3.f
+			info.position, info.radius
 		);
 
 		shadow_stage.indirect_buffer(draw_stream.indirect_buffer);

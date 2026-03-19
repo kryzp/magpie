@@ -47,7 +47,6 @@ void RenderScene::init(Device *device, ResourceCache *cache)
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 		sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS
 	);
-
 }
 
 void RenderScene::destroy()
@@ -148,9 +147,7 @@ void RenderScene::update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneRes
 	for (int i = 0; i < lights.data.size(); i++) {
 		const Light &light = lights.data[i];
 
-		const float epsilon_intensity = 0.01f;
-		const float light_max = light.colour.max_value();
-		const float heuristic_radius = CalcF::sqrt((light.intensity * light_max) / (light.falloff * epsilon_intensity));
+		float heuristic_radius = light.get_heuristic_radius(0.01f);
 
 		mapped_lights[i].transform = Mat4::transform(light.position, Quat(), Vec3(heuristic_radius), Vec3::zero());
 		mapped_lights[i].position = lights.data[i].position;
@@ -166,6 +163,7 @@ void RenderScene::update_light_buffer(GpuRingBuffer &frame_arena, RenderSceneRes
 			shadow_caster.position = light.position;
 			shadow_caster.near_plane = light.shadow_near;
 			shadow_caster.far_plane = light.shadow_far;
+			shadow_caster.radius = light.get_heuristic_radius(0.01f);
 
 			shadow_casters.push_back(shadow_caster);
 
