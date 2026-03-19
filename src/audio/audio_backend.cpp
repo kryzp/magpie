@@ -7,6 +7,18 @@
 
 using namespace audio;
 
+static u64 get_bytes_from_format(AudioFormat format)
+{
+	switch (format) {
+		case FORMAT_U8:   return  1u;
+		case FORMAT_S16:  return  2u;
+		case FORMAT_S24:  return  3u;
+		case FORMAT_S32:  return  4u;
+		case FORMAT_F32:  return  4u;
+		default:          return -1u;
+	}
+}
+
 static ma_format get_ma_format(AudioFormat format)
 {
 	switch (format) {
@@ -19,15 +31,13 @@ static ma_format get_ma_format(AudioFormat format)
 	}
 }
 
-static u64 get_bytes_from_format(AudioFormat format)
+static ma_attenuation_model get_ma_model(AttenuationModel model)
 {
-	switch (format) {
-		case FORMAT_U8:   return  1u;
-		case FORMAT_S16:  return  2u;
-		case FORMAT_S24:  return  3u;
-		case FORMAT_S32:  return  4u;
-		case FORMAT_F32:  return  4u;
-		default:          return -1u;
+	switch (model) {
+		case ATTENUATION_EXPONENTIAL:  return ma_attenuation_model_exponential;
+		case ATTENUATION_INVERSE:      return ma_attenuation_model_inverse;
+		case ATTENUATION_LINEAR:       return ma_attenuation_model_linear;
+		default:                       return ma_attenuation_model_none;
 	}
 }
 
@@ -63,6 +73,9 @@ public:
 	void set_source_pitch(AudioSourceHandle source, float pitch) override;
 	void set_source_looping(AudioSourceHandle source, bool loop) override;
 	void set_source_position(AudioSourceHandle source, const Vec3 &position) override;
+	void set_source_doppler_factor(AudioSourceHandle source, float factor) override;
+	void set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model) override;
+	void set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance) override;
 
 	void play(AudioSourceHandle source) override;
 	void stop(AudioSourceHandle source) override;
@@ -276,6 +289,33 @@ void MiniAudioBackend::set_source_position(AudioSourceHandle source, const Vec3 
 
 	ma_sound_set_spatialization_enabled(&sources[source]->sound, true);
 	ma_sound_set_position(&sources[source]->sound, position.x, position.y, position.z);
+}
+
+void MiniAudioBackend::set_source_doppler_factor(AudioSourceHandle source, float factor)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_set_doppler_factor(&sources[source]->sound, factor);
+}
+
+void MiniAudioBackend::set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_attenuation_model ma_model = get_ma_model(model);
+
+	ma_sound_set_attenuation_model(&sources[source]->sound, ma_model);
+}
+
+void MiniAudioBackend::set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_set_min_distance(&sources[source]->sound, min_distance);
+	ma_sound_set_max_distance(&sources[source]->sound, max_distance);
 }
 
 void MiniAudioBackend::play(AudioSourceHandle source)

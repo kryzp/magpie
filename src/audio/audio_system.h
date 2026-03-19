@@ -13,7 +13,10 @@ namespace audio
 		BUS_MAX_ENUM
 	};
 
+	typedef u32 AudioHandle;
+
 	struct AudioVoice {
+		AudioHandle handle;
 		AudioSourceHandle source;
 		AudioBus bus;
 		float base_volume;
@@ -29,8 +32,10 @@ namespace audio
 
 		void tick(float dt);
 
-		void play_sound(AudioBufferHandle clip, AudioBus bus, float volume = 1.f, float pitch = 1.f);
-		void play_sound_3d(AudioBufferHandle clip, const Vec3 &position, AudioBus bus, float volume = 1.f, float pitch = 1.f);
+		AudioHandle play_sound(AudioBufferHandle clip, AudioBus bus, float volume = 1.f, float pitch = 1.f);
+		AudioHandle play_sound_3d(AudioBufferHandle clip, const Vec3 &position, AudioBus bus, float volume = 1.f, float pitch = 1.f);
+
+		void stop(AudioHandle handle);
 
 		void stop_all();
 

@@ -23,6 +23,13 @@ namespace audio
 		FORMAT_MAX_ENUM
 	};
 
+	enum AttenuationModel {
+		ATTENUATION_EXPONENTIAL,
+		ATTENUATION_INVERSE,
+		ATTENUATION_LINEAR,
+		ATTENUATION_MAX_ENUM,
+	};
+
 	class IAudioBackend {
 	public:
 		virtual ~IAudioBackend() = default;
@@ -44,6 +51,9 @@ namespace audio
 		virtual void set_source_pitch(AudioSourceHandle source, float pitch) = 0;
 		virtual void set_source_looping(AudioSourceHandle source, bool loop) = 0;
 		virtual void set_source_position(AudioSourceHandle source, const Vec3 &position) = 0;
+		virtual void set_source_doppler_factor(AudioSourceHandle source, float factor) = 0;
+		virtual void set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model) = 0;
+		virtual void set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance) = 0;
 
 		virtual void play(AudioSourceHandle source) = 0;
 		virtual void stop(AudioSourceHandle source) = 0;

@@ -49,7 +49,7 @@ void AudioSystem::tick(float dt)
 	}
 }
 
-void AudioSystem::play_sound(AudioBufferHandle buffer, AudioBus bus, float volume, float pitch)
+AudioHandle AudioSystem::play_sound(AudioBufferHandle buffer, AudioBus bus, float volume, float pitch)
 {
 	AudioSourceHandle source = backend->create_source();
 	backend->set_source_buffer(source, buffer);
@@ -63,10 +63,14 @@ void AudioSystem::play_sound(AudioBufferHandle buffer, AudioBus bus, float volum
 	voice.bus = bus;
 	voice.base_volume = volume;
 
+	AudioHandle handle = active_voices.size();
+
 	active_voices.push_back(voice);
+
+	return handle;
 }
 
-void AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &position, AudioBus bus, float volume, float pitch)
+AudioHandle AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &position, AudioBus bus, float volume, float pitch)
 {
 	AudioSourceHandle source = backend->create_source();
 	backend->set_source_buffer(source, buffer);
@@ -81,7 +85,16 @@ void AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &position, 
 	voice.bus = bus;
 	voice.base_volume = volume;
 
+	AudioHandle handle = active_voices.size();
+
 	active_voices.push_back(voice);
+
+	return handle;
+}
+
+void AudioSystem::stop(AudioHandle handle)
+{
+	backend->stop(active_voices[handle].source);
 }
 
 void AudioSystem::stop_all()
