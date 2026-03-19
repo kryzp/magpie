@@ -820,6 +820,8 @@ void RenderGraph::process_invalidate(RenderStage &stage, const RenderResourceEdg
 			}
 		}
 	}
+
+	r.tracking.pipeline_barrier_stage_flags = edge.access_state.stage;
 }
 
 void RenderGraph::process_flush(RenderStage &stage, const RenderResourceEdge &edge)
