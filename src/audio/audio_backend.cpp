@@ -34,8 +34,8 @@ static ma_format get_ma_format(AudioFormat format)
 static ma_attenuation_model get_ma_model(AttenuationModel model)
 {
 	switch (model) {
-		case ATTENUATION_EXPONENTIAL:  return ma_attenuation_model_exponential;
 		case ATTENUATION_INVERSE:      return ma_attenuation_model_inverse;
+		case ATTENUATION_EXPONENTIAL:  return ma_attenuation_model_exponential;
 		case ATTENUATION_LINEAR:       return ma_attenuation_model_linear;
 		default:                       return ma_attenuation_model_none;
 	}

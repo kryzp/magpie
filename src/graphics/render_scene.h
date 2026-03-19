@@ -91,6 +91,8 @@ namespace gfx
 		void set_light_colour(RenderHandle handle, const Vec3 &colour);
 		void set_light_intensity(RenderHandle handle, float intensity);
 
+		Vec3 get_light_position(RenderHandle handle) const;
+
 		u32 register_mesh(const Mesh &mesh);
 		u32 register_material(const Material &material, ast::AssetManager &assets);
 

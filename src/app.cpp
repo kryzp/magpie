@@ -313,13 +313,15 @@ bool App::tick(const inp::InputState &input)
 		if (ImGui::SliderFloat3("Light Colour", &col.x, 0.f, 1.f))
 			render_scene.set_light_colour(light_handle, col);
 
-		/*
-		static Vec3 pos_x = 0.f;
-
-		if (ImGui::SliderFloat3("Light Position", &pos_x, -2.f, 2.f))*/
+		static audio::AudioHandle audio_handle;
 
 		if (ImGui::Button("Hit that shi"))
-			audio_system.play_sound(test_sound, audio::BUS_SFX);
+			audio_handle = audio_system.play_sound_3d(test_sound, audio::BUS_SFX, render_scene.get_light_position(light_handle));
+
+		if (audio_system.is_valid(audio_handle))
+			audio_system.set_sound_position(audio_handle, render_scene.get_light_position(light_handle));
+
+		gfx::DebugRenderer::get_singleton()->push_sphere(render_scene.get_light_position(light_handle), 0.25f, Colour::yellow());
 	}
 	ImGui::End();
 
@@ -383,7 +385,7 @@ void App::update(float dt, const inp::InputState &input)
 		gfx::DebugRenderer::get_singleton()->push_sphere(
 			Vec3(0.f, 0.f, 3.f),
 			2.f,
-			Colour::yellow(),
+			Colour::cyan(),
 			1.f,
 			true
 		);

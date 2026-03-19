@@ -4,7 +4,8 @@ using namespace audio;
 
 AudioSystem::AudioSystem()
 	: backend(nullptr)
-	, active_voices()
+	, voice_pool()
+	, free_indices()
 	, master_volume()
 	, bus_volumes{}
 	, listener()
@@ -37,16 +38,53 @@ void AudioSystem::tick(float dt)
 {
 	backend->tick(dt, listener);
 
-	for (int i = 0; i < active_voices.size();) {
-		auto &voice = active_voices[i];
+	for (int i = 0; i < voice_pool.size();) {
+		auto &voice = voice_pool[i];
 
-		if (!backend->is_playing(voice.source)) {
+		if (voice.active && !backend->is_playing(voice.source)) {
 			backend->destroy_source(voice.source);
-			active_voices.erase(active_voices.begin() + i);
+			voice.active = false;
+			free_indices.push_back(i);
 		} else {
 			i++;
 		}
 	}
+}
+
+bool AudioSystem::is_valid(const AudioHandle &handle) const
+{
+	if (handle.index == -1u ||
+		handle.index >= voice_pool.size())
+		return false;
+
+	const auto &voice = voice_pool[handle.index];
+
+	return voice.active && voice.handle.generation == handle.generation;
+}
+
+AudioHandle AudioSystem::allocate_voice(AudioSourceHandle source, AudioBus bus, float volume)
+{
+	u32 index;
+
+	if (!free_indices.empty()) {
+		index = free_indices.back();
+		free_indices.pop_back();
+	} else {
+		index = voice_pool.size();
+
+		voice_pool.emplace_back();
+		voice_pool[index].handle = { index, 0 };
+	}
+
+	AudioVoice &voice = voice_pool[index];
+	voice.active = true;
+	voice.handle.generation++;
+
+	voice.source = source;
+	voice.bus = bus;
+	voice.base_volume = volume;
+
+	return voice.handle;
 }
 
 AudioHandle AudioSystem::play_sound(AudioBufferHandle buffer, AudioBus bus, float volume, float pitch)
@@ -58,19 +96,10 @@ AudioHandle AudioSystem::play_sound(AudioBufferHandle buffer, AudioBus bus, floa
 
 	backend->play(source);
 
-	AudioVoice voice = {};
-	voice.source = source;
-	voice.bus = bus;
-	voice.base_volume = volume;
-
-	AudioHandle handle = active_voices.size();
-
-	active_voices.push_back(voice);
-
-	return handle;
+	return allocate_voice(source, bus, volume);
 }
 
-AudioHandle AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &position, AudioBus bus, float volume, float pitch)
+AudioHandle AudioSystem::play_sound_3d(AudioBufferHandle buffer, AudioBus bus, const Vec3 &position, float volume, float pitch)
 {
 	AudioSourceHandle source = backend->create_source();
 	backend->set_source_buffer(source, buffer);
@@ -80,31 +109,32 @@ AudioHandle AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &pos
 
 	backend->play(source);
 
-	AudioVoice voice = {};
-	voice.source = source;
-	voice.bus = bus;
-	voice.base_volume = volume;
-
-	AudioHandle handle = active_voices.size();
-
-	active_voices.push_back(voice);
-
-	return handle;
+	return allocate_voice(source, bus, volume);
 }
 
-void AudioSystem::stop(AudioHandle handle)
+void AudioSystem::stop(const AudioHandle &handle)
 {
-	backend->stop(active_voices[handle].source);
+	backend->stop(voice_pool[handle.index].source);
 }
 
 void AudioSystem::stop_all()
 {
-	for (auto &voice : active_voices) {
+	for (auto &voice : voice_pool) {
+		if (!voice.active)
+			continue;
+
 		backend->stop(voice.source);
 		backend->destroy_source(voice.source);
-	}
 
-	active_voices.clear();
+		voice.active = false;
+
+		free_indices.push_back(voice.handle.index);
+	}
+}
+
+void AudioSystem::set_sound_position(const AudioHandle &handle, const Vec3 &position)
+{
+	backend->set_source_position(voice_pool[handle.index].source, position);
 }
 
 const AudioListener &AudioSystem::get_listener() const
@@ -138,8 +168,8 @@ void AudioSystem::set_bus_volume(AudioBus bus, float volume)
 
 void AudioSystem::update_voice_volumes(AudioBus bus)
 {
-	for (auto &voice : active_voices) {
-		if (voice.bus == bus)
+	for (auto &voice : voice_pool) {
+		if (voice.active && voice.bus == bus)
 			backend->set_source_volume(voice.source, get_output_volume_on_bus(bus, voice.base_volume));
 	}
 }

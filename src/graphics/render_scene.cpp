@@ -257,6 +257,11 @@ void RenderScene::set_light_intensity(RenderHandle handle, float intensity)
 	lights.get(handle).intensity = intensity;
 }
 
+Vec3 RenderScene::get_light_position(RenderHandle handle) const
+{
+	return lights.get(handle).position;
+}
+
 u32 RenderScene::register_mesh(const Mesh &mesh)
 {
 	assert(meshes.size() < MAX_MESHES);
