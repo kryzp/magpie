@@ -28,6 +28,8 @@ void AudioSystem::init()
 
 void AudioSystem::shutdown()
 {
+	stop_all();
+
 	backend->shutdown();
 }
 
@@ -82,6 +84,16 @@ void AudioSystem::play_sound_3d(AudioBufferHandle buffer, const Vec3 &position, 
 	active_voices.push_back(voice);
 }
 
+void AudioSystem::stop_all()
+{
+	for (auto &voice : active_voices) {
+		backend->stop(voice.source);
+		backend->destroy_source(voice.source);
+	}
+
+	active_voices.clear();
+}
+
 const AudioListener &AudioSystem::get_listener() const
 {
 	return listener;
@@ -95,6 +107,9 @@ void AudioSystem::set_listener(const AudioListener &l)
 void AudioSystem::set_master_volume(float volume)
 {
 	master_volume = volume;
+
+	for (int bus = 0; bus < BUS_MAX_ENUM; bus++)
+		update_voice_volumes((AudioBus)bus);
 }
 
 float AudioSystem::get_output_volume_on_bus(AudioBus bus, float base_volume) const

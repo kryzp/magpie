@@ -389,13 +389,13 @@ void App::update(float dt, const inp::InputState &input)
 		);
 	}
 
-	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds() * 1.f)*2.f - 1.f, 0.f, 1.f));
+	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds() * 1.f) * 2.f - 1.f, 0.f, 1.f));
 
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;
 		platform::set_mouse_locked(camera_driver_active);
 	}
-	
+
 	if (camera_driver_active) {
 		camera_driver.update(main_camera, input, dt);
 
@@ -408,6 +408,13 @@ void App::update(float dt, const inp::InputState &input)
 		inp::rumble_gamepad(0, input.gamepads[0].left_trigger, input.gamepads[0].right_trigger, 0.25f);
 
 	render_scene.on_debug();
+
+	audio::AudioListener audio_listener = {};
+	audio_listener.eye     = main_camera.get_position();
+	audio_listener.forward = main_camera.get_forward();
+	audio_listener.up      = Vec3::up();
+
+	audio_system.set_listener(audio_listener);
 }
 
 void App::fixed_update(float dt)

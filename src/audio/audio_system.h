@@ -32,6 +32,8 @@ namespace audio
 		void play_sound(AudioBufferHandle clip, AudioBus bus, float volume = 1.f, float pitch = 1.f);
 		void play_sound_3d(AudioBufferHandle clip, const Vec3 &position, AudioBus bus, float volume = 1.f, float pitch = 1.f);
 
+		void stop_all();
+
 		const AudioListener &get_listener() const;
 		void set_listener(const AudioListener &l);
 

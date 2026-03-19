@@ -104,11 +104,20 @@ void MiniAudioBackend::init()
 
 void MiniAudioBackend::shutdown()
 {
-	for (auto &source : sources)
+	for (auto &source : sources) {
+		if (source->is_valid) {
+			ma_sound_stop(&source->sound);
+			ma_sound_uninit(&source->sound);
+		}
 		delete source;
+	}
 
-	for (auto &buffer : buffers)
+	for (auto &buffer : buffers) {
+		if (buffer->is_valid) {
+			ma_audio_buffer_uninit(&buffer->buffer);
+		}
 		delete buffer;
+	}
 
 	ma_engine_uninit(&engine);
 }
@@ -154,7 +163,11 @@ AudioBufferHandle MiniAudioBackend::create_buffer(const void *data, u64 size, u3
 	ma_audio_buffer_config config = ma_audio_buffer_config_init(fmt, channels, frame_count, data, nullptr);
 	config.sampleRate = sample_rate;
 
-	ma_audio_buffer_init(&config, &buffers[handle]->buffer);
+	ma_result result = ma_audio_buffer_init(&config, &buffers[handle]->buffer);
+
+	assert(result == MA_SUCCESS);
+
+	buffers[handle]->is_valid = true;
 
 	return handle;
 }
@@ -163,12 +176,12 @@ void MiniAudioBackend::destroy_buffer(AudioBufferHandle buffer)
 {
 	assert(buffer != INVALID_AUDIO_BUFFER);
 	
-	if (buffers[buffer]->is_valid) {
+	if (buffers[buffer]->is_valid)
 		ma_audio_buffer_uninit(&buffers[buffer]->buffer);
-		free_buffer_handles.push(buffer);
-	}
 
 	buffers[buffer]->is_valid = false;
+
+	free_buffer_handles.push(buffer);
 }
 
 AudioSourceHandle MiniAudioBackend::create_source()
@@ -194,10 +207,10 @@ void MiniAudioBackend::destroy_source(AudioSourceHandle source)
 
 	if (sources[source]->is_valid) {
 		ma_sound_uninit(&sources[source]->sound);
-		free_source_handles.push(source);
+		sources[source]->is_valid = false;
 	}
 
-	sources[source]->is_valid = false;
+	free_source_handles.push(source);
 }
 
 void MiniAudioBackend::set_source_buffer(AudioSourceHandle source, AudioBufferHandle buffer)
@@ -209,6 +222,9 @@ void MiniAudioBackend::set_source_buffer(AudioSourceHandle source, AudioBufferHa
 	
 	ma_result result = ma_sound_init_from_data_source(&engine, &buffers[buffer]->buffer, 0, nullptr, &sources[source]->sound);
 	assert(result == MA_SUCCESS);
+
+	// Disable spatialization be default.
+	ma_sound_set_spatialization_enabled(&sources[source]->sound, false);
 
 	sources[source]->is_valid = true;
 }
@@ -223,11 +239,15 @@ void MiniAudioBackend::set_source_stream(AudioSourceHandle source, const String 
 	ma_result result = ma_sound_init_from_file(&engine, filepath.c_str(), MA_SOUND_FLAG_STREAM, nullptr, nullptr, &sources[source]->sound);
 	assert(result == MA_SUCCESS);
 
+	// Disable spatialization be default.
+	ma_sound_set_spatialization_enabled(&sources[source]->sound, false);
+
 	sources[source]->is_valid = true;
 }
 
 void MiniAudioBackend::set_source_volume(AudioSourceHandle source, float volume)
 {
+	assert(source != INVALID_AUDIO_SOURCE);
 	assert(sources[source]->is_valid);
 
 	ma_sound_set_volume(&sources[source]->sound, volume);
@@ -263,8 +283,8 @@ void MiniAudioBackend::play(AudioSourceHandle source)
 	assert(source != INVALID_AUDIO_SOURCE);
 	assert(sources[source]->is_valid);
 
-	ma_sound_start(&sources[source]->sound);
 	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
+	ma_sound_start(&sources[source]->sound);
 }
 
 void MiniAudioBackend::stop(AudioSourceHandle source)
@@ -272,8 +292,8 @@ void MiniAudioBackend::stop(AudioSourceHandle source)
 	assert(source != INVALID_AUDIO_SOURCE);
 	assert(sources[source]->is_valid);
 
-	ma_sound_stop(&sources[source]->sound);
 	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
+	ma_sound_stop(&sources[source]->sound);
 }
 
 void MiniAudioBackend::resume(AudioSourceHandle source)
