@@ -63,14 +63,14 @@ void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 
 	device->destroy_buffer(staging_buffer);
 
-	cubemap = device->alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	environment_map = device->alloc_texture_cubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
 }
 
 void SkyboxRenderer::destroy()
 {
 	mesh.destroy_buffers();
-	
-	device->destroy_texture(cubemap);
+
+	device->destroy_texture(environment_map);
 }
 
 void SkyboxRenderer::add_render_stages(
@@ -84,7 +84,7 @@ void SkyboxRenderer::add_render_stages(
 
 	RenderResourceHandle colour_handle = skybox_stage.write_colour(output_attachment);
 	RenderResourceHandle depth_handle = skybox_stage.write_depth(output_depth);
-	RenderResourceHandle cubemap_handle = skybox_stage.read_texture(graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT }));
+	RenderResourceHandle cubemap_handle = skybox_stage.read_texture(graph.import_texture(environment_map));
 
 	skybox_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
@@ -129,7 +129,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 	const GpuBuffer *cubemap_capture_transforms
 )
 {
-	RenderResourceHandle cubemap_handle = graph.import_texture(cubemap, { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED);
+	RenderResourceHandle cubemap_handle = graph.import_texture(environment_map);
 
 	RenderStage &hdr_to_skybox_stage = graph.push_stage("HDR to Skybox", RenderStage::TYPE_GRAPHICS);
 	hdr_to_skybox_stage.set_multi_view_mask(0b111111);
@@ -174,14 +174,4 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		CommandBuffer &cmd = ctx.cmd;
 		cmd.generate_mipmaps(resources.get_texture(cubemap_blit_dst_handle));
 	});
-}
-
-const Mesh &SkyboxRenderer::get_mesh() const
-{
-	return mesh;
-}
-
-const Texture *SkyboxRenderer::get_environment_map() const
-{
-	return cubemap;
 }

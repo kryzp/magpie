@@ -37,7 +37,7 @@ void ShadowRenderer::render_shadows(
 	RenderGraph &graph, RenderGraphBlackboard &bb,
 	const RenderScene &scene,
 	const RenderSceneResources &scene_resources,
-	const DrawStream &draw_stream
+	ComputeCulling &culling
 )
 {
 	static const Vec3 light_dirs[6] = {
@@ -89,14 +89,15 @@ void ShadowRenderer::render_shadows(
 		RenderStage &shadow_stage = graph.push_stage(stage_name, RenderStage::TYPE_GRAPHICS);
 		shadow_stage.set_multi_view_mask(0b111111);
 
+		DrawStream draw_stream = culling.cull_sphere(
+			graph, bb, scene, scene_resources,
+			info.position, 3.f
+		);
+
 		shadow_stage.indirect_buffer(draw_stream.indirect_buffer);
 		shadow_stage.indirect_buffer(draw_stream.count_buffer);
 
-		RenderResourceHandle cubemap_rg = graph.import_texture(
-			shadow_cubemaps[caster_index],
-			{ VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE },
-			VK_IMAGE_LAYOUT_UNDEFINED
-		);
+		RenderResourceHandle cubemap_rg = graph.import_texture(shadow_cubemaps[caster_index]);
 
 		RenderClear clear(1.f, 0);
 

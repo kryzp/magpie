@@ -96,7 +96,7 @@ void GpuProfiler::grab_queries(CommandBuffer &cmd)
 
 			switch (ev.type) {
 				case GPU_PROFILE_TIMESTAMP:
-					result = queries[ev.end] - queries[ev.start];
+					result = queries[ev.start] - queries[ev.end];
 					break;
 
 				case GPU_PROFILE_PIPELINE_STATS:

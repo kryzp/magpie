@@ -25,7 +25,7 @@ namespace gfx
 			RenderGraph &graph, RenderGraphBlackboard &bb,
 			const RenderScene &scene,
 			const RenderSceneResources &scene_resources,
-			const DrawStream &draw_stream
+			ComputeCulling &culling
 		);
 
 		const GpuBuffer *get_shadow_caster_buffer() const

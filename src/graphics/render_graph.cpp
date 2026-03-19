@@ -569,6 +569,8 @@ RenderGraph::RenderGraph()
 	, pool(*this)
 	, import_cache()
 	, backbuffer_handle(RENDER_INVALID_HANDLE)
+	, tracked_external_textures()
+	, tracked_external_buffers()
 {
 }
 
@@ -589,32 +591,47 @@ void RenderGraph::destroy()
 	pool.destroy();
 	resources.clear();
 	stages.clear();
-	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
+
+	backbuffer_handle = RENDER_INVALID_HANDLE;
+
+	tracked_external_textures.clear();
+	tracked_external_buffers.clear();
 }
 
 void RenderGraph::reset()
 {
 	for (auto &r : resources) {
-		if (r.is_imported)
-			continue;
+		if (r.is_imported) {
+			switch (r.kind) {
+				case RenderResource::KIND_TEXTURE:
+					tracked_external_textures[r.physical_texture] = r.tracking;
+					break;
 
-		switch (r.kind) {
-			case RenderResource::KIND_TEXTURE:
-				pool.update_texture_state(r.physical_texture, r.tracking);
-				break;
+				case RenderResource::KIND_BUFFER:
+					tracked_external_buffers[r.physical_buffer] = r.tracking;
+					break;
+			}
+		} else {
+			switch (r.kind) {
+				case RenderResource::KIND_TEXTURE:
+					pool.update_texture_state(r.physical_texture, r.tracking);
+					break;
 
-			case RenderResource::KIND_BUFFER:
-				pool.update_buffer_state(r.physical_buffer, r.tracking);
-				break;
+				case RenderResource::KIND_BUFFER:
+					pool.update_buffer_state(r.physical_buffer, r.tracking);
+					break;
+			}
 		}
 	}
 
 	stages.clear();
 	resources.clear();
-	backbuffer_handle = RENDER_INVALID_HANDLE;
 	import_cache.clear();
+	
 	pool.flush();
+
+	backbuffer_handle = RENDER_INVALID_HANDLE;
 }
 
 RenderStage &RenderGraph::push_stage(const String &name, RenderStage::Type type)
@@ -1119,13 +1136,12 @@ RenderResourceHandle RenderGraph::create_buffer(const GpuBufferInfo &info)
 	return handle;
 }
 
-RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout)
+RenderResourceHandle RenderGraph::import_texture(const Texture *texture)
 {
-	if (import_cache.find(texture) != import_cache.end())
-		return import_cache[texture];
+	auto it = import_cache.find(texture);
+	if (it != import_cache.end())
+		return it->second;
 
-	RenderResourceHandle handle = resources.size();
-	
 	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_TEXTURE;
 	resource.is_imported = true;
@@ -1133,23 +1149,30 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const A
 	resource.first_stage_index = -1u;
 	resource.last_stage_index = -1u;
 
-	resource.tracking.pipeline_barrier_stage_flags = access_state.stage;
-	resource.tracking.to_flush_access = access_state.access;
-	resource.tracking.layout = layout;
-
-	memory_zero_array(resource.tracking.invalidated_in_stage);
-
-	resource.physical_texture = texture;
-
 	resource.texture_info.size_class = SIZE_CLASS_ABSOLUTE;
+
 	resource.texture_info.size_x = texture->get_width();
 	resource.texture_info.size_y = texture->get_height();
 	resource.texture_info.size_z = texture->get_depth();
 
-	resource.texture_info.format = texture->get_format();
+	resource.texture_info.format  = texture->get_format();
 	resource.texture_info.samples = texture->get_sample_count();
-	resource.texture_info.mips = texture->get_mipmap_count();
-	resource.texture_info.layers = texture->get_layer_count();
+	resource.texture_info.mips    = texture->get_mipmap_count();
+	resource.texture_info.layers  = texture->get_layer_count();
+
+	resource.physical_texture = texture;
+
+	auto state_it = tracked_external_textures.find(texture);
+	if (state_it != tracked_external_textures.end()) {
+		resource.tracking = tracked_external_textures[texture];
+	} else {
+		resource.tracking.pipeline_barrier_stage_flags = VK_PIPELINE_STAGE_2_NONE;
+		resource.tracking.to_flush_access = VK_ACCESS_2_NONE;
+		resource.tracking.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		memory_zero_array(resource.tracking.invalidated_in_stage);
+	}
+
+	RenderResourceHandle handle = resources.size();
 
 	resources.push_back(resource);
 
@@ -1158,12 +1181,11 @@ RenderResourceHandle RenderGraph::import_texture(const Texture *texture, const A
 	return handle;
 }
 
-RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const AccessState &access_state)
+RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer)
 {
-	if (import_cache.find(buffer) != import_cache.end())
-		return import_cache[buffer];
-
-	RenderResourceHandle handle = resources.size();
+	auto it = import_cache.find(buffer);
+	if (it != import_cache.end())
+		return it->second;
 
 	RenderResource resource = {};
 	resource.kind = RenderResource::KIND_BUFFER;
@@ -1171,19 +1193,23 @@ RenderResourceHandle RenderGraph::import_buffer(const GpuBuffer *buffer, const A
 
 	resource.first_stage_index = -1u;
 	resource.last_stage_index = -1u;
-	
-	resource.tracking.pipeline_barrier_stage_flags = access_state.stage;
-	resource.tracking.to_flush_access = access_state.access;
-	
-	memory_zero_array(resource.tracking.invalidated_in_stage);
-
-	resource.physical_buffer = buffer;
 
 	resource.buffer_info.flags = buffer->get_allocation_flags();
 	resource.buffer_info.usage = buffer->get_usage();
-	resource.buffer_info.size = buffer->capacity();
+	resource.buffer_info.size  = buffer->capacity();
 
-	resource.buffer_offset = 0;
+	resource.physical_buffer = buffer;
+
+	auto state_it = tracked_external_buffers.find(buffer);
+	if (state_it != tracked_external_buffers.end()) {
+		resource.tracking = tracked_external_buffers[buffer];
+	} else {
+		resource.tracking.pipeline_barrier_stage_flags = VK_PIPELINE_STAGE_2_NONE;
+		resource.tracking.to_flush_access = VK_ACCESS_2_NONE;
+		memory_zero_array(resource.tracking.invalidated_in_stage);
+	}
+
+	RenderResourceHandle handle = resources.size();
 
 	resources.push_back(resource);
 

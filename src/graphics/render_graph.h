@@ -427,8 +427,8 @@ namespace gfx
 		RenderResourceHandle create_texture(const AttachmentInfo &info);
 		RenderResourceHandle create_buffer(const GpuBufferInfo &info);
 
-		RenderResourceHandle import_texture(const Texture *texture, const AccessState &access_state, VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL);
-		RenderResourceHandle import_buffer(const GpuBuffer *buffer, const AccessState &access_state);
+		RenderResourceHandle import_texture(const Texture *texture);
+		RenderResourceHandle import_buffer(const GpuBuffer *buffer);
 
 		Device &get_device()
 		{
@@ -458,5 +458,8 @@ namespace gfx
 		HashMap<const void *, RenderResourceHandle> import_cache;
 
 		RenderResourceHandle backbuffer_handle;
+
+		HashMap<const Texture *, ResourceTrackingState> tracked_external_textures;
+		HashMap<const GpuBuffer *, ResourceTrackingState> tracked_external_buffers;
 	};
 }

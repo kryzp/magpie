@@ -4,24 +4,32 @@
 
 using namespace gfx;
 
-void IBLRenderer::init(ast::AssetManager &assets)
+void IBLRenderer::init(Device *device, ast::AssetManager &assets)
 {
+	this->device = device;
+
 	brdf_shader       = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://brdf_lut.msh"))->shader;
 	irradiance_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://irradiance_convolution.msh"))->shader;
 	prefilter_shader  = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://prefilter_convolution.msh"))->shader;
+
+	brdf = device->alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+	irradiance = device->alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	prefilter = device->alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
 }
 
 void IBLRenderer::destroy()
 {
+	device->destroy_texture(brdf);
+	device->destroy_texture(irradiance);
+	device->destroy_texture(prefilter);
 }
 
 void IBLRenderer::render_brdf(
-	RenderGraph &graph,
-	Texture *brdf
+	RenderGraph &graph
 )
 {
 	RenderStage &brdf_stage = graph.push_stage("BRDF LUT Generation", RenderStage::TYPE_GRAPHICS);
-	brdf_stage.write_colour(graph.import_texture(brdf, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED));
+	brdf_stage.write_colour(graph.import_texture(brdf));
 	brdf_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
@@ -39,18 +47,20 @@ void IBLRenderer::render_brdf(
 
 void IBLRenderer::render_environment_map(
 	RenderGraph &graph,
-	const Texture *irradiance,
-	const Texture *prefilter,
 	const Texture *environment_map,
 	const Mesh &skybox,
 	const GpuBuffer *capture_transforms
 )
 {
+	RenderResourceHandle env_handle = graph.import_texture(environment_map);
+	RenderResourceHandle irradiance_handle = graph.import_texture(irradiance);
+	RenderResourceHandle prefilter_handle = graph.import_texture(prefilter);
+
 	RenderStage &irradiance_stage = graph.push_stage("Irradiance Map Convolution", RenderStage::TYPE_GRAPHICS);
 	irradiance_stage.set_multi_view_mask(0b111111);
-	irradiance_stage.write_colour(graph.import_texture(irradiance, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED));
+	irradiance_stage.write_colour(irradiance_handle);
 
-	RenderResourceHandle irradiance_environment_map_handle = irradiance_stage.read_texture(graph.import_texture(environment_map, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
+	RenderResourceHandle irradiance_environment_map_handle = irradiance_stage.read_texture(env_handle);
 
 	irradiance_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
@@ -72,7 +82,7 @@ void IBLRenderer::render_environment_map(
 			u32 environment_map;
 			u32 linear_sampler;
 		} args;
-			
+
 		args.transform_matrices = capture_transforms->get_device_address();
 		args.vertices = skybox.vertex_buffer->get_device_address();
 		args.environment_map = environment_map_texture->get_bindless_handle();
@@ -84,6 +94,7 @@ void IBLRenderer::render_environment_map(
 		skybox.draw_indexed(cmd);
 	});
 	
+
 	const u32 mip_levels = prefilter->get_mipmap_count();
 
 	for (int i = 0; i < mip_levels; i++) {
@@ -97,9 +108,9 @@ void IBLRenderer::render_environment_map(
 		range.base_layer = 0;
 		range.layers = 6;
 
-		prefilter_stage.write_colour(graph.import_texture(prefilter, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }, VK_IMAGE_LAYOUT_UNDEFINED), range);
+		prefilter_stage.write_colour(prefilter_handle, range);
 
-		RenderResourceHandle prefilter_environment_map_handle = prefilter_stage.read_texture(graph.import_texture(environment_map, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }));
+		RenderResourceHandle prefilter_environment_map_handle = prefilter_stage.read_texture(env_handle);
 
 		prefilter_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 			CommandBuffer &cmd = ctx.cmd;
@@ -122,7 +133,7 @@ void IBLRenderer::render_environment_map(
 				u32 linear_sampler;
 				float roughness;
 			} args;
-				
+
 			args.transform_matrices = capture_transforms->get_device_address();
 			args.vertices = skybox.vertex_buffer->get_device_address();
 			args.environment_map = environment_map_view->get_bindless_handle();

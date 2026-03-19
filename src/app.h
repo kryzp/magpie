@@ -78,11 +78,6 @@ private:
 	gfx::GpuBuffer *frame_data_buffer;
 	gfx::GpuBuffer *cubemap_capture_transforms;
 	
-	gfx::Texture *brdf_texture;
-
-	gfx::Texture *irradiance_cubemap;
-	gfx::Texture *prefilter_cubemap;
-
 	gfx::IBLRenderer ibl_renderer;
 	gfx::ComputeCulling compute_culling;
 	gfx::DeferredRenderer deferred_renderer;

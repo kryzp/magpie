@@ -186,9 +186,9 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 	const GBuffer &gbuffer,
 	const GpuBuffer *frame_data,
 	const DrawStream &draw_stream,
-	RenderResourceHandle irradiance,
-	RenderResourceHandle prefilter,
-	RenderResourceHandle brdf
+	const Texture *irradiance,
+	const Texture *prefilter,
+	const Texture *brdf
 )
 {
 	auto &shadow_info = bb.get<ShadowRendererInfo>();
@@ -204,9 +204,9 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 	for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
 		lighting_stage.read_texture(gbuffer.attachments[i]);
 
-	RenderResourceHandle lighting_irradiance_handle = lighting_stage.read_texture(irradiance);
-	RenderResourceHandle lighting_prefilter_handle = lighting_stage.read_texture(prefilter);
-	RenderResourceHandle lighting_brdf_handle = lighting_stage.read_texture(brdf);
+	RenderResourceHandle lighting_irradiance_handle = lighting_stage.read_texture(graph.import_texture(irradiance));
+	RenderResourceHandle lighting_prefilter_handle = lighting_stage.read_texture(graph.import_texture(prefilter));
+	RenderResourceHandle lighting_brdf_handle = lighting_stage.read_texture(graph.import_texture(brdf));
 
 	lighting_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;

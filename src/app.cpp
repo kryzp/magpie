@@ -81,9 +81,6 @@ App::App()
 	, camera_driver_active(false)
 	, frame_data_buffer(nullptr)
 	, cubemap_capture_transforms(nullptr)
-	, brdf_texture(nullptr)
-	, irradiance_cubemap(nullptr)
-	, prefilter_cubemap(nullptr)
 	, ibl_renderer()
 	, compute_culling()
 	, deferred_renderer()
@@ -198,7 +195,7 @@ void App::init(VirtualArena &global_arena)
 
 	gfx::DebugRenderer::get_singleton()->init(&graphics_device, assets);
 
-	ibl_renderer.init(assets);
+	ibl_renderer.init(&graphics_device, assets);
 	compute_culling.init(assets);
 	deferred_renderer.init(&graphics_device, assets);
 	skybox_renderer.init(&graphics_device, assets);
@@ -206,10 +203,6 @@ void App::init(VirtualArena &global_arena)
 	shadow_renderer.init(&graphics_device, assets);
 	
 	main_camera = gfx::Camera::perspective(Vec3::zero(), Vec3::forward(), 90.f, (float)DEFAULT_WINDOW_WIDTH / (float)DEFAULT_WINDOW_HEIGHT, 0.1f, 100.f);
-
-	brdf_texture = graphics_device.alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
-	irradiance_cubemap = graphics_device.alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	prefilter_cubemap = graphics_device.alloc_texture_cubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
 	
 	const gfx::Texture *hdr_texture = assets.get_asset<ast::TextureAsset>(assets.from_file_path("assets://environment_map_1.hdr"))->texture;
 
@@ -220,14 +213,11 @@ void App::init(VirtualArena &global_arena)
 	);
 
 	ibl_renderer.render_brdf(
-		render_graph,
-		brdf_texture
+		render_graph
 	);
 	
 	ibl_renderer.render_environment_map(
 		render_graph,
-		irradiance_cubemap,
-		prefilter_cubemap,
 		skybox_renderer.get_environment_map(),
 		skybox_renderer.get_mesh(),
 		cubemap_capture_transforms
@@ -243,10 +233,6 @@ void App::destroy()
 	graphics_device.wait_idle();
 
 	ring_upload_buffer.destroy();
-
-	graphics_device.destroy_texture(brdf_texture);
-	graphics_device.destroy_texture(irradiance_cubemap);
-	graphics_device.destroy_texture(prefilter_cubemap);
 	
 	graphics_device.destroy_buffer(cubemap_capture_transforms);
 
@@ -445,16 +431,10 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 
 	gfx::RenderGraphBlackboard bb;
 
-	gfx::DrawStream light_draw_stream = compute_culling.cull_sphere(
-		render_graph, bb,
-		render_scene, scene_resources,
-		Vec3(0.f, 0.f, 0.f), 10.f
-	);
-
 	shadow_renderer.render_shadows(
 		render_graph, bb,
 		render_scene, scene_resources,
-		light_draw_stream
+		compute_culling
 	);
 
 	main_camera.recompute();
@@ -476,9 +456,9 @@ void App::render(float dt, const inp::InputState &input, float elapsed_time, gfx
 		gbuffer,
 		frame_data_buffer,
 		draw_stream,
-		render_graph.import_texture(irradiance_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
-		render_graph.import_texture(prefilter_cubemap, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE }),
-		render_graph.import_texture(brdf_texture, { VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE })
+		ibl_renderer.get_irradiance(),
+		ibl_renderer.get_prefilter(),
+		ibl_renderer.get_brdf()
 	);
 	
 	skybox_renderer.add_render_stages(render_graph, bb, frame_data_buffer, lighting_attachment, gbuffer.depth);

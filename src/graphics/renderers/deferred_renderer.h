@@ -41,9 +41,9 @@ namespace gfx
 			const GBuffer &gbuffer,
 			const GpuBuffer *frame_data,
 			const DrawStream &draw_stream,
-			RenderResourceHandle irradiance,
-			RenderResourceHandle prefilter,
-			RenderResourceHandle brdf
+			const Texture *irradiance,
+			const Texture *prefilter,
+			const Texture *brdf
 		);
 
 	private:

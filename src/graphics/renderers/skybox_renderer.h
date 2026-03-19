@@ -24,17 +24,25 @@ namespace gfx
 			const Texture *hdr_texture,
 			const GpuBuffer *cubemap_capture_transforms
 		);
-		
-		const Mesh &get_mesh() const;
-		const Texture *get_environment_map() const;
+
+		const Mesh &get_mesh() const
+		{
+			return mesh;
+		}
+
+		const Texture *get_environment_map() const
+		{
+			return environment_map;
+		}
 
 	private:
 		Device *device;
-		Mesh mesh;
 
-		Texture *cubemap;
+		Mesh mesh;
 
 		const ShaderProgram *shader;
 		const ShaderProgram *hdr_to_cubemap_shader;
+
+		Texture *environment_map;
 	};
 }

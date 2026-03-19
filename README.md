@@ -25,7 +25,8 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - Modern bindless resource design
 - GPU Driven Rendering: Bindless materials and meshes (global vertex buffer, vertex pulling, etc...)
 - IBL (Image-Based Lighting)
-- Compute Frustum Culling
+- Compute Frustum Culling for Cameras
+- Compute Sphere Culling for Point Light Shadow Maps
 - Indirect Deferred Rendering
 - Point Lights with compute-culled shadow-mapping
 - ImGui Integration
@@ -67,3 +68,4 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 ### Pictures
 ![](images/indirect_deferred.png)
 ![](images/cool.png)
+![](images/sponza.png)
