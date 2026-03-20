@@ -8,19 +8,21 @@ using namespace gfx;
 void ShadowRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
+	this->assets = &assets;
 
-	caster_table_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		MAX_SHADOW_CASTERS * sizeof(gpu_types::GpuShadowCaster)
-	);
+	gfx::BufferAllocInfo caster_table_buffer_info = {};
+	caster_table_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	caster_table_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	caster_table_buffer_info.size = MAX_SHADOW_CASTERS * sizeof(gpu_types::GpuShadowCaster);
+
+	caster_table_buffer = device->alloc_buffer(caster_table_buffer_info);
 
 	for (int i = 0; i < MAX_SHADOW_CASTERS; i++) {
 		shadow_cubemaps[i] = device->alloc_texture_cubemap_depth(SHADOW_MAP_RESOLUTION, 1);
 		shadow_cubemap_views[i] = device->create_texture_view(shadow_cubemaps[i], VK_IMAGE_VIEW_TYPE_CUBE, SubresourceRange::all_depth());
 	}
 
-	depth_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://shadow_mapping.msh"))->shader;
+	depth_shader_asset = assets.from_file_path("assets://shadow_mapping.msh");
 }
 
 void ShadowRenderer::destroy()
@@ -106,7 +108,7 @@ void ShadowRenderer::render_shadows(
 		shadow_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 			CommandBuffer &cmd = ctx.cmd;
 
-			GraphicsPipelineDef pipeline_def(depth_shader);
+			GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(depth_shader_asset)->shader);
 			pipeline_def.has_depth_attachment = true;
 			pipeline_def.multi_view_mask = 0b111111;
 			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;

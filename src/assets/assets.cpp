@@ -215,6 +215,12 @@ void AssetManager::poll_hot_reloads()
 		String path = get_system_file_path(record.path);
 		u64 current_time = platform::file_last_write_time(path.c_str());
 
+		for (auto &path : record.watch_paths) {
+			u64 t = platform::file_last_write_time(path.c_str());
+			if (t > current_time)
+				current_time = t;
+		}
+
 		if (current_time > record.last_write_time && current_time != 0) {
 			AssetHandle handle = record.asset->get_handle();
 			AssetType type = record.asset->get_asset_type();
@@ -224,6 +230,8 @@ void AssetManager::poll_hot_reloads()
 			reload_async(handle, type);
 		}
 	}
+
+	resolve_pending_dependencies(async_upload_counter);
 }
 
 void AssetManager::wait_for_async_uploads()
@@ -408,7 +416,17 @@ void AssetManager::flush_uploads()
 
 					serializer->gpu_upload(asset, context, upload.result, cmd, staging_buffer, stage_base);
 					serializer->dispose(upload.result);
-				
+
+					record.watch_paths = upload.result.watch_paths;
+
+					record.last_write_time = platform::file_last_write_time(get_system_file_path(record.path).c_str());
+
+					for (auto &path : record.watch_paths) {
+						u64 t = platform::file_last_write_time(path.c_str());
+						if (t > record.last_write_time)
+							record.last_write_time = t;
+					}
+
 					record.state = ASSET_STATE_READY;
 
 					notify_dependents(upload.handle, false);

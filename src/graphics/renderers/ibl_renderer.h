@@ -40,10 +40,11 @@ namespace gfx
 
 	private:
 		Device *device;
+		ast::AssetManager *assets;
 
-		const ShaderProgram *brdf_shader;
-		const ShaderProgram *irradiance_shader;
-		const ShaderProgram *prefilter_shader;
+		ast::AssetHandle brdf_shader_asset;
+		ast::AssetHandle irradiance_shader_asset;
+		ast::AssetHandle prefilter_shader_asset;
 
 		Texture *brdf;
 		Texture *irradiance;

@@ -39,7 +39,9 @@ namespace gfx
 		);
 
 	private:
-		const ShaderProgram *frustum_culling_shader;
-		const ShaderProgram *sphere_culling_shader;
+		ast::AssetManager *assets;
+
+		ast::AssetHandle frustum_culling_asset;
+		ast::AssetHandle sphere_culling_asset;
 	};
 }

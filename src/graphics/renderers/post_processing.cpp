@@ -8,9 +8,11 @@ using namespace gfx;
 
 void PostProcessingRenderer::init(ast::AssetManager &assets)
 {
+	this->assets = &assets;
+
 	exposure = 1.f;
 
-	tonemapping_program = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_tonemapping.msh"))->shader;
+	tonemapping_asset = assets.from_file_path("assets://hdr_tonemapping.msh");
 }
 
 void PostProcessingRenderer::destroy()
@@ -37,7 +39,7 @@ void PostProcessingRenderer::add_render_stages(
 		const Texture *in_texture = resources.get_texture(lighting_handle);
 		const Texture *out_texture = resources.get_texture(colour_handle);
 
-		ComputePipelineDef pipeline_def(tonemapping_program);
+		ComputePipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(tonemapping_asset)->shader);
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());

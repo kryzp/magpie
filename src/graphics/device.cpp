@@ -220,6 +220,9 @@ void Device::PerFrameData::flush(VkDevice vk_device, VmaAllocator vma_allocator,
 	for (auto &buffer : destroyed_buffers)
 		vmaDestroyBuffer(vma_allocator, buffer.handle, buffer.allocation);
 
+	for (auto &stage : destroyed_stages)
+		vkDestroyShaderModule(vk_device, stage.module, nullptr);
+
 	for (auto &bs : destroyed_bindless_samplers)
 		bindless.free_sampler(bs);
 
@@ -230,6 +233,7 @@ void Device::PerFrameData::flush(VkDevice vk_device, VmaAllocator vma_allocator,
 	destroyed_images.clear();
 	destroyed_views.clear();
 	destroyed_buffers.clear();
+	destroyed_stages.clear();
 	destroyed_bindless_samplers.clear();
 	destroyed_bindless_views.clear();
 }
@@ -826,26 +830,20 @@ void Device::destroy_pipeline(VkPipeline pipeline)
 	vkDestroyPipeline(context.get_device(), pipeline, nullptr);
 }
 
-Sampler *Device::create_sampler(
-	VkFilter filter,
-	VkSamplerAddressMode wrap_x,
-	VkSamplerAddressMode wrap_y,
-	VkSamplerAddressMode wrap_z,
-	VkBorderColor border_colour
-)
+Sampler *Device::create_sampler(const SamplerCreateInfo &info)
 {
 	VkPhysicalDeviceProperties properties =	context.get_physical_properties();
 
 	VkSamplerCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	create_info.minFilter = filter;
-	create_info.magFilter = filter;
-	create_info.addressModeU = wrap_x;
-	create_info.addressModeV = wrap_y;
-	create_info.addressModeW = wrap_z;
+	create_info.minFilter = info.filter;
+	create_info.magFilter = info.filter;
+	create_info.addressModeU = info.wrap_x;
+	create_info.addressModeV = info.wrap_y;
+	create_info.addressModeW = info.wrap_z;
 	create_info.anisotropyEnable = VK_TRUE;
 	create_info.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-	create_info.borderColor = border_colour;
+	create_info.borderColor = info.border_colour;
 	create_info.unnormalizedCoordinates = VK_FALSE;
 	create_info.compareEnable = VK_FALSE;
 	create_info.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -855,11 +853,11 @@ Sampler *Device::create_sampler(
 	create_info.maxLod = VK_LOD_CLAMP_NONE;
 
 	Sampler *sampler = new Sampler();
-	sampler->filter = filter;
-	sampler->wrap_x = wrap_x;
-	sampler->wrap_y = wrap_y;
-	sampler->wrap_z = wrap_z;
-	sampler->border_colour = border_colour;
+	sampler->filter = info.filter;
+	sampler->wrap_x = info.wrap_x;
+	sampler->wrap_y = info.wrap_y;
+	sampler->wrap_z = info.wrap_z;
+	sampler->border_colour = info.border_colour;
 
 	GFX_VK_CHECK(
 		vkCreateSampler(
@@ -875,6 +873,18 @@ Sampler *Device::create_sampler(
 	return sampler;
 }
 
+Sampler *Device::create_sampler(VkFilter filter)
+{
+	SamplerCreateInfo create_info = {};
+	create_info.filter = filter;
+	create_info.wrap_x = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	create_info.wrap_y = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	create_info.wrap_z = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	create_info.border_colour = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+
+	return create_sampler(create_info);
+}
+
 void Device::destroy_sampler(const Sampler *sampler)
 {
 	assert(sampler);
@@ -888,29 +898,23 @@ static u32 clamp_mimap_count(u32 mipmaps, u32 w, u32 h, u32 d)
 	return CalcF::min(mipmaps, 1u + (u32)CalcF::log2(CalcF::max(w, CalcF::max(h, d))));
 }
 
-Texture *Device::alloc_texture(
-	u32 width, u32 height, u32 depth,
-	VkFormat format, VkImageType type, VkImageTiling tiling,
-	u32 mipmaps, u32 layers,
-	VkSampleCountFlags samples,
-	bool is_transient, bool is_storage, bool is_cubemap
-)
+Texture *Device::alloc_texture(const TextureAllocInfo &alloc_info)
 {
 	Texture *texture = new Texture();
 
-	texture->width = width;
-	texture->height = height;
-	texture->depth = depth;
+	texture->width = alloc_info.width;
+	texture->height = alloc_info.height;
+	texture->depth = alloc_info.depth;
 
-	texture->format = format;
-	texture->type = type;
-	texture->tiling = tiling;
+	texture->format = alloc_info.format;
+	texture->type = alloc_info.type;
+	texture->tiling = alloc_info.tiling;
 
-	texture->mipmap_count = clamp_mimap_count(mipmaps, width, height, depth);
-	texture->layer_count = layers;
-	texture->sample_count = samples;
+	texture->mipmap_count = clamp_mimap_count(alloc_info.mipmaps, alloc_info.width, alloc_info.height, alloc_info.depth);
+	texture->layer_count = alloc_info.layers;
+	texture->sample_count = alloc_info.samples;
 
-	if (is_transient)
+	if (alloc_info.is_transient)
 		texture->usage =
 			VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 	else
@@ -919,13 +923,13 @@ Texture *Device::alloc_texture(
 			VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-	texture->is_transient_texture = is_transient;
-	texture->is_depth_texture = format == context.get_depth_format();
-	texture->is_cubemap_texture = is_cubemap;
-	texture->is_storage_texture = is_storage;
+	texture->is_transient_texture = alloc_info.is_transient;
+	texture->is_depth_texture = alloc_info.format == context.get_depth_format();
+	texture->is_cubemap_texture = alloc_info.is_cubemap;
+	texture->is_storage_texture = alloc_info.is_storage;
 	texture->is_swapchain_texture = false;
 
-	if (is_storage)
+	if (alloc_info.is_storage)
 		texture->usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
 	if (texture->is_depth())
@@ -946,7 +950,7 @@ Texture *Device::alloc_texture(
 
 	VkImageCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	create_info.imageType = type;
+	create_info.imageType = alloc_info.type;
 	create_info.extent.width = texture->width;
 	create_info.extent.height = texture->height;
 	create_info.extent.depth = texture->depth;
@@ -960,14 +964,14 @@ Texture *Device::alloc_texture(
 	create_info.samples = (VkSampleCountFlagBits)texture->sample_count;
 	create_info.flags = 0;
 
-	if (is_cubemap)
+	if (alloc_info.is_cubemap)
 		create_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
 	VmaAllocationCreateInfo vma_alloc_info = {};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.priority = 1.f;
 
-	if (is_storage)
+	if (alloc_info.is_storage)
 		vma_alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
 	GFX_VK_CHECK(
@@ -985,28 +989,40 @@ Texture *Device::alloc_texture(
 
 Texture *Device::alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
-	return alloc_texture(
-		width, height, 1,
-		format,
-		VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		mipmaps, 1,
-		VK_SAMPLE_COUNT_1_BIT,
-		false, false, false
-	);
+	TextureAllocInfo alloc_info = {};
+	alloc_info.width = width;
+	alloc_info.height = height;
+	alloc_info.depth = 1;
+	alloc_info.format = format;
+	alloc_info.type = VK_IMAGE_TYPE_2D;
+	alloc_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	alloc_info.mipmaps = mipmaps;
+	alloc_info.layers = 1;
+	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	alloc_info.is_cubemap = false;
+	alloc_info.is_storage = false;
+	alloc_info.is_transient = false;
+
+	return alloc_texture(alloc_info);
 }
 
 Texture *Device::alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
-	return alloc_texture(
-		width, height, 1,
-		format,
-		VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		mipmaps, 1,
-		VK_SAMPLE_COUNT_1_BIT,
-		false, true, false
-	);
+	TextureAllocInfo alloc_info = {};
+	alloc_info.width = width;
+	alloc_info.height = height;
+	alloc_info.depth = 1;
+	alloc_info.format = format;
+	alloc_info.type = VK_IMAGE_TYPE_2D;
+	alloc_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	alloc_info.mipmaps = mipmaps;
+	alloc_info.layers = 1;
+	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	alloc_info.is_cubemap = false;
+	alloc_info.is_storage = true;
+	alloc_info.is_transient = false;
+
+	return alloc_texture(alloc_info);
 }
 
 Texture *Device::alloc_texture_2d_depth(u32 width, u32 height, u32 mipmaps)
@@ -1029,27 +1045,29 @@ Texture *Device::alloc_texture_2d_rw_depth(u32 width, u32 height, u32 mipmaps)
 
 Texture *Device::alloc_texture_cubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
-	return alloc_texture(
-		resolution, resolution, 1,
-		format,
-		VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		mipmaps, 6,
-		VK_SAMPLE_COUNT_1_BIT,
-		false, false, true
-	);
+	TextureAllocInfo alloc_info = {};
+	alloc_info.width = resolution;
+	alloc_info.height = resolution;
+	alloc_info.depth = 1;
+	alloc_info.format = format;
+	alloc_info.type = VK_IMAGE_TYPE_2D;
+	alloc_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	alloc_info.mipmaps = mipmaps;
+	alloc_info.layers = 6;
+	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	alloc_info.is_cubemap = true;
+	alloc_info.is_storage = false;
+	alloc_info.is_transient = false;
+
+	return alloc_texture(alloc_info);
 }
 
 Texture *Device::alloc_texture_cubemap_depth(u32 resolution, u32 mipmaps)
 {
-	return alloc_texture(
-		resolution, resolution, 1,
+	return alloc_texture_cubemap(
+		resolution,
 		context.get_depth_format(),
-		VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		mipmaps, 6,
-		VK_SAMPLE_COUNT_1_BIT,
-		false, false, true
+		mipmaps
 	);
 }
 
@@ -1113,13 +1131,13 @@ void Device::destroy_texture_view(const TextureView *texture_view)
 	delete texture_view;
 }
 
-GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size)
+GpuBuffer *Device::alloc_buffer(const BufferAllocInfo &alloc_info)
 {
 	GpuBuffer *buffer = new GpuBuffer();
-	buffer->usage = usage;
-	buffer->size = size;
+	buffer->usage = alloc_info.usage;
+	buffer->size = alloc_info.size;
 	buffer->allocator = context.get_allocator();
-	buffer->allocation_flags = flags;
+	buffer->allocation_flags = alloc_info.flags;
 
 	// All storage buffers automatically get BDA because its the big '26.
 	if (buffer->is_storage())
@@ -1135,7 +1153,7 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 
 	VmaAllocationCreateInfo vma_alloc_info = {};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-	vma_alloc_info.flags = flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	vma_alloc_info.flags = alloc_info.flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	GFX_VK_CHECK(
 		vmaCreateBuffer(
@@ -1163,11 +1181,12 @@ GpuBuffer *Device::alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFl
 
 GpuBuffer *Device::alloc_stage(u64 size)
 {
-	return alloc_buffer(
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		size
-	);
+	BufferAllocInfo alloc_info = {};
+	alloc_info.usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
+	alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	alloc_info.size = size;
+
+	return alloc_buffer(alloc_info);
 }
 
 void Device::destroy_buffer(const GpuBuffer *buffer)
@@ -1236,18 +1255,23 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 
 void Device::destroy_shader_stage(const ShaderStage &stage)
 {
-	vkDestroyShaderModule(context.get_device(), stage.module, nullptr);
+	per_frame_data[current_frame_index].destroyed_stages.push_back(stage);
 }
 
 ShaderProgram *Device::create_shader_program(const Vector<ShaderBytecode> &stages)
 {
 	ShaderProgram *program = new ShaderProgram();
 	program->stage_count = stages.size();
+	program->push_constant_size = 0;
 
 	for (int i = 0; i < stages.size(); i++) {
 		program->stages[i] = create_shader_stage(stages[i]);
 		program->push_constant_size = CalcU::max(program->push_constant_size, program->stages[i].push_constant_size);
 	}
+
+	static u32 shader_cookie = 0;
+
+	program->cookie = ++shader_cookie;
 
 	return program;
 }

@@ -111,6 +111,7 @@ AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 	for (int i = 0; i < load_data->stage_count; i++) {
 		load_data->stages[i] = load_file_bytes(ctx.arena, spv_paths[i]);
 		result.failed |= load_data->stages[i].size == 0;
+		result.watch_paths.push_back(spv_paths[i]);
 	}
 
 	return result;

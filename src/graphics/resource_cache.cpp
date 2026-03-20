@@ -43,7 +43,9 @@ void ResourceCache::destroy()
 
 VkPipelineLayout ResourceCache::fetch_pipeline_layout(const ShaderProgram *program)
 {
-	u64 hash = hash::generic(&program, sizeof(ShaderProgram *));
+	u32 shader_cookie = program->get_cookie();
+
+	u64 hash = hash::generic(&shader_cookie, sizeof(u32));
 
 	if (pipeline_layout_cache.find(hash) == pipeline_layout_cache.end())
 		pipeline_layout_cache[hash] = device->create_pipeline_layout(program);
@@ -55,9 +57,11 @@ PipelineState ResourceCache::fetch_pipeline(const GraphicsPipelineDef &def)
 {
 	VkPipelineLayout layout = fetch_pipeline_layout(def.program);
 
+	u32 shader_cookie = def.program->get_cookie();
+
 	u64 hash = 0;
 
-	hash = hash::generic_combine(hash, &def.program,                    sizeof(ShaderProgram *));
+	hash = hash::generic_combine(hash, &shader_cookie,                  sizeof(u32));
 	hash = hash::generic_combine(hash, &def.cull_mode,                  sizeof(VkCullModeFlags));
 	hash = hash::generic_combine(hash, &def.front_face,                 sizeof(VkFrontFace));
 	hash = hash::generic_combine(hash, &def.blend_state,                sizeof(BlendState));
@@ -66,7 +70,7 @@ PipelineState ResourceCache::fetch_pipeline(const GraphicsPipelineDef &def)
 	hash = hash::generic_combine(hash, &def.samples,                    sizeof(VkSampleCountFlagBits));
 	hash = hash::generic_combine(hash, &def.min_sample_shading_enabled, sizeof(bool));
 	hash = hash::generic_combine(hash, &def.min_sample_shading,         sizeof(float));
-	hash = hash::generic_combine(hash, &def.multi_view_mask,                  sizeof(u32));
+	hash = hash::generic_combine(hash, &def.multi_view_mask,            sizeof(u32));
 
 	for (auto &format : def.colour_attachment_formats)
 		hash = hash::generic_combine(hash, &format, sizeof(format));
@@ -86,7 +90,9 @@ PipelineState ResourceCache::fetch_pipeline(const ComputePipelineDef &def)
 {
 	VkPipelineLayout layout = fetch_pipeline_layout(def.program);
 
-	u64 hash = hash::generic(&def.program, sizeof(ShaderProgram *));
+	u32 shader_cookie = def.program->get_cookie();
+
+	u64 hash = hash::generic(&shader_cookie, sizeof(u32));
 
 	if (pipeline_cache.find(hash) == pipeline_cache.end())
 		pipeline_cache[hash] = device->create_pipeline(def, layout);

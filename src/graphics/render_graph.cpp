@@ -430,20 +430,21 @@ const Texture *RenderResourcePool::acquire_texture(const AttachmentInfo &info, R
 	
 	PooledTexture texture = {};
 
-	texture.texture = graph.get_device().alloc_texture(
-		info.size_x,
-		info.size_y,
-		info.size_z,
-		info.format,
-		info.size_z > 1 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TILING_OPTIMAL,
-		info.mips,
-		info.layers,
-		info.samples,
-		info.is_transient,
-		info.is_storage,
-		info.is_cubemap
-	);
+	TextureAllocInfo alloc_info = {};
+	alloc_info.width = info.size_x;
+	alloc_info.height = info.size_y;
+	alloc_info.depth = info.size_z;
+	alloc_info.format = info.format;
+	alloc_info.type = info.size_z > 1 ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D;
+	alloc_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	alloc_info.mipmaps = info.mips;
+	alloc_info.layers = info.layers;
+	alloc_info.samples = info.samples;
+	alloc_info.is_cubemap = info.is_cubemap;
+	alloc_info.is_storage = info.is_storage;
+	alloc_info.is_transient = info.is_transient;
+
+	texture.texture = graph.get_device().alloc_texture(alloc_info);
 
 	texture.info = info;
 
@@ -492,11 +493,12 @@ const GpuBuffer *RenderResourcePool::acquire_buffer(const GpuBufferInfo &info, R
 	
 	PooledBuffer buffer = {};
 
-	buffer.buffer = graph.get_device().alloc_buffer(
-		info.usage,
-		info.flags,
-		info.size
-	);
+	BufferAllocInfo alloc_info = {};
+	alloc_info.usage = info.usage;
+	alloc_info.flags = info.flags;
+	alloc_info.size = info.size;
+
+	buffer.buffer = graph.get_device().alloc_buffer(alloc_info);
 
 	buffer.info = info;
 

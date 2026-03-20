@@ -9,8 +9,10 @@ using namespace gfx;
 
 void ComputeCulling::init(ast::AssetManager &assets)
 {
-	frustum_culling_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://frustum_culling.msh"))->shader;
-	sphere_culling_shader  = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://sphere_culling.msh"))->shader;
+	this->assets = &assets;
+
+	frustum_culling_asset = assets.from_file_path("assets://frustum_culling.msh");
+	sphere_culling_asset = assets.from_file_path("assets://sphere_culling.msh");
 }
 
 void ComputeCulling::destroy()
@@ -61,7 +63,7 @@ DrawStream ComputeCulling::cull_frustum(
 	compute_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		ComputePipelineDef pipeline_def(frustum_culling_shader);
+		ComputePipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(frustum_culling_asset)->shader);
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
@@ -152,7 +154,7 @@ DrawStream ComputeCulling::cull_sphere(
 	compute_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		ComputePipelineDef pipeline_def(sphere_culling_shader);
+		ComputePipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(sphere_culling_asset)->shader);
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
 		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());

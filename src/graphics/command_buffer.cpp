@@ -353,22 +353,20 @@ void CommandBuffer::generate_mipmaps(const Texture *texture)
 	this->pipeline_barrier(0, {}, {}, { barrier });
 }
 
-// TODO: Convert to VkBufferCopy2
-// TODO: Convert to VkBufferImageCopy2
-
 void CommandBuffer::copy_buffer_to_buffer(
 	const GpuBuffer *src,
 	const GpuBuffer *dst,
-	const Vector<VkBufferCopy> &regions
+	const Vector<VkBufferCopy2> &regions
 )
 {
-	vkCmdCopyBuffer(
-		handle,
-		src->get_handle(),
-		dst->get_handle(),
-		regions.size(),
-		regions.data()
-	);
+	VkCopyBufferInfo2 copy_info = {};
+	copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+	copy_info.srcBuffer = src->get_handle();
+	copy_info.dstBuffer = dst->get_handle();
+	copy_info.regionCount = regions.size();
+	copy_info.pRegions = regions.data();
+
+	vkCmdCopyBuffer2(handle, &copy_info);
 }
 
 void CommandBuffer::copy_buffer_to_texture(
@@ -377,7 +375,8 @@ void CommandBuffer::copy_buffer_to_texture(
 	u64 buffer_offset
 )
 {
-	VkBufferImageCopy region = {};
+	VkBufferImageCopy2 region = {};
+	region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
 	region.bufferOffset = buffer_offset;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
@@ -394,16 +393,18 @@ void CommandBuffer::copy_buffer_to_texture(
 void CommandBuffer::copy_buffer_to_texture_region(
 	const GpuBuffer *src,
 	const Texture *dst,
-	const Vector<VkBufferImageCopy> &regions
+	const Vector<VkBufferImageCopy2> &regions
 )
 {
-	vkCmdCopyBufferToImage(
-		handle,
-		src->get_handle(),
-		dst->get_handle(),
-		VK_IMAGE_LAYOUT_GENERAL,
-		regions.size(), regions.data()
-	);
+	VkCopyBufferToImageInfo2 copy_info = {};
+	copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2;
+	copy_info.srcBuffer = src->get_handle();
+	copy_info.dstImage = dst->get_handle();
+	copy_info.dstImageLayout = VK_IMAGE_LAYOUT_GENERAL;
+	copy_info.regionCount = regions.size();
+	copy_info.pRegions = regions.data();
+
+	vkCmdCopyBufferToImage2(handle, &copy_info);
 }
 
 void CommandBuffer::fill_buffer(

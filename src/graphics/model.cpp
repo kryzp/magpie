@@ -26,21 +26,18 @@ void Mesh::create_buffers(
 	this->vertex_count = vertex_count;
 	this->index_count = index_count;
 
-	this->vertex_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		get_vertex_buffer_size()
-	);
+	BufferAllocInfo vertex_info = {};
+	vertex_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	vertex_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	vertex_info.size = get_vertex_buffer_size();
 
-	this->index_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		get_index_buffer_size()
-	);
+	BufferAllocInfo index_info = {};
+	index_info.usage = VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	index_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	index_info.size = get_index_buffer_size();
+
+	this->vertex_buffer = device->alloc_buffer(vertex_info);
+	this->index_buffer = device->alloc_buffer(index_info);
 }
 
 void Mesh::destroy_buffers() const
@@ -69,12 +66,14 @@ u64 Mesh::batch_upload(
 	u64 vertex_buffer_size = get_vertex_buffer_size();
 	u64 index_buffer_size = get_index_buffer_size();
 
-	VkBufferCopy stage_to_vertex_copy = {};
+	VkBufferCopy2 stage_to_vertex_copy = {};
+	stage_to_vertex_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 	stage_to_vertex_copy.srcOffset = offset;
 	stage_to_vertex_copy.dstOffset = 0;
 	stage_to_vertex_copy.size = vertex_buffer_size;
 
-	VkBufferCopy stage_to_index_copy = {};
+	VkBufferCopy2 stage_to_index_copy = {};
+	stage_to_index_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 	stage_to_index_copy.srcOffset = offset + vertex_buffer_size;
 	stage_to_index_copy.dstOffset = 0;
 	stage_to_index_copy.size = index_buffer_size;

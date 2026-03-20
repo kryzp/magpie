@@ -21,6 +21,33 @@ namespace gfx
 {
 	class Context;
 
+	struct TextureAllocInfo {
+		u32 width, height, depth;
+		VkFormat format;
+		VkImageType type;
+		VkImageTiling tiling;
+		u32 mipmaps;
+		u32 layers;
+		VkSampleCountFlags samples;
+		bool is_transient;
+		bool is_storage;
+		bool is_cubemap;
+	};
+
+	struct BufferAllocInfo {
+		VkBufferUsageFlags2 usage;
+		VmaAllocationCreateFlags flags;
+		u64 size;
+	};
+
+	struct SamplerCreateInfo {
+		VkFilter filter;
+		VkSamplerAddressMode wrap_x;
+		VkSamplerAddressMode wrap_y;
+		VkSamplerAddressMode wrap_z;
+		VkBorderColor border_colour;
+	};
+
 	class Device {
 	public:
 		Device();
@@ -93,13 +120,8 @@ namespace gfx
 
 		// ---
 
-		Sampler *create_sampler(
-			VkFilter filter,
-			VkSamplerAddressMode wrap_x = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			VkSamplerAddressMode wrap_y = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			VkSamplerAddressMode wrap_z = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			VkBorderColor border_colour = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
-		);
+		Sampler *create_sampler(const SamplerCreateInfo &info);
+		Sampler *create_sampler(VkFilter filter);
 
 		void destroy_sampler(const Sampler *sampler);
 
@@ -107,13 +129,7 @@ namespace gfx
 
 		// TODO: The parameters here should be put into a struct like TextureAllocInfo.
 
-		Texture *alloc_texture(
-			u32 width, u32 height, u32 depth,
-			VkFormat format, VkImageType type, VkImageTiling tiling,
-			u32 mipmaps, u32 layers,
-			VkSampleCountFlags samples,
-			bool is_transient, bool is_storage, bool is_cubemap
-		);
+		Texture *alloc_texture(const TextureAllocInfo &alloc_info);
 
 		Texture *alloc_texture_2d(u32 width, u32 height, VkFormat format, u32 mipmaps);
 		Texture *alloc_texture_2d_rw(u32 width, u32 height, VkFormat format, u32 mipmaps);
@@ -136,7 +152,7 @@ namespace gfx
 
 		// TODO: The parameters here should be put into a struct like GPUBufferAllocInfo.
 
-		GpuBuffer *alloc_buffer(VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size);
+		GpuBuffer *alloc_buffer(const BufferAllocInfo &alloc_info);
 		GpuBuffer *alloc_stage(u64 size);
 
 		void destroy_buffer(const GpuBuffer *gpu_buffer);
@@ -225,6 +241,7 @@ namespace gfx
 			Vector<ImageDestroy> destroyed_images;
 			Vector<VkImageView> destroyed_views;
 			Vector<BufferDestroy> destroyed_buffers;
+			Vector<ShaderStage> destroyed_stages;
 			Vector<BindlessHandle> destroyed_bindless_samplers;
 			Vector<BindlessHandle> destroyed_bindless_views;
 

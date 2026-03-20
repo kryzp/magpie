@@ -21,7 +21,9 @@ namespace gfx
 		void set_exposure(float exp);
 		
 	private:
-		const ShaderProgram *tonemapping_program;
+		ast::AssetManager *assets;
+
+		ast::AssetHandle tonemapping_asset;
 		float exposure;
 	};
 }

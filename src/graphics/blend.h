@@ -60,7 +60,7 @@ namespace gfx
 		bool depth_bounds_test_enabled = false;
 		float depth_bounds_min = 0.f;
 		float depth_bounds_max = 0.f;
-		bool stencil_test_enabled = true;
+		bool stencil_test_enabled = false;
 		StencilState stencil_front = {};
 		StencilState stencil_back = {};
 	};

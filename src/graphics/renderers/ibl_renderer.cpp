@@ -7,10 +7,11 @@ using namespace gfx;
 void IBLRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
+	this->assets = &assets;
 
-	brdf_shader       = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://brdf_lut.msh"))->shader;
-	irradiance_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://irradiance_convolution.msh"))->shader;
-	prefilter_shader  = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://prefilter_convolution.msh"))->shader;
+	brdf_shader_asset       = assets.from_file_path("assets://brdf_lut.msh");
+	irradiance_shader_asset = assets.from_file_path("assets://irradiance_convolution.msh");
+	prefilter_shader_asset  = assets.from_file_path("assets://prefilter_convolution.msh");
 
 	brdf = device->alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	irradiance = device->alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
@@ -33,7 +34,7 @@ void IBLRenderer::render_brdf(
 	brdf_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		GraphicsPipelineDef pipeline_def(brdf_shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(brdf_shader_asset)->shader);
 		pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32_SFLOAT };
 
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
@@ -67,7 +68,7 @@ void IBLRenderer::render_environment_map(
 
 		const TextureView *environment_map_texture = resources.get_texture_view(irradiance_environment_map_handle, SubresourceRange::all_colour());
 
-		GraphicsPipelineDef pipeline_def(irradiance_shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(irradiance_shader_asset)->shader);
 		pipeline_def.multi_view_mask = 0b111111;
 		pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 
@@ -117,7 +118,7 @@ void IBLRenderer::render_environment_map(
 
 			const TextureView *environment_map_view = resources.get_texture_view(prefilter_environment_map_handle, SubresourceRange::all_colour());
 
-			GraphicsPipelineDef pipeline_def(prefilter_shader);
+			GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(prefilter_shader_asset)->shader);
 			pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 			pipeline_def.multi_view_mask = 0b111111;
 

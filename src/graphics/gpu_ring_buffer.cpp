@@ -17,8 +17,13 @@ GpuRingBuffer::~GpuRingBuffer()
 
 void GpuRingBuffer::allocate(Device *device, VkBufferUsageFlags2 usage, VmaAllocationCreateFlags flags, u64 size)
 {
+	BufferAllocInfo alloc_info = {};
+	alloc_info.usage = usage;
+	alloc_info.flags = flags;
+	alloc_info.size = size;
+
 	this->device = device;
-	this->buffer = device->alloc_buffer(usage, flags, size);
+	this->buffer = device->alloc_buffer(alloc_info);
 	this->used = 0;
 }
 

@@ -34,6 +34,7 @@ namespace gfx
 			: push_constant_size(0)
 			, stage_count(0)
 			, stages{}
+			, cookie(0)
 		{
 		}
 
@@ -59,9 +60,17 @@ namespace gfx
 			return stages[stage];
 		}
 
+		u32 get_cookie() const
+		{
+			return cookie;
+		}
+
 	private:
 		u32 push_constant_size;
+
 		u32 stage_count;
 		ShaderStage stages[2];
+
+		u32 cookie;
 	};
 }

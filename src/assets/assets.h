@@ -165,6 +165,7 @@ namespace ast
 		u64 stage_size;                   // Gpu buffer size required.
 		bool failed;                      // Did we fail in loading?
 		Vector<AssetHandle> dependencies; // Assets we depend on.
+		Vector<String> watch_paths;       // Paths to monitor for hot reload.
 	};
 
 	class IAssetSerializer {
@@ -279,6 +280,7 @@ namespace ast
 			u32 pending_dependencies = 0;
 			Vector<AssetHandle> dependents; // Assets that depend on this asset.
 			AssetUpload stashed_upload_data;
+			Vector<String> watch_paths;
 		};
 
 		Vector<AssetRecord> asset_records;

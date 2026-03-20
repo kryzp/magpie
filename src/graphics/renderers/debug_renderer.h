@@ -95,6 +95,7 @@ namespace gfx
 
 	private:
 		Device *device;
+		ast::AssetManager *assets;
 
 		enum DrawCallType {
 			DRAW_CALL_LINE,
@@ -173,16 +174,16 @@ namespace gfx
 		void create_circle_mesh();
 		void create_cube_mesh();
 
-		Vector<DebugDrawCall> depth_buckets[DRAW_CALL_MAX_ENUM];
-		Vector<DebugDrawCall> no_depth_buckets[DRAW_CALL_MAX_ENUM];
+		Vector<DebugDrawCall> depth_enabled_buckets[DRAW_CALL_MAX_ENUM];
+		Vector<DebugDrawCall> depth_disabled_buckets[DRAW_CALL_MAX_ENUM];
 
-		const ShaderProgram *shader;
+		ast::AssetHandle shader_asset;
 
 		GpuBuffer *depth_enabled_call_buffer;
 		u32 depth_enabled_id;
 
-		GpuBuffer *no_depth_call_buffer;
-		u32 no_depth_id;
+		GpuBuffer *depth_disabled_call_buffer;
+		u32 depth_disabled_id;
 
 		Mesh line_mesh;
 		Mesh cross_mesh;

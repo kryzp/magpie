@@ -35,6 +35,7 @@ namespace gfx
 
 	private:
 		Device *device;
+		ast::AssetManager *assets;
 
 		Texture *shadow_cubemaps[MAX_SHADOW_CASTERS];
 		TextureView *shadow_cubemap_views[MAX_SHADOW_CASTERS];
@@ -42,6 +43,6 @@ namespace gfx
 		GpuBuffer *handle_table_buffer;
 		GpuBuffer *caster_table_buffer;
 
-		const ShaderProgram *depth_shader;
+		ast::AssetHandle depth_shader_asset;
 	};
 }

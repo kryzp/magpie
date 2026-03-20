@@ -37,11 +37,12 @@ namespace gfx
 
 	private:
 		Device *device;
+		ast::AssetManager *assets;
 
 		Mesh mesh;
 
-		const ShaderProgram *shader;
-		const ShaderProgram *hdr_to_cubemap_shader;
+		ast::AssetHandle shader_asset;
+		ast::AssetHandle hdr_to_cubemap_shader_asset;
 
 		Texture *environment_map;
 	};

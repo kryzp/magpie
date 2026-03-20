@@ -47,12 +47,14 @@ namespace gfx
 		);
 
 	private:
+		ast::AssetManager *assets;
+
 		void create_light_sphere_mesh(Device *device);
 
 		Mesh light_sphere_mesh;
 
-		const ShaderProgram *model_shader;
-		const ShaderProgram *ambient_lighting_shader;
-		const ShaderProgram *direct_lighting_point_shader;
+		ast::AssetHandle model_shader_asset;
+		ast::AssetHandle ambient_lighting_shader_asset;
+		ast::AssetHandle direct_lighting_point_shader_asset;
 	};
 }

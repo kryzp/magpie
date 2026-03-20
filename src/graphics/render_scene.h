@@ -118,6 +118,9 @@ namespace gfx
 		void update_material_buffer();
 		void update_mesh_buffer();
 
+		u32 find_suitable_page(u32 vertex_count, u32 index_count);
+		GeometryPage create_new_page();
+
 		struct RS_Object {
 			Mat4 transform;
 			Vec4 sphere_bounds;
@@ -146,7 +149,7 @@ namespace gfx
 		GpuBuffer *mesh_buffer;
 		GpuBuffer *material_buffer;
 
-		u32 find_suitable_page(u32 vertex_count, u32 index_count);
-		GeometryPage create_new_page();
+		bool mesh_buffer_dirty;
+		bool material_buffer_dirty;
 	};
 }

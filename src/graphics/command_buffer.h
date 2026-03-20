@@ -130,7 +130,7 @@ namespace gfx
 		void copy_buffer_to_buffer(
 			const GpuBuffer *src,
 			const GpuBuffer *dst,
-			const Vector<VkBufferCopy> &regions
+			const Vector<VkBufferCopy2> &regions
 		);
 
 		void copy_buffer_to_texture(
@@ -142,7 +142,7 @@ namespace gfx
 		void copy_buffer_to_texture_region(
 			const GpuBuffer *src,
 			const Texture *dst,
-			const Vector<VkBufferImageCopy> &regions
+			const Vector<VkBufferImageCopy2> &regions
 		);
 
 		// ---

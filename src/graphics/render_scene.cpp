@@ -20,6 +20,8 @@ RenderScene::RenderScene()
 	, materials()
 	, mesh_buffer()
 	, material_buffer()
+	, mesh_buffer_dirty(true)
+	, material_buffer_dirty(true)
 {
 }
 
@@ -33,20 +35,19 @@ void RenderScene::init(Device *device, ResourceCache *cache)
 
 	this->device = device;
 	this->cache = cache;
-	
-	mesh_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuRenderMesh) * MAX_MESHES
-	);
 
-	material_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS
-	);
+	BufferAllocInfo mesh_buffer_info = {};
+	mesh_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	mesh_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	mesh_buffer_info.size = sizeof(gpu_types::GpuRenderMesh) * MAX_MESHES;
+
+	BufferAllocInfo material_buffer_info = {};
+	material_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	material_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	material_buffer_info.size = sizeof(gpu_types::GpuMaterial) * MAX_MATERIALS;
+	
+	mesh_buffer = device->alloc_buffer(mesh_buffer_info);
+	material_buffer = device->alloc_buffer(material_buffer_info);
 }
 
 void RenderScene::destroy()
@@ -72,11 +73,15 @@ RenderSceneResources RenderScene::update_transient_resources(GpuRingBuffer &fram
 	if (!lights.data.empty())
 		update_light_buffer(frame_arena, resources);
 
-	if (!materials.empty())
+	if (!materials.empty() && material_buffer_dirty) {
 		update_material_buffer();
+		material_buffer_dirty = false;
+	}
 
-	if (!meshes.empty())
+	if (!meshes.empty() && mesh_buffer_dirty) {
 		update_mesh_buffer();
+		mesh_buffer_dirty = false;
+	}
 
 	return resources;
 }
@@ -285,12 +290,14 @@ u32 RenderScene::register_mesh(const Mesh &mesh)
 		const u64 vertex_stride = sizeof(gpu_types::GpuModelVertex);
 		const u64 index_stride = sizeof(u32);
 
-		VkBufferCopy vertex_copy = {};
+		VkBufferCopy2 vertex_copy = {};
+		vertex_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		vertex_copy.srcOffset = 0;
 		vertex_copy.dstOffset = page.vertex_offset * vertex_stride;
 		vertex_copy.size      = mesh.vertex_count * vertex_stride;
 		
-		VkBufferCopy index_copy = {};
+		VkBufferCopy2 index_copy = {};
+		index_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		index_copy.srcOffset = 0;
 		index_copy.dstOffset = page.index_offset * index_stride;
 		index_copy.size      = mesh.index_count * index_stride;
@@ -327,6 +334,8 @@ u32 RenderScene::register_mesh(const Mesh &mesh)
 
 	mesh_registry.push_back(location);
 
+	mesh_buffer_dirty = true;
+
 	return handle;
 }
 
@@ -350,6 +359,8 @@ u32 RenderScene::register_material(const Material &material, ast::AssetManager &
 	u32 index = materials.size();
 
 	materials.push_back(gpu_material);
+
+	material_buffer_dirty = true;
 
 	return index;
 }
@@ -412,20 +423,18 @@ GeometryPage RenderScene::create_new_page()
 	
 	// Doesn't need to be VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT
 	// because we use vertex pulling.
-	page.vertex_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		PAGE_VERTEX_BUFFER_SIZE
-	);
-	
-	page.index_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		PAGE_INDEX_BUFFER_SIZE
-	);
+	BufferAllocInfo vertex_buffer_info = {};
+	vertex_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	vertex_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	vertex_buffer_info.size = PAGE_VERTEX_BUFFER_SIZE;
+
+	BufferAllocInfo index_buffer_info = {};
+	index_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT;
+	index_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	index_buffer_info.size = PAGE_INDEX_BUFFER_SIZE;
+
+	page.vertex_buffer = device->alloc_buffer(vertex_buffer_info);
+	page.index_buffer = device->alloc_buffer(index_buffer_info);
 
 	page.vertex_offset = 0;
 	page.index_offset = 0;

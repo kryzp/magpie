@@ -161,11 +161,12 @@ void App::init(VirtualArena &global_arena)
 
 	this->test_sound = test_sound_asset->buffer;
 
-	frame_data_buffer = graphics_device.alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(gfx::gpu_types::GpuFrameData)
-	);
+	gfx::BufferAllocInfo frame_data_buffer_info = {};
+	frame_data_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	frame_data_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	frame_data_buffer_info.size = sizeof(gfx::gpu_types::GpuFrameData);
+
+	frame_data_buffer = graphics_device.alloc_buffer(frame_data_buffer_info);
 
 	Mat4 capture_view_matrices[] = {
 		Mat4::lookat(Vec3::zero(), Vec3( 1.f, 0.f, 0.f), Vec3( 0.f, 0.f, 1.f)), // Right.
@@ -181,12 +182,12 @@ void App::init(VirtualArena &global_arena)
 	for (int i = 0; i < 6; i++)
 		capture_view_matrices[i] = capture_projection_matrix * capture_view_matrices[i];
 
-	cubemap_capture_transforms = graphics_device.alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(capture_view_matrices)
-	);
+	gfx::BufferAllocInfo cubemap_capture_buffer_info = {};
+	cubemap_capture_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	cubemap_capture_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	cubemap_capture_buffer_info.size = sizeof(capture_view_matrices);
+
+	cubemap_capture_transforms = graphics_device.alloc_buffer(cubemap_capture_buffer_info);
 
 	cubemap_capture_transforms->write(capture_view_matrices, sizeof(capture_view_matrices), 0);
 	
@@ -390,8 +391,6 @@ void App::update(float dt, const inp::InputState &input)
 	}
 
 	render_scene.set_light_position(light_handle, Vec3(CalcF::sin(global_timer.get_elapsed_seconds())*2.f - 1.f, 0.f, 1.f));
-
-	gfx::DebugRenderer::get_singleton()->push_line(Vec3::zero(), render_scene.get_light_position(light_handle), Colour::white());
 
 	if (input.pressed(inp::KEYBOARD_KEY_tab)) {
 		camera_driver_active = !camera_driver_active;

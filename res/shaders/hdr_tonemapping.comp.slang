@@ -13,7 +13,12 @@ Arguments args;
 
 float3 Tonemapping(float3 c)
 {
-	return 1. - exp(-c * args.exposure);
+	float3 out = c;
+	
+	out = 1.0 - exp(-out * args.exposure);
+	out = 1.0 - out;
+
+	return out;
 }
 
 [shader("compute")]
@@ -27,5 +32,5 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 	Texture2D input = bindless_images[args.input_image_id];
 	RWTexture2D output = bindless_rw_images[args.output_image_id];
 	
-	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.);
+	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.0);
 }

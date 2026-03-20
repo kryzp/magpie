@@ -10,13 +10,13 @@ using namespace gfx;
 
 DebugRenderer::DebugRenderer()
 	: device(nullptr)
-	, depth_buckets{}
-	, no_depth_buckets{}
-	, shader(nullptr)
+	, depth_enabled_buckets{}
+	, depth_disabled_buckets{}
+	, shader_asset()
 	, depth_enabled_call_buffer(nullptr)
 	, depth_enabled_id(0)
-	, no_depth_call_buffer(nullptr)
-	, no_depth_id(0)
+	, depth_disabled_call_buffer(nullptr)
+	, depth_disabled_id(0)
 	, line_mesh()
 	, cross_mesh()
 	, sphere_mesh()
@@ -48,22 +48,17 @@ struct GPU_DebugObjectDraw {
 void DebugRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
+	this->assets = &assets;
 
-	this->shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://debug_rendering.msh"))->shader;
-	
-	this->depth_enabled_call_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPU_DebugObjectDraw) * MAX_DEBUG_DRAWS
-	);
+	this->shader_asset = assets.from_file_path("assets://debug_rendering.msh");
 
-	this->no_depth_call_buffer = device->alloc_buffer(
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-		sizeof(GPU_DebugObjectDraw) * MAX_DEBUG_DRAWS
-	);
+	BufferAllocInfo buffer_info = {};
+	buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	buffer_info.size = sizeof(GPU_DebugObjectDraw) * MAX_DEBUG_DRAWS;
+
+	this->depth_enabled_call_buffer = device->alloc_buffer(buffer_info);
+	this->depth_disabled_call_buffer = device->alloc_buffer(buffer_info);
 
 	create_line_mesh();
 	create_cross_mesh();
@@ -81,7 +76,7 @@ void DebugRenderer::destroy()
 	cube_mesh.destroy_buffers();
 
 	device->destroy_buffer(depth_enabled_call_buffer);
-	device->destroy_buffer(no_depth_call_buffer);
+	device->destroy_buffer(depth_disabled_call_buffer);
 }
 
 void DebugRenderer::create_line_mesh()
@@ -265,7 +260,7 @@ void DebugRenderer::create_cube_mesh()
 void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle target_colour, RenderResourceHandle target_depth)
 {
 	depth_enabled_id = 0;
-	no_depth_id = 0;
+	depth_disabled_id = 0;
 
 	for (int i = 0; i < DRAW_CALL_MAX_ENUM; i++) {
 		auto filter_buckets = [&](Vector<DebugDrawCall> &calls) {
@@ -281,8 +276,8 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 			}
 		};
 
-		filter_buckets(depth_buckets[i]);
-		filter_buckets(no_depth_buckets[i]);
+		filter_buckets(depth_enabled_buckets[i]);
+		filter_buckets(depth_disabled_buckets[i]);
 	}
 
 	struct Batch {
@@ -301,7 +296,7 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 			if (buckets[type].empty())
 				continue;
 
-			Batch batch = { (DrawCallType)type, depth ? depth_enabled_id : no_depth_id, (u32)buckets[type].size() };
+			Batch batch = { (DrawCallType)type, depth ? depth_enabled_id : depth_disabled_id, (u32)buckets[type].size() };
 
 			for (auto &call : buckets[type]) {
 				current_colour = call.colour;
@@ -323,8 +318,8 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 		}
 	};
 
-	process_buckets(depth_buckets, depth_batches, true);
-	process_buckets(no_depth_buckets, no_depth_batches, false);
+	process_buckets(depth_enabled_buckets, depth_batches, true);
+	process_buckets(depth_disabled_buckets, no_depth_batches, false);
 
 	RenderStage &debug_rendering_stage = graph.push_stage("Debug Rendering", RenderStage::TYPE_GRAPHICS);
 	debug_rendering_stage.write_colour(target_colour);
@@ -333,7 +328,7 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 	debug_rendering_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		GraphicsPipelineDef pipeline_def(shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(shader_asset)->shader);
 		pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 		pipeline_def.colour_attachment_formats = { VK_FORMAT_R32G32B32A32_SFLOAT };
 		pipeline_def.cull_mode = VK_CULL_MODE_NONE;
@@ -392,7 +387,7 @@ void DebugRenderer::render(float dt, RenderGraph &graph, RenderResourceHandle ta
 		};
 
 		draw_batches(depth_batches, depth_enabled_call_buffer->get_device_address(), pipeline_st);
-		draw_batches(no_depth_batches, no_depth_call_buffer->get_device_address(), pipeline_st_no_depth);
+		draw_batches(no_depth_batches, depth_disabled_call_buffer->get_device_address(), pipeline_st_no_depth);
 	});
 }
 
@@ -492,15 +487,15 @@ void DebugRenderer::push_instance_data(const Mat4 &transform)
 
 		depth_enabled_id++;
 	} else {
-		assert(no_depth_id < MAX_DEBUG_DRAWS);
+		assert(depth_disabled_id < MAX_DEBUG_DRAWS);
 
-		GPU_DebugObjectDraw *draws = (GPU_DebugObjectDraw *)no_depth_call_buffer->map();
+		GPU_DebugObjectDraw *draws = (GPU_DebugObjectDraw *)depth_disabled_call_buffer->map();
 
-		draws[no_depth_id].transform = transform;
-		draws[no_depth_id].colour    = colour;
-		draws[no_depth_id].thickness = current_thickness;
+		draws[depth_disabled_id].transform = transform;
+		draws[depth_disabled_id].colour    = colour;
+		draws[depth_disabled_id].thickness = current_thickness;
 
-		no_depth_id++;
+		depth_disabled_id++;
 	}
 }
 
@@ -659,7 +654,7 @@ void DebugRenderer::push_draw_call(
 )
 {
 	if (depth_enabled)
-		depth_buckets[type].push_back(call);
+		depth_enabled_buckets[type].push_back(call);
 	else
-		no_depth_buckets[type].push_back(call);
+		depth_disabled_buckets[type].push_back(call);
 }

@@ -13,10 +13,11 @@ using namespace gfx;
 
 void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 {
-	model_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://model.msh"))->shader;
+	this->assets = &assets;
 
-	ambient_lighting_shader      = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://ambient_lighting.msh"))->shader;
-	direct_lighting_point_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://direct_lighting_point.msh"))->shader;
+	model_shader_asset                 = assets.from_file_path("assets://model.msh");
+	ambient_lighting_shader_asset      = assets.from_file_path("assets://ambient_lighting.msh");
+	direct_lighting_point_shader_asset = assets.from_file_path("assets://direct_lighting_point.msh");
 
 	create_light_sphere_mesh(device);
 }
@@ -129,7 +130,7 @@ GBuffer DeferredRenderer::render_geometry(
 	geometry_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 
-		GraphicsPipelineDef pipeline_def(model_shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(model_shader_asset)->shader);
 		pipeline_def.has_depth_attachment = true;
 
 		for (int i = 0; i < GBuffer::ATTACHMENT_MAX_ENUM; i++)
@@ -212,7 +213,7 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 		CommandBuffer &cmd = ctx.cmd;
 		
 		// --- AMBIENT
-		GraphicsPipelineDef ambient_pipeline_def(ambient_lighting_shader);
+		GraphicsPipelineDef ambient_pipeline_def(assets->get_asset<ast::ShaderAsset>(ambient_lighting_shader_asset)->shader);
 		ambient_pipeline_def.has_depth_attachment = true;
 		ambient_pipeline_def.depth_stencil_state.depth_test_enabled = false;
 		ambient_pipeline_def.depth_stencil_state.depth_write_enabled = false;
@@ -263,7 +264,7 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 		cmd.draw(3);
 
 		// --- DIRECT
-		GraphicsPipelineDef direct_pipeline_def(direct_lighting_point_shader);
+		GraphicsPipelineDef direct_pipeline_def(assets->get_asset<ast::ShaderAsset>(direct_lighting_point_shader_asset)->shader);
 		direct_pipeline_def.has_depth_attachment = true;
 		direct_pipeline_def.depth_stencil_state.depth_test_enabled = false;
 		direct_pipeline_def.depth_stencil_state.depth_write_enabled = false;

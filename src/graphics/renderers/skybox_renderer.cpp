@@ -10,9 +10,10 @@ using namespace gfx;
 void SkyboxRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->device = device;
+	this->assets = &assets;
 
-	shader                = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://skybox.msh"))->shader;
-	hdr_to_cubemap_shader = assets.get_asset<ast::ShaderAsset>(assets.from_file_path("assets://hdr_to_environment_cubemap.msh"))->shader;
+	shader_asset                = assets.from_file_path("assets://skybox.msh");
+	hdr_to_cubemap_shader_asset = assets.from_file_path("assets://hdr_to_environment_cubemap.msh");
 
 	Vec3 vertices[] = {
 		{ -1.f,  1.f,  1.f },
@@ -92,7 +93,7 @@ void SkyboxRenderer::add_render_stages(
 		const Texture *colour = resources.get_texture(colour_handle);
 		const TextureView *cubemap_view = resources.get_texture_view(cubemap_handle, SubresourceRange::all_colour());
 
-		GraphicsPipelineDef pipeline_def(shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(shader_asset)->shader);
 		pipeline_def.has_depth_attachment = true;
 		pipeline_def.depth_stencil_state.depth_test_enabled = true;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
@@ -150,7 +151,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 		args.hdr_image_id = ctx.cache.fetch_texture_view_std(hdr_texture)->get_bindless_handle();
 		args.linear_sampler_id = Sampler::linear->get_bindless_handle();
 
-		GraphicsPipelineDef pipeline_def(hdr_to_cubemap_shader);
+		GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(hdr_to_cubemap_shader_asset)->shader);
 		pipeline_def.depth_stencil_state.depth_test_enabled = false;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
 		pipeline_def.colour_attachment_formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
