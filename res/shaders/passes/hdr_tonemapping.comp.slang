@@ -1,4 +1,4 @@
-#include "bindless.slang"
+import bindless;
 
 struct Arguments {
 	uint width;
@@ -22,15 +22,14 @@ float3 Tonemapping(float3 c)
 }
 
 [shader("compute")]
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ComputeMain(uint3 tid : SV_DispatchThreadID)
 {
-	if (tid.x < 0 || tid.x >= args.width ||
-	    tid.y < 0 || tid.y >= args.height)
+	if (tid.x >= args.width || tid.y >= args.height)
 		return;
 
-	Texture2D input = bindless_images[args.input_image_id];
-	RWTexture2D output = bindless_rw_images[args.output_image_id];
+	Texture2D input = bindless::images[args.input_image_id];
+	RWTexture2D output = bindless::rw_images[args.output_image_id];
 	
 	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.0);
 }

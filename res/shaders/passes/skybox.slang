@@ -1,9 +1,9 @@
-#include "util.slang"
-#include "bindless.slang"
-#include "types.slang"
+import util;
+import bindless;
+import types;
 
 struct Arguments {
-    FrameData *frame_data;
+    types::FrameData *frame_data;
     float3 *vertices;
 	uint cubemap;
 	uint sampler;
@@ -32,5 +32,5 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    return float4(bindless_cubes[args.cubemap].Sample(bindless_samplers[args.sampler], normalize(WorldToCubemap(input.position))).rgb, 1.);
+    return float4(bindless::cubes[args.cubemap].Sample(bindless::samplers[args.sampler], normalize(util::WorldToCubemap(input.position))).rgb, 1.);
 }

@@ -1,17 +1,18 @@
+module util;
 
-const static float PI = 3.14159265;
+export const static float PI = 3.14159265;
 
 // We use a right-handed Z-up world
 // coordinate system, but cubemap
 // sampling requires Y-up left handed.
 // Thanks RenderMan!!
 // Warning: Does NOT normalize.
-float3 WorldToCubemap(float3 v)
+export float3 WorldToCubemap(float3 v)
 {
 	return float3(v.x, v.z, v.y);
 }
 
-float RadicalInverse_VdC(uint bits) 
+export float RadicalInverse_VdC(uint bits) 
 {
 	bits = (bits << 16u) | (bits >> 16u);
 	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -21,19 +22,19 @@ float RadicalInverse_VdC(uint bits)
 	return float(bits) * 2.3283064365386963e-10;
 }
 
-float2 Hammersley(uint i, uint N)
+export float2 Hammersley(uint i, uint N)
 {
 	return float2(float(i) / float(N), RadicalInverse_VdC(i));
 }
 
-float3 FresnelSchlick(float VdotH, float3 F0, float roughness)
+export float3 FresnelSchlick(float VdotH, float3 F0, float roughness)
 {
 	float t = pow(1.0 - max(VdotH, 0.0), 5.0);
 	float3 F90 = max(1.0 - roughness, F0);
 	return lerp(F0, F90, t);
 }
 
-float DistributionGGX(float NdotH, float roughness)
+export float DistributionGGX(float NdotH, float roughness)
 {
 	float a = roughness * roughness;
 	float a2 = a * a;
@@ -47,7 +48,7 @@ float DistributionGGX(float NdotH, float roughness)
 }
 
 // Actual physically-accurate equation.
-float GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
+export float GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
 {
     float r = roughness;
     float k = r * r * 0.5;
@@ -55,7 +56,7 @@ float GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
+export float GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
 {
     float ggx2 = GeometrySchlickGGX_PHYSACC(NdotV, roughness);
     float ggx1 = GeometrySchlickGGX_PHYSACC(NdotL, roughness);
@@ -64,7 +65,7 @@ float GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
 }
 
 // Modified because this looks better for lighting.
-float GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
+export float GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
 {
 	float r = roughness + 1.0;
 	float k = r * r / 8.0;
@@ -72,7 +73,7 @@ float GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
+export float GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
 {
     float ggx2 = GeometrySchlickGGX_ARTISTIC(NdotV, roughness);
     float ggx1 = GeometrySchlickGGX_ARTISTIC(NdotL, roughness);
@@ -80,7 +81,7 @@ float GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
 	return ggx1 * ggx2;
 }
 
-void BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitangent)
+export void BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitangent)
 {
 	float3 u = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
 
@@ -107,7 +108,7 @@ void BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitange
 	*/
 }
 
-float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
+export float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 {
 	float a = roughness * roughness;
 	

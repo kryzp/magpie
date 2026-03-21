@@ -1,12 +1,12 @@
-#include "util.slang"
-#include "bindless.slang"
-#include "types.slang"
+import util;
+import bindless;
+import types;
 
 struct Arguments {
-    FrameData *frame_data;
-    ObjectData *objects;
-    Material *materials;
-    RenderMesh *meshes;
+    types::FrameData *frame_data;
+    types::ObjectData *objects;
+    types::Material *materials;
+    types::RenderMesh *meshes;
 //	uint *instance_buffer;
 	uint sampler;
 };
@@ -28,8 +28,8 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 {
     uint index = instance;//args.instance_buffer[instance];
 
-    FrameData *frame_data = args.frame_data;
-    ObjectData object_data = args.objects[index];
+    types::FrameData *frame_data = args.frame_data;
+    types::ObjectData object_data = args.objects[index];
 
     RenderMesh mesh = args.meshes[object_data.mesh_index];
 
@@ -68,11 +68,11 @@ struct FS_Output
 [shader("fragment")]
 FS_Output FragmentMain(VS_Output input)
 {
-	Material material = args.materials[input.material_index];
+	types::Material material = args.materials[input.material_index];
 
 	float2 uv = frac(input.texcoord);
 
-	SamplerState sampler = bindless_samplers[args.sampler];
+	SamplerState sampler = bindless::samplers[args.sampler];
 
 	float4 albedo = float4(1.0, 1.0, 1.0, 1.0);
 	float3 normal = float3(0.0, 0.0, 1.0);
@@ -80,27 +80,26 @@ FS_Output FragmentMain(VS_Output input)
     float3 metallic_roughness = float3(1.0, 1.0, 1.0);
     float ambient_occlusion = 0.0;
 
-    if (is_bindless_valid(material.albedo_texture))
-        albedo = bindless_images[material.albedo_texture].Sample(sampler, uv).rgba;
+    if (is_bindless::valid(material.albedo_texture))
+        albedo = bindless::images[material.albedo_texture].Sample(sampler, uv).rgba;
 
-    if (is_bindless_valid(material.normal_texture))
-        normal = bindless_images[material.normal_texture].Sample(sampler, uv).rgb;
+    if (is_bindless::valid(material.normal_texture))
+        normal = bindless::images[material.normal_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless_valid(material.emissive_texture))
-        emissive = bindless_images[material.emissive_texture].Sample(sampler, uv).rgb;
+    if (is_bindless::valid(material.emissive_texture))
+        emissive = bindless::images[material.emissive_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless_valid(material.mr_texture))
-        metallic_roughness = bindless_images[material.mr_texture].Sample(sampler, uv).rgb;
+    if (is_bindless::valid(material.mr_texture))
+        metallic_roughness = bindless::images[material.mr_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless_valid(material.ambient_texture))
-        ambient_occlusion = bindless_images[material.ambient_texture].Sample(sampler, uv).r;
+    if (is_bindless::valid(material.ambient_texture))
+        ambient_occlusion = bindless::images[material.ambient_texture].Sample(sampler, uv).r;
 
     if (albedo.a <= 0.01)
         discard;
 
 	normal = 2.0*normal - 1.0;
 	normal = normalize(mul(input.tbn, normal));
-    normal = mul(input.tbn, float3(0.0, 0.0, 1.0));
 
     metallic_roughness.r += ambient_occlusion;
 

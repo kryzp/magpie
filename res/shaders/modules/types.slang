@@ -1,5 +1,6 @@
+module types;
 
-struct FrameData {
+export struct FrameData {
 	float4x4 view;
 	float4x4 projection;
 	float4x4 view_projection;
@@ -11,7 +12,7 @@ struct FrameData {
 	float time;
 };
 
-struct ModelVertex {
+export struct ModelVertex {
 	float3 position;
 	float2 texcoord;
 	float3 colour;
@@ -20,7 +21,7 @@ struct ModelVertex {
 	float3 bitangent;
 };
 
-struct ObjectData {
+export struct ObjectData {
 	float4x4 model_matrix;
     float4x4 normal_matrix;
     float4 sphere_bounds;
@@ -29,13 +30,13 @@ struct ObjectData {
     uint mesh_index;
 };
 
-struct RenderMesh {
+export struct RenderMesh {
     uint index_count;
     uint first_index;
     ModelVertex *vertex_buffer;
 };
 
-struct Material {
+export struct Material {
     uint albedo_texture;
     uint normal_texture;
     uint emissive_texture;
@@ -43,7 +44,7 @@ struct Material {
     uint ambient_texture;
 };
 
-struct Light {
+export struct Light {
     float4x4 transform;
 	float3 position;
 	float radius;
@@ -53,7 +54,7 @@ struct Light {
     int shadow_slot_index; // -1 to disable shadows
 };
 
-struct ShadowCaster {
+export struct ShadowCaster {
     float4x4 face_matrices[6];
     float3 position;
     float near_plane;
@@ -61,7 +62,7 @@ struct ShadowCaster {
     int shadow_map;
 };
 
-struct IndirectDraw {
+export struct IndirectDraw {
 	uint index_count;
 	uint instance_count;
 	uint first_index;
@@ -69,6 +70,6 @@ struct IndirectDraw {
 	uint first_instance;
 };
 
-struct PagePointers {
+export struct PagePointers {
     ModelVertex *vertex_buffer;
 };

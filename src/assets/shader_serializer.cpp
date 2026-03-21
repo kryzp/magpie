@@ -28,7 +28,6 @@ static gfx::ShaderBytecode load_file_bytes(ArenaView &arena, const String &path)
 }
 
 struct ShaderLoadData {
-	gfx::ShaderKind kind;
 	int stage_count;
 	gfx::ShaderBytecode stages[2];
 };
@@ -44,7 +43,6 @@ AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 	String file_path = ctx.system_file_path();
 	
 	ShaderLoadData *load_data = ctx.arena.push<ShaderLoadData>();
-	load_data->kind = gfx::SHADER_KIND_UNKNOWN;
 	load_data->stage_count = 0;
 	
 	AssetLoadResult result = {};
@@ -73,11 +71,7 @@ AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 
 		switch (hash::c_str(line_str.c_str())) {
 			case hash::c_str("Graphics"):
-				load_data->kind = gfx::SHADER_KIND_GRAPHICS;
-				break;
-
 			case hash::c_str("Compute"):
-				load_data->kind = gfx::SHADER_KIND_COMPUTE;
 				break;
 
 			default:

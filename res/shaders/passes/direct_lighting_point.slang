@@ -1,12 +1,12 @@
-#include "util.slang"
-#include "bindless.slang"
-#include "types.slang"
+import util;
+import bindless;
+import types;
 
 struct PushConstants {
-	FrameData *frame_data;
-	Light *lights;
+	types::FrameData *frame_data;
+	types::Light *lights;
 	float3 *vertices;
-	ShadowCaster *shadow_casters;
+	types::ShadowCaster *shadow_casters;
 
 	uint position;
 	uint albedo;
@@ -29,8 +29,8 @@ struct VS_Output {
 [shader("vertex")]
 VS_Output VertexMain(uint vertex_id : SV_VertexID, uint base_instance : SV_InstanceID)
 {
-	FrameData *frame_data = args.frame_data;
-	Light light = args.lights[base_instance];
+	types::FrameData *frame_data = args.frame_data;
+	types::Light light = args.lights[base_instance];
 	float3 position = args.vertices[vertex_id];
 
     VS_Output output;
@@ -47,10 +47,10 @@ float CalculateAttenuation(float distance_squared, float3 params)
 
 float CalculateShadow(float3 light_to_frag, in Light light)
 {
-    ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
+    types::ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
 
-    SamplerState shadow_sampler = bindless_samplers[args.shadow_sampler];
-    TextureCube shadow_map = bindless_cubes[caster.shadow_map];
+    SamplerState shadow_sampler = bindless::samplers[args.shadow_sampler];
+    TextureCube shadow_map = bindless::cubes[caster.shadow_map];
 
     float3 sample_dir = normalize(light_to_frag);
 
@@ -67,16 +67,16 @@ float CalculateShadow(float3 light_to_frag, in Light light)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
-	SamplerState sampler = bindless_samplers[args.linear_sampler];
+	SamplerState sampler = bindless::samplers[args.linear_sampler];
 	float2 uv = input.sv_position.xy / args.frame_data->window_resolution.xy;
 
-	float3 position    = bindless_images[args.position]    .Sample(sampler, uv).rgb;
-	float3 albedo      = bindless_images[args.albedo]      .Sample(sampler, uv).rgb;
-	float3 material    = bindless_images[args.material]    .Sample(sampler, uv).rgb;
-	float3 normal      = bindless_images[args.normal]      .Sample(sampler, uv).rgb;
-	float3 emissive    = bindless_images[args.emissive]    .Sample(sampler, uv).rgb;
+	float3 position    = bindless::images[args.position]    .Sample(sampler, uv).rgb;
+	float3 albedo      = bindless::images[args.albedo]      .Sample(sampler, uv).rgb;
+	float3 material    = bindless::images[args.material]    .Sample(sampler, uv).rgb;
+	float3 normal      = bindless::images[args.normal]      .Sample(sampler, uv).rgb;
+	float3 emissive    = bindless::images[args.emissive]    .Sample(sampler, uv).rgb;
 
-	Light light = args.lights[input.light_id];
+	types::Light light = args.lights[input.light_id];
 
 	float roughness_value = material.g;
 	float metallic_value = material.b;
@@ -101,9 +101,9 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float NdotH = max(0.0, dot(normal, halfway_dir));
 	float VdotH = max(0.0, dot(halfway_dir, view_dir));
 
-	float3 F = FresnelSchlick(VdotH, F0, 0.0);
-	float NDF = DistributionGGX(NdotH, roughness_value);
-	float G = GeometrySmith_ARTISTIC(NdotV, NdotL, roughness_value);
+	float3 F = util::FresnelSchlick(VdotH, F0, 0.0);
+	float NDF = util::DistributionGGX(NdotH, roughness_value);
+	float G = util::GeometrySmith_ARTISTIC(NdotV, NdotL, roughness_value);
 
 	float3 kD = (1. - F) * (1. - metallic_value);
 

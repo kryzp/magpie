@@ -1,4 +1,5 @@
-#include "types.slang"
+import types;
+import culling;
 
 struct Arguments {
     ObjectData *objects;
@@ -33,11 +34,11 @@ bool IsVisible(in ObjectData obj)
 	return dist_sq < radius_sum*radius_sum;
 }
 
-IndirectDraw GetDrawFor(uint gid)
+types::IndirectDraw GetDrawFor(uint gid)
 {
-    RenderMesh mesh = args.meshes[args.objects[gid].mesh_index];
+    types::RenderMesh mesh = args.meshes[args.objects[gid].mesh_index];
 
-    IndirectDraw draw;
+    types::IndirectDraw draw;
     draw.index_count = mesh.index_count;
     draw.instance_count = 1;
     draw.first_index = mesh.first_index;
@@ -62,6 +63,6 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
         PagePointers page = args.pages[obj.page_index];
         uint slot;
         InterlockedAdd(*args.count_buffer, 1, slot);
-        args.indirect_buffer[slot] = GetDrawFor(gid);
+        args.indirect_buffer[slot] = culling::GetDrawFor(gid);
 	}
 }

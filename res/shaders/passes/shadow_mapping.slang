@@ -1,11 +1,11 @@
-#include "util.slang"
-#include "bindless.slang"
-#include "types.slang"
+import util;
+import bindless;
+import types;
 
 struct Arguments {
-    ObjectData *objects;
-    RenderMesh *meshes;
-    ShadowCaster *shadow_casters;
+    types::ObjectData *objects;
+    types::RenderMesh *meshes;
+    types::ShadowCaster *shadow_casters;
     uint shadow_caster_index;
 };
 
@@ -20,10 +20,10 @@ struct VS_Output {
 [shader("vertex")]
 VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID, uint view_id : SV_ViewID)
 {
-    ObjectData object_data = args.objects[instance];
-    RenderMesh mesh = args.meshes[object_data.mesh_index];
-    ModelVertex vertex = mesh.vertex_buffer[vertex_id];
-    ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
+    types::ObjectData object_data = args.objects[instance];
+    types::RenderMesh mesh = args.meshes[object_data.mesh_index];
+    types::ModelVertex vertex = mesh.vertex_buffer[vertex_id];
+    types::ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
 
     float4 world_position = mul(object_data.model_matrix, float4(vertex.position, 1.0));
 
@@ -41,7 +41,7 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 [shader("fragment")]
 float FragmentMain(VS_Output input) : SV_Depth
 {
-    ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
+    types::ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
 
     float distance = length(input.world_position - caster.position);
 

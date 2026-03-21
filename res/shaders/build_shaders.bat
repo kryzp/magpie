@@ -1,17 +1,34 @@
 @echo off
+
 setlocal enabledelayedexpansion
 
-for %%f in (*.slang) do (
-  set "filename=%%~nf"
-  set "ending=!filename:~-5!"
-  echo !filename!
-  if /i "!ending!"==".comp" (
-    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.spv" -entry ComputeMain
-  ) else (
-    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.vert.spv" -entry VertexMain
-    slangc "%%f" -Wno-39001 -profile glsl_450 -target spirv -o "!filename!.frag.spv" -entry FragmentMain
-  )
+set SHADER_DIR=.
+
+for %%f in (%SHADER_DIR%\passes\*.comp.slang) do (
+    set "name=%%~nf"
+    echo "Compiling %%f..."
+
+    slangc %%f -I %SHADER_DIR% ^
+        -profile glsl_450 -target spirv ^
+        -entry ComputeMain ^
+        -o "%%~dpnf.spv"
 )
 
-echo All shaders compiled!
+for %%f in (%SHADER_DIR%\passes\*.slang) do (
+    set "name=%%~nf"
+    echo "Compiling %%f (vertex + fragment)..."
+
+    slangc %%f -I %SHADER_DIR% ^
+        -profile glsl_450 -target spirv ^
+        -entry VertexMain ^
+        -o "%%~dpnf.vert.spv"
+
+    slangc %%f -I %SHADER_DIR% ^
+        -profile glsl_450 -target spirv ^
+        -entry FragmentMain ^
+        -o "%%~dpnf.frag.spv"
+)
+
+echo Done!
+
 pause

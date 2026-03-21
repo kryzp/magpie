@@ -1,5 +1,5 @@
-#include "util.slang"
-#include "bindless.slang"
+import util;
+import bindless;
 
 struct Arguments {
 	float4x4 *transform_matrices;
@@ -29,15 +29,15 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    TextureCube env_map = bindless_cubes[args.environment_map_id];
-    SamplerState sampler = bindless_samplers[args.linear_sampler_id];
+    TextureCube env_map = bindless::cubes[args.environment_map_id];
+    SamplerState sampler = bindless::samplers[args.linear_sampler_id];
 
     float3 irradiance = 0.0;
 
     float3 forward = normalize(input.position);
 
     float3 right, up;
-    BuildOrthonormalBasis(forward, right, up);
+    util::BuildOrthonormalBasis(forward, right, up);
 
     float dt = 0.025;
     float n_samples = 0.0;
@@ -54,7 +54,7 @@ float4 FragmentMain(VS_Output input)
 
             float3 sample_direction = mul(tangent_to_world, sample);
 
-            sample_direction = WorldToCubemap(sample_direction);
+            sample_direction = util::WorldToCubemap(sample_direction);
 
             irradiance += env_map.Sample(sampler, sample_direction).rgb * cos(theta) * sin(theta);
 

@@ -1,5 +1,5 @@
-#include "util.slang"
-#include "bindless.slang"
+import util;
+import bindless;
 
 struct Arguments {
 	float4x4 *transform_matrices;
@@ -24,7 +24,7 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 {
 	VS_Output output;
 	output.position = args.vertices[vertex_id];
-	output.sv_position = mul(args.transform_matrices[view_id], float4(output.position, 1.));
+	output.sv_position = mul(args.transform_matrices[view_id], float4(output.position, 1.0));
 
 	return output;
 }
@@ -32,8 +32,8 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
-    TextureCube environment_map = bindless_cubes[args.environment_map_id];
-    SamplerState sampler = bindless_samplers[args.linear_sampler_id];
+    TextureCube environment_map = bindless::cubes[args.environment_map_id];
+    SamplerState sampler = bindless::samplers[args.linear_sampler_id];
 
     float roughness = args.roughness;
 
@@ -44,13 +44,13 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float3 R = normal;
 	float3 V = R;
 	
-	float total_weight = 0.;
+	float total_weight = 0.0;
 	
-	float3 result = 0.;
+	float3 result = 0.0;
 	
 	for (int i = 0; i < SAMPLE_COUNT; i++) {
-        float2 Xi = Hammersley(i, SAMPLE_COUNT);
-        float3 H = ImportanceSampleGGX(Xi, normal, roughness);
+        float2 Xi = util::Hammersley(i, SAMPLE_COUNT);
+        float3 H = util::ImportanceSampleGGX(Xi, normal, roughness);
 		float3 L = normalize(2.*dot(V, H)*H - V);
 
         float NdotL = max(0.0, dot(normal, L));
@@ -58,7 +58,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
         float HdotV = max(0.0, dot(H, V));
 
         if (NdotL > 0.0) {
-            float D = DistributionGGX(NdotH, roughness);
+            float D = util::DistributionGGX(NdotH, roughness);
 			
 			float pdf = ((D * NdotH) / (4.0 * HdotV)) + 0.0001;
 			
@@ -69,7 +69,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
             result += environment_map.SampleLevel(
 				sampler,
-				WorldToCubemap(L),
+				util::WorldToCubemap(L),
 				mip_level
 			).rgb * NdotL;
 

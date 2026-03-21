@@ -1,4 +1,4 @@
-#include "bindless.slang"
+import bindless;
 
 struct Arguments
 {
@@ -69,7 +69,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 //	return DemoMap(input.position);
 
 	float2 uv = SampleSphericalMap(normalize(input.position));
-    float3 colour = bindless_images[args.hdr_image_id].Sample(bindless_samplers[args.linear_sampler_id], uv).rgb;
+    float3 colour = bindless::images[args.hdr_image_id].Sample(bindless::samplers[args.linear_sampler_id], uv).rgb;
 
 	return float4(colour, 1.0);
 }
