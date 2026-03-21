@@ -13,12 +13,12 @@ Arguments args;
 
 float3 Tonemapping(float3 c)
 {
-	float3 out = c;
-	
-	out = 1.0 - exp(-out * args.exposure);
-//	out = 1.0 - out;
+	float3 col = c;
 
-	return out;
+    col = 1.0 - exp(-col * args.exposure);
+//	col = 1.0 - out;
+
+    return col;
 }
 
 [shader("compute")]

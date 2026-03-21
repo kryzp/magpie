@@ -1,3 +1,0 @@
-Graphics
-vert: assets://shaders/hdr_to_environment_cubemap.vert.spv
-frag: assets://shaders/hdr_to_environment_cubemap.frag.spv

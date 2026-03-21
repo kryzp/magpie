@@ -1,3 +1,0 @@
-Graphics
-vert: assets://shaders/debug_rendering.vert.spv
-frag: assets://shaders/debug_rendering.frag.spv

@@ -1,3 +1,0 @@
-Graphics
-vert: assets://shaders/skybox.vert.spv
-frag: assets://shaders/skybox.frag.spv
