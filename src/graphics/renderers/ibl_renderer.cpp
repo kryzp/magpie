@@ -9,9 +9,9 @@ void IBLRenderer::init(Device *device, ast::AssetManager &assets)
 	this->device = device;
 	this->assets = &assets;
 
-	brdf_shader_asset       = assets.from_file_path("assets://brdf_lut.msh");
-	irradiance_shader_asset = assets.from_file_path("assets://irradiance_convolution.msh");
-	prefilter_shader_asset  = assets.from_file_path("assets://prefilter_convolution.msh");
+	brdf_shader_asset       = assets.from_file_path("assets://shaders/passes/brdf_lut.slang");
+	irradiance_shader_asset = assets.from_file_path("assets://shaders/passes/irradiance_convolution.slang");
+	prefilter_shader_asset  = assets.from_file_path("assets://shaders/passes/prefilter_convolution.slang");
 
 	brdf = device->alloc_texture_2d(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	irradiance = device->alloc_texture_cubemap(32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);

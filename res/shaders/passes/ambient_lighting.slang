@@ -3,7 +3,7 @@ import bindless;
 import types;
 
 struct PushConstants {
-	FrameData *frame_data;
+	types::FrameData *frame_data;
 
     uint position;
     uint albedo;
@@ -60,23 +60,23 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 F0 = lerp(0.04, albedo, metallic_value);
 
-	float3 view_dir = normalize(args.frame_data->camera_position.xyz - position);
+	float3 view_dir = normalize(args.frame_data.camera_position.xyz - position);
 
 	float NdotV = max(0., dot(normal, view_dir));
 
-	float3 F = FresnelSchlick(NdotV, F0, roughness_value);
+	float3 F = util::FresnelSchlick(NdotV, F0, roughness_value);
 	float3 kD = (1. - F) * (1.0 - metallic_value);
 
 	float3 reflected = normalize(reflect(-view_dir, normal));
 
     float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
-    float3 prefiltered_colour = prefilter_map.SampleLevel(sampler, WorldToCubemap(reflected), prefilter_mip_level).rgb;
+    float3 prefiltered_colour = prefilter_map.SampleLevel(sampler, util::WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
     float2 environment_brdf = bindless::images[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 
-    float3 irradiance = irradiance_map.Sample(sampler, WorldToCubemap(normal)).rgb;
+    float3 irradiance = irradiance_map.Sample(sampler, util::WorldToCubemap(normal)).rgb;
 	float3 diffuse = irradiance * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambient_occlusion;
 

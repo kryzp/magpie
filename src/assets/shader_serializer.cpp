@@ -1,35 +1,11 @@
 #include "shader_serializer.h"
 
-#include "core/hash.h"
+#include "graphics/shader_compiler.h"
 
 using namespace ast;
 
-static gfx::ShaderBytecode load_file_bytes(ArenaView &arena, const String &path)
-{
-	gfx::ShaderBytecode bytecode = {};
-
-	FILE *file = fopen(path.c_str(), "rb");
-	u64 file_size = 0;
-
-	if (file) {
-		fseek(file, 0, SEEK_END);
-		file_size = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytecode.size = file_size;
-		bytecode.bytes = (u8 *)arena.push_bytes_no_zero(file_size);
-
-		fread(bytecode.bytes, file_size, 1, file);
-
-		fclose(file);
-	}
-
-	return bytecode;
-}
-
 struct ShaderLoadData {
-	int stage_count;
-	gfx::ShaderBytecode stages[2];
+	gfx::CompiledShaderProgram compiled;
 };
 
 class ShaderSerializer : public IAssetSerializer {
@@ -41,72 +17,51 @@ public:
 AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 {
 	String file_path = ctx.system_file_path();
-	
+
 	ShaderLoadData *load_data = ctx.arena.push<ShaderLoadData>();
-	load_data->stage_count = 0;
-	
+
 	AssetLoadResult result = {};
 	result.data = load_data;
 	result.stage_size = 0; // We don't need a staging buffer for shaders.
 	result.failed = false;
 
-	FILE *file = fopen(file_path.c_str(), "r");
+	// Determine the module search path.
+	// Convention: modules live in "shaders/modules/" relative to the shader file's root.
+	// We find the "shaders/" part of the path and add "shaders/modules/" as a search path.
+	String search_path;
 
-	if (!file) {
+	u64 shaders_index = file_path.find("shaders");
+	if (shaders_index != String::npos) {
+		search_path = file_path.substr(0, shaders_index) + "shaders/modules/";
+	} else {
+		// Fallback: use same directory as the shader file.
+		u64 last_slash = file_path.find_last_of("/\\");
+		if (last_slash != String::npos)
+			search_path = file_path.substr(0, last_slash + 1);
+		else
+			search_path = "./";
+	}
+
+	Vector<String> search_paths;
+	search_paths.push_back(search_path);
+
+	// Also add the passes directory for potential cross-imports.
+	if (shaders_index != String::npos) {
+		String passes_path = file_path.substr(0, shaders_index) + "shaders/passes/";
+		search_paths.push_back(passes_path);
+	}
+
+	// Compile the .slang source file.
+	gfx::IShaderCompiler *compiler = gfx::get_shader_compiler();
+	load_data->compiled = compiler->compile(file_path.c_str(), search_paths);
+
+	if (load_data->compiled.failed) {
 		result.failed = true;
 		return result;
 	}
 
-	char line[256] = {};
-	Vector<String> spv_paths;
-
-	while (fgets(line, sizeof(line), file)) {
-		String line_str(line);
-
-		line_str.erase(std::remove(line_str.begin(), line_str.end(), '\n'), line_str.end());
-		line_str.erase(std::remove(line_str.begin(), line_str.end(), '\r'), line_str.end());
-
-		if (line_str.empty() || line_str[0] == '#')
-			continue;
-
-		switch (hash::c_str(line_str.c_str())) {
-			case hash::c_str("Graphics"):
-			case hash::c_str("Compute"):
-				break;
-
-			default:
-				// Find delimeter ':'
-				u64 colon_index = line_str.find(':');
-
-				if (colon_index != String::npos) {
-					String path = line_str.substr(colon_index + 1);
-
-					// Get rid of the leading spaces.
-					u64 first_char_idx = path.find_first_not_of(' ');
-					if (first_char_idx != String::npos)
-						path = path.substr(first_char_idx);
-
-					// Resolve relative path.
-					String absolute_spv_path = ctx.assets.get_system_file_path(path);
-					spv_paths.push_back(absolute_spv_path);
-				}
-
-				break;
-		}
-	}
-
-	fclose(file);
-
-	load_data->stage_count = spv_paths.size();
-
-	if (load_data->stage_count == 0)
-		result.failed = true;
-	
-	for (int i = 0; i < load_data->stage_count; i++) {
-		load_data->stages[i] = load_file_bytes(ctx.arena, spv_paths[i]);
-		result.failed |= load_data->stages[i].size == 0;
-		result.watch_paths.push_back(spv_paths[i]);
-	}
+	result.watch_paths.push_back(file_path); // Watch the slang file.
+	result.watch_paths.push_back(search_path); // Watch the modules directory (dependencies).
 
 	return result;
 }
@@ -119,12 +74,24 @@ Asset *ShaderSerializer::finalize(
 {
 	ShaderLoadData *load_data = (ShaderLoadData *)result.data;
 
-	Vector<gfx::ShaderBytecode> stages;
+	Vector<gfx::ShaderBytecode> bytecodes;
 
-	for (int i = 0; i < load_data->stage_count; i++)
-		stages.push_back(load_data->stages[i]);
+	for (auto &stage : load_data->compiled.stages)
+		bytecodes.push_back(stage.bytecode);
 
-	gfx::ShaderProgram *new_shader = device.create_shader_program(stages);
+	// Use the max push constant size from all stages.
+	// TODO: Could this be done better?
+	u32 push_constant_size = 0;
+	for (auto &stage : load_data->compiled.stages) {
+		if (stage.push_constant_size > push_constant_size)
+			push_constant_size = stage.push_constant_size;
+	}
+
+	gfx::ShaderProgram *new_shader = device.create_shader_program(bytecodes);
+
+	// Override with the Slang-reflected push constant size if it's larger.
+	if (push_constant_size > new_shader->get_push_constant_size())
+		debug_log_crash("fuck");
 
 	if (existing_asset) {
 		ShaderAsset *shader_asset = existing_asset->as<ShaderAsset>();

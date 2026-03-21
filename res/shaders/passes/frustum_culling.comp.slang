@@ -1,5 +1,4 @@
 import types;
-import culling;
 
 struct Arguments {
     types::ObjectData *objects;
@@ -14,7 +13,7 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-bool IsVisible(in types.ObjectData obj)
+bool IsVisible(in types::ObjectData obj)
 {
     float3 world_centre = mul(obj.model_matrix, float4(obj.sphere_bounds.xyz, 1.0)).xyz;
 

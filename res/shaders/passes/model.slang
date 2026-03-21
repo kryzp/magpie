@@ -28,12 +28,10 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 {
     uint index = instance;//args.instance_buffer[instance];
 
-    types::FrameData *frame_data = args.frame_data;
+    types::FrameData frame_data = *args.frame_data;
     types::ObjectData object_data = args.objects[index];
-
-    RenderMesh mesh = args.meshes[object_data.mesh_index];
-
-    ModelVertex vertex = mesh.vertex_buffer[vertex_id];
+    types::RenderMesh mesh = args.meshes[object_data.mesh_index];
+    types::ModelVertex vertex = mesh.vertex_buffer[vertex_id];
 
     float3x3 normal_matrix = (float3x3)object_data.normal_matrix;
 
@@ -47,7 +45,7 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 
     VS_Output output;
     output.position = mul(object_data.model_matrix, float4(vertex.position, 1.));
-	output.sv_position = mul(frame_data->projection, mul(frame_data->view, output.position));
+	output.sv_position = mul(frame_data.projection, mul(frame_data.view, output.position));
 	output.texcoord = vertex.texcoord;
     output.colour = vertex.colour;
     output.tbn = transpose(float3x3(T, B, N)); // float3x3(T,B,N) gives a row-major matrix, so transpose it to make it column-major.
@@ -80,19 +78,19 @@ FS_Output FragmentMain(VS_Output input)
     float3 metallic_roughness = float3(1.0, 1.0, 1.0);
     float ambient_occlusion = 0.0;
 
-    if (is_bindless::valid(material.albedo_texture))
+    if (bindless::IsValid(material.albedo_texture))
         albedo = bindless::images[material.albedo_texture].Sample(sampler, uv).rgba;
 
-    if (is_bindless::valid(material.normal_texture))
+    if (bindless::IsValid(material.normal_texture))
         normal = bindless::images[material.normal_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless::valid(material.emissive_texture))
+    if (bindless::IsValid(material.emissive_texture))
         emissive = bindless::images[material.emissive_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless::valid(material.mr_texture))
+    if (bindless::IsValid(material.mr_texture))
         metallic_roughness = bindless::images[material.mr_texture].Sample(sampler, uv).rgb;
 
-    if (is_bindless::valid(material.ambient_texture))
+    if (bindless::IsValid(material.ambient_texture))
         ambient_occlusion = bindless::images[material.ambient_texture].Sample(sampler, uv).r;
 
     if (albedo.a <= 0.01)

@@ -22,7 +22,7 @@ void ShadowRenderer::init(Device *device, ast::AssetManager &assets)
 		shadow_cubemap_views[i] = device->create_texture_view(shadow_cubemaps[i], VK_IMAGE_VIEW_TYPE_CUBE, SubresourceRange::all_depth());
 	}
 
-	depth_shader_asset = assets.from_file_path("assets://shadow_mapping.msh");
+	depth_shader_asset = assets.from_file_path("assets://shaders/passes/shadow_mapping.slang");
 }
 
 void ShadowRenderer::destroy()

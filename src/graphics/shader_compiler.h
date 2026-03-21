@@ -2,6 +2,10 @@
 
 #include <volk/volk.h>
 
+#include "core/types.h"
+#include "container/vector.h"
+#include "container/string.h"
+
 #include "shader.h"
 
 namespace gfx
@@ -10,15 +14,19 @@ namespace gfx
 		ShaderBytecode bytecode;
 		u32 push_constant_size;
 		VkShaderStageFlags stage;
+	};
+
+	struct CompiledShaderProgram {
+		Vector<CompiledShaderStage> stages;
 		bool failed;
 	};
 
 	class IShaderCompiler {
 	public:
 		virtual ~IShaderCompiler() = default;
-		virtual void start() = 0;
+		virtual void init() = 0;
 		virtual void shutdown() = 0;
-		virtual CompiledShaderStage compile(const char *path, const char *entry_point, VkShaderStageFlags stage_type) = 0;
+		virtual CompiledShaderProgram compile(const char *source_path, const Vector<String> &search_paths) = 0;
 	};
 
 	IShaderCompiler *get_shader_compiler();

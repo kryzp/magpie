@@ -12,7 +12,7 @@ void PostProcessingRenderer::init(ast::AssetManager &assets)
 
 	exposure = 1.f;
 
-	tonemapping_asset = assets.from_file_path("assets://hdr_tonemapping.msh");
+	tonemapping_asset = assets.from_file_path("assets://shaders/passes/hdr_tonemapping.comp.slang");
 }
 
 void PostProcessingRenderer::destroy()

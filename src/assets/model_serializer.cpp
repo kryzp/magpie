@@ -162,7 +162,7 @@ Asset *ModelSerializer::finalize(
 		}
 
 		model_asset->model = load_data->model;
-		
+
 		return model_asset;
 	}
 

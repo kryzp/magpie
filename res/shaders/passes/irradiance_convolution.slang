@@ -42,8 +42,8 @@ float4 FragmentMain(VS_Output input)
     float dt = 0.025;
     float n_samples = 0.0;
 
-    for (float phi = 0.0; phi < 2.0 * PI; phi += dt) {
-        for (float theta = 0.0; theta < 0.5 * PI; theta += dt) {
+    for (float phi = 0.0; phi < 2.0 * util::PI; phi += dt) {
+        for (float theta = 0.0; theta < 0.5 * util::PI; theta += dt) {
             float3 sample = float3(
                 sin(theta) * cos(phi),
                 sin(theta) * sin(phi),
@@ -62,7 +62,7 @@ float4 FragmentMain(VS_Output input)
 		}
 	}
 
-	irradiance *= PI / n_samples;
+	irradiance *= util::PI / n_samples;
 
 	return float4(irradiance, 1.0);
 }

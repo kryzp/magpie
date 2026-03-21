@@ -50,7 +50,7 @@ void DebugRenderer::init(Device *device, ast::AssetManager &assets)
 	this->device = device;
 	this->assets = &assets;
 
-	this->shader_asset = assets.from_file_path("assets://debug_rendering.msh");
+	this->shader_asset = assets.from_file_path("assets://shaders/passes/debug_rendering.slang");
 
 	BufferAllocInfo buffer_info = {};
 	buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;

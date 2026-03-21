@@ -63,7 +63,7 @@ namespace gfx
 		u32 push_constant_size;
 
 		u32 stage_count;
-		ShaderStage stages[2];
+		ShaderStage stages[4];
 
 		u32 cookie;
 	};

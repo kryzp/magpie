@@ -29,12 +29,12 @@ struct VS_Output {
 [shader("vertex")]
 VS_Output VertexMain(uint vertex_id : SV_VertexID, uint base_instance : SV_InstanceID)
 {
-	types::FrameData *frame_data = args.frame_data;
+	types::FrameData frame_data = *args.frame_data;
 	types::Light light = args.lights[base_instance];
 	float3 position = args.vertices[vertex_id];
 
     VS_Output output;
-    output.sv_position = mul(frame_data->view_projection, mul(light.transform, float4(position, 1.0)));
+    output.sv_position = mul(frame_data.view_projection, mul(light.transform, float4(position, 1.0)));
 	output.light_id = base_instance;
 
 	return output;
@@ -45,7 +45,7 @@ float CalculateAttenuation(float distance_squared, float3 params)
 	return 1.0 / dot(float3(distance_squared, sqrt(distance_squared), 1.0), params);
 }
 
-float CalculateShadow(float3 light_to_frag, in Light light)
+float CalculateShadow(float3 light_to_frag, in types::Light light)
 {
     types::ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
 
@@ -55,7 +55,7 @@ float CalculateShadow(float3 light_to_frag, in Light light)
     float3 sample_dir = normalize(light_to_frag);
 
     float current_depth = length(light_to_frag);
-    float sampled_depth = shadow_map.Sample(shadow_sampler, WorldToCubemap(sample_dir)).r;
+    float sampled_depth = shadow_map.Sample(shadow_sampler, util::WorldToCubemap(sample_dir)).r;
 
     sampled_depth = caster.near_plane + sampled_depth * (caster.far_plane - caster.near_plane);
 

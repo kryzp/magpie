@@ -1,11 +1,10 @@
 import types;
-import culling;
 
 struct Arguments {
-    ObjectData *objects;
-    RenderMesh *meshes;
-    PagePointers *pages;
-    IndirectDraw *indirect_buffer;
+    types::ObjectData *objects;
+    types::RenderMesh *meshes;
+    types::PagePointers *pages;
+    types::IndirectDraw *indirect_buffer;
     uint *count_buffer;
     uint object_count; uint _padding;
     float4 sphere; // x,y,z = position | w = radius
@@ -14,7 +13,7 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-bool IsVisible(in ObjectData obj)
+bool IsVisible(in types::ObjectData obj)
 {
     float3 world_centre = mul(obj.model_matrix, float4(obj.sphere_bounds.xyz, 1.0)).xyz;
 
@@ -57,12 +56,12 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
     if (gid >= args.object_count)
         return;
 
-    ObjectData obj = args.objects[gid];
+    types::ObjectData obj = args.objects[gid];
 
     if (IsVisible(obj)) {
-        PagePointers page = args.pages[obj.page_index];
+        types::PagePointers page = args.pages[obj.page_index];
         uint slot;
         InterlockedAdd(*args.count_buffer, 1, slot);
-        args.indirect_buffer[slot] = culling::GetDrawFor(gid);
+        args.indirect_buffer[slot] = GetDrawFor(gid);
 	}
 }

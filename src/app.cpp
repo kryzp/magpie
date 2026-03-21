@@ -9,6 +9,7 @@
 
 #include "graphics/gpu_types.h"
 #include "graphics/gpu_profiler.h"
+#include "graphics/shader_compiler.h"
 
 #include "graphics/renderers/debug_renderer.h"
 
@@ -103,6 +104,7 @@ void App::init(VirtualArena &global_arena)
 	ClassDB::get_singleton()->build_registry();
 
 	graphics_device.init();
+	gfx::get_shader_compiler()->init();
 	graphics_cache.init(&graphics_device);
 
 	swapchain = graphics_device.create_swapchain();
@@ -264,6 +266,7 @@ void App::destroy()
 	graphics_cache.destroy();
 
 	graphics_device.destroy_swapchain(swapchain);
+	gfx::get_shader_compiler()->shutdown();
 	graphics_device.destroy();
 }
 

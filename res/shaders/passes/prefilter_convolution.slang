@@ -62,7 +62,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 			
 			float pdf = ((D * NdotH) / (4.0 * HdotV)) + 0.0001;
 			
-			float sa_texel = 4.0 * PI / (6.0 * float(env_width) * float(env_height));
+			float sa_texel = 4.0 * util::PI / (6.0 * float(env_width) * float(env_height));
 			float sa_sample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
             float mip_level = roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);

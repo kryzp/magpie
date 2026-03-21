@@ -47,6 +47,8 @@ void AssetManager::init(ArenaView &&arena, gfx::Device *device)
 	this->asset_arena = std::move(arena);
 
 	async_upload_counter = job::alloc_counter();
+
+	debug_log("Asset manager initialized.");
 }
 
 void AssetManager::destroy()
@@ -56,6 +58,8 @@ void AssetManager::destroy()
 
 	asset_arena.destroy();
 	job::free_counter(async_upload_counter);
+
+	debug_log("Asset manager destroyed.");
 }
 
 void AssetManager::destroy_asset(const AssetHandle &handle)

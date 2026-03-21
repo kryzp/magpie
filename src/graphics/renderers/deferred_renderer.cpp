@@ -15,9 +15,9 @@ void DeferredRenderer::init(Device *device, ast::AssetManager &assets)
 {
 	this->assets = &assets;
 
-	model_shader_asset                 = assets.from_file_path("assets://model.msh");
-	ambient_lighting_shader_asset      = assets.from_file_path("assets://ambient_lighting.msh");
-	direct_lighting_point_shader_asset = assets.from_file_path("assets://direct_lighting_point.msh");
+	model_shader_asset                 = assets.from_file_path("assets://shaders/passes/model.slang");
+	ambient_lighting_shader_asset      = assets.from_file_path("assets://shaders/passes/ambient_lighting.slang");
+	direct_lighting_point_shader_asset = assets.from_file_path("assets://shaders/passes/direct_lighting_point.slang");
 
 	create_light_sphere_mesh(device);
 }

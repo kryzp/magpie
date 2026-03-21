@@ -11,8 +11,8 @@ void ComputeCulling::init(ast::AssetManager &assets)
 {
 	this->assets = &assets;
 
-	frustum_culling_asset = assets.from_file_path("assets://frustum_culling.msh");
-	sphere_culling_asset = assets.from_file_path("assets://sphere_culling.msh");
+	frustum_culling_asset = assets.from_file_path("assets://shaders/passes/frustum_culling.comp.slang");
+	sphere_culling_asset = assets.from_file_path("assets://shaders/passes/sphere_culling.comp.slang");
 }
 
 void ComputeCulling::destroy()
