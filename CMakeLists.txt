@@ -121,7 +121,6 @@ add_executable(magpie
 	"${CODE_DIR}/graphics/renderers/debug_renderer.cpp"
 
 	"${CODE_DIR}/ext/vk_mem_alloc.cpp"
-	"${CODE_DIR}/ext/spirv_reflect.cpp"
 	"${CODE_DIR}/ext/volk.cpp"
 
 	"${CODE_DIR}/ext/spirv/spirv_reflect.cpp"
@@ -136,7 +135,7 @@ add_executable(magpie
 	"${CODE_DIR}/ext/imgui/imgui_tables.cpp"
 	"${CODE_DIR}/ext/imgui/imgui_widgets.cpp"
 
-	"${CODE_DIR}/ext/miniaudio.cpp"
+	"${CODE_DIR}/ext/ma/miniaudio.cpp"
 )
 
 target_compile_definitions(magpie PUBLIC
