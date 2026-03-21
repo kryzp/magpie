@@ -96,7 +96,7 @@ FS_Output FragmentMain(VS_Output input)
     if (albedo.a <= 0.01)
         discard;
 
-	normal = 2.0*normal - 1.0;
+    normal = 2.0 * normal - 1.0;
 	normal = normalize(mul(input.tbn, normal));
 
     metallic_roughness.r += ambient_occlusion;

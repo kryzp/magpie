@@ -33,6 +33,7 @@ No gurantees on quality though, I'm still a student. Most of this code is probab
 - Right-handed Z-up coordinates (as it SHOULD be)
 - Async Asset Streaming (integrated with job system)
 - Asset Hot-Reloading
+  - Including shaders!!! Shaders are automatically compiled with an internal Slang compiler and even the modules they depend on are tracked too.
 - Arena Memory Allocation System
 - Page-allocated Render Scene
 - High-performance (almost) lockless fiber-based job system, with low-latency spin mode.
