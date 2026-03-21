@@ -140,5 +140,5 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 Lo = radiance * NdotL * (kD * diffuse + specular) * shadow_factor;
 
-	return float4(Lo, 1.);
+	return float4(Lo, 1.0);
 }

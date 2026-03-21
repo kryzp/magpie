@@ -212,6 +212,7 @@ CompiledShaderProgram SlangCompiler::compile(
 		u32 push_constant_size = 0;
 
 		slang::TypeLayoutReflection *global_params = layout->getGlobalParamsTypeLayout();
+
 		if (global_params)
 			push_constant_size = global_params->getSize();
 
