@@ -234,7 +234,7 @@ CompiledShaderProgram SlangCompiler::compile(
 
 	result.failed = false;
 
-	debug_log("Compiled Shader \"%s\" - %d stage(s).", source_path, (int)entry_point_count);
+//	debug_log("Compiled Shader \"%s\" - %d stage(s).", source_path, (int)entry_point_count);
 
 	return result;
 }
