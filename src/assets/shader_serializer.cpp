@@ -88,6 +88,9 @@ Asset *ShaderSerializer::finalize(
 
 	gfx::ShaderProgram *new_shader = device.create_shader_program(bytecodes);
 
+	for (auto &stage : load_data->compiled.stages)
+		delete[] stage.bytecode.bytes;
+
 	// Override with the Slang-reflected push constant size if it's larger.
 	if (push_constant_size > new_shader->get_push_constant_size())
 		debug_log_crash("fuck");
