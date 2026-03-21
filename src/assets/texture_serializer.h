@@ -4,9 +4,10 @@
 
 namespace ast
 {
-	struct TextureAsset : public Asset {
+	class TextureAsset : public Asset {
 		ASSET_DECLARE(ASSET_TYPE_TEXTURE);
 
+	public:
 		TextureAsset(const gfx::Texture *texture, gfx::Device &device)
 			: texture(texture)
 			, device(device)

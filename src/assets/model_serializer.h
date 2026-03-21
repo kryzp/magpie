@@ -6,9 +6,10 @@
 
 namespace ast
 {
-	struct ModelAsset : public Asset {
+	class ModelAsset : public Asset {
 		ASSET_DECLARE(ASSET_TYPE_MODEL);
 
+	public:
 		ModelAsset(const gfx::Model model)
 			: model(model)
 		{

@@ -6,9 +6,10 @@
 
 namespace ast
 {
-	struct SoundAsset : public Asset {
+	class SoundAsset : public Asset {
 		ASSET_DECLARE(ASSET_TYPE_SOUND);
 
+	public:
 		SoundAsset(audio::AudioBufferHandle buffer)
 			: buffer(buffer)
 		{

@@ -1,6 +1,6 @@
 module bindless;
 
-namespace bindless
+namespace bdl
 {
     [vk::binding(0, 0)] public SamplerState samplers[];
     [vk::binding(0, 1)] public Texture2D images[];

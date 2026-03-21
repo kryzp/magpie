@@ -3,7 +3,7 @@
 #include "container/vector.h"
 #include "container/stack.h"
 
-#include "ext/miniaudio.h"
+#include "ext/ma/miniaudio.h"
 
 using namespace audio;
 

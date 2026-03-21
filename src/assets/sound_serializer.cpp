@@ -1,6 +1,6 @@
 #include "sound_serializer.h"
 
-#include "ext/miniaudio.h"
+#include "ext/ma/miniaudio.h"
 
 using namespace ast;
 

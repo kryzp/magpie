@@ -46,7 +46,7 @@
 // (When using Volk from directory outside your include directories list you can specify full path to the volk.h header,
 //  for example when using Volk from VulkanSDK and using include_directories(${Vulkan_INCLUDE_DIRS})' from 'find_package(Vulkan REQUIRED)')
 #define IMGUI_IMPL_VULKAN_USE_VOLK
-#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <Volk/volk.h>
+#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <volk/volk.h>
 //#define IMGUI_IMPL_VULKAN_VOLK_FILENAME    <volk.h>       // Default
 // Reminder: make those changes in your imconfig.h file, not here!
 

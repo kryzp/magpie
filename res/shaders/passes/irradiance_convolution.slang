@@ -29,8 +29,8 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint view_id : SV_ViewID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    TextureCube env_map = bindless::cubes[args.environment_map_id];
-    SamplerState sampler = bindless::samplers[args.linear_sampler_id];
+    TextureCube env_map = bdl::cubes[args.environment_map_id];
+    SamplerState sampler = bdl::samplers[args.linear_sampler_id];
 
     float3 irradiance = 0.0;
 

@@ -4,9 +4,10 @@
 
 namespace ast
 {
-	struct ShaderAsset : public Asset {
+	class ShaderAsset : public Asset {
 		ASSET_DECLARE(ASSET_TYPE_SHADER);
 
+	public:
 		ShaderAsset(const gfx::ShaderProgram *shader, gfx::Device &device)
 			: shader(shader)
 			, device(device)

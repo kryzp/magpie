@@ -57,8 +57,8 @@ float CalculateShadow(float3 frag_position, in types::Light light)
 {
     types::ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
 
-    SamplerState shadow_sampler = bindless::samplers[args.shadow_sampler];
-    TextureCube shadow_map = bindless::cubes[caster.shadow_map];
+    SamplerState shadow_sampler = bdl::samplers[args.shadow_sampler];
+    TextureCube shadow_map = bdl::cubes[caster.shadow_map];
 
     float3 light_to_frag = frag_position - light.position;    
 	float current_depth = length(light_to_frag);
@@ -90,14 +90,14 @@ float CalculateShadow(float3 frag_position, in types::Light light)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
-	SamplerState sampler = bindless::samplers[args.linear_sampler];
+	SamplerState sampler = bdl::samplers[args.linear_sampler];
 	float2 uv = input.sv_position.xy / args.frame_data.window_resolution.xy;
 
-	float3 position    = bindless::images[args.position]    .Sample(sampler, uv).rgb;
-	float3 albedo      = bindless::images[args.albedo]      .Sample(sampler, uv).rgb;
-	float3 material    = bindless::images[args.material]    .Sample(sampler, uv).rgb;
-	float3 normal      = bindless::images[args.normal]      .Sample(sampler, uv).rgb;
-	float3 emissive    = bindless::images[args.emissive]    .Sample(sampler, uv).rgb;
+	float3 position    = bdl::images[args.position]    .Sample(sampler, uv).rgb;
+	float3 albedo      = bdl::images[args.albedo]      .Sample(sampler, uv).rgb;
+	float3 material    = bdl::images[args.material]    .Sample(sampler, uv).rgb;
+	float3 normal      = bdl::images[args.normal]      .Sample(sampler, uv).rgb;
+	float3 emissive    = bdl::images[args.emissive]    .Sample(sampler, uv).rgb;
 
 	types::Light light = args.lights[input.light_id];
 

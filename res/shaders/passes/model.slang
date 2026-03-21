@@ -70,7 +70,7 @@ FS_Output FragmentMain(VS_Output input)
 
 	float2 uv = frac(input.texcoord);
 
-	SamplerState sampler = bindless::samplers[args.sampler];
+	SamplerState sampler = bdl::samplers[args.sampler];
 
 	float4 albedo = float4(1.0, 1.0, 1.0, 1.0);
 	float3 normal = float3(0.0, 0.0, 1.0);
@@ -78,20 +78,20 @@ FS_Output FragmentMain(VS_Output input)
     float3 metallic_roughness = float3(1.0, 1.0, 1.0);
     float ambient_occlusion = 0.0;
 
-    if (bindless::IsValid(material.albedo_texture))
-        albedo = bindless::images[material.albedo_texture].Sample(sampler, uv).rgba;
+    if (bdl::IsValid(material.albedo_texture))
+        albedo = bdl::images[material.albedo_texture].Sample(sampler, uv).rgba;
 
-    if (bindless::IsValid(material.normal_texture))
-        normal = bindless::images[material.normal_texture].Sample(sampler, uv).rgb;
+    if (bdl::IsValid(material.normal_texture))
+        normal = bdl::images[material.normal_texture].Sample(sampler, uv).rgb;
 
-    if (bindless::IsValid(material.emissive_texture))
-        emissive = bindless::images[material.emissive_texture].Sample(sampler, uv).rgb;
+    if (bdl::IsValid(material.emissive_texture))
+        emissive = bdl::images[material.emissive_texture].Sample(sampler, uv).rgb;
 
-    if (bindless::IsValid(material.mr_texture))
-        metallic_roughness = bindless::images[material.mr_texture].Sample(sampler, uv).rgb;
+    if (bdl::IsValid(material.mr_texture))
+        metallic_roughness = bdl::images[material.mr_texture].Sample(sampler, uv).rgb;
 
-    if (bindless::IsValid(material.ambient_texture))
-        ambient_occlusion = bindless::images[material.ambient_texture].Sample(sampler, uv).r;
+    if (bdl::IsValid(material.ambient_texture))
+        ambient_occlusion = bdl::images[material.ambient_texture].Sample(sampler, uv).r;
 
     if (albedo.a <= 0.01)
         discard;

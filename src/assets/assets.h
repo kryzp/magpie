@@ -23,10 +23,9 @@
 
 class FileStream;
 
-//	ASSET_TYPE_SOUND,
-//	ASSET_TYPE_MATERIAL,
-//	ASSET_TYPE_MESH,
-//	ASSET_TYPE_MAP,
+//	ASSET_TYPE_MATERIAL
+//	ASSET_TYPE_MESH
+//	ASSET_TYPE_MAP
 
 // I <3 X-MACROS!!
 #define ASSET_DEFINITIONS			\
@@ -35,9 +34,11 @@ class FileStream;
 	ASSET_DEF(MODEL, Model)			\
 	ASSET_DEF(SOUND, Sound)
 
-#define ASSET_DECLARE(type_)												\
+#define ASSET_DECLARE(type_)													\
+	public:																		\
 	static AssetType get_asset_type_static() { return type_; }				\
-	virtual AssetType get_asset_type() const override { return type_; }
+		virtual AssetType get_asset_type() const override { return type_; }		\
+	private:
 
 namespace ast
 {

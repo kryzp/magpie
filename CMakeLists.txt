@@ -124,6 +124,10 @@ add_executable(magpie
 	"${CODE_DIR}/ext/spirv_reflect.cpp"
 	"${CODE_DIR}/ext/volk.cpp"
 
+	"${CODE_DIR}/ext/spirv/spirv_reflect.cpp"
+
+	"${CODE_DIR}/ext/stb/stb_impl.cpp"
+
 	"${CODE_DIR}/ext/imgui/imgui.cpp"
 	"${CODE_DIR}/ext/imgui/imgui_demo.cpp"
 	"${CODE_DIR}/ext/imgui/imgui_draw.cpp"

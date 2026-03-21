@@ -32,5 +32,5 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID)
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    return float4(bindless::cubes[args.cubemap].Sample(bindless::samplers[args.sampler], normalize(util::WorldToCubemap(input.position))).rgb, 1.);
+    return float4(bdl::cubes[args.cubemap].Sample(bdl::samplers[args.sampler], normalize(util::WorldToCubemap(input.position))).rgb, 1.);
 }
