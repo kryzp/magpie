@@ -9,14 +9,10 @@
 
 namespace gfx
 {
-	struct ShadowRendererInfo : public RenderGraphBlackboardData {
-		const GpuBuffer *shadow_caster_table;
-	};
-
 	class ShadowRenderer {
 	public:
 		static constexpr u32 MAX_SHADOW_CASTERS = 6;
-		static constexpr u32 SHADOW_MAP_RESOLUTION = 1024;
+		static constexpr u32 SHADOW_MAP_RESOLUTION = 2048;
 
 		void init(Device *device, ast::AssetManager &assets);
 		void destroy();
@@ -44,5 +40,11 @@ namespace gfx
 		GpuBuffer *caster_table_buffer;
 
 		ast::AssetHandle depth_shader_asset;
+	};
+
+	struct ShadowRendererInfo : public RenderGraphBlackboardData {
+		const GpuBuffer *shadow_caster_table;
+		int shadow_map_count;
+		RenderResourceHandle shadow_maps[ShadowRenderer::MAX_SHADOW_CASTERS];
 	};
 }

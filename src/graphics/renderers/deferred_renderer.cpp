@@ -209,6 +209,10 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 	RenderResourceHandle lighting_prefilter_handle = lighting_stage.read_texture(graph.import_texture(prefilter));
 	RenderResourceHandle lighting_brdf_handle = lighting_stage.read_texture(graph.import_texture(brdf));
 
+	for (int i = 0; i < shadow_info.shadow_map_count; i++) {
+		lighting_stage.read_texture(shadow_info.shadow_maps[i]);
+	}
+
 	lighting_stage.set_record([=](const RenderContext &ctx, const RenderStageResources &resources) -> void {
 		CommandBuffer &cmd = ctx.cmd;
 		

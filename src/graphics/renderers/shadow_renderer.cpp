@@ -82,8 +82,12 @@ void ShadowRenderer::render_shadows(
 		}
 	}
 
+	ShadowRendererInfo info = {};
+	info.shadow_caster_table = caster_table_buffer;
+	info.shadow_map_count = caster_count;
+
 	for (int caster_index = 0; caster_index < caster_count; caster_index++) {
-		const auto &info = shadow_casters[caster_index];
+		const auto &info_caster = shadow_casters[caster_index];
 
 		char stage_name[64];
 		snprintf(stage_name, sizeof(stage_name), "Shadow Mapping (slot %d)", caster_index);
@@ -93,13 +97,14 @@ void ShadowRenderer::render_shadows(
 
 		DrawStream draw_stream = culling.cull_sphere(
 			graph, bb, scene, scene_resources,
-			info.position, info.radius
+			info_caster.position, info_caster.radius
 		);
 
 		shadow_stage.indirect_buffer(draw_stream.indirect_buffer);
 		shadow_stage.indirect_buffer(draw_stream.count_buffer);
 
 		RenderResourceHandle cubemap_rg = graph.import_texture(shadow_cubemaps[caster_index]);
+		info.shadow_maps[caster_index] = cubemap_rg;
 
 		RenderClear clear(1.f, 0);
 
@@ -111,7 +116,7 @@ void ShadowRenderer::render_shadows(
 			GraphicsPipelineDef pipeline_def(assets->get_asset<ast::ShaderAsset>(depth_shader_asset)->shader);
 			pipeline_def.has_depth_attachment = true;
 			pipeline_def.multi_view_mask = 0b111111;
-			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
+//			pipeline_def.cull_mode = VK_CULL_MODE_FRONT_BIT;
 
 			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
@@ -149,9 +154,6 @@ void ShadowRenderer::render_shadows(
 			}
 		});
 	}
-
-	ShadowRendererInfo info = {};
-	info.shadow_caster_table = caster_table_buffer;
 
 	bb.add<ShadowRendererInfo>(info);
 }

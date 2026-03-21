@@ -45,30 +45,53 @@ float CalculateAttenuation(float distance_squared, float3 params)
 	return 1.0 / dot(float3(distance_squared, sqrt(distance_squared), 1.0), params);
 }
 
-float CalculateShadow(float3 light_to_frag, in types::Light light)
+static const float3 pcf_offsets[20] = {
+	float3( 1.0, 1.0, 1.0), float3( 1.0,-1.0, 1.0), float3(-1.0, -1.0,  1.0), float3(-1.0, 1.0, 1.0), 
+	float3( 1.0, 1.0,-1.0), float3( 1.0,-1.0,-1.0), float3(-1.0, -1.0, -1.0), float3(-1.0, 1.0,-1.0),
+	float3( 1.0, 1.0, 0.0), float3( 1.0,-1.0, 0.0), float3(-1.0, -1.0,  0.0), float3(-1.0, 1.0, 0.0),
+	float3( 1.0, 0.0, 1.0), float3(-1.0, 0.0, 1.0), float3( 1.0,  0.0, -1.0), float3(-1.0, 0.0,-1.0),
+	float3( 0.0, 1.0, 1.0), float3( 0.0,-1.0, 1.0), float3( 0.0, -1.0, -1.0), float3( 0.0, 1.0,-1.0)
+};
+
+float CalculateShadow(float3 frag_position, in types::Light light)
 {
     types::ShadowCaster caster = args.shadow_casters[light.shadow_slot_index];
 
     SamplerState shadow_sampler = bindless::samplers[args.shadow_sampler];
     TextureCube shadow_map = bindless::cubes[caster.shadow_map];
 
-    float3 sample_dir = normalize(light_to_frag);
+    float3 light_to_frag = frag_position - light.position;    
+	float current_depth = length(light_to_frag);
 
-    float current_depth = length(light_to_frag);
-    float sampled_depth = shadow_map.Sample(shadow_sampler, util::WorldToCubemap(sample_dir)).r;
-
-    sampled_depth = caster.near_plane + sampled_depth * (caster.far_plane - caster.near_plane);
+    float shadow = 0.0;
 
     float bias = 0.05;
+    int sample_count = 20;
 
-    return current_depth - bias > sampled_depth ? 0.0 : 1.0;
+    float disk_radius = (1.0 + length(light.position - args.frame_data.camera_position)*10.0) * 0.0005;
+
+    for (int i = 0; i < sample_count; i++) {
+        float3 sample_dir = light_to_frag + pcf_offsets[i] * disk_radius;
+        sample_dir = normalize(sample_dir);
+
+        float sampled_depth = shadow_map.Sample(shadow_sampler, util::WorldToCubemap(sample_dir)).r;
+
+        sampled_depth = caster.near_plane + sampled_depth * (caster.far_plane - caster.near_plane);
+
+        if (current_depth - bias > sampled_depth)
+            shadow += 1.0;
+    }
+
+    shadow /= float(sample_count);
+
+    return 1.0 - shadow;
 }
 
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
 	SamplerState sampler = bindless::samplers[args.linear_sampler];
-	float2 uv = input.sv_position.xy / args.frame_data->window_resolution.xy;
+	float2 uv = input.sv_position.xy / args.frame_data.window_resolution.xy;
 
 	float3 position    = bindless::images[args.position]    .Sample(sampler, uv).rgb;
 	float3 albedo      = bindless::images[args.albedo]      .Sample(sampler, uv).rgb;
@@ -83,7 +106,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float3 F0 = lerp(0.04, albedo, metallic_value);
 
-	float3 view_dir = normalize(args.frame_data->camera_position - position);
+	float3 view_dir = normalize(args.frame_data.camera_position - position);
 
 	float NdotV = max(0.0, dot(normal, view_dir));
 
@@ -105,15 +128,15 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	float NDF = util::DistributionGGX(NdotH, roughness_value);
 	float G = util::GeometrySmith_ARTISTIC(NdotV, NdotL, roughness_value);
 
-	float3 kD = (1. - F) * (1. - metallic_value);
+	float3 kD = (1.0 - F) * (1.0 - metallic_value);
 
 	float3 diffuse = albedo;
-	float3 specular = (F * G * NDF) / (4. * NdotL * NdotV + 0.0001);
+	float3 specular = (F * G * NDF) / (4.0 * NdotL * NdotV + 0.0001);
 
     float shadow_factor = 1.0;
 
     if (light.shadow_slot_index != -1)
-        shadow_factor = CalculateShadow(-delta_x, light);
+        shadow_factor = CalculateShadow(position, light);
 
 	float3 Lo = radiance * NdotL * (kD * diffuse + specular) * shadow_factor;
 
