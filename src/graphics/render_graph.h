@@ -20,20 +20,6 @@
 #include "resource_cache.h"
 #include "sync.h"
 
-/*
-#define GFX_DECLARE_BLACKBOARD_DATA(_name)			\
-public:												\
-class Meta {										\
-public:												\
-	static inline u32 type_id() { return id; }		\
-private:											\
-	static u32 id;									\
-}													\
-
-#define GFX_BLACKBOARD_DATA(_name) \
-u32 _name::Meta::id = RenderGraphBlackboard::assign_id()
-*/
-
 namespace gfx
 {
 	class RenderGraph;
@@ -259,7 +245,7 @@ namespace gfx
 		RenderStageResources(RenderGraph &graph, const RenderStage &stage);
 		~RenderStageResources();
 
-		RenderInfo build_rendering_info() const;
+		RenderInfo rendering_info() const;
 		
 		const Texture *get_texture(RenderResourceHandle handle) const;
 		const TextureView *get_texture_view(RenderResourceHandle handle, const SubresourceRange &range) const;

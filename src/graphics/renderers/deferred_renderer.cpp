@@ -197,6 +197,7 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 	RenderStage &lighting_stage = graph.push_stage("Lighting", RenderStage::TYPE_GRAPHICS);
 	
 	AttachmentInfo lighting_info(VK_FORMAT_R32G32B32A32_SFLOAT);
+
 	RenderResourceHandle lighting = graph.create_texture(lighting_info);
 
 	lighting_stage.write_colour(lighting);

@@ -30,7 +30,7 @@ RenderStageResources::~RenderStageResources()
 {
 }
 
-RenderInfo RenderStageResources::build_rendering_info() const
+RenderInfo RenderStageResources::rendering_info() const
 {
 	RenderInfo render_info = {};
 
@@ -44,9 +44,8 @@ RenderInfo RenderStageResources::build_rendering_info() const
 		//       --> Ideally I should have resolving implemented so they automatically have their resolves.
 		render_info.samples = attachment_info.samples;
 
-		u32 mip = output.range.base_mip;
-		render_info.width = CalcU::max(1u, (u32)attachment_info.size_x >> mip);
-		render_info.height = CalcU::max(1u, (u32)attachment_info.size_y >> mip);
+		render_info.width = CalcU::max(1u, (u32)attachment_info.size_x >> output.range.base_mip);
+		render_info.height = CalcU::max(1u, (u32)attachment_info.size_y >> output.range.base_mip);
 
 		VkRenderingAttachmentInfo vk_attachment_info = {};
 		vk_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -988,7 +987,7 @@ void RenderGraph::execute(
 		};
 
 		if (stage.type == RenderStage::TYPE_GRAPHICS) {
-			cmd.begin_rendering(stage_resources.build_rendering_info());
+			cmd.begin_rendering(stage_resources.rendering_info());
 			stage.record(ctx, stage_resources);
 			cmd.end_rendering();
 		} else {

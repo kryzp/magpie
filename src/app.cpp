@@ -128,8 +128,8 @@ void App::init(VirtualArena &global_arena)
 
 	audio_system.init();
 
-	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/Sponza/glTF/Sponza.gltf");
-//	ast::AssetHandle model_handle = assets.from_file_path("assets://Models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+	ast::AssetHandle model_handle = assets.from_file_path("assets://models/Sponza/glTF/Sponza.gltf");
+//	ast::AssetHandle model_handle = assets.from_file_path("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 	
 	ast::ModelAsset *model_asset = assets.get_asset<ast::ModelAsset>(model_handle);
 

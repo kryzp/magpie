@@ -90,7 +90,7 @@ void ShadowRenderer::render_shadows(
 		const auto &info_caster = shadow_casters[caster_index];
 
 		char stage_name[64];
-		snprintf(stage_name, sizeof(stage_name), "Shadow Mapping (slot %d)", caster_index);
+		snprintf(stage_name, sizeof(stage_name), "Shadow Mapping (Slot %d)", caster_index);
 
 		RenderStage &shadow_stage = graph.push_stage(stage_name, RenderStage::TYPE_GRAPHICS);
 		shadow_stage.set_multi_view_mask(0b111111);
