@@ -16,7 +16,7 @@ float3 Tonemapping(float3 c)
 	float3 col = c;
 
     col = 1.0 - exp(-col * args.exposure);
-//	col = 1.0 - out;
+//	col = 1.0 - col;
 
     return col;
 }

@@ -26,15 +26,14 @@ AssetLoadResult ShaderSerializer::load(const AssetLoadContext &ctx)
 	result.failed = false;
 
 	// Determine the module search path.
-	// Convention: modules live in "shaders/modules/" relative to the shader file's root.
-	// We find the "shaders/" part of the path and add "shaders/modules/" as a search path.
+	// --> Modules live in "shaders/modules/"
 	String search_path;
 
 	u64 shaders_index = file_path.find("shaders");
 	if (shaders_index != String::npos) {
 		search_path = file_path.substr(0, shaders_index) + "shaders/modules/";
 	} else {
-		// Fallback: use same directory as the shader file.
+		// Use same directory as the shader file if we can't find "shaders/"
 		u64 last_slash = file_path.find_last_of("/\\");
 		if (last_slash != String::npos)
 			search_path = file_path.substr(0, last_slash + 1);

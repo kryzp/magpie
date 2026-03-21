@@ -208,17 +208,14 @@ CompiledShaderProgram SlangCompiler::compile(
 			return result;
 		}
 
-		// Determine push constant size from Slang reflection.
-		// Slang encodes push constants as global-scope parameters with the [vk::push_constant] attribute.
-		// The size of the global scope parameter block tells us the push constant size.
+		// Determine push constant size.
 		u32 push_constant_size = 0;
 
-		// Get global scope parameters size — this is the push constant block.
 		slang::TypeLayoutReflection *global_params = layout->getGlobalParamsTypeLayout();
 		if (global_params)
 			push_constant_size = global_params->getSize();
 
-		// Copy the SPIR-V into our own allocation
+		// Copy the SPIR-V into our own allocation.
 		u64 code_size = spirv_code->getBufferSize();
 		u8 *code_copy = new u8[code_size];
 		memory_copy(code_copy, spirv_code->getBufferPointer(), code_size);
