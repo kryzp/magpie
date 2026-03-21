@@ -39,6 +39,15 @@ namespace audio
 
 		virtual void tick(float dt, const AudioListener &listener) = 0;
 
+		virtual void play(AudioSourceHandle source) = 0;
+		virtual void stop(AudioSourceHandle source) = 0;
+		virtual void resume(AudioSourceHandle source) = 0;
+		virtual void pause(AudioSourceHandle source) = 0;
+		virtual void reset(AudioSourceHandle source) = 0;
+
+		virtual bool is_playing(AudioSourceHandle source) = 0;
+		virtual bool is_looping(AudioSourceHandle source) = 0;
+
 		virtual AudioBufferHandle create_buffer(const void *data, u64 size, u32 channels, u16 sample_rate, AudioFormat format) = 0;
 		virtual void destroy_buffer(AudioBufferHandle buffer) = 0;
 
@@ -54,15 +63,6 @@ namespace audio
 		virtual void set_source_doppler_factor(AudioSourceHandle source, float factor) = 0;
 		virtual void set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model) = 0;
 		virtual void set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance) = 0;
-
-		virtual void play(AudioSourceHandle source) = 0;
-		virtual void stop(AudioSourceHandle source) = 0;
-		virtual void resume(AudioSourceHandle source) = 0;
-		virtual void pause(AudioSourceHandle source) = 0;
-		virtual void reset(AudioSourceHandle source) = 0;
-
-		virtual bool is_playing(AudioSourceHandle source) = 0;
-		virtual bool is_looping(AudioSourceHandle source) = 0;
 	};
 
 	IAudioBackend *get_audio_backend();

@@ -61,6 +61,15 @@ public:
 
 	void tick(float dt, const AudioListener &listener) override;
 
+	void play(AudioSourceHandle source) override;
+	void stop(AudioSourceHandle source) override;
+	void resume(AudioSourceHandle source) override;
+	void pause(AudioSourceHandle source) override;
+	void reset(AudioSourceHandle source) override;
+
+	bool is_playing(AudioSourceHandle source) override;
+	bool is_looping(AudioSourceHandle source) override;
+
 	AudioBufferHandle create_buffer(const void *data, u64 size, u32 channels, u16 sample_rate, AudioFormat format) override;
 	void destroy_buffer(AudioBufferHandle buffer) override;
 
@@ -76,15 +85,6 @@ public:
 	void set_source_doppler_factor(AudioSourceHandle source, float factor) override;
 	void set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model) override;
 	void set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance) override;
-
-	void play(AudioSourceHandle source) override;
-	void stop(AudioSourceHandle source) override;
-	void resume(AudioSourceHandle source) override;
-	void pause(AudioSourceHandle source) override;
-	void reset(AudioSourceHandle source) override;
-
-	bool is_playing(AudioSourceHandle source) override;
-	bool is_looping(AudioSourceHandle source) override;
 
 private:
 	ma_engine engine;
@@ -154,6 +154,64 @@ void MiniAudioBackend::tick(float dt, const AudioListener &listener)
 		listener.up.y,
 		listener.up.z
 	);
+}
+
+void MiniAudioBackend::play(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
+	ma_sound_start(&sources[source]->sound);
+}
+
+void MiniAudioBackend::stop(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
+	ma_sound_stop(&sources[source]->sound);
+}
+
+void MiniAudioBackend::resume(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_start(&sources[source]->sound);
+}
+
+void MiniAudioBackend::pause(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_stop(&sources[source]->sound);
+}
+
+void MiniAudioBackend::reset(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
+}
+
+bool MiniAudioBackend::is_playing(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	return ma_sound_is_playing(&sources[source]->sound);
+}
+
+bool MiniAudioBackend::is_looping(AudioSourceHandle source)
+{
+	assert(source != INVALID_AUDIO_SOURCE);
+	assert(sources[source]->is_valid);
+
+	return ma_sound_is_looping(&sources[source]->sound);
 }
 
 AudioBufferHandle MiniAudioBackend::create_buffer(const void *data, u64 size, u32 channels, u16 sample_rate, AudioFormat format)
@@ -316,64 +374,6 @@ void MiniAudioBackend::set_source_attenuation_range(AudioSourceHandle source, fl
 
 	ma_sound_set_min_distance(&sources[source]->sound, min_distance);
 	ma_sound_set_max_distance(&sources[source]->sound, max_distance);
-}
-
-void MiniAudioBackend::play(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
-	ma_sound_start(&sources[source]->sound);
-}
-
-void MiniAudioBackend::stop(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
-	ma_sound_stop(&sources[source]->sound);
-}
-
-void MiniAudioBackend::resume(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	ma_sound_start(&sources[source]->sound);
-}
-
-void MiniAudioBackend::pause(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	ma_sound_stop(&sources[source]->sound);
-}
-
-void MiniAudioBackend::reset(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	ma_sound_seek_to_pcm_frame(&sources[source]->sound, 0);
-}
-
-bool MiniAudioBackend::is_playing(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	return ma_sound_is_playing(&sources[source]->sound);
-}
-
-bool MiniAudioBackend::is_looping(AudioSourceHandle source)
-{
-	assert(source != INVALID_AUDIO_SOURCE);
-	assert(sources[source]->is_valid);
-
-	return ma_sound_is_looping(&sources[source]->sound);
 }
 
 IAudioBackend *audio::get_audio_backend()
