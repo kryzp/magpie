@@ -262,12 +262,37 @@ namespace gfx
 		const RenderStage &stage;
 	};
 
+	/*
+	struct RenderPassInfo {
+		Vector<VkFormat> colour_formats;
+		bool has_depth_format = false;
+		u32 multi_view_mask = 0;
+	};
+
+	// Quick utility wrapper to make rendering code more readable for render graph passes.
+	struct BoundPipeline {
+		CommandBuffer &cmd;
+		VkPipelineLayout layout;
+		VkShaderStageFlags stage_flags;
+
+		void push_constants(u64 size, const void *data, u32 offset = 0) const
+		{
+			cmd.push_constants(layout, stage_flags, size, data, offset);
+		}
+	};
+	*/
+
 	struct RenderContext {
 		Device &device;
 		ResourceCache &cache;
+
 		CommandBuffer &cmd;
+		
 		RenderScene &scene;
 		const Camera &camera;
+		
+//		RenderPassInfo pass_info;
+
 		float delta_time;
 		float elapsed_time;
 	};

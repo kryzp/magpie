@@ -159,9 +159,6 @@ namespace gfx
 
 		// ---
 
-		ShaderStage create_shader_stage(const ShaderBytecode &data);
-		void destroy_shader_stage(const ShaderStage &stage);
-
 		ShaderProgram *create_shader_program(const Vector<ShaderBytecode> &stages);
 		void destroy_shader_program(const ShaderProgram *program);
 
@@ -241,7 +238,6 @@ namespace gfx
 			Vector<ImageDestroy> destroyed_images;
 			Vector<VkImageView> destroyed_views;
 			Vector<BufferDestroy> destroyed_buffers;
-			Vector<ShaderStage> destroyed_stages;
 			Vector<BindlessHandle> destroyed_bindless_samplers;
 			Vector<BindlessHandle> destroyed_bindless_views;
 

@@ -120,7 +120,7 @@ void ShadowRenderer::render_shadows(
 
 			PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
-			cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
+			cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, ctx.device.get_bindless());
 			cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
 			struct {

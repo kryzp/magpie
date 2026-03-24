@@ -119,37 +119,42 @@ void CommandBuffer::pipeline_barrier(
 }
 
 void CommandBuffer::bind_descriptors(
-	VkPipelineBindPoint bind_point,
+	VkShaderStageFlags stage_flags,
 	VkPipelineLayout layout, u32 first,
 	const Vector<VkDescriptorSet> &descriptors,
 	const Vector<u32> &dynamic_offsets
 )
 {
-	vkCmdBindDescriptorSets(
-		handle,
-		bind_point,
-		layout, first,
-		descriptors.size(),
-		descriptors.data(),
-		dynamic_offsets.size(),
-		dynamic_offsets.data()
-	);
+	VkBindDescriptorSetsInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO;
+	info.stageFlags = stage_flags;
+	info.layout = layout;
+	info.firstSet = first;
+	info.descriptorSetCount = descriptors.size();
+	info.pDescriptorSets = descriptors.data();
+	info.dynamicOffsetCount = dynamic_offsets.size();
+	info.pDynamicOffsets = dynamic_offsets.data();
+
+	vkCmdBindDescriptorSets2(handle, &info);
 }
 
 void CommandBuffer::bind_bindless(
-	VkPipelineBindPoint bind_point,
+	VkShaderStageFlags stage_flags,
 	VkPipelineLayout layout,
 	const BindlessResources &bindless
 )
 {
-	vkCmdBindDescriptorSets(
-		handle,
-		bind_point,
-		layout, 0,
-		BINDLESS_SET_MAX_ENUM,
-		bindless.get_sets(),
-		0, nullptr
-	);
+	VkBindDescriptorSetsInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_BIND_DESCRIPTOR_SETS_INFO;
+	info.stageFlags = stage_flags;
+	info.layout = layout;
+	info.firstSet = 0;
+	info.descriptorSetCount = BINDLESS_SET_MAX_ENUM;
+	info.pDescriptorSets = bindless.get_sets();
+	info.dynamicOffsetCount = 0;
+	info.pDynamicOffsets = nullptr;
+
+	vkCmdBindDescriptorSets2(handle, &info);
 }
 
 void CommandBuffer::bind_pipeline(
@@ -169,10 +174,11 @@ void CommandBuffer::bind_index_buffer(
 	u64 offset
 )
 {
-	vkCmdBindIndexBuffer(
+	vkCmdBindIndexBuffer2(
 		handle,
 		buffer->get_handle(),
 		offset,
+		VK_WHOLE_SIZE,
 		VK_INDEX_TYPE_UINT32
 	);
 }
@@ -180,17 +186,19 @@ void CommandBuffer::bind_index_buffer(
 void CommandBuffer::push_constants(
 	VkPipelineLayout layout,
 	VkShaderStageFlags stage_flags,
-	u64 size, void *data,
+	u64 size, const void *data,
 	u32 offset
 )
 {
-	vkCmdPushConstants(
-		handle,
-		layout,
-		stage_flags,
-		offset,
-		size, data
-	);
+	VkPushConstantsInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+	info.layout = layout;
+	info.stageFlags = stage_flags;
+	info.offset = offset;
+	info.size = size;
+	info.pValues = data;
+
+	vkCmdPushConstants2(handle, &info);
 }
 
 void CommandBuffer::set_line_width(float thickness)
@@ -241,15 +249,39 @@ void CommandBuffer::draw_indexed_indirect(
 void CommandBuffer::draw_indexed_indirect_count(
 	const GpuBuffer *buffer, u64 offset,
 	const GpuBuffer *count_buffer, u64 count_offset,
-	u32 count, u32 stride
+	u32 max_count, u32 stride
 )
 {
 	vkCmdDrawIndexedIndirectCount(
 		handle,
 		buffer->get_handle(), offset,
 		count_buffer->get_handle(), count_offset,
-		count, stride
+		max_count, stride
 	);
+}
+
+void CommandBuffer::draw_mesh_tasks_indirect_count(
+	const GpuBuffer *buffer, u64 offset,
+	const GpuBuffer *count_buffer, u64 count_offset,
+	u32 max_count, u32 stride
+)
+{
+	vkCmdDrawMeshTasksIndirectCountEXT(
+		handle,
+		buffer->get_handle(), offset,
+		count_buffer->get_handle(), count_offset,
+		max_count, stride
+	);
+}
+
+void CommandBuffer::dispatch(u32 x, u32 y, u32 z)
+{
+	vkCmdDispatch(handle, x, y, z);
+}
+
+void CommandBuffer::dispatch_indirect(const GpuBuffer *buffer, u64 offset)
+{
+	vkCmdDispatchIndirect(handle, buffer->get_handle(), offset);
 }
 
 void CommandBuffer::blit(
@@ -417,11 +449,6 @@ void CommandBuffer::fill_buffer(
 		buffer->get_handle(),
 		offset, size, data
 	);
-}
-
-void CommandBuffer::dispatch(u32 x, u32 y, u32 z)
-{
-	vkCmdDispatch(handle, x, y, z);
 }
 
 void CommandBuffer::begin_query(VkQueryPool pool, u32 query, VkQueryControlFlags flags)

@@ -138,7 +138,7 @@ GBuffer DeferredRenderer::render_geometry(
 
 		PipelineState pipeline_st = ctx.cache.fetch_pipeline(pipeline_def);
 
-		cmd.bind_bindless(pipeline_st.bind_point, pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(pipeline_st.bind_point, pipeline_st.pipeline);
 
 		struct {
@@ -226,7 +226,7 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 
 		PipelineState ambient_pipeline_st = ctx.cache.fetch_pipeline(ambient_pipeline_def);
 
-		cmd.bind_bindless(ambient_pipeline_st.bind_point, ambient_pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, ambient_pipeline_st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(ambient_pipeline_st.bind_point, ambient_pipeline_st.pipeline);
 
 		struct {
@@ -282,7 +282,7 @@ RenderResourceHandle DeferredRenderer::render_lighting(
 		
 		PipelineState direct_pipeline_st = ctx.cache.fetch_pipeline(direct_pipeline_def);
 
-		cmd.bind_bindless(direct_pipeline_st.bind_point, direct_pipeline_st.layout, ctx.device.get_bindless());
+		cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, direct_pipeline_st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(direct_pipeline_st.bind_point, direct_pipeline_st.pipeline);
 
 		light_sphere_mesh.bind_indices(cmd);

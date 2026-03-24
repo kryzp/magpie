@@ -519,6 +519,11 @@ void Context::init()
 	vulkan13_features.synchronization2 = VK_TRUE;
 	vulkan13_features.pNext = &vulkan12_features;
 
+	VkPhysicalDeviceVulkan14Features vulkan14_features = {};
+	vulkan14_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+	vulkan14_features.maintenance5 = VK_TRUE;
+	vulkan14_features.pNext = &vulkan13_features;
+
 	static const char *device_extensions[] = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
@@ -536,7 +541,7 @@ void Context::init()
 	device_create_info.enabledExtensionCount = array_size(device_extensions);
 	device_create_info.ppEnabledExtensionNames = device_extensions;
 	device_create_info.pEnabledFeatures = &physical_device_features.features;
-	device_create_info.pNext = &vulkan13_features;
+	device_create_info.pNext = &vulkan14_features;
 
 	if (has_validation_layers) {
 		device_create_info.enabledLayerCount = array_size(graphics_validation_layers);

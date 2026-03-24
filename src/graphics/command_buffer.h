@@ -53,14 +53,14 @@ namespace gfx
 		// ---
 
 		void bind_descriptors(
-			VkPipelineBindPoint bind_point,
+			VkShaderStageFlags stage_flags,
 			VkPipelineLayout layout, u32 first,
 			const Vector<VkDescriptorSet> &descriptors,
 			const Vector<u32> &dynamic_offsets
 		);
 
 		void bind_bindless(
-			VkPipelineBindPoint bind_point,
+			VkShaderStageFlags stage_flags,
 			VkPipelineLayout layout,
 			const BindlessResources &bindless
 		);
@@ -78,7 +78,7 @@ namespace gfx
 		void push_constants(
 			VkPipelineLayout layout,
 			VkShaderStageFlags stage_flags,
-			u64 size, void *data,
+			u64 size, const void *data,
 			u32 offset = 0
 		);
 
@@ -111,8 +111,20 @@ namespace gfx
 		void draw_indexed_indirect_count(
 			const GpuBuffer *buffer, u64 offset,
 			const GpuBuffer *count_buffer, u64 count_offset,
-			u32 count, u32 stride
+			u32 max_count, u32 stride
 		);
+
+		void draw_mesh_tasks_indirect_count(
+			const GpuBuffer *buffer, u64 offset,
+			const GpuBuffer *count_buffer, u64 count_offset,
+			u32 max_count, u32 stride
+		);
+
+		// ---
+
+		void dispatch(u32 x, u32 y, u32 z);
+
+		void dispatch_indirect(const GpuBuffer *buffer, u64 offset);
 
 		// ---
 
@@ -151,10 +163,6 @@ namespace gfx
 			const GpuBuffer *buffer,
 			u64 offset, u64 size, u32 data
 		);
-
-		// ---
-
-		void dispatch(u32 x, u32 y, u32 z);
 
 		// ---
 

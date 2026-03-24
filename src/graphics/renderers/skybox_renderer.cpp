@@ -114,7 +114,7 @@ void SkyboxRenderer::add_render_stages(
 		args.cubemap_id = cubemap_view->get_bindless_handle();
 		args.sampler_id = Sampler::linear->get_bindless_handle();
 
-		cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+		cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(st.bind_point, st.pipeline);
 
 		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);
@@ -159,7 +159,7 @@ void SkyboxRenderer::render_hdr_to_skybox(
 
 		PipelineState st = ctx.cache.fetch_pipeline(pipeline_def);
 
-		cmd.bind_bindless(st.bind_point, st.layout, ctx.device.get_bindless());
+		cmd.bind_bindless(VK_SHADER_STAGE_ALL_GRAPHICS, st.layout, ctx.device.get_bindless());
 		cmd.bind_pipeline(st.bind_point, st.pipeline);
 
 		cmd.push_constants(st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args);

@@ -6,15 +6,17 @@
 
 namespace gfx
 {
+	constexpr static u32 MAX_SHADER_STAGES = 4;
+
 	struct ShaderBytecode {
 		u8 *bytes;
 		u64 size;
 	};
 
 	struct ShaderStage {
-		VkShaderStageFlags type;
-		VkShaderModule module;
+		VkShaderStageFlags flags;
 		u32 push_constant_size;
+		ShaderBytecode bytecode;
 	};
 
 	/*
@@ -49,9 +51,14 @@ namespace gfx
 			return stage_count;
 		}
 
-		const ShaderStage &get_stage(u32 stage) const
+		VkShaderStageFlags get_stage_flags(u32 stage) const
 		{
-			return stages[stage];
+			return stages[stage].flags;
+		}
+
+		ShaderBytecode get_stage_bytecode(u32 stage) const
+		{
+			return stages[stage].bytecode;
 		}
 
 		u32 get_cookie() const
@@ -63,7 +70,7 @@ namespace gfx
 		u32 push_constant_size;
 
 		u32 stage_count;
-		ShaderStage stages[4];
+		ShaderStage stages[MAX_SHADER_STAGES];
 
 		u32 cookie;
 	};

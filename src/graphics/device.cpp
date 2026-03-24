@@ -223,9 +223,6 @@ void Device::PerFrameData::flush(VkDevice vk_device, VmaAllocator vma_allocator,
 	for (auto &buffer : destroyed_buffers)
 		vmaDestroyBuffer(vma_allocator, buffer.handle, buffer.allocation);
 
-	for (auto &stage : destroyed_stages)
-		vkDestroyShaderModule(vk_device, stage.module, nullptr);
-
 	for (auto &bs : destroyed_bindless_samplers)
 		bindless.free_sampler(bs);
 
@@ -236,7 +233,6 @@ void Device::PerFrameData::flush(VkDevice vk_device, VmaAllocator vma_allocator,
 	destroyed_images.clear();
 	destroyed_views.clear();
 	destroyed_buffers.clear();
-	destroyed_stages.clear();
 	destroyed_bindless_samplers.clear();
 	destroyed_bindless_views.clear();
 }
@@ -754,19 +750,27 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 	pipeline_rendering_create_info.depthAttachmentFormat = depth_stencil_format;
 	pipeline_rendering_create_info.stencilAttachmentFormat = depth_stencil_format;
 
-	VkPipelineShaderStageCreateInfo shader_stages[2] = {};
+	const ShaderProgram *program = def.program;
 
-	for (int i = 0; i < def.program->get_stage_count(); i++) {
-		VkPipelineShaderStageCreateInfo *shader_stage = &shader_stages[i];
-		shader_stage->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		shader_stage->stage = (VkShaderStageFlagBits)def.program->get_stage(i).type;
-		shader_stage->module = def.program->get_stage(i).module;
-		shader_stage->pName = "main";
+	VkShaderModuleCreateInfo module_infos[MAX_SHADER_STAGES] = {};
+	VkPipelineShaderStageCreateInfo shader_stages[MAX_SHADER_STAGES] = {};
+
+	for (int i = 0; i < program->get_stage_count(); i++) {
+		module_infos[i].sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		module_infos[i].codeSize = program->get_stage_bytecode(i).size;
+		module_infos[i].pCode = (u32 *)program->get_stage_bytecode(i).bytes;
+		module_infos[i].flags = 0;
+
+		shader_stages[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shader_stages[i].stage = (VkShaderStageFlagBits)program->get_stage_flags(i);
+		shader_stages[i].module = VK_NULL_HANDLE;
+		shader_stages[i].pName = "main";
+		shader_stages[i].pNext = &module_infos[i];
 	}
 
 	VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
 	graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	graphics_pipeline_create_info.stageCount = def.program->get_stage_count();
+	graphics_pipeline_create_info.stageCount = program->get_stage_count();
 	graphics_pipeline_create_info.pStages = shader_stages;
 	graphics_pipeline_create_info.pVertexInputState = &vertex_input_state_create_info;
 	graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_state_create_info;
@@ -800,13 +804,22 @@ VkPipeline Device::create_pipeline(const GraphicsPipelineDef &def, VkPipelineLay
 
 VkPipeline Device::create_pipeline(const ComputePipelineDef &def, VkPipelineLayout layout)
 {
-	assert(def.program->is_compute());
+	const ShaderProgram *program = def.program;
+
+	assert(program->is_compute());
+
+	VkShaderModuleCreateInfo module_info = {};
+	module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	module_info.codeSize = program->get_stage_bytecode(0).size;
+	module_info.pCode = (u32 *)program->get_stage_bytecode(0).bytes;
+	module_info.flags = 0;
 
 	VkPipelineShaderStageCreateInfo shader_stage = {};
 	shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shader_stage.stage = (VkShaderStageFlagBits)def.program->get_stage(0).type;
-	shader_stage.module = def.program->get_stage(0).module;
+	shader_stage.stage = (VkShaderStageFlagBits)program->get_stage_flags(0);
+	shader_stage.module = VK_NULL_HANDLE;
 	shader_stage.pName = "main";
+	shader_stage.pNext = &module_info;
 
 	VkComputePipelineCreateInfo compute_pipeline_create_info = {};
 	compute_pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -1199,7 +1212,7 @@ void Device::destroy_buffer(const GpuBuffer *buffer)
 	delete buffer;
 }
 
-ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
+static ShaderStage create_shader_stage(const ShaderBytecode &data)
 {
 	SpvReflectShaderModule reflect_module = {};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(data.size, data.bytes, &reflect_module);
@@ -1212,7 +1225,7 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 	ShaderStage stage = {};
 
 	if (reflect_module.entry_point_count >= 1) {
-		stage.type = (VkShaderStageFlags)reflect_module.entry_points[0].shader_stage;
+		stage.flags = (VkShaderStageFlags)reflect_module.entry_points[0].shader_stage;
 
 		u32 push_constant_count = 0;
 		reflect_result = spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, nullptr);
@@ -1234,19 +1247,9 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 			}
 		}
 
-		VkShaderModuleCreateInfo module_create_info = {};
-		module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		module_create_info.codeSize = data.size;
-		module_create_info.pCode = (const u32 *)data.bytes;
-
-		GFX_VK_CHECK(
-			vkCreateShaderModule(
-				context.get_device(),
-				&module_create_info, nullptr,
-				&stage.module
-			),
-			"Failed to create shader module."
-		);
+		stage.bytecode.size = data.size;
+		stage.bytecode.bytes = (u8 *)malloc(data.size);
+		memcpy(stage.bytecode.bytes, data.bytes, data.size);
 	} else {
 		debug_log_crash("No entry points found in SPIR-V.\n");
 	}
@@ -1256,9 +1259,9 @@ ShaderStage Device::create_shader_stage(const ShaderBytecode &data)
 	return stage;
 }
 
-void Device::destroy_shader_stage(const ShaderStage &stage)
+static void destroy_shader_stage(const ShaderStage &stage)
 {
-	per_frame_data[current_frame_index].destroyed_stages.push_back(stage);
+	free(stage.bytecode.bytes);
 }
 
 ShaderProgram *Device::create_shader_program(const Vector<ShaderBytecode> &stages)
