@@ -1,0 +1,7 @@
+GFX_DEVICE_MANAGED_RESOURCE(PipelineLayout, VkPipelineLayout)
+GFX_DEVICE_MANAGED_RESOURCE(Pipeline,       VkPipeline)
+GFX_DEVICE_MANAGED_RESOURCE(Texture,        GFX_Texture)
+GFX_DEVICE_MANAGED_RESOURCE(TextureView,    GFX_TextureView)
+GFX_DEVICE_MANAGED_RESOURCE(Buffer,         GFX_Buffer)
+GFX_DEVICE_MANAGED_RESOURCE(Sampler,        GFX_Sampler)
+GFX_DEVICE_MANAGED_RESOURCE(Shader,         GFX_ShaderProgram)

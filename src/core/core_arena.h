@@ -1,0 +1,29 @@
+#ifndef CORE_ARENA_H
+#define CORE_ARENA_H
+
+typedef struct Arena Arena;
+struct Arena
+{
+	void *base;
+	u64 capacity;
+	u64 used;
+	u64 last_alloc_size;
+};
+
+internal Arena ArenaInitMemory(void *memory, u64 capacity);
+internal Arena ArenaInitArena(Arena *arena, u64 capacity);
+
+internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment);
+
+internal void ArenaPopTo(Arena *arena, u64 to);
+internal void ArenaPop(Arena *arena, u64 bytes);
+
+internal void ArenaResizeLastBy(Arena *arena, u64 bytes);
+internal void ArenaResizeLastTo(Arena *arena, u64 bytes);
+
+internal void ArenaClear(Arena *arena);
+internal void ArenaZero(Arena *arena);
+
+#define ArenaPushArray(arena, type, count) ArenaPush((arena), sizeof(type) * (count), alignof(type))
+
+#endif // CORE_ARENA_H

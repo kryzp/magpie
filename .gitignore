@@ -11,3 +11,5 @@ cmake-build-debug/
 *\.rdbg
 CMakeSettings.json
 /res/Models
+TAGS
+

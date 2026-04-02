@@ -1,94 +1,61 @@
-#pragma once
+#ifndef APP_H
+#define APP_H
 
-#include "core/memory_arena.h"
-
-#include "math/timer.h"
-
-#include "assets/assets.h"
-
-#include "audio/audio_system.h"
-
-#include "graphics/device.h"
-#include "graphics/resource_cache.h"
-#include "graphics/render_scene.h"
-#include "graphics/render_graph.h"
-#include "graphics/camera.h"
-
-#include "graphics/renderers/ibl_renderer.h"
-#include "graphics/renderers/compute_culling.h"
-#include "graphics/renderers/deferred_renderer.h"
-#include "graphics/renderers/skybox_renderer.h"
-#include "graphics/renderers/post_processing.h"
-#include "graphics/renderers/shadow_renderer.h"
-
-#include "platform/input.h"
-
-class CameraDriver {
-public:
-	void update(gfx::Camera &camera, const inp::InputState &input, float dt);
-
-private:
-	float yaw = 0.f;
-	float target_yaw = 0.f;
-	float pitch = 0.f;
-	float target_pitch = 0.f;
+typedef struct CameraDriver CameraDriver;
+struct CameraDriver
+{
+	f32 yaw;
+	f32 target_yaw;
+	f32 pitch;
+	f32 target_pitch;
 };
 
-class App {
-	static constexpr u32 TARGET_FPS = 120;
-	static constexpr u64 TRANSIENT_ARENA_SIZE = MEGABYTES(512);
-	static constexpr float HOT_RELOAD_INTERVAL = 0.5f;
+internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera);
 
-public:
-	App();
-	~App();
+typedef struct App App;
+struct App
+{
+	Arena permanent_arena;
+	Arena frame_arena;
 
-	void init(VirtualArena &global_arena);
-	void destroy();
-	bool tick(const inp::InputState &input);
-
-private:
-	void update(float dt, const inp::InputState &input);
-	void fixed_update(float dt);
-	void render(float dt, const inp::InputState &input, float elapsed_time, gfx::CommandBuffer &present_cmd, gfx::RenderSceneResources &scene_resources);
-
-	void add_imgui_render_stage(gfx::RenderGraph &graph, const gfx::RenderResourceHandle &output_attachment);
+	OS_API *osapi;
 	
-	Timer global_timer;
-	Timer delta_timer;
-	float delta_accumulator;
-	Timer hot_reload_timer;
+	CH_Timer global_timer;
+	CH_Timer delta_timer;
+	CH_Timer hot_reload_timer;
 
-	ast::AssetManager assets;
+	f32 delta_accumulator;
 
-	gfx::Device graphics_device;
-	gfx::ResourceCache graphics_cache;
+	AST_Assets assets;
 
-	gfx::Swapchain swapchain;
+	AUD_System audio_system;
+	AUD_BufferHandle test_sound;
 
-	gfx::RenderScene render_scene;
-	gfx::RenderGraph render_graph;
+	GFX_Device graphics_device;
+	GFX_Swapchain swapchain;
 
-	gfx::GpuRingBuffer ring_upload_buffer;
+	GFX_RingBuffer frame_upload_ring_buffer;
+	GFX_BufferKey frame_data_buffer;
+	GFX_BufferKey cubemap_capture_transform_buffer;
+	
+	R_Graph graph;
+	R_GraphHandle swapchain_src;
+	R_Scene scene;
+	R_SceneLightHandle light_handle;
+	R_Camera camera;
 
-	gfx::Camera main_camera;
 	CameraDriver camera_driver;
-	bool camera_driver_active;
-
-	gfx::GpuBuffer *frame_data_buffer;
-	gfx::GpuBuffer *cubemap_capture_transforms;
-	
-	gfx::IBLRenderer ibl_renderer;
-	gfx::ComputeCulling compute_culling;
-	gfx::DeferredRenderer deferred_renderer;
-	gfx::SkyboxRenderer skybox_renderer;
-	gfx::PostProcessingRenderer post_processing;
-	gfx::ShadowRenderer shadow_renderer;
-
-	gfx::RenderResourceHandle swapchain_src;
-
-	gfx::RenderHandle light_handle;
-
-	audio::AudioSystem audio_system;
-	audio::AudioBufferHandle test_sound;
+	b32 camera_driver_active;
 };
+
+global OS_API *osapi;
+
+internal void AppBootstrapArenas(const OS_BootstrapData *data);
+
+__declspec(dllexport) void AppInit(const OS_BootstrapData *data);
+__declspec(dllexport) void AppDestroy(void);
+__declspec(dllexport) b32  AppTick(const I_InputSt *input);
+__declspec(dllexport) void AppHotLoad(const OS_BootstrapData *data);
+__declspec(dllexport) void AppHotUnload(void);
+
+#endif // APP_H

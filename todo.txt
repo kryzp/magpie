@@ -1,6 +1,0 @@
-1) why so many caches pipelines??? 445 or some shit??
-2) merge types.slang and gpu_types.h
-3) make creating graphics pipeline def inside of render graphs easier (e.g: automatically handling multi_view_mask, colour formats, and whether or not a depth attachment is present, etc...)
-4) create a RenderingManager to move the gfx crap out of App
-5) refactor the renderers - some of them are really just passes, etc...
-6) shader hot reloading isn't working

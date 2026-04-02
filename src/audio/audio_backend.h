@@ -1,69 +1,64 @@
-#pragma once
+#ifndef AUDIO_BACKEND_H
+#define AUDIO_BACKEND_H
 
-#include "core/types.h"
-#include "math/vec3.h"
-#include "container/string.h"
+typedef u32 AUD_BufferHandle;
+typedef u32 AUD_SourceHandle;
 
-#include "audio_listener.h"
-
-namespace audio
+typedef enum AUD_Format
 {
-	typedef u32 AudioBufferHandle;
-	typedef u32 AudioSourceHandle;
-	
-	static constexpr AudioBufferHandle INVALID_AUDIO_BUFFER = -1u;
-	static constexpr AudioSourceHandle INVALID_AUDIO_SOURCE = -1u;
-
-	enum AudioFormat {
-		FORMAT_U8,
-		FORMAT_S16,
-		FORMAT_S24,
-		FORMAT_S32,
-		FORMAT_F32,
-		FORMAT_MAX_ENUM
-	};
-
-	enum AttenuationModel {
-		ATTENUATION_INVERSE,
-		ATTENUATION_EXPONENTIAL,
-		ATTENUATION_LINEAR,
-		ATTENUATION_MAX_ENUM,
-	};
-
-	class IAudioBackend {
-	public:
-		virtual ~IAudioBackend() = default;
-
-		virtual void init() = 0;
-		virtual void shutdown() = 0;
-
-		virtual void tick(float dt, const AudioListener &listener) = 0;
-
-		virtual void play(AudioSourceHandle source) = 0;
-		virtual void stop(AudioSourceHandle source) = 0;
-		virtual void resume(AudioSourceHandle source) = 0;
-		virtual void pause(AudioSourceHandle source) = 0;
-		virtual void reset(AudioSourceHandle source) = 0;
-
-		virtual bool is_playing(AudioSourceHandle source) = 0;
-		virtual bool is_looping(AudioSourceHandle source) = 0;
-
-		virtual AudioBufferHandle create_buffer(const void *data, u64 size, u32 channels, u16 sample_rate, AudioFormat format) = 0;
-		virtual void destroy_buffer(AudioBufferHandle buffer) = 0;
-
-		virtual AudioSourceHandle create_source() = 0;
-		virtual void destroy_source(AudioSourceHandle source) = 0;
-
-		virtual void set_source_buffer(AudioSourceHandle source, AudioBufferHandle buffer) = 0;	
-		virtual void set_source_stream(AudioSourceHandle source, const String &filepath) = 0;
-		virtual void set_source_volume(AudioSourceHandle source, float volume) = 0;
-		virtual void set_source_pitch(AudioSourceHandle source, float pitch) = 0;
-		virtual void set_source_looping(AudioSourceHandle source, bool loop) = 0;
-		virtual void set_source_position(AudioSourceHandle source, const Vec3 &position) = 0;
-		virtual void set_source_doppler_factor(AudioSourceHandle source, float factor) = 0;
-		virtual void set_source_attenuation_model(AudioSourceHandle source, AttenuationModel model) = 0;
-		virtual void set_source_attenuation_range(AudioSourceHandle source, float min_distance, float max_distance) = 0;
-	};
-
-	IAudioBackend *get_audio_backend();
+	AUD_Format_U8,
+	AUD_Format_S16,
+	AUD_Format_S24,
+	AUD_Format_S32,
+	AUD_Format_F32,
+	AUD_Format_COUNT
 }
+AUD_Format;
+
+typedef enum AUD_AttenuationModel
+{
+	AUD_AttenuationModel_Inverse,
+	AUD_AttenuationModel_Exponential,
+	AUD_AttenuationModel_Linear,
+	AUD_AttenuationModel_COUNT
+}
+AUD_AttenuationModel;
+
+typedef struct AUD_Backend AUD_Backend;
+struct AUD_Backend
+{
+	void (*Init)(void);
+	void (*Shutdown)(void);
+
+	void (*Tick)(f32 dt, AUD_Listener listener);
+
+	void (*Play)(AUD_SourceHandle source);
+	void (*Stop)(AUD_SourceHandle source);
+	void (*Resume)(AUD_SourceHandle source);
+	void (*Pause)(AUD_SourceHandle source);
+	void (*Reset)(AUD_SourceHandle source);
+
+	b32 (*IsPlaying)(AUD_SourceHandle source);
+	b32 (*IsLooping)(AUD_SourceHandle source);
+
+	AUD_BufferHandle (*CreateBuffer)(const void *data, u64 bytes, u32 channels, u16 sample_rate, AUD_Format format);
+	void (*DestroyBuffer)(AUD_BufferHandle buffer);
+
+	AUD_SourceHandle (*CreateSource)(void);
+	void (*DestroySource)(AUD_SourceHandle source);
+
+	void (*SetSourceBuffer)(AUD_SourceHandle source, AUD_BufferHandle buffer);
+	void (*SetSourceStream)(AUD_SourceHandle source, String8 path);
+	void (*SetSourceVolume)(AUD_SourceHandle source, f32 volume);
+	void (*SetSourcePitch)(AUD_SourceHandle source, f32 pitch);
+	void (*SetSourceLooping)(AUD_SourceHandle source, b32 loop);
+	void (*SetSourcePosition)(AUD_SourceHandle source, v3 position);
+	void (*SetSourceDopplerFactor)(AUD_SourceHandle source, f32 factor);
+	void (*SetSourceAttenuationModel)(AUD_SourceHandle source, AUD_AttenuationModel model);
+	void (*SetSourceAttenuationRange)(AUD_SourceHandle source, f32 dist_min, f32 dist_max);
+};
+
+internal AUD_Backend *AUD_BackendAlloc(Arena *arena);
+internal void AUD_BackendFree(Arena *arena);
+
+#endif // AUDIO_BACKEND_H

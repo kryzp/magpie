@@ -1,12 +1,12 @@
-#pragma once
+#ifndef AUDIO_LISTENER_H
+#define AUDIO_LISTENER_H
 
-#include "math/vec3.h"
-
-namespace audio
+typedef struct AUD_Listener AUD_Listener;
+struct AUD_Listener
 {
-	struct AudioListener {
-		Vec3 eye;
-		Vec3 forward;
-		Vec3 up;
-	};
-}
+	v3 eye;
+	v3 forward;
+	v3 up;
+};
+
+#endif // AUDIO_LISTENER_H

@@ -1,15 +1,5 @@
-#pragma once
-
-#include "core/types.h"
-#include "container/vector.h"
-#include "math/vec3.h"
-
-// Example of a .mcs cutscene file.
-// Top (before ---) defines actors
-// Bottom (after ---) defines the cutscene script
-// [...] before a command sets the actor id of the currently being built command
-// some commands don't need an actor so it's optional
-// $xxx refers to a global variable
+#ifndef CUTSCENE_H
+#define CUTSCENE_H
 
 /*
 Pat = "npc_pat_01"
@@ -27,57 +17,47 @@ else
 	[Pat] "Nevim..."
 */
 
-namespace cs
+typedef enum CS_CommandType
 {
-	enum CutsceneCommandType {
-		CS_CMD_WAIT,
-		CS_CMD_MOVE_ACTOR,
-		CS_CMD_SHOW_DIALOG,
-		CS_CMD_MAX_ENUM
-	};
-
-	struct CutsceneCommand {
-		CutsceneCommandType type;
-		bool is_finished;
-		float time_remaining;
-		u64 actor_tag_hash;
-		int actor_id;
-		Vec3 target_position;
-		float speed;
-	};
-
-	class CutsceneCommandBuilder {
-	public:
-		CutsceneCommandBuilder();
-		~CutsceneCommandBuilder();
-
-		CutsceneCommand build();
-
-		CutsceneCommandBuilder &set_type(CutsceneCommandType type);
-		CutsceneCommandBuilder &set_length(float length);
-		CutsceneCommandBuilder &set_actor(u64 hash);
-		CutsceneCommandBuilder &set_target_position(const Vec3 &target);
-		CutsceneCommandBuilder &set_speed(float speed);
-
-	private:
-		CutsceneCommand command;
-	};
-
-	struct Cutscene {
-		Vector<CutsceneCommand> commands;
-	};
-
-	class CutsceneManager {
-	public:
-		CutsceneManager();
-		~CutsceneManager();
-
-		void play(const Cutscene &cutscene);
-		void tick(float dt);
-
-	private:
-		Vector<CutsceneCommand> commands;
-		int current_command_index;
-		bool is_playing;
-	};
+	CS_CommandType_Wait,
+	CS_CommandType_MoveActor,
+	CS_CommandType_ShowDialog,
+	CS_CommandType_COUNT
 }
+CS_CommandType;
+
+typedef struct CS_Command CS_Command;
+struct CS_Command
+{
+	CS_Command *cutscene_next;
+	
+	CS_CommandType type;
+	b32 is_finished;	
+
+	f32 time_remaining;
+	
+	u64 actor_tag_hash;
+	u32 actor_id;
+
+	v3 target_position;
+	f32 speed;
+};
+
+typedef struct CS_Cutscene CS_Cutscene;
+struct CS_Cutscene
+{
+	CS_Command *command_head;
+};
+
+typedef struct CS_Director CS_Director;
+struct CS_Director
+{
+	CS_Command *command_head;
+	CS_Command *current_command;
+	b32 is_playing;
+};
+
+internal void CS_DirectorPlay(CS_Director *director, const CS_Cutscene *cutscene);
+internal void CS_DirectorTick(CS_Director *director, float dt);
+
+#endif // CUTSCENE_H
