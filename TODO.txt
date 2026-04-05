@@ -1,1 +1,5 @@
-rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
+- rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
+- add caching to the pipeline layout, pipeline and view creation in device
+- finish shader compiler
+- finish render scene
+- finish render graph
