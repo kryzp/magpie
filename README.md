@@ -7,7 +7,7 @@
 ![](images/sponza.png)
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else—feel free to use any of the code in your own projects, as long as you credit me a little.
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little.
 
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
 
@@ -112,7 +112,7 @@ Data that simply cannot survive a hot-reload, such as OS level features (i.e. th
 ```
 
 ### Formatting
-iles in each namespace begin with the full name of the namespace followed by an underscore, and include guards are just the capitalized name of the file.
+Files in each namespace begin with the full name of the namespace followed by an underscore, and include guards are just the capitalized name of the file.
 
 All structs and enums are typedef'd (sorry Torvalds) to improve readability. However, avoid using misleading typedefs:
 
@@ -132,11 +132,12 @@ struct MyDataType
 };
 ```
 
-Therefore, only do this when you really HAVE to use an opaque type that isn't portable at all (so much so that you're okay with sacrificing an innocent puppy for the sake of the code—hope it was worth it!), and in those cases make it clear that it's a pointer or anything that isn't plain ol' data.
+Therefore, only do this when you really HAVE to use an opaque type that isn't portable at all (so much so that you're okay with sacrificing an innocent puppy for the sake of the code, hope it was worth it!), and in those cases make it clear that it's a pointer or anything that isn't plain ol' data.
 
 Macros follow the naming convention of whatever makes the most sense: if it's meant to act like a function use `PascalCase`, if it's a constant use `SCREAMING_SNAKE_CASE`, etc.
 
 ## QnA
 
 > Where's the cool engine UI?????
+
 Not a game engine. And even if it was, I'd only make the editor UI after deciding on the game.

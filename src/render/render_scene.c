@@ -93,6 +93,7 @@ R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources
 	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS && write_index < scene->object_count; i++)
 	{
 		R_SceneObjectSlot *slot = &scene->object_slots[i];
+		
 		if (!slot->active)
 			continue;
  
@@ -112,7 +113,54 @@ R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources
 internal void
 R_SceneUpdateLightBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
 {
-	// TODO
+	scene->shadow_caster_count = 0;
+
+	out->light_buffer = GFX_RingBufferPushArray(ring, R_GPU_Light, scene->light_count);
+
+	R_GPU_Light *mapped = out->light_buffer.cpu;
+
+	u32 write_index = 0;
+	i32 shadow_slot_index = 0;
+
+	for (u32 i = 0; i < R_SCENE_MAX_LIGHTS && write_index < scene->light_count; i++)
+	{
+		R_SceneLightSlot *slot = &scene->light_slots[i];
+
+		if (!slot->active)
+			continue;
+
+		const R_Light *light = &slot->light;
+
+		const f32 heuristic_radius = R_LightHeuristicRadius(light, 0.05f);
+
+		mapped[write_index].transform   = M4Transform(light->position, V4QuatIdentity(), v3x(heuristic_radius), v3x(0.f));
+		mapped[write_index].position    = light->position;
+		mapped[write_index].colour      = light->colour;
+		mapped[write_index].intensity   = light->intensity;
+		mapped[write_index].attenuation = v3(light->falloff, 0.f, 0.f);
+		mapped[write_index].radius      = heuristic_radius;
+
+		if (light->casts_shadows && scene->shadow_caster_count < R_SCENE_MAX_SHADOW_CASTERS)
+		{
+			mapped[write_index].shadow_slot_index = shadow_slot_index;
+
+			R_ShadowCaster *caster = &scene->shadow_casters[scene->shadow_caster_count];
+			caster->position = light->position;
+			caster->near     = light->shadow_near;
+			caster->far      = light->shadow_far;
+			caster->radius   = heuristic_radius;
+
+			scene->shadow_caster_count++;
+
+			shadow_slot_index++;
+		}
+		else
+		{
+			mapped[write_index].shadow_slot_index = -1;
+		}
+
+		write_index++;
+	}
 }
 
 internal void
