@@ -1,4 +1,6 @@
 
+// TODO: Just move this into the device...
+
 global const char *gfx_context_vk_validation_layers[] = {
 	"VK_LAYER_KHRONOS_validation"
 };

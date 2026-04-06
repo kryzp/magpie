@@ -35,6 +35,8 @@ clang \
 	-I"$code/" \
 	-I"/Users/kryzp/VulkanSDK/1.4.335.1/macOS/include" \
 	-fdeclspec \
+	-Wno-switch \
+	-Wno-ignored-attributes \
 	-fPIC \
 	-c -o app.o
 

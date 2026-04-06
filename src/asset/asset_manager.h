@@ -14,17 +14,25 @@ AST_Type;
 internal inline AST_Type
 AST_TypeFromString(String8 str)
 {
-	// TODO
+#define AssetDef(name) if (String8Match(str, Str8(#name))) return AST_Type_##name;
+#include "asset_definitions.inc"
+#undef AssetDef
 	
-	AssertTrue(false);
+	AssertTrue(false && "Unknown Asset Name.");
+
+	return AST_Type_COUNT;
 }
 
 internal inline String8
 AST_StringFromType(Arena *arena, AST_Type type)
 {
-	// TODO
+#define AssetDef(name) if (type == AST_Type_##name) return Str8(#name);
+#include "asset_definitions.inc"
+#undef AssetDef
 	
-	AssertTrue(false);
+	AssertTrue(false && "Unknown Asset Type.");
+
+	return (String8) {0};
 }
 
 typedef enum AST_State
@@ -42,33 +50,33 @@ AST_State;
 internal inline b32
 AST_StateIsLoading(AST_State st)
 {
-	// TODO
-	
-	AssertTrue(false);
+	return
+		st == AST_State_CpuStage ||
+		st == AST_State_WaitingForDependencies ||
+		st == AST_State_GpuStage;
 }
 
 internal inline b32
 AST_StateNeedsLoad(AST_State st)
 {
-	// TODO
-	
-	AssertTrue(false);
+	return
+		st == AST_State_Unloaded ||
+		st == AST_State_Failed;
 }
 
 internal inline b32
 AST_StateIsLoaded(AST_State st)
 {
-	// TODO
-	
-	AssertTrue(false);
+	return
+		st == AST_State_Ready;
 }
 
 internal inline b32
 AST_StateIsFinalized(AST_State st)
 {
-	// TODO
-	
-	AssertTrue(false);
+	return
+		st == AST_State_Ready ||
+		st == AST_State_Failed;
 }
 
 typedef struct AST_MetaData AST_MetaData;

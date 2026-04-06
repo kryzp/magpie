@@ -29,6 +29,17 @@ struct JOB_Fiber
 	Arena *scratch_arenas[2];
 };
 
+typedef struct JOB_Counter JOB_Counter;
+struct JOB_Counter
+{
+	u32 atomic_count;
+	u32 atomic_spinlock;
+
+	// Fibers that are blocked waiting on this counter.
+	u32 waiting_count;
+	JOB_Fiber *waiting[JOB_COUNTER_MAX_WAITING];
+};
+
 typedef struct JOB_Request JOB_Request;
 struct JOB_Request
 {

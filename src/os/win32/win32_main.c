@@ -1012,7 +1012,7 @@ main(void)
 	W32_BindAPI(&win32_st.api);
 	
 	W32_InitImGui();
-	W32_LoadCode(String8("build/app.dll"));
+	W32_LoadCode(Str8("build/app.dll"));
 
 	u64 job_memory_size =
 		JOB_MAX_CONCURRENT_FIBERS * THREAD_CONTEXT_SCRATCH_RING_SIZE * JOB_FIBER_SCRATCH_SIZE +

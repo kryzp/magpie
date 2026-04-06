@@ -9,6 +9,29 @@ String8Init(u8 *str, u64 len)
 	return s;
 }
 
+internal String8
+String8Alloc(Arena *arena, u32 len)
+{
+	String8 str = {0};
+	str.str = ArenaPushArray(arena, u8, len + 1);
+	str.len = len;
+
+	return str;
+}
+
+internal String8
+String8Append(Arena *arena, String8 a, String8 b)
+{
+	u32 len = a.len + b.len;
+
+	String8 out = String8Alloc(arena, len);
+
+	MemCopy(out.str        , a.str, a.len);
+	MemCopy(out.str + a.len, b.str, b.len);
+
+	return out;
+}
+
 internal b32
 String8Match(String8 a, String8 b)
 {
@@ -24,25 +47,21 @@ String8Match(String8 a, String8 b)
 	return true;
 }
 
-internal String8
-String8ViewUpToLastSubstringIncl(String8 string, String8 sub)
+internal u32
+String8UpToLastSubstringIncl(String8 string, String8 sub)
 {
-	String8 result = {0};
-	result.str = string.str;
-	result.len = 0;
-
 	for (u64 i = string.len - sub.len - 1; i >= 0; i--)
 	{
 		String8 here = String8Init(string.str + i, sub.len);
 
 		if (String8Match(here, sub))
 		{
-			result.len = i + sub.len;
+			return i + sub.len;
 			break;
 		}
 	}
 
-	return result;
+	return -1;
 }
 
 internal b32

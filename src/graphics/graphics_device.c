@@ -307,6 +307,31 @@ GFX_DeviceSubmitImEnd(GFX_Device *device, GFX_CmdBuffer *cmd)
 	GFX_DeviceWaitUntil(device, GFX_DeviceSubmit(device, cmd));
 }
 
+// TODO: We really shouldn't need to initialize
+//       and de-initialize volk like this. Surely
+//       we should load all fpointers into a table
+//       which we store in program memory (possible
+//       in volk) and just load that table back
+//       in after reloading?
+//       --> Also, do VMA's function pointers
+//           break down here? Or is it okay?
+
+internal void
+GFX_DeviceHotLoad(GFX_Device *device)
+{
+	volkInitialize();
+	volkLoadInstance(device->context.instance);
+	volkLoadDevice(device->context.device);
+
+	GFX_DeviceWaitIdle(device);
+}
+
+internal void
+GFX_DeviceHotUnload(GFX_Device *device)
+{
+	volkFinalize();
+}
+
 internal void
 GFX_DeviceQueryPoolDestroy(const GFX_Device *device, VkQueryPool pool)
 {
@@ -1309,19 +1334,63 @@ GFX_DeviceSamplerFromKey(const GFX_Device *device, GFX_SamplerKey key)
 }
 
 internal GFX_ShaderStage
-GFX_DeviceShaderStageCreate(const GFX_ShaderBytecode *bytecode)
+GFX_DeviceShaderStageCreate(Arena *arena, const GFX_ShaderBytecode *bytecode)
 {
-	// TODO
+	SpvReflectShaderModule reflect_module = {0};
+	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
 
-	AssertTrue(false);
-}
+	if (reflect_result != SPV_REFLECT_RESULT_SUCCESS)
+	{
+		DebugLogF("Failed to reflect SPIR-V module: %d\n", reflect_result);
+		AssertTrue(false);
+	}
+	
+	ScratchArena scratch = ScratchBegin(&arena, 1);
 
-internal void
-GFX_DeviceShaderStageDestroy(const GFX_ShaderStage *stage)
-{
-	// TODO
+	GFX_ShaderStage stage = {0};
 
-	AssertTrue(false);
+	if (reflect_module.entry_point_count >= 1)
+	{
+		stage.flags = (VkShaderStageFlagBits)reflect_module.entry_points[0].shader_stage;
+
+		u32 push_constant_count = 0;
+		reflect_result = spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, NULL);
+
+		if (reflect_result == SPV_REFLECT_RESULT_SUCCESS && push_constant_count > 0)
+		{
+			SpvReflectBlockVariable **pcs = ArenaPushArray(scratch.arena, SpvReflectBlockVariable *, push_constant_count);
+			
+			spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, pcs);
+
+			for (u32 i = 0; i < push_constant_count; i++)
+			{
+				SpvReflectBlockVariable *pc = pcs[i];
+
+				u32 alignment = 4;
+
+				for (u32 j = 0; j < pc->member_count; j++)
+					alignment = MaxValue(alignment, pc->members[j].size);
+
+				u32 padded = MemAlignUp(pc->size, alignment);
+
+				stage.push_constant_size = MaxValue(stage.push_constant_size, padded);
+			}
+		}
+
+		stage.bytecode.size = bytecode->size;
+		stage.bytecode.bytes = ArenaPush(arena, bytecode->size, 1);
+		
+		MemCopy(stage.bytecode.bytes, bytecode->bytes, bytecode->size);
+	} else {
+		DebugLogF("No entry points found in SPIR-V.");
+		AssertTrue(false);
+	}
+
+	spvReflectDestroyShaderModule(&reflect_module);
+
+	ScratchRelease(&scratch);
+
+	return stage;
 }
 
 internal GFX_ShaderKey
@@ -1333,7 +1402,7 @@ GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_Sha
 
 	for (u32 i = 0; i < stage_count; i++)
 	{
-		program.stages[i] = GFX_DeviceShaderStageCreate(&stages[i]);
+		program.stages[i] = GFX_DeviceShaderStageCreate(device->permanent_arena, &stages[i]);
 		program.push_constant_size = MaxValue(program.push_constant_size, program.stages[i].push_constant_size);
 	}
 
@@ -1346,13 +1415,7 @@ GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_Sha
 internal void
 GFX_DeviceShaderProgramDestroy(GFX_Device *device, GFX_ShaderKey program_key)
 {
-	GFX_ShaderProgram *program = GFX_DeviceShaderListGet(&device->shaders, program_key);
-	
-	if (!program)
-		return;
-
-	for (u32 i = 0; i < program->stage_count; i++)
-		GFX_DeviceShaderStageDestroy(&program->stages[i]);
+	// TODO
 }
 
 internal GFX_ShaderProgram *

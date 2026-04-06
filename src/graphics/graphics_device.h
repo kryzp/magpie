@@ -212,6 +212,9 @@ internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, GFX_CmdB
 internal GFX_CmdBuffer     GFX_DeviceSubmitImBegin (GFX_Device *device);
 internal void              GFX_DeviceSubmitImEnd   (GFX_Device *device, GFX_CmdBuffer *cmd);
 
+internal void GFX_DeviceHotLoad(GFX_Device *device);
+internal void GFX_DeviceHotUnload(GFX_Device *device);
+
 internal void GFX_DeviceCreateSyncResources(GFX_Device *device);
 internal void GFX_DeviceDestroySyncResources(GFX_Device *device);
 
@@ -338,11 +341,10 @@ internal GFX_Sampler *GFX_DeviceSamplerFromKey(const GFX_Device *device, GFX_Sam
    SHADERS
    ================================================== */
 
-internal GFX_ShaderStage GFX_DeviceShaderStageCreate(const GFX_ShaderBytecode *bytecode);
-internal void            GFX_DeviceShaderStageDestroy(const GFX_ShaderStage *stage);
+internal GFX_ShaderStage GFX_DeviceShaderStageCreate(Arena *arena, const GFX_ShaderBytecode *bytecode);
 
-internal GFX_ShaderKey GFX_DeviceShaderProgramCreate  (GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
-internal void          GFX_DeviceShaderProgramDestroy (GFX_Device *device, GFX_ShaderKey program);
+internal GFX_ShaderKey GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
+internal void          GFX_DeviceShaderProgramDestroy(GFX_Device *device, GFX_ShaderKey program);
 
 internal GFX_ShaderProgram *GFX_DeviceShaderProgramFromKey(const GFX_Device *device, GFX_ShaderKey key);
 

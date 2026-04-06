@@ -1,8 +1,13 @@
 
 #define VOLK_IMPLEMENTATION
-#include <volk/volk.h>
 
+#include <volk/volk.h>
 #include <vma/vk_mem_alloc.h>
+
+#define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
+
+#include "ext/spirv/spirv_reflect.h"
+#include "ext/spirv/spirv_reflect.c"
 
 #include "graphics_vk_check.h"
 #include "graphics_blend.h"

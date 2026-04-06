@@ -12,8 +12,11 @@ internal String8 String8Init(u8 *str, u64 len);
 
 #define Str8(s) String8Init((u8 *)(s), sizeof(s) - 1)
 
+internal String8 String8Alloc(Arena *arena, u32 len);
+internal String8 String8Append(Arena *arena, String8 a, String8 b);
+
 internal b32 String8Match(String8 a, String8 b);
-internal String8 String8ViewUpToLastSubstringIncl(String8 string, String8 sub);
+internal u32 String8UpToLastSubstringIncl(String8 string, String8 sub);
 
 internal b32 CharIsWhitespace(u8 c);
 internal b32 CharIsLower(u8 c);

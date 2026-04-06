@@ -76,18 +76,7 @@ struct JOB_Decl
 	void *param;
 };
 
-typedef struct JOB_Fiber JOB_Fiber;
-
 typedef struct JOB_Counter JOB_Counter;
-struct JOB_Counter
-{
-	u32 atomic_count;
-	u32 atomic_spinlock;
-
-	// Fibers that are blocked waiting on this counter.
-	u32 waiting_count;
-	JOB_Fiber *waiting[JOB_COUNTER_MAX_WAITING];
-};
 
 typedef struct OS_API OS_API;
 struct OS_API
@@ -247,13 +236,13 @@ struct OS_API
 	   JOBS
 	   ================================================== */
 
-	void   (*JobCounterAlloc)(Arena *arena, u32 initial_count);
-	void   (*JobYield)(JOB_Counter *counter, u32 value);
-	void   (*JobKick)(const JOB_Decl *decl, JOB_Counter *counter);
-	void   (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
-	void   (*JobFor)(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size);
-	b32    (*JobIsMainThread)(void);
-	Arena *(*JobGetScratch)(Arena **conflicts, u32 conflict_count);
+	JOB_Counter *(*JobCounterAlloc)(Arena *arena, u32 initial_count);
+	void         (*JobYield)(JOB_Counter *counter, u32 value);
+	void         (*JobKick)(const JOB_Decl *decl, JOB_Counter *counter);
+	void         (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
+	void         (*JobFor)(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size);
+	b32          (*JobIsMainThread)(void);
+	Arena       *(*JobGetScratch)(Arena **conflicts, u32 conflict_count);
 
 	
 	/* ==================================================

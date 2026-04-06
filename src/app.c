@@ -68,9 +68,12 @@ AppHotLoad(const OS_BootstrapData *data)
 {
 	app_ptr = data->memory;
 	osapi = app_ptr->osapi;
+
+	GFX_DeviceHotLoad(&app_ptr->graphics_device);
 }
 
 __declspec(dllexport) void
 AppHotUnload(void)
 {
+	GFX_DeviceHotUnload(&app_ptr->graphics_device);
 }
