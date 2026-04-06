@@ -58,20 +58,20 @@ clang++ \
 # layer as executable
 # (if it isn't currently open)
 
-#if ! pgrep -x magpie_macos > /dev/null; then
-#
-#	echo "Compiling platform layer..."
-#
-#	clang \
-#		-arch arm64 \
-#		$opts \
-#		"$code/macos/macos_main.c" \
-#		-I"$code/" \
-#		$libs \
-#		$rpaths \
-#		-lSDL3 \
-#		-o magpie_macos
-#fi
+if ! pgrep -x magpie_macos > /dev/null; then
+
+	echo "Compiling platform layer..."
+
+	clang \
+		-arch arm64 \
+		$opts \
+		"$code/os/win32/win32_main.c" \
+		-I"$code/" \
+		$libs \
+		$rpaths \
+		-lSDL3 \
+		-o magpie_win32
+fi
 
 cd - > /dev/null
 

@@ -27,8 +27,6 @@ struct R_AttachmentInfo
 	b32 is_storage;
 };
 
-b32 R_AttachmentInfoMatch(const R_AttachmentInfo *a, const R_AttachmentInfo *b);
-
 typedef struct R_BufferInfo R_BufferInfo;
 struct R_BufferInfo
 {
@@ -37,7 +35,29 @@ struct R_BufferInfo
 	VkBufferUsageFlags2 usage;
 };
 
-b32 R_BufferInfoMatch(const R_BufferInfo *a, const R_BufferInfo *b);
+inline internal b32
+R_AttachmentInfoMatch(const R_AttachmentInfo *a, const R_AttachmentInfo *b)
+{
+	return (a->format == b->format &&
+			a->size_class == b->size_class &&
+			a->size_x == b->size_x &&
+			a->size_y == b->size_y &&
+			a->size_z == b->size_z &&
+			a->mips == b->mips &&
+			a->layers == b->layers &&
+			a->samples == b->samples &&
+			a->is_cubemap == b->is_cubemap &&
+			a->is_transient == b->is_transient &&
+			a->is_storage == b->is_storage);
+}
+
+inline internal b32
+R_BufferInfoMatch(const R_BufferInfo *a, const R_BufferInfo *b)
+{
+	return (a->size == b->size &&
+			a->flags == b->flags &&
+			a->usage == b->usage);
+}
 
 typedef union R_Clear R_Clear;
 union R_Clear
@@ -130,7 +150,6 @@ struct R_GraphBlackboard
 };
 
 void R_GraphBlackboardClean(R_GraphBlackboard *bb);
-
 void *R_GraphBlackboardAdd(R_GraphBlackboard *bb, u32 id, void *data, u64 size);
 void *R_GraphBlackboardGet(R_GraphBlackboard *bb, u32 id);
 
@@ -189,12 +208,11 @@ struct R_Stage
 	String8 name;
 	R_StageType type;
 	u32 index;
+	b32 is_culled;
 
 	R_GraphRecordFn *record;
 	
 	u32 multi_view_mask;
-
-	b32 is_culled;
 
 	u32 input_count;
 	R_GraphEdge inputs[16];

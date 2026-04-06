@@ -1,3 +1,4 @@
+- make a global graphics device pointer for the graphics backend? - set it on GFX_DeviceHotLoad() and GFX_DeviceInit() ?
 - rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
 - convert graphics device resource management to freelists
 - add caching to the pipeline layout, pipeline and view creation in device

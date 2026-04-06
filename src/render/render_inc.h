@@ -1,3 +1,4 @@
+#include "render_gpu_types.h"
 #include "render_model.h"
 #include "render_light.h"
 #include "render_camera.h"
