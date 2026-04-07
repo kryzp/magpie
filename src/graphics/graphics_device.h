@@ -1,6 +1,14 @@
 #ifndef GRAPHICS_DEVICE_H
 #define GRAPHICS_DEVICE_H
 
+
+/* ==================================================
+   MACRO BULLSHIT
+
+   Auto-generates a linked list for every
+   managed resource in the graphics device.
+   ================================================== */
+
 #define GFX_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
 	typedef struct GFX_Device##mgp_name##Node GFX_Device##mgp_name##Node; \
 	struct GFX_Device##mgp_name##Node									\
@@ -20,6 +28,11 @@
 #include "graphics_device_managed_resources.inc"
 
 #undef GFX_DEVICE_MANAGED_RESOURCE
+
+
+/* ==================================================
+   ALLOC / CREATION PARAMETERS
+   ================================================== */
 
 typedef u32 GFX_TextureAllocFlags;
 enum
@@ -75,35 +88,10 @@ struct GFX_SamplerCreateInfo
 	VkBorderColor border_colour;
 };
 
-typedef struct GFX_TimelinePoint GFX_TimelinePoint;
-struct GFX_TimelinePoint
-{
-	VkSemaphore semaphore;
-	u64 value;
-};
 
-typedef struct GFX_Semaphore GFX_Semaphore;
-struct GFX_Semaphore
-{
-	VkSemaphore handle;
-	u64 target;
-};
-
-internal inline GFX_TimelinePoint
-GFX_SemaphoreSignal(GFX_Semaphore *semaphore)
-{
-	semaphore->target++;
-
-	GFX_TimelinePoint p = { semaphore->handle, semaphore->target };
-	return p;
-}
-
-internal inline GFX_TimelinePoint
-GFX_SemaphoreLastSignaled(const GFX_Semaphore *semaphore)
-{
-	GFX_TimelinePoint p = { semaphore->handle, semaphore->target };
-	return p;	
-}
+/* ==================================================
+   DESTRUCTION
+   ================================================== */
 
 typedef struct GFX_DestroyedImage GFX_DestroyedImage;
 struct GFX_DestroyedImage
@@ -137,12 +125,17 @@ struct GFX_DestroyedSampler
 	GFX_BindlessHandle bindless;
 };
 
+
+/* ==================================================
+   DEVICE
+   ================================================== */
+
 typedef struct GFX_DevicePerFrameData GFX_DevicePerFrameData;
 struct GFX_DevicePerFrameData
 {
 	GFX_TimelinePoint completion_point;
 
-	// Non-timeline semaphores.
+	// Non-Timeline Semaphores.
 	VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
 	VkSemaphore render_finished_semaphore; // Signaled when the OS lets us present.
 
@@ -165,13 +158,13 @@ struct GFX_Device
 	u32 current_frame_index;
 	GFX_DevicePerFrameData per_frame_data[GFX_FRAMES_IN_FLIGHT];
 
-	GFX_DevicePipelineLayoutList layouts;
-	GFX_DevicePipelineList       pipelines;
-	GFX_DeviceTextureList        textures;
-	GFX_DeviceTextureViewList    views;
-	GFX_DeviceBufferList         buffers;
-	GFX_DeviceSamplerList        samplers;
-	GFX_DeviceShaderList         shaders;
+	GFX_DevicePipelineLayoutList  layouts;
+	GFX_DevicePipelineList        pipelines;
+	GFX_DeviceTextureList         textures;
+	GFX_DeviceTextureViewList     views;
+	GFX_DeviceBufferList          buffers;
+	GFX_DeviceSamplerList         samplers;
+	GFX_DeviceShaderList          shaders;
 	
 	GFX_Semaphore graphics_semaphore;
 

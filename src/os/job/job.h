@@ -156,7 +156,7 @@ internal void JOB_Batch(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
  * Divides [0, count) into batches of batch_size, and kicks
  * off a basic for-loop job for them all.
  */
-JOB_ENTRY_POINT_SIG(JOB_ParallelForBatchEntry);
+JOB_ENTRY_POINT_DEF(JOB_ParallelForBatchEntry);
 
 internal void JOB_For(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size);
 

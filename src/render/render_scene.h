@@ -151,36 +151,36 @@ struct R_Scene
 	Arena *arena;
 	GFX_Device *device;
 
-	/* --- Objects --- */
+	// Objects
 	R_SceneObjectSlot object_slots[R_SCENE_MAX_OBJECTS];
 	u32               object_count;
 	u32               object_free_list[R_SCENE_MAX_OBJECTS];
 	u32               object_free_count;
 
-	/* --- Lights --- */
+	// Lights
 	R_SceneLightSlot light_slots[R_SCENE_MAX_LIGHTS];
 	u32              light_count;
 	u32              light_free_list[R_SCENE_MAX_LIGHTS];
 	u32              light_free_count;
 
-	/* --- Shadow Casters --- */
+	// Shadow Casters
 	R_ShadowCaster shadow_casters[R_SCENE_MAX_SHADOW_CASTERS];
 	u32            shadow_caster_count;
 
-	/* --- Geometry Page --- */
+	// Geometry Page
 	R_GeometryPage *geometry_page_head;
 	u32             geometry_page_count;
 
-	/* --- Mesh Regisry --- */
+	// Mesh Registry
 	R_MeshMemoryLocation mesh_registry[R_SCENE_MAX_MESHES];
 
-	/* --- Meshes --- */
+	// Meshes
 	R_GPU_RenderMesh gpu_meshes[R_SCENE_MAX_MESHES];
 	u32              mesh_count;
 	GFX_BufferKey    mesh_buffer;
 	b32              mesh_buffer_dirty;
 
-	/* --- Materials --- */
+	// Materials
 	R_GPU_Material gpu_materials[R_SCENE_MAX_MATERIALS];
 	u32            material_count;
 	GFX_BufferKey  material_buffer;

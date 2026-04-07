@@ -23,5 +23,6 @@
 #include "graphics_sync.h"
 #include "graphics_cmd_buffer.h"
 #include "graphics_cmd_pool.h"
+#include "graphics_semaphore.h"
 #include "graphics_device.h"
 #include "graphics_ring_buffer.h"

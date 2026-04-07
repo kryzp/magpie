@@ -39,7 +39,7 @@ struct App
 	GFX_BufferKey cubemap_capture_transform_buffer;
 	
 	R_Graph graph;
-	R_GraphHandle swapchain_src;
+	R_GraphTexHandle swapchain_src;
 	R_Scene scene;
 	R_SceneLightHandle light_handle;
 	R_Camera camera;

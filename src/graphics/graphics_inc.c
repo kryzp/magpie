@@ -7,5 +7,6 @@
 #include "graphics_pipeline.c"
 #include "graphics_sync.c"
 #include "graphics_cmd_buffer.c"
+#include "graphics_semaphore.c"
 #include "graphics_device.c"
 #include "graphics_ring_buffer.c"

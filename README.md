@@ -1,17 +1,17 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer/game engine (-ish, closer to a more developed framework) written in C. 
+**Magpie** is primarily a Vulkan renderer/game engine (-ish, closer to a more developed framework) written in C.
 
 ![](images/indirect_deferred.png)
 ![](images/cool.png)
 ![](images/sponza.png)
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little.
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little. I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
 
-This project has been the death of me. Please don't check the commit history.
+This project has been the death of me.
 
 ## Notable Features
 - **True Hot-Code Reloading** for everything outside of `/os/` (app code written to DLL)
