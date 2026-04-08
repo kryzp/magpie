@@ -109,7 +109,7 @@ struct R_Graph
 	u32 texture_ver_count; R_GraphTexVersion texture_ver[R_GRAPH_MAX_TEX_VERSIONS];
 
 	u32 buffer_res_count; R_GraphBuffer     buffer_res[R_GRAPH_MAX_BUF_RESOURCES];
-	u32 buffer_ver_count; R_GraphBufVersion buffer_ver[R_GRAPH_MAX_BUF_VERSIONS]
+	u32 buffer_ver_count; R_GraphBufVersion buffer_ver[R_GRAPH_MAX_BUF_VERSIONS];
 	
 						  // Passes
 	u32 pass_count;

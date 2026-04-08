@@ -34,7 +34,7 @@ R_GraphTexHandleNull(void)
 inline internal R_GraphBufHandle
 R_GraphBufHandleNull(void)
 {
-	R_GraphBufxHandle null_handle = {0};
+	R_GraphBufHandle null_handle = {0};
 	return null_handle;
 }
 

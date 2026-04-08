@@ -24,9 +24,10 @@ typedef struct R_PassTextureEdge R_PassTextureEdge;
 struct R_PassTextureEdge
 {
 	R_GraphTexHandle handle;
-	GFX_AccessSt access;
+
+	GFX_AccessSt state;
 	VkImageLayout layout;
-	GFX_SubresourceRange range;
+	
 	b32 should_clear;
 	R_Clear clear;
 };
@@ -35,7 +36,9 @@ typedef struct R_PassBufferEdge R_PassBufferEdge;
 struct R_PassBufferEdge
 {
 	R_GraphBufHandle handle;
-	GFX_AccessSt access;
+	
+	GFX_AccessSt state;
+	
 	u64 offset;
 	u64 size; // 0 = whole buffer.
 };
@@ -63,6 +66,10 @@ typedef R_PASS_RECORD_SIG(R_PassRecordFn);
 typedef struct R_Pass R_Pass;
 struct R_Pass
 {
+	// This is just for utility so we don't have
+	// to keep passing it in for resource versioning.
+	R_Graph *graph;
+	
 	String8 name;
 	R_PassType type;
 
@@ -74,7 +81,7 @@ struct R_Pass
 	
 	u32 multi_view_mask;
 
-	// excuse the weird formatting but this reads nicer
+	// Excuse the weird formatting but this reads nicer.
 	
 	u32 input_texture_count;    R_PassTextureEdge input_textures  [R_PASS_MAX_I_TEXTURE_EDGES];
 	u32 output_texture_count;   R_PassTextureEdge output_textures [R_PASS_MAX_O_TEXTURE_EDGES];
@@ -101,18 +108,16 @@ internal void R_PassSetMultiViewMask(R_Pass *pass, u32 mask);
    HELPERS
    ================================================== */
 
-internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass, R_GraphTexHandle handle,
+internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
+												R_GraphTexHandle handle,
 												VkPipelineStageFlags2 stage,
-												VkAccessFlags2 access,
-												VkImageLayout layout,
-												GFX_SubresourceRange range);
+												VkAccessFlags2 access);
 
-internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass, R_GraphTexHandle handle,
+internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
+												 R_GraphTexHandle handle,
+												 const R_Clear *clear,
 												 VkPipelineStageFlags2 stage,
-												 VkAccessFlags2 access,
-												 VkImageLayout layout,
-												 GFX_SubresourceRange range,
-												 const R_Clear *clear);
+												 VkAccessFlags2 access);
 
 internal R_GraphBufHandle R_PassAddInputBuffer(R_Pass *pass, R_GraphBufHandle handle,
 											   VkPipelineStageFlags2 stage,
@@ -129,9 +134,6 @@ internal R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle h
 
 internal R_GraphTexHandle R_PassWriteColour(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
 internal R_GraphTexHandle R_PassWriteDepth(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
-
-internal R_GraphTexHandle R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, GFX_SubresourceRange range, const R_Clear *clear);
-internal R_GraphTexHandle R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, GFX_SubresourceRange range, const R_Clear *clear);
 
 internal R_GraphTexHandle R_PassReadTexture(R_Pass *pass, R_GraphTexHandle handle);
 

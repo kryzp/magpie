@@ -4,27 +4,27 @@
 typedef struct R_PooledTexture R_PooledTexture;
 struct R_PooledTexture
 {
-	GFX_TextureKey physical_texture;
+	GFX_TextureKey key;
 	R_TextureInfo info;
 	b32 in_use;
-	u64 last_time_used;
+	u64 last_frame_used;
 	R_ResourceState state;
 };
 
 typedef struct R_PooledBuffer R_PooledBuffer;
 struct R_PooledBuffer
 {
-	GFX_BufferKey physical_buffer;
+	GFX_BufferKey key;
 	R_BufferInfo info;
 	u32 in_use;
-	u64 last_time_used;
+	u64 last_frame_used;
 	R_ResourceState state;
 };
 
 typedef struct R_ResourcePool R_ResourcePool;
 struct R_ResourcePool
 {
-	u64 current_time;
+	u64 current_frame;
 	u64 gpu_completed_time;
 
 	u32 texture_capacity;
@@ -43,15 +43,15 @@ internal void R_ResourcePoolDestroy(R_ResourcePool *pool, GFX_Device *device);
 // Typically call once per frame.
 internal void R_ResourcePoolFlush(R_ResourcePool *pool, const GFX_Device *device);
 
-internal const GFX_Texture *R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
-														 GFX_Device *device,
-														 const R_TextureInfo *info,
-														 R_ResourceState *out_state);
+internal GFX_TextureKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
+													 GFX_Device *device,
+													 const R_TextureInfo *info,
+													 R_ResourceState *out_state);
 
-internal const GFX_Buffer *R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
-													   GFX_Device *device,
-													   const R_BufferInfo *info,
-													   R_ResourceState *out_state);
+internal GFX_BufferKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
+												   GFX_Device *device,
+												   const R_BufferInfo *info,
+												   R_ResourceState *out_state);
 
 internal void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
 										  GFX_TextureKey key,

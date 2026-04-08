@@ -4,4 +4,6 @@
 #include "render_clear.c"
 #include "render_graph_types.c"
 #include "render_pool.c"
+#include "render_pass.c"
+#include "render_tracker.c"
 #include "render_graph.c"
