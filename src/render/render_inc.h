@@ -7,5 +7,6 @@
 #include "render_graph_types.h"
 #include "render_pool.h"
 #include "render_pass.h"
+#include "render_tracker.h"
 #include "render_graph.h"
 #include "render_blackboard.h"
