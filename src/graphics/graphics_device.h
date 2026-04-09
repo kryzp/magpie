@@ -265,11 +265,11 @@ internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (const GFX_Device *device, GFX_
    PIPELINES
    ================================================== */
 
-internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutCreate  (GFX_Device *device, GFX_ShaderKey program);
+internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch   (GFX_Device *device, GFX_ShaderKey program);
 internal void                  GFX_DevicePipelineLayoutDestroy (GFX_Device *device, GFX_PipelineLayoutKey layout);
 
-internal GFX_PipelineKey GFX_DeviceCreateGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
-internal GFX_PipelineKey GFX_DeviceCreateComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
+internal GFX_PipelineKey GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
+internal GFX_PipelineKey GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
 
 internal void GFX_DeviceDestroyPipeline(GFX_Device *device, GFX_PipelineKey pipeline);
 
@@ -298,7 +298,7 @@ internal GFX_Texture *GFX_DeviceTextureFromKey(const GFX_Device *device, GFX_Tex
    VIEWS
    ================================================== */
 
-internal GFX_TextureViewKey GFX_DeviceTextureViewCreate(GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
+internal GFX_TextureViewKey GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
 internal GFX_TextureViewKey GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture);
 
 internal void GFX_DeviceTextureViewDestroy(GFX_Device *device, GFX_TextureViewKey view);

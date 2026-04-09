@@ -21,50 +21,22 @@
 //           R_Pass *lighting = R_GraphAdd(graph, Str8("Lighting"), R_PassType_Graphics);
 //           R_PassWriteColour(lighting, hdr, &clear); // Actually writes to it.
 
+// NOTE: 0 is reserved for the invalid handle so indices start at 1.
+//       R_GraphCreateTexture allocates version index 1+ for the initial version.
+
+#define R_GRAPH_INVALID_INDEX (-1u)
+
 typedef struct R_GraphTexHandle { u32 value; } R_GraphTexHandle;
 typedef struct R_GraphBufHandle { u32 value; } R_GraphBufHandle;
 
-inline internal R_GraphTexHandle
-R_GraphTexHandleNull(void)
-{
-	R_GraphTexHandle null_handle = {0};
-	null_handle.value = -1u;
-	
-	return null_handle;
-}
+internal inline R_GraphTexHandle R_GraphTexHandleNull(void) { return (R_GraphTexHandle) {0}; }
+internal inline R_GraphBufHandle R_GraphBufHandleNull(void) { return (R_GraphBufHandle) {0}; }
 
-inline internal R_GraphBufHandle
-R_GraphBufHandleNull(void)
-{
-	R_GraphBufHandle null_handle = {0};
-	null_handle.value = -1u;
-	
-	return null_handle;
-}
+internal inline b32 R_GraphTexHandleIsNull(R_GraphTexHandle h) { return h.value == 0; }
+internal inline b32 R_GraphBufHandleIsNull(R_GraphBufHandle h) { return h.value == 0; }
 
-inline internal b32
-R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b)
-{
-	return a.value == b.value;
-}
-
-inline internal b32
-R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b)
-{
-	return a.value == b.value;
-}
-
-inline internal b32
-R_GraphTexHandleIsNull(R_GraphTexHandle handle)
-{
-	return handle.value == -1u;
-}
-
-inline internal b32
-R_GraphBufHandleIsNull(R_GraphBufHandle handle)
-{
-	return handle.value == -1u;
-}
+internal inline b32 R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b) { return a.value == b.value; }
+internal inline b32 R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b) { return a.value == b.value; }
 
 typedef enum R_SizeClass
 {
@@ -101,26 +73,18 @@ struct R_BufferInfo
 	VkBufferUsageFlags2 usage;
 };
 
-internal R_TextureInfo R_TextureInfoInit(void);
-internal R_BufferInfo R_BufferInfoInit(void);
+internal R_TextureInfo R_TextureInfoInit (void);
+internal R_BufferInfo  R_BufferInfoInit  (void);
 
-internal b32 R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b);
-internal b32 R_BufferInfoMatch(const R_BufferInfo *a, const R_BufferInfo *b);
+internal b32 R_TextureInfoMatch (const R_TextureInfo *a, const R_TextureInfo *b);
+internal b32 R_BufferInfoMatch  (const R_BufferInfo *a,  const R_BufferInfo *b);
 
 typedef struct R_ResourceState R_ResourceState;
 struct R_ResourceState
 {
 	VkPipelineStageFlags2 stage;
-
-	// Access masks that need to be made available (flushed).
 	VkAccessFlags2 to_flush;
-
-	// Per-Stage visibility bitmask of stages.
-	// TODO: Could this be represented better somehow.
-	VkAccessFlags2 invalidated_in_stage[64]; 
-
-	// For textures only.
-	// Start off as VK_IMAGE_LAYOUT_UNDEFINED (0).
+	VkAccessFlags2 invalidated_in_stage[64]; // TODO: Could this be represented better somehow.
 	VkImageLayout layout;
 };
 

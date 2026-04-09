@@ -36,7 +36,8 @@ struct R_PassTextureEdge
 	GFX_AccessSt state;
 	VkImageLayout layout;
 
-	GFX_SubresourceRange range;
+	// only used for graphics attachments to generate the target view
+	GFX_SubresourceRange attachment_range;
 	
 	b32 should_clear;
 	R_Clear clear;
@@ -69,7 +70,7 @@ struct R_PassContext
 	f32 delta_time;
 	f32 elapsed_time;
 
-	void *user_data;
+	const void *user_data;
 };
 
 #define R_PASS_RECORD_SIG(fn) void fn(const R_PassContext *ctx)
@@ -120,13 +121,11 @@ internal void R_PassSetMultiViewMask(R_Pass *pass, u32 mask);
 
 internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
 												R_GraphTexHandle handle,
-												GFX_SubresourceRange range,
 												VkPipelineStageFlags2 stage,
 												VkAccessFlags2 access);
 
 internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
 												 R_GraphTexHandle handle,
-												 GFX_SubresourceRange range,
 												 const R_Clear *clear,
 												 VkPipelineStageFlags2 stage,
 												 VkAccessFlags2 access);
@@ -146,6 +145,9 @@ internal R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle h
 
 internal R_GraphTexHandle R_PassWriteColour(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
 internal R_GraphTexHandle R_PassWriteDepth(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
+
+internal R_GraphTexHandle R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
 
 internal R_GraphTexHandle R_PassReadTexture(R_Pass *pass, R_GraphTexHandle handle);
 

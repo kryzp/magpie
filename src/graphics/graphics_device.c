@@ -604,7 +604,7 @@ GFX_DeviceFetchFreeBuffer(const GFX_Device *device, GFX_CmdPool *pool)
 }
 
 internal GFX_PipelineLayoutKey
-GFX_DevicePipelineLayoutCreate(GFX_Device *device, GFX_ShaderKey program)
+GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program)
 {
 	const GFX_ShaderProgram *gfx_program = GFX_DeviceShaderProgramFromKey(device, program);
 	
@@ -652,7 +652,7 @@ GFX_DevicePipelineLayoutDestroy(GFX_Device *device, GFX_PipelineLayoutKey layout
 }
 
 internal GFX_PipelineKey
-GFX_DeviceCreateGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout_key)
+GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout_key)
 {
 	VkPipelineLayout layout = *GFX_DevicePipelineLayoutListGet(&device->layouts, layout_key);
 	
@@ -832,7 +832,7 @@ GFX_DeviceCreateGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineD
 }
 
 internal GFX_PipelineKey
-GFX_DeviceCreateComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout_key)
+GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout_key)
 {
 	VkPipelineLayout layout = *GFX_DevicePipelineLayoutListGet(&device->layouts, layout_key);
 	GFX_ShaderProgram *program = GFX_DeviceShaderProgramFromKey(device, def->program);
@@ -1095,7 +1095,7 @@ GFX_DeviceTextureFromKey(const GFX_Device *device, GFX_TextureKey key)
 }
 
 internal GFX_TextureViewKey
-GFX_DeviceTextureViewCreate(GFX_Device *device, const GFX_TextureViewCreateInfo *info)
+GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *info)
 {
 	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, info->texture);
 	
@@ -1156,7 +1156,7 @@ GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture)
 	info.type = view_type;
 	info.range = range;
 
-	return GFX_DeviceTextureViewCreate(device, &info);
+	return GFX_DeviceTextureViewFetch(device, &info);
 }
 
 internal void

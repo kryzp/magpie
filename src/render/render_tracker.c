@@ -45,10 +45,10 @@ R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, GFX_TextureKey key, R_Re
 	t.key = key;
 	t.state = state;
 
+	AssertTrue(tracker->texture_count < ArraySize(tracker->textures));
+
 	tracker->textures[tracker->texture_count] = t;
 	tracker->texture_count++;
-
-	AssertTrue(tracker->texture_count < ArraySize(tracker->textures));
 }
 
 internal void
@@ -60,17 +60,17 @@ R_ResourceTrackerSetBuffer(R_ResourceTracker *tracker, GFX_BufferKey key,  R_Res
 
 		if (GFX_BufferKeyMatch(key, b->key))
 		{
-			t->state = state;
+			b->state = state;
 			return;
 		}
 	}
 
 	R_TrackedBuffer b = {0};
-	t.key = key;
-	t.state = state;
+	b.key = key;
+	b.state = state;
+
+	AssertTrue(tracker->buffer_count < ArraySize(tracker->buffers));
 
 	tracker->buffers[tracker->buffer_count] = b;
 	tracker->buffer_count++;
-
-	AssertTrue(tracker->buffer_count < ArraySize(tracker->buffers));
 }

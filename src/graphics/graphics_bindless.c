@@ -93,17 +93,17 @@ GFX_BindlessUpdateView(GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImag
 internal void
 GFX_BindlessFreeSampler(GFX_Bindless *bindless, GFX_BindlessHandle handle)
 {
+	AssertTrue(bindless->free_sampler_count < ArraySize(bindless->free_samplers));
+	
 	bindless->free_samplers[bindless->free_sampler_count] = handle;
 	bindless->free_sampler_count++;
-
-	AssertTrue(bindless->free_sampler_count < ArraySize(bindless->free_samplers));
 }
 
 internal void
 GFX_BindlessFreeView(GFX_Bindless *bindless, GFX_BindlessHandle handle)
 {
+	AssertTrue(bindless->free_view_count < ArraySize(bindless->free_views));
+
 	bindless->free_views[bindless->free_view_count] = handle;
 	bindless->free_view_count++;
-
-	AssertTrue(bindless->free_view_count < ArraySize(bindless->free_views));
 }

@@ -28,10 +28,10 @@ R_PassAddInputTexture(R_Pass *pass,
 
 	edge.should_clear = false;
 
+	AssertTrue(pass->input_texture_count < ArraySize(pass->input_textures));
+
 	pass->input_textures[pass->input_texture_count] = edge;
 	pass->input_texture_count++;
-
-	AssertTrue(pass->input_texture_count < ArraySize(pass->input_textures));
 
 	return versioned_handle;
 }
@@ -56,10 +56,10 @@ R_PassAddOutputTexture(R_Pass *pass,
 	if (edge.should_clear)
 		edge.clear = *clear;
 
-	pass->input_textures[pass->input_texture_count] = edge;
-	pass->input_texture_count++;
+	AssertTrue(pass->output_texture_count < ArraySize(pass->output_textures));
 
-	AssertTrue(pass->input_texture_count < ArraySize(pass->input_textures));
+	pass->output_textures[pass->output_texture_count] = edge;
+	pass->output_texture_count++;
 
 	return versioned_handle;
 }
@@ -79,10 +79,10 @@ R_PassAddInputBuffer(R_Pass *pass,
 	edge.offset = 0;
 	edge.size = 0;
 
+	AssertTrue(pass->input_buffer_count < ArraySize(pass->input_buffers));
+
 	pass->input_buffers[pass->input_buffer_count] = edge;
 	pass->input_buffer_count++;
-
-	AssertTrue(pass->input_buffer_count < ArraySize(pass->input_buffers));
 
 	return versioned_handle;
 }
@@ -102,10 +102,10 @@ R_PassAddOutputBuffer(R_Pass *pass,
 	edge.offset = 0;
 	edge.size = 0;
 
+	AssertTrue(pass->output_buffer_count < ArraySize(pass->output_buffers));
+
 	pass->output_buffers[pass->output_buffer_count] = edge;
 	pass->output_buffer_count++;
-
-	AssertTrue(pass->output_buffer_count < ArraySize(pass->output_buffers));
 
 	return versioned_handle;
 }
@@ -113,17 +113,63 @@ R_PassAddOutputBuffer(R_Pass *pass,
 internal R_GraphTexHandle
 R_PassWriteColour(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear)
 {
-	return R_PassAddOutputTexture(pass, handle, clear,
-								  VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-								  VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+	return R_PassWriteColourEx(pass, handle, clear, GFX_SubresourceRangeAllColour());
 }
 
 internal R_GraphTexHandle
 R_PassWriteDepth(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear)
 {
-	return R_PassAddOutputTexture(pass, handle, clear,
-								  VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-								  VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+	return R_PassWriteDepthEx(pass, handle, clear, GFX_SubresourceRangeAllDepth());
+}
+
+internal R_GraphTexHandle
+R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range)
+{
+	R_GraphTexHandle versioned_handle = R_GraphPushTexVersion(pass->graph, handle, pass->index);
+	
+	R_PassTextureEdge edge = {0};
+	edge.handle = versioned_handle;
+	edge.state.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	edge.state.access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+	edge.layout = VK_IMAGE_LAYOUT_GENERAL;
+	edge.attachment_range = range;
+
+	edge.should_clear = clear != NULL;
+
+	if (edge.should_clear)
+		edge.clear = *clear;
+
+	AssertTrue(pass->output_texture_count < ArraySize(pass->output_textures));
+
+	pass->output_textures[pass->output_texture_count] = edge;
+	pass->output_texture_count++;
+
+	return versioned_handle;
+}
+
+internal R_GraphTexHandle
+R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range)
+{
+	R_GraphTexHandle versioned_handle = R_GraphPushTexVersion(pass->graph, handle, pass->index);
+	
+	R_PassTextureEdge edge = {0};
+	edge.handle = versioned_handle;
+	edge.state.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+	edge.state.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	edge.layout = VK_IMAGE_LAYOUT_GENERAL;
+	edge.attachment_range = range;
+
+	edge.should_clear = clear != NULL;
+
+	if (edge.should_clear)
+		edge.clear = *clear;
+
+	AssertTrue(pass->output_texture_count < ArraySize(pass->output_textures));
+
+	pass->output_textures[pass->output_texture_count] = edge;
+	pass->output_texture_count++;
+
+	return versioned_handle;
 }
 
 internal R_GraphTexHandle
