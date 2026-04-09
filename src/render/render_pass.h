@@ -11,6 +11,14 @@
 #define R_PASS_MAX_BUFFER_BARRIERS   16
 #define R_PASS_MAX_TEXTURE_BARRIERS  16
 
+// TODO: Remove R_PassType. It's a basically depricated
+//       thing and literally all it's ever used for is
+//       automatically starting and ending CmdRendering
+//       in the render graph. I'm keeping it right now
+//       incase I ever need to know what kind of pass
+//       it is but realistically I think this will have
+//       to go in the future because it's just useless.
+
 typedef enum R_PassType
 {
 	R_PassType_Graphics,
@@ -27,6 +35,8 @@ struct R_PassTextureEdge
 
 	GFX_AccessSt state;
 	VkImageLayout layout;
+
+	GFX_SubresourceRange range;
 	
 	b32 should_clear;
 	R_Clear clear;
@@ -43,9 +53,13 @@ struct R_PassBufferEdge
 	u64 size; // 0 = whole buffer.
 };
 
+typedef struct R_Graph R_Graph;
+
 typedef struct R_PassContext R_PassContext;
 struct R_PassContext
 {
+	R_Graph *graph;
+	
 	GFX_Device *device;	
 	GFX_CmdBuffer *cmd;
 
@@ -54,11 +68,11 @@ struct R_PassContext
 	
 	f32 delta_time;
 	f32 elapsed_time;
+
+	void *user_data;
 };
 
-typedef struct R_Graph R_Graph;
-
-#define R_PASS_RECORD_SIG(fn) void fn(const R_Graph *graph, const R_PassContext *ctx, const void *user_data)
+#define R_PASS_RECORD_SIG(fn) void fn(const R_PassContext *ctx)
 #define R_PASS_RECORD_DEF(fn) internal R_PASS_RECORD_SIG(fn)
 
 typedef R_PASS_RECORD_SIG(R_PassRecordFn);
@@ -66,14 +80,12 @@ typedef R_PASS_RECORD_SIG(R_PassRecordFn);
 typedef struct R_Pass R_Pass;
 struct R_Pass
 {
-	// This is just for utility so we don't have
-	// to keep passing it in for resource versioning.
 	R_Graph *graph;
 	
 	String8 name;
 	R_PassType type;
-
 	u32 index;
+	
 	b32 is_culled;
 
 	R_PassRecordFn *record;
@@ -81,8 +93,6 @@ struct R_Pass
 	
 	u32 multi_view_mask;
 
-	// Excuse the weird formatting but this reads nicer.
-	
 	u32 input_texture_count;    R_PassTextureEdge input_textures  [R_PASS_MAX_I_TEXTURE_EDGES];
 	u32 output_texture_count;   R_PassTextureEdge output_textures [R_PASS_MAX_O_TEXTURE_EDGES];
 
@@ -110,11 +120,13 @@ internal void R_PassSetMultiViewMask(R_Pass *pass, u32 mask);
 
 internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
 												R_GraphTexHandle handle,
+												GFX_SubresourceRange range,
 												VkPipelineStageFlags2 stage,
 												VkAccessFlags2 access);
 
 internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
 												 R_GraphTexHandle handle,
+												 GFX_SubresourceRange range,
 												 const R_Clear *clear,
 												 VkPipelineStageFlags2 stage,
 												 VkAccessFlags2 access);

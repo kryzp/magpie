@@ -28,6 +28,8 @@ inline internal R_GraphTexHandle
 R_GraphTexHandleNull(void)
 {
 	R_GraphTexHandle null_handle = {0};
+	null_handle.value = -1u;
+	
 	return null_handle;
 }
 
@@ -35,7 +37,33 @@ inline internal R_GraphBufHandle
 R_GraphBufHandleNull(void)
 {
 	R_GraphBufHandle null_handle = {0};
+	null_handle.value = -1u;
+	
 	return null_handle;
+}
+
+inline internal b32
+R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b)
+{
+	return a.value == b.value;
+}
+
+inline internal b32
+R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b)
+{
+	return a.value == b.value;
+}
+
+inline internal b32
+R_GraphTexHandleIsNull(R_GraphTexHandle handle)
+{
+	return handle.value == -1u;
+}
+
+inline internal b32
+R_GraphBufHandleIsNull(R_GraphBufHandle handle)
+{
+	return handle.value == -1u;
 }
 
 typedef enum R_SizeClass

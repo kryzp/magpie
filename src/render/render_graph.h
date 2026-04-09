@@ -24,8 +24,8 @@
 typedef struct R_GraphTexture R_GraphTexture;
 struct R_GraphTexture
 {
+	GFX_TextureKey physical_key;
 	R_TextureInfo texture_info;
-	GFX_TextureKey physical_texture;
 	
 	u32 first_stage_index;
 	u32 last_stage_index;
@@ -40,8 +40,8 @@ struct R_GraphTexture
 typedef struct R_GraphBuffer R_GraphBuffer;
 struct R_GraphBuffer
 {
+	GFX_BufferKey physical_key;
 	R_BufferInfo buffer_info;
-	GFX_BufferKey physical_buffer;
 	
 	u32 first_stage_index;
 	u32 last_stage_index;
@@ -111,7 +111,7 @@ struct R_Graph
 	u32 buffer_res_count; R_GraphBuffer     buffer_res[R_GRAPH_MAX_BUF_RESOURCES];
 	u32 buffer_ver_count; R_GraphBufVersion buffer_ver[R_GRAPH_MAX_BUF_VERSIONS];
 	
-						  // Passes
+	// Passes
 	u32 pass_count;
 	R_Pass passes[R_GRAPH_MAX_PASSES];
 
@@ -197,7 +197,7 @@ internal void R_GraphProcessFlushBuffer  (R_Graph *graph, const R_PassBufferEdge
 internal void R_GraphExecute(R_Graph *graph,
 							 GFX_Device *device,
 							 const GFX_Swapchain *swapchain,
-							 const GFX_CmdBuffer *cmd,
+							 GFX_CmdBuffer *cmd,
 							 const R_Scene *scene,
 							 const R_Camera *camera,
 							 f32 delta_time, f32 elapsed_time);

@@ -7,6 +7,11 @@
 		return null_key;												\
 	}																	\
 	internal b32														\
+	GFX_##mgp_name##KeyIsNull(GFX_##mgp_name##Key key)					\
+	{																	\
+		return key.value == 0;											\
+	}																	\
+	internal b32														\
 	GFX_##mgp_name##KeyMatch(GFX_##mgp_name##Key a, GFX_##mgp_name##Key b) \
 	{																	\
 		return a.value == b.value;										\
