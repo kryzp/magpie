@@ -7,7 +7,7 @@ struct Arena
 	void *base;
 	u64 capacity;
 	u64 used;
-	u64 last_alloc_size;
+	u64 last_alloc_offset;
 };
 
 internal Arena ArenaInitMemory(void *memory, u64 capacity);
