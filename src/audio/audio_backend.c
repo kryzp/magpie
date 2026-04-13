@@ -1,4 +1,3 @@
-
 #include "ext/ma/miniaudio.h"
 #include "ext/ma/miniaudio.c"
 
@@ -29,8 +28,10 @@ struct AUD_MA_Backend
 	
 	ma_engine engine;
 
-	AUD_MA_Buffer *buffers, *free_buffers;
-	AUD_MA_Source *sources, *free_sources;
+	AUD_MA_Buffer buffer_sentinel;
+	AUD_MA_Buffer free_buffer_sentinel;
+	AUD_MA_Source source_sentinel;
+	AUD_MA_Source free_source_sentinel;
 
 	AUD_BufferHandle curr_buffer_handle;
 	AUD_SourceHandle curr_source_handle;
@@ -48,7 +49,7 @@ AUD_MA_BytesFromFormat(AUD_Format format)
 		case AUD_Format_S24:  return  3u;
 		case AUD_Format_S32:  return  4u;
 		case AUD_Format_F32:  return  4u;
-		default:              return -1u;
+		default:              AssertTrue(false); return 0;
 	}
 }
 
@@ -81,12 +82,13 @@ AUD_MA_GetMiniAttenuationModel(AUD_AttenuationModel model)
 internal AUD_MA_Buffer *
 AUD_MA_AllocBuffer(void)
 {
-	AUD_MA_Buffer *buffer = mini_backend->free_buffers;
+	AUD_MA_Buffer *buffer;
 
-	if (buffer)
+	if (mini_backend->free_buffer_sentinel.next != &mini_backend->free_buffer_sentinel)
 	{
-		mini_backend->free_buffers = mini_backend->free_buffers->next;
-		mini_backend->free_buffers->prev = NULL;
+		buffer = mini_backend->free_buffer_sentinel.next;
+		buffer->prev->next = buffer->next;
+		buffer->next->prev = buffer->prev;
 
 		MemZeroStruct(buffer);
 	}
@@ -98,10 +100,10 @@ AUD_MA_AllocBuffer(void)
 	buffer->handle = mini_backend->curr_buffer_handle;
 	mini_backend->curr_buffer_handle.value++;
 
-	buffer->next = mini_backend->buffers;
+	buffer->next = mini_backend->buffer_sentinel.next;
+	buffer->prev = &mini_backend->buffer_sentinel;
 	buffer->next->prev = buffer;
-	
-	mini_backend->buffers = buffer;
+	buffer->prev->next = buffer;
 
 	return buffer;
 }
@@ -109,13 +111,14 @@ AUD_MA_AllocBuffer(void)
 internal AUD_MA_Source *
 AUD_MA_AllocSource(void)
 {
-	AUD_MA_Source *source = mini_backend->free_sources;
+	AUD_MA_Source *source;
 
-	if (source)
+	if (mini_backend->free_source_sentinel.next != &mini_backend->free_source_sentinel)
 	{
-		mini_backend->free_sources = mini_backend->free_sources->next;
-		mini_backend->free_sources->prev = NULL;
-		
+		source = mini_backend->free_source_sentinel.next;
+		source->prev->next = source->next;
+		source->next->prev = source->prev;
+
 		MemZeroStruct(source);
 	}
 	else
@@ -126,10 +129,10 @@ AUD_MA_AllocSource(void)
 	source->handle = mini_backend->curr_source_handle;
 	mini_backend->curr_source_handle.value++;
 
-	source->next = mini_backend->sources;
+	source->next = mini_backend->source_sentinel.next;
+	source->prev = &mini_backend->source_sentinel;
 	source->next->prev = source;
-	
-	mini_backend->sources = source;
+	source->prev->next = source;
 
 	return source;
 }
@@ -141,11 +144,11 @@ AUD_MA_ReleaseBuffer(AUD_MA_Buffer *buffer)
 	
 	buffer->prev->next = buffer->next;
 	buffer->next->prev = buffer->prev;
-	
-	buffer->next = mini_backend->free_buffers;
-	buffer->prev = NULL;
-	
-	mini_backend->free_buffers = buffer;
+
+	buffer->next = mini_backend->free_buffer_sentinel.next;
+	buffer->prev = &mini_backend->free_buffer_sentinel;
+	buffer->next->prev = buffer;
+	buffer->prev->next = buffer;
 }
 
 internal void
@@ -156,16 +159,18 @@ AUD_MA_ReleaseSource(AUD_MA_Source *source)
 	source->prev->next = source->next;
 	source->next->prev = source->prev;
 
-	source->next = mini_backend->free_sources;
-	source->prev = NULL;
-
-	mini_backend->free_sources = source;
+	source->next = mini_backend->free_source_sentinel.next;
+	source->prev = &mini_backend->free_source_sentinel;
+	source->next->prev = source;
+	source->prev->next = source;
 }
 
 internal AUD_MA_Buffer *
 AUD_MA_GetBuffer(AUD_BufferHandle handle)
 {
-	for (AUD_MA_Buffer *buffer = mini_backend->buffers; buffer; buffer = buffer->next)
+	AUD_MA_Buffer *sentinel = &mini_backend->buffer_sentinel;
+
+	for (AUD_MA_Buffer *buffer = sentinel->next; buffer != sentinel; buffer = buffer->next)
 	{
 		if (AUD_BufferHandleMatch(handle, buffer->handle))
 			return buffer;
@@ -177,7 +182,9 @@ AUD_MA_GetBuffer(AUD_BufferHandle handle)
 internal AUD_MA_Source *
 AUD_MA_GetSource(AUD_SourceHandle handle)
 {
-	for (AUD_MA_Source *source = mini_backend->sources; source; source = source->next)
+	AUD_MA_Source *sentinel = &mini_backend->source_sentinel;
+
+	for (AUD_MA_Source *source = sentinel->next; source != sentinel; source = source->next)
 	{
 		if (AUD_SourceHandleMatch(handle, source->handle))
 			return source;
@@ -196,13 +203,15 @@ AUD_MA_Init(void)
 internal void
 AUD_MA_Shutdown(void)
 {
-	for (AUD_MA_Source *source = mini_backend->sources; source; source = source->next)
+	AUD_MA_Source *src_sentinel = &mini_backend->source_sentinel;
+	for (AUD_MA_Source *source = src_sentinel->next; source != src_sentinel; source = source->next)
 	{
 		ma_sound_stop(&source->sound);
 		ma_sound_uninit(&source->sound);
 	}
 
-	for (AUD_MA_Buffer *buffer = mini_backend->buffers; buffer; buffer = buffer->next)
+	AUD_MA_Buffer *buf_sentinel = &mini_backend->buffer_sentinel;
+	for (AUD_MA_Buffer *buffer = buf_sentinel->next; buffer != buf_sentinel; buffer = buffer->next)
 	{
 		ma_audio_buffer_uninit(&buffer->buffer);
 	}
@@ -450,6 +459,20 @@ AUD_BackendAllocAndSelect(Arena *arena)
 {
 	AUD_MA_Backend *mini = ArenaPushArray(arena, AUD_MA_Backend, 1);
 	mini->arena = arena;
+
+	// reserve zero as invalid hnadle.
+	mini->curr_buffer_handle.value = 1;
+	mini->curr_source_handle.value = 1;
+
+	mini->buffer_sentinel.next = &mini->buffer_sentinel;
+	mini->buffer_sentinel.prev = &mini->buffer_sentinel;
+	mini->free_buffer_sentinel.next = &mini->free_buffer_sentinel;
+	mini->free_buffer_sentinel.prev = &mini->free_buffer_sentinel;
+
+	mini->source_sentinel.next = &mini->source_sentinel;
+	mini->source_sentinel.prev = &mini->source_sentinel;
+	mini->free_source_sentinel.next = &mini->free_source_sentinel;
+	mini->free_source_sentinel.prev = &mini->free_source_sentinel;
 	
 	AUD_BackendAPI *api = ArenaPushArray(arena, AUD_BackendAPI, 1);
 	api->ctx = mini;

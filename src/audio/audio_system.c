@@ -1,4 +1,3 @@
-
 internal void
 AUD_Init(AUD_System *system, Arena *arena, AUD_BackendAPI *api)
 {
@@ -9,6 +8,13 @@ AUD_Init(AUD_System *system, Arena *arena, AUD_BackendAPI *api)
 
 	for (u32 b = 0; b < AUD_Bus_COUNT; b++)
 		system->bus_volumes[b] = 1.f;
+
+	system->curr_voice_handle.value = 1;
+
+	system->voice_sentinel.next = &system->voice_sentinel;
+	system->voice_sentinel.prev = &system->voice_sentinel;
+	system->free_voice_sentinel.next = &system->free_voice_sentinel;
+	system->free_voice_sentinel.prev = &system->free_voice_sentinel;
 }
 
 internal void
@@ -26,11 +32,14 @@ AUD_Tick(AUD_System *system, f32 dt, AUD_Listener listener)
 internal AUD_Voice *
 AUD_AllocVoice(AUD_System *system)
 {
-	AUD_Voice *voice = system->free_voices;
+	AUD_Voice *voice;
 
-	if (voice)
+	if (system->free_voice_sentinel.next != &system->free_voice_sentinel)
 	{
-		system->free_voices = system->free_voices->next;
+		voice = system->free_voice_sentinel.next;
+		voice->prev->next = voice->next;
+		voice->next->prev = voice->prev;
+
 		MemZeroStruct(voice);
 	}
 	else
@@ -41,16 +50,32 @@ AUD_AllocVoice(AUD_System *system)
 	voice->handle = system->curr_voice_handle;
 	system->curr_voice_handle.value++;
 
-	voice->next = system->voices;
-	system->voices = voice;
+	voice->next = system->voice_sentinel.next;
+	voice->prev = &system->voice_sentinel;
+	voice->next->prev = voice;
+	voice->prev->next = voice;
 
 	return voice;
+}
+
+internal void
+AUD_ReleaseVoice(AUD_System *system, AUD_Voice *voice)
+{
+	voice->prev->next = voice->next;
+	voice->next->prev = voice->prev;
+
+	voice->next = system->free_voice_sentinel.next;
+	voice->prev = &system->free_voice_sentinel;
+	voice->next->prev = voice;
+	voice->prev->next = voice;
 }
 
 internal AUD_Voice *
 AUD_GetVoice(const AUD_System *system, AUD_Handle handle)
 {
-	for (AUD_Voice *voice = system->voices; voice; voice = voice->next)
+	const AUD_Voice *sentinel = &system->voice_sentinel;
+
+	for (AUD_Voice *voice = sentinel->next; voice != sentinel; voice = voice->next)
 	{
 		if (AUD_HandleMatch(handle, voice->handle))
 			return voice;
@@ -60,43 +85,21 @@ AUD_GetVoice(const AUD_System *system, AUD_Handle handle)
 }
 
 internal AUD_Handle
-AUD_PlaySound(AUD_System *system,
-			  AUD_BufferHandle clip,
-			  AUD_Bus bus,
-			  f32 volume, f32 pitch)
+AUD_Play(AUD_System *system, const AUD_PlayConfig *config)
 {
-	AUD_SourceHandle source = system->api->CreateSourceFromBuffer(clip);
-	system->api->SetSourceVolume(source, AUD_GetOutputVolumeOnBus(system, bus, volume));
-	system->api->SetSourcePitch(source, pitch);
+	AUD_SourceHandle source = system->api->CreateSourceFromBuffer(config->clip);
+	system->api->SetSourceVolume(source, AUD_GetOutputVolumeOnBus(system, config->bus, config->volume));
+	system->api->SetSourcePitch(source, config->pitch);
+
+	if (config->spatial)
+		system->api->SetSourcePosition(source, config->position);
 
 	system->api->Play(source);
 
 	AUD_Voice *voice = AUD_AllocVoice(system);
 	voice->source = source;
-	voice->bus = bus;
-	voice->base_volume = volume;
-	
-	return voice->handle;
-}
-
-internal AUD_Handle
-AUD_PlaySound3D(AUD_System *system,
-				AUD_BufferHandle clip,
-				AUD_Bus bus,
-				v3 position,
-				f32 volume, f32 pitch)
-{
-	AUD_SourceHandle source = system->api->CreateSourceFromBuffer(clip);
-	system->api->SetSourcePosition(source, position);
-	system->api->SetSourceVolume(source, AUD_GetOutputVolumeOnBus(system, bus, volume));
-	system->api->SetSourcePitch(source, pitch);
-
-	system->api->Play(source);
-
-	AUD_Voice *voice = AUD_AllocVoice(system);
-	voice->source = source;
-	voice->bus = bus;
-	voice->base_volume = volume;
+	voice->bus = config->bus;
+	voice->base_volume = config->volume;
 	
 	return voice->handle;
 }
@@ -106,31 +109,52 @@ AUD_Stop(AUD_System *system, AUD_Handle handle)
 {
 	AUD_Voice *voice = AUD_GetVoice(system, handle);
 	AssertTrue(voice);
-	
+
 	system->api->Stop(voice->source);
 	system->api->DestroySource(voice->source);
-	
-	voice->next = system->free_voices;
-	system->free_voices->prev = voice;
-	system->free_voices = voice;
+
+	AUD_ReleaseVoice(system, voice);
 }
 
 internal void
 AUD_StopAll(AUD_System *system)
 {
-	for (AUD_Voice *voice = system->voices; voice; voice = voice->next)
+	AUD_Voice *sentinel = &system->voice_sentinel;
+	AUD_Voice *voice    = sentinel->next;
+
+	while (voice != sentinel)
 	{
+		AUD_Voice *next = voice->next;
+
 		system->api->Stop(voice->source);
 		system->api->DestroySource(voice->source);
-	
-		voice->next = system->free_voices;
-		system->free_voices->prev = voice;
-		system->free_voices = voice;
+
+		AUD_ReleaseVoice(system, voice);
+
+		voice = next;
 	}
 }
 
 internal void
-AUD_SetSoundPosition(const AUD_System *system, AUD_Handle handle, v3 position)
+AUD_Resume(AUD_System *system, AUD_Handle handle)
+{
+	AUD_Voice *voice = AUD_GetVoice(system, handle);
+	AssertTrue(voice);
+
+	system->api->Resume(voice->source);
+}
+
+internal void
+AUD_Pause(AUD_System *system, AUD_Handle handle)
+{
+	AUD_Voice *voice = AUD_GetVoice(system, handle);
+	AssertTrue(voice);
+
+	system->api->Pause(voice->source);
+}
+
+internal void
+AUD_SetPositionOf(const AUD_System *system, AUD_Handle handle, v3 position)
 {
 	AUD_Voice *voice = AUD_GetVoice(system, handle);
 	AssertTrue(voice);
@@ -163,7 +187,9 @@ AUD_GetOutputVolumeOnBus(const AUD_System *system, AUD_Bus bus, f32 base_volume)
 internal void
 AUD_UpdateVoiceVolumes(const AUD_System *system, AUD_Bus bus)
 {
-	for (AUD_Voice *voice = system->voices; voice; voice = voice->next)
+	const AUD_Voice *sentinel = &system->voice_sentinel;
+
+	for (AUD_Voice *voice = sentinel->next; voice != sentinel; voice = voice->next)
 	{
 		if (voice->bus == bus)
 			system->api->SetSourceVolume(voice->source, AUD_GetOutputVolumeOnBus(system, bus, voice->base_volume));

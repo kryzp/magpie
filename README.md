@@ -69,7 +69,7 @@ Each layer follows a strict namespace system. Since this is C, I'm referring to 
 
 It is a **unity build**. Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.
 
-Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance. All functions and types defined in the source file, including "internal" helpers, should also be in the header. There is no such thing as a "private" method/type (though encapsulation is still used!).
+Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance.
 
 ### Rendering Structure
 Rendering is fundamentally abstracted into what should be three layers, but is only two right now:
