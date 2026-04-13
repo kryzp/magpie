@@ -39,7 +39,7 @@ AUD_AttenuationModel;
 typedef struct AUD_BackendAPI AUD_BackendAPI;
 struct AUD_BackendAPI
 {
-	void *internal; // Internal data store per-backend.
+	void *ctx; // Internal data store per-backend.
 	
 	void (*Init)(void);
 	void (*Shutdown)(void);

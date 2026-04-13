@@ -1,8 +1,13 @@
 
+#include "ext/ma/miniaudio.h"
+#include "ext/ma/miniaudio.c"
+
 typedef struct AUD_MA_Buffer AUD_MA_Buffer;
 struct AUD_MA_Buffer
 {
 	AUD_MA_Buffer *next;
+	AUD_MA_Buffer *prev;
+	
 	AUD_BufferHandle handle;
 	ma_audio_buffer buffer;
 };
@@ -11,7 +16,9 @@ typedef struct AUD_MA_Source AUD_MA_Source;
 struct AUD_MA_Source
 {
 	AUD_MA_Source *next;
-	AUD_SourceHandle source;
+	AUD_MA_Source *prev;
+	
+	AUD_SourceHandle handle;
 	ma_sound sound;
 };
 
@@ -36,12 +43,12 @@ AUD_MA_BytesFromFormat(AUD_Format format)
 {
 	switch (format)
 	{
-		case FORMAT_U8:   return  1u;
-		case FORMAT_S16:  return  2u;
-		case FORMAT_S24:  return  3u;
-		case FORMAT_S32:  return  4u;
-		case FORMAT_F32:  return  4u;
-		default:          return -1u;
+		case AUD_Format_U8:   return  1u;
+		case AUD_Format_S16:  return  2u;
+		case AUD_Format_S24:  return  3u;
+		case AUD_Format_S32:  return  4u;
+		case AUD_Format_F32:  return  4u;
+		default:              return -1u;
 	}
 }
 
@@ -50,12 +57,12 @@ AUD_MA_GetMiniFormat(AUD_Format format)
 {
 	switch (format)
 	{
-		case FORMAT_U8:   return ma_format_u8;
-		case FORMAT_S16:  return ma_format_s16;
-		case FORMAT_S24:  return ma_format_s24;
-		case FORMAT_S32:  return ma_format_s32;
-		case FORMAT_F32:  return ma_format_f32;
-		default:          return ma_format_unknown;
+		case AUD_Format_U8:   return ma_format_u8;
+		case AUD_Format_S16:  return ma_format_s16;
+		case AUD_Format_S24:  return ma_format_s24;
+		case AUD_Format_S32:  return ma_format_s32;
+		case AUD_Format_F32:  return ma_format_f32;
+		default:              return ma_format_unknown;
 	}
 }
 
@@ -79,6 +86,8 @@ AUD_MA_AllocBuffer(void)
 	if (buffer)
 	{
 		mini_backend->free_buffers = mini_backend->free_buffers->next;
+		mini_backend->free_buffers->prev = NULL;
+
 		MemZeroStruct(buffer);
 	}
 	else
@@ -86,10 +95,12 @@ AUD_MA_AllocBuffer(void)
 		buffer = ArenaPushArray(mini_backend->arena, AUD_MA_Buffer, 1);
 	}
 
-	source->handle = mini_backend->curr_buffer_handle;
+	buffer->handle = mini_backend->curr_buffer_handle;
 	mini_backend->curr_buffer_handle.value++;
 
 	buffer->next = mini_backend->buffers;
+	buffer->next->prev = buffer;
+	
 	mini_backend->buffers = buffer;
 
 	return buffer;
@@ -103,6 +114,8 @@ AUD_MA_AllocSource(void)
 	if (source)
 	{
 		mini_backend->free_sources = mini_backend->free_sources->next;
+		mini_backend->free_sources->prev = NULL;
+		
 		MemZeroStruct(source);
 	}
 	else
@@ -114,6 +127,8 @@ AUD_MA_AllocSource(void)
 	mini_backend->curr_source_handle.value++;
 
 	source->next = mini_backend->sources;
+	source->next->prev = source;
+	
 	mini_backend->sources = source;
 
 	return source;
@@ -123,16 +138,28 @@ internal void
 AUD_MA_ReleaseBuffer(AUD_MA_Buffer *buffer)
 {
 	ma_audio_buffer_uninit(&buffer->buffer);
-	buffer->next = mini_audio->free_buffers;
-	free_buffers = buffer->next;
+	
+	buffer->prev->next = buffer->next;
+	buffer->next->prev = buffer->prev;
+	
+	buffer->next = mini_backend->free_buffers;
+	buffer->prev = NULL;
+	
+	mini_backend->free_buffers = buffer;
 }
 
 internal void
 AUD_MA_ReleaseSource(AUD_MA_Source *source)
 {
 	ma_sound_uninit(&source->sound);
-	source->next = mini_audio->free_sources;
-	free_sources = source->next;
+
+	source->prev->next = source->next;
+	source->next->prev = source->prev;
+
+	source->next = mini_backend->free_sources;
+	source->prev = NULL;
+
+	mini_backend->free_sources = source;
 }
 
 internal AUD_MA_Buffer *
@@ -273,9 +300,9 @@ AUD_MA_CreateBuffer(const void *data, u64 bytes, u32 channels, u16 sample_rate, 
 	AUD_MA_Buffer *buffer = AUD_MA_AllocBuffer();
 
 	ma_format fmt = AUD_MA_GetMiniFormat(format);
-	u64 bytes = AUD_MA_BytesFromFormat(format);
+	u64 format_bytes = AUD_MA_BytesFromFormat(format);
 
-	u64 frame_count = size / (channels * bytes);
+	u64 frame_count = bytes / (channels * format_bytes);
 
 	ma_audio_buffer_config config = ma_audio_buffer_config_init(fmt, channels, frame_count, data, NULL);
 	config.sampleRate = sample_rate;
@@ -325,7 +352,7 @@ AUD_MA_SetSourceVolume(AUD_SourceHandle handle, f32 volume)
 	AUD_MA_Source *source = AUD_MA_GetSource(handle);
 	AssertTrue(source);
 
-	ma_set_sound_volume(&source->sound, volume);
+	ma_sound_set_volume(&source->sound, volume);
 }
 
 internal void
@@ -406,7 +433,7 @@ AUD_MA_BindAPI(AUD_BackendAPI *api)
 	api->CreateBuffer = AUD_MA_CreateBuffer;
 	api->DestroyBuffer = AUD_MA_DestroyBuffer;
 
-	api->CreateSourceFromBuffer = AUD_MA_CreateSource;
+	api->CreateSourceFromBuffer = AUD_MA_CreateSourceFromBuffer;
 	api->DestroySource = AUD_MA_DestroySource;
 
 	api->SetSourceVolume = AUD_MA_SetSourceVolume;
@@ -425,7 +452,7 @@ AUD_BackendAllocAndSelect(Arena *arena)
 	mini->arena = arena;
 	
 	AUD_BackendAPI *api = ArenaPushArray(arena, AUD_BackendAPI, 1);
-	api->internal = mini;
+	api->ctx = mini;
 	
 	AUD_MA_BindAPI(api);
 
@@ -437,5 +464,5 @@ AUD_BackendAllocAndSelect(Arena *arena)
 internal void
 AUD_BackendSelect(AUD_BackendAPI *api)
 {
-	mini_backend = api->internal;
+	mini_backend = api->ctx;
 }
