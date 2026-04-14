@@ -1,6 +1,4 @@
 
-/* --- WIN32 PLATFORM LAYER --- */
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellapi.h>
@@ -48,7 +46,7 @@ struct OS_W32_Code
 	HMODULE handle;
 	FILETIME last_write_time;
 
-	void *(*Init)      (Arena *arena, const OS_API *data);
+	void *(*Init)      (Arena *arena, const OS_API *api);
 	void  (*Destroy)   (void *ctx);
 	b32   (*Tick)      (void *ctx, const I_InputSt *input);
 	void  (*HotLoad)   (void *ctx, const OS_API *api);

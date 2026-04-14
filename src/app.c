@@ -153,9 +153,9 @@ AppTick(void *ctx, const I_InputSt *input)
 __declspec(dllexport) void
 AppHotLoad(void *ctx, const OS_API *api)
 {
-	App *app = ctx;
-	
 	osapi = api;
+	
+	App *app = ctx;
 
 	AppHotLoadGraphics(app);
 	AppHotLoadAudio(app);
