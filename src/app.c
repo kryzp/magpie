@@ -107,7 +107,7 @@ AppHotUnloadGraphics(App *app)
    APP
    ================================================== */
 
-__declspec(dllexport) App *
+__declspec(dllexport) void *
 AppInit(Arena *arena, const OS_API *api)
 {
 	osapi = api;
@@ -124,15 +124,19 @@ AppInit(Arena *arena, const OS_API *api)
 }
 
 __declspec(dllexport) void
-AppDestroy(App *app)
+AppDestroy(void *ctx)
 {
+	App *app = ctx;
+	
 	AppDestroyGraphics(app);
 	AppDestroyAudio(app);
 }
 
 __declspec(dllexport) b32
-AppTick(App *app, const I_InputSt *input)
+AppTick(void *ctx, const I_InputSt *input)
 {
+	App *app = ctx;
+	
 	ArenaClear(&app->frame_arena);
 
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
@@ -147,8 +151,10 @@ AppTick(App *app, const I_InputSt *input)
 }
 
 __declspec(dllexport) void
-AppHotLoad(App *app, const OS_API *api)
+AppHotLoad(void *ctx, const OS_API *api)
 {
+	App *app = ctx;
+	
 	osapi = api;
 
 	AppHotLoadGraphics(app);
@@ -156,8 +162,10 @@ AppHotLoad(App *app, const OS_API *api)
 }
 
 __declspec(dllexport) void
-AppHotUnload(App *app)
+AppHotUnload(void *ctx)
 {
+	App *app = ctx;
+	
 	AppHotUnloadAudio(app);
 	AppHotUnloadGraphics(app);
 }

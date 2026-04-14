@@ -50,10 +50,10 @@ struct App
 
 global const OS_API *osapi;
 
-__declspec(dllexport) App *AppInit      (Arena *arena, const OS_API *api);
-__declspec(dllexport) void AppDestroy   (App *app);
-__declspec(dllexport) b32  AppTick      (App *app, const I_InputSt *input);
-__declspec(dllexport) void AppHotLoad   (App *app, const OS_API *api);
-__declspec(dllexport) void AppHotUnload (App *app);
+__declspec(dllexport) void *AppInit      (Arena *arena, const OS_API *api);
+__declspec(dllexport) void  AppDestroy   (void *ctx);
+__declspec(dllexport) b32   AppTick      (void *ctx, const I_InputSt *input);
+__declspec(dllexport) void  AppHotLoad   (void *ctx, const OS_API *api);
+__declspec(dllexport) void  AppHotUnload (void *ctx);
 
 #endif // APP_H

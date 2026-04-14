@@ -26,8 +26,6 @@
 #include "os/os_inc.h"
 #include "input/input_inc.h"
 
-#include "app.h"
-
 #include "core/core_inc.c"
 #include "os/os_inc.c"
 #include "input/input_inc.c"
@@ -50,11 +48,11 @@ struct OS_W32_Code
 	HMODULE handle;
 	FILETIME last_write_time;
 
-	App *(*Init)(const OS_W32_BootstrapData *data);
-	void (*Destroy)(void);
-	b32  (*Tick)(const I_InputSt *input);
-	void (*HotLoad)(const OS_BootstrapData *data);
-	void (*HotUnload)(void);
+	void *(*Init)      (Arena *arena, const OS_API *data);
+	void  (*Destroy)   (void *ctx);
+	b32   (*Tick)      (void *ctx, const I_InputSt *input);
+	void  (*HotLoad)   (void *ctx, const OS_API *api);
+	void  (*HotUnload) (void *ctx);
 };
 
 typedef struct OS_W32_State OS_W32_State;
@@ -62,7 +60,7 @@ struct OS_W32_State
 {
 	Arena process_arena;
 	
-	App *app;
+	void *app;
 	
 	OS_API api;
 	OS_W32_Code code;
@@ -107,11 +105,11 @@ OS_W32_ReturnObject(OS_W32_Object *object)
 	win32_st.free_objects = object;
 }
 
-App *OS_W32_AppNullStubInit(Arena *arena, const OS_API *api) { return NULL; }
-void OS_W32_AppNullStubDestroy(App *app) { }
-b32  OS_W32_AppNullStubTick(App *app, const I_InputSt *input) { return false; }
-void OS_W32_AppNullStubHotLoad(App *app, const OS_API *api) { }
-void OS_W32_AppNullStubHotUnload(App *app) { }
+void *OS_W32_AppNullStubInit(Arena *arena, const OS_API *api) { return NULL; }
+void  OS_W32_AppNullStubDestroy(void *ctx) { }
+b32   OS_W32_AppNullStubTick(void *ctx, const I_InputSt *input) { return false; }
+void  OS_W32_AppNullStubHotLoad(void *ctx, const OS_API *api) { }
+void  OS_W32_AppNullStubHotUnload(void *ctx) { }
 
 internal void
 OS_W32_UnloadCode(void)
