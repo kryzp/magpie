@@ -166,19 +166,19 @@ struct OS_API
 
 	// TODO: Some kind of OS_MemoryOrder parameter?
 
-	u32   (*AtomicLoadU32)(u32  *ptr);
-	u64   (*AtomicLoadU64)(u64  *ptr);
-	void *(*AtomicLoadPtr)(void *ptr);
+	u32   (*AtomicLoadU32)   (u32  *ptr);
+	u64   (*AtomicLoadU64)   (u64  *ptr);
+	void *(*AtomicLoadPtr)   (void *ptr);
 
-	void (*AtomicStoreU32)(u32  *ptr, u32  value);
-	void (*AtomicStoreU64)(u64  *ptr, u64  value);
-	void (*AtomicStorePtr)(void *ptr, void *value);
+	void  (*AtomicStoreU32)  (u32  *ptr, u32   value);
+	void  (*AtomicStoreU64)  (u64  *ptr, u64   value);
+	void  (*AtomicStorePtr)  (void *ptr, void *value);
 
 	// Note the return value is the value of the input atomic BEFORE adding / subtracting.
-	u32 (*AtomicAddU32)(u32 *ptr, u32 delta);
-	u64 (*AtomicAddU64)(u64 *ptr, u64 delta);
-	u32 (*AtomicSubU32)(u32 *ptr, u32 delta);
-	u64 (*AtomicSubU64)(u64 *ptr, u64 delta);
+	u32   (*AtomicAddU32)    (u32 *ptr, u32 delta);
+	u64   (*AtomicAddU64)    (u64 *ptr, u64 delta);
+	u32   (*AtomicSubU32)    (u32 *ptr, u32 delta);
+	u64   (*AtomicSubU64)    (u64 *ptr, u64 delta);
 
 	/* ==================================================
 	   SPINLOCK

@@ -26,14 +26,8 @@ struct App
 
 	AST_Assets assets;
 
-	AUD_System audio_system;
-	AUD_BackendAPI *audio_backend;
-
-	AUD_BufferHandle test_sound;
-
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
-
 	GFX_RingBuffer frame_upload_ring_buffer;
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
@@ -46,9 +40,29 @@ struct App
 
 	CameraDriver camera_driver;
 	b32 camera_driver_active;
+
+	AUD_System audio_system;
+	AUD_BackendAPI *audio_backend;
+	AUD_BufferHandle test_sound;
 };
 
 global const OS_API *osapi;
+
+internal void AppInitAudio      (App *app);
+internal void AppDestroyAudio   (App *app);
+internal void AppTickAudio      (App *app, f32 dt, f32 elapsed);
+internal void AppHotLoadAudio   (App *app);
+internal void AppHotUnloadAudio (App *app);
+
+internal void AppInitGraphics      (App *app);
+internal void AppDestroyGraphics   (App *app);
+internal void AppTickGraphics      (App *app, f32 dt, f32 elapsed);
+internal void AppHotLoadGraphics   (App *app);
+internal void AppHotUnloadGraphics (App *app);
+
+internal void AppUpdate      (App *app, f32 dt, f32 elapsed, const I_InputSt *input);
+internal void AppFixedUpdate (App *app, f32 dt, f32 elapsed, const I_InputSt *input);
+internal void AppRender      (App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
 __declspec(dllexport) void *AppInit      (Arena *arena, const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (void *ctx);
