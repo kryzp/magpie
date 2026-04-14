@@ -12,7 +12,7 @@
 
 #ifdef __x86_64__
 # include <immintrin.h>
-# define OS_W32_SPIN_PAUSE() do { _mm_pause() } while (0)
+# define OS_W32_SPIN_PAUSE() _mm_pause()
 #else
 # define OS_W32_SPIN_PAUSE() do { } while (0)
 #endif
