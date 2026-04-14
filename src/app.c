@@ -9,8 +9,11 @@
 #include "render/render_inc.h"
 #include "audio/audio_inc.h"
 #include "animation/animation_inc.h"
+#include "timeline/timeline_inc.h"
 #include "cutscene/cutscene_inc.h"
 
+#include "game_mode.h"
+#include "camera_driver.h"
 #include "app.h"
 
 #include "core/core_inc.c"
@@ -26,11 +29,7 @@
 #include "animation/animation_inc.c"
 #include "cutscene/cutscene_inc.c"
 
-internal void
-CameraDriverDrive(CameraDriver *driver, R_Camera *camera)
-{
-	// TODO
-}
+#include "camera_driver.c"
 
 
 /* ==================================================

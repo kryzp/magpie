@@ -1,17 +1,6 @@
 #ifndef APP_H
 #define APP_H
 
-typedef struct CameraDriver CameraDriver;
-struct CameraDriver
-{
-	f32 yaw;
-	f32 target_yaw;
-	f32 pitch;
-	f32 target_pitch;
-};
-
-internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera);
-
 typedef struct App App;
 struct App
 {
