@@ -87,6 +87,8 @@ This does mean that global data is a little tricky because it gets reset wheneve
 
 Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored. Thread-local state is maintained in `/os/`, for example.
 
+`/os/` ultimately doesn't rely on the app at all or any layer "higher" than `/core/` and `/input/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
+
 ```
 +--------------------------------------------------+
 |  win32_main.exe                                  |
