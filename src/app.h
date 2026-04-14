@@ -15,11 +15,9 @@ internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera);
 typedef struct App App;
 struct App
 {
-	Arena permanent_arena;
+	Arena *permanent_arena;
 	Arena frame_arena;
 
-	OS_API *osapi;
-	
 	CH_Timer global_timer;
 	CH_Timer delta_timer;
 	CH_Timer hot_reload_timer;
@@ -29,6 +27,8 @@ struct App
 	AST_Assets assets;
 
 	AUD_System audio_system;
+	AUD_BackendAPI *audio_backend;
+
 	AUD_BufferHandle test_sound;
 
 	GFX_Device graphics_device;
@@ -48,14 +48,12 @@ struct App
 	b32 camera_driver_active;
 };
 
-global OS_API *osapi;
+global const OS_API *osapi;
 
-internal void AppBootstrapArenas(const OS_BootstrapData *data);
-
-__declspec(dllexport) void AppInit(const OS_BootstrapData *data);
-__declspec(dllexport) void AppDestroy(void);
-__declspec(dllexport) b32  AppTick(const I_InputSt *input);
-__declspec(dllexport) void AppHotLoad(const OS_BootstrapData *data);
-__declspec(dllexport) void AppHotUnload(void);
+__declspec(dllexport) App *AppInit      (Arena *arena, const OS_API *api);
+__declspec(dllexport) void AppDestroy   (App *app);
+__declspec(dllexport) b32  AppTick      (App *app, const I_InputSt *input);
+__declspec(dllexport) void AppHotLoad   (App *app, const OS_API *api);
+__declspec(dllexport) void AppHotUnload (App *app);
 
 #endif // APP_H

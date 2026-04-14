@@ -26,54 +26,138 @@
 #include "animation/animation_inc.c"
 #include "cutscene/cutscene_inc.c"
 
-global App *app_ptr = NULL;
-
 internal void
 CameraDriverDrive(CameraDriver *driver, R_Camera *camera)
 {
 	// TODO
 }
 
-__declspec(dllexport) void
-AppInit(const OS_BootstrapData *data)
+/* ==================================================
+   AUDIO
+   ================================================== */
+
+internal void
+AppInitAudio(App *app)
 {
-	Arena tmp = ArenaInitMemory(data->memory, data->memory_size);
+	app->audio_backend = AUD_BackendAllocAndSelect(app->permanent_arena);
+	app->audio_backend->Init();
+	
+	AUD_Init(&app->audio_system, app->permanent_arena, app->audio_backend);
+}
 
-	app_ptr = ArenaPushArray(&tmp, App, 1);
+internal void
+AppDestroyAudio(App *app)
+{
+	AUD_Shutdown(&app->audio_system);
+	
+	app->audio_backend->Shutdown();
+}
 
-	app_ptr->permanent_arena = tmp;
-	app_ptr->frame_arena = ArenaInitArena(&app_ptr->permanent_arena, Megabytes(512));
+internal void
+AppTickAudio(App *app, f32 dt)
+{
+	AUD_Listener listener = {0};
+	AUD_Tick(&app->audio_system, dt, listener);
+}
 
-	app_ptr->osapi = data->api;
+internal void
+AppHotLoadAudio(App *app)
+{
+	AUD_BackendSelect(app->audio_backend);
+}
+
+internal void
+AppHotUnloadAudio(App *app)
+{
+}
+
+/* ==================================================
+   GRAPHICS
+   ================================================== */
+
+internal void
+AppInitGraphics(App *app)
+{
+}
+
+internal void
+AppDestroyGraphics(App *app)
+{
+}
+
+internal void
+AppTickGraphics(App *app, f32 dt)
+{
+}
+
+internal void
+AppHotLoadGraphics(App *app)
+{
+	GFX_DeviceHotLoad(&app->graphics_device);
+}
+
+internal void
+AppHotUnloadGraphics(App *app)
+{
+	GFX_DeviceHotUnload(&app->graphics_device);
+}
+
+
+/* ==================================================
+   APP
+   ================================================== */
+
+__declspec(dllexport) App *
+AppInit(Arena *arena, const OS_API *api)
+{
+	osapi = api;
+	
+	App *app = ArenaPushArray(arena, App, 1);
+	
+	app->permanent_arena = arena;
+	app->frame_arena = ArenaInitArena(app->permanent_arena, Megabytes(512));
+
+	AppInitAudio(app);
+	AppInitGraphics(app);
+
+	return app;
 }
 
 __declspec(dllexport) void
-AppDestroy(void)
+AppDestroy(App *app)
 {
+	AppDestroyGraphics(app);
+	AppDestroyAudio(app);
 }
 
 __declspec(dllexport) b32
-AppTick(const I_InputSt *input)
+AppTick(App *app, const I_InputSt *input)
 {
-	ArenaClear(&app_ptr->frame_arena);
+	ArenaClear(&app->frame_arena);
 
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
 		return true;
+
+	const f32 dt = 0.1f;
+
+	AppTickAudio(app, dt);
+	AppTickGraphics(app, dt);
 	
 	return false;
 }
 
 __declspec(dllexport) void
-AppHotLoad(const OS_BootstrapData *data)
+AppHotLoad(App *app, const OS_API *api)
 {
-	app_ptr = data->memory;
-	osapi = app_ptr->osapi;
+	osapi = api;
 
-	GFX_DeviceHotLoad(&app_ptr->graphics_device);
+	AppHotLoadGraphics(app);
+	AppHotLoadAudio(app);
 }
 
 __declspec(dllexport) void
-AppHotUnload(void)
+AppHotUnload(App *app)
 {
-	GFX_DeviceHotUnload(&app_ptr->graphics_device);
+	AppHotUnloadAudio(app);
+	AppHotUnloadGraphics(app);
 }

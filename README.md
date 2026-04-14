@@ -97,8 +97,8 @@ Data that simply cannot survive a hot-reload, such as OS level features (i.e. th
 |  W32_RootJobEntry  --> AppInit(bootstrap_data)   |
 |  W32_FrameJobEntry --> AppTick(input)            |
 +--------------------------------------------------+
-              |  Passes OS_BootstrapData
-              |  (Memory + API Table)
+              |
+              |  Passes API Table
               V
 +--------------------------------------------------+
 |  app.dll                                         |

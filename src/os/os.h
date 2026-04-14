@@ -1,6 +1,10 @@
 #ifndef OS_H
 #define OS_H
 
+// total amount of allocated memory to
+// the entire process, everything.
+#define OS_PROCESS_MEMORY           Gigabytes(8)
+
 #define OS_ENGINE_NAME             "Magpie"
 #define OS_DEFAULT_WINDOW_TITLE    "Magpie Demo"
 
@@ -261,14 +265,6 @@ struct OS_API
 	b32  (*VulkanSurfaceCreate)(void *instance, void *surface_ptr);
 	void (*VulkanSurfaceDestroy)(void *instance, void *surface);
 	const char *const *(*VulkanGetInstanceExtensions)(u32 *count);
-};
-
-typedef struct OS_BootstrapData OS_BootstrapData;
-struct OS_BootstrapData
-{
-	void *memory;
-	u64 memory_size;
-	OS_API *api;
 };
 
 #endif // OS_H

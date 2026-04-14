@@ -26,14 +26,11 @@
 #include "os/os_inc.h"
 #include "input/input_inc.h"
 
+#include "app.h"
+
 #include "core/core_inc.c"
 #include "os/os_inc.c"
 #include "input/input_inc.c"
-
-#include "app.h"
-
-#define OS_W32_OBJECT_MEMORY_SIZE Megabytes(16)
-#define OS_W32_APP_MEMORY_SIZE Gigabytes(4)
 
 typedef struct OS_W32_Object OS_W32_Object;
 struct OS_W32_Object
@@ -53,7 +50,7 @@ struct OS_W32_Code
 	HMODULE handle;
 	FILETIME last_write_time;
 
-	void (*Init)(const OS_W32_BootstrapData *data);
+	App *(*Init)(const OS_W32_BootstrapData *data);
 	void (*Destroy)(void);
 	b32  (*Tick)(const I_InputSt *input);
 	void (*HotLoad)(const OS_BootstrapData *data);
@@ -63,18 +60,20 @@ struct OS_W32_Code
 typedef struct OS_W32_State OS_W32_State;
 struct OS_W32_State
 {
-	Arena object_arena;
-	OS_W32_Object *free_objects;
-
+	Arena process_arena;
+	
+	App *app;
+	
 	OS_API api;
 	OS_W32_Code code;
 	
 	SYSTEM_INFO system_info;
 	SDL_Window *sdl_window;
 
+	OS_W32_Object *free_objects;
+
 	u32 pending_event_count;
 	SDL_Event pending_events[512];
-
 	OS_Handle event_mutex;
 
 	u32 gamepad_count;
@@ -95,7 +94,7 @@ OS_W32_AllocObject(void)
 	}
 	else
 	{
-		object = ArenaPushArray(&win32_st.object_arena, OS_W32_Object, 1);
+		object = ArenaPushArray(&win32_st.process_arena, OS_W32_Object, 1);
 	}
 
 	return object;
@@ -108,11 +107,11 @@ OS_W32_ReturnObject(OS_W32_Object *object)
 	win32_st.free_objects = object;
 }
 
-void OS_W32_AppNullStubInit(const OS_BootstrapData *data) { }
-void OS_W32_AppNullStubDestroy(void) { }
-b32  OS_W32_AppNullStubTick(const I_InputSt *input) { return false; }
-void OS_W32_AppNullStubHotLoad(const OS_BootstrapData *data) { }
-void OS_W32_AppNullStubHotUnload(void) { }
+App *OS_W32_AppNullStubInit(Arena *arena, const OS_API *api) { return NULL; }
+void OS_W32_AppNullStubDestroy(App *app) { }
+b32  OS_W32_AppNullStubTick(App *app, const I_InputSt *input) { return false; }
+void OS_W32_AppNullStubHotLoad(App *app, const OS_API *api) { }
+void OS_W32_AppNullStubHotUnload(App *app) { }
 
 internal void
 OS_W32_UnloadCode(void)
@@ -952,34 +951,29 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 
 	// ---
 	
-	if (win32_st.code.Tick(&curr_input_st))
+	if (win32_st.code.Tick(win32_st.app, &curr_input_st))
 	{
 		JOB_Halt();
 	}
 	else
 	{
-		JOB_Decl next_frame = {0};
-		next_frame.EntryPoint = OS_W32_FrameJobEntry;
-		next_frame.priority = JOB_Priority_Normal;
+		JOB_Decl next_frame_job = {0};
+		next_frame_job.EntryPoint = OS_W32_FrameJobEntry;
+		next_frame_job.priority = JOB_Priority_Normal;
 
-		JOB_Kick(&next_frame, NULL);
+		JOB_Kick(&next_frame_job, NULL);
 	}
 }
 
 JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 {
-	OS_BootstrapData bootstrap_data = {0};
-	bootstrap_data.memory = param;
-	bootstrap_data.memory_size = OS_W32_APP_MEMORY_SIZE;
-	bootstrap_data.api = &win32_st.api;
-	
-	win32_st.code.Init(&bootstrap_data);
+	win32_st.app = win32_st.code.Init(&win32_st.process_arena, &win32_st.api);
 
-	JOB_Decl first_frame = {0};
-	first_frame.EntryPoint = OS_W32_FrameJobEntry;
-	first_frame.priority = JOB_Priority_Normal;
+	JOB_Decl first_frame_job = {0};
+	first_frame_job.EntryPoint = OS_W32_FrameJobEntry;
+	first_frame_job.priority = JOB_Priority_Normal;
 
-	JOB_Kick(&first_frame, NULL);
+	JOB_Kick(&first_frame_job, NULL);
 }
 
 i32
@@ -1014,36 +1008,27 @@ main(void)
 	OS_W32_InitImGui();
 	OS_W32_LoadCode(Str8("build/app.dll"));
 
-	u64 job_memory_size =
-		JOB_MAX_CONCURRENT_FIBERS * THREAD_CONTEXT_SCRATCH_RING_SIZE * JOB_FIBER_SCRATCH_SIZE +
-		Megabytes(1);
-
-	void *object_memory = malloc(OS_W32_OBJECT_MEMORY_SIZE);
-	win32_st.object_arena = ArenaInitMemory(object_memory, OS_W32_OBJECT_MEMORY_SIZE);
-
-	void *job_memory = malloc(job_memory_size);
-	Arena job_arena = ArenaInitMemory(job_memory, job_memory_size);
+	const u64 process_memory_size = OS_PROCESS_MEMORY;
+	void *process_memory = malloc(process_memory_size);
+	MemSet(process_memory, 0, process_memory_size);
+	win32_st.process_arena = ArenaInitMemory(process_memory, process_memory_size);
 
 	JOB_Scheduler scheduler = {0};	
-	JOB_InitAndSelect(&job_arena, &scheduler);
+	JOB_InitAndSelect(&win32_st.process_arena, &scheduler);
 
-	void *app_memory = malloc(OS_W32_APP_MEMORY_SIZE);
-	
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
-	root_job.param = memory;
 	root_job.priority = JOB_Priority_Normal;
 
 	JOB_Kick(&root_job, NULL);
 	
 	JOB_Enter(OS_W32_MessagePump);
 	
-	win32_st.code.Destroy();
+	win32_st.code.Destroy(win32_st.app);
+	
 	JOB_Shutdown();
 
-	free(app_memory);
-	free(job_memory);
-	free(object_memory);
+	free(process_memory);
 
 	OS_W32_DestroyImGui();
 	SDL_DestroyWindow(win32_st.sdl_window);
