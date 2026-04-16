@@ -15,15 +15,14 @@ struct ENT_TypePool
 typedef struct ENT_Locator ENT_Locator;
 struct ENT_Locator
 {
-	ENT_TypeID tid;
+	ENT_Type type;
 	u32 slot_index;
 };
 
 typedef struct ENT_World ENT_World;
 struct ENT_World
 {
-	ENT_Registry registry;
-	ENT_TypePool pools[ENT_REGISTRY_MAX_TYPES];
+	ENT_TypePool pools[ENT_Type_COUNT];
 
 	ENT_Locator *id_map;
 	u32 next_entity_id;
@@ -47,7 +46,7 @@ internal void ENT_WorldDestroy (ENT_World *world);
    ENTITIES
    ================================================== */
 
-internal void *ENT_WorldSpawn (ENT_World *world, ENT_TypeID tid);
+internal void *ENT_WorldSpawn (ENT_World *world, ENT_Type type);
 internal void *ENT_WorldKill  (ENT_World *world, ENT_UID uid);
 
 
@@ -67,7 +66,7 @@ struct ENT_GetAllReceipt
 	u64 count;
 };
 
-internal ENT_GetAllReceipt ENT_WorldGetAll(ENT_World *world, ENT_TypeID tid);
+internal ENT_GetAllReceipt ENT_WorldGetAll(ENT_World *world, ENT_Type type);
 
 
 /* ==================================================

@@ -1,19 +1,39 @@
 #ifndef ENTITY_REGISTRY_H
 #define ENTITY_REGISTRY_H
 
-#define ENT_REGISTRY_MAX_TYPES 512
-
-typedef struct ENT_Registry ENT_Registry;
-struct ENT_Registry
+global String8 ent_global_struct_names[ENT_Type_COUNT] =
 {
-	ENT_TypeDesc types[ENT_REGISTRY_MAX_TYPES];
-	u32 count;
+#define EntityDef(pascal, lower, max) Str8(STRINGIFY(pascal)),
+#include "entity_xmacro.inc"
+#undef EntityDef
 };
 
-internal void       ENT_RegistryInit (ENT_Registry *registry);
-internal ENT_TypeID ENT_RegistryAdd  (ENT_Registry *registry, const ENT_TypeDesc *desc);
+global String8 ent_global_lower_names[ENT_Type_COUNT] =
+{
+#define EntityDef(pascal, lower, max) Str8(STRINGIFY(lower)),
+#include "entity_xmacro.inc"
+#undef EntityDef
+};
 
-internal const ENT_TypeDesc *ENT_RegistryGet       (const ENT_Registry *registry, ENT_TypeID tid);
-internal const ENT_TypeDesc *ENT_RegistryGetByName (const ENT_Registry *registry, String8 name);
+global ENT_TypeDesc ent_global_types[ENT_Type_COUNT] =
+{
+#define EntityDef(pascal, lower, max)									\
+	[ENT_Type_##Pascal] =												\
+	{																	\
+		.name              = Str8(STRINGIFY(pascal)),					\
+		.stride            = sizeof(ENT_##pascal),						\
+		.max_instances     = (max),										\
+		.OnDestroy         = (ENT_TypeDescOnDestroyFn *)ENT_##pascal##Destroy, \
+		.OnPreAnimTick     = (ENT_TypeDescOnTickFn *)ENT_##pascal##PreAnimTick, \
+		.OnPostAnimTick    = (ENT_TypeDescOnTickFn *)ENT_##pascal##PostAnimTick, \
+		.OnPostPhysicsTick = (ENT_TypeDescOnTickFn *)ENT_##pascal##PostPhysicsTick, \
+		.OnSerialize       = (ENT_TypeDescOnSerializeFn *)ENT_##pascal##Serialize, \
+		.OnDeserialize     = (ENT_TypeDescOnDeserializeFn *)ENT_##pascal##Deserialize \
+	},																	\
+
+#include "entity_xmacro.inc"
+
+#undef EntityDef
+};
 
 #endif // ENTITY_REGISTRY_H

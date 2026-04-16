@@ -10,7 +10,7 @@ typedef void ENT_EventHandlerFn(void *entity, const ENT_Event *event);
 typedef struct ENT_EventBinding ENT_EventBinding;
 struct ENT_EventBinding
 {
-	ENT_TypeID tid;
+	ENT_Type entity_type;
 	ENT_EventType event_type;
 	ENT_EventHandlerFn *handler;
 };
@@ -30,8 +30,8 @@ internal void ENT_EventQueueInit(ENT_EventQueue *q);
 internal void ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev);
 
 internal void ENT_EventBind(ENT_EventQueue *q,
-							ENT_TypeID tid,
-							ENT_EventType type,
+							ENT_Type entity_type,
+							ENT_EventType event_type,
 							ENT_EventHandlerFn *handler);
 
 internal void ENT_EventDispatch(ENT_EventQueue *q);

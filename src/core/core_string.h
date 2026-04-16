@@ -8,8 +8,7 @@ struct String8
 	u64 len;
 };
 
-internal String8 String8Init(u8 *str, u64 len);
-
+#define String8Init(str_, len_) ((String8) { .str = (str_), .len = (len_) })
 #define Str8(s) String8Init((u8 *)(s), sizeof(s) - 1)
 
 internal String8 String8Alloc(Arena *arena, u32 len);

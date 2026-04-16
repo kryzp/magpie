@@ -1,15 +1,5 @@
 
 internal String8
-String8Init(u8 *str, u64 len)
-{
-	String8 s = {0};
-	s.str = str;
-	s.len = len;
-
-	return s;
-}
-
-internal String8
 String8Alloc(Arena *arena, u32 len)
 {
 	String8 str = {0};

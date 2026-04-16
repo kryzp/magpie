@@ -13,13 +13,6 @@ ENT_UIDNull(void)
 	return (ENT_UID) {0};
 }
 
-// Type of the entity - Player, ShopKeepr, etc...
-typedef struct ENT_TypeID ENT_TypeID;
-struct ENT_TypeID
-{
-	u16 value;
-};
-
 typedef u32 ENT_Flags;
 enum
 {
@@ -60,11 +53,13 @@ typedef struct ENT_Header ENT_Header;
 struct ENT_Header
 {
 	ENT_UID uid;
-	ENT_TypeID tid;
+	ENT_Type type;
 	ENT_Flags flags;
 	u16 layer_id;
 	ENT_Transform transform;
 	String8 debug_name;
 };
+
+#define ENT_HeaderOf(entity_pointer) ((ENT_Header *)(entity_pointer))
 
 #endif // ENTITY_HEADER_H

@@ -7,22 +7,37 @@ typedef struct IO_ByteReader IO_ByteReader;
 
 typedef struct ENT_World ENT_World;
 
+typedef enum ENT_Type
+{
+	ENT_Type_Null = 0,
+#define EntityDef(pascal, lower, max) ENT_Type_##Pascal,
+#include "entity_xmacro.inc"
+#undef EntityDef
+	ENT_Type_COUNT,
+}
+ENT_Type;
+
+typedef void ENT_TypeDescOnDestroyFn     (void *entity);
+typedef void ENT_TypeDescOnTickFn        (void *entity, f32 dt);
+typedef void ENT_TypeDescOnSerializeFn   (void *entity, IO_ByteWriter *writer);
+typedef void ENT_TypeDescOnDeserializeFn (void *entity, IO_ByteReader *reader);
+
 typedef struct ENT_TypeDesc ENT_TypeDesc;
 struct ENT_TypeDesc
 {
 	String8 name;
-	ENT_TypeID tid;
+	ENT_Type type;
 	u64 stride;
 	u32 max_instances;
 
-	void (*OnDestroy)         (void *entity);
-
-	void (*OnPreAnimTick)     (void *entity, f32 dt);
-	void (*OnPostAnimTick)    (void *entity, f32 dt);
-	void (*OnPostPhysicsTick) (void *entity, f32 dt);
+	ENT_TypeDescOnDestroyFn *OnDestroy;
 	
-	void (*OnSerialize)       (void *entity, IO_ByteWriter *writer);
-	void (*OnDeserialize)     (void *entity, IO_ByteReader *reader);
+	ENT_TypeDescOnTickFn *OnPreAnimTick;
+	ENT_TypeDescOnTickFn *OnPostAnimTick;
+	ENT_TypeDescOnTickFn *OnPostPhysicsTick;
+
+	ENT_TypeDescOnSerializeFn   *OnSerialize;
+	ENT_TypeDescOnDeserializeFn *OnDeserialize;
 };
 
 #endif // ENTITY_TYPE_H

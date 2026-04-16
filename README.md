@@ -6,12 +6,14 @@
 ![](images/cool.png)
 ![](images/sponza.png)
 
+
 ## About the Project
 Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little. I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
 
 This project has been the death of me.
+
 
 ## Notable Features
 - **True Hot-Code Reloading** for everything outside of `/os/` (app code written to DLL)
@@ -33,6 +35,8 @@ This project has been the death of me.
 - **3D Audio**
 - **Debug Rendering** (lines, circles, spheres, AABB, OBB, crosses, etc.)
 - **GPU Profiler**
+- **Modular Entity System**
+
 
 ## Roadmap
 
@@ -52,6 +56,7 @@ This project has been the death of me.
 - Refraction
 - Shader Permutations(?)
 
+
 ### Mini Project Ideas
 - Realistic Ocean water rendering based on FFT
 - Terrain Generator based on No Man's Sky GDC Talk
@@ -64,6 +69,7 @@ This project has been the death of me.
 
 The codebase is split into a tiered system to make development easier and more compartmentalized. This is akin to the Source engine (Tier0, Tier1, ...) or the Decima Engine (OS, PIGS, ...), though a little more granular.
 
+
 ### Namespaces & Unity Build
 Each layer follows a strict namespace system. Since this is C, I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for unsigned types, etc.).
 
@@ -71,12 +77,24 @@ It is a **unity build**. Both headers and source are `#include`'d in a single co
 
 Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance.
 
+
+### The Entity System
+I really dislike entity component systems with a viceral, primal, gut-wrenching hatred, but inheritance-based ones suck as well, so we go with the best solution in my opinion: you split entity behaviours into just... structs.
+
+You just call to them for shared functionality (imagine - NPC's like shopkeepers, raiders, etc... all have some shared functionality (maybe you can talk to them, or they have an opinion of you, etc...) so you just move it out into a struct. Simple as!). Of course each entity has unique data (otherwise your game would be a little more exciting then staring at a mountain erode via rainfall) and it's easy as pie to do with this system. Best of both worlds!
+
+It's kinda like a mega-structure entity approach except it doesn't feel like someone stabbing you 591224 times in the pancreas every time you try to add new behaviour into your three trillion line header file and find that you've yet again hit a naming conflict, and have become lost entirely. If you want physics, ask the physics engine for a handle and then use it. If you want audio, AI, rendering, all the same. An entity is just a glorified function call anyway.
+
+I use some fancy X-Macro magic to streamline the process, like automatically generating a type description per-entity.
+
+
 ### Rendering Structure
 Rendering is fundamentally abstracted into what should be three layers, but is only two right now:
 
 1. **The Vulkan abstraction layer (`/graphics/`)**: Makes up the bulk of the graphics layer. Handles synchronization, resource management, etc. GPU resources are assigned handles (keys) by the graphics device, and only get resolved when they're used. Pretty much all high-level interactions with Vulkan either go through the device or command buffer (which has to get submitted to the device anyway).
 2. **The Rendering abstraction layer (`/render/`)**: Consists of a render graph abstraction and (generally) stateless render stage code, such as the culling, geometry, and lighting stages.
 3. **The Scene abstraction layer (WIP)**: Manages meshes, materials, and lights.
+
 
 ### Hot-Code Reloading
 The actual implementation of this is relatively simple. All memory is allocated at once in the beginning of the program, so all we have to do is reload the DLL (thank you Handmade Hero!). 
@@ -113,6 +131,7 @@ Data that simply cannot survive a hot-reload, such as OS level features (i.e. th
 +--------------------------------------------------+
 ```
 
+
 ### Formatting
 Files in each namespace begin with the full name of the namespace followed by an underscore, and include guards are just the capitalized name of the file.
 
@@ -137,6 +156,7 @@ struct MyDataType
 Therefore, only do this when you really HAVE to use an opaque type that isn't portable at all (so much so that you're okay with sacrificing an innocent puppy for the sake of the code, hope it was worth it!), and in those cases make it clear that it's a pointer or anything that isn't plain ol' data.
 
 Macros follow the naming convention of whatever makes the most sense: if it's meant to act like a function use `PascalCase`, if it's a constant use `SCREAMING_SNAKE_CASE`, etc.
+
 
 ## QnA
 
