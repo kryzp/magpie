@@ -1,158 +1,6 @@
 #ifndef ASSET_MANAGER_H
 #define ASSET_MANAGER_H
 
-typedef enum AST_Type
-{
-	AST_Type_Unknown,
-#define AssetDef(name) AST_Type_##name,
-#include "asset_definitions.inc"
-#undef AssetDef
-	AST_Type_COUNT
-}
-AST_Type;
-
-internal inline AST_Type
-AST_TypeFromString(String8 str)
-{
-#define AssetDef(name) if (String8Match(str, Str8(#name))) return AST_Type_##name;
-#include "asset_definitions.inc"
-#undef AssetDef
-	
-	AssertTrue(false && "Unknown Asset Name.");
-
-	return AST_Type_COUNT;
-}
-
-internal inline String8
-AST_StringFromType(Arena *arena, AST_Type type)
-{
-#define AssetDef(name) if (type == AST_Type_##name) return Str8(#name);
-#include "asset_definitions.inc"
-#undef AssetDef
-	
-	AssertTrue(false && "Unknown Asset Type.");
-
-	return (String8) {0};
-}
-
-typedef enum AST_State
-{
-	AST_State_Unloaded,
-	AST_State_CpuStage,
-	AST_State_WaitingForDependencies,
-	AST_State_GpuStage,
-	AST_State_Ready,
-	AST_State_Failed,
-	AST_State_COUNT
-}
-AST_State;
-
-internal inline b32
-AST_StateIsLoading(AST_State st)
-{
-	return
-		st == AST_State_CpuStage ||
-		st == AST_State_WaitingForDependencies ||
-		st == AST_State_GpuStage;
-}
-
-internal inline b32
-AST_StateNeedsLoad(AST_State st)
-{
-	return
-		st == AST_State_Unloaded ||
-		st == AST_State_Failed;
-}
-
-internal inline b32
-AST_StateIsLoaded(AST_State st)
-{
-	return
-		st == AST_State_Ready;
-}
-
-internal inline b32
-AST_StateIsFinalized(AST_State st)
-{
-	return
-		st == AST_State_Ready ||
-		st == AST_State_Failed;
-}
-
-typedef struct AST_MetaData AST_MetaData;
-struct AST_MetaData
-{
-	String8 path;
-};
-
-typedef struct AST_Handle AST_Handle;
-struct AST_Handle
-{
-	u32 index;
-	u32 generation;
-};
-
-internal inline AST_Handle
-AST_HandleNull(void)
-{
-	AST_Handle handle = {0};
-	handle.index = -1u;
-	handle.generation = 0;
-
-	return handle;
-}
-
-internal inline b32
-AST_HandleMatch(AST_Handle a, AST_Handle b)
-{
-	return (a.index == b.index &&
-			a.generation == b.generation);
-}
-
-typedef struct AST_Asset AST_Asset;
-struct AST_Asset
-{
-	AST_Type type;
-	AST_Handle handle;
-
-	/*
-	union
-	{
-		struct
-		{
-		}
-		texture;
-
-		struct
-		{
-		}
-		shader;
-
-		struct
-		{
-		}
-		model;
-
-		struct
-		{
-		}
-		sound;
-	};
-	*/
-};
-
-typedef struct AST_Assets AST_Assets;
-
-typedef struct AST_Context AST_Context;
-struct AST_Context
-{
-	Arena *scratch;
-	AST_Assets *assets;
-	AST_MetaData metadata;
-};
-
-internal String8 AST_ContextSystemFilePath(const AST_Context *context);
-
 typedef struct AST_LoadData AST_LoadData;
 struct AST_LoadData
 {
@@ -162,10 +10,10 @@ struct AST_LoadData
 	b32 failed;
 	
 	u32 dependency_count;
-	AST_Handle dependencies[16];
+	AST_Handle *dependencies;
 
 	u32 watch_path_count;
-	char watch_paths[16][512];
+	String8 *watch_paths;
 };
 
 typedef struct AST_Upload AST_Upload;
@@ -177,43 +25,39 @@ struct AST_Upload
 	AST_Type type;
 };
 
+#define AST_UPLOAD_QUEUE_MAX_ELEMENTS 64
+
 typedef struct AST_UploadQueue AST_UploadQueue;
 struct AST_UploadQueue
 {
+	AST_Upload queue[AST_UPLOAD_QUEUE_MAX_ELEMENTS];
+	u32 count;
 };
 
-typedef struct AST_Serializer AST_Serializer;
-struct AST_Serializer
-{
-	AST_LoadData *(*Load)(const AST_Context *ctx);
-	void (*Finalize)(const AST_Context *ctx, void *data, AST_Asset *existing, GFX_Device *device);
-	void (*Upload)(const AST_Context *ctx, void *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
-	void (*Dispose)(void *data);
-};
-
-// TODO: this is a bitch
 typedef struct AST_Record AST_Record;
 struct AST_Record
 {
-	AST_Asset *asset;
-
-	AST_State state;
+	AST_Asset asset;
 
 	AST_Upload upload_data;
-	
-	u32 generation;
-	
+
 	String8 path;
 
 	u64 last_write_time;
-	
-	u32 pending_dependencies;
-	
+
 	u32 dependent_count;
 	AST_Handle dependents[16];
 
 	u32 watch_path_count;
-	char watch_paths[16][512];
+	String8 *watch_paths;
+};
+
+typedef struct AST_HotRecord AST_HotRecord;
+struct AST_HotRecord
+{
+	AST_State state;
+	u32 generation;
+	u32 pending_deps;
 };
 
 typedef struct AST_PathMapEntry AST_PathMapEntry;
@@ -227,19 +71,22 @@ struct AST_PathMapEntry
 typedef struct AST_MountPoint AST_MountPoint;
 struct AST_MountPoint
 {
-	char prefix[64];
-	char directory[512];
+	String8 prefix;
+	String8 directory;
 };
 
 typedef struct AST_Assets AST_Assets;
 struct AST_Assets
 {
+	Arena *arena;
 	GFX_Device *graphics_device;
-	
+
+	u32 record_count;
 	AST_Record records[512];
+	AST_HotRecord hot_records[512];
 	
-	u32 free_indices[512];
 	u32 free_index_count;
+	u32 free_indices[512];
 
 	AST_Serializer serializers[AST_Type_COUNT];
 
@@ -267,12 +114,15 @@ struct AST_Assets
    CORE
    ================================================== */
 
-internal void AST_Init(AST_Assets *assets, GFX_Device *device);
+internal void AST_Init(AST_Assets *assets, Arena *arena, GFX_Device *device);
 internal void AST_Destroy(AST_Assets *assets);
 
 internal void AST_PollHotReloads(AST_Assets *assets);
 internal void AST_WaitForAsyncUploads(AST_Assets *assets);
 internal void AST_FlushUploads(AST_Assets *assets);
+
+internal u32 AST_AllocSlot(AST_Assets *assets);
+internal AST_Record *AST_GetRecord(AST_Assets *assets, AST_Handle handle);
 
 
 /* ==================================================
@@ -287,18 +137,18 @@ internal String8 AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8
    QUERY
    ================================================== */
 
-internal b32 AST_IsLoaded(const AST_Assets *assets, AST_Handle handle);
-internal b32 AST_IsLoading(const AST_Assets *assets, AST_Handle handle);
-internal b32 AST_IsValid(const AST_Assets *assets, AST_Handle handle);
+internal b32 AST_IsLoaded  (const AST_Assets *assets, AST_Handle handle);
+internal b32 AST_IsLoading (const AST_Assets *assets, AST_Handle handle);
+internal b32 AST_IsValid   (const AST_Assets *assets, AST_Handle handle);
 
 
 /* ==================================================
    LOADING
    ================================================== */
 
-internal void AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type);
-internal void AST_LoadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type);
-internal void AST_ReloadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal void AST_LoadAsync   (AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal void AST_ReloadAsync (AST_Assets *assets, AST_Handle handle, AST_Type type);
 
 internal void AST_LoadDirectEx(AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter);
 
@@ -310,10 +160,10 @@ internal void AST_PushForDependencyResolution(AST_Assets *assets, const AST_Uplo
    ASSETS
    ================================================== */
 
-internal AST_Asset *AST_AssetCreate(AST_Assets *assets, String8 path);
-internal void       AST_AssetDestroy(AST_Handle handle);
-internal AST_Asset *AST_AssetGet(AST_Assets *assets, AST_Handle handle, AST_Type type);
-internal void       AST_AssetUnload(AST_Asset *asset);
+internal AST_Asset *AST_AssetCreate  (AST_Assets *assets, String8 path);
+internal void       AST_AssetDestroy (AST_Assets *assets, AST_Handle handle);
+internal AST_Asset *AST_AssetGet     (AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal void       AST_AssetUnload  (AST_Assets *assets, AST_Asset *asset);
 
 
 /* ==================================================

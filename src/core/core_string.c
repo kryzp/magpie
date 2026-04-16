@@ -20,13 +20,25 @@ String8Alloc(Arena *arena, u32 len)
 }
 
 internal String8
+String8Clone(Arena *arena, String8 string)
+{
+	String8 clone = {0};
+	clone.str = ArenaPushArray(arena, u8, string.len + 1);
+	clone.len = string.len;
+
+	MemCopy(clone.str, string.str, clone.len);
+
+	return clone;
+}
+
+internal String8
 String8Append(Arena *arena, String8 a, String8 b)
 {
 	u32 len = a.len + b.len;
 
 	String8 out = String8Alloc(arena, len);
 
-	MemCopy(out.str        , a.str, a.len);
+	MemCopy(out.str,         a.str, a.len);
 	MemCopy(out.str + a.len, b.str, b.len);
 
 	return out;

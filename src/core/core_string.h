@@ -13,6 +13,7 @@ internal String8 String8Init(u8 *str, u64 len);
 #define Str8(s) String8Init((u8 *)(s), sizeof(s) - 1)
 
 internal String8 String8Alloc(Arena *arena, u32 len);
+internal String8 String8Clone(Arena *arena, String8 string);
 internal String8 String8Append(Arena *arena, String8 a, String8 b);
 
 internal b32 String8Match(String8 a, String8 b);

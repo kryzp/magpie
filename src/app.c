@@ -9,6 +9,7 @@
 #include "render/render_inc.h"
 #include "audio/audio_inc.h"
 #include "animation/animation_inc.h"
+#include "entity/entity_inc.h"
 #include "timeline/timeline_inc.h"
 #include "cutscene/cutscene_inc.h"
 
@@ -27,6 +28,7 @@
 #include "render/render_inc.c"
 #include "audio/audio_inc.c"
 #include "animation/animation_inc.c"
+#include "entity/entity_inc.c"
 #include "cutscene/cutscene_inc.c"
 
 #include "camera_driver.c"
