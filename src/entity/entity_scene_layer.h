@@ -24,7 +24,6 @@
 typedef struct ENT_SceneLayer ENT_SceneLayer;
 struct ENT_SceneLayer
 {
-	u32 id;
 	String8 name;
 	b32 active;
 	b32 visible;

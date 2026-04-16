@@ -13,6 +13,18 @@ ENT_UIDNull(void)
 	return (ENT_UID) {0};
 }
 
+internal inline b32
+ENT_UIDIsNull(ENT_UID uid)
+{
+	return uid.value == 0;
+}
+
+internal inline b32
+ENT_UIDMatch(ENT_UID a, ENT_UID b)
+{
+	return a.value == b.value;
+}
+
 typedef u32 ENT_Flags;
 enum
 {
@@ -22,23 +34,6 @@ enum
 	ENT_Flag_Static      = 1 << 2, // doesn't move (more of a hint typically)
 	ENT_Flag_PendingKill = 1 << 3  // marked for death (Aura)
 };
-
-typedef struct ENT_Transform ENT_Transform;
-struct ENT_Transform
-{
-	v3 position;
-	v4 rotation;
-	v3 scale;
-	m4 matrix;
-	b32 dirty;
-};
-
-internal void ENT_TransformRecompute(ENT_Transform *transform);
-
-// I hate getters / setters but we need these to automatically
-// set the dirty flag, though I wonder if we even need that...
-internal void ENT_TransformSetPosition(ENT_Transform *transform, v3 position);
-internal void ENT_TransformSetRotation(ENT_Transform *transform, v4 rotation);
 
 /*
  * Bascially to do basically what C++ does
@@ -62,8 +57,13 @@ struct ENT_Header
 
 #define ENT_HeaderOf(entity_pointer) ((ENT_Header *)(entity_pointer))
 
-#define ENT_UIDOf(entity_pointer)           (&ENT_HeaderOf(entity_pointer)->uid)
-#define ENT_TypeOf(entity_pointer)          (&ENT_HeaderOf(entity_pointer)->type)
-#define ENT_TransformOf(entity_pointer)     (&ENT_HeaderOf(entity_pointer)->transform)
+// todo: not a fan of this, should probably just
+//       remove and use header directly.
+#define ENT_UIDOf(entity_pointer)           (ENT_HeaderOf(entity_pointer)->uid)
+#define ENT_TypeOf(entity_pointer)          (ENT_HeaderOf(entity_pointer)->type)
+#define ENT_FlagsOf(entity_pointer)         (ENT_HeaderOf(entity_pointer)->flags)
+#define ENT_LayerIDOf(entity_pointer)       (ENT_HeaderOf(entity_pointer)->layer_id)
+#define ENT_TransformOf(entity_pointer)     (ENT_HeaderOf(entity_pointer)->transform)
+#define ENT_DebugNameOf(entity_pointer)     (ENT_HeaderOf(entity_pointer)->debug_name)
 
 #endif // ENTITY_HEADER_H

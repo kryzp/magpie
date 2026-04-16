@@ -5,8 +5,6 @@
 typedef struct IO_ByteWriter IO_ByteWriter;
 typedef struct IO_ByteReader IO_ByteReader;
 
-typedef struct ENT_World ENT_World;
-
 typedef enum ENT_Type
 {
 	ENT_Type_Null = 0,
@@ -17,8 +15,20 @@ typedef enum ENT_Type
 }
 ENT_Type;
 
+typedef struct ENT_World ENT_World;
+typedef struct ENT_EventQueue ENT_EventQueue;
+
+typedef struct ENT_TickContext ENT_TickContext;
+struct ENT_TickContext
+{
+	ENT_World *world;
+	ENT_EventQueue *events;
+	f32 dt;
+	const I_InputSt *input;
+};
+
 typedef void ENT_TypeDescOnDestroyFn     (void *entity);
-typedef void ENT_TypeDescOnTickFn        (void *entity, f32 dt);
+typedef void ENT_TypeDescOnTickFn        (void *entity, const ENT_TickContext *ctx);
 typedef void ENT_TypeDescOnSerializeFn   (void *entity, IO_ByteWriter *writer);
 typedef void ENT_TypeDescOnDeserializeFn (void *entity, IO_ByteReader *reader);
 

@@ -673,23 +673,6 @@ AST_WaitForAsyncUploads(AST_Assets *assets)
 	osapi->JobYield(assets->async_upload_counter, 0);
 }
 
-internal AST_Asset *
-AST_AssetGet(AST_Assets *assets, AST_Handle handle, AST_Type type, GFX_Device *device)
-{
-	AST_Record *record = AST_GetRecord(assets, handle);
-
-	if (AST_StateNeedsLoad(record->state))
-		AST_LoadNow(assets, handle, type, device);
-
-	return &record->asset;
-}
-
-internal void
-AST_AssetUnload(AST_Assets *assets, AST_Asset *asset)
-{
-	// TODO
-}
-
 internal AST_Handle
 AST_FromFilePath(AST_Assets *assets, String8 path)
 {

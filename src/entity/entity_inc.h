@@ -1,10 +1,9 @@
 #include "entity_type.h"
+#include "entity_transform.h"
 #include "entity_header.h"
 #include "entity_scene_layer.h"
 #include "entity_event.h"
 #include "entity_event_queue.h"
 #include "entity_world.h"
-
-#include "entities/entity_dummy.h"
-
+#include "entities/entities_inc.h"
 #include "entity_registry.h"

@@ -167,9 +167,6 @@ internal void AST_WaitForAsyncUploads(AST_Assets *assets);
 
 // TODO: Functionality to add/create and remove/unload assets directly via code.
 
-internal AST_Asset *AST_AssetGet     (AST_Assets *assets, AST_Handle handle, AST_Type type, GFX_Device *device);
-internal void       AST_AssetUnload  (AST_Assets *assets, AST_Asset *asset);
-
 
 /* ==================================================
    HANDLES

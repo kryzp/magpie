@@ -23,6 +23,7 @@
 #define MemCopy             memcpy
 #define MemSet              memset
 #define MemMove             memmove
+#define MemZero(x, y)       MemSet((x), 0, (y))
 #define MemZeroArray(a)     MemSet((a), 0, sizeof(a))
 #define MemZeroStruct(s)    MemSet((s), 0, sizeof(*(s)))
 #define MemAlignUp(v, a)    (((v) + (a) - 1) & ~((a) - 1))

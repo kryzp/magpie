@@ -1,6 +1,11 @@
 #ifndef ENTITY_EVENT_QUEUE_H
 #define ENTITY_EVENT_QUEUE_H
 
+// TODO: rename this its more of an
+//       event manager atp
+
+typedef struct ENT_World ENT_World;
+
 #define ENT_EVENT_QUEUE_MAX_PER_FRAME  512
 #define ENT_EVENT_QUEUE_MAX_BINDINGS   512
 
@@ -12,7 +17,7 @@ struct ENT_EventBinding
 {
 	ENT_Type entity_type;
 	ENT_EventType event_type;
-	ENT_EventHandlerFn *handler;
+	ENT_EventHandlerFn *Handler;
 };
 
 typedef struct ENT_EventQueue ENT_EventQueue;
@@ -32,9 +37,12 @@ internal void ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev);
 internal void ENT_EventBind(ENT_EventQueue *q,
 							ENT_Type entity_type,
 							ENT_EventType event_type,
-							ENT_EventHandlerFn *handler);
+							ENT_EventHandlerFn *Handler);
 
-internal void ENT_EventDispatch(ENT_EventQueue *q);
+internal void ENT_EventDispatch(ENT_EventQueue *q, ENT_World *world);
+
+internal void ENT_EventSignal    (ENT_EventQueue *q, ENT_Event *event, void *entity);
+internal void ENT_EventBroadcast (ENT_EventQueue *q, ENT_Event *event, ENT_World *world);
 
 // ---
 
