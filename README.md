@@ -40,7 +40,7 @@ This project has been the death of me.
 
 ## Roadmap
 
-### Planned Features (In rough order of what's next)
+### Planned Features (in rough order of what's next)
 - Text / Font Rendering
 - Bone / Joint Based Animation
 - More sophisticated debug logging / tracing system
@@ -56,6 +56,11 @@ This project has been the death of me.
 - Refraction
 - Shader Permutations(?)
 
+### Non-Graphics Planned Features (general engine stuff that interests me)
+- Custom (simple) physics engine
+- Complete the entity system
+- Cutscenes!
+
 
 ### Mini Project Ideas
 - Realistic Ocean water rendering based on FFT
@@ -66,7 +71,6 @@ This project has been the death of me.
 ---
 
 ## Under the Hood: Architecture
-
 The codebase is split into a tiered system to make development easier and more compartmentalized. This is akin to the Source engine (Tier0, Tier1, ...) or the Decima Engine (OS, PIGS, ...), though a little more granular.
 
 
@@ -76,6 +80,29 @@ Each layer follows a strict namespace system. Since this is C, I'm referring to 
 It is a **unity build**. Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.
 
 Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance.
+
+### The Layer Organisation
+Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
+
+The hierarchy looks something like this, from the bottom to the top:
+
+- Core
+- Input
+- OS
+- IO
+- Chrono
+- Graphics
+- Assets
+- Rendering
+- Audio
+- Animation
+- Entity
+- Timeline
+- Cutscene
+- App
+- Editor
+
+You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level *graphics* operations, but also *assets* such as textures and models (which ultimately also need to use the *graphics* layer). Other layers effectively lie parallel to each other, such *audio* and *rendering*. Entities naturally lie above the core engine systems such as physics and rendering but below higher level things like timelines. The editor needs access to all engine systems so it lies above everything.
 
 
 ### The Entity System
