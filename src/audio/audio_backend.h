@@ -73,6 +73,8 @@ struct AUD_BackendAPI
 };
 
 internal AUD_BackendAPI *AUD_BackendAllocAndSelect(Arena *arena);
-internal void AUD_BackendSelect(AUD_BackendAPI *api);
+
+internal void AUD_BackendHotLoad(AUD_BackendAPI *api);
+internal void AUD_BackendHotUnload(AUD_BackendAPI *api);
 
 #endif // AUDIO_BACKEND_H

@@ -23,12 +23,12 @@ global ENT_TypeDesc ent_global_types[ENT_Type_COUNT] =
 		.name              = Str8(STRINGIFY(pascal)),					\
 		.stride            = sizeof(ENT_##pascal),						\
 		.max_instances     = (max),										\
-		.OnDestroy         = (ENT_TypeDescOnDestroyFn *)ENT_##pascal##Destroy, \
-		.OnPreAnimTick     = (ENT_TypeDescOnTickFn *)ENT_##pascal##PreAnimTick, \
-		.OnPostAnimTick    = (ENT_TypeDescOnTickFn *)ENT_##pascal##PostAnimTick, \
-		.OnPostPhysicsTick = (ENT_TypeDescOnTickFn *)ENT_##pascal##PostPhysicsTick, \
-		.OnSerialize       = (ENT_TypeDescOnSerializeFn *)ENT_##pascal##Serialize, \
-		.OnDeserialize     = (ENT_TypeDescOnDeserializeFn *)ENT_##pascal##Deserialize \
+		.OnDestroy         = (ENT_TypeDescDestroyFn *)ENT_##pascal##Destroy, \
+		.OnPreAnimTick     = (ENT_TypeDescTickFn *)ENT_##pascal##PreAnimTick, \
+		.OnPostAnimTick    = (ENT_TypeDescTickFn *)ENT_##pascal##PostAnimTick, \
+		.OnPostPhysicsTick = (ENT_TypeDescTickFn *)ENT_##pascal##PostPhysicsTick, \
+		.OnSerialize       = (ENT_TypeDescSerializeFn *)ENT_##pascal##Serialize, \
+		.OnDeserialize     = (ENT_TypeDescDeserializeFn *)ENT_##pascal##Deserialize \
 	},																	\
 
 #include "entity_xmacro.inc"

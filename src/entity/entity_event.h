@@ -14,7 +14,7 @@ struct ENT_Event
 {
 	ENT_EventType type;
 	
-	ENT_UID source; // null = global event
+	ENT_UID source;
 	ENT_UID target; // null = broadcast
 
 	f32 timestamp;

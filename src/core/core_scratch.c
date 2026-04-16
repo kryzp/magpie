@@ -1,6 +1,6 @@
 
 internal ScratchArena
-ScratchBegin(Arena **conflicts, u32 conflict_count)
+ScratchBegin(Arena * const *conflicts, u32 conflict_count)
 {
 	Arena *arena = osapi->JobGetScratch(conflicts, conflict_count);
 	

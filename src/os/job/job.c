@@ -619,7 +619,7 @@ JOB_For(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size)
 }
 
 internal Arena *
-JOB_GetScratch(Arena **conflicts, u32 conflict_count)
+JOB_GetScratch(Arena * const *conflicts, u32 conflict_count)
 {
 	JOB_Fiber *fiber = job_current_worker->current_fiber;
 	

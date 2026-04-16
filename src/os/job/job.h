@@ -165,7 +165,7 @@ internal void JOB_For(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 ba
    SCRATCH
    ================================================== */
 
-internal Arena *JOB_GetScratch(Arena **conflicts, u32 conflict_count);
+internal Arena *JOB_GetScratch(Arena * const *conflicts, u32 conflict_count);
 
 
 #endif // JOB_H

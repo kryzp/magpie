@@ -23,14 +23,16 @@ struct ENT_TickContext
 {
 	ENT_World *world;
 	ENT_EventQueue *events;
+	
 	f32 dt;
+
 	const I_InputSt *input;
 };
 
-typedef void ENT_TypeDescOnDestroyFn     (void *entity);
-typedef void ENT_TypeDescOnTickFn        (void *entity, const ENT_TickContext *ctx);
-typedef void ENT_TypeDescOnSerializeFn   (void *entity, IO_ByteWriter *writer);
-typedef void ENT_TypeDescOnDeserializeFn (void *entity, IO_ByteReader *reader);
+typedef void ENT_TypeDescDestroyFn     (void *entity);
+typedef void ENT_TypeDescTickFn        (void *entity, const ENT_TickContext *ctx);
+typedef void ENT_TypeDescSerializeFn   (void *entity, IO_ByteWriter *writer);
+typedef void ENT_TypeDescDeserializeFn (void *entity, IO_ByteReader *reader);
 
 typedef struct ENT_TypeDesc ENT_TypeDesc;
 struct ENT_TypeDesc
@@ -40,14 +42,14 @@ struct ENT_TypeDesc
 	u64 stride;
 	u32 max_instances;
 
-	ENT_TypeDescOnDestroyFn *OnDestroy;
+	ENT_TypeDescDestroyFn *OnDestroy;
 	
-	ENT_TypeDescOnTickFn *OnPreAnimTick;
-	ENT_TypeDescOnTickFn *OnPostAnimTick;
-	ENT_TypeDescOnTickFn *OnPostPhysicsTick;
+	ENT_TypeDescTickFn *OnPreAnimTick;
+	ENT_TypeDescTickFn *OnPostAnimTick;
+	ENT_TypeDescTickFn *OnPostPhysicsTick;
 
-	ENT_TypeDescOnSerializeFn   *OnSerialize;
-	ENT_TypeDescOnDeserializeFn *OnDeserialize;
+	ENT_TypeDescSerializeFn   *OnSerialize;
+	ENT_TypeDescDeserializeFn *OnDeserialize;
 };
 
 #endif // ENTITY_TYPE_H

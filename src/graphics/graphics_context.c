@@ -69,10 +69,10 @@ GFX_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properti
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-internal const char *const *
+internal const char * const *
 GFX_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
 {
-	const char *const *names = osapi->VulkanGetInstanceExtensions(extension_count);
+	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
 
 	if (!names)
 		AssertTrue(false && "Unable to get instance extension count.");

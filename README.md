@@ -114,6 +114,8 @@ It's kinda like a mega-structure entity approach except it doesn't feel like som
 
 I use some fancy X-Macro magic to streamline the process, like automatically generating a type description per-entity.
 
+Everything an entity needs to inform decisions (pointers to other systems, the world, etc...) all just gets passed as a single context struct to it's tick functions.
+
 
 ### Rendering Structure
 Rendering is fundamentally abstracted into what should be three layers, but is only two right now:

@@ -34,9 +34,9 @@ struct AST_Serializer
 	AST_LoadData (*Cpu)     (const AST_Context *ctx);
 	void         (*Alloc)   (const AST_Context *ctx, AST_LoadData *data, GFX_Device *device, AST_Asset *out);
 	void         (*Reload)  (const AST_Context *ctx, AST_LoadData *data, GFX_Device *device, AST_Asset *existing);
-	void         (*Gpu)     (const AST_Context *ctx, AST_LoadData *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
+	void         (*Gpu)     (const AST_Context *ctx, AST_LoadData *data, AST_Asset *asset, GFX_Device *device, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
 	void         (*End)     (AST_LoadData *data);
-	void         (*Dispose) (AST_Asset *asset);
+	void         (*Dispose) (AST_Asset *asset, GFX_Device *device);
 };
 
 #endif // ASSET_SERIALIZER_H

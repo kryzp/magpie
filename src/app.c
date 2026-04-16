@@ -29,6 +29,7 @@
 #include "audio/audio_inc.c"
 #include "animation/animation_inc.c"
 #include "entity/entity_inc.c"
+#include "timeline/timeline_inc.c"
 #include "cutscene/cutscene_inc.c"
 
 #include "camera_driver.c"
@@ -56,25 +57,15 @@ AppDestroyAudio(App *app)
 }
 
 internal void
-AppTickAudio(App *app, f32 dt, f32 elapsed)
-{
-	AUD_Listener listener = {0};
-	listener.eye     = app->camera.position;
-	listener.forward = app->camera.forward;
-	listener.up      = v3(0.f, 0.f, 1.f);
-	
-	AUD_Tick(&app->audio_system, dt, listener);
-}
-
-internal void
 AppHotLoadAudio(App *app)
 {
-	AUD_BackendSelect(app->audio_backend);
+	AUD_BackendHotLoad(app->audio_backend);
 }
 
 internal void
 AppHotUnloadAudio(App *app)
 {
+	AUD_BackendHotUnload(app->audio_backend);
 }
 
 
@@ -98,27 +89,6 @@ AppDestroyGraphics(App *app)
 }
 
 internal void
-AppTickGraphics(App *app, f32 dt, f32 elapsed)
-{	
-	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
-
-	R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
-
-	R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
-	swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	
-	app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
-	
-	AppRender(app, dt, elapsed, &cmd);
-
-	R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
-	R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
-	R_GraphReset(&app->graph, &app->graphics_device);
-	
-	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
-}
-
-internal void
 AppHotLoadGraphics(App *app)
 {
 	GFX_DeviceHotLoad(&app->graphics_device);
@@ -128,6 +98,31 @@ internal void
 AppHotUnloadGraphics(App *app)
 {
 	GFX_DeviceHotUnload(&app->graphics_device);
+}
+
+
+/* ==================================================
+   ENTITY
+   ================================================== */
+
+internal void
+AppInitEntity(App *app)
+{
+}
+
+internal void
+AppDestroyEntity(App *app)
+{
+}
+
+internal void
+AppHotLoadEntity(App *app)
+{
+}
+
+internal void
+AppHotUnloadEntity(App *app)
+{
 }
 
 
@@ -145,8 +140,9 @@ AppInit(Arena *arena, const OS_API *api)
 	app->permanent_arena = arena;
 	app->frame_arena = ArenaInitArena(app->permanent_arena, Megabytes(512));
 
-	AppInitAudio(app);
 	AppInitGraphics(app);
+	AppInitAudio(app);
+	AppInitEntity(app);
 
 	return app;
 }
@@ -155,9 +151,10 @@ __declspec(dllexport) void
 AppDestroy(void *ctx)
 {
 	App *app = ctx;
-	
-	AppDestroyGraphics(app);
+
+	AppDestroyEntity(app);
 	AppDestroyAudio(app);
+	AppDestroyGraphics(app);
 }
 
 __declspec(dllexport) b32
@@ -170,7 +167,7 @@ AppTick(void *ctx, const I_InputSt *input)
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
 		return true;
 
-	const f32 elapsed_time = CH_TimerElapsed(&app->global_timer);
+	const f32 elapsed = CH_TimerElapsed(&app->global_timer);
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
@@ -182,18 +179,52 @@ AppTick(void *ctx, const I_InputSt *input)
 
 	AST_FlushUploads(&app->assets, &app->graphics_device);
 
-	AppUpdate(app, dt, elapsed_time, input);
+	ENT_WorldTickPreAnim(&app->world, &app->events, dt, input);
+
+	// TODO: animation system
+
+	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
 	app->delta_accumulator += MinValue(dt, fixed_dt);
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
-		AppFixedUpdate(app, fixed_dt, elapsed_time, input);
+		// TODO: physics update here (using fixed_dt)
+		
 		app->delta_accumulator -= fixed_dt;
 	}
+	
+	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
-	AppTickAudio(app, dt, elapsed_time);
-	AppTickGraphics(app, dt, elapsed_time);
+	ENT_EventDispatch(&app->events, &app->world);
+
+	ENT_WorldFlush(&app->world);
+	
+	AUD_Listener listener = {0};
+	listener.eye = app->camera.position;
+	listener.forward = app->camera.forward;
+	listener.up = v3(0.f, 0.f, 1.f);
+	
+	AUD_Tick(&app->audio_system, dt, listener);
+	
+	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
+	{
+		R_SceneDebug(&app->scene);
+	
+		R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
+
+		R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
+		swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	
+		app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
+	
+		AppRender(app, dt, elapsed, &cmd);
+
+		R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
+		R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
+		R_GraphReset(&app->graph, &app->graphics_device);
+	}
+	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	
 	return false;
 }
@@ -216,22 +247,6 @@ AppHotUnload(void *ctx)
 	
 	AppHotUnloadAudio(app);
 	AppHotUnloadGraphics(app);
-}
-
-
-/* ==================================================
-   APP BEHAVIOUR
-   ================================================== */
-
-internal void
-AppUpdate(App *app, f32 dt, f32 elapsed, const I_InputSt *input)
-{
-	R_SceneDebug(&app->scene);
-}
-
-internal void
-AppFixedUpdate(App *app, f32 dt, f32 elapsed, const I_InputSt *input)
-{
 }
 
 internal void

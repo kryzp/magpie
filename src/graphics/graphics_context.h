@@ -60,7 +60,7 @@ internal VkFormat GFX_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_d
 
 internal VkSampleCountFlagBits GFX_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties);
 
-internal const char *const *GFX_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count);
+internal const char * const *GFX_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count);
 
 internal b32 GFX_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device);
 

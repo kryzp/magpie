@@ -61,7 +61,10 @@ internal void ENT_WorldToggleLayer(ENT_World *world, u16 layer_id, b32 active);
    PER-FRAME
    ================================================== */
 
-internal void ENT_WorldTick(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input);
+internal void ENT_WorldTickPreAnim     (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input);
+internal void ENT_WorldTickPostAnim    (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input);
+internal void ENT_WorldTickPostPhysics (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input);
+
 internal void ENT_WorldFlush(ENT_World *world); // Clean-up all entities marked for pending kill.
 
 

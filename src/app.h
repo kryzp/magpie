@@ -18,6 +18,9 @@ struct App
 
 	AST_Assets assets;
 
+	ENT_World world;
+	ENT_EventQueue events;
+
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
 	GFX_RingBuffer frame_upload_ring_buffer;
@@ -42,19 +45,20 @@ global const OS_API *osapi;
 
 internal void AppInitAudio      (App *app);
 internal void AppDestroyAudio   (App *app);
-internal void AppTickAudio      (App *app, f32 dt, f32 elapsed);
 internal void AppHotLoadAudio   (App *app);
 internal void AppHotUnloadAudio (App *app);
 
 internal void AppInitGraphics      (App *app);
 internal void AppDestroyGraphics   (App *app);
-internal void AppTickGraphics      (App *app, f32 dt, f32 elapsed);
 internal void AppHotLoadGraphics   (App *app);
 internal void AppHotUnloadGraphics (App *app);
 
-internal void AppUpdate      (App *app, f32 dt, f32 elapsed, const I_InputSt *input);
-internal void AppFixedUpdate (App *app, f32 dt, f32 elapsed, const I_InputSt *input);
-internal void AppRender      (App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
+internal void AppInitEntity      (App *app);
+internal void AppDestroyEntity   (App *app);
+internal void AppHotLoadEntity   (App *app);
+internal void AppHotUnloadEntity (App *app);
+
+internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
 __declspec(dllexport) void *AppInit      (Arena *arena, const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (void *ctx);

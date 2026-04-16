@@ -244,7 +244,7 @@ struct OS_API
 	void         (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
 	void         (*JobFor)(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size);
 	b32          (*JobIsMainThread)(void);
-	Arena       *(*JobGetScratch)(Arena **conflicts, u32 conflict_count);
+	Arena       *(*JobGetScratch)(Arena * const *conflicts, u32 conflict_count);
 
 	
 	/* ==================================================
@@ -262,7 +262,7 @@ struct OS_API
 	//       scene (RS_), replace the, void *'s here with G_Handle.
 	b32  (*VulkanSurfaceCreate)(void *instance, void *surface_ptr);
 	void (*VulkanSurfaceDestroy)(void *instance, void *surface);
-	const char *const *(*VulkanGetInstanceExtensions)(u32 *count);
+	const char * const *(*VulkanGetInstanceExtensions)(u32 *count);
 };
 
 #endif // OS_H

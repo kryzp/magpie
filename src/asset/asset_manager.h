@@ -109,7 +109,7 @@ internal void AST_LoadArenaRelease(AST_Assets *assets, u32 index);
    ================================================== */
 
 internal void AST_Init(AST_Assets *assets, Arena *arena);
-internal void AST_Destroy(AST_Assets *assets);
+internal void AST_Destroy(AST_Assets *assets, GFX_Device *device);
 
 
 /* ==================================================

@@ -57,8 +57,6 @@ struct ENT_Header
 
 #define ENT_HeaderOf(entity_pointer) ((ENT_Header *)(entity_pointer))
 
-// todo: not a fan of this, should probably just
-//       remove and use header directly.
 #define ENT_UIDOf(entity_pointer)           (ENT_HeaderOf(entity_pointer)->uid)
 #define ENT_TypeOf(entity_pointer)          (ENT_HeaderOf(entity_pointer)->type)
 #define ENT_FlagsOf(entity_pointer)         (ENT_HeaderOf(entity_pointer)->flags)

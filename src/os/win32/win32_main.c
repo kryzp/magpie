@@ -659,7 +659,7 @@ OS_W32_VulkanSurfaceDestroy(void *instance, void *surface)
 	SDL_Vulkan_DestroySurface(instance, surface, NULL);
 }
 
-internal const char *const *
+internal const char * const *
 OS_W32_VulkanGetInstanceExtensions(u32 *count)
 {
 	return SDL_Vulkan_GetInstanceExtensions(count);

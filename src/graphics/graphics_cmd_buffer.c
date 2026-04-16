@@ -285,7 +285,7 @@ GFX_CmdBlit(const GFX_CmdBuffer *cmd,
 }
 
 internal void
-GFX_CmdGenMipmaps(const GFX_CmdBuffer *cmd, const GFX_Texture *texture)
+GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, const GFX_Texture *texture)
 {
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;

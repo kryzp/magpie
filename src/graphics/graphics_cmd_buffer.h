@@ -90,7 +90,7 @@ internal void GFX_CmdBlit(const GFX_CmdBuffer *cmd,
 						  u32 region_count, const VkImageBlit2 *regions,
 						  VkFilter filter);
 
-internal void GFX_CmdGenMipmaps(const GFX_CmdBuffer *cmd, const GFX_Texture *texture);
+internal void GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, const GFX_Texture *texture);
 
 internal void GFX_CmdCopyBufferToBuffer(const GFX_CmdBuffer *cmd,
 										const GFX_Buffer *src,

@@ -81,7 +81,7 @@ ENT_WorldToggleLayer(ENT_World *world, u16 layer_id, b32 active)
 }
 
 internal void
-ENT_WorldTick(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input)
+ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input)
 {
 	ENT_TickContext ctx = {0};
 	ctx.world = world;
@@ -119,9 +119,17 @@ ENT_WorldTick(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt 
 			desc->OnPreAnimTick(entity, &ctx);
 		}
 	}
+}
 
-	// TODO: anim update
-
+internal void
+ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input)
+{
+	ENT_TickContext ctx = {0};
+	ctx.world = world;
+	ctx.events = events;
+	ctx.dt = dt;
+	ctx.input = input;
+	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
 		const ENT_TypeDesc *desc = &ent_global_types[t];
@@ -152,10 +160,17 @@ ENT_WorldTick(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt 
 			desc->OnPostAnimTick(entity, &ctx);
 		}
 	}
+}
 
-	// TODO: physics step
-	// TODO: should be in the fixed update!!
-
+internal void
+ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_InputSt *input)
+{
+	ENT_TickContext ctx = {0};
+	ctx.world = world;
+	ctx.events = events;
+	ctx.dt = dt;
+	ctx.input = input;
+	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
 		const ENT_TypeDesc *desc = &ent_global_types[t];

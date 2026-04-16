@@ -1,6 +1,8 @@
 #ifndef ASSET_ASSET_H
 #define ASSET_ASSET_H
 
+// TODO: rename this file to like ASSET_TYPE_H or something
+
 typedef enum AST_Type
 {
 	AST_Type_Unknown,
@@ -122,30 +124,14 @@ struct AST_Asset
 	AST_Type type;
 	AST_Handle handle;
 
-	/*
 	union
 	{
 		struct
 		{
+			GFX_TextureKey key;
 		}
 		texture;
-
-		struct
-		{
-		}
-		shader;
-
-		struct
-		{
-		}
-		model;
-
-		struct
-		{
-		}
-		sound;
 	};
-	*/
 };
 
 #endif // ASSET_ASSET_H

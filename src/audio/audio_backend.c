@@ -1,5 +1,7 @@
+
+#define MINIAUDIO_IMPLEMENTATION
+
 #include "ext/ma/miniaudio.h"
-#include "ext/ma/miniaudio.c"
 
 typedef struct AUD_MA_Buffer AUD_MA_Buffer;
 struct AUD_MA_Buffer
@@ -485,7 +487,12 @@ AUD_BackendAllocAndSelect(Arena *arena)
 }
 
 internal void
-AUD_BackendSelect(AUD_BackendAPI *api)
+AUD_BackendHotLoad(AUD_BackendAPI *api)
 {
 	mini_backend = api->ctx;
+}
+
+internal void
+AUD_BackendHotUnload(AUD_BackendAPI *api)
+{
 }

@@ -174,14 +174,15 @@ AST_Init(AST_Assets *assets, Arena *arena)
 
 	assets->free_load_arena_count = AST_LOAD_ARENA_COUNT;
 
-	assets->serializers[AST_Type_Texture]; // = TODO!!
-	// ...
-
+#define AssetDef(name) assets->serializers[AST_Type_##name] = AST_Get##name##Serializer();
+#include "asset_definitions.inc"
+#undef AssetDef
+	
 	DebugLogF("Assets Initialized.");
 }
 
 internal void
-AST_Destroy(AST_Assets *assets)
+AST_Destroy(AST_Assets *assets, GFX_Device *device)
 {
 	for (u32 i = 0; i < assets->record_count; i++)
 	{
@@ -192,7 +193,7 @@ AST_Destroy(AST_Assets *assets)
 			AST_Serializer *s = &assets->serializers[record->asset.type];
 
 			if (s->Dispose)
-				s->Dispose(&record->asset);
+				s->Dispose(&record->asset, device);
 		}
 	}
 	
@@ -614,7 +615,7 @@ AST_FlushUploads(AST_Assets *assets, GFX_Device *device)
 					if (serializer->Gpu)
 					{
 						GFX_Buffer *gfx_staging_buffer = GFX_DeviceBufferFromKey(device, staging_buffer);
-						serializer->Gpu(&ctx, &upload->load_data, asset, &cmd, gfx_staging_buffer, stage_offset);
+						serializer->Gpu(&ctx, &upload->load_data, asset, device, &cmd, gfx_staging_buffer, stage_offset);
 					}
 
 					if (serializer->End)
