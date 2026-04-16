@@ -11,14 +11,14 @@ struct ENT_EntityDummy
 	b32 random_flag;
 };
 
-internal void ENT_EntityDummyInit    (ENT_EntityDummy *dummy, v3 spawn_position);
-internal void ENT_EntityDummyDestroy (ENT_EntityDummy *dummy);
+internal void ENT_EntityDummyInit    (void *entity, v3 spawn_position);
+internal void ENT_EntityDummyDestroy (void *entity);
 
-internal void ENT_EntityDummyPreAnimTick     (ENT_EntityDummy *dummy, f32 dt);
-internal void ENT_EntityDummyPostAnimTick    (ENT_EntityDummy *dummy, f32 dt);
-internal void ENT_EntityDummyPostPhysicsTick (ENT_EntityDummy *dummy, f32 dt);
+internal void ENT_EntityDummyPreAnimTick     (void *entity, f32 dt);
+internal void ENT_EntityDummyPostAnimTick    (void *entity, f32 dt);
+internal void ENT_EntityDummyPostPhysicsTick (void *entity, f32 dt);
 
-internal void ENT_EntityDummySerialize   (ENT_EntityDummy *dummy, IO_ByteWriter *writer);
-internal void ENT_EntityDummyDeserialize (ENT_EntityDummy *dummy, IO_ByteReader *reader);
+internal void ENT_EntityDummySerialize   (void *entity, IO_ByteWriter *writer);
+internal void ENT_EntityDummyDeserialize (void *entity, IO_ByteReader *reader);
 
 #endif // ENTITY_DUMMY_H

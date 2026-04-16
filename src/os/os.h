@@ -184,10 +184,8 @@ struct OS_API
 	   SPINLOCK
 	   ================================================== */
 
-	// TODO: Remove Atomic- prefix.
-	
-	void (*AtomicSpinLockAcquire)(u32 *lock);
-	void (*AtomicSpinLockRelease)(u32 *lock);
+	void (*SpinLockAcquire)(b32 *lock);
+	void (*SpinLockRelease)(b32 *lock);
 
 
 	/* ==================================================

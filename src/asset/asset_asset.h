@@ -103,6 +103,13 @@ AST_HandleNull(void)
 }
 
 internal inline b32
+AST_HandleIsNull(AST_Handle handle)
+{
+	return (handle.index == 0 &&
+			handle.generation == 0);
+}
+
+internal inline b32
 AST_HandleMatch(AST_Handle a, AST_Handle b)
 {
 	return (a.index == b.index &&

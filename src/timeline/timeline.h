@@ -43,8 +43,8 @@ void TL_Reset(TL_Timeline *timeline);
    UTILITIES
    ================================================== */
 
-typedef struct TL_TriggerAtTime TL_TriggerAtTime;
-struct TL_TriggerAtTime
+typedef struct TL_TriggerAtTimeData TL_TriggerAtTimeData;
+struct TL_TriggerAtTimeData
 {
 	f32 timestamp;
 };
@@ -52,8 +52,8 @@ struct TL_TriggerAtTime
 b32 TL_TriggerAtTime(void *state, f32 elapsed, void *data);
 
 
-typedef struct TL_TriggerOnEntityInSphere TL_TriggerOnEntityInSphere;
-struct TL_TriggerOnEntityInSphere
+typedef struct TL_TriggerOnEntityInSphereData TL_TriggerOnEntityInSphereData;
+struct TL_TriggerOnEntityInSphereData
 {
 	ENT_UID entity_uid;
 	v3 centre;
@@ -63,8 +63,8 @@ struct TL_TriggerOnEntityInSphere
 b32 TL_TriggerOnEntityInSphere(void *state, f32 elapsed, void *data);
 
 
-typedef struct TL_TriggerOnEntityDeath TL_TriggerOnEntityDeath;
-struct TL_TriggerOnEntityDeath
+typedef struct TL_TriggerOnEntityDeathData TL_TriggerOnEntityDeathData;
+struct TL_TriggerOnEntityDeathData
 {
 	ENT_UID entity_uid;
 };

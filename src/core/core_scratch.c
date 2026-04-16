@@ -12,6 +12,12 @@ ScratchBegin(Arena **conflicts, u32 conflict_count)
 }
 
 internal void
+ScratchClear(const ScratchArena *scratch)
+{
+	ArenaPopTo(scratch->arena, scratch->checkpoint);
+}
+
+internal void
 ScratchRelease(const ScratchArena *scratch)
 {
 	ArenaPopTo(scratch->arena, scratch->checkpoint);

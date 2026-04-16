@@ -27,6 +27,6 @@ struct ENT_Event
 		}
 		some_random_thing;
 	};
-}
+};
 
 #endif // ENTITY_EVENT_H

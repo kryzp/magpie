@@ -424,14 +424,14 @@ OS_W32_AtomicSubU64(volatile u64 *ptr, u64 delta)
 }
 
 internal void
-OS_W32_AtomicSpinLockAcquire(u32 *lock)
+OS_W32_SpinLockAcquire(b32 *lock)
 {
-	while (OS_W32_AtomicStoreU32(lock))
+	while (OS_W32_AtomicStoreU32(lock, true))
 		OS_W32_SPIN_PAUSE();
 }
 
 internal void
-OS_W32_AtomicSpinLockRelease(u32 *lock)
+OS_W32_SpinLockRelease(b32 *lock)
 {
 	OS_W32_AtomicStoreU32(lock, false);
 }
@@ -790,8 +790,8 @@ OS_W32_BindAPI(OS_API *osapi)
 	osapi->AtomicAddU64 = OS_W32_AtomicAddU64;
 	osapi->AtomicSubU32 = OS_W32_AtomicSubU32;
 	osapi->AtomicSubU64 = OS_W32_AtomicSubU64;
-	osapi->AtomicSpinLockAcquire = OS_W32_AtomicSpinLockAcquire;
-	osapi->AtomicSpinLockRelease = OS_W32_AtomicSpinLockRelease;
+	osapi->SpinLockAcquire = OS_W32_SpinLockAcquire;
+	osapi->SpinLockRelease = OS_W32_SpinLockRelease;
 	osapi->Handle = OS_W32_Handle;
 	osapi->MutexDestroy = OS_W32_MutexDestroy;
 	osapi->MutexLock = OS_W32_MutexLock;

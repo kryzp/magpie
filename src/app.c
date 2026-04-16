@@ -77,6 +77,7 @@ AppHotUnloadAudio(App *app)
 {
 }
 
+
 /* ==================================================
    GRAPHICS
    ================================================== */
@@ -84,7 +85,7 @@ AppHotUnloadAudio(App *app)
 internal void
 AppInitGraphics(App *app)
 {
-	GFX_DeviceInit(&app->graphics_device);
+	GFX_DeviceInit(&app->graphics_device, app->permanent_arena, &app->frame_arena);
 
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
@@ -106,12 +107,12 @@ AppTickGraphics(App *app, f32 dt, f32 elapsed)
 	R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
 	swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	
-	app->swapchain_src = R_GraphCreateTexture(swapchain_attachment_info);
+	app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
 	
-	AppRender(app, dt, elapsed_time, &cmd);
+	AppRender(app, dt, elapsed, &cmd);
 
 	R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
-	R_GraphExecute(&app->graph, &app->graphics_device, &app->Swapchain, &cmd, &app->scene, &app->camera, dt, elapsed_time);
+	R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
 	R_GraphReset(&app->graph, &app->graphics_device);
 	
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
@@ -179,7 +180,7 @@ AppTick(void *ctx, const I_InputSt *input)
 		AST_PollHotReloads(&app->assets);
 	}
 
-	AST_FlushUploads(&app->assets);
+	AST_FlushUploads(&app->assets, &app->graphics_device);
 
 	AppUpdate(app, dt, elapsed_time, input);
 
@@ -249,7 +250,9 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.window_resolution = v2(1280.f, 720.f);
 	frame_data.time = elapsed;
 
-	GFX_BufferWrite(&app->frame_data_buffer, &frame_data, sizeof(frame_data), 0);
+	GFX_Buffer *gfx_frame_data_buffer = GFX_DeviceBufferFromKey(&app->graphics_device, app->frame_data_buffer);
+	
+	GFX_BufferWrite(gfx_frame_data_buffer, &frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
 }

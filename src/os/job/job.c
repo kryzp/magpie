@@ -55,14 +55,14 @@ JOB_FiberCompleted(void)
 internal JOB_Fiber *
 JOB_FiberFetchFree(void)
 {
-	OS_AtomicSpinLockAcquire(&job_fiber_pool_lock);
+	OS_SpinLockAcquire(&job_fiber_pool_lock);
  
 	JOB_Fiber *fiber = job_fiber_pool_head;
 	
 	if (fiber)
 		job_fiber_pool_head = fiber->next;
 
-	OS_AtomicSpinLockRelease(&job_fiber_pool_lock);
+	OS_SpinLockRelease(&job_fiber_pool_lock);
  
 	if (fiber)
 		fiber->next = NULL;
@@ -78,12 +78,12 @@ JOB_FiberReturn(JOB_Fiber *fiber)
 	fiber->counter	= NULL;
 	fiber->finished = true;
  
-	OS_AtomicSpinLockAcquire(&job_fiber_pool_lock);
+	OS_SpinLockAcquire(&job_fiber_pool_lock);
  
 	fiber->next = job_fiber_pool_head;
 	job_fiber_pool_head = fiber;
  
-	OS_AtomicSpinLockRelease(&job_fiber_pool_lock);
+	OS_SpinLockRelease(&job_fiber_pool_lock);
 }
 
 internal OS_Handle
@@ -105,7 +105,7 @@ JOB_TryGetRequest(void)
 		if (queue->atomic_added_task_count <= queue->atomic_taken_task_count)
 			continue;
 
-		OS_AtomicSpinLockAcquire(&queue->atomic_locked);
+		OS_SpinLockAcquire(&queue->atomic_spinlock);
  
 		u32 t = queue->atomic_taken_task_count;
 		u32 a = queue->atomic_added_task_count;
@@ -117,7 +117,7 @@ JOB_TryGetRequest(void)
 			queue->atomic_taken_task_count = t + 1;
 		}
 
-		OS_AtomicSpinLockRelease(&queue->atomic_locked);
+		OS_SpinLockRelease(&queue->atomic_spinlock);
 		
 		if (request)
 			return request;
@@ -136,7 +136,7 @@ JOB_TryGetWaitingFiber(void)
 		if (queue->atomic_added_waiting_count <= queue->atomic_taken_waiting_count)
 			continue;
  
-		OS_AtomicSpinLockAcquire(&queue->atomic_locked);
+		OS_SpinLockAcquire(&queue->atomic_spinlock);
  
 		u32 t = queue->atomic_taken_waiting_count;
 		u32 a = queue->atomic_added_waiting_count;
@@ -149,7 +149,7 @@ JOB_TryGetWaitingFiber(void)
 			queue->atomic_taken_waiting_count = t + 1;
 		}
 
-		OS_AtomicSpinLockRelease(&queue->atomic_locked);
+		OS_SpinLockRelease(&queue->atomic_spinlock);
  
 		if (fiber)
 			return fiber;
@@ -388,13 +388,13 @@ JOB_CounterAlloc(Arena *arena, u32 initial_count)
 internal void
 JOB_CounterLock(JOB_Counter *counter)
 {
-	OS_AtomicSpinLockAcquire(&counter->atomic_locked);
+	OS_SpinLockAcquire(&counter->atomic_spinlock);
 }
 
 internal void
 JOB_CounterUnlock(JOB_Counter *counter)
 {
-	OS_AtomicSpinLockRelease(&counter->atomic_locked);
+	OS_SpinLockRelease(&counter->atomic_spinlock);
 }
 
 internal void
@@ -446,7 +446,7 @@ JOB_Push(const JOB_Request *request)
 
 	while (true)
 	{
-		OS_AtomicSpinLockAcquire(&queue->atomic_locked);
+		OS_SpinLockAcquire(&queue->atomic_spinlock);
 		
 		u32 t = queue->atomic_taken_task_count;
 		u32 a = queue->atomic_added_task_count;
@@ -456,7 +456,7 @@ JOB_Push(const JOB_Request *request)
 			// Queue is full.
 			// Release and spin until space opens up.
 
-			OS_AtomicSpinLockRelease(&queue->atomic_locked);
+			OS_SpinLockRelease(&queue->atomic_spinlock);
 			
 			JOB_SPIN_PAUSE();
 		}
@@ -465,7 +465,7 @@ JOB_Push(const JOB_Request *request)
 			queue->requests[a % JOB_MAX_JOBS_PER_QUEUE] = *request;
 			queue->atomic_added_task_count = a + 1;
 
-			OS_AtomicSpinLockRelease(&queue->atomic_locked);
+			OS_SpinLockRelease(&queue->atomic_spinlock);
 			
 			break;
 		}
@@ -479,7 +479,7 @@ JOB_PushWaitingFiber(JOB_Fiber *fiber)
  
 	while (true)
 	{
-		OS_AtomicSpinLockAcquire(&queue->atomic_locked);
+		OS_SpinLockAcquire(&queue->atomic_spinlock);
  
 		u32 t = queue->atomic_taken_waiting_count;
 		u32 a = queue->atomic_added_waiting_count;
@@ -489,7 +489,7 @@ JOB_PushWaitingFiber(JOB_Fiber *fiber)
 			// Queue is full.
 			// Release and spin until space opens up.
 
-			OS_AtomicSpinLockRelease(&queue->atomic_locked);
+			OS_SpinLockRelease(&queue->atomic_spinlock);
 			
 			JOB_SPIN_PAUSE();
 		}
@@ -498,7 +498,7 @@ JOB_PushWaitingFiber(JOB_Fiber *fiber)
 			queue->waiting[a % JOB_MAX_JOBS_PER_QUEUE] = fiber;
 			queue->atomic_added_waiting_count = a + 1;
 			
-			OS_AtomicSpinLockRelease(&queue->atomic_locked);
+			OS_SpinLockRelease(&queue->atomic_spinlock);
 			
 			break;
 		}

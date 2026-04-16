@@ -28,7 +28,7 @@ struct ENT_World
 	ENT_Locator *id_map;
 	u32 next_entity_id;
 
-	ENT_SceneLayer layers[ENT_SCENE_LAYER_MAX];
+	ENT_SceneLayer layers[ENT_WORLD_MAX_SCENE_LAYERS];
 	u32 layer_count;
 
 	ENT_EventQueue events;

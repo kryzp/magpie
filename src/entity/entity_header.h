@@ -18,7 +18,7 @@ typedef struct ENT_TypeID ENT_TypeID;
 struct ENT_TypeID
 {
 	u16 value;
-}
+};
 
 typedef u32 ENT_Flags;
 enum

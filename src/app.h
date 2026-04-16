@@ -1,6 +1,9 @@
 #ifndef APP_H
 #define APP_H
 
+#define APP_TARGET_FPS 144
+#define APP_HOT_RELOAD_INTERVAL 1.f
+
 typedef struct App App;
 struct App
 {
