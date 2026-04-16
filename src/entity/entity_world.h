@@ -56,7 +56,7 @@ internal void *ENT_WorldKill  (ENT_World *world, ENT_UID uid);
 
 internal void *ENT_WorldGet(ENT_World *world, ENT_UID uid);
 
-#define ENT_WorldGetHeader(world, uid) ((ENT_Header *)ENT_WorldGet((world), (uid)))
+#define ENT_WorldGetHeader(world, uid) ENT_HeaderOf(ENT_WorldGet((world, (uid))))
 
 
 typedef struct ENT_GetAllReceipt ENT_GetAllReceipt;

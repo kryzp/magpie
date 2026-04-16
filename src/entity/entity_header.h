@@ -62,4 +62,8 @@ struct ENT_Header
 
 #define ENT_HeaderOf(entity_pointer) ((ENT_Header *)(entity_pointer))
 
+#define ENT_UIDOf(entity_pointer)           (&ENT_HeaderOf(entity_pointer)->uid)
+#define ENT_TypeOf(entity_pointer)          (&ENT_HeaderOf(entity_pointer)->type)
+#define ENT_TransformOf(entity_pointer)     (&ENT_HeaderOf(entity_pointer)->transform)
+
 #endif // ENTITY_HEADER_H
