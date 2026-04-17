@@ -16,6 +16,7 @@
 #include "graphics_bindless.h"
 #include "graphics_sampler.h"
 #include "graphics_shader.h"
+#include "graphics_shader_compiler.h"
 #include "graphics_texture.h"
 #include "graphics_device_managed_resources.h"
 #include "graphics_pipeline.h"

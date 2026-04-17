@@ -1,6 +1,6 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer/game engine (-ish, closer to a more developed framework) written in C.
+**Magpie** is primarily a Vulkan renderer/game engine (-ish, closer to a more developed framework) written in pure C.
 
 ![](images/indirect_deferred.png)
 ![](images/cool.png)
@@ -8,7 +8,9 @@
 
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little. I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little.
+
+!I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
 
@@ -70,16 +72,19 @@ This project has been the death of me.
 
 ---
 
-## Under the Hood: Architecture
+## Architecture
 The codebase is split into a tiered system to make development easier and more compartmentalized. This is akin to the Source engine (Tier0, Tier1, ...) or the Decima Engine (OS, PIGS, ...), though a little more granular.
 
 
-### Namespaces & Unity Build
+### Namespaces
 Each layer follows a strict namespace system. Since this is C, I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for unsigned types, etc.).
 
-It is a **unity build**. Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.
+
+### Unity Build
+Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.
 
 Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance.
+
 
 ### The Layer Organisation
 Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
@@ -105,6 +110,23 @@ The hierarchy looks something like this, from the bottom to the top:
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level *graphics* operations, but also *assets* such as textures and models (which ultimately also need to use the *graphics* layer). Other layers effectively lie parallel to each other, such *audio* and *rendering*. Entities naturally lie above the core engine systems such as physics and rendering but below higher level things like timelines. The editor needs access to all engine systems so it lies above everything.
 
 
+### Assets
+I'm actually pretty proud of this system! Assets are loaded entirely asynchronously since they're integrated with the job system. However, that leads to a problem, which is that an asset actually goes through multiple stages until it's considered "ready". In a naiive asset system, you typically have a single `Load()` function that handles everything from finding the file on the disk, to load it into memory, and potentally uploading to the GPU. That's pretty terrible because you have to wait for the entire asset to load in before moving on to the next one, when you could be loading multiple in parallel.
+
+You can't just parallelize the whole thing because while loading an asset into memory is super simple, when it comes to things like uploading onto the GPU it's not so simple and we want to minimize the number of command buffers we use / submit. Therefore, I split asset loading into four stages:
+
+1. The CPU Stage: This is where we find the file in memory, load it in, and allocate some temporary memory for it. We haven't modified the actual asset record yet. For example, loading in pixel data from a texture file.
+2. The Alloc / Realloc Stage. This is where we actually move that temporary data into the asset and allocate any resources.
+3. The GPU Stage. This is where we upload the data onto the GPU, exposing a command buffer and staging buffer which can be used.
+4. The Cleanup Stage. Any temporary data that was allocated in previous stages can be cleaned up here. Only really necessary for external API's (e.g: cleaning up texture data from `stbi`) because we use arenas for everything internally anyway.
+
+Essentially, we parallelize the CPU stage, and try to record as much instructions onto the command buffer in the GPU stage before submitting.
+
+Hooking it up was more "awkward" than "hard" necessarily but it works and that's what matters.
+
+The asset system also supports fancy things like hot-reloading of assets which was also harder than I initially assumed because some assets, like shaders or models, also have dependencies. So, we have to watch those for modifications as well. Fun stuff!
+
+
 ### The Entity System
 I really dislike entity component systems with a viceral, primal, gut-wrenching hatred, but inheritance-based ones suck as well, so we go with the best solution in my opinion: you split entity behaviours into just... structs.
 
@@ -126,11 +148,11 @@ Rendering is fundamentally abstracted into what should be three layers, but is o
 
 
 ### Hot-Code Reloading
-The actual implementation of this is relatively simple. All memory is allocated at once in the beginning of the program, so all we have to do is reload the DLL (thank you Handmade Hero!). 
+The actual implementation of this is simple in theory. All memory is allocated at once in the beginning of the program, so all we have to do is reload the DLL (thank you Handmade Hero!).
 
 This does mean that global data is a little tricky because it gets reset whenever the app is re-compiled at runtime. However, it can be fixed by:
 1. Using as little globally-accessible data as possible.
-2. When it is used, using it in the form of a pointer into the main app struct which is set each frame anyway.
+2. Re-Setting it whenever we hot reload.
 
 Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored. Thread-local state is maintained in `/os/`, for example.
 

@@ -50,17 +50,28 @@ String8Match(String8 a, String8 b)
 }
 
 internal u32
-String8UpToLastSubstringIncl(String8 string, String8 sub)
+String8Find(String8 string, String8 substr)
 {
-	for (u64 i = string.len - sub.len - 1; i >= 0; i--)
+	for (u64 i = 0; i < string.len; i++)
 	{
-		String8 here = String8Init(string.str + i, sub.len);
+		String8 here = String8Init(string.str + i, substr.len);
 
-		if (String8Match(here, sub))
-		{
-			return i + sub.len;
-			break;
-		}
+		if (String8Match(here, substr))
+			return i;
+	}
+
+	return -1;
+}
+
+internal u32
+String8UpToLastSubstringIncl(String8 string, String8 substr)
+{
+	for (u64 i = string.len - substr.len - 1; i >= 0; i--)
+	{
+		String8 here = String8Init(string.str + i, substr.len);
+
+		if (String8Match(here, substr))
+			return i + substr.len;
 	}
 
 	return -1;

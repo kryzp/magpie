@@ -46,11 +46,11 @@ struct OS_W32_Code
 	HMODULE handle;
 	FILETIME last_write_time;
 
-	void *(*Init)      (Arena *arena, const OS_API *api);
-	void  (*Destroy)   (void *ctx);
-	b32   (*Tick)      (void *ctx, const I_InputSt *input);
-	void  (*HotLoad)   (void *ctx, const OS_API *api);
-	void  (*HotUnload) (void *ctx);
+	OS_EntryInitFn        *Init;
+	OS_EntryDestroyFn     *Destroy;
+	OS_EntryTickFn        *Tick;
+	OS_EntryHotLoadFn     *HotLoad;
+	OS_EntryHotUnloadFn   *HotUnload;
 };
 
 typedef struct OS_W32_State OS_W32_State;
@@ -103,20 +103,20 @@ OS_W32_ReturnObject(OS_W32_Object *object)
 	win32_st.free_objects = object;
 }
 
-void *OS_W32_AppNullStubInit(Arena *arena, const OS_API *api) { return NULL; }
-void  OS_W32_AppNullStubDestroy(void *ctx) { }
-b32   OS_W32_AppNullStubTick(void *ctx, const I_InputSt *input) { return false; }
-void  OS_W32_AppNullStubHotLoad(void *ctx, const OS_API *api) { }
-void  OS_W32_AppNullStubHotUnload(void *ctx) { }
+void *OS_W32_EntryInitStub(Arena *arena, const OS_API *api) { return NULL; }
+void  OS_W32_EntryDestroyStub(void *ctx) { }
+b32   OS_W32_EntryTickStub(void *ctx, const I_InputSt *input) { return false; }
+void  OS_W32_EntryHotLoadStub(void *ctx, const OS_API *api) { }
+void  OS_W32_EntryHotUnloadStub(void *ctx) { }
 
 internal void
 OS_W32_UnloadCode(void)
 {
-	win32_st.code.Init      = OS_W32_AppNullStubInit;
-	win32_st.code.Destroy   = OS_W32_AppNullStubDestroy;
-	win32_st.code.Tick      = OS_W32_AppNullStubTick;
-	win32_st.code.HotLoad   = OS_W32_AppNullStubHotLoad;
-	win32_st.code.HotUnload = OS_W32_AppNullStubHotUnload;
+	win32_st.code.Init      = OS_W32_EntryInitStub;
+	win32_st.code.Destroy   = OS_W32_EntryDestroyStub;
+	win32_st.code.Tick      = OS_W32_EntryTickStub;
+	win32_st.code.HotLoad   = OS_W32_EntryHotLoadStub;
+	win32_st.code.HotUnload = OS_W32_EntryHotUnloadStub;
 
 	if (win32_st.code.handle)
 	{
@@ -138,11 +138,11 @@ OS_W32_LoadCode(String8 dll_path)
 
 	if (win32_st.code.handle)
 	{
-		win32_st.code.Init      = GetProcAddress(win32_st.code.handle, "AppInit");
-		win32_st.code.Destroy   = GetProcAddress(win32_st.code.handle, "AppDestroy");
-		win32_st.code.Tick      = GetProcAddress(win32_st.code.handle, "AppTick");
-		win32_st.code.HotLoad   = GetProcAddress(win32_st.code.handle, "AppHotLoad");
-		win32_st.code.HotUnload = GetProcAddress(win32_st.code.handle, "AppHotUnload");
+		win32_st.code.Init      = (OS_EntryInitFn      *)GetProcAddress(win32_st.code.handle, "AppInit");
+		win32_st.code.Destroy   = (OS_EntryDestroyFn   *)GetProcAddress(win32_st.code.handle, "AppDestroy");
+		win32_st.code.Tick      = (OS_EntryTickFn      *)GetProcAddress(win32_st.code.handle, "AppTick");
+		win32_st.code.HotLoad   = (OS_EntryHotLoadFn   *)GetProcAddress(win32_st.code.handle, "AppHotLoad");
+		win32_st.code.HotUnload = (OS_EntryHotUnloadFn *)GetProcAddress(win32_st.code.handle, "AppHotUnload");
 	}
 	else
 	{

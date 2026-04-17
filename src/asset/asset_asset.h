@@ -131,6 +131,12 @@ struct AST_Asset
 			GFX_TextureKey key;
 		}
 		texture;
+
+		struct
+		{
+			GFX_ShaderKey key;
+		}
+		shader;
 	};
 };
 

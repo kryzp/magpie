@@ -8,9 +8,11 @@ typedef struct App App;
 struct App
 {
 	Arena *permanent_arena;
+	
 	Arena frame_arena;
+	Arena scene_arena;
 
-	CH_Timer global_timer;
+	CH_Timer elapsed_timer;
 	CH_Timer delta_timer;
 	CH_Timer hot_reload_timer;
 
@@ -43,27 +45,27 @@ struct App
 
 global const OS_API *osapi;
 
-internal void AppInitAudio      (App *app);
-internal void AppDestroyAudio   (App *app);
-internal void AppHotLoadAudio   (App *app);
-internal void AppHotUnloadAudio (App *app);
+internal void AppInitAudio           (App *app);
+internal void AppDestroyAudio        (App *app);
+internal void AppHotLoadAudio        (App *app);
+internal void AppHotUnloadAudio      (App *app);
 
-internal void AppInitGraphics      (App *app);
-internal void AppDestroyGraphics   (App *app);
-internal void AppHotLoadGraphics   (App *app);
-internal void AppHotUnloadGraphics (App *app);
+internal void AppInitGraphics        (App *app);
+internal void AppDestroyGraphics     (App *app);
+internal void AppHotLoadGraphics     (App *app);
+internal void AppHotUnloadGraphics   (App *app);
 
-internal void AppInitEntity      (App *app);
-internal void AppDestroyEntity   (App *app);
-internal void AppHotLoadEntity   (App *app);
-internal void AppHotUnloadEntity (App *app);
+internal void AppInitEntity          (App *app);
+internal void AppDestroyEntity       (App *app);
+internal void AppHotLoadEntity       (App *app);
+internal void AppHotUnloadEntity     (App *app);
 
 internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
 __declspec(dllexport) void *AppInit      (Arena *arena, const OS_API *api);
-__declspec(dllexport) void  AppDestroy   (void *ctx);
-__declspec(dllexport) b32   AppTick      (void *ctx, const I_InputSt *input);
-__declspec(dllexport) void  AppHotLoad   (void *ctx, const OS_API *api);
-__declspec(dllexport) void  AppHotUnload (void *ctx);
+__declspec(dllexport) void  AppDestroy   (App *app);
+__declspec(dllexport) b32   AppTick      (App *app, const I_InputSt *input);
+__declspec(dllexport) void  AppHotLoad   (App *app, const OS_API *api);
+__declspec(dllexport) void  AppHotUnload (App *app);
 
 #endif // APP_H

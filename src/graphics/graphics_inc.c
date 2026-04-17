@@ -2,6 +2,7 @@
 #include "graphics_buffer.c"
 #include "graphics_context.c"
 #include "graphics_bindless.c"
+#include "graphics_shader_compiler.c"
 #include "graphics_texture.c"
 #include "graphics_device_managed_resources.c"
 #include "graphics_pipeline.c"

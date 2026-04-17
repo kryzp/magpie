@@ -1,9 +1,8 @@
 #include "core/core_inc.h"
-#include "os/os_inc.h"
 #include "input/input_inc.h"
+#include "os/os_inc.h"
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
-#include "dev/dev_inc.h"
 #include "graphics/graphics_inc.h"
 #include "asset/asset_inc.h"
 #include "render/render_inc.h"
@@ -12,17 +11,17 @@
 #include "entity/entity_inc.h"
 #include "timeline/timeline_inc.h"
 #include "cutscene/cutscene_inc.h"
+#include "dev/dev_inc.h"
 
 #include "game_mode.h"
 #include "camera_driver.h"
 #include "app.h"
 
 #include "core/core_inc.c"
-#include "os/os_inc.c"
 #include "input/input_inc.c"
+#include "os/os_inc.c"
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
-#include "dev/dev_inc.c"
 #include "graphics/graphics_inc.c"
 #include "asset/asset_inc.c"
 #include "render/render_inc.c"
@@ -31,6 +30,7 @@
 #include "entity/entity_inc.c"
 #include "timeline/timeline_inc.c"
 #include "cutscene/cutscene_inc.c"
+#include "dev/dev_inc.c"
 
 #include "camera_driver.c"
 
@@ -77,15 +77,68 @@ internal void
 AppInitGraphics(App *app)
 {
 	GFX_DeviceInit(&app->graphics_device, app->permanent_arena, &app->frame_arena);
-
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
-	// TODO
+	
+	GFX_GetShaderCompilerAPI()->Init();
+
+	
+	GFX_BufferAllocInfo ring_buffer_alloc_info = {0};
+	ring_buffer_alloc_info.size = Megabytes(512);
+	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	ring_buffer_alloc_info.usage =
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+
+	app->frame_upload_ring_buffer = GFX_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
+
+	
+	GFX_BufferAllocInfo frame_buffer_alloc_info = {0};
+	frame_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	frame_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	frame_buffer_alloc_info.size = sizeof(R_GPU_FrameData);
+
+	app->frame_data_buffer = GFX_DeviceBufferAlloc(&app->graphics_device, &frame_buffer_alloc_info);
+
+	
+	m4 capture_view_matrices[] = {
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Right.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Left.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3( 0.f,-1.f, 0.f)), // Up.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3( 0.f, 1.f, 0.f)), // Down.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Forward.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Backwards.
+	};
+
+	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
+
+	for (u32 i = 0; i < 6; i++)
+		capture_view_matrices[i] = M4MulM4(capture_projection_matrix, capture_view_matrices[i]);
+
+	GFX_BufferAllocInfo cubemap_capture_buffer_alloc_info = {0};
+	cubemap_capture_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	cubemap_capture_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
+
+	app->cubemap_capture_transform_buffer = GFX_DeviceBufferAlloc(&app->graphics_device, &cubemap_capture_buffer_alloc_info);
+
+	GFX_BufferWrite(GFX_DeviceBufferFromKey(&app->graphics_device, app->cubemap_capture_transform_buffer),
+					capture_view_matrices,
+					sizeof(capture_view_matrices), 0);
 }
 
 internal void
 AppDestroyGraphics(App *app)
 {
+	GFX_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
+
+	GFX_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
+
+	GFX_GetShaderCompilerAPI()->Shutdown();
+
+	GFX_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
+	GFX_DeviceDestroy(&app->graphics_device);
 }
 
 internal void
@@ -138,36 +191,50 @@ AppInit(Arena *arena, const OS_API *api)
 	App *app = ArenaPushArray(arena, App, 1);
 	
 	app->permanent_arena = arena;
+	
 	app->frame_arena = ArenaInitArena(app->permanent_arena, Megabytes(512));
+	app->scene_arena = ArenaInitArena(app->permanent_arena, Megabytes(256));
 
 	AppInitGraphics(app);
+
+	R_GraphInit(&app->graph, app->permanent_arena, &app->frame_arena);
+	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
+	
+	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
+	
 	AppInitAudio(app);
 	AppInitEntity(app);
+
+	CH_TimerStart(&app->elapsed_timer);
+	CH_TimerStart(&app->delta_timer);
+	CH_TimerStart(&app->hot_reload_timer);
 
 	return app;
 }
 
 __declspec(dllexport) void
-AppDestroy(void *ctx)
+AppDestroy(App *app)
 {
-	App *app = ctx;
+	GFX_DeviceWaitIdle(&app->graphics_device);
 
 	AppDestroyEntity(app);
 	AppDestroyAudio(app);
+
+	R_SceneDestroy(&app->scene);
+	R_GraphDestroy(&app->graph, &app->graphics_device);
+	
 	AppDestroyGraphics(app);
 }
 
 __declspec(dllexport) b32
-AppTick(void *ctx, const I_InputSt *input)
+AppTick(App *app, const I_InputSt *input)
 {
-	App *app = ctx;
-	
 	ArenaClear(&app->frame_arena);
 
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
 		return true;
 
-	const f32 elapsed = CH_TimerElapsed(&app->global_timer);
+	const f32 elapsed = CH_TimerElapsed(&app->elapsed_timer);
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
@@ -230,21 +297,17 @@ AppTick(void *ctx, const I_InputSt *input)
 }
 
 __declspec(dllexport) void
-AppHotLoad(void *ctx, const OS_API *api)
+AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
-	App *app = ctx;
-
 	AppHotLoadGraphics(app);
 	AppHotLoadAudio(app);
 }
 
 __declspec(dllexport) void
-AppHotUnload(void *ctx)
-{
-	App *app = ctx;
-	
+AppHotUnload(App *app)
+{	
 	AppHotUnloadAudio(app);
 	AppHotUnloadGraphics(app);
 }

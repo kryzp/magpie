@@ -149,7 +149,7 @@ typedef struct R_Scene R_Scene;
 struct R_Scene
 {
 	Arena *arena;
-	GFX_Device *device;
+	GFX_Device *device; // TODO: move out of the scene and into function params
 
 	// Objects
 	R_SceneObjectSlot object_slots[R_SCENE_MAX_OBJECTS];
