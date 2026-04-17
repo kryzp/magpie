@@ -1,4 +1,3 @@
-
 internal void
 R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers)
 {
@@ -151,17 +150,18 @@ R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 	texture.info = *info;
 	texture.in_use = true;
 	texture.last_frame_used = pool->current_frame;
-	texture.state.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-	texture.state.to_flush = VK_ACCESS_2_NONE;
+	texture.state.write_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+	texture.state.write_access = VK_ACCESS_2_NONE;
+	texture.state.read_stages = 0;
 	texture.state.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	if (out_state)
 		*out_state = texture.state;
 
+	AssertTrue(pool->texture_count < pool->texture_capacity);
+
 	pool->textures[pool->texture_count] = texture;
 	pool->texture_count++;
-
-	AssertTrue(pool->texture_count < pool->texture_capacity);
 
 	return texture.key;
 }
@@ -199,16 +199,17 @@ R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
 	buffer.info = *info;
 	buffer.in_use = true;
 	buffer.last_frame_used = pool->current_frame;
-	buffer.state.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-	buffer.state.to_flush = VK_ACCESS_2_NONE;
+	buffer.state.write_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+	buffer.state.write_access = VK_ACCESS_2_NONE;
+	buffer.state.read_stages = 0;
 
 	if (out_state)
 		*out_state = buffer.state;
 
+	AssertTrue(pool->buffer_count < pool->buffer_capacity);
+
 	pool->buffers[pool->buffer_count] = buffer;
 	pool->buffer_count++;
-
-	AssertTrue(pool->buffer_count < pool->buffer_capacity);
 
 	return buffer.key;
 }

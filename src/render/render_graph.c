@@ -1,21 +1,4 @@
 
-internal b32
-R_ResourceNeedsInvalidation(const GFX_AccessSt *access, const R_ResourceState *state)
-{
-	u64 stages = access->stage;
-
-	for (u32 i = 0; i < ArraySize(state->invalidated_in_stage) && stages != 0; i++)
-	{
-		if ((stages >> i) & 1)
-		{
-			if (access->access & ~state->invalidated_in_stage[i])
-				return true;
-		}
-	}
-
-	return false;
-}
-
 internal R_GraphTexture *
 R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
 {
@@ -242,7 +225,7 @@ R_GraphImportTexture(R_Graph *graph, const GFX_Device *device, GFX_TextureKey ex
 	else
 	{
 		MemZeroStruct(&texture->state);
-		texture->state.stage = VK_PIPELINE_STAGE_2_NONE;
+		texture->state.write_stage = VK_PIPELINE_STAGE_2_NONE;
 		texture->state.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 
@@ -302,7 +285,7 @@ R_GraphImportBuffer(R_Graph *graph, const GFX_Device *device, GFX_BufferKey exte
 	else
 	{
 		MemZeroStruct(&buffer->state);
-		buffer->state.stage = VK_PIPELINE_STAGE_2_NONE;
+		buffer->state.write_stage = VK_PIPELINE_STAGE_2_NONE;
 	}
 
 	u32 ver_index = graph->buffer_ver_count++;
@@ -550,39 +533,30 @@ R_GraphGenerateBarriers(R_Graph *graph, const GFX_Device *device)
 			continue;
 
 		
-		// Inputs.
+		// Reads
 		
 		for (u32 j = 0; j < pass->input_texture_count; j++)
-			R_GraphProcessInvalidateTexture(graph, device, pass, &pass->input_textures[j]);
+			R_GraphSyncTextureRead(graph, device, pass, &pass->input_textures[j]);
 
 		for (u32 j = 0; j < pass->input_buffer_count; j++)
-			R_GraphProcessInvalidateBuffer(graph, device, pass, &pass->input_buffers[j]);
+			R_GraphSyncBufferRead(graph, device, pass, &pass->input_buffers[j]);
 
 		
-		// Outputs.
+		// Writes
 
 		for (u32 j = 0; j < pass->output_texture_count; j++)
-			R_GraphProcessInvalidateTexture(graph, device, pass, &pass->output_textures[j]);
+			R_GraphSyncTextureWrite(graph, device, pass, &pass->output_textures[j]);
 
 		for (u32 j = 0; j < pass->output_buffer_count; j++)
-			R_GraphProcessInvalidateBuffer(graph, device, pass, &pass->output_buffers[j]);
-
-		
-		// Also flush the outputs.
-
-		for (u32 j = 0; j < pass->output_texture_count; j++)
-			R_GraphProcessFlushTexture(graph, &pass->output_textures[j]);
-
-		for (u32 j = 0; j < pass->output_buffer_count; j++)
-			R_GraphProcessFlushBuffer(graph, &pass->output_buffers[j]);
+			R_GraphSyncBufferWrite(graph, device, pass, &pass->output_buffers[j]);
 	}
 }
 
 internal void
-R_GraphProcessInvalidateTexture(R_Graph *graph,
-								const GFX_Device *device,
-								R_Pass *pass,
-								const R_PassTextureEdge *edge)
+R_GraphSyncTextureRead(R_Graph *graph,
+					   const GFX_Device *device,
+					   R_Pass *pass,
+					   const R_PassTextureEdge *edge)
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
@@ -592,21 +566,18 @@ R_GraphProcessInvalidateTexture(R_Graph *graph,
 	R_ResourceState *st = &t->state;
 
 	const VkImageLayout target_layout = VK_IMAGE_LAYOUT_GENERAL;
-	
 	b32 layout_change = st->layout != target_layout;
-	b32 needs_flush = st->to_flush != 0;
-	b32 needs_invalidation = R_ResourceNeedsInvalidation(&edge->state, st);
-	
-	b32 needs_sync = layout_change || needs_flush || needs_invalidation;
 
-	if (needs_sync)
+	if (st->write_access != 0 || layout_change)
 	{
+		// RAW HAZARD
+		
 		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
 
 		GFX_AccessSt src = {0};
-		src.stage  = st->stage ? st->stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-		src.access = st->to_flush;
-		
+		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		src.access = st->write_access;
+
 		const GFX_Texture *physical = GFX_DeviceTextureFromKey(device, t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
@@ -615,30 +586,91 @@ R_GraphProcessInvalidateTexture(R_Graph *graph,
 								   st->layout, target_layout,
 								   0, VK_REMAINING_MIP_LEVELS,
 								   0, VK_REMAINING_ARRAY_LAYERS);
-		
-		st->layout = target_layout;
-		st->to_flush = 0;
 
-		if (needs_flush || layout_change)
-			MemZeroArray(st->invalidated_in_stage);
-
-		const u64 dst_stages = edge->state.stage;
-		
-		for (u32 i = 0; i < ArraySize(st->invalidated_in_stage); i++)
-		{
-			if ((dst_stages >> i) & 1)
-				st->invalidated_in_stage[i] |= edge->state.access;
-		}
+		st->layout       = target_layout;
+		st->write_access = 0;
+		st->read_stages  = edge->state.stage;
 	}
-
-	st->stage = edge->state.stage;
+	else
+	{
+		st->read_stages |= edge->state.stage;
+	}
 }
 
 internal void
-R_GraphProcessInvalidateBuffer(R_Graph *graph,
-							   const GFX_Device *device,
-							   R_Pass *pass,
-							   const R_PassBufferEdge *edge)
+R_GraphSyncTextureWrite(R_Graph *graph,
+						const GFX_Device *device,
+						R_Pass *pass,
+						const R_PassTextureEdge *edge)
+{
+	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
+
+	if (GFX_TextureKeyIsNull(t->physical_key))
+		return;
+
+	R_ResourceState *st = &t->state;
+
+	const VkImageLayout target_layout = VK_IMAGE_LAYOUT_GENERAL;
+	b32 layout_change = st->layout != target_layout;
+
+	if (st->write_access != 0)
+	{
+		// WAW HAZARD
+		
+		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
+
+		GFX_AccessSt src = {0};
+		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		src.access = st->write_access;
+
+		const GFX_Texture *physical = GFX_DeviceTextureFromKey(device, t->physical_key);
+
+		pass->texture_barriers[pass->texture_barrier_count++] =
+			GFX_SyncTextureBarrier(physical,
+								   &src, &edge->state,
+								   st->layout, target_layout,
+								   0, VK_REMAINING_MIP_LEVELS,
+								   0, VK_REMAINING_ARRAY_LAYERS);
+
+		st->layout = target_layout;
+	}
+	else if (st->read_stages != 0 || layout_change)
+	{
+		// WAR HAZARD
+
+		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
+
+		GFX_AccessSt src_access = {0};
+		src_access.stage  = st->read_stages ? st->read_stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		src_access.access = VK_ACCESS_2_NONE;
+
+		GFX_AccessSt dst_access = {0};
+		dst_access.stage  = edge->state.stage;
+		dst_access.access = layout_change ? edge->state.access : VK_ACCESS_2_NONE;
+
+		const GFX_Texture *physical = GFX_DeviceTextureFromKey(device, t->physical_key);
+
+		pass->texture_barriers[pass->texture_barrier_count++] =
+			GFX_SyncTextureBarrier(physical,
+								   &src_access,
+								   &dst_access,
+								   st->layout, target_layout,
+								   0, VK_REMAINING_MIP_LEVELS,
+								   0, VK_REMAINING_ARRAY_LAYERS);
+
+		st->layout = target_layout;
+	}
+
+	st->write_stage  = edge->state.stage;
+	st->write_access = edge->state.access & R_WRITE_ACCESS_MASK;
+	st->read_stages  = 0;
+}
+
+internal void
+R_GraphSyncBufferRead(R_Graph *graph,
+					  const GFX_Device *device,
+					  R_Pass *pass,
+					  const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
@@ -647,66 +679,92 @@ R_GraphProcessInvalidateBuffer(R_Graph *graph,
 
 	R_ResourceState *st = &b->state;
 
-	b32 needs_flush = st->to_flush != 0;
-	b32 needs_invalidation = R_ResourceNeedsInvalidation(&edge->state, st);
-	
-	b32 needs_sync = needs_flush || needs_invalidation;
-
-	if (needs_sync)
+	if (st->write_access != 0)
 	{
+		// RAW HAZARD
+		
 		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
 
-		GFX_AccessSt src = {0};
-		src.stage  = st->stage ? st->stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-		src.access = st->to_flush;
-		
+		GFX_AccessSt src_access = {0};
+		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		src_access.access = st->write_access;
+
 		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(device, b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			GFX_SyncBufferBarrier(physical,
-								  &src, &edge->state,
+								  &src_access, &edge->state,
 								  edge->offset,
 								  edge->size ? edge->size : physical->size);
 
-		st->to_flush = 0;
-
-		if (needs_flush)
-			MemZeroArray(st->invalidated_in_stage);
-
-		const u64 dst_stages = edge->state.stage;
-		
-		for (u32 i = 0; i < ArraySize(st->invalidated_in_stage); i++)
-		{
-			if ((dst_stages >> i) & 1)
-				st->invalidated_in_stage[i] |= edge->state.access;
-		}
+		st->write_access = 0;
+		st->read_stages  = edge->state.stage;
 	}
-
-	st->stage = edge->state.stage;
+	else
+	{
+		st->read_stages |= edge->state.stage;
+	}
 }
 
 internal void
-R_GraphProcessFlushTexture(R_Graph *graph, const R_PassTextureEdge *edge)
-{
-	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
-
-	if (GFX_TextureKeyIsNull(t->physical_key))
-		return;
-
-	t->state.stage = edge->state.stage;
-	t->state.to_flush = edge->state.access;
-}
-
-internal void
-R_GraphProcessFlushBuffer(R_Graph *graph, const R_PassBufferEdge *edge)
+R_GraphSyncBufferWrite(R_Graph *graph,
+					   const GFX_Device *device,
+					   R_Pass *pass,
+					   const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
 	if (GFX_BufferKeyIsNull(b->physical_key))
 		return;
 
-	b->state.stage = edge->state.stage;
-	b->state.to_flush = edge->state.access;
+	R_ResourceState *st = &b->state;
+
+	if (st->write_access != 0)
+	{
+		// WAW HAZARD
+
+		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
+
+		GFX_AccessSt src_access = {0};
+		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+		src_access.access = st->write_access;
+
+		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(device, b->physical_key);
+
+		pass->buffer_barriers[pass->buffer_barrier_count++] =
+			GFX_SyncBufferBarrier(physical,
+								  &src_access,
+								  &edge->state,
+								  edge->offset,
+								  edge->size ? edge->size : physical->size);
+	}
+	else if (st->read_stages != 0)
+	{
+		// WAR HAZARD
+
+		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
+
+		GFX_AccessSt src_access = {0};
+		src_access.stage  = st->read_stages;
+		src_access.access = VK_ACCESS_2_NONE;
+
+		GFX_AccessSt dst_access = {0};
+		dst_access.stage  = edge->state.stage;
+		dst_access.access = VK_ACCESS_2_NONE;
+
+		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(device, b->physical_key);
+
+		pass->buffer_barriers[pass->buffer_barrier_count++] =
+			GFX_SyncBufferBarrier(physical,
+								  &src_access,
+								  &dst_access,
+								  edge->offset,
+								  edge->size ? edge->size : physical->size);
+	}
+
+	st->write_stage  = edge->state.stage;
+	st->write_access = edge->state.access & R_WRITE_ACCESS_MASK;
+	st->read_stages  = 0;
 }
 
 internal void
@@ -780,7 +838,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	// Backbuffer = Transfer Source
 	// Swapchain  = Trandfer Destination
 	
-	GFX_AccessSt src_src = { backbuffer->state.stage, backbuffer->state.to_flush };
+	GFX_AccessSt src_src = { backbuffer->state.write_stage, backbuffer->state.write_access };
 	GFX_AccessSt src_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT };
 
 	GFX_AccessSt dst_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
@@ -922,7 +980,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, GFX_Device *device, const R_Pass
 		const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, out->handle);
 		const R_TextureInfo *info = &t->texture_info;
 
-		// TODO: right now itss just based on the last attachments sample count.
+		// TODO: right now its just based on the last attachments sample count.
 		//       Assumption is that all attachments will already have the same sample count.
 		//       --> ideally there should be implicit resolving per attachment when
 		//           get around to finally implementing msaa n stuff.

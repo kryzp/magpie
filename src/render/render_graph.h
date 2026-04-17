@@ -48,9 +48,6 @@ struct R_GraphBuffer
 
 /* ==================================================
    VERSIONING
-   
-   Every write produces a new version. Every read
-   consumes an existing version.
    ================================================== */
 
 typedef struct R_GraphTexVersion R_GraphTexVersion;
@@ -163,11 +160,11 @@ internal void R_GraphBackpropagateDependencies (R_Graph *graph);
 internal void R_GraphAllocateResources         (R_Graph *graph, GFX_Device *device, const GFX_Swapchain *swapchain);
 internal void R_GraphGenerateBarriers          (R_Graph *graph, const GFX_Device *device);
 
-internal void R_GraphProcessInvalidateTexture (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassTextureEdge *edge);
-internal void R_GraphProcessInvalidateBuffer  (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncTextureRead  (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassTextureEdge *edge);
+internal void R_GraphSyncTextureWrite (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassTextureEdge *edge);
 
-internal void R_GraphProcessFlushTexture (R_Graph *graph, const R_PassTextureEdge *edge);
-internal void R_GraphProcessFlushBuffer  (R_Graph *graph, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferRead   (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferWrite  (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassBufferEdge *edge);
 
 
 /* ==================================================
@@ -213,11 +210,6 @@ internal R_GraphBuffer  *R_GraphBufferFromHandle  (R_Graph *graph, R_GraphBufHan
 
 internal b32 R_GraphTexVersionIsUnwritten (const R_Graph *graph, R_GraphTexHandle handle);
 internal b32 R_GraphBufVersionIsUnwritten (const R_Graph *graph, R_GraphBufHandle handle);
-
-// Check if any requested access bits haven't
-// been made visible yet in the stages that
-// need them.
-internal b32 R_ResourceNeedsInvalidation(const GFX_AccessSt *access, const R_ResourceState *state);
 
 
 #endif // RENDER_GRAPH_H

@@ -1,19 +1,4 @@
 
-internal b32
-GFX_SyncIsWriteAccess(VkAccessFlags2 access_flags)
-{
-	static const VkAccessFlags2 write_bits =
-		VK_ACCESS_2_SHADER_WRITE_BIT |
-		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT |
-		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-		VK_ACCESS_2_TRANSFER_WRITE_BIT |
-		VK_ACCESS_2_HOST_WRITE_BIT |
-		VK_ACCESS_2_MEMORY_WRITE_BIT |
-		VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-
-	return (access_flags & write_bits) != 0;
-}
-
 internal VkImageMemoryBarrier2
 GFX_SyncTextureBarrier(const GFX_Texture *texture,
 					   const GFX_AccessSt *src,
