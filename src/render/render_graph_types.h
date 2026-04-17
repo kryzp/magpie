@@ -77,7 +77,7 @@ internal R_TextureInfo R_TextureInfoInit (void);
 internal R_BufferInfo  R_BufferInfoInit  (void);
 
 internal b32 R_TextureInfoMatch (const R_TextureInfo *a, const R_TextureInfo *b);
-internal b32 R_BufferInfoMatch  (const R_BufferInfo *a,  const R_BufferInfo *b);
+internal b32 R_BufferInfoMatch  (const R_BufferInfo  *a, const R_BufferInfo  *b);
 
 /*
 typedef struct R_ResourceState R_ResourceState;

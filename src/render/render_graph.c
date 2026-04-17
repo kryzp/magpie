@@ -662,7 +662,7 @@ R_GraphSyncTextureWrite(R_Graph *graph,
 	}
 
 	st->write_stage  = edge->state.stage;
-	st->write_access = edge->state.access & R_WRITE_ACCESS_MASK;
+	st->write_access = edge->state.access & GFX_SYNC_WRITE_ACCESS_MASK;
 	st->read_stages  = 0;
 }
 
@@ -763,7 +763,7 @@ R_GraphSyncBufferWrite(R_Graph *graph,
 	}
 
 	st->write_stage  = edge->state.stage;
-	st->write_access = edge->state.access & R_WRITE_ACCESS_MASK;
+	st->write_access = edge->state.access & GFX_SYNC_WRITE_ACCESS_MASK;
 	st->read_stages  = 0;
 }
 
