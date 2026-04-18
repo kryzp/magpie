@@ -98,9 +98,9 @@ The hierarchy looks something like this, from the bottom to the top:
 - Chrono
 - Graphics
 - Audio
-- Animation
 - Assets
 - Rendering
+- Animation
 - Entity
 - Timeline
 - Cutscene

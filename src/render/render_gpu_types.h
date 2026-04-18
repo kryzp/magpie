@@ -58,6 +58,13 @@ struct R_GPU_Material
 	u32 emissive_texture;
 	u32 metallic_roughness_texture;
 	u32 ambient_texture;
+
+	v4  albedo_factor;
+	f32 metallic_factor;
+	f32 roughness_factor;
+	f32 emissive_factor;
+
+	u32 double_sided;
 };
 
 typedef struct R_GPU_Light R_GPU_Light;

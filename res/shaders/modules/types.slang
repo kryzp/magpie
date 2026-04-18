@@ -2,7 +2,8 @@ module types;
 
 namespace types
 {
-	public struct FrameData {
+	public struct FrameData
+	{
 		public float4x4 view;
 		public float4x4 projection;
 		public float4x4 view_projection;
@@ -14,7 +15,8 @@ namespace types
 		public float time;
 	};
 
-	public struct ModelVertex {
+	public struct ModelVertex
+	{
 		public float3 position;
 		public float2 texcoord;
 		public float3 colour;
@@ -23,7 +25,8 @@ namespace types
 		public float3 bitangent;
 	};
 
-	public struct ObjectData {
+	public struct ObjectData
+	{
 		public float4x4 model_matrix;
 		public float4x4 normal_matrix;
 		public float4 sphere_bounds;
@@ -32,21 +35,31 @@ namespace types
 		public uint mesh_index;
 	};
 
-	public struct RenderMesh {
+	public struct RenderMesh
+	{
 		public uint index_count;
 		public uint first_index;
 		public ModelVertex *vertex_buffer;
 	};
 
-	public struct Material {
+	public struct Material
+	{
 		public uint albedo_texture;
 		public uint normal_texture;
 		public uint emissive_texture;
 		public uint mr_texture;
 		public uint ambient_texture;
+
+		public float4 albedo_factor;
+		public float metallic_factor;
+		public float roughness_factor;
+		public float emissive_factor;
+
+		public uint double_sided;
 	};
 
-	public struct Light {
+	public struct Light
+	{
 		public float4x4 transform;
 		public float3 position;
 		public float radius;
@@ -56,7 +69,8 @@ namespace types
 		public int shadow_slot_index; // -1 to disable shadows
 	};
 
-	public struct ShadowCaster {
+	public struct ShadowCaster
+	{
 		public float4x4 face_matrices[6];
 		public float3 position;
 		public float near_plane;
@@ -64,7 +78,8 @@ namespace types
 		public int shadow_map;
 	};
 
-	public struct IndirectDraw {
+	public struct IndirectDraw
+	{
 		public uint index_count;
 		public uint instance_count;
 		public uint first_index;
@@ -72,7 +87,8 @@ namespace types
 		public uint first_instance;
 	};
 
-	public struct PagePointers {
+	public struct PagePointers
+	{
 		public ModelVertex *vertex_buffer;
 	};
 }

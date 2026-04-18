@@ -14,14 +14,35 @@ struct AST_ModelVertex
 	v3 bitangent;
 };
 
+/*
+typedef enum AST_ModelAlphaMode
+{
+	AST_ModelAlphaMode_Opaque,
+	AST_ModelAlphaMode_Mask,
+	AST_ModelAlphaMode_Blend,
+	AST_ModelAlphaMode_COUNT
+}
+AST_ModelAlphaMode;
+*/
+
 typedef struct AST_ModelMaterial AST_ModelMaterial;
 struct AST_ModelMaterial
 {
+	// Textures. If absent, assume 1.0 sampled.
 	AST_Handle albedo;
 	AST_Handle normal;
 	AST_Handle emissive;
 	AST_Handle metallic_roughness;
 	AST_Handle ambient;
+
+	// Multipliers.
+	v4 albedo_factor;
+	f32 metallic_factor;
+	f32 roughness_factor;
+	f32 emissive_factor;
+
+	// Etc.
+	b32 double_sided;
 };
 
 typedef struct AST_ModelMesh AST_ModelMesh;

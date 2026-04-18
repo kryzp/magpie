@@ -121,6 +121,28 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	mat.metallic_roughness = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_DIFFUSE_ROUGHNESS);
 	mat.ambient            = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_LIGHTMAP);
 
+	mat.albedo_factor      = v4(1.f, 1.f, 1.f, 1.f);
+	mat.metallic_factor    = 1.f;
+	mat.roughness_factor   = 1.f;
+	mat.emissive_factor    = 0.f;
+	
+	mat.double_sided       = false;
+	
+	struct aiColor4D colour = {0};
+	
+	if (aiGetMaterialColor(ai_mat, AI_MATKEY_COLOR_DIFFUSE, &colour) == AI_SUCCESS)
+		mat.albedo_factor = v4(colour.r, colour.g, colour.b, colour.a);
+
+	aiGetMaterialFloat(ai_mat, AI_MATKEY_OPACITY, &mat.albedo_factor.w);
+	aiGetMaterialFloat(ai_mat, AI_MATKEY_METALLIC_FACTOR, &mat.metallic_factor);
+	aiGetMaterialFloat(ai_mat, AI_MATKEY_ROUGHNESS_FACTOR, &mat.roughness_factor);
+	aiGetMaterialFloat(ai_mat, AI_MATKEY_EMISSIVE_INTENSITY, &mat.emissive_factor);
+	
+	i32 double_sided = 0;
+	
+	if (aiGetMaterialInteger(ai_mat, AI_MATKEY_TWOSIDED, &double_sided) == AI_SUCCESS)
+		mat.double_sided = !!double_sided;
+
 	return mat;
 }
 

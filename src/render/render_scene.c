@@ -581,6 +581,13 @@ R_SceneRegisterMaterial(R_Scene *scene,
 	gpu->metallic_roughness_texture = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness);
 	gpu->ambient_texture            = R_SceneResolveTextureBindless(scene, assets, material->ambient);
 
+	gpu->albedo_factor      = material->albedo_factor;
+	gpu->metallic_factor    = material->metallic_factor;
+	gpu->roughness_factor   = material->roughness_factor;
+	gpu->emissive_factor    = material->emissive_factor;
+
+	gpu->double_sided       = (u32)material->double_sided;
+	
 	scene->material_count++;
 	scene->material_buffer_dirty = true;
 
