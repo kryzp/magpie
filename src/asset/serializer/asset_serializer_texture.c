@@ -1,10 +1,4 @@
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
-#include "ext/stb/stb_image.h"
-#include "ext/stb/stb_image_write.h"
-
 typedef struct AST_TextureLoadData AST_TextureLoadData;
 struct AST_TextureLoadData
 {
@@ -14,7 +8,7 @@ struct AST_TextureLoadData
 	void *pixel_data;
 };
 
-internal AST_LoadData
+internal AST_SerializerPipelineData
 AST_TextureSerializerCpu(const AST_Context *ctx)
 {
 	ScratchArena scratch = ScratchBegin(&ctx->scope, 1);
@@ -46,7 +40,7 @@ AST_TextureSerializerCpu(const AST_Context *ctx)
 	tex_load_data->is_hdr = is_hdr;
 	tex_load_data->pixel_data = px;
 
-	AST_LoadData result = {0};
+	AST_SerializerPipelineData result = {0};
 	result.data = tex_load_data;
 	result.stage_size = w * h * stride * 4; // RGBA = 4 values ppx.
 	result.failed = px == NULL;
@@ -58,10 +52,11 @@ AST_TextureSerializerCpu(const AST_Context *ctx)
 
 internal void
 AST_TextureSerializerAlloc(const AST_Context *ctx,
-						   AST_LoadData *data,
-						   GFX_Device *device,
+						   AST_SerializerPipelineData *data,
 						   AST_Asset *out)
 {
+	GFX_Device *device = ctx->assets->device;
+	
 	AST_TextureLoadData *tex_data = data->data;
 
 	VkFormat format = tex_data->is_hdr
@@ -73,8 +68,7 @@ AST_TextureSerializerAlloc(const AST_Context *ctx,
 
 internal void
 AST_TextureSerializerReload(const AST_Context *ctx,
-							AST_LoadData *data,
-							GFX_Device *device,
+							AST_SerializerPipelineData *data,
 							AST_Asset *existing)
 {
 	// TODO
@@ -82,12 +76,13 @@ AST_TextureSerializerReload(const AST_Context *ctx,
 
 internal void
 AST_TextureSerializerGpu(const AST_Context *ctx,
-						 AST_LoadData *data,
+						 AST_SerializerPipelineData *data,
 						 AST_Asset *asset,
-						 GFX_Device *device,
 						 GFX_CmdBuffer *cmd,
 						 GFX_Buffer *stage, u64 stage_base)
 {
+	GFX_Device *device = ctx->assets->device;
+	
 	AST_TextureLoadData *tex_data = data->data;
 	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, asset->texture.key);
 
@@ -122,7 +117,7 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 }
 
 internal void
-AST_TextureSerializerEnd(AST_LoadData *data)
+AST_TextureSerializerEnd(AST_SerializerPipelineData *data)
 {
 	AST_TextureLoadData *tex_data = data->data;
 
@@ -130,9 +125,9 @@ AST_TextureSerializerEnd(AST_LoadData *data)
 }
 
 internal void
-AST_TextureSerializerDispose(AST_Asset *asset, GFX_Device *device)
+AST_TextureSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
-	GFX_DeviceTextureDestroy(device, asset->texture.key);
+	GFX_DeviceTextureDestroy(assets->device, asset->texture.key);
 }
 
 internal AST_Serializer

@@ -1,12 +1,11 @@
-#ifndef RENDER_MODEL_H
-#define RENDER_MODEL_H
-
-typedef u32 R_MeshIndex;
+#ifndef RENDER_MESH_H
+#define RENDER_MESH_H
 
 typedef struct R_Mesh R_Mesh;
 struct R_Mesh
 {
 	u64 vertex_stride;
+	u64 index_stride;
 
 	u32 vertex_count;
 	u32 index_count;
@@ -16,14 +15,14 @@ struct R_Mesh
 };
 
 internal void R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
-						  u64 vertex_stride,
+						  u64 vertex_stride, u64 index_stride,
 						  u32 vertex_count, u32 index_count);
 
 internal void R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device);
 
 internal void R_MeshWriteToStage(const R_Mesh *mesh,
 								 GFX_Buffer *stage, u64 stage_base,
-								 void *vertices, R_MeshIndex *indices);
+								 void *vertices, void *indices);
 
 internal u64 R_MeshUpload(const R_Mesh *mesh,
 						  const GFX_Device *device,
@@ -39,35 +38,7 @@ R_MeshVertexBufferSize(const R_Mesh *mesh)
 internal inline u64
 R_MeshIndexBufferSize(const R_Mesh *mesh)
 {
-	return mesh->index_count * sizeof(R_MeshIndex);
+	return mesh->index_count * mesh->index_stride;
 }
 
-typedef struct R_Material R_Material;
-struct R_Material
-{
-	AST_Handle albedo;
-	AST_Handle normal;
-	AST_Handle emissive;
-	AST_Handle metallic_roughness;
-	AST_Handle ambient;
-};
-
-typedef struct R_SubModel R_SubModel;
-struct R_SubModel
-{
-	R_SubModel *next;
-	
-	m4 transform;
-	v4 sphere;
-	
-	R_Mesh mesh;
-	R_Material material;
-};
-
-typedef struct R_Model R_Model;
-struct R_Model
-{
-	R_SubModel *sub_model_head;
-};
-
-#endif // RENDER_MODEL_H
+#endif // RENDER_MESH_H

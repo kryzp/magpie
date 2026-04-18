@@ -11,8 +11,8 @@ struct AST_Context
 	AST_MetaData metadata;
 };
 
-typedef struct AST_LoadData AST_LoadData;
-struct AST_LoadData
+typedef struct AST_SerializerPipelineData AST_SerializerPipelineData;
+struct AST_SerializerPipelineData
 {
 	void *data;
 	
@@ -31,12 +31,12 @@ internal String8 AST_ContextSystemFilePath(const AST_Context *context, Arena *ar
 typedef struct AST_Serializer AST_Serializer;
 struct AST_Serializer
 {
-	AST_LoadData (*Cpu)     (const AST_Context *ctx);
-	void         (*Alloc)   (const AST_Context *ctx, AST_LoadData *data, GFX_Device *device, AST_Asset *out);
-	void         (*Reload)  (const AST_Context *ctx, AST_LoadData *data, GFX_Device *device, AST_Asset *existing);
-	void         (*Gpu)     (const AST_Context *ctx, AST_LoadData *data, AST_Asset *asset, GFX_Device *device, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
-	void         (*End)     (AST_LoadData *data);
-	void         (*Dispose) (AST_Asset *asset, GFX_Device *device);
+	AST_SerializerPipelineData (*Cpu)     (const AST_Context *ctx);
+	void                       (*Alloc)   (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *out);
+	void                       (*Reload)  (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *existing);
+	void                       (*Gpu)     (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
+	void                       (*End)     (AST_SerializerPipelineData *data);
+	void                       (*Dispose) (AST_Asset *asset, AST_Assets *assets);
 };
 
 #endif // ASSET_SERIALIZER_H

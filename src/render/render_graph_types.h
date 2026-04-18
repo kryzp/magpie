@@ -14,11 +14,11 @@
 //       writing to it, which won't cause a crash but it will
 //       result in complete garbage data being rendered.
 //
-//           R_Pass *bloom = R_GraphAdd(graph, Str8("Bloom"), R_PassType_Compute);
+//           R_Pass *bloom = R_GraphAdd(graph, String8Lit("Bloom"), R_PassType_Compute);
 //           R_PassReadTextureCompute(bloom, hdr); // Reads before lighting writes to it!
 //                                                    This won't cause a crash but it will be garbage.
 //
-//           R_Pass *lighting = R_GraphAdd(graph, Str8("Lighting"), R_PassType_Graphics);
+//           R_Pass *lighting = R_GraphAdd(graph, String8Lit("Lighting"), R_PassType_Graphics);
 //           R_PassWriteColour(lighting, hdr, &clear); // Actually writes to it.
 
 // NOTE: 0 is reserved for the invalid handle so indices start at 1.

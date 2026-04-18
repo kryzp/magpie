@@ -237,11 +237,56 @@ internal void R_SceneLightSetIntensity (R_Scene *scene, R_SceneLightHandle handl
 
 
 /* =======================================================
-   MESHES & MATERIALS
+   MODELS
    ======================================================= */
 
-internal R_SceneMeshHandle     R_SceneRegisterMesh     (R_Scene *scene, const R_Mesh *mesh);
-internal R_SceneMaterialHandle R_SceneRegisterMaterial (R_Scene *scene, const R_Material *material);
+typedef struct R_SceneModelEntry R_SceneModelEntry;
+struct R_SceneModelEntry
+{
+	R_SceneMeshHandle mesh;
+	R_SceneMaterialHandle material;
+	m4 transform;
+	v4 sphere_bounds;
+};
+
+typedef struct R_SceneRegisterModelReceipt R_SceneRegisterModelReceipt;
+struct R_SceneRegisterModelReceipt
+{
+	u32 entry_count;
+	R_SceneModelEntry *entries;
+};
+
+internal R_SceneRegisterModelReceipt R_SceneRegisterModel(R_Scene *scene,
+														  Arena *arena,
+														  const AST_Assets *assets,
+														  AST_Handle model_handle,
+														  u32 max_entries);
+
+
+/* =======================================================
+   MESHES
+   ======================================================= */
+
+internal R_SceneMeshHandle R_SceneRegisterMeshFromBuffers(R_Scene *scene,
+														  GFX_BufferKey vertex_buffer,
+														  GFX_BufferKey index_buffer,
+														  u32 vertex_count,
+														  u32 index_count);
+
+internal R_SceneMeshHandle R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh);
+
+
+/* =======================================================
+   MATERIALS
+   ======================================================= */
+
+internal u32 R_SceneResolveTextureBindless(const R_Scene *scene,
+										   const AST_Assets *assets,
+										   AST_Handle handle);
+
+internal R_SceneMaterialHandle R_SceneRegisterMaterial (R_Scene *scene,
+														const AST_ModelMaterial *material,
+														const AST_Assets *assets);
 
 
 #endif // RENDER_SCENE_H

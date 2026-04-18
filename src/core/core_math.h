@@ -5,13 +5,12 @@
 #include <float.h>
 
 #define MATH_PI                                  3.1415926535897
-#define MATH_PIf                                 3.1415926535897f
 #define MATH_ONE_OVER_SQUARE_ROOT_OF_TWO_PI      0.3989422804
-#define MATH_ONE_OVER_SQUARE_ROOT_OF_TWO_PIf     0.3989422804f
 #define MATH_EULERS_NUMBER                       2.718281828459045
-#define MATH_EULERS_NUMBERf                      2.718281828459045f
-#define MATH_EPSILON DBL_EPSILON
-#define MATH_EPSILONf FLT_EPSILON
+#define MATH_EPSILON_F32                         FLT_EPSILON
+#define MATH_EPSILON_F64                         DBL_EPSILON
+#define MATH_MAX_F32                             FLT_MAX
+#define MATH_MAX_F64                             DBL_MAX
 
 #define SquareRoot   sqrtf
 #define AbsF         fabsf
@@ -84,6 +83,9 @@ internal v3 V3Normalize(v3 v);
 
 internal f32 V3Max(v3 v);
 internal f32 V3Min(v3 v);
+
+internal v3 V3MinOf(v3 a, v3 b);
+internal v3 V3MaxOf(v3 a, v3 b);
 
 internal v3 V3Lerp(v3 from, v3 to, f32 amount);
 internal v3 V3Approach(v3 from, v3 to, f32 amount);

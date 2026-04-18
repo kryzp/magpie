@@ -28,12 +28,7 @@ struct R_GPU_FrameData
 typedef struct R_GPU_ModelVertex R_GPU_ModelVertex;
 struct R_GPU_ModelVertex
 {
-	v3 position;
-	v2 texcoord;
-	v3 colour;
-	v3 normal;
-	v3 tangent;
-	v3 bitangent;
+	AST_ModelVertex vertex;
 };
 
 typedef struct R_GPU_ObjectData R_GPU_ObjectData;

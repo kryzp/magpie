@@ -1,10 +1,12 @@
 
 internal void
 R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
-			u64 vertex_stride,
+			u64 vertex_stride, u64 index_stride,
 			u32 vertex_count, u32 index_count)
 {
 	mesh->vertex_stride = vertex_stride;
+	mesh->index_stride = index_stride;
+	
 	mesh->vertex_count = vertex_count;
 	mesh->index_count = index_count;
 
@@ -32,7 +34,7 @@ R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device)
 internal void
 R_MeshWriteToStage(const R_Mesh *mesh,
 				   GFX_Buffer *stage, u64 stage_base,
-				   void *vertices, R_MeshIndex *indices)
+				   void *vertices, void *indices)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);

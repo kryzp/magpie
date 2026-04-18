@@ -1,0 +1,35 @@
+#ifndef ASSET_HANDLE_H
+#define ASSET_HANDLE_H
+
+typedef struct AST_Handle AST_Handle;
+struct AST_Handle
+{
+	u32 index;
+	u32 generation;
+};
+
+internal inline AST_Handle
+AST_HandleNull(void)
+{
+	AST_Handle handle = {0};
+	handle.index = -1u;
+	handle.generation = 0;
+
+	return handle;
+}
+
+internal inline b32
+AST_HandleIsNull(AST_Handle handle)
+{
+	return (handle.index == 0 &&
+			handle.generation == 0);
+}
+
+internal inline b32
+AST_HandleMatch(AST_Handle a, AST_Handle b)
+{
+	return (a.index == b.index &&
+			a.generation == b.generation);
+}
+
+#endif // ASSET_HANDLE_H

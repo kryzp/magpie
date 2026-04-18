@@ -12,7 +12,7 @@ IO_PathGetFileName(Arena *arena, String8 path)
 internal String8
 IO_PathGetFileNameExt(Arena *arena, String8 path)
 {
-	u32 index = String8UpToLastSubstringIncl(path, Str8("/"));
+	u32 index = String8FindLastIncl(path, String8Lit("/"));
 
 	String8 out = String8Alloc(arena, path.len - index);
 
@@ -24,7 +24,7 @@ IO_PathGetFileNameExt(Arena *arena, String8 path)
 internal String8
 IO_PathGetFileExtension(Arena *arena, String8 path)
 {
-	u32 index = String8UpToLastSubstringIncl(path, Str8("."));
+	u32 index = String8FindLastIncl(path, String8Lit("."));
 
 	String8 out = String8Alloc(arena, path.len - index);
 
@@ -64,7 +64,7 @@ IO_PathJoin(Arena *arena, String8 path_a, String8 path_b)
 
 	ScratchArena scratch = ScratchBegin(&arena, 1);
 
-	String8 joined = String8Append(scratch.arena, String8Append(scratch.arena, path_a, Str8("/")), path_b);
+	String8 joined = String8Append(scratch.arena, String8Append(scratch.arena, path_a, String8Lit("/")), path_b);
 	
 	String8 result = IO_PathNormalize(arena, joined);
 

@@ -97,6 +97,22 @@ V3Min(v3 v)
 }
 
 internal v3
+V3MinOf(v3 a, v3 b)
+{
+	return v3(MinValue(a.x, b.x),
+			  MinValue(a.y, b.y),
+			  MinValue(a.z, b.z));
+}
+
+internal v3
+V3MaxOf(v3 a, v3 b)
+{
+	return v3(MaxValue(a.x, b.x),
+			  MaxValue(a.y, b.y),
+			  MaxValue(a.z, b.z));
+}
+
+internal v3
 V3Lerp(v3 from, v3 to, f32 amount)
 {
 	return v3(LerpValue(from.x, to.x, amount),
@@ -260,7 +276,7 @@ V4QuatInverse(v4 q)
 
 	f32 length_sqr = V4LengthSqr(q);
 
-	if (length_sqr > MATH_EPSILONf)
+	if (length_sqr > MATH_EPSILON_F32)
 	{
 		f32 length = SquareRoot(length_sqr);
 

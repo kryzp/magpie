@@ -10,7 +10,7 @@ struct AST_Upload
 	AST_MetaData metadata;
 	AST_Handle handle;
 	AST_Type type;
-	AST_LoadData load_data;
+	AST_SerializerPipelineData load_data;
 };
 
 typedef struct AST_UploadQueue AST_UploadQueue;

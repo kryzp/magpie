@@ -1,12 +1,40 @@
+
+// TODO: Move these out into their respective
+//       backends.
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ext/stb/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "ext/stb/stb_image_write.h"
+
+#define VOLK_IMPLEMENTATION
+#include <volk/volk.h>
+
+#include <vma/vk_mem_alloc.h>
+
+#define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
+#include "ext/spirv/spirv_reflect.h"
+#include "ext/spirv/spirv_reflect.c"
+
+#define MINIAUDIO_IMPLEMENTATION
+#include "ext/ma/miniaudio.h"
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+// ---
+
 #include "core/core_inc.h"
 #include "input/input_inc.h"
 #include "os/os_inc.h"
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
 #include "graphics/graphics_inc.h"
+#include "audio/audio_inc.h"
 #include "asset/asset_inc.h"
 #include "render/render_inc.h"
-#include "audio/audio_inc.h"
 #include "animation/animation_inc.h"
 #include "entity/entity_inc.h"
 #include "timeline/timeline_inc.h"
@@ -17,15 +45,17 @@
 #include "camera_driver.h"
 #include "app.h"
 
+// ---
+
 #include "core/core_inc.c"
 #include "input/input_inc.c"
 #include "os/os_inc.c"
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
 #include "graphics/graphics_inc.c"
+#include "audio/audio_inc.c"
 #include "asset/asset_inc.c"
 #include "render/render_inc.c"
-#include "audio/audio_inc.c"
 #include "animation/animation_inc.c"
 #include "entity/entity_inc.c"
 #include "timeline/timeline_inc.c"
@@ -244,7 +274,7 @@ AppTick(App *app, const I_InputSt *input)
 		AST_PollHotReloads(&app->assets);
 	}
 
-	AST_FlushUploads(&app->assets, &app->graphics_device);
+	AST_FlushUploads(&app->assets);
 
 	ENT_WorldTickPreAnim(&app->world, &app->events, dt, input);
 

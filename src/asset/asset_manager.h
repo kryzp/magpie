@@ -50,6 +50,9 @@ struct AST_Assets
 {
 	Arena *arena;
 
+	GFX_Device *device;
+	const AUD_BackendAPI *audio_backend;
+
 	u32 record_count;
 	AST_Record records[AST_MANAGER_MAX_RECORDS];
 	
@@ -108,8 +111,8 @@ internal void AST_LoadArenaRelease(AST_Assets *assets, u32 index);
    CORE
    ================================================== */
 
-internal void AST_Init(AST_Assets *assets, Arena *arena);
-internal void AST_Destroy(AST_Assets *assets, GFX_Device *device);
+internal void AST_Init(AST_Assets *assets, Arena *arena, GFX_Device *device, const AUD_BackendAPI *audio_backend);
+internal void AST_Destroy(AST_Assets *assets);
 
 
 /* ==================================================
@@ -133,7 +136,7 @@ internal b32 AST_IsValid   (const AST_Assets *assets, AST_Handle handle);
    LOADING
    ================================================== */
 
-internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type, GFX_Device *device);
+internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_LoadAsync   (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_ReloadAsync (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_Load        (AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter);
@@ -157,7 +160,7 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry);
 
 
 internal void AST_PollHotReloads(AST_Assets *assets);
-internal void AST_FlushUploads(AST_Assets *assets, GFX_Device *device);
+internal void AST_FlushUploads(AST_Assets *assets);
 internal void AST_WaitForAsyncUploads(AST_Assets *assets);
 
 

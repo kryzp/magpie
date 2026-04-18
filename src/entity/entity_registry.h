@@ -3,14 +3,14 @@
 
 global String8 ent_global_struct_names[ENT_Type_COUNT] =
 {
-#define EntityDef(pascal, lower, max) Str8(STRINGIFY(pascal)),
+#define EntityDef(pascal, lower, max) String8Lit(STRINGIFY(pascal)),
 #include "entity_xmacro.inc"
 #undef EntityDef
 };
 
 global String8 ent_global_lower_names[ENT_Type_COUNT] =
 {
-#define EntityDef(pascal, lower, max) Str8(STRINGIFY(lower)),
+#define EntityDef(pascal, lower, max) String8Lit(STRINGIFY(lower)),
 #include "entity_xmacro.inc"
 #undef EntityDef
 };
@@ -20,7 +20,7 @@ global ENT_TypeDesc ent_global_types[ENT_Type_COUNT] =
 #define EntityDef(pascal, lower, max)									\
 	[ENT_Type_##Pascal] =												\
 	{																	\
-		.name              = Str8(STRINGIFY(pascal)),					\
+		.name              = String8Lit(STRINGIFY(pascal)),					\
 		.stride            = sizeof(ENT_##pascal),						\
 		.max_instances     = (max),										\
 		.OnDestroy         = (ENT_TypeDescDestroyFn *)ENT_##pascal##Destroy, \

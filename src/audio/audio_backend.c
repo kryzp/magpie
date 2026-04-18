@@ -1,8 +1,4 @@
 
-#define MINIAUDIO_IMPLEMENTATION
-
-#include "ext/ma/miniaudio.h"
-
 typedef struct AUD_MA_Buffer AUD_MA_Buffer;
 struct AUD_MA_Buffer
 {

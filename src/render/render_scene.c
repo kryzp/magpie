@@ -269,7 +269,7 @@ R_SceneCreateNewPage(R_Scene *scene)
 	page.vertex_offset = 0;
 	page.index_offset  = 0;
 	page.max_vertices  = R_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
-	page.max_indices   = R_PAGE_INDEX_BUFFER_SIZE  / sizeof(R_MeshIndex);
+	page.max_indices   = R_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
 	page.next = NULL;
  
 	return page;
@@ -427,15 +427,62 @@ R_SceneLightSetIntensity(R_Scene *scene, R_SceneLightHandle handle, f32 intensit
 	slot->light.intensity = intensity;
 }
 
+internal R_SceneRegisterModelReceipt
+R_SceneRegisterModel(R_Scene *scene,
+					 Arena *arena,
+					 const AST_Assets *assets,
+					 AST_Handle model_handle,
+					 u32 max_entries)
+{		
+	AssertTrue(AST_IsLoaded(assets, model_handle));
+
+	const AST_Record *record = AST_GetRecordConst(assets, model_handle);
+
+	AssertTrue(record->asset.type == AST_Type_Model);
+
+	u32 mesh_count = record->asset.model.mesh_count;
+	const AST_ModelMesh *meshes = record->asset.model.meshes;
+
+	R_SceneRegisterModelReceipt receipt = {0};
+	receipt.entry_count = MinValue(mesh_count, max_entries);
+	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, receipt.entry_count);
+	
+	for (u32 i = 0; i < receipt.entry_count; i++)
+	{
+		const AST_ModelMesh *src = &meshes[i];
+
+		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene,
+																 src->vertex_buffer,
+																 src->index_buffer,
+																 src->vertex_count,
+																 src->index_count);
+
+		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
+		
+		receipt.entries[i].transform = src->transform;
+
+		v3  centre = V3MulF32(V3Add(src->bounds_min, src->bounds_max), 0.5f);
+		f32 radius = V3Length(V3Sub(src->bounds_max, centre));
+
+		receipt.entries[i].sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
+	}
+
+	return receipt;
+}
+
 internal R_SceneMeshHandle
-R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh)
+R_SceneRegisterMeshFromBuffers(R_Scene *scene,
+							   GFX_BufferKey vertex_buffer,
+							   GFX_BufferKey index_buffer,
+							   u32 vertex_count,
+							   u32 index_count)
 {
 	AssertTrue(scene->mesh_count < R_SCENE_MAX_MESHES);
 
-	u32 page_index = R_SceneFindSuitablePage(scene, mesh->vertex_count, mesh->index_count);
+	u32 page_index = R_SceneFindSuitablePage(scene, vertex_count, index_count);
 
 	R_GeometryPage *page = scene->geometry_page_head;
-	for (u32 i = 0; i < page_index; i++, page = page->next); // Iterate to page_index of the page linked list.
+	for (u32 i = 0; i < page_index; i++, page = page->next);
 
 	GFX_Buffer *page_vertex_buffer = GFX_DeviceBufferFromKey(scene->device, page->vertex_buffer);
 	GFX_Buffer *page_index_buffer  = GFX_DeviceBufferFromKey(scene->device, page->index_buffer);
@@ -443,68 +490,96 @@ R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh)
 	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
 	{
 		const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
-		const u64 index_stride	= sizeof(R_MeshIndex);
+		const u64 index_stride  = sizeof(AST_ModelIndex);
 
 		VkBufferCopy2 vc = {0};
-		vc.sType	 = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		vc.sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		vc.srcOffset = 0;
 		vc.dstOffset = page->vertex_offset * vertex_stride;
-		vc.size		 = mesh->vertex_count  * vertex_stride;
-		
+		vc.size      = vertex_count * vertex_stride;
+
 		VkBufferCopy2 ic = {0};
-		ic.sType	 = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		ic.sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		ic.srcOffset = 0;
 		ic.dstOffset = page->index_offset * index_stride;
-		ic.size		 = mesh->index_count  * index_stride;
-		
-		GFX_Buffer *mesh_vertex_buffer = GFX_DeviceBufferFromKey(scene->device, mesh->vertex_buffer);
-		GFX_Buffer *mesh_index_buffer  = GFX_DeviceBufferFromKey(scene->device, mesh->index_buffer);
+		ic.size      = index_count * index_stride;
 
-		GFX_CmdCopyBufferToBuffer(&cmd, mesh_vertex_buffer, page_vertex_buffer, 1, &vc);
-		GFX_CmdCopyBufferToBuffer(&cmd, mesh_index_buffer,  page_index_buffer,  1, &ic);
+		GFX_Buffer *src_vb = GFX_DeviceBufferFromKey(scene->device, vertex_buffer);
+		GFX_Buffer *src_ib = GFX_DeviceBufferFromKey(scene->device, index_buffer);
+
+		GFX_CmdCopyBufferToBuffer(&cmd, src_vb, page_vertex_buffer, 1, &vc);
+		GFX_CmdCopyBufferToBuffer(&cmd, src_ib, page_index_buffer,  1, &ic);
 	}
 	GFX_DeviceSubmitImEnd(scene->device, &cmd);
 
 	u32 mesh_data_index = scene->mesh_count;
 
 	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[mesh_data_index];
-
-	gpu_mesh->index_count = mesh->index_count;
+	gpu_mesh->index_count = index_count;
 	gpu_mesh->first_index = page->index_offset;
 	gpu_mesh->vertex_buffer = GFX_BufferAddress(page_vertex_buffer) + (page->vertex_offset * sizeof(R_GPU_ModelVertex));
- 
-	// Advance page allocator.
-	page->vertex_offset += mesh->vertex_count;
-	page->index_offset	+= mesh->index_count;
- 
-	// Register the mesh memory location so that the scene object
-	// can look it up by handle instead.
-	scene->mesh_registry[mesh_data_index].page	= page_index;
+
+	page->vertex_offset += vertex_count;
+	page->index_offset  += index_count;
+
+	scene->mesh_registry[mesh_data_index].page  = page_index;
 	scene->mesh_registry[mesh_data_index].index = mesh_data_index;
- 
+
 	scene->mesh_count++;
 	scene->mesh_buffer_dirty = true;
- 
+
 	R_SceneMeshHandle handle = {0};
 	handle.value = mesh_data_index;
-	
+
 	return handle;
 }
 
+internal R_SceneMeshHandle
+R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh)
+{
+	return R_SceneRegisterMeshFromBuffers(scene,
+										  mesh->vertex_buffer,
+										  mesh->index_buffer,
+										  mesh->vertex_count,
+										  mesh->index_count);
+}
+
+internal u32
+R_SceneResolveTextureBindless(const R_Scene *scene,
+							  const AST_Assets *assets,
+							  AST_Handle handle)
+{
+	if (AST_HandleIsNull(handle))
+		return 0;
+
+	if (!AST_IsLoaded(assets, handle))
+		return 0;
+
+	const AST_Record *record = AST_GetRecordConst(assets, handle);
+
+	GFX_TextureKey key = record->asset.texture.key;
+
+	GFX_TextureView *view = GFX_DeviceTextureViewFromKey(scene->device, GFX_DeviceTextureViewAuto(scene->device, key));
+
+	return view->bindless.value;
+}
+
 internal R_SceneMaterialHandle
-R_SceneRegisterMaterial(R_Scene *scene, const R_Material *material)
+R_SceneRegisterMaterial(R_Scene *scene,
+						const AST_ModelMaterial *material,
+						const AST_Assets *assets)
 {
 	AssertTrue(scene->material_count < R_SCENE_MAX_MATERIALS);
 
 	u32 index = scene->material_count;
-	
-	R_GPU_Material *gpu_material = &scene->gpu_materials[index];
 
-	gpu_material->albedo_texture = 0;
-	gpu_material->normal_texture = 0;
-	gpu_material->emissive_texture = 0;
-	gpu_material->metallic_roughness_texture = 0;
-	gpu_material->ambient_texture = 0;
+	R_GPU_Material *gpu = &scene->gpu_materials[index];
+
+	gpu->albedo_texture             = R_SceneResolveTextureBindless(scene, assets, material->albedo);
+	gpu->normal_texture             = R_SceneResolveTextureBindless(scene, assets, material->normal);
+	gpu->emissive_texture           = R_SceneResolveTextureBindless(scene, assets, material->emissive);
+	gpu->metallic_roughness_texture = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness);
+	gpu->ambient_texture            = R_SceneResolveTextureBindless(scene, assets, material->ambient);
 
 	scene->material_count++;
 	scene->material_buffer_dirty = true;

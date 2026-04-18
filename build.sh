@@ -34,6 +34,9 @@ clang \
 	$opts "$code/app.c" \
 	-I"$code/" \
 	-I"/Users/kryzp/VulkanSDK/1.4.335.1/macOS/include" \
+    -I"/opt/homebrew/include" \
+    -L"/opt/homebrew/lib" \
+    -lassimp \
 	-fdeclspec \
 	-Wno-switch \
 	-Wno-ignored-attributes \

@@ -49,7 +49,7 @@ String8Match(String8 a, String8 b)
 	return true;
 }
 
-internal u32
+internal u64
 String8Find(String8 string, String8 substr)
 {
 	for (u64 i = 0; i < string.len; i++)
@@ -63,8 +63,22 @@ String8Find(String8 string, String8 substr)
 	return -1;
 }
 
-internal u32
-String8UpToLastSubstringIncl(String8 string, String8 substr)
+internal u64
+String8FindLast(String8 string, String8 substr)
+{
+	for (u64 i = string.len - substr.len - 1; i >= 0; i--)
+	{
+		String8 here = String8Init(string.str + i, substr.len);
+
+		if (String8Match(here, substr))
+			return i;
+	}
+
+	return -1;
+}
+
+internal u64
+String8FindLastIncl(String8 string, String8 substr)
 {
 	for (u64 i = string.len - substr.len - 1; i >= 0; i--)
 	{

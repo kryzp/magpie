@@ -1002,7 +1002,7 @@ main(void)
 	OS_W32_BindAPI(&win32_st.api);
 	
 	OS_W32_InitImGui();
-	OS_W32_LoadCode(Str8("build/app.dll"));
+	OS_W32_LoadCode(String8Lit("build/app.dll"));
 
 	const u64 process_memory_size = OS_PROCESS_MEMORY;
 	void *process_memory = malloc(process_memory_size);

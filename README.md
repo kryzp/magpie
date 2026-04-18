@@ -97,10 +97,10 @@ The hierarchy looks something like this, from the bottom to the top:
 - IO
 - Chrono
 - Graphics
-- Assets
-- Rendering
 - Audio
 - Animation
+- Assets
+- Rendering
 - Entity
 - Timeline
 - Cutscene

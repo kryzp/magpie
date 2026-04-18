@@ -42,7 +42,7 @@ ENT_WorldInit(ENT_World *world, Arena *arena)
 	}
 
 	world->layers[0].active = true;
-	world->layers[0].name = Str8("default");
+	world->layers[0].name = String8Lit("default");
 
 	world->layer_count = 1;
 }

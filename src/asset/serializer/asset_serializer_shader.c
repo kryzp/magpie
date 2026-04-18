@@ -5,7 +5,7 @@ struct AST_ShaderLoadData
 	GFX_ShaderCompiledStages compiled;
 };
 
-internal AST_LoadData
+internal AST_SerializerPipelineData
 AST_ShaderSerializerCpu(const AST_Context *ctx)
 {
 	ScratchArena scratch = ScratchBegin(&ctx->scope, 1);
@@ -14,17 +14,17 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 	
 	AST_ShaderLoadData *shader_data = ArenaPushArray(ctx->scope, AST_ShaderLoadData, 1);
 	
-	AST_LoadData result = {0};
+	AST_SerializerPipelineData result = {0};
 	result.data = shader_data;
 	result.stage_size = 0;
 	result.failed = false;
 	result.dependency_count = 0;
 
-	u64 shader_index = String8Find(file_path, Str8("shaders"));
+	u64 shader_index = String8Find(file_path, String8Lit("shaders"));
 
 	String8 search_directory = String8Append(scratch.arena,
 											 String8Substr(file_path, 0, shader_index),
-											 Str8("shaders/modules/"));
+											 String8Lit("shaders/modules/"));
 
 	const GFX_ShaderCompilerAPI *api = GFX_GetShaderCompilerAPI();
 
@@ -47,30 +47,28 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 
 internal void
 AST_ShaderSerializerAlloc(const AST_Context *ctx,
-						  AST_LoadData *data,
-						  GFX_Device *device,
+						  AST_SerializerPipelineData *data,
 						  AST_Asset *out)
 {
 	AST_ShaderLoadData *shader_data = data->data;
 
-	out->shader.key = GFX_DeviceShaderProgramCreate(device,
+	out->shader.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
 													shader_data->compiled.count,
 													shader_data->compiled.bytecodes);
 }
 
 internal void
 AST_ShaderSerializerReload(const AST_Context *ctx,
-						   AST_LoadData *data,
-						   GFX_Device *device,
+						   AST_SerializerPipelineData *data,
 						   AST_Asset *existing)
 {
 	// TODO
 }
 
 internal void
-AST_ShaderSerializerDispose(AST_Asset *asset, GFX_Device *device)
+AST_ShaderSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
-	GFX_DeviceShaderProgramDestroy(device, asset->shader.key);
+	GFX_DeviceShaderProgramDestroy(assets->device, asset->shader.key);
 }
 
 internal AST_Serializer

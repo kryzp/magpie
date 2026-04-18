@@ -152,12 +152,17 @@ AST_LoadArenaRelease(AST_Assets *assets, u32 index)
 }
 
 internal void
-AST_Init(AST_Assets *assets, Arena *arena)
+AST_Init(AST_Assets *assets, Arena *arena,
+		 GFX_Device *device,
+		 const AUD_BackendAPI *audio_backend)
 {
 	MemZeroStruct(assets);
 
 	assets->arena = arena;
 
+	assets->device = device;
+	assets->audio_backend = audio_backend;
+	
 	assets->async_upload_counter = osapi->JobCounterAlloc(arena, 0);
 
 	assets->upload_mutex     = osapi->MutexCreate();
@@ -182,7 +187,7 @@ AST_Init(AST_Assets *assets, Arena *arena)
 }
 
 internal void
-AST_Destroy(AST_Assets *assets, GFX_Device *device)
+AST_Destroy(AST_Assets *assets)
 {
 	for (u32 i = 0; i < assets->record_count; i++)
 	{
@@ -193,7 +198,7 @@ AST_Destroy(AST_Assets *assets, GFX_Device *device)
 			AST_Serializer *s = &assets->serializers[record->asset.type];
 
 			if (s->Dispose)
-				s->Dispose(&record->asset, device);
+				s->Dispose(&record->asset, assets);
 		}
 	}
 	
@@ -263,7 +268,7 @@ AST_IsValid(const AST_Assets *assets, AST_Handle handle)
 }
 
 internal void
-AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type, GFX_Device *device)
+AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
 {
 	AST_Record *record = AST_GetRecord(assets, handle);
 
@@ -282,7 +287,7 @@ AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type, GFX_Device *de
 		{
 			AST_ResolvePendingDependencies(assets, counter);
 			osapi->JobYield(counter, 0);
-			AST_FlushUploads(assets, device);
+			AST_FlushUploads(assets);
 		}
 	
 		ScratchRelease(&scratch);
@@ -321,7 +326,7 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 
 	AST_Serializer *serializer = &load_params->assets->serializers[load_params->type];
 
-	AST_LoadData load_data = serializer->Cpu(&ctx);
+	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx);
 
 	if (load_data.failed)
 	{
@@ -518,7 +523,7 @@ AST_PollHotReloads(AST_Assets *assets)
 }
 
 internal void
-AST_FlushUploads(AST_Assets *assets, GFX_Device *device)
+AST_FlushUploads(AST_Assets *assets)
 {
 	AST_ResolvePendingDependencies(assets, assets->async_upload_counter);
 
@@ -565,9 +570,9 @@ AST_FlushUploads(AST_Assets *assets, GFX_Device *device)
 		GFX_BufferKey staging_buffer = GFX_BufferKeyNull();
 
 		if (batch_stage_size > 0)
-			staging_buffer = GFX_DeviceStageAlloc(device, batch_stage_size);
+			staging_buffer = GFX_DeviceStageAlloc(assets->device, batch_stage_size);
 
-		GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(device);
+		GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(assets->device);
 		{
 			u64 stage_offset = 0;
 
@@ -604,22 +609,23 @@ AST_FlushUploads(AST_Assets *assets, GFX_Device *device)
 
 					if (is_new)
 					{
-						serializer->Alloc(&ctx, &upload->load_data, device, asset);
+						serializer->Alloc(&ctx, &upload->load_data, asset);
 					}
 					else
 					{
-						serializer->Reload(&ctx, &upload->load_data, device, asset);
+						serializer->Reload(&ctx, &upload->load_data, asset);
 					}
-
-
+					
 					if (serializer->Gpu)
 					{
-						GFX_Buffer *gfx_staging_buffer = GFX_DeviceBufferFromKey(device, staging_buffer);
-						serializer->Gpu(&ctx, &upload->load_data, asset, device, &cmd, gfx_staging_buffer, stage_offset);
+						GFX_Buffer *gfx_staging_buffer = GFX_DeviceBufferFromKey(assets->device, staging_buffer);
+						serializer->Gpu(&ctx, &upload->load_data, asset, &cmd, gfx_staging_buffer, stage_offset);
 					}
 
 					if (serializer->End)
+					{
 						serializer->End(&upload->load_data);
+					}
 
 					if (upload->load_data.watch_path_count > 0)
 					{
@@ -655,12 +661,14 @@ AST_FlushUploads(AST_Assets *assets, GFX_Device *device)
 
 					stage_offset += MemAlignUp(upload->load_data.stage_size, 16);
 				}
+				
+				AST_LoadArenaRelease(assets, upload->load_arena_index);
 			}
 		}
-		GFX_DeviceSubmitImEnd(device, &cmd);
+		GFX_DeviceSubmitImEnd(assets->device, &cmd);
 
 		if (!GFX_BufferKeyIsNull(staging_buffer))
-			GFX_DeviceBufferDestroy(device, staging_buffer);
+			GFX_DeviceBufferDestroy(assets->device, staging_buffer);
 
 		base += batch_count;
 	}
@@ -680,10 +688,7 @@ AST_FromFilePath(AST_Assets *assets, String8 path)
 	AST_Handle existing = AST_PathMapFind(assets, path);
 
 	if (!AST_HandleIsNull(existing))
-	{
-		osapi->MutexUnlock(assets->allocation_mutex);
 		return existing;
-	}
 
 	osapi->MutexLock(assets->allocation_mutex);
 	AST_Handle handle = AST_AllocRecord(assets, path);
