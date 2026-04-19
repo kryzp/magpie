@@ -27,6 +27,7 @@ struct App
 
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
+	GFX_ShaderCompiler shader_compiler;
 	GFX_RingBuffer frame_upload_ring_buffer;
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
@@ -64,9 +65,9 @@ internal void AppHotUnloadEntity     (App *app);
 
 internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
-__declspec(dllexport) void *AppInit      (Arena *arena, const OS_API *api);
+__declspec(dllexport) App  *AppInit      (Arena *arena, const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);
-__declspec(dllexport) b32   AppTick      (App *app, const I_InputSt *input);
+__declspec(dllexport) b32   AppTick      (App *app, const I_State *input);
 __declspec(dllexport) void  AppHotLoad   (App *app, const OS_API *api);
 __declspec(dllexport) void  AppHotUnload (App *app);
 

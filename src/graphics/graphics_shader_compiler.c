@@ -1,8 +1,18 @@
 
-internal const GFX_ShaderCompilerAPI *
-GFX_GetShaderCompilerAPI(void)
+internal void
+GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler)
 {
-	static GFX_ShaderCompilerAPI api = {0};
+}
 
-	return &api;
+internal void
+GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler)
+{
+}
+
+internal GFX_ShaderCompiledStages
+GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
+						  Arena *arena,
+						  String8 source_path,
+						  u32 search_path_count, const String8 *search_paths)
+{
 }

@@ -51,6 +51,7 @@ struct AST_Assets
 	Arena *arena;
 
 	GFX_Device *device;
+	GFX_ShaderCompiler *shader_compiler;
 	const AUD_BackendAPI *audio_backend;
 
 	u32 record_count;
@@ -111,7 +112,11 @@ internal void AST_LoadArenaRelease(AST_Assets *assets, u32 index);
    CORE
    ================================================== */
 
-internal void AST_Init(AST_Assets *assets, Arena *arena, GFX_Device *device, const AUD_BackendAPI *audio_backend);
+internal void AST_Init(AST_Assets *assets, Arena *arena,
+					   GFX_Device *device,
+					   GFX_ShaderCompiler *shader_compiler,
+					   const AUD_BackendAPI *audio_backend);
+
 internal void AST_Destroy(AST_Assets *assets);
 
 

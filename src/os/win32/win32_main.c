@@ -105,7 +105,7 @@ OS_W32_ReturnObject(OS_W32_Object *object)
 
 void *OS_W32_EntryInitStub(Arena *arena, const OS_API *api) { return NULL; }
 void  OS_W32_EntryDestroyStub(void *ctx) { }
-b32   OS_W32_EntryTickStub(void *ctx, const I_InputSt *input) { return false; }
+b32   OS_W32_EntryTickStub(void *ctx, const I_State *input) { return false; }
 void  OS_W32_EntryHotLoadStub(void *ctx, const OS_API *api) { }
 void  OS_W32_EntryHotUnloadStub(void *ctx) { }
 
@@ -830,7 +830,7 @@ OS_W32_BindAPI(OS_API *osapi)
 }
 
 internal void
-OS_W32_ProcessEvents(I_InputSt *input_out)
+OS_W32_ProcessEvents(I_State *input_out)
 {
 	SDL_Event events[MAX_PENDING_EVENTS] = {0};
 	u32 event_count = 0;
@@ -937,9 +937,9 @@ OS_W32_ProcessEvents(I_InputSt *input_out)
 
 JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
-	static I_InputSt prev_input_st = {0};
+	static I_State prev_input_st = {0};
 
-	I_InputSt curr_input_st = prev_input_st;
+	I_State curr_input_st = prev_input_st;
 	OS_W32_ProcessEvents(&curr_input_st);
 	prev_input_st = curr_input_st;
 

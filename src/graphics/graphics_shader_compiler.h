@@ -9,17 +9,17 @@ struct GFX_ShaderCompiledStages
 	GFX_ShaderBytecode *bytecodes;
 };
 
-typedef struct GFX_ShaderCompilerAPI GFX_ShaderCompilerAPI;
-struct GFX_ShaderCompilerAPI
+typedef struct GFX_ShaderCompiler GFX_ShaderCompiler;
+struct GFX_ShaderCompiler
 {
-	void (*Init)(void);
-	void (*Shutdown)(void);
-	
-	GFX_ShaderCompiledStages (*Compile)(Arena *arena,
-										String8 source_path,
-										u32 search_path_count, const String8 *search_paths);
 };
 
-internal const GFX_ShaderCompilerAPI *GFX_GetShaderCompilerAPI(void);
+internal void GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler);
+internal void GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler);
+
+internal GFX_ShaderCompiledStages GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
+															Arena *arena,
+															String8 source_path,
+															u32 search_path_count, const String8 *search_paths);
 
 #endif // GRAPHICS_SHADER_COMPILER_H

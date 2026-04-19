@@ -112,9 +112,7 @@ AppInitGraphics(App *app)
 	GFX_DeviceInit(&app->graphics_device, app->permanent_arena, &app->frame_arena);
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
-	
-	GFX_GetShaderCompilerAPI()->Init();
-
+	GFX_ShaderCompilerInit(&app->shader_compiler);
 	
 	GFX_BufferAllocInfo ring_buffer_alloc_info = {0};
 	ring_buffer_alloc_info.size = Megabytes(512);
@@ -168,8 +166,8 @@ AppDestroyGraphics(App *app)
 
 	GFX_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
 
-	GFX_GetShaderCompilerAPI()->Shutdown();
-
+	GFX_ShaderCompilerShutdown(&app->shader_compiler);
+	
 	GFX_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
 	GFX_DeviceDestroy(&app->graphics_device);
 }
@@ -216,7 +214,7 @@ AppHotUnloadEntity(App *app)
    APP
    ================================================== */
 
-__declspec(dllexport) void *
+__declspec(dllexport) App *
 AppInit(Arena *arena, const OS_API *api)
 {
 	osapi = api;
@@ -262,7 +260,7 @@ AppDestroy(App *app)
 }
 
 __declspec(dllexport) b32
-AppTick(App *app, const I_InputSt *input)
+AppTick(App *app, const I_State *input)
 {
 	ArenaClear(&app->frame_arena);
 

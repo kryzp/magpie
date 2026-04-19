@@ -154,6 +154,7 @@ AST_LoadArenaRelease(AST_Assets *assets, u32 index)
 internal void
 AST_Init(AST_Assets *assets, Arena *arena,
 		 GFX_Device *device,
+		 GFX_ShaderCompiler *shader_compiler,
 		 const AUD_BackendAPI *audio_backend)
 {
 	MemZeroStruct(assets);
@@ -161,6 +162,7 @@ AST_Init(AST_Assets *assets, Arena *arena,
 	assets->arena = arena;
 
 	assets->device = device;
+	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
 	
 	assets->async_upload_counter = osapi->JobCounterAlloc(arena, 0);

@@ -26,11 +26,12 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 											 String8Substr(file_path, 0, shader_index),
 											 String8Lit("shaders/modules/"));
 
-	const GFX_ShaderCompilerAPI *api = GFX_GetShaderCompilerAPI();
+	GFX_ShaderCompiler *compiler = ctx->assets->shader_compiler;
 
-	shader_data->compiled = api->Compile(ctx->scope,
-										 file_path,
-										 1, &search_directory);
+	shader_data->compiled = GFX_ShaderCompilerCompile(compiler,
+													  ctx->scope,
+													  file_path,
+													  1, &search_directory);
 
 	result.failed = shader_data->compiled.failed;
 	

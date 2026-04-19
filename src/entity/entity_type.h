@@ -26,7 +26,7 @@ struct ENT_TickContext
 	
 	f32 dt;
 
-	const I_InputSt *input;
+	const I_State *input;
 };
 
 typedef void ENT_TypeDescDestroyFn     (void *entity);

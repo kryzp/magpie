@@ -305,8 +305,8 @@ struct I_GamepadState
 
 internal void I_GamepadStSetAxisValue(I_GamepadState *st, I_GamepadAxis axis, f32 value);
 
-typedef struct I_InputSt I_InputSt;
-struct I_InputSt
+typedef struct I_State I_State;
+struct I_State
 {
 	b32 kb_down[I_KeyboardKey_COUNT];
 	b32 kb_pressed[I_KeyboardKey_COUNT];
@@ -324,21 +324,21 @@ struct I_InputSt
 	I_GamepadState gamepads[I_MAX_GAMEPADS];
 };
 
-internal b32 I_KbDown     (const I_InputSt *st, I_KeyboardKey k);
-internal b32 I_KbPressed  (const I_InputSt *st, I_KeyboardKey k);
-internal b32 I_KbReleased (const I_InputSt *st, I_KeyboardKey k);
+internal b32 I_KbDown     (const I_State *st, I_KeyboardKey k);
+internal b32 I_KbPressed  (const I_State *st, I_KeyboardKey k);
+internal b32 I_KbReleased (const I_State *st, I_KeyboardKey k);
 
-internal b32 I_MbDown     (const I_InputSt *st, I_MouseButton b);
-internal b32 I_MbPressed  (const I_InputSt *st, I_MouseButton b);
-internal b32 I_MbReleased (const I_InputSt *st, I_MouseButton b);
+internal b32 I_MbDown     (const I_State *st, I_MouseButton b);
+internal b32 I_MbPressed  (const I_State *st, I_MouseButton b);
+internal b32 I_MbReleased (const I_State *st, I_MouseButton b);
 
-internal b32 I_GpDown     (const I_InputSt *st, I_GamepadButton b, u32 player_index);
-internal b32 I_GpPressed  (const I_InputSt *st, I_GamepadButton b, u32 player_index);
-internal b32 I_GpReleased (const I_InputSt *st, I_GamepadButton b, u32 player_index);
+internal b32 I_GpDown     (const I_State *st, I_GamepadButton b, u32 player_index);
+internal b32 I_GpPressed  (const I_State *st, I_GamepadButton b, u32 player_index);
+internal b32 I_GpReleased (const I_State *st, I_GamepadButton b, u32 player_index);
 
-internal b32 I_Shift (const I_InputSt *st);
-internal b32 I_Ctrl  (const I_InputSt *st);
-internal b32 I_Alt   (const I_InputSt *st);
+internal b32 I_Shift (const I_State *st);
+internal b32 I_Ctrl  (const I_State *st);
+internal b32 I_Alt   (const I_State *st);
 
 // 0 <= lo, hi <= 1
 //internal void I_RumbleGamepad(u32 index, f32 lo, f32 hi, f32 duration_s);
