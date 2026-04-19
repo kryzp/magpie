@@ -1,9 +1,9 @@
 
 internal IO_Stream
-IO_StreamFromFile(String8 path, OS_FileMode mode)
+IO_StreamFromFile(String8 path, OS_FileAccess access)
 {
 	IO_Stream file_stream = {0};
-	file_stream.os_handle = osapi->StreamFromFile(path, mode);
+	file_stream.os_handle = osapi->StreamFromFile(path, access);
 
 	return file_stream;
 }

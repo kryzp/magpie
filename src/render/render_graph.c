@@ -108,6 +108,8 @@ R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 	
 	MemZeroStruct(pass);
 
+	pass->graph = graph;
+	
 	pass->name = name;
 	pass->type = type;
 	pass->index = graph->pass_count;
@@ -776,17 +778,11 @@ R_GraphExecute(R_Graph *graph,
 			   const R_Camera *camera,
 			   f32 delta_time, f32 elapsed_time)
 {
-	if (graph->pass_count == 0)
-		return;
-
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
 		R_Pass *pass = &graph->passes[i];
 
 		if (pass->is_culled)
-			continue;
-
-		if (!pass->record)
 			continue;
 
 		GFX_CmdPipelineBarrier(cmd, 0,
@@ -809,16 +805,18 @@ R_GraphExecute(R_Graph *graph,
 			GFX_RenderInfo render_info = R_GraphBuildRenderingInfo(graph, device, pass);
 			
 			GFX_CmdBeginRendering(cmd, &render_info);
-			pass->record(&ctx);
+
+			if (pass->record)
+				pass->record(&ctx);
+
 			GFX_CmdEndRendering(cmd);
 		}
 		else
 		{
-			pass->record(&ctx);
+			if (pass->record)
+				pass->record(&ctx);
 		}
 	}
-
-	R_GraphPresentToSwapchain(graph, device, swapchain, cmd);
 }
 
 internal void
@@ -847,14 +845,16 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	VkImageMemoryBarrier2 pre_blit_barriers[2] = {0};
 
 	pre_blit_barriers[0] = GFX_SyncTextureBarrier(src_texture,
-												  &src_src, &src_dst,
+												  &src_src,
+												  &src_dst,
 												  backbuffer->state.layout,
 												  VK_IMAGE_LAYOUT_GENERAL,
 												  0, VK_REMAINING_MIP_LEVELS,
 												  0, VK_REMAINING_ARRAY_LAYERS);
 	
 	pre_blit_barriers[1] = GFX_SyncTextureBarrier(dst_texture,
-												  &dst_src, &dst_dst,
+												  &dst_src,
+												  &dst_dst,
 												  VK_IMAGE_LAYOUT_UNDEFINED,
 												  VK_IMAGE_LAYOUT_GENERAL,
 												  0, VK_REMAINING_MIP_LEVELS,
@@ -871,11 +871,11 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	VkImageBlit2 blit = {0};
 	blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
 	
-	blit.srcOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-	blit.srcOffsets[1] = (VkOffset3D){ (i32)src_texture->width, (i32)src_texture->height, 1 };
+	blit.srcOffsets[0] = (VkOffset3D) { 0, 0, 0 };
+	blit.srcOffsets[1] = (VkOffset3D) { (i32)src_texture->width, (i32)src_texture->height, 1 };
 	
-	blit.dstOffsets[0] = (VkOffset3D){ 0, 0, 0 };
-	blit.dstOffsets[1] = (VkOffset3D){ (i32)dst_texture->width, (i32)dst_texture->height, 1 };
+	blit.dstOffsets[0] = (VkOffset3D) { 0, 0, 0 };
+	blit.dstOffsets[1] = (VkOffset3D) { (i32)dst_texture->width, (i32)dst_texture->height, 1 };
 	
 	blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	blit.srcSubresource.mipLevel = 0;
@@ -892,15 +892,16 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	
 	// Transition swpachain to present.
 	
-	GFX_AccessSt present_src = { VK_PIPELINE_STAGE_2_TRANSFER_BIT,                  VK_ACCESS_2_TRANSFER_WRITE_BIT };
-	GFX_AccessSt present_dst = { VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,    VK_ACCESS_2_NONE };
+	GFX_AccessSt present_src = { VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
+	GFX_AccessSt present_dst = { VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, VK_ACCESS_2_NONE };
 	
-	VkImageMemoryBarrier2 present_barrier =
-		GFX_SyncTextureBarrier(dst_texture,
-							   &present_src, &present_dst,
-							   VK_IMAGE_LAYOUT_GENERAL,
-							   VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-							   0, 1, 0, 1);
+	VkImageMemoryBarrier2 present_barrier = GFX_SyncTextureBarrier(dst_texture,
+																   &present_src,
+																   &present_dst,
+																   VK_IMAGE_LAYOUT_GENERAL,
+																   VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+																   0, 1,
+																   0, 1);
 
 	GFX_CmdPipelineBarrier(cmd, 0,
 						   0, NULL,

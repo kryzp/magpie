@@ -1,5 +1,11 @@
-#ifndef JOB_H
-#define JOB_H
+#ifndef OS_JOB_H
+#define OS_JOB_H
+
+#define JOB_MAX_JOBS_PER_QUEUE     512
+#define JOB_MAX_CONCURRENT_FIBERS  128
+#define JOB_MAX_WORKERS            32
+#define JOB_COUNTER_MAX_WAITING    64
+#define JOB_FIBER_SCRATCH_SIZE     Megabytes(2)
 
 /*
  * Fiber-Driven Job System.
@@ -21,11 +27,16 @@ struct JOB_Fiber
 	JOB_Fiber *next_free;
 
 	OS_Handle handle;
-	JOB_EntryPoint *EntryPoint;
+
+	JOB_EntryPointFn *EntryPoint;
 	void *param;
+	
 	JOB_Priority priority;
+
 	JOB_Counter *counter;
+	
 	b32 finished;
+
 	Arena *scratch_arenas[2];
 };
 
@@ -43,7 +54,7 @@ struct JOB_Counter
 typedef struct JOB_Request JOB_Request;
 struct JOB_Request
 {
-	JOB_EntryPoint *EntryPoint;
+	JOB_EntryPointFn *EntryPoint;
 	void *param;
 	JOB_Priority priority;
 	JOB_Counter *counter;
@@ -64,6 +75,8 @@ struct JOB_Queue
 	u32 atomic_added_waiting_count;
 };
 
+typedef struct JOB_Scheduler JOB_Scheduler;
+
 typedef struct JOB_Worker JOB_Worker;
 struct JOB_Worker
 {
@@ -75,6 +88,13 @@ struct JOB_Worker
 	OS_Handle fiber_handle; // The scheduler fiber for this current worker thread.
 
 	JOB_Fiber *current_fiber; // The fiber currently executing on this worker.
+
+	// Yes this is fucking retarded but ICBA
+	// and the thread entry needs to know about
+	// the job scheduler somehow.
+	// Yes I could just make it a global but
+	// you know what fuck you.
+	JOB_Scheduler *scheduler;
 };
 
 typedef struct JOB_Scheduler JOB_Scheduler;
@@ -92,6 +112,11 @@ struct JOB_Scheduler
 	JOB_Worker workers[JOB_MAX_WORKERS];
 
 	JOB_Fiber atomic_fiber_storage[JOB_MAX_CONCURRENT_FIBERS];
+
+	b32 fiber_pool_spinlock;
+	JOB_Fiber *fiber_pool_head;
+	
+	void (*MessagePump)(void);
 };
 
 
@@ -99,57 +124,59 @@ struct JOB_Scheduler
    HELPERS
    ================================================== */
 
-internal void JOB_SpinModeEnable(void);
-internal void JOB_SpinModeDisable(void);
+internal void JOB_SpinModeEnable  (JOB_Scheduler *scheduler);
+internal void JOB_SpinModeDisable (JOB_Scheduler *scheduler);
 
-internal b32 JOB_IsMainThread(void);
+internal b32 JOB_IsMainThread(JOB_Scheduler *scheduler);
 
-internal void         JOB_FiberYield(void);
-internal void         JOB_FiberCompleted(void);
-internal JOB_Fiber   *JOB_FiberFetchFree(void);
-internal void         JOB_FiberReturn(JOB_Fiber *fiber);
-internal OS_Handle    JOB_GetCurrentFiberHandle(void);
+internal void         JOB_FiberYield              (JOB_Scheduler *scheduler);
+internal void         JOB_FiberCompleted          (JOB_Scheduler *scheduler);
+internal JOB_Fiber   *JOB_FiberFetchFree          (JOB_Scheduler *scheduler);
+internal void         JOB_FiberReturn             (JOB_Scheduler *scheduler, JOB_Fiber *fiber);
+internal OS_Handle    JOB_GetCurrentFiberHandle   (JOB_Scheduler *scheduler);
 
-internal JOB_Request *JOB_TryGetRequest(void);
-internal JOB_Fiber   *JOB_TryGetWaitingFiber(void);
+internal JOB_Request *JOB_TryGetRequest           (JOB_Scheduler *scheduler);
+internal JOB_Fiber   *JOB_TryGetWaitingFiber      (JOB_Scheduler *scheduler);
 
-internal b32          JOB_RequestAvailable(void);
+internal b32          JOB_RequestAvailable        (JOB_Scheduler *scheduler);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-internal void JOB_InitAndSelect(Arena *arena, JOB_Scheduler *scheduler);
-internal void JOB_Shutdown(void);
+internal void JOB_Init(Arena *arena, JOB_Scheduler *scheduler);
+internal void JOB_Shutdown(JOB_Scheduler *scheduler);
+
 internal void JOB_SchedulerThreadEntry(void *param);
 internal void JOB_FiberEntry(void *param);
-internal void JOB_Enter(void (*MessagePump)(void));
-internal void JOB_Halt(void);
+
+internal void JOB_Enter(JOB_Scheduler *scheduler, void (*MessagePump)(void));
+internal void JOB_Halt(JOB_Scheduler *scheduler);
 
 
 /* ==================================================
    COUNTER
    ================================================== */
 
-internal JOB_Counter *JOB_CounterAlloc(Arena *arena, u32 initial_count);
-internal void         JOB_CounterLock(JOB_Counter *counter);
-internal void         JOB_CounterUnlock(JOB_Counter *counter);
-internal void         JOB_CounterIncrement(JOB_Counter *counter, u32 n);
-internal void         JOB_CounterDecrement(JOB_Counter *counter, u32 n);
+internal JOB_Counter *JOB_CounterAlloc     (JOB_Scheduler *scheduler, Arena *arena, u32 initial_count);
+internal void         JOB_CounterLock      (JOB_Scheduler *scheduler, JOB_Counter *counter);
+internal void         JOB_CounterUnlock    (JOB_Scheduler *scheduler, JOB_Counter *counter);
+internal void         JOB_CounterIncrement (JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n);
+internal void         JOB_CounterDecrement (JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n);
 
 
 /* ==================================================
    JOBS
    ================================================== */
 
-internal void JOB_Push(const JOB_Request *request);
-internal void JOB_PushWaitingFiber(JOB_Fiber *fiber);
+internal void JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request);
+internal void JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber);
 
-internal void JOB_Yield(JOB_Counter *counter, u32 value);
+internal void JOB_Yield(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 value);
 
-internal void JOB_Kick(const JOB_Decl *decl, JOB_Counter *counter);
-internal void JOB_Batch(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
+internal void JOB_Kick  (JOB_Scheduler *scheduler, const JOB_Decl *decl, JOB_Counter *counter);
+internal void JOB_Batch (JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, JOB_Counter *counter);
 
 /*
  * Parallel for loop utility.
@@ -158,14 +185,14 @@ internal void JOB_Batch(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
  */
 JOB_ENTRY_POINT_DEF(JOB_ParallelForBatchEntry);
 
-internal void JOB_For(u32 count, JOB_EntryFor *fn, JOB_Priority priority, u32 batch_size);
+internal void JOB_For(JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size);
 
 
 /* ==================================================
    SCRATCH
    ================================================== */
 
-internal Arena *JOB_GetScratch(Arena * const *conflicts, u32 conflict_count);
+internal Arena *JOB_GetScratch(JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count);
 
 
-#endif // JOB_H
+#endif // OS_JOB_H

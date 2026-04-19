@@ -1,6 +1,6 @@
 
 internal void
-I_GamepadStSetAxisValue(I_GamepadState *st, I_GamepadAxis axis, f32 value)
+I_GamepadStateSetAxisValue(I_GamepadState *st, I_GamepadAxis axis, f32 value)
 {
 	switch (axis)
 	{

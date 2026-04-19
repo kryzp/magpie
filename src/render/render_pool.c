@@ -20,7 +20,6 @@ R_ResourcePoolDestroy(R_ResourcePool *pool, GFX_Device *device)
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
-		AssertTrue(t->in_use);
 		GFX_DeviceTextureDestroy(device, t->key);
 		t->key = GFX_TextureKeyNull();
 	}
@@ -28,7 +27,6 @@ R_ResourcePoolDestroy(R_ResourcePool *pool, GFX_Device *device)
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
-		AssertTrue(b->in_use);
 		GFX_DeviceBufferDestroy(device, b->key);
 		b->key = GFX_BufferKeyNull();
 	}

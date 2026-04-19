@@ -303,7 +303,7 @@ struct I_GamepadState
 	f32 right_trigger;
 };
 
-internal void I_GamepadStSetAxisValue(I_GamepadState *st, I_GamepadAxis axis, f32 value);
+internal void I_GamepadStateSetAxisValue(I_GamepadState *st, I_GamepadAxis axis, f32 value);
 
 typedef struct I_State I_State;
 struct I_State

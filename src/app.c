@@ -24,6 +24,12 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+// who decided to name these macros ffs
+#undef min
+#undef max
+#undef near
+#undef far
+
 // ---
 
 #include "core/core_inc.h"
@@ -165,6 +171,7 @@ AppDestroyGraphics(App *app)
 	GFX_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
 
 	GFX_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
+	GFX_DeviceBufferDestroy(&app->graphics_device, app->cubemap_capture_transform_buffer);
 
 	GFX_ShaderCompilerShutdown(&app->shader_compiler);
 	
@@ -271,6 +278,7 @@ AppTick(App *app, const I_State *input)
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
+	/*
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
 		CH_TimerReset(&app->hot_reload_timer);
@@ -278,6 +286,7 @@ AppTick(App *app, const I_State *input)
 	}
 
 	AST_FlushUploads(&app->assets);
+	*/
 
 	GM_StackTick(&app->game_mode_stack, app, dt, input);
 
@@ -322,8 +331,10 @@ AppTick(App *app, const I_State *input)
 	
 		AppRender(app, dt, elapsed, &cmd);
 
+		R_GraphSetBackbuffer(&app->graph, app->swapchain_src);
 		R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
+		R_GraphPresentToSwapchain(&app->graph, &app->graphics_device, &app->swapchain, &cmd);
 		R_GraphReset(&app->graph, &app->graphics_device);
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
@@ -336,15 +347,15 @@ AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
-	AppHotLoadGraphics(app);
-	AppHotLoadAudio(app);
+	AppHotLoadGraphics   (app);
+	AppHotLoadAudio      (app);
 }
 
 __declspec(dllexport) void
 AppHotUnload(App *app)
 {	
-	AppHotUnloadAudio(app);
-	AppHotUnloadGraphics(app);
+	AppHotUnloadAudio      (app);
+	AppHotUnloadGraphics   (app);
 }
 
 internal void
@@ -363,9 +374,13 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.window_resolution = v2(1280.f, 720.f);
 	frame_data.time = elapsed;
 
-	GFX_Buffer *gfx_frame_data_buffer = GFX_DeviceBufferFromKey(&app->graphics_device, app->frame_data_buffer);
-	
-	GFX_BufferWrite(gfx_frame_data_buffer, &frame_data, sizeof(frame_data), 0);
+	GFX_BufferWrite(GFX_DeviceBufferFromKey(&app->graphics_device, app->frame_data_buffer),
+					&frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
+
+	R_Clear clear = R_ClearColour(0.1f + AbsValue(SinF(elapsed)), 0.5f, 0.9f, 1.f);
+
+	R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
+	R_PassWriteColour(dummy, app->swapchain_src, &clear);
 }

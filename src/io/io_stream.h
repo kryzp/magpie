@@ -7,7 +7,7 @@ struct IO_Stream
 	OS_Handle os_handle;
 };
 
-internal IO_Stream IO_StreamFromFile(String8 path, OS_FileMode mode);
+internal IO_Stream IO_StreamFromFile(String8 path, OS_FileAccess access);
 internal IO_Stream IO_StreamFromMemory(void *memory, u64 bytes);
 internal IO_Stream IO_StreamFromConstMemory(const void *memory, u64 bytes);
 

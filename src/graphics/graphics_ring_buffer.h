@@ -28,7 +28,7 @@ internal void GFX_RingBufferReset(GFX_RingBuffer *ring);
 
 internal GFX_Alloc GFX_RingBufferPush(GFX_RingBuffer *ring, u64 bytes, u64 alignment);
 
-#define GFX_RingBufferPushArray(ring, type, count) GFX_RingBufferPush((ring), sizeof(type) * (count), alignof(type))
+#define GFX_RingBufferPushArray(ring, type, count) GFX_RingBufferPush((ring), sizeof(type) * (count), _Alignof(type))
 
 internal void *GFX_RingBufferAddrCPU(const GFX_RingBuffer *ring, u64 offset);
 internal u64   GFX_RingBufferAddrGPU(const GFX_RingBuffer *ring, u64 offset);

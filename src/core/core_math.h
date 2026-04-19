@@ -12,24 +12,24 @@
 #define MATH_MAX_F32                             FLT_MAX
 #define MATH_MAX_F64                             DBL_MAX
 
-#define SquareRoot   sqrtf
-#define AbsF         fabsf
-#define CosF         cosf
-#define SinF         sinf
-#define TanF         tanf
-#define ASinF        asinf
-#define ACosF        acosf
-#define ATanF        atanf
-#define ATan2F       atan2f
-#define LogF         logf
-#define Log2F        log2f
-#define Log10F       log10f
+#define SquareRoot      sqrtf
+#define CosF            cosf
+#define SinF            sinf
+#define TanF            tanf
+#define ASinF           asinf
+#define ACosF           acosf
+#define ATanF           atanf
+#define ATan2F          atan2f
+#define LogF            logf
+#define Log2F           log2f
+#define Log10F          log10f
 
-#define MinValue(a, b) (((a) < (b)) ? (a) : (b))
-#define MaxValue(a, b) (((a) > (b)) ? (a) : (b))
-#define ClampValue(v, lo, hi) MaxValue((lo), MinValue((hi), (v)))
-#define LerpValue(from, to, t) ((from) + ((to) - (from)) * (t))
-#define ApproachValue(from, to, t) (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
+#define AbsValue(a)                         (((a) < 0.0) ? (-(a)) : (a))
+#define MinValue(a, b)                      (((a) < (b)) ? (a) : (b))
+#define MaxValue(a, b)                      (((a) > (b)) ? (a) : (b))
+#define ClampValue(v, lo, hi)               MaxValue((lo), MinValue((hi), (v)))
+#define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
+#define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
 
 typedef union v2 v2;
 union v2
@@ -45,6 +45,9 @@ union v2
 
 #define v2(x_, y_)  ((v2) { .x = (x_), .y = (y_) })
 #define v2x(x_)     ((v2) { .x = (x_), .y = (x_) })
+
+internal v2 V2Add(v2 a, v2 b);
+internal v2 V2Sub(v2 a, v2 b);
 
 internal f32 V2Dot(v2 a, v2 b);
 

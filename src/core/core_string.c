@@ -60,7 +60,7 @@ String8Find(String8 string, String8 substr)
 			return i;
 	}
 
-	return -1;
+	return CORE_STRING_INVALID_INDEX;
 }
 
 internal u64
@@ -74,7 +74,7 @@ String8FindLast(String8 string, String8 substr)
 			return i;
 	}
 
-	return -1;
+	return CORE_STRING_INVALID_INDEX;
 }
 
 internal u64
@@ -88,7 +88,7 @@ String8FindLastIncl(String8 string, String8 substr)
 			return i + substr.len;
 	}
 
-	return -1;
+	return CORE_STRING_INVALID_INDEX;
 }
 
 internal b32

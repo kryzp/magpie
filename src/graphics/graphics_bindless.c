@@ -43,7 +43,7 @@ GFX_BindlessRegisterSampler(GFX_Bindless *bindless, VkSampler sampler)
 	}
 	else
 	{
-		handle.value = bindless->sampler_count;
+		handle.value = bindless->sampler_count + 1; // 0 reserved as null.
 	}
 
 	bindless->sampler_count++;
@@ -65,7 +65,7 @@ GFX_BindlessRegisterView(GFX_Bindless *bindless, VkImageView view, b32 is_also_s
 	}
 	else
 	{
-		handle.value = bindless->view_count;
+		handle.value = bindless->view_count + 1; // 0 reserved as null.
 	}
 
 	bindless->view_count++;

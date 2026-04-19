@@ -1,4 +1,14 @@
 
+/*
+ * Yes this file is a complete mess.
+ *
+ * But that's okay!
+ *
+ * As long as that mess is confined to just one file,
+ * then I consider that a damn good success for trying
+ * to support multiple platforms.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <shellapi.h>
@@ -12,21 +22,25 @@
 
 #ifdef __x86_64__
 # include <immintrin.h>
-# define OS_W32_SPIN_PAUSE() _mm_pause()
+# define OS_SPIN_PAUSE() _mm_pause()
 #else
-# define OS_W32_SPIN_PAUSE() do { } while (0)
+# define OS_SPIN_PAUSE() do { } while (0)
 #endif
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
 #include "core/core_inc.h"
-#include "os/os_inc.h"
 #include "input/input_inc.h"
+#include "os/os_inc.h"
+#include "os/job/job_inc.h"
+
+global OS_API *osapi = NULL;
 
 #include "core/core_inc.c"
-#include "os/os_inc.c"
 #include "input/input_inc.c"
+#include "os/os_inc.c"
+#include "os/job/job_inc.c"
 
 typedef struct OS_W32_Object OS_W32_Object;
 struct OS_W32_Object
@@ -53,6 +67,8 @@ struct OS_W32_Code
 	OS_EntryHotUnloadFn   *HotUnload;
 };
 
+#define OS_W32_MAX_PENDING_EVENTS 512
+
 typedef struct OS_W32_State OS_W32_State;
 struct OS_W32_State
 {
@@ -68,9 +84,11 @@ struct OS_W32_State
 
 	OS_W32_Object *free_objects;
 
-	u32 pending_event_count;
-	SDL_Event pending_events[512];
 	OS_Handle event_mutex;
+	u32 pending_event_count;
+	SDL_Event pending_events[OS_W32_MAX_PENDING_EVENTS];
+
+	JOB_Scheduler scheduler;
 
 	u32 gamepad_count;
 	SDL_Gamepad *gamepads[I_MAX_GAMEPADS];
@@ -130,9 +148,20 @@ OS_W32_LoadCode(String8 dll_path)
 {
 	static const char *dll_path_hot = "build/hot_reload.dll";
 
-	win32_st.code.last_write_time = OS_GetFileLastWriteTime(dll_path);
+	WIN32_FIND_DATA find_data = {0};
+	HANDLE file_handle = FindFirstFileA((LPCSTR)dll_path.str, &find_data);
 
-	CopyFile(dll_path.str, dll_path_hot, FALSE);
+	if (file_handle != INVALID_HANDLE_VALUE)
+	{
+		FindClose(file_handle);
+		win32_st.code.last_write_time = find_data.ftLastWriteTime;
+	}
+	else
+	{
+		AssertTrue(false && "FUCK");
+	}
+
+	CopyFile((LPCSTR)dll_path.str, dll_path_hot, FALSE);
 
 	win32_st.code.handle = LoadLibraryA(dll_path_hot);
 
@@ -171,49 +200,67 @@ OS_W32_VirtualCommit(void *address, u64 bytes)
 internal void
 OS_W32_VirtualFree(void *address)
 {
-	VirtualFree(memory, 0, MEM_RELEASE);
+	VirtualFree(address, 0, MEM_RELEASE);
 }
 
 internal u64
 OS_W32_GetPageSize(void)
 {
-	return system_info.dwPageSize;
+	return win32_st.system_info.dwPageSize;
 }
 
 internal void
 OS_W32_SetWindowTitle(String8 title)
 {
-	SDL_SetWindowTitle(win32_st.sdl_window, title);
+	SDL_SetWindowTitle(win32_st.sdl_window, (const char *)title.str);
 }
 
 internal void
 OS_W32_GetWindowSize(u32 *w, u32 *h)
 {
-	SDL_GetWindowSize(win32_st.sdl_window, width, height);
+	i32 width,
+		height;
+	
+	SDL_GetWindowSize(win32_st.sdl_window, &width, &height);
+
+	AssertTrue(width >= 0 &&
+			   height >= 0);
+
+	if (w) *w = width;
+	if (h) *h = height;
 }
 
 internal void
 OS_W32_GetWindowSizeInPixels(u32 *pw, u32 *ph)
 {
-	SDL_GetWindowSizeInPixels(win32_st.sdl_window, pixel_width, pixel_height);
+	i32 pixel_width,
+		pixel_height;
+	
+	SDL_GetWindowSizeInPixels(win32_st.sdl_window, &pixel_width, &pixel_height);
+
+	AssertTrue(pixel_width >= 0 &&
+			   pixel_height >= 0);
+
+	if (pw) *pw = pixel_width;
+	if (ph) *ph = pixel_height;
 }
 
 internal void
 OS_W32_SetWindowSize(u32 w, u32 h)
 {
-	SDL_SetWindowSize(win32_st.sdl_window, width, height);
+	SDL_SetWindowSize(win32_st.sdl_window, w, h);
 }
 
 internal void
 OS_W32_SetWindowFullscreen(b32 fullscreen)
 {
-	SDL_SetWindowFullscreen(win32_st.sdl_window, b);
+	SDL_SetWindowFullscreen(win32_st.sdl_window, fullscreen);
 }
 
 internal void
 OS_W32_SetWindowBorderless(b32 borderless)
 {
-	SDL_SetWindowBordered(win32_st.sdl_window, !b);
+	SDL_SetWindowBordered(win32_st.sdl_window, !borderless);
 }
 
 internal void
@@ -278,7 +325,7 @@ OS_W32_GetPerformanceFrequency(void)
 internal u32
 OS_W32_GetNumCores(void)
 {
-	return win32_system_info.dwNumberOfProcessors;
+	return win32_st.system_info.dwNumberOfProcessors;
 }
 
 typedef struct OS_W32_ThreadStart OS_W32_ThreadStart;
@@ -286,14 +333,17 @@ struct OS_W32_ThreadStart
 {
 	void (*Entry)(void *param);
 	void *param;
-}
+};
 
 internal DWORD WINAPI
 OS_W32_ThreadTrampoline(LPVOID param)
 {
 	OS_W32_ThreadStart *t = param;
+
 	t->Entry(t->param);
+	
 	free(t);
+	
 	return 0;
 }
 
@@ -302,10 +352,11 @@ OS_W32_ThreadCreate(void (*Entry)(void *param), void *param)
 {
 	// TODO: switch to arena alloc
 	OS_W32_ThreadStart *t = malloc(sizeof(OS_W32_ThreadStart));
-	t->entry = Entry;
+	t->Entry = Entry;
 	t->param = param;
 
-	return CreateThread(NULL, 0, OS_W32_ThreadTrampoline, t, 0, NULL);
+	OS_Handle handle = { CreateThread(NULL, 0, OS_W32_ThreadTrampoline, t, 0, NULL) };
+	return handle;
 }
 
 internal void
@@ -324,40 +375,43 @@ OS_W32_ThreadDetach(OS_Handle handle)
 internal void
 OS_W32_ThreadSetAffinity(OS_Handle handle, u64 mask)
 {
-	SetThreadAffinityMask(handle, mask);
+	SetThreadAffinityMask(handle.value, mask);
 }
 
 internal OS_Handle
 OS_W32_GetCurrentThreadHandle(void)
 {
-	return GetCurrentThread();
+	OS_Handle handle = { GetCurrentThread() };
+	return handle;
 }
 
 internal OS_Handle
 OS_W32_FiberCreate(u32 stack_size, void (*Entry)(void *param), void *param)
 {
-	return CreateFiber(stack_size, entry, param);
+	OS_Handle handle = { CreateFiber(stack_size, Entry, param) };
+	return handle;
 }
 
 internal void
 OS_W32_FiberDelete(OS_Handle handle)
 {
-	DeleteFiber(handle);
+	DeleteFiber(handle.value);
 }
 
 internal void
 OS_W32_SwitchToFiber(OS_Handle handle)
 {
-	SwitchToFiber(handle);
+	SwitchToFiber(handle.value);
 }
 
 internal OS_Handle
-OS_ConvertThreadToFiber(void)
+OS_W32_ConvertThreadToFiber(void)
 {
-	return ConvertThreadToFiber(NULL);
+	OS_Handle handle = { ConvertThreadToFiber(NULL) };
+	return handle;
 }
 
-internal u32
+internal b32
 OS_W32_ConvertFiberToThread(void)
 {
 	return ConvertFiberToThread();
@@ -381,22 +435,22 @@ OS_W32_AtomicLoadPtr(void *ptr)
 	return InterlockedCompareExchangePointer((PVOID *)ptr, NULL, NULL);
 }
 
-internal void
+internal u32
 OS_W32_AtomicStoreU32(u32 *ptr, u32 value)
 {
-	InterlockedExchange((volatile LONG *)ptr, value);
+	return InterlockedExchange((volatile LONG *)ptr, value);
 }
 
-internal void
+internal u64
 OS_W32_AtomicStoreU64(u64 *ptr, u64 value)
 {
-	InterlockedExchange64((volatile LONGLONG *)ptr, value);
+	return InterlockedExchange64((volatile LONGLONG *)ptr, value);
 }
 
-internal void
+internal void *
 OS_W32_AtomicStorePtr(void *ptr, void *value)
 {
-	InterlockedExchangePointer((PVOID *)ptr, value);
+	return InterlockedExchangePointer((PVOID *)ptr, value);
 }
 
 internal u32
@@ -427,7 +481,7 @@ internal void
 OS_W32_SpinLockAcquire(b32 *lock)
 {
 	while (OS_W32_AtomicStoreU32(lock, true))
-		OS_W32_SPIN_PAUSE();
+		OS_SPIN_PAUSE();
 }
 
 internal void
@@ -439,48 +493,48 @@ OS_W32_SpinLockRelease(b32 *lock)
 internal OS_Handle
 OS_W32_MutexCreate(void)
 {
-	OS_W32_Object *object = OS_W32_AllocObject();
+	OS_W32_Object *mtx = OS_W32_AllocObject();
 	
-	InitializeCriticalSection(&object->cs);
+	InitializeCriticalSection(&mtx->cs);
 	
-	OS_Handle handle = { object };
+	OS_Handle handle = { mtx };
 	return handle;
 }
 
 internal void
 OS_W32_MutexDestroy(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;
+	OS_W32_Object *mtx = handle.value;
 	
-	DestroyCriticalSection(&object->cs);
+	DeleteCriticalSection(&mtx->cs);
 
-	OS_W32_ReturnObject(object);
+	OS_W32_ReturnObject(mtx);
 }
 
 internal void
 OS_W32_MutexLock(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;
+	OS_W32_Object *mtx = handle.value;
 	
-	EnterCriticalSection(&object->cs);
+	EnterCriticalSection(&mtx->cs);
 }
 
 internal void
 OS_W32_MutexUnlock(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;
+	OS_W32_Object *mtx = handle.value;
 	
-	LeaveCriticalSection(&object->cs);
+	LeaveCriticalSection(&mtx->cs);
 }
 
 internal OS_Handle
 OS_W32_CondVarCreate(void)
 {
-	OS_W32_Object *object = OS_W32_AllocObject();
+	OS_W32_Object *cnd = OS_W32_AllocObject();
 
-	InitializeConditionVariable(&object->cv);
+	InitializeConditionVariable(&cnd->cv);
 	
-	OS_Handle handle = { object };
+	OS_Handle handle = { cnd };
 	return handle;
 }
 
@@ -492,8 +546,9 @@ OS_W32_CondVarCreate(void)
 internal void
 OS_W32_CondVarDestroy(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;	
-	OS_W32_ReturnObject(object);
+	OS_W32_Object *cnd = handle.value;
+	
+	OS_W32_ReturnObject(cnd);
 }
 
 internal void
@@ -502,35 +557,36 @@ OS_W32_CondVarWait(OS_Handle handle, OS_Handle mutex_handle)
 	OS_W32_Object *cnd = handle.value;
 	OS_W32_Object *mtx = mutex_handle.value;
 	
-	SleepConditionVariable(&cnd->cv, &mtx->cs, INFINITE);
+	SleepConditionVariableCS(&cnd->cv, &mtx->cs, INFINITE);
 }
 
 internal void
 OS_W32_CondVarSignal(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;
+	OS_W32_Object *cnd = handle.value;
 
-	WakeConditionVariable(&object->cv);
+	WakeConditionVariable(&cnd->cv);
 }
 
 internal void
 OS_W32_CondVarBroadcast(OS_Handle handle)
 {
-	OS_W32_Object *object = handle.value;
+	OS_W32_Object *cnd = handle.value;
 
-	WakeAllConditionVariable(&object->cv);
+	WakeAllConditionVariable(&cnd->cv);
 }
 
 internal b32
 OS_W32_FileDelete(String8 path)
 {
-	AssertTrue(DeleteFile(path.str));
+	AssertTrue(DeleteFile((LPCSTR)path.str));
+	return true;
 }
 
 internal b32
 OS_W32_FileExists(String8 path)
 {
-	DWORD attr = GetFileAttributes(path.str);
+	DWORD attr = GetFileAttributes((LPCSTR)path.str);
 
 	if (attr == INVALID_FILE_ATTRIBUTES)
 		return false; // Doesn't exist in the filesystem.
@@ -544,7 +600,7 @@ OS_W32_GetFileLastWriteTime(String8 path)
 	FILETIME last_write_time = {0};
 
 	WIN32_FIND_DATA find_data = {0};
-	HANDLE file_handle = FindFirstFileA(path.str, &find_data);
+	HANDLE file_handle = FindFirstFileA((LPCSTR)path.str, &find_data);
 
 	if (file_handle != INVALID_HANDLE_VALUE)
 	{
@@ -558,19 +614,21 @@ OS_W32_GetFileLastWriteTime(String8 path)
 internal b32
 OS_W32_DirectoryCreate(String8 path)
 {
-	AssertTrue(CreateDirectory(path.str, NULL));
+	AssertTrue(CreateDirectory((LPCSTR)path.str, NULL));
+	return true;
 }
 
 internal b32
 OS_W32_DirectoryDelete(String8 path)
 {
-	AssertTrue(RemoveDirectory(path.str));
+	AssertTrue(RemoveDirectory((LPCSTR)path.str));
+	return true;
 }
 
 internal b32
 OS_W32_DirectoryExists(String8 path)
 {
-	DWORD attr = GetFileAttributes(path.str);
+	DWORD attr = GetFileAttributes((LPCSTR)path.str);
 
 	if (attr == INVALID_FILE_ATTRIBUTES)
 		return false; // Doesn't exist in the filesystem.
@@ -579,78 +637,133 @@ OS_W32_DirectoryExists(String8 path)
 }
 
 internal OS_Handle
-OS_W32_StreamFromFile(String8 path, OS_FileMode mode)
+OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 {
-	void *h = SDL_IOFromFile(path, mode);
+	b32 read	   = access & OS_FileAccess_Read;
+	b32 write	   = access & OS_FileAccess_Write;
+	b32 create	   = access & OS_FileAccess_CreateIfMissing;
+	b32 overwrite  = access & OS_FileAccess_OverwriteIfExists;
+	b32 append	   = access & OS_FileAccess_Append;
+	b32 excl	   = access & OS_FileAccess_Exclusive;
+	b32 non_binary = access & OS_FileAccess_NonBinary;
 
-	OS_Handle handle = { h };
-	return h;
+	AssertTrue(read || write);
+	
+	char buf[16] = {0};
+	int cursor = 0;
+
+	if (append)
+	{
+		buf[cursor++] = 'a';
+	}
+	else if (overwrite)
+	{
+		buf[cursor++] = 'w';
+			
+		if (excl)
+		{
+			buf[cursor++] = 'x';
+		}
+	}
+	else if (create)
+	{
+		SDL_IOStream *io = SDL_IOFromFile((const char *)path.str,
+										  (read && write)
+										  ? non_binary ? "r+" : "r+b"
+										  : non_binary ? "r"  : "rb");
+
+		if (!io)
+		{
+			io = SDL_IOFromFile((const char *)path.str,
+								(read && write)
+								? non_binary ? "w+" : "w+b"
+								: non_binary ? "w"  : "wb");
+		}
+
+		OS_Handle handle = { io };
+		return handle;
+	}
+	else
+	{
+		buf[cursor++] = 'r';
+	}
+
+	if (read && write)
+	{
+		buf[cursor++] = '+';
+	}
+
+	if (!non_binary)
+	{
+		buf[cursor++] = 'b';
+	}
+
+	buf[cursor] = '\0';
+	
+	OS_Handle handle = { SDL_IOFromFile((const char *)path.str, buf) };
+	return handle;
 }
 
 internal OS_Handle
 OS_W32_StreamFromMemory(void *memory, u64 bytes)
 {
-	void *h = SDL_IOFromMem(path, mode);
-
-	OS_Handle handle = { h };
-	return h;
+	OS_Handle handle = { SDL_IOFromMem(memory, bytes) };
+	return handle;
 }
 
 internal OS_Handle
 OS_W32_StreamFromConstMemory(const void *memory, u64 bytes)
 {
-	void *h = SDL_IOFromConstMem(path, mode);
-
-	OS_Handle handle = { h };
-	return h;
+	OS_Handle handle = { SDL_IOFromConstMem(memory, bytes) };
+	return handle;
 }
 
 internal i64
 OS_W32_StreamRead(OS_Handle handle, void *dst, u64 bytes)
 {
-	return SDL_ReadIO(stream.value, dst, size);
+	return SDL_ReadIO(handle.value, dst, bytes);
 }
 
 internal i64
 OS_W32_StreamWrite(OS_Handle handle, const void *src, u64 bytes)
 {
-	return SDL_WriteIO(stream.value, src, size);
+	return SDL_WriteIO(handle.value, src, bytes);
 }
 
 internal i64
 OS_W32_StreamSeek(OS_Handle handle, i64 offset)
 {
-	return SDL_SeekIO(stream.value, offset, SDL_IO_SEEK_SET);
+	return SDL_SeekIO(handle.value, offset, SDL_IO_SEEK_SET);
 }
 
 internal u64
 OS_W32_StreamSize(OS_Handle handle)
 {
-	return SDL_GetIOSize(stream.value);
+	return SDL_GetIOSize(handle.value);
 }
 
 internal i64
 OS_W32_StreamPosition(OS_Handle handle)
 {
-	return SDL_TellIO(stream.value);
+	return SDL_TellIO(handle.value);
 }
 
 internal b32
 OS_W32_StreamClose(OS_Handle handle)
 {
-	return SDL_CloseIO(stream.value);
+	return SDL_CloseIO(handle.value);
 }
 
 internal void
 OS_W32_OpenInExplorer(String8 path)
 {
-	ShellExecute(NULL, "open", path.str, NULL, NULL, SW_SHOWDEFAULT);
+	ShellExecute(NULL, "open", (LPCSTR)path.str, NULL, NULL, SW_SHOWDEFAULT);
 }
 
 internal b32
 OS_W32_VulkanSurfaceCreate(void *instance, void *surface_ptr)
 {
-	return SDL_Vulkan_CreateSurface(win32_st.sdl_window, instance, NULL, surface_pointer);
+	return SDL_Vulkan_CreateSurface(win32_st.sdl_window, instance, NULL, surface_ptr);
 }
 
 internal void
@@ -668,31 +781,37 @@ OS_W32_VulkanGetInstanceExtensions(u32 *count)
 internal void
 OS_W32_CloseAllGamepads(void)
 {
-	for (u32 i = 0; i < gamepad_count; i++)
+	for (u32 i = 0; i < win32_st.gamepad_count; i++)
 	{
-		SDL_CloseGamepad(gamepads[i]);
-		gamepads[i] = NULL;
+		SDL_CloseGamepad(win32_st.gamepads[i]);
+		win32_st.gamepads[i] = NULL;
 	}
 
-	gamepad_count = 0;
+	win32_st.gamepad_count = 0;
 }
 
 internal void
 OS_W32_ReconnectAllGamepads(void)
 {
-	if (gamepad_count > 0)
+	if (win32_st.gamepad_count > 0)
 		OS_W32_CloseAllGamepads();
 
-	SDL_JoystickID *ids = SDL_GetGamepads(&gamepad_count);
+	i32 sdl_gp_count = 0;
+	
+	SDL_JoystickID *ids = SDL_GetGamepads(&sdl_gp_count);
 
-	for (u32 i = 0; i < gamepad_count; i++)
+	AssertTrue(sdl_gp_count >= 0);
+	
+	win32_st.gamepad_count = sdl_gp_count;
+	
+	for (u32 i = 0; i < win32_st.gamepad_count; i++)
 	{
-		gamepads[i] = SDL_OpenGamepad(ids[i]);
+		win32_st.gamepads[i] = SDL_OpenGamepad(ids[i]);
 
-		if (gamepads[i])
-			DebugLogF("Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(gamepads[i]));
+		if (win32_st.gamepads[i])
+			DebugLogF("Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 		else
-			DebugLogF("Failed to open gamepad: %d.", SDL_GetGamepadPlayerIndex(gamepads[i]));
+			DebugLogF("Failed to open gamepad: %d.", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 	}
 
 	SDL_free(ids);
@@ -725,132 +844,200 @@ OS_W32_DestroyImGui(void)
 internal void
 OS_W32_MessagePump(void)
 {
-	SDL_Event local_events[MAX_PENDING_EVENTS] = {0};
+	SDL_Event local_events[OS_W32_MAX_PENDING_EVENTS] = {0};
 	u32 local_event_count = 0;
 
 	SDL_Event ev = {0};
 
-	while (SDL_PollEvent(&ev) && local_event_count < array_size(local_events))
+	while (SDL_PollEvent(&ev) && local_event_count < ArraySize(local_events))
 		local_events[local_event_count++] = ev;
 
 	if (local_event_count > 0)
 	{
-		OS_MutexLock(win32_st.event_mutex);
+		OS_W32_MutexLock(win32_st.event_mutex);
+
+		// ---
 		
-		u32 available_space = MAX_PENDING_EVENTS - pending_event_count;
+		AssertTrue(win32_st.pending_event_count < OS_W32_MAX_PENDING_EVENTS);
+		
+		u32 available_space = OS_W32_MAX_PENDING_EVENTS - win32_st.pending_event_count;
 		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
 
-		memory_copy(pending_events + pending_event_count, local_events, copy_count * sizeof(SDL_Event));
-		pending_event_count += copy_count;
+		MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
+		win32_st.pending_event_count += copy_count;
 
-		OS_MutexUnlock(win32_st.event_mmutex);
+		// ---
+		
+		OS_W32_MutexUnlock(win32_st.event_mutex);
 	}
 }
 
-internal void
-OS_W32_BindAPI(OS_API *osapi)
+internal JOB_Counter *
+OS_W32_JobCounterAlloc(Arena *arena, u32 initial_count)
 {
-	osapi->VirtualReserve = OS_W32_VirtualReserve;
-	osapi->VirtualCommit = OS_W32_VirtualCommit;
-	osapi->VirtualFree = OS_W32_VirtualFree;
-	osapi->GetPageSize = OS_W32_GetPageSize;
-	osapi->SetWindowTitle = OS_W32_SetWindowTitle;
-	osapi->GetWindowSize = OS_W32_GetWindowSize;
-	osapi->GetWindowSizeInPixels = OS_W32_GetWindowSizeInPixels;
-	osapi->SetWindowSize = OS_W32_SetWindowSize;
-	osapi->SetWindowFullscreen = OS_W32_SetWindowFullscreen;
-	osapi->SetWindowBorderless = OS_W32_SetWindowBorderless;
-	osapi->SetWindowOpacity = OS_W32_SetWindowOpacity;
-	osapi->SetMousePosition = OS_W32_SetMousePosition;
-	osapi->SetMouseVisible = OS_W32_SetMouseVisible;
-	osapi->IsMouseVisible = OS_W32_IsMouseVisible;
-	osapi->SetMouseLocked = OS_W32_SetMouseLocked;
-	osapi->IsMouseLocked = OS_W32_IsMouseLocked;
-	osapi->GetTicks = OS_W32_GetTicks;
-	osapi->GetPerformanceCounter = OS_W32_GetPerformanceCounter;
-	osapi->GetPerformanceFrequency = OS_W32_GetPerformanceFrequency;
-	osapi->GetNumCores = OS_W32_GetNumCores;
-	osapi->Handle = OS_W32_Handle;
-	osapi->ThreadJoin = OS_W32_ThreadJoin;
-	osapi->ThreadDetach = OS_W32_ThreadDetach;
-	osapi->ThreadSetAffinity = OS_W32_ThreadSetAffinity;
-	osapi->Handle = OS_W32_Handle;
-	osapi->Handle = OS_W32_Handle;
-	osapi->FiberDelete = OS_W32_FiberDelete;
-	osapi->SwitchToFiber = OS_W32_SwitchToFiber;
-	osapi->Handle = OS_W32_Handle;
-	osapi->ConvertFiberToThread = OS_W32_ConvertFiberToThread;
-	osapi->AtomicLoadU32 = OS_W32_AtomicLoadU32;
-	osapi->AtomicLoadU64 = OS_W32_AtomicLoadU64;
-	osapi->AtomicLoadPtr = OS_W32_AtomicLoadPtr;
-	osapi->AtomicStoreU32 = OS_W32_AtomicStoreU32;
-	osapi->AtomicStoreU64 = OS_W32_AtomicStoreU64;
-	osapi->AtomicStorePtr = OS_W32_AtomicStorePtr;
-	osapi->AtomicAddU32 = OS_W32_AtomicAddU32;
-	osapi->AtomicAddU64 = OS_W32_AtomicAddU64;
-	osapi->AtomicSubU32 = OS_W32_AtomicSubU32;
-	osapi->AtomicSubU64 = OS_W32_AtomicSubU64;
-	osapi->SpinLockAcquire = OS_W32_SpinLockAcquire;
-	osapi->SpinLockRelease = OS_W32_SpinLockRelease;
-	osapi->Handle = OS_W32_Handle;
-	osapi->MutexDestroy = OS_W32_MutexDestroy;
-	osapi->MutexLock = OS_W32_MutexLock;
-	osapi->MutexUnlock = OS_W32_MutexUnlock;
-	osapi->Handle = OS_W32_Handle;
-	osapi->CondVarDestroy = OS_W32_CondVarDestroy;
-	osapi->CondVarWait = OS_W32_CondVarWait;
-	osapi->CondVarSignal = OS_W32_CondVarSignal;
-	osapi->CondVarBroadcast = OS_W32_CondVarBroadcast;
-	osapi->FileDelete = OS_W32_FileDelete;
-	osapi->FileExists = OS_W32_FileExists;
-	osapi->GetFileLastWriteTime = OS_W32_GetFileLastWriteTime;
-	osapi->DirectoryCreate = OS_W32_DirectoryCreate;
-	osapi->DirectoryDelete = OS_W32_DirectoryDelete;
-	osapi->DirectoryExists = OS_W32_DirectoryExists;
-	osapi->Handle = OS_W32_Handle;
-	osapi->Handle = OS_W32_Handle;
-	osapi->Handle = OS_W32_Handle;
-	osapi->StreamRead = OS_W32_StreamRead;
-	osapi->StreamWrite = OS_W32_StreamWrite;
-	osapi->StreamSeek = OS_W32_StreamSeek;
-	osapi->StreamSize = OS_W32_StreamSize;
-	osapi->StreamPosition = OS_W32_StreamPosition;
-	osapi->StreamClose = OS_W32_StreamClose;
-	osapi->JobCounterAlloc = JOB_JobCounterAlloc;
-	osapi->JobYield = JOB_JobYield;
-	osapi->JobKick = JOB_JobKick;
-	osapi->JobBatch = JOB_JobBatch;
-	osapi->JobFor = JOB_JobFor;
-	osapi->JobIsMainThread = JOB_JobIsMainThread;
-	osapi->JobGetScratch = JOB_GetScratch;
-	osapi->OpenInExplorer = OS_W32_OpenInExplorer;
-	osapi->VulkanSurfaceCreate = OS_W32_VulkanSurfaceCreate;
-	osapi->VulkanSurfaceDestroy = OS_W32_VulkanSurfaceDestroy;
-	osapi->VulkanGetInstanceExtensions = OS_W32_VulkanGetInstanceExtensions;
+	return JOB_CounterAlloc(&win32_st.scheduler, arena, initial_count);
+}
+
+internal void
+OS_W32_JobYield(JOB_Counter *counter, u32 value)
+{
+	JOB_Yield(&win32_st.scheduler, counter, value);
+}
+
+internal void
+OS_W32_JobKick(const JOB_Decl *decl, JOB_Counter *counter)
+{
+	JOB_Kick(&win32_st.scheduler, decl, counter);
+}
+
+internal void
+OS_W32_JobBatch(const JOB_Decl *decls, u32 count, JOB_Counter *counter)
+{
+	JOB_Batch(&win32_st.scheduler, decls, count, counter);
+}
+
+internal void
+OS_W32_JobFor(u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size)
+{
+	JOB_For(&win32_st.scheduler, count, fn, priority, batch_size);
+}
+
+internal b32
+OS_W32_JobIsMainThread(void)
+{
+	return JOB_IsMainThread(&win32_st.scheduler);
+}
+
+internal Arena *
+OS_W32_GetScratch(Arena * const *conflicts, u32 conflict_count)
+{
+	return JOB_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
+}
+
+internal void
+OS_W32_BindAPI(OS_API *api)
+{
+	api->VirtualReserve              = OS_W32_VirtualReserve;
+	api->VirtualCommit               = OS_W32_VirtualCommit;
+	api->VirtualFree                 = OS_W32_VirtualFree;
+
+	api->GetPageSize                 = OS_W32_GetPageSize;
+
+	api->SetWindowTitle              = OS_W32_SetWindowTitle;
+	api->GetWindowSize               = OS_W32_GetWindowSize;
+	api->GetWindowSizeInPixels       = OS_W32_GetWindowSizeInPixels;
+	api->SetWindowSize               = OS_W32_SetWindowSize;
+	api->SetWindowFullscreen         = OS_W32_SetWindowFullscreen;
+	api->SetWindowBorderless         = OS_W32_SetWindowBorderless;
+	api->SetWindowOpacity            = OS_W32_SetWindowOpacity;
+
+	api->SetMousePosition            = OS_W32_SetMousePosition;
+	api->SetMouseVisible             = OS_W32_SetMouseVisible;
+	api->IsMouseVisible              = OS_W32_IsMouseVisible;
+	api->SetMouseLocked              = OS_W32_SetMouseLocked;
+	api->IsMouseLocked               = OS_W32_IsMouseLocked;
+
+	api->GetTicks                    = OS_W32_GetTicks;
+	api->GetPerformanceCounter       = OS_W32_GetPerformanceCounter;
+	api->GetPerformanceFrequency     = OS_W32_GetPerformanceFrequency;
+
+	api->GetNumCores                 = OS_W32_GetNumCores;
+
+	api->ThreadCreate                = OS_W32_ThreadCreate;
+	api->ThreadJoin                  = OS_W32_ThreadJoin;
+	api->ThreadDetach                = OS_W32_ThreadDetach;
+	api->ThreadSetAffinity           = OS_W32_ThreadSetAffinity;
+	api->GetCurrentThreadHandle      = OS_W32_GetCurrentThreadHandle;
+
+	api->FiberCreate                 = OS_W32_FiberCreate;
+	api->FiberDelete                 = OS_W32_FiberDelete;
+	api->SwitchToFiber               = OS_W32_SwitchToFiber;
+
+	api->ConvertThreadToFiber        = OS_W32_ConvertThreadToFiber;
+	api->ConvertFiberToThread        = OS_W32_ConvertFiberToThread;
+
+	api->AtomicLoadU32               = OS_W32_AtomicLoadU32;
+	api->AtomicLoadU64               = OS_W32_AtomicLoadU64;
+	api->AtomicLoadPtr               = OS_W32_AtomicLoadPtr;
+	api->AtomicStoreU32              = OS_W32_AtomicStoreU32;
+	api->AtomicStoreU64              = OS_W32_AtomicStoreU64;
+	api->AtomicStorePtr              = OS_W32_AtomicStorePtr;
+	api->AtomicAddU32                = OS_W32_AtomicAddU32;
+	api->AtomicAddU64                = OS_W32_AtomicAddU64;
+	api->AtomicSubU32                = OS_W32_AtomicSubU32;
+	api->AtomicSubU64                = OS_W32_AtomicSubU64;
+
+	api->SpinLockAcquire             = OS_W32_SpinLockAcquire;
+	api->SpinLockRelease             = OS_W32_SpinLockRelease;
+
+	api->MutexCreate                 = OS_W32_MutexCreate;
+	api->MutexDestroy                = OS_W32_MutexDestroy;
+	api->MutexLock                   = OS_W32_MutexLock;
+	api->MutexUnlock                 = OS_W32_MutexUnlock;
+	
+	api->CondVarCreate               = OS_W32_CondVarCreate;
+	api->CondVarDestroy              = OS_W32_CondVarDestroy;
+	api->CondVarWait                 = OS_W32_CondVarWait;
+	api->CondVarSignal               = OS_W32_CondVarSignal;
+	api->CondVarBroadcast            = OS_W32_CondVarBroadcast;
+
+	api->FileDelete                  = OS_W32_FileDelete;
+	api->FileExists                  = OS_W32_FileExists;
+	api->GetFileLastWriteTime        = OS_W32_GetFileLastWriteTime;
+
+	api->DirectoryCreate             = OS_W32_DirectoryCreate;
+	api->DirectoryDelete             = OS_W32_DirectoryDelete;
+	api->DirectoryExists             = OS_W32_DirectoryExists;
+
+	api->StreamFromFile              = OS_W32_StreamFromFile;
+	api->StreamFromMemory            = OS_W32_StreamFromMemory;
+	api->StreamFromConstMemory       = OS_W32_StreamFromConstMemory;
+
+	api->StreamRead                  = OS_W32_StreamRead;
+	api->StreamWrite                 = OS_W32_StreamWrite;
+	api->StreamSeek                  = OS_W32_StreamSeek;
+	api->StreamSize                  = OS_W32_StreamSize;
+	api->StreamPosition              = OS_W32_StreamPosition;
+	api->StreamClose                 = OS_W32_StreamClose;
+
+	api->JobCounterAlloc             = OS_W32_JobCounterAlloc;
+	api->JobYield                    = OS_W32_JobYield;
+	api->JobKick                     = OS_W32_JobKick;
+	api->JobBatch                    = OS_W32_JobBatch;
+	api->JobFor                      = OS_W32_JobFor;
+	api->JobIsMainThread             = OS_W32_JobIsMainThread;
+
+	api->JobGetScratch               = OS_W32_GetScratch;
+
+	api->OpenInExplorer              = OS_W32_OpenInExplorer;
+
+	api->VulkanSurfaceCreate         = OS_W32_VulkanSurfaceCreate;
+	api->VulkanSurfaceDestroy        = OS_W32_VulkanSurfaceDestroy;
+	api->VulkanGetInstanceExtensions = OS_W32_VulkanGetInstanceExtensions;
 }
 
 internal void
 OS_W32_ProcessEvents(I_State *input_out)
 {
-	SDL_Event events[MAX_PENDING_EVENTS] = {0};
+	SDL_Event events[OS_W32_MAX_PENDING_EVENTS] = {0};
 	u32 event_count = 0;
 
-	OS_MutexLock(event_mutex);
+	OS_W32_MutexLock(win32_st.event_mutex);
 	{
-		MemCpy(events, pending_events, pending_event_count * sizeof(SDL_Event));
-		event_count = pending_event_count;
-		pending_event_count = 0;
+		MemCopy(events, win32_st.pending_events, win32_st.pending_event_count * sizeof(SDL_Event));
+		event_count = win32_st.pending_event_count;
+		win32_st.pending_event_count = 0;
 	}
-	OS_MutexUnlock(event_mutex);
+	OS_W32_MutexUnlock(win32_st.event_mutex);
 	
 	// Reset button input states.
 	MemZeroArray(input_out->kb_pressed);
 	MemZeroArray(input_out->kb_released);
-	MeMZeroArray(input_out->mb_pressed);
+	MemZeroArray(input_out->mb_pressed);
 	MemZeroArray(input_out->mb_released);
 
-	for (int i = 0; i < inp::MAX_GAMEPADS; i++) {
-		I_GamepadSt *gp = input_out->gamepads[i];
+	for (int i = 0; i < I_MAX_GAMEPADS; i++) {
+		I_GamepadState *gp = &input_out->gamepads[i];
 		MemZeroArray(gp->pressed);
 		MemZeroArray(gp->released);
 	}
@@ -860,59 +1047,59 @@ OS_W32_ProcessEvents(I_State *input_out)
 	MemZeroStruct(&input_out->mouse_wheel);
 
 	for (u32 i = 0; i < event_count; i++) {
-		const SDL_Event &ev = events[i];
+		const SDL_Event *ev = &events[i];
 
-		ImGui_ImplSDL3_ProcessEvent(&ev);
+		//ImGui_ImplSDL3_ProcessEvent(ev);
 
-		switch (ev.type) {
+		switch (ev->type) {
 			case SDL_EVENT_QUIT:
-				JOB_Halt();
+				JOB_Halt(&win32_st.scheduler);
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
-				input_out->kb_down[ev.key.scancode] = true;
-				input_out->kb_pressed[ev.key.scancode] = true;
+				input_out->kb_down[ev->key.scancode] = true;
+				input_out->kb_pressed[ev->key.scancode] = true;
 				break;
 
 			case SDL_EVENT_KEY_UP:
-				input_out->kb_down[ev.key.scancode] = false;
-				input_out->kb_released[ev.key.scancode] = true;
+				input_out->kb_down[ev->key.scancode] = false;
+				input_out->kb_released[ev->key.scancode] = true;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
-				input_out->mb_down[ev.button.button] = true;
-				input_out->mb_pressed[ev.button.button] = true;
+				input_out->mb_down[ev->button.button] = true;
+				input_out->mb_pressed[ev->button.button] = true;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
-				input_out->mb_down[ev.button.button] = false;
-				input_out->mb_released[ev.button.button] = true;
+				input_out->mb_down[ev->button.button] = false;
+				input_out->mb_released[ev->button.button] = true;
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
 				SDL_GetGlobalMouseState(&input_out->mouse_screen_position.x, &input_out->mouse_screen_position.y);
-				input_out->mouse_position = v2(ev.motion.x, ev.motion.y);
-				input_out->mouse_delta = V2Add(input_out->mouse_delta, v2(ev.motion.xrel, ev.motion.yrel));
+				input_out->mouse_position = v2(ev->motion.x, ev->motion.y);
+				input_out->mouse_delta = V2Add(input_out->mouse_delta, v2(ev->motion.xrel, ev->motion.yrel));
 				break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
-				input_out->mouse_wheel += v2(ev.wheel.x, ev.wheel.y);
+				input_out->mouse_wheel = V2Add(input_out->mouse_wheel, v2(ev->wheel.x, ev->wheel.y));
 				break;
 					
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = true;
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].pressed[ev.gbutton.button] = true;
+				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = true;
+				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].pressed[ev->gbutton.button] = true;
 				break;
 
 			case SDL_EVENT_GAMEPAD_BUTTON_UP:
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].down[ev.gbutton.button] = false;
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev.gbutton.which)].released[ev.gbutton.button] = true;
+				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = false;
+				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].released[ev->gbutton.button] = true;
 				break;
 
 			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-				I_GamepadStSetAxisValue(&input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev.gaxis.which)],
-										(I_GamepadAxis)ev.gaxis.axis,
-										(f32)ev.gaxis.value / (f32)(SDL_JOYSTICK_AXIS_MAX - ((ev.gaxis.value >= 0.f) ? 1.f : 0.f)));
+				I_GamepadStateSetAxisValue(&input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gaxis.which)],
+										   (I_GamepadAxis)ev->gaxis.axis,
+										   (f32)ev->gaxis.value / (f32)(SDL_JOYSTICK_AXIS_MAX - ((ev->gaxis.value >= 0.f) ? 1.f : 0.f)));
 				break;
 
 			case SDL_EVENT_GAMEPAD_ADDED:
@@ -920,7 +1107,7 @@ OS_W32_ProcessEvents(I_State *input_out)
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				DebugLog("Removed gamepad.");
+				DebugLogF("Removed gamepad.");
 				OS_W32_ReconnectAllGamepads();
 				break;
 
@@ -943,13 +1130,13 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 	OS_W32_ProcessEvents(&curr_input_st);
 	prev_input_st = curr_input_st;
 
-	OS_ImGuiNewFrame();
+	//OS_ImGuiNewFrame();
 
 	// ---
 	
 	if (win32_st.code.Tick(win32_st.app, &curr_input_st))
 	{
-		JOB_Halt();
+		JOB_Halt(&win32_st.scheduler);
 	}
 	else
 	{
@@ -957,7 +1144,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		next_frame_job.EntryPoint = OS_W32_FrameJobEntry;
 		next_frame_job.priority = JOB_Priority_Normal;
 
-		JOB_Kick(&next_frame_job, NULL);
+		JOB_Kick(&win32_st.scheduler, &next_frame_job, NULL);
 	}
 }
 
@@ -969,13 +1156,13 @@ JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 	first_frame_job.EntryPoint = OS_W32_FrameJobEntry;
 	first_frame_job.priority = JOB_Priority_Normal;
 
-	JOB_Kick(&first_frame_job, NULL);
+	JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
 
 i32
 main(void)
 {
-	GetSystemInfo(&win32_system_info);
+	GetSystemInfo(&win32_st.system_info);
 
 	SDL_InitFlags init_flags =
 		SDL_INIT_VIDEO |
@@ -1000,30 +1187,34 @@ main(void)
 										   window_flags);
 
 	OS_W32_BindAPI(&win32_st.api);
+
+	osapi = &win32_st.api;
 	
 	OS_W32_InitImGui();
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
+	
+	void *process_memory = malloc(OS_PROCESS_MEMORY);
+	MemSet(process_memory, 0, OS_PROCESS_MEMORY);
+	win32_st.process_arena = ArenaInitMemory(process_memory, OS_PROCESS_MEMORY);
 
-	const u64 process_memory_size = OS_PROCESS_MEMORY;
-	void *process_memory = malloc(process_memory_size);
-	MemSet(process_memory, 0, process_memory_size);
-	win32_st.process_arena = ArenaInitMemory(process_memory, process_memory_size);
+	win32_st.event_mutex = OS_W32_MutexCreate();
 
-	JOB_Scheduler scheduler = {0};	
-	JOB_InitAndSelect(&win32_st.process_arena, &scheduler);
+	JOB_Init(&win32_st.process_arena, &win32_st.scheduler);
 
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
 	root_job.priority = JOB_Priority_Normal;
 
-	JOB_Kick(&root_job, NULL);
+	JOB_Kick(&win32_st.scheduler, &root_job, NULL);
 	
-	JOB_Enter(OS_W32_MessagePump);
+	JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump);
 	
 	win32_st.code.Destroy(win32_st.app);
 	
-	JOB_Shutdown();
+	JOB_Shutdown(&win32_st.scheduler);
 
+	OS_W32_MutexDestroy(win32_st.event_mutex);
+	
 	free(process_memory);
 
 	OS_W32_DestroyImGui();

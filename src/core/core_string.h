@@ -1,6 +1,8 @@
 #ifndef CORE_STRING_H
 #define CORE_STRING_H
 
+#define CORE_STRING_INVALID_INDEX ((u32)-1)
+
 typedef struct String8 String8;
 struct String8
 {

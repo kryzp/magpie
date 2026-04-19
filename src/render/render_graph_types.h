@@ -24,7 +24,7 @@
 // NOTE: 0 is reserved for the invalid handle so indices start at 1.
 //       R_GraphCreateTexture allocates version index 1+ for the initial version.
 
-#define R_GRAPH_INVALID_INDEX (-1u)
+#define R_GRAPH_INVALID_INDEX ((u32)-1)
 
 typedef struct R_GraphTexHandle { u32 value; } R_GraphTexHandle;
 typedef struct R_GraphBufHandle { u32 value; } R_GraphBufHandle;

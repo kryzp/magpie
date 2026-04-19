@@ -1,6 +1,8 @@
 #ifndef ASSET_HANDLE_H
 #define ASSET_HANDLE_H
 
+#define AST_HANDLE_INVALID_INDEX ((u32)-1)
+
 typedef struct AST_Handle AST_Handle;
 struct AST_Handle
 {
@@ -12,7 +14,7 @@ internal inline AST_Handle
 AST_HandleNull(void)
 {
 	AST_Handle handle = {0};
-	handle.index = -1u;
+	handle.index = AST_HANDLE_INVALID_INDEX;
 	handle.generation = 0;
 
 	return handle;

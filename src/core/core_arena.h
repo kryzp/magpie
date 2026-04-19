@@ -24,6 +24,6 @@ internal void ArenaResizeLastTo(Arena *arena, u64 bytes);
 internal void ArenaClear(Arena *arena);
 internal void ArenaZero(Arena *arena);
 
-#define ArenaPushArray(arena, type, count) ArenaPush((arena), sizeof(type) * (count), alignof(type))
+#define ArenaPushArray(arena, type, count) ArenaPush((arena), sizeof(type) * (count), _Alignof(type))
 
 #endif // CORE_ARENA_H

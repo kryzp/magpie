@@ -327,7 +327,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx)
 	
 	u64 last_slash = String8FindLast(file_path, String8Lit("/"));
 
-	if (last_slash == -1u)
+	if (last_slash == CORE_STRING_INVALID_INDEX)
 		last_slash = String8FindLast(file_path, String8Lit("\\"));
 
 	String8 directory = String8Substr(file_path, 0, last_slash + 1);

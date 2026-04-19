@@ -1,4 +1,18 @@
 
+internal v2
+V2Add(v2 a, v2 b)
+{
+	return v2(a.x + b.x,
+			  a.y + b.y);
+}
+
+internal v2
+V2Sub(v2 a, v2 b)
+{
+	return v2(a.x - b.x,
+			  a.y - b.y);
+}
+
 internal f32
 V2Dot(v2 a, v2 b)
 {
@@ -140,7 +154,7 @@ V3Refract(v3 v, v3 n, f64 eta21)
 {
 	f64 cost = MinValue(-V3Dot(v, n), 1.f);
 	v3 out_perp = V3MulF32(V3Add(v, V3MulF32(n, cost)), eta21); // eta . (v + cost . n)
-	v3 out_para = V3MulF32(n, -SquareRoot(AbsF(1.f - V3LengthSqr(out_perp))));
+	v3 out_para = V3MulF32(n, -SquareRoot(AbsValue(1.f - V3LengthSqr(out_perp))));
 	return V3Add(out_perp, out_para);
 }
 

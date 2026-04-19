@@ -3,7 +3,7 @@
 	typedef struct GFX_##mgp_name##Key GFX_##mgp_name##Key;				\
 	struct GFX_##mgp_name##Key											\
 	{																	\
-		u32 value;														\
+		u64 value;														\
 	};																	\
 	internal GFX_##mgp_name##Key GFX_##mgp_name##KeyNull(void);			\
 	internal b32 GFX_##mgp_name##KeyIsNull(GFX_##mgp_name##Key key);	\

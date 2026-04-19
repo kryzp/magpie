@@ -13,6 +13,7 @@ struct ANIM_Node
 typedef struct ANIM_Animation ANIM_Animation;
 struct ANIM_Animation
 {
+	b32 temp;
 };
 
 #endif // ANIMATION_ANIMATION_H

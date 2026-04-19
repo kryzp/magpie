@@ -22,7 +22,8 @@
 	{																	\
 		GFX_Device##mgp_name##Node *first;								\
 	};																	\
-	internal GFX_##mgp_name##Key GFX_Device##mgp_name##ListPush(GFX_Device##mgp_name##List *list, Arena *arena, const resource_name *resource); \
+	internal GFX_##mgp_name##Key GFX_Device##mgp_name##ListPush    (GFX_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, GFX_##mgp_name##Key key); \
+	internal GFX_##mgp_name##Key GFX_Device##mgp_name##ListPushAuto(GFX_Device##mgp_name##List *list, Arena *arena, const resource_name *resource); \
 	internal resource_name *GFX_Device##mgp_name##ListGet(const GFX_Device##mgp_name##List *list, GFX_##mgp_name##Key key);
 
 #include "graphics_device_managed_resources.inc"
@@ -101,14 +102,6 @@ struct GFX_DestroyedImage
 	VmaAllocation allocation;
 };
 
-typedef struct GFX_DestroyedView GFX_DestroyedView;
-struct GFX_DestroyedView
-{
-	GFX_DestroyedView *next;
-	VkImageView view;
-	GFX_BindlessHandle bindless;
-};
-
 typedef struct GFX_DestroyedBuffer GFX_DestroyedBuffer;
 struct GFX_DestroyedBuffer
 {
@@ -142,7 +135,6 @@ struct GFX_DevicePerFrameData
 	GFX_CmdPool command_pool;
 
 	GFX_DestroyedImage    *destroyed_image_head;
-	GFX_DestroyedView     *destroyed_view_head;
 	GFX_DestroyedBuffer   *destroyed_buffer_head;
 	GFX_DestroyedSampler  *destroyed_sampler_head;
 };
@@ -195,6 +187,8 @@ internal u32                GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h
 
 internal void GFX_DeviceInit    (GFX_Device *device, Arena *permanent_arena, Arena *frame_arena);
 internal void GFX_DeviceDestroy (GFX_Device *device);
+
+internal void GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data);
 
 internal GFX_CmdBuffer GFX_DeviceBeginFrame (GFX_Device *device, GFX_Swapchain *swapchain);
 internal void          GFX_DeviceEndFrame   (GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBuffer *cmd);
@@ -266,12 +260,9 @@ internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (const GFX_Device *device, GFX_
    ================================================== */
 
 internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch   (GFX_Device *device, GFX_ShaderKey program);
-internal void                  GFX_DevicePipelineLayoutDestroy (GFX_Device *device, GFX_PipelineLayoutKey layout);
 
 internal GFX_PipelineKey GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
 internal GFX_PipelineKey GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
-
-internal void GFX_DeviceDestroyPipeline(GFX_Device *device, GFX_PipelineKey pipeline);
 
 internal VkPipelineLayout GFX_DevicePipelineLayoutFromKey (const GFX_Device *device, GFX_PipelineLayoutKey key);
 internal VkPipeline       GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
@@ -300,8 +291,6 @@ internal GFX_Texture *GFX_DeviceTextureFromKey(const GFX_Device *device, GFX_Tex
 
 internal GFX_TextureViewKey GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
 internal GFX_TextureViewKey GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture);
-
-internal void GFX_DeviceTextureViewDestroy(GFX_Device *device, GFX_TextureViewKey view);
 
 internal GFX_TextureView *GFX_DeviceTextureViewFromKey(const GFX_Device *device, GFX_TextureViewKey key);
 
