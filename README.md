@@ -89,25 +89,9 @@ Headers exist to document the API from a higher level because it's nice to be ab
 ### The Layer Organisation
 Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
 
-The hierarchy looks something like this, from the bottom to the top:
-
-- Core
-- Input
-- OS
-- IO
-- Chrono
-- Graphics
-- Audio
-- Assets
-- Rendering
-- Animation
-- Entity
-- Timeline
-- Cutscene
-- App
-- Editor
-
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level *graphics* operations, but also *assets* such as textures and models (which ultimately also need to use the *graphics* layer). Other layers effectively lie parallel to each other, such *audio* and *rendering*. Entities naturally lie above the core engine systems such as physics and rendering but below higher level things like timelines. The editor needs access to all engine systems so it lies above everything.
+
+The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 
 
 ### Assets

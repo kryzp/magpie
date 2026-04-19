@@ -18,6 +18,8 @@ struct App
 
 	f32 delta_accumulator;
 
+	GM_Stack game_mode_stack;
+
 	AST_Assets assets;
 
 	ENT_World world;

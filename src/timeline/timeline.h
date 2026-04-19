@@ -16,6 +16,9 @@ struct TL_Event
 
 	b32 fired;
 	b32 repeatable;
+
+	f32 cooldown;
+	f32 cooldown_remaining;
 };
 
 typedef struct TL_Timeline TL_Timeline;
@@ -38,9 +41,15 @@ internal void TL_Tick  (TL_Timeline *timeline, void *state, f32 dt);
 internal void TL_Add(TL_Timeline *timeline,
 					 TL_TriggerFn *Trigger,
 					 TL_ActionFn *Action,
-					 void *data, b32 repeatable);
+					 void *data);
 
-internal void TL_Reset(TL_Timeline *timeline);
+internal void TL_AddRepeatable(TL_Timeline *timeline,
+							   TL_TriggerFn *Trigger,
+							   TL_ActionFn *Action,
+							   void *data,
+							   f32 cooldown);
+
+	internal void TL_Reset(TL_Timeline *timeline);
 
 
 /* ==================================================

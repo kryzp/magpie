@@ -38,10 +38,11 @@
 #include "render/render_inc.h"
 #include "entity/entity_inc.h"
 #include "timeline/timeline_inc.h"
-#include "cutscene/cutscene_inc.h"
 #include "dev/dev_inc.h"
+#include "gamemode/gamemode_inc.h"
+#include "cutscene/cutscene_inc.h"
+#include "encounter/encounter_inc.h"
 
-#include "game_mode.h"
 #include "camera_driver.h"
 #include "app.h"
 
@@ -59,8 +60,10 @@
 #include "render/render_inc.c"
 #include "entity/entity_inc.c"
 #include "timeline/timeline_inc.c"
-#include "cutscene/cutscene_inc.c"
 #include "dev/dev_inc.c"
+#include "gamemode/gamemode_inc.c"
+#include "cutscene/cutscene_inc.c"
+#include "encounter/encounter_inc.c"
 
 #include "camera_driver.c"
 
@@ -235,6 +238,8 @@ AppInit(Arena *arena, const OS_API *api)
 	AppInitAudio(app);
 	AppInitEntity(app);
 
+	GM_StackInit(&app->game_mode_stack);
+
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -275,6 +280,8 @@ AppTick(App *app, const I_InputSt *input)
 	}
 
 	AST_FlushUploads(&app->assets);
+
+	GM_StackTick(&app->game_mode_stack, app, dt, input);
 
 	ENT_WorldTickPreAnim(&app->world, &app->events, dt, input);
 

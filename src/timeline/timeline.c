@@ -31,6 +31,11 @@ TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
 
 		if (ev->fired && !ev->repeatable)
 			continue;
+	
+		ev->cooldown_remaining -= dt;
+
+		if (ev->cooldown_remaining > 0.f)
+			continue;
 
 		all_fired = false;
 		
@@ -40,6 +45,7 @@ TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
 		{
 			ev->Action(state, ev->data);
 			ev->fired = true;
+			ev->cooldown_remaining = ev->cooldown;
 		}
 	}
 
@@ -54,17 +60,34 @@ TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
 
 internal void
 TL_Add(TL_Timeline *timeline,
-	   TL_TriggerFn *Trigger,
-	   TL_ActionFn *Action,
-	   void *data, b32 repeatable)
+					 TL_TriggerFn *Trigger,
+					 TL_ActionFn *Action,
+					 void *data)
 {
 	AssertTrue(timeline->event_count < ArraySize(timeline->events));
 	
 	TL_Event *ev = &timeline->events[timeline->event_count];
 	ev->Trigger = Trigger;
 	ev->Action = Action;
-	ev->fired = false;
-	ev->repeatable = repeatable;
+	ev->repeatable = false;
+
+	timeline->event_count++;
+}
+
+internal void
+TL_AddRepeatable(TL_Timeline *timeline,
+							   TL_TriggerFn *Trigger,
+							   TL_ActionFn *Action,
+							   void *data,
+							   f32 cooldown)
+{
+	AssertTrue(timeline->event_count < ArraySize(timeline->events));
+	
+	TL_Event *ev = &timeline->events[timeline->event_count];
+	ev->Trigger = Trigger;
+	ev->Action = Action;
+	ev->repeatable = true;
+	ev->cooldown = cooldown;
 
 	timeline->event_count++;
 }
