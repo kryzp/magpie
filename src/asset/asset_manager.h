@@ -4,8 +4,8 @@
 #define AST_MANAGER_MAX_RECORDS 512
 #define AST_GPU_UPLOAD_CHUNK    Megabytes(128)
 
-#define AST_LOAD_ARENA_COUNT 16
-#define AST_LOAD_ARENA_SIZE  Megabytes(64)
+#define AST_LOAD_ARENA_COUNT 32
+#define AST_LOAD_ARENA_SIZE  Megabytes(4)
 
 typedef struct AST_Record AST_Record;
 struct AST_Record

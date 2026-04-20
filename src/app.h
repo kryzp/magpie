@@ -4,14 +4,23 @@
 #define APP_TARGET_FPS 144
 #define APP_HOT_RELOAD_INTERVAL 1.f
 
+typedef enum AppMemoryPartition
+{
+#define Partition(name, ratio) AppMemoryPartition_##name,
+#include "partitions.inc"
+#undef Partition
+	AppMemoryPartition_COUNT
+}
+AppMemoryPartition;
+
 typedef struct App App;
 struct App
 {
-	Arena *permanent_arena;
-	
-	Arena frame_arena;
-	Arena scene_arena;
+	Arena *partitions;
 
+	Arena graph_arena;
+	Arena scene_arena;
+	
 	CH_Timer elapsed_timer;
 	CH_Timer delta_timer;
 	CH_Timer hot_reload_timer;
@@ -46,8 +55,6 @@ struct App
 	AUD_BufferHandle test_sound;
 };
 
-global const OS_API *osapi;
-
 internal void AppInitAudio           (App *app);
 internal void AppDestroyAudio        (App *app);
 internal void AppHotLoadAudio        (App *app);
@@ -70,5 +77,7 @@ __declspec(dllexport) void  AppDestroy   (App *app);
 __declspec(dllexport) b32   AppTick      (App *app, const I_State *input);
 __declspec(dllexport) void  AppHotLoad   (App *app, const OS_API *api);
 __declspec(dllexport) void  AppHotUnload (App *app);
+
+global const OS_API *osapi;
 
 #endif // APP_H

@@ -15,7 +15,7 @@ internal Arena
 ArenaInitArena(Arena *arena, u64 capacity)
 {
 	Arena child = {0};
-	child.base = ArenaPush(arena, capacity, 16);
+	child.base = ArenaPush(arena, capacity, 4);
 	child.capacity = capacity;
 	child.used = 0;
 	child.last_alloc_offset = 0;

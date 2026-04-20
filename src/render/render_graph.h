@@ -94,7 +94,6 @@ typedef struct R_Graph R_Graph;
 struct R_Graph
 {
 	Arena *permanent_arena;
-	Arena *frame_arena;
 
 	u32 texture_res_count; R_GraphTexture    texture_res[R_GRAPH_MAX_TEX_RESOURCES];
 	u32 texture_ver_count; R_GraphTexVersion texture_ver[R_GRAPH_MAX_TEX_VERSIONS];
@@ -119,7 +118,7 @@ struct R_Graph
    CORE
    ================================================== */
 
-internal void R_GraphInit(R_Graph *graph, Arena *permanent_arena, Arena *frame_arena);
+internal void R_GraphInit(R_Graph *graph, Arena *arena);
 internal void R_GraphDestroy(R_Graph *graph, GFX_Device *device);
 
 internal void R_GraphReset(R_Graph *graph, const GFX_Device *device);

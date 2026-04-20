@@ -42,16 +42,15 @@ R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 }
 
 internal void
-R_GraphInit(R_Graph *graph, Arena *permanent_arena, Arena *frame_arena)
+R_GraphInit(R_Graph *graph, Arena *arena)
 {
 	MemZeroStruct(graph);
 	
-	graph->permanent_arena = permanent_arena;
-	graph->frame_arena = frame_arena;
+	graph->permanent_arena = arena;
 
 	graph->backbuffer_handle = R_GraphTexHandleNull();
 
-	R_ResourcePoolInit(&graph->pool, permanent_arena, R_GRAPH_MAX_TEX_RESOURCES, R_GRAPH_MAX_BUF_RESOURCES);
+	R_ResourcePoolInit(&graph->pool, graph->permanent_arena, R_GRAPH_MAX_TEX_RESOURCES, R_GRAPH_MAX_BUF_RESOURCES);
 }
 
 internal void

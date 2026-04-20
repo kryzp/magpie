@@ -112,10 +112,10 @@ GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 }
 
 internal void
-GFX_DeviceInit(GFX_Device *device, Arena *permanent_arena, Arena *frame_arena)
+GFX_DeviceInit(GFX_Device *device, Arena *arena)
 {
-	device->permanent_arena = permanent_arena;
-	device->frame_arena = frame_arena;
+	device->permanent_arena = arena;
+	device->frame_arena = ArenaInitArena(arena, arena->capacity * 0.5f);
 
 	device->current_frame_index = 0;
 
@@ -263,6 +263,8 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBu
 		AssertTrue(false && "Failed to present swapchain image.");
 	
 	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
+
+	ArenaClear(&device->frame_arena);
 }
 
 internal GFX_TimelinePoint
@@ -1130,7 +1132,7 @@ GFX_DeviceTextureDestroy(GFX_Device *device, GFX_TextureKey texture_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedImage *node = ArenaPushArray(device->frame_arena, GFX_DestroyedImage, 1);
+	GFX_DestroyedImage *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedImage, 1);
 	node->image = texture->handle;
 	node->allocation = texture->allocation;
 	node->next = frame_data->destroyed_image_head;
@@ -1284,7 +1286,7 @@ GFX_DeviceBufferDestroy(GFX_Device *device, GFX_BufferKey buffer_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedBuffer *node = ArenaPushArray(device->frame_arena, GFX_DestroyedBuffer, 1);
+	GFX_DestroyedBuffer *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedBuffer, 1);
 	node->buffer = buffer->handle;
 	node->allocation = buffer->allocation;
 	node->next = frame_data->destroyed_buffer_head;
@@ -1359,7 +1361,7 @@ GFX_DeviceSamplerDestroy(GFX_Device *device, GFX_SamplerKey sampler_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedSampler *node = ArenaPushArray(device->frame_arena, GFX_DestroyedSampler, 1);
+	GFX_DestroyedSampler *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedSampler, 1);
 	node->sampler = sampler->handle;
 	node->bindless = sampler->bindless;
 	node->next = frame_data->destroyed_sampler_head;

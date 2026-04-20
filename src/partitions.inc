@@ -1,0 +1,6 @@
+Partition(Assets,   1)
+Partition(Graphics, 1)
+Partition(Render,   1)
+Partition(Audio,    1)
+Partition(Entity,   1)
+Partition(Debug,    1)

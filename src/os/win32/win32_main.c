@@ -82,6 +82,7 @@ struct OS_W32_State
 	SYSTEM_INFO system_info;
 	SDL_Window *sdl_window;
 
+	Arena object_arena;
 	OS_W32_Object *free_objects;
 
 	OS_Handle event_mutex;
@@ -108,7 +109,7 @@ OS_W32_AllocObject(void)
 	}
 	else
 	{
-		object = ArenaPushArray(&win32_st.process_arena, OS_W32_Object, 1);
+		object = ArenaPushArray(&win32_st.object_arena, OS_W32_Object, 1);
 	}
 
 	return object;
@@ -1202,8 +1203,10 @@ main(void)
 	
 	void *process_memory = malloc(OS_PROCESS_MEMORY);
 	MemSet(process_memory, 0, OS_PROCESS_MEMORY);
-	win32_st.process_arena = ArenaInitMemory(process_memory, OS_PROCESS_MEMORY);
+	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);
 
+	win32_st.object_arena = ArenaInitArena(&win32_st.process_arena, OS_LAYER_MEMORY);
+	
 	DebugLogF("Allocated!");
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();

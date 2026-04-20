@@ -81,10 +81,10 @@
 internal void
 AppInitAudio(App *app)
 {
-	app->audio_backend = AUD_BackendAllocAndSelect(app->permanent_arena);
+	app->audio_backend = AUD_BackendAllocAndSelect(&app->partitions[AppMemoryPartition_Audio]);
 	app->audio_backend->Init();
 	
-	AUD_Init(&app->audio_system, app->permanent_arena, app->audio_backend);
+	AUD_Init(&app->audio_system, &app->partitions[AppMemoryPartition_Audio], app->audio_backend);
 }
 
 internal void
@@ -115,11 +115,12 @@ AppHotUnloadAudio(App *app)
 internal void
 AppInitGraphics(App *app)
 {
-	GFX_DeviceInit(&app->graphics_device, app->permanent_arena, &app->frame_arena);
+	GFX_DeviceInit(&app->graphics_device, &app->partitions[AppMemoryPartition_Graphics]);
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
 	GFX_ShaderCompilerInit(&app->shader_compiler);
-	
+
+  
 	GFX_BufferAllocInfo ring_buffer_alloc_info = {0};
 	ring_buffer_alloc_info.size = Megabytes(512);
 	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -218,29 +219,69 @@ AppHotUnloadEntity(App *app)
 
 
 /* ==================================================
+   MEMORY PARTITION
+   ================================================== */
+
+internal Arena *
+PartitionMemory(Arena *out, Arena *memory, u32 count, const f32 *ratio)
+{
+	f32 total = 0.f;
+
+	for (u32 i = 0; i < count; i++)
+		total += ratio[i];
+
+	AssertTrue(total > 0.f);
+	
+	Arena *partitions = ArenaPushArray(out, Arena, count);
+
+	const u64 alignment_reserve = 4 * count; // mem arenas push at 4 byte alignment
+
+	AssertTrue(memory->capacity - memory->used > alignment_reserve);
+	
+	const u64 left = memory->capacity - memory->used - alignment_reserve;
+
+	u64 assigned = 0;
+	
+	for (u32 p = 0; p < count; p++)
+	{
+		u64 size = 0;
+
+		if (p == count - 1)
+			size = left - assigned; // remainder
+		else
+			size = (u64)((f64)left * (ratio[p] / total));
+
+		partitions[o] = ArenaInitArena(memory, size);
+		assigned += size;
+	}
+	
+	return partitions;
+}
+
+
+/* ==================================================
    APP
    ================================================== */
 
-__declspec(dllexport) App *
-AppInit(Arena *arena, const OS_API *api)
+internal void
+AppInit_(App *app)
 {
-	osapi = api;
-	
-	App *app = ArenaPushArray(arena, App, 1);
-	
-	app->permanent_arena = arena;
-	
-	app->frame_arena = ArenaInitArena(app->permanent_arena, Megabytes(512));
-	app->scene_arena = ArenaInitArena(app->permanent_arena, Megabytes(256));
+	ScratchArena scratch = ScratchBegin(NULL, 0);
 
 	AppInitGraphics(app);
+	AppInitAudio(app);
 
-	R_GraphInit(&app->graph, app->permanent_arena, &app->frame_arena);
+	AST_Init(&app->assets, &app->partitions[AppMemoryPartition_Assets], &app->graphics_device, &app->shader_compiler, app->audio_backend);
+	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
+
+	app->graph_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], app->partitions[AppMemoryPartition_Render].capacity * 0.5f);
+	app->scene_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], app->partitions[AppMemoryPartition_Render].capacity * 0.5f);
+	
+	R_GraphInit(&app->graph, &app->graph_arena);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 	
-	AppInitAudio(app);
 	AppInitEntity(app);
 
 	GM_StackInit(&app->game_mode_stack);
@@ -253,6 +294,26 @@ AppInit(Arena *arena, const OS_API *api)
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
+
+	ScratchRelease(&scratch);
+}
+
+__declspec(dllexport) App *
+AppInit(Arena *arena, const OS_API *api)
+{
+	osapi = api;
+	
+	App *app = ArenaPushArray(arena, App, 1);
+
+	static f32 memory_ratios[AppMemoryPartition_COUNT] = {
+#define Partition(name, ratio) [AppMemoryPartition_##name] = (f32)(ratio),
+#include "partitions.inc"
+#undef Partition
+	};
+	
+	app->partitions = PartitionMemory(arena, arena, ArraySize(memory_ratios), memory_ratios);
+	
+	AppInit_(app);
 
 	return app;
 }
@@ -267,6 +328,8 @@ AppDestroy(App *app)
 
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph, &app->graphics_device);
+
+	AST_Destroy(&app->assets);
 	
 	AppDestroyGraphics(app);
 }
@@ -274,8 +337,6 @@ AppDestroy(App *app)
 __declspec(dllexport) b32
 AppTick(App *app, const I_State *input)
 {
-	ArenaClear(&app->frame_arena);
-
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
 		return true;
 
@@ -283,7 +344,6 @@ AppTick(App *app, const I_State *input)
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
-	/*
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
 		CH_TimerReset(&app->hot_reload_timer);
@@ -291,7 +351,6 @@ AppTick(App *app, const I_State *input)
 	}
 
 	AST_FlushUploads(&app->assets);
-	*/
 
 	GM_StackTick(&app->game_mode_stack, app, dt, input);
 
