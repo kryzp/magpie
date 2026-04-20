@@ -8,7 +8,7 @@
 
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else, feel free to use any of the code in your own projects, as long as you credit me a little.
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else. Ask me anything!
 
 !I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
