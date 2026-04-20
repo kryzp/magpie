@@ -11,6 +11,8 @@
 #define MATH_EPSILON_F64                         DBL_EPSILON
 #define MATH_MAX_F32                             FLT_MAX
 #define MATH_MAX_F64                             DBL_MAX
+#define MATH_DEG_TO_RAD                          0.f
+#define MATH_RAD_TO_DEG                          0.f
 
 #define SquareRoot      sqrtf
 #define CosF            cosf

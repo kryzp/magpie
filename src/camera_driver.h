@@ -35,6 +35,6 @@ struct CameraDriver
 internal CameraDriver CameraDriverInit(const CameraDriverConfig *config);
 
 internal void CameraDriverShake(CameraDriver *driver, f32 amount);
-internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera);
+internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, f32 dt);
 
 #endif // CAMERA_DRIVER_H

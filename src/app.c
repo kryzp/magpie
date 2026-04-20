@@ -245,6 +245,11 @@ AppInit(Arena *arena, const OS_API *api)
 
 	GM_StackInit(&app->game_mode_stack);
 
+	CameraDriverConfig camera_driver_cfg = {0};
+	camera_driver_cfg.mode = CameraDriverMode_Unrestricted;
+	
+	app->camera_driver = CameraDriverInit(&camera_driver_cfg);
+	
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -317,6 +322,8 @@ AppTick(App *app, const I_State *input)
 	listener.up = v3(0.f, 0.f, 1.f);
 	
 	AUD_Tick(&app->audio_system, dt, listener);
+
+	CameraDriverDrive(&app->camera_driver, &app->camera, input, dt);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
