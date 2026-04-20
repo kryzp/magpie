@@ -3,7 +3,7 @@
 
 // total amount of allocated memory to
 // the entire process, everything.
-#define OS_PROCESS_MEMORY           Gigabytes(8)
+#define OS_PROCESS_MEMORY           Gigabytes(2)
 
 #define OS_ENGINE_NAME             "Magpie"
 #define OS_DEFAULT_WINDOW_TITLE    "Magpie Demo"

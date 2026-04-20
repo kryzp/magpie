@@ -129,26 +129,24 @@ GFX_DeviceInit(GFX_Device *device, Arena *permanent_arena, Arena *frame_arena)
 internal void
 GFX_DeviceDestroy(GFX_Device *device)
 {
-	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
-	GFX_DeviceFlushFrameData(device, frame_data);
-
+	for (u32 i = 0; i < GFX_FRAMES_IN_FLIGHT; i++)
+    {
+        GFX_DevicePerFrameData *frame = &device->per_frame_data[i];
+        GFX_DeviceWaitUntil(device, frame->completion_point);
+        GFX_DeviceFlushFrameData(device, frame);
+    }
+	
 	// Layouts, Pipelines and Views are special and cached
 	// internally without any API to destroy them so we
 	// have to destroy them here.
 	for (GFX_DevicePipelineLayoutNode *node = device->layouts.first; node; node = node->next)
-	{
 		vkDestroyPipelineLayout(device->context.device, node->resource, NULL);
-	}
 
 	for (GFX_DevicePipelineNode *node = device->pipelines.first; node; node = node->next)
-	{
 		vkDestroyPipeline(device->context.device, node->resource, NULL);
-	}
 
 	for (GFX_DeviceTextureViewNode *node = device->views.first; node; node = node->next)
-	{
 		vkDestroyImageView(device->context.device, node->resource.handle, NULL);
-	}
 	
 	GFX_DeviceDestroySyncResources(device);
 	GFX_DeviceDestroyBindless(device);

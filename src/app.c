@@ -331,6 +331,11 @@ AppTick(App *app, const I_State *input)
 	
 		AppRender(app, dt, elapsed, &cmd);
 
+		R_Clear clear = R_ClearColour((f32)I_KbDown(input, I_KeyboardKey_Tab), 0.0f, 0.0f, 1.f);
+
+		R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
+		R_PassWriteColour(dummy, app->swapchain_src, &clear);
+
 		R_GraphSetBackbuffer(&app->graph, app->swapchain_src);
 		R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
@@ -378,9 +383,4 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 					&frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
-
-	R_Clear clear = R_ClearColour(0.1f + AbsValue(SinF(elapsed)), 0.5f, 0.9f, 1.f);
-
-	R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
-	R_PassWriteColour(dummy, app->swapchain_src, &clear);
 }

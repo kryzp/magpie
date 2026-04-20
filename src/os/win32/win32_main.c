@@ -1189,14 +1189,23 @@ main(void)
 	OS_W32_BindAPI(&win32_st.api);
 
 	osapi = &win32_st.api;
+
+	DebugLogF("Initializing ImGui...");
 	
 	OS_W32_InitImGui();
+
+	DebugLogF("Loading App DLL...");
+
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
+
+	DebugLogF("Allocating %llu bytes memory...", OS_PROCESS_MEMORY);
 	
 	void *process_memory = malloc(OS_PROCESS_MEMORY);
 	MemSet(process_memory, 0, OS_PROCESS_MEMORY);
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_PROCESS_MEMORY);
 
+	DebugLogF("Allocated!");
+	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
 	JOB_Init(&win32_st.process_arena, &win32_st.scheduler);
