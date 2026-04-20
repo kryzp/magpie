@@ -14,7 +14,13 @@ Basically, this is a testing ground for whatever programming project I want to t
 
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
 
-This project has been the death of me.
+This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/magpie) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
+
+
+### Resources Used
+- Real Time Rendering 4th Edition
+- Game Engine Architecture 3rd Edition
+- Vulkan Guide
 
 
 ## Notable Features
@@ -92,6 +98,18 @@ Layers strictly only propogate upwards, that is to say, a layer *A* that uses fu
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level *graphics* operations, but also *assets* such as textures and models (which ultimately also need to use the *graphics* layer). Other layers effectively lie parallel to each other, such *audio* and *rendering*. Entities naturally lie above the core engine systems such as physics and rendering but below higher level things like timelines. The editor needs access to all engine systems so it lies above everything.
 
 The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
+
+
+### Memory Arenas
+To simplify memory management in C I use a thing called a "memory arena" for pretty much anything. I'm not going to go into why because [this](https://www.youtube.com/watch?v=TZ5a3gCCZYo) talk by Ryan Fleury explains it way better. Essentially, they let you "group" allocations and formalize the idea of a "scope" for some object. The `/os/` layer allocates one massive arena up front and the app then allocates itself onto that arena and partitions it accordingly. Only one actual memory allocation happens in the entire program.
+
+
+### Job System
+The job system is effectively at the core of the project. It is a fiber-based job system based off-of the pioneering work of Naughty Dog in their presentation "Parallelizing the Naughty Dog by Christian Gyrling". It's pretty complicated but the basic idea is that using a naiive job queue is that when a job dispatches more jobs and waits on them, the thread running that job stalls when it could be working! This can get even worse, when in some cases it can straight up lead to a deadlock as there might not be any free thread to complete the child job!
+
+To fix this problem, we turn to a thing called a "fiber". The special thing about fibers is that they maintain their own call stack, which allows us to context-switch between any job at any time we want. Therefore, every time we "wait" at a counter (renamed - "Yield" because it's more apt) the fiber running that job context switches to a different job, and once all the jobs that the counter is waiting on are completed, then we resume that job by context-switching back into it.
+
+If you're more curious I wrote a blog post about my implementation approach [here](https://kryzp.github.io/posts/fiber-job-system/).
 
 
 ### Assets
@@ -191,6 +209,23 @@ struct MyDataType
 Therefore, only do this when you really HAVE to use an opaque type that isn't portable at all (so much so that you're okay with sacrificing an innocent puppy for the sake of the code, hope it was worth it!), and in those cases make it clear that it's a pointer or anything that isn't plain ol' data.
 
 Macros follow the naming convention of whatever makes the most sense: if it's meant to act like a function use `PascalCase`, if it's a constant use `SCREAMING_SNAKE_CASE`, etc.
+
+
+### Cool Stuff
+Interesting files that you might wanna have a look at if you're just starting with the codebase.
+
+- `app`
+- `core/core_arena`
+- `core/core_scratch`
+- `os/*`
+- `os/job/*`
+- `os/win32/*`
+- `render/render_graph`
+- `render/render_scene`
+- `asset/asset_manager`
+- `asset/serializer/*`
+- `graphics/graphics_device`
+- `entity/*`
 
 
 ## QnA
