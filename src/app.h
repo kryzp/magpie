@@ -16,7 +16,7 @@ AppMemoryPartition;
 typedef struct App App;
 struct App
 {
-	Arena *partitions;
+	Arena partitions[AppMemoryPartition_COUNT];
 
 	Arena graph_arena;
 	Arena scene_arena;

@@ -219,47 +219,6 @@ AppHotUnloadEntity(App *app)
 
 
 /* ==================================================
-   MEMORY PARTITION
-   ================================================== */
-
-internal Arena *
-PartitionMemory(Arena *out, Arena *memory, u32 count, const f32 *ratio)
-{
-	f32 total = 0.f;
-
-	for (u32 i = 0; i < count; i++)
-		total += ratio[i];
-
-	AssertTrue(total > 0.f);
-	
-	Arena *partitions = ArenaPushArray(out, Arena, count);
-
-	const u64 alignment_reserve = 4 * count; // mem arenas push at 4 byte alignment
-
-	AssertTrue(memory->capacity - memory->used > alignment_reserve);
-	
-	const u64 left = memory->capacity - memory->used - alignment_reserve;
-
-	u64 assigned = 0;
-	
-	for (u32 p = 0; p < count; p++)
-	{
-		u64 size = 0;
-
-		if (p == count - 1)
-			size = left - assigned; // remainder
-		else
-			size = (u64)((f64)left * (ratio[p] / total));
-
-		partitions[p] = ArenaInitArena(memory, size);
-		assigned += size;
-	}
-	
-	return partitions;
-}
-
-
-/* ==================================================
    APP
    ================================================== */
 
@@ -306,12 +265,38 @@ AppInit(Arena *arena, const OS_API *api)
 	App *app = ArenaPushArray(arena, App, 1);
 
 	static f32 memory_ratios[AppMemoryPartition_COUNT] = {
-#define Partition(name, ratio) [AppMemoryPartition_##name] = (f32)(ratio),
+#define Partition(name, ratio) (f32)(ratio),
 #include "partitions.inc"
 #undef Partition
 	};
 	
-	app->partitions = PartitionMemory(arena, arena, ArraySize(memory_ratios), memory_ratios);
+	f32 total = 0.f;
+
+	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
+		total += memory_ratios[i];
+
+	AssertTrue(total > 0.f);
+
+	const u64 alignment_reserve = 4 * AppMemoryPartition_COUNT; // mem arenas push at 4 byte alignment
+
+	AssertTrue(arena->capacity - arena->used > alignment_reserve);
+	
+	const u64 left = arena->capacity - arena->used - alignment_reserve;
+
+	u64 assigned = 0;
+	
+	for (u32 p = 0; p < AppMemoryPartition_COUNT; p++)
+	{
+		u64 size = 0;
+
+		if (p == AppMemoryPartition_COUNT - 1)
+			size = left - assigned; // remainder
+		else
+			size = (u64)((f64)left * (memory_ratios[p] / total));
+
+		app->partitions[p] = ArenaInitArena(arena, size);
+		assigned += size;
+	}
 	
 	AppInit_(app);
 
