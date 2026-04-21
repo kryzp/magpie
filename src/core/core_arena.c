@@ -12,15 +12,29 @@ ArenaInitMemory(void *memory, u64 capacity)
 }
 
 internal Arena
-ArenaInitArena(Arena *arena, u64 capacity)
+ArenaInitArena(Arena *arena, u64 capacity, u64 alignment)
 {
 	Arena child = {0};
-	child.base = ArenaPush(arena, capacity, 4);
+	child.base = ArenaPush(arena, capacity, alignment);
 	child.capacity = capacity;
 	child.used = 0;
 	child.last_alloc_offset = 0;
 
 	return child;
+}
+
+internal u64
+ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
+{
+	u64 left = parent->capacity - parent->used;
+	u64 total_padding_reserve = count * alignment;
+
+	u64 safe_size = 0;
+
+	if (left > total_padding_reserve)
+		safe_size = (left - total_padding_reserve) / count;
+
+	return safe_size;
 }
 
 internal void *

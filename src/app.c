@@ -233,8 +233,10 @@ AppInit_(App *app)
 	AST_Init(&app->assets, &app->partitions[AppMemoryPartition_Assets], &app->graphics_device, &app->shader_compiler, app->audio_backend);
 	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
 
-	app->graph_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], app->partitions[AppMemoryPartition_Render].capacity * 0.5f);
-	app->scene_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], app->partitions[AppMemoryPartition_Render].capacity * 0.5f);
+	u64 render_half_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 2, 8);
+
+	app->graph_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_half_size, 8);
+	app->scene_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_half_size, 8);
 	
 	R_GraphInit(&app->graph, &app->graph_arena);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
@@ -264,39 +266,42 @@ AppInit(Arena *arena, const OS_API *api)
 	
 	App *app = ArenaPushArray(arena, App, 1);
 
-	static f32 memory_ratios[AppMemoryPartition_COUNT] = {
+	static f64 memory_ratios[AppMemoryPartition_COUNT] = {
 #define Partition(name, ratio) (f32)(ratio),
 #include "partitions.inc"
 #undef Partition
 	};
 	
-	f32 total = 0.f;
+	f64 total_ratio = 0.0;
 
 	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
-		total += memory_ratios[i];
+		total_ratio += memory_ratios[i];
 
-	AssertTrue(total > 0.f);
+	AssertTrue(total_ratio > 0.0);
 
-	const u64 alignment_reserve = 4 * AppMemoryPartition_COUNT; // mem arenas push at 4 byte alignment
-
-	AssertTrue(arena->capacity - arena->used > alignment_reserve);
+	static u64 memory_sizes[AppMemoryPartition_COUNT] = {0};
 	
-	const u64 left = arena->capacity - arena->used - alignment_reserve;
+	u64 left = arena->capacity - arena->used
+			   - (AppMemoryPartition_COUNT * 8); // correct for alignment
 
-	u64 assigned = 0;
-	
-	for (u32 p = 0; p < AppMemoryPartition_COUNT; p++)
+	u64 allocated = 0;
+
+	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
 	{
-		u64 size = 0;
-
-		if (p == AppMemoryPartition_COUNT - 1)
-			size = left - assigned; // remainder
-		else
-			size = (u64)((f64)left * (memory_ratios[p] / total));
-
-		app->partitions[p] = ArenaInitArena(arena, size);
-		assigned += size;
+		memory_sizes[i] = (u64)((memory_ratios[i] / total_ratio) * left);
+		allocated += memory_sizes[i];
 	}
+
+	u64 remainder = left - allocated;
+
+	for (u32 i = 0; remainder > 0; i++)
+	{
+		memory_sizes[i % AppMemoryPartition_COUNT]++;
+		remainder--;
+	}
+
+	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
+		app->partitions[i] = ArenaInitArena(arena, memory_sizes[i], 8);
 	
 	AppInit_(app);
 
@@ -325,6 +330,7 @@ AppTick(App *app, const I_State *input)
 	if (I_KbPressed(input, I_KeyboardKey_Escape))
 		return true;
 
+	const f32 max_frame_time = 0.2f;
 	const f32 elapsed = CH_TimerElapsed(&app->elapsed_timer);
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
@@ -345,7 +351,7 @@ AppTick(App *app, const I_State *input)
 
 	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
-	app->delta_accumulator += MinValue(dt, fixed_dt);
+	app->delta_accumulator += MinValue(dt, max_frame_time);
 
 	while (app->delta_accumulator >= fixed_dt)
 	{

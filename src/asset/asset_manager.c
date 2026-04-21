@@ -175,7 +175,7 @@ AST_Init(AST_Assets *assets, Arena *arena,
 
 	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
 	{
-		assets->load_arenas[i] = ArenaInitArena(arena, AST_LOAD_ARENA_SIZE);
+		assets->load_arenas[i] = ArenaInitArena(arena, AST_LOAD_ARENA_SIZE, 8);
 		assets->free_load_arenas[i] = i;
 	}
 

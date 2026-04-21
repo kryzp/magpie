@@ -191,7 +191,7 @@ JOB_Init(Arena *arena, JOB_Scheduler *scheduler)
 		for (u32 j = 0; j < ArraySize(fiber->scratch_arenas); j++)
 		{
 			fiber->scratch_arenas[j] = ArenaPushArray(arena, Arena, 1);
-			(*fiber->scratch_arenas[j]) = ArenaInitArena(arena, JOB_FIBER_SCRATCH_SIZE);
+			(*fiber->scratch_arenas[j]) = ArenaInitArena(arena, JOB_FIBER_SCRATCH_SIZE, 8);
 		}
 
 		// Give the fiber to the freelist.
@@ -437,7 +437,7 @@ JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
 	{
 		osapi->MutexLock(scheduler->mutex);
 		osapi->CondVarBroadcast(scheduler->cond_begin);
-		osapi->MutexUnLock(scheduler->mutex);
+		osapi->MutexUnlock(scheduler->mutex);
 	}
 }
 

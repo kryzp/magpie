@@ -11,7 +11,15 @@ struct Arena
 };
 
 internal Arena ArenaInitMemory(void *memory, u64 capacity);
-internal Arena ArenaInitArena(Arena *arena, u64 capacity);
+internal Arena ArenaInitArena(Arena *arena, u64 capacity, u64 alignment);
+
+/*
+ * Partitioning arenas into sub-arenas can be a pain in the ass
+ * because memory is aligned upwards to better performance, so
+ * just allocating two arenas of size parent->capacity / 2 onto
+ * the parent arena can crash it.
+ */
+internal u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment);
 
 internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment);
 

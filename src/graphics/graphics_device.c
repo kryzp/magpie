@@ -115,7 +115,7 @@ internal void
 GFX_DeviceInit(GFX_Device *device, Arena *arena)
 {
 	device->permanent_arena = arena;
-	device->frame_arena = ArenaInitArena(arena, arena->capacity * 0.5f);
+	device->frame_arena = ArenaInitArena(arena, arena->capacity * 0.5f, 8);
 
 	device->current_frame_index = 0;
 
