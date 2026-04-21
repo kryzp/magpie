@@ -124,6 +124,8 @@ GFX_DeviceInit(GFX_Device *device, Arena *arena)
 	GFX_DeviceCreateSyncResources(device);
 	GFX_DeviceCreateBindless(device);
 	GFX_DeviceCreateImGui(device);
+
+	DebugLogF("Graphics Device Initialized.");
 }
 
 internal void
@@ -148,33 +150,23 @@ GFX_DeviceDestroy(GFX_Device *device)
 	for (GFX_DeviceTextureViewNode *node = device->views.first; node; node = node->next)
 		vkDestroyImageView(device->context.device, node->resource.handle, NULL);
 	
-	GFX_DeviceDestroySyncResources(device);
-	GFX_DeviceDestroyBindless(device);
 	GFX_DeviceDestroyImGui(device);
+	GFX_DeviceDestroyBindless(device);
+	GFX_DeviceDestroySyncResources(device);
 
 	GFX_ContextDestroy(&device->context);
+
+	DebugLogF("Graphics Device Destroyed.");
 }
 
 internal void
 GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data)
 {
 	for (GFX_DestroyedImage *img = frame_data->destroyed_image_head; img; img = img->next)
-	{
 		vmaDestroyImage(device->context.vma_allocator, img->image, img->allocation);
-	}
-
-	/*
-	for (GFX_DestroyedView *v = frame_data->destroyed_view_head; v; v = v->next)
-	{
-		vkDestroyImageView(device->context.device, v->view, NULL);
-		GFX_BindlessFreeView(&device->bindless, v->bindless);
-	}
-	*/
 
 	for (GFX_DestroyedBuffer *b = frame_data->destroyed_buffer_head; b; b = b->next)
-	{
 		vmaDestroyBuffer(device->context.vma_allocator, b->buffer, b->allocation);
-	}
 	
 	for (GFX_DestroyedSampler *s = frame_data->destroyed_sampler_head; s; s = s->next)
 	{
@@ -184,7 +176,6 @@ GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data)
 	
 	frame_data->destroyed_sampler_head = NULL;
 	frame_data->destroyed_image_head = NULL;
-	//frame_data->destroyed_view_head = NULL;
 	frame_data->destroyed_buffer_head = NULL;
 }
 

@@ -22,6 +22,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - Game Engine Architecture 3rd Edition
 - Vulkan Guide
 
+---
 
 ## Notable Features
 - **True Hot-Code Reloading** for everything outside of `/os/` (app code written to DLL)
@@ -37,7 +38,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **Async Generic Asset Streaming**
 - **Asset Hot-Reloading**
 - **Arena Memory Allocation System**
-- **Page-Allocated Geometry Data** for the Scene
+- **Page-Allocated Geometry Data** for the Render Scene
 - **Lockless (almost) fiber-based job system**, with an even lower-latency spin mode
 - **Controller Support**
 - **3D Audio**
@@ -49,6 +50,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
+- Better Logging (per system / e.g: `[GRAPHICS] Device Initialized.` or something like that idk)
 - Text / Font Rendering
 - Bone / Joint Based Animation
 - More sophisticated debug logging / tracing system
@@ -58,11 +60,13 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - Irradiance Probes with Spherical Harmonics, which automatically reposition themselves
 - Reflective Objects (such as mirrors)
 - Fur / Hair Rendering
-- UI System
+- 2D Batch Quad Renderer (basically the SpriteBatch from XNA/FNA/MonoGame)
+- UI System (needs 2D batch renderer)
 - Compositive Post Processing Pipeline
 - Hybrid Clustered Deferred + Forward Rendering (For Transparency)
 - Refraction
 - Shader Permutations(?)
+
 
 ### Non-Graphics Planned Features (general engine stuff that interests me)
 - Custom (simple) physics engine
@@ -153,8 +157,8 @@ Everything an entity needs to inform decisions (pointers to other systems, the w
 Rendering is fundamentally abstracted into what should be three layers, but is only two right now:
 
 1. **The Vulkan abstraction layer (`/graphics/`)**: Makes up the bulk of the graphics layer. Handles synchronization, resource management, etc. GPU resources are assigned handles (keys) by the graphics device, and only get resolved when they're used. Pretty much all high-level interactions with Vulkan either go through the device or command buffer (which has to get submitted to the device anyway).
-2. **The Rendering abstraction layer (`/render/`)**: Consists of a render graph abstraction and (generally) stateless render stage code, such as the culling, geometry, and lighting stages.
-3. **The Scene abstraction layer (WIP)**: Manages meshes, materials, and lights.
+2. **The Scene abstraction layer (WIP, currently in `/render/`)**: Manages meshes, materials, and lights.
+3. **The Rendering abstraction layer (`/render/`)**: Consists of a render graph abstraction and (generally) stateless render stage code, such as the culling, geometry, and lighting stages.
 
 
 ### Hot-Code Reloading
@@ -164,13 +168,13 @@ This does mean that global data is a little tricky because it gets reset wheneve
 1. Using as little globally-accessible data as possible.
 2. Re-Setting it whenever we hot reload.
 
-Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored. Thread-local state is maintained in `/os/`, for example.
+Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored. Thread-local state is maintained in `/os/`, for example. `/os/job/` could *theoretically* be moved out of the OS layer because the only thing it really needs is thread local state, which we can just expose from the OS layer, but it wouldn't be used by any other layer anyway, and realistically if you're trying to hot-reload the job system as it's running then you deserve to have that shit crash on you.
 
 `/os/` ultimately doesn't rely on the app at all or any layer "higher" than `/core/` and `/input/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
 
 ```
 +--------------------------------------------------+
-|  win32_main.exe                                  |
+|  magpie_win32.exe                                |
 |                                                  |
 |  All OS primitives, job scheduler, etc...        |
 |  Exposes API via function pointer table          |

@@ -336,9 +336,9 @@ internal b32 I_GpDown     (const I_State *st, I_GamepadButton b, u32 player_inde
 internal b32 I_GpPressed  (const I_State *st, I_GamepadButton b, u32 player_index);
 internal b32 I_GpReleased (const I_State *st, I_GamepadButton b, u32 player_index);
 
-internal b32 I_Shift (const I_State *st);
-internal b32 I_Ctrl  (const I_State *st);
-internal b32 I_Alt   (const I_State *st);
+internal b32 I_Shift      (const I_State *st);
+internal b32 I_Ctrl       (const I_State *st);
+internal b32 I_Alt        (const I_State *st);
 
 // 0 <= lo, hi <= 1
 //internal void I_RumbleGamepad(u32 index, f32 lo, f32 hi, f32 duration_s);

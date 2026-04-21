@@ -28,6 +28,7 @@ struct AUD_MA_Backend
 
 	AUD_MA_Buffer buffer_sentinel;
 	AUD_MA_Buffer free_buffer_sentinel;
+
 	AUD_MA_Source source_sentinel;
 	AUD_MA_Source free_source_sentinel;
 
@@ -42,11 +43,11 @@ AUD_MA_BytesFromFormat(AUD_Format format)
 {
 	switch (format)
 	{
-		case AUD_Format_U8:   return  1u;
-		case AUD_Format_S16:  return  2u;
-		case AUD_Format_S24:  return  3u;
-		case AUD_Format_S32:  return  4u;
-		case AUD_Format_F32:  return  4u;
+		case AUD_Format_U8:   return 1u;
+		case AUD_Format_S16:  return 2u;
+		case AUD_Format_S24:  return 3u;
+		case AUD_Format_S32:  return 4u;
+		case AUD_Format_F32:  return 4u;
 		default:              AssertTrue(false); return 0;
 	}
 }
@@ -100,6 +101,7 @@ AUD_MA_AllocBuffer(void)
 
 	buffer->next = mini_backend->buffer_sentinel.next;
 	buffer->prev = &mini_backend->buffer_sentinel;
+
 	buffer->next->prev = buffer;
 	buffer->prev->next = buffer;
 
@@ -129,6 +131,7 @@ AUD_MA_AllocSource(void)
 
 	source->next = mini_backend->source_sentinel.next;
 	source->prev = &mini_backend->source_sentinel;
+
 	source->next->prev = source;
 	source->prev->next = source;
 
@@ -145,6 +148,7 @@ AUD_MA_ReleaseBuffer(AUD_MA_Buffer *buffer)
 
 	buffer->next = mini_backend->free_buffer_sentinel.next;
 	buffer->prev = &mini_backend->free_buffer_sentinel;
+
 	buffer->next->prev = buffer;
 	buffer->prev->next = buffer;
 }
@@ -159,6 +163,7 @@ AUD_MA_ReleaseSource(AUD_MA_Source *source)
 
 	source->next = mini_backend->free_source_sentinel.next;
 	source->prev = &mini_backend->free_source_sentinel;
+
 	source->next->prev = source;
 	source->prev->next = source;
 }
@@ -221,19 +226,17 @@ internal void
 AUD_MA_Tick(f32 dt, AUD_Listener listener)
 {
 	ma_engine_listener_set_position(&mini_backend->engine, 0,
-									listener.eye.x,
-									listener.eye.y,
-									listener.eye.z);
+									listener.position.x,
+									listener.position.y,
+									listener.position.z);
 
 	ma_engine_listener_set_direction(&mini_backend->engine, 0,
-									 listener.forward.x,
-									 listener.forward.y,
-									 listener.forward.z);
+									 listener.direction.x,
+									 listener.direction.y,
+									 listener.direction.z);
 
 	ma_engine_listener_set_world_up(&mini_backend->engine, 0,
-									listener.up.x,
-									listener.up.y,
-									listener.up.z);
+									0.f, 0.f, 1.f);
 }
 
 internal void
@@ -423,31 +426,31 @@ AUD_MA_SetSourceAttenuationRange(AUD_SourceHandle handle, f32 dist_min, f32 dist
 internal void
 AUD_MA_BindAPI(AUD_BackendAPI *api)
 {
-	api->Init = AUD_MA_Init;
-	api->Shutdown = AUD_MA_Shutdown;
+	api->Init                      = AUD_MA_Init;
+	api->Shutdown                  = AUD_MA_Shutdown;
 
-	api->Tick = AUD_MA_Tick;
+	api->Tick                      = AUD_MA_Tick;
 
-	api->Play = AUD_MA_Play;
-	api->Stop = AUD_MA_Stop;
-	api->Resume = AUD_MA_Resume;
-	api->Pause = AUD_MA_Pause;
-	api->Reset = AUD_MA_Reset;
+	api->Play                      = AUD_MA_Play;
+	api->Stop                      = AUD_MA_Stop;
+	api->Resume                    = AUD_MA_Resume;
+	api->Pause                     = AUD_MA_Pause;
+	api->Reset                     = AUD_MA_Reset;
 
-	api->IsPlaying = AUD_MA_IsPlaying;
-	api->IsLooping = AUD_MA_IsLooping;
+	api->IsPlaying                 = AUD_MA_IsPlaying;
+	api->IsLooping                 = AUD_MA_IsLooping;
 
-	api->CreateBuffer = AUD_MA_CreateBuffer;
-	api->DestroyBuffer = AUD_MA_DestroyBuffer;
+	api->CreateBuffer              = AUD_MA_CreateBuffer;
+	api->DestroyBuffer             = AUD_MA_DestroyBuffer;
 
-	api->CreateSourceFromBuffer = AUD_MA_CreateSourceFromBuffer;
-	api->DestroySource = AUD_MA_DestroySource;
+	api->CreateSourceFromBuffer    = AUD_MA_CreateSourceFromBuffer;
+	api->DestroySource             = AUD_MA_DestroySource;
 
-	api->SetSourceVolume = AUD_MA_SetSourceVolume;
-	api->SetSourcePitch = AUD_MA_SetSourcePitch;
-	api->SetSourceLooping = AUD_MA_SetSourceLooping;
-	api->SetSourcePosition = AUD_MA_SetSourcePosition;
-	api->SetSourceDopplerFactor = AUD_MA_SetSourceDopplerFactor;
+	api->SetSourceVolume           = AUD_MA_SetSourceVolume;
+	api->SetSourcePitch            = AUD_MA_SetSourcePitch;
+	api->SetSourceLooping          = AUD_MA_SetSourceLooping;
+	api->SetSourcePosition         = AUD_MA_SetSourcePosition;
+	api->SetSourceDopplerFactor    = AUD_MA_SetSourceDopplerFactor;
 	api->SetSourceAttenuationModel = AUD_MA_SetSourceAttenuationModel;
 	api->SetSourceAttenuationRange = AUD_MA_SetSourceAttenuationRange;
 }

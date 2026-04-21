@@ -13,6 +13,8 @@
 
 #include <vma/vk_mem_alloc.h>
 
+#include "ext/slang_compiler.h"
+
 #define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
 #include "ext/spirv/spirv_reflect.h"
 #include "ext/spirv/spirv_reflect.c"
@@ -194,6 +196,34 @@ AppHotUnloadGraphics(App *app)
 
 
 /* ==================================================
+   Assets
+   ================================================== */
+
+internal void
+AppInitAssets(App *app)
+{
+	AST_Init(&app->assets, &app->partitions[AppMemoryPartition_Assets], &app->graphics_device, &app->shader_compiler, app->audio_backend);
+	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
+}
+
+internal void
+AppDestroyAssets(App *app)
+{
+	AST_Destroy(&app->assets);
+}
+
+internal void
+AppHotLoadAssets(App *app)
+{
+}
+
+internal void
+AppHotUnloadAssets(App *app)
+{
+}
+
+
+/* ==================================================
    ENTITY
    ================================================== */
 
@@ -227,12 +257,14 @@ AppInit_(App *app)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
+	// ---
+	
 	AppInitGraphics(app);
 	AppInitAudio(app);
+	AppInitAssets(app);
 
-	AST_Init(&app->assets, &app->partitions[AppMemoryPartition_Assets], &app->graphics_device, &app->shader_compiler, app->audio_backend);
-	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
-
+	// ---
+	
 	u64 render_half_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 2, 8);
 
 	app->graph_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_half_size, 8);
@@ -242,9 +274,13 @@ AppInit_(App *app)
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
+
+	// ---
 	
 	AppInitEntity(app);
 
+	// ---
+	
 	GM_StackInit(&app->game_mode_stack);
 
 	CameraDriverConfig camera_driver_cfg = {0};
@@ -314,13 +350,12 @@ AppDestroy(App *app)
 	GFX_DeviceWaitIdle(&app->graphics_device);
 
 	AppDestroyEntity(app);
-	AppDestroyAudio(app);
 
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph, &app->graphics_device);
 
-	AST_Destroy(&app->assets);
-	
+	AppDestroyAssets(app);
+	AppDestroyAudio(app);
 	AppDestroyGraphics(app);
 }
 
@@ -367,9 +402,8 @@ AppTick(App *app, const I_State *input)
 	ENT_WorldFlush(&app->world);
 	
 	AUD_Listener listener = {0};
-	listener.eye = app->camera.position;
-	listener.forward = app->camera.forward;
-	listener.up = v3(0.f, 0.f, 1.f);
+	listener.position = app->camera.position;
+	listener.direction = app->camera.forward;
 	
 	AUD_Tick(&app->audio_system, dt, listener);
 
@@ -387,9 +421,8 @@ AppTick(App *app, const I_State *input)
 		app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
 	
 		AppRender(app, dt, elapsed, &cmd);
-
-		R_Clear clear = R_ClearColour((f32)I_KbDown(input, I_KeyboardKey_Tab), 0.0f, 0.0f, 1.f);
-
+		
+		R_Clear clear = R_ClearColour(CosF(elapsed), SinF(elapsed), CosF(elapsed) * SinF(elapsed), 1.f);
 		R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
 		R_PassWriteColour(dummy, app->swapchain_src, &clear);
 

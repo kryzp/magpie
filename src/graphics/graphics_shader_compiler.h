@@ -12,7 +12,7 @@ struct GFX_ShaderCompiledStages
 typedef struct GFX_ShaderCompiler GFX_ShaderCompiler;
 struct GFX_ShaderCompiler
 {
-	b32 temp;
+	void *global_session;
 };
 
 internal void GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler);

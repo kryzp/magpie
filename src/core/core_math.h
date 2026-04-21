@@ -30,6 +30,7 @@
 #define MinValue(a, b)                      (((a) < (b)) ? (a) : (b))
 #define MaxValue(a, b)                      (((a) > (b)) ? (a) : (b))
 #define ClampValue(v, lo, hi)               MaxValue((lo), MinValue((hi), (v)))
+#define ClampValue01(v)                     ClampValue((v), 0, 1)
 #define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
 #define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
 

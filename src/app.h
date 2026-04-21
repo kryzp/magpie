@@ -65,6 +65,11 @@ internal void AppDestroyGraphics     (App *app);
 internal void AppHotLoadGraphics     (App *app);
 internal void AppHotUnloadGraphics   (App *app);
 
+internal void AppInitAssets          (App *app);
+internal void AppDestroyAssets       (App *app);
+internal void AppHotLoadAssets       (App *app);
+internal void AppHotUnloadAssets     (App *app);
+
 internal void AppInitEntity          (App *app);
 internal void AppDestroyEntity       (App *app);
 internal void AppHotLoadEntity       (App *app);

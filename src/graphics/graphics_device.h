@@ -261,11 +261,11 @@ internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (const GFX_Device *device, GFX_
 
 internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch   (GFX_Device *device, GFX_ShaderKey program);
 
-internal GFX_PipelineKey GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
-internal GFX_PipelineKey GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
+internal GFX_PipelineKey       GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
+internal GFX_PipelineKey       GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
 
-internal VkPipelineLayout GFX_DevicePipelineLayoutFromKey (const GFX_Device *device, GFX_PipelineLayoutKey key);
-internal VkPipeline       GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
+internal VkPipelineLayout      GFX_DevicePipelineLayoutFromKey (const GFX_Device *device, GFX_PipelineLayoutKey key);
+internal VkPipeline            GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
 
 
 /* ==================================================
@@ -280,31 +280,31 @@ internal GFX_TextureKey GFX_DeviceTextureAllocDepth2DRW    (GFX_Device *device, 
 internal GFX_TextureKey GFX_DeviceTextureAllocCubemap      (GFX_Device *device, u32 resolution, VkFormat format, u32 mipmaps);
 internal GFX_TextureKey GFX_DeviceTextureAllocCubemapDepth (GFX_Device *device, u32 resolution, u32 mipmaps);
 
-internal void GFX_DeviceTextureDestroy(GFX_Device *device, GFX_TextureKey texture);
+internal void           GFX_DeviceTextureDestroy           (GFX_Device *device, GFX_TextureKey texture);
 
-internal GFX_Texture *GFX_DeviceTextureFromKey(const GFX_Device *device, GFX_TextureKey key);
+internal GFX_Texture   *GFX_DeviceTextureFromKey           (const GFX_Device *device, GFX_TextureKey key);
 
 
 /* ==================================================
    VIEWS
    ================================================== */
 
-internal GFX_TextureViewKey GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
-internal GFX_TextureViewKey GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture);
+internal GFX_TextureViewKey GFX_DeviceTextureViewFetch   (GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
+internal GFX_TextureViewKey GFX_DeviceTextureViewAuto    (GFX_Device *device, GFX_TextureKey texture);
 
-internal GFX_TextureView *GFX_DeviceTextureViewFromKey(const GFX_Device *device, GFX_TextureViewKey key);
+internal GFX_TextureView   *GFX_DeviceTextureViewFromKey (const GFX_Device *device, GFX_TextureViewKey key);
 
 
 /* ==================================================
    BUFFERS
    ================================================== */
 
-internal GFX_BufferKey GFX_DeviceBufferAlloc (GFX_Device *device, const GFX_BufferAllocInfo *alloc_info);
-internal GFX_BufferKey GFX_DeviceStageAlloc  (GFX_Device *device, u64 size);
+internal GFX_BufferKey GFX_DeviceBufferAlloc   (GFX_Device *device, const GFX_BufferAllocInfo *alloc_info);
+internal GFX_BufferKey GFX_DeviceStageAlloc    (GFX_Device *device, u64 size);
 
-internal void GFX_DeviceBufferDestroy(GFX_Device *device, GFX_BufferKey buffer);
+internal void          GFX_DeviceBufferDestroy (GFX_Device *device, GFX_BufferKey buffer);
 
-internal GFX_Buffer *GFX_DeviceBufferFromKey(const GFX_Device *device, GFX_BufferKey key);
+internal GFX_Buffer   *GFX_DeviceBufferFromKey (const GFX_Device *device, GFX_BufferKey key);
 
 
 /* ==================================================
@@ -314,21 +314,21 @@ internal GFX_Buffer *GFX_DeviceBufferFromKey(const GFX_Device *device, GFX_Buffe
 internal GFX_SamplerKey GFX_DeviceSamplerCreate  (GFX_Device *device, const GFX_SamplerCreateInfo *create_info);
 internal GFX_SamplerKey GFX_DeviceSamplerCreateF (GFX_Device *device, VkFilter filter);
 
-internal void GFX_DeviceSamplerDestroy(GFX_Device *device, GFX_SamplerKey sampler);
+internal void           GFX_DeviceSamplerDestroy (GFX_Device *device, GFX_SamplerKey sampler);
 
-internal GFX_Sampler *GFX_DeviceSamplerFromKey(const GFX_Device *device, GFX_SamplerKey key);
+internal GFX_Sampler   *GFX_DeviceSamplerFromKey (const GFX_Device *device, GFX_SamplerKey key);
 
 
 /* ==================================================
    SHADERS
    ================================================== */
 
-internal GFX_ShaderStage GFX_DeviceShaderStageCreate(Arena *arena, const GFX_ShaderBytecode *bytecode);
+internal GFX_ShaderStage    GFX_DeviceShaderStageCreate    (Arena *arena, const GFX_ShaderBytecode *bytecode);
 
-internal GFX_ShaderKey GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
-internal void          GFX_DeviceShaderProgramDestroy(GFX_Device *device, GFX_ShaderKey program);
+internal GFX_ShaderKey      GFX_DeviceShaderProgramCreate  (GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
+internal void               GFX_DeviceShaderProgramDestroy (GFX_Device *device, GFX_ShaderKey program);
 
-internal GFX_ShaderProgram *GFX_DeviceShaderProgramFromKey(const GFX_Device *device, GFX_ShaderKey key);
+internal GFX_ShaderProgram *GFX_DeviceShaderProgramFromKey (const GFX_Device *device, GFX_ShaderKey key);
 
 
 /* ==================================================

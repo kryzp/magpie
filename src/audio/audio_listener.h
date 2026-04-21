@@ -4,9 +4,8 @@
 typedef struct AUD_Listener AUD_Listener;
 struct AUD_Listener
 {
-	v3 eye;
-	v3 forward;
-	v3 up;
+	v3 position;
+	v3 direction;
 };
 
 #endif // AUDIO_LISTENER_H
