@@ -251,7 +251,7 @@ PartitionMemory(Arena *out, Arena *memory, u32 count, const f32 *ratio)
 		else
 			size = (u64)((f64)left * (ratio[p] / total));
 
-		partitions[o] = ArenaInitArena(memory, size);
+		partitions[p] = ArenaInitArena(memory, size);
 		assigned += size;
 	}
 	
