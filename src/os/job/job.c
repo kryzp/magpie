@@ -242,7 +242,7 @@ JOB_SchedulerThreadEntry(void *param)
 	worker->fiber_handle = osapi->ConvertThreadToFiber();
  
 	// Force each worker to stay on a single core.
-	osapi->ThreadSetAffinity(worker->thread_handle, 1ull << worker->id);
+	osapi->ThreadSetAffinity(osapi->GetCurrentThreadHandle(), 1ull << worker->id);
  
 	while (osapi->AtomicLoadU32(&scheduler->atomic_running))
 	{
@@ -324,7 +324,7 @@ JOB_SchedulerThreadEntry(void *param)
 			{	
 				osapi->MutexLock(scheduler->mutex);
 				
-				if (!JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
+				while (!JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
 				{
 					osapi->CondVarWait(scheduler->cond_begin, scheduler->mutex);
 				}
@@ -434,7 +434,11 @@ JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
 		JOB_PushWaitingFiber(scheduler, to_kick[i]);
  
 	if (kick_count > 0)
+	{
+		osapi->MutexLock(scheduler->mutex);
 		osapi->CondVarBroadcast(scheduler->cond_begin);
+		osapi->MutexUnLock(scheduler->mutex);
+	}
 }
 
 internal void
@@ -539,8 +543,10 @@ JOB_Kick(JOB_Scheduler *scheduler, const JOB_Decl *decl, JOB_Counter *counter)
 	request.counter     = counter;
  
 	JOB_Push(scheduler, &request);
-	
+
+	osapi->MutexLock(scheduler->mutex);
 	osapi->CondVarSignal(scheduler->cond_begin);
+	osapi->MutexUnlock(scheduler->mutex);
 }
 
 internal void
@@ -560,7 +566,9 @@ JOB_Batch(JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, JOB_Counte
 		JOB_Push(scheduler, &request);
 	}
  
+	osapi->MutexLock(scheduler->mutex);
 	osapi->CondVarBroadcast(scheduler->cond_begin);
+	osapi->MutexUnlock(scheduler->mutex);
 }
 
 typedef struct JOB_ParallelForParam JOB_ParallelForParam;
