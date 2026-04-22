@@ -12,4 +12,4 @@ cmake-build-debug/
 CMakeSettings.json
 /res/Models
 TAGS
-
+.dir-locals.el
