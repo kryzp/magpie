@@ -4,13 +4,15 @@
 // TODO: Get this from the physical properties of the context.
 #define GFX_BINDLESS_MAX_RESOURCES 4096
 
+typedef u32 GFX_BindlessIndex;
+
 typedef struct GFX_BindlessHandle GFX_BindlessHandle;
 struct GFX_BindlessHandle
 {
-	u32 value;
+	GFX_BindlessIndex value;
 };
 
-internal inline u32
+internal inline GFX_BindlessIndex
 GFX_BindlessIndexOf(GFX_BindlessHandle handle)
 {
 	// Just return the value.
@@ -51,13 +53,13 @@ struct GFX_Bindless
 	u32 update_count;
 	GFX_BindlessUpdate updates[512];
 
-	u32 sampler_count;
-	u32 view_count;
+	GFX_BindlessIndex sampler_count;
+	GFX_BindlessIndex view_count;
 
-	u32 free_sampler_count;
+	GFX_BindlessIndex free_sampler_count;
 	GFX_BindlessHandle free_samplers[128];
 
-	u32 free_view_count;
+	GFX_BindlessIndex free_view_count;
 	GFX_BindlessHandle free_views[128];
 };
 

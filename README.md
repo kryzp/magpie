@@ -10,9 +10,9 @@
 ## About the Project
 Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else. Ask me anything!
 
-!I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
-
 Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
+
+!I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it, though some may be a bit vulgar). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
 This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/wyvern) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
 

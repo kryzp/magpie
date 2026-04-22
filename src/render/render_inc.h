@@ -1,3 +1,4 @@
+#include "render_buffer_range.h"
 #include "render_gpu_types.h"
 #include "render_mesh.h"
 #include "render_light.h"
@@ -10,3 +11,5 @@
 #include "render_tracker.h"
 #include "render_graph.h"
 #include "render_blackboard.h"
+
+#include "pass/render_pass_inc.h"

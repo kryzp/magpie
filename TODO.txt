@@ -1,2 +1,9 @@
+- /graphics/ backend shouldn't be taking in raw types, everything should take
+  in a GFX_<xxx>Key. also make the device global, in the same way the audio
+  backend works. e.g: command buffer takes in a GFX_TextureKey and such,
+  which it then resolves internally - that way we can implement a DX12 version
+  which has the same API and keys being passed around on the frontend and just
+  resolves it internally?
+  
 - rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
 - convert graphics device resource management to freelists

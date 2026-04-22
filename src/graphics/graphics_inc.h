@@ -1,4 +1,5 @@
 #include "graphics_vk_check.h"
+#include "graphics_device_managed_resources.h"
 #include "graphics_blend.h"
 #include "graphics_buffer.h"
 #include "graphics_context.h"
@@ -7,7 +8,6 @@
 #include "graphics_shader.h"
 #include "graphics_shader_compiler.h"
 #include "graphics_texture.h"
-#include "graphics_device_managed_resources.h"
 #include "graphics_pipeline.h"
 #include "graphics_swapchain.h"
 #include "graphics_sync.h"

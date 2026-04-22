@@ -21,13 +21,13 @@ internal void R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
 internal void R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device);
 
 internal void R_MeshWriteToStage(const R_Mesh *mesh,
-								 GFX_Buffer *stage, u64 stage_base,
+								 GFX_Device *device,
+								 GFX_BufferKey stage, u64 stage_base,
 								 void *vertices, void *indices);
 
 internal u64 R_MeshUpload(const R_Mesh *mesh,
-						  const GFX_Device *device,
 						  const GFX_CmdBuffer *cmd,
-						  GFX_Buffer *stage, u64 stage_base);
+						  GFX_BufferKey stage, u64 stage_base);
 
 internal inline u64
 R_MeshVertexBufferSize(const R_Mesh *mesh)

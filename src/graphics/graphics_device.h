@@ -126,6 +126,8 @@ struct GFX_DestroyedSampler
 typedef struct GFX_DevicePerFrameData GFX_DevicePerFrameData;
 struct GFX_DevicePerFrameData
 {
+	Arena arena;
+	
 	GFX_TimelinePoint completion_point;
 
 	// Non-Timeline Semaphores.
@@ -143,7 +145,6 @@ typedef struct GFX_Device GFX_Device;
 struct GFX_Device
 {
 	Arena *permanent_arena;
-	Arena  frame_arena;
 	
 	GFX_Context context;
 
@@ -241,7 +242,7 @@ internal void GFX_DeviceWaitUntil(const GFX_Device *device, GFX_TimelinePoint po
    SWAPCHAIN
    ================================================== */
 
-internal GFX_Swapchain GFX_DeviceSwapchainCreate  (const GFX_Device *device);
+internal GFX_Swapchain GFX_DeviceSwapchainCreate  (GFX_Device *device);
 internal void          GFX_DeviceSwapchainDestroy (const GFX_Device *device, const GFX_Swapchain *swapchain);
 
 
@@ -252,20 +253,29 @@ internal void          GFX_DeviceSwapchainDestroy (const GFX_Device *device, con
 internal GFX_CmdPool   GFX_DeviceCmdPoolCreate   (const GFX_Device *device, u32 family_index);
 internal void          GFX_DeviceCmdPoolDestroy  (const GFX_Device *device, const GFX_CmdPool *pool);
 internal void          GFX_DeviceCmdPoolReset    (const GFX_Device *device, GFX_CmdPool *pool);
-internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (const GFX_Device *device, GFX_CmdPool *pool);
+internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (      GFX_Device *device, GFX_CmdPool *pool);
 
 
 /* ==================================================
    PIPELINES
    ================================================== */
 
-internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch   (GFX_Device *device, GFX_ShaderKey program);
-
-internal GFX_PipelineKey       GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout);
-internal GFX_PipelineKey       GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout);
-
+internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program);
 internal VkPipelineLayout      GFX_DevicePipelineLayoutFromKey (const GFX_Device *device, GFX_PipelineLayoutKey key);
-internal VkPipeline            GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
+
+
+typedef struct GFX_PipelineSt GFX_PipelineSt;
+struct GFX_PipelineSt
+{
+	GFX_PipelineKey pipeline;
+	GFX_PipelineLayoutKey layout;
+	VkPipelineBindPoint bind_point;
+};
+
+internal GFX_PipelineSt GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def);
+internal GFX_PipelineSt GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def);
+
+internal VkPipeline     GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
 
 
 /* ==================================================
@@ -289,10 +299,12 @@ internal GFX_Texture   *GFX_DeviceTextureFromKey           (const GFX_Device *de
    VIEWS
    ================================================== */
 
-internal GFX_TextureViewKey GFX_DeviceTextureViewFetch   (GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
-internal GFX_TextureViewKey GFX_DeviceTextureViewAuto    (GFX_Device *device, GFX_TextureKey texture);
+internal GFX_TextureViewKey GFX_DeviceTextureViewFetch    (GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
+internal GFX_TextureViewKey GFX_DeviceTextureViewAuto     (GFX_Device *device, GFX_TextureKey texture);
 
-internal GFX_TextureView   *GFX_DeviceTextureViewFromKey (const GFX_Device *device, GFX_TextureViewKey key);
+internal GFX_TextureView   *GFX_DeviceTextureViewFromKey  (const GFX_Device *device, GFX_TextureViewKey key);
+
+internal GFX_BindlessIndex  GFX_DeviceTextureViewBindless (const GFX_Device *device, GFX_TextureViewKey key);
 
 
 /* ==================================================
@@ -306,17 +318,25 @@ internal void          GFX_DeviceBufferDestroy (GFX_Device *device, GFX_BufferKe
 
 internal GFX_Buffer   *GFX_DeviceBufferFromKey (const GFX_Device *device, GFX_BufferKey key);
 
+internal void         *GFX_DeviceBufferMap     (const GFX_Device *device, GFX_BufferKey key);
+internal u64           GFX_DeviceBufferAddress (const GFX_Device *device, GFX_BufferKey key);
+
+internal void          GFX_DeviceBufferRead    (const GFX_Device *device, GFX_BufferKey key, void *dst, u64 length, u64 offset);
+internal void          GFX_DeviceBufferWrite   (const GFX_Device *device, GFX_BufferKey key, const void *src, u64 length, u64 offset);
+
 
 /* ==================================================
    SAMPLERS
    ================================================== */
 
-internal GFX_SamplerKey GFX_DeviceSamplerCreate  (GFX_Device *device, const GFX_SamplerCreateInfo *create_info);
-internal GFX_SamplerKey GFX_DeviceSamplerCreateF (GFX_Device *device, VkFilter filter);
+internal GFX_SamplerKey    GFX_DeviceSamplerCreate   (GFX_Device *device, const GFX_SamplerCreateInfo *create_info);
+internal GFX_SamplerKey    GFX_DeviceSamplerCreateF  (GFX_Device *device, VkFilter filter);
 
-internal void           GFX_DeviceSamplerDestroy (GFX_Device *device, GFX_SamplerKey sampler);
+internal void              GFX_DeviceSamplerDestroy  (GFX_Device *device, GFX_SamplerKey sampler);
 
-internal GFX_Sampler   *GFX_DeviceSamplerFromKey (const GFX_Device *device, GFX_SamplerKey key);
+internal GFX_Sampler      *GFX_DeviceSamplerFromKey  (const GFX_Device *device, GFX_SamplerKey key);
+
+internal GFX_BindlessIndex GFX_DeviceSamplerBindless (const GFX_Device *device, GFX_SamplerKey key);
 
 
 /* ==================================================

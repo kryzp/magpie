@@ -1202,7 +1202,6 @@ main(void)
 	DebugLogF("Allocating %llu bytes memory...", OS_TOTAL_MEMORY);
 	
 	void *process_memory = malloc(OS_TOTAL_MEMORY);
-	MemSet(process_memory, 0, OS_TOTAL_MEMORY);
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);
 
 	win32_st.object_arena = ArenaInitArena(&win32_st.process_arena, OS_LAYER_MEMORY, 8);

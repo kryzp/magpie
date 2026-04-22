@@ -3,13 +3,16 @@
 
 #define GFX_ComputeGroupCount(count, tile) (((count) + (tile) - 1u) / (tile))
 
+typedef struct GFX_Device GFX_Device;
+
 typedef struct GFX_CmdBuffer GFX_CmdBuffer;
 struct GFX_CmdBuffer
 {
 	VkCommandBuffer handle;
+	GFX_Device *device;
 };
 
-#define GFX_CmdInit(vk_handle) ((GFX_CmdBuffer) { .handle = (vk_handle) })
+#define GFX_CmdInit(vk_handle, device) ((GFX_CmdBuffer) { (vk_handle), (device) })
 
 internal void GFX_CmdBegin(const GFX_CmdBuffer *cmd);
 internal void GFX_CmdEnd(const GFX_CmdBuffer *cmd);
@@ -27,25 +30,25 @@ internal void GFX_CmdPipelineBarrier(const GFX_CmdBuffer *cmd, VkDependencyFlags
 
 internal void GFX_CmdBindDescriptors(const GFX_CmdBuffer *cmd,
 									 VkShaderStageFlags stage_flags,
-									 VkPipelineLayout layout, u32 first,
+									 GFX_PipelineLayoutKey layout, u32 first,
 									 u32 descriptor_count, const VkDescriptorSet *descriptors,
 									 u32 dynamic_offset_count, const u32 *dynamic_offsets);
 
 internal void GFX_CmdBindBindless(const GFX_CmdBuffer *cmd,
 								  VkShaderStageFlags stage_flags,
-								  VkPipelineLayout layout,
+								  GFX_PipelineLayoutKey layout,
 								  const GFX_Bindless *bindless);
 
 internal void GFX_CmdBindPipeline(const GFX_CmdBuffer *cmd,
 								  VkPipelineBindPoint bind_point,
-								  VkPipeline pipeline);
+								  GFX_PipelineKey pipeline);
 
 internal void GFX_CmdBindIndexBuffer(const GFX_CmdBuffer *cmd,
-									 const GFX_Buffer *buffer,
-									 u64 offset);
+									 GFX_BufferKey buffer,
+									 u64 offset, u64 size); // VK_WHOLE_SIZE
 
 internal void GFX_CmdPushConstants(const GFX_CmdBuffer *cmd,
-								   VkPipelineLayout layout,
+								   GFX_PipelineLayoutKey layout,
 								   VkShaderStageFlags stage_flags,
 								   u64 size, const void *data,
 								   u32 offset);
@@ -68,47 +71,48 @@ internal void GFX_CmdDrawIndexed(const GFX_CmdBuffer *cmd,
 								 u32 first_instance);
 
 internal void GFX_CmdDrawIndexedIndirect(const GFX_CmdBuffer *cmd,
-										 const GFX_Buffer *buffer, u64 offset,
+										 GFX_BufferKey buffer, u64 offset,
 										 u32 count, u32 stride);
 
 internal void GFX_CmdDrawIndexedIndirectCount(const GFX_CmdBuffer *cmd,
-											  const GFX_Buffer *indirect_buffer, u64 indirect_offset,
-											  const GFX_Buffer *count_buffer, u64 count_offset,
+											  GFX_BufferKey indirect_buffer, u64 indirect_offset,
+											  GFX_BufferKey count_buffer,    u64 count_offset,
 											  u32 max_count, u32 stride);
 
 internal void GFX_CmdDrawMeshTasksIndirectCount(const GFX_CmdBuffer *cmd,
-												const GFX_Buffer *indirect_buffer, u64 indirect_offset,
-												const GFX_Buffer *count_buffer, u64 count_offset,
+												GFX_BufferKey indirect_buffer, u64 indirect_offset,
+												GFX_BufferKey count_buffer,    u64 count_offset,
 												u32 max_count, u32 stride);
 
 internal void GFX_CmdDispatch(const GFX_CmdBuffer *cmd, u32 x, u32 y, u32 z);
-internal void GFX_CmdDispatchIndirect(const GFX_CmdBuffer *cmd, const GFX_Buffer *buffer, u64 offset);
+
+internal void GFX_CmdDispatchIndirect(const GFX_CmdBuffer *cmd, GFX_BufferKey buffer, u64 offset);
 
 internal void GFX_CmdBlit(const GFX_CmdBuffer *cmd,
-						  const GFX_Texture *src,
-						  const GFX_Texture *dst,
+						  GFX_TextureKey src,
+						  GFX_TextureKey dst,
 						  u32 region_count, const VkImageBlit2 *regions,
 						  VkFilter filter);
 
-internal void GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, const GFX_Texture *texture);
+internal void GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, GFX_TextureKey texture);
 
 internal void GFX_CmdCopyBufferToBuffer(const GFX_CmdBuffer *cmd,
-										const GFX_Buffer *src,
-										const GFX_Buffer *dst,
+										GFX_BufferKey src,
+										GFX_BufferKey dst,
 										u32 region_count, const VkBufferCopy2 *regions);
 
 internal void GFX_CmdCopyBufferToTexture(const GFX_CmdBuffer *cmd,
-										 const GFX_Buffer *src,
-										 const GFX_Texture *dst,
+										 GFX_BufferKey src,
+										 GFX_TextureKey dst,
 										 u32 region_count, const VkBufferImageCopy2 *regions);
 
 internal void GFX_CmdCopyBufferToTextureWhole(const GFX_CmdBuffer *cmd,
-											  const GFX_Buffer *src,
-											  const GFX_Texture *dst,
+											  GFX_BufferKey src,
+											  GFX_TextureKey dst,
 											  u64 buffer_offset);
 
 internal void GFX_CmdFillBuffer(const GFX_CmdBuffer *cmd,
-								const GFX_Buffer *buffer,
+								GFX_BufferKey buffer,
 								u64 offset, u64 size, u32 fill);
 
 internal void GFX_CmdBeginQuery(const GFX_CmdBuffer *cmd,

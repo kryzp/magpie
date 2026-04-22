@@ -115,7 +115,9 @@ internal void
 GFX_DeviceInit(GFX_Device *device, Arena *arena)
 {
 	device->permanent_arena = arena;
-	device->frame_arena = ArenaInitArena(arena, arena->capacity * 0.5f, 8);
+	
+	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
+		device->per_frame_data[i].arena = ArenaInitArena(arena, arena->capacity * 0.1f, 8);
 
 	device->current_frame_index = 0;
 
@@ -177,6 +179,8 @@ GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data)
 	frame_data->destroyed_sampler_head = NULL;
 	frame_data->destroyed_image_head = NULL;
 	frame_data->destroyed_buffer_head = NULL;
+
+	ArenaClear(&frame_data->arena);
 }
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.
@@ -254,8 +258,6 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBu
 		AssertTrue(false && "Failed to present swapchain image.");
 	
 	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
-
-	ArenaClear(&device->frame_arena);
 }
 
 internal GFX_TimelinePoint
@@ -449,7 +451,7 @@ GFX_DeviceWaitUntil(const GFX_Device *device, GFX_TimelinePoint point)
 }
 
 internal GFX_Swapchain
-GFX_DeviceSwapchainCreate(const GFX_Device *device)
+GFX_DeviceSwapchainCreate(GFX_Device *device)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -511,20 +513,22 @@ GFX_DeviceSwapchainCreate(const GFX_Device *device)
 
 	for (u32 i = 0; i < texture_count; i++)
 	{
-		GFX_Texture *texture = &swapchain.textures[i];
-		texture->handle = vk_images[i];
-		texture->width = swapchain.width;
-		texture->height = swapchain.height;
-		texture->depth = 1;
-		texture->flags = GFX_TextureFlag_Swapchain;
-		texture->format = swapchain.format;
-		texture->type = VK_IMAGE_TYPE_2D;
-		texture->tiling = VK_IMAGE_TILING_OPTIMAL;
-		texture->usage = swapchain_texture_usage;
-		texture->aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-		texture->layer_count = 1;
-		texture->mipmap_count = 1;
-		texture->sample_count = VK_SAMPLE_COUNT_1_BIT;
+		GFX_Texture texture = {0};
+		texture.handle = vk_images[i];
+		texture.width = swapchain.width;
+		texture.height = swapchain.height;
+		texture.depth = 1;
+		texture.flags = GFX_TextureFlag_Swapchain;
+		texture.format = swapchain.format;
+		texture.type = VK_IMAGE_TYPE_2D;
+		texture.tiling = VK_IMAGE_TILING_OPTIMAL;
+		texture.usage = swapchain_texture_usage;
+		texture.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+		texture.layer_count = 1;
+		texture.mipmap_count = 1;
+		texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
+
+		swapchain.textures[i] = GFX_DeviceTextureListPushAuto(&device->textures, device->permanent_arena, &texture);
 
 		swapchain.views[i].type = VK_IMAGE_VIEW_TYPE_2D;
 		swapchain.views[i].range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -617,14 +621,11 @@ GFX_DeviceCmdPoolReset(const GFX_Device *device, GFX_CmdPool *pool)
 }
 
 internal GFX_CmdBuffer
-GFX_DeviceFetchFreeBuffer(const GFX_Device *device, GFX_CmdPool *pool)
+GFX_DeviceFetchFreeBuffer(GFX_Device *device, GFX_CmdPool *pool)
 {
 	AssertTrue(pool->used_count < GFX_CMD_POOL_MAX_BUFFERS);
 
-	GFX_CmdBuffer cmd = {0};
-	cmd.handle = pool->buffers[pool->used_count++];
-
-	return cmd;
+	return GFX_CmdInit(pool->buffers[pool->used_count++], device);
 }
 
 internal GFX_PipelineLayoutKey
@@ -675,17 +676,18 @@ GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program)
 	return GFX_DevicePipelineLayoutListPush(&device->layouts, device->permanent_arena, &layout, hashed_key);
 }
 
-internal void
-GFX_DevicePipelineLayoutDestroy(GFX_Device *device, GFX_PipelineLayoutKey layout_key)
+internal VkPipelineLayout
+GFX_DevicePipelineLayoutFromKey(const GFX_Device *device, GFX_PipelineLayoutKey key)
 {
-	VkPipelineLayout *layout = GFX_DevicePipelineLayoutListGet(&device->layouts, layout_key);
-	if (layout)
-		vkDestroyPipelineLayout(device->context.device, *layout, NULL);
+	VkPipelineLayout *layout = GFX_DevicePipelineLayoutListGet(&device->layouts, key);
+	return layout ? *layout : VK_NULL_HANDLE;
 }
 
-internal GFX_PipelineKey
-GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDef *def, GFX_PipelineLayoutKey layout_key)
+internal GFX_PipelineSt
+GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDef *def)
 {
+	GFX_PipelineLayoutKey layout_key = GFX_DevicePipelineLayoutFetch(device, def->program);
+	
 	u64 hashed_key_value = 0;
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &layout_key, sizeof(layout_key));
@@ -693,7 +695,14 @@ GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDe
 	GFX_PipelineKey hashed_key = { hashed_key_value };
 	
 	if (GFX_DevicePipelineFromKey(device, hashed_key))
-		return hashed_key;
+	{
+		GFX_PipelineSt st = {0};
+		st.pipeline = hashed_key;
+		st.layout = layout_key;
+		st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		
+		return st;
+	}
 	
 	VkPipelineLayout layout = *GFX_DevicePipelineLayoutListGet(&device->layouts, layout_key);
 	
@@ -867,14 +876,21 @@ GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDe
 										   NULL, &pipeline),
 				 "Failed to create graphics pipeline.");
 
-	ScratchRelease(&scratch);
+	GFX_PipelineSt st = {0};
+	st.pipeline = GFX_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
+	st.layout = layout_key;
+	st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-	return GFX_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
+	ScratchRelease(&scratch);
+	
+	return st;
 }
 
-internal GFX_PipelineKey
-GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef *def, GFX_PipelineLayoutKey layout_key)
+internal GFX_PipelineSt
+GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef *def)
 {
+	GFX_PipelineLayoutKey layout_key = GFX_DevicePipelineLayoutFetch(device, def->program);
+	
 	u64 hashed_key_value = 0;
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &layout_key, sizeof(layout_key));
@@ -882,9 +898,17 @@ GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef 
 	GFX_PipelineKey hashed_key = { hashed_key_value };
 	
 	if (GFX_DevicePipelineFromKey(device, hashed_key))
-		return hashed_key;
+	{
+		GFX_PipelineSt st = {0};
+		st.pipeline = hashed_key;
+		st.layout = layout_key;
+		st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+		
+		return st;
+	}
 	
 	VkPipelineLayout layout = *GFX_DevicePipelineLayoutListGet(&device->layouts, layout_key);
+	
 	GFX_ShaderProgram *program = GFX_DeviceShaderProgramFromKey(device, def->program);
 
 	AssertTrue(GFX_ShaderProgramIsCompute(program));
@@ -915,14 +939,12 @@ GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef 
 										  NULL, &pipeline),
 				 "Failed to create compute pipeline.");
 
-	return GFX_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
-}
-
-internal VkPipelineLayout
-GFX_DevicePipelineLayoutFromKey(const GFX_Device *device, GFX_PipelineLayoutKey key)
-{
-	VkPipelineLayout *layout = GFX_DevicePipelineLayoutListGet(&device->layouts, key);
-	return layout ? *layout : VK_NULL_HANDLE;
+	GFX_PipelineSt st = {0};
+	st.pipeline = GFX_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
+	st.layout = layout_key;
+	st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+	
+	return st;
 }
 
 internal VkPipeline
@@ -1123,7 +1145,7 @@ GFX_DeviceTextureDestroy(GFX_Device *device, GFX_TextureKey texture_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedImage *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedImage, 1);
+	GFX_DestroyedImage *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedImage, 1);
 	node->image = texture->handle;
 	node->allocation = texture->allocation;
 	node->next = frame_data->destroyed_image_head;
@@ -1183,7 +1205,6 @@ internal GFX_TextureViewKey
 GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture)
 {
 	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, texture);
-
 	AssertTrue(gfx_texture);
 
 	GFX_SubresourceRange range = {0};
@@ -1212,6 +1233,15 @@ GFX_DeviceTextureViewFromKey(const GFX_Device *device, GFX_TextureViewKey key)
 	return GFX_DeviceTextureViewListGet(&device->views, key);
 }
 
+internal GFX_BindlessIndex
+GFX_DeviceTextureViewBindless(const GFX_Device *device, GFX_TextureViewKey key)
+{
+	GFX_TextureView *gfx_view = GFX_DeviceTextureViewFromKey(device, key);
+	AssertTrue(gfx_view);
+	
+	return GFX_BindlessIndexOf(gfx_view->bindless);
+}
+
 internal GFX_BufferKey
 GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 {
@@ -1219,7 +1249,6 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 	buffer.usage = alloc_info->usage;
 	buffer.size = alloc_info->size;
 	buffer.allocation_flags = alloc_info->flags;
-	buffer.allocator = device->context.vma_allocator;
 
 	b32 is_storage = (buffer.usage & VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT) != 0;
 
@@ -1277,7 +1306,7 @@ GFX_DeviceBufferDestroy(GFX_Device *device, GFX_BufferKey buffer_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedBuffer *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedBuffer, 1);
+	GFX_DestroyedBuffer *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedBuffer, 1);
 	node->buffer = buffer->handle;
 	node->allocation = buffer->allocation;
 	node->next = frame_data->destroyed_buffer_head;
@@ -1288,6 +1317,42 @@ internal GFX_Buffer *
 GFX_DeviceBufferFromKey(const GFX_Device *device, GFX_BufferKey key)
 {
 	return GFX_DeviceBufferListGet(&device->buffers, key);
+}
+
+internal void *
+GFX_DeviceBufferMap(const GFX_Device *device, GFX_BufferKey key)
+{
+	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
+	AssertTrue(buffer);
+	
+	return buffer->allocation_info.pMappedData;
+}
+
+internal u64
+GFX_DeviceBufferAddress(const GFX_Device *device, GFX_BufferKey key)
+{
+	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
+	AssertTrue(buffer);
+	
+	return buffer->device_address;
+}
+
+internal void
+GFX_DeviceBufferRead(const GFX_Device *device, GFX_BufferKey key, void *dst, u64 length, u64 offset)
+{
+	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
+	AssertTrue(buffer);
+	
+	vmaCopyAllocationToMemory(device->context.vma_allocator, buffer->allocation, offset, dst, length);
+}
+
+internal void
+GFX_DeviceBufferWrite(const GFX_Device *device, GFX_BufferKey key, const void *src, u64 length, u64 offset)
+{
+	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
+	AssertTrue(buffer);
+	
+	vmaCopyMemoryToAllocation(device->context.vma_allocator, src, buffer->allocation, offset, length);
 }
 
 internal GFX_SamplerKey
@@ -1352,7 +1417,7 @@ GFX_DeviceSamplerDestroy(GFX_Device *device, GFX_SamplerKey sampler_key)
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
-	GFX_DestroyedSampler *node = ArenaPushArray(&device->frame_arena, GFX_DestroyedSampler, 1);
+	GFX_DestroyedSampler *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedSampler, 1);
 	node->sampler = sampler->handle;
 	node->bindless = sampler->bindless;
 	node->next = frame_data->destroyed_sampler_head;
@@ -1363,6 +1428,15 @@ internal GFX_Sampler *
 GFX_DeviceSamplerFromKey(const GFX_Device *device, GFX_SamplerKey key)
 {
 	return GFX_DeviceSamplerListGet(&device->samplers, key);
+}
+
+internal GFX_BindlessIndex
+GFX_DeviceSamplerBindless(const GFX_Device *device, GFX_SamplerKey key)
+{
+	GFX_Sampler *gfx_sampler = GFX_DeviceSamplerFromKey(device, key);
+	AssertTrue(gfx_sampler);
+	
+	return GFX_BindlessIndexOf(gfx_sampler->bindless);
 }
 
 internal GFX_ShaderStage

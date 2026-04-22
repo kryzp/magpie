@@ -424,7 +424,7 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 					   AST_SerializerPipelineData *data,
 					   AST_Asset *asset,
 					   GFX_CmdBuffer *cmd,
-					   GFX_Buffer *stage, u64 stage_base)
+					   GFX_BufferKey stage, u64 stage_base)
 {
 	AST_ModelLoadData *load = data->data;
 	GFX_Device *device = ctx->assets->device;
@@ -448,24 +448,21 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 		u64 vb_size = src->vertex_count * sizeof(AST_ModelVertex);
 		u64 ib_size = src->index_count  * sizeof(u32);
 
-		GFX_BufferWrite(stage, src->vertices, vb_size, offset);
-		GFX_BufferWrite(stage, src->indices,  ib_size, offset + vb_size);
-
-		GFX_Buffer *vb = GFX_DeviceBufferFromKey(device, dst->vertex_buffer);
-		GFX_Buffer *ib = GFX_DeviceBufferFromKey(device, dst->index_buffer);
+		GFX_DeviceBufferWrite(device, stage, src->vertices, vb_size, offset);
+		GFX_DeviceBufferWrite(device, stage, src->indices,  ib_size, offset + vb_size);
 
 		VkBufferCopy2 vb_copy = {0};
-		vb_copy.sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		vb_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		vb_copy.srcOffset = offset;
-		vb_copy.size      = vb_size;
+		vb_copy.size = vb_size;
 
 		VkBufferCopy2 ib_copy = {0};
-		ib_copy.sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		ib_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		ib_copy.srcOffset = offset + vb_size;
-		ib_copy.size      = ib_size;
+		ib_copy.size = ib_size;
 
-		GFX_CmdCopyBufferToBuffer(cmd, stage, vb, 1, &vb_copy);
-		GFX_CmdCopyBufferToBuffer(cmd, stage, ib, 1, &ib_copy);
+		GFX_CmdCopyBufferToBuffer(cmd, stage, dst->vertex_buffer, 1, &vb_copy);
+		GFX_CmdCopyBufferToBuffer(cmd, stage, dst->index_buffer,  1, &ib_copy);
 
 		offset += vb_size + ib_size;
 	}

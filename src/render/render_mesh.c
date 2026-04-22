@@ -33,21 +33,21 @@ R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device)
 
 internal void
 R_MeshWriteToStage(const R_Mesh *mesh,
-				   GFX_Buffer *stage, u64 stage_base,
+				   GFX_Device *device,
+				   GFX_BufferKey stage, u64 stage_base,
 				   void *vertices, void *indices)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
 
-	GFX_BufferWrite(stage, vertices, vb_size, stage_base);
-	GFX_BufferWrite(stage, indices,  ib_size, stage_base + vb_size);
+	GFX_DeviceBufferWrite(device, stage, vertices, vb_size, stage_base);
+	GFX_DeviceBufferWrite(device, stage, indices,  ib_size, stage_base + vb_size);
 }
 
 internal u64
 R_MeshUpload(const R_Mesh *mesh,
-			 const GFX_Device *device,
 			 const GFX_CmdBuffer *cmd,
-			 GFX_Buffer *stage, u64 stage_base)
+			 GFX_BufferKey stage, u64 stage_base)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
@@ -64,11 +64,8 @@ R_MeshUpload(const R_Mesh *mesh,
 	stage_to_index_copy.dstOffset = 0;
 	stage_to_index_copy.size = ib_size;
 
-	GFX_Buffer *vertex_buffer = GFX_DeviceBufferFromKey(device, mesh->vertex_buffer);
-	GFX_Buffer *index_buffer  = GFX_DeviceBufferFromKey(device, mesh->index_buffer);
-
-	GFX_CmdCopyBufferToBuffer(cmd, stage, vertex_buffer, 1, &stage_to_vertex_copy);
-	GFX_CmdCopyBufferToBuffer(cmd, stage, index_buffer, 1, &stage_to_index_copy);
+	GFX_CmdCopyBufferToBuffer(cmd, stage, mesh->vertex_buffer, 1, &stage_to_vertex_copy);
+	GFX_CmdCopyBufferToBuffer(cmd, stage, mesh->index_buffer,  1, &stage_to_index_copy);
 
 	return vb_size + ib_size;
 }

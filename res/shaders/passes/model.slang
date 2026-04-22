@@ -2,7 +2,8 @@ import util;
 import bindless;
 import types;
 
-struct Arguments {
+struct Arguments
+{
     types::FrameData *frame_data;
     types::ObjectData *objects;
     types::Material *materials;
@@ -14,7 +15,8 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-struct VS_Output {
+struct VS_Output
+{
 	float4 sv_position : SV_Position;
 	[vk::location(0)] float4 position;
 	[vk::location(1)] float2 texcoord;
@@ -72,11 +74,11 @@ FS_Output FragmentMain(VS_Output input)
 
 	SamplerState sampler = bdl::samplers[args.sampler];
 
-	float4 albedo = float4(1.0, 1.0, 1.0, 1.0);
-	float3 normal = float3(0.0, 0.0, 1.0);
-	float3 emissive = float3(0.0, 0.0, 0.0);
+	float4 albedo             = float4(1.0, 1.0, 1.0, 1.0);
+	float3 normal             = float3(0.0, 0.0, 1.0);
+	float3 emissive           = float3(0.0, 0.0, 0.0);
     float3 metallic_roughness = float3(1.0, 1.0, 1.0);
-    float ambient_occlusion = 0.0;
+    float  ambient_occlusion  = 0.0;
 
     if (bdl::IsValid(material.albedo_texture))
         albedo = bdl::images[material.albedo_texture].Sample(sampler, uv).rgba;
@@ -102,7 +104,6 @@ FS_Output FragmentMain(VS_Output input)
     metallic_roughness.r += ambient_occlusion;
 
 	FS_Output output;
-
 	output.position = float4(input.position.xyz, 1.);
 	output.albedo   = float4(albedo.rgb, 1.);
 	output.normal   = float4(normal, 1.);

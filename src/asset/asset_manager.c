@@ -610,24 +610,15 @@ AST_FlushUploads(AST_Assets *assets)
 					asset->handle = upload->handle;
 
 					if (is_new)
-					{
 						serializer->Alloc(&ctx, &upload->load_data, asset);
-					}
 					else
-					{
 						serializer->Reload(&ctx, &upload->load_data, asset);
-					}
 					
 					if (serializer->Gpu)
-					{
-						GFX_Buffer *gfx_staging_buffer = GFX_DeviceBufferFromKey(assets->device, staging_buffer);
-						serializer->Gpu(&ctx, &upload->load_data, asset, &cmd, gfx_staging_buffer, stage_offset);
-					}
+						serializer->Gpu(&ctx, &upload->load_data, asset, &cmd, staging_buffer, stage_offset);
 
 					if (serializer->End)
-					{
 						serializer->End(&upload->load_data);
-					}
 
 					if (upload->load_data.watch_path_count > 0)
 					{

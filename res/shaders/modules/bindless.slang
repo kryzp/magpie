@@ -15,4 +15,12 @@ namespace bdl
     {
         return handle != 0;
     }
+
+	/*
+	// TODO: Something like this?
+	public SamplerState GetSampler(uint handle)
+	{
+		return samples[handle];
+	}
+	*/
 }

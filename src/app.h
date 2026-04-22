@@ -20,6 +20,7 @@ struct App
 
 	Arena graph_arena;
 	Arena scene_arena;
+	Arena pass_frame_arena;
 	
 	CH_Timer elapsed_timer;
 	CH_Timer delta_timer;

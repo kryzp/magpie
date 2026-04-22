@@ -34,7 +34,7 @@ struct AST_Serializer
 	AST_SerializerPipelineData (*Cpu)     (const AST_Context *ctx);
 	void                       (*Alloc)   (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *out);
 	void                       (*Reload)  (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *existing);
-	void                       (*Gpu)     (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_Buffer *stage, u64 stage_base);
+	void                       (*Gpu)     (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_BufferKey stage, u64 stage_base);
 	void                       (*End)     (AST_SerializerPipelineData *data);
 	void                       (*Dispose) (AST_Asset *asset, AST_Assets *assets);
 };

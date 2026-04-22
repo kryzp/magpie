@@ -188,12 +188,10 @@ internal void R_GraphPresentToSwapchain(R_Graph *graph,
    RESOURCE RESOLUTION
    ================================================== */
 
-// TODO: Should these return GFX_XxxKey's instead?
-
-internal const GFX_Texture     *R_GraphResolveTexture     (const R_Graph *graph, const GFX_Device *device, R_GraphTexHandle handle);
-internal const GFX_TextureView *R_GraphResolveTextureView (const R_Graph *graph,       GFX_Device *device, R_GraphTexHandle handle, GFX_SubresourceRange range);
-internal const GFX_Buffer      *R_GraphResolveBuffer      (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
-internal GFX_BufferRange        R_GraphResolveBufferRange (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
+internal GFX_TextureKey     R_GraphResolveTexture     (const R_Graph *graph, const GFX_Device *device, R_GraphTexHandle handle);
+internal GFX_TextureViewKey R_GraphResolveTextureView (const R_Graph *graph,       GFX_Device *device, R_GraphTexHandle handle, GFX_SubresourceRange range);
+internal GFX_BufferKey      R_GraphResolveBuffer      (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
+internal R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
 
 
 /* ==================================================

@@ -48,12 +48,4 @@ struct GFX_ComputePipelineDef
 internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit(GFX_ShaderKey program);
 internal GFX_ComputePipelineDef GFX_ComputePipelineDefInit(GFX_ShaderKey program);
 
-typedef struct GFX_PipelineSt GFX_PipelineSt;
-struct GFX_PipelineSt
-{
-	VkPipeline pipeline;
-	VkPipelineLayout layout;
-	VkPipelineBindPoint bind_point;
-};
-
 #endif // GRAPHICS_PIPELINE_H

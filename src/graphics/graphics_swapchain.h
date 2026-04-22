@@ -17,7 +17,7 @@ struct GFX_Swapchain
 	u32 current_texture_index;
 
 	u32 texture_count;
-	GFX_Texture *textures;
+	GFX_TextureKey *textures;
 	GFX_TextureView *views;
 
 	u32 width;
@@ -26,10 +26,10 @@ struct GFX_Swapchain
 	VkFormat format;
 };
 
-internal inline const GFX_Texture *
+internal inline GFX_TextureKey
 GFX_SwapchainCurrentTexture(const GFX_Swapchain *swapchain)
 {
-	return &swapchain->textures[swapchain->current_texture_index];
+	return swapchain->textures[swapchain->current_texture_index];
 }
 
 internal inline GFX_TextureView *

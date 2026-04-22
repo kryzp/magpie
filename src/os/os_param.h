@@ -3,7 +3,7 @@
 
 // The total amount of memory
 // allocated to the App.
-#define OS_PROCESS_MEMORY              Gigabytes(4)
+#define OS_PROCESS_MEMORY              Gigabytes(5)
 
 // The total amount of memory
 // allocated to the Platform Layer.

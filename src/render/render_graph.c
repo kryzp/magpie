@@ -829,8 +829,11 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 
 	R_GraphTexture *backbuffer = R_GraphTextureFromHandle(graph, graph->backbuffer_handle);
 
-	const GFX_Texture *src_texture = GFX_DeviceTextureFromKey(device, backbuffer->physical_key);
-	const GFX_Texture *dst_texture = GFX_SwapchainCurrentTexture(swapchain);
+	GFX_TextureKey src_texture_key = backbuffer->physical_key;
+	GFX_TextureKey dst_texture_key = GFX_SwapchainCurrentTexture(swapchain);
+	
+	const GFX_Texture *src_texture = GFX_DeviceTextureFromKey(device, src_texture_key);
+	const GFX_Texture *dst_texture = GFX_DeviceTextureFromKey(device, dst_texture_key);
 
 	// Backbuffer = Transfer Source
 	// Swapchain  = Trandfer Destination
@@ -886,7 +889,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	blit.dstSubresource.baseArrayLayer = 0;
 	blit.dstSubresource.layerCount = 1;
 
-	GFX_CmdBlit(cmd, src_texture, dst_texture, 1, &blit, VK_FILTER_LINEAR);
+	GFX_CmdBlit(cmd, src_texture_key, dst_texture_key, 1, &blit, VK_FILTER_LINEAR);
 
 	
 	// Transition swpachain to present.
@@ -914,16 +917,16 @@ R_GraphPresentToSwapchain(R_Graph *graph,
  * THE RESOURCE NEVER GETS MODIFIED AS FAR AS I CARE
  */
 
-internal const GFX_Texture *
+internal GFX_TextureKey
 R_GraphResolveTexture(const R_Graph *graph,
 					  const GFX_Device *device,
 					  R_GraphTexHandle handle)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
-	return GFX_DeviceTextureFromKey(device, t->physical_key);
+	return t->physical_key;
 }
 
-internal const GFX_TextureView *
+internal GFX_TextureViewKey
 R_GraphResolveTextureView(const R_Graph *graph,
 						  GFX_Device *device,
 						  R_GraphTexHandle handle,
@@ -938,30 +941,27 @@ R_GraphResolveTextureView(const R_Graph *graph,
 	create_info.type = GFX_TextureDefaultViewType(physical);
 	create_info.range = range;
 	
-	GFX_TextureViewKey view_key = GFX_DeviceTextureViewFetch(device, &create_info);
-
-	return GFX_DeviceTextureViewFromKey(device, view_key);
+	return GFX_DeviceTextureViewFetch(device, &create_info);
 }
 
-internal const GFX_Buffer *
+internal GFX_BufferKey
 R_GraphResolveBuffer(const R_Graph *graph,
 					 const GFX_Device *device,
 					 R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
-	return GFX_DeviceBufferFromKey(device, b->physical_key);
+	return b->physical_key;
 }
 
-internal GFX_BufferRange
+internal R_BufferRange
 R_GraphResolveBufferRange(const R_Graph *graph,
 						  const GFX_Device *device,
 						  R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
-	const GFX_Buffer *physical = GFX_DeviceBufferFromKey(device, b->physical_key);
 
-	GFX_BufferRange range = {0};
-	range.buffer = physical;
+	R_BufferRange range = {0};
+	range.buffer = b->physical_key;
 	range.size = b->buffer_info.size;
 	range.offset = 0;
 
@@ -989,7 +989,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, GFX_Device *device, const R_Pass
 		render_info.width  = MaxValue(1u, (u32)info->size_x >> out->attachment_range.base_mip);
 		render_info.height = MaxValue(1u, (u32)info->size_y >> out->attachment_range.base_mip);
 
-		const GFX_TextureView *view = R_GraphResolveTextureView(graph, device, out->handle, out->attachment_range);
+		GFX_TextureViewKey view = R_GraphResolveTextureView(graph, device, out->handle, out->attachment_range);
 
 		VkRenderingAttachmentInfo vk_info = {0};
 		vk_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -997,7 +997,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, GFX_Device *device, const R_Pass
 		vk_info.loadOp = out->should_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_info.imageView = view->handle;
+		vk_info.imageView = GFX_DeviceTextureViewFromKey(device, view)->handle;
 		vk_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		// TODO: support MSAA!!!

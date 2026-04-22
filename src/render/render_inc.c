@@ -7,3 +7,5 @@
 #include "render_pass.c"
 #include "render_tracker.c"
 #include "render_graph.c"
+
+#include "pass/render_pass_inc.c"

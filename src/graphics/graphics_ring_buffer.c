@@ -7,10 +7,8 @@ GFX_RingBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 	ring.capacity = alloc_info->size;
 	ring.used = 0;
 
-	GFX_Buffer *gfx_buffer = GFX_DeviceBufferFromKey(device, ring.buffer);
-	
-	ring.base_cpu = GFX_BufferMap(gfx_buffer);
-	ring.base_gpu = GFX_BufferAddress(gfx_buffer);
+	ring.base_cpu = GFX_DeviceBufferMap(device, ring.buffer);
+	ring.base_gpu = GFX_DeviceBufferAddress(device, ring.buffer);
 
 	return ring;
 }

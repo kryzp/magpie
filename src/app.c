@@ -162,10 +162,11 @@ AppInitGraphics(App *app)
 	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
 
 	app->cubemap_capture_transform_buffer = GFX_DeviceBufferAlloc(&app->graphics_device, &cubemap_capture_buffer_alloc_info);
-
-	GFX_BufferWrite(GFX_DeviceBufferFromKey(&app->graphics_device, app->cubemap_capture_transform_buffer),
-					capture_view_matrices,
-					sizeof(capture_view_matrices), 0);
+	
+	GFX_DeviceBufferWrite(&app->graphics_device,
+						  app->cubemap_capture_transform_buffer,
+						  capture_view_matrices,
+						  sizeof(capture_view_matrices), 0);
 }
 
 internal void
@@ -265,10 +266,11 @@ AppInit_(App *app)
 
 	// ---
 	
-	u64 render_half_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 2, 8);
+	u64 render_third_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 3, 8);
 
-	app->graph_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_half_size, 8);
-	app->scene_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_half_size, 8);
+	app->graph_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	
 	R_GraphInit(&app->graph, &app->graph_arena);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
@@ -434,6 +436,8 @@ AppTick(App *app, const I_State *input)
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	
+	ArenaClear(&app->pass_frame_arena);
+	
 	return false;
 }
 
@@ -469,8 +473,9 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.window_resolution = v2(1280.f, 720.f);
 	frame_data.time = elapsed;
 
-	GFX_BufferWrite(GFX_DeviceBufferFromKey(&app->graphics_device, app->frame_data_buffer),
-					&frame_data, sizeof(frame_data), 0);
+	GFX_DeviceBufferWrite(&app->graphics_device,
+						  app->frame_data_buffer,
+						  &frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
 }
