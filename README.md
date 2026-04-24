@@ -168,7 +168,7 @@ This does mean that global data is a little tricky because it gets reset wheneve
 1. Using as little globally-accessible data as possible.
 2. Re-Setting it whenever we hot reload.
 
-Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored. Thread-local state is maintained in `/os/`, for example. `/os/job/` could *theoretically* be moved out of the OS layer because the only thing it really needs is thread local state, which we can just expose from the OS layer, but it wouldn't be used by any other layer anyway, and realistically if you're trying to hot-reload the job system as it's running then you deserve to have that shit crash on you.
+Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored.
 
 `/os/` ultimately doesn't rely on the app at all or any layer "higher" than `/core/` and `/input/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
 

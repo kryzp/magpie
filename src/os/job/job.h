@@ -44,7 +44,7 @@ typedef struct JOB_Counter JOB_Counter;
 struct JOB_Counter
 {
 	u32 atomic_count;
-	b32 atomic_spinlock;
+	u32 atomic_spinlock;
 
 	// Fibers that are blocked waiting on this counter.
 	u32 waiting_count;
@@ -64,7 +64,7 @@ struct JOB_Request
 typedef struct JOB_Queue JOB_Queue;
 struct JOB_Queue
 {
-	b32 atomic_spinlock;
+	u32 atomic_spinlock;
 	
 	JOB_Request requests[JOB_MAX_JOBS_PER_QUEUE];
 	JOB_Fiber *waiting[JOB_MAX_JOBS_PER_QUEUE];
@@ -110,7 +110,7 @@ struct JOB_Scheduler
 
 	JOB_Fiber atomic_fiber_storage[JOB_MAX_CONCURRENT_FIBERS];
 
-	b32 fiber_pool_spinlock;
+	u32 fiber_pool_spinlock;
 	JOB_Fiber *fiber_pool_head;
 	
 	void (*OnMainThreadIdle)(void *ctx);

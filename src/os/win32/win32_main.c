@@ -419,6 +419,39 @@ OS_W32_ConvertFiberToThread(void)
 }
 
 internal u32
+OS_W32_TLSAlloc(void)
+{
+	u32 slot = TlsAlloc();
+	AssertTrue(slot != TLS_OUT_OF_INDEXES);
+	return slot;
+}
+
+internal void
+OS_W32_TLSFree(u32 slot)
+{
+	TlsFree(slot);
+}
+
+internal void *
+OS_W32_TLSGet(u32 slot)
+{
+	SetLastError(0);
+
+	void *value = TlsGetValue(slot);
+	
+	if (value == NULL && GetLastError() != 0)
+		AssertTrue(false && "Error with the call to get TLS.");
+	
+	return value;
+}
+
+internal void
+OS_W32_TLSSet(u32 slot, void *value)
+{
+	TlsSetValue(slot, value);
+}
+
+internal u32
 OS_W32_AtomicLoadU32(u32 *ptr)
 {
 	return InterlockedCompareExchange((volatile LONG *)ptr, 0, 0);
@@ -473,22 +506,46 @@ OS_W32_AtomicSubU32(u32 *ptr, u32 delta)
 }
 
 internal u64
-OS_W32_AtomicSubU64(volatile u64 *ptr, u64 delta)
+OS_W32_AtomicSubU64(u64 *ptr, u64 delta)
 {
 	return InterlockedExchangeAdd64((volatile LONGLONG *)ptr, -(LONGLONG)delta);
 }
 
-internal void
-OS_W32_SpinLockAcquire(b32 *lock)
+internal b32
+OS_W32_AtomicCASU32(u32 *ptr, u32 expected, u32 desired)
 {
-	while (OS_W32_AtomicStoreU32(lock, true))
-		OS_SPIN_PAUSE();
+	return InterlockedCompareExchange((volatile LONG *)ptr, (LONG)desired, (LONG)expected) == (LONG)expected;
+}
+
+internal b32
+OS_W32_AtomicCASU64(u64 *ptr, u64 expected, u64 desired)
+{
+	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, (LONGLONG)desired, (LONGLONG)expected) == (LONGLONG)expected;
+}
+
+internal b32
+OS_W32_AtomicCASPtr(void *ptr, void *expected, void *desired)
+{
+	return InterlockedCompareExchangePointer((volatile void *)ptr, desired, expected) == expected;
 }
 
 internal void
-OS_W32_SpinLockRelease(b32 *lock)
+OS_W32_SpinLockAcquire(u32 *lock)
 {
-	OS_W32_AtomicStoreU32(lock, false);
+	while (true)
+	{
+		if (InterlockedCompareExchange((volatile LONG *)lock, 1, 0) == 0)
+			break;
+		
+		while (InterlockedCompareExchange((volatile LONG *)lock, 0, 0))
+			OS_SPIN_PAUSE();
+	}
+}
+
+internal void
+OS_W32_SpinLockRelease(u32 *lock)
+{
+	InterlockedExchange((volatile LONG *)lock, 0);
 }
 
 internal OS_Handle
@@ -926,17 +983,28 @@ OS_W32_BindAPI(OS_API *api)
 	api->ConvertThreadToFiber        = OS_W32_ConvertThreadToFiber;
 	api->ConvertFiberToThread        = OS_W32_ConvertFiberToThread;
 
+	api->TLSAlloc                    = OS_W32_TLSAlloc;
+	api->TLSFree                     = OS_W32_TLSFree;
+	api->TLSGet                      = OS_W32_TLSGet;
+	api->TLSSet                      = OS_W32_TLSSet;
+	
 	api->AtomicLoadU32               = OS_W32_AtomicLoadU32;
 	api->AtomicLoadU64               = OS_W32_AtomicLoadU64;
 	api->AtomicLoadPtr               = OS_W32_AtomicLoadPtr;
+	
 	api->AtomicStoreU32              = OS_W32_AtomicStoreU32;
 	api->AtomicStoreU64              = OS_W32_AtomicStoreU64;
 	api->AtomicStorePtr              = OS_W32_AtomicStorePtr;
+	
 	api->AtomicAddU32                = OS_W32_AtomicAddU32;
 	api->AtomicAddU64                = OS_W32_AtomicAddU64;
 	api->AtomicSubU32                = OS_W32_AtomicSubU32;
 	api->AtomicSubU64                = OS_W32_AtomicSubU64;
-
+	
+	api->AtomicCASU32                = OS_W32_AtomicCASU32;
+	api->AtomicCASU64                = OS_W32_AtomicCASU64;
+	api->AtomicCASPtr                = OS_W32_AtomicCASPtr;
+	
 	api->SpinLockAcquire             = OS_W32_SpinLockAcquire;
 	api->SpinLockRelease             = OS_W32_SpinLockRelease;
 

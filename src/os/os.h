@@ -134,6 +134,16 @@ struct OS_API
 
 
 	/* ==================================================
+	   TLS
+	   ================================================== */
+	
+	u32   (*TLSAlloc) (void);
+	void  (*TLSFree)  (u32 slot);
+	void *(*TLSGet)   (u32 slot);
+	void  (*TLSSet)   (u32 slot, void *value);
+	
+
+	/* ==================================================
 	   ATOMICS
 	   ================================================== */
 
@@ -156,12 +166,17 @@ struct OS_API
 	u32   (*AtomicSubU32)    (u32 *ptr, u32 delta);
 	u64   (*AtomicSubU64)    (u64 *ptr, u64 delta);
 
+	b32   (*AtomicCASU32)    (u32  *ptr, u32   expected, u32   desired);
+	b32   (*AtomicCASU64)    (u64  *ptr, u64   expected, u64   desired);
+	b32   (*AtomicCASPtr)    (void *ptr, void *expected, void *desired);
+	
+	
 	/* ==================================================
 	   SPINLOCK
 	   ================================================== */
 
-	void (*SpinLockAcquire)(b32 *lock);
-	void (*SpinLockRelease)(b32 *lock);
+	void (*SpinLockAcquire)(u32 *lock);
+	void (*SpinLockRelease)(u32 *lock);
 
 
 	/* ==================================================
