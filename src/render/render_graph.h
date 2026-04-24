@@ -94,6 +94,8 @@ typedef struct R_Graph R_Graph;
 struct R_Graph
 {
 	Arena *permanent_arena;
+	
+	GFX_Device *device;
 
 	u32 texture_res_count; R_GraphTexture    texture_res[R_GRAPH_MAX_TEX_RESOURCES];
 	u32 texture_ver_count; R_GraphTexVersion texture_ver[R_GRAPH_MAX_TEX_VERSIONS];
@@ -118,10 +120,10 @@ struct R_Graph
    CORE
    ================================================== */
 
-internal void R_GraphInit(R_Graph *graph, Arena *arena);
-internal void R_GraphDestroy(R_Graph *graph, GFX_Device *device);
+internal void R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device);
+internal void R_GraphDestroy(R_Graph *graph);
 
-internal void R_GraphReset(R_Graph *graph, const GFX_Device *device);
+internal void R_GraphReset(R_Graph *graph);
 
 
 /* ==================================================
@@ -138,8 +140,8 @@ internal R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type);
 internal R_GraphTexHandle R_GraphCreateTexture (R_Graph *graph, const R_TextureInfo *info);
 internal R_GraphBufHandle R_GraphCreateBuffer  (R_Graph *graph, const R_BufferInfo *info);
 
-internal R_GraphTexHandle R_GraphImportTexture (R_Graph *graph, const GFX_Device *device, GFX_TextureKey external_key);
-internal R_GraphBufHandle R_GraphImportBuffer  (R_Graph *graph, const GFX_Device *device, GFX_BufferKey external_key);
+internal R_GraphTexHandle R_GraphImportTexture (R_Graph *graph, GFX_TextureKey external_key);
+internal R_GraphBufHandle R_GraphImportBuffer  (R_Graph *graph, GFX_BufferKey external_key);
 
 
 // --- Versioning
@@ -152,18 +154,18 @@ internal R_GraphBufHandle R_GraphPushBufVersion (R_Graph *graph, R_GraphBufHandl
    COMPILATION
    ================================================== */
 
-internal void R_GraphCompile(R_Graph *graph, GFX_Device *device, const GFX_Swapchain *swapchain);
+internal void R_GraphCompile(R_Graph *graph, const GFX_Swapchain *swapchain);
 
 internal void R_GraphPropagateDependencies     (R_Graph *graph);
 internal void R_GraphBackpropagateDependencies (R_Graph *graph);
-internal void R_GraphAllocateResources         (R_Graph *graph, GFX_Device *device, const GFX_Swapchain *swapchain);
-internal void R_GraphGenerateBarriers          (R_Graph *graph, const GFX_Device *device);
+internal void R_GraphAllocateResources         (R_Graph *graph, const GFX_Swapchain *swapchain);
+internal void R_GraphGenerateBarriers          (R_Graph *graph);
 
-internal void R_GraphSyncTextureRead  (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassTextureEdge *edge);
-internal void R_GraphSyncTextureWrite (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassTextureEdge *edge);
+internal void R_GraphSyncTextureRead  (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
+internal void R_GraphSyncTextureWrite (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
 
-internal void R_GraphSyncBufferRead   (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassBufferEdge *edge);
-internal void R_GraphSyncBufferWrite  (R_Graph *graph, const GFX_Device *device, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferRead   (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferWrite  (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
 
 
 /* ==================================================
@@ -171,7 +173,6 @@ internal void R_GraphSyncBufferWrite  (R_Graph *graph, const GFX_Device *device,
    ================================================== */
 
 internal void R_GraphExecute(R_Graph *graph,
-							 GFX_Device *device,
 							 const GFX_Swapchain *swapchain,
 							 GFX_CmdBuffer *cmd,
 							 const R_Scene *scene,
@@ -179,7 +180,6 @@ internal void R_GraphExecute(R_Graph *graph,
 							 f32 delta_time, f32 elapsed_time);
 
 internal void R_GraphPresentToSwapchain(R_Graph *graph,
-										const GFX_Device *device,
 										const GFX_Swapchain *swapchain,
 										GFX_CmdBuffer *cmd);
 
@@ -188,10 +188,10 @@ internal void R_GraphPresentToSwapchain(R_Graph *graph,
    RESOURCE RESOLUTION
    ================================================== */
 
-internal GFX_TextureKey     R_GraphResolveTexture     (const R_Graph *graph, const GFX_Device *device, R_GraphTexHandle handle);
-internal GFX_TextureViewKey R_GraphResolveTextureView (const R_Graph *graph,       GFX_Device *device, R_GraphTexHandle handle, GFX_SubresourceRange range);
-internal GFX_BufferKey      R_GraphResolveBuffer      (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
-internal R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, const GFX_Device *device, R_GraphBufHandle handle);
+internal GFX_TextureKey     R_GraphResolveTexture     (const R_Graph *graph, R_GraphTexHandle handle);
+internal GFX_TextureViewKey R_GraphResolveTextureView (const R_Graph *graph, R_GraphTexHandle handle, GFX_SubresourceRange range);
+internal GFX_BufferKey      R_GraphResolveBuffer      (const R_Graph *graph, R_GraphBufHandle handle);
+internal R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, R_GraphBufHandle handle);
 
 
 /* ==================================================
@@ -200,7 +200,7 @@ internal R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, con
 
 internal void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle);
 
-internal GFX_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, GFX_Device *device, const R_Pass *pass);
+internal GFX_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass);
 
 internal R_GraphTexture *R_GraphTextureFromHandle (R_Graph *graph, R_GraphTexHandle handle);
 internal R_GraphBuffer  *R_GraphBufferFromHandle  (R_Graph *graph, R_GraphBufHandle handle);

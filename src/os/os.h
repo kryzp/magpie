@@ -19,12 +19,20 @@ typedef enum JOB_Priority
 }
 JOB_Priority;
 
+typedef u32 JOB_Flags;
+enum
+{
+	JOB_Flag_None           = 0,
+	JOB_Flag_MainThreadOnly = 1 << 0
+};
+
 typedef struct JOB_Decl JOB_Decl;
 struct JOB_Decl
 {
 	JOB_EntryPointFn *EntryPoint;
-	JOB_Priority priority;
 	void *param;
+	JOB_Priority priority;
+	JOB_Flags flags;
 };
 
 typedef struct JOB_Counter JOB_Counter;

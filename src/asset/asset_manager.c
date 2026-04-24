@@ -60,14 +60,18 @@ AST_AllocRecord(AST_Assets *assets, String8 path)
 internal AST_Record *
 AST_GetRecord(AST_Assets *assets, AST_Handle handle)
 {
-	AssertTrue(AST_IsValid(assets, handle));
+	if (!AST_IsValid(assets, handle))
+		return NULL;
+
 	return &assets->records[handle.index];
 }
 
 internal const AST_Record *
 AST_GetRecordConst(const AST_Assets *assets, AST_Handle handle)
 {
-	AssertTrue(AST_IsValid(assets, handle));
+	if (!AST_IsValid(assets, handle))
+		return NULL;
+
 	return &assets->records[handle.index];
 }
 
@@ -165,7 +169,7 @@ AST_Init(AST_Assets *assets, Arena *arena,
 	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
 	
-	assets->async_upload_counter = osapi->JobCounterAlloc(arena, 0);
+	assets->async_counter = osapi->JobCounterAlloc(arena, 0);
 
 	assets->upload_mutex     = osapi->MutexCreate();
 	assets->dependency_mutex = osapi->MutexCreate();
@@ -302,7 +306,7 @@ AST_LoadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type)
 	AST_Record *record = AST_GetRecord(assets, handle);
 
 	if (AST_StateNeedsLoad(record->state))
-		AST_Load(assets, handle, type, assets->async_upload_counter);
+		AST_Load(assets, handle, type, assets->async_counter);
 }
 
 internal void
@@ -311,7 +315,7 @@ AST_ReloadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type)
 	AST_Record *record = AST_GetRecord(assets, handle);
 
 	if (!AST_StateIsLoading(record->state))
-		AST_Load(assets, handle, type, assets->async_upload_counter);
+		AST_Load(assets, handle, type, assets->async_counter);
 }
 
 JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
@@ -527,7 +531,7 @@ AST_PollHotReloads(AST_Assets *assets)
 internal void
 AST_FlushUploads(AST_Assets *assets)
 {
-	AST_ResolvePendingDependencies(assets, assets->async_upload_counter);
+	AST_ResolvePendingDependencies(assets, assets->async_counter);
 
 	osapi->MutexLock(assets->upload_mutex);
 
@@ -670,9 +674,39 @@ AST_FlushUploads(AST_Assets *assets)
 }
 
 internal void
-AST_WaitForAsyncUploads(AST_Assets *assets)
+AST_WaitForAsync(AST_Assets *assets)
 {
-	osapi->JobYield(assets->async_upload_counter, 0);
+	osapi->JobYield(assets->async_counter, 0);
+}
+
+internal void
+AST_SetFallback(AST_Assets *assets, AST_Handle handle, AST_Type type)
+{
+	AssertTrue(AST_IsLoaded(assets, handle));
+	assets->fallbacks[type] = handle;
+}
+
+internal AST_Asset *
+AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
+{
+	AST_Record *record = AST_GetRecord(assets, handle);
+	
+	if (record &&
+		AST_StateIsLoaded(record->state) &&
+		record->asset.type == type)
+	{
+		return &record->asset;
+	}
+	
+	AST_Record *fallback = AST_GetRecord(assets, assets->fallbacks[type]);
+	if (fallback &&
+		AST_StateIsLoaded(fallback->state))
+	{
+		return &fallback->asset;
+	}
+	
+	// we're fucked basically
+	return &assets->null_asset_sentinel;
 }
 
 internal AST_Handle
@@ -680,7 +714,7 @@ AST_FromFilePath(AST_Assets *assets, String8 path)
 {
 	AST_Handle existing = AST_PathMapFind(assets, path);
 
-	if (!AST_HandleIsNull(existing))
+	if (AST_IsValid(assets, existing))
 		return existing;
 
 	osapi->MutexLock(assets->allocation_mutex);

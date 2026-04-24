@@ -71,9 +71,6 @@ struct AST_ModelLoadData
 internal void
 AST_ModelAddDependency(AST_ModelLoadData *load, Arena *arena, AST_Handle handle)
 {
-	if (AST_HandleIsNull(handle))
-		return;
-
 	AST_ModelLoadDep *dep = ArenaPushArray(arena, AST_ModelLoadDep, 1);
 	dep->handle = handle;
 	dep->next = load->first_dep;
@@ -102,7 +99,8 @@ AST_ModelTryFetchTexture(const AST_Context *ctx,
 
 	AST_Handle handle = AST_FromFilePath(ctx->assets, full_path);
 
-	AST_ModelAddDependency(load, ctx->scope, handle);
+	if (AST_IsValid(ctx->assets, handle))
+		AST_ModelAddDependency(load, ctx->scope, handle);
 
 	return handle;
 }

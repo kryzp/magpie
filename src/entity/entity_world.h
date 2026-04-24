@@ -1,7 +1,8 @@
 #ifndef ENTITY_WORLD_H
 #define ENTITY_WORLD_H
 
-#define ENT_WORLD_MAX_SCENE_LAYERS 16
+#define ENT_WORLD_MAX_SCENE_LAYERS    16
+#define ENT_WORLD_MAX_MARKERS         512
 
 typedef struct ENT_TypePool ENT_TypePool;
 struct ENT_TypePool
@@ -25,6 +26,21 @@ struct ENT_Locator
 };
 */
 
+/*
+ * Markers are just useful ways to quickly "mark"
+ * points in the world ahead of time for use in
+ * code.
+ */
+typedef struct ENT_Marker ENT_Marker;
+struct ENT_Marker
+{
+	String8 name;
+	u64 name_hash;
+	v3 position;
+	v4 rotation;
+	u16 layer_id;
+};
+
 typedef struct ENT_World ENT_World;
 struct ENT_World
 {
@@ -35,6 +51,9 @@ struct ENT_World
 	ENT_SceneLayer layers[ENT_WORLD_MAX_SCENE_LAYERS];
 	u32 layer_count;
 
+	ENT_Marker markers[ENT_WORLD_MAX_MARKERS];
+	u32 marker_count;
+	
 	u32 next_uid;
 };
 
@@ -95,6 +114,14 @@ struct ENT_GetAllReceipt
 };
 
 internal ENT_GetAllReceipt ENT_WorldGetAll(ENT_World *world, ENT_Type type);
+
+
+/* ==================================================
+   MARKERS
+   ================================================== */
+
+internal ENT_Marker *ENT_WorldAddMarker  (ENT_World *world, String8 name, v3 position, v4 rotation, u16 layer_id);
+internal ENT_Marker *ENT_WorldFindMarker (ENT_World *world, String8 name);
 
 
 #endif // ENTITY_WORLD_H

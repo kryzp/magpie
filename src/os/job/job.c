@@ -95,6 +95,32 @@ JOB_GetCurrentFiberHandle(JOB_Scheduler *scheduler)
 internal JOB_Request *
 JOB_TryGetRequest(JOB_Scheduler *scheduler)
 {
+	if (JOB_IsMainThread(scheduler))
+	{
+		JOB_Queue *mtq = &scheduler->main_thread_queue;
+		
+		if (mtq->atomic_added_task_count > mtq->atomic_taken_task_count)
+		{
+			osapi->SpinLockAcquire(&mtq->atomic_spinlock);
+ 
+			u32 t = osapi->AtomicLoadU32(&mtq->atomic_taken_task_count);
+			u32 a = osapi->AtomicLoadU32(&mtq->atomic_added_task_count);
+ 
+			JOB_Request *request = NULL;
+		
+			if (a > t)
+				{
+					request = &mtq->requests[t % JOB_MAX_JOBS_PER_QUEUE];
+					mtq->atomic_taken_task_count = t + 1;
+				}
+
+			osapi->SpinLockRelease(&mtq->atomic_spinlock);
+		
+			if (request)
+				return request;
+		}
+	}
+	
 	for (i32 i = JOB_Priority_COUNT - 1; i >= 0; i--)
 	{
 		JOB_Queue *queue = &scheduler->queues[i];
@@ -108,6 +134,7 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 		u32 a = osapi->AtomicLoadU32(&queue->atomic_added_task_count);
  
 		JOB_Request *request = NULL;
+		
 		if (a > t)
 		{
 			request = &queue->requests[t % JOB_MAX_JOBS_PER_QUEUE];
@@ -246,9 +273,6 @@ JOB_SchedulerThreadEntry(void *param)
  
 	while (osapi->AtomicLoadU32(&scheduler->atomic_running))
 	{
-		if (JOB_IsMainThread(scheduler))
-			scheduler->MessagePump();
- 
 		// Check for a fiber to resume.
 		JOB_Fiber *waiting_fiber = JOB_TryGetWaitingFiber(scheduler);
 		if (waiting_fiber)
@@ -285,7 +309,7 @@ JOB_SchedulerThreadEntry(void *param)
 			fiber->finished   = false;
  
 			worker->current_fiber = fiber;
-
+			
 			osapi->SwitchToFiber(fiber->handle);
  
 			if (worker->current_fiber->finished)
@@ -296,16 +320,19 @@ JOB_SchedulerThreadEntry(void *param)
 			continue;
 		}
  
-		// Wait until we have more work to do.
-
-		if (osapi->AtomicLoadU32(&scheduler->atomic_spin_mode))
+		// Wait until we have more work to do...
+		
+		b32 is_main_thread = JOB_IsMainThread(scheduler);
+		
+		if (is_main_thread || osapi->AtomicLoadU32(&scheduler->atomic_spin_mode))
 		{
 			// High-Perf Spin Mode.
+			// Main thread always goes here because it can pump messages.
 			
 			while (!JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
 			{
-				if (JOB_IsMainThread(scheduler))
-					scheduler->MessagePump();
+				if (scheduler->OnMainThreadIdle && is_main_thread)
+					scheduler->OnMainThreadIdle(scheduler->main_thread_idle_ctx);
 				
 				if (!osapi->AtomicLoadU32(&scheduler->atomic_spin_mode))
 					break;
@@ -361,9 +388,11 @@ JOB_FiberEntry(void *param)
 }
 
 internal void
-JOB_Enter(JOB_Scheduler *scheduler, void (*MessagePump)(void))
+JOB_Enter(JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx)
 {
-	scheduler->MessagePump = MessagePump;
+	scheduler->OnMainThreadIdle = OnMainThreadIdle;
+	scheduler->main_thread_idle_ctx = main_thread_idle_ctx;
+	
 	JOB_SchedulerThreadEntry(&scheduler->workers[0]);
 }
 
@@ -446,6 +475,9 @@ JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 {
 	JOB_Queue *queue = &scheduler->queues[request->priority];
 
+	if (request->flags & JOB_Flag_MainThreadOnly)
+		queue = &scheduler->main_thread_queue;
+	
 	while (true)
 	{
 		osapi->SpinLockAcquire(&queue->atomic_spinlock);
@@ -540,6 +572,7 @@ JOB_Kick(JOB_Scheduler *scheduler, const JOB_Decl *decl, JOB_Counter *counter)
 	request.EntryPoint  = decl->EntryPoint;
 	request.param       = decl->param;
 	request.priority    = decl->priority;
+	request.flags       = decl->flags;
 	request.counter     = counter;
  
 	JOB_Push(scheduler, &request);
@@ -561,6 +594,7 @@ JOB_Batch(JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, JOB_Counte
 		request.EntryPoint  = decls[i].EntryPoint;
 		request.param       = decls[i].param;
 		request.priority    = decls[i].priority;
+		request.flags       = decls[i].flags;
 		request.counter     = counter;
  
 		JOB_Push(scheduler, &request);
@@ -615,6 +649,7 @@ JOB_For(JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority pr
 		decls[i].EntryPoint	= JOB_ParallelForBatchEntry;
 		decls[i].param = &params[i];
 		decls[i].priority = priority;
+		decls[i].flags = JOB_Flag_None;
 	}
  
 	JOB_Counter counter = {0};

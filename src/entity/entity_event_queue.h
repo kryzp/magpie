@@ -9,15 +9,16 @@ typedef struct ENT_World ENT_World;
 #define ENT_EVENT_QUEUE_MAX_PER_FRAME  512
 #define ENT_EVENT_QUEUE_MAX_BINDINGS   512
 
-typedef void ENT_EventHandlerFn(void *entity, const ENT_Event *event);
+typedef void ENT_EventHandlerFn(void *entity, const ENT_Event *event, void *ctx);
 
-// listeners
 typedef struct ENT_EventBinding ENT_EventBinding;
 struct ENT_EventBinding
 {
+	u64 listener_id;
 	ENT_Type entity_type;
 	ENT_EventType event_type;
 	ENT_EventHandlerFn *Handler;
+	void *ctx;
 };
 
 typedef struct ENT_EventQueue ENT_EventQueue;
@@ -28,16 +29,24 @@ struct ENT_EventQueue
 
 	ENT_EventBinding bindings[ENT_EVENT_QUEUE_MAX_BINDINGS];
 	u32 binding_count;
+	
+	u64 next_listener_id;
 };
 
 internal void ENT_EventQueueInit(ENT_EventQueue *q);
 
 internal void ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev);
 
+internal u64  ENT_EventListenerRegister(ENT_EventQueue *q);
+
 internal void ENT_EventBind(ENT_EventQueue *q,
+							u64 listener_id,
 							ENT_Type entity_type,
 							ENT_EventType event_type,
-							ENT_EventHandlerFn *Handler);
+							ENT_EventHandlerFn *Handler,
+							void *ctx);
+
+internal void ENT_EventUnbindAll(ENT_EventQueue *q, u64 listener_id);
 
 internal void ENT_EventDispatch(ENT_EventQueue *q, ENT_World *world);
 

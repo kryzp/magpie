@@ -1,5 +1,5 @@
 
-// TODO: Move these out into their respective
+// Todo: Move these out into their respective
 //       backends.
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -272,11 +272,17 @@ AppInit_(App *app)
 	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	
-	R_GraphInit(&app->graph, &app->graph_arena);
+	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
+	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	
+	AST_WaitForAsync(&app->assets);
+	
+	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+	
 	// ---
 	
 	AppInitEntity(app);
@@ -354,7 +360,7 @@ AppDestroy(App *app)
 	AppDestroyEntity(app);
 
 	R_SceneDestroy(&app->scene);
-	R_GraphDestroy(&app->graph, &app->graphics_device);
+	R_GraphDestroy(&app->graph);
 
 	AppDestroyAssets(app);
 	AppDestroyAudio(app);
@@ -429,10 +435,10 @@ AppTick(App *app, const I_State *input)
 		R_PassWriteColour(dummy, app->swapchain_src, &clear);
 
 		R_GraphSetBackbuffer(&app->graph, app->swapchain_src);
-		R_GraphCompile(&app->graph, &app->graphics_device, &app->swapchain);
-		R_GraphExecute(&app->graph, &app->graphics_device, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
-		R_GraphPresentToSwapchain(&app->graph, &app->graphics_device, &app->swapchain, &cmd);
-		R_GraphReset(&app->graph, &app->graphics_device);
+		R_GraphCompile(&app->graph, &app->swapchain);
+		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
+		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
+		R_GraphReset(&app->graph);
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	

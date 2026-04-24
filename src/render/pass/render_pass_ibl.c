@@ -67,7 +67,6 @@ R_PASS_RECORD_DEF(R_IBLPassRenderIrradianceRecord)
 internal void
 R_IBLPassRenderIrradiance(R_Graph *graph,
 						  Arena *frame_arena,
-						  const GFX_Device *device,
 						  GFX_TextureKey out,
 						  GFX_TextureKey environment_map,
 						  const R_Mesh *skybox,
@@ -75,7 +74,7 @@ R_IBLPassRenderIrradiance(R_Graph *graph,
 {
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Irradiance"), R_PassType_Graphics);
 	
-	R_GraphTexHandle out_handle = R_GraphImportTexture(graph, device, out);
+	R_GraphTexHandle out_handle = R_GraphImportTexture(graph, out);
 	
 	R_IBLPassRenderIrradianceRecordUserData *user_data = ArenaPushArray(frame_arena, R_IBLPassRenderIrradianceRecordUserData, 1);
 	user_data->shader = GFX_ShaderKeyNull();
@@ -96,7 +95,6 @@ R_PASS_RECORD_DEF(R_IBLPassRenderPrefilterRecord)
 internal void
 R_IBLPassRenderPrefilter(R_Graph *graph,
 						 Arena *frame_arena,
-						 const GFX_Device *device,
 						 GFX_TextureKey out,
 						 GFX_TextureKey environment_map,
 						 const R_Mesh *skybox,

@@ -67,7 +67,7 @@ struct OS_W32_Code
 	OS_EntryHotUnloadFn   *HotUnload;
 };
 
-#define OS_W32_MAX_PENDING_EVENTS 512
+#define OS_W32_MAX_PENDING_EVENTS 1024
 
 typedef struct OS_W32_State OS_W32_State;
 struct OS_W32_State
@@ -87,7 +87,7 @@ struct OS_W32_State
 
 	OS_Handle event_mutex;
 	u32 pending_event_count;
-	SDL_Event pending_events[OS_W32_MAX_PENDING_EVENTS];
+	SDL_Event *pending_events;
 
 	JOB_Scheduler scheduler;
 
@@ -842,37 +842,6 @@ OS_W32_DestroyImGui(void)
 	*/
 }
 
-internal void
-OS_W32_MessagePump(void)
-{
-	SDL_Event local_events[OS_W32_MAX_PENDING_EVENTS] = {0};
-	u32 local_event_count = 0;
-
-	SDL_Event ev = {0};
-
-	while (SDL_PollEvent(&ev) && local_event_count < ArraySize(local_events))
-		local_events[local_event_count++] = ev;
-
-	if (local_event_count > 0)
-	{
-		OS_W32_MutexLock(win32_st.event_mutex);
-
-		// ---
-		
-		AssertTrue(win32_st.pending_event_count < OS_W32_MAX_PENDING_EVENTS);
-		
-		u32 available_space = OS_W32_MAX_PENDING_EVENTS - win32_st.pending_event_count;
-		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
-
-		MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
-		win32_st.pending_event_count += copy_count;
-
-		// ---
-		
-		OS_W32_MutexUnlock(win32_st.event_mutex);
-	}
-}
-
 internal JOB_Counter *
 OS_W32_JobCounterAlloc(Arena *arena, u32 initial_count)
 {
@@ -1018,9 +987,44 @@ OS_W32_BindAPI(OS_API *api)
 }
 
 internal void
+OS_W32_MessagePump(void *ctx)
+{
+	SDL_Event local_events[OS_W32_MAX_PENDING_EVENTS];
+	u32 local_event_count = 0;
+
+	SDL_Event ev = {0};
+
+	while (SDL_PollEvent(&ev) && local_event_count < ArraySize(local_events))
+		local_events[local_event_count++] = ev;
+
+	if (local_event_count > 0)
+	{
+		OS_W32_MutexLock(win32_st.event_mutex);
+
+		// ---
+		
+		AssertTrue(win32_st.pending_event_count <= OS_W32_MAX_PENDING_EVENTS);
+		
+		u32 available_space = OS_W32_MAX_PENDING_EVENTS - win32_st.pending_event_count;
+		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
+
+		MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
+		win32_st.pending_event_count += copy_count;
+
+		// ---
+		
+		OS_W32_MutexUnlock(win32_st.event_mutex);
+	}
+}
+
+internal void
 OS_W32_ProcessEvents(I_State *input_out)
 {
-	SDL_Event events[OS_W32_MAX_PENDING_EVENTS] = {0};
+	OS_W32_MessagePump(NULL);
+	
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+	
+	SDL_Event *events = ArenaPushArray(scratch.arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	u32 event_count = 0;
 
 	OS_W32_MutexLock(win32_st.event_mutex);
@@ -1121,6 +1125,8 @@ OS_W32_ProcessEvents(I_State *input_out)
 				break;
 		}
 	}
+	
+	ScratchRelease(&scratch);
 }
 
 JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
@@ -1144,6 +1150,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		JOB_Decl next_frame_job = {0};
 		next_frame_job.EntryPoint = OS_W32_FrameJobEntry;
 		next_frame_job.priority = JOB_Priority_Normal;
+		next_frame_job.flags = JOB_Flag_MainThreadOnly;
 
 		JOB_Kick(&win32_st.scheduler, &next_frame_job, NULL);
 	}
@@ -1156,6 +1163,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 	JOB_Decl first_frame_job = {0};
 	first_frame_job.EntryPoint = OS_W32_FrameJobEntry;
 	first_frame_job.priority = JOB_Priority_Normal;
+	first_frame_job.flags = JOB_Flag_MainThreadOnly;
 
 	JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
@@ -1188,7 +1196,7 @@ main(void)
 										   window_flags);
 
 	OS_W32_BindAPI(&win32_st.api);
-
+	
 	osapi = &win32_st.api;
 
 	DebugLogF("Initializing ImGui...");
@@ -1205,6 +1213,8 @@ main(void)
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);
 
 	win32_st.object_arena = ArenaInitArena(&win32_st.process_arena, OS_LAYER_MEMORY, 8);
+
+	win32_st.pending_events = ArenaPushArray(&win32_st.object_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	
 	DebugLogF("Allocated!");
 	
@@ -1215,10 +1225,11 @@ main(void)
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
 	root_job.priority = JOB_Priority_Normal;
+	root_job.flags = JOB_Flag_MainThreadOnly;
 
 	JOB_Kick(&win32_st.scheduler, &root_job, NULL);
 	
-	JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump);
+	JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
 	
 	win32_st.code.Destroy(win32_st.app);
 	

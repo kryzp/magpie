@@ -14,22 +14,51 @@ ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev)
 	AssertTrue(q->event_count < ArraySize(q->events));
 }
 
+internal u64
+ENT_EventListenerRegister(ENT_EventQueue *q)
+{
+	return q->next_listener_id++;
+}
+
 internal void
 ENT_EventBind(ENT_EventQueue *q,
+			  u64 listener_id,
 			  ENT_Type entity_type,
 			  ENT_EventType event_type,
-			  ENT_EventHandlerFn *Handler)
+			  ENT_EventHandlerFn *Handler,
+			  void *ctx)
 {
 	ENT_EventBinding binding = {0};
+	binding.listener_id = listener_id;
 	binding.entity_type = entity_type;
 	binding.event_type = event_type;
 	binding.Handler = Handler;
+	binding.ctx = ctx;
 	
 	q->bindings[q->binding_count] = binding;
 	q->binding_count++;
 
-	AssertTrue(q->binding_count < ArraySize(q->bindings));
+	AssertTrue(q->binding_count < ArraySize(q->bindings));	
+}
+
+internal void
+ENT_EventUnbindAll(ENT_EventQueue *q, u64 listener_id)
+{
+	u32 cursor = 0;
 	
+	// Since we can't "delete" from the array
+	// we can just rewrite over all of the
+	// bindings.
+	for (u32 b = 0; b < q->binding_count; b++)
+	{
+		if (q->bindings[b].listener_id != listener_id)
+		{
+			q->bindings[cursor] = q->bindings[b];
+			cursor++;
+		}
+	}
+	
+	q->binding_count = cursor;
 }
 
 internal void
@@ -69,7 +98,7 @@ ENT_EventSignal(ENT_EventQueue *q, ENT_Event *event, void *entity)
 		if (b->entity_type == header->type &&
 			b->event_type == event->type)
 		{
-			b->Handler(entity, event);
+			b->Handler(entity, event, b->ctx);
 			break;
 		}
 	}
@@ -97,7 +126,7 @@ ENT_EventBroadcast(ENT_EventQueue *q, ENT_Event *event, ENT_World *world)
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			b->Handler(entity, event);
+			b->Handler(entity, event, b->ctx);
 		}
 	}
 }

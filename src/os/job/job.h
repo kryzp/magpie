@@ -57,6 +57,7 @@ struct JOB_Request
 	JOB_EntryPointFn *EntryPoint;
 	void *param;
 	JOB_Priority priority;
+	JOB_Flags flags;
 	JOB_Counter *counter;
 };
 
@@ -80,8 +81,6 @@ typedef struct JOB_Scheduler JOB_Scheduler;
 typedef struct JOB_Worker JOB_Worker;
 struct JOB_Worker
 {
-	JOB_Worker *next;
-	
 	u32 id;
 	
 	OS_Handle thread_handle;
@@ -89,10 +88,6 @@ struct JOB_Worker
 
 	JOB_Fiber *current_fiber; // The fiber currently executing on this worker.
 
-	// Yes this is fucking retarded but ICBA
-	// and the thread entry needs to know about
-	// the job scheduler somehow.
-	// Yes I could just make it a global but
 	// you know what fuck you.
 	JOB_Scheduler *scheduler;
 };
@@ -106,6 +101,8 @@ struct JOB_Scheduler
 	OS_Handle mutex;
 	OS_Handle cond_begin;
 
+	JOB_Queue main_thread_queue;
+	
 	JOB_Queue queues[JOB_Priority_COUNT];
 	
 	u32 worker_count;
@@ -116,7 +113,8 @@ struct JOB_Scheduler
 	b32 fiber_pool_spinlock;
 	JOB_Fiber *fiber_pool_head;
 	
-	void (*MessagePump)(void);
+	void (*OnMainThreadIdle)(void *ctx);
+	void *main_thread_idle_ctx;
 };
 
 
@@ -151,7 +149,7 @@ internal void JOB_Shutdown(JOB_Scheduler *scheduler);
 internal void JOB_SchedulerThreadEntry(void *param);
 internal void JOB_FiberEntry(void *param);
 
-internal void JOB_Enter(JOB_Scheduler *scheduler, void (*MessagePump)(void));
+internal void JOB_Enter(JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
 internal void JOB_Halt(JOB_Scheduler *scheduler);
 
 

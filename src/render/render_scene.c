@@ -544,7 +544,7 @@ R_SceneResolveTextureBindless(const R_Scene *scene,
 							  const AST_Assets *assets,
 							  AST_Handle handle)
 {
-	if (AST_HandleIsNull(handle))
+	if (!AST_IsValid(assets, handle))
 		return 0;
 
 	if (!AST_IsLoaded(assets, handle))

@@ -3,7 +3,6 @@
 
 internal void R_IBLPassRenderIrradiance(R_Graph *graph,
 										Arena *frame_arena,
-										const GFX_Device *device,
 										GFX_TextureKey out,
 										GFX_TextureKey environment_map,
 										const R_Mesh *skybox,
@@ -11,7 +10,6 @@ internal void R_IBLPassRenderIrradiance(R_Graph *graph,
 
 internal void R_IBLPassRenderPrefilter(R_Graph *graph,
 									   Arena *frame_arena,
-									   const GFX_Device *device,
 									   GFX_TextureKey out,
 									   GFX_TextureKey environment_map,
 									   const R_Mesh *skybox,

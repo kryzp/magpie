@@ -57,6 +57,9 @@ struct AST_Assets
 	u32 record_count;
 	AST_Record records[AST_MANAGER_MAX_RECORDS];
 	
+	AST_Handle fallbacks[AST_Type_COUNT];
+	AST_Asset null_asset_sentinel; // if a fallback doesn't exist for this asset
+	
 	u32 free_index_count;
 	u32 free_indices[AST_MANAGER_MAX_RECORDS];
 
@@ -67,7 +70,7 @@ struct AST_Assets
 	AST_MountPoint mount_points[8];
 	u32 mount_point_count;
 
-	JOB_Counter *async_upload_counter;
+	JOB_Counter *async_counter;
 
 	// todo: move mutex into upload queue
 	AST_UploadQueue upload_queue;
@@ -94,11 +97,11 @@ struct AST_Assets
 
 internal u64 AST_FindSchemeSeparator(String8 path);
 
-internal u32 AST_AllocSlot(AST_Assets *assets);
+internal u32  AST_AllocSlot(AST_Assets *assets);
 internal void AST_FreeSlot(AST_Assets *assets, u32 index);
 
-internal AST_Handle  AST_AllocRecord(AST_Assets *assets, String8 path);
-internal AST_Record *AST_GetRecord(AST_Assets *assets, AST_Handle handle);
+internal AST_Handle        AST_AllocRecord(AST_Assets *assets, String8 path);
+internal AST_Record       *AST_GetRecord(AST_Assets *assets, AST_Handle handle);
 internal const AST_Record *AST_GetRecordConst(const AST_Assets *assets, AST_Handle handle);
 
 internal AST_Handle AST_PathMapFind(const AST_Assets *assets, String8 path);
@@ -166,14 +169,15 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry);
 
 internal void AST_PollHotReloads(AST_Assets *assets);
 internal void AST_FlushUploads(AST_Assets *assets);
-internal void AST_WaitForAsyncUploads(AST_Assets *assets);
+internal void AST_WaitForAsync(AST_Assets *assets);
 
 
 /* ==================================================
    ASSETS
    ================================================== */
 
-// TODO: Functionality to add/create and remove/unload assets directly via code.
+internal void       AST_SetFallback (AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal AST_Asset *AST_Get         (AST_Assets *assets, AST_Handle handle, AST_Type type);
 
 
 /* ==================================================

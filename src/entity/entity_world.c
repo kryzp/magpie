@@ -324,3 +324,34 @@ ENT_WorldGetAll(ENT_World *world, ENT_Type type)
 
 	return receipt;
 }
+
+internal ENT_Marker *
+ENT_WorldAddMarker(ENT_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
+{
+	AssertTrue(world->marker_count < ArraySize(world->markers));
+	
+	ENT_Marker *m = &world->markers[world->marker_count];
+	m->name = name;
+	m->name_hash = HashStr8(name);
+	m->position = position;
+	m->rotation = rotation;
+	m->layer_id = layer_id;
+	
+	world->marker_count++;
+	
+	return m;
+}
+
+internal ENT_Marker *
+ENT_WorldFindMarker(ENT_World *world, String8 name)
+{
+	u64 hash = HashStr8(name);
+	
+	for (u32 i = 0; i < world->marker_count; i++)
+	{
+		if (world->markers[i].name_hash == hash)
+			return &world->markers[i];
+	}
+	
+	return NULL;
+}
