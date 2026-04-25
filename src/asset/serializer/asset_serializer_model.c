@@ -371,14 +371,14 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 	GFX_Device *device = ctx->assets->device;
 
 	osapi->MutexLock(ctx->assets->allocation_mutex);
-	AST_ModelMesh *meshes = ArenaPushArray(ctx->assets->arena, AST_ModelMesh, load->mesh_count);
+	AST_SubModel *sub_models = ArenaPushArray(ctx->assets->arena, AST_SubModel, load->mesh_count);
 	osapi->MutexUnlock(ctx->assets->allocation_mutex);
 
 	AST_ModelLoadMesh *src = load->first_mesh;
 
 	for (i32 i = (i32)load->mesh_count - 1; i >= 0; i--, src = src->next)
 	{
-		AST_ModelMesh *dst = &meshes[i];
+		AST_SubModel *dst = &sub_models[i];
 
 		dst->transform     = src->transform;
 
@@ -405,8 +405,8 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		dst->index_buffer  = GFX_DeviceBufferAlloc(device, &ib_info);
 	}
 
-	out->model.mesh_count = load->mesh_count;
-	out->model.meshes = meshes;
+	out->model.sub_model_count = load->mesh_count;
+	out->model.sub_models = sub_models;
 }
 
 internal void
@@ -438,10 +438,10 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 		load_meshes[i] = src_mesh;
 	}
 	
-	for (u32 i = 0; i < asset->model.mesh_count; i++)
+	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
-		AST_ModelMesh     *dst = &asset->model.meshes[i];
 		AST_ModelLoadMesh *src = load_meshes[i];
+		AST_SubModel      *dst = &asset->model.sub_models[i];
 
 		u64 vb_size = src->vertex_count * sizeof(AST_ModelVertex);
 		u64 ib_size = src->index_count  * sizeof(u32);
@@ -471,10 +471,10 @@ AST_ModelSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
 	GFX_Device *device = assets->device;
 
-	for (u32 i = 0; i < asset->model.mesh_count; i++)
+	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
-		GFX_DeviceBufferDestroy(device, asset->model.meshes[i].vertex_buffer);
-		GFX_DeviceBufferDestroy(device, asset->model.meshes[i].index_buffer);
+		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].vertex_buffer);
+		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].index_buffer);
 	}
 }
 

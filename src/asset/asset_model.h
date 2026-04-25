@@ -45,8 +45,8 @@ struct AST_ModelMaterial
 	b32 double_sided;
 };
 
-typedef struct AST_ModelMesh AST_ModelMesh;
-struct AST_ModelMesh
+typedef struct AST_SubModel AST_SubModel;
+struct AST_SubModel
 {
 	m4 transform;
 

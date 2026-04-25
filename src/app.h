@@ -21,19 +21,6 @@ struct App
 	Arena graph_arena;
 	Arena scene_arena;
 	Arena pass_frame_arena;
-	
-	CH_Timer elapsed_timer;
-	CH_Timer delta_timer;
-	CH_Timer hot_reload_timer;
-
-	f32 delta_accumulator;
-
-	GM_Stack game_mode_stack;
-
-	AST_Assets assets;
-
-	ENT_World world;
-	ENT_EventQueue events;
 
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
@@ -41,6 +28,12 @@ struct App
 	GFX_RingBuffer frame_upload_ring_buffer;
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
+
+	AUD_System audio_system;
+	AUD_BackendAPI *audio_backend;
+	AUD_BufferHandle test_sound;
+
+	AST_Assets assets;
 	
 	R_Graph graph;
 	R_GraphTexHandle swapchain_src;
@@ -48,12 +41,19 @@ struct App
 	R_SceneLightHandle light_handle;
 	R_Camera camera;
 
+	ENT_World world;
+	ENT_EventQueue events;
+
+	GM_Stack game_mode_stack;
+
 	CameraDriver camera_driver;
 	b32 camera_driver_active;
+	
+	CH_Timer elapsed_timer;
+	CH_Timer delta_timer;
+	CH_Timer hot_reload_timer;
 
-	AUD_System audio_system;
-	AUD_BackendAPI *audio_backend;
-	AUD_BufferHandle test_sound;
+	f32 delta_accumulator;
 };
 
 internal void AppInitAudio           (App *app);
@@ -70,6 +70,11 @@ internal void AppInitAssets          (App *app);
 internal void AppDestroyAssets       (App *app);
 internal void AppHotLoadAssets       (App *app);
 internal void AppHotUnloadAssets     (App *app);
+
+internal void AppInitRender          (App *app);
+internal void AppDestroyRender       (App *app);
+internal void AppHotLoadRender       (App *app);
+internal void AppHotUnloadRender     (App *app);
 
 internal void AppInitEntity          (App *app);
 internal void AppDestroyEntity       (App *app);

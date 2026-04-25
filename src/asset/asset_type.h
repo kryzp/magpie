@@ -69,8 +69,8 @@ struct AST_Asset
 
 		struct
 		{
-			u32 mesh_count;
-			AST_ModelMesh *meshes;
+			u32 sub_model_count;
+			AST_SubModel *sub_models;
 		}
 		model;
 	};

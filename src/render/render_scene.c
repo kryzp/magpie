@@ -441,16 +441,16 @@ R_SceneRegisterModel(R_Scene *scene,
 
 	AssertTrue(record->asset.type == AST_Type_Model);
 
-	u32 mesh_count = record->asset.model.mesh_count;
-	const AST_ModelMesh *meshes = record->asset.model.meshes;
+	u32 sub_model_count = record->asset.model.sub_model_count;
+	const AST_SubModel *sub_models = record->asset.model.sub_models;
 
 	R_SceneRegisterModelReceipt receipt = {0};
-	receipt.entry_count = MinValue(mesh_count, max_entries);
+	receipt.entry_count = MinValue(sub_model_count, max_entries);
 	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, receipt.entry_count);
 	
 	for (u32 i = 0; i < receipt.entry_count; i++)
 	{
-		const AST_ModelMesh *src = &meshes[i];
+		const AST_SubModel *src = &sub_models[i];
 
 		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene,
 																 src->vertex_buffer,

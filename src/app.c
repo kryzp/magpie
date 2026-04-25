@@ -225,17 +225,89 @@ AppHotUnloadAssets(App *app)
 
 
 /* ==================================================
+   RENDER
+   ================================================== */
+
+internal void
+AppInitRender(App *app)
+{
+	u64 render_third_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 3, 8);
+
+	app->graph_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	
+	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device);
+	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
+	
+	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
+
+	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	
+	AST_WaitForAsync(&app->assets);
+	
+	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+	
+	// Irradiance.
+	{
+		R_IBLPassIrradianceFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceFnData, 1);
+	
+		data->shader             = GFX_ShaderKeyNull();
+		data->sampler            = GFX_SamplerKeyNull();
+		data->env_view           = GFX_TextureViewKeyNull();
+		data->capture_transforms = GFX_BufferKeyNull();
+		data->cube_mesh          = NULL;
+		
+		//R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Irradiance"), R_PassType_Graphics);
+
+		//R_PassSetRecord           (pass, R_IBLPassIrradianceFn, data);
+		//R_PassSetMultiViewMask    (pass, 0b111111);
+		//R_PassWriteColour         (pass, R_GraphImportTexture(&app->graph, /* output irradiance cubemap */), NULL);
+	}
+	
+	// Prefilter.
+	{
+		R_IBLPassPrefilterFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassPrefilterFnData, 1);
+
+		// TODO: add prefilter passes.
+	}
+	
+	// TODO: execute & clear render graph
+}
+
+internal void
+AppDestroyRender(App *app)
+{
+	R_SceneDestroy(&app->scene);
+	R_GraphDestroy(&app->graph);
+}
+
+internal void
+AppHotLoadRender(App *app)
+{
+}
+
+internal void
+AppHotUnloadRender(App *app)
+{
+}
+
+
+/* ==================================================
    ENTITY
    ================================================== */
 
 internal void
 AppInitEntity(App *app)
 {
+	ENT_WorldInit(&app->world, &app->partitions[AppMemoryPartition_Entity]);
+	ENT_EventQueueInit(&app->events);
 }
 
 internal void
 AppDestroyEntity(App *app)
 {
+	ENT_WorldDestroy(&app->world);
 }
 
 internal void
@@ -256,36 +328,11 @@ AppHotUnloadEntity(App *app)
 internal void
 AppInit_(App *app)
 {
-	ScratchArena scratch = ScratchBegin(NULL, 0);
-
-	// ---
-	
-	AppInitGraphics(app);
-	AppInitAudio(app);
-	AppInitAssets(app);
-
-	// ---
-	
-	u64 render_third_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 3, 8);
-
-	app->graph_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
-	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
-	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
-	
-	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device);
-	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
-	
-	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
-
-	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
-	
-	AST_WaitForAsync(&app->assets);
-	
-	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
-	
-	// ---
-	
-	AppInitEntity(app);
+	AppInitGraphics (app);
+	AppInitAudio    (app);
+	AppInitAssets   (app);
+	AppInitRender   (app);
+	AppInitEntity   (app);
 
 	// ---
 	
@@ -299,8 +346,6 @@ AppInit_(App *app)
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
-
-	ScratchRelease(&scratch);
 }
 
 __declspec(dllexport) App *
@@ -357,14 +402,11 @@ AppDestroy(App *app)
 {
 	GFX_DeviceWaitIdle(&app->graphics_device);
 
-	AppDestroyEntity(app);
-
-	R_SceneDestroy(&app->scene);
-	R_GraphDestroy(&app->graph);
-
-	AppDestroyAssets(app);
-	AppDestroyAudio(app);
-	AppDestroyGraphics(app);
+	AppDestroyEntity   (app);
+	AppDestroyRender   (app);
+	AppDestroyAssets   (app);
+	AppDestroyAudio    (app);
+	AppDestroyGraphics (app);
 }
 
 __declspec(dllexport) b32
@@ -429,10 +471,6 @@ AppTick(App *app, const I_State *input)
 		app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
 	
 		AppRender(app, dt, elapsed, &cmd);
-		
-		R_Clear clear = R_ClearColour(CosF(elapsed), SinF(elapsed), CosF(elapsed) * SinF(elapsed), 1.f);
-		R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
-		R_PassWriteColour(dummy, app->swapchain_src, &clear);
 
 		R_GraphSetBackbuffer(&app->graph, app->swapchain_src);
 		R_GraphCompile(&app->graph, &app->swapchain);
@@ -454,11 +492,17 @@ AppHotLoad(App *app, const OS_API *api)
 	
 	AppHotLoadGraphics   (app);
 	AppHotLoadAudio      (app);
+	AppHotLoadAssets     (app);
+	AppHotLoadRender     (app);
+	AppHotLoadEntity     (app);
 }
 
 __declspec(dllexport) void
 AppHotUnload(App *app)
-{	
+{
+	AppHotUnloadEntity     (app);
+	AppHotUnloadRender     (app);
+	AppHotUnloadAssets     (app);
 	AppHotUnloadAudio      (app);
 	AppHotUnloadGraphics   (app);
 }
@@ -484,4 +528,8 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						  &frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
+		
+	R_Clear clear = R_ClearColour(CosF(elapsed), SinF(elapsed), CosF(elapsed) * SinF(elapsed), 1.f);
+	R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
+	R_PassWriteColour(dummy, app->swapchain_src, &clear);
 }

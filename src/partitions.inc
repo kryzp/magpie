@@ -1,3 +1,4 @@
+Partition(App,      2.0)
 Partition(Assets,   2.0)
 Partition(Graphics, 2.0)
 Partition(Render,   2.0)
