@@ -45,7 +45,7 @@ struct GFX_ComputePipelineDef
 	GFX_ShaderKey program;
 };
 
-internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit(GFX_ShaderKey program);
-internal GFX_ComputePipelineDef GFX_ComputePipelineDefInit(GFX_ShaderKey program);
+internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit (GFX_ShaderKey program);
+internal GFX_ComputePipelineDef  GFX_ComputePipelineDefInit  (GFX_ShaderKey program);
 
 #endif // GRAPHICS_PIPELINE_H
