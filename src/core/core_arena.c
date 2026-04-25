@@ -26,9 +26,13 @@ ArenaInitArena(Arena *arena, u64 capacity, u64 alignment)
 internal u64
 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 {
+	AssertTrue(parent->capacity >= parent->used);
+	
 	u64 left = parent->capacity - parent->used;
 	u64 total_padding_reserve = count * alignment;
 
+	AssertTrue(left >= total_padding_reserve);
+	
 	u64 safe_size = 0;
 
 	if (left > total_padding_reserve)
