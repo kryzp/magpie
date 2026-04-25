@@ -1,4 +1,28 @@
 
+/*
+ * At the willow tree grows the wallflower,
+ * pale and cold,
+ * from dust, alone.
+ *
+ * To the voices outside unresponsive,
+ * blossoming only for the wind,
+ * and to the touch, you are cold.
+ *
+ * Of no mother, nor child,
+ * to bear your name,
+ * to free your spirit.
+ *
+ * And I will meet you there,
+ * and so it shall be,
+ * together at last.
+ *
+ * But till that day may pass,
+ * I have but one final question,
+ * what is it, you fear most?
+ */
+
+// ---
+
 // Todo: Move these out into their respective
 //       backends.
 
@@ -464,7 +488,7 @@ AppTick(App *app, const I_State *input)
 		R_SceneDebug(&app->scene);
 	
 		R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
-
+		
 		R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
 		swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 	
