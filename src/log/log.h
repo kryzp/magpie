@@ -37,7 +37,7 @@ LOG_LevelToString(LOG_Level level)
 		case LOG_Level_Break:  return "BREAK";
 	}
 
-	return "  ?????  ";
+	return "?????";
 }
 
 internal inline const char *
