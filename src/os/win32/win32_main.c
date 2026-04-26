@@ -929,8 +929,14 @@ OS_W32_JobIsMainThread(void)
 	return JOB_IsMainThread(&win32_st.scheduler);
 }
 
+internal JOB_Context
+OS_W32_JobGetContext(void)
+{
+	return JOB_GetContext(&win32_st.scheduler);
+}
+
 internal Arena *
-OS_W32_GetScratch(Arena * const *conflicts, u32 conflict_count)
+OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
 {
 	return JOB_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
 }
@@ -1038,8 +1044,8 @@ OS_W32_BindAPI(OS_API *api)
 	api->JobBatch                    = OS_W32_JobBatch;
 	api->JobFor                      = OS_W32_JobFor;
 	api->JobIsMainThread             = OS_W32_JobIsMainThread;
-
-	api->JobGetScratch               = OS_W32_GetScratch;
+	api->JobGetContext               = OS_W32_JobGetContext;
+	api->JobGetScratch               = OS_W32_JobGetScratch;
 
 	api->OpenInExplorer              = OS_W32_OpenInExplorer;
 

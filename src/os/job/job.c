@@ -212,7 +212,13 @@ JOB_Init(Arena *arena, JOB_Scheduler *scheduler)
 	for (u32 i = 0; i < JOB_MAX_CONCURRENT_FIBERS; i++)
 	{
 		JOB_Fiber *fiber = &scheduler->atomic_fiber_storage[i];
- 
+
+		// This is purely an aesthetic thing but since we push
+		// the fibers to the front, the ones at the front get
+		// selected first so we assign id's in reverse so at
+		// the end the "front" fiber has id 0, then 1, etc...
+		fiber->id = JOB_MAX_CONCURRENT_FIBERS - i - 1;
+
 		fiber->handle = osapi->FiberCreate(0, JOB_FiberEntry, scheduler);
  
 		for (u32 j = 0; j < ArraySize(fiber->scratch_arenas); j++)
@@ -241,11 +247,16 @@ JOB_Init(Arena *arena, JOB_Scheduler *scheduler)
 		worker->thread_handle = osapi->ThreadCreate(JOB_SchedulerThreadEntry, worker);
 		worker->scheduler = scheduler;
 	}
+
+	scheduler->tls_worker_slot = osapi->TLSAlloc();
+	osapi->TLSSet(scheduler->tls_worker_slot, NULL);
 }
 
 internal void
 JOB_Shutdown(JOB_Scheduler *scheduler)
 {
+	osapi->TLSFree(scheduler->tls_worker_slot);
+	
 	// Join worker threads (worker 0 is the main thread so no join needed).
 	for (u32 i = 1; i < scheduler->worker_count; i++)
 		osapi->ThreadJoin(scheduler->workers[i].thread_handle);
@@ -264,6 +275,8 @@ JOB_SchedulerThreadEntry(void *param)
 {
 	JOB_Worker *worker = param;
 	JOB_Scheduler *scheduler = worker->scheduler;
+
+	osapi->TLSSet(scheduler->tls_worker_slot, worker);
 
 	job_current_worker = worker;
 	worker->fiber_handle = osapi->ConvertThreadToFiber();
@@ -401,6 +414,19 @@ JOB_Halt(JOB_Scheduler *scheduler)
 {
 	osapi->AtomicStoreU32(&scheduler->atomic_running, false);
 	osapi->CondVarBroadcast(scheduler->cond_begin);
+}
+
+internal JOB_Context
+JOB_GetContext(JOB_Scheduler *scheduler)
+{
+	JOB_Context ctx = {0};
+
+    JOB_Worker *worker = (JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
+
+	ctx.worker_id = worker->id;
+	ctx.fiber_id = worker->current_fiber ? worker->current_fiber->id : -1;
+
+	return ctx;
 }
 
 internal JOB_Counter *

@@ -162,14 +162,14 @@ internal R_GraphTexHandle R_PassBlitTextureDst      (R_Pass *pass, R_GraphTexHan
    BUFFERS
    ================================================== */
 
-internal R_GraphBufHandle R_PassWriteBufferGraphics(R_Pass *pass, R_GraphBufHandle handle);
-internal R_GraphBufHandle R_PassReadBufferGraphics(R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassWriteBufferGraphics (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassReadBufferGraphics  (R_Pass *pass, R_GraphBufHandle handle);
 
-internal R_GraphBufHandle R_PassWriteBufferCompute(R_Pass *pass, R_GraphBufHandle handle);
-internal R_GraphBufHandle R_PassReadBufferCompute(R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassWriteBufferCompute  (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassReadBufferCompute   (R_Pass *pass, R_GraphBufHandle handle);
 
-internal R_GraphBufHandle R_PassIndirectBuffer(R_Pass *pass, R_GraphBufHandle handle);
-internal R_GraphBufHandle R_PassClearBuffer(R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassIndirectBuffer      (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassClearBuffer         (R_Pass *pass, R_GraphBufHandle handle);
 
 
 #endif // RENDER_PASS_H

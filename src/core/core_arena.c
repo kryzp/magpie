@@ -46,8 +46,14 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
 	u64 aligned = MemAlignUp(arena->used, alignment);
 
-	AssertTrue(aligned + bytes <= arena->capacity);
-
+	if (aligned + bytes > arena->capacity)
+	{
+		// TODO: Integrate logging here somehow?
+		
+		AssertTrue(false);
+		return NULL;
+	}
+	
 	void *mem = (void *)((u8 *)arena->base + aligned);
 
 	MemSet(mem, 0, bytes);

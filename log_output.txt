@@ -1,36 +1,30 @@
-[    0.000  ] [  INFO   ] [  LOG       ] Initialized, File: "log_output.txt" as output.
-[    0.022  ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
-[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
-[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
-[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
-[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
-[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
-[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
-[    0.069  ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
-[    0.071  ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
-[    0.073  ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
-[    0.073  ] [  INFO   ] [  GRAPHICS  ] Initialized.
-[    0.073  ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
-[    0.137  ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
-[    0.193  ] [  INFO   ] [  SLANG     ] Initialized.
-[    0.278  ] [  INFO   ] [  AUDIO     ] Initialized.
-[    0.286  ] [  INFO   ] [  ASSETS    ] Initialized.
-[    0.334  ] [  INFO   ] [  RENDER    ] Graph Initialized.
-[    0.334  ] [  INFO   ] [  RENDER    ] Scene Initialized.
-[    0.399  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.400  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.522  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
-[    0.540  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
-[    0.540  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
-[    0.552  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.575  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
-[    0.575  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
-[    0.583  ] [  INFO   ] [  APP       ] Initialized.
-[    1.676  ] [  INFO   ] [  APP       ] Shutting Down...
-[    1.676  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
-[    1.676  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
-[    1.676  ] [  INFO   ] [  ASSETS    ] Destroyed.
-[    1.676  ] [  INFO   ] [  AUDIO     ] Shut Down.
-[    1.690  ] [  INFO   ] [  SLANG     ] Shutting down...
-[    1.766  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
-[    1.766  ] [  INFO   ] [  LOG       ] Shutting Down...
+[    0.000  ] [  W:MT  F:0    ] [  INFO   ] [  LOG       ] Initialized, File: "log_output.txt" as output.
+[    0.017  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
+[    0.056  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.057  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
+[    0.057  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
+[    0.067  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
+[    0.067  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
+[    0.068  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
+[    0.069  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
+[    0.071  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
+[    0.072  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
+[    0.072  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
+[    0.072  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
+[    0.140  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
+[    0.199  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.296  ] [  W:MT  F:0    ] [  INFO   ] [  AUDIO     ] Initialized.
+[    0.303  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.336  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.336  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.460  ] [  W:MT  F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
+[    0.460  ] [  W:MT  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
+[    0.512  ] [  W:1   F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.512  ] [  W:1   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.527  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.541  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
+[    0.541  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.563  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.570  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
+[    0.571  ] [  W:MT  F:0    ] [  WARN   ] [  ASSETS    ] Shader asset not found. Falling back...
+[    0.571  ] [  W:MT  F:0    ] [  BREAK  ] [  ASSETS    ] asset_manager.c:722 AST_Get: No fallback found for Shader asset. We're fucked basically.

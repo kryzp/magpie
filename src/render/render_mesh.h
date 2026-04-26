@@ -20,14 +20,19 @@ internal void R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
 
 internal void R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device);
 
-internal void R_MeshWriteToStage(const R_Mesh *mesh,
-								 GFX_Device *device,
+internal void R_MeshWriteToStage(const R_Mesh *mesh, GFX_Device *device,
 								 GFX_BufferKey stage, u64 stage_base,
 								 void *vertices, void *indices);
 
-internal u64 R_MeshUpload(const R_Mesh *mesh,
-						  const GFX_CmdBuffer *cmd,
+internal u64 R_MeshUpload(const R_Mesh *mesh, const GFX_CmdBuffer *cmd,
 						  GFX_BufferKey stage, u64 stage_base);
+
+//internal u64 R_MeshVertexAddress(const R_Mesh *mesh, GFX_Device *device);
+
+// Only binds index buffer as we use vertex pulling!!!
+internal void R_MeshBind(const R_Mesh *mesh, const GFX_CmdBuffer *cmd);
+
+internal void R_MeshDraw(const R_Mesh *mesh, const GFX_CmdBuffer *cmd);
 
 internal inline u64
 R_MeshVertexBufferSize(const R_Mesh *mesh)

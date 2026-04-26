@@ -5,7 +5,7 @@
 #define JOB_MAX_CONCURRENT_FIBERS  128
 #define JOB_MAX_WORKERS            32
 #define JOB_COUNTER_MAX_WAITING    64
-#define JOB_FIBER_SCRATCH_SIZE     Megabytes(2)
+#define JOB_FIBER_SCRATCH_SIZE     Megabytes(8)
 
 /*
  * Fiber-Driven Job System.
@@ -24,6 +24,8 @@
 typedef struct JOB_Fiber JOB_Fiber;
 struct JOB_Fiber
 {
+	u32 id;
+	
 	JOB_Fiber *next_free;
 
 	OS_Handle handle;
@@ -115,6 +117,8 @@ struct JOB_Scheduler
 	
 	void (*OnMainThreadIdle)(void *ctx);
 	void *main_thread_idle_ctx;
+
+	u32 tls_worker_slot;
 };
 
 
@@ -152,6 +156,7 @@ internal void JOB_FiberEntry(void *param);
 internal void JOB_Enter(JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
 internal void JOB_Halt(JOB_Scheduler *scheduler);
 
+internal JOB_Context JOB_GetContext(JOB_Scheduler *scheduler);
 
 /* ==================================================
    COUNTER

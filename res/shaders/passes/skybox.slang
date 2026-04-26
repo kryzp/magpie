@@ -2,7 +2,8 @@ import util;
 import bindless;
 import types;
 
-struct Arguments {
+struct Arguments
+{
     types::FrameData *frame_data;
     float3 *vertices;
 	uint cubemap;
@@ -12,7 +13,8 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-struct VS_Output {
+struct VS_Output
+{
 	float4 sv_position : SV_Position;
 	[vk::location(0)] float3 position;
 };

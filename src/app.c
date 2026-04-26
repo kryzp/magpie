@@ -410,7 +410,7 @@ AppInitRender(App *app)
 		data->skybox_mesh        = &app->skybox_mesh;
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("HDR -> Environment Map"), R_PassType_Graphics);
-		R_PassSetRecord        (pass, R_HdrToEnvPass, data);
+		R_PassSetRecord        (pass, R_HdrToEnvPassFn, data);
 		R_PassSetMultiViewMask (pass, 0b111111);
 		R_PassWriteColour      (pass, R_GraphImportTexture(&app->graph, app->environment_cubemap), NULL);
 
@@ -418,13 +418,13 @@ AppInitRender(App *app)
 		mips_data->texture = app->environment_cubemap;
 		
 		R_Pass *pass_mipmaps = R_GraphAdd(&app->graph, String8Lit("Environment Map Mipmapping"), R_PassType_Transfer);
-		R_PassSetRecord      (pass_mipmaps, R_GenerateMipsPass, mips_data);
+		R_PassSetRecord      (pass_mipmaps, R_GenerateMipsPassFn, mips_data);
 		R_PassBlitTextureDst (pass_mipmaps, R_GraphImportTexture(&app->graph, app->environment_cubemap));
 	}
 	
 	// Irradiance.
 	{
-		R_IBLPassIrradianceFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceFnData, 1);
+		R_IBLPassIrradianceData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceData, 1);
 		data->shader             = irradiance_pass_shader;
 		data->sampler            = app->linear_sampler;
 		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
@@ -439,7 +439,7 @@ AppInitRender(App *app)
 	
 	// Prefilter.
 	{
-		R_IBLPassPrefilterFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassPrefilterFnData, 1);
+		R_IBLPassPrefilterData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassPrefilterData, 1);
 
 		// TODO: add prefilter passes.
 	}
@@ -703,6 +703,9 @@ internal void
 AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 {
 	R_CameraRecompute(&app->camera);
+
+	u32 window_width, window_height;
+	osapi->GetWindowSize(&window_width, &window_height);
 	
 	R_GPU_FrameData frame_data = {0};
 	frame_data.view = app->camera.view;
@@ -712,7 +715,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.inv_view = M4Inverse(app->camera.view);
 	frame_data.inv_proj = M4Inverse(app->camera.proj);
 	frame_data.camera_position = app->camera.position;
-	frame_data.window_resolution = v2(1280.f, 720.f);
+	frame_data.window_resolution = v2(window_width, window_height);
 	frame_data.time = elapsed;
 
 	GFX_DeviceBufferWrite(&app->graphics_device,
@@ -720,8 +723,25 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						  &frame_data, sizeof(frame_data), 0);
 
 	R_Blackboard bb = {0};
+
+	// Skybox Pass.
+	{
+		AST_Handle shader_handle = AST_Require (&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
+		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 		
-	R_Clear clear = R_ClearColour(CosF(elapsed), SinF(elapsed), CosF(elapsed) * SinF(elapsed), 1.f);
-	R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
-	R_PassWriteColour(dummy, app->swapchain_src, &clear);
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
+
+		R_SkyboxPassData *data = ArenaPushArray(&app->pass_frame_arena, R_SkyboxPassData, 1);
+		data->shader = shader;
+		data->sampler = app->linear_sampler;
+		data->frame_data_buffer = app->frame_data_buffer;
+		data->skybox_mesh = &app->skybox_mesh;
+		
+		R_PassWriteColour(pass, app->swapchain_src, NULL);
+		//R_PassWriteDepth(pass, ..., NULL);
+
+		R_PassReadTexture(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
+
+		R_PassSetRecord(pass, R_SkyboxPassFn, data);
+	}
 }

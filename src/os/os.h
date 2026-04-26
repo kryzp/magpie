@@ -35,6 +35,13 @@ struct JOB_Decl
 	JOB_Flags flags;
 };
 
+typedef struct JOB_Context JOB_Context;
+struct JOB_Context
+{
+	u32 worker_id;
+	i32 fiber_id;
+};
+
 typedef struct JOB_Counter JOB_Counter;
 
 // ---
@@ -241,6 +248,7 @@ struct OS_API
 	void         (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
 	void         (*JobFor)(u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size);
 	b32          (*JobIsMainThread)(void);
+	JOB_Context  (*JobGetContext)(void);
 	Arena       *(*JobGetScratch)(Arena * const *conflicts, u32 conflict_count);
 
 	

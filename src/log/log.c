@@ -13,12 +13,12 @@ LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
 
 	log_selected = logger;
 
-	logger->self_channel = LOG_OpenChannel(String8Lit("LOG"));
+	logger->log_channel = LOG_OpenChannel(String8Lit("LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))
-		DebugLogI(logger->self_channel, "Initialized, File: \"%.*s\" as output.", (i32)sink.len, sink.str);
+		DebugLogI(logger->log_channel, "Initialized, File: \"%.*s\" as output.", (i32)sink.len, sink.str);
 	else
-		DebugLogI(logger->self_channel, "Initialized (no file sink).");
+		DebugLogI(logger->log_channel, "Initialized (no file sink).");
 }
 
 internal void
@@ -33,7 +33,7 @@ LOG_Shutdown(void)
 		log_selected->dedup_active = false;
 	}
 	
-	DebugLogI(log_selected->self_channel, "Shutting Down...");
+	DebugLogI(log_selected->log_channel, "Shutting Down...");
 
 	if (!OS_HandleIsNull(log_selected->file_stream))
 	{
@@ -89,7 +89,8 @@ LOG_FormatLine(char *dst, i32 dst_size,
 			   LOG_Level level, LOG_Channel channel,
 			   const char *file, i32 line, const char *fn,
 			   const char *body,
-			   b32 for_file, f32 elapsed)
+			   b32 for_file, f32 elapsed,
+			   JOB_Context job_context)
 {
 	const char *level_string = LOG_LevelToString (level);
 	const char *level_ansi   = LOG_LevelAnsi     (level);
@@ -116,6 +117,30 @@ LOG_FormatLine(char *dst, i32 dst_size,
 	else
 		APPEND(LOG_ANSI_DIM "[  %7.3f  ]" LOG_ANSI_RESET " ", elapsed);
 
+	// Job Context.
+    {
+        char worker_str[8] = {0};
+        char fiber_str[8] = {0};
+
+		// We could jsut use worker_id = 0 but
+		// writing MT makes it more obvious so
+		// I'm going with that.
+        if (job_context.worker_id == 0)
+            snprintf(worker_str, sizeof(worker_str), "MT ");
+        else
+            snprintf(worker_str, sizeof(worker_str), "%-3u", job_context.worker_id);
+
+        if (job_context.fiber_id == -1)
+            snprintf(fiber_str, sizeof(fiber_str), "---");
+        else
+            snprintf(fiber_str, sizeof(fiber_str), "%-3d", job_context.fiber_id);
+
+        if (for_file)
+            APPEND("[  W:%s F:%s  ] ", worker_str, fiber_str);
+        else
+            APPEND(LOG_ANSI_DIM "[  W:%s F:%s  ]" LOG_ANSI_RESET " ", worker_str, fiber_str);
+    }
+
 	// Level.
 	if (for_file)
 		APPEND("[  %s  ] ", level_string);
@@ -127,7 +152,7 @@ LOG_FormatLine(char *dst, i32 dst_size,
 		APPEND("[  %-*s  ] ", LOG_CHANNEL_COL_ALIGN, channel_name);
 	else
 		APPEND("%s[  %-*s  ]" LOG_ANSI_RESET " ", level_ansi, LOG_CHANNEL_COL_ALIGN, channel_name);
-
+	
 	// Callsite.
 	if (show_callsite)
 	{
@@ -185,7 +210,8 @@ LOG_FlushDedupToFile(f32 elapsed)
 								  log_selected->dedup_channel,
 								  "", 0, "",
 								  body,
-								  true, elapsed);
+								  true, elapsed,
+								  log_selected->dedup_job_context);
 		
 		if (file_len > 0)
 			osapi->StreamWrite(log_selected->file_stream, file_line, (u64)file_len);
@@ -220,6 +246,8 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 
 	f32 elapsed = CH_TimerElapsed(&log_selected->timer);
 
+	JOB_Context job_context = osapi->JobGetContext();
+	
 	char body[LOG_LINE_BUFFER_SIZE] = {0};
 	vsnprintf(body, sizeof(body), fmt, args);
 
@@ -227,7 +255,8 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 	{
 		b32 is_repeated_line =
 			log_selected->dedup_active &&
-			log_selected->dedup_level == level && 
+			log_selected->dedup_level == level &&
+			log_selected->dedup_job_context.fiber_id == job_context.fiber_id &&
 			LOG_ChannelMatch(log_selected->dedup_channel, channel) &&
 			(CStrCompare(log_selected->dedup_body, body) == 0);
 
@@ -244,7 +273,8 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 dedup_body,
-											 false, elapsed);
+											 false, elapsed,
+											 log_selected->dedup_job_context);
 
 			if (console_len > 0)
 			{
@@ -275,7 +305,8 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 body,
-											 false, elapsed);
+											 false, elapsed,
+											 job_context);
 
 			if (console_len > 0)
 			{
@@ -294,7 +325,8 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 										  level, channel,
 										  file, line, fn,
 										  body,
-										  true, elapsed);
+										  true, elapsed,
+										  job_context);
 				
 				if (file_len > 0)
 					osapi->StreamWrite(log_selected->file_stream, file_line, (u64)file_len);
@@ -305,6 +337,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 			log_selected->dedup_channel = channel;
 			log_selected->dedup_count = 1;
 			log_selected->dedup_active = true;
+			log_selected->dedup_job_context = job_context;
 		}
 	}
 	osapi->MutexUnlock(log_selected->mutex);

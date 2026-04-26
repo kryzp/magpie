@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_GenerateMipsPass)
+R_PASS_RECORD_DEF(R_GenerateMipsPassFn)
 {
 	GFX_CmdBuffer *cmd = ctx->cmd;
 	

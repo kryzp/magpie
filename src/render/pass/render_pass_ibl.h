@@ -22,8 +22,8 @@ struct R_PassContext
 
 */
 
-typedef struct R_IBLPassIrradianceFnData R_IBLPassIrradianceFnData;
-struct R_IBLPassIrradianceFnData
+typedef struct R_IBLPassIrradianceData R_IBLPassIrradianceData;
+struct R_IBLPassIrradianceData
 {
 	GFX_ShaderKey       shader;
 	GFX_SamplerKey      sampler;
@@ -36,8 +36,8 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn);
 
 // ---
 
-typedef struct R_IBLPassPrefilterFnData R_IBLPassPrefilterFnData;
-struct R_IBLPassPrefilterFnData
+typedef struct R_IBLPassPrefilterData R_IBLPassPrefilterData;
+struct R_IBLPassPrefilterData
 {
 	GFX_ShaderKey       shader;
 	GFX_SamplerKey      sampler;

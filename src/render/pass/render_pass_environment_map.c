@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_HdrToEnvPass)
+R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 {
 	GFX_Device *device = ctx->device;
 	GFX_CmdBuffer *cmd = ctx->cmd;
@@ -27,9 +27,10 @@ R_PASS_RECORD_DEF(R_HdrToEnvPass)
 	args.hdr_image               = GFX_DeviceTextureViewBindless (device, user_data->hdr_view);
 	args.linear_sampler          = GFX_DeviceSamplerBindless     (device, user_data->sampler);
 
-	GFX_CmdBindBindless    (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, &cmd->device->bindless);
-	GFX_CmdBindPipeline    (cmd, pipeline_st.bind_point, pipeline_st.pipeline);	
-	GFX_CmdPushConstants   (cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-	GFX_CmdBindIndexBuffer (cmd, user_data->skybox_mesh->index_buffer, 0, VK_WHOLE_SIZE, user_data->skybox_mesh->index_type);
-	GFX_CmdDrawIndexed     (cmd, user_data->skybox_mesh->index_count, 1, 0, 0, 0);
+	GFX_CmdBindBindless  (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, &cmd->device->bindless);
+	GFX_CmdBindPipeline  (cmd, pipeline_st.bind_point, pipeline_st.pipeline);	
+	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+
+	R_MeshBind(user_data->skybox_mesh, cmd);
+	R_MeshDraw(user_data->skybox_mesh, cmd);
 }

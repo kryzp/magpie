@@ -7,6 +7,6 @@ struct R_GenerateMipsPassData
 	GFX_TextureKey texture;
 };
 
-R_PASS_RECORD_DEF(R_GenerateMipsPass);
+R_PASS_RECORD_DEF(R_GenerateMipsPassFn);
 
 #endif // RENDER_PASS_GENERATE_MIPS_H

@@ -89,16 +89,16 @@ struct LOG_Logger
 	u32 channel_count;
 	LOG_ChannelEntry channels[LOG_MAX_CHANNELS];
 
-	LOG_Channel self_channel;
+	LOG_Channel log_channel;
 
-	// deduplication
 	// track last message and overwrite in-place if repeated.
-	char dedup_body[LOG_LINE_BUFFER_SIZE];
+	char        dedup_body[LOG_LINE_BUFFER_SIZE];
 	LOG_Channel dedup_channel;
-	LOG_Level dedup_level;
-	u32 dedup_count;
-	b32 dedup_active;
-	f32 dedup_start_elapsed;
+	LOG_Level   dedup_level;
+	u32         dedup_count;
+	b32         dedup_active;
+	f32         dedup_start_elapsed;
+	JOB_Context dedup_job_context;
 };
 
 internal void LOG_InitAndSelect(LOG_Logger *logger, String8 sink);
@@ -116,7 +116,8 @@ internal i32 LOG_FormatLine(char *dst, i32 dst_size,
 							LOG_Level level, LOG_Channel channel,
 							const char *file, i32 line, const char *fn,
 							const char *body,
-							b32 for_file, f32 elapsed);
+							b32 for_file, f32 elapsed,
+							JOB_Context job_context);
 
 internal void LOG_Write  (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
 internal void LOG_WriteV (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, va_list args);
