@@ -24,7 +24,8 @@ void SLANG_Shutdown(void *global_session);
 
 typedef void SLANG_LogFn(const char *context,
 						 const char *source,
-						 const char *message);
+						 const char *message,
+						 void *user_data);
 
 typedef struct SLANG_StageResult SLANG_StageResult;
 struct SLANG_StageResult
@@ -45,7 +46,7 @@ SLANG_CompileResult SLANG_Compile(void *global_session,
 								  const char *source_path,
 								  uint32_t search_path_count,
 								  const char *const *search_paths,
-								  SLANG_LogFn *log_fn);
+								  SLANG_LogFn *log_fn, void *user_data);
 
 void SLANG_FreeResult(SLANG_CompileResult *result);
 

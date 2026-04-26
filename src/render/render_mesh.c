@@ -1,11 +1,11 @@
 
 internal void
 R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
-			u64 vertex_stride, u64 index_stride,
+			u64 vertex_stride, VkIndexType index_type,
 			u32 vertex_count, u32 index_count)
 {
 	mesh->vertex_stride = vertex_stride;
-	mesh->index_stride = index_stride;
+	mesh->index_type = index_type;
 	
 	mesh->vertex_count = vertex_count;
 	mesh->index_count = index_count;

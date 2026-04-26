@@ -2,10 +2,12 @@
 internal void
 GFX_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
-							  const char *message)
+							  const char *message,
+							  void *user_data)
 {
-	// TODO: integrate with logging system.
-	printf("Shader [%s] %s: %s", source, context, message);
+	GFX_ShaderCompiler *self = user_data;
+	
+	DebugLogD(self->log_channel, "%s --> %s: %s", source, context, message);
 }
 
 internal void
@@ -13,6 +15,8 @@ GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
 	SLANG_Init(&compiler->global_session);
 
+	compiler->mutex = osapi->MutexCreate();
+	
 	compiler->log_channel = log_channel;
 
 	if (compiler->global_session)
@@ -26,6 +30,8 @@ GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler)
 {
 	DebugLogI(compiler->log_channel, "Shutting down...");
 
+	osapi->MutexDestroy(compiler->mutex);
+	
 	SLANG_Shutdown(compiler->global_session);
 
 	compiler->global_session = NULL;
@@ -37,6 +43,8 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 						  String8 source_path,
 						  u32 search_path_count, const String8 *search_paths)
 {
+	osapi->MutexLock(compiler->mutex);
+	
 	GFX_ShaderCompiledStages compiled = {0};
 	compiled.failed = true;
 
@@ -62,14 +70,11 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 													  source_cstr,
 													  search_path_count,
 													  search_path_cstrs,
-													  GFX_ShaderCompilerLogCallback);
+													  GFX_ShaderCompilerLogCallback,
+													  compiler);
 
 	if (bridge_result.failed)
-	{
-		SLANG_FreeResult(&bridge_result);
-		ScratchRelease(&scratch);
-		return compiled;
-	}
+		goto end;
 
 	compiled.count = bridge_result.stage_count;
 	compiled.bytecodes = ArenaPushArray(arena, GFX_ShaderBytecode, compiled.count);
@@ -86,8 +91,15 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 
 	compiled.failed = false;
 
+	DebugLogD(compiler->log_channel,
+			  "Compiled shader: %.*s.",
+			  (i32)source_path.len, source_path.str);
+
+end:
 	SLANG_FreeResult(&bridge_result);
 	ScratchRelease(&scratch);
 
+	osapi->MutexUnlock(compiler->mutex);
+	
 	return compiled;
 }

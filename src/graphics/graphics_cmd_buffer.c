@@ -162,14 +162,15 @@ GFX_CmdBindPipeline(const GFX_CmdBuffer *cmd,
 internal void
 GFX_CmdBindIndexBuffer(const GFX_CmdBuffer *cmd,
 					   GFX_BufferKey buffer,
-					   u64 offset, u64 size)
+					   u64 offset, u64 size,
+					   VkIndexType type)
 {
 	GFX_Buffer *gfx_buffer = GFX_DeviceBufferFromKey(cmd->device, buffer);
 	
 	vkCmdBindIndexBuffer2(cmd->handle,
 						  gfx_buffer->handle,
 						  offset, size,
-						  VK_INDEX_TYPE_UINT32);
+						  type);
 }
 
 internal void

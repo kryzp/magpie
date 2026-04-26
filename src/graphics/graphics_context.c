@@ -382,7 +382,7 @@ GFX_ContextInit(LOG_Channel log_channel)
 	}
 
 	if (!osapi->VulkanSurfaceCreate(context.instance, &context.surface))
-		AssertTrue(false && "Failed to create surface.");
+		DebugLogB(log_channel, "Failed to create surface.");
 
 	// Enumerate physical_resource devices.
 	{
@@ -390,7 +390,7 @@ GFX_ContextInit(LOG_Channel log_channel)
 		vkEnumeratePhysicalDevices(context.instance, &device_count, NULL);
 
 		if (device_count <= 0)
-			AssertTrue(false && "Failed to find GPUs with Vulkan support.");
+			DebugLogB(log_channel, "Failed to find GPUs with Vulkan support.");
 
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 		VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };

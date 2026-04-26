@@ -1269,7 +1269,7 @@ main(void)
 
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
 
-	printf("OS/Win32 -- Allocating %llu bytes memory...\n", OS_TOTAL_MEMORY);
+	printf("OS/Win32 -- Allocating %llu gigabytes of memory...\n", (u64)((f64)OS_TOTAL_MEMORY / (f64)Gigabytes(1)));
 	
 	void *process_memory = malloc(OS_TOTAL_MEMORY);
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);

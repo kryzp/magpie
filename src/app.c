@@ -312,6 +312,60 @@ AppHotUnloadAssets(App *app)
    ================================================== */
 
 internal void
+AppInitRenderCreateSkyboxMesh(App *app)
+{
+	static v3 vertices[] = {
+		{ -1.f,  1.f,  1.f },
+		{ -1.f,  1.f, -1.f },
+		{  1.f,  1.f, -1.f },
+		{  1.f,  1.f,  1.f },
+		{ -1.f, -1.f,  1.f },
+		{ -1.f, -1.f, -1.f },
+		{  1.f, -1.f, -1.f },
+		{  1.f, -1.f,  1.f }
+	};
+
+	static u16 indices[] = {
+		1, 2, 0,
+		3, 0, 2,
+
+		6, 5, 7,
+		4, 7, 5,
+
+		5, 1, 4,
+		0, 4, 1,
+
+		2, 6, 3,
+		7, 3, 6,
+
+		5, 6, 1,
+		2, 1, 6,
+
+		0, 3, 4,
+		7, 4, 3
+	};
+
+	R_MeshAlloc(&app->skybox_mesh, &app->graphics_device,
+				sizeof(v3), VK_INDEX_TYPE_UINT16,
+				ArraySize(vertices), ArraySize(indices));
+
+	GFX_BufferKey staging_buffer = GFX_DeviceStageAlloc(&app->graphics_device, R_MeshVertexBufferSize(&app->skybox_mesh) + R_MeshIndexBufferSize(&app->skybox_mesh));
+
+	R_MeshWriteToStage(&app->skybox_mesh, &app->graphics_device,
+					   staging_buffer, 0,
+					   vertices, indices);
+
+	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(&app->graphics_device);
+	
+	R_MeshUpload(&app->skybox_mesh, &cmd,
+				 staging_buffer, 0);
+
+	GFX_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+
+	GFX_DeviceBufferDestroy(&app->graphics_device, staging_buffer);
+}
+
+internal void
 AppInitRender(App *app)
 {
 	app->render_log_channel = LOG_OpenChannel(String8Lit("RENDER"));
@@ -327,30 +381,58 @@ AppInitRender(App *app)
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
-	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"), AST_Type_Shader);
-	AST_Handle hdr_texture_handle       = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"),                       AST_Type_Texture);
+	AppInitRenderCreateSkyboxMesh(app);
+
+	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
+	
+	AST_Handle hdr_to_env_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
+	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
+	AST_Handle hdr_texture_handle       = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"),                           AST_Type_Texture);
 	
 	AST_WaitForAsync(&app->assets);
 	AST_FlushUploads(&app->assets);
 
+	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_TextureKey hdr_texture_gfx       = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+
+	// Generate Environment Cubemap.
+	{
+		R_HdrToEnvPassData *data = ArenaPushArray(&app->pass_frame_arena, R_HdrToEnvPassData, 1);
+		data->shader             = hdr_to_env_shader;
+		data->sampler            = app->linear_sampler;
+		data->hdr_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
+		data->capture_transforms = app->cubemap_capture_transform_buffer;
+		data->skybox_mesh        = &app->skybox_mesh;
+		
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("HDR -> Environment Map"), R_PassType_Graphics);
+		R_PassSetRecord        (pass, R_HdrToEnvPass, data);
+		R_PassSetMultiViewMask (pass, 0b111111);
+		R_PassWriteColour      (pass, R_GraphImportTexture(&app->graph, app->environment_cubemap), NULL);
+
+		R_GenerateMipsPassData *mips_data = ArenaPushArray(&app->pass_frame_arena, R_GenerateMipsPassData, 1);
+		mips_data->texture = app->environment_cubemap;
+		
+		R_Pass *pass_mipmaps = R_GraphAdd(&app->graph, String8Lit("Environment Map Mipmapping"), R_PassType_Transfer);
+		R_PassSetRecord      (pass_mipmaps, R_GenerateMipsPass, mips_data);
+		R_PassBlitTextureDst (pass_mipmaps, R_GraphImportTexture(&app->graph, app->environment_cubemap));
+	}
 	
 	// Irradiance.
 	{
 		R_IBLPassIrradianceFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceFnData, 1);
-	
 		data->shader             = irradiance_pass_shader;
 		data->sampler            = app->linear_sampler;
-		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
+		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->capture_transforms = app->cubemap_capture_transform_buffer;
-		data->cube_mesh          = NULL;
+		data->skybox_mesh        = &app->skybox_mesh;
 		
-		//R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Irradiance"), R_PassType_Graphics);
-
-		//R_PassSetRecord           (pass, R_IBLPassIrradianceFn, data);
-		//R_PassSetMultiViewMask    (pass, 0b111111);
-		//R_PassWriteColour         (pass, R_GraphImportTexture(&app->graph, /* output irradiance cubemap */), NULL);
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Irradiance"), R_PassType_Graphics);
+		R_PassSetRecord           (pass, R_IBLPassIrradianceFn, data);
+		R_PassSetMultiViewMask    (pass, 0b111111);
+		R_PassWriteColour         (pass, R_GraphImportTexture(&app->graph, app->irradiance_cubemap), NULL);
 	}
 	
 	// Prefilter.
@@ -359,13 +441,17 @@ AppInitRender(App *app)
 
 		// TODO: add prefilter passes.
 	}
-	
-	// TODO: execute & clear render graph
 }
 
 internal void
 AppDestroyRender(App *app)
 {
+	GFX_DeviceTextureDestroy(&app->graphics_device, app->environment_cubemap);
+	GFX_DeviceTextureDestroy(&app->graphics_device, app->irradiance_cubemap);
+	GFX_DeviceTextureDestroy(&app->graphics_device, app->prefilter_cubemap);
+	
+	R_MeshDestroy(&app->skybox_mesh, &app->graphics_device);
+	
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
 }

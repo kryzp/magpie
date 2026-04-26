@@ -45,7 +45,8 @@ internal void GFX_CmdBindPipeline(const GFX_CmdBuffer *cmd,
 
 internal void GFX_CmdBindIndexBuffer(const GFX_CmdBuffer *cmd,
 									 GFX_BufferKey buffer,
-									 u64 offset, u64 size); // VK_WHOLE_SIZE
+									 u64 offset, u64 size, // VK_WHOLE_SIZE
+									 VkIndexType type);
 
 internal void GFX_CmdPushConstants(const GFX_CmdBuffer *cmd,
 								   GFX_PipelineLayoutKey layout,

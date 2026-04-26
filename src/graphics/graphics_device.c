@@ -209,9 +209,9 @@ GFX_DeviceBeginFrame(GFX_Device *device, GFX_Swapchain *swapchain)
 	VkResult result = vkAcquireNextImage2KHR(device->context.device, &acquire_next_image_info, &swapchain->current_texture_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
-		AssertTrue(false && "TODO We need to rebuild the entire swapchain here.");
+		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-		AssertTrue(false && "Failed to acquire next image in swapchain.");
+		DebugLogB(device->log_channel, "Failed to acquire next image in swapchain.");
 
 	GFX_DeviceCmdPoolReset(device, &frame_data->command_pool);
 
@@ -256,9 +256,9 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBu
 	VkResult result = vkQueuePresentKHR(device->context.graphics_queue.handle, &present_info);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-		AssertTrue(false && "TODO We need to rebuild the entire swapchain here.");
+		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS)
-		AssertTrue(false && "Failed to present swapchain image.");
+		DebugLogB(device->log_channel, "Failed to present swapchain image.");
 	
 	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
 }
@@ -503,7 +503,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 	vkGetSwapchainImagesKHR(device->context.device, swapchain.handle, &texture_count, NULL);
 
 	if (texture_count <= 0)
-		AssertTrue(false && "Failed to find any images in swapchain.");
+		DebugLogB(device->log_channel, "Failed to find any images in swapchain.");
 
 	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, texture_count);
 
@@ -937,7 +937,7 @@ GFX_DeviceFetchComputePipeline(GFX_Device *device, const GFX_ComputePipelineDef 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
 	GFX_VK_CHECK(vkCreateComputePipelines(device->context.device,
-										   device->context.pipeline_process_cache,
+										  device->context.pipeline_process_cache,
 										  1, &compute_pipeline_create_info,
 										  NULL, &pipeline),
 				 "Failed to create compute pipeline.");
@@ -1027,13 +1027,13 @@ GFX_DeviceTextureAlloc(GFX_Device *device, const GFX_TextureAllocInfo *alloc_inf
 	}
 
 	/*
-	texture.aspect_count = 0;
+	  texture.aspect_count = 0;
 
-	for (VkImageAspectFlags b = 1; b <= texture.aspect_flags; b <<= 1)
-	{
-		if (texture.aspect_flags & b)
-			texture.aspect_count++;
-	}
+	  for (VkImageAspectFlags b = 1; b <= texture.aspect_flags; b <<= 1)
+	  {
+	  if (texture.aspect_flags & b)
+	  texture.aspect_count++;
+	  }
 	*/
 
 	VkImageCreateInfo create_info = {0};
@@ -1705,55 +1705,55 @@ internal void
 GFX_DeviceCreateImGui(GFX_Device *device)
 {
 	/*
-	const u32 max_sets = 1000;
+	  const u32 max_sets = 1000;
 
-	VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER,                max_sets },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       max_sets }
-	};
+	  VkDescriptorPoolSize pool_sizes[] = {
+	  { VK_DESCRIPTOR_TYPE_SAMPLER,                max_sets },
+	  { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
+	  { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          max_sets },
+	  { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          max_sets },
+	  { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   max_sets },
+	  { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   max_sets },
+	  { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         max_sets },
+	  { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         max_sets },
+	  { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
+	  { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
+	  { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       max_sets }
+	  };
 
-	VkDescriptorPoolCreateInfo pool_info = {0};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_info.maxSets = max_sets;
-	pool_info.poolSizeCount = ArraySize(pool_sizes);
-	pool_info.pPoolSizes = pool_sizes;
+	  VkDescriptorPoolCreateInfo pool_info = {0};
+	  pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	  pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	  pool_info.maxSets = max_sets;
+	  pool_info.poolSizeCount = ArraySize(pool_sizes);
+	  pool_info.pPoolSizes = pool_sizes;
 
-	GFX_VK_CHECK(vkCreateDescriptorPool(device->context.device,
-										&pool_info, NULL,
-										&device->imgui_pool),
-				 "Failed to create ImGui descriptor pool.");
+	  GFX_VK_CHECK(vkCreateDescriptorPool(device->context.device,
+	  &pool_info, NULL,
+	  &device->imgui_pool),
+	  "Failed to create ImGui descriptor pool.");
 
-	VkFormat swapchain_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	  VkFormat swapchain_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-	ImGui_ImplVulkan_InitInfo init_info = {0};
-	init_info.Instance = device->context.instance;
-	init_info.PhysicalDevice = device->context.physical_device;
-	init_info.Device = device->context.device;
-	init_info.QueueFamily = device->context.graphics_queue.family_index;
-	init_info.Queue = device->context.graphics_queue.handle;
-	init_info.PipelineCache = device->pipeline_cache;
-	init_info.DescriptorPool = device->imgui_pool;
-	init_info.Allocator = NULL;
-	init_info.MinImageCount = GFX_FRAMES_IN_FLIGHT;
-	init_info.ImageCount = GFX_FRAMES_IN_FLIGHT;
-	init_info.CheckVkResultFn = NULL;
-	init_info.UseDynamicRendering = true;
-	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchain_image_format;
+	  ImGui_ImplVulkan_InitInfo init_info = {0};
+	  init_info.Instance = device->context.instance;
+	  init_info.PhysicalDevice = device->context.physical_device;
+	  init_info.Device = device->context.device;
+	  init_info.QueueFamily = device->context.graphics_queue.family_index;
+	  init_info.Queue = device->context.graphics_queue.handle;
+	  init_info.PipelineCache = device->pipeline_cache;
+	  init_info.DescriptorPool = device->imgui_pool;
+	  init_info.Allocator = NULL;
+	  init_info.MinImageCount = GFX_FRAMES_IN_FLIGHT;
+	  init_info.ImageCount = GFX_FRAMES_IN_FLIGHT;
+	  init_info.CheckVkResultFn = NULL;
+	  init_info.UseDynamicRendering = true;
+	  init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	  init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	  init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	  init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &swapchain_image_format;
 
-	ImGui_ImplVulkan_Init(&init_info);
+	  ImGui_ImplVulkan_Init(&init_info);
 	*/
 }
 
@@ -1761,8 +1761,8 @@ internal void
 GFX_DeviceDestroyImGui(GFX_Device *device)
 {
 	/*
-	ImGui_ImplVulkan_Shutdown();
-	vkDestroyDescriptorPool(device->context.device, device->imgui_pool, NULL);
+	  ImGui_ImplVulkan_Shutdown();
+	  vkDestroyDescriptorPool(device->context.device, device->imgui_pool, NULL);
 	*/
 }
 
@@ -1770,7 +1770,7 @@ internal void
 GFX_DeviceImGuiNewFrame(const GFX_Device *device)
 {
 	/*
-	ImGui_ImplVulkan_NewFrame();
+	  ImGui_ImplVulkan_NewFrame();
 	*/
 }
 
@@ -1778,7 +1778,7 @@ internal void
 GFX_DeviceImGuiRecord(const GFX_Device *device, const GFX_CmdBuffer *cmd)
 {
 	/*
-	ImDrawData *draw_data = ImGui_GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd->handle);
+	  ImDrawData *draw_data = ImGui_GetDrawData();
+	  ImGui_ImplVulkan_RenderDrawData(draw_data, cmd->handle);
 	*/
 }

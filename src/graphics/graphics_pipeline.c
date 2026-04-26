@@ -10,6 +10,9 @@ GFX_GraphicsPipelineDefInit(GFX_ShaderKey program)
 	def.cull_mode = VK_CULL_MODE_BACK_BIT;
 	def.front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
+	def.blend_state = GFX_BlendStInit();
+	def.depth_stencil_state = GFX_DepthStencilStInit();
+	
 	def.colour_attachment_count = 0;
 	def.has_depth_attachment = false;
 

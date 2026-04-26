@@ -53,6 +53,11 @@ struct App
 	R_Scene scene;
 	R_SceneLightHandle light_handle;
 	R_Camera camera;
+	R_Mesh skybox_mesh;
+
+	GFX_TextureKey environment_cubemap;
+	GFX_TextureKey irradiance_cubemap;
+	GFX_TextureKey prefilter_cubemap;
 
 	ENT_World world;
 	ENT_EventQueue events;

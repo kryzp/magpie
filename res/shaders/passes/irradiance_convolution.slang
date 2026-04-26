@@ -1,7 +1,8 @@
 import util;
 import bindless;
 
-struct Arguments {
+struct Arguments
+{
 	float4x4 *transform_matrices;
 	float3 *vertices;
 	uint environment_map_id;
@@ -11,7 +12,8 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-struct VS_Output {
+struct VS_Output
+{
 	float4 sv_position : SV_Position;
 	[vk::location(0)] float3 position;
 };
@@ -42,8 +44,10 @@ float4 FragmentMain(VS_Output input)
     float dt = 0.025;
     float n_samples = 0.0;
 
-    for (float phi = 0.0; phi < 2.0 * util::PI; phi += dt) {
-        for (float theta = 0.0; theta < 0.5 * util::PI; theta += dt) {
+    for (float phi = 0.0; phi < 2.0 * util::PI; phi += dt)
+	{
+        for (float theta = 0.0; theta < 0.5 * util::PI; theta += dt)
+		{
             float3 sample = float3(
                 sin(theta) * cos(phi),
                 sin(theta) * sin(phi),

@@ -10,7 +10,8 @@ static void
 SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 					 const char *context,
 					 const char *source,
-					 slang::IBlob *diag)
+					 slang::IBlob *diag,
+					 void *user_data)
 {
 	if (!diag || !log_fn)
 		return;
@@ -18,7 +19,7 @@ SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 	const char *msg = (const char *)diag->getBufferPointer();
 
 	if (msg && msg[0])
-		log_fn(context, source, msg);
+		log_fn(context, source, msg, user_data);
 }
 
 extern "C" void
@@ -44,7 +45,7 @@ SLANG_Compile(void *global_session,
 			  const char *source_path,
 			  uint32_t search_path_count,
 			  const char *const *search_paths,
-			  SLANG_LogFn *log_fn)
+			  SLANG_LogFn *log_fn, void *user_data)
 {
 	SLANG_CompileResult result = {};
 	result.failed = 1;
@@ -59,7 +60,7 @@ SLANG_Compile(void *global_session,
 	target_desc.profile = gs->findProfile("glsl_460");
 	target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
-	slang::CompilerOptionEntry options[3] = {};
+	slang::CompilerOptionEntry options[2] = {};
 	options[0].name = slang::CompilerOptionName::EmitSpirvDirectly;
 	options[0].value.intValue0 = 1;
 	options[1].name = slang::CompilerOptionName::MatrixLayoutColumn;
@@ -79,7 +80,7 @@ SLANG_Compile(void *global_session,
 	if (SLANG_FAILED(sr))
 	{
 		if (log_fn)
-			log_fn("Session", source_path, "Failed to create Slang session.");
+			log_fn("Session", source_path, "Failed to create Slang session.", user_data);
 
 		return result;
 	}
@@ -87,7 +88,7 @@ SLANG_Compile(void *global_session,
 	Slang::ComPtr<slang::IBlob> diagnostics;
 	slang::IModule *module = session->loadModule(source_path, diagnostics.writeRef());
 
-	SLANG_LogDiagnostics(log_fn, "Loading Module", source_path, diagnostics);
+	SLANG_LogDiagnostics(log_fn, "Loading Module", source_path, diagnostics, user_data);
 
 	if (!module)
 		return result;
@@ -97,7 +98,7 @@ SLANG_Compile(void *global_session,
 	if (entry_point_count <= 0)
 	{
 		if (log_fn)
-			log_fn("EntryPoints", source_path, "No entry points found.");
+			log_fn("EntryPoints", source_path, "No entry points found.", user_data);
 
 		return result;
 	}
@@ -105,7 +106,7 @@ SLANG_Compile(void *global_session,
 	if (entry_point_count > SLANG_MAX_STAGES)
 	{
 		if (log_fn)
-			log_fn("EntryPoints", source_path, "Too many entry points (max 8).");
+			log_fn("EntryPoints", source_path, "Too many entry points (max 8).", user_data);
 
 		return result;
 	}
@@ -124,7 +125,7 @@ SLANG_Compile(void *global_session,
 		if (SLANG_FAILED(sr))
 		{
 			if (log_fn)
-				log_fn("EntryPoint", source_path, "Failed to get entry point.");
+				log_fn("EntryPoint", source_path, "Failed to get entry point.", user_data);
 
 			return result;
 		}
@@ -140,7 +141,7 @@ SLANG_Compile(void *global_session,
 											   composed.writeRef(),
 											   diagnostics.writeRef());
 
-	SLANG_LogDiagnostics(log_fn, "Composing", source_path, diagnostics);
+	SLANG_LogDiagnostics(log_fn, "Composing", source_path, diagnostics, user_data);
 
 	if (SLANG_FAILED(sr))
 		return result;
@@ -150,7 +151,7 @@ SLANG_Compile(void *global_session,
 
 	sr = composed->link(linked.writeRef(), diagnostics.writeRef());
 
-	SLANG_LogDiagnostics(log_fn, "Linking", source_path, diagnostics);
+	SLANG_LogDiagnostics(log_fn, "Linking", source_path, diagnostics, user_data);
 
 	if (SLANG_FAILED(sr))
 		return result;
@@ -164,7 +165,7 @@ SLANG_Compile(void *global_session,
 									   spirv_blob.writeRef(),
 									   diagnostics.writeRef());
 
-		SLANG_LogDiagnostics(log_fn, "Compiling", source_path, diagnostics);
+		SLANG_LogDiagnostics(log_fn, "Compiling", source_path, diagnostics, user_data);
 
 		if (SLANG_FAILED(sr) || !spirv_blob)
 			return result;

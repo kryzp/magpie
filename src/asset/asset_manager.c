@@ -125,7 +125,7 @@ AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
 		}
 	}
 
-	AssertTrue(false && "Cannot add more paths to path map.");
+	DebugLogB(assets->log_channel, "Cannot add more paths to path map.");
 }
 
 internal u32

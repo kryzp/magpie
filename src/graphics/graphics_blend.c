@@ -35,8 +35,8 @@ GFX_DepthStencilStInit(void)
 {
 	GFX_DepthStencilSt st = {0};
 
-	st.depth_test_enabled = true;
-	st.depth_write_enabled = true;
+	st.depth_test_enabled = false;
+	st.depth_write_enabled = false;
 	st.depth_compare_op = VK_COMPARE_OP_LESS;
 
 	st.depth_bounds_test_enabled = false;

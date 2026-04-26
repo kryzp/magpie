@@ -29,7 +29,7 @@ struct R_IBLPassIrradianceFnData
 	GFX_SamplerKey      sampler;
 	GFX_TextureViewKey  env_view;
 	GFX_BufferKey       capture_transforms;
-	const R_Mesh       *cube_mesh;
+	const R_Mesh       *skybox_mesh;
 };
 
 R_PASS_RECORD_DEF(R_IBLPassIrradianceFn);
@@ -43,7 +43,7 @@ struct R_IBLPassPrefilterFnData
 	GFX_SamplerKey      sampler;
 	GFX_TextureViewKey  env_view;
 	GFX_BufferKey       capture_transforms;
-	const R_Mesh       *cube_mesh;
+	const R_Mesh       *skybox_mesh;
 };
 
 R_PASS_RECORD_DEF(R_IBLPassPrefilterFn);

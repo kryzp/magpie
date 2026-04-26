@@ -1,10 +1,10 @@
 
-R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
+R_PASS_RECORD_DEF(R_HdrToEnvPass)
 {
 	GFX_Device *device = ctx->device;
 	GFX_CmdBuffer *cmd = ctx->cmd;
 	
-	const R_IBLPassIrradianceFnData *user_data = ctx->user_data;
+	const R_HdrToEnvPassData *user_data = ctx->user_data;
 	
 	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(user_data->shader);
 	pipeline_def.multi_view_mask = 0b111111;
@@ -17,14 +17,14 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 	{
 		u64 transform_matrix_buffer;
 		u64 vertex_buffer;
-		u32 environment_map;
+		u32 hdr_image;
 		u32 linear_sampler;
 	}
 	args;
 	
 	args.transform_matrix_buffer = GFX_DeviceBufferAddress       (device, user_data->capture_transforms);
 	args.vertex_buffer           = GFX_DeviceBufferAddress       (device, user_data->skybox_mesh->vertex_buffer);
-	args.environment_map         = GFX_DeviceTextureViewBindless (device, user_data->env_view);
+	args.hdr_image               = GFX_DeviceTextureViewBindless (device, user_data->hdr_view);
 	args.linear_sampler          = GFX_DeviceSamplerBindless     (device, user_data->sampler);
 
 	GFX_CmdBindBindless    (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, &cmd->device->bindless);
@@ -32,9 +32,4 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 	GFX_CmdPushConstants   (cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 	GFX_CmdBindIndexBuffer (cmd, user_data->skybox_mesh->index_buffer, 0, VK_WHOLE_SIZE, user_data->skybox_mesh->index_type);
 	GFX_CmdDrawIndexed     (cmd, user_data->skybox_mesh->index_count, 1, 0, 0, 0);
-}
-
-R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
-{
-	AssertTrue(false && "fuck you work in progress.");
 }
