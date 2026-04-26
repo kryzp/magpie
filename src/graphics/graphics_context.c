@@ -273,8 +273,10 @@ GFX_ContextVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_se
 {
 	if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 	{
-		DebugLogF("Severity = %d, Type = %d, Message = \"%s\"",
-				 message_severity, message_type, callback_data->pMessage);
+		// todo: integrate with logging system
+		
+		printf("Severity = %d, Type = %d, Message = \"%s\"",
+			   message_severity, message_type, callback_data->pMessage);
 		
 		AssertTrue(false);
 	}
@@ -297,7 +299,7 @@ GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 }
 
 internal GFX_Context
-GFX_ContextInit()
+GFX_ContextInit(LOG_Channel log_channel)
 {
 	GFX_Context context = {0};
 	
@@ -347,7 +349,7 @@ GFX_ContextInit()
 
 	if (context.has_validation_layers)
 	{
-		DebugLogF("Validation layer support verified.");
+		DebugLogD(log_channel, "Validation layer support verified.");
 
 		instance_create_info.enabledLayerCount = ArraySize(gfx_context_vk_validation_layers);
 		instance_create_info.ppEnabledLayerNames = gfx_context_vk_validation_layers;
@@ -355,7 +357,7 @@ GFX_ContextInit()
 	}
 	else
 	{
-		DebugLogF("No validation layer support.");
+		DebugLogW(log_channel, "No validation layer support.");
 
 		instance_create_info.enabledLayerCount = 0;
 		instance_create_info.ppEnabledLayerNames = NULL;
@@ -405,7 +407,8 @@ GFX_ContextInit()
 			vkGetPhysicalDeviceProperties2(devices[i], &properties);
 			vkGetPhysicalDeviceFeatures2(devices[i], &features);
 
-			DebugLogF("Querying physical device: %s (%d)",
+			DebugLogD(log_channel,
+					  "Querying physical device: %s (%d)",
 					  properties.properties.deviceName, properties.properties.deviceID);
 
 			b32 has_essentials = false;
@@ -427,9 +430,9 @@ GFX_ContextInit()
 		}
 
 		if (!context.physical_device)
-			AssertTrue(false && "Unable to find a suitable GPU.");
+			DebugLogB(log_channel, "Unable to find a suitable GPU.");
 
-		DebugLogF("Selected a suitable GPU: %d", selected_id);
+		DebugLogD(log_channel, "Selected a suitable GPU: %d", selected_id);
 	}
 
 	context.max_msaa_samples = GFX_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties);
@@ -440,7 +443,7 @@ GFX_ContextInit()
 	vkGetPhysicalDeviceQueueFamilyProperties(context.physical_device, &queue_family_count, 0);
 
 	if (queue_family_count <= 0)
-		AssertTrue(false && "Failed to find any queue families.");
+		DebugLogD(log_channel, "Failed to find any queue families.");
 
 	VkQueueFamilyProperties *queue_families = ArenaPushArray(scratch.arena, VkQueueFamilyProperties, queue_family_count);
 
@@ -527,7 +530,7 @@ GFX_ContextInit()
 	{
 		device_create_info.enabledLayerCount = ArraySize(gfx_context_vk_validation_layers);
 		device_create_info.ppEnabledLayerNames = gfx_context_vk_validation_layers;
-		DebugLogF("Enabled validation layers.");
+		DebugLogD(log_channel, "Enabled validation layers.");
 	}
 
 	GFX_VK_CHECK(vkCreateDevice(context.physical_device,
@@ -535,13 +538,13 @@ GFX_ContextInit()
 								&context.device),
 				 "Failed to create logical device.");
 
-	DebugLogF("Created logical device.");
+	DebugLogD(log_channel, "Created logical device.");
 	
 	vkGetDeviceQueue(context.device,
 					 context.graphics_queue.family_index, 0,
 					 &context.graphics_queue.handle);
 
-	DebugLogF("Created graphics queue.");
+	DebugLogD(log_channel, "Created graphics queue.");
 
 	u32 version = 0;
 	VkResult result = vkEnumerateInstanceVersion(&version);
@@ -551,11 +554,11 @@ GFX_ContextInit()
 		u32 major = VK_API_VERSION_MAJOR(version);
 		u32 minor = VK_API_VERSION_MINOR(version);
 		
-		DebugLogF("Using Vulkan %d.%d", major, minor);
+		DebugLogD(log_channel, "Using Vulkan %d.%d", major, minor);
 	}
 	else
 	{
-		DebugLogF("Failed to retrieve Vulkan version.");
+		DebugLogW(log_channel, "Failed to retrieve Vulkan version.");
 	}
 
 	volkLoadDevice(context.device);
@@ -593,7 +596,7 @@ GFX_ContextInit()
 									&context.vma_allocator),
 				 "Failed to create Vulkan Memory Allocator.");
 	
-	DebugLogF("Created Vulkan Memory Allocator.");
+	DebugLogD(log_channel, "Created Vulkan Memory Allocator.");
 
 	context.swapchain_details = GFX_ContextQuerySwapchainSupport(context.physical_device, context.surface);
 

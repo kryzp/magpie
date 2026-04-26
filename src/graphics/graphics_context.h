@@ -89,7 +89,7 @@ internal VkResult GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance insta
    CONTEXT CORE
    ================================================== */
 
-internal GFX_Context GFX_ContextInit();
+internal GFX_Context GFX_ContextInit(LOG_Channel log_channel);
 internal void GFX_ContextDestroy(GFX_Context *context);
 
 #endif // GRAPHICS_CONTEXT_H

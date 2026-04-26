@@ -97,6 +97,8 @@ struct R_Graph
 	
 	GFX_Device *device;
 
+	LOG_Channel log_channel;
+
 	u32 texture_res_count; R_GraphTexture    texture_res[R_GRAPH_MAX_TEX_RESOURCES];
 	u32 texture_ver_count; R_GraphTexVersion texture_ver[R_GRAPH_MAX_TEX_VERSIONS];
 
@@ -120,10 +122,9 @@ struct R_Graph
    CORE
    ================================================== */
 
-internal void R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device);
-internal void R_GraphDestroy(R_Graph *graph);
-
-internal void R_GraphReset(R_Graph *graph);
+internal void R_GraphInit    (R_Graph *graph, Arena *arena, GFX_Device *device, LOG_Channel log_channel);
+internal void R_GraphDestroy (R_Graph *graph);
+internal void R_GraphReset   (R_Graph *graph);
 
 
 /* ==================================================

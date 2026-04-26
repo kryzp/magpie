@@ -4,6 +4,8 @@ AUD_Init(AUD_System *system, Arena *arena, AUD_BackendAPI *api)
 	system->arena = arena;
 	system->api = api;
 
+	system->log_channel = LOG_OpenChannel(String8Lit("AUDIO"));
+
 	system->master_volume = 1.f;
 
 	for (u32 b = 0; b < AUD_Bus_COUNT; b++)
@@ -15,12 +17,16 @@ AUD_Init(AUD_System *system, Arena *arena, AUD_BackendAPI *api)
 	system->emitter_sentinel.prev = &system->emitter_sentinel;
 	system->free_emitter_sentinel.next = &system->free_emitter_sentinel;
 	system->free_emitter_sentinel.prev = &system->free_emitter_sentinel;
+
+	DebugLogI(system->log_channel, "Initialized.");
 }
 
 internal void
 AUD_Shutdown(AUD_System *system)
 {
 	AUD_StopAll(system);
+	
+	DebugLogI(system->log_channel, "Shut Down.");
 }
 
 internal void

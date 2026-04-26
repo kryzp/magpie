@@ -109,10 +109,10 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 			JOB_Request *request = NULL;
 		
 			if (a > t)
-				{
-					request = &mtq->requests[t % JOB_MAX_JOBS_PER_QUEUE];
-					mtq->atomic_taken_task_count = t + 1;
-				}
+			{
+				request = &mtq->requests[t % JOB_MAX_JOBS_PER_QUEUE];
+				mtq->atomic_taken_task_count = t + 1;
+			}
 
 			osapi->SpinLockRelease(&mtq->atomic_spinlock);
 		

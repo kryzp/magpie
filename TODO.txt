@@ -1,3 +1,5 @@
+- logging deduplication shouldn't reset when switching between channels.
+
 - /graphics/ backend shouldn't be taking in raw types, everything should take
   in a GFX_<xxx>Key. also make the device global, in the same way the audio
   backend works. e.g: command buffer takes in a GFX_TextureKey and such,

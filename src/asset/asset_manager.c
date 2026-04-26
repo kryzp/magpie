@@ -125,7 +125,7 @@ AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
 		}
 	}
 
-	AssertTrue(false && "Cannot add more paths to path map in Assets.");
+	AssertTrue(false && "Cannot add more paths to path map.");
 }
 
 internal u32
@@ -165,6 +165,8 @@ AST_Init(AST_Assets *assets, Arena *arena,
 
 	assets->arena = arena;
 
+	assets->log_channel = LOG_OpenChannel(String8Lit("ASSETS"));
+
 	assets->device = device;
 	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
@@ -189,7 +191,7 @@ AST_Init(AST_Assets *assets, Arena *arena,
 #include "asset_definitions.inc"
 #undef AssetDef
 	
-	DebugLogF("Assets Initialized.");
+	DebugLogI(assets->log_channel, "Initialized.");
 }
 
 internal void
@@ -214,7 +216,7 @@ AST_Destroy(AST_Assets *assets)
 	osapi->MutexDestroy   (assets->loading_mutex);
 	osapi->CondVarDestroy (assets->loading_cond);
 
-	DebugLogF("Assets Destroyed.");
+	DebugLogI(assets->log_channel, "Destroyed.");
 }
 
 internal void
@@ -248,8 +250,7 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 		}
 	}
 
-	DebugLogF("Unrecognised asset prefix in path: \"%.*s\"", (int)path.len, path.str);
-	AssertTrue(false);
+	DebugLogB(assets->log_channel, "Unrecognised prefix in path: \"%.*s\"", (int)path.len, path.str);
 
 	return path;
 }
@@ -335,11 +336,12 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx);
 
 	if (load_data.failed)
-	{
-		DebugLogF("Failed to load asset: %.*s", (int)ctx.metadata.path.len, ctx.metadata.path.str);
-		AssertTrue(false);
-	}
-
+		DebugLogE(load_params->assets->log_channel, "Failed to load %.*s.",
+				  (i32)ctx.metadata.path.len, ctx.metadata.path.str);
+	else
+		DebugLogD(load_params->assets->log_channel, "Loaded in %.*s.",
+				  (i32)ctx.metadata.path.len, ctx.metadata.path.str);
+	
 	AST_Upload upload = {0};
 	upload.load_arena_index = arena_index;
 	upload.metadata = load_params->metadata;
@@ -599,16 +601,10 @@ AST_FlushUploads(AST_Assets *assets)
 				if (upload->load_data.failed)
 				{
 					record->state = AST_State_Failed;
-					// TODO: assign fallback / placeholder asset.
 				}
 				else
 				{
 					b32 is_new = asset->type == AST_Type_Unknown;
-
-					DebugLogF("%s %.*s...",
-							  is_new ? "Creating" : "Reloading",
-							  (int)upload->metadata.path.len,
-							  upload->metadata.path.str);
 
 					asset->type = upload->type;
 					asset->handle = upload->handle;
@@ -636,6 +632,11 @@ AST_FlushUploads(AST_Assets *assets)
 
 						osapi->MutexUnlock(assets->allocation_mutex);
 					}
+
+					DebugLogD(assets->log_channel,
+							  "%s %.*s.",
+							  is_new ? "Allocated" : "Reloaded",
+							  (i32)upload->metadata.path.len, upload->metadata.path.str);
 
 					ScratchArena scratch = ScratchBegin(NULL, 0);
 					{
@@ -689,24 +690,41 @@ AST_SetFallback(AST_Assets *assets, AST_Handle handle, AST_Type type)
 internal AST_Asset *
 AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
 {
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+	AST_Asset *selected = NULL;
+	
 	AST_Record *record = AST_GetRecord(assets, handle);
 	
 	if (record &&
 		AST_StateIsLoaded(record->state) &&
 		record->asset.type == type)
 	{
-		return &record->asset;
+		selected = &record->asset;
+		goto end;
 	}
+
+	String8 type_string = AST_StringFromType(scratch.arena, type);
+
+	DebugLogW(assets->log_channel,
+			  "%.*s asset not found. Falling back...",
+			  (i32)type_string.len, type_string.str);
 	
 	AST_Record *fallback = AST_GetRecord(assets, assets->fallbacks[type]);
 	if (fallback &&
 		AST_StateIsLoaded(fallback->state))
 	{
-		return &fallback->asset;
+		selected = &fallback->asset;
+		goto end;
 	}
-	
+
 	// we're fucked basically
-	return &assets->null_asset_sentinel;
+	DebugLogE(assets->log_channel, "No fallback found for asset. FUCK");
+
+	selected = &assets->null_asset_sentinel;
+
+end:
+	ScratchRelease(&scratch);
+	return selected;
 }
 
 internal AST_Handle

@@ -4,7 +4,8 @@ GFX_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
 							  const char *message)
 {
-	DebugLogF("Shader [%s] %s: %s", source, context, message);
+	// TODO: integrate with logging system.
+	printf("Shader [%s] %s: %s", source, context, message);
 }
 
 internal void
@@ -12,19 +13,22 @@ GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler)
 {
 	SLANG_Init(&compiler->global_session);
 
+	compiler->log_channel = LOG_OpenChannel(String8Lit("SLANG"));
+
 	if (compiler->global_session)
-		DebugLogF("Slang shader compiler initialized.");
+		DebugLogI(compiler->log_channel, "Initialized.");
 	else
-		DebugLogF("Failed to initialize Slang shader compiler.");
+		DebugLogB(compiler->log_channel, "Failed to initialize.");
 }
 
 internal void
 GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler)
 {
-	SLANG_Shutdown(compiler->global_session);
-	compiler->global_session = NULL;
+	DebugLogI(compiler->log_channel, "Shutting down...");
 
-	DebugLogF("Slang shader compiler shut down.");
+	SLANG_Shutdown(compiler->global_session);
+
+	compiler->global_session = NULL;
 }
 
 internal GFX_ShaderCompiledStages

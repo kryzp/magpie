@@ -12,10 +12,15 @@ IO_PathGetFileName(Arena *arena, String8 path)
 internal String8
 IO_PathGetFileNameExt(Arena *arena, String8 path)
 {
-	u32 index = String8FindLastIncl(path, String8Lit("/"));
+	u64 index = 0;
+	
+	for (u64 i = 0; i < path.len; i++)
+	{
+		if (path.str[i] == '/' || path.str[i] == '\\')
+			index = i + 1;
+	}
 
 	String8 out = String8Alloc(arena, path.len - index);
-
 	MemCopy(out.str, path.str + index, out.len);
 
 	return out;

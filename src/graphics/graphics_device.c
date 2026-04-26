@@ -36,7 +36,8 @@
 #undef GFX_DEVICE_MANAGED_RESOURCE
 
 internal VkSurfaceFormatKHR
-GFX_DeviceChooseSwapchainSurfaceFormat(u32 available_surface_format_count,
+GFX_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
+									   u32 available_surface_format_count,
 									   const VkSurfaceFormatKHR *available_surface_formats)
 {
 	for (u32 i = 0; i < available_surface_format_count; i++)
@@ -46,12 +47,12 @@ GFX_DeviceChooseSwapchainSurfaceFormat(u32 available_surface_format_count,
 		if (format->format == VK_FORMAT_B8G8R8A8_UNORM &&
 		    format->colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 		{
-			DebugLogF("Found desired swapchain swap surface format and colour space.");
+			DebugLogD(channel, "Found desired swapchain swap surface format and colour space.");
 			return *format;
 		}
 	}
 
-	DebugLogF("Could not find desired swapchain swap surface format and colour space, falling back...");
+	DebugLogB(channel, "Could not find desired swapchain swap surface format and colour space.");
 
 	return available_surface_formats[0];
 }
@@ -115,19 +116,21 @@ internal void
 GFX_DeviceInit(GFX_Device *device, Arena *arena)
 {
 	device->permanent_arena = arena;
+
+	device->log_channel = LOG_OpenChannel(String8Lit("VULKAN"));
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
 		device->per_frame_data[i].arena = ArenaInitArena(arena, arena->capacity * 0.1f, 8);
 
 	device->current_frame_index = 0;
 
-	device->context = GFX_ContextInit();
+	device->context = GFX_ContextInit(device->log_channel);
 
 	GFX_DeviceCreateSyncResources(device);
 	GFX_DeviceCreateBindless(device);
 	GFX_DeviceCreateImGui(device);
 
-	DebugLogF("Graphics Device Initialized.");
+	DebugLogI(device->log_channel, "Initialized.");
 }
 
 internal void
@@ -158,7 +161,7 @@ GFX_DeviceDestroy(GFX_Device *device)
 
 	GFX_ContextDestroy(&device->context);
 
-	DebugLogF("Graphics Device Destroyed.");
+	DebugLogI(device->log_channel, "Destroyed.");
 }
 
 internal void
@@ -457,7 +460,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 
 	const GFX_SwapchainSupportDetails *details = &device->context.swapchain_details;
 
-	VkSurfaceFormatKHR surface_format = GFX_DeviceChooseSwapchainSurfaceFormat(details->surface_format_count, details->surface_formats);
+	VkSurfaceFormatKHR surface_format = GFX_DeviceChooseSwapchainSurfaceFormat(device->log_channel, details->surface_format_count, details->surface_formats);
 	VkPresentModeKHR present_mode = GFX_DeviceChooseSwapchainPresentMode(details->present_mode_count, details->present_modes, false);
 	VkExtent2D extent = GFX_DeviceChooseSwapchainExtent(&details->capabilities);
 
@@ -560,7 +563,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 					 "Failed to create texture image view.");
 	}
 
-	DebugLogF("Swapchain created.");
+	DebugLogD(device->log_channel, "Swapchain created.");
 
 	ScratchRelease(&scratch);
 
@@ -1440,16 +1443,13 @@ GFX_DeviceSamplerBindless(const GFX_Device *device, GFX_SamplerKey key)
 }
 
 internal GFX_ShaderStage
-GFX_DeviceShaderStageCreate(Arena *arena, const GFX_ShaderBytecode *bytecode)
+GFX_DeviceShaderStageCreate(GFX_Device *device, Arena *arena, const GFX_ShaderBytecode *bytecode)
 {
 	SpvReflectShaderModule reflect_module = {0};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
 
 	if (reflect_result != SPV_REFLECT_RESULT_SUCCESS)
-	{
-		DebugLogF("Failed to reflect SPIR-V module: %d\n", reflect_result);
-		AssertTrue(false);
-	}
+		DebugLogB(device->log_channel, "Failed to reflect SPIR-V module: %d\n", reflect_result);
 	
 	ScratchArena scratch = ScratchBegin(&arena, 1);
 
@@ -1487,9 +1487,10 @@ GFX_DeviceShaderStageCreate(Arena *arena, const GFX_ShaderBytecode *bytecode)
 		stage.bytecode.bytes = ArenaPush(arena, bytecode->size, 1);
 		
 		MemCopy(stage.bytecode.bytes, bytecode->bytes, bytecode->size);
-	} else {
-		DebugLogF("No entry points found in SPIR-V.");
-		AssertTrue(false);
+	}
+	else
+	{
+		DebugLogB(device->log_channel, "No entry points found in SPIR-V.");
 	}
 
 	spvReflectDestroyShaderModule(&reflect_module);
@@ -1508,7 +1509,7 @@ GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_Sha
 
 	for (u32 i = 0; i < stage_count; i++)
 	{
-		program.stages[i] = GFX_DeviceShaderStageCreate(device->permanent_arena, &stages[i]);
+		program.stages[i] = GFX_DeviceShaderStageCreate(device, device->permanent_arena, &stages[i]);
 		program.push_constant_size = MaxValue(program.push_constant_size, program.stages[i].push_constant_size);
 	}
 
@@ -1565,7 +1566,7 @@ GFX_DeviceCreateSyncResources(GFX_Device *device)
 		device->per_frame_data[i].destroyed_buffer_head = NULL;
 	}
 
-	DebugLogF("Created frame sync objects.");
+	DebugLogD(device->log_channel, "Created frame sync objects.");
 }
 
 internal void
@@ -1647,7 +1648,7 @@ GFX_DeviceCreateBindless(GFX_Device *device)
 										  device->bindless.sets),
 				 "Failed to allocate bindless descriptor set.");
 
-	DebugLogF("Bindless resources created.");
+	DebugLogD(device->log_channel, "Bindless resources created.");
 }
 
 internal void

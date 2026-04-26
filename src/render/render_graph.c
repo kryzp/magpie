@@ -42,21 +42,26 @@ R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 }
 
 internal void
-R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device)
+R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device, LOG_Channel log_channel)
 {
 	MemZeroStruct(graph);
 	
 	graph->permanent_arena = arena;
 	graph->device = device;
+	graph->log_channel = log_channel;
 	graph->backbuffer_handle = R_GraphTexHandleNull();
 
 	R_ResourcePoolInit(&graph->pool, graph->permanent_arena, R_GRAPH_MAX_TEX_RESOURCES, R_GRAPH_MAX_BUF_RESOURCES);
+
+	DebugLogI(graph->log_channel, "Graph Initialized.");
 }
 
 internal void
 R_GraphDestroy(R_Graph *graph)
 {
 	R_ResourcePoolDestroy(&graph->pool, graph->device);
+	
+	DebugLogI(graph->log_channel, "Graph Destroyed.");
 }
 
 internal void

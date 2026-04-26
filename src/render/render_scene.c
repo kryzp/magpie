@@ -1,11 +1,12 @@
 
 internal void
-R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device)
+R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_channel)
 {
 	MemZeroStruct(scene);
 
 	scene->arena = arena;
 	scene->device = device;
+	scene->log_channel = log_channel;
 
 	// Hook up the free lists.
 	for (u32 i = R_SCENE_MAX_OBJECTS; i > 0; i--)
@@ -29,6 +30,8 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device)
  
 	scene->mesh_buffer_dirty	 = true;
 	scene->material_buffer_dirty = true;
+	
+	DebugLogI(scene->log_channel, "Scene Initialized.");
 }
 
 internal void
@@ -42,6 +45,8 @@ R_SceneDestroy(R_Scene *scene)
 		GFX_DeviceBufferDestroy(scene->device, page->vertex_buffer);
 		GFX_DeviceBufferDestroy(scene->device, page->index_buffer);
 	}
+	
+	DebugLogI(scene->log_channel, "Scene Destroyed.");
 }
 
 internal void
@@ -526,6 +531,8 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 	R_SceneMeshHandle handle = {0};
 	handle.value = mesh_data_index;
 
+	DebugLogD(scene->log_channel, "Registered Mesh.");
+
 	return handle;
 }
 
@@ -589,5 +596,7 @@ R_SceneRegisterMaterial(R_Scene *scene,
 	R_SceneMaterialHandle handle = {0};
 	handle.value = index;
 
+	DebugLogD(scene->log_channel, "Registered Material.");
+	
 	return handle;
 }

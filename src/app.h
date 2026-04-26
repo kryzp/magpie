@@ -22,6 +22,9 @@ struct App
 	Arena scene_arena;
 	Arena pass_frame_arena;
 
+	LOG_Logger logger;
+	LOG_Channel log_channel;
+	
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
 	GFX_ShaderCompiler shader_compiler;
@@ -34,7 +37,10 @@ struct App
 	AUD_BufferHandle test_sound;
 
 	AST_Assets assets;
-	
+
+	// todo: move rendering stuff into a
+	//       seperate manager sub-system.
+	LOG_Channel render_log_channel;
 	R_Graph graph;
 	R_GraphTexHandle swapchain_src;
 	R_Scene scene;
@@ -56,15 +62,20 @@ struct App
 	f32 delta_accumulator;
 };
 
-internal void AppInitAudio           (App *app);
-internal void AppDestroyAudio        (App *app);
-internal void AppHotLoadAudio        (App *app);
-internal void AppHotUnloadAudio      (App *app);
+internal void AppInitLog             (App *app);
+internal void AppDestroyLog          (App *app);
+internal void AppHotLoadLog          (App *app);
+internal void AppHotUnloadLog        (App *app);
 
 internal void AppInitGraphics        (App *app);
 internal void AppDestroyGraphics     (App *app);
 internal void AppHotLoadGraphics     (App *app);
 internal void AppHotUnloadGraphics   (App *app);
+
+internal void AppInitAudio           (App *app);
+internal void AppDestroyAudio        (App *app);
+internal void AppHotLoadAudio        (App *app);
+internal void AppHotUnloadAudio      (App *app);
 
 internal void AppInitAssets          (App *app);
 internal void AppDestroyAssets       (App *app);

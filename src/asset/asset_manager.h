@@ -50,6 +50,8 @@ struct AST_Assets
 {
 	Arena *arena;
 
+	LOG_Channel log_channel;
+
 	GFX_Device *device;
 	GFX_ShaderCompiler *shader_compiler;
 	const AUD_BackendAPI *audio_backend;

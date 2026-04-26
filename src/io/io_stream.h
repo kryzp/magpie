@@ -1,6 +1,8 @@
 #ifndef IO_STREAM_H
 #define IO_STREAM_H
 
+// TODO: is this necessary???
+
 typedef struct IO_Stream IO_Stream;
 struct IO_Stream
 {

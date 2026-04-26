@@ -1,0 +1,30 @@
+[    0.000  ] [  INFO   ] [  LOG       ] Initialized, File: "log_output.txt" as output.
+[    0.022  ] [  DEBUG  ] [  VULKAN    ] Validation layer support verified.
+[    0.057  ] [  DEBUG  ] [  VULKAN    ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.058  ] [  DEBUG  ] [  VULKAN    ] Selected a suitable GPU: 29822
+[    0.058  ] [  DEBUG  ] [  VULKAN    ] Enabled validation layers.
+[    0.068  ] [  DEBUG  ] [  VULKAN    ] Created logical device.
+[    0.068  ] [  DEBUG  ] [  VULKAN    ] Created graphics queue.
+[    0.069  ] [  DEBUG  ] [  VULKAN    ] Using Vulkan 1.4
+[    0.070  ] [  DEBUG  ] [  VULKAN    ] Created Vulkan Memory Allocator.
+[    0.072  ] [  DEBUG  ] [  VULKAN    ] Created frame sync objects.
+[    0.073  ] [  DEBUG  ] [  VULKAN    ] Bindless resources created.
+[    0.073  ] [  INFO   ] [  VULKAN    ] Initialized.
+[    0.073  ] [  DEBUG  ] [  VULKAN    ] Found desired swapchain swap surface format and colour space.
+[    0.136  ] [  DEBUG  ] [  VULKAN    ] Swapchain created.
+[    0.193  ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.237  ] [  INFO   ] [  AUDIO     ] Initialized.
+[    0.245  ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.293  ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.293  ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.485  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.521  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.529  ] [  INFO   ] [  APP       ] Initialized.
+[    3.001  ] [  INFO   ] [  APP       ] Shutting Down...
+[    3.001  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
+[    3.002  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
+[    3.002  ] [  INFO   ] [  ASSETS    ] Destroyed.
+[    3.002  ] [  INFO   ] [  AUDIO     ] Shut Down.
+[    3.019  ] [  INFO   ] [  SLANG     ] Shutting down...
+[    3.091  ] [  INFO   ] [  VULKAN    ] Destroyed.
+[    3.092  ] [  INFO   ] [  LOG       ] Shutting Down...

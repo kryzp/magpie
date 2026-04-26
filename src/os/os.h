@@ -53,6 +53,12 @@ OS_HandleNull(void)
 }
 
 inline b32
+OS_HandleIsNull(OS_Handle handle)
+{
+	return handle.value == NULL;
+}
+
+inline b32
 OS_HandleMatch(OS_Handle a, OS_Handle b)
 {
 	return a.value == b.value;

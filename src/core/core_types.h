@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stdalign.h>
+#include <stdarg.h>
 
 #define STRINGIFY(x) #x
 #define MCONCAT(a, b) a##b
@@ -45,21 +46,6 @@ typedef uint16_t    u16;
 typedef uint32_t    u32;
 typedef uint64_t    u64;
 
-/*
- * Conflicated between using sXX or iXX.
- *
- * Choosing iXX because despite uXX/sXX
- * being more symmetric sXX for some reason
- * is harder to read and easier to mistake
- * for uXX compared to iXX.
- *
- * It's also more reflective of C standard
- * keywords (int / unsigned, not signed / unsigned)
- *
- * This is such a non-issue haha idk why
- * I'm so pressed about this.
- */
-
 typedef int8_t      i8;
 typedef int16_t     i16;
 typedef int32_t     i32;
@@ -73,6 +59,7 @@ typedef uint64_t    b64;
 typedef float       f32;
 typedef double      f64;
 
+typedef size_t      usize;
 typedef uintptr_t   uptr;
 
 #endif // CORE_TYPES_H

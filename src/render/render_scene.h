@@ -149,8 +149,10 @@ typedef struct R_Scene R_Scene;
 struct R_Scene
 {
 	Arena *arena;
-	GFX_Device *device; // TODO: move out of the scene and into function params
-
+	GFX_Device *device;
+	
+	LOG_Channel log_channel;
+	
 	// Objects
 	R_SceneObjectSlot object_slots[R_SCENE_MAX_OBJECTS];
 	u32               object_count;
@@ -192,8 +194,8 @@ struct R_Scene
    CORE
    ================================================== */
 
-internal void R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device);
-internal void R_SceneDestroy(R_Scene *scene);
+internal void R_SceneInit    (R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_channel);
+internal void R_SceneDestroy (R_Scene *scene);
 
 internal void R_SceneDebug(const R_Scene *scene);
 

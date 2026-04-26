@@ -13,6 +13,8 @@ typedef struct GFX_ShaderCompiler GFX_ShaderCompiler;
 struct GFX_ShaderCompiler
 {
 	void *global_session;
+
+	LOG_Channel log_channel;
 };
 
 internal void GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler);

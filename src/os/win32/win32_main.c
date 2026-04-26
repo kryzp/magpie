@@ -719,9 +719,7 @@ OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 		buf[cursor++] = 'w';
 			
 		if (excl)
-		{
 			buf[cursor++] = 'x';
-		}
 	}
 	else if (create)
 	{
@@ -747,14 +745,10 @@ OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 	}
 
 	if (read && write)
-	{
 		buf[cursor++] = '+';
-	}
 
 	if (!non_binary)
-	{
 		buf[cursor++] = 'b';
-	}
 
 	buf[cursor] = '\0';
 	
@@ -867,9 +861,9 @@ OS_W32_ReconnectAllGamepads(void)
 		win32_st.gamepads[i] = SDL_OpenGamepad(ids[i]);
 
 		if (win32_st.gamepads[i])
-			DebugLogF("Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
+			printf("OS/Win32 -- Added gamepad with player index: %d\n", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 		else
-			DebugLogF("Failed to open gamepad: %d.", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
+			printf("OS/Win32 -- Failed to open gamepad: %d.\n", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 	}
 
 	SDL_free(ids);
@@ -1180,7 +1174,7 @@ OS_W32_ProcessEvents(I_State *input_out)
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				DebugLogF("Removed gamepad.");
+				printf("OS/Win32 -- Removed gamepad.\n");
 				OS_W32_ReconnectAllGamepads();
 				break;
 
@@ -1267,15 +1261,15 @@ main(void)
 	
 	osapi = &win32_st.api;
 
-	DebugLogF("Initializing ImGui...");
+	printf("OS/Win32 -- Initializing ImGui...\n");
 	
 	OS_W32_InitImGui();
 
-	DebugLogF("Loading App DLL...");
+	printf("OS/Win32 -- Loading App DLL...\n");
 
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
 
-	DebugLogF("Allocating %llu bytes memory...", OS_TOTAL_MEMORY);
+	printf("OS/Win32 -- Allocating %llu bytes memory...\n", OS_TOTAL_MEMORY);
 	
 	void *process_memory = malloc(OS_TOTAL_MEMORY);
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);
@@ -1284,7 +1278,7 @@ main(void)
 
 	win32_st.pending_events = ArenaPushArray(&win32_st.object_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	
-	DebugLogF("Allocated!");
+	printf("OS/Win32 -- Allocated!\n");
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 

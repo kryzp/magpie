@@ -64,6 +64,8 @@ struct AUD_System
 	Arena *arena;
 	AUD_BackendAPI *api;
 
+	LOG_Channel log_channel;
+
 	AUD_Listener listener;
 
 	AUD_Emitter emitter_sentinel;

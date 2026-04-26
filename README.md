@@ -45,12 +45,12 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **Debug Rendering** (lines, circles, spheres, AABB, OBB, crosses, etc.)
 - **GPU Profiler**
 - **Modular Entity System**
+- **Logging System** with levels (trace, debug, info, ...), channels (graphics, assets, ...), file output, collapsing repeated messages (deduplication), ...
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- Better Logging (per system / e.g: `[GRAPHICS] Device Initialized.` or something like that idk)
 - Text / Font Rendering
 - Bone / Joint Based Animation
 - More sophisticated debug logging / tracing system

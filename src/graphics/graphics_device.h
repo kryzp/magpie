@@ -145,6 +145,8 @@ typedef struct GFX_Device GFX_Device;
 struct GFX_Device
 {
 	Arena *permanent_arena;
+
+	LOG_Channel log_channel;
 	
 	GFX_Context context;
 
@@ -171,7 +173,8 @@ struct GFX_Device
    INTERNALS
    ================================================== */
 
-internal VkSurfaceFormatKHR GFX_DeviceChooseSwapchainSurfaceFormat(u32 available_surface_format_count,
+internal VkSurfaceFormatKHR GFX_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
+																   u32 available_surface_format_count,
 																   const VkSurfaceFormatKHR *available_surface_formats);
 
 internal VkPresentModeKHR   GFX_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
@@ -261,7 +264,7 @@ internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (      GFX_Device *device, GFX_
    ================================================== */
 
 internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program);
-internal VkPipelineLayout      GFX_DevicePipelineLayoutFromKey (const GFX_Device *device, GFX_PipelineLayoutKey key);
+internal VkPipelineLayout      GFX_DevicePipelineLayoutFromKey(const GFX_Device *device, GFX_PipelineLayoutKey key);
 
 
 typedef struct GFX_PipelineSt GFX_PipelineSt;
@@ -343,7 +346,7 @@ internal GFX_BindlessIndex GFX_DeviceSamplerBindless (const GFX_Device *device, 
    SHADERS
    ================================================== */
 
-internal GFX_ShaderStage    GFX_DeviceShaderStageCreate    (Arena *arena, const GFX_ShaderBytecode *bytecode);
+internal GFX_ShaderStage    GFX_DeviceShaderStageCreate    (GFX_Device *device, Arena *arena, const GFX_ShaderBytecode *bytecode);
 
 internal GFX_ShaderKey      GFX_DeviceShaderProgramCreate  (GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
 internal void               GFX_DeviceShaderProgramDestroy (GFX_Device *device, GFX_ShaderKey program);

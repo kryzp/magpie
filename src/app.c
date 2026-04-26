@@ -65,6 +65,7 @@
 #include "os/os_inc.h"
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
+#include "log/log_inc.h"
 #include "graphics/graphics_inc.h"
 #include "audio/audio_inc.h"
 #include "asset/asset_inc.h"
@@ -87,6 +88,7 @@
 #include "os/os_inc.c"
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
+#include "log/log_inc.c"
 #include "graphics/graphics_inc.c"
 #include "audio/audio_inc.c"
 #include "asset/asset_inc.c"
@@ -103,36 +105,33 @@
 
 
 /* ==================================================
-   AUDIO
+   LOG
    ================================================== */
 
 internal void
-AppInitAudio(App *app)
+AppInitLog(App *app)
 {
-	app->audio_backend = AUD_BackendAllocAndSelect(&app->partitions[AppMemoryPartition_Audio]);
-	app->audio_backend->Init();
-	
-	AUD_Init(&app->audio_system, &app->partitions[AppMemoryPartition_Audio], app->audio_backend);
+	LOG_InitAndSelect(&app->logger, String8Lit("log_output.txt"));
+
+	app->log_channel = LOG_OpenChannel(String8Lit("APP"));
 }
 
 internal void
-AppDestroyAudio(App *app)
+AppDestroyLog(App *app)
 {
-	AUD_Shutdown(&app->audio_system);
-	
-	app->audio_backend->Shutdown();
+	LOG_Shutdown();
 }
 
 internal void
-AppHotLoadAudio(App *app)
+AppHotLoadLog(App *app)
 {
-	AUD_BackendHotLoad(app->audio_backend);
+	LOG_HotLoad(&app->logger);
 }
 
 internal void
-AppHotUnloadAudio(App *app)
+AppHotUnloadLog(App *app)
 {
-	AUD_BackendHotUnload(app->audio_backend);
+	LOG_HotUnload();
 }
 
 
@@ -223,7 +222,41 @@ AppHotUnloadGraphics(App *app)
 
 
 /* ==================================================
-   Assets
+   AUDIO
+   ================================================== */
+
+internal void
+AppInitAudio(App *app)
+{
+	app->audio_backend = AUD_BackendAllocAndSelect(&app->partitions[AppMemoryPartition_Audio]);
+	app->audio_backend->Init();
+	
+	AUD_Init(&app->audio_system, &app->partitions[AppMemoryPartition_Audio], app->audio_backend);
+}
+
+internal void
+AppDestroyAudio(App *app)
+{
+	AUD_Shutdown(&app->audio_system);
+	
+	app->audio_backend->Shutdown();
+}
+
+internal void
+AppHotLoadAudio(App *app)
+{
+	AUD_BackendHotLoad(app->audio_backend);
+}
+
+internal void
+AppHotUnloadAudio(App *app)
+{
+	AUD_BackendHotUnload(app->audio_backend);
+}
+
+
+/* ==================================================
+   ASSETS
    ================================================== */
 
 internal void
@@ -257,21 +290,24 @@ AppHotUnloadAssets(App *app)
 internal void
 AppInitRender(App *app)
 {
+	app->render_log_channel = LOG_OpenChannel(String8Lit("RENDER"));
+	
 	u64 render_third_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 3, 8);
 
 	app->graph_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
 	
-	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device);
-	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device);
+	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device, app->render_log_channel);
+	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device, app->render_log_channel);
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
 	AST_WaitForAsync(&app->assets);
-	
+	AST_FlushUploads(&app->assets);
+
 	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 	
 	// Irradiance.
@@ -354,6 +390,7 @@ AppHotUnloadEntity(App *app)
 internal void
 AppInit_(App *app)
 {
+	AppInitLog      (app);
 	AppInitGraphics (app);
 	AppInitAudio    (app);
 	AppInitAssets   (app);
@@ -420,6 +457,8 @@ AppInit(Arena *arena, const OS_API *api)
 	
 	AppInit_(app);
 
+	DebugLogI(app->log_channel, "Initialized.");
+	
 	return app;
 }
 
@@ -428,11 +467,14 @@ AppDestroy(App *app)
 {
 	GFX_DeviceWaitIdle(&app->graphics_device);
 
+	DebugLogI(app->log_channel, "Shutting Down...");
+	
 	AppDestroyEntity   (app);
 	AppDestroyRender   (app);
 	AppDestroyAssets   (app);
 	AppDestroyAudio    (app);
 	AppDestroyGraphics (app);
+	AppDestroyLog      (app);
 }
 
 __declspec(dllexport) b32
@@ -462,7 +504,15 @@ AppTick(App *app, const I_State *input)
 
 	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
-	app->delta_accumulator += MinValue(dt, max_frame_time);
+	f32 clamped_delta = dt;
+
+	if (clamped_delta > max_frame_time)
+	{
+		clamped_delta = max_frame_time;
+		DebugLogW(app->log_channel, "Had to clamp delta - is there lag?");
+	}
+	
+	app->delta_accumulator += clamped_delta;
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
@@ -516,6 +566,7 @@ AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
+	AppHotLoadLog        (app);
 	AppHotLoadGraphics   (app);
 	AppHotLoadAudio      (app);
 	AppHotLoadAssets     (app);
@@ -531,6 +582,7 @@ AppHotUnload(App *app)
 	AppHotUnloadAssets     (app);
 	AppHotUnloadAudio      (app);
 	AppHotUnloadGraphics   (app);
+	AppHotUnloadLog        (app);
 }
 
 internal void
