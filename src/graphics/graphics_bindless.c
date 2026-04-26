@@ -1,12 +1,13 @@
 
 internal VkDescriptorType
-GFX_BindlessGetVkType(GFX_BindlessSetKind kind)
+GFX_BindlessGetVkType(GFX_BindlessKind kind)
 {
 	switch (kind)
 	{
-		case GFX_BindlessSetKind_Sampler:  return VK_DESCRIPTOR_TYPE_SAMPLER;
-		case GFX_BindlessSetKind_Sampled:  return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		case GFX_BindlessSetKind_Storage:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		case GFX_BindlessKind_Sampler:         return VK_DESCRIPTOR_TYPE_SAMPLER;
+		case GFX_BindlessKind_SampledTexture:  return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		case GFX_BindlessKind_SampledCubemap:  return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		case GFX_BindlessKind_StorageTexture:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	}
 
 	AssertTrue(false && "Could not find descriptor type from bindless binding type.");
@@ -16,7 +17,7 @@ GFX_BindlessGetVkType(GFX_BindlessSetKind kind)
 
 internal void
 GFX_BindlessPushUpdate(GFX_Bindless *bindless,
-					   GFX_BindlessSetKind kind, GFX_BindlessHandle handle,
+					   GFX_BindlessKind kind, GFX_BindlessHandle handle,
 					   VkSampler sampler, VkImageView view)
 {
 	AssertTrue(GFX_BindlessHandleValid(handle));
@@ -54,7 +55,7 @@ GFX_BindlessRegisterSampler(GFX_Bindless *bindless, VkSampler sampler)
 }
 
 internal GFX_BindlessHandle
-GFX_BindlessRegisterView(GFX_Bindless *bindless, VkImageView view, b32 is_also_storage)
+GFX_BindlessRegisterView(GFX_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage)
 {
 	GFX_BindlessHandle handle = {0};
 
@@ -70,7 +71,7 @@ GFX_BindlessRegisterView(GFX_Bindless *bindless, VkImageView view, b32 is_also_s
 
 	bindless->view_count++;
 
-	GFX_BindlessUpdateView(bindless, handle, view, is_also_storage);
+	GFX_BindlessUpdateView(bindless, handle, view, is_cubemap, is_also_storage);
 
 	return handle;
 }
@@ -78,16 +79,20 @@ GFX_BindlessRegisterView(GFX_Bindless *bindless, VkImageView view, b32 is_also_s
 internal void
 GFX_BindlessUpdateSampler(GFX_Bindless *bindless, GFX_BindlessHandle handle, VkSampler sampler)
 {
-	GFX_BindlessPushUpdate(bindless, GFX_BindlessSetKind_Sampler, handle, sampler, VK_NULL_HANDLE);
+	GFX_BindlessPushUpdate(bindless, GFX_BindlessKind_Sampler, handle, sampler, VK_NULL_HANDLE);
 }
 
 internal void
-GFX_BindlessUpdateView(GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImageView view, b32 is_also_storage)
+GFX_BindlessUpdateView(GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage)
 {
-	GFX_BindlessPushUpdate(bindless, GFX_BindlessSetKind_Sampled, handle, VK_NULL_HANDLE, view);
+	GFX_BindlessKind kind = is_cubemap
+		? GFX_BindlessKind_SampledCubemap
+		: GFX_BindlessKind_SampledTexture;
+	
+	GFX_BindlessPushUpdate(bindless, kind, handle, VK_NULL_HANDLE, view);
 
 	if (is_also_storage)
-		GFX_BindlessPushUpdate(bindless, GFX_BindlessSetKind_Storage, handle, VK_NULL_HANDLE, view);
+		GFX_BindlessPushUpdate(bindless, kind, handle, VK_NULL_HANDLE, view);
 }
 
 internal void

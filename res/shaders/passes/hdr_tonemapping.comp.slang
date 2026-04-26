@@ -28,8 +28,8 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 	if (tid.x >= args.width || tid.y >= args.height)
 		return;
 
-	Texture2D input = bdl::images[args.input_image_id];
-	RWTexture2D output = bdl::rw_images[args.output_image_id];
+	Texture2D input = bdl::textures[args.input_image_id];
+	RWTexture2D output = bdl::rw_textures[args.output_image_id];
 	
 	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.0);
 }

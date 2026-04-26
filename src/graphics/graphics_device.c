@@ -655,8 +655,8 @@ GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program)
 
 	VkPipelineLayoutCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	create_info.setLayoutCount = GFX_BindlessSetKind_COUNT;
-	create_info.pSetLayouts = device->bindless.layouts;
+	create_info.setLayoutCount = 1;
+	create_info.pSetLayouts = &device->bindless.layout;
 
 	if (push_constants.size > 0)
 	{
@@ -1197,9 +1197,10 @@ GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *
 								   &view.handle),
 				 "Failed to create texture image view.");
 
+	b32 is_cubemap = (gfx_texture->flags & GFX_TextureFlag_Cubemap) != 0;
 	b32 is_storage = (gfx_texture->flags & GFX_TextureFlag_Storage) != 0;
 
-	view.bindless = GFX_BindlessRegisterView(&device->bindless, view.handle, is_storage);
+	view.bindless = GFX_BindlessRegisterView(&device->bindless, view.handle, is_cubemap, is_storage);
 	
 	return GFX_DeviceTextureViewListPush(&device->views, device->permanent_arena, &view, hashed_key);
 }
@@ -1586,11 +1587,11 @@ GFX_DeviceDestroySyncResources(GFX_Device *device)
 internal void
 GFX_DeviceCreateBindless(GFX_Device *device)
 {
-	VkDescriptorPoolSize pool_sizes[GFX_BindlessSetKind_COUNT] = {0};
+	VkDescriptorPoolSize pool_sizes[GFX_BindlessKind_COUNT] = {0};
 
-	for (u32 i = 0; i < GFX_BindlessSetKind_COUNT; i++)
+	for (u32 i = 0; i < GFX_BindlessKind_COUNT; i++)
 	{
-		pool_sizes[i].type = GFX_BindlessGetVkType((GFX_BindlessSetKind)i);
+		pool_sizes[i].type = GFX_BindlessGetVkType((GFX_BindlessKind)i);
 		pool_sizes[i].descriptorCount = GFX_BINDLESS_MAX_RESOURCES;
 	}
 
@@ -1606,46 +1607,48 @@ GFX_DeviceCreateBindless(GFX_Device *device)
 										&device->bindless.pool),
 				 "Failed to create bindless descriptor pool.");
 
-	VkDescriptorBindingFlags bindless_flags =
-		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
-		VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+	VkDescriptorSetLayoutBinding bindings[GFX_BindlessKind_COUNT] = {0};
+	VkDescriptorBindingFlags bindless_flags[GFX_BindlessKind_COUNT] = {0};
 
+	for (u32 i = 0; i < GFX_BindlessKind_COUNT; i++)
+	{
+		bindings[i].descriptorType = GFX_BindlessGetVkType((GFX_BindlessKind)i);
+		bindings[i].descriptorCount = GFX_BINDLESS_MAX_RESOURCES;
+		bindings[i].binding = i;
+		bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
+		bindings[i].pImmutableSamplers = NULL;
+		
+		bindless_flags[i] =
+			VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
+			VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+	}
+	
 	VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags = {0};
 	binding_flags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-	binding_flags.bindingCount = 1;
-	binding_flags.pBindingFlags = &bindless_flags;
+	binding_flags.bindingCount = ArraySize(bindless_flags);
+	binding_flags.pBindingFlags = bindless_flags;
 
-	for (u32 i = 0; i < GFX_BindlessSetKind_COUNT; i++)
-	{
-		VkDescriptorSetLayoutBinding binding = {0};
-		binding.descriptorType = GFX_BindlessGetVkType((GFX_BindlessSetKind)i);
-		binding.descriptorCount = GFX_BINDLESS_MAX_RESOURCES;
-		binding.binding = 0;
-		binding.stageFlags = VK_SHADER_STAGE_ALL;
-		binding.pImmutableSamplers = NULL;
+	VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
+	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layout_create_info.bindingCount = ArraySize(bindings);
+	layout_create_info.pBindings = bindings;
+	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+	layout_create_info.pNext = &binding_flags;
 
-		VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
-		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layout_create_info.bindingCount = 1;
-		layout_create_info.pBindings = &binding;
-		layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
-		layout_create_info.pNext = &binding_flags;
-
-		GFX_VK_CHECK(vkCreateDescriptorSetLayout(device->context.device,
-												 &layout_create_info, NULL,
-												 &device->bindless.layouts[i]),
-					 "Failed to create bindless descriptor layout.");
-	}
+	GFX_VK_CHECK(vkCreateDescriptorSetLayout(device->context.device,
+											 &layout_create_info, NULL,
+											 &device->bindless.layout),
+				 "Failed to create bindless descriptor layout.");
 
 	VkDescriptorSetAllocateInfo alloc_info = {0};
 	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	alloc_info.descriptorPool = device->bindless.pool;
-	alloc_info.descriptorSetCount = GFX_BindlessSetKind_COUNT;
-	alloc_info.pSetLayouts = device->bindless.layouts;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &device->bindless.layout;
 
 	GFX_VK_CHECK(vkAllocateDescriptorSets(device->context.device,
 										  &alloc_info,
-										  device->bindless.sets),
+										  &device->bindless.set),
 				 "Failed to allocate bindless descriptor set.");
 
 	DebugLogD(device->log_channel, "Bindless resources created.");
@@ -1654,9 +1657,7 @@ GFX_DeviceCreateBindless(GFX_Device *device)
 internal void
 GFX_DeviceDestroyBindless(GFX_Device *device)
 {
-	for (u32 i = 0; i < GFX_BindlessSetKind_COUNT; i++)
-		vkDestroyDescriptorSetLayout(device->context.device, device->bindless.layouts[i], NULL);
-
+	vkDestroyDescriptorSetLayout(device->context.device, device->bindless.layout, NULL);
 	vkDestroyDescriptorPool(device->context.device, device->bindless.pool, NULL);
 }
 
@@ -1681,13 +1682,13 @@ GFX_DeviceApplyBindlessUpdates(GFX_Device *device)
 		infos[i].imageView = update->view;
 		infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-		writes[i] = (VkWriteDescriptorSet){0};
+		writes[i] = (VkWriteDescriptorSet) {0};
 		writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		writes[i].descriptorCount = 1;
 		writes[i].dstArrayElement = update->slot;
 		writes[i].descriptorType = GFX_BindlessGetVkType(update->kind);
-		writes[i].dstSet = device->bindless.sets[update->kind];
-		writes[i].dstBinding = 0;
+		writes[i].dstSet = device->bindless.set;
+		writes[i].dstBinding = update->kind;
 		writes[i].pImageInfo = &infos[i];
 	}
 

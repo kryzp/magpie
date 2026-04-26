@@ -93,11 +93,11 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	SamplerState sampler = bdl::samplers[args.linear_sampler];
 	float2 uv = input.sv_position.xy / args.frame_data.window_resolution.xy;
 
-	float3 position    = bdl::images[args.position]    .Sample(sampler, uv).rgb;
-	float3 albedo      = bdl::images[args.albedo]      .Sample(sampler, uv).rgb;
-	float3 material    = bdl::images[args.material]    .Sample(sampler, uv).rgb;
-	float3 normal      = bdl::images[args.normal]      .Sample(sampler, uv).rgb;
-	float3 emissive    = bdl::images[args.emissive]    .Sample(sampler, uv).rgb;
+	float3 position    = bdl::textures[args.position]    .Sample(sampler, uv).rgb;
+	float3 albedo      = bdl::textures[args.albedo]      .Sample(sampler, uv).rgb;
+	float3 material    = bdl::textures[args.material]    .Sample(sampler, uv).rgb;
+	float3 normal      = bdl::textures[args.normal]      .Sample(sampler, uv).rgb;
+	float3 emissive    = bdl::textures[args.emissive]    .Sample(sampler, uv).rgb;
 
 	types::Light light = args.lights[input.light_id];
 

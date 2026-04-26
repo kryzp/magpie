@@ -25,19 +25,20 @@ GFX_BindlessHandleValid(GFX_BindlessHandle handle)
 	return (handle.value != 0) && (handle.value < GFX_BINDLESS_MAX_RESOURCES);
 }
 
-typedef enum GFX_BindlessSetKind
+typedef enum GFX_BindlessKind
 {
-	GFX_BindlessSetKind_Sampler,
-	GFX_BindlessSetKind_Sampled,
-	GFX_BindlessSetKind_Storage,
-	GFX_BindlessSetKind_COUNT
+	GFX_BindlessKind_Sampler        = 0,
+	GFX_BindlessKind_SampledTexture = 1,
+	GFX_BindlessKind_SampledCubemap = 2,
+	GFX_BindlessKind_StorageTexture = 3,
+	GFX_BindlessKind_COUNT
 }
-GFX_BindlessSetKind;
+GFX_BindlessKind;
 
 typedef struct GFX_BindlessUpdate GFX_BindlessUpdate;
 struct GFX_BindlessUpdate
 {
-	GFX_BindlessSetKind kind;
+	GFX_BindlessKind kind;
 	u32 slot;
 	VkSampler sampler;
 	VkImageView view;
@@ -47,8 +48,8 @@ typedef struct GFX_Bindless GFX_Bindless;
 struct GFX_Bindless
 {
 	VkDescriptorPool pool;
-	VkDescriptorSetLayout layouts[GFX_BindlessSetKind_COUNT];
-	VkDescriptorSet sets[GFX_BindlessSetKind_COUNT];
+	VkDescriptorSetLayout layout;
+	VkDescriptorSet set;
 
 	u32 update_count;
 	GFX_BindlessUpdate updates[512];
@@ -63,17 +64,17 @@ struct GFX_Bindless
 	GFX_BindlessHandle free_views[128];
 };
 
-internal VkDescriptorType GFX_BindlessGetVkType(GFX_BindlessSetKind kind);
+internal VkDescriptorType GFX_BindlessGetVkType(GFX_BindlessKind kind);
 
 internal void GFX_BindlessPushUpdate(GFX_Bindless *bindless,
-									 GFX_BindlessSetKind kind, GFX_BindlessHandle handle,
+									 GFX_BindlessKind kind, GFX_BindlessHandle handle,
 									 VkSampler sampler, VkImageView view);
 
 internal GFX_BindlessHandle GFX_BindlessRegisterSampler (GFX_Bindless *bindless, VkSampler sampler);
-internal GFX_BindlessHandle GFX_BindlessRegisterView    (GFX_Bindless *bindless, VkImageView view, b32 is_also_storage);
+internal GFX_BindlessHandle GFX_BindlessRegisterView    (GFX_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
 internal void GFX_BindlessUpdateSampler (GFX_Bindless *bindless, GFX_BindlessHandle handle, VkSampler sampler);
-internal void GFX_BindlessUpdateView    (GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImageView view, b32 is_also_storage);
+internal void GFX_BindlessUpdateView    (GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
 internal void GFX_BindlessFreeSampler (GFX_Bindless *bindless, GFX_BindlessHandle handle);
 internal void GFX_BindlessFreeView    (GFX_Bindless *bindless, GFX_BindlessHandle handle);

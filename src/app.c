@@ -199,11 +199,15 @@ AppInitGraphics(App *app)
 						  app->cubemap_capture_transform_buffer,
 						  capture_view_matrices,
 						  sizeof(capture_view_matrices), 0);
+
+	app->linear_sampler = GFX_DeviceSamplerCreateF(&app->graphics_device, VK_FILTER_LINEAR);
 }
 
 internal void
 AppDestroyGraphics(App *app)
 {
+	GFX_DeviceSamplerDestroy(&app->graphics_device, app->linear_sampler);
+	
 	GFX_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
 
 	GFX_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
@@ -323,21 +327,23 @@ AppInitRender(App *app)
 	
 	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
-	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"), AST_Type_Shader);
+	AST_Handle hdr_texture_handle       = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"),                       AST_Type_Texture);
 	
 	AST_WaitForAsync(&app->assets);
 	AST_FlushUploads(&app->assets);
 
-	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
+	GFX_TextureKey hdr_texture_gfx       = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 	
 	// Irradiance.
 	{
 		R_IBLPassIrradianceFnData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceFnData, 1);
 	
-		data->shader             = GFX_ShaderKeyNull();
-		data->sampler            = GFX_SamplerKeyNull();
-		data->env_view           = GFX_TextureViewKeyNull();
-		data->capture_transforms = GFX_BufferKeyNull();
+		data->shader             = irradiance_pass_shader;
+		data->sampler            = app->linear_sampler;
+		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
+		data->capture_transforms = app->cubemap_capture_transform_buffer;
 		data->cube_mesh          = NULL;
 		
 		//R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Irradiance"), R_PassType_Graphics);

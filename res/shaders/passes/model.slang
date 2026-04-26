@@ -81,19 +81,19 @@ FS_Output FragmentMain(VS_Output input)
     float  ambient_occlusion  = 0.0;
 
     if (bdl::IsValid(material.albedo_texture))
-        albedo = bdl::images[material.albedo_texture].Sample(sampler, uv).rgba;
+        albedo = bdl::textures[material.albedo_texture].Sample(sampler, uv).rgba;
 
     if (bdl::IsValid(material.normal_texture))
-        normal = bdl::images[material.normal_texture].Sample(sampler, uv).rgb;
+        normal = bdl::textures[material.normal_texture].Sample(sampler, uv).rgb;
 
     if (bdl::IsValid(material.emissive_texture))
-        emissive = bdl::images[material.emissive_texture].Sample(sampler, uv).rgb;
+        emissive = bdl::textures[material.emissive_texture].Sample(sampler, uv).rgb;
 
     if (bdl::IsValid(material.mr_texture))
-        metallic_roughness = bdl::images[material.mr_texture].Sample(sampler, uv).rgb;
+        metallic_roughness = bdl::textures[material.mr_texture].Sample(sampler, uv).rgb;
 
     if (bdl::IsValid(material.ambient_texture))
-        ambient_occlusion = bdl::images[material.ambient_texture].Sample(sampler, uv).r;
+        ambient_occlusion = bdl::textures[material.ambient_texture].Sample(sampler, uv).r;
 
     if (albedo.a <= 0.01)
         discard;

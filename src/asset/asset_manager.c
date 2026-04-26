@@ -718,7 +718,9 @@ AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
 	}
 
 	// we're fucked basically
-	DebugLogE(assets->log_channel, "No fallback found for asset. FUCK");
+	DebugLogE(assets->log_channel,
+			  "No fallback found for %.*s asset. FUCK",
+			  (i32)type_string.len, type_string.str);
 
 	selected = &assets->null_asset_sentinel;
 

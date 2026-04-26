@@ -140,8 +140,8 @@ GFX_CmdBindBindless(const GFX_CmdBuffer *cmd,
 	info.stageFlags = stage_flags;
 	info.layout = vk_layout;
 	info.firstSet = 0;
-	info.descriptorSetCount = GFX_BindlessSetKind_COUNT;
-	info.pDescriptorSets = bindless->sets;
+	info.descriptorSetCount = 1;
+	info.pDescriptorSets = &bindless->set;
 	info.dynamicOffsetCount = 0;
 	info.pDynamicOffsets = NULL;
 

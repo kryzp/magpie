@@ -31,6 +31,7 @@ struct App
 	GFX_RingBuffer frame_upload_ring_buffer;
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
+	GFX_SamplerKey linear_sampler;
 	
 	// todo: merge shader compiler into graphics device?
 	LOG_Channel shader_compiler_log_channel;

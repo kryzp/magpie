@@ -59,11 +59,11 @@ SLANG_Compile(void *global_session,
 	target_desc.profile = gs->findProfile("glsl_460");
 	target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
-	slang::CompilerOptionEntry options[2] = {};
+	slang::CompilerOptionEntry options[3] = {};
 	options[0].name = slang::CompilerOptionName::EmitSpirvDirectly;
-	options[0].value.intValue0  = 1;
+	options[0].value.intValue0 = 1;
 	options[1].name = slang::CompilerOptionName::MatrixLayoutColumn;
-	options[1].value.intValue0  = 1;
+	options[1].value.intValue0 = 1;
 
 	slang::SessionDesc session_desc = {};
 	session_desc.targets = &target_desc;
