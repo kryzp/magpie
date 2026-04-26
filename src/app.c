@@ -142,10 +142,17 @@ AppHotUnloadLog(App *app)
 internal void
 AppInitGraphics(App *app)
 {
-	GFX_DeviceInit(&app->graphics_device, &app->partitions[AppMemoryPartition_Graphics]);
+	app->graphics_log_channel = LOG_OpenChannel(String8Lit("GRAPHICS"));
+
+	
+	GFX_DeviceInit(&app->graphics_device, &app->partitions[AppMemoryPartition_Graphics], app->graphics_log_channel);
+
+
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
-	GFX_ShaderCompilerInit(&app->shader_compiler);
+	
+	app->shader_compiler_log_channel = LOG_OpenChannel(String8Lit("SLANG"));
+	GFX_ShaderCompilerInit(&app->shader_compiler, app->shader_compiler_log_channel);
 
   
 	GFX_BufferAllocInfo ring_buffer_alloc_info = {0};
@@ -228,10 +235,15 @@ AppHotUnloadGraphics(App *app)
 internal void
 AppInitAudio(App *app)
 {
+	app->audio_log_channel = LOG_OpenChannel(String8Lit("AUDIO"));
+	
 	app->audio_backend = AUD_BackendAllocAndSelect(&app->partitions[AppMemoryPartition_Audio]);
 	app->audio_backend->Init();
 	
-	AUD_Init(&app->audio_system, &app->partitions[AppMemoryPartition_Audio], app->audio_backend);
+	AUD_Init(&app->audio_system,
+			 &app->partitions[AppMemoryPartition_Audio],
+			 app->audio_log_channel,
+			 app->audio_backend);
 }
 
 internal void
@@ -262,7 +274,15 @@ AppHotUnloadAudio(App *app)
 internal void
 AppInitAssets(App *app)
 {
-	AST_Init(&app->assets, &app->partitions[AppMemoryPartition_Assets], &app->graphics_device, &app->shader_compiler, app->audio_backend);
+	app->asset_log_channel = LOG_OpenChannel(String8Lit("ASSETS"));
+	
+	AST_Init(&app->assets,
+			 &app->partitions[AppMemoryPartition_Assets],
+			 app->asset_log_channel,
+			 &app->graphics_device,
+			 &app->shader_compiler,
+			 app->audio_backend);
+	
 	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
 }
 

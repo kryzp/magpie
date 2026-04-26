@@ -24,18 +24,24 @@ struct App
 
 	LOG_Logger logger;
 	LOG_Channel log_channel;
-	
+
+	LOG_Channel graphics_log_channel;
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
-	GFX_ShaderCompiler shader_compiler;
 	GFX_RingBuffer frame_upload_ring_buffer;
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
-
+	
+	// todo: merge shader compiler into graphics device?
+	LOG_Channel shader_compiler_log_channel;
+	GFX_ShaderCompiler shader_compiler;
+	
+	LOG_Channel audio_log_channel;
 	AUD_System audio_system;
 	AUD_BackendAPI *audio_backend;
 	AUD_BufferHandle test_sound;
 
+	LOG_Channel asset_log_channel;
 	AST_Assets assets;
 
 	// todo: move rendering stuff into a

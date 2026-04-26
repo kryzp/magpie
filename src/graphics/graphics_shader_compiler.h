@@ -17,8 +17,8 @@ struct GFX_ShaderCompiler
 	LOG_Channel log_channel;
 };
 
-internal void GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler);
-internal void GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler);
+internal void GFX_ShaderCompilerInit     (GFX_ShaderCompiler *compiler, LOG_Channel log_channel);
+internal void GFX_ShaderCompilerShutdown (GFX_ShaderCompiler *compiler);
 
 internal GFX_ShaderCompiledStages GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 															Arena *arena,

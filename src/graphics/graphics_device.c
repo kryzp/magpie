@@ -113,11 +113,11 @@ GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 }
 
 internal void
-GFX_DeviceInit(GFX_Device *device, Arena *arena)
+GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 {
 	device->permanent_arena = arena;
 
-	device->log_channel = LOG_OpenChannel(String8Lit("VULKAN"));
+	device->log_channel = log_channel;
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
 		device->per_frame_data[i].arena = ArenaInitArena(arena, arena->capacity * 0.1f, 8);

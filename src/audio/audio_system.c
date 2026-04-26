@@ -1,10 +1,10 @@
 internal void
-AUD_Init(AUD_System *system, Arena *arena, AUD_BackendAPI *api)
+AUD_Init(AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendAPI *api)
 {
 	system->arena = arena;
 	system->api = api;
 
-	system->log_channel = LOG_OpenChannel(String8Lit("AUDIO"));
+	system->log_channel = log_channel;
 
 	system->master_volume = 1.f;
 

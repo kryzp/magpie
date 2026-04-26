@@ -77,7 +77,7 @@ struct AUD_System
 	f32 bus_volumes[AUD_Bus_COUNT];
 };
 
-internal void AUD_Init     (AUD_System *system, Arena *arena, AUD_BackendAPI *api);
+internal void AUD_Init     (AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendAPI *api);
 internal void AUD_Shutdown (AUD_System *system);
 
 internal void AUD_Tick(AUD_System *system, f32 dt, AUD_Listener listener);

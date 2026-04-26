@@ -156,7 +156,7 @@ AST_LoadArenaRelease(AST_Assets *assets, u32 index)
 }
 
 internal void
-AST_Init(AST_Assets *assets, Arena *arena,
+AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 		 GFX_Device *device,
 		 GFX_ShaderCompiler *shader_compiler,
 		 const AUD_BackendAPI *audio_backend)
@@ -165,7 +165,7 @@ AST_Init(AST_Assets *assets, Arena *arena,
 
 	assets->arena = arena;
 
-	assets->log_channel = LOG_OpenChannel(String8Lit("ASSETS"));
+	assets->log_channel = log_channel;
 
 	assets->device = device;
 	assets->shader_compiler = shader_compiler;

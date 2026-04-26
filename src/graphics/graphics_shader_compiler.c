@@ -9,11 +9,11 @@ GFX_ShaderCompilerLogCallback(const char *context,
 }
 
 internal void
-GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler)
+GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
 	SLANG_Init(&compiler->global_session);
 
-	compiler->log_channel = LOG_OpenChannel(String8Lit("SLANG"));
+	compiler->log_channel = log_channel;
 
 	if (compiler->global_session)
 		DebugLogI(compiler->log_channel, "Initialized.");

@@ -189,7 +189,7 @@ internal u32                GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h
    CORE DEVICE
    ================================================== */
 
-internal void GFX_DeviceInit    (GFX_Device *device, Arena *arena);
+internal void GFX_DeviceInit    (GFX_Device *device, Arena *arena, LOG_Channel log_channel);
 internal void GFX_DeviceDestroy (GFX_Device *device);
 
 internal void GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data);
