@@ -389,14 +389,16 @@ AppInitRender(App *app)
 	
 	AST_Handle hdr_to_env_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
 	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
-	AST_Handle hdr_texture_handle       = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"),                           AST_Type_Texture);
+
+	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
 	AST_WaitForAsync(&app->assets);
 	AST_FlushUploads(&app->assets);
 
 	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
-	GFX_TextureKey hdr_texture_gfx       = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+	
+	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 
 	// Generate Environment Cubemap.
 	{

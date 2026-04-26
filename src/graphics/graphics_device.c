@@ -112,6 +112,23 @@ GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
 	return MinValue(mipmaps, max_mips);
 }
 
+internal VKAPI_ATTR VkBool32 VKAPI_CALL
+GFX_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+							  VkDebugUtilsMessageTypeFlagsEXT message_type,
+							  const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+							  void *ctx)
+{
+	GFX_Device *device = ctx;
+	
+	if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		DebugLogB(device->log_channel, "Severity = %d, Type = %d, Message = \"%s\"",
+				  message_severity, message_type, callback_data->pMessage);
+	}
+	
+	return VK_FALSE;
+}
+
 internal void
 GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 {
@@ -124,7 +141,7 @@ GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 
 	device->current_frame_index = 0;
 
-	device->context = GFX_ContextInit(device->log_channel);
+	device->context = GFX_ContextInit(device->log_channel, GFX_DeviceVulkanDebugCallback, device);
 
 	GFX_DeviceCreateSyncResources(device);
 	GFX_DeviceCreateBindless(device);

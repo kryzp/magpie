@@ -1,37 +1,36 @@
-[    0.001  ] [  INFO   ] [  LOG       ] Initialized, File: "log_output.txt" as output.
+[    0.000  ] [  INFO   ] [  LOG       ] Initialized, File: "log_output.txt" as output.
 [    0.022  ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
-[    0.078  ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
-[    0.078  ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
-[    0.078  ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
-[    0.119  ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
-[    0.119  ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
-[    0.120  ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
-[    0.121  ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
-[    0.123  ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
-[    0.124  ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
-[    0.124  ] [  INFO   ] [  GRAPHICS  ] Initialized.
-[    0.124  ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
-[    0.129  ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
-[    0.185  ] [  INFO   ] [  SLANG     ] Initialized.
-[    0.286  ] [  INFO   ] [  AUDIO     ] Initialized.
-[    0.293  ] [  INFO   ] [  ASSETS    ] Initialized.
-[    0.341  ] [  INFO   ] [  RENDER    ] Graph Initialized.
-[    0.341  ] [  INFO   ] [  RENDER    ] Scene Initialized.
-[    0.771  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
-[    0.771  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
-[    0.823  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.823  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.836  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
-[    0.847  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
-[    0.848  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.870  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
-[    1.078  ] [  INFO   ] [  APP       ] Initialized.
-[    3.206  ] [  WARN   ] [  APP       ] Had to clamp delta - is there lag?
-[    4.583  ] [  INFO   ] [  APP       ] Shutting Down...
-[    4.584  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
-[    4.584  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
-[    4.584  ] [  INFO   ] [  ASSETS    ] Destroyed.
-[    4.584  ] [  INFO   ] [  AUDIO     ] Shut Down.
-[    4.600  ] [  INFO   ] [  SLANG     ] Shutting down...
-[    4.742  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
-[    4.742  ] [  INFO   ] [  LOG       ] Shutting Down...
+[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
+[    0.057  ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
+[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
+[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
+[    0.068  ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
+[    0.069  ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
+[    0.071  ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
+[    0.073  ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
+[    0.073  ] [  INFO   ] [  GRAPHICS  ] Initialized.
+[    0.073  ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
+[    0.137  ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
+[    0.193  ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.278  ] [  INFO   ] [  AUDIO     ] Initialized.
+[    0.286  ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.334  ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.334  ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.399  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.400  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.522  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.540  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
+[    0.540  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
+[    0.552  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.575  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.575  ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
+[    0.583  ] [  INFO   ] [  APP       ] Initialized.
+[    1.676  ] [  INFO   ] [  APP       ] Shutting Down...
+[    1.676  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
+[    1.676  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
+[    1.676  ] [  INFO   ] [  ASSETS    ] Destroyed.
+[    1.676  ] [  INFO   ] [  AUDIO     ] Shut Down.
+[    1.690  ] [  INFO   ] [  SLANG     ] Shutting down...
+[    1.766  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
+[    1.766  ] [  INFO   ] [  LOG       ] Shutting Down...

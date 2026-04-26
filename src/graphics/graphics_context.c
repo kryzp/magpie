@@ -265,25 +265,6 @@ GFX_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 	return usability;
 }
 
-internal VKAPI_ATTR VkBool32 VKAPI_CALL
-GFX_ContextVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-							   VkDebugUtilsMessageTypeFlagsEXT message_type,
-							   const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-							   void *user_data)
-{
-	if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-	{
-		// todo: integrate with logging system
-		
-		printf("Severity = %d, Type = %d, Message = \"%s\"",
-			   message_severity, message_type, callback_data->pMessage);
-		
-		AssertTrue(false);
-	}
-
-	return VK_FALSE;
-}
-
 internal VkResult
 GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 											  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
@@ -299,7 +280,7 @@ GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 }
 
 internal GFX_Context
-GFX_ContextInit(LOG_Channel log_channel)
+GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
 {
 	GFX_Context context = {0};
 	
@@ -342,8 +323,8 @@ GFX_ContextInit(LOG_Channel log_channel)
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 
-	debug_create_info.pfnUserCallback = GFX_ContextVulkanDebugCallback;
-	debug_create_info.pUserData = NULL;
+	debug_create_info.pfnUserCallback = vk_debug_callback;
+	debug_create_info.pUserData = vk_debug_callback_ctx;
 
 	context.has_validation_layers = GFX_ContextCheckForValidationLayerSupport();
 
