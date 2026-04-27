@@ -145,7 +145,7 @@ AppInitGraphics(App *app)
 	app->graphics_log_channel = LOG_OpenChannel(String8Lit("GRAPHICS"));
 
 	
-	GFX_DeviceInit(&app->graphics_device, &app->partitions[AppMemoryPartition_Graphics], app->graphics_log_channel);
+	GFX_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
 
 
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
@@ -241,11 +241,11 @@ AppInitAudio(App *app)
 {
 	app->audio_log_channel = LOG_OpenChannel(String8Lit("AUDIO"));
 	
-	app->audio_backend = AUD_BackendAllocAndSelect(&app->partitions[AppMemoryPartition_Audio]);
+	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
 	app->audio_backend->Init();
 	
 	AUD_Init(&app->audio_system,
-			 &app->partitions[AppMemoryPartition_Audio],
+			 &app->audio_arena,
 			 app->audio_log_channel,
 			 app->audio_backend);
 }
@@ -281,7 +281,7 @@ AppInitAssets(App *app)
 	app->asset_log_channel = LOG_OpenChannel(String8Lit("ASSETS"));
 	
 	AST_Init(&app->assets,
-			 &app->partitions[AppMemoryPartition_Assets],
+			 &app->asset_arena,
 			 app->asset_log_channel,
 			 &app->graphics_device,
 			 &app->shader_compiler,
@@ -370,11 +370,11 @@ AppInitRender(App *app)
 {
 	app->render_log_channel = LOG_OpenChannel(String8Lit("RENDER"));
 	
-	u64 render_third_size = ArenaSafePartitionSize(&app->partitions[AppMemoryPartition_Render], 3, 8);
+	u64 render_third_size = ArenaSafePartitionSize(&app->render_arena, 3, 8);
 
-	app->graph_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
-	app->scene_arena      = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
-	app->pass_frame_arena = ArenaInitArena(&app->partitions[AppMemoryPartition_Render], render_third_size, 8);
+	app->graph_arena      = ArenaInitArena(&app->render_arena, render_third_size, 8);
+	app->scene_arena      = ArenaInitArena(&app->render_arena, render_third_size, 8);
+	app->pass_frame_arena = ArenaInitArena(&app->render_arena, render_third_size, 8);
 	
 	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device, app->render_log_channel);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device, app->render_log_channel);
@@ -478,7 +478,7 @@ AppHotUnloadRender(App *app)
 internal void
 AppInitEntity(App *app)
 {
-	ENT_WorldInit(&app->world, &app->partitions[AppMemoryPartition_Entity]);
+	ENT_WorldInit(&app->world, &app->entity_arena);
 	ENT_EventQueueInit(&app->events);
 }
 
@@ -536,48 +536,20 @@ AppInit_(App *app)
 }
 
 __declspec(dllexport) App *
-AppInit(Arena *arena, const OS_API *api)
+AppInit(const OS_API *api)
 {
 	osapi = api;
-	
-	App *app = ArenaPushArray(arena, App, 1);
 
-	static f64 memory_ratios[AppMemoryPartition_COUNT] = {
-#define Partition(name, ratio) (f32)(ratio),
-#include "partitions.inc"
-#undef Partition
-	};
-	
-	f64 total_ratio = 0.0;
+	Arena bootstrap = ArenaInitReserved(Megabytes(64));
+	App *app = ArenaPushArray(&bootstrap, App, 1);
+	app->bootstrap_arena = bootstrap;
 
-	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
-		total_ratio += memory_ratios[i];
-
-	AssertTrue(total_ratio > 0.0);
-
-	static u64 memory_sizes[AppMemoryPartition_COUNT] = {0};
-	
-	u64 left = arena->capacity - arena->used
-			   - (AppMemoryPartition_COUNT * 8); // correct for alignment
-
-	u64 allocated = 0;
-
-	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
-	{
-		memory_sizes[i] = (u64)((memory_ratios[i] / total_ratio) * left);
-		allocated += memory_sizes[i];
-	}
-
-	u64 remainder = left - allocated;
-
-	for (u32 i = 0; remainder > 0; i++)
-	{
-		memory_sizes[i % AppMemoryPartition_COUNT]++;
-		remainder--;
-	}
-
-	for (u32 i = 0; i < AppMemoryPartition_COUNT; i++)
-		app->partitions[i] = ArenaInitArena(arena, memory_sizes[i], 8);
+	app->log_arena      = ArenaInitReserved(Gigabytes(1));
+	app->graphics_arena = ArenaInitReserved(Gigabytes(3));
+	app->audio_arena    = ArenaInitReserved(Gigabytes(1));
+	app->asset_arena    = ArenaInitReserved(Gigabytes(3));
+	app->render_arena   = ArenaInitReserved(Gigabytes(2));
+	app->entity_arena   = ArenaInitReserved(Gigabytes(1));
 	
 	AppInit_(app);
 

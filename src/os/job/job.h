@@ -1,12 +1,6 @@
 #ifndef OS_JOB_H
 #define OS_JOB_H
 
-#define JOB_MAX_JOBS_PER_QUEUE     512
-#define JOB_MAX_CONCURRENT_FIBERS  128
-#define JOB_MAX_WORKERS            32
-#define JOB_COUNTER_MAX_WAITING    64
-#define JOB_FIBER_SCRATCH_SIZE     Megabytes(8)
-
 /*
  * Fiber-Driven Job System.
  * - N worker threads, each run a scheduler loop.

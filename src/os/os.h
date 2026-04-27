@@ -274,7 +274,7 @@ struct OS_API
 	const char * const *(*VulkanGetInstanceExtensions)(u32 *count);
 };
 
-typedef void *OS_EntryInitFn      (Arena *arena, const OS_API *api);
+typedef void *OS_EntryInitFn      (const OS_API *api);
 typedef void  OS_EntryDestroyFn   (void *ctx);
 typedef b32   OS_EntryTickFn      (void *ctx, const I_State *input);
 typedef void  OS_EntryHotLoadFn   (void *ctx, const OS_API *api);

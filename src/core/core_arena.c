@@ -83,7 +83,7 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 		f64 aligned_mb  = (f64)aligned         / (f64)Megabytes(1);
 
 		f32 free_mb = capacity_mb - used_mb;
-	
+
 		CoreFatal("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
 				  arena,
 				  bytes_mb,    bytes,

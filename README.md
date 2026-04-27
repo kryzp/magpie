@@ -107,14 +107,6 @@ The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 ### Memory Arenas
 To simplify memory management in C I use a thing called a "memory arena" for pretty much anything. I'm not going to go into why because [this](https://www.youtube.com/watch?v=TZ5a3gCCZYo) talk by Ryan Fleury explains it way better. Essentially, they let you "group" allocations and formalize the idea of a "scope" for some object. The `/os/` layer allocates one massive arena up front and the app then allocates itself onto that arena and partitions it accordingly. Only one actual memory allocation happens in the entire program.
 
-#### But... synchronisation!
-Thank you for asking :) Memory arenas, since they're passed all across the project can in theory be pushed to and modified by multiple different jobs in parallel. This is a real problem, because then we have race conditions and the memory gets all fucked up.
-
-I fix this by the simplest solution possible - at the program init we "partition" the process memory between the different subsystems (assets, rendering, graphics, entity, what have you ...) and each system then internally synchronises the allocations however it needs to according to the work it's doing.
-
-There is no "main" allocator. Each system gets its own region of memory to which it synchronises pushes. The assumption, obviously, is that cross-system allocations don't happen (that is, a system will never *directly* access another systems arena and allocate from it).
-
-
 
 ### Job System
 The job system is effectively at the core of the project. It is a fiber-based job system based off-of the pioneering work of Naughty Dog in their presentation "Parallelizing the Naughty Dog by Christian Gyrling". It's pretty complicated but the basic idea is that using a naiive job queue is that when a job dispatches more jobs and waits on them, the thread running that job stalls when it could be working! This can get even worse, when in some cases it can straight up lead to a deadlock as there might not be any free thread to complete the child job!
@@ -162,7 +154,7 @@ Rendering is fundamentally abstracted into what should be three layers, but is o
 
 
 ### Hot-Code Reloading
-The actual implementation of this is simple in theory. All memory is allocated at once in the beginning of the program, so all we have to do is reload the DLL (thank you Handmade Hero!).
+The actual implementation of this is simple in theory.
 
 This does mean that global data is a little tricky because it gets reset whenever the app is re-compiled at runtime. However, it can be fixed by:
 1. Using as little globally-accessible data as possible.
@@ -179,8 +171,8 @@ Data that simply cannot survive a hot-reload, such as OS level features (i.e. th
 |  All OS primitives, job scheduler, etc...        |
 |  Exposes API via function pointer table          |
 |                                                  |
-|  W32_RootJobEntry  --> AppInit(bootstrap_data)   |
-|  W32_FrameJobEntry --> AppTick(input)            |
+|  W32_RootJobEntry  --> AppInit(...)              |
+|  W32_FrameJobEntry --> AppTick(...)              |
 +--------------------------------------------------+
               |
               |  Passes API Table

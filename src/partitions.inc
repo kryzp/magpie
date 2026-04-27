@@ -1,7 +1,0 @@
-Partition(App,      0.5)
-Partition(Assets,   5.0)
-Partition(Graphics, 5.0)
-Partition(Render,   3.0)
-Partition(Audio,    1.0)
-Partition(Entity,   2.0)
-Partition(Debug,    0.5)
