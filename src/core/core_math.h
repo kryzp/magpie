@@ -7,12 +7,15 @@
 #define MATH_PI                                  3.1415926535897
 #define MATH_ONE_OVER_SQUARE_ROOT_OF_TWO_PI      0.3989422804
 #define MATH_EULERS_NUMBER                       2.718281828459045
+
+#define MATH_DEG_TO_RAD                          0.0174532925199
+#define MATH_RAD_TO_DEG                          57.2957795131
+
 #define MATH_EPSILON_F32                         FLT_EPSILON
 #define MATH_EPSILON_F64                         DBL_EPSILON
+
 #define MATH_MAX_F32                             FLT_MAX
 #define MATH_MAX_F64                             DBL_MAX
-#define MATH_DEG_TO_RAD                          0.f
-#define MATH_RAD_TO_DEG                          0.f
 
 #define SquareRoot      sqrtf
 #define CosF            cosf

@@ -1236,6 +1236,13 @@ JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 	JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
 
+internal void
+OS_W32_CoreFatalHandler(const char *file, i32 line, const char *fn, const char *msg)
+{
+	printf("OS/W32 -- %s:%d %s: %s\n", file, line, fn, msg);
+	AssertTrue(false);
+}
+
 i32
 main(void)
 {
@@ -1264,6 +1271,8 @@ main(void)
 										   window_flags);
 
 	OS_W32_BindAPI(&win32_st.api);
+
+	CoreSetFatalHandler(OS_W32_CoreFatalHandler);
 	
 	osapi = &win32_st.api;
 

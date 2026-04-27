@@ -68,6 +68,13 @@ LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)
 	return a.id == b.id;
 }
 
+internal inline LOG_Channel
+LOG_ChannelNull(void)
+{
+	LOG_Channel null_channel = {0};
+	return null_channel;
+}
+
 typedef struct LOG_ChannelEntry LOG_ChannelEntry;
 struct LOG_ChannelEntry
 {
@@ -89,6 +96,7 @@ struct LOG_Logger
 	u32 channel_count;
 	LOG_ChannelEntry channels[LOG_MAX_CHANNELS];
 
+	LOG_Channel null_channel;
 	LOG_Channel log_channel;
 
 	// track last message and overwrite in-place if repeated.
@@ -112,23 +120,37 @@ internal void        LOG_CloseChannel(LOG_Channel channel);
 internal void LOG_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
 internal void LOG_FlushDedupToFile (f32 elapsed);
 
+
+// Yes this is a complete mess of parameters.
+// TODO: Clean this up.
+//       --> Add some kind of parameter flags?
+
 internal i32 LOG_FormatLine(char *dst, i32 dst_size,
 							LOG_Level level, LOG_Channel channel,
 							const char *file, i32 line, const char *fn,
 							const char *body,
-							b32 for_file, f32 elapsed,
+							b32 for_file, f32 elapsed, b32 remove_level_and_channel,
 							JOB_Context job_context);
+
 
 internal void LOG_Write  (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
 internal void LOG_WriteV (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, va_list args);
 
-#define DebugLogEx(level, channel_id, ...) LOG_Write((level), (channel_id), __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define DebugLogEx(level, channel, ...) LOG_Write((level), (channel), __FILE__, __LINE__, __func__, __VA_ARGS__)
 
-#define DebugLogT(channel_id, ...) DebugLogEx(LOG_Level_Trace, (channel_id), __VA_ARGS__)
-#define DebugLogD(channel_id, ...) DebugLogEx(LOG_Level_Debug, (channel_id), __VA_ARGS__)
-#define DebugLogI(channel_id, ...) DebugLogEx(LOG_Level_Info,  (channel_id), __VA_ARGS__)
-#define DebugLogW(channel_id, ...) DebugLogEx(LOG_Level_Warn,  (channel_id), __VA_ARGS__)
-#define DebugLogE(channel_id, ...) DebugLogEx(LOG_Level_Error, (channel_id), __VA_ARGS__)
-#define DebugLogB(channel_id, ...) DebugLogEx(LOG_Level_Break, (channel_id), __VA_ARGS__)
+#define DebugLogT(channel, ...) DebugLogEx(LOG_Level_Trace, (channel), __VA_ARGS__)
+#define DebugLogD(channel, ...) DebugLogEx(LOG_Level_Debug, (channel), __VA_ARGS__)
+#define DebugLogI(channel, ...) DebugLogEx(LOG_Level_Info,  (channel), __VA_ARGS__)
+#define DebugLogW(channel, ...) DebugLogEx(LOG_Level_Warn,  (channel), __VA_ARGS__)
+#define DebugLogE(channel, ...) DebugLogEx(LOG_Level_Error, (channel), __VA_ARGS__)
+#define DebugLogB(channel, ...) DebugLogEx(LOG_Level_Break, (channel), __VA_ARGS__)
+
+// TODO: Kinda hacky, not a fan of this!!
+#define DebugPrintT(...) DebugLogT(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintD(...) DebugLogD(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintI(...) DebugLogI(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintW(...) DebugLogW(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintE(...) DebugLogE(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintB(...) DebugLogB(LOG_ChannelNull(), __VA_ARGS__)
 
 #endif // LOG_H

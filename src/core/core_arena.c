@@ -48,10 +48,8 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 
 	if (aligned + bytes > arena->capacity)
 	{
-		// TODO: Integrate logging here somehow?
-		
-		AssertTrue(false);
-		return NULL;
+		CoreFatal("Arena (%p) out of space, requested %llu bytes, capacity %llu, used %llu (aligned offset %llu, free %llu).",
+				  arena, bytes, arena->capacity, arena->used, aligned, arena->capacity - aligned);
 	}
 	
 	void *mem = (void *)((u8 *)arena->base + aligned);
@@ -83,7 +81,12 @@ ArenaPop(Arena *arena, u64 bytes)
 internal void
 ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
-	AssertTrue(arena->used + bytes <= arena->capacity);
+   	if (arena->used + bytes > arena->capacity)
+	{
+		CoreFatal("Arena %p out of space, attempted to resize by %llu bytes from %llu exceeding capacity of %llu.",
+				  arena, bytes, arena->used, arena->capacity);
+	}
+	
 	arena->used += bytes;
 }
 
@@ -92,7 +95,11 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 {
 	u64 new_used = arena->last_alloc_offset + bytes;
 
-	AssertTrue(new_used <= arena->capacity);
+   	if (new_used > arena->capacity)
+	{
+		CoreFatal("Arena %p out of space, attempted to resize to %llu bytes from %llu exceeding capacity of %llu.",
+				  arena, new_used, arena->used, arena->capacity);
+	}
 
 	arena->used = new_used;
 }

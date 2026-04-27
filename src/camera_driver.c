@@ -56,9 +56,9 @@ CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, 
 	for (u32 i = 0; i < 3; i++)
 		basis[i] = V3MulF32(basis[i], move_speed * dt);
 
-	f32 hori = I_KbDown(input, I_KeyboardKey_D)     - I_KbDown(input, I_KeyboardKey_A);
-	f32 frwd = I_KbDown(input, I_KeyboardKey_W)     - I_KbDown(input, I_KeyboardKey_S);
-	f32 vert = I_KbDown(input, I_KeyboardKey_Space) - I_Shift(input);
+	f32 hori = (i32)I_KbDown(input, I_KeyboardKey_D)     - (i32)I_KbDown(input, I_KeyboardKey_A);
+	f32 frwd = (i32)I_KbDown(input, I_KeyboardKey_W)     - (i32)I_KbDown(input, I_KeyboardKey_S);
+	f32 vert = (i32)I_KbDown(input, I_KeyboardKey_Space) - (i32)I_Shift(input);
 
 	camera->position = V3Add(camera->position, V3MulF32(basis[0], hori));
 	camera->position = V3Add(camera->position, V3MulF32(basis[1], frwd));

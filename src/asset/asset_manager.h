@@ -146,7 +146,7 @@ internal b32 AST_IsValid   (const AST_Assets *assets, AST_Handle handle);
    LOADING
    ================================================== */
 
-internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type); // Block and wait until loaded.
+internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_LoadAsync   (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_ReloadAsync (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_Load        (AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter);
@@ -187,7 +187,8 @@ internal AST_Asset *AST_Get         (AST_Assets *assets, AST_Handle handle, AST_
    ================================================== */
 
 internal AST_Handle AST_FromFilePath (AST_Assets *assets, String8 path);
-internal AST_Handle AST_Require      (AST_Assets *assets, String8 path, AST_Type type); // ensure it's loading
+internal AST_Handle AST_Require      (AST_Assets *assets, String8 path, AST_Type type); // ensure it's loading.
+internal AST_Handle AST_RequireNow   (AST_Assets *assets, String8 path, AST_Type type); // block until we got it.
 
 
 #endif // ASSET_MANAGER_H

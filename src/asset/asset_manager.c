@@ -757,3 +757,16 @@ AST_Require(AST_Assets *assets, String8 path, AST_Type type)
 
 	return handle;
 }
+
+internal AST_Handle
+AST_RequireNow(AST_Assets *assets, String8 path, AST_Type type)
+{
+	AST_Handle handle = AST_FromFilePath(assets, path);
+
+	AST_Record *record = AST_GetRecord(assets, handle);
+
+	if (AST_StateNeedsLoad(record->state))
+		AST_LoadNow(assets, handle, type);
+
+	return handle;
+}

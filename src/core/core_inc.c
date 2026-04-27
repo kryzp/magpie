@@ -1,6 +1,6 @@
+#include "core_fatal.c"
 #include "core_math.c"
 #include "core_arena.c"
 #include "core_scratch.c"
 #include "core_string.c"
 #include "core_hash.c"
-#include "core_log.c"

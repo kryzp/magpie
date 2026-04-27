@@ -4,6 +4,8 @@ global LOG_Logger *log_selected = NULL;
 internal void
 LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
 {
+	MemZeroStruct(logger);
+	
 	CH_TimerStart(&logger->timer);
 
 	logger->mutex = osapi->MutexCreate();
@@ -13,10 +15,11 @@ LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
 
 	log_selected = logger;
 
+	logger->null_channel = LOG_OpenChannel(String8Lit("--------"));
 	logger->log_channel = LOG_OpenChannel(String8Lit("LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))
-		DebugLogI(logger->log_channel, "Initialized, File: \"%.*s\" as output.", (i32)sink.len, sink.str);
+		DebugLogI(logger->log_channel, "Initialized (\"%.*s\" as file sink).", (i32)sink.len, sink.str);
 	else
 		DebugLogI(logger->log_channel, "Initialized (no file sink).");
 }
@@ -89,7 +92,7 @@ LOG_FormatLine(char *dst, i32 dst_size,
 			   LOG_Level level, LOG_Channel channel,
 			   const char *file, i32 line, const char *fn,
 			   const char *body,
-			   b32 for_file, f32 elapsed,
+			   b32 for_file, f32 elapsed, b32 remove_level_and_channel,
 			   JOB_Context job_context)
 {
 	const char *level_string = LOG_LevelToString (level);
@@ -100,10 +103,10 @@ LOG_FormatLine(char *dst, i32 dst_size,
 	u8 *channel_name = log_selected->channels[channel.id].name.str;
 
 	// I just learned about this push/pop_macro stuff man this is so sick.
-#pragma push_macro("APPEND")
-#undef APPEND
+#pragma push_macro("Append")
+#undef Append
 
-#define APPEND(...)														\
+#define Append(...)														\
 	do																	\
 	{																	\
 		if (len < dst_size)												\
@@ -113,9 +116,9 @@ LOG_FormatLine(char *dst, i32 dst_size,
 
 	// Timestamp.
 	if (for_file)
-		APPEND("[  %7.3f  ] ", elapsed);
+		Append("[  %7.3f  ] ", elapsed);
 	else
-		APPEND(LOG_ANSI_DIM "[  %7.3f  ]" LOG_ANSI_RESET " ", elapsed);
+		Append(LOG_ANSI_DIM "[  %7.3f  ]" LOG_ANSI_RESET " ", elapsed);
 
 	// Job Context.
     {
@@ -136,22 +139,34 @@ LOG_FormatLine(char *dst, i32 dst_size,
             snprintf(fiber_str, sizeof(fiber_str), "%-3d", job_context.fiber_id);
 
         if (for_file)
-            APPEND("[  W:%s F:%s  ] ", worker_str, fiber_str);
+            Append("[  W:%s F:%s  ] ", worker_str, fiber_str);
         else
-            APPEND(LOG_ANSI_DIM "[  W:%s F:%s  ]" LOG_ANSI_RESET " ", worker_str, fiber_str);
+            Append(LOG_ANSI_DIM "[  W:%s F:%s  ]" LOG_ANSI_RESET " ", worker_str, fiber_str);
     }
 
-	// Level.
-	if (for_file)
-		APPEND("[  %s  ] ", level_string);
-	else
-		APPEND("%s" LOG_ANSI_RESET, level_ansi);
+	//if (remove_level_and_channel)
+	{
+		// Level.
+		if (for_file)
+			Append("[  %s  ] ", level_string);
 
-	// Channel.
-	if (for_file)
-		APPEND("[  %-*s  ] ", LOG_CHANNEL_COL_ALIGN, channel_name);
+		// Channel.
+		if (for_file)
+			Append("[  %-*s  ] ", LOG_CHANNEL_COL_ALIGN, channel_name);
+		else
+			Append("%s[  %-*s  ]" LOG_ANSI_RESET " ", level_ansi, LOG_CHANNEL_COL_ALIGN, channel_name);
+	}
+	/*
 	else
-		APPEND("%s[  %-*s  ]" LOG_ANSI_RESET " ", level_ansi, LOG_CHANNEL_COL_ALIGN, channel_name);
+	{
+		// Level.
+		if (for_file)
+			Append("            ");
+
+		// Channel.
+		Append("   %-*s    ", LOG_CHANNEL_COL_ALIGN, "");
+	}
+	*/
 	
 	// Callsite.
 	if (show_callsite)
@@ -161,16 +176,16 @@ LOG_FormatLine(char *dst, i32 dst_size,
 		u8 *base = IO_PathGetFileNameExt(scratch.arena, String8FromCStr(file)).str;
 
 		if (for_file)
-			APPEND("%s:%d %s: ", base, line, fn);
+			Append("%s:%d %s: ", base, line, fn);
 		else
-			APPEND(LOG_ANSI_DIM "%s:%d %s:" LOG_ANSI_RESET " ", base, line, fn);
+			Append(LOG_ANSI_DIM "%s:%d %s:" LOG_ANSI_RESET " ", base, line, fn);
 
 		ScratchRelease(&scratch);
 	}
 
-	APPEND("%s\n", body);
+	Append("%s\n", body);
 
-#pragma pop_macro("APPEND")
+#pragma pop_macro("Append")
 	
 	if (len >= dst_size)
 		len = dst_size - 1;
@@ -182,7 +197,7 @@ internal void
 LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
 {
 	if (count > 1)
-		snprintf(dst, (usize)dst_size, "%ux %s", count, body);
+		snprintf(dst, (usize)dst_size, "%s (%ux)", body, count);
 	else
 		snprintf(dst, (usize)dst_size, "%s", body);
 }
@@ -210,7 +225,7 @@ LOG_FlushDedupToFile(f32 elapsed)
 								  log_selected->dedup_channel,
 								  "", 0, "",
 								  body,
-								  true, elapsed,
+								  true, elapsed, true,
 								  log_selected->dedup_job_context);
 		
 		if (file_len > 0)
@@ -260,6 +275,10 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 			LOG_ChannelMatch(log_selected->dedup_channel, channel) &&
 			(CStrCompare(log_selected->dedup_body, body) == 0);
 
+		b32 is_repeated_channel_and_level =
+			log_selected->dedup_level == level &&
+			LOG_ChannelMatch(log_selected->dedup_channel, channel);
+		
 		if (is_repeated_line)
 		{
 			log_selected->dedup_count++;
@@ -273,7 +292,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 dedup_body,
-											 false, elapsed,
+											 false, elapsed, !is_repeated_channel_and_level,
 											 log_selected->dedup_job_context);
 
 			if (console_len > 0)
@@ -305,7 +324,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 body,
-											 false, elapsed,
+											 false, elapsed, !is_repeated_channel_and_level,
 											 job_context);
 
 			if (console_len > 0)
@@ -325,7 +344,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 										  level, channel,
 										  file, line, fn,
 										  body,
-										  true, elapsed,
+										  true, elapsed, true,
 										  job_context);
 				
 				if (file_len > 0)

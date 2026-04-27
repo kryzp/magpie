@@ -502,8 +502,16 @@ AppHotUnloadEntity(App *app)
    ================================================== */
 
 internal void
+AppCoreFatalHandler(const char *file, i32 line, const char *fn, const char *msg)
+{
+	LOG_Write(LOG_Level_Break, LOG_ChannelNull(), file, line, fn, "%s", msg);
+}
+
+internal void
 AppInit_(App *app)
 {
+	CoreSetFatalHandler(AppCoreFatalHandler);
+	
 	AppInitLog      (app);
 	AppInitGraphics (app);
 	AppInitAudio    (app);
@@ -581,7 +589,7 @@ AppDestroy(App *app)
 {
 	GFX_DeviceWaitIdle(&app->graphics_device);
 
-	DebugLogI(app->log_channel, "Shutting Down...");
+	DebugLogI(app->log_channel, "Destroying...");
 	
 	AppDestroyEntity   (app);
 	AppDestroyRender   (app);
@@ -680,6 +688,8 @@ AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
+	CoreSetFatalHandler(AppCoreFatalHandler);
+	
 	AppHotLoadLog        (app);
 	AppHotLoadGraphics   (app);
 	AppHotLoadAudio      (app);
@@ -711,7 +721,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.view = app->camera.view;
 	frame_data.proj = app->camera.proj;
 	frame_data.view_proj = M4MulM4(app->camera.proj, app->camera.view);
-	frame_data.view_proj_no_translation = M4RemoveTranslation(frame_data.view_proj);
+	frame_data.view_proj_no_translation = M4MulM4(app->camera.proj, M4RemoveTranslation(app->camera.view));
 	frame_data.inv_view = M4Inverse(app->camera.view);
 	frame_data.inv_proj = M4Inverse(app->camera.proj);
 	frame_data.camera_position = app->camera.position;
@@ -726,13 +736,14 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 	// Skybox Pass.
 	{
-		AST_Handle shader_handle = AST_Require (&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
+		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
 
 		R_SkyboxPassData *data = ArenaPushArray(&app->pass_frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
+		data->cubemap = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->sampler = app->linear_sampler;
 		data->frame_data_buffer = app->frame_data_buffer;
 		data->skybox_mesh = &app->skybox_mesh;

@@ -1,7 +1,7 @@
 #include "core_types.h"
+#include "core_fatal.h"
 #include "core_math.h"
 #include "core_arena.h"
 #include "core_scratch.h"
 #include "core_string.h"
 #include "core_hash.h"
-#include "core_log.h"
