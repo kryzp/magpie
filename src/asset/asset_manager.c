@@ -153,7 +153,7 @@ AST_LoadArenaAcquire(AST_Assets *assets)
 internal void
 AST_LoadArenaRelease(AST_Assets *assets, u32 index)
 {
-	ArenaClear(&assets->load_arenas[index]);
+	ArenaResetAndDecommit(&assets->load_arenas[index]);
  
 	osapi->SpinLockAcquire(&assets->load_arena_spinlock);
  
@@ -215,7 +215,7 @@ AST_Destroy(AST_Assets *assets)
 	{
 		AST_Record *record = &assets->records[i];
 
-		if (record->state == AST_State_Ready)
+		if (record->state == AST_State_Ready || record->reloading)
 		{
 			AST_Serializer *s = &assets->serializers[record->asset.type];
 
@@ -270,9 +270,9 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 	}
 
 	/*
-	DebugLogW(assets->log_channel,
-			  "Unrecognised prefix in path: \"%.*s\", using path as-is.",
-			  (i32)path.len, path.str);
+	  DebugLogW(assets->log_channel,
+	  "Unrecognised prefix in path: \"%.*s\", using path as-is.",
+	  (i32)path.len, path.str);
 	*/
 	
 	return path;
@@ -380,7 +380,12 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 internal void
 AST_Load(AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter)
 {
-	assets->records[handle.index].state = AST_State_CpuStage;
+	AST_Record *r = &assets->records[handle.index];
+	
+	if (AST_StateIsLoaded(r->state))
+		r->reloading = true;
+	
+	r->state = AST_State_CpuStage;
 
 	// params get dumped onto the permanent arena which isnt that big a deal
 	// 'cuz they're only like a couple of bytes so whatever.
@@ -426,8 +431,16 @@ AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
 
 		if (failed)
 		{
-			parent_record->state = AST_State_Failed;
-			AST_NotifyDependentsNoLock(assets, parent_handle, true);
+			if (parent_record->reloading)
+			{
+				parent_record->state = AST_State_Ready;
+				parent_record->reloading = false;
+			}
+			else
+			{
+				parent_record->state = AST_State_Failed;
+				AST_NotifyDependentsNoLock(assets, parent_handle, true);
+			}
 		}
 		else
 		{
@@ -463,9 +476,25 @@ AST_ResolvePendingDependencies(AST_Assets *assets, JOB_Counter *counter)
 
 		if (upload->load_data.failed)
 		{
-			record->state = AST_State_Failed;
+			b32 was_reloading = record->reloading;
+			
+			if (was_reloading)
+			{
+				DebugLogW(assets->log_channel,
+						  "Reload failed for %.*s, keeping previous version.",
+						  (i32)upload->metadata.path.len, upload->metadata.path.str);
+				
+				record->state = AST_State_Ready;
+				record->reloading = false;
+			}
+			else
+			{
+				record->state = AST_State_Failed;
+			}
 
-			AST_NotifyDependentsNoLock(assets, upload->handle, true);
+			AST_NotifyDependentsNoLock(assets, upload->handle, !was_reloading);
+
+			AST_LoadArenaRelease(assets, upload->load_arena_index);
 
 			continue;
 		}
@@ -623,7 +652,19 @@ AST_FlushUploads(AST_Assets *assets)
 
 				if (upload->load_data.failed)
 				{
-					record->state = AST_State_Failed;
+					if (record->reloading)
+					{
+						DebugLogW(assets->log_channel,
+								  "Reload failed for %.*s, keeping previous version.",
+								  (i32)upload->metadata.path.len, upload->metadata.path.str);
+						
+						record->state = AST_State_Ready;
+						record->reloading = false;
+					}
+					else
+					{
+						record->state = AST_State_Failed;
+					}
 				}
 				else
 				{
@@ -677,6 +718,7 @@ AST_FlushUploads(AST_Assets *assets)
 					ScratchRelease(&scratch);
 
 					record->state = AST_State_Ready;
+					record->reloading = false;
 
 					AST_NotifyDependents(assets, upload->handle);
 
@@ -719,7 +761,7 @@ AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
 	AST_Record *record = AST_GetRecord(assets, handle);
 	
 	if (record &&
-		AST_StateIsLoaded(record->state) &&
+		(AST_StateIsLoaded(record->state) || record->reloading) &&
 		record->asset.type == type)
 	{
 		selected = &record->asset;

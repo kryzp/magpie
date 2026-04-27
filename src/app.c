@@ -679,7 +679,7 @@ AppTick(App *app, const I_State *input)
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	
-	ArenaClear(&app->pass_frame_arena);
+	ArenaReset(&app->pass_frame_arena);
 	
 	return false;
 }

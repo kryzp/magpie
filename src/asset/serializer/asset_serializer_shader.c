@@ -63,7 +63,13 @@ AST_ShaderSerializerReload(const AST_Context *ctx,
 						   AST_SerializerPipelineData *data,
 						   AST_Asset *existing)
 {
-	// TODO
+	AST_ShaderLoadData *shader_data = data->data;
+
+	GFX_DeviceShaderProgramDestroy(ctx->assets->device, existing->shader.key);
+	
+	existing->shader.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
+														 shader_data->compiled.count,
+														 shader_data->compiled.bytecodes);
 }
 
 internal void

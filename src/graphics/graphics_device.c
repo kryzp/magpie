@@ -200,7 +200,7 @@ GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data)
 	frame_data->destroyed_image_head = NULL;
 	frame_data->destroyed_buffer_head = NULL;
 
-	ArenaClear(&frame_data->arena);
+	ArenaReset(&frame_data->arena);
 }
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.

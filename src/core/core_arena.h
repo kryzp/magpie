@@ -15,7 +15,6 @@ struct Arena
 	void *base;
 	u64 capacity;
 	u64 used;
-	u64 last_alloc_offset;
 	u64 committed; // used for backed memory.
 	ArenaKind kind;
 };
@@ -39,10 +38,8 @@ internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment);
 internal void ArenaPopTo(Arena *arena, u64 to);
 internal void ArenaPop(Arena *arena, u64 bytes);
 
-internal void ArenaResizeLastBy(Arena *arena, u64 bytes);
-internal void ArenaResizeLastTo(Arena *arena, u64 bytes);
-
-internal void ArenaClear(Arena *arena);
+internal void ArenaReset(Arena *arena);
+internal void ArenaResetAndDecommit(Arena *arena);
 internal void ArenaZero(Arena *arena);
 
 #define ArenaPushArray(arena, type, count) ArenaPush((arena), sizeof(type) * (count), _Alignof(type))

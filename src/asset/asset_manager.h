@@ -11,6 +11,7 @@ typedef struct AST_Record AST_Record;
 struct AST_Record
 {
 	AST_Asset asset;
+	
 	AST_State state;
 
 	u32 generation;
@@ -28,6 +29,8 @@ struct AST_Record
 	String8 *watch_paths;
 
 	u32 hot_pending_dependencies;
+
+	b32 reloading;
 };
 
 typedef struct AST_PathMapEntry AST_PathMapEntry;

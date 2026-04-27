@@ -9,7 +9,6 @@ ArenaInitReserved(u64 size)
 	arena.base = osapi->VirtualReserve(reserve_size);
 	arena.capacity = reserve_size;
 	arena.used = 0;
-	arena.last_alloc_offset = 0;
 	arena.committed = 0;
 	arena.kind = ArenaKind_Backed;
 	
@@ -23,7 +22,6 @@ ArenaInitMemory(void *memory, u64 capacity)
 	arena.base = memory;
 	arena.capacity = capacity;
 	arena.used = 0;
-	arena.last_alloc_offset = 0;
 	arena.kind = ArenaKind_View;
 
 	return arena;
@@ -36,7 +34,6 @@ ArenaInitArena(Arena *arena, u64 capacity, u64 alignment)
 	child.base = ArenaPush(arena, capacity, alignment);
 	child.capacity = capacity;
 	child.used = 0;
-	child.last_alloc_offset = 0;
 	child.kind = ArenaKind_View;
 
 	return child;
@@ -109,7 +106,6 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 	MemSet(mem, 0, bytes);
 
 	arena->used = new_used;
-	arena->last_alloc_offset = aligned;
 	
 	return mem;
 }
@@ -130,6 +126,7 @@ ArenaPop(Arena *arena, u64 bytes)
 		arena->used -= bytes;
 }
 
+/*
 internal void
 ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
@@ -155,9 +152,21 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 
 	arena->used = new_used;
 }
+*/
 
 internal void
-ArenaClear(Arena *arena)
+ArenaReset(Arena *arena)
+{
+	// TODO: this is just for debug purposes so remove in release
+	//       0xCD is the standard sentinel for "use-after-free" indicators.
+	// TODO: need some kind of debug build flag!!! literally 2 seconds to add im just so fucking tired right now.
+	MemSet((u8 *)arena->base, 0xCD, arena->used);
+
+	arena->used = 0;
+}
+
+internal void
+ArenaResetAndDecommit(Arena *arena)
 {
 	if (arena->kind == ArenaKind_Backed && arena->committed > 0)
 	{
@@ -166,7 +175,6 @@ ArenaClear(Arena *arena)
 	}
 	
 	arena->used = 0;
-	arena->last_alloc_offset = 0;
 }
 
 internal void
