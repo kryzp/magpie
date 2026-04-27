@@ -131,15 +131,23 @@ AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
 internal u32
 AST_LoadArenaAcquire(AST_Assets *assets)
 {
-	osapi->SpinLockAcquire(&assets->load_arena_spinlock);
- 
-	AssertTrue(assets->free_load_arena_count > 0 && "Load arena pool exhausted.");
- 
-	u32 index = assets->free_load_arenas[--assets->free_load_arena_count];
- 
-	osapi->SpinLockRelease(&assets->load_arena_spinlock);
- 
-	return index;
+	for (;;)
+	{
+		osapi->SpinLockAcquire(&assets->load_arena_spinlock);
+
+		if (assets->free_load_arena_count > 0)
+		{
+			assets->free_load_arena_count--;
+			u32 index = assets->free_load_arenas[assets->free_load_arena_count];
+			osapi->SpinLockRelease(&assets->load_arena_spinlock);
+			return index;
+		}
+
+		osapi->JobCounterInc(assets->load_arena_wait_counter, 1);
+		osapi->SpinLockRelease(&assets->load_arena_spinlock);
+
+		osapi->JobYield(assets->load_arena_wait_counter, 0);
+	}
 }
 
 internal void
@@ -151,8 +159,13 @@ AST_LoadArenaRelease(AST_Assets *assets, u32 index)
  
 	assets->free_load_arenas[assets->free_load_arena_count] = index;
 	assets->free_load_arena_count++;
- 
+
+	u32 waiters = osapi->JobCounterValue(assets->load_arena_wait_counter);
+
 	osapi->SpinLockRelease(&assets->load_arena_spinlock);
+
+	if (waiters > 0)
+		osapi->JobCounterDec(assets->load_arena_wait_counter, 1);
 }
 
 internal void
@@ -170,8 +183,9 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 	assets->device = device;
 	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
-	
-	assets->async_counter = osapi->JobCounterAlloc(arena, 0);
+
+	assets->load_arena_wait_counter = osapi->JobCounterAlloc(arena, 0);
+	assets->async_counter           = osapi->JobCounterAlloc(arena, 0);
 
 	assets->upload_mutex     = osapi->MutexCreate();
 	assets->dependency_mutex = osapi->MutexCreate();
@@ -181,7 +195,7 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 
 	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
 	{
-		assets->load_arenas[i] = ArenaInitArena(arena, AST_LOAD_ARENA_SIZE, 8);
+		assets->load_arenas[i] = ArenaInitReserved(AST_LOAD_ARENA_RESERVE);
 		assets->free_load_arenas[i] = i;
 	}
 
@@ -208,6 +222,11 @@ AST_Destroy(AST_Assets *assets)
 			if (s->Dispose)
 				s->Dispose(&record->asset, assets);
 		}
+	}
+
+	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
+	{
+		ArenaRelease(&assets->load_arenas[i]);
 	}
 	
 	osapi->MutexDestroy   (assets->upload_mutex);
@@ -250,8 +269,12 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 		}
 	}
 
-	DebugLogB(assets->log_channel, "Unrecognised prefix in path: \"%.*s\"", (int)path.len, path.str);
-
+	/*
+	DebugLogW(assets->log_channel,
+			  "Unrecognised prefix in path: \"%.*s\", using path as-is.",
+			  (i32)path.len, path.str);
+	*/
+	
 	return path;
 }
 
@@ -377,7 +400,7 @@ AST_Load(AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *coun
 	decl.EntryPoint = AST_LoadJobEntry;
 	decl.priority = JOB_Priority_Normal;
 	decl.param = params;
- 
+	
 	osapi->JobKick(&decl, counter);
 }
 

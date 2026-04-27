@@ -1,5 +1,22 @@
 
 internal Arena
+ArenaInitReserved(u64 size)
+{
+	u64 page = osapi->GetPageSize();
+	u64 reserve_size = MemAlignUp(size, page);
+
+	Arena arena = {0};
+	arena.base = osapi->VirtualReserve(reserve_size);
+	arena.capacity = reserve_size;
+	arena.used = 0;
+	arena.last_alloc_offset = 0;
+	arena.committed = 0;
+	arena.kind = ArenaKind_Backed;
+	
+	return arena;
+}
+
+internal Arena
 ArenaInitMemory(void *memory, u64 capacity)
 {
 	Arena arena = {0};
@@ -7,6 +24,7 @@ ArenaInitMemory(void *memory, u64 capacity)
 	arena.capacity = capacity;
 	arena.used = 0;
 	arena.last_alloc_offset = 0;
+	arena.kind = ArenaKind_View;
 
 	return arena;
 }
@@ -19,8 +37,21 @@ ArenaInitArena(Arena *arena, u64 capacity, u64 alignment)
 	child.capacity = capacity;
 	child.used = 0;
 	child.last_alloc_offset = 0;
+	child.kind = ArenaKind_View;
 
 	return child;
+}
+
+internal void
+ArenaRelease(Arena *arena)
+{
+	if (arena->kind != ArenaKind_Backed)
+		CoreFatal("Arena (%p) attempted to release but not backed by reserved memory.", arena);
+
+	if (!arena->base)
+		CoreFatal("Arena (%p) attempted to release by null base pointer.", arena);
+	
+	osapi->VirtualRelease(arena->base);
 }
 
 internal u64
@@ -45,18 +76,39 @@ internal void *
 ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
 	u64 aligned = MemAlignUp(arena->used, alignment);
-
-	if (aligned + bytes > arena->capacity)
+	u64 new_used = aligned + bytes;
+	
+	if (new_used > arena->capacity)
 	{
-		CoreFatal("Arena (%p) out of space, requested %llu bytes, capacity %llu, used %llu (aligned offset %llu, free %llu).",
-				  arena, bytes, arena->capacity, arena->used, aligned, arena->capacity - aligned);
+		f64 bytes_mb    = (f64)bytes           / (f64)Megabytes(1);
+		f64 capacity_mb = (f64)arena->capacity / (f64)Megabytes(1);
+		f64 used_mb     = (f64)arena->used     / (f64)Megabytes(1);
+		f64 aligned_mb  = (f64)aligned         / (f64)Megabytes(1);
+
+		f32 free_mb = capacity_mb - used_mb;
+	
+		CoreFatal("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
+				  arena,
+				  bytes_mb,    bytes,
+				  capacity_mb, arena->capacity,
+				  used_mb,     arena->used,
+				  aligned_mb, free_mb);
+	}
+
+	if (arena->kind == ArenaKind_Backed && new_used > arena->committed)
+	{
+		u64 page = osapi->GetPageSize();
+		u64 commit_to = MemAlignUp(new_used, page);
+		u64 commit_bytes = commit_to - arena->committed;
+
+		osapi->VirtualCommit((u8 *)arena->base + arena->committed, commit_bytes);
 	}
 	
-	void *mem = (void *)((u8 *)arena->base + aligned);
+	void *mem = (u8 *)arena->base + aligned;
 
 	MemSet(mem, 0, bytes);
 
-	arena->used = aligned + bytes;
+	arena->used = new_used;
 	arena->last_alloc_offset = aligned;
 	
 	return mem;
@@ -83,7 +135,7 @@ ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
    	if (arena->used + bytes > arena->capacity)
 	{
-		CoreFatal("Arena %p out of space, attempted to resize by %llu bytes from %llu exceeding capacity of %llu.",
+		CoreFatal("Arena %p out of space, attempted to resize by %llu bytes from %llu exceeding capacity of %llu bytes.",
 				  arena, bytes, arena->used, arena->capacity);
 	}
 	
@@ -97,7 +149,7 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 
    	if (new_used > arena->capacity)
 	{
-		CoreFatal("Arena %p out of space, attempted to resize to %llu bytes from %llu exceeding capacity of %llu.",
+		CoreFatal("Arena %p out of space, attempted to resize to %llu bytes from %llu exceeding capacity of %llu bytes.",
 				  arena, new_used, arena->used, arena->capacity);
 	}
 
@@ -107,6 +159,12 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 internal void
 ArenaClear(Arena *arena)
 {
+	if (arena->kind == ArenaKind_Backed && arena->committed > 0)
+	{
+		osapi->VirtualDecommit(arena->base, arena->committed);
+		arena->committed = 0;
+	}
+	
 	arena->used = 0;
 	arena->last_alloc_offset = 0;
 }

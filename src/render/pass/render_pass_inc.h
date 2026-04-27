@@ -2,3 +2,4 @@
 #include "render_pass_environment_map.h"
 #include "render_pass_skybox.h"
 #include "render_pass_ibl.h"
+#include "render_pass_post_processing.h"

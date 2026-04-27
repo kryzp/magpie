@@ -1286,8 +1286,8 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 
 	VmaAllocationCreateInfo vma_alloc_info = {0};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-	vma_alloc_info.flags = alloc_info->flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
+	vma_alloc_info.flags = alloc_info->flags | VMA_ALLOCATION_CREATE_MAPPED_BIT; // just map every buffer it's easier and the performance loss is negligible i rekon
+	
 	GFX_VK_CHECK(vmaCreateBuffer(device->context.vma_allocator,
 								 &buffer_create_info,
 								 &vma_alloc_info,
@@ -1354,7 +1354,7 @@ GFX_DeviceBufferAddress(const GFX_Device *device, GFX_BufferKey key)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
 	AssertTrue(buffer);
-	
+
 	return buffer->device_address;
 }
 

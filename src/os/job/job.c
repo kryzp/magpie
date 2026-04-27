@@ -385,7 +385,7 @@ JOB_FiberEntry(void *param)
 {
 	JOB_Scheduler *scheduler = param;
 	
-	while (true)
+	for (;;)
 	{
 		JOB_Fiber *f = job_current_worker->current_fiber;
 		JOB_Counter *c = f->counter;
@@ -496,6 +496,12 @@ JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
 	}
 }
 
+internal u32
+JOB_CounterValue(JOB_Scheduler *scheduler, JOB_Counter *counter)
+{
+	return osapi->AtomicLoadU32(&counter->atomic_count);
+}
+
 internal void
 JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 {
@@ -504,7 +510,7 @@ JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 	if (request->flags & JOB_Flag_MainThreadOnly)
 		queue = &scheduler->main_thread_queue;
 	
-	while (true)
+	for (;;)
 	{
 		osapi->SpinLockAcquire(&queue->atomic_spinlock);
 		
@@ -537,7 +543,7 @@ JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 {
 	JOB_Queue *queue = &scheduler->queues[fiber->priority];
  
-	while (true)
+	for (;;)
 	{
 		osapi->SpinLockAcquire(&queue->atomic_spinlock);
  
@@ -568,7 +574,7 @@ JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 internal void
 JOB_Yield(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 value)
 {
-	while (true)
+	for (;;)
 	{
 		JOB_CounterLock(scheduler, counter);
  

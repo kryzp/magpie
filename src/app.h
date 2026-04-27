@@ -49,7 +49,6 @@ struct App
 	//       seperate manager sub-system.
 	LOG_Channel render_log_channel;
 	R_Graph graph;
-	R_GraphTexHandle swapchain_src;
 	R_Scene scene;
 	R_SceneLightHandle light_handle;
 	R_Camera camera;

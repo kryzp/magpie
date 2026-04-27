@@ -4,8 +4,8 @@
 #define AST_MANAGER_MAX_RECORDS 512
 #define AST_GPU_UPLOAD_CHUNK    Megabytes(128)
 
-#define AST_LOAD_ARENA_COUNT 32
-#define AST_LOAD_ARENA_SIZE  Megabytes(4)
+#define AST_LOAD_ARENA_COUNT    128
+#define AST_LOAD_ARENA_RESERVE  Gigabytes(1)
 
 typedef struct AST_Record AST_Record;
 struct AST_Record
@@ -90,6 +90,7 @@ struct AST_Assets
 	u32 free_load_arenas[AST_LOAD_ARENA_COUNT];
 	u32 free_load_arena_count;
 	u32 load_arena_spinlock;
+	JOB_Counter *load_arena_wait_counter;
 };
 
 

@@ -149,7 +149,7 @@ internal R_GraphTexHandle R_PassWriteDepth          (R_Pass *pass, R_GraphTexHan
 internal R_GraphTexHandle R_PassWriteColourEx       (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
 internal R_GraphTexHandle R_PassWriteDepthEx        (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
 
-internal R_GraphTexHandle R_PassReadTexture         (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassReadTextureGraphics (R_Pass *pass, R_GraphTexHandle handle);
 
 internal R_GraphTexHandle R_PassReadTextureCompute  (R_Pass *pass, R_GraphTexHandle handle);
 internal R_GraphTexHandle R_PassWriteTextureCompute (R_Pass *pass, R_GraphTexHandle handle);

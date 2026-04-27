@@ -167,6 +167,7 @@ internal void         JOB_CounterLock      (JOB_Scheduler *scheduler, JOB_Counte
 internal void         JOB_CounterUnlock    (JOB_Scheduler *scheduler, JOB_Counter *counter);
 internal void         JOB_CounterIncrement (JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n);
 internal void         JOB_CounterDecrement (JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n);
+internal u32          JOB_CounterValue     (JOB_Scheduler *scheduler, JOB_Counter *counter);
 
 
 /* ==================================================

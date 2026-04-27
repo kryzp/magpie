@@ -27,7 +27,7 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 	args.environment_map         = GFX_DeviceTextureViewBindless (device, user_data->env_view);
 	args.linear_sampler          = GFX_DeviceSamplerBindless     (device, user_data->sampler);
 
-	GFX_CmdBindBindless  (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout, &cmd->device->bindless);
+	GFX_CmdBindBindless  (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	GFX_CmdBindPipeline  (cmd, pipeline_st.bind_point, pipeline_st.pipeline);	
 	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 

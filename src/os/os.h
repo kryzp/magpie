@@ -79,9 +79,10 @@ struct OS_API
 	   ================================================== */
 
 	void *(*VirtualReserve)(u64 bytes);
+	void  (*VirtualRelease)(void *address);
 	void  (*VirtualCommit)(void *address, u64 bytes);
-	void  (*VirtualFree)(void *address);
-
+	void  (*VirtualDecommit)(void *address, u64 bytes);
+	
 	u64 (*GetPageSize)(void);
 
 
@@ -243,6 +244,9 @@ struct OS_API
 	   ================================================== */
 
 	JOB_Counter *(*JobCounterAlloc)(Arena *arena, u32 initial_count);
+	void         (*JobCounterInc)(JOB_Counter *counter, u32 amount);
+	void         (*JobCounterDec)(JOB_Counter *counter, u32 amount);
+	u32          (*JobCounterValue)(JOB_Counter *counter);
 	void         (*JobYield)(JOB_Counter *counter, u32 value);
 	void         (*JobKick)(const JOB_Decl *decl, JOB_Counter *counter);
 	void         (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);

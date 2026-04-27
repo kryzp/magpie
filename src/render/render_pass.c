@@ -173,7 +173,7 @@ R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, 
 }
 
 internal R_GraphTexHandle
-R_PassReadTexture(R_Pass *pass, R_GraphTexHandle handle)
+R_PassReadTextureGraphics(R_Pass *pass, R_GraphTexHandle handle)
 {
 	return R_PassAddInputTexture(pass, handle,
 								 VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,

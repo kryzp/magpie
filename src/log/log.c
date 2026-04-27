@@ -92,7 +92,7 @@ LOG_FormatLine(char *dst, i32 dst_size,
 			   LOG_Level level, LOG_Channel channel,
 			   const char *file, i32 line, const char *fn,
 			   const char *body,
-			   b32 for_file, f32 elapsed, b32 remove_level_and_channel,
+			   b32 for_file, f32 elapsed,
 			   JOB_Context job_context)
 {
 	const char *level_string = LOG_LevelToString (level);
@@ -144,29 +144,15 @@ LOG_FormatLine(char *dst, i32 dst_size,
             Append(LOG_ANSI_DIM "[  W:%s F:%s  ]" LOG_ANSI_RESET " ", worker_str, fiber_str);
     }
 
-	//if (remove_level_and_channel)
-	{
-		// Level.
-		if (for_file)
-			Append("[  %s  ] ", level_string);
+	// Level.
+	if (for_file)
+		Append("[  %s  ] ", level_string);
 
-		// Channel.
-		if (for_file)
-			Append("[  %-*s  ] ", LOG_CHANNEL_COL_ALIGN, channel_name);
-		else
-			Append("%s[  %-*s  ]" LOG_ANSI_RESET " ", level_ansi, LOG_CHANNEL_COL_ALIGN, channel_name);
-	}
-	/*
+	// Channel.
+	if (for_file)
+		Append("[  %-*s  ] ", LOG_CHANNEL_COL_ALIGN, channel_name);
 	else
-	{
-		// Level.
-		if (for_file)
-			Append("            ");
-
-		// Channel.
-		Append("   %-*s    ", LOG_CHANNEL_COL_ALIGN, "");
-	}
-	*/
+		Append("%s[  %-*s  ]" LOG_ANSI_RESET " ", level_ansi, LOG_CHANNEL_COL_ALIGN, channel_name);
 	
 	// Callsite.
 	if (show_callsite)
@@ -225,7 +211,7 @@ LOG_FlushDedupToFile(f32 elapsed)
 								  log_selected->dedup_channel,
 								  "", 0, "",
 								  body,
-								  true, elapsed, true,
+								  true, elapsed,
 								  log_selected->dedup_job_context);
 		
 		if (file_len > 0)
@@ -274,10 +260,6 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 			log_selected->dedup_job_context.fiber_id == job_context.fiber_id &&
 			LOG_ChannelMatch(log_selected->dedup_channel, channel) &&
 			(CStrCompare(log_selected->dedup_body, body) == 0);
-
-		b32 is_repeated_channel_and_level =
-			log_selected->dedup_level == level &&
-			LOG_ChannelMatch(log_selected->dedup_channel, channel);
 		
 		if (is_repeated_line)
 		{
@@ -292,7 +274,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 dedup_body,
-											 false, elapsed, !is_repeated_channel_and_level,
+											 false, elapsed,
 											 log_selected->dedup_job_context);
 
 			if (console_len > 0)
@@ -324,7 +306,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 											 level, channel,
 											 file, line, fn,
 											 body,
-											 false, elapsed, !is_repeated_channel_and_level,
+											 false, elapsed,
 											 job_context);
 
 			if (console_len > 0)
@@ -344,7 +326,7 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 										  level, channel,
 										  file, line, fn,
 										  body,
-										  true, elapsed, true,
+										  true, elapsed,
 										  job_context);
 				
 				if (file_len > 0)

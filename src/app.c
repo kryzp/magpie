@@ -386,6 +386,8 @@ AppInitRender(App *app)
 	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
 	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
+
+	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 	
 	AST_Handle hdr_to_env_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
 	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
@@ -599,6 +601,8 @@ AppDestroy(App *app)
 	AppDestroyLog      (app);
 }
 
+global f32 app_pp_exposure = 1.f;
+
 __declspec(dllexport) b32
 AppTick(App *app, const I_State *input)
 {
@@ -626,6 +630,9 @@ AppTick(App *app, const I_State *input)
 
 	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
+	if (I_KbDown(input, I_KeyboardKey_Up  ))  app_pp_exposure += dt;
+	if (I_KbDown(input, I_KeyboardKey_Down))  app_pp_exposure -= dt;
+	
 	f32 clamped_delta = dt;
 
 	if (clamped_delta > max_frame_time)
@@ -662,15 +669,9 @@ AppTick(App *app, const I_State *input)
 		R_SceneDebug(&app->scene);
 	
 		R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
-		
-		R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
-		swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	
-		app->swapchain_src = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
 	
 		AppRender(app, dt, elapsed, &cmd);
 
-		R_GraphSetBackbuffer(&app->graph, app->swapchain_src);
 		R_GraphCompile(&app->graph, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
@@ -734,12 +735,16 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 	R_Blackboard bb = {0};
 
+	R_TextureInfo lighting_attachment_info = R_TextureInfoInit();
+	lighting_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	lighting_attachment_info.flags = GFX_TextureAllocFlag_Storage;
+		
+	R_GraphTexHandle lighting = R_GraphCreateTexture(&app->graph, &lighting_attachment_info);
+		
 	// Skybox Pass.
 	{
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
-		
-		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
 
 		R_SkyboxPassData *data = ArenaPushArray(&app->pass_frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
@@ -748,11 +753,29 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		data->frame_data_buffer = app->frame_data_buffer;
 		data->skybox_mesh = &app->skybox_mesh;
 		
-		R_PassWriteColour(pass, app->swapchain_src, NULL);
-		//R_PassWriteDepth(pass, ..., NULL);
-
-		R_PassReadTexture(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
-
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
 		R_PassSetRecord(pass, R_SkyboxPassFn, data);
+		R_PassReadTextureGraphics(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
+		lighting = R_PassWriteColour(pass, lighting, NULL);
+		//R_PassWriteDepth(pass, ..., NULL);
 	}
+
+	// Post Processing Pass.
+	{
+		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_tonemapping.comp.slang"), AST_Type_Shader);
+		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
+		
+		R_PostProcessingPassData *data = ArenaPushArray(&app->pass_frame_arena, R_PostProcessingPassData, 1);
+		data->shader = shader;
+		data->exposure = app_pp_exposure;
+		data->input = lighting;
+		data->output = lighting;
+
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Post Processing"), R_PassType_Compute);
+		R_PassSetRecord(pass, R_PostProcessingPassFn, data);
+		R_PassReadTextureCompute(pass, lighting);
+		lighting = R_PassWriteTextureCompute(pass, lighting);
+	}
+
+	R_GraphSetBackbuffer(&app->graph, lighting);
 }

@@ -79,17 +79,6 @@ internal R_BufferInfo  R_BufferInfoInit  (void);
 internal b32 R_TextureInfoMatch (const R_TextureInfo *a, const R_TextureInfo *b);
 internal b32 R_BufferInfoMatch  (const R_BufferInfo  *a, const R_BufferInfo  *b);
 
-/*
-typedef struct R_ResourceState R_ResourceState;
-struct R_ResourceState
-{
-	VkPipelineStageFlags2 stage;
-	VkAccessFlags2 to_flush;
-	VkAccessFlags2 invalidated_in_stage[64]; // TODO: Could this be represented better somehow.
-	VkImageLayout layout;
-};
-*/
-
 typedef struct R_ResourceState R_ResourceState;
 struct R_ResourceState
 {

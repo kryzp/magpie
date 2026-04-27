@@ -1,39 +1,183 @@
-[    0.001  ] [  W:MT  F:0    ] [  INFO   ] [  LOG       ] Initialized ("log_output.txt" as file sink).
-[    0.017  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
-[    0.052  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
-[    0.052  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
-[    0.052  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
-[    0.062  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
-[    0.062  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
-[    0.063  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
-[    0.064  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
-[    0.066  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
-[    0.067  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
-[    0.067  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
-[    0.067  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
-[    0.129  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
-[    0.184  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
-[    0.285  ] [  W:MT  F:0    ] [  INFO   ] [  AUDIO     ] Initialized.
-[    0.292  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
-[    0.324  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
-[    0.325  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
-[    0.390  ] [  W:MT  F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.390  ] [  W:MT  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.514  ] [  W:2   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
-[    0.531  ] [  W:1   F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
-[    0.531  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
-[    0.543  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
-[    0.565  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
-[    0.567  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
-[    0.574  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
-[    0.619  ] [  W:MT  F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/skybox.slang.
-[    0.619  ] [  W:MT  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/skybox.slang.
-[    0.620  ] [  W:9   F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/skybox.slang.
-[    9.735  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
-[    9.735  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
-[    9.735  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
-[    9.735  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
-[    9.735  ] [  W:MT  F:---  ] [  INFO   ] [  AUDIO     ] Shut Down.
-[    9.752  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
-[    9.825  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
-[    9.825  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting Down...
+[    0.000  ] [  W:MT  F:0    ] [  INFO   ] [  LOG       ] Initialized ("log_output.txt" as file sink).
+[    0.059  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
+[    0.245  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.245  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
+[    0.245  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
+[    0.256  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
+[    0.256  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
+[    0.256  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
+[    0.257  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
+[    0.260  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
+[    0.261  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
+[    0.261  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
+[    0.261  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
+[    0.325  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
+[    0.382  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.470  ] [  W:MT  F:0    ] [  INFO   ] [  AUDIO     ] Initialized.
+[    0.471  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.573  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.574  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.698  ] [  W:MT  F:3    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/irradiance_convolution.slang.
+[    0.698  ] [  W:MT  F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/irradiance_convolution.slang.
+[    0.752  ] [  W:1   F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.753  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.768  ] [  W:3   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/Sponza.gltf.
+[    0.836  ] [  W:2   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.857  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/irradiance_convolution.slang.
+[    0.858  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_to_environment_cubemap.slang.
+[    0.864  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/16885566240357350108.jpg.
+[    0.871  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/17556969131407844942.jpg.
+[    0.875  ] [  W:6   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/13196865903111448057.jpg.
+[    0.875  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/13982482287905699490.jpg.
+[    0.876  ] [  W:5   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8750083169368950601.jpg.
+[    0.877  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/11968150294050148237.jpg.
+[    0.878  ] [  W:2   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/16299174074766089871.jpg.
+[    0.880  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/759203620573749278.jpg.
+[    0.882  ] [  W:3   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/5792855332885324923.jpg.
+[    0.883  ] [  W:13  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/6772804448157695701.jpg.
+[    0.888  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2969916736137545357.jpg.
+[    0.888  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8503262930880235456.jpg.
+[    0.889  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.891  ] [  W:4   F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/10381718147657362067.jpg.
+[    0.895  ] [  W:8   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8747919177698443163.jpg.
+[    0.896  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8481240838833932244.jpg.
+[    0.897  ] [  W:6   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4477655471536070370.jpg.
+[    0.898  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
+[    0.898  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/12501374198249454378.jpg.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/16885566240357350108.jpg.
+[    0.900  ] [  W:5   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/715093869573992647.jpg.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/17556969131407844942.jpg.
+[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/13196865903111448057.jpg.
+[    0.902  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/13982482287905699490.jpg.
+[    0.903  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8750083169368950601.jpg.
+[    0.904  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/11968150294050148237.jpg.
+[    0.904  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/14170708867020035030.jpg.
+[    0.905  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/16299174074766089871.jpg.
+[    0.906  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/759203620573749278.jpg.
+[    0.907  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/5792855332885324923.jpg.
+[    0.907  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/7268504077753552595.jpg.
+[    0.908  ] [  W:13  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/755318871556304029.jpg.
+[    0.908  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/6772804448157695701.jpg.
+[    0.909  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2969916736137545357.jpg.
+[    0.909  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2411100444841994089.jpg.
+[    0.910  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8503262930880235456.jpg.
+[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/10381718147657362067.jpg.
+[    0.911  ] [  W:10  F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/14118779221266351425.jpg.
+[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8747919177698443163.jpg.
+[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8481240838833932244.jpg.
+[    0.914  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/1219024358953944284.jpg.
+[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4477655471536070370.jpg.
+[    0.917  ] [  W:3   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/3827035219084910048.jpg.
+[    0.925  ] [  W:8   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/466164707995436622.jpg.
+[    0.933  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4601176305987539675.jpg.
+[    0.938  ] [  W:10  F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4975155472559461469.jpg.
+[    0.940  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/6593109234861095314.jpg.
+[    0.942  ] [  W:13  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/3371964815757888145.jpg.
+[    0.945  ] [  W:6   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/17876391417123941155.jpg.
+[    0.946  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4910669866631290573.jpg.
+[    0.947  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/7815564343179553343.jpg.
+[    0.948  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2299742237651021498.jpg.
+[    0.948  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/white.png.
+[    0.948  ] [  W:5   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/11474523244911310074.jpg.
+[    0.953  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/9288698199695299068.jpg.
+[    0.959  ] [  W:3   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2374361008830720677.jpg.
+[    0.959  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2775690330959970771.jpg.
+[    0.960  ] [  W:2   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8006627369776289000.png.
+[    0.961  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2185409758123873465.jpg.
+[    0.964  ] [  W:8   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/332936164838540657.jpg.
+[    0.971  ] [  W:6   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8773302468495022225.jpg.
+[    0.975  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8783994986360286082.jpg.
+[    0.975  ] [  W:13  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/11872827283454512094.jpg.
+[    0.977  ] [  W:10  F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/7056944414013900257.jpg.
+[    0.977  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4675343432951571524.jpg.
+[    0.978  ] [  W:4   F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/16275776544635328252.png.
+[    0.979  ] [  W:3   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/2051777328469649772.jpg.
+[    0.982  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/7645212358685992005.jpg.
+[    0.984  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/15722799267630235092.jpg.
+[    0.984  ] [  W:2   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8051790464816141987.jpg.
+[    0.984  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/4871783166746854860.jpg.
+[    0.986  ] [  W:5   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/6151467286084645207.jpg.
+[    0.992  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/14650633544276105767.jpg.
+[    0.995  ] [  W:8   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/6047387724914829168.jpg.
+[    0.995  ] [  W:6   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/13824894030729245199.jpg.
+[    0.998  ] [  W:10  F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/8114461559286000061.jpg.
+[    1.001  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/11490520546946913238.jpg.
+[    1.006  ] [  W:13  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/5823059166183034438.jpg.
+[    1.007  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/6667038893015345571.jpg.
+[    1.008  ] [  W:11  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/3628158980083700836.jpg.
+[    1.009  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/14267839433702832875.jpg.
+[    1.010  ] [  W:3   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/3455394979645218238.jpg.
+[    1.012  ] [  W:4   F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/7441062115984513793.jpg.
+[    1.014  ] [  W:2   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/9916269861720640319.jpg.
+[    1.014  ] [  W:5   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/15295713303328085182.jpg.
+[    1.016  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/10388182081421875623.jpg.
+[    1.058  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in res/models/Sponza/glTF/5061699253647017043.png.
+[    1.062  ] [  W:MT  F:15   ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/skybox.slang.
+[    1.062  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/skybox.slang.
+[    1.073  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/12501374198249454378.jpg.
+[    1.073  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/715093869573992647.jpg.
+[    1.074  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/14170708867020035030.jpg.
+[    1.075  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/7268504077753552595.jpg.
+[    1.075  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/755318871556304029.jpg.
+[    1.076  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2411100444841994089.jpg.
+[    1.076  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/14118779221266351425.jpg.
+[    1.077  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/1219024358953944284.jpg.
+[    1.078  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/3827035219084910048.jpg.
+[    1.078  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/466164707995436622.jpg.
+[    1.079  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4601176305987539675.jpg.
+[    1.079  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4975155472559461469.jpg.
+[    1.080  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/6593109234861095314.jpg.
+[    1.081  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/3371964815757888145.jpg.
+[    1.081  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/17876391417123941155.jpg.
+[    1.082  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4910669866631290573.jpg.
+[    1.082  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/7815564343179553343.jpg.
+[    1.083  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2299742237651021498.jpg.
+[    1.083  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/white.png.
+[    1.084  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/11474523244911310074.jpg.
+[    1.084  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/9288698199695299068.jpg.
+[    1.085  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2374361008830720677.jpg.
+[    1.085  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2775690330959970771.jpg.
+[    1.086  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8006627369776289000.png.
+[    1.087  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2185409758123873465.jpg.
+[    1.087  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/332936164838540657.jpg.
+[    1.088  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8773302468495022225.jpg.
+[    1.088  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8783994986360286082.jpg.
+[    1.089  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/11872827283454512094.jpg.
+[    1.090  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/7056944414013900257.jpg.
+[    1.090  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4675343432951571524.jpg.
+[    1.091  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/16275776544635328252.png.
+[    1.098  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/2051777328469649772.jpg.
+[    1.099  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/7645212358685992005.jpg.
+[    1.099  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/15722799267630235092.jpg.
+[    1.100  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8051790464816141987.jpg.
+[    1.100  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/4871783166746854860.jpg.
+[    1.101  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/6151467286084645207.jpg.
+[    1.102  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/14650633544276105767.jpg.
+[    1.102  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/6047387724914829168.jpg.
+[    1.103  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/13824894030729245199.jpg.
+[    1.103  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/8114461559286000061.jpg.
+[    1.104  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/11490520546946913238.jpg.
+[    1.105  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/5823059166183034438.jpg.
+[    1.105  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/6667038893015345571.jpg.
+[    1.106  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/3628158980083700836.jpg.
+[    1.106  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/14267839433702832875.jpg.
+[    1.107  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/3455394979645218238.jpg.
+[    1.115  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/7441062115984513793.jpg.
+[    1.115  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/9916269861720640319.jpg.
+[    1.116  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/15295713303328085182.jpg.
+[    1.116  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/10388182081421875623.jpg.
+[    1.117  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated res/models/Sponza/glTF/5061699253647017043.png.
+[    1.117  ] [  W:13  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/skybox.slang.
+[    1.148  ] [  W:MT  F:15   ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/hdr_tonemapping.comp.slang.
+[    1.148  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/hdr_tonemapping.comp.slang.
+[    1.156  ] [  W:1   F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/Sponza.gltf.
+[    1.156  ] [  W:1   F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/hdr_tonemapping.comp.slang.
+[    1.164  ] [  W:MT  F:15   ] [  WARN   ] [  APP       ] Had to clamp delta - is there lag?
+[    3.667  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
+[    3.667  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
+[    3.667  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
+[    3.669  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
+[    3.669  ] [  W:MT  F:---  ] [  INFO   ] [  AUDIO     ] Shut Down.
+[    3.684  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
+[    3.757  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
+[    3.757  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting Down...

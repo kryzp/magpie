@@ -190,6 +190,12 @@ OS_W32_VirtualReserve(u64 bytes)
 }
 
 internal void
+OS_W32_VirtualRelease(void *address)
+{
+	VirtualFree(address, 0, MEM_RELEASE);
+}
+
+internal void
 OS_W32_VirtualCommit(void *address, u64 bytes)
 {
 	VirtualAlloc(address,
@@ -199,9 +205,9 @@ OS_W32_VirtualCommit(void *address, u64 bytes)
 }
 
 internal void
-OS_W32_VirtualFree(void *address)
+OS_W32_VirtualDecommit(void *address, u64 bytes)
 {
-	VirtualFree(address, 0, MEM_RELEASE);
+	VirtualFree(address, bytes, MEM_DECOMMIT);
 }
 
 internal u64
@@ -532,7 +538,7 @@ OS_W32_AtomicCASPtr(void *ptr, void *expected, void *desired)
 internal void
 OS_W32_SpinLockAcquire(u32 *lock)
 {
-	while (true)
+	for (;;)
 	{
 		if (InterlockedCompareExchange((volatile LONG *)lock, 1, 0) == 0)
 			break;
@@ -900,6 +906,24 @@ OS_W32_JobCounterAlloc(Arena *arena, u32 initial_count)
 }
 
 internal void
+OS_W32_JobCounterInc(JOB_Counter *counter, u32 amount)
+{
+	JOB_CounterIncrement(&win32_st.scheduler, counter, amount);
+}
+
+internal void
+OS_W32_JobCounterDec(JOB_Counter *counter, u32 amount)
+{
+	JOB_CounterDecrement(&win32_st.scheduler, counter, amount);
+}
+
+internal u32
+OS_W32_JobCounterValue(JOB_Counter *counter)
+{
+	return JOB_CounterValue(&win32_st.scheduler, counter);
+}
+
+internal void
 OS_W32_JobYield(JOB_Counter *counter, u32 value)
 {
 	JOB_Yield(&win32_st.scheduler, counter, value);
@@ -945,8 +969,9 @@ internal void
 OS_W32_BindAPI(OS_API *api)
 {
 	api->VirtualReserve              = OS_W32_VirtualReserve;
+	api->VirtualRelease              = OS_W32_VirtualRelease;
 	api->VirtualCommit               = OS_W32_VirtualCommit;
-	api->VirtualFree                 = OS_W32_VirtualFree;
+	api->VirtualDecommit             = OS_W32_VirtualDecommit;
 
 	api->GetPageSize                 = OS_W32_GetPageSize;
 
@@ -1039,6 +1064,9 @@ OS_W32_BindAPI(OS_API *api)
 	api->StreamClose                 = OS_W32_StreamClose;
 
 	api->JobCounterAlloc             = OS_W32_JobCounterAlloc;
+	api->JobCounterInc               = OS_W32_JobCounterInc;
+	api->JobCounterDec               = OS_W32_JobCounterDec;
+	api->JobCounterValue             = OS_W32_JobCounterValue;
 	api->JobYield                    = OS_W32_JobYield;
 	api->JobKick                     = OS_W32_JobKick;
 	api->JobBatch                    = OS_W32_JobBatch;
@@ -1284,16 +1312,14 @@ main(void)
 
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
 
-	printf("OS/Win32 -- Allocating %llu gigabytes of memory...\n", (u64)((f64)OS_TOTAL_MEMORY / (f64)Gigabytes(1)));
-	
+	printf("OS/Win32 -- Allocating %.1f GB of memory...\n", (f64)OS_TOTAL_MEMORY / (f64)Gigabytes(1));
 	void *process_memory = malloc(OS_TOTAL_MEMORY);
+	printf("OS/Win32 -- Allocated!\n");
+	
 	win32_st.process_arena = ArenaInitMemory(process_memory, OS_TOTAL_MEMORY);
-
-	win32_st.object_arena = ArenaInitArena(&win32_st.process_arena, OS_LAYER_MEMORY, 8);
+	win32_st.object_arena  = ArenaInitArena(&win32_st.process_arena, OS_LAYER_MEMORY, 8);
 
 	win32_st.pending_events = ArenaPushArray(&win32_st.object_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
-	
-	printf("OS/Win32 -- Allocated!\n");
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 

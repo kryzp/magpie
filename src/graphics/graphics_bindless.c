@@ -92,7 +92,9 @@ GFX_BindlessUpdateView(GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImag
 	GFX_BindlessPushUpdate(bindless, kind, handle, VK_NULL_HANDLE, view);
 
 	if (is_also_storage)
-		GFX_BindlessPushUpdate(bindless, kind, handle, VK_NULL_HANDLE, view);
+	{
+		GFX_BindlessPushUpdate(bindless, GFX_BindlessKind_StorageTexture, handle, VK_NULL_HANDLE, view);
+	}
 }
 
 internal void

@@ -130,8 +130,7 @@ GFX_CmdBindDescriptors(const GFX_CmdBuffer *cmd,
 internal void
 GFX_CmdBindBindless(const GFX_CmdBuffer *cmd,
 					VkShaderStageFlags stage_flags,
-					GFX_PipelineLayoutKey layout,
-					const GFX_Bindless *bindless)
+					GFX_PipelineLayoutKey layout)
 {
 	VkPipelineLayout vk_layout = GFX_DevicePipelineLayoutFromKey(cmd->device, layout);
 	
@@ -141,7 +140,7 @@ GFX_CmdBindBindless(const GFX_CmdBuffer *cmd,
 	info.layout = vk_layout;
 	info.firstSet = 0;
 	info.descriptorSetCount = 1;
-	info.pDescriptorSets = &bindless->set;
+	info.pDescriptorSets = &cmd->device->bindless.set;
 	info.dynamicOffsetCount = 0;
 	info.pDynamicOffsets = NULL;
 
@@ -180,6 +179,9 @@ GFX_CmdPushConstants(const GFX_CmdBuffer *cmd,
 					 u64 size, const void *data,
 					 u32 offset)
 {
+	// Vulkan 1.4 minimum is 256 bytes.
+	AssertTrue(size <= Bytes(256));
+	
 	VkPipelineLayout vk_layout = GFX_DevicePipelineLayoutFromKey(cmd->device, layout);
 	
 	VkPushConstantsInfo info = {0};
@@ -194,7 +196,7 @@ GFX_CmdPushConstants(const GFX_CmdBuffer *cmd,
 }
 
 internal void
-GFX_CmdSetLineWidth(const GFX_CmdBuffer *cmd, float thickness)
+GFX_CmdSetLineWidth(const GFX_CmdBuffer *cmd, f32 thickness)
 {
 	vkCmdSetLineWidth(cmd->handle, thickness);
 }

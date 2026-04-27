@@ -120,18 +120,12 @@ internal void        LOG_CloseChannel(LOG_Channel channel);
 internal void LOG_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
 internal void LOG_FlushDedupToFile (f32 elapsed);
 
-
-// Yes this is a complete mess of parameters.
-// TODO: Clean this up.
-//       --> Add some kind of parameter flags?
-
 internal i32 LOG_FormatLine(char *dst, i32 dst_size,
 							LOG_Level level, LOG_Channel channel,
 							const char *file, i32 line, const char *fn,
 							const char *body,
-							b32 for_file, f32 elapsed, b32 remove_level_and_channel,
+							b32 for_file, f32 elapsed,
 							JOB_Context job_context);
-
 
 internal void LOG_Write  (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
 internal void LOG_WriteV (LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, va_list args);

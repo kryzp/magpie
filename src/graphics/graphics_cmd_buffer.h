@@ -36,8 +36,7 @@ internal void GFX_CmdBindDescriptors(const GFX_CmdBuffer *cmd,
 
 internal void GFX_CmdBindBindless(const GFX_CmdBuffer *cmd,
 								  VkShaderStageFlags stage_flags,
-								  GFX_PipelineLayoutKey layout,
-								  const GFX_Bindless *bindless);
+								  GFX_PipelineLayoutKey layout);
 
 internal void GFX_CmdBindPipeline(const GFX_CmdBuffer *cmd,
 								  VkPipelineBindPoint bind_point,
@@ -54,7 +53,7 @@ internal void GFX_CmdPushConstants(const GFX_CmdBuffer *cmd,
 								   u64 size, const void *data,
 								   u32 offset);
 
-internal void GFX_CmdSetLineWidth(const GFX_CmdBuffer *cmd, float thickness);
+internal void GFX_CmdSetLineWidth(const GFX_CmdBuffer *cmd, f32 thickness);
 
 internal void GFX_CmdDraw(const GFX_CmdBuffer *cmd,
 						  u32 vertex_count,
