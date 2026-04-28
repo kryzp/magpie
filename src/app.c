@@ -806,15 +806,6 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 		bb.gbuffer.depth = R_PassWriteDepth(pass, bb.gbuffer.depth, NULL);
 	}
 
-	// -- Debug Rendering.
-
-	R_DebugRendererRender(&app->debug_renderer,
-						  dt,
-						  &app->graph,
-						  &app->pass_frame_arena,
-						  lighting,
-						  bb.gbuffer.depth);
-
 	// -- Post Processing.
 	{
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_tonemapping.comp.slang"), AST_Type_Shader);
@@ -831,6 +822,13 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 		R_PassReadTextureCompute(pass, lighting);
 		lighting = R_PassWriteTextureCompute(pass, lighting);
 	}
+
+	R_DebugRendererRender(&app->debug_renderer,
+						  dt,
+						  &app->graph,
+						  &app->pass_frame_arena,
+						  lighting,
+						  bb.gbuffer.depth);
 
 	R_GraphSetBackbuffer(&app->graph, lighting);
 }

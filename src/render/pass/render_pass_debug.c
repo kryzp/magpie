@@ -5,7 +5,6 @@ struct R_GPU_DebugObjectDraw
 	m4 transform;
 	v4 colour;
 	f32 thickness;
-	f32 _pad[3];
 };
 
 internal R_DebugDrawNode *
@@ -475,6 +474,7 @@ R_DebugBuildInstances(R_DebugRenderer *dr,
 				{
 					f32 half = call->cross.size * 0.5f;
 					m4 t = M4MulM4(M4Translate(call->cross.point), M4Scale(v3(half, half, half)));
+					
 					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
 				}
 				break;
@@ -483,6 +483,7 @@ R_DebugBuildInstances(R_DebugRenderer *dr,
 				{
 					f32 r = call->sphere.radius;
 					m4 t = M4MulM4(M4Translate(call->sphere.centre), M4Scale(v3(r, r, r)));
+					
 					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
 				}
 				break;
@@ -492,6 +493,7 @@ R_DebugBuildInstances(R_DebugRenderer *dr,
 					f32 r = call->circle.radius;
 					// TODO: M4RotateAround for the normal vector.
 					m4 t = M4MulM4(M4Translate(call->circle.centre), M4Scale(v3(r, r, r)));
+					
 					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
 				}
 				break;
@@ -703,7 +705,7 @@ R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets, f32 dt)
 	{
 		R_DebugDrawNode **prev = &buckets[type];
 		R_DebugDrawNode  *node = *prev;
-
+		
 		while (node)
 		{
 			R_DebugDrawNode *next = node->next;
@@ -740,7 +742,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// -- Build GPU instance data for both depth modes.
 
-	u32 depth_enabled_id  = 0;
+	u32 depth_enabled_id = 0;
 	u32 depth_disabled_id = 0;
 
 	R_GPU_DebugObjectDraw *depth_enabled_draws  = GFX_DeviceBufferMap(dr->device, dr->depth_enabled_buffer);
@@ -752,13 +754,13 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// -- Build batch descriptors.
 
-	u32 depth_running_id    = 0;
+	u32    depth_running_id = 0;
 	u32 no_depth_running_id = 0;
 
-	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES];
-	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES];
+	R_DebugBatch    depth_batches[R_DEBUG_MAX_BATCHES] = {0};
+	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES] = {0};
 
-	u32 depth_batch_count    = R_DebugBuildBatches(dr->depth_enabled,  depth_batches,    &depth_running_id);
+	u32    depth_batch_count = R_DebugBuildBatches(dr->depth_enabled,  depth_batches,    &depth_running_id);
 	u32 no_depth_batch_count = R_DebugBuildBatches(dr->depth_disabled, no_depth_batches, &no_depth_running_id);
 
 	
@@ -768,7 +770,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 
 	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
 	data->shader = shader;
-	data->depth_enabled_buffer  = dr->depth_enabled_buffer;
+	data->depth_enabled_buffer = dr->depth_enabled_buffer;
 	data->depth_disabled_buffer = dr->depth_disabled_buffer;
 	data->line_mesh = &dr->line_mesh;
 	data->cross_mesh = &dr->cross_mesh;
@@ -776,13 +778,13 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	data->circle_mesh = &dr->circle_mesh;
 	data->cube_mesh = &dr->cube_mesh;
 
-	data->depth_batch_count    = depth_batch_count;
+	data->depth_batch_count    =    depth_batch_count;
 	data->no_depth_batch_count = no_depth_batch_count;
 
 	MemCopy(data->depth_batches,    depth_batches,    depth_batch_count    * sizeof(R_DebugBatch));
 	MemCopy(data->no_depth_batches, no_depth_batches, no_depth_batch_count * sizeof(R_DebugBatch));
 
-	R_Pass *pass = R_GraphAdd(graph, String8Lit("Debug Rendering"), R_PassType_Graphics);
+	R_Pass *pass = R_GraphAdd(graph, String8Lit("Debug Lines"), R_PassType_Graphics);
 	R_PassSetRecord(pass, R_DebugRenderPassFn, data);
 	R_PassWriteColour(pass, target_colour, NULL);
 	R_PassWriteDepth(pass, target_depth, NULL);

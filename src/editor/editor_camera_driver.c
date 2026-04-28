@@ -64,5 +64,7 @@ CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, 
 	camera->position = V3Add(camera->position, V3MulF32(basis[1], frwd));
 	camera->position = V3Add(camera->position, V3MulF32(basis[2], vert));
 
+	osapi->SetMouseLocked(true);
+	
 	R_CameraRecompute(camera);
 }

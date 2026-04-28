@@ -1,13 +1,15 @@
 import bindless;
 import types;
 
-struct DebugObjectDraw {
+struct DebugObjectDraw
+{
     float4x4 transform;
     float4 colour;
     float thickness;
 };
 
-struct Arguments {
+struct Arguments
+{
     float4x4 view_proj;
     DebugObjectDraw *calls;
     float3 *vertices;
@@ -16,7 +18,8 @@ struct Arguments {
 [vk::push_constant]
 Arguments args;
 
-struct VS_Output {
+struct VS_Output
+{
     [vk::location(0)] float4 colour; 
 	float4 sv_position : SV_Position;
 };
