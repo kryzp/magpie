@@ -658,7 +658,7 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	const R_DebugPassData *data = ctx->user_data;
 
 	
-	// -- Pipeline with depth testing.
+	// Pipeline with depth testing.
 
 	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->shader);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
@@ -679,13 +679,13 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
 	
-	// -- Pipeline without depth testing.
+	// Pipeline without depth testing.
 
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	GFX_PipelineSt pipeline_st_no_depth = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
 	
-	// -- Draw.
+	// Draw.
 
 	m4 view_proj = M4MulM4(ctx->camera->proj, ctx->camera->view);
 
@@ -734,13 +734,13 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 					  R_GraphTexHandle target_colour,
 					  R_GraphTexHandle target_depth)
 {
-	// -- Expire old draws and return their nodes to the freelist.
+	// Expire old draws and return their nodes to the freelist.
 
 	R_DebugFilterBuckets(dr, dr->depth_enabled,  dt);
 	R_DebugFilterBuckets(dr, dr->depth_disabled, dt);
 
 	
-	// -- Build GPU instance data for both depth modes.
+	// Build GPU instance data for both depth modes.
 
 	u32 depth_enabled_id = 0;
 	u32 depth_disabled_id = 0;
@@ -752,7 +752,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	R_DebugBuildInstances(dr, dr->depth_disabled, depth_disabled_draws, &depth_disabled_id);
 
 	
-	// -- Build batch descriptors.
+	// Build batch descriptors.
 
 	u32    depth_running_id = 0;
 	u32 no_depth_running_id = 0;
@@ -764,7 +764,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	u32 no_depth_batch_count = R_DebugBuildBatches(dr->depth_disabled, no_depth_batches, &no_depth_running_id);
 
 	
-	// -- Create the render pass.
+	// Create the render pass.
 
 	GFX_ShaderKey shader = AST_Get(dr->assets, dr->shader_handle, AST_Type_Shader)->shader.key;
 

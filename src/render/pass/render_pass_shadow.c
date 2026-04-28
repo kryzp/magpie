@@ -36,8 +36,6 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	GFX_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
 	GFX_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
-	// TODO: iterate geometry pages from ctx->scene
-	//       for each page: bind index buffer, draw_indexed_indirect_count
 	R_SceneDrawIndirect(ctx->scene, cmd, indirect_key, counter_key);
 }
 
@@ -106,7 +104,7 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 	};
 	
 
-	// -- Gather shadow casters from the scene and upload to GPU.
+	// Gather shadow casters from the scene and upload to GPU.
 
 	u32 caster_count = MinValue(R_SceneGetShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
 
@@ -133,13 +131,13 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 	}
 	
 
-	// -- Populate the blackboard.
+	// Populate the blackboard.
 
 	bb->shadow_data.shadow_caster_table = sr->caster_table_buffer;
 	bb->shadow_data.shadow_map_count = caster_count;
 
 	
-	// -- Create one render pass per shadow caster.
+	// Create one render pass per shadow caster.
 
 	GFX_ShaderKey shader = AST_Get(sr->assets, sr->depth_shader, AST_Type_Shader)->shader.key;
 
@@ -148,14 +146,14 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 		const R_ShadowCaster *info = R_SceneShadowCasterGet(scene, caster_index);
 
 		
-		// -- Build a culling draw stream for this caster's influence sphere.
+		// Build a culling draw stream for this caster's influence sphere.
 
 		R_DrawStream draw_stream = R_CullSphere(culling, graph, pass_arena,
 												scene, scene_resources,
 												info->position, info->radius);
 
 		
-		// -- Create the shadow mapping pass.
+		// Create the shadow mapping pass.
 
 		// TODO: snprintf the pass name with the caster index for debug labelling.
 
