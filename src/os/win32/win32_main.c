@@ -187,7 +187,7 @@ OS_W32_LoadCode(String8 dll_path)
 	}
 	else
 	{
-		AssertTrue(false && "FUCK");
+		DebugLogB(win32_st.log_channel, "FUCK");
 	}
 
 	CopyFile((LPCSTR)dll_path.str, dll_path_hot, FALSE);
@@ -1284,6 +1284,31 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
 	static I_State prev_input_st = {0};
 
+	FILETIME last_write_time = {0};
+
+	WIN32_FIND_DATA find_data = {0};
+	HANDLE file_handle = FindFirstFileA("build/app.dll", &find_data);
+
+	if (file_handle != INVALID_HANDLE_VALUE)
+	{
+		FindClose(file_handle);
+		last_write_time = find_data.ftLastWriteTime;
+	}
+	
+	if (CompareFileTime(&last_write_time, &win32_st.code.last_write_time) != 0)
+	{
+		DebugLogI(win32_st.log_channel, "Attempting Hot Reload...");
+
+		win32_st.code.HotUnload(win32_st.app);
+
+		OS_W32_UnloadCode();
+		OS_W32_LoadCode(String8Lit("build/app.dll"));
+
+		win32_st.code.HotLoad(win32_st.app, &win32_st.api);
+
+		DebugLogI(win32_st.log_channel, "Hot Reloaded!");
+	}
+
 	I_State curr_input_st = prev_input_st;
 	OS_W32_ProcessEvents(&curr_input_st);
 	prev_input_st = curr_input_st;
@@ -1363,7 +1388,7 @@ main(void)
 	
 	LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
 
-	win32_st.log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("OS/Win32"));
+	win32_st.log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("OS/WIN32"));
 
 	DebugLogI(win32_st.log_channel, "Initializing ImGui...");
 	

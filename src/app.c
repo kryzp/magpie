@@ -222,6 +222,7 @@ AppHotUnloadGraphics(App *app)
 internal void
 AppInitAudio(App *app)
 {
+	/*
 	app->audio_log_channel = osapi->LogOpenChannel(String8Lit("AUDIO"));
 	
 	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
@@ -231,26 +232,27 @@ AppInitAudio(App *app)
 			 &app->audio_arena,
 			 app->audio_log_channel,
 			 app->audio_backend);
+	*/
 }
 
 internal void
 AppDestroyAudio(App *app)
 {
-	AUD_Shutdown(&app->audio_system);
+	//AUD_Shutdown(&app->audio_system);
 	
-	app->audio_backend->Shutdown();
+	//app->audio_backend->Shutdown();
 }
 
 internal void
 AppHotLoadAudio(App *app)
 {
-	AUD_BackendHotLoad(app->audio_backend);
+	//AUD_BackendHotLoad(app->audio_backend);
 }
 
 internal void
 AppHotUnloadAudio(App *app)
 {
-	AUD_BackendHotUnload(app->audio_backend);
+	//AUD_BackendHotUnload(app->audio_backend);
 }
 
 
@@ -637,6 +639,8 @@ AppTick(App *app, const I_State *input)
 		AST_PollHotReloads(&app->assets);
 	}
 
+	//DebugPrintT("Hello!!!");
+
 	AST_FlushUploads(&app->assets);
 
 	EditorTick(&app->editor, input, dt, elapsed);
@@ -677,7 +681,7 @@ AppTick(App *app, const I_State *input)
 	listener.position = app->editor.camera.position;
 	listener.direction = app->editor.camera.forward;
 	
-	AUD_Tick(&app->audio_system, dt, listener);
+	//AUD_Tick(&app->audio_system, dt, listener);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
