@@ -1,7 +1,7 @@
 #ifndef ASSET_UPLOAD_QUEUE_H
 #define ASSET_UPLOAD_QUEUE_H
 
-#define AST_UPLOAD_QUEUE_MAX_ELEMENTS 64
+#define AST_UPLOAD_QUEUE_MAX_ELEMENTS 512
 
 typedef struct AST_Upload AST_Upload;
 struct AST_Upload

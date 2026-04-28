@@ -38,5 +38,5 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 
 R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 {
-	AssertTrue(false && "fuck you work in progress.");
+	DebugPrintB("Prefiler rendering work in progress fuck you.");
 }

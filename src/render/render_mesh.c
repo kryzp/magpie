@@ -34,7 +34,7 @@ R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device)
 internal void
 R_MeshWriteToStage(const R_Mesh *mesh, GFX_Device *device,
 				   GFX_BufferKey stage, u64 stage_base,
-				   void *vertices, void *indices)
+				   const void *vertices, const void *indices)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
@@ -78,4 +78,10 @@ internal void
 R_MeshDraw(const R_Mesh *mesh, const GFX_CmdBuffer *cmd)
 {
 	GFX_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
+}
+
+internal void
+R_MeshDrawInstanced(const R_Mesh *mesh, const GFX_CmdBuffer *cmd, u32 first)
+{
+	GFX_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, first);
 }

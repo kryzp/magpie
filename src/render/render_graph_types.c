@@ -22,6 +22,16 @@ R_TextureInfoInit(void)
 	return info;
 }
 
+internal R_TextureInfo
+R_TextureInfoInitDepth(GFX_Device *device)
+{
+	R_TextureInfo info = R_TextureInfoInit();
+
+	info.format = device->context.depth_format;
+
+	return info;
+}
+
 internal R_BufferInfo
 R_BufferInfoInit(void)
 {

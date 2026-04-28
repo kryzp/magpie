@@ -73,7 +73,9 @@ struct R_BufferInfo
 	VkBufferUsageFlags2 usage;
 };
 
-internal R_TextureInfo R_TextureInfoInit (void);
+internal R_TextureInfo R_TextureInfoInit      (void);
+internal R_TextureInfo R_TextureInfoInitDepth (GFX_Device *device);
+
 internal R_BufferInfo  R_BufferInfoInit  (void);
 
 internal b32 R_TextureInfoMatch (const R_TextureInfo *a, const R_TextureInfo *b);

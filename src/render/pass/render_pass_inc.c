@@ -3,3 +3,7 @@
 #include "render_pass_skybox.c"
 #include "render_pass_ibl.c"
 #include "render_pass_post_processing.c"
+#include "render_pass_culling.c"
+#include "render_pass_debug.c"
+#include "render_pass_shadow.c"
+#include "render_pass_deferred.c"

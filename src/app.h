@@ -22,6 +22,7 @@ struct App
 	Arena graph_arena;
 	Arena scene_arena;
 	Arena pass_frame_arena;
+	Arena debug_draw_arena;
 	
 	Arena entity_arena;
 
@@ -68,6 +69,13 @@ struct App
 	R_Scene scene;
 	R_SceneLightHandle light_handle;
 	R_Mesh skybox_mesh;
+
+	// ---
+
+	R_Culling culling;
+	R_ShadowRenderer shadow_renderer;
+	R_DeferredRenderer deferred_renderer;
+	R_DebugRenderer debug_renderer;
 
 	// ---
 
@@ -125,7 +133,7 @@ internal void AppDestroyEditor       (App *app);
 internal void AppHotLoadEditor       (App *app);
 internal void AppHotUnloadEditor     (App *app);
 
-internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
+internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResources *scene_resources);
 
 __declspec(dllexport) App  *AppInit      (const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);

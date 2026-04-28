@@ -208,6 +208,11 @@ internal void R_SceneUpdatePageBuffer     (R_Scene *scene, GFX_RingBuffer *ring,
 internal void R_SceneUpdateMeshBuffer     (R_Scene *scene);
 internal void R_SceneUpdateMaterialBuffer (R_Scene *scene);
 
+internal void R_SceneDrawIndirect (const R_Scene *scene,
+								   GFX_CmdBuffer *cmd,
+								   GFX_BufferKey indirect_buffer,
+								   GFX_BufferKey count_buffer);
+
 internal u32            R_SceneFindSuitablePage (R_Scene *scene, u32 vertex_count, u32 index_count);
 internal R_GeometryPage R_SceneCreateNewPage    (R_Scene *scene);
 
@@ -223,6 +228,8 @@ internal void                R_SceneObjectRemove  (R_Scene *scene, R_SceneObject
 
 internal void R_SceneObjectSetTransform(R_Scene *scene, R_SceneObjectHandle handle, m4 transform);
 
+internal u32 R_SceneGetObjectCount(const R_Scene *scene);
+
 
 /* =======================================================
    LIGHTS
@@ -236,6 +243,17 @@ internal void               R_SceneLightRemove  (R_Scene *scene, R_SceneLightHan
 internal void R_SceneLightSetPosition  (R_Scene *scene, R_SceneLightHandle handle, v3 position);
 internal void R_SceneLightSetColour    (R_Scene *scene, R_SceneLightHandle handle, v3 colour);
 internal void R_SceneLightSetIntensity (R_Scene *scene, R_SceneLightHandle handle, f32 intensity);
+
+internal u32 R_SceneGetLightCount(const R_Scene *scene);
+
+
+/* =======================================================
+   SHADOW CASTER
+   ======================================================= */
+
+internal const R_ShadowCaster *R_SceneShadowCasterGet(const R_Scene *scene, u32 i);
+
+internal u32 R_SceneGetShadowCasterCount(const R_Scene *scene);
 
 
 /* =======================================================
@@ -270,12 +288,15 @@ internal R_SceneRegisterModelReceipt R_SceneRegisterModel(R_Scene *scene,
    ======================================================= */
 
 internal R_SceneMeshHandle R_SceneRegisterMeshFromBuffers(R_Scene *scene,
+														  const GFX_CmdBuffer *cmd,
 														  GFX_BufferKey vertex_buffer,
 														  GFX_BufferKey index_buffer,
 														  u32 vertex_count,
 														  u32 index_count);
 
 internal R_SceneMeshHandle R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh);
+
+internal u64 R_SceneMeshBufferAddress(const R_Scene *scene);
 
 
 /* =======================================================
@@ -289,6 +310,8 @@ internal u32 R_SceneResolveTextureBindless(const R_Scene *scene,
 internal R_SceneMaterialHandle R_SceneRegisterMaterial (R_Scene *scene,
 														const AST_ModelMaterial *material,
 														const AST_Assets *assets);
+
+internal u64 R_SceneMaterialBufferAddress(const R_Scene *scene);
 
 
 #endif // RENDER_SCENE_H

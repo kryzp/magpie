@@ -353,11 +353,12 @@ AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogOpenChannel(String8Lit("RENDER"));
 	
-	u64 render_third_size = ArenaSafePartitionSize(&app->render_arena, 3, 8);
+	u64 render_quarter_size = ArenaSafePartitionSize(&app->render_arena, 4, 8);
 
-	app->graph_arena      = ArenaInitArena(&app->render_arena, render_third_size, 8);
-	app->scene_arena      = ArenaInitArena(&app->render_arena, render_third_size, 8);
-	app->pass_frame_arena = ArenaInitArena(&app->render_arena, render_third_size, 8);
+	app->graph_arena      = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
+	app->scene_arena      = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
+	app->pass_frame_arena = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
+	app->debug_draw_arena = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
 	
 	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device, app->render_log_channel);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device, app->render_log_channel);
@@ -368,16 +369,50 @@ AppInitRender(App *app)
 	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
 
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
-	
-	AST_Handle hdr_to_env_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
-	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
+	R_CullingInit          (&app->culling,           &app->assets);
+	R_ShadowRendererInit   (&app->shadow_renderer,   &app->graphics_device, &app->assets);
+	R_DeferredRendererInit (&app->deferred_renderer, &app->graphics_device, &app->assets);
+	R_DebugRendererInit    (&app->debug_renderer,    &app->debug_draw_arena, &app->graphics_device, &app->assets);
 
-	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
-	
-	AST_WaitForAsync(&app->assets);
-	AST_FlushUploads(&app->assets);
+	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
+	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
 
+	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	
+	AST_Handle model_handle = AST_RequireNow(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
+
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	R_SceneRegisterModelReceipt model_receipt = R_SceneRegisterModel(&app->scene, scratch.arena, &app->assets, model_handle, -1u);
+
+	for (u32 i = 0; i < model_receipt.entry_count; i++)
+	{
+		R_SceneModelEntry *entry = &model_receipt.entries[i];
+
+		R_Object obj = {0};
+		obj.transform     = entry->transform;
+		obj.sphere_bounds = entry->sphere_bounds;
+		obj.mesh          = entry->mesh;
+		obj.material      = entry->material;
+		
+		R_SceneObjectCreate(&app->scene, &obj);
+	}
+	
+	ScratchRelease(&scratch);
+
+	R_Light light = {0};
+	light.type = R_LightType_Point;
+	light.position = v3(0.f, 0.f, 1.f);
+	light.direction = v3x(0.f);
+	light.colour = v3(1.f, 1.f, 1.f);
+	light.intensity = 3.f;
+	light.falloff = 1.f;
+	light.casts_shadows = true;
+	light.shadow_near = 0.1f;
+	light.shadow_far = 10.f;
+	
+	R_SceneLightCreate(&app->scene, &light);
+	
 	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
 	
@@ -422,8 +457,6 @@ AppInitRender(App *app)
 	
 	// Prefilter.
 	{
-		R_IBLPassPrefilterData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassPrefilterData, 1);
-
 		// TODO: add prefilter passes.
 	}
 }
@@ -431,6 +464,11 @@ AppInitRender(App *app)
 internal void
 AppDestroyRender(App *app)
 {
+	R_DebugRendererDestroy    (&app->debug_renderer);
+	R_DeferredRendererDestroy (&app->deferred_renderer);
+	R_ShadowRendererDestroy   (&app->shadow_renderer);
+	R_CullingDestroy          (&app->culling);
+
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->environment_cubemap);
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->irradiance_cubemap);
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->prefilter_cubemap);
@@ -647,7 +685,7 @@ AppTick(App *app, const I_State *input)
 	
 		R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
 	
-		AppRender(app, dt, elapsed, &cmd);
+		AppRender(app, dt, elapsed, &cmd, &scene_resources);
 
 		R_GraphCompile(&app->graph, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->editor.camera, dt, elapsed);
@@ -688,7 +726,7 @@ AppHotUnload(App *app)
 }
 
 internal void
-AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
+AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResources *scene_resources)
 {
 	R_CameraRecompute(&app->editor.camera);
 
@@ -712,13 +750,44 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 	R_Blackboard bb = {0};
 
-	R_TextureInfo lighting_attachment_info = R_TextureInfoInit();
-	lighting_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	lighting_attachment_info.flags = GFX_TextureAllocFlag_Storage;
-		
-	R_GraphTexHandle lighting = R_GraphCreateTexture(&app->graph, &lighting_attachment_info);
-		
-	// Skybox Pass.
+	R_FrustumVolume frustum = R_CameraFrustum(&app->editor.camera);
+
+	R_DrawStream draw_stream = R_CullFrustum(&app->culling,
+											 &app->graph,
+											 &app->pass_frame_arena,
+											 &app->scene,
+											 scene_resources,
+											 &frustum);
+
+	R_ShadowRendererRender(&app->shadow_renderer,
+						   &app->graph,
+						   &bb,
+						   &app->pass_frame_arena,
+						   &app->culling,
+						   &app->scene,
+						   scene_resources);
+
+	R_DeferredRenderGeometry(&app->deferred_renderer,
+							&app->graph,
+							&bb,
+							&app->pass_frame_arena,
+							scene_resources,
+							app->frame_data_buffer,
+							app->linear_sampler,
+							&draw_stream);
+
+	R_GraphTexHandle lighting = R_DeferredRenderLighting(&app->deferred_renderer,
+														&app->graph,
+														&bb,
+														&app->pass_frame_arena,
+														scene_resources,
+														app->frame_data_buffer,
+														app->linear_sampler,
+														app->irradiance_cubemap,
+														app->prefilter_cubemap,
+														app->environment_cubemap); // TODO: proper BRDF LUT texture.
+
+	// -- Skybox
 	{
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
@@ -734,10 +803,19 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		R_PassSetRecord(pass, R_SkyboxPassFn, data);
 		R_PassReadTextureGraphics(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
 		lighting = R_PassWriteColour(pass, lighting, NULL);
-		//R_PassWriteDepth(pass, ..., NULL);
+		bb.gbuffer.depth = R_PassWriteDepth(pass, bb.gbuffer.depth, NULL);
 	}
 
-	// Post Processing Pass.
+	// -- Debug Rendering.
+
+	R_DebugRendererRender(&app->debug_renderer,
+						  dt,
+						  &app->graph,
+						  &app->pass_frame_arena,
+						  lighting,
+						  bb.gbuffer.depth);
+
+	// -- Post Processing.
 	{
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_tonemapping.comp.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
