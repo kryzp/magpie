@@ -107,7 +107,7 @@ The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 
 
 ### Memory Arenas
-To simplify memory management in C I use a thing called a "memory arena" for pretty much anything. I'm not going to go into why because [this](https://www.youtube.com/watch?v=TZ5a3gCCZYo) talk by Ryan Fleury explains it way better. Essentially, they let you "group" allocations and formalize the idea of a "scope" for some object. The `/os/` layer allocates one massive arena up front and the app then allocates itself onto that arena and partitions it accordingly. Only one actual memory allocation happens in the entire program.
+To simplify memory management in C I use a thing called a "memory arena" for pretty much anything. I'm not going to go into why because [this](https://www.youtube.com/watch?v=TZ5a3gCCZYo) talk by Ryan Fleury explains it way better. Essentially, they let you "group" allocations and formalize the idea of a "scope" for some object.
 
 
 ### Job System
