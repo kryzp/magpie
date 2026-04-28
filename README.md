@@ -156,15 +156,11 @@ Rendering is fundamentally abstracted into what should be three layers, but is o
 
 
 ### Hot-Code Reloading
-The actual implementation of this is simple in theory.
-
-This does mean that global data is a little tricky because it gets reset whenever the app is re-compiled at runtime. However, it can be fixed by:
+The actual implementation of this is simple in theory. We pass a V-Table `OS_API` which can be used by `app.dll` to make OS-level calls from the main executable. For instance, if we wanna allocate memory, we have to do it through this V-Table because otherwise the memory allocated is attributed to the DLL and thus lost on hot reload. Unfortunately, being able to hot reload the state at any point means there are some things that get tricky, mostly things related to global data. However, it can be (mostly) fixed by:
 1. Using as little globally-accessible data as possible.
-2. Re-Setting it whenever we hot reload.
+2. Re-setting it whenever we hot reload.
 
-Data that simply cannot survive a hot-reload, such as OS level features (i.e. the fiber-based job system) all lie in `/os/`, where the actual entry point code per-platform is stored.
-
-`/os/` ultimately doesn't rely on the app at all or any layer "higher" than `/core/` and `/input/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
+`/os/` ultimately doesn't rely on the app at all or any layers "higher" than `/core/`, `/input/`, `/io/` and `/log/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which mostly all take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
 
 ```
 +--------------------------------------------------+
