@@ -65,7 +65,6 @@
 #include "os/os_inc.h"
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
-#include "log/log_inc.h"
 #include "graphics/graphics_inc.h"
 #include "audio/audio_inc.h"
 #include "asset/asset_inc.h"
@@ -77,9 +76,26 @@
 #include "gamemode/gamemode_inc.h"
 #include "cutscene/cutscene_inc.h"
 #include "encounter/encounter_inc.h"
+#include "editor/editor_inc.h"
 
-#include "camera_driver.h"
 #include "app.h"
+
+#define DebugLogEx(level, channel, ...) osapi->Log((level), (channel), __FILE__, __LINE__, __func__, __VA_ARGS__)
+
+#define DebugLogT(channel, ...) DebugLogEx(LOG_Level_Trace, (channel), __VA_ARGS__)
+#define DebugLogD(channel, ...) DebugLogEx(LOG_Level_Debug, (channel), __VA_ARGS__)
+#define DebugLogI(channel, ...) DebugLogEx(LOG_Level_Info,  (channel), __VA_ARGS__)
+#define DebugLogW(channel, ...) DebugLogEx(LOG_Level_Warn,  (channel), __VA_ARGS__)
+#define DebugLogE(channel, ...) DebugLogEx(LOG_Level_Error, (channel), __VA_ARGS__)
+#define DebugLogB(channel, ...) DebugLogEx(LOG_Level_Break, (channel), __VA_ARGS__)
+
+// TODO: Kinda hacky, not a fan of this!!
+#define DebugPrintT(...) DebugLogT(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintD(...) DebugLogD(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintI(...) DebugLogI(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintW(...) DebugLogW(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintE(...) DebugLogE(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintB(...) DebugLogB(LOG_ChannelNull(), __VA_ARGS__)
 
 // ---
 
@@ -88,7 +104,6 @@
 #include "os/os_inc.c"
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
-#include "log/log_inc.c"
 #include "graphics/graphics_inc.c"
 #include "audio/audio_inc.c"
 #include "asset/asset_inc.c"
@@ -100,39 +115,7 @@
 #include "gamemode/gamemode_inc.c"
 #include "cutscene/cutscene_inc.c"
 #include "encounter/encounter_inc.c"
-
-#include "camera_driver.c"
-
-
-/* ==================================================
-   LOG
-   ================================================== */
-
-internal void
-AppInitLog(App *app)
-{
-	LOG_InitAndSelect(&app->logger, String8Lit("log_output.txt"));
-
-	app->log_channel = LOG_OpenChannel(String8Lit("APP"));
-}
-
-internal void
-AppDestroyLog(App *app)
-{
-	LOG_Shutdown();
-}
-
-internal void
-AppHotLoadLog(App *app)
-{
-	LOG_HotLoad(&app->logger);
-}
-
-internal void
-AppHotUnloadLog(App *app)
-{
-	LOG_HotUnload();
-}
+#include "editor/editor_inc.c"
 
 
 /* ==================================================
@@ -142,7 +125,7 @@ AppHotUnloadLog(App *app)
 internal void
 AppInitGraphics(App *app)
 {
-	app->graphics_log_channel = LOG_OpenChannel(String8Lit("GRAPHICS"));
+	app->graphics_log_channel = osapi->LogOpenChannel(String8Lit("GRAPHICS"));
 
 	
 	GFX_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
@@ -151,7 +134,7 @@ AppInitGraphics(App *app)
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
 	
-	app->shader_compiler_log_channel = LOG_OpenChannel(String8Lit("SLANG"));
+	app->shader_compiler_log_channel = osapi->LogOpenChannel(String8Lit("SLANG"));
 	GFX_ShaderCompilerInit(&app->shader_compiler, app->shader_compiler_log_channel);
 
   
@@ -239,7 +222,7 @@ AppHotUnloadGraphics(App *app)
 internal void
 AppInitAudio(App *app)
 {
-	app->audio_log_channel = LOG_OpenChannel(String8Lit("AUDIO"));
+	app->audio_log_channel = osapi->LogOpenChannel(String8Lit("AUDIO"));
 	
 	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
 	app->audio_backend->Init();
@@ -278,7 +261,7 @@ AppHotUnloadAudio(App *app)
 internal void
 AppInitAssets(App *app)
 {
-	app->asset_log_channel = LOG_OpenChannel(String8Lit("ASSETS"));
+	app->asset_log_channel = osapi->LogOpenChannel(String8Lit("ASSETS"));
 	
 	AST_Init(&app->assets,
 			 &app->asset_arena,
@@ -368,7 +351,7 @@ AppInitRenderCreateSkyboxMesh(App *app)
 internal void
 AppInitRender(App *app)
 {
-	app->render_log_channel = LOG_OpenChannel(String8Lit("RENDER"));
+	app->render_log_channel = osapi->LogOpenChannel(String8Lit("RENDER"));
 	
 	u64 render_third_size = ArenaSafePartitionSize(&app->render_arena, 3, 8);
 
@@ -378,8 +361,6 @@ AppInitRender(App *app)
 	
 	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device, app->render_log_channel);
 	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device, app->render_log_channel);
-	
-	app->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
 	AppInitRenderCreateSkyboxMesh(app);
 
@@ -478,8 +459,10 @@ AppHotUnloadRender(App *app)
 internal void
 AppInitEntity(App *app)
 {
-	ENT_WorldInit(&app->world, &app->entity_arena);
-	ENT_EventQueueInit(&app->events);
+	app->entity_log_channel = osapi->LogOpenChannel(String8Lit("ENTITY"));
+	
+	ENT_WorldInit(&app->world, &app->entity_arena, app->entity_log_channel);
+	ENT_EventQueueInit(&app->events, app->entity_log_channel);
 }
 
 internal void
@@ -500,13 +483,44 @@ AppHotUnloadEntity(App *app)
 
 
 /* ==================================================
+   EDITOR
+   ================================================== */
+
+internal void
+AppInitEditor(App *app)
+{
+	app->editor_log_channel = osapi->LogOpenChannel(String8Lit("EDITOR"));
+	
+	EditorInit(&app->editor, &app->editor_arena, app->editor_log_channel);
+}
+
+internal void
+AppDestroyEditor(App *app)
+{
+	EditorDestroy(&app->editor);
+}
+
+internal void
+AppHotLoadEditor(App *app)
+{
+	EditorHotLoad(&app->editor);
+}
+
+internal void
+AppHotUnloadEditor(App *app)
+{
+	EditorHotUnload(&app->editor);
+}
+
+
+/* ==================================================
    APP
    ================================================== */
 
 internal void
 AppCoreFatalHandler(const char *file, i32 line, const char *fn, const char *msg)
 {
-	LOG_Write(LOG_Level_Break, LOG_ChannelNull(), file, line, fn, "%s", msg);
+	osapi->Log(LOG_Level_Break, LOG_ChannelNull(), file, line, fn, "%s", msg);
 }
 
 internal void
@@ -514,22 +528,15 @@ AppInit_(App *app)
 {
 	CoreSetFatalHandler(AppCoreFatalHandler);
 	
-	AppInitLog      (app);
+	app->log_channel = osapi->LogOpenChannel(String8Lit("APP"));
+	
 	AppInitGraphics (app);
 	AppInitAudio    (app);
 	AppInitAssets   (app);
 	AppInitRender   (app);
 	AppInitEntity   (app);
+	AppInitEditor   (app);
 
-	// ---
-	
-	GM_StackInit(&app->game_mode_stack);
-
-	CameraDriverConfig camera_driver_cfg = {0};
-	camera_driver_cfg.mode = CameraDriverMode_Unrestricted;
-	
-	app->camera_driver = CameraDriverInit(&camera_driver_cfg);
-	
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -544,12 +551,12 @@ AppInit(const OS_API *api)
 	App *app = ArenaPushArray(&bootstrap, App, 1);
 	app->bootstrap_arena = bootstrap;
 
-	app->log_arena      = ArenaInitReserved(Gigabytes(1));
 	app->graphics_arena = ArenaInitReserved(Gigabytes(3));
 	app->audio_arena    = ArenaInitReserved(Gigabytes(1));
 	app->asset_arena    = ArenaInitReserved(Gigabytes(3));
 	app->render_arena   = ArenaInitReserved(Gigabytes(2));
 	app->entity_arena   = ArenaInitReserved(Gigabytes(1));
+	app->editor_arena   = ArenaInitReserved(Gigabytes(1));
 	
 	AppInit_(app);
 
@@ -564,13 +571,13 @@ AppDestroy(App *app)
 	GFX_DeviceWaitIdle(&app->graphics_device);
 
 	DebugLogI(app->log_channel, "Destroying...");
-	
+
+	AppDestroyEditor   (app);
 	AppDestroyEntity   (app);
 	AppDestroyRender   (app);
 	AppDestroyAssets   (app);
 	AppDestroyAudio    (app);
 	AppDestroyGraphics (app);
-	AppDestroyLog      (app);
 }
 
 global f32 app_pp_exposure = 1.f;
@@ -594,8 +601,8 @@ AppTick(App *app, const I_State *input)
 
 	AST_FlushUploads(&app->assets);
 
-	GM_StackTick(&app->game_mode_stack, app, dt, input);
-
+	EditorTick(&app->editor, input, dt, elapsed);
+	
 	ENT_WorldTickPreAnim(&app->world, &app->events, dt, input);
 
 	// TODO: animation system
@@ -629,12 +636,10 @@ AppTick(App *app, const I_State *input)
 	ENT_WorldFlush(&app->world);
 	
 	AUD_Listener listener = {0};
-	listener.position = app->camera.position;
-	listener.direction = app->camera.forward;
+	listener.position = app->editor.camera.position;
+	listener.direction = app->editor.camera.forward;
 	
 	AUD_Tick(&app->audio_system, dt, listener);
-
-	CameraDriverDrive(&app->camera_driver, &app->camera, input, dt);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
@@ -645,7 +650,7 @@ AppTick(App *app, const I_State *input)
 		AppRender(app, dt, elapsed, &cmd);
 
 		R_GraphCompile(&app->graph, &app->swapchain);
-		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->camera, dt, elapsed);
+		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->editor.camera, dt, elapsed);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
 		R_GraphReset(&app->graph);
 	}
@@ -663,41 +668,41 @@ AppHotLoad(App *app, const OS_API *api)
 	
 	CoreSetFatalHandler(AppCoreFatalHandler);
 	
-	AppHotLoadLog        (app);
 	AppHotLoadGraphics   (app);
 	AppHotLoadAudio      (app);
 	AppHotLoadAssets     (app);
 	AppHotLoadRender     (app);
 	AppHotLoadEntity     (app);
+	AppHotLoadEditor     (app);
 }
 
 __declspec(dllexport) void
 AppHotUnload(App *app)
 {
+	AppHotUnloadEditor     (app);
 	AppHotUnloadEntity     (app);
 	AppHotUnloadRender     (app);
 	AppHotUnloadAssets     (app);
 	AppHotUnloadAudio      (app);
 	AppHotUnloadGraphics   (app);
-	AppHotUnloadLog        (app);
 }
 
 internal void
 AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 {
-	R_CameraRecompute(&app->camera);
+	R_CameraRecompute(&app->editor.camera);
 
 	u32 window_width, window_height;
 	osapi->GetWindowSize(&window_width, &window_height);
 	
 	R_GPU_FrameData frame_data = {0};
-	frame_data.view = app->camera.view;
-	frame_data.proj = app->camera.proj;
-	frame_data.view_proj = M4MulM4(app->camera.proj, app->camera.view);
-	frame_data.view_proj_no_translation = M4MulM4(app->camera.proj, M4RemoveTranslation(app->camera.view));
-	frame_data.inv_view = M4Inverse(app->camera.view);
-	frame_data.inv_proj = M4Inverse(app->camera.proj);
-	frame_data.camera_position = app->camera.position;
+	frame_data.view = app->editor.camera.view;
+	frame_data.proj = app->editor.camera.proj;
+	frame_data.view_proj = M4MulM4(app->editor.camera.proj, app->editor.camera.view);
+	frame_data.view_proj_no_translation = M4MulM4(app->editor.camera.proj, M4RemoveTranslation(app->editor.camera.view));
+	frame_data.inv_view = M4Inverse(app->editor.camera.view);
+	frame_data.inv_proj = M4Inverse(app->editor.camera.proj);
+	frame_data.camera_position = app->editor.camera.position;
 	frame_data.window_resolution = v2(window_width, window_height);
 	frame_data.time = elapsed;
 

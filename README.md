@@ -89,6 +89,8 @@ The codebase is split into a tiered system to make development easier and more c
 ### Namespaces
 Each layer follows a strict namespace system. Since this is C, I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for unsigned types, etc.).
 
+`/app/` and `/editor/` don't have namespaces as they aren't "engine" code, they're what you'd call "game" code. I just don't use a namespace for them by convention.
+
 
 ### Unity Build
 Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.

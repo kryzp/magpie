@@ -25,11 +25,12 @@ struct App
 	
 	Arena entity_arena;
 
+	Arena editor_arena;
+
 	// ---
 
-	LOG_Logger logger;
 	LOG_Channel log_channel;
-
+	
 	// ---
 
 	LOG_Channel graphics_log_channel;
@@ -66,7 +67,6 @@ struct App
 	R_Graph graph;
 	R_Scene scene;
 	R_SceneLightHandle light_handle;
-	R_Camera camera;
 	R_Mesh skybox_mesh;
 
 	// ---
@@ -77,15 +77,14 @@ struct App
 
 	// ---
 
+	LOG_Channel entity_log_channel;
 	ENT_World world;
 	ENT_EventQueue events;
 
 	// ---
 
-	GM_Stack game_mode_stack;
-
-	CameraDriver camera_driver;
-	b32 camera_driver_active;
+	LOG_Channel editor_log_channel;
+	Editor editor;
 
 	// ---
 	
@@ -95,11 +94,6 @@ struct App
 
 	f32 delta_accumulator;
 };
-
-internal void AppInitLog             (App *app);
-internal void AppDestroyLog          (App *app);
-internal void AppHotLoadLog          (App *app);
-internal void AppHotUnloadLog        (App *app);
 
 internal void AppInitGraphics        (App *app);
 internal void AppDestroyGraphics     (App *app);
@@ -125,6 +119,11 @@ internal void AppInitEntity          (App *app);
 internal void AppDestroyEntity       (App *app);
 internal void AppHotLoadEntity       (App *app);
 internal void AppHotUnloadEntity     (App *app);
+
+internal void AppInitEditor          (App *app);
+internal void AppDestroyEditor       (App *app);
+internal void AppHotLoadEditor       (App *app);
+internal void AppHotUnloadEditor     (App *app);
 
 internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 

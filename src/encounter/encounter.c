@@ -88,7 +88,7 @@ ENC_Advance(ENC_Encounter *enc)
 
 	const ENC_Phase *new = ENC_GetCurrentPhase(enc);
 
-	if (new && new->OnExit)
+	if (new && new->OnEnter)
 		new->OnEnter(enc->state, new->ctx);
 }
 

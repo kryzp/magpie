@@ -91,6 +91,8 @@ struct JOB_Worker
 typedef struct JOB_Scheduler JOB_Scheduler;
 struct JOB_Scheduler
 {
+	LOG_Channel log_channel;
+	
 	u32 atomic_running;
 	u32 atomic_spin_mode;
 
@@ -141,7 +143,7 @@ internal b32          JOB_RequestAvailable        (JOB_Scheduler *scheduler);
    CORE
    ================================================== */
 
-internal void JOB_Init(Arena *arena, JOB_Scheduler *scheduler);
+internal void JOB_Init(JOB_Scheduler *scheduler, Arena *arena, LOG_Channel log_channel);
 internal void JOB_Shutdown(JOB_Scheduler *scheduler);
 
 internal void JOB_SchedulerThreadEntry(void *param);

@@ -45,8 +45,11 @@ typedef struct ENT_World ENT_World;
 struct ENT_World
 {
 	Arena *arena;
+
+	LOG_Channel log_channel;
 	
-	ENT_TypePool pools[ENT_Type_COUNT];
+	ENT_TypePool type_pools[ENT_Type_COUNT];
+	ENT_TypeDesc type_registry[ENT_Type_COUNT];
 
 	ENT_SceneLayer layers[ENT_WORLD_MAX_SCENE_LAYERS];
 	u32 layer_count;
@@ -70,10 +73,11 @@ internal void ENT_PoolFreeSlot  (ENT_TypePool *pool, u32 index);
    CORE
    ================================================== */
 
-internal void ENT_WorldInit    (ENT_World *world, Arena *arena);
+internal void ENT_WorldInit    (ENT_World *world, Arena *arena, LOG_Channel log_channel);
 internal void ENT_WorldDestroy (ENT_World *world);
 
 internal void ENT_WorldToggleLayer(ENT_World *world, u16 layer_id, b32 active);
+internal void ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc);
 
 
 /* ==================================================

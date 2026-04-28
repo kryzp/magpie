@@ -1,8 +1,12 @@
 
 internal void
-ENT_EventQueueInit(ENT_EventQueue *q)
+ENT_EventQueueInit(ENT_EventQueue *q, LOG_Channel log_channel)
 {
 	MemZeroStruct(q);
+
+	q->log_channel = log_channel;
+
+	DebugLogI(q->log_channel, "Events Initialized.");
 }
 
 internal void
@@ -114,8 +118,8 @@ ENT_EventBroadcast(ENT_EventQueue *q, ENT_Event *event, ENT_World *world)
 		if (b->event_type != event->type)
 			continue;
 
-		ENT_TypePool *pool = &world->pools[b->event_type];
-		const ENT_TypeDesc *desc = &ent_global_types[b->event_type];
+		ENT_TypePool *pool = &world->type_pools[b->event_type];
+		const ENT_TypeDesc *desc = &world->type_registry[b->event_type];
 		
 		u8 *base = pool->data;
 

@@ -200,9 +200,11 @@ JOB_RequestAvailable(JOB_Scheduler *scheduler)
 }
 
 internal void
-JOB_Init(Arena *arena, JOB_Scheduler *scheduler)
+JOB_Init(JOB_Scheduler *scheduler, Arena *arena, LOG_Channel log_channel)
 {
 	MemZeroStruct(scheduler);
+
+	scheduler->log_channel = log_channel;
  
 	scheduler->mutex	  = osapi->MutexCreate();
 	scheduler->cond_begin = osapi->CondVarCreate();
@@ -250,6 +252,8 @@ JOB_Init(Arena *arena, JOB_Scheduler *scheduler)
 
 	scheduler->tls_worker_slot = osapi->TLSAlloc();
 	osapi->TLSSet(scheduler->tls_worker_slot, NULL);
+
+	DebugLogI(scheduler->log_channel, "Initialized.");
 }
 
 internal void
@@ -268,6 +272,8 @@ JOB_Shutdown(JOB_Scheduler *scheduler)
 	// Destroy OS synchronisation primitives.
 	osapi->MutexDestroy(scheduler->mutex);
 	osapi->CondVarDestroy(scheduler->cond_begin);
+
+	DebugLogI(scheduler->log_channel, "Destroyed.");
 }
 
 internal void
@@ -392,7 +398,7 @@ JOB_FiberEntry(void *param)
 
 		if (f->EntryPoint)
 			f->EntryPoint(f->param);
-
+		
 		if (c)
 			JOB_CounterDecrement(scheduler, c, 1);
 
@@ -420,11 +426,16 @@ internal JOB_Context
 JOB_GetContext(JOB_Scheduler *scheduler)
 {
 	JOB_Context ctx = {0};
-
+	ctx.worker_id = 0;
+	ctx.fiber_id = -1;
+	
     JOB_Worker *worker = (JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
 
-	ctx.worker_id = worker->id;
-	ctx.fiber_id = worker->current_fiber ? worker->current_fiber->id : -1;
+	if (worker)
+	{
+		ctx.worker_id = worker->id;
+		ctx.fiber_id = worker->current_fiber ? worker->current_fiber->id : -1;
+	}
 
 	return ctx;
 }

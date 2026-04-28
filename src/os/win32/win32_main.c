@@ -33,13 +33,36 @@
 #include "core/core_inc.h"
 #include "input/input_inc.h"
 #include "os/os_inc.h"
+#include "io/io_inc.h"
+#include "chrono/chrono_inc.h"
+#include "os/log/log_inc.h"
 #include "os/job/job_inc.h"
 
 global OS_API *osapi = NULL;
 
+#define DebugLogEx(level, channel, ...) osapi->Log((level), (channel), __FILE__, __LINE__, __func__, __VA_ARGS__)
+
+#define DebugLogT(channel, ...) DebugLogEx(LOG_Level_Trace, (channel), __VA_ARGS__)
+#define DebugLogD(channel, ...) DebugLogEx(LOG_Level_Debug, (channel), __VA_ARGS__)
+#define DebugLogI(channel, ...) DebugLogEx(LOG_Level_Info,  (channel), __VA_ARGS__)
+#define DebugLogW(channel, ...) DebugLogEx(LOG_Level_Warn,  (channel), __VA_ARGS__)
+#define DebugLogE(channel, ...) DebugLogEx(LOG_Level_Error, (channel), __VA_ARGS__)
+#define DebugLogB(channel, ...) DebugLogEx(LOG_Level_Break, (channel), __VA_ARGS__)
+
+// TODO: Kinda hacky, not a fan of this!!
+#define DebugPrintT(...) DebugLogT(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintD(...) DebugLogD(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintI(...) DebugLogI(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintW(...) DebugLogW(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintE(...) DebugLogE(LOG_ChannelNull(), __VA_ARGS__)
+#define DebugPrintB(...) DebugLogB(LOG_ChannelNull(), __VA_ARGS__)
+
 #include "core/core_inc.c"
 #include "input/input_inc.c"
 #include "os/os_inc.c"
+#include "io/io_inc.c"
+#include "chrono/chrono_inc.c"
+#include "os/log/log_inc.c"
 #include "os/job/job_inc.c"
 
 typedef struct OS_W32_Object OS_W32_Object;
@@ -83,10 +106,13 @@ struct OS_W32_State
 	SDL_Window *sdl_window;
 
 	Arena platform_layer_arena;
-	Arena job_system_arena;
 
+	Arena job_system_arena;
 	JOB_Scheduler scheduler;
-	
+
+	LOG_Logger logger;
+	LOG_Channel log_channel;
+
 	OS_W32_Object *free_objects;
 
 	OS_Handle event_mutex;
@@ -216,6 +242,29 @@ internal u64
 OS_W32_GetPageSize(void)
 {
 	return win32_st.system_info.dwPageSize;
+}
+
+internal void
+OS_W32_Log(LOG_Level level, LOG_Channel channel,
+		   const char *file, i32 line, const char *fn,
+		   const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	LOG_WriteV(&win32_st.logger, level, channel, file, line, fn, fmt, args);
+	va_end(args);
+}
+
+internal LOG_Channel
+OS_W32_LogOpenChannel(String8 name)
+{
+	return LOG_OpenChannel(&win32_st.logger, name);
+}
+
+internal void
+OS_W32_LogCloseChannel(LOG_Channel channel)
+{
+	LOG_CloseChannel(&win32_st.logger, channel);
 }
 
 internal void
@@ -869,9 +918,9 @@ OS_W32_ReconnectAllGamepads(void)
 		win32_st.gamepads[i] = SDL_OpenGamepad(ids[i]);
 
 		if (win32_st.gamepads[i])
-			printf("OS/Win32 -- Added gamepad with player index: %d\n", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
+			DebugLogD(win32_st.log_channel, "Added gamepad with player index: %d.", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 		else
-			printf("OS/Win32 -- Failed to open gamepad: %d.\n", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
+			DebugLogD(win32_st.log_channel, "Failed to open gamepad: %d.", SDL_GetGamepadPlayerIndex(win32_st.gamepads[i]));
 	}
 
 	SDL_free(ids);
@@ -976,6 +1025,10 @@ OS_W32_BindAPI(OS_API *api)
 	api->VirtualDecommit             = OS_W32_VirtualDecommit;
 
 	api->GetPageSize                 = OS_W32_GetPageSize;
+
+	api->Log                         = OS_W32_Log;
+	api->LogOpenChannel              = OS_W32_LogOpenChannel;
+	api->LogCloseChannel             = OS_W32_LogCloseChannel;
 
 	api->SetWindowTitle              = OS_W32_SetWindowTitle;
 	api->GetWindowSize               = OS_W32_GetWindowSize;
@@ -1210,7 +1263,7 @@ OS_W32_ProcessEvents(I_State *input_out)
 				break;
 
 			case SDL_EVENT_GAMEPAD_REMOVED:
-				printf("OS/Win32 -- Removed gamepad.\n");
+				DebugLogD(win32_st.log_channel, "Removed Gamepad.");
 				OS_W32_ReconnectAllGamepads();
 				break;
 
@@ -1269,8 +1322,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 internal void
 OS_W32_CoreFatalHandler(const char *file, i32 line, const char *fn, const char *msg)
 {
-	printf("OS/Win32 -- %s:%d %s: %s\n", file, line, fn, msg);
-	AssertTrue(false);
+	OS_W32_Log(LOG_Level_Break, LOG_ChannelNull(), file, line, fn, "%s", msg);
 }
 
 i32
@@ -1306,22 +1358,27 @@ main(void)
 	
 	osapi = &win32_st.api;
 
-	printf("OS/Win32 -- Initializing ImGui...\n");
+	win32_st.platform_layer_arena = ArenaInitReserved(OS_LAYER_MEMORY);
+	win32_st.job_system_arena     = ArenaInitReserved(JOB_LAYER_MEMORY);
+	
+	LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
+
+	win32_st.log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("OS/Win32"));
+
+	DebugLogI(win32_st.log_channel, "Initializing ImGui...");
 	
 	OS_W32_InitImGui();
 
-	printf("OS/Win32 -- Loading App DLL...\n");
+	DebugLogI(win32_st.log_channel, "Loading App DLL...");
 
 	OS_W32_LoadCode(String8Lit("build/app.dll"));
-
-	win32_st.platform_layer_arena = ArenaInitReserved(OS_LAYER_MEMORY);
-	win32_st.job_system_arena     = ArenaInitReserved(JOB_LAYER_MEMORY);
 	
 	win32_st.pending_events = ArenaPushArray(&win32_st.platform_layer_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
-	JOB_Init(&win32_st.job_system_arena, &win32_st.scheduler);
+	LOG_Channel job_log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("JOB"));
+	JOB_Init(&win32_st.scheduler, &win32_st.job_system_arena, job_log_channel);
 
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
@@ -1333,10 +1390,12 @@ main(void)
 	JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
 	
 	win32_st.code.Destroy(win32_st.app);
-	
+
 	JOB_Shutdown(&win32_st.scheduler);
 
 	OS_W32_MutexDestroy(win32_st.event_mutex);
+	
+	LOG_Shutdown(&win32_st.logger);
 
 	ArenaRelease(&win32_st.platform_layer_arena);
 	ArenaRelease(&win32_st.job_system_arena);

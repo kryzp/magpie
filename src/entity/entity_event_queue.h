@@ -24,6 +24,8 @@ struct ENT_EventBinding
 typedef struct ENT_EventQueue ENT_EventQueue;
 struct ENT_EventQueue
 {
+	LOG_Channel log_channel;
+	
 	ENT_Event events[ENT_EVENT_QUEUE_MAX_PER_FRAME];
 	u32 event_count;
 
@@ -33,7 +35,7 @@ struct ENT_EventQueue
 	u64 next_listener_id;
 };
 
-internal void ENT_EventQueueInit(ENT_EventQueue *q);
+internal void ENT_EventQueueInit(ENT_EventQueue *q, LOG_Channel log_channel);
 
 internal void ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev);
 

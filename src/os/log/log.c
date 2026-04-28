@@ -1,8 +1,6 @@
 
-global LOG_Logger *log_selected = NULL;
-
 internal void
-LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
+LOG_Init(LOG_Logger *logger, String8 sink)
 {
 	MemZeroStruct(logger);
 	
@@ -13,10 +11,8 @@ LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
 	if (sink.len > 0)
 		logger->file_stream = osapi->StreamFromFile(sink, OS_FILE_PRESET_CREATE);
 
-	log_selected = logger;
-
-	logger->null_channel = LOG_OpenChannel(String8Lit("--------"));
-	logger->log_channel = LOG_OpenChannel(String8Lit("LOG"));
+	logger->null_channel = LOG_OpenChannel(logger, String8Lit("--------"));
+	logger->log_channel  = LOG_OpenChannel(logger, String8Lit("LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))
 		DebugLogI(logger->log_channel, "Initialized (\"%.*s\" as file sink).", (i32)sink.len, sink.str);
@@ -25,70 +21,57 @@ LOG_InitAndSelect(LOG_Logger *logger, String8 sink)
 }
 
 internal void
-LOG_Shutdown(void)
+LOG_Shutdown(LOG_Logger *logger)
 {
-	AssertTrue(log_selected);
+	AssertTrue(logger);
 
-	if (log_selected->dedup_active)
+	if (logger->dedup_active)
 	{
-		f32 elapsed = CH_TimerElapsed(&log_selected->timer);
-		LOG_FlushDedupToFile(elapsed);
-		log_selected->dedup_active = false;
+		f32 elapsed = CH_TimerElapsed(&logger->timer);
+		LOG_FlushDedupToFile(logger, elapsed);
+		logger->dedup_active = false;
 	}
 	
-	DebugLogI(log_selected->log_channel, "Shutting Down...");
+	DebugLogI(logger->log_channel, "Shutting down...");
 
-	if (!OS_HandleIsNull(log_selected->file_stream))
+	if (!OS_HandleIsNull(logger->file_stream))
 	{
-		osapi->StreamClose(log_selected->file_stream);
-		log_selected->file_stream = OS_HandleNull();
+		osapi->StreamClose(logger->file_stream);
+		logger->file_stream = OS_HandleNull();
 	}
 
-	osapi->MutexDestroy(log_selected->mutex);
-	log_selected->mutex = OS_HandleNull();
-
-	log_selected = NULL;
-}
-
-internal void
-LOG_HotLoad(LOG_Logger *logger)
-{
-	log_selected = logger;
-}
-
-internal void
-LOG_HotUnload(void)
-{
-	AssertTrue(log_selected);
+	osapi->MutexDestroy(logger->mutex);
+	logger->mutex = OS_HandleNull();
 }
 
 internal LOG_Channel
-LOG_OpenChannel(String8 name)
+LOG_OpenChannel(LOG_Logger *logger, String8 name)
 {
-	AssertTrue(log_selected);
-	AssertTrue(log_selected->channel_count < ArraySize(log_selected->channels));
+	AssertTrue(logger);
+	AssertTrue(logger->channel_count < ArraySize(logger->channels));
 
-	LOG_ChannelEntry *c = &log_selected->channels[log_selected->channel_count];
+	LOG_ChannelEntry *c = &logger->channels[logger->channel_count];
 	c->name = name;
 	c->enabled = true;
 
-	LOG_Channel id = { log_selected->channel_count };
+	LOG_Channel id = { logger->channel_count };
 
-	log_selected->channel_count++;
+	logger->channel_count++;
 
 	return id;
 }
 
 internal void
-LOG_CloseChannel(LOG_Channel channel)
+LOG_CloseChannel(LOG_Logger *logger, LOG_Channel channel)
 {
-	AssertTrue(log_selected);
+	AssertTrue(logger);
 	
-	log_selected->channels[channel.id].enabled = false;
+	logger->channels[channel.id].enabled = false;
 }
 
 internal i32
-LOG_FormatLine(char *dst, i32 dst_size,
+LOG_FormatLine(LOG_Logger *logger,
+			   char *dst, i32 dst_size,
 			   LOG_Level level, LOG_Channel channel,
 			   const char *file, i32 line, const char *fn,
 			   const char *body,
@@ -100,7 +83,7 @@ LOG_FormatLine(char *dst, i32 dst_size,
 	
 	i32 len = 0;
 	b32 show_callsite = level >= LOG_Level_Error;
-	u8 *channel_name = log_selected->channels[channel.id].name.str;
+	u8 *channel_name = logger->channels[channel.id].name.str;
 
 	// I just learned about this push/pop_macro stuff man this is so sick.
 #pragma push_macro("Append")
@@ -189,93 +172,83 @@ LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
 }
 
 internal void
-LOG_FlushDedupToFile(f32 elapsed)
+LOG_FlushDedupToFile(LOG_Logger *logger, f32 elapsed)
 {
-	if (!log_selected->dedup_active || OS_HandleIsNull(log_selected->file_stream))
+	if (!logger->dedup_active || OS_HandleIsNull(logger->file_stream))
 		return;
 
-	if (log_selected->dedup_count <= 1)
+	if (logger->dedup_count <= 1)
 		return;
 
 	char body[LOG_LINE_BUFFER_SIZE] = {0};
-	LOG_MakeDedupBody(body, sizeof(body), log_selected->dedup_body, log_selected->dedup_count);
+	LOG_MakeDedupBody(body, sizeof(body), logger->dedup_body, logger->dedup_count);
 
 	char file_line[LOG_LINE_BUFFER_SIZE] = {0};
 
 	i32 file_len = 0;
 
-	if (!OS_HandleIsNull(log_selected->file_stream))
+	if (!OS_HandleIsNull(logger->file_stream))
 	{
-		file_len = LOG_FormatLine(file_line, sizeof(file_line),
-								  log_selected->dedup_level,
-								  log_selected->dedup_channel,
+		file_len = LOG_FormatLine(logger,
+								  file_line, sizeof(file_line),
+								  logger->dedup_level,
+								  logger->dedup_channel,
 								  "", 0, "",
 								  body,
 								  true, elapsed,
-								  log_selected->dedup_job_context);
+								  logger->dedup_job_context);
 		
 		if (file_len > 0)
-			osapi->StreamWrite(log_selected->file_stream, file_line, (u64)file_len);
+			osapi->StreamWrite(logger->file_stream, file_line, (u64)file_len);
 	}
 }
 
 internal void
-LOG_Write(LOG_Level level, LOG_Channel channel,
-		  const char *file, i32 line, const char *fn,
-		  const char *fmt, ...)
-{
-	AssertTrue(log_selected);
-	
-	va_list args;
-	va_start(args, fmt);
-	LOG_WriteV(level, channel, file, line, fn, fmt, args);
-	va_end(args);
-}
-
-internal void
-LOG_WriteV(LOG_Level level, LOG_Channel channel,
+LOG_WriteV(LOG_Logger *logger,
+		   LOG_Level level, LOG_Channel channel,
 		   const char *file, i32 line, const char *fn,
 		   const char *fmt, va_list args)
 {
-	AssertTrue(log_selected);
+	AssertTrue(logger);
 
 	if (level < LOG_COMPILE_MIN_FILTER)
 		return;
 
-	if (!log_selected->channels[channel.id].enabled)
+	if (!logger->channels[channel.id].enabled)
 		return;
 
-	f32 elapsed = CH_TimerElapsed(&log_selected->timer);
+	f32 elapsed = CH_TimerElapsed(&logger->timer);
 
 	JOB_Context job_context = osapi->JobGetContext();
 	
 	char body[LOG_LINE_BUFFER_SIZE] = {0};
 	vsnprintf(body, sizeof(body), fmt, args);
 
-	osapi->MutexLock(log_selected->mutex);
+	osapi->MutexLock(logger->mutex);
 	{
 		b32 is_repeated_line =
-			log_selected->dedup_active &&
-			log_selected->dedup_level == level &&
-			log_selected->dedup_job_context.fiber_id == job_context.fiber_id &&
-			LOG_ChannelMatch(log_selected->dedup_channel, channel) &&
-			(CStrCompare(log_selected->dedup_body, body) == 0);
+			logger->dedup_active &&
+			logger->dedup_level == level &&
+			logger->dedup_job_context.fiber_id == job_context.fiber_id &&
+			LOG_ChannelMatch(logger->dedup_channel, channel) &&
+			(CStrCompare(logger->dedup_body, body) == 0);
 		
 		if (is_repeated_line)
 		{
-			log_selected->dedup_count++;
+			logger->dedup_count++;
 
 			char dedup_body[LOG_LINE_BUFFER_SIZE] = {0};
-			LOG_MakeDedupBody(dedup_body, sizeof(dedup_body), body, log_selected->dedup_count);
+			LOG_MakeDedupBody(dedup_body, sizeof(dedup_body), body, logger->dedup_count);
 			
 			char console_line[LOG_LINE_BUFFER_SIZE] = {0};
 	
-			i32 console_len = LOG_FormatLine(console_line, sizeof(console_line),
+			i32 console_len = LOG_FormatLine(logger,
+											 console_line, sizeof(console_line),
 											 level, channel,
 											 file, line, fn,
 											 dedup_body,
 											 false, elapsed,
-											 log_selected->dedup_job_context);
+											 logger->dedup_job_context);
 
 			if (console_len > 0)
 			{
@@ -292,17 +265,18 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 		}
 		else
 		{
-			if (log_selected->dedup_active)
+			if (logger->dedup_active)
 			{
-				LOG_FlushDedupToFile(elapsed);
+				LOG_FlushDedupToFile(logger, elapsed);
 
-				if (log_selected->dedup_count > 1)
+				if (logger->dedup_count > 1)
 					fwrite("\n", 1, 1, stdout);
 			}
 			
 			char console_line[LOG_LINE_BUFFER_SIZE] = {0};
 	
-			i32 console_len = LOG_FormatLine(console_line, sizeof(console_line),
+			i32 console_len = LOG_FormatLine(logger,
+											 console_line, sizeof(console_line),
 											 level, channel,
 											 file, line, fn,
 											 body,
@@ -317,12 +291,13 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 					fflush(stdout);
 			}
 			
-			if (!OS_HandleIsNull(log_selected->file_stream))
+			if (!OS_HandleIsNull(logger->file_stream))
 			{
 				char file_line[LOG_LINE_BUFFER_SIZE] = {0};
 				i32 file_len = 0;
 			
-				file_len = LOG_FormatLine(file_line, sizeof(file_line),
+				file_len = LOG_FormatLine(logger,
+										  file_line, sizeof(file_line),
 										  level, channel,
 										  file, line, fn,
 										  body,
@@ -330,27 +305,27 @@ LOG_WriteV(LOG_Level level, LOG_Channel channel,
 										  job_context);
 				
 				if (file_len > 0)
-					osapi->StreamWrite(log_selected->file_stream, file_line, (u64)file_len);
+					osapi->StreamWrite(logger->file_stream, file_line, (u64)file_len);
 			}
 
-			snprintf(log_selected->dedup_body, sizeof(log_selected->dedup_body), "%s", body);
-			log_selected->dedup_level = level;
-			log_selected->dedup_channel = channel;
-			log_selected->dedup_count = 1;
-			log_selected->dedup_active = true;
-			log_selected->dedup_job_context = job_context;
+			snprintf(logger->dedup_body, sizeof(logger->dedup_body), "%s", body);
+			logger->dedup_level = level;
+			logger->dedup_channel = channel;
+			logger->dedup_count = 1;
+			logger->dedup_active = true;
+			logger->dedup_job_context = job_context;
 		}
 	}
-	osapi->MutexUnlock(log_selected->mutex);
+	osapi->MutexUnlock(logger->mutex);
 
 	if (level == LOG_Level_Break)
 	{
 		fflush(stdout);
 
-		if (!OS_HandleIsNull(log_selected->file_stream))
+		if (!OS_HandleIsNull(logger->file_stream))
 		{
-			osapi->StreamClose(log_selected->file_stream);
-			log_selected->file_stream = OS_HandleNull();
+			osapi->StreamClose(logger->file_stream);
+			logger->file_stream = OS_HandleNull();
 		}
 
 		AssertTrue(false);

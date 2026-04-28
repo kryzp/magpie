@@ -19,32 +19,21 @@ ENT_PoolFreeSlot(ENT_TypePool *pool, u32 index)
 }
 
 internal void
-ENT_WorldInit(ENT_World *world, Arena *arena)
+ENT_WorldInit(ENT_World *world, Arena *arena, LOG_Channel log_channel)
 {
 	MemZeroStruct(world);
 
 	world->arena = arena;
+	world->log_channel = log_channel;
+	
 	world->next_uid = 1; // 0 is reserved as null invalid entity id.
-
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
-	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
-
-		ENT_TypePool *pool = &world->pools[t];
-
-		pool->capacity = desc->max_instances;
-		pool->count = 0;
-		pool->free_index_count = 0;
-
-		pool->data         = ArenaPushArray(arena, u8,  desc->max_instances * desc->stride);
-		pool->alive        = ArenaPushArray(arena, b32, desc->max_instances);
-		pool->free_indices = ArenaPushArray(arena, u32, desc->max_instances);
-	}
 
 	world->layers[0].active = true;
 	world->layers[0].name = String8Lit("default");
 
 	world->layer_count = 1;
+
+	DebugLogI(world->log_channel, "World Initialized.");
 }
 
 internal void
@@ -52,12 +41,12 @@ ENT_WorldDestroy(ENT_World *world)
 {
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnDestroy)
 			continue;
 		
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -71,6 +60,8 @@ ENT_WorldDestroy(ENT_World *world)
 			desc->OnDestroy(entity);
 		}
 	}
+	
+	DebugLogI(world->log_channel, "World Destroyed.");
 }
 
 internal void
@@ -78,6 +69,22 @@ ENT_WorldToggleLayer(ENT_World *world, u16 layer_id, b32 active)
 {
 	AssertTrue(layer_id < world->layer_count);
 	world->layers[layer_id].active = active;
+}
+
+internal void
+ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc)
+{
+	ENT_TypePool *pool = &world->type_pools[desc->type];
+
+	pool->capacity = desc->max_instances;
+	pool->count = 0;
+	pool->free_index_count = 0;
+
+	pool->data         = ArenaPushArray(world->arena, u8,  desc->max_instances * desc->stride);
+	pool->alive        = ArenaPushArray(world->arena, b32, desc->max_instances);
+	pool->free_indices = ArenaPushArray(world->arena, u32, desc->max_instances);
+		
+	world->type_registry[desc->type] = *desc;
 }
 
 internal void
@@ -91,12 +98,12 @@ ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_S
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPreAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -132,12 +139,12 @@ ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -173,12 +180,12 @@ ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostPhysicsTick)
 			continue;
 
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -208,12 +215,12 @@ ENT_WorldFlush(ENT_World *world)
 {
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -244,8 +251,8 @@ ENT_WorldFlush(ENT_World *world)
 internal void *
 ENT_WorldSpawn(ENT_World *world, ENT_Type type)
 {
-	const ENT_TypeDesc *desc = &ent_global_types[type];
-	ENT_TypePool *pool = &world->pools[type];
+	const ENT_TypeDesc *desc = &world->type_registry[type];
+	ENT_TypePool *pool = &world->type_pools[type];
 
 	u32 slot = ENT_PoolAllocSlot(pool);
 
@@ -290,9 +297,9 @@ ENT_WorldGet(ENT_World *world, ENT_UID uid)
 {
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &ent_global_types[t];
+		const ENT_TypeDesc *desc = &world->type_registry[t];
 
-		ENT_TypePool *pool = &world->pools[t];
+		ENT_TypePool *pool = &world->type_pools[t];
 
 		b8 *base = pool->data;
 
@@ -308,19 +315,21 @@ ENT_WorldGet(ENT_World *world, ENT_UID uid)
 		}
 	}
 
+	DebugLogW(world->log_channel, "Couldn't find entity with UID %u", uid.value);
+
 	return NULL;
 }
 
 internal ENT_GetAllReceipt
 ENT_WorldGetAll(ENT_World *world, ENT_Type type)
 {
-	ENT_TypePool *pool = &world->pools[type];
+	ENT_TypePool *pool = &world->type_pools[type];
 
 	ENT_GetAllReceipt receipt = {0};
 	receipt.data = pool->data;
 	receipt.count = pool->count;
 	receipt.alive = pool->alive;
-	receipt.stride = ent_global_types[type].stride;
+	receipt.stride = world->type_registry[type].stride;
 
 	return receipt;
 }
@@ -352,6 +361,8 @@ ENT_WorldFindMarker(ENT_World *world, String8 name)
 		if (world->markers[i].name_hash == hash)
 			return &world->markers[i];
 	}
+
+	DebugLogW(world->log_channel, "Couldn't find marker with name %.*s", (i32)name.len, name.str);
 	
 	return NULL;
 }
