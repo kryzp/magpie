@@ -111,6 +111,8 @@ The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 ### Memory Arenas
 To simplify memory management in C I use a thing called a "memory arena" for pretty much anything. I'm not going to go into why because [this](https://www.youtube.com/watch?v=TZ5a3gCCZYo) talk by Ryan Fleury explains it way better. Essentially, they let you "group" allocations and formalize the idea of a "scope" for some object.
 
+The one major downside with arenas is when it comes to dealing with things that might not have an actual fixed "scope" in the code since you can't remove things from the middle of the arena (at least, not without moving a ton of memory around which would be pretty expensive). For instance entities that can be added and removed at any time. I fix this by making use of freelists where possible.
+
 
 ### Job System
 The job system is effectively at the core of the project. It is a fiber-based job system based off-of the pioneering work of Naughty Dog in their presentation "Parallelizing the Naughty Dog by Christian Gyrling". It's pretty complicated but the basic idea is that using a naiive job queue is that when a job dispatches more jobs and waits on them, the thread running that job stalls when it could be working! This can get even worse, when in some cases it can straight up lead to a deadlock as there might not be any free thread to complete the child job!
