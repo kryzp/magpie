@@ -343,6 +343,7 @@ AppInitRender(App *app)
 
 	AppInitRenderCreateSkyboxMesh(app);
 
+	app->brdf_lut            = GFX_DeviceTextureAlloc2D     (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
 	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
@@ -352,6 +353,7 @@ AppInitRender(App *app)
 	R_DeferredRendererInit (&app->deferred_renderer, &app->graphics_device, &app->assets);
 	R_DebugRendererInit    (&app->debug_renderer,    &app->render_arena, &app->graphics_device, &app->assets);
 
+	AST_Handle brdf_lut_shader_handle   = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/brdf_lut.slang"),                   AST_Type_Shader);
 	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
 	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
 
@@ -390,12 +392,23 @@ AppInitRender(App *app)
 	light.shadow_far = 10.f;
 	
 	R_SceneLightCreate(&app->scene, &light);
-	
+
+	GFX_ShaderKey brdf_lut_shader        = AST_Get(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader.key;
 	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
 	
 	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 
+	// Generate BRDF Lookup Table.
+	{
+		R_BRDFLutPassData *data = ArenaPushArray(&app->frame_arena, R_BRDFLutPassData, 1);
+		data->shader = brdf_lut_shader;
+		
+		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("BRDF LUT"), R_PassType_Graphics);
+		R_PassSetRecord   (pass, R_BRDFLutPassFn, data);
+		R_PassWriteColour (pass, R_GraphImportTexture(&app->graph, app->brdf_lut), NULL);
+	}
+	
 	// Generate Environment Cubemap.
 	{
 		R_HdrToEnvPassData *data = ArenaPushArray(&app->frame_arena, R_HdrToEnvPassData, 1);
@@ -447,6 +460,7 @@ AppDestroyRender(App *app)
 	R_ShadowRendererDestroy   (&app->shadow_renderer);
 	R_CullingDestroy          (&app->culling);
 
+	GFX_DeviceTextureDestroy(&app->graphics_device, app->brdf_lut);
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->environment_cubemap);
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->irradiance_cubemap);
 	GFX_DeviceTextureDestroy(&app->graphics_device, app->prefilter_cubemap);
@@ -747,24 +761,24 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 						   scene_resources);
 
 	R_DeferredRenderGeometry(&app->deferred_renderer,
-							&app->graph,
-							&bb,
-							&app->frame_arena,
-							scene_resources,
-							app->frame_data_buffer,
-							app->linear_sampler,
-							&draw_stream);
+							 &app->graph,
+							 &bb,
+							 &app->frame_arena,
+							 scene_resources,
+							 app->frame_data_buffer,
+							 app->linear_sampler,
+							 &draw_stream);
 
 	R_GraphTexHandle lighting = R_DeferredRenderLighting(&app->deferred_renderer,
-														&app->graph,
-														&bb,
-														&app->frame_arena,
-														scene_resources,
-														app->frame_data_buffer,
-														app->linear_sampler,
-														app->irradiance_cubemap,
-														app->prefilter_cubemap,
-														app->environment_cubemap); // TODO: proper BRDF LUT texture.
+														 &app->graph,
+														 &bb,
+														 &app->frame_arena,
+														 scene_resources,
+														 app->frame_data_buffer,
+														 app->linear_sampler,
+														 app->irradiance_cubemap,
+														 app->prefilter_cubemap,
+														 app->brdf_lut);
 
 	// -- Skybox
 	{

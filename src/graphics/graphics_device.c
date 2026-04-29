@@ -521,8 +521,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 
 	vkGetSwapchainImagesKHR(device->context.device, swapchain.handle, &texture_count, NULL);
 
-	if (texture_count <= 0)
-		DebugLogB(device->log_channel, "Failed to find any images in swapchain.");
+	DebugLogAssert(device->log_channel, texture_count > 0, "Failed to find any images in swapchain.");
 
 	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, texture_count);
 
@@ -1468,8 +1467,7 @@ GFX_DeviceShaderStageCreate(GFX_Device *device, Arena *arena, const GFX_ShaderBy
 	SpvReflectShaderModule reflect_module = {0};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
 
-	if (reflect_result != SPV_REFLECT_RESULT_SUCCESS)
-		DebugLogB(device->log_channel, "Failed to reflect SPIR-V module: %d\n", reflect_result);
+	DebugLogAssert(device->log_channel, reflect_result == SPV_REFLECT_RESULT_SUCCESS, "Failed to reflect SPIR-V module: %d\n", reflect_result);
 	
 	ScratchArena scratch = ScratchBegin(&arena, 1);
 

@@ -239,7 +239,7 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 
 		pc.irradiance_map = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_handle, GFX_SubresourceRangeAllColour()));
 		pc.prefilter_map  = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,  GFX_SubresourceRangeAllColour()));
-		pc.brdf_lut       = 0;//GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,       GFX_SubresourceRangeAllColour()));
+		pc.brdf_lut       = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,       GFX_SubresourceRangeAllColour()));
 
 		pc.linear_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler);
 
@@ -290,7 +290,7 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 				u32 linear_sampler;
 				u32 shadow_sampler;
 			}
-			pc;
+				pc;
 
 			pc.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
 			pc.light_buffer = data->light_buffer_address;
@@ -298,9 +298,9 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 			pc.shadow_caster_buffer = GFX_DeviceBufferAddress(device, data->shadow_caster_table);
 
 			pc.position = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          GFX_SubresourceRangeAllColour()));
-			pc.albedo   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],             GFX_SubresourceRangeAllColour()));
-			pc.normal   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],             GFX_SubresourceRangeAllColour()));
-			pc.emissive = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],           GFX_SubresourceRangeAllColour()));
+			pc.albedo   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            GFX_SubresourceRangeAllColour()));
+			pc.normal   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            GFX_SubresourceRangeAllColour()));
+			pc.emissive = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          GFX_SubresourceRangeAllColour()));
 			pc.material = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], GFX_SubresourceRangeAllColour()));
 
 			pc.linear_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler);

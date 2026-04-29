@@ -370,8 +370,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 		u32 device_count = 0;
 		vkEnumeratePhysicalDevices(context.instance, &device_count, NULL);
 
-		if (device_count <= 0)
-			DebugLogB(log_channel, "Failed to find GPUs with Vulkan support.");
+		DebugLogAssert(log_channel, device_count > 0, "Failed to find GPUs with Vulkan support.");
 
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 		VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
@@ -410,8 +409,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 			}
 		}
 
-		if (!context.physical_device)
-			DebugLogB(log_channel, "Unable to find a suitable GPU.");
+		DebugLogAssert(log_channel, context.physical_device, "Unable to find a suitable GPU.");
 
 		DebugLogD(log_channel, "Selected a suitable GPU: %d", selected_id);
 	}

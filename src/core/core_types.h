@@ -17,8 +17,6 @@
 #define internal    static
 #define global      static
 
-#define AssertTrue(eq)      do { if (!(eq)) { *((int *)0) = 0; } } while (0)
-
 #define ArraySize(arr)      (sizeof(arr) / sizeof((arr)[0]))
 
 #define MemCopy             memcpy

@@ -270,8 +270,7 @@ OS_W32_GetWindowSize(u32 *w, u32 *h)
 	
 	SDL_GetWindowSize(win32_st.sdl_window, &width, &height);
 
-	AssertTrue(width >= 0 &&
-			   height >= 0);
+	AssertTrue(width >= 0 && height >= 0);
 
 	if (w) *w = width;
 	if (h) *h = height;
@@ -285,8 +284,7 @@ OS_W32_GetWindowSizeInPixels(u32 *pw, u32 *ph)
 	
 	SDL_GetWindowSizeInPixels(win32_st.sdl_window, &pixel_width, &pixel_height);
 
-	AssertTrue(pixel_width >= 0 &&
-			   pixel_height >= 0);
+	AssertTrue(pixel_width >= 0 && pixel_height >= 0);
 
 	if (pw) *pw = pixel_width;
 	if (ph) *ph = pixel_height;

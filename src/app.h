@@ -76,6 +76,7 @@ struct App
 
 	// ---
 
+	GFX_TextureKey brdf_lut;
 	GFX_TextureKey environment_cubemap;
 	GFX_TextureKey irradiance_cubemap;
 	GFX_TextureKey prefilter_cubemap;

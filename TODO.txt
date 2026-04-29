@@ -9,3 +9,5 @@
   
 - rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
 - convert graphics device resource management to freelists
+
+- replace the AssertTrue's that are everywhere with DebugLogAssert for more clarity.

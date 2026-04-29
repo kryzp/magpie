@@ -1,3 +1,4 @@
+#include "render_pass_brdf_lut.c"
 #include "render_pass_generate_mips.c"
 #include "render_pass_environment_map.c"
 #include "render_pass_skybox.c"

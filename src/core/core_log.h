@@ -1,6 +1,8 @@
 #ifndef CORE_LOG_H
 #define CORE_LOG_H
 
+#define AssertTrue(eq) do { if (!(eq)) { *((int *)0) = 0; } } while (0)
+
 #define DebugLogEx(level, channel, ...) osapi->Log((level), (channel), __FILE__, __LINE__, __func__, __VA_ARGS__)
 
 #define DebugLogT(channel, ...) DebugLogEx(LOG_Level_Trace, (channel), __VA_ARGS__)
@@ -16,5 +18,8 @@
 #define DebugPrintW(...) DebugLogW(LOG_ChannelNull(), __VA_ARGS__)
 #define DebugPrintE(...) DebugLogE(LOG_ChannelNull(), __VA_ARGS__)
 #define DebugPrintB(...) DebugLogB(LOG_ChannelNull(), __VA_ARGS__)
+
+#define DebugLogAssert(channel, eq, ...)  do { if (!(eq)) { DebugLogB(channel, __VA_ARGS__); } } while (0)
+#define DebugPrintAssert(eq, ...)         do { if (!(eq)) { DebugPrintB(__VA_ARGS__); } } while (0)
 
 #endif // CORE_LOG_H

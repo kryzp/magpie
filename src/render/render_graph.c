@@ -191,10 +191,11 @@ R_GraphImportTexture(R_Graph *graph, GFX_TextureKey external_key)
 	}
 
 	const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, external_key);
-	AssertTrue(physical);
 
-	AssertTrue(graph->texture_res_count < ArraySize(graph->texture_res));
-	AssertTrue(graph->texture_ver_count < ArraySize(graph->texture_ver));
+	DebugLogAssert(graph->log_channel, physical, "Imported texture with key %llu is invalid.", external_key.value);
+
+	DebugLogAssert(graph->log_channel, graph->texture_res_count < ArraySize(graph->texture_res), "Ran out of space in resource register when importing texture.");
+	DebugLogAssert(graph->log_channel, graph->texture_ver_count < ArraySize(graph->texture_ver), "Ran out of space in version register when importing texture.");
 
 	u32 res_index = graph->texture_res_count++;
 	R_GraphTexture *texture = &graph->texture_res[res_index];
@@ -262,10 +263,11 @@ R_GraphImportBuffer(R_Graph *graph, GFX_BufferKey external_key)
 	}
 
 	const GFX_Buffer *physical = GFX_DeviceBufferFromKey(graph->device, external_key);
-	AssertTrue(physical);
 
-	AssertTrue(graph->buffer_res_count < ArraySize(graph->buffer_res));
-	AssertTrue(graph->buffer_ver_count < ArraySize(graph->buffer_ver));
+	DebugLogAssert(graph->log_channel, physical, "Imported buffer with key %llu is invalid.", external_key.value);
+
+	DebugLogAssert(graph->log_channel, graph->buffer_res_count < ArraySize(graph->buffer_res), "Ran out of space in resource register when importing buffer.");
+	DebugLogAssert(graph->log_channel, graph->buffer_ver_count < ArraySize(graph->buffer_ver), "Ran out of space in version register when importing buffer.");
 
 	u32 res_index = graph->buffer_res_count++;
 	R_GraphBuffer *buffer = &graph->buffer_res[res_index];
@@ -575,7 +577,9 @@ R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *ed
 	{
 		// RAW HAZARD
 		
-		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
+		DebugLogAssert(graph->log_channel,
+					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
+					   "Ran out of room for texture barriers.");
 
 		GFX_AccessSt src = {0};
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -617,7 +621,9 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 	{
 		// WAW HAZARD
 		
-		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
+		DebugLogAssert(graph->log_channel,
+					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
+					   "Ran out of room for texture barriers.");
 
 		GFX_AccessSt src = {0};
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -637,8 +643,10 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 	else if (st->read_stages != 0 || layout_change)
 	{
 		// WAR HAZARD
-
-		AssertTrue(pass->texture_barrier_count < ArraySize(pass->texture_barriers));
+		
+		DebugLogAssert(graph->log_channel,
+					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
+					   "Ran out of room for texture barriers.");
 
 		GFX_AccessSt src_access = {0};
 		src_access.stage  = st->read_stages ? st->read_stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -680,7 +688,9 @@ R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge
 	{
 		// RAW HAZARD
 		
-		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
+		DebugLogAssert(graph->log_channel,
+					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
+					   "Ran out of room for buffer barriers.");
 
 		GFX_AccessSt src_access = {0};
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -716,8 +726,10 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 	if (st->write_access != 0)
 	{
 		// WAW HAZARD
-
-		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
+		
+		DebugLogAssert(graph->log_channel,
+					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
+					   "Ran out of room for buffer barriers.");
 
 		GFX_AccessSt src_access = {0};
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
@@ -735,9 +747,10 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 	else if (st->read_stages != 0)
 	{
 		// WAR HAZARD
-
-		AssertTrue(pass->buffer_barrier_count < ArraySize(pass->buffer_barriers));
-
+		
+		DebugLogAssert(graph->log_channel,
+					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
+					   "Ran out of room for buffer barriers.");
 		GFX_AccessSt src_access = {0};
 		src_access.stage  = st->read_stages;
 		src_access.access = VK_ACCESS_2_NONE;
