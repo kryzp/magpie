@@ -355,15 +355,8 @@ AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogOpenChannel(String8Lit("RENDER"));
 	
-	u64 render_quarter_size = ArenaSafePartitionSize(&app->render_arena, 4, 8);
-
-	app->graph_arena      = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
-	app->scene_arena      = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
-	app->pass_frame_arena = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
-	app->debug_draw_arena = ArenaInitArena(&app->render_arena, render_quarter_size, 8);
-	
-	R_GraphInit(&app->graph, &app->graph_arena, &app->graphics_device, app->render_log_channel);
-	R_SceneInit(&app->scene, &app->scene_arena, &app->graphics_device, app->render_log_channel);
+	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, app->render_log_channel);
+	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, app->render_log_channel);
 
 	AppInitRenderCreateSkyboxMesh(app);
 
@@ -374,7 +367,7 @@ AppInitRender(App *app)
 	R_CullingInit          (&app->culling,           &app->assets);
 	R_ShadowRendererInit   (&app->shadow_renderer,   &app->graphics_device, &app->assets);
 	R_DeferredRendererInit (&app->deferred_renderer, &app->graphics_device, &app->assets);
-	R_DebugRendererInit    (&app->debug_renderer,    &app->debug_draw_arena, &app->graphics_device, &app->assets);
+	R_DebugRendererInit    (&app->debug_renderer,    &app->render_arena, &app->graphics_device, &app->assets);
 
 	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
 	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
@@ -422,7 +415,7 @@ AppInitRender(App *app)
 
 	// Generate Environment Cubemap.
 	{
-		R_HdrToEnvPassData *data = ArenaPushArray(&app->pass_frame_arena, R_HdrToEnvPassData, 1);
+		R_HdrToEnvPassData *data = ArenaPushArray(&app->frame_arena, R_HdrToEnvPassData, 1);
 		data->shader             = hdr_to_env_shader;
 		data->sampler            = app->linear_sampler;
 		data->hdr_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
@@ -434,7 +427,7 @@ AppInitRender(App *app)
 		R_PassSetMultiViewMask (pass, 0b111111);
 		R_PassWriteColour      (pass, R_GraphImportTexture(&app->graph, app->environment_cubemap), NULL);
 
-		R_GenerateMipsPassData *mips_data = ArenaPushArray(&app->pass_frame_arena, R_GenerateMipsPassData, 1);
+		R_GenerateMipsPassData *mips_data = ArenaPushArray(&app->frame_arena, R_GenerateMipsPassData, 1);
 		mips_data->texture = app->environment_cubemap;
 		
 		R_Pass *pass_mipmaps = R_GraphAdd(&app->graph, String8Lit("Environment Map Mipmapping"), R_PassType_Transfer);
@@ -444,7 +437,7 @@ AppInitRender(App *app)
 	
 	// Irradiance.
 	{
-		R_IBLPassIrradianceData *data = ArenaPushArray(&app->pass_frame_arena, R_IBLPassIrradianceData, 1);
+		R_IBLPassIrradianceData *data = ArenaPushArray(&app->frame_arena, R_IBLPassIrradianceData, 1);
 		data->shader             = irradiance_pass_shader;
 		data->sampler            = app->linear_sampler;
 		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
@@ -587,16 +580,17 @@ AppInit(const OS_API *api)
 {
 	osapi = api;
 
-	Arena bootstrap = ArenaInitReserved(Megabytes(64));
+	Arena bootstrap = ArenaAlloc(sizeof(App));
 	App *app = ArenaPushArray(&bootstrap, App, 1);
 	app->bootstrap_arena = bootstrap;
 
-	app->graphics_arena = ArenaInitReserved(Gigabytes(3));
-	app->audio_arena    = ArenaInitReserved(Gigabytes(1));
-	app->asset_arena    = ArenaInitReserved(Gigabytes(3));
-	app->render_arena   = ArenaInitReserved(Gigabytes(2));
-	app->entity_arena   = ArenaInitReserved(Gigabytes(1));
-	app->editor_arena   = ArenaInitReserved(Gigabytes(1));
+	app->frame_arena    = ArenaAlloc(Gigabytes(1));
+	app->graphics_arena = ArenaAlloc(Gigabytes(3));
+	app->audio_arena    = ArenaAlloc(Gigabytes(1));
+	app->asset_arena    = ArenaAlloc(Gigabytes(3));
+	app->render_arena   = ArenaAlloc(Gigabytes(2));
+	app->entity_arena   = ArenaAlloc(Gigabytes(1));
+	app->editor_arena   = ArenaAlloc(Gigabytes(1));
 	
 	AppInit_(app);
 
@@ -618,6 +612,14 @@ AppDestroy(App *app)
 	AppDestroyAssets   (app);
 	AppDestroyAudio    (app);
 	AppDestroyGraphics (app);
+
+	ArenaRelease(&app->frame_arena);
+	ArenaRelease(&app->graphics_arena);
+	ArenaRelease(&app->audio_arena);
+	ArenaRelease(&app->asset_arena);
+	ArenaRelease(&app->render_arena);
+	ArenaRelease(&app->entity_arena);
+	ArenaRelease(&app->editor_arena);
 }
 
 global f32 app_pp_exposure = 1.f;
@@ -698,7 +700,7 @@ AppTick(App *app, const I_State *input)
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	
-	ArenaReset(&app->pass_frame_arena);
+	ArenaReset(&app->frame_arena);
 	
 	return false;
 }
@@ -758,7 +760,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 
 	R_DrawStream draw_stream = R_CullFrustum(&app->culling,
 											 &app->graph,
-											 &app->pass_frame_arena,
+											 &app->frame_arena,
 											 &app->scene,
 											 scene_resources,
 											 &frustum);
@@ -766,7 +768,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 	R_ShadowRendererRender(&app->shadow_renderer,
 						   &app->graph,
 						   &bb,
-						   &app->pass_frame_arena,
+						   &app->frame_arena,
 						   &app->culling,
 						   &app->scene,
 						   scene_resources);
@@ -774,7 +776,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 	R_DeferredRenderGeometry(&app->deferred_renderer,
 							&app->graph,
 							&bb,
-							&app->pass_frame_arena,
+							&app->frame_arena,
 							scene_resources,
 							app->frame_data_buffer,
 							app->linear_sampler,
@@ -783,7 +785,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 	R_GraphTexHandle lighting = R_DeferredRenderLighting(&app->deferred_renderer,
 														&app->graph,
 														&bb,
-														&app->pass_frame_arena,
+														&app->frame_arena,
 														scene_resources,
 														app->frame_data_buffer,
 														app->linear_sampler,
@@ -796,7 +798,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 
-		R_SkyboxPassData *data = ArenaPushArray(&app->pass_frame_arena, R_SkyboxPassData, 1);
+		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
 		data->cubemap = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->sampler = app->linear_sampler;
@@ -815,7 +817,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_tonemapping.comp.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 		
-		R_PostProcessingPassData *data = ArenaPushArray(&app->pass_frame_arena, R_PostProcessingPassData, 1);
+		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
 		data->exposure = app_pp_exposure;
 		data->input = lighting;
@@ -830,7 +832,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 	R_DebugRendererRender(&app->debug_renderer,
 						  dt,
 						  &app->graph,
-						  &app->pass_frame_arena,
+						  &app->frame_arena,
 						  lighting,
 						  bb.gbuffer.depth);
 

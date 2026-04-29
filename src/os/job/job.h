@@ -15,6 +15,8 @@
  * - "Parallelizing the Physics Solver" - Dennis Gustafsson
  */
 
+#define JOB_FIBER_SCRATCH_RING_SIZE 2
+
 typedef struct JOB_Fiber JOB_Fiber;
 struct JOB_Fiber
 {
@@ -33,7 +35,7 @@ struct JOB_Fiber
 	
 	b32 finished;
 
-	Arena *scratch_arenas[2];
+	Arena scratch_arenas[JOB_FIBER_SCRATCH_RING_SIZE];
 };
 
 typedef struct JOB_Counter JOB_Counter;
@@ -143,14 +145,14 @@ internal b32          JOB_RequestAvailable        (JOB_Scheduler *scheduler);
    CORE
    ================================================== */
 
-internal void JOB_Init(JOB_Scheduler *scheduler, Arena *arena, LOG_Channel log_channel);
-internal void JOB_Shutdown(JOB_Scheduler *scheduler);
+internal void JOB_Init     (JOB_Scheduler *scheduler, LOG_Channel log_channel);
+internal void JOB_Shutdown (JOB_Scheduler *scheduler);
 
 internal void JOB_SchedulerThreadEntry(void *param);
 internal void JOB_FiberEntry(void *param);
 
-internal void JOB_Enter(JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
-internal void JOB_Halt(JOB_Scheduler *scheduler);
+internal void JOB_Enter (JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
+internal void JOB_Halt  (JOB_Scheduler *scheduler);
 
 internal JOB_Context JOB_GetContext(JOB_Scheduler *scheduler);
 

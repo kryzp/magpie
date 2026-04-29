@@ -9,6 +9,8 @@ struct App
 {
 	Arena bootstrap_arena;
 
+	Arena frame_arena;
+	
 	Arena log_arena;
 
 	Arena graphics_arena;
@@ -18,11 +20,6 @@ struct App
 	Arena asset_arena;
 
 	Arena render_arena;
-
-	Arena graph_arena;
-	Arena scene_arena;
-	Arena pass_frame_arena;
-	Arena debug_draw_arena;
 	
 	Arena entity_arena;
 

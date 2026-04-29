@@ -1,6 +1,6 @@
 
 internal Arena
-ArenaInitReserved(u64 size)
+ArenaAlloc(u64 size)
 {
 	u64 page = osapi->GetPageSize();
 	u64 reserve_size = MemAlignUp(size, page);
@@ -10,41 +10,13 @@ ArenaInitReserved(u64 size)
 	arena.capacity = reserve_size;
 	arena.used = 0;
 	arena.committed = 0;
-	arena.kind = ArenaKind_Backed;
 	
 	return arena;
-}
-
-internal Arena
-ArenaInitMemory(void *memory, u64 capacity)
-{
-	Arena arena = {0};
-	arena.base = memory;
-	arena.capacity = capacity;
-	arena.used = 0;
-	arena.kind = ArenaKind_View;
-
-	return arena;
-}
-
-internal Arena
-ArenaInitArena(Arena *arena, u64 capacity, u64 alignment)
-{
-	Arena child = {0};
-	child.base = ArenaPush(arena, capacity, alignment);
-	child.capacity = capacity;
-	child.used = 0;
-	child.kind = ArenaKind_View;
-
-	return child;
 }
 
 internal void
 ArenaRelease(Arena *arena)
 {
-	if (arena->kind != ArenaKind_Backed)
-		CoreFatal("Arena (%p) attempted to release but not backed by reserved memory.", arena);
-
 	if (!arena->base)
 		CoreFatal("Arena (%p) attempted to release by null base pointer.", arena);
 	
@@ -92,7 +64,7 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 				  aligned_mb, free_mb);
 	}
 
-	if (arena->kind == ArenaKind_Backed && new_used > arena->committed)
+	if (new_used > arena->committed)
 	{
 		u64 page = osapi->GetPageSize();
 		u64 commit_to = MemAlignUp(new_used, page);
@@ -168,7 +140,7 @@ ArenaReset(Arena *arena)
 internal void
 ArenaResetAndDecommit(Arena *arena)
 {
-	if (arena->kind == ArenaKind_Backed && arena->committed > 0)
+	if (arena->committed > 0)
 	{
 		osapi->VirtualDecommit(arena->base, arena->committed);
 		arena->committed = 0;

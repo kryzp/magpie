@@ -137,7 +137,7 @@ GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 	device->log_channel = log_channel;
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
-		device->per_frame_data[i].arena = ArenaInitArena(arena, arena->capacity * 0.1f, 8);
+		device->per_frame_data[i].arena = ArenaAlloc(Megabytes(128));
 
 	device->current_frame_index = 0;
 
@@ -158,6 +158,8 @@ GFX_DeviceDestroy(GFX_Device *device)
         GFX_DevicePerFrameData *frame = &device->per_frame_data[i];
         GFX_DeviceWaitUntil(device, frame->completion_point);
         GFX_DeviceFlushFrameData(device, frame);
+
+		ArenaRelease(&frame->arena);
     }
 	
 	// Layouts, Pipelines and Views are special and cached

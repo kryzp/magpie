@@ -1,29 +1,17 @@
 #ifndef CORE_ARENA_H
 #define CORE_ARENA_H
 
-typedef enum ArenaKind
-{
-	ArenaKind_Backed, // Actual memory backed by a reserved allocation.
-	ArenaKind_View,   // Arena operating on top of existing reserved memory.
-	ArenaKind_COUNT
-}
-ArenaKind;
-
 typedef struct Arena Arena;
 struct Arena
 {
 	void *base;
 	u64 capacity;
 	u64 used;
-	u64 committed; // used for backed memory.
-	ArenaKind kind;
+	u64 committed;
 };
 
-internal Arena ArenaInitReserved(u64 size);
-internal Arena ArenaInitMemory(void *memory, u64 capacity);
-internal Arena ArenaInitArena(Arena *arena, u64 capacity, u64 alignment);
-
-internal void ArenaRelease(Arena *arena);
+internal Arena ArenaAlloc(u64 size);
+internal void  ArenaRelease(Arena *arena);
 
 /*
  * Partitioning arenas into sub-arenas can be a pain in the ass

@@ -200,7 +200,7 @@ JOB_RequestAvailable(JOB_Scheduler *scheduler)
 }
 
 internal void
-JOB_Init(JOB_Scheduler *scheduler, Arena *arena, LOG_Channel log_channel)
+JOB_Init(JOB_Scheduler *scheduler, LOG_Channel log_channel)
 {
 	MemZeroStruct(scheduler);
 
@@ -223,11 +223,8 @@ JOB_Init(JOB_Scheduler *scheduler, Arena *arena, LOG_Channel log_channel)
 
 		fiber->handle = osapi->FiberCreate(0, JOB_FiberEntry, scheduler);
  
-		for (u32 j = 0; j < ArraySize(fiber->scratch_arenas); j++)
-		{
-			fiber->scratch_arenas[j] = ArenaPushArray(arena, Arena, 1);
-			(*fiber->scratch_arenas[j]) = ArenaInitArena(arena, JOB_FIBER_SCRATCH_SIZE, 8);
-		}
+		for (u32 j = 0; j < JOB_FIBER_SCRATCH_RING_SIZE; j++)
+			fiber->scratch_arenas[j] = ArenaAlloc(JOB_FIBER_SCRATCH_SIZE);
 
 		// Give the fiber to the freelist.
 		JOB_FiberReturn(scheduler, fiber);
@@ -267,7 +264,12 @@ JOB_Shutdown(JOB_Scheduler *scheduler)
  
 	// Release all fibers.
 	for (u32 i = 0; i < JOB_MAX_CONCURRENT_FIBERS; i++)
+	{
+		for (u32 j = 0; j < JOB_FIBER_SCRATCH_RING_SIZE; j++)
+			ArenaRelease(&scheduler->atomic_fiber_storage[i].scratch_arenas[j]);
+
 		osapi->FiberDelete(scheduler->atomic_fiber_storage[i].handle);
+	}
 
 	// Destroy OS synchronisation primitives.
 	osapi->MutexDestroy(scheduler->mutex);
@@ -708,7 +710,7 @@ JOB_GetScratch(JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_
 	JOB_Fiber *fiber = job_current_worker->current_fiber;
 	
 	Arena *arena = NULL;
-	Arena **ring = fiber->scratch_arenas;
+	Arena *ring = fiber->scratch_arenas;
 
 	for (u32 i = 0; i < ArraySize(fiber->scratch_arenas); i++, ring++)
 	{
@@ -716,7 +718,7 @@ JOB_GetScratch(JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_
 
 		for (u32 j = 0; j < conflict_count; j++)
 		{
-			if (*ring == conflicts[j])
+			if (ring == conflicts[j])
 			{
 				conflict = true;
 				break;
@@ -725,7 +727,7 @@ JOB_GetScratch(JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_
 
 		if (!conflict)
 		{
-			arena = *ring;
+			arena = ring;
 			break;
 		}
 	}

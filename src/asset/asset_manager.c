@@ -43,12 +43,15 @@ AST_AllocRecord(AST_Assets *assets, String8 path)
 	u32 index = AST_AllocSlot(assets);
 
 	AST_Record *record = &assets->records[index];
+
+	u32 prev_gen = record->generation;
+
 	MemZeroStruct(record);
 
 	record->path = String8Clone(assets->arena, path);
 	record->state = AST_State_Unloaded;
 	
-	record->generation++;
+	record->generation = prev_gen + 1;
 
 	AST_Handle handle = {0};
 	handle.index = index;
@@ -195,7 +198,7 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 
 	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
 	{
-		assets->load_arenas[i] = ArenaInitReserved(AST_LOAD_ARENA_RESERVE);
+		assets->load_arenas[i] = ArenaAlloc(AST_LOAD_ARENA_RESERVE);
 		assets->free_load_arenas[i] = i;
 	}
 
@@ -281,7 +284,12 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 internal b32
 AST_IsLoaded(const AST_Assets *assets, AST_Handle handle)
 {
-	return AST_StateIsLoaded(AST_GetRecordConst(assets, handle)->state);
+	AST_Record *record = AST_GetRecordConst(assets, handle);
+
+	if (!record)
+		return false;
+	
+	return AST_StateIsLoaded(record->state);
 }
 
 internal b32
@@ -312,8 +320,8 @@ AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
 
 		osapi->JobYield(counter, 0);
 
-		while (record->state != AST_State_Ready ||
-			   record->state == AST_State_Failed)
+		while (record->state != AST_State_Ready &&
+			   record->state != AST_State_Failed)
 		{
 			AST_ResolvePendingDependencies(assets, counter);
 			osapi->JobYield(counter, 0);
@@ -796,16 +804,21 @@ end:
 internal AST_Handle
 AST_FromFilePath(AST_Assets *assets, String8 path)
 {
+	osapi->MutexLock(assets->allocation_mutex);
+
 	AST_Handle existing = AST_PathMapFind(assets, path);
 
 	if (AST_IsValid(assets, existing))
+	{
+		osapi->MutexUnlock(assets->allocation_mutex);		
 		return existing;
+	}
 
-	osapi->MutexLock(assets->allocation_mutex);
 	AST_Handle handle = AST_AllocRecord(assets, path);
-	osapi->MutexUnlock(assets->allocation_mutex);
 
 	AST_PathMapInsert(assets, path, handle);
+
+	osapi->MutexUnlock(assets->allocation_mutex);
 
 	return handle;
 }

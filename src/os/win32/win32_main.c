@@ -107,7 +107,6 @@ struct OS_W32_State
 
 	Arena platform_layer_arena;
 
-	Arena job_system_arena;
 	JOB_Scheduler scheduler;
 
 	LOG_Logger logger;
@@ -1383,8 +1382,7 @@ main(void)
 	
 	osapi = &win32_st.api;
 
-	win32_st.platform_layer_arena = ArenaInitReserved(OS_LAYER_MEMORY);
-	win32_st.job_system_arena     = ArenaInitReserved(JOB_LAYER_MEMORY);
+	win32_st.platform_layer_arena = ArenaAlloc(OS_LAYER_MEMORY);
 	
 	LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
 
@@ -1403,7 +1401,7 @@ main(void)
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
 	LOG_Channel job_log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("JOB"));
-	JOB_Init(&win32_st.scheduler, &win32_st.job_system_arena, job_log_channel);
+	JOB_Init(&win32_st.scheduler, job_log_channel);
 
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
@@ -1423,7 +1421,6 @@ main(void)
 	LOG_Shutdown(&win32_st.logger);
 
 	ArenaRelease(&win32_st.platform_layer_arena);
-	ArenaRelease(&win32_st.job_system_arena);
 
 	OS_W32_DestroyImGui();
 	SDL_DestroyWindow(win32_st.sdl_window);
