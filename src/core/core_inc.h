@@ -1,5 +1,5 @@
 #include "core_types.h"
-#include "core_fatal.h"
+#include "core_log.h"
 #include "core_math.h"
 #include "core_arena.h"
 #include "core_scratch.h"

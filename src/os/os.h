@@ -79,8 +79,6 @@ struct JOB_Context
 	i32 fiber_id;
 };
 
-typedef struct JOB_Counter JOB_Counter;
-
 // ---
 
 typedef struct OS_Handle OS_Handle;
@@ -289,17 +287,18 @@ struct OS_API
 	   JOBS
 	   ================================================== */
 
-	JOB_Counter *(*JobCounterAlloc)(Arena *arena, u32 initial_count);
-	void         (*JobCounterInc)(JOB_Counter *counter, u32 amount);
-	void         (*JobCounterDec)(JOB_Counter *counter, u32 amount);
-	u32          (*JobCounterValue)(JOB_Counter *counter);
-	void         (*JobYield)(JOB_Counter *counter, u32 value);
-	void         (*JobKick)(const JOB_Decl *decl, JOB_Counter *counter);
-	void         (*JobBatch)(const JOB_Decl *decls, u32 count, JOB_Counter *counter);
-	void         (*JobFor)(u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size);
-	b32          (*JobIsMainThread)(void);
-	JOB_Context  (*JobGetContext)(void);
-	Arena       *(*JobGetScratch)(Arena * const *conflicts, u32 conflict_count);
+	OS_Handle    (*JobCounterAlloc)   (u32 initial_count);
+	void         (*JobCounterRelease) (OS_Handle handle);
+	void         (*JobCounterInc)     (OS_Handle handle, u32 amount);
+	void         (*JobCounterDec)     (OS_Handle handle, u32 amount);
+	u32          (*JobCounterValue)   (OS_Handle handle);
+	void         (*JobYield)          (OS_Handle handle, u32 value);
+	void         (*JobKick)           (const JOB_Decl *decl,             OS_Handle counter_handle);
+	void         (*JobBatch)          (const JOB_Decl *decls, u32 count, OS_Handle counter_handle);
+	void         (*JobFor)            (u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size);
+	b32          (*JobIsMainThread)   (void);
+	JOB_Context  (*JobGetContext)     (void);
+	Arena       *(*JobGetScratch)     (Arena * const *conflicts, u32 conflict_count);
 
 	
 	/* ==================================================

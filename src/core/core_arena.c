@@ -18,7 +18,7 @@ internal void
 ArenaRelease(Arena *arena)
 {
 	if (!arena->base)
-		CoreFatal("Arena (%p) attempted to release by null base pointer.", arena);
+		DebugPrintB("Arena (%p) attempted to release by null base pointer.", arena);
 	
 	osapi->VirtualRelease(arena->base);
 }
@@ -56,12 +56,12 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 
 		f32 free_mb = capacity_mb - used_mb;
 
-		CoreFatal("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
-				  arena,
-				  bytes_mb,    bytes,
-				  capacity_mb, arena->capacity,
-				  used_mb,     arena->used,
-				  aligned_mb, free_mb);
+		DebugPrintB("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
+					arena,
+					bytes_mb,    bytes,
+					capacity_mb, arena->capacity,
+					used_mb,     arena->used,
+					aligned_mb, free_mb);
 	}
 
 	if (new_used > arena->committed)
@@ -104,7 +104,7 @@ ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
    	if (arena->used + bytes > arena->capacity)
 	{
-		CoreFatal("Arena %p out of space, attempted to resize by %llu bytes from %llu exceeding capacity of %llu bytes.",
+		DebugPrintB("Arena %p out of space, attempted to resize by %llu bytes from %llu exceeding capacity of %llu bytes.",
 				  arena, bytes, arena->used, arena->capacity);
 	}
 	
@@ -118,7 +118,7 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 
    	if (new_used > arena->capacity)
 	{
-		CoreFatal("Arena %p out of space, attempted to resize to %llu bytes from %llu exceeding capacity of %llu bytes.",
+		DebugPrintB("Arena %p out of space, attempted to resize to %llu bytes from %llu exceeding capacity of %llu bytes.",
 				  arena, new_used, arena->used, arena->capacity);
 	}
 

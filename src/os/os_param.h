@@ -5,13 +5,7 @@
 #define OS_LAYER_MEMORY                Megabytes(512)
 
 // Memory allocated to job system.
-#define JOB_LAYER_MEMORY               Gigabytes(3)
-
-#define JOB_MAX_JOBS_PER_QUEUE         512
-#define JOB_MAX_CONCURRENT_FIBERS      128
-#define JOB_MAX_WORKERS                32
-#define JOB_COUNTER_MAX_WAITING        64
-#define JOB_FIBER_SCRATCH_SIZE         Megabytes(8)
+#define OS_JOB_LAYER_MEMORY               Gigabytes(3)
 
 #define OS_ENGINE_NAME                "Magpie"
 #define OS_DEFAULT_WINDOW_TITLE       "Magpie Demo"

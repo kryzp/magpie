@@ -187,8 +187,8 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
 
-	assets->load_arena_wait_counter = osapi->JobCounterAlloc(arena, 0);
-	assets->async_counter           = osapi->JobCounterAlloc(arena, 0);
+	assets->load_arena_wait_counter = osapi->JobCounterAlloc(0);
+	assets->async_counter           = osapi->JobCounterAlloc(0);
 
 	assets->upload_mutex     = osapi->MutexCreate();
 	assets->dependency_mutex = osapi->MutexCreate();
@@ -231,6 +231,9 @@ AST_Destroy(AST_Assets *assets)
 	{
 		ArenaRelease(&assets->load_arenas[i]);
 	}
+
+	osapi->JobCounterRelease(assets->load_arena_wait_counter);
+	osapi->JobCounterRelease(assets->async_counter);
 	
 	osapi->MutexDestroy   (assets->upload_mutex);
 	osapi->MutexDestroy   (assets->dependency_mutex);
@@ -284,7 +287,7 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 internal b32
 AST_IsLoaded(const AST_Assets *assets, AST_Handle handle)
 {
-	AST_Record *record = AST_GetRecordConst(assets, handle);
+	const AST_Record *record = AST_GetRecordConst(assets, handle);
 
 	if (!record)
 		return false;
@@ -310,12 +313,10 @@ AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
 {
 	AST_Record *record = AST_GetRecord(assets, handle);
 
+	OS_Handle counter = osapi->JobCounterAlloc(0);
+		
 	if (AST_StateNeedsLoad(record->state))
 	{
-		ScratchArena scratch = ScratchBegin(&assets->arena, 1);
-	
-		JOB_Counter *counter = osapi->JobCounterAlloc(scratch.arena, 0);
-
 		AST_Load(assets, handle, type, counter);
 
 		osapi->JobYield(counter, 0);
@@ -327,9 +328,9 @@ AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
 			osapi->JobYield(counter, 0);
 			AST_FlushUploads(assets);
 		}
-	
-		ScratchRelease(&scratch);
 	}
+	
+	osapi->JobCounterRelease(counter);
 }
 
 internal void
@@ -386,7 +387,7 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 }
 
 internal void
-AST_Load(AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter)
+AST_Load(AST_Assets *assets, AST_Handle handle, AST_Type type, OS_Handle counter)
 {
 	AST_Record *r = &assets->records[handle.index];
 	
@@ -471,7 +472,7 @@ AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
 }
 
 internal void
-AST_ResolvePendingDependencies(AST_Assets *assets, JOB_Counter *counter)
+AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 {
 	osapi->MutexLock(assets->dependency_mutex);
 

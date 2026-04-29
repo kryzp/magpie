@@ -1,21 +1,21 @@
 
-global __declspec(thread) JOB_Worker *job_current_worker;
+global __declspec(thread) OS_W32_JOB_Worker *job_current_worker;
 
 internal void
-JOB_SpinModeEnable(JOB_Scheduler *scheduler)
+OS_W32_JOB_SpinModeEnable(OS_W32_JOB_Scheduler *scheduler)
 {
 	osapi->AtomicStoreU32(&scheduler->atomic_spin_mode, true);
 	//osapi->CondVarBroadcast(scheduler->cond_begin);
 }
 
 internal void
-JOB_SpinModeDisable(JOB_Scheduler *scheduler)
+OS_W32_JOB_SpinModeDisable(OS_W32_JOB_Scheduler *scheduler)
 {
 	osapi->AtomicStoreU32(&scheduler->atomic_spin_mode, false);
 }
 
 internal b32
-JOB_IsMainThread(JOB_Scheduler *scheduler)
+OS_W32_JOB_IsMainThread(OS_W32_JOB_Scheduler *scheduler)
 {
 	AssertTrue(job_current_worker);
 	
@@ -28,7 +28,7 @@ JOB_IsMainThread(JOB_Scheduler *scheduler)
  * back to the free fiber pool.
  */
 internal void
-JOB_FiberYield(JOB_Scheduler *scheduler)
+OS_W32_JOB_FiberYield(OS_W32_JOB_Scheduler *scheduler)
 {
 	job_current_worker->current_fiber->finished = false;
 	
@@ -41,19 +41,19 @@ JOB_FiberYield(JOB_Scheduler *scheduler)
  * back to the free fiber pool for use later.
  */
 internal void
-JOB_FiberCompleted(JOB_Scheduler *scheduler)
+OS_W32_JOB_FiberCompleted(OS_W32_JOB_Scheduler *scheduler)
 {
 	job_current_worker->current_fiber->finished = true;
 	
 	osapi->SwitchToFiber(job_current_worker->fiber_handle);
 }
 
-internal JOB_Fiber *
-JOB_FiberFetchFree(JOB_Scheduler *scheduler)
+internal OS_W32_JOB_Fiber *
+OS_W32_JOB_FiberFetchFree(OS_W32_JOB_Scheduler *scheduler)
 {
 	osapi->SpinLockAcquire(&scheduler->fiber_pool_spinlock);
  
-	JOB_Fiber *fiber = scheduler->fiber_pool_head;
+	OS_W32_JOB_Fiber *fiber = scheduler->fiber_pool_head;
 	
 	if (fiber)
 		scheduler->fiber_pool_head = fiber->next_free;
@@ -67,7 +67,7 @@ JOB_FiberFetchFree(JOB_Scheduler *scheduler)
 }
 
 internal void
-JOB_FiberReturn(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
+OS_W32_JOB_FiberReturn(OS_W32_JOB_Scheduler *scheduler, OS_W32_JOB_Fiber *fiber)
 {
 	fiber->EntryPoint = NULL;
 	fiber->param = NULL;
@@ -84,7 +84,7 @@ JOB_FiberReturn(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 }
 
 internal OS_Handle
-JOB_GetCurrentFiberHandle(JOB_Scheduler *scheduler)
+OS_W32_JOB_GetCurrentFiberHandle(OS_W32_JOB_Scheduler *scheduler)
 {
 	if (job_current_worker && job_current_worker->current_fiber)
 		return job_current_worker->current_fiber->handle;
@@ -92,12 +92,12 @@ JOB_GetCurrentFiberHandle(JOB_Scheduler *scheduler)
 		return OS_HandleNull();
 }
 
-internal JOB_Request *
-JOB_TryGetRequest(JOB_Scheduler *scheduler)
+internal OS_W32_JOB_Request *
+OS_W32_JOB_TryGetRequest(OS_W32_JOB_Scheduler *scheduler)
 {
-	if (JOB_IsMainThread(scheduler))
+	if (OS_W32_JOB_IsMainThread(scheduler))
 	{
-		JOB_Queue *mtq = &scheduler->main_thread_queue;
+		OS_W32_JOB_Queue *mtq = &scheduler->main_thread_queue;
 		
 		if (mtq->atomic_added_task_count > mtq->atomic_taken_task_count)
 		{
@@ -106,11 +106,11 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 			u32 t = osapi->AtomicLoadU32(&mtq->atomic_taken_task_count);
 			u32 a = osapi->AtomicLoadU32(&mtq->atomic_added_task_count);
  
-			JOB_Request *request = NULL;
+			OS_W32_JOB_Request *request = NULL;
 		
 			if (a > t)
 			{
-				request = &mtq->requests[t % JOB_MAX_JOBS_PER_QUEUE];
+				request = &mtq->requests[t % OS_W32_JOB_MAX_JOBS_PER_QUEUE];
 				mtq->atomic_taken_task_count = t + 1;
 			}
 
@@ -123,7 +123,7 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 	
 	for (i32 i = JOB_Priority_COUNT - 1; i >= 0; i--)
 	{
-		JOB_Queue *queue = &scheduler->queues[i];
+		OS_W32_JOB_Queue *queue = &scheduler->queues[i];
 		
 		if (queue->atomic_added_task_count <= queue->atomic_taken_task_count)
 			continue;
@@ -133,11 +133,11 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 		u32 t = osapi->AtomicLoadU32(&queue->atomic_taken_task_count);
 		u32 a = osapi->AtomicLoadU32(&queue->atomic_added_task_count);
  
-		JOB_Request *request = NULL;
+		OS_W32_JOB_Request *request = NULL;
 		
 		if (a > t)
 		{
-			request = &queue->requests[t % JOB_MAX_JOBS_PER_QUEUE];
+			request = &queue->requests[t % OS_W32_JOB_MAX_JOBS_PER_QUEUE];
 			queue->atomic_taken_task_count = t + 1;
 		}
 
@@ -150,12 +150,12 @@ JOB_TryGetRequest(JOB_Scheduler *scheduler)
 	return NULL;
 }
 
-internal JOB_Fiber *
-JOB_TryGetWaitingFiber(JOB_Scheduler *scheduler)
+internal OS_W32_JOB_Fiber *
+OS_W32_JOB_TryGetWaitingFiber(OS_W32_JOB_Scheduler *scheduler)
 {
 	for (i32 i = JOB_Priority_COUNT - 1; i >= 0; i--)
 	{
-		JOB_Queue *queue = &scheduler->queues[i];
+		OS_W32_JOB_Queue *queue = &scheduler->queues[i];
  
 		if (queue->atomic_added_waiting_count <= queue->atomic_taken_waiting_count)
 			continue;
@@ -165,11 +165,11 @@ JOB_TryGetWaitingFiber(JOB_Scheduler *scheduler)
 		u32 t = osapi->AtomicLoadU32(&queue->atomic_taken_waiting_count);
 		u32 a = osapi->AtomicLoadU32(&queue->atomic_added_waiting_count);
  
-		JOB_Fiber *fiber = NULL;
+		OS_W32_JOB_Fiber *fiber = NULL;
 		
 		if (a > t)
 		{
-			fiber = queue->waiting[t % JOB_MAX_JOBS_PER_QUEUE];
+			fiber = queue->waiting[t % OS_W32_JOB_MAX_JOBS_PER_QUEUE];
 			queue->atomic_taken_waiting_count = t + 1;
 		}
 
@@ -183,11 +183,11 @@ JOB_TryGetWaitingFiber(JOB_Scheduler *scheduler)
 }
 
 internal b32
-JOB_RequestAvailable(JOB_Scheduler *scheduler)
+OS_W32_JOB_RequestAvailable(OS_W32_JOB_Scheduler *scheduler)
 {
 	for (u32 i = 0; i < JOB_Priority_COUNT; i++)
 	{
-		JOB_Queue *queue = &scheduler->queues[i];
+		OS_W32_JOB_Queue *queue = &scheduler->queues[i];
 		
 		if (osapi->AtomicLoadU32(&queue->atomic_added_task_count) > osapi->AtomicLoadU32(&queue->atomic_taken_task_count))
 			return true;
@@ -200,7 +200,7 @@ JOB_RequestAvailable(JOB_Scheduler *scheduler)
 }
 
 internal void
-JOB_Init(JOB_Scheduler *scheduler, LOG_Channel log_channel)
+OS_W32_JOB_Init(OS_W32_JOB_Scheduler *scheduler, LOG_Channel log_channel)
 {
 	MemZeroStruct(scheduler);
 
@@ -211,29 +211,29 @@ JOB_Init(JOB_Scheduler *scheduler, LOG_Channel log_channel)
  
 	osapi->AtomicStoreU32(&scheduler->atomic_running, true);
  
-	for (u32 i = 0; i < JOB_MAX_CONCURRENT_FIBERS; i++)
+	for (u32 i = 0; i < OS_W32_JOB_MAX_CONCURRENT_FIBERS; i++)
 	{
-		JOB_Fiber *fiber = &scheduler->atomic_fiber_storage[i];
+		OS_W32_JOB_Fiber *fiber = &scheduler->atomic_fiber_storage[i];
 
 		// This is purely an aesthetic thing but since we push
 		// the fibers to the front, the ones at the front get
 		// selected first so we assign id's in reverse so at
 		// the end the "front" fiber has id 0, then 1, etc...
-		fiber->id = JOB_MAX_CONCURRENT_FIBERS - i - 1;
+		fiber->id = OS_W32_JOB_MAX_CONCURRENT_FIBERS - i - 1;
 
-		fiber->handle = osapi->FiberCreate(0, JOB_FiberEntry, scheduler);
+		fiber->handle = osapi->FiberCreate(0, OS_W32_JOB_FiberEntry, scheduler);
  
-		for (u32 j = 0; j < JOB_FIBER_SCRATCH_RING_SIZE; j++)
-			fiber->scratch_arenas[j] = ArenaAlloc(JOB_FIBER_SCRATCH_SIZE);
+		for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
+			fiber->scratch_arenas[j] = ArenaAlloc(OS_W32_JOB_FIBER_SCRATCH_SIZE);
 
 		// Give the fiber to the freelist.
-		JOB_FiberReturn(scheduler, fiber);
+		OS_W32_JOB_FiberReturn(scheduler, fiber);
 	}
 
 	// Try to leave at least one free core available.
 	const u32 desired_workers = MaxValue(1, osapi->GetNumCores() - 1);
 
-	scheduler->worker_count = MinValue(desired_workers, JOB_MAX_WORKERS);
+	scheduler->worker_count = MinValue(desired_workers, OS_W32_JOB_MAX_WORKERS);
 
 	scheduler->workers[0].id = 0;
 	scheduler->workers[0].thread_handle = osapi->GetCurrentThreadHandle();
@@ -241,9 +241,9 @@ JOB_Init(JOB_Scheduler *scheduler, LOG_Channel log_channel)
  
 	for (u32 i = 1; i < scheduler->worker_count; i++)
 	{
-		JOB_Worker *worker = &scheduler->workers[i];
+		OS_W32_JOB_Worker *worker = &scheduler->workers[i];
 		worker->id = i;
-		worker->thread_handle = osapi->ThreadCreate(JOB_SchedulerThreadEntry, worker);
+		worker->thread_handle = osapi->ThreadCreate(OS_W32_JOB_SchedulerThreadEntry, worker);
 		worker->scheduler = scheduler;
 	}
 
@@ -254,7 +254,7 @@ JOB_Init(JOB_Scheduler *scheduler, LOG_Channel log_channel)
 }
 
 internal void
-JOB_Shutdown(JOB_Scheduler *scheduler)
+OS_W32_JOB_Shutdown(OS_W32_JOB_Scheduler *scheduler)
 {
 	osapi->TLSFree(scheduler->tls_worker_slot);
 	
@@ -263,9 +263,9 @@ JOB_Shutdown(JOB_Scheduler *scheduler)
 		osapi->ThreadJoin(scheduler->workers[i].thread_handle);
  
 	// Release all fibers.
-	for (u32 i = 0; i < JOB_MAX_CONCURRENT_FIBERS; i++)
+	for (u32 i = 0; i < OS_W32_JOB_MAX_CONCURRENT_FIBERS; i++)
 	{
-		for (u32 j = 0; j < JOB_FIBER_SCRATCH_RING_SIZE; j++)
+		for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
 			ArenaRelease(&scheduler->atomic_fiber_storage[i].scratch_arenas[j]);
 
 		osapi->FiberDelete(scheduler->atomic_fiber_storage[i].handle);
@@ -279,10 +279,10 @@ JOB_Shutdown(JOB_Scheduler *scheduler)
 }
 
 internal void
-JOB_SchedulerThreadEntry(void *param)
+OS_W32_JOB_SchedulerThreadEntry(void *param)
 {
-	JOB_Worker *worker = param;
-	JOB_Scheduler *scheduler = worker->scheduler;
+	OS_W32_JOB_Worker *worker = param;
+	OS_W32_JOB_Scheduler *scheduler = worker->scheduler;
 
 	osapi->TLSSet(scheduler->tls_worker_slot, worker);
 
@@ -295,7 +295,7 @@ JOB_SchedulerThreadEntry(void *param)
 	while (osapi->AtomicLoadU32(&scheduler->atomic_running))
 	{
 		// Check for a fiber to resume.
-		JOB_Fiber *waiting_fiber = JOB_TryGetWaitingFiber(scheduler);
+		OS_W32_JOB_Fiber *waiting_fiber = OS_W32_JOB_TryGetWaitingFiber(scheduler);
 		if (waiting_fiber)
 		{
 			worker->current_fiber = waiting_fiber;
@@ -303,7 +303,7 @@ JOB_SchedulerThreadEntry(void *param)
 			osapi->SwitchToFiber(waiting_fiber->handle);
  
 			if (worker->current_fiber->finished)
-				JOB_FiberReturn(scheduler, worker->current_fiber);
+				OS_W32_JOB_FiberReturn(scheduler, worker->current_fiber);
 			
 			worker->current_fiber = NULL;
 
@@ -311,10 +311,10 @@ JOB_SchedulerThreadEntry(void *param)
 		}
  
 		// Check for a new job to start.
-		JOB_Request *request = JOB_TryGetRequest(scheduler);
+		OS_W32_JOB_Request *request = OS_W32_JOB_TryGetRequest(scheduler);
 		if (request)
 		{
-			JOB_Fiber *fiber = JOB_FiberFetchFree(scheduler);
+			OS_W32_JOB_Fiber *fiber = OS_W32_JOB_FiberFetchFree(scheduler);
 			
 			if (!fiber)
 			{
@@ -334,7 +334,7 @@ JOB_SchedulerThreadEntry(void *param)
 			osapi->SwitchToFiber(fiber->handle);
  
 			if (worker->current_fiber->finished)
-				JOB_FiberReturn(scheduler, worker->current_fiber);
+				OS_W32_JOB_FiberReturn(scheduler, worker->current_fiber);
 
 			worker->current_fiber = NULL;
 
@@ -343,14 +343,14 @@ JOB_SchedulerThreadEntry(void *param)
  
 		// Wait until we have more work to do...
 		
-		b32 is_main_thread = JOB_IsMainThread(scheduler);
+		b32 is_main_thread = OS_W32_JOB_IsMainThread(scheduler);
 		
 		if (is_main_thread || osapi->AtomicLoadU32(&scheduler->atomic_spin_mode))
 		{
 			// High-Perf Spin Mode.
 			// Main thread always goes here because it can pump messages.
 			
-			while (!JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
+			while (!OS_W32_JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
 			{
 				if (scheduler->OnMainThreadIdle && is_main_thread)
 					scheduler->OnMainThreadIdle(scheduler->main_thread_idle_ctx);
@@ -368,11 +368,11 @@ JOB_SchedulerThreadEntry(void *param)
 			//
 			// Main thread can't sleep on condition variable
 			// because it must keep pumping messages.
-			if (!JOB_IsMainThread(scheduler))
+			if (!OS_W32_JOB_IsMainThread(scheduler))
 			{	
 				osapi->MutexLock(scheduler->mutex);
 				
-				while (!JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
+				while (!OS_W32_JOB_RequestAvailable(scheduler) && osapi->AtomicLoadU32(&scheduler->atomic_running))
 				{
 					osapi->CondVarWait(scheduler->cond_begin, scheduler->mutex);
 				}
@@ -389,49 +389,49 @@ JOB_SchedulerThreadEntry(void *param)
  * The entry point for all fibers.
  */
 internal void
-JOB_FiberEntry(void *param)
+OS_W32_JOB_FiberEntry(void *param)
 {
-	JOB_Scheduler *scheduler = param;
+	OS_W32_JOB_Scheduler *scheduler = param;
 	
 	for (;;)
 	{
-		JOB_Fiber *f = job_current_worker->current_fiber;
-		JOB_Counter *c = f->counter;
+		OS_W32_JOB_Fiber *f = job_current_worker->current_fiber;
+		OS_W32_JOB_Counter *c = f->counter;
 
 		if (f->EntryPoint)
 			f->EntryPoint(f->param);
 		
 		if (c)
-			JOB_CounterDecrement(scheduler, c, 1);
+			OS_W32_JOB_CounterDecrement(scheduler, c, 1);
 
-		JOB_FiberCompleted(scheduler);
+		OS_W32_JOB_FiberCompleted(scheduler);
 	}
 }
 
 internal void
-JOB_Enter(JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx)
+OS_W32_JOB_Enter(OS_W32_JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx)
 {
 	scheduler->OnMainThreadIdle = OnMainThreadIdle;
 	scheduler->main_thread_idle_ctx = main_thread_idle_ctx;
 	
-	JOB_SchedulerThreadEntry(&scheduler->workers[0]);
+	OS_W32_JOB_SchedulerThreadEntry(&scheduler->workers[0]);
 }
 
 internal void
-JOB_Halt(JOB_Scheduler *scheduler)
+OS_W32_JOB_Halt(OS_W32_JOB_Scheduler *scheduler)
 {
 	osapi->AtomicStoreU32(&scheduler->atomic_running, false);
 	osapi->CondVarBroadcast(scheduler->cond_begin);
 }
 
 internal JOB_Context
-JOB_GetContext(JOB_Scheduler *scheduler)
+OS_W32_JOB_GetContext(OS_W32_JOB_Scheduler *scheduler)
 {
 	JOB_Context ctx = {0};
 	ctx.worker_id = 0;
 	ctx.fiber_id = -1;
 	
-    JOB_Worker *worker = (JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
+    OS_W32_JOB_Worker *worker = (OS_W32_JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
 
 	if (worker)
 	{
@@ -442,29 +442,14 @@ JOB_GetContext(JOB_Scheduler *scheduler)
 	return ctx;
 }
 
-internal JOB_Counter *
-JOB_CounterAlloc(JOB_Scheduler *scheduler, Arena *arena, u32 initial_count)
+internal void
+OS_W32_JOB_CounterInit(OS_W32_JOB_Counter *counter, u32 initial_count)
 {
-	JOB_Counter *counter = ArenaPushArray(arena, JOB_Counter, 1);
 	counter->atomic_count = initial_count;
-	
-	return counter;
 }
 
 internal void
-JOB_CounterLock(JOB_Scheduler *scheduler, JOB_Counter *counter)
-{
-	osapi->SpinLockAcquire(&counter->atomic_spinlock);
-}
-
-internal void
-JOB_CounterUnlock(JOB_Scheduler *scheduler, JOB_Counter *counter)
-{
-	osapi->SpinLockRelease(&counter->atomic_spinlock);
-}
-
-internal void
-JOB_CounterIncrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
+OS_W32_JOB_CounterIncrement(OS_W32_JOB_Counter *counter, u32 n)
 {
 	osapi->AtomicAddU32(&counter->atomic_count, n);
 }
@@ -474,9 +459,9 @@ JOB_CounterIncrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
  * waiting fibers and kick them off.
  */
 internal void
-JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
+OS_W32_JOB_CounterDecrement(OS_W32_JOB_Scheduler *scheduler, OS_W32_JOB_Counter *counter, u32 n)
 {
-	JOB_CounterLock(scheduler, counter);
+	osapi->SpinLockAcquire(&counter->atomic_spinlock);
 
 	u32 atomic_count = osapi->AtomicLoadU32(&counter->atomic_count);
  
@@ -487,19 +472,19 @@ JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
 	atomic_count -= n;
  
 	u32 kick_count = 0;
-	JOB_Fiber *to_kick[JOB_COUNTER_MAX_WAITING] = {0};
+	OS_W32_JOB_Fiber *to_kick[OS_W32_JOB_COUNTER_MAX_WAITING] = {0};
  
 	if (atomic_count == 0 && counter->waiting_count > 0)
 	{
 		kick_count = counter->waiting_count;
-		MemCopy(to_kick, counter->waiting, kick_count * sizeof(JOB_Fiber *));
+		MemCopy(to_kick, counter->waiting, kick_count * sizeof(OS_W32_JOB_Fiber *));
 		counter->waiting_count = 0;
 	}
  
-	JOB_CounterUnlock(scheduler, counter);
+	osapi->SpinLockRelease(&counter->atomic_spinlock);
  
 	for (u32 i = 0; i < kick_count; i++)
-		JOB_PushWaitingFiber(scheduler, to_kick[i]);
+		OS_W32_JOB_PushWaitingFiber(scheduler, to_kick[i]);
  
 	if (kick_count > 0)
 	{
@@ -510,15 +495,15 @@ JOB_CounterDecrement(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 n)
 }
 
 internal u32
-JOB_CounterValue(JOB_Scheduler *scheduler, JOB_Counter *counter)
+OS_W32_JOB_CounterValue(OS_W32_JOB_Counter *counter)
 {
 	return osapi->AtomicLoadU32(&counter->atomic_count);
 }
 
 internal void
-JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
+OS_W32_JOB_Push(OS_W32_JOB_Scheduler *scheduler, const OS_W32_JOB_Request *request)
 {
-	JOB_Queue *queue = &scheduler->queues[request->priority];
+	OS_W32_JOB_Queue *queue = &scheduler->queues[request->priority];
 
 	if (request->flags & JOB_Flag_MainThreadOnly)
 		queue = &scheduler->main_thread_queue;
@@ -530,7 +515,7 @@ JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 		u32 t = osapi->AtomicLoadU32(&queue->atomic_taken_task_count);
 		u32 a = osapi->AtomicLoadU32(&queue->atomic_added_task_count);
  
-		if ((a - t) >= JOB_MAX_JOBS_PER_QUEUE)
+		if ((a - t) >= OS_W32_JOB_MAX_JOBS_PER_QUEUE)
 		{
 			// Queue is full.
 			// Release and spin until space opens up.
@@ -541,7 +526,7 @@ JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 		}
 		else
 		{
-			queue->requests[a % JOB_MAX_JOBS_PER_QUEUE] = *request;
+			queue->requests[a % OS_W32_JOB_MAX_JOBS_PER_QUEUE] = *request;
 			queue->atomic_added_task_count = a + 1;
 
 			osapi->SpinLockRelease(&queue->atomic_spinlock);
@@ -552,9 +537,9 @@ JOB_Push(JOB_Scheduler *scheduler, const JOB_Request *request)
 }
 
 internal void
-JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
+OS_W32_JOB_PushWaitingFiber(OS_W32_JOB_Scheduler *scheduler, OS_W32_JOB_Fiber *fiber)
 {
-	JOB_Queue *queue = &scheduler->queues[fiber->priority];
+	OS_W32_JOB_Queue *queue = &scheduler->queues[fiber->priority];
  
 	for (;;)
 	{
@@ -563,7 +548,7 @@ JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 		u32 t = osapi->AtomicLoadU32(&queue->atomic_taken_waiting_count);
 		u32 a = osapi->AtomicLoadU32(&queue->atomic_added_waiting_count);
  
-		if ((a - t) >= JOB_MAX_JOBS_PER_QUEUE)
+		if ((a - t) >= OS_W32_JOB_MAX_JOBS_PER_QUEUE)
 		{
 			// Queue is full.
 			// Release and spin until space opens up.
@@ -574,7 +559,7 @@ JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 		}
 		else
 		{
-			queue->waiting[a % JOB_MAX_JOBS_PER_QUEUE] = fiber;
+			queue->waiting[a % OS_W32_JOB_MAX_JOBS_PER_QUEUE] = fiber;
 			queue->atomic_added_waiting_count = a + 1;
 			
 			osapi->SpinLockRelease(&queue->atomic_spinlock);
@@ -585,42 +570,42 @@ JOB_PushWaitingFiber(JOB_Scheduler *scheduler, JOB_Fiber *fiber)
 }
 
 internal void
-JOB_Yield(JOB_Scheduler *scheduler, JOB_Counter *counter, u32 value)
+OS_W32_JOB_Yield(OS_W32_JOB_Scheduler *scheduler, OS_W32_JOB_Counter *counter, u32 value)
 {
 	for (;;)
 	{
-		JOB_CounterLock(scheduler, counter);
+		osapi->SpinLockAcquire(&counter->atomic_spinlock);
  
 		if (counter->atomic_count == value)
 		{
-			JOB_CounterUnlock(scheduler, counter);
+			osapi->SpinLockRelease(&counter->atomic_spinlock);
 			return;
 		}
  
-		AssertTrue(counter->waiting_count < JOB_COUNTER_MAX_WAITING);
+		AssertTrue(counter->waiting_count < OS_W32_JOB_COUNTER_MAX_WAITING);
 		
 		counter->waiting[counter->waiting_count++] = job_current_worker->current_fiber;
  
-		JOB_CounterUnlock(scheduler, counter);
+		osapi->SpinLockRelease(&counter->atomic_spinlock);
  
-		JOB_FiberYield(scheduler);
+		OS_W32_JOB_FiberYield(scheduler);
 	}
 }
 
 internal void
-JOB_Kick(JOB_Scheduler *scheduler, const JOB_Decl *decl, JOB_Counter *counter)
+OS_W32_JOB_Kick(OS_W32_JOB_Scheduler *scheduler, const JOB_Decl *decl, OS_W32_JOB_Counter *counter)
 {
 	if (counter)
-		JOB_CounterIncrement(scheduler, counter, 1);
+		OS_W32_JOB_CounterIncrement(counter, 1);
  
-	JOB_Request request = {0};
-	request.EntryPoint  = decl->EntryPoint;
-	request.param       = decl->param;
-	request.priority    = decl->priority;
-	request.flags       = decl->flags;
-	request.counter     = counter;
+	OS_W32_JOB_Request request = {0};
+	request.EntryPoint = decl->EntryPoint;
+	request.param      = decl->param;
+	request.priority   = decl->priority;
+	request.flags      = decl->flags;
+	request.counter    = counter;
  
-	JOB_Push(scheduler, &request);
+	OS_W32_JOB_Push(scheduler, &request);
 
 	osapi->MutexLock(scheduler->mutex);
 	osapi->CondVarSignal(scheduler->cond_begin);
@@ -628,21 +613,21 @@ JOB_Kick(JOB_Scheduler *scheduler, const JOB_Decl *decl, JOB_Counter *counter)
 }
 
 internal void
-JOB_Batch(JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, JOB_Counter *counter)
+OS_W32_JOB_Batch(OS_W32_JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, OS_W32_JOB_Counter *counter)
 {
 	if (counter)
-		JOB_CounterIncrement(scheduler, counter, count);
+		OS_W32_JOB_CounterIncrement(counter, count);
  
 	for (u32 i = 0; i < count; i++)
 	{
-		JOB_Request request = {0};
-		request.EntryPoint  = decls[i].EntryPoint;
-		request.param       = decls[i].param;
-		request.priority    = decls[i].priority;
-		request.flags       = decls[i].flags;
-		request.counter     = counter;
+		OS_W32_JOB_Request request = {0};
+		request.EntryPoint = decls[i].EntryPoint;
+		request.param      = decls[i].param;
+		request.priority   = decls[i].priority;
+		request.flags      = decls[i].flags;
+		request.counter    = counter;
  
-		JOB_Push(scheduler, &request);
+		OS_W32_JOB_Push(scheduler, &request);
 	}
  
 	osapi->MutexLock(scheduler->mutex);
@@ -650,24 +635,24 @@ JOB_Batch(JOB_Scheduler *scheduler, const JOB_Decl *decls, u32 count, JOB_Counte
 	osapi->MutexUnlock(scheduler->mutex);
 }
 
-typedef struct JOB_ParallelForParam JOB_ParallelForParam;
-struct JOB_ParallelForParam
+typedef struct OS_W32_JOB_ParallelForParam OS_W32_JOB_ParallelForParam;
+struct OS_W32_JOB_ParallelForParam
 {
 	JOB_EntryForFn *Inner;
 	u32 base_index;
 	u32 loop_size;
 };
 
-JOB_ENTRY_POINT_DEF(JOB_ParallelForBatchEntry)
+JOB_ENTRY_POINT_DEF(OS_W32_JOB_ParallelForBatchEntry)
 {
-	JOB_ParallelForParam *p = param;
+	OS_W32_JOB_ParallelForParam *p = param;
 	
 	for (u32 i = 0; i < p->loop_size; i++)
 		p->Inner(p->base_index + i);
 }
 
 internal void
-JOB_For(JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size)
+OS_W32_JOB_For(OS_W32_JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size)
 {
 	if (count == 0 || batch_size == 0)
 		return;
@@ -676,8 +661,8 @@ JOB_For(JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority pr
  
 	ScratchArena scratch = ScratchBegin(NULL, 0);
  
-	JOB_ParallelForParam *params = ArenaPushArray(scratch.arena, JOB_ParallelForParam, job_count);
-	JOB_Decl             *decls  = ArenaPushArray(scratch.arena, JOB_Decl,             job_count);
+	OS_W32_JOB_ParallelForParam *params = ArenaPushArray(scratch.arena, OS_W32_JOB_ParallelForParam, job_count);
+	JOB_Decl                    *decls  = ArenaPushArray(scratch.arena, JOB_Decl,                    job_count);
  
 	for (u32 i = 0; i < job_count; i++)
 	{
@@ -691,23 +676,23 @@ JOB_For(JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, JOB_Priority pr
 		params[i].base_index = base_index;
 		params[i].loop_size = loop_size;
  
-		decls[i].EntryPoint	= JOB_ParallelForBatchEntry;
+		decls[i].EntryPoint	= OS_W32_JOB_ParallelForBatchEntry;
 		decls[i].param = &params[i];
 		decls[i].priority = priority;
 		decls[i].flags = JOB_Flag_None;
 	}
  
-	JOB_Counter counter = {0};
-	JOB_Batch(scheduler, decls, job_count, &counter);
-	JOB_Yield(scheduler, &counter, 0);
+	OS_W32_JOB_Counter counter = {0};
+	OS_W32_JOB_Batch(scheduler, decls, job_count, &counter);
+	OS_W32_JOB_Yield(scheduler, &counter, 0);
  
 	ScratchRelease(&scratch);
 }
 
 internal Arena *
-JOB_GetScratch(JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count)
+OS_W32_JOB_GetScratch(OS_W32_JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count)
 {
-	JOB_Fiber *fiber = job_current_worker->current_fiber;
+	OS_W32_JOB_Fiber *fiber = job_current_worker->current_fiber;
 	
 	Arena *arena = NULL;
 	Arena *ring = fiber->scratch_arenas;

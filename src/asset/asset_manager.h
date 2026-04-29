@@ -75,7 +75,7 @@ struct AST_Assets
 	AST_MountPoint mount_points[8];
 	u32 mount_point_count;
 
-	JOB_Counter *async_counter;
+	OS_Handle async_counter;
 
 	// todo: move mutex into upload queue
 	AST_UploadQueue upload_queue;
@@ -93,7 +93,7 @@ struct AST_Assets
 	u32 free_load_arenas[AST_LOAD_ARENA_COUNT];
 	u32 free_load_arena_count;
 	u32 load_arena_spinlock;
-	JOB_Counter *load_arena_wait_counter;
+	OS_Handle load_arena_wait_counter;
 };
 
 
@@ -153,12 +153,12 @@ internal b32 AST_IsValid   (const AST_Assets *assets, AST_Handle handle);
 internal void AST_LoadNow     (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_LoadAsync   (AST_Assets *assets, AST_Handle handle, AST_Type type);
 internal void AST_ReloadAsync (AST_Assets *assets, AST_Handle handle, AST_Type type);
-internal void AST_Load        (AST_Assets *assets, AST_Handle handle, AST_Type type, JOB_Counter *counter);
+internal void AST_Load        (AST_Assets *assets, AST_Handle handle, AST_Type type, OS_Handle counter);
 
 internal void AST_NotifyDependents       (AST_Assets *assets, AST_Handle handle);
 internal void AST_NotifyDependentsNoLock (AST_Assets *assets, AST_Handle handle, b32 failed);
 
-internal void AST_ResolvePendingDependencies(AST_Assets *assets, JOB_Counter *counter);
+internal void AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter);
 
 
 typedef struct AST_LoadJobParam AST_LoadJobParam;

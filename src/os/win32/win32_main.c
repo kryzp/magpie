@@ -35,46 +35,36 @@
 #include "os/os_inc.h"
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
-#include "os/log/log_inc.h"
-#include "os/job/job_inc.h"
+
+#include "win32_log.h"
+#include "win32_job.h"
 
 global OS_API *osapi = NULL;
-
-#define DebugLogEx(level, channel, ...) osapi->Log((level), (channel), __FILE__, __LINE__, __func__, __VA_ARGS__)
-
-#define DebugLogT(channel, ...) DebugLogEx(LOG_Level_Trace, (channel), __VA_ARGS__)
-#define DebugLogD(channel, ...) DebugLogEx(LOG_Level_Debug, (channel), __VA_ARGS__)
-#define DebugLogI(channel, ...) DebugLogEx(LOG_Level_Info,  (channel), __VA_ARGS__)
-#define DebugLogW(channel, ...) DebugLogEx(LOG_Level_Warn,  (channel), __VA_ARGS__)
-#define DebugLogE(channel, ...) DebugLogEx(LOG_Level_Error, (channel), __VA_ARGS__)
-#define DebugLogB(channel, ...) DebugLogEx(LOG_Level_Break, (channel), __VA_ARGS__)
-
-// TODO: Kinda hacky, not a fan of this!!
-#define DebugPrintT(...) DebugLogT(LOG_ChannelNull(), __VA_ARGS__)
-#define DebugPrintD(...) DebugLogD(LOG_ChannelNull(), __VA_ARGS__)
-#define DebugPrintI(...) DebugLogI(LOG_ChannelNull(), __VA_ARGS__)
-#define DebugPrintW(...) DebugLogW(LOG_ChannelNull(), __VA_ARGS__)
-#define DebugPrintE(...) DebugLogE(LOG_ChannelNull(), __VA_ARGS__)
-#define DebugPrintB(...) DebugLogB(LOG_ChannelNull(), __VA_ARGS__)
 
 #include "core/core_inc.c"
 #include "input/input_inc.c"
 #include "os/os_inc.c"
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
-#include "os/log/log_inc.c"
-#include "os/job/job_inc.c"
+
+#include "win32_log.c"
+#include "win32_job.c"
 
 typedef struct OS_W32_Object OS_W32_Object;
 struct OS_W32_Object
 {
 	OS_W32_Object *next_free;
-	
-	// Regular win32 CreateMutex(...) is more heavy-duty for sync
-	// between multiple processes, so just use this instead.
-	CRITICAL_SECTION cs; 
 
-	CONDITION_VARIABLE cv;
+	union
+	{
+		// Regular win32 CreateMutex(...) is more heavy-duty for sync
+		// between multiple processes, so just use this instead.
+		CRITICAL_SECTION cs;
+
+		CONDITION_VARIABLE cv;
+
+		OS_W32_JOB_Counter counter;
+	};
 };
 
 typedef struct OS_W32_Code OS_W32_Code;
@@ -107,9 +97,9 @@ struct OS_W32_State
 
 	Arena platform_layer_arena;
 
-	JOB_Scheduler scheduler;
+	OS_W32_JOB_Scheduler scheduler;
 
-	LOG_Logger logger;
+	OS_W32_LOG_Logger logger;
 	LOG_Channel log_channel;
 
 	OS_W32_Object *free_objects;
@@ -250,20 +240,20 @@ OS_W32_Log(LOG_Level level, LOG_Channel channel,
 {
 	va_list args;
 	va_start(args, fmt);
-	LOG_WriteV(&win32_st.logger, level, channel, file, line, fn, fmt, args);
+	OS_W32_LOG_WriteV(&win32_st.logger, level, channel, file, line, fn, fmt, args);
 	va_end(args);
 }
 
 internal LOG_Channel
 OS_W32_LogOpenChannel(String8 name)
 {
-	return LOG_OpenChannel(&win32_st.logger, name);
+	return OS_W32_LOG_OpenChannel(&win32_st.logger, name);
 }
 
 internal void
 OS_W32_LogCloseChannel(LOG_Channel channel)
 {
-	LOG_CloseChannel(&win32_st.logger, channel);
+	OS_W32_LOG_CloseChannel(&win32_st.logger, channel);
 }
 
 internal void
@@ -949,70 +939,101 @@ OS_W32_DestroyImGui(void)
 	*/
 }
 
-internal JOB_Counter *
-OS_W32_JobCounterAlloc(Arena *arena, u32 initial_count)
+internal OS_Handle
+OS_W32_JobCounterAlloc(u32 initial_count)
 {
-	return JOB_CounterAlloc(&win32_st.scheduler, arena, initial_count);
+	OS_W32_Object *counter = OS_W32_AllocObject();
+
+	OS_W32_JOB_CounterInit(&counter->counter, initial_count);
+	
+	OS_Handle handle = { counter };
+	return handle;
 }
 
 internal void
-OS_W32_JobCounterInc(JOB_Counter *counter, u32 amount)
+OS_W32_JobCounterRelease(OS_Handle handle)
 {
-	JOB_CounterIncrement(&win32_st.scheduler, counter, amount);
+	OS_W32_Object *obj = handle.value;
+	
+	OS_W32_ReturnObject(obj);
 }
 
 internal void
-OS_W32_JobCounterDec(JOB_Counter *counter, u32 amount)
+OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
 {
-	JOB_CounterDecrement(&win32_st.scheduler, counter, amount);
+	OS_W32_Object *obj = handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	OS_W32_JOB_CounterIncrement(counter, amount);
+}
+
+internal void
+OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
+{
+	OS_W32_Object *obj = handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	OS_W32_JOB_CounterDecrement(&win32_st.scheduler, counter, amount);
 }
 
 internal u32
-OS_W32_JobCounterValue(JOB_Counter *counter)
+OS_W32_JobCounterValue(OS_Handle handle)
 {
-	return JOB_CounterValue(&win32_st.scheduler, counter);
+	OS_W32_Object *obj = handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	return OS_W32_JOB_CounterValue(counter);
 }
 
 internal void
-OS_W32_JobYield(JOB_Counter *counter, u32 value)
+OS_W32_JobYield(OS_Handle handle, u32 value)
 {
-	JOB_Yield(&win32_st.scheduler, counter, value);
+	OS_W32_Object *obj = handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	OS_W32_JOB_Yield(&win32_st.scheduler, counter, value);
 }
 
 internal void
-OS_W32_JobKick(const JOB_Decl *decl, JOB_Counter *counter)
+OS_W32_JobKick(const JOB_Decl *decl, OS_Handle counter_handle)
 {
-	JOB_Kick(&win32_st.scheduler, decl, counter);
+	OS_W32_Object *obj = counter_handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	OS_W32_JOB_Kick(&win32_st.scheduler, decl, counter);
 }
 
 internal void
-OS_W32_JobBatch(const JOB_Decl *decls, u32 count, JOB_Counter *counter)
+OS_W32_JobBatch(const JOB_Decl *decls, u32 count, OS_Handle counter_handle)
 {
-	JOB_Batch(&win32_st.scheduler, decls, count, counter);
+	OS_W32_Object *obj = counter_handle.value;
+	OS_W32_JOB_Counter *counter = &obj->counter;
+	
+	OS_W32_JOB_Batch(&win32_st.scheduler, decls, count, counter);
 }
 
 internal void
 OS_W32_JobFor(u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size)
 {
-	JOB_For(&win32_st.scheduler, count, fn, priority, batch_size);
+	OS_W32_JOB_For(&win32_st.scheduler, count, fn, priority, batch_size);
 }
 
 internal b32
 OS_W32_JobIsMainThread(void)
 {
-	return JOB_IsMainThread(&win32_st.scheduler);
+	return OS_W32_JOB_IsMainThread(&win32_st.scheduler);
 }
 
 internal JOB_Context
 OS_W32_JobGetContext(void)
 {
-	return JOB_GetContext(&win32_st.scheduler);
+	return OS_W32_JOB_GetContext(&win32_st.scheduler);
 }
 
 internal Arena *
 OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
 {
-	return JOB_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
+	return OS_W32_JOB_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
 }
 
 internal void
@@ -1118,6 +1139,7 @@ OS_W32_BindAPI(OS_API *api)
 	api->StreamClose                 = OS_W32_StreamClose;
 
 	api->JobCounterAlloc             = OS_W32_JobCounterAlloc;
+	api->JobCounterRelease           = OS_W32_JobCounterRelease;
 	api->JobCounterInc               = OS_W32_JobCounterInc;
 	api->JobCounterDec               = OS_W32_JobCounterDec;
 	api->JobCounterValue             = OS_W32_JobCounterValue;
@@ -1208,7 +1230,7 @@ OS_W32_ProcessEvents(I_State *input_out)
 
 		switch (ev->type) {
 			case SDL_EVENT_QUIT:
-				JOB_Halt(&win32_st.scheduler);
+				OS_W32_JOB_Halt(&win32_st.scheduler);
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
@@ -1318,7 +1340,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 	
 	if (win32_st.code.Tick(win32_st.app, &curr_input_st))
 	{
-		JOB_Halt(&win32_st.scheduler);
+		OS_W32_JOB_Halt(&win32_st.scheduler);
 	}
 	else
 	{
@@ -1327,7 +1349,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		next_frame_job.priority = JOB_Priority_Normal;
 		next_frame_job.flags = JOB_Flag_MainThreadOnly;
 
-		JOB_Kick(&win32_st.scheduler, &next_frame_job, NULL);
+		OS_W32_JOB_Kick(&win32_st.scheduler, &next_frame_job, NULL);
 	}
 }
 
@@ -1340,13 +1362,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 	first_frame_job.priority = JOB_Priority_Normal;
 	first_frame_job.flags = JOB_Flag_MainThreadOnly;
 
-	JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
-}
-
-internal void
-OS_W32_CoreFatalHandler(const char *file, i32 line, const char *fn, const char *msg)
-{
-	OS_W32_Log(LOG_Level_Break, LOG_ChannelNull(), file, line, fn, "%s", msg);
+	OS_W32_JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
 
 i32
@@ -1378,15 +1394,13 @@ main(void)
 
 	OS_W32_BindAPI(&win32_st.api);
 
-	CoreSetFatalHandler(OS_W32_CoreFatalHandler);
-	
 	osapi = &win32_st.api;
 
 	win32_st.platform_layer_arena = ArenaAlloc(OS_LAYER_MEMORY);
 	
-	LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
+	OS_W32_LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
 
-	win32_st.log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("OS/WIN32"));
+	win32_st.log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("OS/WIN32"));
 
 	DebugLogI(win32_st.log_channel, "Initializing ImGui...");
 	
@@ -1400,25 +1414,25 @@ main(void)
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
-	LOG_Channel job_log_channel = LOG_OpenChannel(&win32_st.logger, String8Lit("JOB"));
-	JOB_Init(&win32_st.scheduler, job_log_channel);
+	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("JOB"));
+	OS_W32_JOB_Init(&win32_st.scheduler, job_log_channel);
 
 	JOB_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
 	root_job.priority = JOB_Priority_Normal;
 	root_job.flags = JOB_Flag_MainThreadOnly;
 
-	JOB_Kick(&win32_st.scheduler, &root_job, NULL);
+	OS_W32_JOB_Kick(&win32_st.scheduler, &root_job, NULL);
 	
-	JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
+	OS_W32_JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
 	
 	win32_st.code.Destroy(win32_st.app);
 
-	JOB_Shutdown(&win32_st.scheduler);
+	OS_W32_JOB_Shutdown(&win32_st.scheduler);
 
 	OS_W32_MutexDestroy(win32_st.event_mutex);
 	
-	LOG_Shutdown(&win32_st.logger);
+	OS_W32_LOG_Shutdown(&win32_st.logger);
 
 	ArenaRelease(&win32_st.platform_layer_arena);
 

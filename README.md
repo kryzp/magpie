@@ -99,9 +99,11 @@ Headers exist to document the API from a higher level because it's nice to be ab
 
 
 ### The Layer Organisation
-Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase (for a simple example, `/core/` doesn't have access to `/log/` directly, so it exposes a fatal handler function that we can set to print a log from a higher level).
+Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
 
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level *graphics* operations, but also *assets* such as textures and models (which ultimately also need to use the *graphics* layer). Other layers effectively lie parallel to each other, such *audio* and *rendering*. Entities naturally lie above the core engine systems such as physics and rendering but below higher level things like timelines. The editor needs access to all engine systems so it lies above everything.
+
+It get's a little messy regarding the OS backend, which for depends on layers like `/core/` for utilities like arenas, which ultimately call back to the OS API for allocating memory, but it's just one file pretty much so I'm willing to break the rules there for the sake of making the code easier.
 
 The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 
@@ -216,18 +218,16 @@ Macros follow the naming convention of whatever makes the most sense: if it's me
 ### Cool Stuff
 Interesting files that you might wanna have a look at if you're just starting with the codebase.
 
-- `app`
+- `app` DLL Entry Point
 - `core/core_arena`
 - `core/core_scratch`
-- `os/*`
-- `os/job/*`
-- `os/win32/*`
+- `os/*` OS API
+- `os/win32/*` Job System, Logging and Win32 Platform layer
 - `render/render_graph`
 - `render/render_scene`
 - `asset/asset_manager`
-- `asset/serializer/*`
-- `graphics/graphics_device`
-- `entity/*`
+- `asset/serializer/*` Asset Importers
+- `graphics/graphics_device` Low-Level Vulkan abstraction
 
 
 ## QnA
