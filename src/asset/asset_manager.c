@@ -2,7 +2,7 @@
 internal u64
 AST_FindSchemeSeparator(String8 path)
 {
-	AssertTrue(path.len >= 2);
+	DebugPrintAssert(path.len >= 2, "Path \"%.*s\" too short!", (i32)path.len, path.str);
 	
 	for (u64 i = 0; i < path.len - 2; i++)
 	{
@@ -23,7 +23,7 @@ AST_AllocSlot(AST_Assets *assets)
 	if (assets->free_index_count > 0)
 		return assets->free_indices[--assets->free_index_count];
 
-	AssertTrue(assets->record_count < ArraySize(assets->records));
+	DebugLogAssert(assets->log_channel, assets->record_count < ArraySize(assets->records), "Cannot allocate more asset records, out of space!");
 
 	return assets->record_count++;
 }
@@ -31,7 +31,7 @@ AST_AllocSlot(AST_Assets *assets)
 internal void
 AST_FreeSlot(AST_Assets *assets, u32 index)
 {
-	AssertTrue(assets->free_index_count < ArraySize(assets->free_indices));
+	DebugLogAssert(assets->log_channel, assets->free_index_count < ArraySize(assets->free_indices), "Cannot free more asset records, out of free index space!");
 
 	assets->free_indices[assets->free_index_count] = index;
 	assets->free_index_count++;
@@ -106,7 +106,7 @@ AST_PathMapFind(const AST_Assets *assets, String8 path)
 internal void
 AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
 {
-	AssertTrue(AST_IsValid(assets, handle));
+	DebugLogAssert(assets->log_channel, AST_IsValid(assets, handle), "Asset handle invalid.");
 
 	const u64 hash = HashStr8(path);
 	const u32 mask = AST_MANAGER_MAX_RECORDS - 1;
@@ -248,10 +248,11 @@ internal void
 AST_Mount(AST_Assets *assets, String8 prefix, String8 directory)
 {
 	AssertTrue(directory.len > 0);
+	
 	AssertTrue((directory.str[directory.len - 1] == '/') ||
 			   (directory.str[directory.len - 1] == '\\'));
 	
-	AssertTrue(assets->mount_point_count < ArraySize(assets->mount_points));
+	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
 
 	AST_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
 	mp->prefix    = String8Clone(assets->arena, prefix);

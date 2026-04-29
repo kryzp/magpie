@@ -343,10 +343,12 @@ AppInitRender(App *app)
 
 	AppInitRenderCreateSkyboxMesh(app);
 
-	app->brdf_lut            = GFX_DeviceTextureAlloc2D     (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
-	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128, VK_FORMAT_R32G32B32A32_SFLOAT, 5);
+	const u32 prefilter_mips = 5;
+
+	app->brdf_lut            = GFX_DeviceTextureAlloc2D     (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
+	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 
 	R_CullingInit          (&app->culling,           &app->assets);
 	R_ShadowRendererInit   (&app->shadow_renderer,   &app->graphics_device, &app->assets);
@@ -356,8 +358,9 @@ AppInitRender(App *app)
 	AST_Handle brdf_lut_shader_handle   = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/brdf_lut.slang"),                   AST_Type_Shader);
 	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
 	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
+	AST_Handle prefilter_shader_handle  = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/prefilter_convolution.slang"),      AST_Type_Shader);
 
-	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
 	
 	AST_Handle model_handle = AST_RequireNow(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 
@@ -396,6 +399,7 @@ AppInitRender(App *app)
 	GFX_ShaderKey brdf_lut_shader        = AST_Get(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader.key;
 	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
+	GFX_ShaderKey prefilter_pass_shader  = AST_Get(&app->assets, prefilter_shader_handle,  AST_Type_Shader)->shader.key;
 	
 	GFX_TextureKey hdr_texture_gfx = AST_Get(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 
@@ -448,7 +452,30 @@ AppInitRender(App *app)
 	
 	// Prefilter.
 	{
-		// TODO: add prefilter passes.
+		const u32 mipmap_count = prefilter_mips;
+		
+		for (u32 i = 0; i < mipmap_count; i++)
+		{
+			R_IBLPassPrefilterData *data = ArenaPushArray(&app->frame_arena, R_IBLPassPrefilterData, 1);
+			data->shader             = prefilter_pass_shader;
+			data->sampler            = app->linear_sampler;
+			data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
+			data->capture_transforms = app->cubemap_capture_transform_buffer;
+			data->skybox_mesh        = &app->skybox_mesh;
+			data->roughness          = (f32)i / (f32)(mipmap_count - 1);
+
+			GFX_SubresourceRange range = {0};
+			range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
+			range.base_mip = i;
+			range.mips = 1;
+			range.base_layer = 0;
+			range.layers = 6;
+		
+			R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Prefilter"), R_PassType_Graphics);
+			R_PassSetRecord           (pass, R_IBLPassPrefilterFn, data);
+			R_PassSetMultiViewMask    (pass, 0b111111);
+			R_PassWriteColourEx       (pass, R_GraphImportTexture(&app->graph, app->prefilter_cubemap), NULL, range);
+		}
 	}
 }
 

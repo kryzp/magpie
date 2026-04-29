@@ -44,6 +44,7 @@ struct R_IBLPassPrefilterData
 	GFX_TextureViewKey  env_view;
 	GFX_BufferKey       capture_transforms;
 	const R_Mesh       *skybox_mesh;
+	f32                 roughness;
 };
 
 R_PASS_RECORD_DEF(R_IBLPassPrefilterFn);
