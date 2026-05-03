@@ -1,6 +1,14 @@
 #ifndef RENDER_PASS_DEBUG_H
 #define RENDER_PASS_DEBUG_H
 
+typedef struct R_GPU_DebugObjectDraw R_GPU_DebugObjectDraw;
+struct R_GPU_DebugObjectDraw
+{
+	m4 transform;
+	v4 colour;
+	f32 thickness;
+};
+
 #define R_DEBUG_MAX_DRAWS    65536
 #define R_DEBUG_MAX_BATCHES  64
 
@@ -97,6 +105,7 @@ struct R_DebugRenderer
 
 	R_DebugDrawNode *free_list;
 
+	// sort draw calls into buckets
 	R_DebugDrawNode *depth_enabled  [R_DebugDrawType_COUNT];
 	R_DebugDrawNode *depth_disabled [R_DebugDrawType_COUNT];
 
@@ -117,8 +126,10 @@ struct R_DebugRenderer
    CORE
    ================================================== */
 
-internal void R_DebugRendererInit    (R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets);
-internal void R_DebugRendererDestroy (R_DebugRenderer *dr);
+internal void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets);
+internal void R_DebugRendererDestroy       (R_DebugRenderer *dr);
+
+internal void R_DebugRendererSelect        (R_DebugRenderer *dr);
 
 
 /* ==================================================
@@ -137,47 +148,40 @@ internal void R_DebugRendererRender (R_DebugRenderer *dr,
    INTERFACE
    ================================================== */
 
-internal void R_DebugPushLine    (R_DebugRenderer *dr,
-								  v3 from, v3 to,
-								  v4 colour,
-								  f32 line_width,
-								  f32 duration,
-								  b32 depth_enabled);
-
-internal void R_DebugPushCross    (R_DebugRenderer *dr,
-								   v3 point, f32 size,
-								   v4 colour,
-								   f32 duration,
-								   b32 depth_enabled);
-
-internal void R_DebugPushSphere   (R_DebugRenderer *dr,
-								   v3 centre, f32 radius,
-								   v4 colour,
-								   f32 duration,
-								   b32 depth_enabled);
-
-internal void R_DebugPushCircle   (R_DebugRenderer *dr,
-								   v3 centre, f32 radius, v3 plane_normal,
-								   v4 colour,
-								   f32 duration,
-								   b32 depth_enabled);
-
-internal void R_DebugPushTriangle (R_DebugRenderer *dr,
-								   v3 a, v3 b, v3 c,
+internal void R_DebugPushLine     (v3 from, v3 to,
 								   v4 colour,
 								   f32 line_width,
 								   f32 duration,
 								   b32 depth_enabled);
 
-internal void R_DebugPushAABB     (R_DebugRenderer *dr,
-								   v3 min, v3 max,
+internal void R_DebugPushCross    (v3 point, f32 size,
+								   v4 colour,
+								   f32 duration,
+								   b32 depth_enabled);
+
+internal void R_DebugPushSphere   (v3 centre, f32 radius,
+								   v4 colour,
+								   f32 duration,
+								   b32 depth_enabled);
+
+internal void R_DebugPushCircle   (v3 centre, f32 radius, v3 plane_normal,
+								   v4 colour,
+								   f32 duration,
+								   b32 depth_enabled);
+
+internal void R_DebugPushTriangle (v3 a, v3 b, v3 c,
 								   v4 colour,
 								   f32 line_width,
 								   f32 duration,
 								   b32 depth_enabled);
 
-internal void R_DebugPushOBB      (R_DebugRenderer *dr,
-								   m4 transform, v3 scale,
+internal void R_DebugPushAABB     (v3 min, v3 max,
+								   v4 colour,
+								   f32 line_width,
+								   f32 duration,
+								   b32 depth_enabled);
+
+internal void R_DebugPushOBB      (m4 transform, v3 scale,
 								   v4 colour,
 								   f32 line_width,
 								   f32 duration,

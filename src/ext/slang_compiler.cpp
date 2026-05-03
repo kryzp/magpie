@@ -57,7 +57,7 @@ SLANG_Compile(void *global_session,
 
 	slang::TargetDesc target_desc = {};
 	target_desc.format = SLANG_SPIRV;
-	target_desc.profile = gs->findProfile("glsl_460");
+	target_desc.profile = gs->findProfile("spirv_1_5");
 	target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
 	slang::CompilerOptionEntry options[2] = {};
@@ -106,7 +106,11 @@ SLANG_Compile(void *global_session,
 	if (entry_point_count > SLANG_MAX_STAGES)
 	{
 		if (log_fn)
-			log_fn("EntryPoints", source_path, "Too many entry points (max 8).", user_data);
+		{
+			char fmt[512];
+			snprintf(fmt, sizeof(fmt), "Too many entry points (max %u).", SLANG_MAX_STAGES);
+			log_fn("EntryPoints", source_path, fmt, user_data);
+		}
 
 		return result;
 	}

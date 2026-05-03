@@ -328,60 +328,60 @@ GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, GFX_TextureKey texture)
 	barrier.subresourceRange.levelCount = 1;
 
 	for (u32 i = 1; i < gfx_texture->mipmap_count; i++)
+	{
+		barrier.subresourceRange.baseMipLevel = i - 1;
+
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+
+		GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &barrier);
+
+		for (u32 face = 0; face < gfx_texture->layer_count; face++)
 		{
-			barrier.subresourceRange.baseMipLevel = i - 1;
+			i32 src_mip_width  = (i32)gfx_texture->width  >> (i - 1);
+			i32 src_mip_height = (i32)gfx_texture->height >> (i - 1);
+			i32 dst_mip_width  = (i32)gfx_texture->width  >> (i - 0);
+			i32 dst_mip_height = (i32)gfx_texture->height >> (i - 0);
 
-			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			VkImageBlit2 blit = {0};
+			blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
 
-			barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+			blit.srcOffsets[0] = (VkOffset3D) { 0, 0, 0 };
+			blit.srcOffsets[1] = (VkOffset3D) { src_mip_width, src_mip_height, 1 };
 
-			barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
-			barrier.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+			blit.dstOffsets[0] = (VkOffset3D) { 0, 0, 0 };
+			blit.dstOffsets[1] = (VkOffset3D) { dst_mip_width, dst_mip_height, 1 };
 
-			GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &barrier);
+			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.srcSubresource.mipLevel = i - 1;
+			blit.srcSubresource.baseArrayLayer = face;
+			blit.srcSubresource.layerCount = 1;
 
-			for (u32 face = 0; face < gfx_texture->layer_count; face++)
-				{
-					i32 src_mip_width  = (i32)gfx_texture->width  >> (i - 1);
-					i32 src_mip_height = (i32)gfx_texture->height >> (i - 1);
-					i32 dst_mip_width  = (i32)gfx_texture->width  >> (i - 0);
-					i32 dst_mip_height = (i32)gfx_texture->height >> (i - 0);
+			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.dstSubresource.mipLevel = i;
+			blit.dstSubresource.baseArrayLayer = face;
+			blit.dstSubresource.layerCount = 1;
 
-					VkImageBlit2 blit = {0};
-					blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
-
-					blit.srcOffsets[0] = (VkOffset3D) { 0, 0, 0 };
-					blit.srcOffsets[1] = (VkOffset3D) { src_mip_width, src_mip_height, 1 };
-
-					blit.dstOffsets[0] = (VkOffset3D) { 0, 0, 0 };
-					blit.dstOffsets[1] = (VkOffset3D) { dst_mip_width, dst_mip_height, 1 };
-
-					blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					blit.srcSubresource.mipLevel = i - 1;
-					blit.srcSubresource.baseArrayLayer = face;
-					blit.srcSubresource.layerCount = 1;
-
-					blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					blit.dstSubresource.mipLevel = i;
-					blit.dstSubresource.baseArrayLayer = face;
-					blit.dstSubresource.layerCount = 1;
-
-					GFX_CmdBlit(cmd, texture, texture, 1, &blit, VK_FILTER_LINEAR);
-				}
-
-			barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-			barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-			barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-
-			barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
-			barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-
-			GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &barrier);
+			GFX_CmdBlit(cmd, texture, texture, 1, &blit, VK_FILTER_LINEAR);
 		}
+
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+
+		barrier.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+		barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+
+		GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &barrier);
+	}
 
 	barrier.subresourceRange.baseMipLevel = gfx_texture->mipmap_count - 1;
 
@@ -469,6 +469,107 @@ GFX_CmdFillBuffer(const GFX_CmdBuffer *cmd,
 	vkCmdFillBuffer(cmd->handle,
 					gfx_buffer->handle,
 					offset, size, fill);
+}
+
+internal void
+GFX_CmdBuildBLAS(const GFX_CmdBuffer *cmd,
+				 GFX_AccelStructKey blas,
+				 const GFX_BLASGeometry *geometries, u32 geometry_count,
+				 GFX_BufferKey scratch_buffer)
+{
+	GFX_Device *device = cmd->device;
+
+	GFX_AccelStruct *accel_struct = GFX_DeviceAccelStructFromKey(device, blas);
+
+	u64 scratch_address = GFX_DeviceBufferAddress(device, scratch_buffer);
+	
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	VkAccelerationStructureGeometryKHR *vk_geometries = ArenaPushArray(scratch.arena, VkAccelerationStructureGeometryKHR, geometry_count);
+	VkAccelerationStructureBuildRangeInfoKHR *ranges = ArenaPushArray(scratch.arena, VkAccelerationStructureBuildRangeInfoKHR, geometry_count);
+	
+	for (u32 i = 0; i < geometry_count; i++)
+	{
+		const GFX_BLASGeometry *geometry = &geometries[i];
+
+		GFX_Buffer *vb = GFX_DeviceBufferFromKey(device, geometry->vertex_buffer);
+		GFX_Buffer *ib = GFX_DeviceBufferFromKey(device, geometry->index_buffer);
+
+		vk_geometries[i].sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		vk_geometries[i].geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+		vk_geometries[i].flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+		VkAccelerationStructureGeometryTrianglesDataKHR *tri = &vk_geometries[i].geometry.triangles;
+
+		tri->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+
+		tri->vertexFormat             = geometry->vertex_format;
+		tri->vertexData.deviceAddress = vb->device_address + geometry->vertex_offset;
+		tri->vertexStride             = geometry->vertex_stride;
+		tri->maxVertex                = geometry->vertex_count - 1;
+
+		tri->indexType               = geometry->index_type;
+		tri->indexData.deviceAddress = ib->device_address + geometry->index_offset;
+
+		ranges[i].primitiveCount = geometry->index_count / 3;
+		ranges[i].primitiveOffset = 0;
+		ranges[i].firstVertex = 0;
+	}
+
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	build_info.dstAccelerationStructure = accel_struct->handle;
+	build_info.geometryCount = geometry_count;
+	build_info.pGeometries = vk_geometries;
+	build_info.scratchData.deviceAddress = scratch_address;
+
+	const VkAccelerationStructureBuildRangeInfoKHR *range_ptrs = ranges;
+	
+	vkCmdBuildAccelerationStructuresKHR(cmd->handle, 1, &build_info, &range_ptrs);
+	
+	ScratchRelease(&scratch);
+}
+
+internal void
+GFX_CmdBuildTLAS(const GFX_CmdBuffer *cmd,
+				 GFX_AccelStructKey tlas,
+				 GFX_BufferKey instance_buffer, u32 instance_count,
+				 GFX_BufferKey scratch_buffer)
+{
+	GFX_Device *device = cmd->device;
+
+	GFX_AccelStruct *accel_struct = GFX_DeviceAccelStructFromKey(device, tlas);
+
+	u64 instance_address = GFX_DeviceBufferAddress(device, instance_buffer);
+	u64 scratch_address  = GFX_DeviceBufferAddress(device, scratch_buffer);
+
+	VkAccelerationStructureGeometryKHR geometry = {0};
+	geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+	geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	geometry.geometry.instances.arrayOfPointers = VK_FALSE;
+	geometry.geometry.instances.data.deviceAddress = instance_address;
+
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	build_info.dstAccelerationStructure = accel_struct->handle;
+	build_info.geometryCount = 1;
+	build_info.pGeometries = &geometry;
+	build_info.scratchData.deviceAddress = scratch_address;
+
+	VkAccelerationStructureBuildRangeInfoKHR range = {0};
+	range.primitiveCount = instance_count;
+
+	const VkAccelerationStructureBuildRangeInfoKHR *range_ptr = &range;
+	
+	vkCmdBuildAccelerationStructuresKHR(cmd->handle, 1, &build_info, &range_ptr);
 }
 
 internal void

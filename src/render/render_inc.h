@@ -12,4 +12,6 @@
 #include "render_graph.h"
 #include "render_blackboard.h"
 
+#include "probe/render_probe_inc.h"
+
 #include "pass/render_pass_inc.h"

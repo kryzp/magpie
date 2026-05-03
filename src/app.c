@@ -108,7 +108,7 @@
 internal void
 AppInitGraphics(App *app)
 {
-	app->graphics_log_channel = osapi->LogOpenChannel(String8Lit("GRAPHICS"));
+	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
 
 	
 	GFX_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
@@ -117,7 +117,7 @@ AppInitGraphics(App *app)
 	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
 
 	
-	app->shader_compiler_log_channel = osapi->LogOpenChannel(String8Lit("SLANG"));
+	app->shader_compiler_log_channel = osapi->LogChannelOpen(String8Lit("SLANG"));
 	GFX_ShaderCompilerInit(&app->shader_compiler, app->shader_compiler_log_channel);
 
   
@@ -206,7 +206,7 @@ internal void
 AppInitAudio(App *app)
 {
 	/*
-	app->audio_log_channel = osapi->LogOpenChannel(String8Lit("AUDIO"));
+	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
 	
 	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
 	app->audio_backend->Init();
@@ -246,7 +246,7 @@ AppHotUnloadAudio(App *app)
 internal void
 AppInitAssets(App *app)
 {
-	app->asset_log_channel = osapi->LogOpenChannel(String8Lit("ASSETS"));
+	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
 	
 	AST_Init(&app->assets,
 			 &app->asset_arena,
@@ -336,7 +336,7 @@ AppInitRenderCreateSkyboxMesh(App *app)
 internal void
 AppInitRender(App *app)
 {
-	app->render_log_channel = osapi->LogOpenChannel(String8Lit("RENDER"));
+	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
 	
 	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, app->render_log_channel);
 	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, app->render_log_channel);
@@ -350,10 +350,10 @@ AppInitRender(App *app)
 	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 
-	R_CullingInit          (&app->culling,           &app->assets);
-	R_ShadowRendererInit   (&app->shadow_renderer,   &app->graphics_device, &app->assets);
-	R_DeferredRendererInit (&app->deferred_renderer, &app->graphics_device, &app->assets);
-	R_DebugRendererInit    (&app->debug_renderer,    &app->render_arena, &app->graphics_device, &app->assets);
+	R_CullingInit                (&app->culling,           &app->assets);
+	R_ShadowRendererInit         (&app->shadow_renderer,   &app->graphics_device, &app->assets);
+	R_DeferredRendererInit       (&app->deferred_renderer, &app->graphics_device, &app->assets);
+	R_DebugRendererInitAndSelect (&app->debug_renderer,    &app->render_arena, &app->graphics_device, &app->assets);
 
 	AST_Handle brdf_lut_shader_handle   = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/brdf_lut.slang"),                   AST_Type_Shader);
 	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
@@ -396,6 +396,16 @@ AppInitRender(App *app)
 	
 	R_SceneLightCreate(&app->scene, &light);
 
+	R_IrradianceVolumeInit(&app->irradiance_volume,
+						   &app->graphics_device, &app->assets,
+						   osapi->LogChannelOpen(String8Lit("IRRADIANCE")),
+						   v3(-12.f, -6.f,  -1.f),
+						   v3( 12.f,  6.f,  12.f),
+						   20, 10, 10,
+						   &app->skybox_mesh,
+						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
+						   app->linear_sampler);
+	
 	GFX_ShaderKey brdf_lut_shader        = AST_Get(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader.key;
 	GFX_ShaderKey hdr_to_env_shader      = AST_Get(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
 	GFX_ShaderKey irradiance_pass_shader = AST_Get(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
@@ -482,6 +492,7 @@ AppInitRender(App *app)
 internal void
 AppDestroyRender(App *app)
 {
+	R_IrradianceVolumeDestroy (&app->irradiance_volume);
 	R_DebugRendererDestroy    (&app->debug_renderer);
 	R_DeferredRendererDestroy (&app->deferred_renderer);
 	R_ShadowRendererDestroy   (&app->shadow_renderer);
@@ -501,6 +512,7 @@ AppDestroyRender(App *app)
 internal void
 AppHotLoadRender(App *app)
 {
+	R_DebugRendererSelect(&app->debug_renderer);
 }
 
 internal void
@@ -516,7 +528,7 @@ AppHotUnloadRender(App *app)
 internal void
 AppInitEntity(App *app)
 {
-	app->entity_log_channel = osapi->LogOpenChannel(String8Lit("ENTITY"));
+	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
 	ENT_WorldInit(&app->world, &app->entity_arena, app->entity_log_channel);
 	ENT_EventQueueInit(&app->events, app->entity_log_channel);
@@ -546,7 +558,7 @@ AppHotUnloadEntity(App *app)
 internal void
 AppInitEditor(App *app)
 {
-	app->editor_log_channel = osapi->LogOpenChannel(String8Lit("EDITOR"));
+	app->editor_log_channel = osapi->LogChannelOpen(String8Lit("EDITOR"));
 	
 	EditorInit(&app->editor, &app->editor_arena, app->editor_log_channel);
 }
@@ -577,7 +589,7 @@ AppHotUnloadEditor(App *app)
 internal void
 AppInit_(App *app)
 {
-	app->log_channel = osapi->LogOpenChannel(String8Lit("APP"));
+	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
 	
 	AppInitGraphics (app);
 	AppInitAudio    (app);
@@ -657,6 +669,11 @@ AppTick(App *app, const I_State *input)
 		AST_PollHotReloads(&app->assets);
 	}
 
+	if (I_KbPressed(input, I_KeyboardKey_Enter))
+	{
+		R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
+	}
+
 	//DebugPrintT("Hello!!!");
 
 	AST_FlushUploads(&app->assets);
@@ -674,10 +691,10 @@ AppTick(App *app, const I_State *input)
 	
 	f32 clamped_delta = dt;
 
-	if (clamped_delta > max_frame_time)
+	if (dt > max_frame_time)
 	{
+		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f) - is there lag?", dt, max_frame_time);
 		clamped_delta = max_frame_time;
-		DebugLogW(app->log_channel, "Had to clamp delta - is there lag?");
 	}
 	
 	app->delta_accumulator += clamped_delta;
@@ -698,8 +715,10 @@ AppTick(App *app, const I_State *input)
 	AUD_Listener listener = {0};
 	listener.position = app->editor.camera.position;
 	listener.direction = app->editor.camera.forward;
-	
+
 	//AUD_Tick(&app->audio_system, dt, listener);
+
+	R_IrradianceVolumeDebug(&app->irradiance_volume);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
@@ -803,6 +822,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 														 scene_resources,
 														 app->frame_data_buffer,
 														 app->linear_sampler,
+														 &app->irradiance_volume,
 														 app->irradiance_cubemap,
 														 app->prefilter_cubemap,
 														 app->brdf_lut);
@@ -842,7 +862,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 		R_PassReadTextureCompute(pass, lighting);
 		lighting = R_PassWriteTextureCompute(pass, lighting);
 	}
-
+	
 	R_DebugRendererRender(&app->debug_renderer,
 						  dt,
 						  &app->graph,

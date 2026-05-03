@@ -160,6 +160,7 @@ struct GFX_Device
 	GFX_DeviceBufferList          buffers;
 	GFX_DeviceSamplerList         samplers;
 	GFX_DeviceShaderList          shaders;
+	GFX_DeviceAccelStructList     accel_structures;
 	
 	GFX_Semaphore graphics_semaphore;
 
@@ -198,7 +199,10 @@ internal GFX_CmdBuffer GFX_DeviceBeginFrame (GFX_Device *device, GFX_Swapchain *
 internal void          GFX_DeviceEndFrame   (GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBuffer *cmd);
 
 internal GFX_TimelinePoint GFX_DeviceSubmit        (GFX_Device *device, GFX_CmdBuffer *cmd);
-internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, GFX_CmdBuffer *cmd, u32 wait_count, const VkSemaphoreSubmitInfo *waits, u32 signal_count, const VkSemaphoreSubmitInfo *signals);
+
+internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, GFX_CmdBuffer *cmd,
+													u32 wait_count, const VkSemaphoreSubmitInfo *waits,
+													u32 signal_count, const VkSemaphoreSubmitInfo *signals);
 
 internal GFX_CmdBuffer     GFX_DeviceSubmitImBegin (GFX_Device *device);
 internal void              GFX_DeviceSubmitImEnd   (GFX_Device *device, GFX_CmdBuffer *cmd);
@@ -352,6 +356,30 @@ internal GFX_ShaderKey      GFX_DeviceShaderProgramCreate  (GFX_Device *device, 
 internal void               GFX_DeviceShaderProgramDestroy (GFX_Device *device, GFX_ShaderKey program);
 
 internal GFX_ShaderProgram *GFX_DeviceShaderProgramFromKey (const GFX_Device *device, GFX_ShaderKey key);
+
+
+/* ==================================================
+   ACCELERATION STRUCTURES
+   ================================================== */
+
+typedef struct GFX_DeviceAllocAccelStructReceipt GFX_DeviceAllocAccelStructReceipt;
+struct GFX_DeviceAllocAccelStructReceipt
+{
+	GFX_AccelStructKey key;
+	u64 scratch_size;
+};
+
+// Bottom-Level Acceleration Structure
+// -- vertex / index data
+internal GFX_DeviceAllocAccelStructReceipt GFX_DeviceBLASAlloc(GFX_Device *device, const GFX_BLASGeometry *geometries, u32 geometry_count);
+
+// Top-Level Acceleration Structure
+// -- objects
+internal GFX_DeviceAllocAccelStructReceipt GFX_DeviceTLASAlloc(GFX_Device *device, u32 max_instance_count);
+
+internal void             GFX_DeviceAccelStructDestroy (GFX_Device *device, GFX_AccelStructKey key);
+internal u64              GFX_DeviceAccelStructAddress (GFX_Device *device, GFX_AccelStructKey key);
+internal GFX_AccelStruct *GFX_DeviceAccelStructFromKey (GFX_Device *device, GFX_AccelStructKey key);
 
 
 /* ==================================================

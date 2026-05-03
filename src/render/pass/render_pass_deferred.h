@@ -31,11 +31,14 @@ struct R_DeferredLightingPassData
 
 	R_BB_GBufferData gbuffer;
 
-	R_GraphTexHandle irradiance_handle;
+	R_GraphTexHandle irradiance_fb_handle;
 	R_GraphTexHandle prefilter_handle;
 	R_GraphTexHandle brdf_handle;
 
 	R_Mesh *light_sphere_mesh;
+
+	u64 irradiance_sh_buffer_address;
+	u64 irradiance_grid_info_buffer_address;
 };
 
 R_PASS_RECORD_DEF(R_DeferredLightingPassFn);
@@ -72,7 +75,8 @@ internal R_GraphTexHandle R_DeferredRenderLighting (R_DeferredRenderer *dr,
 												    const R_SceneResources *scene_resources,
 												    GFX_BufferKey frame_data_buffer,
 												    GFX_SamplerKey linear_sampler,
-												    GFX_TextureKey irradiance,
+													const R_IrradianceVolume *irradiance_volume,
+												    GFX_TextureKey irradiance_fallback,
 												    GFX_TextureKey prefilter,
 												    GFX_TextureKey brdf);
 

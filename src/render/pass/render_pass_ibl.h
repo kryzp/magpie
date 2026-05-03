@@ -1,26 +1,15 @@
 #ifndef RENDER_PASS_IBL_H
 #define RENDER_PASS_IBL_H
 
-/* for reference
-   
-typedef struct R_PassContext R_PassContext;
-struct R_PassContext
+typedef struct R_BRDFLutPassData R_BRDFLutPassData;
+struct R_BRDFLutPassData
 {
-	R_Graph *graph;
-	
-	GFX_Device *device;	
-	GFX_CmdBuffer *cmd;
-
-	const R_Scene *scene;
-	const R_Camera *camera;
-	
-	f32 delta_time;
-	f32 elapsed_time;
-
-	const void *user_data;
+	GFX_ShaderKey shader;
 };
 
-*/
+R_PASS_RECORD_DEF(R_BRDFLutPassFn);
+
+// ---
 
 typedef struct R_IBLPassIrradianceData R_IBLPassIrradianceData;
 struct R_IBLPassIrradianceData

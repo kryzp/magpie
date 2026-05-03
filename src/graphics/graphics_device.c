@@ -1162,7 +1162,7 @@ internal void
 GFX_DeviceTextureDestroy(GFX_Device *device, GFX_TextureKey texture_key)
 {
 	GFX_Texture *texture = GFX_DeviceTextureListGet(&device->textures, texture_key);
-	AssertTrue(texture);
+	DebugLogAssert(device->log_channel, texture, "Invalid texture with key %llu when destroying.", texture_key.value);
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
@@ -1188,6 +1188,7 @@ GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *
 		return hashed_key;
 	
 	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, info->texture);
+	DebugLogAssert(device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view.", info->texture.value);
 	
 	VkImageViewCreateInfo view_create_info = {0};
 	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1227,7 +1228,7 @@ internal GFX_TextureViewKey
 GFX_DeviceTextureViewAuto(GFX_Device *device, GFX_TextureKey texture)
 {
 	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, texture);
-	AssertTrue(gfx_texture);
+	DebugLogAssert(device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view (auto).", texture.value);
 
 	GFX_SubresourceRange range = {0};
 	range.aspects = gfx_texture->aspect_flags;
@@ -1259,7 +1260,7 @@ internal GFX_BindlessIndex
 GFX_DeviceTextureViewBindless(const GFX_Device *device, GFX_TextureViewKey key)
 {
 	GFX_TextureView *gfx_view = GFX_DeviceTextureViewFromKey(device, key);
-	AssertTrue(gfx_view);
+	DebugLogAssert(device->log_channel, gfx_view, "Invalid texture view with key %llu when getting bindless info.", key.value);
 	
 	return GFX_BindlessIndexOf(gfx_view->bindless);
 }
@@ -1272,9 +1273,8 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 	buffer.size = alloc_info->size;
 	buffer.allocation_flags = alloc_info->flags;
 
-	b32 is_storage = (buffer.usage & VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT) != 0;
-
-	if (is_storage)
+	// just implicitly make all storage buffers have device address
+	if ((buffer.usage & VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT) != 0)
 		buffer.usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
 
 	VkBufferCreateInfo buffer_create_info = {0};
@@ -1297,7 +1297,7 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 								 &buffer.allocation_info),
 				 "Failed to allocate buffer.");
 
-	if (is_storage)
+	if ((buffer.usage & VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT) != 0)
 	{
 		VkBufferDeviceAddressInfo address_info = {0};
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -1324,7 +1324,7 @@ internal void
 GFX_DeviceBufferDestroy(GFX_Device *device, GFX_BufferKey buffer_key)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, buffer_key);
-	AssertTrue(buffer);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", buffer_key.value);
 
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
@@ -1345,7 +1345,7 @@ internal void *
 GFX_DeviceBufferMap(const GFX_Device *device, GFX_BufferKey key)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
-	AssertTrue(buffer);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when mapping memory.", key.value);
 	
 	return buffer->allocation_info.pMappedData;
 }
@@ -1354,7 +1354,7 @@ internal u64
 GFX_DeviceBufferAddress(const GFX_Device *device, GFX_BufferKey key)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
-	AssertTrue(buffer);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when getting device address.", key.value);
 
 	return buffer->device_address;
 }
@@ -1363,7 +1363,7 @@ internal void
 GFX_DeviceBufferRead(const GFX_Device *device, GFX_BufferKey key, void *dst, u64 length, u64 offset)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
-	AssertTrue(buffer);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when reading.", key.value);
 	
 	vmaCopyAllocationToMemory(device->context.vma_allocator, buffer->allocation, offset, dst, length);
 }
@@ -1372,7 +1372,7 @@ internal void
 GFX_DeviceBufferWrite(const GFX_Device *device, GFX_BufferKey key, const void *src, u64 length, u64 offset)
 {
 	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
-	AssertTrue(buffer);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when writing.", key.value);
 	
 	vmaCopyMemoryToAllocation(device->context.vma_allocator, src, buffer->allocation, offset, length);
 }
@@ -1456,7 +1456,7 @@ internal GFX_BindlessIndex
 GFX_DeviceSamplerBindless(const GFX_Device *device, GFX_SamplerKey key)
 {
 	GFX_Sampler *gfx_sampler = GFX_DeviceSamplerFromKey(device, key);
-	AssertTrue(gfx_sampler);
+	DebugLogAssert(device->log_channel, gfx_sampler, "Invalid sampler with key %llu when destroying.", key.value);
 	
 	return GFX_BindlessIndexOf(gfx_sampler->bindless);
 }
@@ -1467,7 +1467,9 @@ GFX_DeviceShaderStageCreate(GFX_Device *device, Arena *arena, const GFX_ShaderBy
 	SpvReflectShaderModule reflect_module = {0};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
 
-	DebugLogAssert(device->log_channel, reflect_result == SPV_REFLECT_RESULT_SUCCESS, "Failed to reflect SPIR-V module: %d\n", reflect_result);
+	DebugLogAssert(device->log_channel,
+				   reflect_result == SPV_REFLECT_RESULT_SUCCESS,
+				   "Failed to reflect SPIR-V module: %d\n", reflect_result);
 	
 	ScratchArena scratch = ScratchBegin(&arena, 1);
 
@@ -1540,13 +1542,205 @@ GFX_DeviceShaderProgramCreate(GFX_Device *device, u32 stage_count, const GFX_Sha
 internal void
 GFX_DeviceShaderProgramDestroy(GFX_Device *device, GFX_ShaderKey program_key)
 {
-	// TODO
+	// since we just pass the shader params directly into the pipeline state
+	// when creating it we have nothing to destroy. but i'm keeping this just
+	// in case, also i kinda like symmetry.
 }
 
 internal GFX_ShaderProgram *
 GFX_DeviceShaderProgramFromKey(const GFX_Device *device, GFX_ShaderKey key)
 {
 	return GFX_DeviceShaderListGet(&device->shaders, key);
+}
+
+internal GFX_DeviceAllocAccelStructReceipt
+GFX_DeviceBLASAlloc(GFX_Device *device, const GFX_BLASGeometry *geometries, u32 geometry_count)
+{
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	VkAccelerationStructureGeometryKHR *vk_geometries = ArenaPushArray(scratch.arena, VkAccelerationStructureGeometryKHR, geometry_count);
+	u32 *primitive_counts = ArenaPushArray(scratch.arena, u32, geometry_count);
+
+	for (u32 i = 0; i < geometry_count; i++)
+	{
+		const GFX_BLASGeometry *geometry = &geometries[i];
+
+		GFX_Buffer *vb = GFX_DeviceBufferFromKey(device, geometry->vertex_buffer);
+		GFX_Buffer *ib = GFX_DeviceBufferFromKey(device, geometry->index_buffer);
+
+		vk_geometries[i].sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		vk_geometries[i].geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+		vk_geometries[i].flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+		VkAccelerationStructureGeometryTrianglesDataKHR *tri = &vk_geometries[i].geometry.triangles;
+
+		tri->sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+
+		tri->vertexFormat             = geometry->vertex_format;
+		tri->vertexData.deviceAddress = vb->device_address + geometry->vertex_offset;
+		tri->vertexStride             = geometry->vertex_stride;
+		tri->maxVertex                = geometry->vertex_count - 1;
+
+		tri->indexType                = geometry->index_type;
+		tri->indexData.deviceAddress  = ib->device_address + geometry->index_offset;
+
+		primitive_counts[i] = geometry->index_count / 3;
+	}
+
+	// so much fucking typing oh my god.
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build_info.geometryCount = geometry_count;
+	build_info.pGeometries = vk_geometries;
+
+	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
+	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	vkGetAccelerationStructureBuildSizesKHR(device->context.device,
+											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+											&build_info,
+											primitive_counts,
+											&sizes);
+
+	// backing buffer also needs alloc
+	
+	// this feels bad 'cuz we should be automatically generating the device address
+	// in the buffer alloc like we do for usual storage buffers but i figure if
+	// this is the only time we do this i can get away with being lazy :p
+	GFX_BufferAllocInfo buf_alloc_info = {0};
+	buf_alloc_info.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
+	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	buf_alloc_info.size = sizes.accelerationStructureSize;
+
+	GFX_BufferKey backing_buffer_key = GFX_DeviceBufferAlloc(device, &buf_alloc_info);
+	GFX_Buffer *backing_buffer = GFX_DeviceBufferFromKey(device, backing_buffer_key);
+
+	VkAccelerationStructureCreateInfoKHR create_info = {0};
+	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	create_info.buffer = backing_buffer->handle;
+	create_info.size = sizes.accelerationStructureSize;
+	create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+	GFX_AccelStruct accel_struct = {0};
+	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	accel_struct.backing_buffer = backing_buffer_key;
+
+	GFX_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
+												  &create_info, NULL,
+												  &accel_struct.handle),
+				 "Failed to create BLAS.");
+
+	VkAccelerationStructureDeviceAddressInfoKHR addr_info = {0}; // fuck me khronos shorter names would be appreciated yes??
+	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+	addr_info.accelerationStructure = accel_struct.handle;
+
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
+	
+	ScratchRelease(&scratch);
+
+	DebugLogD(device->log_channel, "Allocated BLAS from %u geometries.", geometry_count);
+
+	GFX_DeviceAllocAccelStructReceipt receipt = {0};
+	receipt.key = GFX_DeviceAccelStructListPushAuto(&device->accel_structures, device->permanent_arena, &accel_struct);
+	receipt.scratch_size = sizes.buildScratchSize;
+	
+	return receipt;
+}
+
+internal GFX_DeviceAllocAccelStructReceipt
+GFX_DeviceTLASAlloc(GFX_Device *device, u32 max_instance_count)
+{
+	VkAccelerationStructureGeometryKHR geometry = {0};
+	geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR; // fuck you
+
+	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
+	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	build_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	build_info.geometryCount = 1;
+	build_info.pGeometries = &geometry;
+
+	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
+	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	vkGetAccelerationStructureBuildSizesKHR(device->context.device,
+											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+											&build_info,
+											&max_instance_count,
+											&sizes);
+	
+	// backing buffer also needs alloc
+	
+	// this feels bad cuz' we should be automatically generating the device address
+	// in the buffer alloc like we do for usual storage buffers but i figure if
+	// this is the only time we do this i can get away with being lazy :p
+	GFX_BufferAllocInfo buf_alloc_info = {0};
+	buf_alloc_info.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
+	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	buf_alloc_info.size = sizes.accelerationStructureSize;
+
+	GFX_BufferKey backing_buffer_key = GFX_DeviceBufferAlloc(device, &buf_alloc_info);
+	GFX_Buffer *backing_buffer = GFX_DeviceBufferFromKey(device, backing_buffer_key);
+
+	VkAccelerationStructureCreateInfoKHR create_info = {0};
+	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	create_info.buffer = backing_buffer->handle;
+	create_info.size = sizes.accelerationStructureSize;
+	create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+	GFX_AccelStruct accel_struct = {0};
+	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	accel_struct.backing_buffer = backing_buffer_key;
+
+	GFX_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
+												  &create_info, NULL,
+												  &accel_struct.handle),
+				 "Failed to create TLAS.");
+
+	VkAccelerationStructureDeviceAddressInfoKHR addr_info = {0}; // fuck me khronos shorter names would be appreciated yes??
+	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+	addr_info.accelerationStructure = accel_struct.handle;
+
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
+
+	DebugLogD(device->log_channel, "Allocated TLAS with max instance count %u.", max_instance_count);
+	
+	GFX_DeviceAllocAccelStructReceipt receipt = {0};
+	receipt.key = GFX_DeviceAccelStructListPushAuto(&device->accel_structures, device->permanent_arena, &accel_struct);
+	receipt.scratch_size = sizes.buildScratchSize;
+	
+	return receipt;
+}
+
+internal void
+GFX_DeviceAccelStructDestroy(GFX_Device *device, GFX_AccelStructKey key)
+{
+	GFX_AccelStruct *accel_struct = GFX_DeviceAccelStructListGet(&device->accel_structures, key);
+	DebugLogAssert(device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
+
+	vkDestroyAccelerationStructureKHR(device->context.device, accel_struct->handle, NULL);
+	accel_struct->handle = VK_NULL_HANDLE;
+
+	GFX_DeviceBufferDestroy(device, accel_struct->backing_buffer);
+}
+
+internal u64
+GFX_DeviceAccelStructAddress(GFX_Device *device, GFX_AccelStructKey key)
+{
+	GFX_AccelStruct *accel_struct = GFX_DeviceAccelStructListGet(&device->accel_structures, key);
+	DebugLogAssert(device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when getting device address.", key.value);
+
+	return accel_struct->device_address;
+}
+
+internal GFX_AccelStruct *
+GFX_DeviceAccelStructFromKey(GFX_Device *device, GFX_AccelStructKey key)
+{
+	return GFX_DeviceAccelStructListGet(&device->accel_structures, key);
 }
 
 internal void

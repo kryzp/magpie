@@ -1,12 +1,7 @@
-#ifndef GRAPHICS_VK_CHECK
-#define GRAPHICS_VK_CHECK
+#ifndef GRAPHICS_VK_CHECK_H
+#define GRAPHICS_VK_CHECK_H
 
-#define GFX_VK_CHECK(fn, msg)					\
-	do											\
-	{											\
-		VkResult gfx_vk_check_result = (fn);	\
-		if (gfx_vk_check_result != VK_SUCCESS)	\
-			AssertTrue(false);					\
-	} while (false);
+// TODO: add a channel input so that logs are clearer
+#define GFX_VK_CHECK(fn, ...) DebugPrintAssert((fn) == VK_SUCCESS, __VA_ARGS__)
 
-#endif // GRAPHICS_VK_CHECK
+#endif // GRAPHICS_VK_CHECK_H

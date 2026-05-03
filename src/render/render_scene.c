@@ -245,8 +245,8 @@ R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 			last_index = walk_index;
 		}
 
-		b32 fits = ((last->vertex_offset + vertex_count) <= last->max_vertices &&
-					(last->index_offset  + index_count)  <= last->max_indices);
+		b32 fits = ((last->vertex_count + vertex_count) <= last->max_vertices &&
+					(last->index_count  + index_count)  <= last->max_indices);
 
 		if (fits)
 			return last_index;
@@ -281,23 +281,38 @@ R_SceneCreateNewPage(R_Scene *scene)
 {
 	// We use vertex pulling so don't need to use VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT.
 	GFX_BufferAllocInfo vb_info = {0};
-	vb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+
+	vb_info.usage =
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+	
 	vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	vb_info.size  = R_PAGE_VERTEX_BUFFER_SIZE;
  
 	GFX_BufferAllocInfo ib_info = {0};
-	ib_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT;
+
+	ib_info.usage =
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+
 	ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	ib_info.size  = R_PAGE_INDEX_BUFFER_SIZE;
  
 	R_GeometryPage page = {0};
-	page.vertex_buffer = GFX_DeviceBufferAlloc(scene->device, &vb_info);
-	page.index_buffer  = GFX_DeviceBufferAlloc(scene->device, &ib_info);
-	page.vertex_offset = 0;
-	page.index_offset  = 0;
-	page.max_vertices  = R_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
-	page.max_indices   = R_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
+
 	page.next = NULL;
+	
+	page.vertex_buffer  = GFX_DeviceBufferAlloc(scene->device, &vb_info);
+	page.index_buffer   = GFX_DeviceBufferAlloc(scene->device, &ib_info);
+
+	page.vertex_count   = 0;
+	page.index_count    = 0;
+
+	page.max_vertices   = R_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
+	page.max_indices    = R_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
  
 	return page;
 }
@@ -547,13 +562,13 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 	VkBufferCopy2 vc = {0};
 	vc.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 	vc.srcOffset = 0;
-	vc.dstOffset = page->vertex_offset * vertex_stride;
+	vc.dstOffset = page->vertex_count * vertex_stride;
 	vc.size = vertex_count * vertex_stride;
 
 	VkBufferCopy2 ic = {0};
 	ic.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 	ic.srcOffset = 0;
-	ic.dstOffset = page->index_offset * index_stride;
+	ic.dstOffset = page->index_count * index_stride;
 	ic.size = index_count * index_stride;
 
 	GFX_CmdCopyBufferToBuffer(cmd, vertex_buffer, page->vertex_buffer, 1, &vc);
@@ -563,11 +578,11 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 
 	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[mesh_data_index];
 	gpu_mesh->index_count = index_count;
-	gpu_mesh->first_index = page->index_offset;
-	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_offset * sizeof(R_GPU_ModelVertex));
+	gpu_mesh->first_index = page->index_count;
+	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_count * sizeof(R_GPU_ModelVertex));
 
-	page->vertex_offset += vertex_count;
-	page->index_offset  += index_count;
+	page->vertex_count += vertex_count;
+	page->index_count  += index_count;
 
 	scene->mesh_registry[mesh_data_index].page  = page_index;
 	scene->mesh_registry[mesh_data_index].index = mesh_data_index;

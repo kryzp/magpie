@@ -126,8 +126,8 @@ struct OS_API
 	   ================================================== */
 
 	void        (*Log)(LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
-	LOG_Channel (*LogOpenChannel)(String8 name);
-	void        (*LogCloseChannel)(LOG_Channel channel);
+	LOG_Channel (*LogChannelOpen)(String8 name);
+	void        (*LogChannelClose)(LOG_Channel channel);
 	
 	
 	/* ==================================================

@@ -46,15 +46,17 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **GPU Profiler**
 - **Modular Entity System**
 - **Logging System** with levels (trace, debug, info, ...), channels (graphics, assets, ...), file output, collapsing repeated messages (deduplication), ...
+- **Raytraced Static Irradiance Probes** please for the love of god appreciate it this took so fucking long
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
+- Reflections
+- Volumetrics (Clouds, Smoke, etc.)
 - Text / Font Rendering
 - Bone / Joint Based Animation
 - More sophisticated debug logging / tracing system
-- Volumetrics (Clouds, Smoke, etc.)
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)
 - ImGui Visualisation for Profilers (CPU & GPU)
 - Irradiance Probes with Spherical Harmonics, which automatically reposition themselves
@@ -192,7 +194,7 @@ The actual implementation of this is simple in theory. We pass a V-Table `OS_API
 
 
 ### Formatting
-Files in each namespace begin with the full name of the namespace followed by an underscore, and include guards are just the capitalized name of the file.
+Files in each namespace begin with the full name of the namespace followed by an underscore, and include guards are just the capitalized name of the file. "Sub-layers", like `/os/win32/`, `/render/pass/` or `/asset/serializer/`, don't follow any strict naming organisation apart from also sharing the same namespace as the parent layer, though I'd like to come to some kind of standard eventually.
 
 All structs and enums are typedef'd (sorry Torvalds) to improve readability. However, avoid using misleading typedefs:
 

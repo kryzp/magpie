@@ -17,8 +17,8 @@ struct R_GeometryPage
 	GFX_BufferKey vertex_buffer;
 	GFX_BufferKey index_buffer;
 
-	u32 vertex_offset;
-	u32 index_offset;
+	u32 vertex_count;
+	u32 index_count;
 
 	u32 max_vertices;
 	u32 max_indices;
@@ -61,7 +61,7 @@ struct R_SceneMaterialHandle
    OBJECTS
    ================================================== */
 
-#define R_SCENE_MAX_OBJECTS 512
+#define R_SCENE_MAX_OBJECTS 1024
 
 typedef struct R_Object R_Object;
 struct R_Object

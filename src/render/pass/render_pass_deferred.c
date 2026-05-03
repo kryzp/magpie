@@ -215,14 +215,17 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 		{
 			u64 frame_data_buffer;
 
+			u64 irradiance_sh_buffer;
+			u64 irradiance_grid_info_buffer;
+			
 			u32 position;
 			u32 albedo;
 			u32 normal;
 			u32 emissive;
 			u32 material;
 
-			u32 irradiance_map;
-			u32 prefilter_map;
+			u32 irradiance_fallback_cubemap;
+			u32 prefilter_cubemap;
 			u32 brdf_lut;
 
 			u32 linear_sampler;
@@ -231,15 +234,18 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 
 		pc.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
 
+		pc.irradiance_sh_buffer        = data->irradiance_sh_buffer_address;
+		pc.irradiance_grid_info_buffer = data->irradiance_grid_info_buffer_address;
+		
 		pc.position = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          GFX_SubresourceRangeAllColour()));
 		pc.albedo   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            GFX_SubresourceRangeAllColour()));
 		pc.normal   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            GFX_SubresourceRangeAllColour()));
 		pc.emissive = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          GFX_SubresourceRangeAllColour()));
 		pc.material = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], GFX_SubresourceRangeAllColour()));
 
-		pc.irradiance_map = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_handle, GFX_SubresourceRangeAllColour()));
-		pc.prefilter_map  = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,  GFX_SubresourceRangeAllColour()));
-		pc.brdf_lut       = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,       GFX_SubresourceRangeAllColour()));
+		pc.irradiance_fallback_cubemap = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, GFX_SubresourceRangeAllColour()));
+		pc.prefilter_cubemap           = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     GFX_SubresourceRangeAllColour()));
+		pc.brdf_lut                    = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          GFX_SubresourceRangeAllColour()));
 
 		pc.linear_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler);
 
@@ -290,7 +296,7 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 				u32 linear_sampler;
 				u32 shadow_sampler;
 			}
-				pc;
+			pc;
 
 			pc.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
 			pc.light_buffer = data->light_buffer_address;
@@ -321,7 +327,8 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 						 const R_SceneResources *scene_resources,
 						 GFX_BufferKey frame_data_buffer,
 						 GFX_SamplerKey linear_sampler,
-						 GFX_TextureKey irradiance,
+						 const R_IrradianceVolume *irradiance_volume,
+						 GFX_TextureKey irradiance_fallback,
 						 GFX_TextureKey prefilter,
 						 GFX_TextureKey brdf)
 {
@@ -342,9 +349,9 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 	for (u32 i = 0; i < R_GBufferAttachment_COUNT; i++)
 		R_PassReadTextureGraphics(pass, gbuffer->attachments[i]);
 
-	R_GraphTexHandle irradiance_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, irradiance));
-	R_GraphTexHandle prefilter_handle  = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, prefilter));
-	R_GraphTexHandle brdf_handle       = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, brdf));
+	R_GraphTexHandle irradiance_fb_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, irradiance_fallback));
+	R_GraphTexHandle prefilter_handle     = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, prefilter));
+	R_GraphTexHandle brdf_handle          = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, brdf));
 
 	for (u32 i = 0; i < shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, shadow->shadow_maps[i]);
@@ -360,11 +367,22 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 	data->light_buffer_address = scene_resources->light_buffer.gpu;
 	data->shadow_caster_table  = shadow->shadow_caster_table;
 	data->gbuffer              = *gbuffer;
-	data->irradiance_handle    = irradiance_handle;
+	data->irradiance_fb_handle = irradiance_fb_handle;
 	data->prefilter_handle     = prefilter_handle;
 	data->brdf_handle          = brdf_handle;
 	data->light_sphere_mesh    = &dr->light_sphere_mesh;
 
+	if (R_IrradianceVolumeIsBaked(irradiance_volume))
+	{
+		data->irradiance_sh_buffer_address        = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer(irradiance_volume));
+		data->irradiance_grid_info_buffer_address = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
+	}
+	else
+	{
+		data->irradiance_sh_buffer_address = 0;
+		data->irradiance_grid_info_buffer_address = 0;
+	}
+	
 	R_PassSetRecord(pass, R_DeferredLightingPassFn, data);
 
 	return lighting;

@@ -245,13 +245,13 @@ OS_W32_Log(LOG_Level level, LOG_Channel channel,
 }
 
 internal LOG_Channel
-OS_W32_LogOpenChannel(String8 name)
+OS_W32_LogChannelOpen(String8 name)
 {
 	return OS_W32_LOG_OpenChannel(&win32_st.logger, name);
 }
 
 internal void
-OS_W32_LogCloseChannel(LOG_Channel channel)
+OS_W32_LogChannelClose(LOG_Channel channel)
 {
 	OS_W32_LOG_CloseChannel(&win32_st.logger, channel);
 }
@@ -1045,8 +1045,8 @@ OS_W32_BindAPI(OS_API *api)
 	api->GetPageSize                 = OS_W32_GetPageSize;
 
 	api->Log                         = OS_W32_Log;
-	api->LogOpenChannel              = OS_W32_LogOpenChannel;
-	api->LogCloseChannel             = OS_W32_LogCloseChannel;
+	api->LogChannelOpen              = OS_W32_LogChannelOpen;
+	api->LogChannelClose             = OS_W32_LogChannelClose;
 
 	api->SetWindowTitle              = OS_W32_SetWindowTitle;
 	api->GetWindowSize               = OS_W32_GetWindowSize;

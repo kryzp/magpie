@@ -1,5 +1,15 @@
 - logging deduplication shouldn't reset when switching between channels.
 
+- newlines in logs should align with the rest of the logs:
+  [ ... ] [ ... ] [ channel ] hello
+                              this is after a newline
+							  another newline!
+  [ ... ] [ ... ] [ channel ] this is a new log
+
+- move engine shaders into a new mount point "engine://" and make them
+  lie in the source directory (src/render/shaders/...) instead of with the
+  assets.
+
 - /graphics/ backend shouldn't be taking in raw types, everything should take
   in a GFX_<xxx>Key. also make the device global, in the same way the audio
   backend works. e.g: command buffer takes in a GFX_TextureKey and such,
@@ -11,3 +21,9 @@
 - convert graphics device resource management to freelists
 
 - replace the AssertTrue's that are everywhere with DebugLogAssert for more clarity.
+
+- SLANG and RENDER code is generally quite disconnected right now despite sharing a lot
+  of stuff like common type definitions, so we need to clean that up somehow, make it a
+  lot easier to develop rendering + shader code together.
+
+- vulkan extension system is the ricketiest shit ever i have ZERO (0 (nula)) fallbacks.

@@ -1,28 +1,20 @@
 #ifndef APP_H
 #define APP_H
 
-#define APP_TARGET_FPS 144
-#define APP_HOT_RELOAD_INTERVAL 1.f
+#define APP_TARGET_FPS               144
+#define APP_HOT_RELOAD_INTERVAL        1.f
 
 typedef struct App App;
 struct App
 {
 	Arena bootstrap_arena;
-
 	Arena frame_arena;
-	
 	Arena log_arena;
-
 	Arena graphics_arena;
-
 	Arena audio_arena;
-
 	Arena asset_arena;
-
 	Arena render_arena;
-	
 	Arena entity_arena;
-
 	Arena editor_arena;
 
 	// ---
@@ -73,9 +65,8 @@ struct App
 	R_ShadowRenderer shadow_renderer;
 	R_DeferredRenderer deferred_renderer;
 	R_DebugRenderer debug_renderer;
-
-	// ---
-
+	R_IrradianceVolume irradiance_volume;
+	
 	GFX_TextureKey brdf_lut;
 	GFX_TextureKey environment_cubemap;
 	GFX_TextureKey irradiance_cubemap;

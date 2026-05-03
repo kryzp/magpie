@@ -8,4 +8,6 @@
 #include "render_tracker.c"
 #include "render_graph.c"
 
+#include "probe/render_probe_inc.c"
+
 #include "pass/render_pass_inc.c"

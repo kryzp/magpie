@@ -1,4 +1,20 @@
 
+internal VkMemoryBarrier2
+GFX_SyncMemoryBarrier(const GFX_AccessSt *src,
+					  const GFX_AccessSt *dst)
+{
+	VkMemoryBarrier2 barrier = {0};
+	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+
+	barrier.srcAccessMask = src->access;
+	barrier.dstAccessMask = dst->access;
+
+	barrier.srcStageMask = src->stage;
+	barrier.dstStageMask = dst->stage;
+
+	return barrier;
+}
+
 internal VkImageMemoryBarrier2
 GFX_SyncTextureBarrier(const GFX_Texture *texture,
 					   const GFX_AccessSt *src,

@@ -8,6 +8,10 @@ global const char *gfx_context_vk_validation_layers[] = {
 global const char *gfx_context_device_extensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+    VK_KHR_RAY_QUERY_EXTENSION_NAME,
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 #ifdef __APPLE__
 	"VK_KHR_portability_subset"
 #endif
@@ -122,17 +126,24 @@ GFX_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical
 
 	b32 result = true;
 
-	for (u32 i = 0; i < extension_count; i++)
-	{
-		for (u32 j = 0; j < ArraySize(gfx_context_vk_validation_layers); j++)
-		{
-			if (CStrCompare(available_exts[i].extensionName, gfx_context_vk_validation_layers[j]) == 0)
-			{
-				result = false;
-				goto exit;
-			}
-		}
-	}
+    for (u32 i = 0; i < ArraySize(gfx_context_device_extensions); i++)
+    {
+        b32 found = false;
+        for (u32 j = 0; j < extension_count; j++)
+        {
+            if (CStrCompare(available_exts[j].extensionName,
+                            gfx_context_device_extensions[i]) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            result = false;
+            goto exit;
+        }
+    }
 
 exit:
 	ScratchRelease(&scratch);
@@ -384,9 +395,14 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 		for (u32 i = 0; i < device_count; i++)
 		{
+			VkPhysicalDeviceAccelerationStructureFeaturesKHR rt_features = {0};
+			rt_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+			features.pNext = &rt_features;
+
 			vkGetPhysicalDeviceProperties2(devices[i], &properties);
 			vkGetPhysicalDeviceFeatures2(devices[i], &features);
-
+	
 			DebugLogD(log_channel,
 					  "Querying physical device: %s (%d)",
 					  properties.properties.deviceName, properties.properties.deviceID);
@@ -456,9 +472,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	graphics_queue_create_info.queueCount = 1;
 	graphics_queue_create_info.pQueuePriorities = &queue_priority;
 
-	/*
-	context.physical_device_features.features.robustBufferAccess = VK_TRUE;
-	 */
+	//context.physical_device_features.features.robustBufferAccess = VK_TRUE;
 	
 	VkPhysicalDeviceVulkan11Features vulkan11_features = {0};
 	vulkan11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -494,6 +508,21 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	vulkan14_features.maintenance5 = VK_TRUE;
 	vulkan14_features.pNext = &vulkan13_features;
 
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {0};
+	rt_pipeline_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+	rt_pipeline_features.rayTracingPipeline = VK_TRUE;
+	rt_pipeline_features.pNext = &vulkan14_features;
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel_struct_features = {0};
+	accel_struct_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+	accel_struct_features.accelerationStructure = VK_TRUE;
+	accel_struct_features.pNext = &rt_pipeline_features;
+	
+	VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {0};
+	ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+	ray_query_features.rayQuery = VK_TRUE;
+	ray_query_features.pNext = &accel_struct_features;
+	
 	VkDeviceCreateInfo device_create_info = {0};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	device_create_info.queueCreateInfoCount = 1;
@@ -503,7 +532,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	device_create_info.enabledExtensionCount = ArraySize(gfx_context_device_extensions);
 	device_create_info.ppEnabledExtensionNames = gfx_context_device_extensions;
 	device_create_info.pEnabledFeatures = &context.physical_device_features.features;
-	device_create_info.pNext = &vulkan14_features;
+	device_create_info.pNext = &ray_query_features;
 
 	if (context.has_validation_layers)
 	{

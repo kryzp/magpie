@@ -2,6 +2,7 @@
 #include "graphics_device_managed_resources.h"
 #include "graphics_blend.h"
 #include "graphics_buffer.h"
+#include "graphics_accel_struct.h"
 #include "graphics_context.h"
 #include "graphics_bindless.h"
 #include "graphics_sampler.h"

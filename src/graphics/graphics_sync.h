@@ -17,6 +17,9 @@ struct GFX_AccessSt
 	 VK_ACCESS_2_MEMORY_WRITE_BIT |						\
 	 VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT)
 
+internal VkMemoryBarrier2 GFX_SyncMemoryBarrier(const GFX_AccessSt *src,
+												const GFX_AccessSt *dst);
+
 internal VkImageMemoryBarrier2 GFX_SyncTextureBarrier(const GFX_Texture *texture,
 													  const GFX_AccessSt *src,
 													  const GFX_AccessSt *dst,

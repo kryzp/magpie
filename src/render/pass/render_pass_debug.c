@@ -1,11 +1,10 @@
 
-typedef struct R_GPU_DebugObjectDraw R_GPU_DebugObjectDraw;
-struct R_GPU_DebugObjectDraw
-{
-	m4 transform;
-	v4 colour;
-	f32 thickness;
-};
+/*
+ * TODO: I was lazy and didn't put a lot of these function
+ *       defintions into the header file. Do that at some point!!!
+ */
+
+global R_DebugRenderer *r_selected_debug_renderer = NULL;
 
 internal R_DebugDrawNode *
 R_DebugAllocNode(R_DebugRenderer *dr)
@@ -231,7 +230,7 @@ R_DebugCreateCubeMesh(R_DebugRenderer *dr)
 }
 
 internal void
-R_DebugRendererInit(R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets)
+R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets)
 {
 	MemZeroStruct(dr);
 
@@ -254,6 +253,8 @@ R_DebugRendererInit(R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_A
 	R_DebugCreateSphereMesh (dr);
 	R_DebugCreateCircleMesh (dr);
 	R_DebugCreateCubeMesh   (dr);
+	
+	r_selected_debug_renderer = dr;
 }
 
 internal void
@@ -270,26 +271,30 @@ R_DebugRendererDestroy(R_DebugRenderer *dr)
 }
 
 internal void
-R_DebugPushDrawCall(R_DebugRenderer *dr,
-					R_DebugDrawType type,
+R_DebugRendererSelect(R_DebugRenderer *dr)
+{
+	r_selected_debug_renderer = dr;
+}
+
+internal void
+R_DebugPushDrawCall(R_DebugDrawType type,
 					const R_DebugDrawCall *call,
 					b32 depth_enabled)
 {
-	R_DebugDrawNode *node = R_DebugAllocNode(dr);
+	R_DebugDrawNode *node = R_DebugAllocNode(r_selected_debug_renderer);
 	node->type = type;
 	node->call = *call;
 
 	R_DebugDrawNode **bucket = depth_enabled
-		? &dr->depth_enabled[type]
-		: &dr->depth_disabled[type];
+		? &r_selected_debug_renderer->depth_enabled[type]
+		: &r_selected_debug_renderer->depth_disabled[type];
 
 	node->next = *bucket;
 	*bucket = node;
 }
 
 internal void
-R_DebugPushLine(R_DebugRenderer *dr,
-				v3 from, v3 to,
+R_DebugPushLine(v3 from, v3 to,
 				v4 colour, f32 line_width,
 				f32 duration, b32 depth_enabled)
 {
@@ -301,12 +306,11 @@ R_DebugPushLine(R_DebugRenderer *dr,
 	call.line.from = from;
 	call.line.to = to;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_Line, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_Line, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushCross(R_DebugRenderer *dr,
-				 v3 point, f32 size,
+R_DebugPushCross(v3 point, f32 size,
 				 v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -317,12 +321,11 @@ R_DebugPushCross(R_DebugRenderer *dr,
 	call.cross.point = point;
 	call.cross.size = size;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_Cross, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_Cross, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushSphere(R_DebugRenderer *dr,
-				  v3 centre, f32 radius,
+R_DebugPushSphere(v3 centre, f32 radius,
 				  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -333,12 +336,11 @@ R_DebugPushSphere(R_DebugRenderer *dr,
 	call.sphere.centre = centre;
 	call.sphere.radius = radius;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_Sphere, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_Sphere, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushCircle(R_DebugRenderer *dr,
-				  v3 centre, f32 radius, v3 plane_normal,
+R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
 				  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -350,12 +352,11 @@ R_DebugPushCircle(R_DebugRenderer *dr,
 	call.circle.radius = radius;
 	call.circle.normal = plane_normal;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_Circle, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_Circle, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushTriangle(R_DebugRenderer *dr,
-					v3 a, v3 b, v3 c,
+R_DebugPushTriangle(v3 a, v3 b, v3 c,
 					v4 colour, f32 line_width,
 					f32 duration, b32 depth_enabled)
 {
@@ -368,12 +369,11 @@ R_DebugPushTriangle(R_DebugRenderer *dr,
 	call.triangle.v1 = b;
 	call.triangle.v2 = c;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_Triangle, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_Triangle, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushAABB(R_DebugRenderer *dr,
-				v3 min, v3 max,
+R_DebugPushAABB(v3 min, v3 max,
 				v4 colour, f32 line_width,
 				f32 duration, b32 depth_enabled)
 {
@@ -385,12 +385,11 @@ R_DebugPushAABB(R_DebugRenderer *dr,
 	call.aabb.min = min;
 	call.aabb.max = max;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_AABB, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_AABB, &call, depth_enabled);
 }
 
 internal void
-R_DebugPushOBB(R_DebugRenderer *dr,
-			   m4 transform, v3 scale,
+R_DebugPushOBB(m4 transform, v3 scale,
 			   v4 colour, f32 line_width,
 			   f32 duration, b32 depth_enabled)
 {
@@ -402,7 +401,7 @@ R_DebugPushOBB(R_DebugRenderer *dr,
 	call.obb.transform = transform;
 	call.obb.scale = scale;
 
-	R_DebugPushDrawCall(dr, R_DebugDrawType_OBB, &call, depth_enabled);
+	R_DebugPushDrawCall(R_DebugDrawType_OBB, &call, depth_enabled);
 }
 
 internal void

@@ -1,9 +1,13 @@
 import util;
 import bindless;
 import types;
+import irradiance;
 
 struct PushConstants {
 	types::FrameData *frame_data;
+
+	irradiance::ProbeSH *irr_sh_buffer;
+	irradiance::ProbeGridInfo *irr_grid_info_buffer;
 
     uint position;
     uint albedo;
@@ -11,9 +15,8 @@ struct PushConstants {
 	uint material;
 	uint emissive;
 
-	uint irradiance_map;
-	uint prefilter_map;
-
+	uint irradiance_fallback_cubemap;
+	uint prefilter_cubemap;
 	uint brdf_lut;
 
 	uint linear_sampler;
@@ -51,8 +54,8 @@ float4 FragmentMain(VS_Output input) : SV_Target
     float3 material    = bdl::textures[args.material]   .Sample(sampler, uv).rgb;
 	float3 emissive    = bdl::textures[args.emissive]   .Sample(sampler, uv).rgb;
 
-    TextureCube prefilter_map = bdl::cubes[args.prefilter_map];
-    TextureCube irradiance_map = bdl::cubes[args.irradiance_map];
+    TextureCube irradiance_fallback_cubemap = bdl::cubes[args.irradiance_fallback_cubemap];
+    TextureCube prefilter_cubemap = bdl::cubes[args.prefilter_cubemap];
 
 	float ambient_occlusion = 1.0;
 	float roughness_value = material.g;
@@ -64,20 +67,28 @@ float4 FragmentMain(VS_Output input) : SV_Target
 
 	float NdotV = max(0., dot(normal, view_dir));
 
-	float3 F = util::FresnelSchlick(NdotV, F0, roughness_value);
+	float3 F = F0;//util::FresnelSchlick(NdotV, F0, roughness_value);
 	float3 kD = (1. - F) * (1.0 - metallic_value);
 
 	float3 reflected = normalize(reflect(-view_dir, normal));
 
     float prefilter_mip_level = roughness_value * MAX_REFLECTION_LOD;
-    float3 prefiltered_colour = prefilter_map.SampleLevel(sampler, util::WorldToCubemap(reflected), prefilter_mip_level).rgb;
+    float3 prefiltered_colour = prefilter_cubemap.SampleLevel(sampler, util::WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
+	prefiltered_colour = 0.0;
+	
     float2 environment_brdf = bdl::textures[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);
 
-    float3 irradiance = irradiance_map.Sample(sampler, util::WorldToCubemap(normal)).rgb;
-	float3 diffuse = irradiance * albedo;
+	float3 irr = 0.0;
+	
+	if (args.irr_sh_buffer)
+		irr = irradiance::SampleIrradianceGrid(position, normal, *args.irr_grid_info_buffer, args.irr_sh_buffer);
+	else
+		irr = irradiance_fallback_cubemap.Sample(sampler, util::WorldToCubemap(normal)).rgb;		
+
+	float3 diffuse = irr * albedo;
 	float3 ambient = (kD * diffuse + specular) * ambient_occlusion;
 
     float3 final_colour = ambient + emissive;

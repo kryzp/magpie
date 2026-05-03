@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_CMD_POOL
 #define GRAPHICS_CMD_POOL
 
-#define GFX_CMD_POOL_MAX_BUFFERS 32
+#define GFX_CMD_POOL_MAX_BUFFERS 512
 
 typedef struct GFX_CmdPool GFX_CmdPool;
 struct GFX_CmdPool
