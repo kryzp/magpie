@@ -17,11 +17,9 @@ R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 	vol->grid_min = grid_min;
 	vol->grid_max = grid_max;
 
-	// genuinely formatted it like this for
-	// no reason other than ****aesthetics****.
 	vol->nx     = nx;
-	vol->ny     =      ny;
-	vol->nz     =           nz;
+	vol->ny     = ny;
+	vol->nz     = nz;
 	vol->ntotal = nx * ny * nz;
 
 	vol->skybox_mesh      = skybox_mesh;
@@ -98,12 +96,8 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 {
 	GFX_Device *device = vol->device;
 
-
-	// ==== Phase 1: Alloc all acceleration structures, collect scratch sizes. ====
-
 	u64 max_scratch_size = 0;
 
-	// -- Alloc BLAS per geometry page.
 	vol->blas_count = scene->geometry_page_count;
 	AssertTrue(vol->blas_count < ArraySize(vol->blas_per_page));
 
@@ -128,13 +122,9 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 		max_scratch_size = MaxValue(max_scratch_size, receipt.scratch_size);
 	}
 
-	// -- Alloc TLAS.
 	GFX_DeviceAllocAccelStructReceipt tlas_receipt = GFX_DeviceTLASAlloc(device, scene->object_count);
 	vol->tlas = tlas_receipt.key;
 	max_scratch_size = MaxValue(max_scratch_size, tlas_receipt.scratch_size);
-
-
-	// ==== Phase 2: Allocate scratch buffer. ====
 
 	GFX_BufferAllocInfo scratch_info = {0};
 	scratch_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
@@ -142,9 +132,6 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 	scratch_info.size  = max_scratch_size;
 
 	GFX_BufferKey scratch_buffer = GFX_DeviceBufferAlloc(device, &scratch_info);
-
-
-	// ==== Phase 3: Build instance data for TLAS. ====
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -189,7 +176,6 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 		instance_index++;
 	}
 
-	// Upload instance data to GPU.
 	u64 instance_data_size = scene->object_count * sizeof(VkAccelerationStructureInstanceKHR);
 
 	GFX_BufferAllocInfo inst_buf_info = {0};

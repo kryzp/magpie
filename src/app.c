@@ -363,7 +363,7 @@ AppInitRender(App *app)
 	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     AST_Type_Shader);
 	AST_Handle prefilter_shader_handle  = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      AST_Type_Shader);
 
-	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
+	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
 	AST_Handle model_handle = AST_RequireNow(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 
@@ -676,8 +676,6 @@ AppTick(App *app, const I_State *input)
 	{
 		R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
 	}
-
-	//DebugPrintT("Hello!!!");
 
 	AST_FlushUploads(&app->assets);
 
