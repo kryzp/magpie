@@ -32,6 +32,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **IBL** (Image-Based Lighting)
 - **Compute Frustum Culling**
 - **Indirect Deferred Rendering**
+- **Indirect Forward Rendering for Transparency**
 - **Point Lights** with compute-culled shadow-mapping
 - **ImGui Integration** (C bindings)
 - **Right-Handed Z-up Coordinates** (as it SHOULD be)
@@ -52,7 +53,9 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- Reflections
+- SSAO
+- Grass / Fur / Hair Rendering
+- Reflections + Reflective Materials (e.g: Mirrors)
 - Volumetrics (Clouds, Smoke, etc.)
 - Text / Font Rendering
 - Bone / Joint Based Animation
@@ -60,8 +63,6 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)
 - ImGui Visualisation for Profilers (CPU & GPU)
 - Irradiance Probes with Spherical Harmonics, which automatically reposition themselves
-- Reflective Objects (such as mirrors)
-- Fur / Hair Rendering
 - 2D Batch Quad Renderer (basically the SpriteBatch from XNA/FNA/MonoGame)
 - UI System (needs 2D batch renderer)
 - Compositive Post Processing Pipeline

@@ -1,5 +1,7 @@
 - logging deduplication shouldn't reset when switching between channels.
 
+- look into order-independent forward transparency
+
 - newlines in logs should align with the rest of the logs:
   [ ... ] [ ... ] [ channel ] hello
                               this is after a newline

@@ -12,9 +12,11 @@
 #include "render_graph.h"
 #include "render_blackboard.h"
 
-#include "probe/render_probe_inc.h"
-
 #include "volumetric/render_volumetric_inc.h"
+
+#include "ssao/render_ssao_inc.h"
+
+#include "probe/render_probe_inc.h"
 
 #include "pass/render_pass_inc.h"
 

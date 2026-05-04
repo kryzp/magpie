@@ -35,7 +35,7 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 		u64 count_buffer;
 
 		u32 object_count;
-		u32 _padding;
+		u32 alpha_filter;
 
 		v4 frustum_planes[6];
 	}
@@ -49,7 +49,7 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
 
 	pc.object_count = data->object_count;
-	pc._padding = 0;
+	pc.alpha_filter = (u32)data->filter;
 
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
@@ -94,7 +94,7 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 		u64 count_buffer;
 
 		u32 object_count;
-		u32 _padding;
+		u32 alpha_filter;
 
 		v4 sphere;
 	}
@@ -108,7 +108,8 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
 
 	pc.object_count = data->object_count;
-	pc._padding = 0;
+	pc.alpha_filter = (u32)data->filter;
+
 	pc.sphere = data->sphere;
 
 	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
@@ -134,6 +135,7 @@ R_CullFrustum(R_Culling *cull,
 			  Arena *pass_arena,
 			  const R_Scene *scene,
 			  const R_SceneResources *scene_resources,
+			  R_CullFilter filter,
 			  const R_FrustumVolume *frustum)
 {
 	R_DrawStream stream = {0};
@@ -176,6 +178,8 @@ R_CullFrustum(R_Culling *cull,
 
 		data->object_count = R_SceneGetObjectCount(scene);
 
+		data->filter = filter;
+		
 		for (u32 i = 0; i < 6; i++)
 			data->frustum_planes[i] = frustum->planes[i];
 
@@ -195,6 +199,7 @@ R_CullSphere(R_Culling *cull,
 			 Arena *pass_arena,
 			 const R_Scene *scene,
 			 const R_SceneResources *scene_resources,
+			 R_CullFilter filter,
 			 v3 sphere_centre, f32 sphere_radius)
 {
 	R_DrawStream stream = {0};
@@ -236,6 +241,8 @@ R_CullSphere(R_Culling *cull,
 		data->page_table_buffer_address = scene_resources->page_table_buffer.gpu;
 
 		data->object_count = R_SceneGetObjectCount(scene);
+
+		data->filter = filter;
 
 		data->sphere = v4(sphere_centre.x, sphere_centre.y, sphere_centre.z, sphere_radius);
 

@@ -56,6 +56,18 @@ namespace culling
 		return t;
 	}
 
+	public static uint ALPHA_FILTER_OPAQUE_ONLY = 0;
+	public static uint ALPHA_FILTER_ALPHA_ONLY  = 1;
+	public static uint ALPHA_FILTER_ALL         = 2;
+
+	public bool PassesAlphaFilter(scene::ObjectData obj, uint filter)
+	{
+		if (filter == ALPHA_FILTER_OPAQUE_ONLY)  return obj.alpha_mode != scene::ALPHA_MODE_BLEND;
+		if (filter == ALPHA_FILTER_ALPHA_ONLY)   return obj.alpha_mode == scene::ALPHA_MODE_BLEND;
+
+		return true;
+	}
+
 	public bool IsVisibleAgainst<T : IVolumeTest>(scene::ObjectData obj, T test)
 	{
 		float3 world_centre = mul(obj.model_matrix, float4(obj.sphere_bounds.xyz, 1.0)).xyz;

@@ -36,10 +36,14 @@ struct R_GPU_ObjectData
 {
 	m4 model_matrix;
 	m4 normal_matrix;
+
 	v4 sphere_bounds;
+
 	u32 material_index;
 	u32 page_index;
 	u32 mesh_index;
+	
+	u32 alpha_mode;
 };
 
 typedef struct R_GPU_RenderMesh R_GPU_RenderMesh;

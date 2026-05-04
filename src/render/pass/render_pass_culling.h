@@ -1,6 +1,17 @@
 #ifndef RENDER_PASS_CULLING_H
 #define RENDER_PASS_CULLING_H
 
+
+typedef enum R_CullFilter R_CullFilter;
+enum R_CullFilter
+{
+	R_CullFilter_OpaqueOnly = 0,
+	R_CullFilter_AlphaOnly  = 1,
+	R_CullFilter_All        = 2,
+	R_CullFilter_COUNT
+};
+
+
 typedef struct R_CullFrustumClearPassData R_CullFrustumClearPassData;
 struct R_CullFrustumClearPassData
 {
@@ -23,6 +34,8 @@ struct R_CullFrustumPassData
 	u64 page_table_buffer_address;
 	
 	u32 object_count;
+
+	R_CullFilter filter;
 
 	v4 frustum_planes[6];
 };
@@ -53,6 +66,8 @@ struct R_CullSpherePassData
 	
 	u32 object_count;
 
+	R_CullFilter filter;
+	
 	v4 sphere;
 };
 
@@ -82,6 +97,7 @@ internal R_DrawStream R_CullFrustum (R_Culling *cull,
 									 Arena *pass_arena,
 									 const R_Scene *scene,
 									 const R_SceneResources *scene_resources,
+									 R_CullFilter filter,
 									 const R_FrustumVolume *frustum);
 
 internal R_DrawStream R_CullSphere  (R_Culling *cull,
@@ -89,6 +105,7 @@ internal R_DrawStream R_CullSphere  (R_Culling *cull,
 									 Arena *pass_arena,
 									 const R_Scene *scene,
 									 const R_SceneResources *scene_resources,
+									 R_CullFilter filter,
 									 v3 sphere_centre, f32 sphere_radius);
 
 #endif // RENDER_PASS_CULLING_H

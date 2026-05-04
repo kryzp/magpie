@@ -14,16 +14,23 @@ struct AST_ModelVertex
 	v3 bitangent;
 };
 
-/*
-typedef enum AST_ModelAlphaMode
+typedef enum AST_AlphaMode
 {
-	AST_ModelAlphaMode_Opaque,
-	AST_ModelAlphaMode_Mask,
-	AST_ModelAlphaMode_Blend,
-	AST_ModelAlphaMode_COUNT
+	AST_AlphaMode_Opaque = 0,  // -> deferred
+	AST_AlphaMode_Mask   = 1,  // -> deferred + discard below threshold
+	AST_AlphaMode_Blend  = 2,  // -> forward transparency, back-to-front
+	AST_AlphaMode_COUNT
 }
-AST_ModelAlphaMode;
-*/
+AST_AlphaMode;
+
+typedef enum AST_ReflectionMode
+{
+	AST_ReflectionMode_Default,  // -> ssr + probes
+	AST_ReflectionMode_Planar,   // -> full scene re-render
+	AST_ReflectionMode_None,     // -> no reflections at all
+	AST_ReflectionMode_COUNT,
+}
+AST_ReflectionMode;
 
 typedef struct AST_ModelMaterial AST_ModelMaterial;
 struct AST_ModelMaterial
@@ -35,7 +42,7 @@ struct AST_ModelMaterial
 	AST_Handle metallic_roughness;
 	AST_Handle ambient;
 
-	// Multipliers.
+	// Factors.
 	v4 albedo_factor;
 	f32 metallic_factor;
 	f32 roughness_factor;
@@ -43,6 +50,9 @@ struct AST_ModelMaterial
 
 	// Etc.
 	b32 double_sided;
+	AST_AlphaMode alpha_mode;
+	AST_ReflectionMode reflection_mode;
+	v4 reflection_plane;
 };
 
 typedef struct AST_SubModel AST_SubModel;

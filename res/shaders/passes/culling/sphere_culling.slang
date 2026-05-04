@@ -9,7 +9,7 @@ struct PushConstants
 	scene::IndirectDraw *indirect_buffer;
 	uint *count_buffer;
 	uint object_count;
-	uint _padding;
+	uint alpha_filter;
 	float4 sphere; // xyz = position, w = radius
 };
 
@@ -20,11 +20,15 @@ struct PushConstants
 void ComputeMain(uint3 tid : SV_DispatchThreadID)
 {
 	uint gid = tid.x;
+	
 	if (gid >= args.object_count)
 		return;
 
 	scene::ObjectData obj = args.objects[gid];
 
+	if (!culling::PassesAlphaFilter(obj, args.alpha_filter))
+		return;
+	
 	culling::SphereTest test = culling::MakeSphereTest(args.sphere);
 
 	if (culling::IsVisibleAgainst(obj, test))

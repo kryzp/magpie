@@ -125,6 +125,9 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	mat.emissive_factor    = 0.f;
 	
 	mat.double_sided       = false;
+	mat.alpha_mode         = AST_AlphaMode_Opaque;
+	mat.reflection_mode    = AST_ReflectionMode_Default;
+	mat.reflection_plane   = v4x(0.f);
 	
 	struct aiColor4D colour = {0};
 	
@@ -135,6 +138,17 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	aiGetMaterialFloat(ai_mat, AI_MATKEY_METALLIC_FACTOR, &mat.metallic_factor);
 	aiGetMaterialFloat(ai_mat, AI_MATKEY_ROUGHNESS_FACTOR, &mat.roughness_factor);
 	aiGetMaterialFloat(ai_mat, AI_MATKEY_EMISSIVE_INTENSITY, &mat.emissive_factor);
+
+	struct aiString alpha_mode_str = {0};
+	if (aiGetMaterialString(ai_mat, AI_MATKEY_GLTF_ALPHAMODE, &alpha_mode_str) == AI_SUCCESS)
+	{
+		if (strcmp(alpha_mode_str.data, "MASK")  == 0)  mat.alpha_mode = AST_AlphaMode_Mask;
+		if (strcmp(alpha_mode_str.data, "BLEND") == 0)  mat.alpha_mode = AST_AlphaMode_Blend;
+	}
+	else if (mat.albedo_factor.w < 1.f)
+	{
+		mat.alpha_mode = AST_AlphaMode_Blend;
+	}
 	
 	i32 double_sided = 0;
 	

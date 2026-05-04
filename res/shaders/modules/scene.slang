@@ -12,14 +12,22 @@ namespace scene
 		public float3 bitangent;
 	};
 
+	public static const uint ALPHA_MODE_OPAQUE = 0;
+	public static const uint ALPHA_MODE_MASK   = 1;
+	public static const uint ALPHA_MODE_BLEND  = 2;
+
 	public struct ObjectData
 	{
 		public float4x4 model_matrix;
 		public float4x4 normal_matrix;
+									 
 		public float4 sphere_bounds;
+								   
 		public uint material_index;
 		public uint page_index;
 		public uint mesh_index;
+							  
+		public uint alpha_mode; // 0 = opaque, 1 = mask, 2 = blend
 	};
 
 	public struct RenderMesh

@@ -150,6 +150,7 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 
 		R_DrawStream draw_stream = R_CullSphere(culling, graph, pass_arena,
 												scene, scene_resources,
+												R_CullFilter_All,
 												info->position, info->radius);
 
 		
