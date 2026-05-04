@@ -71,15 +71,15 @@ OS_W32_LOG_CloseChannel(OS_W32_LOG_Logger *logger, LOG_Channel channel)
 
 internal i32
 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
-			   char *dst, i32 dst_size,
-			   LOG_Level level, LOG_Channel channel,
-			   const char *file, i32 line, const char *fn,
-			   const char *body,
-			   b32 for_file, f32 elapsed,
-			   JOB_Context job_context)
+					  char *dst, i32 dst_size,
+					  LOG_Level level, LOG_Channel channel,
+					  const char *file, i32 line, const char *fn,
+					  const char *body,
+					  b32 for_file, f32 elapsed,
+					  OS_W32_JOB_Context job_context)
 {
-	const char *level_string = LOG_LevelToString (level);
-	const char *level_ansi   = LOG_LevelAnsi     (level);
+	const char *level_string = OS_W32_LOG_LevelToString (level);
+	const char *level_ansi   = OS_W32_LOG_LevelAnsi     (level);
 	
 	i32 len = 0;
 	b32 show_callsite = level >= LOG_Level_Error;
@@ -190,13 +190,13 @@ OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 	if (!OS_HandleIsNull(logger->file_stream))
 	{
 		file_len = OS_W32_LOG_FormatLine(logger,
-								  file_line, sizeof(file_line),
-								  logger->dedup_level,
-								  logger->dedup_channel,
-								  "", 0, "",
-								  body,
-								  true, elapsed,
-								  logger->dedup_job_context);
+										 file_line, sizeof(file_line),
+										 logger->dedup_level,
+										 logger->dedup_channel,
+										 "", 0, "",
+										 body,
+										 true, elapsed,
+										 logger->dedup_job_context);
 		
 		if (file_len > 0)
 			osapi->StreamWrite(logger->file_stream, file_line, (u64)file_len);
@@ -205,9 +205,10 @@ OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 
 internal void
 OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
-		   LOG_Level level, LOG_Channel channel,
-		   const char *file, i32 line, const char *fn,
-		   const char *fmt, va_list args)
+				  OS_W32_JOB_Context job_context,
+				  LOG_Level level, LOG_Channel channel,
+				  const char *file, i32 line, const char *fn,
+				  const char *fmt, va_list args)
 {
 	AssertTrue(logger);
 
@@ -219,8 +220,6 @@ OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 
 	f32 elapsed = CH_TimerElapsed(&logger->timer);
 
-	JOB_Context job_context = osapi->JobGetContext();
-	
 	char body[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
 	vsnprintf(body, sizeof(body), fmt, args);
 
@@ -243,12 +242,12 @@ OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 			char console_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
 	
 			i32 console_len = OS_W32_LOG_FormatLine(logger,
-											 console_line, sizeof(console_line),
-											 level, channel,
-											 file, line, fn,
-											 dedup_body,
-											 false, elapsed,
-											 logger->dedup_job_context);
+													console_line, sizeof(console_line),
+													level, channel,
+													file, line, fn,
+													dedup_body,
+													false, elapsed,
+													logger->dedup_job_context);
 
 			if (console_len > 0)
 			{
@@ -276,12 +275,12 @@ OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 			char console_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
 	
 			i32 console_len = OS_W32_LOG_FormatLine(logger,
-											 console_line, sizeof(console_line),
-											 level, channel,
-											 file, line, fn,
-											 body,
-											 false, elapsed,
-											 job_context);
+													console_line, sizeof(console_line),
+													level, channel,
+													file, line, fn,
+													body,
+													false, elapsed,
+													job_context);
 
 			if (console_len > 0)
 			{
@@ -297,12 +296,12 @@ OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 				i32 file_len = 0;
 			
 				file_len = OS_W32_LOG_FormatLine(logger,
-										  file_line, sizeof(file_line),
-										  level, channel,
-										  file, line, fn,
-										  body,
-										  true, elapsed,
-										  job_context);
+												 file_line, sizeof(file_line),
+												 level, channel,
+												 file, line, fn,
+												 body,
+												 true, elapsed,
+												 job_context);
 				
 				if (file_len > 0)
 					osapi->StreamWrite(logger->file_stream, file_line, (u64)file_len);

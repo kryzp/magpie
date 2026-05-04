@@ -130,9 +130,9 @@ R_DeferredRendererInit(R_DeferredRenderer *dr, GFX_Device *device, AST_Assets *a
 	dr->device = device;
 	dr->assets = assets;
 
-	dr->model_shader                 = AST_Require(assets, String8Lit("assets://shaders/passes/model.slang"),                 AST_Type_Shader);
-	dr->ambient_lighting_shader      = AST_Require(assets, String8Lit("assets://shaders/passes/ambient_lighting.slang"),      AST_Type_Shader);
-	dr->direct_lighting_point_shader = AST_Require(assets, String8Lit("assets://shaders/passes/direct_lighting_point.slang"), AST_Type_Shader);
+	dr->model_shader                 = AST_Require(assets, String8Lit("assets://shaders/passes/geometry/model.slang"),                 AST_Type_Shader);
+	dr->ambient_lighting_shader      = AST_Require(assets, String8Lit("assets://shaders/passes/lighting/ambient_lighting.slang"),      AST_Type_Shader);
+	dr->direct_lighting_point_shader = AST_Require(assets, String8Lit("assets://shaders/passes/lighting/direct_lighting_point.slang"), AST_Type_Shader);
 
 	R_DeferredCreateLightSphereMesh(dr);
 }

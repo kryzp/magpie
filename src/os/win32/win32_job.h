@@ -22,6 +22,13 @@
 #define OS_W32_JOB_FIBER_SCRATCH_SIZE         Megabytes(8)
 #define OS_W32_JOB_FIBER_SCRATCH_RING_SIZE    2
 
+typedef struct OS_W32_JOB_Context OS_W32_JOB_Context;
+struct OS_W32_JOB_Context
+{
+	u32 worker_id;
+	i32 fiber_id;
+};
+
 typedef struct OS_W32_JOB_Fiber OS_W32_JOB_Fiber;
 
 typedef struct OS_W32_JOB_Counter OS_W32_JOB_Counter;
@@ -161,7 +168,7 @@ internal void OS_W32_JOB_FiberEntry(void *param);
 internal void OS_W32_JOB_Enter (OS_W32_JOB_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
 internal void OS_W32_JOB_Halt  (OS_W32_JOB_Scheduler *scheduler);
 
-internal JOB_Context OS_W32_JOB_GetContext(OS_W32_JOB_Scheduler *scheduler);
+internal OS_W32_JOB_Context OS_W32_JOB_GetContext(OS_W32_JOB_Scheduler *scheduler);
 
 /* ==================================================
    COUNTER

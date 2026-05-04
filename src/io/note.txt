@@ -1,0 +1,4 @@
+is there any point in this layer even existing?
+maybe for IO_ByteWriter / IO_ByteReader, but everything else is unnecessary
+the stream is useless
+the path really is just stuff that should be in the string core no?

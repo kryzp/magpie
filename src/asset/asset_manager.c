@@ -1,22 +1,4 @@
 
-internal u64
-AST_FindSchemeSeparator(String8 path)
-{
-	DebugPrintAssert(path.len >= 2, "Path \"%.*s\" too short!", (i32)path.len, path.str);
-	
-	for (u64 i = 0; i < path.len - 2; i++)
-	{
-		if (path.str[i]     == ':' &&
-			path.str[i + 1] == '/' &&
-			path.str[i + 2] == '/')
-		{
-			return i;
-		}
-	}
-
-	return path.len;
-}
-
 internal u32
 AST_AllocSlot(AST_Assets *assets)
 {
@@ -249,9 +231,6 @@ AST_Mount(AST_Assets *assets, String8 prefix, String8 directory)
 {
 	AssertTrue(directory.len > 0);
 	
-	AssertTrue((directory.str[directory.len - 1] == '/') ||
-			   (directory.str[directory.len - 1] == '\\'));
-	
 	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
 
 	AST_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
@@ -262,27 +241,30 @@ AST_Mount(AST_Assets *assets, String8 prefix, String8 directory)
 internal String8
 AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 {
-	u64 sep = AST_FindSchemeSeparator(path);
+	AST_MountPoint *best = NULL;
+	u64 best_len = 0;
 
-	if (sep < path.len)
+	for (u32 i = 0; i < assets->mount_point_count; i++)
 	{
-		String8 prefix   = String8Init(path.str, sep);
-		String8 relative = String8Init(path.str + sep + 3, path.len - sep - 3);
+		AST_MountPoint *m = &assets->mount_points[i];
 
-		for (u32 i = 0; i < assets->mount_point_count; i++)
+		if (String8StartsWith(path, m->prefix) && m->prefix.len > best_len)
 		{
-			if (String8Match(prefix, assets->mount_points[i].prefix))
-				return String8Append(arena, assets->mount_points[i].directory, relative);
+			best = m;
+			best_len = m->prefix.len;
 		}
 	}
 
-	/*
-	  DebugLogW(assets->log_channel,
-	  "Unrecognised prefix in path: \"%.*s\", using path as-is.",
-	  (i32)path.len, path.str);
-	*/
+	if (!best)
+	{
+		DebugLogB(assets->log_channel,
+				  "Failed to find system file path for asset path: \"%.*s\"",
+				  (i32)path.len, path.str);
+	}
 	
-	return path;
+	String8 suffix = String8Skip(path, best_len);
+
+	return IO_PathJoin(arena, best->directory, suffix);
 }
 
 internal b32

@@ -424,10 +424,10 @@ OS_W32_JOB_Halt(OS_W32_JOB_Scheduler *scheduler)
 	osapi->CondVarBroadcast(scheduler->cond_begin);
 }
 
-internal JOB_Context
+internal OS_W32_JOB_Context
 OS_W32_JOB_GetContext(OS_W32_JOB_Scheduler *scheduler)
 {
-	JOB_Context ctx = {0};
+	OS_W32_JOB_Context ctx = {0};
 	ctx.worker_id = 0;
 	ctx.fiber_id = -1;
 	

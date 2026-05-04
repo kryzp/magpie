@@ -64,7 +64,7 @@ R_ShadowRendererInit(R_ShadowRenderer *sr, GFX_Device *device, AST_Assets *asset
 		sr->shadow_cubemap_views[i] = GFX_DeviceTextureViewFetch(device, &view_info);
 	}
 
-	sr->depth_shader = AST_Require(assets, String8Lit("assets://shaders/passes/shadow_mapping.slang"), AST_Type_Shader);
+	sr->depth_shader = AST_Require(assets, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), AST_Type_Shader);
 }
 
 internal void

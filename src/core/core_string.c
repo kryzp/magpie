@@ -34,6 +34,16 @@ String8Append(Arena *arena, String8 a, String8 b)
 	return out;
 }
 
+internal String8
+String8Skip(String8 string, u64 to)
+{
+	String8 skipped = {0};
+	skipped.str = string.str + to;
+	skipped.len = string.len - to;
+
+	return skipped;
+}
+
 internal b32
 String8Match(String8 a, String8 b)
 {
@@ -43,6 +53,21 @@ String8Match(String8 a, String8 b)
 	for (u32 i = 0; i < a.len; i++)
 	{
 		if (a.str[i] != b.str[i])
+			return false;
+	}
+
+	return true;
+}
+
+internal b32
+String8StartsWith(String8 string, String8 prefix)
+{
+	if (prefix.len > string.len)
+		return false;
+
+	for (u32 i = 0; i < prefix.len; i++)
+	{
+		if (string.str[i] != prefix.str[i])
 			return false;
 	}
 

@@ -64,7 +64,7 @@ R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 	}
 
 	vol->bake_shader_handle = AST_RequireNow(assets,
-											 String8Lit("assets://shaders/passes/irradiance_probe_bake.comp.slang"),
+											 String8Lit("assets://shaders/passes/ibl/irradiance_probe_bake.slang"),
 											 AST_Type_Shader);
 
 	vol->is_baked = false;

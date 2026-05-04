@@ -6,10 +6,6 @@
 							  another newline!
   [ ... ] [ ... ] [ channel ] this is a new log
 
-- move engine shaders into a new mount point "engine://" and make them
-  lie in the source directory (src/render/shaders/...) instead of with the
-  assets.
-
 - /graphics/ backend shouldn't be taking in raw types, everything should take
   in a GFX_<xxx>Key. also make the device global, in the same way the audio
   backend works. e.g: command buffer takes in a GFX_TextureKey and such,

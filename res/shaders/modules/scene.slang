@@ -1,20 +1,7 @@
-module types;
+module scene;
 
-namespace types
+namespace scene
 {
-	public struct FrameData
-	{
-		public float4x4 view;
-		public float4x4 projection;
-		public float4x4 view_projection;
-		public float4x4 view_projection_no_translation;
-		public float4x4 inv_view;
-		public float4x4 inv_projection;
-		public float3 camera_position;
-		public float2 window_resolution;
-		public float time;
-	};
-
 	public struct ModelVertex
 	{
 		public float3 position;
@@ -56,26 +43,6 @@ namespace types
 		public float emissive_factor;
 
 		public uint double_sided;
-	};
-
-	public struct Light
-	{
-		public float4x4 transform;
-		public float3 position;
-		public float radius;
-		public float3 colour;
-		public float intensity;
-		public float3 attenuation;
-		public int shadow_slot_index; // -1 to disable shadows
-	};
-
-	public struct ShadowCaster
-	{
-		public float4x4 face_matrices[6];
-		public float3 position;
-		public float near_plane;
-		public float far_plane;
-		public int shadow_map;
 	};
 
 	public struct IndirectDraw

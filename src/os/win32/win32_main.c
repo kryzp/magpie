@@ -36,8 +36,8 @@
 #include "io/io_inc.h"
 #include "chrono/chrono_inc.h"
 
-#include "win32_log.h"
 #include "win32_job.h"
+#include "win32_log.h"
 
 global OS_API *osapi = NULL;
 
@@ -47,8 +47,8 @@ global OS_API *osapi = NULL;
 #include "io/io_inc.c"
 #include "chrono/chrono_inc.c"
 
-#include "win32_log.c"
 #include "win32_job.c"
+#include "win32_log.c"
 
 typedef struct OS_W32_Object OS_W32_Object;
 struct OS_W32_Object
@@ -238,9 +238,11 @@ OS_W32_Log(LOG_Level level, LOG_Channel channel,
 		   const char *file, i32 line, const char *fn,
 		   const char *fmt, ...)
 {
+	OS_W32_JOB_Context job_context = OS_W32_JOB_GetContext(&win32_st.scheduler);
+	
 	va_list args;
 	va_start(args, fmt);
-	OS_W32_LOG_WriteV(&win32_st.logger, level, channel, file, line, fn, fmt, args);
+	OS_W32_LOG_WriteV(&win32_st.logger, job_context, level, channel, file, line, fn, fmt, args);
 	va_end(args);
 }
 
@@ -1022,12 +1024,6 @@ OS_W32_JobIsMainThread(void)
 	return OS_W32_JOB_IsMainThread(&win32_st.scheduler);
 }
 
-internal JOB_Context
-OS_W32_JobGetContext(void)
-{
-	return OS_W32_JOB_GetContext(&win32_st.scheduler);
-}
-
 internal Arena *
 OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
 {
@@ -1146,7 +1142,6 @@ OS_W32_BindAPI(OS_API *api)
 	api->JobBatch                    = OS_W32_JobBatch;
 	api->JobFor                      = OS_W32_JobFor;
 	api->JobIsMainThread             = OS_W32_JobIsMainThread;
-	api->JobGetContext               = OS_W32_JobGetContext;
 	api->JobGetScratch               = OS_W32_JobGetScratch;
 
 	api->OpenInExplorer              = OS_W32_OpenInExplorer;

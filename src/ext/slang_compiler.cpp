@@ -18,8 +18,18 @@ SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 
 	const char *msg = (const char *)diag->getBufferPointer();
 
-	if (msg && msg[0])
-		log_fn(context, source, msg, user_data);
+	if (!msg)
+		return;
+
+	if (!msg[0])
+		return;
+
+	// cut off the newline
+	char fmt[512] = {0};
+	memcpy(fmt, msg, strlen(msg));
+	fmt[strlen(msg)-2] = 0;
+		
+	log_fn(context, source, fmt, user_data);
 }
 
 extern "C" void

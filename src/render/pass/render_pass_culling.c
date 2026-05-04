@@ -119,8 +119,8 @@ internal void
 R_CullingInit(R_Culling *cull, AST_Assets *assets)
 {
 	cull->assets = assets;
-	cull->frustum_shader = AST_Require(assets, String8Lit("assets://shaders/passes/frustum_culling.comp.slang"), AST_Type_Shader);
-	cull->sphere_shader  = AST_Require(assets, String8Lit("assets://shaders/passes/sphere_culling.comp.slang"),  AST_Type_Shader);
+	cull->frustum_shader = AST_Require(assets, String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), AST_Type_Shader);
+	cull->sphere_shader  = AST_Require(assets, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"),  AST_Type_Shader);
 }
 
 internal void

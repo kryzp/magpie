@@ -1,6 +1,7 @@
 import bindless;
 
-struct Arguments {
+struct PushConstants
+{
 	uint width;
 	uint height;
 	float exposure;
@@ -8,17 +9,14 @@ struct Arguments {
 	uint output_image_id;
 };
 
-[vk::push_constant]
-Arguments args;
+[vk::push_constant] PushConstants args;
 
 float3 Tonemapping(float3 c)
 {
 	float3 col = c;
-
-    col = 1.0 - exp(-col * args.exposure);
+	col = 1.0 - exp(-col * args.exposure);
 	//col = 1.0 - col;
-
-    return col;
+	return col;
 }
 
 [shader("compute")]
@@ -30,6 +28,6 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 
 	Texture2D input = bdl::textures[args.input_image_id];
 	RWTexture2D output = bdl::rw_textures[args.output_image_id];
-	
+
 	output[tid.xy] = float4(Tonemapping(input[tid.xy].rgb).rgb, 1.0);
 }

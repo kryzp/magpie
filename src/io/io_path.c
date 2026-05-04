@@ -51,11 +51,12 @@ IO_PathGetFilePathNoExt(Arena *arena, String8 path)
 internal String8
 IO_PathGetFileDirectory(Arena *arena, String8 path)
 {
-	// TODO
+	u64 last_slash = String8FindLast(path, String8Lit("/"));
 
-	AssertTrue(false);
+	String8 directory = String8Alloc(arena, last_slash + 1);
+	MemCopy(directory.str, path.str, directory.len);
 
-	return (String8) {0};
+	return directory;
 }
 
 internal String8
@@ -71,7 +72,7 @@ IO_PathJoin(Arena *arena, String8 path_a, String8 path_b)
 
 	String8 joined = String8Append(scratch.arena, String8Append(scratch.arena, path_a, String8Lit("/")), path_b);
 	
-	String8 result = IO_PathNormalize(arena, joined);
+	String8 result = joined;//IO_PathNormalize(arena, joined);
 
 	ScratchRelease(&scratch);
 	

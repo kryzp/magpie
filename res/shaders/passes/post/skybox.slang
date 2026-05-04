@@ -1,17 +1,16 @@
-import util;
 import bindless;
-import types;
+import frame;
+import math;
 
-struct Arguments
+struct PushConstants
 {
-    types::FrameData *frame_data;
-    float3 *vertices;
+	frame::FrameData *frame_data;
+	float3 *vertices;
 	uint cubemap;
 	uint sampler;
 };
 
-[vk::push_constant]
-Arguments args;
+[vk::push_constant] PushConstants args;
 
 struct VS_Output
 {
@@ -27,12 +26,12 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID)
 
 	output.sv_position = mul(args.frame_data->view_projection_no_translation, float4(output.position, 1.));
 	output.sv_position = output.sv_position.xyww;
-
+	
 	return output;
 }
 
 [shader("fragment")]
 float4 FragmentMain(VS_Output input)
 {
-    return float4(bdl::cubes[args.cubemap].Sample(bdl::samplers[args.sampler], normalize(util::WorldToCubemap(input.position))).rgb, 1.);
+	return float4(bdl::cubes[args.cubemap].Sample(bdl::samplers[args.sampler], normalize(math::WorldToCubemap(input.position))).rgb, 1.);
 }

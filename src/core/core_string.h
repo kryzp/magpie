@@ -18,8 +18,10 @@ struct String8
 internal String8 String8Alloc  (Arena *arena, u32 len);
 internal String8 String8Clone  (Arena *arena, String8 string);
 internal String8 String8Append (Arena *arena, String8 a, String8 b);
+internal String8 String8Skip   (String8 string, u64 to);
 
 internal b32 String8Match(String8 a, String8 b);
+internal b32 String8StartsWith(String8 string, String8 prefix);
 
 internal u64 String8Find         (String8 string, String8 substr);
 internal u64 String8FindLast     (String8 string, String8 substr);

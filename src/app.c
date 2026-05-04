@@ -254,8 +254,11 @@ AppInitAssets(App *app)
 			 &app->graphics_device,
 			 &app->shader_compiler,
 			 app->audio_backend);
-	
-	AST_Mount(&app->assets, String8Lit("assets"), String8Lit("res/"));
+
+	// I stole this concept of asset mounting from the "Granite" engine / renderer by Themaister.
+	// It's so simple but it makes everything so much cleaner!!!
+	//AST_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
+	AST_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
 }
 
 internal void
@@ -355,10 +358,10 @@ AppInitRender(App *app)
 	R_DeferredRendererInit       (&app->deferred_renderer, &app->graphics_device, &app->assets);
 	R_DebugRendererInitAndSelect (&app->debug_renderer,    &app->render_arena, &app->graphics_device, &app->assets);
 
-	AST_Handle brdf_lut_shader_handle   = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/brdf_lut.slang"),                   AST_Type_Shader);
-	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
-	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/irradiance_convolution.slang"),     AST_Type_Shader);
-	AST_Handle prefilter_shader_handle  = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/prefilter_convolution.slang"),      AST_Type_Shader);
+	AST_Handle brdf_lut_shader_handle   = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   AST_Type_Shader);
+	AST_Handle hdr_to_env_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
+	AST_Handle irradiance_shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     AST_Type_Shader);
+	AST_Handle prefilter_shader_handle  = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      AST_Type_Shader);
 
 	AST_Handle hdr_texture_handle = AST_RequireNow(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
 	
@@ -829,7 +832,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 
 	// -- Skybox
 	{
-		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/skybox.slang"), AST_Type_Shader);
+		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
@@ -848,7 +851,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 
 	// -- Post Processing.
 	{
-		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/hdr_tonemapping.comp.slang"), AST_Type_Shader);
+		AST_Handle shader_handle = AST_RequireNow(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_Get(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 		
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);

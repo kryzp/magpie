@@ -311,7 +311,8 @@ AST_ModelSerializerCpu(const AST_Context *ctx)
 	AST_SerializerPipelineData result = {0};
 	result.data = load;
 
-	b32 failed = !scene ||
+	b32 failed =
+		!scene ||
 		(scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) ||
 		!scene->mRootNode;
 
@@ -321,21 +322,12 @@ AST_ModelSerializerCpu(const AST_Context *ctx)
 		goto end;
 	}
 
-
-	
-	u64 last_slash = String8FindLast(file_path, String8Lit("/"));
-
-	if (last_slash == CORE_STRING_INVALID_INDEX)
-		last_slash = String8FindLast(file_path, String8Lit("\\"));
-
-	String8 directory = String8Substr(file_path, 0, last_slash + 1);
+	String8 directory = IO_PathGetFileDirectory(scratch.arena, ctx->metadata.path);
 
 	struct aiMatrix4x4 identity = {0};
 	aiIdentityMatrix4(&identity);
 
 	AST_ModelProcessNodes(ctx, load, directory, scene->mRootNode, scene, identity);
-
-
 	
 	result.stage_size = load->total_vertex_bytes + load->total_index_bytes;
 	result.failed = false;

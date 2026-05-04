@@ -238,7 +238,7 @@ R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, GFX_Device *devi
 	dr->device = device;
 	dr->assets = assets;
 
-	dr->shader_handle = AST_Require(assets, String8Lit("assets://shaders/passes/debug_rendering.slang"), AST_Type_Shader);
+	dr->shader_handle = AST_Require(assets, String8Lit("assets://shaders/passes/debug/debug_line.slang"), AST_Type_Shader);
 
 	GFX_BufferAllocInfo buf_info = {0};
 	buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
@@ -686,7 +686,7 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	
 	// Draw.
 
-	m4 view_proj = M4MulM4(ctx->camera->proj, ctx->camera->view);
+	m4 view_proj = M4MulM4(ctx->camera->proj, ctx->camera->view); // TODO: the debug lines appear to be lagging behind the camera what gives?
 
 	R_DebugDrawBatches(data, device, cmd, &pipeline_st,
 					   data->depth_batches, data->depth_batch_count,
