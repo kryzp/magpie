@@ -645,12 +645,14 @@ AppDestroy(App *app)
 	AppDestroyGraphics (app);
 
 	ArenaRelease(&app->frame_arena);
-	ArenaRelease(&app->graphics_arena);
-	ArenaRelease(&app->audio_arena);
-	ArenaRelease(&app->asset_arena);
-	ArenaRelease(&app->render_arena);
-	ArenaRelease(&app->entity_arena);
 	ArenaRelease(&app->editor_arena);
+	ArenaRelease(&app->entity_arena);
+	ArenaRelease(&app->render_arena);
+	ArenaRelease(&app->asset_arena);
+	ArenaRelease(&app->audio_arena);
+	ArenaRelease(&app->graphics_arena);
+	
+	DebugLogI(app->log_channel, "Destroyed");
 }
 
 global f32 app_pp_exposure = 1.f;

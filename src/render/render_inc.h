@@ -14,4 +14,8 @@
 
 #include "probe/render_probe_inc.h"
 
+#include "volumetric/render_volumetric_inc.h"
+
 #include "pass/render_pass_inc.h"
+
+#include "debug/render_debug_inc.h"

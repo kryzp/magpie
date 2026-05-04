@@ -1,5 +1,8 @@
-#ifndef RENDER_PASS_DEBUG_H
-#define RENDER_PASS_DEBUG_H
+#ifndef RENDER_DEBUG_RENDERER_H
+#define RENDER_DEBUG_RENDERER_H
+
+#define R_DEBUG_MAX_DRAWS    65536
+#define R_DEBUG_MAX_BATCHES  64
 
 typedef struct R_GPU_DebugObjectDraw R_GPU_DebugObjectDraw;
 struct R_GPU_DebugObjectDraw
@@ -8,9 +11,6 @@ struct R_GPU_DebugObjectDraw
 	v4 colour;
 	f32 thickness;
 };
-
-#define R_DEBUG_MAX_DRAWS    65536
-#define R_DEBUG_MAX_BATCHES  64
 
 typedef enum R_DebugDrawType
 {
@@ -187,4 +187,4 @@ internal void R_DebugPushOBB      (m4 transform, v3 scale,
 								   f32 duration,
 								   b32 depth_enabled);
 
-#endif // RENDER_PASS_DEBUG_H
+#endif // RENDER_DEBUG_RENDERER_H

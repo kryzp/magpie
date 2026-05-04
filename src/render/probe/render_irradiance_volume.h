@@ -95,7 +95,7 @@ internal void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
 												   LOG_Channel log_channel,
 												   v3 grid_min, v3 grid_max,
 												   u32 nx, u32 ny, u32 nz,
-												   R_Mesh *skybox_mesh,
+												   const R_Mesh *skybox_mesh,
 												   GFX_TextureViewKey environment_view,
 												   GFX_SamplerKey linear_sampler);
 

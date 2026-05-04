@@ -8,6 +8,10 @@
 #include "render_tracker.c"
 #include "render_graph.c"
 
+#include "volumetric/render_volumetric_inc.c"
+
 #include "probe/render_probe_inc.c"
 
 #include "pass/render_pass_inc.c"
+
+#include "debug/render_debug_inc.c"
