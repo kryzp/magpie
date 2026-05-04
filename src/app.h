@@ -56,16 +56,15 @@ struct App
 	LOG_Channel render_log_channel;
 	R_Graph graph;
 	R_Scene scene;
-	R_SceneLightHandle light_handle;
-	R_Mesh skybox_mesh;
-
-	// ---
 
 	R_Culling culling;
 	R_ShadowRenderer shadow_renderer;
 	R_DeferredRenderer deferred_renderer;
 	R_DebugRenderer debug_renderer;
 	R_IrradianceVolume irradiance_volume;
+
+	R_SceneLightHandle light_handle;
+	R_Mesh skybox_mesh;
 	
 	GFX_TextureKey brdf_lut;
 	GFX_TextureKey environment_cubemap;

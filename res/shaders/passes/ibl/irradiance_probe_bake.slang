@@ -51,9 +51,9 @@ float3 ProbeWorldPosition(uint probe_index, irradiance::ProbeGridInfo grid)
 	uint iy = (probe_index / grid.count_x) % grid.count_y;
 	uint ix = probe_index % grid.count_x;
 
-	return grid.grid_min + float3(float(ix) * grid.cell_size.x,
-	                              float(iy) * grid.cell_size.y,
-	                              float(iz) * grid.cell_size.z);
+	return grid.grid_min + float3((0.5 + float(ix)) * grid.cell_size.x,
+	                              (0.5 + float(iy)) * grid.cell_size.y,
+	                              (0.5 + float(iz)) * grid.cell_size.z);
 }
 
 [shader("compute")]

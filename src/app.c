@@ -397,14 +397,14 @@ AppInitRender(App *app)
 	light.shadow_near = 0.1f;
 	light.shadow_far = 10.f;
 	
-	R_SceneLightCreate(&app->scene, &light);
+	app->light_handle = R_SceneLightCreate(&app->scene, &light);
 
 	R_IrradianceVolumeInit(&app->irradiance_volume,
 						   &app->graphics_device, &app->assets,
 						   osapi->LogChannelOpen(String8Lit("IRRADIANCE")),
 						   v3(-12.f, -6.f,  -1.f),
 						   v3( 12.f,  6.f,  12.f),
-						   20, 10, 10,
+						   8, 6, 4,
 						   &app->skybox_mesh,
 						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
@@ -708,6 +708,8 @@ AppTick(App *app, const I_State *input)
 		
 		app->delta_accumulator -= fixed_dt;
 	}
+
+	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	
 	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
