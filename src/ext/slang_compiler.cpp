@@ -24,10 +24,12 @@ SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 	if (!msg[0])
 		return;
 
-	// cut off the newline
-	char fmt[512] = {0};
-	memcpy(fmt, msg, strlen(msg));
-	fmt[strlen(msg)-2] = 0;
+	size_t len = strlen(msg);
+
+	char fmt[1024] = {0};
+	size_t capped_len = (len > sizeof(fmt)) ? sizeof(fmt) : len;
+	memcpy(fmt, msg, capped_len);
+	fmt[capped_len-2] = 0; // cut off the newline
 		
 	log_fn(context, source, fmt, user_data);
 }

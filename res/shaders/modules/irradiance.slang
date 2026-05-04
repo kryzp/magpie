@@ -1,5 +1,7 @@
 module irradiance;
 
+import math;
+
 namespace irradiance
 {
 	public struct ProbeGridInfo
@@ -30,6 +32,18 @@ namespace irradiance
 	public static const float SH_C3 = 0.315392;
 	public static const float SH_C4 = 0.546274;
 
+	public static const float SH_COS_CONV[9] = {
+		math::PI,             // l=0
+		math::PI*2.0/3.0,     // l=1
+		math::PI*2.0/3.0,
+		math::PI*2.0/3.0,
+		math::PI/4.0,         // l=2
+		math::PI/4.0,
+		math::PI/4.0,
+		math::PI/4.0,
+		math::PI/4.0,
+	};
+
 	public static const float MAX_REFLECTION_LOD = 5.0;
 
 	// Ramamoorthi & Hanrahan (2001) "An Efficient Representation for Irradiance Environment Maps".
@@ -57,6 +71,7 @@ namespace irradiance
 		SH_EvaluateBasis(normal, basis);
 
 		float3 irradiance = float3(0, 0, 0);
+		
 		for (uint i = 0; i < 9; i++)
 			irradiance += probe.coefficients[i].xyz * basis[i];
 

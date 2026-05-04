@@ -66,8 +66,6 @@ float4 FragmentMain(fullscreen::VS_Output input) : SV_Target
 	float prefilter_mip_level = roughness_value * irradiance::MAX_REFLECTION_LOD;
 	float3 prefiltered_colour = prefilter_cubemap.SampleLevel(sampler, math::WorldToCubemap(reflected), prefilter_mip_level).rgb;
 
-	prefiltered_colour = 0.0;
-
 	float2 environment_brdf = bdl::textures[args.brdf_lut].Sample(sampler, float2(NdotV, roughness_value)).xy;
 
 	float3 specular = prefiltered_colour * (F * environment_brdf.x + environment_brdf.y);

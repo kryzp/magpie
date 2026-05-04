@@ -21,10 +21,10 @@ if not exist vk_mem_alloc.obj (
 )
 
 :: compile the slang compiler separately
-::if not exist slang_compiler.obj (
+if not exist slang_compiler.obj (
    echo Compiling Slang Compiler...
    cl %opts% %includes% /std:c++20 /c "%code%\ext\slang_compiler.cpp" /Fo:slang_compiler.obj
-::)
+)
 
 :: compile app (platform agnostic code)
 echo Compiling app...

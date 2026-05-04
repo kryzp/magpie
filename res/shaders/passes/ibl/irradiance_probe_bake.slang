@@ -103,10 +103,9 @@ void ComputeMain(uint3 dispatch_id : SV_DispatchThreadID)
 			         -> get vertex data + interpolate uvs
 			         -> get the albedo at that ponit
 			         -> apply diffuse model (lambert * light)
-
-			   but im too lazy to do that so we're just setting it to 0.1 :) fuck you
 			*/
-			radiance = 0.1;
+			radiance = 0.0;
+			//radiance = env_map.SampleLevel(env_sampler, math::WorldToCubemap(ray_dir), 0).rgb;
 		}
 		else
 		{
@@ -127,5 +126,5 @@ void ComputeMain(uint3 dispatch_id : SV_DispatchThreadID)
 	irradiance::ProbeSH *output = pc.sh_buffer;
 
 	for (uint c = 0; c < 9; c++)
-		output[probe_index].coefficients[c] = float4(sh_accum[c], 0.0);
+		output[probe_index].coefficients[c] = float4(sh_accum[c] * irradiance::SH_COS_CONV[c], 0.0);
 }
