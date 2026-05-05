@@ -19,8 +19,11 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 
 ### Resources Used
 - Real Time Rendering 4th Edition
+  - My bible. It's so pretty...
 - Game Engine Architecture 3rd Edition
+  - I've used this more for structuring the engine as a whole, it doesn't focus on graphics as much, but I've taken a lot from it and I'd recommend it to anyone learning how to make a game engine, or renderer.
 - Vulkan Guide
+  - Obvious.
 
 ---
 
@@ -32,7 +35,6 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **IBL** (Image-Based Lighting)
 - **Compute Frustum Culling**
 - **Indirect Deferred Rendering**
-- **Indirect Forward Rendering for Transparency**
 - **Point Lights** with compute-culled shadow-mapping
 - **ImGui Integration** (C bindings)
 - **Right-Handed Z-up Coordinates** (as it SHOULD be)
@@ -53,9 +55,17 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
+- More advanced material rendering
+  - Transmission
+  - Specular
+  - Clearcoat
+  - Sheen
+  - Iridescence
+  - Unlit Materials
+- Forward Transparency Pass
 - SSAO
-- Grass / Fur / Hair Rendering
 - Reflections + Reflective Materials (e.g: Mirrors)
+- Grass / Fur / Hair Rendering
 - Volumetrics (Clouds, Smoke, etc.)
 - Text / Font Rendering
 - Bone / Joint Based Animation

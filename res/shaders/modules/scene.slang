@@ -41,16 +41,20 @@ namespace scene
 	{
 		public uint albedo_texture;
 		public uint normal_texture;
+		public uint metallic_roughness_texture;
 		public uint emissive_texture;
-		public uint mr_texture;
-		public uint ambient_texture;
+		public uint occlusion_texture;
 
 		public float4 albedo_factor;
-		public float metallic_factor;
-		public float roughness_factor;
-		public float emissive_factor;
+		public float  normal_scale;
+		public float  metallic_factor;
+		public float  roughness_factor;
+		public float3 emissive_factor;
+		public float  emissive_intensity;
+		public float  occlusion_intensity;
 
-		public uint double_sided;
+		public uint  double_sided;
+		public float alpha_cutoff;
 	};
 
 	public struct IndirectDraw

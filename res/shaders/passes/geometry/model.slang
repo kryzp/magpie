@@ -8,7 +8,6 @@ struct PushConstants
 	scene::ObjectData *objects;
 	scene::Material *materials;
 	scene::RenderMesh *meshes;
-//	uint *instance_buffer;
 	uint sampler;
 };
 
@@ -76,16 +75,16 @@ FS_Output FragmentMain(VS_Output input)
 	float4 albedo             = material.albedo_factor;
 	float3 normal             = float3(1.0, 1.0, 1.0);
 	float3 metallic_roughness = float3(1.0, material.metallic_factor, material.roughness_factor);
-	float3 emissive           = material.emissive_factor;
-	float  ambient_occlusion  = 1.0;
+	float3 emissive           = material.emissive_factor * material.emissive_intensity;
+	float  ambient_occlusion  = material.occlusion_intensity;
 
-	if (bdl::IsValid(material.albedo_texture))   albedo             *= bdl::textures[material.albedo_texture].Sample(sampler, uv).rgba;
-	if (bdl::IsValid(material.normal_texture))   normal             *= bdl::textures[material.normal_texture].Sample(sampler, uv).rgb;
-	if (bdl::IsValid(material.mr_texture))       metallic_roughness *= bdl::textures[material.mr_texture].Sample(sampler, uv).rgb;
-	if (bdl::IsValid(material.emissive_texture)) emissive           *= bdl::textures[material.emissive_texture].Sample(sampler, uv).rgb;
-	if (bdl::IsValid(material.ambient_texture))  ambient_occlusion  *= bdl::textures[material.ambient_texture].Sample(sampler, uv).r;
+	if (bdl::IsValid(material.albedo_texture))              albedo             *= bdl::textures[material.albedo_texture].Sample(sampler, uv).rgba;
+	if (bdl::IsValid(material.normal_texture))              normal             *= bdl::textures[material.normal_texture].Sample(sampler, uv).rgb;
+	if (bdl::IsValid(material.metallic_roughness_texture))  metallic_roughness *= bdl::textures[material.metallic_roughness_texture].Sample(sampler, uv).rgb;
+	if (bdl::IsValid(material.emissive_texture))            emissive           *= bdl::textures[material.emissive_texture].Sample(sampler, uv).rgb;
+	if (bdl::IsValid(material.occlusion_texture))           ambient_occlusion  *= bdl::textures[material.occlusion_texture].Sample(sampler, uv).r;
 
-	if (albedo.a <= 0.01)
+	if (albedo.a <= material.alpha_cutoff)
 		discard;
 
 	normal = 2.0 * normal - 1.0;

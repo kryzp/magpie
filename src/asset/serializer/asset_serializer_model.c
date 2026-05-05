@@ -113,21 +113,36 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 {
 	AST_ModelMaterial mat = {0};
 
-	mat.albedo             = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_DIFFUSE);
-	mat.normal             = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_NORMALS);
-	mat.emissive           = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_EMISSIVE);
-	mat.metallic_roughness = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_DIFFUSE_ROUGHNESS);
-	mat.ambient            = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_LIGHTMAP);
+	mat.albedo                     = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_BASE_COLOR);
+	mat.normal                     = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_NORMALS);
+	mat.emissive                   = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_EMISSIVE);
+	mat.metallic_roughness         = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_METALNESS);
+	mat.occlusion                  = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_AMBIENT_OCCLUSION);
+	mat.transmission               = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_TRANSMISSION);
 
-	mat.albedo_factor      = v4(1.f, 1.f, 1.f, 1.f);
-	mat.metallic_factor    = 1.f;
-	mat.roughness_factor   = 1.f;
-	mat.emissive_factor    = 0.f;
+	/*
+	mat.thickness                  = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.specular                   = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.specular_colour            = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.clearcoat                  = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.clearcoat_roughness        = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.sheen_colour               = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	mat.sheen_roughness            = AST_ModelTryFetchTexture(ctx, load, directory, ai_mat, aiTextureType_UNKNOWN);
+	*/
 	
-	mat.double_sided       = false;
-	mat.alpha_mode         = AST_AlphaMode_Opaque;
-	mat.reflection_mode    = AST_ReflectionMode_Default;
-	mat.reflection_plane   = v4x(0.f);
+	mat.albedo_factor              = v4(1.f, 1.f, 1.f, 1.f);
+	mat.normal_scale               = 1.f;
+	mat.metallic_factor            = 1.f;
+	mat.roughness_factor           = 1.f;
+	mat.emissive_factor            = v3(0.f, 0.f, 0.f);
+	mat.emissive_intensity         = 1.f;
+	mat.occlusion_intensity        = 1.f;
+	
+	mat.double_sided               = false;
+	mat.unlit                      = false;
+	mat.alpha_mode                 = AST_AlphaMode_Opaque;
+	mat.reflection_mode            = AST_ReflectionMode_Default;
+	mat.reflection_plane           = v4(0.f, 0.f, 0.f, 0.f);
 	
 	struct aiColor4D colour = {0};
 	

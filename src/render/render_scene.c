@@ -653,16 +653,20 @@ R_SceneRegisterMaterial(R_Scene *scene,
 
 	gpu->albedo_texture             = R_SceneResolveTextureBindless(scene, assets, material->albedo);
 	gpu->normal_texture             = R_SceneResolveTextureBindless(scene, assets, material->normal);
-	gpu->emissive_texture           = R_SceneResolveTextureBindless(scene, assets, material->emissive);
 	gpu->metallic_roughness_texture = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness);
-	gpu->ambient_texture            = R_SceneResolveTextureBindless(scene, assets, material->ambient);
+	gpu->emissive_texture           = R_SceneResolveTextureBindless(scene, assets, material->emissive);
+	gpu->occlusion_texture          = R_SceneResolveTextureBindless(scene, assets, material->occlusion);
 
-	gpu->albedo_factor      = material->albedo_factor;
-	gpu->metallic_factor    = material->metallic_factor;
-	gpu->roughness_factor   = material->roughness_factor;
-	gpu->emissive_factor    = material->emissive_factor;
+	gpu->albedo_factor              = material->albedo_factor;
+	gpu->normal_scale               = material->normal_scale;
+	gpu->metallic_factor            = material->metallic_factor;
+	gpu->roughness_factor           = material->roughness_factor;
+	gpu->emissive_factor            = material->emissive_factor;
+	gpu->emissive_intensity         = material->emissive_intensity;
+	gpu->occlusion_intensity        = material->occlusion_intensity; 
 
-	gpu->double_sided       = (u32)material->double_sided;
+	gpu->double_sided               = (u32)material->double_sided;
+	gpu->alpha_cutoff               = material->alpha_cutoff;
 	
 	scene->material_count++;
 	scene->material_buffer_dirty = true;
