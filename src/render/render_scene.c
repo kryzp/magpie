@@ -649,22 +649,73 @@ R_SceneRegisterMaterial(R_Scene *scene,
 
 	R_GPU_Material *gpu = &scene->gpu_materials[index];
 
-	gpu->albedo_texture             = R_SceneResolveTextureBindless(scene, assets, material->albedo);
-	gpu->normal_texture             = R_SceneResolveTextureBindless(scene, assets, material->normal);
-	gpu->metallic_roughness_texture = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness);
-	gpu->emissive_texture           = R_SceneResolveTextureBindless(scene, assets, material->emissive);
-	gpu->occlusion_texture          = R_SceneResolveTextureBindless(scene, assets, material->occlusion);
+	gpu->albedo_texture                       = R_SceneResolveTextureBindless(scene, assets, material->albedo_texture);
+	gpu->normal_texture                       = R_SceneResolveTextureBindless(scene, assets, material->normal_texture);
+	gpu->metallic_roughness_texture           = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness_texture);
+	gpu->emissive_texture                     = R_SceneResolveTextureBindless(scene, assets, material->emissive_texture);
+	gpu->occlusion_texture                    = R_SceneResolveTextureBindless(scene, assets, material->occlusion_texture);
+	
+	gpu->albedo_factor                        = material->albedo_factor;
+	gpu->normal_scale                         = material->normal_scale;
+	gpu->metallic_factor                      = material->metallic_factor;
+	gpu->roughness_factor                     = material->roughness_factor;
+	gpu->emissive_factor                      = material->emissive_factor;
+	gpu->emissive_intensity                   = material->emissive_intensity;
+	gpu->occlusion_intensity                  = material->occlusion_intensity;
 
-	gpu->albedo_factor              = material->albedo_factor;
-	gpu->normal_scale               = material->normal_scale;
-	gpu->metallic_factor            = material->metallic_factor;
-	gpu->roughness_factor           = material->roughness_factor;
-	gpu->emissive_factor            = material->emissive_factor;
-	gpu->emissive_intensity         = material->emissive_intensity;
-	gpu->occlusion_intensity        = material->occlusion_intensity; 
+	// ---
+	
+	gpu->ior                                  = material->ior;
 
-	gpu->double_sided               = (u32)material->double_sided;
-	gpu->alpha_cutoff               = material->alpha_cutoff;
+	// ---
+	
+	gpu->transmission_texture                 = R_SceneResolveTextureBindless(scene, assets, material->transmission_texture);
+	gpu->thickness_texture                    = R_SceneResolveTextureBindless(scene, assets, material->thickness_texture);
+	gpu->transmission_factor                  = material->transmission_factor;
+	gpu->thickness_factor                     = material->thickness_factor;
+	
+	gpu->attenuation_colour                   = material->attenuation_colour;
+	gpu->attenuation_distance                 = material->attenuation_distance;
+
+	// ---
+
+	gpu->specular_texture                     = R_SceneResolveTextureBindless(scene, assets, material->specular_texture);
+	gpu->specular_colour_texture              = R_SceneResolveTextureBindless(scene, assets, material->specular_colour_texture);
+
+	gpu->specular_factor                      = material->specular_factor;
+	gpu->specular_colour_factor               = material->specular_colour_factor;
+
+	// ---
+
+	gpu->clearcoat_texture                    = R_SceneResolveTextureBindless(scene, assets, material->clearcoat_texture);
+	gpu->clearcoat_roughness_texture          = R_SceneResolveTextureBindless(scene, assets, material->clearcoat_roughness_texture);
+
+	gpu->clearcoat_factor                     = material->clearcoat_factor;
+	gpu->clearcoat_roughness_factor           = material->clearcoat_roughness_factor;
+
+	// ---
+
+	gpu->sheen_colour_texture                 = R_SceneResolveTextureBindless(scene, assets, material->sheen_colour_texture);
+	gpu->sheen_roughness_texture              = R_SceneResolveTextureBindless(scene, assets, material->sheen_roughness_texture);
+
+	gpu->sheen_colour_factor                  = material->sheen_colour_factor;
+	gpu->sheen_roughness_factor               = material->sheen_roughness_factor;
+
+	// ---
+
+	gpu->iridescence_texture                  = R_SceneResolveTextureBindless(scene, assets, material->iridescence_texture);
+	gpu->iridescence_thickness_texture        = R_SceneResolveTextureBindless(scene, assets, material->iridescence_thickness_texture);
+
+	gpu->iridescence_factor                   = material->iridescence_factor;
+	gpu->iridescence_ior                      = material->iridescence_ior;
+	gpu->iridescence_thickness_min_nanometers = material->iridescence_thickness_min_nanometers;
+	gpu->iridescence_thickness_max_nanometers = material->iridescence_thickness_max_nanometers;
+
+	// ---
+
+	gpu->double_sided                         = (u32)material->double_sided;
+	gpu->unlit                                = (u32)material->unlit;
+	gpu->alpha_cutoff                         = material->alpha_cutoff;
 	
 	scene->material_count++;
 	scene->material_buffer_dirty = true;

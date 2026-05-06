@@ -172,6 +172,8 @@ Rendering is fundamentally abstracted into what should be three layers, but is o
 2. **The Scene abstraction layer (WIP, currently in `/render/`)**: Manages meshes, materials, and lights.
 3. **The Rendering abstraction layer (`/render/`)**: Consists of a render graph abstraction and (generally) stateless render stage code, such as the culling, geometry, and lighting stages.
 
+Right now, `/graphics/` and `/render/` are a little more "intertwined" than they should be simply out of convenience because we're only dealing with Vulkan. E.g: `VK_FORMAT_...` technically shouldn't be in `/render/` (or any Vulkan stuff for that matter) as it's a graphics-backend thing, so there should be some kind of universal `GFX_Format` that backends map to their internal API versions, but that's so much code to maintain for zero benefit.
+
 
 ### Hot-Code Reloading
 The actual implementation of this is simple in theory. We pass a V-Table `OS_API` which can be used by `app.dll` to make OS-level calls from the main executable. For instance, if we wanna allocate memory, we have to do it through this V-Table because otherwise the memory allocated is attributed to the DLL and thus lost on hot reload. Unfortunately, being able to hot reload the state at any point means there are some things that get tricky, mostly things related to global data. However, it can be (mostly) fixed by:

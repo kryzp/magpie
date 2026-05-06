@@ -62,7 +62,7 @@ struct R_GPU_Material
 	u32 metallic_roughness_texture;
 	u32 emissive_texture;
 	u32 occlusion_texture;
-
+	
 	v4  albedo_factor;
 	f32 normal_scale;
 	f32 metallic_factor;
@@ -71,7 +71,59 @@ struct R_GPU_Material
 	f32 emissive_intensity;
 	f32 occlusion_intensity;
 
+	// ---
+
+	f32 ior;
+	
+	// ---
+	
+	u32 transmission_texture;
+	u32 thickness_texture;
+
+	f32 transmission_factor;
+	f32 thickness_factor;
+
+	v3  attenuation_colour;
+	f32 attenuation_distance;
+
+	// ---
+	
+	u32 specular_texture;
+	u32 specular_colour_texture;
+
+	f32 specular_factor;
+	v3  specular_colour_factor;
+
+	// ---
+	
+	u32 clearcoat_texture;
+	u32 clearcoat_roughness_texture;
+
+	f32 clearcoat_factor;
+	f32 clearcoat_roughness_factor;
+
+	// ---
+	
+	u32 sheen_colour_texture;
+	u32 sheen_roughness_texture;
+
+	v3  sheen_colour_factor;
+	f32 sheen_roughness_factor;
+	
+	// ---
+	
+	u32 iridescence_texture;
+	u32 iridescence_thickness_texture;
+
+	f32 iridescence_factor;
+	f32 iridescence_ior;
+	f32 iridescence_thickness_min_nanometers;
+	f32 iridescence_thickness_max_nanometers;
+
+	// ---
+	
 	u32 double_sided;
+	u32 unlit;
 	f32 alpha_cutoff;
 };
 

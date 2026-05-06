@@ -38,11 +38,11 @@ struct AST_ModelMaterial
 	/*
 	 * Standard Metallic-Roughness PBR crap.
 	 */
-	AST_Handle albedo;
-	AST_Handle normal;
-	AST_Handle emissive;
-	AST_Handle metallic_roughness; // g = roughness, b = metallic
-	AST_Handle occlusion; // r channel only
+	AST_Handle albedo_texture;
+	AST_Handle normal_texture;
+	AST_Handle emissive_texture;
+	AST_Handle metallic_roughness_texture; // g = roughness, b = metallic
+	AST_Handle occlusion_texture; // r channel only
 	
 	v4  albedo_factor;
 	f32 normal_scale;
@@ -58,8 +58,8 @@ struct AST_ModelMaterial
 	 * Light can pass through objects, and transmission tells
 	 * us "how much" of the light makes its way through.
 	 */
-	AST_Handle transmission;
-	AST_Handle thickness;
+	AST_Handle transmission_texture;
+	AST_Handle thickness_texture;
 
 	f32 transmission_factor;
 	f32 thickness_factor;
@@ -71,8 +71,8 @@ struct AST_ModelMaterial
 	 * Overrides the usual F0 value which is usually around .04
 	 * for most materials.
 	 */
-	AST_Handle specular; // r = specular
-	AST_Handle specular_colour;
+	AST_Handle specular_texture; // r = specular
+	AST_Handle specular_colour_texture;
 
 	f32 specular_factor;
 	v3  specular_colour_factor;
@@ -82,8 +82,8 @@ struct AST_ModelMaterial
 	 * that can't be simulated using just roughness called a clearcoat.
 	 * e.g: car paint, varnished wood, wet surfaces, etc...
 	 */
-	AST_Handle clearcoat;
-	AST_Handle clearcoat_roughness;
+	AST_Handle clearcoat_texture;
+	AST_Handle clearcoat_roughness_texture;
 
 	f32 clearcoat_factor;
 	f32 clearcoat_roughness_factor;
@@ -94,8 +94,8 @@ struct AST_ModelMaterial
 	 * in the material being darker when you look at it head on.
 	 * e.g: cloth & fabrics (VELVET ESPECIALLY).
 	 */
-	AST_Handle sheen_colour;
-	AST_Handle sheen_roughness;
+	AST_Handle sheen_colour_texture;
+	AST_Handle sheen_roughness_texture;
 
 	v3  sheen_colour_factor;
 	f32 sheen_roughness_factor;
@@ -104,8 +104,8 @@ struct AST_ModelMaterial
 	 * Thin-film interference. Lowk just looks cool af. Soap, pearl
 	 * CD's, butterfly wings, etc...
 	 */
-	AST_Handle iridescence;
-	AST_Handle iridescence_thickness;
+	AST_Handle iridescence_texture;
+	AST_Handle iridescence_thickness_texture;
 
 	f32 iridescence_factor;
 	f32 iridescence_ior;

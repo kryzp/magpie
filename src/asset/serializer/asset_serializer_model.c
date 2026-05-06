@@ -176,8 +176,8 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	{
 		const cgltf_pbr_metallic_roughness *pbr = &gltf_mat->pbr_metallic_roughness;
 
-		mat.albedo             = AST_ModelTryFetchTexture(ctx, load, directory, &pbr->base_color_texture);
-		mat.metallic_roughness = AST_ModelTryFetchTexture(ctx, load, directory, &pbr->metallic_roughness_texture);
+		mat.albedo_texture             = AST_ModelTryFetchTexture(ctx, load, directory, &pbr->base_color_texture);
+		mat.metallic_roughness_texture = AST_ModelTryFetchTexture(ctx, load, directory, &pbr->metallic_roughness_texture);
 
 		mat.albedo_factor      = v4(pbr->base_color_factor[0],
 									pbr->base_color_factor[1],
@@ -190,20 +190,20 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// NORMALS.
-	mat.normal       = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->normal_texture);
-	mat.normal_scale = gltf_mat->normal_texture.scale;
+	mat.normal_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->normal_texture);
+	mat.normal_scale   = gltf_mat->normal_texture.scale;
 
 
 	// OCCLUSION
-	mat.occlusion           = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->occlusion_texture);
+	mat.occlusion_texture   = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->occlusion_texture);
 	mat.occlusion_intensity = gltf_mat->occlusion_texture.scale;
 
 
 	// EMISSIVE
-	mat.emissive        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->emissive_texture);
-	mat.emissive_factor = v3(gltf_mat->emissive_factor[0],
-							 gltf_mat->emissive_factor[1],
-							 gltf_mat->emissive_factor[2]);
+	mat.emissive_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->emissive_texture);
+	mat.emissive_factor  = v3(gltf_mat->emissive_factor[0],
+							  gltf_mat->emissive_factor[1],
+							  gltf_mat->emissive_factor[2]);
 
 
 	// EMISSIVE STRENGTH.
@@ -219,15 +219,15 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	// TRANSMISSION.
 	if (gltf_mat->has_transmission)
 	{
-		mat.transmission        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->transmission.transmission_texture);
-		mat.transmission_factor = gltf_mat->transmission.transmission_factor;
+		mat.transmission_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->transmission.transmission_texture);
+		mat.transmission_factor  = gltf_mat->transmission.transmission_factor;
 	}
 
 
 	// VOLUME.
 	if (gltf_mat->has_volume)
 	{
-		mat.thickness            = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->volume.thickness_texture);
+		mat.thickness_texture    = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->volume.thickness_texture);
 		mat.thickness_factor     = gltf_mat->volume.thickness_factor;
 
 		mat.attenuation_colour   = v3(gltf_mat->volume.attenuation_color[0],
@@ -241,46 +241,46 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	// SPECULAR.
 	if (gltf_mat->has_specular)
 	{
-		mat.specular               = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->specular.specular_texture);
-		mat.specular_colour        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->specular.specular_color_texture);
-		mat.specular_factor        = gltf_mat->specular.specular_factor;
+		mat.specular_texture        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->specular.specular_texture);
+		mat.specular_colour_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->specular.specular_color_texture);
+		mat.specular_factor         = gltf_mat->specular.specular_factor;
 
-		mat.specular_colour_factor = v3(gltf_mat->specular.specular_color_factor[0],
-										gltf_mat->specular.specular_color_factor[1],
-										gltf_mat->specular.specular_color_factor[2]);
+		mat.specular_colour_factor  = v3(gltf_mat->specular.specular_color_factor[0],
+										 gltf_mat->specular.specular_color_factor[1],
+										 gltf_mat->specular.specular_color_factor[2]);
 	}
 
 
 	// CLEARCOAT.
 	if (gltf_mat->has_clearcoat)
 	{
-		mat.clearcoat                  = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
-		mat.clearcoat_roughness        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->clearcoat.clearcoat_roughness_texture);
+		mat.clearcoat_texture           = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
+		mat.clearcoat_roughness_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->clearcoat.clearcoat_roughness_texture);
 
-		mat.clearcoat_factor           = gltf_mat->clearcoat.clearcoat_factor;
-		mat.clearcoat_roughness_factor = gltf_mat->clearcoat.clearcoat_roughness_factor;
+		mat.clearcoat_factor            = gltf_mat->clearcoat.clearcoat_factor;
+		mat.clearcoat_roughness_factor  = gltf_mat->clearcoat.clearcoat_roughness_factor;
 	}
 
 
 	// SHEEN.
 	if (gltf_mat->has_sheen)
 	{
-		mat.sheen_colour           = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->sheen.sheen_color_texture);
-		mat.sheen_roughness        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->sheen.sheen_roughness_texture);
+		mat.sheen_colour_texture    = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->sheen.sheen_color_texture);
+		mat.sheen_roughness_texture = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->sheen.sheen_roughness_texture);
 
-		mat.sheen_colour_factor    = v3(gltf_mat->sheen.sheen_color_factor[0],
-										gltf_mat->sheen.sheen_color_factor[1],
-										gltf_mat->sheen.sheen_color_factor[2]);
+		mat.sheen_colour_factor     = v3(gltf_mat->sheen.sheen_color_factor[0],
+										 gltf_mat->sheen.sheen_color_factor[1],
+										 gltf_mat->sheen.sheen_color_factor[2]);
 
-		mat.sheen_roughness_factor = gltf_mat->sheen.sheen_roughness_factor;
+		mat.sheen_roughness_factor  = gltf_mat->sheen.sheen_roughness_factor;
 	}
 
 
 	// IRIDESCENCE.
 	if (gltf_mat->has_iridescence)
 	{
-		mat.iridescence                          = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->iridescence.iridescence_texture);
-		mat.iridescence_thickness                = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->iridescence.iridescence_thickness_texture);
+		mat.iridescence_texture                  = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->iridescence.iridescence_texture);
+		mat.iridescence_thickness_texture        = AST_ModelTryFetchTexture(ctx, load, directory, &gltf_mat->iridescence.iridescence_thickness_texture);
 
 		mat.iridescence_factor                   = gltf_mat->iridescence.iridescence_factor;
 		mat.iridescence_ior                      = gltf_mat->iridescence.iridescence_ior;

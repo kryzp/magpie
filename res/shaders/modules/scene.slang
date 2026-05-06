@@ -44,7 +44,7 @@ namespace scene
 		public uint metallic_roughness_texture;
 		public uint emissive_texture;
 		public uint occlusion_texture;
-
+	
 		public float4 albedo_factor;
 		public float  normal_scale;
 		public float  metallic_factor;
@@ -53,7 +53,59 @@ namespace scene
 		public float  emissive_intensity;
 		public float  occlusion_intensity;
 
-		public uint  double_sided;
+		// ---
+
+		public float ior;
+	
+		// ---
+	
+		public uint transmissive_texture;
+		public uint thickness_texture;
+
+		public float transmission_factor;
+		public float thickness_factor;
+
+		public float3 attenuation_colour;
+		public float  attenuation_distance;
+
+		// ---
+	
+		public uint specular_texture;
+		public uint specular_colour_texture;
+
+		public float  specular_factor;
+		public float3 specular_colour_factor;
+
+		// ---
+	
+		public uint clearcoat_texture;
+		public uint clearcoat_roughness_texture;
+
+		public float clearcoat_factor;
+		public float clearcoat_roughness_factor;
+
+		// ---
+	
+		public uint sheen_colour_texture;
+		public uint sheen_roughness_texture;
+
+		public float3 sheen_colour_factor;
+		public float  sheen_roughness_factor;
+	
+		// ---
+	
+		public uint iridescence_texture;
+		public uint iridescence_thickness_texture;
+
+		public float iridescence_factor;
+		public float iridescence_ior;
+		public float iridescence_thickness_min_nanometers;
+		public float iridescence_thickness_max_nanometers;
+
+		// ---
+	
+		public uint double_sided;
+		public uint unlit;
 		public float alpha_cutoff;
 	};
 
