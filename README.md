@@ -33,6 +33,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **Bindless Resource Design**
 - **GPU Driven Rendering:** Bindless materials and meshes (global vertex buffer, vertex pulling, etc.)
 - **IBL** (Image-Based Lighting)
+- **Advanced glTF 2.0 material support** Transmission, volume, specular, clearcoat, sheen, iridescence, etc.
 - **Compute Frustum Culling**
 - **Indirect Deferred Rendering**
 - **Point Lights** with compute-culled shadow-mapping
@@ -250,3 +251,15 @@ Interesting files that you might wanna have a look at if you're just starting wi
 > Where's the cool engine UI?????
 
 Not a game engine. And even if it was, I'd only make the editor UI after deciding on the game.
+
+
+## External Libraries
+This project is built upon the shoulders of gi- yeah you know what I mean.
+
+- Vulkan Memory Allocator
+- Volk
+- Slang Compiler
+- cgltf
+- ImGui
+- miniaudio
+- stb headers

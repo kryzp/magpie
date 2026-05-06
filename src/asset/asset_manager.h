@@ -69,6 +69,7 @@ struct AST_Assets
 	u32 free_indices[AST_MANAGER_MAX_RECORDS];
 
 	AST_Serializer serializers[AST_Type_COUNT];
+	LOG_Channel    serializer_log_channels[AST_Type_COUNT];
 
 	AST_PathMapEntry path_map[AST_MANAGER_MAX_RECORDS];
 

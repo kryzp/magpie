@@ -71,7 +71,7 @@ AST_TextureSerializerReload(const AST_Context *ctx,
 							AST_SerializerPipelineData *data,
 							AST_Asset *existing)
 {
-	// TODO
+	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
 internal void

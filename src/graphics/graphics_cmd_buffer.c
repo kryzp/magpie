@@ -401,8 +401,20 @@ internal void
 GFX_CmdCopyBufferToBuffer(const GFX_CmdBuffer *cmd,
 						  GFX_BufferKey src,
 						  GFX_BufferKey dst,
-						  u32 region_count, const VkBufferCopy2 *regions)
+						  u32 region_count, const GFX_BufferCopy *regions)
 {
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	VkBufferCopy2 *vk_regions = ArenaPushArray(scratch.arena, VkBufferCopy2, region_count);
+
+	for (u32 i = 0; i < region_count; i++)
+	{
+		vk_regions[i].sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		vk_regions[i].srcOffset = regions[i].src_offset;
+		vk_regions[i].dstOffset = regions[i].dst_offset;
+		vk_regions[i].size      = regions[i].size;
+	}
+	
 	GFX_Buffer *gfx_src = GFX_DeviceBufferFromKey(cmd->device, src);
 	GFX_Buffer *gfx_dst = GFX_DeviceBufferFromKey(cmd->device, dst);
 	
@@ -411,17 +423,36 @@ GFX_CmdCopyBufferToBuffer(const GFX_CmdBuffer *cmd,
 	copy_info.srcBuffer = gfx_src->handle;
 	copy_info.dstBuffer = gfx_dst->handle;
 	copy_info.regionCount = region_count;
-	copy_info.pRegions = regions;
+	copy_info.pRegions = vk_regions;
 
 	vkCmdCopyBuffer2(cmd->handle, &copy_info);
+
+	ScratchRelease(&scratch);
 }
 
 internal void
 GFX_CmdCopyBufferToTexture(const GFX_CmdBuffer *cmd,
 						   GFX_BufferKey src,
 						   GFX_TextureKey dst,
-						   u32 region_count, const VkBufferImageCopy2 *regions)
+						   u32 region_count, const GFX_BufferImageCopy *regions)
 {
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	VkBufferImageCopy2 *vk_regions = ArenaPushArray(scratch.arena, VkBufferImageCopy2, region_count);
+
+	for (u32 i = 0; i < region_count; i++)
+	{
+		GFX_BufferImageCopy *r = &regions[i];
+		
+		vk_regions[i].sType             = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+		vk_regions[i].bufferOffset      = r->buffer_offset;
+		vk_regions[i].bufferRowLength   = r->buffer_row_length;
+		vk_regions[i].bufferImageHeight = r->buffer_image_height;
+		vk_regions[i].imageSubresource  = r->image_subresource;
+		vk_regions[i].imageOffset       = (VkOffset3D) { r->x, r->y, r->z };
+		vk_regions[i].imageExtent       = (VkExtent3D) { r->w, r->h, r->d };
+	}
+	
 	GFX_Buffer  *gfx_src = GFX_DeviceBufferFromKey  (cmd->device, src);
 	GFX_Texture *gfx_dst = GFX_DeviceTextureFromKey (cmd->device, dst);
 	
@@ -431,7 +462,7 @@ GFX_CmdCopyBufferToTexture(const GFX_CmdBuffer *cmd,
 	copy_info.dstImage = gfx_dst->handle;
 	copy_info.dstImageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	copy_info.regionCount = region_count;
-	copy_info.pRegions = regions;
+	copy_info.pRegions = vk_regions;
 
 	vkCmdCopyBufferToImage2(cmd->handle, &copy_info);
 }
@@ -444,18 +475,25 @@ GFX_CmdCopyBufferToTextureWhole(const GFX_CmdBuffer *cmd,
 {
 	GFX_Texture *gfx_dst = GFX_DeviceTextureFromKey(cmd->device, dst);
 	
-	VkBufferImageCopy2 region = {0};
-	region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
-	region.bufferOffset = buffer_offset;
-	region.bufferRowLength = 0;
-	region.bufferImageHeight = 0;
-	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.imageSubresource.mipLevel = 0;
-	region.imageSubresource.baseArrayLayer = 0;
-	region.imageSubresource.layerCount = 1;
-	region.imageOffset = (VkOffset3D) { 0, 0, 0 };
-	region.imageExtent = (VkExtent3D) { gfx_dst->width, gfx_dst->height, 1 };
+	GFX_BufferImageCopy region = {0};
 
+	region.buffer_offset = buffer_offset;
+	region.buffer_row_length = 0;
+	region.buffer_image_height = 0;
+
+	region.image_subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.image_subresource.mipLevel = 0;
+	region.image_subresource.baseArrayLayer = 0;
+	region.image_subresource.layerCount = 1;
+
+	region.x = 0;
+	region.y = 0;
+	region.z = 0;
+
+	region.w = gfx_dst->width;
+	region.h = gfx_dst->height;
+	region.d = 1;
+	
 	GFX_CmdCopyBufferToTexture(cmd, src, dst, 1, &region);
 }
 

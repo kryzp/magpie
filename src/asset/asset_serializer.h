@@ -9,6 +9,7 @@ struct AST_Context
 	Arena *scope;
 	AST_Assets *assets;
 	AST_MetaData metadata;
+	LOG_Channel log_channel;
 };
 
 typedef struct AST_SerializerPipelineData AST_SerializerPipelineData;

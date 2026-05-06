@@ -39,7 +39,7 @@
 
 #include <vma/vk_mem_alloc.h>
 
-#include "ext/slang_compiler.h"
+#include "ext/slang/slang_compiler.h"
 
 #define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
 #include "ext/spirv/spirv_reflect.h"
@@ -48,10 +48,8 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "ext/ma/miniaudio.h"
 
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/GltfMaterial.h>
+#define CGLTF_IMPLEMENTATION
+#include "ext/gltf/cgltf.h"
 
 // who decided to name these macros ffs
 #undef min

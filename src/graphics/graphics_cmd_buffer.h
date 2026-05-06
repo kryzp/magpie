@@ -151,15 +151,36 @@ internal void GFX_CmdGenerateMipmaps(const GFX_CmdBuffer *cmd, GFX_TextureKey te
    TRANSFER
    ================================================== */
 
+typedef struct GFX_BufferCopy GFX_BufferCopy;
+struct GFX_BufferCopy
+{
+	u64 src_offset;
+	u64 dst_offset;
+	u64 size;
+};
+
+typedef struct GFX_BufferImageCopy GFX_BufferImageCopy;
+struct GFX_BufferImageCopy
+{
+	u64 buffer_offset;
+	u32 buffer_row_length;
+	u32 buffer_image_height;
+
+	VkImageSubresourceLayers image_subresource;
+
+	i32 x, y, z;
+	u32 w, h, d;
+};
+
 internal void GFX_CmdCopyBufferToBuffer(const GFX_CmdBuffer *cmd,
 										GFX_BufferKey src,
 										GFX_BufferKey dst,
-										u32 region_count, const VkBufferCopy2 *regions);
+										u32 region_count, const GFX_BufferCopy *regions);
 
 internal void GFX_CmdCopyBufferToTexture(const GFX_CmdBuffer *cmd,
 										 GFX_BufferKey src,
 										 GFX_TextureKey dst,
-										 u32 region_count, const VkBufferImageCopy2 *regions);
+										 u32 region_count, const GFX_BufferImageCopy *regions);
 
 internal void GFX_CmdCopyBufferToTextureWhole(const GFX_CmdBuffer *cmd,
 											  GFX_BufferKey src,

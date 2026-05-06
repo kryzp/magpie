@@ -559,16 +559,14 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
 	const u64 index_stride  = sizeof(AST_ModelIndex);
 
-	VkBufferCopy2 vc = {0};
-	vc.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-	vc.srcOffset = 0;
-	vc.dstOffset = page->vertex_count * vertex_stride;
+	GFX_BufferCopy vc = {0};
+	vc.src_offset = 0;
+	vc.dst_offset = page->vertex_count * vertex_stride;
 	vc.size = vertex_count * vertex_stride;
 
-	VkBufferCopy2 ic = {0};
-	ic.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-	ic.srcOffset = 0;
-	ic.dstOffset = page->index_count * index_stride;
+	GFX_BufferCopy ic = {0};
+	ic.src_offset = 0;
+	ic.dst_offset = page->index_count * index_stride;
 	ic.size = index_count * index_stride;
 
 	GFX_CmdCopyBufferToBuffer(cmd, vertex_buffer, page->vertex_buffer, 1, &vc);

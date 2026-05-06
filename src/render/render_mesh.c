@@ -50,16 +50,14 @@ R_MeshUpload(const R_Mesh *mesh, const GFX_CmdBuffer *cmd,
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
 
-	VkBufferCopy2 stage_to_vertex_copy = {0};
-	stage_to_vertex_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-	stage_to_vertex_copy.srcOffset = stage_base;
-	stage_to_vertex_copy.dstOffset = 0;
+	GFX_BufferCopy stage_to_vertex_copy = {0};
+	stage_to_vertex_copy.src_offset = stage_base;
+	stage_to_vertex_copy.dst_offset = 0;
 	stage_to_vertex_copy.size = vb_size;
 
-	VkBufferCopy2 stage_to_index_copy = {0};
-	stage_to_index_copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-	stage_to_index_copy.srcOffset = stage_base + vb_size;
-	stage_to_index_copy.dstOffset = 0;
+	GFX_BufferCopy stage_to_index_copy = {0};
+	stage_to_index_copy.src_offset = stage_base + vb_size;
+	stage_to_index_copy.dst_offset = 0;
 	stage_to_index_copy.size = ib_size;
 
 	GFX_CmdCopyBufferToBuffer(cmd, stage, mesh->vertex_buffer, 1, &stage_to_vertex_copy);

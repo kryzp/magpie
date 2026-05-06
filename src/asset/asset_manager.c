@@ -186,7 +186,9 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 
 	assets->free_load_arena_count = AST_LOAD_ARENA_COUNT;
 
-#define AssetDef(name) assets->serializers[AST_Type_##name] = AST_Get##name##Serializer();
+#define AssetDef(name)													\
+	assets->serializers[AST_Type_##name] = AST_Get##name##Serializer(); \
+	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpen(String8Lit(STRINGIFY(name) " Serializer"));
 #include "asset_definitions.inc"
 #undef AssetDef
 	
