@@ -57,6 +57,6 @@ namespace shadows
 
 		shadow /= float(sample_count);
 
-		return 1.0 - shadow;
+		return saturate(1.0 - shadow);
 	}
 }

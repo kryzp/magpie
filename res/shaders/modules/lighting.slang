@@ -150,41 +150,6 @@ namespace lighting
 	}
 
 	public float3
-	EvaluateBRDF_Base(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
-	{
-		float3 F = FresnelSchlick(VdotH, s.F0, 0.0);
-		float NDF = DistributionGGX(NdotH, s.roughness);
-		float G = GeometrySmith_ARTISTIC(s.NdotV, NdotL, s.roughness);
-
-		float3 kD = (1.0 - F) * (1.0 - s.metallic);
-		float3 diffuse = s.albedo;
-		float3 specular = (F * G * NDF) / (4.0 * NdotL * s.NdotV + 0.0001);
-
-		return kD * diffuse + specular;
-	}
-
-	public float3
-	EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
-	{
-		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
-		
-		float3 F = FresnelSchlick(VdotH, float3(0.04), 0.0);
-		float D = DistributionGGX(NdotH, s.clearcoat_roughness);
-		float V = GeometrySmith_PHYSACC(s.clearcoat_NdotV, NdotL, s.clearcoat_roughness);
-		float3 spec = (F * D * V) / (4.0 * s.clearcoat_NdotV * NdotL + 0.001);
-
-		return spec * s.clearcoat;
-	}
-
-	public float3
-	EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
-	{
-		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md
-
-		return 0.0; // TODO
-	}
-
-	public float3
 	SampleIrradiance(Surface s, IBL ibl)
 	{
 		float3 irr = 0.0;
@@ -232,6 +197,41 @@ namespace lighting
 	}
 
 	public float3
+	EvaluateBRDF_Base(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	{
+		float3 F = FresnelSchlick(VdotH, s.F0, 0.0);
+		float NDF = DistributionGGX(NdotH, s.roughness);
+		float G = GeometrySmith_ARTISTIC(s.NdotV, NdotL, s.roughness);
+
+		float3 kD = (1.0 - F) * (1.0 - s.metallic);
+		float3 diffuse = s.albedo;
+		float3 specular = (F * G * NDF) / (4.0 * NdotL * s.NdotV + 0.0001);
+
+		return kD * diffuse + specular;
+	}
+
+	public float3
+	EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	{
+		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
+		
+		float3 F = FresnelSchlick(VdotH, float3(0.04), 0.0);
+		float D = DistributionGGX(NdotH, s.clearcoat_roughness);
+		float V = GeometrySmith_PHYSACC(s.clearcoat_NdotV, NdotL, s.clearcoat_roughness);
+		float3 spec = (F * D * V) / (4.0 * s.clearcoat_NdotV * NdotL + 0.001);
+
+		return spec * s.clearcoat;
+	}
+
+	public float3
+	EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	{
+		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md
+
+		return 0.0; // TODO
+	}
+
+	public float3
 	EvaluateLight_Ambient(Surface s, IBL ibl)
 	{
 		float3 base = EvaluateBRDF_BaseIBL(s, ibl);
@@ -245,7 +245,7 @@ namespace lighting
 		}
 
 		// TODO: sheen
-		
+
 		return base * s.occlusion;
 	}
 

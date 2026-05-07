@@ -737,7 +737,8 @@ AppTick(App *app, const I_State *input)
 		R_GraphReset(&app->graph);
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
-	
+
+	GFX_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
 	return false;
