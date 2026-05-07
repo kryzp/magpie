@@ -6,20 +6,9 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	const R_Scene *scene          = ctx->scene;
 	const R_ForwardPassData *data = ctx->user_data;
 
-	
-	// TODO: replace this system with something more streamlined
-	//       i.e: render graph already *knows* we have a depth attachment + # amount of colour formats
-	//            on this pass, but there's no utilities to make a pipeline from that info
-	//            like imagine something like
-	//                R_PassGfxPipelineDef pipeline_def = ...;
-	//                GFX_PipelineSt pipeline_st = R_PassFetchPipeline(ctx, pipeline_def)
-
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->shader);
-	pipeline_def.has_depth_attachment = true;
+	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
-	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
@@ -92,7 +81,7 @@ R_ForwardRendererDestroy(R_ForwardRenderer *r)
 {
 }
 
-internal R_GraphTexHandle
+internal R_MsaaPair
 R_ForwardRender(R_ForwardRenderer *r,
 				R_Graph *graph,
 				R_Blackboard *bb,
@@ -109,8 +98,8 @@ R_ForwardRender(R_ForwardRenderer *r,
 {
 	const R_BB_ShadowData *shadow = &bb->shadow_data;
 
-	R_Clear depth_clear  = R_ClearDepthStencil(1.f, 0);
 	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
+	R_Clear depth_clear  = R_ClearDepthStencil(1.f, 0);
 
 	R_TextureInfo depth_info = R_TextureInfoInitDepth(graph->device);
 
@@ -118,13 +107,13 @@ R_ForwardRender(R_ForwardRenderer *r,
 	lighting_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	lighting_info.flags  = GFX_TextureAllocFlag_Storage;
 
-	R_GraphTexHandle lighting = R_GraphCreateTexture(graph, &lighting_info);
-	R_GraphTexHandle depth    = R_GraphCreateTexture(graph, &depth_info);
+	R_MsaaPair lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
+	R_MsaaPair depth    = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
 
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 
-	lighting = R_PassWriteColour (pass, lighting, &colour_clear);
-	depth    = R_PassWriteDepth  (pass, depth,    &depth_clear);
+	lighting.msaa = R_PassWriteColour (pass, lighting.msaa, &colour_clear);
+	depth.msaa    = R_PassWriteDepth  (pass, depth.msaa,    &depth_clear);
 
 	bb->depth = depth;
 

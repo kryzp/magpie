@@ -16,6 +16,9 @@ Yes, it's over-engineered for a solo project, but I enjoy good code. No guarante
 
 This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/wyvern) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
 
+### Philosophy
+Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main render path.
+
 
 ### Resources Used
 - Real Time Rendering 4th Edition

@@ -8,11 +8,17 @@ struct GFX_RenderInfo
 {
 	u32 width;
 	u32 height;
-	VkSampleCountFlagBits samples;
-	u32 view_mask;
+
 	u32 colour_attachment_count;
+	VkFormat colour_attachment_formats[GFX_MAX_COLOUR_ATTACHMENTS];
 	VkRenderingAttachmentInfo colour_attachments[GFX_MAX_COLOUR_ATTACHMENTS];
+
+	b32 has_depth_attachment;
 	VkRenderingAttachmentInfo depth_attachment;
+
+	VkSampleCountFlagBits samples;
+
+	u32 view_mask;
 };
 
 typedef struct GFX_GraphicsPipelineDef GFX_GraphicsPipelineDef;
@@ -45,7 +51,9 @@ struct GFX_ComputePipelineDef
 	GFX_ShaderKey program;
 };
 
-internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit (GFX_ShaderKey program);
-internal GFX_ComputePipelineDef  GFX_ComputePipelineDefInit  (GFX_ShaderKey program);
+internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit     (GFX_ShaderKey program);
+internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefFromInfo (GFX_ShaderKey program, const GFX_RenderInfo *info);
+
+internal GFX_ComputePipelineDef  GFX_ComputePipelineDefInit      (GFX_ShaderKey program);
 
 #endif // GRAPHICS_PIPELINE_H

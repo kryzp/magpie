@@ -62,8 +62,8 @@ typedef struct R_GraphBufVersion R_GraphBufVersion;
 struct R_GraphBufVersion
 {
 	u32 resource_index;
-	u32 writer_pass;
-	u32 parent;
+	u32 writer_pass; // R_GRAPH_INVALID_INDEX if initial
+	u32 parent;      // R_GRAPH_INVALID_INDEX if initial
 };
 
 
@@ -208,6 +208,13 @@ internal R_GraphBuffer  *R_GraphBufferFromHandle  (R_Graph *graph, R_GraphBufHan
 
 internal b32 R_GraphTexVersionIsUnwritten (const R_Graph *graph, R_GraphTexHandle handle);
 internal b32 R_GraphBufVersionIsUnwritten (const R_Graph *graph, R_GraphBufHandle handle);
+
+
+/* ==================================================
+   MSAA
+   ================================================== */
+
+internal R_MsaaPair R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples);
 
 
 #endif // RENDER_GRAPH_H

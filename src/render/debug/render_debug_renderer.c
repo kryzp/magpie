@@ -659,10 +659,9 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	
 	// Pipeline with depth testing.
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->shader);
+	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	pipeline_def.cull_mode = VK_CULL_MODE_NONE;
-	pipeline_def.has_depth_attachment = true;
 	pipeline_def.depth_stencil_state.depth_test_enabled  = true;
 	pipeline_def.depth_stencil_state. depth_write_enabled = false;
 	pipeline_def.blend_state.enabled = true;
@@ -672,8 +671,6 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	pipeline_def.blend_state.alpha.src = VK_BLEND_FACTOR_ONE;
 	pipeline_def.blend_state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	pipeline_def.blend_state.alpha.op = VK_BLEND_OP_ADD;
-	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 

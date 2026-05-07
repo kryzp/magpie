@@ -813,62 +813,72 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						   &app->scene,
 						   &scene_resources);
 
-	R_GraphTexHandle lighting = R_ForwardRender(&app->forward_renderer,
-												&app->graph,
-												&bb,
-												&app->frame_arena,
-												&scene_resources,
-												app->frame_data_buffer,
-												app->linear_sampler,
-												app->nearest_sampler,
-												&app->irradiance_volume,
-												app->irradiance_cubemap,
-												app->prefilter_cubemap,
-												app->brdf_lut,
-												&draw_stream);
+	R_MsaaPair lighting = R_ForwardRender(&app->forward_renderer,
+										  &app->graph,
+										  &bb,
+										  &app->frame_arena,
+										  &scene_resources,
+										  app->frame_data_buffer,
+										  app->linear_sampler,
+										  app->nearest_sampler,
+										  &app->irradiance_volume,
+										  app->irradiance_cubemap,
+										  app->prefilter_cubemap,
+										  app->brdf_lut,
+										  &draw_stream);
 
 	// Skybox.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
 
+		
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
 		data->cubemap = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->sampler = app->linear_sampler;
 		data->frame_data_buffer = app->frame_data_buffer;
 		data->skybox_mesh = &app->skybox_mesh;
+
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
-		R_PassSetRecord(pass, R_SkyboxPassFn, data);
+		
+		lighting.resolved = R_PassWriteColourResolve (pass, lighting.msaa, lighting.resolved, NULL);
+		bb.depth.resolved = R_PassWriteDepthResolve  (pass, bb.depth.msaa, bb.depth.resolved, NULL);
+		
 		R_PassReadTextureGraphics(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
-		lighting = R_PassWriteColour(pass, lighting, NULL);
-		bb.depth = R_PassWriteDepth(pass, bb.depth, NULL);
+
+		R_PassSetRecord(pass, R_SkyboxPassFn, data);
 	}
 
 	// Post Processing.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
+
 		
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
 		data->exposure = app_pp_exposure;
-		data->input = lighting;
-		data->output = lighting;
+		data->input = lighting.resolved;
+		data->output = lighting.resolved;
 
+		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Post Processing"), R_PassType_Compute);
+
+		lighting.resolved = R_PassWriteTextureCompute(pass, lighting.resolved);
+
+		R_PassReadTextureCompute(pass, lighting.resolved);
+
 		R_PassSetRecord(pass, R_PostProcessingPassFn, data);
-		R_PassReadTextureCompute(pass, lighting);
-		lighting = R_PassWriteTextureCompute(pass, lighting);
 	}
 	
 	R_DebugRendererRender(&app->debug_renderer,
 						  dt,
 						  &app->graph,
 						  &app->frame_arena,
-						  lighting,
-						  bb.depth);
+						  lighting.resolved,
+						  bb.depth.resolved);
 
-	R_GraphSetBackbuffer(&app->graph, lighting);
+	R_GraphSetBackbuffer(&app->graph, lighting.resolved);
 }

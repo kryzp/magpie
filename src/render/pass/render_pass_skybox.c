@@ -5,15 +5,12 @@ R_PASS_RECORD_DEF(R_SkyboxPassFn)
 	GFX_CmdBuffer *cmd = ctx->cmd;
 	
 	const R_SkyboxPassData *user_data = ctx->user_data;
-	
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(user_data->shader);
-	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R16G16B16A16_SFLOAT;
-	pipeline_def.has_depth_attachment = true;
+
+	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(user_data->shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
-	
+
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 	
 	struct

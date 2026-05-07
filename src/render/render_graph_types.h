@@ -60,7 +60,7 @@ struct R_TextureInfo
 	u32 mips;
 	u32 layers;
 	
-	u32 samples;
+	VkSampleCountFlagBits samples;
 
 	GFX_TextureAllocFlags flags;
 };
@@ -84,12 +84,17 @@ internal b32 R_BufferInfoMatch  (const R_BufferInfo  *a, const R_BufferInfo  *b)
 typedef struct R_ResourceState R_ResourceState;
 struct R_ResourceState
 {
-	VkPipelineStageFlags2 write_stage;  // stage of last unsynced write
-	VkAccessFlags2        write_access; // WRITE access pending flush (0 = no pending writes)
+	VkPipelineStageFlags2     write_stage;  // stage of last unsynced write
+	VkAccessFlags2            write_access; // WRITE access pending flush (0 = no pending writes)
+	VkPipelineStageFlags2     read_stages; // accumulated reader stages since last flush (for WAR)	
+	VkImageLayout             layout;
+};
 
-	VkPipelineStageFlags2 read_stages; // accumulated reader stages since last flush (for WAR)
-	
-	VkImageLayout layout;
+typedef struct R_MsaaPair R_MsaaPair;
+struct R_MsaaPair
+{
+	R_GraphTexHandle msaa;
+	R_GraphTexHandle resolved;
 };
 
 #endif // RENDER_GRAPH_TYPES_H

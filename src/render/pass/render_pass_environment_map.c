@@ -6,10 +6,7 @@ R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 	
 	const R_HdrToEnvPassData *user_data = ctx->user_data;
 	
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(user_data->shader);
-	pipeline_def.multi_view_mask = 0b111111;
-	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(user_data->shader, ctx->render_info);
 	
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 	

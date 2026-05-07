@@ -2,6 +2,7 @@
 // https://songho.ca/opengl/gl_sphere.html
 // TODO: Use an icosphere or cubesphere for better tessellation.
 
+/*
 internal void
 R_DeferredCreateLightSphereMesh(R_DeferredRenderer *dr)
 {
@@ -387,3 +388,4 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 
 	return lighting;
 }
+*/

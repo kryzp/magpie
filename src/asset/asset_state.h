@@ -13,6 +13,10 @@ typedef enum AST_State
 }
 AST_State;
 
+/*
+ * TODO: Get rid of these functions just do clear checks in the asset manager this is just making code harder.
+ */
+
 internal inline b32
 AST_StateIsLoading(AST_State st)
 {

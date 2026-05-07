@@ -173,6 +173,78 @@ R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, 
 }
 
 internal R_GraphTexHandle
+R_PassWriteColourResolve(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear)
+{
+	return R_PassWriteColourResolveEx(pass, msaa, resolve, clear, GFX_SubresourceRangeAllColour());
+}
+
+internal R_GraphTexHandle
+R_PassWriteDepthResolve(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear)
+{
+	return R_PassWriteDepthResolveEx(pass, msaa, resolve, clear, GFX_SubresourceRangeAllDepth());
+}
+
+internal R_GraphTexHandle
+R_PassWriteColourResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range)
+{
+	R_GraphTexHandle msaa_v    = R_GraphPushTexVersion(pass->graph, msaa,    pass->index);
+	R_GraphTexHandle resolve_v = R_GraphPushTexVersion(pass->graph, resolve, pass->index);
+	
+	R_PassTextureEdge edge = {0};
+	edge.handle = msaa_v;
+	edge.state.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	edge.state.access = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+	edge.layout = VK_IMAGE_LAYOUT_GENERAL;
+	edge.attachment_range = range;
+
+	edge.should_clear = clear != NULL;
+
+	if (edge.should_clear)
+		edge.clear = *clear;
+
+	edge.resolve_handle = resolve_v;
+	edge.resolve_mode = VK_RESOLVE_MODE_AVERAGE_BIT;
+	edge.resolve_layout = VK_IMAGE_LAYOUT_GENERAL;	
+
+	AssertTrue(pass->output_texture_count < ArraySize(pass->output_textures));
+
+	pass->output_textures[pass->output_texture_count] = edge;
+	pass->output_texture_count++;
+
+	return resolve_v; // downstream passes get the resolved version
+}
+
+internal R_GraphTexHandle
+R_PassWriteDepthResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range)
+{
+	R_GraphTexHandle msaa_v    = R_GraphPushTexVersion(pass->graph, msaa,    pass->index);
+	R_GraphTexHandle resolve_v = R_GraphPushTexVersion(pass->graph, resolve, pass->index);
+	
+	R_PassTextureEdge edge = {0};
+	edge.handle = msaa_v;
+	edge.state.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+	edge.state.access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	edge.layout = VK_IMAGE_LAYOUT_GENERAL;
+	edge.attachment_range = range;
+
+	edge.should_clear = clear != NULL;
+
+	if (edge.should_clear)
+		edge.clear = *clear;
+
+	edge.resolve_handle = resolve_v;
+	edge.resolve_mode = VK_RESOLVE_MODE_MIN_BIT;
+	edge.resolve_layout = VK_IMAGE_LAYOUT_GENERAL;
+	
+	AssertTrue(pass->output_texture_count < ArraySize(pass->output_textures));
+
+	pass->output_textures[pass->output_texture_count] = edge;
+	pass->output_texture_count++;
+
+	return resolve_v; // downstream passes get the resolved version
+}
+
+internal R_GraphTexHandle
 R_PassReadTextureGraphics(R_Pass *pass, R_GraphTexHandle handle)
 {
 	return R_PassAddInputTexture(pass, handle,

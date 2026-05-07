@@ -6,11 +6,9 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 
 	const R_ShadowMappingPassData *data = ctx->user_data;
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->shader);
-	pipeline_def.has_depth_attachment = true;
+	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
-	pipeline_def.multi_view_mask = 0b111111;
 
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 

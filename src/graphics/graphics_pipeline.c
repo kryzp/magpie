@@ -25,6 +25,25 @@ GFX_GraphicsPipelineDefInit(GFX_ShaderKey program)
 	return def;
 }
 
+internal GFX_GraphicsPipelineDef
+GFX_GraphicsPipelineDefFromInfo(GFX_ShaderKey program, const GFX_RenderInfo *info)
+{
+	GFX_GraphicsPipelineDef def = GFX_GraphicsPipelineDefInit(program);
+
+	def.colour_attachment_count = info->colour_attachment_count;
+
+	for (u32 i = 0; i < def.colour_attachment_count; i++)
+		def.colour_attachment_formats[i] = info->colour_attachment_formats[i];
+	
+	def.has_depth_attachment = info->has_depth_attachment;
+
+	def.samples = info->samples;
+	
+	def.multi_view_mask = info->view_mask;
+	
+	return def;
+}
+
 internal GFX_ComputePipelineDef
 GFX_ComputePipelineDefInit(GFX_ShaderKey program)
 {
