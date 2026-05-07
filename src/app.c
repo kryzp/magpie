@@ -362,10 +362,10 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
+	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"), AST_Type_Model);
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -728,10 +728,8 @@ AppTick(App *app, const I_State *input)
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
 		R_SceneDebug(&app->scene);
-	
-		R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
-	
-		AppRender(app, dt, elapsed, &cmd, &scene_resources);
+		
+		AppRender(app, dt, elapsed, &cmd);
 
 		R_GraphCompile(&app->graph, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->editor.camera, dt, elapsed);
@@ -770,8 +768,10 @@ AppHotUnload(App *app)
 }
 
 internal void
-AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResources *scene_resources)
+AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 {
+	R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
+
 	R_CameraRecompute(&app->editor.camera);
 
 	u32 window_width, window_height;
@@ -800,7 +800,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 											 &app->graph,
 											 &app->frame_arena,
 											 &app->scene,
-											 scene_resources,
+											 &scene_resources,
 											 R_CullFilter_OpaqueOnly,
 											 &frustum);
 
@@ -810,13 +810,13 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResour
 						   &app->frame_arena,
 						   &app->culling,
 						   &app->scene,
-						   scene_resources);
+						   &scene_resources);
 
 	R_GraphTexHandle lighting = R_ForwardRender(&app->forward_renderer,
 												&app->graph,
 												&bb,
 												&app->frame_arena,
-												scene_resources,
+												&scene_resources,
 												app->frame_data_buffer,
 												app->linear_sampler,
 												app->nearest_sampler,

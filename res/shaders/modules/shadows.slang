@@ -26,7 +26,6 @@ namespace shadows
 	// PCF point-light shadow lookup.
 	// returns shadow multiplier (out = shadow * in)
 	public float CalculatePointShadow(float3 frag_position,
-	                                  float3 light_position,
 	                                  ShadowCaster caster,
 	                                  frame::FrameData frame_data,
 	                                  uint shadow_sampler_id)
@@ -34,7 +33,7 @@ namespace shadows
 		SamplerState shadow_sampler = bdl::samplers[shadow_sampler_id];
 		TextureCube shadow_map = bdl::cubes[caster.shadow_map];
 
-		float3 light_to_frag = frag_position - light_position;
+		float3 light_to_frag = frag_position - caster.position;
 		float current_depth = length(light_to_frag);
 
 		float shadow = 0.0;
@@ -42,7 +41,7 @@ namespace shadows
 		float bias = 0.05;
 		const int sample_count = 20;
 
-		float disk_radius = (1.0 + length(light_position - frame_data.camera_position) * 10.0) * 0.0005;
+		float disk_radius = (1.0 + (current_depth / caster.far_plane) * 100.0) * 0.0005;
 
 		for (int i = 0; i < sample_count; i++)
 		{

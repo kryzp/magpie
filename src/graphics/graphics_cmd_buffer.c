@@ -442,7 +442,7 @@ GFX_CmdCopyBufferToTexture(const GFX_CmdBuffer *cmd,
 
 	for (u32 i = 0; i < region_count; i++)
 	{
-		GFX_BufferImageCopy *r = &regions[i];
+		const GFX_BufferImageCopy *r = &regions[i];
 		
 		vk_regions[i].sType             = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
 		vk_regions[i].bufferOffset      = r->buffer_offset;

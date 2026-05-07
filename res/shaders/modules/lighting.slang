@@ -282,7 +282,7 @@ namespace lighting
 		if (light.shadow_slot_index >= 0)
 		{
 			shadows::ShadowCaster caster = casters[light.shadow_slot_index];
-			shadow_factor = shadows::CalculatePointShadow(s.world_position, light.position, caster, frame_data, shadow_sampler_idx);
+			shadow_factor = shadows::CalculatePointShadow(s.world_position, caster, frame_data, shadow_sampler_idx);
 		}
 
 		//float3 sheen_albedo_scaling = 1.0 - max(s.sheen_colour.r, max(s.sheen_colour.g, s.sheen_colour.b)); // approximation

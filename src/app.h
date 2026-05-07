@@ -122,7 +122,7 @@ internal void AppDestroyEditor       (App *app);
 internal void AppHotLoadEditor       (App *app);
 internal void AppHotUnloadEditor     (App *app);
 
-internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd, const R_SceneResources *scene_resources);
+internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
 __declspec(dllexport) App  *AppInit      (const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);
