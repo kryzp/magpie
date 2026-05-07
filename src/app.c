@@ -15,11 +15,7 @@
  * to free your spirit.
  *
  * And I will meet you there,
- * and so it shall be,
- * together at last.
- *
- * But till that day may pass,
- * I have but one final question,
+ * But I have one final question,
  * what is it, you fear most?
  */
 
