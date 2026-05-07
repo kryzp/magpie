@@ -136,7 +136,8 @@ namespace material
 			s.clearcoat_roughness *= bdl::textures[mat.clearcoat_roughness_texture].Sample(sampler, uv).g;
 
 		s.clearcoat_normal = s.world_normal; // TODO: should have a seperate normal map oops.
-
+		s.clearcoat_NdotV = s.NdotV;
+		
 
 		s.sheen_colour = mat.sheen_colour_factor;
 

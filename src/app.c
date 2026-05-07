@@ -362,8 +362,10 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"), AST_Type_Model);
+	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 

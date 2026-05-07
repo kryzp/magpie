@@ -53,6 +53,7 @@ namespace lighting
 		public float  clearcoat;
 		public float  clearcoat_roughness;
 		public float3 clearcoat_normal;
+		public float  clearcoat_NdotV;
 
 		public float3 sheen_colour;
 		public float  sheen_roughness;
@@ -165,11 +166,67 @@ namespace lighting
 	public float3
 	EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
-		return 0.0; // TODO
+		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
+		
+		float3 F = FresnelSchlick(VdotH, float3(0.04), 0.0);
+		float D = DistributionGGX(NdotH, s.clearcoat_roughness);
+		float V = GeometrySmith_PHYSACC(s.clearcoat_NdotV, NdotL, s.clearcoat_roughness);
+		float3 spec = (F * D * V) / (4.0 * s.clearcoat_NdotV * NdotL + 0.001);
+
+		return spec * s.clearcoat;
 	}
 
 	public float3
 	EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	{
+		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md
+
+		return 0.0; // TODO
+	}
+
+	public float3
+	SampleIrradiance(Surface s, IBL ibl)
+	{
+		float3 irr = 0.0;
+
+		if (ibl.irr_sh)
+			irr = irradiance::SampleIrradianceGrid(s.world_position, s.world_normal, *ibl.irr_grid_info, ibl.irr_sh);
+		else
+			irr = bdl::cubes[ibl.irradiance_fallback_cubemap].Sample(bdl::samplers[ibl.sampler], math::WorldToCubemap(s.world_normal)).rgb;
+
+		return irr;
+	}
+
+	public float3
+	EvaluateBRDF_SpecularIBL_GGX(float3 R, float roughness, float NdotV, float3 F, IBL ibl)
+	{
+		float mip = roughness * irradiance::MAX_REFLECTION_LOD;
+		float3 prefiltered = bdl::cubes[ibl.prefilter_cubemap].SampleLevel(bdl::samplers[ibl.sampler], math::WorldToCubemap(R), mip).rgb;
+		float2 brdf = bdl::textures[ibl.brdf_lut].Sample(bdl::samplers[ibl.sampler], float2(NdotV, roughness)).xy;
+		float3 specular = prefiltered * (F * brdf.x + brdf.y);
+		return specular;
+	}
+
+	public float3
+	EvaluateBRDF_BaseIBL(Surface s, IBL ibl)
+	{
+		float3 R = normalize(reflect(-s.view_dir, s.world_normal));
+		float3 kD = (1.0 - s.F0) * (1.0 - s.metallic);
+		float3 diffuse = SampleIrradiance(s, ibl) * s.albedo;
+		float3 specular = EvaluateBRDF_SpecularIBL_GGX(R, s.roughness, s.NdotV, s.F0, ibl);
+		return kD * diffuse + specular;
+	}
+
+	public float3
+	EvaluateBRDF_ClearCoatIBL(Surface s, IBL ibl)
+	{
+		float3 R = normalize(reflect(-s.view_dir, s.clearcoat_normal));
+		float3 specular = EvaluateBRDF_SpecularIBL_GGX(R, s.clearcoat_roughness, s.clearcoat_NdotV, 0.04, ibl);
+		return specular * s.clearcoat;
+	}
+
+	public float3
+	EvaluateBRDF_SheenIBL(Surface s, IBL ibl)
 	{
 		return 0.0; // TODO
 	}
@@ -177,33 +234,19 @@ namespace lighting
 	public float3
 	EvaluateLight_Ambient(Surface s, IBL ibl)
 	{
-		SamplerState sampler = bdl::samplers[ibl.sampler];
+		float3 base = EvaluateBRDF_BaseIBL(s, ibl);
 
-		TextureCube fallback_irradiance_cubemap = bdl::cubes[ibl.irradiance_fallback_cubemap];
-		TextureCube prefilter_cubemap           = bdl::cubes[ibl.prefilter_cubemap];
+		if (s.clearcoat > 0.0)
+		{
+			float3 f_cc_view = FresnelSchlick(s.clearcoat_NdotV, float3(0.04), 0.0) * s.clearcoat;
+			float3 clearcoat = EvaluateBRDF_ClearCoatIBL(s, ibl);
 
-		float3 F = s.F0;
-		float3 kD = (1.0 - F) * (1.0 - s.metallic);
+			base = base * (1.0 - f_cc_view) + clearcoat;
+		}
 
-		float3 R = normalize(reflect(-s.view_dir, s.world_normal));
-
-		float prefilter_mip_level = s.roughness * irradiance::MAX_REFLECTION_LOD;
-		float3 prefiltered_colour = prefilter_cubemap.SampleLevel(sampler, math::WorldToCubemap(R), prefilter_mip_level).rgb;
-
-		float2 env_brdf = bdl::textures[ibl.brdf_lut].Sample(sampler, float2(s.NdotV, s.roughness)).xy;
-
-		float3 specular = prefiltered_colour * (F * env_brdf.x + env_brdf.y);
-
-		float3 irr = 0.0;
-
-		if (ibl.irr_sh)
-			irr = irradiance::SampleIrradianceGrid(s.world_position, s.world_normal, *ibl.irr_grid_info, ibl.irr_sh);
-		else
-			irr = fallback_irradiance_cubemap.Sample(sampler, math::WorldToCubemap(s.world_normal)).rgb;
-
-		float3 diffuse = irr * s.albedo;
-
-		return (kD * diffuse + specular) * s.occlusion;
+		// TODO: sheen
+		
+		return base * s.occlusion;
 	}
 
 	public float3
@@ -222,11 +265,16 @@ namespace lighting
 		float NdotH = max(0.0, dot(s.world_normal, H));
 		float VdotH = max(0.0, dot(H, s.view_dir));
 
+		float clearcoat_NdotL = max(0.0, dot(s.clearcoat_normal, L));
+		float clearcoat_NdotH = max(0.0, dot(s.clearcoat_normal, H));
+
 		if (NdotL <= 0.0)
 			return 0.0;
 
-		float3 base = EvaluateBRDF_Base(s, L, NdotL, NdotH, VdotH);
-		float3 clear_coat = (s.clearcoat > 0.0) ? EvaluateBRDF_ClearCoat(s, L, NdotL, NdotH, VdotH) : 0.0;
+		float3 f_cc_view = FresnelSchlick(s.clearcoat_NdotV, float3(0.04), 0.0) * s.clearcoat;
+
+		float3 base = EvaluateBRDF_Base(s, L, NdotL, NdotH, VdotH) * (1.0 - f_cc_view);
+		float3 clear_coat = (s.clearcoat > 0.0) ? EvaluateBRDF_ClearCoat(s, L, clearcoat_NdotL, clearcoat_NdotH, VdotH) : 0.0;
 		float3 sheen = (length(s.sheen_colour) > 0.0) ? EvaluateBRDF_Sheen(s, L, NdotL, NdotH, VdotH) : 0.0;
 
 		float shadow_factor = 1.0;
@@ -237,6 +285,9 @@ namespace lighting
 			shadow_factor = shadows::CalculatePointShadow(s.world_position, light.position, caster, frame_data, shadow_sampler_idx);
 		}
 
-		return shadow_factor * radiance * NdotL * (base + clear_coat + sheen);
+		//float3 sheen_albedo_scaling = 1.0 - max(s.sheen_colour.r, max(s.sheen_colour.g, s.sheen_colour.b)); // approximation
+		float3 sheen_albedo_scaling = 1.0; // TODO
+
+		return shadow_factor * radiance * NdotL * (base * sheen_albedo_scaling + clear_coat + sheen);
 	}
 }

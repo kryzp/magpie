@@ -128,7 +128,7 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 
 	GFX_BufferAllocInfo scratch_info = {0};
 	scratch_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
-	scratch_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	scratch_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	scratch_info.size  = max_scratch_size;
 
 	GFX_BufferKey scratch_buffer = GFX_DeviceBufferAlloc(device, &scratch_info);
@@ -180,11 +180,7 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 
 	GFX_BufferAllocInfo inst_buf_info = {0};
 	inst_buf_info.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
-
-	inst_buf_info.flags =
-		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-		VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // MUST HAVE DEVICEADDRESS ALIGNED TO 16 BYTES SO ALLOCATE DEDICATED NEW MEMORY
-	
+	inst_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // MUST HAVE DEVICEADDRESS ALIGNED TO 16 BYTES SO ALLOCATE DEDICATED NEW MEMORY
 	inst_buf_info.size = instance_data_size;
 
 	GFX_BufferKey instance_buffer = GFX_DeviceBufferAlloc(device, &inst_buf_info);
