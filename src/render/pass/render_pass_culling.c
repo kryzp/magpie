@@ -165,7 +165,7 @@ R_CullFrustum(R_Culling *cull,
 
 	// Compute culling pass.
 	{
-		GFX_ShaderKey shader = AST_Get(cull->assets, cull->frustum_shader, AST_Type_Shader)->shader.key;
+		GFX_ShaderKey shader = AST_GetNow(cull->assets, cull->frustum_shader, AST_Type_Shader)->shader.key;
 
 		R_CullFrustumPassData *data = ArenaPushArray(pass_arena, R_CullFrustumPassData, 1);
 		data->shader = shader;
@@ -229,7 +229,7 @@ R_CullSphere(R_Culling *cull,
 
 	// Compute culling pass.
 	{
-		GFX_ShaderKey shader = AST_Get(cull->assets, cull->sphere_shader, AST_Type_Shader)->shader.key;
+		GFX_ShaderKey shader = AST_GetNow(cull->assets, cull->sphere_shader, AST_Type_Shader)->shader.key;
 
 		R_CullSpherePassData *data = ArenaPushArray(pass_arena, R_CullSpherePassData, 1);
 		data->shader = shader;

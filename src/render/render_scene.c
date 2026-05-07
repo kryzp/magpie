@@ -497,18 +497,14 @@ R_SceneGetShadowCasterCount(const R_Scene *scene)
 internal R_SceneRegisterModelReceipt
 R_SceneRegisterModel(R_Scene *scene,
 					 Arena *arena,
-					 const AST_Assets *assets,
+					 AST_Assets *assets,
 					 AST_Handle model_handle,
 					 u32 max_entries)
-{		
-	AssertTrue(AST_IsLoaded(assets, model_handle));
-
-	const AST_Record *record = AST_GetRecordConst(assets, model_handle);
-
-	AssertTrue(record->asset.type == AST_Type_Model);
-
-	u32 sub_model_count = record->asset.model.sub_model_count;
-	const AST_SubModel *sub_models = record->asset.model.sub_models;
+{
+	AST_Asset *model_asset = AST_GetNow(assets, model_handle, AST_Type_Model);
+	
+	u32 sub_model_count = model_asset->model.sub_model_count;
+	const AST_SubModel *sub_models = model_asset->model.sub_models;
 
 	R_SceneRegisterModelReceipt receipt = {0};
 	receipt.entry_count = MinValue(sub_model_count, max_entries);
@@ -620,7 +616,7 @@ R_SceneMeshBufferAddress(const R_Scene *scene)
 
 internal u32
 R_SceneResolveTextureBindless(const R_Scene *scene,
-							  const AST_Assets *assets,
+							  AST_Assets *assets,
 							  AST_Handle handle)
 {
 	if (!AST_IsValid(assets, handle))
@@ -629,9 +625,11 @@ R_SceneResolveTextureBindless(const R_Scene *scene,
 	if (!AST_IsLoaded(assets, handle))
 		return 0;
 
-	const AST_Record *record = AST_GetRecordConst(assets, handle);
+	// TODO: fuck this won't work with hot-reloading will it shiitt.
+	
+	AST_Asset *texture_asset = AST_GetNow(assets, handle, AST_Type_Texture);
 
-	GFX_TextureKey key = record->asset.texture.key;
+	GFX_TextureKey key = texture_asset->texture.key;
 
 	GFX_TextureView *view = GFX_DeviceTextureViewFromKey(scene->device, GFX_DeviceTextureViewAuto(scene->device, key));
 
@@ -641,7 +639,7 @@ R_SceneResolveTextureBindless(const R_Scene *scene,
 internal R_SceneMaterialHandle
 R_SceneRegisterMaterial(R_Scene *scene,
 						const AST_ModelMaterial *material,
-						const AST_Assets *assets)
+						AST_Assets *assets)
 {
 	AssertTrue(scene->material_count < R_SCENE_MAX_MATERIALS);
 
@@ -716,6 +714,7 @@ R_SceneRegisterMaterial(R_Scene *scene,
 	gpu->double_sided                         = (u32)material->double_sided;
 	gpu->unlit                                = (u32)material->unlit;
 	gpu->alpha_cutoff                         = material->alpha_cutoff;
+	gpu->alpha_mode                           = (u32)material->alpha_mode;
 	
 	scene->material_count++;
 	scene->material_buffer_dirty = true;

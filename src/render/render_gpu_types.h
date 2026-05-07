@@ -125,6 +125,7 @@ struct R_GPU_Material
 	u32 double_sided;
 	u32 unlit;
 	f32 alpha_cutoff;
+	u32 alpha_mode;
 };
 
 typedef struct R_GPU_Light R_GPU_Light;

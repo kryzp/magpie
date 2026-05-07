@@ -673,7 +673,7 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	pipeline_def.blend_state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	pipeline_def.blend_state.alpha.op = VK_BLEND_OP_ADD;
 	pipeline_def.colour_attachment_count = 1;
-	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
+	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
@@ -765,7 +765,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// Create the render pass.
 
-	GFX_ShaderKey shader = AST_Get(dr->assets, dr->shader_handle, AST_Type_Shader)->shader.key;
+	GFX_ShaderKey shader = AST_GetNow(dr->assets, dr->shader_handle, AST_Type_Shader)->shader.key;
 
 	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
 	data->shader = shader;

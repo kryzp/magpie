@@ -303,17 +303,10 @@ AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
 	if (AST_StateNeedsLoad(record->state))
 	{
 		AST_Load(assets, handle, type, counter);
-
 		osapi->JobYield(counter, 0);
-
-		while (record->state != AST_State_Ready &&
-			   record->state != AST_State_Failed)
-		{
-			AST_ResolvePendingDependencies(assets, counter);
-			osapi->JobYield(counter, 0);
-			AST_FlushUploads(assets);
-		}
 	}
+
+	AST_WaitForLoad(assets, handle, counter);
 	
 	osapi->JobCounterRelease(counter);
 }
@@ -740,6 +733,23 @@ AST_WaitForAsync(AST_Assets *assets)
 }
 
 internal void
+AST_WaitForLoad(AST_Assets *assets, AST_Handle handle, OS_Handle counter)
+{
+	AST_Record *record = AST_GetRecord(assets, handle);
+
+	if (!record)
+		return;
+
+	while (record->state != AST_State_Ready &&
+		   record->state != AST_State_Failed)
+	{
+		AST_ResolvePendingDependencies(assets, counter);
+		osapi->JobYield(counter, 0);
+		AST_FlushUploads(assets);
+	}
+}
+
+internal void
 AST_SetFallback(AST_Assets *assets, AST_Handle handle, AST_Type type)
 {
 	AssertTrue(AST_IsLoaded(assets, handle));
@@ -787,6 +797,28 @@ end:
 	return selected;
 }
 
+internal AST_Asset *
+AST_GetNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
+{
+	AST_Record *record = AST_GetRecord(assets, handle);
+
+	if (record)
+	{
+		if (AST_StateNeedsLoad(record->state))
+		{
+			AST_LoadNow(assets, handle, type);
+		}
+		else if (AST_StateIsLoading(record->state))
+		{
+			OS_Handle counter = osapi->JobCounterAlloc(0);
+			AST_WaitForLoad(assets, handle, counter);
+			osapi->JobCounterRelease(counter);
+		}
+	}
+
+	return AST_Get(assets, handle, type);
+}
+
 internal AST_Handle
 AST_FromFilePath(AST_Assets *assets, String8 path)
 {
@@ -818,19 +850,6 @@ AST_Require(AST_Assets *assets, String8 path, AST_Type type)
 
 	if (AST_StateNeedsLoad(record->state))
 		AST_LoadAsync(assets, handle, type);
-
-	return handle;
-}
-
-internal AST_Handle
-AST_RequireNow(AST_Assets *assets, String8 path, AST_Type type)
-{
-	AST_Handle handle = AST_FromFilePath(assets, path);
-
-	AST_Record *record = AST_GetRecord(assets, handle);
-
-	if (AST_StateNeedsLoad(record->state))
-		AST_LoadNow(assets, handle, type);
 
 	return handle;
 }

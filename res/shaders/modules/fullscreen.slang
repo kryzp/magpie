@@ -9,7 +9,8 @@ namespace fullscreen
 	};
 
 	// standard 3-vertex fullscreen triangle.
-	public VS_Output FullscreenVS(uint id)
+	public VS_Output
+	FullscreenVS(uint id)
 	{
 		VS_Output output;
 		output.uv = float2(id & 2, (id << 1) & 2);

@@ -278,7 +278,7 @@ struct R_SceneRegisterModelReceipt
 
 internal R_SceneRegisterModelReceipt R_SceneRegisterModel(R_Scene *scene,
 														  Arena *arena,
-														  const AST_Assets *assets,
+														  AST_Assets *assets,
 														  AST_Handle model_handle,
 														  u32 max_entries);
 
@@ -304,12 +304,12 @@ internal u64 R_SceneMeshBufferAddress(const R_Scene *scene);
    ======================================================= */
 
 internal u32 R_SceneResolveTextureBindless(const R_Scene *scene,
-										   const AST_Assets *assets,
+										   AST_Assets *assets,
 										   AST_Handle handle);
 
 internal R_SceneMaterialHandle R_SceneRegisterMaterial (R_Scene *scene,
 														const AST_ModelMaterial *material,
-														const AST_Assets *assets);
+														AST_Assets *assets);
 
 internal u64 R_SceneMaterialBufferAddress(const R_Scene *scene);
 

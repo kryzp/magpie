@@ -4,7 +4,8 @@ import math;
 
 namespace sampling
 {
-	public float RadicalInverse_VdC(uint bits)
+	public float
+	RadicalInverse_VdC(uint bits)
 	{
 		bits = (bits << 16u) | (bits >> 16u);
 		bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -15,12 +16,14 @@ namespace sampling
 		return float(bits) * 2.3283064365386963e-10;
 	}
 
-	public float2 Hammersley(uint i, uint N)
+	public float2
+	Hammersley(uint i, uint N)
 	{
 		return float2(float(i) / float(N), RadicalInverse_VdC(i));
 	}
 
-	public float3 ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
+	public float3
+	ImportanceSampleGGX(float2 Xi, float3 normal, float roughness)
 	{
 		float a = roughness * roughness;
 

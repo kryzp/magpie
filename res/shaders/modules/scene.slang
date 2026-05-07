@@ -27,7 +27,7 @@ namespace scene
 		public uint page_index;
 		public uint mesh_index;
 							  
-		public uint alpha_mode; // 0 = opaque, 1 = mask, 2 = blend
+		public uint alpha_mode; // 0 = opaque, 1 = mask, 2 = blend (for culling)
 	};
 
 	public struct RenderMesh
@@ -59,7 +59,7 @@ namespace scene
 	
 		// ---
 	
-		public uint transmissive_texture;
+		public uint transmission_texture;
 		public uint thickness_texture;
 
 		public float transmission_factor;
@@ -107,6 +107,7 @@ namespace scene
 		public uint double_sided;
 		public uint unlit;
 		public float alpha_cutoff;
+		public uint alpha_mode;
 	};
 
 	public struct IndirectDraw

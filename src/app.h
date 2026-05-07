@@ -30,7 +30,8 @@ struct App
 	GFX_BufferKey frame_data_buffer;
 	GFX_BufferKey cubemap_capture_transform_buffer;
 	GFX_SamplerKey linear_sampler;
-
+	GFX_SamplerKey nearest_sampler;
+	
 	// ---
 	
 	// todo: merge shader compiler into graphics device?
@@ -59,7 +60,7 @@ struct App
 
 	R_Culling culling;
 	R_ShadowRenderer shadow_renderer;
-	R_DeferredRenderer deferred_renderer;
+	R_ForwardRenderer forward_renderer;
 	R_DebugRenderer debug_renderer;
 	R_IrradianceVolume irradiance_volume;
 

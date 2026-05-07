@@ -35,7 +35,7 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
 - **IBL** (Image-Based Lighting)
 - **Advanced glTF 2.0 material support** Transmission, volume, specular, clearcoat, sheen, iridescence, etc.
 - **Compute Frustum Culling**
-- **Indirect Deferred Rendering**
+- **Indirect Forward Rendering**
 - **Point Lights** with compute-culled shadow-mapping
 - **ImGui Integration** (C bindings)
 - **Right-Handed Z-up Coordinates** (as it SHOULD be)
@@ -63,9 +63,9 @@ This isn't my first Vulkan or game engine project. If you look into the reposito
   - Sheen
   - Iridescence
   - Unlit Materials
-- Forward Transparency Pass
+- Forward+ Light Clustering
 - SSAO
-- Reflections + Reflective Materials (e.g: Mirrors)
+- Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
 - Grass / Fur / Hair Rendering
 - Volumetrics (Clouds, Smoke, etc.)
 - Text / Font Rendering

@@ -174,9 +174,10 @@ struct AST_LoadJobParam
 JOB_ENTRY_POINT_DEF(AST_LoadJobEntry);
 
 
-internal void AST_PollHotReloads(AST_Assets *assets);
-internal void AST_FlushUploads(AST_Assets *assets);
-internal void AST_WaitForAsync(AST_Assets *assets);
+internal void AST_PollHotReloads (AST_Assets *assets);
+internal void AST_FlushUploads   (AST_Assets *assets);
+internal void AST_WaitForAsync   (AST_Assets *assets);
+internal void AST_WaitForLoad    (AST_Assets *assets, AST_Handle handle, OS_Handle counter);
 
 
 /* ==================================================
@@ -184,7 +185,9 @@ internal void AST_WaitForAsync(AST_Assets *assets);
    ================================================== */
 
 internal void       AST_SetFallback (AST_Assets *assets, AST_Handle handle, AST_Type type);
+
 internal AST_Asset *AST_Get         (AST_Assets *assets, AST_Handle handle, AST_Type type);
+internal AST_Asset *AST_GetNow      (AST_Assets *assets, AST_Handle handle, AST_Type type); // block until we got it.
 
 
 /* ==================================================
@@ -193,7 +196,6 @@ internal AST_Asset *AST_Get         (AST_Assets *assets, AST_Handle handle, AST_
 
 internal AST_Handle AST_FromFilePath (AST_Assets *assets, String8 path);
 internal AST_Handle AST_Require      (AST_Assets *assets, String8 path, AST_Type type); // ensure it's loading.
-internal AST_Handle AST_RequireNow   (AST_Assets *assets, String8 path, AST_Type type); // block until we got it.
 
 
 #endif // ASSET_MANAGER_H

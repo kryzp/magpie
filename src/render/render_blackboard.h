@@ -10,6 +10,7 @@
  * three trillion different parameters into their functions.
  */
 
+/*
 typedef enum R_GBufferAttachment
 {
 	R_GBufferAttachment_Position,
@@ -27,6 +28,7 @@ struct R_BB_GBufferData
 	R_GraphTexHandle attachments[R_GBufferAttachment_COUNT];
 	R_GraphTexHandle depth;
 };
+*/
 
 typedef struct R_BB_ShadowData R_BB_ShadowData;
 struct R_BB_ShadowData
@@ -40,7 +42,8 @@ struct R_BB_ShadowData
 typedef struct R_Blackboard R_Blackboard;
 struct R_Blackboard
 {
-	R_BB_GBufferData gbuffer;
+	//R_BB_GBufferData gbuffer;
+	R_GraphTexHandle depth;
 	R_BB_ShadowData shadow_data;
 };
 

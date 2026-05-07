@@ -61,9 +61,9 @@ R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 							  &grid_info, sizeof(grid_info), 0);
 	}
 
-	vol->bake_shader_handle = AST_RequireNow(assets,
-											 String8Lit("assets://shaders/passes/ibl/irradiance_probe_bake.slang"),
-											 AST_Type_Shader);
+	vol->bake_shader_handle = AST_Require(assets,
+										  String8Lit("assets://shaders/passes/ibl/irradiance_probe_bake.slang"),
+										  AST_Type_Shader);
 
 	vol->is_baked = false;
 
@@ -254,7 +254,7 @@ R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 
 	R_IrradianceVolumeBuildAccelStructs(vol, scene);
 
-	GFX_ShaderKey shader = AST_Get(vol->assets, vol->bake_shader_handle, AST_Type_Shader)->shader.key;
+	GFX_ShaderKey shader = AST_GetNow(vol->assets, vol->bake_shader_handle, AST_Type_Shader)->shader.key;
 
 	GFX_ComputePipelineDef pipeline_def = GFX_ComputePipelineDefInit(shader);
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchComputePipeline(device, &pipeline_def);

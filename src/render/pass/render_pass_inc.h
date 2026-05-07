@@ -5,4 +5,4 @@
 #include "render_pass_post_processing.h"
 #include "render_pass_culling.h"
 #include "render_pass_shadow.h"
-#include "render_pass_deferred.h"
+#include "render_pass_forward.h"

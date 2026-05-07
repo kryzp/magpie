@@ -47,7 +47,8 @@ namespace irradiance
 	public static const float MAX_REFLECTION_LOD = 5.0;
 
 	// Ramamoorthi & Hanrahan (2001) "An Efficient Representation for Irradiance Environment Maps".
-	public void SH_EvaluateBasis(float3 d, out float basis[9])
+	public void
+	SH_EvaluateBasis(float3 d, out float basis[9])
 	{
 		// l=0
 		basis[0] = SH_C0;
@@ -65,7 +66,8 @@ namespace irradiance
 		basis[8] = SH_C4 * (d.x * d.x - d.y * d.y);
 	}
 
-	public float3 SH_Evaluate(ProbeSH probe, float3 normal)
+	public float3
+	SH_Evaluate(ProbeSH probe, float3 normal)
 	{
 		float basis[9];
 		SH_EvaluateBasis(normal, basis);
@@ -80,7 +82,8 @@ namespace irradiance
 
 	/* bro FUCK my life bro */
 	/* credit to some academic man i cant remember atp who cares */
-	public float3 SampleIrradianceGrid(float3 world_pos,
+	public float3
+	SampleIrradianceGrid(float3 world_pos,
 	                                   float3 normal,
 	                                   ProbeGridInfo grid,
 	                                   ProbeSH *probe_data)
