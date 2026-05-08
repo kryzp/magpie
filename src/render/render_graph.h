@@ -214,7 +214,7 @@ internal b32 R_GraphBufVersionIsUnwritten (const R_Graph *graph, R_GraphBufHandl
    MSAA
    ================================================== */
 
-internal R_MsaaPair R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples);
+internal R_GraphMsaaTexture R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples);
 
 
 #endif // RENDER_GRAPH_H

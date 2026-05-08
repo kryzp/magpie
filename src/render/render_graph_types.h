@@ -90,8 +90,8 @@ struct R_ResourceState
 	VkImageLayout             layout;
 };
 
-typedef struct R_MsaaPair R_MsaaPair;
-struct R_MsaaPair
+typedef struct R_GraphMsaaTexture R_GraphMsaaTexture;
+struct R_GraphMsaaTexture
 {
 	R_GraphTexHandle msaa;
 	R_GraphTexHandle resolved;

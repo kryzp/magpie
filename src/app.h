@@ -1,29 +1,28 @@
 #ifndef APP_H
 #define APP_H
 
-#define APP_TARGET_FPS               144
-#define APP_HOT_RELOAD_INTERVAL        1.f
+#define APP_TARGET_FPS                144
+#define APP_HOT_RELOAD_INTERVAL       1.f
 
 typedef struct App App;
 struct App
 {
 	Arena bootstrap_arena;
-	Arena frame_arena;
 	Arena log_arena;
 	Arena graphics_arena;
 	Arena audio_arena;
 	Arena asset_arena;
 	Arena render_arena;
+	Arena physics_arena;
 	Arena entity_arena;
 	Arena editor_arena;
 
-	// ---
-
-	LOG_Channel log_channel;
+	Arena frame_arena;
 	
 	// ---
 
 	LOG_Channel graphics_log_channel;
+	
 	GFX_Device graphics_device;
 	GFX_Swapchain swapchain;
 	GFX_RingBuffer frame_upload_ring_buffer;
@@ -36,11 +35,13 @@ struct App
 	
 	// todo: merge shader compiler into graphics device?
 	LOG_Channel shader_compiler_log_channel;
+	
 	GFX_ShaderCompiler shader_compiler;
 
 	// ---
 	
 	LOG_Channel audio_log_channel;
+	
 	AUD_System audio_system;
 	AUD_BackendAPI *audio_backend;
 	AUD_BufferHandle test_sound;
@@ -48,6 +49,7 @@ struct App
 	// ---
 
 	LOG_Channel asset_log_channel;
+	
 	AST_Assets assets;
 
 	// ---
@@ -55,6 +57,7 @@ struct App
 	// todo: move rendering stuff into a
 	//       seperate manager sub-system.
 	LOG_Channel render_log_channel;
+	
 	R_Graph graph;
 	R_Scene scene;
 
@@ -74,16 +77,26 @@ struct App
 
 	// ---
 
+	LOG_Channel physics_log_channel;
+	
+	PHYS_Engine physics_engine;
+
+	// ---
+
 	LOG_Channel entity_log_channel;
+	
 	ENT_World world;
 	ENT_EventQueue events;
 
 	// ---
 
 	LOG_Channel editor_log_channel;
+	
 	Editor editor;
 
 	// ---
+
+	LOG_Channel log_channel;
 	
 	CH_Timer elapsed_timer;
 	CH_Timer delta_timer;
@@ -111,6 +124,11 @@ internal void AppInitRender          (App *app);
 internal void AppDestroyRender       (App *app);
 internal void AppHotLoadRender       (App *app);
 internal void AppHotUnloadRender     (App *app);
+
+internal void AppInitPhysics         (App *app);
+internal void AppDestroyPhysics      (App *app);
+internal void AppHotLoadPhysics      (App *app);
+internal void AppHotUnloadPhysics    (App *app);
 
 internal void AppInitEntity          (App *app);
 internal void AppDestroyEntity       (App *app);

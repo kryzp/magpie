@@ -43,7 +43,7 @@ typedef struct R_Blackboard R_Blackboard;
 struct R_Blackboard
 {
 	//R_BB_GBufferData gbuffer;
-	R_MsaaPair depth;
+	R_GraphMsaaTexture depth;
 	R_BB_ShadowData shadow_data;
 };
 

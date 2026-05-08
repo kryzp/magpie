@@ -65,6 +65,7 @@
 #include "asset/asset_inc.h"
 #include "animation/animation_inc.h"
 #include "render/render_inc.h"
+#include "physics/physics_inc.h"
 #include "entity/entity_inc.h"
 #include "timeline/timeline_inc.h"
 #include "dev/dev_inc.h"
@@ -87,6 +88,7 @@
 #include "asset/asset_inc.c"
 #include "animation/animation_inc.c"
 #include "render/render_inc.c"
+#include "physics/physics_inc.c"
 #include "entity/entity_inc.c"
 #include "timeline/timeline_inc.c"
 #include "dev/dev_inc.c"
@@ -523,6 +525,34 @@ AppHotUnloadRender(App *app)
 {
 }
 
+/* ==================================================
+   ENTITY
+   ================================================== */
+
+internal void
+AppInitPhysics(App *app)
+{
+	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
+
+	PHYS_EngineInit(&app->physics_engine, app->physics_log_channel);
+}
+
+internal void
+AppDestroyPhysics(App *app)
+{
+	PHYS_EngineDestroy(&app->physics_engine);
+}
+
+internal void
+AppHotLoadPhysics(App *app)
+{
+}
+
+internal void
+AppHotUnloadPhysics(App *app)
+{
+}
+
 
 /* ==================================================
    ENTITY
@@ -598,6 +628,7 @@ AppInit_(App *app)
 	AppInitAudio    (app);
 	AppInitAssets   (app);
 	AppInitRender   (app);
+	AppInitPhysics  (app);
 	AppInitEntity   (app);
 	AppInitEditor   (app);
 
@@ -615,13 +646,15 @@ AppInit(const OS_API *api)
 	App *app = ArenaPushArray(&bootstrap, App, 1);
 	app->bootstrap_arena = bootstrap;
 
-	app->frame_arena    = ArenaAlloc(Gigabytes(1));
 	app->graphics_arena = ArenaAlloc(Gigabytes(3));
 	app->audio_arena    = ArenaAlloc(Gigabytes(1));
 	app->asset_arena    = ArenaAlloc(Gigabytes(3));
 	app->render_arena   = ArenaAlloc(Gigabytes(2));
+	app->physics_arena  = ArenaAlloc(Gigabytes(1));
 	app->entity_arena   = ArenaAlloc(Gigabytes(1));
 	app->editor_arena   = ArenaAlloc(Gigabytes(1));
+	
+	app->frame_arena    = ArenaAlloc(Gigabytes(1));
 	
 	AppInit_(app);
 
@@ -639,20 +672,26 @@ AppDestroy(App *app)
 
 	AppDestroyEditor   (app);
 	AppDestroyEntity   (app);
+	AppDestroyPhysics  (app);
 	AppDestroyRender   (app);
 	AppDestroyAssets   (app);
 	AppDestroyAudio    (app);
 	AppDestroyGraphics (app);
 
 	ArenaRelease(&app->frame_arena);
+	
 	ArenaRelease(&app->editor_arena);
 	ArenaRelease(&app->entity_arena);
+	ArenaRelease(&app->physics_arena);
 	ArenaRelease(&app->render_arena);
 	ArenaRelease(&app->asset_arena);
 	ArenaRelease(&app->audio_arena);
 	ArenaRelease(&app->graphics_arena);
 	
 	DebugLogI(app->log_channel, "Destroyed");
+
+	// TODO: fuck are we remembering to release this? why wasnt it crashing lol
+	//ArenaRelease(&app->bootstrap_arena);
 }
 
 global f32 app_pp_exposure = 1.f;
@@ -696,7 +735,7 @@ AppTick(App *app, const I_State *input)
 
 	if (dt > max_frame_time)
 	{
-		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f) - is there lag?", dt, max_frame_time);
+		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f).", dt, max_frame_time);
 		clamped_delta = max_frame_time;
 	}
 	
@@ -704,8 +743,7 @@ AppTick(App *app, const I_State *input)
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
-		// TODO: physics update here (using fixed_dt)
-		
+		PHYS_EngineTick(&app->physics_engine, fixed_dt);
 		app->delta_accumulator -= fixed_dt;
 	}
 
@@ -813,19 +851,19 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						   &app->scene,
 						   &scene_resources);
 
-	R_MsaaPair lighting = R_ForwardRender(&app->forward_renderer,
-										  &app->graph,
-										  &bb,
-										  &app->frame_arena,
-										  &scene_resources,
-										  app->frame_data_buffer,
-										  app->linear_sampler,
-										  app->nearest_sampler,
-										  &app->irradiance_volume,
-										  app->irradiance_cubemap,
-										  app->prefilter_cubemap,
-										  app->brdf_lut,
-										  &draw_stream);
+	R_GraphMsaaTexture lighting = R_ForwardRender(&app->forward_renderer,
+												  &app->graph,
+												  &bb,
+												  &app->frame_arena,
+												  &scene_resources,
+												  app->frame_data_buffer,
+												  app->linear_sampler,
+												  app->nearest_sampler,
+												  &app->irradiance_volume,
+												  app->irradiance_cubemap,
+												  app->prefilter_cubemap,
+												  app->brdf_lut,
+												  &draw_stream);
 
 	// Skybox.
 	{
@@ -850,7 +888,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 		R_PassSetRecord(pass, R_SkyboxPassFn, data);
 	}
-
+	
 	// Post Processing.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);

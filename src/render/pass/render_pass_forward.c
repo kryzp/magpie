@@ -81,7 +81,7 @@ R_ForwardRendererDestroy(R_ForwardRenderer *r)
 {
 }
 
-internal R_MsaaPair
+internal R_GraphMsaaTexture
 R_ForwardRender(R_ForwardRenderer *r,
 				R_Graph *graph,
 				R_Blackboard *bb,
@@ -107,8 +107,8 @@ R_ForwardRender(R_ForwardRenderer *r,
 	lighting_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 	lighting_info.flags  = GFX_TextureAllocFlag_Storage;
 
-	R_MsaaPair lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
-	R_MsaaPair depth    = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
+	R_GraphMsaaTexture lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
+	R_GraphMsaaTexture depth    = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
 
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 

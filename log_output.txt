@@ -1,425 +1,424 @@
 [    0.000  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Initialized ("log_output.txt" as file sink).
 [    0.004  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Initializing ImGui...
 [    0.004  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Loading App DLL...
-[    0.046  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Initialized.
-[    0.054  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
-[    0.115  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
-[    0.116  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
-[    0.116  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
-[    0.156  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
-[    0.156  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
-[    0.157  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
-[    0.158  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
-[    0.182  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
-[    0.183  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
-[    0.183  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
-[    0.183  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
-[    0.189  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
-[    0.244  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
-[    0.278  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
-[    0.278  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
-[    0.278  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
-[    0.386  ] [  W:13  F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/frustum_culling.slang.
-[    0.386  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/frustum_culling.slang.
-[    0.387  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/frustum_culling.slang.
-[    0.445  ] [  W:11  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/Sponza.gltf.
-[    0.448  ] [  W:1   F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/sphere_culling.slang.
-[    0.448  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/sphere_culling.slang.
-[    0.466  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11968150294050148237.jpg.
-[    0.469  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16299174074766089871.jpg.
-[    0.471  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13982482287905699490.jpg.
-[    0.475  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5792855332885324923.jpg.
-[    0.475  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16885566240357350108.jpg.
-[    0.482  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8747919177698443163.jpg.
-[    0.485  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2969916736137545357.jpg.
-[    0.493  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8750083169368950601.jpg.
-[    0.496  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13196865903111448057.jpg.
-[    0.498  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6772804448157695701.jpg.
-[    0.498  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/759203620573749278.jpg.
-[    0.505  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14118779221266351425.jpg.
-[    0.509  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8503262930880235456.jpg.
-[    0.511  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17556969131407844942.jpg.
-[    0.516  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4477655471536070370.jpg.
-[    0.520  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10381718147657362067.jpg.
-[    0.522  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8481240838833932244.jpg.
-[    0.525  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/715093869573992647.jpg.
-[    0.528  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7268504077753552595.jpg.
-[    0.530  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/12501374198249454378.jpg.
-[    0.537  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14170708867020035030.jpg.
-[    0.545  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2411100444841994089.jpg.
-[    0.545  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/755318871556304029.jpg.
-[    0.549  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3827035219084910048.jpg.
-[    0.554  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/1219024358953944284.jpg.
-[    0.566  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6593109234861095314.jpg.
-[    0.572  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/466164707995436622.jpg.
-[    0.589  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17876391417123941155.jpg.
-[    0.590  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4601176305987539675.jpg.
-[    0.595  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8006627369776289000.png.
-[    0.595  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11474523244911310074.jpg.
-[    0.595  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4910669866631290573.jpg.
-[    0.600  ] [  W:3   F:3    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/shadow/shadow_mapping.slang.
-[    0.600  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/shadow/shadow_mapping.slang.
-[    0.614  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9288698199695299068.jpg.
-[    0.615  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16275776544635328252.png.
-[    0.618  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7815564343179553343.jpg.
-[    0.621  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3371964815757888145.jpg.
-[    0.622  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4975155472559461469.jpg.
-[    0.624  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2299742237651021498.jpg.
-[    0.632  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2374361008830720677.jpg.
-[    0.637  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2775690330959970771.jpg.
-[    0.638  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/white.png.
-[    0.642  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
-[    0.645  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7056944414013900257.jpg.
-[    0.650  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2185409758123873465.jpg.
-[    0.651  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/332936164838540657.jpg.
-[    0.652  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8773302468495022225.jpg.
-[    0.656  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4675343432951571524.jpg.
-[    0.656  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11872827283454512094.jpg.
-[    0.668  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8783994986360286082.jpg.
-[    0.669  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6151467286084645207.jpg.
-[    0.670  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2051777328469649772.jpg.
-[    0.671  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7645212358685992005.jpg.
-[    0.678  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8051790464816141987.jpg.
-[    0.681  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4871783166746854860.jpg.
-[    0.685  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14650633544276105767.jpg.
-[    0.687  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15722799267630235092.jpg.
-[    0.694  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13824894030729245199.jpg.
-[    0.694  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14267839433702832875.jpg.
-[    0.697  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6047387724914829168.jpg.
-[    0.701  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8114461559286000061.jpg.
-[    0.702  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5823059166183034438.jpg.
-[    0.711  ] [  W:14  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11490520546946913238.jpg.
-[    0.712  ] [  W:2   F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6667038893015345571.jpg.
-[    0.716  ] [  W:12  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3628158980083700836.jpg.
-[    0.719  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7441062115984513793.jpg.
-[    0.722  ] [  W:13  F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3455394979645218238.jpg.
-[    0.725  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15295713303328085182.jpg.
-[    0.731  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9916269861720640319.jpg.
-[    0.734  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10388182081421875623.jpg.
-[    0.749  ] [  W:1   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5061699253647017043.png.
-[    0.767  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/sphere_culling.slang.
-[    0.768  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11968150294050148237.jpg.
-[    0.769  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16299174074766089871.jpg.
-[    0.770  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13982482287905699490.jpg.
-[    0.771  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5792855332885324923.jpg.
-[    0.772  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16885566240357350108.jpg.
-[    0.773  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8747919177698443163.jpg.
-[    0.773  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2969916736137545357.jpg.
-[    0.774  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8750083169368950601.jpg.
-[    0.775  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13196865903111448057.jpg.
-[    0.776  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6772804448157695701.jpg.
-[    0.777  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/759203620573749278.jpg.
-[    0.778  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14118779221266351425.jpg.
-[    0.779  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8503262930880235456.jpg.
-[    0.780  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17556969131407844942.jpg.
-[    0.780  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4477655471536070370.jpg.
-[    0.781  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10381718147657362067.jpg.
-[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8481240838833932244.jpg.
-[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/715093869573992647.jpg.
-[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7268504077753552595.jpg.
-[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/12501374198249454378.jpg.
-[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14170708867020035030.jpg.
-[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2411100444841994089.jpg.
-[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/755318871556304029.jpg.
-[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3827035219084910048.jpg.
-[    0.789  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/1219024358953944284.jpg.
-[    0.789  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6593109234861095314.jpg.
-[    0.790  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/466164707995436622.jpg.
-[    0.791  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17876391417123941155.jpg.
-[    0.792  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4601176305987539675.jpg.
-[    0.803  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8006627369776289000.png.
-[    0.804  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11474523244911310074.jpg.
-[    0.805  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4910669866631290573.jpg.
-[    0.806  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/shadow/shadow_mapping.slang.
-[    0.814  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9288698199695299068.jpg.
-[    0.814  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16275776544635328252.png.
-[    0.815  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7815564343179553343.jpg.
-[    0.816  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3371964815757888145.jpg.
-[    0.817  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4975155472559461469.jpg.
-[    0.818  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2299742237651021498.jpg.
-[    0.818  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2374361008830720677.jpg.
-[    0.820  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2775690330959970771.jpg.
-[    0.820  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/white.png.
-[    0.858  ] [  W:5   F:4    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/forward/forward.slang.
-[    0.858  ] [  W:5   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/forward/forward.slang.
-[    0.862  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
-[    0.871  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7056944414013900257.jpg.
-[    0.872  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2185409758123873465.jpg.
-[    0.873  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/332936164838540657.jpg.
-[    0.874  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8773302468495022225.jpg.
-[    0.875  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4675343432951571524.jpg.
-[    0.876  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11872827283454512094.jpg.
-[    0.877  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8783994986360286082.jpg.
-[    0.877  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6151467286084645207.jpg.
-[    0.878  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2051777328469649772.jpg.
-[    0.879  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7645212358685992005.jpg.
-[    0.880  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8051790464816141987.jpg.
-[    0.881  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4871783166746854860.jpg.
-[    0.882  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14650633544276105767.jpg.
-[    0.883  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15722799267630235092.jpg.
-[    0.884  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13824894030729245199.jpg.
-[    0.884  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14267839433702832875.jpg.
-[    0.885  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6047387724914829168.jpg.
-[    0.886  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8114461559286000061.jpg.
-[    0.887  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5823059166183034438.jpg.
-[    0.888  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11490520546946913238.jpg.
-[    0.889  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6667038893015345571.jpg.
-[    0.889  ] [  W:4   F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/debug/debug_line.slang.
-[    0.889  ] [  W:4   F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/debug/debug_line.slang.
-[    0.890  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3628158980083700836.jpg.
-[    0.891  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7441062115984513793.jpg.
-[    0.892  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3455394979645218238.jpg.
-[    0.892  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15295713303328085182.jpg.
-[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9916269861720640319.jpg.
-[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10388182081421875623.jpg.
-[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5061699253647017043.png.
-[    0.910  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/Sponza.gltf.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/forward/forward.slang.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/debug/debug_line.slang.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.925  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.926  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.927  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.928  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.929  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.931  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.932  ] [  W:MT  F:0    ] [  INFO   ] [  IRRADIANCE  ] Irradiance Volume Initialized (8 x 6 x 4 = 192 probes).
-[    1.001  ] [  W:8   F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/brdf_lut.slang.
-[    1.001  ] [  W:8   F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/brdf_lut.slang.
-[    1.001  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/brdf_lut.slang.
-[    1.035  ] [  W:7   F:7    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.035  ] [  W:7   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.035  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.076  ] [  W:6   F:8    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_convolution.slang.
-[    1.077  ] [  W:6   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_convolution.slang.
-[    1.077  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_convolution.slang.
-[    1.172  ] [  W:9   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/prefilter_convolution.slang.
-[    1.172  ] [  W:9   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/prefilter_convolution.slang.
-[    1.172  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/prefilter_convolution.slang.
-[    1.173  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] World Initialized.
-[    1.173  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] Events Initialized.
-[    1.173  ] [  W:MT  F:0    ] [  INFO   ] [  EDITOR    ] Initialized.
-[    1.173  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
-[    1.240  ] [  W:12  F:5    ] [  DEBUG  ] [  SLANG     ] res/shaders/passes/ibl/irradiance_probe_bake.slang --> Loading Module: res/shaders/passes/ibl/irradiance_probe_bake.slang(61): warning 41012: entry point 'ComputeMain' uses additional capabilities that are not part of the specified profile 'spirv_1_5'. The profile setting is automatically updated to include these capabilities: 'spvRayQueryKHR'
+[    0.044  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Initialized.
+[    0.052  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
+[    0.087  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.088  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
+[    0.088  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
+[    0.098  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
+[    0.099  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
+[    0.099  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
+[    0.100  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
+[    0.120  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
+[    0.121  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
+[    0.121  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
+[    0.121  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
+[    0.186  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
+[    0.242  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.275  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.275  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.275  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.411  ] [  W:1   F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/frustum_culling.slang.
+[    0.411  ] [  W:1   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/frustum_culling.slang.
+[    0.411  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/frustum_culling.slang.
+[    0.439  ] [  W:11  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/Sponza.gltf.
+[    0.454  ] [  W:2   F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/sphere_culling.slang.
+[    0.454  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/sphere_culling.slang.
+[    0.455  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/sphere_culling.slang.
+[    0.459  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5792855332885324923.jpg.
+[    0.461  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5792855332885324923.jpg.
+[    0.463  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16299174074766089871.jpg.
+[    0.463  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16299174074766089871.jpg.
+[    0.468  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11968150294050148237.jpg.
+[    0.469  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11968150294050148237.jpg.
+[    0.475  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13982482287905699490.jpg.
+[    0.476  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13982482287905699490.jpg.
+[    0.476  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8747919177698443163.jpg.
+[    0.477  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16885566240357350108.jpg.
+[    0.478  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8747919177698443163.jpg.
+[    0.479  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16885566240357350108.jpg.
+[    0.490  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2969916736137545357.jpg.
+[    0.491  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2969916736137545357.jpg.
+[    0.493  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8750083169368950601.jpg.
+[    0.494  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14118779221266351425.jpg.
+[    0.495  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/759203620573749278.jpg.
+[    0.499  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13196865903111448057.jpg.
+[    0.500  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8750083169368950601.jpg.
+[    0.502  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14118779221266351425.jpg.
+[    0.503  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/759203620573749278.jpg.
+[    0.504  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13196865903111448057.jpg.
+[    0.509  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6772804448157695701.jpg.
+[    0.509  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4477655471536070370.jpg.
+[    0.510  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6772804448157695701.jpg.
+[    0.511  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4477655471536070370.jpg.
+[    0.516  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8503262930880235456.jpg.
+[    0.516  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8503262930880235456.jpg.
+[    0.518  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17556969131407844942.jpg.
+[    0.519  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17556969131407844942.jpg.
+[    0.520  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8481240838833932244.jpg.
+[    0.521  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8481240838833932244.jpg.
+[    0.526  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/12501374198249454378.jpg.
+[    0.528  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/12501374198249454378.jpg.
+[    0.529  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10381718147657362067.jpg.
+[    0.530  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10381718147657362067.jpg.
+[    0.537  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/715093869573992647.jpg.
+[    0.538  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/715093869573992647.jpg.
+[    0.540  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7268504077753552595.jpg.
+[    0.541  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7268504077753552595.jpg.
+[    0.544  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2411100444841994089.jpg.
+[    0.545  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2411100444841994089.jpg.
+[    0.550  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3827035219084910048.jpg.
+[    0.551  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3827035219084910048.jpg.
+[    0.552  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/755318871556304029.jpg.
+[    0.553  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/755318871556304029.jpg.
+[    0.555  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14170708867020035030.jpg.
+[    0.564  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/1219024358953944284.jpg.
+[    0.567  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14170708867020035030.jpg.
+[    0.569  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/1219024358953944284.jpg.
+[    0.580  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/466164707995436622.jpg.
+[    0.581  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/466164707995436622.jpg.
+[    0.585  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6593109234861095314.jpg.
+[    0.586  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6593109234861095314.jpg.
+[    0.596  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8006627369776289000.png.
+[    0.597  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8006627369776289000.png.
+[    0.599  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16275776544635328252.png.
+[    0.600  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17876391417123941155.jpg.
+[    0.600  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16275776544635328252.png.
+[    0.604  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4601176305987539675.jpg.
+[    0.611  ] [  W:3   F:3    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/shadow/shadow_mapping.slang.
+[    0.611  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/shadow/shadow_mapping.slang.
+[    0.613  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17876391417123941155.jpg.
+[    0.615  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4601176305987539675.jpg.
+[    0.615  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/shadow/shadow_mapping.slang.
+[    0.622  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4910669866631290573.jpg.
+[    0.622  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11474523244911310074.jpg.
+[    0.623  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4910669866631290573.jpg.
+[    0.624  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2299742237651021498.jpg.
+[    0.624  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11474523244911310074.jpg.
+[    0.626  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2299742237651021498.jpg.
+[    0.630  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4975155472559461469.jpg.
+[    0.631  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4975155472559461469.jpg.
+[    0.632  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3371964815757888145.jpg.
+[    0.633  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3371964815757888145.jpg.
+[    0.640  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9288698199695299068.jpg.
+[    0.641  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.641  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9288698199695299068.jpg.
+[    0.649  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2374361008830720677.jpg.
+[    0.649  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7815564343179553343.jpg.
+[    0.657  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/332936164838540657.jpg.
+[    0.658  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/white.png.
+[    0.659  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2775690330959970771.jpg.
+[    0.665  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2185409758123873465.jpg.
+[    0.666  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8773302468495022225.jpg.
+[    0.669  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7056944414013900257.jpg.
+[    0.676  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4675343432951571524.jpg.
+[    0.683  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7645212358685992005.jpg.
+[    0.683  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11872827283454512094.jpg.
+[    0.686  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8783994986360286082.jpg.
+[    0.689  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2051777328469649772.jpg.
+[    0.699  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.701  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6151467286084645207.jpg.
+[    0.703  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4871783166746854860.jpg.
+[    0.707  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14650633544276105767.jpg.
+[    0.708  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8051790464816141987.jpg.
+[    0.709  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2374361008830720677.jpg.
+[    0.710  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7815564343179553343.jpg.
+[    0.711  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15722799267630235092.jpg.
+[    0.711  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/332936164838540657.jpg.
+[    0.712  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/white.png.
+[    0.712  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2775690330959970771.jpg.
+[    0.713  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2185409758123873465.jpg.
+[    0.714  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8773302468495022225.jpg.
+[    0.715  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7056944414013900257.jpg.
+[    0.716  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4675343432951571524.jpg.
+[    0.717  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7645212358685992005.jpg.
+[    0.718  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6047387724914829168.jpg.
+[    0.719  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11872827283454512094.jpg.
+[    0.719  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8783994986360286082.jpg.
+[    0.720  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2051777328469649772.jpg.
+[    0.721  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6151467286084645207.jpg.
+[    0.722  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4871783166746854860.jpg.
+[    0.724  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14650633544276105767.jpg.
+[    0.725  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8051790464816141987.jpg.
+[    0.725  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14267839433702832875.jpg.
+[    0.726  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13824894030729245199.jpg.
+[    0.729  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8114461559286000061.jpg.
+[    0.730  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15722799267630235092.jpg.
+[    0.731  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6047387724914829168.jpg.
+[    0.732  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14267839433702832875.jpg.
+[    0.733  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13824894030729245199.jpg.
+[    0.734  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8114461559286000061.jpg.
+[    0.735  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5823059166183034438.jpg.
+[    0.736  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7441062115984513793.jpg.
+[    0.737  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5823059166183034438.jpg.
+[    0.739  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7441062115984513793.jpg.
+[    0.742  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6667038893015345571.jpg.
+[    0.743  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6667038893015345571.jpg.
+[    0.745  ] [  W:1   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5061699253647017043.png.
+[    0.746  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5061699253647017043.png.
+[    0.748  ] [  W:2   F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3628158980083700836.jpg.
+[    0.748  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3628158980083700836.jpg.
+[    0.749  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11490520546946913238.jpg.
+[    0.750  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11490520546946913238.jpg.
+[    0.755  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3455394979645218238.jpg.
+[    0.756  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3455394979645218238.jpg.
+[    0.757  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15295713303328085182.jpg.
+[    0.758  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15295713303328085182.jpg.
+[    0.762  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10388182081421875623.jpg.
+[    0.762  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9916269861720640319.jpg.
+[    0.763  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10388182081421875623.jpg.
+[    0.764  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9916269861720640319.jpg.
+[    0.771  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/Sponza.gltf.
+[    0.781  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.784  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.785  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.786  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.787  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.788  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.789  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.789  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.789  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.789  ] [  W:MT  F:0    ] [  INFO   ] [  IRRADIANCE  ] Irradiance Volume Initialized (8 x 6 x 4 = 192 probes).
+[    0.870  ] [  W:4   F:4    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/forward/forward.slang.
+[    0.870  ] [  W:4   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/forward/forward.slang.
+[    0.873  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/forward/forward.slang.
+[    0.890  ] [  W:5   F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/debug/debug_line.slang.
+[    0.890  ] [  W:5   F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/debug/debug_line.slang.
+[    0.891  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/debug/debug_line.slang.
+[    0.924  ] [  W:6   F:7    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    0.924  ] [  W:6   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    0.924  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    0.965  ] [  W:7   F:8    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_convolution.slang.
+[    0.966  ] [  W:7   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_convolution.slang.
+[    0.966  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_convolution.slang.
+[    1.079  ] [  W:9   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/prefilter_convolution.slang.
+[    1.079  ] [  W:9   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/prefilter_convolution.slang.
+[    1.079  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/prefilter_convolution.slang.
+[    1.167  ] [  W:8   F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/brdf_lut.slang.
+[    1.168  ] [  W:8   F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/brdf_lut.slang.
+[    1.168  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/brdf_lut.slang.
+[    1.170  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] World Initialized.
+[    1.170  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] Events Initialized.
+[    1.170  ] [  W:MT  F:0    ] [  INFO   ] [  EDITOR    ] Initialized.
+[    1.170  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
+[    1.227  ] [  W:13  F:14   ] [  DEBUG  ] [  SLANG     ] res/shaders/passes/ibl/irradiance_probe_bake.slang --> Loading Module: res/shaders/passes/ibl/irradiance_probe_bake.slang(61): warning 41012: entry point 'ComputeMain' uses additional capabilities that are not part of the specified profile 'spirv_1_5'. The profile setting is automatically updated to include these capabilities: 'spvRayQueryKHR'
 void ComputeMain(uint3 dispatch_id : SV_DispatchThreadID)
      ^~~~~~~~~~
-[    1.257  ] [  W:12  F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.257  ] [  W:12  F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.257  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.290  ] [  W:2   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/skybox.slang.
-[    1.290  ] [  W:2   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/skybox.slang.
-[    1.290  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/skybox.slang.
-[    1.318  ] [  W:1   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/hdr_tonemapping.slang.
-[    1.318  ] [  W:1   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/hdr_tonemapping.slang.
-[    1.318  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/hdr_tonemapping.slang.
-[    6.193  ] [  W:MT  F:0    ] [  WARN   ] [  APP       ] Had to clamp delta (was 1.866588, clamped to 0.200000) - is there lag?
-[    6.659  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
-[    6.659  ] [  W:MT  F:---  ] [  INFO   ] [  EDITOR    ] Destroyed.
-[    6.659  ] [  W:MT  F:---  ] [  INFO   ] [  ENTITY    ] World Destroyed.
-[    6.659  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
-[    6.659  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
-[    6.661  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
-[    6.661  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
-[    6.838  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
-[    6.839  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroyed
-[    6.840  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Destroyed.
-[    6.840  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting down...
+[    1.243  ] [  W:13  F:14   ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.243  ] [  W:13  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.243  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.275  ] [  W:2   F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/skybox.slang.
+[    1.275  ] [  W:2   F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/skybox.slang.
+[    1.275  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/skybox.slang.
+[    1.295  ] [  W:12  F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/hdr_tonemapping.slang.
+[    1.295  ] [  W:12  F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/hdr_tonemapping.slang.
+[    1.295  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/hdr_tonemapping.slang.
+[    2.043  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
+[    2.043  ] [  W:MT  F:---  ] [  INFO   ] [  EDITOR    ] Destroyed.
+[    2.043  ] [  W:MT  F:---  ] [  INFO   ] [  ENTITY    ] World Destroyed.
+[    2.043  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
+[    2.044  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
+[    2.046  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
+[    2.046  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
+[    2.152  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
+[    2.152  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroyed
+[    2.154  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Destroyed.
+[    2.154  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting down...

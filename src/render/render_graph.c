@@ -1160,7 +1160,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 	return render_info;
 }
 
-internal R_MsaaPair
+internal R_GraphMsaaTexture
 R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples)
 {
 	R_TextureInfo msaa_info = *base;
@@ -1169,7 +1169,7 @@ R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBi
 	msaa_info.samples = samples;
 	resolve_info.samples = 1;
 
-	R_MsaaPair pair = {0};
+	R_GraphMsaaTexture pair = {0};
 	pair.msaa     = R_GraphCreateTexture(graph, &msaa_info);
 	pair.resolved = R_GraphCreateTexture(graph, &resolve_info);
 
