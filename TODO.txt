@@ -14,13 +14,14 @@
   which it then resolves internally - that way we can implement a DX12 version
   which has the same API and keys being passed around on the frontend and just
   resolves it internally?
-  
-- rename ->handle parameters in /graphics/ layer to vk_handle for clarity.
-- convert graphics device resource management to freelists
+
+- finish graphics profiler
+
+- convert graphics device resource management to freelists to support actually removing resources hahaaaaaaa :p....
 
 - replace the AssertTrue's that are everywhere with DebugLogAssert for more clarity.
 
-- SLANG and RENDER code is generally quite disconnected right now despite sharing a lot
+- SLANG SHADER CODE and C SOURCE CODE is generally quite disconnected right now despite sharing a lot
   of stuff like common type definitions, so we need to clean that up somehow, make it a
   lot easier to develop rendering + shader code together.
 

@@ -8,7 +8,7 @@ typedef struct GFX_Device GFX_Device;
 typedef struct GFX_CmdBuffer GFX_CmdBuffer;
 struct GFX_CmdBuffer
 {
-	VkCommandBuffer handle;
+	VkCommandBuffer vk_handle;
 	GFX_Device *device;
 };
 

@@ -4,7 +4,7 @@ IO_PathGetFileName(Arena *arena, String8 path)
 {
 	// TODO
 	
-	AssertTrue(false);
+	DebugPrintB("Not implemented.");
 
 	return (String8) {0};
 }
@@ -43,7 +43,7 @@ IO_PathGetFilePathNoExt(Arena *arena, String8 path)
 {
 	// TODO
 
-	AssertTrue(false);
+	DebugPrintB("Not implemented.");
 
 	return (String8) {0};
 }
@@ -84,7 +84,7 @@ IO_PathNormalize(Arena *arena, String8 path)
 {
 	// TODO
 
-	AssertTrue(false);
+	DebugPrintB("Not implemented.");
 
 	return (String8) {0};
 }

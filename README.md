@@ -52,37 +52,36 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Debug Rendering** (lines, circles, spheres, AABB, OBB, crosses, etc.)
 - **GPU Profiler**
 - **Modular Entity System**
-- **Logging System** with levels (trace, debug, info, ...), channels (graphics, assets, ...), file output, collapsing repeated messages (deduplication), ...
+- **Logging System** with levels, channels, file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes** please for the love of god appreciate it this took so fucking long
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- More advanced material rendering
-  - Transmission
-  - Specular
-  - Clearcoat
-  - Sheen
-  - Iridescence
-  - Unlit Materials
-- Forward+ Light Clustering
-- SSAO
-- Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
-- Grass / Fur / Hair Rendering
-- Volumetrics (Clouds, Smoke, etc.)
-- Text / Font Rendering
 - Bone / Joint Based Animation
+- SSAO
+- Physically Based Bloom
+- Cascaded Shadow Mapping (CSM)
+- More advanced material rendering
+  - [ ] Transmission
+  - [ ] Specular
+  - [x] Clearcoat
+  - [ ] Sheen
+  - [ ] Iridescence
+  - [x] Unlit Materials
+- Basic Sorted Forward Transparency
+- Forward+ Light Clustering
+- Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
+- Text / Font Rendering
 - More sophisticated debug logging / tracing system
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)
-- ImGui Visualisation for Profilers (CPU & GPU)
-- Irradiance Probes with Spherical Harmonics, which automatically reposition themselves
+- Visualisation for Profilers (CPU & GPU)
+- Dynamic Irradiance Probes which automatically reposition themselves
 - 2D Batch Quad Renderer (basically the SpriteBatch from XNA/FNA/MonoGame)
 - UI System (needs 2D batch renderer)
 - Compositive Post Processing Pipeline
-- Hybrid Clustered Deferred + Forward Rendering (For Transparency)
 - Refraction
-- Shader Permutations(?)
 
 
 ### Non-Graphics Planned Features (general engine stuff that interests me)
@@ -92,6 +91,8 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 
 
 ### Mini Project Ideas
+- Volumetrics (Clouds, Smoke, etc.)
+- Grass / Fur / Hair Rendering
 - Realistic Ocean water rendering based on FFT
 - Terrain Generator based on No Man's Sky GDC Talk
 - Compute particles based on Naughty Dog's *The Last of Us Part II* SigGraph 2020 Talk

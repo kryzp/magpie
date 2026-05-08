@@ -26,12 +26,14 @@ ArenaRelease(Arena *arena)
 internal u64
 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 {
-	AssertTrue(parent->capacity >= parent->used);
+	DebugPrintAssert(parent->capacity >= parent->used, "Arena (%p) out of space (%llu bytes used >= %llu bytes of capacity).", parent, parent->used, parent->capacity);
 	
 	u64 left = parent->capacity - parent->used;
 	u64 total_padding_reserve = count * alignment;
 
-	AssertTrue(left >= total_padding_reserve);
+	DebugPrintAssert(left >= total_padding_reserve,
+					 "Arena (%p) doesn't have enough enough space left (%llu bytes) to account for padding reserve (%llu bytes).",
+					 parent, left, total_padding_reserve);
 	
 	u64 safe_size = 0;
 
@@ -54,14 +56,15 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 		f64 used_mb     = (f64)arena->used     / (f64)Megabytes(1);
 		f64 aligned_mb  = (f64)aligned         / (f64)Megabytes(1);
 
-		f32 free_mb = capacity_mb - used_mb;
+		f64 free_mb = capacity_mb - used_mb;
 
 		DebugPrintB("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
 					arena,
 					bytes_mb,    bytes,
 					capacity_mb, arena->capacity,
 					used_mb,     arena->used,
-					aligned_mb, free_mb);
+					aligned_mb,
+					free_mb);
 	}
 
 	if (new_used > arena->committed)

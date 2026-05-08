@@ -19,7 +19,7 @@ struct GFX_BLASGeometry
 typedef struct GFX_AccelStruct GFX_AccelStruct;
 struct GFX_AccelStruct
 {
-	VkAccelerationStructureKHR handle;
+	VkAccelerationStructureKHR vk_handle;
 	VkAccelerationStructureTypeKHR type;
 	GFX_BufferKey backing_buffer;
 	u64 device_address;

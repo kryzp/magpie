@@ -1115,14 +1115,14 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 		vk_info.loadOp = out->should_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_info.imageView = GFX_DeviceTextureViewFromKey(graph->device, view)->handle;
+		vk_info.imageView = GFX_DeviceTextureViewFromKey(graph->device, view)->vk_handle;
 		vk_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		if (!R_GraphTexHandleIsNull(out->resolve_handle))
 		{
 			GFX_TextureViewKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
 
-			vk_info.resolveImageView = GFX_DeviceTextureViewFromKey(graph->device, resolve_view)->handle;
+			vk_info.resolveImageView = GFX_DeviceTextureViewFromKey(graph->device, resolve_view)->vk_handle;
 			vk_info.resolveImageLayout = out->resolve_layout;
 			vk_info.resolveMode = out->resolve_mode;
 		}

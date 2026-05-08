@@ -231,8 +231,7 @@ AST_Destroy(AST_Assets *assets)
 internal void
 AST_Mount(AST_Assets *assets, String8 prefix, String8 directory)
 {
-	AssertTrue(directory.len > 0);
-	
+	DebugLogAssert(assets->log_channel, directory.len > 0, "Directory length must be greater than zero.");
 	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
 
 	AST_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
@@ -407,7 +406,7 @@ AST_NotifyDependents(AST_Assets *assets, AST_Handle handle)
 internal void
 AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
 {
-	AssertTrue(AST_IsValid(assets, handle));
+	DebugLogAssert(assets->log_channel, AST_IsValid(assets, handle), "Asset handle must be valid.");
 
 	AST_Record *record = AST_GetRecord(assets, handle);
 
@@ -502,7 +501,9 @@ AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 			{
 				unresolved++;
 
-				AssertTrue(dep_record->dependent_count < ArraySize(dep_record->dependents));
+				DebugLogAssert(assets->log_channel,
+							   dep_record->dependent_count < ArraySize(dep_record->dependents),
+							   "Ran out of space in dependents array of asset record.");
 
 				dep_record->dependents[dep_record->dependent_count] = upload->handle;
 				dep_record->dependent_count++;

@@ -4,7 +4,7 @@
 typedef struct GFX_Sampler GFX_Sampler;
 struct GFX_Sampler
 {
-	VkSampler handle;
+	VkSampler vk_handle;
 	VkFilter filter;
 
 	VkSamplerAddressMode wrap_x;

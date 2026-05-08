@@ -4,7 +4,7 @@
 typedef struct GFX_Buffer GFX_Buffer;
 struct GFX_Buffer
 {
-	VkBuffer handle;
+	VkBuffer vk_handle;
 	VkBufferUsageFlags2 usage;
 
 	VmaAllocation allocation;

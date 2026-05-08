@@ -6,7 +6,7 @@
 typedef struct GFX_Swapchain GFX_Swapchain;
 struct GFX_Swapchain
 {
-	VkSwapchainKHR handle;
+	VkSwapchainKHR vk_handle;
 
 	/*
 	 * This is DIFFERENT from the device's current_frame_index.

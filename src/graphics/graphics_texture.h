@@ -15,7 +15,7 @@ enum
 typedef struct GFX_Texture GFX_Texture;
 struct GFX_Texture
 {
-	VkImage handle;
+	VkImage vk_handle;
 	VkImageUsageFlags usage;
 
 	VmaAllocation allocation;
@@ -61,7 +61,7 @@ internal GFX_SubresourceRange GFX_SubresourceRangeAllDepth(void);
 typedef struct GFX_TextureView GFX_TextureView;
 struct GFX_TextureView
 {
-	VkImageView handle;
+	VkImageView vk_handle;
 	VkImageViewType type;
 	GFX_SubresourceRange range;
 

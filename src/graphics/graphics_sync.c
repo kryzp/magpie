@@ -27,7 +27,7 @@ GFX_SyncTextureBarrier(const GFX_Texture *texture,
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 
-	barrier.image = texture->handle;
+	barrier.image = texture->vk_handle;
 	
 	barrier.subresourceRange.aspectMask = texture->aspect_flags;
 	barrier.subresourceRange.baseMipLevel = base_mip;
@@ -59,7 +59,7 @@ GFX_SyncBufferBarrier(const GFX_Buffer *buffer,
 	VkBufferMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
 
-	barrier.buffer = buffer->handle;
+	barrier.buffer = buffer->vk_handle;
 	barrier.offset = offset;
 	barrier.size   = size;
 

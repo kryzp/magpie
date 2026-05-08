@@ -18,7 +18,7 @@ struct GFX_TimelinePoint
 typedef struct GFX_Semaphore GFX_Semaphore;
 struct GFX_Semaphore
 {
-	VkSemaphore handle;
+	VkSemaphore vk_handle;
 	u64 target;
 };
 

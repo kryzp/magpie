@@ -6,7 +6,7 @@
 typedef struct GFX_CmdPool GFX_CmdPool;
 struct GFX_CmdPool
 {
-	VkCommandPool handle;
+	VkCommandPool vk_handle;
 	u32 used_count;
 	VkCommandBuffer buffers[GFX_CMD_POOL_MAX_BUFFERS];
 };

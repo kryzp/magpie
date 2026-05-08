@@ -172,7 +172,7 @@ GFX_DeviceDestroy(GFX_Device *device)
 		vkDestroyPipeline(device->context.device, node->resource, NULL);
 
 	for (GFX_DeviceTextureViewNode *node = device->views.first; node; node = node->next)
-		vkDestroyImageView(device->context.device, node->resource.handle, NULL);
+		vkDestroyImageView(device->context.device, node->resource.vk_handle, NULL);
 	
 	GFX_DeviceDestroyImGui(device);
 	GFX_DeviceDestroyBindless(device);
@@ -219,7 +219,7 @@ GFX_DeviceBeginFrame(GFX_Device *device, GFX_Swapchain *swapchain)
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {0};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
-	acquire_next_image_info.swapchain = swapchain->handle;
+	acquire_next_image_info.swapchain = swapchain->vk_handle;
 	acquire_next_image_info.timeout = UINT64_MAX;
 	acquire_next_image_info.semaphore = frame_data->image_available_semaphore;
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
@@ -267,12 +267,12 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBu
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pResults = NULL;
 	present_info.swapchainCount = 1;
-	present_info.pSwapchains = &swapchain->handle;
+	present_info.pSwapchains = &swapchain->vk_handle;
 	present_info.pImageIndices = &swapchain->current_texture_index;
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &frame_data->render_finished_semaphore;
 
-	VkResult result = vkQueuePresentKHR(device->context.graphics_queue.handle, &present_info);
+	VkResult result = vkQueuePresentKHR(device->context.graphics_queue.vk_handle, &present_info);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -315,7 +315,7 @@ GFX_DeviceSubmitEx(GFX_Device *device, GFX_CmdBuffer *cmd,
 	VkCommandBufferSubmitInfo buffer_info = {0};
 	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 	buffer_info.deviceMask = 0;
-	buffer_info.commandBuffer = cmd->handle;
+	buffer_info.commandBuffer = cmd->vk_handle;
 
 	VkSubmitInfo2 submit_info = {0};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -330,7 +330,7 @@ GFX_DeviceSubmitEx(GFX_Device *device, GFX_CmdBuffer *cmd,
 	submit_info.signalSemaphoreInfoCount = 1 + signal_count;
 	submit_info.pSignalSemaphoreInfos = all_signals;
 
-	GFX_VK_CHECK(vkQueueSubmit2(device->context.graphics_queue.handle, 1, &submit_info, VK_NULL_HANDLE),
+	GFX_VK_CHECK(vkQueueSubmit2(device->context.graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
 				 "Failed to submit command to queue.");
 
 	ScratchRelease(&scratch);
@@ -341,7 +341,7 @@ GFX_DeviceSubmitEx(GFX_Device *device, GFX_CmdBuffer *cmd,
 internal GFX_CmdBuffer
 GFX_DeviceSubmitImBegin(GFX_Device *device)
 {
-	vkQueueWaitIdle(device->context.graphics_queue.handle);
+	vkQueueWaitIdle(device->context.graphics_queue.vk_handle);
 
 	GFX_CmdBuffer cmd = GFX_DeviceFetchFreeBuffer(device, &device->per_frame_data[device->current_frame_index].command_pool);
 	GFX_CmdBegin(&cmd);
@@ -431,7 +431,7 @@ GFX_DeviceSemaphoreCreate(const GFX_Device *device, u64 value)
 				 "Failed to create timeline semaphore.");
 
 	GFX_Semaphore semaphore = {0};
-	semaphore.handle = vk_semaphore;
+	semaphore.vk_handle = vk_semaphore;
 	semaphore.target = value;
 
 	return semaphore;
@@ -440,7 +440,7 @@ GFX_DeviceSemaphoreCreate(const GFX_Device *device, u64 value)
 internal void
 GFX_DeviceSemaphoreDestroy(const GFX_Device *device, const GFX_Semaphore *semaphore)
 {
-	vkDestroySemaphore(device->context.device, semaphore->handle, NULL);
+	vkDestroySemaphore(device->context.device, semaphore->vk_handle, NULL);
 }
 
 internal u64
@@ -449,7 +449,7 @@ GFX_DeviceSemaphoreValue(const GFX_Device *device, const GFX_Semaphore *semaphor
 	u64 result = 0;
 
 	vkGetSemaphoreCounterValue(device->context.device,
-							   semaphore->handle,
+							   semaphore->vk_handle,
 							   &result);
 
 	return result;
@@ -516,16 +516,16 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 
 	GFX_VK_CHECK(vkCreateSwapchainKHR(device->context.device,
 									  &create_info, NULL,
-									  &swapchain.handle),
+									  &swapchain.vk_handle),
 				 "Failed to create swapchain.");
 
-	vkGetSwapchainImagesKHR(device->context.device, swapchain.handle, &texture_count, NULL);
+	vkGetSwapchainImagesKHR(device->context.device, swapchain.vk_handle, &texture_count, NULL);
 
 	DebugLogAssert(device->log_channel, texture_count > 0, "Failed to find any images in swapchain.");
 
 	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, texture_count);
 
-	vkGetSwapchainImagesKHR(device->context.device, swapchain.handle, &texture_count, vk_images);
+	vkGetSwapchainImagesKHR(device->context.device, swapchain.vk_handle, &texture_count, vk_images);
 
 	swapchain.texture_count = texture_count;
 
@@ -535,7 +535,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 	for (u32 i = 0; i < texture_count; i++)
 	{
 		GFX_Texture texture = {0};
-		texture.handle = vk_images[i];
+		texture.vk_handle = vk_images[i];
 		texture.width = swapchain.width;
 		texture.height = swapchain.height;
 		texture.depth = 1;
@@ -577,7 +577,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 
 		GFX_VK_CHECK(vkCreateImageView(device->context.device,
 									   &view_create_info, NULL,
-									   &swapchain.views[i].handle),
+									   &swapchain.views[i].vk_handle),
 					 "Failed to create texture image view.");
 	}
 
@@ -592,9 +592,9 @@ internal void
 GFX_DeviceSwapchainDestroy(const GFX_Device *device, const GFX_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < swapchain->texture_count; i++)
-		vkDestroyImageView(device->context.device, swapchain->views[i].handle, NULL);
+		vkDestroyImageView(device->context.device, swapchain->views[i].vk_handle, NULL);
 
-	vkDestroySwapchainKHR(device->context.device, swapchain->handle, NULL);
+	vkDestroySwapchainKHR(device->context.device, swapchain->vk_handle, NULL);
 }
 
 internal GFX_CmdPool
@@ -609,14 +609,14 @@ GFX_DeviceCmdPoolCreate(const GFX_Device *device, u32 family_index)
 
 	GFX_VK_CHECK(vkCreateCommandPool(device->context.device,
 									 &create_info, NULL,
-									 &pool.handle),
+									 &pool.vk_handle),
 				 "Failed to create command pool.");
 
 	VkCommandBufferAllocateInfo alloc_info = {0};
 	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	alloc_info.commandBufferCount = GFX_CMD_POOL_MAX_BUFFERS;
-	alloc_info.commandPool = pool.handle;
+	alloc_info.commandPool = pool.vk_handle;
 
 	GFX_VK_CHECK(vkAllocateCommandBuffers(device->context.device,
 										  &alloc_info,
@@ -631,14 +631,14 @@ GFX_DeviceCmdPoolCreate(const GFX_Device *device, u32 family_index)
 internal void
 GFX_DeviceCmdPoolDestroy(const GFX_Device *device, const GFX_CmdPool *pool)
 {
-	vkDestroyCommandPool(device->context.device, pool->handle, NULL);
+	vkDestroyCommandPool(device->context.device, pool->vk_handle, NULL);
 }
 
 internal void
 GFX_DeviceCmdPoolReset(const GFX_Device *device, GFX_CmdPool *pool)
 {
 	pool->used_count = 0;
-	vkResetCommandPool(device->context.device, pool->handle, 0);
+	vkResetCommandPool(device->context.device, pool->vk_handle, 0);
 }
 
 internal GFX_CmdBuffer
@@ -1078,7 +1078,7 @@ GFX_DeviceTextureAlloc(GFX_Device *device, const GFX_TextureAllocInfo *alloc_inf
 	GFX_VK_CHECK(vmaCreateImage(device->context.vma_allocator,
 								&create_info,
 								&vma_alloc_info,
-								&texture.handle,
+								&texture.vk_handle,
 								&texture.allocation,
 								&texture.allocation_info),
 				 "Failed to allocate texture.");
@@ -1167,7 +1167,7 @@ GFX_DeviceTextureDestroy(GFX_Device *device, GFX_TextureKey texture_key)
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
 	GFX_DestroyedImage *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedImage, 1);
-	node->image = texture->handle;
+	node->image = texture->vk_handle;
 	node->allocation = texture->allocation;
 	node->next = frame_data->destroyed_image_head;
 	frame_data->destroyed_image_head = node;
@@ -1192,7 +1192,7 @@ GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *
 	
 	VkImageViewCreateInfo view_create_info = {0};
 	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_create_info.image = gfx_texture->handle;
+	view_create_info.image = gfx_texture->vk_handle;
 	view_create_info.viewType = info->type;
 	view_create_info.format = gfx_texture->format;
 
@@ -1213,13 +1213,13 @@ GFX_DeviceTextureViewFetch(GFX_Device *device, const GFX_TextureViewCreateInfo *
 
 	GFX_VK_CHECK(vkCreateImageView(device->context.device,
 								   &view_create_info, NULL,
-								   &view.handle),
+								   &view.vk_handle),
 				 "Failed to create texture image view.");
 
 	b32 is_cubemap = (gfx_texture->flags & GFX_TextureFlag_Cubemap) != 0;
 	b32 is_storage = (gfx_texture->flags & GFX_TextureFlag_Storage) != 0;
 
-	view.bindless = GFX_BindlessRegisterView(&device->bindless, view.handle, is_cubemap, is_storage);
+	view.bindless = GFX_BindlessRegisterView(&device->bindless, view.vk_handle, is_cubemap, is_storage);
 	
 	return GFX_DeviceTextureViewListPush(&device->views, device->permanent_arena, &view, hashed_key);
 }
@@ -1292,7 +1292,7 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 	GFX_VK_CHECK(vmaCreateBuffer(device->context.vma_allocator,
 								 &buffer_create_info,
 								 &vma_alloc_info,
-								 &buffer.handle,
+								 &buffer.vk_handle,
 								 &buffer.allocation,
 								 &buffer.allocation_info),
 				 "Failed to allocate buffer.");
@@ -1301,7 +1301,7 @@ GFX_DeviceBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info)
 	{
 		VkBufferDeviceAddressInfo address_info = {0};
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-		address_info.buffer = buffer.handle;
+		address_info.buffer = buffer.vk_handle;
 
 		buffer.device_address = vkGetBufferDeviceAddress(device->context.device, &address_info);
 	}
@@ -1329,7 +1329,7 @@ GFX_DeviceBufferDestroy(GFX_Device *device, GFX_BufferKey buffer_key)
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
 	GFX_DestroyedBuffer *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedBuffer, 1);
-	node->buffer = buffer->handle;
+	node->buffer = buffer->vk_handle;
 	node->allocation = buffer->allocation;
 	node->next = frame_data->destroyed_buffer_head;
 	frame_data->destroyed_buffer_head = node;
@@ -1404,7 +1404,7 @@ GFX_DeviceSamplerCreate(GFX_Device *device, const GFX_SamplerCreateInfo *info)
 	
 	GFX_VK_CHECK(vkCreateSampler(device->context.device,
 								 &create_info, NULL,
-								 &sampler.handle),
+								 &sampler.vk_handle),
 				 "Failed to create texture sampler.");
 
 	sampler.filter = info->filter;
@@ -1412,7 +1412,7 @@ GFX_DeviceSamplerCreate(GFX_Device *device, const GFX_SamplerCreateInfo *info)
 	sampler.wrap_y = info->wrap_y;
 	sampler.wrap_z = info->wrap_z;
 	sampler.border_colour = info->border_colour;
-	sampler.bindless = GFX_BindlessRegisterSampler(&device->bindless, sampler.handle);
+	sampler.bindless = GFX_BindlessRegisterSampler(&device->bindless, sampler.vk_handle);
 
 	return GFX_DeviceSamplerListPushAuto(&device->samplers, device->permanent_arena, &sampler);
 }
@@ -1440,7 +1440,7 @@ GFX_DeviceSamplerDestroy(GFX_Device *device, GFX_SamplerKey sampler_key)
 	GFX_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
 
 	GFX_DestroyedSampler *node = ArenaPushArray(&frame_data->arena, GFX_DestroyedSampler, 1);
-	node->sampler = sampler->handle;
+	node->sampler = sampler->vk_handle;
 	node->bindless = sampler->bindless;
 	node->next = frame_data->destroyed_sampler_head;
 	frame_data->destroyed_sampler_head = node;
@@ -1619,7 +1619,7 @@ GFX_DeviceBLASAlloc(GFX_Device *device, const GFX_BLASGeometry *geometries, u32 
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-	create_info.buffer = backing_buffer->handle;
+	create_info.buffer = backing_buffer->vk_handle;
 	create_info.size = sizes.accelerationStructureSize;
 	create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
@@ -1629,12 +1629,12 @@ GFX_DeviceBLASAlloc(GFX_Device *device, const GFX_BLASGeometry *geometries, u32 
 
 	GFX_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
 												  &create_info, NULL,
-												  &accel_struct.handle),
+												  &accel_struct.vk_handle),
 				 "Failed to create BLAS.");
 
 	VkAccelerationStructureDeviceAddressInfoKHR addr_info = {0}; // fuck me khronos shorter names would be appreciated yes??
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-	addr_info.accelerationStructure = accel_struct.handle;
+	addr_info.accelerationStructure = accel_struct.vk_handle;
 
 	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
 	
@@ -1688,7 +1688,7 @@ GFX_DeviceTLASAlloc(GFX_Device *device, u32 max_instance_count)
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-	create_info.buffer = backing_buffer->handle;
+	create_info.buffer = backing_buffer->vk_handle;
 	create_info.size = sizes.accelerationStructureSize;
 	create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
@@ -1698,12 +1698,12 @@ GFX_DeviceTLASAlloc(GFX_Device *device, u32 max_instance_count)
 
 	GFX_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
 												  &create_info, NULL,
-												  &accel_struct.handle),
+												  &accel_struct.vk_handle),
 				 "Failed to create TLAS.");
 
 	VkAccelerationStructureDeviceAddressInfoKHR addr_info = {0}; // fuck me khronos shorter names would be appreciated yes??
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
-	addr_info.accelerationStructure = accel_struct.handle;
+	addr_info.accelerationStructure = accel_struct.vk_handle;
 
 	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
 
@@ -1722,8 +1722,8 @@ GFX_DeviceAccelStructDestroy(GFX_Device *device, GFX_AccelStructKey key)
 	GFX_AccelStruct *accel_struct = GFX_DeviceAccelStructListGet(&device->accel_structures, key);
 	DebugLogAssert(device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
 
-	vkDestroyAccelerationStructureKHR(device->context.device, accel_struct->handle, NULL);
-	accel_struct->handle = VK_NULL_HANDLE;
+	vkDestroyAccelerationStructureKHR(device->context.device, accel_struct->vk_handle, NULL);
+	accel_struct->vk_handle = VK_NULL_HANDLE;
 
 	GFX_DeviceBufferDestroy(device, accel_struct->backing_buffer);
 }
@@ -1753,7 +1753,7 @@ GFX_DeviceCreateSyncResources(GFX_Device *device)
 	for (u32 i = 0; i < GFX_FRAMES_IN_FLIGHT; i++)
 	{
 		device->per_frame_data[i].completion_point.value = 0;
-		device->per_frame_data[i].completion_point.semaphore = device->graphics_semaphore.handle;
+		device->per_frame_data[i].completion_point.semaphore = device->graphics_semaphore.vk_handle;
 
 		device->per_frame_data[i].command_pool = GFX_DeviceCmdPoolCreate(device, family_index);
 
@@ -1951,7 +1951,7 @@ GFX_DeviceCreateImGui(GFX_Device *device)
 	  init_info.PhysicalDevice = device->context.physical_device;
 	  init_info.Device = device->context.device;
 	  init_info.QueueFamily = device->context.graphics_queue.family_index;
-	  init_info.Queue = device->context.graphics_queue.handle;
+	  init_info.Queue = device->context.graphics_queue.vk_handle;
 	  init_info.PipelineCache = device->pipeline_cache;
 	  init_info.DescriptorPool = device->imgui_pool;
 	  init_info.Allocator = NULL;
@@ -1990,6 +1990,6 @@ GFX_DeviceImGuiRecord(const GFX_Device *device, const GFX_CmdBuffer *cmd)
 {
 	/*
 	  ImDrawData *draw_data = ImGui_GetDrawData();
-	  ImGui_ImplVulkan_RenderDrawData(draw_data, cmd->handle);
+	  ImGui_ImplVulkan_RenderDrawData(draw_data, cmd->vk_handle);
 	*/
 }

@@ -550,7 +550,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	
 	vkGetDeviceQueue(context.device,
 					 context.graphics_queue.family_index, 0,
-					 &context.graphics_queue.handle);
+					 &context.graphics_queue.vk_handle);
 
 	DebugLogD(log_channel, "Created graphics queue.");
 

@@ -14,7 +14,7 @@ struct GFX_SwapchainSupportDetails
 typedef struct GFX_HardwareQueue GFX_HardwareQueue;
 struct GFX_HardwareQueue
 {
-	VkQueue handle;
+	VkQueue vk_handle;
 	u32 family_index;
 };
 
