@@ -1,26 +1,4 @@
 
-/*
- * The Echo or The Answer
- * ---
- * At the willow tree grows the wallflower,
- * pale and cold,
- * from dust, alone.
- *
- * To the voices outside unresponsive,
- * blossoming only for the wind,
- * and to the touch, you are cold.
- *
- * Of no mother, nor child,
- * to bear your name,
- * to free your spirit.
- *
- * And I will meet you there,
- * But I have one final question,
- * what is it, you fear most?
- */
-
-// ---
-
 // Todo: Move these out into their respective
 //       backends.
 
@@ -618,6 +596,26 @@ AppHotUnloadEditor(App *app)
 /* ==================================================
    APP
    ================================================== */
+
+/*
+ * The Echo or The Answer
+ * ---
+ * At the willow tree grows the wallflower,
+ * pale and cold,
+ * from dust, alone.
+ *
+ * To the voices outside unresponsive,
+ * blossoming only for the wind,
+ * and to the touch, you are cold.
+ *
+ * Of no mother, nor child,
+ * to bear your name,
+ * to free your spirit.
+ *
+ * And I will meet you there,
+ * But I have one final question,
+ * what is it, you fear most?
+ */
 
 internal void
 AppInit_(App *app)
