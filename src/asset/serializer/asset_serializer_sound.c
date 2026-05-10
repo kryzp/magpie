@@ -9,9 +9,9 @@ struct AST_SoundLoadData
 };
 
 internal AST_SerializerPipelineData
-AST_SoundSerializerCpu(const AST_Context *ctx)
+AST_SoundSerializerCpu(const AST_Context *ctx, Arena *load_arena)
 {
-	ScratchArena scratch = ScratchBegin(&ctx->scope, 1);
+	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
 	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
 
@@ -30,11 +30,11 @@ AST_SoundSerializerCpu(const AST_Context *ctx)
 	u64 frame_count = 0;
 	ma_decoder_get_length_in_pcm_frames(&decoder, &frame_count);
 	
-	AST_SoundLoadData *sound_data = ArenaPushArray(ctx->scope, AST_SoundLoadData, 1);
+	AST_SoundLoadData *sound_data = ArenaPushArray(load_arena, AST_SoundLoadData, 1);
 	sound_data->channels = decoder.outputChannels;
 	sound_data->sample_rate = decoder.outputSampleRate;
 	sound_data->size_in_bytes = frame_count * sound_data->channels * sizeof(f32);
-	sound_data->pcm_data = ArenaPushArray(ctx->scope, u8, sound_data->size_in_bytes);
+	sound_data->pcm_data = ArenaPushArray(load_arena, u8, sound_data->size_in_bytes);
 
 	ma_decoder_read_pcm_frames(&decoder, sound_data->pcm_data, frame_count, NULL);
 	ma_decoder_uninit(&decoder);
@@ -51,13 +51,14 @@ end:
 internal void
 AST_SoundSerializerAlloc(const AST_Context *ctx,
 						 AST_SerializerPipelineData *data,
-						 AST_Asset *out)
+						 AST_Asset *out,
+						 Arena *arena)
 {
 	const AUD_BackendAPI *backend = ctx->assets->audio_backend;
 	
 	AST_SoundLoadData *sound_data = data->data;
 	
-	void *permanent_pcm = ArenaPushArray(ctx->assets->arena, u8, sound_data->size_in_bytes);
+	void *permanent_pcm = ArenaPushArray(arena, u8, sound_data->size_in_bytes);
 	MemCopy(permanent_pcm, sound_data->pcm_data, sound_data->size_in_bytes);
 
 	out->sound.buffer = backend->CreateBuffer(permanent_pcm,

@@ -186,9 +186,9 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 
 	assets->free_load_arena_count = AST_LOAD_ARENA_COUNT;
 
-#define AssetDef(name)													\
+#define AssetDef(name, upper)											\
 	assets->serializers[AST_Type_##name] = AST_Get##name##Serializer(); \
-	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpen(String8Lit(STRINGIFY(name) " Serializer"));
+	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpen(String8Lit(STRINGIFY(upper) " SERIALIZER"));
 #include "asset_definitions.inc"
 #undef AssetDef
 	
@@ -336,13 +336,13 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 	Arena *load_arena = &load_params->assets->load_arenas[arena_index];
 	
 	AST_Context ctx = {0};
-	ctx.scope = load_arena;
 	ctx.assets = load_params->assets;
 	ctx.metadata = load_params->metadata;
+	ctx.log_channel = load_params->assets->serializer_log_channels[load_params->type];
 
 	AST_Serializer *serializer = &load_params->assets->serializers[load_params->type];
 
-	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx);
+	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx, load_arena);
 
 	if (load_data.failed)
 		DebugLogE(load_params->assets->log_channel, "Failed to load %.*s.",
@@ -634,9 +634,9 @@ AST_FlushUploads(AST_Assets *assets)
 				AST_Asset *asset = &record->asset;
 
 				AST_Context ctx = {0};
-				ctx.scope = &assets->load_arenas[upload->load_arena_index];
 				ctx.assets = assets;
 				ctx.metadata = upload->metadata;
+				ctx.log_channel = assets->serializer_log_channels[upload->type];
 
 				if (upload->load_data.failed)
 				{
@@ -662,9 +662,15 @@ AST_FlushUploads(AST_Assets *assets)
 					asset->handle = upload->handle;
 
 					if (is_new)
-						serializer->Alloc(&ctx, &upload->load_data, asset);
+					{
+						osapi->MutexLock(assets->allocation_mutex);
+						serializer->Alloc(&ctx, &upload->load_data, asset, assets->arena);
+						osapi->MutexUnlock(assets->allocation_mutex);
+					}
 					else
+					{
 						serializer->Reload(&ctx, &upload->load_data, asset);
+					}
 					
 					if (serializer->Gpu)
 						serializer->Gpu(&ctx, &upload->load_data, asset, &cmd, staging_buffer, stage_offset);

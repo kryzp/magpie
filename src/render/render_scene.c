@@ -629,7 +629,7 @@ R_SceneResolveTextureBindless(const R_Scene *scene,
 	
 	AST_Asset *texture_asset = AST_GetNow(assets, handle, AST_Type_Texture);
 
-	GFX_TextureKey key = texture_asset->texture.key;
+	GFX_TextureKey key = AST_AssetTextureGet(texture_asset);
 
 	GFX_TextureView *view = GFX_DeviceTextureViewFromKey(scene->device, GFX_DeviceTextureViewAuto(scene->device, key));
 

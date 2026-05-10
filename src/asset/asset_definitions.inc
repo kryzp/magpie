@@ -1,3 +1,3 @@
-AssetDef(Texture)
-AssetDef(Shader)
-AssetDef(Model)
+AssetDef(Texture, TEXTURE)
+AssetDef(Shader, SHADER)
+AssetDef(Model, MODEL)

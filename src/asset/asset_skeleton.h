@@ -18,6 +18,8 @@ struct AST_Joint
 typedef struct AST_Skeleton AST_Skeleton;
 struct AST_Skeleton
 {
+	String8 name;
+	
 	u32 joint_count;
 	AST_Joint *joints;
 };

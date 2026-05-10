@@ -9,9 +9,9 @@ struct AST_TextureLoadData
 };
 
 internal AST_SerializerPipelineData
-AST_TextureSerializerCpu(const AST_Context *ctx)
+AST_TextureSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 {
-	ScratchArena scratch = ScratchBegin(&ctx->scope, 1);
+	ScratchArena scratch = ScratchBegin(NULL, 0);
 
 	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
 
@@ -32,9 +32,7 @@ AST_TextureSerializerCpu(const AST_Context *ctx)
 		stride = sizeof(u8);
 	}
 
-	ScratchRelease(&scratch);
-
-	AST_TextureLoadData *tex_load_data = ArenaPushArray(ctx->scope, AST_TextureLoadData, 1);
+	AST_TextureLoadData *tex_load_data = ArenaPushArray(load_scope, AST_TextureLoadData, 1);
 	tex_load_data->width = w;
 	tex_load_data->height = h;
 	tex_load_data->is_hdr = is_hdr;
@@ -47,13 +45,16 @@ AST_TextureSerializerCpu(const AST_Context *ctx)
 	result.dependency_count = 0;
 	result.watch_path_count = 0;
 
+	ScratchRelease(&scratch);
+
 	return result;
 }
 
 internal void
 AST_TextureSerializerAlloc(const AST_Context *ctx,
 						   AST_SerializerPipelineData *data,
-						   AST_Asset *out)
+						   AST_Asset *out,
+						   Arena *arena)
 {
 	GFX_Device *device = ctx->assets->device;
 	

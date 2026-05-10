@@ -117,7 +117,7 @@ R_ForwardRender(R_ForwardRenderer *r,
 	for (u32 i = 0; i < bb_shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb_shadow->shadow_maps[i]);
 
-	GFX_ShaderKey shader = AST_GetNow(r->assets, r->shader, AST_Type_Shader)->shader.key;
+	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(r->assets, r->shader, AST_Type_Shader));
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
 	data->shader                = shader;

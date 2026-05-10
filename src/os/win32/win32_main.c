@@ -39,8 +39,6 @@
 #include "win32_job.h"
 #include "win32_log.h"
 
-global OS_API *osapi = NULL;
-
 #include "core/core_inc.c"
 #include "input/input_inc.c"
 #include "os/os_inc.c"
@@ -1333,6 +1331,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 	
 	if (win32_st.code.Tick(win32_st.app, &curr_input_st))
 	{
+		win32_st.code.Destroy(win32_st.app);
 		OS_W32_JOB_Halt(&win32_st.scheduler);
 	}
 	else
@@ -1393,7 +1392,7 @@ main(void)
 	
 	OS_W32_LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
 
-	win32_st.log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("OS/WIN32"));
+	win32_st.log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("WIN32"));
 
 	DebugLogI(win32_st.log_channel, "Initializing ImGui...");
 	
@@ -1407,7 +1406,7 @@ main(void)
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
-	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("JOB"));
+	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("WIN32/JOB"));
 	OS_W32_JOB_Init(&win32_st.scheduler, job_log_channel);
 
 	JOB_Decl root_job = {0};
@@ -1418,8 +1417,6 @@ main(void)
 	OS_W32_JOB_Kick(&win32_st.scheduler, &root_job, NULL);
 	
 	OS_W32_JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
-	
-	win32_st.code.Destroy(win32_st.app);
 
 	OS_W32_JOB_Shutdown(&win32_st.scheduler);
 

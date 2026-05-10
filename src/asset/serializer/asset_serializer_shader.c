@@ -6,13 +6,13 @@ struct AST_ShaderLoadData
 };
 
 internal AST_SerializerPipelineData
-AST_ShaderSerializerCpu(const AST_Context *ctx)
+AST_ShaderSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 {
-	ScratchArena scratch = ScratchBegin(&ctx->scope, 1);
+	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
 	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
 	
-	AST_ShaderLoadData *shader_data = ArenaPushArray(ctx->scope, AST_ShaderLoadData, 1);
+	AST_ShaderLoadData *shader_data = ArenaPushArray(load_scope, AST_ShaderLoadData, 1);
 	
 	AST_SerializerPipelineData result = {0};
 	result.data = shader_data;
@@ -29,7 +29,7 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 	GFX_ShaderCompiler *compiler = ctx->assets->shader_compiler;
 
 	shader_data->compiled = GFX_ShaderCompilerCompile(compiler,
-													  ctx->scope,
+													  load_scope,
 													  file_path,
 													  1, &search_directory);
 
@@ -37,7 +37,7 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 	
 	result.watch_path_count = 2;
 	
-	result.watch_paths = ArenaPushArray(ctx->scope, String8, result.watch_path_count);
+	result.watch_paths = ArenaPushArray(load_scope, String8, result.watch_path_count);
 	result.watch_paths[0] = file_path;
 	result.watch_paths[1] = search_directory;
 
@@ -49,7 +49,8 @@ AST_ShaderSerializerCpu(const AST_Context *ctx)
 internal void
 AST_ShaderSerializerAlloc(const AST_Context *ctx,
 						  AST_SerializerPipelineData *data,
-						  AST_Asset *out)
+						  AST_Asset *out,
+						  Arena *arena)
 {
 	AST_ShaderLoadData *shader_data = data->data;
 

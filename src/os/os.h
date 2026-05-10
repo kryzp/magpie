@@ -244,4 +244,6 @@ typedef b32   OS_EntryTickFn      (void *ctx, const I_State *input);
 typedef void  OS_EntryHotLoadFn   (void *ctx, const OS_API *api);
 typedef void  OS_EntryHotUnloadFn (void *ctx);
 
+global const OS_API *osapi = NULL; // must be manually set
+
 #endif // OS_H

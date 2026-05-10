@@ -350,11 +350,12 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
-
+	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"), AST_Type_Model);
+	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
 	R_SceneRegisterModelReceipt model_receipt = R_SceneRegisterModel(&app->scene, scratch.arena, &app->assets, model_handle, (u32)(-1));
@@ -397,10 +398,10 @@ AppInitRender(App *app)
 						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
 	
-	GFX_ShaderKey brdf_lut_shader        = AST_GetNow(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader.key;
-	GFX_ShaderKey hdr_to_env_shader      = AST_GetNow(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader.key;
-	GFX_ShaderKey irradiance_pass_shader = AST_GetNow(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader.key;
-	GFX_ShaderKey prefilter_pass_shader  = AST_GetNow(&app->assets, prefilter_shader_handle,  AST_Type_Shader)->shader.key;
+	GFX_ShaderKey brdf_lut_shader        = AST_AssetShaderGet(AST_GetNow(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader));
+	GFX_ShaderKey hdr_to_env_shader      = AST_AssetShaderGet(AST_GetNow(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader));
+	GFX_ShaderKey irradiance_pass_shader = AST_AssetShaderGet(AST_GetNow(&app->assets, irradiance_shader_handle, AST_Type_Shader));
+	GFX_ShaderKey prefilter_pass_shader  = AST_AssetShaderGet(AST_GetNow(&app->assets, prefilter_shader_handle,  AST_Type_Shader));
 	
 	GFX_TextureKey hdr_texture_gfx = AST_GetNow(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
 
@@ -898,7 +899,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	// Skybox.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
+		GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(&app->assets, shader_handle, AST_Type_Shader));
 
 		
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
@@ -919,7 +920,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	// Post Processing.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader.key;
+		GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(&app->assets, shader_handle, AST_Type_Shader));
 
 		
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);

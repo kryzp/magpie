@@ -10,7 +10,7 @@ struct AST_MetaData
 typedef enum AST_Type
 {
 	AST_Type_Unknown,
-#define AssetDef(name) AST_Type_##name,
+#define AssetDef(name, upper) AST_Type_##name,
 #include "asset_definitions.inc"
 #undef AssetDef
 	AST_Type_COUNT
@@ -20,11 +20,13 @@ AST_Type;
 internal inline AST_Type
 AST_TypeFromString(String8 str)
 {
-#define AssetDef(name) if (String8Match(str, String8Lit(#name))) return AST_Type_##name;
+#define AssetDef(name, upper) if (String8Match(str, String8Lit(#name))) return AST_Type_##name;
 #include "asset_definitions.inc"
 #undef AssetDef
 	
-	AssertTrue(false && "Unknown Asset Name.");
+	DebugPrintB("Unknown Asset Name: %.*s",
+				(i32)str.len,
+				str.str);
 
 	return AST_Type_COUNT;
 }
@@ -32,11 +34,11 @@ AST_TypeFromString(String8 str)
 internal inline String8
 AST_StringFromType(Arena *arena, AST_Type type)
 {
-#define AssetDef(name) if (type == AST_Type_##name) return String8Lit(#name);
+#define AssetDef(name, upper) if (type == AST_Type_##name) return String8Lit(#name);
 #include "asset_definitions.inc"
 #undef AssetDef
 	
-	AssertTrue(false && "Unknown Asset Type.");
+	DebugPrintB("Unknown Asset Type: %d", type);
 
 	return (String8) {0};
 }
@@ -72,7 +74,8 @@ struct AST_Asset
 			u32 sub_model_count;
 			AST_SubModel *sub_models;
 
-			AST_Skeleton skeleton;
+			u32 skeleton_count;
+			AST_Skeleton *skeletons;
 			
 			u32 clip_count;
 			AST_AnimClip *clips;
@@ -80,5 +83,12 @@ struct AST_Asset
 		model;
 	};
 };
+
+internal GFX_TextureKey      AST_AssetTextureGet       (const AST_Asset *asset);
+internal GFX_ShaderKey       AST_AssetShaderGet        (const AST_Asset *asset);
+internal AUD_BufferHandle    AST_AssetSoundGetBuffer   (const AST_Asset *asset);
+internal const AST_SubModel *AST_AssetModelGetSubModel (const AST_Asset *asset, u32 index);
+internal const AST_Skeleton *AST_AssetModelGetSkeleton (const AST_Asset *asset, String8 name);
+internal const AST_AnimClip *AST_AssetModelGetAnimClip (const AST_Asset *asset, String8 name);
 
 #endif // ASSET_TYPE_H

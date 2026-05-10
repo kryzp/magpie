@@ -149,6 +149,4 @@ __declspec(dllexport) b32   AppTick      (App *app, const I_State *input);
 __declspec(dllexport) void  AppHotLoad   (App *app, const OS_API *api);
 __declspec(dllexport) void  AppHotUnload (App *app);
 
-global const OS_API *osapi;
-
 #endif // APP_H

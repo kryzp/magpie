@@ -152,7 +152,7 @@ You can't just parallelize the whole thing because while loading an asset into m
 
 Essentially, we parallelize the CPU stage, and try to record as much instructions onto the command buffer in the GPU stage before submitting.
 
-Hooking it up was more "awkward" than "hard" necessarily but it works and that's what matters.
+Hooking it up was more "awkward" than "hard" necessarily but it works and that's what matters. It leads to some uncomfortable code when allocating extra data per-asset because we have to do a deep copy of that data (anything allocated using `ctx->scope` in the cpu stage is impermanent) once it gets to the alloc stage but that's fine.
 
 The asset system also supports fancy things like hot-reloading of assets which was also harder than I initially assumed because some assets, like shaders or models, also have dependencies. So, we have to watch those for modifications as well. Fun stuff!
 

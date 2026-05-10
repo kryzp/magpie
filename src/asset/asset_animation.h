@@ -35,6 +35,7 @@ struct AST_AnimKey
 typedef struct AST_AnimChannel AST_AnimChannel;
 struct AST_AnimChannel
 {
+	u32 target_skeleton;
 	u32 target_joint;
 
 	AST_AnimPath path;
