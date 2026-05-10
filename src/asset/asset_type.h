@@ -71,6 +71,11 @@ struct AST_Asset
 		{
 			u32 sub_model_count;
 			AST_SubModel *sub_models;
+
+			AST_Skeleton skeleton;
+			
+			u32 clip_count;
+			AST_AnimClip *clips;
 		}
 		model;
 	};

@@ -59,6 +59,9 @@ struct AST_ModelLoadMesh
 	u32 index_count;
 	AST_ModelIndex *indices;
 
+	AST_ModelSkinVertex *skin_vertices;
+	i32 skin_index;
+
 	AST_ModelMaterial material;
 };
 
@@ -80,6 +83,7 @@ struct AST_ModelLoadData
 
 	u64 total_vertex_bytes;
 	u64 total_index_bytes;
+	u64 total_skin_vertex_bytes;
 };
 
 internal void
@@ -317,7 +321,9 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 						  AST_ModelLoadData *load,
 						  String8 directory,
 						  const cgltf_primitive *prim,
-						  m4 world_transform)
+						  m4 world_transform,
+						  const cgltf_skin *skin,
+						  i32 skin_idx)
 {
 	Arena *arena = ctx->scope;
 
@@ -325,7 +331,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 	// TODO: support more topologies
 	DebugLogAssert(ctx->log_channel,
 				   prim->type == cgltf_primitive_type_triangles,
-				   "Only support triangle-primitive models.");
+				   "Only support triangle-primitive models currently!");
 
 
 	// Locate attributes.
@@ -335,6 +341,8 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 	const cgltf_accessor *tangents  = NULL;
 	const cgltf_accessor *texcoords = NULL;
 	const cgltf_accessor *colours   = NULL;
+	const cgltf_accessor *joints    = NULL;
+	const cgltf_accessor *weights   = NULL;
 
 	for (cgltf_size i = 0; i < prim->attributes_count; i++)
 	{
@@ -342,30 +350,78 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 
 		switch (attr->type)
 		{
-			case cgltf_attribute_type_position: positions = attr->data; break;
-			case cgltf_attribute_type_normal:   normals   = attr->data; break;
-			case cgltf_attribute_type_tangent:  tangents  = attr->data; break;
+			case cgltf_attribute_type_position:
+				positions = attr->data;
+				break;
+
+			case cgltf_attribute_type_normal:
+				normals = attr->data;
+				break;
+				
+			case cgltf_attribute_type_tangent:
+				tangents = attr->data;
+				break;
 
 			case cgltf_attribute_type_texcoord:
-				if (attr->index == 0) texcoords = attr->data;
+				if (attr->index == 0)
+					texcoords = attr->data;
 				break;
 
 			case cgltf_attribute_type_color:
-				if (attr->index == 0) colours = attr->data;
+				if (attr->index == 0)
+					colours = attr->data;
 				break;
 
-			default: break;
+			case cgltf_attribute_type_joints:
+				if (attr->index == 0)
+					joints = attr->data;
+				break;
+
+			case cgltf_attribute_type_weights:
+				if (attr->index == 0)
+					weights = attr->data;
+				break;
+
+			default:
+				break;
 		}
 	}
 
 	if (!positions)
+	{
+		DebugLogW(ctx->log_channel, "Node has no positions??");
 		return;
+	}
 
+
+	// Skinning.
+
+	b32 is_skinned = ((skin != NULL) &&
+					  (joints != NULL) &&
+					  (weights != NULL));
+
+	if ((skin != NULL) && (joints == NULL || weights == NULL))
+	{
+		DebugLogW(ctx->log_channel,
+				  "Node has skin but missing joints and/or weights.");
+	}
+	
 
 	// Vertices.
 
 	u32 vert_count = (u32)positions->count;
 	AST_ModelVertex *vertices = ArenaPushArray(arena, AST_ModelVertex, vert_count);
+	AST_ModelSkinVertex *skin_vertices = NULL;
+
+	if (is_skinned)
+	{
+		skin_vertices = ArenaPushArray(arena, AST_ModelSkinVertex, vert_count);
+
+		DebugLogAssert(ctx->log_channel,
+					   joints->count == positions->count &&
+					   weights->count == positions->count,
+					   "Joint / Weight count is in mismatch with position count in node.");
+	}
 
 	v3 bmin = v3( MATH_MAX_F32,  MATH_MAX_F32,  MATH_MAX_F32);
 	v3 bmax = v3(-MATH_MAX_F32, -MATH_MAX_F32, -MATH_MAX_F32);
@@ -394,10 +450,14 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 
 		if (colours)
 		{
-			f32 col[4] = {1.f, 1.f, 1.f, 1.f};
+			f32 col[4] = { 1.f, 1.f, 1.f, 1.f };
 			cgltf_size comps = cgltf_num_components(colours->type);
-			if (comps > 4) comps = 4;
+
+			if (comps > 4)
+				comps = 4;
+
 			cgltf_accessor_read_float(colours, i, col, comps);
+
 			v->colour = v3(col[0], col[1], col[2]);
 		}
 		else
@@ -438,6 +498,52 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 			// TODO: integrate using something called ""mikktspace" for tangents.
 			v->tangent   = v3x(0.f);
 			v->bitangent = v3x(0.f);
+		}
+
+		if (is_skinned)
+		{
+			AST_ModelSkinVertex *sv = &skin_vertices[i];
+
+			cgltf_uint j[4] = {0};
+			cgltf_accessor_read_uint(joints, i, j, 4);
+
+			DebugLogAssert(ctx->log_channel,
+						   j[0] < skin->joints_count &&
+						   j[1] < skin->joints_count &&
+						   j[2] < skin->joints_count &&
+						   j[3] < skin->joints_count,
+						   "Joint index is out of range.");
+			
+			sv->joints[0] = j[0];
+			sv->joints[1] = j[1];
+			sv->joints[2] = j[2];
+			sv->joints[3] = j[3];
+
+			f32 w[4] = {0};
+			cgltf_accessor_read_float(weights, i, w, 4);
+
+			// renormalize 'cuz weights don't necessarily always
+			// have to add up to 1 for whatever fucking reason.
+			f32 wsum = w[0] + w[1] + w[2] + w[3];
+
+			if (wsum > 0.f)
+			{
+				f32 inv = 1.f / wsum;
+
+				w[0] *= inv;
+				w[1] *= inv;
+				w[2] *= inv;
+				w[3] *= inv;
+			}
+			else
+			{
+				w[0] = 1.f; // zero influence so just bind to joint 0
+			}
+
+			sv->weights[0] = w[0];
+			sv->weights[1] = w[1];
+			sv->weights[2] = w[2];
+			sv->weights[3] = w[3];
 		}
 	}
 
@@ -497,48 +603,66 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 	// Push onto list.
 
 	AST_ModelLoadMesh *mesh = ArenaPushArray(arena, AST_ModelLoadMesh, 1);
+	mesh->transform     = world_transform;
+	mesh->bounds_min    = bmin;
+	mesh->bounds_max    = bmax;
+	mesh->vertex_count  = vert_count;
+	mesh->vertices      = vertices;
+	mesh->index_count   = idx_count;
+	mesh->indices       = indices;
+	mesh->skin_vertices = skin_vertices;
+	mesh->skin_index    = skin_idx;
+	mesh->material      = material;
+
 	mesh->next = load->first_mesh;
 	load->first_mesh = mesh;
 	load->mesh_count++;
-
-	mesh->transform  = world_transform;
-	mesh->bounds_min = bmin;
-	mesh->bounds_max = bmax;
-
-	mesh->vertex_count = vert_count;
-	mesh->vertices     = vertices;
-	mesh->index_count  = idx_count;
-	mesh->indices      = indices;
-	mesh->material     = material;
-
+	
 	load->total_vertex_bytes += vert_count * sizeof(AST_ModelVertex);
 	load->total_index_bytes  += idx_count  * sizeof(AST_ModelIndex);
+
+	if (is_skinned)
+		load->total_skin_vertex_bytes += vert_count * sizeof(AST_ModelSkinVertex);
 }
 
 internal void
 AST_ModelProcessNode(const AST_Context *ctx,
 					 AST_ModelLoadData *load,
 					 String8 directory,
-					 const cgltf_node *node)
+					 const cgltf_node *node,
+					 const cgltf_data *gltf)
 {
 	if (node->mesh)
 	{
-		// cgltf_node_transform_world walks the parent chain for us.
-		// Conjugate the resulting matrix into Z-up basis so that vertex positions
-		// (which we rebase per-vertex) and the mesh transform agree.
-		cgltf_float world[16];
-		cgltf_node_transform_world(node, world);
-		m4 world_transform = AST_GltfTransformM4(AST_GltfFloat16ToM4(world));
+		b32 is_skinned = node->skin != NULL;
+
+		m4 mesh_transform = {0};
+
+		if (is_skinned)
+		{
+			mesh_transform = M4Identity(); // glTf spec, node transform ignored, entirely based on joint.
+		}
+		else
+		{
+			cgltf_float world[16];
+			cgltf_node_transform_world(node, world);
+			mesh_transform = AST_GltfTransformM4(AST_GltfFloat16ToM4(world));
+		}
+
+		i32 skin_idx = -1;
+
+		if (is_skinned)
+			skin_idx = (i32)cgltf_skin_index(gltf, node->skin);
 
 		for (cgltf_size i = 0; i < node->mesh->primitives_count; i++)
 		{
 			const cgltf_primitive *prim = &node->mesh->primitives[i];
-			AST_ModelProcessPrimitive(ctx, load, directory, prim, world_transform);
+			AST_ModelProcessPrimitive(ctx, load, directory, prim, mesh_transform, node->skin, skin_idx);
 		}
 	}
 
 	for (cgltf_size i = 0; i < node->children_count; i++)
-		AST_ModelProcessNode(ctx, load, directory, node->children[i]);
+		AST_ModelProcessNode(ctx, load, directory, node->children[i], gltf);
 }
 
 internal AST_SerializerPipelineData
@@ -559,18 +683,33 @@ AST_ModelSerializerCpu(const AST_Context *ctx)
 
 	if (cgltf_parse_file(&options, (const char *)file_path.str, &gltf) != cgltf_result_success)
 	{
+		DebugLogE(ctx->log_channel,
+				  "Failed to parse glTF model: %.*s",
+				  (i32)file_path.len,
+				  file_path.str);
+		
 		result.failed = true;
 		goto end;
 	}
 
 	if (cgltf_load_buffers(&options, gltf, (const char *)file_path.str) != cgltf_result_success)
 	{
+		DebugLogE(ctx->log_channel,
+				  "Failed to load buffers of glTF model: %.*s",
+				  (i32)file_path.len,
+				  file_path.str);
+		
 		result.failed = true;
 		goto end;
 	}
 
 	if (cgltf_validate(gltf) != cgltf_result_success)
 	{
+		DebugLogE(ctx->log_channel,
+				  "Failed to validate glTF model: %.*s",
+				  (i32)file_path.len,
+				  file_path.str);
+		
 		result.failed = true;
 		goto end;
 	}
@@ -578,17 +717,21 @@ AST_ModelSerializerCpu(const AST_Context *ctx)
 	String8 directory = IO_PathGetFileDirectory(scratch.arena, ctx->metadata.path);
 
 	const cgltf_scene *scene = gltf->scene;
+
 	if (!scene && gltf->scenes_count > 0)
 		scene = &gltf->scenes[0];
 
 	if (!scene)
 	{
+		DebugLogE(ctx->log_channel,
+				  "Failed to create cgltf scene.");
+		
 		result.failed = true;
 		goto end;
 	}
 
 	for (cgltf_size i = 0; i < scene->nodes_count; i++)
-		AST_ModelProcessNode(ctx, load, directory, scene->nodes[i]);
+		AST_ModelProcessNode(ctx, load, directory, scene->nodes[i], gltf);
 
 	result.stage_size = load->total_vertex_bytes + load->total_index_bytes;
 	result.failed = false;
@@ -655,8 +798,16 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		ib_info.size  = src->index_count * sizeof(AST_ModelIndex);
 
+		GFX_BufferAllocInfo svb_info = {0};
+		svb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
+		svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+		svb_info.size  = src->vertex_count * sizeof(AST_SkinModelVertex);
+
 		dst->vertex_buffer = GFX_DeviceBufferAlloc(device, &vb_info);
 		dst->index_buffer  = GFX_DeviceBufferAlloc(device, &ib_info);
+		dst->skin_buffer   = GFX_DeviceBufferAlloc(device, &svb_info);
+
+		dst->skin_index = src->skin_index;
 	}
 
 	out->model.sub_model_count = load->mesh_count;
@@ -727,6 +878,7 @@ AST_ModelSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 	{
 		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].vertex_buffer);
 		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].index_buffer);
+		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].skin_buffer);
 	}
 }
 

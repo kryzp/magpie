@@ -379,7 +379,7 @@ AppInitRender(App *app)
 	light.position = v3(0.f, 0.f, 1.f);
 	light.direction = v3x(0.f);
 	light.colour = v3(1.f, 1.f, 1.f);
-	light.intensity = 100.f;
+	light.intensity = 5.f;
 	light.falloff = 1.f;
 	light.casts_shadows = true;
 	light.shadow_near = 0.1f;
