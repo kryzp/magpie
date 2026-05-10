@@ -2,33 +2,28 @@
 #define RENDER_BLACKBOARD_H
 
 /*
- * The render blackboard is just a collection of "global"
- * data used throughout a single frame of rendering.
- *
- * Different passes can write to this and then other
- * passes can read from it without having to have
- * three trillion different parameters into their functions.
+ * Fixed Rendering Data.
+ * Immutable.
  */
-
-/*
-typedef enum R_GBufferAttachment
+typedef struct R_Bulletin R_Bulletin;
+struct R_Bulletin
 {
-	R_GBufferAttachment_Position,
-	R_GBufferAttachment_Albedo,
-	R_GBufferAttachment_Normal,
-	R_GBufferAttachment_Emissive,
-	R_GBufferAttachment_MetallicRoughness,
-	R_GBufferAttachment_COUNT
-}
-R_GBufferAttachment;
+	Arena *pass_arena;
 
-typedef struct R_BB_GBufferData R_BB_GBufferData;
-struct R_BB_GBufferData
-{
-	R_GraphTexHandle attachments[R_GBufferAttachment_COUNT];
-	R_GraphTexHandle depth;
+	GFX_BufferKey frame_data_buffer;
+
+	GFX_SamplerKey linear_sampler;
+	GFX_SamplerKey nearest_sampler;
+
+	const R_SceneResources *scene_resources;
+
+	const R_IrradianceVolume *irradiance_volume;
+	GFX_TextureKey irradiance_fallback_cubemap;
+	GFX_TextureKey prefilter_cubemap;
+	GFX_TextureKey brdf;
 };
-*/
+
+// ---
 
 typedef struct R_BB_ShadowData R_BB_ShadowData;
 struct R_BB_ShadowData
@@ -39,11 +34,16 @@ struct R_BB_ShadowData
 	GFX_BufferKey shadow_caster_table;
 };
 
+/*
+ * Transient Resources.
+ * Mutable.
+ */
 typedef struct R_Blackboard R_Blackboard;
 struct R_Blackboard
 {
-	//R_BB_GBufferData gbuffer;
+	R_GraphMsaaTexture lighting;
 	R_GraphMsaaTexture depth;
+	R_GraphTexHandle normals;
 	R_BB_ShadowData shadow_data;
 };
 

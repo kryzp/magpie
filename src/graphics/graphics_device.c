@@ -480,7 +480,7 @@ GFX_DeviceSwapchainCreate(GFX_Device *device)
 	const GFX_SwapchainSupportDetails *details = &device->context.swapchain_details;
 
 	VkSurfaceFormatKHR surface_format = GFX_DeviceChooseSwapchainSurfaceFormat(device->log_channel, details->surface_format_count, details->surface_formats);
-	VkPresentModeKHR present_mode = GFX_DeviceChooseSwapchainPresentMode(details->present_mode_count, details->present_modes, false);
+	VkPresentModeKHR present_mode = GFX_DeviceChooseSwapchainPresentMode(details->present_mode_count, details->present_modes, false); // TODO: add option to enable VSYNC
 	VkExtent2D extent = GFX_DeviceChooseSwapchainExtent(&details->capabilities);
 
 	GFX_Swapchain swapchain = {0};

@@ -18,7 +18,7 @@ internal void
 CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, f32 dt)
 {
 	const f32 mouse_deadzone = 0.001f;
-	const f32 turn_speed     = 0.1f;
+	const f32 mouse_sens     = 0.08f;
 	const f32 turn_interp    = 35.f;
 
 	f32 move_speed = 2.5f;
@@ -34,8 +34,8 @@ CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, 
 
 	if (dx*dx + dy*dy >= mouse_deadzone*mouse_deadzone)
 	{
-		driver->target_pitch -= dy * turn_speed;
-		driver->target_yaw   -= dx * turn_speed;
+		driver->target_pitch -= dy * mouse_sens;
+		driver->target_yaw   -= dx * mouse_sens;
 	}
 
 	driver->pitch = LerpValue(driver->pitch, driver->target_pitch, turn_interp * dt);

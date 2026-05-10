@@ -1,4 +1,9 @@
 
+/*
+ * TODO: Is this really necessary? We could just have
+ *       a generic GFX_Handle that works for everything.
+ */
+
 #define GFX_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
 	typedef struct GFX_##mgp_name##Key GFX_##mgp_name##Key;				\
 	struct GFX_##mgp_name##Key											\

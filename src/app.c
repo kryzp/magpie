@@ -371,7 +371,7 @@ AppInitRender(App *app)
 	light.position = v3(0.f, 0.f, 1.f);
 	light.direction = v3x(0.f);
 	light.colour = v3(1.f, 1.f, 1.f);
-	light.intensity = 3.f;
+	light.intensity = 100.f;
 	light.falloff = 1.f;
 	light.casts_shadows = true;
 	light.shadow_near = 0.1f;
@@ -694,6 +694,27 @@ AppDestroy(App *app)
 
 global f32 app_pp_exposure = 1.f;
 
+internal void
+AppLogFPS(App *app, f32 dt)
+{
+	static u32 index = 0;
+	static f32 fps_history[512] = {0};
+
+	const f32 fps_now = 1.f / dt;
+
+	fps_history[index % ArraySize(fps_history)] = fps_now;
+	index++;
+
+	f32 fps_avg = 0.f;
+
+	for (u32 i = 0; i < ArraySize(fps_history); i++)
+		fps_avg += fps_history[i];
+	
+	fps_avg /= (f32)ArraySize(fps_history);
+	
+	DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
+}
+
 __declspec(dllexport) b32
 AppTick(App *app, const I_State *input)
 {
@@ -736,6 +757,8 @@ AppTick(App *app, const I_State *input)
 		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f).", dt, max_frame_time);
 		clamped_delta = max_frame_time;
 	}
+
+	AppLogFPS(app, dt);
 	
 	app->delta_accumulator += clamped_delta;
 
@@ -785,12 +808,12 @@ AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
-	AppHotLoadGraphics   (app);
-	AppHotLoadAudio      (app);
-	AppHotLoadAssets     (app);
-	AppHotLoadRender     (app);
-	AppHotLoadEntity     (app);
-	AppHotLoadEditor     (app);
+	AppHotLoadGraphics     (app);
+	AppHotLoadAudio        (app);
+	AppHotLoadAssets       (app);
+	AppHotLoadRender       (app);
+	AppHotLoadEntity       (app);
+	AppHotLoadEditor       (app);
 }
 
 __declspec(dllexport) void
@@ -829,39 +852,40 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						  app->frame_data_buffer,
 						  &frame_data, sizeof(frame_data), 0);
 
+	R_Bulletin bt = {0};
+	bt.pass_arena = &app->frame_arena;
+	bt.frame_data_buffer = app->frame_data_buffer;
+	bt.brdf = app->brdf_lut;
+	bt.linear_sampler = app->linear_sampler;
+	bt.nearest_sampler = app->nearest_sampler;
+	bt.scene_resources = &scene_resources;
+	bt.irradiance_volume = &app->irradiance_volume;
+	bt.irradiance_fallback_cubemap = app->irradiance_cubemap;
+	bt.prefilter_cubemap = app->prefilter_cubemap;
+	bt.brdf = app->brdf_lut;
+	
 	R_Blackboard bb = {0};
-
+	
 	R_FrustumVolume frustum = R_CameraFrustum(&app->editor.camera);
+
+	R_ShadowRendererUploadGPU(&app->shadow_renderer, &app->scene);
+	
+	R_ShadowRendererRender(&app->shadow_renderer,
+						   &app->graph,
+						   &bt, &bb,
+						   &app->scene,
+						   &app->culling);
 
 	R_DrawStream draw_stream = R_CullFrustum(&app->culling,
 											 &app->graph,
-											 &app->frame_arena,
-											 &app->scene,
-											 &scene_resources,
+											 &bt,
 											 R_CullFilter_OpaqueOnly,
 											 &frustum);
 
-	R_ShadowRendererRender(&app->shadow_renderer,
-						   &app->graph,
-						   &bb,
-						   &app->frame_arena,
-						   &app->culling,
-						   &app->scene,
-						   &scene_resources);
-
-	R_GraphMsaaTexture lighting = R_ForwardRender(&app->forward_renderer,
-												  &app->graph,
-												  &bb,
-												  &app->frame_arena,
-												  &scene_resources,
-												  app->frame_data_buffer,
-												  app->linear_sampler,
-												  app->nearest_sampler,
-												  &app->irradiance_volume,
-												  app->irradiance_cubemap,
-												  app->prefilter_cubemap,
-												  app->brdf_lut,
-												  &draw_stream);
+	R_ForwardRender(&app->forward_renderer,
+					&app->graph,
+					&bt, &bb,
+					&draw_stream);
 
 	// Skybox.
 	{
@@ -878,13 +902,10 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
-		
-		lighting.resolved = R_PassWriteColourResolve (pass, lighting.msaa, lighting.resolved, NULL);
-		bb.depth.resolved = R_PassWriteDepthResolve  (pass, bb.depth.msaa, bb.depth.resolved, NULL);
-		
-		R_PassReadTextureGraphics(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
-
-		R_PassSetRecord(pass, R_SkyboxPassFn, data);
+		bb.lighting.resolved = R_PassWriteColourResolve  (pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
+		bb.depth.resolved    = R_PassWriteDepthResolve   (pass, bb.depth.msaa,    bb.depth.resolved,    NULL);
+		                       R_PassReadTextureGraphics (pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
+		                       R_PassSetRecord           (pass, R_SkyboxPassFn, data);
 	}
 	
 	// Post Processing.
@@ -896,25 +917,22 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
 		data->exposure = app_pp_exposure;
-		data->input = lighting.resolved;
-		data->output = lighting.resolved;
+		data->input = bb.lighting.resolved;
+		data->output = bb.lighting.resolved;
 
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Post Processing"), R_PassType_Compute);
-
-		lighting.resolved = R_PassWriteTextureCompute(pass, lighting.resolved);
-
-		R_PassReadTextureCompute(pass, lighting.resolved);
-
-		R_PassSetRecord(pass, R_PostProcessingPassFn, data);
+		bb.lighting.resolved = R_PassWriteTextureCompute (pass, bb.lighting.resolved);
+		                       R_PassReadTextureCompute  (pass, bb.lighting.resolved);
+		                       R_PassSetRecord           (pass, R_PostProcessingPassFn, data);
 	}
 	
 	R_DebugRendererRender(&app->debug_renderer,
 						  dt,
 						  &app->graph,
 						  &app->frame_arena,
-						  lighting.resolved,
+						  bb.lighting.resolved,
 						  bb.depth.resolved);
 
-	R_GraphSetBackbuffer(&app->graph, lighting.resolved);
+	R_GraphSetBackbuffer(&app->graph, bb.lighting.resolved);
 }

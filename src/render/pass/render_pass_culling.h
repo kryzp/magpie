@@ -2,6 +2,8 @@
 #define RENDER_PASS_CULLING_H
 
 
+// has matching SLANG values don't fuck with
+// the values here
 typedef enum R_CullFilter R_CullFilter;
 enum R_CullFilter
 {
@@ -12,17 +14,17 @@ enum R_CullFilter
 };
 
 
-typedef struct R_CullFrustumClearPassData R_CullFrustumClearPassData;
-struct R_CullFrustumClearPassData
+typedef struct R_CullClearPassData R_CullClearPassData;
+struct R_CullClearPassData
 {
 	R_GraphBufHandle counter_handle;
 };
 
-R_PASS_RECORD_DEF(R_CullFrustumClearFn);
+R_PASS_RECORD_DEF(R_CullClearFn);
 
 
-typedef struct R_CullFrustumPassData R_CullFrustumPassData;
-struct R_CullFrustumPassData
+typedef struct R_CullPassData R_CullPassData;
+struct R_CullPassData
 {
 	GFX_ShaderKey shader;
 	
@@ -30,47 +32,18 @@ struct R_CullFrustumPassData
 	R_GraphBufHandle counter_handle;
 
 	u64 object_buffer_address;
-	u64 mesh_buffer_address;
 	u64 page_table_buffer_address;
 	
-	u32 object_count;
-
 	R_CullFilter filter;
 
-	v4 frustum_planes[6];
+	union
+	{
+		v4 frustum_planes[6];
+		v4 sphere;
+	};
 };
 
 R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
-
-
-typedef struct R_CullSphereClearPassData R_CullSphereClearPassData;
-struct R_CullSphereClearPassData
-{
-	R_GraphBufHandle counter_handle;
-};
-
-R_PASS_RECORD_DEF(R_CullSphereClearFn);
-
-
-typedef struct R_CullSpherePassData R_CullSpherePassData;
-struct R_CullSpherePassData
-{
-	GFX_ShaderKey shader;
-	
-	R_GraphBufHandle indirect_handle;
-	R_GraphBufHandle counter_handle;
-
-	u64 object_buffer_address;
-	u64 mesh_buffer_address;
-	u64 page_table_buffer_address;
-	
-	u32 object_count;
-
-	R_CullFilter filter;
-	
-	v4 sphere;
-};
-
 R_PASS_RECORD_DEF(R_CullSphereComputeFn);
 
 
@@ -85,6 +58,7 @@ typedef struct R_Culling R_Culling;
 struct R_Culling
 {
 	AST_Assets *assets;
+	
 	AST_Handle frustum_shader;
 	AST_Handle sphere_shader;
 };
@@ -94,17 +68,13 @@ internal void R_CullingDestroy      (R_Culling *cull);
 
 internal R_DrawStream R_CullFrustum (R_Culling *cull,
 									 R_Graph *graph,
-									 Arena *pass_arena,
-									 const R_Scene *scene,
-									 const R_SceneResources *scene_resources,
+									 const R_Bulletin *bt,
 									 R_CullFilter filter,
 									 const R_FrustumVolume *frustum);
 
 internal R_DrawStream R_CullSphere  (R_Culling *cull,
 									 R_Graph *graph,
-									 Arena *pass_arena,
-									 const R_Scene *scene,
-									 const R_SceneResources *scene_resources,
+									 const R_Bulletin *bt,
 									 R_CullFilter filter,
 									 v3 sphere_centre, f32 sphere_radius);
 

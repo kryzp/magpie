@@ -1,424 +1,1121 @@
 [    0.000  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Initialized ("log_output.txt" as file sink).
-[    0.004  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Initializing ImGui...
-[    0.004  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Loading App DLL...
-[    0.044  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Initialized.
-[    0.051  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
-[    0.087  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
-[    0.087  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
-[    0.087  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
-[    0.098  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
-[    0.098  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
-[    0.099  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
-[    0.099  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
-[    0.119  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
-[    0.120  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
-[    0.120  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
-[    0.120  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
-[    0.185  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
-[    0.240  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
-[    0.274  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
-[    0.274  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
-[    0.275  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
-[    0.410  ] [  W:MT  F:---  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/sphere_culling.slang.
-[    0.410  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/sphere_culling.slang.
-[    0.410  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/sphere_culling.slang.
-[    0.439  ] [  W:11  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/Sponza.gltf.
-[    0.453  ] [  W:2   F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/frustum_culling.slang.
-[    0.453  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/frustum_culling.slang.
-[    0.459  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5792855332885324923.jpg.
+[    0.000  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Initializing ImGui...
+[    0.000  ] [  W:MT  F:---  ] [  INFO   ] [  OS/WIN32  ] Loading App DLL...
+[    0.045  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Initialized.
+[    0.052  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Validation layer support verified.
+[    0.119  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Querying physical device: AMD Radeon RX 7700 XT (29822)
+[    0.120  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Selected a suitable GPU: 29822
+[    0.120  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Enabled validation layers.
+[    0.189  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created logical device.
+[    0.190  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created graphics queue.
+[    0.191  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Using Vulkan 1.4
+[    0.192  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created Vulkan Memory Allocator.
+[    0.216  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Created frame sync objects.
+[    0.218  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Bindless resources created.
+[    0.218  ] [  W:MT  F:0    ] [  INFO   ] [  GRAPHICS  ] Initialized.
+[    0.218  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Found desired swapchain swap surface format and colour space.
+[    0.228  ] [  W:MT  F:0    ] [  DEBUG  ] [  GRAPHICS  ] Swapchain created.
+[    0.283  ] [  W:MT  F:0    ] [  INFO   ] [  SLANG     ] Initialized.
+[    0.317  ] [  W:MT  F:0    ] [  INFO   ] [  ASSETS    ] Initialized.
+[    0.317  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Graph Initialized.
+[    0.318  ] [  W:MT  F:0    ] [  INFO   ] [  RENDER    ] Scene Initialized.
+[    0.434  ] [  W:2   F:1    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/frustum_culling.slang.
+[    0.434  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/frustum_culling.slang.
+[    0.434  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/frustum_culling.slang.
+[    0.438  ] [  W:11  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/Sponza.gltf.
 [    0.462  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16299174074766089871.jpg.
-[    0.468  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11968150294050148237.jpg.
-[    0.468  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16885566240357350108.jpg.
-[    0.476  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8747919177698443163.jpg.
-[    0.476  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13982482287905699490.jpg.
-[    0.478  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2969916736137545357.jpg.
-[    0.483  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13196865903111448057.jpg.
-[    0.487  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8750083169368950601.jpg.
-[    0.495  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/759203620573749278.jpg.
-[    0.496  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14118779221266351425.jpg.
-[    0.503  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8481240838833932244.jpg.
-[    0.505  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17556969131407844942.jpg.
-[    0.506  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6772804448157695701.jpg.
-[    0.507  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4477655471536070370.jpg.
-[    0.512  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8503262930880235456.jpg.
-[    0.514  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10381718147657362067.jpg.
-[    0.521  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/12501374198249454378.jpg.
-[    0.525  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7268504077753552595.jpg.
-[    0.529  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/715093869573992647.jpg.
-[    0.533  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14170708867020035030.jpg.
-[    0.538  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/755318871556304029.jpg.
-[    0.538  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2411100444841994089.jpg.
-[    0.539  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3827035219084910048.jpg.
-[    0.549  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/1219024358953944284.jpg.
-[    0.562  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6593109234861095314.jpg.
-[    0.565  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/466164707995436622.jpg.
-[    0.579  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8006627369776289000.png.
-[    0.580  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4601176305987539675.jpg.
-[    0.583  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17876391417123941155.jpg.
-[    0.591  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4910669866631290573.jpg.
-[    0.592  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11474523244911310074.jpg.
-[    0.607  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9288698199695299068.jpg.
-[    0.608  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4975155472559461469.jpg.
-[    0.613  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3371964815757888145.jpg.
-[    0.614  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2299742237651021498.jpg.
-[    0.617  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2374361008830720677.jpg.
-[    0.621  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7815564343179553343.jpg.
-[    0.621  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16275776544635328252.png.
-[    0.634  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
-[    0.641  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4675343432951571524.jpg.
-[    0.642  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/white.png.
-[    0.643  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2775690330959970771.jpg.
-[    0.645  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/332936164838540657.jpg.
-[    0.646  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8773302468495022225.jpg.
-[    0.647  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2185409758123873465.jpg.
-[    0.651  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7056944414013900257.jpg.
-[    0.656  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11872827283454512094.jpg.
-[    0.664  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7645212358685992005.jpg.
-[    0.665  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2051777328469649772.jpg.
-[    0.669  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8783994986360286082.jpg.
-[    0.676  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4871783166746854860.jpg.
-[    0.677  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6151467286084645207.jpg.
-[    0.679  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8051790464816141987.jpg.
-[    0.681  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14650633544276105767.jpg.
-[    0.688  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15722799267630235092.jpg.
-[    0.693  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6047387724914829168.jpg.
-[    0.700  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13824894030729245199.jpg.
-[    0.702  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8114461559286000061.jpg.
-[    0.702  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6667038893015345571.jpg.
-[    0.703  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14267839433702832875.jpg.
-[    0.707  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5823059166183034438.jpg.
-[    0.721  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3628158980083700836.jpg.
-[    0.723  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7441062115984513793.jpg.
-[    0.724  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11490520546946913238.jpg.
-[    0.729  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3455394979645218238.jpg.
-[    0.730  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10388182081421875623.jpg.
-[    0.733  ] [  W:2   F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9916269861720640319.jpg.
-[    0.734  ] [  W:13  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15295713303328085182.jpg.
-[    0.741  ] [  W:10  F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5061699253647017043.png.
-[    0.758  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/frustum_culling.slang.
-[    0.760  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5792855332885324923.jpg.
-[    0.761  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16299174074766089871.jpg.
-[    0.761  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11968150294050148237.jpg.
-[    0.763  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16885566240357350108.jpg.
-[    0.764  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8747919177698443163.jpg.
-[    0.764  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13982482287905699490.jpg.
-[    0.765  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2969916736137545357.jpg.
-[    0.766  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13196865903111448057.jpg.
-[    0.767  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8750083169368950601.jpg.
-[    0.768  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/759203620573749278.jpg.
-[    0.768  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14118779221266351425.jpg.
-[    0.769  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8481240838833932244.jpg.
-[    0.770  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17556969131407844942.jpg.
-[    0.771  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6772804448157695701.jpg.
-[    0.772  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4477655471536070370.jpg.
-[    0.773  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8503262930880235456.jpg.
-[    0.773  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10381718147657362067.jpg.
-[    0.774  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/12501374198249454378.jpg.
-[    0.775  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7268504077753552595.jpg.
-[    0.776  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/715093869573992647.jpg.
-[    0.777  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14170708867020035030.jpg.
-[    0.778  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/755318871556304029.jpg.
-[    0.778  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2411100444841994089.jpg.
-[    0.779  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3827035219084910048.jpg.
-[    0.780  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/1219024358953944284.jpg.
-[    0.781  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6593109234861095314.jpg.
-[    0.781  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/466164707995436622.jpg.
-[    0.782  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8006627369776289000.png.
-[    0.783  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4601176305987539675.jpg.
-[    0.795  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17876391417123941155.jpg.
-[    0.796  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4910669866631290573.jpg.
-[    0.796  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11474523244911310074.jpg.
-[    0.805  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9288698199695299068.jpg.
-[    0.806  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4975155472559461469.jpg.
-[    0.807  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3371964815757888145.jpg.
-[    0.808  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2299742237651021498.jpg.
-[    0.809  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2374361008830720677.jpg.
-[    0.809  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7815564343179553343.jpg.
-[    0.810  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16275776544635328252.png.
-[    0.834  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
-[    0.848  ] [  W:3   F:4    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/forward/forward.slang.
-[    0.848  ] [  W:3   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/forward/forward.slang.
-[    0.861  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4675343432951571524.jpg.
-[    0.862  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/white.png.
-[    0.862  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2775690330959970771.jpg.
-[    0.863  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/332936164838540657.jpg.
-[    0.864  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8773302468495022225.jpg.
-[    0.864  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2185409758123873465.jpg.
-[    0.866  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7056944414013900257.jpg.
-[    0.866  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11872827283454512094.jpg.
-[    0.867  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7645212358685992005.jpg.
-[    0.868  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2051777328469649772.jpg.
-[    0.869  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8783994986360286082.jpg.
-[    0.870  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4871783166746854860.jpg.
-[    0.870  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6151467286084645207.jpg.
-[    0.871  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8051790464816141987.jpg.
-[    0.872  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14650633544276105767.jpg.
-[    0.873  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15722799267630235092.jpg.
-[    0.874  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6047387724914829168.jpg.
-[    0.875  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13824894030729245199.jpg.
-[    0.875  ] [  W:4   F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/debug/debug_line.slang.
-[    0.875  ] [  W:4   F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/debug/debug_line.slang.
-[    0.876  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8114461559286000061.jpg.
-[    0.876  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6667038893015345571.jpg.
-[    0.877  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14267839433702832875.jpg.
-[    0.878  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5823059166183034438.jpg.
-[    0.879  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3628158980083700836.jpg.
-[    0.879  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7441062115984513793.jpg.
-[    0.880  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11490520546946913238.jpg.
-[    0.881  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3455394979645218238.jpg.
-[    0.882  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10388182081421875623.jpg.
-[    0.883  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9916269861720640319.jpg.
-[    0.884  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15295713303328085182.jpg.
-[    0.884  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5061699253647017043.png.
-[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/Sponza.gltf.
-[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/forward/forward.slang.
-[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/debug/debug_line.slang.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.911  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.912  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.913  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.914  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.915  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.916  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
-[    0.918  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
-[    0.919  ] [  W:MT  F:0    ] [  INFO   ] [  IRRADIANCE  ] Irradiance Volume Initialized (8 x 6 x 4 = 192 probes).
-[    0.930  ] [  W:5   F:3    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/shadow/shadow_mapping.slang.
-[    0.930  ] [  W:5   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/shadow/shadow_mapping.slang.
-[    0.930  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/shadow/shadow_mapping.slang.
-[    1.035  ] [  W:6   F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/brdf_lut.slang.
-[    1.035  ] [  W:6   F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/brdf_lut.slang.
-[    1.035  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/brdf_lut.slang.
-[    1.077  ] [  W:7   F:8    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_convolution.slang.
-[    1.077  ] [  W:7   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_convolution.slang.
-[    1.077  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_convolution.slang.
-[    1.110  ] [  W:8   F:7    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.111  ] [  W:8   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.111  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
-[    1.204  ] [  W:9   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/prefilter_convolution.slang.
-[    1.204  ] [  W:9   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/prefilter_convolution.slang.
-[    1.205  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/prefilter_convolution.slang.
-[    1.207  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] World Initialized.
-[    1.207  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] Events Initialized.
-[    1.207  ] [  W:MT  F:0    ] [  INFO   ] [  EDITOR    ] Initialized.
-[    1.207  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
-[    1.270  ] [  W:2   F:5    ] [  DEBUG  ] [  SLANG     ] res/shaders/passes/ibl/irradiance_probe_bake.slang --> Loading Module: res/shaders/passes/ibl/irradiance_probe_bake.slang(61): warning 41012: entry point 'ComputeMain' uses additional capabilities that are not part of the specified profile 'spirv_1_5'. The profile setting is automatically updated to include these capabilities: 'spvRayQueryKHR'
+[    0.462  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5792855332885324923.jpg.
+[    0.464  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8747919177698443163.jpg.
+[    0.467  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11968150294050148237.jpg.
+[    0.474  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16885566240357350108.jpg.
+[    0.479  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2969916736137545357.jpg.
+[    0.483  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8750083169368950601.jpg.
+[    0.483  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14118779221266351425.jpg.
+[    0.487  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13982482287905699490.jpg.
+[    0.492  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13196865903111448057.jpg.
+[    0.495  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/759203620573749278.jpg.
+[    0.501  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17556969131407844942.jpg.
+[    0.507  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4477655471536070370.jpg.
+[    0.508  ] [  W:MT  F:---  ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/culling/sphere_culling.slang.
+[    0.508  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/culling/sphere_culling.slang.
+[    0.510  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10381718147657362067.jpg.
+[    0.512  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8503262930880235456.jpg.
+[    0.514  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6772804448157695701.jpg.
+[    0.517  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8481240838833932244.jpg.
+[    0.526  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/12501374198249454378.jpg.
+[    0.528  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7268504077753552595.jpg.
+[    0.530  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/715093869573992647.jpg.
+[    0.541  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/755318871556304029.jpg.
+[    0.541  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14170708867020035030.jpg.
+[    0.544  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2411100444841994089.jpg.
+[    0.545  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3827035219084910048.jpg.
+[    0.553  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/1219024358953944284.jpg.
+[    0.557  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8006627369776289000.png.
+[    0.559  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://environment_map_1.hdr.
+[    0.561  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/466164707995436622.jpg.
+[    0.584  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6593109234861095314.jpg.
+[    0.587  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4601176305987539675.jpg.
+[    0.588  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4910669866631290573.jpg.
+[    0.588  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2299742237651021498.jpg.
+[    0.590  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9288698199695299068.jpg.
+[    0.593  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/17876391417123941155.jpg.
+[    0.597  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11474523244911310074.jpg.
+[    0.610  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7815564343179553343.jpg.
+[    0.613  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4975155472559461469.jpg.
+[    0.614  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2374361008830720677.jpg.
+[    0.615  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2775690330959970771.jpg.
+[    0.616  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/16275776544635328252.png.
+[    0.617  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3371964815757888145.jpg.
+[    0.618  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/white.png.
+[    0.631  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8773302468495022225.jpg.
+[    0.632  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2185409758123873465.jpg.
+[    0.633  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/332936164838540657.jpg.
+[    0.637  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11872827283454512094.jpg.
+[    0.639  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7056944414013900257.jpg.
+[    0.648  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4675343432951571524.jpg.
+[    0.649  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8783994986360286082.jpg.
+[    0.650  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7645212358685992005.jpg.
+[    0.657  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/4871783166746854860.jpg.
+[    0.657  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/2051777328469649772.jpg.
+[    0.660  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14650633544276105767.jpg.
+[    0.662  ] [  W:3   F:3    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/shadow/shadow_mapping.slang.
+[    0.662  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/shadow/shadow_mapping.slang.
+[    0.664  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8051790464816141987.jpg.
+[    0.664  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6151467286084645207.jpg.
+[    0.678  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/8114461559286000061.jpg.
+[    0.678  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15722799267630235092.jpg.
+[    0.680  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6047387724914829168.jpg.
+[    0.681  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/14267839433702832875.jpg.
+[    0.682  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5823059166183034438.jpg.
+[    0.685  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/13824894030729245199.jpg.
+[    0.696  ] [  W:3   F:3    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/6667038893015345571.jpg.
+[    0.697  ] [  W:2   F:13   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/7441062115984513793.jpg.
+[    0.698  ] [  W:11  F:14   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3628158980083700836.jpg.
+[    0.704  ] [  W:12  F:11   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/11490520546946913238.jpg.
+[    0.705  ] [  W:14  F:12   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/9916269861720640319.jpg.
+[    0.707  ] [  W:13  F:1    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/3455394979645218238.jpg.
+[    0.708  ] [  W:7   F:10   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/10388182081421875623.jpg.
+[    0.714  ] [  W:MT  F:15   ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/15295713303328085182.jpg.
+[    0.733  ] [  W:MT  F:---  ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://models/Sponza/glTF/5061699253647017043.png.
+[    0.755  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16299174074766089871.jpg.
+[    0.756  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5792855332885324923.jpg.
+[    0.757  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8747919177698443163.jpg.
+[    0.758  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11968150294050148237.jpg.
+[    0.758  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16885566240357350108.jpg.
+[    0.759  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2969916736137545357.jpg.
+[    0.760  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8750083169368950601.jpg.
+[    0.760  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14118779221266351425.jpg.
+[    0.761  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13982482287905699490.jpg.
+[    0.762  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13196865903111448057.jpg.
+[    0.762  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/759203620573749278.jpg.
+[    0.763  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17556969131407844942.jpg.
+[    0.764  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4477655471536070370.jpg.
+[    0.764  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/culling/sphere_culling.slang.
+[    0.765  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10381718147657362067.jpg.
+[    0.766  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8503262930880235456.jpg.
+[    0.766  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6772804448157695701.jpg.
+[    0.767  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8481240838833932244.jpg.
+[    0.768  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/12501374198249454378.jpg.
+[    0.768  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7268504077753552595.jpg.
+[    0.769  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/715093869573992647.jpg.
+[    0.770  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/755318871556304029.jpg.
+[    0.770  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14170708867020035030.jpg.
+[    0.771  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2411100444841994089.jpg.
+[    0.772  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3827035219084910048.jpg.
+[    0.772  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/1219024358953944284.jpg.
+[    0.773  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8006627369776289000.png.
+[    0.799  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://environment_map_1.hdr.
+[    0.824  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/466164707995436622.jpg.
+[    0.825  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6593109234861095314.jpg.
+[    0.826  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4601176305987539675.jpg.
+[    0.835  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4910669866631290573.jpg.
+[    0.836  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2299742237651021498.jpg.
+[    0.836  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9288698199695299068.jpg.
+[    0.837  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/17876391417123941155.jpg.
+[    0.838  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11474523244911310074.jpg.
+[    0.838  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7815564343179553343.jpg.
+[    0.839  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4975155472559461469.jpg.
+[    0.840  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2374361008830720677.jpg.
+[    0.840  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2775690330959970771.jpg.
+[    0.841  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/16275776544635328252.png.
+[    0.842  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3371964815757888145.jpg.
+[    0.842  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/white.png.
+[    0.843  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8773302468495022225.jpg.
+[    0.844  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2185409758123873465.jpg.
+[    0.844  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/332936164838540657.jpg.
+[    0.845  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11872827283454512094.jpg.
+[    0.845  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7056944414013900257.jpg.
+[    0.846  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4675343432951571524.jpg.
+[    0.847  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8783994986360286082.jpg.
+[    0.848  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7645212358685992005.jpg.
+[    0.848  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/4871783166746854860.jpg.
+[    0.849  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/2051777328469649772.jpg.
+[    0.850  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14650633544276105767.jpg.
+[    0.850  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/shadow/shadow_mapping.slang.
+[    0.851  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8051790464816141987.jpg.
+[    0.851  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6151467286084645207.jpg.
+[    0.852  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/8114461559286000061.jpg.
+[    0.853  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15722799267630235092.jpg.
+[    0.854  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6047387724914829168.jpg.
+[    0.854  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/14267839433702832875.jpg.
+[    0.862  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5823059166183034438.jpg.
+[    0.863  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/13824894030729245199.jpg.
+[    0.863  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/6667038893015345571.jpg.
+[    0.864  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/7441062115984513793.jpg.
+[    0.865  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3628158980083700836.jpg.
+[    0.865  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/11490520546946913238.jpg.
+[    0.866  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/9916269861720640319.jpg.
+[    0.867  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/3455394979645218238.jpg.
+[    0.867  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/10388182081421875623.jpg.
+[    0.868  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/15295713303328085182.jpg.
+[    0.869  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/5061699253647017043.png.
+[    0.880  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://models/Sponza/glTF/Sponza.gltf.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.893  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.894  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.895  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.896  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.897  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.898  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.899  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.900  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Mesh.
+[    0.901  ] [  W:MT  F:0    ] [  DEBUG  ] [  RENDER    ] Registered Material.
+[    0.902  ] [  W:MT  F:0    ] [  INFO   ] [  IRRADIANCE  ] Irradiance Volume Initialized (8 x 6 x 4 = 192 probes).
+[    0.914  ] [  W:4   F:4    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/forward/forward.slang.
+[    0.914  ] [  W:4   F:4    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/forward/forward.slang.
+[    0.917  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/forward/forward.slang.
+[    0.935  ] [  W:6   F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/debug/debug_line.slang.
+[    0.935  ] [  W:6   F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/debug/debug_line.slang.
+[    0.935  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/debug/debug_line.slang.
+[    0.979  ] [  W:9   F:8    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_convolution.slang.
+[    0.979  ] [  W:9   F:8    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_convolution.slang.
+[    0.979  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_convolution.slang.
+[    1.013  ] [  W:5   F:7    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    1.013  ] [  W:5   F:7    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    1.013  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang.
+[    1.122  ] [  W:8   F:6    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/brdf_lut.slang.
+[    1.122  ] [  W:8   F:6    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/brdf_lut.slang.
+[    1.122  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/brdf_lut.slang.
+[    1.218  ] [  W:10  F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/prefilter_convolution.slang.
+[    1.218  ] [  W:10  F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/prefilter_convolution.slang.
+[    1.218  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/prefilter_convolution.slang.
+[    1.219  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] World Initialized.
+[    1.219  ] [  W:MT  F:0    ] [  INFO   ] [  ENTITY    ] Events Initialized.
+[    1.219  ] [  W:MT  F:0    ] [  INFO   ] [  EDITOR    ] Initialized.
+[    1.219  ] [  W:MT  F:0    ] [  INFO   ] [  APP       ] Initialized.
+[    1.220  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 12.60
+[    1.270  ] [  W:11  F:2    ] [  DEBUG  ] [  SLANG     ] res/shaders/passes/ibl/irradiance_probe_bake.slang --> Loading Module: res/shaders/passes/ibl/irradiance_probe_bake.slang(61): warning 41012: entry point 'ComputeMain' uses additional capabilities that are not part of the specified profile 'spirv_1_5'. The profile setting is automatically updated to include these capabilities: 'spvRayQueryKHR'
 void ComputeMain(uint3 dispatch_id : SV_DispatchThreadID)
      ^~~~~~~~~~
-[    1.286  ] [  W:2   F:5    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.286  ] [  W:2   F:5    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.286  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_probe_bake.slang.
-[    1.317  ] [  W:10  F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/skybox.slang.
-[    1.318  ] [  W:10  F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/skybox.slang.
-[    1.318  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/skybox.slang.
-[    1.337  ] [  W:12  F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/hdr_tonemapping.slang.
-[    1.337  ] [  W:12  F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/hdr_tonemapping.slang.
-[    1.337  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/hdr_tonemapping.slang.
-[    2.131  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
-[    2.131  ] [  W:MT  F:---  ] [  INFO   ] [  EDITOR    ] Destroyed.
-[    2.131  ] [  W:MT  F:---  ] [  INFO   ] [  ENTITY    ] World Destroyed.
-[    2.132  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
-[    2.132  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
-[    2.134  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
-[    2.134  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
-[    2.231  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
-[    2.231  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroyed
-[    2.233  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Destroyed.
-[    2.233  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting down...
+[    1.287  ] [  W:11  F:2    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.287  ] [  W:11  F:2    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.288  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/ibl/irradiance_probe_bake.slang.
+[    1.324  ] [  W:12  F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/skybox.slang.
+[    1.324  ] [  W:12  F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/skybox.slang.
+[    1.324  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/skybox.slang.
+[    1.345  ] [  W:7   F:9    ] [  DEBUG  ] [  SLANG     ] Compiled shader: res/shaders/passes/post/hdr_tonemapping.slang.
+[    1.345  ] [  W:7   F:9    ] [  DEBUG  ] [  ASSETS    ] Loaded in assets://shaders/passes/post/hdr_tonemapping.slang.
+[    1.345  ] [  W:MT  F:0    ] [  DEBUG  ] [  ASSETS    ] Allocated assets://shaders/passes/post/hdr_tonemapping.slang.
+[    1.375  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 12.61
+[    1.377  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 13.50
+[    1.383  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 13.84
+[    1.403  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 13.93
+[    1.405  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 14.97
+[    1.411  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 15.31
+[    1.416  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 15.73
+[    1.421  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 16.11
+[    1.426  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 16.48
+[    1.431  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 16.86
+[    1.437  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 17.22
+[    1.441  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 17.61
+[    1.446  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 18.01
+[    1.452  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 18.34
+[    1.457  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 18.72
+[    1.462  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 19.13
+[    1.468  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 19.49
+[    1.473  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 19.86
+[    1.478  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 20.24
+[    1.488  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 20.44
+[    1.494  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 20.74
+[    1.500  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 21.06
+[    1.508  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 21.32
+[    1.515  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 21.60
+[    1.521  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 21.95
+[    1.529  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 22.18
+[    1.536  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 22.48
+[    1.542  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 22.80
+[    1.549  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 23.06
+[    1.556  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 23.36
+[    1.560  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 23.84
+[    1.564  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 24.26
+[    1.570  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 24.61
+[    1.575  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 24.97
+[    1.581  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 25.35
+[    1.586  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 25.72
+[    1.592  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 26.04
+[    1.597  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 26.40
+[    1.602  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 26.80
+[    1.607  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 27.20
+[    1.612  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 27.56
+[    1.618  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 27.90
+[    1.623  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 28.28
+[    1.629  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 28.65
+[    1.634  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 29.03
+[    1.639  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 29.40
+[    1.644  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 29.76
+[    1.650  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 30.12
+[    1.655  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 30.52
+[    1.660  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 30.86
+[    1.666  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 31.23
+[    1.671  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 31.63
+[    1.676  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 32.00
+[    1.682  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 32.33
+[    1.687  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 32.72
+[    1.692  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 33.09
+[    1.697  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 33.47
+[    1.703  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 33.83
+[    1.708  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 34.17
+[    1.713  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 34.57
+[    1.718  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 34.96
+[    1.724  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 35.31
+[    1.729  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 35.67
+[    1.734  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 36.07
+[    1.740  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 36.43
+[    1.745  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 36.81
+[    1.750  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 37.18
+[    1.755  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 37.57
+[    1.761  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 37.92
+[    1.766  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 38.29
+[    1.773  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 38.55
+[    1.776  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 39.20
+[    1.782  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 39.58
+[    1.787  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 39.95
+[    1.792  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 40.31
+[    1.799  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 40.58
+[    1.804  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 41.00
+[    1.809  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 41.40
+[    1.815  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 41.74
+[    1.820  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 42.12
+[    1.825  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 42.51
+[    1.830  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 42.90
+[    1.836  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 43.23
+[    1.842  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 43.56
+[    1.848  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 43.89
+[    1.853  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 44.25
+[    1.858  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 44.66
+[    1.864  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 45.00
+[    1.869  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 45.36
+[    1.874  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 45.72
+[    1.879  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 46.12
+[    1.885  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 46.45
+[    1.891  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 46.77
+[    1.896  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 47.16
+[    1.902  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 47.53
+[    1.906  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 47.93
+[    1.912  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 48.31
+[    1.917  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 48.68
+[    1.922  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 49.07
+[    1.927  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 49.43
+[    1.932  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 49.82
+[    1.938  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 50.18
+[    1.942  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 50.59
+[    1.948  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 50.95
+[    1.953  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 51.34
+[    1.959  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 51.67
+[    1.964  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 52.06
+[    1.969  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 52.42
+[    1.974  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 52.81
+[    1.980  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 53.17
+[    1.985  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 53.55
+[    1.990  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 53.91
+[    1.995  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 54.31
+[    2.000  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 54.70
+[    2.005  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 55.08
+[    2.011  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 55.45
+[    2.016  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 55.83
+[    2.021  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 56.17
+[    2.027  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 56.55
+[    2.031  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 56.97
+[    2.036  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 57.35
+[    2.042  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 57.69
+[    2.047  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 58.09
+[    2.052  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 58.48
+[    2.057  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 58.86
+[    2.063  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 59.22
+[    2.068  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 59.59
+[    2.073  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 59.99
+[    2.078  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 60.37
+[    2.083  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 60.74
+[    2.088  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 61.12
+[    2.093  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 61.50
+[    2.099  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 61.89
+[    2.104  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 62.24
+[    2.109  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 62.66
+[    2.113  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 63.08
+[    2.119  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 63.44
+[    2.123  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 63.87
+[    2.128  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 64.26
+[    2.134  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 64.63
+[    2.139  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 65.00
+[    2.144  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 65.42
+[    2.149  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 65.75
+[    2.154  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 66.15
+[    2.159  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 66.57
+[    2.164  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 66.94
+[    2.169  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 67.33
+[    2.174  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 67.71
+[    2.180  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 68.07
+[    2.185  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 68.45
+[    2.190  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 68.83
+[    2.195  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 69.19
+[    2.201  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 69.56
+[    2.206  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 69.96
+[    2.211  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 70.33
+[    2.216  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 70.70
+[    2.227  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 71.09
+[    2.229  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 71.33
+[    2.232  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 72.20
+[    2.237  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 72.57
+[    2.242  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 72.93
+[    2.247  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 73.33
+[    2.252  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 73.71
+[    2.258  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 74.05
+[    2.263  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 74.46
+[    2.268  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 74.84
+[    2.273  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 75.21
+[    2.279  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 75.58
+[    2.284  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 75.95
+[    2.289  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 76.33
+[    2.294  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 76.69
+[    2.300  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 77.06
+[    2.305  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 77.43
+[    2.310  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 77.81
+[    2.315  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 78.20
+[    2.321  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 78.55
+[    2.326  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 78.93
+[    2.331  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 79.32
+[    2.336  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 79.68
+[    2.342  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 80.03
+[    2.347  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 80.41
+[    2.352  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 80.78
+[    2.357  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 81.15
+[    2.363  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 81.53
+[    2.368  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 81.87
+[    2.373  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 82.26
+[    2.379  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 82.63
+[    2.384  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 83.00
+[    2.389  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 83.37
+[    2.394  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 83.77
+[    2.399  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 84.14
+[    2.405  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 84.52
+[    2.410  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 84.90
+[    2.415  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 85.29
+[    2.420  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 85.69
+[    2.424  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 86.09
+[    2.430  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 86.46
+[    2.434  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 86.87
+[    2.439  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 87.26
+[    2.445  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 87.63
+[    2.449  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 88.06
+[    2.454  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 88.46
+[    2.459  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 88.83
+[    2.464  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 89.23
+[    2.469  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 89.68
+[    2.474  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 90.05
+[    2.479  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 90.43
+[    2.484  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 90.84
+[    2.489  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 91.24
+[    2.494  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 91.63
+[    2.498  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 92.04
+[    2.504  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 92.41
+[    2.509  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 92.81
+[    2.513  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 93.22
+[    2.518  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 93.62
+[    2.523  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 94.03
+[    2.528  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 94.45
+[    2.533  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 94.84
+[    2.538  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 95.24
+[    2.543  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 95.63
+[    2.548  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 96.02
+[    2.552  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 96.43
+[    2.557  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 96.84
+[    2.563  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 97.19
+[    2.568  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 97.59
+[    2.572  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 98.00
+[    2.577  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 98.38
+[    2.582  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 98.78
+[    2.587  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 99.20
+[    2.592  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 99.57
+[    2.597  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 99.97
+[    2.602  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 100.37
+[    2.607  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 100.77
+[    2.612  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 101.16
+[    2.616  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 101.59
+[    2.622  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 101.97
+[    2.627  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 102.35
+[    2.631  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 102.77
+[    2.637  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 103.14
+[    2.641  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 103.57
+[    2.646  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 103.96
+[    2.651  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 104.37
+[    2.656  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 104.78
+[    2.661  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 105.18
+[    2.666  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 105.57
+[    2.670  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 105.98
+[    2.675  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 106.38
+[    2.681  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 106.72
+[    2.685  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 107.16
+[    2.690  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 107.59
+[    2.695  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 107.95
+[    2.700  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 108.39
+[    2.705  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 108.80
+[    2.710  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 109.17
+[    2.715  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 109.58
+[    2.719  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 110.02
+[    2.724  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 110.41
+[    2.729  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 110.79
+[    2.734  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 111.21
+[    2.739  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 111.60
+[    2.744  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 111.99
+[    2.748  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 112.45
+[    2.753  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 112.84
+[    2.758  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 113.23
+[    2.763  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 113.63
+[    2.768  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 114.03
+[    2.773  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 114.42
+[    2.778  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 114.83
+[    2.783  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 115.22
+[    2.787  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 115.65
+[    2.792  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 116.04
+[    2.797  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 116.45
+[    2.802  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 116.85
+[    2.807  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 117.25
+[    2.812  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 117.66
+[    2.816  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 118.07
+[    2.821  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 118.47
+[    2.826  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 118.85
+[    2.831  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 119.25
+[    2.836  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 119.66
+[    2.841  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 120.04
+[    2.846  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 120.45
+[    2.851  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 120.86
+[    2.856  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 121.22
+[    2.861  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 121.63
+[    2.866  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 122.04
+[    2.871  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 122.41
+[    2.876  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 122.80
+[    2.880  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 123.23
+[    2.885  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 123.63
+[    2.890  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 124.01
+[    2.895  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 124.44
+[    2.900  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 124.85
+[    2.905  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 125.23
+[    2.910  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 125.64
+[    2.914  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 126.04
+[    2.919  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 126.44
+[    2.924  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 126.84
+[    2.929  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 127.24
+[    2.934  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 127.65
+[    2.939  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 128.07
+[    2.944  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 128.46
+[    2.948  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 128.87
+[    2.953  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 129.26
+[    2.958  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 129.64
+[    2.963  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 130.06
+[    2.968  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 130.49
+[    2.973  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 130.85
+[    2.978  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 131.26
+[    2.982  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 131.70
+[    2.988  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 132.05
+[    2.992  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 132.48
+[    2.997  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 132.90
+[    3.002  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 133.29
+[    3.007  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 133.69
+[    3.012  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 134.12
+[    3.017  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 134.51
+[    3.022  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 134.88
+[    3.026  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 135.30
+[    3.031  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 135.69
+[    3.037  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 136.05
+[    3.041  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 136.48
+[    3.046  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 136.91
+[    3.051  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 137.30
+[    3.056  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 137.68
+[    3.061  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 138.08
+[    3.066  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 138.48
+[    3.071  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 138.88
+[    3.076  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 139.27
+[    3.081  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 139.67
+[    3.085  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 140.08
+[    3.090  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 140.46
+[    3.095  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 140.89
+[    3.100  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 141.31
+[    3.105  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 141.68
+[    3.110  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 142.09
+[    3.114  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 142.50
+[    3.120  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 142.87
+[    3.125  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 143.27
+[    3.129  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 143.69
+[    3.134  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 144.09
+[    3.140  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 144.45
+[    3.144  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 144.87
+[    3.149  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 145.25
+[    3.154  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 145.65
+[    3.159  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 146.07
+[    3.164  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 146.46
+[    3.169  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 146.86
+[    3.174  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 147.26
+[    3.179  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 147.66
+[    3.184  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 148.06
+[    3.188  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 148.48
+[    3.193  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 148.88
+[    3.198  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 149.28
+[    3.203  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 149.68
+[    3.208  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 150.08
+[    3.213  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 150.48
+[    3.217  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 150.90
+[    3.229  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 151.26
+[    3.230  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 151.51
+[    3.232  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 152.75
+[    3.237  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 153.10
+[    3.242  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 153.49
+[    3.247  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 153.88
+[    3.253  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 154.26
+[    3.258  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 154.65
+[    3.263  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 155.04
+[    3.267  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 155.44
+[    3.273  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 155.82
+[    3.277  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 156.25
+[    3.282  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 156.64
+[    3.287  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 157.04
+[    3.292  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 157.43
+[    3.297  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 157.84
+[    3.302  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 158.23
+[    3.307  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 158.61
+[    3.312  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 159.01
+[    3.316  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 159.44
+[    3.321  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 159.82
+[    3.326  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 160.22
+[    3.331  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 160.63
+[    3.336  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 161.05
+[    3.341  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 161.42
+[    3.346  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 161.83
+[    3.350  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 162.26
+[    3.356  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 162.64
+[    3.360  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 163.08
+[    3.365  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 163.49
+[    3.370  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 163.86
+[    3.375  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 164.27
+[    3.379  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 164.70
+[    3.384  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 165.09
+[    3.389  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 165.48
+[    3.394  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 165.92
+[    3.399  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 166.29
+[    3.404  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 166.68
+[    3.409  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 167.10
+[    3.414  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 167.50
+[    3.419  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 167.89
+[    3.423  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 168.30
+[    3.428  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 168.71
+[    3.433  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 169.10
+[    3.438  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 169.49
+[    3.443  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 169.87
+[    3.448  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 170.27
+[    3.453  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 170.67
+[    3.458  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 171.10
+[    3.462  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 171.50
+[    3.467  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 171.90
+[    3.472  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 172.28
+[    3.477  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 172.70
+[    3.482  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 173.13
+[    3.488  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 173.44
+[    3.492  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 173.92
+[    3.497  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 174.31
+[    3.502  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 174.70
+[    3.507  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 175.10
+[    3.512  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 175.52
+[    3.517  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 175.91
+[    3.522  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 176.29
+[    3.526  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 176.72
+[    3.531  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 177.10
+[    3.537  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 177.48
+[    3.541  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 177.90
+[    3.546  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 178.31
+[    3.551  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 178.70
+[    3.556  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 179.10
+[    3.561  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 179.51
+[    3.566  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 179.90
+[    3.571  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 180.30
+[    3.576  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 180.69
+[    3.581  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 181.08
+[    3.586  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 181.47
+[    3.591  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 181.84
+[    3.595  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 182.27
+[    3.600  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 182.68
+[    3.605  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 183.06
+[    3.610  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 183.49
+[    3.615  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 183.91
+[    3.620  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 184.28
+[    3.624  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 184.71
+[    3.629  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 185.14
+[    3.634  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 185.53
+[    3.638  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 185.97
+[    3.643  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 186.36
+[    3.648  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 186.75
+[    3.653  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 187.16
+[    3.657  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 187.60
+[    3.663  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 187.96
+[    3.668  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 188.37
+[    3.672  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 188.81
+[    3.677  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 189.21
+[    3.682  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 189.60
+[    3.687  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 190.01
+[    3.692  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 190.41
+[    3.697  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 190.80
+[    3.702  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 191.17
+[    3.706  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 191.61
+[    3.711  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 192.01
+[    3.716  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 192.41
+[    3.721  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 192.80
+[    3.726  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 193.21
+[    3.731  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 193.62
+[    3.736  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 194.00
+[    3.740  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 194.44
+[    3.745  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 194.84
+[    3.750  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 195.24
+[    3.755  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 195.66
+[    3.759  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 196.09
+[    3.765  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 196.44
+[    3.769  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 196.89
+[    3.774  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 197.32
+[    3.779  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 197.69
+[    3.783  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 198.13
+[    3.788  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 198.57
+[    3.793  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 198.94
+[    3.798  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 199.37
+[    3.802  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 199.82
+[    3.807  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.18
+[    3.812  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.60
+[    3.817  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.02
+[    3.822  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.39
+[    3.827  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.78
+[    3.832  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.20
+[    3.837  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.60
+[    3.842  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.99
+[    3.846  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.40
+[    3.851  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.79
+[    3.856  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.19
+[    3.861  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.60
+[    3.866  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.98
+[    3.871  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.39
+[    3.876  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.79
+[    3.880  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 206.22
+[    3.885  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 206.60
+[    3.890  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 207.00
+[    3.895  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 207.41
+[    3.900  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 207.80
+[    3.905  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 208.18
+[    3.910  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 208.59
+[    3.915  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 209.01
+[    3.919  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 209.42
+[    3.925  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 209.78
+[    3.929  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 210.23
+[    3.934  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 210.63
+[    3.939  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 211.01
+[    3.944  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 211.44
+[    3.948  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 211.87
+[    3.953  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 212.25
+[    3.958  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 212.67
+[    3.963  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 213.08
+[    3.968  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.86
+[    3.973  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.24
+[    3.977  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.81
+[    3.982  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.86
+[    3.987  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.14
+[    3.992  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.55
+[    3.997  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.62
+[    4.002  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.59
+[    4.006  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.63
+[    4.016  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.63 (2x)
+[    4.016  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.64
+[    4.021  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.72
+[    4.026  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.73
+[    4.035  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.73 (2x)
+[    4.035  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.81
+[    4.040  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.83
+[    4.045  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.82
+[    4.050  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.85
+[    4.055  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.87
+[    4.060  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 200.91
+[    4.065  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.12
+[    4.070  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.20
+[    4.075  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.29
+[    4.079  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.44
+[    4.085  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.53
+[    4.089  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.60
+[    4.094  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.77
+[    4.099  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.85
+[    4.104  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 201.97
+[    4.108  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.12
+[    4.114  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.18
+[    4.119  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.11
+[    4.123  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.12
+[    4.128  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.16
+[    4.138  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.16 (2x)
+[    4.138  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.26
+[    4.143  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.27
+[    4.148  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.33
+[    4.152  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.40
+[    4.157  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.39
+[    4.162  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.38
+[    4.167  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.43
+[    4.172  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.49
+[    4.177  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.51
+[    4.182  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.54
+[    4.187  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.56
+[    4.192  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.59
+[    4.197  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.62
+[    4.201  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.66
+[    4.206  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.68
+[    4.211  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.74
+[    4.221  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.74 (2x)
+[    4.221  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.77
+[    4.232  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.81
+[    4.233  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.73
+[    4.235  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.41
+[    4.240  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.46
+[    4.245  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.45
+[    4.250  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.52
+[    4.255  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.58
+[    4.260  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.55
+[    4.269  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.55 (2x)
+[    4.269  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.63
+[    4.275  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.65
+[    4.280  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.61
+[    4.284  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.68
+[    4.289  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.71
+[    4.294  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.72
+[    4.299  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.76
+[    4.304  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.79
+[    4.309  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.84
+[    4.314  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.96
+[    4.319  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.72
+[    4.324  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.74
+[    4.328  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.77
+[    4.333  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.81
+[    4.338  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.95
+[    4.343  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.93
+[    4.349  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.87
+[    4.353  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.00
+[    4.358  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.03
+[    4.363  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.00
+[    4.368  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.04
+[    4.372  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.14
+[    4.377  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.17
+[    4.382  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.27
+[    4.387  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.32
+[    4.392  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.30
+[    4.397  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.36
+[    4.401  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.44
+[    4.406  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.45
+[    4.411  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.44
+[    4.416  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.53
+[    4.421  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.60
+[    4.426  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.59
+[    4.431  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.66
+[    4.436  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.64
+[    4.440  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.69
+[    4.445  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.71
+[    4.455  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.71 (2x)
+[    4.455  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.76
+[    4.465  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.76 (2x)
+[    4.465  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.80
+[    4.470  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.79
+[    4.475  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.85
+[    4.479  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.87
+[    4.484  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.93
+[    4.489  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.96
+[    4.499  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.96 (2x)
+[    4.499  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.00
+[    4.504  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.06
+[    4.509  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.03
+[    4.513  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 205.12
+[    4.685  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.74
+[    6.423  ] [  W:MT  F:0    ] [  WARN   ] [  APP       ] Had to clamp delta (was 1.729170, clamped to 0.200000).
+[    6.423  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.34
+[    6.447  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.02
+[    6.466  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.75
+[    6.486  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.48
+[    6.505  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.24
+[    6.524  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.95
+[    6.544  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.64
+[    6.565  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.34
+[    6.569  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.42
+[    6.572  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 202.76
+[    6.574  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.63
+[    6.576  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.95
+[    6.583  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.87
+[    6.589  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.86
+[    6.595  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.80
+[    6.600  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.79
+[    6.605  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.80
+[    6.610  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.83
+[    6.619  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.83 (2x)
+[    6.619  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.88
+[    6.624  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.93
+[    6.629  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.89
+[    6.639  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.89 (2x)
+[    6.639  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.95
+[    6.644  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.91
+[    6.653  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.91 (2x)
+[    6.653  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.97
+[    6.658  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.00
+[    6.663  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 203.97
+[    6.667  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.10
+[    6.673  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.07
+[    6.678  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.06
+[    6.682  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.10
+[    6.692  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.10 (2x)
+[    6.692  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.12
+[    6.697  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.18
+[    6.702  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.20
+[    6.707  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.22
+[    6.711  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.26
+[    6.716  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.30
+[    6.721  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.31
+[    6.726  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.35
+[    6.731  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.38
+[    6.735  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.39
+[    6.740  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.55
+[    6.745  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.07
+[    6.750  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.13
+[    6.755  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.16
+[    6.760  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.15
+[    6.765  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.19
+[    6.769  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.27
+[    6.775  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.21
+[    6.779  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.28
+[    6.784  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.33
+[    6.794  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.33 (2x)
+[    6.794  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.38
+[    6.799  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.41
+[    6.804  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.42
+[    6.809  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.43
+[    6.813  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.49
+[    6.818  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.50
+[    6.828  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.50 (2x)
+[    6.828  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.59
+[    6.838  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.59 (2x)
+[    6.838  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.60
+[    6.843  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.65
+[    6.848  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.69
+[    6.853  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.70
+[    6.863  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.70 (2x)
+[    6.863  ] [  W:MT  F:0    ] [  TRACE  ] [  APP       ] FPS: 204.75
+[    6.881  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroying...
+[    6.881  ] [  W:MT  F:---  ] [  INFO   ] [  EDITOR    ] Destroyed.
+[    6.881  ] [  W:MT  F:---  ] [  INFO   ] [  ENTITY    ] World Destroyed.
+[    6.881  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Scene Destroyed.
+[    6.881  ] [  W:MT  F:---  ] [  INFO   ] [  RENDER    ] Graph Destroyed.
+[    6.883  ] [  W:MT  F:---  ] [  INFO   ] [  ASSETS    ] Destroyed.
+[    6.883  ] [  W:MT  F:---  ] [  INFO   ] [  SLANG     ] Shutting down...
+[    7.040  ] [  W:MT  F:---  ] [  INFO   ] [  GRAPHICS  ] Destroyed.
+[    7.040  ] [  W:MT  F:---  ] [  INFO   ] [  APP       ] Destroyed
+[    7.042  ] [  W:MT  F:---  ] [  INFO   ] [  JOB       ] Destroyed.
+[    7.042  ] [  W:MT  F:---  ] [  INFO   ] [  LOG       ] Shutting down...

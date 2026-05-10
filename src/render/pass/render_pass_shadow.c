@@ -25,7 +25,7 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc;
 
 	pc.object_buffer      = data->object_buffer_address;
-	pc.mesh_buffer        = data->mesh_buffer_address;
+	pc.mesh_buffer        = R_SceneMeshBufferAddress(ctx->scene);
 	pc.caster_data_buffer = GFX_DeviceBufferAddress(device, data->caster_table_buffer);
 	pc.caster_index       = data->caster_index;
 
@@ -75,13 +75,8 @@ R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 }
 
 internal void
-R_ShadowRendererRender(R_ShadowRenderer *sr,
-					   R_Graph *graph,
-					   R_Blackboard *bb,
-					   Arena *pass_arena,
-					   R_Culling *culling,
-					   const R_Scene *scene,
-					   const R_SceneResources *scene_resources)
+R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
+						  const R_Scene *scene)
 {
 	static const v3 light_dirs[6] = {
 		{  1.f,  0.f,  0.f }, // Right.
@@ -100,22 +95,19 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 		{  0.f,  0.f,  1.f }, // Forward.
 		{  0.f,  0.f,  1.f }, // Backwards.
 	};
-	
 
-	// Gather shadow casters from the scene and upload to GPU.
-
-	u32 caster_count = MinValue(R_SceneGetShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
+	sr->caster_count = MinValue(R_SceneGetShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
 
 	R_GPU_ShadowCaster *caster_mapping = GFX_DeviceBufferMap(sr->device, sr->caster_table_buffer);
 
-	for (u32 i = 0; i < caster_count; i++)
+	for (u32 i = 0; i < sr->caster_count; i++)
 	{
 		const R_ShadowCaster *info = R_SceneShadowCasterGet(scene, i);
 		R_GPU_ShadowCaster *gpu = &caster_mapping[i];
 
-		gpu->position = info->position;
+		gpu->position   = info->position;
 		gpu->near_plane = info->near;
-		gpu->far_plane = info->far;
+		gpu->far_plane  = info->far;
 		gpu->shadow_map = GFX_DeviceTextureViewBindless(sr->device, sr->shadow_cubemap_views[i]);
 
 		m4 light_proj = M4Perspective(90.f, 1.f, info->near, info->far);
@@ -127,27 +119,32 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 			gpu->face_matrices[f] = M4MulM4(light_proj, light_view);
 		}
 	}
-	
+}
 
-	// Populate the blackboard.
-
+internal void
+R_ShadowRendererRender(R_ShadowRenderer *sr,
+					   R_Graph *graph,
+					   const R_Bulletin *bt,
+					   R_Blackboard *bb,
+					   const R_Scene *scene,
+					   R_Culling *culling)
+{
 	bb->shadow_data.shadow_caster_table = sr->caster_table_buffer;
-	bb->shadow_data.shadow_map_count = caster_count;
+	bb->shadow_data.shadow_map_count = sr->caster_count;
 
 	
 	// Create one render pass per shadow caster.
 
 	GFX_ShaderKey shader = AST_GetNow(sr->assets, sr->depth_shader, AST_Type_Shader)->shader.key;
 
-	for (u32 caster_index = 0; caster_index < caster_count; caster_index++)
+	for (u32 caster_index = 0; caster_index < sr->caster_count; caster_index++)
 	{
 		const R_ShadowCaster *info = R_SceneShadowCasterGet(scene, caster_index);
 
 		
 		// Build a culling draw stream for this caster's influence sphere.
 
-		R_DrawStream draw_stream = R_CullSphere(culling, graph, pass_arena,
-												scene, scene_resources,
+		R_DrawStream draw_stream = R_CullSphere(culling, graph, bt,
 												R_CullFilter_All,
 												info->position, info->radius);
 
@@ -156,25 +153,24 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 
 		// TODO: snprintf the pass name with the caster index for debug labelling.
 
-		R_ShadowMappingPassData *data = ArenaPushArray(pass_arena, R_ShadowMappingPassData, 1);
-		data->shader                  = shader;
-		data->caster_index            = caster_index;
-		data->object_buffer_address   = scene_resources->object_buffer.gpu;
-		data->mesh_buffer_address     = R_SceneMeshBufferAddress(scene);
-		data->caster_table_buffer     = sr->caster_table_buffer;
-		data->draw_stream             = draw_stream;
-
-		R_Pass *pass = R_GraphAdd(graph, String8Lit("Shadow Mapping"), R_PassType_Graphics);
-		R_PassSetRecord        (pass, R_ShadowMappingPassFn, data);
-		R_PassSetMultiViewMask (pass, 0b111111);
-
-		R_PassIndirectBuffer(pass, draw_stream.indirect_buffer);
-		R_PassIndirectBuffer(pass, draw_stream.count_buffer);
+		R_ShadowMappingPassData *data = ArenaPushArray(bt->pass_arena, R_ShadowMappingPassData, 1);
+		data->shader                = shader;
+		data->caster_index          = caster_index;
+		data->object_buffer_address = bt->scene_resources->object_buffer.gpu;
+		data->caster_table_buffer   = sr->caster_table_buffer;
+		data->draw_stream           = draw_stream;
 
 		R_GraphTexHandle cubemap_handle = R_GraphImportTexture(graph, sr->shadow_cubemaps[caster_index]);
 		bb->shadow_data.shadow_maps[caster_index] = cubemap_handle;
 
 		R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
-		R_PassWriteDepthEx(pass, cubemap_handle, &depth_clear, GFX_SubresourceRangeAllDepth());
+
+		R_Pass *pass = R_GraphAdd(graph, String8Lit("Shadow Mapping"), R_PassType_Graphics);
+
+		R_PassSetRecord        (pass, R_ShadowMappingPassFn, data);
+		R_PassSetMultiViewMask (pass, 0b111111);
+		R_PassIndirectBuffer   (pass, draw_stream.indirect_buffer);
+		R_PassIndirectBuffer   (pass, draw_stream.count_buffer);
+		R_PassWriteDepth       (pass, cubemap_handle, &depth_clear);
 	}
 }

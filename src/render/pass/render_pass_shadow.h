@@ -16,7 +16,6 @@ struct R_ShadowMappingPassData
 	u32 caster_index;
 
 	u64 object_buffer_address;
-	u64 mesh_buffer_address;
 	GFX_BufferKey caster_table_buffer;
 
 	R_DrawStream draw_stream;
@@ -39,19 +38,22 @@ struct R_ShadowRenderer
 	GFX_TextureViewKey shadow_cubemap_views [R_SCENE_MAX_SHADOW_CASTERS];
 
 	GFX_BufferKey caster_table_buffer;
+	u32 caster_count;
 
 	AST_Handle depth_shader;
 };
 
-internal void R_ShadowRendererInit    (R_ShadowRenderer *sr, GFX_Device *device, AST_Assets *assets);
-internal void R_ShadowRendererDestroy (R_ShadowRenderer *sr);
+internal void R_ShadowRendererInit       (R_ShadowRenderer *sr, GFX_Device *device, AST_Assets *assets);
+internal void R_ShadowRendererDestroy    (R_ShadowRenderer *sr);
 
-internal void R_ShadowRendererRender  (R_ShadowRenderer *sr,
-									   R_Graph *graph,
-									   R_Blackboard *bb,
-									   Arena *pass_arena,
-									   R_Culling *culling,
-									   const R_Scene *scene,
-									   const R_SceneResources *scene_resources);
+internal void R_ShadowRendererUploadGPU  (R_ShadowRenderer *sr,
+										  const R_Scene *scene);
+
+internal void R_ShadowRendererRender     (R_ShadowRenderer *sr,
+										  R_Graph *graph,
+										  const R_Bulletin *bt,
+										  R_Blackboard *bb,
+										  const R_Scene *scene,
+										  R_Culling *culling);
 
 #endif // RENDER_PASS_SHADOW_H

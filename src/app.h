@@ -66,7 +66,8 @@ struct App
 	R_ForwardRenderer forward_renderer;
 	R_DebugRenderer debug_renderer;
 	R_IrradianceVolume irradiance_volume;
-
+	R_SSAO ssao;
+	
 	R_SceneLightHandle light_handle;
 	R_Mesh skybox_mesh;
 	
