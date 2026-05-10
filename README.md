@@ -54,13 +54,13 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Modular Entity System**
 - **Logging System** with levels, channels, file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes**
-- **SSAO**
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
 - Bone / Joint Based Animation
+- SSAO
 - Physically Based Bloom
 - Cascaded Shadow Mapping (CSM)
 - More advanced material rendering

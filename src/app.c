@@ -179,6 +179,14 @@ AppHotUnloadGraphics(App *app)
    AUDIO
    ================================================== */
 
+/*
+ * Audio is temporarily removed because hot reloading fucks
+ * with the library I'm using (miniaudio).
+ *
+ * I might have to make some modifications to the miniaudio
+ * source code to fix that... at some point...
+ */
+
 internal void
 AppInitAudio(App *app)
 {
