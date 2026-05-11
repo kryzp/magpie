@@ -539,7 +539,7 @@ M4Scale(v3 scale)
 }
 
 internal m4
-M4RotateAround(f32 angle, v3 normal)
+M4FaceTowards(v3 normal)
 {
 	m4 result = M4Identity();
 

@@ -9,11 +9,8 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_ch
 	scene->log_channel = log_channel;
 
 	// Hook up the free lists.
-	for (u32 i = R_SCENE_MAX_OBJECTS; i > 0; i--)
-		scene->object_free_list[scene->object_free_count++] = i - 1;
-
-	for (u32 i = R_SCENE_MAX_LIGHTS; i > 0; i--)
-		scene->light_free_list[scene->light_free_count++] = i - 1;
+	for (u32 i = R_SCENE_MAX_OBJECTS; i > 0; i--)  scene->object_free_list [scene->object_free_count++] = i - 1;
+	for (u32 i = R_SCENE_MAX_LIGHTS;  i > 0; i--)  scene->light_free_list  [scene->light_free_count++]  = i - 1;
 
 	GFX_BufferAllocInfo mesh_buffer_info = {0};
 	mesh_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
@@ -73,15 +70,13 @@ R_SceneRefreshTransientResources(R_Scene *scene, GFX_RingBuffer *ring)
 		R_SceneUpdateLightBuffer(scene, ring, &resources);
 	}
  
-	if (scene->mesh_count > 0 &&
-		scene->mesh_buffer_dirty)
+	if (scene->mesh_count > 0 && scene->mesh_buffer_dirty)
 	{
 		R_SceneUpdateMeshBuffer(scene);
 		scene->mesh_buffer_dirty = false;
 	}
  
-	if (scene->material_count > 0 &&
-		scene->material_buffer_dirty)
+	if (scene->material_count > 0 && scene->material_buffer_dirty)
 	{
 		R_SceneUpdateMaterialBuffer(scene);
 		scene->material_buffer_dirty = false;
@@ -442,6 +437,18 @@ R_SceneObjectSetTransform(R_Scene *scene, R_SceneObjectHandle handle, m4 transfo
 	slot->object.transform = transform;
 }
 
+internal void
+R_SceneObjectSetSkinningPalette(R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 bone_count)
+{
+	R_SceneObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+
+	slot->object.skinning_palette = palette;
+	slot->object.skinning_bone_count = bone_count;
+}
+
 internal u32
 R_SceneGetObjectCount(const R_Scene *scene)
 {
@@ -647,24 +654,26 @@ R_SceneRegisterModel(R_Scene *scene,
 	u32 sub_model_count = model_asset->model.sub_model_count;
 	const AST_SubModel *sub_models = model_asset->model.sub_models;
 
+	u32 actual_count = sub_model_count;
+	
+	if (sub_model_count > max_entries)
+	{
+		DebugLogW(scene->log_channel,
+				  "Hit max entry count! Truncating sub model count %u down to %u.",
+				  sub_model_count, max_entries);
+
+		actual_count = max_entries;
+	}
+	
 	R_SceneRegisterModelReceipt receipt = {0};
-	receipt.entry_count = MinValue(sub_model_count, max_entries);
-	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, receipt.entry_count);
+	receipt.entry_count = actual_count;
+	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, actual_count);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
 	
-	for (u32 i = 0; i < receipt.entry_count; i++)
+	for (u32 i = 0; i < actual_count; i++)
 	{
 		const AST_SubModel *src = &sub_models[i];
-
-		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene, &cmd,
-																 src->vertex_buffer,
-																 src->index_buffer,
-																 src->vertex_count,
-																 src->index_count,
-																 GFX_BufferKeyNull());
-
-		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
 		
 		receipt.entries[i].transform = src->transform;
 
@@ -672,6 +681,17 @@ R_SceneRegisterModel(R_Scene *scene,
 		f32 radius = V3Length(V3Sub(src->bounds_max, centre));
 
 		receipt.entries[i].sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
+
+		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene, &cmd,
+																 src->vertex_buffer,
+																 src->index_buffer,
+																 src->vertex_count,
+																 src->index_count,
+																 src->skin_buffer);
+
+		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
+
+		receipt.entries[i].skin_index = src->skin_index;
 	}
 
 	GFX_DeviceSubmitImEnd(scene->device, &cmd);

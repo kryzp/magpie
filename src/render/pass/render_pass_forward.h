@@ -14,7 +14,6 @@ struct R_ForwardPassData
 
 	u64 object_buffer_address;
 	u64 light_buffer_address;
-	u64 skinning_palette_buffer_address;
 
 	u64 irradiance_sh_buffer_address;
 	u64 irradiance_grid_info_buffer_address;

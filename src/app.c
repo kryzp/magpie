@@ -350,33 +350,34 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), AST_Type_Model);
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), AST_Type_Model);
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"), AST_Type_Model);
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"), AST_Type_Model);
-	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"), AST_Type_Model);
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"), AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             AST_Type_Model);
+	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         AST_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	R_SceneRegisterModelReceipt model_receipt = R_SceneRegisterModel(&app->scene, scratch.arena, &app->assets, model_handle, (u32)(-1));
+	R_SceneRegisterModelReceipt model_receipt = R_SceneRegisterModel(&app->scene, scratch.arena, &app->assets, app->object_model_handle, (u32)(-1));
 
 	for (u32 i = 0; i < model_receipt.entry_count; i++)
 	{
 		R_SceneModelEntry *entry = &model_receipt.entries[i];
-
+		
 		R_Object obj = {0};
 		obj.transform     = entry->transform;
 		obj.sphere_bounds = entry->sphere_bounds;
 		obj.mesh          = entry->mesh;
 		obj.material      = entry->material;
 		
-		R_SceneObjectCreate(&app->scene, &obj);
+		app->object_handle = R_SceneObjectCreate(&app->scene, &obj);
 	}
 	
 	ScratchRelease(&scratch);
 
+	/*
 	R_Light light = {0};
 	light.type = R_LightType_Point;
 	light.position = v3(0.f, 0.f, 1.f);
@@ -389,12 +390,13 @@ AppInitRender(App *app)
 	light.shadow_far = 10.f;
 	
 	app->light_handle = R_SceneLightCreate(&app->scene, &light);
-
+	*/
+	
 	R_IrradianceVolumeInit(&app->irradiance_volume,
 						   &app->graphics_device, &app->assets,
 						   osapi->LogChannelOpen(String8Lit("IRRADIANCE")),
-						   v3(-12.f, -6.f,  -1.f),
-						   v3( 12.f,  6.f,  12.f),
+						   v3(-8.f, -6.f,  -1.f),
+						   v3( 8.f,  6.f,  12.f),
 						   8, 6, 4,
 						   &app->skybox_mesh,
 						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
@@ -779,7 +781,7 @@ AppTick(App *app, const I_State *input)
 		app->delta_accumulator -= fixed_dt;
 	}
 
-	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
+	//R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	
 	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
@@ -795,6 +797,32 @@ AppTick(App *app, const I_State *input)
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
+
+	{
+		AST_Asset *model_asset = AST_Get(&app->assets, app->object_model_handle, AST_Type_Model);
+		
+		u32 bone_count = model_asset->model.skeletons[0].joint_count;
+
+		if (bone_count > ArraySize(app->object_palette))
+			bone_count = ArraySize(app->object_palette);
+
+		for (u32 i = 0; i < bone_count; i++)
+			app->object_palette[i] = M4Identity();
+
+		static i32 debug_joint = 0;
+
+		if (I_KbPressed(input, I_KeyboardKey_Left))
+			debug_joint++;
+		if (I_KbPressed(input, I_KeyboardKey_Right))
+			debug_joint--;
+
+		debug_joint = ClampValue(debug_joint, 0, bone_count - 1);
+		
+		f32 angle = SinF(elapsed * 5.0f) * 1.0f;
+		app->object_palette[debug_joint] = M4RotateAxis(angle, v3(0.f, 0.f, 1.f));
+		
+		R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, app->object_palette, bone_count);
+	}
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{

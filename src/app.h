@@ -67,8 +67,13 @@ struct App
 	R_DebugRenderer debug_renderer;
 	R_IrradianceVolume irradiance_volume;
 	R_SSAO ssao;
+
+	AST_Handle object_model_handle;
+	R_SceneObjectHandle object_handle;
+	m4 object_palette[256];
 	
 	R_SceneLightHandle light_handle;
+	
 	R_Mesh skybox_mesh;
 	
 	GFX_TextureKey brdf_lut;

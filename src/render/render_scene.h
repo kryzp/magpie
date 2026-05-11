@@ -89,7 +89,7 @@ struct R_SceneObjectSlot
 	u32 generation;
 	b32 active;
 
-	u32 skinning_palette_address_this_frame;
+	u64 skinning_palette_address_this_frame;
 };
 
 
@@ -232,7 +232,8 @@ internal R_SceneObjectSlot  *R_SceneObjectGetSlot (R_Scene *scene, R_SceneObject
 internal R_SceneObjectHandle R_SceneObjectCreate  (R_Scene *scene, const R_Object *object);
 internal void                R_SceneObjectRemove  (R_Scene *scene, R_SceneObjectHandle handle);
 
-internal void R_SceneObjectSetTransform(R_Scene *scene, R_SceneObjectHandle handle, m4 transform);
+internal void R_SceneObjectSetTransform       (R_Scene *scene, R_SceneObjectHandle handle, m4 transform);
+internal void R_SceneObjectSetSkinningPalette (R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 bone_count);
 
 internal u32 R_SceneGetObjectCount(const R_Scene *scene);
 
@@ -286,10 +287,13 @@ internal u64 R_SceneMeshBufferAddress(const R_Scene *scene);
 typedef struct R_SceneModelEntry R_SceneModelEntry;
 struct R_SceneModelEntry
 {
-	R_SceneMeshHandle mesh;
-	R_SceneMaterialHandle material;
 	m4 transform;
 	v4 sphere_bounds;
+
+	R_SceneMeshHandle mesh;
+	R_SceneMaterialHandle material;
+
+	i32 skin_index;
 };
 
 typedef struct R_SceneRegisterModelReceipt R_SceneRegisterModelReceipt;

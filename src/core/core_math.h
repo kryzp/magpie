@@ -195,7 +195,7 @@ internal m4 M4Transpose(m4 m);
 internal m4 M4Translate(v3 translation);
 internal m4 M4Scale(v3 scale);
 
-internal m4 M4RotateAround(f32 angle, v3 normal); // Must be normalized.
+internal m4 M4FaceTowards(v3 normal); // Must be normalized. todo: what the fuck is this function????
 internal m4 M4RotateAxis(f32 angle, v3 axis); // Must be normalized.
 internal m4 M4RotateQuat(v4 q); // Must be normalized.
 

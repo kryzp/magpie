@@ -20,8 +20,6 @@ struct PushConstants
 	irradiance::ProbeSH *irr_sh;
 	irradiance::ProbeGridInfo *irr_grid_info;
 
-	float4x4 *skinning_palette;
-	
 	uint32_t irradiance_fallback_cubemap;
 	uint32_t prefilter_cubemap;
 	uint32_t brdf_lut;
@@ -64,7 +62,7 @@ VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 	if (scene::IsSkinned(object_data, mesh))
 	{
 		scene::SkinVertex skin_vertex = mesh.skin_buffer[vertex_id];
-		float4x4 skin = scene::ComputeSkinningMatrix(skin_vertex, args.skinning_palette);
+		float4x4 skin = scene::ComputeSkinningMatrix(skin_vertex, object_data.skinning_palette);
 
 		local_position = mul(skin, float4(local_position, 1.0)).xyz;
 

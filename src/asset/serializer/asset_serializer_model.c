@@ -1102,7 +1102,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 		AST_ModelLoadClips(ctx, load_scope, load, gltf);
 	}
 	
-	result.stage_size = load->total_vertex_bytes + load->total_index_bytes;
+	result.stage_size = load->total_vertex_bytes + load->total_index_bytes + load->total_skin_vertex_bytes;
 	result.failed = false;
 
 	result.dependency_count = load->dep_count;
@@ -1343,7 +1343,7 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 			svb_copy.src_offset = offset;
 			svb_copy.size = svb_size;
 
-			GFX_DeviceBufferDestroy(device, dst->skin_buffer);
+			GFX_CmdCopyBufferToBuffer(cmd, stage, dst->skin_buffer, 1, &svb_copy);
 
 			offset += svb_size;
 		}

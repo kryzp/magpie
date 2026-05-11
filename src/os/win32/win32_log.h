@@ -3,7 +3,7 @@
 
 #define OS_W32_LOG_MAX_CHANNELS        32
 #define OS_W32_LOG_LINE_BUFFER_SIZE    4096
-#define OS_W32_LOG_CHANNEL_COL_ALIGN   8
+#define OS_W32_LOG_CHANNEL_COL_ALIGN   10
 
 #define OS_W32_LOG_ANSI_RESET    "\x1b[0m"
 #define OS_W32_LOG_ANSI_DIM      "\x1b[2m"
