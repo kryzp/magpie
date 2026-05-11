@@ -67,6 +67,8 @@ struct AST_ModelLoadMesh
 	v3 bounds_min;
 	v3 bounds_max;
 
+	AST_ModelMaterial material;
+
 	u32 vertex_count;
 	AST_ModelVertex *vertices;
 
@@ -75,8 +77,6 @@ struct AST_ModelLoadMesh
 
 	AST_ModelSkinVertex *skin_vertices;
 	i32 skin_index;
-
-	AST_ModelMaterial material;
 };
 
 typedef struct AST_ModelLoadDep AST_ModelLoadDep;
@@ -198,6 +198,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// STANDARD METALLIC-ROUGHNESS OPAQUE PBR.
+	
 	if (gltf_mat->has_pbr_metallic_roughness)
 	{
 		const cgltf_pbr_metallic_roughness *pbr = &gltf_mat->pbr_metallic_roughness;
@@ -216,18 +217,21 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// NORMALS.
+	
 	mat.normal_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->normal_texture);
 	
 	mat.normal_scale   = gltf_mat->normal_texture.scale;
 
 
 	// OCCLUSION
+	
 	mat.occlusion_texture   = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->occlusion_texture);
 	
 	mat.occlusion_intensity = gltf_mat->occlusion_texture.scale;
 
 
 	// EMISSIVE
+	
 	mat.emissive_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->emissive_texture);
 	
 	mat.emissive_factor  = v3(gltf_mat->emissive_factor[0],
@@ -236,16 +240,19 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// EMISSIVE STRENGTH.
+	
 	if (gltf_mat->has_emissive_strength)
 		mat.emissive_intensity = gltf_mat->emissive_strength.emissive_strength;
 
 
 	// INDEX OF REFRACTION.
+	
 	if (gltf_mat->has_ior)
 		mat.ior = gltf_mat->ior.ior;
 
 
 	// TRANSMISSION.
+	
 	if (gltf_mat->has_transmission)
 	{
 		mat.transmission_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->transmission.transmission_texture);
@@ -255,6 +262,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// VOLUME.
+	
 	if (gltf_mat->has_volume)
 	{
 		mat.thickness_texture    = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->volume.thickness_texture);
@@ -270,6 +278,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// SPECULAR.
+	
 	if (gltf_mat->has_specular)
 	{
 		mat.specular_texture        = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->specular.specular_texture);
@@ -284,6 +293,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// CLEARCOAT.
+	
 	if (gltf_mat->has_clearcoat)
 	{
 		mat.clearcoat_texture           = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
@@ -295,6 +305,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// SHEEN.
+	
 	if (gltf_mat->has_sheen)
 	{
 		mat.sheen_colour_texture    = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->sheen.sheen_color_texture);
@@ -309,6 +320,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// IRIDESCENCE.
+	
 	if (gltf_mat->has_iridescence)
 	{
 		mat.iridescence_texture                  = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_texture);
@@ -323,14 +335,17 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// DOUBLE SIDED.
+	
 	mat.double_sided = !!gltf_mat->double_sided;
 
 
 	// UNLIT.
+	
 	mat.unlit = !!gltf_mat->unlit;
 
 
 	// ALPHA.
+	
 	switch (gltf_mat->alpha_mode)
 	{
 		case cgltf_alpha_mode_opaque: mat.alpha_mode = AST_AlphaMode_Opaque; break;
@@ -477,7 +492,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 		if (colours)
 		{
 			f32 col[4] = { 1.f, 1.f, 1.f, 1.f };
-			u32 comps = cgltf_num_components(colours->type);
+			u32 comps = (u32)cgltf_num_components(colours->type);
 
 			if (comps > 4)
 				comps = 4;
@@ -950,7 +965,7 @@ AST_ModelLoadClips(const AST_Context *ctx,
 
 			if (cubic)
 			{
-				DebugLogE(ctx->log_channel,
+				DebugLogW(ctx->log_channel,
 						  "Clip (%.*s) channel uses cubic interpolation but we don't support that yet so falling back to linear.",
 						  (i32)clip->name.len, clip->name.str);
 
@@ -1132,13 +1147,13 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		dst->bounds_min    = src_mesh->bounds_min;
 		dst->bounds_max    = src_mesh->bounds_max;
 
+		dst->material      = src_mesh->material;
+
 		dst->vertex_stride = sizeof(AST_ModelVertex);
 		dst->index_stride  = sizeof(AST_ModelIndex);
 
 		dst->vertex_count  = src_mesh->vertex_count;
 		dst->index_count   = src_mesh->index_count;
-
-		dst->material      = src_mesh->material;
 
 		GFX_BufferAllocInfo vb_info = {0};
 		vb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
@@ -1153,16 +1168,17 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		dst->vertex_buffer = GFX_DeviceBufferAlloc(device, &vb_info);
 		dst->index_buffer  = GFX_DeviceBufferAlloc(device, &ib_info);
 
-		/*
+		if (src_mesh->skin_vertices)
+		{
 			GFX_BufferAllocInfo svb_info = {0};
 			svb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
 			svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 			svb_info.size  = src_mesh->vertex_count * sizeof(AST_ModelSkinVertex);
 			
 			dst->skin_buffer = GFX_DeviceBufferAlloc(device, &svb_info);
-
+			
 			dst->skin_index = src_mesh->skin_index;
-		*/
+		}
 	}
 
 	
@@ -1315,7 +1331,7 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 
 		// Skinning.
 		
-		if (!GFX_BufferKeyIsNull(asset->model.sub_models[i].skin_buffer))
+		if (src->skin_vertices)
 		{
 			u64 svb_size = src->vertex_count * sizeof(AST_ModelSkinVertex);
 			
@@ -1325,7 +1341,7 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 			svb_copy.src_offset = offset;
 			svb_copy.size = svb_size;
 
-			GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].skin_buffer);
+			GFX_DeviceBufferDestroy(device, dst->skin_buffer);
 
 			offset += svb_size;
 		}
@@ -1341,11 +1357,13 @@ AST_ModelSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
-		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].vertex_buffer);
-		GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].index_buffer);
+		AST_SubModel *sub_model = &asset->model.sub_models[i];
+		
+		GFX_DeviceBufferDestroy(device, sub_model->vertex_buffer);
+		GFX_DeviceBufferDestroy(device, sub_model->index_buffer);
 
-		if (!GFX_BufferKeyIsNull(asset->model.sub_models[i].skin_buffer))
-			GFX_DeviceBufferDestroy(device, asset->model.sub_models[i].skin_buffer);
+		if (!GFX_BufferKeyIsNull(sub_model->skin_buffer))
+			GFX_DeviceBufferDestroy(device, sub_model->skin_buffer);
 	}
 }
 

@@ -333,10 +333,10 @@ AppInitRender(App *app)
 
 	const u32 prefilter_mips = 5;
 
-	app->brdf_lut            = GFX_DeviceTextureAlloc2D     (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
-	app->environment_cubemap = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap(&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap(&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
+	app->brdf_lut            = GFX_DeviceTextureAlloc2D      (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
+	app->environment_cubemap = GFX_DeviceTextureAllocCubemap (&app->graphics_device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap (&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap (&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 
 	R_CullingInit                (&app->culling,          &app->assets);
 	R_ShadowRendererInit         (&app->shadow_renderer,  &app->graphics_device, &app->assets);

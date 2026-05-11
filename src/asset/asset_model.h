@@ -30,6 +30,8 @@ struct AST_SubModel
 	v3 bounds_min;
 	v3 bounds_max;
 
+	AST_ModelMaterial material;
+
 	u64 vertex_stride;
 	u64 index_stride;
 
@@ -41,8 +43,6 @@ struct AST_SubModel
 
 	GFX_BufferKey skin_buffer;
 	i32 skin_index;
-
-	AST_ModelMaterial material;
 };
 
 #endif // ASSET_MODEL_H
