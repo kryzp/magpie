@@ -354,7 +354,9 @@ AppInitRender(App *app)
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"), AST_Type_Model);
 	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
-	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"), AST_Type_Model);
+	//AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"), AST_Type_Model);
+	AST_Handle model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"), AST_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -791,12 +793,11 @@ AppTick(App *app, const I_State *input)
 
 	//AUD_Tick(&app->audio_system, dt, listener);
 
-	R_IrradianceVolumeDebug(&app->irradiance_volume);
+	//R_IrradianceVolumeDebug(&app->irradiance_volume);
+	//R_SceneDebug(&app->scene);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
-		R_SceneDebug(&app->scene);
-		
 		AppRender(app, dt, elapsed, &cmd);
 
 		R_GraphCompile(&app->graph, &app->swapchain);

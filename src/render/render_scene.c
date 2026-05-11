@@ -63,18 +63,25 @@ R_SceneRefreshTransientResources(R_Scene *scene, GFX_RingBuffer *ring)
 	R_SceneUpdatePageBuffer(scene, ring, &resources);
  
 	if (scene->object_count > 0)
+	{
+		R_SceneUpdateSkinningBuffer(scene, ring, &resources);
 		R_SceneUpdateObjectBuffer(scene, ring, &resources);
+	}
  
 	if (scene->light_count > 0)
+	{
 		R_SceneUpdateLightBuffer(scene, ring, &resources);
+	}
  
-	if (scene->mesh_count > 0 && scene->mesh_buffer_dirty)
+	if (scene->mesh_count > 0 &&
+		scene->mesh_buffer_dirty)
 	{
 		R_SceneUpdateMeshBuffer(scene);
 		scene->mesh_buffer_dirty = false;
 	}
  
-	if (scene->material_count > 0 && scene->material_buffer_dirty)
+	if (scene->material_count > 0 &&
+		scene->material_buffer_dirty)
 	{
 		R_SceneUpdateMaterialBuffer(scene);
 		scene->material_buffer_dirty = false;
@@ -104,12 +111,19 @@ R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources
  
 		const R_Object *obj = &slot->object;
  
-		mapped[write_index].model_matrix   = obj->transform;
-		mapped[write_index].normal_matrix  = M4RemoveTranslation(M4Inverse(M4Transpose(obj->transform)));
-		mapped[write_index].sphere_bounds  = obj->sphere_bounds;
-		mapped[write_index].material_index = obj->material.value;
-		mapped[write_index].mesh_index	   = obj->mesh.value;
-		mapped[write_index].page_index	   = slot->page_index;
+		mapped[write_index].model_matrix            = obj->transform;
+		mapped[write_index].normal_matrix           = M4RemoveTranslation(M4Inverse(M4Transpose(obj->transform)));
+
+		mapped[write_index].sphere_bounds           = obj->sphere_bounds;
+
+		mapped[write_index].material_index          = obj->material.value;
+		mapped[write_index].mesh_index	            = obj->mesh.value;
+		mapped[write_index].page_index	            = slot->page_index;
+
+		mapped[write_index].alpha_mode              = 0;//TODO
+		
+		mapped[write_index].skinning_palette_buffer = slot->skinning_palette_address_this_frame;
+		mapped[write_index].skinning_bone_count     = obj->skinning_bone_count;
  
 		write_index++;
 	}
@@ -182,6 +196,49 @@ R_SceneUpdatePageBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *
  
 	for (u32 i = 0; i < scene->geometry_page_count; i++, page = page->next)
 		mapped[i].vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer);
+}
+
+internal void
+R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
+{
+	u32 total_bones = 0;
+
+	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS; i++)
+	{
+		R_SceneObjectSlot *slot = &scene->object_slots[i];
+
+		slot->skinning_palette_address_this_frame = 0;
+		
+		if (!slot->active || slot->object.skinning_palette == NULL)
+			continue;
+
+		total_bones += slot->object.skinning_bone_count;
+	}
+
+	if (total_bones <= 0)
+		return;
+	
+	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_bones);
+ 
+	m4 *mapped = out->skinning_palette_buffer.cpu;
+
+	u32 offset = 0;
+
+	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS; i++)
+	{
+		R_SceneObjectSlot *slot = &scene->object_slots[i];
+
+		if (!slot->active || slot->object.skinning_palette == NULL)
+			continue;
+
+		u32 bones = slot->object.skinning_bone_count;
+
+		MemCopy(mapped + offset, slot->object.skinning_palette, bones * sizeof(m4));
+
+		slot->skinning_palette_address_this_frame = out->skinning_palette_buffer.gpu + offset*sizeof(m4);
+
+		offset += bones;
+	}
 }
 
 internal void
@@ -494,56 +551,14 @@ R_SceneGetShadowCasterCount(const R_Scene *scene)
 	return scene->shadow_caster_count;
 }
 
-internal R_SceneRegisterModelReceipt
-R_SceneRegisterModel(R_Scene *scene,
-					 Arena *arena,
-					 AST_Assets *assets,
-					 AST_Handle model_handle,
-					 u32 max_entries)
-{
-	AST_Asset *model_asset = AST_GetNow(assets, model_handle, AST_Type_Model);
-	
-	u32 sub_model_count = model_asset->model.sub_model_count;
-	const AST_SubModel *sub_models = model_asset->model.sub_models;
-
-	R_SceneRegisterModelReceipt receipt = {0};
-	receipt.entry_count = MinValue(sub_model_count, max_entries);
-	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, receipt.entry_count);
-	
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
-	
-	for (u32 i = 0; i < receipt.entry_count; i++)
-	{
-		const AST_SubModel *src = &sub_models[i];
-
-		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene, &cmd,
-																 src->vertex_buffer,
-																 src->index_buffer,
-																 src->vertex_count,
-																 src->index_count);
-
-		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
-		
-		receipt.entries[i].transform = src->transform;
-
-		v3  centre = V3MulF32(V3Add(src->bounds_min, src->bounds_max), 0.5f);
-		f32 radius = V3Length(V3Sub(src->bounds_max, centre));
-
-		receipt.entries[i].sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
-	}
-
-	GFX_DeviceSubmitImEnd(scene->device, &cmd);
-	
-	return receipt;
-}
-
 internal R_SceneMeshHandle
 R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 							   const GFX_CmdBuffer *cmd,
 							   GFX_BufferKey vertex_buffer,
 							   GFX_BufferKey index_buffer,
 							   u32 vertex_count,
-							   u32 index_count)
+							   u32 index_count,
+							   GFX_BufferKey skin_buffer)
 {
 	AssertTrue(scene->mesh_count < R_SCENE_MAX_MESHES);
 
@@ -575,6 +590,11 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 	gpu_mesh->first_index = page->index_count;
 	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_count * sizeof(R_GPU_ModelVertex));
 
+	if (!GFX_BufferKeyIsNull(skin_buffer))
+		gpu_mesh->skin_buffer = GFX_DeviceBufferAddress(scene->device, skin_buffer);
+	else
+		gpu_mesh->skin_buffer = 0;
+	
 	page->vertex_count += vertex_count;
 	page->index_count  += index_count;
 
@@ -601,7 +621,8 @@ R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh)
 														 mesh->vertex_buffer,
 														 mesh->index_buffer,
 														 mesh->vertex_count,
-														 mesh->index_count);
+														 mesh->index_count,
+														 GFX_BufferKeyNull());
 
 	GFX_DeviceSubmitImEnd(scene->device, &cmd);
 
@@ -612,6 +633,50 @@ internal u64
 R_SceneMeshBufferAddress(const R_Scene *scene)
 {
 	return GFX_DeviceBufferAddress(scene->device, scene->mesh_buffer);
+}
+
+internal R_SceneRegisterModelReceipt
+R_SceneRegisterModel(R_Scene *scene,
+					 Arena *arena,
+					 AST_Assets *assets,
+					 AST_Handle model_handle,
+					 u32 max_entries)
+{
+	AST_Asset *model_asset = AST_GetNow(assets, model_handle, AST_Type_Model);
+	
+	u32 sub_model_count = model_asset->model.sub_model_count;
+	const AST_SubModel *sub_models = model_asset->model.sub_models;
+
+	R_SceneRegisterModelReceipt receipt = {0};
+	receipt.entry_count = MinValue(sub_model_count, max_entries);
+	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, receipt.entry_count);
+	
+	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
+	
+	for (u32 i = 0; i < receipt.entry_count; i++)
+	{
+		const AST_SubModel *src = &sub_models[i];
+
+		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene, &cmd,
+																 src->vertex_buffer,
+																 src->index_buffer,
+																 src->vertex_count,
+																 src->index_count,
+																 GFX_BufferKeyNull());
+
+		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
+		
+		receipt.entries[i].transform = src->transform;
+
+		v3  centre = V3MulF32(V3Add(src->bounds_min, src->bounds_max), 0.5f);
+		f32 radius = V3Length(V3Sub(src->bounds_max, centre));
+
+		receipt.entries[i].sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
+	}
+
+	GFX_DeviceSubmitImEnd(scene->device, &cmd);
+	
+	return receipt;
 }
 
 internal u32

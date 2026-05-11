@@ -20,14 +20,16 @@ struct PushConstants
 	irradiance::ProbeSH *irr_sh;
 	irradiance::ProbeGridInfo *irr_grid_info;
 
-	uint irradiance_fallback_cubemap;
-	uint prefilter_cubemap;
-	uint brdf_lut;
+	float4x4 *skinning_palette;
+	
+	uint32_t irradiance_fallback_cubemap;
+	uint32_t prefilter_cubemap;
+	uint32_t brdf_lut;
 
-	uint linear_sampler;
-	uint shadow_sampler;
+	uint32_t linear_sampler;
+	uint32_t shadow_sampler;
 
-	uint light_count;
+	uint32_t light_count;
 };
 
 [vk::push_constant]
@@ -54,16 +56,35 @@ VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 	scene::RenderMesh mesh = args.meshes[object_data.mesh_index];
 	scene::ModelVertex vertex = mesh.vertex_buffer[vertex_id];
 
+	float3 local_position  = vertex.position;
+	float3 local_normal    = vertex.normal;
+	float3 local_tangent   = vertex.tangent;
+	float3 local_bitangent = vertex.bitangent;
+
+	if (scene::IsSkinned(object_data, mesh))
+	{
+		scene::SkinVertex skin_vertex = mesh.skin_buffer[vertex_id];
+		float4x4 skin = scene::ComputeSkinningMatrix(skin_vertex, args.skinning_palette);
+
+		local_position = mul(skin, float4(local_position, 1.0)).xyz;
+
+		float3x3 skin_tbn = (float3x3)skin;
+		
+		local_tangent   = mul(skin_tbn, local_tangent);
+		local_bitangent = mul(skin_tbn, local_bitangent);
+		local_normal    = mul(skin_tbn, local_normal);
+	}
+	
 	float3x3 normal_matrix = (float3x3)object_data.normal_matrix;
 
-	float3 T = normalize(mul(normal_matrix, vertex.tangent));
-	float3 B = normalize(mul(normal_matrix, vertex.bitangent));
-	float3 N = normalize(mul(normal_matrix, vertex.normal));
+	float3 T = normalize(mul(normal_matrix, local_tangent));
+	float3 B = normalize(mul(normal_matrix, local_bitangent));
+	float3 N = normalize(mul(normal_matrix, local_normal));
 
 	//T = normalize(T - dot(T, N) * N);
 	//B = normalize(B - dot(B, N) * N);
 
-	float4 world_pos = mul(object_data.model_matrix, float4(vertex.position, 1.0));
+	float4 world_pos = mul(object_data.model_matrix, float4(local_position, 1.0));
 
 	VS_Output output;
 	output.sv_position = mul(frame_data.view_projection, world_pos);

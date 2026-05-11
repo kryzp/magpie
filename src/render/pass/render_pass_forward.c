@@ -28,6 +28,8 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 		u64 irr_sh_buffer;
 		u64 irr_grid_info_buffer;
 
+		u64 skinning_palette;
+
 		u32 irradiance_fallback_cubemap;
 		u32 prefilter_cubemap;
 		u32 brdf_lut;
@@ -50,6 +52,8 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	args.irr_sh_buffer               = data->irradiance_sh_buffer_address;
 	args.irr_grid_info_buffer        = data->irradiance_grid_info_buffer_address;
 
+	args.skinning_palette            = data->skinning_palette_buffer_address;
+	
 	args.irradiance_fallback_cubemap = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, GFX_SubresourceRangeAllColour()));
 	args.prefilter_cubemap           = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     GFX_SubresourceRangeAllColour()));
 	args.brdf_lut                    = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          GFX_SubresourceRangeAllColour()));
@@ -120,17 +124,24 @@ R_ForwardRender(R_ForwardRenderer *r,
 	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(r->assets, r->shader, AST_Type_Shader));
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
-	data->shader                = shader;
-	data->frame_data_buffer     = bt->frame_data_buffer;
-	data->shadow_caster_table   = bb_shadow->shadow_caster_table;
-	data->linear_sampler        = bt->linear_sampler;
-	data->nearest_sampler       = bt->nearest_sampler;
-	data->object_buffer_address = bt->scene_resources->object_buffer.gpu;
-	data->light_buffer_address  = bt->scene_resources->light_buffer.gpu;
-	data->irradiance_fb_handle  = irradiance_fb_handle;
-	data->prefilter_handle      = prefilter_handle;
-	data->brdf_handle           = brdf_handle;
-	data->draw_stream           = *draw_stream;
+
+	data->shader                          = shader;
+
+	data->frame_data_buffer               = bt->frame_data_buffer;
+	data->shadow_caster_table             = bb_shadow->shadow_caster_table;
+
+	data->linear_sampler                  = bt->linear_sampler;
+	data->nearest_sampler                 = bt->nearest_sampler;
+
+	data->object_buffer_address           = bt->scene_resources->object_buffer.gpu;
+	data->light_buffer_address            = bt->scene_resources->light_buffer.gpu;
+	data->skinning_palette_buffer_address = bt->scene_resources->skinning_palette_buffer.gpu;
+
+	data->irradiance_fb_handle            = irradiance_fb_handle;
+	data->prefilter_handle                = prefilter_handle;
+	data->brdf_handle                     = brdf_handle;
+
+	data->draw_stream                     = *draw_stream;
 
 	if (R_IrradianceVolumeIsBaked(bt->irradiance_volume))
 	{

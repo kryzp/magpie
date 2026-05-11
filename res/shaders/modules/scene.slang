@@ -11,10 +11,16 @@ namespace scene
 		public float3 tangent;
 		public float3 bitangent;
 	};
+	 
+	public struct SkinVertex
+	{
+		public uint32_t joints[4];
+		public float weights[4];
+	};
 
-	public static const uint ALPHA_MODE_OPAQUE = 0;
-	public static const uint ALPHA_MODE_MASK   = 1;
-	public static const uint ALPHA_MODE_BLEND  = 2;
+	public static const uint32_t ALPHA_MODE_OPAQUE = 0;
+	public static const uint32_t ALPHA_MODE_MASK   = 1;
+	public static const uint32_t ALPHA_MODE_BLEND  = 2;
 
 	public struct ObjectData
 	{
@@ -23,27 +29,45 @@ namespace scene
 									 
 		public float4 sphere_bounds;
 								   
-		public uint material_index;
-		public uint page_index;
-		public uint mesh_index;
+		public uint32_t material_index;
+		public uint32_t page_index;
+		public uint32_t mesh_index;
 							  
-		public uint alpha_mode; // 0 = opaque, 1 = mask, 2 = blend (for culling)
+		public uint32_t alpha_mode; // 0 = opaque, 1 = mask, 2 = blend (for culling)
+
+		public float4x4 *skinning_palette;
+		public uint32_t skinning_bone_count;
 	};
 
 	public struct RenderMesh
 	{
-		public uint index_count;
-		public uint first_index;
+		public uint32_t index_count;
+		public uint32_t first_index;
 		public ModelVertex *vertex_buffer;
+		public SkinVertex *skin_buffer;
 	};
+
+	public float4x4 ComputeSkinningMatrix(SkinVertex v, float4x4 *palette)
+	{
+		return (v.weights[0] * palette[v.joints[0]] +
+				v.weights[1] * palette[v.joints[1]] +
+				v.weights[2] * palette[v.joints[2]] +
+				v.weights[3] * palette[v.joints[3]]);
+	}
+
+	public bool IsSkinned(ObjectData o, RenderMesh m)
+	{
+		return (o.skinning_palette != nullptr &&
+				m.skin_buffer != nullptr);
+	}
 
 	public struct Material
 	{
-		public uint albedo_texture;
-		public uint normal_texture;
-		public uint metallic_roughness_texture;
-		public uint emissive_texture;
-		public uint occlusion_texture;
+		public uint32_t albedo_texture;
+		public uint32_t normal_texture;
+		public uint32_t metallic_roughness_texture;
+		public uint32_t emissive_texture;
+		public uint32_t occlusion_texture;
 	
 		public float4 albedo_factor;
 		public float  normal_scale;
@@ -59,8 +83,8 @@ namespace scene
 	
 		// ---
 	
-		public uint transmission_texture;
-		public uint thickness_texture;
+		public uint32_t transmission_texture;
+		public uint32_t thickness_texture;
 
 		public float transmission_factor;
 		public float thickness_factor;
@@ -70,32 +94,32 @@ namespace scene
 
 		// ---
 	
-		public uint specular_texture;
-		public uint specular_colour_texture;
+		public uint32_t specular_texture;
+		public uint32_t specular_colour_texture;
 
 		public float  specular_factor;
 		public float3 specular_colour_factor;
 
 		// ---
 	
-		public uint clearcoat_texture;
-		public uint clearcoat_roughness_texture;
+		public uint32_t clearcoat_texture;
+		public uint32_t clearcoat_roughness_texture;
 
 		public float clearcoat_factor;
 		public float clearcoat_roughness_factor;
 
 		// ---
 	
-		public uint sheen_colour_texture;
-		public uint sheen_roughness_texture;
+		public uint32_t sheen_colour_texture;
+		public uint32_t sheen_roughness_texture;
 
 		public float3 sheen_colour_factor;
 		public float  sheen_roughness_factor;
 	
 		// ---
 	
-		public uint iridescence_texture;
-		public uint iridescence_thickness_texture;
+		public uint32_t iridescence_texture;
+		public uint32_t iridescence_thickness_texture;
 
 		public float iridescence_factor;
 		public float iridescence_ior;
@@ -104,19 +128,19 @@ namespace scene
 
 		// ---
 	
-		public uint double_sided;
-		public uint unlit;
+		public uint32_t double_sided;
+		public uint32_t unlit;
 		public float alpha_cutoff;
-		public uint alpha_mode;
+		public uint32_t alpha_mode;
 	};
 
 	public struct IndirectDraw
 	{
-		public uint index_count;
-		public uint instance_count;
-		public uint first_index;
-		public uint vertex_offset;
-		public uint first_instance;
+		public uint32_t index_count;
+		public uint32_t instance_count;
+		public uint32_t first_index;
+		public uint32_t vertex_offset;
+		public uint32_t first_instance;
 	};
 
 	public struct PagePointers

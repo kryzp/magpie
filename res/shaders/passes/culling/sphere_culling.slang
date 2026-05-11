@@ -7,13 +7,14 @@ struct PushConstants
 	scene::RenderMesh *meshes;
 	scene::PagePointers *pages;
 	scene::IndirectDraw *indirect_buffer;
-	uint *count_buffer;
-	uint object_count;
-	uint alpha_filter;
+	uint32_t *count_buffer;
+	uint32_t object_count;
+	uint32_t alpha_filter;
 	float4 sphere; // xyz = position, w = radius
 };
 
-[vk::push_constant] PushConstants args;
+[vk::push_constant]
+PushConstants args;
 
 [shader("compute")]
 [numthreads(64, 1, 1)]

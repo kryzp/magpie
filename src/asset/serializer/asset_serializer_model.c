@@ -33,14 +33,16 @@ AST_GltfFloat16ToM4(const cgltf_float m[16])
 internal v3
 AST_GltfTransformTranslation(v3 v)
 {
-	return v3(v.x, -v.z, v.y);
+	return v3(v.x, v.y, v.z);
+	//return v3(v.x, -v.z, v.y);
 }
 
 internal v4
 AST_GltfTransformQuat(v4 q)
 {
 	// basis change
-	return v4(q.x, -q.z, q.y, q.w);
+	return v4(q.x, q.y, q.z, q.w);
+	//return v4(q.x, -q.z, q.y, q.w);
 }
 
 internal v3

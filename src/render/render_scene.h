@@ -70,6 +70,8 @@ struct R_Object
 	v4 sphere_bounds;
 	R_SceneMeshHandle mesh;
 	R_SceneMaterialHandle material;
+	const m4 *skinning_palette;
+	u32 skinning_bone_count;
 };
 
 typedef struct R_SceneObjectHandle R_SceneObjectHandle;
@@ -83,9 +85,11 @@ typedef struct R_SceneObjectSlot R_SceneObjectSlot;
 struct R_SceneObjectSlot
 {
 	R_Object object;
-	u32 page_index; // Which geometry page this object's mesh lives in.
+	u32 page_index;
 	u32 generation;
 	b32 active;
+
+	u32 skinning_palette_address_this_frame;
 };
 
 
@@ -138,6 +142,7 @@ struct R_SceneResources
 	GFX_Alloc object_buffer;
 	GFX_Alloc light_buffer;
 	GFX_Alloc page_table_buffer;
+	GFX_Alloc skinning_palette_buffer;
 };
 
 
@@ -204,6 +209,7 @@ internal R_SceneResources R_SceneRefreshTransientResources(R_Scene *scene, GFX_R
 internal void R_SceneUpdateObjectBuffer   (R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out);
 internal void R_SceneUpdateLightBuffer    (R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out);
 internal void R_SceneUpdatePageBuffer     (R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out);
+internal void R_SceneUpdateSkinningBuffer (R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out);
 
 internal void R_SceneUpdateMeshBuffer     (R_Scene *scene);
 internal void R_SceneUpdateMaterialBuffer (R_Scene *scene);
@@ -257,6 +263,23 @@ internal u32 R_SceneGetShadowCasterCount(const R_Scene *scene);
 
 
 /* =======================================================
+   MESHES
+   ======================================================= */
+
+internal R_SceneMeshHandle R_SceneRegisterMeshFromBuffers(R_Scene *scene,
+														  const GFX_CmdBuffer *cmd,
+														  GFX_BufferKey vertex_buffer,
+														  GFX_BufferKey index_buffer,
+														  u32 vertex_count,
+														  u32 index_count,
+														  GFX_BufferKey skin_buffer);
+
+internal R_SceneMeshHandle R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh);
+
+internal u64 R_SceneMeshBufferAddress(const R_Scene *scene);
+
+
+/* =======================================================
    MODELS
    ======================================================= */
 
@@ -281,22 +304,6 @@ internal R_SceneRegisterModelReceipt R_SceneRegisterModel(R_Scene *scene,
 														  AST_Assets *assets,
 														  AST_Handle model_handle,
 														  u32 max_entries);
-
-
-/* =======================================================
-   MESHES
-   ======================================================= */
-
-internal R_SceneMeshHandle R_SceneRegisterMeshFromBuffers(R_Scene *scene,
-														  const GFX_CmdBuffer *cmd,
-														  GFX_BufferKey vertex_buffer,
-														  GFX_BufferKey index_buffer,
-														  u32 vertex_count,
-														  u32 index_count);
-
-internal R_SceneMeshHandle R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh);
-
-internal u64 R_SceneMeshBufferAddress(const R_Scene *scene);
 
 
 /* =======================================================

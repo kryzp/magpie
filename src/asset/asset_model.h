@@ -17,7 +17,7 @@ struct AST_ModelVertex
 typedef struct AST_ModelSkinVertex AST_ModelSkinVertex;
 struct AST_ModelSkinVertex
 {
-	u16 joints[4];
+	u32 joints[4];
 	f32 weights[4];
 };
 
