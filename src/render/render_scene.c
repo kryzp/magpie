@@ -118,7 +118,7 @@ R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources
 		mapped[write_index].alpha_mode              = 0;//TODO
 		
 		mapped[write_index].skinning_palette_buffer = slot->skinning_palette_address_this_frame;
-		mapped[write_index].skinning_bone_count     = obj->skinning_bone_count;
+		mapped[write_index].skinning_joint_count    = obj->skinning_joint_count;
  
 		write_index++;
 	}
@@ -196,7 +196,7 @@ R_SceneUpdatePageBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *
 internal void
 R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
 {
-	u32 total_bones = 0;
+	u32 total_joints = 0;
 
 	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS; i++)
 	{
@@ -207,13 +207,13 @@ R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResourc
 		if (!slot->active || slot->object.skinning_palette == NULL)
 			continue;
 
-		total_bones += slot->object.skinning_bone_count;
+		total_joints += slot->object.skinning_joint_count;
 	}
 
-	if (total_bones <= 0)
+	if (total_joints <= 0)
 		return;
 	
-	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_bones);
+	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_joints);
  
 	m4 *mapped = out->skinning_palette_buffer.cpu;
 
@@ -226,13 +226,13 @@ R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResourc
 		if (!slot->active || slot->object.skinning_palette == NULL)
 			continue;
 
-		u32 bones = slot->object.skinning_bone_count;
+		u32 joints = slot->object.skinning_joint_count;
 
-		MemCopy(mapped + offset, slot->object.skinning_palette, bones * sizeof(m4));
+		MemCopy(mapped + offset, slot->object.skinning_palette, joints * sizeof(m4));
 
 		slot->skinning_palette_address_this_frame = out->skinning_palette_buffer.gpu + offset*sizeof(m4);
 
-		offset += bones;
+		offset += joints;
 	}
 }
 
@@ -438,7 +438,7 @@ R_SceneObjectSetTransform(R_Scene *scene, R_SceneObjectHandle handle, m4 transfo
 }
 
 internal void
-R_SceneObjectSetSkinningPalette(R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 bone_count)
+R_SceneObjectSetSkinningPalette(R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 joint_count)
 {
 	R_SceneObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -446,7 +446,7 @@ R_SceneObjectSetSkinningPalette(R_Scene *scene, R_SceneObjectHandle handle, cons
 		return;
 
 	slot->object.skinning_palette = palette;
-	slot->object.skinning_bone_count = bone_count;
+	slot->object.skinning_joint_count = joint_count;
 }
 
 internal u32
@@ -699,16 +699,16 @@ R_SceneRegisterModel(R_Scene *scene,
 	return receipt;
 }
 
-internal u32
+internal GFX_BindlessIndex
 R_SceneResolveTextureBindless(const R_Scene *scene,
 							  AST_Assets *assets,
 							  AST_Handle handle)
 {
 	if (!AST_IsValid(assets, handle))
-		return 0;
+		return GFX_BINDLESS_INDEX_INVALID;
 
 	if (!AST_IsLoaded(assets, handle))
-		return 0;
+		return GFX_BINDLESS_INDEX_INVALID;
 
 	// TODO: fuck this won't work with hot-reloading will it shiitt.
 	

@@ -155,6 +155,8 @@ internal v4 V4QuatInitEuler(v3 euler); // Pitch, Yaw, Roll
 internal v3 V4QuatToEuler(v4 q); // Pitch, Yaw, Roll
 internal v4 V4QuatInverse(v4 q);
 
+internal v4 V4QuatSlerp(v4 a, v4 b, f32 t);
+
 typedef union m4 m4;
 union m4
 {

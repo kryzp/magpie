@@ -3,6 +3,7 @@
 
 // TODO: Get this from the physical properties of the context.
 #define GFX_BINDLESS_MAX_RESOURCES 4096
+#define GFX_BINDLESS_INDEX_INVALID 0
 
 typedef u32 GFX_BindlessIndex;
 

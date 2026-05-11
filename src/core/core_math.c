@@ -16,7 +16,7 @@ V2Sub(v2 a, v2 b)
 internal f32
 V2Dot(v2 a, v2 b)
 {
-	return (a.x * a.x +
+	return (a.x * b.x +
 			a.y * b.y);
 }
 
@@ -239,7 +239,7 @@ V4QuatInitAxis(f32 angle, v3 axis)
 	v4 q = {0};
 
 	q.w = CosF(angle * .5f);
-	q.x = SinF(angle * .5f) * axis.z;
+	q.x = SinF(angle * .5f) * axis.x;
 	q.y = SinF(angle * .5f) * axis.y;
 	q.z = SinF(angle * .5f) * axis.z;
 
@@ -270,7 +270,7 @@ V4QuatInitEuler(v3 euler)
 internal v3
 V4QuatToEuler(v4 q)
 {
-	f32 t0 =           (2.f + ((q.w * q.x) + (q.y * q.z)));
+	f32 t0 =           (2.f * ((q.w * q.x) + (q.y * q.z)));
 	f32 t1 = 1.f     - (2.f * ((q.x * q.x) + (q.y * q.y)));
 	f32 t2 = ClampValue(2.f * ((q.w * q.y) - (q.z * q.x)), -1.f, 1.f);
 	f32 t3 =           (2.f * ((q.w * q.z) + (q.x * q.y)));
@@ -308,6 +308,36 @@ V4QuatInverse(v4 q)
 	}
 
 	return inverse;
+}
+
+internal v4
+V4QuatSlerp(v4 a, v4 b, f32 t)
+{
+	f32 cos_t = V4Dot(a, b);
+
+	if (cos_t < 0.f)
+	{
+		b = V4MulF32(b, -1.f);
+		cos_t = -cos_t;
+	}
+
+	if (cos_t > 0.999f)
+	{
+		v4 result = V4Add(a, V4MulF32(V4Sub(b, a), t));
+		f32 len = V4Length(result);
+
+		return len > MATH_EPSILON_F32
+			? V4MulF32(result, 1.f / len)
+			: a;
+	}
+
+	f32 theta = ACosF(cos_t);
+	f32 sin_t = SinF(theta);
+	
+	f32 scale_a = SinF((1.f - t) * theta) / sin_t;
+	f32 scale_b = SinF((      t) * theta) / sin_t;
+
+	return V4Add(V4MulF32(a, scale_a), V4MulF32(b, scale_b));
 }
 
 internal m4

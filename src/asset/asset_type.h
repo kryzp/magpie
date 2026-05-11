@@ -84,6 +84,18 @@ struct AST_Asset
 	};
 };
 
+// TODO: remove all this, instead replace union with
+
+#if 0
+union
+{
+	GFX_AssetTexture texture_data;
+	GFX_AssetShader shader_data;
+	GFX_AssetSound sound_data;
+	// ...
+}
+#endif
+
 internal GFX_TextureKey      AST_AssetTextureGet       (const AST_Asset *asset);
 internal GFX_ShaderKey       AST_AssetShaderGet        (const AST_Asset *asset);
 internal AUD_BufferHandle    AST_AssetSoundGetBuffer   (const AST_Asset *asset);

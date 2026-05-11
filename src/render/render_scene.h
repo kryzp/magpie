@@ -71,7 +71,7 @@ struct R_Object
 	R_SceneMeshHandle mesh;
 	R_SceneMaterialHandle material;
 	const m4 *skinning_palette;
-	u32 skinning_bone_count;
+	u32 skinning_joint_count;
 };
 
 typedef struct R_SceneObjectHandle R_SceneObjectHandle;
@@ -233,7 +233,7 @@ internal R_SceneObjectHandle R_SceneObjectCreate  (R_Scene *scene, const R_Objec
 internal void                R_SceneObjectRemove  (R_Scene *scene, R_SceneObjectHandle handle);
 
 internal void R_SceneObjectSetTransform       (R_Scene *scene, R_SceneObjectHandle handle, m4 transform);
-internal void R_SceneObjectSetSkinningPalette (R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 bone_count);
+internal void R_SceneObjectSetSkinningPalette (R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 joint_count);
 
 internal u32 R_SceneGetObjectCount(const R_Scene *scene);
 
@@ -314,9 +314,9 @@ internal R_SceneRegisterModelReceipt R_SceneRegisterModel(R_Scene *scene,
    MATERIALS
    ======================================================= */
 
-internal u32 R_SceneResolveTextureBindless(const R_Scene *scene,
-										   AST_Assets *assets,
-										   AST_Handle handle);
+internal GFX_BindlessIndex R_SceneResolveTextureBindless(const R_Scene *scene,
+														 AST_Assets *assets,
+														 AST_Handle handle);
 
 internal R_SceneMaterialHandle R_SceneRegisterMaterial (R_Scene *scene,
 														const AST_ModelMaterial *material,

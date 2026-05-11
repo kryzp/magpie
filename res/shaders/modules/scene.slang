@@ -36,7 +36,7 @@ namespace scene
 		public uint32_t alpha_mode; // 0 = opaque, 1 = mask, 2 = blend (for culling)
 
 		public float4x4 *skinning_palette;
-		public uint32_t skinning_bone_count;
+		public uint32_t skinning_joint_count;
 	};
 
 	public struct RenderMesh

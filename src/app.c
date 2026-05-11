@@ -374,6 +374,9 @@ AppInitRender(App *app)
 		
 		app->object_handle = R_SceneObjectCreate(&app->scene, &obj);
 	}
+
+	ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
+	ANIM_AnimatorPlay(&app->object_animator, 0);
 	
 	ScratchRelease(&scratch);
 
@@ -798,31 +801,9 @@ AppTick(App *app, const I_State *input)
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 
-	{
-		AST_Asset *model_asset = AST_Get(&app->assets, app->object_model_handle, AST_Type_Model);
-		
-		u32 bone_count = model_asset->model.skeletons[0].joint_count;
-
-		if (bone_count > ArraySize(app->object_palette))
-			bone_count = ArraySize(app->object_palette);
-
-		for (u32 i = 0; i < bone_count; i++)
-			app->object_palette[i] = M4Identity();
-
-		static i32 debug_joint = 0;
-
-		if (I_KbPressed(input, I_KeyboardKey_Left))
-			debug_joint++;
-		if (I_KbPressed(input, I_KeyboardKey_Right))
-			debug_joint--;
-
-		debug_joint = ClampValue(debug_joint, 0, bone_count - 1);
-		
-		f32 angle = SinF(elapsed * 5.0f) * 1.0f;
-		app->object_palette[debug_joint] = M4RotateAxis(angle, v3(0.f, 0.f, 1.f));
-		
-		R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, app->object_palette, bone_count);
-	}
+	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
+	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
+	R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
