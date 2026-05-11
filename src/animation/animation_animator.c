@@ -172,7 +172,7 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 		{
 			const AST_AnimChannel *ch = &clip->channels[i];
 
-			if (ch->target_skeleton < 0 || ch->target_skeleton > animator->pose_count)
+			if (ch->target_skeleton < 0 || ch->target_skeleton >= animator->pose_count)
 				continue;
 
 			ANIM_SkeletonPose *pose = &animator->poses[ch->target_skeleton];
