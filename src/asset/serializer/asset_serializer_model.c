@@ -368,7 +368,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 						  const cgltf_primitive *prim,
 						  m4 world_transform,
 						  const cgltf_skin *skin,
-						  i32 skin_idx)
+						  i32 skin_index)
 {
 	// TODO: support more topologies
 	DebugLogAssert(ctx->log_channel,
@@ -653,7 +653,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 	mesh->index_count   = idx_count;
 	mesh->indices       = indices;
 	mesh->skin_vertices = skin_vertices;
-	mesh->skin_index    = skin_idx;
+	mesh->skin_index    = skin_index;
 	mesh->material      = material;
 
 	mesh->next = load->first_mesh;
@@ -692,15 +692,15 @@ AST_ModelProcessNode(const AST_Context *ctx,
 			mesh_transform = AST_GltfTransformM4(AST_GltfFloat16ToM4(world));
 		}
 
-		i32 skin_idx = -1;
+		i32 skin_index = -1;
 
 		if (is_skinned)
-			skin_idx = (i32)cgltf_skin_index(gltf, node->skin);
+			skin_index = (i32)cgltf_skin_index(gltf, node->skin);
 
 		for (u32 i = 0; i < node->mesh->primitives_count; i++)
 		{
 			const cgltf_primitive *prim = &node->mesh->primitives[i];
-			AST_ModelProcessPrimitive(ctx, arena, load, directory, prim, mesh_transform, node->skin, skin_idx);
+			AST_ModelProcessPrimitive(ctx, arena, load, directory, prim, mesh_transform, node->skin, skin_index);
 		}
 	}
 
@@ -1214,9 +1214,13 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 			svb_info.size  = src_mesh->vertex_count * sizeof(AST_ModelSkinVertex);
 			
 			dst->skin_buffer = GFX_DeviceBufferAlloc(device, &svb_info);
-			
-			dst->skin_index = src_mesh->skin_index;
 		}
+		else
+		{
+			dst->skin_buffer = GFX_BufferKeyNull();
+		}
+		
+		dst->skin_index = src_mesh->skin_index;
 	}
 
 	

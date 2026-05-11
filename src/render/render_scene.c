@@ -27,7 +27,7 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_ch
  
 	scene->mesh_buffer_dirty	 = true;
 	scene->material_buffer_dirty = true;
-	
+
 	DebugLogI(scene->log_channel, "Scene Initialized.");
 }
 
@@ -230,7 +230,7 @@ R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResourc
 
 		MemCopy(mapped + offset, slot->object.skinning_palette, joints * sizeof(m4));
 
-		slot->skinning_palette_address_this_frame = out->skinning_palette_buffer.gpu + offset*sizeof(m4);
+		slot->skinning_palette_address_this_frame = out->skinning_palette_buffer.gpu + offset * sizeof(m4);
 
 		offset += joints;
 	}
@@ -613,9 +613,7 @@ R_SceneRegisterMeshFromBuffers(R_Scene *scene,
 
 	R_SceneMeshHandle handle = {0};
 	handle.value = mesh_data_index;
-
-	DebugLogD(scene->log_channel, "Registered Mesh.");
-
+	
 	return handle;
 }
 
@@ -806,8 +804,6 @@ R_SceneRegisterMaterial(R_Scene *scene,
 
 	R_SceneMaterialHandle handle = {0};
 	handle.value = index;
-
-	DebugLogD(scene->log_channel, "Registered Material.");
 	
 	return handle;
 }

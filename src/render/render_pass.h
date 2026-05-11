@@ -36,12 +36,12 @@ struct R_PassTextureEdge
 	VkImageLayout layout;
 	GFX_SubresourceRange attachment_range;
 
+	R_GraphTexHandle resolve_handle;
+	VkImageLayout resolve_layout;
+	VkResolveModeFlagBits resolve_mode;
+
 	b32 should_clear;
 	R_Clear clear;
-
-	R_GraphTexHandle resolve_handle;
-	VkResolveModeFlagBits resolve_mode;
-	VkImageLayout resolve_layout;
 };
 
 typedef struct R_PassBufferEdge R_PassBufferEdge;

@@ -7,7 +7,7 @@ GFX_ShaderCompilerLogCallback(const char *context,
 {
 	GFX_ShaderCompiler *self = user_data;
 	
-	DebugLogD(self->log_channel, "%s --> %s: %s", source, context, message);
+	DebugLogW(self->log_channel, "%s --> %s: %s", source, context, message);
 }
 
 internal void
@@ -91,9 +91,11 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 
 	compiled.failed = false;
 
+	/*
 	DebugLogD(compiler->log_channel,
 			  "Compiled shader: %.*s.",
 			  (i32)source_path.len, source_path.str);
+	*/
 
 end:
 	SLANG_FreeResult(&bridge_result);

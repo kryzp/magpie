@@ -116,8 +116,9 @@ struct OS_W32_JOB_Scheduler
 	OS_Handle cond_begin;
 
 	OS_W32_JOB_Queue main_thread_queue;
-	
 	OS_W32_JOB_Queue queues[JOB_Priority_COUNT];
+	
+	Arena fallback_scratch_ring[OS_W32_JOB_FIBER_SCRATCH_RING_SIZE];
 	
 	u32 worker_count;
 	OS_W32_JOB_Worker workers[OS_W32_JOB_MAX_WORKERS];

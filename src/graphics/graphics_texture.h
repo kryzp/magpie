@@ -64,7 +64,6 @@ struct GFX_TextureView
 	VkImageView vk_handle;
 	VkImageViewType type;
 	GFX_SubresourceRange range;
-
 	GFX_BindlessHandle bindless;
 };
 

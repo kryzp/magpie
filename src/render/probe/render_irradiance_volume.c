@@ -68,7 +68,7 @@ R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 	vol->is_baked = false;
 
 	DebugLogI(log_channel,
-			  "Irradiance Volume Initialized (%u x %u x %u = %u probes).",
+			  "Irradiance Volume Initialized (%u * %u * %u = %u probes).",
 			  nx, ny, nz, vol->ntotal);
 }
 

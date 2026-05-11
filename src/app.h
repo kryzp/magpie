@@ -69,9 +69,9 @@ struct App
 	R_SSAO ssao;
 
 	AST_Handle object_model_handle;
-	ANIM_Animator object_animator;
-	R_SceneObjectHandle object_handle;
-	m4 object_palette[256];
+	//ANIM_Animator object_animator;
+	//R_SceneObjectHandle object_handle;
+	//m4 object_palette[256];
 	
 	R_SceneLightHandle light_handle;
 	

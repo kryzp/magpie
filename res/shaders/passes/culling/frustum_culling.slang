@@ -8,8 +8,10 @@ struct PushConstants
 	scene::PagePointers *pages;
 	scene::IndirectDraw *indirect_buffer;
 	uint32_t *count_buffer;
+	uint64_t padding0;
 	uint32_t object_count;
 	uint32_t alpha_filter;
+	uint32_t padding1[2];
 	float4 frustum_planes[6]; // xyz = normal, w = distance
 };
 

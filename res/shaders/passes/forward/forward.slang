@@ -40,7 +40,7 @@ struct VS_Output
 	[vk::location(1)] float2 texcoord;
 	[vk::location(2)] float3 colour;
 	[vk::location(3)] float3x3 tbn;
-	[vk::location(6)] uint material_index; // TBN matrix takes 3 locations	
+	[vk::location(6)] uint32_t material_index; // TBN matrix takes 3 locations	
 };
 
 [shader("vertex")]
@@ -79,8 +79,8 @@ VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 	float3 B = normalize(mul(normal_matrix, local_bitangent));
 	float3 N = normalize(mul(normal_matrix, local_normal));
 
-	//T = normalize(T - dot(T, N) * N);
-	//B = normalize(B - dot(B, N) * N);
+	T = normalize(T - dot(T, N) * N);
+	B = normalize(B - dot(B, N) * N);
 
 	float4 world_pos = mul(object_data.model_matrix, float4(local_position, 1.0));
 

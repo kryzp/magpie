@@ -296,15 +296,17 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	GFX_Context context = {0};
 	
 	VkApplicationInfo core_info = {0};
+	
 	core_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 
 	core_info.pApplicationName = OS_DEFAULT_WINDOW_TITLE;
+	core_info.pEngineName      = OS_ENGINE_NAME;
+	
 	core_info.applicationVersion = VK_MAKE_API_VERSION(0,
 													   OS_APP_VERSION_MAJOR,
 													   OS_APP_VERSION_MINOR,
 													   OS_APP_VERSION_PATCH);
 
-	core_info.pEngineName = OS_ENGINE_NAME;
 	core_info.engineVersion = VK_MAKE_API_VERSION(0,
 												  OS_ENGINE_VERSION_MAJOR,
 												  OS_ENGINE_VERSION_MINOR,
@@ -322,11 +324,26 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 	instance_create_info.ppEnabledExtensionNames = GFX_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
 
+	static const VkValidationFeatureEnableEXT enabled_features[] = {
+		VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+		VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+		VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
+	};
+
+	VkValidationFeaturesEXT validation_features = {0};
+	validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+	validation_features.enabledValidationFeatureCount = ArraySize(enabled_features);
+	validation_features.pEnabledValidationFeatures = enabled_features;
+	
 	VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
-	debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;	
+	debug_create_info.pNext = &validation_features;
 
 	debug_create_info.messageSeverity =
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 
 	debug_create_info.messageType =
@@ -336,7 +353,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 	debug_create_info.pfnUserCallback = vk_debug_callback;
 	debug_create_info.pUserData = vk_debug_callback_ctx;
-
+	
 	context.has_validation_layers = GFX_ContextCheckForValidationLayerSupport();
 
 	if (context.has_validation_layers)

@@ -11,7 +11,7 @@ OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 	if (sink.len > 0)
 		logger->file_stream = osapi->StreamFromFile(sink, OS_FILE_PRESET_CREATE);
 
-	logger->null_channel = OS_W32_LOG_OpenChannel(logger, String8Lit("--------"));
+	logger->null_channel = OS_W32_LOG_OpenChannel(logger, String8Lit("----------"));
 	logger->log_channel  = OS_W32_LOG_OpenChannel(logger, String8Lit("WIN32/LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))

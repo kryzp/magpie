@@ -441,7 +441,7 @@ R_GraphBackpropagateDependencies(R_Graph *graph)
 		R_Pass *pass = &graph->passes[i];
 
 		pass->is_culled = true;
-
+		
 		for (u32 j = 0; j < pass->output_texture_count; j++)
 		{
 			R_PassTextureEdge *out = &pass->output_textures[j];
@@ -652,6 +652,14 @@ R_GraphGenerateBarriers(R_Graph *graph)
 				R_PassTextureEdge resolve_edge = *edge;
 				resolve_edge.handle = edge->resolve_handle;
 				resolve_edge.layout = edge->resolve_layout;
+
+				resolve_edge.state.stage =
+					VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+				resolve_edge.state.access =
+					VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT |
+					VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+				
 				resolve_edge.resolve_handle = R_GraphTexHandleNull();
 				resolve_edge.should_clear = false;
 

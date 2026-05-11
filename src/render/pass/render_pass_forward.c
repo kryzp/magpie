@@ -14,7 +14,7 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	GFX_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	GFX_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
-	
+
 	struct
 	{
 		u64 frame_data_buffer;
@@ -60,7 +60,7 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	args.light_count                 = R_SceneGetLightCount(scene);
 
 	GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
-
+	
 	GFX_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
 	GFX_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 

@@ -210,6 +210,9 @@ OS_W32_JOB_Init(OS_W32_JOB_Scheduler *scheduler, LOG_Channel log_channel)
 	scheduler->cond_begin = osapi->CondVarCreate();
  
 	osapi->AtomicStoreU32(&scheduler->atomic_running, true);
+	
+	for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
+		scheduler->fallback_scratch_ring[j] = ArenaAlloc(OS_W32_JOB_FIBER_SCRATCH_SIZE);
  
 	for (u32 i = 0; i < OS_W32_JOB_MAX_CONCURRENT_FIBERS; i++)
 	{
@@ -270,6 +273,9 @@ OS_W32_JOB_Shutdown(OS_W32_JOB_Scheduler *scheduler)
 
 		osapi->FiberDelete(scheduler->atomic_fiber_storage[i].handle);
 	}
+	
+	for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
+		ArenaRelease(&scheduler->fallback_scratch_ring[j]);
 
 	// Destroy OS synchronisation primitives.
 	osapi->MutexDestroy(scheduler->mutex);
@@ -692,12 +698,20 @@ OS_W32_JOB_For(OS_W32_JOB_Scheduler *scheduler, u32 count, JOB_EntryForFn *fn, J
 internal Arena *
 OS_W32_JOB_GetScratch(OS_W32_JOB_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count)
 {
-	OS_W32_JOB_Fiber *fiber = job_current_worker->current_fiber;
-	
 	Arena *arena = NULL;
-	Arena *ring = fiber->scratch_arenas;
+	Arena *ring = NULL;
 
-	for (u32 i = 0; i < ArraySize(fiber->scratch_arenas); i++, ring++)
+	if (job_current_worker)
+	{
+		OS_W32_JOB_Fiber *fiber = job_current_worker->current_fiber;
+		ring = fiber->scratch_arenas;
+	}
+	else
+	{
+		ring = scheduler->fallback_scratch_ring;
+	}
+
+	for (u32 i = 0; i < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; i++, ring++)
 	{
 		b32 conflict = false;
 

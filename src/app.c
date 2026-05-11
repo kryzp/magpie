@@ -350,12 +350,12 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
 	
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
+	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             AST_Type_Model);
-	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         AST_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -372,11 +372,11 @@ AppInitRender(App *app)
 		obj.mesh          = entry->mesh;
 		obj.material      = entry->material;
 		
-		app->object_handle = R_SceneObjectCreate(&app->scene, &obj);
+		/*app->object_handle = */R_SceneObjectCreate(&app->scene, &obj);
 	}
 
-	ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
-	ANIM_AnimatorPlay(&app->object_animator, 0);
+	//ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
+	//ANIM_AnimatorPlay(&app->object_animator, 0);
 	
 	ScratchRelease(&scratch);
 
@@ -801,14 +801,24 @@ AppTick(App *app, const I_State *input)
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 
-	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
-	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
-	R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
+	//ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
+	//ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
+	//R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
 		AppRender(app, dt, elapsed, &cmd);
 
+		/*
+		R_TextureInfo swapchain_attachment_info = R_TextureInfoInit();
+		swapchain_attachment_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		R_GraphTexHandle dummy_handle = R_GraphCreateTexture(&app->graph, &swapchain_attachment_info);
+		R_Clear clear = R_ClearColour((f32)I_KbDown(input, I_KeyboardKey_Tab), 0.0f, 0.0f, 1.f);
+		R_Pass *dummy = R_GraphAdd(&app->graph, String8Lit("dummy"), R_PassType_Graphics);
+		R_PassWriteColour(dummy, dummy_handle, &clear);
+		R_GraphSetBackbuffer(&app->graph, dummy_handle);
+		*/
+		
 		R_GraphCompile(&app->graph, &app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->editor.camera, dt, elapsed);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
@@ -888,7 +898,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	R_FrustumVolume frustum = R_CameraFrustum(&app->editor.camera);
 
 	R_ShadowRendererUploadGPU(&app->shadow_renderer, &app->scene);
-	
+
 	R_ShadowRendererRender(&app->shadow_renderer,
 						   &app->graph,
 						   &bt, &bb,
@@ -905,7 +915,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 					&app->graph,
 					&bt, &bb,
 					&draw_stream);
-
+		
 	// Skybox.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
@@ -921,10 +931,10 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
-		bb.lighting.resolved = R_PassWriteColourResolve  (pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
-		bb.depth.resolved    = R_PassWriteDepthResolve   (pass, bb.depth.msaa,    bb.depth.resolved,    NULL);
-		                       R_PassReadTextureGraphics (pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
-		                       R_PassSetRecord           (pass, R_SkyboxPassFn, data);
+		bb.lighting.resolved = R_PassWriteColourResolve(pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
+		bb.depth.resolved    = R_PassWriteDepthResolve(pass, bb.depth.msaa,    bb.depth.resolved,    NULL);
+		R_PassReadTextureGraphics(pass, R_GraphImportTexture(&app->graph, app->environment_cubemap));
+		R_PassSetRecord(pass, R_SkyboxPassFn, data);
 	}
 	
 	// Post Processing.
@@ -941,17 +951,17 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 
 		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Post Processing"), R_PassType_Compute);
-		bb.lighting.resolved = R_PassWriteTextureCompute (pass, bb.lighting.resolved);
-		                       R_PassReadTextureCompute  (pass, bb.lighting.resolved);
-		                       R_PassSetRecord           (pass, R_PostProcessingPassFn, data);
+		bb.lighting.resolved = R_PassWriteTextureCompute(pass, bb.lighting.resolved);
+		R_PassReadTextureCompute(pass, bb.lighting.resolved);
+		R_PassSetRecord(pass, R_PostProcessingPassFn, data);
 	}
-	
+
 	R_DebugRendererRender(&app->debug_renderer,
 						  dt,
 						  &app->graph,
 						  &app->frame_arena,
 						  bb.lighting.resolved,
 						  bb.depth.resolved);
-
+	
 	R_GraphSetBackbuffer(&app->graph, bb.lighting.resolved);
 }

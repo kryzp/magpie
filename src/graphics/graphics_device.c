@@ -118,12 +118,70 @@ GFX_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_sev
 							  const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
 							  void *ctx)
 {
-	GFX_Device *device = ctx;
-	
-	if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	LOG_Channel ch = ((GFX_Device *)ctx)->log_channel;
+
+	if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
 	{
-		DebugLogB(device->log_channel, "Severity = %d, Type = %d, Message = \"%s\"",
-				  message_severity, message_type, callback_data->pMessage);
+		switch (message_severity)
+		{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+				DebugLogT(ch, "(General) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+				DebugLogD(ch, "(General) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+				DebugLogW(ch, "(General) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+				DebugLogB(ch, "(General) %s", callback_data->pMessage);
+				break;
+		}
+	}
+	else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+	{
+		switch (message_severity)
+		{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+				DebugLogT(ch, "(Validation) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+				DebugLogD(ch, "(Validation) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+				DebugLogW(ch, "(Validation) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+				DebugLogB(ch, "(Validation) %s", callback_data->pMessage);
+				break;
+		}
+	}
+	else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+	{
+		switch (message_severity)
+		{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+				DebugLogT(ch, "(Performance) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+				DebugLogD(ch, "(Performance) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+				DebugLogW(ch, "(Performance) %s", callback_data->pMessage);
+				break;
+			
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+				DebugLogB(ch, "(Performance) %s", callback_data->pMessage);
+				break;
+		}
 	}
 	
 	return VK_FALSE;
@@ -314,7 +372,7 @@ GFX_DeviceSubmitEx(GFX_Device *device, GFX_CmdBuffer *cmd,
 
 	VkCommandBufferSubmitInfo buffer_info = {0};
 	buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-	buffer_info.deviceMask = 0;
+	buffer_info.deviceMask = 1;
 	buffer_info.commandBuffer = cmd->vk_handle;
 
 	VkSubmitInfo2 submit_info = {0};
