@@ -22,6 +22,8 @@ struct AST_Skeleton
 	
 	u32 joint_count;
 	AST_Joint *joints;
+
+	m4 root_parent_world;
 };
 
 #endif // ASSET_SKELETON_H

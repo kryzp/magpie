@@ -801,6 +801,43 @@ AST_ModelLoadSkeleton(const AST_Context *ctx,
 			j->inverse_bind_matrix = M4Identity();
 		}
 	}
+
+
+	out->root_parent_world = M4Identity();
+	
+	const cgltf_node *top_joint_n = NULL;
+
+	for (u32 i = 0; i < skin->joints_count; i++)
+	{
+		const cgltf_node *n = skin->joints[i];
+
+		b32 is_parent = false;
+
+		if (n->parent)
+		{
+			for (u32 k = 0; k < skin->joints_count; k++)
+			{
+				if (skin->joints[k] != n->parent)
+					continue;
+
+				is_parent = true;
+				break;
+			}
+		}
+
+		if (!is_parent)
+		{
+			top_joint_n = n;
+			break;
+		}
+	}
+
+	if (top_joint_n && top_joint_n->parent)
+	{
+		cgltf_float world[16] = {0};
+		cgltf_node_transform_world(top_joint_n->parent, world);
+		out->root_parent_world = AST_GltfTransformM4(AST_GltfFloat16ToM4(world));
+	}
 }
 
 internal AST_AnimPath
@@ -1197,6 +1234,8 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		
 		dst->joint_count = src->joint_count;
 		dst->joints = ArenaPushArray(arena, AST_Joint, src->joint_count);
+
+		dst->root_parent_world = src->root_parent_world;
 
 		for (u32 j = 0; j < dst->joint_count; j++)
 		{

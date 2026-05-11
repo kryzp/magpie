@@ -195,7 +195,7 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 			i32 parent = skeleton->joints[j].parent;
 
 			pose->global_transforms[j] = parent < 0
-				? local_transform
+				? M4MulM4(skeleton->root_parent_world, local_transform)
 				: M4MulM4(pose->global_transforms[parent], local_transform);
 
 			pose->palette[j] = M4MulM4(pose->global_transforms[j], skeleton->joints[j].inverse_bind_matrix);
