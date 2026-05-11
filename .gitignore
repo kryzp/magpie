@@ -13,3 +13,4 @@ CMakeSettings.json
 /res/Models
 TAGS
 .dir-locals.el
+log_output.txt
