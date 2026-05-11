@@ -31,7 +31,7 @@ AST_GltfFloat16ToM4(const cgltf_float m[16])
 }
 
 internal v3
-AST_GltfTransformV3(v3 v)
+AST_GltfTransformTranslation(v3 v)
 {
 	return v3(v.x, -v.z, v.y);
 }
@@ -370,7 +370,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 	const cgltf_accessor *joints    = NULL;
 	const cgltf_accessor *weights   = NULL;
 
-	for (cgltf_size i = 0; i < prim->attributes_count; i++)
+	for (u32 i = 0; i < prim->attributes_count; i++)
 	{
 		const cgltf_attribute *attr = &prim->attributes[i];
 
@@ -458,7 +458,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 
 		f32 pos[3] = {0};
 		cgltf_accessor_read_float(positions, i, pos, 3);
-		v->position = AST_GltfTransformV3(v3(pos[0], pos[1], pos[2]));
+		v->position = AST_GltfTransformTranslation(v3(pos[0], pos[1], pos[2]));
 
 		bmin = V3MinOf(bmin, v->position);
 		bmax = V3MaxOf(bmax, v->position);
@@ -477,7 +477,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 		if (colours)
 		{
 			f32 col[4] = { 1.f, 1.f, 1.f, 1.f };
-			cgltf_size comps = cgltf_num_components(colours->type);
+			u32 comps = cgltf_num_components(colours->type);
 
 			if (comps > 4)
 				comps = 4;
@@ -495,7 +495,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 		{
 			f32 n[3] = {0};
 			cgltf_accessor_read_float(normals, i, n, 3);
-			v->normal = AST_GltfTransformV3(v3(n[0], n[1], n[2]));
+			v->normal = AST_GltfTransformTranslation(v3(n[0], n[1], n[2]));
 		}
 		else
 		{
@@ -511,7 +511,7 @@ AST_ModelProcessPrimitive(const AST_Context *ctx,
 			cgltf_accessor_read_float(tangents, i, t, 4);
 
 			v3 N = v->normal;
-			v3 T = AST_GltfTransformV3(v3(t[0], t[1], t[2]));
+			v3 T = AST_GltfTransformTranslation(v3(t[0], t[1], t[2]));
 			f32 sign = t[3];
 
 			v->tangent   = T;
@@ -681,34 +681,329 @@ AST_ModelProcessNode(const AST_Context *ctx,
 		if (is_skinned)
 			skin_idx = (i32)cgltf_skin_index(gltf, node->skin);
 
-		for (cgltf_size i = 0; i < node->mesh->primitives_count; i++)
+		for (u32 i = 0; i < node->mesh->primitives_count; i++)
 		{
 			const cgltf_primitive *prim = &node->mesh->primitives[i];
 			AST_ModelProcessPrimitive(ctx, arena, load, directory, prim, mesh_transform, node->skin, skin_idx);
 		}
 	}
 
-	for (cgltf_size i = 0; i < node->children_count; i++)
+	for (u32 i = 0; i < node->children_count; i++)
 		AST_ModelProcessNode(ctx, arena, load, directory, node->children[i], gltf);
 }
 
 internal void
 AST_ModelLoadSkeleton(const AST_Context *ctx,
-					   AST_ModelLoadData *load,
-					   const cgltf_data *gltf,
-					   u32 skin_index)
+					  Arena *arena,
+					  AST_ModelLoadData *load,
+					  const cgltf_data *gltf,
+					  u32 index)
 {
-	const cgltf_skin *skin = &gltf->skins[skin_index];
+	const cgltf_skin *skin = &gltf->skins[index];
+	AST_Skeleton *out = &load->skeletons[index];
+
+	if (skin->name && skin->name[0])
+		out->name = String8Clone(arena, String8FromCStr(skin->name));
+	else if (skin->skeleton && skin->skeleton->name)
+		out->name = String8Clone(arena, String8FromCStr(skin->skeleton->name));
+	else
+		out->name = String8Fmt(arena, "Unnamed Skeleton (%u)", index);
 	
-	DebugLogW(ctx->log_channel, "Skeleton loading not implemented yet.");
+	out->joint_count = (u32)skin->joints_count;
+	out->joints = ArenaPushArray(arena, AST_Joint, out->joint_count);
+
+	for (u32 i = 0; i < out->joint_count; i++)
+	{
+		AST_Joint *j = &out->joints[i];
+
+		const cgltf_node *node = skin->joints[i];
+
+		if (node->name)
+			j->name = String8Clone(arena, String8FromCStr(node->name));
+		else
+			j->name = String8Fmt(arena, "Unnamed Joint (%u)", i);
+
+		j->parent = -1;
+
+		if (node->parent)
+		{
+			for (u32 k = 0; k < out->joint_count; k++)
+			{
+				if (skin->joints[k] != node->parent)
+					continue;
+
+				j->parent = (i32)k;
+				break;
+			}
+		}
+
+		v3 translation = v3(0.f, 0.f, 0.f);
+		v4 rotation    = v4(0.f, 0.f, 0.f, 1.f);
+		v3 scale       = v3(1.f, 1.f, 1.f);
+
+		if (node->has_matrix)
+		{
+			DebugLogW(ctx->log_channel, "Joint (%u) stores a baked matrix but I'm not bothering to decompose the matrix yet so we're just gonna assume identity and act like everything's fine :thumbsup:", i);
+		}
+		else
+		{
+			if (node->has_translation)
+			{
+				translation = v3(node->translation[0],
+								 node->translation[1],
+								 node->translation[2]);
+			}
+
+			if (node->has_rotation)
+			{
+				rotation = v4(node->rotation[0],
+							  node->rotation[1],
+							  node->rotation[2],
+							  node->rotation[3]);
+			}
+
+			if (node->has_scale)
+			{
+				scale = v3(node->scale[0],
+						   node->scale[1],
+						   node->scale[2]);
+			}
+		}
+
+		j->bind_translate = AST_GltfTransformTranslation(translation);
+		j->bind_rotation  = AST_GltfTransformQuat(rotation);
+		j->bind_scale     = AST_GltfTransformScale(scale);
+
+		if (skin->inverse_bind_matrices)
+		{
+			f32 ibm[16] = {0};
+			cgltf_accessor_read_float(skin->inverse_bind_matrices, i, ibm, 16);
+			j->inverse_bind_matrix = AST_GltfTransformM4(AST_GltfFloat16ToM4(ibm));
+		}
+		else
+		{
+			j->inverse_bind_matrix = M4Identity();
+		}
+	}
 }
 
+internal AST_AnimPath
+AST_ModelAnimPathFromGltf(cgltf_animation_path_type t)
+{
+	switch (t)
+	{
+		case cgltf_animation_path_type_translation:  return AST_AnimPath_Translate;
+		case cgltf_animation_path_type_rotation:     return AST_AnimPath_Rotation;
+		case cgltf_animation_path_type_scale:        return AST_AnimPath_Scale;
+	}
+
+	AssertTrue(false);
+
+	return AST_AnimPath_COUNT;
+}
+
+internal AST_AnimInterp
+AST_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
+{
+	switch (t)
+	{
+		case cgltf_interpolation_type_step:          return AST_AnimInterp_Step;
+		case cgltf_interpolation_type_linear:        return AST_AnimInterp_Linear;
+		case cgltf_interpolation_type_cubic_spline:  return AST_AnimInterp_Cubic;
+	}
+
+	AssertTrue(false);
+
+	return AST_AnimInterp_COUNT;
+}
+
+/*
+ * this function sucks dick holy shit
+ */
 internal void
 AST_ModelLoadClips(const AST_Context *ctx,
+				   Arena *arena,
 				   AST_ModelLoadData *load,
 				   const cgltf_data *gltf)
 {
-	DebugLogW(ctx->log_channel, "Animation clip loading not implemented yet.");
+	if (gltf->animations_count <= 0)
+	{
+		load->clip_count = 0;
+		load->clips = NULL;
+
+		return;
+	}
+	
+	load->clip_count = (u32)gltf->animations_count;
+	load->clips = ArenaPushArray(arena, AST_AnimClip, load->clip_count);
+
+	for (u32 i = 0; i < load->clip_count; i++)
+	{
+		AST_AnimClip *clip = &load->clips[i];
+
+		const cgltf_animation *anim = &gltf->animations[i];
+
+		if (anim->name)
+			clip->name = String8Clone(arena, String8FromCStr(anim->name));
+		else
+			clip->name = String8Fmt(arena, "Animation Clip (%u)", i);
+
+		u32 valid_count = 0;
+
+		for (u32 j = 0; j < anim->channels_count; j++)
+		{
+			const cgltf_animation_channel *anim_ch = &anim->channels[j];
+
+			if (!anim_ch->target_node || !anim_ch->sampler)
+				continue;
+
+			if (anim_ch->target_path == cgltf_animation_path_type_invalid)
+				continue;
+
+			if (anim_ch->target_path == cgltf_animation_path_type_weights)
+				continue; // morph targets
+
+			i32 joint_idx = -1;
+			i32 skeleton_idx = -1;
+
+			for (u32 ii = 0; ii < gltf->skins_count; ii++)
+			{
+				if (joint_idx >= 0)
+					break;
+
+				const cgltf_skin *s = &gltf->skins[ii];
+
+				for (u32 jj = 0; jj < s->joints_count; jj++)
+				{
+					if (s->joints[jj] == anim_ch->target_node)
+					{
+						joint_idx = (i32)jj;
+						skeleton_idx = (i32)ii;
+
+						break;
+					}
+				}
+			}
+
+			if (joint_idx < 0)
+				continue;
+
+			valid_count++;
+		}
+
+		clip->duration_s = 0.f;
+
+		clip->channel_count = valid_count;
+		clip->channels = ArenaPushArray(arena, AST_AnimChannel, clip->channel_count);
+
+		u32 curr = 0;
+
+		for (u32 j = 0; j < anim->channels_count; j++)
+		{
+			const cgltf_animation_channel *anim_ch = &anim->channels[j];
+
+			if (!anim_ch->target_node || !anim_ch->sampler)
+				continue;
+
+			if (anim_ch->target_path == cgltf_animation_path_type_invalid)
+				continue;
+
+			if (anim_ch->target_path == cgltf_animation_path_type_weights)
+				continue; // morph targets
+
+			i32 skeleton_idx = -1;
+			i32 joint_idx = -1;
+
+			for (u32 ii = 0; ii < gltf->skins_count; ii++)
+			{
+				if (joint_idx >= 0)
+					break;
+
+				const cgltf_skin *s = &gltf->skins[ii];
+
+				for (u32 jj = 0; jj < s->joints_count; jj++)
+				{
+					if (s->joints[jj] == anim_ch->target_node)
+					{
+						joint_idx = (i32)jj;
+						skeleton_idx = (i32)ii;
+
+						break;
+					}
+				}
+			}
+
+			if (joint_idx < 0)
+				continue;
+
+			AST_AnimChannel *ch = &clip->channels[curr];
+			
+			const cgltf_animation_sampler *anim_sampler = anim_ch->sampler;
+
+			ch->target_skeleton = skeleton_idx;
+			ch->target_joint    = (u32)joint_idx;
+
+			ch->path            = AST_ModelAnimPathFromGltf(anim_ch->target_path);
+			ch->interp          = AST_ModelAnimInterpFromGltf(anim_sampler->interpolation);
+
+			b32 cubic = anim_sampler->interpolation == cgltf_interpolation_type_cubic_spline;
+
+			if (cubic)
+			{
+				DebugLogE(ctx->log_channel,
+						  "Clip (%.*s) channel uses cubic interpolation but we don't support that yet so falling back to linear.",
+						  (i32)clip->name.len, clip->name.str);
+
+				ch->interp = AST_AnimInterp_Linear;
+			}
+
+			u32 nkeys = (u32)anim_sampler->input->count;
+
+			ch->key_count = nkeys;
+			ch->keys = ArenaPushArray(arena, AST_AnimKey, ch->key_count);
+
+			for (u32 k = 0; k < ch->key_count; k++)
+			{
+				AST_AnimKey *key = &ch->keys[k];
+
+				f32 t = 0.f;
+				cgltf_accessor_read_float(anim_sampler->input, k, &t, 1);
+				key->timestamp_s = t;
+
+				switch (ch->path)
+				{
+					case AST_AnimPath_Translate:
+					{
+						f32 v[3] = { 0.f, 0.f, 0.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+						key->translation = AST_GltfTransformTranslation(v3(v[0], v[1], v[2]));
+					}
+					break;
+						
+					case AST_AnimPath_Rotation:
+					{
+						f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
+						key->rotation = AST_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
+					}
+					break;
+
+					case AST_AnimPath_Scale:
+					{
+						f32 v[3] = { 1.f, 1.f, 1.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+						key->scale = AST_GltfTransformScale(v3(v[0], v[1], v[2]));
+					}
+					break;
+				}
+			}
+
+			if (nkeys > 0 && ch->keys[nkeys - 1].timestamp_s > clip->duration_s)
+				clip->duration_s = ch->keys[nkeys - 1].timestamp_s;
+			
+			curr++;
+		}
+	}
 }
 
 internal AST_SerializerPipelineData
@@ -776,7 +1071,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 		goto end;
 	}
 
-	for (cgltf_size i = 0; i < scene->nodes_count; i++)
+	for (u32 i = 0; i < scene->nodes_count; i++)
 		AST_ModelProcessNode(ctx, load_scope, load, directory, scene->nodes[i], gltf);
 	
 	if (gltf->skins_count > 0)
@@ -785,9 +1080,9 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 		load->skeletons = ArenaPushArray(load_scope, AST_Skeleton, load->skeleton_count);
 
 		for (u32 i = 0; i < load->skeleton_count; i++)
-			AST_ModelLoadSkeleton(ctx, load, gltf, i);
+			AST_ModelLoadSkeleton(ctx, load_scope, load, gltf, i);
 		
-		AST_ModelLoadClips(ctx, load, gltf);
+		AST_ModelLoadClips(ctx, load_scope, load, gltf);
 	}
 	
 	result.stage_size = load->total_vertex_bytes + load->total_index_bytes;
@@ -855,18 +1150,19 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 		ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		ib_info.size  = src_mesh->index_count * sizeof(AST_ModelIndex);
 
-		/*
-		GFX_BufferAllocInfo svb_info = {0};
-		svb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
-		svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-		svb_info.size  = src_mesh->vertex_count * sizeof(AST_ModelSkinVertex);
-		*/
-		
 		dst->vertex_buffer = GFX_DeviceBufferAlloc(device, &vb_info);
 		dst->index_buffer  = GFX_DeviceBufferAlloc(device, &ib_info);
-		//dst->skin_buffer   = GFX_DeviceBufferAlloc(device, &svb_info);
 
-		dst->skin_index = src_mesh->skin_index;
+		/*
+			GFX_BufferAllocInfo svb_info = {0};
+			svb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
+			svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			svb_info.size  = src_mesh->vertex_count * sizeof(AST_ModelSkinVertex);
+			
+			dst->skin_buffer = GFX_DeviceBufferAlloc(device, &svb_info);
+
+			dst->skin_index = src_mesh->skin_index;
+		*/
 	}
 
 	
@@ -877,12 +1173,29 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 
 	for (u32 i = 0; i < load->skeleton_count; i++)
 	{
-		const AST_Skeleton *src = &load->skeletons[i];
+		AST_Skeleton *src = &load->skeletons[i];
 		AST_Skeleton *dst = &skeletons[i];
 
 		dst->name = String8Clone(arena, src->name);
+		
 		dst->joint_count = src->joint_count;
 		dst->joints = ArenaPushArray(arena, AST_Joint, src->joint_count);
+
+		for (u32 j = 0; j < dst->joint_count; j++)
+		{
+			AST_Joint *src_j = &src->joints[j];
+			AST_Joint *dst_j = &dst->joints[j];
+			
+			dst_j->name                = String8Clone(arena, src_j->name);
+			
+			dst_j->parent              = src_j->parent;
+
+			dst_j->bind_translate      = src_j->bind_translate;
+			dst_j->bind_rotation       = src_j->bind_rotation;
+			dst_j->bind_scale          = src_j->bind_scale;
+
+			dst_j->inverse_bind_matrix = src_j->inverse_bind_matrix;
+		}
 	}
 
 	
@@ -893,10 +1206,33 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 
 	for (u32 i = 0; i < load->clip_count; i++)
 	{
-		const AST_AnimClip *src = &load->clips[i];
+		AST_AnimClip *src = &load->clips[i];
 		AST_AnimClip *dst = &clips[i];
 
-		// TODO
+		dst->name = String8Clone(arena, src->name);
+		
+		dst->duration_s = src->duration_s;
+
+		dst->channel_count = src->channel_count;
+		dst->channels = ArenaPushArray(arena, AST_AnimChannel, src->channel_count);
+
+		for (u32 j = 0; j < dst->channel_count; j++)
+		{
+			AST_AnimChannel *src_ch = &src->channels[j];
+			AST_AnimChannel *dst_ch = &dst->channels[j];
+
+			dst_ch->target_skeleton = src_ch->target_skeleton;
+			dst_ch->target_joint    = src_ch->target_joint;
+
+			dst_ch->path            = src_ch->path;
+			dst_ch->interp          = src_ch->interp;
+			
+			dst_ch->key_count       = src_ch->key_count;
+			dst_ch->keys            = ArenaPushArray(arena, AST_AnimKey, dst_ch->key_count);
+
+			for (u32 k = 0; k < dst_ch->key_count; k++)
+				dst_ch->keys[k] = src_ch->keys[k];
+		}
 	}
 	
 	

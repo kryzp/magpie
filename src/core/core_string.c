@@ -35,6 +35,19 @@ String8Append(Arena *arena, String8 a, String8 b)
 }
 
 internal String8
+String8Fmt(Arena *arena, const char *fmt, ...)
+{
+	char out[512] = {0};
+	
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(out, sizeof(out), fmt, args);
+	va_end(args);
+
+	return String8Clone(arena, String8FromCStr(out));
+}
+
+internal String8
 String8Skip(String8 string, u64 to)
 {
 	String8 skipped = {0};
