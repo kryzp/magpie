@@ -47,6 +47,8 @@ struct R_GPU_ObjectData
 
 	u64 skinning_palette_buffer;
 	u32 skinning_joint_count;
+
+	u32 _padding0;
 };
 
 typedef struct R_GPU_RenderMesh R_GPU_RenderMesh;

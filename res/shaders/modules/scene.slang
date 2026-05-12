@@ -37,6 +37,8 @@ namespace scene
 
 		public float4x4 *skinning_palette;
 		public uint32_t skinning_joint_count;
+
+		public uint32_t _padding0; // todo: why the fuck do we need padding? i genuinely spent like 3 hours bruteforcing this what the fuck? we use scalar block layout????
 	};
 
 	public struct RenderMesh

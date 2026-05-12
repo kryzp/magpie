@@ -325,8 +325,8 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	instance_create_info.ppEnabledExtensionNames = GFX_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
 
 	static const VkValidationFeatureEnableEXT enabled_features[] = {
-		VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-		VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
 		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
 		VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
 	};
