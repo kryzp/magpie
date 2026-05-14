@@ -30,9 +30,23 @@ if not exist slang_compiler.obj (
 echo Compiling app...
 cl %opts% %supwarn% %includes% /TC /c "%code%\app.c" /Fo:app.obj
 
+if errorlevel 1 (
+   echo.
+   echo Compilation failed.
+   popd
+   exit /b 1
+)
+
 :: link app into DLL
 echo Linking app...
 link /DLL /DEBUG /OUT:app.dll app.obj vk_mem_alloc.obj slang_compiler.obj %libs% slang.lib
+
+if errorlevel 1 (
+   echo.
+   echo Linking failed.
+   popd
+   exit /b 1
+)
 
 :: compile platform launch executable if not running
 tasklist /FI "IMAGENAME eq magpie_win32.exe" | find /I "magpie_win32.exe" >nul
@@ -45,5 +59,10 @@ if errorlevel 1 (
 popd
 
 echo Finished!
+
+if exist .\build\magpie_win32.exe (
+    echo Running...
+    .\build\magpie_win32.exe
+)
 
 endlocal

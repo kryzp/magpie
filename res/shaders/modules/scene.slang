@@ -18,10 +18,6 @@ namespace scene
 		public float weights[4];
 	};
 
-	public static const uint32_t ALPHA_MODE_OPAQUE = 0;
-	public static const uint32_t ALPHA_MODE_MASK   = 1;
-	public static const uint32_t ALPHA_MODE_BLEND  = 2;
-
 	public struct ObjectData
 	{
 		public float4x4 model_matrix;
@@ -31,14 +27,10 @@ namespace scene
 								   
 		public uint32_t material_index;
 		public uint32_t page_index;
-		public uint32_t mesh_index;
-							  
-		public uint32_t alpha_mode; // 0 = opaque, 1 = mask, 2 = blend (for culling)
+        public uint32_t mesh_index;
 
+        public uint32_t skinning_joint_count;
 		public float4x4 *skinning_palette;
-		public uint32_t skinning_joint_count;
-
-		public uint32_t _padding0; // todo: why the fuck do we need padding? i genuinely spent like 3 hours bruteforcing this what the fuck? we use scalar block layout????
 	};
 
 	public struct RenderMesh
@@ -62,6 +54,10 @@ namespace scene
 		return (o.skinning_palette != nullptr &&
 				m.skin_buffer != nullptr);
 	}
+
+	public static const uint32_t ALPHA_MODE_OPAQUE = 0;
+	public static const uint32_t ALPHA_MODE_MASK   = 1;
+	public static const uint32_t ALPHA_MODE_BLEND  = 2;
 
 	public struct Material
 	{

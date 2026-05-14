@@ -228,4 +228,8 @@ internal void GFX_CmdWriteTimestamp(const GFX_CmdBuffer *cmd,
 									VkQueryPool pool,
 									u32 index);
 
+internal void GFX_CmdBeginLabel(const GFX_CmdBuffer *cmd, String8 name);
+internal void GFX_CmdBeginLabelEx(const GFX_CmdBuffer *cmd, String8 name, v4 colour);
+internal void GFX_CmdEndLabel(const GFX_CmdBuffer *cmd);
+
 #endif // GRAPHICS_CMD_BUFFER

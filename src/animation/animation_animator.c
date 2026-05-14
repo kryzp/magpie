@@ -10,92 +10,111 @@ ANIM_TRSToM4(ANIM_TRS trs)
 }
 
 internal f32
-ANIM_ScaleFactor(f32 last_ts, f32 next_ts, f32 t)
+ANIM_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 {
-	if (next_ts <= last_ts)
+	if (next_ts <= prev_ts)
 		return 0.f;
 
-	return (t - last_ts) / (next_ts - last_ts);
+	return (ts - prev_ts) / (next_ts - prev_ts);
 }
 
-internal void
-ANIM_FindKeyframes(const AST_AnimChannel *ch, f32 t, u32 *out_k0, u32 *out_k1, f32 *out_u)
+internal ANIM_InterpolatedKeyframe
+ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts)
 {
-	AssertTrue(out_k0 && out_k1 && out_u);
+	ANIM_InterpolatedKeyframe keyframe = {0};
 	
-	if (ch->key_count == 1 || t <= ch->keys[0].timestamp_s)
+	if (ch->key_count == 1 || ts <= ch->keys[0].timestamp_s)
 	{
-		*out_k0 = 0;
-		*out_k1 = 0;
-		*out_u  = 0.f;
-
-		return;
+		return keyframe;
 	}
 
-	if (t >= ch->keys[ch->key_count - 1].timestamp_s)
+	if (ts >= ch->keys[ch->key_count - 1].timestamp_s)
 	{
-		*out_k0 = ch->key_count - 1;
-		*out_k1 = ch->key_count - 1;
-		*out_u  = 0.f;
+		keyframe.k0 = ch->key_count - 1;
+		keyframe.k1 = ch->key_count - 1;
+		keyframe.progress = 0.f;
 
-		return;
+		return keyframe;
 	}
 
 	for (u32 i = 0; i < ch->key_count - 1; i++)
 	{
-		if (t >= ch->keys[i + 1].timestamp_s)
+		if (ts >= ch->keys[i + 1].timestamp_s)
 			continue;
 
-		*out_k0 = i;
-		*out_k1 = i + 1;
-		*out_u  = ANIM_ScaleFactor(ch->keys[i].timestamp_s, ch->keys[i + 1].timestamp_s, t);
+		keyframe.k0 = i + 0;
+		keyframe.k1 = i + 1;
 
-		return;
+		f32 prev_ts = ch->keys[keyframe.k0].timestamp_s;
+		f32 next_ts = ch->keys[keyframe.k1].timestamp_s;
+		
+		keyframe.progress = ANIM_TimestampProgressFactor(prev_ts, next_ts, ts);
+
+		return keyframe;
 	}
 
-	AssertTrue(false && "shouldn't get here anyway something's gone wrong");
-	
-	*out_k0 = 0;
-	*out_k1 = 0;
-	*out_u  = 0;
+	AssertTrue(false);
+
+	return keyframe;
 }
 
 internal void
-ANIM_SampleChannel(const AST_AnimChannel *ch, f32 t, ANIM_TRS *local_trs)
+ANIM_SampleChannel(const AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs)
 {
-	u32 k0 = 0;
-	u32 k1 = 0;
-	f32 u  = 0.f;
+	ANIM_InterpolatedKeyframe keyframe = ANIM_InterpolateKeyframe(ch, ts);
 
-	ANIM_FindKeyframes(ch, t, &k0, &k1, &u);
+	const AST_AnimKey *k0 = &ch->keys[keyframe.k0];
+	const AST_AnimKey *k1 = &ch->keys[keyframe.k1];
+	
+	f32 progress = keyframe.progress;
 
-	b32 step = ch->interp == AST_AnimInterp_Step;
-
-	switch (ch->path)
+	if (ch->interp == AST_AnimInterp_Step)
 	{
-		case AST_AnimPath_Translate:
+		// Discrete Interpolation.
+	
+		switch (ch->path)
 		{
-			local_trs->translation = step
-				? ch->keys[k0].translation
-				: V3Lerp(ch->keys[k0].translation, ch->keys[k1].translation, u);
-		}
-		break;
+			case AST_AnimPath_Translate:
+				local_trs->translation = k0->translation;
+				break;
 		
-		case AST_AnimPath_Rotation:
-		{
-			local_trs->rotation = step
-				? ch->keys[k0].rotation
-				: V4QuatSlerp(ch->keys[k0].rotation, ch->keys[k1].rotation, u);
-		}
-		break;
+			case AST_AnimPath_Rotation:
+				local_trs->rotation = k0->rotation;
+				break;
 		
-		case AST_AnimPath_Scale:
-		{
-			local_trs->scale = step
-				? ch->keys[k0].scale
-				: V3Lerp(ch->keys[k0].scale, ch->keys[k1].scale, u);
+			case AST_AnimPath_Scale:
+				local_trs->scale = k0->scale;
+				break;
 		}
-		break;
+	}
+	else if (ch->interp == AST_AnimInterp_Linear)
+	{
+		// Linear Interpoaltion.
+	
+		switch (ch->path)
+		{
+			case AST_AnimPath_Translate:
+				local_trs->translation = V3Lerp(k0->translation,
+											 k1->translation,
+											 progress);
+				break;
+		
+			case AST_AnimPath_Rotation:
+				local_trs->rotation = V4QuatSlerp(k0->rotation,
+											   k1->rotation,
+											   progress);
+				break;
+		
+			case AST_AnimPath_Scale:
+				local_trs->scale = V3Lerp(k0->scale,
+									   k1->scale,
+									   progress);
+				break;
+		}
+	}
+	else if (ch->interp == AST_AnimInterp_Cubic)
+	{
+		AssertTrue(false);
 	}
 }
 
@@ -143,7 +162,7 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
-			animator->poses[i].local_transforms[j].translation = skeleton->joints[j].bind_translate;
+			animator->poses[i].local_transforms[j].translation = skeleton->joints[j].bind_translation;
 			animator->poses[i].local_transforms[j].rotation    = skeleton->joints[j].bind_rotation;
 			animator->poses[i].local_transforms[j].scale       = skeleton->joints[j].bind_scale;
 		}

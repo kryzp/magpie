@@ -43,12 +43,8 @@ struct R_GPU_ObjectData
 	u32 page_index;
 	u32 mesh_index;
 	
-	u32 alpha_mode; // copied from material for convenience and used in culling filtering
-
-	u64 skinning_palette_buffer;
 	u32 skinning_joint_count;
-
-	u32 _padding0;
+	u64 skinning_palette_buffer;
 };
 
 typedef struct R_GPU_RenderMesh R_GPU_RenderMesh;

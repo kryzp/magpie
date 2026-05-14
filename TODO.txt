@@ -8,6 +8,10 @@
 							  another newline!
   [ ... ] [ ... ] [ channel ] this is a new log
 
+- fix paging not existing for skinning vertices
+--- actually the entire paging system seems kinda ass can we remove it
+- alpha to coverage seperate opaque pass for foliage / alpha-cutout geometry
+
 - /graphics/ backend shouldn't be taking in raw types, everything should take
   in a GFX_<xxx>Key. also make the device global, in the same way the audio
   backend works. e.g: command buffer takes in a GFX_TextureKey and such,
@@ -15,7 +19,7 @@
   which has the same API and keys being passed around on the frontend and just
   resolves it internally?
 
-- finish graphics profiler
+- finish graphics profiler currently just a skeleton
 
 - convert graphics device resource management to freelists to support actually removing resources hahaaaaaaa :p....
 

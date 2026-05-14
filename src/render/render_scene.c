@@ -115,8 +115,6 @@ R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources
 		mapped[write_index].mesh_index	            = obj->mesh.value;
 		mapped[write_index].page_index	            = slot->page_index;
 
-		mapped[write_index].alpha_mode              = 0;//TODO
-		
 		mapped[write_index].skinning_palette_buffer = slot->skinning_palette_address_this_frame;
 		mapped[write_index].skinning_joint_count    = obj->skinning_joint_count;
  

@@ -925,6 +925,8 @@ R_GraphExecute(R_Graph *graph,
 		ctx.render_info = NULL;
 		ctx.user_data = pass->user_data;
 
+		GFX_CmdBeginLabel(cmd, pass->name);
+		
 		if (pass->type == R_PassType_Graphics)
 		{
 			GFX_RenderInfo render_info = R_GraphBuildRenderingInfo(graph, pass);
@@ -943,6 +945,8 @@ R_GraphExecute(R_Graph *graph,
 			if (pass->record)
 				pass->record(&ctx);
 		}
+		
+		GFX_CmdEndLabel(cmd);
 	}
 }
 

@@ -46,6 +46,9 @@ ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 internal void *
 ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
+	if (bytes == 0)
+		return NULL;
+	
 	u64 aligned = MemAlignUp(arena->used, alignment);
 	u64 new_used = aligned + bytes;
 	

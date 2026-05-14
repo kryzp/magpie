@@ -157,7 +157,7 @@ AppDestroyGraphics(App *app)
 	GFX_DeviceBufferDestroy(&app->graphics_device, app->cubemap_capture_transform_buffer);
 
 	GFX_ShaderCompilerShutdown(&app->shader_compiler);
-	
+
 	GFX_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
 	GFX_DeviceDestroy(&app->graphics_device);
 }
@@ -350,12 +350,12 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
 	
-	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
+	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         AST_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -372,11 +372,11 @@ AppInitRender(App *app)
 		obj.mesh          = entry->mesh;
 		obj.material      = entry->material;
 		
-		/*app->object_handle = */R_SceneObjectCreate(&app->scene, &obj);
+		app->object_handle = R_SceneObjectCreate(&app->scene, &obj);
 	}
 
-	//ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
-	//ANIM_AnimatorPlay(&app->object_animator, 0);
+	ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
+	ANIM_AnimatorPlay(&app->object_animator, 0);
 	
 	ScratchRelease(&scratch);
 
@@ -586,7 +586,7 @@ internal void
 AppInitEditor(App *app)
 {
 	app->editor_log_channel = osapi->LogChannelOpen(String8Lit("EDITOR"));
-	
+
 	EditorInit(&app->editor, &app->editor_arena, app->editor_log_channel);
 }
 
@@ -728,7 +728,7 @@ AppLogFPS(App *app, f32 dt)
 	
 	fps_avg /= (f32)ArraySize(fps_history);
 	
-	DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
+	//DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
 }
 
 __declspec(dllexport) b32
@@ -801,9 +801,9 @@ AppTick(App *app, const I_State *input)
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 
-	//ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
-	//ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
-	//R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
+	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
+	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
+	R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
@@ -894,7 +894,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	bt.brdf = app->brdf_lut;
 	
 	R_Blackboard bb = {0};
-	
+
 	R_FrustumVolume frustum = R_CameraFrustum(&app->editor.camera);
 
 	R_ShadowRendererUploadGPU(&app->shadow_renderer, &app->scene);

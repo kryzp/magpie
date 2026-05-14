@@ -8,7 +8,7 @@ struct AST_Joint
 
 	i32 parent;
 
-	v3 bind_translate;
+	v3 bind_translation;
 	v4 bind_rotation;
 	v3 bind_scale;
 	
@@ -23,6 +23,8 @@ struct AST_Skeleton
 	u32 joint_count;
 	AST_Joint *joints;
 
+	// Root world transformation matrix applied to all joint transforms.
+	// Sets the orientation.
 	m4 root_parent_world;
 };
 

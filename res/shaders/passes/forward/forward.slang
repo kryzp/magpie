@@ -111,7 +111,18 @@ FragmentMain(VS_Output input) : SV_Target
 	lighting::Surface surface = material::SampleSurface(surface_input, mat, frame_data, args.linear_sampler);
 
 	if (material::ShouldDiscard(surface.alpha, mat.alpha_mode, mat.alpha_cutoff))
+	{
 		discard;
+		/*
+		float width = 0.5;
+
+		float coverage = smoothstep(mat.alpha_cutoff - width,
+		                            mat.alpha_cutoff + width,
+		                            surface.alpha);
+
+		surface.alpha = coverage;
+		*/
+	}
 
 	if (mat.unlit != 0)
 		return float4(surface.albedo, surface.alpha);

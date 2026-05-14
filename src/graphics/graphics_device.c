@@ -832,7 +832,7 @@ GFX_DeviceFetchGraphicsPipeline(GFX_Device *device, const GFX_GraphicsPipelineDe
 	multisample_state_create_info.minSampleShading = def->min_sample_shading;
 	multisample_state_create_info.rasterizationSamples = def->samples;
 	multisample_state_create_info.pSampleMask = NULL;
-	multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+	multisample_state_create_info.alphaToCoverageEnable = VK_FALSE; // todo: add option to turn this on
 	multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);

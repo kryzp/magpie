@@ -29,19 +29,21 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	{
 		u64 object_buffer;
 		u64 mesh_buffer;
+		u64 material_buffer;
 		u64 page_buffer;
 		u64 indirect_buffer;
 		u64 count_buffer;
-		u64 _padding0;
 		u32 object_count;
 		u32 alpha_filter;
-		u32 _padding1[2];
+		u32 _padding0;
+		u32 _padding1;
 		v4 frustum_planes[6];
 	}
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
 	pc.mesh_buffer     = R_SceneMeshBufferAddress(ctx->scene);
+	pc.material_buffer = R_SceneMaterialBufferAddress(ctx->scene);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);
@@ -78,21 +80,21 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	{
 		u64 object_buffer;
 		u64 mesh_buffer;
+		u64 material_buffer;
 		u64 page_buffer;
-
 		u64 indirect_buffer;
 		u64 count_buffer;
-
 		u32 object_count;
-		
 		u32 alpha_filter;
-
+		u32 _padding0;
+		u32 _padding1;
 		v4 sphere;
 	}
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
 	pc.mesh_buffer     = R_SceneMeshBufferAddress(ctx->scene);
+	pc.material_buffer = R_SceneMaterialBufferAddress(ctx->scene);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);

@@ -642,3 +642,33 @@ GFX_CmdWriteTimestamp(const GFX_CmdBuffer *cmd,
 {
 	vkCmdWriteTimestamp2(cmd->vk_handle, stage, pool, index);
 }
+
+internal void
+GFX_CmdBeginLabel(const GFX_CmdBuffer *cmd, String8 name)
+{
+	VkDebugUtilsLabelEXT label = {0};
+	label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+	label.pLabelName = (const char *)name.str;
+
+	vkCmdBeginDebugUtilsLabelEXT(cmd->vk_handle, &label);
+}
+
+internal void
+GFX_CmdBeginLabelEx(const GFX_CmdBuffer *cmd, String8 name, v4 colour)
+{
+	VkDebugUtilsLabelEXT label = {0};
+	label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+	label.pLabelName = (const char *)name.str;
+	label.color[0] = colour.x;
+	label.color[1] = colour.y;
+	label.color[2] = colour.z;
+	label.color[3] = colour.w;
+
+	vkCmdBeginDebugUtilsLabelEXT(cmd->vk_handle, &label);
+}
+
+internal void
+GFX_CmdEndLabel(const GFX_CmdBuffer *cmd)
+{
+	vkCmdEndDebugUtilsLabelEXT(cmd->vk_handle);
+}

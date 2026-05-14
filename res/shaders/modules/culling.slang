@@ -56,15 +56,16 @@ namespace culling
 		return t;
 	}
 
-	public static uint ALPHA_FILTER_OPAQUE_ONLY = 0;
-	public static uint ALPHA_FILTER_ALPHA_ONLY  = 1;
-	public static uint ALPHA_FILTER_ALL         = 2;
+	public static uint32_t ALPHA_FILTER_OPAQUE_ONLY = 0;
+	public static uint32_t ALPHA_FILTER_ALPHA_ONLY  = 1;
+	public static uint32_t ALPHA_FILTER_ALL         = 2;
 
-	public bool PassesAlphaFilter(scene::ObjectData obj, uint filter)
+	public bool PassesAlphaFilter(uint32_t alpha_mode, uint32_t filter)
 	{
-		if (filter == ALPHA_FILTER_OPAQUE_ONLY)  return obj.alpha_mode != scene::ALPHA_MODE_BLEND;
-		if (filter == ALPHA_FILTER_ALPHA_ONLY)   return obj.alpha_mode == scene::ALPHA_MODE_BLEND;
-
+		if (filter == ALPHA_FILTER_OPAQUE_ONLY)  return alpha_mode != scene::ALPHA_MODE_BLEND;
+		if (filter == ALPHA_FILTER_ALPHA_ONLY)   return alpha_mode == scene::ALPHA_MODE_BLEND;
+		if (filter == ALPHA_FILTER_ALL)          return true;
+		
 		return true;
 	}
 

@@ -5,13 +5,14 @@ struct PushConstants
 {
 	scene::ObjectData *objects;
 	scene::RenderMesh *meshes;
+	scene::Material *materials;
 	scene::PagePointers *pages;
 	scene::IndirectDraw *indirect_buffer;
 	uint32_t *count_buffer;
-	uint64_t padding0;
 	uint32_t object_count;
 	uint32_t alpha_filter;
-	uint32_t padding1[2];
+	uint32_t _padding0;
+	uint32_t _padding1;
 	float4 frustum_planes[6]; // xyz = normal, w = distance
 };
 
@@ -28,8 +29,9 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 		return;
 
 	scene::ObjectData obj = args.objects[gid];
+	scene::Material mat = args.materials[obj.material_index];
 
-	if (!culling::PassesAlphaFilter(obj, args.alpha_filter))
+	if (!culling::PassesAlphaFilter(mat.alpha_mode, args.alpha_filter))
 		return;
 
 	culling::FrustumTest test = culling::MakeFrustumTest(args.frustum_planes);

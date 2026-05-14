@@ -16,6 +16,14 @@ struct ANIM_TRS
 	v3 scale;
 };
 
+typedef struct ANIM_InterpolatedKeyframe ANIM_InterpolatedKeyframe;
+struct ANIM_InterpolatedKeyframe
+{
+	u32 k0;
+	u32 k1;
+	f32 progress;
+};
+
 typedef struct ANIM_SkeletonPose ANIM_SkeletonPose;
 struct ANIM_SkeletonPose
 {
@@ -48,32 +56,20 @@ struct ANIM_Animator
    HELPERS
    ================================================== */
 
-internal m4           ANIM_TRSToM4(ANIM_TRS trs);
-internal f32          ANIM_ScaleFactor(f32 last_ts, f32 next_ts, f32 t);
-internal void         ANIM_FindKeyframes(const AST_AnimChannel *ch, f32 t, u32 *out_k0, u32 *out_k1, f32 *out_u);
-internal void         ANIM_SampleChannel(const AST_AnimChannel *ch, f32 t, ANIM_TRS *local_trs);
+internal m4 ANIM_TRSToM4(ANIM_TRS trs);
+internal f32 ANIM_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
+internal ANIM_InterpolatedKeyframe ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts);
+internal void ANIM_SampleChannel(AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs);
 
 
 /* ==================================================
-   CORE
+   ANIMATOR
    ================================================== */
 
 internal void         ANIM_AnimatorSelect     (ANIM_Animator *animator, Arena *arena, AST_Assets *assets, AST_Handle model_handle);
 internal void         ANIM_AnimatorTick       (ANIM_Animator *animator, AST_Assets *assets, f32 dt);
-
-
-/* ==================================================
-   CONTROL
-   ================================================== */
-
 internal void         ANIM_AnimatorPlay       (ANIM_Animator *animator, u32 clip);
 internal b32          ANIM_AnimatorPlayByName (ANIM_Animator *animator, AST_Assets *assets, String8 name);
-
-
-/* ==================================================
-   PALETTE
-   ================================================== */
-
 internal ANIM_Palette ANIM_AnimatorPalette    (ANIM_Animator *animator, i32 skin_index);
 
 
