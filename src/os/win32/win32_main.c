@@ -250,6 +250,12 @@ OS_W32_LogChannelOpen(String8 name)
 	return OS_W32_LOG_OpenChannel(&win32_st.logger, name);
 }
 
+internal LOG_Channel
+OS_W32_LogChannelOpenFrom(LOG_Channel parent, String8 name)
+{
+	return OS_W32_LOG_OpenChannelFrom(&win32_st.logger, parent, name);
+}
+
 internal void
 OS_W32_LogChannelClose(LOG_Channel channel)
 {
@@ -1040,6 +1046,7 @@ OS_W32_BindAPI(OS_API *api)
 
 	api->Log                         = OS_W32_Log;
 	api->LogChannelOpen              = OS_W32_LogChannelOpen;
+	api->LogChannelOpenFrom          = OS_W32_LogChannelOpenFrom;
 	api->LogChannelClose             = OS_W32_LogChannelClose;
 
 	api->SetWindowTitle              = OS_W32_SetWindowTitle;
@@ -1389,7 +1396,7 @@ main(void)
 	osapi = &win32_st.api;
 
 	win32_st.platform_layer_arena = ArenaAlloc(OS_LAYER_MEMORY);
-	
+
 	OS_W32_LOG_Init(&win32_st.logger, String8Lit("log_output.txt"));
 
 	win32_st.log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("WIN32"));
@@ -1406,7 +1413,7 @@ main(void)
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
-	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannel(&win32_st.logger, String8Lit("WIN32/JOB"));
+	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannelFrom(&win32_st.logger, win32_st.log_channel, String8Lit("JOB"));
 	OS_W32_JOB_Init(&win32_st.scheduler, job_log_channel);
 
 	JOB_Decl root_job = {0};
@@ -1419,7 +1426,7 @@ main(void)
 	OS_W32_JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
 
 	OS_W32_JOB_Shutdown(&win32_st.scheduler);
-
+	
 	OS_W32_MutexDestroy(win32_st.event_mutex);
 	
 	OS_W32_LOG_Shutdown(&win32_st.logger);

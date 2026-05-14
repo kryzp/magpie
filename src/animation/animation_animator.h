@@ -59,7 +59,7 @@ struct ANIM_Animator
 internal m4 ANIM_TRSToM4(ANIM_TRS trs);
 internal f32 ANIM_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
 internal ANIM_InterpolatedKeyframe ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts);
-internal void ANIM_SampleChannel(AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs);
+internal void ANIM_SampleChannel(const AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs);
 
 
 /* ==================================================

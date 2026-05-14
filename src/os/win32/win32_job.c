@@ -731,7 +731,7 @@ OS_W32_JOB_GetScratch(OS_W32_JOB_Scheduler *scheduler, Arena * const *conflicts,
 		}
 	}
 
-	AssertTrue(arena);
+	DebugLogAssert(scheduler->log_channel, arena, "Must have found scratch arena. This is mathematically impossible to hit, the fuck?");
 
 	return arena;
 }

@@ -118,70 +118,40 @@ GFX_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_sev
 							  const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
 							  void *ctx)
 {
-	LOG_Channel ch = ((GFX_Device *)ctx)->log_channel;
+	GFX_Device *device = ctx;
 
-	if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+	LOG_Channel ch = device->log_channel;
+
+	switch (message_type)
 	{
-		switch (message_severity)
-		{
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-				DebugLogT(ch, "(General) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-				DebugLogD(ch, "(General) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-				DebugLogW(ch, "(General) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-				DebugLogB(ch, "(General) %s", callback_data->pMessage);
-				break;
-		}
+		case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+			ch = device->log_channel_general;
+			break;
+		case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+			ch = device->log_channel_validation;
+			break;
+		case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+			ch = device->log_channel_performance;
+			break;
 	}
-	else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+
+	switch (message_severity)
 	{
-		switch (message_severity)
-		{
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-				DebugLogT(ch, "(Validation) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-				DebugLogD(ch, "(Validation) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-				DebugLogW(ch, "(Validation) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-				DebugLogB(ch, "(Validation) %s", callback_data->pMessage);
-				break;
-		}
-	}
-	else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-	{
-		switch (message_severity)
-		{
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-				DebugLogT(ch, "(Performance) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-				DebugLogD(ch, "(Performance) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-				DebugLogW(ch, "(Performance) %s", callback_data->pMessage);
-				break;
-			
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-				DebugLogB(ch, "(Performance) %s", callback_data->pMessage);
-				break;
-		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+			DebugLogT(ch, "%s", callback_data->pMessage);
+			break;
+		
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+			DebugLogD(ch, "%s", callback_data->pMessage);
+			break;
+		
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+			DebugLogW(ch, "%s", callback_data->pMessage);
+			break;
+		
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+			DebugLogB(ch, "%s", callback_data->pMessage);
+			break;
 	}
 	
 	return VK_FALSE;
@@ -193,6 +163,10 @@ GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 	device->permanent_arena = arena;
 
 	device->log_channel = log_channel;
+
+	device->log_channel_general = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
+	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
+	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
 		device->per_frame_data[i].arena = ArenaAlloc(Megabytes(128));

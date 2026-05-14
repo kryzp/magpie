@@ -47,6 +47,7 @@ struct OS_API
 
 	void        (*Log)(LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
 	LOG_Channel (*LogChannelOpen)(String8 name);
+	LOG_Channel (*LogChannelOpenFrom)(LOG_Channel parent, String8 name); // create a sub/child channel.
 	void        (*LogChannelClose)(LOG_Channel channel);
 	
 	

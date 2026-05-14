@@ -46,7 +46,11 @@ ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 internal void *
 ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
-	if (bytes == 0)
+	DebugPrintAssert(arena, "Arena must not be NULL!");
+	DebugPrintAssert(arena->base, "Arena base pointer must not be NULL!");
+	DebugPrintAssert(arena->capacity > 0, "Arena capacity must be greater than zero!");
+
+	if (bytes == 0 || !arena || !arena->base || arena->capacity <= 0)
 		return NULL;
 	
 	u64 aligned = MemAlignUp(arena->used, alignment);

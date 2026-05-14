@@ -28,7 +28,7 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_ch
 	scene->mesh_buffer_dirty	 = true;
 	scene->material_buffer_dirty = true;
 
-	DebugLogI(scene->log_channel, "Scene Initialized.");
+	DebugLogI(scene->log_channel, "Initialized.");
 }
 
 internal void
@@ -43,7 +43,7 @@ R_SceneDestroy(R_Scene *scene)
 		GFX_DeviceBufferDestroy(scene->device, page->index_buffer);
 	}
 	
-	DebugLogI(scene->log_channel, "Scene Destroyed.");
+	DebugLogI(scene->log_channel, "Destroyed.");
 }
 
 internal void

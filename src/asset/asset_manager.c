@@ -188,7 +188,7 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 
 #define AssetDef(name, upper)											\
 	assets->serializers[AST_Type_##name] = AST_Get##name##Serializer(); \
-	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpen(String8Lit(STRINGIFY(upper) " SERIALIZER"));
+	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper)));
 #include "asset_definitions.inc"
 #undef AssetDef
 	

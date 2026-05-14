@@ -20,7 +20,7 @@ LOG_Level;
 typedef struct LOG_Channel LOG_Channel;
 struct LOG_Channel
 {
-	u32 id;
+	u32 id; // 0 = fallback channel
 };
 
 internal inline b32

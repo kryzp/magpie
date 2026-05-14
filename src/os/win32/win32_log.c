@@ -1,4 +1,10 @@
 
+/*
+ * due to the fact i suck at coding the logger is actually considered lower
+ * than the job system and thus isn't allowed to use scratch arenas
+ * note to future me NEVER USE SCRATCH ARENAS HERE.
+ */
+
 internal void
 OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 {
@@ -61,12 +67,47 @@ OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 name)
 	return channel;
 }
 
+internal LOG_Channel
+OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name)
+{
+	AssertTrue(logger);
+	AssertTrue(logger->channel_count < ArraySize(logger->channels));
+
+	OS_W32_LOG_ChannelEntry *entry = &logger->channels[logger->channel_count];
+	entry->name = name;
+	entry->enabled = true;
+	entry->parent = parent;
+
+	LOG_Channel channel = { logger->channel_count };
+
+	logger->channel_count++;
+
+	return channel;
+}
+
 internal void
 OS_W32_LOG_CloseChannel(OS_W32_LOG_Logger *logger, LOG_Channel channel)
 {
 	AssertTrue(logger);
 	
 	logger->channels[channel.id].enabled = false;
+}
+
+internal void
+OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
+{
+    OS_W32_LOG_ChannelEntry *entry = &logger->channels[channel.id];
+
+    if (entry->parent.id != 0)
+    {
+        char parent[64] = {0};
+        OS_W32_LOG_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
+        snprintf(dst, (usize)dst_size, "%s/%.*s", parent, (i32)entry->name.len, entry->name.str);
+    }
+    else
+    {
+        snprintf(dst, (usize)dst_size, "%.*s", (i32)entry->name.len, entry->name.str);
+    }
 }
 
 internal i32
@@ -83,7 +124,6 @@ OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 	
 	i32 len = 0;
 	b32 show_callsite = level >= LOG_Level_Error;
-	u8 *channel_name = logger->channels[channel.id].name.str;
 
 	// I just learned about this push/pop_macro stuff man this is so sick.
 #pragma push_macro("Append")
@@ -132,24 +172,26 @@ OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 		Append("[  %s  ] ", level_string);
 
 	// Channel.
+	char channel_name[512] = {0};
+	OS_W32_LOG_ChannelNameResolve(logger, channel, channel_name, sizeof(channel_name));
+
 	if (for_file)
 		Append("[  %-*s  ] ", OS_W32_LOG_CHANNEL_COL_ALIGN, channel_name);
 	else
 		Append("%s[  %-*s  ]" OS_W32_LOG_ANSI_RESET " ", level_ansi, OS_W32_LOG_CHANNEL_COL_ALIGN, channel_name);
-	
+
 	// Callsite.
 	if (show_callsite)
 	{
-		ScratchArena scratch = ScratchBegin(NULL, 0);
-		
-		u8 *base = IO_PathGetFileNameExt(scratch.arena, String8FromCStr(file)).str;
+		const char *filename = file;
+		for (const char *p = file; *p; p++)
+			if (*p == '/' || *p == '\\')
+				filename = p + 1;
 
 		if (for_file)
-			Append("%s:%d %s: ", base, line, fn);
+			Append("%s:%d %s: ", filename, line, fn);
 		else
-			Append(OS_W32_LOG_ANSI_DIM "%s:%d %s:" OS_W32_LOG_ANSI_RESET " ", base, line, fn);
-
-		ScratchRelease(&scratch);
+			Append(OS_W32_LOG_ANSI_DIM "%s:%d %s:" OS_W32_LOG_ANSI_RESET " ", filename, line, fn);
 	}
 
 	Append("%s\n", body);

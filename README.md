@@ -52,14 +52,14 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Debug Rendering** (lines, circles, spheres, AABB, OBB, crosses, etc.)
 - **GPU Profiler**
 - **Modular Entity System**
-- **Logging System** with levels, channels, file output, deduplication, etc.
+- **Logging System** with levels, channels (+ sub channels), file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes**
+- **Skeletal Animation Support**
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- Bone / Joint Based Animation
 - SSAO
 - Physically Based Bloom
 - Cascaded Shadow Mapping (CSM)

@@ -148,6 +148,10 @@ struct GFX_Device
 
 	LOG_Channel log_channel;
 	
+	LOG_Channel log_channel_general;
+	LOG_Channel log_channel_validation;
+	LOG_Channel log_channel_performance;
+	
 	GFX_Context context;
 
 	u32 current_frame_index;

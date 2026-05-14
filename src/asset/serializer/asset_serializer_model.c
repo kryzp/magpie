@@ -198,15 +198,7 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 	mat.reflection_plane                     = v4(0.f, 0.f, 0.f, 0.f);
 
 
-	/*
-	 * sorry for the weird formatting but there's so much elements
-	 * in the material struct that being able to read this without
-	 * information overload is nice.
-	 */
-
-
 	// STANDARD METALLIC-ROUGHNESS OPAQUE PBR.
-	
 	if (gltf_mat->has_pbr_metallic_roughness)
 	{
 		const cgltf_pbr_metallic_roughness *pbr = &gltf_mat->pbr_metallic_roughness;
@@ -225,56 +217,43 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// NORMALS.
-	
 	mat.normal_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->normal_texture);
-	
 	mat.normal_scale   = gltf_mat->normal_texture.scale;
 
 
-	// OCCLUSION
-	
+	// OCCLUSION.
 	mat.occlusion_texture   = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->occlusion_texture);
-	
 	mat.occlusion_intensity = gltf_mat->occlusion_texture.scale;
 
 
-	// EMISSIVE
-	
+	// EMISSIVE.
 	mat.emissive_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->emissive_texture);
-	
 	mat.emissive_factor  = v3(gltf_mat->emissive_factor[0],
 							  gltf_mat->emissive_factor[1],
 							  gltf_mat->emissive_factor[2]);
 
-
 	// EMISSIVE STRENGTH.
-	
 	if (gltf_mat->has_emissive_strength)
 		mat.emissive_intensity = gltf_mat->emissive_strength.emissive_strength;
 
 
 	// INDEX OF REFRACTION.
-	
 	if (gltf_mat->has_ior)
 		mat.ior = gltf_mat->ior.ior;
 
 
 	// TRANSMISSION.
-	
 	if (gltf_mat->has_transmission)
 	{
 		mat.transmission_texture = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->transmission.transmission_texture);
-
 		mat.transmission_factor  = gltf_mat->transmission.transmission_factor;
 	}
 
 
 	// VOLUME.
-	
 	if (gltf_mat->has_volume)
 	{
 		mat.thickness_texture    = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->volume.thickness_texture);
-
 		mat.thickness_factor     = gltf_mat->volume.thickness_factor;
 
 		mat.attenuation_colour   = v3(gltf_mat->volume.attenuation_color[0],
@@ -286,7 +265,6 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// SPECULAR.
-	
 	if (gltf_mat->has_specular)
 	{
 		mat.specular_texture        = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->specular.specular_texture);
@@ -301,7 +279,6 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// CLEARCOAT.
-	
 	if (gltf_mat->has_clearcoat)
 	{
 		mat.clearcoat_texture           = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
@@ -313,7 +290,6 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// SHEEN.
-	
 	if (gltf_mat->has_sheen)
 	{
 		mat.sheen_colour_texture    = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->sheen.sheen_color_texture);
@@ -328,7 +304,6 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// IRIDESCENCE.
-	
 	if (gltf_mat->has_iridescence)
 	{
 		mat.iridescence_texture                  = AST_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_texture);
@@ -343,17 +318,14 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 
 	// DOUBLE SIDED.
-	
 	mat.double_sided = !!gltf_mat->double_sided;
 
 
 	// UNLIT.
-	
 	mat.unlit = !!gltf_mat->unlit;
 
 
 	// ALPHA.
-	
 	switch (gltf_mat->alpha_mode)
 	{
 		case cgltf_alpha_mode_opaque: mat.alpha_mode = AST_AlphaMode_Opaque; break;

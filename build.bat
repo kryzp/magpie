@@ -22,8 +22,8 @@ if not exist vk_mem_alloc.obj (
 
 :: compile the slang compiler separately
 if not exist slang_compiler.obj (
-   echo Compiling Slang Compiler...
-   cl %opts% %includes% /std:c++20 /c "%code%\ext\slang\slang_compiler.cpp" /Fo:slang_compiler.obj
+    echo Compiling Slang Compiler...
+    cl %opts% %includes% /std:c++20 /c "%code%\ext\slang\slang_compiler.cpp" /Fo:slang_compiler.obj
 )
 
 :: compile app (platform agnostic code)
@@ -31,10 +31,10 @@ echo Compiling app...
 cl %opts% %supwarn% %includes% /TC /c "%code%\app.c" /Fo:app.obj
 
 if errorlevel 1 (
-   echo.
-   echo Compilation failed.
-   popd
-   exit /b 1
+    echo.
+    echo App compilation failed.
+    popd
+    exit /b 1
 )
 
 :: link app into DLL
@@ -42,10 +42,10 @@ echo Linking app...
 link /DLL /DEBUG /OUT:app.dll app.obj vk_mem_alloc.obj slang_compiler.obj %libs% slang.lib
 
 if errorlevel 1 (
-   echo.
-   echo Linking failed.
-   popd
-   exit /b 1
+    echo.
+    echo Linking failed.
+    popd
+    exit /b 1
 )
 
 :: compile platform launch executable if not running
@@ -54,6 +54,13 @@ tasklist /FI "IMAGENAME eq magpie_win32.exe" | find /I "magpie_win32.exe" >nul
 if errorlevel 1 (
     echo Compiling platform layer...
     cl %opts% %supwarn% %includes% /TC "%code%\os\win32\win32_main.c" /Fe:magpie_win32 /link %libs% SDL3.lib shell32.lib
+        
+    if errorlevel 1 (
+        echo.
+        echo Platform compilation failed.
+        popd
+        exit /b 1
+    )
 )
 
 popd

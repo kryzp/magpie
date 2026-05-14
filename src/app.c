@@ -326,8 +326,8 @@ AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
 	
-	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, app->render_log_channel);
-	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, app->render_log_channel);
+	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
+	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
 
 	AppInitRenderCreateSkyboxMesh(app);
 
