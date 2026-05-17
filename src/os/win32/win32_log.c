@@ -21,7 +21,7 @@ OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 	logger->log_channel  = OS_W32_LOG_OpenChannel(logger, String8Lit("WIN32/LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))
-		DebugLogI(logger->log_channel, "Initialized (\"%.*s\" as file sink).", (i32)sink.len, sink.str);
+		DebugLogI(logger->log_channel, "Initialized (\"%.*s\" as file output).", String8VArg(sink));
 	else
 		DebugLogI(logger->log_channel, "Initialized (no file sink).");
 }
@@ -102,11 +102,11 @@ OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, ch
     {
         char parent[64] = {0};
         OS_W32_LOG_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
-        snprintf(dst, (usize)dst_size, "%s/%.*s", parent, (i32)entry->name.len, entry->name.str);
+        snprintf(dst, (usize)dst_size, "%s/%.*s", parent, String8VArg(entry->name));
     }
     else
     {
-        snprintf(dst, (usize)dst_size, "%.*s", (i32)entry->name.len, entry->name.str);
+        snprintf(dst, (usize)dst_size, "%.*s", String8VArg(entry->name));
     }
 }
 

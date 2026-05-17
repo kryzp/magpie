@@ -902,7 +902,7 @@ R_GraphExecute(R_Graph *graph,
 		/*
 		DebugLogD(graph->log_channel,
 				  "Executing Pass: %.*s, Culled: %s",
-				  (i32)pass->name.len, pass->name.str,
+				  String8VArg(pass->name),
 				  pass->is_culled ? "YES" : "NO");
 		*/
 		

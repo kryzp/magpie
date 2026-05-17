@@ -260,7 +260,7 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 	{
 		DebugLogB(assets->log_channel,
 				  "Failed to find system file path for asset path: \"%.*s\"",
-				  (i32)path.len, path.str);
+				  String8VArg(path));
 	}
 	
 	String8 suffix = String8Skip(path, best_len);
@@ -346,10 +346,10 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 
 	if (load_data.failed)
 		DebugLogE(load_params->assets->log_channel, "Failed to load %.*s.",
-				  (i32)ctx.metadata.path.len, ctx.metadata.path.str);
+				  String8VArg(ctx.metadata.path));
 	else
 		DebugLogD(load_params->assets->log_channel, "Loaded in %.*s.",
-				  (i32)ctx.metadata.path.len, ctx.metadata.path.str);
+				  String8VArg(ctx.metadata.path));
 	
 	AST_Upload upload = {0};
 	upload.load_arena_index = arena_index;
@@ -468,7 +468,7 @@ AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 			{
 				DebugLogW(assets->log_channel,
 						  "Reload failed for %.*s, keeping previous version.",
-						  (i32)upload->metadata.path.len, upload->metadata.path.str);
+						  String8VArg(upload->metadata.path));
 				
 				record->state = AST_State_Ready;
 				record->reloading = false;
@@ -644,7 +644,7 @@ AST_FlushUploads(AST_Assets *assets)
 					{
 						DebugLogW(assets->log_channel,
 								  "Reload failed for %.*s, keeping previous version.",
-								  (i32)upload->metadata.path.len, upload->metadata.path.str);
+								  String8VArg(upload->metadata.path));
 						
 						record->state = AST_State_Ready;
 						record->reloading = false;
@@ -694,7 +694,7 @@ AST_FlushUploads(AST_Assets *assets)
 					DebugLogD(assets->log_channel,
 							  "%s %.*s.",
 							  is_new ? "Allocated" : "Reloaded",
-							  (i32)upload->metadata.path.len, upload->metadata.path.str);
+							  String8VArg(upload->metadata.path));
 
 					ScratchArena scratch = ScratchBegin(NULL, 0);
 					{
@@ -783,7 +783,7 @@ AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
 
 	DebugLogW(assets->log_channel,
 			  "%.*s asset not found. Falling back...",
-			  (i32)type_string.len, type_string.str);
+			  String8VArg(type_string));
 	
 	AST_Record *fallback = AST_GetRecord(assets, assets->fallbacks[type]);
 	if (fallback &&
@@ -795,7 +795,7 @@ AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
 
 	DebugLogB(assets->log_channel,
 			  "No fallback found for %.*s asset. We're fucked basically.",
-			  (i32)type_string.len, type_string.str);
+			  String8VArg(type_string));
 
 	selected = &assets->null_asset_sentinel;
 

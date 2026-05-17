@@ -1,24 +1,24 @@
 
 internal void
-TL_Init(TL_Timeline *timeline)
+CH_TimelineInit(CH_Timeline *timeline)
 {
 	MemZeroStruct(timeline);
 }
 
 internal void
-TL_Start(TL_Timeline *timeline)
+CH_TimelineStart(CH_Timeline *timeline)
 {
 	timeline->playing = true;
 }
 
 internal void
-TL_Stop(TL_Timeline *timeline)
+CH_TimelineStop(CH_Timeline *timeline)
 {
 	timeline->playing = false;
 }
 
 internal void
-TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
+CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt)
 {
 	if (!timeline->playing)
 		return;
@@ -27,7 +27,7 @@ TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
 	
 	for (u32 i = 0; i < timeline->event_count; i++)
 	{
-		TL_Event *ev = &timeline->events[i];
+		CH_TimelineEvent *ev = &timeline->events[i];
 
 		if (ev->fired && !ev->repeatable)
 			continue;
@@ -59,14 +59,14 @@ TL_Tick(TL_Timeline *timeline, void *state, f32 dt)
 }
 
 internal void
-TL_Add(TL_Timeline *timeline,
-					 TL_TriggerFn *Trigger,
-					 TL_ActionFn *Action,
-					 void *data)
+CH_TimelineAdd(CH_Timeline *timeline,
+			   CH_TimelineTriggerFn *Trigger,
+			   CH_TimelineActionFn *Action,
+			   void *data)
 {
 	AssertTrue(timeline->event_count < ArraySize(timeline->events));
 	
-	TL_Event *ev = &timeline->events[timeline->event_count];
+	CH_TimelineEvent *ev = &timeline->events[timeline->event_count];
 	ev->Trigger = Trigger;
 	ev->Action = Action;
 	ev->repeatable = false;
@@ -75,15 +75,15 @@ TL_Add(TL_Timeline *timeline,
 }
 
 internal void
-TL_AddRepeatable(TL_Timeline *timeline,
-							   TL_TriggerFn *Trigger,
-							   TL_ActionFn *Action,
-							   void *data,
-							   f32 cooldown)
+CH_TimelineAddRepeatable(CH_Timeline *timeline,
+						 CH_TimelineTriggerFn *Trigger,
+						 CH_TimelineActionFn *Action,
+						 void *data,
+						 f32 cooldown)
 {
 	AssertTrue(timeline->event_count < ArraySize(timeline->events));
 	
-	TL_Event *ev = &timeline->events[timeline->event_count];
+	CH_TimelineEvent *ev = &timeline->events[timeline->event_count];
 	ev->Trigger = Trigger;
 	ev->Action = Action;
 	ev->repeatable = true;
@@ -93,7 +93,7 @@ TL_AddRepeatable(TL_Timeline *timeline,
 }
 
 internal void
-TL_Reset(TL_Timeline *timeline)
+CH_TimelineReset(CH_Timeline *timeline)
 {
 	timeline->finished = false;
 	timeline->elapsed = 0.f;
@@ -105,8 +105,8 @@ TL_Reset(TL_Timeline *timeline)
    ================================================== */
 
 internal b32
-TL_TriggerAtTime(void *state, f32 elapsed, void *data)
+CH_TimelineTriggerAtTime(void *state, f32 elapsed, void *data)
 {
-	TL_TriggerAtTimeData *t = data;
+	CH_TimelineTriggerAtTimeData *t = data;
 	return elapsed >= t->timestamp;
 }

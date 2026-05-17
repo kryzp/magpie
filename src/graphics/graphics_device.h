@@ -199,17 +199,17 @@ internal void GFX_DeviceDestroy (GFX_Device *device);
 
 internal void GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data);
 
-internal GFX_CmdBuffer GFX_DeviceBeginFrame (GFX_Device *device, GFX_Swapchain *swapchain);
-internal void          GFX_DeviceEndFrame   (GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBuffer *cmd);
+internal GFX_CmdBuffer GFX_DeviceBeginFrame        (GFX_Device *device, GFX_Swapchain *swapchain);
+internal void          GFX_DeviceEndFrame          (GFX_Device *device, const GFX_Swapchain *swapchain, const GFX_CmdBuffer *cmd);
 
-internal GFX_TimelinePoint GFX_DeviceSubmit        (GFX_Device *device, GFX_CmdBuffer *cmd);
+internal GFX_TimelinePoint GFX_DeviceSubmit        (GFX_Device *device, const GFX_CmdBuffer *cmd);
 
-internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, GFX_CmdBuffer *cmd,
+internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, const GFX_CmdBuffer *cmd,
 													u32 wait_count, const VkSemaphoreSubmitInfo *waits,
 													u32 signal_count, const VkSemaphoreSubmitInfo *signals);
 
 internal GFX_CmdBuffer     GFX_DeviceSubmitImBegin (GFX_Device *device);
-internal void              GFX_DeviceSubmitImEnd   (GFX_Device *device, GFX_CmdBuffer *cmd);
+internal void              GFX_DeviceSubmitImEnd   (GFX_Device *device, const GFX_CmdBuffer *cmd);
 
 internal void GFX_DeviceHotLoad(GFX_Device *device);
 internal void GFX_DeviceHotUnload(GFX_Device *device);
@@ -263,8 +263,10 @@ internal void          GFX_DeviceSwapchainDestroy (const GFX_Device *device, con
 
 internal GFX_CmdPool   GFX_DeviceCmdPoolCreate   (const GFX_Device *device, u32 family_index);
 internal void          GFX_DeviceCmdPoolDestroy  (const GFX_Device *device, const GFX_CmdPool *pool);
-internal void          GFX_DeviceCmdPoolReset    (const GFX_Device *device, GFX_CmdPool *pool);
-internal GFX_CmdBuffer GFX_DeviceFetchFreeBuffer (      GFX_Device *device, GFX_CmdPool *pool);
+
+internal GFX_CmdBuffer GFX_DeviceCmdPoolAcquire  (      GFX_Device *device, GFX_CmdPool *pool);
+internal void          GFX_DeviceCmdPoolRelease  (const GFX_Device *device, GFX_CmdPool *pool, const GFX_CmdBuffer *cmd, u64 fence_value);
+internal void          GFX_DeviceCmdPoolPurge    (const GFX_Device *device, GFX_CmdPool *pool, u64 fence_value);
 
 
 /* ==================================================

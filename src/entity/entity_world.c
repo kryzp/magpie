@@ -362,7 +362,7 @@ ENT_WorldFindMarker(ENT_World *world, String8 name)
 			return &world->markers[i];
 	}
 
-	DebugLogW(world->log_channel, "Couldn't find marker with name %.*s", (i32)name.len, name.str);
+	DebugLogW(world->log_channel, "Couldn't find marker with name %.*s", String8VArg(name));
 	
 	return NULL;
 }

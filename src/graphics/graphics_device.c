@@ -264,16 +264,16 @@ GFX_DeviceBeginFrame(GFX_Device *device, GFX_Swapchain *swapchain)
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		DebugLogB(device->log_channel, "Failed to acquire next image in swapchain.");
 
-	GFX_DeviceCmdPoolReset(device, &frame_data->command_pool);
+	GFX_DeviceCmdPoolPurge(device, &frame_data->command_pool, frame_data->completion_point.value);
 
-	GFX_CmdBuffer cmd = GFX_DeviceFetchFreeBuffer(device, &frame_data->command_pool);
+	GFX_CmdBuffer cmd = GFX_DeviceCmdPoolAcquire(device, &frame_data->command_pool);
 	GFX_CmdBegin(&cmd);
 
 	return cmd;
 }
 
 internal void
-GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBuffer *cmd)
+GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, const GFX_CmdBuffer *cmd)
 {
 	GFX_DeviceApplyBindlessUpdates(device);
 
@@ -312,16 +312,18 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, GFX_CmdBu
 		DebugLogB(device->log_channel, "Failed to present swapchain image.");
 	
 	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
+
+	GFX_DeviceCmdPoolRelease(device, &frame_data->command_pool, cmd, frame_data->completion_point.value);
 }
 
 internal GFX_TimelinePoint
-GFX_DeviceSubmit(GFX_Device *device, GFX_CmdBuffer *cmd)
+GFX_DeviceSubmit(GFX_Device *device, const GFX_CmdBuffer *cmd)
 {
 	return GFX_DeviceSubmitEx(device, cmd, 0, NULL, 0, NULL);
 }
 
 internal GFX_TimelinePoint
-GFX_DeviceSubmitEx(GFX_Device *device, GFX_CmdBuffer *cmd,
+GFX_DeviceSubmitEx(GFX_Device *device, const GFX_CmdBuffer *cmd,
 				   u32 wait_count, const VkSemaphoreSubmitInfo *waits,
 				   u32 signal_count, const VkSemaphoreSubmitInfo *signals)
 {
@@ -375,14 +377,14 @@ GFX_DeviceSubmitImBegin(GFX_Device *device)
 {
 	vkQueueWaitIdle(device->context.graphics_queue.vk_handle);
 
-	GFX_CmdBuffer cmd = GFX_DeviceFetchFreeBuffer(device, &device->per_frame_data[device->current_frame_index].command_pool);
+	GFX_CmdBuffer cmd = GFX_DeviceCmdPoolAcquire(device, &device->per_frame_data[device->current_frame_index].command_pool);
 	GFX_CmdBegin(&cmd);
 
 	return cmd;
 }
 
 internal void
-GFX_DeviceSubmitImEnd(GFX_Device *device, GFX_CmdBuffer *cmd)
+GFX_DeviceSubmitImEnd(GFX_Device *device, const GFX_CmdBuffer *cmd)
 {
 	GFX_DeviceWaitUntil(device, GFX_DeviceSubmit(device, cmd));
 }
@@ -644,18 +646,11 @@ GFX_DeviceCmdPoolCreate(const GFX_Device *device, u32 family_index)
 									 &pool.vk_handle),
 				 "Failed to create command pool.");
 
-	VkCommandBufferAllocateInfo alloc_info = {0};
-	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	alloc_info.commandBufferCount = GFX_CMD_POOL_MAX_BUFFERS;
-	alloc_info.commandPool = pool.vk_handle;
+	pool.acquire_queue_front = -1;
+	pool.acquire_queue_back  = 0;
 
-	GFX_VK_CHECK(vkAllocateCommandBuffers(device->context.device,
-										  &alloc_info,
-										  pool.buffers),
-				 "Failed to allocate command pool command buffers.");
-
-	pool.used_count = 0;
+	pool.release_queue_front = -1;
+	pool.release_queue_back  = 0;
 
 	return pool;
 }
@@ -666,19 +661,64 @@ GFX_DeviceCmdPoolDestroy(const GFX_Device *device, const GFX_CmdPool *pool)
 	vkDestroyCommandPool(device->context.device, pool->vk_handle, NULL);
 }
 
-internal void
-GFX_DeviceCmdPoolReset(const GFX_Device *device, GFX_CmdPool *pool)
+internal GFX_CmdBuffer
+GFX_DeviceCmdPoolAcquire(GFX_Device *device, GFX_CmdPool *pool)
 {
-	pool->used_count = 0;
-	vkResetCommandPool(device->context.device, pool->vk_handle, 0);
+	VkCommandBuffer cb = VK_NULL_HANDLE;
+	
+	if (!GFX_CmdPoolHasEmptyAcquireQueue(pool))
+	{
+		cb = pool->acquire_queue[pool->acquire_queue_front];
+		pool->acquire_queue_front--;
+		vkResetCommandBuffer(cb, 0);
+	}
+	else
+	{
+		VkCommandBufferAllocateInfo alloc_info = {0};
+		alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		alloc_info.commandBufferCount = 1;
+		alloc_info.commandPool = pool->vk_handle;
+
+		GFX_VK_CHECK(vkAllocateCommandBuffers(device->context.device,
+											  &alloc_info,
+											  &cb),
+					 "Failed to allocate command pool command buffers.");
+	}
+
+	return GFX_CmdInit(cb, device);
 }
 
-internal GFX_CmdBuffer
-GFX_DeviceFetchFreeBuffer(GFX_Device *device, GFX_CmdPool *pool)
+internal void
+GFX_DeviceCmdPoolRelease(const GFX_Device *device, GFX_CmdPool *pool, const GFX_CmdBuffer *cmd, u64 fence_value)
 {
-	AssertTrue(pool->used_count < GFX_CMD_POOL_MAX_BUFFERS);
+	DebugLogAssert(device->log_channel,
+				   !GFX_CmdPoolHasFullReleaseQueue(pool),
+				   "Command pool release queue is full!");
+	
+	GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_queue_back];
 
-	return GFX_CmdInit(pool->buffers[pool->used_count++], device);
+	released->vk_handle = cmd->vk_handle;
+	released->fence_value = fence_value;
+
+	pool->release_queue_back = (pool->release_queue_back + 1) % ArraySize(pool->release_queue);
+}
+
+internal void
+GFX_DeviceCmdPoolPurge(const GFX_Device *device, GFX_CmdPool *pool, u64 fence_value)
+{
+	while (!GFX_CmdPoolHasEmptyReleaseQueue(pool))
+	{
+		GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_queue_front];
+
+		if (released->fence_value > fence_value)
+			break;
+
+		pool->acquire_queue[pool->acquire_queue_back] = released->vk_handle;
+		pool->acquire_queue_back = (pool->acquire_queue_back + 1) % ArraySize(pool->acquire_queue);
+
+		pool->release_queue_front = (pool->acquire_queue_front + 1) % ArraySize(pool->release_queue);
+	}
 }
 
 internal GFX_PipelineLayoutKey

@@ -1,10 +1,6 @@
 #ifndef ENTITY_TYPE_H
 #define ENTITY_TYPE_H
 
-// TODO: Implement!!
-typedef struct IO_ByteWriter IO_ByteWriter;
-typedef struct IO_ByteReader IO_ByteReader;
-
 typedef enum ENT_Type
 {
 	ENT_Type_Null = 0,

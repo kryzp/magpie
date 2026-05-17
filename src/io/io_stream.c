@@ -1,4 +1,5 @@
 
+/*
 internal IO_Stream
 IO_StreamFromFile(String8 path, OS_FileAccess access)
 {
@@ -62,3 +63,4 @@ IO_StreamSize(const IO_Stream *stream)
 {
 	return osapi->StreamSize(stream->os_handle);
 }
+*/

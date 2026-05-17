@@ -45,11 +45,8 @@
 #include "render/render_inc.h"
 #include "physics/physics_inc.h"
 #include "entity/entity_inc.h"
-#include "timeline/timeline_inc.h"
 #include "dev/dev_inc.h"
 #include "gamemode/gamemode_inc.h"
-#include "cutscene/cutscene_inc.h"
-#include "encounter/encounter_inc.h"
 #include "editor/editor_inc.h"
 
 #include "app.h"
@@ -68,11 +65,8 @@
 #include "render/render_inc.c"
 #include "physics/physics_inc.c"
 #include "entity/entity_inc.c"
-#include "timeline/timeline_inc.c"
 #include "dev/dev_inc.c"
 #include "gamemode/gamemode_inc.c"
-#include "cutscene/cutscene_inc.c"
-#include "encounter/encounter_inc.c"
 #include "editor/editor_inc.c"
 
 

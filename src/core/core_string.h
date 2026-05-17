@@ -15,6 +15,9 @@ struct String8
 #define String8FromCStr(str_) String8Init((str_), CStrLength(str_))
 #define String8Lit(str_) String8Init((str_), sizeof(str_) - 1)
 
+// printf("%.*s", String8VArg(string));
+#define String8VArg(str_) (i32)((str_).len), (const char *)((str_).str)
+
 internal String8 String8Alloc  (Arena *arena, u32 len);
 internal String8 String8Clone  (Arena *arena, String8 string);
 internal String8 String8Append (Arena *arena, String8 a, String8 b);

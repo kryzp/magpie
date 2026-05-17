@@ -24,9 +24,7 @@ AST_TypeFromString(String8 str)
 #include "asset_definitions.inc"
 #undef AssetDef
 	
-	DebugPrintB("Unknown Asset Name: %.*s",
-				(i32)str.len,
-				str.str);
+	DebugPrintB("Unknown Asset Name: %.*s", String8VArg(str));
 
 	return AST_Type_COUNT;
 }

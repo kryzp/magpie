@@ -3,6 +3,7 @@
 
 // TODO: is this necessary???
 
+/*
 typedef struct IO_Stream IO_Stream;
 struct IO_Stream
 {
@@ -23,5 +24,7 @@ internal i64  IO_StreamPosition (const IO_Stream *stream);
 internal u64  IO_StreamSize     (const IO_Stream *stream);
 
 //#define IO_StreamReadArray(stream, type, count) IO_StreamRead((stream), sizeof(type) * (count))
+
+*/
 
 #endif // IO_STREAM_H

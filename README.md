@@ -60,8 +60,9 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- SSAO
 - Physically Based Bloom
+- Lua bcuz why not (useful for stuff like cutscenes in games)
+- SSAO
 - Cascaded Shadow Mapping (CSM)
 - More advanced material rendering
   - [ ] Transmission
@@ -260,10 +261,10 @@ Not a game engine. And even if it was, I'd only make the editor UI after decidin
 
 
 ## External Libraries
-This project is built upon the shoulders of gi- yeah you know what I mean.
+This project is built upon the shoulders of- yeah you've heard it all before.
 
-- Vulkan Memory Allocator
-- Volk
+- SDL3
+- Vulkan + Vulkan Memory Allocator + Volk
 - Slang Compiler
 - cgltf
 - ImGui

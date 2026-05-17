@@ -974,7 +974,7 @@ AST_ModelLoadClip(const AST_Context *ctx,
 		{
 			DebugLogW(ctx->log_channel,
 					  "Clip (%.*s) channel uses cubic interpolation but we don't support that yet so falling back to linear.",
-					  (i32)clip->name.len, clip->name.str);
+					  String8VArg(clip->name));
 
 			ch->interp = AST_AnimInterp_Linear;
 		}
@@ -1047,8 +1047,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 	{
 		DebugLogE(ctx->log_channel,
 				  "Failed to parse glTF model: %.*s",
-				  (i32)file_path.len,
-				  file_path.str);
+				  String8VArg(file_path));
 		
 		result.failed = true;
 		goto end;
@@ -1058,8 +1057,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 	{
 		DebugLogE(ctx->log_channel,
 				  "Failed to load buffers of glTF model: %.*s",
-				  (i32)file_path.len,
-				  file_path.str);
+				  String8VArg(file_path));
 		
 		result.failed = true;
 		goto end;
@@ -1069,8 +1067,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 	{
 		DebugLogE(ctx->log_channel,
 				  "Failed to validate glTF model: %.*s",
-				  (i32)file_path.len,
-				  file_path.str);
+				  String8VArg(file_path));
 		
 		result.failed = true;
 		goto end;
@@ -1085,8 +1082,7 @@ AST_ModelSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 
 	if (!scene)
 	{
-		DebugLogE(ctx->log_channel,
-				  "Failed to create cgltf scene.");
+		DebugLogE(ctx->log_channel, "Failed to create cgltf scene.");
 		
 		result.failed = true;
 		goto end;

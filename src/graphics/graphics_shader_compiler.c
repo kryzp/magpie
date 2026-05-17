@@ -94,7 +94,7 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 	/*
 	DebugLogD(compiler->log_channel,
 			  "Compiled shader: %.*s.",
-			  (i32)source_path.len, source_path.str);
+			  String8VArg(source_path));
 	*/
 
 end:
