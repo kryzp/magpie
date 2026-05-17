@@ -15,7 +15,7 @@ CameraDriverShake(CameraDriver *driver, f32 amount)
 }
 
 internal void
-CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, f32 dt)
+CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt)
 {
 	const f32 mouse_deadzone = 0.001f;
 	const f32 mouse_sens     = 0.08f;
@@ -23,10 +23,10 @@ CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, 
 
 	f32 move_speed = 2.5f;
 
-	if (I_Ctrl(input))
+	if (OS_KbCtrl(input))
 		move_speed *= 0.25f;
 
-	if (I_Alt(input))
+	if (OS_KbAlt(input))
 		move_speed *= 2.f;
 
 	const f32 dx = input->mouse_delta.x;
@@ -56,9 +56,9 @@ CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const I_State *input, 
 	for (u32 i = 0; i < 3; i++)
 		basis[i] = V3MulF32(basis[i], move_speed * dt);
 
-	f32 hori = (i32)I_KbDown(input, I_KeyboardKey_D)     - (i32)I_KbDown(input, I_KeyboardKey_A);
-	f32 frwd = (i32)I_KbDown(input, I_KeyboardKey_W)     - (i32)I_KbDown(input, I_KeyboardKey_S);
-	f32 vert = (i32)I_KbDown(input, I_KeyboardKey_Space) - (i32)I_Shift(input);
+	f32 hori = (i32)OS_KbDown(input, OS_KeyboardKey_D)     - (i32)OS_KbDown(input, OS_KeyboardKey_A);
+	f32 frwd = (i32)OS_KbDown(input, OS_KeyboardKey_W)     - (i32)OS_KbDown(input, OS_KeyboardKey_S);
+	f32 vert = (i32)OS_KbDown(input, OS_KeyboardKey_Space) - (i32)OS_KbShift(input);
 
 	camera->position = V3Add(camera->position, V3MulF32(basis[0], hori));
 	camera->position = V3Add(camera->position, V3MulF32(basis[1], frwd));

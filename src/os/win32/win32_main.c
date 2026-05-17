@@ -31,22 +31,20 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "core/core_inc.h"
-#include "input/input_inc.h"
 #include "os/os_inc.h"
+#include "core/core_inc.c"
+#include "os/os_inc.c"
+
 #include "io/io_inc.h"
+#include "io/io_inc.c"
+
 #include "chrono/chrono_inc.h"
+#include "chrono/chrono_inc.c"
 
 #include "win32_job.h"
 #include "win32_log.h"
-
-#include "core/core_inc.c"
-#include "input/input_inc.c"
-#include "os/os_inc.c"
-#include "io/io_inc.c"
-#include "chrono/chrono_inc.c"
-
-#include "win32_job.c"
 #include "win32_log.c"
+#include "win32_job.c"
 
 typedef struct OS_W32_Object OS_W32_Object;
 struct OS_W32_Object
@@ -107,7 +105,7 @@ struct OS_W32_State
 	SDL_Event *pending_events;
 
 	u32 gamepad_count;
-	SDL_Gamepad *gamepads[I_MAX_GAMEPADS];
+	SDL_Gamepad *gamepads[OS_MAX_GAMEPADS];
 };
 
 global OS_W32_State win32_st = {0};
@@ -139,7 +137,7 @@ OS_W32_ReturnObject(OS_W32_Object *object)
 
 void *OS_W32_EntryInitStub      (const OS_API *api) { return NULL; }
 void  OS_W32_EntryDestroyStub   (void *ctx) { }
-b32   OS_W32_EntryTickStub      (void *ctx, const I_State *input) { return false; }
+b32   OS_W32_EntryTickStub      (void *ctx, const OS_InputState *input) { return false; }
 void  OS_W32_EntryHotLoadStub   (void *ctx, const OS_API *api) { }
 void  OS_W32_EntryHotUnloadStub (void *ctx) { }
 
@@ -1188,7 +1186,7 @@ OS_W32_MessagePump(void *ctx)
 }
 
 internal void
-OS_W32_ProcessEvents(I_State *input_out)
+OS_W32_ProcessEvents(OS_InputState *input_out)
 {
 	OS_W32_MessagePump(NULL);
 	
@@ -1211,8 +1209,8 @@ OS_W32_ProcessEvents(I_State *input_out)
 	MemZeroArray(input_out->mb_pressed);
 	MemZeroArray(input_out->mb_released);
 
-	for (int i = 0; i < I_MAX_GAMEPADS; i++) {
-		I_GamepadState *gp = &input_out->gamepads[i];
+	for (int i = 0; i < OS_MAX_GAMEPADS; i++) {
+		OS_GamepadState *gp = &input_out->gamepads[i];
 		MemZeroArray(gp->pressed);
 		MemZeroArray(gp->released);
 	}
@@ -1272,9 +1270,9 @@ OS_W32_ProcessEvents(I_State *input_out)
 				break;
 
 			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-				I_GamepadStateSetAxisValue(&input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gaxis.which)],
-										   (I_GamepadAxis)ev->gaxis.axis,
-										   (f32)ev->gaxis.value / (f32)(SDL_JOYSTICK_AXIS_MAX - ((ev->gaxis.value >= 0.f) ? 1.f : 0.f)));
+				OS_GamepadStateSetAxisValue(&input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gaxis.which)],
+											(OS_GamepadAxis)ev->gaxis.axis,
+											(f32)ev->gaxis.value / (f32)(SDL_JOYSTICK_AXIS_MAX - ((ev->gaxis.value >= 0.f) ? 1.f : 0.f)));
 				break;
 
 			case SDL_EVENT_GAMEPAD_ADDED:
@@ -1301,7 +1299,7 @@ OS_W32_ProcessEvents(I_State *input_out)
 
 JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
-	static I_State prev_input_st = {0};
+	static OS_InputState prev_input_st = {0};
 
 	FILETIME last_write_time = {0};
 
@@ -1328,7 +1326,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		DebugLogI(win32_st.log_channel, "Hot Reloaded!");
 	}
 
-	I_State curr_input_st = prev_input_st;
+	OS_InputState curr_input_st = prev_input_st;
 	OS_W32_ProcessEvents(&curr_input_st);
 	prev_input_st = curr_input_st;
 

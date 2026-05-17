@@ -23,7 +23,7 @@ EditorDestroy(Editor *editor)
 }
 
 internal void
-EditorTick(Editor *editor, const I_State *input, f32 dt, f32 elapsed)
+EditorTick(Editor *editor, const OS_InputState *input, f32 dt, f32 elapsed)
 {
 	GM_StackTick(&editor->game_mode_stack, editor, dt, input);
 	

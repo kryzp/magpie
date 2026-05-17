@@ -2,4 +2,5 @@
 #include "os_file.h"
 #include "os_log.h"
 #include "os_job.h"
+#include "os_input.h"
 #include "os.h"

@@ -33,41 +33,49 @@
 
 // ---
 
+// the notorious os-core dependency problem...
 #include "core/core_inc.h"
-#include "input/input_inc.h"
 #include "os/os_inc.h"
+#include "core/core_inc.c"
+#include "os/os_inc.c"
+
 #include "io/io_inc.h"
+#include "io/io_inc.c"
+
 #include "chrono/chrono_inc.h"
+#include "chrono/chrono_inc.c"
+
 #include "graphics/graphics_inc.h"
+#include "graphics/graphics_inc.c"
+
 #include "audio/audio_inc.h"
+#include "audio/audio_inc.c"
+
 #include "asset/asset_inc.h"
+#include "asset/asset_inc.c"
+
 #include "animation/animation_inc.h"
+#include "animation/animation_inc.c"
+
 #include "render/render_inc.h"
+#include "render/render_inc.c"
+
 #include "physics/physics_inc.h"
+#include "physics/physics_inc.c"
+
 #include "entity/entity_inc.h"
-#include "dev/dev_inc.h"
+#include "entity/entity_inc.c"
+
 #include "gamemode/gamemode_inc.h"
+#include "gamemode/gamemode_inc.c"
+
+#include "dev/dev_inc.h"
+#include "dev/dev_inc.c"
+
 #include "editor/editor_inc.h"
+#include "editor/editor_inc.c"
 
 #include "app.h"
-
-// ---
-
-#include "core/core_inc.c"
-#include "input/input_inc.c"
-#include "os/os_inc.c"
-#include "io/io_inc.c"
-#include "chrono/chrono_inc.c"
-#include "graphics/graphics_inc.c"
-#include "audio/audio_inc.c"
-#include "asset/asset_inc.c"
-#include "animation/animation_inc.c"
-#include "render/render_inc.c"
-#include "physics/physics_inc.c"
-#include "entity/entity_inc.c"
-#include "dev/dev_inc.c"
-#include "gamemode/gamemode_inc.c"
-#include "editor/editor_inc.c"
 
 
 /* ==================================================
@@ -726,9 +734,9 @@ AppLogFPS(App *app, f32 dt)
 }
 
 __declspec(dllexport) b32
-AppTick(App *app, const I_State *input)
+AppTick(App *app, const OS_InputState *input)
 {
-	if (I_KbPressed(input, I_KeyboardKey_Escape))
+	if (OS_KbPressed(input, OS_KeyboardKey_Escape))
 		return true;
 
 	const f32 max_frame_time = 0.2f;
@@ -742,7 +750,7 @@ AppTick(App *app, const I_State *input)
 		AST_PollHotReloads(&app->assets);
 	}
 
-	if (I_KbPressed(input, I_KeyboardKey_Enter))
+	if (OS_KbPressed(input, OS_KeyboardKey_Enter))
 	{
 		R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
 	}
@@ -757,8 +765,8 @@ AppTick(App *app, const I_State *input)
 
 	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
-	if (I_KbDown(input, I_KeyboardKey_Up  ))  app_pp_exposure += dt;
-	if (I_KbDown(input, I_KeyboardKey_Down))  app_pp_exposure -= dt;
+	if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
+	if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
 	
 	f32 clamped_delta = dt;
 

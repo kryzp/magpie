@@ -151,7 +151,7 @@ internal void AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd);
 
 __declspec(dllexport) App  *AppInit      (const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);
-__declspec(dllexport) b32   AppTick      (App *app, const I_State *input);
+__declspec(dllexport) b32   AppTick      (App *app, const OS_InputState *input);
 __declspec(dllexport) void  AppHotLoad   (App *app, const OS_API *api);
 __declspec(dllexport) void  AppHotUnload (App *app);
 

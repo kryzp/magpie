@@ -84,9 +84,9 @@ internal void ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc);
    PER-FRAME
    ================================================== */
 
-internal void ENT_WorldTickPreAnim     (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input);
-internal void ENT_WorldTickPostAnim    (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input);
-internal void ENT_WorldTickPostPhysics (ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input);
+internal void ENT_WorldTickPreAnim     (ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input);
+internal void ENT_WorldTickPostAnim    (ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input);
+internal void ENT_WorldTickPostPhysics (ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input);
 
 internal void ENT_WorldFlush(ENT_World *world); // Clean-up all entities marked for pending kill.
 

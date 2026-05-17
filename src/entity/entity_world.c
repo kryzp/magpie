@@ -88,13 +88,13 @@ ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc)
 }
 
 internal void
-ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input)
+ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	ENT_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
-	ctx.dt = dt;
 	ctx.input = input;
+	ctx.dt = dt;
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
@@ -129,13 +129,13 @@ ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_S
 }
 
 internal void
-ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input)
+ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	ENT_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
-	ctx.dt = dt;
 	ctx.input = input;
+	ctx.dt = dt;
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{
@@ -170,13 +170,13 @@ ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_
 }
 
 internal void
-ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const I_State *input)
+ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	ENT_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
-	ctx.dt = dt;
 	ctx.input = input;
+	ctx.dt = dt;
 	
 	for (u32 t = 0; t < ENT_Type_COUNT; t++)
 	{

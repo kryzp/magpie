@@ -55,7 +55,7 @@ GM_StackPeek(const GM_Stack *stack)
 }
 
 internal void
-GM_StackTick(const GM_Stack *stack, void *state, f32 dt, const I_State *input)
+GM_StackTick(const GM_Stack *stack, void *state, f32 dt, const OS_InputState *input)
 {
 	GM_Mode *top = GM_StackPeek(stack);
 

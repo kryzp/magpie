@@ -20,9 +20,9 @@ struct ENT_TickContext
 	ENT_World *world;
 	ENT_EventQueue *events;
 	
+	const OS_InputState *input;
+	
 	f32 dt;
-
-	const I_State *input;
 };
 
 typedef void ENT_TypeDescDestroyFn     (void *entity);
