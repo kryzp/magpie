@@ -22,6 +22,8 @@ AST_ReflectionMode;
 typedef struct AST_ModelMaterial AST_ModelMaterial;
 struct AST_ModelMaterial
 {
+	String8 name;
+	
 	/*
 	 * Standard Metallic-Roughness PBR crap.
 	 */

@@ -33,7 +33,6 @@
 
 // ---
 
-// the notorious os-core dependency problem...
 #include "core/core_inc.h"
 #include "os/os_inc.h"
 #include "core/core_inc.c"

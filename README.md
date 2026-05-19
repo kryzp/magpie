@@ -122,8 +122,6 @@ Layers strictly only propogate upwards, that is to say, a layer *A* that uses fu
 
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level `/graphics/` operations, but also *assets* such as textures and models (which ultimately also need to use the `/graphics/` layer).
 
-Probably the only egregious breaking of the dependency rule is the os/platform layer. In order to make code easier, I assume a `global OS_API *osapi` that is present in all source files. This is super useful 'cuz now you can make platform OS calls anywhere in the code, like allocating memory or kicking a job. The major problem is that you get a completely wacky dependency system, where `/core/` depends on `/os/` now (along with every other layer), but `/os/` also depends on `/core/` to define itself, and the `/win32/` implementation also relies on some other layers for utilities. I've mostly just let this slip because afaic it affects a couple of files that were going to be messy *anyway* because it's platform code and it's a pretty self-contained architecture problem. I do intend to resolve this sometime in the future, maybe by moving some stuff in `/core/` into `/os/`, potentially making `/os/` entirely independent and therefore lower than `/core/`.
-
 The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 
 

@@ -160,6 +160,11 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 {
 	AST_ModelMaterial mat = {0};
 
+	if (gltf_mat->name && gltf_mat->name[0])
+		mat.name = String8Clone(arena, String8FromCStr(gltf_mat->name));
+	else
+		mat.name = String8Fmt(arena, "Unnamed Material");
+
 	mat.albedo_factor                        = v4(1.f, 1.f, 1.f, 1.f);
 	mat.normal_scale                         = 1.f;
 	mat.metallic_factor                      = 1.f;
@@ -336,6 +341,8 @@ AST_ModelResolveMaterial(const AST_Context *ctx,
 
 	mat.alpha_cutoff = gltf_mat->alpha_cutoff;
 
+	DebugLogT(ctx->log_channel, "Loaded Material: %.*s", String8VArg(mat.name));
+	
 	return mat;
 }
 
