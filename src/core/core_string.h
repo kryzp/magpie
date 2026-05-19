@@ -25,7 +25,7 @@ internal String8 String8Fmt    (Arena *arena, const char *fmt, ...);
 
 internal String8 String8Skip         (String8 string, u64 to);
 
-internal b32     String8Match        (String8 a, String8 b);
+internal b32     String8Match        (String8 a,      String8 b);
 internal b32     String8StartsWith   (String8 string, String8 prefix);
 
 internal u64     String8Find         (String8 string, String8 substr);

@@ -27,8 +27,8 @@ struct ENT_TickContext
 
 typedef void ENT_TypeDescDestroyFn     (void *entity);
 typedef void ENT_TypeDescTickFn        (void *entity, const ENT_TickContext *ctx);
-typedef void ENT_TypeDescSerializeFn   (void *entity, IO_ByteWriter *writer);
-typedef void ENT_TypeDescDeserializeFn (void *entity, IO_ByteReader *reader);
+typedef void ENT_TypeDescSerializeFn   (void *entity, IO_ByteSerializer *writer);
+typedef void ENT_TypeDescDeserializeFn (void *entity, IO_ByteSerializer *reader);
 
 typedef struct ENT_TypeDesc ENT_TypeDesc;
 struct ENT_TypeDesc

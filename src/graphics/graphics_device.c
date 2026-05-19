@@ -127,9 +127,11 @@ GFX_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_sev
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
 			ch = device->log_channel_general;
 			break;
+			
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
 			ch = device->log_channel_validation;
 			break;
+			
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
 			ch = device->log_channel_performance;
 			break;
@@ -164,8 +166,8 @@ GFX_DeviceInit(GFX_Device *device, Arena *arena, LOG_Channel log_channel)
 
 	device->log_channel = log_channel;
 
-	device->log_channel_general = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
-	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
+	device->log_channel_general     = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
+	device->log_channel_validation  = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
@@ -310,9 +312,9 @@ GFX_DeviceEndFrame(GFX_Device *device, const GFX_Swapchain *swapchain, const GFX
 		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS)
 		DebugLogB(device->log_channel, "Failed to present swapchain image.");
-	
-	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
 
+	device->current_frame_index = (device->current_frame_index + 1) % GFX_FRAMES_IN_FLIGHT;
+	
 	GFX_DeviceCmdPoolRelease(device, &frame_data->command_pool, cmd, frame_data->completion_point.value);
 }
 
@@ -646,11 +648,10 @@ GFX_DeviceCmdPoolCreate(const GFX_Device *device, u32 family_index)
 									 &pool.vk_handle),
 				 "Failed to create command pool.");
 
-	pool.acquire_queue_front = -1;
-	pool.acquire_queue_back  = 0;
+	pool.acquire_count = 0;
 
-	pool.release_queue_front = -1;
-	pool.release_queue_back  = 0;
+	pool.release_front = 0;
+	pool.release_count = 0;
 
 	return pool;
 }
@@ -666,11 +667,13 @@ GFX_DeviceCmdPoolAcquire(GFX_Device *device, GFX_CmdPool *pool)
 {
 	VkCommandBuffer cb = VK_NULL_HANDLE;
 	
-	if (!GFX_CmdPoolHasEmptyAcquireQueue(pool))
+	if (pool->acquire_count > 0)
 	{
-		cb = pool->acquire_queue[pool->acquire_queue_front];
-		pool->acquire_queue_front--;
-		vkResetCommandBuffer(cb, 0);
+        cb = pool->acquire_stack[--pool->acquire_count];
+		
+        vkResetCommandBuffer(cb, 0);
+
+		DebugLogD(device->log_channel, "Reused");
 	}
 	else
 	{
@@ -679,11 +682,13 @@ GFX_DeviceCmdPoolAcquire(GFX_Device *device, GFX_CmdPool *pool)
 		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		alloc_info.commandBufferCount = 1;
 		alloc_info.commandPool = pool->vk_handle;
-
+		
 		GFX_VK_CHECK(vkAllocateCommandBuffers(device->context.device,
 											  &alloc_info,
 											  &cb),
 					 "Failed to allocate command pool command buffers.");
+		
+		DebugLogD(device->log_channel, "Allocation");
 	}
 
 	return GFX_CmdInit(cb, device);
@@ -693,31 +698,36 @@ internal void
 GFX_DeviceCmdPoolRelease(const GFX_Device *device, GFX_CmdPool *pool, const GFX_CmdBuffer *cmd, u64 fence_value)
 {
 	DebugLogAssert(device->log_channel,
-				   !GFX_CmdPoolHasFullReleaseQueue(pool),
-				   "Command pool release queue is full!");
+				   pool->release_count < ArraySize(pool->release_queue),
+				   "Command pool release queue is full.");
 	
-	GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_queue_back];
+    u32 slot = (pool->release_front + pool->release_count) % ArraySize(pool->release_queue);
 
+	GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[slot];
+	
 	released->vk_handle = cmd->vk_handle;
-	released->fence_value = fence_value;
+    released->fence_value = fence_value;
 
-	pool->release_queue_back = (pool->release_queue_back + 1) % ArraySize(pool->release_queue);
+	pool->release_count++;
 }
 
 internal void
 GFX_DeviceCmdPoolPurge(const GFX_Device *device, GFX_CmdPool *pool, u64 fence_value)
 {
-	while (!GFX_CmdPoolHasEmptyReleaseQueue(pool))
+	while (pool->release_count > 0)
 	{
-		GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_queue_front];
+        GFX_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_front];
 
-		if (released->fence_value > fence_value)
-			break;
+        if (released->fence_value > fence_value)
+            break;
 
-		pool->acquire_queue[pool->acquire_queue_back] = released->vk_handle;
-		pool->acquire_queue_back = (pool->acquire_queue_back + 1) % ArraySize(pool->acquire_queue);
+        DebugLogAssert(device->log_channel,
+                       pool->acquire_count < ArraySize(pool->acquire_stack),
+                       "Command pool acquire stack is full.");
 
-		pool->release_queue_front = (pool->acquire_queue_front + 1) % ArraySize(pool->release_queue);
+        pool->acquire_stack[pool->acquire_count++] = released->vk_handle;
+        pool->release_front = (pool->release_front + 1) % ArraySize(pool->release_queue);
+        pool->release_count--;
 	}
 }
 
