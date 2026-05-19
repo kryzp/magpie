@@ -240,14 +240,13 @@ Macros follow the naming convention of whatever makes the most sense: if it's me
 Interesting files that you might wanna have a look at if you're just starting with the codebase.
 
 - `app` DLL Entry Point
-- `core/core_arena`
-- `core/core_scratch`
+- `core/core_arena.*`
 - `os/*` OS API
 - `os/win32/*` Job System, Logging and Win32 Platform layer
-- `render/render_graph`
-- `render/render_scene`
-- `asset/asset_manager`
-- `asset/serializer/*` Asset Importers
+- `render/render_graph.*`
+- `render/render_scene.*`
+- `asset/asset_manager.*`
+- `asset/serializer/asset_serializer_model.c`
 - `graphics/graphics_device` Low-Level Vulkan abstraction
 
 

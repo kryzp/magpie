@@ -101,9 +101,10 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 	vol->blas_count = scene->geometry_page_count;
 	AssertTrue(vol->blas_count < ArraySize(vol->blas_per_page));
 
-	u32 page_index = 0;
-	for (const R_GeometryPage *page = scene->geometry_page_head; page != NULL; page = page->next, page_index++)
+	for (u32 page_index = 0; page_index < scene->geometry_page_count; page_index++)
 	{
+		const R_GeometryPage *page = &scene->geometry_pages[page_index];
+		
 		GFX_BLASGeometry geometry = {0};
 		
 		geometry.vertex_buffer = page->vertex_buffer;
@@ -121,7 +122,7 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 		vol->blas_per_page[page_index] = receipt.key;
 		max_scratch_size = MaxValue(max_scratch_size, receipt.scratch_size);
 	}
-
+	
 	GFX_DeviceAllocAccelStructReceipt tlas_receipt = GFX_DeviceTLASAlloc(device, scene->object_count);
 	vol->tlas = tlas_receipt.key;
 	max_scratch_size = MaxValue(max_scratch_size, tlas_receipt.scratch_size);
@@ -141,13 +142,12 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 
 	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS && instance_index < scene->object_count; i++)
 	{
-		const R_SceneObjectSlot *slot = &scene->object_slots[i];
+		const R_ObjectSlot *slot = &scene->object_slots[i];
 
 		if (!slot->active)
 			continue;
 
-		const R_Object *obj = &slot->object;
-		m4 t = obj->transform;
+		m4 t = slot->transform;
 		
 		VkAccelerationStructureInstanceKHR *inst = &instances[instance_index];
 		
@@ -169,8 +169,9 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 		inst->instanceShaderBindingTableRecordOffset = 0;
 		inst->flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
 
-		u32 mesh_index = obj->mesh.value;
-		u32 page_idx = scene->mesh_registry[mesh_index].page;
+		// TODO: this is ASS
+		u32 mesh_index = slot->mesh.index;
+		u32 page_idx = scene->mesh_slots[mesh_index].page_index;
 		inst->accelerationStructureReference = GFX_DeviceAccelStructAddress(device, vol->blas_per_page[page_idx]);
 
 		instance_index++;
@@ -188,9 +189,10 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 
 	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(device);
 	{
-		page_index = 0;
-		for (const R_GeometryPage *page = scene->geometry_page_head; page != NULL; page = page->next, page_index++)
+		for (u32 page_index = 0; page_index < scene->geometry_page_count; page_index++)
 		{
+			const R_GeometryPage *page = &scene->geometry_pages[page_index];
+		
 			GFX_BLASGeometry geometry = {0};
 
 			geometry.vertex_buffer = page->vertex_buffer;
@@ -206,7 +208,7 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 
 			GFX_CmdBuildBLAS(&cmd, vol->blas_per_page[page_index], &geometry, 1, scratch_buffer);
 		}
-
+	
 		// BLAS -> TLAS.
 		{
 			GFX_AccessSt access_src = { VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR };

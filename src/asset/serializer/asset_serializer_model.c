@@ -1002,28 +1002,28 @@ AST_ModelLoadClip(const AST_Context *ctx,
 			switch (ch->path)
 			{
 				case AST_AnimPath_Translate:
-					{
-						f32 v[3] = { 0.f, 0.f, 0.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-						key->translation = AST_GltfTransformTranslation(v3(v[0], v[1], v[2]));
-					}
-					break;
+				{
+					f32 v[3] = { 0.f, 0.f, 0.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+					key->translation = AST_GltfTransformTranslation(v3(v[0], v[1], v[2]));
+				}
+				break;
 						
 				case AST_AnimPath_Rotation:
-					{
-						f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
-						key->rotation = AST_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
-					}
-					break;
+				{
+					f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
+					key->rotation = AST_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
+				}
+				break;
 
 				case AST_AnimPath_Scale:
-					{
-						f32 v[3] = { 1.f, 1.f, 1.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-						key->scale = AST_GltfTransformScale(v3(v[0], v[1], v[2]));
-					}
-					break;
+				{
+					f32 v[3] = { 1.f, 1.f, 1.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+					key->scale = AST_GltfTransformScale(v3(v[0], v[1], v[2]));
+				}
+				break;
 			}
 		}
 

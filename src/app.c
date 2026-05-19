@@ -327,8 +327,8 @@ AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
 	
-	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
-	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
+	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device,               osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
+	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
 
 	AppInitRenderCreateSkyboxMesh(app);
 
@@ -351,34 +351,36 @@ AppInitRender(App *app)
 
 	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
 	
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
+	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             AST_Type_Model);
-	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
+	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         AST_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
-
-	R_SceneRegisterModelReceipt model_receipt = R_SceneRegisterModel(&app->scene, scratch.arena, &app->assets, app->object_model_handle, (u32)(-1));
-
-	for (u32 i = 0; i < model_receipt.entry_count; i++)
 	{
-		R_SceneModelEntry *entry = &model_receipt.entries[i];
-		
-		R_Object obj = {0};
-		obj.transform     = entry->transform;
-		obj.sphere_bounds = entry->sphere_bounds;
-		obj.mesh          = entry->mesh;
-		obj.material      = entry->material;
-		
-		app->object_handle = R_SceneObjectCreate(&app->scene, &obj);
-	}
+		GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(&app->graphics_device);
+		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, app->object_model_handle, (u32)(-1));
+		GFX_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+					
+		for (u32 i = 0; i < receipt.count; i++)
+		{
+			R_ModelEntry *entry = &receipt.entries[i];
 
-	ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
-	ANIM_AnimatorPlay(&app->object_animator, 0);
-	
+			R_ObjectDesc desc = {0};
+			desc.transform = entry->transform;
+			desc.sphere_bounds = entry->sphere_bounds;
+			desc.mesh = entry->mesh;
+			desc.material = entry->material;
+
+			app->object_handle = R_SceneObjectCreate(&app->scene, &desc);
+		}
+
+		//ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
+		//ANIM_AnimatorPlay(&app->object_animator, 0);
+	}
 	ScratchRelease(&scratch);
 
 	/*
@@ -802,9 +804,11 @@ AppTick(App *app, const OS_InputState *input)
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 
+	/*
 	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
-	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);	
-	R_SceneObjectSetSkinningPalette(&app->scene, app->object_handle, palette.palette, palette.joint_count);
+	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);
+	R_SceneObjectSetSkinning(&app->scene, app->object_handle, palette.palette, palette.joint_count);
+	*/
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
@@ -860,7 +864,7 @@ AppHotUnload(App *app)
 internal void
 AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 {
-	R_SceneResources scene_resources = R_SceneRefreshTransientResources(&app->scene, &app->frame_upload_ring_buffer);
+	R_SceneFrameData scene_resources = R_SceneUploadFrameData(&app->scene, &app->frame_upload_ring_buffer);
 
 	R_CameraRecompute(&app->editor.camera);
 

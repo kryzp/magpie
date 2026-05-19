@@ -1,4 +1,5 @@
 #include "render_mesh.c"
+#include "render_material.c"
 #include "render_camera.c"
 #include "render_scene.c"
 #include "render_clear.c"

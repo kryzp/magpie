@@ -25,7 +25,7 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc;
 
 	pc.object_buffer      = data->object_buffer_address;
-	pc.mesh_buffer        = R_SceneMeshBufferAddress(ctx->scene);
+	pc.mesh_buffer        = R_SceneMeshBufferAddr(ctx->scene);
 	pc.caster_data_buffer = GFX_DeviceBufferAddress(device, data->caster_table_buffer);
 	pc.caster_index       = data->caster_index;
 
@@ -96,7 +96,7 @@ R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
 		{  0.f,  0.f,  1.f }, // Backwards.
 	};
 
-	sr->caster_count = MinValue(R_SceneGetShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
+	sr->caster_count = MinValue(R_SceneShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
 
 	R_GPU_ShadowCaster *caster_mapping = GFX_DeviceBufferMap(sr->device, sr->caster_table_buffer);
 

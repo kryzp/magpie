@@ -31,12 +31,16 @@ struct Coroutine
 				(cor_)->delay -= (dt_);			\
 				return;							\
 			}									\
-	} \											\
+	}											\
 	while (0)
 
 #define CoroutineEnd(cor_) } (cor_)->state = ((u64)(-1))
 
 #if 0
+
+Coroutine my_coroutine = {0};
+
+// ...
 
 CoroutineBegin(&my_coroutine);
 {

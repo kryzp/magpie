@@ -1,32 +1,39 @@
 
 internal void
-R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_channel)
+R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets, LOG_Channel log_channel)
 {
 	MemZeroStruct(scene);
 
 	scene->arena = arena;
 	scene->device = device;
+	scene->assets = assets;
 	scene->log_channel = log_channel;
 
-	// Hook up the free lists.
-	for (u32 i = R_SCENE_MAX_OBJECTS; i > 0; i--)  scene->object_free_list [scene->object_free_count++] = i - 1;
-	for (u32 i = R_SCENE_MAX_LIGHTS;  i > 0; i--)  scene->light_free_list  [scene->light_free_count++]  = i - 1;
+	for (u32 i = 0; i < ArraySize(scene->object_slots);   i++)  scene->object_slots[i].generation = 1;
+	for (u32 i = 0; i < ArraySize(scene->light_slots);    i++)  scene->light_slots[i].generation = 1;
+	for (u32 i = 0; i < ArraySize(scene->material_slots); i++)  scene->material_slots[i].generation = 1;
+	for (u32 i = 0; i < ArraySize(scene->mesh_slots);     i++)  scene->mesh_slots[i].generation = 1;
 
-	GFX_BufferAllocInfo mesh_buffer_info = {0};
-	mesh_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	mesh_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	mesh_buffer_info.size  = sizeof(R_GPU_RenderMesh) * R_SCENE_MAX_MESHES;
- 
-	GFX_BufferAllocInfo material_buffer_info = {0};
-	material_buffer_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	material_buffer_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	material_buffer_info.size  = sizeof(R_GPU_Material) * R_SCENE_MAX_MATERIALS;
- 
-	scene->mesh_buffer	   = GFX_DeviceBufferAlloc(device, &mesh_buffer_info);
-	scene->material_buffer = GFX_DeviceBufferAlloc(device, &material_buffer_info);
- 
-	scene->mesh_buffer_dirty	 = true;
+	for (i32 i = ArraySize(scene->object_slots) - 1;   i > 0; i--)  scene->object_free_list[scene->object_free_count++] = i - 1;
+	for (i32 i = ArraySize(scene->light_slots) - 1;    i > 0; i--)  scene->light_free_list[scene->light_free_count++] = i - 1;
+	for (i32 i = ArraySize(scene->material_slots) - 1; i > 0; i--)  scene->material_free_list[scene->material_free_count++] = i - 1;
+	for (i32 i = ArraySize(scene->mesh_slots) - 1;     i > 0; i--)  scene->mesh_free_list[scene->mesh_free_count++] = i - 1;
+
+	GFX_BufferAllocInfo material_buffer_alloc_info = {0};
+	material_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	material_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	material_buffer_alloc_info.size = sizeof(R_GPU_Material) * ArraySize(scene->material_slots);
+		
+	GFX_BufferAllocInfo mesh_buffer_alloc_info = {0};
+	mesh_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	mesh_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	mesh_buffer_alloc_info.size = sizeof(R_GPU_RenderMesh) * ArraySize(scene->mesh_slots);
+
+	scene->material_buffer = GFX_DeviceBufferAlloc(device, &material_buffer_alloc_info);
+	scene->mesh_buffer     = GFX_DeviceBufferAlloc(device, &mesh_buffer_alloc_info);
+
 	scene->material_buffer_dirty = true;
+	scene->mesh_buffer_dirty     = true;
 
 	DebugLogI(scene->log_channel, "Initialized.");
 }
@@ -34,96 +41,157 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, LOG_Channel log_ch
 internal void
 R_SceneDestroy(R_Scene *scene)
 {
-	GFX_DeviceBufferDestroy(scene->device, scene->mesh_buffer);
 	GFX_DeviceBufferDestroy(scene->device, scene->material_buffer);
- 
-	for (R_GeometryPage *page = scene->geometry_page_head; page; page = page->next)
+	GFX_DeviceBufferDestroy(scene->device, scene->mesh_buffer);
+
+	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
-		GFX_DeviceBufferDestroy(scene->device, page->vertex_buffer);
-		GFX_DeviceBufferDestroy(scene->device, page->index_buffer);
+		GFX_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].vertex_buffer);
+		GFX_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].index_buffer);
 	}
 	
 	DebugLogI(scene->log_channel, "Destroyed.");
 }
 
 internal void
-R_SceneDebug(const R_Scene *scene)
+R_SceneDrawIndirect(const R_Scene *scene, GFX_CmdBuffer *cmd, GFX_BufferKey indirect_buffer, GFX_BufferKey count_buffer)
 {
-	// TODO
+	for (u32 i = 0; i < scene->geometry_page_count; i++)
+	{
+		const R_GeometryPage *page = &scene->geometry_pages[i];
+		
+		GFX_CmdBindIndexBuffer(cmd, page->index_buffer, 0, VK_WHOLE_SIZE, VK_INDEX_TYPE_UINT32);
+		GFX_CmdDrawIndexedIndirectCount(cmd, indirect_buffer, 0, count_buffer, 0, ArraySize(scene->object_slots), sizeof(R_GPU_IndirectDraw));
+	}
 }
 
-internal R_SceneResources
-R_SceneRefreshTransientResources(R_Scene *scene, GFX_RingBuffer *ring)
+internal R_SceneFrameData
+R_SceneUploadFrameData(R_Scene *scene, GFX_RingBuffer *ring)
 {
-	R_SceneResources resources = {0};
+	R_SceneFrameData resources = {0};
  
-	R_SceneUpdatePageBuffer(scene, ring, &resources);
+	if (scene->mesh_buffer_dirty)
+	{
+		R_SceneFlushMeshBuffer(scene);
+		scene->mesh_buffer_dirty = false;
+	}
+
+	if (scene->material_buffer_dirty)
+	{
+		R_SceneFlushMaterialBuffer(scene);
+		scene->material_buffer_dirty = false;
+	}
+ 
+	R_SceneUploadPageTable(scene, ring, &resources);
  
 	if (scene->object_count > 0)
 	{
-		R_SceneUpdateSkinningBuffer(scene, ring, &resources);
-		R_SceneUpdateObjectBuffer(scene, ring, &resources);
+		R_SceneUploadSkinning(scene, ring, &resources);
+		R_SceneUploadObjects(scene, ring, &resources);
 	}
  
 	if (scene->light_count > 0)
 	{
-		R_SceneUpdateLightBuffer(scene, ring, &resources);
-	}
- 
-	if (scene->mesh_count > 0 && scene->mesh_buffer_dirty)
-	{
-		R_SceneUpdateMeshBuffer(scene);
-		scene->mesh_buffer_dirty = false;
-	}
- 
-	if (scene->material_count > 0 && scene->material_buffer_dirty)
-	{
-		R_SceneUpdateMaterialBuffer(scene);
-		scene->material_buffer_dirty = false;
+		R_SceneUploadLights(scene, ring, &resources);
 	}
  
 	return resources;
 }
 
 internal void
-R_SceneUpdateObjectBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
+R_SceneUploadPageTable(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+{
+	u32 count = scene->geometry_page_count > 0 ? scene->geometry_page_count : 1;
+
+	out->page_table_buffer = GFX_RingBufferPushArray(ring, R_GPU_PagePointers, count);
+
+	R_GPU_PagePointers *mapped = out->page_table_buffer.cpu;
+
+	for (u32 i = 0; i < scene->geometry_page_count; i++)
+		mapped[i].vertex_buffer = GFX_DeviceBufferAddress(scene->device, scene->geometry_pages[i].vertex_buffer);
+}
+
+internal void
+R_SceneUploadSkinning(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+{
+	u32 total_joints = 0;
+
+	for (u32 i = 0; i < ArraySize(scene->object_slots); i++)
+	{
+		R_ObjectSlot *slot = &scene->object_slots[i];
+
+		slot->skinning_palette_gpu_addr = 0;
+		
+		if (!slot->active || slot->skinning_palette == NULL)
+			continue;
+
+		total_joints += slot->skinning_joint_count;
+	}
+
+	if (total_joints <= 0)
+		return;
+	
+	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_joints);
+ 
+	m4 *mapped = out->skinning_palette_buffer.cpu;
+
+	u32 offset = 0;
+
+	for (u32 i = 0; i < ArraySize(scene->object_slots); i++)
+	{
+		R_ObjectSlot *slot = &scene->object_slots[i];
+
+		if (!slot->active || slot->skinning_palette == NULL)
+			continue;
+
+		u32 joints = slot->skinning_joint_count;
+
+		MemCopy(mapped + offset, slot->skinning_palette, joints * sizeof(m4));
+
+		slot->skinning_palette_gpu_addr = out->skinning_palette_buffer.gpu + offset * sizeof(m4);
+
+		offset += joints;
+	}
+}
+
+internal void
+R_SceneUploadObjects(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
 {
 	out->object_buffer = GFX_RingBufferPushArray(ring, R_GPU_ObjectData, scene->object_count);
  
 	R_GPU_ObjectData *mapped = out->object_buffer.cpu;
 
 	u32 write_index = 0;
- 
-	// TODO: The list is sparse so this is just gonna be
-	//       slower than it really should be...
-	
-	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS && write_index < scene->object_count; i++)
+ 	
+	for (u32 i = 0; i < ArraySize(scene->object_slots) && write_index < scene->object_count; i++)
 	{
-		R_SceneObjectSlot *slot = &scene->object_slots[i];
+		R_ObjectSlot *slot = &scene->object_slots[i];
 		
 		if (!slot->active)
 			continue;
+
+		u32 mesh_index = slot->mesh.index;
+		u32 material_index = slot->material.index;
+		u32 page_index = scene->mesh_slots[mesh_index].page_index;
  
-		const R_Object *obj = &slot->object;
- 
-		mapped[write_index].model_matrix            = obj->transform;
-		mapped[write_index].normal_matrix           = M4RemoveTranslation(M4Inverse(M4Transpose(obj->transform)));
+		mapped[write_index].model_matrix            = slot->transform;
+		mapped[write_index].normal_matrix           = M4RemoveTranslation(M4Inverse(M4Transpose(slot->transform)));
 
-		mapped[write_index].sphere_bounds           = obj->sphere_bounds;
+		mapped[write_index].sphere_bounds           = slot->sphere_bounds;
 
-		mapped[write_index].material_index          = obj->material.value;
-		mapped[write_index].mesh_index	            = obj->mesh.value;
-		mapped[write_index].page_index	            = slot->page_index;
+		mapped[write_index].material_index          = material_index;
+		mapped[write_index].mesh_index	            = mesh_index;
+		mapped[write_index].page_index	            = page_index;
 
-		mapped[write_index].skinning_palette_buffer = slot->skinning_palette_address_this_frame;
-		mapped[write_index].skinning_joint_count    = obj->skinning_joint_count;
+		mapped[write_index].skinning_palette_buffer = slot->skinning_palette_gpu_addr;
+		mapped[write_index].skinning_joint_count    = slot->skinning_joint_count;
  
 		write_index++;
 	}
 }
 
 internal void
-R_SceneUpdateLightBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
+R_SceneUploadLights(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
 {
 	scene->shadow_caster_count = 0;
 
@@ -134,9 +202,9 @@ R_SceneUpdateLightBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources 
 	u32 write_index = 0;
 	i32 shadow_slot_index = 0;
 
-	for (u32 i = 0; i < R_SCENE_MAX_LIGHTS && write_index < scene->light_count; i++)
+	for (u32 i = 0; i < ArraySize(scene->light_slots) && write_index < scene->light_count; i++)
 	{
-		R_SceneLightSlot *slot = &scene->light_slots[i];
+		R_LightSlot *slot = &scene->light_slots[i];
 
 		if (!slot->active)
 			continue;
@@ -175,152 +243,615 @@ R_SceneUpdateLightBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources 
 	}
 }
 
-internal void
-R_SceneUpdatePageBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
+internal R_SceneHandle
+R_SceneObjectCreate(R_Scene *scene, const R_ObjectDesc *desc)
 {
-	// geometry_page_count may be 0 on the first frame before any mesh is
-	// registered. Push at least 1 entry to avoid a zero-size allocation.
-	u32 count = scene->geometry_page_count > 0 ? scene->geometry_page_count : 1;
- 
-	out->page_table_buffer = GFX_RingBufferPushArray(ring, R_GPU_PagePointers, count);
- 
-	R_GPU_PagePointers *mapped	= out->page_table_buffer.cpu;
-	R_GeometryPage	   *page	= scene->geometry_page_head;
- 
-	for (u32 i = 0; i < scene->geometry_page_count; i++, page = page->next)
-		mapped[i].vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer);
+	DebugLogAssert(scene->log_channel,
+				   scene->object_free_count > 0,
+				   "Ran out of free object slots.");
+
+	scene->object_free_count--;
+	u32 slot_index = scene->object_free_list[scene->object_free_count];
+	R_ObjectSlot *slot = &scene->object_slots[slot_index];
+
+	slot->transform = desc->transform;
+	slot->sphere_bounds = desc->sphere_bounds;
+	slot->mesh = desc->mesh;
+	slot->material = desc->material;
+
+	slot->skinning_palette = NULL;
+	slot->skinning_joint_count = 0;
+
+	slot->active = true;
+
+	scene->object_count++;
+
+	R_SceneHandle handle = {0};
+	handle.index = slot_index;
+	handle.generation = slot->generation;
+
+	return handle;
 }
 
 internal void
-R_SceneUpdateSkinningBuffer(R_Scene *scene, GFX_RingBuffer *ring, R_SceneResources *out)
+R_SceneObjectDestroy(R_Scene *scene, R_SceneHandle handle)
 {
-	u32 total_joints = 0;
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
-	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS; i++)
-	{
-		R_SceneObjectSlot *slot = &scene->object_slots[i];
+	if (!slot)
+		return;
 
-		slot->skinning_palette_address_this_frame = 0;
-		
-		if (!slot->active || slot->object.skinning_palette == NULL)
-			continue;
+	slot->active = false;
+	slot->generation++;
 
-		total_joints += slot->object.skinning_joint_count;
-	}
+	scene->object_free_list[scene->object_free_count++] = handle.index;
+	scene->object_count--;
+}
 
-	if (total_joints <= 0)
+internal u32
+R_SceneObjectCount(const R_Scene *scene)
+{
+	return scene->object_count;
+}
+
+internal R_ObjectSlot *
+R_SceneObjectGetSlot(R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->object_slots))
+		return NULL;
+
+	R_ObjectSlot *slot = &scene->object_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return NULL;
+
+	return slot;
+}
+
+internal void
+R_SceneObjectSetTransform(R_Scene *scene, R_SceneHandle handle, m4 transform)
+{
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
 		return;
 	
-	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_joints);
- 
-	m4 *mapped = out->skinning_palette_buffer.cpu;
-
-	u32 offset = 0;
-
-	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS; i++)
-	{
-		R_SceneObjectSlot *slot = &scene->object_slots[i];
-
-		if (!slot->active || slot->object.skinning_palette == NULL)
-			continue;
-
-		u32 joints = slot->object.skinning_joint_count;
-
-		MemCopy(mapped + offset, slot->object.skinning_palette, joints * sizeof(m4));
-
-		slot->skinning_palette_address_this_frame = out->skinning_palette_buffer.gpu + offset * sizeof(m4);
-
-		offset += joints;
-	}
+	slot->transform = transform;
 }
 
 internal void
-R_SceneDrawIndirect(const R_Scene *scene,
-					GFX_CmdBuffer *cmd,
-					GFX_BufferKey indirect_buffer,
-					GFX_BufferKey count_buffer)
+R_SceneObjectSetSphereBounds(R_Scene *scene, R_SceneHandle handle, v4 sphere_bounds)
 {
-	for (const R_GeometryPage *page = scene->geometry_page_head; page; page = page->next)
-	{
-		GFX_CmdBindIndexBuffer(cmd,
-							   page->index_buffer,
-							   0, VK_WHOLE_SIZE,
-							   VK_INDEX_TYPE_UINT32);
-		
-		GFX_CmdDrawIndexedIndirectCount(cmd,
-										indirect_buffer, 0,
-										count_buffer, 0,
-										R_SCENE_MAX_OBJECTS,
-										sizeof(R_GPU_IndirectDraw));
-	}
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+	
+	slot->sphere_bounds = sphere_bounds;
 }
 
 internal void
-R_SceneUpdateMeshBuffer(R_Scene *scene)
+R_SceneObjectSetMaterial(R_Scene *scene, R_SceneHandle handle, R_SceneHandle material)
 {
-	AssertTrue(scene->mesh_count <= R_SCENE_MAX_MESHES);
- 
-	GFX_DeviceBufferWrite(scene->device,
-						  scene->mesh_buffer,
-						  scene->gpu_meshes,
-						  sizeof(R_GPU_RenderMesh) * scene->mesh_count, 0);
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+	
+	slot->material = material;
 }
 
 internal void
-R_SceneUpdateMaterialBuffer(R_Scene *scene)
+R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
 {
-	AssertTrue(scene->material_count <= R_SCENE_MAX_MATERIALS);
- 
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+	
+	slot->mesh = mesh;
+}
+
+internal void
+R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const m4 *palette, u32 joint_count)
+{
+	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+	
+	slot->skinning_palette = palette;
+	slot->skinning_joint_count = joint_count;
+}
+
+internal b32
+R_SceneObjectHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->object_slots))
+		return false;
+
+	const R_ObjectSlot *slot = &scene->object_slots[handle.index];
+	return slot->active && slot->generation == handle.generation;
+}
+
+internal R_SceneHandle
+R_SceneLightCreate(R_Scene *scene, const R_Light *light)
+{
+	DebugLogAssert(scene->log_channel,
+				   scene->light_free_count > 0,
+				   "Ran out of free light slots.");
+
+	scene->light_free_count--;
+	u32 slot_index = scene->light_free_list[scene->light_free_count];
+	R_LightSlot *slot = &scene->light_slots[slot_index];
+
+	slot->light = *light;
+	
+	slot->active = true;
+
+	scene->light_count++;
+
+	R_SceneHandle handle = {0};
+	handle.index = slot_index;
+	handle.generation = slot->generation;
+
+	return handle;
+}
+
+internal void
+R_SceneLightDestroy(R_Scene *scene, R_SceneHandle handle)
+{
+	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+
+	slot->active = false;
+	slot->generation++;
+
+	scene->light_free_list[scene->light_free_count++] = handle.index;
+	scene->light_count--;
+}
+
+internal u32
+R_SceneLightCount(const R_Scene *scene)
+{
+	return scene->light_count;
+}
+
+internal R_LightSlot *
+R_SceneLightGetSlot(R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->light_slots))
+		return NULL;
+
+	R_LightSlot *slot = &scene->light_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return NULL;
+
+	return slot;
+}
+
+internal void
+R_SceneLightSetPosition(R_Scene *scene, R_SceneHandle handle, v3 position)
+{
+	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+
+	slot->light.position = position;
+}
+
+internal void
+R_SceneLightSetColour(R_Scene *scene, R_SceneHandle handle, v3 colour)
+{
+	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+
+	slot->light.colour = colour;
+}
+
+internal void
+R_SceneLightSetIntensity(R_Scene *scene, R_SceneHandle handle, f32 intensity)
+{
+	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
+
+	if (!slot)
+		return;
+
+	slot->light.intensity = intensity;
+}
+
+internal b32
+R_SceneLightHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->light_slots))
+		return false;
+
+	const R_LightSlot *slot = &scene->light_slots[handle.index];
+	return slot->active && slot->generation == handle.generation;
+}
+
+internal u32
+R_SceneShadowCasterCount(const R_Scene *scene)
+{
+	return scene->shadow_caster_count;
+}
+
+internal const R_ShadowCaster *
+R_SceneShadowCasterGet(const R_Scene *scene, u32 index)
+{
+	DebugLogAssert(scene->log_channel,
+				   index < ArraySize(scene->shadow_casters),
+				   "Out of range index (%u) into shadow caster array of size %llu",
+				   index, ArraySize(scene->shadow_casters));
+	
+	return &scene->shadow_casters[index];
+}
+
+internal R_SceneHandle
+R_SceneMaterialCreate(R_Scene *scene, const R_Material *material)
+{
+	DebugLogAssert(scene->log_channel,
+				   scene->material_free_count > 0,
+				   "Ran out of free material slots.");
+
+	scene->material_free_count--;
+	u32 slot_index = scene->material_free_list[scene->material_free_count];
+
+	R_MaterialSlot *slot = &scene->material_slots[slot_index];
+
+	slot->source = *material;
+	slot->active = true;
+
+	R_SceneMaterialBakeIntoGPU(scene, material, &scene->material_gpus[slot_index]);
+	scene->material_buffer_dirty = true;
+
+	scene->material_count++;
+
+	R_SceneHandle handle = {0};
+	handle.index = slot_index;
+	handle.generation = slot->generation;
+
+	return handle;
+}
+
+internal R_SceneHandle
+R_SceneMaterialFromAssets(R_Scene *scene, const AST_ModelMaterial *source)
+{
+	R_Material material = R_MaterialFromAsset(source, scene->assets);
+	return R_SceneMaterialCreate(scene, &material);
+}
+
+internal void
+R_SceneMaterialUpdate(R_Scene *scene, R_SceneHandle handle, const R_Material *material)
+{
+	if (handle.index >= ArraySize(scene->material_slots))
+		return;
+
+	R_MaterialSlot *slot = &scene->material_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return;
+
+	slot->source = *material;
+
+	R_SceneMaterialBakeIntoGPU(scene, material, &scene->material_gpus[handle.index]);
+	scene->material_buffer_dirty = true;
+}
+
+internal void
+R_SceneMaterialDestroy(R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->material_slots))
+		return;
+
+	R_MaterialSlot *slot = &scene->material_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return;
+
+	slot->active = false;
+	slot->generation++;
+
+	MemZeroStruct(&scene->material_gpus[handle.index]);
+	scene->material_buffer_dirty = true;
+
+	scene->material_free_list[scene->material_free_count++] = handle.index;
+	scene->material_count--;
+}
+
+internal u32
+R_SceneMaterialCount(const R_Scene *scene)
+{
+	return scene->material_count;
+}
+
+internal const R_Material *
+R_SceneMaterialGetSource(const R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->material_slots))
+		return NULL;
+
+	const R_MaterialSlot *slot = &scene->material_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return NULL;
+
+	return &slot->source;
+}
+
+internal u64
+R_SceneMaterialBufferAddr(const R_Scene *scene)
+{
+	return GFX_DeviceBufferAddress(scene->device, scene->material_buffer);
+}
+
+internal void
+R_SceneMaterialBakeIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)
+{
+	out->albedo_texture                       = R_SceneResolveTextureKey(scene, material->albedo_texture);
+	out->normal_texture                       = R_SceneResolveTextureKey(scene, material->normal_texture);
+	out->metallic_roughness_texture           = R_SceneResolveTextureKey(scene, material->metallic_roughness_texture);
+	out->emissive_texture                     = R_SceneResolveTextureKey(scene, material->emissive_texture);
+	out->occlusion_texture                    = R_SceneResolveTextureKey(scene, material->occlusion_texture);
+	
+	out->albedo_factor                        = material->albedo_factor;
+	out->normal_scale                         = material->normal_scale;
+	out->metallic_factor                      = material->metallic_factor;
+	out->roughness_factor                     = material->roughness_factor;
+	out->emissive_factor                      = material->emissive_factor;
+	out->emissive_intensity                   = material->emissive_intensity;
+	out->occlusion_intensity                  = material->occlusion_intensity;
+
+	out->ior                                  = material->ior;
+	
+	out->transmission_texture                 = R_SceneResolveTextureKey(scene, material->transmission_texture);
+	out->thickness_texture                    = R_SceneResolveTextureKey(scene, material->thickness_texture);
+
+	out->transmission_factor                  = material->transmission_factor;
+	out->thickness_factor                     = material->thickness_factor;
+
+	out->attenuation_colour                   = material->attenuation_colour;
+	out->attenuation_distance                 = material->attenuation_distance;
+
+	out->specular_texture                     = R_SceneResolveTextureKey(scene, material->specular_texture);
+	out->specular_colour_texture              = R_SceneResolveTextureKey(scene, material->specular_colour_texture);
+
+	out->specular_factor                      = material->specular_factor;
+	out->specular_colour_factor               = material->specular_colour_factor;
+
+	out->clearcoat_texture                    = R_SceneResolveTextureKey(scene, material->clearcoat_texture);
+	out->clearcoat_roughness_texture          = R_SceneResolveTextureKey(scene, material->clearcoat_roughness_texture);
+
+	out->clearcoat_factor                     = material->clearcoat_factor;
+	out->clearcoat_roughness_factor           = material->clearcoat_roughness_factor;
+
+	out->sheen_colour_texture                 = R_SceneResolveTextureKey(scene, material->sheen_colour_texture);
+	out->sheen_roughness_texture              = R_SceneResolveTextureKey(scene, material->sheen_roughness_texture);
+
+	out->sheen_colour_factor                  = material->sheen_colour_factor;
+	out->sheen_roughness_factor               = material->sheen_roughness_factor;
+	
+	out->iridescence_texture                  = R_SceneResolveTextureKey(scene, material->iridescence_texture);
+	out->iridescence_thickness_texture        = R_SceneResolveTextureKey(scene, material->iridescence_thickness_texture);
+
+	out->iridescence_factor                   = material->iridescence_factor;
+	out->iridescence_ior                      = material->iridescence_ior;
+	out->iridescence_thickness_min_nanometers = material->iridescence_thickness_min_nanometers;
+	out->iridescence_thickness_max_nanometers = material->iridescence_thickness_max_nanometers;
+
+	out->double_sided                         = material->double_sided;
+	out->unlit                                = material->unlit;
+	out->alpha_cutoff                         = material->alpha_cutoff;
+	out->alpha_mode                           = material->alpha_mode;
+}
+
+internal b32
+R_SceneMaterialHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->material_slots))
+		return false;
+
+	const R_MaterialSlot *slot = &scene->material_slots[handle.index];
+	return slot->active && slot->generation == handle.generation;
+}
+
+internal R_SceneHandle
+R_SceneMeshCreate(R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc)
+{
+	DebugLogAssert(scene->log_channel,
+				   scene->mesh_free_count > 0,
+				   "Ran out of free mesh slots.");
+
+	scene->mesh_free_count--;
+	u32 slot_index = scene->mesh_free_list[scene->mesh_free_count];
+	R_MeshSlot *slot = &scene->mesh_slots[slot_index];
+
+	u32 page_index = R_SceneFindSuitablePage(scene, desc->vertex_count, desc->index_count);
+	R_GeometryPage *page = &scene->geometry_pages[page_index];
+	
+	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
+	const u64 index_stride  = sizeof(AST_ModelIndex);
+
+	GFX_BufferCopy vc = {0};
+	vc.src_offset = 0;
+	vc.dst_offset = page->vertex_count * vertex_stride;
+	vc.size = desc->vertex_count * vertex_stride;
+
+	GFX_BufferCopy ic = {0};
+	ic.src_offset = 0;
+	ic.dst_offset = page->index_count * index_stride;
+	ic.size = desc->index_count * index_stride;
+
+	GFX_CmdCopyBufferToBuffer(cmd, desc->vertex_buffer, page->vertex_buffer, 1, &vc);
+	GFX_CmdCopyBufferToBuffer(cmd, desc->index_buffer,  page->index_buffer,  1, &ic);
+
+	R_GPU_RenderMesh *gpu_mesh = &scene->mesh_gpus[slot_index];
+	gpu_mesh->index_count = desc->index_count;
+	gpu_mesh->first_index = page->index_count;
+	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_count * sizeof(R_GPU_ModelVertex));
+
+	if (!GFX_BufferKeyIsNull(desc->skin_buffer))
+		gpu_mesh->skin_buffer = GFX_DeviceBufferAddress(scene->device, desc->skin_buffer);
+	else
+		gpu_mesh->skin_buffer = 0;
+	
+	page->vertex_count += desc->vertex_count;
+	page->index_count  += desc->index_count;
+
+	slot->page_index = page_index;
+	slot->active = true;
+	
+	scene->mesh_count++;
+	scene->mesh_buffer_dirty = true;
+
+	R_SceneHandle handle = {0};
+	handle.index = slot_index;
+	handle.generation = slot->generation;
+	
+	return handle;
+}
+
+internal void
+R_SceneMeshDestroy(R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->mesh_slots))
+		return;
+
+	R_MeshSlot *slot = &scene->mesh_slots[handle.index];
+
+	if (!slot->active || slot->generation != handle.generation)
+		return;
+
+	slot->active = false;
+	slot->generation++;
+
+	MemZeroStruct(&scene->mesh_gpus[handle.index]);
+	scene->mesh_buffer_dirty = true;
+
+	scene->mesh_free_list[scene->mesh_free_count++] = handle.index;
+	scene->mesh_count--;
+}
+
+internal u32
+R_SceneMeshCount(const R_Scene *scene)
+{
+	return scene->mesh_count;
+}
+
+internal u64
+R_SceneMeshBufferAddr(const R_Scene *scene)
+{
+	return GFX_DeviceBufferAddress(scene->device, scene->mesh_buffer);
+}
+
+internal b32
+R_SceneMeshHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+{
+	if (handle.index >= ArraySize(scene->mesh_slots))
+		return false;
+
+	const R_MeshSlot *slot = &scene->mesh_slots[handle.index];
+	return slot->active && slot->generation == handle.generation;
+}
+
+internal void
+R_SceneFlushMaterialBuffer(R_Scene *scene)
+{
 	GFX_DeviceBufferWrite(scene->device,
 						  scene->material_buffer,
-						  scene->gpu_materials,
-						  sizeof(R_GPU_Material) * scene->material_count, 0);
+						  scene->material_gpus,
+						  sizeof(scene->material_gpus), 0);
+}
+
+internal void
+R_SceneFlushMeshBuffer(R_Scene *scene)
+{
+	GFX_DeviceBufferWrite(scene->device,
+						  scene->mesh_buffer,
+						  scene->mesh_gpus,
+						  sizeof(scene->mesh_gpus), 0);
+}
+
+internal R_ModelImportReceipt
+R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle handle, u32 max_count)
+{
+	AST_Asset *model_asset = AST_GetNow(scene->assets, handle, AST_Type_Model);
+	
+	u32 sub_model_count = model_asset->model.sub_model_count;
+	const AST_SubModel *sub_models = model_asset->model.sub_models;
+	
+	u32 actual_count = sub_model_count;
+	
+	if (sub_model_count > max_count)
+	{
+		DebugLogW(scene->log_channel,
+				  "Hit max entry count! Truncating sub model count %u down to %u.",
+				  sub_model_count, max_count);
+
+		actual_count = max_count;
+	}
+	
+	R_ModelImportReceipt receipt = {0};
+	receipt.count = sub_model_count;
+	receipt.entries = ArenaPushArray(arena, R_ModelEntry, actual_count);
+
+	for (u32 i = 0; i < actual_count; i++)
+	{
+		const AST_SubModel *sub = &sub_models[i];
+		R_ModelEntry *entry = &receipt.entries[i];
+
+		R_MeshDesc mesh_desc = {0};
+		mesh_desc.vertex_buffer = sub->vertex_buffer;
+		mesh_desc.index_buffer = sub->index_buffer;
+		mesh_desc.vertex_count = sub->vertex_count;
+		mesh_desc.index_count = sub->index_count;
+		mesh_desc.skin_buffer = sub->skin_buffer;
+
+		entry->mesh = R_SceneMeshCreate(scene, cmd, &mesh_desc);
+
+		entry->material = R_SceneMaterialFromAssets(scene, &sub->material);
+
+		entry->transform = sub->transform;
+
+		v3 centre = V3MulF32(V3Add(sub->bounds_min, sub->bounds_max), 0.5f);
+		f32 radius = V3Length(V3Sub(sub->bounds_max, centre));
+
+		entry->sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
+
+		entry->skin_index = sub->skin_index;
+	}
+
+	return receipt;
 }
 
 internal u32
 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 {
-	if (scene->geometry_page_head)
+	if (scene->geometry_page_count > 0)
 	{
-		// Walk to the last page.
-		// The page count should be small
-		// 'cuz each page is pretty big.
-		R_GeometryPage *last = scene->geometry_page_head;
-		u32 last_index = 0;
-		u32 walk_index = 0;
+		u32 last = scene->geometry_page_count - 1;
+		R_GeometryPage *last_page = &scene->geometry_pages[last];
 
-		for (R_GeometryPage *p = scene->geometry_page_head; p; p = p->next, walk_index++)
-		{
-			last = p;
-			last_index = walk_index;
-		}
-
-		b32 fits = ((last->vertex_count + vertex_count) <= last->max_vertices &&
-					(last->index_count  + index_count)  <= last->max_indices);
+		b32 fits = ((last_page->vertex_count + vertex_count) <= last_page->max_vertices &&
+					(last_page->index_count  + index_count)  <= last_page->max_indices);
 
 		if (fits)
-			return last_index;
+			return last;
 	}
 
-	R_GeometryPage *new_page = ArenaPushArray(scene->arena, R_GeometryPage, 1);
-	*new_page = R_SceneCreateNewPage(scene);
+	DebugLogAssert(scene->log_channel,
+				   scene->geometry_page_count < ArraySize(scene->geometry_pages),
+				   "Exhausted all possible geometry pages.");
 
 	u32 new_index = scene->geometry_page_count;
 
-	if (scene->geometry_page_head)
-	{
-		R_GeometryPage *tail = scene->geometry_page_head;
-
-		while (tail->next)
-			tail = tail->next;
-
-		tail->next = new_page;
-	}
-	else
-	{
-		scene->geometry_page_head = new_page;
-	}
-
+	scene->geometry_pages[new_index] = R_SceneCreateNewPage(scene);
 	scene->geometry_page_count++;
 
 	return new_index;
@@ -338,7 +869,7 @@ R_SceneCreateNewPage(R_Scene *scene)
 		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 	
 	vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	vb_info.size  = R_PAGE_VERTEX_BUFFER_SIZE;
+	vb_info.size = R_SCENE_PAGE_VERTEX_BUFFER_SIZE;
  
 	GFX_BufferAllocInfo ib_info = {0};
 
@@ -349,465 +880,25 @@ R_SceneCreateNewPage(R_Scene *scene)
 		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 
 	ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	ib_info.size  = R_PAGE_INDEX_BUFFER_SIZE;
+	ib_info.size = R_SCENE_PAGE_INDEX_BUFFER_SIZE;
  
 	R_GeometryPage page = {0};
-
-	page.next = NULL;
-	
 	page.vertex_buffer  = GFX_DeviceBufferAlloc(scene->device, &vb_info);
 	page.index_buffer   = GFX_DeviceBufferAlloc(scene->device, &ib_info);
-
 	page.vertex_count   = 0;
 	page.index_count    = 0;
-
-	page.max_vertices   = R_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
-	page.max_indices    = R_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
+	page.max_vertices   = R_SCENE_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
+	page.max_indices    = R_SCENE_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
  
 	return page;
 }
 
-internal R_SceneObjectSlot *
-R_SceneObjectGetSlot(R_Scene *scene, R_SceneObjectHandle handle)
-{
-	if (handle.index >= R_SCENE_MAX_OBJECTS)
-		return NULL;
-
-	R_SceneObjectSlot *slot = &scene->object_slots[handle.index];
-
-	if (!slot->active || slot->generation != handle.generation)
-		return NULL;
-
-	return slot;
-}
-
-internal R_SceneObjectHandle
-R_SceneObjectCreate(R_Scene *scene, const R_Object *object)
-{
-	AssertTrue(scene->object_free_count > 0);
-
-	u32 slot_index = scene->object_free_list[--scene->object_free_count];
-
-	R_SceneObjectSlot *slot = &scene->object_slots[slot_index];
-
-	u32 mesh_handle = object->mesh.value;
-	
-	AssertTrue(mesh_handle < scene->mesh_count);
-
-	slot->object = *object;
-	slot->page_index = scene->mesh_registry[mesh_handle].page;
-	slot->active = true;
-
-	scene->object_count++;
-
-	R_SceneObjectHandle handle = {0};
-	handle.index = slot_index;
-	handle.generation = slot->generation;
-
-	return handle;
-}
-
-internal void
-R_SceneObjectRemove(R_Scene *scene, R_SceneObjectHandle handle)
-{
-	R_SceneObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->active = false;
-	slot->generation++; // Invalidate outstanding handles.
-
-	scene->object_free_list[scene->object_free_count] = handle.index;
-	scene->object_free_count++;
-
-	scene->object_count--;
-}
-
-internal void
-R_SceneObjectSetTransform(R_Scene *scene, R_SceneObjectHandle handle, m4 transform)
-{
-	R_SceneObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->object.transform = transform;
-}
-
-internal void
-R_SceneObjectSetSkinningPalette(R_Scene *scene, R_SceneObjectHandle handle, const m4 *palette, u32 joint_count)
-{
-	R_SceneObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->object.skinning_palette = palette;
-	slot->object.skinning_joint_count = joint_count;
-}
-
-internal u32
-R_SceneGetObjectCount(const R_Scene *scene)
-{
-	return scene->object_count;
-}
-
-internal R_SceneLightSlot *
-R_SceneLightGetSlot(R_Scene *scene, R_SceneLightHandle handle)
-{
-	if (handle.index >= R_SCENE_MAX_LIGHTS)
-		return NULL;
-
-	R_SceneLightSlot *slot = &scene->light_slots[handle.index];
-
-	if (!slot->active || slot->generation != handle.generation)
-		return NULL;
-
-	return slot;
-}
-
-internal R_SceneLightHandle
-R_SceneLightCreate(R_Scene *scene, const R_Light *light)
-{
-	AssertTrue(scene->light_free_count > 0);
- 
-	u32 slot_index = scene->light_free_list[--scene->light_free_count];
- 
-	R_SceneLightSlot *slot = &scene->light_slots[slot_index];
-	slot->light = *light;
-	slot->active = true;
- 
-	scene->light_count++;
- 
-	R_SceneLightHandle handle = {0};
-	handle.index = slot_index;
-	handle.generation = slot->generation;
-	
-	return handle;
-}
-
-internal void
-R_SceneLightRemove(R_Scene *scene, R_SceneLightHandle handle)
-{
-	R_SceneLightSlot *slot = R_SceneLightGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->active = false;
-	slot->generation++; // Invalidate outstanding handles.
-
-	scene->light_free_list[scene->light_free_count] = handle.index;
-	scene->light_free_count++;
-
-	scene->light_count--;
-}
-
-internal void
-R_SceneLightSetPosition(R_Scene *scene, R_SceneLightHandle handle, v3 position)
-{
-	R_SceneLightSlot *slot = R_SceneLightGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->light.position = position;
-}
-
-internal void
-R_SceneLightSetColour(R_Scene *scene, R_SceneLightHandle handle, v3 colour)
-{
-	R_SceneLightSlot *slot = R_SceneLightGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->light.colour = colour;
-}
-
-internal void
-R_SceneLightSetIntensity(R_Scene *scene, R_SceneLightHandle handle, f32 intensity)
-{
-	R_SceneLightSlot *slot = R_SceneLightGetSlot(scene, handle);
-
-	if (!slot)
-		return;
-
-	slot->light.intensity = intensity;
-}
-
-internal u32
-R_SceneGetLightCount(const R_Scene *scene)
-{
-	return scene->light_count;
-}
-
-internal const R_ShadowCaster *
-R_SceneShadowCasterGet(const R_Scene *scene, u32 i)
-{
-	AssertTrue(i < scene->shadow_caster_count);
-	return &scene->shadow_casters[i];
-}
-
-internal u32
-R_SceneGetShadowCasterCount(const R_Scene *scene)
-{
-	return scene->shadow_caster_count;
-}
-
-internal R_SceneMeshHandle
-R_SceneRegisterMeshFromBuffers(R_Scene *scene,
-							   const GFX_CmdBuffer *cmd,
-							   GFX_BufferKey vertex_buffer,
-							   GFX_BufferKey index_buffer,
-							   u32 vertex_count,
-							   u32 index_count,
-							   GFX_BufferKey skin_buffer)
-{
-	AssertTrue(scene->mesh_count < R_SCENE_MAX_MESHES);
-
-	u32 page_index = R_SceneFindSuitablePage(scene, vertex_count, index_count);
-
-	R_GeometryPage *page = scene->geometry_page_head;
-	for (u32 i = 0; i < page_index; i++, page = page->next); // get page_index'th page
-
-	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
-	const u64 index_stride  = sizeof(AST_ModelIndex);
-
-	GFX_BufferCopy vc = {0};
-	vc.src_offset = 0;
-	vc.dst_offset = page->vertex_count * vertex_stride;
-	vc.size = vertex_count * vertex_stride;
-
-	GFX_BufferCopy ic = {0};
-	ic.src_offset = 0;
-	ic.dst_offset = page->index_count * index_stride;
-	ic.size = index_count * index_stride;
-
-	GFX_CmdCopyBufferToBuffer(cmd, vertex_buffer, page->vertex_buffer, 1, &vc);
-	GFX_CmdCopyBufferToBuffer(cmd, index_buffer,  page->index_buffer,  1, &ic);
-
-	u32 mesh_data_index = scene->mesh_count;
-
-	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[mesh_data_index];
-	gpu_mesh->index_count = index_count;
-	gpu_mesh->first_index = page->index_count;
-	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_count * sizeof(R_GPU_ModelVertex));
-
-	if (!GFX_BufferKeyIsNull(skin_buffer))
-		gpu_mesh->skin_buffer = GFX_DeviceBufferAddress(scene->device, skin_buffer);
-	else
-		gpu_mesh->skin_buffer = 0;
-	
-	page->vertex_count += vertex_count;
-	page->index_count  += index_count;
-
-	scene->mesh_registry[mesh_data_index].page  = page_index;
-	scene->mesh_registry[mesh_data_index].index = mesh_data_index;
-
-	scene->mesh_count++;
-	scene->mesh_buffer_dirty = true;
-
-	R_SceneMeshHandle handle = {0};
-	handle.value = mesh_data_index;
-	
-	return handle;
-}
-
-internal R_SceneMeshHandle
-R_SceneRegisterMesh(R_Scene *scene, const R_Mesh *mesh)
-{
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
-
-	R_SceneMeshHandle h = R_SceneRegisterMeshFromBuffers(scene, &cmd,
-														 mesh->vertex_buffer,
-														 mesh->index_buffer,
-														 mesh->vertex_count,
-														 mesh->index_count,
-														 GFX_BufferKeyNull());
-
-	GFX_DeviceSubmitImEnd(scene->device, &cmd);
-
-	return h;
-}
-
-internal u64
-R_SceneMeshBufferAddress(const R_Scene *scene)
-{
-	return GFX_DeviceBufferAddress(scene->device, scene->mesh_buffer);
-}
-
-internal R_SceneRegisterModelReceipt
-R_SceneRegisterModel(R_Scene *scene,
-					 Arena *arena,
-					 AST_Assets *assets,
-					 AST_Handle model_handle,
-					 u32 max_entries)
-{
-	AST_Asset *model_asset = AST_GetNow(assets, model_handle, AST_Type_Model);
-	
-	u32 sub_model_count = model_asset->model.sub_model_count;
-	const AST_SubModel *sub_models = model_asset->model.sub_models;
-
-	u32 actual_count = sub_model_count;
-	
-	if (sub_model_count > max_entries)
-	{
-		DebugLogW(scene->log_channel,
-				  "Hit max entry count! Truncating sub model count %u down to %u.",
-				  sub_model_count, max_entries);
-
-		actual_count = max_entries;
-	}
-	
-	R_SceneRegisterModelReceipt receipt = {0};
-	receipt.entry_count = actual_count;
-	receipt.entries = ArenaPushArray(arena, R_SceneModelEntry, actual_count);
-	
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(scene->device);
-	
-	for (u32 i = 0; i < actual_count; i++)
-	{
-		const AST_SubModel *src = &sub_models[i];
-		
-		receipt.entries[i].transform = src->transform;
-
-		v3  centre = V3MulF32(V3Add(src->bounds_min, src->bounds_max), 0.5f);
-		f32 radius = V3Length(V3Sub(src->bounds_max, centre));
-
-		receipt.entries[i].sphere_bounds = v4(centre.x, centre.y, centre.z, radius);
-
-		receipt.entries[i].mesh = R_SceneRegisterMeshFromBuffers(scene, &cmd,
-																 src->vertex_buffer,
-																 src->index_buffer,
-																 src->vertex_count,
-																 src->index_count,
-																 src->skin_buffer);
-
-		receipt.entries[i].material = R_SceneRegisterMaterial(scene, &src->material, assets);
-
-		receipt.entries[i].skin_index = src->skin_index;
-	}
-
-	GFX_DeviceSubmitImEnd(scene->device, &cmd);
-	
-	return receipt;
-}
-
 internal GFX_BindlessIndex
-R_SceneResolveTextureBindless(const R_Scene *scene,
-							  AST_Assets *assets,
-							  AST_Handle handle)
+R_SceneResolveTextureKey(const R_Scene *scene, GFX_TextureKey key)
 {
-	if (!AST_IsValid(assets, handle))
+	if (GFX_TextureKeyIsNull(key))
 		return GFX_BINDLESS_INDEX_INVALID;
 
-	if (!AST_IsLoaded(assets, handle))
-		return GFX_BINDLESS_INDEX_INVALID;
-
-	// TODO: fuck this won't work with hot-reloading will it shiitt.
-	
-	AST_Asset *texture_asset = AST_GetNow(assets, handle, AST_Type_Texture);
-
-	GFX_TextureKey key = AST_AssetTextureGet(texture_asset);
-
-	GFX_TextureView *view = GFX_DeviceTextureViewFromKey(scene->device, GFX_DeviceTextureViewAuto(scene->device, key));
-
-	return view->bindless.value;
-}
-
-internal R_SceneMaterialHandle
-R_SceneRegisterMaterial(R_Scene *scene,
-						const AST_ModelMaterial *material,
-						AST_Assets *assets)
-{
-	AssertTrue(scene->material_count < R_SCENE_MAX_MATERIALS);
-
-	u32 index = scene->material_count;
-
-	R_GPU_Material *gpu = &scene->gpu_materials[index];
-
-	gpu->albedo_texture                       = R_SceneResolveTextureBindless(scene, assets, material->albedo_texture);
-	gpu->normal_texture                       = R_SceneResolveTextureBindless(scene, assets, material->normal_texture);
-	gpu->metallic_roughness_texture           = R_SceneResolveTextureBindless(scene, assets, material->metallic_roughness_texture);
-	gpu->emissive_texture                     = R_SceneResolveTextureBindless(scene, assets, material->emissive_texture);
-	gpu->occlusion_texture                    = R_SceneResolveTextureBindless(scene, assets, material->occlusion_texture);
-	
-	gpu->albedo_factor                        = material->albedo_factor;
-	gpu->normal_scale                         = material->normal_scale;
-	gpu->metallic_factor                      = material->metallic_factor;
-	gpu->roughness_factor                     = material->roughness_factor;
-	gpu->emissive_factor                      = material->emissive_factor;
-	gpu->emissive_intensity                   = material->emissive_intensity;
-	gpu->occlusion_intensity                  = material->occlusion_intensity;
-
-	// ---
-	
-	gpu->ior                                  = material->ior;
-
-	// ---
-	
-	gpu->transmission_texture                 = R_SceneResolveTextureBindless(scene, assets, material->transmission_texture);
-	gpu->thickness_texture                    = R_SceneResolveTextureBindless(scene, assets, material->thickness_texture);
-	gpu->transmission_factor                  = material->transmission_factor;
-	gpu->thickness_factor                     = material->thickness_factor;
-	
-	gpu->attenuation_colour                   = material->attenuation_colour;
-	gpu->attenuation_distance                 = material->attenuation_distance;
-
-	// ---
-
-	gpu->specular_texture                     = R_SceneResolveTextureBindless(scene, assets, material->specular_texture);
-	gpu->specular_colour_texture              = R_SceneResolveTextureBindless(scene, assets, material->specular_colour_texture);
-
-	gpu->specular_factor                      = material->specular_factor;
-	gpu->specular_colour_factor               = material->specular_colour_factor;
-
-	// ---
-
-	gpu->clearcoat_texture                    = R_SceneResolveTextureBindless(scene, assets, material->clearcoat_texture);
-	gpu->clearcoat_roughness_texture          = R_SceneResolveTextureBindless(scene, assets, material->clearcoat_roughness_texture);
-
-	gpu->clearcoat_factor                     = material->clearcoat_factor;
-	gpu->clearcoat_roughness_factor           = material->clearcoat_roughness_factor;
-
-	// ---
-
-	gpu->sheen_colour_texture                 = R_SceneResolveTextureBindless(scene, assets, material->sheen_colour_texture);
-	gpu->sheen_roughness_texture              = R_SceneResolveTextureBindless(scene, assets, material->sheen_roughness_texture);
-
-	gpu->sheen_colour_factor                  = material->sheen_colour_factor;
-	gpu->sheen_roughness_factor               = material->sheen_roughness_factor;
-
-	// ---
-
-	gpu->iridescence_texture                  = R_SceneResolveTextureBindless(scene, assets, material->iridescence_texture);
-	gpu->iridescence_thickness_texture        = R_SceneResolveTextureBindless(scene, assets, material->iridescence_thickness_texture);
-
-	gpu->iridescence_factor                   = material->iridescence_factor;
-	gpu->iridescence_ior                      = material->iridescence_ior;
-	gpu->iridescence_thickness_min_nanometers = material->iridescence_thickness_min_nanometers;
-	gpu->iridescence_thickness_max_nanometers = material->iridescence_thickness_max_nanometers;
-
-	// ---
-
-	gpu->double_sided                         = (u32)material->double_sided;
-	gpu->unlit                                = (u32)material->unlit;
-	gpu->alpha_cutoff                         = material->alpha_cutoff;
-	gpu->alpha_mode                           = (u32)material->alpha_mode;
-	
-	scene->material_count++;
-	scene->material_buffer_dirty = true;
-
-	R_SceneMaterialHandle handle = {0};
-	handle.value = index;
-	
-	return handle;
-}
-
-internal u64
-R_SceneMaterialBufferAddress(const R_Scene *scene)
-{
-	return GFX_DeviceBufferAddress(scene->device, scene->material_buffer);
+	GFX_TextureViewKey view_key = GFX_DeviceTextureViewAuto(scene->device, key);
+	return GFX_DeviceTextureViewBindless(scene->device, view_key);
 }

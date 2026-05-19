@@ -1,6 +1,7 @@
 #include "render_buffer_range.h"
 #include "render_gpu_types.h"
 #include "render_mesh.h"
+#include "render_material.h"
 #include "render_light.h"
 #include "render_camera.h"
 #include "render_scene.h"

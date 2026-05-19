@@ -41,8 +41,8 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	args.frame_data_buffer           = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
 	args.object_buffer               = data->object_buffer_address;
-	args.material_buffer             = R_SceneMaterialBufferAddress(scene);
-	args.mesh_buffer                 = R_SceneMeshBufferAddress(scene);
+	args.material_buffer             = R_SceneMaterialBufferAddr(scene);
+	args.mesh_buffer                 = R_SceneMeshBufferAddr(scene);
 
 	args.light_buffer                = data->light_buffer_address;
 	args.shadow_caster_buffer        = GFX_DeviceBufferAddress(device, data->shadow_caster_table);
@@ -57,7 +57,7 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	args.linear_sampler              = GFX_DeviceSamplerBindless(device, data->linear_sampler);
 	args.shadow_sampler              = GFX_DeviceSamplerBindless(device, data->nearest_sampler);
 
-	args.light_count                 = R_SceneGetLightCount(scene);
+	args.light_count                 = R_SceneLightCount(scene);
 
 	GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 	

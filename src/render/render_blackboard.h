@@ -15,7 +15,7 @@ struct R_Bulletin
 	GFX_SamplerKey linear_sampler;
 	GFX_SamplerKey nearest_sampler;
 
-	const R_SceneResources *scene_resources;
+	const R_SceneFrameData *scene_resources;
 
 	const R_IrradianceVolume *irradiance_volume;
 	GFX_TextureKey irradiance_fallback_cubemap;

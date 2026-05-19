@@ -42,14 +42,14 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
-	pc.mesh_buffer     = R_SceneMeshBufferAddress(ctx->scene);
-	pc.material_buffer = R_SceneMaterialBufferAddress(ctx->scene);
+	pc.mesh_buffer     = R_SceneMeshBufferAddr(ctx->scene);
+	pc.material_buffer = R_SceneMaterialBufferAddr(ctx->scene);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
 	
-	pc.object_count    = R_SceneGetObjectCount(ctx->scene);
+	pc.object_count    = R_SceneObjectCount(ctx->scene);
 	
 	pc.alpha_filter    = (u32)data->filter;
 
@@ -57,7 +57,7 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 		pc.frustum_planes[i] = data->frustum_planes[i];
 
 	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
-	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(R_SceneGetObjectCount(ctx->scene), 64), 1, 1);
+	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
 R_PASS_RECORD_DEF(R_CullSphereComputeFn)
@@ -93,21 +93,21 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
-	pc.mesh_buffer     = R_SceneMeshBufferAddress(ctx->scene);
-	pc.material_buffer = R_SceneMaterialBufferAddress(ctx->scene);
+	pc.mesh_buffer     = R_SceneMeshBufferAddr(ctx->scene);
+	pc.material_buffer = R_SceneMaterialBufferAddr(ctx->scene);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
 
-	pc.object_count    = R_SceneGetObjectCount(ctx->scene);
+	pc.object_count    = R_SceneObjectCount(ctx->scene);
 	
 	pc.alpha_filter    = (u32)data->filter;
 	
 	pc.sphere          = data->sphere;
 
 	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
-	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(R_SceneGetObjectCount(ctx->scene), 64), 1, 1);
+	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
 internal void

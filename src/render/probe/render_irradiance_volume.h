@@ -2,6 +2,11 @@
 #define RENDER_IRRADIANCE_VOLUME_H
 
 /*
+ * TODO THIS IS EXPERIMENTAL AND COMPLETE
+ * GARBAGE CODE-WISE.
+ */
+
+/*
  * Ray traced irradiance probing using L2 harmonics.
  *
  * - "An Efficient Representation for Irradiance Environment Maps"
