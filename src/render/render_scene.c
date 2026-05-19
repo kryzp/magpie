@@ -791,7 +791,7 @@ R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle 
 	if (sub_model_count > max_count)
 	{
 		DebugLogW(scene->log_channel,
-				  "Hit max entry count! Truncating sub model count %u down to %u.",
+				  "Hit max entry count! Truncating total sub model count %u down to %u.",
 				  sub_model_count, max_count);
 
 		actual_count = max_count;
