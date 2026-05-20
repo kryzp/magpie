@@ -1,6 +1,7 @@
 #include "render_mesh.c"
 #include "render_material.c"
 #include "render_camera.c"
+#include "render_geometry.c"
 #include "render_scene.c"
 #include "render_clear.c"
 #include "render_graph_types.c"

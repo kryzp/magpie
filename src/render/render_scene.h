@@ -8,9 +8,6 @@
 #define R_SCENE_MAX_SHADOW_CASTERS             8
 #define R_SCENE_MAX_GEOMETRY_PAGES            16
 
-#define R_SCENE_PAGE_VERTEX_BUFFER_SIZE     Megabytes(64)
-#define R_SCENE_PAGE_INDEX_BUFFER_SIZE      Megabytes(32)
-
 typedef struct R_SceneHandle R_SceneHandle;
 struct R_SceneHandle
 {
@@ -54,6 +51,13 @@ typedef struct R_MeshSlot R_MeshSlot;
 struct R_MeshSlot
 {
 	u32 page_index;
+
+	u32 vertex_offset;
+	u32 vertex_count;
+
+	u32 index_offset;
+	u32 index_count;
+	
 	u32 generation;
 	b32 active;
 };
@@ -83,19 +87,6 @@ struct R_LightSlot
 
 	u32 generation;
 	b32 active;
-};
-
-typedef struct R_GeometryPage R_GeometryPage;
-struct R_GeometryPage
-{
-	GFX_BufferKey vertex_buffer;
-	GFX_BufferKey index_buffer;
-
-	u32 vertex_count;
-	u32 index_count;
-
-	u32 max_vertices;
-	u32 max_indices;
 };
 
 typedef struct R_ShadowCaster R_ShadowCaster;
@@ -129,6 +120,8 @@ struct R_ModelImportReceipt
 typedef struct R_SceneFrameData R_SceneFrameData;
 struct R_SceneFrameData
 {
+	u32 page_count;
+	
 	GFX_Alloc object_buffer;
 	GFX_Alloc light_buffer;
 	GFX_Alloc page_table_buffer;
@@ -181,7 +174,10 @@ struct R_Scene
 internal void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets, LOG_Channel log_channel);
 internal void                  R_SceneDestroy               (      R_Scene *scene);
 
-internal void                  R_SceneDrawIndirect          (const R_Scene *scene, GFX_CmdBuffer *cmd, GFX_BufferKey indirect_buffer, GFX_BufferKey count_buffer);
+internal void                  R_SceneDrawIndirect          (const R_Scene *scene,
+															 GFX_CmdBuffer *cmd,
+															 GFX_BufferKey indirect_buffer,
+															 GFX_BufferKey count_buffer);
 
 internal R_SceneFrameData      R_SceneUploadFrameData       (      R_Scene *scene, GFX_RingBuffer *ring);
 internal void                  R_SceneUploadPageTable       (      R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out);
@@ -235,6 +231,7 @@ internal R_ModelImportReceipt  R_SceneImportModel           (      R_Scene *scen
 
 internal u32                   R_SceneFindSuitablePage      (      R_Scene *scene, u32 vertex_count, u32 index_count);
 internal R_GeometryPage        R_SceneCreateNewPage         (      R_Scene *scene);
+internal u32                   R_ScenePageCount             (const R_Scene *scene);
 
 internal GFX_BindlessIndex     R_SceneResolveTextureKey     (const R_Scene *scene, GFX_TextureKey key);
 

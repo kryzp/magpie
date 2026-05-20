@@ -9,7 +9,6 @@
   [ ... ] [ ... ] [ channel ] this is a new log
 
 - fix paging not existing for skinning vertices
---- actually the entire paging system seems kinda ass can we remove it
 - alpha to coverage seperate opaque pass for foliage / alpha-cutout geometry
 
 - /graphics/ backend shouldn't be taking in raw types, everything should take

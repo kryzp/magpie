@@ -1,10 +1,14 @@
 #ifndef RENDER_BLACKBOARD_H
 #define RENDER_BLACKBOARD_H
 
-/*
- * Fixed Rendering Data.
- * Immutable.
- */
+// Realistically should just be one struct
+// but I've split up "global" render data
+// (i.e: general data required by all render
+// systems) into two structs - an "immutable"
+// one (bulletin) and a "mutable" one (blackboard)
+// immutable - for constant data
+// mutable - typically attachments that get written/read from
+
 typedef struct R_Bulletin R_Bulletin;
 struct R_Bulletin
 {
@@ -23,8 +27,6 @@ struct R_Bulletin
 	GFX_TextureKey brdf;
 };
 
-// ---
-
 typedef struct R_BB_ShadowData R_BB_ShadowData;
 struct R_BB_ShadowData
 {
@@ -34,10 +36,6 @@ struct R_BB_ShadowData
 	GFX_BufferKey shadow_caster_table;
 };
 
-/*
- * Transient Resources.
- * Mutable.
- */
 typedef struct R_Blackboard R_Blackboard;
 struct R_Blackboard
 {

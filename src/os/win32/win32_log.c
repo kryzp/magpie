@@ -297,8 +297,12 @@ OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 
 				if (console_line[write_len - 1] == '\n')
 					write_len--;
-				
-				fwrite("\r", 1, 1, stdout);
+
+				if (logger->dedup_count == 2) // jump back to previous line to overwrite
+					fwrite("\x1b[1A\r", 1, 5, stdout);
+				else
+					fwrite("\r", 1, 1, stdout);
+
 				fwrite(console_line, 1, (usize)write_len, stdout);
 
 				fflush(stdout);

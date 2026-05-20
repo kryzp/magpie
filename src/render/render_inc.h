@@ -4,6 +4,7 @@
 #include "render_material.h"
 #include "render_light.h"
 #include "render_camera.h"
+#include "render_geometry.h"
 #include "render_scene.h"
 #include "render_clear.h"
 #include "render_graph_types.h"

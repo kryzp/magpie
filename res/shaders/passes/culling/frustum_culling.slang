@@ -11,7 +11,7 @@ struct PushConstants
 	uint32_t *count_buffer;
 	uint32_t object_count;
 	uint32_t alpha_filter;
-	uint32_t _padding0;
+	uint32_t max_draws_per_page;
 	uint32_t _padding1;
 	float4 frustum_planes[6]; // xyz = normal, w = distance
 };
@@ -38,9 +38,10 @@ void ComputeMain(uint3 tid : SV_DispatchThreadID)
 
 	if (culling::IsVisibleAgainst(obj, test))
 	{
-		scene::PagePointers page = args.pages[obj.page_index];
-		uint slot;
-		InterlockedAdd(*args.count_buffer, 1, slot);
-		args.indirect_buffer[slot] = culling::GetDrawFor(args.objects, args.meshes, gid);
+		uint32_t page = obj.page_index;
+		uint32_t slot;
+		InterlockedAdd(args.count_buffer[page], 1, slot);
+		uint32_t offset = page * args.max_draws_per_page;
+		args.indirect_buffer[slot + offset] = culling::GetDrawFor(args.objects, args.meshes, gid);
 	}
 }

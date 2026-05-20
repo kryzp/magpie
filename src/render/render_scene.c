@@ -54,14 +54,30 @@ R_SceneDestroy(R_Scene *scene)
 }
 
 internal void
-R_SceneDrawIndirect(const R_Scene *scene, GFX_CmdBuffer *cmd, GFX_BufferKey indirect_buffer, GFX_BufferKey count_buffer)
+R_SceneDrawIndirect(const R_Scene *scene,
+					GFX_CmdBuffer *cmd,
+					GFX_BufferKey indirect_buffer,
+					GFX_BufferKey count_buffer)
 {
-	for (u32 i = 0; i < scene->geometry_page_count; i++)
+	for (u64 i = 0; i < scene->geometry_page_count; i++)
 	{
 		const R_GeometryPage *page = &scene->geometry_pages[i];
+
+		u64 max_draws_per_page = R_SCENE_MAX_OBJECTS;
+
+		u64 indirect_offset = i * sizeof(R_GPU_IndirectDraw) * max_draws_per_page;
+		u64 count_offset    = i * sizeof(u32);
 		
-		GFX_CmdBindIndexBuffer(cmd, page->index_buffer, 0, VK_WHOLE_SIZE, VK_INDEX_TYPE_UINT32);
-		GFX_CmdDrawIndexedIndirectCount(cmd, indirect_buffer, 0, count_buffer, 0, ArraySize(scene->object_slots), sizeof(R_GPU_IndirectDraw));
+		GFX_CmdBindIndexBuffer(cmd,
+							   page->index_buffer,
+							   0, VK_WHOLE_SIZE,
+							   VK_INDEX_TYPE_UINT32);
+		
+		GFX_CmdDrawIndexedIndirectCount(cmd,
+										indirect_buffer, indirect_offset,
+										count_buffer, count_offset,
+										max_draws_per_page,
+										sizeof(R_GPU_IndirectDraw));
 	}
 }
 
@@ -69,7 +85,9 @@ internal R_SceneFrameData
 R_SceneUploadFrameData(R_Scene *scene, GFX_RingBuffer *ring)
 {
 	R_SceneFrameData resources = {0};
- 
+
+	resources.page_count = scene->geometry_page_count;
+	
 	if (scene->mesh_buffer_dirty)
 	{
 		R_SceneFlushMeshBuffer(scene);
@@ -674,27 +692,36 @@ R_SceneMeshCreate(R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc)
 
 	u32 page_index = R_SceneFindSuitablePage(scene, desc->vertex_count, desc->index_count);
 	R_GeometryPage *page = &scene->geometry_pages[page_index];
+
+	u64 vertex_offset = 0;
+	u64 index_offset = 0;
+	
+	b32 vok = R_GeometryFreeListTryAlloc(&page->vertex_free, desc->vertex_count, &vertex_offset);
+	b32 iok = R_GeometryFreeListTryAlloc(&page->index_free,  desc->index_count,  &index_offset);
+
+	DebugLogAssert(scene->log_channel, vok, "Vertex region allocation failed after R_GeometryFreeListAvailable returned true.");
+	DebugLogAssert(scene->log_channel, iok, "Index region allocation failed after R_GeometryFreeListAvailable returned true.");
 	
 	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
 	const u64 index_stride  = sizeof(AST_ModelIndex);
 
 	GFX_BufferCopy vc = {0};
 	vc.src_offset = 0;
-	vc.dst_offset = page->vertex_count * vertex_stride;
+	vc.dst_offset = vertex_offset * vertex_stride;
 	vc.size = desc->vertex_count * vertex_stride;
 
 	GFX_BufferCopy ic = {0};
 	ic.src_offset = 0;
-	ic.dst_offset = page->index_count * index_stride;
+	ic.dst_offset = index_offset * index_stride;
 	ic.size = desc->index_count * index_stride;
-
+	
 	GFX_CmdCopyBufferToBuffer(cmd, desc->vertex_buffer, page->vertex_buffer, 1, &vc);
 	GFX_CmdCopyBufferToBuffer(cmd, desc->index_buffer,  page->index_buffer,  1, &ic);
 
 	R_GPU_RenderMesh *gpu_mesh = &scene->mesh_gpus[slot_index];
 	gpu_mesh->index_count = desc->index_count;
-	gpu_mesh->first_index = page->index_count;
-	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (page->vertex_count * sizeof(R_GPU_ModelVertex));
+	gpu_mesh->first_index = index_offset;
+	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
 
 	if (!GFX_BufferKeyIsNull(desc->skin_buffer))
 		gpu_mesh->skin_buffer = GFX_DeviceBufferAddress(scene->device, desc->skin_buffer);
@@ -705,6 +732,10 @@ R_SceneMeshCreate(R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc)
 	page->index_count  += desc->index_count;
 
 	slot->page_index = page_index;
+	slot->vertex_offset = vertex_offset;
+	slot->vertex_count = desc->vertex_count;
+	slot->index_offset = index_offset;
+	slot->index_count = desc->index_count;
 	slot->active = true;
 	
 	scene->mesh_count++;
@@ -727,6 +758,11 @@ R_SceneMeshDestroy(R_Scene *scene, R_SceneHandle handle)
 
 	if (!slot->active || slot->generation != handle.generation)
 		return;
+
+	R_GeometryPage *page = &scene->geometry_pages[slot->page_index];
+
+	R_GeometryFreeListRelease(&page->vertex_free, slot->vertex_offset, slot->vertex_count);
+	R_GeometryFreeListRelease(&page->index_free,  slot->index_offset,  slot->index_count);
 
 	slot->active = false;
 	slot->generation++;
@@ -833,18 +869,17 @@ R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle 
 internal u32
 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 {
-	if (scene->geometry_page_count > 0)
+	for (u32 i = 0 ; i < scene->geometry_page_count; i++)
 	{
-		u32 last = scene->geometry_page_count - 1;
-		R_GeometryPage *last_page = &scene->geometry_pages[last];
+		R_GeometryPage *page = &scene->geometry_pages[i];
 
-		b32 fits = ((last_page->vertex_count + vertex_count) <= last_page->max_vertices &&
-					(last_page->index_count  + index_count)  <= last_page->max_indices);
-
-		if (fits)
-			return last;
+		if (R_GeometryFreeListAvailable(&page->vertex_free, vertex_count) &&
+			R_GeometryFreeListAvailable(&page->index_free, index_count))
+		{
+			return i;
+		}
 	}
-
+	
 	DebugLogAssert(scene->log_channel,
 				   scene->geometry_page_count < ArraySize(scene->geometry_pages),
 				   "Exhausted all possible geometry pages.");
@@ -860,37 +895,47 @@ R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 internal R_GeometryPage
 R_SceneCreateNewPage(R_Scene *scene)
 {
+	DebugLogD(scene->log_channel, "Creating new geometry page...");
+
 	// We use vertex pulling so don't need to use VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT.
 	GFX_BufferAllocInfo vb_info = {0};
-
 	vb_info.usage =
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
 		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-	
-	vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	vb_info.size = R_SCENE_PAGE_VERTEX_BUFFER_SIZE;
+		vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	vb_info.size = R_GEOMETRY_PAGE_VERTEX_BUFFER_SIZE;
  
 	GFX_BufferAllocInfo ib_info = {0};
-
 	ib_info.usage =
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
 		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-
 	ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	ib_info.size = R_SCENE_PAGE_INDEX_BUFFER_SIZE;
- 
+	ib_info.size = R_GEOMETRY_PAGE_INDEX_BUFFER_SIZE;
+
+	u32 max_vertices = vb_info.size / sizeof(R_GPU_ModelVertex);
+	u32 max_indices  = ib_info.size / sizeof(AST_ModelIndex);
+	
 	R_GeometryPage page = {0};
 	page.vertex_buffer  = GFX_DeviceBufferAlloc(scene->device, &vb_info);
 	page.index_buffer   = GFX_DeviceBufferAlloc(scene->device, &ib_info);
 	page.vertex_count   = 0;
 	page.index_count    = 0;
-	page.max_vertices   = R_SCENE_PAGE_VERTEX_BUFFER_SIZE / sizeof(R_GPU_ModelVertex);
-	page.max_indices    = R_SCENE_PAGE_INDEX_BUFFER_SIZE  / sizeof(AST_ModelIndex);
+	page.max_vertices   = max_vertices;
+	page.max_indices    = max_indices;
+
+	R_GeometryFreeListInit(&page.vertex_free, max_vertices);
+	R_GeometryFreeListInit(&page.index_free, max_indices);
  
 	return page;
+}
+
+internal u32
+R_ScenePageCount(const R_Scene *scene)
+{
+	return scene->geometry_page_count;
 }
 
 internal GFX_BindlessIndex

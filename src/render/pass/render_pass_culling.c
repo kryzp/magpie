@@ -35,7 +35,7 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 		u64 count_buffer;
 		u32 object_count;
 		u32 alpha_filter;
-		u32 _padding0;
+		u32 max_draws_per_page;
 		u32 _padding1;
 		v4 frustum_planes[6];
 	}
@@ -53,6 +53,8 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	
 	pc.alpha_filter    = (u32)data->filter;
 
+	pc.max_draws_per_page = R_SCENE_MAX_OBJECTS;
+	
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
 
@@ -86,7 +88,7 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 		u64 count_buffer;
 		u32 object_count;
 		u32 alpha_filter;
-		u32 _padding0;
+		u32 max_draws_per_page;
 		u32 _padding1;
 		v4 sphere;
 	}
@@ -103,6 +105,8 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc.object_count    = R_SceneObjectCount(ctx->scene);
 	
 	pc.alpha_filter    = (u32)data->filter;
+
+	pc.max_draws_per_page = R_SCENE_MAX_OBJECTS;
 	
 	pc.sphere          = data->sphere;
 
@@ -134,12 +138,12 @@ R_CullFrustum(R_Culling *cull,
 	R_DrawStream stream = {0};
 
 	R_BufferInfo indirect_info = R_BufferInfoInit();
-	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw);
+	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count;
 	indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	indirect_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
 
 	R_BufferInfo counter_info = R_BufferInfoInit();
-	counter_info.size  = sizeof(u32);
+	counter_info.size  = sizeof(u32) * bt->scene_resources->page_count;
 	counter_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	counter_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 
@@ -191,12 +195,12 @@ R_CullSphere(R_Culling *cull,
 	R_DrawStream stream = {0};
 
 	R_BufferInfo indirect_info = R_BufferInfoInit();
-	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw);
+	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count;
 	indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	indirect_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
 
 	R_BufferInfo counter_info = R_BufferInfoInit();
-	counter_info.size  = sizeof(u32);
+	counter_info.size  = sizeof(u32) * bt->scene_resources->page_count;
 	counter_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	counter_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 
