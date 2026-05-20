@@ -337,6 +337,8 @@ internal u64           GFX_DeviceBufferAddress (const GFX_Device *device, GFX_Bu
 internal void          GFX_DeviceBufferRead    (const GFX_Device *device, GFX_BufferKey key, void *dst, u64 length, u64 offset);
 internal void          GFX_DeviceBufferWrite   (const GFX_Device *device, GFX_BufferKey key, const void *src, u64 length, u64 offset);
 
+internal u64           GFX_DeviceBufferSize    (const GFX_Device *device, GFX_BufferKey key);
+
 
 /* ==================================================
    SAMPLERS

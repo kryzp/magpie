@@ -1,12 +1,10 @@
 
 R_PASS_RECORD_DEF(R_CullClearFn)
 {
-	GFX_CmdBuffer *cmd = ctx->cmd;
-
 	const R_CullClearPassData *data = ctx->user_data;
 	
 	GFX_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
-	GFX_CmdFillBuffer(cmd, counter_key, 0, sizeof(u32), 0);
+	GFX_CmdFillBuffer(ctx->cmd, counter_key, 0, GFX_DeviceBufferSize(ctx->device, counter_key), 0);
 }
 
 R_PASS_RECORD_DEF(R_CullFrustumComputeFn)

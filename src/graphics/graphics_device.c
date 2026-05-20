@@ -1459,6 +1459,15 @@ GFX_DeviceBufferWrite(const GFX_Device *device, GFX_BufferKey key, const void *s
 	vmaCopyMemoryToAllocation(device->context.vma_allocator, src, buffer->allocation, offset, length);
 }
 
+internal u64
+GFX_DeviceBufferSize(const GFX_Device *device, GFX_BufferKey key)
+{
+	GFX_Buffer *buffer = GFX_DeviceBufferListGet(&device->buffers, key);
+	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when getting size.", key.value);
+
+	return buffer->size;
+}
+
 internal GFX_SamplerKey
 GFX_DeviceSamplerCreate(GFX_Device *device, const GFX_SamplerCreateInfo *info)
 {
