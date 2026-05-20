@@ -93,14 +93,13 @@ R_ForwardRender(R_ForwardRenderer *r,
 	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
 	R_Clear depth_clear  = R_ClearDepthStencil(1.f, 0);
 
-	R_TextureInfo depth_info = R_TextureInfoInitDepth(graph->device);
+	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(graph->device->context.depth_format, v3(1.f, 1.f, 1.f));
 
-	R_TextureInfo lighting_info = R_TextureInfoInit();
-	lighting_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-	lighting_info.flags  = GFX_TextureAllocFlag_Storage;
+	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
+	lighting_info.flags = GFX_TextureAllocFlag_Storage;
 
-	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
-	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_4_BIT);
+	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_2_BIT);
+	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_2_BIT);
 
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 

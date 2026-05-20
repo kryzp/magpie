@@ -50,7 +50,8 @@ R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device, LOG_Channel log_ch
 	graph->device = device;
 	graph->log_channel = log_channel;
 	graph->backbuffer_handle = R_GraphTexHandleNull();
-
+	graph->present_filter = VK_FILTER_LINEAR;
+	
 	R_ResourcePoolInit(&graph->pool, graph->permanent_arena, R_GRAPH_MAX_TEX_RESOURCES, R_GRAPH_MAX_BUF_RESOURCES);
 
 	DebugLogI(graph->log_channel, "Initialized.");
@@ -127,6 +128,12 @@ internal void
 R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle)
 {
 	graph->backbuffer_handle = handle;
+}
+
+internal void
+R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
+{
+	graph->present_filter = filter;
 }
 
 internal R_GraphTexHandle
@@ -566,6 +573,26 @@ R_GraphAllocateResources(R_Graph *graph, const GFX_Swapchain *swapchain)
 					t->texture_info.size_x *= (f32)swapchain->width;
 					t->texture_info.size_y *= (f32)swapchain->height;
 				
+					t->texture_info.size_class = R_SizeClass_Absolute;
+				}
+				else if (t->texture_info.size_class == R_SizeClass_Relative)
+				{
+					R_GraphTexHandle rel = t->texture_info.relative_to;
+
+					DebugLogAssert(graph->log_channel,
+								   !R_GraphTexHandleIsNull(rel),
+								   "Cannot have R_SizeClass_Relative with a null relative_to handle.");
+
+					R_GraphTexture *base = R_GraphTextureFromHandle(graph, rel);
+
+					DebugLogAssert(graph->log_channel,
+								   base->texture_info.size_class == R_SizeClass_Absolute,
+								   "Base texture (relative to) must already be resolved to an absolute size.");
+
+					t->texture_info.size_x *= base->texture_info.size_x;
+					t->texture_info.size_y *= base->texture_info.size_y;
+					t->texture_info.size_z *= base->texture_info.size_z;
+
 					t->texture_info.size_class = R_SizeClass_Absolute;
 				}
 
@@ -1020,7 +1047,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	blit.dstSubresource.baseArrayLayer = 0;
 	blit.dstSubresource.layerCount = 1;
 
-	GFX_CmdBlit(cmd, src_texture_key, dst_texture_key, 1, &blit, VK_FILTER_LINEAR);
+	GFX_CmdBlit(cmd, src_texture_key, dst_texture_key, 1, &blit, graph->present_filter);
 
 	
 	// Transition swpachain to present.

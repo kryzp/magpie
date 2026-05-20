@@ -383,7 +383,6 @@ AppInitRender(App *app)
 	}
 	ScratchRelease(&scratch);
 
-	/*
 	R_Light light = {0};
 	light.type = R_LightType_Point;
 	light.position = v3(0.f, 0.f, 1.f);
@@ -396,14 +395,13 @@ AppInitRender(App *app)
 	light.shadow_far = 10.f;
 	
 	app->light_handle = R_SceneLightCreate(&app->scene, &light);
-	*/
 	
 	R_IrradianceVolumeInit(&app->irradiance_volume,
 						   &app->graphics_device, &app->assets,
 						   osapi->LogChannelOpen(String8Lit("IRRADIANCE")),
 						   v3(-8.f, -6.f,  -1.f),
 						   v3( 8.f,  6.f,  12.f),
-						   8, 6, 4,
+						   1, 1, 1,
 						   &app->skybox_mesh,
 						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
@@ -787,7 +785,7 @@ AppTick(App *app, const OS_InputState *input)
 		app->delta_accumulator -= fixed_dt;
 	}
 
-	//R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
+	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	
 	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
@@ -969,4 +967,5 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 						  bb.depth.resolved);
 	
 	R_GraphSetBackbuffer(&app->graph, bb.lighting.resolved);
+	R_GraphSetPresentFilter(&app->graph, VK_FILTER_NEAREST);
 }

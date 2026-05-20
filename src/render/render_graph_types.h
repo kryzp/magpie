@@ -42,6 +42,7 @@ typedef enum R_SizeClass
 {
 	R_SizeClass_Absolute,
 	R_SizeClass_SwapchainRelative,
+	R_SizeClass_Relative,
 	R_SizeClass_COUNT
 }
 R_SizeClass;
@@ -52,6 +53,7 @@ struct R_TextureInfo
 	VkFormat format;
 
 	R_SizeClass size_class;
+	R_GraphTexHandle relative_to;
 	
 	f32 size_x;
 	f32 size_y;
@@ -68,18 +70,21 @@ struct R_TextureInfo
 typedef struct R_BufferInfo R_BufferInfo;
 struct R_BufferInfo
 {
-	VkDeviceSize size;
+	u64 size;
 	VmaAllocationCreateFlags flags;
 	VkBufferUsageFlags2 usage;
 };
 
-internal R_TextureInfo R_TextureInfoInit      (void);
-internal R_TextureInfo R_TextureInfoInitDepth (GFX_Device *device);
+internal R_TextureInfo R_TextureInfoInitAbsolute(VkFormat format, v3 size);
+internal R_TextureInfo R_TextureInfoInitSwapchain(VkFormat format, v3 factor);
+internal R_TextureInfo R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_to);
 
-internal R_BufferInfo  R_BufferInfoInit  (void);
+internal R_BufferInfo R_BufferInfoInit(u64 size,
+									   VmaAllocationCreateFlags flags,
+									   VkBufferUsageFlags2 usage);
 
-internal b32 R_TextureInfoMatch (const R_TextureInfo *a, const R_TextureInfo *b);
-internal b32 R_BufferInfoMatch  (const R_BufferInfo  *a, const R_BufferInfo  *b);
+internal b32 R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b);
+internal b32 R_BufferInfoMatch(const R_BufferInfo  *a, const R_BufferInfo  *b);
 
 typedef struct R_ResourceState R_ResourceState;
 struct R_ResourceState

@@ -135,15 +135,16 @@ R_CullFrustum(R_Culling *cull,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit();
-	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count;
-	indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	indirect_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
+												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
 
-	R_BufferInfo counter_info = R_BufferInfoInit();
-	counter_info.size  = sizeof(u32) * bt->scene_resources->page_count;
-	counter_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	counter_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	R_BufferInfo counter_info = R_BufferInfoInit(sizeof(u32) * bt->scene_resources->page_count,
+												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+												 VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+												 VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+												 VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
 
 	R_GraphBufHandle indirect_handle = R_GraphCreateBuffer(graph, &indirect_info);
 	R_GraphBufHandle counter_handle  = R_GraphCreateBuffer(graph, &counter_info);
@@ -192,15 +193,16 @@ R_CullSphere(R_Culling *cull,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit();
-	indirect_info.size  = R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count;
-	indirect_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	indirect_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
+												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
 
-	R_BufferInfo counter_info = R_BufferInfoInit();
-	counter_info.size  = sizeof(u32) * bt->scene_resources->page_count;
-	counter_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	counter_info.usage = VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	R_BufferInfo counter_info = R_BufferInfoInit(sizeof(u32) * bt->scene_resources->page_count,
+												 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+												 VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
+												 VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+												 VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
 
 	R_GraphBufHandle indirect_handle = R_GraphCreateBuffer(graph, &indirect_info);
 	R_GraphBufHandle counter_handle  = R_GraphCreateBuffer(graph, &counter_info);

@@ -115,6 +115,7 @@ struct R_Graph
 	R_ResourceTracker tracker;
 
 	R_GraphTexHandle backbuffer_handle;
+	VkFilter present_filter; // backbuffer is upscaled/downscaled to the swapchain size when presenting !
 };
 
 
@@ -200,6 +201,7 @@ internal R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, R_G
    ================================================== */
 
 internal void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle);
+internal void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter);
 
 internal GFX_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass);
 
