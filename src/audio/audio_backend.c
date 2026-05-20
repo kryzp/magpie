@@ -4,6 +4,11 @@ struct AUD_MA_Buffer
 {
 	AUD_MA_Buffer *next;
 	AUD_MA_Buffer *prev;
+
+	ma_format format;
+	u32 channels;
+	const void *data;
+	u64 frame_count;
 	
 	AUD_BufferHandle handle;
 	ma_audio_buffer buffer;
@@ -14,6 +19,8 @@ struct AUD_MA_Source
 {
 	AUD_MA_Source *next;
 	AUD_MA_Source *prev;
+	
+	ma_audio_buffer_ref buffer_ref;
 	
 	AUD_SourceHandle handle;
 	ma_sound sound;
@@ -95,7 +102,7 @@ AUD_MA_AllocBuffer(void)
 	{
 		buffer = ArenaPushArray(mini_backend->arena, AUD_MA_Buffer, 1);
 	}
-
+	
 	buffer->handle = mini_backend->curr_buffer_handle;
 	mini_backend->curr_buffer_handle.value++;
 
@@ -157,7 +164,8 @@ internal void
 AUD_MA_ReleaseSource(AUD_MA_Source *source)
 {
 	ma_sound_uninit(&source->sound);
-
+	ma_audio_buffer_ref_uninit(&source->buffer_ref);
+	
 	source->prev->next = source->next;
 	source->next->prev = source->prev;
 
@@ -320,6 +328,11 @@ AUD_MA_CreateBuffer(const void *data, u64 bytes, u32 channels, u16 sample_rate, 
 	ma_result result = ma_audio_buffer_init(&config, &buffer->buffer);
 	AssertTrue(result == MA_SUCCESS);
 
+	buffer->format = fmt;
+	buffer->channels = channels;
+	buffer->data = data;
+	buffer->frame_count = frame_count;
+	
 	return buffer->handle;
 }
 
@@ -339,9 +352,15 @@ AUD_MA_CreateSourceFromBuffer(AUD_BufferHandle handle)
 
 	AssertTrue(buffer);
 
-	ma_result result = ma_sound_init_from_data_source(&mini_backend->engine, &buffer->buffer, 0, NULL, &source->sound);
-	AssertTrue(result == MA_SUCCESS);
+	ma_audio_buffer_ref_init(buffer->format,
+							 buffer->channels,
+							 buffer->data,
+							 buffer->frame_count,
+							 &source->buffer_ref);
 
+	ma_result result = ma_sound_init_from_data_source(&mini_backend->engine, &source->buffer_ref, 0, NULL, &source->sound);
+	AssertTrue(result == MA_SUCCESS);
+	
 	// Disable spatialization by default.
 	ma_sound_set_spatialization_enabled(&source->sound, false);
 	

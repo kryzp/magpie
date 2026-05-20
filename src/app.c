@@ -191,7 +191,6 @@ AppHotUnloadGraphics(App *app)
 internal void
 AppInitAudio(App *app)
 {
-	/*
 	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
 	
 	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
@@ -201,27 +200,26 @@ AppInitAudio(App *app)
 			 &app->audio_arena,
 			 app->audio_log_channel,
 			 app->audio_backend);
-	*/
 }
 
 internal void
 AppDestroyAudio(App *app)
 {
-	//AUD_Shutdown(&app->audio_system);
+	AUD_Shutdown(&app->audio_system);
 	
-	//app->audio_backend->Shutdown();
+	app->audio_backend->Shutdown();
 }
 
 internal void
 AppHotLoadAudio(App *app)
 {
-	//AUD_BackendHotLoad(app->audio_backend);
+	AUD_BackendHotLoad(app->audio_backend);
 }
 
 internal void
 AppHotUnloadAudio(App *app)
 {
-	//AUD_BackendHotUnload(app->audio_backend);
+	AUD_BackendHotUnload(app->audio_backend);
 }
 
 
@@ -647,6 +645,10 @@ AppInit_(App *app)
 	AppInitEntity   (app);
 	AppInitEditor   (app);
 
+	app->test_sound_handle = AST_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), AST_Type_Sound);
+	AST_Asset *test_sound_asset = AST_GetNow(&app->assets, app->test_sound_handle, AST_Type_Sound);
+	app->test_sound = AST_AssetSoundGetBuffer(test_sound_asset);
+	
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -754,6 +756,19 @@ AppTick(App *app, const OS_InputState *input)
 		R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
 	}
 
+	if (OS_KbPressed(input, OS_KeyboardKey_Y))
+	{
+		AUD_PlayConfig play_config = {0};
+		play_config.clip = app->test_sound;
+		play_config.bus = AUD_Bus_Sfx;
+		play_config.volume = 1.f;
+		play_config.pitch = 1.f;
+		play_config.spatial = true;
+		play_config.position = v3x(0.f);
+		
+		AUD_Play(&app->audio_system, &play_config);
+	}
+
 	AST_FlushUploads(&app->assets);
 
 	EditorTick(&app->editor, input, dt, elapsed);
@@ -797,7 +812,7 @@ AppTick(App *app, const OS_InputState *input)
 	listener.position = app->editor.camera.position;
 	listener.direction = app->editor.camera.forward;
 
-	//AUD_Tick(&app->audio_system, dt, listener);
+	AUD_Tick(&app->audio_system, dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);

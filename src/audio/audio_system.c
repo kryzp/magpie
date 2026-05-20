@@ -24,9 +24,9 @@ AUD_Init(AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendA
 internal void
 AUD_Shutdown(AUD_System *system)
 {
-	AUD_StopAll(system);
+	DebugLogI(system->log_channel, "Shutting Down...");
 	
-	DebugLogI(system->log_channel, "Shut Down.");
+	AUD_StopAll(system);
 }
 
 internal void

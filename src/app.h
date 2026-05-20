@@ -44,6 +44,7 @@ struct App
 	
 	AUD_System audio_system;
 	AUD_BackendAPI *audio_backend;
+	AST_Handle test_sound_handle;
 	AUD_BufferHandle test_sound;
 
 	// ---
