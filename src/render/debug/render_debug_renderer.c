@@ -762,7 +762,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// Create the render pass.
 
-	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(dr->assets, dr->shader_handle, AST_Type_Shader));
+	GFX_ShaderKey shader = AST_GetNow(dr->assets, dr->shader_handle, AST_Type_Shader)->shader_data.key;
 
 	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
 	data->shader = shader;

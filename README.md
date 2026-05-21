@@ -1,10 +1,10 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer/game engine (-ish, closer to a more developed framework) written in pure C.
+**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C.
 
-![](images/indirect_deferred.png)
-![](images/cool.png)
 ![](images/sponza.png)
+
+TODO: add more images :p
 
 
 ## About the Project
@@ -21,12 +21,10 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 
 
 ### Resources Used
-- Real Time Rendering 4th Edition
-  - My bible. It's so pretty...
+- Real Time Rendering 4th Edition (i have the physical book it's genuinely awesome)
 - Game Engine Architecture 3rd Edition
   - I've used this more for structuring the engine as a whole, it doesn't focus on graphics as much, but I've taken a lot from it and I'd recommend it to anyone learning how to make a game engine, or renderer.
 - Vulkan Guide
-  - Obvious.
 
 ---
 
@@ -34,13 +32,12 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **True Hot-Code Reloading** for everything outside of `/os/` (app code written to DLL)
 - **Render Graph** that handles resource management, pipeline barriers, and synchronization
 - **Bindless Resource Design**
-- **GPU Driven Rendering:** Bindless materials and meshes (global vertex buffer, vertex pulling, etc.)
+- **GPU Driven Rendering:** bindless materials and meshes (global vertex buffer, vertex pulling, etc.)
 - **IBL** (Image-Based Lighting)
-- **Advanced glTF 2.0 material support** Transmission, volume, specular, clearcoat, sheen, iridescence, etc.
+- **Advanced glTF 2.0 material support** transmission, volume, specular, clearcoat, sheen, iridescence, etc.
 - **Compute Frustum Culling**
 - **Indirect Forward Rendering**
 - **Point Lights** with compute-culled shadow-mapping
-- **ImGui Integration** (C bindings)
 - **Right-Handed Z-up Coordinates** (as it SHOULD be)
 - **Async Generic Asset Streaming**
 - **Asset Hot-Reloading**
@@ -55,16 +52,17 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Logging System** with levels, channels (+ sub channels), file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes**
 - **Skeletal Animation Support**
+- **Scripting Integration** with all top-level systems using Lua.
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
 - Physically Based Bloom
-- Lua bcuz why not (useful for stuff like cutscenes in games)
-- SSAO
+- ImGui Integration (C bindings)
+- SSAO (horizon-based none of that random hemisphere stuff)
 - Cascaded Shadow Mapping (CSM)
-- More advanced material rendering
+- Advanced Material Rendering
   - [ ] Transmission
   - [ ] Specular
   - [x] Clearcoat
@@ -118,7 +116,7 @@ Headers exist to document the API from a higher level because it's nice to be ab
 
 
 ### The Layer Organisation
-Layers strictly only propogate upwards, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
+Layers strictly only propogate one-way, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
 
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level `/graphics/` operations, but also *assets* such as textures and models (which ultimately also need to use the `/graphics/` layer).
 
@@ -178,12 +176,21 @@ Rendering is fundamentally abstracted into what should be three layers, but is o
 Right now, `/graphics/` and `/render/` are a little more "intertwined" than they should be simply out of convenience because we're only dealing with Vulkan. E.g: `VK_FORMAT_...` technically shouldn't be in `/render/` (or any Vulkan stuff for that matter) as it's a graphics-backend thing, so there should be some kind of universal `GFX_Format` that backends map to their internal API versions, but that's so much code to maintain for zero benefit.
 
 
+## Scripting
+
+I've implemented a Lua-based scripting system that lies at a pretty low level just below the asset system that allows all layers above it to "hook" into it. I think this is kinda where the layer architecture shines. Anyway it's not the greatest thing in the world but it gets the job done. It's not intended to be used for engine behaviours but when I make games on the side to test out the engine there's often stuff like cutscenes or one-off interactions (idk, talking to a specific shopkeeper) that are just a pain in the ass to do in the C code due to all the systems that have to work together to make it happen, so having a centralized scripting system that lets you just access all systems globally in a contained space is just a really nice QoL feature to have.
+
+
 ### Hot-Code Reloading
 The actual implementation of this is simple in theory. We pass a V-Table `OS_API` which can be used by `app.dll` to make OS-level calls from the main executable. For instance, if we wanna allocate memory, we have to do it through this V-Table because otherwise the memory allocated is attributed to the DLL and thus lost on hot reload. Unfortunately, being able to hot reload the state at any point means there are some things that get tricky, mostly things related to global data. However, it can be (mostly) fixed by:
 1. Using as little globally-accessible data as possible.
 2. Re-setting it whenever we hot reload.
 
+The reason this is so "easy" to implement is because we manage all the memory ourselves in large chunks (thank you arenas). If we were dealing with C++ this would become a whole ass project on it's own because we'd have to hook into any and all smaller memory allocations in the program, and would be so clunky and awkward and slow to use that it really wouldn't be worth it. Maybe some special gameplay code could be compiled to a seperate dynamic library but certainly not to the extent I do here.
+
 `/os/` ultimately doesn't rely on the app at all or any layers "higher" than `/core/`, `/input/`, `/io/` and `/log/`, it just makes some assumptions about specific functions inside the DLL (namely, `AppXXX`) which mostly all take in the context pointer (generic, just some allocated data returned by `AppInit`) alongside maybe some other data (such as input, in the case of `AppTick`).
+
+Note: right now hot-reloading actually doesn't work because of `miniaudio`, which crashes when I try hot reload. I need to figure out why that's happening, I might have to modify miniaudio a little for my purposes if it's a problem with global data. If you remove the audio system from the loop it works like a treat.
 
 ```
 +--------------------------------------------------+
@@ -219,21 +226,11 @@ All structs and enums are typedef'd (sorry Torvalds) to improve readability. How
 typedef SomeOtherThing *MyDataType;
 ```
 
-This is TERRIBLE, EVIL, and puppies GENUINELY DIE when you do this.
-
-In most cases, you could probably do something like this anyway:
-
-```C
-typedef struct MyDataType MyDataType;
-struct MyDataType
-{
-	SomeOtherThing *value;
-};
-```
-
-Therefore, only do this when you really HAVE to use an opaque type that isn't portable at all (so much so that you're okay with sacrificing an innocent puppy for the sake of the code, hope it was worth it!), and in those cases make it clear that it's a pointer or anything that isn't plain ol' data.
+This is TERRIBLE, EVIL, and puppies (or kittens, your choice) GENUINELY DIE when you do this. Usually you can get away with doing something different, and in cases where it is necessary make it clear that it's a weird opaque type (e.g: if it's a pointer make it clear it's a pointer, I cannot tell you how many times I used an API and midway through I realised I was passing around pointers to pointers and not just regular structs).
 
 Macros follow the naming convention of whatever makes the most sense: if it's meant to act like a function use `PascalCase`, if it's a constant use `SCREAMING_SNAKE_CASE`, etc.
+
+Other than that I'm pretty lax on formatting, there's entire systems that are just formatted differently because I was experimenting, it's no big deal because I'm the only person working on this project. But in general a sub-system / layer should follow the same formatting even if it might be different from the other layers (though even this isn't really enforced... at least keep the formatting the same in a single file! that's the bare minimum I think!!!).
 
 
 ### Cool Stuff

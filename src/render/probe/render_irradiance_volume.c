@@ -252,7 +252,7 @@ R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 
 	R_IrradianceVolumeBuildAccelStructs(vol, scene);
 
-	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(vol->assets, vol->bake_shader_handle, AST_Type_Shader));
+	GFX_ShaderKey shader = AST_GetNow(vol->assets, vol->bake_shader_handle, AST_Type_Shader)->shader_data.key;
 
 	GFX_ComputePipelineDef pipeline_def = GFX_ComputePipelineDefInit(shader);
 	GFX_PipelineSt pipeline_st = GFX_DeviceFetchComputePipeline(device, &pipeline_def);

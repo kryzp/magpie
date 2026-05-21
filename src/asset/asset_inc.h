@@ -7,6 +7,7 @@
 #include "asset_model.h"
 
 #include "asset_type.h"
+#include "asset_def.h"
 
 #include "asset_serializer.h"
 #include "serializer/asset_serializer_inc.h"

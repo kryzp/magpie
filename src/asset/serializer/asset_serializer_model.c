@@ -1271,14 +1271,14 @@ AST_ModelSerializerAlloc(const AST_Context *ctx,
 	}
 	
 	
-	out->model.sub_model_count = load->mesh_count;
-	out->model.sub_models = sub_models;
+	out->model_data.sub_model_count = load->mesh_count;
+	out->model_data.sub_models = sub_models;
 
-	out->model.skeleton_count = load->skeleton_count;
-	out->model.skeletons = skeletons;
+	out->model_data.skeleton_count = load->skeleton_count;
+	out->model_data.skeletons = skeletons;
 
-	out->model.clip_count = load->clip_count;
-	out->model.clips = clips;
+	out->model_data.clip_count = load->clip_count;
+	out->model_data.clips = clips;
 }
 
 internal void
@@ -1312,10 +1312,10 @@ AST_ModelSerializerGpu(const AST_Context *ctx,
 		load_meshes[i] = src_mesh;
 	}
 
-	for (u32 i = 0; i < asset->model.sub_model_count; i++)
+	for (u32 i = 0; i < asset->model_data.sub_model_count; i++)
 	{
 		AST_ModelLoadMesh *src = load_meshes[i];
-		AST_SubModel      *dst = &asset->model.sub_models[i];
+		AST_SubModel      *dst = &asset->model_data.sub_models[i];
 
 
 		// Vertices.
@@ -1374,9 +1374,9 @@ AST_ModelSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
 	GFX_Device *device = assets->device;
 
-	for (u32 i = 0; i < asset->model.sub_model_count; i++)
+	for (u32 i = 0; i < asset->model_data.sub_model_count; i++)
 	{
-		AST_SubModel *sub_model = &asset->model.sub_models[i];
+		AST_SubModel *sub_model = &asset->model_data.sub_models[i];
 		
 		GFX_DeviceBufferDestroy(device, sub_model->vertex_buffer);
 		GFX_DeviceBufferDestroy(device, sub_model->index_buffer);

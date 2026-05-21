@@ -6,7 +6,7 @@ R_MaterialResolveAssetTexture(AST_Assets *assets, AST_Handle handle)
 		return GFX_TextureKeyNull();
 
 	AST_Asset *asset = AST_GetNow(assets, handle, AST_Type_Texture);
-	return AST_AssetTextureGet(asset);
+	return asset->texture_data.key;
 }
 
 internal R_Material

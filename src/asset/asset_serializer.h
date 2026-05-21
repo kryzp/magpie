@@ -3,6 +3,12 @@
 
 typedef struct AST_Assets AST_Assets;
 
+typedef struct AST_MetaData AST_MetaData;
+struct AST_MetaData
+{
+	String8 path;
+};
+
 typedef struct AST_Context AST_Context;
 struct AST_Context
 {

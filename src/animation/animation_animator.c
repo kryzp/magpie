@@ -123,18 +123,22 @@ ANIM_AnimatorSelect(ANIM_Animator *animator, Arena *arena, AST_Assets *assets, A
 {
 	AST_Asset *asset = AST_GetNow(assets, model_handle, AST_Type_Model);
 
+	AssertTrue(asset);
+	
+	AST_AssetModel *asset_model = &asset->model_data;
+
 	animator->selected_model = model_handle;
 	animator->active_clip = (u32)-1;
 	animator->elapsed = 0;
 	animator->playback_rate = 1.f;
 	animator->loop = true;
 
-	animator->pose_count = asset->model.skeleton_count;
+	animator->pose_count = asset_model->skeleton_count;
 	animator->poses = ArenaPushArray(arena, ANIM_SkeletonPose, animator->pose_count);
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset->model.skeletons[i];
+		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
 
 		u32 count = skeleton->joint_count;
 
@@ -151,14 +155,11 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 	if (animator->pose_count <= 0)
 		return;
 	
-	AST_Asset *asset = AST_Get(assets, animator->selected_model, AST_Type_Model);
-
-	if (!asset)
-		return;
+	AST_AssetModel *asset_model = &AST_Get(assets, animator->selected_model, AST_Type_Model)->model_data;
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset->model.skeletons[i];
+		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
 
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
@@ -168,9 +169,9 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 		}
 	}
 
-	if (animator->active_clip < asset->model.clip_count)
+	if (animator->active_clip < asset_model->clip_count)
 	{
-		AST_AnimClip *clip = &asset->model.clips[animator->active_clip];
+		AST_AnimClip *clip = &asset_model->clips[animator->active_clip];
 
 		animator->elapsed += dt * animator->playback_rate;
 
@@ -205,7 +206,7 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset->model.skeletons[i];
+		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
 		ANIM_SkeletonPose *pose = &animator->poses[i];
 		
 		for (u32 j = 0; j < skeleton->joint_count; j++)
@@ -232,14 +233,11 @@ ANIM_AnimatorPlay(ANIM_Animator *animator, u32 clip)
 internal b32
 ANIM_AnimatorPlayByName(ANIM_Animator *animator, AST_Assets *assets, String8 name)
 {
-	AST_Asset *asset = AST_Get(assets, animator->selected_model, AST_Type_Model);
+	AST_AssetModel *asset_model = &AST_Get(assets, animator->selected_model, AST_Type_Model)->model_data;
 
-	if (!asset)
-		return false;
-
-	for (u32 i = 0; i < asset->model.clip_count; i++)
+	for (u32 i = 0; i < asset_model->clip_count; i++)
 	{
-		if (String8Match(asset->model.clips[i].name, name))
+		if (String8Match(asset_model->clips[i].name, name))
 		{
 			ANIM_AnimatorPlay(animator, i);
 			return true;

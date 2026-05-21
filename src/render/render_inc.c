@@ -10,6 +10,7 @@
 #include "render_tracker.c"
 #include "render_graph.c"
 
+#include "bloom/render_bloom_inc.c"
 #include "probe/render_probe_inc.c"
 #include "ssao/render_ssao_inc.c"
 #include "volumetric/render_volumetric_inc.c"

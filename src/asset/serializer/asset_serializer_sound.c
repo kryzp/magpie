@@ -61,11 +61,11 @@ AST_SoundSerializerAlloc(const AST_Context *ctx,
 	void *permanent_pcm = ArenaPushArray(arena, u8, sound_data->size_in_bytes);
 	MemCopy(permanent_pcm, sound_data->pcm_data, sound_data->size_in_bytes);
 
-	out->sound.buffer = backend->CreateBuffer(permanent_pcm,
-											  sound_data->size_in_bytes,
-											  sound_data->channels,
-											  sound_data->sample_rate,
-											  AUD_Format_F32);
+	out->sound_data.buffer = backend->CreateBuffer(permanent_pcm,
+												   sound_data->size_in_bytes,
+												   sound_data->channels,
+												   sound_data->sample_rate,
+												   AUD_Format_F32);
 }
 
 internal void
@@ -79,7 +79,7 @@ AST_SoundSerializerReload(const AST_Context *ctx,
 internal void
 AST_SoundSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
-	assets->audio_backend->DestroyBuffer(asset->sound.buffer);
+	assets->audio_backend->DestroyBuffer(asset->sound_data.buffer);
 }
 
 internal AST_Serializer

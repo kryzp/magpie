@@ -54,7 +54,7 @@ AST_ShaderSerializerAlloc(const AST_Context *ctx,
 {
 	AST_ShaderLoadData *shader_data = data->data;
 
-	out->shader.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
+	out->shader_data.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
 													shader_data->compiled.count,
 													shader_data->compiled.bytecodes);
 }
@@ -66,9 +66,9 @@ AST_ShaderSerializerReload(const AST_Context *ctx,
 {
 	AST_ShaderLoadData *shader_data = data->data;
 
-	GFX_DeviceShaderProgramDestroy(ctx->assets->device, existing->shader.key);
+	GFX_DeviceShaderProgramDestroy(ctx->assets->device, existing->shader_data.key);
 	
-	existing->shader.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
+	existing->shader_data.key = GFX_DeviceShaderProgramCreate(ctx->assets->device,
 														 shader_data->compiled.count,
 														 shader_data->compiled.bytecodes);
 }
@@ -76,7 +76,7 @@ AST_ShaderSerializerReload(const AST_Context *ctx,
 internal void
 AST_ShaderSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
-	GFX_DeviceShaderProgramDestroy(assets->device, asset->shader.key);
+	GFX_DeviceShaderProgramDestroy(assets->device, asset->shader_data.key);
 }
 
 internal AST_Serializer

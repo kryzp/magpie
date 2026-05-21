@@ -1,0 +1,19 @@
+
+internal void
+R_BloomRendererInit(R_BloomRenderer *renderer, AST_Assets *assets)
+{
+	renderer->assets = assets;
+
+	renderer->upsample_shader_handle   = AST_Require(assets, String8Lit("assets://shaders/passes/upsample_bloom.slang"),   AST_Type_Shader);
+	renderer->downsample_shader_handle = AST_Require(assets, String8Lit("assets://shaders/passes/downsample_bloom.slang"), AST_Type_Shader);
+}
+
+internal void
+R_BloomRendererDestroy(R_BloomRenderer *renderer)
+{
+}
+
+internal void
+R_BloomRender(R_BloomRenderer *renderer, R_Graph *graph)
+{
+}

@@ -13,6 +13,7 @@
 #include "render_tracker.h"
 #include "render_graph.h"
 
+#include "bloom/render_bloom_inc.h"
 #include "probe/render_probe_inc.h"
 #include "ssao/render_ssao_inc.h"
 #include "volumetric/render_volumetric_inc.h"

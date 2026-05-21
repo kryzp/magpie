@@ -50,6 +50,9 @@
 #include "audio/audio_inc.h"
 #include "audio/audio_inc.c"
 
+#include "script/script_inc.h"
+#include "script/script_inc.c"
+
 #include "asset/asset_inc.h"
 #include "asset/asset_inc.c"
 
@@ -347,7 +350,7 @@ AppInitRender(App *app)
 	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     AST_Type_Shader);
 	AST_Handle prefilter_shader_handle  = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      AST_Type_Shader);
 
-	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_2.hdr"), AST_Type_Texture);
+	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
 	
 	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
 	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
@@ -396,7 +399,7 @@ AppInitRender(App *app)
 	
 	R_IrradianceVolumeInit(&app->irradiance_volume,
 						   &app->graphics_device, &app->assets,
-						   osapi->LogChannelOpen(String8Lit("IRRADIANCE")),
+						   osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("IRRADIANCE")),
 						   v3(-8.f, -6.f,  -1.f),
 						   v3( 8.f,  6.f,  12.f),
 						   1, 1, 1,
@@ -404,12 +407,12 @@ AppInitRender(App *app)
 						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
 	
-	GFX_ShaderKey brdf_lut_shader        = AST_AssetShaderGet(AST_GetNow(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader));
-	GFX_ShaderKey hdr_to_env_shader      = AST_AssetShaderGet(AST_GetNow(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader));
-	GFX_ShaderKey irradiance_pass_shader = AST_AssetShaderGet(AST_GetNow(&app->assets, irradiance_shader_handle, AST_Type_Shader));
-	GFX_ShaderKey prefilter_pass_shader  = AST_AssetShaderGet(AST_GetNow(&app->assets, prefilter_shader_handle,  AST_Type_Shader));
+	GFX_ShaderKey brdf_lut_shader        = AST_GetNow(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader_data.key;
+	GFX_ShaderKey hdr_to_env_shader      = AST_GetNow(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader_data.key;
+	GFX_ShaderKey irradiance_pass_shader = AST_GetNow(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader_data.key;
+	GFX_ShaderKey prefilter_pass_shader  = AST_GetNow(&app->assets, prefilter_shader_handle,  AST_Type_Shader)->shader_data.key;
 	
-	GFX_TextureKey hdr_texture_gfx = AST_GetNow(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture.key;
+	GFX_TextureKey hdr_texture_gfx = AST_GetNow(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture_data.key;
 
 	// Generate BRDF Lookup Table.
 	{
@@ -647,7 +650,7 @@ AppInit_(App *app)
 
 	app->test_sound_handle = AST_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), AST_Type_Sound);
 	AST_Asset *test_sound_asset = AST_GetNow(&app->assets, app->test_sound_handle, AST_Type_Sound);
-	app->test_sound = AST_AssetSoundGetBuffer(test_sound_asset);
+	app->test_sound = test_sound_asset->sound_data.buffer;
 	
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
@@ -820,7 +823,7 @@ AppTick(App *app, const OS_InputState *input)
 	/*
 	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
 	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);
-	R_SceneObjectSetSkinning(&app->scene, app->object_handle, palette.palette, palette.joint_count);
+	R_SceneObjectSetSkinning(&app->scene, app->object_handle, &palette);
 	*/
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
@@ -937,7 +940,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	// Skybox.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(&app->assets, shader_handle, AST_Type_Shader));
+		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
 
 		
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
@@ -958,7 +961,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	// Post Processing.
 	{
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(&app->assets, shader_handle, AST_Type_Shader));
+		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
 
 		
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);

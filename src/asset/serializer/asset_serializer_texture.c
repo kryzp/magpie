@@ -64,7 +64,7 @@ AST_TextureSerializerAlloc(const AST_Context *ctx,
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	out->texture.key = GFX_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
+	out->texture_data.key = GFX_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
 }
 
 internal void
@@ -85,7 +85,7 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 	GFX_Device *device = ctx->assets->device;
 	
 	AST_TextureLoadData *tex_data = data->data;
-	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, asset->texture.key);
+	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, asset->texture_data.key);
 
 	GFX_DeviceBufferWrite(device, stage, tex_data->pixel_data, data->stage_size, stage_base);
 
@@ -103,7 +103,7 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 
 	GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &copy_barrier);
 	
-	GFX_CmdCopyBufferToTextureWhole(cmd, stage, asset->texture.key, stage_base);
+	GFX_CmdCopyBufferToTextureWhole(cmd, stage, asset->texture_data.key, stage_base);
 
 	VkImageMemoryBarrier2 blit_barrier = GFX_SyncTextureBarrier(gfx_texture,
 																&copy_dst,
@@ -114,7 +114,7 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 																0, VK_REMAINING_ARRAY_LAYERS);
 
 	GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &blit_barrier);
-	GFX_CmdGenerateMipmaps(cmd, asset->texture.key);
+	GFX_CmdGenerateMipmaps(cmd, asset->texture_data.key);
 }
 
 internal void
@@ -128,7 +128,7 @@ AST_TextureSerializerEnd(AST_SerializerPipelineData *data)
 internal void
 AST_TextureSerializerDispose(AST_Asset *asset, AST_Assets *assets)
 {
-	GFX_DeviceTextureDestroy(assets->device, asset->texture.key);
+	GFX_DeviceTextureDestroy(assets->device, asset->texture_data.key);
 }
 
 internal AST_Serializer

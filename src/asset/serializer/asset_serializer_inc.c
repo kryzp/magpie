@@ -2,3 +2,4 @@
 #include "asset_serializer_shader.c"
 #include "asset_serializer_model.c"
 #include "asset_serializer_sound.c"
+#include "asset_serializer_script.c"

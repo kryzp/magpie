@@ -193,7 +193,7 @@ internal void                  R_SceneObjectSetTransform    (      R_Scene *scen
 internal void                  R_SceneObjectSetSphereBounds (      R_Scene *scene, R_SceneHandle handle, v4 sphere_bounds);
 internal void                  R_SceneObjectSetMaterial     (      R_Scene *scene, R_SceneHandle handle, R_SceneHandle material);
 internal void                  R_SceneObjectSetMesh         (      R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh);
-internal void                  R_SceneObjectSetSkinning     (      R_Scene *scene, R_SceneHandle handle, const m4 *palette, u32 joint_count);
+internal void                  R_SceneObjectSetSkinning     (      R_Scene *scene, R_SceneHandle handle, const ANIM_Palette *palette);
 internal b32                   R_SceneObjectHandleIsValid   (const R_Scene *scene, R_SceneHandle handle);
 
 internal R_SceneHandle         R_SceneLightCreate           (      R_Scene *scene, const R_Light *light);

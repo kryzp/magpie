@@ -98,8 +98,8 @@ R_ForwardRender(R_ForwardRenderer *r,
 	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
 	lighting_info.flags = GFX_TextureAllocFlag_Storage;
 
-	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_2_BIT);
-	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_2_BIT);
+	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
+	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_4_BIT);
 
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 
@@ -116,7 +116,7 @@ R_ForwardRender(R_ForwardRenderer *r,
 	for (u32 i = 0; i < bb_shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb_shadow->shadow_maps[i]);
 
-	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(r->assets, r->shader, AST_Type_Shader));
+	GFX_ShaderKey shader = AST_GetNow(r->assets, r->shader, AST_Type_Shader)->shader_data.key;
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
 

@@ -2,6 +2,10 @@
 
 - look into order-independent forward transparency
 
+- serializers should expose a `String8 extension` that automatically
+  then assigns the right type to an asset without having to provide
+  it manually
+
 - newlines in logs should align with the rest of the logs:
   [ ... ] [ ... ] [ channel ] hello
                               this is after a newline

@@ -1,4 +1,4 @@
-#include "asset_type.c"
+#include "asset_def.c"
 #include "asset_upload_queue.c"
 #include "asset_serializer.c"
 #include "serializer/asset_serializer_inc.c"

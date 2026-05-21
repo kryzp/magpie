@@ -371,15 +371,15 @@ R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
 }
 
 internal void
-R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const m4 *palette, u32 joint_count)
+R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const ANIM_Palette *palette)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
 	if (!slot)
 		return;
 	
-	slot->skinning_palette = palette;
-	slot->skinning_joint_count = joint_count;
+	slot->skinning_palette = palette->palette;
+	slot->skinning_joint_count = palette->joint_count;
 }
 
 internal b32
@@ -817,10 +817,10 @@ R_SceneFlushMeshBuffer(R_Scene *scene)
 internal R_ModelImportReceipt
 R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle handle, u32 max_count)
 {
-	AST_Asset *model_asset = AST_GetNow(scene->assets, handle, AST_Type_Model);
+	AST_AssetModel *model_asset = &AST_GetNow(scene->assets, handle, AST_Type_Model)->model_data;
 	
-	u32 sub_model_count = model_asset->model.sub_model_count;
-	const AST_SubModel *sub_models = model_asset->model.sub_models;
+	u32 sub_model_count = model_asset->sub_model_count;
+	const AST_SubModel *sub_models = model_asset->sub_models;
 	
 	u32 actual_count = sub_model_count;
 	

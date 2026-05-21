@@ -673,7 +673,7 @@ GFX_DeviceCmdPoolAcquire(GFX_Device *device, GFX_CmdPool *pool)
 		
         vkResetCommandBuffer(cb, 0);
 
-		DebugLogD(device->log_channel, "Reused");
+		//DebugLogD(device->log_channel, "Reused");
 	}
 	else
 	{
@@ -688,7 +688,7 @@ GFX_DeviceCmdPoolAcquire(GFX_Device *device, GFX_CmdPool *pool)
 											  &cb),
 					 "Failed to allocate command pool command buffers.");
 		
-		DebugLogD(device->log_channel, "Allocation");
+		//DebugLogD(device->log_channel, "Allocation");
 	}
 
 	return GFX_CmdInit(cb, device);
