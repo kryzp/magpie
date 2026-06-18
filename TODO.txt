@@ -1,3 +1,23 @@
+
+- shorten namespaces:
+  ANIM -> AN
+  AST  -> stays the same
+  AUD  -> stays the same
+  CH   -> stays the same
+  DEV  -> stays the same
+  ENT  -> E
+  GM   -> stays the same
+  GFX  -> G
+  IO   -> stays the same
+  OS   -> stays the same
+  JOB  -> J
+  LOG  -> stays the same
+  PHYS -> P
+  R    -> stays the same
+  SCR  -> S
+
+
+
 - logging deduplication shouldn't reset when switching between channels.
 
 - look into order-independent forward transparency
@@ -5,6 +25,10 @@
 - serializers should expose a `String8 extension` that automatically
   then assigns the right type to an asset without having to provide
   it manually
+
+- dedupes are printed twice in the log.txt output file, e.g for a log that was repeated 3 times:
+  [ ... ] Hello
+  [ ... ] Hello (3x)
 
 - newlines in logs should align with the rest of the logs:
   [ ... ] [ ... ] [ channel ] hello

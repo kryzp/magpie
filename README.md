@@ -33,31 +33,32 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Render Graph** that handles resource management, pipeline barriers, and synchronization
 - **Bindless Resource Design**
 - **GPU Driven Rendering:** bindless materials and meshes (global vertex buffer, vertex pulling, etc.)
-- **IBL** (Image-Based Lighting)
+- **Image-Based Lighting** (IBL)
 - **Advanced glTF 2.0 material support** transmission, volume, specular, clearcoat, sheen, iridescence, etc.
 - **Compute Frustum Culling**
 - **Indirect Forward Rendering**
 - **Point Lights** with compute-culled shadow-mapping
-- **Right-Handed Z-up Coordinates** (as it SHOULD be)
+- **Right-Handed Z-up Coordinates** as it SHOULD be
 - **Async Generic Asset Streaming**
 - **Asset Hot-Reloading**
 - **Arena Memory Allocation System**
-- **Page-Allocated Geometry Data** for the Render Scene
-- **Lockless (almost) fiber-based job system**, with an even lower-latency spin mode
+- **Page-Allocated Geometry Data** in the render scene allowing for efficient mesh data streaming in and out
+- **Lockless (almost) fiber-based job system** with an even lower-latency spin mode
 - **Controller Support**
 - **3D Audio**
-- **Debug Rendering** (lines, circles, spheres, AABB, OBB, crosses, etc.)
+- **Debug Rendering** lines, circles, spheres, AABB, OBB, crosses, etc.
 - **GPU Profiler**
 - **Modular Entity System**
 - **Logging System** with levels, channels (+ sub channels), file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes**
 - **Skeletal Animation Support**
-- **Scripting Integration** with all top-level systems using Lua.
+- **Scripting Integration** with all top-level systems (using Lua).
 
 
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
+- Flesh out the animation system, make it more intergrated.
 - Physically Based Bloom
 - ImGui Integration (C bindings)
 - SSAO (horizon-based none of that random hemisphere stuff)
@@ -73,7 +74,6 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - Forward+ Light Clustering
 - Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
 - Text / Font Rendering
-- More sophisticated debug logging / tracing system
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)
 - Visualisation for Profilers (CPU & GPU)
 - Dynamic Irradiance Probes which automatically reposition themselves
@@ -120,6 +120,8 @@ Layers strictly only propogate one-way, that is to say, a layer *A* that uses fu
 
 You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level `/graphics/` operations, but also *assets* such as textures and models (which ultimately also need to use the `/graphics/` layer).
 
+However, it is still ultimately a monolithic build. For a while I considered going the Machinery / Source Engine approach of complete modularity where every engine sub-system gets split apart into a DLL that then gets linked up at runtime, but it's a lot of work for basically no gain. I still might, if only to try something new out, which is the point of the this whole project anyway, but it's not a top priority right now. If I do, it really won't be a problem since layers have pretty well defined API's anyway, it'd just be a lot of groundwork / boilerplate that I don't wanna do right now.
+
 The hierarchy of layers is visible via the order of `#include`'s in `app.c`.
 
 
@@ -143,7 +145,7 @@ I'm actually pretty proud of this system! Assets are loaded entirely asynchronou
 You can't just parallelize the whole thing because while loading an asset into memory is super simple, when it comes to things like uploading onto the GPU it's not so simple and we want to minimize the number of command buffers we use / submit. Therefore, I split asset loading into four stages:
 
 1. The CPU Stage: This is where we find the file in memory, load it in, and allocate some temporary memory for it. We haven't modified the actual asset record yet. For example, loading in pixel data from a texture file.
-2. The Alloc / Realloc Stage. This is where we actually move that temporary data into the asset and allocate any resources.
+2. The Alloc / Realloc Stage. This is where we actually move that temporary data into the asset and allocate any resources. This has to be seperate from the CPU stage as memory allocation on the main asset arena has to be synchronised between jobs. In the CPU stage each job gets its own arena so there's never any contention!!
 3. The GPU Stage. This is where we upload the data onto the GPU, exposing a command buffer and staging buffer which can be used.
 4. The Cleanup Stage. Any temporary data that was allocated in previous stages can be cleaned up here. Only really necessary for external API's (e.g: cleaning up texture data from `stbi`) because we use arenas for everything internally anyway.
 
@@ -177,8 +179,7 @@ Right now, `/graphics/` and `/render/` are a little more "intertwined" than they
 
 
 ## Scripting
-
-I've implemented a Lua-based scripting system that lies at a pretty low level just below the asset system that allows all layers above it to "hook" into it. I think this is kinda where the layer architecture shines. Anyway it's not the greatest thing in the world but it gets the job done. It's not intended to be used for engine behaviours but when I make games on the side to test out the engine there's often stuff like cutscenes or one-off interactions (idk, talking to a specific shopkeeper) that are just a pain in the ass to do in the C code due to all the systems that have to work together to make it happen, so having a centralized scripting system that lets you just access all systems globally in a contained space is just a really nice QoL feature to have.
+I've implemented a Lua-based scripting system that lies at a pretty low level that allows all layers above it to "hook" into it. I think this is kinda where the layer architecture shines. Anyway it's not the greatest thing in the world but it gets the job done. It's not intended to be used for engine behaviours but when I make games on the side to test out the engine there's often stuff like cutscenes or one-off interactions (idk, talking to a specific shopkeeper) that are just a pain in the ass to do in the C code due to all the systems that have to work together to make it happen, so having a centralized scripting system that lets you just access all systems globally in a contained space is just a really nice QoL feature to have.
 
 
 ### Hot-Code Reloading
@@ -254,8 +255,13 @@ Interesting files that you might wanna have a look at if you're just starting wi
 Not a game engine. And even if it was, I'd only make the editor UI after deciding on the game.
 
 
+> Can I use this to make my own games?!
+
+Don't. I mean, you can, and I'm not gonna stop you. But don't (coming from a place of love). It's unstable and constantly changing. I mostly made it for my own projects and games and I modify it however I see fit. I don't intend to build it for someone else. If you really want to probably just cut out sections of it and make your own fork, then understand you can never pull again without breaking your project.
+
+
 ## External Libraries
-This project is built upon the shoulders of- yeah you've heard it all before.
+This project is built upon the shoulders of- yeah you've heard it all before. All external libraries are found in `ext/`
 
 - SDL3
 - Vulkan + Vulkan Memory Allocator + Volk
@@ -263,4 +269,5 @@ This project is built upon the shoulders of- yeah you've heard it all before.
 - cgltf
 - ImGui
 - miniaudio
-- stb headers
+- STB headers
+- Lua

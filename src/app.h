@@ -10,13 +10,13 @@ struct App
 	Arena bootstrap_arena;
 	Arena log_arena;
 	Arena graphics_arena;
+	Arena scripting_arena;
 	Arena audio_arena;
 	Arena asset_arena;
 	Arena render_arena;
 	Arena physics_arena;
 	Arena entity_arena;
 	Arena editor_arena;
-
 	Arena frame_arena;
 	
 	// ---
@@ -39,6 +39,12 @@ struct App
 	GFX_ShaderCompiler shader_compiler;
 
 	// ---
+
+	LOG_Channel scripting_log_channel;
+	
+	SCR_System *scripting_system;
+	
+	// ---
 	
 	LOG_Channel audio_log_channel;
 	
@@ -46,7 +52,7 @@ struct App
 	AUD_BackendAPI *audio_backend;
 	AST_Handle test_sound_handle;
 	AUD_BufferHandle test_sound;
-
+	
 	// ---
 
 	LOG_Channel asset_log_channel;
@@ -117,6 +123,11 @@ internal void AppInitGraphics        (App *app);
 internal void AppDestroyGraphics     (App *app);
 internal void AppHotLoadGraphics     (App *app);
 internal void AppHotUnloadGraphics   (App *app);
+
+internal void AppInitScripting       (App *app);
+internal void AppDestroyScripting    (App *app);
+internal void AppHotLoadScripting    (App *app);
+internal void AppHotUnloadScripting  (App *app);
 
 internal void AppInitAudio           (App *app);
 internal void AppDestroyAudio        (App *app);

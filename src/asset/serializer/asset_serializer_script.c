@@ -2,16 +2,36 @@
 typedef struct AST_ScriptLoadData AST_ScriptLoadData;
 struct AST_ScriptLoadData
 {
-	u32 asdf;
+	SCR_ScriptRef ref;
 };
 
 internal AST_SerializerPipelineData
-AST_ScriptSerializerCpu(const AST_Context *ctx, Arena *load_arena)
+AST_ScriptSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 {
-	DebugLogB(ctx->log_channel, "CPU NOT IMPLEMENTED");
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+	
+	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
 
+	AST_ScriptLoadData *script_data = ArenaPushArray(load_scope, AST_ScriptLoadData, 1);
+	script_data->ref = SCR_ScriptRefNull();
+	
+	IO_ByteSpan source_bytes = IO_ReadEntireFile(scratch.arena, file_path);
+	SCR_ScriptRef chunk_ref = SCR_Compile(ctx->assets->scripting_system, source_bytes, file_path);
+
+	if (!SCR_ScriptRefIsNull(chunk_ref))
+	{
+		script_data->ref = SCR_ExecuteModule(ctx->assets->scripting_system, chunk_ref);
+		SCR_Release(ctx->assets->scripting_system, chunk_ref);
+	}
+	
 	AST_SerializerPipelineData result = {0};
+	result.data = script_data;
+	result.stage_size = 0;
+	result.failed = false;
+	result.dependency_count = 0;
 
+	ScratchRelease(&scratch);
+	
 	return result;
 }
 
@@ -21,7 +41,9 @@ AST_ScriptSerializerAlloc(const AST_Context *ctx,
 						 AST_Asset *out,
 						 Arena *arena)
 {
-	DebugLogB(ctx->log_channel, "ALLOC NOT IMPLEMENTED");
+	AST_ScriptLoadData *script_data = data->data;
+
+	out->script_data.ref = script_data->ref;
 }
 
 internal void

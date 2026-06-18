@@ -1,2 +1,2 @@
-#include "script_binding.c"
+#include "script_type.c"
 #include "script_system.c"

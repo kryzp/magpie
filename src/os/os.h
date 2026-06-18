@@ -37,6 +37,10 @@ struct OS_API
 	void  (*VirtualRelease)(void *address);
 	void  (*VirtualCommit)(void *address, u64 bytes);
 	void  (*VirtualDecommit)(void *address, u64 bytes);
+
+	void *(*HeapAlloc)(u64 bytes);
+	void  (*HeapFree)(void *address);
+	void *(*HeapRealloc)(void *address, u64 new_bytes);
 	
 	u64 (*GetPageSize)(void);
 
@@ -199,7 +203,7 @@ struct OS_API
 	i64 (*StreamRead)     (OS_Handle handle, void *dst, u64 bytes);
 	i64 (*StreamWrite)    (OS_Handle handle, const void *src, u64 bytes);
 	i64 (*StreamSeek)     (OS_Handle handle, i64 offset);
-	u64 (*StreamSize)     (OS_Handle handle);
+	i64 (*StreamSize)     (OS_Handle handle);
 	i64 (*StreamPosition) (OS_Handle handle);
 	b32 (*StreamClose)    (OS_Handle handle);
 	

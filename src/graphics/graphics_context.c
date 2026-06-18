@@ -169,7 +169,7 @@ GFX_ContextCheckForValidationLayerSupport(void)
 		b32 has_layer = false;
 		const char *layer_name_0 = gfx_context_vk_validation_layers[i];
 
-		for (int j = 0; j < layer_count; j++)
+		for (u32 j = 0; j < layer_count; j++)
 		{
 			const char *layer_name_1 = available_layers[j].layerName;
 

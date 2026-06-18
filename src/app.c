@@ -2,6 +2,10 @@
 // Todo: Move these out into their respective
 //       backends.
 
+// remove warnings from external libraries
+#pragma warning(push)
+#pragma warning(disable:4310 4709 4701 4702 4324)
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb/stb_image.h"
 
@@ -25,6 +29,11 @@
 #define CGLTF_IMPLEMENTATION
 #include "ext/gltf/cgltf.h"
 
+#define MAKE_LIB
+#include "ext/lua/onelua.c"
+
+#pragma warning(pop)
+
 // who decided to name these macros ffs
 #undef min
 #undef max
@@ -47,11 +56,11 @@
 #include "graphics/graphics_inc.h"
 #include "graphics/graphics_inc.c"
 
-#include "audio/audio_inc.h"
-#include "audio/audio_inc.c"
-
 #include "script/script_inc.h"
 #include "script/script_inc.c"
+
+#include "audio/audio_inc.h"
+#include "audio/audio_inc.c"
 
 #include "asset/asset_inc.h"
 #include "asset/asset_inc.c"
@@ -180,6 +189,72 @@ AppHotUnloadGraphics(App *app)
 
 
 /* ==================================================
+   SCRIPTING
+   ================================================== */
+
+SCR_BINDING_DEF(SCR_BND_DebugLog)
+{
+	String8 msg = SCR_ArgString(ctx, 0);
+	DebugLogD(ctx->system->log_channel, "%.*s", String8VArg(msg));
+}
+
+SCR_BINDING_DEF(SCR_BND_WaitSeconds)
+{
+	f32 s = SCR_ArgF32(ctx, 0); 
+	SCR_YieldTime(ctx, s);
+}
+
+SCR_BINDING_DEF(SCR_BND_WaitSignal)
+{
+	String8 sig = SCR_ArgString(ctx, 0);
+	SCR_YieldSignal(ctx, sig);
+}
+
+internal void
+AppInitScripting(App *app)
+{
+	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
+	
+	app->scripting_system = SCR_Init(&app->scripting_arena, app->scripting_log_channel);
+
+	SCR_BindGlobal(app->scripting_system, String8Lit("debug_log"),    SCR_BND_DebugLog);
+	SCR_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), SCR_BND_WaitSeconds);
+	SCR_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  SCR_BND_WaitSignal);
+}
+
+internal void
+AppDestroyScripting(App *app)
+{
+	SCR_Destroy(app->scripting_system);
+}
+
+internal void
+AppHotLoadScripting(App *app)
+{
+	/*
+	 * this is a super hacky measure but there's no other
+	 * way to do this that isn't super complicated.
+	 * essentially when we hot reload, the function bindings
+	 * associated with C functions become invalidated, and
+	 * we can either
+	 * a. destroy and recreate the entire system (lose all state)
+	 * b. iterate through every goddamn C closure in the lua registry and every upvalue
+	 * option b. is a complete nightmare i dont wanna deal with right
+	 * now so in my opinion it's far more preferable to just reset the whole thing.
+	 */
+	
+	ArenaReset(&app->scripting_arena);
+	AppInitScripting(app);
+}
+
+internal void
+AppHotUnloadScripting(App *app)
+{
+	AppDestroyScripting(app);
+}
+
+
+/* ==================================================
    AUDIO
    ================================================== */
 
@@ -240,7 +315,8 @@ AppInitAssets(App *app)
 			 app->asset_log_channel,
 			 &app->graphics_device,
 			 &app->shader_compiler,
-			 app->audio_backend);
+			 app->audio_backend,
+			 app->scripting_system);
 
 	// I stole this concept of asset mounting from the "Granite" engine / renderer by Themaister.
 	// It's so simple but it makes everything so much cleaner!!!
@@ -640,18 +716,23 @@ AppInit_(App *app)
 {
 	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
 	
-	AppInitGraphics (app);
-	AppInitAudio    (app);
-	AppInitAssets   (app);
-	AppInitRender   (app);
-	AppInitPhysics  (app);
-	AppInitEntity   (app);
-	AppInitEditor   (app);
+	AppInitGraphics  (app);
+	AppInitScripting (app);
+	AppInitAudio     (app);
+	AppInitAssets    (app);
+	AppInitRender    (app);
+	AppInitPhysics   (app);
+	AppInitEntity    (app);
+	AppInitEditor    (app);
 
 	app->test_sound_handle = AST_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), AST_Type_Sound);
 	AST_Asset *test_sound_asset = AST_GetNow(&app->assets, app->test_sound_handle, AST_Type_Sound);
 	app->test_sound = test_sound_asset->sound_data.buffer;
 	
+	AST_Handle test_script_handle = AST_Require(&app->assets, String8Lit("assets://test.lua"), AST_Type_Script);
+	SCR_ScriptRef test_lua_script = AST_GetNow(&app->assets, test_script_handle, AST_Type_Script)->script_data.ref;
+	SCR_CallMethodEx(app->scripting_system, test_lua_script, String8Lit("Yay"), NULL, 0);
+
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -666,15 +747,15 @@ AppInit(const OS_API *api)
 	App *app = ArenaPushArray(&bootstrap, App, 1);
 	app->bootstrap_arena = bootstrap;
 
-	app->graphics_arena = ArenaAlloc(Gigabytes(3));
-	app->audio_arena    = ArenaAlloc(Gigabytes(1));
-	app->asset_arena    = ArenaAlloc(Gigabytes(3));
-	app->render_arena   = ArenaAlloc(Gigabytes(2));
-	app->physics_arena  = ArenaAlloc(Gigabytes(1));
-	app->entity_arena   = ArenaAlloc(Gigabytes(1));
-	app->editor_arena   = ArenaAlloc(Gigabytes(1));
-	
-	app->frame_arena    = ArenaAlloc(Gigabytes(1));
+	app->graphics_arena  = ArenaAlloc(Gigabytes(3));
+	app->scripting_arena = ArenaAlloc(Gigabytes(1));
+	app->audio_arena     = ArenaAlloc(Gigabytes(1));
+	app->asset_arena     = ArenaAlloc(Gigabytes(3));
+	app->render_arena    = ArenaAlloc(Gigabytes(2));
+	app->physics_arena   = ArenaAlloc(Gigabytes(1));
+	app->entity_arena    = ArenaAlloc(Gigabytes(1));
+	app->editor_arena    = ArenaAlloc(Gigabytes(1));
+	app->frame_arena     = ArenaAlloc(Gigabytes(1));
 	
 	AppInit_(app);
 
@@ -690,16 +771,16 @@ AppDestroy(App *app)
 
 	DebugLogI(app->log_channel, "Destroying...");
 
-	AppDestroyEditor   (app);
-	AppDestroyEntity   (app);
-	AppDestroyPhysics  (app);
-	AppDestroyRender   (app);
-	AppDestroyAssets   (app);
-	AppDestroyAudio    (app);
-	AppDestroyGraphics (app);
+	AppDestroyEditor    (app);
+	AppDestroyEntity    (app);
+	AppDestroyPhysics   (app);
+	AppDestroyRender    (app);
+	AppDestroyAssets    (app);
+	AppDestroyAudio     (app);
+	AppDestroyScripting (app);
+	AppDestroyGraphics  (app);
 
 	ArenaRelease(&app->frame_arena);
-	
 	ArenaRelease(&app->editor_arena);
 	ArenaRelease(&app->entity_arena);
 	ArenaRelease(&app->physics_arena);
@@ -756,7 +837,8 @@ AppTick(App *app, const OS_InputState *input)
 
 	if (OS_KbPressed(input, OS_KeyboardKey_Enter))
 	{
-		R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
+		SCR_FireSignal(app->scripting_system, String8Lit("test_ready"));
+		//R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
 	}
 
 	if (OS_KbPressed(input, OS_KeyboardKey_Y))
@@ -780,8 +862,16 @@ AppTick(App *app, const OS_InputState *input)
 
 	// TODO: animation system
 
+	/*
+	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
+	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);
+	R_SceneObjectSetSkinning(&app->scene, app->object_handle, &palette);
+	*/
+
 	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
+	SCR_Tick(app->scripting_system, dt);
+	
 	if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
 	if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
 	
@@ -793,6 +883,8 @@ AppTick(App *app, const OS_InputState *input)
 		clamped_delta = max_frame_time;
 	}
 
+	DebugLogT(app->log_channel, "%f", 1.f / dt);
+
 	AppLogFPS(app, dt);
 	
 	app->delta_accumulator += clamped_delta;
@@ -803,6 +895,15 @@ AppTick(App *app, const OS_InputState *input)
 		app->delta_accumulator -= fixed_dt;
 	}
 
+	// https://gafferongames.com/post/fix_your_timestep/
+	const float alpha = app->delta_accumulator / fixed_dt;
+
+	// TODO: interpolate render state once the rendering system is fully moved out of App
+	// maybe something like:
+	//   R_RenderState current_state, previous_state;
+	//   R_RenderState interpolated_state = R_RenderStateInterp(previous_state, current_state, alpha);
+	//   R_RenderSystemRender(&interpolated_state);
+	
 	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	
 	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
@@ -810,21 +911,9 @@ AppTick(App *app, const OS_InputState *input)
 	ENT_EventDispatch(&app->events, &app->world);
 
 	ENT_WorldFlush(&app->world);
-	
-	AUD_Listener listener = {0};
-	listener.position = app->editor.camera.position;
-	listener.direction = app->editor.camera.forward;
-
-	AUD_Tick(&app->audio_system, dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
-
-	/*
-	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
-	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);
-	R_SceneObjectSetSkinning(&app->scene, app->object_handle, &palette);
-	*/
 	
 	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
@@ -846,7 +935,13 @@ AppTick(App *app, const OS_InputState *input)
 		R_GraphReset(&app->graph);
 	}
 	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
+	
+	AUD_Listener listener = {0};
+	listener.position = app->editor.camera.position;
+	listener.direction = app->editor.camera.forward;
 
+	AUD_Tick(&app->audio_system, dt, listener);
+	
 	GFX_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
@@ -859,6 +954,7 @@ AppHotLoad(App *app, const OS_API *api)
 	osapi = api;
 	
 	AppHotLoadGraphics     (app);
+	AppHotLoadScripting    (app);
 	AppHotLoadAudio        (app);
 	AppHotLoadAssets       (app);
 	AppHotLoadRender       (app);
@@ -874,6 +970,7 @@ AppHotUnload(App *app)
 	AppHotUnloadRender     (app);
 	AppHotUnloadAssets     (app);
 	AppHotUnloadAudio      (app);
+	AppHotUnloadScripting  (app);
 	AppHotUnloadGraphics   (app);
 }
 
@@ -942,7 +1039,6 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
 
-		
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
 		data->cubemap = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
@@ -950,7 +1046,6 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		data->frame_data_buffer = app->frame_data_buffer;
 		data->skybox_mesh = &app->skybox_mesh;
 
-		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Skybox"), R_PassType_Graphics);
 		bb.lighting.resolved = R_PassWriteColourResolve(pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
 		bb.depth.resolved    = R_PassWriteDepthResolve(pass, bb.depth.msaa,    bb.depth.resolved,    NULL);
@@ -963,14 +1058,12 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
 		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
 
-		
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
 		data->exposure = app_pp_exposure;
 		data->input = bb.lighting.resolved;
 		data->output = bb.lighting.resolved;
 
-		
 		R_Pass *pass = R_GraphAdd(&app->graph, String8Lit("Post Processing"), R_PassType_Compute);
 		bb.lighting.resolved = R_PassWriteTextureCompute(pass, bb.lighting.resolved);
 		R_PassReadTextureCompute(pass, bb.lighting.resolved);

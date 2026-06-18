@@ -131,7 +131,7 @@ struct OS_W32_JOB_Scheduler
 	void (*OnMainThreadIdle)(void *ctx);
 	void *main_thread_idle_ctx;
 
-	u32 tls_worker_slot;
+	//u32 tls_worker_slot;
 };
 
 

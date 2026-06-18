@@ -18,12 +18,26 @@ pushd build
 if not exist vk_mem_alloc.obj (
     echo Compiling Vulkan Memory Allocator...
     cl %opts% %includes% /std:c++20 /c "%code%\ext\vma\vk_mem_alloc.cpp" /Fo:vk_mem_alloc.obj
+	
+	if errorlevel 1 (
+		echo.
+		echo Vulkan Memory Allocator compilation failed.
+		popd
+		exit /b 1
+	)
 )
 
 :: compile the slang compiler separately
 if not exist slang_compiler.obj (
     echo Compiling Slang Compiler...
     cl %opts% %includes% /std:c++20 /c "%code%\ext\slang\slang_compiler.cpp" /Fo:slang_compiler.obj
+	
+	if errorlevel 1 (
+		echo.
+		echo Slang compiler compilation failed.
+		popd
+		exit /b 1
+	)
 )
 
 :: compile app (platform agnostic code)

@@ -5,7 +5,9 @@ AST_AllocSlot(AST_Assets *assets)
 	if (assets->free_index_count > 0)
 		return assets->free_indices[--assets->free_index_count];
 
-	DebugLogAssert(assets->log_channel, assets->record_count < ArraySize(assets->records), "Cannot allocate more asset records, out of space!");
+	DebugLogAssert(assets->log_channel,
+				   assets->record_count < ArraySize(assets->records),
+				   "Cannot allocate more asset records, out of space!");
 
 	return assets->record_count++;
 }
@@ -13,7 +15,9 @@ AST_AllocSlot(AST_Assets *assets)
 internal void
 AST_FreeSlot(AST_Assets *assets, u32 index)
 {
-	DebugLogAssert(assets->log_channel, assets->free_index_count < ArraySize(assets->free_indices), "Cannot free more asset records, out of free index space!");
+	DebugLogAssert(assets->log_channel,
+				   assets->free_index_count < ArraySize(assets->free_indices),
+				   "Cannot free more asset records, out of free index space!");
 
 	assets->free_indices[assets->free_index_count] = index;
 	assets->free_index_count++;
@@ -157,7 +161,8 @@ internal void
 AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 		 GFX_Device *device,
 		 GFX_ShaderCompiler *shader_compiler,
-		 const AUD_BackendAPI *audio_backend)
+		 const AUD_BackendAPI *audio_backend,
+		 SCR_System *scripting_system)
 {
 	MemZeroStruct(assets);
 
@@ -168,7 +173,8 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 	assets->device = device;
 	assets->shader_compiler = shader_compiler;
 	assets->audio_backend = audio_backend;
-
+	assets->scripting_system = scripting_system;
+	
 	assets->load_arena_wait_counter = osapi->JobCounterAlloc(0);
 	assets->async_counter           = osapi->JobCounterAlloc(0);
 
@@ -345,10 +351,12 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx, load_arena);
 
 	if (load_data.failed)
-		DebugLogE(load_params->assets->log_channel, "Failed to load %.*s.",
+		DebugLogE(load_params->assets->log_channel,
+				  "Failed to load %.*s.",
 				  String8VArg(ctx.metadata.path));
 	else
-		DebugLogD(load_params->assets->log_channel, "Loaded in %.*s.",
+		DebugLogD(load_params->assets->log_channel,
+				  "Loaded in %.*s.",
 				  String8VArg(ctx.metadata.path));
 	
 	AST_Upload upload = {0};

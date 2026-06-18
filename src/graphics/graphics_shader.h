@@ -3,6 +3,13 @@
 
 #define GFX_MAX_SHADER_STAGES 4
 
+// TODO: replace with IO_ByteSpan??? one part of me
+//       wants to since they're the same data-wise
+//       but in reality I think it might actually
+//       be better to keep them seperate, since shader
+//       bytecode is compiled rather than generated
+//       from a file.
+
 typedef struct GFX_ShaderBytecode GFX_ShaderBytecode;
 struct GFX_ShaderBytecode
 {

@@ -84,9 +84,9 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 		SLANG_StageResult *src = &bridge_result.stages[i];
 
 		compiled.bytecodes[i].size = src->size;
-		compiled.bytecodes[i].bytes = ArenaPushArray(arena, u8, compiled.bytecodes[i].size);
+		compiled.bytecodes[i].bytes = ArenaPushArray(arena, u8, src->size);
 
-		MemCopy(compiled.bytecodes[i].bytes, src->bytes, compiled.bytecodes[i].size);
+		MemCopy(compiled.bytecodes[i].bytes, src->bytes, src->size);
 	}
 
 	compiled.failed = false;

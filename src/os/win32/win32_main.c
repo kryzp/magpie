@@ -223,6 +223,24 @@ OS_W32_VirtualDecommit(void *address, u64 bytes)
 	VirtualFree(address, bytes, MEM_DECOMMIT);
 }
 
+internal void *
+OS_W32_HeapAlloc(u64 bytes)
+{
+	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, bytes);
+}
+
+internal void
+OS_W32_HeapFree(void *address)
+{
+	HeapFree(GetProcessHeap(), 0, address);
+}
+
+internal void *
+OS_W32_HeapRealloc(void *address, u64 new_bytes)
+{
+	return HeapReAlloc(GetProcessHeap(), 0, address, new_bytes);
+}
+
 internal u64
 OS_W32_GetPageSize(void)
 {
@@ -756,7 +774,7 @@ OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 	AssertTrue(read || write);
 	
 	char buf[16] = {0};
-	int cursor = 0;
+	i32 cursor = 0;
 
 	if (append)
 	{
@@ -836,7 +854,7 @@ OS_W32_StreamSeek(OS_Handle handle, i64 offset)
 	return SDL_SeekIO(handle.value, offset, SDL_IO_SEEK_SET);
 }
 
-internal u64
+internal i64
 OS_W32_StreamSize(OS_Handle handle)
 {
 	return SDL_GetIOSize(handle.value);
@@ -1040,6 +1058,10 @@ OS_W32_BindAPI(OS_API *api)
 	api->VirtualCommit               = OS_W32_VirtualCommit;
 	api->VirtualDecommit             = OS_W32_VirtualDecommit;
 
+	api->HeapAlloc                   = OS_W32_HeapAlloc;
+	api->HeapFree                    = OS_W32_HeapFree;
+	api->HeapRealloc                 = OS_W32_HeapRealloc;
+	
 	api->GetPageSize                 = OS_W32_GetPageSize;
 
 	api->Log                         = OS_W32_Log;
@@ -1209,7 +1231,7 @@ OS_W32_ProcessEvents(OS_InputState *input_out)
 	MemZeroArray(input_out->mb_pressed);
 	MemZeroArray(input_out->mb_released);
 
-	for (int i = 0; i < OS_MAX_GAMEPADS; i++) {
+	for (u32 i = 0; i < OS_MAX_GAMEPADS; i++) {
 		OS_GamepadState *gp = &input_out->gamepads[i];
 		MemZeroArray(gp->pressed);
 		MemZeroArray(gp->released);

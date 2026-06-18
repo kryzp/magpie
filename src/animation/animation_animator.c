@@ -70,8 +70,6 @@ ANIM_SampleChannel(const AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs)
 
 	if (ch->interp == AST_AnimInterp_Step)
 	{
-		// Discrete Interpolation.
-	
 		switch (ch->path)
 		{
 			case AST_AnimPath_Translate:
@@ -89,8 +87,6 @@ ANIM_SampleChannel(const AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs)
 	}
 	else if (ch->interp == AST_AnimInterp_Linear)
 	{
-		// Linear Interpoaltion.
-	
 		switch (ch->path)
 		{
 			case AST_AnimPath_Translate:

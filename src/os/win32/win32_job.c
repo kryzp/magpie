@@ -250,8 +250,8 @@ OS_W32_JOB_Init(OS_W32_JOB_Scheduler *scheduler, LOG_Channel log_channel)
 		worker->scheduler = scheduler;
 	}
 
-	scheduler->tls_worker_slot = osapi->TLSAlloc();
-	osapi->TLSSet(scheduler->tls_worker_slot, NULL);
+	//scheduler->tls_worker_slot = osapi->TLSAlloc();
+	//osapi->TLSSet(scheduler->tls_worker_slot, NULL);
 
 	DebugLogI(scheduler->log_channel, "Initialized.");
 }
@@ -259,13 +259,13 @@ OS_W32_JOB_Init(OS_W32_JOB_Scheduler *scheduler, LOG_Channel log_channel)
 internal void
 OS_W32_JOB_Shutdown(OS_W32_JOB_Scheduler *scheduler)
 {
-	osapi->TLSFree(scheduler->tls_worker_slot);
+	//osapi->TLSFree(scheduler->tls_worker_slot);
 	
-	// Join worker threads (worker 0 is the main thread so no join needed).
+	// worker 0 is the main thread so no join needed.
 	for (u32 i = 1; i < scheduler->worker_count; i++)
 		osapi->ThreadJoin(scheduler->workers[i].thread_handle);
  
-	// Release all fibers.
+	// release fibers
 	for (u32 i = 0; i < OS_W32_JOB_MAX_CONCURRENT_FIBERS; i++)
 	{
 		for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
@@ -277,7 +277,6 @@ OS_W32_JOB_Shutdown(OS_W32_JOB_Scheduler *scheduler)
 	for (u32 j = 0; j < OS_W32_JOB_FIBER_SCRATCH_RING_SIZE; j++)
 		ArenaRelease(&scheduler->fallback_scratch_ring[j]);
 
-	// Destroy OS synchronisation primitives.
 	osapi->MutexDestroy(scheduler->mutex);
 	osapi->CondVarDestroy(scheduler->cond_begin);
 
@@ -290,7 +289,7 @@ OS_W32_JOB_SchedulerThreadEntry(void *param)
 	OS_W32_JOB_Worker *worker = param;
 	OS_W32_JOB_Scheduler *scheduler = worker->scheduler;
 
-	osapi->TLSSet(scheduler->tls_worker_slot, worker);
+	//osapi->TLSSet(scheduler->tls_worker_slot, worker);
 
 	job_current_worker = worker;
 	worker->fiber_handle = osapi->ConvertThreadToFiber();
@@ -437,7 +436,7 @@ OS_W32_JOB_GetContext(OS_W32_JOB_Scheduler *scheduler)
 	ctx.worker_id = 0;
 	ctx.fiber_id = -1;
 	
-    OS_W32_JOB_Worker *worker = (OS_W32_JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
+    OS_W32_JOB_Worker *worker = job_current_worker;//(OS_W32_JOB_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
 
 	if (worker)
 	{
