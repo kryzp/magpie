@@ -1,19 +1,19 @@
 
 R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 
 	const R_ShadowMappingPassData *data = ctx->user_data;
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-	GFX_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-	GFX_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+	G_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	struct
 	{
@@ -26,52 +26,52 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 
 	pc.object_buffer      = data->object_buffer_address;
 	pc.mesh_buffer        = R_SceneMeshBufferAddr(ctx->scene);
-	pc.caster_data_buffer = GFX_DeviceBufferAddress(device, data->caster_table_buffer);
+	pc.caster_data_buffer = G_DeviceBufferAddress(device, data->caster_table_buffer);
 	pc.caster_index       = data->caster_index;
 
-	GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
 
-	GFX_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	GFX_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
+	G_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
 	R_SceneDrawIndirect(ctx->scene, cmd, indirect_key, counter_key);
 }
 
 internal void
-R_ShadowRendererInit(R_ShadowRenderer *sr, GFX_Device *device, AST_Assets *assets)
+R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets)
 {
 	sr->device = device;
 	sr->assets = assets;
 
-	GFX_BufferAllocInfo caster_buf_info = {0};
+	G_BufferAllocInfo caster_buf_info = {0};
 	caster_buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
 	caster_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	caster_buf_info.size  = R_SCENE_MAX_SHADOW_CASTERS * sizeof(R_GPU_ShadowCaster);
 
-	sr->caster_table_buffer = GFX_DeviceBufferAlloc(device, &caster_buf_info);
+	sr->caster_table_buffer = G_DeviceBufferAlloc(device, &caster_buf_info);
 
 	for (u32 i = 0; i < R_SCENE_MAX_SHADOW_CASTERS; i++)
 	{
-		sr->shadow_cubemaps[i] = GFX_DeviceTextureAllocCubemapDepth(device, R_SHADOW_MAP_RESOLUTION, 1);
+		sr->shadow_cubemaps[i] = G_DeviceTextureAllocCubemapDepth(device, R_SHADOW_MAP_RESOLUTION, 1);
 
-		GFX_TextureViewCreateInfo view_info = {0};
+		G_TextureViewCreateInfo view_info = {0};
 		view_info.texture = sr->shadow_cubemaps[i];
 		view_info.type = VK_IMAGE_VIEW_TYPE_CUBE;
-		view_info.range = GFX_SubresourceRangeAllDepth();
+		view_info.range = G_SubresourceRangeAllDepth();
 
-		sr->shadow_cubemap_views[i] = GFX_DeviceTextureViewFetch(device, &view_info);
+		sr->shadow_cubemap_views[i] = G_DeviceTextureViewFetch(device, &view_info);
 	}
 
-	sr->depth_shader = AST_Require(assets, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), AST_Type_Shader);
+	sr->depth_shader = A_Require(assets, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), A_Type_Shader);
 }
 
 internal void
 R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 {
-	GFX_DeviceBufferDestroy(sr->device, sr->caster_table_buffer);
+	G_DeviceBufferDestroy(sr->device, sr->caster_table_buffer);
 
 	for (u32 i = 0; i < R_SCENE_MAX_SHADOW_CASTERS; i++)
-		GFX_DeviceTextureDestroy(sr->device, sr->shadow_cubemaps[i]);
+		G_DeviceTextureDestroy(sr->device, sr->shadow_cubemaps[i]);
 }
 
 internal void
@@ -98,7 +98,7 @@ R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
 
 	sr->caster_count = MinValue(R_SceneShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
 
-	R_GPU_ShadowCaster *caster_mapping = GFX_DeviceBufferMap(sr->device, sr->caster_table_buffer);
+	R_GPU_ShadowCaster *caster_mapping = G_DeviceBufferMap(sr->device, sr->caster_table_buffer);
 
 	for (u32 i = 0; i < sr->caster_count; i++)
 	{
@@ -108,7 +108,7 @@ R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
 		gpu->position   = info->position;
 		gpu->near_plane = info->near;
 		gpu->far_plane  = info->far;
-		gpu->shadow_map = GFX_DeviceTextureViewBindless(sr->device, sr->shadow_cubemap_views[i]);
+		gpu->shadow_map = G_DeviceTextureViewBindless(sr->device, sr->shadow_cubemap_views[i]);
 
 		m4 light_proj = M4Perspective(90.f, 1.f, info->near, info->far);
 
@@ -135,7 +135,7 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 	
 	// Create one render pass per shadow caster.
 
-	GFX_ShaderKey shader = AST_GetNow(sr->assets, sr->depth_shader, AST_Type_Shader)->shader_data.key;
+	G_ShaderKey shader = A_GetNow(sr->assets, sr->depth_shader, A_Type_Shader)->shader.key;
 
 	for (u32 caster_index = 0; caster_index < sr->caster_count; caster_index++)
 	{

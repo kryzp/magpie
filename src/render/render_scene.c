@@ -1,6 +1,6 @@
 
 internal void
-R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets, LOG_Channel log_channel)
+R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
 {
 	MemZeroStruct(scene);
 
@@ -19,18 +19,18 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets
 	for (i32 i = ArraySize(scene->material_slots) - 1; i > 0; i--)  scene->material_free_list[scene->material_free_count++] = i - 1;
 	for (i32 i = ArraySize(scene->mesh_slots) - 1;     i > 0; i--)  scene->mesh_free_list[scene->mesh_free_count++] = i - 1;
 
-	GFX_BufferAllocInfo material_buffer_alloc_info = {0};
+	G_BufferAllocInfo material_buffer_alloc_info = {0};
 	material_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	material_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	material_buffer_alloc_info.size = sizeof(R_GPU_Material) * ArraySize(scene->material_slots);
 		
-	GFX_BufferAllocInfo mesh_buffer_alloc_info = {0};
+	G_BufferAllocInfo mesh_buffer_alloc_info = {0};
 	mesh_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	mesh_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	mesh_buffer_alloc_info.size = sizeof(R_GPU_RenderMesh) * ArraySize(scene->mesh_slots);
 
-	scene->material_buffer = GFX_DeviceBufferAlloc(device, &material_buffer_alloc_info);
-	scene->mesh_buffer     = GFX_DeviceBufferAlloc(device, &mesh_buffer_alloc_info);
+	scene->material_buffer = G_DeviceBufferAlloc(device, &material_buffer_alloc_info);
+	scene->mesh_buffer     = G_DeviceBufferAlloc(device, &mesh_buffer_alloc_info);
 
 	scene->material_buffer_dirty = true;
 	scene->mesh_buffer_dirty     = true;
@@ -41,13 +41,13 @@ R_SceneInit(R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets
 internal void
 R_SceneDestroy(R_Scene *scene)
 {
-	GFX_DeviceBufferDestroy(scene->device, scene->material_buffer);
-	GFX_DeviceBufferDestroy(scene->device, scene->mesh_buffer);
+	G_DeviceBufferDestroy(scene->device, scene->material_buffer);
+	G_DeviceBufferDestroy(scene->device, scene->mesh_buffer);
 
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
-		GFX_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].vertex_buffer);
-		GFX_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].index_buffer);
+		G_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].vertex_buffer);
+		G_DeviceBufferDestroy(scene->device, scene->geometry_pages[i].index_buffer);
 	}
 	
 	DebugLogI(scene->log_channel, "Destroyed.");
@@ -55,9 +55,9 @@ R_SceneDestroy(R_Scene *scene)
 
 internal void
 R_SceneDrawIndirect(const R_Scene *scene,
-					GFX_CmdBuffer *cmd,
-					GFX_BufferKey indirect_buffer,
-					GFX_BufferKey count_buffer)
+					G_CmdBuffer *cmd,
+					G_BufferKey indirect_buffer,
+					G_BufferKey count_buffer)
 {
 	for (u64 i = 0; i < scene->geometry_page_count; i++)
 	{
@@ -68,12 +68,12 @@ R_SceneDrawIndirect(const R_Scene *scene,
 		u64 indirect_offset = i * sizeof(R_GPU_IndirectDraw) * max_draws_per_page;
 		u64 count_offset    = i * sizeof(u32);
 		
-		GFX_CmdBindIndexBuffer(cmd,
+		G_CmdBindIndexBuffer(cmd,
 							   page->index_buffer,
 							   0, VK_WHOLE_SIZE,
 							   VK_INDEX_TYPE_UINT32);
 		
-		GFX_CmdDrawIndexedIndirectCount(cmd,
+		G_CmdDrawIndexedIndirectCount(cmd,
 										indirect_buffer, indirect_offset,
 										count_buffer, count_offset,
 										max_draws_per_page,
@@ -82,7 +82,7 @@ R_SceneDrawIndirect(const R_Scene *scene,
 }
 
 internal R_SceneFrameData
-R_SceneUploadFrameData(R_Scene *scene, GFX_RingBuffer *ring)
+R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
 {
 	R_SceneFrameData resources = {0};
 
@@ -117,20 +117,20 @@ R_SceneUploadFrameData(R_Scene *scene, GFX_RingBuffer *ring)
 }
 
 internal void
-R_SceneUploadPageTable(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+R_SceneUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	u32 count = scene->geometry_page_count > 0 ? scene->geometry_page_count : 1;
 
-	out->page_table_buffer = GFX_RingBufferPushArray(ring, R_GPU_PagePointers, count);
+	out->page_table_buffer = G_RingBufferPushArray(ring, R_GPU_PagePointers, count);
 
 	R_GPU_PagePointers *mapped = out->page_table_buffer.cpu;
 
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
-		mapped[i].vertex_buffer = GFX_DeviceBufferAddress(scene->device, scene->geometry_pages[i].vertex_buffer);
+		mapped[i].vertex_buffer = G_DeviceBufferAddress(scene->device, scene->geometry_pages[i].vertex_buffer);
 }
 
 internal void
-R_SceneUploadSkinning(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+R_SceneUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	u32 total_joints = 0;
 
@@ -149,7 +149,7 @@ R_SceneUploadSkinning(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *ou
 	if (total_joints <= 0)
 		return;
 	
-	out->skinning_palette_buffer = GFX_RingBufferPushArray(ring, m4, total_joints);
+	out->skinning_palette_buffer = G_RingBufferPushArray(ring, m4, total_joints);
  
 	m4 *mapped = out->skinning_palette_buffer.cpu;
 
@@ -173,9 +173,9 @@ R_SceneUploadSkinning(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *ou
 }
 
 internal void
-R_SceneUploadObjects(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+R_SceneUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
-	out->object_buffer = GFX_RingBufferPushArray(ring, R_GPU_ObjectData, scene->object_count);
+	out->object_buffer = G_RingBufferPushArray(ring, R_GPU_ObjectData, scene->object_count);
  
 	R_GPU_ObjectData *mapped = out->object_buffer.cpu;
 
@@ -209,11 +209,11 @@ R_SceneUploadObjects(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out
 }
 
 internal void
-R_SceneUploadLights(R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out)
+R_SceneUploadLights(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	scene->shadow_caster_count = 0;
 
-	out->light_buffer = GFX_RingBufferPushArray(ring, R_GPU_Light, scene->light_count);
+	out->light_buffer = G_RingBufferPushArray(ring, R_GPU_Light, scene->light_count);
 
 	R_GPU_Light *mapped = out->light_buffer.cpu;
 
@@ -371,7 +371,7 @@ R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
 }
 
 internal void
-R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const ANIM_Palette *palette)
+R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const AN_Palette *palette)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -539,7 +539,7 @@ R_SceneMaterialCreate(R_Scene *scene, const R_Material *material)
 }
 
 internal R_SceneHandle
-R_SceneMaterialFromAssets(R_Scene *scene, const AST_ModelMaterial *source)
+R_SceneMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source)
 {
 	R_Material material = R_MaterialFromAsset(source, scene->assets);
 	return R_SceneMaterialCreate(scene, &material);
@@ -606,7 +606,7 @@ R_SceneMaterialGetSource(const R_Scene *scene, R_SceneHandle handle)
 internal u64
 R_SceneMaterialBufferAddr(const R_Scene *scene)
 {
-	return GFX_DeviceBufferAddress(scene->device, scene->material_buffer);
+	return G_DeviceBufferAddress(scene->device, scene->material_buffer);
 }
 
 internal void
@@ -680,7 +680,7 @@ R_SceneMaterialHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 }
 
 internal R_SceneHandle
-R_SceneMeshCreate(R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc)
+R_SceneMeshCreate(R_Scene *scene, G_CmdBuffer *cmd, const R_MeshDesc *desc)
 {
 	DebugLogAssert(scene->log_channel,
 				   scene->mesh_free_count > 0,
@@ -703,28 +703,28 @@ R_SceneMeshCreate(R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc)
 	DebugLogAssert(scene->log_channel, iok, "Index region allocation failed after R_GeometryFreeListAvailable returned true.");
 	
 	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
-	const u64 index_stride  = sizeof(AST_ModelIndex);
+	const u64 index_stride  = sizeof(A_ModelIndex);
 
-	GFX_BufferCopy vc = {0};
+	G_BufferCopy vc = {0};
 	vc.src_offset = 0;
 	vc.dst_offset = vertex_offset * vertex_stride;
 	vc.size = desc->vertex_count * vertex_stride;
 
-	GFX_BufferCopy ic = {0};
+	G_BufferCopy ic = {0};
 	ic.src_offset = 0;
 	ic.dst_offset = index_offset * index_stride;
 	ic.size = desc->index_count * index_stride;
 	
-	GFX_CmdCopyBufferToBuffer(cmd, desc->vertex_buffer, page->vertex_buffer, 1, &vc);
-	GFX_CmdCopyBufferToBuffer(cmd, desc->index_buffer,  page->index_buffer,  1, &ic);
+	G_CmdCopyBufferToBuffer(cmd, desc->vertex_buffer, page->vertex_buffer, 1, &vc);
+	G_CmdCopyBufferToBuffer(cmd, desc->index_buffer,  page->index_buffer,  1, &ic);
 
 	R_GPU_RenderMesh *gpu_mesh = &scene->mesh_gpus[slot_index];
 	gpu_mesh->index_count = desc->index_count;
 	gpu_mesh->first_index = index_offset;
-	gpu_mesh->vertex_buffer = GFX_DeviceBufferAddress(scene->device, page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
+	gpu_mesh->vertex_buffer = G_DeviceBufferAddress(scene->device, page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
 
-	if (!GFX_BufferKeyIsNull(desc->skin_buffer))
-		gpu_mesh->skin_buffer = GFX_DeviceBufferAddress(scene->device, desc->skin_buffer);
+	if (!G_BufferKeyIsNull(desc->skin_buffer))
+		gpu_mesh->skin_buffer = G_DeviceBufferAddress(scene->device, desc->skin_buffer);
 	else
 		gpu_mesh->skin_buffer = 0;
 	
@@ -783,7 +783,7 @@ R_SceneMeshCount(const R_Scene *scene)
 internal u64
 R_SceneMeshBufferAddr(const R_Scene *scene)
 {
-	return GFX_DeviceBufferAddress(scene->device, scene->mesh_buffer);
+	return G_DeviceBufferAddress(scene->device, scene->mesh_buffer);
 }
 
 internal b32
@@ -799,7 +799,7 @@ R_SceneMeshHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 internal void
 R_SceneFlushMaterialBuffer(R_Scene *scene)
 {
-	GFX_DeviceBufferWrite(scene->device,
+	G_DeviceBufferWrite(scene->device,
 						  scene->material_buffer,
 						  scene->material_gpus,
 						  sizeof(scene->material_gpus), 0);
@@ -808,19 +808,19 @@ R_SceneFlushMaterialBuffer(R_Scene *scene)
 internal void
 R_SceneFlushMeshBuffer(R_Scene *scene)
 {
-	GFX_DeviceBufferWrite(scene->device,
+	G_DeviceBufferWrite(scene->device,
 						  scene->mesh_buffer,
 						  scene->mesh_gpus,
 						  sizeof(scene->mesh_gpus), 0);
 }
 
 internal R_ModelImportReceipt
-R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle handle, u32 max_count)
+R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count)
 {
-	AST_AssetModel *model_asset = &AST_GetNow(scene->assets, handle, AST_Type_Model)->model_data;
+	A_ModelData *model_asset = &A_GetNow(scene->assets, handle, A_Type_Model)->model;
 	
 	u32 sub_model_count = model_asset->sub_model_count;
-	const AST_SubModel *sub_models = model_asset->sub_models;
+	const A_SubModel *sub_models = model_asset->sub_models;
 	
 	u32 actual_count = sub_model_count;
 	
@@ -839,7 +839,7 @@ R_SceneImportModel(R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle 
 
 	for (u32 i = 0; i < actual_count; i++)
 	{
-		const AST_SubModel *sub = &sub_models[i];
+		const A_SubModel *sub = &sub_models[i];
 		R_ModelEntry *entry = &receipt.entries[i];
 
 		R_MeshDesc mesh_desc = {0};
@@ -898,7 +898,7 @@ R_SceneCreateNewPage(R_Scene *scene)
 	DebugLogD(scene->log_channel, "Creating new geometry page...");
 
 	// We use vertex pulling so don't need to use VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT.
-	GFX_BufferAllocInfo vb_info = {0};
+	G_BufferAllocInfo vb_info = {0};
 	vb_info.usage =
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
@@ -906,7 +906,7 @@ R_SceneCreateNewPage(R_Scene *scene)
 		vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	vb_info.size = R_GEOMETRY_PAGE_VERTEX_BUFFER_SIZE;
  
-	GFX_BufferAllocInfo ib_info = {0};
+	G_BufferAllocInfo ib_info = {0};
 	ib_info.usage =
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
@@ -916,11 +916,11 @@ R_SceneCreateNewPage(R_Scene *scene)
 	ib_info.size = R_GEOMETRY_PAGE_INDEX_BUFFER_SIZE;
 
 	u32 max_vertices = vb_info.size / sizeof(R_GPU_ModelVertex);
-	u32 max_indices  = ib_info.size / sizeof(AST_ModelIndex);
+	u32 max_indices  = ib_info.size / sizeof(A_ModelIndex);
 	
 	R_GeometryPage page = {0};
-	page.vertex_buffer  = GFX_DeviceBufferAlloc(scene->device, &vb_info);
-	page.index_buffer   = GFX_DeviceBufferAlloc(scene->device, &ib_info);
+	page.vertex_buffer  = G_DeviceBufferAlloc(scene->device, &vb_info);
+	page.index_buffer   = G_DeviceBufferAlloc(scene->device, &ib_info);
 	page.vertex_count   = 0;
 	page.index_count    = 0;
 	page.max_vertices   = max_vertices;
@@ -938,12 +938,12 @@ R_ScenePageCount(const R_Scene *scene)
 	return scene->geometry_page_count;
 }
 
-internal GFX_BindlessIndex
-R_SceneResolveTextureKey(const R_Scene *scene, GFX_TextureKey key)
+internal G_BindlessIndex
+R_SceneResolveTextureKey(const R_Scene *scene, G_TextureKey key)
 {
-	if (GFX_TextureKeyIsNull(key))
-		return GFX_BINDLESS_INDEX_INVALID;
+	if (G_TextureKeyIsNull(key))
+		return G_BINDLESS_INDEX_INVALID;
 
-	GFX_TextureViewKey view_key = GFX_DeviceTextureViewAuto(scene->device, key);
-	return GFX_DeviceTextureViewBindless(scene->device, view_key);
+	G_TextureViewKey view_key = G_DeviceTextureViewAuto(scene->device, key);
+	return G_DeviceTextureViewBindless(scene->device, view_key);
 }

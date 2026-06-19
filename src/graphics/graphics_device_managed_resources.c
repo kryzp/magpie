@@ -1,22 +1,22 @@
 
-#define GFX_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
-	internal GFX_##mgp_name##Key										\
-	GFX_##mgp_name##KeyNull(void)										\
+#define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
+	internal G_##mgp_name##Key										\
+	G_##mgp_name##KeyNull(void)										\
 	{																	\
-		GFX_##mgp_name##Key null_key = {0};								\
+		G_##mgp_name##Key null_key = {0};								\
 		return null_key;												\
 	}																	\
 	internal b32														\
-	GFX_##mgp_name##KeyIsNull(GFX_##mgp_name##Key key)					\
+	G_##mgp_name##KeyIsNull(G_##mgp_name##Key key)					\
 	{																	\
 		return key.value == 0;											\
 	}																	\
 	internal b32														\
-	GFX_##mgp_name##KeyMatch(GFX_##mgp_name##Key a, GFX_##mgp_name##Key b) \
+	G_##mgp_name##KeyMatch(G_##mgp_name##Key a, G_##mgp_name##Key b) \
 	{																	\
 		return a.value == b.value;										\
 	}
 
 #include "graphics_device_managed_resources.inc"
 
-#undef GFX_DEVICE_MANAGED_RESOURCE
+#undef G_DEVICE_MANAGED_RESOURCE

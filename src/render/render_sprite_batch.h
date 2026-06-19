@@ -35,8 +35,8 @@ R_SpriteSort;
 typedef struct R_SpriteBatchTask R_SpriteBatchTask;
 struct R_SpriteBatchTask
 {
-	GFX_TextureKey texture_key;
-	GFX_SamplerKey sampler_key;
+	G_TextureKey texture_key;
+	G_SamplerKey sampler_key;
 
 	f32 layer;
 
@@ -70,11 +70,13 @@ struct R_SpriteBatch
 internal void R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel);
 
 internal void R_SpriteBatchBegin(R_SpriteBatch *b);
-internal void R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *graph);
+internal void R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *g);
 
 internal void R_SpriteBatchClear(R_SpriteBatch *b);
 
-internal void R_SpriteBatchSetPixelSnap(R_SpriteBatch *b, b32 b);
+internal void R_SpriteBatchSetPixelSnap(R_SpriteBatch *b, b32 v);
+
+internal void R_SpriteBatchRect(R_SpriteBatch *b, v2 pos, v2 size);
 
 #define SbParam(type, lower, upper)										\
 	internal void R_SpriteBatchPush##upper(R_SpriteBatch *b, type v);	\

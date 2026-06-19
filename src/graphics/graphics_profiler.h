@@ -1,55 +1,55 @@
 #ifndef GRAPHICS_PROFILER_H
 #define GRAPHICS_PROFILER_H
 
-typedef enum GFX_ProfileType
+typedef enum G_ProfileType
 {
-	GFX_ProfileType_Timestamp,
-	GFX_ProfileType_PipelineStatistics,
-	GFX_ProfileType_COUNT
+	G_ProfileType_Timestamp,
+	G_ProfileType_PipelineStatistics,
+	G_ProfileType_COUNT
 }
-GFX_ProfileType;
+G_ProfileType;
 
-typedef struct GFX_ProfileEvent GFX_ProfileEvent;
-struct GFX_ProfileEvent
+typedef struct G_ProfileEvent G_ProfileEvent;
+struct G_ProfileEvent
 {
-	GFX_ProfileEvent *next;
+	G_ProfileEvent *next;
 	
 	String8 name;
-	GFX_ProfileType type;
+	G_ProfileType type;
 	u64 start;
 	u64 end;
 	u64 query;
 };
 
-typedef struct GFX_ProfilePool GFX_ProfilePool;
-struct GFX_ProfilePool
+typedef struct G_ProfilePool G_ProfilePool;
+struct G_ProfilePool
 {
-	GFX_ProfileEvent *event_head;
+	G_ProfileEvent *event_head;
 	VkQueryPool vk_pool;
 	u64 count;
 };
 
-typedef struct GFX_ProfilerFrame GFX_ProfilerFrame;
-struct GFX_ProfilerFrame
+typedef struct G_ProfilerFrame G_ProfilerFrame;
+struct G_ProfilerFrame
 {
-	GFX_ProfilePool pools[GFX_ProfileType_COUNT];
+	G_ProfilePool pools[G_ProfileType_COUNT];
 };
 
-typedef struct GFX_ProfileQueryNode GFX_ProfileQueryNode;
-struct GFX_ProfileQueryNode
+typedef struct G_ProfileQueryNode G_ProfileQueryNode;
+struct G_ProfileQueryNode
 {
-	GFX_ProfileQueryNode *next;
+	G_ProfileQueryNode *next;
 	u64 key;
 	u64 query;
 };
 
-typedef struct GFX_Profiler GFX_Profiler;
-struct GFX_Profiler
+typedef struct G_Profiler G_Profiler;
+struct G_Profiler
 {
 	Arena *arena;
 	f32 period;
-	GFX_ProfileQueryNode *query_head;
-	GFX_ProfilerFrame frames[GFX_FRAMES_IN_FLIGHT];
+	G_ProfileQueryNode *query_head;
+	G_ProfilerFrame frames[G_FRAMES_IN_FLIGHT];
 };
 
 #endif // GRAPHICS_PROFILER_H

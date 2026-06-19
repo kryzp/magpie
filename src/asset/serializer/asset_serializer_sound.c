@@ -1,6 +1,6 @@
 
-typedef struct AST_SoundLoadData AST_SoundLoadData;
-struct AST_SoundLoadData
+typedef struct A_SoundLoadData A_SoundLoadData;
+struct A_SoundLoadData
 {
 	void *pcm_data;
 	u32 channels;
@@ -8,17 +8,17 @@ struct AST_SoundLoadData
 	u64 size_in_bytes;
 };
 
-internal AST_SerializerPipelineData
-AST_SoundSerializerCpu(const AST_Context *ctx, Arena *load_scope)
+internal A_SerializerPipelineData
+A_SoundSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
-	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
+	String8 file_path = A_ContextSystemFilePath(ctx, scratch.arena);
 
 	ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
 	ma_decoder decoder = {0};
 	
-	AST_SerializerPipelineData result = {0};
+	A_SerializerPipelineData result = {0};
 	result.stage_size = 0;
 
 	if (ma_decoder_init_file((const char *)file_path.str, &config, &decoder) != MA_SUCCESS)
@@ -30,16 +30,16 @@ AST_SoundSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 	u64 frame_count = 0;
 	ma_decoder_get_length_in_pcm_frames(&decoder, &frame_count);
 	
-	AST_SoundLoadData *sound_data = ArenaPushArray(load_scope, AST_SoundLoadData, 1);
-	sound_data->channels = decoder.outputChannels;
-	sound_data->sample_rate = decoder.outputSampleRate;
-	sound_data->size_in_bytes = frame_count * sound_data->channels * sizeof(f32);
-	sound_data->pcm_data = ArenaPushArray(load_scope, u8, sound_data->size_in_bytes);
+	A_SoundLoadData *sound = ArenaPushArray(load_scope, A_SoundLoadData, 1);
+	sound->channels = decoder.outputChannels;
+	sound->sample_rate = decoder.outputSampleRate;
+	sound->size_in_bytes = frame_count * sound->channels * sizeof(f32);
+	sound->pcm_data = ArenaPushArray(load_scope, u8, sound->size_in_bytes);
 
-	ma_decoder_read_pcm_frames(&decoder, sound_data->pcm_data, frame_count, NULL);
+	ma_decoder_read_pcm_frames(&decoder, sound->pcm_data, frame_count, NULL);
 	ma_decoder_uninit(&decoder);
 
-	result.data = sound_data;
+	result.data = sound;
 	result.failed = false;
 	
 end:	
@@ -49,49 +49,50 @@ end:
 }
 
 internal void
-AST_SoundSerializerAlloc(const AST_Context *ctx,
-						 AST_SerializerPipelineData *data,
-						 AST_Asset *out,
+A_SoundSerializerAlloc(const A_Context *ctx,
+						 A_SerializerPipelineData *data,
+						 A_Asset *out,
 						 Arena *arena)
 {
-	const AUD_BackendAPI *backend = ctx->assets->audio_backend;
+	AU_Backend *backend = ctx->assets->audio_backend;
 	
-	AST_SoundLoadData *sound_data = data->data;
+	A_SoundLoadData *sound = data->data;
 	
-	void *permanent_pcm = ArenaPushArray(arena, u8, sound_data->size_in_bytes);
-	MemCopy(permanent_pcm, sound_data->pcm_data, sound_data->size_in_bytes);
+	void *permanent_pcm = ArenaPushArray(arena, u8, sound->size_in_bytes);
+	MemCopy(permanent_pcm, sound->pcm_data, sound->size_in_bytes);
 
-	out->sound_data.buffer = backend->CreateBuffer(permanent_pcm,
-												   sound_data->size_in_bytes,
-												   sound_data->channels,
-												   sound_data->sample_rate,
-												   AUD_Format_F32);
+	out->sound.buffer = AU_BackendCreateBuffer(backend,
+													 permanent_pcm,
+													 sound->size_in_bytes,
+													 sound->channels,
+													 sound->sample_rate,
+													 AU_Format_F32);
 }
 
 internal void
-AST_SoundSerializerReload(const AST_Context *ctx,
-						  AST_SerializerPipelineData *data,
-						  AST_Asset *existing)
+A_SoundSerializerReload(const A_Context *ctx,
+						  A_SerializerPipelineData *data,
+						  A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
 internal void
-AST_SoundSerializerDispose(AST_Asset *asset, AST_Assets *assets)
+A_SoundSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
-	assets->audio_backend->DestroyBuffer(asset->sound_data.buffer);
+	AU_BackendDestroyBuffer(assets->audio_backend, asset->sound.buffer);
 }
 
-internal AST_Serializer
-AST_GetSoundSerializer(void)
+internal A_Serializer
+A_GetSoundSerializer(void)
 {
-	static AST_Serializer sound_serializer = {
-		.Cpu     = AST_SoundSerializerCpu,
-		.Alloc   = AST_SoundSerializerAlloc,
-		.Reload  = AST_SoundSerializerReload,
+	static A_Serializer sound_serializer = {
+		.Cpu     = A_SoundSerializerCpu,
+		.Alloc   = A_SoundSerializerAlloc,
+		.Reload  = A_SoundSerializerReload,
 		.Gpu     = NULL,
 		.End     = NULL,
-		.Dispose = AST_SoundSerializerDispose,
+		.Dispose = A_SoundSerializerDispose,
 	};
 
 	return sound_serializer;

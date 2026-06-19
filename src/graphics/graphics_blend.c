@@ -1,8 +1,8 @@
 
-internal GFX_BlendSt
-GFX_BlendStInit(void)
+internal G_BlendSt
+G_BlendStInit(void)
 {
-	GFX_BlendSt st = {0};
+	G_BlendSt st = {0};
 	
 	st.enabled = true;
 	
@@ -30,10 +30,10 @@ GFX_BlendStInit(void)
 	return st;
 }
 
-internal GFX_DepthStencilSt
-GFX_DepthStencilStInit(void)
+internal G_DepthStencilSt
+G_DepthStencilStInit(void)
 {
-	GFX_DepthStencilSt st = {0};
+	G_DepthStencilSt st = {0};
 
 	st.depth_test_enabled = false;
 	st.depth_write_enabled = false;

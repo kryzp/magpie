@@ -1,21 +1,21 @@
 #ifndef ENTITY_EVENT_H
 #define ENTITY_EVENT_H
 
-typedef enum ENT_EventType
+typedef enum E_EventType
 {
-	ENT_EventType_None = 0,
-	ENT_EventType_SomeRandomThing,
-	ENT_EventType_COUNT
+	E_EventType_None = 0,
+	E_EventType_SomeRandomThing,
+	E_EventType_COUNT
 }
-ENT_EventType;
+E_EventType;
 
-typedef struct ENT_Event ENT_Event;
-struct ENT_Event
+typedef struct E_Event E_Event;
+struct E_Event
 {
-	ENT_EventType type;
+	E_EventType type;
 	
-	ENT_UID source;
-	ENT_UID target; // null = broadcast
+	E_UID source;
+	E_UID target; // null = broadcast
 
 	f32 timestamp;
 

@@ -1,6 +1,6 @@
 
 internal u32
-ENT_PoolAllocSlot(ENT_TypePool *pool)
+E_PoolAllocSlot(E_TypePool *pool)
 {
 	if (pool->free_index_count > 0)
 		return pool->free_indices[--pool->free_index_count];
@@ -10,7 +10,7 @@ ENT_PoolAllocSlot(ENT_TypePool *pool)
 }
 
 internal void
-ENT_PoolFreeSlot(ENT_TypePool *pool, u32 index)
+E_PoolFreeSlot(E_TypePool *pool, u32 index)
 {
 	AssertTrue(pool->free_index_count < pool->capacity);
 
@@ -19,7 +19,7 @@ ENT_PoolFreeSlot(ENT_TypePool *pool, u32 index)
 }
 
 internal void
-ENT_WorldInit(ENT_World *world, Arena *arena, LOG_Channel log_channel)
+E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 {
 	MemZeroStruct(world);
 
@@ -37,16 +37,16 @@ ENT_WorldInit(ENT_World *world, Arena *arena, LOG_Channel log_channel)
 }
 
 internal void
-ENT_WorldDestroy(ENT_World *world)
+E_WorldDestroy(E_World *world)
 {
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnDestroy)
 			continue;
 		
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -65,16 +65,16 @@ ENT_WorldDestroy(ENT_World *world)
 }
 
 internal void
-ENT_WorldToggleLayer(ENT_World *world, u16 layer_id, b32 active)
+E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
 {
 	AssertTrue(layer_id < world->layer_count);
 	world->layers[layer_id].active = active;
 }
 
 internal void
-ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc)
+E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 {
-	ENT_TypePool *pool = &world->type_pools[desc->type];
+	E_TypePool *pool = &world->type_pools[desc->type];
 
 	pool->capacity = desc->max_instances;
 	pool->count = 0;
@@ -88,22 +88,22 @@ ENT_WorldRegisterType(ENT_World *world, const ENT_TypeDesc *desc)
 }
 
 internal void
-ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
+E_WorldTickPreAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
-	ENT_TickContext ctx = {0};
+	E_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
 	ctx.input = input;
 	ctx.dt = dt;
 	
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPreAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -114,10 +114,10 @@ ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			ENT_Flags flags = ENT_FlagsOf(entity);
-			u16 layer_id = ENT_LayerIDOf(entity);
+			E_Flags flags = E_FlagsOf(entity);
+			u16 layer_id = E_LayerIDOf(entity);
 			
-			if (!(flags & ENT_Flag_Active))
+			if (!(flags & E_Flag_Active))
 				continue;
 
 			if (!world->layers[layer_id].active)
@@ -129,22 +129,22 @@ ENT_WorldTickPreAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_
 }
 
 internal void
-ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
+E_WorldTickPostAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
-	ENT_TickContext ctx = {0};
+	E_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
 	ctx.input = input;
 	ctx.dt = dt;
 	
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -155,10 +155,10 @@ ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			ENT_Flags flags = ENT_FlagsOf(entity);
-			u16 layer_id = ENT_LayerIDOf(entity);
+			E_Flags flags = E_FlagsOf(entity);
+			u16 layer_id = E_LayerIDOf(entity);
 			
-			if (!(flags & ENT_Flag_Active))
+			if (!(flags & E_Flag_Active))
 				continue;
 
 			if (!world->layers[layer_id].active)
@@ -170,22 +170,22 @@ ENT_WorldTickPostAnim(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS
 }
 
 internal void
-ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const OS_InputState *input)
+E_WorldTickPostPhysics(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
-	ENT_TickContext ctx = {0};
+	E_TickContext ctx = {0};
 	ctx.world = world;
 	ctx.events = events;
 	ctx.input = input;
 	ctx.dt = dt;
 	
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostPhysicsTick)
 			continue;
 
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -196,10 +196,10 @@ ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			ENT_Flags flags = ENT_FlagsOf(entity);
-			u16 layer_id = ENT_LayerIDOf(entity);
+			E_Flags flags = E_FlagsOf(entity);
+			u16 layer_id = E_LayerIDOf(entity);
 			
-			if (!(flags & ENT_Flag_Active))
+			if (!(flags & E_Flag_Active))
 				continue;
 
 			if (!world->layers[layer_id].active)
@@ -211,16 +211,16 @@ ENT_WorldTickPostPhysics(ENT_World *world, ENT_EventQueue *events, f32 dt, const
 }
 
 internal void
-ENT_WorldFlush(ENT_World *world)
+E_WorldFlush(E_World *world)
 {
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
 		if (!desc->OnPostAnimTick)
 			continue;
 
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 		
 		u8 *base = pool->data;
 
@@ -231,9 +231,9 @@ ENT_WorldFlush(ENT_World *world)
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			ENT_Flags flags = ENT_FlagsOf(entity);
+			E_Flags flags = E_FlagsOf(entity);
 
-			if (!(flags & ENT_Flag_PendingKill))
+			if (!(flags & E_Flag_PendingKill))
 				continue;
 
 			if (desc->OnDestroy)
@@ -243,18 +243,18 @@ ENT_WorldFlush(ENT_World *world)
 
 			pool->alive[j] = false;
 
-			ENT_PoolFreeSlot(pool, j);
+			E_PoolFreeSlot(pool, j);
 		}
 	}
 }
 
 internal void *
-ENT_WorldSpawn(ENT_World *world, ENT_Type type)
+E_WorldSpawn(E_World *world, E_Type type)
 {
-	const ENT_TypeDesc *desc = &world->type_registry[type];
-	ENT_TypePool *pool = &world->type_pools[type];
+	const E_TypeDesc *desc = &world->type_registry[type];
+	E_TypePool *pool = &world->type_pools[type];
 
-	u32 slot = ENT_PoolAllocSlot(pool);
+	u32 slot = E_PoolAllocSlot(pool);
 
 	void *entity = (void *)(pool->data + (slot * desc->stride));
 
@@ -262,18 +262,18 @@ ENT_WorldSpawn(ENT_World *world, ENT_Type type)
 
 	pool->alive[slot] = true;
 
-	ENT_Header *header = ENT_HeaderOf(entity);
+	E_Header *header = E_HeaderOf(entity);
 	header->uid.value = world->next_uid;
 	header->type = type;
-	header->flags = ENT_Flag_Active | ENT_Flag_Visible;
+	header->flags = E_Flag_Active | E_Flag_Visible;
 	header->layer_id = 0;
 
-	ENT_TransformSetPosition (&header->transform, v3x(0.f));
-	ENT_TransformSetRotation (&header->transform, V4QuatIdentity());
-	ENT_TransformSetScale    (&header->transform, v3x(1.f));
-	ENT_TransformSetOrigin   (&header->transform, v3x(0.f));
+	E_TransformSetPosition (&header->transform, v3x(0.f));
+	E_TransformSetRotation (&header->transform, V4QuatIdentity());
+	E_TransformSetScale    (&header->transform, v3x(1.f));
+	E_TransformSetOrigin   (&header->transform, v3x(0.f));
 	
-	ENT_TransformRecompute(&header->transform);
+	E_TransformRecompute(&header->transform);
 	
 	world->next_uid++;
 
@@ -281,25 +281,25 @@ ENT_WorldSpawn(ENT_World *world, ENT_Type type)
 }
 
 internal void
-ENT_WorldKill(ENT_World *world, ENT_UID uid)
+E_WorldKill(E_World *world, E_UID uid)
 {
-	void *entity = ENT_WorldGet(world, uid);
+	void *entity = E_WorldGet(world, uid);
 
 	if (entity)
 	{
-		ENT_Header *header = ENT_HeaderOf(entity);
-		header->flags |= ENT_Flag_PendingKill;
+		E_Header *header = E_HeaderOf(entity);
+		header->flags |= E_Flag_PendingKill;
 	}
 }
 
 internal void *
-ENT_WorldGet(ENT_World *world, ENT_UID uid)
+E_WorldGet(E_World *world, E_UID uid)
 {
-	for (u32 t = 0; t < ENT_Type_COUNT; t++)
+	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
-		const ENT_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_registry[t];
 
-		ENT_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_pools[t];
 
 		b8 *base = pool->data;
 
@@ -310,7 +310,7 @@ ENT_WorldGet(ENT_World *world, ENT_UID uid)
 
 			void *entity = (void *)(base + (j * desc->stride));
 
-			if (ENT_UIDMatch(ENT_UIDOf(entity), uid))
+			if (E_UIDMatch(E_UIDOf(entity), uid))
 				return entity;
 		}
 	}
@@ -320,12 +320,12 @@ ENT_WorldGet(ENT_World *world, ENT_UID uid)
 	return NULL;
 }
 
-internal ENT_GetAllReceipt
-ENT_WorldGetAll(ENT_World *world, ENT_Type type)
+internal E_GetAllReceipt
+E_WorldGetAll(E_World *world, E_Type type)
 {
-	ENT_TypePool *pool = &world->type_pools[type];
+	E_TypePool *pool = &world->type_pools[type];
 
-	ENT_GetAllReceipt receipt = {0};
+	E_GetAllReceipt receipt = {0};
 	receipt.data = pool->data;
 	receipt.count = pool->count;
 	receipt.alive = pool->alive;
@@ -334,12 +334,12 @@ ENT_WorldGetAll(ENT_World *world, ENT_Type type)
 	return receipt;
 }
 
-internal ENT_Marker *
-ENT_WorldAddMarker(ENT_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
+internal E_Marker *
+E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
 {
 	AssertTrue(world->marker_count < ArraySize(world->markers));
 	
-	ENT_Marker *m = &world->markers[world->marker_count];
+	E_Marker *m = &world->markers[world->marker_count];
 	m->name = name;
 	m->name_hash = HashStr8(name);
 	m->position = position;
@@ -351,8 +351,8 @@ ENT_WorldAddMarker(ENT_World *world, String8 name, v3 position, v4 rotation, u16
 	return m;
 }
 
-internal ENT_Marker *
-ENT_WorldFindMarker(ENT_World *world, String8 name)
+internal E_Marker *
+E_WorldFindMarker(E_World *world, String8 name)
 {
 	u64 hash = HashStr8(name);
 	

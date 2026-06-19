@@ -1,22 +1,22 @@
 #ifndef SCRIPT_TYPE_H
 #define SCRIPT_TYPE_H
 
-typedef enum SCR_ArgType
+typedef enum S_ArgType
 {
-	SCR_ArgType_Nil = 0,
-	SCR_ArgType_F32,
-	SCR_ArgType_I32,
-	SCR_ArgType_B32,
-	SCR_ArgType_String8,
-	SCR_ArgType_TaggedU32,
-	SCR_ArgType_COUNT,
+	S_ArgType_Nil = 0,
+	S_ArgType_F32,
+	S_ArgType_I32,
+	S_ArgType_B32,
+	S_ArgType_String8,
+	S_ArgType_TaggedU32,
+	S_ArgType_COUNT,
 }
-SCR_ArgType;
+S_ArgType;
 
-typedef struct SCR_Argument SCR_Argument;
-struct SCR_Argument
+typedef struct S_Argument S_Argument;
+struct S_Argument
 {
-	SCR_ArgType type;
+	S_ArgType type;
 
 	union
 	{
@@ -41,10 +41,13 @@ struct SCR_Argument
 	};
 };
 
-internal SCR_Argument SCR_ArgumentF32(f32 v);
-internal SCR_Argument SCR_ArgumentI32(i32 v);
-internal SCR_Argument SCR_ArgumentB32(b32 v);
-internal SCR_Argument SCR_ArgumentStr(String8 v);
-internal SCR_Argument SCR_ArgumentTaggedU32(u32 v, u32 tag);
+internal S_Argument S_ArgF32(f32 v);
+internal S_Argument S_ArgI32(i32 v);
+internal S_Argument S_ArgB32(b32 v);
+internal S_Argument S_ArgStr(String8 v);
+internal S_Argument S_ArgTaggedU32(u32 v, u32 tag);
+
+internal inline u64 S_PackTaggedU32(u32 value, u32 tag);
+internal inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag);
 
 #endif // SCRIPT_TYPE_H

@@ -42,7 +42,7 @@ R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 }
 
 internal void
-R_GraphInit(R_Graph *graph, Arena *arena, GFX_Device *device, LOG_Channel log_channel)
+R_GraphInit(R_Graph *graph, Arena *arena, G_Device *device, LOG_Channel log_channel)
 {
 	MemZeroStruct(graph);
 	
@@ -74,7 +74,7 @@ R_GraphReset(R_Graph *graph)
 
 		if (t->is_imported)
 			R_ResourceTrackerSetTexture(&graph->tracker, t->imported_key, t->state);
-		else if (!GFX_TextureKeyIsNull(t->physical_key))
+		else if (!G_TextureKeyIsNull(t->physical_key))
 			R_ResourcePoolUpdateTexture(&graph->pool, t->physical_key, &t->state);
 	}
 	
@@ -84,7 +84,7 @@ R_GraphReset(R_Graph *graph)
 
 		if (b->is_imported)
 			R_ResourceTrackerSetBuffer(&graph->tracker, b->imported_key, b->state);
-		else if (!GFX_BufferKeyIsNull(b->physical_key))
+		else if (!G_BufferKeyIsNull(b->physical_key))
 			R_ResourcePoolUpdateBuffer(&graph->pool, b->physical_key, &b->state);
 	}
 
@@ -189,15 +189,15 @@ R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
 }
 
 internal R_GraphTexHandle
-R_GraphImportTexture(R_Graph *graph, GFX_TextureKey external_key)
+R_GraphImportTexture(R_Graph *graph, G_TextureKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_texture_count; i++)
 	{
-		if (GFX_TextureKeyMatch(graph->imported_textures[i].external_key, external_key))
+		if (G_TextureKeyMatch(graph->imported_textures[i].external_key, external_key))
 			return graph->imported_textures[i].handle;
 	}
 
-	const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, external_key);
+	const G_Texture *physical = G_DeviceTextureFromKey(graph->device, external_key);
 
 	DebugLogAssert(graph->log_channel, physical, "Imported texture with key %llu is invalid.", external_key.value);
 
@@ -218,9 +218,9 @@ R_GraphImportTexture(R_Graph *graph, GFX_TextureKey external_key)
 	texture->texture_info.samples = physical->sample_count;
 
 	/*
-	  texture->texture_info.is_cubemap = (physical->flags & GFX_TextureFlag_Cubemap) != 0;
-	  texture->texture_info.is_transient = (physical->flags & GFX_TextureFlag_Transient) != 0;
-	  texture->texture_info.is_storage = (physical->flags & GFX_TextureFlag_Storage) != 0;
+	  texture->texture_info.is_cubemap = (physical->flags & G_TextureFlag_Cubemap) != 0;
+	  texture->texture_info.is_transient = (physical->flags & G_TextureFlag_Transient) != 0;
+	  texture->texture_info.is_storage = (physical->flags & G_TextureFlag_Storage) != 0;
 	*/
 	
 	texture->physical_key = external_key;
@@ -261,15 +261,15 @@ R_GraphImportTexture(R_Graph *graph, GFX_TextureKey external_key)
 }
 
 internal R_GraphBufHandle
-R_GraphImportBuffer(R_Graph *graph, GFX_BufferKey external_key)
+R_GraphImportBuffer(R_Graph *graph, G_BufferKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_buffer_count; i++)
 	{
-		if (GFX_BufferKeyMatch(graph->imported_buffers[i].external_key, external_key))
+		if (G_BufferKeyMatch(graph->imported_buffers[i].external_key, external_key))
 			return graph->imported_buffers[i].handle;
 	}
 
-	const GFX_Buffer *physical = GFX_DeviceBufferFromKey(graph->device, external_key);
+	const G_Buffer *physical = G_DeviceBufferFromKey(graph->device, external_key);
 
 	DebugLogAssert(graph->log_channel, physical, "Imported buffer with key %llu is invalid.", external_key.value);
 
@@ -363,7 +363,7 @@ R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_i
 }
 
 internal void
-R_GraphCompile(R_Graph *graph, const GFX_Swapchain *swapchain)
+R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->texture_res_count; i++)
 	{
@@ -551,7 +551,7 @@ R_GraphBackpropagateDependencies(R_Graph *graph)
 }
 
 internal void
-R_GraphAllocateResources(R_Graph *graph, const GFX_Swapchain *swapchain)
+R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -566,7 +566,7 @@ R_GraphAllocateResources(R_Graph *graph, const GFX_Swapchain *swapchain)
 
 			R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-			if (!t->is_imported && GFX_TextureKeyIsNull(t->physical_key))
+			if (!t->is_imported && G_TextureKeyIsNull(t->physical_key))
 			{
 				if (t->texture_info.size_class == R_SizeClass_SwapchainRelative)
 				{
@@ -605,7 +605,7 @@ R_GraphAllocateResources(R_Graph *graph, const GFX_Swapchain *swapchain)
 			{
 				R_GraphTexture *rt = R_GraphTextureFromHandle(graph, edge->resolve_handle);
 
-				if (!rt->is_imported && GFX_TextureKeyIsNull(rt->physical_key))
+				if (!rt->is_imported && G_TextureKeyIsNull(rt->physical_key))
 				{
 					if (rt->texture_info.size_class == R_SizeClass_SwapchainRelative)
 					{
@@ -629,7 +629,7 @@ R_GraphAllocateResources(R_Graph *graph, const GFX_Swapchain *swapchain)
 			if (b->is_imported)
 				continue;
 
-			if (!GFX_BufferKeyIsNull(b->physical_key))
+			if (!G_BufferKeyIsNull(b->physical_key))
 				continue;
 
 			b->physical_key = R_ResourcePoolAcquireBuffer(&graph->pool, graph->device,
@@ -668,7 +668,7 @@ R_GraphGenerateBarriers(R_Graph *graph)
 			R_GraphSyncTextureWrite(graph, pass, edge);
 
 			/*
-			 * GFX_CmdEndRendering causes an implicit write to the resolution
+			 * G_CmdEndRendering causes an implicit write to the resolution
 			 * texture as well so we need to give it a barrier also.
 			 *
 			 * Not really a fan of how messy this is, making an edge from an
@@ -704,7 +704,7 @@ R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *ed
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-	if (GFX_TextureKeyIsNull(t->physical_key))
+	if (G_TextureKeyIsNull(t->physical_key))
 		return;
 
 	R_ResourceState *st = &t->state;
@@ -720,14 +720,14 @@ R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *ed
 					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
 					   "Ran out of room for texture barriers.");
 
-		GFX_AccessSt src = {0};
+		G_AccessSt src = {0};
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src.access = st->write_access;
 
-		const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, t->physical_key);
+		const G_Texture *physical = G_DeviceTextureFromKey(graph->device, t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
-			GFX_SyncTextureBarrier(physical,
+			G_SyncTextureBarrier(physical,
 								   &src, &edge->state,
 								   st->layout, target_layout,
 								   0, VK_REMAINING_MIP_LEVELS,
@@ -748,7 +748,7 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-	if (GFX_TextureKeyIsNull(t->physical_key))
+	if (G_TextureKeyIsNull(t->physical_key))
 		return;
 
 	R_ResourceState *st = &t->state;
@@ -764,14 +764,14 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
 					   "Ran out of room for texture barriers.");
 
-		GFX_AccessSt src = {0};
+		G_AccessSt src = {0};
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src.access = st->write_access;
 
-		const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, t->physical_key);
+		const G_Texture *physical = G_DeviceTextureFromKey(graph->device, t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
-			GFX_SyncTextureBarrier(physical,
+			G_SyncTextureBarrier(physical,
 								   &src, &edge->state,
 								   st->layout, target_layout,
 								   0, VK_REMAINING_MIP_LEVELS,
@@ -787,18 +787,18 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 					   pass->texture_barrier_count < ArraySize(pass->texture_barriers),
 					   "Ran out of room for texture barriers.");
 
-		GFX_AccessSt src_access = {0};
+		G_AccessSt src_access = {0};
 		src_access.stage  = st->read_stages ? st->read_stages : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src_access.access = VK_ACCESS_2_NONE;
 
-		GFX_AccessSt dst_access = {0};
+		G_AccessSt dst_access = {0};
 		dst_access.stage  = edge->state.stage;
 		dst_access.access = layout_change ? edge->state.access : VK_ACCESS_2_NONE;
 
-		const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, t->physical_key);
+		const G_Texture *physical = G_DeviceTextureFromKey(graph->device, t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
-			GFX_SyncTextureBarrier(physical,
+			G_SyncTextureBarrier(physical,
 								   &src_access,
 								   &dst_access,
 								   st->layout, target_layout,
@@ -809,7 +809,7 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 	}
 
 	st->write_stage  = edge->state.stage;
-	st->write_access = edge->state.access & GFX_SYNC_WRITE_ACCESS_MASK;
+	st->write_access = edge->state.access & G_SYNC_WRITE_ACCESS_MASK;
 	st->read_stages  = 0;
 }
 
@@ -818,7 +818,7 @@ R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
-	if (GFX_BufferKeyIsNull(b->physical_key))
+	if (G_BufferKeyIsNull(b->physical_key))
 		return;
 
 	R_ResourceState *st = &b->state;
@@ -831,14 +831,14 @@ R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge
 					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
 					   "Ran out of room for buffer barriers.");
 
-		GFX_AccessSt src_access = {0};
+		G_AccessSt src_access = {0};
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src_access.access = st->write_access;
 
-		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(graph->device, b->physical_key);
+		const G_Buffer *physical = G_DeviceBufferFromKey(graph->device, b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
-			GFX_SyncBufferBarrier(physical,
+			G_SyncBufferBarrier(physical,
 								  &src_access, &edge->state,
 								  edge->offset,
 								  edge->size ? edge->size : physical->size);
@@ -857,7 +857,7 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
-	if (GFX_BufferKeyIsNull(b->physical_key))
+	if (G_BufferKeyIsNull(b->physical_key))
 		return;
 
 	R_ResourceState *st = &b->state;
@@ -870,14 +870,14 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
 					   "Ran out of room for buffer barriers.");
 
-		GFX_AccessSt src_access = {0};
+		G_AccessSt src_access = {0};
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src_access.access = st->write_access;
 
-		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(graph->device, b->physical_key);
+		const G_Buffer *physical = G_DeviceBufferFromKey(graph->device, b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
-			GFX_SyncBufferBarrier(physical,
+			G_SyncBufferBarrier(physical,
 								  &src_access,
 								  &edge->state,
 								  edge->offset,
@@ -891,18 +891,18 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 					   pass->buffer_barrier_count < ArraySize(pass->buffer_barriers),
 					   "Ran out of room for buffer barriers.");
 		
-		GFX_AccessSt src_access = {0};
+		G_AccessSt src_access = {0};
 		src_access.stage  = st->read_stages;
 		src_access.access = VK_ACCESS_2_NONE;
 
-		GFX_AccessSt dst_access = {0};
+		G_AccessSt dst_access = {0};
 		dst_access.stage  = edge->state.stage;
 		dst_access.access = VK_ACCESS_2_NONE;
 
-		const GFX_Buffer *physical = GFX_DeviceBufferFromKey(graph->device, b->physical_key);
+		const G_Buffer *physical = G_DeviceBufferFromKey(graph->device, b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
-			GFX_SyncBufferBarrier(physical,
+			G_SyncBufferBarrier(physical,
 								  &src_access,
 								  &dst_access,
 								  edge->offset,
@@ -910,14 +910,14 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 	}
 
 	st->write_stage  = edge->state.stage;
-	st->write_access = edge->state.access & GFX_SYNC_WRITE_ACCESS_MASK;
+	st->write_access = edge->state.access & G_SYNC_WRITE_ACCESS_MASK;
 	st->read_stages  = 0;
 }
 
 internal void
 R_GraphExecute(R_Graph *graph,
-			   const GFX_Swapchain *swapchain,
-			   GFX_CmdBuffer *cmd,
+			   const G_Swapchain *swapchain,
+			   G_CmdBuffer *cmd,
 			   const R_Scene *scene,
 			   const R_Camera *camera,
 			   f32 delta_time, f32 elapsed_time)
@@ -936,7 +936,7 @@ R_GraphExecute(R_Graph *graph,
 		if (pass->is_culled)
 			continue;
 
-		GFX_CmdPipelineBarrier(cmd, 0,
+		G_CmdPipelineBarrier(cmd, 0,
 							   pass->memory_barrier_count,  pass->memory_barriers,
 							   pass->buffer_barrier_count,  pass->buffer_barriers,
 							   pass->texture_barrier_count, pass->texture_barriers);
@@ -952,20 +952,20 @@ R_GraphExecute(R_Graph *graph,
 		ctx.render_info = NULL;
 		ctx.user_data = pass->user_data;
 
-		GFX_CmdBeginLabel(cmd, pass->name);
+		G_CmdBeginLabel(cmd, pass->name);
 		
 		if (pass->type == R_PassType_Graphics)
 		{
-			GFX_RenderInfo render_info = R_GraphBuildRenderingInfo(graph, pass);
+			G_RenderInfo render_info = R_GraphBuildRenderingInfo(graph, pass);
 
-			GFX_CmdBeginRendering(cmd, &render_info);
+			G_CmdBeginRendering(cmd, &render_info);
 
 			ctx.render_info = &render_info;
 
 			if (pass->record)
 				pass->record(&ctx);
 
-			GFX_CmdEndRendering(cmd);
+			G_CmdEndRendering(cmd);
 		}
 		else
 		{
@@ -973,38 +973,38 @@ R_GraphExecute(R_Graph *graph,
 				pass->record(&ctx);
 		}
 		
-		GFX_CmdEndLabel(cmd);
+		G_CmdEndLabel(cmd);
 	}
 }
 
 internal void
 R_GraphPresentToSwapchain(R_Graph *graph,
-						  const GFX_Swapchain *swapchain,
-						  GFX_CmdBuffer *cmd)
+						  const G_Swapchain *swapchain,
+						  G_CmdBuffer *cmd)
 {
 	if (R_GraphTexHandleIsNull(graph->backbuffer_handle))
 		return;
 
 	R_GraphTexture *backbuffer = R_GraphTextureFromHandle(graph, graph->backbuffer_handle);
 
-	GFX_TextureKey src_texture_key = backbuffer->physical_key;
-	GFX_TextureKey dst_texture_key = GFX_SwapchainCurrentTexture(swapchain);
+	G_TextureKey src_texture_key = backbuffer->physical_key;
+	G_TextureKey dst_texture_key = G_SwapchainCurrentTexture(swapchain);
 	
-	const GFX_Texture *src_texture = GFX_DeviceTextureFromKey(graph->device, src_texture_key);
-	const GFX_Texture *dst_texture = GFX_DeviceTextureFromKey(graph->device, dst_texture_key);
+	const G_Texture *src_texture = G_DeviceTextureFromKey(graph->device, src_texture_key);
+	const G_Texture *dst_texture = G_DeviceTextureFromKey(graph->device, dst_texture_key);
 
 	// Backbuffer = Transfer Source
 	// Swapchain  = Trandfer Destination
 	
-	GFX_AccessSt src_src = { backbuffer->state.write_stage, backbuffer->state.write_access };
-	GFX_AccessSt src_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT };
+	G_AccessSt src_src = { backbuffer->state.write_stage, backbuffer->state.write_access };
+	G_AccessSt src_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_READ_BIT };
 
-	GFX_AccessSt dst_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
-	GFX_AccessSt dst_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
+	G_AccessSt dst_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
+	G_AccessSt dst_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
 	
 	VkImageMemoryBarrier2 pre_blit_barriers[2] = {0};
 
-	pre_blit_barriers[0] = GFX_SyncTextureBarrier(src_texture,
+	pre_blit_barriers[0] = G_SyncTextureBarrier(src_texture,
 												  &src_src,
 												  &src_dst,
 												  backbuffer->state.layout,
@@ -1012,7 +1012,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 												  0, VK_REMAINING_MIP_LEVELS,
 												  0, VK_REMAINING_ARRAY_LAYERS);
 	
-	pre_blit_barriers[1] = GFX_SyncTextureBarrier(dst_texture,
+	pre_blit_barriers[1] = G_SyncTextureBarrier(dst_texture,
 												  &dst_src,
 												  &dst_dst,
 												  VK_IMAGE_LAYOUT_UNDEFINED,
@@ -1020,7 +1020,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 												  0, VK_REMAINING_MIP_LEVELS,
 												  0, VK_REMAINING_ARRAY_LAYERS);
 
-	GFX_CmdPipelineBarrier(cmd, 0,
+	G_CmdPipelineBarrier(cmd, 0,
 						   0, NULL,
 						   0, NULL,
 						   ArraySize(pre_blit_barriers), pre_blit_barriers);
@@ -1047,15 +1047,15 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	blit.dstSubresource.baseArrayLayer = 0;
 	blit.dstSubresource.layerCount = 1;
 
-	GFX_CmdBlit(cmd, src_texture_key, dst_texture_key, 1, &blit, graph->present_filter);
+	G_CmdBlit(cmd, src_texture_key, dst_texture_key, 1, &blit, graph->present_filter);
 
 	
 	// Transition swpachain to present.
 	
-	GFX_AccessSt present_src = { VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
-	GFX_AccessSt present_dst = { VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, VK_ACCESS_2_NONE };
+	G_AccessSt present_src = { VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
+	G_AccessSt present_dst = { VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, VK_ACCESS_2_NONE };
 	
-	VkImageMemoryBarrier2 present_barrier = GFX_SyncTextureBarrier(dst_texture,
+	VkImageMemoryBarrier2 present_barrier = G_SyncTextureBarrier(dst_texture,
 																   &present_src,
 																   &present_dst,
 																   VK_IMAGE_LAYOUT_GENERAL,
@@ -1063,7 +1063,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 																   0, 1,
 																   0, 1);
 
-	GFX_CmdPipelineBarrier(cmd, 0,
+	G_CmdPipelineBarrier(cmd, 0,
 						   0, NULL,
 						   0, NULL,
 						   1, &present_barrier);
@@ -1075,7 +1075,7 @@ R_GraphPresentToSwapchain(R_Graph *graph,
  * THE RESOURCE NEVER GETS MODIFIED AS FAR AS I CARE
  */
 
-internal GFX_TextureKey
+internal G_TextureKey
 R_GraphResolveTexture(const R_Graph *graph,
 					  R_GraphTexHandle handle)
 {
@@ -1083,24 +1083,24 @@ R_GraphResolveTexture(const R_Graph *graph,
 	return t->physical_key;
 }
 
-internal GFX_TextureViewKey
+internal G_TextureViewKey
 R_GraphResolveTextureView(const R_Graph *graph,
 						  R_GraphTexHandle handle,
-						  GFX_SubresourceRange range)
+						  G_SubresourceRange range)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 
-	const GFX_Texture *physical = GFX_DeviceTextureFromKey(graph->device, t->physical_key);
+	const G_Texture *physical = G_DeviceTextureFromKey(graph->device, t->physical_key);
 
-	GFX_TextureViewCreateInfo create_info = {0};
+	G_TextureViewCreateInfo create_info = {0};
 	create_info.texture = t->physical_key;
-	create_info.type = GFX_TextureDefaultViewType(physical);
+	create_info.type = G_TextureDefaultViewType(physical);
 	create_info.range = range;
 	
-	return GFX_DeviceTextureViewFetch(graph->device, &create_info);
+	return G_DeviceTextureViewFetch(graph->device, &create_info);
 }
 
-internal GFX_BufferKey
+internal G_BufferKey
 R_GraphResolveBuffer(const R_Graph *graph,
 					 R_GraphBufHandle handle)
 {
@@ -1122,10 +1122,10 @@ R_GraphResolveBufferRange(const R_Graph *graph,
 	return range;
 }
 
-internal GFX_RenderInfo
+internal G_RenderInfo
 R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 {
-	GFX_RenderInfo render_info = {0};
+	G_RenderInfo render_info = {0};
 	
 	render_info.view_mask = pass->multi_view_mask;
 	
@@ -1146,7 +1146,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 		render_info.width  = MaxValue(1u, (u32)info->size_x >> out->attachment_range.base_mip);
 		render_info.height = MaxValue(1u, (u32)info->size_y >> out->attachment_range.base_mip);
 
-		GFX_TextureViewKey view = R_GraphResolveTextureView(graph, out->handle, out->attachment_range);
+		G_TextureViewKey view = R_GraphResolveTextureView(graph, out->handle, out->attachment_range);
 
 		VkRenderingAttachmentInfo vk_info = {0};
 		vk_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -1154,14 +1154,14 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 		vk_info.loadOp = out->should_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_info.imageView = GFX_DeviceTextureViewFromKey(graph->device, view)->vk_handle;
+		vk_info.imageView = G_DeviceTextureViewFromKey(graph->device, view)->vk_handle;
 		vk_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		if (!R_GraphTexHandleIsNull(out->resolve_handle))
 		{
-			GFX_TextureViewKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
+			G_TextureViewKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
 
-			vk_info.resolveImageView = GFX_DeviceTextureViewFromKey(graph->device, resolve_view)->vk_handle;
+			vk_info.resolveImageView = G_DeviceTextureViewFromKey(graph->device, resolve_view)->vk_handle;
 			vk_info.resolveImageLayout = out->resolve_layout;
 			vk_info.resolveMode = out->resolve_mode;
 		}

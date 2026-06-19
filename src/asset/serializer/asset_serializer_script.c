@@ -1,31 +1,31 @@
 
-typedef struct AST_ScriptLoadData AST_ScriptLoadData;
-struct AST_ScriptLoadData
+typedef struct A_ScriptLoadData A_ScriptLoadData;
+struct A_ScriptLoadData
 {
-	SCR_ScriptRef ref;
+	S_Ref ref;
 };
 
-internal AST_SerializerPipelineData
-AST_ScriptSerializerCpu(const AST_Context *ctx, Arena *load_scope)
+internal A_SerializerPipelineData
+A_ScriptSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
-	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
+	String8 file_path = A_ContextSystemFilePath(ctx, scratch.arena);
 
-	AST_ScriptLoadData *script_data = ArenaPushArray(load_scope, AST_ScriptLoadData, 1);
-	script_data->ref = SCR_ScriptRefNull();
+	A_ScriptLoadData *script = ArenaPushArray(load_scope, A_ScriptLoadData, 1);
+	script->ref = S_RefNull();
 	
 	IO_ByteSpan source_bytes = IO_ReadEntireFile(scratch.arena, file_path);
-	SCR_ScriptRef chunk_ref = SCR_Compile(ctx->assets->scripting_system, source_bytes, file_path);
+	S_Ref chunk_ref = S_Compile(ctx->assets->scripting_system, source_bytes, file_path);
 
-	if (!SCR_ScriptRefIsNull(chunk_ref))
+	if (!S_RefIsNull(chunk_ref))
 	{
-		script_data->ref = SCR_ExecuteModule(ctx->assets->scripting_system, chunk_ref);
-		SCR_Release(ctx->assets->scripting_system, chunk_ref);
+		script->ref = S_ExecuteModule(ctx->assets->scripting_system, chunk_ref);
+		S_Release(ctx->assets->scripting_system, chunk_ref);
 	}
 	
-	AST_SerializerPipelineData result = {0};
-	result.data = script_data;
+	A_SerializerPipelineData result = {0};
+	result.data = script;
 	result.stage_size = 0;
 	result.failed = false;
 	result.dependency_count = 0;
@@ -36,31 +36,31 @@ AST_ScriptSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 }
 
 internal void
-AST_ScriptSerializerAlloc(const AST_Context *ctx,
-						 AST_SerializerPipelineData *data,
-						 AST_Asset *out,
+A_ScriptSerializerAlloc(const A_Context *ctx,
+						 A_SerializerPipelineData *data,
+						 A_Asset *out,
 						 Arena *arena)
 {
-	AST_ScriptLoadData *script_data = data->data;
+	A_ScriptLoadData *script = data->data;
 
-	out->script_data.ref = script_data->ref;
+	out->script.ref = script->ref;
 }
 
 internal void
-AST_ScriptSerializerReload(const AST_Context *ctx,
-						  AST_SerializerPipelineData *data,
-						  AST_Asset *existing)
+A_ScriptSerializerReload(const A_Context *ctx,
+						  A_SerializerPipelineData *data,
+						  A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-internal AST_Serializer
-AST_GetScriptSerializer(void)
+internal A_Serializer
+A_GetScriptSerializer(void)
 {
-	static AST_Serializer script_serializer = {
-		.Cpu     = AST_ScriptSerializerCpu,
-		.Alloc   = AST_ScriptSerializerAlloc,
-		.Reload  = AST_ScriptSerializerReload,
+	static A_Serializer script_serializer = {
+		.Cpu     = A_ScriptSerializerCpu,
+		.Alloc   = A_ScriptSerializerAlloc,
+		.Reload  = A_ScriptSerializerReload,
 		.Gpu     = NULL,
 		.End     = NULL,
 		.Dispose = NULL,

@@ -18,7 +18,7 @@ global const char *gfx_context_device_extensions[] = {
 };
 
 internal VkFormat
-GFX_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 									   VkImageTiling tiling,
 									   VkFormatFeatureFlags features,
 									   u32 candidate_count, const VkFormat *candidates)
@@ -40,21 +40,21 @@ GFX_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 }
 
 internal VkFormat
-GFX_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
+G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
 {
 	static const VkFormat candidates[] = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
 		VK_FORMAT_D24_UNORM_S8_UINT
 	};
 
-	return GFX_ContextFindGraphicsSupportedFormat(physical_device,
+	return G_ContextFindGraphicsSupportedFormat(physical_device,
 												  VK_IMAGE_TILING_OPTIMAL,
 												  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
 												  ArraySize(candidates), candidates);
 }
 
 internal VkSampleCountFlagBits
-GFX_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
+G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
 {
 	VkSampleCountFlags counts =
 		properties.properties.limits.framebufferColorSampleCounts &
@@ -74,7 +74,7 @@ GFX_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properti
 }
 
 internal const char * const *
-GFX_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
+G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
 {
 	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
 
@@ -107,7 +107,7 @@ GFX_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
 }
 
 internal b32
-GFX_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device)
+G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device)
 {
 	u32 extension_count = 0;
 	
@@ -151,7 +151,7 @@ exit:
 }
 
 internal b32
-GFX_ContextCheckForValidationLayerSupport(void)
+G_ContextCheckForValidationLayerSupport(void)
 {
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);
@@ -192,10 +192,10 @@ exit:
 	return result;
 }
 
-internal GFX_SwapchainSupportDetails
-GFX_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+internal G_SwapchainSupportDetails
+G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
-	GFX_SwapchainSupportDetails result = {0};
+	G_SwapchainSupportDetails result = {0};
 
 	u32 surface_format_count = 0;
 	u32 present_mode_count = 0;
@@ -230,7 +230,7 @@ GFX_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR 
 }
 
 internal u32
-GFX_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
+G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 												 VkPhysicalDevice physical_device,
 												 VkPhysicalDeviceProperties2 properties,
 												 VkPhysicalDeviceFeatures2 features,
@@ -239,7 +239,7 @@ GFX_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 	u32 usability = 0;
 
 	b32 adequate_swap_chain = false;
-	b32 has_required_extensions = GFX_ContextCheckGraphicsPhysicalDeviceExtensionSupport(physical_device);
+	b32 has_required_extensions = G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(physical_device);
 	b32 has_anisotropy = features.features.samplerAnisotropy;
 
 	// Prefer / give more weight to discrete gpus than integrated gpus.
@@ -255,7 +255,7 @@ GFX_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 	// It must have the required extensions.
 	if (has_required_extensions)
 	{
-		GFX_SwapchainSupportDetails details = GFX_ContextQuerySwapchainSupport(physical_device, surface);
+		G_SwapchainSupportDetails details = G_ContextQuerySwapchainSupport(physical_device, surface);
 
 		adequate_swap_chain =
 			(details.surface_format_count > 0) &&
@@ -277,7 +277,7 @@ GFX_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 }
 
 internal VkResult
-GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 											  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
 											  const VkAllocationCallbacks *allocator,
 											  VkDebugUtilsMessengerEXT *messenger)
@@ -290,10 +290,10 @@ GFX_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-internal GFX_Context
-GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
+internal G_Context
+G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
 {
-	GFX_Context context = {0};
+	G_Context context = {0};
 	
 	VkApplicationInfo core_info = {0};
 	
@@ -322,7 +322,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	instance_create_info.ppEnabledExtensionNames = GFX_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
+	instance_create_info.ppEnabledExtensionNames = G_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
 
 	static const VkValidationFeatureEnableEXT enabled_features[] = {
 		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
@@ -354,7 +354,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	debug_create_info.pfnUserCallback = vk_debug_callback;
 	debug_create_info.pUserData = vk_debug_callback_ctx;
 	
-	context.has_validation_layers = GFX_ContextCheckForValidationLayerSupport();
+	context.has_validation_layers = G_ContextCheckForValidationLayerSupport();
 
 	if (context.has_validation_layers)
 	{
@@ -377,14 +377,14 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	instance_create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-	GFX_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &context.instance),
+	G_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &context.instance),
 				 "Failed to create instance.");
 
 	volkLoadInstance(context.instance);
 
 	if (context.has_validation_layers)
 	{
-		GFX_VK_CHECK(GFX_ContextCreateDeviceDebugUtilsMessengerExt(context.instance,
+		G_VK_CHECK(G_ContextCreateDeviceDebugUtilsMessengerExt(context.instance,
 																   &debug_create_info, NULL,
 																   &context.debug_messenger),
 					 "Failed to create debug messenger.");
@@ -426,7 +426,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 			b32 has_essentials = false;
 
-			u32 current_usability = GFX_ContextAssignGraphicsPhysicalDeviceUsability(context.surface,
+			u32 current_usability = G_ContextAssignGraphicsPhysicalDeviceUsability(context.surface,
 																					 devices[i],
 																					 properties, features,
 																					 &has_essentials);
@@ -447,8 +447,8 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 		DebugLogD(log_channel, "Selected a suitable GPU: %d", selected_id);
 	}
 
-	context.max_msaa_samples = GFX_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties);
-	context.depth_format = GFX_ContextFindGraphicsDepthFormat(context.physical_device);
+	context.max_msaa_samples = G_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties);
+	context.depth_format = G_ContextFindGraphicsDepthFormat(context.physical_device);
 
 	u32 queue_family_count = 0;
 	
@@ -558,7 +558,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 		DebugLogD(log_channel, "Enabled validation layers.");
 	}
 
-	GFX_VK_CHECK(vkCreateDevice(context.physical_device,
+	G_VK_CHECK(vkCreateDevice(context.physical_device,
 								&device_create_info, NULL,
 								&context.device),
 				 "Failed to create logical device.");
@@ -617,13 +617,13 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 
 	allocator_create_info.pVulkanFunctions = &vulkan_functions;
 
-	GFX_VK_CHECK(vmaCreateAllocator(&allocator_create_info,
+	G_VK_CHECK(vmaCreateAllocator(&allocator_create_info,
 									&context.vma_allocator),
 				 "Failed to create Vulkan Memory Allocator.");
 	
 	DebugLogD(log_channel, "Created Vulkan Memory Allocator.");
 
-	context.swapchain_details = GFX_ContextQuerySwapchainSupport(context.physical_device, context.surface);
+	context.swapchain_details = G_ContextQuerySwapchainSupport(context.physical_device, context.surface);
 
 	VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
 	pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -632,7 +632,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 	pipeline_cache_create_info.initialDataSize = 0;
 	pipeline_cache_create_info.pInitialData = NULL;
 
-	GFX_VK_CHECK(vkCreatePipelineCache(context.device,
+	G_VK_CHECK(vkCreatePipelineCache(context.device,
 									   &pipeline_cache_create_info, NULL,
 									   &context.pipeline_process_cache),
 				 "Failed to process pipeline cache.");
@@ -643,7 +643,7 @@ GFX_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk
 }
 
 internal void
-GFX_ContextDestroy(GFX_Context *context)
+G_ContextDestroy(G_Context *context)
 {
 	vkDestroyPipelineCache(context->device, context->pipeline_process_cache, NULL);
 	osapi->VulkanSurfaceDestroy(context->instance, context->surface);

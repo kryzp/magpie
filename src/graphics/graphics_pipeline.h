@@ -1,17 +1,17 @@
 #ifndef GRAPHICS_PIPELINE_H
 #define GRAPHICS_PIPELINE_H
 
-#define GFX_MAX_COLOUR_ATTACHMENTS 8
+#define G_MAX_COLOUR_ATTACHMENTS 8
 
-typedef struct GFX_RenderInfo GFX_RenderInfo;
-struct GFX_RenderInfo
+typedef struct G_RenderInfo G_RenderInfo;
+struct G_RenderInfo
 {
 	u32 width;
 	u32 height;
 
 	u32 colour_attachment_count;
-	VkFormat colour_attachment_formats[GFX_MAX_COLOUR_ATTACHMENTS];
-	VkRenderingAttachmentInfo colour_attachments[GFX_MAX_COLOUR_ATTACHMENTS];
+	VkFormat colour_attachment_formats[G_MAX_COLOUR_ATTACHMENTS];
+	VkRenderingAttachmentInfo colour_attachments[G_MAX_COLOUR_ATTACHMENTS];
 
 	b32 has_depth_attachment;
 	VkRenderingAttachmentInfo depth_attachment;
@@ -21,20 +21,20 @@ struct GFX_RenderInfo
 	u32 view_mask;
 };
 
-typedef struct GFX_GraphicsPipelineDef GFX_GraphicsPipelineDef;
-struct GFX_GraphicsPipelineDef
+typedef struct G_GraphicsPipelineDef G_GraphicsPipelineDef;
+struct G_GraphicsPipelineDef
 {
-	GFX_ShaderKey program;
+	G_ShaderKey program;
 
 	VkPrimitiveTopology topology;
 	VkCullModeFlags cull_mode;
 	VkFrontFace front_face;
 
-	GFX_BlendSt blend_state;
-	GFX_DepthStencilSt depth_stencil_state;
+	G_BlendSt blend_state;
+	G_DepthStencilSt depth_stencil_state;
 
 	u32 colour_attachment_count;
-	VkFormat colour_attachment_formats[GFX_MAX_COLOUR_ATTACHMENTS];
+	VkFormat colour_attachment_formats[G_MAX_COLOUR_ATTACHMENTS];
 
 	b32 has_depth_attachment;
 
@@ -45,15 +45,15 @@ struct GFX_GraphicsPipelineDef
 	u32 multi_view_mask;
 };
 
-typedef struct GFX_ComputePipelineDef GFX_ComputePipelineDef;
-struct GFX_ComputePipelineDef
+typedef struct G_ComputePipelineDef G_ComputePipelineDef;
+struct G_ComputePipelineDef
 {
-	GFX_ShaderKey program;
+	G_ShaderKey program;
 };
 
-internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefInit     (GFX_ShaderKey program);
-internal GFX_GraphicsPipelineDef GFX_GraphicsPipelineDefFromInfo (GFX_ShaderKey program, const GFX_RenderInfo *info);
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefInit     (G_ShaderKey program);
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo (G_ShaderKey program, const G_RenderInfo *info);
 
-internal GFX_ComputePipelineDef  GFX_ComputePipelineDefInit      (GFX_ShaderKey program);
+internal G_ComputePipelineDef  G_ComputePipelineDefInit      (G_ShaderKey program);
 
 #endif // GRAPHICS_PIPELINE_H

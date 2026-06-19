@@ -1,6 +1,6 @@
 
-internal const AST_SubModel *
-AST_AssetModelGetSubModel(const AST_AssetModel *asset, u32 index)
+internal const A_SubModel *
+A_ModelDataGetSubModel(const A_ModelData *asset, u32 index)
 {
 	if (index >= asset->sub_model_count)
 		return NULL;
@@ -8,8 +8,8 @@ AST_AssetModelGetSubModel(const AST_AssetModel *asset, u32 index)
 	return &asset->sub_models[index];
 }
 
-internal const AST_Skeleton *
-AST_AssetModelGetSkeleton(const AST_AssetModel *asset, String8 name)
+internal const A_Skeleton *
+A_ModelDataGetSkeleton(const A_ModelData *asset, String8 name)
 {
 	for (u32 i = 0; i < asset->skeleton_count; i++)
 	{
@@ -20,8 +20,8 @@ AST_AssetModelGetSkeleton(const AST_AssetModel *asset, String8 name)
 	return NULL;
 }
 
-internal const AST_AnimClip *
-AST_AssetModelGetAnimClip(const AST_AssetModel *asset, String8 name)
+internal const A_AnimClip *
+A_ModelDataGetAnimClip(const A_ModelData *asset, String8 name)
 {
 	for (u32 i = 0; i < asset->clip_count; i++)
 	{

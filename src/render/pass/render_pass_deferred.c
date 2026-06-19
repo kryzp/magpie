@@ -64,31 +64,31 @@ R_DeferredCreateLightSphereMesh(R_DeferredRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				vertex_count, index_count);
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->light_sphere_mesh) +
 												 R_MeshIndexBufferSize(&dr->light_sphere_mesh));
 
 	R_MeshWriteToStage(&dr->light_sphere_mesh, dr->device,
 					   staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->light_sphere_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 
 	ScratchRelease(&scratch);
 }
 
 R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 	const R_Scene *scene = ctx->scene;
 
 	const R_DeferredGeometryPassData *data = ctx->user_data;
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->shader);
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefInit(data->shader);
 	pipeline_def.has_depth_attachment = true;
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
@@ -96,10 +96,10 @@ R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 	for (u32 i = 0; i < R_GBufferAttachment_COUNT; i++)
 		pipeline_def.colour_attachment_formats[pipeline_def.colour_attachment_count++] = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-	GFX_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-	GFX_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+	G_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	struct
 	{
@@ -111,29 +111,29 @@ R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 	}
 	args;
 
-	args.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
+	args.frame_data_buffer = G_DeviceBufferAddress(device, data->frame_data_buffer);
 	args.object_buffer     = data->object_buffer_address;
 	args.material_buffer   = R_SceneMaterialBufferAddress(scene);
 	args.mesh_buffer       = R_SceneMeshBufferAddress(scene);
-	args.sampler           = GFX_DeviceSamplerBindless(device, data->sampler);
+	args.sampler           = G_DeviceSamplerBindless(device, data->sampler);
 
-	GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 
-	GFX_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	GFX_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
+	G_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
 internal void
-R_DeferredRendererInit(R_DeferredRenderer *dr, GFX_Device *device, AST_Assets *assets)
+R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Registry *assets)
 {
 	dr->device = device;
 	dr->assets = assets;
 
-	dr->model_shader                 = AST_Require(assets, String8Lit("assets://shaders/passes/geometry/model.slang"),                 AST_Type_Shader);
-	dr->ambient_lighting_shader      = AST_Require(assets, String8Lit("assets://shaders/passes/lighting/ambient_lighting.slang"),      AST_Type_Shader);
-	dr->direct_lighting_point_shader = AST_Require(assets, String8Lit("assets://shaders/passes/lighting/direct_lighting_point.slang"), AST_Type_Shader);
+	dr->model_shader                 = A_Require(assets, String8Lit("assets://shaders/passes/geometry/model.slang"),                 A_Type_Shader);
+	dr->ambient_lighting_shader      = A_Require(assets, String8Lit("assets://shaders/passes/lighting/ambient_lighting.slang"),      A_Type_Shader);
+	dr->direct_lighting_point_shader = A_Require(assets, String8Lit("assets://shaders/passes/lighting/direct_lighting_point.slang"), A_Type_Shader);
 
 	R_DeferredCreateLightSphereMesh(dr);
 }
@@ -150,8 +150,8 @@ R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 						 R_Blackboard *bb,
 						 Arena *pass_arena,
 						 const R_SceneResources *scene_resources,
-						 GFX_BufferKey frame_data_buffer,
-						 GFX_SamplerKey linear_sampler,
+						 G_BufferKey frame_data_buffer,
+						 G_SamplerKey linear_sampler,
 						 const R_DrawStream *draw_stream)
 {
 	R_BB_GBufferData *gbuffer = &bb->gbuffer;
@@ -178,7 +178,7 @@ R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
 	R_PassIndirectBuffer(pass, draw_stream->count_buffer);
 
-	GFX_ShaderKey shader = AST_AssetShaderGet(AST_GetNow(dr->assets, dr->model_shader, AST_Type_Shader));
+	G_ShaderKey shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->model_shader, A_Type_Shader));
 
 	R_DeferredGeometryPassData *data = ArenaPushArray(pass_arena, R_DeferredGeometryPassData, 1);
 	data->shader                = shader;
@@ -192,25 +192,25 @@ R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 
 R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 	const R_Scene *scene = ctx->scene;
 
 	const R_DeferredLightingPassData *data = ctx->user_data;
 
 	// -- Ambient Lighting
 	{
-		GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->ambient_shader);
+		G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefInit(data->ambient_shader);
 		pipeline_def.has_depth_attachment = true;
 		pipeline_def.depth_stencil_state.depth_test_enabled  = false;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
 		pipeline_def.colour_attachment_count = 1;
 		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-		GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+		G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-		GFX_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-		GFX_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+		G_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+		G_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 		struct
 		{
@@ -233,31 +233,31 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 		}
 		pc;
 
-		pc.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
+		pc.frame_data_buffer = G_DeviceBufferAddress(device, data->frame_data_buffer);
 
 		pc.irradiance_sh_buffer        = data->irradiance_sh_buffer_address;
 		pc.irradiance_grid_info_buffer = data->irradiance_grid_info_buffer_address;
 		
-		pc.position = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          GFX_SubresourceRangeAllColour()));
-		pc.albedo   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            GFX_SubresourceRangeAllColour()));
-		pc.normal   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            GFX_SubresourceRangeAllColour()));
-		pc.emissive = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          GFX_SubresourceRangeAllColour()));
-		pc.material = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], GFX_SubresourceRangeAllColour()));
+		pc.position = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          G_SubresourceRangeAllColour()));
+		pc.albedo   = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            G_SubresourceRangeAllColour()));
+		pc.normal   = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            G_SubresourceRangeAllColour()));
+		pc.emissive = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          G_SubresourceRangeAllColour()));
+		pc.material = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], G_SubresourceRangeAllColour()));
 
-		pc.irradiance_fallback_cubemap = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, GFX_SubresourceRangeAllColour()));
-		pc.prefilter_cubemap           = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     GFX_SubresourceRangeAllColour()));
-		pc.brdf_lut                    = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          GFX_SubresourceRangeAllColour()));
+		pc.irradiance_fallback_cubemap = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, G_SubresourceRangeAllColour()));
+		pc.prefilter_cubemap           = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     G_SubresourceRangeAllColour()));
+		pc.brdf_lut                    = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          G_SubresourceRangeAllColour()));
 
-		pc.linear_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler);
+		pc.linear_sampler = G_DeviceSamplerBindless(device, data->linear_sampler);
 
-		GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
+		G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
 
-		GFX_CmdDrawV(cmd, 3);
+		G_CmdDrawV(cmd, 3);
 	}
 
 	// -- Direct Point Lighting
 	{
-		GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefInit(data->direct_shader);
+		G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefInit(data->direct_shader);
 		pipeline_def.has_depth_attachment = true;
 		pipeline_def.depth_stencil_state.depth_test_enabled  = false;
 		pipeline_def.depth_stencil_state.depth_write_enabled = false;
@@ -269,10 +269,10 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 		pipeline_def.colour_attachment_count = 1;
 		pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-		GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+		G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-		GFX_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-		GFX_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+		G_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+		G_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 		R_MeshBind(data->light_sphere_mesh, cmd);
 
@@ -299,21 +299,21 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 			}
 			pc;
 
-			pc.frame_data_buffer = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
+			pc.frame_data_buffer = G_DeviceBufferAddress(device, data->frame_data_buffer);
 			pc.light_buffer = data->light_buffer_address;
-			pc.vertex_buffer = GFX_DeviceBufferAddress(device, data->light_sphere_mesh->vertex_buffer);
-			pc.shadow_caster_buffer = GFX_DeviceBufferAddress(device, data->shadow_caster_table);
+			pc.vertex_buffer = G_DeviceBufferAddress(device, data->light_sphere_mesh->vertex_buffer);
+			pc.shadow_caster_buffer = G_DeviceBufferAddress(device, data->shadow_caster_table);
 
-			pc.position = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          GFX_SubresourceRangeAllColour()));
-			pc.albedo   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            GFX_SubresourceRangeAllColour()));
-			pc.normal   = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            GFX_SubresourceRangeAllColour()));
-			pc.emissive = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          GFX_SubresourceRangeAllColour()));
-			pc.material = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], GFX_SubresourceRangeAllColour()));
+			pc.position = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Position],          G_SubresourceRangeAllColour()));
+			pc.albedo   = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Albedo],            G_SubresourceRangeAllColour()));
+			pc.normal   = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Normal],            G_SubresourceRangeAllColour()));
+			pc.emissive = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_Emissive],          G_SubresourceRangeAllColour()));
+			pc.material = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->gbuffer.attachments[R_GBufferAttachment_MetallicRoughness], G_SubresourceRangeAllColour()));
 
-			pc.linear_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler);
-			pc.shadow_sampler = GFX_DeviceSamplerBindless(device, data->linear_sampler); // TODO: use a nearest sampler for shadows.
+			pc.linear_sampler = G_DeviceSamplerBindless(device, data->linear_sampler);
+			pc.shadow_sampler = G_DeviceSamplerBindless(device, data->linear_sampler); // TODO: use a nearest sampler for shadows.
 
-			GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
+			G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
 
 			R_MeshDrawInstanced(data->light_sphere_mesh, cmd, i);
 		}
@@ -326,19 +326,19 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 						 R_Blackboard *bb,
 						 Arena *pass_arena,
 						 const R_SceneResources *scene_resources,
-						 GFX_BufferKey frame_data_buffer,
-						 GFX_SamplerKey linear_sampler,
+						 G_BufferKey frame_data_buffer,
+						 G_SamplerKey linear_sampler,
 						 const R_IrradianceVolume *irradiance_volume,
-						 GFX_TextureKey irradiance_fallback,
-						 GFX_TextureKey prefilter,
-						 GFX_TextureKey brdf)
+						 G_TextureKey irradiance_fallback,
+						 G_TextureKey prefilter,
+						 G_TextureKey brdf)
 {
 	const R_BB_GBufferData *gbuffer = &bb->gbuffer;
 	const R_BB_ShadowData  *shadow  = &bb->shadow_data;
 
 	R_TextureInfo lighting_info = R_TextureInfoInit();
 	lighting_info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	lighting_info.flags = GFX_TextureAllocFlag_Storage;
+	lighting_info.flags = G_TextureAllocFlag_Storage;
 	
 	R_GraphTexHandle lighting = R_GraphCreateTexture(graph, &lighting_info);
 
@@ -357,8 +357,8 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 	for (u32 i = 0; i < shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, shadow->shadow_maps[i]);
 
-	GFX_ShaderKey ambient_shader = AST_AssetShaderGet(AST_GetNow(dr->assets, dr->ambient_lighting_shader,      AST_Type_Shader));
-	GFX_ShaderKey direct_shader  = AST_AssetShaderGet(AST_GetNow(dr->assets, dr->direct_lighting_point_shader, AST_Type_Shader));
+	G_ShaderKey ambient_shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->ambient_lighting_shader,      A_Type_Shader));
+	G_ShaderKey direct_shader  = A_ShaderDataGet(A_GetNow(dr->assets, dr->direct_lighting_point_shader, A_Type_Shader));
 
 	R_DeferredLightingPassData *data = ArenaPushArray(pass_arena, R_DeferredLightingPassData, 1);
 	data->ambient_shader       = ambient_shader;
@@ -375,8 +375,8 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 
 	if (R_IrradianceVolumeIsBaked(irradiance_volume))
 	{
-		data->irradiance_sh_buffer_address        = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer(irradiance_volume));
-		data->irradiance_grid_info_buffer_address = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
+		data->irradiance_sh_buffer_address        = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer(irradiance_volume));
+		data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
 	}
 	else
 	{

@@ -1,19 +1,19 @@
 
 /*
  * TODO: Is this really necessary? We could just have
- *       a generic GFX_Handle that works for everything.
+ *       a generic G_Handle that works for everything.
  */
 
-#define GFX_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
-	typedef struct GFX_##mgp_name##Key GFX_##mgp_name##Key;				\
-	struct GFX_##mgp_name##Key											\
+#define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
+	typedef struct G_##mgp_name##Key G_##mgp_name##Key;				\
+	struct G_##mgp_name##Key											\
 	{																	\
 		u64 value;														\
 	};																	\
-	internal GFX_##mgp_name##Key GFX_##mgp_name##KeyNull(void);			\
-	internal b32 GFX_##mgp_name##KeyIsNull(GFX_##mgp_name##Key key);	\
-	internal b32 GFX_##mgp_name##KeyMatch(GFX_##mgp_name##Key a, GFX_##mgp_name##Key b);
+	internal G_##mgp_name##Key G_##mgp_name##KeyNull(void);			\
+	internal b32 G_##mgp_name##KeyIsNull(G_##mgp_name##Key key);	\
+	internal b32 G_##mgp_name##KeyMatch(G_##mgp_name##Key a, G_##mgp_name##Key b);
 
 #include "graphics_device_managed_resources.inc"
 
-#undef GFX_DEVICE_MANAGED_RESOURCE
+#undef G_DEVICE_MANAGED_RESOURCE

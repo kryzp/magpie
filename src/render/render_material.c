@@ -1,12 +1,12 @@
 
-internal GFX_TextureKey
-R_MaterialResolveAssetTexture(AST_Assets *assets, AST_Handle handle)
+internal G_TextureKey
+R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle)
 {
-	if (!AST_IsValid(assets, handle) || !AST_IsLoaded(assets, handle))
-		return GFX_TextureKeyNull();
+	if (!A_IsValid(assets, handle) || !A_IsLoaded(assets, handle))
+		return G_TextureKeyNull();
 
-	AST_Asset *asset = AST_GetNow(assets, handle, AST_Type_Texture);
-	return asset->texture_data.key;
+	A_Asset *asset = A_GetNow(assets, handle, A_Type_Texture);
+	return asset->texture.key;
 }
 
 internal R_Material
@@ -43,12 +43,12 @@ R_MaterialDefault(void)
 	mat.iridescence_thickness_min_nanometers = 100.f;
 	mat.iridescence_thickness_max_nanometers = 400.f;
 
-	mat.alpha_mode                           = AST_AlphaMode_Opaque;
+	mat.alpha_mode                           = A_AlphaMode_Opaque;
 	mat.alpha_cutoff                         = 0.5f;
 	mat.double_sided                         = false;
 	mat.unlit                                = false;
 
-	mat.reflection_mode                      = AST_ReflectionMode_Default;
+	mat.reflection_mode                      = A_ReflectionMode_Default;
 	mat.reflection_plane                     = v4(0.f, 0.f, 0.f, 0.f);
 	
 	return mat;
@@ -56,7 +56,7 @@ R_MaterialDefault(void)
 
 // js slime me out gng
 internal R_Material
-R_MaterialFromAsset(const AST_ModelMaterial *source, AST_Assets *assets)
+R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets)
 {
 	R_Material mat = R_MaterialDefault();
 

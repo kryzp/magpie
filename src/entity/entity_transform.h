@@ -1,8 +1,8 @@
 #ifndef ENTITY_TRANSFORM_H
 #define ENTITY_TRANSFORM_H
 
-typedef struct ENT_Transform ENT_Transform;
-struct ENT_Transform
+typedef struct E_Transform E_Transform;
+struct E_Transform
 {
 	v3 position;
 	v4 rotation;
@@ -12,14 +12,14 @@ struct ENT_Transform
 	b32 dirty;
 };
 
-internal void ENT_TransformRecompute(ENT_Transform *transform);
-internal m4   ENT_TransformGetMatrix(ENT_Transform *transform);
+internal void E_TransformRecompute(E_Transform *transform);
+internal m4   E_TransformGetMatrix(E_Transform *transform);
 
 // I hate getters / setters but we need these to automatically
 // set the dirty flag.
-internal void ENT_TransformSetPosition (ENT_Transform *transform, v3 position);
-internal void ENT_TransformSetRotation (ENT_Transform *transform, v4 rotation);
-internal void ENT_TransformSetScale    (ENT_Transform *transform, v3 scale);
-internal void ENT_TransformSetOrigin   (ENT_Transform *transform, v3 origin);
+internal void E_TransformSetPosition (E_Transform *transform, v3 position);
+internal void E_TransformSetRotation (E_Transform *transform, v4 rotation);
+internal void E_TransformSetScale    (E_Transform *transform, v3 scale);
+internal void E_TransformSetOrigin   (E_Transform *transform, v3 origin);
 
 #endif // ENTITY_TRANSFORM_H

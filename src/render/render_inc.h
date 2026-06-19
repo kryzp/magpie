@@ -12,6 +12,7 @@
 #include "render_pass.h"
 #include "render_tracker.h"
 #include "render_graph.h"
+#include "render_sprite_batch.h"
 
 #include "bloom/render_bloom_inc.h"
 #include "probe/render_probe_inc.h"

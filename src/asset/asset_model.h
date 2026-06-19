@@ -1,10 +1,10 @@
 #ifndef ASSET_MODEL_H
 #define ASSET_MODEL_H
 
-typedef u32 AST_ModelIndex;
+typedef u32 A_ModelIndex;
 
-typedef struct AST_ModelVertex AST_ModelVertex;
-struct AST_ModelVertex
+typedef struct A_ModelVertex A_ModelVertex;
+struct A_ModelVertex
 {
 	v3 position;
 	v2 texcoord;
@@ -14,15 +14,15 @@ struct AST_ModelVertex
 	v3 bitangent;
 };
 
-typedef struct AST_ModelSkinVertex AST_ModelSkinVertex;
-struct AST_ModelSkinVertex
+typedef struct A_ModelSkinVertex A_ModelSkinVertex;
+struct A_ModelSkinVertex
 {
 	u32 joints[4];
 	f32 weights[4];
 };
 
-typedef struct AST_SubModel AST_SubModel;
-struct AST_SubModel
+typedef struct A_SubModel A_SubModel;
+struct A_SubModel
 {
 	// note: identity for skinned models!!
 	m4 transform;
@@ -30,7 +30,7 @@ struct AST_SubModel
 	v3 bounds_min;
 	v3 bounds_max;
 
-	AST_ModelMaterial material;
+	A_ModelMaterial material;
 
 	u64 vertex_stride;
 	u64 index_stride;
@@ -38,10 +38,10 @@ struct AST_SubModel
 	u32 vertex_count;
 	u32 index_count;
 
-	GFX_BufferKey vertex_buffer;
-	GFX_BufferKey index_buffer;
+	G_BufferKey vertex_buffer;
+	G_BufferKey index_buffer;
 
-	GFX_BufferKey skin_buffer;
+	G_BufferKey skin_buffer;
 	i32 skin_index;
 };
 

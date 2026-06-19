@@ -1,51 +1,51 @@
 #ifndef ENTITY_TYPE_H
 #define ENTITY_TYPE_H
 
-typedef enum ENT_Type
+typedef enum E_Type
 {
-	ENT_Type_Null = 0,
-#define EntityDef(pascal, lower, max) ENT_Type_##Pascal,
+	E_Type_Null = 0,
+#define EntityDef(pascal, lower, max) E_Type_##Pascal,
 #include "entity_xmacro.inc"
 #undef EntityDef
-	ENT_Type_COUNT,
+	E_Type_COUNT,
 }
-ENT_Type;
+E_Type;
 
-typedef struct ENT_World ENT_World;
-typedef struct ENT_EventQueue ENT_EventQueue;
+typedef struct E_World E_World;
+typedef struct E_EventQueue E_EventQueue;
 
-typedef struct ENT_TickContext ENT_TickContext;
-struct ENT_TickContext
+typedef struct E_TickContext E_TickContext;
+struct E_TickContext
 {
-	ENT_World *world;
-	ENT_EventQueue *events;
+	E_World *world;
+	E_EventQueue *events;
 	
 	const OS_InputState *input;
 	
 	f32 dt;
 };
 
-typedef void ENT_TypeDescDestroyFn     (void *entity);
-typedef void ENT_TypeDescTickFn        (void *entity, const ENT_TickContext *ctx);
-typedef void ENT_TypeDescSerializeFn   (void *entity, IO_ByteSerializer *writer);
-typedef void ENT_TypeDescDeserializeFn (void *entity, IO_ByteSerializer *reader);
+typedef void E_TypeDescDestroyFn     (void *entity);
+typedef void E_TypeDescTickFn        (void *entity, const E_TickContext *ctx);
+typedef void E_TypeDescSerializeFn   (void *entity, IO_ByteSerializer *writer);
+typedef void E_TypeDescDeserializeFn (void *entity, IO_ByteSerializer *reader);
 
-typedef struct ENT_TypeDesc ENT_TypeDesc;
-struct ENT_TypeDesc
+typedef struct E_TypeDesc E_TypeDesc;
+struct E_TypeDesc
 {
 	String8 name;
-	ENT_Type type;
+	E_Type type;
 	u64 stride;
 	u32 max_instances;
 
-	ENT_TypeDescDestroyFn *OnDestroy;
+	E_TypeDescDestroyFn *OnDestroy;
 	
-	ENT_TypeDescTickFn *OnPreAnimTick;
-	ENT_TypeDescTickFn *OnPostAnimTick;
-	ENT_TypeDescTickFn *OnPostPhysicsTick;
+	E_TypeDescTickFn *OnPreAnimTick;
+	E_TypeDescTickFn *OnPostAnimTick;
+	E_TypeDescTickFn *OnPostPhysicsTick;
 
-	ENT_TypeDescSerializeFn   *OnSerialize;
-	ENT_TypeDescDeserializeFn *OnDeserialize;
+	E_TypeDescSerializeFn   *OnSerialize;
+	E_TypeDescDeserializeFn *OnDeserialize;
 };
 
 #endif // ENTITY_TYPE_H

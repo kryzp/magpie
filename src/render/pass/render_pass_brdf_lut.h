@@ -4,7 +4,7 @@
 typedef struct R_BRDFLutPassData R_BRDFLutPassData;
 struct R_BRDFLutPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 };
 
 R_PASS_RECORD_DEF(R_BRDFLutPassFn);

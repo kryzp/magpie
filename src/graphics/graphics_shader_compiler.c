@@ -1,17 +1,17 @@
 
 internal void
-GFX_ShaderCompilerLogCallback(const char *context,
+G_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
 							  const char *message,
 							  void *user_data)
 {
-	GFX_ShaderCompiler *self = user_data;
+	G_ShaderCompiler *self = user_data;
 	
 	DebugLogW(self->log_channel, "%s --> %s: %s", source, context, message);
 }
 
 internal void
-GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler, LOG_Channel log_channel)
+G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
 	SLANG_Init(&compiler->global_session);
 
@@ -26,7 +26,7 @@ GFX_ShaderCompilerInit(GFX_ShaderCompiler *compiler, LOG_Channel log_channel)
 }
 
 internal void
-GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler)
+G_ShaderCompilerShutdown(G_ShaderCompiler *compiler)
 {
 	DebugLogI(compiler->log_channel, "Shutting down...");
 
@@ -37,15 +37,15 @@ GFX_ShaderCompilerShutdown(GFX_ShaderCompiler *compiler)
 	compiler->global_session = NULL;
 }
 
-internal GFX_ShaderCompiledStages
-GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
+internal G_ShaderCompiledStages
+G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
 						  Arena *arena,
 						  String8 source_path,
 						  u32 search_path_count, const String8 *search_paths)
 {
 	osapi->MutexLock(compiler->mutex);
 	
-	GFX_ShaderCompiledStages compiled = {0};
+	G_ShaderCompiledStages compiled = {0};
 	compiled.failed = true;
 
 	AssertTrue(compiler->global_session);
@@ -70,14 +70,14 @@ GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
 													  source_cstr,
 													  search_path_count,
 													  search_path_cstrs,
-													  GFX_ShaderCompilerLogCallback,
+													  G_ShaderCompilerLogCallback,
 													  compiler);
 
 	if (bridge_result.failed)
 		goto end;
 
 	compiled.count = bridge_result.stage_count;
-	compiled.bytecodes = ArenaPushArray(arena, GFX_ShaderBytecode, compiled.count);
+	compiled.bytecodes = ArenaPushArray(arena, G_ShaderBytecode, compiled.count);
 
 	for (u32 i = 0; i < compiled.count; i++)
 	{

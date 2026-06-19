@@ -1,80 +1,70 @@
 #ifndef AUDIO_BACKEND_H
 #define AUDIO_BACKEND_H
 
-typedef struct AUD_BufferHandle { u32 value; } AUD_BufferHandle;
-typedef struct AUD_SourceHandle { u32 value; } AUD_SourceHandle;
+typedef struct AU_BufferHandle { u32 value; } AU_BufferHandle;
+typedef struct AU_SourceHandle { u32 value; } AU_SourceHandle;
 
 internal inline b32
-AUD_BufferHandleMatch(AUD_BufferHandle a, AUD_BufferHandle b)
+AU_BufferHandleMatch(AU_BufferHandle a, AU_BufferHandle b)
 {
 	return a.value == b.value;
 }
 
 internal inline b32
-AUD_SourceHandleMatch(AUD_SourceHandle a, AUD_SourceHandle b)
+AU_SourceHandleMatch(AU_SourceHandle a, AU_SourceHandle b)
 {
 	return a.value == b.value;
 }
 
-typedef enum AUD_Format
+typedef enum AU_Format
 {
-	AUD_Format_U8,
-	AUD_Format_S16,
-	AUD_Format_S24,
-	AUD_Format_S32,
-	AUD_Format_F32,
-	AUD_Format_COUNT
+	AU_Format_U8,
+	AU_Format_S16,
+	AU_Format_S24,
+	AU_Format_S32,
+	AU_Format_F32,
+	AU_Format_COUNT
 }
-AUD_Format;
+AU_Format;
 
-typedef enum AUD_AttenuationModel
+typedef enum AU_AttenuationModel
 {
-	AUD_AttenuationModel_Inverse,
-	AUD_AttenuationModel_Exponential,
-	AUD_AttenuationModel_Linear,
-	AUD_AttenuationModel_COUNT
+	AU_AttenuationModel_Inverse,
+	AU_AttenuationModel_Exponential,
+	AU_AttenuationModel_Linear,
+	AU_AttenuationModel_COUNT
 }
-AUD_AttenuationModel;
+AU_AttenuationModel;
 
-typedef struct AUD_BackendAPI AUD_BackendAPI;
-struct AUD_BackendAPI
-{
-	void *ctx; // Internal data store per-backend.
-	
-	void (*Init)(void);
-	void (*Shutdown)(void);
+typedef struct AU_Backend AU_Backend;
 
-	void (*Tick)(f32 dt, AUD_Listener listener);
+internal AU_Backend *AU_BackendInit(Arena *arena, LOG_Channel log_channel);
+internal void AU_BackendShutdown(AU_Backend *backend);
 
-	void (*Play)(AUD_SourceHandle handle);
-	void (*Stop)(AUD_SourceHandle handle);
-	void (*Resume)(AUD_SourceHandle handle);
-	void (*Pause)(AUD_SourceHandle handle);
-	void (*Reset)(AUD_SourceHandle handle);
+internal void AU_BackendTick(AU_Backend *backend, f32 dt, AU_Listener listener);
 
-	b32 (*IsPlaying)(AUD_SourceHandle handle);
-	b32 (*IsLooping)(AUD_SourceHandle handle);
+internal void AU_BackendPlay(AU_Backend *backend, AU_SourceHandle handle);
+internal void AU_BackendStop(AU_Backend *backend, AU_SourceHandle handle);
+internal void AU_BackendResume(AU_Backend *backend, AU_SourceHandle handle);
+internal void AU_BackendPause(AU_Backend *backend, AU_SourceHandle handle);
+internal void AU_BackendReset(AU_Backend *backend, AU_SourceHandle handle);
 
-	AUD_BufferHandle (*CreateBuffer)(const void *data, u64 bytes, u32 channels, u16 sample_rate, AUD_Format format);
-	void (*DestroyBuffer)(AUD_BufferHandle handle);
+internal b32 AU_BackendIsPlaying(AU_Backend *backend, AU_SourceHandle handle);
+internal b32 AU_BackendIsLooping(AU_Backend *backend, AU_SourceHandle handle);
 
-	AUD_SourceHandle (*CreateSourceFromBuffer)(AUD_BufferHandle handle);
-	// TODO: CreateSourceFromStream
-	
-	void (*DestroySource)(AUD_SourceHandle handle);
+internal AU_BufferHandle AU_BackendCreateBuffer(AU_Backend *backend, const void *data, u64 bytes, u32 channels, u16 sample_rate, AU_Format format);
+internal void AU_BackendDestroyBuffer(AU_Backend *backend, AU_BufferHandle handle);
 
-	void (*SetSourceVolume)(AUD_SourceHandle handle, f32 volume);
-	void (*SetSourcePitch)(AUD_SourceHandle handle, f32 pitch);
-	void (*SetSourceLooping)(AUD_SourceHandle handle, b32 loop);
-	void (*SetSourcePosition)(AUD_SourceHandle handle, v3 position);
-	void (*SetSourceDopplerFactor)(AUD_SourceHandle handle, f32 factor);
-	void (*SetSourceAttenuationModel)(AUD_SourceHandle handle, AUD_AttenuationModel model);
-	void (*SetSourceAttenuationRange)(AUD_SourceHandle handle, f32 dist_min, f32 dist_max);
-};
+internal AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_Backend *backend, AU_BufferHandle handle);
+// TODO: CreateSourceFromStream
+internal void AU_BackendDestroySource(AU_Backend *backend, AU_SourceHandle handle);
 
-internal AUD_BackendAPI *AUD_BackendAllocAndSelect(Arena *arena);
-
-internal void AUD_BackendHotLoad(AUD_BackendAPI *api);
-internal void AUD_BackendHotUnload(AUD_BackendAPI *api);
+internal void AU_BackendSetSourceVolume(AU_Backend *backend, AU_SourceHandle handle, f32 volume);
+internal void AU_BackendSetSourcePitch(AU_Backend *backend, AU_SourceHandle handle, f32 pitch);
+internal void AU_BackendSetSourceLooping(AU_Backend *backend, AU_SourceHandle handle, b32 loop);
+internal void AU_BackendSetSourcePosition(AU_Backend *backend, AU_SourceHandle handle, v3 position);
+internal void AU_BackendSetSourceDopplerFactor(AU_Backend *backend, AU_SourceHandle handle, f32 factor);
+internal void AU_BackendSetSourceAttenuationModel(AU_Backend *backend, AU_SourceHandle handle, AU_AttenuationModel model);
+internal void AU_BackendSetSourceAttenuationRange(AU_Backend *backend, AU_SourceHandle handle, f32 dist_min, f32 dist_max);
 
 #endif // AUDIO_BACKEND_H

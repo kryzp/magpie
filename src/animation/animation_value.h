@@ -1,21 +1,21 @@
-#ifndef ANIM_VALUE_H
-#define ANIM_VALUE_H
+#ifndef AN_VALUE_H
+#define AN_VALUE_H
 
-typedef struct ANIM_Value ANIM_Value;
-struct ANIM_Value
+typedef struct AN_Value AN_Value;
+struct AN_Value
 {
     u64 key;
     f32 curr;
     f32 target;
 };
 
-typedef struct ANIM_ValueRegistry ANIM_ValueRegistry;
-struct ANIM_ValueRegistry
+typedef struct AN_ValueRegistry AN_ValueRegistry;
+struct AN_ValueRegistry
 {
-    ANIM_Value values[512];
+    AN_Value values[512];
     u32 value_count;
 };
 
-//internal void ANIM_ValueRegistryTick(ANIM_ValueRegistry *r, f32 dt);
+//internal void AN_ValueRegistryTick(AN_ValueRegistry *r, f32 dt);
 
-#endif // ANIM_VALUE_H
+#endif // AN_VALUE_H

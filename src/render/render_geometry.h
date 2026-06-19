@@ -29,8 +29,8 @@ internal void R_GeometryFreeListRelease   (      R_GeometryFreeList *list, u64 o
 typedef struct R_GeometryPage R_GeometryPage;
 struct R_GeometryPage
 {
-	GFX_BufferKey vertex_buffer;
-	GFX_BufferKey index_buffer;
+	G_BufferKey vertex_buffer;
+	G_BufferKey index_buffer;
 
 	u32 vertex_count;
 	u32 index_count;

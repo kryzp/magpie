@@ -1,52 +1,52 @@
 #ifndef ASSET_STATE_H
 #define ASSET_STATE_H
 
-typedef enum AST_State
+typedef enum A_State
 {
-	AST_State_Unloaded,
-	AST_State_CpuStage,
-	AST_State_WaitingForDependencies,
-	AST_State_GpuStage,
-	AST_State_Ready,
-	AST_State_Failed,
-	AST_State_COUNT
+	A_State_Unloaded,
+	A_State_CpuStage,
+	A_State_WaitingForDependencies,
+	A_State_GpuStage,
+	A_State_Ready,
+	A_State_Failed,
+	A_State_COUNT
 }
-AST_State;
+A_State;
 
 /*
  * TODO: Get rid of these functions just do clear checks in the asset manager this is just making code harder.
  */
 
 internal inline b32
-AST_StateIsLoading(AST_State st)
+A_StateIsLoading(A_State st)
 {
 	return
-		st == AST_State_CpuStage ||
-		st == AST_State_WaitingForDependencies ||
-		st == AST_State_GpuStage;
+		st == A_State_CpuStage ||
+		st == A_State_WaitingForDependencies ||
+		st == A_State_GpuStage;
 }
 
 internal inline b32
-AST_StateNeedsLoad(AST_State st)
+A_StateNeedsLoad(A_State st)
 {
 	return
-		st == AST_State_Unloaded ||
-		st == AST_State_Failed;
+		st == A_State_Unloaded ||
+		st == A_State_Failed;
 }
 
 internal inline b32
-AST_StateIsLoaded(AST_State st)
+A_StateIsLoaded(A_State st)
 {
 	return
-		st == AST_State_Ready;
+		st == A_State_Ready;
 }
 
 internal inline b32
-AST_StateIsFinalized(AST_State st)
+A_StateIsFinalized(A_State st)
 {
 	return
-		st == AST_State_Ready ||
-		st == AST_State_Failed;
+		st == A_State_Ready ||
+		st == A_State_Failed;
 }
 
 #endif // ASSET_STATE_H

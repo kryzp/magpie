@@ -12,11 +12,11 @@ struct R_Material
 	/*
 	 * Standard Metallic-Roughness PBR crap.
 	 */
-	GFX_TextureKey albedo_texture;
-	GFX_TextureKey normal_texture;
-	GFX_TextureKey emissive_texture;
-	GFX_TextureKey metallic_roughness_texture; // g = roughness, b = metallic
-	GFX_TextureKey occlusion_texture; // r channel only
+	G_TextureKey albedo_texture;
+	G_TextureKey normal_texture;
+	G_TextureKey emissive_texture;
+	G_TextureKey metallic_roughness_texture; // g = roughness, b = metallic
+	G_TextureKey occlusion_texture; // r channel only
 	
 	v4  albedo_factor;
 	f32 normal_scale;
@@ -32,8 +32,8 @@ struct R_Material
 	 * Light can pass through objects, and transmission tells
 	 * us "how much" of the light makes its way through.
 	 */
-	GFX_TextureKey transmission_texture;
-	GFX_TextureKey thickness_texture;
+	G_TextureKey transmission_texture;
+	G_TextureKey thickness_texture;
 
 	f32 transmission_factor;
 	f32 thickness_factor;
@@ -45,8 +45,8 @@ struct R_Material
 	 * Overrides the usual F0 value which is usually around .04
 	 * for most materials.
 	 */
-	GFX_TextureKey specular_texture; // r = specular
-	GFX_TextureKey specular_colour_texture;
+	G_TextureKey specular_texture; // r = specular
+	G_TextureKey specular_colour_texture;
 
 	f32 specular_factor;
 	v3  specular_colour_factor;
@@ -56,8 +56,8 @@ struct R_Material
 	 * that can't be simulated using just roughness called a clearcoat.
 	 * e.g: car paint, varnished wood, wet surfaces, etc...
 	 */
-	GFX_TextureKey clearcoat_texture;
-	GFX_TextureKey clearcoat_roughness_texture;
+	G_TextureKey clearcoat_texture;
+	G_TextureKey clearcoat_roughness_texture;
 
 	f32 clearcoat_factor;
 	f32 clearcoat_roughness_factor;
@@ -68,8 +68,8 @@ struct R_Material
 	 * in the material being darker when you look at it head on.
 	 * e.g: cloth & fabrics (VELVET ESPECIALLY).
 	 */
-	GFX_TextureKey sheen_colour_texture;
-	GFX_TextureKey sheen_roughness_texture;
+	G_TextureKey sheen_colour_texture;
+	G_TextureKey sheen_roughness_texture;
 
 	v3  sheen_colour_factor;
 	f32 sheen_roughness_factor;
@@ -78,8 +78,8 @@ struct R_Material
 	 * Thin-film interference. Lowk just looks cool af. Soap, pearl
 	 * CD's, butterfly wings, etc...
 	 */
-	GFX_TextureKey iridescence_texture;
-	GFX_TextureKey iridescence_thickness_texture;
+	G_TextureKey iridescence_texture;
+	G_TextureKey iridescence_thickness_texture;
 
 	f32 iridescence_factor;
 	f32 iridescence_ior;
@@ -93,16 +93,16 @@ struct R_Material
 	b32 unlit;
 	
 	f32 alpha_cutoff;
-	AST_AlphaMode alpha_mode;
+	A_AlphaMode alpha_mode;
 
 	// note: not part of GLTF spec! just engine flags (not yet implemented tho)
-	AST_ReflectionMode reflection_mode;
+	A_ReflectionMode reflection_mode;
 	v4 reflection_plane;
 };
 
-internal GFX_TextureKey R_MaterialResolveAssetTexture(AST_Assets *assets, AST_Handle handle);
+internal G_TextureKey R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle);
 
 internal R_Material R_MaterialDefault(void);
-internal R_Material R_MaterialFromAsset(const AST_ModelMaterial *source, AST_Assets *assets);
+internal R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets);
 
 #endif // RENDER_MATERIAL_H

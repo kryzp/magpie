@@ -1,12 +1,12 @@
 
 internal const R_ResourceState *
-R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, GFX_TextureKey key)
+R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, G_TextureKey key)
 {
 	for (u32 i = 0; i < tracker->texture_count; i++)
 	{
 		R_TrackedTexture *t = &tracker->textures[i];
 
-		if (GFX_TextureKeyMatch(key, t->key))
+		if (G_TextureKeyMatch(key, t->key))
 			return &t->state;
 	}
 
@@ -14,13 +14,13 @@ R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, GFX_TextureKey key)
 }
 
 internal const R_ResourceState *
-R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, GFX_BufferKey key)
+R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, G_BufferKey key)
 {
 	for (u32 i = 0; i < tracker->buffer_count; i++)
 	{
 		R_TrackedBuffer *b = &tracker->buffers[i];
 
-		if (GFX_BufferKeyMatch(key, b->key))
+		if (G_BufferKeyMatch(key, b->key))
 			return &b->state;
 	}
 
@@ -28,13 +28,13 @@ R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, GFX_BufferKey key)
 }
 
 internal void
-R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, GFX_TextureKey key, R_ResourceState state)
+R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state)
 {
 	for (u32 i = 0; i < tracker->texture_count; i++)
 	{
 		R_TrackedTexture *t = &tracker->textures[i];
 
-		if (GFX_TextureKeyMatch(key, t->key))
+		if (G_TextureKeyMatch(key, t->key))
 		{
 			t->state = state;
 			return;
@@ -52,13 +52,13 @@ R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, GFX_TextureKey key, R_Re
 }
 
 internal void
-R_ResourceTrackerSetBuffer(R_ResourceTracker *tracker, GFX_BufferKey key,  R_ResourceState state)
+R_ResourceTrackerSetBuffer(R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state)
 {
 	for (u32 i = 0; i < tracker->buffer_count; i++)
 	{
 		R_TrackedBuffer *b = &tracker->buffers[i];
 
-		if (GFX_BufferKeyMatch(key, b->key))
+		if (G_BufferKeyMatch(key, b->key))
 		{
 			b->state = state;
 			return;

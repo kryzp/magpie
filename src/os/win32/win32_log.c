@@ -117,7 +117,7 @@ OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 					  const char *file, i32 line, const char *fn,
 					  const char *body,
 					  b32 for_file, f32 elapsed,
-					  OS_W32_JOB_Context job_context)
+					  OS_W32_J_Context job_context)
 {
 	const char *level_string = OS_W32_LOG_LevelToString (level);
 	const char *level_ansi   = OS_W32_LOG_LevelAnsi     (level);
@@ -247,7 +247,7 @@ OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 
 internal void
 OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
-				  OS_W32_JOB_Context job_context,
+				  OS_W32_J_Context job_context,
 				  LOG_Level level, LOG_Channel channel,
 				  const char *file, i32 line, const char *fn,
 				  const char *fmt, va_list args)

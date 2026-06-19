@@ -4,10 +4,10 @@
 typedef struct R_SkyboxPassData R_SkyboxPassData;
 struct R_SkyboxPassData
 {
-	GFX_ShaderKey shader;
-	GFX_TextureViewKey cubemap;
-	GFX_SamplerKey sampler;
-	GFX_BufferKey frame_data_buffer;
+	G_ShaderKey shader;
+	G_TextureViewKey cubemap;
+	G_SamplerKey sampler;
+	G_BufferKey frame_data_buffer;
 	const R_Mesh *skybox_mesh;
 };
 

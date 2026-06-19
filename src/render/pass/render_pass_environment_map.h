@@ -4,10 +4,10 @@
 typedef struct R_HdrToEnvPassData R_HdrToEnvPassData;
 struct R_HdrToEnvPassData
 {
-	GFX_ShaderKey       shader;
-	GFX_SamplerKey      sampler;
-	GFX_TextureViewKey  hdr_view;
-	GFX_BufferKey       capture_transforms;
+	G_ShaderKey       shader;
+	G_SamplerKey      sampler;
+	G_TextureViewKey  hdr_view;
+	G_BufferKey       capture_transforms;
 	const R_Mesh       *skybox_mesh;
 };
 

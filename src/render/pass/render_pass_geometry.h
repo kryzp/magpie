@@ -18,10 +18,10 @@ R_PASS_RECORD_DEF(R_GeometryPassFn);
 typedef struct R_GeometryRenderer R_GeometryRenderer;
 struct R_GeometryRenderer
 {
-	GFX_Device *device;
-	AST_Assets *assets;
+	G_Device *device;
+	A_Registry *assets;
 
-	AST_Handle shader;
+	A_Handle shader;
 };
 
 void R_GeometryRendererInit (R_GeometryRenderer *r);

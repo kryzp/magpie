@@ -218,9 +218,9 @@ struct OS_API
 	void         (*JobCounterDec)     (OS_Handle handle, u32 amount);
 	u32          (*JobCounterValue)   (OS_Handle handle);
 	void         (*JobYield)          (OS_Handle handle, u32 value);
-	void         (*JobKick)           (const JOB_Decl *decl,             OS_Handle counter_handle);
-	void         (*JobBatch)          (const JOB_Decl *decls, u32 count, OS_Handle counter_handle);
-	void         (*JobFor)            (u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size);
+	void         (*JobKick)           (const J_Decl *decl, OS_Handle counter_handle);
+	void         (*JobBatch)          (const J_Decl *decls, u32 count, OS_Handle counter_handle);
+	void         (*JobFor)            (u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size);
 	b32          (*JobIsMainThread)   (void);
 	Arena       *(*JobGetScratch)     (Arena * const *conflicts, u32 conflict_count);
 

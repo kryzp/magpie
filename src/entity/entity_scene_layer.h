@@ -21,8 +21,8 @@
  * TODO: Maybe rename to "SceneGroup" or "SceneBucket" ?
  */
 
-typedef struct ENT_SceneLayer ENT_SceneLayer;
-struct ENT_SceneLayer
+typedef struct E_SceneLayer E_SceneLayer;
+struct E_SceneLayer
 {
 	String8 name;
 	b32 active;

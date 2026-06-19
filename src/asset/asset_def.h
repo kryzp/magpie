@@ -1,60 +1,60 @@
 #ifndef ASSET_DEF_H
 #define ASSET_DEF_H
 
-typedef struct AST_AssetTexture AST_AssetTexture;
-struct AST_AssetTexture
+typedef struct A_TextureData A_TextureData;
+struct A_TextureData
 {
-	GFX_TextureKey key;
+	G_TextureKey key;
 };
 
-typedef struct AST_AssetShader AST_AssetShader;
-struct AST_AssetShader
+typedef struct A_ShaderData A_ShaderData;
+struct A_ShaderData
 {
-	GFX_ShaderKey key;
+	G_ShaderKey key;
 };
 
-typedef struct AST_AssetSound AST_AssetSound;
-struct AST_AssetSound
+typedef struct A_SoundData A_SoundData;
+struct A_SoundData
 {
-	AUD_BufferHandle buffer;
+	AU_BufferHandle buffer;
 };
 
-typedef struct AST_AssetModel AST_AssetModel;
-struct AST_AssetModel
+typedef struct A_ModelData A_ModelData;
+struct A_ModelData
 {
 	u32 sub_model_count;
-	AST_SubModel *sub_models;
+	A_SubModel *sub_models;
 
 	u32 skeleton_count;
-	AST_Skeleton *skeletons;
+	A_Skeleton *skeletons;
 			
 	u32 clip_count;
-	AST_AnimClip *clips;
+	A_AnimClip *clips;
 };
 
-internal const AST_SubModel *AST_AssetModelGetSubModel(const AST_AssetModel *asset, u32 index);
-internal const AST_Skeleton *AST_AssetModelGetSkeleton(const AST_AssetModel *asset, String8 name);
-internal const AST_AnimClip *AST_AssetModelGetAnimClip(const AST_AssetModel *asset, String8 name);
+internal const A_SubModel *A_ModelDataGetSubModel(const A_ModelData *asset, u32 index);
+internal const A_Skeleton *A_ModelDataGetSkeleton(const A_ModelData *asset, String8 name);
+internal const A_AnimClip *A_ModelDataGetAnimClip(const A_ModelData *asset, String8 name);
 
-typedef struct AST_AssetScript AST_AssetScript;
-struct AST_AssetScript
+typedef struct A_ScriptData A_ScriptData;
+struct A_ScriptData
 {
-	SCR_ScriptRef ref;
+	S_Ref ref;
 };
 
-typedef struct AST_Asset AST_Asset;
-struct AST_Asset
+typedef struct A_Asset A_Asset;
+struct A_Asset
 {
-	AST_Type type;
-	AST_Handle handle;
+	A_Type type;
+	A_Handle handle;
 
 	union
 	{
-		AST_AssetTexture texture_data;
-		AST_AssetShader  shader_data;
-		AST_AssetSound   sound_data;
-		AST_AssetModel   model_data;
-		AST_AssetScript  script_data;
+		A_TextureData texture;
+		A_ShaderData  shader;
+		A_SoundData   sound;
+		A_ModelData   model;
+		A_ScriptData  script;
 	};
 };
 

@@ -100,8 +100,8 @@ typedef struct R_DebugRenderer R_DebugRenderer;
 struct R_DebugRenderer
 {
 	Arena *arena;
-	GFX_Device *device;
-	AST_Assets *assets;
+	G_Device *device;
+	A_Registry *assets;
 
 	R_DebugDrawNode *free_list;
 
@@ -109,8 +109,8 @@ struct R_DebugRenderer
 	R_DebugDrawNode *depth_enabled  [R_DebugDrawType_COUNT];
 	R_DebugDrawNode *depth_disabled [R_DebugDrawType_COUNT];
 
-	GFX_BufferKey depth_enabled_buffer;
-	GFX_BufferKey depth_disabled_buffer;
+	G_BufferKey depth_enabled_buffer;
+	G_BufferKey depth_disabled_buffer;
 
 	R_Mesh line_mesh;
 	R_Mesh cross_mesh;
@@ -118,7 +118,7 @@ struct R_DebugRenderer
 	R_Mesh circle_mesh;
 	R_Mesh cube_mesh;
 
-	AST_Handle shader_handle;
+	A_Handle shader_handle;
 };
 
 
@@ -126,7 +126,7 @@ struct R_DebugRenderer
    CORE
    ================================================== */
 
-internal void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets);
+internal void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Registry *assets);
 internal void R_DebugRendererDestroy       (R_DebugRenderer *dr);
 
 internal void R_DebugRendererSelect        (R_DebugRenderer *dr);

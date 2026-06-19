@@ -1,6 +1,6 @@
 
 internal m4
-ANIM_TRSToM4(ANIM_TRS trs)
+AN_TRSToM4(AN_TRS trs)
 {
 	m4 T = M4Translate(trs.translation);
 	m4 R = M4RotateQuat(trs.rotation);
@@ -10,7 +10,7 @@ ANIM_TRSToM4(ANIM_TRS trs)
 }
 
 internal f32
-ANIM_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
+AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 {
 	if (next_ts <= prev_ts)
 		return 0.f;
@@ -18,10 +18,10 @@ ANIM_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 	return (ts - prev_ts) / (next_ts - prev_ts);
 }
 
-internal ANIM_InterpolatedKeyframe
-ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts)
+internal AN_InterpolatedKeyframe
+AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
 {
-	ANIM_InterpolatedKeyframe keyframe = {0};
+	AN_InterpolatedKeyframe keyframe = {0};
 	
 	if (ch->key_count == 1 || ts <= ch->keys[0].timestamp_s)
 	{
@@ -48,7 +48,7 @@ ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts)
 		f32 prev_ts = ch->keys[keyframe.k0].timestamp_s;
 		f32 next_ts = ch->keys[keyframe.k1].timestamp_s;
 		
-		keyframe.progress = ANIM_TimestampProgressFactor(prev_ts, next_ts, ts);
+		keyframe.progress = AN_TimestampProgressFactor(prev_ts, next_ts, ts);
 
 		return keyframe;
 	}
@@ -59,69 +59,69 @@ ANIM_InterpolateKeyframe(const AST_AnimChannel *ch, f32 ts)
 }
 
 internal void
-ANIM_SampleChannel(const AST_AnimChannel *ch, f32 ts, ANIM_TRS *local_trs)
+AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs)
 {
-	ANIM_InterpolatedKeyframe keyframe = ANIM_InterpolateKeyframe(ch, ts);
+	AN_InterpolatedKeyframe keyframe = AN_InterpolateKeyframe(ch, ts);
 
-	const AST_AnimKey *k0 = &ch->keys[keyframe.k0];
-	const AST_AnimKey *k1 = &ch->keys[keyframe.k1];
+	const A_AnimKey *k0 = &ch->keys[keyframe.k0];
+	const A_AnimKey *k1 = &ch->keys[keyframe.k1];
 	
 	f32 progress = keyframe.progress;
 
-	if (ch->interp == AST_AnimInterp_Step)
+	if (ch->interp == A_AnimInterp_Step)
 	{
 		switch (ch->path)
 		{
-			case AST_AnimPath_Translate:
+			case A_AnimPath_Translate:
 				local_trs->translation = k0->translation;
 				break;
 		
-			case AST_AnimPath_Rotation:
+			case A_AnimPath_Rotation:
 				local_trs->rotation = k0->rotation;
 				break;
 		
-			case AST_AnimPath_Scale:
+			case A_AnimPath_Scale:
 				local_trs->scale = k0->scale;
 				break;
 		}
 	}
-	else if (ch->interp == AST_AnimInterp_Linear)
+	else if (ch->interp == A_AnimInterp_Linear)
 	{
 		switch (ch->path)
 		{
-			case AST_AnimPath_Translate:
+			case A_AnimPath_Translate:
 				local_trs->translation = V3Lerp(k0->translation,
 											 k1->translation,
 											 progress);
 				break;
 		
-			case AST_AnimPath_Rotation:
+			case A_AnimPath_Rotation:
 				local_trs->rotation = V4QuatSlerp(k0->rotation,
 											   k1->rotation,
 											   progress);
 				break;
 		
-			case AST_AnimPath_Scale:
+			case A_AnimPath_Scale:
 				local_trs->scale = V3Lerp(k0->scale,
 									   k1->scale,
 									   progress);
 				break;
 		}
 	}
-	else if (ch->interp == AST_AnimInterp_Cubic)
+	else if (ch->interp == A_AnimInterp_Cubic)
 	{
 		AssertTrue(false);
 	}
 }
 
 internal void
-ANIM_AnimatorSelect(ANIM_Animator *animator, Arena *arena, AST_Assets *assets, AST_Handle model_handle)
+AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle)
 {
-	AST_Asset *asset = AST_GetNow(assets, model_handle, AST_Type_Model);
+	A_Asset *asset = A_GetNow(assets, model_handle, A_Type_Model);
 
 	AssertTrue(asset);
 	
-	AST_AssetModel *asset_model = &asset->model_data;
+	A_ModelData *asset_model = &asset->model;
 
 	animator->selected_model = model_handle;
 	animator->active_clip = (u32)-1;
@@ -130,32 +130,32 @@ ANIM_AnimatorSelect(ANIM_Animator *animator, Arena *arena, AST_Assets *assets, A
 	animator->loop = true;
 
 	animator->pose_count = asset_model->skeleton_count;
-	animator->poses = ArenaPushArray(arena, ANIM_SkeletonPose, animator->pose_count);
+	animator->poses = ArenaPushArray(arena, AN_SkeletonPose, animator->pose_count);
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
+		const A_Skeleton *skeleton = &asset_model->skeletons[i];
 
 		u32 count = skeleton->joint_count;
 
 		animator->poses[i].joint_count       = count;
-		animator->poses[i].local_transforms  = ArenaPushArray(arena, ANIM_TRS, count);
+		animator->poses[i].local_transforms  = ArenaPushArray(arena, AN_TRS, count);
 		animator->poses[i].global_transforms = ArenaPushArray(arena, m4,       count);
 		animator->poses[i].palette           = ArenaPushArray(arena, m4,       count);
 	}
 }
 
 internal void
-ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
+AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 {
 	if (animator->pose_count <= 0)
 		return;
 	
-	AST_AssetModel *asset_model = &AST_Get(assets, animator->selected_model, AST_Type_Model)->model_data;
+	A_ModelData *asset_model = &A_Get(assets, animator->selected_model, A_Type_Model)->model;
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
+		const A_Skeleton *skeleton = &asset_model->skeletons[i];
 
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
@@ -167,7 +167,7 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 
 	if (animator->active_clip < asset_model->clip_count)
 	{
-		AST_AnimClip *clip = &asset_model->clips[animator->active_clip];
+		A_AnimClip *clip = &asset_model->clips[animator->active_clip];
 
 		animator->elapsed += dt * animator->playback_rate;
 
@@ -186,28 +186,28 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 
 		for (u32 i = 0; i < clip->channel_count; i++)
 		{
-			const AST_AnimChannel *ch = &clip->channels[i];
+			const A_AnimChannel *ch = &clip->channels[i];
 
 			if (ch->target_skeleton < 0 || ch->target_skeleton >= animator->pose_count)
 				continue;
 
-			ANIM_SkeletonPose *pose = &animator->poses[ch->target_skeleton];
+			AN_SkeletonPose *pose = &animator->poses[ch->target_skeleton];
 
 			if (ch->target_joint >= pose->joint_count)
 				continue;
 
-			ANIM_SampleChannel(ch, animator->elapsed, &pose->local_transforms[ch->target_joint]);
+			AN_SampleChannel(ch, animator->elapsed, &pose->local_transforms[ch->target_joint]);
 		}
 	}
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
-		const AST_Skeleton *skeleton = &asset_model->skeletons[i];
-		ANIM_SkeletonPose *pose = &animator->poses[i];
+		const A_Skeleton *skeleton = &asset_model->skeletons[i];
+		AN_SkeletonPose *pose = &animator->poses[i];
 		
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
-			m4 local_transform = ANIM_TRSToM4(pose->local_transforms[j]);
+			m4 local_transform = AN_TRSToM4(pose->local_transforms[j]);
 			i32 parent = skeleton->joints[j].parent;
 
 			pose->global_transforms[j] = parent < 0
@@ -220,22 +220,22 @@ ANIM_AnimatorTick(ANIM_Animator *animator, AST_Assets *assets, f32 dt)
 }
 
 internal void
-ANIM_AnimatorPlay(ANIM_Animator *animator, u32 clip)
+AN_AnimatorPlay(AN_Animator *animator, u32 clip)
 {
 	animator->active_clip = clip;
 	animator->elapsed = 0.f;
 }
 
 internal b32
-ANIM_AnimatorPlayByName(ANIM_Animator *animator, AST_Assets *assets, String8 name)
+AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name)
 {
-	AST_AssetModel *asset_model = &AST_Get(assets, animator->selected_model, AST_Type_Model)->model_data;
+	A_ModelData *asset_model = &A_Get(assets, animator->selected_model, A_Type_Model)->model;
 
 	for (u32 i = 0; i < asset_model->clip_count; i++)
 	{
 		if (String8Match(asset_model->clips[i].name, name))
 		{
-			ANIM_AnimatorPlay(animator, i);
+			AN_AnimatorPlay(animator, i);
 			return true;
 		}
 	}
@@ -243,10 +243,10 @@ ANIM_AnimatorPlayByName(ANIM_Animator *animator, AST_Assets *assets, String8 nam
 	return false;
 }
 
-internal ANIM_Palette
-ANIM_AnimatorPalette(ANIM_Animator *animator, i32 skin_index)
+internal AN_Palette
+AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
 {
-	ANIM_Palette palette = {0};
+	AN_Palette palette = {0};
 
 	if (skin_index < 0 || skin_index >= animator->pose_count)
 		return palette;

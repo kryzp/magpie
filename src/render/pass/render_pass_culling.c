@@ -3,22 +3,22 @@ R_PASS_RECORD_DEF(R_CullClearFn)
 {
 	const R_CullClearPassData *data = ctx->user_data;
 	
-	GFX_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
-	GFX_CmdFillBuffer(ctx->cmd, counter_key, 0, GFX_DeviceBufferSize(ctx->device, counter_key), 0);
+	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
+	G_CmdFillBuffer(ctx->cmd, counter_key, 0, G_DeviceBufferSize(ctx->device, counter_key), 0);
 }
 
 R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 
 	const R_CullPassData *data = ctx->user_data;
 
-	GFX_ComputePipelineDef pipeline_def = GFX_ComputePipelineDefInit(data->shader);
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchComputePipeline(device, &pipeline_def);
+	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(data->shader);
+	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(device, &pipeline_def);
 
-	GFX_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
-	GFX_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
+	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	R_BufferRange indirect_range = R_GraphResolveBufferRange(ctx->graph, data->indirect_handle);
 	R_BufferRange counter_range  = R_GraphResolveBufferRange(ctx->graph, data->counter_handle);
@@ -56,22 +56,22 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
 
-	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
-	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(pc.object_count, 64), 1, 1);
+	G_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
+	G_CmdDispatch      (cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
 R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 
 	const R_CullPassData *data = ctx->user_data;
 
-	GFX_ComputePipelineDef pipeline_def = GFX_ComputePipelineDefInit(data->shader);
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchComputePipeline(device, &pipeline_def);
+	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(data->shader);
+	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(device, &pipeline_def);
 
-	GFX_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
-	GFX_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
+	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	R_BufferRange indirect_range = R_GraphResolveBufferRange(ctx->graph, data->indirect_handle);
 	R_BufferRange counter_range  = R_GraphResolveBufferRange(ctx->graph, data->counter_handle);
@@ -108,17 +108,17 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	
 	pc.sphere          = data->sphere;
 
-	GFX_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
-	GFX_CmdDispatch      (cmd, GFX_ComputeGroupCount(pc.object_count, 64), 1, 1);
+	G_CmdPushConstants (cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
+	G_CmdDispatch      (cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
 internal void
-R_CullingInit(R_Culling *cull, AST_Assets *assets)
+R_CullingInit(R_Culling *cull, A_Registry *assets)
 {
 	cull->assets = assets;
 	
-	cull->frustum_shader = AST_Require(assets, String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), AST_Type_Shader);
-	cull->sphere_shader  = AST_Require(assets, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"),  AST_Type_Shader);
+	cull->frustum_shader = A_Require(assets, String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), A_Type_Shader);
+	cull->sphere_shader  = A_Require(assets, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"),  A_Type_Shader);
 }
 
 internal void
@@ -161,7 +161,7 @@ R_CullFrustum(R_Culling *cull,
 
 	// Compute culling pass.
 	{
-		GFX_ShaderKey shader = AST_GetNow(cull->assets, cull->frustum_shader, AST_Type_Shader)->shader_data.key;
+		G_ShaderKey shader = A_GetNow(cull->assets, cull->frustum_shader, A_Type_Shader)->shader.key;
 
 		R_CullPassData *data = ArenaPushArray(bt->pass_arena, R_CullPassData, 1);
 		data->shader                    = shader;
@@ -219,7 +219,7 @@ R_CullSphere(R_Culling *cull,
 
 	// Compute culling pass.
 	{
-		GFX_ShaderKey shader = AST_GetNow(cull->assets, cull->sphere_shader, AST_Type_Shader)->shader_data.key;
+		G_ShaderKey shader = A_GetNow(cull->assets, cull->sphere_shader, A_Type_Shader)->shader.key;
 
 		R_CullPassData *data = ArenaPushArray(bt->pass_arena, R_CullPassData, 1);
 		data->shader                    = shader;

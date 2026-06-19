@@ -1,8 +1,8 @@
 #ifndef GRAPHICS_BUFFER_H
 #define GRAPHICS_BUFFER_H
 
-typedef struct GFX_Buffer GFX_Buffer;
-struct GFX_Buffer
+typedef struct G_Buffer G_Buffer;
+struct G_Buffer
 {
 	VkBuffer vk_handle;
 	VkBufferUsageFlags2 usage;
@@ -16,7 +16,7 @@ struct GFX_Buffer
 	u64 device_address;
 };
 
-internal b32 GFX_BufferIsStorage (const GFX_Buffer *buffer);
-internal b32 GFX_BufferIsUniform (const GFX_Buffer *buffer);
+internal b32 G_BufferIsStorage (const G_Buffer *buffer);
+internal b32 G_BufferIsUniform (const G_Buffer *buffer);
 
 #endif // GRAPHICS_BUFFER_H

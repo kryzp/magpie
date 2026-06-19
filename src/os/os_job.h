@@ -1,38 +1,38 @@
-#ifndef OS_JOB_H
-#define OS_JOB_H
+#ifndef OS_J_H
+#define OS_J_H
 
-#define JOB_ENTRY_POINT_SIG(fn) void fn(void *param)
-#define JOB_ENTRY_POINT_DEF(fn) internal JOB_ENTRY_POINT_SIG(fn)
+#define J_ENTRY_POINT_SIG(fn) void fn(void *param)
+#define J_ENTRY_POINT_DEF(fn) internal J_ENTRY_POINT_SIG(fn)
 
-#define JOB_PARALLEL_FOR_SIG(fn) void fn(u32 index)
-#define JOB_PARALLEL_FOR_DEF(fn) internal JOB_PARALLEL_FOR_SIG(fn)
+#define J_PARALLEL_FOR_SIG(fn) void fn(u32 index)
+#define J_PARALLEL_FOR_DEF(fn) internal J_PARALLEL_FOR_SIG(fn)
 
-typedef JOB_ENTRY_POINT_SIG(JOB_EntryPointFn);
-typedef JOB_PARALLEL_FOR_SIG(JOB_EntryForFn);
+typedef J_ENTRY_POINT_SIG(J_EntryPointFn);
+typedef J_PARALLEL_FOR_SIG(J_EntryForFn);
 
-typedef enum JOB_Priority
+typedef enum J_Priority
 {
-	JOB_Priority_Low,
-	JOB_Priority_Normal,
-	JOB_Priority_High,
-	JOB_Priority_COUNT
+	J_Priority_Low,
+	J_Priority_Normal,
+	J_Priority_High,
+	J_Priority_COUNT
 }
-JOB_Priority;
+J_Priority;
 
-typedef u32 JOB_Flags;
+typedef u32 J_Flags;
 enum
 {
-	JOB_Flag_None           = 0,
-	JOB_Flag_MainThreadOnly = 1 << 0
+	J_Flag_None           = 0,
+	J_Flag_MainThreadOnly = 1 << 0
 };
 
-typedef struct JOB_Decl JOB_Decl;
-struct JOB_Decl
+typedef struct J_Decl J_Decl;
+struct J_Decl
 {
-	JOB_EntryPointFn *EntryPoint;
+	J_EntryPointFn *EntryPoint;
 	void *param;
-	JOB_Priority priority;
-	JOB_Flags flags;
+	J_Priority priority;
+	J_Flags flags;
 };
 
-#endif // OS_JOB_H
+#endif // OS_J_H

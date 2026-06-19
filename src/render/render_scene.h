@@ -20,13 +20,13 @@ internal b32 R_SceneHandleIsNull(R_SceneHandle h);
 typedef struct R_MeshDesc R_MeshDesc;
 struct R_MeshDesc
 {
-	GFX_BufferKey vertex_buffer;
-	GFX_BufferKey index_buffer;
+	G_BufferKey vertex_buffer;
+	G_BufferKey index_buffer;
 
 	u32 vertex_count;
 	u32 index_count;
 
-	GFX_BufferKey skin_buffer; // optional :: GFX_BufferKeyNull()
+	G_BufferKey skin_buffer; // optional :: G_BufferKeyNull()
 };
 
 typedef struct R_ObjectDesc R_ObjectDesc;
@@ -122,18 +122,18 @@ struct R_SceneFrameData
 {
 	u32 page_count;
 	
-	GFX_Alloc object_buffer;
-	GFX_Alloc light_buffer;
-	GFX_Alloc page_table_buffer;
-	GFX_Alloc skinning_palette_buffer;
+	G_Alloc object_buffer;
+	G_Alloc light_buffer;
+	G_Alloc page_table_buffer;
+	G_Alloc skinning_palette_buffer;
 };
 
 typedef struct R_Scene R_Scene;
 struct R_Scene
 {
 	Arena           *arena;
-	GFX_Device      *device;
-	AST_Assets      *assets;
+	G_Device      *device;
+	A_Registry      *assets;
 	LOG_Channel      log_channel;
 
 	R_ObjectSlot     object_slots[R_SCENE_MAX_OBJECTS];
@@ -157,7 +157,7 @@ struct R_Scene
 	u32              material_count;
 	u32              material_free_list[R_SCENE_MAX_MATERIALS];
 	u32              material_free_count;
-	GFX_BufferKey    material_buffer;
+	G_BufferKey    material_buffer;
 	b32              material_buffer_dirty;
 
 	R_MeshSlot       mesh_slots[R_SCENE_MAX_MESHES];
@@ -165,25 +165,25 @@ struct R_Scene
 	u32              mesh_count;
 	u32              mesh_free_list[R_SCENE_MAX_MESHES];
 	u32              mesh_free_count;
-	GFX_BufferKey    mesh_buffer;
+	G_BufferKey    mesh_buffer;
 	b32              mesh_buffer_dirty;
 };
 
 // trying out new formatting :p
 
-internal void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, GFX_Device *device, AST_Assets *assets, LOG_Channel log_channel);
+internal void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
 internal void                  R_SceneDestroy               (      R_Scene *scene);
 
 internal void                  R_SceneDrawIndirect          (const R_Scene *scene,
-															 GFX_CmdBuffer *cmd,
-															 GFX_BufferKey indirect_buffer,
-															 GFX_BufferKey count_buffer);
+															 G_CmdBuffer *cmd,
+															 G_BufferKey indirect_buffer,
+															 G_BufferKey count_buffer);
 
-internal R_SceneFrameData      R_SceneUploadFrameData       (      R_Scene *scene, GFX_RingBuffer *ring);
-internal void                  R_SceneUploadPageTable       (      R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out);
-internal void                  R_SceneUploadSkinning        (      R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out);
-internal void                  R_SceneUploadObjects         (      R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out);
-internal void                  R_SceneUploadLights          (      R_Scene *scene, GFX_RingBuffer *ring, R_SceneFrameData *out);
+internal R_SceneFrameData      R_SceneUploadFrameData       (      R_Scene *scene, G_RingBuffer *ring);
+internal void                  R_SceneUploadPageTable       (      R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out);
+internal void                  R_SceneUploadSkinning        (      R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out);
+internal void                  R_SceneUploadObjects         (      R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out);
+internal void                  R_SceneUploadLights          (      R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out);
 
 internal R_SceneHandle         R_SceneObjectCreate          (      R_Scene *scene, const R_ObjectDesc *desc);
 internal void                  R_SceneObjectDestroy         (      R_Scene *scene, R_SceneHandle handle);
@@ -193,7 +193,7 @@ internal void                  R_SceneObjectSetTransform    (      R_Scene *scen
 internal void                  R_SceneObjectSetSphereBounds (      R_Scene *scene, R_SceneHandle handle, v4 sphere_bounds);
 internal void                  R_SceneObjectSetMaterial     (      R_Scene *scene, R_SceneHandle handle, R_SceneHandle material);
 internal void                  R_SceneObjectSetMesh         (      R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh);
-internal void                  R_SceneObjectSetSkinning     (      R_Scene *scene, R_SceneHandle handle, const ANIM_Palette *palette);
+internal void                  R_SceneObjectSetSkinning     (      R_Scene *scene, R_SceneHandle handle, const AN_Palette *palette);
 internal b32                   R_SceneObjectHandleIsValid   (const R_Scene *scene, R_SceneHandle handle);
 
 internal R_SceneHandle         R_SceneLightCreate           (      R_Scene *scene, const R_Light *light);
@@ -209,7 +209,7 @@ internal u32                   R_SceneShadowCasterCount     (const R_Scene *scen
 internal const R_ShadowCaster *R_SceneShadowCasterGet       (const R_Scene *scene, u32 index);
 
 internal R_SceneHandle         R_SceneMaterialCreate        (      R_Scene *scene, const R_Material *material);
-internal R_SceneHandle         R_SceneMaterialFromAssets    (      R_Scene *scene, const AST_ModelMaterial *source);
+internal R_SceneHandle         R_SceneMaterialFromAssets    (      R_Scene *scene, const A_ModelMaterial *source);
 internal void                  R_SceneMaterialUpdate        (      R_Scene *scene, R_SceneHandle handle, const R_Material *material);
 internal void                  R_SceneMaterialDestroy       (      R_Scene *scene, R_SceneHandle handle);
 internal u32                   R_SceneMaterialCount         (const R_Scene *scene);
@@ -218,7 +218,7 @@ internal u64                   R_SceneMaterialBufferAddr    (const R_Scene *scen
 internal void                  R_SceneMaterialBakeIntoGPU   (const R_Scene *scene, const R_Material *material, R_GPU_Material *out);
 internal b32                   R_SceneMaterialHandleIsValid (const R_Scene *scene, R_SceneHandle handle);
 
-internal R_SceneHandle         R_SceneMeshCreate            (      R_Scene *scene, GFX_CmdBuffer *cmd, const R_MeshDesc *desc);
+internal R_SceneHandle         R_SceneMeshCreate            (      R_Scene *scene, G_CmdBuffer *cmd, const R_MeshDesc *desc);
 internal void                  R_SceneMeshDestroy           (      R_Scene *scene, R_SceneHandle handle);
 internal u32                   R_SceneMeshCount             (const R_Scene *scene);
 internal u64                   R_SceneMeshBufferAddr        (const R_Scene *scene);
@@ -227,12 +227,12 @@ internal b32                   R_SceneMeshHandleIsValid     (const R_Scene *scen
 internal void                  R_SceneFlushMaterialBuffer   (      R_Scene *scene);
 internal void                  R_SceneFlushMeshBuffer       (      R_Scene *scene);
 
-internal R_ModelImportReceipt  R_SceneImportModel           (      R_Scene *scene, GFX_CmdBuffer *cmd, Arena *arena, AST_Handle handle, u32 max_count);
+internal R_ModelImportReceipt  R_SceneImportModel           (      R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count);
 
 internal u32                   R_SceneFindSuitablePage      (      R_Scene *scene, u32 vertex_count, u32 index_count);
 internal R_GeometryPage        R_SceneCreateNewPage         (      R_Scene *scene);
 internal u32                   R_ScenePageCount             (const R_Scene *scene);
 
-internal GFX_BindlessIndex     R_SceneResolveTextureKey     (const R_Scene *scene, GFX_TextureKey key);
+internal G_BindlessIndex     R_SceneResolveTextureKey     (const R_Scene *scene, G_TextureKey key);
 
 #endif // RENDER_SCENE_H

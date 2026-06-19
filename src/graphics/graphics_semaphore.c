@@ -1,16 +1,16 @@
 
-internal GFX_TimelinePoint
-GFX_SemaphoreSignal(GFX_Semaphore *semaphore)
+internal G_TimelinePoint
+G_SemaphoreSignal(G_Semaphore *semaphore)
 {
 	semaphore->target++;
 
-	GFX_TimelinePoint p = { semaphore->vk_handle, semaphore->target };
+	G_TimelinePoint p = { semaphore->vk_handle, semaphore->target };
 	return p;
 }
 
-internal GFX_TimelinePoint
-GFX_SemaphoreLastSignaled(const GFX_Semaphore *semaphore)
+internal G_TimelinePoint
+G_SemaphoreLastSignaled(const G_Semaphore *semaphore)
 {
-	GFX_TimelinePoint p = { semaphore->vk_handle, semaphore->target };
+	G_TimelinePoint p = { semaphore->vk_handle, semaphore->target };
 	return p;
 }

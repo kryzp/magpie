@@ -117,17 +117,17 @@ R_PassAddOutputBuffer(R_Pass *pass,
 internal R_GraphTexHandle
 R_PassWriteColour(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear)
 {
-	return R_PassWriteColourEx(pass, handle, clear, GFX_SubresourceRangeAllColour());
+	return R_PassWriteColourEx(pass, handle, clear, G_SubresourceRangeAllColour());
 }
 
 internal R_GraphTexHandle
 R_PassWriteDepth(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear)
 {
-	return R_PassWriteDepthEx(pass, handle, clear, GFX_SubresourceRangeAllDepth());
+	return R_PassWriteDepthEx(pass, handle, clear, G_SubresourceRangeAllDepth());
 }
 
 internal R_GraphTexHandle
-R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range)
+R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range)
 {
 	R_GraphTexHandle versioned_handle = R_GraphPushTexVersion(pass->graph, handle, pass->index);
 	
@@ -153,7 +153,7 @@ R_PassWriteColourEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear,
 }
 
 internal R_GraphTexHandle
-R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range)
+R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range)
 {
 	R_GraphTexHandle versioned_handle = R_GraphPushTexVersion(pass->graph, handle, pass->index);
 	
@@ -181,17 +181,17 @@ R_PassWriteDepthEx(R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, 
 internal R_GraphTexHandle
 R_PassWriteColourResolve(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear)
 {
-	return R_PassWriteColourResolveEx(pass, msaa, resolve, clear, GFX_SubresourceRangeAllColour());
+	return R_PassWriteColourResolveEx(pass, msaa, resolve, clear, G_SubresourceRangeAllColour());
 }
 
 internal R_GraphTexHandle
 R_PassWriteDepthResolve(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear)
 {
-	return R_PassWriteDepthResolveEx(pass, msaa, resolve, clear, GFX_SubresourceRangeAllDepth());
+	return R_PassWriteDepthResolveEx(pass, msaa, resolve, clear, G_SubresourceRangeAllDepth());
 }
 
 internal R_GraphTexHandle
-R_PassWriteColourResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range)
+R_PassWriteColourResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range)
 {
 	R_GraphTexHandle msaa_v    = R_GraphPushTexVersion(pass->graph, msaa,    pass->index);
 	R_GraphTexHandle resolve_v = R_GraphPushTexVersion(pass->graph, resolve, pass->index);
@@ -222,7 +222,7 @@ R_PassWriteColourResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle
 }
 
 internal R_GraphTexHandle
-R_PassWriteDepthResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range)
+R_PassWriteDepthResolveEx(R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range)
 {
 	R_GraphTexHandle msaa_v    = R_GraphPushTexVersion(pass->graph, msaa,    pass->index);
 	R_GraphTexHandle resolve_v = R_GraphPushTexVersion(pass->graph, resolve, pass->index);

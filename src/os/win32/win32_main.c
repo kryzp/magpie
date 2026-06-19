@@ -59,7 +59,7 @@ struct OS_W32_Object
 
 		CONDITION_VARIABLE cv;
 
-		OS_W32_JOB_Counter counter;
+		OS_W32_J_Counter counter;
 	};
 };
 
@@ -93,7 +93,7 @@ struct OS_W32_State
 
 	Arena platform_layer_arena;
 
-	OS_W32_JOB_Scheduler scheduler;
+	OS_W32_J_Scheduler scheduler;
 
 	OS_W32_LOG_Logger logger;
 	LOG_Channel log_channel;
@@ -252,7 +252,7 @@ OS_W32_Log(LOG_Level level, LOG_Channel channel,
 		   const char *file, i32 line, const char *fn,
 		   const char *fmt, ...)
 {
-	OS_W32_JOB_Context job_context = OS_W32_JOB_GetContext(&win32_st.scheduler);
+	OS_W32_J_Context job_context = OS_W32_J_GetContext(&win32_st.scheduler);
 	
 	va_list args;
 	va_start(args, fmt);
@@ -964,7 +964,7 @@ OS_W32_JobCounterAlloc(u32 initial_count)
 {
 	OS_W32_Object *counter = OS_W32_AllocObject();
 
-	OS_W32_JOB_CounterInit(&counter->counter, initial_count);
+	OS_W32_J_CounterInit(&counter->counter, initial_count);
 	
 	OS_Handle handle = { counter };
 	return handle;
@@ -982,72 +982,72 @@ internal void
 OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
 {
 	OS_W32_Object *obj = handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	OS_W32_JOB_CounterIncrement(counter, amount);
+	OS_W32_J_CounterIncrement(counter, amount);
 }
 
 internal void
 OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
 {
 	OS_W32_Object *obj = handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	OS_W32_JOB_CounterDecrement(&win32_st.scheduler, counter, amount);
+	OS_W32_J_CounterDecrement(&win32_st.scheduler, counter, amount);
 }
 
 internal u32
 OS_W32_JobCounterValue(OS_Handle handle)
 {
 	OS_W32_Object *obj = handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	return OS_W32_JOB_CounterValue(counter);
+	return OS_W32_J_CounterValue(counter);
 }
 
 internal void
 OS_W32_JobYield(OS_Handle handle, u32 value)
 {
 	OS_W32_Object *obj = handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	OS_W32_JOB_Yield(&win32_st.scheduler, counter, value);
+	OS_W32_J_Yield(&win32_st.scheduler, counter, value);
 }
 
 internal void
-OS_W32_JobKick(const JOB_Decl *decl, OS_Handle counter_handle)
+OS_W32_JobKick(const J_Decl *decl, OS_Handle counter_handle)
 {
 	OS_W32_Object *obj = counter_handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	OS_W32_JOB_Kick(&win32_st.scheduler, decl, counter);
+	OS_W32_J_Kick(&win32_st.scheduler, decl, counter);
 }
 
 internal void
-OS_W32_JobBatch(const JOB_Decl *decls, u32 count, OS_Handle counter_handle)
+OS_W32_JobBatch(const J_Decl *decls, u32 count, OS_Handle counter_handle)
 {
 	OS_W32_Object *obj = counter_handle.value;
-	OS_W32_JOB_Counter *counter = &obj->counter;
+	OS_W32_J_Counter *counter = &obj->counter;
 	
-	OS_W32_JOB_Batch(&win32_st.scheduler, decls, count, counter);
+	OS_W32_J_Batch(&win32_st.scheduler, decls, count, counter);
 }
 
 internal void
-OS_W32_JobFor(u32 count, JOB_EntryForFn *fn, JOB_Priority priority, u32 batch_size)
+OS_W32_JobFor(u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size)
 {
-	OS_W32_JOB_For(&win32_st.scheduler, count, fn, priority, batch_size);
+	OS_W32_J_For(&win32_st.scheduler, count, fn, priority, batch_size);
 }
 
 internal b32
 OS_W32_JobIsMainThread(void)
 {
-	return OS_W32_JOB_IsMainThread(&win32_st.scheduler);
+	return OS_W32_J_IsMainThread(&win32_st.scheduler);
 }
 
 internal Arena *
 OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
 {
-	return OS_W32_JOB_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
+	return OS_W32_J_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
 }
 
 internal void
@@ -1248,7 +1248,7 @@ OS_W32_ProcessEvents(OS_InputState *input_out)
 
 		switch (ev->type) {
 			case SDL_EVENT_QUIT:
-				OS_W32_JOB_Halt(&win32_st.scheduler);
+				OS_W32_J_Halt(&win32_st.scheduler);
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
@@ -1319,14 +1319,14 @@ OS_W32_ProcessEvents(OS_InputState *input_out)
 	ScratchRelease(&scratch);
 }
 
-JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
+J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
 	static OS_InputState prev_input_st = {0};
 
 	FILETIME last_write_time = {0};
 
 	WIN32_FIND_DATA find_data = {0};
-	HANDLE file_handle = FindFirstFileA("build/app.dll", &find_data);
+	HANDLE file_handle = FindFirstFileA("build/program.dll", &find_data);
 
 	if (file_handle != INVALID_HANDLE_VALUE)
 	{
@@ -1341,7 +1341,7 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		win32_st.code.HotUnload(win32_st.app);
 
 		OS_W32_UnloadCode();
-		OS_W32_LoadCode(String8Lit("build/app.dll"));
+		OS_W32_LoadCode(String8Lit("build/program.dll"));
 
 		win32_st.code.HotLoad(win32_st.app, &win32_st.api);
 
@@ -1359,29 +1359,29 @@ JOB_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 	if (win32_st.code.Tick(win32_st.app, &curr_input_st))
 	{
 		win32_st.code.Destroy(win32_st.app);
-		OS_W32_JOB_Halt(&win32_st.scheduler);
+		OS_W32_J_Halt(&win32_st.scheduler);
 	}
 	else
 	{
-		JOB_Decl next_frame_job = {0};
+		J_Decl next_frame_job = {0};
 		next_frame_job.EntryPoint = OS_W32_FrameJobEntry;
-		next_frame_job.priority = JOB_Priority_Normal;
-		next_frame_job.flags = JOB_Flag_MainThreadOnly;
+		next_frame_job.priority = J_Priority_Normal;
+		next_frame_job.flags = J_Flag_MainThreadOnly;
 
-		OS_W32_JOB_Kick(&win32_st.scheduler, &next_frame_job, NULL);
+		OS_W32_J_Kick(&win32_st.scheduler, &next_frame_job, NULL);
 	}
 }
 
-JOB_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
+J_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 {
 	win32_st.app = win32_st.code.Init(&win32_st.api);
 
-	JOB_Decl first_frame_job = {0};
+	J_Decl first_frame_job = {0};
 	first_frame_job.EntryPoint = OS_W32_FrameJobEntry;
-	first_frame_job.priority = JOB_Priority_Normal;
-	first_frame_job.flags = JOB_Flag_MainThreadOnly;
+	first_frame_job.priority = J_Priority_Normal;
+	first_frame_job.flags = J_Flag_MainThreadOnly;
 
-	OS_W32_JOB_Kick(&win32_st.scheduler, &first_frame_job, NULL);
+	OS_W32_J_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
 
 i32
@@ -1425,27 +1425,27 @@ main(void)
 	
 	OS_W32_InitImGui();
 
-	DebugLogI(win32_st.log_channel, "Loading App DLL...");
+	DebugLogI(win32_st.log_channel, "Loading DLL...");
 
-	OS_W32_LoadCode(String8Lit("build/app.dll"));
+	OS_W32_LoadCode(String8Lit("build/program.dll"));
 	
 	win32_st.pending_events = ArenaPushArray(&win32_st.platform_layer_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	
 	win32_st.event_mutex = OS_W32_MutexCreate();
 
 	LOG_Channel job_log_channel = OS_W32_LOG_OpenChannelFrom(&win32_st.logger, win32_st.log_channel, String8Lit("JOB"));
-	OS_W32_JOB_Init(&win32_st.scheduler, job_log_channel);
+	OS_W32_J_Init(&win32_st.scheduler, job_log_channel);
 
-	JOB_Decl root_job = {0};
+	J_Decl root_job = {0};
 	root_job.EntryPoint = OS_W32_RootJobEntry;
-	root_job.priority = JOB_Priority_Normal;
-	root_job.flags = JOB_Flag_MainThreadOnly;
+	root_job.priority = J_Priority_Normal;
+	root_job.flags = J_Flag_MainThreadOnly;
 
-	OS_W32_JOB_Kick(&win32_st.scheduler, &root_job, NULL);
+	OS_W32_J_Kick(&win32_st.scheduler, &root_job, NULL);
 	
-	OS_W32_JOB_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
+	OS_W32_J_Enter(&win32_st.scheduler, OS_W32_MessagePump, NULL);
 
-	OS_W32_JOB_Shutdown(&win32_st.scheduler);
+	OS_W32_J_Shutdown(&win32_st.scheduler);
 	
 	OS_W32_MutexDestroy(win32_st.event_mutex);
 	

@@ -1,20 +1,7 @@
 
 - shorten namespaces:
-  ANIM -> AN
-  AST  -> stays the same
-  AUD  -> stays the same
-  CH   -> stays the same
-  DEV  -> stays the same
-  ENT  -> E
-  GM   -> stays the same
   GFX  -> G
-  IO   -> stays the same
-  OS   -> stays the same
-  JOB  -> J
   LOG  -> stays the same
-  PHYS -> P
-  R    -> stays the same
-  SCR  -> S
 
 
 

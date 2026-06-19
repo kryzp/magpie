@@ -1,54 +1,54 @@
 #ifndef SCRIPT_HANDLE_H
 #define SCRIPT_HANDLE_H
 
-typedef struct SCR_Handle SCR_Handle;
-struct SCR_Handle
+typedef struct S_Handle S_Handle;
+struct S_Handle
 {
 	u32 index;
 	u32 generation;
 };
 
-internal inline SCR_Handle
-SCR_HandleNull(void)
+internal inline S_Handle
+S_HandleNull(void)
 {
-	SCR_Handle handle = {0};
+	S_Handle handle = {0};
 	return handle;
 }
 
 internal inline b32
-SCR_HandleIsNull(SCR_Handle handle)
+S_HandleIsNull(S_Handle handle)
 {
 	return handle.index == 0 && handle.generation == 0;
 }
 
 internal inline b32
-SCR_HandleMatch(SCR_Handle a, SCR_Handle b)
+S_HandleMatch(S_Handle a, S_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation);
 }
 
-typedef struct SCR_ScriptRef SCR_ScriptRef;
-struct SCR_ScriptRef
+typedef struct S_Ref S_Ref;
+struct S_Ref
 {
 	i32 value;
 };
 
-internal inline SCR_ScriptRef
-SCR_ScriptRefNull(void)
+internal inline S_Ref
+S_RefNull(void)
 {
-	SCR_ScriptRef ref = {0};
+	S_Ref ref = {0};
 	return ref;
 }
 
 internal inline b32
-SCR_ScriptRefIsNull(SCR_ScriptRef ref)
+S_RefIsNull(S_Ref ref)
 {
 	return ref.value < 0;
 }
 
 internal inline b32
-SCR_ScriptRefMatch(SCR_ScriptRef a, SCR_ScriptRef b)
+S_RefMatch(S_Ref a, S_Ref b)
 {
 	return a.value == b.value;
 }

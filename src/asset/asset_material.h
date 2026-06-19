@@ -1,37 +1,37 @@
 #ifndef ASSET_MATERIAL_H
 #define ASSET_MATERIAL_H
 
-typedef enum AST_AlphaMode
+typedef enum A_AlphaMode
 {
-	AST_AlphaMode_Opaque = 0,  // -> deferred
-	AST_AlphaMode_Mask   = 1,  // -> deferred + discard below threshold
-	AST_AlphaMode_Blend  = 2,  // -> forward transparency, back-to-front
-	AST_AlphaMode_COUNT
+	A_AlphaMode_Opaque = 0,  // -> deferred
+	A_AlphaMode_Mask   = 1,  // -> deferred + discard below threshold
+	A_AlphaMode_Blend  = 2,  // -> forward transparency, back-to-front
+	A_AlphaMode_COUNT
 }
-AST_AlphaMode;
+A_AlphaMode;
 
-typedef enum AST_ReflectionMode
+typedef enum A_ReflectionMode
 {
-	AST_ReflectionMode_Default,  // -> ssr + probes
-	AST_ReflectionMode_Planar,   // -> full scene re-render
-	AST_ReflectionMode_None,     // -> no reflections at all
-	AST_ReflectionMode_COUNT,
+	A_ReflectionMode_Default,  // -> ssr + probes
+	A_ReflectionMode_Planar,   // -> full scene re-render
+	A_ReflectionMode_None,     // -> no reflections at all
+	A_ReflectionMode_COUNT,
 }
-AST_ReflectionMode;
+A_ReflectionMode;
 
-typedef struct AST_ModelMaterial AST_ModelMaterial;
-struct AST_ModelMaterial
+typedef struct A_ModelMaterial A_ModelMaterial;
+struct A_ModelMaterial
 {
 	String8 name;
 	
 	/*
 	 * Standard Metallic-Roughness PBR crap.
 	 */
-	AST_Handle albedo_texture;
-	AST_Handle normal_texture;
-	AST_Handle emissive_texture;
-	AST_Handle metallic_roughness_texture; // g = roughness, b = metallic
-	AST_Handle occlusion_texture; // r channel only
+	A_Handle albedo_texture;
+	A_Handle normal_texture;
+	A_Handle emissive_texture;
+	A_Handle metallic_roughness_texture; // g = roughness, b = metallic
+	A_Handle occlusion_texture; // r channel only
 	
 	v4  albedo_factor;
 	f32 normal_scale;
@@ -47,8 +47,8 @@ struct AST_ModelMaterial
 	 * Light can pass through objects, and transmission tells
 	 * us "how much" of the light makes its way through.
 	 */
-	AST_Handle transmission_texture;
-	AST_Handle thickness_texture;
+	A_Handle transmission_texture;
+	A_Handle thickness_texture;
 
 	f32 transmission_factor;
 	f32 thickness_factor;
@@ -60,8 +60,8 @@ struct AST_ModelMaterial
 	 * Overrides the usual F0 value which is usually around .04
 	 * for most materials.
 	 */
-	AST_Handle specular_texture; // r = specular
-	AST_Handle specular_colour_texture;
+	A_Handle specular_texture; // r = specular
+	A_Handle specular_colour_texture;
 
 	f32 specular_factor;
 	v3  specular_colour_factor;
@@ -71,8 +71,8 @@ struct AST_ModelMaterial
 	 * that can't be simulated using just roughness called a clearcoat.
 	 * e.g: car paint, varnished wood, wet surfaces, etc...
 	 */
-	AST_Handle clearcoat_texture;
-	AST_Handle clearcoat_roughness_texture;
+	A_Handle clearcoat_texture;
+	A_Handle clearcoat_roughness_texture;
 
 	f32 clearcoat_factor;
 	f32 clearcoat_roughness_factor;
@@ -83,8 +83,8 @@ struct AST_ModelMaterial
 	 * in the material being darker when you look at it head on.
 	 * e.g: cloth & fabrics (VELVET ESPECIALLY).
 	 */
-	AST_Handle sheen_colour_texture;
-	AST_Handle sheen_roughness_texture;
+	A_Handle sheen_colour_texture;
+	A_Handle sheen_roughness_texture;
 
 	v3  sheen_colour_factor;
 	f32 sheen_roughness_factor;
@@ -93,8 +93,8 @@ struct AST_ModelMaterial
 	 * Thin-film interference. Lowk just looks cool af. Soap, pearl
 	 * CD's, butterfly wings, etc...
 	 */
-	AST_Handle iridescence_texture;
-	AST_Handle iridescence_thickness_texture;
+	A_Handle iridescence_texture;
+	A_Handle iridescence_thickness_texture;
 
 	f32 iridescence_factor;
 	f32 iridescence_ior;
@@ -108,10 +108,10 @@ struct AST_ModelMaterial
 	b32 unlit;
 	
 	f32 alpha_cutoff;
-	AST_AlphaMode alpha_mode;
+	A_AlphaMode alpha_mode;
 
 	// note: not part of GLTF spec! just engine flags (not yet implemented tho)
-	AST_ReflectionMode reflection_mode;
+	A_ReflectionMode reflection_mode;
 	v4 reflection_plane;
 };
 

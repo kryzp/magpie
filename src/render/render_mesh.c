@@ -1,6 +1,6 @@
 
 internal void
-R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
+R_MeshAlloc(R_Mesh *mesh, G_Device *device,
 			u64 vertex_stride, VkIndexType index_type,
 			u32 vertex_count, u32 index_count)
 {
@@ -10,76 +10,76 @@ R_MeshAlloc(R_Mesh *mesh, GFX_Device *device,
 	mesh->vertex_count = vertex_count;
 	mesh->index_count = index_count;
 
-	GFX_BufferAllocInfo vertex_info = {0};
+	G_BufferAllocInfo vertex_info = {0};
 	vertex_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	vertex_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	vertex_info.size = R_MeshVertexBufferSize(mesh);
 	
-	GFX_BufferAllocInfo index_info = {0};
+	G_BufferAllocInfo index_info = {0};
 	index_info.usage = VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	index_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	index_info.size = R_MeshIndexBufferSize(mesh);
 
-	mesh->vertex_buffer = GFX_DeviceBufferAlloc(device, &vertex_info);
-	mesh->index_buffer  = GFX_DeviceBufferAlloc(device, &index_info);
+	mesh->vertex_buffer = G_DeviceBufferAlloc(device, &vertex_info);
+	mesh->index_buffer  = G_DeviceBufferAlloc(device, &index_info);
 }
 
 internal void
-R_MeshDestroy(const R_Mesh *mesh, GFX_Device *device)
+R_MeshDestroy(const R_Mesh *mesh, G_Device *device)
 {
-	GFX_DeviceBufferDestroy(device, mesh->vertex_buffer);
-	GFX_DeviceBufferDestroy(device, mesh->index_buffer);
+	G_DeviceBufferDestroy(device, mesh->vertex_buffer);
+	G_DeviceBufferDestroy(device, mesh->index_buffer);
 }
 
 internal void
-R_MeshWriteToStage(const R_Mesh *mesh, GFX_Device *device,
-				   GFX_BufferKey stage, u64 stage_base,
+R_MeshWriteToStage(const R_Mesh *mesh, G_Device *device,
+				   G_BufferKey stage, u64 stage_base,
 				   const void *vertices, const void *indices)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
 
-	GFX_DeviceBufferWrite(device, stage, vertices, vb_size, stage_base);
-	GFX_DeviceBufferWrite(device, stage, indices,  ib_size, stage_base + vb_size);
+	G_DeviceBufferWrite(device, stage, vertices, vb_size, stage_base);
+	G_DeviceBufferWrite(device, stage, indices,  ib_size, stage_base + vb_size);
 }
 
 internal u64
-R_MeshUpload(const R_Mesh *mesh, const GFX_CmdBuffer *cmd,
-			 GFX_BufferKey stage, u64 stage_base)
+R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
+			 G_BufferKey stage, u64 stage_base)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
 
-	GFX_BufferCopy stage_to_vertex_copy = {0};
+	G_BufferCopy stage_to_vertex_copy = {0};
 	stage_to_vertex_copy.src_offset = stage_base;
 	stage_to_vertex_copy.dst_offset = 0;
 	stage_to_vertex_copy.size = vb_size;
 
-	GFX_BufferCopy stage_to_index_copy = {0};
+	G_BufferCopy stage_to_index_copy = {0};
 	stage_to_index_copy.src_offset = stage_base + vb_size;
 	stage_to_index_copy.dst_offset = 0;
 	stage_to_index_copy.size = ib_size;
 
-	GFX_CmdCopyBufferToBuffer(cmd, stage, mesh->vertex_buffer, 1, &stage_to_vertex_copy);
-	GFX_CmdCopyBufferToBuffer(cmd, stage, mesh->index_buffer,  1, &stage_to_index_copy);
+	G_CmdCopyBufferToBuffer(cmd, stage, mesh->vertex_buffer, 1, &stage_to_vertex_copy);
+	G_CmdCopyBufferToBuffer(cmd, stage, mesh->index_buffer,  1, &stage_to_index_copy);
 
 	return vb_size + ib_size;
 }
 
 internal void
-R_MeshBind(const R_Mesh *mesh, const GFX_CmdBuffer *cmd)
+R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
-	GFX_CmdBindIndexBuffer(cmd, mesh->index_buffer, 0, VK_WHOLE_SIZE, mesh->index_type);
+	G_CmdBindIndexBuffer(cmd, mesh->index_buffer, 0, VK_WHOLE_SIZE, mesh->index_type);
 }
 
 internal void
-R_MeshDraw(const R_Mesh *mesh, const GFX_CmdBuffer *cmd)
+R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
-	GFX_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
+	G_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
 }
 
 internal void
-R_MeshDrawInstanced(const R_Mesh *mesh, const GFX_CmdBuffer *cmd, u32 first)
+R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first)
 {
-	GFX_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, first);
+	G_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, first);
 }

@@ -1,15 +1,15 @@
 
 internal void
-PHYS_EngineInit(PHYS_Engine *engine, LOG_Channel log_channel)
+P_EngineInit(P_Engine *engine, LOG_Channel log_channel)
 {
 }
 
 internal void
-PHYS_EngineDestroy(PHYS_Engine *engine)
+P_EngineDestroy(P_Engine *engine)
 {
 }
 
 internal void
-PHYS_EngineTick(PHYS_Engine *engine, f32 dt)
+P_EngineTick(P_Engine *engine, f32 dt)
 {
 }

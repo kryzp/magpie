@@ -1,8 +1,8 @@
 #ifndef GRAPHICS_RING_BUFFER_H
 #define GRAPHICS_RING_BUFFER_H
 
-typedef struct GFX_Alloc GFX_Alloc;
-struct GFX_Alloc
+typedef struct G_Alloc G_Alloc;
+struct G_Alloc
 {
 	u64 offset;
 	u64 size;
@@ -10,27 +10,27 @@ struct GFX_Alloc
 	u64   gpu;
 };
 
-typedef struct GFX_RingBuffer GFX_RingBuffer;
-struct GFX_RingBuffer
+typedef struct G_RingBuffer G_RingBuffer;
+struct G_RingBuffer
 {
-	GFX_BufferKey buffer;
+	G_BufferKey buffer;
 	u64 used;
 	u64 capacity;
 	void *base_cpu;
 	u64   base_gpu;
 };
 
-internal GFX_RingBuffer GFX_RingBufferAlloc(GFX_Device *device, const GFX_BufferAllocInfo *alloc_info);
+internal G_RingBuffer G_RingBufferAlloc(G_Device *device, const G_BufferAllocInfo *alloc_info);
 
-internal void GFX_RingBufferDestroy(const GFX_RingBuffer *ring, GFX_Device *device);
+internal void G_RingBufferDestroy(const G_RingBuffer *ring, G_Device *device);
 
-internal void GFX_RingBufferReset(GFX_RingBuffer *ring);
+internal void G_RingBufferReset(G_RingBuffer *ring);
 
-internal GFX_Alloc GFX_RingBufferPush(GFX_RingBuffer *ring, u64 bytes, u64 alignment);
+internal G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment);
 
-#define GFX_RingBufferPushArray(ring, type, count) GFX_RingBufferPush((ring), sizeof(type) * (count), _Alignof(type))
+#define G_RingBufferPushArray(ring, type, count) G_RingBufferPush((ring), sizeof(type) * (count), _Alignof(type))
 
-internal void *GFX_RingBufferAddrCPU(const GFX_RingBuffer *ring, u64 offset);
-internal u64   GFX_RingBufferAddrGPU(const GFX_RingBuffer *ring, u64 offset);
+internal void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset);
+internal u64   G_RingBufferAddrGPU(const G_RingBuffer *ring, u64 offset);
 
 #endif // GRAPHICS_RING_BUFFER_H

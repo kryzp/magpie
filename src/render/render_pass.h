@@ -32,9 +32,9 @@ typedef struct R_PassTextureEdge R_PassTextureEdge;
 struct R_PassTextureEdge
 {
 	R_GraphTexHandle handle;
-	GFX_AccessSt state;
+	G_AccessSt state;
 	VkImageLayout layout;
-	GFX_SubresourceRange attachment_range;
+	G_SubresourceRange attachment_range;
 
 	R_GraphTexHandle resolve_handle;
 	VkImageLayout resolve_layout;
@@ -49,7 +49,7 @@ struct R_PassBufferEdge
 {
 	R_GraphBufHandle handle;
 	
-	GFX_AccessSt state;
+	G_AccessSt state;
 	
 	u64 offset;
 	u64 size; // 0 = whole buffer.
@@ -62,8 +62,8 @@ struct R_PassContext
 {
 	R_Graph *graph;
 	
-	GFX_Device *device;	
-	GFX_CmdBuffer *cmd;
+	G_Device *device;	
+	G_CmdBuffer *cmd;
 
 	const R_Scene *scene;
 	const R_Camera *camera;
@@ -71,7 +71,7 @@ struct R_PassContext
 	f32 delta_time;
 	f32 elapsed_time;
 
-	const GFX_RenderInfo *render_info;
+	const G_RenderInfo *render_info;
 
 	const void *user_data;
 };
@@ -149,14 +149,14 @@ internal R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle h
 internal R_GraphTexHandle R_PassWriteColour          (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
 internal R_GraphTexHandle R_PassWriteDepth           (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
 
-internal R_GraphTexHandle R_PassWriteColourEx        (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
-internal R_GraphTexHandle R_PassWriteDepthEx         (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, GFX_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteColourEx        (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteDepthEx         (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
 
 internal R_GraphTexHandle R_PassWriteColourResolve   (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
 internal R_GraphTexHandle R_PassWriteDepthResolve    (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
 
-internal R_GraphTexHandle R_PassWriteColourResolveEx (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range);
-internal R_GraphTexHandle R_PassWriteDepthResolveEx  (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, GFX_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteColourResolveEx (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteDepthResolveEx  (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
 
 internal R_GraphTexHandle R_PassReadTextureGraphics  (R_Pass *pass, R_GraphTexHandle handle);
 

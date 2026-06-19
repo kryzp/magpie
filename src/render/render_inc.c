@@ -9,6 +9,7 @@
 #include "render_pass.c"
 #include "render_tracker.c"
 #include "render_graph.c"
+#include "render_sprite_batch.c"
 
 #include "bloom/render_bloom_inc.c"
 #include "probe/render_probe_inc.c"

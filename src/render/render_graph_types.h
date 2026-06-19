@@ -64,7 +64,7 @@ struct R_TextureInfo
 	
 	VkSampleCountFlagBits samples;
 
-	GFX_TextureAllocFlags flags;
+	G_TextureAllocFlags flags;
 };
 
 typedef struct R_BufferInfo R_BufferInfo;

@@ -1,6 +1,6 @@
 
 internal void
-ENT_EventQueueInit(ENT_EventQueue *q, LOG_Channel log_channel)
+E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 {
 	MemZeroStruct(q);
 
@@ -10,7 +10,7 @@ ENT_EventQueueInit(ENT_EventQueue *q, LOG_Channel log_channel)
 }
 
 internal void
-ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev)
+E_EventPush(E_EventQueue *q, const E_Event *ev)
 {
 	q->events[q->event_count] = *ev;
 	q->event_count++;
@@ -19,20 +19,20 @@ ENT_EventPush(ENT_EventQueue *q, const ENT_Event *ev)
 }
 
 internal u64
-ENT_EventListenerRegister(ENT_EventQueue *q)
+E_EventListenerRegister(E_EventQueue *q)
 {
 	return q->next_listener_id++;
 }
 
 internal void
-ENT_EventBind(ENT_EventQueue *q,
+E_EventBind(E_EventQueue *q,
 			  u64 listener_id,
-			  ENT_Type entity_type,
-			  ENT_EventType event_type,
-			  ENT_EventHandlerFn *Handler,
+			  E_Type entity_type,
+			  E_EventType event_type,
+			  E_EventHandlerFn *Handler,
 			  void *ctx)
 {
-	ENT_EventBinding binding = {0};
+	E_EventBinding binding = {0};
 	binding.listener_id = listener_id;
 	binding.entity_type = entity_type;
 	binding.event_type = event_type;
@@ -46,7 +46,7 @@ ENT_EventBind(ENT_EventQueue *q,
 }
 
 internal void
-ENT_EventUnbindAll(ENT_EventQueue *q, u64 listener_id)
+E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
 {
 	u32 cursor = 0;
 	
@@ -66,24 +66,24 @@ ENT_EventUnbindAll(ENT_EventQueue *q, u64 listener_id)
 }
 
 internal void
-ENT_EventDispatch(ENT_EventQueue *q, ENT_World *world)
+E_EventDispatch(E_EventQueue *q, E_World *world)
 {
 	for (u32 i = 0; i < q->event_count; i++)
 	{
-		ENT_Event *ev = &q->events[i];
+		E_Event *ev = &q->events[i];
 
-		if (!ENT_UIDIsNull(ev->target))
+		if (!E_UIDIsNull(ev->target))
 		{
-			void *entity = ENT_WorldGet(world, ev->target);
+			void *entity = E_WorldGet(world, ev->target);
 
 			if (!entity)
 				continue;
 
-			ENT_EventSignal(q, ev, entity);
+			E_EventSignal(q, ev, entity);
 		}
 		else
 		{
-			ENT_EventBroadcast(q, ev, world);
+			E_EventBroadcast(q, ev, world);
 		}
 	}
 	
@@ -91,13 +91,13 @@ ENT_EventDispatch(ENT_EventQueue *q, ENT_World *world)
 }
 
 internal void
-ENT_EventSignal(ENT_EventQueue *q, ENT_Event *event, void *entity)
+E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 {
-	ENT_Header *header = ENT_HeaderOf(entity);
+	E_Header *header = E_HeaderOf(entity);
 
 	for (u32 i = 0; i < q->binding_count; i++)
 	{
-		ENT_EventBinding *b = &q->bindings[i];
+		E_EventBinding *b = &q->bindings[i];
 
 		if (b->entity_type == header->type &&
 			b->event_type == event->type)
@@ -109,17 +109,17 @@ ENT_EventSignal(ENT_EventQueue *q, ENT_Event *event, void *entity)
 }
 
 internal void
-ENT_EventBroadcast(ENT_EventQueue *q, ENT_Event *event, ENT_World *world)
+E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
 {
 	for (u32 i = 0; i < q->binding_count; i++)
 	{
-		ENT_EventBinding *b = &q->bindings[i];
+		E_EventBinding *b = &q->bindings[i];
 
 		if (b->event_type != event->type)
 			continue;
 
-		ENT_TypePool *pool = &world->type_pools[b->event_type];
-		const ENT_TypeDesc *desc = &world->type_registry[b->event_type];
+		E_TypePool *pool = &world->type_pools[b->event_type];
+		const E_TypeDesc *desc = &world->type_registry[b->event_type];
 		
 		u8 *base = pool->data;
 

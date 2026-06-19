@@ -1,8 +1,8 @@
 #ifndef ASSET_SKELETON_H
 #define ASSET_SKELETON_H
 
-typedef struct AST_Joint AST_Joint;
-struct AST_Joint
+typedef struct A_Joint A_Joint;
+struct A_Joint
 {
 	String8 name;
 
@@ -15,13 +15,13 @@ struct AST_Joint
 	m4 inverse_bind_matrix;
 };
 
-typedef struct AST_Skeleton AST_Skeleton;
-struct AST_Skeleton
+typedef struct A_Skeleton A_Skeleton;
+struct A_Skeleton
 {
 	String8 name;
 	
 	u32 joint_count;
-	AST_Joint *joints;
+	A_Joint *joints;
 
 	// Root world transformation matrix applied to all joint transforms.
 	// Sets the orientation.

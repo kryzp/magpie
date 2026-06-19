@@ -1,16 +1,16 @@
 #ifndef GRAPHICS_SHADER_COMPILER_H
 #define GRAPHICS_SHADER_COMPILER_H
 
-typedef struct GFX_ShaderCompiledStages GFX_ShaderCompiledStages;
-struct GFX_ShaderCompiledStages
+typedef struct G_ShaderCompiledStages G_ShaderCompiledStages;
+struct G_ShaderCompiledStages
 {
 	b32 failed;
 	u32 count;
-	GFX_ShaderBytecode *bytecodes;
+	G_ShaderBytecode *bytecodes;
 };
 
-typedef struct GFX_ShaderCompiler GFX_ShaderCompiler;
-struct GFX_ShaderCompiler
+typedef struct G_ShaderCompiler G_ShaderCompiler;
+struct G_ShaderCompiler
 {
 	void *global_session;
 	OS_Handle mutex;
@@ -18,10 +18,10 @@ struct GFX_ShaderCompiler
 	LOG_Channel log_channel;
 };
 
-internal void GFX_ShaderCompilerInit     (GFX_ShaderCompiler *compiler, LOG_Channel log_channel);
-internal void GFX_ShaderCompilerShutdown (GFX_ShaderCompiler *compiler);
+internal void G_ShaderCompilerInit     (G_ShaderCompiler *compiler, LOG_Channel log_channel);
+internal void G_ShaderCompilerShutdown (G_ShaderCompiler *compiler);
 
-internal GFX_ShaderCompiledStages GFX_ShaderCompilerCompile(GFX_ShaderCompiler *compiler,
+internal G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
 															Arena *arena,
 															String8 source_path,
 															u32 search_path_count, const String8 *search_paths);

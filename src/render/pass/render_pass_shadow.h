@@ -11,12 +11,12 @@
 typedef struct R_ShadowMappingPassData R_ShadowMappingPassData;
 struct R_ShadowMappingPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 
 	u32 caster_index;
 
 	u64 object_buffer_address;
-	GFX_BufferKey caster_table_buffer;
+	G_BufferKey caster_table_buffer;
 
 	R_DrawStream draw_stream;
 };
@@ -31,19 +31,19 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn);
 typedef struct R_ShadowRenderer R_ShadowRenderer;
 struct R_ShadowRenderer
 {
-	GFX_Device *device;
-	AST_Assets *assets;
+	G_Device *device;
+	A_Registry *assets;
 
-	GFX_TextureKey     shadow_cubemaps      [R_SCENE_MAX_SHADOW_CASTERS];
-	GFX_TextureViewKey shadow_cubemap_views [R_SCENE_MAX_SHADOW_CASTERS];
+	G_TextureKey     shadow_cubemaps      [R_SCENE_MAX_SHADOW_CASTERS];
+	G_TextureViewKey shadow_cubemap_views [R_SCENE_MAX_SHADOW_CASTERS];
 
-	GFX_BufferKey caster_table_buffer;
+	G_BufferKey caster_table_buffer;
 	u32 caster_count;
 
-	AST_Handle depth_shader;
+	A_Handle depth_shader;
 };
 
-internal void R_ShadowRendererInit       (R_ShadowRenderer *sr, GFX_Device *device, AST_Assets *assets);
+internal void R_ShadowRendererInit       (R_ShadowRenderer *sr, G_Device *device, A_Registry *assets);
 internal void R_ShadowRendererDestroy    (R_ShadowRenderer *sr);
 
 internal void R_ShadowRendererUploadGPU  (R_ShadowRenderer *sr,

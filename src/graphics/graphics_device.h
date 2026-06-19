@@ -9,43 +9,43 @@
    managed resource in the graphics device.
    ================================================== */
 
-#define GFX_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
-	typedef struct GFX_Device##mgp_name##Node GFX_Device##mgp_name##Node; \
-	struct GFX_Device##mgp_name##Node									\
+#define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
+	typedef struct G_Device##mgp_name##Node G_Device##mgp_name##Node; \
+	struct G_Device##mgp_name##Node									\
 	{																	\
-		GFX_Device##mgp_name##Node *next;								\
-		GFX_##mgp_name##Key key;										\
+		G_Device##mgp_name##Node *next;								\
+		G_##mgp_name##Key key;										\
 		resource_name resource;											\
 	};																	\
-	typedef struct GFX_Device##mgp_name##List GFX_Device##mgp_name##List; \
-	struct GFX_Device##mgp_name##List									\
+	typedef struct G_Device##mgp_name##List G_Device##mgp_name##List; \
+	struct G_Device##mgp_name##List									\
 	{																	\
-		GFX_Device##mgp_name##Node *first;								\
+		G_Device##mgp_name##Node *first;								\
 	};																	\
-	internal GFX_##mgp_name##Key GFX_Device##mgp_name##ListPush    (GFX_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, GFX_##mgp_name##Key key); \
-	internal GFX_##mgp_name##Key GFX_Device##mgp_name##ListPushAuto(GFX_Device##mgp_name##List *list, Arena *arena, const resource_name *resource); \
-	internal resource_name *GFX_Device##mgp_name##ListGet(const GFX_Device##mgp_name##List *list, GFX_##mgp_name##Key key);
+	internal G_##mgp_name##Key G_Device##mgp_name##ListPush    (G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, G_##mgp_name##Key key); \
+	internal G_##mgp_name##Key G_Device##mgp_name##ListPushAuto(G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource); \
+	internal resource_name *G_Device##mgp_name##ListGet(const G_Device##mgp_name##List *list, G_##mgp_name##Key key);
 
 #include "graphics_device_managed_resources.inc"
 
-#undef GFX_DEVICE_MANAGED_RESOURCE
+#undef G_DEVICE_MANAGED_RESOURCE
 
 
 /* ==================================================
    ALLOC / CREATION PARAMETERS
    ================================================== */
 
-typedef u32 GFX_TextureAllocFlags;
+typedef u32 G_TextureAllocFlags;
 enum
 {
-	GFX_TextureAllocFlag_None      = 0,
-	GFX_TextureAllocFlag_Transient = 1 << 0,
-	GFX_TextureAllocFlag_Storage   = 1 << 1,
-	GFX_TextureAllocFlag_Cubemap   = 1 << 2
+	G_TextureAllocFlag_None      = 0,
+	G_TextureAllocFlag_Transient = 1 << 0,
+	G_TextureAllocFlag_Storage   = 1 << 1,
+	G_TextureAllocFlag_Cubemap   = 1 << 2
 };
 
-typedef struct GFX_TextureAllocInfo GFX_TextureAllocInfo;
-struct GFX_TextureAllocInfo
+typedef struct G_TextureAllocInfo G_TextureAllocInfo;
+struct G_TextureAllocInfo
 {
 	u32 width;
 	u32 height;
@@ -60,27 +60,27 @@ struct GFX_TextureAllocInfo
 
 	VkSampleCountFlagBits samples;
 
-	GFX_TextureAllocFlags flags;
+	G_TextureAllocFlags flags;
 };
 
-typedef struct GFX_TextureViewCreateInfo GFX_TextureViewCreateInfo;
-struct GFX_TextureViewCreateInfo
+typedef struct G_TextureViewCreateInfo G_TextureViewCreateInfo;
+struct G_TextureViewCreateInfo
 {	
-	GFX_TextureKey texture;
+	G_TextureKey texture;
 	VkImageViewType type;
-	GFX_SubresourceRange range;
+	G_SubresourceRange range;
 };
 
-typedef struct GFX_BufferAllocInfo GFX_BufferAllocInfo;
-struct GFX_BufferAllocInfo
+typedef struct G_BufferAllocInfo G_BufferAllocInfo;
+struct G_BufferAllocInfo
 {
 	VkBufferUsageFlags2 usage;
 	VmaAllocationCreateFlags flags;
 	u64 size;
 };
 
-typedef struct GFX_SamplerCreateInfo GFX_SamplerCreateInfo;
-struct GFX_SamplerCreateInfo
+typedef struct G_SamplerCreateInfo G_SamplerCreateInfo;
+struct G_SamplerCreateInfo
 {
 	VkFilter filter;
 	VkSamplerAddressMode wrap_x;
@@ -94,28 +94,28 @@ struct GFX_SamplerCreateInfo
    DESTRUCTION
    ================================================== */
 
-typedef struct GFX_DestroyedImage GFX_DestroyedImage;
-struct GFX_DestroyedImage
+typedef struct G_DestroyedImage G_DestroyedImage;
+struct G_DestroyedImage
 {
-	GFX_DestroyedImage *next;
+	G_DestroyedImage *next;
 	VkImage image;
 	VmaAllocation allocation;
 };
 
-typedef struct GFX_DestroyedBuffer GFX_DestroyedBuffer;
-struct GFX_DestroyedBuffer
+typedef struct G_DestroyedBuffer G_DestroyedBuffer;
+struct G_DestroyedBuffer
 {
-	GFX_DestroyedBuffer *next;
+	G_DestroyedBuffer *next;
 	VkBuffer buffer;
 	VmaAllocation allocation;
 };
 
-typedef struct GFX_DestroyedSampler GFX_DestroyedSampler;
-struct GFX_DestroyedSampler
+typedef struct G_DestroyedSampler G_DestroyedSampler;
+struct G_DestroyedSampler
 {
-	GFX_DestroyedSampler *next;
+	G_DestroyedSampler *next;
 	VkSampler sampler;
-	GFX_BindlessHandle bindless;
+	G_BindlessHandle bindless;
 };
 
 
@@ -123,26 +123,26 @@ struct GFX_DestroyedSampler
    DEVICE
    ================================================== */
 
-typedef struct GFX_DevicePerFrameData GFX_DevicePerFrameData;
-struct GFX_DevicePerFrameData
+typedef struct G_DevicePerFrameData G_DevicePerFrameData;
+struct G_DevicePerFrameData
 {
 	Arena arena;
 	
-	GFX_TimelinePoint completion_point;
+	G_TimelinePoint completion_point;
 
 	// Non-Timeline Semaphores.
 	VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
 	VkSemaphore render_finished_semaphore; // Signaled when the OS lets us present.
 
-	GFX_CmdPool command_pool;
+	G_CmdPool command_pool;
 
-	GFX_DestroyedImage    *destroyed_image_head;
-	GFX_DestroyedBuffer   *destroyed_buffer_head;
-	GFX_DestroyedSampler  *destroyed_sampler_head;
+	G_DestroyedImage    *destroyed_image_head;
+	G_DestroyedBuffer   *destroyed_buffer_head;
+	G_DestroyedSampler  *destroyed_sampler_head;
 };
 
-typedef struct GFX_Device GFX_Device;
-struct GFX_Device
+typedef struct G_Device G_Device;
+struct G_Device
 {
 	Arena *permanent_arena;
 
@@ -152,23 +152,23 @@ struct GFX_Device
 	LOG_Channel log_channel_validation;
 	LOG_Channel log_channel_performance;
 	
-	GFX_Context context;
+	G_Context context;
 
 	u32 current_frame_index;
-	GFX_DevicePerFrameData per_frame_data[GFX_FRAMES_IN_FLIGHT];
+	G_DevicePerFrameData per_frame_data[G_FRAMES_IN_FLIGHT];
 
-	GFX_DevicePipelineLayoutList  layouts;
-	GFX_DevicePipelineList        pipelines;
-	GFX_DeviceTextureList         textures;
-	GFX_DeviceTextureViewList     views;
-	GFX_DeviceBufferList          buffers;
-	GFX_DeviceSamplerList         samplers;
-	GFX_DeviceShaderList          shaders;
-	GFX_DeviceAccelStructList     accel_structures;
+	G_DevicePipelineLayoutList  layouts;
+	G_DevicePipelineList        pipelines;
+	G_DeviceTextureList         textures;
+	G_DeviceTextureViewList     views;
+	G_DeviceBufferList          buffers;
+	G_DeviceSamplerList         samplers;
+	G_DeviceShaderList          shaders;
+	G_DeviceAccelStructList     accel_structures;
 	
-	GFX_Semaphore graphics_semaphore;
+	G_Semaphore graphics_semaphore;
 
-	GFX_Bindless bindless;
+	G_Bindless bindless;
 	
 	VkDescriptorPool imgui_pool;
 };
@@ -178,224 +178,224 @@ struct GFX_Device
    INTERNALS
    ================================================== */
 
-internal VkSurfaceFormatKHR GFX_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
+internal VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
 																   u32 available_surface_format_count,
 																   const VkSurfaceFormatKHR *available_surface_formats);
 
-internal VkPresentModeKHR   GFX_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
+internal VkPresentModeKHR   G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
 																 const VkPresentModeKHR *available_present_modes,
 																 b32 enable_vsync);
 
-internal VkExtent2D         GFX_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities);
-internal u32                GFX_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d);
+internal VkExtent2D         G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities);
+internal u32                G_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d);
 
 
 /* ==================================================
    CORE DEVICE
    ================================================== */
 
-internal void GFX_DeviceInit    (GFX_Device *device, Arena *arena, LOG_Channel log_channel);
-internal void GFX_DeviceDestroy (GFX_Device *device);
+internal void G_DeviceInit    (G_Device *device, Arena *arena, LOG_Channel log_channel);
+internal void G_DeviceDestroy (G_Device *device);
 
-internal void GFX_DeviceFlushFrameData(GFX_Device *device, GFX_DevicePerFrameData *frame_data);
+internal void G_DeviceFlushFrameData(G_Device *device, G_DevicePerFrameData *frame_data);
 
-internal GFX_CmdBuffer GFX_DeviceBeginFrame        (GFX_Device *device, GFX_Swapchain *swapchain);
-internal void          GFX_DeviceEndFrame          (GFX_Device *device, const GFX_Swapchain *swapchain, const GFX_CmdBuffer *cmd);
+internal G_CmdBuffer G_DeviceBeginFrame        (G_Device *device, G_Swapchain *swapchain);
+internal void          G_DeviceEndFrame          (G_Device *device, const G_Swapchain *swapchain, const G_CmdBuffer *cmd);
 
-internal GFX_TimelinePoint GFX_DeviceSubmit        (GFX_Device *device, const GFX_CmdBuffer *cmd);
+internal G_TimelinePoint G_DeviceSubmit        (G_Device *device, const G_CmdBuffer *cmd);
 
-internal GFX_TimelinePoint GFX_DeviceSubmitEx      (GFX_Device *device, const GFX_CmdBuffer *cmd,
+internal G_TimelinePoint G_DeviceSubmitEx      (G_Device *device, const G_CmdBuffer *cmd,
 													u32 wait_count, const VkSemaphoreSubmitInfo *waits,
 													u32 signal_count, const VkSemaphoreSubmitInfo *signals);
 
-internal GFX_CmdBuffer     GFX_DeviceSubmitImBegin (GFX_Device *device);
-internal void              GFX_DeviceSubmitImEnd   (GFX_Device *device, const GFX_CmdBuffer *cmd);
+internal G_CmdBuffer     G_DeviceSubmitImBegin (G_Device *device);
+internal void              G_DeviceSubmitImEnd   (G_Device *device, const G_CmdBuffer *cmd);
 
-internal void GFX_DeviceHotLoad(GFX_Device *device);
-internal void GFX_DeviceHotUnload(GFX_Device *device);
+internal void G_DeviceHotLoad(G_Device *device);
+internal void G_DeviceHotUnload(G_Device *device);
 
-internal void GFX_DeviceCreateSyncResources(GFX_Device *device);
-internal void GFX_DeviceDestroySyncResources(GFX_Device *device);
+internal void G_DeviceCreateSyncResources(G_Device *device);
+internal void G_DeviceDestroySyncResources(G_Device *device);
 
-internal void GFX_DeviceCreateBindless(GFX_Device *device);
-internal void GFX_DeviceApplyBindlessUpdates(GFX_Device *device);
-internal void GFX_DeviceDestroyBindless(GFX_Device *device);
+internal void G_DeviceCreateBindless(G_Device *device);
+internal void G_DeviceApplyBindlessUpdates(G_Device *device);
+internal void G_DeviceDestroyBindless(G_Device *device);
 
-internal void GFX_DeviceDestroyImGui(GFX_Device *device);
-internal void GFX_DeviceCreateImGui(GFX_Device *device);
+internal void G_DeviceDestroyImGui(G_Device *device);
+internal void G_DeviceCreateImGui(G_Device *device);
 
 
 /* ==================================================
    QUERY
    ================================================== */
 
-internal void GFX_DeviceQueryPoolDestroy(const GFX_Device *device, VkQueryPool pool);
+internal void G_DeviceQueryPoolDestroy(const G_Device *device, VkQueryPool pool);
 
 
 /* ==================================================
    SYNCHRONISATION
    ================================================== */
 
-internal void GFX_DeviceWaitIdle(const GFX_Device *device);
+internal void G_DeviceWaitIdle(const G_Device *device);
 
-internal void GFX_DeviceWaitForFence (const GFX_Device *device, VkFence fence);
-internal void GFX_DeviceResetFence   (const GFX_Device *device, VkFence fence);
-internal void GFX_DeviceDestroyFence (const GFX_Device *device, VkFence fence);
+internal void G_DeviceWaitForFence (const G_Device *device, VkFence fence);
+internal void G_DeviceResetFence   (const G_Device *device, VkFence fence);
+internal void G_DeviceDestroyFence (const G_Device *device, VkFence fence);
 
-internal GFX_Semaphore GFX_DeviceSemaphoreCreate  (const GFX_Device *device, u64 value);
-internal void          GFX_DeviceSemaphoreDestroy (const GFX_Device *device, const GFX_Semaphore *semaphore);
-internal u64           GFX_DeviceSemaphoreValue   (const GFX_Device *device, const GFX_Semaphore *semaphore);
+internal G_Semaphore G_DeviceSemaphoreCreate  (const G_Device *device, u64 value);
+internal void          G_DeviceSemaphoreDestroy (const G_Device *device, const G_Semaphore *semaphore);
+internal u64           G_DeviceSemaphoreValue   (const G_Device *device, const G_Semaphore *semaphore);
 
-internal void GFX_DeviceWaitUntil(const GFX_Device *device, GFX_TimelinePoint point);
+internal void G_DeviceWaitUntil(const G_Device *device, G_TimelinePoint point);
 
 
 /* ==================================================
    SWAPCHAIN
    ================================================== */
 
-internal GFX_Swapchain GFX_DeviceSwapchainCreate  (GFX_Device *device);
-internal void          GFX_DeviceSwapchainDestroy (const GFX_Device *device, const GFX_Swapchain *swapchain);
+internal G_Swapchain G_DeviceSwapchainCreate  (G_Device *device);
+internal void          G_DeviceSwapchainDestroy (const G_Device *device, const G_Swapchain *swapchain);
 
 
 /* ==================================================
    COMMAND POOL
    ================================================== */
 
-internal GFX_CmdPool   GFX_DeviceCmdPoolCreate   (const GFX_Device *device, u32 family_index);
-internal void          GFX_DeviceCmdPoolDestroy  (const GFX_Device *device, const GFX_CmdPool *pool);
+internal G_CmdPool   G_DeviceCmdPoolCreate   (const G_Device *device, u32 family_index);
+internal void          G_DeviceCmdPoolDestroy  (const G_Device *device, const G_CmdPool *pool);
 
-internal GFX_CmdBuffer GFX_DeviceCmdPoolAcquire  (      GFX_Device *device, GFX_CmdPool *pool);
-internal void          GFX_DeviceCmdPoolRelease  (const GFX_Device *device, GFX_CmdPool *pool, const GFX_CmdBuffer *cmd, u64 fence_value);
-internal void          GFX_DeviceCmdPoolPurge    (const GFX_Device *device, GFX_CmdPool *pool, u64 fence_value);
+internal G_CmdBuffer G_DeviceCmdPoolAcquire  (      G_Device *device, G_CmdPool *pool);
+internal void          G_DeviceCmdPoolRelease  (const G_Device *device, G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value);
+internal void          G_DeviceCmdPoolPurge    (const G_Device *device, G_CmdPool *pool, u64 fence_value);
 
 
 /* ==================================================
    PIPELINES
    ================================================== */
 
-internal GFX_PipelineLayoutKey GFX_DevicePipelineLayoutFetch(GFX_Device *device, GFX_ShaderKey program);
-internal VkPipelineLayout      GFX_DevicePipelineLayoutFromKey(const GFX_Device *device, GFX_PipelineLayoutKey key);
+internal G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_Device *device, G_ShaderKey program);
+internal VkPipelineLayout      G_DevicePipelineLayoutFromKey(const G_Device *device, G_PipelineLayoutKey key);
 
 
-typedef struct GFX_PipelineSt GFX_PipelineSt;
-struct GFX_PipelineSt
+typedef struct G_PipelineSt G_PipelineSt;
+struct G_PipelineSt
 {
-	GFX_PipelineKey pipeline;
-	GFX_PipelineLayoutKey layout;
+	G_PipelineKey pipeline;
+	G_PipelineLayoutKey layout;
 	VkPipelineBindPoint bind_point;
 };
 
-internal GFX_PipelineSt GFX_DeviceFetchGraphicsPipeline (GFX_Device *device, const GFX_GraphicsPipelineDef *def);
-internal GFX_PipelineSt GFX_DeviceFetchComputePipeline  (GFX_Device *device, const GFX_ComputePipelineDef *def);
+internal G_PipelineSt G_DeviceFetchGraphicsPipeline (G_Device *device, const G_GraphicsPipelineDef *def);
+internal G_PipelineSt G_DeviceFetchComputePipeline  (G_Device *device, const G_ComputePipelineDef *def);
 
-internal VkPipeline     GFX_DevicePipelineFromKey       (const GFX_Device *device, GFX_PipelineKey key);
+internal VkPipeline     G_DevicePipelineFromKey       (const G_Device *device, G_PipelineKey key);
 
 
 /* ==================================================
    TEXTURES
    ================================================== */
 
-internal GFX_TextureKey GFX_DeviceTextureAlloc             (GFX_Device *device, const GFX_TextureAllocInfo *alloc_info);
-internal GFX_TextureKey GFX_DeviceTextureAlloc2D           (GFX_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps);
-internal GFX_TextureKey GFX_DeviceTextureAlloc2DRW         (GFX_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps);
-internal GFX_TextureKey GFX_DeviceTextureAllocDepth2D      (GFX_Device *device, u32 width, u32 height, u32 mipmaps);
-internal GFX_TextureKey GFX_DeviceTextureAllocDepth2DRW    (GFX_Device *device, u32 width, u32 height, u32 mipmaps);
-internal GFX_TextureKey GFX_DeviceTextureAllocCubemap      (GFX_Device *device, u32 resolution, VkFormat format, u32 mipmaps);
-internal GFX_TextureKey GFX_DeviceTextureAllocCubemapDepth (GFX_Device *device, u32 resolution, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAlloc             (G_Device *device, const G_TextureAllocInfo *alloc_info);
+internal G_TextureKey G_DeviceTextureAlloc2D           (G_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAlloc2DRW         (G_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAllocDepth2D      (G_Device *device, u32 width, u32 height, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAllocDepth2DRW    (G_Device *device, u32 width, u32 height, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAllocCubemap      (G_Device *device, u32 resolution, VkFormat format, u32 mipmaps);
+internal G_TextureKey G_DeviceTextureAllocCubemapDepth (G_Device *device, u32 resolution, u32 mipmaps);
 
-internal void           GFX_DeviceTextureDestroy           (GFX_Device *device, GFX_TextureKey texture);
+internal void           G_DeviceTextureDestroy           (G_Device *device, G_TextureKey texture);
 
-internal GFX_Texture   *GFX_DeviceTextureFromKey           (const GFX_Device *device, GFX_TextureKey key);
+internal G_Texture   *G_DeviceTextureFromKey           (const G_Device *device, G_TextureKey key);
 
 
 /* ==================================================
    VIEWS
    ================================================== */
 
-internal GFX_TextureViewKey GFX_DeviceTextureViewFetch    (GFX_Device *device, const GFX_TextureViewCreateInfo *create_info);
-internal GFX_TextureViewKey GFX_DeviceTextureViewAuto     (GFX_Device *device, GFX_TextureKey texture);
+internal G_TextureViewKey G_DeviceTextureViewFetch    (G_Device *device, const G_TextureViewCreateInfo *create_info);
+internal G_TextureViewKey G_DeviceTextureViewAuto     (G_Device *device, G_TextureKey texture);
 
-internal GFX_TextureView   *GFX_DeviceTextureViewFromKey  (const GFX_Device *device, GFX_TextureViewKey key);
+internal G_TextureView   *G_DeviceTextureViewFromKey  (const G_Device *device, G_TextureViewKey key);
 
-internal GFX_BindlessIndex  GFX_DeviceTextureViewBindless (const GFX_Device *device, GFX_TextureViewKey key);
+internal G_BindlessIndex  G_DeviceTextureViewBindless (const G_Device *device, G_TextureViewKey key);
 
 
 /* ==================================================
    BUFFERS
    ================================================== */
 
-internal GFX_BufferKey GFX_DeviceBufferAlloc   (GFX_Device *device, const GFX_BufferAllocInfo *alloc_info);
-internal GFX_BufferKey GFX_DeviceStageAlloc    (GFX_Device *device, u64 size);
+internal G_BufferKey G_DeviceBufferAlloc   (G_Device *device, const G_BufferAllocInfo *alloc_info);
+internal G_BufferKey G_DeviceStageAlloc    (G_Device *device, u64 size);
 
-internal void          GFX_DeviceBufferDestroy (GFX_Device *device, GFX_BufferKey buffer);
+internal void          G_DeviceBufferDestroy (G_Device *device, G_BufferKey buffer);
 
-internal GFX_Buffer   *GFX_DeviceBufferFromKey (const GFX_Device *device, GFX_BufferKey key);
+internal G_Buffer   *G_DeviceBufferFromKey (const G_Device *device, G_BufferKey key);
 
-internal void         *GFX_DeviceBufferMap     (const GFX_Device *device, GFX_BufferKey key);
-internal u64           GFX_DeviceBufferAddress (const GFX_Device *device, GFX_BufferKey key);
+internal void         *G_DeviceBufferMap     (const G_Device *device, G_BufferKey key);
+internal u64           G_DeviceBufferAddress (const G_Device *device, G_BufferKey key);
 
-internal void          GFX_DeviceBufferRead    (const GFX_Device *device, GFX_BufferKey key, void *dst, u64 length, u64 offset);
-internal void          GFX_DeviceBufferWrite   (const GFX_Device *device, GFX_BufferKey key, const void *src, u64 length, u64 offset);
+internal void          G_DeviceBufferRead    (const G_Device *device, G_BufferKey key, void *dst, u64 length, u64 offset);
+internal void          G_DeviceBufferWrite   (const G_Device *device, G_BufferKey key, const void *src, u64 length, u64 offset);
 
-internal u64           GFX_DeviceBufferSize    (const GFX_Device *device, GFX_BufferKey key);
+internal u64           G_DeviceBufferSize    (const G_Device *device, G_BufferKey key);
 
 
 /* ==================================================
    SAMPLERS
    ================================================== */
 
-internal GFX_SamplerKey    GFX_DeviceSamplerCreate   (GFX_Device *device, const GFX_SamplerCreateInfo *create_info);
-internal GFX_SamplerKey    GFX_DeviceSamplerCreateF  (GFX_Device *device, VkFilter filter);
+internal G_SamplerKey    G_DeviceSamplerCreate   (G_Device *device, const G_SamplerCreateInfo *create_info);
+internal G_SamplerKey    G_DeviceSamplerCreateF  (G_Device *device, VkFilter filter);
 
-internal void              GFX_DeviceSamplerDestroy  (GFX_Device *device, GFX_SamplerKey sampler);
+internal void              G_DeviceSamplerDestroy  (G_Device *device, G_SamplerKey sampler);
 
-internal GFX_Sampler      *GFX_DeviceSamplerFromKey  (const GFX_Device *device, GFX_SamplerKey key);
+internal G_Sampler      *G_DeviceSamplerFromKey  (const G_Device *device, G_SamplerKey key);
 
-internal GFX_BindlessIndex GFX_DeviceSamplerBindless (const GFX_Device *device, GFX_SamplerKey key);
+internal G_BindlessIndex G_DeviceSamplerBindless (const G_Device *device, G_SamplerKey key);
 
 
 /* ==================================================
    SHADERS
    ================================================== */
 
-internal GFX_ShaderStage    GFX_DeviceShaderStageCreate    (GFX_Device *device, Arena *arena, const GFX_ShaderBytecode *bytecode);
+internal G_ShaderStage    G_DeviceShaderStageCreate    (G_Device *device, Arena *arena, const G_ShaderBytecode *bytecode);
 
-internal GFX_ShaderKey      GFX_DeviceShaderProgramCreate  (GFX_Device *device, u32 stage_count, const GFX_ShaderBytecode *stages);
-internal void               GFX_DeviceShaderProgramDestroy (GFX_Device *device, GFX_ShaderKey program);
+internal G_ShaderKey      G_DeviceShaderProgramCreate  (G_Device *device, u32 stage_count, const G_ShaderBytecode *stages);
+internal void               G_DeviceShaderProgramDestroy (G_Device *device, G_ShaderKey program);
 
-internal GFX_ShaderProgram *GFX_DeviceShaderProgramFromKey (const GFX_Device *device, GFX_ShaderKey key);
+internal G_ShaderProgram *G_DeviceShaderProgramFromKey (const G_Device *device, G_ShaderKey key);
 
 
 /* ==================================================
    ACCELERATION STRUCTURES
    ================================================== */
 
-typedef struct GFX_DeviceAllocAccelStructReceipt GFX_DeviceAllocAccelStructReceipt;
-struct GFX_DeviceAllocAccelStructReceipt
+typedef struct G_DeviceAllocAccelStructReceipt G_DeviceAllocAccelStructReceipt;
+struct G_DeviceAllocAccelStructReceipt
 {
-	GFX_AccelStructKey key;
+	G_AccelStructKey key;
 	u64 scratch_size;
 };
 
 // Bottom-Level Acceleration Structure
 // -- vertex / index data
-internal GFX_DeviceAllocAccelStructReceipt GFX_DeviceBLASAlloc(GFX_Device *device, const GFX_BLASGeometry *geometries, u32 geometry_count);
+internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const G_BLASGeometry *geometries, u32 geometry_count);
 
 // Top-Level Acceleration Structure
 // -- objects
-internal GFX_DeviceAllocAccelStructReceipt GFX_DeviceTLASAlloc(GFX_Device *device, u32 max_instance_count);
+internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 max_instance_count);
 
-internal void             GFX_DeviceAccelStructDestroy (GFX_Device *device, GFX_AccelStructKey key);
-internal u64              GFX_DeviceAccelStructAddress (GFX_Device *device, GFX_AccelStructKey key);
-internal GFX_AccelStruct *GFX_DeviceAccelStructFromKey (GFX_Device *device, GFX_AccelStructKey key);
+internal void             G_DeviceAccelStructDestroy (G_Device *device, G_AccelStructKey key);
+internal u64              G_DeviceAccelStructAddress (G_Device *device, G_AccelStructKey key);
+internal G_AccelStruct *G_DeviceAccelStructFromKey (G_Device *device, G_AccelStructKey key);
 
 
 /* ==================================================
    IMGUI
    ================================================== */
 
-internal void GFX_DeviceImGuiNewFrame (const GFX_Device *device);
-internal void GFX_DeviceImGuiRecord   (const GFX_Device *device, const GFX_CmdBuffer *cmd);
+internal void G_DeviceImGuiNewFrame (const G_Device *device);
+internal void G_DeviceImGuiRecord   (const G_Device *device, const G_CmdBuffer *cmd);
 
 
 #endif // GRAPHICS_DEVICE_H

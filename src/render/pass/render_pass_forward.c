@@ -1,19 +1,19 @@
 
 R_PASS_RECORD_DEF(R_ForwardPassFn)
 {
-	GFX_Device *device            = ctx->device;
-	GFX_CmdBuffer *cmd            = ctx->cmd;
+	G_Device *device            = ctx->device;
+	G_CmdBuffer *cmd            = ctx->cmd;
 	const R_Scene *scene          = ctx->scene;
 	const R_ForwardPassData *data = ctx->user_data;
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-	GFX_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-	GFX_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	struct
 	{
@@ -39,41 +39,41 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	}
 	args;
 
-	args.frame_data_buffer           = GFX_DeviceBufferAddress(device, data->frame_data_buffer);
+	args.frame_data_buffer           = G_DeviceBufferAddress(device, data->frame_data_buffer);
 	args.object_buffer               = data->object_buffer_address;
 	args.material_buffer             = R_SceneMaterialBufferAddr(scene);
 	args.mesh_buffer                 = R_SceneMeshBufferAddr(scene);
 
 	args.light_buffer                = data->light_buffer_address;
-	args.shadow_caster_buffer        = GFX_DeviceBufferAddress(device, data->shadow_caster_table);
+	args.shadow_caster_buffer        = G_DeviceBufferAddress(device, data->shadow_caster_table);
 
 	args.irr_sh_buffer               = data->irradiance_sh_buffer_address;
 	args.irr_grid_info_buffer        = data->irradiance_grid_info_buffer_address;
 
-	args.irradiance_fallback_cubemap = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, GFX_SubresourceRangeAllColour()));
-	args.prefilter_cubemap           = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     GFX_SubresourceRangeAllColour()));
-	args.brdf_lut                    = GFX_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          GFX_SubresourceRangeAllColour()));
+	args.irradiance_fallback_cubemap = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, G_SubresourceRangeAllColour()));
+	args.prefilter_cubemap           = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     G_SubresourceRangeAllColour()));
+	args.brdf_lut                    = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          G_SubresourceRangeAllColour()));
 
-	args.linear_sampler              = GFX_DeviceSamplerBindless(device, data->linear_sampler);
-	args.shadow_sampler              = GFX_DeviceSamplerBindless(device, data->nearest_sampler);
+	args.linear_sampler              = G_DeviceSamplerBindless(device, data->linear_sampler);
+	args.shadow_sampler              = G_DeviceSamplerBindless(device, data->nearest_sampler);
 
 	args.light_count                 = R_SceneLightCount(scene);
 
-	GFX_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 	
-	GFX_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	GFX_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
+	G_BufferKey counter_key  = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
 internal void
-R_ForwardRendererInit(R_ForwardRenderer *r, GFX_Device *device, AST_Assets *assets)
+R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Registry *assets)
 {
 	r->device = device;
 	r->assets = assets;
 	
-	r->shader = AST_Require(assets, String8Lit("assets://shaders/passes/forward/forward.slang"), AST_Type_Shader);
+	r->shader = A_Require(assets, String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader);
 }
 
 internal void
@@ -96,7 +96,7 @@ R_ForwardRender(R_ForwardRenderer *r,
 	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(graph->device->context.depth_format, v3(1.f, 1.f, 1.f));
 
 	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
-	lighting_info.flags = GFX_TextureAllocFlag_Storage;
+	lighting_info.flags = G_TextureAllocFlag_Storage;
 
 	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
 	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_4_BIT);
@@ -116,7 +116,7 @@ R_ForwardRender(R_ForwardRenderer *r,
 	for (u32 i = 0; i < bb_shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb_shadow->shadow_maps[i]);
 
-	GFX_ShaderKey shader = AST_GetNow(r->assets, r->shader, AST_Type_Shader)->shader_data.key;
+	G_ShaderKey shader = A_GetNow(r->assets, r->shader, A_Type_Shader)->shader.key;
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
 
@@ -139,8 +139,8 @@ R_ForwardRender(R_ForwardRenderer *r,
 
 	if (R_IrradianceVolumeIsBaked(bt->irradiance_volume))
 	{
-		data->irradiance_sh_buffer_address        = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer       (bt->irradiance_volume));
-		data->irradiance_grid_info_buffer_address = GFX_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer (bt->irradiance_volume));
+		data->irradiance_sh_buffer_address        = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer       (bt->irradiance_volume));
+		data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer (bt->irradiance_volume));
 	}
 	else
 	{

@@ -40,20 +40,20 @@ if not exist slang_compiler.obj (
 	)
 )
 
-:: compile app (platform agnostic code)
-echo Compiling app...
-cl %opts% %supwarn% %includes% /TC /c "%code%\app.c" /Fo:app.obj
+:: compile program (platform agnostic code)
+echo Compiling program...
+cl %opts% %supwarn% %includes% /TC /c "%code%\magpie.c" /Fo:program.obj
 
 if errorlevel 1 (
     echo.
-    echo App compilation failed.
+    echo Program compilation failed.
     popd
     exit /b 1
 )
 
-:: link app into DLL
-echo Linking app...
-link /DLL /DEBUG /OUT:app.dll app.obj vk_mem_alloc.obj slang_compiler.obj %libs% slang.lib
+:: link program into dll
+echo Linking program...
+link /DLL /DEBUG /OUT:program.dll program.obj vk_mem_alloc.obj slang_compiler.obj %libs% slang.lib
 
 if errorlevel 1 (
     echo.

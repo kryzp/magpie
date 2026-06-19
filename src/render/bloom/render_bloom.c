@@ -1,11 +1,11 @@
 
 internal void
-R_BloomRendererInit(R_BloomRenderer *renderer, AST_Assets *assets)
+R_BloomRendererInit(R_BloomRenderer *renderer, A_Registry *assets)
 {
 	renderer->assets = assets;
 
-	renderer->upsample_shader_handle   = AST_Require(assets, String8Lit("assets://shaders/passes/upsample_bloom.slang"),   AST_Type_Shader);
-	renderer->downsample_shader_handle = AST_Require(assets, String8Lit("assets://shaders/passes/downsample_bloom.slang"), AST_Type_Shader);
+	renderer->upsample_shader_handle   = A_Require(assets, String8Lit("assets://shaders/passes/upsample_bloom.slang"),   A_Type_Shader);
+	renderer->downsample_shader_handle = A_Require(assets, String8Lit("assets://shaders/passes/downsample_bloom.slang"), A_Type_Shader);
 }
 
 internal void

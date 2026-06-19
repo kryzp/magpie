@@ -1,14 +1,15 @@
+
 internal void
-AUD_Init(AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendAPI *api)
+AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel, AU_Backend *backend)
 {
 	system->arena = arena;
-	system->api = api;
+	system->backend = backend;
 
 	system->log_channel = log_channel;
 
 	system->master_volume = 1.f;
 
-	for (u32 b = 0; b < AUD_Bus_COUNT; b++)
+	for (u32 b = 0; b < AU_Bus_COUNT; b++)
 		system->bus_volumes[b] = 1.f;
 
 	system->curr_emitter_handle.value = 1;
@@ -22,23 +23,22 @@ AUD_Init(AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendA
 }
 
 internal void
-AUD_Shutdown(AUD_System *system)
+AU_Shutdown(AU_System *system)
 {
 	DebugLogI(system->log_channel, "Shutting Down...");
 	
-	AUD_StopAll(system);
+	AU_StopAll(system);
 }
 
 internal void
-AUD_Tick(AUD_System *system, f32 dt, AUD_Listener listener)
+AU_Tick(AU_System *system, f32 dt, AU_Listener listener)
 {
-	system->api->Tick(dt, listener);
 }
 
-internal AUD_Emitter *
-AUD_AllocEmitter(AUD_System *system)
+internal AU_Emitter *
+AU_AllocEmitter(AU_System *system)
 {
-	AUD_Emitter *emitter;
+	AU_Emitter *emitter;
 
 	if (system->free_emitter_sentinel.next != &system->free_emitter_sentinel)
 	{
@@ -50,7 +50,7 @@ AUD_AllocEmitter(AUD_System *system)
 	}
 	else
 	{
-		emitter = ArenaPushArray(system->arena, AUD_Emitter, 1);
+		emitter = ArenaPushArray(system->arena, AU_Emitter, 1);
 	}
 
 	emitter->handle = system->curr_emitter_handle;
@@ -65,7 +65,7 @@ AUD_AllocEmitter(AUD_System *system)
 }
 
 internal void
-AUD_ReleaseEmitter(AUD_System *system, AUD_Emitter *emitter)
+AU_ReleaseEmitter(AU_System *system, AU_Emitter *emitter)
 {
 	emitter->prev->next = emitter->next;
 	emitter->next->prev = emitter->prev;
@@ -76,33 +76,33 @@ AUD_ReleaseEmitter(AUD_System *system, AUD_Emitter *emitter)
 	emitter->prev->next = emitter;
 }
 
-internal AUD_Emitter *
-AUD_GetEmitter(const AUD_System *system, AUD_Handle handle)
+internal AU_Emitter *
+AU_GetEmitter(const AU_System *system, AU_Handle handle)
 {
-	const AUD_Emitter *sentinel = &system->emitter_sentinel;
+	const AU_Emitter *sentinel = &system->emitter_sentinel;
 
-	for (AUD_Emitter *emitter = sentinel->next; emitter != sentinel; emitter = emitter->next)
+	for (AU_Emitter *emitter = sentinel->next; emitter != sentinel; emitter = emitter->next)
 	{
-		if (AUD_HandleMatch(handle, emitter->handle))
+		if (AU_HandleMatch(handle, emitter->handle))
 			return emitter;
 	}
 
 	return NULL;
 }
 
-internal AUD_Handle
-AUD_Play(AUD_System *system, const AUD_PlayConfig *config)
+internal AU_Handle
+AU_Play(AU_System *system, const AU_PlayConfig *config)
 {
-	AUD_SourceHandle source = system->api->CreateSourceFromBuffer(config->clip);
-	system->api->SetSourceVolume(source, AUD_GetOutputVolumeOnBus(system, config->bus, config->volume));
-	system->api->SetSourcePitch(source, config->pitch);
+	AU_SourceHandle source = AU_BackendCreateSourceFromBuffer(system->backend, config->clip);
+	AU_BackendSetSourceVolume(system->backend, source, AU_GetOutputVolumeOnBus(system, config->bus, config->volume));
+	AU_BackendSetSourcePitch(system->backend, source, config->pitch);
 
 	if (config->spatial)
-		system->api->SetSourcePosition(source, config->position);
+		AU_BackendSetSourcePosition(system->backend, source, config->position);
 
-	system->api->Play(source);
+	AU_BackendPlay(system->backend, source);
 
-	AUD_Emitter *emitter = AUD_AllocEmitter(system);
+	AU_Emitter *emitter = AU_AllocEmitter(system);
 	emitter->source = source;
 	emitter->bus = config->bus;
 	emitter->base_volume = config->volume;
@@ -111,93 +111,93 @@ AUD_Play(AUD_System *system, const AUD_PlayConfig *config)
 }
 
 internal void
-AUD_Stop(AUD_System *system, AUD_Handle handle)
+AU_Stop(AU_System *system, AU_Handle handle)
 {
-	AUD_Emitter *emitter = AUD_GetEmitter(system, handle);
+	AU_Emitter *emitter = AU_GetEmitter(system, handle);
 	AssertTrue(emitter);
 
-	system->api->Stop(emitter->source);
-	system->api->DestroySource(emitter->source);
+	AU_BackendStop(system->backend, emitter->source);
+	AU_BackendDestroySource(system->backend, emitter->source);
 
-	AUD_ReleaseEmitter(system, emitter);
+	AU_ReleaseEmitter(system, emitter);
 }
 
 internal void
-AUD_StopAll(AUD_System *system)
+AU_StopAll(AU_System *system)
 {
-	AUD_Emitter *sentinel = &system->emitter_sentinel;
-	AUD_Emitter *emitter    = sentinel->next;
+	AU_Emitter *sentinel = &system->emitter_sentinel;
+	AU_Emitter *emitter    = sentinel->next;
 
 	while (emitter != sentinel)
 	{
-		AUD_Emitter *next = emitter->next;
+		AU_Emitter *next = emitter->next;
 
-		system->api->Stop(emitter->source);
-		system->api->DestroySource(emitter->source);
+		AU_BackendStop(system->backend, emitter->source);
+		AU_BackendDestroySource(system->backend, emitter->source);
 
-		AUD_ReleaseEmitter(system, emitter);
+		AU_ReleaseEmitter(system, emitter);
 
 		emitter = next;
 	}
 }
 
 internal void
-AUD_Resume(AUD_System *system, AUD_Handle handle)
+AU_Resume(AU_System *system, AU_Handle handle)
 {
-	AUD_Emitter *emitter = AUD_GetEmitter(system, handle);
+	AU_Emitter *emitter = AU_GetEmitter(system, handle);
 	AssertTrue(emitter);
 
-	system->api->Resume(emitter->source);
+	AU_BackendResume(system->backend, emitter->source);
 }
 
 internal void
-AUD_Pause(AUD_System *system, AUD_Handle handle)
+AU_Pause(AU_System *system, AU_Handle handle)
 {
-	AUD_Emitter *emitter = AUD_GetEmitter(system, handle);
+	AU_Emitter *emitter = AU_GetEmitter(system, handle);
 	AssertTrue(emitter);
 
-	system->api->Pause(emitter->source);
+	AU_BackendPause(system->backend, emitter->source);
 }
 
 internal void
-AUD_SetPositionOf(const AUD_System *system, AUD_Handle handle, v3 position)
+AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 position)
 {
-	AUD_Emitter *emitter = AUD_GetEmitter(system, handle);
+	AU_Emitter *emitter = AU_GetEmitter(system, handle);
 	AssertTrue(emitter);
 
-	system->api->SetSourcePosition(emitter->source, position);
+	AU_BackendSetSourcePosition(system->backend, emitter->source, position);
 }
 
 internal void
-AUD_SetMasterVolume(AUD_System *system, f32 volume)
+AU_SetMasterVolume(AU_System *system, f32 volume)
 {
 	system->master_volume = volume;
 
-	for (u32 b = 0; b < AUD_Bus_COUNT; b++)
-		AUD_UpdateEmitterVolumes(system, b);
+	for (u32 b = 0; b < AU_Bus_COUNT; b++)
+		AU_UpdateEmitterVolumes(system, b);
 }
 
 internal void
-AUD_SetBusVolume(AUD_System *system, AUD_Bus bus, f32 volume)
+AU_SetBusVolume(AU_System *system, AU_Bus bus, f32 volume)
 {
 	system->bus_volumes[bus] = volume;
-	AUD_UpdateEmitterVolumes(system, bus);
+	AU_UpdateEmitterVolumes(system, bus);
 }
 
 internal f32
-AUD_GetOutputVolumeOnBus(const AUD_System *system, AUD_Bus bus, f32 base_volume)
+AU_GetOutputVolumeOnBus(const AU_System *system, AU_Bus bus, f32 base_volume)
 {
 	return base_volume * system->bus_volumes[bus] * system->master_volume;
 }
 
 internal void
-AUD_UpdateEmitterVolumes(const AUD_System *system, AUD_Bus bus)
+AU_UpdateEmitterVolumes(const AU_System *system, AU_Bus bus)
 {
-	const AUD_Emitter *sentinel = &system->emitter_sentinel;
+	const AU_Emitter *sentinel = &system->emitter_sentinel;
 
-	for (AUD_Emitter *emitter = sentinel->next; emitter != sentinel; emitter = emitter->next)
+	for (AU_Emitter *emitter = sentinel->next; emitter != sentinel; emitter = emitter->next)
 	{
 		if (emitter->bus == bus)
-			system->api->SetSourceVolume(emitter->source, AUD_GetOutputVolumeOnBus(system, bus, emitter->base_volume));
+			AU_BackendSetSourceVolume(system->backend, emitter->source, AU_GetOutputVolumeOnBus(system, bus, emitter->base_volume));
 	}
 }

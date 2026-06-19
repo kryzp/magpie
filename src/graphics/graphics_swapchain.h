@@ -1,10 +1,10 @@
 #ifndef GRAPHICS_SWAPCHAIN_H
 #define GRAPHICS_SWAPCHAIN_H
 
-#define GFX_FRAMES_IN_FLIGHT 3
+#define G_FRAMES_IN_FLIGHT 3
 
-typedef struct GFX_Swapchain GFX_Swapchain;
-struct GFX_Swapchain
+typedef struct G_Swapchain G_Swapchain;
+struct G_Swapchain
 {
 	VkSwapchainKHR vk_handle;
 
@@ -17,8 +17,8 @@ struct GFX_Swapchain
 	u32 current_texture_index;
 
 	u32 texture_count;
-	GFX_TextureKey *textures;
-	GFX_TextureView *views;
+	G_TextureKey *textures;
+	G_TextureView *views;
 
 	u32 width;
 	u32 height;
@@ -26,14 +26,14 @@ struct GFX_Swapchain
 	VkFormat format;
 };
 
-internal inline GFX_TextureKey
-GFX_SwapchainCurrentTexture(const GFX_Swapchain *swapchain)
+internal inline G_TextureKey
+G_SwapchainCurrentTexture(const G_Swapchain *swapchain)
 {
 	return swapchain->textures[swapchain->current_texture_index];
 }
 
-internal inline GFX_TextureView *
-GFX_SwapchainCurrentView(const GFX_Swapchain *swapchain)
+internal inline G_TextureView *
+G_SwapchainCurrentView(const G_Swapchain *swapchain)
 {
 	return &swapchain->views[swapchain->current_texture_index];
 }

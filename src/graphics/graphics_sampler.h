@@ -1,8 +1,8 @@
 #ifndef GRAPHICS_SAMPLER_H
 #define GRAPHICS_SAMPLER_H
 
-typedef struct GFX_Sampler GFX_Sampler;
-struct GFX_Sampler
+typedef struct G_Sampler G_Sampler;
+struct G_Sampler
 {
 	VkSampler vk_handle;
 	VkFilter filter;
@@ -13,7 +13,7 @@ struct GFX_Sampler
 	
 	VkBorderColor border_colour;
 
-	GFX_BindlessHandle bindless;
+	G_BindlessHandle bindless;
 };
 
 #endif // GRAPHICS_SAMPLER_H

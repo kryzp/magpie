@@ -45,17 +45,17 @@ R_DebugCreateLineMesh(R_DebugRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->line_mesh) +
 												 R_MeshIndexBufferSize(&dr->line_mesh));
 
 	R_MeshWriteToStage(&dr->line_mesh, dr->device, staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->line_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 }
 
 internal void
@@ -83,17 +83,17 @@ R_DebugCreateCrossMesh(R_DebugRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->cross_mesh) +
 												 R_MeshIndexBufferSize(&dr->cross_mesh));
 
 	R_MeshWriteToStage(&dr->cross_mesh, dr->device, staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->cross_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 }
 
 internal void
@@ -137,17 +137,17 @@ R_DebugCreateSphereMesh(R_DebugRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				vertex_count, index_count);
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->sphere_mesh) +
 												 R_MeshIndexBufferSize(&dr->sphere_mesh));
 
 	R_MeshWriteToStage(&dr->sphere_mesh, dr->device, staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->sphere_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 
 	ScratchRelease(&scratch);
 }
@@ -177,17 +177,17 @@ R_DebugCreateCircleMesh(R_DebugRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				vertex_count, index_count);
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->circle_mesh) +
 												 R_MeshIndexBufferSize(&dr->circle_mesh));
 
 	R_MeshWriteToStage(&dr->circle_mesh, dr->device, staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->circle_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 
 	ScratchRelease(&scratch);
 }
@@ -216,21 +216,21 @@ R_DebugCreateCubeMesh(R_DebugRenderer *dr)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	GFX_BufferKey staging = GFX_DeviceStageAlloc(dr->device,
+	G_BufferKey staging = G_DeviceStageAlloc(dr->device,
 												 R_MeshVertexBufferSize(&dr->cube_mesh) +
 												 R_MeshIndexBufferSize(&dr->cube_mesh));
 
 	R_MeshWriteToStage(&dr->cube_mesh, dr->device, staging, 0, vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(dr->device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(dr->device);
 	R_MeshUpload(&dr->cube_mesh, &cmd, staging, 0);
-	GFX_DeviceSubmitImEnd(dr->device, &cmd);
+	G_DeviceSubmitImEnd(dr->device, &cmd);
 
-	GFX_DeviceBufferDestroy(dr->device, staging);
+	G_DeviceBufferDestroy(dr->device, staging);
 }
 
 internal void
-R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, GFX_Device *device, AST_Assets *assets)
+R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Registry *assets)
 {
 	MemZeroStruct(dr);
 
@@ -238,15 +238,15 @@ R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, GFX_Device *devi
 	dr->device = device;
 	dr->assets = assets;
 
-	dr->shader_handle = AST_Require(assets, String8Lit("assets://shaders/passes/debug/debug_line.slang"), AST_Type_Shader);
+	dr->shader_handle = A_Require(assets, String8Lit("assets://shaders/passes/debug/debug_line.slang"), A_Type_Shader);
 
-	GFX_BufferAllocInfo buf_info = {0};
+	G_BufferAllocInfo buf_info = {0};
 	buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	buf_info.size  = sizeof(R_GPU_DebugObjectDraw) * R_DEBUG_MAX_DRAWS;
 
-	dr->depth_enabled_buffer  = GFX_DeviceBufferAlloc(device, &buf_info);
-	dr->depth_disabled_buffer = GFX_DeviceBufferAlloc(device, &buf_info);
+	dr->depth_enabled_buffer  = G_DeviceBufferAlloc(device, &buf_info);
+	dr->depth_disabled_buffer = G_DeviceBufferAlloc(device, &buf_info);
 
 	R_DebugCreateLineMesh   (dr);
 	R_DebugCreateCrossMesh  (dr);
@@ -266,8 +266,8 @@ R_DebugRendererDestroy(R_DebugRenderer *dr)
 	R_MeshDestroy(&dr->circle_mesh, dr->device);
 	R_MeshDestroy(&dr->cube_mesh,   dr->device);
 
-	GFX_DeviceBufferDestroy(dr->device, dr->depth_enabled_buffer);
-	GFX_DeviceBufferDestroy(dr->device, dr->depth_disabled_buffer);
+	G_DeviceBufferDestroy(dr->device, dr->depth_enabled_buffer);
+	G_DeviceBufferDestroy(dr->device, dr->depth_disabled_buffer);
 }
 
 internal void
@@ -579,10 +579,10 @@ R_DebugBuildBatches(R_DebugDrawNode **buckets,
 typedef struct R_DebugPassData R_DebugPassData;
 struct R_DebugPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 
-	GFX_BufferKey depth_enabled_buffer;
-	GFX_BufferKey depth_disabled_buffer;
+	G_BufferKey depth_enabled_buffer;
+	G_BufferKey depth_disabled_buffer;
 
 	u32 depth_batch_count;
 	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES];
@@ -615,15 +615,15 @@ R_DebugMeshForType(const R_DebugPassData *data, R_DebugDrawType type)
 
 internal void
 R_DebugDrawBatches(const R_DebugPassData *data,
-				   GFX_Device *device,
-				   GFX_CmdBuffer *cmd,
-				   GFX_PipelineSt *pipeline_st,
+				   G_Device *device,
+				   G_CmdBuffer *cmd,
+				   G_PipelineSt *pipeline_st,
 				   const R_DebugBatch *batches,
 				   u32 batch_count,
-				   GFX_BufferKey buffer,
+				   G_BufferKey buffer,
 				   m4 view_proj)
 {
-	GFX_CmdBindPipeline(cmd, pipeline_st->bind_point, pipeline_st->pipeline);
+	G_CmdBindPipeline(cmd, pipeline_st->bind_point, pipeline_st->pipeline);
 
 	for (u32 i = 0; i < batch_count; i++)
 	{
@@ -639,27 +639,27 @@ R_DebugDrawBatches(const R_DebugPassData *data,
 		args;
 
 		args.view_proj     = view_proj;
-		args.calls_buffer  = GFX_DeviceBufferAddress(device, buffer);
-		args.vertex_buffer = GFX_DeviceBufferAddress(device, mesh->vertex_buffer);
+		args.calls_buffer  = G_DeviceBufferAddress(device, buffer);
+		args.vertex_buffer = G_DeviceBufferAddress(device, mesh->vertex_buffer);
 
-		GFX_CmdPushConstants(cmd, pipeline_st->layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+		G_CmdPushConstants(cmd, pipeline_st->layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 
 		R_MeshBind(mesh, cmd);
-		GFX_CmdDrawIndexed(cmd, mesh->index_count, batch->count, 0, 0, batch->start);
+		G_CmdDrawIndexed(cmd, mesh->index_count, batch->count, 0, 0, batch->start);
 	}
 }
 
 R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 {
-	GFX_Device *device = ctx->device;
-	GFX_CmdBuffer *cmd = ctx->cmd;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
 
 	const R_DebugPassData *data = ctx->user_data;
 
 	
 	// Pipeline with depth testing.
 
-	GFX_GraphicsPipelineDef pipeline_def = GFX_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	pipeline_def.cull_mode = VK_CULL_MODE_NONE;
 	pipeline_def.depth_stencil_state.depth_test_enabled  = true;
@@ -672,13 +672,13 @@ R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	pipeline_def.blend_state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	pipeline_def.blend_state.alpha.op = VK_BLEND_OP_ADD;
 
-	GFX_PipelineSt pipeline_st = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
 	
 	// Pipeline without depth testing.
 
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
-	GFX_PipelineSt pipeline_st_no_depth = GFX_DeviceFetchGraphicsPipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st_no_depth = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
 	
 	// Draw.
@@ -741,8 +741,8 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	u32 depth_enabled_id = 0;
 	u32 depth_disabled_id = 0;
 
-	R_GPU_DebugObjectDraw *depth_enabled_draws  = GFX_DeviceBufferMap(dr->device, dr->depth_enabled_buffer);
-	R_GPU_DebugObjectDraw *depth_disabled_draws = GFX_DeviceBufferMap(dr->device, dr->depth_disabled_buffer);
+	R_GPU_DebugObjectDraw *depth_enabled_draws  = G_DeviceBufferMap(dr->device, dr->depth_enabled_buffer);
+	R_GPU_DebugObjectDraw *depth_disabled_draws = G_DeviceBufferMap(dr->device, dr->depth_disabled_buffer);
 
 	R_DebugBuildInstances(dr, dr->depth_enabled,  depth_enabled_draws,  &depth_enabled_id);
 	R_DebugBuildInstances(dr, dr->depth_disabled, depth_disabled_draws, &depth_disabled_id);
@@ -762,7 +762,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// Create the render pass.
 
-	GFX_ShaderKey shader = AST_GetNow(dr->assets, dr->shader_handle, AST_Type_Shader)->shader_data.key;
+	G_ShaderKey shader = A_GetNow(dr->assets, dr->shader_handle, A_Type_Shader)->shader.key;
 
 	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
 	data->shader = shader;

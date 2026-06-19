@@ -14,17 +14,17 @@ struct R_Bulletin
 {
 	Arena *pass_arena;
 
-	GFX_BufferKey frame_data_buffer;
+	G_BufferKey frame_data_buffer;
 
-	GFX_SamplerKey linear_sampler;
-	GFX_SamplerKey nearest_sampler;
+	G_SamplerKey linear_sampler;
+	G_SamplerKey nearest_sampler;
 
 	const R_SceneFrameData *scene_resources;
 
 	const R_IrradianceVolume *irradiance_volume;
-	GFX_TextureKey irradiance_fallback_cubemap;
-	GFX_TextureKey prefilter_cubemap;
-	GFX_TextureKey brdf;
+	G_TextureKey irradiance_fallback_cubemap;
+	G_TextureKey prefilter_cubemap;
+	G_TextureKey brdf;
 };
 
 typedef struct R_BB_ShadowData R_BB_ShadowData;
@@ -33,7 +33,7 @@ struct R_BB_ShadowData
 	u32 shadow_map_count;
 	R_GraphTexHandle shadow_maps[R_SCENE_MAX_SHADOW_CASTERS];
 	
-	GFX_BufferKey shadow_caster_table;
+	G_BufferKey shadow_caster_table;
 };
 
 typedef struct R_Blackboard R_Blackboard;

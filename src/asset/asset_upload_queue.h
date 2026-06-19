@@ -1,26 +1,26 @@
 #ifndef ASSET_UPLOAD_QUEUE_H
 #define ASSET_UPLOAD_QUEUE_H
 
-#define AST_UPLOAD_QUEUE_MAX_ELEMENTS 512
+#define A_UPLOAD_QUEUE_MAX_ELEMENTS 512
 
-typedef struct AST_Upload AST_Upload;
-struct AST_Upload
+typedef struct A_Upload A_Upload;
+struct A_Upload
 {
 	u32 load_arena_index;
-	AST_MetaData metadata;
-	AST_Handle handle;
-	AST_Type type;
-	AST_SerializerPipelineData load_data;
+	A_MetaData metadata;
+	A_Handle handle;
+	A_Type type;
+	A_SerializerPipelineData load_data;
 };
 
-typedef struct AST_UploadQueue AST_UploadQueue;
-struct AST_UploadQueue
+typedef struct A_UploadQueue A_UploadQueue;
+struct A_UploadQueue
 {
-	AST_Upload elements[AST_UPLOAD_QUEUE_MAX_ELEMENTS];
+	A_Upload elements[A_UPLOAD_QUEUE_MAX_ELEMENTS];
 	u32 count;
 };
 
-internal void AST_UploadQueuePush  (AST_UploadQueue *queue, const AST_Upload *upload);
-internal void AST_UploadQueueClear (AST_UploadQueue *queue);
+internal void A_UploadQueuePush  (A_UploadQueue *queue, const A_Upload *upload);
+internal void A_UploadQueueClear (A_UploadQueue *queue);
 
 #endif // ASSET_UPLOAD_QUEUE_H

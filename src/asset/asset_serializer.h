@@ -1,24 +1,24 @@
 #ifndef ASSET_SERIALIZER_H
 #define ASSET_SERIALIZER_H
 
-typedef struct AST_Assets AST_Assets;
+typedef struct A_Registry A_Registry;
 
-typedef struct AST_MetaData AST_MetaData;
-struct AST_MetaData
+typedef struct A_MetaData A_MetaData;
+struct A_MetaData
 {
 	String8 path;
 };
 
-typedef struct AST_Context AST_Context;
-struct AST_Context
+typedef struct A_Context A_Context;
+struct A_Context
 {
-	AST_Assets *assets;
-	AST_MetaData metadata;
+	A_Registry *assets;
+	A_MetaData metadata;
 	LOG_Channel log_channel;
 };
 
-typedef struct AST_SerializerPipelineData AST_SerializerPipelineData;
-struct AST_SerializerPipelineData
+typedef struct A_SerializerPipelineData A_SerializerPipelineData;
+struct A_SerializerPipelineData
 {
 	void *data;
 	
@@ -26,23 +26,23 @@ struct AST_SerializerPipelineData
 	b32 failed;
 	
 	u32 dependency_count;
-	AST_Handle *dependencies;
+	A_Handle *dependencies;
 
 	u32 watch_path_count;
 	String8 *watch_paths;
 };
 
-internal String8 AST_ContextSystemFilePath(const AST_Context *context, Arena *arena);
+internal String8 A_ContextSystemFilePath(const A_Context *context, Arena *arena);
 
-typedef struct AST_Serializer AST_Serializer;
-struct AST_Serializer
+typedef struct A_Serializer A_Serializer;
+struct A_Serializer
 {
-	AST_SerializerPipelineData (*Cpu)      (const AST_Context *ctx, Arena *load_scope);
-	void                       (*Alloc)    (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *out, Arena *arena);
-	void                       (*Reload)   (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *existing);
-	void                       (*Gpu)      (const AST_Context *ctx, AST_SerializerPipelineData *data, AST_Asset *asset, GFX_CmdBuffer *cmd, GFX_BufferKey stage, u64 stage_base);
-	void                       (*End)      (AST_SerializerPipelineData *data);
-	void                       (*Dispose)  (AST_Asset *asset, AST_Assets *assets);
+	A_SerializerPipelineData (*Cpu)      (const A_Context *ctx, Arena *load_scope);
+	void                       (*Alloc)    (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *out, Arena *arena);
+	void                       (*Reload)   (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *existing);
+	void                       (*Gpu)      (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *asset, G_CmdBuffer *cmd, G_BufferKey stage, u64 stage_base);
+	void                       (*End)      (A_SerializerPipelineData *data);
+	void                       (*Dispose)  (A_Asset *asset, A_Registry *assets);
 };
 
 #endif // ASSET_SERIALIZER_H

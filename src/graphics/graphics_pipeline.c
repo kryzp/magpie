@@ -1,8 +1,8 @@
 
-internal GFX_GraphicsPipelineDef
-GFX_GraphicsPipelineDefInit(GFX_ShaderKey program)
+internal G_GraphicsPipelineDef
+G_GraphicsPipelineDefInit(G_ShaderKey program)
 {
-	GFX_GraphicsPipelineDef def = {0};
+	G_GraphicsPipelineDef def = {0};
 
 	def.program = program;
 
@@ -10,8 +10,8 @@ GFX_GraphicsPipelineDefInit(GFX_ShaderKey program)
 	def.cull_mode = VK_CULL_MODE_BACK_BIT;
 	def.front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-	def.blend_state = GFX_BlendStInit();
-	def.depth_stencil_state = GFX_DepthStencilStInit();
+	def.blend_state = G_BlendStInit();
+	def.depth_stencil_state = G_DepthStencilStInit();
 	
 	def.colour_attachment_count = 0;
 	def.has_depth_attachment = false;
@@ -25,10 +25,10 @@ GFX_GraphicsPipelineDefInit(GFX_ShaderKey program)
 	return def;
 }
 
-internal GFX_GraphicsPipelineDef
-GFX_GraphicsPipelineDefFromInfo(GFX_ShaderKey program, const GFX_RenderInfo *info)
+internal G_GraphicsPipelineDef
+G_GraphicsPipelineDefFromInfo(G_ShaderKey program, const G_RenderInfo *info)
 {
-	GFX_GraphicsPipelineDef def = GFX_GraphicsPipelineDefInit(program);
+	G_GraphicsPipelineDef def = G_GraphicsPipelineDefInit(program);
 
 	def.colour_attachment_count = info->colour_attachment_count;
 
@@ -44,10 +44,10 @@ GFX_GraphicsPipelineDefFromInfo(GFX_ShaderKey program, const GFX_RenderInfo *inf
 	return def;
 }
 
-internal GFX_ComputePipelineDef
-GFX_ComputePipelineDefInit(GFX_ShaderKey program)
+internal G_ComputePipelineDef
+G_ComputePipelineDefInit(G_ShaderKey program)
 {
-	GFX_ComputePipelineDef def = {0};
+	G_ComputePipelineDef def = {0};
 
 	def.program = program;
 

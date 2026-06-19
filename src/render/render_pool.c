@@ -15,20 +15,20 @@ R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max
 }
 
 internal void
-R_ResourcePoolDestroy(R_ResourcePool *pool, GFX_Device *device)
+R_ResourcePoolDestroy(R_ResourcePool *pool, G_Device *device)
 {
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
-		GFX_DeviceTextureDestroy(device, t->key);
-		t->key = GFX_TextureKeyNull();
+		G_DeviceTextureDestroy(device, t->key);
+		t->key = G_TextureKeyNull();
 	}
 	
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
-		GFX_DeviceBufferDestroy(device, b->key);
-		b->key = GFX_BufferKeyNull();
+		G_DeviceBufferDestroy(device, b->key);
+		b->key = G_BufferKeyNull();
 	}
 
 	pool->texture_count = 0;
@@ -90,10 +90,10 @@ void RenderResourcePool::release_buffer(const GpuBuffer *buffer, const GpuBuffer
 */
 
 internal void
-R_ResourcePoolFlush(R_ResourcePool *pool, const GFX_Device *device)
+R_ResourcePoolFlush(R_ResourcePool *pool, const G_Device *device)
 {
 	pool->current_frame = device->graphics_semaphore.target + 1;
-	pool->gpu_completed_time = GFX_DeviceSemaphoreValue(device, &device->graphics_semaphore);
+	pool->gpu_completed_time = G_DeviceSemaphoreValue(device, &device->graphics_semaphore);
 
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
@@ -108,9 +108,9 @@ R_ResourcePoolFlush(R_ResourcePool *pool, const GFX_Device *device)
 	}
 }
 
-internal GFX_TextureKey
+internal G_TextureKey
 R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
-							 GFX_Device *device,
+							 G_Device *device,
 							 const R_TextureInfo *info,
 							 R_ResourceState *out_state)
 {
@@ -131,7 +131,7 @@ R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 		}
 	}
 
-	GFX_TextureAllocInfo alloc_info = {0};
+	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width   = info->size_x;
 	alloc_info.height  = info->size_y;
 	alloc_info.depth   = info->size_z;
@@ -144,7 +144,7 @@ R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 	alloc_info.flags   = info->flags;
 	
 	R_PooledTexture texture = {0};
-	texture.key = GFX_DeviceTextureAlloc(device, &alloc_info);
+	texture.key = G_DeviceTextureAlloc(device, &alloc_info);
 	texture.info = *info;
 	texture.in_use = true;
 	texture.last_frame_used = pool->current_frame;
@@ -164,9 +164,9 @@ R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 	return texture.key;
 }
 
-internal GFX_BufferKey
+internal G_BufferKey
 R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
-							GFX_Device *device,
+							G_Device *device,
 							const R_BufferInfo *info,
 							R_ResourceState *out_state)
 {
@@ -187,13 +187,13 @@ R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
 		}
 	}
 
-	GFX_BufferAllocInfo alloc_info = {0};
+	G_BufferAllocInfo alloc_info = {0};
 	alloc_info.usage = info->usage;
 	alloc_info.flags = info->flags;
 	alloc_info.size  = info->size;
 	
 	R_PooledBuffer buffer = {0};
-	buffer.key = GFX_DeviceBufferAlloc(device, &alloc_info);
+	buffer.key = G_DeviceBufferAlloc(device, &alloc_info);
 	buffer.info = *info;
 	buffer.in_use = true;
 	buffer.last_frame_used = pool->current_frame;
@@ -214,14 +214,14 @@ R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
 
 internal void
 R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
-							GFX_TextureKey key,
+							G_TextureKey key,
 							const R_ResourceState *state)
 {
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
 
-		if (GFX_TextureKeyMatch(key, t->key))
+		if (G_TextureKeyMatch(key, t->key))
 		{
 			t->state = *state;
 			return;
@@ -231,14 +231,14 @@ R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
 
 internal void
 R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
-						   GFX_BufferKey key,
+						   G_BufferKey key,
 						   const R_ResourceState *state)
 {
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
 
-		if (GFX_BufferKeyMatch(key, b->key))
+		if (G_BufferKeyMatch(key, b->key))
 		{
 			b->state = *state;
 			return;

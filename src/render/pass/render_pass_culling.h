@@ -26,7 +26,7 @@ R_PASS_RECORD_DEF(R_CullClearFn);
 typedef struct R_CullPassData R_CullPassData;
 struct R_CullPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 	
 	R_GraphBufHandle indirect_handle;
 	R_GraphBufHandle counter_handle;
@@ -57,13 +57,13 @@ struct R_DrawStream
 typedef struct R_Culling R_Culling;
 struct R_Culling
 {
-	AST_Assets *assets;
+	A_Registry *assets;
 	
-	AST_Handle frustum_shader;
-	AST_Handle sphere_shader;
+	A_Handle frustum_shader;
+	A_Handle sphere_shader;
 };
 
-internal void R_CullingInit         (R_Culling *cull, AST_Assets *assets);
+internal void R_CullingInit         (R_Culling *cull, A_Registry *assets);
 internal void R_CullingDestroy      (R_Culling *cull);
 
 internal R_DrawStream R_CullFrustum (R_Culling *cull,

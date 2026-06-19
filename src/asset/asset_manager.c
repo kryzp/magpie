@@ -1,6 +1,6 @@
 
 internal u32
-AST_AllocSlot(AST_Assets *assets)
+A_AllocSlot(A_Registry *assets)
 {
 	if (assets->free_index_count > 0)
 		return assets->free_indices[--assets->free_index_count];
@@ -13,7 +13,7 @@ AST_AllocSlot(AST_Assets *assets)
 }
 
 internal void
-AST_FreeSlot(AST_Assets *assets, u32 index)
+A_FreeSlot(A_Registry *assets, u32 index)
 {
 	DebugLogAssert(assets->log_channel,
 				   assets->free_index_count < ArraySize(assets->free_indices),
@@ -23,61 +23,61 @@ AST_FreeSlot(AST_Assets *assets, u32 index)
 	assets->free_index_count++;
 }
 
-internal AST_Handle
-AST_AllocRecord(AST_Assets *assets, String8 path)
+internal A_Handle
+A_AllocRecord(A_Registry *assets, String8 path)
 {
-	u32 index = AST_AllocSlot(assets);
+	u32 index = A_AllocSlot(assets);
 
-	AST_Record *record = &assets->records[index];
+	A_Record *record = &assets->records[index];
 
 	u32 prev_gen = record->generation;
 
 	MemZeroStruct(record);
 
 	record->path = String8Clone(assets->arena, path);
-	record->state = AST_State_Unloaded;
+	record->state = A_State_Unloaded;
 	
 	record->generation = prev_gen + 1;
 
-	AST_Handle handle = {0};
+	A_Handle handle = {0};
 	handle.index = index;
 	handle.generation = record->generation;
 
 	return handle;
 }
 
-internal AST_Record *
-AST_GetRecord(AST_Assets *assets, AST_Handle handle)
+internal A_Record *
+A_GetRecord(A_Registry *assets, A_Handle handle)
 {
-	if (!AST_IsValid(assets, handle))
+	if (!A_IsValid(assets, handle))
 		return NULL;
 
 	return &assets->records[handle.index];
 }
 
-internal const AST_Record *
-AST_GetRecordConst(const AST_Assets *assets, AST_Handle handle)
+internal const A_Record *
+A_GetRecordConst(const A_Registry *assets, A_Handle handle)
 {
-	if (!AST_IsValid(assets, handle))
+	if (!A_IsValid(assets, handle))
 		return NULL;
 
 	return &assets->records[handle.index];
 }
 
-internal AST_Handle
-AST_PathMapFind(const AST_Assets *assets, String8 path)
+internal A_Handle
+A_PathMapFind(const A_Registry *assets, String8 path)
 {
 	// shitty but cool trick but i really shouldnt be doing this lol
-	// note: AST_MANAGER_MAX_RECORDS *must* be a power of two for this to work.
+	// note: A_MANAGER_MAX_RECORDS *must* be a power of two for this to work.
 	
 	const u64 hash = HashStr8(path);
-	const u32 mask = AST_MANAGER_MAX_RECORDS - 1;
+	const u32 mask = A_MANAGER_MAX_RECORDS - 1;
 
-	for (u32 i = 0; i < AST_MANAGER_MAX_RECORDS; i++)
+	for (u32 i = 0; i < A_MANAGER_MAX_RECORDS; i++)
 	{
 		u32 idx = (u32)((hash + i) & mask);
 
-		const AST_PathMapEntry *entry = &assets->path_map[idx];
+		const A_PathMapEntry *entry = &assets->path_map[idx];
 		
 		if (!entry->occupied)
 			break;
@@ -86,22 +86,22 @@ AST_PathMapFind(const AST_Assets *assets, String8 path)
 			return entry->value;
 	}
 
-	return AST_HandleNull();
+	return A_HandleNull();
 }
 
 internal void
-AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
+A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle)
 {
-	DebugLogAssert(assets->log_channel, AST_IsValid(assets, handle), "Asset handle invalid.");
+	DebugLogAssert(assets->log_channel, A_IsValid(assets, handle), "Asset handle invalid.");
 
 	const u64 hash = HashStr8(path);
-	const u32 mask = AST_MANAGER_MAX_RECORDS - 1;
+	const u32 mask = A_MANAGER_MAX_RECORDS - 1;
 
-	for (u32 i = 0; i < AST_MANAGER_MAX_RECORDS; i++)
+	for (u32 i = 0; i < A_MANAGER_MAX_RECORDS; i++)
 	{
 		u32 idx = (u32)((hash + i) & mask);
 
-		AST_PathMapEntry *entry = &assets->path_map[idx];
+		A_PathMapEntry *entry = &assets->path_map[idx];
 		
 		if (!entry->occupied)
 		{
@@ -118,7 +118,7 @@ AST_PathMapInsert(AST_Assets *assets, String8 path, AST_Handle handle)
 }
 
 internal u32
-AST_LoadArenaAcquire(AST_Assets *assets)
+A_LoadArenaAcquire(A_Registry *assets)
 {
 	for (;;)
 	{
@@ -140,7 +140,7 @@ AST_LoadArenaAcquire(AST_Assets *assets)
 }
 
 internal void
-AST_LoadArenaRelease(AST_Assets *assets, u32 index)
+A_LoadArenaRelease(A_Registry *assets, u32 index)
 {
 	ArenaResetAndDecommit(&assets->load_arenas[index]);
  
@@ -158,11 +158,11 @@ AST_LoadArenaRelease(AST_Assets *assets, u32 index)
 }
 
 internal void
-AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
-		 GFX_Device *device,
-		 GFX_ShaderCompiler *shader_compiler,
-		 const AUD_BackendAPI *audio_backend,
-		 SCR_System *scripting_system)
+A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
+		 G_Device *device,
+		 G_ShaderCompiler *shader_compiler,
+		 AU_Backend *audio_backend,
+		 S_System *scripting_system)
 {
 	MemZeroStruct(assets);
 
@@ -184,17 +184,17 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 	assets->loading_mutex    = osapi->MutexCreate();
 	assets->loading_cond     = osapi->CondVarCreate();
 
-	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
+	for (u32 i = 0; i < A_LOAD_ARENA_COUNT; i++)
 	{
-		assets->load_arenas[i] = ArenaAlloc(AST_LOAD_ARENA_RESERVE);
+		assets->load_arenas[i] = ArenaAlloc(A_LOAD_ARENA_RESERVE);
 		assets->free_load_arenas[i] = i;
 	}
 
-	assets->free_load_arena_count = AST_LOAD_ARENA_COUNT;
+	assets->free_load_arena_count = A_LOAD_ARENA_COUNT;
 
 #define AssetDef(name, upper)											\
-	assets->serializers[AST_Type_##name] = AST_Get##name##Serializer(); \
-	assets->serializer_log_channels[AST_Type_##name] = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper)));
+	assets->serializers[A_Type_##name] = A_Get##name##Serializer(); \
+	assets->serializer_log_channels[A_Type_##name] = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper)));
 #include "asset_definitions.inc"
 #undef AssetDef
 	
@@ -202,22 +202,22 @@ AST_Init(AST_Assets *assets, Arena *arena, LOG_Channel log_channel,
 }
 
 internal void
-AST_Destroy(AST_Assets *assets)
+A_Destroy(A_Registry *assets)
 {
 	for (u32 i = 0; i < assets->record_count; i++)
 	{
-		AST_Record *record = &assets->records[i];
+		A_Record *record = &assets->records[i];
 
-		if (record->state == AST_State_Ready || record->reloading)
+		if (record->state == A_State_Ready || record->reloading)
 		{
-			AST_Serializer *s = &assets->serializers[record->asset.type];
+			A_Serializer *s = &assets->serializers[record->asset.type];
 
 			if (s->Dispose)
 				s->Dispose(&record->asset, assets);
 		}
 	}
 
-	for (u32 i = 0; i < AST_LOAD_ARENA_COUNT; i++)
+	for (u32 i = 0; i < A_LOAD_ARENA_COUNT; i++)
 	{
 		ArenaRelease(&assets->load_arenas[i]);
 	}
@@ -235,25 +235,25 @@ AST_Destroy(AST_Assets *assets)
 }
 
 internal void
-AST_Mount(AST_Assets *assets, String8 prefix, String8 directory)
+A_Mount(A_Registry *assets, String8 prefix, String8 directory)
 {
 	DebugLogAssert(assets->log_channel, directory.len > 0, "Directory length must be greater than zero.");
 	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
 
-	AST_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
+	A_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
 	mp->prefix    = String8Clone(assets->arena, prefix);
 	mp->directory = String8Clone(assets->arena, directory);
 }
 
 internal String8
-AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
+A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path)
 {
-	AST_MountPoint *best = NULL;
+	A_MountPoint *best = NULL;
 	u64 best_len = 0;
 
 	for (u32 i = 0; i < assets->mount_point_count; i++)
 	{
-		AST_MountPoint *m = &assets->mount_points[i];
+		A_MountPoint *m = &assets->mount_points[i];
 
 		if (String8StartsWith(path, m->prefix) && m->prefix.len > best_len)
 		{
@@ -275,91 +275,95 @@ AST_GetSystemFilePath(AST_Assets *assets, Arena *arena, String8 path)
 }
 
 internal b32
-AST_IsLoaded(const AST_Assets *assets, AST_Handle handle)
+A_IsLoaded(const A_Registry *assets, A_Handle handle)
 {
-	const AST_Record *record = AST_GetRecordConst(assets, handle);
+	const A_Record *record = A_GetRecordConst(assets, handle);
 
 	if (!record)
 		return false;
 	
-	return AST_StateIsLoaded(record->state);
+	return A_StateIsLoaded(record->state);
 }
 
 internal b32
-AST_IsLoading(const AST_Assets *assets, AST_Handle handle)
+A_IsLoading(const A_Registry *assets, A_Handle handle)
 {
-	return AST_StateIsLoading(AST_GetRecordConst(assets, handle)->state);
+	return A_StateIsLoading(A_GetRecordConst(assets, handle)->state);
 }
 
 internal b32
-AST_IsValid(const AST_Assets *assets, AST_Handle handle)
+A_IsValid(const A_Registry *assets, A_Handle handle)
 {
 	return (handle.index < assets->record_count &&
 			assets->records[handle.index].generation == handle.generation);
 }
 
 internal void
-AST_LoadNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
+A_LoadNow(A_Registry *assets, A_Handle handle, A_Type type)
 {
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
 	OS_Handle counter = osapi->JobCounterAlloc(0);
 		
-	if (AST_StateNeedsLoad(record->state))
+	if (A_StateNeedsLoad(record->state))
 	{
-		AST_Load(assets, handle, type, counter);
+		A_Load(assets, handle, type, counter);
 		osapi->JobYield(counter, 0);
 	}
 
-	AST_WaitForLoad(assets, handle, counter);
+	A_WaitForLoad(assets, handle, counter);
 	
 	osapi->JobCounterRelease(counter);
 }
 
 internal void
-AST_LoadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type)
+A_LoadAsync(A_Registry *assets, A_Handle handle, A_Type type)
 {
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
-	if (AST_StateNeedsLoad(record->state))
-		AST_Load(assets, handle, type, assets->async_counter);
+	if (A_StateNeedsLoad(record->state))
+		A_Load(assets, handle, type, assets->async_counter);
 }
 
 internal void
-AST_ReloadAsync(AST_Assets *assets, AST_Handle handle, AST_Type type)
+A_ReloadAsync(A_Registry *assets, A_Handle handle, A_Type type)
 {
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
-	if (!AST_StateIsLoading(record->state))
-		AST_Load(assets, handle, type, assets->async_counter);
+	if (!A_StateIsLoading(record->state))
+		A_Load(assets, handle, type, assets->async_counter);
 }
 
-JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
+J_ENTRY_POINT_DEF(A_LoadJobEntry)
 {
-	AST_LoadJobParam *load_params = param;
+	A_LoadJobParam *load_params = param;
 
-	u32 arena_index = AST_LoadArenaAcquire(load_params->assets);
+	u32 arena_index = A_LoadArenaAcquire(load_params->assets);
 	Arena *load_arena = &load_params->assets->load_arenas[arena_index];
 	
-	AST_Context ctx = {0};
+	A_Context ctx = {0};
 	ctx.assets = load_params->assets;
 	ctx.metadata = load_params->metadata;
 	ctx.log_channel = load_params->assets->serializer_log_channels[load_params->type];
 
-	AST_Serializer *serializer = &load_params->assets->serializers[load_params->type];
+	A_Serializer *serializer = &load_params->assets->serializers[load_params->type];
 
-	AST_SerializerPipelineData load_data = serializer->Cpu(&ctx, load_arena);
+	A_SerializerPipelineData load_data = serializer->Cpu(&ctx, load_arena);
 
 	if (load_data.failed)
+	{
 		DebugLogE(load_params->assets->log_channel,
 				  "Failed to load %.*s.",
 				  String8VArg(ctx.metadata.path));
+	}
 	else
+	{
 		DebugLogD(load_params->assets->log_channel,
 				  "Loaded in %.*s.",
 				  String8VArg(ctx.metadata.path));
-	
-	AST_Upload upload = {0};
+	}
+
+	A_Upload upload = {0};
 	upload.load_arena_index = arena_index;
 	upload.metadata = load_params->metadata;
 	upload.handle = load_params->handle;
@@ -367,73 +371,73 @@ JOB_ENTRY_POINT_DEF(AST_LoadJobEntry)
 	upload.load_data = load_data;
  
 	osapi->MutexLock(load_params->assets->dependency_mutex);
-	AST_UploadQueuePush(&load_params->assets->dependency_queue, &upload);
+	A_UploadQueuePush(&load_params->assets->dependency_queue, &upload);
 	osapi->MutexUnlock(load_params->assets->dependency_mutex);
 }
 
 internal void
-AST_Load(AST_Assets *assets, AST_Handle handle, AST_Type type, OS_Handle counter)
+A_Load(A_Registry *assets, A_Handle handle, A_Type type, OS_Handle counter)
 {
-	AST_Record *r = &assets->records[handle.index];
+	A_Record *r = &assets->records[handle.index];
 	
-	if (AST_StateIsLoaded(r->state))
+	if (A_StateIsLoaded(r->state))
 		r->reloading = true;
 	
-	r->state = AST_State_CpuStage;
+	r->state = A_State_CpuStage;
 
 	// params get dumped onto the permanent arena which isnt that big a deal
 	// 'cuz they're only like a couple of bytes so whatever.
 	osapi->MutexLock(assets->allocation_mutex);
-	AST_LoadJobParam *params = ArenaPushArray(assets->arena, AST_LoadJobParam, 1);
+	A_LoadJobParam *params = ArenaPushArray(assets->arena, A_LoadJobParam, 1);
 	osapi->MutexUnlock(assets->allocation_mutex);
 
-	AST_MetaData metadata = {0};
-	metadata.path = AST_GetRecord(assets, handle)->path;
+	A_MetaData metadata = {0};
+	metadata.path = A_GetRecord(assets, handle)->path;
 	
-	params->assets   = assets;
-	params->handle   = handle;
-	params->type     = type;
+	params->assets = assets;
+	params->handle = handle;
+	params->type = type;
 	params->metadata = metadata;
  
-	JOB_Decl decl = {0};
-	decl.EntryPoint = AST_LoadJobEntry;
-	decl.priority = JOB_Priority_Normal;
+	J_Decl decl = {0};
+	decl.EntryPoint = A_LoadJobEntry;
+	decl.priority = J_Priority_Normal;
 	decl.param = params;
 	
 	osapi->JobKick(&decl, counter);
 }
 
 internal void
-AST_NotifyDependents(AST_Assets *assets, AST_Handle handle)
+A_NotifyDependents(A_Registry *assets, A_Handle handle)
 {
 	osapi->MutexLock(assets->dependency_mutex);
-	AST_NotifyDependentsNoLock(assets, handle, false);
+	A_NotifyDependentsNoLock(assets, handle, false);
 	osapi->MutexUnlock(assets->dependency_mutex);
 }
 
 internal void
-AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
+A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 failed)
 {
-	DebugLogAssert(assets->log_channel, AST_IsValid(assets, handle), "Asset handle must be valid.");
+	DebugLogAssert(assets->log_channel, A_IsValid(assets, handle), "Asset handle must be valid.");
 
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
 	for (u32 i = 0; i < record->dependent_count; i++)
 	{
-		AST_Handle  parent_handle = record->dependents[i];
-		AST_Record *parent_record = AST_GetRecord(assets, parent_handle);
+		A_Handle  parent_handle = record->dependents[i];
+		A_Record *parent_record = A_GetRecord(assets, parent_handle);
 
 		if (failed)
 		{
 			if (parent_record->reloading)
 			{
-				parent_record->state = AST_State_Ready;
+				parent_record->state = A_State_Ready;
 				parent_record->reloading = false;
 			}
 			else
 			{
-				parent_record->state = AST_State_Failed;
-				AST_NotifyDependentsNoLock(assets, parent_handle, true);
+				parent_record->state = A_State_Failed;
+				A_NotifyDependentsNoLock(assets, parent_handle, true);
 			}
 		}
 		else
@@ -442,12 +446,12 @@ AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
 				parent_record->hot_pending_dependencies--;
 
 			if (parent_record->hot_pending_dependencies == 0 &&
-				parent_record->state == AST_State_WaitingForDependencies)
+				parent_record->state == A_State_WaitingForDependencies)
 			{
-				parent_record->state = AST_State_GpuStage;
+				parent_record->state = A_State_GpuStage;
 
 				osapi->MutexLock(assets->upload_mutex);
-				AST_UploadQueuePush(&assets->upload_queue, &parent_record->stashed_upload);
+				A_UploadQueuePush(&assets->upload_queue, &parent_record->stashed_upload);
 				osapi->MutexUnlock(assets->upload_mutex);
 			}
 		}
@@ -457,16 +461,16 @@ AST_NotifyDependentsNoLock(AST_Assets *assets, AST_Handle handle, b32 failed)
 }
 
 internal void
-AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
+A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 {
 	osapi->MutexLock(assets->dependency_mutex);
 
-	AST_UploadQueue *q = &assets->dependency_queue;
+	A_UploadQueue *q = &assets->dependency_queue;
 
 	for (u32 i = 0; i < q->count; i++)
 	{
-		AST_Upload *upload = &q->elements[i];
-		AST_Record *record = AST_GetRecord(assets, upload->handle);
+		A_Upload *upload = &q->elements[i];
+		A_Record *record = A_GetRecord(assets, upload->handle);
 
 		if (upload->load_data.failed)
 		{
@@ -478,17 +482,17 @@ AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 						  "Reload failed for %.*s, keeping previous version.",
 						  String8VArg(upload->metadata.path));
 				
-				record->state = AST_State_Ready;
+				record->state = A_State_Ready;
 				record->reloading = false;
 			}
 			else
 			{
-				record->state = AST_State_Failed;
+				record->state = A_State_Failed;
 			}
 
-			AST_NotifyDependentsNoLock(assets, upload->handle, !was_reloading);
+			A_NotifyDependentsNoLock(assets, upload->handle, !was_reloading);
 
-			AST_LoadArenaRelease(assets, upload->load_arena_index);
+			A_LoadArenaRelease(assets, upload->load_arena_index);
 
 			continue;
 		}
@@ -497,15 +501,15 @@ AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 
 		for (u32 j = 0; j < upload->load_data.dependency_count; j++)
 		{
-			AST_Handle  dep_handle = upload->load_data.dependencies[j];
-			AST_Record *dep_record = AST_GetRecord(assets, dep_handle);
+			A_Handle  dep_handle = upload->load_data.dependencies[j];
+			A_Record *dep_record = A_GetRecord(assets, dep_handle);
 
-			if (!AST_StateIsLoading(dep_record->state) && AST_StateNeedsLoad(dep_record->state))
+			if (!A_StateIsLoading(dep_record->state) && A_StateNeedsLoad(dep_record->state))
 			{
-				AST_Load(assets, dep_handle, AST_Type_Texture, counter); // TODO: infer type from dependency !!!
+				A_Load(assets, dep_handle, A_Type_Texture, counter); // TODO: infer type from dependency !!!
 			}
 
-			if (!AST_StateIsFinalized(dep_record->state))
+			if (!A_StateIsFinalized(dep_record->state))
 			{
 				unresolved++;
 
@@ -520,38 +524,38 @@ AST_ResolvePendingDependencies(AST_Assets *assets, OS_Handle counter)
 
 		if (unresolved > 0)
 		{
-			record->state = AST_State_WaitingForDependencies;
+			record->state = A_State_WaitingForDependencies;
 			record->hot_pending_dependencies = unresolved;
 			record->stashed_upload = *upload;
 		}
 		else
 		{
-			record->state = AST_State_GpuStage;
+			record->state = A_State_GpuStage;
 
 			osapi->MutexLock(assets->upload_mutex);
-			AST_UploadQueuePush(&assets->upload_queue, upload);
+			A_UploadQueuePush(&assets->upload_queue, upload);
 			osapi->MutexUnlock(assets->upload_mutex);
 		}
 	}
 
-	AST_UploadQueueClear(q);
+	A_UploadQueueClear(q);
 
 	osapi->MutexUnlock(assets->dependency_mutex);
 }
 
 internal void
-AST_PollHotReloads(AST_Assets *assets)
+A_PollHotReloads(A_Registry *assets)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
  
 	for (u32 i = 0; i < assets->record_count; i++)
 	{
-		AST_Record *record = &assets->records[i];
+		A_Record *record = &assets->records[i];
  
-		if (record->state != AST_State_Ready)
+		if (record->state != A_State_Ready)
 			continue;
  
-		String8 sys_path = AST_GetSystemFilePath(assets, scratch.arena, record->path);
+		String8 sys_path = A_GetSystemFilePath(assets, scratch.arena, record->path);
 		u64 newest_write = osapi->GetFileLastWriteTime(sys_path);
  
 		for (u32 j = 0; j < record->watch_path_count; j++)
@@ -566,10 +570,10 @@ AST_PollHotReloads(AST_Assets *assets)
 		{
 			record->last_write_time = newest_write;
  
-			AST_Handle handle = record->asset.handle;
-			AST_Type type = record->asset.type;
+			A_Handle handle = record->asset.handle;
+			A_Type type = record->asset.type;
  
-			AST_ReloadAsync(assets, handle, type);
+			A_ReloadAsync(assets, handle, type);
 		}
  
 		ScratchClear(&scratch);
@@ -579,9 +583,9 @@ AST_PollHotReloads(AST_Assets *assets)
 }
 
 internal void
-AST_FlushUploads(AST_Assets *assets)
+A_FlushUploads(A_Registry *assets)
 {
-	AST_ResolvePendingDependencies(assets, assets->async_counter);
+	A_ResolvePendingDependencies(assets, assets->async_counter);
 
 	osapi->MutexLock(assets->upload_mutex);
 
@@ -591,8 +595,8 @@ AST_FlushUploads(AST_Assets *assets)
 		return;
 	}
 
-	AST_UploadQueue pending = assets->upload_queue;
-	AST_UploadQueueClear(&assets->upload_queue);
+	A_UploadQueue pending = assets->upload_queue;
+	A_UploadQueueClear(&assets->upload_queue);
 
 	osapi->MutexUnlock(assets->upload_mutex);
 
@@ -608,7 +612,7 @@ AST_FlushUploads(AST_Assets *assets)
 			u64 upload_size  = pending.elements[i].load_data.stage_size;
 			u64 aligned_size = MemAlignUp(upload_size, 16);
 
-			if (aligned_size > AST_GPU_UPLOAD_CHUNK && batch_stage_size == 0)
+			if (aligned_size > A_GPU_UPLOAD_CHUNK && batch_stage_size == 0)
 			{
 				batch_stage_size = aligned_size;
 				batch_count = 1;
@@ -616,32 +620,32 @@ AST_FlushUploads(AST_Assets *assets)
 				break;
 			}
 
-			if (batch_stage_size + aligned_size > AST_GPU_UPLOAD_CHUNK)
+			if (batch_stage_size + aligned_size > A_GPU_UPLOAD_CHUNK)
 				break;
 
 			batch_stage_size += aligned_size;
 			batch_count++;
 		}
 
-		GFX_BufferKey staging_buffer = GFX_BufferKeyNull();
+		G_BufferKey staging_buffer = G_BufferKeyNull();
 
 		if (batch_stage_size > 0)
-			staging_buffer = GFX_DeviceStageAlloc(assets->device, batch_stage_size);
+			staging_buffer = G_DeviceStageAlloc(assets->device, batch_stage_size);
 
-		GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(assets->device);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin(assets->device);
 		{
 			u64 stage_offset = 0;
 
 			for (u32 i = 0; i < batch_count; i++)
 			{
-				AST_Upload *upload = &pending.elements[base + i];
-				AST_Record *record = AST_GetRecord(assets, upload->handle);
+				A_Upload *upload = &pending.elements[base + i];
+				A_Record *record = A_GetRecord(assets, upload->handle);
 
-				AST_Serializer *serializer = &assets->serializers[upload->type];
+				A_Serializer *serializer = &assets->serializers[upload->type];
 
-				AST_Asset *asset = &record->asset;
+				A_Asset *asset = &record->asset;
 
-				AST_Context ctx = {0};
+				A_Context ctx = {0};
 				ctx.assets = assets;
 				ctx.metadata = upload->metadata;
 				ctx.log_channel = assets->serializer_log_channels[upload->type];
@@ -654,17 +658,17 @@ AST_FlushUploads(AST_Assets *assets)
 								  "Reload failed for %.*s, keeping previous version.",
 								  String8VArg(upload->metadata.path));
 						
-						record->state = AST_State_Ready;
+						record->state = A_State_Ready;
 						record->reloading = false;
 					}
 					else
 					{
-						record->state = AST_State_Failed;
+						record->state = A_State_Failed;
 					}
 				}
 				else
 				{
-					b32 is_new = asset->type == AST_Type_Unknown;
+					b32 is_new = asset->type == A_Type_Unknown;
 
 					asset->type = upload->type;
 					asset->handle = upload->handle;
@@ -706,7 +710,7 @@ AST_FlushUploads(AST_Assets *assets)
 
 					ScratchArena scratch = ScratchBegin(NULL, 0);
 					{
-						String8 sys_path = AST_GetSystemFilePath(assets, scratch.arena, record->path);
+						String8 sys_path = A_GetSystemFilePath(assets, scratch.arena, record->path);
 						record->last_write_time = osapi->GetFileLastWriteTime(sys_path);
  
 						for (u32 j = 0; j < record->watch_path_count; j++)
@@ -719,21 +723,21 @@ AST_FlushUploads(AST_Assets *assets)
 					}
 					ScratchRelease(&scratch);
 
-					record->state = AST_State_Ready;
+					record->state = A_State_Ready;
 					record->reloading = false;
 
-					AST_NotifyDependents(assets, upload->handle);
+					A_NotifyDependents(assets, upload->handle);
 
 					stage_offset += MemAlignUp(upload->load_data.stage_size, 16);
 				}
 				
-				AST_LoadArenaRelease(assets, upload->load_arena_index);
+				A_LoadArenaRelease(assets, upload->load_arena_index);
 			}
 		}
-		GFX_DeviceSubmitImEnd(assets->device, &cmd);
+		G_DeviceSubmitImEnd(assets->device, &cmd);
 
-		if (!GFX_BufferKeyIsNull(staging_buffer))
-			GFX_DeviceBufferDestroy(assets->device, staging_buffer);
+		if (!G_BufferKeyIsNull(staging_buffer))
+			G_DeviceBufferDestroy(assets->device, staging_buffer);
 
 		base += batch_count;
 	}
@@ -742,60 +746,60 @@ AST_FlushUploads(AST_Assets *assets)
 }
 
 internal void
-AST_WaitForAsync(AST_Assets *assets)
+A_WaitForAsync(A_Registry *assets)
 {
 	osapi->JobYield(assets->async_counter, 0);
 }
 
 internal void
-AST_WaitForLoad(AST_Assets *assets, AST_Handle handle, OS_Handle counter)
+A_WaitForLoad(A_Registry *assets, A_Handle handle, OS_Handle counter)
 {
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
 	if (!record)
 		return;
 
-	while (record->state != AST_State_Ready &&
-		   record->state != AST_State_Failed)
+	while (record->state != A_State_Ready &&
+		   record->state != A_State_Failed)
 	{
-		AST_ResolvePendingDependencies(assets, counter);
+		A_ResolvePendingDependencies(assets, counter);
 		osapi->JobYield(counter, 0);
-		AST_FlushUploads(assets);
+		A_FlushUploads(assets);
 	}
 }
 
 internal void
-AST_SetFallback(AST_Assets *assets, AST_Handle handle, AST_Type type)
+A_SetFallback(A_Registry *assets, A_Handle handle, A_Type type)
 {
-	AssertTrue(AST_IsLoaded(assets, handle));
+	AssertTrue(A_IsLoaded(assets, handle));
 	assets->fallbacks[type] = handle;
 }
 
-internal AST_Asset *
-AST_Get(AST_Assets *assets, AST_Handle handle, AST_Type type)
+internal A_Asset *
+A_Get(A_Registry *assets, A_Handle handle, A_Type type)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
-	AST_Asset *selected = NULL;
+	A_Asset *selected = NULL;
 	
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 	
 	if (record &&
-		(AST_StateIsLoaded(record->state) || record->reloading) &&
+		(A_StateIsLoaded(record->state) || record->reloading) &&
 		record->asset.type == type)
 	{
 		selected = &record->asset;
 		goto end;
 	}
 
-	String8 type_string = AST_StringFromType(scratch.arena, type);
+	String8 type_string = A_StringFromType(scratch.arena, type);
 
 	DebugLogW(assets->log_channel,
 			  "%.*s asset not found. Falling back...",
 			  String8VArg(type_string));
 	
-	AST_Record *fallback = AST_GetRecord(assets, assets->fallbacks[type]);
+	A_Record *fallback = A_GetRecord(assets, assets->fallbacks[type]);
 	if (fallback &&
-		AST_StateIsLoaded(fallback->state))
+		A_StateIsLoaded(fallback->state))
 	{
 		selected = &fallback->asset;
 		goto end;
@@ -812,59 +816,59 @@ end:
 	return selected;
 }
 
-internal AST_Asset *
-AST_GetNow(AST_Assets *assets, AST_Handle handle, AST_Type type)
+internal A_Asset *
+A_GetNow(A_Registry *assets, A_Handle handle, A_Type type)
 {
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
 	if (record)
 	{
-		if (AST_StateNeedsLoad(record->state))
+		if (A_StateNeedsLoad(record->state))
 		{
-			AST_LoadNow(assets, handle, type);
+			A_LoadNow(assets, handle, type);
 		}
-		else if (AST_StateIsLoading(record->state))
+		else if (A_StateIsLoading(record->state))
 		{
 			OS_Handle counter = osapi->JobCounterAlloc(0);
-			AST_WaitForLoad(assets, handle, counter);
+			A_WaitForLoad(assets, handle, counter);
 			osapi->JobCounterRelease(counter);
 		}
 	}
 
-	return AST_Get(assets, handle, type);
+	return A_Get(assets, handle, type);
 }
 
-internal AST_Handle
-AST_FromFilePath(AST_Assets *assets, String8 path)
+internal A_Handle
+A_FromFilePath(A_Registry *assets, String8 path)
 {
 	osapi->MutexLock(assets->allocation_mutex);
 
-	AST_Handle existing = AST_PathMapFind(assets, path);
+	A_Handle existing = A_PathMapFind(assets, path);
 
-	if (AST_IsValid(assets, existing))
+	if (A_IsValid(assets, existing))
 	{
 		osapi->MutexUnlock(assets->allocation_mutex);		
 		return existing;
 	}
 
-	AST_Handle handle = AST_AllocRecord(assets, path);
+	A_Handle handle = A_AllocRecord(assets, path);
 
-	AST_PathMapInsert(assets, path, handle);
+	A_PathMapInsert(assets, path, handle);
 
 	osapi->MutexUnlock(assets->allocation_mutex);
 
 	return handle;
 }
 
-internal AST_Handle
-AST_Require(AST_Assets *assets, String8 path, AST_Type type)
+internal A_Handle
+A_Require(A_Registry *assets, String8 path, A_Type type)
 {
-	AST_Handle handle = AST_FromFilePath(assets, path);
+	A_Handle handle = A_FromFilePath(assets, path);
 
-	AST_Record *record = AST_GetRecord(assets, handle);
+	A_Record *record = A_GetRecord(assets, handle);
 
-	if (AST_StateNeedsLoad(record->state))
-		AST_LoadAsync(assets, handle, type);
+	if (A_StateNeedsLoad(record->state))
+		A_LoadAsync(assets, handle, type);
 
 	return handle;
 }

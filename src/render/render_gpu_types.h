@@ -28,7 +28,7 @@ struct R_GPU_FrameData
 typedef struct R_GPU_ModelVertex R_GPU_ModelVertex;
 struct R_GPU_ModelVertex
 {
-	AST_ModelVertex vertex;
+	A_ModelVertex vertex;
 };
 
 typedef struct R_GPU_ObjectData R_GPU_ObjectData;

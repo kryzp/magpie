@@ -1,6 +1,6 @@
 
-typedef struct AST_TextureLoadData AST_TextureLoadData;
-struct AST_TextureLoadData
+typedef struct A_TextureLoadData A_TextureLoadData;
+struct A_TextureLoadData
 {
 	u32 width;
 	u32 height;
@@ -8,12 +8,12 @@ struct AST_TextureLoadData
 	void *pixel_data;
 };
 
-internal AST_SerializerPipelineData
-AST_TextureSerializerCpu(const AST_Context *ctx, Arena *load_scope)
+internal A_SerializerPipelineData
+A_TextureSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	String8 file_path = AST_ContextSystemFilePath(ctx, scratch.arena);
+	String8 file_path = A_ContextSystemFilePath(ctx, scratch.arena);
 
 	i32 w, h, n;
 	void *px;
@@ -32,13 +32,13 @@ AST_TextureSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 		stride = sizeof(u8);
 	}
 
-	AST_TextureLoadData *tex_load_data = ArenaPushArray(load_scope, AST_TextureLoadData, 1);
+	A_TextureLoadData *tex_load_data = ArenaPushArray(load_scope, A_TextureLoadData, 1);
 	tex_load_data->width = w;
 	tex_load_data->height = h;
 	tex_load_data->is_hdr = is_hdr;
 	tex_load_data->pixel_data = px;
 
-	AST_SerializerPipelineData result = {0};
+	A_SerializerPipelineData result = {0};
 	result.data = tex_load_data;
 	result.stage_size = w * h * stride * 4; // RGBA = 4 values ppx.
 	result.failed = px == NULL;
@@ -51,49 +51,49 @@ AST_TextureSerializerCpu(const AST_Context *ctx, Arena *load_scope)
 }
 
 internal void
-AST_TextureSerializerAlloc(const AST_Context *ctx,
-						   AST_SerializerPipelineData *data,
-						   AST_Asset *out,
+A_TextureSerializerAlloc(const A_Context *ctx,
+						   A_SerializerPipelineData *data,
+						   A_Asset *out,
 						   Arena *arena)
 {
-	GFX_Device *device = ctx->assets->device;
+	G_Device *device = ctx->assets->device;
 	
-	AST_TextureLoadData *tex_data = data->data;
+	A_TextureLoadData *tex_data = data->data;
 
 	VkFormat format = tex_data->is_hdr
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	out->texture_data.key = GFX_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
+	out->texture.key = G_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
 }
 
 internal void
-AST_TextureSerializerReload(const AST_Context *ctx,
-							AST_SerializerPipelineData *data,
-							AST_Asset *existing)
+A_TextureSerializerReload(const A_Context *ctx,
+							A_SerializerPipelineData *data,
+							A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
 internal void
-AST_TextureSerializerGpu(const AST_Context *ctx,
-						 AST_SerializerPipelineData *data,
-						 AST_Asset *asset,
-						 GFX_CmdBuffer *cmd,
-						 GFX_BufferKey stage, u64 stage_base)
+A_TextureSerializerGpu(const A_Context *ctx,
+						 A_SerializerPipelineData *data,
+						 A_Asset *asset,
+						 G_CmdBuffer *cmd,
+						 G_BufferKey stage, u64 stage_base)
 {
-	GFX_Device *device = ctx->assets->device;
+	G_Device *device = ctx->assets->device;
 	
-	AST_TextureLoadData *tex_data = data->data;
-	GFX_Texture *gfx_texture = GFX_DeviceTextureFromKey(device, asset->texture_data.key);
+	A_TextureLoadData *tex_data = data->data;
+	G_Texture *gfx_texture = G_DeviceTextureFromKey(device, asset->texture.key);
 
-	GFX_DeviceBufferWrite(device, stage, tex_data->pixel_data, data->stage_size, stage_base);
+	G_DeviceBufferWrite(device, stage, tex_data->pixel_data, data->stage_size, stage_base);
 
-	GFX_AccessSt copy_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
-	GFX_AccessSt copy_dst = { VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
-	GFX_AccessSt blit_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
+	G_AccessSt copy_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
+	G_AccessSt copy_dst = { VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
+	G_AccessSt blit_dst = { VK_PIPELINE_STAGE_2_BLIT_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
 
-	VkImageMemoryBarrier2 copy_barrier = GFX_SyncTextureBarrier(gfx_texture,
+	VkImageMemoryBarrier2 copy_barrier = G_SyncTextureBarrier(gfx_texture,
 																&copy_src,
 																&copy_dst,
 																VK_IMAGE_LAYOUT_UNDEFINED,
@@ -101,11 +101,11 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 																0, VK_REMAINING_MIP_LEVELS,
 																0, VK_REMAINING_ARRAY_LAYERS);
 
-	GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &copy_barrier);
+	G_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &copy_barrier);
 	
-	GFX_CmdCopyBufferToTextureWhole(cmd, stage, asset->texture_data.key, stage_base);
+	G_CmdCopyBufferToTextureWhole(cmd, stage, asset->texture.key, stage_base);
 
-	VkImageMemoryBarrier2 blit_barrier = GFX_SyncTextureBarrier(gfx_texture,
+	VkImageMemoryBarrier2 blit_barrier = G_SyncTextureBarrier(gfx_texture,
 																&copy_dst,
 																&blit_dst,
 																VK_IMAGE_LAYOUT_GENERAL,
@@ -113,34 +113,34 @@ AST_TextureSerializerGpu(const AST_Context *ctx,
 																0, VK_REMAINING_MIP_LEVELS,
 																0, VK_REMAINING_ARRAY_LAYERS);
 
-	GFX_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &blit_barrier);
-	GFX_CmdGenerateMipmaps(cmd, asset->texture_data.key);
+	G_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &blit_barrier);
+	G_CmdGenerateMipmaps(cmd, asset->texture.key);
 }
 
 internal void
-AST_TextureSerializerEnd(AST_SerializerPipelineData *data)
+A_TextureSerializerEnd(A_SerializerPipelineData *data)
 {
-	AST_TextureLoadData *tex_data = data->data;
+	A_TextureLoadData *tex_data = data->data;
 
 	stbi_image_free(tex_data->pixel_data);
 }
 
 internal void
-AST_TextureSerializerDispose(AST_Asset *asset, AST_Assets *assets)
+A_TextureSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
-	GFX_DeviceTextureDestroy(assets->device, asset->texture_data.key);
+	G_DeviceTextureDestroy(assets->device, asset->texture.key);
 }
 
-internal AST_Serializer
-AST_GetTextureSerializer(void)
+internal A_Serializer
+A_GetTextureSerializer(void)
 {
-	static AST_Serializer texture_serializer = {
-		.Cpu     = AST_TextureSerializerCpu,
-		.Alloc   = AST_TextureSerializerAlloc,
-		.Reload  = AST_TextureSerializerReload,
-		.Gpu     = AST_TextureSerializerGpu,
-		.End     = AST_TextureSerializerEnd,
-		.Dispose = AST_TextureSerializerDispose,
+	static A_Serializer texture_serializer = {
+		.Cpu     = A_TextureSerializerCpu,
+		.Alloc   = A_TextureSerializerAlloc,
+		.Reload  = A_TextureSerializerReload,
+		.Gpu     = A_TextureSerializerGpu,
+		.End     = A_TextureSerializerEnd,
+		.Dispose = A_TextureSerializerDispose,
 	};
 
 	return texture_serializer;

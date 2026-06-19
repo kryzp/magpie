@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_SHADER_H
 #define GRAPHICS_SHADER_H
 
-#define GFX_MAX_SHADER_STAGES 4
+#define G_MAX_SHADER_STAGES 4
 
 // TODO: replace with IO_ByteSpan??? one part of me
 //       wants to since they're the same data-wise
@@ -10,32 +10,32 @@
 //       bytecode is compiled rather than generated
 //       from a file.
 
-typedef struct GFX_ShaderBytecode GFX_ShaderBytecode;
-struct GFX_ShaderBytecode
+typedef struct G_ShaderBytecode G_ShaderBytecode;
+struct G_ShaderBytecode
 {
 	u8 *bytes;
 	u64 size;
 };
 
-typedef struct GFX_ShaderStage GFX_ShaderStage;
-struct GFX_ShaderStage
+typedef struct G_ShaderStage G_ShaderStage;
+struct G_ShaderStage
 {
-	GFX_ShaderBytecode bytecode;
+	G_ShaderBytecode bytecode;
 	VkShaderStageFlagBits flags;
 	u32 push_constant_size;
 };
 
-typedef struct GFX_ShaderProgram GFX_ShaderProgram;
-struct GFX_ShaderProgram
+typedef struct G_ShaderProgram G_ShaderProgram;
+struct G_ShaderProgram
 {
 	u32 cookie;
 	u32 push_constant_size;
 	u32 stage_count;
-	GFX_ShaderStage stages[GFX_MAX_SHADER_STAGES];
+	G_ShaderStage stages[G_MAX_SHADER_STAGES];
 };
 
 internal inline b32
-GFX_ShaderProgramIsCompute(const GFX_ShaderProgram *program)
+G_ShaderProgramIsCompute(const G_ShaderProgram *program)
 {
 	return (program->stage_count == 1) && (program->stages[0].flags & VK_SHADER_STAGE_COMPUTE_BIT);
 }

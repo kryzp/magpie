@@ -71,7 +71,7 @@ struct OS_W32_LOG_Logger
 	LOG_Level          dedup_level;
 	u32                dedup_count;
 	b32                dedup_active;
-	OS_W32_JOB_Context dedup_job_context;
+	OS_W32_J_Context dedup_job_context;
 };
 
 internal void OS_W32_LOG_Init     (OS_W32_LOG_Logger *logger, String8 sink);
@@ -92,10 +92,10 @@ internal i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 								   const char *file, i32 line, const char *fn,
 								   const char *body,
 								   b32 for_file, f32 elapsed,
-								   OS_W32_JOB_Context job_context);
+								   OS_W32_J_Context job_context);
 
 internal void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
-								OS_W32_JOB_Context job_context,
+								OS_W32_J_Context job_context,
 								LOG_Level level, LOG_Channel channel,
 								const char *file, i32 line, const char *fn,
 								const char *fmt, va_list args);

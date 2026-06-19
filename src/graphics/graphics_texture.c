@@ -1,8 +1,8 @@
 
 internal VkImageViewType
-GFX_TextureDefaultViewType(const GFX_Texture *texture)
+G_TextureDefaultViewType(const G_Texture *texture)
 {
-	if (texture->flags & GFX_TextureFlag_Cubemap)
+	if (texture->flags & G_TextureFlag_Cubemap)
 	{
 		if (texture->layer_count > 6)
 			return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
@@ -32,41 +32,41 @@ GFX_TextureDefaultViewType(const GFX_Texture *texture)
 	return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 }
 
-internal GFX_SubresourceRange
-GFX_SubresourceRangeOfTexture(const GFX_SubresourceRange *range, const GFX_Texture *texture)
+internal G_SubresourceRange
+G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *texture)
 {
-	GFX_SubresourceRange result = *range;
+	G_SubresourceRange result = *range;
 
-	if (result.mips == GFX_SRR_REMAINING_COUNT)
+	if (result.mips == G_SRR_REMAINING_COUNT)
 		result.mips = texture->mipmap_count - range->base_mip;
 
-	if (result.layers == GFX_SRR_REMAINING_COUNT)
+	if (result.layers == G_SRR_REMAINING_COUNT)
 		result.layers = texture->layer_count - range->base_layer;
 
 	return result;
 }
 
-internal GFX_SubresourceRange
-GFX_SubresourceRangeAll(VkImageAspectFlags aspects)
+internal G_SubresourceRange
+G_SubresourceRangeAll(VkImageAspectFlags aspects)
 {
-	GFX_SubresourceRange range = {0};
+	G_SubresourceRange range = {0};
 	range.aspects = aspects;
 	range.base_mip = 0;
-	range.mips = GFX_SRR_REMAINING_COUNT;
+	range.mips = G_SRR_REMAINING_COUNT;
 	range.base_layer = 0;
-	range.layers = GFX_SRR_REMAINING_COUNT;
+	range.layers = G_SRR_REMAINING_COUNT;
 
 	return range;
 }
 
-internal GFX_SubresourceRange
-GFX_SubresourceRangeAllColour(void)
+internal G_SubresourceRange
+G_SubresourceRangeAllColour(void)
 {
-	return GFX_SubresourceRangeAll(VK_IMAGE_ASPECT_COLOR_BIT);
+	return G_SubresourceRangeAll(VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-internal GFX_SubresourceRange
-GFX_SubresourceRangeAllDepth(void)
+internal G_SubresourceRange
+G_SubresourceRangeAllDepth(void)
 {
-	return GFX_SubresourceRangeAll(VK_IMAGE_ASPECT_DEPTH_BIT);
+	return G_SubresourceRangeAll(VK_IMAGE_ASPECT_DEPTH_BIT);
 }

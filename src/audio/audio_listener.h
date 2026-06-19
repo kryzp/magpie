@@ -1,8 +1,8 @@
 #ifndef AUDIO_LISTENER_H
 #define AUDIO_LISTENER_H
 
-typedef struct AUD_Listener AUD_Listener;
-struct AUD_Listener
+typedef struct AU_Listener AU_Listener;
+struct AU_Listener
 {
 	v3 position;
 	v3 direction;

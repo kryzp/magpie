@@ -66,8 +66,8 @@ struct R_GPU_ProbeGridInfo
 typedef struct R_IrradianceVolume R_IrradianceVolume;
 struct R_IrradianceVolume
 {
-	GFX_Device *device;
-	AST_Assets *assets;
+	G_Device *device;
+	A_Registry *assets;
 	
 	LOG_Channel log_channel;
 
@@ -79,30 +79,30 @@ struct R_IrradianceVolume
 	u32 nz;
 	u32 ntotal;
 
-	GFX_BufferKey sh_buffer;
-	GFX_BufferKey grid_info_buffer;
+	G_BufferKey sh_buffer;
+	G_BufferKey grid_info_buffer;
 	
-	AST_Handle bake_shader_handle;
+	A_Handle bake_shader_handle;
 
 	const R_Mesh *skybox_mesh;
-	GFX_TextureViewKey environment_view;
-	GFX_SamplerKey linear_sampler;
+	G_TextureViewKey environment_view;
+	G_SamplerKey linear_sampler;
 
-	GFX_AccelStructKey tlas;
-	GFX_AccelStructKey blas_per_page[32]; // we need a blas per geometry page in the scene
+	G_AccelStructKey tlas;
+	G_AccelStructKey blas_per_page[32]; // we need a blas per geometry page in the scene
 	u32 blas_count;
 
 	b32 is_baked;
 };
 
 internal void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
-												   GFX_Device *device, AST_Assets *assets,
+												   G_Device *device, A_Registry *assets,
 												   LOG_Channel log_channel,
 												   v3 grid_min, v3 grid_max,
 												   u32 nx, u32 ny, u32 nz,
 												   const R_Mesh *skybox_mesh,
-												   GFX_TextureViewKey environment_view,
-												   GFX_SamplerKey linear_sampler);
+												   G_TextureViewKey environment_view,
+												   G_SamplerKey linear_sampler);
 
 internal void R_IrradianceVolumeDestroy           (R_IrradianceVolume *vol);
 
@@ -111,8 +111,8 @@ internal void R_IrradianceVolumeBake              (R_IrradianceVolume *vol, cons
 
 internal void R_IrradianceVolumeDebug             (const R_IrradianceVolume *vol);
 
-internal GFX_BufferKey R_IrradianceVolumeGetSHBuffer       (const R_IrradianceVolume *vol);
-internal GFX_BufferKey R_IrradianceVolumeGetGridInfoBuffer (const R_IrradianceVolume *vol);
+internal G_BufferKey R_IrradianceVolumeGetSHBuffer       (const R_IrradianceVolume *vol);
+internal G_BufferKey R_IrradianceVolumeGetGridInfoBuffer (const R_IrradianceVolume *vol);
 internal b32           R_IrradianceVolumeIsBaked           (const R_IrradianceVolume *vol);
 
 #endif // RENDER_IRRADIANCE_VOLUME_H

@@ -1,103 +1,103 @@
 #ifndef AUDIO_SYSTEM_H
 #define AUDIO_SYSTEM_H
 
-typedef enum AUD_Bus
+typedef enum AU_Bus
 {
-	AUD_Bus_Music,
-	AUD_Bus_Sfx,
-	AUD_Bus_COUNT
+	AU_Bus_Music,
+	AU_Bus_Sfx,
+	AU_Bus_COUNT
 }
-AUD_Bus;
+AU_Bus;
 
-typedef struct AUD_Handle AUD_Handle;
-struct AUD_Handle
+typedef struct AU_Handle AU_Handle;
+struct AU_Handle
 {
 	u32 value;
 };
 
 // null handle (value = 0) is reserved
 // as the invalid handle!!
-internal inline AUD_Handle
-AUD_HandleNull(void)
+internal inline AU_Handle
+AU_HandleNull(void)
 {
-	return (AUD_Handle) {0};
+	return (AU_Handle) {0};
 }
 
 internal inline b32
-AUD_HandleIsValid(AUD_Handle h)
+AU_HandleIsValid(AU_Handle h)
 {
 	return h.value != 0;
 }
 
 internal inline b32
-AUD_HandleMatch(AUD_Handle a, AUD_Handle b)
+AU_HandleMatch(AU_Handle a, AU_Handle b)
 {
 	return a.value == b.value;
 }
 
-typedef struct AUD_Emitter AUD_Emitter;
-struct AUD_Emitter
+typedef struct AU_Emitter AU_Emitter;
+struct AU_Emitter
 {
-	AUD_Emitter *next;
-	AUD_Emitter *prev;
+	AU_Emitter *next;
+	AU_Emitter *prev;
 	
-	AUD_Handle handle;
-	AUD_SourceHandle source;
-	AUD_Bus bus;
+	AU_Handle handle;
+	AU_SourceHandle source;
+	AU_Bus bus;
 	f32 base_volume;
 };
 
-typedef struct AUD_PlayConfig AUD_PlayConfig;
-struct AUD_PlayConfig
+typedef struct AU_PlayConfig AU_PlayConfig;
+struct AU_PlayConfig
 {
-	AUD_BufferHandle clip;
-	AUD_Bus bus;
+	AU_BufferHandle clip;
+	AU_Bus bus;
 	f32 volume;
 	f32 pitch;
 	b32 spatial;
 	v3 position;
 };
 
-typedef struct AUD_System AUD_System;
-struct AUD_System
+typedef struct AU_System AU_System;
+struct AU_System
 {
 	Arena *arena;
-	AUD_BackendAPI *api;
+	AU_Backend *backend;
 
 	LOG_Channel log_channel;
 
-	AUD_Listener listener;
+	AU_Listener listener;
 
-	AUD_Emitter emitter_sentinel;
-	AUD_Emitter free_emitter_sentinel;
+	AU_Emitter emitter_sentinel;
+	AU_Emitter free_emitter_sentinel;
 
-	AUD_Handle curr_emitter_handle;
+	AU_Handle curr_emitter_handle;
 	
 	f32 master_volume;
-	f32 bus_volumes[AUD_Bus_COUNT];
+	f32 bus_volumes[AU_Bus_COUNT];
 };
 
-internal void AUD_Init     (AUD_System *system, Arena *arena, LOG_Channel log_channel, AUD_BackendAPI *api);
-internal void AUD_Shutdown (AUD_System *system);
+internal void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel, AU_Backend *backend);
+internal void AU_Shutdown(AU_System *system);
 
-internal void AUD_Tick(AUD_System *system, f32 dt, AUD_Listener listener);
+internal void AU_Tick(AU_System *system, f32 dt, AU_Listener listener);
 
-internal AUD_Emitter *AUD_AllocEmitter   (AUD_System *system);
-internal void         AUD_ReleaseEmitter (AUD_System *system, AUD_Emitter *emitter);
-internal AUD_Emitter *AUD_GetEmitter     (const AUD_System *system, AUD_Handle handle);
+internal AU_Emitter *AU_AllocEmitter(AU_System *system);
+internal void AU_ReleaseEmitter(AU_System *system, AU_Emitter *emitter);
+internal AU_Emitter *AU_GetEmitter(const AU_System *system, AU_Handle handle);
 
-internal AUD_Handle AUD_Play    (AUD_System *system, const AUD_PlayConfig *config);
-internal void       AUD_Stop    (AUD_System *system, AUD_Handle handle);
-internal void       AUD_StopAll (AUD_System *system);
-internal void       AUD_Resume  (AUD_System *system, AUD_Handle handle);
-internal void       AUD_Pause   (AUD_System *system, AUD_Handle handle);
+internal AU_Handle AU_Play(AU_System *system, const AU_PlayConfig *config);
+internal void AU_Stop(AU_System *system, AU_Handle handle);
+internal void AU_StopAll(AU_System *system);
+internal void AU_Resume(AU_System *system, AU_Handle handle);
+internal void AU_Pause(AU_System *system, AU_Handle handle);
 
-internal void AUD_SetPositionOf(const AUD_System *system, AUD_Handle handle, v3 position);
+internal void AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 position);
 
-internal void AUD_SetMasterVolume (AUD_System *system, f32 volume);
-internal void AUD_SetBusVolume    (AUD_System *system, AUD_Bus bus, f32 volume);
+internal void AU_SetMasterVolume(AU_System *system, f32 volume);
+internal void AU_SetBusVolume(AU_System *system, AU_Bus bus, f32 volume);
 
-internal f32  AUD_GetOutputVolumeOnBus (const AUD_System *system, AUD_Bus bus, f32 base_volume);
-internal void AUD_UpdateEmitterVolumes (const AUD_System *system, AUD_Bus bus);
+internal f32 AU_GetOutputVolumeOnBus(const AU_System *system, AU_Bus bus, f32 base_volume);
+internal void AU_UpdateEmitterVolumes(const AU_System *system, AU_Bus bus);
 
 #endif // AUDIO_SYSTEM_H

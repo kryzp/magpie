@@ -2,82 +2,82 @@
 #define GRAPHICS_BINDLESS_H
 
 // TODO: Get this from the physical properties of the context.
-#define GFX_BINDLESS_MAX_RESOURCES 4096
-#define GFX_BINDLESS_INDEX_INVALID 0
+#define G_BINDLESS_MAX_RESOURCES 4096
+#define G_BINDLESS_INDEX_INVALID 0
 
-typedef u32 GFX_BindlessIndex;
+typedef u32 G_BindlessIndex;
 
-typedef struct GFX_BindlessHandle GFX_BindlessHandle;
-struct GFX_BindlessHandle
+typedef struct G_BindlessHandle G_BindlessHandle;
+struct G_BindlessHandle
 {
-	GFX_BindlessIndex value;
+	G_BindlessIndex value;
 };
 
-internal inline GFX_BindlessIndex
-GFX_BindlessIndexOf(GFX_BindlessHandle handle)
+internal inline G_BindlessIndex
+G_BindlessIndexOf(G_BindlessHandle handle)
 {
 	// Just return the value.
 	return handle.value;
 }
 
 internal inline b32
-GFX_BindlessHandleValid(GFX_BindlessHandle handle)
+G_BindlessHandleValid(G_BindlessHandle handle)
 {
-	return (handle.value != 0) && (handle.value < GFX_BINDLESS_MAX_RESOURCES);
+	return (handle.value != 0) && (handle.value < G_BINDLESS_MAX_RESOURCES);
 }
 
-typedef enum GFX_BindlessKind
+typedef enum G_BindlessKind
 {
-	GFX_BindlessKind_Sampler        = 0,
-	GFX_BindlessKind_SampledTexture = 1,
-	GFX_BindlessKind_SampledCubemap = 2,
-	GFX_BindlessKind_StorageTexture = 3,
-	GFX_BindlessKind_COUNT
+	G_BindlessKind_Sampler        = 0,
+	G_BindlessKind_SampledTexture = 1,
+	G_BindlessKind_SampledCubemap = 2,
+	G_BindlessKind_StorageTexture = 3,
+	G_BindlessKind_COUNT
 }
-GFX_BindlessKind;
+G_BindlessKind;
 
-typedef struct GFX_BindlessUpdate GFX_BindlessUpdate;
-struct GFX_BindlessUpdate
+typedef struct G_BindlessUpdate G_BindlessUpdate;
+struct G_BindlessUpdate
 {
-	GFX_BindlessKind kind;
+	G_BindlessKind kind;
 	u32 slot;
 	VkSampler sampler;
 	VkImageView view;
 };
 
-typedef struct GFX_Bindless GFX_Bindless;
-struct GFX_Bindless
+typedef struct G_Bindless G_Bindless;
+struct G_Bindless
 {
 	VkDescriptorPool pool;
 	VkDescriptorSetLayout layout;
 	VkDescriptorSet set;
 
 	u32 update_count;
-	GFX_BindlessUpdate updates[512];
+	G_BindlessUpdate updates[512];
 
-	GFX_BindlessIndex sampler_count;
-	GFX_BindlessIndex view_count;
+	G_BindlessIndex sampler_count;
+	G_BindlessIndex view_count;
 
-	GFX_BindlessIndex free_sampler_count;
-	GFX_BindlessHandle free_samplers[128];
+	G_BindlessIndex free_sampler_count;
+	G_BindlessHandle free_samplers[128];
 
-	GFX_BindlessIndex free_view_count;
-	GFX_BindlessHandle free_views[128];
+	G_BindlessIndex free_view_count;
+	G_BindlessHandle free_views[128];
 };
 
-internal VkDescriptorType GFX_BindlessGetVkType(GFX_BindlessKind kind);
+internal VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind);
 
-internal void GFX_BindlessPushUpdate(GFX_Bindless *bindless,
-									 GFX_BindlessKind kind, GFX_BindlessHandle handle,
+internal void G_BindlessPushUpdate(G_Bindless *bindless,
+									 G_BindlessKind kind, G_BindlessHandle handle,
 									 VkSampler sampler, VkImageView view);
 
-internal GFX_BindlessHandle GFX_BindlessRegisterSampler (GFX_Bindless *bindless, VkSampler sampler);
-internal GFX_BindlessHandle GFX_BindlessRegisterView    (GFX_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+internal G_BindlessHandle G_BindlessRegisterSampler (G_Bindless *bindless, VkSampler sampler);
+internal G_BindlessHandle G_BindlessRegisterView    (G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-internal void GFX_BindlessUpdateSampler (GFX_Bindless *bindless, GFX_BindlessHandle handle, VkSampler sampler);
-internal void GFX_BindlessUpdateView    (GFX_Bindless *bindless, GFX_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+internal void G_BindlessUpdateSampler (G_Bindless *bindless, G_BindlessHandle handle, VkSampler sampler);
+internal void G_BindlessUpdateView    (G_Bindless *bindless, G_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-internal void GFX_BindlessFreeSampler (GFX_Bindless *bindless, GFX_BindlessHandle handle);
-internal void GFX_BindlessFreeView    (GFX_Bindless *bindless, GFX_BindlessHandle handle);
+internal void G_BindlessFreeSampler (G_Bindless *bindless, G_BindlessHandle handle);
+internal void G_BindlessFreeView    (G_Bindless *bindless, G_BindlessHandle handle);
 
 #endif // GRAPHICS_BINDLESS_H

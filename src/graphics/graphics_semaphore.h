@@ -8,21 +8,21 @@
  * They're great!
  */
 
-typedef struct GFX_TimelinePoint GFX_TimelinePoint;
-struct GFX_TimelinePoint
+typedef struct G_TimelinePoint G_TimelinePoint;
+struct G_TimelinePoint
 {
 	VkSemaphore semaphore;
 	u64 value;
 };
 
-typedef struct GFX_Semaphore GFX_Semaphore;
-struct GFX_Semaphore
+typedef struct G_Semaphore G_Semaphore;
+struct G_Semaphore
 {
 	VkSemaphore vk_handle;
 	u64 target;
 };
 
-internal GFX_TimelinePoint GFX_SemaphoreSignal(GFX_Semaphore *semaphore);
-internal GFX_TimelinePoint GFX_SemaphoreLastSignaled(const GFX_Semaphore *semaphore);
+internal G_TimelinePoint G_SemaphoreSignal(G_Semaphore *semaphore);
+internal G_TimelinePoint G_SemaphoreLastSignaled(const G_Semaphore *semaphore);
 
 #endif // GRAPHICS_SEMAPHORE_H

@@ -5,7 +5,7 @@
 #define OS_LAYER_MEMORY                Megabytes(512)
 
 // Memory allocated to job system.
-#define OS_JOB_LAYER_MEMORY            Gigabytes(3)
+#define OS_J_LAYER_MEMORY              Gigabytes(3)
 
 #define OS_ENGINE_NAME                "Magpie"
 #define OS_DEFAULT_WINDOW_TITLE       "Magpie Demo"

@@ -4,7 +4,7 @@
 typedef struct R_BRDFLutPassData R_BRDFLutPassData;
 struct R_BRDFLutPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 };
 
 R_PASS_RECORD_DEF(R_BRDFLutPassFn);
@@ -14,10 +14,10 @@ R_PASS_RECORD_DEF(R_BRDFLutPassFn);
 typedef struct R_IBLPassIrradianceData R_IBLPassIrradianceData;
 struct R_IBLPassIrradianceData
 {
-	GFX_ShaderKey       shader;
-	GFX_SamplerKey      sampler;
-	GFX_TextureViewKey  env_view;
-	GFX_BufferKey       capture_transforms;
+	G_ShaderKey       shader;
+	G_SamplerKey      sampler;
+	G_TextureViewKey  env_view;
+	G_BufferKey       capture_transforms;
 	const R_Mesh       *skybox_mesh;
 };
 
@@ -28,10 +28,10 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn);
 typedef struct R_IBLPassPrefilterData R_IBLPassPrefilterData;
 struct R_IBLPassPrefilterData
 {
-	GFX_ShaderKey       shader;
-	GFX_SamplerKey      sampler;
-	GFX_TextureViewKey  env_view;
-	GFX_BufferKey       capture_transforms;
+	G_ShaderKey       shader;
+	G_SamplerKey      sampler;
+	G_TextureViewKey  env_view;
+	G_BufferKey       capture_transforms;
 	const R_Mesh       *skybox_mesh;
 	f32                 roughness;
 };

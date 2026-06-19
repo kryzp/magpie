@@ -1,213 +1,24 @@
 
-// Todo: Move these out into their respective
-//       backends.
-
-// remove warnings from external libraries
-#pragma warning(push)
-#pragma warning(disable:4310 4709 4701 4702 4324)
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "ext/stb/stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "ext/stb/stb_image_write.h"
-
-#define VOLK_IMPLEMENTATION
-#include <volk/volk.h>
-
-#include <vma/vk_mem_alloc.h>
-
-#include "ext/slang/slang_compiler.h"
-
-#define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
-#include "ext/spirv/spirv_reflect.h"
-#include "ext/spirv/spirv_reflect.c"
-
-#define MINIAUDIO_IMPLEMENTATION
-#include "ext/ma/miniaudio.h"
-
-#define CGLTF_IMPLEMENTATION
-#include "ext/gltf/cgltf.h"
-
-#define MAKE_LIB
-#include "ext/lua/onelua.c"
-
-#pragma warning(pop)
-
-// who decided to name these macros ffs
-#undef min
-#undef max
-#undef near
-#undef far
-
-// ---
-
-#include "core/core_inc.h"
-#include "os/os_inc.h"
-#include "core/core_inc.c"
-#include "os/os_inc.c"
-
-#include "io/io_inc.h"
-#include "io/io_inc.c"
-
-#include "chrono/chrono_inc.h"
-#include "chrono/chrono_inc.c"
-
-#include "graphics/graphics_inc.h"
-#include "graphics/graphics_inc.c"
-
-#include "script/script_inc.h"
-#include "script/script_inc.c"
-
-#include "audio/audio_inc.h"
-#include "audio/audio_inc.c"
-
-#include "asset/asset_inc.h"
-#include "asset/asset_inc.c"
-
-#include "animation/animation_inc.h"
-#include "animation/animation_inc.c"
-
-#include "render/render_inc.h"
-#include "render/render_inc.c"
-
-#include "physics/physics_inc.h"
-#include "physics/physics_inc.c"
-
-#include "entity/entity_inc.h"
-#include "entity/entity_inc.c"
-
-#include "gamemode/gamemode_inc.h"
-#include "gamemode/gamemode_inc.c"
-
-#include "dev/dev_inc.h"
-#include "dev/dev_inc.c"
-
-#include "editor/editor_inc.h"
-#include "editor/editor_inc.c"
-
-#include "app.h"
-
-
-/* ==================================================
-   GRAPHICS
-   ================================================== */
-
-internal void
-AppInitGraphics(App *app)
-{
-	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
-
-	
-	GFX_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
-
-
-	app->swapchain = GFX_DeviceSwapchainCreate(&app->graphics_device);
-
-	
-	app->shader_compiler_log_channel = osapi->LogChannelOpen(String8Lit("SLANG"));
-	GFX_ShaderCompilerInit(&app->shader_compiler, app->shader_compiler_log_channel);
-
-  
-	GFX_BufferAllocInfo ring_buffer_alloc_info = {0};
-	ring_buffer_alloc_info.size = Megabytes(512);
-	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	ring_buffer_alloc_info.usage =
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-
-	app->frame_upload_ring_buffer = GFX_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
-
-	
-	GFX_BufferAllocInfo frame_buffer_alloc_info = {0};
-	frame_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
-	frame_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	frame_buffer_alloc_info.size = sizeof(R_GPU_FrameData);
-
-	app->frame_data_buffer = GFX_DeviceBufferAlloc(&app->graphics_device, &frame_buffer_alloc_info);
-
-	
-	m4 capture_view_matrices[] = {
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Right.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Left.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3( 0.f,-1.f, 0.f)), // Up.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3( 0.f, 1.f, 0.f)), // Down.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Forward.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Backwards.
-	};
-
-	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
-
-	for (u32 i = 0; i < 6; i++)
-		capture_view_matrices[i] = M4MulM4(capture_projection_matrix, capture_view_matrices[i]);
-
-	GFX_BufferAllocInfo cubemap_capture_buffer_alloc_info = {0};
-	cubemap_capture_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	cubemap_capture_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
-
-	app->cubemap_capture_transform_buffer = GFX_DeviceBufferAlloc(&app->graphics_device, &cubemap_capture_buffer_alloc_info);
-	
-	GFX_DeviceBufferWrite(&app->graphics_device,
-						  app->cubemap_capture_transform_buffer,
-						  capture_view_matrices,
-						  sizeof(capture_view_matrices), 0);
-
-	app->linear_sampler  = GFX_DeviceSamplerCreateF(&app->graphics_device, VK_FILTER_LINEAR);
-	app->nearest_sampler = GFX_DeviceSamplerCreateF(&app->graphics_device, VK_FILTER_NEAREST);
-}
-
-internal void
-AppDestroyGraphics(App *app)
-{
-	GFX_DeviceSamplerDestroy(&app->graphics_device, app->linear_sampler);
-	GFX_DeviceSamplerDestroy(&app->graphics_device, app->nearest_sampler);
-	
-	GFX_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
-
-	GFX_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
-	GFX_DeviceBufferDestroy(&app->graphics_device, app->cubemap_capture_transform_buffer);
-
-	GFX_ShaderCompilerShutdown(&app->shader_compiler);
-
-	GFX_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
-	GFX_DeviceDestroy(&app->graphics_device);
-}
-
-internal void
-AppHotLoadGraphics(App *app)
-{
-	GFX_DeviceHotLoad(&app->graphics_device);
-}
-
-internal void
-AppHotUnloadGraphics(App *app)
-{
-	GFX_DeviceHotUnload(&app->graphics_device);
-}
-
-
 /* ==================================================
    SCRIPTING
    ================================================== */
 
-SCR_BINDING_DEF(SCR_BND_DebugLog)
+S_BINDING_DEF(S_BND_DebugLog)
 {
-	String8 msg = SCR_ArgString(ctx, 0);
+	String8 msg = S_CtxGetArgStr(ctx, 0);
 	DebugLogD(ctx->system->log_channel, "%.*s", String8VArg(msg));
 }
 
-SCR_BINDING_DEF(SCR_BND_WaitSeconds)
+S_BINDING_DEF(S_BND_WaitSeconds)
 {
-	f32 s = SCR_ArgF32(ctx, 0); 
-	SCR_YieldTime(ctx, s);
+	f32 s = S_CtxGetArgF32(ctx, 0); 
+	S_CtxYieldTime(ctx, s);
 }
 
-SCR_BINDING_DEF(SCR_BND_WaitSignal)
+S_BINDING_DEF(S_BND_WaitSignal)
 {
-	String8 sig = SCR_ArgString(ctx, 0);
-	SCR_YieldSignal(ctx, sig);
+	String8 sig = S_CtxGetArgStr(ctx, 0);
+	S_CtxYieldSignal(ctx, sig);
 }
 
 internal void
@@ -215,17 +26,17 @@ AppInitScripting(App *app)
 {
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
 	
-	app->scripting_system = SCR_Init(&app->scripting_arena, app->scripting_log_channel);
+	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
 
-	SCR_BindGlobal(app->scripting_system, String8Lit("debug_log"),    SCR_BND_DebugLog);
-	SCR_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), SCR_BND_WaitSeconds);
-	SCR_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  SCR_BND_WaitSignal);
+	S_BindGlobal(app->scripting_system, String8Lit("debug_log"),    S_BND_DebugLog);
+	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
+	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  S_BND_WaitSignal);
 }
 
 internal void
 AppDestroyScripting(App *app)
 {
-	SCR_Destroy(app->scripting_system);
+	S_Destroy(app->scripting_system);
 }
 
 internal void
@@ -255,6 +66,43 @@ AppHotUnloadScripting(App *app)
 
 
 /* ==================================================
+   GRAPHICS
+   ================================================== */
+
+internal void
+AppInitGraphics(App *app)
+{
+	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
+	
+	G_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
+
+	app->swapchain = G_DeviceSwapchainCreate(&app->graphics_device);
+	
+	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
+}
+
+internal void
+AppDestroyGraphics(App *app)
+{
+	G_ShaderCompilerShutdown(&app->shader_compiler);
+	G_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
+	G_DeviceDestroy(&app->graphics_device);
+}
+
+internal void
+AppHotLoadGraphics(App *app)
+{
+	G_DeviceHotLoad(&app->graphics_device);
+}
+
+internal void
+AppHotUnloadGraphics(App *app)
+{
+	G_DeviceHotUnload(&app->graphics_device);
+}
+
+
+/* ==================================================
    AUDIO
    ================================================== */
 
@@ -271,10 +119,9 @@ AppInitAudio(App *app)
 {
 	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
 	
-	app->audio_backend = AUD_BackendAllocAndSelect(&app->audio_arena);
-	app->audio_backend->Init();
+	app->audio_backend = AU_BackendInit(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("BACKEND")));
 	
-	AUD_Init(&app->audio_system,
+	AU_Init(&app->audio_system,
 			 &app->audio_arena,
 			 app->audio_log_channel,
 			 app->audio_backend);
@@ -283,21 +130,18 @@ AppInitAudio(App *app)
 internal void
 AppDestroyAudio(App *app)
 {
-	AUD_Shutdown(&app->audio_system);
-	
-	app->audio_backend->Shutdown();
+	AU_Shutdown(&app->audio_system);
+	AU_BackendShutdown(app->audio_backend);
 }
 
 internal void
 AppHotLoadAudio(App *app)
 {
-	AUD_BackendHotLoad(app->audio_backend);
 }
 
 internal void
 AppHotUnloadAudio(App *app)
 {
-	AUD_BackendHotUnload(app->audio_backend);
 }
 
 
@@ -310,7 +154,7 @@ AppInitAssets(App *app)
 {
 	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
 	
-	AST_Init(&app->assets,
+	A_Init(&app->assets,
 			 &app->asset_arena,
 			 app->asset_log_channel,
 			 &app->graphics_device,
@@ -320,14 +164,14 @@ AppInitAssets(App *app)
 
 	// I stole this concept of asset mounting from the "Granite" engine / renderer by Themaister.
 	// It's so simple but it makes everything so much cleaner!!!
-	//AST_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
-	AST_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
+	//A_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
+	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
 }
 
 internal void
 AppDestroyAssets(App *app)
 {
-	AST_Destroy(&app->assets);
+	A_Destroy(&app->assets);
 }
 
 internal void
@@ -383,26 +227,76 @@ AppInitRenderCreateSkyboxMesh(App *app)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	GFX_BufferKey staging_buffer = GFX_DeviceStageAlloc(&app->graphics_device, R_MeshVertexBufferSize(&app->skybox_mesh) + R_MeshIndexBufferSize(&app->skybox_mesh));
+	G_BufferKey staging_buffer = G_DeviceStageAlloc(&app->graphics_device, R_MeshVertexBufferSize(&app->skybox_mesh) + R_MeshIndexBufferSize(&app->skybox_mesh));
 
 	R_MeshWriteToStage(&app->skybox_mesh, &app->graphics_device,
 					   staging_buffer, 0,
 					   vertices, indices);
 
-	GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(&app->graphics_device);
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
 	
 	R_MeshUpload(&app->skybox_mesh, &cmd,
 				 staging_buffer, 0);
 
-	GFX_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+	G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
 
-	GFX_DeviceBufferDestroy(&app->graphics_device, staging_buffer);
+	G_DeviceBufferDestroy(&app->graphics_device, staging_buffer);
 }
 
 internal void
 AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
+
+  
+	G_BufferAllocInfo ring_buffer_alloc_info = {0};
+	ring_buffer_alloc_info.size = Megabytes(512);
+	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	ring_buffer_alloc_info.usage =
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+
+	app->frame_upload_ring_buffer = G_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
+
+	
+	G_BufferAllocInfo frame_buffer_alloc_info = {0};
+	frame_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	frame_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	frame_buffer_alloc_info.size = sizeof(R_GPU_FrameData);
+
+	app->frame_data_buffer = G_DeviceBufferAlloc(&app->graphics_device, &frame_buffer_alloc_info);
+
+	
+	m4 capture_view_matrices[] = {
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Right.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Left.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3( 0.f,-1.f, 0.f)), // Up.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3( 0.f, 1.f, 0.f)), // Down.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Forward.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Backwards.
+	};
+
+	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
+
+	for (u32 i = 0; i < 6; i++)
+		capture_view_matrices[i] = M4MulM4(capture_projection_matrix, capture_view_matrices[i]);
+
+	G_BufferAllocInfo cubemap_capture_buffer_alloc_info = {0};
+	cubemap_capture_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	cubemap_capture_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
+
+	app->cubemap_capture_transform_buffer = G_DeviceBufferAlloc(&app->graphics_device, &cubemap_capture_buffer_alloc_info);
+	
+	G_DeviceBufferWrite(&app->graphics_device,
+						  app->cubemap_capture_transform_buffer,
+						  capture_view_matrices,
+						  sizeof(capture_view_matrices), 0);
+
+	app->linear_sampler  = G_DeviceSamplerCreateF(&app->graphics_device, VK_FILTER_LINEAR);
+	app->nearest_sampler = G_DeviceSamplerCreateF(&app->graphics_device, VK_FILTER_NEAREST);
+
 	
 	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device,               osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
 	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
@@ -411,36 +305,36 @@ AppInitRender(App *app)
 
 	const u32 prefilter_mips = 5;
 
-	app->brdf_lut            = GFX_DeviceTextureAlloc2D      (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
-	app->environment_cubemap = GFX_DeviceTextureAllocCubemap (&app->graphics_device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	app->irradiance_cubemap  = GFX_DeviceTextureAllocCubemap (&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	app->prefilter_cubemap   = GFX_DeviceTextureAllocCubemap (&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
+	app->brdf_lut            = G_DeviceTextureAlloc2D      (&app->graphics_device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
+	app->environment_cubemap = G_DeviceTextureAllocCubemap (&app->graphics_device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	app->irradiance_cubemap  = G_DeviceTextureAllocCubemap (&app->graphics_device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	app->prefilter_cubemap   = G_DeviceTextureAllocCubemap (&app->graphics_device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 
 	R_CullingInit                (&app->culling,          &app->assets);
 	R_ShadowRendererInit         (&app->shadow_renderer,  &app->graphics_device, &app->assets);
 	R_ForwardRendererInit        (&app->forward_renderer, &app->graphics_device, &app->assets);
 	R_DebugRendererInitAndSelect (&app->debug_renderer,   &app->render_arena, &app->graphics_device, &app->assets);
 
-	AST_Handle brdf_lut_shader_handle   = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   AST_Type_Shader);
-	AST_Handle hdr_to_env_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), AST_Type_Shader);
-	AST_Handle irradiance_shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     AST_Type_Shader);
-	AST_Handle prefilter_shader_handle  = AST_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      AST_Type_Shader);
+	A_Handle brdf_lut_shader_handle   = A_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   A_Type_Shader);
+	A_Handle hdr_to_env_shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
+	A_Handle irradiance_shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
+	A_Handle prefilter_shader_handle  = A_Require(&app->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
 
-	AST_Handle hdr_texture_handle = AST_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), AST_Type_Texture);
+	A_Handle hdr_texture_handle = A_Require(&app->assets, String8Lit("assets://environment_map_1.hdr"), A_Type_Texture);
 	
-	app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         AST_Type_Model);
-	//app->object_model_handle = AST_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         AST_Type_Model);
+	app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
+	//app->object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
-		GFX_CmdBuffer cmd = GFX_DeviceSubmitImBegin(&app->graphics_device);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
 		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, app->object_model_handle, (u32)(-1));
-		GFX_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
 					
 		for (u32 i = 0; i < receipt.count; i++)
 		{
@@ -455,8 +349,8 @@ AppInitRender(App *app)
 			app->object_handle = R_SceneObjectCreate(&app->scene, &desc);
 		}
 
-		//ANIM_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
-		//ANIM_AnimatorPlay(&app->object_animator, 0);
+		//AN_AnimatorSelect(&app->object_animator, &app->render_arena, &app->assets, app->object_model_handle);
+		//AN_AnimatorPlay(&app->object_animator, 0);
 	}
 	ScratchRelease(&scratch);
 
@@ -480,15 +374,15 @@ AppInitRender(App *app)
 						   v3( 8.f,  6.f,  12.f),
 						   1, 1, 1,
 						   &app->skybox_mesh,
-						   GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
+						   G_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
 	
-	GFX_ShaderKey brdf_lut_shader        = AST_GetNow(&app->assets, brdf_lut_shader_handle,   AST_Type_Shader)->shader_data.key;
-	GFX_ShaderKey hdr_to_env_shader      = AST_GetNow(&app->assets, hdr_to_env_shader_handle, AST_Type_Shader)->shader_data.key;
-	GFX_ShaderKey irradiance_pass_shader = AST_GetNow(&app->assets, irradiance_shader_handle, AST_Type_Shader)->shader_data.key;
-	GFX_ShaderKey prefilter_pass_shader  = AST_GetNow(&app->assets, prefilter_shader_handle,  AST_Type_Shader)->shader_data.key;
+	G_ShaderKey brdf_lut_shader        = A_GetNow(&app->assets, brdf_lut_shader_handle,   A_Type_Shader)->shader.key;
+	G_ShaderKey hdr_to_env_shader      = A_GetNow(&app->assets, hdr_to_env_shader_handle, A_Type_Shader)->shader.key;
+	G_ShaderKey irradiance_pass_shader = A_GetNow(&app->assets, irradiance_shader_handle, A_Type_Shader)->shader.key;
+	G_ShaderKey prefilter_pass_shader  = A_GetNow(&app->assets, prefilter_shader_handle,  A_Type_Shader)->shader.key;
 	
-	GFX_TextureKey hdr_texture_gfx = AST_GetNow(&app->assets, hdr_texture_handle, AST_Type_Texture)->texture_data.key;
+	G_TextureKey hdr_texture_gfx = A_GetNow(&app->assets, hdr_texture_handle, A_Type_Texture)->texture.key;
 
 	// Generate BRDF Lookup Table.
 	{
@@ -505,7 +399,7 @@ AppInitRender(App *app)
 		R_HdrToEnvPassData *data = ArenaPushArray(&app->frame_arena, R_HdrToEnvPassData, 1);
 		data->shader             = hdr_to_env_shader;
 		data->sampler            = app->linear_sampler;
-		data->hdr_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
+		data->hdr_view           = G_DeviceTextureViewAuto(&app->graphics_device, hdr_texture_gfx);
 		data->capture_transforms = app->cubemap_capture_transform_buffer;
 		data->skybox_mesh        = &app->skybox_mesh;
 		
@@ -527,7 +421,7 @@ AppInitRender(App *app)
 		R_IBLPassIrradianceData *data = ArenaPushArray(&app->frame_arena, R_IBLPassIrradianceData, 1);
 		data->shader             = irradiance_pass_shader;
 		data->sampler            = app->linear_sampler;
-		data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
+		data->env_view           = G_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->capture_transforms = app->cubemap_capture_transform_buffer;
 		data->skybox_mesh        = &app->skybox_mesh;
 		
@@ -546,12 +440,12 @@ AppInitRender(App *app)
 			R_IBLPassPrefilterData *data = ArenaPushArray(&app->frame_arena, R_IBLPassPrefilterData, 1);
 			data->shader             = prefilter_pass_shader;
 			data->sampler            = app->linear_sampler;
-			data->env_view           = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
+			data->env_view           = G_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 			data->capture_transforms = app->cubemap_capture_transform_buffer;
 			data->skybox_mesh        = &app->skybox_mesh;
 			data->roughness          = (f32)i / (f32)(mipmap_count - 1);
 
-			GFX_SubresourceRange range = {0};
+			G_SubresourceRange range = {0};
 			range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
 			range.base_mip = i;
 			range.mips = 1;
@@ -575,15 +469,23 @@ AppDestroyRender(App *app)
 	R_ShadowRendererDestroy   (&app->shadow_renderer);
 	R_CullingDestroy          (&app->culling);
 
-	GFX_DeviceTextureDestroy(&app->graphics_device, app->brdf_lut);
-	GFX_DeviceTextureDestroy(&app->graphics_device, app->environment_cubemap);
-	GFX_DeviceTextureDestroy(&app->graphics_device, app->irradiance_cubemap);
-	GFX_DeviceTextureDestroy(&app->graphics_device, app->prefilter_cubemap);
+	G_DeviceTextureDestroy(&app->graphics_device, app->brdf_lut);
+	G_DeviceTextureDestroy(&app->graphics_device, app->environment_cubemap);
+	G_DeviceTextureDestroy(&app->graphics_device, app->irradiance_cubemap);
+	G_DeviceTextureDestroy(&app->graphics_device, app->prefilter_cubemap);
 	
 	R_MeshDestroy(&app->skybox_mesh, &app->graphics_device);
 	
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
+	
+	G_DeviceSamplerDestroy(&app->graphics_device, app->linear_sampler);
+	G_DeviceSamplerDestroy(&app->graphics_device, app->nearest_sampler);
+	
+	G_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
+
+	G_DeviceBufferDestroy(&app->graphics_device, app->frame_data_buffer);
+	G_DeviceBufferDestroy(&app->graphics_device, app->cubemap_capture_transform_buffer);
 }
 
 internal void
@@ -606,13 +508,13 @@ AppInitPhysics(App *app)
 {
 	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
 
-	PHYS_EngineInit(&app->physics_engine, app->physics_log_channel);
+	P_EngineInit(&app->physics_engine, app->physics_log_channel);
 }
 
 internal void
 AppDestroyPhysics(App *app)
 {
-	PHYS_EngineDestroy(&app->physics_engine);
+	P_EngineDestroy(&app->physics_engine);
 }
 
 internal void
@@ -635,14 +537,14 @@ AppInitEntity(App *app)
 {
 	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
-	ENT_WorldInit(&app->world, &app->entity_arena, app->entity_log_channel);
-	ENT_EventQueueInit(&app->events, app->entity_log_channel);
+	E_WorldInit(&app->world, &app->entity_arena, app->entity_log_channel);
+	E_EventQueueInit(&app->events, app->entity_log_channel);
 }
 
 internal void
 AppDestroyEntity(App *app)
 {
-	ENT_WorldDestroy(&app->world);
+	E_WorldDestroy(&app->world);
 }
 
 internal void
@@ -716,8 +618,8 @@ AppInit_(App *app)
 {
 	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
 	
-	AppInitGraphics  (app);
 	AppInitScripting (app);
+	AppInitGraphics  (app);
 	AppInitAudio     (app);
 	AppInitAssets    (app);
 	AppInitRender    (app);
@@ -725,13 +627,13 @@ AppInit_(App *app)
 	AppInitEntity    (app);
 	AppInitEditor    (app);
 
-	app->test_sound_handle = AST_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), AST_Type_Sound);
-	AST_Asset *test_sound_asset = AST_GetNow(&app->assets, app->test_sound_handle, AST_Type_Sound);
-	app->test_sound = test_sound_asset->sound_data.buffer;
+	app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
+	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle, A_Type_Sound);
+	app->test_sound = test_sound_asset->sound.buffer;
 	
-	AST_Handle test_script_handle = AST_Require(&app->assets, String8Lit("assets://test.lua"), AST_Type_Script);
-	SCR_ScriptRef test_lua_script = AST_GetNow(&app->assets, test_script_handle, AST_Type_Script)->script_data.ref;
-	SCR_CallMethodEx(app->scripting_system, test_lua_script, String8Lit("Yay"), NULL, 0);
+	A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
+	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle, A_Type_Script)->script.ref;
+	S_CallMethodEx(app->scripting_system, test_lua_script, String8Lit("Yay"), NULL, 0);
 
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
@@ -747,8 +649,8 @@ AppInit(const OS_API *api)
 	App *app = ArenaPushArray(&bootstrap, App, 1);
 	app->bootstrap_arena = bootstrap;
 
-	app->graphics_arena  = ArenaAlloc(Gigabytes(3));
 	app->scripting_arena = ArenaAlloc(Gigabytes(1));
+	app->graphics_arena  = ArenaAlloc(Gigabytes(3));
 	app->audio_arena     = ArenaAlloc(Gigabytes(1));
 	app->asset_arena     = ArenaAlloc(Gigabytes(3));
 	app->render_arena    = ArenaAlloc(Gigabytes(2));
@@ -767,7 +669,7 @@ AppInit(const OS_API *api)
 __declspec(dllexport) void
 AppDestroy(App *app)
 {
-	GFX_DeviceWaitIdle(&app->graphics_device);
+	G_DeviceWaitIdle(&app->graphics_device);
 
 	DebugLogI(app->log_channel, "Destroying...");
 
@@ -777,8 +679,8 @@ AppDestroy(App *app)
 	AppDestroyRender    (app);
 	AppDestroyAssets    (app);
 	AppDestroyAudio     (app);
-	AppDestroyScripting (app);
 	AppDestroyGraphics  (app);
+	AppDestroyScripting (app);
 
 	ArenaRelease(&app->frame_arena);
 	ArenaRelease(&app->editor_arena);
@@ -801,7 +703,7 @@ internal void
 AppLogFPS(App *app, f32 dt)
 {
 	static u32 index = 0;
-	static f32 fps_history[512] = {0};
+	static f32 fps_history[1] = {0};
 
 	const f32 fps_now = 1.f / dt;
 
@@ -832,45 +734,45 @@ AppTick(App *app, const OS_InputState *input)
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
 		CH_TimerReset(&app->hot_reload_timer);
-		AST_PollHotReloads(&app->assets);
+		A_PollHotReloads(&app->assets);
 	}
 
 	if (OS_KbPressed(input, OS_KeyboardKey_Enter))
 	{
-		SCR_FireSignal(app->scripting_system, String8Lit("test_ready"));
+		S_FireSignal(app->scripting_system, String8Lit("test_ready"));
 		//R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
 	}
 
 	if (OS_KbPressed(input, OS_KeyboardKey_Y))
 	{
-		AUD_PlayConfig play_config = {0};
+		AU_PlayConfig play_config = {0};
 		play_config.clip = app->test_sound;
-		play_config.bus = AUD_Bus_Sfx;
+		play_config.bus = AU_Bus_Sfx;
 		play_config.volume = 1.f;
 		play_config.pitch = 1.f;
 		play_config.spatial = true;
 		play_config.position = v3x(0.f);
 		
-		AUD_Play(&app->audio_system, &play_config);
+		AU_Play(&app->audio_system, &play_config);
 	}
 
-	AST_FlushUploads(&app->assets);
+	A_FlushUploads(&app->assets);
 
 	EditorTick(&app->editor, input, dt, elapsed);
 	
-	ENT_WorldTickPreAnim(&app->world, &app->events, dt, input);
+	E_WorldTickPreAnim(&app->world, &app->events, dt, input);
 
 	// TODO: animation system
 
 	/*
-	ANIM_AnimatorTick(&app->object_animator, &app->assets, dt);
-	ANIM_Palette palette = ANIM_AnimatorPalette(&app->object_animator, 0);
+	AN_AnimatorTick(&app->object_animator, &app->assets, dt);
+	AN_Palette palette = AN_AnimatorPalette(&app->object_animator, 0);
 	R_SceneObjectSetSkinning(&app->scene, app->object_handle, &palette);
 	*/
 
-	ENT_WorldTickPostAnim(&app->world, &app->events, dt, input);
+	E_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
-	SCR_Tick(app->scripting_system, dt);
+	S_Tick(app->scripting_system, dt);
 	
 	if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
 	if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
@@ -891,7 +793,7 @@ AppTick(App *app, const OS_InputState *input)
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
-		PHYS_EngineTick(&app->physics_engine, fixed_dt);
+		P_EngineTick(&app->physics_engine, fixed_dt);
 		app->delta_accumulator -= fixed_dt;
 	}
 
@@ -906,16 +808,16 @@ AppTick(App *app, const OS_InputState *input)
 	
 	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	
-	ENT_WorldTickPostPhysics(&app->world, &app->events, dt, input);
+	E_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
-	ENT_EventDispatch(&app->events, &app->world);
+	E_EventDispatch(&app->events, &app->world);
 
-	ENT_WorldFlush(&app->world);
+	E_WorldFlush(&app->world);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 	
-	GFX_CmdBuffer cmd = GFX_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
+	G_CmdBuffer cmd = G_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
 	{
 		AppRender(app, dt, elapsed, &cmd);
 
@@ -934,15 +836,16 @@ AppTick(App *app, const OS_InputState *input)
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
 		R_GraphReset(&app->graph);
 	}
-	GFX_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
+	G_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	
-	AUD_Listener listener = {0};
+	AU_Listener listener = {0};
 	listener.position = app->editor.camera.position;
 	listener.direction = app->editor.camera.forward;
 
-	AUD_Tick(&app->audio_system, dt, listener);
+	AU_BackendTick(app->audio_backend, dt, listener);
+	AU_Tick(&app->audio_system, dt, listener);
 	
-	GFX_RingBufferReset(&app->frame_upload_ring_buffer);
+	G_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
 	return false;
@@ -953,8 +856,8 @@ AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
-	AppHotLoadGraphics     (app);
 	AppHotLoadScripting    (app);
+	AppHotLoadGraphics     (app);
 	AppHotLoadAudio        (app);
 	AppHotLoadAssets       (app);
 	AppHotLoadRender       (app);
@@ -970,12 +873,12 @@ AppHotUnload(App *app)
 	AppHotUnloadRender     (app);
 	AppHotUnloadAssets     (app);
 	AppHotUnloadAudio      (app);
-	AppHotUnloadScripting  (app);
 	AppHotUnloadGraphics   (app);
+	AppHotUnloadScripting  (app);
 }
 
 internal void
-AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
+AppRender(App *app, f32 dt, f32 elapsed, G_CmdBuffer *cmd)
 {
 	R_SceneFrameData scene_resources = R_SceneUploadFrameData(&app->scene, &app->frame_upload_ring_buffer);
 
@@ -995,7 +898,7 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	frame_data.window_resolution = v2(window_width, window_height);
 	frame_data.time = elapsed;
 
-	GFX_DeviceBufferWrite(&app->graphics_device,
+	G_DeviceBufferWrite(&app->graphics_device,
 						  app->frame_data_buffer,
 						  &frame_data, sizeof(frame_data), 0);
 
@@ -1036,12 +939,12 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 		
 	// Skybox.
 	{
-		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
+		A_Handle shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);
+		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle, A_Type_Shader)->shader.key;
 
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
-		data->cubemap = GFX_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
+		data->cubemap = G_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap);
 		data->sampler = app->linear_sampler;
 		data->frame_data_buffer = app->frame_data_buffer;
 		data->skybox_mesh = &app->skybox_mesh;
@@ -1055,8 +958,8 @@ AppRender(App *app, f32 dt, f32 elapsed, GFX_CmdBuffer *cmd)
 	
 	// Post Processing.
 	{
-		AST_Handle shader_handle = AST_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), AST_Type_Shader);
-		GFX_ShaderKey shader = AST_GetNow(&app->assets, shader_handle, AST_Type_Shader)->shader_data.key;
+		A_Handle shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader);
+		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle, A_Type_Shader)->shader.key;
 
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;

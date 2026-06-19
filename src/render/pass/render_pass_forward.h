@@ -4,13 +4,13 @@
 typedef struct R_ForwardPassData R_ForwardPassData;
 struct R_ForwardPassData
 {
-	GFX_ShaderKey shader;
+	G_ShaderKey shader;
 
-	GFX_BufferKey frame_data_buffer;
-	GFX_BufferKey shadow_caster_table;
+	G_BufferKey frame_data_buffer;
+	G_BufferKey shadow_caster_table;
 	
-	GFX_SamplerKey linear_sampler;
-	GFX_SamplerKey nearest_sampler;
+	G_SamplerKey linear_sampler;
+	G_SamplerKey nearest_sampler;
 
 	u64 object_buffer_address;
 	u64 light_buffer_address;
@@ -31,13 +31,13 @@ R_PASS_RECORD_DEF(R_ForwardPassFn);
 typedef struct R_ForwardRenderer R_ForwardRenderer;
 struct R_ForwardRenderer
 {
-	GFX_Device *device;
-	AST_Assets *assets;
+	G_Device *device;
+	A_Registry *assets;
 
-	AST_Handle shader;
+	A_Handle shader;
 };
 
-internal void R_ForwardRendererInit    (R_ForwardRenderer *r, GFX_Device *device, AST_Assets *assets);
+internal void R_ForwardRendererInit    (R_ForwardRenderer *r, G_Device *device, A_Registry *assets);
 internal void R_ForwardRendererDestroy (R_ForwardRenderer *r);
 
 internal void R_ForwardRender          (R_ForwardRenderer *r,
