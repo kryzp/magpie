@@ -377,12 +377,12 @@ AppInitRender(App *app)
 						   G_DeviceTextureViewAuto(&app->graphics_device, app->environment_cubemap),
 						   app->linear_sampler);
 	
-	G_ShaderKey brdf_lut_shader        = A_GetNow(&app->assets, brdf_lut_shader_handle,   A_Type_Shader)->shader.key;
-	G_ShaderKey hdr_to_env_shader      = A_GetNow(&app->assets, hdr_to_env_shader_handle, A_Type_Shader)->shader.key;
-	G_ShaderKey irradiance_pass_shader = A_GetNow(&app->assets, irradiance_shader_handle, A_Type_Shader)->shader.key;
-	G_ShaderKey prefilter_pass_shader  = A_GetNow(&app->assets, prefilter_shader_handle,  A_Type_Shader)->shader.key;
-	
-	G_TextureKey hdr_texture_gfx = A_GetNow(&app->assets, hdr_texture_handle, A_Type_Texture)->texture.key;
+	G_ShaderKey brdf_lut_shader        = A_GetNow(&app->assets, brdf_lut_shader_handle)->shader.key;
+	G_ShaderKey hdr_to_env_shader      = A_GetNow(&app->assets, hdr_to_env_shader_handle)->shader.key;
+	G_ShaderKey irradiance_pass_shader = A_GetNow(&app->assets, irradiance_shader_handle)->shader.key;
+	G_ShaderKey prefilter_pass_shader  = A_GetNow(&app->assets, prefilter_shader_handle)->shader.key;
+
+	G_TextureKey hdr_texture_gfx = A_GetNow(&app->assets, hdr_texture_handle)->texture.key;
 
 	// Generate BRDF Lookup Table.
 	{
@@ -628,12 +628,12 @@ AppInit_(App *app)
 	AppInitEditor    (app);
 
 	app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
-	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle, A_Type_Sound);
+	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
 	app->test_sound = test_sound_asset->sound.buffer;
 	
 	A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
-	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle, A_Type_Script)->script.ref;
-	S_CallMethodEx(app->scripting_system, test_lua_script, String8Lit("Yay"), NULL, 0);
+	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
+	S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
 
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
@@ -940,7 +940,7 @@ AppRender(App *app, f32 dt, f32 elapsed, G_CmdBuffer *cmd)
 	// Skybox.
 	{
 		A_Handle shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle, A_Type_Shader)->shader.key;
+		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle)->shader.key;
 
 		R_SkyboxPassData *data = ArenaPushArray(&app->frame_arena, R_SkyboxPassData, 1);
 		data->shader = shader;
@@ -959,7 +959,7 @@ AppRender(App *app, f32 dt, f32 elapsed, G_CmdBuffer *cmd)
 	// Post Processing.
 	{
 		A_Handle shader_handle = A_Require(&app->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle, A_Type_Shader)->shader.key;
+		G_ShaderKey shader = A_GetNow(&app->assets, shader_handle)->shader.key;
 
 		R_PostProcessingPassData *data = ArenaPushArray(&app->frame_arena, R_PostProcessingPassData, 1);
 		data->shader = shader;

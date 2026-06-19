@@ -178,7 +178,7 @@ R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
 	R_PassIndirectBuffer(pass, draw_stream->count_buffer);
 
-	G_ShaderKey shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->model_shader, A_Type_Shader));
+	G_ShaderKey shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->model_shader));
 
 	R_DeferredGeometryPassData *data = ArenaPushArray(pass_arena, R_DeferredGeometryPassData, 1);
 	data->shader                = shader;
@@ -357,8 +357,8 @@ R_DeferredRenderLighting(R_DeferredRenderer *dr,
 	for (u32 i = 0; i < shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, shadow->shadow_maps[i]);
 
-	G_ShaderKey ambient_shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->ambient_lighting_shader,      A_Type_Shader));
-	G_ShaderKey direct_shader  = A_ShaderDataGet(A_GetNow(dr->assets, dr->direct_lighting_point_shader, A_Type_Shader));
+	G_ShaderKey ambient_shader = A_ShaderDataGet(A_GetNow(dr->assets, dr->ambient_lighting_shader));
+	G_ShaderKey direct_shader  = A_ShaderDataGet(A_GetNow(dr->assets, dr->direct_lighting_point_shader));
 
 	R_DeferredLightingPassData *data = ArenaPushArray(pass_arena, R_DeferredLightingPassData, 1);
 	data->ambient_shader       = ambient_shader;

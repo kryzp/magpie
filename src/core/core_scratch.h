@@ -10,6 +10,6 @@ struct ScratchArena
 
 internal ScratchArena ScratchBegin(Arena * const *conflicts, u32 conflict_count);
 internal void ScratchClear(const ScratchArena *scratch);
-internal void ScratchRelease(const ScratchArena *scratch);
+internal void ScratchRelease(ScratchArena *scratch);
 
 #endif // CORE_SCRATCH_H

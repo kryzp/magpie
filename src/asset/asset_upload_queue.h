@@ -9,7 +9,6 @@ struct A_Upload
 	u32 load_arena_index;
 	A_MetaData metadata;
 	A_Handle handle;
-	A_Type type;
 	A_SerializerPipelineData load_data;
 };
 

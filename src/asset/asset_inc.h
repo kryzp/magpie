@@ -1,4 +1,5 @@
 #include "asset_state.h"
+#include "asset_type.h"
 #include "asset_handle.h"
 
 #include "asset_skeleton.h"
@@ -6,7 +7,6 @@
 #include "asset_material.h"
 #include "asset_model.h"
 
-#include "asset_type.h"
 #include "asset_def.h"
 
 #include "asset_serializer.h"

@@ -762,7 +762,7 @@ R_DebugRendererRender(R_DebugRenderer *dr,
 	
 	// Create the render pass.
 
-	G_ShaderKey shader = A_GetNow(dr->assets, dr->shader_handle, A_Type_Shader)->shader.key;
+	G_ShaderKey shader = A_GetNow(dr->assets, dr->shader_handle)->shader.key;
 
 	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
 	data->shader = shader;

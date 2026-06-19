@@ -3,7 +3,7 @@
 
 typedef enum A_Type
 {
-	A_Type_Unknown,
+	A_Type_Null,
 #define AssetDef(name, upper) A_Type_##name,
 #include "asset_definitions.inc"
 #undef AssetDef

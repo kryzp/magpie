@@ -117,7 +117,7 @@ AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs)
 internal void
 AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle)
 {
-	A_Asset *asset = A_GetNow(assets, model_handle, A_Type_Model);
+	A_Asset *asset = A_GetNow(assets, model_handle);
 
 	AssertTrue(asset);
 	
@@ -151,7 +151,7 @@ AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 	if (animator->pose_count <= 0)
 		return;
 	
-	A_ModelData *asset_model = &A_Get(assets, animator->selected_model, A_Type_Model)->model;
+	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
@@ -229,7 +229,7 @@ AN_AnimatorPlay(AN_Animator *animator, u32 clip)
 internal b32
 AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name)
 {
-	A_ModelData *asset_model = &A_Get(assets, animator->selected_model, A_Type_Model)->model;
+	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
 	for (u32 i = 0; i < asset_model->clip_count; i++)
 	{

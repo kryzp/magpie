@@ -18,7 +18,10 @@ ScratchClear(const ScratchArena *scratch)
 }
 
 internal void
-ScratchRelease(const ScratchArena *scratch)
+ScratchRelease(ScratchArena *scratch)
 {
 	ArenaPopTo(scratch->arena, scratch->checkpoint);
+
+	scratch->arena = NULL;
+	scratch->checkpoint = 0;
 }
