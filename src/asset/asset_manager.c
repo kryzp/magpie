@@ -663,7 +663,11 @@ A_FlushUploads(A_Registry *assets)
 				}
 				else
 				{
+<<<<<<< HEAD
 					b32 is_new = asset->handle.type == A_Type_Null;
+=======
+					b32 is_new = asset->handle.type == A_Type_Unknown;
+>>>>>>> 964a8b2ae9b71be88a160e5cfa62b29279e4045d
 
 					asset->handle = upload->handle;
 
