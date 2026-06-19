@@ -817,7 +817,7 @@ R_SceneFlushMeshBuffer(R_Scene *scene)
 internal R_ModelImportReceipt
 R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count)
 {
-	A_ModelData *model_asset = &A_GetNow(scene->assets, handle, A_Type_Model)->model;
+	A_ModelData *model_asset = &A_GetNow(scene->assets, handle)->model;
 	
 	u32 sub_model_count = model_asset->sub_model_count;
 	const A_SubModel *sub_models = model_asset->sub_models;

@@ -51,7 +51,7 @@ A_GetRecord(A_Registry *assets, A_Handle handle)
 {
 	if (!A_IsValid(assets, handle))
 		return NULL;
-
+	
 	return &assets->records[handle.index];
 }
 
@@ -210,7 +210,7 @@ A_Destroy(A_Registry *assets)
 
 		if (record->state == A_State_Ready || record->reloading)
 		{
-			A_Serializer *s = &assets->serializers[record->asset.type];
+			A_Serializer *s = &assets->serializers[record->asset.handle.type];
 
 			if (s->Dispose)
 				s->Dispose(&record->asset, assets);
@@ -299,7 +299,7 @@ A_IsValid(const A_Registry *assets, A_Handle handle)
 }
 
 internal void
-A_LoadNow(A_Registry *assets, A_Handle handle, A_Type type)
+A_LoadNow(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -307,7 +307,7 @@ A_LoadNow(A_Registry *assets, A_Handle handle, A_Type type)
 		
 	if (A_StateNeedsLoad(record->state))
 	{
-		A_Load(assets, handle, type, counter);
+		A_Load(assets, handle, counter);
 		osapi->JobYield(counter, 0);
 	}
 
@@ -317,21 +317,21 @@ A_LoadNow(A_Registry *assets, A_Handle handle, A_Type type)
 }
 
 internal void
-A_LoadAsync(A_Registry *assets, A_Handle handle, A_Type type)
+A_LoadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
 	if (A_StateNeedsLoad(record->state))
-		A_Load(assets, handle, type, assets->async_counter);
+		A_Load(assets, handle, assets->async_counter);
 }
 
 internal void
-A_ReloadAsync(A_Registry *assets, A_Handle handle, A_Type type)
+A_ReloadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
 	if (!A_StateIsLoading(record->state))
-		A_Load(assets, handle, type, assets->async_counter);
+		A_Load(assets, handle, assets->async_counter);
 }
 
 J_ENTRY_POINT_DEF(A_LoadJobEntry)
@@ -344,9 +344,9 @@ J_ENTRY_POINT_DEF(A_LoadJobEntry)
 	A_Context ctx = {0};
 	ctx.assets = load_params->assets;
 	ctx.metadata = load_params->metadata;
-	ctx.log_channel = load_params->assets->serializer_log_channels[load_params->type];
+	ctx.log_channel = load_params->assets->serializer_log_channels[load_params->handle.type];
 
-	A_Serializer *serializer = &load_params->assets->serializers[load_params->type];
+	A_Serializer *serializer = &load_params->assets->serializers[load_params->handle.type];
 
 	A_SerializerPipelineData load_data = serializer->Cpu(&ctx, load_arena);
 
@@ -367,7 +367,6 @@ J_ENTRY_POINT_DEF(A_LoadJobEntry)
 	upload.load_arena_index = arena_index;
 	upload.metadata = load_params->metadata;
 	upload.handle = load_params->handle;
-	upload.type = load_params->type;
 	upload.load_data = load_data;
  
 	osapi->MutexLock(load_params->assets->dependency_mutex);
@@ -376,7 +375,7 @@ J_ENTRY_POINT_DEF(A_LoadJobEntry)
 }
 
 internal void
-A_Load(A_Registry *assets, A_Handle handle, A_Type type, OS_Handle counter)
+A_Load(A_Registry *assets, A_Handle handle, OS_Handle counter)
 {
 	A_Record *r = &assets->records[handle.index];
 	
@@ -396,7 +395,6 @@ A_Load(A_Registry *assets, A_Handle handle, A_Type type, OS_Handle counter)
 	
 	params->assets = assets;
 	params->handle = handle;
-	params->type = type;
 	params->metadata = metadata;
  
 	J_Decl decl = {0};
@@ -505,9 +503,7 @@ A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 			A_Record *dep_record = A_GetRecord(assets, dep_handle);
 
 			if (!A_StateIsLoading(dep_record->state) && A_StateNeedsLoad(dep_record->state))
-			{
-				A_Load(assets, dep_handle, A_Type_Texture, counter); // TODO: infer type from dependency !!!
-			}
+				A_Load(assets, dep_handle, counter);
 
 			if (!A_StateIsFinalized(dep_record->state))
 			{
@@ -571,9 +567,8 @@ A_PollHotReloads(A_Registry *assets)
 			record->last_write_time = newest_write;
  
 			A_Handle handle = record->asset.handle;
-			A_Type type = record->asset.type;
  
-			A_ReloadAsync(assets, handle, type);
+			A_ReloadAsync(assets, handle);
 		}
  
 		ScratchClear(&scratch);
@@ -641,14 +636,14 @@ A_FlushUploads(A_Registry *assets)
 				A_Upload *upload = &pending.elements[base + i];
 				A_Record *record = A_GetRecord(assets, upload->handle);
 
-				A_Serializer *serializer = &assets->serializers[upload->type];
+				A_Serializer *serializer = &assets->serializers[upload->handle.type];
 
 				A_Asset *asset = &record->asset;
 
 				A_Context ctx = {0};
 				ctx.assets = assets;
 				ctx.metadata = upload->metadata;
-				ctx.log_channel = assets->serializer_log_channels[upload->type];
+				ctx.log_channel = assets->serializer_log_channels[upload->handle.type];
 
 				if (upload->load_data.failed)
 				{
@@ -668,9 +663,8 @@ A_FlushUploads(A_Registry *assets)
 				}
 				else
 				{
-					b32 is_new = asset->type == A_Type_Unknown;
+					b32 is_new = asset->handle.type == A_Type_Unknown;
 
-					asset->type = upload->type;
 					asset->handle = upload->handle;
 
 					if (is_new)
@@ -776,16 +770,18 @@ A_SetFallback(A_Registry *assets, A_Handle handle, A_Type type)
 }
 
 internal A_Asset *
-A_Get(A_Registry *assets, A_Handle handle, A_Type type)
+A_Get(A_Registry *assets, A_Handle handle)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	A_Asset *selected = NULL;
 	
 	A_Record *record = A_GetRecord(assets, handle);
+
+	A_Type type = handle.type;
 	
 	if (record &&
 		(A_StateIsLoaded(record->state) || record->reloading) &&
-		record->asset.type == type)
+		record->asset.handle.type == type)
 	{
 		selected = &record->asset;
 		goto end;
@@ -817,7 +813,7 @@ end:
 }
 
 internal A_Asset *
-A_GetNow(A_Registry *assets, A_Handle handle, A_Type type)
+A_GetNow(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -825,7 +821,7 @@ A_GetNow(A_Registry *assets, A_Handle handle, A_Type type)
 	{
 		if (A_StateNeedsLoad(record->state))
 		{
-			A_LoadNow(assets, handle, type);
+			A_LoadNow(assets, handle);
 		}
 		else if (A_StateIsLoading(record->state))
 		{
@@ -835,11 +831,11 @@ A_GetNow(A_Registry *assets, A_Handle handle, A_Type type)
 		}
 	}
 
-	return A_Get(assets, handle, type);
+	return A_Get(assets, handle);
 }
 
 internal A_Handle
-A_FromFilePath(A_Registry *assets, String8 path)
+A_FromFilePath(A_Registry *assets, String8 path, A_Type type)
 {
 	osapi->MutexLock(assets->allocation_mutex);
 
@@ -852,6 +848,7 @@ A_FromFilePath(A_Registry *assets, String8 path)
 	}
 
 	A_Handle handle = A_AllocRecord(assets, path);
+	handle.type = type;
 
 	A_PathMapInsert(assets, path, handle);
 
@@ -863,12 +860,12 @@ A_FromFilePath(A_Registry *assets, String8 path)
 internal A_Handle
 A_Require(A_Registry *assets, String8 path, A_Type type)
 {
-	A_Handle handle = A_FromFilePath(assets, path);
+	A_Handle handle = A_FromFilePath(assets, path, type);
 
 	A_Record *record = A_GetRecord(assets, handle);
 
 	if (A_StateNeedsLoad(record->state))
-		A_LoadAsync(assets, handle, type);
+		A_LoadAsync(assets, handle);
 
 	return handle;
 }

@@ -5,7 +5,7 @@ R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle)
 	if (!A_IsValid(assets, handle) || !A_IsLoaded(assets, handle))
 		return G_TextureKeyNull();
 
-	A_Asset *asset = A_GetNow(assets, handle, A_Type_Texture);
+	A_Asset *asset = A_GetNow(assets, handle);
 	return asset->texture.key;
 }
 

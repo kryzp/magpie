@@ -135,7 +135,7 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 	
 	// Create one render pass per shadow caster.
 
-	G_ShaderKey shader = A_GetNow(sr->assets, sr->depth_shader, A_Type_Shader)->shader.key;
+	G_ShaderKey shader = A_GetNow(sr->assets, sr->depth_shader)->shader.key;
 
 	for (u32 caster_index = 0; caster_index < sr->caster_count; caster_index++)
 	{

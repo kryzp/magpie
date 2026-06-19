@@ -143,7 +143,7 @@ A_ModelTryFetchTexture(const A_Context *ctx,
 	String8 relative = String8Init(image->uri, strlen(image->uri));
 	String8 full_path = String8Append(arena, directory, relative);
 
-	A_Handle handle = A_FromFilePath(ctx->assets, full_path);
+	A_Handle handle = A_FromFilePath(ctx->assets, full_path, A_Type_Texture);
 
 	if (A_IsValid(ctx->assets, handle))
 		A_ModelAddDependency(load, arena, handle);

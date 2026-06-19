@@ -8,6 +8,8 @@ struct A_Handle
 {
 	u32 index;
 	u32 generation;
+
+	A_Type type;
 };
 
 internal inline A_Handle

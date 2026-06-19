@@ -45,7 +45,6 @@ struct A_ScriptData
 typedef struct A_Asset A_Asset;
 struct A_Asset
 {
-	A_Type type;
 	A_Handle handle;
 
 	union

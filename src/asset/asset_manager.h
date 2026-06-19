@@ -153,10 +153,10 @@ internal b32 A_IsValid   (const A_Registry *assets, A_Handle handle);
    LOADING
    ================================================== */
 
-internal void A_LoadNow     (A_Registry *assets, A_Handle handle, A_Type type);
-internal void A_LoadAsync   (A_Registry *assets, A_Handle handle, A_Type type);
-internal void A_ReloadAsync (A_Registry *assets, A_Handle handle, A_Type type);
-internal void A_Load        (A_Registry *assets, A_Handle handle, A_Type type, OS_Handle counter);
+internal void A_LoadNow     (A_Registry *assets, A_Handle handle);
+internal void A_LoadAsync   (A_Registry *assets, A_Handle handle);
+internal void A_ReloadAsync (A_Registry *assets, A_Handle handle);
+internal void A_Load        (A_Registry *assets, A_Handle handle, OS_Handle counter);
 
 internal void A_NotifyDependents       (A_Registry *assets, A_Handle handle);
 internal void A_NotifyDependentsNoLock (A_Registry *assets, A_Handle handle, b32 failed);
@@ -170,7 +170,6 @@ struct A_LoadJobParam
 	A_Registry *assets;
 	A_MetaData metadata;
 	A_Handle handle;
-	A_Type type;
 };
 
 J_ENTRY_POINT_DEF(A_LoadJobEntry);
@@ -188,15 +187,15 @@ internal void A_WaitForLoad    (A_Registry *assets, A_Handle handle, OS_Handle c
 
 internal void     A_SetFallback (A_Registry *assets, A_Handle handle, A_Type type);
 
-internal A_Asset *A_Get         (A_Registry *assets, A_Handle handle, A_Type type);
-internal A_Asset *A_GetNow      (A_Registry *assets, A_Handle handle, A_Type type); // block until we got it.
+internal A_Asset *A_Get         (A_Registry *assets, A_Handle handle);
+internal A_Asset *A_GetNow      (A_Registry *assets, A_Handle handle); // block until we got it.
 
 
 /* ==================================================
    HANDLES
    ================================================== */
 
-internal A_Handle A_FromFilePath (A_Registry *assets, String8 path);
+internal A_Handle A_FromFilePath (A_Registry *assets, String8 path, A_Type type);
 internal A_Handle A_Require      (A_Registry *assets, String8 path, A_Type type); // ensure it's loading.
 
 
