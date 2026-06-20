@@ -4,10 +4,6 @@
 #define R_SHADOW_MAP_RESOLUTION 2048
 
 
-/* ==================================================
-   SHADOW MAPPING PASS
-   ================================================== */
-
 typedef struct R_ShadowMappingPassData R_ShadowMappingPassData;
 struct R_ShadowMappingPassData
 {
@@ -24,10 +20,6 @@ struct R_ShadowMappingPassData
 R_PASS_RECORD_DEF(R_ShadowMappingPassFn);
 
 
-/* ==================================================
-   SHADOW RENDERER
-   ================================================== */
-
 typedef struct R_ShadowRenderer R_ShadowRenderer;
 struct R_ShadowRenderer
 {
@@ -43,17 +35,15 @@ struct R_ShadowRenderer
 	A_Handle depth_shader;
 };
 
-internal void R_ShadowRendererInit       (R_ShadowRenderer *sr, G_Device *device, A_Registry *assets);
-internal void R_ShadowRendererDestroy    (R_ShadowRenderer *sr);
+internal void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets);
+internal void R_ShadowRendererDestroy(R_ShadowRenderer *sr);
 
-internal void R_ShadowRendererUploadGPU  (R_ShadowRenderer *sr,
-										  const R_Scene *scene);
+internal void R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt);
 
-internal void R_ShadowRendererRender     (R_ShadowRenderer *sr,
-										  R_Graph *graph,
-										  const R_Bulletin *bt,
-										  R_Blackboard *bb,
-										  const R_Scene *scene,
-										  R_Culling *culling);
+internal void R_ShadowRendererRender(R_ShadowRenderer *sr,
+									 R_Graph *graph,
+									 const R_Bulletin *bt,
+									 R_Blackboard *bb,
+									 R_Culling *culling);
 
 #endif // RENDER_PASS_SHADOW_H

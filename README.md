@@ -53,6 +53,8 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Raytraced Static Irradiance Probes**
 - **Skeletal Animation Support**
 - **Scripting Integration** with all top-level systems (using Lua).
+- **Naughty Dog-Style Frame System** hard to explain, essentially frames are packed into "frame params" which are then sent to the render system, which allows for far more synchronisation and performance.
+- **Frame Interpolation** based on the highly inluential https://gafferongames.com/post/fix_your_timestep/ article, integrated with the Naughty Dog frame params as listed above.
 
 
 ## Roadmap

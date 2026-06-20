@@ -75,8 +75,7 @@ R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 }
 
 internal void
-R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
-						  const R_Scene *scene)
+R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt)
 {
 	static const v3 light_dirs[6] = {
 		{  1.f,  0.f,  0.f }, // Right.
@@ -96,13 +95,13 @@ R_ShadowRendererUploadGPU(R_ShadowRenderer *sr,
 		{  0.f,  0.f,  1.f }, // Backwards.
 	};
 
-	sr->caster_count = MinValue(R_SceneShadowCasterCount(scene), R_SCENE_MAX_SHADOW_CASTERS);
+	sr->caster_count = MinValue(bt->scene_resources->shadow_caster_count, R_SCENE_MAX_SHADOW_CASTERS);
 
 	R_GPU_ShadowCaster *caster_mapping = G_DeviceBufferMap(sr->device, sr->caster_table_buffer);
 
 	for (u32 i = 0; i < sr->caster_count; i++)
 	{
-		const R_ShadowCaster *info = R_SceneShadowCasterGet(scene, i);
+		const R_ShadowCaster *info = &bt->scene_resources->shadow_casters[i];
 		R_GPU_ShadowCaster *gpu = &caster_mapping[i];
 
 		gpu->position   = info->position;
@@ -126,7 +125,6 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 					   R_Graph *graph,
 					   const R_Bulletin *bt,
 					   R_Blackboard *bb,
-					   const R_Scene *scene,
 					   R_Culling *culling)
 {
 	bb->shadow_data.shadow_caster_table = sr->caster_table_buffer;
@@ -139,8 +137,8 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 
 	for (u32 caster_index = 0; caster_index < sr->caster_count; caster_index++)
 	{
-		const R_ShadowCaster *info = R_SceneShadowCasterGet(scene, caster_index);
-
+		const R_ShadowCaster *info = &bt->scene_resources->shadow_casters[caster_index];
+		
 		
 		// Build a culling draw stream for this caster's influence sphere.
 

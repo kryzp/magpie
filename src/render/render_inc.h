@@ -23,3 +23,6 @@
 
 #include "debug/render_debug_inc.h"
 #include "pass/render_pass_inc.h"
+
+#include "render_frame.h"
+#include "render_system.h"

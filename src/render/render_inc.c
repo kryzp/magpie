@@ -18,3 +18,6 @@
 
 #include "debug/render_debug_inc.c"
 #include "pass/render_pass_inc.c"
+
+#include "render_frame.c"
+#include "render_system.c"

@@ -13,6 +13,7 @@ struct App
 	Arena scripting_arena;
 	Arena audio_arena;
 	Arena asset_arena;
+	Arena animation_arena;
 	Arena render_arena;
 	Arena physics_arena;
 	Arena entity_arena;
@@ -22,13 +23,11 @@ struct App
 	// ---
 
 	LOG_Channel scripting_log_channel;
-	
 	S_System *scripting_system;
 	
 	// ---
 
 	LOG_Channel graphics_log_channel;
-	
 	G_Device graphics_device;
 	G_Swapchain swapchain;
 	G_ShaderCompiler shader_compiler;
@@ -36,82 +35,54 @@ struct App
 	// ---
 	
 	LOG_Channel audio_log_channel;
-	
 	AU_System audio_system;
 	AU_Backend *audio_backend;
 	A_Handle test_sound_handle;
 	AU_BufferHandle test_sound;
-	
+
 	// ---
 
 	LOG_Channel asset_log_channel;
-	
 	A_Registry assets;
 
 	// ---
 
-	// todo: move rendering stuff into a
-	//       seperate manager sub-system.
+	LOG_Channel animation_log_channel;
+	AN_System animation_system;
+
+	// ---
+
 	LOG_Channel render_log_channel;
-	
 	G_RingBuffer frame_upload_ring_buffer;
-	G_BufferKey frame_data_buffer;
-	G_BufferKey cubemap_capture_transform_buffer;
-	
-	G_SamplerKey linear_sampler;
-	G_SamplerKey nearest_sampler;
-	
 	R_Graph graph;
 	R_Scene scene;
-
-	R_Culling culling;
-	R_ShadowRenderer shadow_renderer;
-	R_ForwardRenderer forward_renderer;
-	R_DebugRenderer debug_renderer;
-	R_IrradianceVolume irradiance_volume;
-	R_SSAO ssao;
-
-	A_Handle object_model_handle;
-	AN_Animator object_animator;
-	R_SceneHandle object_handle;
-	m4 object_palette[256];
-	
+	R_System render_system;
+	R_FrameParams prev_frame;
+	u64 frame_count;
 	R_SceneHandle light_handle;
-	
-	R_Mesh skybox_mesh;
-	
-	G_TextureKey brdf_lut;
-	G_TextureKey environment_cubemap;
-	G_TextureKey irradiance_cubemap;
-	G_TextureKey prefilter_cubemap;
 
 	// ---
 
 	LOG_Channel physics_log_channel;
-	
 	P_Engine physics_engine;
 
 	// ---
 
 	LOG_Channel entity_log_channel;
-	
 	E_World world;
 	E_EventQueue events;
 
 	// ---
 
 	LOG_Channel editor_log_channel;
-	
 	Editor editor;
 
 	// ---
 
 	LOG_Channel log_channel;
-	
 	CH_Timer elapsed_timer;
 	CH_Timer delta_timer;
 	CH_Timer hot_reload_timer;
-
 	f32 delta_accumulator;
 };
 
@@ -135,6 +106,11 @@ internal void AppDestroyAssets       (App *app);
 internal void AppHotLoadAssets       (App *app);
 internal void AppHotUnloadAssets     (App *app);
 
+internal void AppInitAnimation       (App *app);
+internal void AppDestroyAnimation    (App *app);
+internal void AppHotLoadAnimation    (App *app);
+internal void AppHotUnloadAnimation  (App *app);
+
 internal void AppInitRender          (App *app);
 internal void AppDestroyRender       (App *app);
 internal void AppHotLoadRender       (App *app);
@@ -154,8 +130,6 @@ internal void AppInitEditor          (App *app);
 internal void AppDestroyEditor       (App *app);
 internal void AppHotLoadEditor       (App *app);
 internal void AppHotUnloadEditor     (App *app);
-
-internal void AppRender(App *app, f32 dt, f32 elapsed, G_CmdBuffer *cmd);
 
 __declspec(dllexport) App  *AppInit      (const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);

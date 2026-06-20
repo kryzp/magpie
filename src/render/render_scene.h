@@ -126,13 +126,16 @@ struct R_SceneFrameData
 	G_Alloc light_buffer;
 	G_Alloc page_table_buffer;
 	G_Alloc skinning_palette_buffer;
+
+	u32 shadow_caster_count;
+	R_ShadowCaster *shadow_casters;
 };
 
 typedef struct R_Scene R_Scene;
 struct R_Scene
 {
 	Arena           *arena;
-	G_Device      *device;
+	G_Device        *device;
 	A_Registry      *assets;
 	LOG_Channel      log_channel;
 
@@ -157,7 +160,7 @@ struct R_Scene
 	u32              material_count;
 	u32              material_free_list[R_SCENE_MAX_MATERIALS];
 	u32              material_free_count;
-	G_BufferKey    material_buffer;
+	G_BufferKey      material_buffer;
 	b32              material_buffer_dirty;
 
 	R_MeshSlot       mesh_slots[R_SCENE_MAX_MESHES];
@@ -165,7 +168,7 @@ struct R_Scene
 	u32              mesh_count;
 	u32              mesh_free_list[R_SCENE_MAX_MESHES];
 	u32              mesh_free_count;
-	G_BufferKey    mesh_buffer;
+	G_BufferKey      mesh_buffer;
 	b32              mesh_buffer_dirty;
 };
 
@@ -174,10 +177,7 @@ struct R_Scene
 internal void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
 internal void                  R_SceneDestroy               (      R_Scene *scene);
 
-internal void                  R_SceneDrawIndirect          (const R_Scene *scene,
-															 G_CmdBuffer *cmd,
-															 G_BufferKey indirect_buffer,
-															 G_BufferKey count_buffer);
+internal void                  R_SceneDrawIndirect          (const R_Scene *scene, G_CmdBuffer *cmd, G_BufferKey indirect_buffer, G_BufferKey count_buffer);
 
 internal R_SceneFrameData      R_SceneUploadFrameData       (      R_Scene *scene, G_RingBuffer *ring);
 internal void                  R_SceneUploadPageTable       (      R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out);
@@ -205,9 +205,6 @@ internal void                  R_SceneLightSetColour        (      R_Scene *scen
 internal void                  R_SceneLightSetIntensity     (      R_Scene *scene, R_SceneHandle handle, f32 intensity);
 internal b32                   R_SceneLightHandleIsValid    (const R_Scene *scene, R_SceneHandle handle);
 
-internal u32                   R_SceneShadowCasterCount     (const R_Scene *scene);
-internal const R_ShadowCaster *R_SceneShadowCasterGet       (const R_Scene *scene, u32 index);
-
 internal R_SceneHandle         R_SceneMaterialCreate        (      R_Scene *scene, const R_Material *material);
 internal R_SceneHandle         R_SceneMaterialFromAssets    (      R_Scene *scene, const A_ModelMaterial *source);
 internal void                  R_SceneMaterialUpdate        (      R_Scene *scene, R_SceneHandle handle, const R_Material *material);
@@ -233,6 +230,6 @@ internal u32                   R_SceneFindSuitablePage      (      R_Scene *scen
 internal R_GeometryPage        R_SceneCreateNewPage         (      R_Scene *scene);
 internal u32                   R_ScenePageCount             (const R_Scene *scene);
 
-internal G_BindlessIndex     R_SceneResolveTextureKey     (const R_Scene *scene, G_TextureKey key);
+internal G_BindlessIndex       R_SceneResolveTextureKey     (const R_Scene *scene, G_TextureKey key);
 
 #endif // RENDER_SCENE_H

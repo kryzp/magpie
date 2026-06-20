@@ -1,6 +1,6 @@
 
 internal void
-ED_RegistryPopulate(E_World *world)
+E_RegistryPopulate(E_World *world)
 {
 #if 0
 #define EntityDef(pascal, lower, max) ent_global_struct_names[E_Type_##pascal] = String8Lit(STRINGIFY(pascal));
@@ -14,7 +14,7 @@ ED_RegistryPopulate(E_World *world)
 	
 #define EntityDef(pascal, lower, max)									\
 	{																	\
-		E_TypeDesc desc = {											\
+		E_TypeDesc desc = {												\
 			.name              = String8Lit(STRINGIFY(pascal)),			\
 			.type              = E_Type_##pascal,						\
 			.stride            = sizeof(E_##pascal),					\
@@ -26,10 +26,10 @@ ED_RegistryPopulate(E_World *world)
 			.OnSerialize       = (E_TypeDescSerializeFn *)##pascal##Serialize, \
 			.OnDeserialize     = (E_TypeDescDeserializeFn *)##pascal##Deserialize \
 		};																\
-		E_WorldRegisterType(world, &desc);							\
+		E_WorldRegisterType(world, &desc);								\
 	}
 
-#include "entity/entity_xmacro.inc"
+#include "entity_xmacro.inc"
 
 #undef EntityDef
 }

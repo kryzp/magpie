@@ -5,3 +5,4 @@
 #include "entity_event.h"
 #include "entity_event_queue.h"
 #include "entity_world.h"
+#include "entity_registry.h"

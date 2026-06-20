@@ -112,6 +112,9 @@ R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
 	{
 		R_SceneUploadLights(scene, ring, &resources);
 	}
+
+	resources.shadow_caster_count = scene->shadow_caster_count;
+	resources.shadow_casters = scene->shadow_casters;
  
 	return resources;
 }
@@ -492,23 +495,6 @@ R_SceneLightHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 
 	const R_LightSlot *slot = &scene->light_slots[handle.index];
 	return slot->active && slot->generation == handle.generation;
-}
-
-internal u32
-R_SceneShadowCasterCount(const R_Scene *scene)
-{
-	return scene->shadow_caster_count;
-}
-
-internal const R_ShadowCaster *
-R_SceneShadowCasterGet(const R_Scene *scene, u32 index)
-{
-	DebugLogAssert(scene->log_channel,
-				   index < ArraySize(scene->shadow_casters),
-				   "Out of range index (%u) into shadow caster array of size %llu",
-				   index, ArraySize(scene->shadow_casters));
-	
-	return &scene->shadow_casters[index];
 }
 
 internal R_SceneHandle

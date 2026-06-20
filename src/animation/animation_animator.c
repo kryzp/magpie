@@ -9,6 +9,18 @@ AN_TRSToM4(AN_TRS trs)
 	return M4MulM4(T, M4MulM4(R, S));
 }
 
+internal AN_TRS
+AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u)
+{
+	AN_TRS blended = {0};
+
+	blended.translation = V3Lerp(a.translation, b.translation, u);
+	blended.rotation = V4QuatSlerp(a.rotation, b.rotation, u);
+	blended.scale = V3Lerp(a.scale, b.scale, u);
+
+	return blended;
+}
+
 internal f32
 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 {
@@ -124,10 +136,19 @@ AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Han
 	A_ModelData *asset_model = &asset->model;
 
 	animator->selected_model = model_handle;
-	animator->active_clip = (u32)-1;
-	animator->elapsed = 0;
+	
+	animator->curr_clip = AN_CLIP_INVALID;
+	animator->curr_elapsed = 0.f;
+	animator->curr_finished = false;
+
+	animator->prev_clip = AN_CLIP_INVALID;
+	animator->prev_elapsed = 0.f;
+	
 	animator->playback_rate = 1.f;
 	animator->loop = true;
+
+	animator->blend_elapsed = 0.f;
+	animator->blend_duration = 0.f;
 
 	animator->pose_count = asset_model->skeleton_count;
 	animator->poses = ArenaPushArray(arena, AN_SkeletonPose, animator->pose_count);
@@ -138,10 +159,11 @@ AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Han
 
 		u32 count = skeleton->joint_count;
 
-		animator->poses[i].joint_count       = count;
-		animator->poses[i].local_transforms  = ArenaPushArray(arena, AN_TRS, count);
-		animator->poses[i].global_transforms = ArenaPushArray(arena, m4,       count);
-		animator->poses[i].palette           = ArenaPushArray(arena, m4,       count);
+		animator->poses[i].joint_count           = count;
+		animator->poses[i].curr_local_transforms = ArenaPushArray(arena, AN_TRS, count);
+		animator->poses[i].prev_local_transforms = ArenaPushArray(arena, AN_TRS, count);
+		animator->poses[i].global_transforms     = ArenaPushArray(arena, m4,     count);
+		animator->poses[i].palette               = ArenaPushArray(arena, m4,     count);
 	}
 }
 
@@ -153,51 +175,117 @@ AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 	
 	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
+	b32 blending = (animator->prev_clip != AN_CLIP_INVALID &&
+					animator->blend_elapsed < animator->blend_duration);
+
+	// reset bind pose
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
 		const A_Skeleton *skeleton = &asset_model->skeletons[i];
 
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
-			animator->poses[i].local_transforms[j].translation = skeleton->joints[j].bind_translation;
-			animator->poses[i].local_transforms[j].rotation    = skeleton->joints[j].bind_rotation;
-			animator->poses[i].local_transforms[j].scale       = skeleton->joints[j].bind_scale;
+			AN_TRS bind = {0};
+			bind.translation = skeleton->joints[j].bind_translation;
+			bind.rotation    = skeleton->joints[j].bind_rotation;
+			bind.scale       = skeleton->joints[j].bind_scale;
+
+			animator->poses[i].curr_local_transforms[j] = bind;
+
+			if (blending)
+				animator->poses[i].prev_local_transforms[j] = bind;
 		}
 	}
 
-	if (animator->active_clip < asset_model->clip_count)
+	// advance and sample the current clip
+	if (animator->curr_clip != AN_CLIP_INVALID)
 	{
-		A_AnimClip *clip = &asset_model->clips[animator->active_clip];
-
-		animator->elapsed += dt * animator->playback_rate;
-
-		if (clip->duration_s > 0.f)
+		if (animator->curr_clip < asset_model->clip_count)
 		{
-			if (animator->loop)
+			A_AnimClip *clip = &asset_model->clips[animator->curr_clip];
+
+			animator->curr_elapsed += dt * animator->playback_rate;
+
+			if (clip->duration_s > 0.f)
 			{
-				while (animator->elapsed > clip->duration_s)
-					animator->elapsed -= clip->duration_s;
+				if (animator->loop)
+				{
+					while (animator->curr_elapsed > clip->duration_s)
+						animator->curr_elapsed -= clip->duration_s;
+				}
+				else
+				{
+					animator->curr_elapsed = ClampValue(animator->curr_elapsed, 0.f, clip->duration_s);
+				}
 			}
-			else
+
+			if (!animator->loop)
 			{
-				animator->elapsed = ClampValue(animator->elapsed, 0.f, clip->duration_s);
+				if (animator->curr_elapsed >= clip->duration_s)
+					animator->curr_finished = true;
+			}
+
+			for (u32 i = 0; i < clip->channel_count; i++)
+			{
+				const A_AnimChannel *ch = &clip->channels[i];
+
+				if (ch->target_skeleton < 0 || ch->target_skeleton >= animator->pose_count)
+					continue;
+
+				AN_SkeletonPose *pose = &animator->poses[ch->target_skeleton];
+
+				if (ch->target_joint >= pose->joint_count)
+					continue;
+
+				AN_SampleChannel(ch, animator->curr_elapsed, &pose->curr_local_transforms[ch->target_joint]);
+			}
+		}
+	}
+	
+	// mid-transition
+	if (blending)
+	{
+		animator->blend_elapsed += dt;
+
+		if (animator->prev_clip < asset_model->clip_count)
+		{
+			A_AnimClip *prev_clip = &asset_model->clips[animator->prev_clip];
+
+			animator->prev_elapsed += dt * animator->playback_rate;
+
+			for (u32 i = 0; i < prev_clip->channel_count; i++)
+			{
+				const A_AnimChannel *prev_ch = &prev_clip->channels[i];
+
+				if (prev_ch->target_skeleton < 0 || prev_ch->target_skeleton >= animator->pose_count)
+					continue;
+
+				AN_SkeletonPose *pose = &animator->poses[prev_ch->target_skeleton];
+
+				if (prev_ch->target_joint >= pose->joint_count)
+					continue;
+
+				AN_SampleChannel(prev_ch, animator->prev_elapsed, &pose->prev_local_transforms[prev_ch->target_joint]);
 			}
 		}
 
-		for (u32 i = 0; i < clip->channel_count; i++)
+		f32 t = ClampValue(animator->blend_elapsed / animator->blend_duration, 0.f, 1.f);
+
+		for (u32 i = 0; i < animator->pose_count; i++)
 		{
-			const A_AnimChannel *ch = &clip->channels[i];
+			AN_SkeletonPose *pose = &animator->poses[i];
 
-			if (ch->target_skeleton < 0 || ch->target_skeleton >= animator->pose_count)
-				continue;
-
-			AN_SkeletonPose *pose = &animator->poses[ch->target_skeleton];
-
-			if (ch->target_joint >= pose->joint_count)
-				continue;
-
-			AN_SampleChannel(ch, animator->elapsed, &pose->local_transforms[ch->target_joint]);
+			for (u32 j = 0; j < pose->joint_count; j++)
+			{
+				pose->curr_local_transforms[j] = AN_TRSBlend(pose->prev_local_transforms[j],
+															 pose->curr_local_transforms[j],
+															 t);
+			}
 		}
+	}
+	else
+	{
+		animator->prev_clip = AN_CLIP_INVALID;
 	}
 
 	for (u32 i = 0; i < animator->pose_count; i++)
@@ -207,7 +295,7 @@ AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 		
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
-			m4 local_transform = AN_TRSToM4(pose->local_transforms[j]);
+			m4 local_transform = AN_TRSToM4(pose->curr_local_transforms[j]);
 			i32 parent = skeleton->joints[j].parent;
 
 			pose->global_transforms[j] = parent < 0
@@ -220,14 +308,13 @@ AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 }
 
 internal void
-AN_AnimatorPlay(AN_Animator *animator, u32 clip)
+AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop)
 {
-	animator->active_clip = clip;
-	animator->elapsed = 0.f;
+	AN_AnimatorCrossFadeTo(animator, clip, loop, 0.f);
 }
 
 internal b32
-AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name)
+AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop)
 {
 	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
@@ -235,12 +322,58 @@ AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name)
 	{
 		if (String8Match(asset_model->clips[i].name, name))
 		{
-			AN_AnimatorPlay(animator, i);
+			AN_AnimatorPlay(animator, i, loop);
 			return true;
 		}
 	}
 
 	return false;
+}
+
+internal void
+AN_AnimatorCrossFadeTo(AN_Animator *animator, u32 clip, b32 loop, f32 blend_duration)
+{
+	if (clip == animator->curr_clip &&
+		loop == animator->loop)
+	{
+		return;
+	}
+
+	animator->prev_clip = animator->curr_clip;
+	animator->prev_elapsed = animator->curr_elapsed;
+
+	animator->curr_clip = clip;
+	animator->curr_elapsed = 0.f;
+	
+	animator->curr_finished = false;
+
+	animator->loop = loop;
+
+	animator->blend_elapsed = 0.f;
+	animator->blend_duration = blend_duration;
+}
+
+internal b32
+AN_AnimatorCrossFadeToByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 blend_duration)
+{
+	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
+
+	for (u32 i = 0; i < asset_model->clip_count; i++)
+	{
+		if (String8Match(asset_model->clips[i].name, name))
+		{
+			AN_AnimatorCrossFadeTo(animator, i, loop, blend_duration);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+internal b32
+AN_AnimatorFinished(const AN_Animator *animator)
+{
+	return animator->curr_finished;
 }
 
 internal AN_Palette
