@@ -210,7 +210,6 @@ AppHotUnloadAnimation(App *app)
    RENDER
    ================================================== */
 
-
 internal void
 AppInitRender(App *app)
 {
@@ -254,6 +253,7 @@ internal void
 AppHotUnloadRender(App *app)
 {
 }
+
 
 /* ==================================================
    ENTITY
@@ -399,11 +399,11 @@ AppInit_(App *app)
 	light.shadow_near = 0.1f;
 	light.shadow_far = 10.f;
 	
-	app->light_handle = R_SceneLightCreate(&app->scene, &light);
+	//app->light_handle = R_SceneLightCreate(&app->scene, &light);
 
 	
-	A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
+	A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
 	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
 	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
 	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);

@@ -1241,12 +1241,14 @@ OS_W32_ProcessEvents(OS_InputState *input_out)
 	MemZeroStruct(&input_out->mouse_delta);
 	MemZeroStruct(&input_out->mouse_wheel);
 
-	for (u32 i = 0; i < event_count; i++) {
+	for (u32 i = 0; i < event_count; i++)
+	{
 		const SDL_Event *ev = &events[i];
 
 		//ImGui_ImplSDL3_ProcessEvent(ev);
 
-		switch (ev->type) {
+		switch (ev->type)
+		{
 			case SDL_EVENT_QUIT:
 				OS_W32_J_Halt(&win32_st.scheduler);
 				break;

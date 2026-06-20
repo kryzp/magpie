@@ -2,6 +2,7 @@
 
 **Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C.
 
+![](images/helmet.png)
 ![](images/sponza.png)
 
 TODO: add more images :p
