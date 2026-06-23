@@ -5,22 +5,21 @@
  * therefore we gotta translate between 'em.
  */
 
-const global m4 ast_gltf_basis = {
+const static m4 ast_gltf_basis = {
 	1.f,  0.f,  0.f,  0.f, // c0
 	0.f,  0.f,  1.f,  0.f, // c1
 	0.f, -1.f,  0.f,  0.f, // c2
 	0.f,  0.f,  0.f,  1.f  // c3
 };
 
-const global m4 ast_gltf_basis_inv = {
+const static m4 ast_gltf_basis_inv = {
 	1.f,  0.f,  0.f,  0.f, // c0
 	0.f,  0.f, -1.f,  0.f, // c1
 	0.f,  1.f,  0.f,  0.f, // c2
 	0.f,  0.f,  0.f,  1.f  // c3
 };
 
-internal m4
-A_GltfFloat16ToM4(const cgltf_float m[16])
+static m4 A_GltfFloat16ToM4(const cgltf_float m[16])
 {
 	return (m4) {
 		m[0],  m[1],  m[2],  m[3],
@@ -30,29 +29,25 @@ A_GltfFloat16ToM4(const cgltf_float m[16])
 	};
 }
 
-internal v3
-A_GltfTransformTranslation(v3 v)
+static v3 A_GltfTransformTranslation(v3 v)
 {
 	// basis change
 	return v3(v.x, -v.z, v.y);
 }
 
-internal v4
-A_GltfTransformQuat(v4 q)
+static v4 A_GltfTransformQuat(v4 q)
 {
 	// basis change
 	return v4(q.x, -q.z, q.y, q.w);
 }
 
-internal v3
-A_GltfTransformScale(v3 s)
+static v3 A_GltfTransformScale(v3 s)
 {
 	// basis change
 	return v3(s.x, s.z, s.y);
 }
 
-internal m4
-A_GltfTransformM4(m4 m)
+static m4 A_GltfTransformM4(m4 m)
 {
 	// magpie = basis * cgltf * basis^-1
 	return M4MulM4(ast_gltf_basis, M4MulM4(m, ast_gltf_basis_inv));
@@ -107,8 +102,7 @@ struct A_ModelLoadData
 	u64 total_skin_vertex_bytes;
 };
 
-internal void
-A_ModelAddDependency(A_ModelLoadData *load, Arena *arena, A_Handle handle)
+static void A_ModelAddDependency(A_ModelLoadData *load, Arena *arena, A_Handle handle)
 {
 	A_ModelLoadDep *dep = ArenaPushArray(arena, A_ModelLoadDep, 1);
 	dep->handle = handle;
@@ -117,8 +111,7 @@ A_ModelAddDependency(A_ModelLoadData *load, Arena *arena, A_Handle handle)
 	load->dep_count++;
 }
 
-internal A_Handle
-A_ModelTryFetchTexture(const A_Context *ctx,
+static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
 						 Arena *arena,
 						 A_ModelLoadData *load,
 						 String8 directory,
@@ -151,8 +144,7 @@ A_ModelTryFetchTexture(const A_Context *ctx,
 	return handle;
 }
 
-internal A_ModelMaterial
-A_ModelResolveMaterial(const A_Context *ctx,
+static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 						 Arena *arena,
 						 A_ModelLoadData *load,
 						 String8 directory,
@@ -346,8 +338,7 @@ A_ModelResolveMaterial(const A_Context *ctx,
 	return mat;
 }
 
-internal void
-A_ModelProcessPrimitive(const A_Context *ctx,
+static void A_ModelProcessPrimitive(const A_Context *ctx,
 						  Arena *arena,
 						  A_ModelLoadData *load,
 						  String8 directory,
@@ -653,8 +644,7 @@ A_ModelProcessPrimitive(const A_Context *ctx,
 		load->total_skin_vertex_bytes += vert_count * sizeof(A_ModelSkinVertex);
 }
 
-internal void
-A_ModelProcessNode(const A_Context *ctx,
+static void A_ModelProcessNode(const A_Context *ctx,
 					 Arena *arena,
 					 A_ModelLoadData *load,
 					 String8 directory,
@@ -696,8 +686,7 @@ A_ModelProcessNode(const A_Context *ctx,
 	}
 }
 
-internal void
-A_ModelLoadSkeleton(const A_Context *ctx,
+static void A_ModelLoadSkeleton(const A_Context *ctx,
 					  Arena *arena,
 					  A_ModelLoadData *load,
 					  const cgltf_data *gltf,
@@ -828,8 +817,7 @@ A_ModelLoadSkeleton(const A_Context *ctx,
 	}
 }
 
-internal A_AnimPath
-A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
+static A_AnimPath A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
 {
 	switch (t)
 	{
@@ -843,8 +831,7 @@ A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
 	return A_AnimPath_COUNT;
 }
 
-internal A_AnimInterp
-A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
+static A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 {
 	switch (t)
 	{
@@ -861,8 +848,7 @@ A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 /*
  * this function sucks dick holy shit
  */
-internal void
-A_ModelLoadClip(const A_Context *ctx,
+static void A_ModelLoadClip(const A_Context *ctx,
 				  Arena *arena,
 				  A_ModelLoadData *load,
 				  const cgltf_data *gltf,
@@ -1034,8 +1020,7 @@ A_ModelLoadClip(const A_Context *ctx,
 	}
 }
 
-internal A_SerializerPipelineData
-A_ModelSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_SerializerPipelineData A_ModelSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -1137,8 +1122,7 @@ end:
 	return result;
 }
 
-internal void
-A_ModelSerializerAlloc(const A_Context *ctx,
+static void A_ModelSerializerAlloc(const A_Context *ctx,
 						 A_SerializerPipelineData *data,
 						 A_Asset *out,
 						 Arena *arena)
@@ -1281,16 +1265,14 @@ A_ModelSerializerAlloc(const A_Context *ctx,
 	out->model.clips = clips;
 }
 
-internal void
-A_ModelSerializerReload(const A_Context *ctx,
+static void A_ModelSerializerReload(const A_Context *ctx,
 						  A_SerializerPipelineData *data,
 						  A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-internal void
-A_ModelSerializerGpu(const A_Context *ctx,
+static void A_ModelSerializerGpu(const A_Context *ctx,
 					   A_SerializerPipelineData *data,
 					   A_Asset *asset,
 					   G_CmdBuffer *cmd,
@@ -1369,8 +1351,7 @@ A_ModelSerializerGpu(const A_Context *ctx,
 	ScratchRelease(&scratch);
 }
 
-internal void
-A_ModelSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_ModelSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
 	G_Device *device = assets->device;
 
@@ -1386,8 +1367,7 @@ A_ModelSerializerDispose(A_Asset *asset, A_Registry *assets)
 	}
 }
 
-internal A_Serializer
-A_GetModelSerializer(void)
+static A_Serializer A_GetModelSerializer(void)
 {
 	static A_Serializer model_serializer = {
 		.Cpu     = A_ModelSerializerCpu,

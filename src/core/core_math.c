@@ -1,156 +1,134 @@
 
-internal v2
-V2Add(v2 a, v2 b)
+static v2 V2Add(v2 a, v2 b)
 {
 	return v2(a.x + b.x,
 			  a.y + b.y);
 }
 
-internal v2
-V2Sub(v2 a, v2 b)
+static v2 V2Sub(v2 a, v2 b)
 {
 	return v2(a.x - b.x,
 			  a.y - b.y);
 }
 
-internal f32
-V2Dot(v2 a, v2 b)
+static f32 V2Dot(v2 a, v2 b)
 {
 	return (a.x * b.x +
 			a.y * b.y);
 }
 
-internal f32
-V2LengthSqr(v2 v)
+static f32 V2LengthSqr(v2 v)
 {
 	return V2Dot(v, v);
 }
 
-internal f32
-V2Length(v2 v)
+static f32 V2Length(v2 v)
 {
 	return SquareRoot(V2LengthSqr(v));
 }
 
-internal v3
-V3Add(v3 a, v3 b)
+static v3 V3Add(v3 a, v3 b)
 {
 	return v3(a.x + b.x,
 			  a.y + b.y,
 			  a.z + b.z);
 }
 
-internal v3
-V3Sub(v3 a, v3 b)
+static v3 V3Sub(v3 a, v3 b)
 {
 	return v3(a.x - b.x,
 			  a.y - b.y,
 			  a.z - b.z);
 }
 
-internal v3
-V3MulF32(v3 v, f32 f)
+static v3 V3MulF32(v3 v, f32 f)
 {
 	return v3(v.x * f,
 			  v.y * f,
 			  v.z * f);
 }
 
-internal v3
-V3MulV3(v3 a, v3 b)
+static v3 V3MulV3(v3 a, v3 b)
 {
 	return v3(a.x * b.x,
 			  a.y * b.y,
 			  a.z * b.z);
 }
 
-internal f32
-V3Dot(v3 a, v3 b)
+static f32 V3Dot(v3 a, v3 b)
 {
 	return (a.x * b.x +
 			a.y * b.y +
 			a.z * b.z);
 }
 
-internal v3
-V3Cross(v3 a, v3 b)
+static v3 V3Cross(v3 a, v3 b)
 {
 	return v3((a.y * b.z) - (a.z * b.y),
 			  (a.z * b.x) - (a.x * b.z),
 			  (a.x * b.y) - (a.y * b.x));
 }
 
-internal f32
-V3LengthSqr(v3 v)
+static f32 V3LengthSqr(v3 v)
 {
 	return V3Dot(v, v);
 }
 
-internal f32
-V3Length(v3 v)
+static f32 V3Length(v3 v)
 {
 	return SquareRoot(V3LengthSqr(v));
 }
 
-internal v3
-V3Normalize(v3 v)
+static v3 V3Normalize(v3 v)
 {
 	return V3MulF32(v, 1.f / V3Length(v));
 }
 
-internal f32
-V3Max(v3 v)
+static f32 V3Max(v3 v)
 {
 	return MaxValue(v.x, MaxValue(v.y, v.z));
 }
 
-internal f32
-V3Min(v3 v)
+static f32 V3Min(v3 v)
 {
 	return MinValue(v.x, MinValue(v.y, v.z));
 }
 
-internal v3
-V3MinOf(v3 a, v3 b)
+static v3 V3MinOf(v3 a, v3 b)
 {
 	return v3(MinValue(a.x, b.x),
 			  MinValue(a.y, b.y),
 			  MinValue(a.z, b.z));
 }
 
-internal v3
-V3MaxOf(v3 a, v3 b)
+static v3 V3MaxOf(v3 a, v3 b)
 {
 	return v3(MaxValue(a.x, b.x),
 			  MaxValue(a.y, b.y),
 			  MaxValue(a.z, b.z));
 }
 
-internal v3
-V3Lerp(v3 from, v3 to, f32 amount)
+static v3 V3Lerp(v3 from, v3 to, f32 amount)
 {
 	return v3(LerpValue(from.x, to.x, amount),
 			  LerpValue(from.y, to.y, amount),
 			  LerpValue(from.z, to.z, amount));
 }
 
-internal v3
-V3Approach(v3 from, v3 to, f32 amount)
+static v3 V3Approach(v3 from, v3 to, f32 amount)
 {
 	return v3(ApproachValue(from.x, to.x, amount),
 			  ApproachValue(from.y, to.y, amount),
 			  ApproachValue(from.z, to.z, amount));
 }
 
-internal v3
-V3Reflect(v3 v, v3 n)
+static v3 V3Reflect(v3 v, v3 n)
 {
 	// reflected = v - 2(v.n)n
 	return V3Sub(v, V3MulF32(n, 2.f * V3Dot(v, n)));
 }
 
-internal v3
-V3Refract(v3 v, v3 n, f64 eta21)
+static v3 V3Refract(v3 v, v3 n, f64 eta21)
 {
 	f64 cost = MinValue(-V3Dot(v, n), 1.f);
 	v3 out_perp = V3MulF32(V3Add(v, V3MulF32(n, cost)), eta21); // eta . (v + cost . n)
@@ -158,16 +136,14 @@ V3Refract(v3 v, v3 n, f64 eta21)
 	return V3Add(out_perp, out_para);
 }
 
-internal v3
-V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation)
+static v3 V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation)
 {
 	return v3(radius * CosF(elevation) * CosF(azimuth),
 			  radius * CosF(elevation) * SinF(azimuth),
 			  radius * SinF(elevation));
 }
 
-internal v4
-V4Add(v4 a, v4 b)
+static v4 V4Add(v4 a, v4 b)
 {
 	return v4(a.x + b.x,
 			  a.y + b.y,
@@ -175,8 +151,7 @@ V4Add(v4 a, v4 b)
 			  a.w + b.w);
 }
 
-internal v4
-V4Sub(v4 a, v4 b)
+static v4 V4Sub(v4 a, v4 b)
 {
 	return v4(a.x - b.x,
 			  a.y - b.y,
@@ -184,8 +159,7 @@ V4Sub(v4 a, v4 b)
 			  a.w - b.w);
 }
 
-internal v4
-V4MulF32(v4 v, f32 f)
+static v4 V4MulF32(v4 v, f32 f)
 {
 	return v4(v.x * f,
 			  v.y * f,
@@ -193,8 +167,7 @@ V4MulF32(v4 v, f32 f)
 			  v.w * f);
 }
 
-internal v4
-V4MulV4(v4 a, v4 b)
+static v4 V4MulV4(v4 a, v4 b)
 {
 	return v4(a.x * b.x,
 			  a.y * b.y,
@@ -202,8 +175,7 @@ V4MulV4(v4 a, v4 b)
 			  a.w * b.w);
 }
 
-internal f32
-V4Dot(v4 a, v4 b)
+static f32 V4Dot(v4 a, v4 b)
 {
 	return (a.x * b.x +
 			a.y * b.y +
@@ -211,20 +183,17 @@ V4Dot(v4 a, v4 b)
 			a.w * b.w);
 }
 
-internal f32
-V4LengthSqr(v4 v)
+static f32 V4LengthSqr(v4 v)
 {
 	return V4Dot(v, v);
 }
 
-internal f32
-V4Length(v4 v)
+static f32 V4Length(v4 v)
 {
 	return SquareRoot(V4LengthSqr(v));
 }
 
-internal v4
-V4FrustumNormalizePlane(v4 v)
+static v4 V4FrustumNormalizePlane(v4 v)
 {
 	f32 length = SquareRoot(v.x * v.x +
 							v.y * v.y +
@@ -233,8 +202,7 @@ V4FrustumNormalizePlane(v4 v)
 	return V4MulF32(v, 1.f / length);
 }
 
-internal v4
-V4QuatInitAxis(f32 angle, v3 axis)
+static v4 V4QuatInitAxis(f32 angle, v3 axis)
 {
 	v4 q = {0};
 
@@ -246,8 +214,7 @@ V4QuatInitAxis(f32 angle, v3 axis)
 	return q;
 }
 
-internal v4
-V4QuatInitEuler(v3 euler)
+static v4 V4QuatInitEuler(v3 euler)
 {
 	// Pitch
 	f32 sp = SinF(euler.x * .5f);
@@ -267,8 +234,7 @@ V4QuatInitEuler(v3 euler)
 			  (cr * cp * cy) + (sr * sp * sy));
 }
 
-internal v3
-V4QuatToEuler(v4 q)
+static v3 V4QuatToEuler(v4 q)
 {
 	f32 t0 =           (2.f * ((q.w * q.x) + (q.y * q.z)));
 	f32 t1 = 1.f     - (2.f * ((q.x * q.x) + (q.y * q.y)));
@@ -283,8 +249,7 @@ V4QuatToEuler(v4 q)
 	return v3(p, y, r);
 }
 
-internal v4
-V4QuatInverse(v4 q)
+static v4 V4QuatInverse(v4 q)
 {
 	v4 inverse = {0};
 
@@ -310,8 +275,7 @@ V4QuatInverse(v4 q)
 	return inverse;
 }
 
-internal v4
-V4QuatSlerp(v4 a, v4 b, f32 t)
+static v4 V4QuatSlerp(v4 a, v4 b, f32 t)
 {
 	f32 cos_t = V4Dot(a, b);
 
@@ -340,8 +304,7 @@ V4QuatSlerp(v4 a, v4 b, f32 t)
 	return V4Add(V4MulF32(a, scale_a), V4MulF32(b, scale_b));
 }
 
-internal m4
-M4MulM4(m4 a, m4 b)
+static m4 M4MulM4(m4 a, m4 b)
 {
 	m4 c = {0};
 
@@ -359,8 +322,7 @@ M4MulM4(m4 a, m4 b)
 	return c;
 }
 
-internal v4
-M4MulV4(m4 m, v4 v)
+static v4 M4MulV4(m4 m, v4 v)
 {
 	v4 result = {0};
 
@@ -375,16 +337,14 @@ M4MulV4(m4 m, v4 v)
 	return result;
 }
 
-internal v3
-M4MulV3(m4 m, v3 v)
+static v3 M4MulV3(m4 m, v3 v)
 {
 	v4 result = M4MulV4(m, v4(v.x, v.y, v.z, 1.f));
 
 	return v3(result.x, result.y, result.z);
 }
 
-internal m4
-M4MulF32(m4 m, f32 f)
+static m4 M4MulF32(m4 m, f32 f)
 {
 	m4 result = {0};
 
@@ -399,8 +359,7 @@ M4MulF32(m4 m, f32 f)
 	return result;
 }
 
-internal m4
-M4LookAt(v3 eye, v3 centre, v3 up)
+static m4 M4LookAt(v3 eye, v3 centre, v3 up)
 {
 	m4 result = {0};
 
@@ -431,8 +390,7 @@ M4LookAt(v3 eye, v3 centre, v3 up)
 	return result;
 }
 
-internal m4
-M4Perspective(f32 fov, f32 aspect, f32 near, f32 far)
+static m4 M4Perspective(f32 fov, f32 aspect, f32 near, f32 far)
 {
 	m4 result = {0};
 
@@ -447,8 +405,7 @@ M4Perspective(f32 fov, f32 aspect, f32 near, f32 far)
 	return result;
 }
 
-internal m4
-M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+static m4 M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
 {
 	m4 result = {0};
 
@@ -464,8 +421,7 @@ M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
 	return result;
 }
 
-internal m4
-M4Inverse(m4 m)
+static m4 M4Inverse(m4 m)
 {
 	f32 coef00 = (m.m22 * m.m33) - (m.m23 * m.m32);
 	f32 coef02 = (m.m21 * m.m33) - (m.m23 * m.m31);
@@ -526,8 +482,7 @@ M4Inverse(m4 m)
 	return M4MulF32(inverse, one_over_det);
 }
 
-internal m4
-M4Transpose(m4 m)
+static m4 M4Transpose(m4 m)
 {
 	m4 result = {0};
 
@@ -542,8 +497,7 @@ M4Transpose(m4 m)
 	return result;
 }
 
-internal m4
-M4Translate(v3 translation)
+static m4 M4Translate(v3 translation)
 {
 	m4 result = M4Identity();
 
@@ -555,8 +509,7 @@ M4Translate(v3 translation)
 	return result;
 }
 
-internal m4
-M4Scale(v3 scale)
+static m4 M4Scale(v3 scale)
 {
 	m4 result = M4Identity();
 
@@ -568,8 +521,7 @@ M4Scale(v3 scale)
 	return result;
 }
 
-internal m4
-M4FaceTowards(v3 normal)
+static m4 M4FaceTowards(v3 normal)
 {
 	m4 result = M4Identity();
 
@@ -594,8 +546,7 @@ M4FaceTowards(v3 normal)
 	return result;
 }
 
-internal m4
-M4RotateAxis(f32 angle, v3 axis)
+static m4 M4RotateAxis(f32 angle, v3 axis)
 {
 	m4 result = M4Identity();
 
@@ -618,8 +569,7 @@ M4RotateAxis(f32 angle, v3 axis)
 	return result;
 }
 
-internal m4
-M4RotateQuat(v4 q)
+static m4 M4RotateQuat(v4 q)
 {
 	m4 result = M4Identity();
 
@@ -638,8 +588,7 @@ M4RotateQuat(v4 q)
 	return result;
 }
 
-internal m4
-M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
+static m4 M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
 {
 	m4 result = M4Identity();
 
@@ -651,8 +600,7 @@ M4Transform(v3 position, v4 rotation, v3 scale, v3 origin)
 	return result;
 }
 
-internal m4
-M4RemoveTranslation(m4 m)
+static m4 M4RemoveTranslation(m4 m)
 {
 	m.m03 = 0.f;
 	m.m13 = 0.f;
@@ -662,8 +610,7 @@ M4RemoveTranslation(m4 m)
 	return m;
 }
 
-internal m4
-M4RemoveRotation(m4 m)
+static m4 M4RemoveRotation(m4 m)
 {
 	v3 s = v3(V3Length(v3(m.m00, m.m10, m.m20)),
 			  V3Length(v3(m.m01, m.m11, m.m21)),

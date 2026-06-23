@@ -1,6 +1,5 @@
 
-internal void
-AN_SystemInit(AN_System *s, LOG_Channel log_channel)
+static void AN_SystemInit(AN_System *s, LOG_Channel log_channel)
 {
 	s->log_channel = log_channel;
 
@@ -15,8 +14,7 @@ AN_SystemInit(AN_System *s, LOG_Channel log_channel)
 	}
 }
 
-internal void
-AN_SystemDestroy(AN_System *s)
+static void AN_SystemDestroy(AN_System *s)
 {
 	for (u32 i = 0; i < ArraySize(s->instances); i++)
 	{
@@ -24,8 +22,7 @@ AN_SystemDestroy(AN_System *s)
 	}
 }
 
-internal void
-AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt)
+static void AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt)
 {
 	for (u32 i = 0; i < s->instance_count; i++)
 	{
@@ -38,8 +35,7 @@ AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt)
 	}
 }
 
-internal AN_Instance *
-AN_SystemResolve(AN_System *s, AN_Handle handle)
+static AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle)
 {
 	if (handle.index >= ArraySize(s->instances))
 		return NULL;
@@ -52,8 +48,7 @@ AN_SystemResolve(AN_System *s, AN_Handle handle)
 	return inst;
 }
 
-internal AN_Handle
-AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle)
+static AN_Handle AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle)
 {
 	AN_Handle result = AN_HandleNull();
 
@@ -94,8 +89,7 @@ AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle)
 	return result;
 }
 
-internal void
-AN_SystemKillInstance(AN_System *s, AN_Handle h)
+static void AN_SystemKillInstance(AN_System *s, AN_Handle h)
 {
 	AN_Instance *inst = AN_SystemResolve(s, h);
 

@@ -1,6 +1,5 @@
 
-internal void
-A_UploadQueuePush(A_UploadQueue *queue, const A_Upload *upload)
+static void A_UploadQueuePush(A_UploadQueue *queue, const A_Upload *upload)
 {
 	AssertTrue(queue->count < ArraySize(queue->elements));
 	
@@ -8,8 +7,7 @@ A_UploadQueuePush(A_UploadQueue *queue, const A_Upload *upload)
 	queue->count++;
 }
 
-internal void
-A_UploadQueueClear(A_UploadQueue *queue)
+static void A_UploadQueueClear(A_UploadQueue *queue)
 {
 	queue->count = 0;
 }

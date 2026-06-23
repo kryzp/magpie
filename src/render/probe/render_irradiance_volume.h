@@ -10,7 +10,7 @@
  * Ray traced irradiance probing using L2 harmonics.
  *
  * - "An Efficient Representation for Irradiance Environment Maps"
- * - "Dynamic Diffuse Global Illumination with Ray-Traced Irradiance Fields"
+ * - "Dynamic Diffuse static Illumination with Ray-Traced Irradiance Fields"
  */
 
 #define R_IRRADIANCE_RAYS_PER_PROBE 64
@@ -95,7 +95,7 @@ struct R_IrradianceVolume
 	b32 is_baked;
 };
 
-internal void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
+static void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
 												   G_Device *device, A_Registry *assets,
 												   LOG_Channel log_channel,
 												   v3 grid_min, v3 grid_max,
@@ -104,15 +104,15 @@ internal void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
 												   G_TextureViewKey environment_view,
 												   G_SamplerKey linear_sampler);
 
-internal void R_IrradianceVolumeDestroy           (R_IrradianceVolume *vol);
+static void R_IrradianceVolumeDestroy           (R_IrradianceVolume *vol);
 
-internal void R_IrradianceVolumeBuildAccelStructs (R_IrradianceVolume *vol, const R_Scene *scene);
-internal void R_IrradianceVolumeBake              (R_IrradianceVolume *vol, const R_Scene *scene);
+static void R_IrradianceVolumeBuildAccelStructs (R_IrradianceVolume *vol, const R_Scene *scene);
+static void R_IrradianceVolumeBake              (R_IrradianceVolume *vol, const R_Scene *scene);
 
-internal void R_IrradianceVolumeDebug             (const R_IrradianceVolume *vol);
+static void R_IrradianceVolumeDebug             (const R_IrradianceVolume *vol);
 
-internal G_BufferKey R_IrradianceVolumeGetSHBuffer       (const R_IrradianceVolume *vol);
-internal G_BufferKey R_IrradianceVolumeGetGridInfoBuffer (const R_IrradianceVolume *vol);
-internal b32           R_IrradianceVolumeIsBaked           (const R_IrradianceVolume *vol);
+static G_BufferKey R_IrradianceVolumeGetSHBuffer       (const R_IrradianceVolume *vol);
+static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer (const R_IrradianceVolume *vol);
+static b32           R_IrradianceVolumeIsBaked           (const R_IrradianceVolume *vol);
 
 #endif // RENDER_IRRADIANCE_VOLUME_H

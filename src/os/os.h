@@ -7,21 +7,18 @@ struct OS_Handle
 	void *value;
 };
 
-inline OS_Handle
-OS_HandleNull(void)
+inline OS_Handle OS_HandleNull(void)
 {
 	OS_Handle null_handle = {0};
 	return null_handle;
 }
 
-inline b32
-OS_HandleIsNull(OS_Handle handle)
+inline b32 OS_HandleIsNull(OS_Handle handle)
 {
 	return handle.value == NULL;
 }
 
-inline b32
-OS_HandleMatch(OS_Handle a, OS_Handle b)
+inline b32 OS_HandleMatch(OS_Handle a, OS_Handle b)
 {
 	return a.value == b.value;
 }
@@ -249,6 +246,6 @@ typedef b32   OS_EntryTickFn      (void *ctx, const OS_InputState *input);
 typedef void  OS_EntryHotLoadFn   (void *ctx, const OS_API *api);
 typedef void  OS_EntryHotUnloadFn (void *ctx);
 
-global const OS_API *osapi = NULL; // must be manually set
+static const OS_API *osapi = NULL; // must be manually set
 
 #endif // OS_H

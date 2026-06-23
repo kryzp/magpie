@@ -1,6 +1,5 @@
 
-internal S_Argument
-S_ArgF32(f32 v)
+static S_Argument S_ArgF32(f32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_F32;
@@ -9,8 +8,7 @@ S_ArgF32(f32 v)
 	return arg;
 }
 
-internal S_Argument
-S_ArgI32(i32 v)
+static S_Argument S_ArgI32(i32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_I32;
@@ -19,8 +17,7 @@ S_ArgI32(i32 v)
 	return arg;
 }
 
-internal S_Argument
-S_ArgB32(b32 v)
+static S_Argument S_ArgB32(b32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_B32;
@@ -29,8 +26,7 @@ S_ArgB32(b32 v)
 	return arg;
 }
 
-internal S_Argument
-S_ArgStr(String8 v)
+static S_Argument S_ArgStr(String8 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_String8;
@@ -39,8 +35,7 @@ S_ArgStr(String8 v)
 	return arg;
 }
 
-internal S_Argument
-S_ArgTaggedU32(u32 v, u32 tag)
+static S_Argument S_ArgTaggedU32(u32 v, u32 tag)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_TaggedU32;
@@ -50,14 +45,12 @@ S_ArgTaggedU32(u32 v, u32 tag)
 	return arg;
 }
 
-internal inline u64
-S_PackTaggedU32(u32 value, u32 tag)
+static inline u64 S_PackTaggedU32(u32 value, u32 tag)
 {
 	return ((u64)tag << 32) | (u64)value;
 }
 
-internal inline void
-S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag)
+static inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag)
 {
 	*out_tag   = (u32)(packed >> 32);
 	*out_value = (u32)(packed & 0xFFFFFFFFu);

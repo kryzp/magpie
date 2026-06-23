@@ -1,14 +1,11 @@
 #ifndef OS_J_H
 #define OS_J_H
 
-#define J_ENTRY_POINT_SIG(fn) void fn(void *param)
-#define J_ENTRY_POINT_DEF(fn) internal J_ENTRY_POINT_SIG(fn)
+#define J_ENTRY_POINT_DEF(fn) void fn(void *param)
+#define J_PARALLEL_FOR_DEF(fn) void fn(u32 index)
 
-#define J_PARALLEL_FOR_SIG(fn) void fn(u32 index)
-#define J_PARALLEL_FOR_DEF(fn) internal J_PARALLEL_FOR_SIG(fn)
-
-typedef J_ENTRY_POINT_SIG(J_EntryPointFn);
-typedef J_PARALLEL_FOR_SIG(J_EntryForFn);
+typedef J_ENTRY_POINT_DEF(J_EntryPointFn);
+typedef J_PARALLEL_FOR_DEF(J_EntryForFn);
 
 typedef enum J_Priority
 {

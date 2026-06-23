@@ -8,8 +8,7 @@ struct A_TextureLoadData
 	void *pixel_data;
 };
 
-internal A_SerializerPipelineData
-A_TextureSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_SerializerPipelineData A_TextureSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -50,8 +49,7 @@ A_TextureSerializerCpu(const A_Context *ctx, Arena *load_scope)
 	return result;
 }
 
-internal void
-A_TextureSerializerAlloc(const A_Context *ctx,
+static void A_TextureSerializerAlloc(const A_Context *ctx,
 						   A_SerializerPipelineData *data,
 						   A_Asset *out,
 						   Arena *arena)
@@ -67,16 +65,14 @@ A_TextureSerializerAlloc(const A_Context *ctx,
 	out->texture.key = G_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
 }
 
-internal void
-A_TextureSerializerReload(const A_Context *ctx,
+static void A_TextureSerializerReload(const A_Context *ctx,
 							A_SerializerPipelineData *data,
 							A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-internal void
-A_TextureSerializerGpu(const A_Context *ctx,
+static void A_TextureSerializerGpu(const A_Context *ctx,
 						 A_SerializerPipelineData *data,
 						 A_Asset *asset,
 						 G_CmdBuffer *cmd,
@@ -117,22 +113,19 @@ A_TextureSerializerGpu(const A_Context *ctx,
 	G_CmdGenerateMipmaps(cmd, asset->texture.key);
 }
 
-internal void
-A_TextureSerializerEnd(A_SerializerPipelineData *data)
+static void A_TextureSerializerEnd(A_SerializerPipelineData *data)
 {
 	A_TextureLoadData *tex_data = data->data;
 
 	stbi_image_free(tex_data->pixel_data);
 }
 
-internal void
-A_TextureSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_TextureSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
 	G_DeviceTextureDestroy(assets->device, asset->texture.key);
 }
 
-internal A_Serializer
-A_GetTextureSerializer(void)
+static A_Serializer A_GetTextureSerializer(void)
 {
 	static A_Serializer texture_serializer = {
 		.Cpu     = A_TextureSerializerCpu,

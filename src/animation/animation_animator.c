@@ -1,6 +1,5 @@
 
-internal m4
-AN_TRSToM4(AN_TRS trs)
+static m4 AN_TRSToM4(AN_TRS trs)
 {
 	m4 T = M4Translate(trs.translation);
 	m4 R = M4RotateQuat(trs.rotation);
@@ -9,8 +8,7 @@ AN_TRSToM4(AN_TRS trs)
 	return M4MulM4(T, M4MulM4(R, S));
 }
 
-internal AN_TRS
-AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u)
+static AN_TRS AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u)
 {
 	AN_TRS blended = {0};
 
@@ -21,8 +19,7 @@ AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u)
 	return blended;
 }
 
-internal f32
-AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
+static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 {
 	if (next_ts <= prev_ts)
 		return 0.f;
@@ -30,8 +27,7 @@ AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 	return (ts - prev_ts) / (next_ts - prev_ts);
 }
 
-internal AN_InterpolatedKeyframe
-AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
+static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
 {
 	AN_InterpolatedKeyframe keyframe = {0};
 	
@@ -70,8 +66,7 @@ AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
 	return keyframe;
 }
 
-internal void
-AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs)
+static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs)
 {
 	AN_InterpolatedKeyframe keyframe = AN_InterpolateKeyframe(ch, ts);
 
@@ -126,8 +121,7 @@ AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs)
 	}
 }
 
-internal void
-AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle)
+static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle)
 {
 	A_Asset *asset = A_GetNow(assets, model_handle);
 
@@ -167,8 +161,7 @@ AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Han
 	}
 }
 
-internal void
-AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
+static void AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -307,14 +300,12 @@ AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 dt)
 	}
 }
 
-internal void
-AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop)
+static void AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop)
 {
 	AN_AnimatorCrossFadeTo(animator, clip, loop, 0.f);
 }
 
-internal b32
-AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop)
+static b32 AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop)
 {
 	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
@@ -330,8 +321,7 @@ AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name, b
 	return false;
 }
 
-internal void
-AN_AnimatorCrossFadeTo(AN_Animator *animator, u32 clip, b32 loop, f32 blend_duration)
+static void AN_AnimatorCrossFadeTo(AN_Animator *animator, u32 clip, b32 loop, f32 blend_duration)
 {
 	if (clip == animator->curr_clip &&
 		loop == animator->loop)
@@ -353,8 +343,7 @@ AN_AnimatorCrossFadeTo(AN_Animator *animator, u32 clip, b32 loop, f32 blend_dura
 	animator->blend_duration = blend_duration;
 }
 
-internal b32
-AN_AnimatorCrossFadeToByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 blend_duration)
+static b32 AN_AnimatorCrossFadeToByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 blend_duration)
 {
 	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 
@@ -370,14 +359,12 @@ AN_AnimatorCrossFadeToByName(AN_Animator *animator, A_Registry *assets, String8 
 	return false;
 }
 
-internal b32
-AN_AnimatorFinished(const AN_Animator *animator)
+static b32 AN_AnimatorFinished(const AN_Animator *animator)
 {
 	return animator->curr_finished;
 }
 
-internal AN_Palette
-AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
+static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
 {
 	AN_Palette palette = {0};
 

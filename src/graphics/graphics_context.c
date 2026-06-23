@@ -1,11 +1,11 @@
 
 // TODO: Just move this into the device...
 
-global const char *gfx_context_vk_validation_layers[] = {
+static const char *gfx_context_vk_validation_layers[] = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
-global const char *gfx_context_device_extensions[] = {
+static const char *gfx_context_device_extensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
     VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -17,8 +17,7 @@ global const char *gfx_context_device_extensions[] = {
 #endif
 };
 
-internal VkFormat
-G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 									   VkImageTiling tiling,
 									   VkFormatFeatureFlags features,
 									   u32 candidate_count, const VkFormat *candidates)
@@ -39,8 +38,7 @@ G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 	return VK_FORMAT_MAX_ENUM;
 }
 
-internal VkFormat
-G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
+static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
 {
 	static const VkFormat candidates[] = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -53,8 +51,7 @@ G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
 												  ArraySize(candidates), candidates);
 }
 
-internal VkSampleCountFlagBits
-G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
+static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
 {
 	VkSampleCountFlags counts =
 		properties.properties.limits.framebufferColorSampleCounts &
@@ -73,8 +70,7 @@ G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-internal const char * const *
-G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
+static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
 {
 	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
 
@@ -106,8 +102,7 @@ G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
 	return extensions;
 }
 
-internal b32
-G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device)
+static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device)
 {
 	u32 extension_count = 0;
 	
@@ -150,8 +145,7 @@ exit:
 	return result;
 }
 
-internal b32
-G_ContextCheckForValidationLayerSupport(void)
+static b32 G_ContextCheckForValidationLayerSupport(void)
 {
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);
@@ -192,8 +186,7 @@ exit:
 	return result;
 }
 
-internal G_SwapchainSupportDetails
-G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
 {
 	G_SwapchainSupportDetails result = {0};
 
@@ -229,8 +222,7 @@ G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR su
 	return result;
 }
 
-internal u32
-G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
+static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 												 VkPhysicalDevice physical_device,
 												 VkPhysicalDeviceProperties2 properties,
 												 VkPhysicalDeviceFeatures2 features,
@@ -276,8 +268,7 @@ G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 	return usability;
 }
 
-internal VkResult
-G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 											  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
 											  const VkAllocationCallbacks *allocator,
 											  VkDebugUtilsMessengerEXT *messenger)
@@ -290,8 +281,7 @@ G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-internal G_Context
-G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
+static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
 {
 	G_Context context = {0};
 	
@@ -642,8 +632,7 @@ G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_d
 	return context;
 }
 
-internal void
-G_ContextDestroy(G_Context *context)
+static void G_ContextDestroy(G_Context *context)
 {
 	vkDestroyPipelineCache(context->device, context->pipeline_process_cache, NULL);
 	osapi->VulkanSurfaceDestroy(context->instance, context->surface);

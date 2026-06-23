@@ -1,6 +1,5 @@
 
-internal void
-R_IrradianceVolumeInit(R_IrradianceVolume *vol,
+static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 					   G_Device *device, A_Registry *assets,
 					   LOG_Channel log_channel,
 					   v3 grid_min, v3 grid_max,
@@ -73,8 +72,7 @@ R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 }
 
 
-internal void
-R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
+static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 {
 	if (vol->blas_count > 0)
 	{
@@ -91,8 +89,7 @@ R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 	G_DeviceBufferDestroy(vol->device, vol->grid_info_buffer);
 }
 
-internal void
-R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
+static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
 {
 	G_Device *device = vol->device;
 
@@ -243,8 +240,7 @@ R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scen
 			  vol->blas_count, scene->object_count);
 }
 
-internal void
-R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
+static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 {
 	G_Device *device = vol->device;
 
@@ -293,8 +289,7 @@ R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 			  vol->ntotal, R_IRRADIANCE_RAYS_PER_PROBE);
 }
 
-internal void
-R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
+static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
 {
 	u32 nx = vol->nx;
 	u32 ny = vol->ny;
@@ -327,20 +322,17 @@ R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
 }
 }
 
-internal G_BufferKey
-R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol)
+static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol)
 {
 	return vol->sh_buffer;
 }
 
-internal G_BufferKey
-R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol)
+static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol)
 {
 	return vol->grid_info_buffer;
 }
 
-internal b32
-R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol)
+static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol)
 {
 	return vol->is_baked;
 }

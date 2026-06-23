@@ -16,9 +16,9 @@ struct R_BloomRenderer
 	A_Handle downsample_shader_handle;
 };
 
-internal void R_BloomRendererInit(R_BloomRenderer *renderer, A_Registry *assets);
-internal void R_BloomRendererDestroy(R_BloomRenderer *renderer);
+static void R_BloomRendererInit(R_BloomRenderer *renderer, A_Registry *assets);
+static void R_BloomRendererDestroy(R_BloomRenderer *renderer);
 
-internal void R_BloomRender(R_BloomRenderer *renderer, R_Graph *graph);
+static void R_BloomRender(R_BloomRenderer *renderer, R_Graph *graph);
 
 #endif // RENDER_BLOOM_H

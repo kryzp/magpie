@@ -1,6 +1,5 @@
 
-internal VkMemoryBarrier2
-G_SyncMemoryBarrier(const G_AccessSt *src,
+static VkMemoryBarrier2 G_SyncMemoryBarrier(const G_AccessSt *src,
 					  const G_AccessSt *dst)
 {
 	VkMemoryBarrier2 barrier = {0};
@@ -15,8 +14,7 @@ G_SyncMemoryBarrier(const G_AccessSt *src,
 	return barrier;
 }
 
-internal VkImageMemoryBarrier2
-G_SyncTextureBarrier(const G_Texture *texture,
+static VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
 					   const G_AccessSt *src,
 					   const G_AccessSt *dst,
 					   VkImageLayout src_layout,
@@ -50,8 +48,7 @@ G_SyncTextureBarrier(const G_Texture *texture,
 	return barrier;
 }
 
-internal VkBufferMemoryBarrier2
-G_SyncBufferBarrier(const G_Buffer *buffer,
+static VkBufferMemoryBarrier2 G_SyncBufferBarrier(const G_Buffer *buffer,
 					  const G_AccessSt *src,
 					  const G_AccessSt *dst,
 					  u64 offset, u64 size)

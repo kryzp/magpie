@@ -1,6 +1,5 @@
 
-internal void
-R_SystemCreateSkyboxMesh(R_System *s)
+static void R_SystemCreateSkyboxMesh(R_System *s)
 {
 	static v3 vertices[] = {
 		{ -1.f,  1.f,  1.f },
@@ -52,8 +51,7 @@ R_SystemCreateSkyboxMesh(R_System *s)
 	G_DeviceBufferDestroy(s->device, staging_buffer);
 }
 
-internal void
-R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
+static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
 {
 	s->arena = arena;
 	s->device = device;
@@ -106,8 +104,7 @@ R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LO
 	DebugLogI(s->log_channel, "Initialized.");
 }
 
-internal void
-R_SystemDestroy(R_System *s)
+static void R_SystemDestroy(R_System *s)
 {
 	R_IrradianceVolumeDestroy (&s->irradiance_volume);
 	R_DebugRendererDestroy    (&s->debug_renderer);
@@ -131,8 +128,7 @@ R_SystemDestroy(R_System *s)
 	DebugLogI(s->log_channel, "Destroyed.");
 }
 
-internal void
-R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena)
+static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena)
 {
 	const u32 prefilter_mips = 5;
 
@@ -241,8 +237,7 @@ R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena)
 	DebugLogI(s->log_channel, "Generated lookups and maps.");
 }
 
-internal void
-R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
+static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 {
 	R_FrustumVolume frustum = R_CameraFrustum(&f->camera);
 	
@@ -327,8 +322,7 @@ R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 	R_GraphSetBackbuffer(g, bb.lighting.resolved);
 }
 
-internal void
-R_SystemHotLoad(R_System *s)
+static void R_SystemHotLoad(R_System *s)
 {
 	R_DebugRendererSelect(&s->debug_renderer);
 }

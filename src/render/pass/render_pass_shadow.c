@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
+static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -37,8 +37,7 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	R_SceneDrawIndirect(ctx->scene, cmd, indirect_key, counter_key);
 }
 
-internal void
-R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets)
+static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets)
 {
 	sr->device = device;
 	sr->assets = assets;
@@ -65,8 +64,7 @@ R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets)
 	sr->depth_shader = A_Require(assets, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), A_Type_Shader);
 }
 
-internal void
-R_ShadowRendererDestroy(R_ShadowRenderer *sr)
+static void R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 {
 	G_DeviceBufferDestroy(sr->device, sr->caster_table_buffer);
 
@@ -74,8 +72,7 @@ R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 		G_DeviceTextureDestroy(sr->device, sr->shadow_cubemaps[i]);
 }
 
-internal void
-R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt)
+static void R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt)
 {
 	static const v3 light_dirs[6] = {
 		{  1.f,  0.f,  0.f }, // Right.
@@ -120,8 +117,7 @@ R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt)
 	}
 }
 
-internal void
-R_ShadowRendererRender(R_ShadowRenderer *sr,
+static void R_ShadowRendererRender(R_ShadowRenderer *sr,
 					   R_Graph *graph,
 					   const R_Bulletin *bt,
 					   R_Blackboard *bb,

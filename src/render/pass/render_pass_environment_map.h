@@ -11,6 +11,6 @@ struct R_HdrToEnvPassData
 	const R_Mesh       *skybox_mesh;
 };
 
-R_PASS_RECORD_DEF(R_HdrToEnvPassFn);
+static R_PASS_RECORD_DEF(R_HdrToEnvPassFn);
 
 #endif // RENDER_PASS_ENVIRONMENT_MAP_H

@@ -25,7 +25,7 @@ struct R_ForwardPassData
 	R_DrawStream draw_stream;
 };
 
-R_PASS_RECORD_DEF(R_ForwardPassFn);
+static R_PASS_RECORD_DEF(R_ForwardPassFn);
 
 
 typedef struct R_ForwardRenderer R_ForwardRenderer;
@@ -37,10 +37,10 @@ struct R_ForwardRenderer
 	A_Handle shader;
 };
 
-internal void R_ForwardRendererInit    (R_ForwardRenderer *r, G_Device *device, A_Registry *assets);
-internal void R_ForwardRendererDestroy (R_ForwardRenderer *r);
+static void R_ForwardRendererInit    (R_ForwardRenderer *r, G_Device *device, A_Registry *assets);
+static void R_ForwardRendererDestroy (R_ForwardRenderer *r);
 
-internal void R_ForwardRender          (R_ForwardRenderer *r,
+static void R_ForwardRender          (R_ForwardRenderer *r,
 										R_Graph *graph,
 										const R_Bulletin *bt,
 										R_Blackboard *bb,

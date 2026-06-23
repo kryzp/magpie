@@ -25,8 +25,7 @@ struct R_Light
 	f32 shadow_far;
 };
 
-internal inline f32
-R_LightHeuristicRadius(const R_Light *light, f32 epsilon_intensity)
+static inline f32 R_LightHeuristicRadius(const R_Light *light, f32 epsilon_intensity)
 {
 	f32 maximum = V3Max(light->colour);
 	return SquareRoot((light->intensity * maximum) / (light->falloff * epsilon_intensity));

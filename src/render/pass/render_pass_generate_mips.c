@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_GenerateMipsPassFn)
+static R_PASS_RECORD_DEF(R_GenerateMipsPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	

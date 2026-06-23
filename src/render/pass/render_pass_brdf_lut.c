@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_BRDFLutPassFn)
+static R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;

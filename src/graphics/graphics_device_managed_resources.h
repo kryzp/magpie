@@ -10,9 +10,9 @@
 	{																	\
 		u64 value;														\
 	};																	\
-	internal G_##mgp_name##Key G_##mgp_name##KeyNull(void);			\
-	internal b32 G_##mgp_name##KeyIsNull(G_##mgp_name##Key key);	\
-	internal b32 G_##mgp_name##KeyMatch(G_##mgp_name##Key a, G_##mgp_name##Key b);
+	static G_##mgp_name##Key G_##mgp_name##KeyNull(void);			\
+	static b32 G_##mgp_name##KeyIsNull(G_##mgp_name##Key key);	\
+	static b32 G_##mgp_name##KeyMatch(G_##mgp_name##Key a, G_##mgp_name##Key b);
 
 #include "graphics_device_managed_resources.inc"
 

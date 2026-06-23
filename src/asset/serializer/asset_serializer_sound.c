@@ -8,8 +8,7 @@ struct A_SoundLoadData
 	u64 size_in_bytes;
 };
 
-internal A_SerializerPipelineData
-A_SoundSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_SerializerPipelineData A_SoundSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
@@ -48,8 +47,7 @@ end:
 	return result;
 }
 
-internal void
-A_SoundSerializerAlloc(const A_Context *ctx,
+static void A_SoundSerializerAlloc(const A_Context *ctx,
 						 A_SerializerPipelineData *data,
 						 A_Asset *out,
 						 Arena *arena)
@@ -69,22 +67,19 @@ A_SoundSerializerAlloc(const A_Context *ctx,
 													 AU_Format_F32);
 }
 
-internal void
-A_SoundSerializerReload(const A_Context *ctx,
+static void A_SoundSerializerReload(const A_Context *ctx,
 						  A_SerializerPipelineData *data,
 						  A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-internal void
-A_SoundSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_SoundSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
 	AU_BackendDestroyBuffer(assets->audio_backend, asset->sound.buffer);
 }
 
-internal A_Serializer
-A_GetSoundSerializer(void)
+static A_Serializer A_GetSoundSerializer(void)
 {
 	static A_Serializer sound_serializer = {
 		.Cpu     = A_SoundSerializerCpu,

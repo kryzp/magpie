@@ -1,6 +1,5 @@
 
-internal VkImageViewType
-G_TextureDefaultViewType(const G_Texture *texture)
+static VkImageViewType G_TextureDefaultViewType(const G_Texture *texture)
 {
 	if (texture->flags & G_TextureFlag_Cubemap)
 	{
@@ -32,8 +31,7 @@ G_TextureDefaultViewType(const G_Texture *texture)
 	return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 }
 
-internal G_SubresourceRange
-G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *texture)
+static G_SubresourceRange G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *texture)
 {
 	G_SubresourceRange result = *range;
 
@@ -46,8 +44,7 @@ G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *te
 	return result;
 }
 
-internal G_SubresourceRange
-G_SubresourceRangeAll(VkImageAspectFlags aspects)
+static G_SubresourceRange G_SubresourceRangeAll(VkImageAspectFlags aspects)
 {
 	G_SubresourceRange range = {0};
 	range.aspects = aspects;
@@ -59,14 +56,12 @@ G_SubresourceRangeAll(VkImageAspectFlags aspects)
 	return range;
 }
 
-internal G_SubresourceRange
-G_SubresourceRangeAllColour(void)
+static G_SubresourceRange G_SubresourceRangeAllColour(void)
 {
 	return G_SubresourceRangeAll(VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-internal G_SubresourceRange
-G_SubresourceRangeAllDepth(void)
+static G_SubresourceRange G_SubresourceRangeAllDepth(void)
 {
 	return G_SubresourceRangeAll(VK_IMAGE_ASPECT_DEPTH_BIT);
 }

@@ -8,8 +8,8 @@ struct ScratchArena
 	u64 checkpoint;
 };
 
-internal ScratchArena ScratchBegin(Arena * const *conflicts, u32 conflict_count);
-internal void ScratchClear(const ScratchArena *scratch);
-internal void ScratchRelease(ScratchArena *scratch);
+static ScratchArena ScratchBegin(Arena * const *conflicts, u32 conflict_count);
+static void ScratchClear(const ScratchArena *scratch);
+static void ScratchRelease(ScratchArena *scratch);
 
 #endif // CORE_SCRATCH_H

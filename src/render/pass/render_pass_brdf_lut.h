@@ -7,6 +7,6 @@ struct R_BRDFLutPassData
 	G_ShaderKey shader;
 };
 
-R_PASS_RECORD_DEF(R_BRDFLutPassFn);
+static R_PASS_RECORD_DEF(R_BRDFLutPassFn);
 
 #endif // RENDER_PASS_BRDF_LUT_H

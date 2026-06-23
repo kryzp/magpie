@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
+static R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;

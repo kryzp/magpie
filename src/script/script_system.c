@@ -69,20 +69,17 @@ struct S_System
 // thread then its created so that the bindings can grab the
 // system pointer in O(1) regardless of the current coroutine.
 
-internal S_System *
-S_GetSystemFromL(lua_State *lua)
+static S_System *S_GetSystemFromL(lua_State *lua)
 {
 	return *((S_System **)lua_getextraspace(lua));
 }
 
-internal void
-S_SetSystemInL(lua_State *lua, S_System *system)
+static void S_SetSystemInL(lua_State *lua, S_System *system)
 {
 	*((S_System **)lua_getextraspace(lua)) = system;
 }
 
-internal S_Coroutine *
-S_AllocCoroutine(S_System *system, S_Handle *out_handle)
+static S_Coroutine *S_AllocCoroutine(S_System *system, S_Handle *out_handle)
 {
 	// 0 = null
 	for (u32 i = 1; i < S_MAX_COROUTINES; i++)
@@ -136,8 +133,7 @@ S_AllocCoroutine(S_System *system, S_Handle *out_handle)
 	return NULL;
 }
 
-internal void
-S_FreeCoroutine(S_System *system, S_Coroutine *co)
+static void S_FreeCoroutine(S_System *system, S_Coroutine *co)
 {
 	if (co->finish_fn)
 		co->finish_fn(system, co, co->finish_user_data);
@@ -163,8 +159,7 @@ S_FreeCoroutine(S_System *system, S_Coroutine *co)
 	co->yield_kind = S_YieldKind_None;
 }
 
-internal S_Coroutine *
-S_ResolveHandle(S_System *system, S_Handle handle)
+static S_Coroutine *S_ResolveHandle(S_System *system, S_Handle handle)
 {
 	if (S_HandleIsNull(handle))
 		return NULL;
@@ -183,8 +178,7 @@ S_ResolveHandle(S_System *system, S_Handle handle)
 	return co;
 }
 
-internal i32
-S_BindingTrampoline(lua_State *lua)
+static i32 S_BindingTrampoline(lua_State *lua)
 {
 	S_System *sys = S_GetSystemFromL(lua);
 	S_BindingFn *fn  = (S_BindingFn *)lua_touserdata(lua, lua_upvalueindex(1));
@@ -200,9 +194,8 @@ S_BindingTrampoline(lua_State *lua)
 	return ctx.nretval;
 }
 
-internal void
-S_PushBindingClosure(S_System *system, S_BindingFn *fn,
-					   void * const *upvalues, u32 n)
+static void S_PushBindingClosure(S_System *system, S_BindingFn *fn,
+					   void *const *upvalues, u32 n)
 {
 	// first upval is reserved for the function pointer
 	lua_pushlightuserdata(system->lua, (void *)fn);
@@ -213,8 +206,7 @@ S_PushBindingClosure(S_System *system, S_BindingFn *fn,
 	lua_pushcclosure(system->lua, S_BindingTrampoline, S_USER_UPVAL_BASE - 1 + n);
 }
 
-internal void
-S_PushArg(lua_State *target, const S_Argument *a)
+static void S_PushArg(lua_State *target, const S_Argument *a)
 {
 	switch (a->type)
 	{
@@ -251,7 +243,7 @@ S_PushArg(lua_State *target, const S_Argument *a)
 	}
 }
 
-S_BINDING_DEF(S_BND_Dispatch)
+static S_BINDING_DEF(S_BND_Dispatch)
 {
 	S_System *sys = ctx->system;
 	u32 n = S_CtxGetArgCount(ctx);
@@ -294,7 +286,7 @@ S_BINDING_DEF(S_BND_Dispatch)
 	child->parent = -1;
 }
 
-S_BINDING_DEF(S_BND_Parallelize)
+static S_BINDING_DEF(S_BND_Parallelize)
 {
 	S_System *sys = ctx->system;
 	u32 n = S_CtxGetArgCount(ctx);
@@ -345,8 +337,7 @@ S_BINDING_DEF(S_BND_Parallelize)
 	lua_yield(ctx->lua, 0);
 }
 
-internal void *
-S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize new_size)
+static void *S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize new_size)
 {
 	if (new_size == 0)
 	{
@@ -364,8 +355,7 @@ S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize new_size)
 	}
 }
 
-internal S_System *
-S_Init(Arena *arena, LOG_Channel log_channel)
+static S_System *S_Init(Arena *arena, LOG_Channel log_channel)
 {
 	S_System *system = ArenaPushArray(arena, S_System, 1);
 
@@ -400,8 +390,7 @@ S_Init(Arena *arena, LOG_Channel log_channel)
 	return system;
 }
 
-internal void
-S_Destroy(S_System *system)
+static void S_Destroy(S_System *system)
 {
 	if (!system || !system->lua)
 		return;
@@ -418,8 +407,7 @@ S_Destroy(S_System *system)
 	DebugLogI(system->log_channel, "%s destroyed.", LUA_VERSION);
 }
 
-internal S_Ref
-S_Compile(S_System *system, IO_ByteSpan source, String8 chunk_name)
+static S_Ref S_Compile(S_System *system, IO_ByteSpan source, String8 chunk_name)
 {
 	S_Ref result = S_RefNull();
 
@@ -443,8 +431,7 @@ S_Compile(S_System *system, IO_ByteSpan source, String8 chunk_name)
 	return result;
 }
 
-internal void
-S_Release(S_System *system, S_Ref ref)
+static void S_Release(S_System *system, S_Ref ref)
 {
 	if (S_RefIsNull(ref))
 		return;
@@ -452,8 +439,7 @@ S_Release(S_System *system, S_Ref ref)
 	luaL_unref(system->lua, LUA_REGISTRYINDEX, ref.value);
 }
 
-internal S_Ref
-S_ExecuteModule(S_System *system, S_Ref chunk_ref)
+static S_Ref S_ExecuteModule(S_System *system, S_Ref chunk_ref)
 {
 	S_Ref result = S_RefNull();
 
@@ -484,8 +470,7 @@ end:
 	return result;
 }
 
-internal S_Ref
-S_NewInstance(S_System *system, S_Ref module_ref)
+static S_Ref S_NewInstance(S_System *system, S_Ref module_ref)
 {
 	S_Ref result = S_RefNull();
 
@@ -504,8 +489,7 @@ end:
 	return result;
 }
 
-internal S_Handle
-S_PlayCallableOnThread(S_System *system, lua_State *thread, i32 thread_ref, u32 arg_count)
+static S_Handle S_PlayCallableOnThread(S_System *system, lua_State *thread, i32 thread_ref, u32 arg_count)
 {
 	S_Handle handle = {0};
 	S_Coroutine *co = S_AllocCoroutine(system, &handle);
@@ -525,14 +509,12 @@ S_PlayCallableOnThread(S_System *system, lua_State *thread, i32 thread_ref, u32 
 	return handle;
 }
 
-internal S_Handle
-S_CallMethod(S_System *system, S_Ref instance_ref, String8 method_name)
+static S_Handle S_CallMethod(S_System *system, S_Ref instance_ref, String8 method_name)
 {
 	return S_CallMethodEx(system, instance_ref, method_name, NULL, 0);
 }
 
-internal S_Handle
-S_CallMethodEx(S_System *system, S_Ref instance_ref, String8 method_name,
+static S_Handle S_CallMethodEx(S_System *system, S_Ref instance_ref, String8 method_name,
 			   const S_Argument *args, u32 arg_count)
 {
 	if (S_RefIsNull(instance_ref))
@@ -565,8 +547,7 @@ S_CallMethodEx(S_System *system, S_Ref instance_ref, String8 method_name,
 	return S_PlayCallableOnThread(system, thread, thread_ref, arg_count + 1); // +1 bcuz of self
 }
 
-internal void
-S_Stop(S_System *system, S_Handle handle)
+static void S_Stop(S_System *system, S_Handle handle)
 {
 	S_Coroutine *co = S_ResolveHandle(system, handle);
 
@@ -576,14 +557,12 @@ S_Stop(S_System *system, S_Handle handle)
 	S_FreeCoroutine(system, co);
 }
 
-internal b32
-S_IsRunning(const S_System *system, S_Handle handle)
+static b32 S_IsRunning(const S_System *system, S_Handle handle)
 {
 	return S_ResolveHandle((S_System *)system, handle) != NULL;
 }
 
-internal void
-S_FireSignal(S_System *system, String8 name)
+static void S_FireSignal(S_System *system, String8 name)
 {
 	if (system->pending_signal_count >= S_MAX_PENDING_SIGNALS)
 	{
@@ -598,8 +577,7 @@ S_FireSignal(S_System *system, String8 name)
 	system->pending_signals[system->pending_signal_count++] = hash;
 }
 
-internal b32
-S_SignalIsPending(const S_System *system, u64 hash)
+static b32 S_SignalIsPending(const S_System *system, u64 hash)
 {
 	for (u32 i = 0; i < system->pending_signal_count; i++)
 	{
@@ -610,8 +588,7 @@ S_SignalIsPending(const S_System *system, u64 hash)
 	return false;
 }
 
-internal b32
-S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
+static b32 S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
 {
 	if (!co->in_use)
 		return false;
@@ -635,8 +612,7 @@ S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
 	}
 }
 
-internal void
-S_ResumeOne(S_System *system, S_Coroutine *co)
+static void S_ResumeOne(S_System *system, S_Coroutine *co)
 {
 	system->curr = co;
 
@@ -684,8 +660,7 @@ S_ResumeOne(S_System *system, S_Coroutine *co)
 	}
 }
 
-internal void
-S_Tick(S_System *system, f32 dt)
+static void S_Tick(S_System *system, f32 dt)
 {
 	if (!system || !system->lua)
 		return;
@@ -719,8 +694,7 @@ S_Tick(S_System *system, f32 dt)
 	system->pending_signal_count = 0;
 }
 
-internal void
-S_SetOnFinish(S_System *system, S_Handle handle, S_FinishFn *fn, void *user_data)
+static void S_SetOnFinish(S_System *system, S_Handle handle, S_FinishFn *fn, void *user_data)
 {
 	S_Coroutine *co = S_ResolveHandle(system, handle);
 
@@ -731,29 +705,25 @@ S_SetOnFinish(S_System *system, S_Handle handle, S_FinishFn *fn, void *user_data
 	co->finish_user_data = user_data;
 }
 
-internal void
-S_BindGlobal(S_System *system, String8 name, S_BindingFn *fn)
+static void S_BindGlobal(S_System *system, String8 name, S_BindingFn *fn)
 {
 	S_BindGlobalEx(system, name, fn, NULL, 0);
 }
 
-internal void
-S_BindToTable(S_System *system, String8 table, String8 name, S_BindingFn *fn)
+static void S_BindToTable(S_System *system, String8 table, String8 name, S_BindingFn *fn)
 {
 	S_BindToTableEx(system, table, name, fn, NULL, 0);
 }
 
-internal void
-S_BindGlobalEx(S_System *system, String8 name,
-			   S_BindingFn *fn, void * const *upvalues, u32 n)
+static void S_BindGlobalEx(S_System *system, String8 name,
+			   S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	S_PushBindingClosure(system, fn, upvalues, n);
 	lua_setglobal(system->lua, (const char *)name.str);
 }
 
-internal void
-S_BindToTableEx(S_System *system, String8 table, String8 name,
-				S_BindingFn *fn, void * const *upvalues, u32 n)
+static void S_BindToTableEx(S_System *system, String8 table, String8 name,
+				S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	if (lua_getglobal(system->lua, (const char *)table.str) != LUA_TTABLE)
 	{

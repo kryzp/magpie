@@ -103,65 +103,65 @@ struct A_Registry
    HELPERS
    ================================================== */
 
-internal u64 A_FindSchemeSeparator(String8 path);
+static u64 A_FindSchemeSeparator(String8 path);
 
-internal u32 A_AllocSlot(A_Registry *assets);
-internal void A_FreeSlot(A_Registry *assets, u32 index);
+static u32 A_AllocSlot(A_Registry *assets);
+static void A_FreeSlot(A_Registry *assets, u32 index);
 
-internal A_Handle A_AllocRecord(A_Registry *assets, String8 path);
-internal A_Record *A_GetRecord(A_Registry *assets, A_Handle handle);
-internal const A_Record *A_GetRecordConst(const A_Registry *assets, A_Handle handle);
+static A_Handle A_AllocRecord(A_Registry *assets, String8 path);
+static A_Record *A_GetRecord(A_Registry *assets, A_Handle handle);
+static const A_Record *A_GetRecordConst(const A_Registry *assets, A_Handle handle);
 
-internal A_Handle A_PathMapFind(const A_Registry *assets, String8 path);
-internal void A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle);
+static A_Handle A_PathMapFind(const A_Registry *assets, String8 path);
+static void A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle);
 
-internal u32 A_LoadArenaAcquire(A_Registry *assets);
-internal void A_LoadArenaRelease(A_Registry *assets, u32 index);
+static u32 A_LoadArenaAcquire(A_Registry *assets);
+static void A_LoadArenaRelease(A_Registry *assets, u32 index);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-internal void A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
+static void A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
 					 G_Device *device,
 					 G_ShaderCompiler *shader_compiler,
 					 AU_Backend *audio_backend,
 					 S_System *scripting_system);
 
-internal void A_Destroy(A_Registry *assets);
+static void A_Destroy(A_Registry *assets);
 
 
 /* ==================================================
    FILESYSTEM
    ================================================== */
 
-internal void A_Mount(A_Registry *assets, String8 prefix, String8 directory);
-internal String8 A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path);
+static void A_Mount(A_Registry *assets, String8 prefix, String8 directory);
+static String8 A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path);
 
 
 /* ==================================================
    QUERY
    ================================================== */
 
-internal b32 A_IsLoaded  (const A_Registry *assets, A_Handle handle);
-internal b32 A_IsLoading (const A_Registry *assets, A_Handle handle);
-internal b32 A_IsValid   (const A_Registry *assets, A_Handle handle);
+static b32 A_IsLoaded  (const A_Registry *assets, A_Handle handle);
+static b32 A_IsLoading (const A_Registry *assets, A_Handle handle);
+static b32 A_IsValid   (const A_Registry *assets, A_Handle handle);
 
 
 /* ==================================================
    LOADING
    ================================================== */
 
-internal void A_LoadNow     (A_Registry *assets, A_Handle handle);
-internal void A_LoadAsync   (A_Registry *assets, A_Handle handle);
-internal void A_ReloadAsync (A_Registry *assets, A_Handle handle);
-internal void A_Load        (A_Registry *assets, A_Handle handle, OS_Handle counter);
+static void A_LoadNow     (A_Registry *assets, A_Handle handle);
+static void A_LoadAsync   (A_Registry *assets, A_Handle handle);
+static void A_ReloadAsync (A_Registry *assets, A_Handle handle);
+static void A_Load        (A_Registry *assets, A_Handle handle, OS_Handle counter);
 
-internal void A_NotifyDependents       (A_Registry *assets, A_Handle handle);
-internal void A_NotifyDependentsNoLock (A_Registry *assets, A_Handle handle, b32 failed);
+static void A_NotifyDependents       (A_Registry *assets, A_Handle handle);
+static void A_NotifyDependentsNoLock (A_Registry *assets, A_Handle handle, b32 failed);
 
-internal void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter);
+static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter);
 
 
 typedef struct A_LoadJobParam A_LoadJobParam;
@@ -172,31 +172,31 @@ struct A_LoadJobParam
 	A_Handle handle;
 };
 
-J_ENTRY_POINT_DEF(A_LoadJobEntry);
+static J_ENTRY_POINT_DEF(A_LoadJobEntry);
 
 
-internal void A_PollHotReloads (A_Registry *assets);
-internal void A_FlushUploads   (A_Registry *assets);
-internal void A_WaitForAsync   (A_Registry *assets);
-internal void A_WaitForLoad    (A_Registry *assets, A_Handle handle, OS_Handle counter);
+static void A_PollHotReloads (A_Registry *assets);
+static void A_FlushUploads   (A_Registry *assets);
+static void A_WaitForAsync   (A_Registry *assets);
+static void A_WaitForLoad    (A_Registry *assets, A_Handle handle, OS_Handle counter);
 
 
 /* ==================================================
    ASSETS
    ================================================== */
 
-internal void     A_SetFallback (A_Registry *assets, A_Handle handle, A_Type type);
+static void     A_SetFallback (A_Registry *assets, A_Handle handle, A_Type type);
 
-internal A_Asset *A_Get         (A_Registry *assets, A_Handle handle);
-internal A_Asset *A_GetNow      (A_Registry *assets, A_Handle handle); // block until we got it.
+static A_Asset *A_Get         (A_Registry *assets, A_Handle handle);
+static A_Asset *A_GetNow      (A_Registry *assets, A_Handle handle); // block until we got it.
 
 
 /* ==================================================
    HANDLES
    ================================================== */
 
-internal A_Handle A_FromFilePath (A_Registry *assets, String8 path, A_Type type);
-internal A_Handle A_Require      (A_Registry *assets, String8 path, A_Type type); // ensure it's loading.
+static A_Handle A_FromFilePath (A_Registry *assets, String8 path, A_Type type);
+static A_Handle A_Require      (A_Registry *assets, String8 path, A_Type type); // ensure it's loading.
 
 
 #endif // ASSET_MANAGER_H

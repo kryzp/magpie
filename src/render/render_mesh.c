@@ -1,6 +1,5 @@
 
-internal void
-R_MeshAlloc(R_Mesh *mesh, G_Device *device,
+static void R_MeshAlloc(R_Mesh *mesh, G_Device *device,
 			u64 vertex_stride, VkIndexType index_type,
 			u32 vertex_count, u32 index_count)
 {
@@ -24,15 +23,13 @@ R_MeshAlloc(R_Mesh *mesh, G_Device *device,
 	mesh->index_buffer  = G_DeviceBufferAlloc(device, &index_info);
 }
 
-internal void
-R_MeshDestroy(const R_Mesh *mesh, G_Device *device)
+static void R_MeshDestroy(const R_Mesh *mesh, G_Device *device)
 {
 	G_DeviceBufferDestroy(device, mesh->vertex_buffer);
 	G_DeviceBufferDestroy(device, mesh->index_buffer);
 }
 
-internal void
-R_MeshWriteToStage(const R_Mesh *mesh, G_Device *device,
+static void R_MeshWriteToStage(const R_Mesh *mesh, G_Device *device,
 				   G_BufferKey stage, u64 stage_base,
 				   const void *vertices, const void *indices)
 {
@@ -43,8 +40,7 @@ R_MeshWriteToStage(const R_Mesh *mesh, G_Device *device,
 	G_DeviceBufferWrite(device, stage, indices,  ib_size, stage_base + vb_size);
 }
 
-internal u64
-R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
+static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 			 G_BufferKey stage, u64 stage_base)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
@@ -66,20 +62,17 @@ R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 	return vb_size + ib_size;
 }
 
-internal void
-R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd)
+static void R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
 	G_CmdBindIndexBuffer(cmd, mesh->index_buffer, 0, VK_WHOLE_SIZE, mesh->index_type);
 }
 
-internal void
-R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd)
+static void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
 	G_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, 0);
 }
 
-internal void
-R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first)
+static void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first)
 {
 	G_CmdDrawIndexed(cmd, mesh->index_count, 1, 0, 0, first);
 }

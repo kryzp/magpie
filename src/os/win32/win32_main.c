@@ -108,10 +108,9 @@ struct OS_W32_State
 	SDL_Gamepad *gamepads[OS_MAX_GAMEPADS];
 };
 
-global OS_W32_State win32_st = {0};
+static OS_W32_State win32_st = {0};
 
-internal OS_W32_Object *
-OS_W32_AllocObject(void)
+static OS_W32_Object *OS_W32_AllocObject(void)
 {
 	OS_W32_Object *object = win32_st.free_objects;
 
@@ -128,8 +127,7 @@ OS_W32_AllocObject(void)
 	return object;
 }
 
-internal void
-OS_W32_ReturnObject(OS_W32_Object *object)
+static void OS_W32_ReturnObject(OS_W32_Object *object)
 {
 	object->next_free = win32_st.free_objects;
 	win32_st.free_objects = object;
@@ -141,8 +139,7 @@ b32   OS_W32_EntryTickStub      (void *ctx, const OS_InputState *input) { return
 void  OS_W32_EntryHotLoadStub   (void *ctx, const OS_API *api) { }
 void  OS_W32_EntryHotUnloadStub (void *ctx) { }
 
-internal void
-OS_W32_UnloadCode(void)
+static void OS_W32_UnloadCode(void)
 {
 	win32_st.code.Init      = OS_W32_EntryInitStub;
 	win32_st.code.Destroy   = OS_W32_EntryDestroyStub;
@@ -157,8 +154,7 @@ OS_W32_UnloadCode(void)
 	}
 }
 
-internal void
-OS_W32_LoadCode(String8 dll_path)
+static void OS_W32_LoadCode(String8 dll_path)
 {
 	static const char *dll_path_hot = "build/hot_reload.dll";
 
@@ -193,8 +189,7 @@ OS_W32_LoadCode(String8 dll_path)
 	}
 }
 
-internal void *
-OS_W32_VirtualReserve(u64 bytes)
+static void *OS_W32_VirtualReserve(u64 bytes)
 {
 	return VirtualAlloc(NULL,
 						bytes,
@@ -202,14 +197,12 @@ OS_W32_VirtualReserve(u64 bytes)
 						PAGE_READWRITE);
 }
 
-internal void
-OS_W32_VirtualRelease(void *address)
+static void OS_W32_VirtualRelease(void *address)
 {
 	VirtualFree(address, 0, MEM_RELEASE);
 }
 
-internal void
-OS_W32_VirtualCommit(void *address, u64 bytes)
+static void OS_W32_VirtualCommit(void *address, u64 bytes)
 {
 	VirtualAlloc(address,
 				 bytes,
@@ -217,38 +210,32 @@ OS_W32_VirtualCommit(void *address, u64 bytes)
 				 PAGE_READWRITE);
 }
 
-internal void
-OS_W32_VirtualDecommit(void *address, u64 bytes)
+static void OS_W32_VirtualDecommit(void *address, u64 bytes)
 {
 	VirtualFree(address, bytes, MEM_DECOMMIT);
 }
 
-internal void *
-OS_W32_HeapAlloc(u64 bytes)
+static void *OS_W32_HeapAlloc(u64 bytes)
 {
 	return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, bytes);
 }
 
-internal void
-OS_W32_HeapFree(void *address)
+static void OS_W32_HeapFree(void *address)
 {
 	HeapFree(GetProcessHeap(), 0, address);
 }
 
-internal void *
-OS_W32_HeapRealloc(void *address, u64 new_bytes)
+static void *OS_W32_HeapRealloc(void *address, u64 new_bytes)
 {
 	return HeapReAlloc(GetProcessHeap(), 0, address, new_bytes);
 }
 
-internal u64
-OS_W32_GetPageSize(void)
+static u64 OS_W32_GetPageSize(void)
 {
 	return win32_st.system_info.dwPageSize;
 }
 
-internal void
-OS_W32_Log(LOG_Level level, LOG_Channel channel,
+static void OS_W32_Log(LOG_Level level, LOG_Channel channel,
 		   const char *file, i32 line, const char *fn,
 		   const char *fmt, ...)
 {
@@ -260,32 +247,27 @@ OS_W32_Log(LOG_Level level, LOG_Channel channel,
 	va_end(args);
 }
 
-internal LOG_Channel
-OS_W32_LogChannelOpen(String8 name)
+static LOG_Channel OS_W32_LogChannelOpen(String8 name)
 {
 	return OS_W32_LOG_OpenChannel(&win32_st.logger, name);
 }
 
-internal LOG_Channel
-OS_W32_LogChannelOpenFrom(LOG_Channel parent, String8 name)
+static LOG_Channel OS_W32_LogChannelOpenFrom(LOG_Channel parent, String8 name)
 {
 	return OS_W32_LOG_OpenChannelFrom(&win32_st.logger, parent, name);
 }
 
-internal void
-OS_W32_LogChannelClose(LOG_Channel channel)
+static void OS_W32_LogChannelClose(LOG_Channel channel)
 {
 	OS_W32_LOG_CloseChannel(&win32_st.logger, channel);
 }
 
-internal void
-OS_W32_SetWindowTitle(String8 title)
+static void OS_W32_SetWindowTitle(String8 title)
 {
 	SDL_SetWindowTitle(win32_st.sdl_window, (const char *)title.str);
 }
 
-internal void
-OS_W32_GetWindowSize(u32 *w, u32 *h)
+static void OS_W32_GetWindowSize(u32 *w, u32 *h)
 {
 	i32 width,
 		height;
@@ -298,8 +280,7 @@ OS_W32_GetWindowSize(u32 *w, u32 *h)
 	if (h) *h = height;
 }
 
-internal void
-OS_W32_GetWindowSizeInPixels(u32 *pw, u32 *ph)
+static void OS_W32_GetWindowSizeInPixels(u32 *pw, u32 *ph)
 {
 	i32 pixel_width,
 		pixel_height;
@@ -312,38 +293,32 @@ OS_W32_GetWindowSizeInPixels(u32 *pw, u32 *ph)
 	if (ph) *ph = pixel_height;
 }
 
-internal void
-OS_W32_SetWindowSize(u32 w, u32 h)
+static void OS_W32_SetWindowSize(u32 w, u32 h)
 {
 	SDL_SetWindowSize(win32_st.sdl_window, w, h);
 }
 
-internal void
-OS_W32_SetWindowFullscreen(b32 fullscreen)
+static void OS_W32_SetWindowFullscreen(b32 fullscreen)
 {
 	SDL_SetWindowFullscreen(win32_st.sdl_window, fullscreen);
 }
 
-internal void
-OS_W32_SetWindowBorderless(b32 borderless)
+static void OS_W32_SetWindowBorderless(b32 borderless)
 {
 	SDL_SetWindowBordered(win32_st.sdl_window, !borderless);
 }
 
-internal void
-OS_W32_SetWindowOpacity(f32 opacity)
+static void OS_W32_SetWindowOpacity(f32 opacity)
 {
 	SDL_SetWindowOpacity(win32_st.sdl_window, opacity);
 }
 
-internal void
-OS_W32_SetMousePosition(f32 x, f32 y)
+static void OS_W32_SetMousePosition(f32 x, f32 y)
 {
 	SDL_WarpMouseInWindow(win32_st.sdl_window, x, y);
 }
 
-internal void
-OS_W32_SetMouseVisible(b32 visible)
+static void OS_W32_SetMouseVisible(b32 visible)
 {
 	//	ImGui::SetMouseCursor(visible ? ImGuiMouseSource_Mouse : ImGuiMouseCursor_None);
 
@@ -353,44 +328,37 @@ OS_W32_SetMouseVisible(b32 visible)
 		SDL_HideCursor();
 }
 
-internal b32
-OS_W32_IsMouseVisible(void)
+static b32 OS_W32_IsMouseVisible(void)
 {
 	return SDL_CursorVisible();
 }
 
-internal void
-OS_W32_SetMouseLocked(b32 locked)
+static void OS_W32_SetMouseLocked(b32 locked)
 {
 	SDL_SetWindowRelativeMouseMode(win32_st.sdl_window, locked);
 }
 
-internal b32
-OS_W32_IsMouseLocked(void)
+static b32 OS_W32_IsMouseLocked(void)
 {
 	return SDL_GetWindowRelativeMouseMode(win32_st.sdl_window);
 }
 
-internal u64
-OS_W32_GetTicks(void)
+static u64 OS_W32_GetTicks(void)
 {
 	return SDL_GetTicks();
 }
 
-internal u64
-OS_W32_GetPerformanceCounter(void)
+static u64 OS_W32_GetPerformanceCounter(void)
 {
 	return SDL_GetPerformanceCounter();
 }
 
-internal u64
-OS_W32_GetPerformanceFrequency(void)
+static u64 OS_W32_GetPerformanceFrequency(void)
 {
 	return SDL_GetPerformanceFrequency();
 }
 
-internal u32
-OS_W32_GetNumCores(void)
+static u32 OS_W32_GetNumCores(void)
 {
 	return win32_st.system_info.dwNumberOfProcessors;
 }
@@ -402,8 +370,7 @@ struct OS_W32_ThreadStart
 	void *param;
 };
 
-internal DWORD WINAPI
-OS_W32_ThreadTrampoline(LPVOID param)
+static DWORD WINAPI OS_W32_ThreadTrampoline(LPVOID param)
 {
 	OS_W32_ThreadStart *t = param;
 
@@ -414,8 +381,7 @@ OS_W32_ThreadTrampoline(LPVOID param)
 	return 0;
 }
 
-internal OS_Handle
-OS_W32_ThreadCreate(void (*Entry)(void *param), void *param)
+static OS_Handle OS_W32_ThreadCreate(void (*Entry)(void *param), void *param)
 {
 	// TODO: switch to arena alloc
 	OS_W32_ThreadStart *t = malloc(sizeof(OS_W32_ThreadStart));
@@ -426,80 +392,68 @@ OS_W32_ThreadCreate(void (*Entry)(void *param), void *param)
 	return handle;
 }
 
-internal void
-OS_W32_ThreadJoin(OS_Handle handle)
+static void OS_W32_ThreadJoin(OS_Handle handle)
 {
 	WaitForSingleObject(handle.value, INFINITE);
 	CloseHandle(handle.value);
 }
 
-internal void
-OS_W32_ThreadDetach(OS_Handle handle)
+static void OS_W32_ThreadDetach(OS_Handle handle)
 {
 	CloseHandle(handle.value);
 }
 
-internal void
-OS_W32_ThreadSetAffinity(OS_Handle handle, u64 mask)
+static void OS_W32_ThreadSetAffinity(OS_Handle handle, u64 mask)
 {
 	SetThreadAffinityMask(handle.value, mask);
 }
 
-internal OS_Handle
-OS_W32_GetCurrentThreadHandle(void)
+static OS_Handle OS_W32_GetCurrentThreadHandle(void)
 {
 	OS_Handle handle = { GetCurrentThread() };
 	return handle;
 }
 
-internal OS_Handle
-OS_W32_FiberCreate(u32 stack_size, void (*Entry)(void *param), void *param)
+static OS_Handle OS_W32_FiberCreate(u32 stack_size, void (*Entry)(void *param), void *param)
 {
 	OS_Handle handle = { CreateFiber(stack_size, Entry, param) };
 	return handle;
 }
 
-internal void
-OS_W32_FiberDelete(OS_Handle handle)
+static void OS_W32_FiberDelete(OS_Handle handle)
 {
 	DeleteFiber(handle.value);
 }
 
-internal void
-OS_W32_SwitchToFiber(OS_Handle handle)
+static void OS_W32_SwitchToFiber(OS_Handle handle)
 {
 	SwitchToFiber(handle.value);
 }
 
-internal OS_Handle
-OS_W32_ConvertThreadToFiber(void)
+static OS_Handle OS_W32_ConvertThreadToFiber(void)
 {
 	OS_Handle handle = { ConvertThreadToFiber(NULL) };
 	return handle;
 }
 
-internal b32
-OS_W32_ConvertFiberToThread(void)
+static b32 OS_W32_ConvertFiberToThread(void)
 {
 	return ConvertFiberToThread();
 }
 
-internal u32
-OS_W32_TLSAlloc(void)
+static u32 OS_W32_TLSAlloc(void)
 {
 	u32 slot = TlsAlloc();
 	AssertTrue(slot != TLS_OUT_OF_INDEXES);
 	return slot;
 }
 
-internal void
-OS_W32_TLSFree(u32 slot)
+static void OS_W32_TLSFree(u32 slot)
 {
 	TlsFree(slot);
 }
 
-internal void *
-OS_W32_TLSGet(u32 slot)
+static void *OS_W32_TLSGet(u32 slot)
 {
 	SetLastError(0);
 
@@ -511,92 +465,77 @@ OS_W32_TLSGet(u32 slot)
 	return value;
 }
 
-internal void
-OS_W32_TLSSet(u32 slot, void *value)
+static void OS_W32_TLSSet(u32 slot, void *value)
 {
 	TlsSetValue(slot, value);
 }
 
-internal u32
-OS_W32_AtomicLoadU32(u32 *ptr)
+static u32 OS_W32_AtomicLoadU32(u32 *ptr)
 {
 	return InterlockedCompareExchange((volatile LONG *)ptr, 0, 0);
 }
 
-internal u64
-OS_W32_AtomicLoadU64(u64 *ptr)
+static u64 OS_W32_AtomicLoadU64(u64 *ptr)
 {
 	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, 0, 0);
 }
 
-internal void *
-OS_W32_AtomicLoadPtr(void *ptr)
+static void *OS_W32_AtomicLoadPtr(void *ptr)
 {
 	return InterlockedCompareExchangePointer((PVOID *)ptr, NULL, NULL);
 }
 
-internal u32
-OS_W32_AtomicStoreU32(u32 *ptr, u32 value)
+static u32 OS_W32_AtomicStoreU32(u32 *ptr, u32 value)
 {
 	return InterlockedExchange((volatile LONG *)ptr, value);
 }
 
-internal u64
-OS_W32_AtomicStoreU64(u64 *ptr, u64 value)
+static u64 OS_W32_AtomicStoreU64(u64 *ptr, u64 value)
 {
 	return InterlockedExchange64((volatile LONGLONG *)ptr, value);
 }
 
-internal void *
-OS_W32_AtomicStorePtr(void *ptr, void *value)
+static void *OS_W32_AtomicStorePtr(void *ptr, void *value)
 {
 	return InterlockedExchangePointer((PVOID *)ptr, value);
 }
 
-internal u32
-OS_W32_AtomicAddU32(u32 *ptr, u32 delta)
+static u32 OS_W32_AtomicAddU32(u32 *ptr, u32 delta)
 {
 	return InterlockedExchangeAdd((volatile LONG *)ptr, delta);
 }
 
-internal u64
-OS_W32_AtomicAddU64(u64 *ptr, u64 delta)
+static u64 OS_W32_AtomicAddU64(u64 *ptr, u64 delta)
 {
 	return InterlockedExchangeAdd64((volatile LONGLONG *)ptr, delta);
 }
 
-internal u32
-OS_W32_AtomicSubU32(u32 *ptr, u32 delta)
+static u32 OS_W32_AtomicSubU32(u32 *ptr, u32 delta)
 {
 	return InterlockedExchangeAdd((volatile LONG *)ptr, -(LONG)delta);
 }
 
-internal u64
-OS_W32_AtomicSubU64(u64 *ptr, u64 delta)
+static u64 OS_W32_AtomicSubU64(u64 *ptr, u64 delta)
 {
 	return InterlockedExchangeAdd64((volatile LONGLONG *)ptr, -(LONGLONG)delta);
 }
 
-internal b32
-OS_W32_AtomicCASU32(u32 *ptr, u32 expected, u32 desired)
+static b32 OS_W32_AtomicCASU32(u32 *ptr, u32 expected, u32 desired)
 {
 	return InterlockedCompareExchange((volatile LONG *)ptr, (LONG)desired, (LONG)expected) == (LONG)expected;
 }
 
-internal b32
-OS_W32_AtomicCASU64(u64 *ptr, u64 expected, u64 desired)
+static b32 OS_W32_AtomicCASU64(u64 *ptr, u64 expected, u64 desired)
 {
 	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, (LONGLONG)desired, (LONGLONG)expected) == (LONGLONG)expected;
 }
 
-internal b32
-OS_W32_AtomicCASPtr(void *ptr, void *expected, void *desired)
+static b32 OS_W32_AtomicCASPtr(void *ptr, void *expected, void *desired)
 {
 	return InterlockedCompareExchangePointer((volatile void *)ptr, desired, expected) == expected;
 }
 
-internal void
-OS_W32_SpinLockAcquire(u32 *lock)
+static void OS_W32_SpinLockAcquire(u32 *lock)
 {
 	for (;;)
 	{
@@ -608,14 +547,12 @@ OS_W32_SpinLockAcquire(u32 *lock)
 	}
 }
 
-internal void
-OS_W32_SpinLockRelease(u32 *lock)
+static void OS_W32_SpinLockRelease(u32 *lock)
 {
 	InterlockedExchange((volatile LONG *)lock, 0);
 }
 
-internal OS_Handle
-OS_W32_MutexCreate(void)
+static OS_Handle OS_W32_MutexCreate(void)
 {
 	OS_W32_Object *mtx = OS_W32_AllocObject();
 	
@@ -625,8 +562,7 @@ OS_W32_MutexCreate(void)
 	return handle;
 }
 
-internal void
-OS_W32_MutexDestroy(OS_Handle handle)
+static void OS_W32_MutexDestroy(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
@@ -635,24 +571,21 @@ OS_W32_MutexDestroy(OS_Handle handle)
 	OS_W32_ReturnObject(mtx);
 }
 
-internal void
-OS_W32_MutexLock(OS_Handle handle)
+static void OS_W32_MutexLock(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
 	EnterCriticalSection(&mtx->cs);
 }
 
-internal void
-OS_W32_MutexUnlock(OS_Handle handle)
+static void OS_W32_MutexUnlock(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
 	LeaveCriticalSection(&mtx->cs);
 }
 
-internal OS_Handle
-OS_W32_CondVarCreate(void)
+static OS_Handle OS_W32_CondVarCreate(void)
 {
 	OS_W32_Object *cnd = OS_W32_AllocObject();
 
@@ -667,16 +600,14 @@ OS_W32_CondVarCreate(void)
  * we still need a destroy function to return the object back
  * to the free pool.
  */
-internal void
-OS_W32_CondVarDestroy(OS_Handle handle)
+static void OS_W32_CondVarDestroy(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 	
 	OS_W32_ReturnObject(cnd);
 }
 
-internal void
-OS_W32_CondVarWait(OS_Handle handle, OS_Handle mutex_handle)
+static void OS_W32_CondVarWait(OS_Handle handle, OS_Handle mutex_handle)
 {
 	OS_W32_Object *cnd = handle.value;
 	OS_W32_Object *mtx = mutex_handle.value;
@@ -684,31 +615,27 @@ OS_W32_CondVarWait(OS_Handle handle, OS_Handle mutex_handle)
 	SleepConditionVariableCS(&cnd->cv, &mtx->cs, INFINITE);
 }
 
-internal void
-OS_W32_CondVarSignal(OS_Handle handle)
+static void OS_W32_CondVarSignal(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 
 	WakeConditionVariable(&cnd->cv);
 }
 
-internal void
-OS_W32_CondVarBroadcast(OS_Handle handle)
+static void OS_W32_CondVarBroadcast(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 
 	WakeAllConditionVariable(&cnd->cv);
 }
 
-internal b32
-OS_W32_FileDelete(String8 path)
+static b32 OS_W32_FileDelete(String8 path)
 {
 	AssertTrue(DeleteFile((LPCSTR)path.str));
 	return true;
 }
 
-internal b32
-OS_W32_FileExists(String8 path)
+static b32 OS_W32_FileExists(String8 path)
 {
 	DWORD attr = GetFileAttributes((LPCSTR)path.str);
 
@@ -718,8 +645,7 @@ OS_W32_FileExists(String8 path)
 	return (attr & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
-internal u64
-OS_W32_GetFileLastWriteTime(String8 path)
+static u64 OS_W32_GetFileLastWriteTime(String8 path)
 {
 	FILETIME last_write_time = {0};
 
@@ -735,22 +661,19 @@ OS_W32_GetFileLastWriteTime(String8 path)
 	return ((u64)last_write_time.dwHighDateTime << 32) | last_write_time.dwLowDateTime;
 }
 
-internal b32
-OS_W32_DirectoryCreate(String8 path)
+static b32 OS_W32_DirectoryCreate(String8 path)
 {
 	AssertTrue(CreateDirectory((LPCSTR)path.str, NULL));
 	return true;
 }
 
-internal b32
-OS_W32_DirectoryDelete(String8 path)
+static b32 OS_W32_DirectoryDelete(String8 path)
 {
 	AssertTrue(RemoveDirectory((LPCSTR)path.str));
 	return true;
 }
 
-internal b32
-OS_W32_DirectoryExists(String8 path)
+static b32 OS_W32_DirectoryExists(String8 path)
 {
 	DWORD attr = GetFileAttributes((LPCSTR)path.str);
 
@@ -760,8 +683,7 @@ OS_W32_DirectoryExists(String8 path)
 	return (attr & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
-internal OS_Handle
-OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
+static OS_Handle OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 {
 	b32 read	   = access & OS_FileAccess_Read;
 	b32 write	   = access & OS_FileAccess_Write;
@@ -822,82 +744,69 @@ OS_W32_StreamFromFile(String8 path, OS_FileAccess access)
 	return handle;
 }
 
-internal OS_Handle
-OS_W32_StreamFromMemory(void *memory, u64 bytes)
+static OS_Handle OS_W32_StreamFromMemory(void *memory, u64 bytes)
 {
 	OS_Handle handle = { SDL_IOFromMem(memory, bytes) };
 	return handle;
 }
 
-internal OS_Handle
-OS_W32_StreamFromConstMemory(const void *memory, u64 bytes)
+static OS_Handle OS_W32_StreamFromConstMemory(const void *memory, u64 bytes)
 {
 	OS_Handle handle = { SDL_IOFromConstMem(memory, bytes) };
 	return handle;
 }
 
-internal i64
-OS_W32_StreamRead(OS_Handle handle, void *dst, u64 bytes)
+static i64 OS_W32_StreamRead(OS_Handle handle, void *dst, u64 bytes)
 {
 	return SDL_ReadIO(handle.value, dst, bytes);
 }
 
-internal i64
-OS_W32_StreamWrite(OS_Handle handle, const void *src, u64 bytes)
+static i64 OS_W32_StreamWrite(OS_Handle handle, const void *src, u64 bytes)
 {
 	return SDL_WriteIO(handle.value, src, bytes);
 }
 
-internal i64
-OS_W32_StreamSeek(OS_Handle handle, i64 offset)
+static i64 OS_W32_StreamSeek(OS_Handle handle, i64 offset)
 {
 	return SDL_SeekIO(handle.value, offset, SDL_IO_SEEK_SET);
 }
 
-internal i64
-OS_W32_StreamSize(OS_Handle handle)
+static i64 OS_W32_StreamSize(OS_Handle handle)
 {
 	return SDL_GetIOSize(handle.value);
 }
 
-internal i64
-OS_W32_StreamPosition(OS_Handle handle)
+static i64 OS_W32_StreamPosition(OS_Handle handle)
 {
 	return SDL_TellIO(handle.value);
 }
 
-internal b32
-OS_W32_StreamClose(OS_Handle handle)
+static b32 OS_W32_StreamClose(OS_Handle handle)
 {
 	return SDL_CloseIO(handle.value);
 }
 
-internal void
-OS_W32_OpenInExplorer(String8 path)
+static void OS_W32_OpenInExplorer(String8 path)
 {
 	ShellExecute(NULL, "open", (LPCSTR)path.str, NULL, NULL, SW_SHOWDEFAULT);
 }
 
-internal b32
-OS_W32_VulkanSurfaceCreate(void *instance, void *surface_ptr)
+static b32 OS_W32_VulkanSurfaceCreate(void *instance, void *surface_ptr)
 {
 	return SDL_Vulkan_CreateSurface(win32_st.sdl_window, instance, NULL, surface_ptr);
 }
 
-internal void
-OS_W32_VulkanSurfaceDestroy(void *instance, void *surface)
+static void OS_W32_VulkanSurfaceDestroy(void *instance, void *surface)
 {
 	SDL_Vulkan_DestroySurface(instance, surface, NULL);
 }
 
-internal const char * const *
-OS_W32_VulkanGetInstanceExtensions(u32 *count)
+static const char * const *OS_W32_VulkanGetInstanceExtensions(u32 *count)
 {
 	return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-internal void
-OS_W32_CloseAllGamepads(void)
+static void OS_W32_CloseAllGamepads(void)
 {
 	for (u32 i = 0; i < win32_st.gamepad_count; i++)
 	{
@@ -908,8 +817,7 @@ OS_W32_CloseAllGamepads(void)
 	win32_st.gamepad_count = 0;
 }
 
-internal void
-OS_W32_ReconnectAllGamepads(void)
+static void OS_W32_ReconnectAllGamepads(void)
 {
 	if (win32_st.gamepad_count > 0)
 		OS_W32_CloseAllGamepads();
@@ -935,8 +843,7 @@ OS_W32_ReconnectAllGamepads(void)
 	SDL_free(ids);
 }
 
-internal void
-OS_W32_InitImGui(void)
+static void OS_W32_InitImGui(void)
 {
 	/*
 	  IMGUI_CHECKVERSION();
@@ -950,8 +857,7 @@ OS_W32_InitImGui(void)
 	*/
 }
 
-internal void
-OS_W32_DestroyImGui(void)
+static void OS_W32_DestroyImGui(void)
 {
 	/*
 	  ImGui_ImplSDL3_Shutdown();
@@ -959,8 +865,7 @@ OS_W32_DestroyImGui(void)
 	*/
 }
 
-internal OS_Handle
-OS_W32_JobCounterAlloc(u32 initial_count)
+static OS_Handle OS_W32_JobCounterAlloc(u32 initial_count)
 {
 	OS_W32_Object *counter = OS_W32_AllocObject();
 
@@ -970,16 +875,14 @@ OS_W32_JobCounterAlloc(u32 initial_count)
 	return handle;
 }
 
-internal void
-OS_W32_JobCounterRelease(OS_Handle handle)
+static void OS_W32_JobCounterRelease(OS_Handle handle)
 {
 	OS_W32_Object *obj = handle.value;
 	
 	OS_W32_ReturnObject(obj);
 }
 
-internal void
-OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
+static void OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
 {
 	OS_W32_Object *obj = handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -987,8 +890,7 @@ OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
 	OS_W32_J_CounterIncrement(counter, amount);
 }
 
-internal void
-OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
+static void OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
 {
 	OS_W32_Object *obj = handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -996,8 +898,7 @@ OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
 	OS_W32_J_CounterDecrement(&win32_st.scheduler, counter, amount);
 }
 
-internal u32
-OS_W32_JobCounterValue(OS_Handle handle)
+static u32 OS_W32_JobCounterValue(OS_Handle handle)
 {
 	OS_W32_Object *obj = handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -1005,8 +906,7 @@ OS_W32_JobCounterValue(OS_Handle handle)
 	return OS_W32_J_CounterValue(counter);
 }
 
-internal void
-OS_W32_JobYield(OS_Handle handle, u32 value)
+static void OS_W32_JobYield(OS_Handle handle, u32 value)
 {
 	OS_W32_Object *obj = handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -1014,8 +914,7 @@ OS_W32_JobYield(OS_Handle handle, u32 value)
 	OS_W32_J_Yield(&win32_st.scheduler, counter, value);
 }
 
-internal void
-OS_W32_JobKick(const J_Decl *decl, OS_Handle counter_handle)
+static void OS_W32_JobKick(const J_Decl *decl, OS_Handle counter_handle)
 {
 	OS_W32_Object *obj = counter_handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -1023,8 +922,7 @@ OS_W32_JobKick(const J_Decl *decl, OS_Handle counter_handle)
 	OS_W32_J_Kick(&win32_st.scheduler, decl, counter);
 }
 
-internal void
-OS_W32_JobBatch(const J_Decl *decls, u32 count, OS_Handle counter_handle)
+static void OS_W32_JobBatch(const J_Decl *decls, u32 count, OS_Handle counter_handle)
 {
 	OS_W32_Object *obj = counter_handle.value;
 	OS_W32_J_Counter *counter = &obj->counter;
@@ -1032,26 +930,22 @@ OS_W32_JobBatch(const J_Decl *decls, u32 count, OS_Handle counter_handle)
 	OS_W32_J_Batch(&win32_st.scheduler, decls, count, counter);
 }
 
-internal void
-OS_W32_JobFor(u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size)
+static void OS_W32_JobFor(u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size)
 {
 	OS_W32_J_For(&win32_st.scheduler, count, fn, priority, batch_size);
 }
 
-internal b32
-OS_W32_JobIsMainThread(void)
+static b32 OS_W32_JobIsMainThread(void)
 {
 	return OS_W32_J_IsMainThread(&win32_st.scheduler);
 }
 
-internal Arena *
-OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
+static Arena *OS_W32_JobGetScratch(Arena * const *conflicts, u32 conflict_count)
 {
 	return OS_W32_J_GetScratch(&win32_st.scheduler, conflicts, conflict_count);
 }
 
-internal void
-OS_W32_BindAPI(OS_API *api)
+static void OS_W32_BindAPI(OS_API *api)
 {
 	api->VirtualReserve              = OS_W32_VirtualReserve;
 	api->VirtualRelease              = OS_W32_VirtualRelease;
@@ -1176,8 +1070,7 @@ OS_W32_BindAPI(OS_API *api)
 	api->VulkanGetInstanceExtensions = OS_W32_VulkanGetInstanceExtensions;
 }
 
-internal void
-OS_W32_MessagePump(void *ctx)
+static void OS_W32_MessagePump(void *ctx)
 {
 	SDL_Event local_events[OS_W32_MAX_PENDING_EVENTS];
 	u32 local_event_count = 0;
@@ -1207,8 +1100,7 @@ OS_W32_MessagePump(void *ctx)
 	}
 }
 
-internal void
-OS_W32_ProcessEvents(OS_InputState *input_out)
+static void OS_W32_ProcessEvents(OS_InputState *input_out)
 {
 	OS_W32_MessagePump(NULL);
 	
@@ -1321,7 +1213,7 @@ OS_W32_ProcessEvents(OS_InputState *input_out)
 	ScratchRelease(&scratch);
 }
 
-J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
+static J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
 	static OS_InputState prev_input_st = {0};
 
@@ -1374,7 +1266,7 @@ J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 	}
 }
 
-J_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
+static J_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 {
 	win32_st.app = win32_st.code.Init(&win32_st.api);
 
@@ -1386,8 +1278,7 @@ J_ENTRY_POINT_DEF(OS_W32_RootJobEntry)
 	OS_W32_J_Kick(&win32_st.scheduler, &first_frame_job, NULL);
 }
 
-i32
-main(void)
+i32 main(void)
 {
 	GetSystemInfo(&win32_st.system_info);
 

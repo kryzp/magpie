@@ -5,8 +5,7 @@ struct A_ShaderLoadData
 	G_ShaderCompiledStages compiled;
 };
 
-internal A_SerializerPipelineData
-A_ShaderSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_SerializerPipelineData A_ShaderSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
@@ -46,8 +45,7 @@ A_ShaderSerializerCpu(const A_Context *ctx, Arena *load_scope)
 	return result;
 }
 
-internal void
-A_ShaderSerializerAlloc(const A_Context *ctx,
+static void A_ShaderSerializerAlloc(const A_Context *ctx,
 						  A_SerializerPipelineData *data,
 						  A_Asset *out,
 						  Arena *arena)
@@ -59,8 +57,7 @@ A_ShaderSerializerAlloc(const A_Context *ctx,
 														 shader->compiled.bytecodes);
 }
 
-internal void
-A_ShaderSerializerReload(const A_Context *ctx,
+static void A_ShaderSerializerReload(const A_Context *ctx,
 						   A_SerializerPipelineData *data,
 						   A_Asset *existing)
 {
@@ -73,14 +70,12 @@ A_ShaderSerializerReload(const A_Context *ctx,
 															  shader->compiled.bytecodes);
 }
 
-internal void
-A_ShaderSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_ShaderSerializerDispose(A_Asset *asset, A_Registry *assets)
 {
 	G_DeviceShaderProgramDestroy(assets->device, asset->shader.key);
 }
 
-internal A_Serializer
-A_GetShaderSerializer(void)
+static A_Serializer A_GetShaderSerializer(void)
 {
 	static A_Serializer shader_serializer = {
 		.Cpu     = A_ShaderSerializerCpu,

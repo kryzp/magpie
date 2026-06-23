@@ -21,10 +21,10 @@ struct R_GeometryFreeList
 	u64 total_free;
 };
 
-internal void R_GeometryFreeListInit      (      R_GeometryFreeList *list, u64 capacity);
-internal b32  R_GeometryFreeListAvailable (const R_GeometryFreeList *list, u64 size);
-internal b32  R_GeometryFreeListTryAlloc  (      R_GeometryFreeList *list, u64 size, u64 *out_offset);
-internal void R_GeometryFreeListRelease   (      R_GeometryFreeList *list, u64 offset, u64 size);
+static void R_GeometryFreeListInit      (      R_GeometryFreeList *list, u64 capacity);
+static b32  R_GeometryFreeListAvailable (const R_GeometryFreeList *list, u64 size);
+static b32  R_GeometryFreeListTryAlloc  (      R_GeometryFreeList *list, u64 size, u64 *out_offset);
+static void R_GeometryFreeListRelease   (      R_GeometryFreeList *list, u64 offset, u64 size);
 
 typedef struct R_GeometryPage R_GeometryPage;
 struct R_GeometryPage

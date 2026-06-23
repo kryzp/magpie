@@ -11,6 +11,6 @@ struct R_SkyboxPassData
 	const R_Mesh *skybox_mesh;
 };
 
-R_PASS_RECORD_DEF(R_SkyboxPassFn);
+static R_PASS_RECORD_DEF(R_SkyboxPassFn);
 	
 #endif // RENDER_PASS_SKYBOX_H

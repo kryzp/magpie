@@ -19,7 +19,7 @@ struct A_UploadQueue
 	u32 count;
 };
 
-internal void A_UploadQueuePush  (A_UploadQueue *queue, const A_Upload *upload);
-internal void A_UploadQueueClear (A_UploadQueue *queue);
+static void A_UploadQueuePush  (A_UploadQueue *queue, const A_Upload *upload);
+static void A_UploadQueueClear (A_UploadQueue *queue);
 
 #endif // ASSET_UPLOAD_QUEUE_H

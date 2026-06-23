@@ -76,29 +76,25 @@ namespace lighting
 	};
 
 	// Standard dielectric F0 mix.
-	public float3
-	ComputeF0(float3 albedo, float metallic)
+	public float3 ComputeF0(float3 albedo, float metallic)
 	{
 		return lerp(0.04, albedo, metallic);
 	}
 
 	// params = (k_quad, k_lin, k_const).
-	public float
-	CalculateAttenuation(float distance_squared, float3 params)
+	public float CalculateAttenuation(float distance_squared, float3 params)
 	{
 		return 1.0 / dot(float3(distance_squared, sqrt(distance_squared), 1.0), params);
 	}
 
-	public float3
-	FresnelSchlick(float VdotH, float3 F0, float roughness)
+	public float3 FresnelSchlick(float VdotH, float3 F0, float roughness)
 	{
 		float t = pow(1.0 - max(VdotH, 0.0), 5.0);
 		float3 F90 = max(1.0 - roughness, F0);
 		return lerp(F0, F90, t);
 	}
 
-	public float
-	DistributionGGX(float NdotH, float roughness)
+	public float DistributionGGX(float NdotH, float roughness)
 	{
 		float a = roughness * roughness;
 		float a2 = a * a;
@@ -112,8 +108,7 @@ namespace lighting
 	}
 
 	// Actual physically-accurate equation (used for BRDF LUT integration).
-	public float
-	GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
+	public float GeometrySchlickGGX_PHYSACC(float NdotV, float roughness)
 	{
 		float r = roughness;
 		float k = r * r * 0.5;
@@ -121,8 +116,7 @@ namespace lighting
 		return NdotV / (NdotV * (1.0 - k) + k);
 	}
 
-	public float
-	GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
+	public float GeometrySmith_PHYSACC(float NdotV, float NdotL, float roughness)
 	{
 		float ggx2 = GeometrySchlickGGX_PHYSACC(NdotV, roughness);
 		float ggx1 = GeometrySchlickGGX_PHYSACC(NdotL, roughness);
@@ -131,8 +125,7 @@ namespace lighting
 	}
 
 	// Modified because this looks better for direct lighting.
-	public float
-	GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
+	public float GeometrySchlickGGX_ARTISTIC(float NdotV, float roughness)
 	{
 		float r = roughness + 1.0;
 		float k = r * r / 8.0;
@@ -140,8 +133,7 @@ namespace lighting
 		return NdotV / (NdotV * (1.0 - k) + k);
 	}
 
-	public float
-	GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
+	public float GeometrySmith_ARTISTIC(float NdotV, float NdotL, float roughness)
 	{
 		float ggx2 = GeometrySchlickGGX_ARTISTIC(NdotV, roughness);
 		float ggx1 = GeometrySchlickGGX_ARTISTIC(NdotL, roughness);
@@ -149,8 +141,7 @@ namespace lighting
 		return ggx1 * ggx2;
 	}
 
-	public float3
-	SampleIrradiance(Surface s, IBL ibl)
+	public float3 SampleIrradiance(Surface s, IBL ibl)
 	{
 		float3 irr = 0.0;
 
@@ -162,8 +153,7 @@ namespace lighting
 		return irr;
 	}
 
-	public float3
-	EvaluateBRDF_SpecularIBL_GGX(float3 R, float roughness, float NdotV, float3 F, IBL ibl)
+	public float3 EvaluateBRDF_SpecularIBL_GGX(float3 R, float roughness, float NdotV, float3 F, IBL ibl)
 	{
 		float mip = roughness * irradiance::MAX_REFLECTION_LOD;
 		float3 prefiltered = bdl::cubes[ibl.prefilter_cubemap].SampleLevel(bdl::samplers[ibl.sampler], math::WorldToCubemap(R), mip).rgb;
@@ -172,8 +162,7 @@ namespace lighting
 		return specular;
 	}
 
-	public float3
-	EvaluateBRDF_BaseIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_BaseIBL(Surface s, IBL ibl)
 	{
 		float3 R = normalize(reflect(-s.view_dir, s.world_normal));
 		float3 kD = (1.0 - s.F0) * (1.0 - s.metallic);
@@ -182,22 +171,19 @@ namespace lighting
 		return kD * diffuse + specular;
 	}
 
-	public float3
-	EvaluateBRDF_ClearCoatIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_ClearCoatIBL(Surface s, IBL ibl)
 	{
 		float3 R = normalize(reflect(-s.view_dir, s.clearcoat_normal));
 		float3 specular = EvaluateBRDF_SpecularIBL_GGX(R, s.clearcoat_roughness, s.clearcoat_NdotV, 0.04, ibl);
 		return specular * s.clearcoat;
 	}
 
-	public float3
-	EvaluateBRDF_SheenIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_SheenIBL(Surface s, IBL ibl)
 	{
 		return 0.0; // TODO
 	}
 
-	public float3
-	EvaluateBRDF_Base(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_Base(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		float3 F = FresnelSchlick(VdotH, s.F0, 0.0);
 		float NDF = DistributionGGX(NdotH, s.roughness);
@@ -210,8 +196,7 @@ namespace lighting
 		return kD * diffuse + specular;
 	}
 
-	public float3
-	EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
 		
@@ -223,16 +208,14 @@ namespace lighting
 		return spec * s.clearcoat;
 	}
 
-	public float3
-	EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md
 
 		return 0.0; // TODO
 	}
 
-	public float3
-	EvaluateLight_Ambient(Surface s, IBL ibl)
+	public float3 EvaluateLight_Ambient(Surface s, IBL ibl)
 	{
 		float3 base = EvaluateBRDF_BaseIBL(s, ibl);
 
@@ -249,8 +232,7 @@ namespace lighting
 		return base * s.occlusion;
 	}
 
-	public float3
-	EvaluateLight_Point(Surface s, Light light, shadows::ShadowCaster *casters, uint shadow_sampler_idx, frame::FrameData frame_data)
+	public float3 EvaluateLight_Point(Surface s, Light light, shadows::ShadowCaster *casters, uint shadow_sampler_idx, frame::FrameData frame_data)
 	{
 		float3 delta_x = light.position - s.world_position;
 		float distance_sqr = dot(delta_x, delta_x);

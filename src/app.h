@@ -86,50 +86,50 @@ struct App
 	f32 delta_accumulator;
 };
 
-internal void AppInitScripting       (App *app);
-internal void AppDestroyScripting    (App *app);
-internal void AppHotLoadScripting    (App *app);
-internal void AppHotUnloadScripting  (App *app);
+static void AppInitScripting       (App *app);
+static void AppDestroyScripting    (App *app);
+static void AppHotLoadScripting    (App *app);
+static void AppHotUnloadScripting  (App *app);
 
-internal void AppInitGraphics        (App *app);
-internal void AppDestroyGraphics     (App *app);
-internal void AppHotLoadGraphics     (App *app);
-internal void AppHotUnloadGraphics   (App *app);
+static void AppInitGraphics        (App *app);
+static void AppDestroyGraphics     (App *app);
+static void AppHotLoadGraphics     (App *app);
+static void AppHotUnloadGraphics   (App *app);
 
-internal void AppInitAudio           (App *app);
-internal void AppDestroyAudio        (App *app);
-internal void AppHotLoadAudio        (App *app);
-internal void AppHotUnloadAudio      (App *app);
+static void AppInitAudio           (App *app);
+static void AppDestroyAudio        (App *app);
+static void AppHotLoadAudio        (App *app);
+static void AppHotUnloadAudio      (App *app);
 
-internal void AppInitAssets          (App *app);
-internal void AppDestroyAssets       (App *app);
-internal void AppHotLoadAssets       (App *app);
-internal void AppHotUnloadAssets     (App *app);
+static void AppInitAssets          (App *app);
+static void AppDestroyAssets       (App *app);
+static void AppHotLoadAssets       (App *app);
+static void AppHotUnloadAssets     (App *app);
 
-internal void AppInitAnimation       (App *app);
-internal void AppDestroyAnimation    (App *app);
-internal void AppHotLoadAnimation    (App *app);
-internal void AppHotUnloadAnimation  (App *app);
+static void AppInitAnimation       (App *app);
+static void AppDestroyAnimation    (App *app);
+static void AppHotLoadAnimation    (App *app);
+static void AppHotUnloadAnimation  (App *app);
 
-internal void AppInitRender          (App *app);
-internal void AppDestroyRender       (App *app);
-internal void AppHotLoadRender       (App *app);
-internal void AppHotUnloadRender     (App *app);
+static void AppInitRender          (App *app);
+static void AppDestroyRender       (App *app);
+static void AppHotLoadRender       (App *app);
+static void AppHotUnloadRender     (App *app);
 
-internal void AppInitPhysics         (App *app);
-internal void AppDestroyPhysics      (App *app);
-internal void AppHotLoadPhysics      (App *app);
-internal void AppHotUnloadPhysics    (App *app);
+static void AppInitPhysics         (App *app);
+static void AppDestroyPhysics      (App *app);
+static void AppHotLoadPhysics      (App *app);
+static void AppHotUnloadPhysics    (App *app);
 
-internal void AppInitEntity          (App *app);
-internal void AppDestroyEntity       (App *app);
-internal void AppHotLoadEntity       (App *app);
-internal void AppHotUnloadEntity     (App *app);
+static void AppInitEntity          (App *app);
+static void AppDestroyEntity       (App *app);
+static void AppHotLoadEntity       (App *app);
+static void AppHotUnloadEntity     (App *app);
 
-internal void AppInitEditor          (App *app);
-internal void AppDestroyEditor       (App *app);
-internal void AppHotLoadEditor       (App *app);
-internal void AppHotUnloadEditor     (App *app);
+static void AppInitEditor          (App *app);
+static void AppDestroyEditor       (App *app);
+static void AppHotLoadEditor       (App *app);
+static void AppHotUnloadEditor     (App *app);
 
 __declspec(dllexport) App  *AppInit      (const OS_API *api);
 __declspec(dllexport) void  AppDestroy   (App *app);

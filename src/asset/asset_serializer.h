@@ -32,7 +32,7 @@ struct A_SerializerPipelineData
 	String8 *watch_paths;
 };
 
-internal String8 A_ContextSystemFilePath(const A_Context *context, Arena *arena);
+static String8 A_ContextSystemFilePath(const A_Context *context, Arena *arena);
 
 typedef struct A_Serializer A_Serializer;
 struct A_Serializer

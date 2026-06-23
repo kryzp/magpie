@@ -1,6 +1,5 @@
 
-internal void
-E_RegistryPopulate(E_World *world)
+static void E_RegistryPopulate(E_World *world)
 {
 #if 0
 #define EntityDef(pascal, lower, max) ent_global_struct_names[E_Type_##pascal] = String8Lit(STRINGIFY(pascal));

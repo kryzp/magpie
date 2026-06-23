@@ -1,6 +1,5 @@
 
-internal void
-EditorInit(Editor *editor, Arena *arena, LOG_Channel log_channel)
+static void EditorInit(Editor *editor, Arena *arena, LOG_Channel log_channel)
 {
 	editor->arena = arena;
 	editor->log_channel = log_channel;
@@ -16,26 +15,22 @@ EditorInit(Editor *editor, Arena *arena, LOG_Channel log_channel)
 	DebugLogI(editor->log_channel, "Initialized.");
 }
 
-internal void
-EditorDestroy(Editor *editor)
+static void EditorDestroy(Editor *editor)
 {
 	DebugLogI(editor->log_channel, "Destroyed.");
 }
 
-internal void
-EditorTick(Editor *editor, const OS_InputState *input, f32 dt, f32 elapsed)
+static void EditorTick(Editor *editor, const OS_InputState *input, f32 dt, f32 elapsed)
 {
 	GM_StackTick(&editor->game_mode_stack, editor, dt, input);
 	
 	CameraDriverDrive(&editor->camera_driver, &editor->camera, input, dt);
 }
 
-internal void
-EditorHotLoad(Editor *editor)
+static void EditorHotLoad(Editor *editor)
 {
 }
 
-internal void
-EditorHotUnload(Editor *editor)
+static void EditorHotUnload(Editor *editor)
 {
 }

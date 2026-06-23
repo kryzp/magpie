@@ -10,6 +10,6 @@ struct R_PostProcessingPassData
 	R_GraphTexHandle output;
 };
 
-R_PASS_RECORD_DEF(R_PostProcessingPassFn);
+static R_PASS_RECORD_DEF(R_PostProcessingPassFn);
 	
 #endif // RENDER_PASS_POSTPROCESSING_H

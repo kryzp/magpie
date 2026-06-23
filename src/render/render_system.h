@@ -30,13 +30,13 @@ struct R_System
 	G_TextureKey prefilter_cubemap;
 };
 
-internal void R_SystemCreateSkyboxMesh(R_System *s);
+static void R_SystemCreateSkyboxMesh(R_System *s);
 
-internal void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
-internal void R_SystemDestroy(R_System *s);
-internal void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena);
-internal void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f);
+static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
+static void R_SystemDestroy(R_System *s);
+static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena);
+static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f);
 
-internal void R_SystemHotLoad(R_System *s);
+static void R_SystemHotLoad(R_System *s);
 
 #endif // RENDER_SYSTEM_H

@@ -41,13 +41,13 @@ struct S_Argument
 	};
 };
 
-internal S_Argument S_ArgF32(f32 v);
-internal S_Argument S_ArgI32(i32 v);
-internal S_Argument S_ArgB32(b32 v);
-internal S_Argument S_ArgStr(String8 v);
-internal S_Argument S_ArgTaggedU32(u32 v, u32 tag);
+static S_Argument S_ArgF32(f32 v);
+static S_Argument S_ArgI32(i32 v);
+static S_Argument S_ArgB32(b32 v);
+static S_Argument S_ArgStr(String8 v);
+static S_Argument S_ArgTaggedU32(u32 v, u32 tag);
 
-internal inline u64 S_PackTaggedU32(u32 value, u32 tag);
-internal inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag);
+static inline u64 S_PackTaggedU32(u32 value, u32 tag);
+static inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag);
 
 #endif // SCRIPT_TYPE_H

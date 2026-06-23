@@ -22,10 +22,10 @@ struct GM_Stack
 	i32 top; // -1 = empty
 };
 
-internal void     GM_StackInit (GM_Stack *stack);
-internal void     GM_StackPush (GM_Stack *stack, GM_Mode *mode, void *state);
-internal void     GM_StackPop  (GM_Stack *stack, void *state);
-internal GM_Mode *GM_StackPeek (const GM_Stack *stack);
-internal void     GM_StackTick (const GM_Stack *stack, void *state, f32 dt, const OS_InputState *input);
+static void     GM_StackInit (GM_Stack *stack);
+static void     GM_StackPush (GM_Stack *stack, GM_Mode *mode, void *state);
+static void     GM_StackPop  (GM_Stack *stack, void *state);
+static GM_Mode *GM_StackPeek (const GM_Stack *stack);
+static void     GM_StackTick (const GM_Stack *stack, void *state, f32 dt, const OS_InputState *input);
 
 #endif // GAME_MODE_H

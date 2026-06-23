@@ -7,20 +7,17 @@ struct E_UID
 	u32 value;
 };
 
-internal inline E_UID
-E_UIDNull(void)
+static inline E_UID E_UIDNull(void)
 {
 	return (E_UID) {0};
 }
 
-internal inline b32
-E_UIDIsNull(E_UID uid)
+static inline b32 E_UIDIsNull(E_UID uid)
 {
 	return uid.value == 0;
 }
 
-internal inline b32
-E_UIDMatch(E_UID a, E_UID b)
+static inline b32 E_UIDMatch(E_UID a, E_UID b)
 {
 	return a.value == b.value;
 }

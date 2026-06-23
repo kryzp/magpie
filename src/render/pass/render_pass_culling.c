@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_CullClearFn)
+static R_PASS_RECORD_DEF(R_CullClearFn)
 {
 	const R_CullClearPassData *data = ctx->user_data;
 	
@@ -7,7 +7,7 @@ R_PASS_RECORD_DEF(R_CullClearFn)
 	G_CmdFillBuffer(ctx->cmd, counter_key, 0, G_DeviceBufferSize(ctx->device, counter_key), 0);
 }
 
-R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
+static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -60,7 +60,7 @@ R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	G_CmdDispatch      (cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
-R_PASS_RECORD_DEF(R_CullSphereComputeFn)
+static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -112,8 +112,7 @@ R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	G_CmdDispatch      (cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
-internal void
-R_CullingInit(R_Culling *cull, A_Registry *assets)
+static void R_CullingInit(R_Culling *cull, A_Registry *assets)
 {
 	cull->assets = assets;
 	
@@ -121,13 +120,11 @@ R_CullingInit(R_Culling *cull, A_Registry *assets)
 	cull->sphere_shader  = A_Require(assets, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"),  A_Type_Shader);
 }
 
-internal void
-R_CullingDestroy(R_Culling *cull)
+static void R_CullingDestroy(R_Culling *cull)
 {
 }
 
-internal R_DrawStream
-R_CullFrustum(R_Culling *cull,
+static R_DrawStream R_CullFrustum(R_Culling *cull,
 			  R_Graph *graph,
 			  const R_Bulletin *bt,
 			  R_CullFilter filter,
@@ -184,8 +181,7 @@ R_CullFrustum(R_Culling *cull,
 	return stream;
 }
 
-internal R_DrawStream
-R_CullSphere(R_Culling *cull,
+static R_DrawStream R_CullSphere(R_Culling *cull,
 			 R_Graph *graph,
 			 const R_Bulletin *bt,
 			 R_CullFilter filter,

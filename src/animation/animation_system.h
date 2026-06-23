@@ -8,8 +8,7 @@ struct AN_Handle
 	u32 generation;
 };
 
-internal inline AN_Handle
-AN_HandleNull(void)
+static inline AN_Handle AN_HandleNull(void)
 {
 	AN_Handle handle = {0};
 	handle.index = (u32)-1;
@@ -18,8 +17,7 @@ AN_HandleNull(void)
 	return handle;
 }
 
-internal inline b32
-AN_HandleMatch(AN_Handle a, AN_Handle b)
+static inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation);
@@ -48,13 +46,13 @@ struct AN_System
 	u32 free_index_count;
 };
 
-internal void         AN_SystemInit(AN_System *s, LOG_Channel log_channel);
-internal void         AN_SystemDestroy(AN_System *s);
+static void         AN_SystemInit(AN_System *s, LOG_Channel log_channel);
+static void         AN_SystemDestroy(AN_System *s);
 
-internal void         AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt);
+static void         AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt);
 
-internal AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle);
-internal AN_Handle    AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle);
-internal void         AN_SystemKillInstance(AN_System *s, AN_Handle h);
+static AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle);
+static AN_Handle    AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle);
+static void         AN_SystemKillInstance(AN_System *s, AN_Handle h);
 
 #endif // ANIMATION_SYSTEM_H

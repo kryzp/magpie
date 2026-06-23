@@ -5,8 +5,7 @@ struct A_ScriptLoadData
 	S_Ref ref;
 };
 
-internal A_SerializerPipelineData
-A_ScriptSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_SerializerPipelineData A_ScriptSerializerCpu(const A_Context *ctx, Arena *load_scope)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
@@ -35,8 +34,7 @@ A_ScriptSerializerCpu(const A_Context *ctx, Arena *load_scope)
 	return result;
 }
 
-internal void
-A_ScriptSerializerAlloc(const A_Context *ctx,
+static void A_ScriptSerializerAlloc(const A_Context *ctx,
 						 A_SerializerPipelineData *data,
 						 A_Asset *out,
 						 Arena *arena)
@@ -46,16 +44,14 @@ A_ScriptSerializerAlloc(const A_Context *ctx,
 	out->script.ref = script->ref;
 }
 
-internal void
-A_ScriptSerializerReload(const A_Context *ctx,
+static void A_ScriptSerializerReload(const A_Context *ctx,
 						  A_SerializerPipelineData *data,
 						  A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-internal A_Serializer
-A_GetScriptSerializer(void)
+static A_Serializer A_GetScriptSerializer(void)
 {
 	static A_Serializer script_serializer = {
 		.Cpu     = A_ScriptSerializerCpu,

@@ -1,6 +1,5 @@
 
-internal R_Camera
-R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 far)
+static R_Camera R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 far)
 {
 	R_Camera camera = {0};
 	camera.type = R_CameraType_Perspective;
@@ -17,8 +16,7 @@ R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 
 	return camera;
 }
 
-internal R_Camera
-R_CameraOrthographic(v3 position, v3 forward, v4 rect, f32 near, f32 far)
+static R_Camera R_CameraOrthographic(v3 position, v3 forward, v4 rect, f32 near, f32 far)
 {
 	R_Camera camera = {0};
 	camera.type = R_CameraType_Orthographic;
@@ -34,8 +32,7 @@ R_CameraOrthographic(v3 position, v3 forward, v4 rect, f32 near, f32 far)
 	return camera;
 }
 
-internal void
-R_CameraRecompute(R_Camera *camera)
+static void R_CameraRecompute(R_Camera *camera)
 {
 	camera->view = M4LookAt(camera->position,
 							V3Add(camera->position, camera->forward),
@@ -55,8 +52,7 @@ R_CameraRecompute(R_Camera *camera)
 	}
 }
 
-internal R_FrustumVolume
-R_CameraFrustum(const R_Camera *camera)
+static R_FrustumVolume R_CameraFrustum(const R_Camera *camera)
 {
 	m4 vpt = M4Transpose(M4MulM4(camera->proj, camera->view));
 

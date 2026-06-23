@@ -23,14 +23,12 @@ struct LOG_Channel
 	u32 id; // 0 = fallback channel
 };
 
-internal inline b32
-LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)
+static inline b32 LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)
 {
 	return a.id == b.id;
 }
 
-internal inline LOG_Channel
-LOG_ChannelNull(void)
+static inline LOG_Channel LOG_ChannelNull(void)
 {
 	LOG_Channel null_channel = {0};
 	return null_channel;

@@ -12,7 +12,7 @@ struct R_GeometryPassData
 {
 };
 
-R_PASS_RECORD_DEF(R_GeometryPassFn);
+static R_PASS_RECORD_DEF(R_GeometryPassFn);
 
 
 typedef struct R_GeometryRenderer R_GeometryRenderer;

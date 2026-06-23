@@ -5,8 +5,7 @@
  * note to future me NEVER USE SCRATCH ARENAS HERE.
  */
 
-internal void
-OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
+static void OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 {
 	MemZeroStruct(logger);
 	
@@ -26,8 +25,7 @@ OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 		DebugLogI(logger->log_channel, "Initialized (no file sink).");
 }
 
-internal void
-OS_W32_LOG_Shutdown(OS_W32_LOG_Logger *logger)
+static void OS_W32_LOG_Shutdown(OS_W32_LOG_Logger *logger)
 {
 	AssertTrue(logger);
 
@@ -50,8 +48,7 @@ OS_W32_LOG_Shutdown(OS_W32_LOG_Logger *logger)
 	logger->mutex = OS_HandleNull();
 }
 
-internal LOG_Channel
-OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 name)
+static LOG_Channel OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 name)
 {
 	AssertTrue(logger);
 	AssertTrue(logger->channel_count < ArraySize(logger->channels));
@@ -67,8 +64,7 @@ OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 name)
 	return channel;
 }
 
-internal LOG_Channel
-OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name)
+static LOG_Channel OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name)
 {
 	AssertTrue(logger);
 	AssertTrue(logger->channel_count < ArraySize(logger->channels));
@@ -85,16 +81,14 @@ OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Channel parent, String
 	return channel;
 }
 
-internal void
-OS_W32_LOG_CloseChannel(OS_W32_LOG_Logger *logger, LOG_Channel channel)
+static void OS_W32_LOG_CloseChannel(OS_W32_LOG_Logger *logger, LOG_Channel channel)
 {
 	AssertTrue(logger);
 	
 	logger->channels[channel.id].enabled = false;
 }
 
-internal void
-OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
+static void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
 {
     OS_W32_LOG_ChannelEntry *entry = &logger->channels[channel.id];
 
@@ -110,8 +104,7 @@ OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, ch
     }
 }
 
-internal i32
-OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
+static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 					  char *dst, i32 dst_size,
 					  LOG_Level level, LOG_Channel channel,
 					  const char *file, i32 line, const char *fn,
@@ -204,8 +197,7 @@ OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 	return len;
 }
 
-internal void
-OS_W32_LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
+static void OS_W32_LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
 {
 	if (count > 1)
 		snprintf(dst, (usize)dst_size, "%s (%ux)", body, count);
@@ -213,8 +205,7 @@ OS_W32_LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
 		snprintf(dst, (usize)dst_size, "%s", body);
 }
 
-internal void
-OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
+static void OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 {
 	if (!logger->dedup_active || OS_HandleIsNull(logger->file_stream))
 		return;
@@ -245,8 +236,7 @@ OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 	}
 }
 
-internal void
-OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
+static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 				  OS_W32_J_Context job_context,
 				  LOG_Level level, LOG_Channel channel,
 				  const char *file, i32 line, const char *fn,

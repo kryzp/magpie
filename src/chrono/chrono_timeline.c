@@ -1,24 +1,20 @@
 
-internal void
-CH_TimelineInit(CH_Timeline *timeline)
+static void CH_TimelineInit(CH_Timeline *timeline)
 {
 	MemZeroStruct(timeline);
 }
 
-internal void
-CH_TimelineStart(CH_Timeline *timeline)
+static void CH_TimelineStart(CH_Timeline *timeline)
 {
 	timeline->playing = true;
 }
 
-internal void
-CH_TimelineStop(CH_Timeline *timeline)
+static void CH_TimelineStop(CH_Timeline *timeline)
 {
 	timeline->playing = false;
 }
 
-internal void
-CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt)
+static void CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt)
 {
 	if (!timeline->playing)
 		return;
@@ -58,8 +54,7 @@ CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt)
 	timeline->elapsed += dt;
 }
 
-internal void
-CH_TimelineAdd(CH_Timeline *timeline,
+static void CH_TimelineAdd(CH_Timeline *timeline,
 			   CH_TimelineTriggerFn *Trigger,
 			   CH_TimelineActionFn *Action,
 			   void *data)
@@ -74,8 +69,7 @@ CH_TimelineAdd(CH_Timeline *timeline,
 	timeline->event_count++;
 }
 
-internal void
-CH_TimelineAddRepeatable(CH_Timeline *timeline,
+static void CH_TimelineAddRepeatable(CH_Timeline *timeline,
 						 CH_TimelineTriggerFn *Trigger,
 						 CH_TimelineActionFn *Action,
 						 void *data,
@@ -92,8 +86,7 @@ CH_TimelineAddRepeatable(CH_Timeline *timeline,
 	timeline->event_count++;
 }
 
-internal void
-CH_TimelineReset(CH_Timeline *timeline)
+static void CH_TimelineReset(CH_Timeline *timeline)
 {
 	timeline->finished = false;
 	timeline->elapsed = 0.f;
@@ -104,8 +97,7 @@ CH_TimelineReset(CH_Timeline *timeline)
    UTILITIES
    ================================================== */
 
-internal b32
-CH_TimelineTriggerAtTime(void *state, f32 elapsed, void *data)
+static b32 CH_TimelineTriggerAtTime(void *state, f32 elapsed, void *data)
 {
 	CH_TimelineTriggerAtTimeData *t = data;
 	return elapsed >= t->timestamp;

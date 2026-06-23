@@ -20,7 +20,7 @@ struct R_CullClearPassData
 	R_GraphBufHandle counter_handle;
 };
 
-R_PASS_RECORD_DEF(R_CullClearFn);
+static R_PASS_RECORD_DEF(R_CullClearFn);
 
 
 typedef struct R_CullPassData R_CullPassData;
@@ -43,8 +43,8 @@ struct R_CullPassData
 	};
 };
 
-R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
-R_PASS_RECORD_DEF(R_CullSphereComputeFn);
+static R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
+static R_PASS_RECORD_DEF(R_CullSphereComputeFn);
 
 
 typedef struct R_DrawStream R_DrawStream;
@@ -63,16 +63,16 @@ struct R_Culling
 	A_Handle sphere_shader;
 };
 
-internal void R_CullingInit         (R_Culling *cull, A_Registry *assets);
-internal void R_CullingDestroy      (R_Culling *cull);
+static void R_CullingInit         (R_Culling *cull, A_Registry *assets);
+static void R_CullingDestroy      (R_Culling *cull);
 
-internal R_DrawStream R_CullFrustum (R_Culling *cull,
+static R_DrawStream R_CullFrustum (R_Culling *cull,
 									 R_Graph *graph,
 									 const R_Bulletin *bt,
 									 R_CullFilter filter,
 									 const R_FrustumVolume *frustum);
 
-internal R_DrawStream R_CullSphere  (R_Culling *cull,
+static R_DrawStream R_CullSphere  (R_Culling *cull,
 									 R_Graph *graph,
 									 const R_Bulletin *bt,
 									 R_CullFilter filter,

@@ -16,10 +16,10 @@ struct Editor
 	b32          camera_driver_active;
 };
 
-internal void EditorInit      (Editor *editor, Arena *arena, LOG_Channel log_channel);
-internal void EditorDestroy   (Editor *editor);
-internal void EditorTick      (Editor *editor, const OS_InputState *input, f32 dt, f32 elapsed);
-internal void EditorHotLoad   (Editor *editor);
-internal void EditorHotUnload (Editor *editor);
+static void EditorInit      (Editor *editor, Arena *arena, LOG_Channel log_channel);
+static void EditorDestroy   (Editor *editor);
+static void EditorTick      (Editor *editor, const OS_InputState *input, f32 dt, f32 elapsed);
+static void EditorHotLoad   (Editor *editor);
+static void EditorHotUnload (Editor *editor);
 
 #endif // EDITOR_H

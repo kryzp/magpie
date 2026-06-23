@@ -1,6 +1,5 @@
 
-internal R_GraphTexture *
-R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
+static R_GraphTexture *R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
 {
 	AssertTrue(!R_GraphTexHandleIsNull(handle));
 	AssertTrue(handle.value <= graph->texture_ver_count);
@@ -13,8 +12,7 @@ R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
 	return &graph->texture_res[res_index];
 }
 
-internal R_GraphBuffer *
-R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
+static R_GraphBuffer *R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
 {
 	AssertTrue(!R_GraphBufHandleIsNull(handle));
 	AssertTrue(handle.value <= graph->buffer_ver_count);
@@ -27,22 +25,19 @@ R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
 	return &graph->buffer_res[res_index];
 }
 
-internal b32
-R_GraphTexVersionIsUnwritten(const R_Graph *graph, R_GraphTexHandle handle)
+static b32 R_GraphTexVersionIsUnwritten(const R_Graph *graph, R_GraphTexHandle handle)
 {
 	AssertTrue(!R_GraphTexHandleIsNull(handle));
 	return graph->texture_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
-internal b32
-R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
+static b32 R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	AssertTrue(!R_GraphBufHandleIsNull(handle));
 	return graph->buffer_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
-internal void
-R_GraphInit(R_Graph *graph, Arena *arena, G_Device *device, LOG_Channel log_channel)
+static void R_GraphInit(R_Graph *graph, Arena *arena, G_Device *device, LOG_Channel log_channel)
 {
 	MemZeroStruct(graph);
 	
@@ -57,16 +52,14 @@ R_GraphInit(R_Graph *graph, Arena *arena, G_Device *device, LOG_Channel log_chan
 	DebugLogI(graph->log_channel, "Initialized.");
 }
 
-internal void
-R_GraphDestroy(R_Graph *graph)
+static void R_GraphDestroy(R_Graph *graph)
 {
 	R_ResourcePoolDestroy(&graph->pool, graph->device);
 	
 	DebugLogI(graph->log_channel, "Destroyed.");
 }
 
-internal void
-R_GraphReset(R_Graph *graph)
+static void R_GraphReset(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->texture_res_count; i++)
 	{
@@ -104,8 +97,7 @@ R_GraphReset(R_Graph *graph)
 	R_ResourcePoolFlush(&graph->pool, graph->device);
 }
 
-internal R_Pass *
-R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
+static R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 {
 	AssertTrue(graph->pass_count < ArraySize(graph->passes));
 
@@ -124,20 +116,17 @@ R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 	return pass;
 }
 
-internal void
-R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle)
+static void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle)
 {
 	graph->backbuffer_handle = handle;
 }
 
-internal void
-R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
+static void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
 {
 	graph->present_filter = filter;
 }
 
-internal R_GraphTexHandle
-R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
+static R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
 {
 	AssertTrue(graph->texture_res_count < ArraySize(graph->texture_res));
 	AssertTrue(graph->texture_ver_count < ArraySize(graph->texture_ver));
@@ -162,8 +151,7 @@ R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
 	return (R_GraphTexHandle) { ver_index + 1 };
 }
 
-internal R_GraphBufHandle
-R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
+static R_GraphBufHandle R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
 {
 	AssertTrue(graph->buffer_res_count < ArraySize(graph->buffer_res));
 	AssertTrue(graph->buffer_ver_count < ArraySize(graph->buffer_ver));
@@ -188,8 +176,7 @@ R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
 	return (R_GraphBufHandle) { ver_index + 1 };
 }
 
-internal R_GraphTexHandle
-R_GraphImportTexture(R_Graph *graph, G_TextureKey external_key)
+static R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_TextureKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_texture_count; i++)
 	{
@@ -260,8 +247,7 @@ R_GraphImportTexture(R_Graph *graph, G_TextureKey external_key)
 	return handle;
 }
 
-internal R_GraphBufHandle
-R_GraphImportBuffer(R_Graph *graph, G_BufferKey external_key)
+static R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_BufferKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_buffer_count; i++)
 	{
@@ -320,8 +306,7 @@ R_GraphImportBuffer(R_Graph *graph, G_BufferKey external_key)
 	return handle;
 }
 
-internal R_GraphTexHandle
-R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index)
+static R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index)
 {
 	AssertTrue(!R_GraphTexHandleIsNull(parent));
 	AssertTrue(graph->texture_ver_count < ArraySize(graph->texture_ver));
@@ -341,8 +326,7 @@ R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_i
 	return (R_GraphTexHandle) { ver_index + 1 };
 }
 
-internal R_GraphBufHandle
-R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index)
+static R_GraphBufHandle R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index)
 {
 	AssertTrue(!R_GraphBufHandleIsNull(parent));
 	AssertTrue(graph->buffer_ver_count < ArraySize(graph->buffer_ver));
@@ -362,8 +346,7 @@ R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_i
 	return (R_GraphBufHandle) { ver_index + 1 };
 }
 
-internal void
-R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
+static void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->texture_res_count; i++)
 	{
@@ -386,8 +369,7 @@ R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
 	R_GraphGenerateBarriers          (graph);
 }
 
-internal void
-R_GraphPropagateDependencies(R_Graph *graph)
+static void R_GraphPropagateDependencies(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -440,8 +422,7 @@ R_GraphPropagateDependencies(R_Graph *graph)
 	}
 }
 
-internal void
-R_GraphBackpropagateDependencies(R_Graph *graph)
+static void R_GraphBackpropagateDependencies(R_Graph *graph)
 {
 	for (i32 i = (i32)graph->pass_count - 1; i >= 0; i--)
 	{
@@ -550,8 +531,7 @@ R_GraphBackpropagateDependencies(R_Graph *graph)
 	}
 }
 
-internal void
-R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
+static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -639,8 +619,7 @@ R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
 	}
 }
 
-internal void
-R_GraphGenerateBarriers(R_Graph *graph)
+static void R_GraphGenerateBarriers(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -699,8 +678,7 @@ R_GraphGenerateBarriers(R_Graph *graph)
 	}
 }
 
-internal void
-R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
+static void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
@@ -728,10 +706,10 @@ R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *ed
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
-								   &src, &edge->state,
-								   st->layout, target_layout,
-								   0, VK_REMAINING_MIP_LEVELS,
-								   0, VK_REMAINING_ARRAY_LAYERS);
+								 &src, &edge->state,
+								 st->layout, target_layout,
+								 0, VK_REMAINING_MIP_LEVELS,
+								 0, VK_REMAINING_ARRAY_LAYERS);
 
 		st->layout       = target_layout;
 		st->write_access = 0;
@@ -743,8 +721,7 @@ R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *ed
 	}
 }
 
-internal void
-R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
+static void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
@@ -772,10 +749,10 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
-								   &src, &edge->state,
-								   st->layout, target_layout,
-								   0, VK_REMAINING_MIP_LEVELS,
-								   0, VK_REMAINING_ARRAY_LAYERS);
+								 &src, &edge->state,
+								 st->layout, target_layout,
+								 0, VK_REMAINING_MIP_LEVELS,
+								 0, VK_REMAINING_ARRAY_LAYERS);
 
 		st->layout = target_layout;
 	}
@@ -799,11 +776,11 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
-								   &src_access,
-								   &dst_access,
-								   st->layout, target_layout,
-								   0, VK_REMAINING_MIP_LEVELS,
-								   0, VK_REMAINING_ARRAY_LAYERS);
+								 &src_access,
+								 &dst_access,
+								 st->layout, target_layout,
+								 0, VK_REMAINING_MIP_LEVELS,
+								 0, VK_REMAINING_ARRAY_LAYERS);
 
 		st->layout = target_layout;
 	}
@@ -813,8 +790,7 @@ R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *e
 	st->read_stages  = 0;
 }
 
-internal void
-R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
+static void R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
@@ -839,9 +815,9 @@ R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
-								  &src_access, &edge->state,
-								  edge->offset,
-								  edge->size ? edge->size : physical->size);
+								&src_access, &edge->state,
+								edge->offset,
+								edge->size ? edge->size : physical->size);
 
 		st->write_access = 0;
 		st->read_stages  = edge->state.stage;
@@ -852,8 +828,7 @@ R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge
 	}
 }
 
-internal void
-R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
+static void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
@@ -878,10 +853,10 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
-								  &src_access,
-								  &edge->state,
-								  edge->offset,
-								  edge->size ? edge->size : physical->size);
+								&src_access,
+								&edge->state,
+								edge->offset,
+								edge->size ? edge->size : physical->size);
 	}
 	else if (st->read_stages != 0)
 	{
@@ -914,8 +889,7 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 	st->read_stages  = 0;
 }
 
-internal void
-R_GraphExecute(R_Graph *graph,
+static void R_GraphExecute(R_Graph *graph,
 			   const G_Swapchain *swapchain,
 			   G_CmdBuffer *cmd,
 			   const R_Scene *scene,
@@ -927,10 +901,10 @@ R_GraphExecute(R_Graph *graph,
 		R_Pass *pass = &graph->passes[i];
 
 		/*
-		DebugLogD(graph->log_channel,
-				  "Executing Pass: %.*s, Culled: %s",
-				  String8VArg(pass->name),
-				  pass->is_culled ? "YES" : "NO");
+		  DebugLogD(graph->log_channel,
+		  "Executing Pass: %.*s, Culled: %s",
+		  String8VArg(pass->name),
+		  pass->is_culled ? "YES" : "NO");
 		*/
 		
 		if (pass->is_culled)
@@ -977,8 +951,7 @@ R_GraphExecute(R_Graph *graph,
 	}
 }
 
-internal void
-R_GraphPresentToSwapchain(R_Graph *graph,
+static void R_GraphPresentToSwapchain(R_Graph *graph,
 						  const G_Swapchain *swapchain,
 						  G_CmdBuffer *cmd)
 {
@@ -1021,9 +994,9 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 												0, VK_REMAINING_ARRAY_LAYERS);
 
 	G_CmdPipelineBarrier(cmd, 0,
-						   0, NULL,
-						   0, NULL,
-						   ArraySize(pre_blit_barriers), pre_blit_barriers);
+						 0, NULL,
+						 0, NULL,
+						 ArraySize(pre_blit_barriers), pre_blit_barriers);
 
 	
 	// Blit the backbuffer to the swapchain.
@@ -1056,17 +1029,17 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	G_AccessSt present_dst = { VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, VK_ACCESS_2_NONE };
 	
 	VkImageMemoryBarrier2 present_barrier = G_SyncTextureBarrier(dst_texture,
-																   &present_src,
-																   &present_dst,
-																   VK_IMAGE_LAYOUT_GENERAL,
-																   VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-																   0, 1,
-																   0, 1);
+																 &present_src,
+																 &present_dst,
+																 VK_IMAGE_LAYOUT_GENERAL,
+																 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+																 0, 1,
+																 0, 1);
 
 	G_CmdPipelineBarrier(cmd, 0,
-						   0, NULL,
-						   0, NULL,
-						   1, &present_barrier);
+						 0, NULL,
+						 0, NULL,
+						 1, &present_barrier);
 }
 
 /*
@@ -1075,16 +1048,14 @@ R_GraphPresentToSwapchain(R_Graph *graph,
  * THE RESOURCE NEVER GETS MODIFIED AS FAR AS I CARE
  */
 
-internal G_TextureKey
-R_GraphResolveTexture(const R_Graph *graph,
+static G_TextureKey R_GraphResolveTexture(const R_Graph *graph,
 					  R_GraphTexHandle handle)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 	return t->physical_key;
 }
 
-internal G_TextureViewKey
-R_GraphResolveTextureView(const R_Graph *graph,
+static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph,
 						  R_GraphTexHandle handle,
 						  G_SubresourceRange range)
 {
@@ -1100,16 +1071,14 @@ R_GraphResolveTextureView(const R_Graph *graph,
 	return G_DeviceTextureViewFetch(graph->device, &create_info);
 }
 
-internal G_BufferKey
-R_GraphResolveBuffer(const R_Graph *graph,
+static G_BufferKey R_GraphResolveBuffer(const R_Graph *graph,
 					 R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
 	return b->physical_key;
 }
 
-internal R_BufferRange
-R_GraphResolveBufferRange(const R_Graph *graph,
+static R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph,
 						  R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
@@ -1122,8 +1091,7 @@ R_GraphResolveBufferRange(const R_Graph *graph,
 	return range;
 }
 
-internal G_RenderInfo
-R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
+static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 {
 	G_RenderInfo render_info = {0};
 	
@@ -1199,8 +1167,7 @@ R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 	return render_info;
 }
 
-internal R_GraphMsaaTexture
-R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples)
+static R_GraphMsaaTexture R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples)
 {
 	R_TextureInfo msaa_info = *base;
 	R_TextureInfo resolve_info = *base;

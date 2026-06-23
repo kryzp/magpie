@@ -1,6 +1,5 @@
 
-internal G_TextureKey
-R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle)
+static G_TextureKey R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle)
 {
 	if (!A_IsValid(assets, handle) || !A_IsLoaded(assets, handle))
 		return G_TextureKeyNull();
@@ -9,8 +8,7 @@ R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle)
 	return asset->texture.key;
 }
 
-internal R_Material
-R_MaterialDefault(void)
+static R_Material R_MaterialDefault(void)
 {
 	R_Material mat = {0};
 
@@ -55,8 +53,7 @@ R_MaterialDefault(void)
 }
 
 // js slime me out gng
-internal R_Material
-R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets)
+static R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets)
 {
 	R_Material mat = R_MaterialDefault();
 

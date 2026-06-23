@@ -18,10 +18,10 @@ struct G_ShaderCompiler
 	LOG_Channel log_channel;
 };
 
-internal void G_ShaderCompilerInit     (G_ShaderCompiler *compiler, LOG_Channel log_channel);
-internal void G_ShaderCompilerShutdown (G_ShaderCompiler *compiler);
+static void G_ShaderCompilerInit     (G_ShaderCompiler *compiler, LOG_Channel log_channel);
+static void G_ShaderCompilerShutdown (G_ShaderCompiler *compiler);
 
-internal G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
+static G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
 															Arena *arena,
 															String8 source_path,
 															u32 search_path_count, const String8 *search_paths);

@@ -51,36 +51,36 @@ struct G_Context
    INTERNALS
    ================================================== */
 
-internal VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 														 VkImageTiling tiling,
 														 VkFormatFeatureFlags features,
 														 u32 candidate_count, const VkFormat *candidates);
 
-internal VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device);
+static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device);
 
-internal VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties);
+static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties);
 
-internal const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count);
+static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count);
 
-internal b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device);
+static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device);
 
-internal b32 G_ContextCheckForValidationLayerSupport(void);
+static b32 G_ContextCheckForValidationLayerSupport(void);
 
-internal G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
-internal u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
+static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 															  VkPhysicalDevice physical_device,
 															  VkPhysicalDeviceProperties2 properties,
 															  VkPhysicalDeviceFeatures2 features,
 															  b32 *has_essentials);
 
 
-internal VKAPI_ATTR VkBool32 VKAPI_CALL G_ContextVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+static VKAPI_ATTR VkBool32 VKAPI_CALL G_ContextVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 																	   VkDebugUtilsMessageTypeFlagsEXT message_type,
 																	   const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
 																	   void *user_data);
 
-internal VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 																 VkDebugUtilsMessengerCreateInfoEXT *debug_info,
 																 const VkAllocationCallbacks *allocator,
 																 VkDebugUtilsMessengerEXT *messenger);
@@ -89,7 +89,7 @@ internal VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instanc
    CONTEXT CORE
    ================================================== */
 
-internal G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx);
-internal void G_ContextDestroy(G_Context *context);
+static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx);
+static void G_ContextDestroy(G_Context *context);
 
 #endif // GRAPHICS_CONTEXT_H

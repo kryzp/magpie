@@ -65,45 +65,45 @@ struct E_World
    HELPERS
    ================================================== */
 
-internal u32  E_PoolAllocSlot (E_TypePool *pool);
-internal void E_PoolFreeSlot  (E_TypePool *pool, u32 index);
+static u32  E_PoolAllocSlot (E_TypePool *pool);
+static void E_PoolFreeSlot  (E_TypePool *pool, u32 index);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-internal void E_WorldInit    (E_World *world, Arena *arena, LOG_Channel log_channel);
-internal void E_WorldDestroy (E_World *world);
+static void E_WorldInit    (E_World *world, Arena *arena, LOG_Channel log_channel);
+static void E_WorldDestroy (E_World *world);
 
-internal void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active);
-internal void E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
+static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active);
+static void E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
 
 
 /* ==================================================
    PER-FRAME
    ================================================== */
 
-internal void E_WorldTickPreAnim     (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
-internal void E_WorldTickPostAnim    (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
-internal void E_WorldTickPostPhysics (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
+static void E_WorldTickPreAnim     (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
+static void E_WorldTickPostAnim    (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
+static void E_WorldTickPostPhysics (E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input);
 
-internal void E_WorldFlush(E_World *world); // Clean-up all entities marked for pending kill.
+static void E_WorldFlush(E_World *world); // Clean-up all entities marked for pending kill.
 
 
 /* ==================================================
    ENTITIES
    ================================================== */
 
-internal void *E_WorldSpawn (E_World *world, E_Type type);
-internal void  E_WorldKill  (E_World *world, E_UID uid);
+static void *E_WorldSpawn (E_World *world, E_Type type);
+static void  E_WorldKill  (E_World *world, E_UID uid);
 
 
 /* ==================================================
    LOOKUP
    ================================================== */
 
-internal void *E_WorldGet(E_World *world, E_UID uid);
+static void *E_WorldGet(E_World *world, E_UID uid);
 
 #define E_WorldGetHeader(world, uid) E_HeaderOf(E_WorldGet((world, (uid))))
 
@@ -117,15 +117,15 @@ struct E_GetAllReceipt
 	u32 stride;
 };
 
-internal E_GetAllReceipt E_WorldGetAll(E_World *world, E_Type type);
+static E_GetAllReceipt E_WorldGetAll(E_World *world, E_Type type);
 
 
 /* ==================================================
    MARKERS
    ================================================== */
 
-internal E_Marker *E_WorldAddMarker  (E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id);
-internal E_Marker *E_WorldFindMarker (E_World *world, String8 name);
+static E_Marker *E_WorldAddMarker  (E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id);
+static E_Marker *E_WorldFindMarker (E_World *world, String8 name);
 
 
 #endif // ENTITY_WORLD_H

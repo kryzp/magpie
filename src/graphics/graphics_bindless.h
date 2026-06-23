@@ -13,15 +13,13 @@ struct G_BindlessHandle
 	G_BindlessIndex value;
 };
 
-internal inline G_BindlessIndex
-G_BindlessIndexOf(G_BindlessHandle handle)
+static inline G_BindlessIndex G_BindlessIndexOf(G_BindlessHandle handle)
 {
 	// Just return the value.
 	return handle.value;
 }
 
-internal inline b32
-G_BindlessHandleValid(G_BindlessHandle handle)
+static inline b32 G_BindlessHandleValid(G_BindlessHandle handle)
 {
 	return (handle.value != 0) && (handle.value < G_BINDLESS_MAX_RESOURCES);
 }
@@ -65,19 +63,19 @@ struct G_Bindless
 	G_BindlessHandle free_views[128];
 };
 
-internal VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind);
+static VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind);
 
-internal void G_BindlessPushUpdate(G_Bindless *bindless,
+static void G_BindlessPushUpdate(G_Bindless *bindless,
 									 G_BindlessKind kind, G_BindlessHandle handle,
 									 VkSampler sampler, VkImageView view);
 
-internal G_BindlessHandle G_BindlessRegisterSampler (G_Bindless *bindless, VkSampler sampler);
-internal G_BindlessHandle G_BindlessRegisterView    (G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+static G_BindlessHandle G_BindlessRegisterSampler (G_Bindless *bindless, VkSampler sampler);
+static G_BindlessHandle G_BindlessRegisterView    (G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-internal void G_BindlessUpdateSampler (G_Bindless *bindless, G_BindlessHandle handle, VkSampler sampler);
-internal void G_BindlessUpdateView    (G_Bindless *bindless, G_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+static void G_BindlessUpdateSampler (G_Bindless *bindless, G_BindlessHandle handle, VkSampler sampler);
+static void G_BindlessUpdateView    (G_Bindless *bindless, G_BindlessHandle handle, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-internal void G_BindlessFreeSampler (G_Bindless *bindless, G_BindlessHandle handle);
-internal void G_BindlessFreeView    (G_Bindless *bindless, G_BindlessHandle handle);
+static void G_BindlessFreeSampler (G_Bindless *bindless, G_BindlessHandle handle);
+static void G_BindlessFreeView    (G_Bindless *bindless, G_BindlessHandle handle);
 
 #endif // GRAPHICS_BINDLESS_H

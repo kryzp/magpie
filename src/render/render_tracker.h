@@ -28,10 +28,10 @@ struct R_ResourceTracker
 };
 
 // return NULL if not tracked!!
-internal const R_ResourceState *R_ResourceTrackerFindTexture (R_ResourceTracker *tracker, G_TextureKey key);
-internal const R_ResourceState *R_ResourceTrackerFindBuffer  (R_ResourceTracker *tracker, G_BufferKey key);
+static const R_ResourceState *R_ResourceTrackerFindTexture (R_ResourceTracker *tracker, G_TextureKey key);
+static const R_ResourceState *R_ResourceTrackerFindBuffer  (R_ResourceTracker *tracker, G_BufferKey key);
 
-internal void R_ResourceTrackerSetTexture (R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state);
-internal void R_ResourceTrackerSetBuffer  (R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state);
+static void R_ResourceTrackerSetTexture (R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state);
+static void R_ResourceTrackerSetBuffer  (R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state);
 
 #endif // RENDER_TRACKER_H

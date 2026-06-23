@@ -1,6 +1,5 @@
 
-internal R_FrameParams
-R_FrameParamsInterp(const R_FrameParams *prev,
+static R_FrameParams R_FrameParamsInterp(const R_FrameParams *prev,
 					const R_FrameParams *curr,
 					f32 alpha)
 {

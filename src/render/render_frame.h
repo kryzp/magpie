@@ -15,7 +15,7 @@ struct R_FrameParams
 	R_Camera camera; // todo this has to be interpolated
 };
 
-internal R_FrameParams R_FrameParamsInterp(const R_FrameParams *prev,
+static R_FrameParams R_FrameParamsInterp(const R_FrameParams *prev,
 										   const R_FrameParams *curr,
 										   f32 alpha);
 

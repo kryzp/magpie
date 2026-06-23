@@ -9,14 +9,12 @@ struct R_BufferRange
 	u64 offset;
 };
 
-internal inline void *
-R_BufferRangeMap(const R_BufferRange *range, const G_Device *device)
+static inline void *R_BufferRangeMap(const R_BufferRange *range, const G_Device *device)
 {
 	return (void *)((u8 *)G_DeviceBufferMap(device, range->buffer) + range->offset);
 }
 
-internal inline u64
-R_BufferRangeAddress(const R_BufferRange *range, const G_Device *device)
+static inline u64 R_BufferRangeAddress(const R_BufferRange *range, const G_Device *device)
 {
 	return G_DeviceBufferAddress(device, range->buffer) + range->offset;
 }

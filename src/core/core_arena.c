@@ -1,6 +1,5 @@
 
-internal Arena
-ArenaAlloc(u64 size)
+static Arena ArenaAlloc(u64 size)
 {
 	u64 page = osapi->GetPageSize();
 	u64 reserve_size = MemAlignUp(size, page);
@@ -14,8 +13,7 @@ ArenaAlloc(u64 size)
 	return arena;
 }
 
-internal void
-ArenaRelease(Arena *arena)
+static void ArenaRelease(Arena *arena)
 {
 	if (!arena->base)
 		DebugPrintB("Arena (%p) attempted to release by null base pointer.", arena);
@@ -23,8 +21,7 @@ ArenaRelease(Arena *arena)
 	osapi->VirtualRelease(arena->base);
 }
 
-internal u64
-ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
+static u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 {
 	DebugPrintAssert(parent->capacity >= parent->used, "Arena (%p) out of space (%llu bytes used >= %llu bytes of capacity).", parent, parent->used, parent->capacity);
 	
@@ -43,8 +40,7 @@ ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 	return safe_size;
 }
 
-internal void *
-ArenaPush(Arena *arena, u64 bytes, u64 alignment)
+static void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
 	DebugPrintAssert(arena, "Arena must not be NULL!");
 	DebugPrintAssert(arena->base, "Arena base pointer must not be NULL!");
@@ -67,9 +63,9 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 
 		DebugPrintB("Arena (%p) out of space, requested %.2f MB (%llu bytes), capacity %.2f MB (%llu bytes), used %.2f MB (%llu bytes) (aligned to %.2f MB, free %.2f MB).",
 					arena,
-					bytes_mb,    bytes,
+					bytes_mb, bytes,
 					capacity_mb, arena->capacity,
-					used_mb,     arena->used,
+					used_mb, arena->used,
 					aligned_mb,
 					free_mb);
 	}
@@ -92,15 +88,13 @@ ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 	return mem;
 }
 
-internal void
-ArenaPopTo(Arena *arena, u64 to)
+static void ArenaPopTo(Arena *arena, u64 to)
 {
 	AssertTrue(to <= arena->capacity);
 	arena->used = to;
 }
 
-internal void
-ArenaPop(Arena *arena, u64 bytes)
+static void ArenaPop(Arena *arena, u64 bytes)
 {
 	if (arena->used <= bytes)
 		arena->used = 0;
@@ -109,8 +103,7 @@ ArenaPop(Arena *arena, u64 bytes)
 }
 
 /*
-internal void
-ArenaResizeLastBy(Arena *arena, u64 bytes)
+static void ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
    	if (arena->used + bytes > arena->capacity)
 	{
@@ -121,8 +114,7 @@ ArenaResizeLastBy(Arena *arena, u64 bytes)
 	arena->used += bytes;
 }
 
-internal void
-ArenaResizeLastTo(Arena *arena, u64 bytes)
+static void ArenaResizeLastTo(Arena *arena, u64 bytes)
 {
 	u64 new_used = arena->last_alloc_offset + bytes;
 
@@ -136,8 +128,7 @@ ArenaResizeLastTo(Arena *arena, u64 bytes)
 }
 */
 
-internal void
-ArenaReset(Arena *arena)
+static void ArenaReset(Arena *arena)
 {
 	// TODO: this is just for debug purposes so remove in release
 	//       0xCD is the standard sentinel for "use-after-free" indicators.
@@ -147,8 +138,7 @@ ArenaReset(Arena *arena)
 	arena->used = 0;
 }
 
-internal void
-ArenaResetAndDecommit(Arena *arena)
+static void ArenaResetAndDecommit(Arena *arena)
 {
 	if (arena->committed > 0)
 	{
@@ -159,8 +149,7 @@ ArenaResetAndDecommit(Arena *arena)
 	arena->used = 0;
 }
 
-internal void
-ArenaZero(Arena *arena)
+static void ArenaZero(Arena *arena)
 {
 	MemSet(arena->base, 0, arena->capacity);
 }

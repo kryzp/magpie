@@ -44,8 +44,7 @@ struct VS_Output
 };
 
 [shader("vertex")]
-VS_Output
-VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
+VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 {
 	uint index = instance;//args.instance_buffer[instance];
 
@@ -96,8 +95,7 @@ VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInstanceID)
 }
 
 [shader("fragment")]
-float4
-FragmentMain(VS_Output input) : SV_Target
+float4 FragmentMain(VS_Output input) : SV_Target
 {
 	frame::FrameData frame_data = *args.frame_data;
 	scene::Material mat = args.materials[input.material_index];

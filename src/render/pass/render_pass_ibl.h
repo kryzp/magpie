@@ -7,7 +7,7 @@ struct R_BRDFLutPassData
 	G_ShaderKey shader;
 };
 
-R_PASS_RECORD_DEF(R_BRDFLutPassFn);
+static R_PASS_RECORD_DEF(R_BRDFLutPassFn);
 
 // ---
 
@@ -21,7 +21,7 @@ struct R_IBLPassIrradianceData
 	const R_Mesh       *skybox_mesh;
 };
 
-R_PASS_RECORD_DEF(R_IBLPassIrradianceFn);
+static R_PASS_RECORD_DEF(R_IBLPassIrradianceFn);
 
 // ---
 
@@ -36,6 +36,6 @@ struct R_IBLPassPrefilterData
 	f32                 roughness;
 };
 
-R_PASS_RECORD_DEF(R_IBLPassPrefilterFn);
+static R_PASS_RECORD_DEF(R_IBLPassPrefilterFn);
 
 #endif // RENDER_PASS_IBL_H

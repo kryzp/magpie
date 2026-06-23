@@ -52,7 +52,7 @@ struct G_DepthStencilSt
 	G_StencilSt stencil_back;
 };
 
-internal G_BlendSt G_BlendStInit(void);
-internal G_DepthStencilSt G_DepthStencilStInit(void);
+static G_BlendSt G_BlendStInit(void);
+static G_DepthStencilSt G_DepthStencilStInit(void);
 
 #endif // GRAPHICS_BLEND_H

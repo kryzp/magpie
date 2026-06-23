@@ -51,9 +51,9 @@ struct G_ComputePipelineDef
 	G_ShaderKey program;
 };
 
-internal G_GraphicsPipelineDef G_GraphicsPipelineDefInit     (G_ShaderKey program);
-internal G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo (G_ShaderKey program, const G_RenderInfo *info);
+static G_GraphicsPipelineDef G_GraphicsPipelineDefInit     (G_ShaderKey program);
+static G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo (G_ShaderKey program, const G_RenderInfo *info);
 
-internal G_ComputePipelineDef  G_ComputePipelineDefInit      (G_ShaderKey program);
+static G_ComputePipelineDef  G_ComputePipelineDefInit      (G_ShaderKey program);
 
 #endif // GRAPHICS_PIPELINE_H

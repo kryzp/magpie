@@ -1,6 +1,5 @@
 
-internal ScratchArena
-ScratchBegin(Arena * const *conflicts, u32 conflict_count)
+static ScratchArena ScratchBegin(Arena * const *conflicts, u32 conflict_count)
 {
 	Arena *arena = osapi->JobGetScratch(conflicts, conflict_count);
 	
@@ -11,14 +10,12 @@ ScratchBegin(Arena * const *conflicts, u32 conflict_count)
 	return scratch;
 }
 
-internal void
-ScratchClear(const ScratchArena *scratch)
+static void ScratchClear(const ScratchArena *scratch)
 {
 	ArenaPopTo(scratch->arena, scratch->checkpoint);
 }
 
-internal void
-ScratchRelease(ScratchArena *scratch)
+static void ScratchRelease(ScratchArena *scratch)
 {
 	ArenaPopTo(scratch->arena, scratch->checkpoint);
 

@@ -1,6 +1,5 @@
 
-internal const R_ResourceState *
-R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, G_TextureKey key)
+static const R_ResourceState *R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, G_TextureKey key)
 {
 	for (u32 i = 0; i < tracker->texture_count; i++)
 	{
@@ -13,8 +12,7 @@ R_ResourceTrackerFindTexture(R_ResourceTracker *tracker, G_TextureKey key)
 	return NULL;
 }
 
-internal const R_ResourceState *
-R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, G_BufferKey key)
+static const R_ResourceState *R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, G_BufferKey key)
 {
 	for (u32 i = 0; i < tracker->buffer_count; i++)
 	{
@@ -27,8 +25,7 @@ R_ResourceTrackerFindBuffer(R_ResourceTracker *tracker, G_BufferKey key)
 	return NULL;
 }
 
-internal void
-R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state)
+static void R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state)
 {
 	for (u32 i = 0; i < tracker->texture_count; i++)
 	{
@@ -51,8 +48,7 @@ R_ResourceTrackerSetTexture(R_ResourceTracker *tracker, G_TextureKey key, R_Reso
 	tracker->texture_count++;
 }
 
-internal void
-R_ResourceTrackerSetBuffer(R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state)
+static void R_ResourceTrackerSetBuffer(R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state)
 {
 	for (u32 i = 0; i < tracker->buffer_count; i++)
 	{

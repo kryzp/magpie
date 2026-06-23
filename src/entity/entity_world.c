@@ -1,6 +1,5 @@
 
-internal u32
-E_PoolAllocSlot(E_TypePool *pool)
+static u32 E_PoolAllocSlot(E_TypePool *pool)
 {
 	if (pool->free_index_count > 0)
 		return pool->free_indices[--pool->free_index_count];
@@ -9,8 +8,7 @@ E_PoolAllocSlot(E_TypePool *pool)
 	return pool->count++;
 }
 
-internal void
-E_PoolFreeSlot(E_TypePool *pool, u32 index)
+static void E_PoolFreeSlot(E_TypePool *pool, u32 index)
 {
 	AssertTrue(pool->free_index_count < pool->capacity);
 
@@ -18,8 +16,7 @@ E_PoolFreeSlot(E_TypePool *pool, u32 index)
 	pool->free_index_count++;
 }
 
-internal void
-E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
+static void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 {
 	MemZeroStruct(world);
 
@@ -36,8 +33,7 @@ E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 	DebugLogI(world->log_channel, "World Initialized.");
 }
 
-internal void
-E_WorldDestroy(E_World *world)
+static void E_WorldDestroy(E_World *world)
 {
 	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
@@ -64,15 +60,13 @@ E_WorldDestroy(E_World *world)
 	DebugLogI(world->log_channel, "World Destroyed.");
 }
 
-internal void
-E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
+static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
 {
 	AssertTrue(layer_id < world->layer_count);
 	world->layers[layer_id].active = active;
 }
 
-internal void
-E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
+static void E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 {
 	E_TypePool *pool = &world->type_pools[desc->type];
 
@@ -87,8 +81,7 @@ E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 	world->type_registry[desc->type] = *desc;
 }
 
-internal void
-E_WorldTickPreAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
+static void E_WorldTickPreAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	E_TickContext ctx = {0};
 	ctx.world = world;
@@ -128,8 +121,7 @@ E_WorldTickPreAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputS
 	}
 }
 
-internal void
-E_WorldTickPostAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
+static void E_WorldTickPostAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	E_TickContext ctx = {0};
 	ctx.world = world;
@@ -169,8 +161,7 @@ E_WorldTickPostAnim(E_World *world, E_EventQueue *events, f32 dt, const OS_Input
 	}
 }
 
-internal void
-E_WorldTickPostPhysics(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
+static void E_WorldTickPostPhysics(E_World *world, E_EventQueue *events, f32 dt, const OS_InputState *input)
 {
 	E_TickContext ctx = {0};
 	ctx.world = world;
@@ -210,8 +201,7 @@ E_WorldTickPostPhysics(E_World *world, E_EventQueue *events, f32 dt, const OS_In
 	}
 }
 
-internal void
-E_WorldFlush(E_World *world)
+static void E_WorldFlush(E_World *world)
 {
 	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
@@ -248,8 +238,7 @@ E_WorldFlush(E_World *world)
 	}
 }
 
-internal void *
-E_WorldSpawn(E_World *world, E_Type type)
+static void *E_WorldSpawn(E_World *world, E_Type type)
 {
 	const E_TypeDesc *desc = &world->type_registry[type];
 	E_TypePool *pool = &world->type_pools[type];
@@ -280,8 +269,7 @@ E_WorldSpawn(E_World *world, E_Type type)
 	return entity;
 }
 
-internal void
-E_WorldKill(E_World *world, E_UID uid)
+static void E_WorldKill(E_World *world, E_UID uid)
 {
 	void *entity = E_WorldGet(world, uid);
 
@@ -292,8 +280,7 @@ E_WorldKill(E_World *world, E_UID uid)
 	}
 }
 
-internal void *
-E_WorldGet(E_World *world, E_UID uid)
+static void *E_WorldGet(E_World *world, E_UID uid)
 {
 	for (u32 t = 0; t < E_Type_COUNT; t++)
 	{
@@ -320,8 +307,7 @@ E_WorldGet(E_World *world, E_UID uid)
 	return NULL;
 }
 
-internal E_GetAllReceipt
-E_WorldGetAll(E_World *world, E_Type type)
+static E_GetAllReceipt E_WorldGetAll(E_World *world, E_Type type)
 {
 	E_TypePool *pool = &world->type_pools[type];
 
@@ -334,8 +320,7 @@ E_WorldGetAll(E_World *world, E_Type type)
 	return receipt;
 }
 
-internal E_Marker *
-E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
+static E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
 {
 	AssertTrue(world->marker_count < ArraySize(world->markers));
 	
@@ -351,8 +336,7 @@ E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 lay
 	return m;
 }
 
-internal E_Marker *
-E_WorldFindMarker(E_World *world, String8 name)
+static E_Marker *E_WorldFindMarker(E_World *world, String8 name)
 {
 	u64 hash = HashStr8(name);
 	

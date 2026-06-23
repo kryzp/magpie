@@ -100,9 +100,9 @@ struct R_Material
 	v4 reflection_plane;
 };
 
-internal G_TextureKey R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle);
+static G_TextureKey R_MaterialResolveAssetTexture(A_Registry *assets, A_Handle handle);
 
-internal R_Material R_MaterialDefault(void);
-internal R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets);
+static R_Material R_MaterialDefault(void);
+static R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Registry *assets);
 
 #endif // RENDER_MATERIAL_H

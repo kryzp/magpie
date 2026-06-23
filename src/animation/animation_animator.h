@@ -66,30 +66,30 @@ struct AN_Animator
    HELPERS
    ================================================== */
 
-internal m4 AN_TRSToM4(AN_TRS trs);
-internal AN_TRS AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u);
+static m4 AN_TRSToM4(AN_TRS trs);
+static AN_TRS AN_TRSBlend(AN_TRS a, AN_TRS b, f32 u);
 
-internal f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
-internal AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts);
-internal void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs);
+static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
+static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts);
+static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_TRS *local_trs);
 
 
 /* ==================================================
    ANIMATOR
    ================================================== */
 
-internal void       AN_AnimatorSelect            (AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle);
-internal void       AN_AnimatorTick              (AN_Animator *animator, A_Registry *assets, f32 dt);
+static void       AN_AnimatorSelect            (AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle);
+static void       AN_AnimatorTick              (AN_Animator *animator, A_Registry *assets, f32 dt);
 
-internal void       AN_AnimatorPlay              (AN_Animator *animator, u32 clip, b32 loop);
-internal b32        AN_AnimatorPlayByName        (AN_Animator *animator, A_Registry *assets, String8 name, b32 loop);
+static void       AN_AnimatorPlay              (AN_Animator *animator, u32 clip, b32 loop);
+static b32        AN_AnimatorPlayByName        (AN_Animator *animator, A_Registry *assets, String8 name, b32 loop);
 
-internal void       AN_AnimatorCrossFadeTo       (AN_Animator *animator, u32 clip, b32 loop, f32 blend_duration);
-internal b32        AN_AnimatorCrossFadeToByName (AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 blend_duration);
+static void       AN_AnimatorCrossFadeTo       (AN_Animator *animator, u32 clip, b32 loop, f32 blend_duration);
+static b32        AN_AnimatorCrossFadeToByName (AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 blend_duration);
 
-internal b32        AN_AnimatorFinished          (const AN_Animator *animator);
+static b32        AN_AnimatorFinished          (const AN_Animator *animator);
 
-internal AN_Palette AN_AnimatorPalette           (AN_Animator *animator, i32 skin_index);
+static AN_Palette AN_AnimatorPalette           (AN_Animator *animator, i32 skin_index);
 
 
 #endif // ANIMATION_ANIMATOR_H

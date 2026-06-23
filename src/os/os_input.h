@@ -303,7 +303,7 @@ struct OS_GamepadState
 	f32 right_trigger;
 };
 
-internal void OS_GamepadStateSetAxisValue(OS_GamepadState *st, OS_GamepadAxis axis, f32 value);
+static void OS_GamepadStateSetAxisValue(OS_GamepadState *st, OS_GamepadAxis axis, f32 value);
 
 typedef struct OS_InputState OS_InputState;
 struct OS_InputState
@@ -324,23 +324,23 @@ struct OS_InputState
 	OS_GamepadState gamepads[OS_MAX_GAMEPADS];
 };
 
-internal b32 OS_KbDown     (const OS_InputState *st, OS_KeyboardKey k);
-internal b32 OS_KbPressed  (const OS_InputState *st, OS_KeyboardKey k);
-internal b32 OS_KbReleased (const OS_InputState *st, OS_KeyboardKey k);
+static b32 OS_KbDown     (const OS_InputState *st, OS_KeyboardKey k);
+static b32 OS_KbPressed  (const OS_InputState *st, OS_KeyboardKey k);
+static b32 OS_KbReleased (const OS_InputState *st, OS_KeyboardKey k);
 
-internal b32 OS_MbDown     (const OS_InputState *st, OS_MouseButton b);
-internal b32 OS_MbPressed  (const OS_InputState *st, OS_MouseButton b);
-internal b32 OS_MbReleased (const OS_InputState *st, OS_MouseButton b);
+static b32 OS_MbDown     (const OS_InputState *st, OS_MouseButton b);
+static b32 OS_MbPressed  (const OS_InputState *st, OS_MouseButton b);
+static b32 OS_MbReleased (const OS_InputState *st, OS_MouseButton b);
 
-internal b32 OS_GpDown     (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
-internal b32 OS_GpPressed  (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
-internal b32 OS_GpReleased (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
+static b32 OS_GpDown     (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
+static b32 OS_GpPressed  (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
+static b32 OS_GpReleased (const OS_InputState *st, OS_GamepadButton b, u32 player_index);
 
-internal b32 OS_KbShift    (const OS_InputState *st);
-internal b32 OS_KbCtrl     (const OS_InputState *st);
-internal b32 OS_KbAlt      (const OS_InputState *st);
+static b32 OS_KbShift    (const OS_InputState *st);
+static b32 OS_KbCtrl     (const OS_InputState *st);
+static b32 OS_KbAlt      (const OS_InputState *st);
 
 // 0 <= lo, hi <= 1
-//internal void OS_RumbleGamepad(u32 index, f32 lo, f32 hi, f32 duration_s);
+//static void OS_RumbleGamepad(u32 index, f32 lo, f32 hi, f32 duration_s);
 
 #endif // OS_INPUT_H

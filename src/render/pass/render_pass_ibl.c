@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_BRDFLutPassFn)
+static R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -15,7 +15,7 @@ R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 	G_CmdDrawV        (cmd, 3);
 }
 
-R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
+static R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -50,7 +50,7 @@ R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 
 }
 
-R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
+static R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;

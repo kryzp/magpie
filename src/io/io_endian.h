@@ -9,9 +9,9 @@ typedef enum IO_Endian
 }
 IO_Endian;
 
-internal b32 IO_IsLittleEndian(void);
-internal b32 IO_IsBigEndian(void);
+static b32 IO_IsLittleEndian(void);
+static b32 IO_IsBigEndian(void);
 
-internal IO_Endian IO_GetEndian(void);
+static IO_Endian IO_GetEndian(void);
 
 #endif // IO_ENDIAN_H

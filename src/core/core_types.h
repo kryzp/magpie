@@ -14,9 +14,6 @@
 #define true   1
 #define false  0
 
-#define internal    static
-#define global      static
-
 #define ArraySize(arr)      (sizeof(arr) / sizeof((arr)[0]))
 
 #define MemCopy             memcpy

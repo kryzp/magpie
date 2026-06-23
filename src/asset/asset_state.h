@@ -17,8 +17,7 @@ A_State;
  * TODO: Get rid of these functions just do clear checks in the asset manager this is just making code harder.
  */
 
-internal inline b32
-A_StateIsLoading(A_State st)
+static inline b32 A_StateIsLoading(A_State st)
 {
 	return
 		st == A_State_CpuStage ||
@@ -26,23 +25,20 @@ A_StateIsLoading(A_State st)
 		st == A_State_GpuStage;
 }
 
-internal inline b32
-A_StateNeedsLoad(A_State st)
+static inline b32 A_StateNeedsLoad(A_State st)
 {
 	return
 		st == A_State_Unloaded ||
 		st == A_State_Failed;
 }
 
-internal inline b32
-A_StateIsLoaded(A_State st)
+static inline b32 A_StateIsLoaded(A_State st)
 {
 	return
 		st == A_State_Ready;
 }
 
-internal inline b32
-A_StateIsFinalized(A_State st)
+static inline b32 A_StateIsFinalized(A_State st)
 {
 	return
 		st == A_State_Ready ||

@@ -3,26 +3,25 @@
    SCRIPTING
    ================================================== */
 
-S_BINDING_DEF(S_BND_DebugLog)
+static S_BINDING_DEF(S_BND_DebugLog)
 {
 	String8 msg = S_CtxGetArgStr(ctx, 0);
 	DebugLogD(ctx->system->log_channel, "%.*s", String8VArg(msg));
 }
 
-S_BINDING_DEF(S_BND_WaitSeconds)
+static S_BINDING_DEF(S_BND_WaitSeconds)
 {
 	f32 s = S_CtxGetArgF32(ctx, 0); 
 	S_CtxYieldTime(ctx, s);
 }
 
-S_BINDING_DEF(S_BND_WaitSignal)
+static S_BINDING_DEF(S_BND_WaitSignal)
 {
 	String8 sig = S_CtxGetArgStr(ctx, 0);
 	S_CtxYieldSignal(ctx, sig);
 }
 
-internal void
-AppInitScripting(App *app)
+static void AppInitScripting(App *app)
 {
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
 	
@@ -33,14 +32,12 @@ AppInitScripting(App *app)
 	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  S_BND_WaitSignal);
 }
 
-internal void
-AppDestroyScripting(App *app)
+static void AppDestroyScripting(App *app)
 {
 	S_Destroy(app->scripting_system);
 }
 
-internal void
-AppHotLoadScripting(App *app)
+static void AppHotLoadScripting(App *app)
 {
 	/*
 	 * this is a super hacky measure but there's no other
@@ -58,8 +55,7 @@ AppHotLoadScripting(App *app)
 	AppInitScripting(app);
 }
 
-internal void
-AppHotUnloadScripting(App *app)
+static void AppHotUnloadScripting(App *app)
 {
 	AppDestroyScripting(app);
 }
@@ -69,8 +65,7 @@ AppHotUnloadScripting(App *app)
    GRAPHICS
    ================================================== */
 
-internal void
-AppInitGraphics(App *app)
+static void AppInitGraphics(App *app)
 {
 	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
 	
@@ -81,22 +76,19 @@ AppInitGraphics(App *app)
 	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 }
 
-internal void
-AppDestroyGraphics(App *app)
+static void AppDestroyGraphics(App *app)
 {
 	G_ShaderCompilerShutdown(&app->shader_compiler);
 	G_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
 	G_DeviceDestroy(&app->graphics_device);
 }
 
-internal void
-AppHotLoadGraphics(App *app)
+static void AppHotLoadGraphics(App *app)
 {
 	G_DeviceHotLoad(&app->graphics_device);
 }
 
-internal void
-AppHotUnloadGraphics(App *app)
+static void AppHotUnloadGraphics(App *app)
 {
 	G_DeviceHotUnload(&app->graphics_device);
 }
@@ -106,8 +98,7 @@ AppHotUnloadGraphics(App *app)
    AUDIO
    ================================================== */
 
-internal void
-AppInitAudio(App *app)
+static void AppInitAudio(App *app)
 {
 	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
 	
@@ -119,20 +110,17 @@ AppInitAudio(App *app)
 			app->audio_backend);
 }
 
-internal void
-AppDestroyAudio(App *app)
+static void AppDestroyAudio(App *app)
 {
 	AU_Shutdown(&app->audio_system);
 	AU_BackendShutdown(app->audio_backend);
 }
 
-internal void
-AppHotLoadAudio(App *app)
+static void AppHotLoadAudio(App *app)
 {
 }
 
-internal void
-AppHotUnloadAudio(App *app)
+static void AppHotUnloadAudio(App *app)
 {
 }
 
@@ -141,8 +129,7 @@ AppHotUnloadAudio(App *app)
    ASSETS
    ================================================== */
 
-internal void
-AppInitAssets(App *app)
+static void AppInitAssets(App *app)
 {
 	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
 	
@@ -160,19 +147,16 @@ AppInitAssets(App *app)
 	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
 }
 
-internal void
-AppDestroyAssets(App *app)
+static void AppDestroyAssets(App *app)
 {
 	A_Destroy(&app->assets);
 }
 
-internal void
-AppHotLoadAssets(App *app)
+static void AppHotLoadAssets(App *app)
 {
 }
 
-internal void
-AppHotUnloadAssets(App *app)
+static void AppHotUnloadAssets(App *app)
 {
 }
 
@@ -181,27 +165,23 @@ AppHotUnloadAssets(App *app)
    ANIMATION
    ================================================== */
 
-internal void
-AppInitAnimation(App *app)
+static void AppInitAnimation(App *app)
 {
 	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
 	
 	AN_SystemInit(&app->animation_system, app->animation_log_channel);
 }
 
-internal void
-AppDestroyAnimation(App *app)
+static void AppDestroyAnimation(App *app)
 {
 	AN_SystemDestroy(&app->animation_system);
 }
 
-internal void
-AppHotLoadAnimation(App *app)
+static void AppHotLoadAnimation(App *app)
 {
 }
 
-internal void
-AppHotUnloadAnimation(App *app)
+static void AppHotUnloadAnimation(App *app)
 {
 }
 
@@ -210,8 +190,7 @@ AppHotUnloadAnimation(App *app)
    RENDER
    ================================================== */
 
-internal void
-AppInitRender(App *app)
+static void AppInitRender(App *app)
 {
 	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
   	
@@ -232,8 +211,7 @@ AppInitRender(App *app)
 	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
 }
 
-internal void
-AppDestroyRender(App *app)
+static void AppDestroyRender(App *app)
 {
 	R_SystemDestroy(&app->render_system);
 	
@@ -243,14 +221,12 @@ AppDestroyRender(App *app)
 	G_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
 }
 
-internal void
-AppHotLoadRender(App *app)
+static void AppHotLoadRender(App *app)
 {
 	R_SystemHotLoad(&app->render_system);
 }
 
-internal void
-AppHotUnloadRender(App *app)
+static void AppHotUnloadRender(App *app)
 {
 }
 
@@ -259,27 +235,23 @@ AppHotUnloadRender(App *app)
    ENTITY
    ================================================== */
 
-internal void
-AppInitPhysics(App *app)
+static void AppInitPhysics(App *app)
 {
 	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
 
 	P_EngineInit(&app->physics_engine, app->physics_log_channel);
 }
 
-internal void
-AppDestroyPhysics(App *app)
+static void AppDestroyPhysics(App *app)
 {
 	P_EngineDestroy(&app->physics_engine);
 }
 
-internal void
-AppHotLoadPhysics(App *app)
+static void AppHotLoadPhysics(App *app)
 {
 }
 
-internal void
-AppHotUnloadPhysics(App *app)
+static void AppHotUnloadPhysics(App *app)
 {
 }
 
@@ -288,8 +260,7 @@ AppHotUnloadPhysics(App *app)
    ENTITY
    ================================================== */
 
-internal void
-AppInitEntity(App *app)
+static void AppInitEntity(App *app)
 {
 	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
@@ -299,19 +270,16 @@ AppInitEntity(App *app)
 	E_RegistryPopulate(&app->world);
 }
 
-internal void
-AppDestroyEntity(App *app)
+static void AppDestroyEntity(App *app)
 {
 	E_WorldDestroy(&app->world);
 }
 
-internal void
-AppHotLoadEntity(App *app)
+static void AppHotLoadEntity(App *app)
 {
 }
 
-internal void
-AppHotUnloadEntity(App *app)
+static void AppHotUnloadEntity(App *app)
 {
 }
 
@@ -320,28 +288,24 @@ AppHotUnloadEntity(App *app)
    EDITOR
    ================================================== */
 
-internal void
-AppInitEditor(App *app)
+static void AppInitEditor(App *app)
 {
 	app->editor_log_channel = osapi->LogChannelOpen(String8Lit("EDITOR"));
 
 	EditorInit(&app->editor, &app->editor_arena, app->editor_log_channel);
 }
 
-internal void
-AppDestroyEditor(App *app)
+static void AppDestroyEditor(App *app)
 {
 	EditorDestroy(&app->editor);
 }
 
-internal void
-AppHotLoadEditor(App *app)
+static void AppHotLoadEditor(App *app)
 {
 	EditorHotLoad(&app->editor);
 }
 
-internal void
-AppHotUnloadEditor(App *app)
+static void AppHotUnloadEditor(App *app)
 {
 	EditorHotUnload(&app->editor);
 }
@@ -371,8 +335,7 @@ AppHotUnloadEditor(App *app)
  * what is it, you fear most?
  */
 
-internal void
-AppInit_(App *app)
+static void AppInit_(App *app)
 {
 	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
 	
@@ -447,8 +410,8 @@ AppInit_(App *app)
 	CH_TimerStart(&app->hot_reload_timer);
 }
 
-__declspec(dllexport) App *
-AppInit(const OS_API *api)
+__declspec(dllexport)
+App *AppInit(const OS_API *api)
 {
 	osapi = api;
 
@@ -474,8 +437,8 @@ AppInit(const OS_API *api)
 	return app;
 }
 
-__declspec(dllexport) void
-AppDestroy(App *app)
+__declspec(dllexport)
+void AppDestroy(App *app)
 {
 	G_DeviceWaitIdle(&app->graphics_device);
 
@@ -507,8 +470,7 @@ AppDestroy(App *app)
 	//ArenaRelease(&app->bootstrap_arena);
 }
 
-internal void
-AppLogFPS(App *app, f32 dt)
+static void AppLogFPS(App *app, f32 dt)
 {
 	static u32 index = 0;
 	static f32 fps_history[1] = {0};
@@ -528,8 +490,8 @@ AppLogFPS(App *app, f32 dt)
 	//DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
 }
 
-__declspec(dllexport) b32
-AppTick(App *app, const OS_InputState *input)
+__declspec(dllexport)
+b32 AppTick(App *app, const OS_InputState *input)
 {
 	if (OS_KbPressed(input, OS_KeyboardKey_Escape))
 		return true;
@@ -656,8 +618,8 @@ AppTick(App *app, const OS_InputState *input)
 	return false;
 }
 
-__declspec(dllexport) void
-AppHotLoad(App *app, const OS_API *api)
+__declspec(dllexport)
+void AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
@@ -671,8 +633,8 @@ AppHotLoad(App *app, const OS_API *api)
 	AppHotLoadEditor       (app);
 }
 
-__declspec(dllexport) void
-AppHotUnload(App *app)
+__declspec(dllexport)
+void AppHotUnload(App *app)
 {
 	AppHotUnloadEditor     (app);
 	AppHotUnloadEntity     (app);

@@ -15,8 +15,7 @@ namespace material
 		public float3x3 tbn;
 	};
 
-	public lighting::Surface
-	SampleSurface(SurfaceInput input, scene::Material mat, frame::FrameData frame_data, uint sampler_idx)
+	public lighting::Surface SampleSurface(SurfaceInput input, scene::Material mat, frame::FrameData frame_data, uint sampler_idx)
 	{
 		SamplerState sampler = bdl::samplers[sampler_idx];
 		float2 uv = frac(input.texcoord);

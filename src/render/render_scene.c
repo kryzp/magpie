@@ -1,6 +1,5 @@
 
-internal void
-R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
+static void R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
 {
 	MemZeroStruct(scene);
 
@@ -38,8 +37,7 @@ R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, 
 	DebugLogI(scene->log_channel, "Initialized.");
 }
 
-internal void
-R_SceneDestroy(R_Scene *scene)
+static void R_SceneDestroy(R_Scene *scene)
 {
 	G_DeviceBufferDestroy(scene->device, scene->material_buffer);
 	G_DeviceBufferDestroy(scene->device, scene->mesh_buffer);
@@ -53,8 +51,7 @@ R_SceneDestroy(R_Scene *scene)
 	DebugLogI(scene->log_channel, "Destroyed.");
 }
 
-internal void
-R_SceneDrawIndirect(const R_Scene *scene,
+static void R_SceneDrawIndirect(const R_Scene *scene,
 					G_CmdBuffer *cmd,
 					G_BufferKey indirect_buffer,
 					G_BufferKey count_buffer)
@@ -81,8 +78,7 @@ R_SceneDrawIndirect(const R_Scene *scene,
 	}
 }
 
-internal R_SceneFrameData
-R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
+static R_SceneFrameData R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
 {
 	R_SceneFrameData resources = {0};
 
@@ -119,8 +115,7 @@ R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
 	return resources;
 }
 
-internal void
-R_SceneUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
+static void R_SceneUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	u32 count = scene->geometry_page_count > 0 ? scene->geometry_page_count : 1;
 
@@ -132,8 +127,7 @@ R_SceneUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out
 		mapped[i].vertex_buffer = G_DeviceBufferAddress(scene->device, scene->geometry_pages[i].vertex_buffer);
 }
 
-internal void
-R_SceneUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
+static void R_SceneUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	u32 total_joints = 0;
 
@@ -175,8 +169,7 @@ R_SceneUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 	}
 }
 
-internal void
-R_SceneUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
+static void R_SceneUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	out->object_buffer = G_RingBufferPushArray(ring, R_GPU_ObjectData, scene->object_count);
  
@@ -211,8 +204,7 @@ R_SceneUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 	}
 }
 
-internal void
-R_SceneUploadLights(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
+static void R_SceneUploadLights(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	scene->shadow_caster_count = 0;
 
@@ -264,8 +256,7 @@ R_SceneUploadLights(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 	}
 }
 
-internal R_SceneHandle
-R_SceneObjectCreate(R_Scene *scene, const R_ObjectDesc *desc)
+static R_SceneHandle R_SceneObjectCreate(R_Scene *scene, const R_ObjectDesc *desc)
 {
 	DebugLogAssert(scene->log_channel,
 				   scene->object_free_count > 0,
@@ -294,8 +285,7 @@ R_SceneObjectCreate(R_Scene *scene, const R_ObjectDesc *desc)
 	return handle;
 }
 
-internal void
-R_SceneObjectDestroy(R_Scene *scene, R_SceneHandle handle)
+static void R_SceneObjectDestroy(R_Scene *scene, R_SceneHandle handle)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -309,14 +299,12 @@ R_SceneObjectDestroy(R_Scene *scene, R_SceneHandle handle)
 	scene->object_count--;
 }
 
-internal u32
-R_SceneObjectCount(const R_Scene *scene)
+static u32 R_SceneObjectCount(const R_Scene *scene)
 {
 	return scene->object_count;
 }
 
-internal R_ObjectSlot *
-R_SceneObjectGetSlot(R_Scene *scene, R_SceneHandle handle)
+static R_ObjectSlot *R_SceneObjectGetSlot(R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->object_slots))
 		return NULL;
@@ -329,8 +317,7 @@ R_SceneObjectGetSlot(R_Scene *scene, R_SceneHandle handle)
 	return slot;
 }
 
-internal void
-R_SceneObjectSetTransform(R_Scene *scene, R_SceneHandle handle, m4 transform)
+static void R_SceneObjectSetTransform(R_Scene *scene, R_SceneHandle handle, m4 transform)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -340,8 +327,7 @@ R_SceneObjectSetTransform(R_Scene *scene, R_SceneHandle handle, m4 transform)
 	slot->transform = transform;
 }
 
-internal void
-R_SceneObjectSetSphereBounds(R_Scene *scene, R_SceneHandle handle, v4 sphere_bounds)
+static void R_SceneObjectSetSphereBounds(R_Scene *scene, R_SceneHandle handle, v4 sphere_bounds)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -351,8 +337,7 @@ R_SceneObjectSetSphereBounds(R_Scene *scene, R_SceneHandle handle, v4 sphere_bou
 	slot->sphere_bounds = sphere_bounds;
 }
 
-internal void
-R_SceneObjectSetMaterial(R_Scene *scene, R_SceneHandle handle, R_SceneHandle material)
+static void R_SceneObjectSetMaterial(R_Scene *scene, R_SceneHandle handle, R_SceneHandle material)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -362,8 +347,7 @@ R_SceneObjectSetMaterial(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mat
 	slot->material = material;
 }
 
-internal void
-R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
+static void R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -373,8 +357,7 @@ R_SceneObjectSetMesh(R_Scene *scene, R_SceneHandle handle, R_SceneHandle mesh)
 	slot->mesh = mesh;
 }
 
-internal void
-R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const AN_Palette *palette)
+static void R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const AN_Palette *palette)
 {
 	R_ObjectSlot *slot = R_SceneObjectGetSlot(scene, handle);
 
@@ -385,8 +368,7 @@ R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const AN_Palette 
 	slot->skinning_joint_count = palette->joint_count;
 }
 
-internal b32
-R_SceneObjectHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+static b32 R_SceneObjectHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->object_slots))
 		return false;
@@ -395,8 +377,7 @@ R_SceneObjectHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 	return slot->active && slot->generation == handle.generation;
 }
 
-internal R_SceneHandle
-R_SceneLightCreate(R_Scene *scene, const R_Light *light)
+static R_SceneHandle R_SceneLightCreate(R_Scene *scene, const R_Light *light)
 {
 	DebugLogAssert(scene->log_channel,
 				   scene->light_free_count > 0,
@@ -419,8 +400,7 @@ R_SceneLightCreate(R_Scene *scene, const R_Light *light)
 	return handle;
 }
 
-internal void
-R_SceneLightDestroy(R_Scene *scene, R_SceneHandle handle)
+static void R_SceneLightDestroy(R_Scene *scene, R_SceneHandle handle)
 {
 	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
 
@@ -434,14 +414,12 @@ R_SceneLightDestroy(R_Scene *scene, R_SceneHandle handle)
 	scene->light_count--;
 }
 
-internal u32
-R_SceneLightCount(const R_Scene *scene)
+static u32 R_SceneLightCount(const R_Scene *scene)
 {
 	return scene->light_count;
 }
 
-internal R_LightSlot *
-R_SceneLightGetSlot(R_Scene *scene, R_SceneHandle handle)
+static R_LightSlot *R_SceneLightGetSlot(R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->light_slots))
 		return NULL;
@@ -454,8 +432,7 @@ R_SceneLightGetSlot(R_Scene *scene, R_SceneHandle handle)
 	return slot;
 }
 
-internal void
-R_SceneLightSetPosition(R_Scene *scene, R_SceneHandle handle, v3 position)
+static void R_SceneLightSetPosition(R_Scene *scene, R_SceneHandle handle, v3 position)
 {
 	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
 
@@ -465,8 +442,7 @@ R_SceneLightSetPosition(R_Scene *scene, R_SceneHandle handle, v3 position)
 	slot->light.position = position;
 }
 
-internal void
-R_SceneLightSetColour(R_Scene *scene, R_SceneHandle handle, v3 colour)
+static void R_SceneLightSetColour(R_Scene *scene, R_SceneHandle handle, v3 colour)
 {
 	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
 
@@ -476,8 +452,7 @@ R_SceneLightSetColour(R_Scene *scene, R_SceneHandle handle, v3 colour)
 	slot->light.colour = colour;
 }
 
-internal void
-R_SceneLightSetIntensity(R_Scene *scene, R_SceneHandle handle, f32 intensity)
+static void R_SceneLightSetIntensity(R_Scene *scene, R_SceneHandle handle, f32 intensity)
 {
 	R_LightSlot *slot = R_SceneLightGetSlot(scene, handle);
 
@@ -487,8 +462,7 @@ R_SceneLightSetIntensity(R_Scene *scene, R_SceneHandle handle, f32 intensity)
 	slot->light.intensity = intensity;
 }
 
-internal b32
-R_SceneLightHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+static b32 R_SceneLightHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->light_slots))
 		return false;
@@ -497,8 +471,7 @@ R_SceneLightHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 	return slot->active && slot->generation == handle.generation;
 }
 
-internal R_SceneHandle
-R_SceneMaterialCreate(R_Scene *scene, const R_Material *material)
+static R_SceneHandle R_SceneMaterialCreate(R_Scene *scene, const R_Material *material)
 {
 	DebugLogAssert(scene->log_channel,
 				   scene->material_free_count > 0,
@@ -524,15 +497,13 @@ R_SceneMaterialCreate(R_Scene *scene, const R_Material *material)
 	return handle;
 }
 
-internal R_SceneHandle
-R_SceneMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source)
+static R_SceneHandle R_SceneMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source)
 {
 	R_Material material = R_MaterialFromAsset(source, scene->assets);
 	return R_SceneMaterialCreate(scene, &material);
 }
 
-internal void
-R_SceneMaterialUpdate(R_Scene *scene, R_SceneHandle handle, const R_Material *material)
+static void R_SceneMaterialUpdate(R_Scene *scene, R_SceneHandle handle, const R_Material *material)
 {
 	if (handle.index >= ArraySize(scene->material_slots))
 		return;
@@ -548,8 +519,7 @@ R_SceneMaterialUpdate(R_Scene *scene, R_SceneHandle handle, const R_Material *ma
 	scene->material_buffer_dirty = true;
 }
 
-internal void
-R_SceneMaterialDestroy(R_Scene *scene, R_SceneHandle handle)
+static void R_SceneMaterialDestroy(R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->material_slots))
 		return;
@@ -569,14 +539,12 @@ R_SceneMaterialDestroy(R_Scene *scene, R_SceneHandle handle)
 	scene->material_count--;
 }
 
-internal u32
-R_SceneMaterialCount(const R_Scene *scene)
+static u32 R_SceneMaterialCount(const R_Scene *scene)
 {
 	return scene->material_count;
 }
 
-internal const R_Material *
-R_SceneMaterialGetSource(const R_Scene *scene, R_SceneHandle handle)
+static const R_Material *R_SceneMaterialGetSource(const R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->material_slots))
 		return NULL;
@@ -589,14 +557,12 @@ R_SceneMaterialGetSource(const R_Scene *scene, R_SceneHandle handle)
 	return &slot->source;
 }
 
-internal u64
-R_SceneMaterialBufferAddr(const R_Scene *scene)
+static u64 R_SceneMaterialBufferAddr(const R_Scene *scene)
 {
 	return G_DeviceBufferAddress(scene->device, scene->material_buffer);
 }
 
-internal void
-R_SceneMaterialBakeIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)
+static void R_SceneMaterialBakeIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)
 {
 	out->albedo_texture                       = R_SceneResolveTextureKey(scene, material->albedo_texture);
 	out->normal_texture                       = R_SceneResolveTextureKey(scene, material->normal_texture);
@@ -655,8 +621,7 @@ R_SceneMaterialBakeIntoGPU(const R_Scene *scene, const R_Material *material, R_G
 	out->alpha_mode                           = material->alpha_mode;
 }
 
-internal b32
-R_SceneMaterialHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+static b32 R_SceneMaterialHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->material_slots))
 		return false;
@@ -665,8 +630,7 @@ R_SceneMaterialHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 	return slot->active && slot->generation == handle.generation;
 }
 
-internal R_SceneHandle
-R_SceneMeshCreate(R_Scene *scene, G_CmdBuffer *cmd, const R_MeshDesc *desc)
+static R_SceneHandle R_SceneMeshCreate(R_Scene *scene, G_CmdBuffer *cmd, const R_MeshDesc *desc)
 {
 	DebugLogAssert(scene->log_channel,
 				   scene->mesh_free_count > 0,
@@ -734,8 +698,7 @@ R_SceneMeshCreate(R_Scene *scene, G_CmdBuffer *cmd, const R_MeshDesc *desc)
 	return handle;
 }
 
-internal void
-R_SceneMeshDestroy(R_Scene *scene, R_SceneHandle handle)
+static void R_SceneMeshDestroy(R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->mesh_slots))
 		return;
@@ -760,20 +723,17 @@ R_SceneMeshDestroy(R_Scene *scene, R_SceneHandle handle)
 	scene->mesh_count--;
 }
 
-internal u32
-R_SceneMeshCount(const R_Scene *scene)
+static u32 R_SceneMeshCount(const R_Scene *scene)
 {
 	return scene->mesh_count;
 }
 
-internal u64
-R_SceneMeshBufferAddr(const R_Scene *scene)
+static u64 R_SceneMeshBufferAddr(const R_Scene *scene)
 {
 	return G_DeviceBufferAddress(scene->device, scene->mesh_buffer);
 }
 
-internal b32
-R_SceneMeshHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
+static b32 R_SceneMeshHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(scene->mesh_slots))
 		return false;
@@ -782,8 +742,7 @@ R_SceneMeshHandleIsValid(const R_Scene *scene, R_SceneHandle handle)
 	return slot->active && slot->generation == handle.generation;
 }
 
-internal void
-R_SceneFlushMaterialBuffer(R_Scene *scene)
+static void R_SceneFlushMaterialBuffer(R_Scene *scene)
 {
 	G_DeviceBufferWrite(scene->device,
 						  scene->material_buffer,
@@ -791,8 +750,7 @@ R_SceneFlushMaterialBuffer(R_Scene *scene)
 						  sizeof(scene->material_gpus), 0);
 }
 
-internal void
-R_SceneFlushMeshBuffer(R_Scene *scene)
+static void R_SceneFlushMeshBuffer(R_Scene *scene)
 {
 	G_DeviceBufferWrite(scene->device,
 						  scene->mesh_buffer,
@@ -800,8 +758,7 @@ R_SceneFlushMeshBuffer(R_Scene *scene)
 						  sizeof(scene->mesh_gpus), 0);
 }
 
-internal R_ModelImportReceipt
-R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count)
+static R_ModelImportReceipt R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count)
 {
 	A_ModelData *model_asset = &A_GetNow(scene->assets, handle)->model;
 	
@@ -852,8 +809,7 @@ R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle hand
 	return receipt;
 }
 
-internal u32
-R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
+static u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 {
 	for (u32 i = 0 ; i < scene->geometry_page_count; i++)
 	{
@@ -878,8 +834,7 @@ R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 	return new_index;
 }
 
-internal R_GeometryPage
-R_SceneCreateNewPage(R_Scene *scene)
+static R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
 {
 	DebugLogD(scene->log_channel, "Creating new geometry page...");
 
@@ -918,14 +873,12 @@ R_SceneCreateNewPage(R_Scene *scene)
 	return page;
 }
 
-internal u32
-R_ScenePageCount(const R_Scene *scene)
+static u32 R_ScenePageCount(const R_Scene *scene)
 {
 	return scene->geometry_page_count;
 }
 
-internal G_BindlessIndex
-R_SceneResolveTextureKey(const R_Scene *scene, G_TextureKey key)
+static G_BindlessIndex R_SceneResolveTextureKey(const R_Scene *scene, G_TextureKey key)
 {
 	if (G_TextureKeyIsNull(key))
 		return G_BINDLESS_INDEX_INVALID;

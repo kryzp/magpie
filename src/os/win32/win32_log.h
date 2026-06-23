@@ -8,8 +8,7 @@
 #define OS_W32_LOG_ANSI_RESET    "\x1b[0m"
 #define OS_W32_LOG_ANSI_DIM      "\x1b[2m"
 
-internal inline const char *
-OS_W32_LOG_LevelToString(LOG_Level level)
+static inline const char *OS_W32_LOG_LevelToString(LOG_Level level)
 {
 	switch (level)
 	{
@@ -24,8 +23,7 @@ OS_W32_LOG_LevelToString(LOG_Level level)
 	return "?????";
 }
 
-internal inline const char *
-OS_W32_LOG_LevelAnsi(LOG_Level level)
+static inline const char *OS_W32_LOG_LevelAnsi(LOG_Level level)
 {
 	switch (level)
 	{
@@ -74,19 +72,19 @@ struct OS_W32_LOG_Logger
 	OS_W32_J_Context dedup_job_context;
 };
 
-internal void OS_W32_LOG_Init     (OS_W32_LOG_Logger *logger, String8 sink);
-internal void OS_W32_LOG_Shutdown (OS_W32_LOG_Logger *logger);
+static void OS_W32_LOG_Init     (OS_W32_LOG_Logger *logger, String8 sink);
+static void OS_W32_LOG_Shutdown (OS_W32_LOG_Logger *logger);
 
-internal LOG_Channel OS_W32_LOG_OpenChannel     (OS_W32_LOG_Logger *logger, String8 name);
-internal LOG_Channel OS_W32_LOG_OpenChannelFrom (OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name);
-internal void        OS_W32_LOG_CloseChannel    (OS_W32_LOG_Logger *logger, LOG_Channel channel);
+static LOG_Channel OS_W32_LOG_OpenChannel     (OS_W32_LOG_Logger *logger, String8 name);
+static LOG_Channel OS_W32_LOG_OpenChannelFrom (OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name);
+static void        OS_W32_LOG_CloseChannel    (OS_W32_LOG_Logger *logger, LOG_Channel channel);
 
-internal void OS_W32_LOG_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
-internal void OS_W32_LOG_FlushDedupToFile (OS_W32_LOG_Logger *logger, f32 elapsed);
+static void OS_W32_LOG_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
+static void OS_W32_LOG_FlushDedupToFile (OS_W32_LOG_Logger *logger, f32 elapsed);
 
-internal void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size);
+static void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size);
 
-internal i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
+static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 								   char *dst, i32 dst_size,
 								   LOG_Level level, LOG_Channel channel,
 								   const char *file, i32 line, const char *fn,
@@ -94,7 +92,7 @@ internal i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 								   b32 for_file, f32 elapsed,
 								   OS_W32_J_Context job_context);
 
-internal void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
+static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 								OS_W32_J_Context job_context,
 								LOG_Level level, LOG_Channel channel,
 								const char *file, i32 line, const char *fn,

@@ -1,6 +1,5 @@
 
-internal R_TextureInfo
-R_TextureInfoInitAbsolute(VkFormat format, v3 size)
+static R_TextureInfo R_TextureInfoInitAbsolute(VkFormat format, v3 size)
 {
 	R_TextureInfo info = {0};
 	info.format = format;
@@ -17,8 +16,7 @@ R_TextureInfoInitAbsolute(VkFormat format, v3 size)
 	return info;
 }
 
-internal R_TextureInfo
-R_TextureInfoInitSwapchain(VkFormat format, v3 factor)
+static R_TextureInfo R_TextureInfoInitSwapchain(VkFormat format, v3 factor)
 {
 	R_TextureInfo info = {0};
 	info.format = format;
@@ -35,8 +33,7 @@ R_TextureInfoInitSwapchain(VkFormat format, v3 factor)
 	return info;
 }
 
-internal R_TextureInfo
-R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_to)
+static R_TextureInfo R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_to)
 {
 	R_TextureInfo info = {0};
 	info.format = format;
@@ -53,8 +50,7 @@ R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_
 	return info;
 }
 
-internal R_BufferInfo
-R_BufferInfoInit(u64 size,
+static R_BufferInfo R_BufferInfoInit(u64 size,
 				 VmaAllocationCreateFlags flags,
 				 VkBufferUsageFlags2 usage)
 {
@@ -66,8 +62,7 @@ R_BufferInfoInit(u64 size,
 	return info;
 }
 
-internal b32
-R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b)
+static b32 R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b)
 {
 	return (a->format     == b->format &&
 			a->size_class == b->size_class &&
@@ -81,8 +76,7 @@ R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b)
 			a->flags      == b->flags);
 }
 
-internal b32
-R_BufferInfoMatch(const R_BufferInfo *a, const R_BufferInfo *b)
+static b32 R_BufferInfoMatch(const R_BufferInfo *a, const R_BufferInfo *b)
 {
 	return (a->size  == b->size &&
 			a->flags == b->flags &&

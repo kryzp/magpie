@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_PostProcessingPassFn)
+static R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	

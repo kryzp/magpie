@@ -1,6 +1,5 @@
 
-internal void
-E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
+static void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 {
 	MemZeroStruct(q);
 
@@ -9,8 +8,7 @@ E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 	DebugLogI(q->log_channel, "Events Initialized.");
 }
 
-internal void
-E_EventPush(E_EventQueue *q, const E_Event *ev)
+static void E_EventPush(E_EventQueue *q, const E_Event *ev)
 {
 	q->events[q->event_count] = *ev;
 	q->event_count++;
@@ -18,14 +16,12 @@ E_EventPush(E_EventQueue *q, const E_Event *ev)
 	AssertTrue(q->event_count < ArraySize(q->events));
 }
 
-internal u64
-E_EventListenerRegister(E_EventQueue *q)
+static u64 E_EventListenerRegister(E_EventQueue *q)
 {
 	return q->next_listener_id++;
 }
 
-internal void
-E_EventBind(E_EventQueue *q,
+static void E_EventBind(E_EventQueue *q,
 			  u64 listener_id,
 			  E_Type entity_type,
 			  E_EventType event_type,
@@ -45,8 +41,7 @@ E_EventBind(E_EventQueue *q,
 	AssertTrue(q->binding_count < ArraySize(q->bindings));	
 }
 
-internal void
-E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
+static void E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
 {
 	u32 cursor = 0;
 	
@@ -65,8 +60,7 @@ E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
 	q->binding_count = cursor;
 }
 
-internal void
-E_EventDispatch(E_EventQueue *q, E_World *world)
+static void E_EventDispatch(E_EventQueue *q, E_World *world)
 {
 	for (u32 i = 0; i < q->event_count; i++)
 	{
@@ -90,8 +84,7 @@ E_EventDispatch(E_EventQueue *q, E_World *world)
 	q->event_count = 0;
 }
 
-internal void
-E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
+static void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 {
 	E_Header *header = E_HeaderOf(entity);
 
@@ -108,8 +101,7 @@ E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 	}
 }
 
-internal void
-E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
+static void E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
 {
 	for (u32 i = 0; i < q->binding_count; i++)
 	{

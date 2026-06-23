@@ -1,6 +1,5 @@
 
-internal void
-G_ShaderCompilerLogCallback(const char *context,
+static void G_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
 							  const char *message,
 							  void *user_data)
@@ -10,8 +9,7 @@ G_ShaderCompilerLogCallback(const char *context,
 	DebugLogW(self->log_channel, "%s --> %s: %s", source, context, message);
 }
 
-internal void
-G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_channel)
+static void G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
 	SLANG_Init(&compiler->global_session);
 
@@ -25,8 +23,7 @@ G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_channel)
 		DebugLogB(compiler->log_channel, "Failed to initialize.");
 }
 
-internal void
-G_ShaderCompilerShutdown(G_ShaderCompiler *compiler)
+static void G_ShaderCompilerShutdown(G_ShaderCompiler *compiler)
 {
 	DebugLogI(compiler->log_channel, "Shutting down...");
 
@@ -37,8 +34,7 @@ G_ShaderCompilerShutdown(G_ShaderCompiler *compiler)
 	compiler->global_session = NULL;
 }
 
-internal G_ShaderCompiledStages
-G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
+static G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
 						  Arena *arena,
 						  String8 source_path,
 						  u32 search_path_count, const String8 *search_paths)

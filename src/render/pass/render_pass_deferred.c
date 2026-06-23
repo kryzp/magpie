@@ -3,8 +3,7 @@
 // TODO: Use an icosphere or cubesphere for better tessellation.
 
 /*
-internal void
-R_DeferredCreateLightSphereMesh(R_DeferredRenderer *dr)
+static void R_DeferredCreateLightSphereMesh(R_DeferredRenderer *dr)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -80,7 +79,7 @@ R_DeferredCreateLightSphereMesh(R_DeferredRenderer *dr)
 	ScratchRelease(&scratch);
 }
 
-R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
+static R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -125,8 +124,7 @@ R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
-internal void
-R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Registry *assets)
+static void R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Registry *assets)
 {
 	dr->device = device;
 	dr->assets = assets;
@@ -138,14 +136,12 @@ R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Registry *ass
 	R_DeferredCreateLightSphereMesh(dr);
 }
 
-internal void
-R_DeferredRendererDestroy(R_DeferredRenderer *dr)
+static void R_DeferredRendererDestroy(R_DeferredRenderer *dr)
 {
 	R_MeshDestroy(&dr->light_sphere_mesh, dr->device);
 }
 
-internal void
-R_DeferredRenderGeometry(R_DeferredRenderer *dr,
+static void R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 						 R_Graph *graph,
 						 R_Blackboard *bb,
 						 Arena *pass_arena,
@@ -190,7 +186,7 @@ R_DeferredRenderGeometry(R_DeferredRenderer *dr,
 	R_PassSetRecord(pass, R_DeferredGeometryPassFn, data);
 }
 
-R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
+static R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 {
 	G_Device *device = ctx->device;
 	G_CmdBuffer *cmd = ctx->cmd;
@@ -320,8 +316,7 @@ R_PASS_RECORD_DEF(R_DeferredLightingPassFn)
 	}
 }
 
-internal R_GraphTexHandle
-R_DeferredRenderLighting(R_DeferredRenderer *dr,
+static R_GraphTexHandle R_DeferredRenderLighting(R_DeferredRenderer *dr,
 						 R_Graph *graph,
 						 R_Blackboard *bb,
 						 Arena *pass_arena,

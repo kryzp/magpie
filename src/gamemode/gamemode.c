@@ -1,14 +1,12 @@
 
-internal void
-GM_StackInit(GM_Stack *stack)
+static void GM_StackInit(GM_Stack *stack)
 {
 	MemZeroStruct(stack);
 	
 	stack->top = -1;
 }
 
-internal void
-GM_StackPush(GM_Stack *stack, GM_Mode *mode, void *state)
+static void GM_StackPush(GM_Stack *stack, GM_Mode *mode, void *state)
 {
 	AssertTrue(mode);
 	AssertTrue(stack->top < ArraySize(stack->stack));
@@ -27,8 +25,7 @@ GM_StackPush(GM_Stack *stack, GM_Mode *mode, void *state)
 		top->OnEnter(top->ctx, state);
 }
 
-internal void
-GM_StackPop(GM_Stack *stack, void *state)
+static void GM_StackPop(GM_Stack *stack, void *state)
 {
 	AssertTrue(stack->top >= 0);
 
@@ -45,8 +42,7 @@ GM_StackPop(GM_Stack *stack, void *state)
 		top->OnResume(top->ctx, state);
 }
 
-internal GM_Mode *
-GM_StackPeek(const GM_Stack *stack)
+static GM_Mode *GM_StackPeek(const GM_Stack *stack)
 {
 	if (stack->top < 0 || stack->top >= ArraySize(stack->stack))
 		return NULL;
@@ -54,8 +50,7 @@ GM_StackPeek(const GM_Stack *stack)
 	return stack->stack[stack->top];
 }
 
-internal void
-GM_StackTick(const GM_Stack *stack, void *state, f32 dt, const OS_InputState *input)
+static void GM_StackTick(const GM_Stack *stack, void *state, f32 dt, const OS_InputState *input)
 {
 	GM_Mode *top = GM_StackPeek(stack);
 

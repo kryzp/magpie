@@ -16,6 +16,6 @@ struct AN_ValueRegistry
     u32 value_count;
 };
 
-//internal void AN_ValueRegistryTick(AN_ValueRegistry *r, f32 dt);
+//static void AN_ValueRegistryTick(AN_ValueRegistry *r, f32 dt);
 
 #endif // AN_VALUE_H

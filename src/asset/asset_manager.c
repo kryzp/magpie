@@ -1,6 +1,5 @@
 
-internal u32
-A_AllocSlot(A_Registry *assets)
+static u32 A_AllocSlot(A_Registry *assets)
 {
 	if (assets->free_index_count > 0)
 		return assets->free_indices[--assets->free_index_count];
@@ -12,8 +11,7 @@ A_AllocSlot(A_Registry *assets)
 	return assets->record_count++;
 }
 
-internal void
-A_FreeSlot(A_Registry *assets, u32 index)
+static void A_FreeSlot(A_Registry *assets, u32 index)
 {
 	DebugLogAssert(assets->log_channel,
 				   assets->free_index_count < ArraySize(assets->free_indices),
@@ -23,8 +21,7 @@ A_FreeSlot(A_Registry *assets, u32 index)
 	assets->free_index_count++;
 }
 
-internal A_Handle
-A_AllocRecord(A_Registry *assets, String8 path)
+static A_Handle A_AllocRecord(A_Registry *assets, String8 path)
 {
 	u32 index = A_AllocSlot(assets);
 
@@ -46,8 +43,7 @@ A_AllocRecord(A_Registry *assets, String8 path)
 	return handle;
 }
 
-internal A_Record *
-A_GetRecord(A_Registry *assets, A_Handle handle)
+static A_Record *A_GetRecord(A_Registry *assets, A_Handle handle)
 {
 	if (!A_IsValid(assets, handle))
 		return NULL;
@@ -55,8 +51,7 @@ A_GetRecord(A_Registry *assets, A_Handle handle)
 	return &assets->records[handle.index];
 }
 
-internal const A_Record *
-A_GetRecordConst(const A_Registry *assets, A_Handle handle)
+static const A_Record *A_GetRecordConst(const A_Registry *assets, A_Handle handle)
 {
 	if (!A_IsValid(assets, handle))
 		return NULL;
@@ -64,8 +59,7 @@ A_GetRecordConst(const A_Registry *assets, A_Handle handle)
 	return &assets->records[handle.index];
 }
 
-internal A_Handle
-A_PathMapFind(const A_Registry *assets, String8 path)
+static A_Handle A_PathMapFind(const A_Registry *assets, String8 path)
 {
 	// shitty but cool trick but i really shouldnt be doing this lol
 	// note: A_MANAGER_MAX_RECORDS *must* be a power of two for this to work.
@@ -89,8 +83,7 @@ A_PathMapFind(const A_Registry *assets, String8 path)
 	return A_HandleNull();
 }
 
-internal void
-A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle)
+static void A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle)
 {
 	DebugLogAssert(assets->log_channel, A_IsValid(assets, handle), "Asset handle invalid.");
 
@@ -117,8 +110,7 @@ A_PathMapInsert(A_Registry *assets, String8 path, A_Handle handle)
 	DebugLogB(assets->log_channel, "Cannot add more paths to path map.");
 }
 
-internal u32
-A_LoadArenaAcquire(A_Registry *assets)
+static u32 A_LoadArenaAcquire(A_Registry *assets)
 {
 	for (;;)
 	{
@@ -139,8 +131,7 @@ A_LoadArenaAcquire(A_Registry *assets)
 	}
 }
 
-internal void
-A_LoadArenaRelease(A_Registry *assets, u32 index)
+static void A_LoadArenaRelease(A_Registry *assets, u32 index)
 {
 	ArenaResetAndDecommit(&assets->load_arenas[index]);
  
@@ -157,8 +148,7 @@ A_LoadArenaRelease(A_Registry *assets, u32 index)
 		osapi->JobCounterDec(assets->load_arena_wait_counter, 1);
 }
 
-internal void
-A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
+static void A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
 		 G_Device *device,
 		 G_ShaderCompiler *shader_compiler,
 		 AU_Backend *audio_backend,
@@ -201,8 +191,7 @@ A_Init(A_Registry *assets, Arena *arena, LOG_Channel log_channel,
 	DebugLogI(assets->log_channel, "Initialized.");
 }
 
-internal void
-A_Destroy(A_Registry *assets)
+static void A_Destroy(A_Registry *assets)
 {
 	for (u32 i = 0; i < assets->record_count; i++)
 	{
@@ -234,8 +223,7 @@ A_Destroy(A_Registry *assets)
 	DebugLogI(assets->log_channel, "Destroyed.");
 }
 
-internal void
-A_Mount(A_Registry *assets, String8 prefix, String8 directory)
+static void A_Mount(A_Registry *assets, String8 prefix, String8 directory)
 {
 	DebugLogAssert(assets->log_channel, directory.len > 0, "Directory length must be greater than zero.");
 	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
@@ -245,8 +233,7 @@ A_Mount(A_Registry *assets, String8 prefix, String8 directory)
 	mp->directory = String8Clone(assets->arena, directory);
 }
 
-internal String8
-A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path)
+static String8 A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path)
 {
 	A_MountPoint *best = NULL;
 	u64 best_len = 0;
@@ -274,8 +261,7 @@ A_GetSystemFilePath(A_Registry *assets, Arena *arena, String8 path)
 	return IO_PathJoin(arena, best->directory, suffix);
 }
 
-internal b32
-A_IsLoaded(const A_Registry *assets, A_Handle handle)
+static b32 A_IsLoaded(const A_Registry *assets, A_Handle handle)
 {
 	const A_Record *record = A_GetRecordConst(assets, handle);
 
@@ -285,21 +271,18 @@ A_IsLoaded(const A_Registry *assets, A_Handle handle)
 	return A_StateIsLoaded(record->state);
 }
 
-internal b32
-A_IsLoading(const A_Registry *assets, A_Handle handle)
+static b32 A_IsLoading(const A_Registry *assets, A_Handle handle)
 {
 	return A_StateIsLoading(A_GetRecordConst(assets, handle)->state);
 }
 
-internal b32
-A_IsValid(const A_Registry *assets, A_Handle handle)
+static b32 A_IsValid(const A_Registry *assets, A_Handle handle)
 {
 	return (handle.index < assets->record_count &&
 			assets->records[handle.index].generation == handle.generation);
 }
 
-internal void
-A_LoadNow(A_Registry *assets, A_Handle handle)
+static void A_LoadNow(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -316,8 +299,7 @@ A_LoadNow(A_Registry *assets, A_Handle handle)
 	osapi->JobCounterRelease(counter);
 }
 
-internal void
-A_LoadAsync(A_Registry *assets, A_Handle handle)
+static void A_LoadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -325,8 +307,7 @@ A_LoadAsync(A_Registry *assets, A_Handle handle)
 		A_Load(assets, handle, assets->async_counter);
 }
 
-internal void
-A_ReloadAsync(A_Registry *assets, A_Handle handle)
+static void A_ReloadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -334,7 +315,7 @@ A_ReloadAsync(A_Registry *assets, A_Handle handle)
 		A_Load(assets, handle, assets->async_counter);
 }
 
-J_ENTRY_POINT_DEF(A_LoadJobEntry)
+static J_ENTRY_POINT_DEF(A_LoadJobEntry)
 {
 	A_LoadJobParam *load_params = param;
 
@@ -374,8 +355,7 @@ J_ENTRY_POINT_DEF(A_LoadJobEntry)
 	osapi->MutexUnlock(load_params->assets->dependency_mutex);
 }
 
-internal void
-A_Load(A_Registry *assets, A_Handle handle, OS_Handle counter)
+static void A_Load(A_Registry *assets, A_Handle handle, OS_Handle counter)
 {
 	A_Record *r = &assets->records[handle.index];
 	
@@ -405,16 +385,14 @@ A_Load(A_Registry *assets, A_Handle handle, OS_Handle counter)
 	osapi->JobKick(&decl, counter);
 }
 
-internal void
-A_NotifyDependents(A_Registry *assets, A_Handle handle)
+static void A_NotifyDependents(A_Registry *assets, A_Handle handle)
 {
 	osapi->MutexLock(assets->dependency_mutex);
 	A_NotifyDependentsNoLock(assets, handle, false);
 	osapi->MutexUnlock(assets->dependency_mutex);
 }
 
-internal void
-A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 failed)
+static void A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 failed)
 {
 	DebugLogAssert(assets->log_channel, A_IsValid(assets, handle), "Asset handle must be valid.");
 
@@ -458,8 +436,7 @@ A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 failed)
 	record->dependent_count = 0;
 }
 
-internal void
-A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
+static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 {
 	osapi->MutexLock(assets->dependency_mutex);
 
@@ -539,8 +516,7 @@ A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 	osapi->MutexUnlock(assets->dependency_mutex);
 }
 
-internal void
-A_PollHotReloads(A_Registry *assets)
+static void A_PollHotReloads(A_Registry *assets)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
  
@@ -577,8 +553,7 @@ A_PollHotReloads(A_Registry *assets)
 	ScratchRelease(&scratch);
 }
 
-internal void
-A_FlushUploads(A_Registry *assets)
+static void A_FlushUploads(A_Registry *assets)
 {
 	A_ResolvePendingDependencies(assets, assets->async_counter);
 
@@ -739,14 +714,12 @@ A_FlushUploads(A_Registry *assets)
 	osapi->CondVarBroadcast(assets->loading_cond);
 }
 
-internal void
-A_WaitForAsync(A_Registry *assets)
+static void A_WaitForAsync(A_Registry *assets)
 {
 	osapi->JobYield(assets->async_counter, 0);
 }
 
-internal void
-A_WaitForLoad(A_Registry *assets, A_Handle handle, OS_Handle counter)
+static void A_WaitForLoad(A_Registry *assets, A_Handle handle, OS_Handle counter)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -762,15 +735,13 @@ A_WaitForLoad(A_Registry *assets, A_Handle handle, OS_Handle counter)
 	}
 }
 
-internal void
-A_SetFallback(A_Registry *assets, A_Handle handle, A_Type type)
+static void A_SetFallback(A_Registry *assets, A_Handle handle, A_Type type)
 {
 	AssertTrue(A_IsLoaded(assets, handle));
 	assets->fallbacks[type] = handle;
 }
 
-internal A_Asset *
-A_Get(A_Registry *assets, A_Handle handle)
+static A_Asset *A_Get(A_Registry *assets, A_Handle handle)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	A_Asset *selected = NULL;
@@ -812,8 +783,7 @@ end:
 	return selected;
 }
 
-internal A_Asset *
-A_GetNow(A_Registry *assets, A_Handle handle)
+static A_Asset *A_GetNow(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
@@ -834,8 +804,7 @@ A_GetNow(A_Registry *assets, A_Handle handle)
 	return A_Get(assets, handle);
 }
 
-internal A_Handle
-A_FromFilePath(A_Registry *assets, String8 path, A_Type type)
+static A_Handle A_FromFilePath(A_Registry *assets, String8 path, A_Type type)
 {
 	osapi->MutexLock(assets->allocation_mutex);
 
@@ -857,8 +826,7 @@ A_FromFilePath(A_Registry *assets, String8 path, A_Type type)
 	return handle;
 }
 
-internal A_Handle
-A_Require(A_Registry *assets, String8 path, A_Type type)
+static A_Handle A_Require(A_Registry *assets, String8 path, A_Type type)
 {
 	A_Handle handle = A_FromFilePath(assets, path, type);
 

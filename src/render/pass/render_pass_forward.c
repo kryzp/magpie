@@ -1,5 +1,5 @@
 
-R_PASS_RECORD_DEF(R_ForwardPassFn)
+static R_PASS_RECORD_DEF(R_ForwardPassFn)
 {
 	G_Device *device            = ctx->device;
 	G_CmdBuffer *cmd            = ctx->cmd;
@@ -67,8 +67,7 @@ R_PASS_RECORD_DEF(R_ForwardPassFn)
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
-internal void
-R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Registry *assets)
+static void R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Registry *assets)
 {
 	r->device = device;
 	r->assets = assets;
@@ -76,13 +75,11 @@ R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Registry *assets
 	r->shader = A_Require(assets, String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader);
 }
 
-internal void
-R_ForwardRendererDestroy(R_ForwardRenderer *r)
+static void R_ForwardRendererDestroy(R_ForwardRenderer *r)
 {
 }
 
-internal void
-R_ForwardRender(R_ForwardRenderer *r,
+static void R_ForwardRender(R_ForwardRenderer *r,
 				R_Graph *graph,
 				const R_Bulletin *bt,
 				R_Blackboard *bb,
