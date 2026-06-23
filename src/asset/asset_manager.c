@@ -32,7 +32,7 @@ static A_Handle A_AllocRecord(A_Registry *assets, String8 path)
 	MemZeroStruct(record);
 
 	record->path = String8Clone(assets->arena, path);
-	record->state = A_State_Unloaded;
+	record->state = A_RecordState_Unloaded;
 	
 	record->generation = prev_gen + 1;
 
@@ -197,7 +197,7 @@ static void A_Destroy(A_Registry *assets)
 	{
 		A_Record *record = &assets->records[i];
 
-		if (record->state == A_State_Ready || record->reloading)
+		if (record->state == A_RecordState_Ready || record->reloading)
 		{
 			A_Serializer *s = &assets->serializers[record->asset.handle.type];
 
@@ -267,13 +267,27 @@ static b32 A_IsLoaded(const A_Registry *assets, A_Handle handle)
 
 	if (!record)
 		return false;
+
+	A_RecordState st = record->state;
 	
-	return A_StateIsLoaded(record->state);
+	return
+		st == A_RecordState_Ready ||
+		st == A_RecordState_Failed;
 }
 
 static b32 A_IsLoading(const A_Registry *assets, A_Handle handle)
 {
-	return A_StateIsLoading(A_GetRecordConst(assets, handle)->state);
+	const A_Record *record = A_GetRecordConst(assets, handle);
+
+	if (!record)
+		return false;
+
+	A_RecordState st = record->state;
+
+	return
+		st == A_RecordState_CpuStage ||
+		st == A_RecordState_WaitingForDependencies ||
+		st == A_RecordState_GpuStage;
 }
 
 static b32 A_IsValid(const A_Registry *assets, A_Handle handle)
@@ -288,7 +302,7 @@ static void A_LoadNow(A_Registry *assets, A_Handle handle)
 
 	OS_Handle counter = osapi->JobCounterAlloc(0);
 		
-	if (A_StateNeedsLoad(record->state))
+	if (record->state == A_RecordState_Unloaded)
 	{
 		A_Load(assets, handle, counter);
 		osapi->JobYield(counter, 0);
@@ -303,7 +317,7 @@ static void A_LoadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
-	if (A_StateNeedsLoad(record->state))
+	if (record->state == A_RecordState_Unloaded)
 		A_Load(assets, handle, assets->async_counter);
 }
 
@@ -311,7 +325,7 @@ static void A_ReloadAsync(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
-	if (!A_StateIsLoading(record->state))
+	if (record->state != A_RecordState_Unloaded)
 		A_Load(assets, handle, assets->async_counter);
 }
 
@@ -359,10 +373,10 @@ static void A_Load(A_Registry *assets, A_Handle handle, OS_Handle counter)
 {
 	A_Record *r = &assets->records[handle.index];
 	
-	if (A_StateIsLoaded(r->state))
+	if (r->state == A_RecordState_Ready)
 		r->reloading = true;
 	
-	r->state = A_State_CpuStage;
+	r->state = A_RecordState_CpuStage;
 
 	// params get dumped onto the permanent arena which isnt that big a deal
 	// 'cuz they're only like a couple of bytes so whatever.
@@ -407,12 +421,12 @@ static void A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 fa
 		{
 			if (parent_record->reloading)
 			{
-				parent_record->state = A_State_Ready;
+				parent_record->state = A_RecordState_Ready;
 				parent_record->reloading = false;
 			}
 			else
 			{
-				parent_record->state = A_State_Failed;
+				parent_record->state = A_RecordState_Failed;
 				A_NotifyDependentsNoLock(assets, parent_handle, true);
 			}
 		}
@@ -422,9 +436,9 @@ static void A_NotifyDependentsNoLock(A_Registry *assets, A_Handle handle, b32 fa
 				parent_record->hot_pending_dependencies--;
 
 			if (parent_record->hot_pending_dependencies == 0 &&
-				parent_record->state == A_State_WaitingForDependencies)
+				parent_record->state == A_RecordState_WaitingForDependencies)
 			{
-				parent_record->state = A_State_GpuStage;
+				parent_record->state = A_RecordState_GpuStage;
 
 				osapi->MutexLock(assets->upload_mutex);
 				A_UploadQueuePush(&assets->upload_queue, &parent_record->stashed_upload);
@@ -457,12 +471,12 @@ static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 						  "Reload failed for %.*s, keeping previous version.",
 						  String8VArg(upload->metadata.path));
 				
-				record->state = A_State_Ready;
+				record->state = A_RecordState_Ready;
 				record->reloading = false;
 			}
 			else
 			{
-				record->state = A_State_Failed;
+				record->state = A_RecordState_Failed;
 			}
 
 			A_NotifyDependentsNoLock(assets, upload->handle, !was_reloading);
@@ -479,10 +493,13 @@ static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 			A_Handle  dep_handle = upload->load_data.dependencies[j];
 			A_Record *dep_record = A_GetRecord(assets, dep_handle);
 
-			if (!A_StateIsLoading(dep_record->state) && A_StateNeedsLoad(dep_record->state))
+			if (dep_record->state == A_RecordState_Unloaded)
+			{
 				A_Load(assets, dep_handle, counter);
-
-			if (!A_StateIsFinalized(dep_record->state))
+			}
+			
+			if (dep_record->state != A_RecordState_Ready &&
+				dep_record->state != A_RecordState_Failed)
 			{
 				unresolved++;
 
@@ -497,13 +514,13 @@ static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter)
 
 		if (unresolved > 0)
 		{
-			record->state = A_State_WaitingForDependencies;
+			record->state = A_RecordState_WaitingForDependencies;
 			record->hot_pending_dependencies = unresolved;
 			record->stashed_upload = *upload;
 		}
 		else
 		{
-			record->state = A_State_GpuStage;
+			record->state = A_RecordState_GpuStage;
 
 			osapi->MutexLock(assets->upload_mutex);
 			A_UploadQueuePush(&assets->upload_queue, upload);
@@ -524,7 +541,7 @@ static void A_PollHotReloads(A_Registry *assets)
 	{
 		A_Record *record = &assets->records[i];
  
-		if (record->state != A_State_Ready)
+		if (record->state != A_RecordState_Ready)
 			continue;
  
 		String8 sys_path = A_GetSystemFilePath(assets, scratch.arena, record->path);
@@ -628,12 +645,12 @@ static void A_FlushUploads(A_Registry *assets)
 								  "Reload failed for %.*s, keeping previous version.",
 								  String8VArg(upload->metadata.path));
 						
-						record->state = A_State_Ready;
+						record->state = A_RecordState_Ready;
 						record->reloading = false;
 					}
 					else
 					{
-						record->state = A_State_Failed;
+						record->state = A_RecordState_Failed;
 					}
 				}
 				else
@@ -692,7 +709,7 @@ static void A_FlushUploads(A_Registry *assets)
 					}
 					ScratchRelease(&scratch);
 
-					record->state = A_State_Ready;
+					record->state = A_RecordState_Ready;
 					record->reloading = false;
 
 					A_NotifyDependents(assets, upload->handle);
@@ -726,8 +743,8 @@ static void A_WaitForLoad(A_Registry *assets, A_Handle handle, OS_Handle counter
 	if (!record)
 		return;
 
-	while (record->state != A_State_Ready &&
-		   record->state != A_State_Failed)
+	while (record->state != A_RecordState_Ready &&
+		   record->state != A_RecordState_Failed)
 	{
 		A_ResolvePendingDependencies(assets, counter);
 		osapi->JobYield(counter, 0);
@@ -751,7 +768,7 @@ static A_Asset *A_Get(A_Registry *assets, A_Handle handle)
 	A_Type type = handle.type;
 	
 	if (record &&
-		(A_StateIsLoaded(record->state) || record->reloading) &&
+		(record->state == A_RecordState_Ready || record->reloading) &&
 		record->asset.handle.type == type)
 	{
 		selected = &record->asset;
@@ -765,8 +782,8 @@ static A_Asset *A_Get(A_Registry *assets, A_Handle handle)
 			  String8VArg(type_string));
 	
 	A_Record *fallback = A_GetRecord(assets, assets->fallbacks[type]);
-	if (fallback &&
-		A_StateIsLoaded(fallback->state))
+
+	if (fallback && fallback->state == A_RecordState_Ready)
 	{
 		selected = &fallback->asset;
 		goto end;
@@ -787,18 +804,21 @@ static A_Asset *A_GetNow(A_Registry *assets, A_Handle handle)
 {
 	A_Record *record = A_GetRecord(assets, handle);
 
-	if (record)
+	if (!record)
+		return NULL;
+
+	if (record->state == A_RecordState_Unloaded)
 	{
-		if (A_StateNeedsLoad(record->state))
-		{
-			A_LoadNow(assets, handle);
-		}
-		else if (A_StateIsLoading(record->state))
-		{
-			OS_Handle counter = osapi->JobCounterAlloc(0);
-			A_WaitForLoad(assets, handle, counter);
-			osapi->JobCounterRelease(counter);
-		}
+		A_LoadNow(assets, handle);
+	}
+	else if (A_IsLoading(assets, handle))
+	{
+		A_WaitForLoad(assets, handle, assets->async_counter);
+		/*
+		OS_Handle counter = osapi->JobCounterAlloc(0);
+		A_WaitForLoad(assets, handle, counter);
+		osapi->JobCounterRelease(counter);
+		*/
 	}
 
 	return A_Get(assets, handle);
@@ -830,10 +850,7 @@ static A_Handle A_Require(A_Registry *assets, String8 path, A_Type type)
 {
 	A_Handle handle = A_FromFilePath(assets, path, type);
 
-	A_Record *record = A_GetRecord(assets, handle);
-
-	if (A_StateNeedsLoad(record->state))
-		A_LoadAsync(assets, handle);
+	A_LoadAsync(assets, handle);
 
 	return handle;
 }

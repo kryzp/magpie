@@ -7,12 +7,24 @@
 #define A_LOAD_ARENA_COUNT    128
 #define A_LOAD_ARENA_RESERVE  Gigabytes(1)
 
+typedef enum A_RecordState
+{
+	A_RecordState_Unloaded,
+	A_RecordState_CpuStage,
+	A_RecordState_WaitingForDependencies,
+	A_RecordState_GpuStage,
+	A_RecordState_Ready,
+	A_RecordState_Failed,
+	A_RecordState_COUNT
+}
+A_RecordState;
+
 typedef struct A_Record A_Record;
 struct A_Record
 {
 	A_Asset asset;
 	
-	A_State state;
+	A_RecordState state;
 
 	u32 generation;
 	
@@ -161,7 +173,8 @@ static void A_Load        (A_Registry *assets, A_Handle handle, OS_Handle counte
 static void A_NotifyDependents       (A_Registry *assets, A_Handle handle);
 static void A_NotifyDependentsNoLock (A_Registry *assets, A_Handle handle, b32 failed);
 
-static void A_ResolvePendingDependencies(A_Registry *assets, OS_Handle counter);
+static void A_ResolveAllPendingDependencies(A_Registry *assets, OS_Handle counter);
+static void A_ResolvePendingDependencies(A_Registry *assets, A_Handle handle, OS_Handle counter);
 
 
 typedef struct A_LoadJobParam A_LoadJobParam;

@@ -1,14 +1,14 @@
 #ifndef OS_WIN32_LOG_H
 #define OS_WIN32_LOG_H
 
-#define OS_W32_LOG_MAX_CHANNELS        32
-#define OS_W32_LOG_LINE_BUFFER_SIZE    4096
-#define OS_W32_LOG_CHANNEL_COL_ALIGN   10
+#define LOG_W32_MAX_CHANNELS        32
+#define LOG_W32_LINE_BUFFER_SIZE    4096
+#define LOG_W32_CHANNEL_COL_ALIGN   10
 
-#define OS_W32_LOG_ANSI_RESET    "\x1b[0m"
-#define OS_W32_LOG_ANSI_DIM      "\x1b[2m"
+#define LOG_W32_ANSI_RESET    "\x1b[0m"
+#define LOG_W32_ANSI_DIM      "\x1b[2m"
 
-static inline const char *OS_W32_LOG_LevelToString(LOG_Level level)
+static inline const char *LOG_W32_LevelToString(LOG_Level level)
 {
 	switch (level)
 	{
@@ -23,7 +23,7 @@ static inline const char *OS_W32_LOG_LevelToString(LOG_Level level)
 	return "?????";
 }
 
-static inline const char *OS_W32_LOG_LevelAnsi(LOG_Level level)
+static inline const char *LOG_W32_LevelAnsi(LOG_Level level)
 {
 	switch (level)
 	{
@@ -38,16 +38,16 @@ static inline const char *OS_W32_LOG_LevelAnsi(LOG_Level level)
 	return "";
 }
 
-typedef struct OS_W32_LOG_ChannelEntry OS_W32_LOG_ChannelEntry;
-struct OS_W32_LOG_ChannelEntry
+typedef struct LOG_W32_ChannelEntry LOG_W32_ChannelEntry;
+struct LOG_W32_ChannelEntry
 {
 	String8 name;
 	b32 enabled;
 	LOG_Channel parent;
 };
 
-typedef struct OS_W32_LOG_Logger OS_W32_LOG_Logger;
-struct OS_W32_LOG_Logger
+typedef struct LOG_W32_Logger LOG_W32_Logger;
+struct LOG_W32_Logger
 {
 	Arena *arena;
 	
@@ -58,42 +58,42 @@ struct OS_W32_LOG_Logger
 	OS_Handle file_stream;
 	
 	u32 channel_count;
-	OS_W32_LOG_ChannelEntry channels[OS_W32_LOG_MAX_CHANNELS];
+	LOG_W32_ChannelEntry channels[LOG_W32_MAX_CHANNELS];
 
 	LOG_Channel null_channel;
 	LOG_Channel log_channel;
 
 	// track last message and overwrite in-place if repeated.
-	char               dedup_body[OS_W32_LOG_LINE_BUFFER_SIZE];
+	char               dedup_body[LOG_W32_LINE_BUFFER_SIZE];
 	LOG_Channel        dedup_channel;
 	LOG_Level          dedup_level;
 	u32                dedup_count;
 	b32                dedup_active;
-	OS_W32_J_Context dedup_job_context;
+	J_W32_Context dedup_job_context;
 };
 
-static void OS_W32_LOG_Init     (OS_W32_LOG_Logger *logger, String8 sink);
-static void OS_W32_LOG_Shutdown (OS_W32_LOG_Logger *logger);
+static void LOG_W32_Init     (LOG_W32_Logger *logger, String8 sink);
+static void LOG_W32_Shutdown (LOG_W32_Logger *logger);
 
-static LOG_Channel OS_W32_LOG_OpenChannel     (OS_W32_LOG_Logger *logger, String8 name);
-static LOG_Channel OS_W32_LOG_OpenChannelFrom (OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name);
-static void        OS_W32_LOG_CloseChannel    (OS_W32_LOG_Logger *logger, LOG_Channel channel);
+static LOG_Channel LOG_W32_OpenChannel     (LOG_W32_Logger *logger, String8 name);
+static LOG_Channel LOG_W32_OpenChannelFrom (LOG_W32_Logger *logger, LOG_Channel parent, String8 name);
+static void        LOG_W32_CloseChannel    (LOG_W32_Logger *logger, LOG_Channel channel);
 
-static void OS_W32_LOG_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
-static void OS_W32_LOG_FlushDedupToFile (OS_W32_LOG_Logger *logger, f32 elapsed);
+static void LOG_W32_MakeDedupBody    (char *dst, i32 dst_size, const char *body, u32 count);
+static void LOG_W32_FlushDedupToFile (LOG_W32_Logger *logger, f32 elapsed);
 
-static void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size);
+static void LOG_W32_ChannelNameResolve(LOG_W32_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size);
 
-static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
+static i32 LOG_W32_FormatLine(LOG_W32_Logger *logger,
 								   char *dst, i32 dst_size,
 								   LOG_Level level, LOG_Channel channel,
 								   const char *file, i32 line, const char *fn,
 								   const char *body,
 								   b32 for_file, f32 elapsed,
-								   OS_W32_J_Context job_context);
+								   J_W32_Context job_context);
 
-static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
-								OS_W32_J_Context job_context,
+static void LOG_W32_WriteV(LOG_W32_Logger *logger,
+								J_W32_Context job_context,
 								LOG_Level level, LOG_Channel channel,
 								const char *file, i32 line, const char *fn,
 								const char *fmt, va_list args);

@@ -14,3 +14,4 @@ CMakeSettings.json
 TAGS
 .dir-locals.el
 log_output.txt
+compile_commands.json

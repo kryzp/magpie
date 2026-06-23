@@ -49,9 +49,10 @@ struct AN_System
 static void         AN_SystemInit(AN_System *s, LOG_Channel log_channel);
 static void         AN_SystemDestroy(AN_System *s);
 
-static void         AN_SystemTick(AN_System *s, A_Registry *assets, f32 dt);
+static void         AN_SystemCalculateIntermediatePoses(AN_System *s, A_Registry *assets, f32 elapsed);
+static void         AN_SystemFinalizePoseAndMatrixPalette(AN_System *s, A_Registry *assets);
 
-static AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle);
+static AN_Instance *AN_SystemResolveHandle(AN_System *s, AN_Handle handle);
 static AN_Handle    AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle);
 static void         AN_SystemKillInstance(AN_System *s, AN_Handle h);
 

@@ -1,4 +1,3 @@
-#include "asset_state.h"
 #include "asset_type.h"
 #include "asset_handle.h"
 

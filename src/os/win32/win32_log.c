@@ -5,7 +5,7 @@
  * note to future me NEVER USE SCRATCH ARENAS HERE.
  */
 
-static void OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
+static void LOG_W32_Init(LOG_W32_Logger *logger, String8 sink)
 {
 	MemZeroStruct(logger);
 	
@@ -16,8 +16,8 @@ static void OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 	if (sink.len > 0)
 		logger->file_stream = osapi->StreamFromFile(sink, OS_FILE_PRESET_CREATE);
 
-	logger->null_channel = OS_W32_LOG_OpenChannel(logger, String8Lit("----------"));
-	logger->log_channel  = OS_W32_LOG_OpenChannel(logger, String8Lit("WIN32/LOG"));
+	logger->null_channel = LOG_W32_OpenChannel(logger, String8Lit("----------"));
+	logger->log_channel  = LOG_W32_OpenChannel(logger, String8Lit("WIN32/LOG"));
 
 	if (!OS_HandleIsNull(logger->file_stream))
 		DebugLogI(logger->log_channel, "Initialized (\"%.*s\" as file output).", String8VArg(sink));
@@ -25,14 +25,14 @@ static void OS_W32_LOG_Init(OS_W32_LOG_Logger *logger, String8 sink)
 		DebugLogI(logger->log_channel, "Initialized (no file sink).");
 }
 
-static void OS_W32_LOG_Shutdown(OS_W32_LOG_Logger *logger)
+static void LOG_W32_Shutdown(LOG_W32_Logger *logger)
 {
 	AssertTrue(logger);
 
 	if (logger->dedup_active)
 	{
 		f32 elapsed = CH_TimerElapsed(&logger->timer);
-		OS_W32_LOG_FlushDedupToFile(logger, elapsed);
+		LOG_W32_FlushDedupToFile(logger, elapsed);
 		logger->dedup_active = false;
 	}
 	
@@ -48,12 +48,12 @@ static void OS_W32_LOG_Shutdown(OS_W32_LOG_Logger *logger)
 	logger->mutex = OS_HandleNull();
 }
 
-static LOG_Channel OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 name)
+static LOG_Channel LOG_W32_OpenChannel(LOG_W32_Logger *logger, String8 name)
 {
 	AssertTrue(logger);
 	AssertTrue(logger->channel_count < ArraySize(logger->channels));
 
-	OS_W32_LOG_ChannelEntry *entry = &logger->channels[logger->channel_count];
+	LOG_W32_ChannelEntry *entry = &logger->channels[logger->channel_count];
 	entry->name = name;
 	entry->enabled = true;
 
@@ -64,12 +64,12 @@ static LOG_Channel OS_W32_LOG_OpenChannel(OS_W32_LOG_Logger *logger, String8 nam
 	return channel;
 }
 
-static LOG_Channel OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Channel parent, String8 name)
+static LOG_Channel LOG_W32_OpenChannelFrom(LOG_W32_Logger *logger, LOG_Channel parent, String8 name)
 {
 	AssertTrue(logger);
 	AssertTrue(logger->channel_count < ArraySize(logger->channels));
 
-	OS_W32_LOG_ChannelEntry *entry = &logger->channels[logger->channel_count];
+	LOG_W32_ChannelEntry *entry = &logger->channels[logger->channel_count];
 	entry->name = name;
 	entry->enabled = true;
 	entry->parent = parent;
@@ -81,21 +81,21 @@ static LOG_Channel OS_W32_LOG_OpenChannelFrom(OS_W32_LOG_Logger *logger, LOG_Cha
 	return channel;
 }
 
-static void OS_W32_LOG_CloseChannel(OS_W32_LOG_Logger *logger, LOG_Channel channel)
+static void LOG_W32_CloseChannel(LOG_W32_Logger *logger, LOG_Channel channel)
 {
 	AssertTrue(logger);
 	
 	logger->channels[channel.id].enabled = false;
 }
 
-static void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
+static void LOG_W32_ChannelNameResolve(LOG_W32_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
 {
-    OS_W32_LOG_ChannelEntry *entry = &logger->channels[channel.id];
+    LOG_W32_ChannelEntry *entry = &logger->channels[channel.id];
 
     if (entry->parent.id != 0)
     {
         char parent[64] = {0};
-        OS_W32_LOG_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
+        LOG_W32_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
         snprintf(dst, (usize)dst_size, "%s/%.*s", parent, String8VArg(entry->name));
     }
     else
@@ -104,16 +104,16 @@ static void OS_W32_LOG_ChannelNameResolve(OS_W32_LOG_Logger *logger, LOG_Channel
     }
 }
 
-static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
+static i32 LOG_W32_FormatLine(LOG_W32_Logger *logger,
 					  char *dst, i32 dst_size,
 					  LOG_Level level, LOG_Channel channel,
 					  const char *file, i32 line, const char *fn,
 					  const char *body,
 					  b32 for_file, f32 elapsed,
-					  OS_W32_J_Context job_context)
+					  J_W32_Context job_context)
 {
-	const char *level_string = OS_W32_LOG_LevelToString (level);
-	const char *level_ansi   = OS_W32_LOG_LevelAnsi     (level);
+	const char *level_string = LOG_W32_LevelToString (level);
+	const char *level_ansi   = LOG_W32_LevelAnsi     (level);
 	
 	i32 len = 0;
 	b32 show_callsite = level >= LOG_Level_Error;
@@ -134,7 +134,7 @@ static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 	if (for_file)
 		Append("[  %7.3f  ] ", elapsed);
 	else
-		Append(OS_W32_LOG_ANSI_DIM "[  %7.3f  ]" OS_W32_LOG_ANSI_RESET " ", elapsed);
+		Append(LOG_W32_ANSI_DIM "[  %7.3f  ]" LOG_W32_ANSI_RESET " ", elapsed);
 
 	// Job Context.
     {
@@ -157,7 +157,7 @@ static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
         if (for_file)
             Append("[  W:%s F:%s  ] ", worker_str, fiber_str);
         else
-            Append(OS_W32_LOG_ANSI_DIM "[  W:%s F:%s  ]" OS_W32_LOG_ANSI_RESET " ", worker_str, fiber_str);
+            Append(LOG_W32_ANSI_DIM "[  W:%s F:%s  ]" LOG_W32_ANSI_RESET " ", worker_str, fiber_str);
     }
 
 	// Level.
@@ -166,12 +166,12 @@ static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 
 	// Channel.
 	char channel_name[512] = {0};
-	OS_W32_LOG_ChannelNameResolve(logger, channel, channel_name, sizeof(channel_name));
+	LOG_W32_ChannelNameResolve(logger, channel, channel_name, sizeof(channel_name));
 
 	if (for_file)
-		Append("[  %-*s  ] ", OS_W32_LOG_CHANNEL_COL_ALIGN, channel_name);
+		Append("[  %-*s  ] ", LOG_W32_CHANNEL_COL_ALIGN, channel_name);
 	else
-		Append("%s[  %-*s  ]" OS_W32_LOG_ANSI_RESET " ", level_ansi, OS_W32_LOG_CHANNEL_COL_ALIGN, channel_name);
+		Append("%s[  %-*s  ]" LOG_W32_ANSI_RESET " ", level_ansi, LOG_W32_CHANNEL_COL_ALIGN, channel_name);
 
 	// Callsite.
 	if (show_callsite)
@@ -184,7 +184,7 @@ static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 		if (for_file)
 			Append("%s:%d %s: ", filename, line, fn);
 		else
-			Append(OS_W32_LOG_ANSI_DIM "%s:%d %s:" OS_W32_LOG_ANSI_RESET " ", filename, line, fn);
+			Append(LOG_W32_ANSI_DIM "%s:%d %s:" LOG_W32_ANSI_RESET " ", filename, line, fn);
 	}
 
 	Append("%s\n", body);
@@ -197,7 +197,7 @@ static i32 OS_W32_LOG_FormatLine(OS_W32_LOG_Logger *logger,
 	return len;
 }
 
-static void OS_W32_LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
+static void LOG_W32_MakeDedupBody(char *dst, i32 dst_size, const char *body, u32 count)
 {
 	if (count > 1)
 		snprintf(dst, (usize)dst_size, "%s (%ux)", body, count);
@@ -205,7 +205,7 @@ static void OS_W32_LOG_MakeDedupBody(char *dst, i32 dst_size, const char *body, 
 		snprintf(dst, (usize)dst_size, "%s", body);
 }
 
-static void OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
+static void LOG_W32_FlushDedupToFile(LOG_W32_Logger *logger, f32 elapsed)
 {
 	if (!logger->dedup_active || OS_HandleIsNull(logger->file_stream))
 		return;
@@ -213,16 +213,16 @@ static void OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 	if (logger->dedup_count <= 1)
 		return;
 
-	char body[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
-	OS_W32_LOG_MakeDedupBody(body, sizeof(body), logger->dedup_body, logger->dedup_count);
+	char body[LOG_W32_LINE_BUFFER_SIZE] = {0};
+	LOG_W32_MakeDedupBody(body, sizeof(body), logger->dedup_body, logger->dedup_count);
 
-	char file_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
+	char file_line[LOG_W32_LINE_BUFFER_SIZE] = {0};
 
 	i32 file_len = 0;
 
 	if (!OS_HandleIsNull(logger->file_stream))
 	{
-		file_len = OS_W32_LOG_FormatLine(logger,
+		file_len = LOG_W32_FormatLine(logger,
 										 file_line, sizeof(file_line),
 										 logger->dedup_level,
 										 logger->dedup_channel,
@@ -236,8 +236,8 @@ static void OS_W32_LOG_FlushDedupToFile(OS_W32_LOG_Logger *logger, f32 elapsed)
 	}
 }
 
-static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
-				  OS_W32_J_Context job_context,
+static void LOG_W32_WriteV(LOG_W32_Logger *logger,
+				  J_W32_Context job_context,
 				  LOG_Level level, LOG_Channel channel,
 				  const char *file, i32 line, const char *fn,
 				  const char *fmt, va_list args)
@@ -252,7 +252,7 @@ static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 
 	f32 elapsed = CH_TimerElapsed(&logger->timer);
 
-	char body[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
+	char body[LOG_W32_LINE_BUFFER_SIZE] = {0};
 	vsnprintf(body, sizeof(body), fmt, args);
 
 	osapi->MutexLock(logger->mutex);
@@ -268,12 +268,12 @@ static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 		{
 			logger->dedup_count++;
 
-			char dedup_body[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
-			OS_W32_LOG_MakeDedupBody(dedup_body, sizeof(dedup_body), body, logger->dedup_count);
+			char dedup_body[LOG_W32_LINE_BUFFER_SIZE] = {0};
+			LOG_W32_MakeDedupBody(dedup_body, sizeof(dedup_body), body, logger->dedup_count);
 			
-			char console_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
+			char console_line[LOG_W32_LINE_BUFFER_SIZE] = {0};
 	
-			i32 console_len = OS_W32_LOG_FormatLine(logger,
+			i32 console_len = LOG_W32_FormatLine(logger,
 													console_line, sizeof(console_line),
 													level, channel,
 													file, line, fn,
@@ -302,15 +302,15 @@ static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 		{
 			if (logger->dedup_active)
 			{
-				OS_W32_LOG_FlushDedupToFile(logger, elapsed);
+				LOG_W32_FlushDedupToFile(logger, elapsed);
 
 				if (logger->dedup_count > 1)
 					fwrite("\n", 1, 1, stdout);
 			}
 			
-			char console_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
+			char console_line[LOG_W32_LINE_BUFFER_SIZE] = {0};
 	
-			i32 console_len = OS_W32_LOG_FormatLine(logger,
+			i32 console_len = LOG_W32_FormatLine(logger,
 													console_line, sizeof(console_line),
 													level, channel,
 													file, line, fn,
@@ -328,10 +328,10 @@ static void OS_W32_LOG_WriteV(OS_W32_LOG_Logger *logger,
 			
 			if (!OS_HandleIsNull(logger->file_stream))
 			{
-				char file_line[OS_W32_LOG_LINE_BUFFER_SIZE] = {0};
+				char file_line[LOG_W32_LINE_BUFFER_SIZE] = {0};
 				i32 file_len = 0;
 			
-				file_len = OS_W32_LOG_FormatLine(logger,
+				file_len = LOG_W32_FormatLine(logger,
 												 file_line, sizeof(file_line),
 												 level, channel,
 												 file, line, fn,

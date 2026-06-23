@@ -3,10 +3,13 @@
    SCRIPTING
    ================================================== */
 
+#include "script/script_system.h"
 static S_BINDING_DEF(S_BND_DebugLog)
 {
+	App *app = S_CtxUpvaluePtr(ctx, 0);
 	String8 msg = S_CtxGetArgStr(ctx, 0);
-	DebugLogD(ctx->system->log_channel, "%.*s", String8VArg(msg));
+	
+	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
 }
 
 static S_BINDING_DEF(S_BND_WaitSeconds)
@@ -24,10 +27,12 @@ static S_BINDING_DEF(S_BND_WaitSignal)
 static void AppInitScripting(App *app)
 {
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
-	
+
 	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
 
-	S_BindGlobal(app->scripting_system, String8Lit("debug_log"),    S_BND_DebugLog);
+	void *app_upval[1] = { app };
+
+	S_BindGlobalEx(app->scripting_system, String8Lit("debug_log"),    S_BND_DebugLog, app_upval, 1);
 	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
 	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  S_BND_WaitSignal);
 }
@@ -501,32 +506,6 @@ b32 AppTick(App *app, const OS_InputState *input)
 	const f32 dt = CH_TimerReset(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
-	/*
-	  if (OS_KbPressed(input, OS_KeyboardKey_Enter))
-	  {
-	  S_FireSignal(app->scripting_system, String8Lit("test_ready"));
-	  //R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
-	  }
-
-	  if (OS_KbPressed(input, OS_KeyboardKey_Y))
-	  {
-	  AU_PlayConfig play_config = {0};
-	  play_config.clip = app->test_sound;
-	  play_config.bus = AU_Bus_Sfx;
-	  play_config.volume = 1.f;
-	  play_config.pitch = 1.f;
-	  play_config.spatial = true;
-	  play_config.position = v3x(0.f);
-		
-	  AU_Play(&app->audio_system, &play_config);
-	  }
-	
-	  if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
-	  if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
-	
-	  R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
-	*/
-	
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
 		CH_TimerReset(&app->hot_reload_timer);
@@ -537,7 +516,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	
 	E_WorldTickPreAnim(&app->world, &app->events, dt, input);
 	
-	AN_SystemTick(&app->animation_system, &app->assets, dt);
+	AN_SystemCalculateIntermediatePoses(&app->animation_system, &app->assets, elapsed);
 
 	E_WorldTickPostAnim(&app->world, &app->events, dt, input);
 
@@ -560,6 +539,8 @@ b32 AppTick(App *app, const OS_InputState *input)
 		P_EngineTick(&app->physics_engine, fixed_dt);
 		app->delta_accumulator -= fixed_dt;
 	}
+
+	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system, &app->assets);
 	
 	E_WorldTickPostPhysics(&app->world, &app->events, dt, input);
 
@@ -645,3 +626,30 @@ void AppHotUnload(App *app)
 	AppHotUnloadGraphics   (app);
 	AppHotUnloadScripting  (app);
 }
+
+	/*
+	  if (OS_KbPressed(input, OS_KeyboardKey_Enter))
+	  {
+	  S_FireSignal(app->scripting_system, String8Lit("test_ready"));
+	  //R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
+	  }
+
+	  if (OS_KbPressed(input, OS_KeyboardKey_Y))
+	  {
+	  AU_PlayConfig play_config = {0};
+	  play_config.clip = app->test_sound;
+	  play_config.bus = AU_Bus_Sfx;
+	  play_config.volume = 1.f;
+	  play_config.pitch = 1.f;
+	  play_config.spatial = true;
+	  play_config.position = v3x(0.f);
+		
+	  AU_Play(&app->audio_system, &play_config);
+	  }
+	
+	  if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
+	  if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
+	
+	  R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
+	*/
+	
