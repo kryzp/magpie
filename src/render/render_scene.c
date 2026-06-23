@@ -821,12 +821,12 @@ R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle hand
 	
 	R_ModelImportReceipt receipt = {0};
 	receipt.count = sub_model_count;
-	receipt.entries = ArenaPushArray(arena, R_ModelEntry, actual_count);
+	receipt.entries = ArenaPushArray(arena, R_ModelImportEntry, actual_count);
 
 	for (u32 i = 0; i < actual_count; i++)
 	{
 		const A_SubModel *sub = &sub_models[i];
-		R_ModelEntry *entry = &receipt.entries[i];
+		R_ModelImportEntry *entry = &receipt.entries[i];
 
 		R_MeshDesc mesh_desc = {0};
 		mesh_desc.vertex_buffer = sub->vertex_buffer;

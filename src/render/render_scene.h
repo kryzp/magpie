@@ -98,8 +98,8 @@ struct R_ShadowCaster
 	f32 radius;
 };
 
-typedef struct R_ModelEntry R_ModelEntry;
-struct R_ModelEntry
+typedef struct R_ModelImportEntry R_ModelImportEntry;
+struct R_ModelImportEntry
 {
 	m4 transform;
 	v4 sphere_bounds;
@@ -114,7 +114,7 @@ typedef struct R_ModelImportReceipt R_ModelImportReceipt;
 struct R_ModelImportReceipt
 {
 	u32 count;
-	R_ModelEntry *entries;
+	R_ModelImportEntry *entries;
 };
 
 typedef struct R_SceneFrameData R_SceneFrameData;

@@ -1,10 +1,38 @@
 
 internal void
-R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel)
+R_SpriteBatchCreateQuad(R_SpriteBatch *b)
 {
+	R_SpriteBatchVertex vertices[4] = {
+		{ v2(0.f, 0.f), v2(0.f, 0.f), v4(1.f, 1.f, 1.f, 1.f), v4(0.f, 0.f, 0.f, 0.f) },
+		{ v2(1.f, 0.f), v2(1.f, 0.f), v4(1.f, 1.f, 1.f, 1.f), v4(0.f, 0.f, 0.f, 0.f) },
+		{ v2(0.f, 1.f), v2(0.f, 1.f), v4(1.f, 1.f, 1.f, 1.f), v4(0.f, 0.f, 0.f, 0.f) },
+		{ v2(1.f, 1.f), v2(1.f, 1.f), v4(1.f, 1.f, 1.f, 1.f), v4(0.f, 0.f, 0.f, 0.f) }
+	};
+	
+	u16 indices[6] = {
+		0, 2, 1,
+		2, 3, 1
+	};
+
+	R_MeshAlloc(&b->quad, b->device,
+				sizeof(R_SpriteBatchVertex), VK_INDEX_TYPE_UINT16,
+				ArraySize(vertices), ArraySize(indices));
+}
+
+internal void
+R_SpriteBatchInit(R_SpriteBatch *b, G_Device *device, LOG_Channel log_channel)
+{
+	b->device = device;
 	b->log_channel = log_channel;
 
+	R_SpriteBatchCreateQuad(b);
 	// TODO
+}
+
+internal void
+R_SpriteBatchDestroy(R_SpriteBatch *b)
+{
+	R_MeshDestroy(&b->quad, b->device);
 }
 
 internal void
@@ -16,7 +44,10 @@ R_SpriteBatchBegin(R_SpriteBatch *b)
 internal void
 R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *g)
 {
-	// TODO
+	for (u32 i = 0; i < b->task_count; i++)
+	{
+		R_SpriteBatchTask *task = &b->tasks[i];
+	}
 }
 
 internal void

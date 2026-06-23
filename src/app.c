@@ -418,7 +418,7 @@ AppInit_(App *app)
 					
 		for (u32 i = 0; i < receipt.count; i++)
 		{
-			R_ModelEntry *entry = &receipt.entries[i];
+			R_ModelImportEntry *entry = &receipt.entries[i];
 
 			R_ObjectDesc desc = {0};
 			desc.transform = entry->transform;

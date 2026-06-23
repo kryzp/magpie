@@ -22,6 +22,7 @@ struct R_Bulletin
 	const R_SceneFrameData *scene_resources;
 
 	const R_IrradianceVolume *irradiance_volume;
+	
 	G_TextureKey irradiance_fallback_cubemap;
 	G_TextureKey prefilter_cubemap;
 	G_TextureKey brdf;

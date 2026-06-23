@@ -903,10 +903,10 @@ R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edg
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
-								  &src_access,
-								  &dst_access,
-								  edge->offset,
-								  edge->size ? edge->size : physical->size);
+								&src_access,
+								&dst_access,
+								edge->offset,
+								edge->size ? edge->size : physical->size);
 	}
 
 	st->write_stage  = edge->state.stage;
@@ -937,9 +937,9 @@ R_GraphExecute(R_Graph *graph,
 			continue;
 
 		G_CmdPipelineBarrier(cmd, 0,
-							   pass->memory_barrier_count,  pass->memory_barriers,
-							   pass->buffer_barrier_count,  pass->buffer_barriers,
-							   pass->texture_barrier_count, pass->texture_barriers);
+							 pass->memory_barrier_count,  pass->memory_barriers,
+							 pass->buffer_barrier_count,  pass->buffer_barriers,
+							 pass->texture_barrier_count, pass->texture_barriers);
 
 		R_PassContext ctx = {0};
 		ctx.graph = graph;
@@ -1005,20 +1005,20 @@ R_GraphPresentToSwapchain(R_Graph *graph,
 	VkImageMemoryBarrier2 pre_blit_barriers[2] = {0};
 
 	pre_blit_barriers[0] = G_SyncTextureBarrier(src_texture,
-												  &src_src,
-												  &src_dst,
-												  backbuffer->state.layout,
-												  VK_IMAGE_LAYOUT_GENERAL,
-												  0, VK_REMAINING_MIP_LEVELS,
-												  0, VK_REMAINING_ARRAY_LAYERS);
+												&src_src,
+												&src_dst,
+												backbuffer->state.layout,
+												VK_IMAGE_LAYOUT_GENERAL,
+												0, VK_REMAINING_MIP_LEVELS,
+												0, VK_REMAINING_ARRAY_LAYERS);
 	
 	pre_blit_barriers[1] = G_SyncTextureBarrier(dst_texture,
-												  &dst_src,
-												  &dst_dst,
-												  VK_IMAGE_LAYOUT_UNDEFINED,
-												  VK_IMAGE_LAYOUT_GENERAL,
-												  0, VK_REMAINING_MIP_LEVELS,
-												  0, VK_REMAINING_ARRAY_LAYERS);
+												&dst_src,
+												&dst_dst,
+												VK_IMAGE_LAYOUT_UNDEFINED,
+												VK_IMAGE_LAYOUT_GENERAL,
+												0, VK_REMAINING_MIP_LEVELS,
+												0, VK_REMAINING_ARRAY_LAYERS);
 
 	G_CmdPipelineBarrier(cmd, 0,
 						   0, NULL,

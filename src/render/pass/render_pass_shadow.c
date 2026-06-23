@@ -12,8 +12,8 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 
 	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-	G_CmdBindBindless (cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-	G_CmdBindPipeline (cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	struct
 	{
@@ -24,10 +24,10 @@ R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	}
 	pc;
 
-	pc.object_buffer      = data->object_buffer_address;
-	pc.mesh_buffer        = R_SceneMeshBufferAddr(ctx->scene);
+	pc.object_buffer = data->object_buffer_address;
+	pc.mesh_buffer = R_SceneMeshBufferAddr(ctx->scene);
 	pc.caster_data_buffer = G_DeviceBufferAddress(device, data->caster_table_buffer);
-	pc.caster_index       = data->caster_index;
+	pc.caster_index = data->caster_index;
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
 
@@ -152,11 +152,11 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 		// TODO: snprintf the pass name with the caster index for debug labelling.
 
 		R_ShadowMappingPassData *data = ArenaPushArray(bt->pass_arena, R_ShadowMappingPassData, 1);
-		data->shader                = shader;
-		data->caster_index          = caster_index;
+		data->shader = shader;
+		data->caster_index = caster_index;
 		data->object_buffer_address = bt->scene_resources->object_buffer.gpu;
-		data->caster_table_buffer   = sr->caster_table_buffer;
-		data->draw_stream           = draw_stream;
+		data->caster_table_buffer = sr->caster_table_buffer;
+		data->draw_stream = draw_stream;
 
 		R_GraphTexHandle cubemap_handle = R_GraphImportTexture(graph, sr->shadow_cubemaps[caster_index]);
 		bb->shadow_data.shadow_maps[caster_index] = cubemap_handle;
@@ -165,10 +165,10 @@ R_ShadowRendererRender(R_ShadowRenderer *sr,
 
 		R_Pass *pass = R_GraphAdd(graph, String8Lit("Shadow Mapping"), R_PassType_Graphics);
 
-		R_PassSetRecord        (pass, R_ShadowMappingPassFn, data);
-		R_PassSetMultiViewMask (pass, 0b111111);
-		R_PassIndirectBuffer   (pass, draw_stream.indirect_buffer);
-		R_PassIndirectBuffer   (pass, draw_stream.count_buffer);
-		R_PassWriteDepth       (pass, cubemap_handle, &depth_clear);
+		R_PassSetRecord(pass, R_ShadowMappingPassFn, data);
+		R_PassSetMultiViewMask(pass, 0b111111);
+		R_PassIndirectBuffer(pass, draw_stream.indirect_buffer);
+		R_PassIndirectBuffer(pass, draw_stream.count_buffer);
+		R_PassWriteDepth(pass, cubemap_handle, &depth_clear);
 	}
 }
