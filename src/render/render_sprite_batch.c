@@ -39,10 +39,12 @@ static void R_SpriteBatchBegin(R_SpriteBatch *b)
 
 static void R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *g)
 {
+	/*
 	for (u32 i = 0; i < b->task_count; i++)
 	{
 		R_SpriteBatchTask *task = &b->tasks[i];
 	}
+	*/
 }
 
 static void R_SpriteBatchClear(R_SpriteBatch *b)

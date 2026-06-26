@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_H
-#define RENDER_PASS_H
+#ifndef RENDER_GRAPH_PASS_H
+#define RENDER_GRAPH_PASS_H
 
 #define R_PASS_MAX_I_TEXTURE_EDGES   16
 #define R_PASS_MAX_O_TEXTURE_EDGES   16
@@ -180,4 +180,4 @@ static R_GraphBufHandle R_PassIndirectBuffer       (R_Pass *pass, R_GraphBufHand
 static R_GraphBufHandle R_PassClearBuffer          (R_Pass *pass, R_GraphBufHandle handle);
 
 
-#endif // RENDER_PASS_H
+#endif // RENDER_GRAPH_PASS_H

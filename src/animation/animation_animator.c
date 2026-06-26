@@ -134,7 +134,7 @@ static f32 AN_GetSampleTime(f32 global_time, f32 global_start_time, f32 playback
 	return sample_time;
 }
 
-static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle)
+static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Assets *assets, A_Handle model_handle)
 {
 	A_Asset *asset = A_GetNow(assets, model_handle);
 
@@ -165,7 +165,7 @@ static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Registry *a
 	}
 }
 
-static void AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 elapsed)
+static void AN_AnimatorTick(AN_Animator *animator, A_Assets *assets, f32 elapsed)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -179,12 +179,9 @@ static void AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 elaps
 
 		for (u32 j = 0; j < skeleton->joint_count; j++)
 		{
-			AN_JointPose bind = {0};
-			bind.translation = skeleton->joints[j].bind_translation;
-			bind.rotation    = skeleton->joints[j].bind_rotation;
-			bind.scale       = skeleton->joints[j].bind_scale;
-
-			animator->poses[i].local_poses[j] = bind;
+			animator->poses[i].local_poses[j].translation = skeleton->joints[j].bind_translation;
+			animator->poses[i].local_poses[j].rotation = skeleton->joints[j].bind_rotation;
+			animator->poses[i].local_poses[j].scale = skeleton->joints[j].bind_scale;
 		}
 	}
 
@@ -215,7 +212,7 @@ static void AN_AnimatorTick(AN_Animator *animator, A_Registry *assets, f32 elaps
 	}
 }
 
-static void AN_AnimatorUpdatePalette(AN_Animator *animator, A_Registry *assets)
+static void AN_AnimatorUpdatePalette(AN_Animator *animator, A_Assets *assets)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -252,7 +249,7 @@ static void AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop, f32 globa
 	animator->global_start_time = global_start_time;
 }
 
-static b32 AN_AnimatorPlayByName(AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 global_start_time)
+static b32 AN_AnimatorPlayByName(AN_Animator *animator, A_Assets *assets, String8 name, b32 loop, f32 global_start_time)
 {
 	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
 

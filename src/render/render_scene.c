@@ -1,5 +1,5 @@
 
-static void R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
+static void R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel)
 {
 	MemZeroStruct(scene);
 
@@ -83,6 +83,7 @@ static R_SceneFrameData R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *rin
 	R_SceneFrameData resources = {0};
 
 	resources.page_count = scene->geometry_page_count;
+	resources.object_count = scene->object_count;
 	
 	if (scene->mesh_buffer_dirty)
 	{

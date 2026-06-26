@@ -57,13 +57,13 @@ struct R_DrawStream
 typedef struct R_Culling R_Culling;
 struct R_Culling
 {
-	A_Registry *assets;
+	A_Assets *assets;
 	
 	A_Handle frustum_shader;
 	A_Handle sphere_shader;
 };
 
-static void R_CullingInit         (R_Culling *cull, A_Registry *assets);
+static void R_CullingInit         (R_Culling *cull, A_Assets *assets);
 static void R_CullingDestroy      (R_Culling *cull);
 
 static R_DrawStream R_CullFrustum (R_Culling *cull,

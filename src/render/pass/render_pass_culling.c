@@ -112,7 +112,7 @@ static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	G_CmdDispatch      (cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
-static void R_CullingInit(R_Culling *cull, A_Registry *assets)
+static void R_CullingInit(R_Culling *cull, A_Assets *assets)
 {
 	cull->assets = assets;
 	

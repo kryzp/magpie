@@ -1,5 +1,5 @@
-#ifndef RENDER_POOL_H
-#define RENDER_POOL_H
+#ifndef RENDER_GRAPH_POOL_H
+#define RENDER_GRAPH_POOL_H
 
 typedef struct R_PooledTexture R_PooledTexture;
 struct R_PooledTexture
@@ -61,4 +61,4 @@ static void R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
 										 G_BufferKey key,
 										 const R_ResourceState *state);
 
-#endif // RENDER_POOL_H
+#endif // RENDER_GRAPH_POOL_H

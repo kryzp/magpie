@@ -1,328 +1,5 @@
 
-/* ==================================================
-   SCRIPTING
-   ================================================== */
-
-#include "script/script_system.h"
-static S_BINDING_DEF(S_BND_DebugLog)
-{
-	App *app = S_CtxUpvaluePtr(ctx, 0);
-	String8 msg = S_CtxGetArgStr(ctx, 0);
-	
-	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
-}
-
-static S_BINDING_DEF(S_BND_WaitSeconds)
-{
-	f32 s = S_CtxGetArgF32(ctx, 0); 
-	S_CtxYieldTime(ctx, s);
-}
-
-static S_BINDING_DEF(S_BND_WaitSignal)
-{
-	String8 sig = S_CtxGetArgStr(ctx, 0);
-	S_CtxYieldSignal(ctx, sig);
-}
-
-static void AppInitScripting(App *app)
-{
-	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
-
-	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
-
-	void *app_upval[1] = { app };
-
-	S_BindGlobalEx(app->scripting_system, String8Lit("debug_log"),    S_BND_DebugLog, app_upval, 1);
-	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
-	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"),  S_BND_WaitSignal);
-}
-
-static void AppDestroyScripting(App *app)
-{
-	S_Destroy(app->scripting_system);
-}
-
-static void AppHotLoadScripting(App *app)
-{
-	/*
-	 * this is a super hacky measure but there's no other
-	 * way to do this that isn't super complicated.
-	 * essentially when we hot reload, the function bindings
-	 * associated with C functions become invalidated, and
-	 * we can either
-	 * a. destroy and recreate the entire system (lose all state)
-	 * b. iterate through every goddamn C closure in the lua registry and every upvalue
-	 * option b. is a complete nightmare i dont wanna deal with right
-	 * now so in my opinion it's far more preferable to just reset the whole thing.
-	 */
-	
-	ArenaReset(&app->scripting_arena);
-	AppInitScripting(app);
-}
-
-static void AppHotUnloadScripting(App *app)
-{
-	AppDestroyScripting(app);
-}
-
-
-/* ==================================================
-   GRAPHICS
-   ================================================== */
-
-static void AppInitGraphics(App *app)
-{
-	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
-	
-	G_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
-
-	app->swapchain = G_DeviceSwapchainCreate(&app->graphics_device);
-	
-	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
-}
-
-static void AppDestroyGraphics(App *app)
-{
-	G_ShaderCompilerShutdown(&app->shader_compiler);
-	G_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
-	G_DeviceDestroy(&app->graphics_device);
-}
-
-static void AppHotLoadGraphics(App *app)
-{
-	G_DeviceHotLoad(&app->graphics_device);
-}
-
-static void AppHotUnloadGraphics(App *app)
-{
-	G_DeviceHotUnload(&app->graphics_device);
-}
-
-
-/* ==================================================
-   AUDIO
-   ================================================== */
-
-static void AppInitAudio(App *app)
-{
-	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
-	
-	app->audio_backend = AU_BackendInit(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
-	
-	AU_Init(&app->audio_system,
-			&app->audio_arena,
-			app->audio_log_channel,
-			app->audio_backend);
-}
-
-static void AppDestroyAudio(App *app)
-{
-	AU_Shutdown(&app->audio_system);
-	AU_BackendShutdown(app->audio_backend);
-}
-
-static void AppHotLoadAudio(App *app)
-{
-}
-
-static void AppHotUnloadAudio(App *app)
-{
-}
-
-
-/* ==================================================
-   ASSETS
-   ================================================== */
-
-static void AppInitAssets(App *app)
-{
-	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
-	
-	A_Init(&app->assets,
-		   &app->asset_arena,
-		   app->asset_log_channel,
-		   &app->graphics_device,
-		   &app->shader_compiler,
-		   app->audio_backend,
-		   app->scripting_system);
-
-	// I stole this concept of asset mounting from the "Granite" engine / renderer by Themaister.
-	// It's so simple but it makes everything so much cleaner!!!
-	//A_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
-	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
-}
-
-static void AppDestroyAssets(App *app)
-{
-	A_Destroy(&app->assets);
-}
-
-static void AppHotLoadAssets(App *app)
-{
-}
-
-static void AppHotUnloadAssets(App *app)
-{
-}
-
-
-/* ==================================================
-   ANIMATION
-   ================================================== */
-
-static void AppInitAnimation(App *app)
-{
-	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
-	
-	AN_SystemInit(&app->animation_system, app->animation_log_channel);
-}
-
-static void AppDestroyAnimation(App *app)
-{
-	AN_SystemDestroy(&app->animation_system);
-}
-
-static void AppHotLoadAnimation(App *app)
-{
-}
-
-static void AppHotUnloadAnimation(App *app)
-{
-}
-
-
-/* ==================================================
-   RENDER
-   ================================================== */
-
-static void AppInitRender(App *app)
-{
-	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
-  	
-	G_BufferAllocInfo ring_buffer_alloc_info = {0};
-	ring_buffer_alloc_info.size = Megabytes(512);
-	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	ring_buffer_alloc_info.usage =
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-
-	app->frame_upload_ring_buffer = G_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
-	
-	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
-	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
-	
-	R_SystemInit(&app->render_system, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
-	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
-}
-
-static void AppDestroyRender(App *app)
-{
-	R_SystemDestroy(&app->render_system);
-	
-	R_SceneDestroy(&app->scene);
-	R_GraphDestroy(&app->graph);
-	
-	G_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
-}
-
-static void AppHotLoadRender(App *app)
-{
-	R_SystemHotLoad(&app->render_system);
-}
-
-static void AppHotUnloadRender(App *app)
-{
-}
-
-
-/* ==================================================
-   ENTITY
-   ================================================== */
-
-static void AppInitPhysics(App *app)
-{
-	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
-
-	P_EngineInit(&app->physics_engine, app->physics_log_channel);
-}
-
-static void AppDestroyPhysics(App *app)
-{
-	P_EngineDestroy(&app->physics_engine);
-}
-
-static void AppHotLoadPhysics(App *app)
-{
-}
-
-static void AppHotUnloadPhysics(App *app)
-{
-}
-
-
-/* ==================================================
-   ENTITY
-   ================================================== */
-
-static void AppInitEntity(App *app)
-{
-	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
-	
-	E_WorldInit(&app->world, &app->entity_arena, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("WORLD")));
-	E_EventQueueInit(&app->events, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("EVENT")));
-
-	E_RegistryPopulate(&app->world);
-}
-
-static void AppDestroyEntity(App *app)
-{
-	E_WorldDestroy(&app->world);
-}
-
-static void AppHotLoadEntity(App *app)
-{
-}
-
-static void AppHotUnloadEntity(App *app)
-{
-}
-
-
-/* ==================================================
-   EDITOR
-   ================================================== */
-
-static void AppInitEditor(App *app)
-{
-	app->editor_log_channel = osapi->LogChannelOpen(String8Lit("EDITOR"));
-
-	EditorInit(&app->editor, &app->editor_arena, app->editor_log_channel);
-}
-
-static void AppDestroyEditor(App *app)
-{
-	EditorDestroy(&app->editor);
-}
-
-static void AppHotLoadEditor(App *app)
-{
-	EditorHotLoad(&app->editor);
-}
-
-static void AppHotUnloadEditor(App *app)
-{
-	EditorHotUnload(&app->editor);
-}
-
-
-/* ==================================================
-   APP
-   ================================================== */
-
 /*
- * The Echo or The Answer
- * ---
  * At the willow tree grows the wallflower,
  * pale and cold,
  * from dust, alone.
@@ -340,76 +17,106 @@ static void AppHotUnloadEditor(App *app)
  * what is it, you fear most?
  */
 
+static S_BINDING_DEF(S_BND_WaitSeconds)
+{
+	f32 s = S_CtxGetArgF32(ctx, 0); 
+	S_CtxYieldTime(ctx, s);
+}
+
+static S_BINDING_DEF(S_BND_WaitSignal)
+{
+	String8 sig = S_CtxGetArgStr(ctx, 0);
+	S_CtxYieldSignal(ctx, sig);
+}
+
+static S_BINDING_DEF(S_BND_DebugLog)
+{
+	App *app = S_CtxUpvaluePtr(ctx, 0);
+	String8 msg = S_CtxGetArgStr(ctx, 0);
+	
+	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
+}
+
+static void AppInitScripting(App *app)
+{
+	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
+	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
+	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"), S_BND_WaitSignal);
+	void *app_upval[1] = { app };
+	S_BindGlobalEx(app->scripting_system, String8Lit("debug_log"), S_BND_DebugLog, app_upval, 1);
+}
+
 static void AppInit_(App *app)
 {
 	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
+	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
+	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
+	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
+	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
+	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
+	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
+	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
+	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
-	
-	AppInitScripting (app);
-	AppInitGraphics  (app);
-	AppInitAudio     (app);
-	AppInitAssets    (app);
-	AppInitAnimation (app);
-	AppInitRender    (app);
-	AppInitPhysics   (app);
-	AppInitEntity    (app);
-	AppInitEditor    (app);
-	
-	
-	R_Light light = {0};
-	light.type = R_LightType_Point;
-	light.position = v3(0.f, 0.f, 1.f);
-	light.direction = v3x(0.f);
-	light.colour = v3(1.f, 1.f, 1.f);
-	light.intensity = 5.f;
-	light.falloff = 1.f;
-	light.casts_shadows = true;
-	light.shadow_near = 0.1f;
-	light.shadow_far = 10.f;
-	
-	//app->light_handle = R_SceneLightCreate(&app->scene, &light);
 
-	
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
-	A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
-	
-	ScratchArena scratch = ScratchBegin(NULL, 0);
-	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
-		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, object_model_handle, (u32)(-1));
-		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
-					
-		for (u32 i = 0; i < receipt.count; i++)
-		{
-			R_ModelImportEntry *entry = &receipt.entries[i];
+	AppInitScripting(app);
 
-			R_ObjectDesc desc = {0};
-			desc.transform = entry->transform;
-			desc.sphere_bounds = entry->sphere_bounds;
-			desc.mesh = entry->mesh;
-			desc.material = entry->material;
 
-			R_SceneObjectCreate(&app->scene, &desc);
-		}
-	}
-	ScratchRelease(&scratch);
+	G_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
+	app->swapchain = G_DeviceSwapchainCreate(&app->graphics_device);
+	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
+
+	app->audio_backend = AU_BackendInit(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
+	AU_Init(&app->audio_system,
+			&app->audio_arena,
+			app->audio_log_channel,
+			app->audio_backend);
 	
-	app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
-	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
-	app->test_sound = test_sound_asset->sound.buffer;
 
-	
-	A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
-	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
-	S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
+	A_Init(&app->assets,
+		   &app->asset_arena,
+		   app->asset_log_channel,
+		   &app->graphics_device,
+		   &app->shader_compiler,
+		   app->audio_backend,
+		   app->scripting_system);
+	//A_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
+	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
 
+
+	AN_SystemInit(&app->animation_system, app->animation_log_channel);
+
+
+  	
+	G_BufferAllocInfo ring_buffer_alloc_info = {0};
+	ring_buffer_alloc_info.size = Megabytes(512);
+	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	ring_buffer_alloc_info.usage =
+		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
+		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+
+	app->frame_upload_ring_buffer = G_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
 	
+	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
+	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
+	
+	R_SystemInit(&app->render_system, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
+	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
+
+
+	P_EngineInit(&app->physics_engine, app->physics_log_channel);
+	
+
+	E_WorldInit(&app->world, &app->entity_arena, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("WORLD")));
+	E_EventQueueInit(&app->events, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("EVENT")));
+
+
+	GameRegisterEntities(&app->game, &app->world);
+	GameInit(&app->game, &app->world);
+
+
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
 	CH_TimerStart(&app->hot_reload_timer);
@@ -448,16 +155,29 @@ void AppDestroy(App *app)
 	G_DeviceWaitIdle(&app->graphics_device);
 
 	DebugLogI(app->log_channel, "Destroying...");
+	
+	E_WorldDestroy(&app->world);
 
-	AppDestroyEditor    (app);
-	AppDestroyEntity    (app);
-	AppDestroyPhysics   (app);
-	AppDestroyRender    (app);
-	AppDestroyAnimation (app);
-	AppDestroyAssets    (app);
-	AppDestroyAudio     (app);
-	AppDestroyGraphics  (app);
-	AppDestroyScripting (app);
+	P_EngineDestroy(&app->physics_engine);
+
+	R_SystemDestroy(&app->render_system);
+	R_SceneDestroy(&app->scene);
+	R_GraphDestroy(&app->graph);
+	G_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
+
+	AN_SystemDestroy(&app->animation_system);
+	
+	A_Destroy(&app->assets);
+	
+	AU_Shutdown(&app->audio_system);
+	
+	AU_BackendShutdown(app->audio_backend);
+	
+	G_ShaderCompilerShutdown(&app->shader_compiler);
+	G_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
+	G_DeviceDestroy(&app->graphics_device);
+
+	S_Destroy(app->scripting_system);
 
 	ArenaRelease(&app->frame_arena);
 	ArenaRelease(&app->editor_arena);
@@ -503,24 +223,38 @@ b32 AppTick(App *app, const OS_InputState *input)
 	
 	const f32 max_frame_time = 0.2f;
 	const f32 elapsed = CH_TimerElapsed(&app->elapsed_timer);
-	const f32 dt = CH_TimerReset(&app->delta_timer);
+	const f32 dt = CH_TimerRestart(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
 
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
-		CH_TimerReset(&app->hot_reload_timer);
+		CH_TimerRestart(&app->hot_reload_timer);
 		A_PollHotReloads(&app->assets);
 	}
 
 	A_FlushUploads(&app->assets);
+
+	E_TickContext entity_tick_context = {0};
+	entity_tick_context.world = &app->world;
+	entity_tick_context.events = &app->events;
+	entity_tick_context.dt = dt;
+	entity_tick_context.elapsed = elapsed;
+	entity_tick_context.input = input;
+	entity_tick_context.scripting = app->scripting_system;
+	entity_tick_context.audio = &app->audio_system;
+	entity_tick_context.assets = &app->assets;
+	entity_tick_context.animation = &app->animation_system;
+	entity_tick_context.physics = &app->physics_engine;
 	
-	E_WorldTickPreAnim(&app->world, &app->events, dt, input);
+	E_WorldResolveInittingEntities(&entity_tick_context);
+
+	E_WorldTickPreAnim(&entity_tick_context);
 	
 	AN_SystemCalculateIntermediatePoses(&app->animation_system, &app->assets, elapsed);
 
-	E_WorldTickPostAnim(&app->world, &app->events, dt, input);
+	E_WorldTickPostAnim(&entity_tick_context);
 
-	EditorTick(&app->editor, input, dt, elapsed);
+	GameTick(&app->game, input, dt, elapsed);
 
 	S_Tick(app->scripting_system, dt);
 	
@@ -542,15 +276,15 @@ b32 AppTick(App *app, const OS_InputState *input)
 
 	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system, &app->assets);
 	
-	E_WorldTickPostPhysics(&app->world, &app->events, dt, input);
+	E_WorldTickPostPhysics(&entity_tick_context);
 
 	E_EventDispatch(&app->events, &app->world);
 
 	E_WorldFlush(&app->world);
 	
 	AU_Listener listener = {0};
-	listener.position = app->editor.camera.position;
-	listener.direction = app->editor.camera.forward;
+	listener.position = app->game.camera.position;
+	listener.direction = app->game.camera.forward;
 
 	AU_BackendTick(app->audio_backend, dt, listener);
 	AU_Tick(&app->audio_system, dt, listener);
@@ -561,7 +295,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	// https://gafferongames.com/post/fix_your_timestep/
 	const float alpha = app->delta_accumulator / fixed_dt;
 
-	R_CameraRecompute(&app->editor.camera);
+	R_CameraRecompute(&app->game.camera);
 	
 	R_FrameParams curr_frame = {0};
 	curr_frame.arena = &app->frame_arena;
@@ -569,7 +303,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	curr_frame.dt = dt;
 	curr_frame.elapsed = elapsed;
 	curr_frame.scene_data = R_SceneUploadFrameData(&app->scene, &app->frame_upload_ring_buffer);
-	curr_frame.camera = app->editor.camera;
+	curr_frame.camera = app->game.camera;
 	
 	R_FrameParams interpolated_frame = R_FrameParamsInterp(&app->prev_frame, &curr_frame, alpha);
 	
@@ -580,7 +314,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	
 	{
 		G_CmdBuffer cmd = G_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
-		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->editor.camera, dt, elapsed);
+		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->game.camera, dt, elapsed);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
 		G_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
 	}
@@ -604,28 +338,87 @@ void AppHotLoad(App *app, const OS_API *api)
 {
 	osapi = api;
 	
-	AppHotLoadScripting    (app);
-	AppHotLoadGraphics     (app);
-	AppHotLoadAudio        (app);
-	AppHotLoadAssets       (app);
-	AppHotLoadAnimation    (app);
-	AppHotLoadRender       (app);
-	AppHotLoadEntity       (app);
-	AppHotLoadEditor       (app);
+	/*
+	 * this is a super hacky measure but there's no other
+	 * way to do this that isn't super complicated.
+	 * essentially when we hot reload, the function bindings
+	 * associated with C functions become invalidated, and
+	 * we can either
+	 * a. destroy and recreate the entire system (lose all state)
+	 * b. iterate through every goddamn C closure in the lua registry and every upvalue
+	 * option b. is a complete nightmare i dont wanna deal with right
+	 * now so in my opinion it's far more preferable to just reset the whole thing.
+	 */
+	
+	ArenaReset(&app->scripting_arena);
+	AppInitScripting(app);
+
+	G_DeviceHotLoad(&app->graphics_device);
+	R_SystemHotLoad(&app->render_system);
 }
 
 __declspec(dllexport)
 void AppHotUnload(App *app)
 {
-	AppHotUnloadEditor     (app);
-	AppHotUnloadEntity     (app);
-	AppHotUnloadRender     (app);
-	AppHotUnloadAnimation  (app);
-	AppHotUnloadAssets     (app);
-	AppHotUnloadAudio      (app);
-	AppHotUnloadGraphics   (app);
-	AppHotUnloadScripting  (app);
+	G_DeviceHotUnload(&app->graphics_device);
+
+	// hack
+	S_Destroy(app->scripting_system);
 }
+
+	/*
+	R_Light light = {0};
+	light.type = R_LightType_Point;
+	light.position = v3(0.f, 0.f, 1.f);
+	light.direction = v3x(0.f);
+	light.colour = v3(1.f, 1.f, 1.f);
+	light.intensity = 5.f;
+	light.falloff = 1.f;
+	light.casts_shadows = true;
+	light.shadow_near = 0.1f;
+	light.shadow_far = 10.f;
+	
+	//app->light_handle = R_SceneLightCreate(&app->scene, &light);
+	
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
+	A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
+	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
+	
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+	{
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, object_model_handle, (u32)(-1));
+		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+
+		for (u32 i = 0; i < receipt.count; i++)
+		{
+			R_ModelImportEntry *entry = &receipt.entries[i];
+
+			R_ObjectDesc desc = {0};
+			desc.transform = entry->transform;
+			desc.sphere_bounds = entry->sphere_bounds;
+			desc.mesh = entry->mesh;
+			desc.material = entry->material;
+
+			R_SceneObjectCreate(&app->scene, &desc);
+		}
+	}
+	ScratchRelease(&scratch);
+
+	app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
+	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
+	app->test_sound = test_sound_asset->sound.buffer;
+
+	A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
+	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
+	S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
+
+	E_WorldSpawn(&app->world, E_Type_Player, E_TransformIdentity());
+*/
 
 	/*
 	  if (OS_KbPressed(input, OS_KeyboardKey_Enter))
@@ -652,4 +445,3 @@ void AppHotUnload(App *app)
 	
 	  R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 	*/
-	

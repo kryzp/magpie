@@ -1,14 +1,6 @@
 #ifndef RENDER_BLACKBOARD_H
 #define RENDER_BLACKBOARD_H
 
-// Realistically should just be one struct
-// but I've split up "global" render data
-// (i.e: general data required by all render
-// systems) into two structs - an "immutable"
-// one (bulletin) and a "mutable" one (blackboard)
-// immutable - for constant data
-// mutable - typically attachments that get written/read from
-
 typedef struct R_Bulletin R_Bulletin;
 struct R_Bulletin
 {
@@ -33,7 +25,7 @@ struct R_BB_ShadowData
 {
 	u32 shadow_map_count;
 	R_GraphTexHandle shadow_maps[R_SCENE_MAX_SHADOW_CASTERS];
-	
+
 	G_BufferKey shadow_caster_table;
 };
 

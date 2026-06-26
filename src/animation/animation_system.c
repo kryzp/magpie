@@ -22,7 +22,7 @@ static void AN_SystemDestroy(AN_System *s)
 	}
 }
 
-static void AN_SystemCalculateIntermediatePoses(AN_System *s, A_Registry *assets, f32 elapsed)
+static void AN_SystemCalculateIntermediatePoses(AN_System *s, A_Assets *assets, f32 elapsed)
 {
 	for (u32 i = 0; i < s->instance_count; i++)
 	{
@@ -35,7 +35,7 @@ static void AN_SystemCalculateIntermediatePoses(AN_System *s, A_Registry *assets
 	}
 }
 
-static void AN_SystemFinalizePoseAndMatrixPalette(AN_System *s, A_Registry *assets)
+static void AN_SystemFinalizePoseAndMatrixPalette(AN_System *s, A_Assets *assets)
 {
 	for (u32 i = 0; i < s->instance_count; i++)
 	{
@@ -61,7 +61,7 @@ static AN_Instance *AN_SystemResolveHandle(AN_System *s, AN_Handle handle)
 	return inst;
 }
 
-static AN_Handle AN_SystemCreateInstance(AN_System *s, A_Registry *assets, A_Handle model_handle)
+static AN_Handle AN_SystemCreateInstance(AN_System *s, A_Assets *assets, A_Handle model_handle)
 {
 	AN_Handle result = AN_HandleNull();
 

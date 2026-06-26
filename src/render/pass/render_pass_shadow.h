@@ -24,7 +24,7 @@ typedef struct R_ShadowRenderer R_ShadowRenderer;
 struct R_ShadowRenderer
 {
 	G_Device *device;
-	A_Registry *assets;
+	A_Assets *assets;
 
 	G_TextureKey     shadow_cubemaps      [R_SCENE_MAX_SHADOW_CASTERS];
 	G_TextureViewKey shadow_cubemap_views [R_SCENE_MAX_SHADOW_CASTERS];
@@ -35,7 +35,7 @@ struct R_ShadowRenderer
 	A_Handle depth_shader;
 };
 
-static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets);
+static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Assets *assets);
 static void R_ShadowRendererDestroy(R_ShadowRenderer *sr);
 
 static void R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt);

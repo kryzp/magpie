@@ -70,7 +70,7 @@ static void A_ShaderSerializerReload(const A_Context *ctx,
 															  shader->compiled.bytecodes);
 }
 
-static void A_ShaderSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_ShaderSerializerDispose(A_Asset *asset, A_Assets *assets)
 {
 	G_DeviceShaderProgramDestroy(assets->device, asset->shader.key);
 }

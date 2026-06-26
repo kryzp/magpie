@@ -1,9 +1,4 @@
 
-/*
- * TODO: I was lazy and didn't put a lot of these function
- *       defintions into the header file. Do that at some point!!!
- */
-
 static R_DebugRenderer *r_selected_debug_renderer = NULL;
 
 static R_DebugDrawNode *R_DebugAllocNode(R_DebugRenderer *dr)
@@ -222,7 +217,7 @@ static void R_DebugCreateCubeMesh(R_DebugRenderer *dr)
 	G_DeviceBufferDestroy(dr->device, staging);
 }
 
-static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Registry *assets)
+static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Assets *assets)
 {
 	MemZeroStruct(dr);
 

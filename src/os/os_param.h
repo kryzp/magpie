@@ -10,8 +10,8 @@
 #define OS_ENGINE_NAME                "Magpie"
 #define OS_DEFAULT_WINDOW_TITLE       "Magpie Demo"
 
-#define OS_DEFAULT_WINDOW_WIDTH        1920
-#define OS_DEFAULT_WINDOW_HEIGHT       1080
+#define OS_DEFAULT_WINDOW_WIDTH        1280
+#define OS_DEFAULT_WINDOW_HEIGHT       720
 
 #define OS_APP_VERSION_MAJOR           0
 #define OS_APP_VERSION_MINOR           1

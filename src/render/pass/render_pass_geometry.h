@@ -19,7 +19,7 @@ typedef struct R_GeometryRenderer R_GeometryRenderer;
 struct R_GeometryRenderer
 {
 	G_Device *device;
-	A_Registry *assets;
+	A_Assets *assets;
 
 	A_Handle shader;
 };

@@ -32,12 +32,12 @@ typedef struct R_ForwardRenderer R_ForwardRenderer;
 struct R_ForwardRenderer
 {
 	G_Device *device;
-	A_Registry *assets;
+	A_Assets *assets;
 
 	A_Handle shader;
 };
 
-static void R_ForwardRendererInit    (R_ForwardRenderer *r, G_Device *device, A_Registry *assets);
+static void R_ForwardRendererInit    (R_ForwardRenderer *r, G_Device *device, A_Assets *assets);
 static void R_ForwardRendererDestroy (R_ForwardRenderer *r);
 
 static void R_ForwardRender          (R_ForwardRenderer *r,

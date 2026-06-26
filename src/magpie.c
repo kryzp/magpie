@@ -83,8 +83,8 @@
 #include "dev/dev_inc.h"
 #include "dev/dev_inc.c"
 
-#include "editor/editor_inc.h"
-#include "editor/editor_inc.c"
+#include "game/game_inc.h"
+#include "game/game_inc.c"
 
 #include "app.h"
 #include "app.c"

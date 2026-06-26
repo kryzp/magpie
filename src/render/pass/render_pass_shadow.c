@@ -37,7 +37,7 @@ static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	R_SceneDrawIndirect(ctx->scene, cmd, indirect_key, counter_key);
 }
 
-static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Registry *assets)
+static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Assets *assets)
 {
 	sr->device = device;
 	sr->assets = assets;

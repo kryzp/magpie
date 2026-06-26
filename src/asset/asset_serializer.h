@@ -1,7 +1,7 @@
 #ifndef ASSET_SERIALIZER_H
 #define ASSET_SERIALIZER_H
 
-typedef struct A_Registry A_Registry;
+typedef struct A_Assets A_Assets;
 
 typedef struct A_MetaData A_MetaData;
 struct A_MetaData
@@ -12,7 +12,7 @@ struct A_MetaData
 typedef struct A_Context A_Context;
 struct A_Context
 {
-	A_Registry *assets;
+	A_Assets *assets;
 	A_MetaData metadata;
 	LOG_Channel log_channel;
 };
@@ -42,7 +42,7 @@ struct A_Serializer
 	void                       (*Reload)   (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *existing);
 	void                       (*Gpu)      (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *asset, G_CmdBuffer *cmd, G_BufferKey stage, u64 stage_base);
 	void                       (*End)      (A_SerializerPipelineData *data);
-	void                       (*Dispose)  (A_Asset *asset, A_Registry *assets);
+	void                       (*Dispose)  (A_Asset *asset, A_Assets *assets);
 };
 
 #endif // ASSET_SERIALIZER_H

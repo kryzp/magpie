@@ -5,15 +5,18 @@ static void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 
 	q->log_channel = log_channel;
 
-	DebugLogI(q->log_channel, "Events Initialized.");
+	DebugLogI(q->log_channel, "Initialized.");
 }
 
 static void E_EventPush(E_EventQueue *q, const E_Event *ev)
 {
+	DebugLogAssert(q->log_channel,
+				   q->event_count < ArraySize(q->events),
+				   "Exceeded max number of events (%u).",
+				   ArraySize(q->events));
+
 	q->events[q->event_count] = *ev;
 	q->event_count++;
-
-	AssertTrue(q->event_count < ArraySize(q->events));
 }
 
 static u64 E_EventListenerRegister(E_EventQueue *q)
@@ -22,11 +25,11 @@ static u64 E_EventListenerRegister(E_EventQueue *q)
 }
 
 static void E_EventBind(E_EventQueue *q,
-			  u64 listener_id,
-			  E_Type entity_type,
-			  E_EventType event_type,
-			  E_EventHandlerFn *Handler,
-			  void *ctx)
+						u64 listener_id,
+						E_TID entity_type,
+						E_EventType event_type,
+						E_EventHandlerFn *Handler,
+						void *ctx)
 {
 	E_EventBinding binding = {0};
 	binding.listener_id = listener_id;
@@ -66,7 +69,7 @@ static void E_EventDispatch(E_EventQueue *q, E_World *world)
 	{
 		E_Event *ev = &q->events[i];
 
-		if (!E_UIDIsNull(ev->target))
+		if (!E_WorldHandleIsValid(world, ev->target))
 		{
 			void *entity = E_WorldGet(world, ev->target);
 
@@ -92,7 +95,7 @@ static void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 	{
 		E_EventBinding *b = &q->bindings[i];
 
-		if (b->entity_type == header->type &&
+		if (E_TIDMatch(b->entity_type, header->tid) &&
 			b->event_type == event->type)
 		{
 			b->Handler(entity, event, b->ctx);

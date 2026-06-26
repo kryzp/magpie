@@ -1351,7 +1351,7 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 	ScratchRelease(&scratch);
 }
 
-static void A_ModelSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_ModelSerializerDispose(A_Asset *asset, A_Assets *assets)
 {
 	G_Device *device = assets->device;
 

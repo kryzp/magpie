@@ -101,7 +101,7 @@ struct R_DebugRenderer
 {
 	Arena *arena;
 	G_Device *device;
-	A_Registry *assets;
+	A_Assets *assets;
 
 	R_DebugDrawNode *free_list;
 
@@ -126,7 +126,7 @@ struct R_DebugRenderer
    CORE
    ================================================== */
 
-static void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Registry *assets);
+static void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Assets *assets);
 static void R_DebugRendererDestroy       (R_DebugRenderer *dr);
 
 static void R_DebugRendererSelect        (R_DebugRenderer *dr);

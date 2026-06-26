@@ -37,6 +37,7 @@
 #define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
 #define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
 
+
 typedef union v2 v2;
 union v2
 {
@@ -55,10 +56,16 @@ union v2
 static v2 V2Add(v2 a, v2 b);
 static v2 V2Sub(v2 a, v2 b);
 
+static v2 V2MulF32(v2 v, f32 f);
+static v2 V2MulV3(v2 a, v2 b);
+
 static f32 V2Dot(v2 a, v2 b);
 
 static f32 V2LengthSqr(v2 v);
 static f32 V2Length(v2 v);
+
+static v2 V2Normalize(v2 v);
+
 
 typedef union v3 v3;
 union v3
@@ -103,6 +110,7 @@ static v3 V3Reflect(v3 v, v3 n);
 static v3 V3Refract(v3 v, v3 n, f64 eta21);
 
 static v3 V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation);
+
 
 typedef union v4 v4;
 union v4
@@ -156,6 +164,7 @@ static v3 V4QuatToEuler(v4 q); // Pitch, Yaw, Roll
 static v4 V4QuatInverse(v4 q);
 
 static v4 V4QuatSlerp(v4 a, v4 b, f32 t);
+
 
 typedef union m4 m4;
 union m4

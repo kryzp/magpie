@@ -8,18 +8,21 @@ struct E_Transform
 	v4 rotation;
 	v3 scale;
 	v3 origin;
+
 	m4 matrix;
 	b32 dirty;
 };
 
-static void E_TransformRecompute(E_Transform *transform);
-static m4   E_TransformGetMatrix(E_Transform *transform);
+static E_Transform E_TransformIdentity(void);
 
-// I hate getters / setters but we need these to automatically
-// set the dirty flag.
-static void E_TransformSetPosition (E_Transform *transform, v3 position);
-static void E_TransformSetRotation (E_Transform *transform, v4 rotation);
-static void E_TransformSetScale    (E_Transform *transform, v3 scale);
-static void E_TransformSetOrigin   (E_Transform *transform, v3 origin);
+static void E_TransformRecompute(E_Transform *transform);
+static m4 E_TransformMatrix(E_Transform *transform);
+
+static void E_TransformSetPosition(E_Transform *transform, v3 position);
+static void E_TransformMoveBy(E_Transform *transform, v3 by);
+
+static void E_TransformSetRotation(E_Transform *transform, v4 rotation);
+static void E_TransformSetScale(E_Transform *transform, v3 scale);
+static void E_TransformSetOrigin(E_Transform *transform, v3 origin);
 
 #endif // ENTITY_TRANSFORM_H

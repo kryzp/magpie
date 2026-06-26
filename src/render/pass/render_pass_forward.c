@@ -67,7 +67,7 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
-static void R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Registry *assets)
+static void R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Assets *assets)
 {
 	r->device = device;
 	r->assets = assets;
@@ -87,28 +87,17 @@ static void R_ForwardRender(R_ForwardRenderer *r,
 {
 	const R_BB_ShadowData *bb_shadow = &bb->shadow_data;
 
-	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
-	R_Clear depth_clear  = R_ClearDepthStencil(1.f, 0);
-
-	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(graph->device->context.depth_format, v3(1.f, 1.f, 1.f));
-
-	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
-	lighting_info.flags = G_TextureAllocFlag_Storage;
-
-	bb->lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
-	bb->depth    = R_GraphCreateMsaa(graph, &depth_info,    VK_SAMPLE_COUNT_4_BIT);
-
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 
-	bb->lighting.msaa = R_PassWriteColour (pass, bb->lighting.msaa, &colour_clear);
-	bb->depth.msaa    = R_PassWriteDepth  (pass, bb->depth.msaa,    &depth_clear);
+	bb->lighting.msaa = R_PassWriteColour(pass, bb->lighting.msaa, NULL);
+	bb->depth.msaa = R_PassWriteDepth(pass, bb->depth.msaa, NULL);
 
 	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
 	R_PassIndirectBuffer(pass, draw_stream->count_buffer);
 
 	R_GraphTexHandle irradiance_fb_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, bt->irradiance_fallback_cubemap));
-	R_GraphTexHandle prefilter_handle     = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, bt->prefilter_cubemap));
-	R_GraphTexHandle brdf_handle          = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, bt->brdf));
+	R_GraphTexHandle prefilter_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, bt->prefilter_cubemap));
+	R_GraphTexHandle brdf_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, bt->brdf));
 
 	for (u32 i = 0; i < bb_shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb_shadow->shadow_maps[i]);
@@ -117,31 +106,26 @@ static void R_ForwardRender(R_ForwardRenderer *r,
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
 
-	data->shader                          = shader;
-
-	data->frame_data_buffer               = bt->frame_data_buffer;
-	data->shadow_caster_table             = bb_shadow->shadow_caster_table;
-
-	data->linear_sampler                  = bt->linear_sampler;
-	data->nearest_sampler                 = bt->nearest_sampler;
-
-	data->object_buffer_address           = bt->scene_resources->object_buffer.gpu;
-	data->light_buffer_address            = bt->scene_resources->light_buffer.gpu;
-
-	data->irradiance_fb_handle            = irradiance_fb_handle;
-	data->prefilter_handle                = prefilter_handle;
-	data->brdf_handle                     = brdf_handle;
-
-	data->draw_stream                     = *draw_stream;
+	data->shader = shader;
+	data->frame_data_buffer= bt->frame_data_buffer;
+	data->shadow_caster_table = bb_shadow->shadow_caster_table;
+	data->linear_sampler = bt->linear_sampler;
+	data->nearest_sampler = bt->nearest_sampler;
+	data->object_buffer_address = bt->scene_resources->object_buffer.gpu;
+	data->light_buffer_address = bt->scene_resources->light_buffer.gpu;
+	data->irradiance_fb_handle = irradiance_fb_handle;
+	data->prefilter_handle = prefilter_handle;
+	data->brdf_handle = brdf_handle;
+	data->draw_stream = *draw_stream;
 
 	if (R_IrradianceVolumeIsBaked(bt->irradiance_volume))
 	{
-		data->irradiance_sh_buffer_address        = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer       (bt->irradiance_volume));
-		data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer (bt->irradiance_volume));
+		data->irradiance_sh_buffer_address = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetSHBuffer(bt->irradiance_volume));
+		data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(graph->device, R_IrradianceVolumeGetGridInfoBuffer(bt->irradiance_volume));
 	}
 	else
 	{
-		data->irradiance_sh_buffer_address        = 0;
+		data->irradiance_sh_buffer_address = 0;
 		data->irradiance_grid_info_buffer_address = 0;
 	}
 

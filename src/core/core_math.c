@@ -11,6 +11,18 @@ static v2 V2Sub(v2 a, v2 b)
 			  a.y - b.y);
 }
 
+static v2 V2MulF32(v2 v, f32 f)
+{
+	return v2(v.x * f,
+			  v.y * f);
+}
+
+static v2 V2MulV3(v2 a, v2 b)
+{
+	return v2(a.x * b.x,
+			  a.y * b.y);
+}
+
 static f32 V2Dot(v2 a, v2 b)
 {
 	return (a.x * b.x +
@@ -25,6 +37,11 @@ static f32 V2LengthSqr(v2 v)
 static f32 V2Length(v2 v)
 {
 	return SquareRoot(V2LengthSqr(v));
+}
+
+static v2 V2Normalize(v2 v)
+{
+	return V2MulF32(v, 1.f / V2Length(v));
 }
 
 static v3 V3Add(v3 a, v3 b)

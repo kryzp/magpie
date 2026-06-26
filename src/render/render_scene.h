@@ -121,6 +121,7 @@ typedef struct R_SceneFrameData R_SceneFrameData;
 struct R_SceneFrameData
 {
 	u32 page_count;
+	u32 object_count;
 	
 	G_Alloc object_buffer;
 	G_Alloc light_buffer;
@@ -136,7 +137,7 @@ struct R_Scene
 {
 	Arena           *arena;
 	G_Device        *device;
-	A_Registry      *assets;
+	A_Assets      *assets;
 	LOG_Channel      log_channel;
 
 	R_ObjectSlot     object_slots[R_SCENE_MAX_OBJECTS];
@@ -174,7 +175,7 @@ struct R_Scene
 
 // trying out new formatting :p
 
-static void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
+static void                  R_SceneInit                  (      R_Scene *scene, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel);
 static void                  R_SceneDestroy               (      R_Scene *scene);
 
 static void                  R_SceneDrawIndirect          (const R_Scene *scene, G_CmdBuffer *cmd, G_BufferKey indirect_buffer, G_BufferKey count_buffer);

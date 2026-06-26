@@ -120,7 +120,7 @@ static void A_TextureSerializerEnd(A_SerializerPipelineData *data)
 	stbi_image_free(tex_data->pixel_data);
 }
 
-static void A_TextureSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_TextureSerializerDispose(A_Asset *asset, A_Assets *assets)
 {
 	G_DeviceTextureDestroy(assets->device, asset->texture.key);
 }

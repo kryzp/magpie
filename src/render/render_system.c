@@ -51,7 +51,7 @@ static void R_SystemCreateSkyboxMesh(R_System *s)
 	G_DeviceBufferDestroy(s->device, staging_buffer);
 }
 
-static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel)
+static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel)
 {
 	s->arena = arena;
 	s->device = device;
@@ -273,14 +273,30 @@ static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 	
 	R_Blackboard bb = {0};
 
-	R_ShadowRendererUploadGPU(&s->shadow_renderer, &bt);
+	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
+	lighting_info.flags = G_TextureAllocFlag_Storage;
+	bb.lighting = R_GraphCreateMsaa(g, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
+	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
 
-	R_ShadowRendererRender(&s->shadow_renderer, g, &bt, &bb, &s->culling);
+	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(g->device->context.depth_format, v3(1.f, 1.f, 1.f));
+	bb.depth = R_GraphCreateMsaa(g, &depth_info, VK_SAMPLE_COUNT_4_BIT);
+	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
-	R_DrawStream draw_stream = R_CullFrustum(&s->culling, g, &bt, R_CullFilter_OpaqueOnly, &frustum);
+	R_Pass *pass = R_GraphAdd(g, String8Lit("Clear"), R_PassType_Graphics);
+	bb.lighting.msaa = R_PassWriteColour(pass, bb.lighting.msaa, &colour_clear);
+	bb.depth.msaa = R_PassWriteDepth(pass, bb.depth.msaa, &depth_clear);
 
-	R_ForwardRender(&s->forward_renderer, g, &bt, &bb, &draw_stream);
-		
+	if (f->scene_data.object_count > 0)
+	{
+		R_ShadowRendererUploadGPU(&s->shadow_renderer, &bt);
+
+		R_ShadowRendererRender(&s->shadow_renderer, g, &bt, &bb, &s->culling);
+
+		R_DrawStream draw_stream = R_CullFrustum(&s->culling, g, &bt, R_CullFilter_OpaqueOnly, &frustum);
+
+		R_ForwardRender(&s->forward_renderer, g, &bt, &bb, &draw_stream);
+	}
+
 	// Skybox.
 	{
 		A_Handle shader_handle = A_Require(s->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);

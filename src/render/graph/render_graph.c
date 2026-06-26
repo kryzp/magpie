@@ -1,39 +1,39 @@
 
 static R_GraphTexture *R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
 {
-	AssertTrue(!R_GraphTexHandleIsNull(handle));
-	AssertTrue(handle.value <= graph->texture_ver_count);
+	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(handle), "Handle is null.");
+	DebugLogAssert(graph->log_channel, handle.value <= graph->texture_ver_count, "Handle version is invalid.");
 
 	u32 ver_index = handle.value - 1;
 	u32 res_index = graph->texture_ver[ver_index].resource_index;
 
-	AssertTrue(res_index < graph->texture_res_count);
+	DebugLogAssert(graph->log_channel, res_index < graph->texture_res_count, "Resource index is invalid.");
 
 	return &graph->texture_res[res_index];
 }
 
 static R_GraphBuffer *R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
 {
-	AssertTrue(!R_GraphBufHandleIsNull(handle));
-	AssertTrue(handle.value <= graph->buffer_ver_count);
+	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(handle), "Handle is null.");
+	DebugLogAssert(graph->log_channel, handle.value <= graph->buffer_ver_count, "Handle version is invalid.");
 
 	u32 ver_index = handle.value - 1;
 	u32 res_index = graph->buffer_ver[ver_index].resource_index;
 
-	AssertTrue(res_index < graph->buffer_res_count);
+	DebugLogAssert(graph->log_channel, res_index < graph->buffer_res_count, "Resource index is invalid.");
 
 	return &graph->buffer_res[res_index];
 }
 
 static b32 R_GraphTexVersionIsUnwritten(const R_Graph *graph, R_GraphTexHandle handle)
 {
-	AssertTrue(!R_GraphTexHandleIsNull(handle));
+	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(handle), "Handle is null.");
 	return graph->texture_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
 static b32 R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 {
-	AssertTrue(!R_GraphBufHandleIsNull(handle));
+	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(handle), "Handle is null.");
 	return graph->buffer_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
@@ -99,7 +99,7 @@ static void R_GraphReset(R_Graph *graph)
 
 static R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 {
-	AssertTrue(graph->pass_count < ArraySize(graph->passes));
+	DebugLogAssert(graph->log_channel, graph->pass_count < ArraySize(graph->passes), "Cannot add more passes.");
 
 	R_Pass *pass = &graph->passes[graph->pass_count];
 	
@@ -128,8 +128,8 @@ static void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
 
 static R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
 {
-	AssertTrue(graph->texture_res_count < ArraySize(graph->texture_res));
-	AssertTrue(graph->texture_ver_count < ArraySize(graph->texture_ver));
+	DebugLogAssert(graph->log_channel, graph->texture_res_count < ArraySize(graph->texture_res), "Cannot add more texture resources.");
+	DebugLogAssert(graph->log_channel, graph->texture_ver_count < ArraySize(graph->texture_ver), "Cannot add more texture versions.");
 
 	u32 res_index = graph->texture_res_count++;
 	R_GraphTexture *texture = &graph->texture_res[res_index];
@@ -153,8 +153,8 @@ static R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo
 
 static R_GraphBufHandle R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
 {
-	AssertTrue(graph->buffer_res_count < ArraySize(graph->buffer_res));
-	AssertTrue(graph->buffer_ver_count < ArraySize(graph->buffer_ver));
+	DebugLogAssert(graph->log_channel, graph->buffer_res_count < ArraySize(graph->buffer_res), "Cannot add more buffer versions.");
+	DebugLogAssert(graph->log_channel, graph->buffer_ver_count < ArraySize(graph->buffer_ver), "Cannot add more buffer versions.");
 
 	u32 res_index = graph->buffer_res_count++;
 	R_GraphBuffer *buffer = &graph->buffer_res[res_index];
@@ -239,7 +239,8 @@ static R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_TextureKey extern
 
 	R_GraphTexHandle handle = { ver_index + 1 };
 
-	AssertTrue(graph->imported_texture_count < ArraySize(graph->imported_textures));
+	DebugLogAssert(graph->log_channel, graph->imported_texture_count < ArraySize(graph->imported_textures), "Cannot import more textures.");
+
 	R_GraphImportedTexture *entry = &graph->imported_textures[graph->imported_texture_count++];
 	entry->external_key = external_key;
 	entry->handle = handle;
@@ -298,7 +299,8 @@ static R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_BufferKey external
 
 	R_GraphBufHandle handle = { ver_index + 1 };
 
-	AssertTrue(graph->imported_buffer_count < ArraySize(graph->imported_buffers));
+	DebugLogAssert(graph->log_channel, graph->imported_buffer_count < ArraySize(graph->imported_buffers), "Cannot import more buffers.");
+
 	R_GraphImportedBuffer *entry = &graph->imported_buffers[graph->imported_buffer_count++];
 	entry->external_key = external_key;
 	entry->handle = handle;
@@ -308,11 +310,11 @@ static R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_BufferKey external
 
 static R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index)
 {
-	AssertTrue(!R_GraphTexHandleIsNull(parent));
-	AssertTrue(graph->texture_ver_count < ArraySize(graph->texture_ver));
+	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(parent), "Parent handle is null.");
+	DebugLogAssert(graph->log_channel, graph->texture_ver_count < ArraySize(graph->texture_ver), "Cannot add more texture versions.");
 
 	u32 parent_ver_index = parent.value - 1;
-	AssertTrue(parent_ver_index < graph->texture_ver_count);
+	DebugLogAssert(graph->log_channel, parent_ver_index < graph->texture_ver_count, "Parent version is invalid.");
 
 	R_GraphTexVersion *parent_ver = &graph->texture_ver[parent_ver_index];
 
@@ -328,11 +330,11 @@ static R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle p
 
 static R_GraphBufHandle R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index)
 {
-	AssertTrue(!R_GraphBufHandleIsNull(parent));
-	AssertTrue(graph->buffer_ver_count < ArraySize(graph->buffer_ver));
+	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(parent), "Parent handle is null.");
+	DebugLogAssert(graph->log_channel, graph->buffer_ver_count < ArraySize(graph->buffer_ver), "Cannot add more buffer versions.");
 
 	u32 parent_ver_index = parent.value - 1;
-	AssertTrue(parent_ver_index < graph->buffer_ver_count);
+	DebugLogAssert(graph->log_channel, parent_ver_index < graph->buffer_ver_count, "Parent version is invalid.");
 
 	R_GraphBufVersion *parent_ver = &graph->buffer_ver[parent_ver_index];
 
@@ -1155,7 +1157,10 @@ static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass
 			vk_info.clearValue.color.float32[2] = out->clear.b;
 			vk_info.clearValue.color.float32[3] = out->clear.a;
 
-			AssertTrue(render_info.colour_attachment_count < ArraySize(render_info.colour_attachments));
+			DebugLogAssert(graph->log_channel,
+						   render_info.colour_attachment_count < ArraySize(render_info.colour_attachments),
+						   "Exceeded max number of colour attachments (%u) in render info.",
+						   ArraySize(render_info.colour_attachments));
 
 			render_info.colour_attachment_formats[render_info.colour_attachment_count] = info->format;
 			render_info.colour_attachments[render_info.colour_attachment_count] = vk_info;

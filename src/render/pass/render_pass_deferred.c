@@ -124,7 +124,7 @@ static R_PASS_RECORD_DEF(R_DeferredGeometryPassFn)
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
-static void R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Registry *assets)
+static void R_DeferredRendererInit(R_DeferredRenderer *dr, G_Device *device, A_Assets *assets)
 {
 	dr->device = device;
 	dr->assets = assets;

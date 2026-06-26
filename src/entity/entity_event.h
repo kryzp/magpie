@@ -14,8 +14,8 @@ struct E_Event
 {
 	E_EventType type;
 	
-	E_UID source;
-	E_UID target; // null = broadcast
+	E_Handle source;
+	E_Handle target; // null == broadcast
 
 	f32 timestamp;
 

@@ -1,5 +1,5 @@
 
-static void R_BloomRendererInit(R_BloomRenderer *renderer, A_Registry *assets)
+static void R_BloomRendererInit(R_BloomRenderer *renderer, A_Assets *assets)
 {
 	renderer->assets = assets;
 

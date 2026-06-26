@@ -29,7 +29,7 @@ struct IO_ByteSerializer
 static IO_ByteSerializer IO_ByteStart(OS_Handle os_stream, IO_Endian endianness);
 static IO_ByteSerializer IO_ByteStartPlatformEndian(OS_Handle os_stream);
 
-static b32 IO_ByteOk(const IO_ByteSerializer *s);
+static b32      IO_ByteOk        (const IO_ByteSerializer *s);
 
 static void     IO_ByteSkip      (IO_ByteSerializer *s, i64 bytes);
 static void     IO_ByteSeek      (IO_ByteSerializer *s, u64 to);

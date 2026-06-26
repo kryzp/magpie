@@ -1,5 +1,5 @@
-#ifndef RENDER_TRACKER_H
-#define RENDER_TRACKER_H
+#ifndef RENDER_GRAPH_TRACKER_H
+#define RENDER_GRAPH_TRACKER_H
 
 #define R_TRACKER_MAX_TRACKED 128
 
@@ -34,4 +34,4 @@ static const R_ResourceState *R_ResourceTrackerFindBuffer  (R_ResourceTracker *t
 static void R_ResourceTrackerSetTexture (R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state);
 static void R_ResourceTrackerSetBuffer  (R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state);
 
-#endif // RENDER_TRACKER_H
+#endif // RENDER_GRAPH_TRACKER_H

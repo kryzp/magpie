@@ -17,7 +17,7 @@ void CH_TimerStop(CH_Timer *timer);
 void CH_TimerPause(CH_Timer *timer);
 void CH_TimerResume(CH_Timer *timer);
 
-f64 CH_TimerReset(CH_Timer *timer);
+f64 CH_TimerRestart(CH_Timer *timer);
 f64 CH_TimerElapsed(const CH_Timer *timer);
 
 b32 CH_TimerStarted(const CH_Timer *timer);

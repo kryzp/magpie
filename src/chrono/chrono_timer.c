@@ -39,13 +39,10 @@ void CH_TimerResume(CH_Timer *timer)
 	timer->paused_ticks = 0;
 }
 
-f64 CH_TimerReset(CH_Timer *timer)
+f64 CH_TimerRestart(CH_Timer *timer)
 {
 	f64 seconds = CH_TimerElapsed(timer);
-
-	if (timer->started)
-		CH_TimerStart(timer);
-
+	CH_TimerStart(timer);
 	return seconds;
 }
 

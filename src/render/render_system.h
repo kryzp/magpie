@@ -6,7 +6,7 @@ struct R_System
 {
 	Arena *arena;
 	G_Device *device;
-	A_Registry *assets;	
+	A_Assets *assets;	
 	LOG_Channel log_channel;
 	
 	G_BufferKey frame_data_buffer;
@@ -32,7 +32,7 @@ struct R_System
 
 static void R_SystemCreateSkyboxMesh(R_System *s);
 
-static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Registry *assets, LOG_Channel log_channel);
+static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel);
 static void R_SystemDestroy(R_System *s);
 static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena);
 static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f);

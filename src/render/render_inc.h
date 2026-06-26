@@ -7,11 +7,9 @@
 #include "render_geometry.h"
 #include "render_scene.h"
 #include "render_clear.h"
-#include "render_graph_types.h"
-#include "render_pool.h"
-#include "render_pass.h"
-#include "render_tracker.h"
-#include "render_graph.h"
+
+#include "graph/render_graph_inc.h"
+
 #include "render_sprite_batch.h"
 
 #include "bloom/render_bloom_inc.h"

@@ -70,12 +70,12 @@ static f32 AN_GetSampleTime(f32 global_time, f32 global_start_time, f32 playback
    ANIMATOR
    ================================================== */
 
-static void       AN_AnimatorSelect            (AN_Animator *animator, Arena *arena, A_Registry *assets, A_Handle model_handle);
-static void       AN_AnimatorTick              (AN_Animator *animator, A_Registry *assets, f32 global_time);
-static void       AN_AnimatorUpdatePalette     (AN_Animator *animator, A_Registry *assets);
+static void       AN_AnimatorSelect            (AN_Animator *animator, Arena *arena, A_Assets *assets, A_Handle model_handle);
+static void       AN_AnimatorTick              (AN_Animator *animator, A_Assets *assets, f32 global_time);
+static void       AN_AnimatorUpdatePalette     (AN_Animator *animator, A_Assets *assets);
 
 static void       AN_AnimatorPlay              (AN_Animator *animator, u32 clip, b32 loop, f32 global_start_time);
-static b32        AN_AnimatorPlayByName        (AN_Animator *animator, A_Registry *assets, String8 name, b32 loop, f32 global_start_time);
+static b32        AN_AnimatorPlayByName        (AN_Animator *animator, A_Assets *assets, String8 name, b32 loop, f32 global_start_time);
 
 static AN_Palette AN_AnimatorPalette           (AN_Animator *animator, i32 skin_index);
 

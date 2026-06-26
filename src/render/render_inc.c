@@ -4,11 +4,9 @@
 #include "render_geometry.c"
 #include "render_scene.c"
 #include "render_clear.c"
-#include "render_graph_types.c"
-#include "render_pool.c"
-#include "render_pass.c"
-#include "render_tracker.c"
-#include "render_graph.c"
+
+#include "graph/render_graph_inc.c"
+
 #include "render_sprite_batch.c"
 
 #include "bloom/render_bloom_inc.c"

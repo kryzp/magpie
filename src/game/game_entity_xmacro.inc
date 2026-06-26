@@ -1,0 +1,1 @@
+GameEntityDef(Player, 1)

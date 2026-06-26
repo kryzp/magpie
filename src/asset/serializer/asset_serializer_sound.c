@@ -74,7 +74,7 @@ static void A_SoundSerializerReload(const A_Context *ctx,
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-static void A_SoundSerializerDispose(A_Asset *asset, A_Registry *assets)
+static void A_SoundSerializerDispose(A_Asset *asset, A_Assets *assets)
 {
 	AU_BackendDestroyBuffer(assets->audio_backend, asset->sound.buffer);
 }
