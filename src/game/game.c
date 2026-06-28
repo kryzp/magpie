@@ -113,7 +113,7 @@ static PlayerInput PlayerGatherInput(const OS_InputState *input)
 	return output;
 }
 
-static void PlayerInit(Player *player, const E_TickContext *ctx)
+static void PlayerInit(Player *player, const E_TickContext *ctx, E_Transform transform)
 {
 	GunSpecs revolver_specs = {0};
 	revolver_specs.ammo_type = AmmoType_Magnum357;

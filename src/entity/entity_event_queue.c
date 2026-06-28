@@ -26,7 +26,7 @@ static u64 E_EventListenerRegister(E_EventQueue *q)
 
 static void E_EventBind(E_EventQueue *q,
 						u64 listener_id,
-						E_TID entity_type,
+						u32 entity_type,
 						E_EventType event_type,
 						E_EventHandlerFn *Handler,
 						void *ctx)
@@ -69,19 +69,12 @@ static void E_EventDispatch(E_EventQueue *q, E_World *world)
 	{
 		E_Event *ev = &q->events[i];
 
-		if (!E_WorldHandleIsValid(world, ev->target))
-		{
-			void *entity = E_WorldGet(world, ev->target);
+		void *entity = E_WorldGet(world, ev->target);
 
-			if (!entity)
-				continue;
-
+		if (entity)
 			E_EventSignal(q, ev, entity);
-		}
 		else
-		{
 			E_EventBroadcast(q, ev, world);
-		}
 	}
 	
 	q->event_count = 0;
@@ -95,7 +88,7 @@ static void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 	{
 		E_EventBinding *b = &q->bindings[i];
 
-		if (E_TIDMatch(b->entity_type, header->tid) &&
+		if (b->entity_type == header->handle.tid &&
 			b->event_type == event->type)
 		{
 			b->Handler(entity, event, b->ctx);
@@ -113,8 +106,8 @@ static void E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
 		if (b->event_type != event->type)
 			continue;
 
-		E_TypePool *pool = &world->type_pools[b->event_type];
-		const E_TypeDesc *desc = &world->type_registry[b->event_type];
+		const E_TypeDesc *desc = &world->type_stores[b->entity_type].desc;
+		E_TypePool *pool = &world->type_stores[b->entity_type].pool;
 		
 		u8 *base = pool->data;
 

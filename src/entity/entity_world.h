@@ -11,6 +11,7 @@ struct E_TypePool
 {
 	u8 *data;
 	b32 *alive;
+	u32 *generations;
 
 	u32 count;
 	u32 capacity;
@@ -34,11 +35,18 @@ struct E_Marker
 	u16 layer_id;
 };
 
+typedef struct E_TypeStore E_TypeStore;
+struct E_TypeStore
+{
+	E_TypeDesc desc;
+	E_TypePool pool;
+};
+
 typedef struct E_InittingEntity E_InittingEntity;
 struct E_InittingEntity
 {
-	E_TID type;
-	u32 slot;
+	E_Handle handle;
+	E_Transform transform;
 };
 
 typedef struct E_World E_World;
@@ -52,11 +60,8 @@ struct E_World
 	AN_System *animation;
 	P_Engine *physics;
 	
-	u32 next_uid;
 	u32 next_tid;
-
-	E_TypePool type_pools[E_WORLD_MAX_REGISTERED_TYPES];
-	E_TypeDesc type_registry[E_WORLD_MAX_REGISTERED_TYPES];
+	E_TypeStore type_stores[E_WORLD_MAX_REGISTERED_TYPES];
 
 	E_SceneLayer layers[E_WORLD_MAX_SCENE_LAYERS];
 	u32 layer_count;
@@ -85,7 +90,7 @@ static void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel);
 static void E_WorldDestroy(E_World *world);
 
 static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active);
-static E_TID E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
+static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
 
 
 /* ==================================================
@@ -104,7 +109,7 @@ static void E_WorldFlush(E_World *world); // Clean-up all entities marked for pe
    ENTITIES
    ================================================== */
 
-static E_Handle E_WorldSpawn(E_World *world, E_TID type, E_Transform transform);
+static E_Handle E_WorldSpawn(E_World *world, u32 type, E_Transform transform);
 static void E_WorldKill(E_World *world, E_Handle handle);
 static b32 E_WorldHandleIsValid(E_World *world, E_Handle handle);
 
@@ -125,7 +130,7 @@ struct E_GetAllReceipt
 	u32 stride;
 };
 
-static E_GetAllReceipt E_WorldGetAll(E_World *world, E_TID type);
+static E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type);
 
 
 /* ==================================================

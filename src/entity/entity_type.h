@@ -22,6 +22,7 @@ struct E_TickContext
 	P_Engine *physics;
 };
 
+typedef void E_TypeDescInitFn        (void *entity, const E_TickContext *ctx, E_Transform transform);
 typedef void E_TypeDescDestroyFn     (void *entity);
 typedef void E_TypeDescTickFn        (void *entity, const E_TickContext *ctx);
 typedef void E_TypeDescSerializeFn   (void *entity, IO_ByteSerializer *writer);
@@ -34,7 +35,7 @@ struct E_TypeDesc
 	u64 stride;
 	u32 max_instances;
 
-	E_TypeDescTickFn *OnInit;
+	E_TypeDescInitFn *OnInit;
 	E_TypeDescDestroyFn *OnDestroy;
 	
 	E_TypeDescTickFn *OnPreAnimTick;

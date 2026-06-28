@@ -1,5 +1,5 @@
-#include "entity_type.h"
 #include "entity_transform.h"
+#include "entity_type.h"
 #include "entity_header.h"
 #include "entity_scene_layer.h"
 #include "entity_event.h"

@@ -13,6 +13,8 @@ static void E_PoolFreeSlot(E_TypePool *pool, u32 index)
 {
 	AssertTrue(pool->free_index_count < pool->capacity);
 
+	pool->generations[index]++;
+
 	pool->free_indices[pool->free_index_count] = index;
 	pool->free_index_count++;
 }
@@ -22,9 +24,6 @@ static void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 	world->arena = arena;
 	world->log_channel = log_channel;
 	
-	world->next_uid = 1; // 0 is reserved as null invalid entity id.
-	world->next_tid = 0;
-
 	world->layers[0].active = true;
 	world->layers[0].name = String8Lit("default");
 
@@ -41,12 +40,12 @@ static void E_WorldDestroy(E_World *world)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
-		const E_TypeDesc *desc = &world->type_registry[t];
+		const E_TypeDesc *desc = &world->type_stores[t].desc;
 
 		if (!desc->OnDestroy)
 			continue;
 		
-		E_TypePool *pool = &world->type_pools[t];
+		E_TypePool *pool = &world->type_stores[t].pool;
 		
 		u8 *base = pool->data;
 
@@ -70,7 +69,7 @@ static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
 	world->layers[layer_id].active = active;
 }
 
-static E_TID E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
+static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 {
 	DebugLogAssert(
 		world->log_channel,
@@ -80,23 +79,23 @@ static E_TID E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 
 	u32 tid = world->next_tid;
 	
-	E_TypePool *pool = &world->type_pools[tid];
+	E_TypePool *pool = &world->type_stores[tid].pool;
 
 	pool->capacity = desc->max_instances;
 	pool->count = 0;
 	pool->free_index_count = 0;
 
-	pool->data = ArenaPushArray(world->arena, u8,  desc->max_instances * desc->stride);
-	pool->alive = ArenaPushArray(world->arena, b32, desc->max_instances);
+	pool->data         = ArenaPushArray(world->arena, u8,  desc->max_instances * desc->stride);
+	pool->alive        = ArenaPushArray(world->arena, b32, desc->max_instances);
+	pool->generations  = ArenaPushArray(world->arena, u32, desc->max_instances);
 	pool->free_indices = ArenaPushArray(world->arena, u32, desc->max_instances);
-		
-	world->type_registry[tid] = *desc;
 
-	E_TID wrapped = { tid };
+	for (u32 i = 0; i < desc->max_instances; i++)
+		pool->generations[i] = 1; // zero initialized handles are null
 
-	world->next_tid++;
+	world->type_stores[tid].desc = *desc;
 
-	return wrapped;
+	return world->next_tid++;
 }
 
 static void E_WorldResolveInittingEntities(const E_TickContext *ctx)
@@ -105,26 +104,24 @@ static void E_WorldResolveInittingEntities(const E_TickContext *ctx)
 	{
 		const E_InittingEntity *initting_entity = &ctx->world->initting_entities[i];
 
-		E_TID type = initting_entity->type;
-		u32 slot = initting_entity->slot;
-		
-		const E_TypeDesc *desc = &ctx->world->type_registry[type.value];
-		E_TypePool *pool = &ctx->world->type_pools[type.value];
+		E_Handle handle = initting_entity->handle;
+
+		const E_TypeDesc *desc = &ctx->world->type_stores[handle.tid].desc;
+		E_TypePool *pool = &ctx->world->type_stores[handle.tid].pool;
 	
-		void *entity = (void *)(pool->data + (slot * desc->stride));
+		void *entity = (void *)(pool->data + (handle.slot * desc->stride));
 
 		MemZero(entity, desc->stride);
 
-		pool->alive[slot] = true;
+		pool->alive[handle.slot] = true;
 
 		E_Header *header = E_HeaderOf(entity);
-		header->uid.value = ctx->world->next_uid;
-		header->tid = type;
+		header->handle = handle;
 		header->flags = E_Flag_Active;
 		header->layer_id = 0;
 	
 		if (desc->OnInit)
-			desc->OnInit(entity, ctx);
+			desc->OnInit(entity, ctx, initting_entity->transform);
 	}
 
 	ctx->world->initting_entity_count = 0;
@@ -134,12 +131,12 @@ static void E_WorldTickPreAnim(const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < ctx->world->next_tid; t++)
 	{
-		const E_TypeDesc *desc = &ctx->world->type_registry[t];
+		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
 
 		if (!desc->OnPreAnimTick)
 			continue;
 
-		E_TypePool *pool = &ctx->world->type_pools[t];
+		E_TypePool *pool = &ctx->world->type_stores[t].pool;
 		
 		u8 *base = pool->data;
 
@@ -168,12 +165,12 @@ static void E_WorldTickPostAnim(const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < ctx->world->next_tid; t++)
 	{
-		const E_TypeDesc *desc = &ctx->world->type_registry[t];
+		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
 
 		if (!desc->OnPostAnimTick)
 			continue;
 
-		E_TypePool *pool = &ctx->world->type_pools[t];
+		E_TypePool *pool = &ctx->world->type_stores[t].pool;
 		
 		u8 *base = pool->data;
 
@@ -202,12 +199,12 @@ static void E_WorldTickPostPhysics(const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < ctx->world->next_tid; t++)
 	{
-		const E_TypeDesc *desc = &ctx->world->type_registry[t];
+		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
 
 		if (!desc->OnPostPhysicsTick)
 			continue;
 
-		E_TypePool *pool = &ctx->world->type_pools[t];
+		E_TypePool *pool = &ctx->world->type_stores[t].pool;
 		
 		u8 *base = pool->data;
 
@@ -236,12 +233,8 @@ static void E_WorldFlush(E_World *world)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
-		const E_TypeDesc *desc = &world->type_registry[t];
-
-		if (!desc->OnPostAnimTick)
-			continue;
-
-		E_TypePool *pool = &world->type_pools[t];
+		const E_TypeDesc *desc = &world->type_stores[t].desc;
+		E_TypePool *pool = &world->type_stores[t].pool;
 		
 		u8 *base = pool->data;
 
@@ -269,7 +262,7 @@ static void E_WorldFlush(E_World *world)
 	}
 }
 
-static E_Handle E_WorldSpawn(E_World *world, E_TID type, E_Transform transform)
+static E_Handle E_WorldSpawn(E_World *world, u32 type, E_Transform transform)
 {
 	DebugLogAssert(
 		world->log_channel,
@@ -277,19 +270,18 @@ static E_Handle E_WorldSpawn(E_World *world, E_TID type, E_Transform transform)
 		"Not enough space to init new entity this frame!"
 	);
 	
-	E_TypePool *pool = &world->type_pools[type.value];
+	E_TypePool *pool = &world->type_stores[type].pool;
 
-	world->initting_entities[world->initting_entity_count].type = type;
-	world->initting_entities[world->initting_entity_count].slot = E_PoolAllocSlot(pool);
-	
-	world->initting_entity_count++;
-	
+	u32 slot = E_PoolAllocSlot(pool);
+
 	E_Handle handle = {0};
-	handle.uid.value = world->next_uid;
-	handle.tid.value = world->next_tid;
-	handle.generation = 0;
+	handle.tid = type;
+	handle.slot = slot;
+	handle.generation = pool->generations[slot];
 
-	world->next_uid++;
+	world->initting_entities[world->initting_entity_count].handle = handle;
+	world->initting_entities[world->initting_entity_count].transform = transform;
+	world->initting_entity_count++;
 
 	return handle;
 }
@@ -307,51 +299,41 @@ static void E_WorldKill(E_World *world, E_Handle handle)
 
 static b32 E_WorldHandleIsValid(E_World *world, E_Handle handle)
 {
-	return true;
+	return E_WorldGet(world, handle) != NULL;
 }
 
 static void *E_WorldGet(E_World *world, E_Handle handle)
 {
-	for (u32 t = 0; t < world->next_tid; t++)
-	{
-		const E_TypeDesc *desc = &world->type_registry[t];
+	if (handle.generation == 0)
+		return NULL;
 
-		E_TypePool *pool = &world->type_pools[t];
+	if (handle.tid >= world->next_tid)
+		return NULL;
 
-		b8 *base = pool->data;
+	E_TypeStore *store = &world->type_stores[handle.tid];
+	E_TypePool *pool = &store->pool;
 
-		for (u32 j = 0; j < pool->count; j++)
-		{
-			if (!pool->alive[j])
-				continue;
+	if (handle.slot >= pool->capacity)
+		return NULL;
 
-			void *entity = (void *)(base + (j * desc->stride));
+	if (!pool->alive[handle.slot])
+		return NULL;
 
-			if (E_UIDMatch(E_HeaderOf(entity)->uid, handle.uid))
-				return entity;
-		}
-	}
+	if (pool->generations[handle.slot] != handle.generation)
+		return NULL; // stale — slot was freed and reused
 
-	DebugLogW(
-		world->log_channel,
-		"Couldn't find entity with UID: %u, TID: %u, GEN: %u",
-		handle.uid.value,
-		handle.tid.value,
-		handle.generation
-	);
-
-	return NULL;
+	return pool->data + (handle.slot * store->desc.stride);
 }
 
-static E_GetAllReceipt E_WorldGetAll(E_World *world, E_TID type)
+static E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type)
 {
-	E_TypePool *pool = &world->type_pools[type.value];
+	E_TypePool *pool = &world->type_stores[type].pool;
 
 	E_GetAllReceipt receipt = {0};
 	receipt.data = pool->data;
 	receipt.count = pool->count;
 	receipt.alive = pool->alive;
-	receipt.stride = world->type_registry[type.value].stride;
+	receipt.stride = world->type_stores[type].desc.stride;
 
 	return receipt;
 }
@@ -361,7 +343,7 @@ static E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 
 	DebugLogAssert(
 		world->log_channel,
 		world->marker_count < ArraySize(world->markers),
-		"Ran out of available marker space."
+		"Cannot add more markers to world (ran out of array space)."
 	);
 	
 	E_Marker *m = &world->markers[world->marker_count];

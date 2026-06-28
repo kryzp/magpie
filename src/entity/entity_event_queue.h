@@ -15,7 +15,7 @@ typedef struct E_EventBinding E_EventBinding;
 struct E_EventBinding
 {
 	u64 listener_id;
-	E_TID entity_type;
+	u32 entity_type;
 	E_EventType event_type;
 	E_EventHandlerFn *Handler;
 	void *ctx;
@@ -43,7 +43,7 @@ static u64  E_EventListenerRegister(E_EventQueue *q);
 
 static void E_EventBind(E_EventQueue *q,
 						u64 listener_id,
-						E_TID entity_type,
+						u32 entity_type,
 						E_EventType event_type,
 						E_EventHandlerFn *Handler,
 						void *ctx);

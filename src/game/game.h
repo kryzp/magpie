@@ -102,7 +102,7 @@ struct Player
     Gun gun;
 };
 
-static void PlayerInit(Player *player, const E_TickContext *ctx);
+static void PlayerInit(Player *player, const E_TickContext *ctx, E_Transform transform);
 static void PlayerDestroy(Player *player);
 static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx);
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx);
@@ -113,7 +113,7 @@ static void PlayerDeserialize(Player *player, IO_ByteSerializer *reader);
 typedef struct Game Game;
 struct Game
 {
-    E_TID entity_types[GameEntityType_COUNT];
+    u32 entity_types[GameEntityType_COUNT];
     E_Handle player_handle;
 	GM_Stack game_mode_stack;
 	R_Camera camera;

@@ -1,39 +1,32 @@
 #ifndef ENTITY_HEADER_H
 #define ENTITY_HEADER_H
 
-typedef struct E_UID E_UID;
-struct E_UID
-{
-	u32 value;
-};
-
-static inline b32 E_UIDMatch(E_UID a, E_UID b)
-{
-	return a.value == b.value;
-}
-
-typedef struct E_TID
-{
-	u32 value;
-}
-E_TID;
-
-static inline b32 E_TIDMatch(E_TID a, E_TID b)
-{
-	return a.value == b.value;
-}
-
 typedef struct E_Handle E_Handle;
 struct E_Handle
 {
-	E_UID uid;
-	E_TID tid;
+	u32 tid;
+	u32 slot;
 	u32 generation;
 };
 
+static inline E_Handle E_HandleNull(void)
+{
+	E_Handle null_handle = {0};
+	return null_handle;
+}
+
+static inline b32 E_HandleIsNull(E_Handle handle)
+{
+	return handle.generation == 0;
+}
+
 static inline b32 E_HandleMatch(E_Handle a, E_Handle b)
 {
-	return true;
+	return (
+		a.tid == b.tid &&
+		a.slot == b.slot &&
+		a.generation == b.generation
+	);
 }
 
 typedef u32 E_Flags;
@@ -56,8 +49,7 @@ enum
 typedef struct E_Header E_Header;
 struct E_Header
 {
-	E_UID uid;
-	E_TID tid;
+	E_Handle handle;
 	E_Flags flags;
 	u16 layer_id;
 };
