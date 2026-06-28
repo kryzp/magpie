@@ -1,7 +1,4 @@
 
-#include "game.h"
-#include "chrono/chrono_timer.h"
-#include "entity/entity_transform.h"
 static CameraDriver CameraDriverInit(const CameraDriverConfig *config)
 {
 	CameraDriver driver = {0};

@@ -1,6 +1,4 @@
 
-#include "entity/entity_world.h"
-#include "core/core_log.h"
 static u32 E_PoolAllocSlot(E_TypePool *pool)
 {
 	if (pool->free_index_count > 0)
