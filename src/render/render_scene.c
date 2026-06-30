@@ -365,7 +365,7 @@ static void R_SceneObjectSetSkinning(R_Scene *scene, R_SceneHandle handle, const
 	if (!slot)
 		return;
 	
-	slot->skinning_palette = palette->palette;
+	slot->skinning_palette = palette->matrices;
 	slot->skinning_joint_count = palette->joint_count;
 }
 

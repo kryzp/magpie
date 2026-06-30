@@ -78,8 +78,8 @@ struct E_World
    HELPERS
    ================================================== */
 
-static u32  E_PoolAllocSlot (E_TypePool *pool);
-static void E_PoolFreeSlot  (E_TypePool *pool, u32 index);
+static u32 E_PoolAllocSlot(E_TypePool *pool);
+static void E_PoolFreeSlot(E_TypePool *pool, u32 index);
 
 
 /* ==================================================

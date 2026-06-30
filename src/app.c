@@ -85,7 +85,7 @@ static void AppInit_(App *app)
 	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
 
 
-	AN_SystemInit(&app->animation_system, app->animation_log_channel);
+	AN_SystemInit(&app->animation_system, app->animation_log_channel, &app->assets);
 
 
   	
@@ -245,12 +245,13 @@ b32 AppTick(App *app, const OS_InputState *input)
 	entity_tick_context.assets = &app->assets;
 	entity_tick_context.animation = &app->animation_system;
 	entity_tick_context.physics = &app->physics_engine;
-	
+	entity_tick_context.render_scene = &app->scene;
+
 	E_WorldResolveInittingEntities(&entity_tick_context);
 
 	E_WorldTickPreAnim(&entity_tick_context);
 	
-	AN_SystemCalculateIntermediatePoses(&app->animation_system, &app->assets, elapsed);
+	AN_SystemCalculateIntermediatePoses(&app->animation_system, elapsed);
 
 	E_WorldTickPostAnim(&entity_tick_context);
 
@@ -274,7 +275,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 		app->delta_accumulator -= fixed_dt;
 	}
 
-	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system, &app->assets);
+	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system);
 	
 	E_WorldTickPostPhysics(&entity_tick_context);
 

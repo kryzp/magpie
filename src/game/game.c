@@ -1,4 +1,7 @@
 
+#include "animation/animation_animator.h"
+#include "animation/animation_system.h"
+#include "render/render_scene.h"
 static CameraDriver CameraDriverInit(const CameraDriverConfig *config)
 {
 	CameraDriver driver = {0};
@@ -68,15 +71,15 @@ static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_I
 
 static void GunFire(Gun *gun)
 {
-	if (CH_TimerElapsed(&gun->shoot_timer) < gun->specs.rechamber_time && gun->ammo_count != gun->specs.max_ammo_in_clip)
-	{
-		DebugPrintT("Rechambering... %f / %f", CH_TimerElapsed(&gun->shoot_timer), gun->specs.rechamber_time);
-		return;
-	}
-
 	if (gun->ammo_count <= 0)
 	{
 		DebugPrintT("Click!");
+		return;
+	}
+
+	if (CH_TimerElapsed(&gun->shoot_timer) < gun->specs.rechamber_time)
+	{
+		DebugPrintT("Rechambering... %f / %f", CH_TimerElapsed(&gun->shoot_timer), gun->specs.rechamber_time);
 		return;
 	}
 
@@ -92,29 +95,43 @@ static void GunReload(Gun *gun)
 	gun->ammo_count = gun->specs.max_ammo_in_clip;
 
 	DebugPrintT("Reloaded! %u / %u", gun->ammo_count, gun->specs.max_ammo_in_clip);
+
+	CH_TimerRestart(&gun->shoot_timer);
 }
 
-static PlayerInput PlayerGatherInput(const OS_InputState *input)
+static PlayerInput PlayerGatherInput(const OS_InputState *st)
 {
-	PlayerInput output = {0};
+	PlayerInput input = {0};
 
-	output.movement.x = (f32)OS_KbDown(input, OS_KeyboardKey_D) - (f32)OS_KbDown(input, OS_KeyboardKey_A);
-	output.movement.y = (f32)OS_KbDown(input, OS_KeyboardKey_W) - (f32)OS_KbDown(input, OS_KeyboardKey_S);
-	output.movement = V2Normalize(output.movement);
+	input.movement.x = (f32)OS_KbDown(st, OS_KeyboardKey_D) - (f32)OS_KbDown(st, OS_KeyboardKey_A);
+	input.movement.y = (f32)OS_KbDown(st, OS_KeyboardKey_W) - (f32)OS_KbDown(st, OS_KeyboardKey_S);
+	input.movement = V2Normalize(input.movement);
 
-	output.jump = OS_KbPressed(input, OS_KeyboardKey_Space);
+	input.jump = OS_KbPressed(st, OS_KeyboardKey_Space);
 
-	output.aiming = OS_MbDown(input, OS_MouseButton_Right);
-	output.just_started_aiming = OS_MbPressed(input, OS_MouseButton_Right);
+	input.sneak = OS_KbShift(st);
 
-	output.fire = OS_MbPressed(input, OS_MouseButton_Left) && output.aiming;
-	output.reload = OS_MbPressed(input, OS_MouseButton_Left) && !output.aiming;
+	input.aiming = OS_MbDown(st, OS_MouseButton_Right);
+	input.just_started_aiming = OS_MbPressed(st, OS_MouseButton_Right);
 
-	return output;
+	input.fire = OS_MbPressed(st, OS_MouseButton_Left) && input.aiming;
+	input.reload = OS_MbPressed(st, OS_MouseButton_Left) && !input.aiming;
+
+	return input;
 }
 
-static void PlayerInit(Player *player, const E_TickContext *ctx, E_Transform transform)
+static void PlayerAnimate(const PlayerAnimationState *st, AN_System *s, AN_Handle handle)
 {
+	AN_ClipKey key = AN_ClipKeyNull();
+	AN_Play(s, handle, key, false, st->elapsed);
+}
+
+static void PlayerInit(Player *player, const E_TickContext *ctx)
+{
+	player->arena = ArenaAlloc(Kilobytes(512));
+
+	//player->anim_handle = AN_SystemCreateInstance(ctx->animation, A_HandleNull());
+
 	GunSpecs revolver_specs = {0};
 	revolver_specs.ammo_type = AmmoType_Magnum357;
 	revolver_specs.max_ammo_in_clip = 6;
@@ -125,6 +142,7 @@ static void PlayerInit(Player *player, const E_TickContext *ctx, E_Transform tra
 
 static void PlayerDestroy(Player *player)
 {
+	ArenaRelease(&player->arena);
 }
 
 static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
@@ -149,11 +167,25 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	movement.y = xy_movement_input.y * move_speed;
 	movement.z = 0.f;
 
-	E_TransformMoveBy(&player->transform, movement); // todo: replace with physics handle call
+	E_TransformMoveBy(E_TransformOf(player), movement); // todo: replace with physics handle call
+
+	PlayerAnimationState animation_st = {0};
+	animation_st.elapsed = ctx->elapsed;
+	animation_st.is_grounded = true;
+	animation_st.is_aiming = input_st.aiming || input_st.fire;
+	animation_st.is_sneaking = input_st.sneak;
+	animation_st.is_moving = V3LengthSqr(movement) <= MATH_EPSILON_F32;
+
+	//PlayerAnimate(&animation_st, ctx->animation, player->anim_handle);
 }
 
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 {
+	//R_SceneObjectSetTransform(ctx->render_scene, player->scene_object_handle, E_TransformMatrix(E_TransformOf(player)));
+
+	//AN_Animator *animator = AN_SystemGetAnimator(ctx->animation, player->anim_handle);
+	//AN_Palette palette = AN_AnimatorPalette(animator, 0);
+	//R_SceneObjectSetSkinning(ctx->render_scene, player->scene_object_handle, &palette);
 }
 
 static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
@@ -176,7 +208,7 @@ static void GameRegisterEntities(Game *game, E_World *world)
 			.name              = String8Lit(STRINGIFY(type)),			\
 			.stride            = sizeof(type),							\
 			.max_instances     = (max),									\
-			.OnInit            = (E_TypeDescTickFn *)type##Init, 		\
+			.OnInit            = (E_TypeDescInitFn *)type##Init, 		\
 			.OnDestroy         = (E_TypeDescDestroyFn *)type##Destroy, \
 			.OnPreAnimTick     = (E_TypeDescTickFn *)type##PreAnimTick, \
 			.OnPostAnimTick    = (E_TypeDescTickFn *)type##PostAnimTick, \

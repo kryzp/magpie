@@ -282,9 +282,9 @@ static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 	bb.depth = R_GraphCreateMsaa(g, &depth_info, VK_SAMPLE_COUNT_4_BIT);
 	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
-	R_Pass *pass = R_GraphAdd(g, String8Lit("Clear"), R_PassType_Graphics);
-	bb.lighting.msaa = R_PassWriteColour(pass, bb.lighting.msaa, &colour_clear);
-	bb.depth.msaa = R_PassWriteDepth(pass, bb.depth.msaa, &depth_clear);
+	R_Pass *clear_pass = R_GraphAdd(g, String8Lit("Clear"), R_PassType_Graphics);
+	bb.lighting.msaa = R_PassWriteColour(clear_pass, bb.lighting.msaa, &colour_clear);
+	bb.depth.msaa = R_PassWriteDepth(clear_pass, bb.depth.msaa, &depth_clear);
 
 	if (f->scene_data.object_count > 0)
 	{
@@ -309,11 +309,11 @@ static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 		data->frame_data_buffer = s->frame_data_buffer;
 		data->skybox_mesh = &s->skybox_mesh;
 
-		R_Pass *pass = R_GraphAdd(g, String8Lit("Skybox"), R_PassType_Graphics);
-		bb.lighting.resolved = R_PassWriteColourResolve(pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
-		bb.depth.resolved = R_PassWriteDepthResolve(pass, bb.depth.msaa,    bb.depth.resolved,    NULL);
-		R_PassReadTextureGraphics(pass, R_GraphImportTexture(g, s->environment_cubemap));
-		R_PassSetRecord(pass, R_SkyboxPassFn, data);
+		R_Pass *skybox_pass = R_GraphAdd(g, String8Lit("Skybox"), R_PassType_Graphics);
+		bb.lighting.resolved = R_PassWriteColourResolve(skybox_pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
+		bb.depth.resolved = R_PassWriteDepthResolve(skybox_pass, bb.depth.msaa, bb.depth.resolved, NULL);
+		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(g, s->environment_cubemap));
+		R_PassSetRecord(skybox_pass, R_SkyboxPassFn, data);
 	}
 	
 	// Post Processing.
@@ -327,10 +327,10 @@ static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 		data->input = bb.lighting.resolved;
 		data->output = bb.lighting.resolved;
 
-		R_Pass *pass = R_GraphAdd(g, String8Lit("Post Processing"), R_PassType_Compute);
-		bb.lighting.resolved = R_PassWriteTextureCompute(pass, bb.lighting.resolved);
-		R_PassReadTextureCompute(pass, bb.lighting.resolved);
-		R_PassSetRecord(pass, R_PostProcessingPassFn, data);
+		R_Pass *pp_pass = R_GraphAdd(g, String8Lit("Post Processing"), R_PassType_Compute);
+		bb.lighting.resolved = R_PassWriteTextureCompute(pp_pass, bb.lighting.resolved);
+		R_PassReadTextureCompute(pp_pass, bb.lighting.resolved);
+		R_PassSetRecord(pp_pass, R_PostProcessingPassFn, data);
 	}
 
 	R_DebugRendererRender(&s->debug_renderer, f->dt, g, f->arena, bb.lighting.resolved, bb.depth.resolved);

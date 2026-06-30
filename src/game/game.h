@@ -64,8 +64,6 @@ struct GunSpecs
 typedef struct Gun Gun;
 struct Gun
 {
-    E_Transform transform;
-    
     u32 ammo_count;
     GunSpecs specs;
 
@@ -82,6 +80,7 @@ struct PlayerInput
 {
 	v2 movement;
     b32 jump;
+    b32 sneak;
 
     b32 aiming;
     b32 just_started_aiming;
@@ -90,19 +89,35 @@ struct PlayerInput
     b32 reload;
 };
 
-static PlayerInput PlayerGatherInput(const OS_InputState *input);
+static PlayerInput PlayerGatherInput(const OS_InputState *st);
+
+typedef struct PlayerAnimationState PlayerAnimationState;
+struct PlayerAnimationState
+{
+    f32 elapsed;
+
+    b32 is_grounded;
+    b32 is_aiming;
+    b32 is_sneaking;
+    b32 is_moving;
+};
+
+static void PlayerAnimate(const PlayerAnimationState *st, AN_System *s, AN_Handle handle);
 
 typedef struct Player Player;
 struct Player
 {
     E_Header header;
 
-    E_Transform transform;
+    Arena arena;
 
+    R_SceneHandle scene_object_handle;
+    AN_Handle anim_handle;
+    
     Gun gun;
 };
 
-static void PlayerInit(Player *player, const E_TickContext *ctx, E_Transform transform);
+static void PlayerInit(Player *player, const E_TickContext *ctx);
 static void PlayerDestroy(Player *player);
 static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx);
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx);

@@ -118,10 +118,11 @@ static void E_WorldResolveInittingEntities(const E_TickContext *ctx)
 		E_Header *header = E_HeaderOf(entity);
 		header->handle = handle;
 		header->flags = E_Flag_Active;
+		header->transform = initting_entity->transform;
 		header->layer_id = 0;
 	
 		if (desc->OnInit)
-			desc->OnInit(entity, ctx, initting_entity->transform);
+			desc->OnInit(entity, ctx);
 	}
 
 	ctx->world->initting_entity_count = 0;

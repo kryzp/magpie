@@ -1,4 +1,5 @@
 
+#include "animation_animator.h"
 static m4 AN_JointPoseToM4(AN_JointPose trs)
 {
 	m4 T = M4Translate(trs.translation);
@@ -134,17 +135,22 @@ static f32 AN_GetSampleTime(f32 global_time, f32 global_start_time, f32 playback
 	return sample_time;
 }
 
-static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Assets *assets, A_Handle model_handle)
+static void AN_AnimatorInit(AN_Animator *animator, A_Assets *assets)
 {
-	A_Asset *asset = A_GetNow(assets, model_handle);
+	animator->assets = assets;
+}
 
-	AssertTrue(asset);
-	
+static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle)
+{
+	DebugPrintAssert(A_IsValid(animator->assets, model_handle), "Asset handle is invalid.");
+
+	A_Asset *asset = A_GetNow(animator->assets, model_handle);
+
 	A_ModelData *asset_model = &asset->model;
 
 	animator->selected_model = model_handle;
 	
-	animator->clip = AN_CLIP_INVALID;
+	animator->clip = AN_ClipKeyNull();
 	
 	animator->playback_rate = 1.f;
 	animator->loop = true;
@@ -158,19 +164,19 @@ static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Assets *ass
 
 		u32 count = skeleton->joint_count;
 
-		animator->poses[i].joint_count       = count;
-		animator->poses[i].local_poses       = ArenaPushArray(arena, AN_JointPose, count);
+		animator->poses[i].joint_count = count;
+		animator->poses[i].local_poses = ArenaPushArray(arena, AN_JointPose, count);
 		animator->poses[i].global_transforms = ArenaPushArray(arena, m4,     count);
-		animator->poses[i].palette           = ArenaPushArray(arena, m4,     count);
+		animator->poses[i].palette = ArenaPushArray(arena, m4,     count);
 	}
 }
 
-static void AN_AnimatorTick(AN_Animator *animator, A_Assets *assets, f32 elapsed)
+static void AN_AnimatorTick(AN_Animator *animator, f32 elapsed)
 {
 	if (animator->pose_count <= 0)
 		return;
 	
-	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
+	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
 
 	// reset bind pose
 	for (u32 i = 0; i < animator->pose_count; i++)
@@ -186,11 +192,11 @@ static void AN_AnimatorTick(AN_Animator *animator, A_Assets *assets, f32 elapsed
 	}
 
 	// advance and sample the clip
-	if (animator->clip != AN_CLIP_INVALID)
+	if (!AN_ClipKeyIsNull(animator->clip))
 	{
-		if (animator->clip < asset_model->clip_count)
+		if (animator->clip.value < asset_model->clip_count)
 		{
-			A_AnimClip *clip = &asset_model->clips[animator->clip];
+			A_AnimClip *clip = &asset_model->clips[animator->clip.value];
 
 			f32 sample_time = AN_GetSampleTime(elapsed, animator->global_start_time, animator->playback_rate, clip->duration_s, 0);
 
@@ -208,16 +214,18 @@ static void AN_AnimatorTick(AN_Animator *animator, A_Assets *assets, f32 elapsed
 
 				AN_SampleChannel(ch, sample_time, &pose->local_poses[ch->target_joint]);
 			}
+
+			animator->last_sample_time = sample_time;
 		}
 	}
 }
 
-static void AN_AnimatorUpdatePalette(AN_Animator *animator, A_Assets *assets)
+static void AN_AnimatorUpdatePalette(AN_Animator *animator)
 {
 	if (animator->pose_count <= 0)
 		return;
 	
-	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
+	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
 	
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
@@ -238,10 +246,31 @@ static void AN_AnimatorUpdatePalette(AN_Animator *animator, A_Assets *assets)
 	}
 }
 
-static void AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop, f32 global_start_time)
+static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
 {
-	if (clip == animator->clip &&
-		loop == animator->loop)
+	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
+
+	for (u32 i = 0; i < asset_model->clip_count; i++)
+	{
+		if (String8Match(asset_model->clips[i].name, name))
+		{
+			AN_ClipKey key = {0};
+			key.value = i;
+
+			return key;
+		}
+	}
+
+	return AN_ClipKeyNull();
+}
+
+static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time)
+{
+	if (AN_ClipKeyIsNull(clip))
+		return;
+
+	if (animator->clip.value == clip.value &&
+		animator->loop == loop)
 		return;
 
 	animator->clip = clip;
@@ -249,20 +278,27 @@ static void AN_AnimatorPlay(AN_Animator *animator, u32 clip, b32 loop, f32 globa
 	animator->global_start_time = global_start_time;
 }
 
-static b32 AN_AnimatorPlayByName(AN_Animator *animator, A_Assets *assets, String8 name, b32 loop, f32 global_start_time)
+static void AN_AnimatorStop(AN_Animator *animator)
 {
-	A_ModelData *asset_model = &A_Get(assets, animator->selected_model)->model;
+	animator->clip = AN_ClipKeyNull();
+}
 
-	for (u32 i = 0; i < asset_model->clip_count; i++)
-	{
-		if (String8Match(asset_model->clips[i].name, name))
-		{
-			AN_AnimatorPlay(animator, i, loop, global_start_time);
-			return true;
-		}
-	}
+static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
+{
+	if (AN_ClipKeyIsNull(animator->clip) || animator->loop)
+		return false;
 
-	return false;
+	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
+	A_AnimClip *anim_clip = &asset_model->clips[animator->clip.value];
+	
+	return animator->last_sample_time >= anim_clip->duration_s;
+}
+
+static f32 AN_AnimatorNormalizedTime(const AN_Animator *animator)
+{
+	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
+	A_AnimClip *c = &asset_model->clips[animator->clip.value];
+	return animator->last_sample_time / c->duration_s;
 }
 
 static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
@@ -272,7 +308,7 @@ static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
 	if (skin_index < 0 || skin_index >= animator->pose_count)
 		return palette;
 
-	palette.palette     = animator->poses[skin_index].palette;
+	palette.matrices = animator->poses[skin_index].palette;
 	palette.joint_count = animator->poses[skin_index].joint_count;
 
 	return palette;

@@ -51,9 +51,13 @@ struct E_Header
 {
 	E_Handle handle;
 	E_Flags flags;
+	E_Transform transform;
 	u16 layer_id;
+	//E_Handle parent; TODO
+	//b32 inherit_transform; TODO
 };
 
 #define E_HeaderOf(entity_pointer) ((E_Header *)(entity_pointer))
+#define E_TransformOf(entity_pointer) (&(E_HeaderOf(entity_pointer)->transform))
 
 #endif // ENTITY_HEADER_H
