@@ -5,14 +5,14 @@
  * therefore we gotta translate between 'em.
  */
 
-const static m4 ast_gltf_basis = {
+static const m4 ast_gltf_basis = {
 	1.f,  0.f,  0.f,  0.f, // c0
 	0.f,  0.f,  1.f,  0.f, // c1
 	0.f, -1.f,  0.f,  0.f, // c2
 	0.f,  0.f,  0.f,  1.f  // c3
 };
 
-const static m4 ast_gltf_basis_inv = {
+static const m4 ast_gltf_basis_inv = {
 	1.f,  0.f,  0.f,  0.f, // c0
 	0.f,  0.f, -1.f,  0.f, // c1
 	0.f,  1.f,  0.f,  0.f, // c2
@@ -31,25 +31,21 @@ static m4 A_GltfFloat16ToM4(const cgltf_float m[16])
 
 static v3 A_GltfTransformTranslation(v3 v)
 {
-	// basis change
 	return v3(v.x, -v.z, v.y);
 }
 
 static v4 A_GltfTransformQuat(v4 q)
 {
-	// basis change
 	return v4(q.x, -q.z, q.y, q.w);
 }
 
 static v3 A_GltfTransformScale(v3 s)
 {
-	// basis change
 	return v3(s.x, s.z, s.y);
 }
 
 static m4 A_GltfTransformM4(m4 m)
 {
-	// magpie = basis * cgltf * basis^-1
 	return M4MulM4(ast_gltf_basis, M4MulM4(m, ast_gltf_basis_inv));
 }
 
@@ -112,10 +108,10 @@ static void A_ModelAddDependency(A_ModelLoadData *load, Arena *arena, A_Handle h
 }
 
 static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
-						 Arena *arena,
-						 A_ModelLoadData *load,
-						 String8 directory,
-						 const cgltf_texture_view *view)
+									   Arena *arena,
+									   A_ModelLoadData *load,
+									   String8 directory,
+									   const cgltf_texture_view *view)
 {
 	if (!view->texture || !view->texture->image)
 		return A_HandleNull();
@@ -145,10 +141,10 @@ static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
 }
 
 static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
-						 Arena *arena,
-						 A_ModelLoadData *load,
-						 String8 directory,
-						 const cgltf_material *gltf_mat)
+											  Arena *arena,
+											  A_ModelLoadData *load,
+											  String8 directory,
+											  const cgltf_material *gltf_mat)
 {
 	A_ModelMaterial mat = {0};
 
@@ -339,13 +335,13 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 }
 
 static void A_ModelProcessPrimitive(const A_Context *ctx,
-						  Arena *arena,
-						  A_ModelLoadData *load,
-						  String8 directory,
-						  const cgltf_primitive *prim,
-						  m4 world_transform,
-						  const cgltf_skin *skin,
-						  i32 skin_index)
+									Arena *arena,
+									A_ModelLoadData *load,
+									String8 directory,
+									const cgltf_primitive *prim,
+									m4 world_transform,
+									const cgltf_skin *skin,
+									i32 skin_index)
 {
 	// TODO: support more topologies
 	DebugLogAssert(ctx->log_channel,
@@ -606,32 +602,32 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 	else
 	{
 		// Default material per glTF spec.
-		material.albedo_factor       = v4(1.f, 1.f, 1.f, 1.f);
-		material.normal_scale        = 1.f;
-		material.metallic_factor     = 1.f;
-		material.roughness_factor    = 1.f;
-		material.emissive_factor     = v3x(0.f);
-		material.emissive_intensity  = 1.f;
+		material.albedo_factor = v4(1.f, 1.f, 1.f, 1.f);
+		material.normal_scale = 1.f;
+		material.metallic_factor = 1.f;
+		material.roughness_factor = 1.f;
+		material.emissive_factor = v3x(0.f);
+		material.emissive_intensity = 1.f;
 		material.occlusion_intensity = 1.f;
-		material.ior                 = 1.5f;
-		material.alpha_mode          = A_AlphaMode_Opaque;
-		material.alpha_cutoff        = 0.5f;
+		material.ior = 1.5f;
+		material.alpha_mode = A_AlphaMode_Opaque;
+		material.alpha_cutoff = 0.5f;
 	}
 
 
 	// Push onto list.
 
 	A_ModelLoadMesh *mesh = ArenaPushArray(arena, A_ModelLoadMesh, 1);
-	mesh->transform     = world_transform;
-	mesh->bounds_min    = bmin;
-	mesh->bounds_max    = bmax;
-	mesh->vertex_count  = vert_count;
-	mesh->vertices      = vertices;
-	mesh->index_count   = idx_count;
-	mesh->indices       = indices;
+	mesh->transform = world_transform;
+	mesh->bounds_min = bmin;
+	mesh->bounds_max = bmax;
+	mesh->vertex_count = vert_count;
+	mesh->vertices = vertices;
+	mesh->index_count = idx_count;
+	mesh->indices = indices;
 	mesh->skin_vertices = skin_vertices;
-	mesh->skin_index    = skin_index;
-	mesh->material      = material;
+	mesh->skin_index = skin_index;
+	mesh->material = material;
 
 	mesh->next = load->first_mesh;
 	load->first_mesh = mesh;
@@ -645,11 +641,11 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 }
 
 static void A_ModelProcessNode(const A_Context *ctx,
-					 Arena *arena,
-					 A_ModelLoadData *load,
-					 String8 directory,
-					 const cgltf_node *node,
-					 const cgltf_data *gltf)
+							   Arena *arena,
+							   A_ModelLoadData *load,
+							   String8 directory,
+							   const cgltf_node *node,
+							   const cgltf_data *gltf)
 {
 	if (node->mesh)
 	{
@@ -663,7 +659,7 @@ static void A_ModelProcessNode(const A_Context *ctx,
 		}
 		else
 		{
-			cgltf_float world[16];
+			cgltf_float world[16] = {0};
 			cgltf_node_transform_world(node, world);
 			mesh_transform = A_GltfTransformM4(A_GltfFloat16ToM4(world));
 		}
@@ -687,10 +683,10 @@ static void A_ModelProcessNode(const A_Context *ctx,
 }
 
 static void A_ModelLoadSkeleton(const A_Context *ctx,
-					  Arena *arena,
-					  A_ModelLoadData *load,
-					  const cgltf_data *gltf,
-					  u32 index)
+								Arena *arena,
+								A_ModelLoadData *load,
+								const cgltf_data *gltf,
+								u32 index)
 {
 	const cgltf_skin *skin = &gltf->skins[index];
 	A_Skeleton *out = &load->skeletons[index];
@@ -845,14 +841,11 @@ static A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 	return A_AnimInterp_COUNT;
 }
 
-/*
- * this function sucks dick holy shit
- */
 static void A_ModelLoadClip(const A_Context *ctx,
-				  Arena *arena,
-				  A_ModelLoadData *load,
-				  const cgltf_data *gltf,
-				  u32 index)
+							Arena *arena,
+							A_ModelLoadData *load,
+							const cgltf_data *gltf,
+							u32 index)
 {
 	A_AnimClip *clip = &load->clips[index];
 
@@ -956,10 +949,10 @@ static void A_ModelLoadClip(const A_Context *ctx,
 		const cgltf_animation_sampler *anim_sampler = anim_ch->sampler;
 
 		ch->target_skeleton = skeleton_idx;
-		ch->target_joint    = (u32)joint_idx;
+		ch->target_joint = (u32)joint_idx;
 
-		ch->path            = A_ModelAnimPathFromGltf(anim_ch->target_path);
-		ch->interp          = A_ModelAnimInterpFromGltf(anim_sampler->interpolation);
+		ch->path = A_ModelAnimPathFromGltf(anim_ch->target_path);
+		ch->interp = A_ModelAnimInterpFromGltf(anim_sampler->interpolation);
 
 		b32 cubic = anim_sampler->interpolation == cgltf_interpolation_type_cubic_spline;
 
@@ -988,28 +981,28 @@ static void A_ModelLoadClip(const A_Context *ctx,
 			switch (ch->path)
 			{
 				case A_AnimPath_Translate:
-				{
-					f32 v[3] = { 0.f, 0.f, 0.f };
-					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-					key->translation = A_GltfTransformTranslation(v3(v[0], v[1], v[2]));
-				}
-				break;
+					{
+						f32 v[3] = { 0.f, 0.f, 0.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+						key->translation = A_GltfTransformTranslation(v3(v[0], v[1], v[2]));
+					}
+					break;
 						
 				case A_AnimPath_Rotation:
-				{
-					f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
-					cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
-					key->rotation = A_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
-				}
-				break;
+					{
+						f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
+						key->rotation = A_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
+					}
+					break;
 
 				case A_AnimPath_Scale:
-				{
-					f32 v[3] = { 1.f, 1.f, 1.f };
-					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-					key->scale = A_GltfTransformScale(v3(v[0], v[1], v[2]));
-				}
-				break;
+					{
+						f32 v[3] = { 1.f, 1.f, 1.f };
+						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+						key->scale = A_GltfTransformScale(v3(v[0], v[1], v[2]));
+					}
+					break;
 			}
 		}
 
@@ -1123,14 +1116,13 @@ end:
 }
 
 static void A_ModelSerializerAlloc(const A_Context *ctx,
-						 A_SerializerPipelineData *data,
-						 A_Asset *out,
-						 Arena *arena)
+								   A_SerializerPipelineData *data,
+								   A_Asset *out,
+								   Arena *arena)
 {
 	A_ModelLoadData *load = data->data;
 	G_Device *device = ctx->assets->device;
 
-	
 	A_SubModel *sub_models = ArenaPushArray(arena, A_SubModel, load->mesh_count);
 	
 	A_ModelLoadMesh *src_mesh = load->first_mesh;
@@ -1139,18 +1131,18 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 	{
 		A_SubModel *dst = &sub_models[i];
 
-		dst->transform     = src_mesh->transform;
+		dst->transform = src_mesh->transform;
 
-		dst->bounds_min    = src_mesh->bounds_min;
-		dst->bounds_max    = src_mesh->bounds_max;
+		dst->bounds_min = src_mesh->bounds_min;
+		dst->bounds_max = src_mesh->bounds_max;
 
-		dst->material      = src_mesh->material;
+		dst->material = src_mesh->material;
 
 		dst->vertex_stride = sizeof(A_ModelVertex);
-		dst->index_stride  = sizeof(A_ModelIndex);
+		dst->index_stride = sizeof(A_ModelIndex);
 
-		dst->vertex_count  = src_mesh->vertex_count;
-		dst->index_count   = src_mesh->index_count;
+		dst->vertex_count = src_mesh->vertex_count;
+		dst->index_count = src_mesh->index_count;
 
 		G_BufferAllocInfo vb_info = {0};
 		vb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
@@ -1163,7 +1155,7 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 		ib_info.size  = src_mesh->index_count * sizeof(A_ModelIndex);
 
 		dst->vertex_buffer = G_DeviceBufferAlloc(device, &vb_info);
-		dst->index_buffer  = G_DeviceBufferAlloc(device, &ib_info);
+		dst->index_buffer = G_DeviceBufferAlloc(device, &ib_info);
 
 		if (src_mesh->skin_vertices)
 		{
@@ -1182,7 +1174,6 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 		dst->skin_index = src_mesh->skin_index;
 	}
 
-	
 	A_Skeleton *skeletons = NULL;
 
 	if (load->skeleton_count > 0)
@@ -1217,7 +1208,6 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 		}
 	}
 
-	
 	A_AnimClip *clips = NULL;
 
 	if (load->clip_count)
@@ -1241,19 +1231,18 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			A_AnimChannel *dst_ch = &dst->channels[j];
 
 			dst_ch->target_skeleton = src_ch->target_skeleton;
-			dst_ch->target_joint    = src_ch->target_joint;
+			dst_ch->target_joint = src_ch->target_joint;
 
-			dst_ch->path            = src_ch->path;
-			dst_ch->interp          = src_ch->interp;
+			dst_ch->path = src_ch->path;
+			dst_ch->interp = src_ch->interp;
 			
-			dst_ch->key_count       = src_ch->key_count;
-			dst_ch->keys            = ArenaPushArray(arena, A_AnimKey, dst_ch->key_count);
+			dst_ch->key_count = src_ch->key_count;
+			dst_ch->keys = ArenaPushArray(arena, A_AnimKey, dst_ch->key_count);
 
 			for (u32 k = 0; k < dst_ch->key_count; k++)
 				dst_ch->keys[k] = src_ch->keys[k];
 		}
 	}
-	
 	
 	out->model.sub_model_count = load->mesh_count;
 	out->model.sub_models = sub_models;
@@ -1266,17 +1255,17 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 }
 
 static void A_ModelSerializerReload(const A_Context *ctx,
-						  A_SerializerPipelineData *data,
-						  A_Asset *existing)
+									A_SerializerPipelineData *data,
+									A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
 static void A_ModelSerializerGpu(const A_Context *ctx,
-					   A_SerializerPipelineData *data,
-					   A_Asset *asset,
-					   G_CmdBuffer *cmd,
-					   G_BufferKey stage, u64 stage_base)
+								 A_SerializerPipelineData *data,
+								 A_Asset *asset,
+								 G_CmdBuffer *cmd,
+								 G_BufferKey stage, u64 stage_base)
 {
 	A_ModelLoadData *load = data->data;
 	G_Device *device = ctx->assets->device;

@@ -861,12 +861,12 @@ static R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
 	u32 max_indices  = ib_info.size / sizeof(A_ModelIndex);
 	
 	R_GeometryPage page = {0};
-	page.vertex_buffer  = G_DeviceBufferAlloc(scene->device, &vb_info);
-	page.index_buffer   = G_DeviceBufferAlloc(scene->device, &ib_info);
-	page.vertex_count   = 0;
-	page.index_count    = 0;
-	page.max_vertices   = max_vertices;
-	page.max_indices    = max_indices;
+	page.vertex_buffer = G_DeviceBufferAlloc(scene->device, &vb_info);
+	page.index_buffer = G_DeviceBufferAlloc(scene->device, &ib_info);
+	page.vertex_count = 0;
+	page.index_count = 0;
+	page.max_vertices = max_vertices;
+	page.max_indices = max_indices;
 
 	R_GeometryFreeListInit(&page.vertex_free, max_vertices);
 	R_GeometryFreeListInit(&page.index_free, max_indices);

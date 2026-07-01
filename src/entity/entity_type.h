@@ -16,6 +16,7 @@ struct E_TickContext
 	const OS_InputState *input;
 
 	S_System *scripting;
+	G_Device *graphics_device;
 	AU_System *audio;
 	A_Assets *assets;
 	AN_System *animation;

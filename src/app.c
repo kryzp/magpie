@@ -241,6 +241,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	entity_tick_context.elapsed = elapsed;
 	entity_tick_context.input = input;
 	entity_tick_context.scripting = app->scripting_system;
+	entity_tick_context.graphics_device = &app->graphics_device;
 	entity_tick_context.audio = &app->audio_system;
 	entity_tick_context.assets = &app->assets;
 	entity_tick_context.animation = &app->animation_system;
@@ -287,8 +288,8 @@ b32 AppTick(App *app, const OS_InputState *input)
 	listener.position = app->game.camera.position;
 	listener.direction = app->game.camera.forward;
 
-	AU_BackendTick(app->audio_backend, dt, listener);
 	AU_Tick(&app->audio_system, dt, listener);
+	AU_BackendTick(app->audio_backend, dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
@@ -367,82 +368,82 @@ void AppHotUnload(App *app)
 	S_Destroy(app->scripting_system);
 }
 
-	/*
-	R_Light light = {0};
-	light.type = R_LightType_Point;
-	light.position = v3(0.f, 0.f, 1.f);
-	light.direction = v3x(0.f);
-	light.colour = v3(1.f, 1.f, 1.f);
-	light.intensity = 5.f;
-	light.falloff = 1.f;
-	light.casts_shadows = true;
-	light.shadow_near = 0.1f;
-	light.shadow_far = 10.f;
-	
-	//app->light_handle = R_SceneLightCreate(&app->scene, &light);
-	
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
-	A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
-	//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
-	
-	ScratchArena scratch = ScratchBegin(NULL, 0);
+/*
+R_Light light = {0};
+light.type = R_LightType_Point;
+light.position = v3(0.f, 0.f, 1.f);
+light.direction = v3x(0.f);
+light.colour = v3(1.f, 1.f, 1.f);
+light.intensity = 5.f;
+light.falloff = 1.f;
+light.casts_shadows = true;
+light.shadow_near = 0.1f;
+light.shadow_far = 10.f;
+
+//app->light_handle = R_SceneLightCreate(&app->scene, &light);
+
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
+A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
+//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
+
+ScratchArena scratch = ScratchBegin(NULL, 0);
+{
+	G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+	R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, object_model_handle, (u32)(-1));
+	G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+
+	for (u32 i = 0; i < receipt.count; i++)
 	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
-		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, object_model_handle, (u32)(-1));
-		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+		R_ModelImportEntry *entry = &receipt.entries[i];
 
-		for (u32 i = 0; i < receipt.count; i++)
-		{
-			R_ModelImportEntry *entry = &receipt.entries[i];
+		R_ObjectDesc desc = {0};
+		desc.transform = entry->transform;
+		desc.sphere_bounds = entry->sphere_bounds;
+		desc.mesh = entry->mesh;
+		desc.material = entry->material;
 
-			R_ObjectDesc desc = {0};
-			desc.transform = entry->transform;
-			desc.sphere_bounds = entry->sphere_bounds;
-			desc.mesh = entry->mesh;
-			desc.material = entry->material;
-
-			R_SceneObjectCreate(&app->scene, &desc);
-		}
+		R_SceneObjectCreate(&app->scene, &desc);
 	}
-	ScratchRelease(&scratch);
+}
+ScratchRelease(&scratch);
 
-	app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
-	A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
-	app->test_sound = test_sound_asset->sound.buffer;
+app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
+A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
+app->test_sound = test_sound_asset->sound.buffer;
 
-	A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
-	S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
-	S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
+A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
+S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
+S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
 
-	E_WorldSpawn(&app->world, E_Type_Player, E_TransformIdentity());
+E_WorldSpawn(&app->world, E_Type_Player, E_TransformIdentity());
 */
 
-	/*
-	  if (OS_KbPressed(input, OS_KeyboardKey_Enter))
-	  {
-	  S_FireSignal(app->scripting_system, String8Lit("test_ready"));
-	  //R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
-	  }
+/*
+	if (OS_KbPressed(input, OS_KeyboardKey_Enter))
+	{
+	S_FireSignal(app->scripting_system, String8Lit("test_ready"));
+	//R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
+	}
 
-	  if (OS_KbPressed(input, OS_KeyboardKey_Y))
-	  {
-	  AU_PlayConfig play_config = {0};
-	  play_config.clip = app->test_sound;
-	  play_config.bus = AU_Bus_Sfx;
-	  play_config.volume = 1.f;
-	  play_config.pitch = 1.f;
-	  play_config.spatial = true;
-	  play_config.position = v3x(0.f);
-		
-	  AU_Play(&app->audio_system, &play_config);
-	  }
+	if (OS_KbPressed(input, OS_KeyboardKey_Y))
+	{
+	AU_PlayConfig play_config = {0};
+	play_config.clip = app->test_sound;
+	play_config.bus = AU_Bus_Sfx;
+	play_config.volume = 1.f;
+	play_config.pitch = 1.f;
+	play_config.spatial = true;
+	play_config.position = v3x(0.f);
 	
-	  if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
-	  if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
-	
-	  R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
-	*/
+	AU_Play(&app->audio_system, &play_config);
+	}
+
+	if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
+	if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
+
+	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
+*/

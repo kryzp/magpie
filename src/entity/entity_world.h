@@ -55,11 +55,6 @@ struct E_World
 	Arena *arena;
 	LOG_Channel log_channel;
 
-	AU_System *audio;
-	A_Assets *assets;
-	AN_System *animation;
-	P_Engine *physics;
-	
 	u32 next_tid;
 	E_TypeStore type_stores[E_WORLD_MAX_REGISTERED_TYPES];
 

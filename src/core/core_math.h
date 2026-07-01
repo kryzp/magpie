@@ -5,11 +5,19 @@
 #include <float.h>
 
 #define MATH_PI                                  3.1415926535897
+#define MATH_PIf                                 3.1415926535897f
+
 #define MATH_ONE_OVER_SQUARE_ROOT_OF_TWO_PI      0.3989422804
+#define MATH_ONE_OVER_SQUARE_ROOT_OF_TWO_PIf     0.3989422804f
+
 #define MATH_EULERS_NUMBER                       2.718281828459045
+#define MATH_EULERS_NUMBERf                      2.718281828459045f
 
 #define MATH_DEG_TO_RAD                          0.0174532925199
+#define MATH_DEG_TO_RADf                         0.0174532925199f
+
 #define MATH_RAD_TO_DEG                          57.2957795131
+#define MATH_RAD_TO_DEGf                         57.2957795131f
 
 #define MATH_EPSILON_F32                         FLT_EPSILON
 #define MATH_EPSILON_F64                         DBL_EPSILON
@@ -29,6 +37,7 @@
 #define Log2F           log2f
 #define Log10F          log10f
 
+#define WithinEpsilon(v)                    (AbsValue(v) < (MATH_EPSILON_F64))
 #define AbsValue(a)                         (((a) < 0.0) ? (-(a)) : (a))
 #define MinValue(a, b)                      (((a) < (b)) ? (a) : (b))
 #define MaxValue(a, b)                      (((a) > (b)) ? (a) : (b))

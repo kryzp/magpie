@@ -41,6 +41,9 @@ static f32 V2Length(v2 v)
 
 static v2 V2Normalize(v2 v)
 {
+	if (WithinEpsilon(V2LengthSqr(v)))
+		return v2x(0.f);
+	
 	return V2MulF32(v, 1.f / V2Length(v));
 }
 
@@ -98,6 +101,9 @@ static f32 V3Length(v3 v)
 
 static v3 V3Normalize(v3 v)
 {
+	if (WithinEpsilon(V3LengthSqr(v)))
+		return v3x(0.f);
+	
 	return V3MulF32(v, 1.f / V3Length(v));
 }
 
