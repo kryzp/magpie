@@ -22,10 +22,10 @@ struct GameStateStack
 	i32 top; // -1 = empty
 };
 
-static void       GameStateStackInit(GameStateStack *stack);
-static void       GameStateStackPush(GameStateStack *stack, GameState *mode, void *state);
-static void       GameStateStackPop(GameStateStack *stack, void *state);
+static void GameStateStackInit(GameStateStack *stack);
+static void GameStateStackPush(GameStateStack *stack, GameState *mode, void *state);
+static void GameStateStackPop(GameStateStack *stack, void *state);
 static GameState *GameStateStackPeek(const GameStateStack *stack);
-static void       GameStateStackTick(const GameStateStack *stack, void *state, const OS_InputState *input, f32 dt, f32 elapsed);
+static void GameStateStackTick(const GameStateStack *stack, void *state, const OS_InputState *input, f32 dt, f32 elapsed);
 
 #endif // GAME_STATE_H
