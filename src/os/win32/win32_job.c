@@ -418,7 +418,7 @@ static J_W32_Context J_W32_GetContext(J_W32_Scheduler *scheduler)
 	ctx.worker_id = 0;
 	ctx.fiber_id = -1;
 	
-    J_W32_Worker *worker = job_current_worker;//(J_W32_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
+	J_W32_Worker *worker = job_current_worker;//(J_W32_Worker *)osapi->TLSGet(scheduler->tls_worker_slot);
 
 	if (worker)
 	{

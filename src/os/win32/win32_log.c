@@ -90,18 +90,18 @@ static void LOG_W32_CloseChannel(LOG_W32_Logger *logger, LOG_Channel channel)
 
 static void LOG_W32_ChannelNameResolve(LOG_W32_Logger *logger, LOG_Channel channel, char *dst, i32 dst_size)
 {
-    LOG_W32_ChannelEntry *entry = &logger->channels[channel.id];
+	LOG_W32_ChannelEntry *entry = &logger->channels[channel.id];
 
-    if (entry->parent.id != 0)
-    {
-        char parent[64] = {0};
-        LOG_W32_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
-        snprintf(dst, (usize)dst_size, "%s/%.*s", parent, String8VArg(entry->name));
-    }
-    else
-    {
-        snprintf(dst, (usize)dst_size, "%.*s", String8VArg(entry->name));
-    }
+	if (entry->parent.id != 0)
+	{
+		char parent[64] = {0};
+		LOG_W32_ChannelNameResolve(logger, entry->parent, parent, sizeof(parent));
+		snprintf(dst, (usize)dst_size, "%s/%.*s", parent, String8VArg(entry->name));
+	}
+	else
+	{
+		snprintf(dst, (usize)dst_size, "%.*s", String8VArg(entry->name));
+	}
 }
 
 static i32 LOG_W32_FormatLine(LOG_W32_Logger *logger,
@@ -137,28 +137,28 @@ static i32 LOG_W32_FormatLine(LOG_W32_Logger *logger,
 		Append(LOG_W32_ANSI_DIM "[  %7.3f  ]" LOG_W32_ANSI_RESET " ", elapsed);
 
 	// Job Context.
-    {
-        char worker_str[8] = {0};
-        char fiber_str[8] = {0};
+	{
+		char worker_str[8] = {0};
+		char fiber_str[8] = {0};
 
 		// We could jsut use worker_id = 0 but
 		// writing MT makes it more obvious so
 		// I'm going with that.
-        if (job_context.worker_id == 0)
-            snprintf(worker_str, sizeof(worker_str), "MT ");
-        else
-            snprintf(worker_str, sizeof(worker_str), "%-3u", job_context.worker_id);
+		if (job_context.worker_id == 0)
+			snprintf(worker_str, sizeof(worker_str), "MT ");
+		else
+			snprintf(worker_str, sizeof(worker_str), "%-3u", job_context.worker_id);
 
-        if (job_context.fiber_id == -1)
-            snprintf(fiber_str, sizeof(fiber_str), "---");
-        else
-            snprintf(fiber_str, sizeof(fiber_str), "%-3d", job_context.fiber_id);
+		if (job_context.fiber_id == -1)
+			snprintf(fiber_str, sizeof(fiber_str), "---");
+		else
+			snprintf(fiber_str, sizeof(fiber_str), "%-3d", job_context.fiber_id);
 
-        if (for_file)
-            Append("[  W:%s F:%s  ] ", worker_str, fiber_str);
-        else
-            Append(LOG_W32_ANSI_DIM "[  W:%s F:%s  ]" LOG_W32_ANSI_RESET " ", worker_str, fiber_str);
-    }
+		if (for_file)
+			Append("[  W:%s F:%s  ] ", worker_str, fiber_str);
+		else
+			Append(LOG_W32_ANSI_DIM "[  W:%s F:%s  ]" LOG_W32_ANSI_RESET " ", worker_str, fiber_str);
+	}
 
 	// Level.
 	if (for_file)

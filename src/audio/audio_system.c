@@ -106,7 +106,8 @@ static AU_Handle AU_Play(AU_System *system, const AU_PlayConfig *config)
 static void AU_Stop(AU_System *system, AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(system, handle);
-	AssertTrue(emitter);
+	
+	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
 	AU_BackendStop(system->backend, emitter->source);
 	AU_BackendDestroySource(system->backend, emitter->source);
@@ -117,7 +118,7 @@ static void AU_Stop(AU_System *system, AU_Handle handle)
 static void AU_StopAll(AU_System *system)
 {
 	AU_Emitter *sentinel = &system->emitter_sentinel;
-	AU_Emitter *emitter    = sentinel->next;
+	AU_Emitter *emitter = sentinel->next;
 
 	while (emitter != sentinel)
 	{
@@ -135,7 +136,8 @@ static void AU_StopAll(AU_System *system)
 static void AU_Resume(AU_System *system, AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(system, handle);
-	AssertTrue(emitter);
+	
+	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
 	AU_BackendResume(system->backend, emitter->source);
 }
@@ -143,7 +145,8 @@ static void AU_Resume(AU_System *system, AU_Handle handle)
 static void AU_Pause(AU_System *system, AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(system, handle);
-	AssertTrue(emitter);
+	
+	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
 	AU_BackendPause(system->backend, emitter->source);
 }
@@ -151,7 +154,8 @@ static void AU_Pause(AU_System *system, AU_Handle handle)
 static void AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 position)
 {
 	AU_Emitter *emitter = AU_GetEmitter(system, handle);
-	AssertTrue(emitter);
+	
+	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
 	AU_BackendSetSourcePosition(system->backend, emitter->source, position);
 }

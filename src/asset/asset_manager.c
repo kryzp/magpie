@@ -166,13 +166,13 @@ static void A_Init(A_Assets *assets, Arena *arena, LOG_Channel log_channel,
 	assets->scripting_system = scripting_system;
 	
 	assets->load_arena_wait_counter = osapi->JobCounterAlloc(0);
-	assets->async_counter           = osapi->JobCounterAlloc(0);
+	assets->async_counter = osapi->JobCounterAlloc(0);
 
-	assets->upload_mutex     = osapi->MutexCreate();
+	assets->upload_mutex = osapi->MutexCreate();
 	assets->dependency_mutex = osapi->MutexCreate();
 	assets->allocation_mutex = osapi->MutexCreate();
-	assets->loading_mutex    = osapi->MutexCreate();
-	assets->loading_cond     = osapi->CondVarCreate();
+	assets->loading_mutex = osapi->MutexCreate();
+	assets->loading_cond = osapi->CondVarCreate();
 
 	for (u32 i = 0; i < A_LOAD_ARENA_COUNT; i++)
 	{
@@ -229,7 +229,7 @@ static void A_Mount(A_Assets *assets, String8 prefix, String8 directory)
 	DebugLogAssert(assets->log_channel, assets->mount_point_count < ArraySize(assets->mount_points), "Cannot mount more directories, out of space!");
 
 	A_MountPoint *mp = &assets->mount_points[assets->mount_point_count++];
-	mp->prefix    = String8Clone(assets->arena, prefix);
+	mp->prefix = String8Clone(assets->arena, prefix);
 	mp->directory = String8Clone(assets->arena, directory);
 }
 

@@ -20,23 +20,51 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 	return input;
 }
 
-static void PlayerAnimate(const PlayerAnimationState *st, AN_System *s, AN_Handle handle)
+static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle)
 {
-	AN_ClipKey key = AN_ClipKeyNull();
-	AN_Play(s, handle, key, false, st->elapsed);
+	//AN_ClipKey key = AN_ClipKeyNull();
+	//AN_Play(&app->animation_system, handle, key, false, st->elapsed);
 }
 
-static void PlayerInit(Player *player, const E_TickContext *ctx)
+static v3 GetPlayerAimingPoint(const OS_InputState *input)
+{
+	R_Camera *camera = &game->camera;
+
+	R_CameraRecompute(camera);
+
+	v2 ndc = V2ScreenToNDC(input->mouse_position);
+
+	v3 pos = camera->position;
+	v3 dir = R_CameraNDCToWsRayDirection(camera, ndc);
+
+	f32 t = -pos.z / dir.z;
+
+	v3 result = V3Add(pos, V3MulF32(dir, t));
+
+	return result;
+}
+
+static void PlayerInit(Player *player, E_Transform transform)
 {
 	player->arena = ArenaAlloc(Kilobytes(512));
 
-	A_Handle model_handle = A_Require(ctx->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
+	player->rigidbody_handle = P_LeaseInstance(&app->physics_engine);
+
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+	rb->solid = false;
+	rb->fixed_position = false;
+	rb->friction = 25.f;
+	rb->air_friction = 0.5f;
+	rb->max_speed = 10.f;
+	rb->gravity_factor = 1.f;
+
+	A_Handle model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(ctx->graphics_device);
-		R_ModelImportReceipt receipt = R_SceneImportModel(ctx->render_scene, &cmd, scratch.arena, model_handle, (u32)(-1));
-		G_DeviceSubmitImEnd(ctx->graphics_device, &cmd);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, model_handle, (u32)(-1));
+		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
 
 		for (u32 i = 0; i < receipt.count; i++)
 		{
@@ -48,7 +76,7 @@ static void PlayerInit(Player *player, const E_TickContext *ctx)
 			desc.mesh = entry->mesh;
 			desc.material = entry->material;
 
-			player->scene_object_handle = R_SceneObjectCreate(ctx->render_scene, &desc);
+			player->scene_object_handle = R_SceneObjectCreate(&app->scene, &desc);
 		}
 	}
 	ScratchRelease(&scratch);
@@ -61,6 +89,8 @@ static void PlayerInit(Player *player, const E_TickContext *ctx)
 	revolver_specs.rechamber_time = .5f;
 
 	player->gun.specs = revolver_specs;
+
+	GunReload(&player->gun);
 }
 
 static void PlayerDestroy(Player *player)
@@ -72,10 +102,29 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 {
 	PlayerInput input_st = PlayerGatherInput(ctx->input);
 
-	f32 move_speed = PLAYER_MOVE_SPEED * 0.001f;
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+
+	rb->max_speed = 20.f;
 
 	if (input_st.aiming)
-		move_speed *= 0.5f;
+	{
+		rb->max_speed *= 0.5f;
+
+		v3 source = rb->position;
+		v3 destination = GetPlayerAimingPoint(ctx->input);
+
+		player->target_rotation = V4QuatLookAt(source, destination);
+	}
+	else if (!WithinEpsilon(V2LengthSqr(input_st.movement)))
+	{
+		v3 source = rb->position;
+		v3 destination = V3Add(source, v3(input_st.movement.x, input_st.movement.y, 0.f));
+
+		player->target_rotation = V4QuatLookAt(source, destination);
+	}
+
+	if (input_st.sneak)
+		rb->max_speed *= 0.25f;
 	
 	if (input_st.fire)
 		GunFire(&player->gun);
@@ -83,14 +132,13 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	if (input_st.reload)
 		GunReload(&player->gun);
 
-	v2 xy_movement_input = input_st.movement;
-
 	v3 movement = v3x(0.f);
-	movement.x = xy_movement_input.x * move_speed;
-	movement.y = xy_movement_input.y * move_speed;
+	movement.x = input_st.movement.x * 70.f;
+	movement.y = input_st.movement.y * 70.f;
 	movement.z = 0.f;
 
-	E_TransformMoveBy(E_TransformOf(player), movement); // todo: replace with physics handle call
+	rb->acceleration = movement;
+	rb->orientation = V4QuatSlerp(rb->orientation, player->target_rotation, ctx->dt * 50.f);
 
 	PlayerAnimationState animation_st = {0};
 	animation_st.elapsed = ctx->elapsed;
@@ -99,16 +147,11 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	animation_st.is_sneaking = input_st.sneak;
 	animation_st.is_moving = V3LengthSqr(movement) <= MATH_EPSILON_F32;
 
-	//PlayerAnimate(&animation_st, ctx->animation, player->anim_handle);
+	PlayerAnimate(&animation_st, player->anim_handle);
 }
 
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 {
-	m4 final_matrix = M4RotateAxis(MATH_PIf * 0.5f, v3(1.f, 0.f, 0.f));
-	final_matrix = M4MulM4(E_TransformMatrix(E_TransformOf(player)), final_matrix);
-	
-	R_SceneObjectSetTransform(ctx->render_scene, player->scene_object_handle, final_matrix);
-
 	//AN_Animator *animator = AN_SystemGetAnimator(ctx->animation, player->anim_handle);
 	//AN_Palette palette = AN_AnimatorPalette(animator, 0);
 	//R_SceneObjectSetSkinning(ctx->render_scene, player->scene_object_handle, &palette);
@@ -116,6 +159,14 @@ static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 
 static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 {
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+
+	m4 final_matrix = M4Identity();
+	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf * 0.5f, v3(1.f, 0.f, 0.f)), final_matrix);
+	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf, v3(0.f, 0.f, 1.f)), final_matrix);
+	final_matrix = M4MulM4(M4Transform(rb->position, rb->orientation, v3x(1.f), v3x(0.f)), final_matrix);
+	
+	R_SceneObjectSetTransform(&app->scene, player->scene_object_handle, final_matrix);
 }
 
 static void PlayerSerialize(Player *player, IO_ByteSerializer *writer)

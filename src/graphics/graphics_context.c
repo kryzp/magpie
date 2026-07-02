@@ -8,9 +8,9 @@ static const char *gfx_context_vk_validation_layers[] = {
 static const char *gfx_context_device_extensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-    VK_KHR_RAY_QUERY_EXTENSION_NAME,
-    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+	VK_KHR_RAY_QUERY_EXTENSION_NAME,
+	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 #ifdef __APPLE__
 	"VK_KHR_portability_subset"
@@ -29,7 +29,7 @@ static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_d
 		vkGetPhysicalDeviceFormatProperties(physical_device, candidates[i], &properties);
 
 		if ((tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) ||
-		    (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features))
+			(tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features))
 			return candidates[i];
 	}
 
@@ -121,24 +121,24 @@ static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice
 
 	b32 result = true;
 
-    for (u32 i = 0; i < ArraySize(gfx_context_device_extensions); i++)
-    {
-        b32 found = false;
-        for (u32 j = 0; j < extension_count; j++)
-        {
-            if (CStrCompare(available_exts[j].extensionName,
-                            gfx_context_device_extensions[i]) == 0)
-            {
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-        {
-            result = false;
-            goto exit;
-        }
-    }
+	for (u32 i = 0; i < ArraySize(gfx_context_device_extensions); i++)
+	{
+		b32 found = false;
+		for (u32 j = 0; j < extension_count; j++)
+		{
+			if (CStrCompare(available_exts[j].extensionName,
+							gfx_context_device_extensions[i]) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+		{
+			result = false;
+			goto exit;
+		}
+	}
 
 exit:
 	ScratchRelease(&scratch);

@@ -412,7 +412,7 @@ static void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 						 v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
 {
 	//v3 direction = V3Normalize (V3Sub(to, from));
-	f32 length   = V3Length    (V3Sub(to, from));
+	f32 length = V3Length(V3Sub(to, from));
 
 	m4 transform = M4MulM4(M4Translate(from), M4Scale(v3(length, length, length)));
 	// TODO: M4RotateAround for the direction vector.

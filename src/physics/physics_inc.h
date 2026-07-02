@@ -1,3 +1,5 @@
 #include "physics_shape.h"
+#include "physics_handle.h"
+#include "physics_ray.h"
 #include "physics_rigidbody.h"
 #include "physics_engine.h"

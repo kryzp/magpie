@@ -1,3 +1,4 @@
+#include "game_state.h"
 #include "game_entity_type.h"
 #include "game_camera.h"
 #include "game_gun.h"

@@ -43,4 +43,6 @@ static void R_CameraRecompute(R_Camera *camera);
 
 static R_FrustumVolume R_CameraFrustum(const R_Camera *camera);
 
+static v3 R_CameraNDCToWsRayDirection(const R_Camera *camera, v2 ndc);
+
 #endif // RENDER_CAMERA_H

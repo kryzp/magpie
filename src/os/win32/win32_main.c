@@ -177,11 +177,11 @@ static void OS_W32_LoadCode(String8 dll_path)
 
 	if (win32_st.code.handle)
 	{
-		win32_st.code.Init      = (OS_EntryInitFn      *)GetProcAddress(win32_st.code.handle, "AppInit");
-		win32_st.code.Destroy   = (OS_EntryDestroyFn   *)GetProcAddress(win32_st.code.handle, "AppDestroy");
-		win32_st.code.Tick      = (OS_EntryTickFn      *)GetProcAddress(win32_st.code.handle, "AppTick");
-		win32_st.code.HotLoad   = (OS_EntryHotLoadFn   *)GetProcAddress(win32_st.code.handle, "AppHotLoad");
-		win32_st.code.HotUnload = (OS_EntryHotUnloadFn *)GetProcAddress(win32_st.code.handle, "AppHotUnload");
+		win32_st.code.Init      = (OS_EntryInitFn      *)GetProcAddress(win32_st.code.handle, "MagpieInit");
+		win32_st.code.Destroy   = (OS_EntryDestroyFn   *)GetProcAddress(win32_st.code.handle, "MagpieDestroy");
+		win32_st.code.Tick      = (OS_EntryTickFn      *)GetProcAddress(win32_st.code.handle, "MagpieTick");
+		win32_st.code.HotLoad   = (OS_EntryHotLoadFn   *)GetProcAddress(win32_st.code.handle, "MagpieHotLoad");
+		win32_st.code.HotUnload = (OS_EntryHotUnloadFn *)GetProcAddress(win32_st.code.handle, "MagpieHotUnload");
 	}
 	else
 	{

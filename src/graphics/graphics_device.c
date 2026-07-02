@@ -41,7 +41,7 @@ static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel chann
 		const VkSurfaceFormatKHR *format = &available_surface_formats[i];
 		
 		if (format->format == VK_FORMAT_B8G8R8A8_UNORM &&
-		    format->colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			format->colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 		{
 			DebugLogD(channel, "Found desired swapchain swap surface format and colour space.");
 			return *format;
@@ -73,7 +73,7 @@ static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present
 static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities)
 {
 	if (capabilities->currentExtent.width != ((u32)-1) &&
-	    capabilities->currentExtent.height != ((u32)-1))
+		capabilities->currentExtent.height != ((u32)-1))
 		return capabilities->currentExtent;
 
 	u32 window_width;
@@ -178,13 +178,13 @@ static void G_DeviceInit(G_Device *device, Arena *arena, LOG_Channel log_channel
 static void G_DeviceDestroy(G_Device *device)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
-    {
-        G_DevicePerFrameData *frame = &device->per_frame_data[i];
-        G_DeviceWaitUntil(device, frame->completion_point);
-        G_DeviceFlushFrameData(device, frame);
+	{
+		G_DevicePerFrameData *frame = &device->per_frame_data[i];
+		G_DeviceWaitUntil(device, frame->completion_point);
+		G_DeviceFlushFrameData(device, frame);
 
 		ArenaRelease(&frame->arena);
-    }
+	}
 	
 	// Layouts, Pipelines and Views are special and cached
 	// internally without any API to destroy them so we
@@ -636,9 +636,9 @@ static G_CmdBuffer G_DeviceCmdPoolAcquire(G_Device *device, G_CmdPool *pool)
 	
 	if (pool->acquire_count > 0)
 	{
-        cb = pool->acquire_stack[--pool->acquire_count];
+		cb = pool->acquire_stack[--pool->acquire_count];
 		
-        vkResetCommandBuffer(cb, 0);
+		vkResetCommandBuffer(cb, 0);
 
 		//DebugLogD(device->log_channel, "Reused");
 	}
@@ -667,12 +667,12 @@ static void G_DeviceCmdPoolRelease(const G_Device *device, G_CmdPool *pool, cons
 				   pool->release_count < ArraySize(pool->release_queue),
 				   "Command pool release queue is full.");
 	
-    u32 slot = (pool->release_front + pool->release_count) % ArraySize(pool->release_queue);
+	u32 slot = (pool->release_front + pool->release_count) % ArraySize(pool->release_queue);
 
 	G_CmdPoolReleasedBuffer *released = &pool->release_queue[slot];
 	
 	released->vk_handle = cmd->vk_handle;
-    released->fence_value = fence_value;
+	released->fence_value = fence_value;
 
 	pool->release_count++;
 }
@@ -681,18 +681,18 @@ static void G_DeviceCmdPoolPurge(const G_Device *device, G_CmdPool *pool, u64 fe
 {
 	while (pool->release_count > 0)
 	{
-        G_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_front];
+		G_CmdPoolReleasedBuffer *released = &pool->release_queue[pool->release_front];
 
-        if (released->fence_value > fence_value)
-            break;
+		if (released->fence_value > fence_value)
+			break;
 
-        DebugLogAssert(device->log_channel,
-                       pool->acquire_count < ArraySize(pool->acquire_stack),
-                       "Command pool acquire stack is full.");
+		DebugLogAssert(device->log_channel,
+					   pool->acquire_count < ArraySize(pool->acquire_stack),
+					   "Command pool acquire stack is full.");
 
-        pool->acquire_stack[pool->acquire_count++] = released->vk_handle;
-        pool->release_front = (pool->release_front + 1) % ArraySize(pool->release_queue);
-        pool->release_count--;
+		pool->acquire_stack[pool->acquire_count++] = released->vk_handle;
+		pool->release_front = (pool->release_front + 1) % ArraySize(pool->release_queue);
+		pool->release_count--;
 	}
 }
 

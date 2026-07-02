@@ -1,5 +1,5 @@
 
-static void GameRegisterEntities(Game *game, E_World *world)
+static void GameRegisterEntities(E_World *world)
 {
 #define GameEntityDef(type, max)										\
 	{																	\
@@ -23,9 +23,16 @@ static void GameRegisterEntities(Game *game, E_World *world)
 #undef GameEntityDef
 }
 
-static void GameInit(Game *game, E_World *world)
+static void GameSelect(Game *game_)
 {
-	GM_StackInit(&game->game_mode_stack);
+	game = game_;
+}
+
+static void GameInit(E_World *world)
+{
+	GameRegisterEntities(world);
+
+	GameStateStackInit(&game->game_state_stack);
 
 	game->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
@@ -36,9 +43,9 @@ static void GameInit(Game *game, E_World *world)
 	game->player_handle = E_WorldSpawn(world, game->entity_types[GameEntityType_Player], E_TransformIdentity());
 }
 
-static void GameTick(Game *game, const OS_InputState *input, f32 dt, f32 elapsed)
+static void GameTick(const OS_InputState *input, f32 dt, f32 elapsed)
 {
-	GM_StackTick(&game->game_mode_stack, game, dt, input);
+	GameStateStackTick(&game->game_state_stack, game, input, dt, elapsed);
 	
 	CameraDriverDrive(&game->camera_driver, &game->camera, input, dt);
 }

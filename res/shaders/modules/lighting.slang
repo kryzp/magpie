@@ -69,7 +69,7 @@ namespace lighting
 		public uint prefilter_cubemap;
 		public uint brdf_lut;
 		
-		public irradiance::ProbeSH       *irr_sh;
+		public irradiance::ProbeSH *irr_sh;
 		public irradiance::ProbeGridInfo *irr_grid_info;
 
 		public uint sampler;

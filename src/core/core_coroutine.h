@@ -4,8 +4,8 @@
 typedef struct Coroutine Coroutine;
 struct Coroutine
 {
-    u64 state;
-    f32 delay;
+	u64 state;
+	f32 delay;
 };
 
 #define CoroutineBegin(cor_) switch ((cor_)->state) { case 0:

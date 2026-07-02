@@ -41,8 +41,8 @@ float3 FibonacciSphereDirection(uint index, uint total)
 	float sin_phi = sin(phi);
 
 	return float3(sin_phi * cos(theta),
-	              sin_phi * sin(theta),
-	              cos(phi));
+				  sin_phi * sin(theta),
+				  cos(phi));
 }
 
 float3 ProbeWorldPosition(uint probe_index, irradiance::ProbeGridInfo grid)
@@ -52,8 +52,8 @@ float3 ProbeWorldPosition(uint probe_index, irradiance::ProbeGridInfo grid)
 	uint ix = probe_index % grid.count_x;
 
 	return grid.grid_min + float3(float(ix) * grid.cell_size.x,
-	                              float(iy) * grid.cell_size.y,
-	                              float(iz) * grid.cell_size.z);
+								  float(iy) * grid.cell_size.y,
+								  float(iz) * grid.cell_size.z);
 }
 
 [shader("compute")]
@@ -97,12 +97,12 @@ void ComputeMain(uint3 dispatch_id : SV_DispatchThreadID)
 		if (rq.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
 		{
 			/* TODO: basically im supposed to do the following here:
-			         -> get instance index
-			         -> get triangle index
-			         -> get barycentrices
-			         -> get vertex data + interpolate uvs
-			         -> get the albedo at that ponit
-			         -> apply diffuse model (lambert * light)
+					 -> get instance index
+					 -> get triangle index
+					 -> get barycentrices
+					 -> get vertex data + interpolate uvs
+					 -> get the albedo at that ponit
+					 -> apply diffuse model (lambert * light)
 			*/
 			radiance = 0.0;
 			//radiance = env_map.SampleLevel(env_sampler, math::WorldToCubemap(ray_dir), 0).rgb;

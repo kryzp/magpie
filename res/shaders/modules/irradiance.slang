@@ -81,15 +81,15 @@ namespace irradiance
 	/* bro FUCK my life bro */
 	/* credit to some academic man i cant remember atp who cares */
 	public float3 SampleIrradianceGrid(float3 world_pos,
-	                                   float3 normal,
-	                                   ProbeGridInfo grid,
-	                                   ProbeSH *probe_data)
+									   float3 normal,
+									   ProbeGridInfo grid,
+									   ProbeSH *probe_data)
 	{
 		float3 local = world_pos - grid.grid_min;
 
 		float3 grid_coord = float3((grid.cell_size.x > 0) ? local.x / grid.cell_size.x : 0,
-		                           (grid.cell_size.y > 0) ? local.y / grid.cell_size.y : 0,
-		                           (grid.cell_size.z > 0) ? local.z / grid.cell_size.z : 0);
+								   (grid.cell_size.y > 0) ? local.y / grid.cell_size.y : 0,
+								   (grid.cell_size.z > 0) ? local.z / grid.cell_size.z : 0);
 
 		// saturat
 		grid_coord.x = clamp(grid_coord.x, 0, float(grid.count_x - 1));
@@ -98,8 +98,8 @@ namespace irradiance
 
 		uint3 lo = uint3(floor(grid_coord));
 		uint3 hi = min(lo + 1, uint3(grid.count_x - 1,
-		                             grid.count_y - 1,
-		                             grid.count_z - 1));
+									 grid.count_y - 1,
+									 grid.count_z - 1));
 
 		float3 frac = grid_coord - float3(lo);
 

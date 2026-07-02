@@ -98,16 +98,16 @@ static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 	return world->next_tid++;
 }
 
-static void E_WorldResolveInittingEntities(const E_TickContext *ctx)
+static void E_WorldResolveInittingEntities(E_World *world)
 {
-	for (u32 i = 0; i < ctx->world->initting_entity_count; i++)
+	for (u32 i = 0; i < world->initting_entity_count; i++)
 	{
-		const E_InittingEntity *initting_entity = &ctx->world->initting_entities[i];
+		const E_InittingEntity *initting_entity = &world->initting_entities[i];
 
 		E_Handle handle = initting_entity->handle;
 
-		const E_TypeDesc *desc = &ctx->world->type_stores[handle.tid].desc;
-		E_TypePool *pool = &ctx->world->type_stores[handle.tid].pool;
+		const E_TypeDesc *desc = &world->type_stores[handle.tid].desc;
+		E_TypePool *pool = &world->type_stores[handle.tid].pool;
 	
 		void *entity = (void *)(pool->data + (handle.slot * desc->stride));
 
@@ -118,116 +118,13 @@ static void E_WorldResolveInittingEntities(const E_TickContext *ctx)
 		E_Header *header = E_HeaderOf(entity);
 		header->handle = handle;
 		header->flags = E_Flag_Active;
-		header->transform = initting_entity->transform;
 		header->layer_id = 0;
 	
 		if (desc->OnInit)
-			desc->OnInit(entity, ctx);
+			desc->OnInit(entity, initting_entity->transform);
 	}
 
-	ctx->world->initting_entity_count = 0;
-}
-
-static void E_WorldTickPreAnim(const E_TickContext *ctx)
-{
-	for (u32 t = 0; t < ctx->world->next_tid; t++)
-	{
-		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
-
-		if (!desc->OnPreAnimTick)
-			continue;
-
-		E_TypePool *pool = &ctx->world->type_stores[t].pool;
-		
-		u8 *base = pool->data;
-
-		for (u32 j = 0; j < pool->count; j++)
-		{
-			if (!pool->alive[j])
-				continue;
-
-			void *entity = (void *)(base + (j * desc->stride));
-
-			E_Flags flags = E_HeaderOf(entity)->flags;
-			u16 layer_id = E_HeaderOf(entity)->layer_id;
-			
-			if (!(flags & E_Flag_Active))
-				continue;
-
-			if (!ctx->world->layers[layer_id].active)
-				continue;
-
-			desc->OnPreAnimTick(entity, ctx);
-		}
-	}
-}
-
-static void E_WorldTickPostAnim(const E_TickContext *ctx)
-{
-	for (u32 t = 0; t < ctx->world->next_tid; t++)
-	{
-		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
-
-		if (!desc->OnPostAnimTick)
-			continue;
-
-		E_TypePool *pool = &ctx->world->type_stores[t].pool;
-		
-		u8 *base = pool->data;
-
-		for (u32 j = 0; j < pool->count; j++)
-		{
-			if (!pool->alive[j])
-				continue;
-
-			void *entity = (void *)(base + (j * desc->stride));
-
-			E_Flags flags = E_HeaderOf(entity)->flags;
-			u16 layer_id = E_HeaderOf(entity)->layer_id;
-			
-			if (!(flags & E_Flag_Active))
-				continue;
-
-			if (!ctx->world->layers[layer_id].active)
-				continue;
-
-			desc->OnPostAnimTick(entity, ctx);
-		}
-	}
-}
-
-static void E_WorldTickPostPhysics(const E_TickContext *ctx)
-{
-	for (u32 t = 0; t < ctx->world->next_tid; t++)
-	{
-		const E_TypeDesc *desc = &ctx->world->type_stores[t].desc;
-
-		if (!desc->OnPostPhysicsTick)
-			continue;
-
-		E_TypePool *pool = &ctx->world->type_stores[t].pool;
-		
-		u8 *base = pool->data;
-
-		for (u32 j = 0; j < pool->count; j++)
-		{
-			if (!pool->alive[j])
-				continue;
-
-			void *entity = (void *)(base + (j * desc->stride));
-
-			E_Flags flags = E_HeaderOf(entity)->flags;
-			u16 layer_id = E_HeaderOf(entity)->layer_id;
-			
-			if (!(flags & E_Flag_Active))
-				continue;
-
-			if (!ctx->world->layers[layer_id].active)
-				continue;
-
-			desc->OnPostPhysicsTick(entity, ctx);
-		}
-	}
+	world->initting_entity_count = 0;
 }
 
 static void E_WorldFlush(E_World *world)
@@ -259,6 +156,108 @@ static void E_WorldFlush(E_World *world)
 			pool->alive[j] = false;
 
 			E_PoolFreeSlot(pool, j);
+		}
+	}
+}
+
+static void E_WorldTickPreAnim(E_World *world, const E_TickContext *ctx)
+{
+	for (u32 t = 0; t < world->next_tid; t++)
+	{
+		const E_TypeDesc *desc = &world->type_stores[t].desc;
+
+		if (!desc->OnPreAnimTick)
+			continue;
+
+		E_TypePool *pool = &world->type_stores[t].pool;
+		
+		u8 *base = pool->data;
+
+		for (u32 j = 0; j < pool->count; j++)
+		{
+			if (!pool->alive[j])
+				continue;
+
+			void *entity = (void *)(base + (j * desc->stride));
+
+			E_Flags flags = E_HeaderOf(entity)->flags;
+			u16 layer_id = E_HeaderOf(entity)->layer_id;
+			
+			if (!(flags & E_Flag_Active))
+				continue;
+
+			if (!world->layers[layer_id].active)
+				continue;
+
+			desc->OnPreAnimTick(entity, ctx);
+		}
+	}
+}
+
+static void E_WorldTickPostAnim(E_World *world, const E_TickContext *ctx)
+{
+	for (u32 t = 0; t < world->next_tid; t++)
+	{
+		const E_TypeDesc *desc = &world->type_stores[t].desc;
+
+		if (!desc->OnPostAnimTick)
+			continue;
+
+		E_TypePool *pool = &world->type_stores[t].pool;
+		
+		u8 *base = pool->data;
+
+		for (u32 j = 0; j < pool->count; j++)
+		{
+			if (!pool->alive[j])
+				continue;
+
+			void *entity = (void *)(base + (j * desc->stride));
+
+			E_Flags flags = E_HeaderOf(entity)->flags;
+			u16 layer_id = E_HeaderOf(entity)->layer_id;
+			
+			if (!(flags & E_Flag_Active))
+				continue;
+
+			if (!world->layers[layer_id].active)
+				continue;
+
+			desc->OnPostAnimTick(entity, ctx);
+		}
+	}
+}
+
+static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
+{
+	for (u32 t = 0; t < world->next_tid; t++)
+	{
+		const E_TypeDesc *desc = &world->type_stores[t].desc;
+
+		if (!desc->OnPostPhysicsTick)
+			continue;
+
+		E_TypePool *pool = &world->type_stores[t].pool;
+		
+		u8 *base = pool->data;
+
+		for (u32 j = 0; j < pool->count; j++)
+		{
+			if (!pool->alive[j])
+				continue;
+
+			void *entity = (void *)(base + (j * desc->stride));
+
+			E_Flags flags = E_HeaderOf(entity)->flags;
+			u16 layer_id = E_HeaderOf(entity)->layer_id;
+			
+			if (!(flags & E_Flag_Active))
+				continue;
+
+			if (!world->layers[layer_id].active)
+				continue;
+
+			desc->OnPostPhysicsTick(entity, ctx);
 		}
 	}
 }

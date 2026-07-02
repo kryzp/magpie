@@ -85,8 +85,8 @@ namespace culling
 	}
 
 	public scene::IndirectDraw GetDrawFor(scene::ObjectData *objects,
-	                                      scene::RenderMesh *meshes,
-	                                      uint gid)
+										  scene::RenderMesh *meshes,
+										  uint gid)
 	{
 		scene::RenderMesh mesh = meshes[objects[gid].mesh_index];
 

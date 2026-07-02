@@ -15,6 +15,23 @@ struct P_RigidBody
 {
 	P_RigidBodyType type;
 	P_CollisionShape shape;
+
+	v3 position;
+	v4 orientation;
+
+	v3 velocity;
+	v3 acceleration;
+	v3 last_position;
+
+	b32 fixed_position;
+	b32 solid;
+
+	f32 friction;
+	f32 air_friction;
+
+	f32 max_speed;
+
+	f32 gravity_factor;
 };
 
 #endif // PHYSICS_RIGIDBODY_H

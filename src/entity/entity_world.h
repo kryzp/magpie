@@ -92,12 +92,12 @@ static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
    PER-FRAME
    ================================================== */
 
-static void E_WorldResolveInittingEntities(const E_TickContext *ctx);
-static void E_WorldTickPreAnim(const E_TickContext *ctx);
-static void E_WorldTickPostAnim(const E_TickContext *ctx);
-static void E_WorldTickPostPhysics(const E_TickContext *ctx);
+static void E_WorldResolveInittingEntities(E_World *world);
+static void E_WorldFlush(E_World *world);
 
-static void E_WorldFlush(E_World *world); // Clean-up all entities marked for pending kill.
+static void E_WorldTickPreAnim(E_World *world, const E_TickContext *ctx);
+static void E_WorldTickPostAnim(E_World *world, const E_TickContext *ctx);
+static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx);
 
 
 /* ==================================================

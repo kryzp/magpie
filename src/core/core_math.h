@@ -75,6 +75,8 @@ static f32 V2Length(v2 v);
 
 static v2 V2Normalize(v2 v);
 
+static v2 V2ScreenToNDC(v2 window_position);
+
 
 typedef union v3 v3;
 union v3
@@ -166,10 +168,12 @@ static v4 V4FrustumNormalizePlane(v4 v);
 
 #define V4QuatIdentity() v4(0.f, 0.f, 0.f, 1.f)
 
+// euler assumes v3(pitch, yaw, roll)
 static v4 V4QuatInitAxis(f32 angle, v3 axis);
-static v4 V4QuatInitEuler(v3 euler); // Pitch, Yaw, Roll
+static v4 V4QuatInitEuler(v3 euler);
+static v4 V4QuatLookAt(v3 eye, v3 centre);
 
-static v3 V4QuatToEuler(v4 q); // Pitch, Yaw, Roll
+static v3 V4QuatToEuler(v4 q);
 static v4 V4QuatInverse(v4 q);
 
 static v4 V4QuatSlerp(v4 a, v4 b, f32 t);

@@ -12,47 +12,48 @@ static R_Material R_MaterialDefault(void)
 {
 	R_Material mat = {0};
 
-	mat.albedo_factor                        = v4(1.f, 1.f, 1.f, 1.f);
-	mat.normal_scale                         = 1.f;
-	mat.metallic_factor                      = 1.f;
-	mat.roughness_factor                     = 1.f;
-	mat.emissive_factor                      = v3(0.f, 0.f, 0.f);
-	mat.emissive_intensity                   = 1.f;
-	mat.occlusion_intensity                  = 1.f;
+	mat.albedo_factor = v4(1.f, 1.f, 1.f, 1.f);
+	mat.normal_scale = 1.f;
+	mat.metallic_factor = 1.f;
+	mat.roughness_factor = 1.f;
+	mat.emissive_factor = v3(0.f, 0.f, 0.f);
+	mat.emissive_intensity  = 1.f;
+	mat.occlusion_intensity = 1.f;
 
-	mat.ior                                  = 1.5f;
+	mat.ior = 1.5f;
 
-	mat.transmission_factor                  = 0.f;
-	mat.thickness_factor                     = 0.f;
-	mat.attenuation_colour                   = v3(1.f, 1.f, 1.f);
-	mat.attenuation_distance                 = MATH_MAX_F32; // gltf spec.
+	mat.transmission_factor = 0.f;
+	mat.thickness_factor = 0.f;
+	mat.attenuation_colour = v3(1.f, 1.f, 1.f);
+	mat.attenuation_distance = MATH_MAX_F32; // gltf spec.
 
-	mat.specular_factor                      = 1.f;
-	mat.specular_colour_factor               = v3(1.f, 1.f, 1.f);
+	mat.specular_factor = 1.f;
+	mat.specular_colour_factor = v3(1.f, 1.f, 1.f);
 
-	mat.clearcoat_factor                     = 0.f;
-	mat.clearcoat_roughness_factor           = 0.f;
+	mat.clearcoat_factor = 0.f;
+	mat.clearcoat_roughness_factor = 0.f;
 
-	mat.sheen_colour_factor                  = v3(0.f, 0.f, 0.f);
-	mat.sheen_roughness_factor               = 0.f;
+	mat.sheen_colour_factor = v3(0.f, 0.f, 0.f);
+	mat.sheen_roughness_factor = 0.f;
 
-	mat.iridescence_factor                   = 0.f;
-	mat.iridescence_ior                      = 1.3f;
+	mat.iridescence_factor = 0.f;
+	mat.iridescence_ior = 1.3f;
 	mat.iridescence_thickness_min_nanometers = 100.f;
 	mat.iridescence_thickness_max_nanometers = 400.f;
 
-	mat.alpha_mode                           = A_AlphaMode_Opaque;
-	mat.alpha_cutoff                         = 0.5f;
-	mat.double_sided                         = false;
-	mat.unlit                                = false;
+	mat.alpha_mode = A_AlphaMode_Opaque;
+	mat.alpha_cutoff = 0.5f;
+	mat.double_sided = false;
+	mat.unlit = false;
 
-	mat.reflection_mode                      = A_ReflectionMode_Default;
-	mat.reflection_plane                     = v4(0.f, 0.f, 0.f, 0.f);
+	mat.reflection_mode = A_ReflectionMode_Default;
+	mat.reflection_plane = v4(0.f, 0.f, 0.f, 0.f);
 	
 	return mat;
 }
 
 // js slime me out gng
+// gurt: yo
 static R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Assets *assets)
 {
 	R_Material mat = R_MaterialDefault();

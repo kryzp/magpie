@@ -1,6 +1,4 @@
 
-// Todo: Move these out into their respective backends.
-
 // remove warnings from external libraries
 #pragma warning(push)
 #pragma warning(disable:4310 4709 4701 4702 4324)
@@ -39,47 +37,20 @@
 #undef near
 #undef far
 
-// ---
+// for LSP's
 
 #include "core/core_inc.h"
 #include "os/os_inc.h"
-#include "core/core_inc.c"
-#include "os/os_inc.c"
-
 #include "io/io_inc.h"
-#include "io/io_inc.c"
-
 #include "chrono/chrono_inc.h"
-#include "chrono/chrono_inc.c"
-
 #include "script/script_inc.h"
-#include "script/script_inc.c"
-
 #include "graphics/graphics_inc.h"
-#include "graphics/graphics_inc.c"
-
 #include "audio/audio_inc.h"
-#include "audio/audio_inc.c"
-
 #include "asset/asset_inc.h"
-#include "asset/asset_inc.c"
-
 #include "animation/animation_inc.h"
-#include "animation/animation_inc.c"
-
 #include "render/render_inc.h"
-#include "render/render_inc.c"
-
 #include "physics/physics_inc.h"
-#include "physics/physics_inc.c"
-
 #include "entity/entity_inc.h"
-#include "entity/entity_inc.c"
-
 #include "dev/dev_inc.h"
-#include "dev/dev_inc.c"
-
 #include "game/game_inc.h"
 #include "app.h"
-#include "game/game_inc.c"
-#include "app.c"

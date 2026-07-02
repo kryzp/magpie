@@ -1,11 +1,11 @@
 #ifndef ASSET_MANAGER_H
 #define ASSET_MANAGER_H
 
-#define A_MANAGER_MAX_RECORDS 512
-#define A_GPU_UPLOAD_CHUNK    Megabytes(128)
+#define A_MANAGER_MAX_RECORDS     512
+#define A_GPU_UPLOAD_CHUNK        Megabytes(128)
 
-#define A_LOAD_ARENA_COUNT    128
-#define A_LOAD_ARENA_RESERVE  Gigabytes(1)
+#define A_LOAD_ARENA_COUNT        128
+#define A_LOAD_ARENA_RESERVE      Gigabytes(1)
 
 typedef enum A_RecordState
 {

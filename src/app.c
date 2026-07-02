@@ -31,22 +31,21 @@ static S_BINDING_DEF(S_BND_WaitSignal)
 
 static S_BINDING_DEF(S_BND_DebugLog)
 {
-	App *app = S_CtxUpvaluePtr(ctx, 0);
 	String8 msg = S_CtxGetArgStr(ctx, 0);
 	
 	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
 }
 
-static void AppInitScripting(App *app)
+static void AppInitScripting()
 {
 	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
+
 	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
 	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"), S_BND_WaitSignal);
-	void *app_upval[1] = { app };
-	S_BindGlobalEx(app->scripting_system, String8Lit("debug_log"), S_BND_DebugLog, app_upval, 1);
+	S_BindGlobal(app->scripting_system, String8Lit("debug_log"), S_BND_DebugLog);
 }
 
-static void AppInit_(App *app)
+static void AppInit_()
 {
 	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
@@ -58,14 +57,11 @@ static void AppInit_(App *app)
 	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
 	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
-
-	AppInitScripting(app);
-
+	AppInitScripting();
 
 	G_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
 	app->swapchain = G_DeviceSwapchainCreate(&app->graphics_device);
 	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
-
 
 	app->audio_backend = AU_BackendInit(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
 	AU_Init(&app->audio_system,
@@ -73,7 +69,6 @@ static void AppInit_(App *app)
 			app->audio_log_channel,
 			app->audio_backend);
 	
-
 	A_Init(&app->assets,
 		   &app->asset_arena,
 		   app->asset_log_channel,
@@ -81,14 +76,12 @@ static void AppInit_(App *app)
 		   &app->shader_compiler,
 		   app->audio_backend,
 		   app->scripting_system);
+	
 	//A_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
-	A_Mount(&app->assets, String8Lit("assets://"),        String8Lit("res"));
-
+	A_Mount(&app->assets, String8Lit("assets://"), String8Lit("res"));
 
 	AN_SystemInit(&app->animation_system, app->animation_log_channel, &app->assets);
 
-
-  	
 	G_BufferAllocInfo ring_buffer_alloc_info = {0};
 	ring_buffer_alloc_info.size = Megabytes(512);
 	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -105,17 +98,13 @@ static void AppInit_(App *app)
 	R_SystemInit(&app->render_system, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
 	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
 
-
-	P_EngineInit(&app->physics_engine, app->physics_log_channel);
+	P_EngineInit(&app->physics_engine, &app->physics_arena, app->physics_log_channel);
 	
-
 	E_WorldInit(&app->world, &app->entity_arena, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("WORLD")));
 	E_EventQueueInit(&app->events, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("EVENT")));
 
-
-	GameRegisterEntities(&app->game, &app->world);
-	GameInit(&app->game, &app->world);
-
+	GameSelect(&app->game);
+	GameInit(&app->world);
 
 	CH_TimerStart(&app->elapsed_timer);
 	CH_TimerStart(&app->delta_timer);
@@ -123,12 +112,13 @@ static void AppInit_(App *app)
 }
 
 __declspec(dllexport)
-App *AppInit(const OS_API *api)
+App *MagpieInit(const OS_API *api)
 {
 	osapi = api;
 
 	Arena bootstrap = ArenaAlloc(sizeof(App));
-	App *app = ArenaPushArray(&bootstrap, App, 1);
+	app = ArenaPushArray(&bootstrap, App, 1);
+	
 	app->bootstrap_arena = bootstrap;
 
 	app->scripting_arena = ArenaAlloc(Gigabytes(1));
@@ -139,10 +129,9 @@ App *AppInit(const OS_API *api)
 	app->render_arena    = ArenaAlloc(Gigabytes(2));
 	app->physics_arena   = ArenaAlloc(Gigabytes(1));
 	app->entity_arena    = ArenaAlloc(Gigabytes(1));
-	app->editor_arena    = ArenaAlloc(Gigabytes(1));
 	app->frame_arena     = ArenaAlloc(Gigabytes(1));
 	
-	AppInit_(app);
+	AppInit_();
 
 	DebugLogI(app->log_channel, "Initialized.");
 	
@@ -150,7 +139,7 @@ App *AppInit(const OS_API *api)
 }
 
 __declspec(dllexport)
-void AppDestroy(App *app)
+void MagpieDestroy(App *app_)
 {
 	G_DeviceWaitIdle(&app->graphics_device);
 
@@ -180,7 +169,6 @@ void AppDestroy(App *app)
 	S_Destroy(app->scripting_system);
 
 	ArenaRelease(&app->frame_arena);
-	ArenaRelease(&app->editor_arena);
 	ArenaRelease(&app->entity_arena);
 	ArenaRelease(&app->physics_arena);
 	ArenaRelease(&app->render_arena);
@@ -195,7 +183,7 @@ void AppDestroy(App *app)
 	//ArenaRelease(&app->bootstrap_arena);
 }
 
-static void AppLogFPS(App *app, f32 dt)
+static void AppLogFPS(f32 dt)
 {
 	static u32 index = 0;
 	static f32 fps_history[1] = {0};
@@ -216,7 +204,7 @@ static void AppLogFPS(App *app, f32 dt)
 }
 
 __declspec(dllexport)
-b32 AppTick(App *app, const OS_InputState *input)
+b32 MagpieTick(App *app_, const OS_InputState *input)
 {
 	if (OS_KbPressed(input, OS_KeyboardKey_Escape))
 		return true;
@@ -235,28 +223,19 @@ b32 AppTick(App *app, const OS_InputState *input)
 	A_FlushUploads(&app->assets);
 
 	E_TickContext entity_tick_context = {0};
-	entity_tick_context.world = &app->world;
-	entity_tick_context.events = &app->events;
 	entity_tick_context.dt = dt;
 	entity_tick_context.elapsed = elapsed;
 	entity_tick_context.input = input;
-	entity_tick_context.scripting = app->scripting_system;
-	entity_tick_context.graphics_device = &app->graphics_device;
-	entity_tick_context.audio = &app->audio_system;
-	entity_tick_context.assets = &app->assets;
-	entity_tick_context.animation = &app->animation_system;
-	entity_tick_context.physics = &app->physics_engine;
-	entity_tick_context.render_scene = &app->scene;
 
-	E_WorldResolveInittingEntities(&entity_tick_context);
+	E_WorldResolveInittingEntities(&app->world);
 
-	E_WorldTickPreAnim(&entity_tick_context);
+	E_WorldTickPreAnim(&app->world, &entity_tick_context);
 	
 	AN_SystemCalculateIntermediatePoses(&app->animation_system, elapsed);
 
-	E_WorldTickPostAnim(&entity_tick_context);
+	E_WorldTickPostAnim(&app->world, &entity_tick_context);
 
-	GameTick(&app->game, input, dt, elapsed);
+	GameTick(input, dt, elapsed);
 
 	S_Tick(app->scripting_system, dt);
 	
@@ -278,7 +257,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 
 	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system);
 	
-	E_WorldTickPostPhysics(&entity_tick_context);
+	E_WorldTickPostPhysics(&app->world, &entity_tick_context);
 
 	E_EventDispatch(&app->events, &app->world);
 
@@ -311,7 +290,6 @@ b32 AppTick(App *app, const OS_InputState *input)
 	
 	R_SystemRender(&app->render_system, &app->graph, &interpolated_frame);
 
-	R_GraphSetPresentFilter(&app->graph, VK_FILTER_LINEAR);
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
 	{
@@ -326,7 +304,7 @@ b32 AppTick(App *app, const OS_InputState *input)
 	G_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
-	AppLogFPS(app, dt);
+	AppLogFPS(dt);
 	
 	app->frame_count++;
 
@@ -336,9 +314,10 @@ b32 AppTick(App *app, const OS_InputState *input)
 }
 
 __declspec(dllexport)
-void AppHotLoad(App *app, const OS_API *api)
+void MagpieHotLoad(App *app_, const OS_API *api)
 {
 	osapi = api;
+	app = app_;
 	
 	/*
 	 * this is a super hacky measure but there's no other
@@ -353,14 +332,16 @@ void AppHotLoad(App *app, const OS_API *api)
 	 */
 	
 	ArenaReset(&app->scripting_arena);
-	AppInitScripting(app);
+	AppInitScripting();
 
 	G_DeviceHotLoad(&app->graphics_device);
 	R_SystemHotLoad(&app->render_system);
+	
+	GameSelect(&app->game);
 }
 
 __declspec(dllexport)
-void AppHotUnload(App *app)
+void MagpieHotUnload(App *app_)
 {
 	G_DeviceHotUnload(&app->graphics_device);
 

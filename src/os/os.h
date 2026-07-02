@@ -74,6 +74,7 @@ struct OS_API
 
 	void (*SetMousePosition)(f32 x, f32 y);
 	void (*SetMouseVisible)(b32 visible);
+
 	b32  (*IsMouseVisible)(void);
 	void (*SetMouseLocked)(b32 locked);
 	b32  (*IsMouseLocked)(void);

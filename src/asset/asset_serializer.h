@@ -38,11 +38,11 @@ typedef struct A_Serializer A_Serializer;
 struct A_Serializer
 {
 	A_SerializerPipelineData (*Cpu)      (const A_Context *ctx, Arena *load_scope);
-	void                       (*Alloc)    (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *out, Arena *arena);
-	void                       (*Reload)   (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *existing);
-	void                       (*Gpu)      (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *asset, G_CmdBuffer *cmd, G_BufferKey stage, u64 stage_base);
-	void                       (*End)      (A_SerializerPipelineData *data);
-	void                       (*Dispose)  (A_Asset *asset, A_Assets *assets);
+	void                     (*Alloc)    (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *out, Arena *arena);
+	void                     (*Reload)   (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *existing);
+	void                     (*Gpu)      (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *asset, G_CmdBuffer *cmd, G_BufferKey stage, u64 stage_base);
+	void                     (*End)      (A_SerializerPipelineData *data);
+	void                     (*Dispose)  (A_Asset *asset, A_Assets *assets);
 };
 
 #endif // ASSET_SERIALIZER_H

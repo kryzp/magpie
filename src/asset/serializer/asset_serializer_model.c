@@ -153,42 +153,42 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	else
 		mat.name = String8Fmt(arena, "Unnamed Material");
 
-	mat.albedo_factor                        = v4(1.f, 1.f, 1.f, 1.f);
-	mat.normal_scale                         = 1.f;
-	mat.metallic_factor                      = 1.f;
-	mat.roughness_factor                     = 1.f;
-	mat.emissive_factor                      = v3(0.f, 0.f, 0.f);
-	mat.emissive_intensity                   = 1.f;
-	mat.occlusion_intensity                  = 1.f;
+	mat.albedo_factor = v4(1.f, 1.f, 1.f, 1.f);
+	mat.normal_scale = 1.f;
+	mat.metallic_factor = 1.f;
+	mat.roughness_factor = 1.f;
+	mat.emissive_factor = v3(0.f, 0.f, 0.f);
+	mat.emissive_intensity = 1.f;
+	mat.occlusion_intensity = 1.f;
 
-	mat.ior                                  = 1.5f;
+	mat.ior = 1.5f;
 
-	mat.transmission_factor                  = 0.f;
-	mat.thickness_factor                     = 0.f;
-	mat.attenuation_colour                   = v3(1.f, 1.f, 1.f);
-	mat.attenuation_distance                 = MATH_MAX_F32; // gltf spec.
+	mat.transmission_factor = 0.f;
+	mat.thickness_factor = 0.f;
+	mat.attenuation_colour = v3(1.f, 1.f, 1.f);
+	mat.attenuation_distance = MATH_MAX_F32; // gltf spec.
 
-	mat.specular_factor                      = 1.f;
-	mat.specular_colour_factor               = v3(1.f, 1.f, 1.f);
+	mat.specular_factor = 1.f;
+	mat.specular_colour_factor = v3(1.f, 1.f, 1.f);
 
-	mat.clearcoat_factor                     = 0.f;
-	mat.clearcoat_roughness_factor           = 0.f;
+	mat.clearcoat_factor = 0.f;
+	mat.clearcoat_roughness_factor = 0.f;
 
-	mat.sheen_colour_factor                  = v3(0.f, 0.f, 0.f);
-	mat.sheen_roughness_factor               = 0.f;
+	mat.sheen_colour_factor = v3(0.f, 0.f, 0.f);
+	mat.sheen_roughness_factor = 0.f;
 
-	mat.iridescence_factor                   = 0.f;
-	mat.iridescence_ior                      = 1.3f;
+	mat.iridescence_factor = 0.f;
+	mat.iridescence_ior = 1.3f;
 	mat.iridescence_thickness_min_nanometers = 100.f;
 	mat.iridescence_thickness_max_nanometers = 400.f;
 
-	mat.alpha_mode                           = A_AlphaMode_Opaque;
-	mat.alpha_cutoff                         = 0.5f;
-	mat.double_sided                         = false;
-	mat.unlit                                = false;
+	mat.alpha_mode = A_AlphaMode_Opaque;
+	mat.alpha_cutoff = 0.5f;
+	mat.double_sided = false;
+	mat.unlit = false;
 
-	mat.reflection_mode                      = A_ReflectionMode_Default;
-	mat.reflection_plane                     = v4(0.f, 0.f, 0.f, 0.f);
+	mat.reflection_mode = A_ReflectionMode_Default;
+	mat.reflection_plane = v4(0.f, 0.f, 0.f, 0.f);
 
 
 	// STANDARD METALLIC-ROUGHNESS OPAQUE PBR.
@@ -196,34 +196,34 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	{
 		const cgltf_pbr_metallic_roughness *pbr = &gltf_mat->pbr_metallic_roughness;
 
-		mat.albedo_texture             = A_ModelTryFetchTexture(ctx, arena, load, directory, &pbr->base_color_texture);
+		mat.albedo_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &pbr->base_color_texture);
 		mat.metallic_roughness_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &pbr->metallic_roughness_texture);
 
-		mat.albedo_factor      = v4(pbr->base_color_factor[0],
-									pbr->base_color_factor[1],
-									pbr->base_color_factor[2],
-									pbr->base_color_factor[3]);
+		mat.albedo_factor = v4(pbr->base_color_factor[0],
+							   pbr->base_color_factor[1],
+							   pbr->base_color_factor[2],
+							pbr->base_color_factor[3]);
 		
-		mat.metallic_factor    = pbr->metallic_factor;
-		mat.roughness_factor   = pbr->roughness_factor;
+		mat.metallic_factor = pbr->metallic_factor;
+		mat.roughness_factor = pbr->roughness_factor;
 	}
 
 
 	// NORMALS.
 	mat.normal_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->normal_texture);
-	mat.normal_scale   = gltf_mat->normal_texture.scale;
+	mat.normal_scale = gltf_mat->normal_texture.scale;
 
 
 	// OCCLUSION.
-	mat.occlusion_texture   = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->occlusion_texture);
+	mat.occlusion_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->occlusion_texture);
 	mat.occlusion_intensity = gltf_mat->occlusion_texture.scale;
 
 
 	// EMISSIVE.
 	mat.emissive_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->emissive_texture);
-	mat.emissive_factor  = v3(gltf_mat->emissive_factor[0],
-							  gltf_mat->emissive_factor[1],
-							  gltf_mat->emissive_factor[2]);
+	mat.emissive_factor = v3(gltf_mat->emissive_factor[0],
+							 gltf_mat->emissive_factor[1],
+							 gltf_mat->emissive_factor[2]);
 
 	// EMISSIVE STRENGTH.
 	if (gltf_mat->has_emissive_strength)
@@ -239,19 +239,19 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	if (gltf_mat->has_transmission)
 	{
 		mat.transmission_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->transmission.transmission_texture);
-		mat.transmission_factor  = gltf_mat->transmission.transmission_factor;
+		mat.transmission_factor = gltf_mat->transmission.transmission_factor;
 	}
 
 
 	// VOLUME.
 	if (gltf_mat->has_volume)
 	{
-		mat.thickness_texture    = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->volume.thickness_texture);
-		mat.thickness_factor     = gltf_mat->volume.thickness_factor;
+		mat.thickness_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->volume.thickness_texture);
+		mat.thickness_factor = gltf_mat->volume.thickness_factor;
 
-		mat.attenuation_colour   = v3(gltf_mat->volume.attenuation_color[0],
-									  gltf_mat->volume.attenuation_color[1],
-									  gltf_mat->volume.attenuation_color[2]);
+		mat.attenuation_colour = v3(gltf_mat->volume.attenuation_color[0],
+									gltf_mat->volume.attenuation_color[1],
+									gltf_mat->volume.attenuation_color[2]);
 
 		mat.attenuation_distance = gltf_mat->volume.attenuation_distance;
 	}
@@ -260,10 +260,10 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	// SPECULAR.
 	if (gltf_mat->has_specular)
 	{
-		mat.specular_texture        = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->specular.specular_texture);
+		mat.specular_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->specular.specular_texture);
 		mat.specular_colour_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->specular.specular_color_texture);
 		
-		mat.specular_factor         = gltf_mat->specular.specular_factor;
+		mat.specular_factor = gltf_mat->specular.specular_factor;
 
 		mat.specular_colour_factor  = v3(gltf_mat->specular.specular_color_factor[0],
 										 gltf_mat->specular.specular_color_factor[1],
@@ -274,10 +274,10 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	// CLEARCOAT.
 	if (gltf_mat->has_clearcoat)
 	{
-		mat.clearcoat_texture           = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
+		mat.clearcoat_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->clearcoat.clearcoat_texture);
 		mat.clearcoat_roughness_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->clearcoat.clearcoat_roughness_texture);
 
-		mat.clearcoat_factor            = gltf_mat->clearcoat.clearcoat_factor;
+		mat.clearcoat_factor = gltf_mat->clearcoat.clearcoat_factor;
 		mat.clearcoat_roughness_factor  = gltf_mat->clearcoat.clearcoat_roughness_factor;
 	}
 
@@ -285,12 +285,12 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	// SHEEN.
 	if (gltf_mat->has_sheen)
 	{
-		mat.sheen_colour_texture    = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->sheen.sheen_color_texture);
+		mat.sheen_colour_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->sheen.sheen_color_texture);
 		mat.sheen_roughness_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->sheen.sheen_roughness_texture);
 
-		mat.sheen_colour_factor     = v3(gltf_mat->sheen.sheen_color_factor[0],
-										 gltf_mat->sheen.sheen_color_factor[1],
-										 gltf_mat->sheen.sheen_color_factor[2]);
+		mat.sheen_colour_factor = v3(gltf_mat->sheen.sheen_color_factor[0],
+									 gltf_mat->sheen.sheen_color_factor[1],
+									 gltf_mat->sheen.sheen_color_factor[2]);
 
 		mat.sheen_roughness_factor  = gltf_mat->sheen.sheen_roughness_factor;
 	}
@@ -299,11 +299,11 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	// IRIDESCENCE.
 	if (gltf_mat->has_iridescence)
 	{
-		mat.iridescence_texture                  = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_texture);
-		mat.iridescence_thickness_texture        = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_thickness_texture);
+		mat.iridescence_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_texture);
+		mat.iridescence_thickness_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->iridescence.iridescence_thickness_texture);
 
-		mat.iridescence_factor                   = gltf_mat->iridescence.iridescence_factor;
-		mat.iridescence_ior                      = gltf_mat->iridescence.iridescence_ior;
+		mat.iridescence_factor = gltf_mat->iridescence.iridescence_factor;
+		mat.iridescence_ior = gltf_mat->iridescence.iridescence_ior;
 
 		mat.iridescence_thickness_min_nanometers = gltf_mat->iridescence.iridescence_thickness_min;
 		mat.iridescence_thickness_max_nanometers = gltf_mat->iridescence.iridescence_thickness_max;

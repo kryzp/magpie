@@ -47,6 +47,19 @@ static v2 V2Normalize(v2 v)
 	return V2MulF32(v, 1.f / V2Length(v));
 }
 
+static v2 V2ScreenToNDC(v2 window_position)
+{
+	u32 window_width, window_height;
+	osapi->GetWindowSize(&window_width, &window_height);
+
+	f32 x = (2.f * window_position.x) / ((f32)window_width) - 1.f;
+	f32 y = (2.f * window_position.y) / ((f32)window_height) - 1.f;
+
+	y *= -1.f;
+
+	return v2(x, y);
+}
+
 static v3 V3Add(v3 a, v3 b)
 {
 	return v3(a.x + b.x,
@@ -257,6 +270,33 @@ static v4 V4QuatInitEuler(v3 euler)
 			  (cr * cp * cy) + (sr * sp * sy));
 }
 
+static v4 V4QuatLookAt(v3 eye, v3 centre)
+{
+	v3 fwd = v3(0.f, 1.f, 0.f);
+
+	v3 dir = V3Normalize(V3Sub(centre, eye));
+
+	f32 d = V3Dot(fwd, dir);
+
+	if (d > 0.9999f)
+		return v4(0.f, 0.f, 0.f, 1.f);
+
+	if (d < -0.9999f)
+		return v4(0.f, 0.f, 1.f, 0.f);
+
+	v3 axis = V3Cross(fwd, dir);
+
+	f32 s = SquareRoot((1.f + d) * 2.f);
+	f32 inv_s = 1.f / s;
+
+	return v4(
+		axis.x * inv_s,
+		axis.y * inv_s,
+		axis.z * inv_s,
+		s * 0.5f
+	);
+}
+
 static v3 V4QuatToEuler(v4 q)
 {
 	f32 t0 =           (2.f * ((q.w * q.x) + (q.y * q.z)));
@@ -331,16 +371,16 @@ static m4 M4MulM4(m4 a, m4 b)
 {
 	m4 c = {0};
 
-    for (u32 i = 0; i < 4; i++)
-    {
-        for (u32 j = 0; j < 4; j++)
-        {
-            for (u32 k = 0; k < 4; k++)
-            {
-                c.e[i][j] += a.e[k][j] * b.e[i][k];
-            }
-        }
-    }
+	for (u32 i = 0; i < 4; i++)
+	{
+		for (u32 j = 0; j < 4; j++)
+		{
+			for (u32 k = 0; k < 4; k++)
+			{
+				c.e[i][j] += a.e[k][j] * b.e[i][k];
+			}
+		}
+	}
 	
 	return c;
 }

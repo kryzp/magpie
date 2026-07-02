@@ -10,9 +10,9 @@ namespace ibl_convolution
 
 	// render standard unit cube via SV_ViewID transform matrices
 	public VS_Output CubemapFaceVS(uint vertex_id,
-	                               uint view_id,
-	                               float4x4 *transform_matrices,
-	                               float3 *vertices)
+								   uint view_id,
+								   float4x4 *transform_matrices,
+								   float3 *vertices)
 	{
 		VS_Output output;
 		output.position = vertices[vertex_id];

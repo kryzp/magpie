@@ -54,7 +54,7 @@ static u64 AU_MA_BytesFromFormat(AU_Format format)
 		case AU_Format_S24:  return 3u;
 		case AU_Format_S32:  return 4u;
 		case AU_Format_F32:  return 4u;
-		default:              AssertTrue(false); return 0;
+		default:             AssertTrue(false); return 0;
 	}
 }
 
@@ -67,7 +67,7 @@ static ma_format AU_MA_GetMiniFormat(AU_Format format)
 		case AU_Format_S24:  return ma_format_s24;
 		case AU_Format_S32:  return ma_format_s32;
 		case AU_Format_F32:  return ma_format_f32;
-		default:              return ma_format_unknown;
+		default:             return ma_format_unknown;
 	}
 }
 
@@ -78,7 +78,7 @@ static ma_attenuation_model AU_MA_GetMiniAttenuationModel(AU_AttenuationModel mo
 		case AU_AttenuationModel_Inverse:      return ma_attenuation_model_inverse;
 		case AU_AttenuationModel_Exponential:  return ma_attenuation_model_exponential;
 		case AU_AttenuationModel_Linear:       return ma_attenuation_model_linear;
-		default:                                return ma_attenuation_model_none;
+		default:                               return ma_attenuation_model_none;
 	}
 }
 

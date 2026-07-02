@@ -27,9 +27,9 @@ namespace scene
 								   
 		public uint32_t material_index;
 		public uint32_t page_index;
-        public uint32_t mesh_index;
+		public uint32_t mesh_index;
 
-        public uint32_t skinning_joint_count;
+		public uint32_t skinning_joint_count;
 		public float4x4 *skinning_palette;
 	};
 

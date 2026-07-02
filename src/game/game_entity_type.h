@@ -6,7 +6,7 @@ typedef enum GameEntityType
 #define GameEntityDef(type, max) GameEntityType_##type,
 #include "game_entity_xmacro.inc"
 #undef GameEntityDef
-    GameEntityType_COUNT
+	GameEntityType_COUNT
 }
 GameEntityType;
 

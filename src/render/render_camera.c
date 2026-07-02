@@ -67,3 +67,23 @@ static R_FrustumVolume R_CameraFrustum(const R_Camera *camera)
 
 	return volume;
 }
+
+static v3 R_CameraNDCToWsRayDirection(const R_Camera *camera, v2 ndc)
+{
+	m4 inv_proj = M4Inverse(camera->proj);
+	m4 inv_view = M4Inverse(camera->view);
+
+	v4 clip = v4(ndc.x, ndc.y, -1.f, 1.f);
+
+	v4 view_pos = M4MulV4(inv_proj, clip);
+
+	view_pos.y = 1.f;
+	view_pos.w = 0.f;
+
+	v4 world_dir4 = M4MulV4(inv_view, view_pos);
+
+	v3 world_dir = v3(world_dir4.x, world_dir4.y, world_dir4.z);
+	world_dir = V3Normalize(world_dir);
+
+	return world_dir;
+}

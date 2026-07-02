@@ -166,8 +166,8 @@ static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle mode
 
 		animator->poses[i].joint_count = count;
 		animator->poses[i].local_poses = ArenaPushArray(arena, AN_JointPose, count);
-		animator->poses[i].global_transforms = ArenaPushArray(arena, m4,     count);
-		animator->poses[i].palette = ArenaPushArray(arena, m4,     count);
+		animator->poses[i].global_transforms = ArenaPushArray(arena, m4, count);
+		animator->poses[i].palette = ArenaPushArray(arena, m4, count);
 	}
 }
 

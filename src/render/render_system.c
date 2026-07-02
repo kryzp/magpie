@@ -141,7 +141,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 	A_Handle hdr_to_env_shader_handle  = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
 	A_Handle irradiance_shader_handle  = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
 	A_Handle prefilter_shader_handle   = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
-	A_Handle hdr_texture_handle        = A_Require(s->assets, String8Lit("assets://environment_map_1.hdr"),                               A_Type_Texture);
+	A_Handle hdr_texture_handle        = A_Require(s->assets, String8Lit("assets://environment_map_3.hdr"),                               A_Type_Texture);
 	
 	G_ShaderKey brdf_lut_shader        = A_GetNow(s->assets, brdf_lut_shader_handle)->shader.key;
 	G_ShaderKey hdr_to_env_shader      = A_GetNow(s->assets, hdr_to_env_shader_handle)->shader.key;
@@ -336,6 +336,7 @@ static void R_SystemRender(R_System *s, R_Graph *g, const R_FrameParams *f)
 	R_DebugRendererRender(&s->debug_renderer, f->dt, g, f->arena, bb.lighting.resolved, bb.depth.resolved);
 	
 	R_GraphSetBackbuffer(g, bb.lighting.resolved);
+	//R_GraphSetPresentFilter(g, VK_FILTER_NEAREST);
 }
 
 static void R_SystemHotLoad(R_System *s)

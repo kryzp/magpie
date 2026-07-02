@@ -125,7 +125,7 @@ You can intuitively see how some layers clearly depend on others, for instance, 
 
 However, it is still ultimately a monolithic build. For a while I considered going the Machinery / Source Engine approach of complete modularity where every engine sub-system gets split apart into a DLL that then gets linked up at runtime, but it's a lot of work for basically no gain. I still might, if only to try something new out, which is the point of the this whole project anyway, but it's not a top priority right now. If I do, it really won't be a problem since layers have pretty well defined API's anyway, it'd just be a lot of groundwork / boilerplate that I don't wanna do right now.
 
-The hierarchy of layers is visible via the order of `#include`'s in `magpie.c`.
+The hierarchy of layers is visible clearly in `magpie.c`.
 
 
 ### Memory Arenas

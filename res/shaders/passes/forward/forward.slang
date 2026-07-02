@@ -53,9 +53,9 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 	scene::RenderMesh mesh = args.meshes[object_data.mesh_index];
 	scene::ModelVertex vertex = mesh.vertex_buffer[vertex_id];
 
-	float3 local_position  = vertex.position;
-	float3 local_normal    = vertex.normal;
-	float3 local_tangent   = vertex.tangent;
+	float3 local_position = vertex.position;
+	float3 local_normal = vertex.normal;
+	float3 local_tangent = vertex.tangent;
 	float3 local_bitangent = vertex.bitangent;
 
 	if (scene::IsSkinned(object_data, mesh))
@@ -115,8 +115,8 @@ float4 FragmentMain(VS_Output input) : SV_Target
 		float width = 0.5;
 
 		float coverage = smoothstep(mat.alpha_cutoff - width,
-		                            mat.alpha_cutoff + width,
-		                            surface.alpha);
+									mat.alpha_cutoff + width,
+									surface.alpha);
 
 		surface.alpha = coverage;
 		*/
