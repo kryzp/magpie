@@ -46,7 +46,7 @@ typedef struct E_InittingEntity E_InittingEntity;
 struct E_InittingEntity
 {
 	E_Handle handle;
-	E_Transform transform;
+	Transform transform;
 };
 
 typedef struct E_World E_World;
@@ -104,7 +104,7 @@ static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx);
    ENTITIES
    ================================================== */
 
-static E_Handle E_WorldSpawn(E_World *world, u32 type, E_Transform transform);
+static E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform);
 static void E_WorldKill(E_World *world, E_Handle handle);
 static b32 E_WorldHandleIsValid(E_World *world, E_Handle handle);
 

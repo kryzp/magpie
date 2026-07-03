@@ -6,3 +6,4 @@
 #include "core_string.h"
 #include "core_hash.h"
 #include "core_coroutine.h"
+#include "core_transform.h"

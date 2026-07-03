@@ -262,7 +262,7 @@ static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
 	}
 }
 
-static E_Handle E_WorldSpawn(E_World *world, u32 type, E_Transform transform)
+static E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform)
 {
 	DebugLogAssert(
 		world->log_channel,

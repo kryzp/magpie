@@ -386,35 +386,6 @@ light.shadow_far = 10.f;
 
 //app->light_handle = R_SceneLightCreate(&app->scene, &light);
 
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),                     A_Type_Model);
-A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"),       A_Type_Model);
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareSheen/glTF/CompareSheen.gltf"),         A_Type_Model);
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/CompareClearcoat/glTF/CompareClearcoat.gltf"), A_Type_Model);
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/SimpleSkin/glTF/SimpleSkin.gltf"),             A_Type_Model);
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedFigure/glTF/RiggedFigure.gltf"),         A_Type_Model);
-//A_Handle object_model_handle = A_Require(&app->assets, String8Lit("assets://models/RiggedSimple/glTF/RiggedSimple.gltf"),         A_Type_Model);
-
-ScratchArena scratch = ScratchBegin(NULL, 0);
-{
-	G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
-	R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, object_model_handle, (u32)(-1));
-	G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
-
-	for (u32 i = 0; i < receipt.count; i++)
-	{
-		R_ModelImportEntry *entry = &receipt.entries[i];
-
-		R_ObjectDesc desc = {0};
-		desc.transform = entry->transform;
-		desc.sphere_bounds = entry->sphere_bounds;
-		desc.mesh = entry->mesh;
-		desc.material = entry->material;
-
-		R_SceneObjectCreate(&app->scene, &desc);
-	}
-}
-ScratchRelease(&scratch);
-
 app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
 A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
 app->test_sound = test_sound_asset->sound.buffer;
@@ -422,8 +393,6 @@ app->test_sound = test_sound_asset->sound.buffer;
 A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
 S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
 S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
-
-E_WorldSpawn(&app->world, E_Type_Player, E_TransformIdentity());
 */
 
 /*

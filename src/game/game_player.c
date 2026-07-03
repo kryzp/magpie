@@ -45,7 +45,7 @@ static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 	return result;
 }
 
-static void PlayerInit(Player *player, E_Transform transform)
+static void PlayerInit(Player *player, Transform transform)
 {
 	player->arena = ArenaAlloc(Kilobytes(512));
 

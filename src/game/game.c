@@ -40,7 +40,7 @@ static void GameInit(E_World *world)
 	camera_driver_cfg.mode = CameraDriverMode_Unrestricted;
 	game->camera_driver = CameraDriverInit(&camera_driver_cfg);
 
-	game->player_handle = E_WorldSpawn(world, game->entity_types[GameEntityType_Player], E_TransformIdentity());
+	game->player_handle = E_WorldSpawn(world, game->entity_types[GameEntityType_Player], TransformIdentity());
 }
 
 static void GameTick(const OS_InputState *input, f32 dt, f32 elapsed)

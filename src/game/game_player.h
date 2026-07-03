@@ -50,7 +50,7 @@ static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle);
 
 static v3 CalcPlayerAimingPoint(const OS_InputState *input);
 
-static void PlayerInit(Player *player, E_Transform transform);
+static void PlayerInit(Player *player, Transform transform);
 static void PlayerDestroy(Player *player);
 
 static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx);

@@ -3,3 +3,4 @@
 #include "core_scratch.c"
 #include "core_string.c"
 #include "core_hash.c"
+#include "core_transform.c"
