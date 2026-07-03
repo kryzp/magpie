@@ -14,8 +14,14 @@ static void CameraDriverShake(CameraDriver *driver, f32 amount)
 
 static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt)
 {
-	camera->position = v3(0.f, -3.f, 7.f);
-	camera->forward = V3Normalize(V3Sub(v3(0.f, 0.f, 0.f), camera->position));
+	Player *player = E_WorldGet(&app->world, game->player_handle);
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+
+	driver->target_position = V3Add(rb->position, v3(0.f, -3.f, 7.f));
+
+	camera->position = V3Lerp(camera->position, driver->target_position, 25.f * dt);
+	
+	camera->forward = V3Normalize(V3Sub(rb->position, driver->target_position));
 	
 	/*
 	const f32 mouse_deadzone = 0.001f;

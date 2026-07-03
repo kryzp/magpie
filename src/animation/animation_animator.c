@@ -122,7 +122,7 @@ static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *loca
 	}
 }
 
-static f32 AN_GetSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n)
+static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n)
 {
 	f32 sample_time = (global_time - global_start_time) * playback_rate;
 
@@ -198,7 +198,7 @@ static void AN_AnimatorTick(AN_Animator *animator, f32 elapsed)
 		{
 			A_AnimClip *clip = &asset_model->clips[animator->clip.value];
 
-			f32 sample_time = AN_GetSampleTime(elapsed, animator->global_start_time, animator->playback_rate, clip->duration_s, 0);
+			f32 sample_time = AN_CalcSampleTime(elapsed, animator->global_start_time, animator->playback_rate, clip->duration_s, 0);
 
 			for (u32 i = 0; i < clip->channel_count; i++)
 			{
@@ -294,7 +294,7 @@ static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
 	return animator->last_sample_time >= anim_clip->duration_s;
 }
 
-static f32 AN_AnimatorNormalizedTime(const AN_Animator *animator)
+static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator)
 {
 	A_ModelData *asset_model = &A_Get(animator->assets, animator->selected_model)->model;
 	A_AnimClip *c = &asset_model->clips[animator->clip.value];

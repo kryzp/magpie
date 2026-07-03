@@ -1,13 +1,5 @@
 
-static const A_SubModel *A_ModelDataGetSubModel(const A_ModelData *asset, u32 index)
-{
-	if (index >= asset->sub_model_count)
-		return NULL;
-	
-	return &asset->sub_models[index];
-}
-
-static const A_Skeleton *A_ModelDataGetSkeleton(const A_ModelData *asset, String8 name)
+static const A_Skeleton *A_ModelDataGetSkeletonByName(const A_ModelData *asset, String8 name)
 {
 	for (u32 i = 0; i < asset->skeleton_count; i++)
 	{
@@ -18,7 +10,7 @@ static const A_Skeleton *A_ModelDataGetSkeleton(const A_ModelData *asset, String
 	return NULL;
 }
 
-static const A_AnimClip *A_ModelDataGetAnimClip(const A_ModelData *asset, String8 name)
+static const A_AnimClip *A_ModelDataGetAnimClipByName(const A_ModelData *asset, String8 name)
 {
 	for (u32 i = 0; i < asset->clip_count; i++)
 	{

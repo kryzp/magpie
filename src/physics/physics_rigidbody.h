@@ -30,6 +30,7 @@ struct P_RigidBody
 	f32 air_friction;
 
 	f32 max_speed;
+	f32 max_z_speed;
 
 	f32 gravity_factor;
 };

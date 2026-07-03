@@ -9,13 +9,14 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 
 	input.jump = OS_KbPressed(st, OS_KeyboardKey_Space);
 
-	input.sneak = OS_KbShift(st);
+	input.run = OS_KbShift(st);
+	input.sneak = OS_KbCtrl(st) && !input.run;
 
-	input.aiming = OS_MbDown(st, OS_MouseButton_Right);
-	input.just_started_aiming = OS_MbPressed(st, OS_MouseButton_Right);
+	input.aim = OS_MbDown(st, OS_MouseButton_Right) && !input.run;
+	input.just_started_aiming = OS_MbPressed(st, OS_MouseButton_Right) && !input.run;
 
-	input.fire = OS_MbPressed(st, OS_MouseButton_Left) && input.aiming;
-	input.reload = OS_MbPressed(st, OS_MouseButton_Left) && !input.aiming;
+	input.fire = OS_MbPressed(st, OS_MouseButton_Left) && input.aim && !input.run;
+	input.reload = OS_MbPressed(st, OS_MouseButton_Left) && !input.aim;
 
 	return input;
 }
@@ -26,7 +27,7 @@ static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle)
 	//AN_Play(&app->animation_system, handle, key, false, st->elapsed);
 }
 
-static v3 GetPlayerAimingPoint(const OS_InputState *input)
+static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 {
 	R_Camera *camera = &game->camera;
 
@@ -55,9 +56,9 @@ static void PlayerInit(Player *player, E_Transform transform)
 	rb->fixed_position = false;
 	rb->friction = 25.f;
 	rb->air_friction = 0.5f;
-	rb->max_speed = 10.f;
-	rb->gravity_factor = 1.f;
-
+	rb->gravity_factor = 10.f;
+	rb->max_speed = 100.f;
+	
 	A_Handle model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -104,14 +105,14 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
 
-	rb->max_speed = 20.f;
+	f32 move_speed = 30.f;
 
-	if (input_st.aiming)
+	if (input_st.aim)
 	{
-		rb->max_speed *= 0.5f;
+		move_speed *= 0.5f;
 
 		v3 source = rb->position;
-		v3 destination = GetPlayerAimingPoint(ctx->input);
+		v3 destination = CalcPlayerAimingPoint(ctx->input);
 
 		player->target_rotation = V4QuatLookAt(source, destination);
 	}
@@ -123,8 +124,14 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 		player->target_rotation = V4QuatLookAt(source, destination);
 	}
 
+	if (input_st.jump)
+		rb->velocity.z += 50.f;
+
+	if (input_st.run)
+		move_speed *= 2.f;
+
 	if (input_st.sneak)
-		rb->max_speed *= 0.25f;
+		move_speed *= 0.25f;
 	
 	if (input_st.fire)
 		GunFire(&player->gun);
@@ -133,8 +140,8 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 		GunReload(&player->gun);
 
 	v3 movement = v3x(0.f);
-	movement.x = input_st.movement.x * 70.f;
-	movement.y = input_st.movement.y * 70.f;
+	movement.x = input_st.movement.x * move_speed;
+	movement.y = input_st.movement.y * move_speed;
 	movement.z = 0.f;
 
 	rb->acceleration = movement;
@@ -143,9 +150,10 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	PlayerAnimationState animation_st = {0};
 	animation_st.elapsed = ctx->elapsed;
 	animation_st.is_grounded = true;
-	animation_st.is_aiming = input_st.aiming || input_st.fire;
+	animation_st.is_aiming = input_st.aim || input_st.fire;
+	animation_st.is_running = input_st.run;
 	animation_st.is_sneaking = input_st.sneak;
-	animation_st.is_moving = V3LengthSqr(movement) <= MATH_EPSILON_F32;
+	animation_st.is_moving = WithinEpsilon(V3LengthSqr(movement));
 
 	PlayerAnimate(&animation_st, player->anim_handle);
 }

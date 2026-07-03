@@ -133,6 +133,29 @@ App *MagpieInit(const OS_API *api)
 	
 	AppInit_();
 
+	A_Handle sponza_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
+
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+	{
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle, (u32)(-1));
+		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+
+		for (u32 i = 0; i < receipt.count; i++)
+		{
+			R_ModelImportEntry *entry = &receipt.entries[i];
+
+			R_ObjectDesc desc = {0};
+			desc.transform = M4MulM4(M4Scale(v3x(5.f)), entry->transform);
+			desc.sphere_bounds = entry->sphere_bounds;
+			desc.mesh = entry->mesh;
+			desc.material = entry->material;
+
+			R_SceneObjectCreate(&app->scene, &desc);
+		}
+	}
+	ScratchRelease(&scratch);
+
 	DebugLogI(app->log_channel, "Initialized.");
 	
 	return app;
@@ -235,8 +258,6 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldTickPostAnim(&app->world, &entity_tick_context);
 
-	GameTick(input, dt, elapsed);
-
 	S_Tick(app->scripting_system, dt);
 	
 	f32 clamped_delta = dt;
@@ -262,6 +283,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	E_EventDispatch(&app->events, &app->world);
 
 	E_WorldFlush(&app->world);
+
+	GameTick(input, dt, elapsed);
 	
 	AU_Listener listener = {0};
 	listener.position = app->game.camera.position;
@@ -301,7 +324,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	R_GraphReset(&app->graph);
 	
-	G_RingBufferReset(&app->frame_upload_ring_buffer);
+	//G_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
 	AppLogFPS(dt);

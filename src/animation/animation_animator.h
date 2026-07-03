@@ -85,7 +85,7 @@ static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
 static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts);
 static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *local_trs);
 
-static f32 AN_GetSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n);
+static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n);
 
 
 /* ==================================================
@@ -104,7 +104,7 @@ static void AN_AnimatorStop(AN_Animator *animator);
 
 static b32 AN_AnimatorIsPlaying(const AN_Animator *animator, AN_ClipKey clip);
 static b32 AN_AnimatorIsFinished(const AN_Animator *animator);
-static f32 AN_AnimatorGetNormalizedTime(const AN_Animator *animator);
+static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator);
 
 static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index);
 

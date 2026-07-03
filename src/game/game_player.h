@@ -6,9 +6,10 @@ struct PlayerInput
 {
 	v2 movement;
 	b32 jump;
+	b32 run;
 	b32 sneak;
 
-	b32 aiming;
+	b32 aim;
 	b32 just_started_aiming;
 	
 	b32 fire;
@@ -22,6 +23,7 @@ struct PlayerAnimationState
 
 	b32 is_grounded;
 	b32 is_aiming;
+	b32 is_running;
 	b32 is_sneaking;
 	b32 is_moving;
 };
@@ -46,7 +48,7 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st);
 
 static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle);
 
-static v3 GetPlayerAimingPoint(const OS_InputState *input);
+static v3 CalcPlayerAimingPoint(const OS_InputState *input);
 
 static void PlayerInit(Player *player, E_Transform transform);
 static void PlayerDestroy(Player *player);

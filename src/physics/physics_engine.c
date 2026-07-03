@@ -55,14 +55,16 @@ static void P_EngineTick(P_Engine *engine, f32 dt)
 				friction_vel = V3Sub(friction_vel, V3MulF32(accel_dir, dot));
 		}
 
-		rb->velocity = V3Add(rb->velocity, V3MulF32(friction_acc, dt));
+		rb->velocity.x += friction_acc.x * dt;
+		rb->velocity.y += friction_acc.y * dt;
 
 		if (rb->position.z > 0.f)
 			rb->velocity.z -= P_GRAVITY_STRENGTH * rb->gravity_factor * dt;
 		else
 			rb->velocity.z = MaxValue(rb->velocity.z, 0.f);
 
-		rb->velocity = V3Sub(rb->velocity, friction_vel);
+		rb->velocity.x -= friction_vel.x;
+		rb->velocity.y -= friction_vel.y;
 
 		rb->last_position = rb->position;
 

@@ -19,7 +19,7 @@ struct Coroutine
 	}											\
 	while (0)
 
-#define CoroutineDelay(cor_, time_, dt_)		\
+#define CoroutineDelay(cor_, time_)				\
 	do											\
 	{											\
 		(cor_)->state = __LINE__;				\
@@ -28,7 +28,7 @@ struct Coroutine
 		case __LINE__:;							\
 			if ((cor_)->delay > 0.f)			\
 			{									\
-				(cor_)->delay -= (dt_);			\
+				(cor_)->delay -= (/* TODO */);	\
 				return;							\
 			}									\
 	}											\
@@ -45,7 +45,7 @@ Coroutine my_coroutine = {0};
 CoroutineBegin(&my_coroutine);
 {
 	DebugLog("1");
-	CoroutineDelay(&my_coroutine, 2.5, delta_time); // wait for 2.5 seconds
+	CoroutineDelay(&my_coroutine, 2.5f); // wait for 2.5 seconds
 	DebugLog("2");
 	CoroutineYield(&my_coroutine); // resume next time the function is called
 	DebugLog("3");

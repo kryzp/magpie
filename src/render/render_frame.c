@@ -9,7 +9,10 @@ static R_FrameParams R_FrameParamsInterp(const R_FrameParams *prev,
 	result.dt = curr->dt;
 	result.elapsed = curr->elapsed;
 	result.scene_data = curr->scene_data; // todo: interpolate scene data (TO BE HONEST THIS WHOLE THING SEEMS A BIT MESSY AND OVERDUE FOR A REFACTOR / REWORK)
-	result.camera = curr->camera; // todo: interpolate camera position
+	result.camera = curr->camera;
 	
+	result.camera.position = V3Lerp(prev->camera.position, curr->camera.position, alpha);
+	result.camera.forward  = V3Normalize(V3Lerp(prev->camera.forward, curr->camera.forward, alpha));
+
 	return result;
 }

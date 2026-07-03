@@ -37,7 +37,7 @@
 #define Log2F           log2f
 #define Log10F          log10f
 
-#define WithinEpsilon(v)                    (AbsValue(v) < (MATH_EPSILON_F64))
+#define WithinEpsilon(v)                    (AbsValue(v) < MATH_EPSILON_F64)
 #define AbsValue(a)                         (((a) < 0.0) ? (-(a)) : (a))
 #define MinValue(a, b)                      (((a) < (b)) ? (a) : (b))
 #define MaxValue(a, b)                      (((a) > (b)) ? (a) : (b))
@@ -45,7 +45,6 @@
 #define ClampValue01(v)                     ClampValue((v), 0, 1)
 #define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
 #define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
-
 
 typedef union v2 v2;
 union v2
@@ -76,7 +75,6 @@ static f32 V2Length(v2 v);
 static v2 V2Normalize(v2 v);
 
 static v2 V2ScreenToNDC(v2 window_position);
-
 
 typedef union v3 v3;
 union v3
@@ -121,7 +119,6 @@ static v3 V3Reflect(v3 v, v3 n);
 static v3 V3Refract(v3 v, v3 n, f64 eta21);
 
 static v3 V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation);
-
 
 typedef union v4 v4;
 union v4
@@ -177,7 +174,6 @@ static v3 V4QuatToEuler(v4 q);
 static v4 V4QuatInverse(v4 q);
 
 static v4 V4QuatSlerp(v4 a, v4 b, f32 t);
-
 
 typedef union m4 m4;
 union m4
