@@ -77,7 +77,7 @@ static void PlayerInit(Player *player, Transform transform)
 			desc.mesh = entry->mesh;
 			desc.material = entry->material;
 
-			player->scene_object_handle = R_SceneObjectCreate(&app->scene, &desc);
+			player->scene_object_handle = R_SceneGraphObjectCreate(&app->scene.graph, &desc);
 		}
 	}
 	ScratchRelease(&scratch);
@@ -174,7 +174,7 @@ static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf, v3(0.f, 0.f, 1.f)), final_matrix);
 	final_matrix = M4MulM4(M4Transform(rb->position, rb->orientation, v3x(1.f), v3x(0.f)), final_matrix);
 	
-	R_SceneObjectSetTransform(&app->scene, player->scene_object_handle, final_matrix);
+	R_SceneGraphObjectSetTransform(&app->scene.graph, player->scene_object_handle, final_matrix);
 }
 
 static void PlayerSerialize(Player *player, IO_ByteSerializer *writer)

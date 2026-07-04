@@ -3,7 +3,6 @@
 
 #define R_SHADOW_MAP_RESOLUTION 2048
 
-
 typedef struct R_ShadowMappingPassData R_ShadowMappingPassData;
 struct R_ShadowMappingPassData
 {
@@ -19,15 +18,14 @@ struct R_ShadowMappingPassData
 
 static R_PASS_RECORD_DEF(R_ShadowMappingPassFn);
 
-
 typedef struct R_ShadowRenderer R_ShadowRenderer;
 struct R_ShadowRenderer
 {
 	G_Device *device;
 	A_Assets *assets;
 
-	G_TextureKey     shadow_cubemaps      [R_SCENE_MAX_SHADOW_CASTERS];
-	G_TextureViewKey shadow_cubemap_views [R_SCENE_MAX_SHADOW_CASTERS];
+	G_TextureKey shadow_cubemaps[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
+	G_TextureViewKey shadow_cubemap_views[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
 
 	G_BufferKey caster_table_buffer;
 	u32 caster_count;

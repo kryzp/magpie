@@ -39,25 +39,25 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 	}
 	args;
 
-	args.frame_data_buffer           = G_DeviceBufferAddress(device, data->frame_data_buffer);
-	args.object_buffer               = data->object_buffer_address;
-	args.material_buffer             = R_SceneMaterialBufferAddr(scene);
-	args.mesh_buffer                 = R_SceneMeshBufferAddr(scene);
+	args.frame_data_buffer = G_DeviceBufferAddress(device, data->frame_data_buffer);
+	args.object_buffer = data->object_buffer_address;
+	args.material_buffer = R_MaterialRegistryBufferAddr(&scene->materials);
+	args.mesh_buffer = R_MeshRegistryBufferAddr(&scene->meshes);
 
-	args.light_buffer                = data->light_buffer_address;
-	args.shadow_caster_buffer        = G_DeviceBufferAddress(device, data->shadow_caster_table);
+	args.light_buffer = data->light_buffer_address;
+	args.shadow_caster_buffer = G_DeviceBufferAddress(device, data->shadow_caster_table);
 
-	args.irr_sh_buffer               = data->irradiance_sh_buffer_address;
-	args.irr_grid_info_buffer        = data->irradiance_grid_info_buffer_address;
+	args.irr_sh_buffer = data->irradiance_sh_buffer_address;
+	args.irr_grid_info_buffer = data->irradiance_grid_info_buffer_address;
 
 	args.irradiance_fallback_cubemap = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, G_SubresourceRangeAllColour()));
-	args.prefilter_cubemap           = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle,     G_SubresourceRangeAllColour()));
-	args.brdf_lut                    = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle,          G_SubresourceRangeAllColour()));
+	args.prefilter_cubemap = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->prefilter_handle, G_SubresourceRangeAllColour()));
+	args.brdf_lut = G_DeviceTextureViewBindless(device, R_GraphResolveTextureView(ctx->graph, data->brdf_handle, G_SubresourceRangeAllColour()));
 
-	args.linear_sampler              = G_DeviceSamplerBindless(device, data->linear_sampler);
-	args.shadow_sampler              = G_DeviceSamplerBindless(device, data->nearest_sampler);
+	args.linear_sampler = G_DeviceSamplerBindless(device, data->linear_sampler);
+	args.shadow_sampler = G_DeviceSamplerBindless(device, data->nearest_sampler);
 
-	args.light_count                 = R_SceneLightCount(scene);
+	args.light_count = R_SceneGraphLightCount(&scene->graph);
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
 	

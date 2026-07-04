@@ -25,7 +25,7 @@ static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc;
 
 	pc.object_buffer = data->object_buffer_address;
-	pc.mesh_buffer = R_SceneMeshBufferAddr(ctx->scene);
+	pc.mesh_buffer = R_MeshRegistryBufferAddr(&ctx->scene->meshes);
 	pc.caster_data_buffer = G_DeviceBufferAddress(device, data->caster_table_buffer);
 	pc.caster_index = data->caster_index;
 
@@ -45,11 +45,11 @@ static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Asset
 	G_BufferAllocInfo caster_buf_info = {0};
 	caster_buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
 	caster_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	caster_buf_info.size  = R_SCENE_MAX_SHADOW_CASTERS * sizeof(R_GPU_ShadowCaster);
+	caster_buf_info.size = R_SCENE_GRAPH_MAX_SHADOW_CASTERS * sizeof(R_GPU_ShadowCaster);
 
 	sr->caster_table_buffer = G_DeviceBufferAlloc(device, &caster_buf_info);
 
-	for (u32 i = 0; i < R_SCENE_MAX_SHADOW_CASTERS; i++)
+	for (u32 i = 0; i < R_SCENE_GRAPH_MAX_SHADOW_CASTERS; i++)
 	{
 		sr->shadow_cubemaps[i] = G_DeviceTextureAllocCubemapDepth(device, R_SHADOW_MAP_RESOLUTION, 1);
 
@@ -68,7 +68,7 @@ static void R_ShadowRendererDestroy(R_ShadowRenderer *sr)
 {
 	G_DeviceBufferDestroy(sr->device, sr->caster_table_buffer);
 
-	for (u32 i = 0; i < R_SCENE_MAX_SHADOW_CASTERS; i++)
+	for (u32 i = 0; i < R_SCENE_GRAPH_MAX_SHADOW_CASTERS; i++)
 		G_DeviceTextureDestroy(sr->device, sr->shadow_cubemaps[i]);
 }
 
@@ -92,7 +92,7 @@ static void R_ShadowRendererUploadGPU(R_ShadowRenderer *sr, const R_Bulletin *bt
 		{  0.f,  0.f,  1.f }, // Backwards.
 	};
 
-	sr->caster_count = MinValue(bt->scene_resources->shadow_caster_count, R_SCENE_MAX_SHADOW_CASTERS);
+	sr->caster_count = MinValue(bt->scene_resources->shadow_caster_count, R_SCENE_GRAPH_MAX_SHADOW_CASTERS);
 
 	R_GPU_ShadowCaster *caster_mapping = G_DeviceBufferMap(sr->device, sr->caster_table_buffer);
 

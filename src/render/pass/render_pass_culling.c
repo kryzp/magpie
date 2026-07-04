@@ -40,18 +40,18 @@ static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
-	pc.mesh_buffer     = R_SceneMeshBufferAddr(ctx->scene);
-	pc.material_buffer = R_SceneMaterialBufferAddr(ctx->scene);
+	pc.mesh_buffer     = R_MeshRegistryBufferAddr(&ctx->scene->meshes);
+	pc.material_buffer = R_MaterialRegistryBufferAddr(&ctx->scene->materials);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
 	
-	pc.object_count    = R_SceneObjectCount(ctx->scene);
+	pc.object_count    = R_SceneGraphObjectCount(&ctx->scene->graph);
 	
 	pc.alpha_filter    = (u32)data->filter;
 
-	pc.max_draws_per_page = R_SCENE_MAX_OBJECTS;
+	pc.max_draws_per_page = R_SCENE_GRAPH_MAX_OBJECTS;
 	
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
@@ -93,18 +93,18 @@ static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc;
 
 	pc.object_buffer   = data->object_buffer_address;
-	pc.mesh_buffer     = R_SceneMeshBufferAddr(ctx->scene);
-	pc.material_buffer = R_SceneMaterialBufferAddr(ctx->scene);
+	pc.mesh_buffer     = R_MeshRegistryBufferAddr(&ctx->scene->meshes);
+	pc.material_buffer = R_MaterialRegistryBufferAddr(&ctx->scene->materials);
 	pc.page_buffer     = data->page_table_buffer_address;
 
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range, device);
 	pc.count_buffer    = R_BufferRangeAddress(&counter_range, device);
-
-	pc.object_count    = R_SceneObjectCount(ctx->scene);
+	
+	pc.object_count    = R_SceneGraphObjectCount(&ctx->scene->graph);
 	
 	pc.alpha_filter    = (u32)data->filter;
 
-	pc.max_draws_per_page = R_SCENE_MAX_OBJECTS;
+	pc.max_draws_per_page = R_SCENE_GRAPH_MAX_OBJECTS;
 	
 	pc.sphere          = data->sphere;
 
@@ -132,7 +132,7 @@ static R_DrawStream R_CullFrustum(R_Culling *cull,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_GRAPH_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
@@ -189,7 +189,7 @@ static R_DrawStream R_CullSphere(R_Culling *cull,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_GRAPH_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * bt->scene_resources->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);

@@ -151,7 +151,7 @@ App *MagpieInit(const OS_API *api)
 			desc.mesh = entry->mesh;
 			desc.material = entry->material;
 
-			R_SceneObjectCreate(&app->scene, &desc);
+			R_SceneGraphObjectCreate(&app->scene.graph, &desc);
 		}
 	}
 	ScratchRelease(&scratch);

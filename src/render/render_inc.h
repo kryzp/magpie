@@ -1,3 +1,4 @@
+#include "render_clear.h"
 #include "render_buffer_range.h"
 #include "render_gpu_types.h"
 #include "render_mesh.h"
@@ -5,8 +6,13 @@
 #include "render_light.h"
 #include "render_camera.h"
 #include "render_geometry.h"
+
+#include "render_scene_handle.h"
+#include "render_scene_graph.h"
+#include "render_mesh_registry.h"
+#include "render_material_registry.h"
 #include "render_scene.h"
-#include "render_clear.h"
+#include "render_scene_frame_data.h"
 
 #include "graph/render_graph_inc.h"
 

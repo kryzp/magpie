@@ -95,24 +95,24 @@ struct R_IrradianceVolume
 	b32 is_baked;
 };
 
-static void R_IrradianceVolumeInit              (R_IrradianceVolume *vol,
-												   G_Device *device, A_Assets *assets,
-												   LOG_Channel log_channel,
-												   v3 grid_min, v3 grid_max,
-												   u32 nx, u32 ny, u32 nz,
-												   const R_Mesh *skybox_mesh,
-												   G_TextureViewKey environment_view,
-												   G_SamplerKey linear_sampler);
+static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
+								   G_Device *device, A_Assets *assets,
+								   LOG_Channel log_channel,
+								   v3 grid_min, v3 grid_max,
+								   u32 nx, u32 ny, u32 nz,
+								   const R_Mesh *skybox_mesh,
+								   G_TextureViewKey environment_view,
+								   G_SamplerKey linear_sampler);
 
-static void R_IrradianceVolumeDestroy           (R_IrradianceVolume *vol);
+static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol);
 
-static void R_IrradianceVolumeBuildAccelStructs (R_IrradianceVolume *vol, const R_Scene *scene);
-static void R_IrradianceVolumeBake              (R_IrradianceVolume *vol, const R_Scene *scene);
+static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene);
+static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene);
 
-static void R_IrradianceVolumeDebug             (const R_IrradianceVolume *vol);
+static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol);
 
-static G_BufferKey R_IrradianceVolumeGetSHBuffer       (const R_IrradianceVolume *vol);
-static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer (const R_IrradianceVolume *vol);
-static b32           R_IrradianceVolumeIsBaked           (const R_IrradianceVolume *vol);
+static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol);
+static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol);
+static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol);
 
 #endif // RENDER_IRRADIANCE_VOLUME_H

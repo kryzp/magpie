@@ -95,12 +95,12 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 	u64 max_scratch_size = 0;
 
-	vol->blas_count = scene->geometry_page_count;
+	vol->blas_count = scene->meshes.geometry_page_count;
 	AssertTrue(vol->blas_count < ArraySize(vol->blas_per_page));
 
-	for (u32 page_index = 0; page_index < scene->geometry_page_count; page_index++)
+	for (u32 page_index = 0; page_index < scene->meshes.geometry_page_count; page_index++)
 	{
-		const R_GeometryPage *page = &scene->geometry_pages[page_index];
+		const R_GeometryPage *page = &scene->meshes.geometry_pages[page_index];
 		
 		G_BLASGeometry geometry = {0};
 		
@@ -120,7 +120,7 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 		max_scratch_size = MaxValue(max_scratch_size, receipt.scratch_size);
 	}
 	
-	G_DeviceAllocAccelStructReceipt tlas_receipt = G_DeviceTLASAlloc(device, scene->object_count);
+	G_DeviceAllocAccelStructReceipt tlas_receipt = G_DeviceTLASAlloc(device, scene->graph.object_count);
 	vol->tlas = tlas_receipt.key;
 	max_scratch_size = MaxValue(max_scratch_size, tlas_receipt.scratch_size);
 
@@ -133,13 +133,13 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	VkAccelerationStructureInstanceKHR *instances = ArenaPushArray(scratch.arena, VkAccelerationStructureInstanceKHR, scene->object_count);
+	VkAccelerationStructureInstanceKHR *instances = ArenaPushArray(scratch.arena, VkAccelerationStructureInstanceKHR, scene->graph.object_count);
 
 	u32 instance_index = 0;
 
-	for (u32 i = 0; i < R_SCENE_MAX_OBJECTS && instance_index < scene->object_count; i++)
+	for (u32 i = 0; i < R_SCENE_GRAPH_MAX_OBJECTS && instance_index < scene->graph.object_count; i++)
 	{
-		const R_ObjectSlot *slot = &scene->object_slots[i];
+		const R_ObjectSlot *slot = &scene->graph.object_slots[i];
 
 		if (!slot->active)
 			continue;
@@ -168,13 +168,13 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 		// TODO: this is ASS
 		u32 mesh_index = slot->mesh.index;
-		u32 page_idx = scene->mesh_slots[mesh_index].page_index;
+		u32 page_idx = scene->meshes.mesh_slots[mesh_index].page_index;
 		inst->accelerationStructureReference = G_DeviceAccelStructAddress(device, vol->blas_per_page[page_idx]);
 
 		instance_index++;
 	}
 
-	u64 instance_data_size = scene->object_count * sizeof(VkAccelerationStructureInstanceKHR);
+	u64 instance_data_size = scene->graph.object_count * sizeof(VkAccelerationStructureInstanceKHR);
 
 	G_BufferAllocInfo inst_buf_info = {0};
 	inst_buf_info.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
@@ -186,9 +186,9 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 	G_CmdBuffer cmd = G_DeviceSubmitImBegin(device);
 	{
-		for (u32 page_index = 0; page_index < scene->geometry_page_count; page_index++)
+		for (u32 page_index = 0; page_index < scene->meshes.geometry_page_count; page_index++)
 		{
-			const R_GeometryPage *page = &scene->geometry_pages[page_index];
+			const R_GeometryPage *page = &scene->meshes.geometry_pages[page_index];
 		
 			G_BLASGeometry geometry = {0};
 
@@ -216,7 +216,7 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 			G_CmdPipelineBarrier(&cmd, 0, 1, &barrier, 0, NULL, 0, NULL);
 		}
 
-		G_CmdBuildTLAS(&cmd, vol->tlas, instance_buffer, scene->object_count, scratch_buffer);
+		G_CmdBuildTLAS(&cmd, vol->tlas, instance_buffer, R_SceneGraphObjectCount(&scene->graph), scratch_buffer);
 
 		// TLAS -> Compute Shader Ray Query.
 		{
@@ -237,7 +237,7 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 	DebugLogI(vol->log_channel,
 			  "Built acceleration structures (%u BLAS, %u instances).",
-			  vol->blas_count, scene->object_count);
+			  vol->blas_count, R_SceneGraphObjectCount(&scene->graph));
 }
 
 static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
@@ -267,19 +267,19 @@ static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene
 	}
 	pc;
 
-	pc.sh_buffer           = G_DeviceBufferAddress       (device, vol->sh_buffer);
-	pc.grid_info_buffer    = G_DeviceBufferAddress       (device, vol->grid_info_buffer);
-	pc.tlas_address        = G_DeviceAccelStructAddress  (device, vol->tlas);
-	pc.environment_cubemap = G_DeviceTextureViewBindless (device, vol->environment_view);
-	pc.linear_sampler      = G_DeviceSamplerBindless     (device, vol->linear_sampler);
+	pc.sh_buffer           = G_DeviceBufferAddress(device, vol->sh_buffer);
+	pc.grid_info_buffer    = G_DeviceBufferAddress(device, vol->grid_info_buffer);
+	pc.tlas_address        = G_DeviceAccelStructAddress(device, vol->tlas);
+	pc.environment_cubemap = G_DeviceTextureViewBindless(device, vol->environment_view);
+	pc.linear_sampler      = G_DeviceSamplerBindless(device, vol->linear_sampler);
 	pc.rays_per_probe      = R_IRRADIANCE_RAYS_PER_PROBE;
 
 	G_CmdBuffer cmd = G_DeviceSubmitImBegin(device);
 	{
-		G_CmdBindBindless  (&cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
-		G_CmdBindPipeline  (&cmd, pipeline_st.bind_point, pipeline_st.pipeline);
-		G_CmdPushConstants (&cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
-		G_CmdDispatch      (&cmd, G_ComputeGroupCount(vol->ntotal, 64), 1, 1);
+		G_CmdBindBindless(&cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
+		G_CmdBindPipeline(&cmd, pipeline_st.bind_point, pipeline_st.pipeline);
+		G_CmdPushConstants(&cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
+		G_CmdDispatch(&cmd, G_ComputeGroupCount(vol->ntotal, 64), 1, 1);
 	}
 	G_DeviceSubmitImEnd(device, &cmd);
 
@@ -317,9 +317,9 @@ static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
 				R_DebugPushSphere(position, 0.1f,
 								  v4(1.f, 1.f, 1.f, 1.f),
 								  0.f, true);
+			}
 		}
 	}
-}
 }
 
 static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol)

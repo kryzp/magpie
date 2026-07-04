@@ -1083,25 +1083,23 @@ static void OS_W32_MessagePump(void *ctx)
 	if (local_event_count > 0)
 	{
 		OS_W32_MutexLock(win32_st.event_mutex);
+		{
+			DebugLogAssert(win32_st.log_channel, win32_st.pending_event_count <= OS_W32_MAX_PENDING_EVENTS, "Ran out of event buffer space SHIT.");
+			
+			u32 available_space = OS_W32_MAX_PENDING_EVENTS - win32_st.pending_event_count;
+			u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
 
-		// ---
-		
-		AssertTrue(win32_st.pending_event_count <= OS_W32_MAX_PENDING_EVENTS);
-		
-		u32 available_space = OS_W32_MAX_PENDING_EVENTS - win32_st.pending_event_count;
-		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
-
-		MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
-		win32_st.pending_event_count += copy_count;
-
-		// ---
-		
+			MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
+			win32_st.pending_event_count += copy_count;
+		}
 		OS_W32_MutexUnlock(win32_st.event_mutex);
 	}
 }
 
-static void OS_W32_ProcessEvents(OS_InputState *input_out)
+static OS_InputState OS_W32_ProcessEvents(OS_InputState prev_state)
 {
+	OS_InputState input_out = prev_state;
+
 	OS_W32_MessagePump(NULL);
 	
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -1116,22 +1114,9 @@ static void OS_W32_ProcessEvents(OS_InputState *input_out)
 		win32_st.pending_event_count = 0;
 	}
 	OS_W32_MutexUnlock(win32_st.event_mutex);
-	
-	// Reset button input states.
-	MemZeroArray(input_out->kb_pressed);
-	MemZeroArray(input_out->kb_released);
-	MemZeroArray(input_out->mb_pressed);
-	MemZeroArray(input_out->mb_released);
 
-	for (u32 i = 0; i < OS_MAX_GAMEPADS; i++) {
-		OS_GamepadState *gp = &input_out->gamepads[i];
-		MemZeroArray(gp->pressed);
-		MemZeroArray(gp->released);
-	}
-
-	// Reset mouse state.
-	MemZeroStruct(&input_out->mouse_delta);
-	MemZeroStruct(&input_out->mouse_wheel);
+	input_out.mouse_delta = v2x(0.f);
+	input_out.mouse_wheel = v2x(0.f);
 
 	for (u32 i = 0; i < event_count; i++)
 	{
@@ -1146,47 +1131,41 @@ static void OS_W32_ProcessEvents(OS_InputState *input_out)
 				break;
 
 			case SDL_EVENT_KEY_DOWN:
-				input_out->kb_down[ev->key.scancode] = true;
-				input_out->kb_pressed[ev->key.scancode] = true;
+				input_out.kb_down[ev->key.scancode] = true;
 				break;
 
 			case SDL_EVENT_KEY_UP:
-				input_out->kb_down[ev->key.scancode] = false;
-				input_out->kb_released[ev->key.scancode] = true;
+				input_out.kb_down[ev->key.scancode] = false;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
-				input_out->mb_down[ev->button.button] = true;
-				input_out->mb_pressed[ev->button.button] = true;
+				input_out.mb_down[ev->button.button] = true;
 				break;
 
 			case SDL_EVENT_MOUSE_BUTTON_UP:
-				input_out->mb_down[ev->button.button] = false;
-				input_out->mb_released[ev->button.button] = true;
+				input_out.mb_down[ev->button.button] = false;
 				break;
 
 			case SDL_EVENT_MOUSE_MOTION:
-				SDL_GetGlobalMouseState(&input_out->mouse_screen_position.x, &input_out->mouse_screen_position.y);
-				input_out->mouse_position = v2(ev->motion.x, ev->motion.y);
-				input_out->mouse_delta = V2Add(input_out->mouse_delta, v2(ev->motion.xrel, ev->motion.yrel));
+				SDL_GetGlobalMouseState(&input_out.mouse_screen_position.x, &input_out.mouse_screen_position.y);
+				input_out.mouse_position = v2(ev->motion.x, ev->motion.y);
+				input_out.mouse_delta = V2Add(input_out.mouse_delta, v2(ev->motion.xrel, ev->motion.yrel));
 				break;
 
 			case SDL_EVENT_MOUSE_WHEEL:
-				input_out->mouse_wheel = V2Add(input_out->mouse_wheel, v2(ev->wheel.x, ev->wheel.y));
+				input_out.mouse_wheel = V2Add(input_out.mouse_wheel, v2(ev->wheel.x, ev->wheel.y));
 				break;
 					
 			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = true;
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].pressed[ev->gbutton.button] = true;
+				input_out.gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = true;
 				break;
 
 			case SDL_EVENT_GAMEPAD_BUTTON_UP:
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = false;
-				input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].released[ev->gbutton.button] = true;
+				input_out.gamepads[SDL_GetGamepadPlayerIndexForID(ev->gbutton.which)].down[ev->gbutton.button] = false;
 				break;
 
 			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-				OS_GamepadStateSetAxisValue(&input_out->gamepads[SDL_GetGamepadPlayerIndexForID(ev->gaxis.which)],
+				OS_GamepadStateSetAxisValue(&input_out.gamepads[SDL_GetGamepadPlayerIndexForID(ev->gaxis.which)],
 											(OS_GamepadAxis)ev->gaxis.axis,
 											(f32)ev->gaxis.value / (f32)(SDL_JOYSTICK_AXIS_MAX - ((ev->gaxis.value >= 0.f) ? 1.f : 0.f)));
 				break;
@@ -1209,14 +1188,35 @@ static void OS_W32_ProcessEvents(OS_InputState *input_out)
 				break;
 		}
 	}
+
+	for (u32 i = 0; i < ArraySize(input_out.kb_down); i++)
+	{
+		input_out.kb_pressed[i] = input_out.kb_down[i] && !prev_state.kb_down[i];
+		input_out.kb_released[i] = !input_out.kb_down[i] && prev_state.kb_down[i];
+	}
+
+	for (u32 i = 0; i < ArraySize(input_out.mb_down); i++)
+	{
+		input_out.mb_pressed[i] = input_out.mb_down[i] && !prev_state.mb_down[i];
+		input_out.mb_released[i] = !input_out.mb_down[i] && prev_state.mb_down[i];
+	}
+
+	for (u32 p = 0; p < OS_MAX_GAMEPADS; p++)
+	{
+		for (u32 i = 0; i < ArraySize(input_out.gamepads[p].down); i++)
+		{
+			input_out.gamepads[p].pressed[i] = input_out.gamepads[p].down[i] && !prev_state.gamepads[p].down[i];
+			input_out.gamepads[p].released[i] = !input_out.gamepads[p].down[i] && prev_state.gamepads[p].down[i];
+		}
+	}
 	
 	ScratchRelease(&scratch);
+
+	return input_out;
 }
 
 static J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 {
-	static OS_InputState prev_input_st = {0};
-
 	FILETIME last_write_time = {0};
 
 	WIN32_FIND_DATA find_data = {0};
@@ -1242,8 +1242,8 @@ static J_ENTRY_POINT_DEF(OS_W32_FrameJobEntry)
 		DebugLogI(win32_st.log_channel, "Hot Reloaded!");
 	}
 
-	OS_InputState curr_input_st = prev_input_st;
-	OS_W32_ProcessEvents(&curr_input_st);
+	static OS_InputState prev_input_st = {0};
+	OS_InputState curr_input_st = OS_W32_ProcessEvents(prev_input_st);
 	prev_input_st = curr_input_st;
 
 	//OS_ImGuiNewFrame();

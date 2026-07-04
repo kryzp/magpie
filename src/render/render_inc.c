@@ -1,9 +1,14 @@
+#include "render_clear.c"
 #include "render_mesh.c"
 #include "render_material.c"
 #include "render_camera.c"
 #include "render_geometry.c"
+
+#include "render_scene_graph.c"
+#include "render_mesh_registry.c"
+#include "render_material_registry.c"
 #include "render_scene.c"
-#include "render_clear.c"
+#include "render_scene_frame_data.c"
 
 #include "graph/render_graph_inc.c"
 

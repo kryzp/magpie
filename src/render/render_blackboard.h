@@ -24,7 +24,7 @@ typedef struct R_BB_ShadowData R_BB_ShadowData;
 struct R_BB_ShadowData
 {
 	u32 shadow_map_count;
-	R_GraphTexHandle shadow_maps[R_SCENE_MAX_SHADOW_CASTERS];
+	R_GraphTexHandle shadow_maps[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
 
 	G_BufferKey shadow_caster_table;
 };
