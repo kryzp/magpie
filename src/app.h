@@ -42,12 +42,9 @@ struct App
 
 	AN_System animation_system;
 
-	G_RingBuffer frame_upload_ring_buffer;
 	R_Graph graph;
 	R_Scene scene;
 	R_System render_system;
-	R_FrameParams prev_frame;
-	u64 frame_count;
 
 	P_Engine physics_engine;
 

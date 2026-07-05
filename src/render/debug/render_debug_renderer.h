@@ -137,9 +137,8 @@ static void R_DebugRendererSelect        (R_DebugRenderer *dr);
    ================================================== */
 
 static void R_DebugRendererRender (R_DebugRenderer *dr,
-									 f32 dt,
 									 R_Graph *graph,
-									 Arena *pass_arena,
+									 const R_FrameParams *frame_params,
 									 R_GraphTexHandle target_colour,
 									 R_GraphTexHandle target_depth);
 

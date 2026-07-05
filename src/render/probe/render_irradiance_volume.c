@@ -1,4 +1,6 @@
 
+#if 0
+
 static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 					   G_Device *device, A_Assets *assets,
 					   LOG_Channel log_channel,
@@ -336,3 +338,5 @@ static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol)
 {
 	return vol->is_baked;
 }
+
+#endif

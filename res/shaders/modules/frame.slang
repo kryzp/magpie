@@ -11,7 +11,8 @@ namespace frame
 		public float4x4 inv_view;
 		public float4x4 inv_projection;
 		public float3 camera_position;
-		public float2 window_resolution;
+        public float2 window_resolution;
+        public float delta_time;
 		public float time;
 	};
 }

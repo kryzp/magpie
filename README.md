@@ -106,26 +106,22 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 The codebase is split into a tiered system to make development easier and more compartmentalized. This is akin to the Source engine (Tier0, Tier1, ...) or the Decima Engine (OS, PIGS, ...), though a little more granular.
 
 
-### Namespaces
-Each layer follows a strict namespace system. Since this is C, I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for unsigned types, etc.).
-
-`/app/` and `/editor/` don't have namespaces as they aren't "engine" code, they're what you'd call "game" code. I just don't use a namespace for them by convention.
-
-
 ### Unity Build
 Both headers and source are `#include`'d in a single compilation unit. This simplifies compilation to just compiling a single file (+ external libraries if needed) which is much, much faster than compiling traditionally. It means no more incremental builds (but when were those ever useful anyway eh?), and it also means you don't need to bother with `#include`s, which is nice.
 
 Headers exist to document the API from a higher level because it's nice to be able to read everything at a glance.
 
 
-### The Layer Organisation
-Layers strictly only propogate one-way, that is to say, a layer *A* that uses functionality by layer *B* will never have it's own functionality used by layer *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
+### Modules
+The engine is heavily modularised. Rather than having a monolithic architecture, all engine subsystems are seperated out into modules. Modules are characterised by the fact that dependencies strictly propogate one-way. That is to say, a module *A* that uses functionality of module *B* will never have it's own functionality used by module *B*. This means that circular dependencies are essentially impossible, and terrible architecture is usually pretty obvious when you realise you need to do some pretty sketchy stuff to get something to work. That being said, *dependency injection* is perfectly fine. Callbacks are used all over the codebase.
 
-You can intuitively see how some layers clearly depend on others, for instance, *rendering* needs to have access to low level `/graphics/` operations, but also *assets* such as textures and models (which ultimately also need to use the `/graphics/` layer).
+An example is the `/render/` module, which depends on `/graphics/` (and a variety of others such as `/asset/`), but `/graphics`/ doesn't depend on `/render`/. This does lead to some pretty odd choices like the fact that there are two versions of materials - An imported asset material `A_Material` and a render-side material `R_Material`.
 
-However, it is still ultimately a monolithic build. For a while I considered going the Machinery / Source Engine approach of complete modularity where every engine sub-system gets split apart into a DLL that then gets linked up at runtime, but it's a lot of work for basically no gain. I still might, if only to try something new out, which is the point of the this whole project anyway, but it's not a top priority right now. If I do, it really won't be a problem since layers have pretty well defined API's anyway, it'd just be a lot of groundwork / boilerplate that I don't wanna do right now.
+I've considered organizing modules into "tiers", where a tier is just a collection of modules that strictly depend on a lower tier. For instance, you could have `tier0` be `/core/`, `/os/` and other utilities, then `tier1` composed of `/graphics/` and other backend stuff, then `tier2` is high-level engine code like `/render/`, `/physics/` and `/entity/`, and so on... But that's just a fun experiment with literally zero utility other than organization.
 
-The hierarchy of layers is visible clearly in `magpie.c`.
+Each module follows a strict namespace system. I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read as it's clear what module something originates from. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for common types, etc.).
+
+The hierarchy of modules is visible clearly in `magpie.c`.
 
 
 ### Memory Arenas

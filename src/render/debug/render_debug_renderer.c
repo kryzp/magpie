@@ -551,6 +551,8 @@ static u32 R_DebugBuildBatches(R_DebugDrawNode **buckets,
 typedef struct R_DebugPassData R_DebugPassData;
 struct R_DebugPassData
 {
+	const R_FrameParams *frame_params;
+
 	G_ShaderKey shader;
 
 	G_BufferKey depth_enabled_buffer;
@@ -608,7 +610,7 @@ static void R_DebugDrawBatches(const R_DebugPassData *data,
 		}
 		args;
 
-		args.view_proj     = view_proj;
+		args.view_proj = view_proj;
 		args.calls_buffer  = G_DeviceBufferAddress(device, buffer);
 		args.vertex_buffer = G_DeviceBufferAddress(device, mesh->vertex_buffer);
 
@@ -626,9 +628,6 @@ static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 
 	const R_DebugPassData *data = ctx->user_data;
 
-	
-	// Pipeline with depth testing.
-
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	pipeline_def.cull_mode = VK_CULL_MODE_NONE;
@@ -644,17 +643,11 @@ static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 
 	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
 
-	
-	// Pipeline without depth testing.
-
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	G_PipelineSt pipeline_st_no_depth = G_DeviceFetchGraphicsPipeline(device, &pipeline_def);
-
 	
-	// Draw.
-
-	m4 view_proj = M4MulM4(ctx->camera->proj, ctx->camera->view); // TODO: the debug lines appear to be lagging behind the camera what gives?
-
+	m4 view_proj = data->frame_params->camera.view_proj;
+	
 	R_DebugDrawBatches(data, device, cmd, &pipeline_st,
 					   data->depth_batches, data->depth_batch_count,
 					   data->depth_enabled_buffer, view_proj);
@@ -692,20 +685,16 @@ static void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets,
 }
 
 static void R_DebugRendererRender(R_DebugRenderer *dr,
-					  f32 dt,
 					  R_Graph *graph,
-					  Arena *pass_arena,
+									const R_FrameParams *frame_params,
 					  R_GraphTexHandle target_colour,
 					  R_GraphTexHandle target_depth)
 {
 	// Expire old draws and return their nodes to the freelist.
+	R_DebugFilterBuckets(dr, dr->depth_enabled, frame_params->dt);
+	R_DebugFilterBuckets(dr, dr->depth_disabled, frame_params->dt);
 
-	R_DebugFilterBuckets(dr, dr->depth_enabled,  dt);
-	R_DebugFilterBuckets(dr, dr->depth_disabled, dt);
-
-	
 	// Build GPU instance data for both depth modes.
-
 	u32 depth_enabled_id = 0;
 	u32 depth_disabled_id = 0;
 
@@ -715,24 +704,21 @@ static void R_DebugRendererRender(R_DebugRenderer *dr,
 	R_DebugBuildInstances(dr, dr->depth_enabled,  depth_enabled_draws,  &depth_enabled_id);
 	R_DebugBuildInstances(dr, dr->depth_disabled, depth_disabled_draws, &depth_disabled_id);
 
-	
 	// Build batch descriptors.
-
-	u32    depth_running_id = 0;
+	u32 depth_running_id = 0;
 	u32 no_depth_running_id = 0;
 
-	R_DebugBatch    depth_batches[R_DEBUG_MAX_BATCHES] = {0};
+	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES] = {0};
 	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES] = {0};
 
-	u32    depth_batch_count = R_DebugBuildBatches(dr->depth_enabled,  depth_batches,    &depth_running_id);
+	u32 depth_batch_count = R_DebugBuildBatches(dr->depth_enabled, depth_batches, &depth_running_id);
 	u32 no_depth_batch_count = R_DebugBuildBatches(dr->depth_disabled, no_depth_batches, &no_depth_running_id);
 
-	
 	// Create the render pass.
-
 	G_ShaderKey shader = A_GetNow(dr->assets, dr->shader_handle)->shader.key;
 
-	R_DebugPassData *data = ArenaPushArray(pass_arena, R_DebugPassData, 1);
+	R_DebugPassData *data = ArenaPushArray(frame_params->arena, R_DebugPassData, 1);
+	data->frame_params = frame_params;
 	data->shader = shader;
 	data->depth_enabled_buffer = dr->depth_enabled_buffer;
 	data->depth_disabled_buffer = dr->depth_disabled_buffer;
@@ -742,10 +728,10 @@ static void R_DebugRendererRender(R_DebugRenderer *dr,
 	data->circle_mesh = &dr->circle_mesh;
 	data->cube_mesh = &dr->cube_mesh;
 
-	data->depth_batch_count    =    depth_batch_count;
+	data->depth_batch_count = depth_batch_count;
 	data->no_depth_batch_count = no_depth_batch_count;
 
-	MemCopy(data->depth_batches,    depth_batches,    depth_batch_count    * sizeof(R_DebugBatch));
+	MemCopy(data->depth_batches, depth_batches, depth_batch_count * sizeof(R_DebugBatch));
 	MemCopy(data->no_depth_batches, no_depth_batches, no_depth_batch_count * sizeof(R_DebugBatch));
 
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Debug Lines"), R_PassType_Graphics);

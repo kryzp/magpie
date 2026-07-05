@@ -891,12 +891,7 @@ static void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBuf
 	st->read_stages  = 0;
 }
 
-static void R_GraphExecute(R_Graph *graph,
-			   const G_Swapchain *swapchain,
-			   G_CmdBuffer *cmd,
-			   const R_Scene *scene,
-			   const R_Camera *camera,
-			   f32 delta_time, f32 elapsed_time)
+static void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -921,10 +916,6 @@ static void R_GraphExecute(R_Graph *graph,
 		ctx.graph = graph;
 		ctx.device = graph->device;
 		ctx.cmd = cmd;
-		ctx.scene = scene;
-		ctx.camera = camera;
-		ctx.delta_time = delta_time;
-		ctx.elapsed_time = elapsed_time;
 		ctx.render_info = NULL;
 		ctx.user_data = pass->user_data;
 
@@ -953,9 +944,7 @@ static void R_GraphExecute(R_Graph *graph,
 	}
 }
 
-static void R_GraphPresentToSwapchain(R_Graph *graph,
-						  const G_Swapchain *swapchain,
-						  G_CmdBuffer *cmd)
+static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
 {
 	if (R_GraphTexHandleIsNull(graph->backbuffer_handle))
 		return;
@@ -1050,16 +1039,13 @@ static void R_GraphPresentToSwapchain(R_Graph *graph,
  * THE RESOURCE NEVER GETS MODIFIED AS FAR AS I CARE
  */
 
-static G_TextureKey R_GraphResolveTexture(const R_Graph *graph,
-					  R_GraphTexHandle handle)
+static G_TextureKey R_GraphResolveTexture(const R_Graph *graph, R_GraphTexHandle handle)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 	return t->physical_key;
 }
 
-static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph,
-						  R_GraphTexHandle handle,
-						  G_SubresourceRange range)
+static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 
@@ -1073,15 +1059,13 @@ static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph,
 	return G_DeviceTextureViewFetch(graph->device, &create_info);
 }
 
-static G_BufferKey R_GraphResolveBuffer(const R_Graph *graph,
-					 R_GraphBufHandle handle)
+static G_BufferKey R_GraphResolveBuffer(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
 	return b->physical_key;
 }
 
-static R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph,
-						  R_GraphBufHandle handle)
+static R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
 
@@ -1181,7 +1165,7 @@ static R_GraphMsaaTexture R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo 
 	resolve_info.samples = 1;
 
 	R_GraphMsaaTexture pair = {0};
-	pair.msaa     = R_GraphCreateTexture(graph, &msaa_info);
+	pair.msaa = R_GraphCreateTexture(graph, &msaa_info);
 	pair.resolved = R_GraphCreateTexture(graph, &resolve_info);
 
 	return pair;

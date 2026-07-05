@@ -1,9 +1,9 @@
 
 static R_PASS_RECORD_DEF(R_ForwardPassFn)
 {
-	G_Device *device            = ctx->device;
-	G_CmdBuffer *cmd            = ctx->cmd;
-	const R_Scene *scene          = ctx->scene;
+	G_Device *device = ctx->device;
+	G_CmdBuffer *cmd = ctx->cmd;
+	const R_Scene *scene = ctx->scene;
 	const R_ForwardPassData *data = ctx->user_data;
 
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
@@ -67,23 +67,11 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 	R_SceneDrawIndirect(scene, cmd, indirect_key, counter_key);
 }
 
-static void R_ForwardRendererInit(R_ForwardRenderer *r, G_Device *device, A_Assets *assets)
-{
-	r->device = device;
-	r->assets = assets;
-	
-	r->shader = A_Require(assets, String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader);
-}
-
-static void R_ForwardRendererDestroy(R_ForwardRenderer *r)
-{
-}
-
-static void R_ForwardRender(R_ForwardRenderer *r,
-				R_Graph *graph,
-				const R_Bulletin *bt,
-				R_Blackboard *bb,
-				const R_DrawStream *draw_stream)
+static void R_ForwardRender(R_Graph *graph,
+							A_Assets *assets,
+							const R_FrameParams *frame_params,
+							R_Blackboard *bb,
+							const R_DrawStream *draw_stream)
 {
 	const R_BB_ShadowData *bb_shadow = &bb->shadow_data;
 
@@ -102,17 +90,13 @@ static void R_ForwardRender(R_ForwardRenderer *r,
 	for (u32 i = 0; i < bb_shadow->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb_shadow->shadow_maps[i]);
 
-	G_ShaderKey shader = A_GetNow(r->assets, r->shader)->shader.key;
+	A_Handle shader_handle = A_Require(assets, String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader);
+	G_ShaderKey shader = A_GetNow(assets, shader_handle)->shader.key;
 
 	R_ForwardPassData *data = ArenaPushArray(bt->pass_arena, R_ForwardPassData, 1);
 
 	data->shader = shader;
-	data->frame_data_buffer= bt->frame_data_buffer;
 	data->shadow_caster_table = bb_shadow->shadow_caster_table;
-	data->linear_sampler = bt->linear_sampler;
-	data->nearest_sampler = bt->nearest_sampler;
-	data->object_buffer_address = bt->scene_resources->object_buffer.gpu;
-	data->light_buffer_address = bt->scene_resources->light_buffer.gpu;
 	data->irradiance_fb_handle = irradiance_fb_handle;
 	data->prefilter_handle = prefilter_handle;
 	data->brdf_handle = brdf_handle;

@@ -126,18 +126,14 @@ static void R_ShadowRendererRender(R_ShadowRenderer *sr,
 	bb->shadow_data.shadow_caster_table = sr->caster_table_buffer;
 	bb->shadow_data.shadow_map_count = sr->caster_count;
 
-	
 	// Create one render pass per shadow caster.
-
 	G_ShaderKey shader = A_GetNow(sr->assets, sr->depth_shader)->shader.key;
 
 	for (u32 caster_index = 0; caster_index < sr->caster_count; caster_index++)
 	{
 		const R_ShadowCaster *info = &bt->scene_resources->shadow_casters[caster_index];
 		
-		
 		// Build a culling draw stream for this caster's influence sphere.
-
 		R_DrawStream draw_stream = R_CullSphere(culling, graph, bt,
 												R_CullFilter_All,
 												info->position, info->radius);

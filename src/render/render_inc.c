@@ -4,13 +4,14 @@
 #include "render_camera.c"
 #include "render_geometry.c"
 
+#include "graph/render_graph_inc.c"
+
 #include "render_scene_graph.c"
 #include "render_mesh_registry.c"
 #include "render_material_registry.c"
 #include "render_scene.c"
-#include "render_scene_frame_data.c"
 
-#include "graph/render_graph_inc.c"
+#include "render_frame.c"
 
 #include "render_sprite_batch.c"
 
@@ -20,7 +21,6 @@
 #include "volumetric/render_volumetric_inc.c"
 
 #include "debug/render_debug_inc.c"
-#include "pass/render_pass_inc.c"
+//#include "pass/render_pass_inc.c"
 
-#include "render_frame.c"
 #include "render_system.c"

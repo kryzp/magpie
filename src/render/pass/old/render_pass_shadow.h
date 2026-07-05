@@ -33,6 +33,18 @@ struct R_ShadowRenderer
 	A_Handle depth_shader;
 };
 
+/*
+typedef struct R_ShadowState R_ShadowState;
+struct R_ShadowState
+{
+	G_TextureKey shadow_cubemaps[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
+	G_TextureViewKey shadow_cubemap_views[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
+
+	G_BufferKey caster_table_buffer;
+	u32 caster_count;
+};
+*/
+
 static void R_ShadowRendererInit(R_ShadowRenderer *sr, G_Device *device, A_Assets *assets);
 static void R_ShadowRendererDestroy(R_ShadowRenderer *sr);
 

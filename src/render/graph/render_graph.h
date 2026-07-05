@@ -174,16 +174,8 @@ static void R_GraphSyncBufferWrite  (R_Graph *graph, R_Pass *pass, const R_PassB
    EXECUTION
    ================================================== */
 
-static void R_GraphExecute(R_Graph *graph,
-							 const G_Swapchain *swapchain,
-							 G_CmdBuffer *cmd,
-							 const R_Scene *scene,
-							 const R_Camera *camera,
-							 f32 delta_time, f32 elapsed_time);
-
-static void R_GraphPresentToSwapchain(R_Graph *graph,
-										const G_Swapchain *swapchain,
-										G_CmdBuffer *cmd);
+static void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
+static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
 
 
 /* ==================================================
@@ -193,7 +185,7 @@ static void R_GraphPresentToSwapchain(R_Graph *graph,
 static G_TextureKey     R_GraphResolveTexture     (const R_Graph *graph, R_GraphTexHandle handle);
 static G_TextureViewKey R_GraphResolveTextureView (const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range);
 static G_BufferKey      R_GraphResolveBuffer      (const R_Graph *graph, R_GraphBufHandle handle);
-static R_BufferRange      R_GraphResolveBufferRange (const R_Graph *graph, R_GraphBufHandle handle);
+static R_BufferRange    R_GraphResolveBufferRange (const R_Graph *graph, R_GraphBufHandle handle);
 
 
 /* ==================================================

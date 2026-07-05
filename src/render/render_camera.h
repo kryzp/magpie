@@ -34,6 +34,11 @@ struct R_Camera
 
 	m4 view;
 	m4 proj;
+	m4 view_proj;
+	m4 view_proj_no_translation;
+	m4 inv_view;
+	m4 inv_proj;
+	m4 inv_view_proj;
 };
 
 static R_Camera R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 far);

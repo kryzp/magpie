@@ -36,7 +36,7 @@ static S_BINDING_DEF(S_BND_DebugLog)
 	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
 }
 
-static void AppInitScripting()
+static void AppInitScripting(void)
 {
 	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
 
@@ -45,17 +45,17 @@ static void AppInitScripting()
 	S_BindGlobal(app->scripting_system, String8Lit("debug_log"), S_BND_DebugLog);
 }
 
-static void AppInit_()
+static void AppInit_(void)
 {
-	app->log_channel = osapi->LogChannelOpen(String8Lit("APP"));
+	app->log_channel           = osapi->LogChannelOpen(String8Lit("APP"));
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
-	app->graphics_log_channel = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
-	app->audio_log_channel = osapi->LogChannelOpen(String8Lit("AUDIO"));
-	app->asset_log_channel = osapi->LogChannelOpen(String8Lit("ASSETS"));
+	app->graphics_log_channel  = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
+	app->audio_log_channel     = osapi->LogChannelOpen(String8Lit("AUDIO"));
+	app->asset_log_channel     = osapi->LogChannelOpen(String8Lit("ASSETS"));
 	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
-	app->render_log_channel = osapi->LogChannelOpen(String8Lit("RENDER"));
-	app->physics_log_channel = osapi->LogChannelOpen(String8Lit("PHYSICS"));
-	app->entity_log_channel = osapi->LogChannelOpen(String8Lit("ENTITY"));
+	app->render_log_channel    = osapi->LogChannelOpen(String8Lit("RENDER"));
+	app->physics_log_channel   = osapi->LogChannelOpen(String8Lit("PHYSICS"));
+	app->entity_log_channel    = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
 	AppInitScripting();
 
@@ -81,16 +81,6 @@ static void AppInit_()
 	A_Mount(&app->assets, String8Lit("assets://"), String8Lit("res"));
 
 	AN_SystemInit(&app->animation_system, app->animation_log_channel, &app->assets);
-
-	G_BufferAllocInfo ring_buffer_alloc_info = {0};
-	ring_buffer_alloc_info.size = Megabytes(512);
-	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	ring_buffer_alloc_info.usage =
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-
-	app->frame_upload_ring_buffer = G_RingBufferAlloc(&app->graphics_device, &ring_buffer_alloc_info);
 	
 	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
 	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
@@ -175,7 +165,6 @@ void MagpieDestroy(App *app_)
 	R_SystemDestroy(&app->render_system);
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
-	G_RingBufferDestroy(&app->frame_upload_ring_buffer, &app->graphics_device);
 
 	AN_SystemDestroy(&app->animation_system);
 	
@@ -272,7 +261,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
-		P_EngineTick(&app->physics_engine, fixed_dt);
+		P_EngineTick(&app->physics_engine, dt);
 		app->delta_accumulator -= fixed_dt;
 	}
 
@@ -301,26 +290,21 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	R_CameraRecompute(&app->game.camera);
 	
-	R_FrameParams curr_frame = {0};
-	curr_frame.arena = &app->frame_arena;
-	curr_frame.frame_number = app->frame_count;
-	curr_frame.dt = dt;
-	curr_frame.elapsed = elapsed;
-	curr_frame.scene_data = R_SceneUploadFrameData(&app->scene, &app->frame_upload_ring_buffer);
-	curr_frame.camera = app->game.camera;
-	
-	R_FrameParams interpolated_frame = R_FrameParamsInterp(&app->prev_frame, &curr_frame, alpha);
-	
-	R_SystemRender(&app->render_system, &app->graph, &interpolated_frame);
+	R_MeshRegistryFlushIfDirty(&app->scene.meshes);
+	R_MaterialRegistryFlushIfDirty(&app->scene.materials);
+
+	R_FrameParams frame_params = R_FrameParamsBuild(&app->render_system, &app->frame_arena, dt, elapsed, &app->scene, &app->game.camera);
+
+	R_SystemRender(&app->render_system, &app->graph, &frame_params);
 
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
-	{
+	{ // --- [[ THE GRAPHICS ZONE ooOooOooOOOooOOo !! ]] ---
 		G_CmdBuffer cmd = G_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
-		R_GraphExecute(&app->graph, &app->swapchain, &cmd, &app->scene, &app->game.camera, dt, elapsed);
+		R_GraphExecute(&app->graph, &app->swapchain, &cmd);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
 		G_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
-	}
+	} // ---
 	
 	R_GraphReset(&app->graph);
 	
@@ -328,10 +312,6 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	ArenaReset(&app->frame_arena);
 	
 	AppLogFPS(dt);
-	
-	app->frame_count++;
-
-	app->prev_frame = curr_frame;
 	
 	return false;
 }

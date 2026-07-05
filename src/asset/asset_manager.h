@@ -82,7 +82,7 @@ struct A_Assets
 	u32 free_indices[A_MANAGER_MAX_RECORDS];
 
 	A_Serializer serializers[A_Type_COUNT];
-	LOG_Channel    serializer_log_channels[A_Type_COUNT];
+	LOG_Channel serializer_log_channels[A_Type_COUNT];
 
 	A_PathMapEntry path_map[A_MANAGER_MAX_RECORDS];
 
@@ -93,10 +93,10 @@ struct A_Assets
 
 	// todo: move mutex into upload queue
 	A_UploadQueue upload_queue;
-	OS_Handle       upload_mutex;
+	OS_Handle upload_mutex;
 
 	A_UploadQueue dependency_queue;
-	OS_Handle       dependency_mutex;
+	OS_Handle dependency_mutex;
 
 	OS_Handle loading_mutex;
 	OS_Handle loading_cond;
@@ -156,22 +156,22 @@ static String8 A_GetSystemFilePath(A_Assets *assets, Arena *arena, String8 path)
    QUERY
    ================================================== */
 
-static b32 A_IsLoaded  (const A_Assets *assets, A_Handle handle);
-static b32 A_IsLoading (const A_Assets *assets, A_Handle handle);
-static b32 A_IsValid   (const A_Assets *assets, A_Handle handle);
+static b32 A_IsLoaded(const A_Assets *assets, A_Handle handle);
+static b32 A_IsLoading(const A_Assets *assets, A_Handle handle);
+static b32 A_IsValid(const A_Assets *assets, A_Handle handle);
 
 
 /* ==================================================
    LOADING
    ================================================== */
 
-static void A_LoadNow     (A_Assets *assets, A_Handle handle);
-static void A_LoadAsync   (A_Assets *assets, A_Handle handle);
-static void A_ReloadAsync (A_Assets *assets, A_Handle handle);
-static void A_Load        (A_Assets *assets, A_Handle handle, OS_Handle counter);
+static void A_LoadNow(A_Assets *assets, A_Handle handle);
+static void A_LoadAsync(A_Assets *assets, A_Handle handle);
+static void A_ReloadAsync(A_Assets *assets, A_Handle handle);
+static void A_Load(A_Assets *assets, A_Handle handle, OS_Handle counter);
 
-static void A_NotifyDependents       (A_Assets *assets, A_Handle handle);
-static void A_NotifyDependentsNoLock (A_Assets *assets, A_Handle handle, b32 failed);
+static void A_NotifyDependents(A_Assets *assets, A_Handle handle);
+static void A_NotifyDependentsNoLock(A_Assets *assets, A_Handle handle, b32 failed);
 
 static void A_ResolvePendingDependencies(A_Assets *assets, OS_Handle counter);
 
@@ -187,28 +187,28 @@ struct A_LoadJobParam
 static J_ENTRY_POINT_DEF(A_LoadJobEntry);
 
 
-static void A_PollHotReloads (A_Assets *assets);
-static void A_FlushUploads   (A_Assets *assets);
-static void A_WaitForAsync   (A_Assets *assets);
-static void A_WaitForLoad    (A_Assets *assets, A_Handle handle, OS_Handle counter);
+static void A_PollHotReloads(A_Assets *assets);
+static void A_FlushUploads(A_Assets *assets);
+static void A_WaitForAsync(A_Assets *assets);
+static void A_WaitForLoad(A_Assets *assets, A_Handle handle, OS_Handle counter);
 
 
 /* ==================================================
    ASSETS
    ================================================== */
 
-static void     A_SetFallback (A_Assets *assets, A_Handle handle, A_Type type);
+static void A_SetFallback(A_Assets *assets, A_Handle handle, A_Type type);
 
-static A_Asset *A_Get         (A_Assets *assets, A_Handle handle);
-static A_Asset *A_GetNow      (A_Assets *assets, A_Handle handle); // block until we got it.
+static A_Asset *A_Get(A_Assets *assets, A_Handle handle);
+static A_Asset *A_GetNow(A_Assets *assets, A_Handle handle); // block until we got it.
 
 
 /* ==================================================
    HANDLES
    ================================================== */
 
-static A_Handle A_FromFilePath (A_Assets *assets, String8 path, A_Type type);
-static A_Handle A_Require      (A_Assets *assets, String8 path, A_Type type); // ensure it's loading.
+static A_Handle A_FromFilePath(A_Assets *assets, String8 path, A_Type type);
+static A_Handle A_Require(A_Assets *assets, String8 path, A_Type type); // ensure it's loading.
 
 
 #endif // ASSET_MANAGER_H

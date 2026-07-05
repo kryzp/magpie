@@ -1,14 +1,4 @@
 
-static R_SceneFrameData R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *ring)
-{
-	R_SceneFrameData resources = {0};
-
-	resources.page_count = scene->meshes.geometry_page_count;
-	resources.object_count = scene->graph.object_count;
-	
-	R_MeshRegistryFlushIfDirty(&scene->meshes);
-	R_MaterialRegistryFlushIfDirty(&scene->materials);
- 
 	R_SceneUploadPageTable(scene, ring, &resources);
  
 	if (scene->graph.object_count > 0)
@@ -21,13 +11,7 @@ static R_SceneFrameData R_SceneUploadFrameData(R_Scene *scene, G_RingBuffer *rin
 	{
 		R_SceneUploadLights(scene, ring, &resources);
 	}
-
-	resources.shadow_caster_count = scene->graph.shadow_caster_count;
-	resources.shadow_casters = scene->graph.shadow_casters;
- 
-	return resources;
-}
-
+	
 static void R_SceneUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_SceneFrameData *out)
 {
 	u32 count = scene->meshes.geometry_page_count > 0 ? scene->meshes.geometry_page_count : 1;
@@ -152,9 +136,9 @@ static void R_SceneUploadLights(R_Scene *scene, G_RingBuffer *ring, R_SceneFrame
 
 			R_ShadowCaster *caster = &scene->graph.shadow_casters[scene->graph.shadow_caster_count];
 			caster->position = light->position;
-			caster->near     = light->shadow_near;
-			caster->far      = light->shadow_far;
-			caster->radius   = heuristic_radius;
+			caster->near = light->shadow_near;
+			caster->far = light->shadow_far;
+			caster->radius = heuristic_radius;
 
 			scene->graph.shadow_caster_count++;
 

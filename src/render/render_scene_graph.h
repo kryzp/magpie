@@ -3,7 +3,6 @@
 
 #define R_SCENE_GRAPH_MAX_OBJECTS            1024
 #define R_SCENE_GRAPH_MAX_LIGHTS              128
-#define R_SCENE_GRAPH_MAX_SHADOW_CASTERS        8
 
 typedef struct R_ObjectDesc R_ObjectDesc;
 struct R_ObjectDesc
@@ -41,15 +40,6 @@ struct R_LightSlot
 	b32 active;
 };
 
-typedef struct R_ShadowCaster R_ShadowCaster;
-struct R_ShadowCaster
-{
-	v3 position;
-	f32 far;
-	f32 near;
-	f32 radius;
-};
-
 typedef struct R_SceneGraph R_SceneGraph;
 struct R_SceneGraph
 {
@@ -64,9 +54,6 @@ struct R_SceneGraph
 	u32              light_count;
 	u32              light_free_list[R_SCENE_GRAPH_MAX_LIGHTS];
 	u32              light_free_count;
-
-	R_ShadowCaster   shadow_casters[R_SCENE_GRAPH_MAX_SHADOW_CASTERS];
-	u32              shadow_caster_count;
 };
 
 static void                  R_SceneGraphInit(R_SceneGraph *sg, LOG_Channel log_channel);

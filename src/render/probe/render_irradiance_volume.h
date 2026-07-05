@@ -1,6 +1,8 @@
 #ifndef RENDER_IRRADIANCE_VOLUME_H
 #define RENDER_IRRADIANCE_VOLUME_H
 
+#if 0
+
 /*
  * TODO THIS IS EXPERIMENTAL AND COMPLETE
  * GARBAGE CODE-WISE.
@@ -114,5 +116,7 @@ static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol);
 static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol);
 static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol);
 static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol);
+
+#endif
 
 #endif // RENDER_IRRADIANCE_VOLUME_H

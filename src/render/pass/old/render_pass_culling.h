@@ -54,26 +54,14 @@ struct R_DrawStream
 	R_GraphBufHandle count_buffer;
 };
 
-typedef struct R_Culling R_Culling;
-struct R_Culling
-{
-	A_Assets *assets;
-	
-	A_Handle frustum_shader;
-	A_Handle sphere_shader;
-};
-
-static void R_CullingInit         (R_Culling *cull, A_Assets *assets);
-static void R_CullingDestroy      (R_Culling *cull);
-
-static R_DrawStream R_CullFrustum (R_Culling *cull,
-									 R_Graph *graph,
+static R_DrawStream R_CullFrustum(R_Graph *graph,
+							A_Assets *assets,
 									 const R_Bulletin *bt,
 									 R_CullFilter filter,
 									 const R_FrustumVolume *frustum);
 
-static R_DrawStream R_CullSphere  (R_Culling *cull,
-									 R_Graph *graph,
+static R_DrawStream R_CullSphere(R_Graph *graph,
+							A_Assets *assets,,
 									 const R_Bulletin *bt,
 									 R_CullFilter filter,
 									 v3 sphere_centre, f32 sphere_radius);

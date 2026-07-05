@@ -190,7 +190,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	mat.reflection_mode = A_ReflectionMode_Default;
 	mat.reflection_plane = v4(0.f, 0.f, 0.f, 0.f);
 
-
 	// STANDARD METALLIC-ROUGHNESS OPAQUE PBR.
 	if (gltf_mat->has_pbr_metallic_roughness)
 	{
@@ -208,16 +207,13 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.roughness_factor = pbr->roughness_factor;
 	}
 
-
 	// NORMALS.
 	mat.normal_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->normal_texture);
 	mat.normal_scale = gltf_mat->normal_texture.scale;
 
-
 	// OCCLUSION.
 	mat.occlusion_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->occlusion_texture);
 	mat.occlusion_intensity = gltf_mat->occlusion_texture.scale;
-
 
 	// EMISSIVE.
 	mat.emissive_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->emissive_texture);
@@ -229,11 +225,9 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	if (gltf_mat->has_emissive_strength)
 		mat.emissive_intensity = gltf_mat->emissive_strength.emissive_strength;
 
-
 	// INDEX OF REFRACTION.
 	if (gltf_mat->has_ior)
 		mat.ior = gltf_mat->ior.ior;
-
 
 	// TRANSMISSION.
 	if (gltf_mat->has_transmission)
@@ -241,7 +235,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.transmission_texture = A_ModelTryFetchTexture(ctx, arena, load, directory, &gltf_mat->transmission.transmission_texture);
 		mat.transmission_factor = gltf_mat->transmission.transmission_factor;
 	}
-
 
 	// VOLUME.
 	if (gltf_mat->has_volume)
@@ -256,7 +249,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.attenuation_distance = gltf_mat->volume.attenuation_distance;
 	}
 
-
 	// SPECULAR.
 	if (gltf_mat->has_specular)
 	{
@@ -270,7 +262,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 										 gltf_mat->specular.specular_color_factor[2]);
 	}
 
-
 	// CLEARCOAT.
 	if (gltf_mat->has_clearcoat)
 	{
@@ -280,7 +271,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.clearcoat_factor = gltf_mat->clearcoat.clearcoat_factor;
 		mat.clearcoat_roughness_factor  = gltf_mat->clearcoat.clearcoat_roughness_factor;
 	}
-
 
 	// SHEEN.
 	if (gltf_mat->has_sheen)
@@ -295,7 +285,6 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.sheen_roughness_factor  = gltf_mat->sheen.sheen_roughness_factor;
 	}
 
-
 	// IRIDESCENCE.
 	if (gltf_mat->has_iridescence)
 	{
@@ -309,14 +298,11 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.iridescence_thickness_max_nanometers = gltf_mat->iridescence.iridescence_thickness_max;
 	}
 
-
 	// DOUBLE SIDED.
 	mat.double_sided = !!gltf_mat->double_sided;
 
-
 	// UNLIT.
 	mat.unlit = !!gltf_mat->unlit;
-
 
 	// ALPHA.
 	switch (gltf_mat->alpha_mode)
@@ -350,7 +336,6 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 
 
 	// Locate attributes.
-
 	const cgltf_accessor *positions = NULL;
 	const cgltf_accessor *normals   = NULL;
 	const cgltf_accessor *tangents  = NULL;
@@ -408,9 +393,7 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 		return;
 	}
 
-
 	// Skinning.
-
 	b32 is_skinned = ((skin != NULL) &&
 					  (joints != NULL) &&
 					  (weights != NULL));
@@ -423,7 +406,6 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 	
 
 	// Vertices.
-
 	u32 vert_count = (u32)positions->count;
 	A_ModelVertex *vertices = ArenaPushArray(arena, A_ModelVertex, vert_count);
 	A_ModelSkinVertex *skin_vertices = NULL;
@@ -562,9 +544,7 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 		}
 	}
 
-
 	// Indices.
-
 	u32 idx_count = 0;
 	A_ModelIndex *indices = NULL;
 
@@ -590,9 +570,7 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 			indices[i] = (A_ModelIndex)i;
 	}
 
-
 	// Material.
-
 	A_ModelMaterial material = {0};
 
 	if (prim->material)
@@ -614,9 +592,7 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 		material.alpha_cutoff = 0.5f;
 	}
 
-
 	// Push onto list.
-
 	A_ModelLoadMesh *mesh = ArenaPushArray(arena, A_ModelLoadMesh, 1);
 	mesh->transform = world_transform;
 	mesh->bounds_min = bmin;

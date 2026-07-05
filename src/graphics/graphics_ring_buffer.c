@@ -27,8 +27,8 @@ static G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment)
 	ring->used = MemAlignUp(ring->used, alignment);
 
 	if (ring->used + bytes > ring->capacity)
-		AssertTrue(false);
-
+		ring->used = 0;
+	
 	G_Alloc alloc = {0};
 	alloc.offset = ring->used;
 	alloc.size = bytes;

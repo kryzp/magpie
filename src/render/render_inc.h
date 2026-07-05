@@ -7,14 +7,15 @@
 #include "render_camera.h"
 #include "render_geometry.h"
 
+#include "graph/render_graph_inc.h"
+
 #include "render_scene_handle.h"
 #include "render_scene_graph.h"
 #include "render_mesh_registry.h"
 #include "render_material_registry.h"
 #include "render_scene.h"
-#include "render_scene_frame_data.h"
 
-#include "graph/render_graph_inc.h"
+#include "render_frame.h"
 
 #include "render_sprite_batch.h"
 
@@ -26,7 +27,6 @@
 #include "render_blackboard.h"
 
 #include "debug/render_debug_inc.h"
-#include "pass/render_pass_inc.h"
+//#include "pass/render_pass_inc.h"
 
-#include "render_frame.h"
 #include "render_system.h"

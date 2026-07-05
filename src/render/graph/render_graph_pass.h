@@ -62,15 +62,9 @@ struct R_PassContext
 {
 	R_Graph *graph;
 	
-	G_Device *device;	
+	G_Device *device;
 	G_CmdBuffer *cmd;
-
-	const R_Scene *scene;
-	const R_Camera *camera;
 	
-	f32 delta_time;
-	f32 elapsed_time;
-
 	const G_RenderInfo *render_info;
 
 	const void *user_data;
@@ -92,6 +86,7 @@ struct R_Pass
 	b32 is_culled;
 
 	R_PassRecordFn *record;
+	
 	const void *user_data;
 	
 	u32 multi_view_mask;

@@ -50,11 +50,18 @@ static void R_CameraRecompute(R_Camera *camera)
 										  camera->near_plane, camera->far_plane);
 			break;
 	}
+
+	camera->view_proj = M4MulM4(camera->proj, camera->view);
+	camera->view_proj_no_translation = M4MulM4(camera->proj, M4RemoveTranslation(camera->view));
+
+	camera->inv_view = M4Inverse(camera->view);
+	camera->inv_proj = M4Inverse(camera->proj);
+	camera->inv_view_proj = M4Inverse(camera->view_proj);
 }
 
 static R_FrustumVolume R_CameraFrustum(const R_Camera *camera)
 {
-	m4 vpt = M4Transpose(M4MulM4(camera->proj, camera->view));
+	m4 vpt = M4Transpose(camera->view_proj);
 
 	R_FrustumVolume volume = {0};
 
