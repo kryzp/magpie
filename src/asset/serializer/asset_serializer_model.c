@@ -132,9 +132,9 @@ static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
 	String8 relative = String8Init(image->uri, strlen(image->uri));
 	String8 full_path = String8Append(arena, directory, relative);
 
-	A_Handle handle = A_FromFilePath(ctx->assets, full_path, A_Type_Texture);
+	A_Handle handle = A_FromFilePath(full_path, A_Type_Texture);
 
-	if (A_IsValid(ctx->assets, handle))
+	if (A_IsValid(handle))
 		A_ModelAddDependency(load, arena, handle);
 
 	return handle;
@@ -999,7 +999,7 @@ static A_SerializerPipelineData A_ModelSerializerCpu(const A_Context *ctx, Arena
 	MemZeroStruct(load);
 
 	A_SerializerPipelineData result = {0};
-	result.data = load;
+	result.user_data = load;
 
 	cgltf_options options = {0};
 	cgltf_data *gltf = NULL;
@@ -1096,8 +1096,7 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 								   A_Asset *out,
 								   Arena *arena)
 {
-	A_ModelLoadData *load = data->data;
-	G_Device *device = ctx->assets->device;
+	A_ModelLoadData *load = data->user_data;
 
 	A_SubModel *sub_models = ArenaPushArray(arena, A_SubModel, load->mesh_count);
 	
@@ -1130,8 +1129,8 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 		ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		ib_info.size  = src_mesh->index_count * sizeof(A_ModelIndex);
 
-		dst->vertex_buffer = G_DeviceBufferAlloc(device, &vb_info);
-		dst->index_buffer = G_DeviceBufferAlloc(device, &ib_info);
+		dst->vertex_buffer = G_DeviceBufferAlloc(&vb_info);
+		dst->index_buffer = G_DeviceBufferAlloc(&ib_info);
 
 		if (src_mesh->skin_vertices)
 		{
@@ -1140,7 +1139,7 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 			svb_info.size  = src_mesh->vertex_count * sizeof(A_ModelSkinVertex);
 			
-			dst->skin_buffer = G_DeviceBufferAlloc(device, &svb_info);
+			dst->skin_buffer = G_DeviceBufferAlloc(&svb_info);
 		}
 		else
 		{
@@ -1172,13 +1171,13 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			A_Joint *src_j = &src->joints[j];
 			A_Joint *dst_j = &dst->joints[j];
 			
-			dst_j->name                = String8Clone(arena, src_j->name);
+			dst_j->name = String8Clone(arena, src_j->name);
 			
-			dst_j->parent              = src_j->parent;
+			dst_j->parent = src_j->parent;
 
-			dst_j->bind_translation    = src_j->bind_translation;
-			dst_j->bind_rotation       = src_j->bind_rotation;
-			dst_j->bind_scale          = src_j->bind_scale;
+			dst_j->bind_translation = src_j->bind_translation;
+			dst_j->bind_rotation = src_j->bind_rotation;
+			dst_j->bind_scale = src_j->bind_scale;
 
 			dst_j->inverse_bind_matrix = src_j->inverse_bind_matrix;
 		}
@@ -1243,8 +1242,7 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 								 G_CmdBuffer *cmd,
 								 G_BufferKey stage, u64 stage_base)
 {
-	A_ModelLoadData *load = data->data;
-	G_Device *device = ctx->assets->device;
+	A_ModelLoadData *load = data->user_data;
 
 	u64 offset = stage_base;
 
@@ -1269,7 +1267,7 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 		
 		u64 vb_size = src->vertex_count * sizeof(A_ModelVertex);
 		
-		G_DeviceBufferWrite(device, stage, src->vertices, vb_size,  offset);
+		G_DeviceBufferWrite(stage, src->vertices, vb_size,  offset);
 		
 		G_BufferCopy vb_copy = {0};
 		vb_copy.src_offset = offset;
@@ -1284,7 +1282,7 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 		
 		u64 ib_size = src->index_count * sizeof(A_ModelIndex);
 
-		G_DeviceBufferWrite(device, stage, src->indices, ib_size,  offset);
+		G_DeviceBufferWrite(stage, src->indices, ib_size,  offset);
 
 		G_BufferCopy ib_copy = {0};
 		ib_copy.src_offset = offset;
@@ -1301,7 +1299,7 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 		{
 			u64 svb_size = src->vertex_count * sizeof(A_ModelSkinVertex);
 			
-			G_DeviceBufferWrite(device, stage, src->skin_vertices, svb_size, offset);
+			G_DeviceBufferWrite(stage, src->skin_vertices, svb_size, offset);
 
 			G_BufferCopy svb_copy = {0};
 			svb_copy.src_offset = offset;
@@ -1316,19 +1314,17 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 	ScratchRelease(&scratch);
 }
 
-static void A_ModelSerializerDispose(A_Asset *asset, A_Assets *assets)
+static void A_ModelSerializerDispose(A_Asset *asset)
 {
-	G_Device *device = assets->device;
-
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
 		A_SubModel *sub_model = &asset->model.sub_models[i];
 		
-		G_DeviceBufferDestroy(device, sub_model->vertex_buffer);
-		G_DeviceBufferDestroy(device, sub_model->index_buffer);
+		G_DeviceBufferDestroy(sub_model->vertex_buffer);
+		G_DeviceBufferDestroy(sub_model->index_buffer);
 
 		if (!G_BufferKeyIsNull(sub_model->skin_buffer))
-			G_DeviceBufferDestroy(device, sub_model->skin_buffer);
+			G_DeviceBufferDestroy(sub_model->skin_buffer);
 	}
 }
 

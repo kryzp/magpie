@@ -12,14 +12,14 @@ typedef struct G_TimelinePoint G_TimelinePoint;
 struct G_TimelinePoint
 {
 	VkSemaphore semaphore;
-	u64 value;
+	u64 frame;
 };
 
 typedef struct G_Semaphore G_Semaphore;
 struct G_Semaphore
 {
 	VkSemaphore vk_handle;
-	u64 target;
+	u64 last_submitted_frame;
 };
 
 static G_TimelinePoint G_SemaphoreSignal(G_Semaphore *semaphore);

@@ -33,8 +33,6 @@ struct Player
 {
 	E_Header header;
 
-	Arena arena;
-
 	v4 target_rotation;
 
 	P_Handle rigidbody_handle;

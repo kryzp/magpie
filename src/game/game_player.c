@@ -47,11 +47,9 @@ static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 
 static void PlayerInit(Player *player, Transform transform)
 {
-	player->arena = ArenaAlloc(Kilobytes(512));
+	player->rigidbody_handle = P_LeaseInstance();
 
-	player->rigidbody_handle = P_LeaseInstance(&app->physics_engine);
-
-	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 	rb->solid = false;
 	rb->fixed_position = false;
 	rb->friction = 25.f;
@@ -59,26 +57,23 @@ static void PlayerInit(Player *player, Transform transform)
 	rb->gravity_factor = 10.f;
 	rb->max_speed = 100.f;
 	
-	A_Handle model_handle = A_Require(&app->assets, String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
+	A_Handle model_handle = A_Require(String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
 		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, model_handle, (u32)(-1));
-		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+		G_DeviceSubmitImEnd(&cmd);
 
-		for (u32 i = 0; i < receipt.count; i++)
-		{
-			R_ModelImportEntry *entry = &receipt.entries[i];
+		R_ModelImportEntry *entry = &receipt.entries[0];
 
-			R_ObjectDesc desc = {0};
-			desc.transform = entry->transform;
-			desc.sphere_bounds = entry->sphere_bounds;
-			desc.mesh = entry->mesh;
-			desc.material = entry->material;
+		R_ObjectDesc desc = {0};
+		desc.transform = entry->transform;
+		desc.sphere_bounds = entry->sphere_bounds;
+		desc.mesh = entry->mesh;
+		desc.material = entry->material;
 
-			player->scene_object_handle = R_SceneGraphObjectCreate(&app->scene.graph, &desc);
-		}
+		player->scene_object_handle = R_SceneGraphObjectCreate(&app->scene.graph, &desc);
 	}
 	ScratchRelease(&scratch);
 
@@ -96,14 +91,14 @@ static void PlayerInit(Player *player, Transform transform)
 
 static void PlayerDestroy(Player *player)
 {
-	ArenaRelease(&player->arena);
+	P_ReturnInstance(player->rigidbody_handle);
 }
 
 static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 {
 	PlayerInput input_st = PlayerGatherInput(ctx->input);
 
-	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
 	f32 move_speed = 30.f;
 
@@ -167,7 +162,7 @@ static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 
 static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 {
-	P_RigidBody *rb = P_GetRigidbodyFromHandle(&app->physics_engine, player->rigidbody_handle);
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
 	m4 final_matrix = M4Identity();
 	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf * 0.5f, v3(1.f, 0.f, 0.f)), final_matrix);

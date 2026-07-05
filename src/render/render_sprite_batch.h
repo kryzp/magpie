@@ -50,7 +50,6 @@ struct R_SpriteBatchTask
 typedef struct R_SpriteBatch R_SpriteBatch;
 struct R_SpriteBatch
 {
-	G_Device *device;
 	LOG_Channel log_channel;
 	
 	u32 task_count;
@@ -68,7 +67,7 @@ struct R_SpriteBatch
 #undef SbParam
 };
 
-static void R_SpriteBatchInit(R_SpriteBatch *b, G_Device *device, LOG_Channel log_channel);
+static void R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel);
 static void R_SpriteBatchDestroy(R_SpriteBatch *b);
 
 static void R_SpriteBatchBegin(R_SpriteBatch *b);

@@ -14,8 +14,6 @@ struct R_MaterialSlot
 typedef struct R_MaterialRegistry R_MaterialRegistry;
 struct R_MaterialRegistry
 {
-	G_Device *device;
-	A_Assets *assets;
 	LOG_Channel log_channel;
 	
 	R_MaterialSlot material_slots[R_MATERIAL_REGISTRY_MAX_MATERIALS];
@@ -27,7 +25,7 @@ struct R_MaterialRegistry
 	b32 material_buffer_dirty;
 };
 
-static void                  R_MaterialRegistryInit(R_MaterialRegistry *r, G_Device *device, A_Assets *assets, LOG_Channel log_channel);
+static void                  R_MaterialRegistryInit(R_MaterialRegistry *r, LOG_Channel log_channel);
 static void                  R_MaterialRegistryDestroy(R_MaterialRegistry *r);
 
 static R_SceneHandle         R_MaterialRegistryAddMaterial(R_MaterialRegistry *r, const R_Material *material);
@@ -38,7 +36,6 @@ static void                  R_MaterialRegistryDisposeOfMaterial(R_MaterialRegis
 
 static u32                   R_MaterialRegistryCountOfMaterials(const R_MaterialRegistry *r);
 static const R_Material     *R_MaterialRegistryGetSource(const R_MaterialRegistry *r, R_SceneHandle handle);
-static u64                   R_MaterialRegistryBufferAddr(const R_MaterialRegistry *r);
 static void                  R_MaterialRegistryBakeIntoGPU(const R_MaterialRegistry *r, const R_Material *material, R_GPU_Material *out);
 static b32                   R_MaterialRegistryHandleIsValid(const R_MaterialRegistry *r, R_SceneHandle handle);
 

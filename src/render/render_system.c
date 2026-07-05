@@ -32,30 +32,28 @@ static void R_SystemCreateSkyboxMesh(R_System *s)
 		7, 4, 3
 	};
 
-	R_MeshAlloc(&s->skybox_mesh, s->device,
+	R_MeshAlloc(&s->skybox_mesh,
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	G_BufferKey staging_buffer = G_DeviceStageAlloc(s->device, R_MeshVertexBufferSize(&s->skybox_mesh) + R_MeshIndexBufferSize(&s->skybox_mesh));
+	G_BufferKey staging_buffer = G_DeviceStageAlloc(R_MeshVertexBufferSize(&s->skybox_mesh) + R_MeshIndexBufferSize(&s->skybox_mesh));
 
-	R_MeshWriteToStage(&s->skybox_mesh, s->device,
+	R_MeshWriteToStage(&s->skybox_mesh,
 					   staging_buffer, 0,
 					   vertices, indices);
 
 	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(s->device);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
 		R_MeshUpload(&s->skybox_mesh, &cmd, staging_buffer, 0);
-		G_DeviceSubmitImEnd(s->device, &cmd);
+		G_DeviceSubmitImEnd(&cmd);
 	}
 
-	G_DeviceBufferDestroy(s->device, staging_buffer);
+	G_DeviceBufferDestroy(staging_buffer);
 }
 
-static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel)
+static void R_SystemInit(R_System *s, Arena *arena, LOG_Channel log_channel)
 {
 	s->arena = arena;
-	s->device = device;
-	s->assets = assets;
 	s->log_channel = log_channel;
 	
 	G_BufferAllocInfo ring_buffer_alloc_info = {0};
@@ -65,7 +63,7 @@ static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	s->frame_upload_ring_buffer = G_RingBufferAlloc(s->device, &ring_buffer_alloc_info);
+	s->frame_upload_ring_buffer = G_RingBufferAlloc(&ring_buffer_alloc_info);
 	
 	m4 capture_view_matrices[] = {
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Right.
@@ -86,20 +84,19 @@ static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *
 	cubemap_capture_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
 
-	s->cubemap_capture_transform_buffer = G_DeviceBufferAlloc(s->device, &cubemap_capture_buffer_alloc_info);
+	s->cubemap_capture_transform_buffer = G_DeviceBufferAlloc(&cubemap_capture_buffer_alloc_info);
 	
-	G_DeviceBufferWrite(s->device,
-						s->cubemap_capture_transform_buffer,
+	G_DeviceBufferWrite(s->cubemap_capture_transform_buffer,
 						capture_view_matrices,
 						sizeof(capture_view_matrices), 0);
 	
-	s->linear_sampler  = G_DeviceSamplerCreateF(s->device, VK_FILTER_LINEAR);
-	s->nearest_sampler = G_DeviceSamplerCreateF(s->device, VK_FILTER_NEAREST);
+	s->linear_sampler = G_DeviceSamplerCreateF(VK_FILTER_LINEAR);
+	s->nearest_sampler = G_DeviceSamplerCreateF(VK_FILTER_NEAREST);
 	
 	R_SystemCreateSkyboxMesh(s);
 
-	//R_ShadowStateInit(&s->shadow_state, s->device);
-	R_DebugRendererInitAndSelect(&s->debug_renderer, s->arena, s->device, s->assets);
+	R_ShadowsInit(&s->shadow_render_state);
+	R_DebugRendererInitAndSelect(&s->debug_renderer, s->arena);
 	
 	DebugLogI(s->log_channel, "Initialized.");
 }
@@ -107,22 +104,22 @@ static void R_SystemInit(R_System *s, Arena *arena, G_Device *device, A_Assets *
 static void R_SystemDestroy(R_System *s)
 {
 	//R_IrradianceVolumeDestroy(&s->irradiance_volume);
-	R_DebugRendererDestroy(&s->debug_renderer);
-	//R_ShadowStateFree(&s->shadow_state);
+	R_DebugRendererDestroy();
+	R_ShadowsDestroy(&s->shadow_render_state);
 
-	G_DeviceTextureDestroy(s->device, s->brdf_lut);
-	G_DeviceTextureDestroy(s->device, s->environment_cubemap);
-	G_DeviceTextureDestroy(s->device, s->irradiance_cubemap);
-	G_DeviceTextureDestroy(s->device, s->prefilter_cubemap);
+	G_DeviceTextureDestroy(s->brdf_lut);
+	G_DeviceTextureDestroy(s->environment_cubemap);
+	G_DeviceTextureDestroy(s->irradiance_cubemap);
+	G_DeviceTextureDestroy(s->prefilter_cubemap);
 	
-	R_MeshDestroy(&s->skybox_mesh, s->device);
+	R_MeshDestroy(&s->skybox_mesh);
 	
-	G_DeviceSamplerDestroy(s->device, s->linear_sampler);
-	G_DeviceSamplerDestroy(s->device, s->nearest_sampler);
+	G_DeviceSamplerDestroy(s->linear_sampler);
+	G_DeviceSamplerDestroy(s->nearest_sampler);
 
-	G_DeviceBufferDestroy(s->device, s->cubemap_capture_transform_buffer);
+	G_DeviceBufferDestroy(s->cubemap_capture_transform_buffer);
 
-	G_RingBufferDestroy(&s->frame_upload_ring_buffer, s->device);
+	G_RingBufferDestroy(&s->frame_upload_ring_buffer);
 
 	DebugLogI(s->log_channel, "Destroyed.");
 }
@@ -131,25 +128,24 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 {
 	const u32 prefilter_mips = 5;
 
-	s->brdf_lut            = G_DeviceTextureAlloc2D      (s->device, 512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
-	s->environment_cubemap = G_DeviceTextureAllocCubemap (s->device, 512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	s->irradiance_cubemap  = G_DeviceTextureAllocCubemap (s->device,  32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	s->prefilter_cubemap   = G_DeviceTextureAllocCubemap (s->device, 128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
+	s->brdf_lut            = G_DeviceTextureAlloc2D      (512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
+	s->environment_cubemap = G_DeviceTextureAllocCubemap (512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	s->irradiance_cubemap  = G_DeviceTextureAllocCubemap ( 32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	s->prefilter_cubemap   = G_DeviceTextureAllocCubemap (128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 	
-	A_Handle brdf_lut_shader_handle    = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   A_Type_Shader);
-	A_Handle hdr_to_env_shader_handle  = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
-	A_Handle irradiance_shader_handle  = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
-	A_Handle prefilter_shader_handle   = A_Require(s->assets, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
-	A_Handle hdr_texture_handle        = A_Require(s->assets, String8Lit("assets://environment_map_3.hdr"),                               A_Type_Texture);
+	A_Handle brdf_lut_shader_handle    = A_Require(String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   A_Type_Shader);
+	A_Handle hdr_to_env_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
+	A_Handle irradiance_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
+	A_Handle prefilter_shader_handle   = A_Require(String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
+	A_Handle hdr_texture_handle        = A_Require(String8Lit("assets://environment_map_3.hdr"),                               A_Type_Texture);
 	
-	G_ShaderKey brdf_lut_shader        = A_GetNow(s->assets, brdf_lut_shader_handle)->shader.key;
-	G_ShaderKey hdr_to_env_shader      = A_GetNow(s->assets, hdr_to_env_shader_handle)->shader.key;
-	G_ShaderKey irradiance_pass_shader = A_GetNow(s->assets, irradiance_shader_handle)->shader.key;
-	G_ShaderKey prefilter_pass_shader  = A_GetNow(s->assets, prefilter_shader_handle)->shader.key;
-	G_TextureKey hdr_texture_gfx       = A_GetNow(s->assets, hdr_texture_handle)->texture.key;
+	G_ShaderKey brdf_lut_shader        = A_GetNow(brdf_lut_shader_handle)->shader.key;
+	G_ShaderKey hdr_to_env_shader      = A_GetNow(hdr_to_env_shader_handle)->shader.key;
+	G_ShaderKey irradiance_pass_shader = A_GetNow(irradiance_shader_handle)->shader.key;
+	G_ShaderKey prefilter_pass_shader  = A_GetNow(prefilter_shader_handle)->shader.key;
+	G_TextureKey hdr_texture_gfx       = A_GetNow(hdr_texture_handle)->texture.key;
 
 	// Generate BRDF Lookup Table.
-	/*
 	{
 		R_BRDFLutPassData *data = ArenaPushArray(arena, R_BRDFLutPassData, 1);
 		data->shader = brdf_lut_shader;
@@ -164,7 +160,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 		R_HdrToEnvPassData *data = ArenaPushArray(arena, R_HdrToEnvPassData, 1);
 		data->shader = hdr_to_env_shader;
 		data->sampler = s->linear_sampler;
-		data->hdr_view = G_DeviceTextureViewAuto(s->device, hdr_texture_gfx);
+		data->hdr_view = G_DeviceTextureViewAuto(hdr_texture_gfx);
 		data->capture_transforms = s->cubemap_capture_transform_buffer;
 		data->skybox_mesh = &s->skybox_mesh;
 		
@@ -186,7 +182,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 		R_IBLPassIrradianceData *data = ArenaPushArray(arena, R_IBLPassIrradianceData, 1);
 		data->shader = irradiance_pass_shader;
 		data->sampler = s->linear_sampler;
-		data->env_view = G_DeviceTextureViewAuto(s->device, s->environment_cubemap);
+		data->env_view = G_DeviceTextureViewAuto(s->environment_cubemap);
 		data->capture_transforms = s->cubemap_capture_transform_buffer;
 		data->skybox_mesh = &s->skybox_mesh;
 		
@@ -205,7 +201,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 			R_IBLPassPrefilterData *data = ArenaPushArray(arena, R_IBLPassPrefilterData, 1);
 			data->shader = prefilter_pass_shader;
 			data->sampler = s->linear_sampler;
-			data->env_view = G_DeviceTextureViewAuto(s->device, s->environment_cubemap);
+			data->env_view = G_DeviceTextureViewAuto(s->environment_cubemap);
 			data->capture_transforms = s->cubemap_capture_transform_buffer;
 			data->skybox_mesh = &s->skybox_mesh;
 			data->roughness = (f32)i / (f32)(mipmap_count - 1);
@@ -223,7 +219,6 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 			R_PassWriteColourEx(pass, R_GraphImportTexture(g, s->prefilter_cubemap), NULL, range);
 		}
 	}
-	*/
 
 	/*
 	R_IrradianceVolumeInit(&s->irradiance_volume,
@@ -242,30 +237,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 
 static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *frame_params)
 {
-	const R_Camera *camera = &frame_params->camera;
-
-	R_FrustumVolume frustum = R_CameraFrustum(camera);
-	
-	u32 window_width, window_height;
-	osapi->GetWindowSize(&window_width, &window_height);
-	
-	/*
-	R_GPU_FrameData frame_data = {0};
-	frame_data.view = camera->view;
-	frame_data.proj = camera->proj;
-	frame_data.view_proj = camera->view_proj;
-	frame_data.view_proj_no_translation = camera->view_proj_no_translation;
-	frame_data.inv_view = camera->inv_view;
-	frame_data.inv_proj = camera->inv_proj;
-	frame_data.camera_position = camera->position;
-	frame_data.window_resolution = v2(window_width, window_height);
-	frame_data.delta_time = frame_params->dt;
-	frame_data.time = frame_params->elapsed;
-
-	G_DeviceBufferWrite(s->device,
-						s->frame_data_buffer,
-						&frame_data, sizeof(frame_data), 0);
-						*/
+	R_FrustumVolume frustum = R_CameraFrustum(&frame_params->camera);
 
 	R_Blackboard bb = {0};
 
@@ -274,7 +246,7 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 	bb.lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
 	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
 
-	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(graph->device->context.depth_format, v3(1.f, 1.f, 1.f));
+	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_DeviceDepthFormat(), v3(1.f, 1.f, 1.f));
 	bb.depth = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
 	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
@@ -282,56 +254,53 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 	bb.lighting.msaa = R_PassWriteColour(clear_pass, bb.lighting.msaa, &colour_clear);
 	bb.depth.msaa = R_PassWriteDepth(clear_pass, bb.depth.msaa, &depth_clear);
 
-	/*
-	if (f->scene_data.object_count > 0)
+	if (frame_params->object_count > 0)
 	{
-		R_ShadowRendererUploadGPU(&s->shadow_renderer, &bt);
+		R_ShadowsUploadGPU(&s->shadow_render_state, frame_params);
 
-		R_ShadowRendererRender(&s->shadow_renderer, g, &bt, &bb, &s->culling);
+		R_ShadowsRender(&s->shadow_render_state, graph, frame_params, &bb);
 
-		R_DrawStream draw_stream = R_CullFrustum(&s->culling, g, &bt, R_CullFilter_OpaqueOnly, &frustum);
+		R_DrawStream draw_stream = R_CullFrustum(graph, frame_params, R_CullFilter_OpaqueOnly, &frustum);
 
-		R_ForwardRender(g, s->assets, &frame_params, &bb, &draw_stream);
+		R_ForwardRender(graph, frame_params, &bb, &draw_stream);
 	}
 
 	// Skybox.
 	{
-		A_Handle shader_handle = A_Require(s->assets, String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(s->assets, shader_handle)->shader.key;
+		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);
+		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
 
-		R_SkyboxPassData *data = ArenaPushArray(f->arena, R_SkyboxPassData, 1);
+		R_SkyboxPassData *data = ArenaPushArray(frame_params->arena, R_SkyboxPassData, 1);
 		data->shader = shader;
-		data->cubemap = G_DeviceTextureViewAuto(s->device, s->environment_cubemap);
-		data->sampler = s->linear_sampler;
-		data->frame_data_buffer = s->frame_data_buffer;
+		data->cubemap = G_DeviceTextureViewAuto(s->environment_cubemap);
 		data->skybox_mesh = &s->skybox_mesh;
+		data->frame_params = frame_params;
 
-		R_Pass *skybox_pass = R_GraphAdd(g, String8Lit("Skybox"), R_PassType_Graphics);
+		R_Pass *skybox_pass = R_GraphAdd(graph, String8Lit("Skybox"), R_PassType_Graphics);
 		bb.lighting.resolved = R_PassWriteColourResolve(skybox_pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
 		bb.depth.resolved = R_PassWriteDepthResolve(skybox_pass, bb.depth.msaa, bb.depth.resolved, NULL);
-		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(g, s->environment_cubemap));
+		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(graph, s->environment_cubemap));
 		R_PassSetRecord(skybox_pass, R_SkyboxPassFn, data);
 	}
 	
 	// Post Processing.
 	{
-		A_Handle shader_handle = A_Require(s->assets, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(s->assets, shader_handle)->shader.key;
+		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader);
+		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
 
-		R_PostProcessingPassData *data = ArenaPushArray(f->arena, R_PostProcessingPassData, 1);
+		R_PostProcessingPassData *data = ArenaPushArray(frame_params->arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
 		data->exposure = 1.f;
 		data->input = bb.lighting.resolved;
 		data->output = bb.lighting.resolved;
 
-		R_Pass *pp_pass = R_GraphAdd(g, String8Lit("Post Processing"), R_PassType_Compute);
+		R_Pass *pp_pass = R_GraphAdd(graph, String8Lit("Post Processing"), R_PassType_Compute);
 		bb.lighting.resolved = R_PassWriteTextureCompute(pp_pass, bb.lighting.resolved);
 		R_PassReadTextureCompute(pp_pass, bb.lighting.resolved);
 		R_PassSetRecord(pp_pass, R_PostProcessingPassFn, data);
 	}
-	*/
 
-	R_DebugRendererRender(&s->debug_renderer, graph, frame_params, bb.lighting.resolved, bb.depth.resolved);
+	R_DebugRendererRender(graph, frame_params, bb.lighting.resolved, bb.depth.resolved);
 	
 	R_GraphSetBackbuffer(graph, bb.lighting.resolved);
 	R_GraphSetPresentFilter(graph, VK_FILTER_LINEAR);

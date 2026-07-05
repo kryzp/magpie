@@ -1,8 +1,7 @@
 
-static void R_MeshRegistryInit(R_MeshRegistry *r, Arena *arena, G_Device *device, LOG_Channel log_channel)
+static void R_MeshRegistryInit(R_MeshRegistry *r, Arena *arena, LOG_Channel log_channel)
 {
 	r->arena = arena;
-	r->device = device;
 	r->log_channel = log_channel;
 
 	for (u32 i = 0; i < ArraySize(r->mesh_slots); i++)
@@ -16,19 +15,19 @@ static void R_MeshRegistryInit(R_MeshRegistry *r, Arena *arena, G_Device *device
 	mesh_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	mesh_buffer_alloc_info.size = sizeof(R_GPU_RenderMesh) * ArraySize(r->mesh_slots);
 
-	r->mesh_buffer = G_DeviceBufferAlloc(device, &mesh_buffer_alloc_info);
+	r->mesh_buffer = G_DeviceBufferAlloc(&mesh_buffer_alloc_info);
 
 	r->mesh_buffer_dirty = true;
 }
 
 static void R_MeshRegistryDestroy(R_MeshRegistry *r)
 {
-	G_DeviceBufferDestroy(r->device, r->mesh_buffer);
+	G_DeviceBufferDestroy(r->mesh_buffer);
 
 	for (u32 i = 0; i < r->geometry_page_count; i++)
 	{
-		G_DeviceBufferDestroy(r->device, r->geometry_pages[i].vertex_buffer);
-		G_DeviceBufferDestroy(r->device, r->geometry_pages[i].index_buffer);
+		G_DeviceBufferDestroy(r->geometry_pages[i].vertex_buffer);
+		G_DeviceBufferDestroy(r->geometry_pages[i].index_buffer);
 	}
 }
 
@@ -73,15 +72,15 @@ static R_SceneHandle R_MeshRegistryCreateMesh(R_MeshRegistry *r, G_CmdBuffer *cm
 	R_GPU_RenderMesh *gpu_mesh = &r->mesh_gpus[slot_index];
 	gpu_mesh->index_count = desc->index_count;
 	gpu_mesh->first_index = index_offset;
-	gpu_mesh->vertex_buffer = G_DeviceBufferAddress(r->device, page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
+	gpu_mesh->vertex_buffer = G_DeviceBufferAddress(page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
 
 	if (!G_BufferKeyIsNull(desc->skin_buffer))
-		gpu_mesh->skin_buffer = G_DeviceBufferAddress(r->device, desc->skin_buffer);
+		gpu_mesh->skin_buffer = G_DeviceBufferAddress(desc->skin_buffer);
 	else
 		gpu_mesh->skin_buffer = 0;
 	
 	page->vertex_count += desc->vertex_count;
-	page->index_count  += desc->index_count;
+	page->index_count += desc->index_count;
 
 	slot->page_index = page_index;
 	slot->vertex_offset = vertex_offset;
@@ -130,11 +129,6 @@ static u32 R_MeshRegistryCountOfMeshes(const R_MeshRegistry *r)
 	return r->mesh_count;
 }
 
-static u64 R_MeshRegistryBufferAddr(const R_MeshRegistry *r)
-{
-	return G_DeviceBufferAddress(r->device, r->mesh_buffer);
-}
-
 static b32 R_MeshRegistryHandleIsValid(const R_MeshRegistry *r, R_SceneHandle handle)
 {
 	if (handle.index >= ArraySize(r->mesh_slots))
@@ -149,10 +143,7 @@ static void R_MeshRegistryFlushIfDirty(R_MeshRegistry *r)
 	if (!r->mesh_buffer_dirty)
 		return;
 
-	G_DeviceBufferWrite(r->device,
-						  r->mesh_buffer,
-						  r->mesh_gpus,
-						  sizeof(r->mesh_gpus), 0);
+	G_DeviceBufferWrite(r->mesh_buffer, r->mesh_gpus, sizeof(r->mesh_gpus), 0);
 
 	r->mesh_buffer_dirty = false;
 }
@@ -208,8 +199,8 @@ static R_GeometryPage R_MeshRegistryCreateNewPage(R_MeshRegistry *r)
 	u32 max_indices  = ib_info.size / sizeof(A_ModelIndex);
 	
 	R_GeometryPage page = {0};
-	page.vertex_buffer = G_DeviceBufferAlloc(r->device, &vb_info);
-	page.index_buffer = G_DeviceBufferAlloc(r->device, &ib_info);
+	page.vertex_buffer = G_DeviceBufferAlloc(&vb_info);
+	page.index_buffer = G_DeviceBufferAlloc(&ib_info);
 	page.vertex_count = 0;
 	page.index_count = 0;
 	page.max_vertices = max_vertices;

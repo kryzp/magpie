@@ -1,9 +1,6 @@
 
-static void R_MaterialRegistryInit(R_MaterialRegistry *r, G_Device *device, A_Assets *assets, LOG_Channel log_channel)
+static void R_MaterialRegistryInit(R_MaterialRegistry *r, LOG_Channel log_channel)
 {
-	r->device = device;
-	r->assets = assets;
-
 	r->log_channel = log_channel;
 
 	for (u32 i = 0; i < ArraySize(r->material_slots); i++)
@@ -17,14 +14,14 @@ static void R_MaterialRegistryInit(R_MaterialRegistry *r, G_Device *device, A_As
 	material_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	material_buffer_alloc_info.size = sizeof(R_GPU_Material) * ArraySize(r->material_slots);
 	
-	r->material_buffer = G_DeviceBufferAlloc(r->device, &material_buffer_alloc_info);
+	r->material_buffer = G_DeviceBufferAlloc(&material_buffer_alloc_info);
 	
 	r->material_buffer_dirty = true;
 }
 
 static void R_MaterialRegistryDestroy(R_MaterialRegistry *r)
 {
-	G_DeviceBufferDestroy(r->device, r->material_buffer);
+	G_DeviceBufferDestroy(r->material_buffer);
 }
 
 static R_SceneHandle R_MaterialRegistryAddMaterial(R_MaterialRegistry *r, const R_Material *material)
@@ -55,7 +52,7 @@ static R_SceneHandle R_MaterialRegistryAddMaterial(R_MaterialRegistry *r, const 
 
 static R_SceneHandle R_MaterialRegistryAddFromAssets(R_MaterialRegistry *r, const A_ModelMaterial *source)
 {
-	R_Material material = R_MaterialFromAsset(source, r->assets);
+	R_Material material = R_MaterialFromAsset(source);
 	return R_MaterialRegistryAddMaterial(r, &material);
 }
 
@@ -111,11 +108,6 @@ static const R_Material *R_MaterialRegistryGetSource(const R_MaterialRegistry *r
 		return NULL;
 
 	return &slot->source;
-}
-
-static u64 R_MaterialRegistryBufferAddr(const R_MaterialRegistry *r)
-{
-	return G_DeviceBufferAddress(r->device, r->material_buffer);
 }
 
 static void R_MaterialRegistryBakeIntoGPU(const R_MaterialRegistry *r, const R_Material *material, R_GPU_Material *out)
@@ -191,8 +183,7 @@ static void R_MaterialRegistryFlushIfDirty(R_MaterialRegistry *r)
 	if (!r->material_buffer_dirty)
 		return;
 
-	G_DeviceBufferWrite(r->device,
-						  r->material_buffer,
+	G_DeviceBufferWrite(r->material_buffer,
 						  r->material_gpus,
 						  sizeof(r->material_gpus), 0);
 
@@ -204,6 +195,6 @@ static G_BindlessIndex R_MaterialRegistryResolveToBindless(const R_MaterialRegis
 	if (G_TextureKeyIsNull(key))
 		return G_BINDLESS_INDEX_INVALID;
 
-	G_TextureViewKey view_key = G_DeviceTextureViewAuto(r->device, key);
-	return G_DeviceTextureViewBindless(r->device, view_key);
+	G_TextureViewKey view_key = G_DeviceTextureViewAuto(key);
+	return G_DeviceTextureViewBindless(view_key);
 }

@@ -100,8 +100,6 @@ typedef struct R_DebugRenderer R_DebugRenderer;
 struct R_DebugRenderer
 {
 	Arena *arena;
-	G_Device *device;
-	A_Assets *assets;
 
 	R_DebugDrawNode *free_list;
 
@@ -126,18 +124,16 @@ struct R_DebugRenderer
    CORE
    ================================================== */
 
-static void R_DebugRendererInitAndSelect (R_DebugRenderer *dr, Arena *arena, G_Device *device, A_Assets *assets);
-static void R_DebugRendererDestroy       (R_DebugRenderer *dr);
-
-static void R_DebugRendererSelect        (R_DebugRenderer *dr);
+static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena);
+static void R_DebugRendererDestroy(void);
+static void R_DebugRendererSelect(R_DebugRenderer *dr);
 
 
 /* ==================================================
    RENDERING
    ================================================== */
 
-static void R_DebugRendererRender (R_DebugRenderer *dr,
-									 R_Graph *graph,
+static void R_DebugRendererRender(R_Graph *graph,
 									 const R_FrameParams *frame_params,
 									 R_GraphTexHandle target_colour,
 									 R_GraphTexHandle target_depth);

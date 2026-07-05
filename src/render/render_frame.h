@@ -33,8 +33,11 @@ struct R_FrameParams
 	G_BufferKey mesh_buffer;
 	G_BufferKey material_buffer;
 
+	G_Alloc frame_data;
+
 	u32 page_count;
 	G_Alloc page_table_buffer;
+	G_BufferKey page_index_buffers[R_MESH_REGISTRY_MAX_GEOMETRY_PAGES];
 
 	u32 object_count;
 	G_Alloc object_buffer;
@@ -44,8 +47,6 @@ struct R_FrameParams
 
 	G_Alloc skinning_palette_buffer;
 
-	//G_BufferKey frame_data_buffer;
-
 	//const R_IrradianceVolume *irradiance_volume;
 	
 	u32 shadow_caster_count;
@@ -54,6 +55,17 @@ struct R_FrameParams
 
 typedef struct R_System R_System; // TODO TODO TODO: R_SYSTEM will not be taken in as a paremeter this is just a quick hack!!!!!
 
+static void R_FrameParamsUploadPageTable(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadObjects(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadLights(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out);
+
 static R_FrameParams R_FrameParamsBuild(R_System *system, Arena *frame_arena, f32 dt, f32 elapsed, R_Scene *scene, const R_Camera *camera);
+
+static void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
+									  G_CmdBuffer *cmd,
+									  G_BufferKey indirect_buffer,
+									  G_BufferKey count_buffer);
 
 #endif // RENDER_FRAME_H

@@ -56,7 +56,8 @@ static void E_WorldDestroy(E_World *world)
 
 			void *entity = (void *)(base + (j * desc->stride));
 			
-			desc->OnDestroy(entity);
+			if (desc->OnDestroy)
+				desc->OnDestroy(entity);
 		}
 	}
 	

@@ -1,5 +1,7 @@
 
-static void P_EngineInit(P_Engine *engine, Arena *arena, LOG_Channel log_channel)
+static P_Engine *p_engine = NULL;
+
+static void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel log_channel)
 {
 	engine->arena = arena;
 	engine->log_channel = log_channel;
@@ -11,16 +13,23 @@ static void P_EngineInit(P_Engine *engine, Arena *arena, LOG_Channel log_channel
 
 	engine->free_instance_sentinel.next = &engine->free_instance_sentinel;
 	engine->free_instance_sentinel.prev = &engine->free_instance_sentinel;
+
+	P_EngineSelectContext(engine);
 }
 
-static void P_EngineDestroy(P_Engine *engine)
+static void P_EngineDestroy(void)
 {
 }
 
-static void P_EngineTick(P_Engine *engine, f32 dt)
+static void P_EngineSelectContext(P_Engine *engine)
 {
-	for (P_Instance *inst = engine->instance_sentinel.next; 
-		 inst != &engine->instance_sentinel; 
+	p_engine = engine;
+}
+
+static void P_EngineTick(f32 dt)
+{
+	for (P_Instance *inst = p_engine->instance_sentinel.next; 
+		 inst != &p_engine->instance_sentinel; 
 		 inst = inst->next)
 	{
 		// took this from an old game project in FNA which
@@ -92,13 +101,13 @@ static void P_EngineTick(P_Engine *engine, f32 dt)
 	}
 }
 
-static P_Handle P_LeaseInstance(P_Engine *engine)
+static P_Handle P_LeaseInstance(void)
 {
 	P_Instance *inst = NULL;
 
-	if (engine->free_instance_sentinel.next != &engine->free_instance_sentinel)
+	if (p_engine->free_instance_sentinel.next != &p_engine->free_instance_sentinel)
 	{
-		inst = engine->free_instance_sentinel.next;
+		inst = p_engine->free_instance_sentinel.next;
 		inst->prev->next = inst->next;
 		inst->next->prev = inst->prev;
 
@@ -106,14 +115,14 @@ static P_Handle P_LeaseInstance(P_Engine *engine)
 	}
 	else
 	{
-		inst = ArenaPushArray(engine->arena, P_Instance, 1);
+		inst = ArenaPushArray(p_engine->arena, P_Instance, 1);
 	}
 
-	inst->key = engine->current_key;
-	engine->current_key++;
+	inst->key = p_engine->current_key;
+	p_engine->current_key++;
 
-	inst->next = engine->instance_sentinel.next;
-	inst->prev = &engine->instance_sentinel;
+	inst->next = p_engine->instance_sentinel.next;
+	inst->prev = &p_engine->instance_sentinel;
 
 	inst->next->prev = inst;
 	inst->prev->next = inst;
@@ -124,10 +133,10 @@ static P_Handle P_LeaseInstance(P_Engine *engine)
 	return handle;
 }
 
-static void P_ReturnInstance(P_Engine *engine, P_Handle handle)
+static void P_ReturnInstance(P_Handle handle)
 {
-	for (P_Instance *inst = engine->instance_sentinel.next; 
-		 inst != &engine->instance_sentinel; 
+	for (P_Instance *inst = p_engine->instance_sentinel.next; 
+		 inst != &p_engine->instance_sentinel; 
 		 inst = inst->next)
 	{
 		if (inst->key != handle.key)
@@ -136,18 +145,20 @@ static void P_ReturnInstance(P_Engine *engine, P_Handle handle)
 		inst->prev->next = inst->next;
 		inst->next->prev = inst->prev;
 
-		inst->next = engine->free_instance_sentinel.next;
-		inst->prev = &engine->free_instance_sentinel;
+		inst->next = p_engine->free_instance_sentinel.next;
+		inst->prev = &p_engine->free_instance_sentinel;
 
 		inst->next->prev = inst;
 		inst->prev->next = inst;
+
+		return;
 	}
 }
 
-static P_RigidBody *P_GetRigidbodyFromHandle(P_Engine *engine, P_Handle handle)
+static P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle)
 {
-	for (P_Instance *inst = engine->instance_sentinel.next; 
-		 inst != &engine->instance_sentinel; 
+	for (P_Instance *inst = p_engine->instance_sentinel.next; 
+		 inst != &p_engine->instance_sentinel; 
 		 inst = inst->next)
 	{
 		if (inst->key == handle.key)
@@ -161,12 +172,12 @@ static J_ENTRY_POINT_DEF(P_CastRayJob)
 {
 }
 
-static P_Raycast P_CastRay(P_Engine *engine, v3 start_position, v3 direction, OS_Handle counter)
+static P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter)
 {
-	return P_CastRayEx(engine, start_position, direction, 1.f, 512, counter);
+	return P_CastRayEx(start_position, direction, 1.f, 512, counter);
 }
 
-static P_Raycast P_CastRayEx(P_Engine *engine, v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter)
+static P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter)
 {
 	// TODO: make job-based. return P_RaycastHandle?
 	/*

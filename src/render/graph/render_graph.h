@@ -95,8 +95,6 @@ struct R_Graph
 {
 	Arena *permanent_arena;
 	
-	G_Device *device;
-
 	LOG_Channel log_channel;
 
 	u32 texture_res_count; R_GraphTexture    texture_res[R_GRAPH_MAX_TEX_RESOURCES];
@@ -123,7 +121,7 @@ struct R_Graph
    CORE
    ================================================== */
 
-static void R_GraphInit    (R_Graph *graph, Arena *arena, G_Device *device, LOG_Channel log_channel);
+static void R_GraphInit    (R_Graph *graph, Arena *arena, LOG_Channel log_channel);
 static void R_GraphDestroy (R_Graph *graph);
 static void R_GraphReset   (R_Graph *graph);
 

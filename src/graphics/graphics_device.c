@@ -1,4 +1,6 @@
 
+static G_Device *g_device = NULL;
+
 #define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)				\
 	static G_##mgp_name##Key G_Device##mgp_name##ListPush(G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, G_##mgp_name##Key key) \
 	{																	\
@@ -110,22 +112,20 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMe
 							const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
 							void *ctx)
 {
-	G_Device *device = ctx;
-
-	LOG_Channel ch = device->log_channel;
+	LOG_Channel ch = g_device->log_channel;
 
 	switch (message_type)
 	{
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-			ch = device->log_channel_general;
+			ch = g_device->log_channel_general;
 			break;
 			
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-			ch = device->log_channel_validation;
+			ch = g_device->log_channel_validation;
 			break;
 			
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-			ch = device->log_channel_performance;
+			ch = g_device->log_channel_performance;
 			break;
 	}
 
@@ -151,14 +151,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMe
 	return VK_FALSE;
 }
 
-static void G_DeviceInit(G_Device *device, Arena *arena, LOG_Channel log_channel)
+static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel)
 {
 	device->permanent_arena = arena;
 
 	device->log_channel = log_channel;
 
-	device->log_channel_general     = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
-	device->log_channel_validation  = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
+	device->log_channel_general = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
+	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
 	
 	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
@@ -166,59 +166,77 @@ static void G_DeviceInit(G_Device *device, Arena *arena, LOG_Channel log_channel
 
 	device->current_frame_index = 0;
 
-	device->context = G_ContextInit(device->log_channel, G_DeviceVulkanDebugCallback, device);
+	G_DeviceSelectContext(device);
 
-	G_DeviceCreateSyncResources(device);
-	G_DeviceCreateBindless(device);
-	G_DeviceCreateImGui(device);
+	device->context = G_ContextInit(device->log_channel, G_DeviceVulkanDebugCallback, NULL);
 
-	DebugLogI(device->log_channel, "Initialized.");
+	G_DeviceCreateSyncResources();
+	G_DeviceCreateBindless();
+	G_DeviceCreateImGui();
+
+	DebugLogI(g_device->log_channel, "Initialized.");
 }
 
-static void G_DeviceDestroy(G_Device *device)
+static void G_DeviceDestroy(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		G_DevicePerFrameData *frame = &device->per_frame_data[i];
-		G_DeviceWaitUntil(device, frame->completion_point);
-		G_DeviceFlushFrameData(device, frame);
-
+		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		G_DeviceWaitUntil(frame->completion_point);
+		G_DeviceFlushFrameData(frame);
 		ArenaRelease(&frame->arena);
 	}
 	
 	// Layouts, Pipelines and Views are special and cached
 	// internally without any API to destroy them so we
 	// have to destroy them here.
-	for (G_DevicePipelineLayoutNode *node = device->layouts.first; node; node = node->next)
-		vkDestroyPipelineLayout(device->context.device, node->resource, NULL);
+	for (G_DevicePipelineLayoutNode *node = g_device->layouts.first; node; node = node->next)
+		vkDestroyPipelineLayout(g_device->context.device, node->resource, NULL);
 
-	for (G_DevicePipelineNode *node = device->pipelines.first; node; node = node->next)
-		vkDestroyPipeline(device->context.device, node->resource, NULL);
+	for (G_DevicePipelineNode *node = g_device->pipelines.first; node; node = node->next)
+		vkDestroyPipeline(g_device->context.device, node->resource, NULL);
 
-	for (G_DeviceTextureViewNode *node = device->views.first; node; node = node->next)
-		vkDestroyImageView(device->context.device, node->resource.vk_handle, NULL);
+	for (G_DeviceTextureViewNode *node = g_device->views.first; node; node = node->next)
+		vkDestroyImageView(g_device->context.device, node->resource.vk_handle, NULL);
 	
-	G_DeviceDestroyImGui(device);
-	G_DeviceDestroyBindless(device);
-	G_DeviceDestroySyncResources(device);
+	G_DeviceDestroyImGui();
+	G_DeviceDestroyBindless();
+	G_DeviceDestroySyncResources();
 
-	G_ContextDestroy(&device->context);
+	G_ContextDestroy(&g_device->context);
 
-	DebugLogI(device->log_channel, "Destroyed.");
+	DebugLogI(g_device->log_channel, "Destroyed.");
+
+	g_device = NULL;
 }
 
-static void G_DeviceFlushFrameData(G_Device *device, G_DevicePerFrameData *frame_data)
+static void G_DeviceSelectContext(G_Device *device)
+{
+	g_device = device;
+}
+
+static G_Device *G_DeviceGetSelected(void)
+{
+	return g_device;
+}
+
+static VkFormat G_DeviceDepthFormat(void)
+{
+	return g_device->context.depth_format;
+}
+
+static void G_DeviceFlushFrameData(G_DevicePerFrameData *frame_data)
 {
 	for (G_DestroyedImage *img = frame_data->destroyed_image_head; img; img = img->next)
-		vmaDestroyImage(device->context.vma_allocator, img->image, img->allocation);
+		vmaDestroyImage(g_device->context.vma_allocator, img->image, img->allocation);
 
 	for (G_DestroyedBuffer *b = frame_data->destroyed_buffer_head; b; b = b->next)
-		vmaDestroyBuffer(device->context.vma_allocator, b->buffer, b->allocation);
+		vmaDestroyBuffer(g_device->context.vma_allocator, b->buffer, b->allocation);
 	
 	for (G_DestroyedSampler *s = frame_data->destroyed_sampler_head; s; s = s->next)
 	{
-		vkDestroySampler(device->context.device, s->sampler, NULL);
-		G_BindlessFreeSampler(&device->bindless, s->bindless);
+		vkDestroySampler(g_device->context.device, s->sampler, NULL);
+		G_BindlessFreeSampler(&g_device->bindless, s->bindless);
 	}
 	
 	frame_data->destroyed_sampler_head = NULL;
@@ -230,14 +248,12 @@ static void G_DeviceFlushFrameData(G_Device *device, G_DevicePerFrameData *frame
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.
 
-static G_CmdBuffer G_DeviceBeginFrame(G_Device *device, G_Swapchain *swapchain)
+static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 {
-	G_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
+	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 
-	G_DeviceFlushFrameData(device, frame_data);
-
-	if (frame_data->completion_point.value > 0)
-		G_DeviceWaitUntil(device, frame_data->completion_point);
+	G_DeviceWaitUntil(frame_data->completion_point);
+	G_DeviceFlushFrameData(frame_data);
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {0};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
@@ -247,40 +263,38 @@ static G_CmdBuffer G_DeviceBeginFrame(G_Device *device, G_Swapchain *swapchain)
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
-	VkResult result = vkAcquireNextImage2KHR(device->context.device, &acquire_next_image_info, &swapchain->current_texture_index);
+	VkResult result = vkAcquireNextImage2KHR(g_device->context.device, &acquire_next_image_info, &swapchain->current_texture_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
-		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
+		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-		DebugLogB(device->log_channel, "Failed to acquire next image in swapchain.");
+		DebugLogB(g_device->log_channel, "Failed to acquire next image in swapchain.");
 
-	G_DeviceCmdPoolPurge(device, &frame_data->command_pool, frame_data->completion_point.value);
+	G_DeviceCmdPoolPurge(&frame_data->command_pool, frame_data->completion_point.frame);
 
-	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(device, &frame_data->command_pool);
+	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&frame_data->command_pool);
 	G_CmdBegin(&cmd);
 
 	return cmd;
 }
 
-static void G_DeviceEndFrame(G_Device *device, const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
+static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
 {
-	G_DeviceApplyBindlessUpdates(device);
+	G_DeviceApplyBindlessUpdates();
 
-	G_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
+	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 
-	// TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
-	
 	VkSemaphoreSubmitInfo image_available_semaphore = {0};
 	image_available_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	image_available_semaphore.semaphore = frame_data->image_available_semaphore;
-	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore = {0};
 	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	render_finished_semaphore.semaphore = frame_data->render_finished_semaphore;
-	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
 
-	frame_data->completion_point = G_DeviceSubmitEx(device, cmd,
+	frame_data->completion_point = G_DeviceSubmitEx(cmd,
 													1, &image_available_semaphore,
 													1, &render_finished_semaphore);
 	
@@ -293,30 +307,30 @@ static void G_DeviceEndFrame(G_Device *device, const G_Swapchain *swapchain, con
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &frame_data->render_finished_semaphore;
 
-	VkResult result = vkQueuePresentKHR(device->context.graphics_queue.vk_handle, &present_info);
+	VkResult result = vkQueuePresentKHR(g_device->context.graphics_queue.vk_handle, &present_info);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-		DebugLogB(device->log_channel, "TODO We need to rebuild the entire swapchain here.");
+		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS)
-		DebugLogB(device->log_channel, "Failed to present swapchain image.");
+		DebugLogB(g_device->log_channel, "Failed to present swapchain image. (%u)", result);
 
-	device->current_frame_index = (device->current_frame_index + 1) % G_FRAMES_IN_FLIGHT;
+	g_device->current_frame_index = (g_device->current_frame_index + 1) % G_FRAMES_IN_FLIGHT;
 	
-	G_DeviceCmdPoolRelease(device, &frame_data->command_pool, cmd, frame_data->completion_point.value);
+	G_DeviceCmdPoolRelease(&frame_data->command_pool, cmd, frame_data->completion_point.frame);
 }
 
-static G_TimelinePoint G_DeviceSubmit(G_Device *device, const G_CmdBuffer *cmd)
+static G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
 {
-	return G_DeviceSubmitEx(device, cmd, 0, NULL, 0, NULL);
+	return G_DeviceSubmitEx(cmd, 0, NULL, 0, NULL);
 }
 
-static G_TimelinePoint G_DeviceSubmitEx(G_Device *device, const G_CmdBuffer *cmd,
+static G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
 				 u32 wait_count, const VkSemaphoreSubmitInfo *waits,
 				 u32 signal_count, const VkSemaphoreSubmitInfo *signals)
 {
 	G_CmdEnd(cmd);
 
-	G_TimelinePoint timeline_point = G_SemaphoreSignal(&device->graphics_semaphore);
+	G_TimelinePoint timeline_point = G_SemaphoreSignal(&g_device->graphics_semaphore);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -325,7 +339,7 @@ static G_TimelinePoint G_DeviceSubmitEx(G_Device *device, const G_CmdBuffer *cmd
 	VkSemaphoreSubmitInfo timeline_signal_info = {0};
 	timeline_signal_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 	timeline_signal_info.semaphore = timeline_point.semaphore;
-	timeline_signal_info.value = timeline_point.value;
+	timeline_signal_info.value = timeline_point.frame;
 	timeline_signal_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 	all_signals[0] = timeline_signal_info;
@@ -351,7 +365,7 @@ static G_TimelinePoint G_DeviceSubmitEx(G_Device *device, const G_CmdBuffer *cmd
 	submit_info.signalSemaphoreInfoCount = 1 + signal_count;
 	submit_info.pSignalSemaphoreInfos = all_signals;
 
-	G_VK_CHECK(vkQueueSubmit2(device->context.graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
+	G_VK_CHECK(vkQueueSubmit2(g_device->context.graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
 			   "Failed to submit command to queue.");
 
 	ScratchRelease(&scratch);
@@ -359,19 +373,19 @@ static G_TimelinePoint G_DeviceSubmitEx(G_Device *device, const G_CmdBuffer *cmd
 	return timeline_point;
 }
 
-static G_CmdBuffer G_DeviceSubmitImBegin(G_Device *device)
+static G_CmdBuffer G_DeviceSubmitImBegin(void)
 {
-	vkQueueWaitIdle(device->context.graphics_queue.vk_handle);
+	vkQueueWaitIdle(g_device->context.graphics_queue.vk_handle);
 
-	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(device, &device->per_frame_data[device->current_frame_index].command_pool);
+	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&g_device->per_frame_data[g_device->current_frame_index].command_pool);
 	G_CmdBegin(&cmd);
 
 	return cmd;
 }
 
-static void G_DeviceSubmitImEnd(G_Device *device, const G_CmdBuffer *cmd)
+static void G_DeviceSubmitImEnd(const G_CmdBuffer *cmd)
 {
-	G_DeviceWaitUntil(device, G_DeviceSubmit(device, cmd));
+	G_DeviceWaitUntil(G_DeviceSubmit(cmd));
 }
 
 // TODO: We really shouldn't need to initialize
@@ -383,46 +397,46 @@ static void G_DeviceSubmitImEnd(G_Device *device, const G_CmdBuffer *cmd)
 //       --> Also, do VMA's function pointers
 //           break down here? Or is it okay?
 
-static void G_DeviceHotLoad(G_Device *device)
+static void G_DeviceHotLoad(void)
 {
 	volkInitialize();
-	volkLoadInstance(device->context.instance);
-	volkLoadDevice(device->context.device);
+	volkLoadInstance(g_device->context.instance);
+	volkLoadDevice(g_device->context.device);
 
-	G_DeviceWaitIdle(device);
+	G_DeviceWaitIdle();
 }
 
-static void G_DeviceHotUnload(G_Device *device)
+static void G_DeviceHotUnload(void)
 {
 	volkFinalize();
 }
 
-static void G_DeviceQueryPoolDestroy(const G_Device *device, VkQueryPool pool)
+static void G_DeviceQueryPoolDestroy(VkQueryPool pool)
 {
-	vkDestroyQueryPool(device->context.device, pool, NULL);
+	vkDestroyQueryPool(g_device->context.device, pool, NULL);
 }
 
-static void G_DeviceWaitIdle(const G_Device *device)
+static void G_DeviceWaitIdle(void)
 {
-	vkDeviceWaitIdle(device->context.device);
+	vkDeviceWaitIdle(g_device->context.device);
 }
 
-static void G_DeviceWaitForFence(const G_Device *device, VkFence fence)
+static void G_DeviceWaitForFence(VkFence fence)
 {
-	vkWaitForFences(device->context.device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(g_device->context.device, 1, &fence, VK_TRUE, UINT64_MAX);
 }
 
-static void G_DeviceResetFence(const G_Device *device, VkFence fence)
+static void G_DeviceResetFence(VkFence fence)
 {
-	vkResetFences(device->context.device, 1, &fence);
+	vkResetFences(g_device->context.device, 1, &fence);
 }
 
-static void G_DeviceDestroyFence(const G_Device *device, VkFence fence)
+static void G_DeviceDestroyFence(VkFence fence)
 {
-	vkDestroyFence(device->context.device, fence, NULL);
+	vkDestroyFence(g_device->context.device, fence, NULL);
 }
 
-static G_Semaphore G_DeviceSemaphoreCreate(const G_Device *device, u64 value)
+static G_Semaphore G_DeviceSemaphoreCreate(u64 value)
 {
 	VkSemaphoreTypeCreateInfo timeline_type_create_info = {0};
 	timeline_type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -436,57 +450,57 @@ static G_Semaphore G_DeviceSemaphoreCreate(const G_Device *device, u64 value)
 
 	VkSemaphore vk_semaphore = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateSemaphore(device->context.device,
+	G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
 								 &timeline_semaphore_create_info, NULL,
 								 &vk_semaphore),
 			   "Failed to create timeline semaphore.");
 
 	G_Semaphore semaphore = {0};
 	semaphore.vk_handle = vk_semaphore;
-	semaphore.target = value;
+	semaphore.last_submitted_frame = value;
 
 	return semaphore;
 }
 
-static void G_DeviceSemaphoreDestroy(const G_Device *device, const G_Semaphore *semaphore)
+static void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore)
 {
-	vkDestroySemaphore(device->context.device, semaphore->vk_handle, NULL);
+	vkDestroySemaphore(g_device->context.device, semaphore->vk_handle, NULL);
 }
 
-static u64 G_DeviceSemaphoreValue(const G_Device *device, const G_Semaphore *semaphore)
+static u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore)
 {
 	u64 result = 0;
 
-	vkGetSemaphoreCounterValue(device->context.device,
+	vkGetSemaphoreCounterValue(g_device->context.device,
 							   semaphore->vk_handle,
 							   &result);
 
 	return result;
 }
 
-static void G_DeviceWaitUntil(const G_Device *device, G_TimelinePoint point)
+static void G_DeviceWaitUntil(G_TimelinePoint point)
 {
-	if (point.value == 0)
+	if (point.frame == 0)
 		return;
 
 	VkSemaphoreWaitInfo wait_info = {0};
 	wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
 	wait_info.semaphoreCount = 1;
 	wait_info.pSemaphores = &point.semaphore;
-	wait_info.pValues = &point.value;
+	wait_info.pValues = &point.frame;
 
-	G_VK_CHECK(vkWaitSemaphores(device->context.device,
+	G_VK_CHECK(vkWaitSemaphores(g_device->context.device,
 								&wait_info, UINT64_MAX),
 			   "Failed to wait on timeline semaphore");
 }
 
-static G_Swapchain G_DeviceSwapchainCreate(G_Device *device)
+static G_Swapchain G_DeviceSwapchainCreate(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	const G_SwapchainSupportDetails *details = &device->context.swapchain_details;
+	const G_SwapchainSupportDetails *details = &g_device->context.swapchain_details;
 
-	VkSurfaceFormatKHR surface_format = G_DeviceChooseSwapchainSurfaceFormat(device->log_channel, details->surface_format_count, details->surface_formats);
+	VkSurfaceFormatKHR surface_format = G_DeviceChooseSwapchainSurfaceFormat(g_device->log_channel, details->surface_format_count, details->surface_formats);
 	VkPresentModeKHR present_mode = G_DeviceChooseSwapchainPresentMode(details->present_mode_count, details->present_modes, false); // TODO: add option to enable VSYNC
 	VkExtent2D extent = G_DeviceChooseSwapchainExtent(&details->capabilities);
 
@@ -505,7 +519,7 @@ static G_Swapchain G_DeviceSwapchainCreate(G_Device *device)
 
 	VkSwapchainCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	create_info.surface = device->context.surface;
+	create_info.surface = g_device->context.surface;
 	create_info.minImageCount = texture_count;
 	create_info.imageFormat = surface_format.format;
 	create_info.imageColorSpace = surface_format.colorSpace;
@@ -521,23 +535,23 @@ static G_Swapchain G_DeviceSwapchainCreate(G_Device *device)
 	create_info.clipped = VK_TRUE;
 	create_info.oldSwapchain = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateSwapchainKHR(device->context.device,
+	G_VK_CHECK(vkCreateSwapchainKHR(g_device->context.device,
 									&create_info, NULL,
 									&swapchain.vk_handle),
 			   "Failed to create swapchain.");
 
-	vkGetSwapchainImagesKHR(device->context.device, swapchain.vk_handle, &texture_count, NULL);
+	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &texture_count, NULL);
 
-	DebugLogAssert(device->log_channel, texture_count > 0, "Failed to find any images in swapchain.");
+	DebugLogAssert(g_device->log_channel, texture_count > 0, "Failed to find any images in swapchain.");
 
 	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, texture_count);
 
-	vkGetSwapchainImagesKHR(device->context.device, swapchain.vk_handle, &texture_count, vk_images);
+	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &texture_count, vk_images);
 
 	swapchain.texture_count = texture_count;
 
-	swapchain.textures = ArenaPushArray(device->permanent_arena, G_Texture,     texture_count);
-	swapchain.views    = ArenaPushArray(device->permanent_arena, G_TextureView, texture_count);
+	swapchain.textures = ArenaPushArray(g_device->permanent_arena, G_Texture,     texture_count);
+	swapchain.views    = ArenaPushArray(g_device->permanent_arena, G_TextureView, texture_count);
 
 	for (u32 i = 0; i < texture_count; i++)
 	{
@@ -556,7 +570,7 @@ static G_Swapchain G_DeviceSwapchainCreate(G_Device *device)
 		texture.mipmap_count = 1;
 		texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-		swapchain.textures[i] = G_DeviceTextureListPushAuto(&device->textures, device->permanent_arena, &texture);
+		swapchain.textures[i] = G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
 
 		swapchain.views[i].type = VK_IMAGE_VIEW_TYPE_2D;
 		swapchain.views[i].range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -582,28 +596,28 @@ static G_Swapchain G_DeviceSwapchainCreate(G_Device *device)
 		view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 		view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-		G_VK_CHECK(vkCreateImageView(device->context.device,
+		G_VK_CHECK(vkCreateImageView(g_device->context.device,
 									 &view_create_info, NULL,
 									 &swapchain.views[i].vk_handle),
 				   "Failed to create texture image view.");
 	}
 
-	DebugLogD(device->log_channel, "Swapchain created.");
+	DebugLogD(g_device->log_channel, "Swapchain created.");
 
 	ScratchRelease(&scratch);
 
 	return swapchain;
 }
 
-static void G_DeviceSwapchainDestroy(const G_Device *device, const G_Swapchain *swapchain)
+static void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < swapchain->texture_count; i++)
-		vkDestroyImageView(device->context.device, swapchain->views[i].vk_handle, NULL);
+		vkDestroyImageView(g_device->context.device, swapchain->views[i].vk_handle, NULL);
 
-	vkDestroySwapchainKHR(device->context.device, swapchain->vk_handle, NULL);
+	vkDestroySwapchainKHR(g_device->context.device, swapchain->vk_handle, NULL);
 }
 
-static G_CmdPool G_DeviceCmdPoolCreate(const G_Device *device, u32 family_index)
+static G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
 {
 	VkCommandPoolCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -612,7 +626,7 @@ static G_CmdPool G_DeviceCmdPoolCreate(const G_Device *device, u32 family_index)
 
 	G_CmdPool pool = {0};
 
-	G_VK_CHECK(vkCreateCommandPool(device->context.device,
+	G_VK_CHECK(vkCreateCommandPool(g_device->context.device,
 								   &create_info, NULL,
 								   &pool.vk_handle),
 			   "Failed to create command pool.");
@@ -625,12 +639,12 @@ static G_CmdPool G_DeviceCmdPoolCreate(const G_Device *device, u32 family_index)
 	return pool;
 }
 
-static void G_DeviceCmdPoolDestroy(const G_Device *device, const G_CmdPool *pool)
+static void G_DeviceCmdPoolDestroy(const G_CmdPool *pool)
 {
-	vkDestroyCommandPool(device->context.device, pool->vk_handle, NULL);
+	vkDestroyCommandPool(g_device->context.device, pool->vk_handle, NULL);
 }
 
-static G_CmdBuffer G_DeviceCmdPoolAcquire(G_Device *device, G_CmdPool *pool)
+static G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
 {
 	VkCommandBuffer cb = VK_NULL_HANDLE;
 	
@@ -640,7 +654,7 @@ static G_CmdBuffer G_DeviceCmdPoolAcquire(G_Device *device, G_CmdPool *pool)
 		
 		vkResetCommandBuffer(cb, 0);
 
-		//DebugLogD(device->log_channel, "Reused");
+		//DebugLogD(g_device->log_channel, "Reused");
 	}
 	else
 	{
@@ -650,20 +664,20 @@ static G_CmdBuffer G_DeviceCmdPoolAcquire(G_Device *device, G_CmdPool *pool)
 		alloc_info.commandBufferCount = 1;
 		alloc_info.commandPool = pool->vk_handle;
 		
-		G_VK_CHECK(vkAllocateCommandBuffers(device->context.device,
+		G_VK_CHECK(vkAllocateCommandBuffers(g_device->context.device,
 											&alloc_info,
 											&cb),
 				   "Failed to allocate command pool command buffers.");
 		
-		//DebugLogD(device->log_channel, "Allocation");
+		//DebugLogD(g_device->log_channel, "Allocation");
 	}
 
-	return G_CmdInit(cb, device);
+	return G_CmdInit(cb);
 }
 
-static void G_DeviceCmdPoolRelease(const G_Device *device, G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value)
+static void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value)
 {
-	DebugLogAssert(device->log_channel,
+	DebugLogAssert(g_device->log_channel,
 				   pool->release_count < ArraySize(pool->release_queue),
 				   "Command pool release queue is full.");
 	
@@ -677,7 +691,7 @@ static void G_DeviceCmdPoolRelease(const G_Device *device, G_CmdPool *pool, cons
 	pool->release_count++;
 }
 
-static void G_DeviceCmdPoolPurge(const G_Device *device, G_CmdPool *pool, u64 fence_value)
+static void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value)
 {
 	while (pool->release_count > 0)
 	{
@@ -686,7 +700,7 @@ static void G_DeviceCmdPoolPurge(const G_Device *device, G_CmdPool *pool, u64 fe
 		if (released->fence_value > fence_value)
 			break;
 
-		DebugLogAssert(device->log_channel,
+		DebugLogAssert(g_device->log_channel,
 					   pool->acquire_count < ArraySize(pool->acquire_stack),
 					   "Command pool acquire stack is full.");
 
@@ -696,17 +710,17 @@ static void G_DeviceCmdPoolPurge(const G_Device *device, G_CmdPool *pool, u64 fe
 	}
 }
 
-static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_Device *device, G_ShaderKey program)
+static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_ShaderKey program)
 {
 	u64 hashed_key_value = 0;
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &program, sizeof(program));
 	
 	G_PipelineLayoutKey hashed_key = { hashed_key_value };
 	
-	if (G_DevicePipelineLayoutFromKey(device, hashed_key))
+	if (G_DevicePipelineLayoutFromKey(hashed_key))
 		return hashed_key;
 	
-	const G_ShaderProgram *gfx_program = G_DeviceShaderProgramFromKey(device, program);
+	const G_ShaderProgram *gfx_program = G_DeviceShaderProgramFromKey(program);
 	
 	VkShaderStageFlags stage = G_ShaderProgramIsCompute(gfx_program)
 		? VK_SHADER_STAGE_COMPUTE_BIT
@@ -720,7 +734,7 @@ static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_Device *device, G_Shade
 	VkPipelineLayoutCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	create_info.setLayoutCount = 1;
-	create_info.pSetLayouts = &device->bindless.layout;
+	create_info.pSetLayouts = &g_device->bindless.layout;
 
 	if (push_constants.size > 0)
 	{
@@ -735,23 +749,23 @@ static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_Device *device, G_Shade
 
 	VkPipelineLayout layout = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreatePipelineLayout(device->context.device,
+	G_VK_CHECK(vkCreatePipelineLayout(g_device->context.device,
 									  &create_info, NULL,
 									  &layout),
 			   "Failed to create pipeline layout.");
 
-	return G_DevicePipelineLayoutListPush(&device->layouts, device->permanent_arena, &layout, hashed_key);
+	return G_DevicePipelineLayoutListPush(&g_device->layouts, g_device->permanent_arena, &layout, hashed_key);
 }
 
-static VkPipelineLayout G_DevicePipelineLayoutFromKey(const G_Device *device, G_PipelineLayoutKey key)
+static VkPipelineLayout G_DevicePipelineLayoutFromKey(G_PipelineLayoutKey key)
 {
-	VkPipelineLayout *layout = G_DevicePipelineLayoutListGet(&device->layouts, key);
+	VkPipelineLayout *layout = G_DevicePipelineLayoutListGet(&g_device->layouts, key);
 	return layout ? *layout : VK_NULL_HANDLE;
 }
 
-static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_GraphicsPipelineDef *def)
+static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
 {
-	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(device, def->program);
+	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(def->program);
 	
 	u64 hashed_key_value = 0;
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
@@ -759,7 +773,7 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 	
 	G_PipelineKey hashed_key = { hashed_key_value };
 	
-	if (G_DevicePipelineFromKey(device, hashed_key))
+	if (G_DevicePipelineFromKey(hashed_key))
 	{
 		G_PipelineSt st = {0};
 		st.pipeline = hashed_key;
@@ -769,9 +783,9 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 		return st;
 	}
 	
-	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&device->layouts, layout_key);
+	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&g_device->layouts, layout_key);
 	
-	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(device, def->program);
+	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
 	AssertTrue(!G_ShaderProgramIsCompute(program));
 
@@ -831,15 +845,15 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 
 		MemZeroStruct(bs);
 
-		bs->blendEnable         = def->blend_state.enabled;
+		bs->blendEnable = def->blend_state.enabled;
 
 		bs->srcColorBlendFactor = def->blend_state.colour.src;
 		bs->dstColorBlendFactor = def->blend_state.colour.dst;
-		bs->colorBlendOp        = def->blend_state.colour.op;
+		bs->colorBlendOp = def->blend_state.colour.op;
 
 		bs->srcAlphaBlendFactor = def->blend_state.alpha.src;
 		bs->dstAlphaBlendFactor = def->blend_state.alpha.dst;
-		bs->alphaBlendOp        = def->blend_state.alpha.op;
+		bs->alphaBlendOp = def->blend_state.alpha.op;
 
 		if (def->blend_state.write_mask[0]) bs->colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 		if (def->blend_state.write_mask[1]) bs->colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
@@ -886,7 +900,7 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 	dynamic_state_create_info.pDynamicStates = graphics_pipeline_dynamic_states;
 
 	VkFormat depth_stencil_format = def->has_depth_attachment
-		? device->context.depth_format
+		? G_DeviceDepthFormat()
 		: VK_FORMAT_UNDEFINED;
 
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {0};
@@ -935,14 +949,14 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateGraphicsPipelines(device->context.device,
-										 device->context.pipeline_process_cache,
+	G_VK_CHECK(vkCreateGraphicsPipelines(g_device->context.device,
+										 g_device->context.pipeline_process_cache,
 										 1, &graphics_pipeline_create_info,
 										 NULL, &pipeline),
 			   "Failed to create graphics pipeline.");
 
 	G_PipelineSt st = {0};
-	st.pipeline = G_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
+	st.pipeline = G_DevicePipelineListPush(&g_device->pipelines, g_device->permanent_arena, &pipeline, hashed_key);
 	st.layout = layout_key;
 	st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
@@ -951,9 +965,9 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(G_Device *device, const G_Grap
 	return st;
 }
 
-static G_PipelineSt G_DeviceFetchComputePipeline(G_Device *device, const G_ComputePipelineDef *def)
+static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def)
 {
-	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(device, def->program);
+	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(def->program);
 	
 	u64 hashed_key_value = 0;
 	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
@@ -961,7 +975,7 @@ static G_PipelineSt G_DeviceFetchComputePipeline(G_Device *device, const G_Compu
 	
 	G_PipelineKey hashed_key = { hashed_key_value };
 	
-	if (G_DevicePipelineFromKey(device, hashed_key))
+	if (G_DevicePipelineFromKey(hashed_key))
 	{
 		G_PipelineSt st = {0};
 		st.pipeline = hashed_key;
@@ -971,9 +985,9 @@ static G_PipelineSt G_DeviceFetchComputePipeline(G_Device *device, const G_Compu
 		return st;
 	}
 	
-	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&device->layouts, layout_key);
+	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&g_device->layouts, layout_key);
 	
-	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(device, def->program);
+	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
 	AssertTrue(G_ShaderProgramIsCompute(program));
 
@@ -997,27 +1011,27 @@ static G_PipelineSt G_DeviceFetchComputePipeline(G_Device *device, const G_Compu
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateComputePipelines(device->context.device,
-										device->context.pipeline_process_cache,
+	G_VK_CHECK(vkCreateComputePipelines(g_device->context.device,
+										g_device->context.pipeline_process_cache,
 										1, &compute_pipeline_create_info,
 										NULL, &pipeline),
 			   "Failed to create compute pipeline.");
 
 	G_PipelineSt st = {0};
-	st.pipeline = G_DevicePipelineListPush(&device->pipelines, device->permanent_arena, &pipeline, hashed_key);
+	st.pipeline = G_DevicePipelineListPush(&g_device->pipelines, g_device->permanent_arena, &pipeline, hashed_key);
 	st.layout = layout_key;
 	st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 	
 	return st;
 }
 
-static VkPipeline G_DevicePipelineFromKey(const G_Device *device, G_PipelineKey key)
+static VkPipeline G_DevicePipelineFromKey(G_PipelineKey key)
 {
-	VkPipeline *pipeline = G_DevicePipelineListGet(&device->pipelines, key);
+	VkPipeline *pipeline = G_DevicePipelineListGet(&g_device->pipelines, key);
 	return pipeline ? *pipeline : VK_NULL_HANDLE;
 }
 
-static G_TextureKey G_DeviceTextureAlloc(G_Device *device, const G_TextureAllocInfo *alloc_info)
+static G_TextureKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info)
 {
 	G_Texture texture = {0};
 
@@ -1049,7 +1063,7 @@ static G_TextureKey G_DeviceTextureAlloc(G_Device *device, const G_TextureAllocI
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	b32 is_depth   = (alloc_info->format == device->context.depth_format);
+	b32 is_depth   = (alloc_info->format == G_DeviceDepthFormat());
 	b32 is_cubemap = (alloc_info->flags & G_TextureAllocFlag_Cubemap) != 0;
 	b32 is_storage = (alloc_info->flags & G_TextureAllocFlag_Storage) != 0;
 
@@ -1096,27 +1110,27 @@ static G_TextureKey G_DeviceTextureAlloc(G_Device *device, const G_TextureAllocI
 	*/
 
 	VkImageCreateInfo create_info = {0};
-	create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	create_info.imageType     = alloc_info->type;
-	create_info.extent.width  = texture.width;
+	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	create_info.imageType = alloc_info->type;
+	create_info.extent.width = texture.width;
 	create_info.extent.height = texture.height;
-	create_info.extent.depth  = texture.depth;
-	create_info.mipLevels     = texture.mipmap_count;
-	create_info.arrayLayers   = texture.layer_count;
-	create_info.format        = texture.format;
-	create_info.tiling        = texture.tiling;
-	create_info.usage         = texture.usage;
+	create_info.extent.depth = texture.depth;
+	create_info.mipLevels = texture.mipmap_count;
+	create_info.arrayLayers = texture.layer_count;
+	create_info.format = texture.format;
+	create_info.tiling = texture.tiling;
+	create_info.usage = texture.usage;
 	create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	create_info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-	create_info.samples       = texture.sample_count;
-	create_info.flags         = vk_create_flags;
+	create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	create_info.samples = texture.sample_count;
+	create_info.flags = vk_create_flags;
 
 	VmaAllocationCreateInfo vma_alloc_info = {0};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.priority = 1.f;
 	vma_alloc_info.flags = vma_alloc_flags;
 
-	G_VK_CHECK(vmaCreateImage(device->context.vma_allocator,
+	G_VK_CHECK(vmaCreateImage(g_device->context.vma_allocator,
 							  &create_info,
 							  &vma_alloc_info,
 							  &texture.vk_handle,
@@ -1124,10 +1138,10 @@ static G_TextureKey G_DeviceTextureAlloc(G_Device *device, const G_TextureAllocI
 							  &texture.allocation_info),
 			   "Failed to allocate texture.");
 
-	return G_DeviceTextureListPushAuto(&device->textures, device->permanent_arena, &texture);
+	return G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
 }
 
-static G_TextureKey G_DeviceTextureAlloc2D(G_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = width;
@@ -1141,10 +1155,10 @@ static G_TextureKey G_DeviceTextureAlloc2D(G_Device *device, u32 width, u32 heig
 	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	alloc_info.flags = G_TextureAllocFlag_None;
 
-	return G_DeviceTextureAlloc(device, &alloc_info);
+	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAlloc2DRW(G_Device *device, u32 width, u32 height, VkFormat format, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = width;
@@ -1158,20 +1172,20 @@ static G_TextureKey G_DeviceTextureAlloc2DRW(G_Device *device, u32 width, u32 he
 	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	alloc_info.flags = G_TextureAllocFlag_Storage;
 
-	return G_DeviceTextureAlloc(device, &alloc_info);
+	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAllocDepth2D(G_Device *device, u32 width, u32 height, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAllocDepth2D(u32 width, u32 height, u32 mipmaps)
 {
-	return G_DeviceTextureAlloc2D(device, width, height, device->context.depth_format, mipmaps);
+	return G_DeviceTextureAlloc2D(width, height, G_DeviceDepthFormat(), mipmaps);
 }
 
-static G_TextureKey G_DeviceTextureAllocDepth2DRW(G_Device *device, u32 width, u32 height, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps)
 {
-	return G_DeviceTextureAlloc2DRW(device, width, height, device->context.depth_format, mipmaps);
+	return G_DeviceTextureAlloc2DRW(width, height, G_DeviceDepthFormat(), mipmaps);
 }
 
-static G_TextureKey G_DeviceTextureAllocCubemap(G_Device *device, u32 resolution, VkFormat format, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = resolution;
@@ -1185,20 +1199,20 @@ static G_TextureKey G_DeviceTextureAllocCubemap(G_Device *device, u32 resolution
 	alloc_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	alloc_info.flags = G_TextureAllocFlag_Cubemap;
 
-	return G_DeviceTextureAlloc(device, &alloc_info);
+	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAllocCubemapDepth(G_Device *device, u32 resolution, u32 mipmaps)
+static G_TextureKey G_DeviceTextureAllocCubemapDepth(u32 resolution, u32 mipmaps)
 {
-	return G_DeviceTextureAllocCubemap(device, resolution, device->context.depth_format, mipmaps);
+	return G_DeviceTextureAllocCubemap(resolution, G_DeviceDepthFormat(), mipmaps);
 }
 
-static void G_DeviceTextureDestroy(G_Device *device, G_TextureKey texture_key)
+static void G_DeviceTextureDestroy(G_TextureKey texture_key)
 {
-	G_Texture *texture = G_DeviceTextureListGet(&device->textures, texture_key);
-	DebugLogAssert(device->log_channel, texture, "Invalid texture with key %llu when destroying.", texture_key.value);
+	G_Texture *texture = G_DeviceTextureListGet(&g_device->textures, texture_key);
+	DebugLogAssert(g_device->log_channel, texture, "Invalid texture with key %llu when destroying.", texture_key.value);
 
-	G_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
+	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 
 	G_DestroyedImage *node = ArenaPushArray(&frame_data->arena, G_DestroyedImage, 1);
 	node->image = texture->vk_handle;
@@ -1207,20 +1221,20 @@ static void G_DeviceTextureDestroy(G_Device *device, G_TextureKey texture_key)
 	frame_data->destroyed_image_head = node;
 }
 
-static G_Texture *G_DeviceTextureFromKey(const G_Device *device, G_TextureKey key)
+static G_Texture *G_DeviceTextureFromKey(G_TextureKey key)
 {
-	return G_DeviceTextureListGet(&device->textures, key);
+	return G_DeviceTextureListGet(&g_device->textures, key);
 }
 
-static G_TextureViewKey G_DeviceTextureViewFetch(G_Device *device, const G_TextureViewCreateInfo *info)
+static G_TextureViewKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *info)
 {
 	G_TextureViewKey hashed_key = { HashBytesGeneric(info, sizeof(*info)) };
 	
-	if (G_DeviceTextureViewFromKey(device, hashed_key))
+	if (G_DeviceTextureViewFromKey(hashed_key))
 		return hashed_key;
 	
-	G_Texture *gfx_texture = G_DeviceTextureFromKey(device, info->texture);
-	DebugLogAssert(device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view.", info->texture.value);
+	G_Texture *gfx_texture = G_DeviceTextureFromKey(info->texture);
+	DebugLogAssert(g_device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view.", info->texture.value);
 	
 	VkImageViewCreateInfo view_create_info = {0};
 	view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1228,11 +1242,11 @@ static G_TextureViewKey G_DeviceTextureViewFetch(G_Device *device, const G_Textu
 	view_create_info.viewType = info->type;
 	view_create_info.format = gfx_texture->format;
 
-	view_create_info.subresourceRange.aspectMask     = info->range.aspects;
-	view_create_info.subresourceRange.baseMipLevel   = info->range.base_mip;
-	view_create_info.subresourceRange.levelCount     = info->range.mips;
+	view_create_info.subresourceRange.aspectMask = info->range.aspects;
+	view_create_info.subresourceRange.baseMipLevel = info->range.base_mip;
+	view_create_info.subresourceRange.levelCount = info->range.mips;
 	view_create_info.subresourceRange.baseArrayLayer = info->range.base_layer;
-	view_create_info.subresourceRange.layerCount     = info->range.layers;
+	view_create_info.subresourceRange.layerCount = info->range.layers;
 
 	view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
 	view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -1243,7 +1257,7 @@ static G_TextureViewKey G_DeviceTextureViewFetch(G_Device *device, const G_Textu
 	view.type = info->type;
 	view.range = info->range;
 
-	G_VK_CHECK(vkCreateImageView(device->context.device,
+	G_VK_CHECK(vkCreateImageView(g_device->context.device,
 								 &view_create_info, NULL,
 								 &view.vk_handle),
 			   "Failed to create texture image view.");
@@ -1251,15 +1265,15 @@ static G_TextureViewKey G_DeviceTextureViewFetch(G_Device *device, const G_Textu
 	b32 is_cubemap = (gfx_texture->flags & G_TextureFlag_Cubemap) != 0;
 	b32 is_storage = (gfx_texture->flags & G_TextureFlag_Storage) != 0;
 
-	view.bindless = G_BindlessRegisterView(&device->bindless, view.vk_handle, is_cubemap, is_storage);
+	view.bindless = G_BindlessRegisterView(&g_device->bindless, view.vk_handle, is_cubemap, is_storage);
 	
-	return G_DeviceTextureViewListPush(&device->views, device->permanent_arena, &view, hashed_key);
+	return G_DeviceTextureViewListPush(&g_device->views, g_device->permanent_arena, &view, hashed_key);
 }
 
-static G_TextureViewKey G_DeviceTextureViewAuto(G_Device *device, G_TextureKey texture)
+static G_TextureViewKey G_DeviceTextureViewAuto(G_TextureKey texture)
 {
-	G_Texture *gfx_texture = G_DeviceTextureFromKey(device, texture);
-	DebugLogAssert(device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view (auto).", texture.value);
+	G_Texture *gfx_texture = G_DeviceTextureFromKey(texture);
+	DebugLogAssert(g_device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view (auto).", texture.value);
 
 	G_SubresourceRange range = {0};
 	range.aspects = gfx_texture->aspect_flags;
@@ -1278,23 +1292,23 @@ static G_TextureViewKey G_DeviceTextureViewAuto(G_Device *device, G_TextureKey t
 	info.type = view_type;
 	info.range = range;
 
-	return G_DeviceTextureViewFetch(device, &info);
+	return G_DeviceTextureViewFetch(&info);
 }
 
-static G_TextureView *G_DeviceTextureViewFromKey(const G_Device *device, G_TextureViewKey key)
+static G_TextureView *G_DeviceTextureViewFromKey(G_TextureViewKey key)
 {
-	return G_DeviceTextureViewListGet(&device->views, key);
+	return G_DeviceTextureViewListGet(&g_device->views, key);
 }
 
-static G_BindlessIndex G_DeviceTextureViewBindless(const G_Device *device, G_TextureViewKey key)
+static G_BindlessIndex G_DeviceTextureViewBindless(G_TextureViewKey key)
 {
-	G_TextureView *gfx_view = G_DeviceTextureViewFromKey(device, key);
-	DebugLogAssert(device->log_channel, gfx_view, "Invalid texture view with key %llu when getting bindless info.", key.value);
+	G_TextureView *gfx_view = G_DeviceTextureViewFromKey(key);
+	DebugLogAssert(g_device->log_channel, gfx_view, "Invalid texture view with key %llu when getting bindless info.", key.value);
 	
 	return G_BindlessIndexOf(gfx_view->bindless);
 }
 
-static G_BufferKey G_DeviceBufferAlloc(G_Device *device, const G_BufferAllocInfo *alloc_info)
+static G_BufferKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
 {
 	G_Buffer buffer = {0};
 	buffer.usage = alloc_info->usage;
@@ -1317,7 +1331,7 @@ static G_BufferKey G_DeviceBufferAlloc(G_Device *device, const G_BufferAllocInfo
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.flags = alloc_info->flags | VMA_ALLOCATION_CREATE_MAPPED_BIT; // just map every buffer it's easier and the performance loss is negligible i rekon
 	
-	G_VK_CHECK(vmaCreateBuffer(device->context.vma_allocator,
+	G_VK_CHECK(vmaCreateBuffer(g_device->context.vma_allocator,
 							   &buffer_create_info,
 							   &vma_alloc_info,
 							   &buffer.vk_handle,
@@ -1331,28 +1345,28 @@ static G_BufferKey G_DeviceBufferAlloc(G_Device *device, const G_BufferAllocInfo
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
 		address_info.buffer = buffer.vk_handle;
 
-		buffer.device_address = vkGetBufferDeviceAddress(device->context.device, &address_info);
+		buffer.device_address = vkGetBufferDeviceAddress(g_device->context.device, &address_info);
 	}
 
-	return G_DeviceBufferListPushAuto(&device->buffers, device->permanent_arena, &buffer);
+	return G_DeviceBufferListPushAuto(&g_device->buffers, g_device->permanent_arena, &buffer);
 }
 
-static G_BufferKey G_DeviceStageAlloc(G_Device *device, u64 size)
+static G_BufferKey G_DeviceStageAlloc(u64 size)
 {
 	G_BufferAllocInfo alloc_info = {0};
 	alloc_info.usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
 	alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	alloc_info.size = size;
 
-	return G_DeviceBufferAlloc(device, &alloc_info);
+	return G_DeviceBufferAlloc(&alloc_info);
 }
 
-static void G_DeviceBufferDestroy(G_Device *device, G_BufferKey buffer_key)
+static void G_DeviceBufferDestroy(G_BufferKey buffer_key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, buffer_key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", buffer_key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, buffer_key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", buffer_key.value);
 
-	G_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
+	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 
 	G_DestroyedBuffer *node = ArenaPushArray(&frame_data->arena, G_DestroyedBuffer, 1);
 	node->buffer = buffer->vk_handle;
@@ -1361,54 +1375,54 @@ static void G_DeviceBufferDestroy(G_Device *device, G_BufferKey buffer_key)
 	frame_data->destroyed_buffer_head = node;
 }
 
-static G_Buffer *G_DeviceBufferFromKey(const G_Device *device, G_BufferKey key)
+static G_Buffer *G_DeviceBufferFromKey(G_BufferKey key)
 {
-	return G_DeviceBufferListGet(&device->buffers, key);
+	return G_DeviceBufferListGet(&g_device->buffers, key);
 }
 
-static void *G_DeviceBufferMap(const G_Device *device, G_BufferKey key)
+static void *G_DeviceBufferMap(G_BufferKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when mapping memory.", key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when mapping memory.", key.value);
 	
 	return buffer->allocation_info.pMappedData;
 }
 
-static u64 G_DeviceBufferAddress(const G_Device *device, G_BufferKey key)
+static u64 G_DeviceBufferAddress(G_BufferKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when getting device address.", key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when getting device address.", key.value);
 
 	return buffer->device_address;
 }
 
-static void G_DeviceBufferRead(const G_Device *device, G_BufferKey key, void *dst, u64 length, u64 offset)
+static void G_DeviceBufferRead(G_BufferKey key, void *dst, u64 length, u64 offset)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when reading.", key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when reading.", key.value);
 	
-	vmaCopyAllocationToMemory(device->context.vma_allocator, buffer->allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(g_device->context.vma_allocator, buffer->allocation, offset, dst, length);
 }
 
-static void G_DeviceBufferWrite(const G_Device *device, G_BufferKey key, const void *src, u64 length, u64 offset)
+static void G_DeviceBufferWrite(G_BufferKey key, const void *src, u64 length, u64 offset)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when writing.", key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when writing.", key.value);
 	
-	vmaCopyMemoryToAllocation(device->context.vma_allocator, src, buffer->allocation, offset, length);
+	vmaCopyMemoryToAllocation(g_device->context.vma_allocator, src, buffer->allocation, offset, length);
 }
 
-static u64 G_DeviceBufferSize(const G_Device *device, G_BufferKey key)
+static u64 G_DeviceBufferSize(G_BufferKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&device->buffers, key);
-	DebugLogAssert(device->log_channel, buffer, "Invalid buffer with key %llu when getting size.", key.value);
+	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when getting size.", key.value);
 
 	return buffer->size;
 }
 
-static G_SamplerKey G_DeviceSamplerCreate(G_Device *device, const G_SamplerCreateInfo *info)
+static G_SamplerKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
 {
-	VkPhysicalDeviceProperties properties = device->context.physical_device_properties.properties;
+	VkPhysicalDeviceProperties properties = g_device->context.physical_device_properties.properties;
 
 	VkSamplerCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1430,7 +1444,7 @@ static G_SamplerKey G_DeviceSamplerCreate(G_Device *device, const G_SamplerCreat
 
 	G_Sampler sampler = {0};
 	
-	G_VK_CHECK(vkCreateSampler(device->context.device,
+	G_VK_CHECK(vkCreateSampler(g_device->context.device,
 							   &create_info, NULL,
 							   &sampler.vk_handle),
 			   "Failed to create texture sampler.");
@@ -1440,12 +1454,12 @@ static G_SamplerKey G_DeviceSamplerCreate(G_Device *device, const G_SamplerCreat
 	sampler.wrap_y = info->wrap_y;
 	sampler.wrap_z = info->wrap_z;
 	sampler.border_colour = info->border_colour;
-	sampler.bindless = G_BindlessRegisterSampler(&device->bindless, sampler.vk_handle);
+	sampler.bindless = G_BindlessRegisterSampler(&g_device->bindless, sampler.vk_handle);
 
-	return G_DeviceSamplerListPushAuto(&device->samplers, device->permanent_arena, &sampler);
+	return G_DeviceSamplerListPushAuto(&g_device->samplers, g_device->permanent_arena, &sampler);
 }
 
-static G_SamplerKey G_DeviceSamplerCreateF(G_Device *device, VkFilter filter)
+static G_SamplerKey G_DeviceSamplerCreateF(VkFilter filter)
 {
 	G_SamplerCreateInfo create_info = {0};
 	create_info.filter = filter;
@@ -1454,16 +1468,16 @@ static G_SamplerKey G_DeviceSamplerCreateF(G_Device *device, VkFilter filter)
 	create_info.wrap_z = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	create_info.border_colour = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 
-	return G_DeviceSamplerCreate(device, &create_info);
+	return G_DeviceSamplerCreate(&create_info);
 }
 
-static void G_DeviceSamplerDestroy(G_Device *device, G_SamplerKey sampler_key)
+static void G_DeviceSamplerDestroy(G_SamplerKey sampler_key)
 {
-	G_Sampler *sampler = G_DeviceSamplerListGet(&device->samplers, sampler_key);
+	G_Sampler *sampler = G_DeviceSamplerListGet(&g_device->samplers, sampler_key);
 	
 	AssertTrue(sampler);
 
-	G_DevicePerFrameData *frame_data = &device->per_frame_data[device->current_frame_index];
+	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 
 	G_DestroyedSampler *node = ArenaPushArray(&frame_data->arena, G_DestroyedSampler, 1);
 	node->sampler = sampler->vk_handle;
@@ -1472,25 +1486,25 @@ static void G_DeviceSamplerDestroy(G_Device *device, G_SamplerKey sampler_key)
 	frame_data->destroyed_sampler_head = node;
 }
 
-static G_Sampler *G_DeviceSamplerFromKey(const G_Device *device, G_SamplerKey key)
+static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key)
 {
-	return G_DeviceSamplerListGet(&device->samplers, key);
+	return G_DeviceSamplerListGet(&g_device->samplers, key);
 }
 
-static G_BindlessIndex G_DeviceSamplerBindless(const G_Device *device, G_SamplerKey key)
+static G_BindlessIndex G_DeviceSamplerBindless(G_SamplerKey key)
 {
-	G_Sampler *gfx_sampler = G_DeviceSamplerFromKey(device, key);
-	DebugLogAssert(device->log_channel, gfx_sampler, "Invalid sampler with key %llu when destroying.", key.value);
+	G_Sampler *gfx_sampler = G_DeviceSamplerFromKey(key);
+	DebugLogAssert(g_device->log_channel, gfx_sampler, "Invalid sampler with key %llu when destroying.", key.value);
 	
 	return G_BindlessIndexOf(gfx_sampler->bindless);
 }
 
-static G_ShaderStage G_DeviceShaderStageCreate(G_Device *device, Arena *arena, const G_ShaderBytecode *bytecode)
+static G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode)
 {
 	SpvReflectShaderModule reflect_module = {0};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
 
-	DebugLogAssert(device->log_channel,
+	DebugLogAssert(g_device->log_channel,
 				   reflect_result == SPV_REFLECT_RESULT_SUCCESS,
 				   "Failed to reflect SPIR-V module: %d\n", reflect_result);
 	
@@ -1533,7 +1547,7 @@ static G_ShaderStage G_DeviceShaderStageCreate(G_Device *device, Arena *arena, c
 	}
 	else
 	{
-		DebugLogB(device->log_channel, "No entry points found in SPIR-V.");
+		DebugLogB(g_device->log_channel, "No entry points found in SPIR-V.");
 	}
 
 	spvReflectDestroyShaderModule(&reflect_module);
@@ -1543,7 +1557,7 @@ static G_ShaderStage G_DeviceShaderStageCreate(G_Device *device, Arena *arena, c
 	return stage;
 }
 
-static G_ShaderKey G_DeviceShaderProgramCreate(G_Device *device, u32 stage_count, const G_ShaderBytecode *stages)
+static G_ShaderKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBytecode *stages)
 {
 	G_ShaderProgram program = {0};
 	program.stage_count = stage_count;
@@ -1551,29 +1565,29 @@ static G_ShaderKey G_DeviceShaderProgramCreate(G_Device *device, u32 stage_count
 
 	for (u32 i = 0; i < stage_count; i++)
 	{
-		program.stages[i] = G_DeviceShaderStageCreate(device, device->permanent_arena, &stages[i]);
+		program.stages[i] = G_DeviceShaderStageCreate(g_device->permanent_arena, &stages[i]);
 		program.push_constant_size = MaxValue(program.push_constant_size, program.stages[i].push_constant_size);
 	}
 
 	static u32 shader_cookie = 0;
 	program.cookie = ++shader_cookie;
 
-	return G_DeviceShaderListPushAuto(&device->shaders, device->permanent_arena, &program);
+	return G_DeviceShaderListPushAuto(&g_device->shaders, g_device->permanent_arena, &program);
 }
 
-static void G_DeviceShaderProgramDestroy(G_Device *device, G_ShaderKey program_key)
+static void G_DeviceShaderProgramDestroy(G_ShaderKey program_key)
 {
 	// since we just pass the shader params directly into the pipeline state
 	// when creating it we have nothing to destroy. but i'm keeping this just
 	// in case, also i kinda like symmetry.
 }
 
-static G_ShaderProgram *G_DeviceShaderProgramFromKey(const G_Device *device, G_ShaderKey key)
+static G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ShaderKey key)
 {
-	return G_DeviceShaderListGet(&device->shaders, key);
+	return G_DeviceShaderListGet(&g_device->shaders, key);
 }
 
-static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const G_BLASGeometry *geometries, u32 geometry_count)
+static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *geometries, u32 geometry_count)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -1584,8 +1598,8 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 	{
 		const G_BLASGeometry *geometry = &geometries[i];
 
-		G_Buffer *vb = G_DeviceBufferFromKey(device, geometry->vertex_buffer);
-		G_Buffer *ib = G_DeviceBufferFromKey(device, geometry->index_buffer);
+		G_Buffer *vb = G_DeviceBufferFromKey(geometry->vertex_buffer);
+		G_Buffer *ib = G_DeviceBufferFromKey(geometry->index_buffer);
 
 		vk_geometries[i].sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 		vk_geometries[i].geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
@@ -1593,15 +1607,15 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 
 		VkAccelerationStructureGeometryTrianglesDataKHR *tri = &vk_geometries[i].geometry.triangles;
 
-		tri->sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+		tri->sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 
-		tri->vertexFormat             = geometry->vertex_format;
+		tri->vertexFormat = geometry->vertex_format;
 		tri->vertexData.deviceAddress = vb->device_address + geometry->vertex_offset;
-		tri->vertexStride             = geometry->vertex_stride;
-		tri->maxVertex                = geometry->vertex_count - 1;
+		tri->vertexStride = geometry->vertex_stride;
+		tri->maxVertex = geometry->vertex_count - 1;
 
-		tri->indexType                = geometry->index_type;
-		tri->indexData.deviceAddress  = ib->device_address + geometry->index_offset;
+		tri->indexType = geometry->index_type;
+		tri->indexData.deviceAddress = ib->device_address + geometry->index_offset;
 
 		primitive_counts[i] = geometry->index_count / 3;
 	}
@@ -1617,7 +1631,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
 	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-	vkGetAccelerationStructureBuildSizesKHR(device->context.device,
+	vkGetAccelerationStructureBuildSizesKHR(g_device->context.device,
 											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 											&build_info,
 											primitive_counts,
@@ -1633,8 +1647,8 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	buf_alloc_info.size = sizes.accelerationStructureSize;
 
-	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(device, &buf_alloc_info);
-	G_Buffer *backing_buffer = G_DeviceBufferFromKey(device, backing_buffer_key);
+	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
+	G_Buffer *backing_buffer = G_DeviceBufferFromKey(backing_buffer_key);
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -1646,7 +1660,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 	accel_struct.backing_buffer = backing_buffer_key;
 
-	G_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
+	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->context.device,
 												&create_info, NULL,
 												&accel_struct.vk_handle),
 			   "Failed to create BLAS.");
@@ -1655,20 +1669,20 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(G_Device *device, const
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 	addr_info.accelerationStructure = accel_struct.vk_handle;
 
-	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->context.device, &addr_info);
 	
 	ScratchRelease(&scratch);
 
-	DebugLogD(device->log_channel, "Allocated BLAS from %u geometries.", geometry_count);
+	DebugLogD(g_device->log_channel, "Allocated BLAS from %u geometries.", geometry_count);
 
 	G_DeviceAllocAccelStructReceipt receipt = {0};
-	receipt.key = G_DeviceAccelStructListPushAuto(&device->accel_structures, device->permanent_arena, &accel_struct);
+	receipt.key = G_DeviceAccelStructListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &accel_struct);
 	receipt.scratch_size = sizes.buildScratchSize;
 	
 	return receipt;
 }
 
-static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 max_instance_count)
+static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count)
 {
 	VkAccelerationStructureGeometryKHR geometry = {0};
 	geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -1685,7 +1699,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 m
 	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
 	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-	vkGetAccelerationStructureBuildSizesKHR(device->context.device,
+	vkGetAccelerationStructureBuildSizesKHR(g_device->context.device,
 											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 											&build_info,
 											&max_instance_count,
@@ -1701,8 +1715,8 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 m
 	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	buf_alloc_info.size = sizes.accelerationStructureSize;
 
-	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(device, &buf_alloc_info);
-	G_Buffer *backing_buffer = G_DeviceBufferFromKey(device, backing_buffer_key);
+	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
+	G_Buffer *backing_buffer = G_DeviceBufferFromKey(backing_buffer_key);
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -1714,7 +1728,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 m
 	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 	accel_struct.backing_buffer = backing_buffer_key;
 
-	G_VK_CHECK(vkCreateAccelerationStructureKHR(device->context.device,
+	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->context.device,
 												&create_info, NULL,
 												&accel_struct.vk_handle),
 			   "Failed to create TLAS.");
@@ -1723,92 +1737,93 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(G_Device *device, u32 m
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 	addr_info.accelerationStructure = accel_struct.vk_handle;
 
-	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(device->context.device, &addr_info);
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->context.device, &addr_info);
 
-	DebugLogD(device->log_channel, "Allocated TLAS with max instance count %u.", max_instance_count);
+	DebugLogD(g_device->log_channel, "Allocated TLAS with max instance count %u.", max_instance_count);
 	
 	G_DeviceAllocAccelStructReceipt receipt = {0};
-	receipt.key = G_DeviceAccelStructListPushAuto(&device->accel_structures, device->permanent_arena, &accel_struct);
+	receipt.key = G_DeviceAccelStructListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &accel_struct);
 	receipt.scratch_size = sizes.buildScratchSize;
 	
 	return receipt;
 }
 
-static void G_DeviceAccelStructDestroy(G_Device *device, G_AccelStructKey key)
+static void G_DeviceAccelStructDestroy(G_AccelStructKey key)
 {
-	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&device->accel_structures, key);
-	DebugLogAssert(device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
+	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&g_device->accel_structures, key);
+	DebugLogAssert(g_device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
 
-	vkDestroyAccelerationStructureKHR(device->context.device, accel_struct->vk_handle, NULL);
+	vkDestroyAccelerationStructureKHR(g_device->context.device, accel_struct->vk_handle, NULL);
 	accel_struct->vk_handle = VK_NULL_HANDLE;
 
-	G_DeviceBufferDestroy(device, accel_struct->backing_buffer);
+	G_DeviceBufferDestroy(accel_struct->backing_buffer);
 }
 
-static u64 G_DeviceAccelStructAddress(G_Device *device, G_AccelStructKey key)
+static u64 G_DeviceAccelStructAddress(G_AccelStructKey key)
 {
-	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&device->accel_structures, key);
-	DebugLogAssert(device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when getting device address.", key.value);
+	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&g_device->accel_structures, key);
+	DebugLogAssert(g_device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when getting device address.", key.value);
 
 	return accel_struct->device_address;
 }
 
-static G_AccelStruct *G_DeviceAccelStructFromKey(G_Device *device, G_AccelStructKey key)
+static G_AccelStruct *G_DeviceAccelStructFromKey(G_AccelStructKey key)
 {
-	return G_DeviceAccelStructListGet(&device->accel_structures, key);
+	return G_DeviceAccelStructListGet(&g_device->accel_structures, key);
 }
 
-static void G_DeviceCreateSyncResources(G_Device *device)
+static void G_DeviceCreateSyncResources(void)
 {
-	device->graphics_semaphore = G_DeviceSemaphoreCreate(device, 0);
+	g_device->graphics_semaphore = G_DeviceSemaphoreCreate(0);
 
-	u32 family_index = device->context.graphics_queue.family_index;
+	u32 family_index = g_device->context.graphics_queue.family_index;
 
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		device->per_frame_data[i].completion_point.value = 0;
-		device->per_frame_data[i].completion_point.semaphore = device->graphics_semaphore.vk_handle;
+		g_device->per_frame_data[i].completion_point.frame = 0;
+		g_device->per_frame_data[i].completion_point.semaphore = g_device->graphics_semaphore.vk_handle;
 
-		device->per_frame_data[i].command_pool = G_DeviceCmdPoolCreate(device, family_index);
+		g_device->per_frame_data[i].command_pool = G_DeviceCmdPoolCreate(family_index);
 
 		VkSemaphoreCreateInfo binary_semaphore_create_info = {0};
 		binary_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		binary_semaphore_create_info.flags = 0;
 		binary_semaphore_create_info.pNext = NULL;
 
-		G_VK_CHECK(vkCreateSemaphore(device->context.device,
+		G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
 									 &binary_semaphore_create_info, NULL,
-									 &device->per_frame_data[i].image_available_semaphore),
+									 &g_device->per_frame_data[i].image_available_semaphore),
 				   "Failed to create image available semaphore.");
 
-		G_VK_CHECK(vkCreateSemaphore(device->context.device,
+		G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
 									 &binary_semaphore_create_info, NULL,
-									 &device->per_frame_data[i].render_finished_semaphore),
+									 &g_device->per_frame_data[i].render_finished_semaphore),
 				   "Failed to create render finished semaphore.");
 
-		device->per_frame_data[i].destroyed_sampler_head = NULL;
-		device->per_frame_data[i].destroyed_image_head = NULL;
-		//device->per_frame_data[i].destroyed_view_head = NULL;
-		device->per_frame_data[i].destroyed_buffer_head = NULL;
+		g_device->per_frame_data[i].destroyed_sampler_head = NULL;
+		g_device->per_frame_data[i].destroyed_image_head = NULL;
+		//g_device->per_frame_data[i].destroyed_view_head = NULL;
+		g_device->per_frame_data[i].destroyed_buffer_head = NULL;
 	}
 
-	DebugLogD(device->log_channel, "Created frame sync objects.");
+	DebugLogD(g_device->log_channel, "Created frame sync objects.");
 }
 
-static void G_DeviceDestroySyncResources(G_Device *device)
+static void G_DeviceDestroySyncResources(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		vkDestroySemaphore(device->context.device, device->per_frame_data[i].image_available_semaphore, NULL);
-		vkDestroySemaphore(device->context.device, device->per_frame_data[i].render_finished_semaphore, NULL);
-		G_DeviceCmdPoolDestroy(device, &device->per_frame_data[i].command_pool);
-		G_DeviceFlushFrameData(device, &device->per_frame_data[i]);
+		vkDestroySemaphore(g_device->context.device, g_device->per_frame_data[i].image_available_semaphore, NULL);
+		vkDestroySemaphore(g_device->context.device, g_device->per_frame_data[i].render_finished_semaphore, NULL);
+
+		G_DeviceCmdPoolDestroy(&g_device->per_frame_data[i].command_pool);
+		G_DeviceFlushFrameData(&g_device->per_frame_data[i]);
 	}
 
-	G_DeviceSemaphoreDestroy(device, &device->graphics_semaphore);
+	G_DeviceSemaphoreDestroy(&g_device->graphics_semaphore);
 }
 
-static void G_DeviceCreateBindless(G_Device *device)
+static void G_DeviceCreateBindless(void)
 {
 	VkDescriptorPoolSize pool_sizes[G_BindlessKind_COUNT] = {0};
 
@@ -1825,9 +1840,9 @@ static void G_DeviceCreateBindless(G_Device *device)
 	pool_create_info.poolSizeCount = ArraySize(pool_sizes);
 	pool_create_info.pPoolSizes = pool_sizes;
 
-	G_VK_CHECK(vkCreateDescriptorPool(device->context.device,
+	G_VK_CHECK(vkCreateDescriptorPool(g_device->context.device,
 									  &pool_create_info, NULL,
-									  &device->bindless.pool),
+									  &g_device->bindless.pool),
 			   "Failed to create bindless descriptor pool.");
 
 	VkDescriptorSetLayoutBinding bindings[G_BindlessKind_COUNT] = {0};
@@ -1858,46 +1873,46 @@ static void G_DeviceCreateBindless(G_Device *device)
 	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 	layout_create_info.pNext = &binding_flags;
 
-	G_VK_CHECK(vkCreateDescriptorSetLayout(device->context.device,
+	G_VK_CHECK(vkCreateDescriptorSetLayout(g_device->context.device,
 										   &layout_create_info, NULL,
-										   &device->bindless.layout),
+										   &g_device->bindless.layout),
 			   "Failed to create bindless descriptor layout.");
 
 	VkDescriptorSetAllocateInfo alloc_info = {0};
 	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	alloc_info.descriptorPool = device->bindless.pool;
+	alloc_info.descriptorPool = g_device->bindless.pool;
 	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts = &device->bindless.layout;
+	alloc_info.pSetLayouts = &g_device->bindless.layout;
 
-	G_VK_CHECK(vkAllocateDescriptorSets(device->context.device,
+	G_VK_CHECK(vkAllocateDescriptorSets(g_device->context.device,
 										&alloc_info,
-										&device->bindless.set),
+										&g_device->bindless.set),
 			   "Failed to allocate bindless descriptor set.");
 
-	DebugLogD(device->log_channel, "Bindless resources created.");
+	DebugLogD(g_device->log_channel, "Bindless resources created.");
 }
 
-static void G_DeviceDestroyBindless(G_Device *device)
+static void G_DeviceDestroyBindless(void)
 {
-	vkDestroyDescriptorSetLayout(device->context.device, device->bindless.layout, NULL);
-	vkDestroyDescriptorPool(device->context.device, device->bindless.pool, NULL);
+	vkDestroyDescriptorSetLayout(g_device->context.device, g_device->bindless.layout, NULL);
+	vkDestroyDescriptorPool(g_device->context.device, g_device->bindless.pool, NULL);
 }
 
-static void G_DeviceApplyBindlessUpdates(G_Device *device)
+static void G_DeviceApplyBindlessUpdates(void)
 {
-	if (device->bindless.update_count == 0)
+	if (g_device->bindless.update_count == 0)
 		return;
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	u32 count = device->bindless.update_count;
+	u32 count = g_device->bindless.update_count;
 
 	VkWriteDescriptorSet *writes = ArenaPushArray(scratch.arena, VkWriteDescriptorSet, count);
 	VkDescriptorImageInfo *infos = ArenaPushArray(scratch.arena, VkDescriptorImageInfo, count);
 
 	for (u32 i = 0; i < count; i++)
 	{
-		G_BindlessUpdate *update = &device->bindless.updates[i];
+		G_BindlessUpdate *update = &g_device->bindless.updates[i];
 
 		infos[i].sampler = update->sampler;
 		infos[i].imageView = update->view;
@@ -1908,21 +1923,21 @@ static void G_DeviceApplyBindlessUpdates(G_Device *device)
 		writes[i].descriptorCount = 1;
 		writes[i].dstArrayElement = update->slot;
 		writes[i].descriptorType = G_BindlessGetVkType(update->kind);
-		writes[i].dstSet = device->bindless.set;
+		writes[i].dstSet = g_device->bindless.set;
 		writes[i].dstBinding = update->kind;
 		writes[i].pImageInfo = &infos[i];
 	}
 
-	vkUpdateDescriptorSets(device->context.device,
+	vkUpdateDescriptorSets(g_device->context.device,
 						   count, writes,
 						   0, NULL);
 
-	device->bindless.update_count = 0;
+	g_device->bindless.update_count = 0;
 
 	ScratchRelease(&scratch);
 }
 
-static void G_DeviceCreateImGui(G_Device *device)
+static void G_DeviceCreateImGui(void)
 {
 	/*
 	  const u32 max_sets = 1000;
@@ -1948,21 +1963,21 @@ static void G_DeviceCreateImGui(G_Device *device)
 	  pool_info.poolSizeCount = ArraySize(pool_sizes);
 	  pool_info.pPoolSizes = pool_sizes;
 
-	  G_VK_CHECK(vkCreateDescriptorPool(device->context.device,
+	  G_VK_CHECK(vkCreateDescriptorPool(g_device->context.device,
 	  &pool_info, NULL,
-	  &device->imgui_pool),
+	  &g_device->imgui_pool),
 	  "Failed to create ImGui descriptor pool.");
 
 	  VkFormat swapchain_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
 	  ImGui_ImplVulkan_InitInfo init_info = {0};
-	  init_info.Instance = device->context.instance;
-	  init_info.PhysicalDevice = device->context.physical_device;
-	  init_info.Device = device->context.device;
-	  init_info.QueueFamily = device->context.graphics_queue.family_index;
-	  init_info.Queue = device->context.graphics_queue.vk_handle;
-	  init_info.PipelineCache = device->pipeline_cache;
-	  init_info.DescriptorPool = device->imgui_pool;
+	  init_info.Instance = g_device->context.instance;
+	  init_info.PhysicalDevice = g_device->context.physical_device;
+	  init_info.Device = g_device->context.device;
+	  init_info.QueueFamily = g_device->context.graphics_queue.family_index;
+	  init_info.Queue = g_device->context.graphics_queue.vk_handle;
+	  init_info.PipelineCache = g_device->pipeline_cache;
+	  init_info.DescriptorPool = g_device->imgui_pool;
 	  init_info.Allocator = NULL;
 	  init_info.MinImageCount = G_FRAMES_IN_FLIGHT;
 	  init_info.ImageCount = G_FRAMES_IN_FLIGHT;
@@ -1977,22 +1992,22 @@ static void G_DeviceCreateImGui(G_Device *device)
 	*/
 }
 
-static void G_DeviceDestroyImGui(G_Device *device)
+static void G_DeviceDestroyImGui(void)
 {
 	/*
 	  ImGui_ImplVulkan_Shutdown();
-	  vkDestroyDescriptorPool(device->context.device, device->imgui_pool, NULL);
+	  vkDestroyDescriptorPool(g_device->context.device, g_device->imgui_pool, NULL);
 	*/
 }
 
-static void G_DeviceImGuiNewFrame(const G_Device *device)
+static void G_DeviceImGuiNewFrame(void)
 {
 	/*
 	  ImGui_ImplVulkan_NewFrame();
 	*/
 }
 
-static void G_DeviceImGuiRecord(const G_Device *device, const G_CmdBuffer *cmd)
+static void G_DeviceImGuiRecord(const G_CmdBuffer *cmd)
 {
 	/*
 	  ImDrawData *draw_data = ImGui_GetDrawData();

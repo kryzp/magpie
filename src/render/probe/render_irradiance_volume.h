@@ -68,9 +68,6 @@ struct R_GPU_ProbeGridInfo
 typedef struct R_IrradianceVolume R_IrradianceVolume;
 struct R_IrradianceVolume
 {
-	G_Device *device;
-	A_Assets *assets;
-	
 	LOG_Channel log_channel;
 
 	v3 grid_min;
@@ -98,7 +95,6 @@ struct R_IrradianceVolume
 };
 
 static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
-								   G_Device *device, A_Assets *assets,
 								   LOG_Channel log_channel,
 								   v3 grid_min, v3 grid_max,
 								   u32 nx, u32 ny, u32 nz,

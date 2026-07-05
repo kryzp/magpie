@@ -1,7 +1,6 @@
 #ifndef RENDER_PASS_CULLING_H
 #define RENDER_PASS_CULLING_H
 
-
 // has matching SLANG values don't fuck with
 // the values here
 typedef enum R_CullFilter R_CullFilter;
@@ -13,7 +12,6 @@ enum R_CullFilter
 	R_CullFilter_COUNT
 };
 
-
 typedef struct R_CullClearPassData R_CullClearPassData;
 struct R_CullClearPassData
 {
@@ -22,7 +20,6 @@ struct R_CullClearPassData
 
 static R_PASS_RECORD_DEF(R_CullClearFn);
 
-
 typedef struct R_CullPassData R_CullPassData;
 struct R_CullPassData
 {
@@ -30,10 +27,9 @@ struct R_CullPassData
 	
 	R_GraphBufHandle indirect_handle;
 	R_GraphBufHandle counter_handle;
-
-	u64 object_buffer_address;
-	u64 page_table_buffer_address;
 	
+	const R_FrameParams *frame_params;
+
 	R_CullFilter filter;
 
 	union
@@ -46,7 +42,6 @@ struct R_CullPassData
 static R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
 static R_PASS_RECORD_DEF(R_CullSphereComputeFn);
 
-
 typedef struct R_DrawStream R_DrawStream;
 struct R_DrawStream
 {
@@ -55,15 +50,13 @@ struct R_DrawStream
 };
 
 static R_DrawStream R_CullFrustum(R_Graph *graph,
-							A_Assets *assets,
-									 const R_Bulletin *bt,
-									 R_CullFilter filter,
-									 const R_FrustumVolume *frustum);
+								  const R_FrameParams *frame_params,
+								  R_CullFilter filter,
+								  const R_FrustumVolume *frustum);
 
 static R_DrawStream R_CullSphere(R_Graph *graph,
-							A_Assets *assets,,
-									 const R_Bulletin *bt,
-									 R_CullFilter filter,
-									 v3 sphere_centre, f32 sphere_radius);
+								 const R_FrameParams *frame_params,
+								 R_CullFilter filter,
+								 v3 sphere_centre, f32 sphere_radius);
 
 #endif // RENDER_PASS_CULLING_H

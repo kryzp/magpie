@@ -38,11 +38,11 @@ static S_BINDING_DEF(S_BND_DebugLog)
 
 static void AppInitScripting(void)
 {
-	app->scripting_system = S_Init(&app->scripting_arena, app->scripting_log_channel);
+	app->scripting_system = S_AllocAndSelect(&app->scripting_arena, app->scripting_log_channel);
 
-	S_BindGlobal(app->scripting_system, String8Lit("wait_seconds"), S_BND_WaitSeconds);
-	S_BindGlobal(app->scripting_system, String8Lit("wait_signal"), S_BND_WaitSignal);
-	S_BindGlobal(app->scripting_system, String8Lit("debug_log"), S_BND_DebugLog);
+	S_BindGlobal(String8Lit("wait_seconds"), S_BND_WaitSeconds);
+	S_BindGlobal(String8Lit("wait_signal"), S_BND_WaitSignal);
+	S_BindGlobal(String8Lit("debug_log"), S_BND_DebugLog);
 }
 
 static void AppInit_(void)
@@ -59,36 +59,27 @@ static void AppInit_(void)
 	
 	AppInitScripting();
 
-	G_DeviceInit(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
-	app->swapchain = G_DeviceSwapchainCreate(&app->graphics_device);
-	G_ShaderCompilerInit(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
+	G_DeviceInitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
+	app->swapchain = G_DeviceSwapchainCreate();
+	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
-	app->audio_backend = AU_BackendInit(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
-	AU_Init(&app->audio_system,
-			&app->audio_arena,
-			app->audio_log_channel,
-			app->audio_backend);
+	app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
+	AU_Init(&app->audio_system, &app->audio_arena, app->audio_log_channel);
 	
-	A_Init(&app->assets,
-		   &app->asset_arena,
-		   app->asset_log_channel,
-		   &app->graphics_device,
-		   &app->shader_compiler,
-		   app->audio_backend,
-		   app->scripting_system);
+	A_InitAndSelect(&app->assets, &app->asset_arena, app->asset_log_channel);
 	
-	//A_Mount(&app->assets, String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
-	A_Mount(&app->assets, String8Lit("assets://"), String8Lit("res"));
+	//A_Mount(String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
+	A_Mount(String8Lit("assets://"), String8Lit("res"));
 
-	AN_SystemInit(&app->animation_system, app->animation_log_channel, &app->assets);
+	AN_SystemInit(&app->animation_system, app->animation_log_channel);
 	
-	R_GraphInit(&app->graph, &app->render_arena, &app->graphics_device, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
-	R_SceneInit(&app->scene, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
+	R_GraphInit(&app->graph, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
+	R_SceneInit(&app->scene, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
 	
-	R_SystemInit(&app->render_system, &app->render_arena, &app->graphics_device, &app->assets, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
+	R_SystemInit(&app->render_system, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
 	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
 
-	P_EngineInit(&app->physics_engine, &app->physics_arena, app->physics_log_channel);
+	P_EngineInitAndSelect(&app->physics_engine, &app->physics_arena, app->physics_log_channel);
 	
 	E_WorldInit(&app->world, &app->entity_arena, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("WORLD")));
 	E_EventQueueInit(&app->events, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("EVENT")));
@@ -102,9 +93,9 @@ static void AppInit_(void)
 }
 
 __declspec(dllexport)
-App *MagpieInit(const OS_API *api)
+App *MagpieInit(const OS_API *osapi_)
 {
-	osapi = api;
+	osapi = osapi_;
 
 	Arena bootstrap = ArenaAlloc(sizeof(App));
 	app = ArenaPushArray(&bootstrap, App, 1);
@@ -123,13 +114,13 @@ App *MagpieInit(const OS_API *api)
 	
 	AppInit_();
 
-	A_Handle sponza_handle = A_Require(&app->assets, String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
+	A_Handle sponza_handle = A_Require(String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin(&app->graphics_device);
+		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
 		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle, (u32)(-1));
-		G_DeviceSubmitImEnd(&app->graphics_device, &cmd);
+		G_DeviceSubmitImEnd(&cmd);
 
 		for (u32 i = 0; i < receipt.count; i++)
 		{
@@ -154,13 +145,13 @@ App *MagpieInit(const OS_API *api)
 __declspec(dllexport)
 void MagpieDestroy(App *app_)
 {
-	G_DeviceWaitIdle(&app->graphics_device);
+	G_DeviceWaitIdle();
 
 	DebugLogI(app->log_channel, "Destroying...");
 	
 	E_WorldDestroy(&app->world);
 
-	P_EngineDestroy(&app->physics_engine);
+	P_EngineDestroy();
 
 	R_SystemDestroy(&app->render_system);
 	R_SceneDestroy(&app->scene);
@@ -168,17 +159,16 @@ void MagpieDestroy(App *app_)
 
 	AN_SystemDestroy(&app->animation_system);
 	
-	A_Destroy(&app->assets);
+	A_Destroy();
 	
 	AU_Shutdown(&app->audio_system);
+	AU_BackendShutdown();
 	
-	AU_BackendShutdown(app->audio_backend);
-	
-	G_ShaderCompilerShutdown(&app->shader_compiler);
-	G_DeviceSwapchainDestroy(&app->graphics_device, &app->swapchain);
-	G_DeviceDestroy(&app->graphics_device);
+	G_ShaderCompilerShutdown();
+	G_DeviceSwapchainDestroy(&app->swapchain);
+	G_DeviceDestroy();
 
-	S_Destroy(app->scripting_system);
+	S_Destroy();
 
 	ArenaRelease(&app->frame_arena);
 	ArenaRelease(&app->entity_arena);
@@ -229,10 +219,10 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
 		CH_TimerRestart(&app->hot_reload_timer);
-		A_PollHotReloads(&app->assets);
+		A_PollHotReloads();
 	}
 
-	A_FlushUploads(&app->assets);
+	//A_FlushUploads();
 
 	E_TickContext entity_tick_context = {0};
 	entity_tick_context.dt = dt;
@@ -247,7 +237,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldTickPostAnim(&app->world, &entity_tick_context);
 
-	S_Tick(app->scripting_system, dt);
+	S_Tick(dt);
 	
 	f32 clamped_delta = dt;
 
@@ -261,7 +251,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	while (app->delta_accumulator >= fixed_dt)
 	{
-		P_EngineTick(&app->physics_engine, dt);
+		P_EngineTick(fixed_dt);
 		app->delta_accumulator -= fixed_dt;
 	}
 
@@ -280,7 +270,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	listener.direction = app->game.camera.forward;
 
 	AU_Tick(&app->audio_system, dt, listener);
-	AU_BackendTick(app->audio_backend, dt, listener);
+	AU_BackendTick(dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
@@ -300,15 +290,14 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
 	{ // --- [[ THE GRAPHICS ZONE ooOooOooOOOooOOo !! ]] ---
-		G_CmdBuffer cmd = G_DeviceBeginFrame(&app->graphics_device, &app->swapchain);
+		G_CmdBuffer cmd = G_DeviceBeginFrame(&app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
-		G_DeviceEndFrame(&app->graphics_device, &app->swapchain, &cmd);
+		G_DeviceEndFrame(&app->swapchain, &cmd);
 	} // ---
 	
 	R_GraphReset(&app->graph);
 	
-	//G_RingBufferReset(&app->frame_upload_ring_buffer);
 	ArenaReset(&app->frame_arena);
 	
 	AppLogFPS(dt);
@@ -317,9 +306,9 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 }
 
 __declspec(dllexport)
-void MagpieHotLoad(App *app_, const OS_API *api)
+void MagpieHotLoad(App *app_, const OS_API *osapi_)
 {
-	osapi = api;
+	osapi = osapi_;
 	app = app_;
 	
 	/*
@@ -337,19 +326,28 @@ void MagpieHotLoad(App *app_, const OS_API *api)
 	ArenaReset(&app->scripting_arena);
 	AppInitScripting();
 
-	G_DeviceHotLoad(&app->graphics_device);
+	G_DeviceSelectContext(&app->graphics_device);
+	G_ShaderCompilerSelectContext(&app->shader_compiler);
+	G_DeviceHotLoad();
+
+	AU_BackendSelectContext(app->audio_backend);
+
+	A_SelectContext(&app->assets);
+
 	R_SystemHotLoad(&app->render_system);
 	
+	P_EngineSelectContext(&app->physics_engine);
+
 	GameSelect(&app->game);
 }
 
 __declspec(dllexport)
 void MagpieHotUnload(App *app_)
 {
-	G_DeviceHotUnload(&app->graphics_device);
+	G_DeviceHotUnload();
 
 	// hack
-	S_Destroy(app->scripting_system);
+	S_Destroy();
 }
 
 /*

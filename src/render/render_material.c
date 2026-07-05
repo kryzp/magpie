@@ -1,10 +1,11 @@
 
-static G_TextureKey R_MaterialResolveAssetTexture(A_Assets *assets, A_Handle handle)
+static G_TextureKey R_MaterialResolveAssetTexture(A_Handle handle)
 {
-	if (!A_IsValid(assets, handle) || !A_IsLoaded(assets, handle))
+	if (!A_IsValid(handle) || !A_IsLoaded(handle))
 		return G_TextureKeyNull();
 
-	A_Asset *asset = A_GetNow(assets, handle);
+	A_Asset *asset = A_GetNow(handle);
+
 	return asset->texture.key;
 }
 
@@ -54,15 +55,15 @@ static R_Material R_MaterialDefault(void)
 
 // js slime me out gng
 // gurt: yo
-static R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Assets *assets)
+static R_Material R_MaterialFromAsset(const A_ModelMaterial *source)
 {
 	R_Material mat = R_MaterialDefault();
 
-	mat.albedo_texture                       = R_MaterialResolveAssetTexture(assets, source->albedo_texture);
-	mat.normal_texture                       = R_MaterialResolveAssetTexture(assets, source->normal_texture);
-	mat.emissive_texture                     = R_MaterialResolveAssetTexture(assets, source->emissive_texture);
-	mat.metallic_roughness_texture           = R_MaterialResolveAssetTexture(assets, source->metallic_roughness_texture);
-	mat.occlusion_texture                    = R_MaterialResolveAssetTexture(assets, source->occlusion_texture);
+	mat.albedo_texture                       = R_MaterialResolveAssetTexture(source->albedo_texture);
+	mat.normal_texture                       = R_MaterialResolveAssetTexture(source->normal_texture);
+	mat.emissive_texture                     = R_MaterialResolveAssetTexture(source->emissive_texture);
+	mat.metallic_roughness_texture           = R_MaterialResolveAssetTexture(source->metallic_roughness_texture);
+	mat.occlusion_texture                    = R_MaterialResolveAssetTexture(source->occlusion_texture);
 	
 	mat.albedo_factor                        = source->albedo_factor;
 	mat.normal_scale                         = source->normal_scale;
@@ -74,30 +75,30 @@ static R_Material R_MaterialFromAsset(const A_ModelMaterial *source, A_Assets *a
 
 	mat.ior                                  = source->ior;
 
-	mat.transmission_texture                 = R_MaterialResolveAssetTexture(assets, source->transmission_texture);
-	mat.thickness_texture                    = R_MaterialResolveAssetTexture(assets, source->thickness_texture);
+	mat.transmission_texture                 = R_MaterialResolveAssetTexture(source->transmission_texture);
+	mat.thickness_texture                    = R_MaterialResolveAssetTexture(source->thickness_texture);
 	mat.transmission_factor                  = source->transmission_factor;
 	mat.thickness_factor                     = source->thickness_factor;
 	mat.attenuation_colour                   = source->attenuation_colour;
 	mat.attenuation_distance                 = source->attenuation_distance;
 
-	mat.specular_texture                     = R_MaterialResolveAssetTexture(assets, source->specular_texture);
-	mat.specular_colour_texture              = R_MaterialResolveAssetTexture(assets, source->specular_colour_texture);
+	mat.specular_texture                     = R_MaterialResolveAssetTexture(source->specular_texture);
+	mat.specular_colour_texture              = R_MaterialResolveAssetTexture(source->specular_colour_texture);
 	mat.specular_factor                      = source->specular_factor;
 	mat.specular_colour_factor               = source->specular_colour_factor;
 
-	mat.clearcoat_texture                    = R_MaterialResolveAssetTexture(assets, source->clearcoat_texture);
-	mat.clearcoat_roughness_texture          = R_MaterialResolveAssetTexture(assets, source->clearcoat_roughness_texture);
+	mat.clearcoat_texture                    = R_MaterialResolveAssetTexture(source->clearcoat_texture);
+	mat.clearcoat_roughness_texture          = R_MaterialResolveAssetTexture(source->clearcoat_roughness_texture);
 	mat.clearcoat_factor                     = source->clearcoat_factor;
 	mat.clearcoat_roughness_factor           = source->clearcoat_roughness_factor;
 
-	mat.sheen_colour_texture                 = R_MaterialResolveAssetTexture(assets, source->sheen_colour_texture);
-	mat.sheen_roughness_texture              = R_MaterialResolveAssetTexture(assets, source->sheen_roughness_texture);
+	mat.sheen_colour_texture                 = R_MaterialResolveAssetTexture(source->sheen_colour_texture);
+	mat.sheen_roughness_texture              = R_MaterialResolveAssetTexture(source->sheen_roughness_texture);
 	mat.sheen_colour_factor                  = source->sheen_colour_factor;
 	mat.sheen_roughness_factor               = source->sheen_roughness_factor;
 
-	mat.iridescence_texture                  = R_MaterialResolveAssetTexture(assets, source->iridescence_texture);
-	mat.iridescence_thickness_texture        = R_MaterialResolveAssetTexture(assets, source->iridescence_thickness_texture);
+	mat.iridescence_texture                  = R_MaterialResolveAssetTexture(source->iridescence_texture);
+	mat.iridescence_thickness_texture        = R_MaterialResolveAssetTexture(source->iridescence_thickness_texture);
 	mat.iridescence_factor                   = source->iridescence_factor;
 	mat.iridescence_ior                      = source->iridescence_ior;
 	mat.iridescence_thickness_min_nanometers = source->iridescence_thickness_min_nanometers;

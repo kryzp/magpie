@@ -14,26 +14,26 @@ struct R_Mesh
 	G_BufferKey index_buffer;
 };
 
-static void R_MeshAlloc(R_Mesh *mesh, G_Device *device,
+static void R_MeshAlloc(R_Mesh *mesh,
 						  u64 vertex_stride, VkIndexType index_type,
 						  u32 vertex_count, u32 index_count);
 
-static void R_MeshDestroy(const R_Mesh *mesh, G_Device *device);
+static void R_MeshDestroy(const R_Mesh *mesh);
 
-static void R_MeshWriteToStage(const R_Mesh *mesh, G_Device *device,
+static void R_MeshWriteToStage(const R_Mesh *mesh,
 								 G_BufferKey stage, u64 stage_base,
 								 const void *vertices, const void *indices);
 
 static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 						  G_BufferKey stage, u64 stage_base);
 
-//static u64 R_MeshVertexAddress(const R_Mesh *mesh, G_Device *device);
+//static u64 R_MeshVertexAddress(const R_Mesh *mesh);
 
 // Only binds index buffer as we use vertex pulling!!!
 static void R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 
-static void R_MeshDraw          (const R_Mesh *mesh, const G_CmdBuffer *cmd);
-static void R_MeshDrawInstanced (const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);
+static void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd);
+static void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);
 
 static inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
 {

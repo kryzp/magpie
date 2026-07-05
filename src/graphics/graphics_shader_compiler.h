@@ -12,18 +12,17 @@ struct G_ShaderCompiledStages
 typedef struct G_ShaderCompiler G_ShaderCompiler;
 struct G_ShaderCompiler
 {
-	void *global_session;
-	OS_Handle mutex;
-
 	LOG_Channel log_channel;
+	OS_Handle mutex;
+	void *global_session;
 };
 
-static void G_ShaderCompilerInit     (G_ShaderCompiler *compiler, LOG_Channel log_channel);
-static void G_ShaderCompilerShutdown (G_ShaderCompiler *compiler);
+static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel);
+static void G_ShaderCompilerShutdown(void);
+static void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler);
 
-static G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
-															Arena *arena,
-															String8 source_path,
-															u32 search_path_count, const String8 *search_paths);
+static G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
+													  String8 source_path,
+													  u32 search_path_count, const String8 *search_paths);
 
 #endif // GRAPHICS_SHADER_COMPILER_H

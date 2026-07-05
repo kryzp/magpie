@@ -13,14 +13,13 @@ static void R_SpriteBatchCreateQuad(R_SpriteBatch *b)
 		2, 3, 1
 	};
 
-	R_MeshAlloc(&b->quad, b->device,
+	R_MeshAlloc(&b->quad,
 				sizeof(R_SpriteBatchVertex), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 }
 
-static void R_SpriteBatchInit(R_SpriteBatch *b, G_Device *device, LOG_Channel log_channel)
+static void R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel)
 {
-	b->device = device;
 	b->log_channel = log_channel;
 
 	R_SpriteBatchCreateQuad(b);
@@ -29,7 +28,7 @@ static void R_SpriteBatchInit(R_SpriteBatch *b, G_Device *device, LOG_Channel lo
 
 static void R_SpriteBatchDestroy(R_SpriteBatch *b)
 {
-	R_MeshDestroy(&b->quad, b->device);
+	R_MeshDestroy(&b->quad);
 }
 
 static void R_SpriteBatchBegin(R_SpriteBatch *b)

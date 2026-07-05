@@ -2,7 +2,6 @@
 #if 0
 
 static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
-					   G_Device *device, A_Assets *assets,
 					   LOG_Channel log_channel,
 					   v3 grid_min, v3 grid_max,
 					   u32 nx, u32 ny, u32 nz,
@@ -11,7 +10,6 @@ static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 					   G_SamplerKey linear_sampler)
 {
 	vol->device = device;
-	vol->assets = assets;
 
 	vol->log_channel = log_channel;
 
@@ -93,8 +91,6 @@ static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 
 static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
 {
-	G_Device *device = vol->device;
-
 	u64 max_scratch_size = 0;
 
 	vol->blas_count = scene->meshes.geometry_page_count;
@@ -244,8 +240,6 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 
 static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 {
-	G_Device *device = vol->device;
-
 	DebugLogI(vol->log_channel, "Baking irradiance volume...");
 
 	R_IrradianceVolumeBuildAccelStructs(vol, scene);

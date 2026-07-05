@@ -9,10 +9,9 @@ typedef struct G_CmdBuffer G_CmdBuffer;
 struct G_CmdBuffer
 {
 	VkCommandBuffer vk_handle;
-	G_Device *device;
 };
 
-#define G_CmdInit(vk_handle, device) ((G_CmdBuffer) { (vk_handle), (device) })
+#define G_CmdInit(vk_handle) ((G_CmdBuffer) { (vk_handle) })
 
 
 /* ==================================================

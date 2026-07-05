@@ -6,9 +6,8 @@ struct R_SkyboxPassData
 {
 	G_ShaderKey shader;
 	G_TextureViewKey cubemap;
-	G_SamplerKey sampler;
-	G_BufferKey frame_data_buffer;
 	const R_Mesh *skybox_mesh;
+	const R_FrameParams *frame_params;
 };
 
 static R_PASS_RECORD_DEF(R_SkyboxPassFn);

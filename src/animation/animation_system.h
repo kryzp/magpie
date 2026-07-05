@@ -46,7 +46,7 @@ struct AN_System
 	u32 free_index_count;
 };
 
-static void AN_SystemInit(AN_System *s, LOG_Channel log_channel, A_Assets *assets);
+static void AN_SystemInit(AN_System *s, LOG_Channel log_channel);
 static void AN_SystemDestroy(AN_System *s);
 
 static void AN_SystemCalculateIntermediatePoses(AN_System *s, f32 elapsed);

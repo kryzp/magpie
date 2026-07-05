@@ -12,15 +12,16 @@ struct A_MetaData
 typedef struct A_Context A_Context;
 struct A_Context
 {
-	A_Assets *assets;
 	A_MetaData metadata;
 	LOG_Channel log_channel;
 };
 
+static String8 A_ContextSystemFilePath(const A_Context *context, Arena *arena);
+
 typedef struct A_SerializerPipelineData A_SerializerPipelineData;
 struct A_SerializerPipelineData
 {
-	void *data;
+	void *user_data;
 	
 	u64 stage_size;
 	b32 failed;
@@ -32,8 +33,6 @@ struct A_SerializerPipelineData
 	String8 *watch_paths;
 };
 
-static String8 A_ContextSystemFilePath(const A_Context *context, Arena *arena);
-
 typedef struct A_Serializer A_Serializer;
 struct A_Serializer
 {
@@ -42,7 +41,7 @@ struct A_Serializer
 	void                     (*Reload)   (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *existing);
 	void                     (*Gpu)      (const A_Context *ctx, A_SerializerPipelineData *data, A_Asset *asset, G_CmdBuffer *cmd, G_BufferKey stage, u64 stage_base);
 	void                     (*End)      (A_SerializerPipelineData *data);
-	void                     (*Dispose)  (A_Asset *asset, A_Assets *assets);
+	void                     (*Dispose)  (A_Asset *asset);
 };
 
 #endif // ASSET_SERIALIZER_H

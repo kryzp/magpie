@@ -61,12 +61,8 @@ typedef struct R_PassContext R_PassContext;
 struct R_PassContext
 {
 	R_Graph *graph;
-	
-	G_Device *device;
 	G_CmdBuffer *cmd;
-	
 	const G_RenderInfo *render_info;
-
 	const void *user_data;
 };
 

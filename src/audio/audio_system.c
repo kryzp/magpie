@@ -1,9 +1,7 @@
 
-static void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel, AU_Backend *backend)
+static void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel)
 {
 	system->arena = arena;
-	system->backend = backend;
-
 	system->log_channel = log_channel;
 
 	system->master_volume = 1.f;
@@ -86,14 +84,14 @@ static AU_Emitter *AU_GetEmitter(const AU_System *system, AU_Handle handle)
 
 static AU_Handle AU_Play(AU_System *system, const AU_PlayConfig *config)
 {
-	AU_SourceHandle source = AU_BackendCreateSourceFromBuffer(system->backend, config->clip);
-	AU_BackendSetSourceVolume(system->backend, source, AU_GetOutputVolumeOnBus(system, config->bus, config->volume));
-	AU_BackendSetSourcePitch(system->backend, source, config->pitch);
+	AU_SourceHandle source = AU_BackendCreateSourceFromBuffer(config->clip);
+	AU_BackendSetSourceVolume(source, AU_GetOutputVolumeOnBus(system, config->bus, config->volume));
+	AU_BackendSetSourcePitch(source, config->pitch);
 
 	if (config->spatial)
-		AU_BackendSetSourcePosition(system->backend, source, config->position);
+		AU_BackendSetSourcePosition(source, config->position);
 
-	AU_BackendPlay(system->backend, source);
+	AU_BackendPlay(source);
 
 	AU_Emitter *emitter = AU_AllocEmitter(system);
 	emitter->source = source;
@@ -109,8 +107,8 @@ static void AU_Stop(AU_System *system, AU_Handle handle)
 	
 	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
-	AU_BackendStop(system->backend, emitter->source);
-	AU_BackendDestroySource(system->backend, emitter->source);
+	AU_BackendStop(emitter->source);
+	AU_BackendDestroySource(emitter->source);
 
 	AU_ReleaseEmitter(system, emitter);
 }
@@ -124,8 +122,8 @@ static void AU_StopAll(AU_System *system)
 	{
 		AU_Emitter *next = emitter->next;
 
-		AU_BackendStop(system->backend, emitter->source);
-		AU_BackendDestroySource(system->backend, emitter->source);
+		AU_BackendStop(emitter->source);
+		AU_BackendDestroySource(emitter->source);
 
 		AU_ReleaseEmitter(system, emitter);
 
@@ -139,7 +137,7 @@ static void AU_Resume(AU_System *system, AU_Handle handle)
 	
 	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
-	AU_BackendResume(system->backend, emitter->source);
+	AU_BackendResume(emitter->source);
 }
 
 static void AU_Pause(AU_System *system, AU_Handle handle)
@@ -148,7 +146,7 @@ static void AU_Pause(AU_System *system, AU_Handle handle)
 	
 	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
-	AU_BackendPause(system->backend, emitter->source);
+	AU_BackendPause(emitter->source);
 }
 
 static void AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 position)
@@ -157,7 +155,7 @@ static void AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 posit
 	
 	DebugLogAssert(system->log_channel, emitter, "Invalid handle.");
 
-	AU_BackendSetSourcePosition(system->backend, emitter->source, position);
+	AU_BackendSetSourcePosition(emitter->source, position);
 }
 
 static void AU_SetMasterVolume(AU_System *system, f32 volume)
@@ -186,6 +184,6 @@ static void AU_UpdateEmitterVolumes(const AU_System *system, AU_Bus bus)
 	for (AU_Emitter *emitter = sentinel->next; emitter != sentinel; emitter = emitter->next)
 	{
 		if (emitter->bus == bus)
-			AU_BackendSetSourceVolume(system->backend, emitter->source, AU_GetOutputVolumeOnBus(system, bus, emitter->base_volume));
+			AU_BackendSetSourceVolume(emitter->source, AU_GetOutputVolumeOnBus(system, bus, emitter->base_volume));
 	}
 }

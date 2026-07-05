@@ -9,6 +9,8 @@
 
 #include "graph/render_graph_inc.h"
 
+#include "render_sprite_batch.h"
+
 #include "render_scene_handle.h"
 #include "render_scene_graph.h"
 #include "render_mesh_registry.h"
@@ -17,16 +19,13 @@
 
 #include "render_frame.h"
 
-#include "render_sprite_batch.h"
+#include "render_blackboard.h"
 
 #include "bloom/render_bloom_inc.h"
 #include "probe/render_probe_inc.h"
 #include "ssao/render_ssao_inc.h"
 #include "volumetric/render_volumetric_inc.h"
-
-#include "render_blackboard.h"
-
 #include "debug/render_debug_inc.h"
-//#include "pass/render_pass_inc.h"
+#include "pass/render_pass_inc.h"
 
 #include "render_system.h"

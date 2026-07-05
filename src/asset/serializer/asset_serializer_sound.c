@@ -38,7 +38,7 @@ static A_SerializerPipelineData A_SoundSerializerCpu(const A_Context *ctx, Arena
 	ma_decoder_read_pcm_frames(&decoder, sound->pcm_data, frame_count, NULL);
 	ma_decoder_uninit(&decoder);
 
-	result.data = sound;
+	result.user_data = sound;
 	result.failed = false;
 	
 end:	
@@ -52,31 +52,28 @@ static void A_SoundSerializerAlloc(const A_Context *ctx,
 						 A_Asset *out,
 						 Arena *arena)
 {
-	AU_Backend *backend = ctx->assets->audio_backend;
-	
-	A_SoundLoadData *sound = data->data;
+	A_SoundLoadData *sound = data->user_data;
 	
 	void *permanent_pcm = ArenaPushArray(arena, u8, sound->size_in_bytes);
 	MemCopy(permanent_pcm, sound->pcm_data, sound->size_in_bytes);
 
-	out->sound.buffer = AU_BackendCreateBuffer(backend,
-													 permanent_pcm,
-													 sound->size_in_bytes,
-													 sound->channels,
-													 sound->sample_rate,
-													 AU_Format_F32);
+	out->sound.buffer = AU_BackendCreateBuffer(permanent_pcm,
+											   sound->size_in_bytes,
+											   sound->channels,
+											   sound->sample_rate,
+											   AU_Format_F32);
 }
 
 static void A_SoundSerializerReload(const A_Context *ctx,
-						  A_SerializerPipelineData *data,
-						  A_Asset *existing)
+									A_SerializerPipelineData *data,
+									A_Asset *existing)
 {
 	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
 }
 
-static void A_SoundSerializerDispose(A_Asset *asset, A_Assets *assets)
+static void A_SoundSerializerDispose(A_Asset *asset)
 {
-	AU_BackendDestroyBuffer(assets->audio_backend, asset->sound.buffer);
+	AU_BackendDestroyBuffer(asset->sound.buffer);
 }
 
 static A_Serializer A_GetSoundSerializer(void)

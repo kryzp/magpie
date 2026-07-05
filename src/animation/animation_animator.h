@@ -58,8 +58,6 @@ static b32 AN_ClipKeyIsNull(AN_ClipKey k)
 typedef struct AN_Animator AN_Animator;
 struct AN_Animator
 {
-	A_Assets *assets;
-	
 	A_Handle selected_model;
 
 	AN_ClipKey clip;
@@ -92,7 +90,6 @@ static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playbac
    ANIMATOR
    ================================================== */
 
-static void AN_AnimatorInit(AN_Animator *animator, A_Assets *assets);
 static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle);
 static void AN_AnimatorTick(AN_Animator *animator, f32 global_time);
 static void AN_AnimatorUpdatePalette(AN_Animator *animator);

@@ -15,16 +15,16 @@ static A_SerializerPipelineData A_ScriptSerializerCpu(const A_Context *ctx, Aren
 	script->ref = S_RefNull();
 	
 	IO_ByteSpan source_bytes = IO_ReadEntireFile(scratch.arena, file_path);
-	S_Ref chunk_ref = S_Compile(ctx->assets->scripting_system, source_bytes, file_path);
+	S_Ref chunk_ref = S_Compile(source_bytes, file_path);
 
 	if (!S_RefIsNull(chunk_ref))
 	{
-		script->ref = S_ExecuteModule(ctx->assets->scripting_system, chunk_ref);
-		S_Release(ctx->assets->scripting_system, chunk_ref);
+		script->ref = S_ExecuteModule(chunk_ref);
+		S_Release(chunk_ref);
 	}
 	
 	A_SerializerPipelineData result = {0};
-	result.data = script;
+	result.user_data = script;
 	result.stage_size = 0;
 	result.failed = false;
 	result.dependency_count = 0;
@@ -39,7 +39,7 @@ static void A_ScriptSerializerAlloc(const A_Context *ctx,
 						 A_Asset *out,
 						 Arena *arena)
 {
-	A_ScriptLoadData *script = data->data;
+	A_ScriptLoadData *script = data->user_data;
 
 	out->script.ref = script->ref;
 }

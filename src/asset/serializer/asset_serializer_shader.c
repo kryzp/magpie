@@ -14,7 +14,7 @@ static A_SerializerPipelineData A_ShaderSerializerCpu(const A_Context *ctx, Aren
 	A_ShaderLoadData *shader = ArenaPushArray(load_scope, A_ShaderLoadData, 1);
 	
 	A_SerializerPipelineData result = {0};
-	result.data = shader;
+	result.user_data = shader;
 	result.stage_size = 0;
 	result.failed = false;
 	result.dependency_count = 0;
@@ -25,12 +25,9 @@ static A_SerializerPipelineData A_ShaderSerializerCpu(const A_Context *ctx, Aren
 											 String8Substr(file_path, 0, shader_index),
 											 String8Lit("shaders/modules/"));
 
-	G_ShaderCompiler *compiler = ctx->assets->shader_compiler;
-
-	shader->compiled = G_ShaderCompilerCompile(compiler,
-													  load_scope,
-													  file_path,
-													  1, &search_directory);
+	shader->compiled = G_ShaderCompilerCompile(load_scope,
+											   file_path,
+											   1, &search_directory);
 
 	result.failed = shader->compiled.failed;
 	
@@ -46,33 +43,29 @@ static A_SerializerPipelineData A_ShaderSerializerCpu(const A_Context *ctx, Aren
 }
 
 static void A_ShaderSerializerAlloc(const A_Context *ctx,
-						  A_SerializerPipelineData *data,
-						  A_Asset *out,
-						  Arena *arena)
+									A_SerializerPipelineData *data,
+									A_Asset *out,
+									Arena *arena)
 {
-	A_ShaderLoadData *shader = data->data;
+	A_ShaderLoadData *shader_data = data->user_data;
 
-	out->shader.key = G_DeviceShaderProgramCreate(ctx->assets->device,
-														 shader->compiled.count,
-														 shader->compiled.bytecodes);
+	out->shader.key = G_DeviceShaderProgramCreate(shader_data->compiled.count, shader_data->compiled.bytecodes);
 }
 
 static void A_ShaderSerializerReload(const A_Context *ctx,
-						   A_SerializerPipelineData *data,
-						   A_Asset *existing)
+									 A_SerializerPipelineData *data,
+									 A_Asset *existing)
 {
-	A_ShaderLoadData *shader = data->data;
+	A_ShaderLoadData *shader_data = data->user_data;
 
-	G_DeviceShaderProgramDestroy(ctx->assets->device, existing->shader.key);
+	G_DeviceShaderProgramDestroy(existing->shader.key);
 	
-	existing->shader.key = G_DeviceShaderProgramCreate(ctx->assets->device,
-															  shader->compiled.count,
-															  shader->compiled.bytecodes);
+	existing->shader.key = G_DeviceShaderProgramCreate(shader_data->compiled.count, shader_data->compiled.bytecodes);
 }
 
-static void A_ShaderSerializerDispose(A_Asset *asset, A_Assets *assets)
+static void A_ShaderSerializerDispose(A_Asset *asset)
 {
-	G_DeviceShaderProgramDestroy(assets->device, asset->shader.key);
+	G_DeviceShaderProgramDestroy(asset->shader.key);
 }
 
 static A_Serializer A_GetShaderSerializer(void)

@@ -38,7 +38,7 @@ static A_SerializerPipelineData A_TextureSerializerCpu(const A_Context *ctx, Are
 	tex_load_data->pixel_data = px;
 
 	A_SerializerPipelineData result = {0};
-	result.data = tex_load_data;
+	result.user_data = tex_load_data;
 	result.stage_size = w * h * stride * 4; // RGBA = 4 values ppx.
 	result.failed = px == NULL;
 	result.dependency_count = 0;
@@ -54,15 +54,13 @@ static void A_TextureSerializerAlloc(const A_Context *ctx,
 						   A_Asset *out,
 						   Arena *arena)
 {
-	G_Device *device = ctx->assets->device;
-	
-	A_TextureLoadData *tex_data = data->data;
+	A_TextureLoadData *tex_data = data->user_data;
 
 	VkFormat format = tex_data->is_hdr
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	out->texture.key = G_DeviceTextureAlloc2D(device, tex_data->width, tex_data->height, format, 5);
+	out->texture.key = G_DeviceTextureAlloc2D(tex_data->width, tex_data->height, format, 5);
 }
 
 static void A_TextureSerializerReload(const A_Context *ctx,
@@ -78,12 +76,10 @@ static void A_TextureSerializerGpu(const A_Context *ctx,
 						 G_CmdBuffer *cmd,
 						 G_BufferKey stage, u64 stage_base)
 {
-	G_Device *device = ctx->assets->device;
-	
-	A_TextureLoadData *tex_data = data->data;
-	G_Texture *gfx_texture = G_DeviceTextureFromKey(device, asset->texture.key);
+	A_TextureLoadData *tex_data = data->user_data;
+	G_Texture *gfx_texture = G_DeviceTextureFromKey(asset->texture.key);
 
-	G_DeviceBufferWrite(device, stage, tex_data->pixel_data, data->stage_size, stage_base);
+	G_DeviceBufferWrite(stage, tex_data->pixel_data, data->stage_size, stage_base);
 
 	G_AccessSt copy_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
 	G_AccessSt copy_dst = { VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
@@ -115,14 +111,14 @@ static void A_TextureSerializerGpu(const A_Context *ctx,
 
 static void A_TextureSerializerEnd(A_SerializerPipelineData *data)
 {
-	A_TextureLoadData *tex_data = data->data;
+	A_TextureLoadData *tex_data = data->user_data;
 
 	stbi_image_free(tex_data->pixel_data);
 }
 
-static void A_TextureSerializerDispose(A_Asset *asset, A_Assets *assets)
+static void A_TextureSerializerDispose(A_Asset *asset)
 {
-	G_DeviceTextureDestroy(assets->device, asset->texture.key);
+	G_DeviceTextureDestroy(asset->texture.key);
 }
 
 static A_Serializer A_GetTextureSerializer(void)

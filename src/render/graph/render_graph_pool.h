@@ -37,19 +37,17 @@ struct R_ResourcePool
 };
 
 static void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers);
-static void R_ResourcePoolDestroy(R_ResourcePool *pool, G_Device *device);
+static void R_ResourcePoolDestroy(R_ResourcePool *pool);
 
 // Update timeline values and reset used state for all entries.
 // Typically call once per frame.
-static void R_ResourcePoolFlush(R_ResourcePool *pool, const G_Device *device);
+static void R_ResourcePoolFlush(R_ResourcePool *pool);
 
 static G_TextureKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
-													 G_Device *device,
 													 const R_TextureInfo *info,
 													 R_ResourceState *out_state);
 
 static G_BufferKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
-												   G_Device *device,
 												   const R_BufferInfo *info,
 												   R_ResourceState *out_state);
 

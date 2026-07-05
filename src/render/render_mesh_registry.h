@@ -35,7 +35,6 @@ typedef struct R_MeshRegistry R_MeshRegistry;
 struct R_MeshRegistry
 {
 	Arena *arena;
-	G_Device *device;
 	LOG_Channel log_channel;
 	
 	R_MeshSlot mesh_slots[R_MESH_REGISTRY_MAX_MESHES];
@@ -50,14 +49,13 @@ struct R_MeshRegistry
 	u32 geometry_page_count;
 };
 
-static void                 R_MeshRegistryInit(R_MeshRegistry *r, Arena *arena, G_Device *device, LOG_Channel log_channel);
+static void                 R_MeshRegistryInit(R_MeshRegistry *r, Arena *arena, LOG_Channel log_channel);
 static void                 R_MeshRegistryDestroy(R_MeshRegistry *r);
 
 static R_SceneHandle        R_MeshRegistryCreateMesh(R_MeshRegistry *r, G_CmdBuffer *cmd, const R_MeshDesc *desc);
 static void                 R_MeshRegistryDestroyMesh(R_MeshRegistry *r, R_SceneHandle handle);
 
 static u32                  R_MeshRegistryCountOfMeshes(const R_MeshRegistry *r);
-static u64                  R_MeshRegistryBufferAddr(const R_MeshRegistry *r);
 static b32                  R_MeshRegistryHandleIsValid(const R_MeshRegistry *r, R_SceneHandle handle);
 
 static void                 R_MeshRegistryFlushIfDirty(R_MeshRegistry *r);

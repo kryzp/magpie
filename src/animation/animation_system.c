@@ -1,5 +1,5 @@
 
-static void AN_SystemInit(AN_System *s, LOG_Channel log_channel, A_Assets *assets)
+static void AN_SystemInit(AN_System *s, LOG_Channel log_channel)
 {
 	s->log_channel = log_channel;
 
@@ -11,8 +11,6 @@ static void AN_SystemInit(AN_System *s, LOG_Channel log_channel, A_Assets *asset
 		s->instances[i].arena = ArenaAlloc(Megabytes(2));
 		s->instances[i].alive = false;
 		s->instances[i].generation = 0;
-
-		AN_AnimatorInit(&s->instances[i].animator, assets);
 	}
 }
 

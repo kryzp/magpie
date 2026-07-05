@@ -1,12 +1,11 @@
 
-static void R_SceneInit(R_Scene *scene, Arena *arena, G_Device *device, A_Assets *assets, LOG_Channel log_channel)
+static void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 {
-	scene->assets = assets;
 	scene->log_channel = log_channel;
 
 	R_SceneGraphInit(&scene->graph, osapi->LogChannelOpenFrom(log_channel, String8Lit("GRAPH")));
-	R_MeshRegistryInit(&scene->meshes, arena, device, osapi->LogChannelOpenFrom(log_channel, String8Lit("MESH")));
-	R_MaterialRegistryInit(&scene->materials, device, assets, osapi->LogChannelOpenFrom(log_channel, String8Lit("MATERIAL")));
+	R_MeshRegistryInit(&scene->meshes, arena, osapi->LogChannelOpenFrom(log_channel, String8Lit("MESH")));
+	R_MaterialRegistryInit(&scene->materials, osapi->LogChannelOpenFrom(log_channel, String8Lit("MATERIAL")));
 
 	DebugLogI(scene->log_channel, "Initialized.");
 }
@@ -20,36 +19,9 @@ static void R_SceneDestroy(R_Scene *scene)
 	DebugLogI(scene->log_channel, "Destroyed.");
 }
 
-static void R_SceneDrawIndirect(const R_Scene *scene,
-					G_CmdBuffer *cmd,
-					G_BufferKey indirect_buffer,
-					G_BufferKey count_buffer)
-{
-	for (u64 i = 0; i < scene->meshes.geometry_page_count; i++)
-	{
-		const R_GeometryPage *page = &scene->meshes.geometry_pages[i];
-
-		u64 max_draws_per_page = R_SCENE_GRAPH_MAX_OBJECTS;
-
-		u64 indirect_offset = i * sizeof(R_GPU_IndirectDraw) * max_draws_per_page;
-		u64 count_offset = i * sizeof(u32);
-		
-		G_CmdBindIndexBuffer(cmd,
-							 page->index_buffer,
-							 0, VK_WHOLE_SIZE,
-							 VK_INDEX_TYPE_UINT32);
-		
-		G_CmdDrawIndexedIndirectCount(cmd,
-									  indirect_buffer, indirect_offset,
-									  count_buffer, count_offset,
-									  max_draws_per_page,
-									  sizeof(R_GPU_IndirectDraw));
-	}
-}
-
 static R_ModelImportReceipt R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle handle, u32 max_count)
 {
-	A_ModelData *model_asset = &A_GetNow(scene->assets, handle)->model;
+	A_ModelData *model_asset = &A_GetNow(handle)->model;
 	
 	u32 sub_model_count = model_asset->sub_model_count;
 	const A_SubModel *sub_models = model_asset->sub_models;

@@ -6,7 +6,7 @@ static u16 IO_ByteSwap16(u16 v);
 static u32 IO_ByteSwap32(u32 v);
 static u64 IO_ByteSwap64(u64 v);
 
-typedef u32 IO_ByteSerializerErrors;
+typedef u32 IO_ByteSerializerErrorFlags;
 enum
 {
 	IO_ByteSerializerError_None        = 0,
@@ -23,8 +23,13 @@ struct IO_ByteSerializer
 	u64 capacity;
 	i64 at;
 	IO_Endian endianness;
-	IO_ByteSerializerErrors errors;
+	IO_ByteSerializerErrorFlags errors;
 };
+
+static u8  IO_ByteSwap8  (u8 v);
+static u16 IO_ByteSwap16 (u16 v);
+static u32 IO_ByteSwap32 (u32 v);
+static u64 IO_ByteSwap64 (u64 v);
 
 static IO_ByteSerializer IO_ByteStart(OS_Handle os_stream, IO_Endian endianness);
 static IO_ByteSerializer IO_ByteStartPlatformEndian(OS_Handle os_stream);

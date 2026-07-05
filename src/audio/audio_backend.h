@@ -36,33 +36,34 @@ AU_AttenuationModel;
 
 typedef struct AU_Backend AU_Backend;
 
-static AU_Backend *AU_BackendInit(Arena *arena, LOG_Channel log_channel);
-static void AU_BackendShutdown(AU_Backend *backend);
+static AU_Backend *AU_BackendAllocAndSelect(Arena *arena, LOG_Channel log_channel);
+static void AU_BackendShutdown(void);
+static void AU_BackendSelectContext(AU_Backend *backend);
 
-static void AU_BackendTick(AU_Backend *backend, f32 dt, AU_Listener listener);
+static void AU_BackendTick(f32 dt, AU_Listener listener);
 
-static void AU_BackendPlay(AU_Backend *backend, AU_SourceHandle handle);
-static void AU_BackendStop(AU_Backend *backend, AU_SourceHandle handle);
-static void AU_BackendResume(AU_Backend *backend, AU_SourceHandle handle);
-static void AU_BackendPause(AU_Backend *backend, AU_SourceHandle handle);
-static void AU_BackendReset(AU_Backend *backend, AU_SourceHandle handle);
+static void AU_BackendPlay(AU_SourceHandle handle);
+static void AU_BackendStop(AU_SourceHandle handle);
+static void AU_BackendResume(AU_SourceHandle handle);
+static void AU_BackendPause(AU_SourceHandle handle);
+static void AU_BackendReset(AU_SourceHandle handle);
 
-static b32 AU_BackendIsPlaying(AU_Backend *backend, AU_SourceHandle handle);
-static b32 AU_BackendIsLooping(AU_Backend *backend, AU_SourceHandle handle);
+static b32 AU_BackendIsPlaying(AU_SourceHandle handle);
+static b32 AU_BackendIsLooping(AU_SourceHandle handle);
 
-static AU_BufferHandle AU_BackendCreateBuffer(AU_Backend *backend, const void *data, u64 bytes, u32 channels, u16 sample_rate, AU_Format format);
-static void AU_BackendDestroyBuffer(AU_Backend *backend, AU_BufferHandle handle);
+static AU_BufferHandle AU_BackendCreateBuffer(const void *data, u64 bytes, u32 channels, u16 sample_rate, AU_Format format);
+static void AU_BackendDestroyBuffer(AU_BufferHandle handle);
 
-static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_Backend *backend, AU_BufferHandle handle);
+static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_BufferHandle handle);
 // TODO: CreateSourceFromStream
-static void AU_BackendDestroySource(AU_Backend *backend, AU_SourceHandle handle);
+static void AU_BackendDestroySource(AU_SourceHandle handle);
 
-static void AU_BackendSetSourceVolume(AU_Backend *backend, AU_SourceHandle handle, f32 volume);
-static void AU_BackendSetSourcePitch(AU_Backend *backend, AU_SourceHandle handle, f32 pitch);
-static void AU_BackendSetSourceLooping(AU_Backend *backend, AU_SourceHandle handle, b32 loop);
-static void AU_BackendSetSourcePosition(AU_Backend *backend, AU_SourceHandle handle, v3 position);
-static void AU_BackendSetSourceDopplerFactor(AU_Backend *backend, AU_SourceHandle handle, f32 factor);
-static void AU_BackendSetSourceAttenuationModel(AU_Backend *backend, AU_SourceHandle handle, AU_AttenuationModel model);
-static void AU_BackendSetSourceAttenuationRange(AU_Backend *backend, AU_SourceHandle handle, f32 dist_min, f32 dist_max);
+static void AU_BackendSetSourceVolume(AU_SourceHandle handle, f32 volume);
+static void AU_BackendSetSourcePitch(AU_SourceHandle handle, f32 pitch);
+static void AU_BackendSetSourceLooping(AU_SourceHandle handle, b32 loop);
+static void AU_BackendSetSourcePosition(AU_SourceHandle handle, v3 position);
+static void AU_BackendSetSourceDopplerFactor(AU_SourceHandle handle, f32 factor);
+static void AU_BackendSetSourceAttenuationModel(AU_SourceHandle handle, AU_AttenuationModel model);
+static void AU_BackendSetSourceAttenuationRange(AU_SourceHandle handle, f32 dist_min, f32 dist_max);
 
 #endif // AUDIO_BACKEND_H

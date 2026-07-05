@@ -1,21 +1,25 @@
 
+static G_ShaderCompiler *g_shader_compiler = NULL;
+
 static void G_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
 							  const char *message,
 							  void *user_data)
 {
-	G_ShaderCompiler *self = user_data;
-	
-	DebugLogW(self->log_channel, "%s --> %s: %s", source, context, message);
+	DebugLogW(g_shader_compiler->log_channel,
+			  "%s --> %s: %s",
+			  source, context, message);
 }
 
-static void G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_channel)
+static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
-	SLANG_Init(&compiler->global_session);
+	compiler->log_channel = log_channel;
 
 	compiler->mutex = osapi->MutexCreate();
-	
-	compiler->log_channel = log_channel;
+
+	SLANG_Init(&compiler->global_session);
+
+	G_ShaderCompilerSelectContext(compiler);
 
 	if (compiler->global_session)
 		DebugLogI(compiler->log_channel, "Initialized.");
@@ -23,28 +27,32 @@ static void G_ShaderCompilerInit(G_ShaderCompiler *compiler, LOG_Channel log_cha
 		DebugLogB(compiler->log_channel, "Failed to initialize.");
 }
 
-static void G_ShaderCompilerShutdown(G_ShaderCompiler *compiler)
+static void G_ShaderCompilerShutdown(void)
 {
-	DebugLogI(compiler->log_channel, "Shutting down...");
-
-	osapi->MutexDestroy(compiler->mutex);
+	DebugLogI(g_shader_compiler->log_channel, "Shutting down...");
 	
-	SLANG_Shutdown(compiler->global_session);
+	SLANG_Shutdown(g_shader_compiler->global_session);
 
-	compiler->global_session = NULL;
+	osapi->MutexDestroy(g_shader_compiler->mutex);
+
+	g_shader_compiler = NULL;
 }
 
-static G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler,
-						  Arena *arena,
-						  String8 source_path,
-						  u32 search_path_count, const String8 *search_paths)
+static void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler)
 {
-	osapi->MutexLock(compiler->mutex);
+	g_shader_compiler = compiler;
+}
+
+static G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
+													  String8 source_path,
+													  u32 search_path_count, const String8 *search_paths)
+{
+	osapi->MutexLock(g_shader_compiler->mutex);
 	
 	G_ShaderCompiledStages compiled = {0};
 	compiled.failed = true;
 
-	AssertTrue(compiler->global_session);
+	DebugLogAssert(g_shader_compiler->log_channel, g_shader_compiler->global_session, "Invalid global session.");
 
 	ScratchArena scratch = ScratchBegin(&arena, 1);
 
@@ -62,12 +70,10 @@ static G_ShaderCompiledStages G_ShaderCompilerCompile(G_ShaderCompiler *compiler
 		search_path_cstrs[i] = p;
 	}
 
-	SLANG_CompileResult bridge_result = SLANG_Compile(compiler->global_session,
+	SLANG_CompileResult bridge_result = SLANG_Compile(g_shader_compiler->global_session,
 													  source_cstr,
-													  search_path_count,
-													  search_path_cstrs,
-													  G_ShaderCompilerLogCallback,
-													  compiler);
+													  search_path_count, search_path_cstrs,
+													  G_ShaderCompilerLogCallback, NULL);
 
 	if (bridge_result.failed)
 		goto end;
@@ -97,7 +103,7 @@ end:
 	SLANG_FreeResult(&bridge_result);
 	ScratchRelease(&scratch);
 
-	osapi->MutexUnlock(compiler->mutex);
+	osapi->MutexUnlock(g_shader_compiler->mutex);
 	
 	return compiled;
 }

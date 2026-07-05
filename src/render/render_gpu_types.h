@@ -22,6 +22,7 @@ struct R_GPU_FrameData
 	m4 inv_proj;
 	v3 camera_position;
 	v2 window_resolution;
+	u32 frame_number;
 	f32 delta_time;
 	f32 time;
 };

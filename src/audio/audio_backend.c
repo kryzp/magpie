@@ -1,4 +1,6 @@
 
+static AU_Backend *au_backend = NULL;
+
 typedef struct AU_MA_Buffer AU_MA_Buffer;
 struct AU_MA_Buffer
 {
@@ -82,13 +84,13 @@ static ma_attenuation_model AU_MA_GetMiniAttenuationModel(AU_AttenuationModel mo
 	}
 }
 
-static AU_MA_Buffer *AU_MA_AllocBuffer(AU_Backend *backend)
+static AU_MA_Buffer *AU_MA_AllocBuffer(void)
 {
 	AU_MA_Buffer *buffer;
 
-	if (backend->free_buffer_sentinel.next != &backend->free_buffer_sentinel)
+	if (au_backend->free_buffer_sentinel.next != &au_backend->free_buffer_sentinel)
 	{
-		buffer = backend->free_buffer_sentinel.next;
+		buffer = au_backend->free_buffer_sentinel.next;
 		buffer->prev->next = buffer->next;
 		buffer->next->prev = buffer->prev;
 
@@ -96,14 +98,14 @@ static AU_MA_Buffer *AU_MA_AllocBuffer(AU_Backend *backend)
 	}
 	else
 	{
-		buffer = ArenaPushArray(backend->arena, AU_MA_Buffer, 1);
+		buffer = ArenaPushArray(au_backend->arena, AU_MA_Buffer, 1);
 	}
 	
-	buffer->handle = backend->curr_buffer_handle;
-	backend->curr_buffer_handle.value++;
+	buffer->handle = au_backend->curr_buffer_handle;
+	au_backend->curr_buffer_handle.value++;
 
-	buffer->next = backend->buffer_sentinel.next;
-	buffer->prev = &backend->buffer_sentinel;
+	buffer->next = au_backend->buffer_sentinel.next;
+	buffer->prev = &au_backend->buffer_sentinel;
 
 	buffer->next->prev = buffer;
 	buffer->prev->next = buffer;
@@ -111,13 +113,13 @@ static AU_MA_Buffer *AU_MA_AllocBuffer(AU_Backend *backend)
 	return buffer;
 }
 
-static AU_MA_Source *AU_MA_AllocSource(AU_Backend *backend)
+static AU_MA_Source *AU_MA_AllocSource(void)
 {
 	AU_MA_Source *source;
 
-	if (backend->free_source_sentinel.next != &backend->free_source_sentinel)
+	if (au_backend->free_source_sentinel.next != &au_backend->free_source_sentinel)
 	{
-		source = backend->free_source_sentinel.next;
+		source = au_backend->free_source_sentinel.next;
 		source->prev->next = source->next;
 		source->next->prev = source->prev;
 
@@ -125,14 +127,14 @@ static AU_MA_Source *AU_MA_AllocSource(AU_Backend *backend)
 	}
 	else
 	{
-		source = ArenaPushArray(backend->arena, AU_MA_Source, 1);
+		source = ArenaPushArray(au_backend->arena, AU_MA_Source, 1);
 	}
 
-	source->handle = backend->curr_source_handle;
-	backend->curr_source_handle.value++;
+	source->handle = au_backend->curr_source_handle;
+	au_backend->curr_source_handle.value++;
 
-	source->next = backend->source_sentinel.next;
-	source->prev = &backend->source_sentinel;
+	source->next = au_backend->source_sentinel.next;
+	source->prev = &au_backend->source_sentinel;
 
 	source->next->prev = source;
 	source->prev->next = source;
@@ -140,21 +142,21 @@ static AU_MA_Source *AU_MA_AllocSource(AU_Backend *backend)
 	return source;
 }
 
-static void AU_MA_ReleaseBuffer(AU_Backend *backend, AU_MA_Buffer *buffer)
+static void AU_MA_ReleaseBuffer(AU_MA_Buffer *buffer)
 {
 	ma_audio_buffer_uninit(&buffer->buffer);
 	
 	buffer->prev->next = buffer->next;
 	buffer->next->prev = buffer->prev;
 
-	buffer->next = backend->free_buffer_sentinel.next;
-	buffer->prev = &backend->free_buffer_sentinel;
+	buffer->next = au_backend->free_buffer_sentinel.next;
+	buffer->prev = &au_backend->free_buffer_sentinel;
 
 	buffer->next->prev = buffer;
 	buffer->prev->next = buffer;
 }
 
-static void AU_MA_ReleaseSource(AU_Backend *backend, AU_MA_Source *source)
+static void AU_MA_ReleaseSource(AU_MA_Source *source)
 {
 	ma_sound_uninit(&source->sound);
 	ma_audio_buffer_ref_uninit(&source->buffer_ref);
@@ -162,16 +164,16 @@ static void AU_MA_ReleaseSource(AU_Backend *backend, AU_MA_Source *source)
 	source->prev->next = source->next;
 	source->next->prev = source->prev;
 
-	source->next = backend->free_source_sentinel.next;
-	source->prev = &backend->free_source_sentinel;
+	source->next = au_backend->free_source_sentinel.next;
+	source->prev = &au_backend->free_source_sentinel;
 
 	source->next->prev = source;
 	source->prev->next = source;
 }
 
-static AU_MA_Buffer *AU_MA_GetBuffer(AU_Backend *backend, AU_BufferHandle handle)
+static AU_MA_Buffer *AU_MA_GetBuffer(AU_BufferHandle handle)
 {
-	AU_MA_Buffer *sentinel = &backend->buffer_sentinel;
+	AU_MA_Buffer *sentinel = &au_backend->buffer_sentinel;
 
 	for (AU_MA_Buffer *buffer = sentinel->next; buffer != sentinel; buffer = buffer->next)
 	{
@@ -182,9 +184,9 @@ static AU_MA_Buffer *AU_MA_GetBuffer(AU_Backend *backend, AU_BufferHandle handle
 	return NULL;
 }
 
-static AU_MA_Source *AU_MA_GetSource(AU_Backend *backend, AU_SourceHandle handle)
+static AU_MA_Source *AU_MA_GetSource(AU_SourceHandle handle)
 {
-	AU_MA_Source *sentinel = &backend->source_sentinel;
+	AU_MA_Source *sentinel = &au_backend->source_sentinel;
 
 	for (AU_MA_Source *source = sentinel->next; source != sentinel; source = source->next)
 	{
@@ -195,7 +197,7 @@ static AU_MA_Source *AU_MA_GetSource(AU_Backend *backend, AU_SourceHandle handle
 	return NULL;
 }
 
-static AU_Backend *AU_BackendInit(Arena *arena, LOG_Channel log_channel)
+static AU_Backend *AU_BackendAllocAndSelect(Arena *arena, LOG_Channel log_channel)
 {
 	AU_Backend *mini = ArenaPushArray(arena, AU_Backend, 1);
 	mini->arena = arena;
@@ -218,108 +220,117 @@ static AU_Backend *AU_BackendInit(Arena *arena, LOG_Channel log_channel)
 	mini->free_source_sentinel.next = &mini->free_source_sentinel;
 	mini->free_source_sentinel.prev = &mini->free_source_sentinel;
 
+	AU_BackendSelectContext(mini);
+
 	DebugLogI(mini->log_channel, "Initialized.");
 	
 	return mini;
 }
 
-static void AU_BackendShutdown(AU_Backend *backend)
+static void AU_BackendShutdown(void)
 {
-	AU_MA_Source *src_sentinel = &backend->source_sentinel;
+	AU_MA_Source *src_sentinel = &au_backend->source_sentinel;
 	for (AU_MA_Source *source = src_sentinel->next; source != src_sentinel; source = source->next)
 	{
 		ma_sound_stop(&source->sound);
 		ma_sound_uninit(&source->sound);
 	}
 
-	AU_MA_Buffer *buf_sentinel = &backend->buffer_sentinel;
+	AU_MA_Buffer *buf_sentinel = &au_backend->buffer_sentinel;
 	for (AU_MA_Buffer *buffer = buf_sentinel->next; buffer != buf_sentinel; buffer = buffer->next)
 	{
 		ma_audio_buffer_uninit(&buffer->buffer);
 	}
 
-	ma_engine_uninit(&backend->engine);
+	ma_engine_uninit(&au_backend->engine);
 	
-	DebugLogI(backend->log_channel, "Destroyed.");
+	DebugLogI(au_backend->log_channel, "Destroyed.");
+
+	au_backend = NULL;
 }
 
-static void AU_BackendTick(AU_Backend *backend, f32 dt, AU_Listener listener)
+static void AU_BackendSelectContext(AU_Backend *backend)
 {
-	ma_engine_listener_set_position(&backend->engine, 0,
+	au_backend = backend;
+}
+
+static void AU_BackendTick(f32 dt, AU_Listener listener)
+{
+	ma_engine_listener_set_position(&au_backend->engine, 0,
 									listener.position.x,
 									listener.position.y,
 									listener.position.z);
 
-	ma_engine_listener_set_direction(&backend->engine, 0,
+	ma_engine_listener_set_direction(&au_backend->engine, 0,
 									 listener.direction.x,
 									 listener.direction.y,
 									 listener.direction.z);
 
-	ma_engine_listener_set_world_up(&backend->engine, 0,
+	ma_engine_listener_set_world_up(&au_backend->engine, 0,
 									0.f, 0.f, 1.f);
 }
 
-static void AU_BackendPlay(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendPlay(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_seek_to_pcm_frame(&source->sound, 0);
 	ma_sound_start(&source->sound);
 }
 
-static void AU_BackendStop(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendStop(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_seek_to_pcm_frame(&source->sound, 0);
 	ma_sound_stop(&source->sound);
 }
 
-static void AU_BackendResume(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendResume(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_start(&source->sound);
 }
 
-static void AU_BackendPause(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendPause(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_stop(&source->sound);
 }
 
-static void AU_BackendReset(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendReset(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_seek_to_pcm_frame(&source->sound, 0);
 }
 
-static b32 AU_BackendIsPlaying(AU_Backend *backend, AU_SourceHandle handle)
+static b32 AU_BackendIsPlaying(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	return ma_sound_is_playing(&source->sound);
 }
 
-static b32 AU_BackendIsLooping(AU_Backend *backend, AU_SourceHandle handle)
+static b32 AU_BackendIsLooping(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	return ma_sound_is_looping(&source->sound);
 }
 
-static AU_BufferHandle AU_BackendCreateBuffer(AU_Backend *backend, const void *data, u64 bytes, u32 channels, u16 sample_rate, AU_Format format)
+static AU_BufferHandle AU_BackendCreateBuffer(const void *data, u64 bytes, u32 channels, u16 sample_rate, AU_Format format)
 {
-	AU_MA_Buffer *buffer = AU_MA_AllocBuffer(backend);
+	AU_MA_Buffer *buffer = AU_MA_AllocBuffer();
 
 	ma_format fmt = AU_MA_GetMiniFormat(format);
 	u64 format_bytes = AU_MA_BytesFromFormat(format);
@@ -330,7 +341,7 @@ static AU_BufferHandle AU_BackendCreateBuffer(AU_Backend *backend, const void *d
 	config.sampleRate = sample_rate;
 
 	ma_result result = ma_audio_buffer_init(&config, &buffer->buffer);
-	DebugLogAssert(backend->log_channel, result == MA_SUCCESS, "Failed to create audio buffer: %d", result);
+	DebugLogAssert(au_backend->log_channel, result == MA_SUCCESS, "Failed to create audio buffer: %d", result);
 
 	buffer->format = fmt;
 	buffer->channels = channels;
@@ -340,18 +351,18 @@ static AU_BufferHandle AU_BackendCreateBuffer(AU_Backend *backend, const void *d
 	return buffer->handle;
 }
 
-static void AU_BackendDestroyBuffer(AU_Backend *backend, AU_BufferHandle handle)
+static void AU_BackendDestroyBuffer(AU_BufferHandle handle)
 {
-	AU_MA_Buffer *buffer = AU_MA_GetBuffer(backend, handle);
-	DebugLogAssert(backend->log_channel, buffer, "Buffer Handle (%u) invalid.", handle.value);
+	AU_MA_Buffer *buffer = AU_MA_GetBuffer(handle);
+	DebugLogAssert(au_backend->log_channel, buffer, "Buffer Handle (%u) invalid.", handle.value);
 
-	AU_MA_ReleaseBuffer(backend, buffer);
+	AU_MA_ReleaseBuffer(buffer);
 }
 
-static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_Backend *backend, AU_BufferHandle handle)
+static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_BufferHandle handle)
 {
-	AU_MA_Source *source = AU_MA_AllocSource(backend);
-	AU_MA_Buffer *buffer = AU_MA_GetBuffer(backend, handle);
+	AU_MA_Source *source = AU_MA_AllocSource();
+	AU_MA_Buffer *buffer = AU_MA_GetBuffer(handle);
 
 	AssertTrue(buffer);
 
@@ -361,8 +372,8 @@ static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_Backend *backend, AU_
 							 buffer->frame_count,
 							 &source->buffer_ref);
 
-	ma_result result = ma_sound_init_from_data_source(&backend->engine, &source->buffer_ref, 0, NULL, &source->sound);
-	DebugLogAssert(backend->log_channel, result == MA_SUCCESS, "Failed to create audio source: %d", result);
+	ma_result result = ma_sound_init_from_data_source(&au_backend->engine, &source->buffer_ref, 0, NULL, &source->sound);
+	DebugLogAssert(au_backend->log_channel, result == MA_SUCCESS, "Failed to create audio source: %d", result);
 	
 	// Disable spatialization by default.
 	ma_sound_set_spatialization_enabled(&source->sound, false);
@@ -370,69 +381,69 @@ static AU_SourceHandle AU_BackendCreateSourceFromBuffer(AU_Backend *backend, AU_
 	return source->handle;
 }
 
-static void AU_BackendDestroySource(AU_Backend *backend, AU_SourceHandle handle)
+static void AU_BackendDestroySource(AU_SourceHandle handle)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 	
-	AU_MA_ReleaseSource(backend, source);
+	AU_MA_ReleaseSource(source);
 }
 
-static void AU_BackendSetSourceVolume(AU_Backend *backend, AU_SourceHandle handle, f32 volume)
+static void AU_BackendSetSourceVolume(AU_SourceHandle handle, f32 volume)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_volume(&source->sound, volume);
 }
 
-static void AU_BackendSetSourcePitch(AU_Backend *backend, AU_SourceHandle handle, f32 pitch)
+static void AU_BackendSetSourcePitch(AU_SourceHandle handle, f32 pitch)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_pitch(&source->sound, pitch);
 }
 
-static void AU_BackendSetSourceLooping(AU_Backend *backend, AU_SourceHandle handle, b32 loop)
+static void AU_BackendSetSourceLooping(AU_SourceHandle handle, b32 loop)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_looping(&source->sound, loop);
 }
 
-static void AU_BackendSetSourcePosition(AU_Backend *backend, AU_SourceHandle handle, v3 position)
+static void AU_BackendSetSourcePosition(AU_SourceHandle handle, v3 position)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_spatialization_enabled(&source->sound, true);
 	ma_sound_set_position(&source->sound, position.x, position.y, position.z);
 }
 
-static void AU_BackendSetSourceDopplerFactor(AU_Backend *backend, AU_SourceHandle handle, f32 factor)
+static void AU_BackendSetSourceDopplerFactor(AU_SourceHandle handle, f32 factor)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_doppler_factor(&source->sound, factor);
 }
 
-static void AU_BackendSetSourceAttenuationModel(AU_Backend *backend, AU_SourceHandle handle, AU_AttenuationModel model)
+static void AU_BackendSetSourceAttenuationModel(AU_SourceHandle handle, AU_AttenuationModel model)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource(handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_attenuation_model mini_model = AU_MA_GetMiniAttenuationModel(model);
 
 	ma_sound_set_attenuation_model(&source->sound, mini_model);
 }
 
-static void AU_BackendSetSourceAttenuationRange(AU_Backend *backend, AU_SourceHandle handle, f32 dist_min, f32 dist_max)
+static void AU_BackendSetSourceAttenuationRange(AU_SourceHandle handle, f32 dist_min, f32 dist_max)
 {
-	AU_MA_Source *source = AU_MA_GetSource(backend, handle);
-	DebugLogAssert(backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
+	AU_MA_Source *source = AU_MA_GetSource( handle);
+	DebugLogAssert(au_backend->log_channel, source, "Source Handle (%u) invalid.", handle.value);
 
 	ma_sound_set_min_distance(&source->sound, dist_min);
 	ma_sound_set_max_distance(&source->sound, dist_max);

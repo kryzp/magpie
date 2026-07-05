@@ -59,8 +59,6 @@ typedef struct AU_System AU_System;
 struct AU_System
 {
 	Arena *arena;
-	AU_Backend *backend;
-
 	LOG_Channel log_channel;
 
 	AU_Listener listener;
@@ -74,7 +72,7 @@ struct AU_System
 	f32 bus_volumes[AU_Bus_COUNT];
 };
 
-static void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel, AU_Backend *backend);
+static void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel);
 static void AU_Shutdown(AU_System *system);
 
 static void AU_Tick(AU_System *system, f32 dt, AU_Listener listener);

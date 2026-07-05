@@ -1,4 +1,6 @@
 
+static S_System *s_system = NULL;
+
 // lua indices start at 1
 // first index reserved for function pointer
 // start from 2
@@ -18,7 +20,6 @@ S_YieldKind;
 typedef struct S_Context S_Context;
 struct S_Context
 {
-	S_System *system;
 	lua_State *lua;
 	i32 nretval;
 };
@@ -65,31 +66,17 @@ struct S_System
 	u32 pending_signal_count;
 };
 
-// kinda hacky but every child inherits a copy from the main
-// thread then its created so that the bindings can grab the
-// system pointer in O(1) regardless of the current coroutine.
-
-static S_System *S_GetSystemFromL(lua_State *lua)
-{
-	return *((S_System **)lua_getextraspace(lua));
-}
-
-static void S_SetSystemInL(lua_State *lua, S_System *system)
-{
-	*((S_System **)lua_getextraspace(lua)) = system;
-}
-
-static S_Coroutine *S_AllocCoroutine(S_System *system, S_Handle *out_handle)
+static S_Coroutine *S_AllocCoroutine(S_Handle *out_handle)
 {
 	// 0 = null
 	for (u32 i = 1; i < S_MAX_COROUTINES; i++)
 	{
-		u32 slot = (system->first_free_hint + i) % S_MAX_COROUTINES;
+		u32 slot = (s_system->first_free_hint + i) % S_MAX_COROUTINES;
 
 		if (slot == 0)
 			continue;
 
-		S_Coroutine *co = &system->coroutines[slot];
+		S_Coroutine *co = &s_system->coroutines[slot];
 
 		if (!co->in_use)
 		{
@@ -113,7 +100,7 @@ static S_Coroutine *S_AllocCoroutine(S_System *system, S_Handle *out_handle)
 			co->thread             = NULL;
 			co->thread_ref         = LUA_NOREF;
 
-			system->first_free_hint = slot;
+			s_system->first_free_hint = slot;
 
 			if (out_handle)
 			{
@@ -125,7 +112,7 @@ static S_Coroutine *S_AllocCoroutine(S_System *system, S_Handle *out_handle)
 		}
 	}
 
-	DebugLogE(system->log_channel, "Out of coroutine slots (max %u).", ArraySize(system->coroutines));
+	DebugLogE(s_system->log_channel, "Out of coroutine slots (max %u).", ArraySize(s_system->coroutines));
 
 	if (out_handle)
 		*out_handle = S_HandleNull();
@@ -133,14 +120,14 @@ static S_Coroutine *S_AllocCoroutine(S_System *system, S_Handle *out_handle)
 	return NULL;
 }
 
-static void S_FreeCoroutine(S_System *system, S_Coroutine *co)
+static void S_FreeCoroutine(S_Coroutine *co)
 {
 	if (co->finish_fn)
-		co->finish_fn(system, co, co->finish_user_data);
+		co->finish_fn(co, co->finish_user_data);
 
 	if (co->parent >= 0 && co->parent < (i32)S_MAX_COROUTINES)
 	{
-		S_Coroutine *parent = &system->coroutines[co->parent];
+		S_Coroutine *parent = &s_system->coroutines[co->parent];
 
 		if (parent->in_use && parent->active_children > 0)
 			parent->active_children--;
@@ -148,7 +135,7 @@ static void S_FreeCoroutine(S_System *system, S_Coroutine *co)
 
 	if (co->thread_ref != LUA_NOREF)
 	{
-		luaL_unref(system->lua, LUA_REGISTRYINDEX, co->thread_ref);
+		luaL_unref(s_system->lua, LUA_REGISTRYINDEX, co->thread_ref);
 		co->thread_ref = LUA_NOREF;
 	}
 
@@ -159,7 +146,7 @@ static void S_FreeCoroutine(S_System *system, S_Coroutine *co)
 	co->yield_kind = S_YieldKind_None;
 }
 
-static S_Coroutine *S_ResolveHandle(S_System *system, S_Handle handle)
+static S_Coroutine *S_ResolveHandle(S_Handle handle)
 {
 	if (S_HandleIsNull(handle))
 		return NULL;
@@ -167,7 +154,7 @@ static S_Coroutine *S_ResolveHandle(S_System *system, S_Handle handle)
 	if (handle.index == 0 || handle.index >= S_MAX_COROUTINES)
 		return NULL;
 
-	S_Coroutine *co = &system->coroutines[handle.index];
+	S_Coroutine *co = &s_system->coroutines[handle.index];
 
 	if (!co->in_use)
 		return NULL;
@@ -180,11 +167,9 @@ static S_Coroutine *S_ResolveHandle(S_System *system, S_Handle handle)
 
 static i32 S_BindingTrampoline(lua_State *lua)
 {
-	S_System *sys = S_GetSystemFromL(lua);
-	S_BindingFn *fn  = (S_BindingFn *)lua_touserdata(lua, lua_upvalueindex(1));
+	S_BindingFn *fn = (S_BindingFn *)lua_touserdata(lua, lua_upvalueindex(1));
 
 	S_Context ctx = {0};
-	ctx.system = sys;
 	ctx.lua = lua;
 	ctx.nretval = 0;
 
@@ -194,16 +179,15 @@ static i32 S_BindingTrampoline(lua_State *lua)
 	return ctx.nretval;
 }
 
-static void S_PushBindingClosure(S_System *system, S_BindingFn *fn,
-					   void *const *upvalues, u32 n)
+static void S_PushBindingClosure(S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	// first upval is reserved for the function pointer
-	lua_pushlightuserdata(system->lua, (void *)fn);
+	lua_pushlightuserdata(s_system->lua, (void *)fn);
 
 	for (u32 i = 0; i < n; i++)
-		lua_pushlightuserdata(system->lua, upvalues ? upvalues[i] : NULL);
+		lua_pushlightuserdata(s_system->lua, upvalues ? upvalues[i] : NULL);
 
-	lua_pushcclosure(system->lua, S_BindingTrampoline, S_USER_UPVAL_BASE - 1 + n);
+	lua_pushcclosure(s_system->lua, S_BindingTrampoline, S_USER_UPVAL_BASE - 1 + n);
 }
 
 static void S_PushArg(lua_State *target, const S_Argument *a)
@@ -245,7 +229,6 @@ static void S_PushArg(lua_State *target, const S_Argument *a)
 
 static S_BINDING_DEF(S_BND_Dispatch)
 {
-	S_System *sys = ctx->system;
 	u32 n = S_CtxGetArgCount(ctx);
 
 	if (n == 0)
@@ -254,7 +237,7 @@ static S_BINDING_DEF(S_BND_Dispatch)
 		return;
 	}
 	
-	S_Coroutine *parent = sys->curr;
+	S_Coroutine *parent = s_system->curr;
 
 	if (!parent)
 	{
@@ -263,16 +246,16 @@ static S_BINDING_DEF(S_BND_Dispatch)
 	}
 	
 	S_Handle child_handle;
-	S_Coroutine *child = S_AllocCoroutine(sys, &child_handle);
+	S_Coroutine *child = S_AllocCoroutine(&child_handle);
 	
 	if (!child)
 	{
-		DebugLogE(sys->log_channel, "Coroutine pool exhausted.");
+		DebugLogE(s_system->log_channel, "Coroutine pool exhausted.");
 		return;
 	}
 
-	child->thread = lua_newthread(sys->lua);
-	child->thread_ref = luaL_ref(sys->lua, LUA_REGISTRYINDEX);
+	child->thread = lua_newthread(s_system->lua);
+	child->thread_ref = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 
 	// push function and arguments onto new thread stack
 	for (u32 i = 1; i <= n; i++)
@@ -288,7 +271,6 @@ static S_BINDING_DEF(S_BND_Dispatch)
 
 static S_BINDING_DEF(S_BND_Parallelize)
 {
-	S_System *sys = ctx->system;
 	u32 n = S_CtxGetArgCount(ctx);
 
 	if (n == 0)
@@ -297,7 +279,7 @@ static S_BINDING_DEF(S_BND_Parallelize)
 		return;
 	}
 	
-	S_Coroutine *parent = sys->curr;
+	S_Coroutine *parent = s_system->curr;
 
 	if (!parent)
 	{
@@ -307,22 +289,22 @@ static S_BINDING_DEF(S_BND_Parallelize)
 
 	parent->active_children = n;
 
-	const i32 parent_idx = (i32)(parent - sys->coroutines);
+	const i32 parent_idx = (i32)(parent - s_system->coroutines);
 
 	for (u32 i = 0; i < n; i++)
 	{
 		S_Handle child_handle;
-		S_Coroutine *child = S_AllocCoroutine(sys, &child_handle);
+		S_Coroutine *child = S_AllocCoroutine(&child_handle);
 		
 		if (!child)
 		{
 			parent->active_children--;
-			DebugLogE(sys->log_channel, "Coroutine pool exhausted.");
+			DebugLogE(s_system->log_channel, "Coroutine pool exhausted.");
 			continue;
 		}
 
-		child->thread = lua_newthread(sys->lua);
-		child->thread_ref = luaL_ref(sys->lua, LUA_REGISTRYINDEX);
+		child->thread = lua_newthread(s_system->lua);
+		child->thread_ref = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 
 		lua_pushvalue(ctx->lua, i + 1); 
 		lua_xmove(ctx->lua, child->thread, 1);
@@ -355,7 +337,7 @@ static void *S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize n
 	}
 }
 
-static S_System *S_Init(Arena *arena, LOG_Channel log_channel)
+static S_System *S_AllocAndSelect(Arena *arena, LOG_Channel log_channel)
 {
 	S_System *system = ArenaPushArray(arena, S_System, 1);
 
@@ -365,8 +347,6 @@ static S_System *S_Init(Arena *arena, LOG_Channel log_channel)
 	system->lua = lua_newstate(S_InternalLuaAllocator, NULL, 0);
 
 	DebugLogAssert(system->log_channel, system->lua, "Lua failed to initialize (still NULL).");
-
-	S_SetSystemInL(system->lua, system);
 
 	luaL_openlibs(system->lua);
 
@@ -382,121 +362,129 @@ static S_System *S_Init(Arena *arena, LOG_Channel log_channel)
 
 	system->pending_signal_count = 0;
 
-	S_BindGlobal(system, String8Lit("dispatch"),     S_BND_Dispatch);
-	S_BindGlobal(system, String8Lit("parallelize"),  S_BND_Parallelize);
+	S_SelectContext(system);
 
-	DebugLogI(system->log_channel, "%s initialized.", LUA_VERSION);
+	S_BindGlobal(String8Lit("dispatch"), S_BND_Dispatch);
+	S_BindGlobal(String8Lit("parallelize"), S_BND_Parallelize);
+
+	DebugLogI(system->log_channel, "Initialized using %s.", LUA_VERSION);
 
 	return system;
 }
 
-static void S_Destroy(S_System *system)
+static void S_Destroy(void)
 {
-	if (!system || !system->lua)
+	if (!s_system->lua)
 		return;
 
 	for (u32 i = 0; i < S_MAX_COROUTINES; i++)
 	{
-		if (system->coroutines[i].in_use)
-			S_FreeCoroutine(system, &system->coroutines[i]);
+		if (s_system->coroutines[i].in_use)
+			S_FreeCoroutine(&s_system->coroutines[i]);
 	}
 
-	lua_close(system->lua);
-	system->lua = NULL;
+	lua_close(s_system->lua);
 
-	DebugLogI(system->log_channel, "%s destroyed.", LUA_VERSION);
+	DebugLogI(s_system->log_channel, "Destroyed.");
+
+	s_system = NULL;
 }
 
-static S_Ref S_Compile(S_System *system, IO_ByteSpan source, String8 chunk_name)
+static void S_SelectContext(S_System *system)
+{
+	s_system = system;
+}
+
+static S_Ref S_Compile(IO_ByteSpan source, String8 chunk_name)
 {
 	S_Ref result = S_RefNull();
 
-	i32 status = luaL_loadbufferx(system->lua, (const char *)source.bytes, source.size, (const char *)chunk_name.str, "t");
+	i32 status = luaL_loadbufferx(s_system->lua, (const char *)source.bytes, source.size, (const char *)chunk_name.str, "t");
 
 	if (status != LUA_OK)
 	{
-		const char *err = lua_tostring(system->lua, -1);
+		const char *err = lua_tostring(s_system->lua, -1);
 
-		DebugLogE(system->log_channel,
+		DebugLogE(s_system->log_channel,
 				  "Compile failed (%.*s): %s",
 				  String8VArg(chunk_name), err ? err : "(no message)");
 
-		lua_pop(system->lua, 1);
+		lua_pop(s_system->lua, 1);
 	}
 	else
 	{
-		result.value = luaL_ref(system->lua, LUA_REGISTRYINDEX);
+		result.value = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 	}
 
 	return result;
 }
 
-static void S_Release(S_System *system, S_Ref ref)
+static void S_Release(S_Ref ref)
 {
 	if (S_RefIsNull(ref))
 		return;
 
-	luaL_unref(system->lua, LUA_REGISTRYINDEX, ref.value);
+	luaL_unref(s_system->lua, LUA_REGISTRYINDEX, ref.value);
 }
 
-static S_Ref S_ExecuteModule(S_System *system, S_Ref chunk_ref)
+static S_Ref S_ExecuteModule(S_Ref chunk_ref)
 {
 	S_Ref result = S_RefNull();
 
 	if (S_RefIsNull(chunk_ref))
 		goto end;
 
-	lua_rawgeti(system->lua, LUA_REGISTRYINDEX, chunk_ref.value);
+	lua_rawgeti(s_system->lua, LUA_REGISTRYINDEX, chunk_ref.value);
 	
-	if (lua_pcall(system->lua, 0, 1, 0) != LUA_OK)
+	if (lua_pcall(s_system->lua, 0, 1, 0) != LUA_OK)
 	{
-		DebugLogE(system->log_channel, "Module init error: %s", lua_tostring(system->lua, -1));
+		DebugLogE(s_system->log_channel, "Module init error: %s", lua_tostring(s_system->lua, -1));
 
-		lua_pop(system->lua, 1);
+		lua_pop(s_system->lua, 1);
 		goto end;
 	}
 
-	if (!lua_istable(system->lua, -1))
+	if (!lua_istable(s_system->lua, -1))
 	{
-		DebugLogE(system->log_channel, "Script did not return a table.");
+		DebugLogE(s_system->log_channel, "Script did not return a table.");
 
-		lua_pop(system->lua, 1);
+		lua_pop(s_system->lua, 1);
 		goto end;
 	}
 
-	result.value = luaL_ref(system->lua, LUA_REGISTRYINDEX);
+	result.value = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 
 end:
 	return result;
 }
 
-static S_Ref S_NewInstance(S_System *system, S_Ref module_ref)
+static S_Ref S_NewInstance(S_Ref module_ref)
 {
 	S_Ref result = S_RefNull();
 
 	if (S_RefIsNull(module_ref))
 		goto end;
 
-	lua_newtable(system->lua); // instance
-	lua_newtable(system->lua); // metatable
-	lua_rawgeti(system->lua, LUA_REGISTRYINDEX, module_ref.value);
-	lua_setfield(system->lua, -2, "__index");
-	lua_setmetatable(system->lua, -2);
+	lua_newtable(s_system->lua); // instance
+	lua_newtable(s_system->lua); // metatable
+	lua_rawgeti(s_system->lua, LUA_REGISTRYINDEX, module_ref.value);
+	lua_setfield(s_system->lua, -2, "__index");
+	lua_setmetatable(s_system->lua, -2);
 	
-	result.value = luaL_ref(system->lua, LUA_REGISTRYINDEX);
+	result.value = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 
 end:
 	return result;
 }
 
-static S_Handle S_PlayCallableOnThread(S_System *system, lua_State *thread, i32 thread_ref, u32 arg_count)
+static S_Handle S_PlayCallableOnThread(lua_State *thread, i32 thread_ref, u32 arg_count)
 {
 	S_Handle handle = {0};
-	S_Coroutine *co = S_AllocCoroutine(system, &handle);
+	S_Coroutine *co = S_AllocCoroutine(&handle);
 
 	if (!co)
 	{
-		luaL_unref(system->lua, LUA_REGISTRYINDEX, thread_ref);
+		luaL_unref(s_system->lua, LUA_REGISTRYINDEX, thread_ref);
 		return S_HandleNull();
 	}
 
@@ -509,29 +497,28 @@ static S_Handle S_PlayCallableOnThread(S_System *system, lua_State *thread, i32 
 	return handle;
 }
 
-static S_Handle S_CallMethod(S_System *system, S_Ref instance_ref, String8 method_name)
+static S_Handle S_CallMethod(S_Ref instance_ref, String8 method_name)
 {
-	return S_CallMethodEx(system, instance_ref, method_name, NULL, 0);
+	return S_CallMethodEx(instance_ref, method_name, NULL, 0);
 }
 
-static S_Handle S_CallMethodEx(S_System *system, S_Ref instance_ref, String8 method_name,
-			   const S_Argument *args, u32 arg_count)
+static S_Handle S_CallMethodEx(S_Ref instance_ref, String8 method_name, const S_Argument *args, u32 arg_count)
 {
 	if (S_RefIsNull(instance_ref))
 		return S_HandleNull();
 
-	lua_State *thread = lua_newthread(system->lua);
-	i32 thread_ref = luaL_ref(system->lua, LUA_REGISTRYINDEX);
+	lua_State *thread = lua_newthread(s_system->lua);
+	i32 thread_ref = luaL_ref(s_system->lua, LUA_REGISTRYINDEX);
 
 	lua_rawgeti(thread, LUA_REGISTRYINDEX, instance_ref.value); // self
 	lua_getfield(thread, -1, (const char *)method_name.str);
 
 	if (lua_type(thread, -1) != LUA_TFUNCTION)
 	{
-		DebugLogW(system->log_channel, "Method '%.*s' not found or not a function.", String8VArg(method_name));
+		DebugLogW(s_system->log_channel, "Method '%.*s' not found or not a function.", String8VArg(method_name));
 
 		lua_settop(thread, 0);
-		luaL_unref(system->lua, LUA_REGISTRYINDEX, thread_ref);
+		luaL_unref(s_system->lua, LUA_REGISTRYINDEX, thread_ref);
 		return S_HandleNull();
 	}
 
@@ -544,29 +531,29 @@ static S_Handle S_CallMethodEx(S_System *system, S_Ref instance_ref, String8 met
 	for (u32 i = 0; i < arg_count; i++)
 		S_PushArg(thread, &args[i]);
 
-	return S_PlayCallableOnThread(system, thread, thread_ref, arg_count + 1); // +1 bcuz of self
+	return S_PlayCallableOnThread(thread, thread_ref, arg_count + 1); // +1 bcuz of self
 }
 
-static void S_Stop(S_System *system, S_Handle handle)
+static void S_Stop(S_Handle handle)
 {
-	S_Coroutine *co = S_ResolveHandle(system, handle);
+	S_Coroutine *co = S_ResolveHandle(handle);
 
 	if (!co)
 		return;
 
-	S_FreeCoroutine(system, co);
+	S_FreeCoroutine(co);
 }
 
-static b32 S_IsRunning(const S_System *system, S_Handle handle)
+static b32 S_IsRunning(S_Handle handle)
 {
-	return S_ResolveHandle((S_System *)system, handle) != NULL;
+	return S_ResolveHandle(handle) != NULL;
 }
 
-static void S_FireSignal(S_System *system, String8 name)
+static void S_FireSignal(String8 name)
 {
-	if (system->pending_signal_count >= S_MAX_PENDING_SIGNALS)
+	if (s_system->pending_signal_count >= S_MAX_PENDING_SIGNALS)
 	{
-		DebugLogE(system->log_channel,
+		DebugLogE(s_system->log_channel,
 				  "Signal queue full, dropping signal \"%.*s\".",
 				  String8VArg(name));
 
@@ -574,21 +561,21 @@ static void S_FireSignal(S_System *system, String8 name)
 	}
 
 	u64 hash = HashStr8(name);
-	system->pending_signals[system->pending_signal_count++] = hash;
+	s_system->pending_signals[s_system->pending_signal_count++] = hash;
 }
 
-static b32 S_SignalIsPending(const S_System *system, u64 hash)
+static b32 S_SignalIsPending(u64 hash)
 {
-	for (u32 i = 0; i < system->pending_signal_count; i++)
+	for (u32 i = 0; i < s_system->pending_signal_count; i++)
 	{
-		if (system->pending_signals[i] == hash)
+		if (s_system->pending_signals[i] == hash)
 			return true;
 	}
 
 	return false;
 }
 
-static b32 S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
+static b32 S_CoroutineIsReady(const S_Coroutine *co)
 {
 	if (!co->in_use)
 		return false;
@@ -602,7 +589,7 @@ static b32 S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
 			return co->wait_remaining_s <= 0.f;
 
 		case S_YieldKind_Signal:
-			return S_SignalIsPending(system, co->wait_signal_hash);
+			return S_SignalIsPending(co->wait_signal_hash);
 
 		case S_YieldKind_Children:
 			return co->active_children == 0;
@@ -612,9 +599,9 @@ static b32 S_CoroutineIsReady(const S_System *system, const S_Coroutine *co)
 	}
 }
 
-static void S_ResumeOne(S_System *system, S_Coroutine *co)
+static void S_ResumeOne(S_Coroutine *co)
 {
-	system->curr = co;
+	s_system->curr = co;
 
 	i32 nargs = 0;
 	
@@ -625,16 +612,16 @@ static void S_ResumeOne(S_System *system, S_Coroutine *co)
 	}
 
 	i32 nres = 0;
-	i32 status = lua_resume(co->thread, system->lua, nargs, &nres);
+	i32 status = lua_resume(co->thread, s_system->lua, nargs, &nres);
 
-	system->curr = NULL;
+	s_system->curr = NULL;
 
 	if (status == LUA_OK)
 	{
 		if (nres > 0)
 			lua_pop(co->thread, nres);
 		
-		S_FreeCoroutine(system, co);
+		S_FreeCoroutine(co);
 	}
 	else if (status == LUA_YIELD)
 	{
@@ -648,26 +635,26 @@ static void S_ResumeOne(S_System *system, S_Coroutine *co)
 		if (!raw_msg) 
 			raw_msg = "(no message)";
 
-		luaL_traceback(system->lua, co->thread, raw_msg, 0);
-		const char *full_trace = lua_tostring(system->lua, -1);
+		luaL_traceback(s_system->lua, co->thread, raw_msg, 0);
+		const char *full_trace = lua_tostring(s_system->lua, -1);
 
-		DebugLogE(system->log_channel, "%s", full_trace);
+		DebugLogE(s_system->log_channel, "%s", full_trace);
 
-		lua_pop(system->lua, 1); // pop the traceback string from main state
+		lua_pop(s_system->lua, 1); // pop the traceback string from main state
 		lua_pop(co->thread, 1);  // pop the original error object from the coroutine state
 
-		S_FreeCoroutine(system, co);
+		S_FreeCoroutine(co);
 	}
 }
 
-static void S_Tick(S_System *system, f32 dt)
+static void S_Tick(f32 dt)
 {
-	if (!system || !system->lua)
+	if (!system || !s_system->lua)
 		return;
 
 	for (u32 i = 1; i < S_MAX_COROUTINES; i++)
 	{
-		S_Coroutine *co = &system->coroutines[i];
+		S_Coroutine *co = &s_system->coroutines[i];
 
 		if (!co->in_use)
 			continue;
@@ -683,20 +670,20 @@ static void S_Tick(S_System *system, f32 dt)
 
 	for (u32 i = 1; i < S_MAX_COROUTINES; i++)
 	{
-		S_Coroutine *co = &system->coroutines[i];
+		S_Coroutine *co = &s_system->coroutines[i];
 
-		if (!S_CoroutineIsReady(system, co))
+		if (!S_CoroutineIsReady(co))
 			continue;
 
-		S_ResumeOne(system, co);
+		S_ResumeOne(co);
 	}
 
-	system->pending_signal_count = 0;
+	s_system->pending_signal_count = 0;
 }
 
-static void S_SetOnFinish(S_System *system, S_Handle handle, S_FinishFn *fn, void *user_data)
+static void S_SetOnFinish(S_Handle handle, S_FinishFn *fn, void *user_data)
 {
-	S_Coroutine *co = S_ResolveHandle(system, handle);
+	S_Coroutine *co = S_ResolveHandle(handle);
 
 	if (!co)
 		return;
@@ -705,42 +692,35 @@ static void S_SetOnFinish(S_System *system, S_Handle handle, S_FinishFn *fn, voi
 	co->finish_user_data = user_data;
 }
 
-static void S_BindGlobal(S_System *system, String8 name, S_BindingFn *fn)
+static void S_BindGlobal(String8 name, S_BindingFn *fn)
 {
-	S_BindGlobalEx(system, name, fn, NULL, 0);
+	S_BindGlobalEx(name, fn, NULL, 0);
 }
 
-static void S_BindToTable(S_System *system, String8 table, String8 name, S_BindingFn *fn)
+static void S_BindToTable(String8 table, String8 name, S_BindingFn *fn)
 {
-	S_BindToTableEx(system, table, name, fn, NULL, 0);
+	S_BindToTableEx(table, name, fn, NULL, 0);
 }
 
-static void S_BindGlobalEx(S_System *system, String8 name,
-			   S_BindingFn *fn, void *const *upvalues, u32 n)
+static void S_BindGlobalEx(String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
 {
-	S_PushBindingClosure(system, fn, upvalues, n);
-	lua_setglobal(system->lua, (const char *)name.str);
+	S_PushBindingClosure(fn, upvalues, n);
+	lua_setglobal(s_system->lua, (const char *)name.str);
 }
 
-static void S_BindToTableEx(S_System *system, String8 table, String8 name,
-				S_BindingFn *fn, void *const *upvalues, u32 n)
+static void S_BindToTableEx(String8 table, String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
 {
-	if (lua_getglobal(system->lua, (const char *)table.str) != LUA_TTABLE)
+	if (lua_getglobal(s_system->lua, (const char *)table.str) != LUA_TTABLE)
 	{
-		lua_pop(system->lua, 1);
-		lua_newtable(system->lua);
-		lua_pushvalue(system->lua, -1);
-		lua_setglobal(system->lua, (const char *)table.str);
+		lua_pop(s_system->lua, 1);
+		lua_newtable(s_system->lua);
+		lua_pushvalue(s_system->lua, -1);
+		lua_setglobal(s_system->lua, (const char *)table.str);
 	}
 
-	S_PushBindingClosure(system, fn, upvalues, n);
-	lua_setfield(system->lua, -2, (const char *)name.str);
-	lua_pop(system->lua, 1);
-}
-
-static S_System *S_CtxGetSystem(S_Context *ctx)
-{
-	return ctx->system;
+	S_PushBindingClosure(fn, upvalues, n);
+	lua_setfield(s_system->lua, -2, (const char *)name.str);
+	lua_pop(s_system->lua, 1);
 }
 
 static u32 S_CtxGetArgCount(S_Context *ctx)
@@ -871,10 +851,10 @@ static void S_CtxReturnTaggedU32(S_Context *ctx, u32 v, u32 type_tag)
 
 static void S_CtxYield(S_Context *ctx)
 {
-	S_Coroutine *co = ctx->system->curr;
+	S_Coroutine *co = s_system->curr;
 
-	DebugLogAssert(ctx->system->log_channel, co, "Can only yield from inside a coroutine.");
-	DebugLogAssert(ctx->system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
+	DebugLogAssert(s_system->log_channel, co, "Can only yield from inside a coroutine.");
+	DebugLogAssert(s_system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
 
 	co->yield_kind = S_YieldKind_Tick;
 	co->wait_remaining_s = 0.f;
@@ -885,10 +865,10 @@ static void S_CtxYield(S_Context *ctx)
 
 static void S_CtxYieldTime(S_Context *ctx, f32 time_s)
 {
-	S_Coroutine *co = ctx->system->curr;
+	S_Coroutine *co = s_system->curr;
 
-	DebugLogAssert(ctx->system->log_channel, co, "Can only yield from inside a coroutine.");
-	DebugLogAssert(ctx->system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
+	DebugLogAssert(s_system->log_channel, co, "Can only yield from inside a coroutine.");
+	DebugLogAssert(s_system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
 
 	co->yield_kind = S_YieldKind_TimeSeconds;
 	co->wait_remaining_s = time_s;
@@ -899,10 +879,10 @@ static void S_CtxYieldTime(S_Context *ctx, f32 time_s)
 
 static void S_CtxYieldSignal(S_Context *ctx, String8 name)
 {
-	S_Coroutine *co = ctx->system->curr;
+	S_Coroutine *co = s_system->curr;
 
-	DebugLogAssert(ctx->system->log_channel, co, "Can only yield from inside a coroutine.");
-	DebugLogAssert(ctx->system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
+	DebugLogAssert(s_system->log_channel, co, "Can only yield from inside a coroutine.");
+	DebugLogAssert(s_system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
 
 	co->yield_kind = S_YieldKind_Signal;
 	co->wait_remaining_s = 0.f;
@@ -913,8 +893,7 @@ static void S_CtxYieldSignal(S_Context *ctx, String8 name)
 
 static i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext kctx)
 {
-	S_System *sys = S_GetSystemFromL(lua);
-	S_Coroutine *co  = sys->curr;
+	S_Coroutine *co = s_system->curr;
 
 	S_ContinueFn *cont = co->continue_fn;
 	void *user_data = co->continue_user_data;
@@ -923,7 +902,6 @@ static i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext 
 	co->continue_user_data = NULL;
 
 	S_Context ctx = {0};
-	ctx.system = sys;
 	ctx.lua = lua;
 	ctx.nretval = 0;
 
@@ -935,10 +913,10 @@ static i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext 
 
 static void S_CtxYieldSignalCont(S_Context *ctx, String8 name, S_ContinueFn *cont, void *user_data)
 {
-	S_Coroutine *co = ctx->system->curr;
+	S_Coroutine *co = s_system->curr;
 
-	DebugLogAssert(ctx->system->log_channel, co, "Can only yield from inside a coroutine.");
-	DebugLogAssert(ctx->system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
+	DebugLogAssert(s_system->log_channel, co, "Can only yield from inside a coroutine.");
+	DebugLogAssert(s_system->log_channel, ctx->lua == co->thread, "Nested coroutines.");
 
 	co->yield_kind = S_YieldKind_Signal;
 	co->wait_remaining_s = 0.f;
