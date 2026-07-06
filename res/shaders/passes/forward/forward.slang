@@ -67,9 +67,9 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 
 		float3x3 skin_tbn = (float3x3)skin;
 		
-		local_tangent   = mul(skin_tbn, local_tangent);
+		local_tangent = mul(skin_tbn, local_tangent);
 		local_bitangent = mul(skin_tbn, local_bitangent);
-		local_normal    = mul(skin_tbn, local_normal);
+		local_normal = mul(skin_tbn, local_normal);
 	}
 	
 	float3x3 normal_matrix = (float3x3)object_data.normal_matrix;

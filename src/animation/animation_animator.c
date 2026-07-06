@@ -165,7 +165,7 @@ static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle mode
 	}
 }
 
-static void AN_AnimatorTick(AN_Animator *animator, f32 elapsed)
+static void AN_AnimatorTick(AN_Animator *animator, f32 global_time)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -192,7 +192,10 @@ static void AN_AnimatorTick(AN_Animator *animator, f32 elapsed)
 		{
 			A_AnimClip *clip = &asset_model->clips[animator->clip.value];
 
-			f32 sample_time = AN_CalcSampleTime(elapsed, animator->global_start_time, animator->playback_rate, clip->duration_s, 0);
+			if (animator->paused)
+				global_time = animator->global_paused_time;
+
+			f32 sample_time = AN_CalcSampleTime(global_time, animator->global_start_time, animator->playback_rate, clip->duration_s, 0);
 
 			for (u32 i = 0; i < clip->channel_count; i++)
 			{
@@ -263,6 +266,8 @@ static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f3
 	if (AN_ClipKeyIsNull(clip))
 		return;
 
+	animator->paused = false;
+
 	if (animator->clip.value == clip.value &&
 		animator->loop == loop)
 		return;
@@ -275,6 +280,31 @@ static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f3
 static void AN_AnimatorStop(AN_Animator *animator)
 {
 	animator->clip = AN_ClipKeyNull();
+	animator->paused = true;
+}
+
+static void AN_AnimatorResume(AN_Animator *animator)
+{
+	animator->paused = false;
+}
+
+static void AN_AnimatorPause(AN_Animator *animator, f32 global_time)
+{
+	if (animator->paused)
+		return;
+
+	animator->paused = true;
+	animator->global_paused_time = global_time;
+}
+
+static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time)
+{
+	if (animator->paused)
+		return;
+	
+	animator->paused = true;
+	animator->global_start_time = global_time;
+	animator->global_paused_time = global_time;
 }
 
 static b32 AN_AnimatorIsFinished(const AN_Animator *animator)

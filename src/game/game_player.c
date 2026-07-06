@@ -21,10 +21,24 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 	return input;
 }
 
-static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle)
+static void PlayerAnimate(const PlayerAnimationState *st, AN_Animator *animator)
 {
-	//AN_ClipKey key = AN_ClipKeyNull();
-	//AN_Play(&app->animation_system, handle, key, false, st->elapsed);
+	if (!st->is_moving)
+	{
+		AN_AnimatorPauseAndReset(animator, st->elapsed);
+		return;
+	}
+
+	if (st->is_running)
+	{
+		AN_AnimatorPlay(animator, st->k_run, true, st->elapsed);
+		return;
+	}
+	else
+	{
+		AN_AnimatorPlay(animator, st->k_walk, true, st->elapsed);
+		return;
+	}
 }
 
 static v3 CalcPlayerAimingPoint(const OS_InputState *input)
@@ -47,37 +61,25 @@ static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 
 static void PlayerInit(Player *player, Transform transform)
 {
+	player->arena = ArenaAlloc(Megabytes(1));
+
+	player->target_rotation = V4QuatIdentity();
+
 	player->rigidbody_handle = P_LeaseInstance();
 
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 	rb->solid = false;
 	rb->fixed_position = false;
-	rb->friction = 2.5f;
-	rb->air_friction = 0.5f;
+	rb->friction = 5.f;
+	rb->air_friction = 0.05f;
 	rb->gravity_factor = 10.f;
-	rb->max_speed = 30.f;
 	
-	A_Handle model_handle = A_Require(String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
-
-	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
+		A_Handle model_handle = A_Require(String8Lit("assets://player/scene.gltf"), A_Type_Model);
 		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
-		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, model_handle, (u32)(-1));
+		player->render_model = R_SceneModelCreate(&app->scene, &cmd, &player->arena, model_handle, true);
 		G_DeviceSubmitImEnd(&cmd);
-
-		R_ModelImportEntry *entry = &receipt.entries[0];
-
-		R_ObjectDesc desc = {0};
-		desc.transform = entry->transform;
-		desc.sphere_bounds = entry->sphere_bounds;
-		desc.mesh = entry->mesh;
-		desc.material = entry->material;
-
-		player->scene_object_handle = R_SceneGraphObjectCreate(&app->scene.graph, &desc);
 	}
-	ScratchRelease(&scratch);
-
-	//player->anim_handle = AN_SystemCreateInstance(ctx->animation, A_HandleNull());
 
 	GunSpecs revolver_specs = {0};
 	revolver_specs.ammo_type = AmmoType_Magnum357;
@@ -91,6 +93,7 @@ static void PlayerInit(Player *player, Transform transform)
 
 static void PlayerDestroy(Player *player)
 {
+	R_SceneModelDestroy(&app->scene, &player->render_model);
 	P_ReturnInstance(player->rigidbody_handle);
 }
 
@@ -100,11 +103,13 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
-	f32 move_speed = .5f;
+	f32 move_speed = 2.f;
+	f32 max_speed = 8.f;
 
 	if (input_st.aim)
 	{
 		move_speed *= 0.5f;
+		max_speed *= 0.5f;
 
 		v3 source = rb->position;
 		v3 destination = CalcPlayerAimingPoint(ctx->input);
@@ -120,7 +125,7 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	}
 
 	if (input_st.jump)
-		rb->velocity.z += 50.f;
+		rb->velocity.z += 30.f;
 
 	if (input_st.run)
 		move_speed *= 2.f;
@@ -139,25 +144,28 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	movement.y = input_st.movement.y * move_speed;
 	movement.z = 0.f;
 
+	rb->max_speed = max_speed;
 	rb->acceleration = movement;
 	rb->orientation = V4QuatSlerp(rb->orientation, player->target_rotation, ctx->dt * 50.f);
 
+	AN_Animator *animator = AN_SystemGetAnimator(player->render_model.animator_handle);
+	
 	PlayerAnimationState animation_st = {0};
 	animation_st.elapsed = ctx->elapsed;
+	animation_st.k_walk = AN_AnimatorFindClipByName(animator, String8Lit("walk"));
+	animation_st.k_run = AN_AnimatorFindClipByName(animator, String8Lit("run"));
 	animation_st.is_grounded = true;
 	animation_st.is_aiming = input_st.aim || input_st.fire;
 	animation_st.is_running = input_st.run;
 	animation_st.is_sneaking = input_st.sneak;
-	animation_st.is_moving = WithinEpsilon(V3LengthSqr(movement));
+	animation_st.is_moving = !WithinEpsilon(V3LengthSqr(movement));
 
-	PlayerAnimate(&animation_st, player->anim_handle);
+	PlayerAnimate(&animation_st, animator);
 }
 
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 {
-	//AN_Animator *animator = AN_SystemGetAnimator(ctx->animation, player->anim_handle);
-	//AN_Palette palette = AN_AnimatorPalette(animator, 0);
-	//R_SceneObjectSetSkinning(ctx->render_scene, player->scene_object_handle, &palette);
+	R_SceneModelUpdateSkinning(&app->scene, &player->render_model);
 }
 
 static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
@@ -165,11 +173,10 @@ static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
 	m4 final_matrix = M4Identity();
-	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf * 0.5f, v3(1.f, 0.f, 0.f)), final_matrix);
 	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf, v3(0.f, 0.f, 1.f)), final_matrix);
 	final_matrix = M4MulM4(M4Transform(rb->position, rb->orientation, v3x(1.f), v3x(0.f)), final_matrix);
 	
-	R_SceneGraphObjectSetTransform(&app->scene.graph, player->scene_object_handle, final_matrix);
+	R_SceneModelSetRootTransform(&app->scene, &player->render_model, final_matrix);
 }
 
 static void PlayerSerialize(Player *player, IO_ByteSerializer *writer)

@@ -47,11 +47,6 @@ static void P_EngineTick(f32 dt)
 
 		b32 is_above_ground = rb->position.z > 0.001f;
 
-		if (is_above_ground)
-			rb->velocity.z -= P_GRAVITY_STRENGTH * rb->gravity_factor * dt;
-		else
-			rb->velocity.z = MaxValue(rb->velocity.z, 0.f);
-
 		f32 friction = is_above_ground ? rb->air_friction : rb->friction;
 		f32 frictional_factor = ClampValue(friction, 0.f, 1.f / dt);
 
@@ -65,6 +60,12 @@ static void P_EngineTick(f32 dt)
 			v3 accel_dir = V3Normalize(acceleration);
 			f32 dot = V3Dot(accel_dir, friction_vel);
 
+			if (dot > speed)
+			{
+				DebugLogW(p_engine->log_channel, "Had to clamp friction vector.");
+				dot = speed;
+			}
+
 			dot = MinValue(dot, speed);
 
 			if (dot > 0.f)
@@ -73,6 +74,11 @@ static void P_EngineTick(f32 dt)
 
 		rb->velocity.x += acceleration.x;
 		rb->velocity.y += acceleration.y;
+
+		if (is_above_ground)
+			rb->velocity.z -= P_GRAVITY_STRENGTH * rb->gravity_factor * dt;
+		else
+			rb->velocity.z = MaxValue(0.f, rb->velocity.z);
 
 		speed = V3Length(rb->velocity);
 		rb->velocity = V3Limit(rb->velocity, 0.f, MaxValue(speed, rb->max_speed));
@@ -105,6 +111,8 @@ static void P_EngineTick(f32 dt)
 		{
 			rb->position = V3Add(rb->position, V3MulF32(rb->velocity, dt));
 		}
+
+		rb->position.z = MaxValue(0.f, rb->position.z);
 	}
 }
 

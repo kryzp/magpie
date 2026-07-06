@@ -23,9 +23,19 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 	scene::ObjectData object_data = args.objects[instance];
 	scene::RenderMesh mesh = args.meshes[object_data.mesh_index];
 	scene::ModelVertex vertex = mesh.vertex_buffer[vertex_id];
-	shadows::ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
+    shadows::ShadowCaster caster = args.shadow_casters[args.shadow_caster_index];
 
-	float4 world_position = mul(object_data.model_matrix, float4(vertex.position, 1.0));
+    float3 local_position = vertex.position;
+
+	if (scene::IsSkinned(object_data, mesh))
+    {
+        scene::SkinVertex skin_vertex = mesh.skin_buffer[vertex_id];
+        float4x4 skin = scene::ComputeSkinningMatrix(skin_vertex, object_data.skinning_palette);
+
+        local_position = mul(skin, float4(local_position, 1.0)).xyz;
+    }
+
+    float4 world_position = mul(object_data.model_matrix, float4(local_position, 1.0));
 
 	VS_Output output;
 	output.world_position = world_position.xyz;

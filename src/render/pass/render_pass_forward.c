@@ -74,7 +74,7 @@ static void R_ForwardRender(R_Graph *graph,
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 
 	bb->lighting.msaa = R_PassWriteColour(pass, bb->lighting.msaa, NULL);
-	bb->depth.msaa    = R_PassWriteDepth(pass, bb->depth.msaa, NULL);
+	bb->depth.msaa = R_PassWriteDepth(pass, bb->depth.msaa, NULL);
 
 	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
 	R_PassIndirectBuffer(pass, draw_stream->count_buffer);

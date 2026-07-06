@@ -63,6 +63,8 @@ struct AN_Animator
 	AN_ClipKey clip;
 	b32 loop;
 	f32 global_start_time;
+	b32 paused;
+	f32 global_paused_time;
 	f32 playback_rate;
 
 	u32 pose_count;
@@ -98,6 +100,10 @@ static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
 
 static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time);
 static void AN_AnimatorStop(AN_Animator *animator);
+
+static void AN_AnimatorResume(AN_Animator *animator);
+static void AN_AnimatorPause(AN_Animator *animator, f32 global_time);
+static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time);
 
 static b32 AN_AnimatorIsPlaying(const AN_Animator *animator, AN_ClipKey clip);
 static b32 AN_AnimatorIsFinished(const AN_Animator *animator);

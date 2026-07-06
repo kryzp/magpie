@@ -21,6 +21,9 @@ struct PlayerAnimationState
 {
 	f32 elapsed;
 
+	AN_ClipKey k_walk;
+	AN_ClipKey k_run;
+
 	b32 is_grounded;
 	b32 is_aiming;
 	b32 is_running;
@@ -33,18 +36,19 @@ struct Player
 {
 	E_Header header;
 
+	Arena arena;
+
 	v4 target_rotation;
 
 	P_Handle rigidbody_handle;
-	R_SceneHandle scene_object_handle;
-	AN_Handle anim_handle;
+	R_Model render_model;
 	
 	Gun gun;
 };
 
 static PlayerInput PlayerGatherInput(const OS_InputState *st);
 
-static void PlayerAnimate(const PlayerAnimationState *st, AN_Handle handle);
+static void PlayerAnimate(const PlayerAnimationState *st, AN_Animator *animator);
 
 static v3 CalcPlayerAimingPoint(const OS_InputState *input);
 

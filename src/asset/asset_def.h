@@ -32,9 +32,6 @@ struct A_ModelData
 	A_AnimClip *clips;
 };
 
-static const A_Skeleton *A_ModelDataGetSkeletonByName(const A_ModelData *asset, String8 name);
-static const A_AnimClip *A_ModelDataGetAnimClipByName(const A_ModelData *asset, String8 name);
-
 typedef struct A_ScriptData A_ScriptData;
 struct A_ScriptData
 {

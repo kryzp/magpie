@@ -71,7 +71,7 @@ static void AppInit_(void)
 	//A_Mount(String8Lit("engine://shaders"), String8Lit("src/render/shaders"));
 	A_Mount(String8Lit("assets://"), String8Lit("res"));
 
-	AN_SystemInit(&app->animation_system, app->animation_log_channel);
+	AN_SystemInitAndSelect(&app->animation_system, app->animation_log_channel);
 	
 	R_GraphInit(&app->graph, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
 	R_SceneInit(&app->scene, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
@@ -120,7 +120,7 @@ App *MagpieInit(const OS_API *osapi_)
 		A_Handle sponza_handle = A_Require(String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
 
 		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
-		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle, (u32)(-1));
+		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle);
 		G_DeviceSubmitImEnd(&cmd);
 
 		for (u32 i = 0; i < receipt.count; i++)
@@ -149,7 +149,7 @@ App *MagpieInit(const OS_API *osapi_)
 		light.falloff = 0.1f;
 		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
-		light.shadow_far = 10.f;
+		light.shadow_far = 20.f;
 
 		R_SceneGraphLightCreate(&app->scene.graph, &light);
 	}
@@ -174,7 +174,7 @@ void MagpieDestroy(App *app_)
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
 
-	AN_SystemDestroy(&app->animation_system);
+	AN_SystemDestroy();
 	
 	A_Destroy();
 	
@@ -219,7 +219,7 @@ static void AppLogFPS(f32 dt)
 	
 	fps_avg /= (f32)ArraySize(fps_history);
 	
-	//DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
+	DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
 }
 
 __declspec(dllexport)
@@ -248,7 +248,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldTickPreAnim(&app->world, &entity_tick_context);
 	
-	AN_SystemCalculateIntermediatePoses(&app->animation_system, elapsed);
+	AN_SystemCalculateIntermediatePoses(elapsed);
 
 	E_WorldTickPostAnim(&app->world, &entity_tick_context);
 
@@ -271,7 +271,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 		app->delta_accumulator -= fixed_dt;
 	}
 
-	AN_SystemFinalizePoseAndMatrixPalette(&app->animation_system);
+	AN_SystemFinalizePoseAndMatrixPalette();
 	
 	E_WorldTickPostPhysics(&app->world, &entity_tick_context);
 
@@ -314,7 +314,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	ArenaReset(&app->frame_arena);
 	
-	AppLogFPS(dt);
+	//AppLogFPS(dt);
 	
 	return false;
 }
@@ -347,6 +347,8 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	AU_BackendSelectContext(app->audio_backend);
 
 	A_SelectContext(&app->assets);
+
+	AN_SystemSelectContext(&app->animation_system);
 
 	R_SystemHotLoad(&app->render_system);
 	

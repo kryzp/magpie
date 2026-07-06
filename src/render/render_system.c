@@ -137,7 +137,7 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 	A_Handle hdr_to_env_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
 	A_Handle irradiance_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
 	A_Handle prefilter_shader_handle   = A_Require(String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
-	A_Handle hdr_texture_handle        = A_Require(String8Lit("assets://environment_map_3.hdr"),                               A_Type_Texture);
+	A_Handle hdr_texture_handle        = A_Require(String8Lit("assets://environment_map_1.hdr"),                               A_Type_Texture);
 	
 	G_ShaderKey brdf_lut_shader        = A_GetNow(brdf_lut_shader_handle)->shader.key;
 	G_ShaderKey hdr_to_env_shader      = A_GetNow(hdr_to_env_shader_handle)->shader.key;
@@ -241,7 +241,7 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 
 	R_Blackboard bb = {0};
 
-	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1.f, 1.f, 1.f));
+	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1., 1.f, 1.f));
 	lighting_info.flags = G_TextureAllocFlag_Storage;
 	bb.lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
 	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);

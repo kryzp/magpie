@@ -1,32 +1,45 @@
 
-static void AN_SystemInit(AN_System *s, LOG_Channel log_channel)
+static AN_System *an_system = NULL;
+
+static void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel)
 {
-	s->log_channel = log_channel;
+	system->log_channel = log_channel;
 
-	s->instance_count = 0;
-	s->free_index_count = 0;
+	system->instance_count = 0;
+	system->free_index_count = 0;
 
-	for (u32 i = 0; i < ArraySize(s->instances); i++)
+	for (u32 i = 0; i < ArraySize(system->instances); i++)
 	{
-		s->instances[i].arena = ArenaAlloc(Megabytes(2));
-		s->instances[i].alive = false;
-		s->instances[i].generation = 0;
+		system->instances[i].arena = ArenaAlloc(Megabytes(2));
+		system->instances[i].alive = false;
+		system->instances[i].generation = 0;
 	}
+
+	AN_SystemSelectContext(system);
+
+	DebugLogI(system->log_channel, "Initialized.");
 }
 
-static void AN_SystemDestroy(AN_System *s)
+static void AN_SystemDestroy(void)
 {
-	for (u32 i = 0; i < ArraySize(s->instances); i++)
+	for (u32 i = 0; i < ArraySize(an_system->instances); i++)
 	{
-		ArenaRelease(&s->instances[i].arena);
+		ArenaRelease(&an_system->instances[i].arena);
 	}
+
+	DebugLogI(an_system->log_channel, "Destroyed.");
 }
 
-static void AN_SystemCalculateIntermediatePoses(AN_System *s, f32 elapsed)
+static void AN_SystemSelectContext(AN_System *system)
 {
-	for (u32 i = 0; i < s->instance_count; i++)
+	an_system = system;
+}
+
+static void AN_SystemCalculateIntermediatePoses(f32 elapsed)
+{
+	for (u32 i = 0; i < an_system->instance_count; i++)
 	{
-		AN_Instance *inst = &s->instances[i];
+		AN_Instance *inst = &an_system->instances[i];
 
 		if (!inst->alive)
 			continue;
@@ -35,11 +48,11 @@ static void AN_SystemCalculateIntermediatePoses(AN_System *s, f32 elapsed)
 	}
 }
 
-static void AN_SystemFinalizePoseAndMatrixPalette(AN_System *s)
+static void AN_SystemFinalizePoseAndMatrixPalette(void)
 {
-	for (u32 i = 0; i < s->instance_count; i++)
+	for (u32 i = 0; i < an_system->instance_count; i++)
 	{
-		AN_Instance *inst = &s->instances[i];
+		AN_Instance *inst = &an_system->instances[i];
 
 		if (!inst->alive)
 			continue;
@@ -48,12 +61,12 @@ static void AN_SystemFinalizePoseAndMatrixPalette(AN_System *s)
 	}
 }
 
-static AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle)
+static AN_Instance *AN_SystemResolve(AN_Handle handle)
 {
-	if (handle.index >= ArraySize(s->instances))
+	if (handle.index >= ArraySize(an_system->instances))
 		return NULL;
 
-	AN_Instance *inst = &s->instances[handle.index];
+	AN_Instance *inst = &an_system->instances[handle.index];
 
 	if (!inst->alive || inst->generation != handle.generation)
 		return NULL;
@@ -61,19 +74,18 @@ static AN_Instance *AN_SystemResolve(AN_System *s, AN_Handle handle)
 	return inst;
 }
 
-static AN_Animator *AN_SystemGetAnimator(AN_System *s, AN_Handle handle)
+static AN_Animator *AN_SystemGetAnimator(AN_Handle handle)
 {
-	AN_Instance *inst = AN_SystemResolve(s, handle);
+	AN_Instance *inst = AN_SystemResolve(handle);
 
-	DebugLogAssert(s->log_channel, inst, "Handle is null.");
+	DebugLogAssert(an_system->log_channel, inst, "Handle is null.");
 
-	AN_Animator *anim = &inst->animator;
-	return anim;
+	return &inst->animator;
 }
 
-static void AN_Play(AN_System *s, AN_Handle handle, AN_ClipKey clip, b32 loop, f32 global_start_time)
+static void AN_Play(AN_Handle handle, AN_ClipKey clip, b32 loop, f32 global_start_time)
 {
-	AN_Animator *anim = AN_SystemGetAnimator(s, handle);
+	AN_Animator *anim = AN_SystemGetAnimator(handle);
 
 	if (!anim)
 		return;
@@ -81,19 +93,19 @@ static void AN_Play(AN_System *s, AN_Handle handle, AN_ClipKey clip, b32 loop, f
 	AN_AnimatorPlay(anim, clip, loop, global_start_time);
 }
 
-static b32 AN_IsFinished(AN_System *s, AN_Handle handle)
+static b32 AN_IsFinished(AN_Handle handle)
 {
-	AN_Animator *anim = AN_SystemGetAnimator(s, handle);
+	AN_Animator *anim = AN_SystemGetAnimator(handle);
 	return anim ? AN_AnimatorIsFinished(anim) : false;
 }
 
-static AN_Palette AN_GetPalette(AN_System *s, AN_Handle handle, i32 skin_index)
+static AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index)
 {
-	AN_Animator *anim = AN_SystemGetAnimator(s, handle);
+	AN_Animator *anim = AN_SystemGetAnimator(handle);
 
 	if (!anim)
 	{
-		DebugLogW(s->log_channel, "Handle is invalid, returning empty palette.");
+		DebugLogW(an_system->log_channel, "Handle is invalid, returning empty palette.");
 
 		AN_Palette empty = {0};
 		return empty;
@@ -102,34 +114,34 @@ static AN_Palette AN_GetPalette(AN_System *s, AN_Handle handle, i32 skin_index)
 	return AN_AnimatorPalette(anim, skin_index);
 }
 
-static AN_Handle AN_SystemCreateInstance(AN_System *s, A_Handle model_handle)
+static AN_Handle AN_SystemCreateInstance(A_Handle model_handle)
 {
 	AN_Handle result = AN_HandleNull();
 
 	u32 index = 0;
 
-	if (s->free_index_count > 0)
+	if (an_system->free_index_count > 0)
 	{
-		s->free_index_count--;
-		index = s->free_indices[s->free_index_count];
+		an_system->free_index_count--;
+		index = an_system->free_indices[an_system->free_index_count];
 	}
 	else
 	{
-		if (s->instance_count >= ArraySize(s->instances))
+		if (an_system->instance_count >= ArraySize(an_system->instances))
 		{
-			DebugLogE(s->log_channel,
+			DebugLogE(an_system->log_channel,
 					  "Instance pool exhausted (max %u).",
-					  ArraySize(s->instances));
+					  ArraySize(an_system->instances));
 
 			return result;
 		}
 
-		index = s->instance_count;
+		index = an_system->instance_count;
 
-		s->instance_count++;
+		an_system->instance_count++;
 	}
 
-	AN_Instance *inst = &s->instances[index];
+	AN_Instance *inst = &an_system->instances[index];
 
 	ArenaReset(&inst->arena);
 
@@ -143,9 +155,9 @@ static AN_Handle AN_SystemCreateInstance(AN_System *s, A_Handle model_handle)
 	return result;
 }
 
-static void AN_SystemKillInstance(AN_System *s, AN_Handle h)
+static void AN_SystemKillInstance(AN_Handle h)
 {
-	AN_Instance *inst = AN_SystemResolve(s, h);
+	AN_Instance *inst = AN_SystemResolve(h);
 
 	if (!inst)
 		return;
@@ -153,6 +165,6 @@ static void AN_SystemKillInstance(AN_System *s, AN_Handle h)
 	inst->alive = false;
 	inst->generation++;
 
-	s->free_indices[s->free_index_count] = h.index;
-	s->free_index_count++;
+	an_system->free_indices[an_system->free_index_count] = h.index;
+	an_system->free_index_count++;
 }
