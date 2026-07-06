@@ -172,6 +172,14 @@ static v3 V3Refract(v3 v, v3 n, f64 eta21)
 	return V3Add(out_perp, out_para);
 }
 
+static v3 V3Limit(v3 v, f32 min_length, f32 max_length)
+{
+	f32 length = V3Length(v);
+	v3 normal = V3Normalize(v);
+	
+	return V3MulF32(normal, ClampValue(length, min_length, max_length));
+}
+
 static v3 V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation)
 {
 	return v3(radius * CosF(elevation) * CosF(azimuth),

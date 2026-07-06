@@ -114,10 +114,11 @@ App *MagpieInit(const OS_API *osapi_)
 	
 	AppInit_();
 
-	A_Handle sponza_handle = A_Require(String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
-
-	ScratchArena scratch = ScratchBegin(NULL, 0);
 	{
+		ScratchArena scratch = ScratchBegin(NULL, 0);
+
+		A_Handle sponza_handle = A_Require(String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
+
 		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
 		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle, (u32)(-1));
 		G_DeviceSubmitImEnd(&cmd);
@@ -134,8 +135,24 @@ App *MagpieInit(const OS_API *osapi_)
 
 			R_SceneGraphObjectCreate(&app->scene.graph, &desc);
 		}
+
+		ScratchRelease(&scratch);
 	}
-	ScratchRelease(&scratch);
+	
+	{
+		R_Light light = {0};
+		light.type = R_LightType_Point;
+		light.position = v3(0.f, 0.f, 1.f);
+		light.direction = v3x(0.f);
+		light.colour = v3(1.f, 1.f, 1.f);
+		light.intensity = 5.f;
+		light.falloff = 0.1f;
+		light.casts_shadows = true;
+		light.shadow_near = 0.1f;
+		light.shadow_far = 10.f;
+
+		R_SceneGraphLightCreate(&app->scene.graph, &light);
+	}
 
 	DebugLogI(app->log_channel, "Initialized.");
 	
@@ -188,7 +205,7 @@ void MagpieDestroy(App *app_)
 static void AppLogFPS(f32 dt)
 {
 	static u32 index = 0;
-	static f32 fps_history[1] = {0};
+	static f32 fps_history[16] = {0};
 
 	const f32 fps_now = 1.f / dt;
 
@@ -222,8 +239,6 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 		A_PollHotReloads();
 	}
 
-	//A_FlushUploads();
-
 	E_TickContext entity_tick_context = {0};
 	entity_tick_context.dt = dt;
 	entity_tick_context.elapsed = elapsed;
@@ -252,6 +267,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	while (app->delta_accumulator >= fixed_dt)
 	{
 		P_EngineTick(fixed_dt);
+		GameTick(input, fixed_dt, elapsed);
 		app->delta_accumulator -= fixed_dt;
 	}
 
@@ -263,8 +279,6 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldFlush(&app->world);
 
-	GameTick(input, dt, elapsed);
-	
 	AU_Listener listener = {0};
 	listener.position = app->game.camera.position;
 	listener.direction = app->game.camera.forward;
@@ -351,19 +365,6 @@ void MagpieHotUnload(App *app_)
 }
 
 /*
-R_Light light = {0};
-light.type = R_LightType_Point;
-light.position = v3(0.f, 0.f, 1.f);
-light.direction = v3x(0.f);
-light.colour = v3(1.f, 1.f, 1.f);
-light.intensity = 5.f;
-light.falloff = 1.f;
-light.casts_shadows = true;
-light.shadow_near = 0.1f;
-light.shadow_far = 10.f;
-
-//app->light_handle = R_SceneLightCreate(&app->scene, &light);
-
 app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
 A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
 app->test_sound = test_sound_asset->sound.buffer;

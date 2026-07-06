@@ -32,50 +32,57 @@ static void P_EngineTick(f32 dt)
 		 inst != &p_engine->instance_sentinel; 
 		 inst = inst->next)
 	{
-		// took this from an old game project in FNA which
-		// I believe itself was taken from the CrossCode physics
+		// took this from an old game project's physics code in FNA which
+		// I believe (long time ago :p) itself was taken from the CrossCode physics
 		// engine blog posts.
+		// -> https://www.radicalfishgames.com/?p=72
 		
-		// was a 2d physics engine but semi-3d (levels) so I'm
-		// just repurposing it here until I bother to look further
-		// into physics engines.
+		// was a 2d physics engine but semi-3d (levels / multiple tilemaps per z-height) so I'm
+		// just repurposing it here until I bother to look further into physics engines.
 
 		// I just need it to be good enough to *feel* good, not necessarily
 		// be physically accurate :)
 
 		P_RigidBody *rb = &inst->rigidbody;
 
-		b32 is_above_ground = false;
+		b32 is_above_ground = rb->position.z > 0.001f;
+
+		if (is_above_ground)
+			rb->velocity.z -= P_GRAVITY_STRENGTH * rb->gravity_factor * dt;
+		else
+			rb->velocity.z = MaxValue(rb->velocity.z, 0.f);
 
 		f32 friction = is_above_ground ? rb->air_friction : rb->friction;
 		f32 frictional_factor = ClampValue(friction, 0.f, 1.f / dt);
 
-		v3 friction_acc = V3MulF32(rb->acceleration, rb->max_speed * frictional_factor * dt);
-		v3 friction_vel = V3MulF32(rb->velocity, 1.2f * frictional_factor * dt);
+		v3 acceleration = V3MulF32(rb->acceleration, 10.f * rb->max_speed * frictional_factor * dt);
+		v3 friction_vel = V3MulF32(rb->velocity, 12.f * frictional_factor * dt);
 
 		f32 speed = V3Length(rb->velocity);
-
+		
 		if (speed <= rb->max_speed)
 		{
-			v3 accel_dir = V3Normalize(rb->acceleration);
+			v3 accel_dir = V3Normalize(acceleration);
 			f32 dot = V3Dot(accel_dir, friction_vel);
+
+			dot = MinValue(dot, speed);
 
 			if (dot > 0.f)
 				friction_vel = V3Sub(friction_vel, V3MulF32(accel_dir, dot));
 		}
 
-		rb->velocity.x += friction_acc.x * dt;
-		rb->velocity.y += friction_acc.y * dt;
+		rb->velocity.x += acceleration.x;
+		rb->velocity.y += acceleration.y;
 
-		if (rb->position.z > 0.f)
-			rb->velocity.z -= P_GRAVITY_STRENGTH * rb->gravity_factor * dt;
-		else
-			rb->velocity.z = MaxValue(rb->velocity.z, 0.f);
+		speed = V3Length(rb->velocity);
+		rb->velocity = V3Limit(rb->velocity, 0.f, MaxValue(speed, rb->max_speed));
 
 		rb->velocity.x -= friction_vel.x;
 		rb->velocity.y -= friction_vel.y;
 
 		rb->last_position = rb->position;
+
+		speed = V3Length(rb->velocity);
 
 		if (rb->shape.type != P_CollisionShapeType_None && !WithinEpsilon(speed))
 		{
@@ -108,6 +115,7 @@ static P_Handle P_LeaseInstance(void)
 	if (p_engine->free_instance_sentinel.next != &p_engine->free_instance_sentinel)
 	{
 		inst = p_engine->free_instance_sentinel.next;
+
 		inst->prev->next = inst->next;
 		inst->next->prev = inst->prev;
 

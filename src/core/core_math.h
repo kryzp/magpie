@@ -118,6 +118,8 @@ static v3 V3Approach(v3 from, v3 to, f32 amount);
 static v3 V3Reflect(v3 v, v3 n);
 static v3 V3Refract(v3 v, v3 n, f64 eta21);
 
+static v3 V3Limit(v3 v, f32 min_length, f32 max_length);
+
 static v3 V3SphericalToCartesian(f32 radius, f32 azimuth, f32 elevation);
 
 typedef union v4 v4;

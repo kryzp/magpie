@@ -52,10 +52,10 @@ static void PlayerInit(Player *player, Transform transform)
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 	rb->solid = false;
 	rb->fixed_position = false;
-	rb->friction = 25.f;
+	rb->friction = 2.5f;
 	rb->air_friction = 0.5f;
 	rb->gravity_factor = 10.f;
-	rb->max_speed = 100.f;
+	rb->max_speed = 30.f;
 	
 	A_Handle model_handle = A_Require(String8Lit("assets://models/DamagedHelmet/glTF/DamagedHelmet.gltf"), A_Type_Model);
 
@@ -100,7 +100,7 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
-	f32 move_speed = 30.f;
+	f32 move_speed = .5f;
 
 	if (input_st.aim)
 	{

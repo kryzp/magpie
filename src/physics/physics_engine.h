@@ -35,6 +35,8 @@ static void P_ReturnInstance(P_Handle handle);
 
 static P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle);
 
+static J_ENTRY_POINT_DEF(P_CastRayJob);
+
 static P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter);
 static P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter);
 
