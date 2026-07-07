@@ -47,22 +47,18 @@ static u8      *IO_ByteRead      (IO_ByteSerializer *s, u64 size, Arena *arena);
 
 static void     IO_ByteWriteU32  (IO_ByteSerializer *s, u32 value);
 static void     IO_ByteWriteI32  (IO_ByteSerializer *s, i32 value);
-static void     IO_ByteWriteB32  (IO_ByteSerializer *s, b32 value);
 static void     IO_ByteWriteF32  (IO_ByteSerializer *s, f32 value);
 
 static u32      IO_ByteReadU32   (IO_ByteSerializer *s);
 static i32      IO_ByteReadI32   (IO_ByteSerializer *s);
-static b32      IO_ByteReadB32   (IO_ByteSerializer *s);
 static f32      IO_ByteReadF32   (IO_ByteSerializer *s);
 
 static void     IO_ByteWriteU64  (IO_ByteSerializer *s, u64 value);
 static void     IO_ByteWriteI64  (IO_ByteSerializer *s, i64 value);
-static void     IO_ByteWriteB64  (IO_ByteSerializer *s, b64 value);
 static void     IO_ByteWriteF64  (IO_ByteSerializer *s, f64 value);
 
 static u64      IO_ByteReadU64   (IO_ByteSerializer *s);
 static i64      IO_ByteReadI64   (IO_ByteSerializer *s);
-static b64      IO_ByteReadB64   (IO_ByteSerializer *s);
 static f64      IO_ByteReadF64   (IO_ByteSerializer *s);
 
 static void     IO_ByteWriteV2   (IO_ByteSerializer *s, v2 v);

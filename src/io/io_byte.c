@@ -195,14 +195,6 @@ static void IO_ByteWriteI32(IO_ByteSerializer *s, i32 value)
 	IO_ByteWriteU32(s, raw);
 }
 
-static void IO_ByteWriteB32(IO_ByteSerializer *s, b32 value)
-{
-	u32 raw = 0;
-	MemCopy(&raw, &value, sizeof(b32));
-
-	IO_ByteWriteU32(s, raw);
-}
-
 static void IO_ByteWriteF32(IO_ByteSerializer *s, f32 value)
 {
 	u32 raw = 0;
@@ -228,16 +220,6 @@ static i32 IO_ByteReadI32(IO_ByteSerializer *s)
 	
 	i32 value;
 	MemCopy(&value, &raw, sizeof(i32));
-
-	return value;
-}
-
-static b32 IO_ByteReadB32(IO_ByteSerializer *s)
-{
-	u32 raw = IO_ByteReadU32(s);
-
-	b32 value;
-	MemCopy(&value, &raw, sizeof(b32));
 
 	return value;
 }
@@ -268,14 +250,6 @@ static void IO_ByteWriteI64(IO_ByteSerializer *s, i64 value)
 	IO_ByteWriteU64(s, raw);
 }
 
-static void IO_ByteWriteB64(IO_ByteSerializer *s, b64 value)
-{
-	u64 raw = 0;
-	MemCopy(&raw, &value, sizeof(b64));
-
-	IO_ByteWriteU64(s, raw);
-}
-
 static void IO_ByteWriteF64(IO_ByteSerializer *s, f64 value)
 {
 	u64 raw = 0;
@@ -301,15 +275,6 @@ static i64 IO_ByteReadI64(IO_ByteSerializer *s)
 
 	i64 value;
 	MemCopy(&value, &raw, sizeof(i64));
-
-	return value;
-}
-
-static b64 IO_ByteReadB64(IO_ByteSerializer *s)
-{
-	u64 raw = IO_ByteReadU64(s);
-	b64 value;
-	MemCopy(&value, &raw, sizeof(b64));
 
 	return value;
 }
