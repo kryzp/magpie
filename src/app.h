@@ -59,11 +59,11 @@ struct App
 	f32 delta_accumulator;
 };
 
-__declspec(dllexport) App  *MagpieInit      (const OS_API *api);
-__declspec(dllexport) void  MagpieDestroy   (App *app_);
-__declspec(dllexport) b32   MagpieTick      (App *app_, const OS_InputState *input);
-__declspec(dllexport) void  MagpieHotLoad   (App *app_, const OS_API *api);
-__declspec(dllexport) void  MagpieHotUnload (App *app_);
+__declspec(dllexport) App  *MagpieInit(const OS_API *osapi_);
+__declspec(dllexport) void  MagpieDestroy(App *app_);
+__declspec(dllexport) b32   MagpieTick(App *app_, const OS_InputState *input);
+__declspec(dllexport) void  MagpieHotLoad(App *app_, const OS_API *osapi_);
+__declspec(dllexport) void  MagpieHotUnload(App *app_);
 
 static App *app = NULL;
 

@@ -22,11 +22,9 @@ static inline b32 E_HandleIsNull(E_Handle handle)
 
 static inline b32 E_HandleMatch(E_Handle a, E_Handle b)
 {
-	return (
-		a.tid == b.tid &&
-		a.slot == b.slot &&
-		a.generation == b.generation
-	);
+	return (a.tid == b.tid &&
+			a.slot == b.slot &&
+			a.generation == b.generation);
 }
 
 typedef u32 E_Flags;

@@ -64,7 +64,7 @@ static void AppInit_(void)
 	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
 	app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
-	AU_Init(&app->audio_system, &app->audio_arena, app->audio_log_channel);
+	AU_InitAndSelect(&app->audio_system, &app->audio_arena, app->audio_log_channel);
 	
 	A_InitAndSelect(&app->assets, &app->asset_arena, app->asset_log_channel);
 	
@@ -178,7 +178,7 @@ void MagpieDestroy(App *app_)
 	
 	A_Destroy();
 	
-	AU_Shutdown(&app->audio_system);
+	AU_Shutdown();
 	AU_BackendShutdown();
 	
 	G_ShaderCompilerShutdown();
@@ -283,7 +283,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	listener.position = app->game.camera.position;
 	listener.direction = app->game.camera.forward;
 
-	AU_Tick(&app->audio_system, dt, listener);
+	AU_Tick(dt, listener);
 	AU_BackendTick(dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
@@ -345,6 +345,7 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	G_DeviceHotLoad();
 
 	AU_BackendSelectContext(app->audio_backend);
+	AU_SelectContext(&app->audio_system);
 
 	A_SelectContext(&app->assets);
 
@@ -367,37 +368,37 @@ void MagpieHotUnload(App *app_)
 }
 
 /*
-app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
-A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
-app->test_sound = test_sound_asset->sound.buffer;
+  app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
+  A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
+  app->test_sound = test_sound_asset->sound.buffer;
 
-A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
-S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
-S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
+  A_Handle test_script_handle = A_Require(&app->assets, String8Lit("assets://test.lua"), A_Type_Script);
+  S_Ref test_lua_script = A_GetNow(&app->assets, test_script_handle)->script.ref;
+  S_CallMethod(app->scripting_system, test_lua_script, String8Lit("Yay"));
 */
 
 /*
-	if (OS_KbPressed(input, OS_KeyboardKey_Enter))
-	{
-	S_FireSignal(app->scripting_system, String8Lit("test_ready"));
-	//R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
-	}
+  if (OS_KbPressed(input, OS_KeyboardKey_Enter))
+  {
+  S_FireSignal(app->scripting_system, String8Lit("test_ready"));
+  //R_IrradianceVolumeBake(&app->irradiance_volume, &app->scene);
+  }
 
-	if (OS_KbPressed(input, OS_KeyboardKey_Y))
-	{
-	AU_PlayConfig play_config = {0};
-	play_config.clip = app->test_sound;
-	play_config.bus = AU_Bus_Sfx;
-	play_config.volume = 1.f;
-	play_config.pitch = 1.f;
-	play_config.spatial = true;
-	play_config.position = v3x(0.f);
+  if (OS_KbPressed(input, OS_KeyboardKey_Y))
+  {
+  AU_PlayConfig play_config = {0};
+  play_config.clip = app->test_sound;
+  play_config.bus = AU_Bus_Sfx;
+  play_config.volume = 1.f;
+  play_config.pitch = 1.f;
+  play_config.spatial = true;
+  play_config.position = v3x(0.f);
 	
-	AU_Play(&app->audio_system, &play_config);
-	}
+  AU_Play(&app->audio_system, &play_config);
+  }
 
-	if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
-	if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
+  if (OS_KbDown(input, OS_KeyboardKey_Up  ))  app_pp_exposure += dt;
+  if (OS_KbDown(input, OS_KeyboardKey_Down))  app_pp_exposure -= dt;
 
-	R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
+  R_SceneLightSetPosition(&app->scene, app->light_handle, v3(SinF(elapsed*2.f)*2.f, 0.f, 1.f));
 */

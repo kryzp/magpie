@@ -62,11 +62,9 @@ float4 FragmentMain(ibl_convolution::VS_Output input) : SV_Target
 
 			float mip_level = roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);
 
-			result += environment_map.SampleLevel(
-				sampler,
-				math::WorldToCubemap(L),
-				mip_level
-			).rgb * NdotL;
+			result += environment_map.SampleLevel(sampler,
+												  math::WorldToCubemap(L),
+												  mip_level).rgb * NdotL;
 
 			total_weight += NdotL;
 		}

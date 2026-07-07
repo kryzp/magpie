@@ -72,27 +72,28 @@ struct AU_System
 	f32 bus_volumes[AU_Bus_COUNT];
 };
 
-static void AU_Init(AU_System *system, Arena *arena, LOG_Channel log_channel);
-static void AU_Shutdown(AU_System *system);
+static void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_channel);
+static void AU_Shutdown(void);
+static void AU_SelectContext(AU_System *system);
 
-static void AU_Tick(AU_System *system, f32 dt, AU_Listener listener);
+static void AU_Tick(f32 dt, AU_Listener listener);
 
-static AU_Emitter *AU_AllocEmitter(AU_System *system);
-static void AU_ReleaseEmitter(AU_System *system, AU_Emitter *emitter);
-static AU_Emitter *AU_GetEmitter(const AU_System *system, AU_Handle handle);
+static AU_Emitter *AU_AllocEmitter(void);
+static void AU_ReleaseEmitter(AU_Emitter *emitter);
+static AU_Emitter *AU_GetEmitter(AU_Handle handle);
 
-static AU_Handle AU_Play(AU_System *system, const AU_PlayConfig *config);
-static void AU_Stop(AU_System *system, AU_Handle handle);
-static void AU_StopAll(AU_System *system);
-static void AU_Resume(AU_System *system, AU_Handle handle);
-static void AU_Pause(AU_System *system, AU_Handle handle);
+static AU_Handle AU_Play(const AU_PlayConfig *config);
+static void AU_Stop(AU_Handle handle);
+static void AU_StopAll(void);
+static void AU_Resume(AU_Handle handle);
+static void AU_Pause(AU_Handle handle);
 
-static void AU_SetPositionOf(const AU_System *system, AU_Handle handle, v3 position);
+static void AU_SetPositionOf(AU_Handle handle, v3 position);
 
-static void AU_SetMasterVolume(AU_System *system, f32 volume);
-static void AU_SetBusVolume(AU_System *system, AU_Bus bus, f32 volume);
+static void AU_SetMasterVolume(f32 volume);
+static void AU_SetBusVolume(AU_Bus bus, f32 volume);
 
-static f32 AU_GetOutputVolumeOnBus(const AU_System *system, AU_Bus bus, f32 base_volume);
-static void AU_UpdateEmitterVolumes(const AU_System *system, AU_Bus bus);
+static f32 AU_GetOutputVolumeOnBus(AU_Bus bus, f32 base_volume);
+static void AU_UpdateEmitterVolumes(AU_Bus bus);
 
 #endif // AUDIO_SYSTEM_H

@@ -28,6 +28,8 @@ static void AN_SystemDestroy(void)
 	}
 
 	DebugLogI(an_system->log_channel, "Destroyed.");
+
+	an_system = NULL;
 }
 
 static void AN_SystemSelectContext(AN_System *system)

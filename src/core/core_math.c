@@ -297,12 +297,10 @@ static v4 V4QuatLookAt(v3 eye, v3 centre)
 	f32 s = SquareRoot((1.f + d) * 2.f);
 	f32 inv_s = 1.f / s;
 
-	return v4(
-		axis.x * inv_s,
-		axis.y * inv_s,
-		axis.z * inv_s,
-		s * 0.5f
-	);
+	return v4(axis.x * inv_s,
+			  axis.y * inv_s,
+			  axis.z * inv_s,
+			  s * 0.5f);
 }
 
 static v3 V4QuatToEuler(v4 q)

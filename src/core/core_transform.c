@@ -14,12 +14,10 @@ static Transform TransformIdentity(void)
 
 static void TransformRecompute(Transform *transform)
 {
-	transform->matrix = M4Transform(
-		transform->position,
-		transform->rotation,
-		transform->scale,
-		transform->origin
-	);
+	transform->matrix = M4Transform(transform->position,
+									transform->rotation,
+									transform->scale,
+									transform->origin);
 
 	transform->dirty = false;
 }

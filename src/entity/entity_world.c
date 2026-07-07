@@ -72,11 +72,9 @@ static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
 
 static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 {
-	DebugLogAssert(
-		world->log_channel,
-		world->next_tid < E_WORLD_MAX_REGISTERED_TYPES,
-		"Cannot register more entity types!"
-	);
+	DebugLogAssert(world->log_channel,
+				   world->next_tid < E_WORLD_MAX_REGISTERED_TYPES,
+				   "Cannot register more entity types!");
 
 	u32 tid = world->next_tid;
 	
@@ -265,11 +263,9 @@ static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
 
 static E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform)
 {
-	DebugLogAssert(
-		world->log_channel,
-		world->initting_entity_count < ArraySize(world->initting_entities),
-		"Not enough space to init new entity this frame!"
-	);
+	DebugLogAssert(world->log_channel,
+				   world->initting_entity_count < ArraySize(world->initting_entities),
+				   "Not enough space to init new entity this frame!");
 	
 	E_TypePool *pool = &world->type_stores[type].pool;
 
@@ -341,12 +337,10 @@ static E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type)
 
 static E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
 {
-	DebugLogAssert(
-		world->log_channel,
-		world->marker_count < ArraySize(world->markers),
-		"Cannot add more markers to world (ran out of array space)."
-	);
-	
+	DebugLogAssert(world->log_channel,
+				   world->marker_count < ArraySize(world->markers),
+				   "Cannot add more markers to world (ran out of array space).");
+
 	E_Marker *m = &world->markers[world->marker_count];
 	m->name = name;
 	m->name_hash = HashStr8(name);

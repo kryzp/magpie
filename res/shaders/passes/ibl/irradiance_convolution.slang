@@ -38,11 +38,9 @@ float4 FragmentMain(ibl_convolution::VS_Output input)
 	{
 		for (float theta = 0.0; theta < 0.5 * math::PI; theta += dt)
 		{
-			float3 sample = float3(
-				sin(theta) * cos(phi),
-				sin(theta) * sin(phi),
-				cos(theta)
-			);
+			float3 sample = float3(sin(theta) * cos(phi),
+								   sin(theta) * sin(phi),
+								   cos(theta));
 
 			float3x3 tangent_to_world = transpose(float3x3(right, up, forward));
 			float3 sample_direction = mul(tangent_to_world, sample);

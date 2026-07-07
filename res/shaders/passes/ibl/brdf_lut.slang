@@ -16,11 +16,9 @@ float4 FragmentMain(fullscreen::VS_Output input) : SV_Target
 	float NdotV = input.uv.x;
 	float roughness = max(input.uv.y, 0.04);
 
-	float3 V = float3(
-		sqrt(1.0 - NdotV * NdotV),
-		0.0,
-		NdotV
-	);
+	float3 V = float3(sqrt(1.0 - NdotV * NdotV),
+					  0.0,
+					  NdotV);
 
 	float A = 0.0;
 	float B = 0.0;

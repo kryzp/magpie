@@ -29,11 +29,9 @@ namespace sampling
 		float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
 		float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
-		float3 H = float3(
-			sin_theta * cos(phi),
-			sin_theta * sin(phi),
-			cos_theta
-		);
+		float3 H = float3(sin_theta * cos(phi),
+						  sin_theta * sin(phi),
+						  cos_theta);
 
 		float3 tangent, bitangent;
 		math::BuildOrthonormalBasis(normal, tangent, bitangent);
