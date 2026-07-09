@@ -246,10 +246,12 @@ Don't. I mean, you can, and I'm not gonna stop you. But don't (coming from a pla
 
 
 > Do you use AI???
+
 No. NO. I also hate that I have to clarify that none of this is vibecoded. This is actually something I care about, and put time into. Check the commit history if you don't believe me.
 
 
 > What's the history? How long did this take?
+
 This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the git history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/wyvern) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
 
 
