@@ -1,0 +1,256 @@
+
+static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle)
+{
+	const A_ModelData *asset_data = &A_GetNow(asset_handle)->model;
+	
+	R_Model model = {0};
+	model.asset_handle = asset_handle;
+
+	for (u32 i = 0; i < asset_data->sub_model_count; i++)
+	{
+		const A_SubModel *asset_src = &asset_data->sub_models[i];
+
+		R_SubModel *r_submodel = ArenaPushArray(arena, R_SubModel, 1);
+		r_submodel->next = model.submodel_first;
+		model.submodel_first = r_submodel;
+
+		R_MeshDesc mesh_desc = {0};
+		mesh_desc.vertex_buffer = asset_src->vertex_buffer;
+		mesh_desc.index_buffer = asset_src->index_buffer;
+		mesh_desc.vertex_count = asset_src->vertex_count;
+		mesh_desc.index_count = asset_src->index_count;
+		mesh_desc.skin_buffer = asset_src->skin_buffer;
+
+		r_submodel->mesh = R_SceneAllocMesh(scene, &mesh_desc);
+		r_submodel->material = R_SceneAddMaterialFromAssets(scene, &asset_src->material);
+		r_submodel->local_transform = asset_src->transform;
+		r_submodel->skin_index = asset_src->skin_index;
+
+		v3 bounds_min = asset_src->bounds_min;
+		v3 bounds_max = asset_src->bounds_max;
+		v3 local_centre = V3MulF32(V3Add(bounds_min, bounds_max), 0.5f);
+		v3 dx = V3Sub(bounds_max, bounds_min);
+		f32 local_radius = V3Length(dx) * 0.5f;
+
+		r_submodel->local_sphere_bounds = v4(local_centre.x,
+											 local_centre.y,
+											 local_centre.z,
+											 local_radius);
+	}
+
+	return model;
+}
+
+static R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+{
+	for (R_ModelCatalogueEntry *entry = catalogue->entry_first_sentinel.next; 
+		 entry != &catalogue->entry_first_sentinel; 
+		 entry = entry->next)
+	{
+		if (A_HandleMatch(entry->asset_handle, asset_handle))
+			return entry;
+	}
+
+	return NULL;
+}
+
+static void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena)
+{
+	catalogue->arena = arena;
+
+	catalogue->entry_first_sentinel.next = &catalogue->entry_first_sentinel;
+	catalogue->entry_first_sentinel.prev = &catalogue->entry_first_sentinel;
+
+	catalogue->first_free_entry_sentinel.next = &catalogue->first_free_entry_sentinel;
+	catalogue->first_free_entry_sentinel.prev = &catalogue->first_free_entry_sentinel;
+}
+
+static void R_ModelCatalogueEquipScene(R_ModelCatalogue *catalogue, R_Scene *scene)
+{
+	catalogue->equipped_scene = scene;
+}
+
+static void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue)
+{
+	for (R_ModelCatalogueEntry *entry = catalogue->entry_first_sentinel.next; 
+		 entry != &catalogue->entry_first_sentinel; 
+		 entry = entry->next)
+	{
+		for (R_SubModel *submodel = entry->model.submodel_first; submodel; submodel = submodel->next)
+		{
+			R_SceneFreeMesh(catalogue->equipped_scene, submodel->mesh);
+			R_SceneFreeMaterial(catalogue->equipped_scene, submodel->material);
+		}
+	}
+}
+
+static R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+{
+	R_ModelCatalogueEntry *existing = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
+
+	if (existing)
+	{
+		existing->ref_count++;
+		return &existing->model;
+	}
+
+	R_ModelCatalogueEntry *entry = ArenaPushArray(catalogue->arena, R_ModelCatalogueEntry, 1);
+	entry->asset_handle = asset_handle;
+	entry->model = R_ModelFromAsset(catalogue->arena, catalogue->equipped_scene, asset_handle);
+	entry->ref_count = 1;
+	
+	entry->next = catalogue->entry_first_sentinel.next;
+	entry->prev = &catalogue->entry_first_sentinel;
+
+	entry->next->prev = entry;
+	entry->prev->next = entry;
+	
+	return &entry->model;
+}
+
+static void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+{
+	R_ModelCatalogueEntry *entry = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
+
+	if (!entry)
+		return;
+
+	if (entry->ref_count > 0)
+		entry->ref_count--;
+
+	if (entry->ref_count == 0)
+	{
+		for (R_SubModel *submodel = entry->model.submodel_first; submodel; submodel = submodel->next)
+		{
+			R_SceneFreeMesh(catalogue->equipped_scene, submodel->mesh);
+			R_SceneFreeMaterial(catalogue->equipped_scene, submodel->material);
+		}
+
+		entry->prev->next = entry->next;
+		entry->next->prev = entry->prev;
+
+		entry->next = catalogue->first_free_entry_sentinel.next;
+		entry->prev = &catalogue->first_free_entry_sentinel;
+
+		entry->next->prev = entry;
+		entry->prev->next = entry;
+	}
+}
+
+static R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+{
+	R_ModelCatalogueEntry *entry = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
+
+	if (!entry)
+		return NULL;
+
+	return &entry->model;
+}
+
+static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Handle asset_handle, m4 initial_transform)
+{
+	R_Model *model = R_ModelCatalogueCreateModel(catalogue, asset_handle);
+
+	R_ModelInstance instance = {0};
+	instance.asset_handle = asset_handle;
+	instance.root_transform = initial_transform;
+	instance.animator_handle = AN_HandleNull();
+
+	b32 needs_animator = false;
+
+	for (R_SubModel *submodel = model->submodel_first; submodel; submodel = submodel->next)
+	{
+		if (submodel->skin_index >= 0)
+		{
+			needs_animator = true;
+			break;
+		}
+	}
+
+	if (needs_animator)
+	{
+		instance.has_animator = true;
+		instance.animator_handle = AN_SystemCreateInstance(asset_handle);
+	}
+
+	for (R_SubModel *submodel = model->submodel_first; submodel; submodel = submodel->next)
+	{
+		R_SubModelInstance *i_submodel = ArenaPushArray(catalogue->arena, R_SubModelInstance, 1);
+		i_submodel->next = instance.submodel_first;
+		instance.submodel_first = i_submodel;
+
+		i_submodel->handle = R_SceneInstanceCreate(catalogue->equipped_scene);
+
+		R_SceneSetInstanceMesh(catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
+		R_SceneSetInstanceMaterial(catalogue->equipped_scene, i_submodel->handle, submodel->material);
+
+		if (instance.has_animator)
+		{
+			AN_Palette palette = AN_GetPalette(instance.animator_handle, submodel->skin_index);
+			R_SceneSetInstanceSkinning(catalogue->equipped_scene, i_submodel->handle, palette.matrices, 0, palette.joint_count);
+		}
+	}
+
+	R_ModelInstanceSetTransform(catalogue, &instance, initial_transform);
+
+	return instance;
+}
+
+static R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform)
+{
+	A_Handle asset_handle = A_Require(asset_path, A_Type_Model);
+	return R_ModelInstanceCreate(catalogue, asset_handle, initial_transform);
+}
+
+static void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance *instance)
+{
+	for (R_SubModelInstance *submodel = instance->submodel_first; submodel; submodel = submodel->next)
+		R_SceneInstanceDestroy(catalogue->equipped_scene, submodel->handle);
+
+	if (instance->has_animator)
+		AN_SystemKillInstance(instance->animator_handle);
+
+	R_ModelCatalogueReleaseModel(catalogue, instance->asset_handle);
+}
+
+static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform)
+{
+	R_Model *original = R_ModelCatalogueTryFindModel(catalogue, instance->asset_handle);
+	
+	instance->root_transform = root_transform;
+
+	R_SubModel *original_submodel = original->submodel_first;
+	R_SubModelInstance *instance_submodel = instance->submodel_first;
+	
+	while (original_submodel && instance_submodel)
+	{
+		m4 world_matrix = M4MulM4(instance->root_transform, original_submodel->local_transform);
+		v4 world_sphere_bounds = R_ModelPartWorldSphereBounds(world_matrix, original_submodel->local_sphere_bounds);
+
+		R_SceneSetInstanceTransform(catalogue->equipped_scene, instance_submodel->handle, world_matrix);
+		R_SceneSetInstanceSphereBounds(catalogue->equipped_scene, instance_submodel->handle, world_sphere_bounds);
+
+		original_submodel = original_submodel->next;
+		instance_submodel = instance_submodel->next;
+	}
+}
+
+static v4 R_ModelPartWorldSphereBounds(m4 world_transform, v4 local_sphere_bounds)
+{
+	v3 local_centre = v3(local_sphere_bounds.x,
+						 local_sphere_bounds.y,
+						 local_sphere_bounds.z);
+	
+	v3 local_edge = v3(local_sphere_bounds.x + local_sphere_bounds.w,
+					   local_sphere_bounds.y,
+					   local_sphere_bounds.z);
+ 
+	v3 world_centre = M4MulV3Point(world_transform, local_centre);
+	v3 world_edge = M4MulV3Point(world_transform, local_edge);
+
+	v3 dx = V3Sub(world_edge, world_centre);
+	f32 world_radius = V3Length(dx);
+ 
+	return v4(world_centre.x, world_centre.y, world_centre.z, world_radius);
+
+}

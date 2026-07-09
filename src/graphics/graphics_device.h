@@ -115,7 +115,7 @@ struct G_DestroyedSampler
 {
 	G_DestroyedSampler *next;
 	VkSampler sampler;
-	G_BindlessHandle bindless;
+	u32 bindless;
 };
 
 
@@ -322,7 +322,7 @@ static G_TextureViewKey G_DeviceTextureViewAuto(G_TextureKey texture);
 
 static G_TextureView *G_DeviceTextureViewFromKey(G_TextureViewKey key);
 
-static G_BindlessIndex  G_DeviceTextureViewBindless(G_TextureViewKey key);
+static u32 G_DeviceTextureViewBindless(G_TextureViewKey key);
 
 
 /* ==================================================
@@ -356,7 +356,7 @@ static void G_DeviceSamplerDestroy(G_SamplerKey sampler);
 
 static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key);
 
-static G_BindlessIndex G_DeviceSamplerBindless(G_SamplerKey key);
+static u32 G_DeviceSamplerBindless(G_SamplerKey key);
 
 
 /* ==================================================

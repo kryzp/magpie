@@ -1,34 +1,88 @@
 #ifndef RENDER_SCENE_H
 #define RENDER_SCENE_H
 
-typedef struct R_ModelImportEntry R_ModelImportEntry;
-struct R_ModelImportEntry
+#define R_SCENE_MAX_INSTANCES          65536
+#define R_SCENE_MAX_LIGHTS             1024
+#define R_SCENE_MAX_MESHES             1024
+#define R_SCENE_MAX_GEOMETRY_PAGES     16
+#define R_SCENE_MAX_MATERIALS          1024
+
+typedef struct R_InstanceHandle R_InstanceHandle;
+struct R_InstanceHandle
 {
-	m4 transform;
-	v4 sphere_bounds;
-
-	R_SceneHandle mesh;
-	R_SceneHandle material;
-
-	i32 skin_index;
+	u32 id;
 };
 
-typedef struct R_ModelImportReceipt R_ModelImportReceipt;
-struct R_ModelImportReceipt
+typedef struct R_LightHandle R_LightHandle;
+struct R_LightHandle
 {
-	u32 count;
-	R_ModelImportEntry *entries;
+	u32 id;
 };
 
-typedef struct R_Model R_Model;
-struct R_Model
+typedef struct R_MaterialHandle R_MaterialHandle;
+struct R_MaterialHandle
 {
-	A_Handle asset_handle;
-	AN_Handle animator_handle;
-	u32 object_count;
-	R_SceneHandle *objects;
-	m4 *local_transforms;
-	i32 *skin_indices;
+	u32 index;
+};
+
+typedef struct R_MeshHandle R_MeshHandle;
+struct R_MeshHandle
+{
+	u32 slot_index;
+	u32 page_index;
+};
+
+static inline R_MaterialHandle R_MaterialHandleNull(void)
+{
+	R_MaterialHandle null_handle = {0};
+	null_handle.index = (u32)(-1);
+	
+	return null_handle;
+}
+
+static inline R_MeshHandle R_MeshHandleNull(void)
+{
+	R_MeshHandle null_handle = {0};
+	null_handle.slot_index = (u32)(-1);
+	null_handle.page_index = (u32)(-1);
+	
+	return null_handle;
+}
+
+typedef struct R_MeshDesc R_MeshDesc;
+struct R_MeshDesc
+{
+	G_BufferKey vertex_buffer;
+	G_BufferKey index_buffer;
+
+	u32 vertex_count;
+	u32 index_count;
+
+	G_BufferKey skin_buffer;
+};
+
+typedef struct R_MeshAllocRegion R_MeshAllocRegion;
+struct R_MeshAllocRegion
+{
+	u32 page_index;
+
+	u64 vertex_offset;
+	u32 vertex_count;
+
+	u64 index_offset;
+	u32 index_count;
+};
+
+typedef struct R_ScenePageMeshCopy R_ScenePageMeshCopy;
+struct R_ScenePageMeshCopy
+{
+	G_BufferCopy vertex_copy;
+	G_BufferCopy index_copy;
+	
+	G_BufferKey src_vertex_buffer;
+	G_BufferKey src_index_buffer;
+
+	u32 dst_page_index;
 };
 
 typedef struct R_Scene R_Scene;
@@ -36,21 +90,100 @@ struct R_Scene
 {
 	LOG_Channel log_channel;
 
-	R_SceneGraph graph;
-	R_MeshRegistry meshes;
-	R_MaterialRegistry materials;
+	DensePool object_pool;
+	m4 transforms[R_SCENE_MAX_INSTANCES];
+	m4 normal_matrices[R_SCENE_MAX_INSTANCES];
+	v4 sphere_bounds[R_SCENE_MAX_INSTANCES];
+	u32 mesh_indices[R_SCENE_MAX_INSTANCES];
+	u32 material_indices[R_SCENE_MAX_INSTANCES];
+	u32 page_indices[R_SCENE_MAX_INSTANCES];
+	const m4 *skinning_palettes[R_SCENE_MAX_INSTANCES];
+	u64 skinning_addrs[R_SCENE_MAX_INSTANCES];
+	u32 skinning_joint_counts[R_SCENE_MAX_INSTANCES];
+
+	DensePool light_pool;
+	R_Light lights[R_SCENE_MAX_LIGHTS];
+
+	SlotPool mesh_pool;
+	R_MeshAllocRegion mesh_allocs[R_SCENE_MAX_MESHES];
+	R_GPU_RenderMesh gpu_meshes[R_SCENE_MAX_MESHES];
+	G_BufferKey mesh_buffer;
+	b32 mesh_buffer_dirty;
+
+	R_ScenePageMeshCopy page_mesh_copies[128];
+	u32 page_mesh_copy_count;
+	
+	R_GeometryPage geometry_pages[R_SCENE_MAX_GEOMETRY_PAGES];
+	u32 geometry_page_count;
+
+	SlotPool material_pool;
+	R_Material cpu_materials[R_SCENE_MAX_MATERIALS];
+	R_GPU_Material gpu_materials[R_SCENE_MAX_MATERIALS];
+	G_BufferKey material_buffer;
+	b32 material_buffer_dirty;
 };
 
-// trying out new formatting :p
 
-static void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel);
-static void R_SceneDestroy(R_Scene *scene);
+/* ==================================================
+   CORE SCENE
+   ================================================== */
 
-static R_ModelImportReceipt R_SceneImportModel(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle asset_handle);
+static void                  R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel);
+static void                  R_SceneDestroy(R_Scene *scene);
 
-static R_Model R_SceneModelCreate(R_Scene *scene, G_CmdBuffer *cmd, Arena *arena, A_Handle asset_handle, b32 animated);
-static void R_SceneModelDestroy(R_Scene *scene, R_Model *model);
-static void R_SceneModelSetRootTransform(R_Scene *scene, R_Model *model, m4 root_transform);
-static void R_SceneModelUpdateSkinning(R_Scene *scene, R_Model *model);
+
+/* ==================================================
+   INSTANCES
+   ================================================== */
+
+static R_InstanceHandle      R_SceneInstanceCreate(R_Scene *scene);
+static void                  R_SceneInstanceDestroy(R_Scene *scene, R_InstanceHandle handle);
+static void                  R_SceneSetInstanceTransform(R_Scene *scene, R_InstanceHandle handle, m4 transform);
+static void                  R_SceneSetInstanceSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 sphere_bounds);
+static void                  R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh);
+static void                  R_SceneSetInstanceMaterial(R_Scene *scene, R_InstanceHandle handle, R_MaterialHandle material);
+static void                  R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u64 palette_gpu_addr, u32 joint_count);
+
+
+/* ==================================================
+   LIGHTS
+   ================================================== */
+
+static R_LightHandle         R_SceneLightCreate(R_Scene *scene);
+static void                  R_SceneLightDestroy(R_Scene *scene, R_LightHandle handle);
+static void                  R_SceneSetLight(R_Scene *scene, R_LightHandle handle, R_Light light);
+
+
+/* ==================================================
+   MESHES
+   ================================================== */
+
+static R_MeshHandle          R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc);
+static void                  R_SceneFreeMesh(R_Scene *scene, R_MeshHandle handle);
+
+static u32                   R_SceneCountOfMeshes(const R_Scene *scene);
+
+static u32                   R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count);
+static R_GeometryPage        R_SceneCreateNewPage(R_Scene *scene);
+static u32                   R_ScenePageCount(const R_Scene *scene);
+
+
+/* ==================================================
+   MATERIALS
+   ================================================== */
+
+static R_MaterialHandle      R_SceneAddMaterial(R_Scene *scene, const R_Material *material);
+static R_MaterialHandle      R_SceneAddMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source);
+
+static void                  R_SceneUpdateMaterial(R_Scene *scene, R_MaterialHandle handle, const R_Material *material);
+static void                  R_SceneFreeMaterial(R_Scene *scene, R_MaterialHandle handle);
+
+static u32                   R_SceneCountOfMaterials(const R_Scene *scene);
+static const R_Material     *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle);
+
+static void                  R_SceneFlushIfDirty(R_Scene *scene);
+static void                  R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out);
+static u32                   R_SceneResolveToBindlessIndex(const R_Scene *scene, G_TextureKey key);
+
 
 #endif // RENDER_SCENE_H

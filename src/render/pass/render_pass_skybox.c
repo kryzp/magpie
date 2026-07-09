@@ -28,8 +28,8 @@ static R_PASS_RECORD_DEF(R_SkyboxPassFn)
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);	
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-	R_MeshBind(user_data->skybox_mesh, cmd);
+	R_MeshBindIndexBuffer(user_data->skybox_mesh, cmd);
 	R_MeshDraw(user_data->skybox_mesh, cmd);
 }

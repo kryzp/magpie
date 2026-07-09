@@ -58,7 +58,7 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	args.light_count = frame_params->light_count;
 
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
 	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
 	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);

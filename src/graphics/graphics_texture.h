@@ -64,7 +64,7 @@ struct G_TextureView
 	VkImageView vk_handle;
 	VkImageViewType type;
 	G_SubresourceRange range;
-	G_BindlessHandle bindless;
+	u32 bindless;
 };
 
 #endif // GRAPHICS_TEXTURE_H

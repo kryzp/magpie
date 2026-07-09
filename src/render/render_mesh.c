@@ -62,7 +62,7 @@ static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 	return vb_size + ib_size;
 }
 
-static void R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd)
+static void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
 	G_CmdBindIndexBuffer(cmd, mesh->index_buffer, 0, VK_WHOLE_SIZE, mesh->index_type);
 }

@@ -43,14 +43,14 @@ static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
 	pc.object_count = data->frame_params->object_count;
 	pc.alpha_filter = data->filter;
-	pc.max_draws_per_page = R_SCENE_GRAPH_MAX_OBJECTS;
+	pc.max_draws_per_page = R_SCENE_MAX_INSTANCES;
 	
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, pc, 0);
 	G_CmdDispatch(cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
@@ -90,13 +90,13 @@ static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
 	pc.object_count = data->frame_params->object_count;
 	pc.alpha_filter = data->filter;
-	pc.max_draws_per_page = R_SCENE_GRAPH_MAX_OBJECTS;
+	pc.max_draws_per_page = R_SCENE_MAX_INSTANCES;
 	
 	pc.sphere = data->sphere;
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, pc, 0);
 	G_CmdDispatch(cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
@@ -107,7 +107,7 @@ static R_DrawStream R_CullFrustum(R_Graph *graph,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_GRAPH_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_INSTANCES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
@@ -163,7 +163,7 @@ static R_DrawStream R_CullSphere(R_Graph *graph,
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_GRAPH_MAX_OBJECTS * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_INSTANCES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);

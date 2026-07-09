@@ -24,12 +24,6 @@ struct R_FrameParams
 
 	R_Camera camera;
 
-	G_SamplerKey linear_sampler;
-	G_SamplerKey nearest_sampler;
-	G_TextureKey irradiance_fallback_cubemap;
-	G_TextureKey prefilter_cubemap;
-	G_TextureKey brdf;
-
 	G_BufferKey mesh_buffer;
 	G_BufferKey material_buffer;
 
@@ -37,7 +31,7 @@ struct R_FrameParams
 
 	u32 page_count;
 	G_Alloc page_table_buffer;
-	G_BufferKey page_index_buffers[R_MESH_REGISTRY_MAX_GEOMETRY_PAGES];
+	G_BufferKey page_index_buffers[R_SCENE_MAX_GEOMETRY_PAGES];
 
 	u32 object_count;
 	G_Alloc object_buffer;
@@ -51,17 +45,26 @@ struct R_FrameParams
 	
 	u32 shadow_caster_count;
 	R_ShadowCaster shadow_casters[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
+
+	G_SamplerKey linear_sampler;
+	G_SamplerKey nearest_sampler;
+	G_TextureKey irradiance_fallback_cubemap;
+	G_TextureKey prefilter_cubemap;
+	G_TextureKey brdf;
 };
 
 typedef struct R_System R_System; // TODO TODO TODO: R_SYSTEM will not be taken in as a paremeter this is just a quick hack!!!!!
 
-static void R_FrameParamsUploadPageTable(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
 static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
-static void R_FrameParamsUploadObjects(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
-static void R_FrameParamsUploadLights(const R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
 static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out);
 
-static R_FrameParams R_FrameParamsBuild(R_System *system, Arena *frame_arena, f32 dt, f32 elapsed, R_Scene *scene, const R_Camera *camera);
+static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
+										R_System *system,
+										f32 dt, f32 elapsed,
+										R_Scene *scene, const R_Camera *camera);
 
 static void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
 									  G_CmdBuffer *cmd,

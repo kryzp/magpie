@@ -105,7 +105,6 @@ static void AN_AnimatorResume(AN_Animator *animator);
 static void AN_AnimatorPause(AN_Animator *animator, f32 global_time);
 static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time);
 
-static b32 AN_AnimatorIsPlaying(const AN_Animator *animator, AN_ClipKey clip);
 static b32 AN_AnimatorIsFinished(const AN_Animator *animator);
 static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator);
 

@@ -28,7 +28,7 @@ static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc.caster_data_buffer = G_DeviceBufferAddress(data->caster_table_buffer);
 	pc.caster_index = data->caster_index;
 
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(pc), &pc, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, pc, 0);
 
 	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
 	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);

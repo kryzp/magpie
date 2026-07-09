@@ -17,7 +17,7 @@ static v2 V2MulF32(v2 v, f32 f)
 			  v.y * f);
 }
 
-static v2 V2MulV3(v2 a, v2 b)
+static v2 V2MulV2(v2 a, v2 b)
 {
 	return v2(a.x * b.x,
 			  a.y * b.y);
@@ -406,10 +406,10 @@ static v4 M4MulV4(m4 m, v4 v)
 	return result;
 }
 
-static v3 M4MulV3(m4 m, v3 v)
+static v3 M4MulV3Point(m4 m, v3 v)
 {
 	v4 result = M4MulV4(m, v4(v.x, v.y, v.z, 1.f));
-
+	
 	return v3(result.x, result.y, result.z);
 }
 
@@ -590,6 +590,7 @@ static m4 M4Scale(v3 scale)
 	return result;
 }
 
+/*
 static m4 M4FaceTowards(v3 normal)
 {
 	m4 result = M4Identity();
@@ -614,6 +615,7 @@ static m4 M4FaceTowards(v3 normal)
 
 	return result;
 }
+*/
 
 static m4 M4RotateAxis(f32 angle, v3 axis)
 {

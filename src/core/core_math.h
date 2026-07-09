@@ -44,7 +44,7 @@
 #define MinValue(a, b)                      (((a) < (b)) ? (a) : (b))
 #define MaxValue(a, b)                      (((a) > (b)) ? (a) : (b))
 #define ClampValue(v, lo, hi)               MaxValue((lo), MinValue((hi), (v)))
-#define ClampValue01(v)                     ClampValue((v), 0, 1)
+#define SaturateValue(v)                    ClampValue((v), 0, 1)
 #define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
 #define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
 
@@ -67,7 +67,7 @@ static v2 V2Add(v2 a, v2 b);
 static v2 V2Sub(v2 a, v2 b);
 
 static v2 V2MulF32(v2 v, f32 f);
-static v2 V2MulV3(v2 a, v2 b);
+static v2 V2MulV2(v2 a, v2 b);
 
 static f32 V2Dot(v2 a, v2 b);
 
@@ -205,7 +205,7 @@ union m4
 
 static m4 M4MulM4(m4 a, m4 b);
 static v4 M4MulV4(m4 m, v4 v);
-static v3 M4MulV3(m4 m, v3 v);
+static v3 M4MulV3Point(m4 m, v3 v);
 static m4 M4MulF32(m4 m, f32 f);
 
 static m4 M4LookAt(v3 eye, v3 centre, v3 up);
@@ -219,7 +219,6 @@ static m4 M4Transpose(m4 m);
 static m4 M4Translate(v3 translation);
 static m4 M4Scale(v3 scale);
 
-static m4 M4FaceTowards(v3 normal); // Must be normalized. todo: what the fuck is this function????
 static m4 M4RotateAxis(f32 angle, v3 axis); // Must be normalized.
 static m4 M4RotateQuat(v4 q); // Must be normalized.
 

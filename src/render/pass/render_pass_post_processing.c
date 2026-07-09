@@ -36,7 +36,7 @@ static R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 	
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, args, 0);
 
 	G_CmdDispatch(cmd,
 				  G_ComputeGroupCount(output_texture->width,  8),

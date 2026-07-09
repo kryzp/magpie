@@ -8,9 +8,6 @@
 
 #include "render_sprite_batch.c"
 
-#include "render_scene_graph.c"
-#include "render_mesh_registry.c"
-#include "render_material_registry.c"
 #include "render_scene.c"
 
 #include "render_frame.c"
@@ -23,3 +20,5 @@
 #include "pass/render_pass_inc.c"
 
 #include "render_system.c"
+
+#include "render_model.c"

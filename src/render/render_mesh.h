@@ -29,8 +29,7 @@ static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 
 //static u64 R_MeshVertexAddress(const R_Mesh *mesh);
 
-// Only binds index buffer as we use vertex pulling!!!
-static void R_MeshBind(const R_Mesh *mesh, const G_CmdBuffer *cmd);
+static void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 
 static void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 static void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);

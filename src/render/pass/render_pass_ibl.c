@@ -41,9 +41,9 @@ static R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 	args.environment_map = G_DeviceTextureViewBindless(user_data->env_view);
 	args.linear_sampler = G_DeviceSamplerBindless(user_data->sampler);
 
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-	R_MeshBind(user_data->skybox_mesh, cmd);
+	R_MeshBindIndexBuffer(user_data->skybox_mesh, cmd);
 	R_MeshDraw(user_data->skybox_mesh, cmd);
 
 }
@@ -80,8 +80,8 @@ static R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 	args.linear_sampler = G_DeviceSamplerBindless(user_data->sampler);
 	args.roughness = user_data->roughness;
 
-	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-	R_MeshBind(user_data->skybox_mesh, cmd);
+	R_MeshBindIndexBuffer(user_data->skybox_mesh, cmd);
 	R_MeshDraw(user_data->skybox_mesh, cmd);
 }

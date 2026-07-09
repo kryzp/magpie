@@ -255,8 +255,8 @@ static void R_DebugRendererSelect(R_DebugRenderer *dr)
 }
 
 static void R_DebugPushDrawCall(R_DebugDrawType type,
-					const R_DebugDrawCall *call,
-					b32 depth_enabled)
+								const R_DebugDrawCall *call,
+								b32 depth_enabled)
 {
 	R_DebugDrawNode *node = R_DebugAllocNode();
 	node->type = type;
@@ -271,8 +271,8 @@ static void R_DebugPushDrawCall(R_DebugDrawType type,
 }
 
 static void R_DebugPushLine(v3 from, v3 to,
-				v4 colour, f32 line_width,
-				f32 duration, b32 depth_enabled)
+							v4 colour, f32 line_width,
+							f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -286,7 +286,7 @@ static void R_DebugPushLine(v3 from, v3 to,
 }
 
 static void R_DebugPushCross(v3 point, f32 size,
-				 v4 colour, f32 duration, b32 depth_enabled)
+							 v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -300,7 +300,7 @@ static void R_DebugPushCross(v3 point, f32 size,
 }
 
 static void R_DebugPushSphere(v3 centre, f32 radius,
-				  v4 colour, f32 duration, b32 depth_enabled)
+							  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -314,7 +314,7 @@ static void R_DebugPushSphere(v3 centre, f32 radius,
 }
 
 static void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
-				  v4 colour, f32 duration, b32 depth_enabled)
+							  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -329,8 +329,8 @@ static void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
 }
 
 static void R_DebugPushTriangle(v3 a, v3 b, v3 c,
-					v4 colour, f32 line_width,
-					f32 duration, b32 depth_enabled)
+								v4 colour, f32 line_width,
+								f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -345,8 +345,8 @@ static void R_DebugPushTriangle(v3 a, v3 b, v3 c,
 }
 
 static void R_DebugPushAABB(v3 min, v3 max,
-				v4 colour, f32 line_width,
-				f32 duration, b32 depth_enabled)
+							v4 colour, f32 line_width,
+							f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -360,8 +360,8 @@ static void R_DebugPushAABB(v3 min, v3 max,
 }
 
 static void R_DebugPushOBB(m4 transform, v3 scale,
-			   v4 colour, f32 line_width,
-			   f32 duration, b32 depth_enabled)
+						   v4 colour, f32 line_width,
+						   f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -375,7 +375,7 @@ static void R_DebugPushOBB(m4 transform, v3 scale,
 }
 
 static void R_DebugWriteInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
-					 m4 transform, v4 colour, f32 thickness, f32 alpha)
+								 m4 transform, v4 colour, f32 thickness, f32 alpha)
 {
 	AssertTrue(*id < R_DEBUG_MAX_DRAWS);
 
@@ -402,7 +402,7 @@ static f32 R_DebugCallAlpha(const R_DebugDrawCall *call)
 }
 
 static void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
-						 v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
+									 v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
 {
 	//v3 direction = V3Normalize (V3Sub(to, from));
 	f32 length = V3Length(V3Sub(to, from));
@@ -414,9 +414,9 @@ static void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 }
 
 static void R_DebugBuildInstances(R_DebugRenderer *dr,
-					  R_DebugDrawNode **buckets,
-					  R_GPU_DebugObjectDraw *draws,
-					  u32 *draw_id)
+								  R_DebugDrawNode **buckets,
+								  R_GPU_DebugObjectDraw *draws,
+								  u32 *draw_id)
 {
 	for (u32 type = 0; type < R_DebugDrawType_COUNT; type++)
 	{
@@ -428,72 +428,72 @@ static void R_DebugBuildInstances(R_DebugRenderer *dr,
 			switch (type)
 			{
 				case R_DebugDrawType_Line:
-				{
-					R_DebugBuildLineInstance(draws, draw_id,
-											 call->line.from, call->line.to,
-											 call->colour, call->line_width, alpha);
-				}
-				break;
+					{
+						R_DebugBuildLineInstance(draws, draw_id,
+												 call->line.from, call->line.to,
+												 call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_Cross:
-				{
-					f32 half = call->cross.size * 0.5f;
-					m4 t = M4MulM4(M4Translate(call->cross.point), M4Scale(v3(half, half, half)));
+					{
+						f32 half = call->cross.size * 0.5f;
+						m4 t = M4MulM4(M4Translate(call->cross.point), M4Scale(v3(half, half, half)));
 					
-					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
-				}
-				break;
+						R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_Sphere:
-				{
-					f32 r = call->sphere.radius;
-					m4 t = M4MulM4(M4Translate(call->sphere.centre), M4Scale(v3(r, r, r)));
+					{
+						f32 r = call->sphere.radius;
+						m4 t = M4MulM4(M4Translate(call->sphere.centre), M4Scale(v3(r, r, r)));
 					
-					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
-				}
-				break;
+						R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_Circle:
-				{
-					f32 r = call->circle.radius;
-					// TODO: M4RotateAround for the normal vector.
-					m4 t = M4MulM4(M4Translate(call->circle.centre), M4Scale(v3(r, r, r)));
+					{
+						f32 r = call->circle.radius;
+						// TODO: M4RotateAround for the normal vector.
+						m4 t = M4MulM4(M4Translate(call->circle.centre), M4Scale(v3(r, r, r)));
 					
-					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
-				}
-				break;
+						R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_Triangle:
-				{
-					R_DebugBuildLineInstance(draws, draw_id,
-											 call->triangle.v0, call->triangle.v1,
-											 call->colour, call->line_width, alpha);
+					{
+						R_DebugBuildLineInstance(draws, draw_id,
+												 call->triangle.v0, call->triangle.v1,
+												 call->colour, call->line_width, alpha);
 					
-					R_DebugBuildLineInstance(draws, draw_id,
-											 call->triangle.v1, call->triangle.v2,
-											 call->colour, call->line_width, alpha);
+						R_DebugBuildLineInstance(draws, draw_id,
+												 call->triangle.v1, call->triangle.v2,
+												 call->colour, call->line_width, alpha);
 					
-					R_DebugBuildLineInstance(draws, draw_id,
-											 call->triangle.v2, call->triangle.v0,
-											 call->colour, call->line_width, alpha);
-				}
-				break;
+						R_DebugBuildLineInstance(draws, draw_id,
+												 call->triangle.v2, call->triangle.v0,
+												 call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_AABB:
-				{
-					v3 centre = V3MulF32(V3Add(call->aabb.max, call->aabb.min), 0.5f);
-					v3 size   = V3Sub(call->aabb.max, call->aabb.min);
-					m4 t = M4MulM4(M4Translate(centre), M4Scale(size));
-					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
-				}
-				break;
+					{
+						v3 centre = V3MulF32(V3Add(call->aabb.max, call->aabb.min), 0.5f);
+						v3 size   = V3Sub(call->aabb.max, call->aabb.min);
+						m4 t = M4MulM4(M4Translate(centre), M4Scale(size));
+						R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
+					}
+					break;
 
 				case R_DebugDrawType_OBB:
-				{
-					m4 t = M4MulM4(call->obb.transform, M4Scale(call->obb.scale));
-					R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
-				}
-				break;
+					{
+						m4 t = M4MulM4(call->obb.transform, M4Scale(call->obb.scale));
+						R_DebugWriteInstance(draws, draw_id, t, call->colour, call->line_width, alpha);
+					}
+					break;
 			}
 		}
 	}
@@ -508,8 +508,8 @@ struct R_DebugBatch
 };
 
 static u32 R_DebugBuildBatches(R_DebugDrawNode **buckets,
-					R_DebugBatch *out_batches,
-					u32 *running_id)
+							   R_DebugBatch *out_batches,
+							   u32 *running_id)
 {
 	u32 batch_count = 0;
 
@@ -545,58 +545,45 @@ typedef struct R_DebugPassData R_DebugPassData;
 struct R_DebugPassData
 {
 	const R_FrameParams *frame_params;
-
 	G_ShaderKey shader;
-
-	G_BufferKey depth_enabled_buffer;
-	G_BufferKey depth_disabled_buffer;
-
 	u32 depth_batch_count;
 	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES];
-
 	u32 no_depth_batch_count;
 	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES];
-
-	R_Mesh *line_mesh;
-	R_Mesh *cross_mesh;
-	R_Mesh *sphere_mesh;
-	R_Mesh *circle_mesh;
-	R_Mesh *cube_mesh;
 };
 
-static R_Mesh *R_DebugMeshForType(const R_DebugPassData *data, R_DebugDrawType type)
+static R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
 {
 	switch (type)
 	{
-		case R_DebugDrawType_Line:      return data->line_mesh;
-		case R_DebugDrawType_Cross:     return data->cross_mesh;
-		case R_DebugDrawType_Sphere:    return data->sphere_mesh;
-		case R_DebugDrawType_Circle:    return data->circle_mesh;
-		case R_DebugDrawType_AABB:      return data->cube_mesh;
-		case R_DebugDrawType_OBB:       return data->cube_mesh;
-		case R_DebugDrawType_Triangle:  return data->line_mesh;
-		default:                        return data->line_mesh;
+		case R_DebugDrawType_Line:      return &r_selected_debug_renderer->line_mesh;
+		case R_DebugDrawType_Cross:     return &r_selected_debug_renderer->cross_mesh;
+		case R_DebugDrawType_Sphere:    return &r_selected_debug_renderer->sphere_mesh;
+		case R_DebugDrawType_Circle:    return &r_selected_debug_renderer->circle_mesh;
+		case R_DebugDrawType_AABB:      return &r_selected_debug_renderer->cube_mesh;
+		case R_DebugDrawType_OBB:       return &r_selected_debug_renderer->cube_mesh;
+		case R_DebugDrawType_Triangle:  return &r_selected_debug_renderer->line_mesh;
+		default:                        return &r_selected_debug_renderer->line_mesh;
 	}
 }
 
-static void R_DebugDrawBatches(const R_DebugPassData *data,
-				   G_CmdBuffer *cmd,
-				   G_PipelineSt *pipeline_st,
-				   const R_DebugBatch *batches,
-				   u32 batch_count,
-				   G_BufferKey buffer,
-				   m4 view_proj)
+static void R_DebugDrawBatches(G_CmdBuffer *cmd,
+							   G_PipelineSt *pipeline_st,
+							   const R_DebugBatch *batches,
+							   u32 batch_count,
+							   G_BufferKey buffer,
+							   m4 view_proj)
 {
 	G_CmdBindPipeline(cmd, pipeline_st->bind_point, pipeline_st->pipeline);
 
 	for (u32 i = 0; i < batch_count; i++)
 	{
 		const R_DebugBatch *batch = &batches[i];
-		R_Mesh *mesh = R_DebugMeshForType(data, batch->type);
+		R_Mesh *mesh = R_DebugMeshForType(batch->type);
 
 		struct
 		{
-			m4  view_proj;
+			m4 view_proj;
 			u64 calls_buffer;
 			u64 vertex_buffer;
 		}
@@ -606,9 +593,9 @@ static void R_DebugDrawBatches(const R_DebugPassData *data,
 		args.calls_buffer = G_DeviceBufferAddress(buffer);
 		args.vertex_buffer = G_DeviceBufferAddress(mesh->vertex_buffer);
 
-		G_CmdPushConstants(cmd, pipeline_st->layout, VK_SHADER_STAGE_ALL_GRAPHICS, sizeof(args), &args, 0);
+		G_CmdPushConstants(cmd, pipeline_st->layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-		R_MeshBind(mesh, cmd);
+		R_MeshBindIndexBuffer(mesh, cmd);
 		G_CmdDrawIndexed(cmd, mesh->index_count, batch->count, 0, 0, batch->start);
 	}
 }
@@ -622,7 +609,7 @@ static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	pipeline_def.cull_mode = VK_CULL_MODE_NONE;
-	pipeline_def.depth_stencil_state.depth_test_enabled  = true;
+	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state. depth_write_enabled = false;
 	pipeline_def.blend_state.enabled = true;
 	pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -635,17 +622,21 @@ static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
 
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
-	G_PipelineSt pipeline_st_no_depth = G_DeviceFetchGraphicsPipeline( &pipeline_def);
+	G_PipelineSt pipeline_st_no_depth = G_DeviceFetchGraphicsPipeline(&pipeline_def);
 	
 	m4 view_proj = data->frame_params->camera.view_proj;
 	
-	R_DebugDrawBatches(data, cmd, &pipeline_st,
-					   data->depth_batches, data->depth_batch_count,
-					   data->depth_enabled_buffer, view_proj);
+	R_DebugDrawBatches(cmd, &pipeline_st,
+					   data->depth_batches,
+					   data->depth_batch_count,
+					   r_selected_debug_renderer->depth_enabled_buffer,
+					   view_proj);
 
-	R_DebugDrawBatches(data, cmd, &pipeline_st_no_depth,
-					   data->no_depth_batches, data->no_depth_batch_count,
-					   data->depth_disabled_buffer, view_proj);
+	R_DebugDrawBatches(cmd, &pipeline_st_no_depth,
+					   data->no_depth_batches,
+					   data->no_depth_batch_count,
+					   r_selected_debug_renderer->depth_disabled_buffer,
+					   view_proj);
 }
 
 static void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets, f32 dt)
@@ -676,9 +667,9 @@ static void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets,
 }
 
 static void R_DebugRendererRender(R_Graph *graph,
-									const R_FrameParams *frame_params,
-					  R_GraphTexHandle target_colour,
-					  R_GraphTexHandle target_depth)
+								  const R_FrameParams *frame_params,
+								  R_GraphTexHandle target_colour,
+								  R_GraphTexHandle target_depth)
 {
 	// Expire old draws and return their nodes to the freelist.
 	R_DebugFilterBuckets(r_selected_debug_renderer, r_selected_debug_renderer->depth_enabled, frame_params->dt);
@@ -710,14 +701,6 @@ static void R_DebugRendererRender(R_Graph *graph,
 	R_DebugPassData *data = ArenaPushArray(frame_params->arena, R_DebugPassData, 1);
 	data->frame_params = frame_params;
 	data->shader = shader;
-	data->depth_enabled_buffer = r_selected_debug_renderer->depth_enabled_buffer;
-	data->depth_disabled_buffer = r_selected_debug_renderer->depth_disabled_buffer;
-	data->line_mesh = &r_selected_debug_renderer->line_mesh;
-	data->cross_mesh = &r_selected_debug_renderer->cross_mesh;
-	data->sphere_mesh = &r_selected_debug_renderer->sphere_mesh;
-	data->circle_mesh = &r_selected_debug_renderer->circle_mesh;
-	data->cube_mesh = &r_selected_debug_renderer->cube_mesh;
-
 	data->depth_batch_count = depth_batch_count;
 	data->no_depth_batch_count = no_depth_batch_count;
 

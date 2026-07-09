@@ -34,10 +34,12 @@ struct App
 	G_Device graphics_device;
 	G_Swapchain swapchain;
 	G_ShaderCompiler shader_compiler;
-	
+
+	/*
 	AU_System audio_system;
 	AU_Backend *audio_backend;
-
+	*/
+	
 	A_Assets assets;
 
 	AN_System animation_system;
@@ -45,6 +47,7 @@ struct App
 	R_Graph graph;
 	R_Scene scene;
 	R_System render_system;
+	R_ModelCatalogue model_catalogue;
 
 	P_Engine physics_engine;
 

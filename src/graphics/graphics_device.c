@@ -1300,12 +1300,12 @@ static G_TextureView *G_DeviceTextureViewFromKey(G_TextureViewKey key)
 	return G_DeviceTextureViewListGet(&g_device->views, key);
 }
 
-static G_BindlessIndex G_DeviceTextureViewBindless(G_TextureViewKey key)
+static u32 G_DeviceTextureViewBindless(G_TextureViewKey key)
 {
 	G_TextureView *gfx_view = G_DeviceTextureViewFromKey(key);
 	DebugLogAssert(g_device->log_channel, gfx_view, "Invalid texture view with key %llu when getting bindless info.", key.value);
 	
-	return G_BindlessIndexOf(gfx_view->bindless);
+	return gfx_view->bindless;
 }
 
 static G_BufferKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
@@ -1491,12 +1491,12 @@ static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key)
 	return G_DeviceSamplerListGet(&g_device->samplers, key);
 }
 
-static G_BindlessIndex G_DeviceSamplerBindless(G_SamplerKey key)
+static u32 G_DeviceSamplerBindless(G_SamplerKey key)
 {
 	G_Sampler *gfx_sampler = G_DeviceSamplerFromKey(key);
 	DebugLogAssert(g_device->log_channel, gfx_sampler, "Invalid sampler with key %llu when destroying.", key.value);
 	
-	return G_BindlessIndexOf(gfx_sampler->bindless);
+	return gfx_sampler->bindless;
 }
 
 static G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode)

@@ -47,16 +47,6 @@ static void AppInitScripting(void)
 
 static void AppInit_(void)
 {
-	app->log_channel           = osapi->LogChannelOpen(String8Lit("APP"));
-	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
-	app->graphics_log_channel  = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
-	app->audio_log_channel     = osapi->LogChannelOpen(String8Lit("AUDIO"));
-	app->asset_log_channel     = osapi->LogChannelOpen(String8Lit("ASSETS"));
-	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
-	app->render_log_channel    = osapi->LogChannelOpen(String8Lit("RENDER"));
-	app->physics_log_channel   = osapi->LogChannelOpen(String8Lit("PHYSICS"));
-	app->entity_log_channel    = osapi->LogChannelOpen(String8Lit("ENTITY"));
-	
 	AppInitScripting();
 
 	G_DeviceInitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
@@ -75,10 +65,11 @@ static void AppInit_(void)
 	
 	R_GraphInit(&app->graph, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
 	R_SceneInit(&app->scene, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
-	
 	R_SystemInit(&app->render_system, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
 	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
-
+	R_ModelCatalogueInit(&app->model_catalogue, &app->render_arena);
+	R_ModelCatalogueEquipScene(&app->model_catalogue, &app->scene);
+	
 	P_EngineInitAndSelect(&app->physics_engine, &app->physics_arena, app->physics_log_channel);
 	
 	E_WorldInit(&app->world, &app->entity_arena, osapi->LogChannelOpenFrom(app->entity_log_channel, String8Lit("WORLD")));
@@ -112,31 +103,22 @@ App *MagpieInit(const OS_API *osapi_)
 	app->entity_arena    = ArenaAlloc(Gigabytes(1));
 	app->frame_arena     = ArenaAlloc(Gigabytes(1));
 	
+	app->log_channel           = osapi->LogChannelOpen(String8Lit("APP"));
+	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
+	app->graphics_log_channel  = osapi->LogChannelOpen(String8Lit("GRAPHICS"));
+	app->audio_log_channel     = osapi->LogChannelOpen(String8Lit("AUDIO"));
+	app->asset_log_channel     = osapi->LogChannelOpen(String8Lit("ASSETS"));
+	app->animation_log_channel = osapi->LogChannelOpen(String8Lit("ANIMATION"));
+	app->render_log_channel    = osapi->LogChannelOpen(String8Lit("RENDER"));
+	app->physics_log_channel   = osapi->LogChannelOpen(String8Lit("PHYSICS"));
+	app->entity_log_channel    = osapi->LogChannelOpen(String8Lit("ENTITY"));
+	
 	AppInit_();
 
 	{
-		ScratchArena scratch = ScratchBegin(NULL, 0);
-
-		A_Handle sponza_handle = A_Require(String8Lit("assets://models/Sponza/glTF/Sponza.gltf"), A_Type_Model);
-
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
-		R_ModelImportReceipt receipt = R_SceneImportModel(&app->scene, &cmd, scratch.arena, sponza_handle);
-		G_DeviceSubmitImEnd(&cmd);
-
-		for (u32 i = 0; i < receipt.count; i++)
-		{
-			R_ModelImportEntry *entry = &receipt.entries[i];
-
-			R_ObjectDesc desc = {0};
-			desc.transform = M4MulM4(M4Scale(v3x(5.f)), entry->transform);
-			desc.sphere_bounds = entry->sphere_bounds;
-			desc.mesh = entry->mesh;
-			desc.material = entry->material;
-
-			R_SceneGraphObjectCreate(&app->scene.graph, &desc);
-		}
-
-		ScratchRelease(&scratch);
+		R_ModelInstanceCreateFromPath(&app->model_catalogue,
+									  String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),
+									  M4Scale(v3x(5.f)));
 	}
 	
 	{
@@ -151,7 +133,9 @@ App *MagpieInit(const OS_API *osapi_)
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
 
-		R_SceneGraphLightCreate(&app->scene.graph, &light);
+		R_SceneSetLight(&app->scene,
+						R_SceneLightCreate(&app->scene),
+						light);
 	}
 	
 	{
@@ -166,7 +150,9 @@ App *MagpieInit(const OS_API *osapi_)
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
 
-		R_SceneGraphLightCreate(&app->scene.graph, &light);
+		R_SceneSetLight(&app->scene,
+						R_SceneLightCreate(&app->scene),
+						light);
 	}
 
 	DebugLogI(app->log_channel, "Initialized.");
@@ -185,6 +171,7 @@ void MagpieDestroy(App *app_)
 
 	P_EngineDestroy();
 
+	R_ModelCatalogueDestroy(&app->model_catalogue);
 	R_SystemDestroy(&app->render_system);
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
@@ -309,10 +296,12 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	R_CameraRecompute(&app->game.camera);
 	
-	R_MeshRegistryFlushIfDirty(&app->scene.meshes);
-	R_MaterialRegistryFlushIfDirty(&app->scene.materials);
-
-	R_FrameParams frame_params = R_FrameParamsBuild(&app->render_system, &app->frame_arena, dt, elapsed, &app->scene, &app->game.camera);
+	R_SceneFlushIfDirty(&app->scene);
+	
+	R_FrameParams frame_params = R_FrameParamsBuild(&app->frame_arena,
+													&app->render_system,
+													dt, elapsed,
+													&app->scene, &app->game.camera);
 
 	R_SystemRender(&app->render_system, &app->graph, &frame_params);
 

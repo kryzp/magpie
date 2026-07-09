@@ -11,10 +11,6 @@
 
 #include "render_sprite_batch.h"
 
-#include "render_scene_handle.h"
-#include "render_scene_graph.h"
-#include "render_mesh_registry.h"
-#include "render_material_registry.h"
 #include "render_scene.h"
 
 #include "render_frame.h"
@@ -29,3 +25,5 @@
 #include "pass/render_pass_inc.h"
 
 #include "render_system.h"
+
+#include "render_model.h"

@@ -75,12 +75,9 @@ static void PlayerInit(Player *player, Transform transform)
 	rb->air_friction = 0.05f;
 	rb->gravity_factor = 10.f;
 	
-	{
-		A_Handle model_handle = A_Require(String8Lit("assets://player/scene.gltf"), A_Type_Model);
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
-		player->render_model = R_SceneModelCreate(&app->scene, &cmd, &player->arena, model_handle, true);
-		G_DeviceSubmitImEnd(&cmd);
-	}
+	player->render_model = R_ModelInstanceCreateFromPath(&app->model_catalogue,
+														 String8Lit("assets://player/scene.gltf"),
+														 M4Identity());
 
 	GunSpecs revolver_specs = {0};
 	revolver_specs.ammo_type = AmmoType_Magnum357;
@@ -98,7 +95,7 @@ static void PlayerInit(Player *player, Transform transform)
 
 static void PlayerDestroy(Player *player)
 {
-	R_SceneModelDestroy(&app->scene, &player->render_model);
+	R_ModelInstanceDestroy(&app->model_catalogue, &player->render_model);
 	P_ReturnInstance(player->rigidbody_handle);
 }
 
@@ -211,7 +208,7 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 {
-	R_SceneModelUpdateSkinning(&app->scene, &player->render_model);
+	//R_SceneModelUpdateSkinning(&app->scene, &player->render_model);
 }
 
 static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
@@ -222,7 +219,7 @@ static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 	final_matrix = M4MulM4(M4RotateAxis(MATH_PIf, v3(0.f, 0.f, 1.f)), final_matrix);
 	final_matrix = M4MulM4(M4Transform(rb->position, rb->orientation, v3x(1.f), v3x(0.f)), final_matrix);
 	
-	R_SceneModelSetRootTransform(&app->scene, &player->render_model, final_matrix);
+	R_ModelInstanceSetTransform(&app->model_catalogue, &player->render_model, final_matrix);
 }
 
 static void PlayerSerialize(Player *player, IO_ByteSerializer *writer)

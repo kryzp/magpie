@@ -13,7 +13,7 @@ struct G_Sampler
 	
 	VkBorderColor border_colour;
 
-	G_BindlessHandle bindless;
+	u32 bindless;
 };
 
 #endif // GRAPHICS_SAMPLER_H

@@ -4,3 +4,4 @@
 #include "core_string.c"
 #include "core_hash.c"
 #include "core_transform.c"
+#include "core_pool.c"

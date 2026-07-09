@@ -7,3 +7,4 @@
 #include "core_hash.h"
 #include "core_coroutine.h"
 #include "core_transform.h"
+#include "core_pool.h"

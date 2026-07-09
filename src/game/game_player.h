@@ -54,7 +54,7 @@ struct Player
 	v4 target_rotation;
 
 	P_Handle rigidbody_handle;
-	R_Model render_model;
+	R_ModelInstance render_model;
 
 	PlayerAnimationClips anim_clips;
 

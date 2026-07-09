@@ -7,7 +7,7 @@ static void R_GeometryFreeListInit(R_GeometryFreeList *list, u64 capacity)
 	list->total_free = capacity;
 }
 
-static b32 R_GeometryFreeListAvailable(const R_GeometryFreeList *list, u64 size)
+static b32 R_GeometryFreeListHasAvailable(const R_GeometryFreeList *list, u64 size)
 {
 	if (size == 0)
 		return true;
@@ -24,13 +24,11 @@ static b32 R_GeometryFreeListAvailable(const R_GeometryFreeList *list, u64 size)
 	return false;
 }
 
-static b32 R_GeometryFreeListTryAlloc(R_GeometryFreeList *list, u64 size, u64 *out_offset)
+static b32 R_GeometryFreeListTryAlloc(R_GeometryFreeList *list, u64 size, u64 *out_index_offset)
 {
-	AssertTrue(out_offset);
-	
 	if (size == 0)
 	{
-		*out_offset = 0;
+		*out_index_offset = 0;
 		return true;
 	}
 
@@ -41,7 +39,7 @@ static b32 R_GeometryFreeListTryAlloc(R_GeometryFreeList *list, u64 size, u64 *o
 
 		R_GeometryFreeBlock *block = &list->blocks[i];
 
-		*out_offset = block->offset;
+		*out_index_offset = block->offset;
 
 		block->offset += size;
 		block->capacity -= size;
@@ -77,7 +75,7 @@ static void R_GeometryFreeListRelease(R_GeometryFreeList *list, u64 offset, u64 
 		list->blocks[j] = list->blocks[j - 1];
 
 	list->blocks[at].offset = offset;
-	list->blocks[at].capacity =  size;
+	list->blocks[at].capacity = size;
 
 	list->count++;
 
