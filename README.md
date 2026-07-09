@@ -237,7 +237,7 @@ Interesting files that you might wanna have a look at if you're just starting wi
 
 > Where's the cool engine UI?????
 
-Not a game engine. And even if it was, I'd only make the editor UI after deciding on the game.
+sigh...
 
 
 > Can I use this to make my own games?!
