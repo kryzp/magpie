@@ -9,16 +9,9 @@ TODO: add more images :p
 
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else. Ask me anything!
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else.
 
-Yes, it's over-engineered for a solo project, but I enjoy good code. No guarantees on quality though, I'm a second-year CS student. Most of this code is probably bad, some of it is maybe good :).
-
-!I also hate that I have to clarify that none of this is vibecoded (yes I talk to myself via comments get over it, though some may be a bit vulgar). This is actually something I care about, and put time into. Check the commit history if you don't believe me.
-
-This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/wyvern) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
-
-### Philosophy
-Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main render path.
+Yes, it's over-engineered for a solo project. No gurantees on quality, some of it is probably bad, some of it is maybe good :).
 
 
 ### Resources Used
@@ -52,7 +45,7 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - **Modular Entity System**
 - **Logging System** with levels, channels (+ sub channels), file output, deduplication, etc.
 - **Raytraced Static Irradiance Probes**
-- **Skeletal Animation Support**
+- **Skeletal Animation Support** with skinning etc...
 - **Scripting Integration** with all top-level systems (using Lua).
 - **Naughty Dog-Style Frame System** hard to explain, essentially frames are packed into "frame params" which are then sent to the render system, which allows for far more synchronisation and performance.
 - **Frame Interpolation** based on the highly inluential https://gafferongames.com/post/fix_your_timestep/ article, integrated with the Naughty Dog frame params as listed above.
@@ -61,7 +54,6 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- Flesh out the animation system, make it more intergrated.
 - Physically Based Bloom
 - ImGui Integration (C bindings)
 - SSAO (horizon-based none of that random hemisphere stuff)
@@ -84,12 +76,6 @@ Don't sacrifice blurriness and lag for a nicer still-image. 4x MSAA for main ren
 - UI System (needs 2D batch renderer)
 - Compositive Post Processing Pipeline
 - Refraction
-
-
-### Non-Graphics Planned Features (general engine stuff that interests me)
-- Custom (simple) physics engine
-- Complete the entity system
-- Cutscenes!
 
 
 ### Mini Project Ideas
@@ -257,6 +243,14 @@ Not a game engine. And even if it was, I'd only make the editor UI after decidin
 > Can I use this to make my own games?!
 
 Don't. I mean, you can, and I'm not gonna stop you. But don't (coming from a place of love). It's unstable and constantly changing. I mostly made it for my own projects and games and I modify it however I see fit. I don't intend to build it for someone else. If you really want to probably just cut out sections of it and make your own fork, then understand you can never pull again without breaking your project.
+
+
+> Do you use AI???
+No. NO. I also hate that I have to clarify that none of this is vibecoded. This is actually something I care about, and put time into. Check the commit history if you don't believe me.
+
+
+> What's the history? How long did this take?
+This isn't my first Vulkan or game engine project. If you look into the repository's history, it's gone through about 3-4 seperate re-writes (the original version, "Lilythorn" I accidentally wiped from the git history entirely, oops...), and even then it was initially based off of my (very crudely written) [Wyvern](https://github.com/kryzp/wyvern) game engine which I made for my NEA all the way back in Year 13 for my A-Levels.
 
 
 ## External Libraries
