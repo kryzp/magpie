@@ -4,6 +4,7 @@
 typedef enum CameraDriverMode
 {
 	CameraDriverMode_Unrestricted,
+	CameraDriverMode_Player,
 	CameraDriverMode_COUNT
 }
 CameraDriverMode;
@@ -27,15 +28,19 @@ typedef struct CameraDriver CameraDriver;
 struct CameraDriver
 {
 	CameraDriverConfig config;
-	
-	v3 target_position;
 
-	//f32 yaw, target_yaw;
-	//f32 pitch, target_pitch;
+	v3 target_look_at;
+	v3 final_offset;
+
+	v3 intermediate_position;
+	
+	/*
+	f32 yaw, target_yaw;
+	f32 pitch, target_pitch;
+	*/
 };
 
 static CameraDriver CameraDriverInit(const CameraDriverConfig *config);
-
 static void CameraDriverShake(CameraDriver *driver, f32 amount);
 static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt);
 

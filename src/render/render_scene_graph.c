@@ -31,6 +31,7 @@ static R_SceneHandle R_SceneGraphObjectCreate(R_SceneGraph *sg, const R_ObjectDe
 	R_ObjectSlot *slot = &sg->object_slots[slot_index];
 
 	slot->transform = desc->transform;
+	slot->normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(desc->transform)));
 	slot->sphere_bounds = desc->sphere_bounds;
 	slot->mesh = desc->mesh;
 	slot->material = desc->material;
@@ -89,6 +90,7 @@ static void R_SceneGraphObjectSetTransform(R_SceneGraph *sg, R_SceneHandle handl
 		return;
 	
 	slot->transform = transform;
+	slot->normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(slot->transform)));
 }
 
 static void R_SceneGraphObjectSetSphereBounds(R_SceneGraph *sg, R_SceneHandle handle, v4 sphere_bounds)

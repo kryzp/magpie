@@ -37,7 +37,7 @@ static void GameInit(E_World *world)
 	game->camera = R_CameraPerspective(v3x(0.f), v3(0.f, 1.f, 0.f), 90.f, 1280.f / 720.f, .1f, 100.f);
 
 	CameraDriverConfig camera_driver_cfg = {0};
-	camera_driver_cfg.mode = CameraDriverMode_Unrestricted;
+	camera_driver_cfg.mode = CameraDriverMode_Player;
 	game->camera_driver = CameraDriverInit(&camera_driver_cfg);
 
 	game->player_handle = E_WorldSpawn(world, game->entity_types[GameEntityType_Player], TransformIdentity());

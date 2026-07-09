@@ -38,10 +38,11 @@ struct R_MeshRegistry
 	LOG_Channel log_channel;
 	
 	R_MeshSlot mesh_slots[R_MESH_REGISTRY_MAX_MESHES];
-	R_GPU_RenderMesh mesh_gpus[R_MESH_REGISTRY_MAX_MESHES];
 	u32 mesh_count;
 	u32 mesh_free_list[R_MESH_REGISTRY_MAX_MESHES];
 	u32 mesh_free_count;
+	
+	R_GPU_RenderMesh mesh_gpus[R_MESH_REGISTRY_MAX_MESHES];
 	G_BufferKey mesh_buffer;
 	b32 mesh_buffer_dirty;
 

@@ -63,8 +63,8 @@ static void AppInit_(void)
 	app->swapchain = G_DeviceSwapchainCreate();
 	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
-	app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
-	AU_InitAndSelect(&app->audio_system, &app->audio_arena, app->audio_log_channel);
+	//app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
+	//AU_InitAndSelect(&app->audio_system, &app->audio_arena, app->audio_log_channel);
 	
 	A_InitAndSelect(&app->assets, &app->asset_arena, app->asset_log_channel);
 	
@@ -153,6 +153,21 @@ App *MagpieInit(const OS_API *osapi_)
 
 		R_SceneGraphLightCreate(&app->scene.graph, &light);
 	}
+	
+	{
+		R_Light light = {0};
+		light.type = R_LightType_Point;
+		light.position = v3(5.f, 4.f, 1.f);
+		light.direction = v3x(0.f);
+		light.colour = v3(0.f, 1.f, 1.f);
+		light.intensity = 5.f;
+		light.falloff = 0.1f;
+		light.casts_shadows = true;
+		light.shadow_near = 0.1f;
+		light.shadow_far = 20.f;
+
+		R_SceneGraphLightCreate(&app->scene.graph, &light);
+	}
 
 	DebugLogI(app->log_channel, "Initialized.");
 	
@@ -178,8 +193,8 @@ void MagpieDestroy(App *app_)
 	
 	A_Destroy();
 	
-	AU_Shutdown();
-	AU_BackendShutdown();
+	//AU_Shutdown();
+	//AU_BackendShutdown();
 	
 	G_ShaderCompilerShutdown();
 	G_DeviceSwapchainDestroy(&app->swapchain);
@@ -279,12 +294,12 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldFlush(&app->world);
 
-	AU_Listener listener = {0};
-	listener.position = app->game.camera.position;
-	listener.direction = app->game.camera.forward;
+	//AU_Listener listener = {0};
+	//listener.position = app->game.camera.position;
+	//listener.direction = app->game.camera.forward;
 
-	AU_Tick(dt, listener);
-	AU_BackendTick(dt, listener);
+	//AU_Tick(dt, listener);
+	//AU_BackendTick(dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
@@ -344,8 +359,8 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	G_ShaderCompilerSelectContext(&app->shader_compiler);
 	G_DeviceHotLoad();
 
-	AU_BackendSelectContext(app->audio_backend);
-	AU_SelectContext(&app->audio_system);
+	//AU_BackendSelectContext(app->audio_backend);
+	//AU_SelectContext(&app->audio_system);
 
 	A_SelectContext(&app->assets);
 

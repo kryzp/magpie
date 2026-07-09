@@ -290,7 +290,7 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 
 		R_PostProcessingPassData *data = ArenaPushArray(frame_params->arena, R_PostProcessingPassData, 1);
 		data->shader = shader;
-		data->exposure = 1.12f;
+		data->exposure = 0.5f;
 		data->input = bb.lighting.resolved;
 		data->output = bb.lighting.resolved;
 

@@ -18,6 +18,8 @@ typedef struct R_ObjectSlot R_ObjectSlot;
 struct R_ObjectSlot
 {
 	m4 transform;
+	m4 normal_matrix;
+
 	v4 sphere_bounds;
 
 	R_SceneHandle mesh;
@@ -45,15 +47,15 @@ struct R_SceneGraph
 {
 	LOG_Channel log_channel;
 
-	R_ObjectSlot     object_slots[R_SCENE_GRAPH_MAX_OBJECTS];
-	u32              object_count;
-	u32              object_free_list[R_SCENE_GRAPH_MAX_OBJECTS];
-	u32              object_free_count;
+	R_ObjectSlot object_slots[R_SCENE_GRAPH_MAX_OBJECTS];
+	u32 object_count;
+	u32 object_free_list[R_SCENE_GRAPH_MAX_OBJECTS];
+	u32 object_free_count;
 
-	R_LightSlot      light_slots[R_SCENE_GRAPH_MAX_LIGHTS];
-	u32              light_count;
-	u32              light_free_list[R_SCENE_GRAPH_MAX_LIGHTS];
-	u32              light_free_count;
+	R_LightSlot light_slots[R_SCENE_GRAPH_MAX_LIGHTS];
+	u32 light_count;
+	u32 light_free_list[R_SCENE_GRAPH_MAX_LIGHTS];
+	u32 light_free_count;
 };
 
 static void                  R_SceneGraphInit(R_SceneGraph *sg, LOG_Channel log_channel);

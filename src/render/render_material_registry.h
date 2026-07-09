@@ -17,10 +17,11 @@ struct R_MaterialRegistry
 	LOG_Channel log_channel;
 	
 	R_MaterialSlot material_slots[R_MATERIAL_REGISTRY_MAX_MATERIALS];
-	R_GPU_Material material_gpus[R_MATERIAL_REGISTRY_MAX_MATERIALS];
 	u32 material_count;
 	u32 material_free_list[R_MATERIAL_REGISTRY_MAX_MATERIALS];
 	u32 material_free_count;
+	
+	R_GPU_Material material_gpus[R_MATERIAL_REGISTRY_MAX_MATERIALS];
 	G_BufferKey material_buffer;
 	b32 material_buffer_dirty;
 };

@@ -72,7 +72,7 @@ static void R_FrameParamsUploadObjects(const R_Scene *scene, G_RingBuffer *ring,
 		u32 page_index = scene->meshes.mesh_slots[mesh_index].page_index;
 
 		mapped[write_index].model_matrix = slot->transform;
-		mapped[write_index].normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(slot->transform)));
+		mapped[write_index].normal_matrix = slot->normal_matrix;
 		mapped[write_index].sphere_bounds = slot->sphere_bounds;
 		mapped[write_index].material_index = material_index;
 		mapped[write_index].mesh_index = mesh_index;

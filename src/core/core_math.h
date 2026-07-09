@@ -36,6 +36,8 @@
 #define LogF            logf
 #define Log2F           log2f
 #define Log10F          log10f
+#define PowF            powf
+#define ExpF            expf
 
 #define WithinEpsilon(v)                    (AbsValue(v) < MATH_EPSILON_F64)
 #define AbsValue(a)                         (((a) < 0.0) ? (-(a)) : (a))

@@ -7,10 +7,9 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 	input.movement.y = (f32)OS_KbDown(st, OS_KeyboardKey_W) - (f32)OS_KbDown(st, OS_KeyboardKey_S);
 	input.movement = V2Normalize(input.movement);
 
-	input.jump = OS_KbPressed(st, OS_KeyboardKey_Space);
+	input.roll = OS_KbPressed(st, OS_KeyboardKey_Space);
 
 	input.run = OS_KbShift(st);
-	input.sneak = OS_KbCtrl(st) && !input.run;
 
 	input.aim = OS_MbDown(st, OS_MouseButton_Right) && !input.run;
 	input.just_started_aiming = OS_MbPressed(st, OS_MouseButton_Right) && !input.run;
@@ -21,22 +20,22 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 	return input;
 }
 
-static void PlayerAnimate(const PlayerAnimationState *st, AN_Animator *animator)
+static void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const PlayerAnimationClips *clips, AN_Animator *animator)
 {
 	if (!st->is_moving)
 	{
-		AN_AnimatorPauseAndReset(animator, st->elapsed);
+		AN_AnimatorPauseAndReset(animator, global_time);
 		return;
 	}
 
 	if (st->is_running)
 	{
-		AN_AnimatorPlay(animator, st->k_run, true, st->elapsed);
+		AN_AnimatorPlay(animator, clips->k_run, true, global_time);
 		return;
 	}
 	else
 	{
-		AN_AnimatorPlay(animator, st->k_walk, true, st->elapsed);
+		AN_AnimatorPlay(animator, clips->k_walk, true, global_time);
 		return;
 	}
 }
@@ -62,6 +61,8 @@ static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 static void PlayerInit(Player *player, Transform transform)
 {
 	player->arena = ArenaAlloc(Megabytes(1));
+
+	player->state = PlayerStateType_Moving;
 
 	player->target_rotation = V4QuatIdentity();
 
@@ -89,6 +90,10 @@ static void PlayerInit(Player *player, Transform transform)
 	player->gun.specs = revolver_specs;
 
 	GunReload(&player->gun);
+
+	AN_Animator *animator = AN_SystemGetAnimator(player->render_model.animator_handle);
+	player->anim_clips.k_walk = AN_AnimatorFindClipByName(animator, String8Lit("walk"));
+	player->anim_clips.k_run = AN_AnimatorFindClipByName(animator, String8Lit("run"));
 }
 
 static void PlayerDestroy(Player *player)
@@ -97,16 +102,14 @@ static void PlayerDestroy(Player *player)
 	P_ReturnInstance(player->rigidbody_handle);
 }
 
-static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
+static PlayerAnimationState PlayerTickMovement(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
 {
-	PlayerInput input_st = PlayerGatherInput(ctx->input);
-
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
-	f32 move_speed = 2.f;
+	f32 move_speed = 1.f;
 	f32 max_speed = 8.f;
 
-	if (input_st.aim)
+	if (input_st->aim)
 	{
 		move_speed *= 0.5f;
 		max_speed *= 0.5f;
@@ -116,51 +119,94 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 
 		player->target_rotation = V4QuatLookAt(source, destination);
 	}
-	else if (!WithinEpsilon(V2LengthSqr(input_st.movement)))
+	
+	if (!WithinEpsilon(V2LengthSqr(input_st->movement)))
 	{
 		v3 source = rb->position;
-		v3 destination = V3Add(source, v3(input_st.movement.x, input_st.movement.y, 0.f));
+		v3 destination = V3Add(source, v3(input_st->movement.x, input_st->movement.y, 0.f));
 
-		player->target_rotation = V4QuatLookAt(source, destination);
+		if (!input_st->aim)
+		{
+			player->target_rotation = V4QuatLookAt(source, destination);
+		}
+
+		if (input_st->roll)
+		{
+			player->state = PlayerStateType_Rolling;
+			player->roll_time = .22f;
+			player->roll_direction = V3Normalize(V3Sub(destination, source));
+		}
 	}
 
-	if (input_st.jump)
-		rb->velocity.z += 30.f;
+	if (input_st->run)
+	{
+		max_speed *= 2.f;
+	}
 
-	if (input_st.run)
-		move_speed *= 2.f;
-
-	if (input_st.sneak)
-		move_speed *= 0.25f;
-	
-	if (input_st.fire)
+	if (input_st->fire)
 		GunFire(&player->gun);
 
-	if (input_st.reload)
+	if (input_st->reload)
 		GunReload(&player->gun);
 
 	v3 movement = v3x(0.f);
-	movement.x = input_st.movement.x * move_speed;
-	movement.y = input_st.movement.y * move_speed;
+	movement.x = input_st->movement.x * move_speed;
+	movement.y = input_st->movement.y * move_speed;
 	movement.z = 0.f;
 
 	rb->max_speed = max_speed;
 	rb->acceleration = movement;
 	rb->orientation = V4QuatSlerp(rb->orientation, player->target_rotation, ctx->dt * 50.f);
-
-	AN_Animator *animator = AN_SystemGetAnimator(player->render_model.animator_handle);
 	
 	PlayerAnimationState animation_st = {0};
-	animation_st.elapsed = ctx->elapsed;
-	animation_st.k_walk = AN_AnimatorFindClipByName(animator, String8Lit("walk"));
-	animation_st.k_run = AN_AnimatorFindClipByName(animator, String8Lit("run"));
 	animation_st.is_grounded = true;
-	animation_st.is_aiming = input_st.aim || input_st.fire;
-	animation_st.is_running = input_st.run;
-	animation_st.is_sneaking = input_st.sneak;
-	animation_st.is_moving = !WithinEpsilon(V3LengthSqr(movement));
+	animation_st.is_aiming = input_st->aim || input_st->fire;
+	animation_st.is_running = input_st->run;
+	animation_st.is_moving = !WithinEpsilon(V2LengthSqr(input_st->movement));
+	
+	return animation_st;
+}
 
-	PlayerAnimate(&animation_st, animator);
+static PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
+{
+	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
+
+	rb->acceleration = V3MulF32(player->roll_direction, 3.f);
+	rb->orientation = V4QuatLookAt(v3x(0.f), player->roll_direction);
+	rb->max_speed = 14.f;
+
+	player->roll_time -= ctx->dt;
+
+	if (player->roll_time <= 0.f)
+		player->state = PlayerStateType_Moving;
+
+	PlayerAnimationState animation_st = {0};
+	animation_st.is_grounded = true;
+	animation_st.is_aiming = false;
+	animation_st.is_running = false;
+	animation_st.is_moving = true;
+	
+	return animation_st;
+}
+
+static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
+{
+	PlayerInput input_st = PlayerGatherInput(ctx->input);
+	PlayerAnimationState animation_st = {0};
+
+	switch (player->state)
+	{
+		case PlayerStateType_Moving:
+			animation_st = PlayerTickMovement(player, ctx, &input_st);
+			break;
+
+		case PlayerStateType_Rolling:
+			animation_st = PlayerTickRolling(player, ctx, &input_st);
+			break;
+	}
+
+	AN_Animator *animator = AN_SystemGetAnimator(player->render_model.animator_handle);
+	PlayerAnimate(&animation_st, ctx->elapsed, &player->anim_clips, animator);
 }
 
 static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
