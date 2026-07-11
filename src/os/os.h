@@ -7,18 +7,18 @@ struct OS_Handle
 	void *value;
 };
 
-static inline OS_Handle OS_HandleNull(void)
+inline OS_Handle OS_HandleNull(void)
 {
 	OS_Handle null_handle = {0};
 	return null_handle;
 }
 
-static inline b32 OS_HandleIsNull(OS_Handle handle)
+inline b32 OS_HandleIsNull(OS_Handle handle)
 {
 	return handle.value == NULL;
 }
 
-static inline b32 OS_HandleMatch(OS_Handle a, OS_Handle b)
+inline b32 OS_HandleMatch(OS_Handle a, OS_Handle b)
 {
 	return a.value == b.value;
 }

@@ -594,15 +594,21 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 
 	// Push onto list.
 	A_ModelLoadMesh *mesh = ArenaPushArray(arena, A_ModelLoadMesh, 1);
+
 	mesh->transform = world_transform;
+
 	mesh->bounds_min = bmin;
 	mesh->bounds_max = bmax;
+
 	mesh->vertex_count = vert_count;
 	mesh->vertices = vertices;
+	
 	mesh->index_count = idx_count;
 	mesh->indices = indices;
+
 	mesh->skin_vertices = skin_vertices;
 	mesh->skin_index = skin_index;
+
 	mesh->material = material;
 
 	mesh->next = load->first_mesh;
@@ -1113,24 +1119,17 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 
 		dst->material = src_mesh->material;
 
-		dst->vertex_stride = sizeof(A_ModelVertex);
-		dst->index_stride = sizeof(A_ModelIndex);
+		dst->vertices = ArenaPushArray(arena, A_ModelVertex, src_mesh->vertex_count);
+		MemCopy(dst->vertices, src_mesh->vertices, sizeof(A_ModelVertex) * src_mesh->vertex_count);
 
 		dst->vertex_count = src_mesh->vertex_count;
+		dst->vertex_stride = sizeof(A_ModelVertex);
+
+		dst->indices = ArenaPushArray(arena, A_ModelIndex, src_mesh->index_count);
+		MemCopy(dst->indices, src_mesh->indices, sizeof(A_ModelIndex) * src_mesh->index_count);
+
 		dst->index_count = src_mesh->index_count;
-
-		G_BufferAllocInfo vb_info = {0};
-		vb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
-		vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-		vb_info.size  = src_mesh->vertex_count * sizeof(A_ModelVertex);
-
-		G_BufferAllocInfo ib_info = {0};
-		ib_info.usage = VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
-		ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-		ib_info.size  = src_mesh->index_count * sizeof(A_ModelIndex);
-
-		dst->vertex_buffer = G_DeviceBufferAlloc(&vb_info);
-		dst->index_buffer = G_DeviceBufferAlloc(&ib_info);
+		dst->index_stride = sizeof(A_ModelIndex);
 
 		if (src_mesh->skin_vertices)
 		{
@@ -1260,41 +1259,8 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
 		A_ModelLoadMesh *src = load_meshes[i];
-		A_SubModel      *dst = &asset->model.sub_models[i];
+		A_SubModel *dst = &asset->model.sub_models[i];
 
-
-		// Vertices.
-		
-		u64 vb_size = src->vertex_count * sizeof(A_ModelVertex);
-		
-		G_DeviceBufferWrite(stage, src->vertices, vb_size,  offset);
-		
-		G_BufferCopy vb_copy = {0};
-		vb_copy.src_offset = offset;
-		vb_copy.size = vb_size;
-		
-		G_CmdCopyBufferToBuffer(cmd, stage, dst->vertex_buffer, 1, &vb_copy);
-
-		offset += vb_size;
-
-
-		// Indices.
-		
-		u64 ib_size = src->index_count * sizeof(A_ModelIndex);
-
-		G_DeviceBufferWrite(stage, src->indices, ib_size,  offset);
-
-		G_BufferCopy ib_copy = {0};
-		ib_copy.src_offset = offset;
-		ib_copy.size = ib_size;
-
-		G_CmdCopyBufferToBuffer(cmd, stage, dst->index_buffer,  1, &ib_copy);
-		
-		offset += ib_size;
-
-
-		// Skinning.
-		
 		if (src->skin_vertices)
 		{
 			u64 svb_size = src->vertex_count * sizeof(A_ModelSkinVertex);
@@ -1319,9 +1285,6 @@ static void A_ModelSerializerDispose(A_Asset *asset)
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
 		A_SubModel *sub_model = &asset->model.sub_models[i];
-		
-		G_DeviceBufferDestroy(sub_model->vertex_buffer);
-		G_DeviceBufferDestroy(sub_model->index_buffer);
 
 		if (!G_BufferKeyIsNull(sub_model->skin_buffer))
 			G_DeviceBufferDestroy(sub_model->skin_buffer);

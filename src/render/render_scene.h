@@ -32,7 +32,7 @@ struct R_MeshHandle
 	u32 page_index;
 };
 
-static inline R_MaterialHandle R_MaterialHandleNull(void)
+inline R_MaterialHandle R_MaterialHandleNull(void)
 {
 	R_MaterialHandle null_handle = {0};
 	null_handle.index = (u32)(-1);
@@ -40,7 +40,7 @@ static inline R_MaterialHandle R_MaterialHandleNull(void)
 	return null_handle;
 }
 
-static inline R_MeshHandle R_MeshHandleNull(void)
+inline R_MeshHandle R_MeshHandleNull(void)
 {
 	R_MeshHandle null_handle = {0};
 	null_handle.slot_index = (u32)(-1);
@@ -52,10 +52,10 @@ static inline R_MeshHandle R_MeshHandleNull(void)
 typedef struct R_MeshDesc R_MeshDesc;
 struct R_MeshDesc
 {
-	G_BufferKey vertex_buffer;
-	G_BufferKey index_buffer;
-
+	const void *vertices;
 	u32 vertex_count;
+	
+	const void *indices;
 	u32 index_count;
 
 	G_BufferKey skin_buffer;
@@ -76,11 +76,13 @@ struct R_MeshAllocRegion
 typedef struct R_ScenePageMeshCopy R_ScenePageMeshCopy;
 struct R_ScenePageMeshCopy
 {
-	G_BufferCopy vertex_copy;
-	G_BufferCopy index_copy;
-	
-	G_BufferKey src_vertex_buffer;
-	G_BufferKey src_index_buffer;
+	const void *vertices;
+	u64 vertex_size;
+	uptr vertex_offset_dst;
+
+	const void *indices;
+	u64 index_size;
+	uptr index_offset_dst;
 
 	u32 dst_page_index;
 };

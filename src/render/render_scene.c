@@ -146,10 +146,12 @@ static R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	ic.size = desc->index_count * index_stride;
 
 	R_ScenePageMeshCopy copy = {0};
-	copy.vertex_copy = vc;
-	copy.index_copy = ic;
-	copy.src_vertex_buffer = desc->vertex_buffer;
-	copy.src_index_buffer = desc->index_buffer;
+	copy.vertices = desc->vertices;
+	copy.vertex_size = desc->vertex_count * vertex_stride;
+	copy.vertex_offset_dst = vertex_offset * vertex_stride;
+	copy.indices = desc->indices;
+	copy.index_size = desc->index_count * index_stride;
+	copy.index_offset_dst = index_offset * index_stride;
 	copy.dst_page_index = page_index;
 
 	DebugLogAssert(scene->log_channel, scene->page_mesh_copy_count < ArraySize(scene->page_mesh_copies), "Ran out of mesh upload buffer!!!!!!!!!!! SHITTTTTT");
@@ -325,8 +327,11 @@ static void R_SceneFlushIfDirty(R_Scene *scene)
 				
 				R_GeometryPage *page = &scene->geometry_pages[copy->dst_page_index];
 				
-				G_CmdCopyBufferToBuffer(&cmd, copy->src_vertex_buffer, page->vertex_buffer, 1, &copy->vertex_copy);
-				G_CmdCopyBufferToBuffer(&cmd, copy->src_index_buffer,  page->index_buffer,  1, &copy->index_copy);
+				uptr vertices_mapped = (uptr)G_DeviceBufferMap(page->vertex_buffer);
+				uptr indices_mapped = (uptr)G_DeviceBufferMap(page->index_buffer);
+
+				MemCopy((void *)(vertices_mapped + copy->vertex_offset_dst), copy->vertices, copy->vertex_size);
+				MemCopy((void *)(indices_mapped + copy->index_offset_dst), copy->indices, copy->index_size);
 			}
 	
 			G_DeviceSubmitImEnd(&cmd);

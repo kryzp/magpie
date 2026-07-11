@@ -26,12 +26,12 @@ struct G_Swapchain
 	VkFormat format;
 };
 
-static inline G_TextureKey G_SwapchainCurrentTexture(const G_Swapchain *swapchain)
+inline G_TextureKey G_SwapchainCurrentTexture(const G_Swapchain *swapchain)
 {
 	return swapchain->textures[swapchain->current_texture_index];
 }
 
-static inline G_TextureView *G_SwapchainCurrentView(const G_Swapchain *swapchain)
+inline G_TextureView *G_SwapchainCurrentView(const G_Swapchain *swapchain)
 {
 	return &swapchain->views[swapchain->current_texture_index];
 }

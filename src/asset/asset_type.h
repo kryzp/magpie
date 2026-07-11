@@ -11,7 +11,7 @@ typedef enum A_Type
 }
 A_Type;
 
-static inline A_Type A_TypeFromString(String8 str)
+inline A_Type A_TypeFromString(String8 str)
 {
 #define AssetDef(name, upper) if (String8Match(str, String8Lit(#name))) return A_Type_##name;
 #include "asset_definitions.inc"
@@ -22,7 +22,7 @@ static inline A_Type A_TypeFromString(String8 str)
 	return A_Type_COUNT;
 }
 
-static inline String8 A_StringFromType(Arena *arena, A_Type type)
+inline String8 A_StringFromType(Arena *arena, A_Type type)
 {
 #define AssetDef(name, upper) if (type == A_Type_##name) return String8Lit(#name);
 #include "asset_definitions.inc"

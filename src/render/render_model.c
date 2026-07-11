@@ -15,8 +15,8 @@ static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_han
 		model.submodel_first = r_submodel;
 
 		R_MeshDesc mesh_desc = {0};
-		mesh_desc.vertex_buffer = asset_src->vertex_buffer;
-		mesh_desc.index_buffer = asset_src->index_buffer;
+		mesh_desc.vertices = asset_src->vertices;
+		mesh_desc.indices = asset_src->indices;
 		mesh_desc.vertex_count = asset_src->vertex_count;
 		mesh_desc.index_count = asset_src->index_count;
 		mesh_desc.skin_buffer = asset_src->skin_buffer;

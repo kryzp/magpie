@@ -11,7 +11,7 @@ struct A_Handle
 	A_Type type;
 };
 
-static inline A_Handle A_HandleNull(void)
+inline A_Handle A_HandleNull(void)
 {
 	A_Handle handle = {0};
 	handle.index = A_HANDLE_INVALID_INDEX;
@@ -21,7 +21,7 @@ static inline A_Handle A_HandleNull(void)
 	return handle;
 }
 
-static inline b32 A_HandleMatch(A_Handle a, A_Handle b)
+inline b32 A_HandleMatch(A_Handle a, A_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation &&

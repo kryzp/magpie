@@ -34,12 +34,12 @@ static void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 static void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 static void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);
 
-static inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
+inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
 {
 	return mesh->vertex_count * mesh->vertex_stride;
 }
 
-static inline u64 R_MeshIndexBufferSize(const R_Mesh *mesh)
+inline u64 R_MeshIndexBufferSize(const R_Mesh *mesh)
 {
 	u64 index_stride = 0;
 

@@ -7,7 +7,7 @@ struct P_Handle
 	u64 key;
 };
 
-static inline b32 P_HandleMatch(P_Handle a, P_Handle b)
+inline b32 P_HandleMatch(P_Handle a, P_Handle b)
 {
 	return a.key == b.key;
 }

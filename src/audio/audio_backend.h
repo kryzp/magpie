@@ -4,12 +4,12 @@
 typedef struct AU_BufferHandle { u32 value; } AU_BufferHandle;
 typedef struct AU_SourceHandle { u32 value; } AU_SourceHandle;
 
-static inline b32 AU_BufferHandleMatch(AU_BufferHandle a, AU_BufferHandle b)
+inline b32 AU_BufferHandleMatch(AU_BufferHandle a, AU_BufferHandle b)
 {
 	return a.value == b.value;
 }
 
-static inline b32 AU_SourceHandleMatch(AU_SourceHandle a, AU_SourceHandle b)
+inline b32 AU_SourceHandleMatch(AU_SourceHandle a, AU_SourceHandle b)
 {
 	return a.value == b.value;
 }

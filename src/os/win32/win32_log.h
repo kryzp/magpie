@@ -8,7 +8,7 @@
 #define LOG_W32_ANSI_RESET    "\x1b[0m"
 #define LOG_W32_ANSI_DIM      "\x1b[2m"
 
-static inline const char *LOG_W32_LevelToString(LOG_Level level)
+inline const char *LOG_W32_LevelToString(LOG_Level level)
 {
 	switch (level)
 	{
@@ -23,7 +23,7 @@ static inline const char *LOG_W32_LevelToString(LOG_Level level)
 	return "?????";
 }
 
-static inline const char *LOG_W32_LevelAnsi(LOG_Level level)
+inline const char *LOG_W32_LevelAnsi(LOG_Level level)
 {
 	switch (level)
 	{

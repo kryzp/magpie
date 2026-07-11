@@ -8,18 +8,18 @@ struct S_Handle
 	u32 generation;
 };
 
-static inline S_Handle S_HandleNull(void)
+inline S_Handle S_HandleNull(void)
 {
 	S_Handle handle = {0};
 	return handle;
 }
 
-static inline b32 S_HandleIsNull(S_Handle handle)
+inline b32 S_HandleIsNull(S_Handle handle)
 {
 	return handle.index == 0 && handle.generation == 0;
 }
 
-static inline b32 S_HandleMatch(S_Handle a, S_Handle b)
+inline b32 S_HandleMatch(S_Handle a, S_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation);
@@ -31,18 +31,18 @@ struct S_Ref
 	i32 value;
 };
 
-static inline S_Ref S_RefNull(void)
+inline S_Ref S_RefNull(void)
 {
 	S_Ref ref = {0};
 	return ref;
 }
 
-static inline b32 S_RefIsNull(S_Ref ref)
+inline b32 S_RefIsNull(S_Ref ref)
 {
 	return ref.value < 0;
 }
 
-static inline b32 S_RefMatch(S_Ref a, S_Ref b)
+inline b32 S_RefMatch(S_Ref a, S_Ref b)
 {
 	return a.value == b.value;
 }

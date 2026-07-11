@@ -35,7 +35,7 @@ struct TypeInfo
 	const FieldInfo *fields;
 };
 
-static inline b32 TypeInfoIsDerivedFrom(const TypeInfo *me, const TypeInfo *other)
+inline b32 TypeInfoIsDerivedFrom(const TypeInfo *me, const TypeInfo *other)
 {
 	const TypeInfo *curr = me;
 

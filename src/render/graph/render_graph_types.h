@@ -29,14 +29,14 @@
 typedef struct R_GraphTexHandle { u32 value; } R_GraphTexHandle;
 typedef struct R_GraphBufHandle { u32 value; } R_GraphBufHandle;
 
-static inline R_GraphTexHandle R_GraphTexHandleNull(void) { return (R_GraphTexHandle) {0}; }
-static inline R_GraphBufHandle R_GraphBufHandleNull(void) { return (R_GraphBufHandle) {0}; }
+inline R_GraphTexHandle R_GraphTexHandleNull(void) { return (R_GraphTexHandle) {0}; }
+inline R_GraphBufHandle R_GraphBufHandleNull(void) { return (R_GraphBufHandle) {0}; }
 
-static inline b32 R_GraphTexHandleIsNull(R_GraphTexHandle h) { return h.value == 0; }
-static inline b32 R_GraphBufHandleIsNull(R_GraphBufHandle h) { return h.value == 0; }
+inline b32 R_GraphTexHandleIsNull(R_GraphTexHandle h) { return h.value == 0; }
+inline b32 R_GraphBufHandleIsNull(R_GraphBufHandle h) { return h.value == 0; }
 
-static inline b32 R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b) { return a.value == b.value; }
-static inline b32 R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b) { return a.value == b.value; }
+inline b32 R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b) { return a.value == b.value; }
+inline b32 R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b) { return a.value == b.value; }
 
 typedef enum R_SizeClass
 {

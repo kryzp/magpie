@@ -5,7 +5,7 @@
 #define G_BINDLESS_MAX_RESOURCES 4096
 #define G_BINDLESS_INDEX_INVALID 0
 
-static inline b32 G_BindlessIndexIsValid(u32 index)
+inline b32 G_BindlessIndexIsValid(u32 index)
 {
 	return (index != 0) && (index < G_BINDLESS_MAX_RESOURCES);
 }

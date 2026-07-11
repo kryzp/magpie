@@ -32,14 +32,13 @@ struct A_SubModel
 
 	A_ModelMaterial material;
 
-	u64 vertex_stride;
-	u64 index_stride;
-
+	void *vertices;
 	u32 vertex_count;
+	u64 vertex_stride;
+	
+	void *indices;
 	u32 index_count;
-
-	G_BufferKey vertex_buffer;
-	G_BufferKey index_buffer;
+	u64 index_stride;
 
 	G_BufferKey skin_buffer;
 	i32 skin_index;
