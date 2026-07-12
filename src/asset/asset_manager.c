@@ -159,11 +159,11 @@ static void A_InitAndSelect(A_Assets *assets, Arena *arena, LOG_Channel log_chan
 	assets->load_arena_wait_counter = osapi->JobCounterAlloc(0);
 	assets->async_counter = osapi->JobCounterAlloc(0);
 
-	assets->upload_mutex = osapi->MutexCreate();
-	assets->dependency_mutex = osapi->MutexCreate();
-	assets->allocation_mutex = osapi->MutexCreate();
-	assets->loading_mutex = osapi->MutexCreate();
-	assets->loading_cond = osapi->CondVarCreate();
+	assets->upload_mutex = osapi->FiberMutexCreate();
+	assets->dependency_mutex = osapi->FiberMutexCreate();
+	assets->allocation_mutex = osapi->FiberMutexCreate();
+	assets->loading_mutex = osapi->FiberMutexCreate();
+	assets->loading_cond = osapi->FiberCondVarCreate();
 
 	for (u32 i = 0; i < A_LOAD_ARENA_COUNT; i++)
 	{
@@ -207,11 +207,11 @@ static void A_Destroy(void)
 	osapi->JobCounterRelease(a_assets->load_arena_wait_counter);
 	osapi->JobCounterRelease(a_assets->async_counter);
 	
-	osapi->MutexDestroy(a_assets->upload_mutex);
-	osapi->MutexDestroy(a_assets->dependency_mutex);
-	osapi->MutexDestroy(a_assets->allocation_mutex);
-	osapi->MutexDestroy(a_assets->loading_mutex);
-	osapi->CondVarDestroy(a_assets->loading_cond);
+	osapi->FiberMutexDestroy(a_assets->upload_mutex);
+	osapi->FiberMutexDestroy(a_assets->dependency_mutex);
+	osapi->FiberMutexDestroy(a_assets->allocation_mutex);
+	osapi->FiberMutexDestroy(a_assets->loading_mutex);
+	osapi->FiberCondVarDestroy(a_assets->loading_cond);
 
 	DebugLogI(a_assets->log_channel, "Destroyed.");
 
@@ -363,9 +363,9 @@ static J_ENTRY_POINT_DEF(A_LoadJobEntry)
 	upload.handle = load_params->handle;
 	upload.load_data = load_data;
  
-	osapi->MutexLock(a_assets->dependency_mutex);
+	osapi->FiberMutexLock(a_assets->dependency_mutex);
 	A_UploadQueuePush(&a_assets->dependency_queue, &upload);
-	osapi->MutexUnlock(a_assets->dependency_mutex);
+	osapi->FiberMutexUnlock(a_assets->dependency_mutex);
 }
 
 static void A_Load(A_Handle handle, OS_Handle counter)
@@ -383,9 +383,9 @@ static void A_Load(A_Handle handle, OS_Handle counter)
 	// params get dumped onto the permanent arena which isnt that big a deal
 	// 'cuz they're only like a couple of bytes so whatever.
 	// TODO - fix this leak somehow :p
-	osapi->MutexLock(a_assets->allocation_mutex);
+	osapi->FiberMutexLock(a_assets->allocation_mutex);
 	A_LoadJobParam *params = ArenaPushArray(a_assets->arena, A_LoadJobParam, 1);
-	osapi->MutexUnlock(a_assets->allocation_mutex);
+	osapi->FiberMutexUnlock(a_assets->allocation_mutex);
 	
 	params->metadata = metadata;
 	params->handle = handle;
@@ -400,9 +400,9 @@ static void A_Load(A_Handle handle, OS_Handle counter)
 
 static void A_NotifyDependents(A_Handle handle)
 {
-	osapi->MutexLock(a_assets->dependency_mutex);
+	osapi->FiberMutexLock(a_assets->dependency_mutex);
 	A_NotifyDependentsNoLock(handle, false);
-	osapi->MutexUnlock(a_assets->dependency_mutex);
+	osapi->FiberMutexUnlock(a_assets->dependency_mutex);
 }
 
 static void A_NotifyDependentsNoLock(A_Handle handle, b32 failed)
@@ -439,9 +439,9 @@ static void A_NotifyDependentsNoLock(A_Handle handle, b32 failed)
 			{
 				parent_record->state = A_RecordState_GpuStage;
 
-				osapi->MutexLock(a_assets->upload_mutex);
+				osapi->FiberMutexLock(a_assets->upload_mutex);
 				A_UploadQueuePush(&a_assets->upload_queue, &parent_record->stashed_upload);
-				osapi->MutexUnlock(a_assets->upload_mutex);
+				osapi->FiberMutexUnlock(a_assets->upload_mutex);
 			}
 		}
 	}
@@ -451,7 +451,7 @@ static void A_NotifyDependentsNoLock(A_Handle handle, b32 failed)
 
 static void A_ResolvePendingDependencies(OS_Handle counter)
 {
-	osapi->MutexLock(a_assets->dependency_mutex);
+	osapi->FiberMutexLock(a_assets->dependency_mutex);
 
 	A_UploadQueue *q = &a_assets->dependency_queue;
 
@@ -521,15 +521,15 @@ static void A_ResolvePendingDependencies(OS_Handle counter)
 		{
 			record->state = A_RecordState_GpuStage;
 
-			osapi->MutexLock(a_assets->upload_mutex);
+			osapi->FiberMutexLock(a_assets->upload_mutex);
 			A_UploadQueuePush(&a_assets->upload_queue, upload);
-			osapi->MutexUnlock(a_assets->upload_mutex);
+			osapi->FiberMutexUnlock(a_assets->upload_mutex);
 		}
 	}
 
 	A_UploadQueueClear(q);
 
-	osapi->MutexUnlock(a_assets->dependency_mutex);
+	osapi->FiberMutexUnlock(a_assets->dependency_mutex);
 }
 
 static void A_PollHotReloads(void)
@@ -573,18 +573,18 @@ static void A_FlushUploads(void)
 {
 	A_ResolvePendingDependencies(a_assets->async_counter);
 
-	osapi->MutexLock(a_assets->upload_mutex);
+	osapi->FiberMutexLock(a_assets->upload_mutex);
 
 	if (a_assets->upload_queue.count == 0)
 	{
-		osapi->MutexUnlock(a_assets->upload_mutex);
+		osapi->FiberMutexUnlock(a_assets->upload_mutex);
 		return;
 	}
 
 	A_UploadQueue pending = a_assets->upload_queue;
 	A_UploadQueueClear(&a_assets->upload_queue);
 
-	osapi->MutexUnlock(a_assets->upload_mutex);
+	osapi->FiberMutexUnlock(a_assets->upload_mutex);
 
 	u32 base = 0;
 
@@ -659,9 +659,9 @@ static void A_FlushUploads(void)
 
 					if (is_new)
 					{
-						osapi->MutexLock(a_assets->allocation_mutex);
+						osapi->FiberMutexLock(a_assets->allocation_mutex);
 						serializer->Alloc(&ctx, &upload->load_data, asset, a_assets->arena);
-						osapi->MutexUnlock(a_assets->allocation_mutex);
+						osapi->FiberMutexUnlock(a_assets->allocation_mutex);
 					}
 					else
 					{
@@ -676,7 +676,7 @@ static void A_FlushUploads(void)
 
 					if (upload->load_data.watch_path_count > 0)
 					{
-						osapi->MutexLock(a_assets->allocation_mutex);
+						osapi->FiberMutexLock(a_assets->allocation_mutex);
 
 						record->watch_path_count = upload->load_data.watch_path_count;
 						record->watch_paths = ArenaPushArray(a_assets->arena, String8, record->watch_path_count);
@@ -684,7 +684,7 @@ static void A_FlushUploads(void)
 						for (u32 j = 0; j < record->watch_path_count; j++)
 							record->watch_paths[j] = String8Clone(a_assets->arena, upload->load_data.watch_paths[j]);
 
-						osapi->MutexUnlock(a_assets->allocation_mutex);
+						osapi->FiberMutexUnlock(a_assets->allocation_mutex);
 					}
 
 					DebugLogD(a_assets->log_channel,
@@ -726,7 +726,7 @@ static void A_FlushUploads(void)
 		base += batch_count;
 	}
 
-	osapi->CondVarBroadcast(a_assets->loading_cond);
+	osapi->FiberCondVarBroadcast(a_assets->loading_cond);
 }
 
 static void A_WaitForAsync(void)
@@ -825,13 +825,13 @@ static A_Asset *A_GetNow(A_Handle handle)
 
 static A_Handle A_FromFilePath(String8 path, A_Type type)
 {
-	osapi->MutexLock(a_assets->allocation_mutex);
+	osapi->FiberMutexLock(a_assets->allocation_mutex);
 
 	A_Handle existing = A_PathMapFind(path);
 
 	if (A_IsValid(existing))
 	{
-		osapi->MutexUnlock(a_assets->allocation_mutex);		
+		osapi->FiberMutexUnlock(a_assets->allocation_mutex);		
 		return existing;
 	}
 
@@ -840,7 +840,7 @@ static A_Handle A_FromFilePath(String8 path, A_Type type)
 
 	A_PathMapInsert(path, handle);
 
-	osapi->MutexUnlock(a_assets->allocation_mutex);
+	osapi->FiberMutexUnlock(a_assets->allocation_mutex);
 
 	return handle;
 }

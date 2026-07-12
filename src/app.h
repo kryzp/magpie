@@ -7,7 +7,8 @@
 typedef struct App App;
 struct App
 {
-	Arena bootstrap_arena;
+	void *bootstrap_memory;
+	
 	Arena log_arena;
 	Arena graphics_arena;
 	Arena scripting_arena;

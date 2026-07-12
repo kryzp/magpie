@@ -100,7 +100,7 @@ struct A_Assets
 	Arena load_arenas[A_LOAD_ARENA_COUNT];
 	u32 free_load_arenas[A_LOAD_ARENA_COUNT];
 	u32 free_load_arena_count;
-	u32 load_arena_spinlock;
+	i32 load_arena_spinlock;
 	OS_Handle load_arena_wait_counter;
 };
 

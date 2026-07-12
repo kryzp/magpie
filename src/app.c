@@ -88,11 +88,9 @@ App *MagpieInit(const OS_API *osapi_)
 {
 	osapi = osapi_;
 
-	Arena bootstrap = ArenaAlloc(sizeof(App));
-	app = ArenaPushArray(&bootstrap, App, 1);
+	app = osapi->HeapAlloc(sizeof(App));
+	app->bootstrap_memory = app; // funky
 	
-	app->bootstrap_arena = bootstrap;
-
 	app->scripting_arena = ArenaAlloc(Gigabytes(1));
 	app->graphics_arena  = ArenaAlloc(Gigabytes(3));
 	app->audio_arena     = ArenaAlloc(Gigabytes(1));
@@ -196,12 +194,12 @@ void MagpieDestroy(App *app_)
 	ArenaRelease(&app->animation_arena);
 	ArenaRelease(&app->asset_arena);
 	ArenaRelease(&app->audio_arena);
+	ArenaRelease(&app->scripting_arena);
 	ArenaRelease(&app->graphics_arena);
 	
 	DebugLogI(app->log_channel, "Destroyed");
 
-	// TODO: fuck are we remembering to release this? why wasnt it crashing lol
-	//ArenaRelease(&app->bootstrap_arena);
+	osapi->HeapFree(app->bootstrap_memory);
 }
 
 static void AppLogFPS(f32 dt)

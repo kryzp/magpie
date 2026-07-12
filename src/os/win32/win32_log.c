@@ -11,7 +11,7 @@ static void LOG_W32_Init(LOG_W32_Logger *logger, String8 sink)
 	
 	CH_TimerStart(&logger->timer);
 
-	logger->mutex = osapi->MutexCreate();
+	logger->mutex = osapi->FiberMutexCreate();
 
 	if (sink.len > 0)
 		logger->file_stream = osapi->StreamFromFile(sink, OS_FILE_PRESET_CREATE);
@@ -44,7 +44,7 @@ static void LOG_W32_Shutdown(LOG_W32_Logger *logger)
 		logger->file_stream = OS_HandleNull();
 	}
 
-	osapi->MutexDestroy(logger->mutex);
+	osapi->FiberMutexDestroy(logger->mutex);
 	logger->mutex = OS_HandleNull();
 }
 
@@ -255,7 +255,7 @@ static void LOG_W32_WriteV(LOG_W32_Logger *logger,
 	char body[LOG_W32_LINE_BUFFER_SIZE] = {0};
 	vsnprintf(body, sizeof(body), fmt, args);
 
-	osapi->MutexLock(logger->mutex);
+	osapi->FiberMutexLock(logger->mutex);
 	{
 		b32 is_repeated_line =
 			logger->dedup_active &&
@@ -351,7 +351,7 @@ static void LOG_W32_WriteV(LOG_W32_Logger *logger,
 			logger->dedup_job_context = job_context;
 		}
 	}
-	osapi->MutexUnlock(logger->mutex);
+	osapi->FiberMutexUnlock(logger->mutex);
 
 	if (level == LOG_Level_Break)
 	{

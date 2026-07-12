@@ -15,7 +15,7 @@ static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channe
 {
 	compiler->log_channel = log_channel;
 
-	compiler->mutex = osapi->MutexCreate();
+	compiler->mutex = osapi->FiberMutexCreate();
 
 	SLANG_Init(&compiler->global_session);
 
@@ -33,7 +33,7 @@ static void G_ShaderCompilerShutdown(void)
 	
 	SLANG_Shutdown(g_shader_compiler->global_session);
 
-	osapi->MutexDestroy(g_shader_compiler->mutex);
+	osapi->FiberMutexDestroy(g_shader_compiler->mutex);
 
 	g_shader_compiler = NULL;
 }
@@ -47,7 +47,7 @@ static G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
 													  String8 source_path,
 													  u32 search_path_count, const String8 *search_paths)
 {
-	osapi->MutexLock(g_shader_compiler->mutex);
+	osapi->FiberMutexLock(g_shader_compiler->mutex);
 	
 	G_ShaderCompiledStages compiled = {0};
 	compiled.failed = true;
@@ -103,7 +103,7 @@ end:
 	SLANG_FreeResult(&bridge_result);
 	ScratchRelease(&scratch);
 
-	osapi->MutexUnlock(g_shader_compiler->mutex);
+	osapi->FiberMutexUnlock(g_shader_compiler->mutex);
 	
 	return compiled;
 }

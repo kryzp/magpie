@@ -53,13 +53,11 @@ struct OS_W32_Object
 
 	union
 	{
-		// Regular win32 CreateMutex(...) is more heavy-duty for sync
-		// between multiple processes, so just use this instead.
-		CRITICAL_SECTION cs;
-
-		CONDITION_VARIABLE cv;
-
+		CRITICAL_SECTION tmutex;
+		CONDITION_VARIABLE tcondvar;
 		J_W32_Counter counter;
+		J_W32_FiberMutex fmutex;
+		J_W32_FiberCondVar fcondvar;
 	};
 };
 
@@ -470,163 +468,199 @@ static void OS_W32_TLSSet(u32 slot, void *value)
 	TlsSetValue(slot, value);
 }
 
-static u32 OS_W32_AtomicLoadU32(u32 *ptr)
+static i32 OS_W32_AtomicCompareExchangeI32(i32 *ptr, i32 exchange, i32 comperand)
 {
-	return InterlockedCompareExchange((volatile LONG *)ptr, 0, 0);
+	return InterlockedCompareExchange((volatile LONG *)ptr, exchange, comperand);
 }
 
-static u64 OS_W32_AtomicLoadU64(u64 *ptr)
+static i64 OS_W32_AtomicCompareExchangeI64(i64 *ptr, i64 exchange, i64 comperand)
 {
-	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, 0, 0);
+	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, exchange, comperand);
 }
 
-static void *OS_W32_AtomicLoadPtr(void *ptr)
+static void *OS_W32_AtomicCompareExchangePtr(void *ptr, void *exchange, void *comperand)
 {
-	return InterlockedCompareExchangePointer((PVOID *)ptr, NULL, NULL);
+	return InterlockedCompareExchangePointer((volatile PVOID *)ptr, exchange, comperand);
 }
 
-static u32 OS_W32_AtomicStoreU32(u32 *ptr, u32 value)
+static i32 OS_W32_AtomicStoreI32(i32 *ptr, i32 value)
 {
 	return InterlockedExchange((volatile LONG *)ptr, value);
 }
 
-static u64 OS_W32_AtomicStoreU64(u64 *ptr, u64 value)
+static i64 OS_W32_AtomicStoreI64(i64 *ptr, i64 value)
 {
 	return InterlockedExchange64((volatile LONGLONG *)ptr, value);
 }
 
 static void *OS_W32_AtomicStorePtr(void *ptr, void *value)
 {
-	return InterlockedExchangePointer((PVOID *)ptr, value);
+	return InterlockedExchangePointer((volatile PVOID *)ptr, value);
 }
 
-static u32 OS_W32_AtomicAddU32(u32 *ptr, u32 delta)
+static i32 OS_W32_AtomicAddI32(i32 *ptr, i32 delta)
 {
 	return InterlockedExchangeAdd((volatile LONG *)ptr, delta);
 }
 
-static u64 OS_W32_AtomicAddU64(u64 *ptr, u64 delta)
+static i64 OS_W32_AtomicAddI64(i64 *ptr, i64 delta)
 {
 	return InterlockedExchangeAdd64((volatile LONGLONG *)ptr, delta);
 }
 
-static u32 OS_W32_AtomicSubU32(u32 *ptr, u32 delta)
-{
-	return InterlockedExchangeAdd((volatile LONG *)ptr, -(LONG)delta);
-}
-
-static u64 OS_W32_AtomicSubU64(u64 *ptr, u64 delta)
-{
-	return InterlockedExchangeAdd64((volatile LONGLONG *)ptr, -(LONGLONG)delta);
-}
-
-static b32 OS_W32_AtomicCASU32(u32 *ptr, u32 expected, u32 desired)
-{
-	return InterlockedCompareExchange((volatile LONG *)ptr, (LONG)desired, (LONG)expected) == (LONG)expected;
-}
-
-static b32 OS_W32_AtomicCASU64(u64 *ptr, u64 expected, u64 desired)
-{
-	return InterlockedCompareExchange64((volatile LONGLONG *)ptr, (LONGLONG)desired, (LONGLONG)expected) == (LONGLONG)expected;
-}
-
-static b32 OS_W32_AtomicCASPtr(void *ptr, void *expected, void *desired)
-{
-	return InterlockedCompareExchangePointer((volatile void *)ptr, desired, expected) == expected;
-}
-
-static void OS_W32_SpinLockAcquire(u32 *lock)
+static void OS_W32_SpinLockAcquire(i32 *lock)
 {
 	for (;;)
 	{
 		if (InterlockedCompareExchange((volatile LONG *)lock, 1, 0) == 0)
 			break;
 		
-		while (InterlockedCompareExchange((volatile LONG *)lock, 0, 0))
+		while (InterlockedCompareExchange((volatile LONG *)lock, 0, 0) == 1)
 			OS_SPIN_PAUSE();
 	}
 }
 
-static void OS_W32_SpinLockRelease(u32 *lock)
+static void OS_W32_SpinLockRelease(i32 *lock)
 {
 	InterlockedExchange((volatile LONG *)lock, 0);
 }
 
-static OS_Handle OS_W32_MutexCreate(void)
+static OS_Handle OS_W32_FiberMutexCreate(void)
 {
 	OS_W32_Object *mtx = OS_W32_AllocObject();
-	
-	InitializeCriticalSection(&mtx->cs);
 	
 	OS_Handle handle = { mtx };
 	return handle;
 }
 
-static void OS_W32_MutexDestroy(OS_Handle handle)
+static void OS_W32_FiberMutexDestroy(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
-	DeleteCriticalSection(&mtx->cs);
+	OS_W32_ReturnObject(mtx);
+}
+
+static void OS_W32_FiberMutexLock(OS_Handle handle)
+{
+	OS_W32_Object *mtx = handle.value;
+	
+	J_W32_FiberMutexLock(&win32_st.scheduler, &mtx->fmutex);
+}
+
+static void OS_W32_FiberMutexUnlock(OS_Handle handle)
+{
+	OS_W32_Object *mtx = handle.value;
+	
+	J_W32_FiberMutexUnlock(&win32_st.scheduler, &mtx->fmutex);
+}
+
+static OS_Handle OS_W32_FiberCondVarCreate(void)
+{
+	OS_W32_Object *cv = OS_W32_AllocObject();
+	
+	OS_Handle handle = { cv };
+	return handle;
+}
+
+static void OS_W32_FiberCondVarDestroy(OS_Handle handle)
+{
+	OS_W32_Object *cv = handle.value;
+	
+	OS_W32_ReturnObject(cv);
+}
+
+static void OS_W32_FiberCondVarWait(OS_Handle handle, OS_Handle fiber_mutex_handle)
+{
+	OS_W32_Object *cv = handle.value;
+	OS_W32_Object *mtx = fiber_mutex_handle.value;
+	
+	J_W32_FiberCondVarWait(&win32_st.scheduler, &cv->fcondvar, &mtx->fmutex);
+}
+
+static void OS_W32_FiberCondVarSignal(OS_Handle handle)
+{
+	OS_W32_Object *cv = handle.value;
+	
+	J_W32_FiberCondVarSignal(&win32_st.scheduler, &cv->fcondvar);
+}
+
+static void OS_W32_FiberCondVarBroadcast(OS_Handle handle)
+{
+	OS_W32_Object *cv = handle.value;
+	
+	J_W32_FiberCondVarBroadcast(&win32_st.scheduler, &cv->fcondvar);
+}
+
+static OS_Handle OS_W32_ThreadMutexCreate(void)
+{
+	OS_W32_Object *mtx = OS_W32_AllocObject();
+	
+	InitializeCriticalSection(&mtx->tmutex);
+	
+	OS_Handle handle = { mtx };
+	return handle;
+}
+
+static void OS_W32_ThreadMutexDestroy(OS_Handle handle)
+{
+	OS_W32_Object *mtx = handle.value;
+	
+	DeleteCriticalSection(&mtx->tmutex);
 
 	OS_W32_ReturnObject(mtx);
 }
 
-static void OS_W32_MutexLock(OS_Handle handle)
+static void OS_W32_ThreadMutexLock(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
-	EnterCriticalSection(&mtx->cs);
+	EnterCriticalSection(&mtx->tmutex);
 }
 
-static void OS_W32_MutexUnlock(OS_Handle handle)
+static void OS_W32_ThreadMutexUnlock(OS_Handle handle)
 {
 	OS_W32_Object *mtx = handle.value;
 	
-	LeaveCriticalSection(&mtx->cs);
+	LeaveCriticalSection(&mtx->tmutex);
 }
 
-static OS_Handle OS_W32_CondVarCreate(void)
+static OS_Handle OS_W32_ThreadCondVarCreate(void)
 {
 	OS_W32_Object *cnd = OS_W32_AllocObject();
 
-	InitializeConditionVariable(&cnd->cv);
+	InitializeConditionVariable(&cnd->tcondvar);
 	
 	OS_Handle handle = { cnd };
 	return handle;
 }
 
-/*
- * Even though condition variables don't allocate any resources
- * we still need a destroy function to return the object back
- * to the free pool.
- */
-static void OS_W32_CondVarDestroy(OS_Handle handle)
+static void OS_W32_ThreadCondVarDestroy(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 	
 	OS_W32_ReturnObject(cnd);
 }
 
-static void OS_W32_CondVarWait(OS_Handle handle, OS_Handle mutex_handle)
+static void OS_W32_ThreadCondVarWait(OS_Handle handle, OS_Handle thread_mutex_handle)
 {
 	OS_W32_Object *cnd = handle.value;
-	OS_W32_Object *mtx = mutex_handle.value;
+	OS_W32_Object *mtx = thread_mutex_handle.value;
 	
-	SleepConditionVariableCS(&cnd->cv, &mtx->cs, INFINITE);
+	SleepConditionVariableCS(&cnd->tcondvar, &mtx->tmutex, INFINITE);
 }
 
-static void OS_W32_CondVarSignal(OS_Handle handle)
+static void OS_W32_ThreadCondVarSignal(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 
-	WakeConditionVariable(&cnd->cv);
+	WakeConditionVariable(&cnd->tcondvar);
 }
 
-static void OS_W32_CondVarBroadcast(OS_Handle handle)
+static void OS_W32_ThreadCondVarBroadcast(OS_Handle handle)
 {
 	OS_W32_Object *cnd = handle.value;
 
-	WakeAllConditionVariable(&cnd->cv);
+	WakeAllConditionVariable(&cnd->tcondvar);
 }
 
 static b32 OS_W32_FileDelete(String8 path)
@@ -865,7 +899,7 @@ static void OS_W32_DestroyImGui(void)
 	*/
 }
 
-static OS_Handle OS_W32_JobCounterAlloc(u32 initial_count)
+static OS_Handle OS_W32_JobCounterAlloc(i32 initial_count)
 {
 	OS_W32_Object *counter = OS_W32_AllocObject();
 
@@ -882,7 +916,7 @@ static void OS_W32_JobCounterRelease(OS_Handle handle)
 	OS_W32_ReturnObject(obj);
 }
 
-static void OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
+static void OS_W32_JobCounterInc(OS_Handle handle, i32 amount)
 {
 	OS_W32_Object *obj = handle.value;
 	J_W32_Counter *counter = &obj->counter;
@@ -890,7 +924,7 @@ static void OS_W32_JobCounterInc(OS_Handle handle, u32 amount)
 	J_W32_CounterIncrement(counter, amount);
 }
 
-static void OS_W32_JobCounterDec(OS_Handle handle, u32 amount)
+static void OS_W32_JobCounterDec(OS_Handle handle, i32 amount)
 {
 	OS_W32_Object *obj = handle.value;
 	J_W32_Counter *counter = &obj->counter;
@@ -906,7 +940,7 @@ static u32 OS_W32_JobCounterValue(OS_Handle handle)
 	return J_W32_CounterValue(counter);
 }
 
-static void OS_W32_JobYield(OS_Handle handle, u32 value)
+static void OS_W32_JobYield(OS_Handle handle, i32 value)
 {
 	OS_W32_Object *obj = handle.value;
 	J_W32_Counter *counter = &obj->counter;
@@ -1001,36 +1035,42 @@ static void OS_W32_BindAPI(OS_API *api)
 	api->TLSGet                      = OS_W32_TLSGet;
 	api->TLSSet                      = OS_W32_TLSSet;
 	
-	api->AtomicLoadU32               = OS_W32_AtomicLoadU32;
-	api->AtomicLoadU64               = OS_W32_AtomicLoadU64;
-	api->AtomicLoadPtr               = OS_W32_AtomicLoadPtr;
+	api->AtomicCompareExchangeI32    = OS_W32_AtomicCompareExchangeI32;
+	api->AtomicCompareExchangeI64    = OS_W32_AtomicCompareExchangeI64;
+	api->AtomicCompareExchangePtr    = OS_W32_AtomicCompareExchangePtr;
 	
-	api->AtomicStoreU32              = OS_W32_AtomicStoreU32;
-	api->AtomicStoreU64              = OS_W32_AtomicStoreU64;
+	api->AtomicStoreI32              = OS_W32_AtomicStoreI32;
+	api->AtomicStoreI64              = OS_W32_AtomicStoreI64;
 	api->AtomicStorePtr              = OS_W32_AtomicStorePtr;
 	
-	api->AtomicAddU32                = OS_W32_AtomicAddU32;
-	api->AtomicAddU64                = OS_W32_AtomicAddU64;
-	api->AtomicSubU32                = OS_W32_AtomicSubU32;
-	api->AtomicSubU64                = OS_W32_AtomicSubU64;
+	api->AtomicAddI32                = OS_W32_AtomicAddI32;
+	api->AtomicAddI64                = OS_W32_AtomicAddI64;
 	
-	api->AtomicCASU32                = OS_W32_AtomicCASU32;
-	api->AtomicCASU64                = OS_W32_AtomicCASU64;
-	api->AtomicCASPtr                = OS_W32_AtomicCASPtr;
-	
+
 	api->SpinLockAcquire             = OS_W32_SpinLockAcquire;
 	api->SpinLockRelease             = OS_W32_SpinLockRelease;
 
-	api->MutexCreate                 = OS_W32_MutexCreate;
-	api->MutexDestroy                = OS_W32_MutexDestroy;
-	api->MutexLock                   = OS_W32_MutexLock;
-	api->MutexUnlock                 = OS_W32_MutexUnlock;
+	api->FiberMutexCreate            = OS_W32_FiberMutexCreate;
+	api->FiberMutexDestroy           = OS_W32_FiberMutexDestroy;
+	api->FiberMutexLock              = OS_W32_FiberMutexLock;
+	api->FiberMutexUnlock            = OS_W32_FiberMutexUnlock;
 	
-	api->CondVarCreate               = OS_W32_CondVarCreate;
-	api->CondVarDestroy              = OS_W32_CondVarDestroy;
-	api->CondVarWait                 = OS_W32_CondVarWait;
-	api->CondVarSignal               = OS_W32_CondVarSignal;
-	api->CondVarBroadcast            = OS_W32_CondVarBroadcast;
+	api->FiberCondVarCreate          = OS_W32_FiberCondVarCreate;
+	api->FiberCondVarDestroy         = OS_W32_FiberCondVarDestroy;
+	api->FiberCondVarWait            = OS_W32_FiberCondVarWait;
+	api->FiberCondVarSignal          = OS_W32_FiberCondVarSignal;
+	api->FiberCondVarBroadcast       = OS_W32_FiberCondVarBroadcast;
+
+	api->ThreadMutexCreate           = OS_W32_ThreadMutexCreate;
+	api->ThreadMutexDestroy          = OS_W32_ThreadMutexDestroy;
+	api->ThreadMutexLock             = OS_W32_ThreadMutexLock;
+	api->ThreadMutexUnlock           = OS_W32_ThreadMutexUnlock;
+	
+	api->ThreadCondVarCreate         = OS_W32_ThreadCondVarCreate;
+	api->ThreadCondVarDestroy        = OS_W32_ThreadCondVarDestroy;
+	api->ThreadCondVarWait           = OS_W32_ThreadCondVarWait;
+	api->ThreadCondVarSignal         = OS_W32_ThreadCondVarSignal;
+	api->ThreadCondVarBroadcast      = OS_W32_ThreadCondVarBroadcast;
 
 	api->FileDelete                  = OS_W32_FileDelete;
 	api->FileExists                  = OS_W32_FileExists;
@@ -1082,7 +1122,7 @@ static void OS_W32_MessagePump(void *ctx)
 
 	if (local_event_count > 0)
 	{
-		OS_W32_MutexLock(win32_st.event_mutex);
+		OS_W32_ThreadMutexLock(win32_st.event_mutex);
 		{
 			DebugLogAssert(win32_st.log_channel, win32_st.pending_event_count <= OS_W32_MAX_PENDING_EVENTS, "Ran out of event buffer space SHIT.");
 			
@@ -1092,7 +1132,7 @@ static void OS_W32_MessagePump(void *ctx)
 			MemCopy(win32_st.pending_events + win32_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
 			win32_st.pending_event_count += copy_count;
 		}
-		OS_W32_MutexUnlock(win32_st.event_mutex);
+		OS_W32_ThreadMutexUnlock(win32_st.event_mutex);
 	}
 }
 
@@ -1107,13 +1147,13 @@ static OS_InputState OS_W32_ProcessEvents(OS_InputState prev_state)
 	SDL_Event *events = ArenaPushArray(scratch.arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	u32 event_count = 0;
 
-	OS_W32_MutexLock(win32_st.event_mutex);
+	OS_W32_ThreadMutexLock(win32_st.event_mutex);
 	{
 		MemCopy(events, win32_st.pending_events, win32_st.pending_event_count * sizeof(SDL_Event));
 		event_count = win32_st.pending_event_count;
 		win32_st.pending_event_count = 0;
 	}
-	OS_W32_MutexUnlock(win32_st.event_mutex);
+	OS_W32_ThreadMutexUnlock(win32_st.event_mutex);
 
 	input_out.mouse_delta = v2x(0.f);
 	input_out.mouse_wheel = v2x(0.f);
@@ -1324,7 +1364,7 @@ i32 main(void)
 	
 	win32_st.pending_events = ArenaPushArray(&win32_st.platform_layer_arena, SDL_Event, OS_W32_MAX_PENDING_EVENTS);
 	
-	win32_st.event_mutex = OS_W32_MutexCreate();
+	win32_st.event_mutex = OS_W32_ThreadMutexCreate();
 
 	LOG_Channel job_log_channel = LOG_W32_OpenChannelFrom(&win32_st.logger, win32_st.log_channel, String8Lit("JOB"));
 	J_W32_Init(&win32_st.scheduler, job_log_channel);
@@ -1340,7 +1380,7 @@ i32 main(void)
 
 	J_W32_Shutdown(&win32_st.scheduler);
 	
-	OS_W32_MutexDestroy(win32_st.event_mutex);
+	OS_W32_ThreadMutexDestroy(win32_st.event_mutex);
 	
 	LOG_W32_Shutdown(&win32_st.logger);
 

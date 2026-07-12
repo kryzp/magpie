@@ -46,10 +46,10 @@ struct OS_API
 	   LOG
 	   ================================================== */
 
-	void        (*Log)(LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
+	void (*Log)(LOG_Level level, LOG_Channel channel, const char *file, i32 line, const char *fn, const char *fmt, ...);
 	LOG_Channel (*LogChannelOpen)(String8 name);
 	LOG_Channel (*LogChannelOpenFrom)(LOG_Channel parent, String8 name); // create a sub/child channel.
-	void        (*LogChannelClose)(LOG_Channel channel);
+	void (*LogChannelClose)(LOG_Channel channel);
 	
 	
 	/* ==================================================
@@ -118,62 +118,71 @@ struct OS_API
 	   TLS
 	   ================================================== */
 	
-	u32   (*TLSAlloc) (void);
-	void  (*TLSFree)  (u32 slot);
-	void *(*TLSGet)   (u32 slot);
-	void  (*TLSSet)   (u32 slot, void *value);
+	u32   (*TLSAlloc)(void);
+	void  (*TLSFree)(u32 slot);
+	void *(*TLSGet)(u32 slot);
+	void  (*TLSSet)(u32 slot, void *value);
 	
 
 	/* ==================================================
 	   ATOMICS
 	   ================================================== */
 
-	// TODO: Implement the rest of the functions for signed
-	//       integers and also the 8 and 16 bit versions.
-
 	// TODO: Some kind of OS_MemoryOrder parameter?
 
-	u32   (*AtomicLoadU32)   (u32  *ptr);
-	u64   (*AtomicLoadU64)   (u64  *ptr);
-	void *(*AtomicLoadPtr)   (void *ptr);
+	i32   (*AtomicCompareExchangeI32)(i32 *ptr, i32 exchange, i32 comperand);
+	i64   (*AtomicCompareExchangeI64)(i64 *ptr, i64 exchange, i64 comperand);
+	void *(*AtomicCompareExchangePtr)(void *ptr, void *exchange, void *comperand);
 
-	u32   (*AtomicStoreU32)  (u32  *ptr, u32   value);
-	u64   (*AtomicStoreU64)  (u64  *ptr, u64   value);
-	void *(*AtomicStorePtr)  (void *ptr, void *value);
+	i32   (*AtomicStoreI32)(i32 *ptr, i32 value);
+	i64   (*AtomicStoreI64)(i64 *ptr, i64 value);
+	void *(*AtomicStorePtr)(void *ptr, void *value);
 
-	// Note the return value is the value of the input atomic BEFORE adding / subtracting.
-	u32   (*AtomicAddU32)    (u32 *ptr, u32 delta);
-	u64   (*AtomicAddU64)    (u64 *ptr, u64 delta);
-	u32   (*AtomicSubU32)    (u32 *ptr, u32 delta);
-	u64   (*AtomicSubU64)    (u64 *ptr, u64 delta);
+	i32   (*AtomicAddI32)(i32 *ptr, i32 delta);
+	i64   (*AtomicAddI64)(i64 *ptr, i64 delta);
 
-	b32   (*AtomicCASU32)    (u32  *ptr, u32   expected, u32   desired);
-	b32   (*AtomicCASU64)    (u64  *ptr, u64   expected, u64   desired);
-	b32   (*AtomicCASPtr)    (void *ptr, void *expected, void *desired);
-	
 	
 	/* ==================================================
 	   SPINLOCK
 	   ================================================== */
 
-	void (*SpinLockAcquire)(u32 *lock);
-	void (*SpinLockRelease)(u32 *lock);
+	void (*SpinLockAcquire)(i32 *lock);
+	void (*SpinLockRelease)(i32 *lock);
 
 
 	/* ==================================================
 	   SYNCHRONISATION PRIMITIVES
 	   ================================================== */
 
-	OS_Handle (*MutexCreate)  (void);
-	void      (*MutexDestroy) (OS_Handle handle);
-	void      (*MutexLock)    (OS_Handle handle);
-	void      (*MutexUnlock)  (OS_Handle handle);
+	OS_Handle (*FiberMutexCreate)       (void);
+	void      (*FiberMutexDestroy)      (OS_Handle handle);
+	void      (*FiberMutexLock)         (OS_Handle handle);
+	void      (*FiberMutexUnlock)       (OS_Handle handle);
 
-	OS_Handle (*CondVarCreate)    (void);
-	void      (*CondVarDestroy)   (OS_Handle handle);
-	void      (*CondVarWait)      (OS_Handle handle, OS_Handle mutex_handle);
-	void      (*CondVarSignal)    (OS_Handle handle);
-	void      (*CondVarBroadcast) (OS_Handle handle);
+	OS_Handle (*FiberCondVarCreate)     (void);
+	void      (*FiberCondVarDestroy)    (OS_Handle handle);
+	void      (*FiberCondVarWait)       (OS_Handle handle, OS_Handle fiber_mutex_handle);
+	void      (*FiberCondVarSignal)     (OS_Handle handle);
+	void      (*FiberCondVarBroadcast)  (OS_Handle handle);
+
+	// NOTE TO SELF: BE CAREFUL WITH USING THESE!!!!
+	//               THE ENTIRE ENGINE IS RAN ON FIBERS
+	//               THEREFORE A REGULAR THREAD MUTEX OR CONDVAR
+	//               CAN SERIOUSLY FUCK UP SYNCHRONISATION,
+	//               AS YOU CAN END UP WITH A MUTEX BEING
+	//               RELEASED ON A THREAD THAT DIDNT LOCK IT.
+	//               >> ONLY USE IF CERTAIN THE SYNCHRONISED BLOCK WILL /NOT/
+	//                  USE FIBER/JOB-SPECIFIC FUNCTIONALITY SUCH AS YIELDING!!
+	OS_Handle (*ThreadMutexCreate)      (void);
+	void      (*ThreadMutexDestroy)     (OS_Handle handle);
+	void      (*ThreadMutexLock)        (OS_Handle handle);
+	void      (*ThreadMutexUnlock)      (OS_Handle handle);
+
+	OS_Handle (*ThreadCondVarCreate)    (void);
+	void      (*ThreadCondVarDestroy)   (OS_Handle handle);
+	void      (*ThreadCondVarWait)      (OS_Handle handle, OS_Handle thread_mutex_handle);
+	void      (*ThreadCondVarSignal)    (OS_Handle handle);
+	void      (*ThreadCondVarBroadcast) (OS_Handle handle);
 
 
 	/* ==================================================
@@ -198,24 +207,24 @@ struct OS_API
 	OS_Handle (*StreamFromMemory)(void *memory, u64 bytes);
 	OS_Handle (*StreamFromConstMemory)(const void *memory, u64 bytes);
 
-	i64 (*StreamRead)     (OS_Handle handle, void *dst, u64 bytes);
-	i64 (*StreamWrite)    (OS_Handle handle, const void *src, u64 bytes);
-	i64 (*StreamSeek)     (OS_Handle handle, i64 offset);
-	i64 (*StreamSize)     (OS_Handle handle);
-	i64 (*StreamPosition) (OS_Handle handle);
-	b32 (*StreamClose)    (OS_Handle handle);
+	i64 (*StreamRead)(OS_Handle handle, void *dst, u64 bytes);
+	i64 (*StreamWrite)(OS_Handle handle, const void *src, u64 bytes);
+	i64 (*StreamSeek)(OS_Handle handle, i64 offset);
+	i64 (*StreamSize)(OS_Handle handle);
+	i64 (*StreamPosition)(OS_Handle handle);
+	b32 (*StreamClose)(OS_Handle handle);
 	
 
 	/* ==================================================
 	   JOBS
 	   ================================================== */
 
-	OS_Handle    (*JobCounterAlloc)   (u32 initial_count);
+	OS_Handle    (*JobCounterAlloc)   (i32 initial_count);
 	void         (*JobCounterRelease) (OS_Handle handle);
-	void         (*JobCounterInc)     (OS_Handle handle, u32 amount);
-	void         (*JobCounterDec)     (OS_Handle handle, u32 amount);
+	void         (*JobCounterInc)     (OS_Handle handle, i32 amount);
+	void         (*JobCounterDec)     (OS_Handle handle, i32 amount);
 	u32          (*JobCounterValue)   (OS_Handle handle);
-	void         (*JobYield)          (OS_Handle handle, u32 value);
+	void         (*JobYield)          (OS_Handle handle, i32 value);
 	void         (*JobKick)           (const J_Decl *decl, OS_Handle counter_handle);
 	void         (*JobBatch)          (const J_Decl *decls, u32 count, OS_Handle counter_handle);
 	void         (*JobFor)            (u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size);
@@ -241,11 +250,11 @@ struct OS_API
 	const char * const *(*VulkanGetInstanceExtensions)(u32 *count);
 };
 
-typedef void *OS_EntryInitFn      (const OS_API *api);
-typedef void  OS_EntryDestroyFn   (void *ctx);
-typedef b32   OS_EntryTickFn      (void *ctx, const OS_InputState *input);
-typedef void  OS_EntryHotLoadFn   (void *ctx, const OS_API *api);
-typedef void  OS_EntryHotUnloadFn (void *ctx);
+typedef void *OS_EntryInitFn(const OS_API *api);
+typedef void  OS_EntryDestroyFn(void *ctx);
+typedef b32   OS_EntryTickFn(void *ctx, const OS_InputState *input);
+typedef void  OS_EntryHotLoadFn(void *ctx, const OS_API *api);
+typedef void  OS_EntryHotUnloadFn(void *ctx);
 
 static const OS_API *osapi = NULL; // must be manually set
 
