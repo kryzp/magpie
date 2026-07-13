@@ -771,11 +771,7 @@ static SpvReflectResult ParseNodes(SpvReflectPrvParser* p_parser) {
             return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
           }
 
-#ifdef _WIN32
-          strcpy_s(p_source_temp, source_len + 1, p_source);
-#else
-          strcpy(p_source_temp, p_source);
-#endif
+          memcpy(p_source_temp, p_source, source_len + 1);
 
           SafeFree(p_parser->source_embedded);
           p_parser->source_embedded = p_source_temp;
@@ -793,13 +789,8 @@ static SpvReflectResult ParseNodes(SpvReflectPrvParser* p_parser) {
           return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
         }
 
-#ifdef _WIN32
-        strcpy_s(p_continued_source, embedded_source_len + 1, p_parser->source_embedded);
-        strcat_s(p_continued_source, embedded_source_len + source_len + 1, p_source);
-#else
-        strcpy(p_continued_source, p_parser->source_embedded);
-        strcat(p_continued_source, p_source);
-#endif
+        memcpy(p_continued_source, p_parser->source_embedded, embedded_source_len);
+        memcpy(p_continued_source + embedded_source_len, p_source, source_len + 1);
 
         SafeFree(p_parser->source_embedded);
         p_parser->source_embedded = p_continued_source;
@@ -1087,11 +1078,7 @@ static SpvReflectResult ParseSource(SpvReflectPrvParser* p_parser, SpvReflectSha
         return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
       }
 
-#ifdef _WIN32
-      strcpy_s(p_source, source_len + 1, p_parser->source_embedded);
-#else
-      strcpy(p_source, p_parser->source_embedded);
-#endif
+      memcpy(p_source, p_parser->source_embedded, source_len + 1);
 
       p_module->source_source = p_source;
     }
@@ -2435,11 +2422,7 @@ static SpvReflectResult ParseUAVCounterBindings(SpvReflectShaderModule* p_module
 
       memset(name, 0, MAX_NODE_NAME_LENGTH);
       memcpy(name, p_descriptor->name, descriptor_name_length);
-#if defined(_WIN32)
-      strcat_s(name, MAX_NODE_NAME_LENGTH, k_count_tag);
-#else
-      strcat(name, k_count_tag);
-#endif
+      { size_t _nl = strlen(name); snprintf(name + _nl, MAX_NODE_NAME_LENGTH - _nl, "%s", k_count_tag); }
 
       for (uint32_t counter_descriptor_index = 0; counter_descriptor_index < p_module->descriptor_binding_count;
            ++counter_descriptor_index) {
