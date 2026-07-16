@@ -15,10 +15,13 @@ static void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel lo
 	engine->free_instance_sentinel.prev = &engine->free_instance_sentinel;
 
 	P_EngineSelectContext(engine);
+
+	DebugLogI(engine->log_channel, "Initialized.");
 }
 
 static void P_EngineDestroy(void)
 {
+	DebugLogI(p_engine->log_channel, "Destroyed.");
 }
 
 static void P_EngineSelectContext(P_Engine *engine)

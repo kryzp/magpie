@@ -1,14 +1,14 @@
 
 static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle)
 {
-	const A_ModelData *asset_data = &A_GetNow(asset_handle)->model;
+	const A_ModelAsset *model_asset = &A_GetOrBreak(asset_handle)->model;
 	
 	R_Model model = {0};
 	model.asset_handle = asset_handle;
 
-	for (u32 i = 0; i < asset_data->sub_model_count; i++)
+	for (u32 i = 0; i < model_asset->sub_model_count; i++)
 	{
-		const A_SubModel *asset_src = &asset_data->sub_models[i];
+		const A_SubModel *asset_src = &model_asset->sub_models[i];
 
 		R_SubModel *r_submodel = ArenaPushArray(arena, R_SubModel, 1);
 		r_submodel->next = model.submodel_first;
@@ -198,7 +198,7 @@ static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Hand
 
 static R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform)
 {
-	A_Handle asset_handle = A_Require(asset_path, A_Type_Model);
+	A_Handle asset_handle = A_RequireAssetBlocking(catalogue->arena, asset_path, A_Type_Model);
 	return R_ModelInstanceCreate(catalogue, asset_handle, initial_transform);
 }
 

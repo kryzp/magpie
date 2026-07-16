@@ -40,8 +40,10 @@ struct A_SubModel
 	u32 index_count;
 	u64 index_stride;
 
-	G_BufferKey skin_buffer;
-	i32 skin_index;
+	b32 is_skinned;
+	i32 skin_index; // -1 for invalid
+	G_BufferKey skin_buffer; // todo: get rid of this and export skin buffer size
+	//u64 skin_buffer_size;
 };
 
 #endif // ASSET_MODEL_H

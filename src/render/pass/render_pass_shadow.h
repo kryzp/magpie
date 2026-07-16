@@ -6,11 +6,10 @@
 typedef struct R_ShadowMappingPassData R_ShadowMappingPassData;
 struct R_ShadowMappingPassData
 {
-	G_ShaderKey shader;
+	const R_FrameParams *frame_params;
 	u32 caster_index;
 	G_BufferKey caster_table_buffer;
 	R_DrawStream draw_stream;
-	const R_FrameParams *frame_params;
 };
 
 static R_PASS_RECORD_DEF(R_ShadowMappingPassFn);

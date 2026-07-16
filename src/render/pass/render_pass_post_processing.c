@@ -2,10 +2,10 @@
 static R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
-	
 	const R_PostProcessingPassData *user_data = ctx->user_data;
-
-	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(user_data->shader);
+	const R_FrameParams *frame_params = user_data->frame_params;
+	
+	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(frame_params->tonemapping_shader);
 
 	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(&pipeline_def);
 	

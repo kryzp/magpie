@@ -46,11 +46,28 @@ struct R_FrameParams
 	u32 shadow_caster_count;
 	R_ShadowCaster shadow_casters[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
 
-	G_SamplerKey linear_sampler;
-	G_SamplerKey nearest_sampler;
+	G_TextureKey brdf_lut;
 	G_TextureKey irradiance_fallback_cubemap;
 	G_TextureKey prefilter_cubemap;
-	G_TextureKey brdf;
+
+	const R_Mesh *skybox_mesh;
+
+	G_BufferKey cubemap_capture_transform_buffer;
+
+	G_SamplerKey linear_sampler;
+	G_SamplerKey nearest_sampler;
+	
+	G_ShaderKey debug_line_shader;
+	G_ShaderKey forward_shader;
+	G_ShaderKey shadow_shader;
+	G_ShaderKey cull_frustum_shader;
+	G_ShaderKey cull_sphere_shader;
+	G_ShaderKey skybox_shader;
+	G_ShaderKey tonemapping_shader;
+	G_ShaderKey brdf_lut_generation_shader;
+	G_ShaderKey hdr_to_cubemap_shader;
+	G_ShaderKey irradiance_cubemap_gen_shader;
+	G_ShaderKey prefilter_cubemap_gen_shader;
 };
 
 typedef struct R_System R_System; // TODO TODO TODO: R_SYSTEM will not be taken in as a paremeter this is just a quick hack!!!!!
@@ -60,10 +77,11 @@ static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_Fr
 static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
 static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out);
 static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out);
+static void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out);
 
 static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 										R_System *system,
-										f32 dt, f32 elapsed,
+										u32 frame_number, f32 dt, f32 elapsed,
 										R_Scene *scene, const R_Camera *camera);
 
 static void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,

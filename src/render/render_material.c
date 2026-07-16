@@ -1,12 +1,10 @@
 
 static G_TextureKey R_MaterialResolveAssetTexture(A_Handle handle)
 {
-	if (!A_IsValid(handle) || !A_IsLoaded(handle))
+	if (A_HandleIsNull(handle))
 		return G_TextureKeyNull();
-
-	A_Asset *asset = A_GetNow(handle);
-
-	return asset->texture.key;
+	
+	return A_GetOrFallback(handle)->texture.key;
 }
 
 static R_Material R_MaterialDefault(void)

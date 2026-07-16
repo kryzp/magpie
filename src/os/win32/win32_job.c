@@ -14,7 +14,7 @@ static void J_W32_SpinModeDisable(J_W32_Scheduler *scheduler)
 
 static b32 J_W32_IsMainThread(J_W32_Scheduler *scheduler)
 {
-	AssertTrue(job_current_worker);
+	DebugLogAssert(scheduler->log_channel, job_current_worker, "No worker running.");
 	
 	return job_current_worker->id == 0;
 }
@@ -448,7 +448,7 @@ static void J_W32_CounterDecrement(J_W32_Scheduler *scheduler, J_W32_Counter *co
 
 	i32 atomic_count = osapi->AtomicCompareExchangeI32(&counter->atomic_count, 0, 0);
  
-	AssertTrue(atomic_count >= n);
+	DebugLogAssert(scheduler->log_channel, atomic_count >= n, "Asking to subtract more than possible.");
 
 	osapi->AtomicAddI32(&counter->atomic_count, -n);
 
@@ -497,7 +497,8 @@ static void J_W32_FiberMutexLock(J_W32_Scheduler *scheduler, J_W32_FiberMutex *m
 			return;
 		}
 
-		AssertTrue(m->waiting_count < J_W32_COUNTER_MAX_WAITING);
+		DebugLogAssert(scheduler->log_channel, m->waiting_count < J_W32_COUNTER_MAX_WAITING, "Cannot make more jobs wait on mutex!!!");
+		
 		m->waiting[m->waiting_count++] = job_current_worker->current_fiber;
 
 		osapi->SpinLockRelease(&m->atomic_spinlock);
@@ -540,7 +541,8 @@ static void J_W32_FiberCondVarWait(J_W32_Scheduler *scheduler, J_W32_FiberCondVa
 {
 	osapi->SpinLockAcquire(&cv->atomic_spinlock);
 
-	AssertTrue(cv->waiting_count < J_W32_COUNTER_MAX_WAITING);
+	DebugLogAssert(scheduler->log_channel, cv->waiting_count < J_W32_COUNTER_MAX_WAITING, "Cannot wait more jobs on condition variable!!");
+	
 	cv->waiting[cv->waiting_count++] = job_current_worker->current_fiber;
 
 	osapi->SpinLockRelease(&cv->atomic_spinlock);
@@ -679,7 +681,7 @@ static void J_W32_Yield(J_W32_Scheduler *scheduler, J_W32_Counter *counter, i32 
 			return;
 		}
  
-		AssertTrue(counter->waiting_count < J_W32_COUNTER_MAX_WAITING);
+		DebugLogAssert(scheduler->log_channel, counter->waiting_count < J_W32_COUNTER_MAX_WAITING, "Cannot wait more jobs on counter!!");
 		
 		counter->waiting[counter->waiting_count++] = job_current_worker->current_fiber;
  

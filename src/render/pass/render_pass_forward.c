@@ -4,8 +4,8 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_ForwardPassData *data = ctx->user_data;
 	const R_FrameParams *frame_params = data->frame_params;
-
-	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->forward_shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
@@ -81,17 +81,12 @@ static void R_ForwardRender(R_Graph *graph,
 
 	R_GraphTexHandle irradiance_fb_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->irradiance_fallback_cubemap));
 	R_GraphTexHandle prefilter_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->prefilter_cubemap));
-	R_GraphTexHandle brdf_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->brdf));
+	R_GraphTexHandle brdf_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->brdf_lut));
 
 	for (u32 i = 0; i < bb->shadow_map_count; i++)
 		R_PassReadTextureGraphics(pass, bb->shadow_maps[i]);
 
-	A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader);
-	G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 	R_ForwardPassData *data = ArenaPushArray(frame_params->arena, R_ForwardPassData, 1);
-
-	data->shader = shader;
 	data->frame_params = frame_params;
 	data->shadow_caster_table = bb->shadow_caster_table;
 	data->irradiance_fb_handle = irradiance_fb_handle;
@@ -99,7 +94,7 @@ static void R_ForwardRender(R_Graph *graph,
 	data->brdf_handle = brdf_handle;
 	data->draw_stream = *draw_stream;
 
-	if (/*R_IrradianceVolumeIsBaked(irradiance_volume)*/ false)
+	if (false /*R_IrradianceVolumeIsBaked(irradiance_volume)*/)
 	{
 		//data->irradiance_sh_buffer_address        = G_DeviceBufferAddress(R_IrradianceVolumeGetSHBuffer(irradiance_volume));
 		//data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));

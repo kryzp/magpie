@@ -12,7 +12,8 @@ typedef enum LOG_Level
 	LOG_Level_Info,  // System Information                        (Graphics initialized, Assets shutdown, ...)
 	LOG_Level_Warn,  // Warnings                                  (Asset not found - falling back, Channel pool full, ...)
 	LOG_Level_Error, // Errors                                    (Shader compilation failed, Win32 object pool empty, Failed to open file, ...)
-	LOG_Level_Break, // Fatal Break                               (Vulkan device lost, AppInit returned NULL, Render graph invalid, ...)
+	LOG_Level_Break, // Break                                     (Vulkan device lost, AppInit returned NULL, Render graph invalid, ...)
+	//                  ^ use Break instead of Fatal because then the format would be DebugLogF which implies a formatted log instead of a fatal log.
 	LOG_Level_COUNT
 }
 LOG_Level;
@@ -20,7 +21,7 @@ LOG_Level;
 typedef struct LOG_Channel LOG_Channel;
 struct LOG_Channel
 {
-	u32 id; // 0 = fallback channel
+	u32 id; // 0 = global channel
 };
 
 inline b32 LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)

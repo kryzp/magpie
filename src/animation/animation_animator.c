@@ -136,11 +136,9 @@ static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playbac
 
 static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle)
 {
-	DebugPrintAssert(A_IsValid(model_handle), "Asset handle is invalid.");
+	A_Asset *asset = A_GetOrFallback(model_handle);
 
-	A_Asset *asset = A_GetNow(model_handle);
-
-	A_ModelData *asset_model = &asset->model;
+	A_ModelAsset *asset_model = &asset->model;
 
 	animator->selected_model = model_handle;
 	
@@ -170,7 +168,7 @@ static void AN_AnimatorTick(AN_Animator *animator, f32 global_time)
 	if (animator->pose_count <= 0)
 		return;
 	
-	A_ModelData *asset_model = &A_Get(animator->selected_model)->model;
+	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 
 	// reset bind pose
 	for (u32 i = 0; i < animator->pose_count; i++)
@@ -222,7 +220,7 @@ static void AN_AnimatorUpdatePalette(AN_Animator *animator)
 	if (animator->pose_count <= 0)
 		return;
 	
-	A_ModelData *asset_model = &A_Get(animator->selected_model)->model;
+	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 	
 	for (u32 i = 0; i < animator->pose_count; i++)
 	{
@@ -245,7 +243,7 @@ static void AN_AnimatorUpdatePalette(AN_Animator *animator)
 
 static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
 {
-	A_ModelData *asset_model = &A_Get(animator->selected_model)->model;
+	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 
 	for (u32 i = 0; i < asset_model->clip_count; i++)
 	{
@@ -312,7 +310,7 @@ static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
 	if (AN_ClipKeyIsNull(animator->clip) || animator->loop)
 		return false;
 
-	A_ModelData *asset_model = &A_Get(animator->selected_model)->model;
+	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 	A_AnimClip *anim_clip = &asset_model->clips[animator->clip.value];
 	
 	return animator->last_sample_time >= anim_clip->duration_s;
@@ -320,7 +318,7 @@ static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
 
 static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator)
 {
-	A_ModelData *asset_model = &A_Get(animator->selected_model)->model;
+	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 	A_AnimClip *c = &asset_model->clips[animator->clip.value];
 	return animator->last_sample_time / c->duration_s;
 }

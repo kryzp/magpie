@@ -49,10 +49,10 @@ static m4 A_GltfTransformM4(m4 m)
 	return M4MulM4(ast_gltf_basis, M4MulM4(m, ast_gltf_basis_inv));
 }
 
-typedef struct A_ModelLoadMesh A_ModelLoadMesh;
-struct A_ModelLoadMesh
+typedef struct A_ModelLoadSubModel A_ModelLoadSubModel;
+struct A_ModelLoadSubModel
 {
-	A_ModelLoadMesh *next;
+	A_ModelLoadSubModel *next;
 
 	m4 transform;
 
@@ -71,21 +71,21 @@ struct A_ModelLoadMesh
 	i32 skin_index;
 };
 
-typedef struct A_ModelLoadDep A_ModelLoadDep;
-struct A_ModelLoadDep
+typedef struct A_ModelLoadDependency A_ModelLoadDependency;
+struct A_ModelLoadDependency
 {
-	A_ModelLoadDep *next;
+	A_ModelLoadDependency *next;
 	A_Handle handle;
 };
 
 typedef struct A_ModelLoadData A_ModelLoadData;
 struct A_ModelLoadData
 {
-	A_ModelLoadMesh *first_mesh;
-	u32 mesh_count;
-
-	A_ModelLoadDep *first_dep;
-	u32 dep_count;
+	u32 dependency_count;
+	A_ModelLoadDependency *first_dependency;
+	
+	u32 submodel_count;
+	A_ModelLoadSubModel *first_submodel;
 
 	u32 skeleton_count;
 	A_Skeleton *skeletons;
@@ -98,16 +98,7 @@ struct A_ModelLoadData
 	u64 total_skin_vertex_bytes;
 };
 
-static void A_ModelAddDependency(A_ModelLoadData *load, Arena *arena, A_Handle handle)
-{
-	A_ModelLoadDep *dep = ArenaPushArray(arena, A_ModelLoadDep, 1);
-	dep->handle = handle;
-	dep->next = load->first_dep;
-	load->first_dep = dep;
-	load->dep_count++;
-}
-
-static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
+static A_Handle A_ModelTryFetchTexture(const A_LCTX *ctx,
 									   Arena *arena,
 									   A_ModelLoadData *load,
 									   String8 directory,
@@ -122,25 +113,29 @@ static A_Handle A_ModelTryFetchTexture(const A_Context *ctx,
 	//       and bufferview-backed images (.glb).
 	if (!image->uri)
 	{
-		DebugLogB(ctx->log_channel, "URIs not supported yet.");
+		DebugLogB(ctx->log_channel, "URI's not supported yet.");
 		return A_HandleNull();
 	}
 
-	if (strncmp(image->uri, "data:", 5) == 0)
+	if (CStrCompareN(image->uri, "data:", 5) == 0)
 		return A_HandleNull();
 
-	String8 relative = String8Init(image->uri, strlen(image->uri));
+	String8 relative = String8Init(image->uri, CStrLength(image->uri));
 	String8 full_path = String8Append(arena, directory, relative);
 
-	A_Handle handle = A_FromFilePath(full_path, A_Type_Texture);
+	A_Handle handle = A_HandleFromFilePath(full_path, A_Type_Texture);
 
-	if (A_IsValid(handle))
-		A_ModelAddDependency(load, arena, handle);
+	A_ModelLoadDependency *dep = ArenaPushArray(arena, A_ModelLoadDependency, 1);
+	dep->next = load->first_dependency;
+	load->first_dependency = dep;
+	load->dependency_count++;
+	
+	dep->handle = handle;
 
 	return handle;
 }
 
-static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
+static A_ModelMaterial A_ModelResolveMaterial(const A_LCTX *ctx,
 											  Arena *arena,
 											  A_ModelLoadData *load,
 											  String8 directory,
@@ -201,7 +196,7 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 		mat.albedo_factor = v4(pbr->base_color_factor[0],
 							   pbr->base_color_factor[1],
 							   pbr->base_color_factor[2],
-							pbr->base_color_factor[3]);
+							   pbr->base_color_factor[3]);
 		
 		mat.metallic_factor = pbr->metallic_factor;
 		mat.roughness_factor = pbr->roughness_factor;
@@ -320,7 +315,7 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_Context *ctx,
 	return mat;
 }
 
-static void A_ModelProcessPrimitive(const A_Context *ctx,
+static void A_ModelProcessPrimitive(const A_LCTX *ctx,
 									Arena *arena,
 									A_ModelLoadData *load,
 									String8 directory,
@@ -333,7 +328,6 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 	DebugLogAssert(ctx->log_channel,
 				   prim->type == cgltf_primitive_type_triangles,
 				   "Only support triangle-primitive models currently!");
-
 
 	// Locate attributes.
 	const cgltf_accessor *positions = NULL;
@@ -404,7 +398,6 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 				  "Node has skin but missing joints and/or weights.");
 	}
 	
-
 	// Vertices.
 	u32 vert_count = (u32)positions->count;
 	A_ModelVertex *vertices = ArenaPushArray(arena, A_ModelVertex, vert_count);
@@ -593,36 +586,35 @@ static void A_ModelProcessPrimitive(const A_Context *ctx,
 	}
 
 	// Push onto list.
-	A_ModelLoadMesh *mesh = ArenaPushArray(arena, A_ModelLoadMesh, 1);
+	A_ModelLoadSubModel *submodel = ArenaPushArray(arena, A_ModelLoadSubModel, 1);
+	submodel->next = load->first_submodel;
+	load->first_submodel = submodel;
+	load->submodel_count++;
 
-	mesh->transform = world_transform;
+	submodel->transform = world_transform;
 
-	mesh->bounds_min = bmin;
-	mesh->bounds_max = bmax;
+	submodel->bounds_min = bmin;
+	submodel->bounds_max = bmax;
 
-	mesh->vertex_count = vert_count;
-	mesh->vertices = vertices;
+	submodel->vertex_count = vert_count;
+	submodel->vertices = vertices;
 	
-	mesh->index_count = idx_count;
-	mesh->indices = indices;
+	submodel->index_count = idx_count;
+	submodel->indices = indices;
 
-	mesh->skin_vertices = skin_vertices;
-	mesh->skin_index = skin_index;
+	submodel->skin_vertices = skin_vertices;
+	submodel->skin_index = skin_index;
 
-	mesh->material = material;
+	submodel->material = material;
 
-	mesh->next = load->first_mesh;
-	load->first_mesh = mesh;
-	load->mesh_count++;
-	
 	load->total_vertex_bytes += vert_count * sizeof(A_ModelVertex);
-	load->total_index_bytes  += idx_count  * sizeof(A_ModelIndex);
+	load->total_index_bytes  += idx_count * sizeof(A_ModelIndex);
 
 	if (is_skinned)
 		load->total_skin_vertex_bytes += vert_count * sizeof(A_ModelSkinVertex);
 }
 
-static void A_ModelProcessNode(const A_Context *ctx,
+static void A_ModelProcessNode(const A_LCTX *ctx,
 							   Arena *arena,
 							   A_ModelLoadData *load,
 							   String8 directory,
@@ -649,7 +641,7 @@ static void A_ModelProcessNode(const A_Context *ctx,
 		i32 skin_index = -1;
 
 		if (is_skinned)
-			skin_index = (i32)cgltf_skin_index(gltf, node->skin);
+			skin_index = (u32)cgltf_skin_index(gltf, node->skin);
 
 		for (u32 i = 0; i < node->mesh->primitives_count; i++)
 		{
@@ -664,7 +656,7 @@ static void A_ModelProcessNode(const A_Context *ctx,
 	}
 }
 
-static void A_ModelLoadSkeleton(const A_Context *ctx,
+static void A_ModelLoadSkeleton(const A_LCTX *ctx,
 								Arena *arena,
 								A_ModelLoadData *load,
 								const cgltf_data *gltf,
@@ -823,7 +815,7 @@ static A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 	return A_AnimInterp_COUNT;
 }
 
-static void A_ModelLoadClip(const A_Context *ctx,
+static void A_ModelLoadClip(const A_LCTX *ctx,
 							Arena *arena,
 							A_ModelLoadData *load,
 							const cgltf_data *gltf,
@@ -963,28 +955,28 @@ static void A_ModelLoadClip(const A_Context *ctx,
 			switch (ch->path)
 			{
 				case A_AnimPath_Translate:
-					{
-						f32 v[3] = { 0.f, 0.f, 0.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-						key->translation = A_GltfTransformTranslation(v3(v[0], v[1], v[2]));
-					}
-					break;
+				{
+					f32 v[3] = { 0.f, 0.f, 0.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+					key->translation = A_GltfTransformTranslation(v3(v[0], v[1], v[2]));
+				}
+				break;
 						
 				case A_AnimPath_Rotation:
-					{
-						f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
-						key->rotation = A_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
-					}
-					break;
+				{
+					f32 v[4] = { 0.f, 0.f, 0.f, 1.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 4);
+					key->rotation = A_GltfTransformQuat(v4(v[0], v[1], v[2], v[3]));	
+				}
+				break;
 
 				case A_AnimPath_Scale:
-					{
-						f32 v[3] = { 1.f, 1.f, 1.f };
-						cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
-						key->scale = A_GltfTransformScale(v3(v[0], v[1], v[2]));
-					}
-					break;
+				{
+					f32 v[3] = { 1.f, 1.f, 1.f };
+					cgltf_accessor_read_float(anim_sampler->output, k, v, 3);
+					key->scale = A_GltfTransformScale(v3(v[0], v[1], v[2]));
+				}
+				break;
 			}
 		}
 
@@ -995,16 +987,16 @@ static void A_ModelLoadClip(const A_Context *ctx,
 	}
 }
 
-static A_SerializerPipelineData A_ModelSerializerCpu(const A_Context *ctx, Arena *load_scope)
+static A_LoadResult A_ModelLoaderLoad(const A_LCTX *ctx,
+									  Arena *result_arena)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	String8 file_path = A_ContextSystemFilePath(ctx, scratch.arena);
+	String8 file_path = A_GetSystemFilePath(scratch.arena, ctx->metadata.path);
 
-	A_ModelLoadData *load = ArenaPushArray(load_scope, A_ModelLoadData, 1);
-	MemZeroStruct(load);
+	A_ModelLoadData *load = ArenaPushArray(result_arena, A_ModelLoadData, 1);
 
-	A_SerializerPipelineData result = {0};
+	A_LoadResult result = {0};
 	result.user_data = load;
 
 	cgltf_options options = {0};
@@ -1056,37 +1048,35 @@ static A_SerializerPipelineData A_ModelSerializerCpu(const A_Context *ctx, Arena
 	}
 
 	for (u32 i = 0; i < scene->nodes_count; i++)
-		A_ModelProcessNode(ctx, load_scope, load, directory, scene->nodes[i], gltf);
+		A_ModelProcessNode(ctx, result_arena, load, directory, scene->nodes[i], gltf);
 	
 	if (gltf->skins_count > 0)
 	{
 		load->skeleton_count = (u32)gltf->skins_count;
-		load->skeletons = ArenaPushArray(load_scope, A_Skeleton, load->skeleton_count);
+		load->skeletons = ArenaPushArray(result_arena, A_Skeleton, load->skeleton_count);
 
 		for (u32 i = 0; i < load->skeleton_count; i++)
-			A_ModelLoadSkeleton(ctx, load_scope, load, gltf, i);
-		
-		load->clip_count = (u32)gltf->animations_count;
-		load->clips = ArenaPushArray(load_scope, A_AnimClip, load->clip_count);
-
-		for (u32 i = 0; i < load->clip_count; i++)
-			A_ModelLoadClip(ctx, load_scope, load, gltf, i);
+			A_ModelLoadSkeleton(ctx, result_arena, load, gltf, i);
 	}
 	
-	result.stage_size = load->total_vertex_bytes + load->total_index_bytes + load->total_skin_vertex_bytes;
-	result.failed = false;
-
-	result.dependency_count = load->dep_count;
-
-	if (load->dep_count > 0)
+	if (gltf->animations_count > 0)
 	{
-		result.dependencies = ArenaPushArray(load_scope, A_Handle, load->dep_count);
+		load->clip_count = (u32)gltf->animations_count;
+		load->clips = ArenaPushArray(result_arena, A_AnimClip, load->clip_count);
 
-		A_ModelLoadDep *dep = load->first_dep;
-
-		for (u32 i = 0; dep; dep = dep->next, i++)
-			result.dependencies[i] = dep->handle;
+		for (u32 i = 0; i < load->clip_count; i++)
+			A_ModelLoadClip(ctx, result_arena, load, gltf, i);
 	}
+	
+	result.stage_size = load->total_skin_vertex_bytes;
+	result.failed = false;
+	
+	result.dependencies = ArenaPushArray(result_arena, A_Handle, load->dependency_count);
+	result.dependency_count = load->dependency_count;
+
+	u32 i = 0;
+	for (A_ModelLoadDependency *dep = load->first_dependency; dep; dep = dep->next, i++)
+		result.dependencies[i] = dep->handle;
 
 end:
 	if (gltf)
@@ -1097,46 +1087,45 @@ end:
 	return result;
 }
 
-static void A_ModelSerializerAlloc(const A_Context *ctx,
-								   A_SerializerPipelineData *data,
-								   A_Asset *out,
-								   Arena *arena)
+static void A_ModelLoaderAlloc(const A_LCTX *ctx,
+							   A_LoadResult *result,
+							   Arena *asset_arena,
+							   A_Asset *asset)
 {
-	A_ModelLoadData *load = data->user_data;
+	A_ModelLoadData *load = result->user_data;
 
-	A_SubModel *sub_models = ArenaPushArray(arena, A_SubModel, load->mesh_count);
-	
-	A_ModelLoadMesh *src_mesh = load->first_mesh;
+	A_SubModel *sub_models = ArenaPushArray(asset_arena, A_SubModel, load->submodel_count);
 
-	for (i32 i = (i32)load->mesh_count - 1; i >= 0; i--, src_mesh = src_mesh->next)
+	int dst_submodel_index = 0;
+	for (A_ModelLoadSubModel *src = load->first_submodel; src; src = src->next, dst_submodel_index++)
 	{
-		A_SubModel *dst = &sub_models[i];
+		A_SubModel *dst = &sub_models[dst_submodel_index];
 
-		dst->transform = src_mesh->transform;
+		dst->transform = src->transform;
 
-		dst->bounds_min = src_mesh->bounds_min;
-		dst->bounds_max = src_mesh->bounds_max;
+		dst->bounds_min = src->bounds_min;
+		dst->bounds_max = src->bounds_max;
 
-		dst->material = src_mesh->material;
+		dst->material = src->material;
 
-		dst->vertices = ArenaPushArray(arena, A_ModelVertex, src_mesh->vertex_count);
-		MemCopy(dst->vertices, src_mesh->vertices, sizeof(A_ModelVertex) * src_mesh->vertex_count);
+		dst->vertices = ArenaPushArray(asset_arena, A_ModelVertex, src->vertex_count);
+		MemCopy(dst->vertices, src->vertices, sizeof(A_ModelVertex) * src->vertex_count);
 
-		dst->vertex_count = src_mesh->vertex_count;
+		dst->vertex_count = src->vertex_count;
 		dst->vertex_stride = sizeof(A_ModelVertex);
 
-		dst->indices = ArenaPushArray(arena, A_ModelIndex, src_mesh->index_count);
-		MemCopy(dst->indices, src_mesh->indices, sizeof(A_ModelIndex) * src_mesh->index_count);
+		dst->indices = ArenaPushArray(asset_arena, A_ModelIndex, src->index_count);
+		MemCopy(dst->indices, src->indices, sizeof(A_ModelIndex) * src->index_count);
 
-		dst->index_count = src_mesh->index_count;
+		dst->index_count = src->index_count;
 		dst->index_stride = sizeof(A_ModelIndex);
 
-		if (src_mesh->skin_vertices)
+		if (src->skin_vertices)
 		{
 			G_BufferAllocInfo svb_info = {0};
 			svb_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
 			svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-			svb_info.size  = src_mesh->vertex_count * sizeof(A_ModelSkinVertex);
+			svb_info.size  = src->vertex_count * sizeof(A_ModelSkinVertex);
 			
 			dst->skin_buffer = G_DeviceBufferAlloc(&svb_info);
 		}
@@ -1145,23 +1134,23 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			dst->skin_buffer = G_BufferKeyNull();
 		}
 		
-		dst->skin_index = src_mesh->skin_index;
+		dst->skin_index = src->skin_index;
 	}
 
 	A_Skeleton *skeletons = NULL;
 
 	if (load->skeleton_count > 0)
-		skeletons = ArenaPushArray(arena, A_Skeleton, load->skeleton_count);
+		skeletons = ArenaPushArray(asset_arena, A_Skeleton, load->skeleton_count);
 
 	for (u32 i = 0; i < load->skeleton_count; i++)
 	{
 		A_Skeleton *src = &load->skeletons[i];
 		A_Skeleton *dst = &skeletons[i];
 
-		dst->name = String8Clone(arena, src->name);
+		dst->name = String8Clone(asset_arena, src->name);
 		
 		dst->joint_count = src->joint_count;
-		dst->joints = ArenaPushArray(arena, A_Joint, src->joint_count);
+		dst->joints = ArenaPushArray(asset_arena, A_Joint, src->joint_count);
 
 		dst->root_parent_world = src->root_parent_world;
 
@@ -1170,7 +1159,7 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			A_Joint *src_j = &src->joints[j];
 			A_Joint *dst_j = &dst->joints[j];
 			
-			dst_j->name = String8Clone(arena, src_j->name);
+			dst_j->name = String8Clone(asset_arena, src_j->name);
 			
 			dst_j->parent = src_j->parent;
 
@@ -1185,19 +1174,19 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 	A_AnimClip *clips = NULL;
 
 	if (load->clip_count)
-		clips = ArenaPushArray(arena, A_AnimClip, load->clip_count);
+		clips = ArenaPushArray(asset_arena, A_AnimClip, load->clip_count);
 
 	for (u32 i = 0; i < load->clip_count; i++)
 	{
 		A_AnimClip *src = &load->clips[i];
 		A_AnimClip *dst = &clips[i];
 
-		dst->name = String8Clone(arena, src->name);
+		dst->name = String8Clone(asset_arena, src->name);
 		
 		dst->duration_s = src->duration_s;
 
 		dst->channel_count = src->channel_count;
-		dst->channels = ArenaPushArray(arena, A_AnimChannel, src->channel_count);
+		dst->channels = ArenaPushArray(asset_arena, A_AnimChannel, src->channel_count);
 
 		for (u32 j = 0; j < dst->channel_count; j++)
 		{
@@ -1211,54 +1200,38 @@ static void A_ModelSerializerAlloc(const A_Context *ctx,
 			dst_ch->interp = src_ch->interp;
 			
 			dst_ch->key_count = src_ch->key_count;
-			dst_ch->keys = ArenaPushArray(arena, A_AnimKey, dst_ch->key_count);
+			dst_ch->keys = ArenaPushArray(asset_arena, A_AnimKey, dst_ch->key_count);
 
 			for (u32 k = 0; k < dst_ch->key_count; k++)
 				dst_ch->keys[k] = src_ch->keys[k];
 		}
 	}
 	
-	out->model.sub_model_count = load->mesh_count;
-	out->model.sub_models = sub_models;
+	asset->model.sub_model_count = load->submodel_count;
+	asset->model.sub_models = sub_models;
 
-	out->model.skeleton_count = load->skeleton_count;
-	out->model.skeletons = skeletons;
+	asset->model.skeleton_count = load->skeleton_count;
+	asset->model.skeletons = skeletons;
 
-	out->model.clip_count = load->clip_count;
-	out->model.clips = clips;
+	asset->model.clip_count = load->clip_count;
+	asset->model.clips = clips;
 }
 
-static void A_ModelSerializerReload(const A_Context *ctx,
-									A_SerializerPipelineData *data,
-									A_Asset *existing)
+static void A_ModelLoaderUploadGPU(const A_LCTX *ctx,
+								   A_LoadResult *result,
+								   A_Asset *asset,
+								   G_CmdBuffer *cmd,
+								   G_BufferKey stage,
+								   u64 stage_offset)
 {
-	DebugLogW(ctx->log_channel, "Reloading not implemented yet.");
-}
+	A_ModelLoadData *load = result->user_data;
 
-static void A_ModelSerializerGpu(const A_Context *ctx,
-								 A_SerializerPipelineData *data,
-								 A_Asset *asset,
-								 G_CmdBuffer *cmd,
-								 G_BufferKey stage, u64 stage_base)
-{
-	A_ModelLoadData *load = data->user_data;
+	u64 offset = stage_offset;
 
-	u64 offset = stage_base;
-
-	ScratchArena scratch = ScratchBegin(NULL, 0);
+	A_ModelLoadSubModel *src = load->first_submodel;
 	
-	A_ModelLoadMesh **load_meshes = ArenaPushArray(scratch.arena, A_ModelLoadMesh *, load->mesh_count);
-
-	A_ModelLoadMesh *src_mesh = load->first_mesh;
-
-	for (i32 i = (i32)load->mesh_count - 1; i >= 0; i--, src_mesh = src_mesh->next)
+	for (u32 i = 0; i < asset->model.sub_model_count; i++, src = src->next)
 	{
-		load_meshes[i] = src_mesh;
-	}
-
-	for (u32 i = 0; i < asset->model.sub_model_count; i++)
-	{
-		A_ModelLoadMesh *src = load_meshes[i];
 		A_SubModel *dst = &asset->model.sub_models[i];
 
 		if (src->skin_vertices)
@@ -1276,11 +1249,9 @@ static void A_ModelSerializerGpu(const A_Context *ctx,
 			offset += svb_size;
 		}
 	}
-
-	ScratchRelease(&scratch);
 }
 
-static void A_ModelSerializerDispose(A_Asset *asset)
+static void A_ModelLoaderDestroyAsset(A_Asset *asset)
 {
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
@@ -1291,16 +1262,15 @@ static void A_ModelSerializerDispose(A_Asset *asset)
 	}
 }
 
-static A_Serializer A_GetModelSerializer(void)
+static A_LoaderAPI A_GetModelLoaderAPI(void)
 {
-	static A_Serializer model_serializer = {
-		.Cpu     = A_ModelSerializerCpu,
-		.Alloc   = A_ModelSerializerAlloc,
-		.Reload  = A_ModelSerializerReload,
-		.Gpu     = A_ModelSerializerGpu,
-		.End     = NULL,
-		.Dispose = A_ModelSerializerDispose,
+	static A_LoaderAPI model_loader_api = {
+		.Load = A_ModelLoaderLoad,
+		.Alloc = A_ModelLoaderAlloc,
+		.UploadGPU = A_ModelLoaderUploadGPU,
+		.DestroyIntermediateResources = NULL,
+		.DestroyAsset = A_ModelLoaderDestroyAsset,
 	};
 
-	return model_serializer;
+	return model_loader_api;
 }

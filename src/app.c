@@ -65,8 +65,7 @@ static void AppInit_(void)
 	
 	R_GraphInit(&app->graph, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("GRAPH")));
 	R_SceneInit(&app->scene, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SCENE")));
-	R_SystemInit(&app->render_system, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
-	R_SystemGenerateLookupsAndMaps(&app->render_system, &app->graph, &app->frame_arena);
+	R_SystemInitAndSelect(&app->render_system, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
 	R_ModelCatalogueInit(&app->model_catalogue, &app->render_arena);
 	R_ModelCatalogueEquipScene(&app->model_catalogue, &app->scene);
 	
@@ -87,7 +86,7 @@ __declspec(dllexport)
 App *MagpieInit(const OS_API *osapi_)
 {
 	osapi = osapi_;
-
+	
 	app = osapi->HeapAlloc(sizeof(App));
 	app->bootstrap_memory = app; // funky
 	
@@ -112,7 +111,7 @@ App *MagpieInit(const OS_API *osapi_)
 	app->entity_log_channel    = osapi->LogChannelOpen(String8Lit("ENTITY"));
 	
 	AppInit_();
-
+	
 	{
 		R_ModelInstanceCreateFromPath(&app->model_catalogue,
 									  String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),
@@ -130,7 +129,7 @@ App *MagpieInit(const OS_API *osapi_)
 		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
-
+		
 		R_SceneSetLight(&app->scene,
 						R_SceneLightCreate(&app->scene),
 						light);
@@ -147,12 +146,12 @@ App *MagpieInit(const OS_API *osapi_)
 		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
-
+		
 		R_SceneSetLight(&app->scene,
 						R_SceneLightCreate(&app->scene),
 						light);
 	}
-
+	
 	DebugLogI(app->log_channel, "Initialized.");
 	
 	return app;
@@ -170,7 +169,7 @@ void MagpieDestroy(App *app_)
 	P_EngineDestroy();
 
 	R_ModelCatalogueDestroy(&app->model_catalogue);
-	R_SystemDestroy(&app->render_system);
+	R_SystemDestroy();
 	R_SceneDestroy(&app->scene);
 	R_GraphDestroy(&app->graph);
 
@@ -239,6 +238,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 		A_PollHotReloads();
 	}
 
+	A_FlushUploads();
+
 	E_TickContext entity_tick_context = {0};
 	entity_tick_context.dt = dt;
 	entity_tick_context.elapsed = elapsed;
@@ -298,10 +299,22 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	R_FrameParams frame_params = R_FrameParamsBuild(&app->frame_arena,
 													&app->render_system,
-													dt, elapsed,
+													app->frame_number, dt, elapsed,
 													&app->scene, &app->game.camera);
 
-	R_SystemRender(&app->render_system, &app->graph, &frame_params);
+	if (app->frame_number == 0)
+	{
+		R_SystemGenerateLookupsAndMaps(&app->graph, &app->frame_arena, &frame_params);		
+
+		// genuinely fuck this
+		// BRDF LUT and IBL shouldnt be generated as part of the RENDER GRAPH FUCK
+		frame_params = R_FrameParamsBuild(&app->frame_arena,
+										  &app->render_system,
+										  app->frame_number, dt, elapsed,
+										  &app->scene, &app->game.camera);
+	}
+
+	R_SystemRender(&app->graph, &frame_params);
 
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
@@ -317,6 +330,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	ArenaReset(&app->frame_arena);
 	
 	//AppLogFPS(dt);
+
+	app->frame_number++;
 	
 	return false;
 }
@@ -353,7 +368,7 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 
 	AN_SystemSelectContext(&app->animation_system);
 
-	R_SystemHotLoad(&app->render_system);
+	R_SystemSelectContext(&app->render_system);
 	
 	P_EngineSelectContext(&app->physics_engine);
 

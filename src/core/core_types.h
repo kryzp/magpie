@@ -27,6 +27,7 @@
 #define CStrCopy            strcpy
 #define CStrCopyN           strncpy
 #define CStrCompare         strcmp
+#define CStrCompareN        strncmp
 #define CStrLength          strlen
 #define CStrToI32(s)        ((i32)atoi(s))
 #define CStrToF32(s)        ((f32)atof(s))

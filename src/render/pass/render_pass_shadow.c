@@ -2,17 +2,14 @@
 static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
-
 	const R_ShadowMappingPassData *data = ctx->user_data;
-
-	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	const R_FrameParams *frame_params = data->frame_params;
+	
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->shadow_shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
 	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
-
-	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
-	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 
 	struct
 	{
@@ -23,17 +20,19 @@ static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	}
 	pc;
 
-	pc.object_buffer = data->frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_DeviceBufferAddress(data->frame_params->mesh_buffer);
+	pc.object_buffer = frame_params->object_buffer.gpu;
+	pc.mesh_buffer = G_DeviceBufferAddress(frame_params->mesh_buffer);
 	pc.caster_data_buffer = G_DeviceBufferAddress(data->caster_table_buffer);
 	pc.caster_index = data->caster_index;
 
+	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
+	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, pc, 0);
 
 	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
 	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
-	R_FrameParamsDrawIndirect(data->frame_params, cmd, indirect_key, counter_key);
+	R_FrameParamsDrawIndirect(frame_params, cmd, indirect_key, counter_key);
 }
 
 static void R_ShadowsInit(R_ShadowState *st)
@@ -95,9 +94,9 @@ static void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_par
 		const R_ShadowCaster *info = &frame_params->shadow_casters[i];
 		R_GPU_ShadowCaster *gpu = &caster_mapping[i];
 
-		gpu->position   = info->position;
+		gpu->position = info->position;
 		gpu->near_plane = info->near;
-		gpu->far_plane  = info->far;
+		gpu->far_plane = info->far;
 		gpu->shadow_map = G_DeviceTextureViewBindless(st->shadow_cubemap_views[i]);
 
 		m4 light_proj = M4Perspective(90.f, 1.f, info->near, info->far);
@@ -119,9 +118,6 @@ static void R_ShadowsRender(R_ShadowState *st,
 	bb->shadow_caster_table = st->caster_table_buffer;
 	bb->shadow_map_count = st->caster_count;
 
-	A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), A_Type_Shader);
-	G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 	for (u32 caster_index = 0; caster_index < st->caster_count; caster_index++)
 	{
 		const R_ShadowCaster *info = &frame_params->shadow_casters[caster_index];
@@ -132,11 +128,10 @@ static void R_ShadowsRender(R_ShadowState *st,
 
 		// TODO: snprintf the pass name with the caster index for debug labelling.
 		R_ShadowMappingPassData *data = ArenaPushArray(frame_params->arena, R_ShadowMappingPassData, 1);
-		data->shader = shader;
+		data->frame_params = frame_params;
 		data->caster_index = caster_index;
 		data->caster_table_buffer = st->caster_table_buffer;
 		data->draw_stream = draw_stream;
-		data->frame_params = frame_params;
 
 		R_GraphTexHandle cubemap_handle = R_GraphImportTexture(graph, st->shadow_cubemaps[caster_index]);
 		bb->shadow_maps[caster_index] = cubemap_handle;

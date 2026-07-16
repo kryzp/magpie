@@ -216,8 +216,6 @@ static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena)
 {
 	dr->arena = arena;
 
-	dr->shader_handle = A_Require(String8Lit("assets://shaders/passes/debug/debug_line.slang"), A_Type_Shader);
-
 	G_BufferAllocInfo buf_info = {0};
 	buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -545,9 +543,10 @@ typedef struct R_DebugPassData R_DebugPassData;
 struct R_DebugPassData
 {
 	const R_FrameParams *frame_params;
-	G_ShaderKey shader;
+	
 	u32 depth_batch_count;
 	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES];
+
 	u32 no_depth_batch_count;
 	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES];
 };
@@ -603,10 +602,10 @@ static void R_DebugDrawBatches(G_CmdBuffer *cmd,
 static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
-
 	const R_DebugPassData *data = ctx->user_data;
+	const R_FrameParams *frame_params = data->frame_params;
 
-	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(data->shader, ctx->render_info);
+	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->debug_line_shader, ctx->render_info);
 	pipeline_def.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	pipeline_def.cull_mode = VK_CULL_MODE_NONE;
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
@@ -696,17 +695,15 @@ static void R_DebugRendererRender(R_Graph *graph,
 	u32 no_depth_batch_count = R_DebugBuildBatches(r_selected_debug_renderer->depth_disabled, no_depth_batches, &no_depth_running_id);
 
 	// Create the render pass.
-	G_ShaderKey shader = A_GetNow(r_selected_debug_renderer->shader_handle)->shader.key;
-
 	R_DebugPassData *data = ArenaPushArray(frame_params->arena, R_DebugPassData, 1);
 	data->frame_params = frame_params;
-	data->shader = shader;
-	data->depth_batch_count = depth_batch_count;
-	data->no_depth_batch_count = no_depth_batch_count;
-
+	
 	MemCopy(data->depth_batches, depth_batches, depth_batch_count * sizeof(R_DebugBatch));
-	MemCopy(data->no_depth_batches, no_depth_batches, no_depth_batch_count * sizeof(R_DebugBatch));
+	data->depth_batch_count = depth_batch_count;
 
+	MemCopy(data->no_depth_batches, no_depth_batches, no_depth_batch_count * sizeof(R_DebugBatch));
+	data->no_depth_batch_count = no_depth_batch_count;
+	
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Debug Lines"), R_PassType_Graphics);
 	R_PassSetRecord(pass, R_DebugRenderPassFn, data);
 	R_PassWriteColour(pass, target_colour, NULL);

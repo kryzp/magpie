@@ -2,23 +2,17 @@
 #define OS_WIN32_J_H
 
 /*
- * Fiber-Driven Job System.
- * - N worker threads, each run a scheduler loop.
- * - A pool of fibers executes jobs, fibers loop forever and
- *   get re-used via a pool.
- * - Seperate job queue per-priority level.
- * - Don't bother with work-stealing but that might be
- *   something to look into in the future!
- *
- * Resources:
  * - "Parallelizing the Naughty Dog Engine Using Fibers" - Christian Gyrling
  * - "Parallelizing the Physics Solver" - Dennis Gustafsson
  */
 
+// TODO: this all needs to be reworked its a complete mess, but there are good fundamentals i think
+// I'm going to me moving to linux soon anyway so that'll be an opportunity to start from scratch.
+
 #define J_W32_MAX_JOBS_PER_QUEUE         512
 #define J_W32_MAX_CONCURRENT_FIBERS      128
 #define J_W32_MAX_WORKERS                32
-#define J_W32_COUNTER_MAX_WAITING        64
+#define J_W32_COUNTER_MAX_WAITING        128
 #define J_W32_FIBER_SCRATCH_SIZE         Megabytes(8)
 #define J_W32_FIBER_SCRATCH_RING_SIZE    2
 

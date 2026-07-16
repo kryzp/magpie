@@ -4,7 +4,7 @@
 typedef struct R_PostProcessingPassData R_PostProcessingPassData;
 struct R_PostProcessingPassData
 {
-	G_ShaderKey shader;
+	const R_FrameParams *frame_params;
 	f32 exposure;
 	R_GraphTexHandle input;
 	R_GraphTexHandle output;

@@ -133,11 +133,8 @@ static R_DrawStream R_CullFrustum(R_Graph *graph,
 
 	// Compute culling pass.
 	{
-		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 		R_CullPassData *data = ArenaPushArray(frame_params->arena, R_CullPassData, 1);
-		data->shader = shader;
+		data->shader = frame_params->cull_frustum_shader;
 		data->indirect_handle = indirect_handle;
 		data->counter_handle = counter_handle;
 		data->frame_params = frame_params;
@@ -175,7 +172,7 @@ static R_DrawStream R_CullSphere(R_Graph *graph,
 												 VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
 
 	R_GraphBufHandle indirect_handle = R_GraphCreateBuffer(graph, &indirect_info);
-	R_GraphBufHandle counter_handle  = R_GraphCreateBuffer(graph, &counter_info);
+	R_GraphBufHandle counter_handle = R_GraphCreateBuffer(graph, &counter_info);
 
 	// Clear counter pass.
 	{
@@ -189,11 +186,8 @@ static R_DrawStream R_CullSphere(R_Graph *graph,
 
 	// Compute culling pass.
 	{
-		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/culling/sphere_culling.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 		R_CullPassData *data = ArenaPushArray(frame_params->arena, R_CullPassData, 1);
-		data->shader = shader;
+		data->shader = frame_params->cull_sphere_shader;
 		data->indirect_handle = indirect_handle;
 		data->counter_handle = counter_handle;
 		data->frame_params = frame_params;

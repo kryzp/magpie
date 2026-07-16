@@ -49,7 +49,6 @@ typedef struct A_AnimClip A_AnimClip;
 struct A_AnimClip
 {
 	String8 name;
-
 	f32 duration_s;
 	
 	u32 channel_count;

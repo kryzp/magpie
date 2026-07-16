@@ -41,7 +41,7 @@ struct App
 	AU_Backend *audio_backend;
 	*/
 	
-	A_Assets assets;
+	A_State assets;
 
 	AN_System animation_system;
 
@@ -61,6 +61,8 @@ struct App
 	CH_Timer delta_timer;
 	CH_Timer hot_reload_timer;
 	f32 delta_accumulator;
+
+	u32 frame_number;
 };
 
 __declspec(dllexport) App  *MagpieInit(const OS_API *osapi_);

@@ -96,7 +96,7 @@ static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_Fram
 			R_ShadowCaster *caster = &out->shadow_casters[out->shadow_caster_count++];
 			caster->position = light->position;
 			caster->near = light->shadow_near;
-			caster->far  = light->shadow_far;
+			caster->far = light->shadow_far;
 			caster->radius = radius;
 		}
 		else
@@ -130,9 +130,24 @@ static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out)
 	frame_data->time = out->elapsed;
 }
 
+static void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out)
+{
+	out->debug_line_shader             = A_GetOrBreak(system->shaders.debug_line_handle)->shader.key;
+	out->forward_shader                = A_GetOrBreak(system->shaders.forward_handle)->shader.key;
+	out->shadow_shader                 = A_GetOrBreak(system->shaders.shadow_handle)->shader.key;
+	out->cull_frustum_shader           = A_GetOrBreak(system->shaders.cull_frustum_handle)->shader.key;
+	out->cull_sphere_shader            = A_GetOrBreak(system->shaders.cull_sphere_handle)->shader.key;
+	out->skybox_shader                 = A_GetOrBreak(system->shaders.skybox_handle)->shader.key;
+	out->tonemapping_shader            = A_GetOrBreak(system->shaders.tonemapping_handle)->shader.key;
+	out->brdf_lut_generation_shader    = A_GetOrBreak(system->shaders.brdf_lut_generation_handle)->shader.key;
+	out->hdr_to_cubemap_shader         = A_GetOrBreak(system->shaders.hdr_to_cubemap_handle)->shader.key;
+	out->irradiance_cubemap_gen_shader = A_GetOrBreak(system->shaders.irradiance_cubemap_gen_handle)->shader.key;
+	out->prefilter_cubemap_gen_shader  = A_GetOrBreak(system->shaders.prefilter_cubemap_gen_handle)->shader.key;
+}
+
 static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 										R_System *system,
-										f32 dt, f32 elapsed,
+										u32 frame_number, f32 dt, f32 elapsed,
 										R_Scene *scene, const R_Camera *camera)
 {
 	G_RingBuffer *ring = &system->frame_upload_ring_buffer;
@@ -140,25 +155,31 @@ static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 	R_FrameParams params = {0};
 
 	params.arena = frame_arena;
-	params.frame_number = system->frame_count++;
+	params.frame_number = frame_number;
 	params.dt = dt;
 	params.elapsed = elapsed;
 	params.camera = *camera;
 
-	params.linear_sampler = system->linear_sampler;
-	params.nearest_sampler = system->nearest_sampler;
-	params.irradiance_fallback_cubemap = system->irradiance_cubemap;
-	params.prefilter_cubemap = system->prefilter_cubemap;
-	params.brdf = system->brdf_lut;
-
 	params.mesh_buffer = scene->mesh_buffer;
 	params.material_buffer = scene->material_buffer;
+
+	params.brdf_lut = system->brdf_lut;
+	params.irradiance_fallback_cubemap = system->irradiance_cubemap;
+	params.prefilter_cubemap = system->prefilter_cubemap;
+
+	params.skybox_mesh = &system->skybox_mesh;
+	
+	params.cubemap_capture_transform_buffer = system->cubemap_capture_transform_buffer;
+
+	params.linear_sampler = system->samplers.linear;
+	params.nearest_sampler = system->samplers.nearest;
 
 	R_FrameParamsUploadPageTable(scene, ring, &params);
 	R_FrameParamsUploadSkinning(scene, ring, &params);
 	R_FrameParamsUploadObjects(scene, ring, &params);
 	R_FrameParamsUploadLights(scene, ring, &params);
 	R_FrameParamsUploadFrameData(ring, &params);
+	R_FrameParamsResolveShaders(system, &params);
 
 	return params;
 }

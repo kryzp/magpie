@@ -1,0 +1,5 @@
+#include "asset_loader_texture.h"
+#include "asset_loader_shader.h"
+#include "asset_loader_model.h"
+#include "asset_loader_sound.h"
+#include "asset_loader_script.h"

@@ -4,8 +4,6 @@
 typedef struct R_ForwardPassData R_ForwardPassData;
 struct R_ForwardPassData
 {
-	G_ShaderKey shader;
-
 	const R_FrameParams *frame_params;
 
 	G_BufferKey shadow_caster_table;

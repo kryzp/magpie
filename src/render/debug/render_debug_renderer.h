@@ -115,8 +115,6 @@ struct R_DebugRenderer
 	R_Mesh sphere_mesh;
 	R_Mesh circle_mesh;
 	R_Mesh cube_mesh;
-
-	A_Handle shader_handle;
 };
 
 

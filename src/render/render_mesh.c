@@ -1,7 +1,7 @@
 
 static void R_MeshAlloc(R_Mesh *mesh,
-			u64 vertex_stride, VkIndexType index_type,
-			u32 vertex_count, u32 index_count)
+						u64 vertex_stride, VkIndexType index_type,
+						u32 vertex_count, u32 index_count)
 {
 	mesh->vertex_stride = vertex_stride;
 	mesh->index_type = index_type;
@@ -30,8 +30,8 @@ static void R_MeshDestroy(const R_Mesh *mesh)
 }
 
 static void R_MeshWriteToStage(const R_Mesh *mesh,
-				   G_BufferKey stage, u64 stage_base,
-				   const void *vertices, const void *indices)
+							   G_BufferKey stage, u64 stage_base,
+							   const void *vertices, const void *indices)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
@@ -41,7 +41,7 @@ static void R_MeshWriteToStage(const R_Mesh *mesh,
 }
 
 static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
-			 G_BufferKey stage, u64 stage_base)
+						G_BufferKey stage, u64 stage_base)
 {
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
@@ -62,6 +62,7 @@ static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
 	return vb_size + ib_size;
 }
 
+// TODO: TODO: TODO: ARE THESE REALLY NECESSARY? CAN JUST REMOVE THEM AND USE G_CmdXXX CALLS DIRECTLY NO?
 static void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd)
 {
 	G_CmdBindIndexBuffer(cmd, mesh->index_buffer, 0, VK_WHOLE_SIZE, mesh->index_type);

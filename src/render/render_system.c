@@ -1,60 +1,10 @@
 
-static void R_SystemCreateSkyboxMesh(R_System *s)
+static R_System *r_system = NULL;
+
+static void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel)
 {
-	static v3 vertices[] = {
-		{ -1.f,  1.f,  1.f },
-		{ -1.f,  1.f, -1.f },
-		{  1.f,  1.f, -1.f },
-		{  1.f,  1.f,  1.f },
-		{ -1.f, -1.f,  1.f },
-		{ -1.f, -1.f, -1.f },
-		{  1.f, -1.f, -1.f },
-		{  1.f, -1.f,  1.f }
-	};
-
-	static u16 indices[] = {
-		1, 2, 0,
-		3, 0, 2,
-
-		6, 5, 7,
-		4, 7, 5,
-
-		5, 1, 4,
-		0, 4, 1,
-
-		2, 6, 3,
-		7, 3, 6,
-
-		5, 6, 1,
-		2, 1, 6,
-
-		0, 3, 4,
-		7, 4, 3
-	};
-
-	R_MeshAlloc(&s->skybox_mesh,
-				sizeof(v3), VK_INDEX_TYPE_UINT16,
-				ArraySize(vertices), ArraySize(indices));
-
-	G_BufferKey staging_buffer = G_DeviceStageAlloc(R_MeshVertexBufferSize(&s->skybox_mesh) + R_MeshIndexBufferSize(&s->skybox_mesh));
-
-	R_MeshWriteToStage(&s->skybox_mesh,
-					   staging_buffer, 0,
-					   vertices, indices);
-
-	{
-		G_CmdBuffer cmd = G_DeviceSubmitImBegin();
-		R_MeshUpload(&s->skybox_mesh, &cmd, staging_buffer, 0);
-		G_DeviceSubmitImEnd(&cmd);
-	}
-
-	G_DeviceBufferDestroy(staging_buffer);
-}
-
-static void R_SystemInit(R_System *s, Arena *arena, LOG_Channel log_channel)
-{
-	s->arena = arena;
-	s->log_channel = log_channel;
+	system->arena = arena;
+	system->log_channel = log_channel;
 	
 	G_BufferAllocInfo ring_buffer_alloc_info = {0};
 	ring_buffer_alloc_info.size = Megabytes(512);
@@ -63,15 +13,15 @@ static void R_SystemInit(R_System *s, Arena *arena, LOG_Channel log_channel)
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	s->frame_upload_ring_buffer = G_RingBufferAlloc(&ring_buffer_alloc_info);
+	system->frame_upload_ring_buffer = G_RingBufferAlloc(&ring_buffer_alloc_info);
 	
 	m4 capture_view_matrices[] = {
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Right.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // Left.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3( 0.f,-1.f, 0.f)), // Up.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3( 0.f, 1.f, 0.f)), // Down.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Forward.
-		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3( 0.f, 0.f, 1.f)), // Backwards.
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // +x :: right
+		M4LookAt(v3(0.f, 0.f, 0.f), v3(-1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // -x :: left
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f), v3( 0.f,-1.f, 0.f)), // +z :: up
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 0.f,-1.f), v3( 0.f, 1.f, 0.f)), // -z :: down
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f, 1.f, 0.f), v3( 0.f, 0.f, 1.f)), // +y :: forward
+		M4LookAt(v3(0.f, 0.f, 0.f), v3( 0.f,-1.f, 0.f), v3( 0.f, 0.f, 1.f)), // -y :: backward
 	};
 
 	m4 capture_projection_matrix = M4Perspective(90.f, 1.f, 0.1f, 10.f);
@@ -84,112 +34,184 @@ static void R_SystemInit(R_System *s, Arena *arena, LOG_Channel log_channel)
 	cubemap_capture_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	cubemap_capture_buffer_alloc_info.size = sizeof(capture_view_matrices);
 
-	s->cubemap_capture_transform_buffer = G_DeviceBufferAlloc(&cubemap_capture_buffer_alloc_info);
+	system->cubemap_capture_transform_buffer = G_DeviceBufferAlloc(&cubemap_capture_buffer_alloc_info);
 	
-	G_DeviceBufferWrite(s->cubemap_capture_transform_buffer,
+	G_DeviceBufferWrite(system->cubemap_capture_transform_buffer,
 						capture_view_matrices,
 						sizeof(capture_view_matrices), 0);
-	
-	s->linear_sampler = G_DeviceSamplerCreateF(VK_FILTER_LINEAR);
-	s->nearest_sampler = G_DeviceSamplerCreateF(VK_FILTER_NEAREST);
-	
-	R_SystemCreateSkyboxMesh(s);
 
-	R_ShadowsInit(&s->shadow_render_state);
-	R_DebugRendererInitAndSelect(&s->debug_renderer, s->arena);
+	// Init shaders.
+	{
+		OS_Handle counter = osapi->JobCounterAlloc(0);
+		
+		system->shaders.debug_line_handle             = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/debug/debug_line.slang"), A_Type_Shader, counter);
+		system->shaders.forward_handle                = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/forward/forward.slang"), A_Type_Shader, counter);
+		system->shaders.shadow_handle                 = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), A_Type_Shader, counter);
+		system->shaders.cull_frustum_handle           = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), A_Type_Shader, counter);
+		system->shaders.cull_sphere_handle            = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"), A_Type_Shader, counter);
+		system->shaders.skybox_handle                 = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader, counter);
+		system->shaders.tonemapping_handle            = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader, counter);
+		system->shaders.brdf_lut_generation_handle    = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"), A_Type_Shader, counter);
+		system->shaders.hdr_to_cubemap_handle         = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader, counter);
+		system->shaders.irradiance_cubemap_gen_handle = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"), A_Type_Shader, counter);
+		system->shaders.prefilter_cubemap_gen_handle  = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"), A_Type_Shader, counter);
+		
+		A_WaitForLoadAndRelease(counter);
+	}
 	
-	DebugLogI(s->log_channel, "Initialized.");
+	// Init samplers.
+	{
+		system->samplers.linear = G_DeviceSamplerCreateF(VK_FILTER_LINEAR);
+		system->samplers.nearest = G_DeviceSamplerCreateF(VK_FILTER_NEAREST);		
+	}
+	
+	// Init skybox mesh.
+	{
+		static v3 vertices[] = {
+			{ -1.f,  1.f,  1.f },
+			{ -1.f,  1.f, -1.f },
+			{  1.f,  1.f, -1.f },
+			{  1.f,  1.f,  1.f },
+			{ -1.f, -1.f,  1.f },
+			{ -1.f, -1.f, -1.f },
+			{  1.f, -1.f, -1.f },
+			{  1.f, -1.f,  1.f }
+		};
+
+		static u16 indices[] = {
+			1, 2, 0,
+			3, 0, 2,
+
+			6, 5, 7,
+			4, 7, 5,
+
+			5, 1, 4,
+			0, 4, 1,
+
+			2, 6, 3,
+			7, 3, 6,
+
+			5, 6, 1,
+			2, 1, 6,
+
+			0, 3, 4,
+			7, 4, 3
+		};
+	
+		R_MeshAlloc(&system->skybox_mesh,
+					sizeof(v3), VK_INDEX_TYPE_UINT16,
+					ArraySize(vertices), ArraySize(indices));
+
+		G_BufferKey staging_buffer = G_DeviceStageAlloc(R_MeshVertexBufferSize(&system->skybox_mesh) + R_MeshIndexBufferSize(&system->skybox_mesh));
+
+		R_MeshWriteToStage(&system->skybox_mesh,
+						   staging_buffer, 0,
+						   vertices, indices);
+
+		{
+			G_CmdBuffer cmd = G_DeviceSubmitImBegin();
+			R_MeshUpload(&system->skybox_mesh, &cmd, staging_buffer, 0);
+			G_DeviceSubmitImEnd(&cmd);
+		}
+
+		G_DeviceBufferDestroy(staging_buffer);
+	}
+
+	// Init sub-render systems.
+	{
+		R_ShadowsInit(&system->shadow_render_state);
+		R_DebugRendererInitAndSelect(&system->debug_renderer, system->arena);
+	}
+
+	R_SystemSelectContext(system);
+	
+	DebugLogI(system->log_channel, "Initialized.");
 }
 
-static void R_SystemDestroy(R_System *s)
+static void R_SystemDestroy(void)
 {
-	//R_IrradianceVolumeDestroy(&s->irradiance_volume);
+	//R_IrradianceVolumeDestroy(&r_system->irradiance_volume);
 	R_DebugRendererDestroy();
-	R_ShadowsDestroy(&s->shadow_render_state);
+	R_ShadowsDestroy(&r_system->shadow_render_state);
 
-	G_DeviceTextureDestroy(s->brdf_lut);
-	G_DeviceTextureDestroy(s->environment_cubemap);
-	G_DeviceTextureDestroy(s->irradiance_cubemap);
-	G_DeviceTextureDestroy(s->prefilter_cubemap);
+	G_DeviceTextureDestroy(r_system->brdf_lut);
+	G_DeviceTextureDestroy(r_system->environment_cubemap);
+	G_DeviceTextureDestroy(r_system->irradiance_cubemap);
+	G_DeviceTextureDestroy(r_system->prefilter_cubemap);
 	
-	R_MeshDestroy(&s->skybox_mesh);
+	R_MeshDestroy(&r_system->skybox_mesh);
 	
-	G_DeviceSamplerDestroy(s->linear_sampler);
-	G_DeviceSamplerDestroy(s->nearest_sampler);
+	G_DeviceSamplerDestroy(r_system->samplers.linear);
+	G_DeviceSamplerDestroy(r_system->samplers.nearest);
 
-	G_DeviceBufferDestroy(s->cubemap_capture_transform_buffer);
+	G_DeviceBufferDestroy(r_system->cubemap_capture_transform_buffer);
 
-	G_RingBufferDestroy(&s->frame_upload_ring_buffer);
+	G_RingBufferDestroy(&r_system->frame_upload_ring_buffer);
 
-	DebugLogI(s->log_channel, "Destroyed.");
+	DebugLogI(r_system->log_channel, "Destroyed.");
+
+	r_system = NULL;
 }
 
-static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena)
+static void R_SystemSelectContext(R_System *system)
+{
+	r_system = system;
+	
+	R_DebugRendererSelect(&r_system->debug_renderer);
+}
+
+static void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params)
 {
 	const u32 prefilter_mips = 5;
 
-	s->brdf_lut            = G_DeviceTextureAlloc2D      (512, 512, VK_FORMAT_R32G32_SFLOAT,       1);
-	s->environment_cubemap = G_DeviceTextureAllocCubemap (512,      VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	s->irradiance_cubemap  = G_DeviceTextureAllocCubemap ( 32,      VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	s->prefilter_cubemap   = G_DeviceTextureAllocCubemap (128,      VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
+	r_system->brdf_lut = G_DeviceTextureAlloc2D(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
 	
-	A_Handle brdf_lut_shader_handle    = A_Require(String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"),                   A_Type_Shader);
-	A_Handle hdr_to_env_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), A_Type_Shader);
-	A_Handle irradiance_shader_handle  = A_Require(String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"),     A_Type_Shader);
-	A_Handle prefilter_shader_handle   = A_Require(String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"),      A_Type_Shader);
-	A_Handle hdr_texture_handle        = A_Require(String8Lit("assets://environment_map_1.hdr"),                               A_Type_Texture);
+	r_system->environment_cubemap = G_DeviceTextureAllocCubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+	r_system->irradiance_cubemap  = G_DeviceTextureAllocCubemap( 32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+	r_system->prefilter_cubemap   = G_DeviceTextureAllocCubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 	
-	G_ShaderKey brdf_lut_shader        = A_GetNow(brdf_lut_shader_handle)->shader.key;
-	G_ShaderKey hdr_to_env_shader      = A_GetNow(hdr_to_env_shader_handle)->shader.key;
-	G_ShaderKey irradiance_pass_shader = A_GetNow(irradiance_shader_handle)->shader.key;
-	G_ShaderKey prefilter_pass_shader  = A_GetNow(prefilter_shader_handle)->shader.key;
-	G_TextureKey hdr_texture_gfx       = A_GetNow(hdr_texture_handle)->texture.key;
-
+	A_Handle hdr_texture_handle = A_RequireAssetBlocking(r_system->arena, String8Lit("assets://environment_map_1.hdr"), A_Type_Texture);
+	G_TextureKey hdr_texture_gfx = A_GetOrBreak(hdr_texture_handle)->texture.key;
+	
 	// Generate BRDF Lookup Table.
 	{
-		R_BRDFLutPassData *data = ArenaPushArray(arena, R_BRDFLutPassData, 1);
-		data->shader = brdf_lut_shader;
+		R_BRDFLutPassData *data = ArenaPushArray(pass_arena, R_BRDFLutPassData, 1);
+		data->frame_params = frame_params;
 		
-		R_Pass *pass = R_GraphAdd(g, String8Lit("BRDF LUT"), R_PassType_Graphics);
+		R_Pass *pass = R_GraphAdd(graph, String8Lit("BRDF LUT"), R_PassType_Graphics);
 		R_PassSetRecord(pass, R_BRDFLutPassFn, data);
-		R_PassWriteColour(pass, R_GraphImportTexture(g, s->brdf_lut), NULL);
+		R_PassWriteColour(pass, R_GraphImportTexture(graph, r_system->brdf_lut), NULL);
 	}
-	
+
 	// Generate Environment Cubemap.
 	{
-		R_HdrToEnvPassData *data = ArenaPushArray(arena, R_HdrToEnvPassData, 1);
-		data->shader = hdr_to_env_shader;
-		data->sampler = s->linear_sampler;
+		R_HdrToEnvPassData *data = ArenaPushArray(pass_arena, R_HdrToEnvPassData, 1);
+		data->frame_params = frame_params;
 		data->hdr_view = G_DeviceTextureViewAuto(hdr_texture_gfx);
-		data->capture_transforms = s->cubemap_capture_transform_buffer;
-		data->skybox_mesh = &s->skybox_mesh;
 		
-		R_Pass *pass = R_GraphAdd(g, String8Lit("HDR -> Environment Map"), R_PassType_Graphics);
+		R_Pass *pass = R_GraphAdd(graph, String8Lit("HDR -> Environment Map"), R_PassType_Graphics);
 		R_PassSetRecord(pass, R_HdrToEnvPassFn, data);
 		R_PassSetMultiViewMask(pass, 0b111111);
-		R_PassWriteColour(pass, R_GraphImportTexture(g, s->environment_cubemap), NULL);
+		R_PassWriteColour(pass, R_GraphImportTexture(graph, r_system->environment_cubemap), NULL);
 
-		R_GenerateMipsPassData *mips_data = ArenaPushArray(arena, R_GenerateMipsPassData, 1);
-		mips_data->texture = s->environment_cubemap;
+		R_GenerateMipsPassData *mips_data = ArenaPushArray(pass_arena, R_GenerateMipsPassData, 1);
+		mips_data->texture = r_system->environment_cubemap;
 		
-		R_Pass *pass_mipmaps = R_GraphAdd(g, String8Lit("Environment Map Mipmapping"), R_PassType_Transfer);
+		R_Pass *pass_mipmaps = R_GraphAdd(graph, String8Lit("Environment Map Mipmapping"), R_PassType_Transfer);
 		R_PassSetRecord(pass_mipmaps, R_GenerateMipsPassFn, mips_data);
-		R_PassBlitTextureDst(pass_mipmaps, R_GraphImportTexture(g, s->environment_cubemap));
+		R_PassBlitTextureDst(pass_mipmaps, R_GraphImportTexture(graph, r_system->environment_cubemap));
 	}
 	
 	// Irradiance.
 	{
-		R_IBLPassIrradianceData *data = ArenaPushArray(arena, R_IBLPassIrradianceData, 1);
-		data->shader = irradiance_pass_shader;
-		data->sampler = s->linear_sampler;
-		data->env_view = G_DeviceTextureViewAuto(s->environment_cubemap);
-		data->capture_transforms = s->cubemap_capture_transform_buffer;
-		data->skybox_mesh = &s->skybox_mesh;
+		R_IBLPassIrradianceData *data = ArenaPushArray(pass_arena, R_IBLPassIrradianceData, 1);
+		data->frame_params = frame_params;
+		data->env_view = G_DeviceTextureViewAuto(r_system->environment_cubemap);
 		
-		R_Pass *pass = R_GraphAdd(g, String8Lit("Irradiance"), R_PassType_Graphics);
+		R_Pass *pass = R_GraphAdd(graph, String8Lit("Irradiance"), R_PassType_Graphics);
 		R_PassSetRecord(pass, R_IBLPassIrradianceFn, data);
 		R_PassSetMultiViewMask(pass, 0b111111);
-		R_PassWriteColour(pass, R_GraphImportTexture(g, s->irradiance_cubemap), NULL);
+		R_PassWriteColour(pass, R_GraphImportTexture(graph, r_system->irradiance_cubemap), NULL);
 	}
 	
 	// Prefilter.
@@ -198,12 +220,9 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 		
 		for (u32 i = 0; i < mipmap_count; i++)
 		{
-			R_IBLPassPrefilterData *data = ArenaPushArray(arena, R_IBLPassPrefilterData, 1);
-			data->shader = prefilter_pass_shader;
-			data->sampler = s->linear_sampler;
-			data->env_view = G_DeviceTextureViewAuto(s->environment_cubemap);
-			data->capture_transforms = s->cubemap_capture_transform_buffer;
-			data->skybox_mesh = &s->skybox_mesh;
+			R_IBLPassPrefilterData *data = ArenaPushArray(pass_arena, R_IBLPassPrefilterData, 1);
+			data->frame_params = frame_params;
+			data->env_view = G_DeviceTextureViewAuto(r_system->environment_cubemap);
 			data->roughness = (f32)i / (f32)(mipmap_count - 1);
 
 			G_SubresourceRange range = {0};
@@ -213,29 +232,29 @@ static void R_SystemGenerateLookupsAndMaps(R_System *s, R_Graph *g, Arena *arena
 			range.base_layer = 0;
 			range.layers = 6;
 		
-			R_Pass *pass = R_GraphAdd(g, String8Lit("Prefilter"), R_PassType_Graphics);
+			R_Pass *pass = R_GraphAdd(graph, String8Lit("Prefilter"), R_PassType_Graphics);
 			R_PassSetRecord(pass, R_IBLPassPrefilterFn, data);
 			R_PassSetMultiViewMask(pass, 0b111111);
-			R_PassWriteColourEx(pass, R_GraphImportTexture(g, s->prefilter_cubemap), NULL, range);
+			R_PassWriteColourEx(pass, R_GraphImportTexture(graph, r_system->prefilter_cubemap), NULL, range);
 		}
 	}
 
 	/*
-	R_IrradianceVolumeInit(&s->irradiance_volume,
-						   s->device, s->assets,
-						   osapi->LogChannelOpenFrom(s->log_channel, String8Lit("IRRADIANCE")),
+	R_IrradianceVolumeInit(&r_system->irradiance_volume,
+						   r_system->device, r_system->assets,
+						   osapi->LogChannelOpenFrom(r_system->log_channel, String8Lit("IRRADIANCE")),
 						   v3(-8.f, -6.f,  -1.f),
 						   v3( 8.f,  6.f,  12.f),
 						   1, 1, 1,
-						   &s->skybox_mesh,
-						   G_DeviceTextureViewAuto(s->device, s->environment_cubemap),
-						   s->linear_sampler);
+						   &r_system->skybox_mesh,
+						   G_DeviceTextureViewAuto(r_system->device, r_system->environment_cubemap),
+						   r_system->linear_sampler);
 	*/
 
-	DebugLogI(s->log_channel, "Generated lookups and maps.");
+	DebugLogI(r_system->log_channel, "Generated lookups and maps.");
 }
 
-static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *frame_params)
+static void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 {
 	R_FrustumVolume frustum = R_CameraFrustum(&frame_params->camera);
 
@@ -250,15 +269,17 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 	bb.depth = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
 	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
+	// todo: this is ass
 	R_Pass *clear_pass = R_GraphAdd(graph, String8Lit("Clear"), R_PassType_Graphics);
 	bb.lighting.msaa = R_PassWriteColour(clear_pass, bb.lighting.msaa, &colour_clear);
 	bb.depth.msaa = R_PassWriteDepth(clear_pass, bb.depth.msaa, &depth_clear);
 
+	// Scene.
 	if (frame_params->object_count > 0)
 	{
-		R_ShadowsUploadGPU(&s->shadow_render_state, frame_params);
+		R_ShadowsUploadGPU(&r_system->shadow_render_state, frame_params);
 
-		R_ShadowsRender(&s->shadow_render_state, graph, frame_params, &bb);
+		R_ShadowsRender(&r_system->shadow_render_state, graph, frame_params, &bb);
 
 		R_DrawStream draw_stream = R_CullFrustum(graph, frame_params, R_CullFilter_OpaqueOnly, &frustum);
 
@@ -267,29 +288,21 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 
 	// Skybox.
 	{
-		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/post/skybox.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 		R_SkyboxPassData *data = ArenaPushArray(frame_params->arena, R_SkyboxPassData, 1);
-		data->shader = shader;
-		data->cubemap = G_DeviceTextureViewAuto(s->environment_cubemap);
-		data->skybox_mesh = &s->skybox_mesh;
 		data->frame_params = frame_params;
+		data->cubemap = G_DeviceTextureViewAuto(r_system->environment_cubemap);
 
 		R_Pass *skybox_pass = R_GraphAdd(graph, String8Lit("Skybox"), R_PassType_Graphics);
 		bb.lighting.resolved = R_PassWriteColourResolve(skybox_pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
 		bb.depth.resolved = R_PassWriteDepthResolve(skybox_pass, bb.depth.msaa, bb.depth.resolved, NULL);
-		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(graph, s->environment_cubemap));
+		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(graph, r_system->environment_cubemap));
 		R_PassSetRecord(skybox_pass, R_SkyboxPassFn, data);
 	}
 	
 	// Post Processing.
 	{
-		A_Handle shader_handle = A_Require(String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), A_Type_Shader);
-		G_ShaderKey shader = A_GetNow(shader_handle)->shader.key;
-
 		R_PostProcessingPassData *data = ArenaPushArray(frame_params->arena, R_PostProcessingPassData, 1);
-		data->shader = shader;
+		data->frame_params = frame_params;
 		data->exposure = 0.5f;
 		data->input = bb.lighting.resolved;
 		data->output = bb.lighting.resolved;
@@ -304,11 +317,6 @@ static void R_SystemRender(R_System *s, R_Graph *graph, const R_FrameParams *fra
 	
 	R_GraphSetBackbuffer(graph, bb.lighting.resolved);
 	R_GraphSetPresentFilter(graph, VK_FILTER_LINEAR);
-}
-
-static void R_SystemHotLoad(R_System *s)
-{
-	R_DebugRendererSelect(&s->debug_renderer);
 }
 
 /*

@@ -129,9 +129,9 @@ I'm actually pretty proud of this system! Assets are loaded entirely asynchronou
 
 You can't just parallelize the whole thing because while loading an asset into memory is super simple, when it comes to things like uploading onto the GPU it's not so simple and we want to minimize the number of command buffers we use / submit. Therefore, I split asset loading into four stages:
 
-1. The CPU Stage: This is where we find the file in memory, load it in, and allocate some temporary memory for it. We haven't modified the actual asset record yet. For example, loading in pixel data from a texture file.
-2. The Alloc / Realloc Stage. This is where we actually move that temporary data into the asset and allocate any resources. This has to be seperate from the CPU stage as memory allocation on the main asset arena has to be synchronised between jobs. In the CPU stage each job gets its own arena so there's never any contention!!
-3. The GPU Stage. This is where we upload the data onto the GPU, exposing a command buffer and staging buffer which can be used.
+1. The Load Stage: This is where we find the file in memory, load it in, and allocate some temporary memory for it. We haven't modified the actual asset record yet. For example, loading in pixel data from a texture file.
+2. The Alloc Stage. This is where we actually move that temporary data into the asset and allocate any resources. This has to be seperate from the load stage as memory allocation on the main asset arena has to be synchronised between jobs. In the load stage each job gets its own arena so there's never any contention.
+3. The GPU Upload Stage. This is where we upload the data onto the GPU, exposing a command buffer and staging buffer which can be used.
 4. The Cleanup Stage. Any temporary data that was allocated in previous stages can be cleaned up here. Only really necessary for external API's (e.g: cleaning up texture data from `stbi`) because we use arenas for everything internally anyway.
 
 Essentially, we parallelize the CPU stage, and try to record as much instructions onto the command buffer in the GPU stage before submitting.
