@@ -3,6 +3,15 @@
 
 #define G_FRAMES_IN_FLIGHT 3
 
+typedef struct G_SwapchainFrame G_SwapchainFrame;
+struct G_SwapchainFrame
+{
+	G_TextureKey texture_key;
+	G_TextureView texture_view;
+	
+	VkSemaphore render_finished_semaphore; // Signaled when the OS let's us present.
+};
+
 typedef struct G_Swapchain G_Swapchain;
 struct G_Swapchain
 {
@@ -14,26 +23,15 @@ struct G_Swapchain
 	 * device only has 2 frames in flight. They are *usually* the same
 	 * but not always!
 	 */
-	u32 current_texture_index;
+	u32 current_frame_index;
 
-	u32 texture_count;
-	G_TextureKey *textures;
-	G_TextureView *views;
+	u32 frame_count;
+	G_SwapchainFrame *frames;
 
 	u32 width;
 	u32 height;
 
 	VkFormat format;
 };
-
-static inline G_TextureKey G_SwapchainCurrentTexture(const G_Swapchain *swapchain)
-{
-	return swapchain->textures[swapchain->current_texture_index];
-}
-
-static inline G_TextureView *G_SwapchainCurrentView(const G_Swapchain *swapchain)
-{
-	return &swapchain->views[swapchain->current_texture_index];
-}
 
 #endif // GRAPHICS_SWAPCHAIN_H

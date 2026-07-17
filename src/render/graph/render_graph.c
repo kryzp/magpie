@@ -948,7 +948,7 @@ static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapcha
 	R_GraphTexture *backbuffer = R_GraphTextureFromHandle(graph, graph->backbuffer_handle);
 
 	G_TextureKey src_texture_key = backbuffer->physical_key;
-	G_TextureKey dst_texture_key = G_SwapchainCurrentTexture(swapchain);
+	G_TextureKey dst_texture_key = swapchain->frames[swapchain->current_frame_index].texture_key;
 	
 	const G_Texture *src_texture = G_DeviceTextureFromKey(src_texture_key);
 	const G_Texture *dst_texture = G_DeviceTextureFromKey(dst_texture_key);

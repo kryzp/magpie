@@ -35,8 +35,8 @@ static G_Device *g_device = NULL;
 #undef G_DEVICE_MANAGED_RESOURCE
 
 static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
-									 u32 available_surface_format_count,
-									 const VkSurfaceFormatKHR *available_surface_formats)
+															   u32 available_surface_format_count,
+															   const VkSurfaceFormatKHR *available_surface_formats)
 {
 	for (u32 i = 0; i < available_surface_format_count; i++)
 	{
@@ -57,8 +57,8 @@ static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel chann
 
 
 static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
-								   const VkPresentModeKHR *available_present_modes,
-								   b32 enable_vsync)
+														   const VkPresentModeKHR *available_present_modes,
+														   b32 enable_vsync)
 {
 	if (!enable_vsync)
 		return VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -99,18 +99,10 @@ static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *
 	return actual_extent;
 }
 
-static u32 G_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d)
-{
-	u32 max_size = MaxValue(w, MaxValue(h, d));
-	u32 max_mips = 1 + (u32)Log2F((f32)max_size);
-	
-	return MinValue(mipmaps, max_mips);
-}
-
 static VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-							VkDebugUtilsMessageTypeFlagsEXT message_type,
-							const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-							void *ctx)
+																  VkDebugUtilsMessageTypeFlagsEXT message_type,
+																  const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+																  void *ctx)
 {
 	LOG_Channel ch = g_device->log_channel;
 
@@ -263,7 +255,7 @@ static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
-	VkResult result = vkAcquireNextImage2KHR(g_device->context.device, &acquire_next_image_info, &swapchain->current_texture_index);
+	VkResult result = vkAcquireNextImage2KHR(g_device->context.device, &acquire_next_image_info, &swapchain->current_frame_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -283,29 +275,30 @@ static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cm
 	G_DeviceApplyBindlessUpdates();
 
 	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	const G_SwapchainFrame *swapchain_frame = &swapchain->frames[swapchain->current_frame_index];
+	
+	VkSemaphoreSubmitInfo image_available_semaphore_info = {0};
+	image_available_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+	image_available_semaphore_info.semaphore = frame_data->image_available_semaphore;
+	image_available_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-	VkSemaphoreSubmitInfo image_available_semaphore = {0};
-	image_available_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	image_available_semaphore.semaphore = frame_data->image_available_semaphore;
-	image_available_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	VkSemaphoreSubmitInfo render_finished_semaphore = {0};
-	render_finished_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	render_finished_semaphore.semaphore = frame_data->render_finished_semaphore;
-	render_finished_semaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
+	VkSemaphoreSubmitInfo render_finished_semaphore_info = {0};
+	render_finished_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+	render_finished_semaphore_info.semaphore = swapchain_frame->render_finished_semaphore;
+	render_finished_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
 
 	frame_data->completion_point = G_DeviceSubmitEx(cmd,
-													1, &image_available_semaphore,
-													1, &render_finished_semaphore);
+													1, &image_available_semaphore_info,
+													1, &render_finished_semaphore_info);
 	
 	VkPresentInfoKHR present_info = {0};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pResults = NULL;
 	present_info.swapchainCount = 1;
 	present_info.pSwapchains = &swapchain->vk_handle;
-	present_info.pImageIndices = &swapchain->current_texture_index;
+	present_info.pImageIndices = &swapchain->current_frame_index;
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = &frame_data->render_finished_semaphore;
+	present_info.pWaitSemaphores = &swapchain_frame->render_finished_semaphore;
 
 	VkResult result = vkQueuePresentKHR(g_device->context.graphics_queue.vk_handle, &present_info);
 
@@ -325,8 +318,8 @@ static G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
 }
 
 static G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
-				 u32 wait_count, const VkSemaphoreSubmitInfo *waits,
-				 u32 signal_count, const VkSemaphoreSubmitInfo *signals)
+										u32 wait_count, const VkSemaphoreSubmitInfo *waits,
+										u32 signal_count, const VkSemaphoreSubmitInfo *signals)
 {
 	G_CmdEnd(cmd);
 
@@ -510,17 +503,17 @@ static G_Swapchain G_DeviceSwapchainCreate(void)
 	swapchain.height = extent.height;
 	swapchain.format = surface_format.format;
 
-	u32 texture_count = details->capabilities.minImageCount + 1;
+	u32 frame_count = details->capabilities.minImageCount + 1;
 
-	if (details->capabilities.maxImageCount > 0 && texture_count > details->capabilities.maxImageCount)
-		texture_count = details->capabilities.maxImageCount;
-
+	if (frame_count > details->capabilities.maxImageCount && details->capabilities.maxImageCount > 0)
+		frame_count = details->capabilities.maxImageCount;
+	
 	const VkImageUsageFlags swapchain_texture_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 	VkSwapchainCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	create_info.surface = g_device->context.surface;
-	create_info.minImageCount = texture_count;
+	create_info.minImageCount = frame_count;
 	create_info.imageFormat = surface_format.format;
 	create_info.imageColorSpace = surface_format.colorSpace;
 	create_info.imageExtent = extent;
@@ -540,66 +533,85 @@ static G_Swapchain G_DeviceSwapchainCreate(void)
 									&swapchain.vk_handle),
 			   "Failed to create swapchain.");
 
-	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &texture_count, NULL);
+	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &frame_count, NULL);
 
-	DebugLogAssert(g_device->log_channel, texture_count > 0, "Failed to find any images in swapchain.");
+	DebugLogAssert(g_device->log_channel, frame_count > 0, "Failed to find any images in swapchain.");
 
-	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, texture_count);
+	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, frame_count);
 
-	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &texture_count, vk_images);
+	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &frame_count, vk_images);
 
-	swapchain.texture_count = texture_count;
+	swapchain.frame_count = frame_count;
+	swapchain.frames = ArenaPushArray(g_device->permanent_arena, G_SwapchainFrame, frame_count);
 
-	swapchain.textures = ArenaPushArray(g_device->permanent_arena, G_Texture,     texture_count);
-	swapchain.views    = ArenaPushArray(g_device->permanent_arena, G_TextureView, texture_count);
-
-	for (u32 i = 0; i < texture_count; i++)
+	for (u32 i = 0; i < frame_count; i++)
 	{
-		G_Texture texture = {0};
-		texture.vk_handle = vk_images[i];
-		texture.width = swapchain.width;
-		texture.height = swapchain.height;
-		texture.depth = 1;
-		texture.flags = G_TextureFlag_Swapchain;
-		texture.format = swapchain.format;
-		texture.type = VK_IMAGE_TYPE_2D;
-		texture.tiling = VK_IMAGE_TILING_OPTIMAL;
-		texture.usage = swapchain_texture_usage;
-		texture.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-		texture.layer_count = 1;
-		texture.mipmap_count = 1;
-		texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
+		G_SwapchainFrame *frame = &swapchain.frames[i];
 
-		swapchain.textures[i] = G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
+		// texture
+		{
+			G_Texture texture = {0};
+			texture.vk_handle = vk_images[i];
+			texture.width = swapchain.width;
+			texture.height = swapchain.height;
+			texture.depth = 1;
+			texture.flags = G_TextureFlag_Swapchain;
+			texture.format = swapchain.format;
+			texture.type = VK_IMAGE_TYPE_2D;
+			texture.tiling = VK_IMAGE_TILING_OPTIMAL;
+			texture.usage = swapchain_texture_usage;
+			texture.aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+			texture.layer_count = 1;
+			texture.mipmap_count = 1;
+			texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-		swapchain.views[i].type = VK_IMAGE_VIEW_TYPE_2D;
-		swapchain.views[i].range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
-		swapchain.views[i].range.base_mip = 0;
-		swapchain.views[i].range.mips = 1;
-		swapchain.views[i].range.base_layer = 0;
-		swapchain.views[i].range.layers = 1;
+			frame->texture_key = G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
+		}
 
-		VkImageViewCreateInfo view_create_info = {0};
-		view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		view_create_info.image = vk_images[i];
-		view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		view_create_info.format = swapchain.format;
+		// view
+		{
+			frame->texture_view.type = VK_IMAGE_VIEW_TYPE_2D;
+			frame->texture_view.range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
+			frame->texture_view.range.base_mip = 0;
+			frame->texture_view.range.mips = 1;
+			frame->texture_view.range.base_layer = 0;
+			frame->texture_view.range.layers = 1;
 
-		view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		view_create_info.subresourceRange.baseMipLevel = 0;
-		view_create_info.subresourceRange.levelCount = 1;
-		view_create_info.subresourceRange.baseArrayLayer = 0;
-		view_create_info.subresourceRange.layerCount = 1;
+			VkImageViewCreateInfo view_create_info = {0};
+			view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			view_create_info.image = vk_images[i];
+			view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			view_create_info.format = swapchain.format;
 
-		view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-		view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-		view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-		view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			view_create_info.subresourceRange.baseMipLevel = 0;
+			view_create_info.subresourceRange.levelCount = 1;
+			view_create_info.subresourceRange.baseArrayLayer = 0;
+			view_create_info.subresourceRange.layerCount = 1;
 
-		G_VK_CHECK(vkCreateImageView(g_device->context.device,
-									 &view_create_info, NULL,
-									 &swapchain.views[i].vk_handle),
-				   "Failed to create texture image view.");
+			view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			G_VK_CHECK(vkCreateImageView(g_device->context.device,
+										 &view_create_info, NULL,
+										 &frame->texture_view.vk_handle),
+					   "Failed to create texture image view.");
+		}
+
+		// semaphore
+		{
+			VkSemaphoreCreateInfo binary_semaphore_create_info = {0};
+			binary_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			binary_semaphore_create_info.flags = 0;
+			binary_semaphore_create_info.pNext = NULL;
+
+			G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
+										 &binary_semaphore_create_info, NULL,
+										 &frame->render_finished_semaphore),
+					   "Failed to create render finished semaphore.");
+		}
 	}
 
 	DebugLogD(g_device->log_channel, "Swapchain created.");
@@ -611,8 +623,12 @@ static G_Swapchain G_DeviceSwapchainCreate(void)
 
 static void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
 {
-	for (u32 i = 0; i < swapchain->texture_count; i++)
-		vkDestroyImageView(g_device->context.device, swapchain->views[i].vk_handle, NULL);
+	for (u32 i = 0; i < swapchain->frame_count; i++)
+	{
+		const G_SwapchainFrame *frame = &swapchain->frames[i];
+		vkDestroyImageView(g_device->context.device, frame->texture_view.vk_handle, NULL);
+		vkDestroySemaphore(g_device->context.device, frame->render_finished_semaphore, NULL);
+	}
 
 	vkDestroySwapchainKHR(g_device->context.device, swapchain->vk_handle, NULL);
 }
@@ -1043,7 +1059,7 @@ static G_TextureKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info)
 	texture.type   = alloc_info->type;
 	texture.tiling = alloc_info->tiling;
 
-	texture.mipmap_count = G_DeviceClampMipmapCount(alloc_info->mipmaps, alloc_info->width, alloc_info->height, alloc_info->depth);
+	texture.mipmap_count = G_ClampMipmapCount(alloc_info->mipmaps, alloc_info->width, alloc_info->height, alloc_info->depth);
 	texture.layer_count  = alloc_info->layers;
 	
 	texture.sample_count = alloc_info->samples;
@@ -1779,30 +1795,30 @@ static void G_DeviceCreateSyncResources(void)
 
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		g_device->per_frame_data[i].completion_point.frame = 0;
-		g_device->per_frame_data[i].completion_point.semaphore = g_device->graphics_semaphore.vk_handle;
+		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		
+		frame->completion_point.frame = 0;
+		frame->completion_point.semaphore = g_device->graphics_semaphore.vk_handle;
 
-		g_device->per_frame_data[i].command_pool = G_DeviceCmdPoolCreate(family_index);
+		frame->command_pool = G_DeviceCmdPoolCreate(family_index);
 
-		VkSemaphoreCreateInfo binary_semaphore_create_info = {0};
-		binary_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		binary_semaphore_create_info.flags = 0;
-		binary_semaphore_create_info.pNext = NULL;
+		// semaphore
+		{
+			VkSemaphoreCreateInfo binary_semaphore_create_info = {0};
+			binary_semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			binary_semaphore_create_info.flags = 0;
+			binary_semaphore_create_info.pNext = NULL;
 
-		G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
-									 &binary_semaphore_create_info, NULL,
-									 &g_device->per_frame_data[i].image_available_semaphore),
-				   "Failed to create image available semaphore.");
-
-		G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
-									 &binary_semaphore_create_info, NULL,
-									 &g_device->per_frame_data[i].render_finished_semaphore),
-				   "Failed to create render finished semaphore.");
-
-		g_device->per_frame_data[i].destroyed_sampler_head = NULL;
-		g_device->per_frame_data[i].destroyed_image_head = NULL;
-		//g_device->per_frame_data[i].destroyed_view_head = NULL;
-		g_device->per_frame_data[i].destroyed_buffer_head = NULL;
+			G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
+										 &binary_semaphore_create_info, NULL,
+										 &frame->image_available_semaphore),
+					   "Failed to create image available semaphore.");
+		}
+		
+		frame->destroyed_image_head = NULL;
+		//frame->destroyed_view_head = NULL;
+		frame->destroyed_buffer_head = NULL;
+		frame->destroyed_sampler_head = NULL;
 	}
 
 	DebugLogD(g_device->log_channel, "Created frame sync objects.");
@@ -1812,11 +1828,10 @@ static void G_DeviceDestroySyncResources(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		vkDestroySemaphore(g_device->context.device, g_device->per_frame_data[i].image_available_semaphore, NULL);
-		vkDestroySemaphore(g_device->context.device, g_device->per_frame_data[i].render_finished_semaphore, NULL);
-
-		G_DeviceCmdPoolDestroy(&g_device->per_frame_data[i].command_pool);
-		G_DeviceFlushFrameData(&g_device->per_frame_data[i]);
+		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		vkDestroySemaphore(g_device->context.device, frame->image_available_semaphore, NULL);		
+		G_DeviceCmdPoolDestroy(&frame->command_pool);
+		G_DeviceFlushFrameData(frame);
 	}
 
 	G_DeviceSemaphoreDestroy(&g_device->graphics_semaphore);

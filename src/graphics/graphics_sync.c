@@ -1,6 +1,6 @@
 
 static VkMemoryBarrier2 G_SyncMemoryBarrier(const G_AccessSt *src,
-					  const G_AccessSt *dst)
+											const G_AccessSt *dst)
 {
 	VkMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
@@ -15,12 +15,12 @@ static VkMemoryBarrier2 G_SyncMemoryBarrier(const G_AccessSt *src,
 }
 
 static VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
-					   const G_AccessSt *src,
-					   const G_AccessSt *dst,
-					   VkImageLayout src_layout,
-					   VkImageLayout dst_layout,
-					   u32 base_mip,   u32 mip_count,
-					   u32 base_layer, u32 layer_count)
+												  const G_AccessSt *src,
+												  const G_AccessSt *dst,
+												  VkImageLayout src_layout,
+												  VkImageLayout dst_layout,
+												  u32 base_mip,   u32 mip_count,
+												  u32 base_layer, u32 layer_count)
 {
 	VkImageMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -49,9 +49,9 @@ static VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
 }
 
 static VkBufferMemoryBarrier2 G_SyncBufferBarrier(const G_Buffer *buffer,
-					  const G_AccessSt *src,
-					  const G_AccessSt *dst,
-					  u64 offset, u64 size)
+												  const G_AccessSt *src,
+												  const G_AccessSt *dst,
+												  u64 offset, u64 size)
 {
 	VkBufferMemoryBarrier2 barrier = {0};
 	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;

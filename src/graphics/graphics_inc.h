@@ -1,4 +1,5 @@
 #include "graphics_vk_check.h"
+#include "graphics_util.h"
 #include "graphics_device_managed_resources.h"
 #include "graphics_blend.h"
 #include "graphics_buffer.h"

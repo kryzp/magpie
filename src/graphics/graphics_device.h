@@ -130,12 +130,10 @@ struct G_DevicePerFrameData
 	
 	G_TimelinePoint completion_point;
 
-	// Non-Timeline Semaphores.
-	VkSemaphore image_available_semaphore; // Wait until OS gives us an image.
-	VkSemaphore render_finished_semaphore; // Signaled when the OS lets us present.
-
 	G_CmdPool command_pool;
 
+	VkSemaphore image_available_semaphore; // Wait until the OS gives us an image.
+	
 	G_DestroyedImage    *destroyed_image_head;
 	G_DestroyedBuffer   *destroyed_buffer_head;
 	G_DestroyedSampler  *destroyed_sampler_head;
@@ -146,8 +144,7 @@ struct G_Device
 {
 	Arena *permanent_arena;
 
-	LOG_Channel log_channel;
-	
+	LOG_Channel log_channel;	
 	LOG_Channel log_channel_general;
 	LOG_Channel log_channel_validation;
 	LOG_Channel log_channel_performance;
@@ -187,7 +184,6 @@ static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present
 														   b32 enable_vsync);
 
 static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities);
-static u32 G_DeviceClampMipmapCount(u32 mipmaps, u32 w, u32 h, u32 d);
 
 
 /* ==================================================

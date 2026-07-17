@@ -1,10 +1,6 @@
 #ifndef GRAPHICS_CMD_BUFFER
 #define GRAPHICS_CMD_BUFFER
 
-#define G_ComputeGroupCount(count, tile) (((count) + (tile) - 1u) / (tile))
-
-typedef struct G_Device G_Device;
-
 typedef struct G_CmdBuffer G_CmdBuffer;
 struct G_CmdBuffer
 {

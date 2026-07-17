@@ -3,9 +3,8 @@
 
 #define A_MAX_MOUNT_POINTS              8
 #define A_UPLOAD_QUEUE_MAX_SIZE         512
-#define A_JOB_ARENA_COUNT               32
-#define A_JOB_ARENA_RESERVE             Megabytes(512)
 #define A_GPU_UPLOAD_CHUNK_MAX_SIZE     Megabytes(256)
+#define A_JOB_ARENA_ALLOC_SIZE          Megabytes(512)
 
 typedef enum A_LoadState
 {
@@ -58,8 +57,8 @@ typedef struct A_Upload A_Upload;
 struct A_Upload
 {
 	A_Record *record;
-	u32 temp_job_arena_index;
-	Arena *arena;
+	Arena temp_arena;
+	Arena *perm_arena;
 	A_LoadResult result;
 };
 
@@ -85,12 +84,6 @@ struct A_State
 	A_Upload upload_queue[A_UPLOAD_QUEUE_MAX_SIZE];
 	u32 upload_count;
 	i32 upload_spinlock;
-
-	Arena job_arenas[A_JOB_ARENA_COUNT];
-	u32 free_job_arenas[A_JOB_ARENA_COUNT];
-	u32 free_job_arena_count;
-	i32 job_arena_spinlock;
-	OS_Handle job_arena_counter;
 };
 
 
@@ -103,9 +96,6 @@ static void A_PathMapInsert(String8 path, A_Handle handle);
 
 static A_Record *A_AllocRecord(A_Type type);
 static void A_FreeRecord(A_Record *record);
-
-static u32 A_AcquireJobArena(void);
-static void A_ReleaseJobArena(u32 index);
 
 static A_Record *A_GetRecord(A_Handle handle);
 

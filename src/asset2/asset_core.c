@@ -67,43 +67,6 @@ static void A_FreeRecord(A_Record *record)
 	record->prev->next = record;
 }
 
-static u32 A_AcquireJobArena(void)
-{
-	for (;;)
-	{
-		osapi->SpinLockAcquire(&a_assets->job_arena_spinlock);
-
-		if (a_assets->free_job_arena_count > 0)
-		{
-			a_assets->free_job_arena_count--;
-			u32 index = a_assets->free_job_arenas[a_assets->free_job_arena_count];
-			osapi->SpinLockRelease(&a_assets->job_arena_spinlock);
-			return index;
-		}
-
-		osapi->JobCounterInc(a_assets->job_arena_counter, 1);
-		osapi->SpinLockRelease(&a_assets->job_arena_spinlock);
-
-		osapi->JobYield(a_assets->job_arena_counter, 0);
-	}
-}
-
-static void A_ReleaseJobArena(u32 index)
-{
-	ArenaResetAndDecommit(&a_assets->job_arenas[index]);
- 
-	osapi->SpinLockAcquire(&a_assets->job_arena_spinlock);
- 
-	a_assets->free_job_arenas[a_assets->free_job_arena_count++] = index;
-
-	u32 waiters = osapi->JobCounterValue(a_assets->job_arena_counter);
-
-	osapi->SpinLockRelease(&a_assets->job_arena_spinlock);
-
-	if (waiters > 0)
-		osapi->JobCounterDec(a_assets->job_arena_counter, 1);
-}
-
 static A_Record *A_GetRecord(A_Handle handle)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
@@ -146,16 +109,6 @@ static void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channe
 #include "asset_xmacro.inc"
 #undef AssetDef
 
-	for (u32 i = 0; i < A_JOB_ARENA_COUNT; i++)
-	{
-		state->job_arenas[i] = ArenaAlloc(A_JOB_ARENA_RESERVE);
-		state->free_job_arenas[i] = i;
-	}
-
-	state->free_job_arena_count = A_JOB_ARENA_COUNT;
-	
-	state->job_arena_counter = osapi->JobCounterAlloc(0);
-	
 	A_SelectContext(state);
 	
 	DebugLogI(state->log_channel, "Initialized.");
@@ -176,14 +129,7 @@ static void A_Destroy(void)
 	}
 
 	osapi->SpinLockRelease(&a_assets->registry_spinlock);
-	
-	osapi->JobCounterRelease(a_assets->job_arena_counter);
-	
-	for (u32 i = 0; i < A_JOB_ARENA_COUNT; i++)
-	{
-		ArenaRelease(&a_assets->job_arenas[i]);
-	}
-	
+
 	DebugLogI(a_assets->log_channel, "Destroyed.");
 
 	a_assets = NULL;
@@ -325,7 +271,7 @@ static void A_FlushUploads(void)
 				else
 				{
 					if (loader->api.Alloc)
-						loader->api.Alloc(&ctx, &upload->result, upload->arena, &record->asset);
+						loader->api.Alloc(&ctx, &upload->result, upload->perm_arena, &record->asset);
 					
 					if (loader->api.UploadGPU)
 						loader->api.UploadGPU(&ctx, &upload->result, &record->asset, &cmd, staging_buffer, stage_offset);
@@ -341,8 +287,8 @@ static void A_FlushUploads(void)
 
 					stage_offset += MemAlignUp(upload->result.stage_size, 16);
 				}
-				
-				A_ReleaseJobArena(upload->temp_job_arena_index);
+
+				ArenaRelease(&upload->temp_arena);
 			}
 			
 			G_DeviceSubmitImEnd(&cmd);
@@ -438,8 +384,7 @@ static J_ENTRY_POINT_DEF(A_LoadJob)
 
 	A_Type type = load_params->record->type;
 	
-	u32 arena_index = A_AcquireJobArena();
-	Arena *job_arena = &a_assets->job_arenas[arena_index];
+	Arena job_arena = ArenaAlloc(A_JOB_ARENA_ALLOC_SIZE);
 
 	A_LCTX ctx = {0};
 	ctx.log_channel = a_assets->loaders[type].log_channel;
@@ -447,7 +392,7 @@ static J_ENTRY_POINT_DEF(A_LoadJob)
 	
 	A_LoaderAPI *api = &a_assets->loaders[type].api;
 
-	A_LoadResult result = api->Load(&ctx, job_arena);
+	A_LoadResult result = api->Load(&ctx, &job_arena);
 
 	if (result.failed)
 	{
@@ -496,8 +441,8 @@ static J_ENTRY_POINT_DEF(A_LoadJob)
 
 	A_Upload upload = {0};
 	upload.record = load_params->record;
-	upload.temp_job_arena_index = arena_index;
-	upload.arena = load_params->arena;
+	upload.temp_arena = job_arena;
+	upload.perm_arena = load_params->arena;
 	upload.result = result;
 
 	osapi->SpinLockAcquire(&a_assets->upload_spinlock);
@@ -516,12 +461,18 @@ static A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handl
 	A_Record *record = A_GetRecord(handle);
 	
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
-			
-	if (record->load_state != A_LoadState_Unloaded)
-		goto end;
-
-	record->load_state = A_LoadState_Loading;
 	
+	if (record->load_state != A_LoadState_Unloaded)
+	{
+		osapi->SpinLockRelease(&a_assets->registry_spinlock);
+		return handle;
+	}
+	else
+	{
+		record->load_state = A_LoadState_Loading;
+		osapi->SpinLockRelease(&a_assets->registry_spinlock);
+	}
+
 	A_LoadJobParam *param = ArenaPushArray(arena, A_LoadJobParam, 1);
 	param->arena = arena;
 	param->record = record;
@@ -535,9 +486,6 @@ static A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handl
 
 	osapi->JobKick(&decl, counter);
 
-end:
-	osapi->SpinLockRelease(&a_assets->registry_spinlock);
-	
 	return handle;
 }
 
