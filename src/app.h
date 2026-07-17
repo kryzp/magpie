@@ -65,11 +65,11 @@ struct App
 	u32 frame_number;
 };
 
-__declspec(dllexport) App  *MagpieInit(const OS_API *osapi_);
-__declspec(dllexport) void  MagpieDestroy(App *app_);
-__declspec(dllexport) b32   MagpieTick(App *app_, const OS_InputState *input);
-__declspec(dllexport) void  MagpieHotLoad(App *app_, const OS_API *osapi_);
-__declspec(dllexport) void  MagpieHotUnload(App *app_);
+App  *MagpieInit(const OS_API *osapi_);
+void  MagpieDestroy(App *app_);
+b32   MagpieTick(App *app_, const OS_InputState *input);
+void  MagpieHotLoad(App *app_, const OS_API *osapi_);
+void  MagpieHotUnload(App *app_);
 
 static App *app = NULL;
 

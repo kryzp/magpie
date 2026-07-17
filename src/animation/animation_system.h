@@ -8,7 +8,7 @@ struct AN_Handle
 	u32 generation;
 };
 
-inline AN_Handle AN_HandleNull(void)
+static inline AN_Handle AN_HandleNull(void)
 {
 	AN_Handle handle = {0};
 	handle.index = (u32)-1;
@@ -17,13 +17,13 @@ inline AN_Handle AN_HandleNull(void)
 	return handle;
 }
 
-inline b32 AN_HandleIsNull(AN_Handle handle)
+static inline b32 AN_HandleIsNull(AN_Handle handle)
 {
 	return (handle.index == (u32)-1 &&
 			handle.generation == 0);
 }
 
-inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
+static inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation);

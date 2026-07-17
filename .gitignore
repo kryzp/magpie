@@ -10,9 +10,13 @@ cmake-build-debug/
 *~
 *\.rdbg
 CMakeSettings.json
-/res/Models
+/res/models
 /res/player
 TAGS
 .dir-locals.el
 log_output.txt
 compile_commands.json
+build.bat
+run.bat
+build.sh
+

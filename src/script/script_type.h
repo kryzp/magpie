@@ -47,12 +47,12 @@ static S_Argument S_ArgB32(b32 v);
 static S_Argument S_ArgStr(String8 v);
 static S_Argument S_ArgTaggedU32(u32 v, u32 tag);
 
-inline u64 S_PackTaggedU32(u32 value, u32 tag)
+static inline u64 S_PackTaggedU32(u32 value, u32 tag)
 {
 	return ((u64)tag << 32) | (u64)value;
 }
 
-inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag)
+static inline void S_UnpackTaggedU32(u64 packed, u32 *out_value, u32 *out_tag)
 {
 	*out_tag = (u32)(packed >> 32);
 	*out_value = (u32)(packed & 0xFFFFFFFFu);

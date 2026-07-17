@@ -19,8 +19,8 @@
 #include "ext/slang/slang_compiler.h"
 
 #define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
-#include "ext/spirv/spirv_reflect.h"
-#include "ext/spirv/spirv_reflect.c"
+#include <SPIRV-Reflect/spirv_reflect.h>
+#include <SPIRV-Reflect/spirv_reflect.c>
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "ext/ma/miniaudio.h"

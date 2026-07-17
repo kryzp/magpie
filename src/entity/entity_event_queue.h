@@ -57,7 +57,7 @@ static void E_EventBroadcast (E_EventQueue *q, E_Event *event, E_World *world);
 
 // ---
 
-inline void E_EventFireSomeRandomThing(E_EventQueue *q,
+static inline void E_EventFireSomeRandomThing(E_EventQueue *q,
 							 E_Handle source, E_Handle target,
 							 f32 random_data)
 {

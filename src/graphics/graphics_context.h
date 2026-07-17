@@ -5,10 +5,12 @@ typedef struct G_SwapchainSupportDetails G_SwapchainSupportDetails;
 struct G_SwapchainSupportDetails
 {
 	VkSurfaceCapabilitiesKHR capabilities;
+
 	u32 surface_format_count;
-	VkSurfaceFormatKHR surface_formats[8];
+	VkSurfaceFormatKHR *surface_formats;
+
 	u32 present_mode_count;
-	VkPresentModeKHR present_modes[8];
+	VkPresentModeKHR *present_modes;
 };
 
 typedef struct G_HardwareQueue G_HardwareQueue;
@@ -52,44 +54,53 @@ struct G_Context
    ================================================== */
 
 static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
-														 VkImageTiling tiling,
-														 VkFormatFeatureFlags features,
-														 u32 candidate_count, const VkFormat *candidates);
+													 VkImageTiling tiling,
+													 VkFormatFeatureFlags features,
+													 u32 candidate_count, const VkFormat *candidates,
+													 LOG_Channel log_channel);
 
-static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device);
+static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device,
+												 LOG_Channel log_channel);
 
-static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties);
+static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties,
+																	   LOG_Channel log_channel);
 
-static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count);
+static const char * const *G_ContextGetInstanceExtensions(Arena *arena,
+														  u32 *extension_count,
+														  LOG_Channel log_channel);
 
-static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device);
+static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device,
+																LOG_Channel log_channel);
 
 static b32 G_ContextCheckForValidationLayerSupport(void);
 
-static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
+																VkPhysicalDevice physical_device,
+																VkSurfaceKHR surface);
 
 static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
-															  VkPhysicalDevice physical_device,
-															  VkPhysicalDeviceProperties2 properties,
-															  VkPhysicalDeviceFeatures2 features,
-															  b32 *has_essentials);
+														  VkPhysicalDevice physical_device,
+														  VkPhysicalDeviceProperties2 properties,
+														  VkPhysicalDeviceFeatures2 features,
+														  b32 *has_essentials,
+														  LOG_Channel log_channel);
 
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL G_ContextVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-																	   VkDebugUtilsMessageTypeFlagsEXT message_type,
-																	   const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-																	   void *user_data);
+																   VkDebugUtilsMessageTypeFlagsEXT message_type,
+																   const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+																   void *user_data);
 
 static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
-																 VkDebugUtilsMessengerCreateInfoEXT *debug_info,
-																 const VkAllocationCallbacks *allocator,
-																 VkDebugUtilsMessengerEXT *messenger);
+															VkDebugUtilsMessengerCreateInfoEXT *debug_info,
+															const VkAllocationCallbacks *allocator,
+															VkDebugUtilsMessengerEXT *messenger);
 
 /* ==================================================
    CONTEXT CORE
    ================================================== */
 
-static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx);
+static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx);
 static void G_ContextDestroy(G_Context *context);
 
 #endif // GRAPHICS_CONTEXT_H

@@ -334,7 +334,7 @@ static void A_FlushUploads(void)
 						loader->api.DestroyIntermediateResources(&upload->result);
 
 					DebugLogD(a_assets->log_channel,
-							  "Finalized %.*s.",
+							  "Finalized: %.*s",
 							  String8VArg(record->metadata.path));
 					
 					record->load_state = A_LoadState_Ready;
@@ -452,13 +452,13 @@ static J_ENTRY_POINT_DEF(A_LoadJob)
 	if (result.failed)
 	{
 		DebugLogE(a_assets->log_channel,
-				  "Failed to load %.*s.",
+				  "Failed to load: %.*s",
 				  String8VArg(ctx.metadata.path));
 	}
 	else
 	{
 		DebugLogD(a_assets->log_channel,
-				  "Loaded %.*s.",
+				  "Loaded: %.*s",
 				  String8VArg(ctx.metadata.path));
 
 		ScratchArena scratch = ScratchBegin(NULL, 0);

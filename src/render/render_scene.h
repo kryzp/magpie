@@ -32,7 +32,7 @@ struct R_MeshHandle
 	u32 page_index;
 };
 
-inline R_MaterialHandle R_MaterialHandleNull(void)
+static inline R_MaterialHandle R_MaterialHandleNull(void)
 {
 	R_MaterialHandle null_handle = {0};
 	null_handle.index = (u32)(-1);
@@ -40,7 +40,7 @@ inline R_MaterialHandle R_MaterialHandleNull(void)
 	return null_handle;
 }
 
-inline R_MeshHandle R_MeshHandleNull(void)
+static inline R_MeshHandle R_MeshHandleNull(void)
 {
 	R_MeshHandle null_handle = {0};
 	null_handle.slot_index = (u32)(-1);

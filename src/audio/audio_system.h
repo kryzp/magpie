@@ -17,17 +17,17 @@ struct AU_Handle
 
 // null handle (value = 0) is reserved
 // as the invalid handle!!
-inline AU_Handle AU_HandleNull(void)
+static inline AU_Handle AU_HandleNull(void)
 {
 	return (AU_Handle) {0};
 }
 
-inline b32 AU_HandleIsValid(AU_Handle h)
+static inline b32 AU_HandleIsValid(AU_Handle h)
 {
 	return h.value != 0;
 }
 
-inline b32 AU_HandleMatch(AU_Handle a, AU_Handle b)
+static inline b32 AU_HandleMatch(AU_Handle a, AU_Handle b)
 {
 	return a.value == b.value;
 }

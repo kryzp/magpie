@@ -82,7 +82,6 @@ static void AppInit_(void)
 	CH_TimerStart(&app->hot_reload_timer);
 }
 
-__declspec(dllexport)
 App *MagpieInit(const OS_API *osapi_)
 {
 	osapi = osapi_;
@@ -157,7 +156,6 @@ App *MagpieInit(const OS_API *osapi_)
 	return app;
 }
 
-__declspec(dllexport)
 void MagpieDestroy(App *app_)
 {
 	G_DeviceWaitIdle();
@@ -221,7 +219,6 @@ static void AppLogFPS(f32 dt)
 	DebugLogT(app->log_channel, "FPS: %.2f", fps_avg);
 }
 
-__declspec(dllexport)
 b32 MagpieTick(App *app_, const OS_InputState *input)
 {
 	if (OS_KbPressed(input, OS_KeyboardKey_Escape))
@@ -336,7 +333,6 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	return false;
 }
 
-__declspec(dllexport)
 void MagpieHotLoad(App *app_, const OS_API *osapi_)
 {
 	osapi = osapi_;
@@ -375,7 +371,6 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	GameSelect(&app->game);
 }
 
-__declspec(dllexport)
 void MagpieHotUnload(App *app_)
 {
 	G_DeviceHotUnload();

@@ -24,12 +24,12 @@ struct LOG_Channel
 	u32 id; // 0 = global channel
 };
 
-inline b32 LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)
+static inline b32 LOG_ChannelMatch(LOG_Channel a, LOG_Channel b)
 {
 	return a.id == b.id;
 }
 
-inline LOG_Channel LOG_ChannelNull(void)
+static inline LOG_Channel LOG_ChannelNull(void)
 {
 	LOG_Channel null_channel = {0};
 	return null_channel;

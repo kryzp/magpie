@@ -1,11 +1,11 @@
 
 // TODO: Just move this into the device...
 
-static const char *gfx_context_vk_validation_layers[] = {
+static const char *g_context_vk_validation_layers[] = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
-static const char *gfx_context_device_extensions[] = {
+static const char *g_context_device_extensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -18,9 +18,10 @@ static const char *gfx_context_device_extensions[] = {
 };
 
 static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
-									   VkImageTiling tiling,
-									   VkFormatFeatureFlags features,
-									   u32 candidate_count, const VkFormat *candidates)
+													 VkImageTiling tiling,
+													 VkFormatFeatureFlags features,
+													 u32 candidate_count, const VkFormat *candidates,
+													 LOG_Channel log_channel)
 {
 	for (u32 i = 0; i < candidate_count; i++)
 	{
@@ -33,12 +34,12 @@ static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_d
 			return candidates[i];
 	}
 
-	AssertTrue(false && "Failed to find supported format.");
+	DebugLogB(log_channel, "Failed to find supported format.");
 
 	return VK_FORMAT_MAX_ENUM;
 }
 
-static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device)
+static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device, LOG_Channel log_channel)
 {
 	static const VkFormat candidates[] = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -46,12 +47,13 @@ static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_devic
 	};
 
 	return G_ContextFindGraphicsSupportedFormat(physical_device,
-												  VK_IMAGE_TILING_OPTIMAL,
-												  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
-												  ArraySize(candidates), candidates);
+												VK_IMAGE_TILING_OPTIMAL,
+												VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+												ArraySize(candidates), candidates,
+												log_channel);
 }
 
-static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties)
+static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties, LOG_Channel log_channel)
 {
 	VkSampleCountFlags counts =
 		properties.properties.limits.framebufferColorSampleCounts &
@@ -65,17 +67,17 @@ static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysica
 	else if (counts & VK_SAMPLE_COUNT_2_BIT)  return VK_SAMPLE_COUNT_2_BIT;
 	else if (counts & VK_SAMPLE_COUNT_1_BIT)  return VK_SAMPLE_COUNT_1_BIT;
 
-	AssertTrue(false && "Could not find a maximum usable sample count.");
+	DebugLogB(log_channel, "Could not find a maximum usable sample count.");
 
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count)
+static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count, LOG_Channel log_channel)
 {
 	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
 
 	if (!names)
-		AssertTrue(false && "Unable to get instance extension count.");
+		DebugLogB(log_channel, "Unable to get instance extension count.");
 
 	u32 extra_extension_count = 3;
 
@@ -102,7 +104,7 @@ static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *ext
 	return extensions;
 }
 
-static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device)
+static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device, LOG_Channel log_channel)
 {
 	u32 extension_count = 0;
 	
@@ -110,7 +112,7 @@ static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice
 										 &extension_count, NULL);
 
 	if (extension_count <= 0)
-		AssertTrue(false && "Failed to find any device extension properties.");
+		DebugLogB(log_channel, "Failed to find any device extension properties.");
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -121,13 +123,13 @@ static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice
 
 	b32 result = true;
 
-	for (u32 i = 0; i < ArraySize(gfx_context_device_extensions); i++)
+	for (u32 i = 0; i < ArraySize(g_context_device_extensions); i++)
 	{
 		b32 found = false;
 		for (u32 j = 0; j < extension_count; j++)
 		{
 			if (CStrCompare(available_exts[j].extensionName,
-							gfx_context_device_extensions[i]) == 0)
+							g_context_device_extensions[i]) == 0)
 			{
 				found = true;
 				break;
@@ -158,10 +160,10 @@ static b32 G_ContextCheckForValidationLayerSupport(void)
 
 	b32 result = true;
 
-	for (u32 i = 0; i < ArraySize(gfx_context_vk_validation_layers); i++)
+	for (u32 i = 0; i < ArraySize(g_context_vk_validation_layers); i++)
 	{
 		b32 has_layer = false;
-		const char *layer_name_0 = gfx_context_vk_validation_layers[i];
+		const char *layer_name_0 = g_context_vk_validation_layers[i];
 
 		for (u32 j = 0; j < layer_count; j++)
 		{
@@ -186,7 +188,9 @@ exit:
 	return result;
 }
 
-static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
+																VkPhysicalDevice physical_device,
+																VkSurfaceKHR surface)
 {
 	G_SwapchainSupportDetails result = {0};
 
@@ -199,8 +203,7 @@ static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice
 
 	if (surface_format_count > 0)
 	{
-		AssertTrue(surface_format_count <= ArraySize(result.surface_formats));
-
+		result.surface_formats = ArenaPushArray(arena, VkSurfaceFormatKHR, surface_format_count);
 		result.surface_format_count = surface_format_count;
 
 		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface,
@@ -210,8 +213,7 @@ static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice
 
 	if (present_mode_count > 0)
 	{
-		AssertTrue(present_mode_count <= ArraySize(result.present_modes));
-
+		result.present_modes = ArenaPushArray(arena, VkPresentModeKHR, present_mode_count);
 		result.present_mode_count = present_mode_count;
 		
 		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface,
@@ -223,15 +225,16 @@ static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(VkPhysicalDevice
 }
 
 static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
-												 VkPhysicalDevice physical_device,
-												 VkPhysicalDeviceProperties2 properties,
-												 VkPhysicalDeviceFeatures2 features,
-												 b32 *has_essentials)
+														  VkPhysicalDevice physical_device,
+														  VkPhysicalDeviceProperties2 properties,
+														  VkPhysicalDeviceFeatures2 features,
+														  b32 *has_essentials,
+														  LOG_Channel log_channel)
 {
 	u32 usability = 0;
 
 	b32 adequate_swap_chain = false;
-	b32 has_required_extensions = G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(physical_device);
+	b32 has_required_extensions = G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(physical_device, log_channel);
 	b32 has_anisotropy = features.features.samplerAnisotropy;
 
 	// Prefer / give more weight to discrete gpus than integrated gpus.
@@ -247,13 +250,17 @@ static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 	// It must have the required extensions.
 	if (has_required_extensions)
 	{
-		G_SwapchainSupportDetails details = G_ContextQuerySwapchainSupport(physical_device, surface);
+		ScratchArena scratch = ScratchBegin(NULL, 0);
+		
+		G_SwapchainSupportDetails details = G_ContextQuerySwapchainSupport(scratch.arena, physical_device, surface);
 
 		adequate_swap_chain =
 			(details.surface_format_count > 0) &&
 			(details.present_mode_count > 0);
 
 		usability += 3;
+
+		ScratchRelease(&scratch);
 	}
 
 	// Essential features must be satisfied.
@@ -269,9 +276,9 @@ static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
 }
 
 static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
-											  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
-											  const VkAllocationCallbacks *allocator,
-											  VkDebugUtilsMessengerEXT *messenger)
+															VkDebugUtilsMessengerCreateInfoEXT *debug_info,
+															const VkAllocationCallbacks *allocator,
+															VkDebugUtilsMessengerEXT *messenger)
 {
 	PFN_vkCreateDebugUtilsMessengerEXT fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -281,7 +288,7 @@ static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
+static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
 {
 	G_Context context = {0};
 	
@@ -310,9 +317,9 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 
 	volkInitialize();
 
-	ScratchArena scratch = ScratchBegin(NULL, 0);
+	ScratchArena scratch = ScratchBegin(&arena, 1);
 
-	instance_create_info.ppEnabledExtensionNames = G_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount);
+	instance_create_info.ppEnabledExtensionNames = G_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount, log_channel);
 
 	static const VkValidationFeatureEnableEXT enabled_features[] = {
 		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
@@ -350,8 +357,8 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 	{
 		DebugLogD(log_channel, "Validation layer support verified.");
 
-		instance_create_info.enabledLayerCount = ArraySize(gfx_context_vk_validation_layers);
-		instance_create_info.ppEnabledLayerNames = gfx_context_vk_validation_layers;
+		instance_create_info.enabledLayerCount = ArraySize(g_context_vk_validation_layers);
+		instance_create_info.ppEnabledLayerNames = g_context_vk_validation_layers;
 		instance_create_info.pNext = &debug_create_info;
 	}
 	else
@@ -368,16 +375,16 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 #endif
 
 	G_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &context.instance),
-				 "Failed to create instance.");
+			   "Failed to create instance.");
 
 	volkLoadInstance(context.instance);
 
 	if (context.has_validation_layers)
 	{
 		G_VK_CHECK(G_ContextCreateDeviceDebugUtilsMessengerExt(context.instance,
-																   &debug_create_info, NULL,
-																   &context.debug_messenger),
-					 "Failed to create debug messenger.");
+															   &debug_create_info, NULL,
+															   &context.debug_messenger),
+				   "Failed to create debug messenger.");
 	}
 
 	if (!osapi->VulkanSurfaceCreate(context.instance, &context.surface))
@@ -417,9 +424,10 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 			b32 has_essentials = false;
 
 			u32 current_usability = G_ContextAssignGraphicsPhysicalDeviceUsability(context.surface,
-																					 devices[i],
-																					 properties, features,
-																					 &has_essentials);
+																				   devices[i],
+																				   properties, features,
+																				   &has_essentials,
+																				   log_channel);
 			
 			if (current_usability > best_usability && has_essentials)
 			{
@@ -437,8 +445,8 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 		DebugLogD(log_channel, "Selected a suitable GPU: %d", selected_id);
 	}
 
-	context.max_msaa_samples = G_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties);
-	context.depth_format = G_ContextFindGraphicsDepthFormat(context.physical_device);
+	context.max_msaa_samples = G_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties, log_channel);
+	context.depth_format = G_ContextFindGraphicsDepthFormat(context.physical_device, log_channel);
 
 	u32 queue_family_count = 0;
 	
@@ -536,22 +544,15 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 	device_create_info.pQueueCreateInfos = &graphics_queue_create_info;
 	device_create_info.enabledLayerCount = 0;
 	device_create_info.ppEnabledLayerNames = NULL;
-	device_create_info.enabledExtensionCount = ArraySize(gfx_context_device_extensions);
-	device_create_info.ppEnabledExtensionNames = gfx_context_device_extensions;
+	device_create_info.enabledExtensionCount = ArraySize(g_context_device_extensions);
+	device_create_info.ppEnabledExtensionNames = g_context_device_extensions;
 	device_create_info.pEnabledFeatures = &context.physical_device_features.features;
 	device_create_info.pNext = &ray_query_features;
 
-	if (context.has_validation_layers)
-	{
-		device_create_info.enabledLayerCount = ArraySize(gfx_context_vk_validation_layers);
-		device_create_info.ppEnabledLayerNames = gfx_context_vk_validation_layers;
-		DebugLogD(log_channel, "Enabled validation layers.");
-	}
-
 	G_VK_CHECK(vkCreateDevice(context.physical_device,
-								&device_create_info, NULL,
-								&context.device),
-				 "Failed to create logical device.");
+							  &device_create_info, NULL,
+							  &context.device),
+			   "Failed to create logical device.");
 
 	DebugLogD(log_channel, "Created logical device.");
 	
@@ -608,12 +609,12 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 	allocator_create_info.pVulkanFunctions = &vulkan_functions;
 
 	G_VK_CHECK(vmaCreateAllocator(&allocator_create_info,
-									&context.vma_allocator),
-				 "Failed to create Vulkan Memory Allocator.");
+								  &context.vma_allocator),
+			   "Failed to create Vulkan Memory Allocator.");
 	
 	DebugLogD(log_channel, "Created Vulkan Memory Allocator.");
 
-	context.swapchain_details = G_ContextQuerySwapchainSupport(context.physical_device, context.surface);
+	context.swapchain_details = G_ContextQuerySwapchainSupport(arena, context.physical_device, context.surface);
 
 	VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
 	pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -623,9 +624,9 @@ static G_Context G_ContextInit(LOG_Channel log_channel, PFN_vkDebugUtilsMessenge
 	pipeline_cache_create_info.pInitialData = NULL;
 
 	G_VK_CHECK(vkCreatePipelineCache(context.device,
-									   &pipeline_cache_create_info, NULL,
-									   &context.pipeline_process_cache),
-				 "Failed to process pipeline cache.");
+									 &pipeline_cache_create_info, NULL,
+									 &context.pipeline_process_cache),
+			   "Failed to process pipeline cache.");
 
 	ScratchRelease(&scratch);
 

@@ -168,7 +168,7 @@ static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel lo
 
 	G_DeviceSelectContext(device);
 
-	device->context = G_ContextInit(device->log_channel, G_DeviceVulkanDebugCallback, NULL);
+	device->context = G_ContextInit(device->permanent_arena, device->log_channel, G_DeviceVulkanDebugCallback, NULL);
 
 	G_DeviceCreateSyncResources();
 	G_DeviceCreateBindless();
@@ -787,7 +787,7 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *d
 	
 	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
-	AssertTrue(!G_ShaderProgramIsCompute(program));
+	DebugLogAssert(g_device->log_channel, !G_ShaderProgramIsCompute(program), "Shader program must not be a compute shader!");
 
 	static const VkDynamicState graphics_pipeline_dynamic_states[] = {
 		VK_DYNAMIC_STATE_VIEWPORT,
@@ -989,7 +989,7 @@ static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def
 	
 	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
-	AssertTrue(G_ShaderProgramIsCompute(program));
+	DebugLogAssert(g_device->log_channel, G_ShaderProgramIsCompute(program), "Shader program must be a compute shader!");
 
 	VkShaderModuleCreateInfo module_info = {0};
 	module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1474,8 +1474,7 @@ static G_SamplerKey G_DeviceSamplerCreateF(VkFilter filter)
 static void G_DeviceSamplerDestroy(G_SamplerKey sampler_key)
 {
 	G_Sampler *sampler = G_DeviceSamplerListGet(&g_device->samplers, sampler_key);
-	
-	AssertTrue(sampler);
+	DebugLogAssert(g_device->log_channel, sampler, "Invalid sampler with key %llu when destroying.", sampler_key.value);
 
 	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
 

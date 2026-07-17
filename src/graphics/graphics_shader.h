@@ -34,7 +34,7 @@ struct G_ShaderProgram
 	G_ShaderStage stages[G_MAX_SHADER_STAGES];
 };
 
-inline b32 G_ShaderProgramIsCompute(const G_ShaderProgram *program)
+static inline b32 G_ShaderProgramIsCompute(const G_ShaderProgram *program)
 {
 	return (program->stage_count == 1) && (program->stages[0].flags & VK_SHADER_STAGE_COMPUTE_BIT);
 }

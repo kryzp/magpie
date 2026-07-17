@@ -9,18 +9,18 @@ struct E_Handle
 	u32 generation;
 };
 
-inline E_Handle E_HandleNull(void)
+static inline E_Handle E_HandleNull(void)
 {
 	E_Handle null_handle = {0};
 	return null_handle;
 }
 
-inline b32 E_HandleIsNull(E_Handle handle)
+static inline b32 E_HandleIsNull(E_Handle handle)
 {
 	return handle.generation == 0;
 }
 
-inline b32 E_HandleMatch(E_Handle a, E_Handle b)
+static inline b32 E_HandleMatch(E_Handle a, E_Handle b)
 {
 	return (a.tid == b.tid &&
 			a.slot == b.slot &&

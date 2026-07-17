@@ -29,7 +29,7 @@ static A_LoadResult A_SoundLoaderLoad(const A_LCTX *ctx,
 	}
 
 	u64 frame_count = 0;
-	ma_decoder_get_length_in_pcm_frames(&decoder, &frame_count);
+	ma_decoder_get_length_in_pcm_frames(&decoder, (ma_uint64 *)&frame_count);
 	
 	A_SoundLoadData *sound = ArenaPushArray(result_arena, A_SoundLoadData, 1);
 	sound->channels = decoder.outputChannels;
