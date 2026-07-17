@@ -153,10 +153,10 @@ static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel lo
 	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
 	
-	for (u32 i = 0; i < ArraySize(device->per_frame_data); i++)
-		device->per_frame_data[i].arena = ArenaAlloc(Megabytes(128));
+	for (u32 i = 0; i < ArraySize(device->frames_in_flight); i++)
+		device->frames_in_flight[i].arena = ArenaAlloc(Megabytes(128));
 
-	device->current_frame_index = 0;
+	device->current_frame_in_flight_index = 0;
 
 	G_DeviceSelectContext(device);
 
@@ -173,9 +173,9 @@ static void G_DeviceDestroy(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		G_DeviceFrameInFlight *frame = &g_device->frames_in_flight[i];
 		G_DeviceWaitUntil(frame->completion_point);
-		G_DeviceFlushFrameData(frame);
+		G_DeviceFlushInFlightFrame(frame);
 		ArenaRelease(&frame->arena);
 	}
 	
@@ -217,41 +217,41 @@ static VkFormat G_DeviceDepthFormat(void)
 	return g_device->context.depth_format;
 }
 
-static void G_DeviceFlushFrameData(G_DevicePerFrameData *frame_data)
+static void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
 {
-	for (G_DestroyedImage *img = frame_data->destroyed_image_head; img; img = img->next)
+	for (G_DestroyedImage *img = frame->destroyed_image_head; img; img = img->next)
 		vmaDestroyImage(g_device->context.vma_allocator, img->image, img->allocation);
 
-	for (G_DestroyedBuffer *b = frame_data->destroyed_buffer_head; b; b = b->next)
+	for (G_DestroyedBuffer *b = frame->destroyed_buffer_head; b; b = b->next)
 		vmaDestroyBuffer(g_device->context.vma_allocator, b->buffer, b->allocation);
 	
-	for (G_DestroyedSampler *s = frame_data->destroyed_sampler_head; s; s = s->next)
+	for (G_DestroyedSampler *s = frame->destroyed_sampler_head; s; s = s->next)
 	{
 		vkDestroySampler(g_device->context.device, s->sampler, NULL);
 		G_BindlessFreeSampler(&g_device->bindless, s->bindless);
 	}
 	
-	frame_data->destroyed_sampler_head = NULL;
-	frame_data->destroyed_image_head = NULL;
-	frame_data->destroyed_buffer_head = NULL;
+	frame->destroyed_sampler_head = NULL;
+	frame->destroyed_image_head = NULL;
+	frame->destroyed_buffer_head = NULL;
 
-	ArenaReset(&frame_data->arena);
+	ArenaReset(&frame->arena);
 }
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.
 
 static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 {
-	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
-	G_DeviceWaitUntil(frame_data->completion_point);
-	G_DeviceFlushFrameData(frame_data);
+	G_DeviceWaitUntil(frame_in_flight->completion_point);
+	G_DeviceFlushInFlightFrame(frame_in_flight);
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {0};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
 	acquire_next_image_info.swapchain = swapchain->vk_handle;
 	acquire_next_image_info.timeout = UINT64_MAX;
-	acquire_next_image_info.semaphore = frame_data->image_available_semaphore;
+	acquire_next_image_info.semaphore = frame_in_flight->image_available_semaphore;
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
@@ -262,9 +262,9 @@ static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		DebugLogB(g_device->log_channel, "Failed to acquire next image in swapchain.");
 
-	G_DeviceCmdPoolPurge(&frame_data->command_pool, frame_data->completion_point.frame);
+	G_DeviceCmdPoolPurge(&frame_in_flight->command_pool, frame_in_flight->completion_point.frame);
 
-	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&frame_data->command_pool);
+	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&frame_in_flight->command_pool);
 	G_CmdBegin(&cmd);
 
 	return cmd;
@@ -274,12 +274,12 @@ static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cm
 {
 	G_DeviceApplyBindlessUpdates();
 
-	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 	const G_SwapchainFrame *swapchain_frame = &swapchain->frames[swapchain->current_frame_index];
 	
 	VkSemaphoreSubmitInfo image_available_semaphore_info = {0};
 	image_available_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	image_available_semaphore_info.semaphore = frame_data->image_available_semaphore;
+	image_available_semaphore_info.semaphore = frame_in_flight->image_available_semaphore;
 	image_available_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore_info = {0};
@@ -287,9 +287,9 @@ static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cm
 	render_finished_semaphore_info.semaphore = swapchain_frame->render_finished_semaphore;
 	render_finished_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
 
-	frame_data->completion_point = G_DeviceSubmitEx(cmd,
-													1, &image_available_semaphore_info,
-													1, &render_finished_semaphore_info);
+	frame_in_flight->completion_point = G_DeviceSubmitEx(cmd,
+														 1, &image_available_semaphore_info,
+														 1, &render_finished_semaphore_info);
 	
 	VkPresentInfoKHR present_info = {0};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -307,9 +307,9 @@ static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cm
 	else if (result != VK_SUCCESS)
 		DebugLogB(g_device->log_channel, "Failed to present swapchain image. (%u)", result);
 
-	g_device->current_frame_index = (g_device->current_frame_index + 1) % G_FRAMES_IN_FLIGHT;
+	g_device->current_frame_in_flight_index = (g_device->current_frame_in_flight_index + 1) % G_FRAMES_IN_FLIGHT;
 	
-	G_DeviceCmdPoolRelease(&frame_data->command_pool, cmd, frame_data->completion_point.frame);
+	G_DeviceCmdPoolRelease(&frame_in_flight->command_pool, cmd, frame_in_flight->completion_point.frame);
 }
 
 static G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
@@ -370,7 +370,7 @@ static G_CmdBuffer G_DeviceSubmitImBegin(void)
 {
 	vkQueueWaitIdle(g_device->context.graphics_queue.vk_handle);
 
-	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&g_device->per_frame_data[g_device->current_frame_index].command_pool);
+	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&g_device->frames_in_flight[g_device->current_frame_in_flight_index].command_pool);
 	G_CmdBegin(&cmd);
 
 	return cmd;
@@ -1228,13 +1228,14 @@ static void G_DeviceTextureDestroy(G_TextureKey texture_key)
 	G_Texture *texture = G_DeviceTextureListGet(&g_device->textures, texture_key);
 	DebugLogAssert(g_device->log_channel, texture, "Invalid texture with key %llu when destroying.", texture_key.value);
 
-	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
-	G_DestroyedImage *node = ArenaPushArray(&frame_data->arena, G_DestroyedImage, 1);
+	G_DestroyedImage *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedImage, 1);
+	node->next = frame_in_flight->destroyed_image_head;
+	frame_in_flight->destroyed_image_head = node;
+	
 	node->image = texture->vk_handle;
 	node->allocation = texture->allocation;
-	node->next = frame_data->destroyed_image_head;
-	frame_data->destroyed_image_head = node;
 }
 
 static G_Texture *G_DeviceTextureFromKey(G_TextureKey key)
@@ -1382,13 +1383,14 @@ static void G_DeviceBufferDestroy(G_BufferKey buffer_key)
 	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, buffer_key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", buffer_key.value);
 
-	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
-	G_DestroyedBuffer *node = ArenaPushArray(&frame_data->arena, G_DestroyedBuffer, 1);
+	G_DestroyedBuffer *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedBuffer, 1);
+	node->next = frame_in_flight->destroyed_buffer_head;
+	frame_in_flight->destroyed_buffer_head = node;
+	
 	node->buffer = buffer->vk_handle;
 	node->allocation = buffer->allocation;
-	node->next = frame_data->destroyed_buffer_head;
-	frame_data->destroyed_buffer_head = node;
 }
 
 static G_Buffer *G_DeviceBufferFromKey(G_BufferKey key)
@@ -1492,13 +1494,14 @@ static void G_DeviceSamplerDestroy(G_SamplerKey sampler_key)
 	G_Sampler *sampler = G_DeviceSamplerListGet(&g_device->samplers, sampler_key);
 	DebugLogAssert(g_device->log_channel, sampler, "Invalid sampler with key %llu when destroying.", sampler_key.value);
 
-	G_DevicePerFrameData *frame_data = &g_device->per_frame_data[g_device->current_frame_index];
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
-	G_DestroyedSampler *node = ArenaPushArray(&frame_data->arena, G_DestroyedSampler, 1);
+	G_DestroyedSampler *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedSampler, 1);
+	node->next = frame_in_flight->destroyed_sampler_head;
+	frame_in_flight->destroyed_sampler_head = node;
+	
 	node->sampler = sampler->vk_handle;
 	node->bindless = sampler->bindless;
-	node->next = frame_data->destroyed_sampler_head;
-	frame_data->destroyed_sampler_head = node;
 }
 
 static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key)
@@ -1795,7 +1798,7 @@ static void G_DeviceCreateSyncResources(void)
 
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		G_DeviceFrameInFlight *frame = &g_device->frames_in_flight[i];
 		
 		frame->completion_point.frame = 0;
 		frame->completion_point.semaphore = g_device->graphics_semaphore.vk_handle;
@@ -1828,10 +1831,10 @@ static void G_DeviceDestroySyncResources(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
-		G_DevicePerFrameData *frame = &g_device->per_frame_data[i];
+		G_DeviceFrameInFlight *frame = &g_device->frames_in_flight[i];
+		
 		vkDestroySemaphore(g_device->context.device, frame->image_available_semaphore, NULL);		
 		G_DeviceCmdPoolDestroy(&frame->command_pool);
-		G_DeviceFlushFrameData(frame);
 	}
 
 	G_DeviceSemaphoreDestroy(&g_device->graphics_semaphore);

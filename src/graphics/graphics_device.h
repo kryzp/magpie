@@ -123,8 +123,8 @@ struct G_DestroyedSampler
    DEVICE
    ================================================== */
 
-typedef struct G_DevicePerFrameData G_DevicePerFrameData;
-struct G_DevicePerFrameData
+typedef struct G_DeviceFrameInFlight G_DeviceFrameInFlight;
+struct G_DeviceFrameInFlight
 {
 	Arena arena;
 	
@@ -151,8 +151,8 @@ struct G_Device
 	
 	G_Context context;
 
-	u32 current_frame_index;
-	G_DevicePerFrameData per_frame_data[G_FRAMES_IN_FLIGHT];
+	u32 current_frame_in_flight_index;
+	G_DeviceFrameInFlight frames_in_flight[G_FRAMES_IN_FLIGHT];
 
 	G_DevicePipelineLayoutList layouts;
 	G_DevicePipelineList pipelines;
@@ -198,7 +198,7 @@ static G_Device *G_DeviceGetSelected(void);
 
 static VkFormat G_DeviceDepthFormat(void);
 
-static void G_DeviceFlushFrameData(G_DevicePerFrameData *frame_data);
+static void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame);
 
 static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain);
 static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd);
