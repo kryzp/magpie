@@ -311,6 +311,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 										  &app->scene, &app->game.camera);
 	}
 
+	/*
 	{
 		u32 object_index = 0;
 	
@@ -345,7 +346,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 			object_index++;
 		}
 	}
-
+	*/
+	
 	R_SystemRender(&app->graph, &frame_params);
 	
 	R_GraphCompile(&app->graph, &app->swapchain);
@@ -361,7 +363,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	ArenaReset(&app->frame_arena);
 	
-	AppLogFPS(dt);
+	//AppLogFPS(dt);
 
 	app->frame_number++;
 	

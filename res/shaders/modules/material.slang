@@ -5,6 +5,7 @@ import scene;
 import lighting;
 import frame;
 
+// todo: retarded namespace - change this
 namespace material
 {
 	public struct SurfaceInput

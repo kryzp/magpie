@@ -14,7 +14,6 @@ static void CameraDriverShake(CameraDriver *driver, f32 amount)
 
 static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt)
 {
-	/*
 	switch (driver->config.mode)
 	{
 		case CameraDriverMode_Unrestricted:
@@ -49,8 +48,8 @@ static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_I
 		}
 		break;
 	}
-	*/
-	
+
+	/*
 	const f32 mouse_deadzone = 0.001f;
 	const f32 mouse_sens = 0.08f;
 	const f32 turn_interp = 35.f;
@@ -101,4 +100,5 @@ static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_I
 	osapi->SetMouseLocked(true);
 	
 	R_CameraRecompute(camera);
+	*/
 }
