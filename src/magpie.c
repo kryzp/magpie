@@ -61,8 +61,8 @@
 #include "audio/audio_inc.h"
 #include "audio/audio_inc.c"
 
-#include "asset2/asset_inc.h"
-#include "asset2/asset_inc.c"
+#include "asset/asset_inc.h"
+#include "asset/asset_inc.c"
 
 #include "animation/animation_inc.h"
 #include "animation/animation_inc.c"

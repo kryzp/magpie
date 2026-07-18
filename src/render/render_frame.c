@@ -18,10 +18,9 @@ static void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_F
 static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
 	u32 total_joints = 0;
-	u32 object_count = DensePoolLiveCount(&scene->object_pool);
-
-	for (u32 i = 0; i < object_count; i++)
-		total_joints += scene->skinning_joint_counts[i];
+	
+	for (u32 i = 0; i < out->object_count; i++)
+		total_joints += scene->objects[i].skinning_joint_count;
 
 	if (total_joints == 0)
 		return;
@@ -30,68 +29,83 @@ static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_Fr
 	m4 *mapped = out->skinning_palette_buffer.cpu;
 	u32 offset = 0;
 
-	for (u32 i = 0; i < object_count; i++)
+	u32 object_index = 0;
+	
+	for (u32 i = 0; i < ArraySize(scene->objects) && object_index < out->object_count; i++)
 	{
-		u32 joints = scene->skinning_joint_counts[i];
-		
-		if (joints == 0)
-			continue;
+		R_Object *object = &scene->objects[i];
 
-		MemCopy(mapped + offset, scene->skinning_palettes[i], joints * sizeof(m4));
-		scene->skinning_addrs[i] = out->skinning_palette_buffer.gpu + offset * sizeof(m4);
-		offset += joints;
+		if (!scene->object_occupied[i])
+			continue;
+		
+		u32 joints = object->skinning_joint_count;
+		
+		if (joints > 0)
+		{
+			MemCopy(mapped + offset, object->skinning_palette, joints * sizeof(m4));
+		
+			object->skinning_address = out->skinning_palette_buffer.gpu + offset * sizeof(m4);
+
+			offset += joints;	
+		}
+
+		object_index++;
 	}
 }
 
 static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
-	out->object_count = DensePoolLiveCount(&scene->object_pool);
-
-	if (out->object_count == 0)
-		return;
-
 	out->object_buffer = G_RingBufferPushArray(ring, R_GPU_ObjectData, out->object_count);
 	R_GPU_ObjectData *mapped = out->object_buffer.cpu;
 
-	for (u32 i = 0; i < out->object_count; i++)
+	u32 object_index = 0;
+	
+	for (u32 i = 0; i < ArraySize(scene->objects) && object_index < out->object_count; i++)
 	{
-		mapped[i].model_matrix = scene->transforms[i];
-		mapped[i].normal_matrix = scene->normal_matrices[i];
-		mapped[i].sphere_bounds = scene->sphere_bounds[i];
-		mapped[i].material_index = scene->material_indices[i];
-		mapped[i].mesh_index = scene->mesh_indices[i];
-		mapped[i].page_index = scene->page_indices[i];
-		mapped[i].skinning_palette_buffer = scene->skinning_addrs[i];
-		mapped[i].skinning_joint_count = scene->skinning_joint_counts[i];
+		R_Object *object = &scene->objects[i];
+
+		if (!scene->object_occupied[i])
+			continue;
+		
+		mapped[object_index].model_matrix = object->transform;
+		mapped[object_index].normal_matrix = object->normal_matrix;
+		mapped[object_index].sphere_bounds = object->sphere_bounds;
+		mapped[object_index].material_index = object->material_index;
+		mapped[object_index].mesh_index = object->mesh_index;
+		mapped[object_index].page_index = object->page_index;
+		mapped[object_index].skinning_palette_buffer = object->skinning_address;
+		mapped[object_index].skinning_joint_count = object->skinning_joint_count;
+
+		object_index++;
 	}
 }
 
 static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
-	out->light_count = scene->light_pool.count;
-	out->shadow_caster_count = 0;
-
-	if (out->light_count == 0)
-		return;
-
 	out->light_buffer = G_RingBufferPushArray(ring, R_GPU_Light, out->light_count);
 	R_GPU_Light *mapped = out->light_buffer.cpu;
 
-	for (u32 i = 0; i < out->light_count; i++)
+	u32 light_index = 0;
+	
+	for (u32 i = 0; i < ArraySize(scene->lights) && light_index < out->light_count; i++)
 	{
 		const R_Light *light = &scene->lights[i];
+
+		if (!scene->light_occupied[i])
+			continue;
+		
 		const f32 radius = R_LightHeuristicRadius(light, 0.05f);
 
-		mapped[i].transform = M4Transform(light->position, V4QuatIdentity(), v3x(radius), v3x(0.f));
-		mapped[i].position = light->position;
-		mapped[i].colour = light->colour;
-		mapped[i].intensity = light->intensity;
-		mapped[i].attenuation = v3(light->falloff, 0.f, 0.f);
-		mapped[i].radius = radius;
+		mapped[light_index].transform = M4Transform(light->position, V4QuatIdentity(), v3x(radius), v3x(0.f));
+		mapped[light_index].position = light->position;
+		mapped[light_index].colour = light->colour;
+		mapped[light_index].intensity = light->intensity;
+		mapped[light_index].attenuation = v3(light->falloff, 0.f, 0.f);
+		mapped[light_index].radius = radius;
 
 		if (light->casts_shadows && out->shadow_caster_count < ArraySize(out->shadow_casters))
 		{
-			mapped[i].shadow_slot_index = (i32)out->shadow_caster_count;
+			mapped[light_index].shadow_slot_index = (i32)out->shadow_caster_count;
 
 			R_ShadowCaster *caster = &out->shadow_casters[out->shadow_caster_count++];
 			caster->position = light->position;
@@ -101,8 +115,10 @@ static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_Fram
 		}
 		else
 		{
-			mapped[i].shadow_slot_index = -1;
+			mapped[light_index].shadow_slot_index = -1;
 		}
+
+		light_index++;
 	}
 }
 
@@ -174,10 +190,23 @@ static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 	params.linear_sampler = system->samplers.linear;
 	params.nearest_sampler = system->samplers.nearest;
 
+	params.object_count = DensePoolLiveCount(&scene->object_pool);
+	params.light_count = DensePoolLiveCount(&scene->light_pool);
+	params.shadow_caster_count = 0;
+	
 	R_FrameParamsUploadPageTable(scene, ring, &params);
-	R_FrameParamsUploadSkinning(scene, ring, &params);
-	R_FrameParamsUploadObjects(scene, ring, &params);
-	R_FrameParamsUploadLights(scene, ring, &params);
+
+	if (params.object_count > 0)
+	{
+		R_FrameParamsUploadSkinning(scene, ring, &params);
+		R_FrameParamsUploadObjects(scene, ring, &params);
+	}
+
+	if (params.light_count > 0)
+	{
+		R_FrameParamsUploadLights(scene, ring, &params);
+	}
+
 	R_FrameParamsUploadFrameData(ring, &params);
 	R_FrameParamsResolveShaders(system, &params);
 

@@ -311,8 +311,43 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 										  &app->scene, &app->game.camera);
 	}
 
-	R_SystemRender(&app->graph, &frame_params);
+	{
+		u32 object_index = 0;
+	
+		for (u32 i = 0; i < ArraySize(app->scene.objects) && object_index < DensePoolLiveCount(&app->scene.object_pool); i++)
+		{
+			R_Object *object = &app->scene.objects[i];
 
+			if (!app->scene.object_occupied[i])
+				continue;
+
+			v4 sphere_bounds = object->sphere_bounds;
+
+			v3 local_centre = v3(sphere_bounds.x,
+								 sphere_bounds.y,
+								 sphere_bounds.z);
+	
+			v3 local_edge = v3(sphere_bounds.x + sphere_bounds.w,
+							   sphere_bounds.y,
+							   sphere_bounds.z);
+ 
+			v3 world_centre = M4MulV3Point(object->transform, local_centre);
+			v3 world_edge = M4MulV3Point(object->transform, local_edge);
+
+			v3 dx = V3Sub(world_edge, world_centre);
+			f32 world_radius = V3Length(dx);
+
+			R_DebugPushSphere(world_centre,
+							  world_radius,
+							  v4(1.f, 1.f, 1.f, 1.f),
+							  0.f, true);
+
+			object_index++;
+		}
+	}
+
+	R_SystemRender(&app->graph, &frame_params);
+	
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
 	{ // --- [[ THE GRAPHICS ZONE ooOooOooOOOooOOo !! ]] ---
@@ -326,7 +361,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	ArenaReset(&app->frame_arena);
 	
-	//AppLogFPS(dt);
+	AppLogFPS(dt);
 
 	app->frame_number++;
 	

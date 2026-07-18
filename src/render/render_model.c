@@ -173,21 +173,30 @@ static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Hand
 		instance.animator_handle = AN_SystemCreateInstance(asset_handle);
 	}
 
+	R_SubModelInstance *i_submodel_tail = NULL;
+ 
 	for (R_SubModel *submodel = model->submodel_first; submodel; submodel = submodel->next)
 	{
 		R_SubModelInstance *i_submodel = ArenaPushArray(catalogue->arena, R_SubModelInstance, 1);
-		i_submodel->next = instance.submodel_first;
-		instance.submodel_first = i_submodel;
-
+		i_submodel->next = NULL;
+		
+		if (i_submodel_tail)
+			i_submodel_tail->next = i_submodel;
+		else
+			instance.submodel_first = i_submodel;
+		
+		i_submodel_tail = i_submodel;
+		
 		i_submodel->handle = R_SceneInstanceCreate(catalogue->equipped_scene);
-
-		R_SceneSetInstanceMesh(catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
-		R_SceneSetInstanceMaterial(catalogue->equipped_scene, i_submodel->handle, submodel->material);
-
+		
+		R_SceneSetInstanceMesh         (catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
+		R_SceneSetInstanceMaterial     (catalogue->equipped_scene, i_submodel->handle, submodel->material);
+		R_SceneSetInstanceSphereBounds (catalogue->equipped_scene, i_submodel->handle, submodel->local_sphere_bounds);
+		
 		if (instance.has_animator)
 		{
 			AN_Palette palette = AN_GetPalette(instance.animator_handle, submodel->skin_index);
-			R_SceneSetInstanceSkinning(catalogue->equipped_scene, i_submodel->handle, palette.matrices, 0, palette.joint_count);
+			R_SceneSetInstanceSkinning(catalogue->equipped_scene, i_submodel->handle, palette.matrices, palette.joint_count);
 		}
 	}
 
@@ -225,32 +234,10 @@ static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInst
 	while (original_submodel && instance_submodel)
 	{
 		m4 world_matrix = M4MulM4(instance->root_transform, original_submodel->local_transform);
-		v4 world_sphere_bounds = R_ModelPartWorldSphereBounds(world_matrix, original_submodel->local_sphere_bounds);
 
 		R_SceneSetInstanceTransform(catalogue->equipped_scene, instance_submodel->handle, world_matrix);
-		R_SceneSetInstanceSphereBounds(catalogue->equipped_scene, instance_submodel->handle, world_sphere_bounds);
 
 		original_submodel = original_submodel->next;
 		instance_submodel = instance_submodel->next;
 	}
-}
-
-static v4 R_ModelPartWorldSphereBounds(m4 world_transform, v4 local_sphere_bounds)
-{
-	v3 local_centre = v3(local_sphere_bounds.x,
-						 local_sphere_bounds.y,
-						 local_sphere_bounds.z);
-	
-	v3 local_edge = v3(local_sphere_bounds.x + local_sphere_bounds.w,
-					   local_sphere_bounds.y,
-					   local_sphere_bounds.z);
- 
-	v3 world_centre = M4MulV3Point(world_transform, local_centre);
-	v3 world_edge = M4MulV3Point(world_transform, local_edge);
-
-	v3 dx = V3Sub(world_edge, world_centre);
-	f32 world_radius = V3Length(dx);
- 
-	return v4(world_centre.x, world_centre.y, world_centre.z, world_radius);
-
 }

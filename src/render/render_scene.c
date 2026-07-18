@@ -43,11 +43,14 @@ static R_InstanceHandle R_SceneInstanceCreate(R_Scene *scene)
 	R_InstanceHandle handle = {0};
 	handle.id = DensePoolGetStableID(&scene->object_pool);
 
+	scene->object_occupied[DensePoolDenseIndex(&scene->object_pool, handle.id)] = true;
+	
 	return handle;
 }
 
 static void R_SceneInstanceDestroy(R_Scene *scene, R_InstanceHandle handle)
 {
+	scene->object_occupied[DensePoolDenseIndex(&scene->object_pool, handle.id)] = false;
 	DensePoolFreeID(&scene->object_pool, handle.id);
 }
 
@@ -55,39 +58,38 @@ static void R_SceneSetInstanceTransform(R_Scene *scene, R_InstanceHandle handle,
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->transforms[index] = transform;
-	scene->normal_matrices[index] = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
+	scene->objects[index].transform = transform;
+	scene->objects[index].normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
 }
 
 static void R_SceneSetInstanceSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 sphere_bounds)
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->sphere_bounds[index] = sphere_bounds;
+	scene->objects[index].sphere_bounds = sphere_bounds;
 }
 
 static void R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh)
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->mesh_indices[index] = mesh.slot_index;
-	scene->page_indices[index] = mesh.page_index;
+	scene->objects[index].page_index = mesh.page_index;
+	scene->objects[index].mesh_index = mesh.slot_index;
 }
 
 static void R_SceneSetInstanceMaterial(R_Scene *scene, R_InstanceHandle handle, R_MaterialHandle material)
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->material_indices[index] = material.index;
+	scene->objects[index].material_index = material.index;
 }
 
-static void R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u64 palette_gpu_addr, u32 joint_count)
+static void R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u32 joint_count)
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->skinning_palettes[index] = palette;
-	scene->skinning_addrs[index] = palette_gpu_addr;
-	scene->skinning_joint_counts[index] = joint_count;
+	scene->objects[index].skinning_palette = palette;
+	scene->objects[index].skinning_joint_count = joint_count;
 }
 
 static R_LightHandle R_SceneLightCreate(R_Scene *scene)
@@ -95,11 +97,14 @@ static R_LightHandle R_SceneLightCreate(R_Scene *scene)
 	R_LightHandle handle = {0};
 	handle.id = DensePoolGetStableID(&scene->light_pool);
 
+	scene->light_occupied[DensePoolDenseIndex(&scene->light_pool, handle.id)] = true;
+	
 	return handle;
 }
 
 static void R_SceneLightDestroy(R_Scene *scene, R_LightHandle handle)
 {
+	scene->light_occupied[DensePoolDenseIndex(&scene->light_pool, handle.id)] = false;
 	DensePoolFreeID(&scene->light_pool, handle.id);
 }
 
@@ -154,7 +159,10 @@ static R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	copy.index_offset_dst = index_offset * index_stride;
 	copy.dst_page_index = page_index;
 
-	DebugLogAssert(scene->log_channel, scene->page_mesh_copy_count < ArraySize(scene->page_mesh_copies), "Ran out of mesh upload buffer!!!!!!!!!!! SHITTTTTT");
+	DebugLogAssert(scene->log_channel,
+				   scene->page_mesh_copy_count < ArraySize(scene->page_mesh_copies),
+				   "Ran out of mesh upload buffer!!!!!!!!!!! SHITTTTTT");
+
 	scene->page_mesh_copies[scene->page_mesh_copy_count++] = copy;
 	
 	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[slot_index];

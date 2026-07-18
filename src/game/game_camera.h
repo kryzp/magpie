@@ -34,10 +34,8 @@ struct CameraDriver
 
 	v3 intermediate_position;
 	
-	/*
 	f32 yaw, target_yaw;
 	f32 pitch, target_pitch;
-	*/
 };
 
 static CameraDriver CameraDriverInit(const CameraDriverConfig *config);

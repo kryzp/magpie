@@ -87,24 +87,35 @@ struct R_ScenePageMeshCopy
 	u32 dst_page_index;
 };
 
+typedef struct R_Object R_Object;
+struct R_Object
+{
+	m4 transform;
+	m4 normal_matrix;
+
+	v4 sphere_bounds;
+
+	u32 page_index;
+	u32 mesh_index;
+	u32 material_index;
+
+	const m4 *skinning_palette;
+	u64 skinning_address;
+	u32 skinning_joint_count;
+};
+
 typedef struct R_Scene R_Scene;
 struct R_Scene
 {
 	LOG_Channel log_channel;
 
 	DensePool object_pool;
-	m4 transforms[R_SCENE_MAX_INSTANCES];
-	m4 normal_matrices[R_SCENE_MAX_INSTANCES];
-	v4 sphere_bounds[R_SCENE_MAX_INSTANCES];
-	u32 mesh_indices[R_SCENE_MAX_INSTANCES];
-	u32 material_indices[R_SCENE_MAX_INSTANCES];
-	u32 page_indices[R_SCENE_MAX_INSTANCES];
-	const m4 *skinning_palettes[R_SCENE_MAX_INSTANCES];
-	u64 skinning_addrs[R_SCENE_MAX_INSTANCES];
-	u32 skinning_joint_counts[R_SCENE_MAX_INSTANCES];
-
+	R_Object objects[R_SCENE_MAX_INSTANCES];
+	b32 object_occupied[R_SCENE_MAX_INSTANCES];
+	
 	DensePool light_pool;
 	R_Light lights[R_SCENE_MAX_LIGHTS];
+	b32 light_occupied[R_SCENE_MAX_LIGHTS];
 
 	SlotPool mesh_pool;
 	R_MeshAllocRegion mesh_allocs[R_SCENE_MAX_MESHES];
@@ -144,7 +155,7 @@ static void                  R_SceneSetInstanceTransform(R_Scene *scene, R_Insta
 static void                  R_SceneSetInstanceSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 sphere_bounds);
 static void                  R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh);
 static void                  R_SceneSetInstanceMaterial(R_Scene *scene, R_InstanceHandle handle, R_MaterialHandle material);
-static void                  R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u64 palette_gpu_addr, u32 joint_count);
+static void                  R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u32 joint_count);
 
 
 /* ==================================================
@@ -181,6 +192,7 @@ static void                  R_SceneUpdateMaterial(R_Scene *scene, R_MaterialHan
 static void                  R_SceneFreeMaterial(R_Scene *scene, R_MaterialHandle handle);
 
 static u32                   R_SceneCountOfMaterials(const R_Scene *scene);
+
 static const R_Material     *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle);
 
 static void                  R_SceneFlushIfDirty(R_Scene *scene);

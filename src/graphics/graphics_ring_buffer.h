@@ -21,13 +21,11 @@ struct G_RingBuffer
 };
 
 static G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info);
-
 static void G_RingBufferDestroy(const G_RingBuffer *ring);
 
 static void G_RingBufferReset(G_RingBuffer *ring);
 
 static G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment);
-
 #define G_RingBufferPushArray(ring, type, count) G_RingBufferPush((ring), sizeof(type) * (count), _Alignof(type))
 
 static void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset);

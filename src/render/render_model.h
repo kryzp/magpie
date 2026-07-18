@@ -94,7 +94,5 @@ static void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance 
 
 static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform);
 
-static v4 R_ModelPartWorldSphereBounds(m4 world_transform, v4 local_sphere_bounds);
-
 
 #endif // RENDER_MODEL_H
