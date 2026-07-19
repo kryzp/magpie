@@ -23,7 +23,7 @@ namespace scene
 		public float4x4 model_matrix;
 		public float4x4 normal_matrix;
 									 
-		public float4 sphere_bounds;
+		public float4 local_sphere_bounds;
 								   
 		public uint32_t material_index;
 		public uint32_t page_index;
@@ -58,6 +58,11 @@ namespace scene
 	public static const uint32_t ALPHA_MODE_OPAQUE = 0;
 	public static const uint32_t ALPHA_MODE_MASK   = 1;
 	public static const uint32_t ALPHA_MODE_BLEND  = 2;
+
+	public bool ShouldDiscardAlpha(float alpha, uint alpha_mode, float cutoff)
+	{
+		return (alpha_mode == scene::ALPHA_MODE_MASK) && (alpha < cutoff);
+	}
 
 	public struct Material
 	{

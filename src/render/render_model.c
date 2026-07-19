@@ -189,9 +189,9 @@ static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Hand
 		
 		i_submodel->handle = R_SceneInstanceCreate(catalogue->equipped_scene);
 		
-		R_SceneSetInstanceMesh         (catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
-		R_SceneSetInstanceMaterial     (catalogue->equipped_scene, i_submodel->handle, submodel->material);
-		R_SceneSetInstanceSphereBounds (catalogue->equipped_scene, i_submodel->handle, submodel->local_sphere_bounds);
+		R_SceneSetInstanceMesh              (catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
+		R_SceneSetInstanceMaterial          (catalogue->equipped_scene, i_submodel->handle, submodel->material);
+		R_SceneSetInstanceLocalSphereBounds (catalogue->equipped_scene, i_submodel->handle, submodel->local_sphere_bounds);
 		
 		if (instance.has_animator)
 		{

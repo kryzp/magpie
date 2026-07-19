@@ -5,6 +5,7 @@ import irradiance;
 import shadows;
 import frame;
 import bindless;
+import surface;
 
 namespace lighting
 {
@@ -17,50 +18,6 @@ namespace lighting
 		public float intensity;
 		public float3 attenuation;
 		public int shadow_slot_index; // -1 to disable shadows
-	};
-
-	/*
-	 * Contains all info required to evaluate shading at a point.
-	 */
-	public struct Surface
-	{
-		// Geometry
-		public float3 world_position;
-		public float3 world_normal;
-		public float3 view_dir; // point -> camera
-		public float NdotV;
-
-		// PBR
-		public float3 albedo;
-		public float  roughness;
-		public float  metallic;
-		public float  occlusion;
-		public float3 emissive;
-		public float  alpha;
-		public float3 F0;
-		
-		public float  ior;
-
-		public float  transmission;
-		public float  thickness;
-
-		public float3 attenuation_colour;
-		public float  attenuation_distance;
-
-		public float  specular;
-		public float3 specular_colour;
-		
-		public float  clearcoat;
-		public float  clearcoat_roughness;
-		public float3 clearcoat_normal;
-		public float  clearcoat_NdotV;
-
-		public float3 sheen_colour;
-		public float  sheen_roughness;
-
-		public float  iridescence;
-		public float  iridescence_ior;
-		public float  iridescence_thickness;
 	};
 
 	public struct IBL
@@ -141,7 +98,7 @@ namespace lighting
 		return ggx1 * ggx2;
 	}
 
-	public float3 SampleIrradiance(Surface s, IBL ibl)
+	public float3 SampleIrradiance(surface::Surface s, IBL ibl)
 	{
 		float3 irr = 0.0;
 
@@ -162,7 +119,7 @@ namespace lighting
 		return specular;
 	}
 
-	public float3 EvaluateBRDF_BaseIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_BaseIBL(surface::Surface s, IBL ibl)
 	{
 		float3 R = normalize(reflect(-s.view_dir, s.world_normal));
 		float3 kD = (1.0 - s.F0) * (1.0 - s.metallic);
@@ -171,19 +128,19 @@ namespace lighting
 		return kD * diffuse + specular;
 	}
 
-	public float3 EvaluateBRDF_ClearCoatIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_ClearCoatIBL(surface::Surface s, IBL ibl)
 	{
 		float3 R = normalize(reflect(-s.view_dir, s.clearcoat_normal));
 		float3 specular = EvaluateBRDF_SpecularIBL_GGX(R, s.clearcoat_roughness, s.clearcoat_NdotV, 0.04, ibl);
 		return specular * s.clearcoat;
 	}
 
-	public float3 EvaluateBRDF_SheenIBL(Surface s, IBL ibl)
+	public float3 EvaluateBRDF_SheenIBL(surface::Surface s, IBL ibl)
 	{
 		return 0.0; // TODO
 	}
 
-	public float3 EvaluateBRDF_Base(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_Base(surface::Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		float3 F = FresnelSchlick(VdotH, s.F0, 0.0);
 		float NDF = DistributionGGX(NdotH, s.roughness);
@@ -196,7 +153,7 @@ namespace lighting
 		return kD * diffuse + specular;
 	}
 
-	public float3 EvaluateBRDF_ClearCoat(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_ClearCoat(surface::Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat/README.md
 		
@@ -208,14 +165,14 @@ namespace lighting
 		return spec * s.clearcoat;
 	}
 
-	public float3 EvaluateBRDF_Sheen(Surface s, float3 L, float NdotL, float NdotH, float VdotH)
+	public float3 EvaluateBRDF_Sheen(surface::Surface s, float3 L, float NdotL, float NdotH, float VdotH)
 	{
 		// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen/README.md
 
 		return 0.0; // TODO
 	}
 
-	public float3 EvaluateLight_Ambient(Surface s, IBL ibl)
+	public float3 EvaluateLight_Ambient(surface::Surface s, IBL ibl)
 	{
 		float3 base = EvaluateBRDF_BaseIBL(s, ibl);
 
@@ -232,7 +189,7 @@ namespace lighting
 		return base * s.occlusion;
 	}
 
-	public float3 EvaluateLight_Point(Surface s, Light light, shadows::ShadowCaster *casters, uint shadow_sampler_idx, frame::FrameData frame_data)
+	public float3 EvaluateLight_Point(surface::Surface s, Light light, shadows::ShadowCaster *casters, uint shadow_sampler_idx, frame::FrameData frame_data)
 	{
 		float3 delta_x = light.position - s.world_position;
 		float distance_sqr = dot(delta_x, delta_x);

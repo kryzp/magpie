@@ -93,7 +93,7 @@ struct R_Object
 	m4 transform;
 	m4 normal_matrix;
 
-	v4 sphere_bounds;
+	v4 local_sphere_bounds;
 
 	u32 page_index;
 	u32 mesh_index;
@@ -152,7 +152,7 @@ static void                  R_SceneDestroy(R_Scene *scene);
 static R_InstanceHandle      R_SceneInstanceCreate(R_Scene *scene);
 static void                  R_SceneInstanceDestroy(R_Scene *scene, R_InstanceHandle handle);
 static void                  R_SceneSetInstanceTransform(R_Scene *scene, R_InstanceHandle handle, m4 transform);
-static void                  R_SceneSetInstanceSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 sphere_bounds);
+static void                  R_SceneSetInstanceLocalSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 local_sphere_bounds);
 static void                  R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh);
 static void                  R_SceneSetInstanceMaterial(R_Scene *scene, R_InstanceHandle handle, R_MaterialHandle material);
 static void                  R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u32 joint_count);

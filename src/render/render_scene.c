@@ -62,11 +62,11 @@ static void R_SceneSetInstanceTransform(R_Scene *scene, R_InstanceHandle handle,
 	scene->objects[index].normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
 }
 
-static void R_SceneSetInstanceSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 sphere_bounds)
+static void R_SceneSetInstanceLocalSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 local_sphere_bounds)
 {
 	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
 	
-	scene->objects[index].sphere_bounds = sphere_bounds;
+	scene->objects[index].local_sphere_bounds = local_sphere_bounds;
 }
 
 static void R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh)

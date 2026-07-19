@@ -39,7 +39,7 @@ struct R_GPU_ObjectData
 	m4 model_matrix;
 	m4 normal_matrix;
 
-	v4 sphere_bounds;
+	v4 local_sphere_bounds;
 
 	u32 material_index;
 	u32 page_index;

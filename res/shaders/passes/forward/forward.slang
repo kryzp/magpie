@@ -3,9 +3,8 @@ import frame;
 import scene;
 import irradiance;
 import lighting;
-import material;
+import surface;
 import shadows;
-import material;
 
 struct PushConstants
 {
@@ -100,15 +99,15 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	frame::FrameData frame_data = *args.frame_data;
 	scene::Material mat = args.materials[input.material_index];
 
-	material::SurfaceInput surface_input;
+	surface::SurfaceInput surface_input;
 	surface_input.world_position = input.world_position;
 	surface_input.texcoord = input.texcoord;
 	surface_input.vertex_colour = input.colour;
 	surface_input.tbn = input.tbn;
 
-	lighting::Surface surface = material::SampleSurface(surface_input, mat, frame_data, args.linear_sampler);
+	surface::Surface surface = surface::SampleSurface(surface_input, mat, frame_data, args.linear_sampler);
 
-	if (material::ShouldDiscard(surface.alpha, mat.alpha_mode, mat.alpha_cutoff))
+	if (scene::ShouldDiscardAlpha(surface.alpha, mat.alpha_mode, mat.alpha_cutoff))
 	{
 		discard;
 		/*

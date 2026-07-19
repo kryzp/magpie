@@ -1,12 +1,10 @@
-module material;
+module surface;
 
 import bindless;
 import scene;
-import lighting;
 import frame;
 
-// todo: retarded namespace - change this
-namespace material
+namespace surface
 {
 	public struct SurfaceInput
 	{
@@ -16,7 +14,51 @@ namespace material
 		public float3x3 tbn;
 	};
 
-	public lighting::Surface SampleSurface(SurfaceInput input, scene::Material mat, frame::FrameData frame_data, uint sampler_idx)
+	/*
+	 * Contains all info required to evaluate shading at a point.
+	 */
+	public struct Surface
+	{
+		// Geometry
+		public float3 world_position;
+		public float3 world_normal;
+		public float3 view_dir; // point -> camera
+		public float NdotV;
+
+		// PBR
+		public float3 albedo;
+		public float  roughness;
+		public float  metallic;
+		public float  occlusion;
+		public float3 emissive;
+		public float  alpha;
+		public float3 F0;
+		
+		public float  ior;
+
+		public float  transmission;
+		public float  thickness;
+
+		public float3 attenuation_colour;
+		public float  attenuation_distance;
+
+		public float  specular;
+		public float3 specular_colour;
+		
+		public float  clearcoat;
+		public float  clearcoat_roughness;
+		public float3 clearcoat_normal;
+		public float  clearcoat_NdotV;
+
+		public float3 sheen_colour;
+		public float  sheen_roughness;
+
+		public float  iridescence;
+		public float  iridescence_ior;
+		public float  iridescence_thickness;
+	};
+
+	public Surface SampleSurface(SurfaceInput input, scene::Material mat, frame::FrameData frame_data, uint sampler_idx)
 	{
 		SamplerState sampler = bdl::samplers[sampler_idx];
 		float2 uv = frac(input.texcoord);
@@ -53,7 +95,7 @@ namespace material
 			normal = 2.0 * normal - 1.0;
 			normal.xy *= mat.normal_scale;
 		}
-
+		
 		normal = normalize(mul(input.tbn, normal));
 
 
@@ -86,15 +128,13 @@ namespace material
 		float3 F0 = lerp(F0_dialectric_specular, albedo.rgb, metallic);
 
 
-		lighting::Surface s;
+		Surface s;
 
-		
 		s.world_position = input.world_position;
 		s.world_normal = normal;
 		s.view_dir = normalize(frame_data.camera_position.xyz - input.world_position);
 		s.NdotV = max(0.0, dot(s.world_normal, s.view_dir));
 
-		
 		s.albedo = albedo.rgb;
 		s.alpha = albedo.a;
 		s.F0 = F0;
@@ -103,10 +143,8 @@ namespace material
 		s.occlusion = occlusion;
 		s.emissive = emissive;
 
-		
 		s.ior = mat.ior;
 
-		
 		s.specular = mat.specular_factor;
 		s.specular_colour = mat.specular_colour_factor;
 
@@ -169,10 +207,5 @@ namespace material
 
 		
 		return s;
-	}
-
-	public bool ShouldDiscard(float alpha, uint alpha_mode, float cutoff)
-	{
-		return (alpha_mode == scene::ALPHA_MODE_MASK) && (alpha < cutoff);
 	}
 }

@@ -69,7 +69,7 @@ static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_Fra
 		
 		mapped[object_index].model_matrix = object->transform;
 		mapped[object_index].normal_matrix = object->normal_matrix;
-		mapped[object_index].sphere_bounds = object->sphere_bounds;
+		mapped[object_index].local_sphere_bounds = object->local_sphere_bounds;
 		mapped[object_index].material_index = object->material_index;
 		mapped[object_index].mesh_index = object->mesh_index;
 		mapped[object_index].page_index = object->page_index;

@@ -6,12 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void
-SLANG_LogDiagnostics(SLANG_LogFn log_fn,
-					 const char *context,
-					 const char *source,
-					 slang::IBlob *diag,
-					 void *user_data)
+static void SLANG_LogDiagnostics(SLANG_LogFn log_fn,
+								 const char *context,
+								 const char *source,
+								 slang::IBlob *diag,
+								 void *user_data)
 {
 	if (!diag || !log_fn)
 		return;
@@ -34,16 +33,14 @@ SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 	log_fn(context, source, fmt, user_data);
 }
 
-extern "C" void
-SLANG_Init(void **out_global_session)
+extern "C" void SLANG_Init(void **out_global_session)
 {
 	slang::IGlobalSession *gs = nullptr;
 	slang::createGlobalSession(&gs);
 	*out_global_session = (void *)gs;
 }
 
-extern "C" void
-SLANG_Shutdown(void *global_session)
+extern "C" void SLANG_Shutdown(void *global_session)
 {
 	if (global_session)
 	{
@@ -52,12 +49,11 @@ SLANG_Shutdown(void *global_session)
 	}
 }
 
-extern "C" SLANG_CompileResult
-SLANG_Compile(void *global_session,
-			  const char *source_path,
-			  uint32_t search_path_count,
-			  const char *const *search_paths,
-			  SLANG_LogFn *log_fn, void *user_data)
+extern "C" SLANG_CompileResult SLANG_Compile(void *global_session,
+											 const char *source_path,
+											 uint32_t search_path_count,
+											 const char *const *search_paths,
+											 SLANG_LogFn *log_fn, void *user_data)
 {
 	SLANG_CompileResult result = {};
 	result.failed = 1;
@@ -204,8 +200,7 @@ SLANG_Compile(void *global_session,
 	return result;
 }
 
-extern "C" void
-SLANG_FreeResult(SLANG_CompileResult *result)
+extern "C" void SLANG_FreeResult(SLANG_CompileResult *result)
 {
 	if (!result)
 		return;
