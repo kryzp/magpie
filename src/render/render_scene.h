@@ -179,7 +179,7 @@ internal void                  R_SceneEntityDestroy(R_Scene *scene, R_EntityHand
 
 internal void                  R_SceneSetObjectTransform(R_Scene *scene, R_EntityHandle handle, m4 transform);
 internal void                  R_SceneSetObjectLocalSphereBounds(R_Scene *scene, R_EntityHandle handle, v4 local_sphere_bounds);
-internal void                  R_SceneSetObjecteMesh(R_Scene *scene, R_EntityHandle handle, R_MeshHandle mesh);
+internal void                  R_SceneSetObjectMesh(R_Scene *scene, R_EntityHandle handle, R_MeshHandle mesh);
 internal void                  R_SceneSetObjectMaterial(R_Scene *scene, R_EntityHandle handle, R_MaterialHandle material);
 internal void                  R_SceneSetObjectSkinning(R_Scene *scene, R_EntityHandle handle, const m4 *palette, u32 joint_count);
 

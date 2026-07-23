@@ -312,6 +312,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	}
 
 	// render debug sphere bounds on objects for culling debug.
+	/*
 	{
 		R_EntityIterator iterator = R_EntityIteratorInit(&app->scene);
 		R_Entity *entity = NULL;
@@ -342,6 +343,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 							  0.f, true);
 		}
 	}
+	*/
 	
 	R_SystemRender(&app->graph, &frame_params);
 	
@@ -358,7 +360,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	ArenaReset(&app->frame_arena);
 	
-	//AppLogFPS(dt);
+	AppLogFPS(dt);
 
 	app->frame_number++;
 	

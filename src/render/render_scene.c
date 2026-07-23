@@ -15,25 +15,22 @@ internal void R_EntityIteratorReset(R_EntityIterator *iter)
 
 internal R_Entity *R_EntityIteratorNext(R_EntityIterator *iter, R_EntityType type)
 {
-	R_Entity *entity = NULL;
-	
-	while (!entity)
+	while (iter->index < ArraySize(iter->scene->entities))
 	{
-		R_Entity *entity2 = &iter->scene->entities[iter->index];
-		b32 occupied = iter->scene->entity_occupied[iter->index];
-		
 		iter->index++;
 
-		if (iter->index >= ArraySize(iter->scene->entities))
-			break;
-		
-		if (occupied || entity2->type != type)
+		if (!iter->scene->entity_occupied[iter->index])
 			continue;
 
-		entity = entity2;
+		R_Entity *entity = &iter->scene->entities[iter->index];
+		
+		if (entity->type != type)
+			continue;
+
+		return entity;
 	}
 
-	return entity;
+	return NULL;
 }
 
 internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
@@ -80,7 +77,8 @@ internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
 	handle.type = type;
 
 	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
-	
+
+	scene->entities[index].type = type;
 	scene->entity_occupied[index] = true;
 	scene->entity_count[type]++;
 	
