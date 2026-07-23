@@ -114,12 +114,12 @@ internal void G_CmdDrawIndexedIndirect(const G_CmdBuffer *cmd,
 
 internal void G_CmdDrawIndexedIndirectCount(const G_CmdBuffer *cmd,
 											G_ResourceKey indirect_buffer, u64 indirect_offset,
-											G_ResourceKey count_buffer,    u64 count_offset,
+											G_ResourceKey count_buffer, u64 count_offset,
 											u32 max_count, u32 stride);
 
 internal void G_CmdDrawMeshTasksIndirectCount(const G_CmdBuffer *cmd,
 											  G_ResourceKey indirect_buffer, u64 indirect_offset,
-											  G_ResourceKey count_buffer,    u64 count_offset,
+											  G_ResourceKey count_buffer,u64 count_offset,
 											  u32 max_count, u32 stride);
 
 

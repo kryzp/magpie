@@ -116,7 +116,7 @@ App *MagpieInit(const OS_API *osapi_)
 									  String8Lit("assets://models/Sponza/glTF/Sponza.gltf"),
 									  M4Scale(v3x(5.f)));
 	}
-	
+
 	{
 		R_Light light = {0};
 		light.type = R_LightType_Point;
@@ -125,7 +125,7 @@ App *MagpieInit(const OS_API *osapi_)
 		light.colour = v3(1.f, 1.f, 1.f);
 		light.intensity = 5.f;
 		light.falloff = 0.1f;
-		light.casts_shadows = true;
+		light.casts_shadows = false;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
 
@@ -142,7 +142,7 @@ App *MagpieInit(const OS_API *osapi_)
 		light.colour = v3(0.f, 1.f, 1.f);
 		light.intensity = 5.f;
 		light.falloff = 0.1f;
-		light.casts_shadows = true;
+		light.casts_shadows = false;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
 

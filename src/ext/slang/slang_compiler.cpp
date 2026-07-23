@@ -28,7 +28,11 @@ static void SLANG_LogDiagnostics(SLANG_LogFn log_fn,
 	char fmt[1024] = {0};
 	size_t capped_len = (len > sizeof(fmt)) ? sizeof(fmt) : len;
 	memcpy(fmt, msg, capped_len);
-	fmt[capped_len-2] = 0; // cut off the newline
+
+	if (capped_len >= 2)
+		fmt[capped_len-2] = 0; // cut off the newline
+	else
+		fmt[0] = 0;
 		
 	log_fn(context, source, fmt, user_data);
 }

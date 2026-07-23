@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_SHADOW_H
 #define RENDER_PASS_SHADOW_H
 
-#define R_SHADOW_MAP_RESOLUTION 2048
+#define R_SHADOW_MAP_RESOLUTION 1024
 
 typedef struct R_ShadowMappingPassData R_ShadowMappingPassData;
 struct R_ShadowMappingPassData
@@ -30,8 +30,8 @@ internal void R_ShadowsDestroy(R_ShadowState *st);
 internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params);
 
 internal void R_ShadowsRender(R_ShadowState *st,
-							R_Graph *graph,
-							const R_FrameParams *frame_params,
-							R_Blackboard *bb);
+							  R_Graph *graph,
+							  const R_FrameParams *frame_params,
+							  R_Blackboard *bb);
 
 #endif // RENDER_PASS_SHADOW_H

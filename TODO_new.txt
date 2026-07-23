@@ -1,4 +1,36 @@
 - move /render/graph/ into a layer below, called /render_graph/ with namespace RG_
+
 - replace old AssertTrue()'s with DebugLogAssert() across the codebase for clearer logging
+
 - remove skin buffer from A_SubModel
+
 - get rid of A_ModelIndex
+
+- fix performance problems in shader code -- far too much branching right now
+
+- write a nice argument parsing library for OS implementations to use, could be helpful.
+---> support: -s --long, aaa -- bbb (seperation), ...
+
+- logging deduplication shouldn't reset when switching between channels.
+
+- asset loaders should expose a `String8 extension` that automatically
+  then assigns the right type to an asset without having to provide
+  it manually
+
+- dedupes are printed twice in the log.txt output file, e.g for a log that was repeated 3 times:
+  [ ... ] Hello
+  [ ... ] Hello (3x)
+
+- newlines in logs should align with the rest of the logs:
+  [ ... ] [ ... ] [ channel ] hello
+                              this is after a newline
+							  another newline!
+  [ ... ] [ ... ] [ channel ] this is a new log
+
+- fix paging not existing for skinning vertices (this is super scuffed in general, need to remove buffer alloc in model loader, should just be skinning buffer size?)
+
+- finish graphics profiler currently just a skeleton
+
+- SLANG SHADER CODE and C SOURCE CODE is generally quite disconnected right now despite sharing a lot
+  of stuff like common type definitions, so we need to clean that up somehow, make it a
+  lot easier to develop rendering + shader code together. prime example: render_gpu_types and the slang equivalents.

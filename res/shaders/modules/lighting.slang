@@ -101,12 +101,16 @@ namespace lighting
 	public float3 SampleIrradiance(surface::Surface s, IBL ibl)
 	{
 		float3 irr = 0.0;
+		
+		irr = bdl::cubes[ibl.irradiance_fallback_cubemap].Sample(bdl::samplers[ibl.sampler], math::WorldToCubemap(s.world_normal)).rgb;
 
+		/*
 		if (ibl.irr_sh)
 			irr = irradiance::SampleIrradianceGrid(s.world_position, s.world_normal, *ibl.irr_grid_info, ibl.irr_sh);
 		else
 			irr = bdl::cubes[ibl.irradiance_fallback_cubemap].Sample(bdl::samplers[ibl.sampler], math::WorldToCubemap(s.world_normal)).rgb;
-
+		*/
+		
 		return irr;
 	}
 

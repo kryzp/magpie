@@ -1,6 +1,6 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C.
+**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C. Magpie currently sticks to supporting devices running Vulkan 1.3 and higher (with some base extensions), and has an optional features system, such as using hardware raytracing if available.
 
 ![](images/helmet.png)
 ![](images/sponza.png)
@@ -65,8 +65,9 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
   - [ ] Sheen
   - [ ] Iridescence
   - [x] Unlit Materials
-- Basic Sorted Forward Transparency
+- Basic Sorted Forward Transparency (also look into order-independent transparency)
 - Forward+ Light Clustering
+- Alpha to Coverage for foliage / alpha-cutout geometry
 - Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
 - Text / Font Rendering
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)

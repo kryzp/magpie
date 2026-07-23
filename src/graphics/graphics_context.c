@@ -421,7 +421,12 @@ internal G_Context G_ContextInit(Arena *arena,
 	graphics_queue_create_info.queueCount = 1;
 	graphics_queue_create_info.pQueuePriorities = &queue_priority;
 
-	//context.physical_device_features.features.robustBufferAccess = VK_TRUE;
+	VkPhysicalDeviceFeatures enabled_base_features = {0};
+	enabled_base_features.samplerAnisotropy = VK_TRUE;
+	enabled_base_features.sampleRateShading = VK_TRUE;
+	enabled_base_features.shaderInt64 = VK_TRUE;
+	enabled_base_features.multiDrawIndirect = VK_TRUE;
+	//enabled_base_features.robustBufferAccess = VK_TRUE;
 	
 	VkPhysicalDeviceVulkan11Features vulkan11_features = {0};
 	vulkan11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -493,11 +498,6 @@ internal G_Context G_ContextInit(Arena *arena,
 
 		feature_chain_tail = &ray_query_features;
 	}
-
-	VkPhysicalDeviceFeatures enabled_base_features = {0};
-	enabled_base_features.samplerAnisotropy = context.capabilities.enabled.set[G_CapabilityType_SamplerAnisotropy];
-	enabled_base_features.sampleRateShading = context.capabilities.enabled.set[G_CapabilityType_SampleRateShading];
-	enabled_base_features.shaderInt64 = context.capabilities.enabled.set[G_CapabilityType_ShaderI64];
 	
 	VkDeviceCreateInfo device_create_info = {0};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

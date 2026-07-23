@@ -149,14 +149,6 @@ internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel 
 
 		G_Feature features[] = {
 			{
-				.tier = G_FeatureTier_Required,
-				.name = "required",
-				.capability_count = 3,
-				.capabilities[0] = G_CapabilityType_SamplerAnisotropy,
-				.capabilities[1] = G_CapabilityType_SampleRateShading,
-				.capabilities[2] = G_CapabilityType_ShaderI64
-			},
-			{
 				.tier = G_FeatureTier_Optional,
 				.name = "raytracing",
 				.capability_count = 3,
@@ -549,11 +541,16 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 	swapchain.width = extent.width;
 	swapchain.height = extent.height;
 	swapchain.format = surface_format.format;
-
+	
 	u32 frame_count = details->capabilities.minImageCount + 1;
 
 	if (frame_count > details->capabilities.maxImageCount && details->capabilities.maxImageCount > 0)
 		frame_count = details->capabilities.maxImageCount;
+
+	DebugLogD(g_device->log_channel, "Swapchain:");
+	DebugLogD(g_device->log_channel, " size: %u x %u", extent.width, extent.height);
+	DebugLogD(g_device->log_channel, " format: %u", surface_format.format);
+	DebugLogD(g_device->log_channel, " frame count: %u", frame_count);
 	
 	const VkImageUsageFlags swapchain_texture_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 

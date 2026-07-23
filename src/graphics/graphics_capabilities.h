@@ -12,9 +12,6 @@ G_FeatureTier;
 
 typedef enum G_CapabilityType
 {
-	G_CapabilityType_SamplerAnisotropy,
-	G_CapabilityType_SampleRateShading,
-	G_CapabilityType_ShaderI64,
 	G_CapabilityType_RayTracingPipeline,
 	G_CapabilityType_AccelerationStructure,
 	G_CapabilityType_RayQuery,

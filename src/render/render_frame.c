@@ -166,9 +166,9 @@ internal void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out)
 }
 
 internal R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
-										R_System *system,
-										u32 frame_number, f32 dt, f32 elapsed,
-										R_Scene *scene, const R_Camera *camera)
+										  R_System *system,
+										  u32 frame_number, f32 dt, f32 elapsed,
+										  R_Scene *scene, const R_Camera *camera)
 {
 	G_RingBuffer *ring = &system->frame_upload_ring_buffer;
 
@@ -218,9 +218,9 @@ internal R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 }
 
 internal void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
-									  G_CmdBuffer *cmd,
-									  G_ResourceKey indirect_buffer,
-									  G_ResourceKey count_buffer)
+										G_CmdBuffer *cmd,
+										G_ResourceKey indirect_buffer,
+										G_ResourceKey count_buffer)
 {
 	const u64 max_draws_per_page = R_SCENE_MAX_ENTITIES;
 
@@ -235,8 +235,10 @@ internal void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
 							 VK_INDEX_TYPE_UINT32);
 
 		G_CmdDrawIndexedIndirectCount(cmd,
-									  indirect_buffer, indirect_offset,
-									  count_buffer, count_offset,
+									  indirect_buffer,
+									  indirect_offset,
+									  count_buffer,
+									  count_offset,
 									  max_draws_per_page,
 									  sizeof(R_GPU_IndirectDraw));
 	}

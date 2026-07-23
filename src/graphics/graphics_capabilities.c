@@ -16,18 +16,6 @@ struct G_CapabilityInfo
 };
 
 const G_CapabilityInfo g_caps_infos[] = {
-	[G_CapabilityType_SamplerAnisotropy] = {
-		.name = "sampler_anisotropy",
-		.score = 1
-	},
-	[G_CapabilityType_SampleRateShading] = {
-		.name = "sample_rate_shading",
-		.score = 1
-	},
-	[G_CapabilityType_ShaderI64] = {
-		.name = "shader_i64",
-		.score = 1
-	},
 	[G_CapabilityType_RayTracingPipeline] = {
 		.name = "ray_tracing_pipeline",
 		.score = 2,
@@ -110,11 +98,8 @@ internal G_Capabilities G_CapabilitiesQuery(VkPhysicalDevice physical_device,
 	result.set[G_CapabilityType_RayTracingPipeline]    = rt_pipeline_query.rayTracingPipeline;
 	result.set[G_CapabilityType_AccelerationStructure] = accel_query.accelerationStructure;
 	result.set[G_CapabilityType_RayQuery]              = ray_query_query.rayQuery;
-	result.set[G_CapabilityType_SamplerAnisotropy]     = out_features2->features.samplerAnisotropy;
-	result.set[G_CapabilityType_SampleRateShading]     = out_features2->features.sampleRateShading;
-	result.set[G_CapabilityType_ShaderI64]             = out_features2->features.shaderInt64;
 	
-	DebugLogD(log_channel, "Detected:");
+	DebugLogD(log_channel, "Detected Capabilities:");
 	
 	for (u32 i = 0; i < ArraySize(result.set); i++)
 		DebugLogD(log_channel, " %s=%d", g_caps_infos[i].name, result.set[i]);
@@ -214,6 +199,8 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 						extensions[extension_count++] = name;
 				}
 			}
+			
+			DebugLogD(log_channel, "Feature \"%s\" is supported by this device!", f->name);
 		}
 		else
 		{
