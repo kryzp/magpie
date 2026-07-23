@@ -354,9 +354,9 @@ internal void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *
 	else if (result != VK_SUCCESS)
 		DebugLogB(g_device->log_channel, "Failed to present swapchain image. (%u)", result);
 
-	g_device->current_frame_in_flight_index = (g_device->current_frame_in_flight_index + 1) % G_FRAMES_IN_FLIGHT;
-	
 	G_DeviceCmdPoolRelease(&frame_in_flight->command_pool, cmd, frame_in_flight->completion_point.frame);
+	
+	g_device->current_frame_in_flight_index = (g_device->current_frame_in_flight_index + 1) % G_FRAMES_IN_FLIGHT;
 }
 
 internal G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
@@ -771,7 +771,9 @@ internal void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value)
 					   "Command pool acquire stack is full.");
 
 		pool->acquire_stack[pool->acquire_count++] = released->vk_handle;
+		
 		pool->release_front = (pool->release_front + 1) % ArraySize(pool->release_queue);
+		
 		pool->release_count--;
 	}
 }
@@ -1909,9 +1911,10 @@ internal void G_DeviceCreateSyncResources(void)
 		}
 		
 		frame->destroyed_image_head = NULL;
-		//frame->destroyed_view_head = NULL;
 		frame->destroyed_buffer_head = NULL;
 		frame->destroyed_sampler_head = NULL;
+		frame->destroyed_shader_head = NULL;
+		frame->destroyed_as_head = NULL;
 	}
 
 	DebugLogD(g_device->log_channel, "Created frame sync objects.");

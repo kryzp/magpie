@@ -169,7 +169,7 @@ internal void G_CmdPushConstantsEx(const G_CmdBuffer *cmd,
 								   u32 offset)
 {
 	u64 max_push_constants_size = G_DeviceGetSelected()->context.max_push_constants_size;
-	
+
 	DebugLogAssert(G_DeviceGetSelected()->log_channel_cmd_buffer,
 				   size <= max_push_constants_size,
 				   "Push constants must not be over %llu bytes in size.",

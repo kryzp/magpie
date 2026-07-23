@@ -194,7 +194,7 @@ void MagpieDestroy(App *app_)
 	ArenaRelease(&app->scripting_arena);
 	ArenaRelease(&app->graphics_arena);
 	
-	DebugLogI(app->log_channel, "Destroyed");
+	DebugLogI(app->log_channel, "Destroyed.");
 
 	osapi->HeapFree(app->bootstrap_memory);
 }

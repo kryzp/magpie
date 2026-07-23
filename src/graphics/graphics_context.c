@@ -168,28 +168,6 @@ internal G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
 	return result;
 }
 
-internal u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
-															VkPhysicalDevice physical_device,
-															VkPhysicalDeviceProperties2 properties,
-															const G_Requirements *requirements,
-															G_Capabilities *out_capabilities,
-															VkPhysicalDeviceFeatures2 *out_features,
-															b32 *has_essentials,
-															LOG_Channel log_channel)
-{
-	u32 usability = 0;
-
-	b32 adequate_swap_chain = false;
-	b32 meets_requirements = false;
-
-
-
-	if (has_essentials)
-		*has_essentials = adequate_swap_chain && meets_requirements;
-
-	return usability;
-}
-
 internal VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 															  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
 															  const VkAllocationCallbacks *allocator,
