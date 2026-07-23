@@ -1,5 +1,5 @@
 
-static void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
+internal void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 {
 	MemZeroStruct(q);
 
@@ -8,7 +8,7 @@ static void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel)
 	DebugLogI(q->log_channel, "Initialized.");
 }
 
-static void E_EventPush(E_EventQueue *q, const E_Event *ev)
+internal void E_EventPush(E_EventQueue *q, const E_Event *ev)
 {
 	DebugLogAssert(q->log_channel,
 				   q->event_count < ArraySize(q->events),
@@ -19,12 +19,12 @@ static void E_EventPush(E_EventQueue *q, const E_Event *ev)
 	q->event_count++;
 }
 
-static u64 E_EventListenerRegister(E_EventQueue *q)
+internal u64 E_EventListenerRegister(E_EventQueue *q)
 {
 	return q->next_listener_id++;
 }
 
-static void E_EventBind(E_EventQueue *q,
+internal void E_EventBind(E_EventQueue *q,
 						u64 listener_id,
 						u32 entity_type,
 						E_EventType event_type,
@@ -44,7 +44,7 @@ static void E_EventBind(E_EventQueue *q,
 	AssertTrue(q->binding_count < ArraySize(q->bindings));	
 }
 
-static void E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
+internal void E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
 {
 	u32 cursor = 0;
 	
@@ -63,7 +63,7 @@ static void E_EventUnbindAll(E_EventQueue *q, u64 listener_id)
 	q->binding_count = cursor;
 }
 
-static void E_EventDispatch(E_EventQueue *q, E_World *world)
+internal void E_EventDispatch(E_EventQueue *q, E_World *world)
 {
 	for (u32 i = 0; i < q->event_count; i++)
 	{
@@ -80,7 +80,7 @@ static void E_EventDispatch(E_EventQueue *q, E_World *world)
 	q->event_count = 0;
 }
 
-static void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
+internal void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 {
 	E_Header *header = E_HeaderOf(entity);
 
@@ -97,7 +97,7 @@ static void E_EventSignal(E_EventQueue *q, E_Event *event, void *entity)
 	}
 }
 
-static void E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
+internal void E_EventBroadcast(E_EventQueue *q, E_Event *event, E_World *world)
 {
 	for (u32 i = 0; i < q->binding_count; i++)
 	{

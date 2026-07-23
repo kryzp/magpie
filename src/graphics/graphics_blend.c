@@ -1,5 +1,5 @@
 
-static G_BlendSt G_BlendStInit(void)
+internal G_BlendSt G_BlendStInit(void)
 {
 	G_BlendSt st = {0};
 	
@@ -29,7 +29,7 @@ static G_BlendSt G_BlendStInit(void)
 	return st;
 }
 
-static G_DepthStencilSt G_DepthStencilStInit(void)
+internal G_DepthStencilSt G_DepthStencilStInit(void)
 {
 	G_DepthStencilSt st = {0};
 

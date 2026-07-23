@@ -17,7 +17,7 @@ struct P_Raycast
     P_Hit hit;
 };
 
-static v3 P_RaycastCalcFinalPosition(const P_Raycast *ray);
-static v3 P_RaycastCalcPositionAt(const P_Raycast *ray, f32 t);
+internal v3 P_RaycastCalcFinalPosition(const P_Raycast *ray);
+internal v3 P_RaycastCalcPositionAt(const P_Raycast *ray, f32 t);
 
 #endif // PHYSICS_HIT_H

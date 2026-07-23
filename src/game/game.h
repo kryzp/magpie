@@ -12,9 +12,9 @@ struct Game
 	b32 camera_driver_active;
 };
 
-static void GameSelect(Game *game_);
-static void GameInit(E_World *world);
-static void GameTick(const OS_InputState *input, f32 dt, f32 elapsed);
+internal void GameSelect(Game *game_);
+internal void GameInit(E_World *world);
+internal void GameTick(const OS_InputState *input, f32 dt, f32 elapsed);
 
 static Game *game = NULL;
 

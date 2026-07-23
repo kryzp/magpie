@@ -10,7 +10,6 @@ struct P_Instance
 	P_Instance *prev;
 
 	u64 key;
-
 	P_RigidBody rigidbody;
 };
 
@@ -25,19 +24,19 @@ struct P_Engine
 	u64 current_key;
 };
 
-static void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel log_channel);
-static void P_EngineDestroy(void);
-static void P_EngineSelectContext(P_Engine *engine);
-static void P_EngineTick(f32 dt);
+internal void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel log_channel);
+internal void P_EngineDestroy(void);
+internal void P_EngineSelectContext(P_Engine *engine);
+internal void P_EngineTick(f32 dt);
 
-static P_Handle P_LeaseInstance(void);
-static void P_ReturnInstance(P_Handle handle);
+internal P_Handle P_LeaseInstance(void);
+internal void P_ReturnInstance(P_Handle handle);
 
-static P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle);
+internal P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle);
 
-static J_ENTRY_POINT_DEF(P_CastRayJob);
+internal J_ENTRY_POINT_DEF(P_CastRayJob);
 
-static P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter);
-static P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter);
+internal P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter);
+internal P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter);
 
 #endif // PHYSICS_ENGINE_H

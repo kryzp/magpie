@@ -1,10 +1,10 @@
 
-static void GameStateStackInit(GameStateStack *stack)
+internal void GameStateStackInit(GameStateStack *stack)
 {
 	stack->top = -1;
 }
 
-static void GameStateStackPush(GameStateStack *stack, GameState *st, void *state)
+internal void GameStateStackPush(GameStateStack *stack, GameState *st, void *state)
 {
 	AssertTrue(st);
 	AssertTrue(stack->top < ArraySize(stack->stack));
@@ -23,7 +23,7 @@ static void GameStateStackPush(GameStateStack *stack, GameState *st, void *state
 		top->OnEnter(top->ctx, state);
 }
 
-static void GameStateStackPop(GameStateStack *stack, void *state)
+internal void GameStateStackPop(GameStateStack *stack, void *state)
 {
 	AssertTrue(stack->top >= 0);
 
@@ -40,7 +40,7 @@ static void GameStateStackPop(GameStateStack *stack, void *state)
 		top->OnResume(top->ctx, state);
 }
 
-static GameState *GameStateStackPeek(const GameStateStack *stack)
+internal GameState *GameStateStackPeek(const GameStateStack *stack)
 {
 	if (stack->top < 0 || stack->top >= ArraySize(stack->stack))
 		return NULL;
@@ -48,7 +48,7 @@ static GameState *GameStateStackPeek(const GameStateStack *stack)
 	return stack->stack[stack->top];
 }
 
-static void GameStateStackTick(const GameStateStack *stack, void *state, const OS_InputState *input, f32 dt, f32 elapsed)
+internal void GameStateStackTick(const GameStateStack *stack, void *state, const OS_InputState *input, f32 dt, f32 elapsed)
 {
 	GameState *top = GameStateStackPeek(stack);
 

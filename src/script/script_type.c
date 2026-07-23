@@ -1,5 +1,5 @@
 
-static S_Argument S_ArgF32(f32 v)
+internal S_Argument S_ArgF32(f32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_F32;
@@ -8,7 +8,7 @@ static S_Argument S_ArgF32(f32 v)
 	return arg;
 }
 
-static S_Argument S_ArgI32(i32 v)
+internal S_Argument S_ArgI32(i32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_I32;
@@ -17,7 +17,7 @@ static S_Argument S_ArgI32(i32 v)
 	return arg;
 }
 
-static S_Argument S_ArgB32(b32 v)
+internal S_Argument S_ArgB32(b32 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_B32;
@@ -26,7 +26,7 @@ static S_Argument S_ArgB32(b32 v)
 	return arg;
 }
 
-static S_Argument S_ArgStr(String8 v)
+internal S_Argument S_ArgStr(String8 v)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_String8;
@@ -35,7 +35,7 @@ static S_Argument S_ArgStr(String8 v)
 	return arg;
 }
 
-static S_Argument S_ArgTaggedU32(u32 v, u32 tag)
+internal S_Argument S_ArgTaggedU32(u32 v, u32 tag)
 {
 	S_Argument arg = {0};
 	arg.type = S_ArgType_TaggedU32;

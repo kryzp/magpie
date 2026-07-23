@@ -17,26 +17,26 @@
  * what is it, you fear most?
  */
 
-static S_BINDING_DEF(S_BND_WaitSeconds)
+internal S_BINDING_DEF(S_BND_WaitSeconds)
 {
 	f32 s = S_CtxGetArgF32(ctx, 0); 
 	S_CtxYieldTime(ctx, s);
 }
 
-static S_BINDING_DEF(S_BND_WaitSignal)
+internal S_BINDING_DEF(S_BND_WaitSignal)
 {
 	String8 sig = S_CtxGetArgStr(ctx, 0);
 	S_CtxYieldSignal(ctx, sig);
 }
 
-static S_BINDING_DEF(S_BND_DebugLog)
+internal S_BINDING_DEF(S_BND_DebugLog)
 {
 	String8 msg = S_CtxGetArgStr(ctx, 0);
 	
 	DebugLogD(app->log_channel, "%.*s", String8VArg(msg));
 }
 
-static void AppInitScripting(void)
+internal void AppInitScripting(void)
 {
 	app->scripting_system = S_AllocAndSelect(&app->scripting_arena, app->scripting_log_channel);
 
@@ -45,7 +45,7 @@ static void AppInitScripting(void)
 	S_BindGlobal(String8Lit("debug_log"), S_BND_DebugLog);
 }
 
-static void AppInit_(void)
+internal void AppInit_(void)
 {
 	AppInitScripting();
 
@@ -128,10 +128,10 @@ App *MagpieInit(const OS_API *osapi_)
 		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
+
+		R_EntityHandle entity = R_SceneEntityCreate(&app->scene, R_EntityType_Light);
 		
-		R_SceneSetLight(&app->scene,
-						R_SceneLightCreate(&app->scene),
-						light);
+		R_SceneSetLightParam(&app->scene, entity, light);
 	}
 	
 	{
@@ -145,10 +145,10 @@ App *MagpieInit(const OS_API *osapi_)
 		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
+
+		R_EntityHandle entity = R_SceneEntityCreate(&app->scene, R_EntityType_Light);
 		
-		R_SceneSetLight(&app->scene,
-						R_SceneLightCreate(&app->scene),
-						light);
+		R_SceneSetLightParam(&app->scene, entity, light);
 	}
 	
 	DebugLogI(app->log_channel, "Initialized.");
@@ -199,7 +199,7 @@ void MagpieDestroy(App *app_)
 	osapi->HeapFree(app->bootstrap_memory);
 }
 
-static void AppLogFPS(f32 dt)
+internal void AppLogFPS(f32 dt)
 {
 	static u32 index = 0;
 	static f32 fps_history[16] = {0};
@@ -311,30 +311,28 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 										  &app->scene, &app->game.camera);
 	}
 
-	/*
+	// render debug sphere bounds on objects for culling debug.
 	{
-		u32 object_index = 0;
+		R_EntityIterator iterator = R_EntityIteratorInit(&app->scene);
+		R_Entity *entity = NULL;
 	
-		for (u32 i = 0; i < ArraySize(app->scene.objects) && object_index < DensePoolLiveCount(&app->scene.object_pool); i++)
+		while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Object)))
 		{
-			R_Object *object = &app->scene.objects[i];
+			R_Object *object = &entity->object;
+			
+			v4 local_sphere_bounds = object->local_sphere_bounds;
 
-			if (!app->scene.object_occupied[i])
-				continue;
-
-			v4 sphere_bounds = object->sphere_bounds;
-
-			v3 local_centre = v3(sphere_bounds.x,
-								 sphere_bounds.y,
-								 sphere_bounds.z);
+			v3 local_centre = v3(local_sphere_bounds.x,
+								 local_sphere_bounds.y,
+								 local_sphere_bounds.z);
 	
-			v3 local_edge = v3(sphere_bounds.x + sphere_bounds.w,
-							   sphere_bounds.y,
-							   sphere_bounds.z);
+			v3 local_edge = v3(local_sphere_bounds.x + local_sphere_bounds.w,
+							   local_sphere_bounds.y,
+							   local_sphere_bounds.z);
  
 			v3 world_centre = M4MulV3Point(object->transform, local_centre);
 			v3 world_edge = M4MulV3Point(object->transform, local_edge);
-
+			
 			v3 dx = V3Sub(world_edge, world_centre);
 			f32 world_radius = V3Length(dx);
 
@@ -342,11 +340,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 							  world_radius,
 							  v4(1.f, 1.f, 1.f, 1.f),
 							  0.f, true);
-
-			object_index++;
 		}
 	}
-	*/
 	
 	R_SystemRender(&app->graph, &frame_params);
 	

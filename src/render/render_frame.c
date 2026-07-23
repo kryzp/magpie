@@ -1,7 +1,7 @@
 
-static void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
+internal void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
-	out->page_count = R_ScenePageCount(scene); // real count, may be 0
+	out->page_count = R_ScenePageCount(scene);
 
 	u32 alloc_count = out->page_count > 0 ? out->page_count : 1;
 	out->page_table_buffer = G_RingBufferPushArray(ring, R_GPU_PagePointers, alloc_count);
@@ -15,12 +15,15 @@ static void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R_F
 	}
 }
 
-static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
+internal void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
 	u32 total_joints = 0;
-	
-	for (u32 i = 0; i < out->object_count; i++)
-		total_joints += scene->objects[i].skinning_joint_count;
+
+	R_EntityIterator iterator = R_EntityIteratorInit(scene);
+	R_Entity *entity = NULL;
+
+	while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Object)))
+		total_joints += entity->object.skinning_joint_count;
 
 	if (total_joints == 0)
 		return;
@@ -30,13 +33,12 @@ static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_Fr
 	u32 offset = 0;
 
 	u32 object_index = 0;
-	
-	for (u32 i = 0; i < ArraySize(scene->objects) && object_index < out->object_count; i++)
-	{
-		R_Object *object = &scene->objects[i];
 
-		if (!scene->object_occupied[i])
-			continue;
+	R_EntityIteratorReset(&iterator);
+	
+	while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Object)))
+	{
+		R_Object *object = &entity->object;
 		
 		u32 joints = object->skinning_joint_count;
 		
@@ -53,19 +55,20 @@ static void R_FrameParamsUploadSkinning(R_Scene *scene, G_RingBuffer *ring, R_Fr
 	}
 }
 
-static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
+internal void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
 	out->object_buffer = G_RingBufferPushArray(ring, R_GPU_ObjectData, out->object_count);
+	
 	R_GPU_ObjectData *mapped = out->object_buffer.cpu;
 
 	u32 object_index = 0;
 	
-	for (u32 i = 0; i < ArraySize(scene->objects) && object_index < out->object_count; i++)
+	R_EntityIterator iterator = R_EntityIteratorInit(scene);
+	R_Entity *entity = NULL;
+	
+	while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Object)))
 	{
-		R_Object *object = &scene->objects[i];
-
-		if (!scene->object_occupied[i])
-			continue;
+		R_Object *object = &entity->object;
 		
 		mapped[object_index].model_matrix = object->transform;
 		mapped[object_index].normal_matrix = object->normal_matrix;
@@ -80,19 +83,20 @@ static void R_FrameParamsUploadObjects(R_Scene *scene, G_RingBuffer *ring, R_Fra
 	}
 }
 
-static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
+internal void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_FrameParams *out)
 {
 	out->light_buffer = G_RingBufferPushArray(ring, R_GPU_Light, out->light_count);
+	
 	R_GPU_Light *mapped = out->light_buffer.cpu;
 
 	u32 light_index = 0;
-	
-	for (u32 i = 0; i < ArraySize(scene->lights) && light_index < out->light_count; i++)
-	{
-		const R_Light *light = &scene->lights[i];
 
-		if (!scene->light_occupied[i])
-			continue;
+	R_EntityIterator iterator = R_EntityIteratorInit(scene);
+	R_Entity *entity = NULL;
+	
+	while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Light)))
+	{
+		R_Light *light = &entity->light;
 		
 		const f32 radius = R_LightHeuristicRadius(light, 0.05f);
 
@@ -122,7 +126,7 @@ static void R_FrameParamsUploadLights(R_Scene *scene, G_RingBuffer *ring, R_Fram
 	}
 }
 
-static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out)
+internal void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out)
 {
 	u32 window_width, window_height;
 	osapi->GetWindowSize(&window_width, &window_height);
@@ -146,7 +150,7 @@ static void R_FrameParamsUploadFrameData(G_RingBuffer *ring, R_FrameParams *out)
 	frame_data->time = out->elapsed;
 }
 
-static void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out)
+internal void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out)
 {
 	out->debug_line_shader             = A_GetOrBreak(system->shaders.debug_line_handle)->shader.key;
 	out->forward_shader                = A_GetOrBreak(system->shaders.forward_handle)->shader.key;
@@ -161,7 +165,7 @@ static void R_FrameParamsResolveShaders(R_System *system, R_FrameParams *out)
 	out->prefilter_cubemap_gen_shader  = A_GetOrBreak(system->shaders.prefilter_cubemap_gen_handle)->shader.key;
 }
 
-static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
+internal R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 										R_System *system,
 										u32 frame_number, f32 dt, f32 elapsed,
 										R_Scene *scene, const R_Camera *camera)
@@ -190,8 +194,8 @@ static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 	params.linear_sampler = system->samplers.linear;
 	params.nearest_sampler = system->samplers.nearest;
 
-	params.object_count = DensePoolLiveCount(&scene->object_pool);
-	params.light_count = DensePoolLiveCount(&scene->light_pool);
+	params.object_count = scene->entity_count[R_EntityType_Object];
+	params.light_count = scene->entity_count[R_EntityType_Light];
 	params.shadow_caster_count = 0;
 	
 	R_FrameParamsUploadPageTable(scene, ring, &params);
@@ -213,12 +217,12 @@ static R_FrameParams R_FrameParamsBuild(Arena *frame_arena,
 	return params;
 }
 
-static void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
+internal void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
 									  G_CmdBuffer *cmd,
-									  G_BufferKey indirect_buffer,
-									  G_BufferKey count_buffer)
+									  G_ResourceKey indirect_buffer,
+									  G_ResourceKey count_buffer)
 {
-	const u64 max_draws_per_page = R_SCENE_MAX_INSTANCES;
+	const u64 max_draws_per_page = R_SCENE_MAX_ENTITIES;
 
 	for (u32 i = 0; i < frame_params->page_count; i++)
 	{

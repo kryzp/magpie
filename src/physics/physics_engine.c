@@ -1,7 +1,7 @@
 
 static P_Engine *p_engine = NULL;
 
-static void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel log_channel)
+internal void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel log_channel)
 {
 	engine->arena = arena;
 	engine->log_channel = log_channel;
@@ -19,17 +19,17 @@ static void P_EngineInitAndSelect(P_Engine *engine, Arena *arena, LOG_Channel lo
 	DebugLogI(engine->log_channel, "Initialized.");
 }
 
-static void P_EngineDestroy(void)
+internal void P_EngineDestroy(void)
 {
 	DebugLogI(p_engine->log_channel, "Destroyed.");
 }
 
-static void P_EngineSelectContext(P_Engine *engine)
+internal void P_EngineSelectContext(P_Engine *engine)
 {
 	p_engine = engine;
 }
 
-static void P_EngineTick(f32 dt)
+internal void P_EngineTick(f32 dt)
 {
 	for (P_Instance *inst = p_engine->instance_sentinel.next; 
 		 inst != &p_engine->instance_sentinel; 
@@ -119,7 +119,7 @@ static void P_EngineTick(f32 dt)
 	}
 }
 
-static P_Handle P_LeaseInstance(void)
+internal P_Handle P_LeaseInstance(void)
 {
 	P_Instance *inst = NULL;
 
@@ -152,7 +152,7 @@ static P_Handle P_LeaseInstance(void)
 	return handle;
 }
 
-static void P_ReturnInstance(P_Handle handle)
+internal void P_ReturnInstance(P_Handle handle)
 {
 	for (P_Instance *inst = p_engine->instance_sentinel.next; 
 		 inst != &p_engine->instance_sentinel; 
@@ -174,7 +174,7 @@ static void P_ReturnInstance(P_Handle handle)
 	}
 }
 
-static P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle)
+internal P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle)
 {
 	for (P_Instance *inst = p_engine->instance_sentinel.next; 
 		 inst != &p_engine->instance_sentinel; 
@@ -187,16 +187,16 @@ static P_RigidBody *P_GetRigidbodyFromHandle(P_Handle handle)
 	return NULL;
 }
 
-static J_ENTRY_POINT_DEF(P_CastRayJob)
+internal J_ENTRY_POINT_DEF(P_CastRayJob)
 {
 }
 
-static P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter)
+internal P_Raycast P_CastRay(v3 start_position, v3 direction, OS_Handle counter)
 {
 	return P_CastRayEx(start_position, direction, 1.f, 512, counter);
 }
 
-static P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter)
+internal P_Raycast P_CastRayEx(v3 start_position, v3 direction, f32 dt, u32 max_steps, OS_Handle counter)
 {
 	// TODO: make job-based. return P_RaycastHandle?
 	/*

@@ -1,0 +1,4 @@
+- move /render/graph/ into a layer below, called /render_graph/ with namespace RG_
+- replace old AssertTrue()'s with DebugLogAssert() across the codebase for clearer logging
+- remove skin buffer from A_SubModel
+- get rid of A_ModelIndex

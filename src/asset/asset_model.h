@@ -1,7 +1,7 @@
 #ifndef ASSET_MODEL_H
 #define ASSET_MODEL_H
 
-typedef u32 A_ModelIndex;
+typedef u32 A_ModelIndex; // todo: this is not necessary, as model indices required may vary from model to model
 
 typedef struct A_ModelVertex A_ModelVertex;
 struct A_ModelVertex
@@ -42,7 +42,7 @@ struct A_SubModel
 
 	b32 is_skinned;
 	i32 skin_index; // -1 for invalid
-	G_BufferKey skin_buffer; // todo: get rid of this and export skin buffer size
+	G_ResourceKey skin_buffer; // todo: get rid of this and export skin buffer size, this is stupid and dumb amnd hacky to be allocating here
 	//u64 skin_buffer_size;
 };
 

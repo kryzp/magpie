@@ -8,7 +8,7 @@ struct AN_Handle
 	u32 generation;
 };
 
-static inline AN_Handle AN_HandleNull(void)
+internal inline AN_Handle AN_HandleNull(void)
 {
 	AN_Handle handle = {0};
 	handle.index = (u32)-1;
@@ -17,13 +17,13 @@ static inline AN_Handle AN_HandleNull(void)
 	return handle;
 }
 
-static inline b32 AN_HandleIsNull(AN_Handle handle)
+internal inline b32 AN_HandleIsNull(AN_Handle handle)
 {
 	return (handle.index == (u32)-1 &&
 			handle.generation == 0);
 }
 
-static inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
+internal inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
 {
 	return (a.index == b.index &&
 			a.generation == b.generation);
@@ -52,19 +52,19 @@ struct AN_System
 	u32 free_index_count;
 };
 
-static void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel);
-static void AN_SystemDestroy(void);
-static void AN_SystemSelectContext(AN_System *system);
+internal void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel);
+internal void AN_SystemDestroy(void);
+internal void AN_SystemSelectContext(AN_System *system);
 
-static void AN_SystemCalculateIntermediatePoses(f32 elapsed);
-static void AN_SystemFinalizePoseAndMatrixPalette(void);
+internal void AN_SystemCalculateIntermediatePoses(f32 elapsed);
+internal void AN_SystemFinalizePoseAndMatrixPalette(void);
 
-static AN_Instance *AN_SystemResolve(AN_Handle handle);
-static AN_Animator *AN_SystemGetAnimator(AN_Handle handle);
+internal AN_Instance *AN_SystemResolve(AN_Handle handle);
+internal AN_Animator *AN_SystemGetAnimator(AN_Handle handle);
 
-static AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index);
+internal AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index);
 
-static AN_Handle AN_SystemCreateInstance(A_Handle model_handle);
-static void AN_SystemKillInstance(AN_Handle h);
+internal AN_Handle AN_SystemCreateInstance(A_Handle model_handle);
+internal void AN_SystemKillInstance(AN_Handle h);
 
 #endif // ANIMATION_SYSTEM_H

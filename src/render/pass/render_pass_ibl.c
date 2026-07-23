@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_BRDFLutPassFn)
+internal R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_BRDFLutPassData *user_data = ctx->user_data;
@@ -14,7 +14,7 @@ static R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 	G_CmdDrawV(cmd, 3);
 }
 
-static R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
+internal R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_IBLPassIrradianceData *user_data = ctx->user_data;
@@ -48,7 +48,7 @@ static R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 
 }
 
-static R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
+internal R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_IBLPassPrefilterData *user_data = ctx->user_data;

@@ -18,12 +18,12 @@ struct R_CullClearPassData
 	R_GraphBufHandle counter_handle;
 };
 
-static R_PASS_RECORD_DEF(R_CullClearFn);
+internal R_PASS_RECORD_DEF(R_CullClearFn);
 
 typedef struct R_CullPassData R_CullPassData;
 struct R_CullPassData
 {
-	G_ShaderKey shader;
+	G_ResourceKey shader;
 	
 	R_GraphBufHandle indirect_handle;
 	R_GraphBufHandle counter_handle;
@@ -39,8 +39,8 @@ struct R_CullPassData
 	};
 };
 
-static R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
-static R_PASS_RECORD_DEF(R_CullSphereComputeFn);
+internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn);
+internal R_PASS_RECORD_DEF(R_CullSphereComputeFn);
 
 typedef struct R_DrawStream R_DrawStream;
 struct R_DrawStream
@@ -49,12 +49,12 @@ struct R_DrawStream
 	R_GraphBufHandle count_buffer;
 };
 
-static R_DrawStream R_CullFrustum(R_Graph *graph,
+internal R_DrawStream R_CullFrustum(R_Graph *graph,
 								  const R_FrameParams *frame_params,
 								  R_CullFilter filter,
 								  const R_FrustumVolume *frustum);
 
-static R_DrawStream R_CullSphere(R_Graph *graph,
+internal R_DrawStream R_CullSphere(R_Graph *graph,
 								 const R_FrameParams *frame_params,
 								 R_CullFilter filter,
 								 v3 sphere_centre, f32 sphere_radius);

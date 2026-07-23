@@ -1,5 +1,5 @@
 
-static G_GraphicsPipelineDef G_GraphicsPipelineDefInit(G_ShaderKey program)
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefInit(G_ResourceKey program)
 {
 	G_GraphicsPipelineDef def = {0};
 
@@ -24,7 +24,7 @@ static G_GraphicsPipelineDef G_GraphicsPipelineDefInit(G_ShaderKey program)
 	return def;
 }
 
-static G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo(G_ShaderKey program, const G_RenderInfo *info)
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo(G_ResourceKey program, const G_RenderInfo *info)
 {
 	G_GraphicsPipelineDef def = G_GraphicsPipelineDefInit(program);
 
@@ -42,7 +42,7 @@ static G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo(G_ShaderKey program, 
 	return def;
 }
 
-static G_ComputePipelineDef G_ComputePipelineDefInit(G_ShaderKey program)
+internal G_ComputePipelineDef G_ComputePipelineDefInit(G_ResourceKey program)
 {
 	G_ComputePipelineDef def = {0};
 

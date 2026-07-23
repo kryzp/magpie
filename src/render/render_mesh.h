@@ -10,36 +10,36 @@ struct R_Mesh
 	u32 vertex_count;
 	u32 index_count;
 
-	G_BufferKey vertex_buffer;
-	G_BufferKey index_buffer;
+	G_ResourceKey vertex_buffer;
+	G_ResourceKey index_buffer;
 };
 
-static void R_MeshAlloc(R_Mesh *mesh,
+internal void R_MeshAlloc(R_Mesh *mesh,
 						  u64 vertex_stride, VkIndexType index_type,
 						  u32 vertex_count, u32 index_count);
 
-static void R_MeshDestroy(const R_Mesh *mesh);
+internal void R_MeshDestroy(const R_Mesh *mesh);
 
-static void R_MeshWriteToStage(const R_Mesh *mesh,
-								 G_BufferKey stage, u64 stage_base,
+internal void R_MeshWriteToStage(const R_Mesh *mesh,
+								 G_ResourceKey stage, u64 stage_base,
 								 const void *vertices, const void *indices);
 
-static u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
-						  G_BufferKey stage, u64 stage_base);
+internal u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,
+						  G_ResourceKey stage, u64 stage_base);
 
-//static u64 R_MeshVertexAddress(const R_Mesh *mesh);
+//internal u64 R_MeshVertexAddress(const R_Mesh *mesh);
 
-static void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd);
+internal void R_MeshBindIndexBuffer(const R_Mesh *mesh, const G_CmdBuffer *cmd);
 
-static void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd);
-static void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);
+internal void R_MeshDraw(const R_Mesh *mesh, const G_CmdBuffer *cmd);
+internal void R_MeshDrawInstanced(const R_Mesh *mesh, const G_CmdBuffer *cmd, u32 first);
 
-static inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
+internal inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
 {
 	return mesh->vertex_count * mesh->vertex_stride;
 }
 
-static inline u64 R_MeshIndexBufferSize(const R_Mesh *mesh)
+internal inline u64 R_MeshIndexBufferSize(const R_Mesh *mesh)
 {
 	u64 index_stride = 0;
 

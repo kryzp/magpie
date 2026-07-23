@@ -4,13 +4,13 @@
 typedef struct A_TextureAsset A_TextureAsset;
 struct A_TextureAsset
 {
-	G_TextureKey key;
+	G_ResourceKey key;
 };
 
 typedef struct A_ShaderAsset A_ShaderAsset;
 struct A_ShaderAsset
 {
-	G_ShaderKey key;
+	G_ResourceKey key;
 };
 
 typedef struct A_SoundAsset A_SoundAsset;

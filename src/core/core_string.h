@@ -18,27 +18,27 @@ struct String8
 // PrintF("%.*s", String8VArg(string));
 #define String8VArg(str_) (i32)((str_).len), (const char *)((str_).str)
 
-static String8 String8Alloc(Arena *arena, u32 len);
-static String8 String8Clone(Arena *arena, String8 string);
-static String8 String8Append(Arena *arena, String8 a, String8 b);
-static String8 String8Fmt(Arena *arena, const char *fmt, ...);
+internal String8 String8Alloc(Arena *arena, u32 len);
+internal String8 String8Clone(Arena *arena, String8 string);
+internal String8 String8Append(Arena *arena, String8 a, String8 b);
+internal String8 String8Fmt(Arena *arena, const char *fmt, ...);
 
-static String8 String8Skip(String8 string, u64 to);
+internal String8 String8Skip(String8 string, u64 to);
 
-static b32 String8Match(String8 a, String8 b);
-static b32 String8StartsWith(String8 string, String8 prefix);
+internal b32 String8Match(String8 a, String8 b);
+internal b32 String8StartsWith(String8 string, String8 prefix);
 
-static u64 String8Find(String8 string, String8 substr);
-static u64 String8FindLast(String8 string, String8 substr);
-static u64 String8FindLastIncl(String8 string, String8 substr);
+internal u64 String8Find(String8 string, String8 substr);
+internal u64 String8FindLast(String8 string, String8 substr);
+internal u64 String8FindLastIncl(String8 string, String8 substr);
 
-static b32 CharIsWhitespace(u8 c);
-static b32 CharIsLower(u8 c);
-static b32 CharIsUpper(u8 c);
-static b32 CharIsAlpha(u8 c);
-static b32 CharIsDigit(u8 c);
+internal b32 CharIsWhitespace(u8 c);
+internal b32 CharIsLower(u8 c);
+internal b32 CharIsUpper(u8 c);
+internal b32 CharIsAlpha(u8 c);
+internal b32 CharIsDigit(u8 c);
 
-static u8 CharToLower(u8 c);
-static u8 CharToUpper(u8 c);
+internal u8 CharToLower(u8 c);
+internal u8 CharToUpper(u8 c);
 
 #endif // CORE_STRING_H

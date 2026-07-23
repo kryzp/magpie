@@ -8,28 +8,28 @@ struct R_ShadowMappingPassData
 {
 	const R_FrameParams *frame_params;
 	u32 caster_index;
-	G_BufferKey caster_table_buffer;
+	G_ResourceKey caster_table_buffer;
 	R_DrawStream draw_stream;
 };
 
-static R_PASS_RECORD_DEF(R_ShadowMappingPassFn);
+internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn);
 
 typedef struct R_ShadowState R_ShadowState;
 struct R_ShadowState
 {
-	G_TextureKey shadow_cubemaps[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
-	G_TextureViewKey shadow_cubemap_views[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
+	G_ResourceKey shadow_cubemaps[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
+	G_ResourceKey shadow_cubemap_views[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
 
-	G_BufferKey caster_table_buffer;
+	G_ResourceKey caster_table_buffer;
 	u32 caster_count;
 };
 
-static void R_ShadowsInit(R_ShadowState *st);
-static void R_ShadowsDestroy(R_ShadowState *st);
+internal void R_ShadowsInit(R_ShadowState *st);
+internal void R_ShadowsDestroy(R_ShadowState *st);
 
-static void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params);
+internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params);
 
-static void R_ShadowsRender(R_ShadowState *st,
+internal void R_ShadowsRender(R_ShadowState *st,
 							R_Graph *graph,
 							const R_FrameParams *frame_params,
 							R_Blackboard *bb);

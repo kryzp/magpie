@@ -33,23 +33,23 @@ struct CH_Timeline
 	b32 finished;
 };
 
-static void CH_TimelineInit(CH_Timeline *timeline);
-static void CH_TimelineStart(CH_Timeline *timeline);
-static void CH_TimelineStop(CH_Timeline *timeline);
-static void CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt);
+internal void CH_TimelineInit(CH_Timeline *timeline);
+internal void CH_TimelineStart(CH_Timeline *timeline);
+internal void CH_TimelineStop(CH_Timeline *timeline);
+internal void CH_TimelineTick(CH_Timeline *timeline, void *state, f32 dt);
 
-static void CH_TimelineAdd(CH_Timeline *timeline,
+internal void CH_TimelineAdd(CH_Timeline *timeline,
 					 CH_TimelineTriggerFn *Trigger,
 					 CH_TimelineActionFn *Action,
 					 void *data);
 
-static void CH_TimelineAddRepeatable(CH_Timeline *timeline,
+internal void CH_TimelineAddRepeatable(CH_Timeline *timeline,
 									   CH_TimelineTriggerFn *Trigger,
 									   CH_TimelineActionFn *Action,
 									   void *data,
 									   f32 cooldown);
 
-static void CH_TimelineReset(CH_Timeline *timeline);
+internal void CH_TimelineReset(CH_Timeline *timeline);
 
 
 /* ==================================================
@@ -62,7 +62,7 @@ struct CH_TimelineTriggerAtTimeData
 	f32 timestamp;
 };
 
-static b32 CH_TimelineTriggerAtTime(void *state, f32 elapsed, void *data);
+internal b32 CH_TimelineTriggerAtTime(void *state, f32 elapsed, void *data);
 
 
 #endif // CHRONO_TIMELINE_H

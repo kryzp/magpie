@@ -29,14 +29,14 @@
 typedef struct R_GraphTexHandle { u32 value; } R_GraphTexHandle;
 typedef struct R_GraphBufHandle { u32 value; } R_GraphBufHandle;
 
-static inline R_GraphTexHandle R_GraphTexHandleNull(void) { return (R_GraphTexHandle) {0}; }
-static inline R_GraphBufHandle R_GraphBufHandleNull(void) { return (R_GraphBufHandle) {0}; }
+internal inline R_GraphTexHandle R_GraphTexHandleNull(void) { return (R_GraphTexHandle) {0}; }
+internal inline R_GraphBufHandle R_GraphBufHandleNull(void) { return (R_GraphBufHandle) {0}; }
 
-static inline b32 R_GraphTexHandleIsNull(R_GraphTexHandle h) { return h.value == 0; }
-static inline b32 R_GraphBufHandleIsNull(R_GraphBufHandle h) { return h.value == 0; }
+internal inline b32 R_GraphTexHandleIsNull(R_GraphTexHandle h) { return h.value == 0; }
+internal inline b32 R_GraphBufHandleIsNull(R_GraphBufHandle h) { return h.value == 0; }
 
-static inline b32 R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b) { return a.value == b.value; }
-static inline b32 R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b) { return a.value == b.value; }
+internal inline b32 R_GraphTexHandleMatch(R_GraphTexHandle a, R_GraphTexHandle b) { return a.value == b.value; }
+internal inline b32 R_GraphBufHandleMatch(R_GraphBufHandle a, R_GraphBufHandle b) { return a.value == b.value; }
 
 typedef enum R_SizeClass
 {
@@ -75,31 +75,24 @@ struct R_BufferInfo
 	VkBufferUsageFlags2 usage;
 };
 
-static R_TextureInfo R_TextureInfoInitAbsolute(VkFormat format, v3 size);
-static R_TextureInfo R_TextureInfoInitSwapchain(VkFormat format, v3 factor);
-static R_TextureInfo R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_to);
+internal R_TextureInfo R_TextureInfoInitAbsolute(VkFormat format, v3 size);
+internal R_TextureInfo R_TextureInfoInitSwapchain(VkFormat format, v3 factor);
+internal R_TextureInfo R_TextureInfoInitRelative(VkFormat format, v3 factor, R_GraphTexHandle relative_to);
 
-static R_BufferInfo R_BufferInfoInit(u64 size,
+internal R_BufferInfo R_BufferInfoInit(u64 size,
 									   VmaAllocationCreateFlags flags,
 									   VkBufferUsageFlags2 usage);
 
-static b32 R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b);
-static b32 R_BufferInfoMatch(const R_BufferInfo  *a, const R_BufferInfo  *b);
+internal b32 R_TextureInfoMatch(const R_TextureInfo *a, const R_TextureInfo *b);
+internal b32 R_BufferInfoMatch(const R_BufferInfo  *a, const R_BufferInfo  *b);
 
 typedef struct R_ResourceState R_ResourceState;
 struct R_ResourceState
 {
-	VkPipelineStageFlags2     write_stage;  // stage of last unsynced write
-	VkAccessFlags2            write_access; // WRITE access pending flush (0 = no pending writes)
-	VkPipelineStageFlags2     read_stages; // accumulated reader stages since last flush (for WAR)	
-	VkImageLayout             layout;
-};
-
-typedef struct R_GraphMsaaTexture R_GraphMsaaTexture;
-struct R_GraphMsaaTexture
-{
-	R_GraphTexHandle msaa;
-	R_GraphTexHandle resolved;
+	VkPipelineStageFlags2  write_stage;  // stage of last unsynced write
+	VkAccessFlags2         write_access; // WRITE access pending flush (0 = no pending writes)
+	VkPipelineStageFlags2  read_stages;  // accumulated reader stages since last flush (for WAR)	
+	VkImageLayout          layout;
 };
 
 #endif // RENDER_GRAPH_TYPES_H

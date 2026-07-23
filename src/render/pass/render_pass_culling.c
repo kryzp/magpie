@@ -1,13 +1,13 @@
 
-static R_PASS_RECORD_DEF(R_CullClearFn)
+internal R_PASS_RECORD_DEF(R_CullClearFn)
 {
 	const R_CullClearPassData *data = ctx->user_data;
 	
-	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
+	G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
 	G_CmdFillBuffer(ctx->cmd, counter_key, 0, G_DeviceBufferSize(counter_key), 0);
 }
 
-static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
+internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 
@@ -43,7 +43,7 @@ static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
 	pc.object_count = data->frame_params->object_count;
 	pc.alpha_filter = data->filter;
-	pc.max_draws_per_page = R_SCENE_MAX_INSTANCES;
+	pc.max_draws_per_page = R_SCENE_MAX_ENTITIES;
 	
 	for (u32 i = 0; i < 6; i++)
 		pc.frustum_planes[i] = data->frustum_planes[i];
@@ -54,7 +54,7 @@ static R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	G_CmdDispatch(cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
-static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
+internal R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 
@@ -90,7 +90,7 @@ static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
 	pc.object_count = data->frame_params->object_count;
 	pc.alpha_filter = data->filter;
-	pc.max_draws_per_page = R_SCENE_MAX_INSTANCES;
+	pc.max_draws_per_page = R_SCENE_MAX_ENTITIES;
 	
 	pc.sphere = data->sphere;
 
@@ -100,14 +100,14 @@ static R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	G_CmdDispatch(cmd, G_ComputeGroupCount(pc.object_count, 64), 1, 1);
 }
 
-static R_DrawStream R_CullFrustum(R_Graph *graph,
+internal R_DrawStream R_CullFrustum(R_Graph *graph,
 								  const R_FrameParams *frame_params,
 								  R_CullFilter filter,
 								  const R_FrustumVolume *frustum)
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_INSTANCES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_ENTITIES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);
@@ -153,14 +153,14 @@ static R_DrawStream R_CullFrustum(R_Graph *graph,
 	return stream;
 }
 
-static R_DrawStream R_CullSphere(R_Graph *graph,
+internal R_DrawStream R_CullSphere(R_Graph *graph,
 								 const R_FrameParams *frame_params,
 								 R_CullFilter filter,
 								 v3 sphere_centre, f32 sphere_radius)
 {
 	R_DrawStream stream = {0};
 
-	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_INSTANCES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
+	R_BufferInfo indirect_info = R_BufferInfoInit(R_SCENE_MAX_ENTITIES * sizeof(R_GPU_IndirectDraw) * frame_params->page_count,
 												  VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
 												  VK_BUFFER_USAGE_2_INDIRECT_BUFFER_BIT |
 												  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT);

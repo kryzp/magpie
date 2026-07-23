@@ -1,5 +1,5 @@
 
-static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle)
+internal R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle)
 {
 	const A_ModelAsset *model_asset = &A_GetOrBreak(asset_handle)->model;
 	
@@ -41,7 +41,7 @@ static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_han
 	return model;
 }
 
-static R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+internal R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *catalogue, A_Handle asset_handle)
 {
 	for (R_ModelCatalogueEntry *entry = catalogue->entry_first_sentinel.next; 
 		 entry != &catalogue->entry_first_sentinel; 
@@ -54,7 +54,7 @@ static R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *cat
 	return NULL;
 }
 
-static void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena)
+internal void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena)
 {
 	catalogue->arena = arena;
 
@@ -65,12 +65,12 @@ static void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena)
 	catalogue->first_free_entry_sentinel.prev = &catalogue->first_free_entry_sentinel;
 }
 
-static void R_ModelCatalogueEquipScene(R_ModelCatalogue *catalogue, R_Scene *scene)
+internal void R_ModelCatalogueEquipScene(R_ModelCatalogue *catalogue, R_Scene *scene)
 {
 	catalogue->equipped_scene = scene;
 }
 
-static void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue)
+internal void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue)
 {
 	for (R_ModelCatalogueEntry *entry = catalogue->entry_first_sentinel.next; 
 		 entry != &catalogue->entry_first_sentinel; 
@@ -84,7 +84,7 @@ static void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue)
 	}
 }
 
-static R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+internal R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
 {
 	R_ModelCatalogueEntry *existing = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
 
@@ -108,7 +108,7 @@ static R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handl
 	return &entry->model;
 }
 
-static void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+internal void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
 {
 	R_ModelCatalogueEntry *entry = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
 
@@ -137,7 +137,7 @@ static void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle a
 	}
 }
 
-static R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
+internal R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Handle asset_handle)
 {
 	R_ModelCatalogueEntry *entry = R_ModelCatalogueTryFindEntry(catalogue, asset_handle);
 
@@ -147,7 +147,7 @@ static R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Hand
 	return &entry->model;
 }
 
-static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Handle asset_handle, m4 initial_transform)
+internal R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Handle asset_handle, m4 initial_transform)
 {
 	R_Model *model = R_ModelCatalogueCreateModel(catalogue, asset_handle);
 
@@ -187,16 +187,16 @@ static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Hand
 		
 		i_submodel_tail = i_submodel;
 		
-		i_submodel->handle = R_SceneInstanceCreate(catalogue->equipped_scene);
+		i_submodel->handle = R_SceneEntityCreate(catalogue->equipped_scene, R_EntityType_Object);
 		
-		R_SceneSetInstanceMesh              (catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
-		R_SceneSetInstanceMaterial          (catalogue->equipped_scene, i_submodel->handle, submodel->material);
-		R_SceneSetInstanceLocalSphereBounds (catalogue->equipped_scene, i_submodel->handle, submodel->local_sphere_bounds);
+		R_SceneSetObjectMesh              (catalogue->equipped_scene, i_submodel->handle, submodel->mesh);
+		R_SceneSetObjectMaterial          (catalogue->equipped_scene, i_submodel->handle, submodel->material);
+		R_SceneSetObjectLocalSphereBounds (catalogue->equipped_scene, i_submodel->handle, submodel->local_sphere_bounds);
 		
 		if (instance.has_animator)
 		{
 			AN_Palette palette = AN_GetPalette(instance.animator_handle, submodel->skin_index);
-			R_SceneSetInstanceSkinning(catalogue->equipped_scene, i_submodel->handle, palette.matrices, palette.joint_count);
+			R_SceneSetObjectSkinning(catalogue->equipped_scene, i_submodel->handle, palette.matrices, palette.joint_count);
 		}
 	}
 
@@ -205,16 +205,16 @@ static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Hand
 	return instance;
 }
 
-static R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform)
+internal R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform)
 {
 	A_Handle asset_handle = A_RequireAssetBlocking(catalogue->arena, asset_path, A_Type_Model);
 	return R_ModelInstanceCreate(catalogue, asset_handle, initial_transform);
 }
 
-static void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance *instance)
+internal void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance *instance)
 {
 	for (R_SubModelInstance *submodel = instance->submodel_first; submodel; submodel = submodel->next)
-		R_SceneInstanceDestroy(catalogue->equipped_scene, submodel->handle);
+		R_SceneEntityDestroy(catalogue->equipped_scene, submodel->handle);
 
 	if (instance->has_animator)
 		AN_SystemKillInstance(instance->animator_handle);
@@ -222,7 +222,7 @@ static void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance 
 	R_ModelCatalogueReleaseModel(catalogue, instance->asset_handle);
 }
 
-static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform)
+internal void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform)
 {
 	R_Model *original = R_ModelCatalogueTryFindModel(catalogue, instance->asset_handle);
 	
@@ -235,7 +235,7 @@ static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInst
 	{
 		m4 world_matrix = M4MulM4(instance->root_transform, original_submodel->local_transform);
 
-		R_SceneSetInstanceTransform(catalogue->equipped_scene, instance_submodel->handle, world_matrix);
+		R_SceneSetObjectTransform(catalogue->equipped_scene, instance_submodel->handle, world_matrix);
 
 		original_submodel = original_submodel->next;
 		instance_submodel = instance_submodel->next;

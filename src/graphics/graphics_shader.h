@@ -28,13 +28,12 @@ struct G_ShaderStage
 typedef struct G_ShaderProgram G_ShaderProgram;
 struct G_ShaderProgram
 {
-	u32 cookie;
 	u32 push_constant_size;
 	u32 stage_count;
 	G_ShaderStage stages[G_MAX_SHADER_STAGES];
 };
 
-static inline b32 G_ShaderProgramIsCompute(const G_ShaderProgram *program)
+internal inline b32 G_ShaderProgramIsCompute(const G_ShaderProgram *program)
 {
 	return (program->stage_count == 1) && (program->stages[0].flags & VK_SHADER_STAGE_COMPUTE_BIT);
 }

@@ -1,5 +1,5 @@
 
-static String8 IO_PathGetFileName(Arena *arena, String8 path)
+internal String8 IO_PathGetFileName(Arena *arena, String8 path)
 {
 	// TODO
 	
@@ -8,7 +8,7 @@ static String8 IO_PathGetFileName(Arena *arena, String8 path)
 	return (String8) {0};
 }
 
-static String8 IO_PathGetFileNameExt(Arena *arena, String8 path)
+internal String8 IO_PathGetFileNameExt(Arena *arena, String8 path)
 {
 	u64 index = 0;
 	
@@ -24,7 +24,7 @@ static String8 IO_PathGetFileNameExt(Arena *arena, String8 path)
 	return out;
 }
 
-static String8 IO_PathGetFileExtension(Arena *arena, String8 path)
+internal String8 IO_PathGetFileExtension(Arena *arena, String8 path)
 {
 	u32 index = String8FindLastIncl(path, String8Lit("."));
 
@@ -35,7 +35,7 @@ static String8 IO_PathGetFileExtension(Arena *arena, String8 path)
 	return out;
 }
 
-static String8 IO_PathGetFilePathNoExt(Arena *arena, String8 path)
+internal String8 IO_PathGetFilePathNoExt(Arena *arena, String8 path)
 {
 	// TODO
 
@@ -44,7 +44,7 @@ static String8 IO_PathGetFilePathNoExt(Arena *arena, String8 path)
 	return (String8) {0};
 }
 
-static String8 IO_PathGetFileDirectory(Arena *arena, String8 path)
+internal String8 IO_PathGetFileDirectory(Arena *arena, String8 path)
 {
 	u64 last_slash = String8FindLast(path, String8Lit("/"));
 
@@ -54,7 +54,7 @@ static String8 IO_PathGetFileDirectory(Arena *arena, String8 path)
 	return directory;
 }
 
-static String8 IO_PathJoin(Arena *arena, String8 path_a, String8 path_b)
+internal String8 IO_PathJoin(Arena *arena, String8 path_a, String8 path_b)
 {
 	if (path_a.len <= 0)
 		return IO_PathNormalize(arena, path_b);
@@ -73,7 +73,7 @@ static String8 IO_PathJoin(Arena *arena, String8 path_a, String8 path_b)
 	return result;
 }
 
-static String8 IO_PathNormalize(Arena *arena, String8 path)
+internal String8 IO_PathNormalize(Arena *arena, String8 path)
 {
 	// TODO
 

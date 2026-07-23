@@ -1,5 +1,5 @@
 
-static R_Clear R_ClearColour(f32 r, f32 g, f32 b, f32 a)
+internal R_Clear R_ClearColour(f32 r, f32 g, f32 b, f32 a)
 {
 	R_Clear c = {0};
 	c.r = r;
@@ -10,7 +10,7 @@ static R_Clear R_ClearColour(f32 r, f32 g, f32 b, f32 a)
 	return c;
 }
 
-static R_Clear R_ClearDepthStencil(f32 depth, u8 stencil)
+internal R_Clear R_ClearDepthStencil(f32 depth, u8 stencil)
 {
 	R_Clear c = {0};
 	c.depth = depth;

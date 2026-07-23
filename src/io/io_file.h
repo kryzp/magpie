@@ -8,6 +8,6 @@ struct IO_ByteSpan
 	u64 size;
 };
 
-static IO_ByteSpan IO_ReadEntireFile(Arena *arena, String8 path);
+internal IO_ByteSpan IO_ReadEntireFile(Arena *arena, String8 path);
 
 #endif // IO_FILE_H

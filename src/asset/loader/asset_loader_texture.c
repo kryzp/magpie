@@ -8,8 +8,8 @@ struct A_TextureLoadData
 	void *pixel_data;
 };
 
-static A_LoadResult A_TextureLoaderLoad(const A_LCTX *ctx,
-										Arena *result_arena)
+internal A_LoadResult A_TextureLoaderLoad(const A_LCTX *ctx,
+										  Arena *result_arena)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -48,10 +48,10 @@ static A_LoadResult A_TextureLoaderLoad(const A_LCTX *ctx,
 	return result;
 }
 
-static void A_TextureLoaderAlloc(const A_LCTX *ctx,
-								 A_LoadResult *result,
-								 Arena *asset_arena,
-								 A_Asset *asset)
+internal void A_TextureLoaderAlloc(const A_LCTX *ctx,
+								   A_LoadResult *result,
+								   Arena *asset_arena,
+								   A_Asset *asset)
 {
 	A_TextureLoadData *tex_data = result->user_data;
 	
@@ -62,12 +62,12 @@ static void A_TextureLoaderAlloc(const A_LCTX *ctx,
 	asset->texture.key = G_DeviceTextureAlloc2D(tex_data->width, tex_data->height, format, 5);
 }
 
-static void A_TextureLoaderUploadGPU(const A_LCTX *ctx,
-									 A_LoadResult *result,
-									 A_Asset *asset,
-									 G_CmdBuffer *cmd,
-									 G_BufferKey stage,
-									 u64 stage_offset)
+internal void A_TextureLoaderUploadGPU(const A_LCTX *ctx,
+									   A_LoadResult *result,
+									   A_Asset *asset,
+									   G_CmdBuffer *cmd,
+									   G_ResourceKey stage,
+									   u64 stage_offset)
 {
 	A_TextureLoadData *tex_data = result->user_data;
 	
@@ -103,19 +103,19 @@ static void A_TextureLoaderUploadGPU(const A_LCTX *ctx,
 	G_CmdGenerateMipmaps(cmd, asset->texture.key);
 }
 
-static void A_TextureLoaderDestroyIntermediateResources(A_LoadResult *result)
+internal void A_TextureLoaderDestroyIntermediateResources(A_LoadResult *result)
 {
 	A_TextureLoadData *tex_data = result->user_data;
 
 	stbi_image_free(tex_data->pixel_data);
 }
 
-static void A_TextureLoaderDestroyAsset(A_Asset *asset)
+internal void A_TextureLoaderDestroyAsset(A_Asset *asset)
 {
 	G_DeviceTextureDestroy(asset->texture.key);
 }
 
-static A_LoaderAPI A_GetTextureLoaderAPI(void)
+internal A_LoaderAPI A_GetTextureLoaderAPI(void)
 {
 	static A_LoaderAPI texture_loader_api = {
 		.Load = A_TextureLoaderLoad,

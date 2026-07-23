@@ -26,7 +26,7 @@ typedef struct R_SubModelInstance R_SubModelInstance;
 struct R_SubModelInstance
 {
 	R_SubModelInstance *next;
-	R_InstanceHandle handle;
+	R_EntityHandle handle;
 };
 
 typedef struct R_ModelInstance R_ModelInstance;
@@ -65,34 +65,34 @@ struct R_ModelCatalogue
    UTILS
    ================================================== */
 
-static R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle);
-static R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *catalogue, A_Handle asset_handle);
+internal R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_handle);
+internal R_ModelCatalogueEntry *R_ModelCatalogueTryFindEntry(R_ModelCatalogue *catalogue, A_Handle asset_handle);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-static void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena);
-static void R_ModelCatalogueEquipScene(R_ModelCatalogue *catalogue, R_Scene *scene);
-static void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue);
+internal void R_ModelCatalogueInit(R_ModelCatalogue *catalogue, Arena *arena);
+internal void R_ModelCatalogueEquipScene(R_ModelCatalogue *catalogue, R_Scene *scene);
+internal void R_ModelCatalogueDestroy(R_ModelCatalogue *catalogue);
 
-static R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
-static void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
+internal R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
+internal void R_ModelCatalogueReleaseModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
 
-static R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
+internal R_Model *R_ModelCatalogueTryFindModel(R_ModelCatalogue *catalogue, A_Handle asset_handle);
 
 
 /* ==================================================
    INSTANCES
    ================================================== */
 
-static R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Handle asset_handle, m4 initial_transform);
-static R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform);
+internal R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Handle asset_handle, m4 initial_transform);
+internal R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform);
 
-static void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance *instance);
+internal void R_ModelInstanceDestroy(R_ModelCatalogue *catalogue, R_ModelInstance *instance);
 
-static void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform);
+internal void R_ModelInstanceSetTransform(R_ModelCatalogue *catalogue, R_ModelInstance *instance, m4 root_transform);
 
 
 #endif // RENDER_MODEL_H

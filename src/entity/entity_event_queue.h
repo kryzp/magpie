@@ -35,29 +35,29 @@ struct E_EventQueue
 	u64 next_listener_id;
 };
 
-static void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel);
+internal void E_EventQueueInit(E_EventQueue *q, LOG_Channel log_channel);
 
-static void E_EventPush(E_EventQueue *q, const E_Event *ev);
+internal void E_EventPush(E_EventQueue *q, const E_Event *ev);
 
-static u64  E_EventListenerRegister(E_EventQueue *q);
+internal u64  E_EventListenerRegister(E_EventQueue *q);
 
-static void E_EventBind(E_EventQueue *q,
+internal void E_EventBind(E_EventQueue *q,
 						u64 listener_id,
 						u32 entity_type,
 						E_EventType event_type,
 						E_EventHandlerFn *Handler,
 						void *ctx);
 
-static void E_EventUnbindAll(E_EventQueue *q, u64 listener_id);
+internal void E_EventUnbindAll(E_EventQueue *q, u64 listener_id);
 
-static void E_EventDispatch(E_EventQueue *q, E_World *world);
+internal void E_EventDispatch(E_EventQueue *q, E_World *world);
 
-static void E_EventSignal    (E_EventQueue *q, E_Event *event, void *entity);
-static void E_EventBroadcast (E_EventQueue *q, E_Event *event, E_World *world);
+internal void E_EventSignal    (E_EventQueue *q, E_Event *event, void *entity);
+internal void E_EventBroadcast (E_EventQueue *q, E_Event *event, E_World *world);
 
 // ---
 
-static inline void E_EventFireSomeRandomThing(E_EventQueue *q,
+internal inline void E_EventFireSomeRandomThing(E_EventQueue *q,
 							 E_Handle source, E_Handle target,
 							 f32 random_data)
 {

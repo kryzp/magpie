@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_ForwardPassFn)
+internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_ForwardPassData *data = ctx->user_data;
@@ -60,21 +60,21 @@ static R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	G_ResourceKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
+	G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
 	R_FrameParamsDrawIndirect(frame_params, cmd, indirect_key, counter_key);
 }
 
-static void R_ForwardRender(R_Graph *graph,
+internal void R_ForwardRender(R_Graph *graph,
 							const R_FrameParams *frame_params,
 							R_Blackboard *bb,
 							const R_DrawStream *draw_stream)
 {
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
 
-	bb->lighting.msaa = R_PassWriteColour(pass, bb->lighting.msaa, NULL);
-	bb->depth.msaa = R_PassWriteDepth(pass, bb->depth.msaa, NULL);
+	bb->lighting_msaa = R_PassWriteColour(pass, bb->lighting_msaa, NULL);
+	bb->depth_msaa = R_PassWriteDepth(pass, bb->depth_msaa, NULL);
 
 	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
 	R_PassIndirectBuffer(pass, draw_stream->count_buffer);

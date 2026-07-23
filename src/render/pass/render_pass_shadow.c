@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
+internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_ShadowMappingPassData *data = ctx->user_data;
@@ -29,13 +29,13 @@ static R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, pc, 0);
 
-	G_BufferKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	G_BufferKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	G_ResourceKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
+	G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
 
 	R_FrameParamsDrawIndirect(frame_params, cmd, indirect_key, counter_key);
 }
 
-static void R_ShadowsInit(R_ShadowState *st)
+internal void R_ShadowsInit(R_ShadowState *st)
 {
 	G_BufferAllocInfo caster_buf_info = {0};
 	caster_buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
@@ -57,7 +57,7 @@ static void R_ShadowsInit(R_ShadowState *st)
 	}
 }
 
-static void R_ShadowsDestroy(R_ShadowState *st)
+internal void R_ShadowsDestroy(R_ShadowState *st)
 {
 	G_DeviceBufferDestroy(st->caster_table_buffer);
 
@@ -65,7 +65,7 @@ static void R_ShadowsDestroy(R_ShadowState *st)
 		G_DeviceTextureDestroy(st->shadow_cubemaps[i]);
 }
 
-static void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params)
+internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params)
 {
 	static const v3 light_dirs[6] = {
 		{  1.f,  0.f,  0.f }, // Right.
@@ -110,7 +110,7 @@ static void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_par
 	}
 }
 
-static void R_ShadowsRender(R_ShadowState *st,
+internal void R_ShadowsRender(R_ShadowState *st,
 							R_Graph *graph,
 							const R_FrameParams *frame_params,
 							R_Blackboard *bb)

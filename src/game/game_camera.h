@@ -38,8 +38,8 @@ struct CameraDriver
 	f32 pitch, target_pitch;
 };
 
-static CameraDriver CameraDriverInit(const CameraDriverConfig *config);
-static void CameraDriverShake(CameraDriver *driver, f32 amount);
-static void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt);
+internal CameraDriver CameraDriverInit(const CameraDriverConfig *config);
+internal void CameraDriverShake(CameraDriver *driver, f32 amount);
+internal void CameraDriverDrive(CameraDriver *driver, R_Camera *camera, const OS_InputState *input, f32 dt);
 
 #endif // GAME_CAMERA_H

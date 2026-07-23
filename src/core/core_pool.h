@@ -9,10 +9,10 @@ struct SlotPool
 	u32 capacity;
 };
 
-static void SlotPoolInit(SlotPool *pool, Arena *arena, u32 capacity);
-static b32 SlotPoolAlloc(SlotPool *pool, u32 *out_index);
-static void SlotPoolFree(SlotPool *pool, u32 index);
-static u32 SlotPoolLiveCount(const SlotPool *pool);
+internal void SlotPoolInit(SlotPool *pool, Arena *arena, u32 capacity);
+internal b32 SlotPoolAlloc(SlotPool *pool, u32 *out_index);
+internal void SlotPoolFree(SlotPool *pool, u32 index);
+internal u32 SlotPoolLiveCount(const SlotPool *pool);
 
 typedef struct DensePool DensePool;
 struct DensePool
@@ -27,10 +27,10 @@ struct DensePool
 	u32 capacity;
 };
 
-static void DensePoolInit(DensePool *pool, Arena *arena, u32 capacity);
-static u32 DensePoolGetStableID(DensePool *pool);
-static u32 DensePoolFreeID(DensePool *pool, u32 id);
-static u32 DensePoolDenseIndex(const DensePool *pool, u32 id);
-static u32 DensePoolLiveCount(const DensePool *pool);
+internal void DensePoolInit(DensePool *pool, Arena *arena, u32 capacity);
+internal u32 DensePoolGetStableID(DensePool *pool);
+internal u32 DensePoolFreeID(DensePool *pool, u32 id);
+internal u32 DensePoolDenseIndex(const DensePool *pool, u32 id);
+internal u32 DensePoolLiveCount(const DensePool *pool);
 
 #endif // CORE_POOL_H

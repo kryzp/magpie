@@ -21,16 +21,16 @@ struct R_GeometryFreeList
 	u64 total_free;
 };
 
-static void R_GeometryFreeListInit(R_GeometryFreeList *list, u64 capacity);
-static b32  R_GeometryFreeListHasAvailable(const R_GeometryFreeList *list, u64 size);
-static b32  R_GeometryFreeListTryAlloc(R_GeometryFreeList *list, u64 size, u64 *out_index_offset);
-static void R_GeometryFreeListRelease(R_GeometryFreeList *list, u64 offset, u64 size);
+internal void R_GeometryFreeListInit(R_GeometryFreeList *list, u64 capacity);
+internal b32  R_GeometryFreeListHasAvailable(const R_GeometryFreeList *list, u64 size);
+internal b32  R_GeometryFreeListTryAlloc(R_GeometryFreeList *list, u64 size, u64 *out_index_offset);
+internal void R_GeometryFreeListRelease(R_GeometryFreeList *list, u64 offset, u64 size);
 
 typedef struct R_GeometryPage R_GeometryPage;
 struct R_GeometryPage
 {
-	G_BufferKey vertex_buffer;
-	G_BufferKey index_buffer;
+	G_ResourceKey vertex_buffer;
+	G_ResourceKey index_buffer;
 
 	u32 vertex_count;
 	u32 index_count;

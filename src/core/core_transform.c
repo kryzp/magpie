@@ -1,5 +1,5 @@
 
-static Transform TransformIdentity(void)
+internal Transform TransformIdentity(void)
 {
 	Transform transform = {0};
 	transform.position = v3x(0.f);
@@ -12,7 +12,7 @@ static Transform TransformIdentity(void)
 	return transform;
 }
 
-static void TransformRecompute(Transform *transform)
+internal void TransformRecompute(Transform *transform)
 {
 	transform->matrix = M4Transform(transform->position,
 									transform->rotation,
@@ -22,7 +22,7 @@ static void TransformRecompute(Transform *transform)
 	transform->dirty = false;
 }
 
-static m4 TransformMatrix(Transform *transform)
+internal m4 TransformMatrix(Transform *transform)
 {
 	if (transform->dirty)
 		TransformRecompute(transform);
@@ -30,31 +30,31 @@ static m4 TransformMatrix(Transform *transform)
 	return transform->matrix;
 }
 
-static void TransformSetPosition(Transform *transform, v3 position)
+internal void TransformSetPosition(Transform *transform, v3 position)
 {
 	transform->position = position;
 	transform->dirty = true;
 }
 
-static void TransformMoveBy(Transform *transform, v3 by)
+internal void TransformMoveBy(Transform *transform, v3 by)
 {
 	transform->position = V3Add(transform->position, by);
 	transform->dirty = true;
 }
 
-static void TransformSetRotation(Transform *transform, v4 rotation)
+internal void TransformSetRotation(Transform *transform, v4 rotation)
 {
 	transform->rotation = rotation;
 	transform->dirty = true;
 }
 
-static void TransformSetScale(Transform *transform, v3 scale)
+internal void TransformSetScale(Transform *transform, v3 scale)
 {
 	transform->scale = scale;
 	transform->dirty = true;
 }
 
-static void TransformSetOrigin(Transform *transform, v3 origin)
+internal void TransformSetOrigin(Transform *transform, v3 origin)
 {
 	transform->origin = origin;
 	transform->dirty = true;

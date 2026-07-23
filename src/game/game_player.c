@@ -1,5 +1,5 @@
 
-static PlayerInput PlayerGatherInput(const OS_InputState *st)
+internal PlayerInput PlayerGatherInput(const OS_InputState *st)
 {
 	PlayerInput input = {0};
 
@@ -20,7 +20,7 @@ static PlayerInput PlayerGatherInput(const OS_InputState *st)
 	return input;
 }
 
-static void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const PlayerAnimationClips *clips, AN_Animator *animator)
+internal void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const PlayerAnimationClips *clips, AN_Animator *animator)
 {
 	if (!st->is_moving)
 	{
@@ -40,7 +40,7 @@ static void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const
 	}
 }
 
-static v3 CalcPlayerAimingPoint(const OS_InputState *input)
+internal v3 CalcPlayerAimingPoint(const OS_InputState *input)
 {
 	R_Camera *camera = &game->camera;
 
@@ -58,7 +58,7 @@ static v3 CalcPlayerAimingPoint(const OS_InputState *input)
 	return result;
 }
 
-static void PlayerInit(Player *player, Transform transform)
+internal void PlayerInit(Player *player, Transform transform)
 {
 	player->arena = ArenaAlloc(Megabytes(1));
 
@@ -93,13 +93,13 @@ static void PlayerInit(Player *player, Transform transform)
 	player->anim_clips.k_run = AN_AnimatorFindClipByName(animator, String8Lit("run"));
 }
 
-static void PlayerDestroy(Player *player)
+internal void PlayerDestroy(Player *player)
 {
 	R_ModelInstanceDestroy(&app->model_catalogue, &player->render_model);
 	P_ReturnInstance(player->rigidbody_handle);
 }
 
-static PlayerAnimationState PlayerTickMovement(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
+internal PlayerAnimationState PlayerTickMovement(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
 {
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
@@ -164,7 +164,7 @@ static PlayerAnimationState PlayerTickMovement(Player *player, const E_TickConte
 	return animation_st;
 }
 
-static PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
+internal PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContext *ctx, const PlayerInput *input_st)
 {
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
@@ -186,7 +186,7 @@ static PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContex
 	return animation_st;
 }
 
-static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
+internal void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 {
 	PlayerInput input_st = PlayerGatherInput(ctx->input);
 	PlayerAnimationState animation_st = {0};
@@ -206,12 +206,12 @@ static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx)
 	PlayerAnimate(&animation_st, ctx->elapsed, &player->anim_clips, animator);
 }
 
-static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
+internal void PlayerPostAnimTick(Player *player, const E_TickContext *ctx)
 {
 	//R_SceneModelUpdateSkinning(&app->scene, &player->render_model);
 }
 
-static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
+internal void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 {
 	P_RigidBody *rb = P_GetRigidbodyFromHandle(player->rigidbody_handle);
 
@@ -222,10 +222,10 @@ static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx)
 	R_ModelInstanceSetTransform(&app->model_catalogue, &player->render_model, final_matrix);
 }
 
-static void PlayerSerialize(Player *player, IO_ByteSerializer *writer)
+internal void PlayerSerialize(Player *player, IO_ByteSerializer *writer)
 {
 }
 
-static void PlayerDeserialize(Player *player, IO_ByteSerializer *reader)
+internal void PlayerDeserialize(Player *player, IO_ByteSerializer *reader)
 {
 }

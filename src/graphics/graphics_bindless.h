@@ -5,7 +5,7 @@
 #define G_BINDLESS_MAX_RESOURCES 4096
 #define G_BINDLESS_INDEX_INVALID 0
 
-static inline b32 G_BindlessIndexIsValid(u32 index)
+internal inline b32 G_BindlessIndexIsValid(u32 index)
 {
 	return (index != 0) && (index < G_BINDLESS_MAX_RESOURCES);
 }
@@ -49,19 +49,19 @@ struct G_Bindless
 	u32 free_views[128];
 };
 
-static VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind);
+internal VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind);
 
-static void G_BindlessPushUpdate(G_Bindless *bindless,
+internal void G_BindlessPushUpdate(G_Bindless *bindless,
 									 G_BindlessKind kind, u32 index,
 									 VkSampler sampler, VkImageView view);
 
-static u32 G_BindlessRegisterSampler (G_Bindless *bindless, VkSampler sampler);
-static u32 G_BindlessRegisterView    (G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+internal u32 G_BindlessRegisterSampler (G_Bindless *bindless, VkSampler sampler);
+internal u32 G_BindlessRegisterView    (G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-static void G_BindlessUpdateSampler (G_Bindless *bindless, u32 index, VkSampler sampler);
-static void G_BindlessUpdateView    (G_Bindless *bindless, u32 index, VkImageView view, b32 is_cubemap, b32 is_also_storage);
+internal void G_BindlessUpdateSampler (G_Bindless *bindless, u32 index, VkSampler sampler);
+internal void G_BindlessUpdateView    (G_Bindless *bindless, u32 index, VkImageView view, b32 is_cubemap, b32 is_also_storage);
 
-static void G_BindlessFreeSampler (G_Bindless *bindless, u32 index);
-static void G_BindlessFreeView    (G_Bindless *bindless, u32 index);
+internal void G_BindlessFreeSampler (G_Bindless *bindless, u32 index);
+internal void G_BindlessFreeView    (G_Bindless *bindless, u32 index);
 
 #endif // GRAPHICS_BINDLESS_H

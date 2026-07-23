@@ -143,81 +143,81 @@ struct J_W32_Scheduler
    HELPERS
    ================================================== */
 
-static void J_W32_SpinModeEnable(J_W32_Scheduler *scheduler);
-static void J_W32_SpinModeDisable(J_W32_Scheduler *scheduler);
+internal void J_W32_SpinModeEnable(J_W32_Scheduler *scheduler);
+internal void J_W32_SpinModeDisable(J_W32_Scheduler *scheduler);
 
-static b32 J_W32_IsMainThread(J_W32_Scheduler *scheduler);
+internal b32 J_W32_IsMainThread(J_W32_Scheduler *scheduler);
 
-static void J_W32_FiberYield(J_W32_Scheduler *scheduler);
-static void J_W32_FiberCompleted(J_W32_Scheduler *scheduler);
-static J_W32_Fiber *J_W32_FiberFetchFree(J_W32_Scheduler *scheduler);
-static void J_W32_FiberReturn(J_W32_Scheduler *scheduler, J_W32_Fiber *fiber);
-static OS_Handle J_W32_GetCurrentFiberHandle(J_W32_Scheduler *scheduler);
+internal void J_W32_FiberYield(J_W32_Scheduler *scheduler);
+internal void J_W32_FiberCompleted(J_W32_Scheduler *scheduler);
+internal J_W32_Fiber *J_W32_FiberFetchFree(J_W32_Scheduler *scheduler);
+internal void J_W32_FiberReturn(J_W32_Scheduler *scheduler, J_W32_Fiber *fiber);
+internal OS_Handle J_W32_GetCurrentFiberHandle(J_W32_Scheduler *scheduler);
 
-static J_W32_Request *J_W32_TryGetRequest(J_W32_Scheduler *scheduler);
-static J_W32_Fiber *J_W32_TryGetWaitingFiber(J_W32_Scheduler *scheduler);
+internal J_W32_Request *J_W32_TryGetRequest(J_W32_Scheduler *scheduler);
+internal J_W32_Fiber *J_W32_TryGetWaitingFiber(J_W32_Scheduler *scheduler);
 
-static b32 J_W32_RequestAvailable(J_W32_Scheduler *scheduler);
+internal b32 J_W32_RequestAvailable(J_W32_Scheduler *scheduler);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-static void J_W32_Init(J_W32_Scheduler *scheduler, LOG_Channel log_channel);
-static void J_W32_Shutdown(J_W32_Scheduler *scheduler);
+internal void J_W32_Init(J_W32_Scheduler *scheduler, LOG_Channel log_channel);
+internal void J_W32_Shutdown(J_W32_Scheduler *scheduler);
 
-static void J_W32_SchedulerThreadEntry(void *param);
-static void J_W32_FiberEntry(void *param);
+internal void J_W32_SchedulerThreadEntry(void *param);
+internal void J_W32_FiberEntry(void *param);
 
-static void J_W32_Enter(J_W32_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
-static void J_W32_Halt(J_W32_Scheduler *scheduler);
+internal void J_W32_Enter(J_W32_Scheduler *scheduler, void (*OnMainThreadIdle)(void *ctx), void *main_thread_idle_ctx);
+internal void J_W32_Halt(J_W32_Scheduler *scheduler);
 
-static J_W32_Context J_W32_GetContext(J_W32_Scheduler *scheduler);
+internal J_W32_Context J_W32_GetContext(J_W32_Scheduler *scheduler);
 
 /* ==================================================
    SYNCHRONISATION
    ================================================== */
 
-static void J_W32_CounterInit(J_W32_Counter *counter, i32 initial_count);
-static void J_W32_CounterIncrement(J_W32_Counter *counter, i32 n);
-static void J_W32_CounterDecrement(J_W32_Scheduler *scheduler, J_W32_Counter *counter, i32 n);
-static u32  J_W32_CounterValue(J_W32_Counter *counter);
+internal void J_W32_CounterInit(J_W32_Counter *counter, i32 initial_count);
+internal void J_W32_CounterIncrement(J_W32_Counter *counter, i32 n);
+internal void J_W32_CounterDecrement(J_W32_Scheduler *scheduler, J_W32_Counter *counter, i32 n);
+internal u32  J_W32_CounterValue(J_W32_Counter *counter);
 
-static void J_W32_FiberMutexLock(J_W32_Scheduler *scheduler, J_W32_FiberMutex *m);
-static void J_W32_FiberMutexUnlock(J_W32_Scheduler *scheduler, J_W32_FiberMutex *m);
+internal void J_W32_FiberMutexLock(J_W32_Scheduler *scheduler, J_W32_FiberMutex *m);
+internal void J_W32_FiberMutexUnlock(J_W32_Scheduler *scheduler, J_W32_FiberMutex *m);
 
-static void J_W32_FiberCondVarWait(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv, J_W32_FiberMutex *mutex);
-static void J_W32_FiberCondVarSignal(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv);
-static void J_W32_FiberCondVarBroadcast(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv);
+internal void J_W32_FiberCondVarWait(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv, J_W32_FiberMutex *mutex);
+internal void J_W32_FiberCondVarSignal(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv);
+internal void J_W32_FiberCondVarBroadcast(J_W32_Scheduler *scheduler, J_W32_FiberCondVar *cv);
 
 
 /* ==================================================
    JOBS
    ================================================== */
 
-static void J_W32_Push(J_W32_Scheduler *scheduler, const J_W32_Request *request);
-static void J_W32_PushWaitingFiber(J_W32_Scheduler *scheduler, J_W32_Fiber *fiber);
+internal void J_W32_Push(J_W32_Scheduler *scheduler, const J_W32_Request *request);
+internal void J_W32_PushWaitingFiber(J_W32_Scheduler *scheduler, J_W32_Fiber *fiber);
 
-static void J_W32_Yield(J_W32_Scheduler *scheduler, J_W32_Counter *counter, i32 value);
+internal void J_W32_Yield(J_W32_Scheduler *scheduler, J_W32_Counter *counter, i32 value);
 
-static void J_W32_Kick  (J_W32_Scheduler *scheduler, const J_Decl *decl, J_W32_Counter *counter);
-static void J_W32_Batch (J_W32_Scheduler *scheduler, const J_Decl *decls, u32 count, J_W32_Counter *counter);
+internal void J_W32_Kick  (J_W32_Scheduler *scheduler, const J_Decl *decl, J_W32_Counter *counter);
+internal void J_W32_Batch (J_W32_Scheduler *scheduler, const J_Decl *decls, u32 count, J_W32_Counter *counter);
 
 /*
  * Divides [0, count) into batches of batch_size, and kicks
  * off a basic for-loop job for them all.
  */
-static J_ENTRY_POINT_DEF(J_W32_ParallelForBatchEntry);
+internal J_ENTRY_POINT_DEF(J_W32_ParallelForBatchEntry);
 
-static void J_W32_For(J_W32_Scheduler *scheduler, u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size);
+internal void J_W32_For(J_W32_Scheduler *scheduler, u32 count, J_EntryForFn *fn, J_Priority priority, u32 batch_size);
 
 
 /* ==================================================
    SCRATCH
    ================================================== */
 
-static Arena *J_W32_GetScratch(J_W32_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count);
+internal Arena *J_W32_GetScratch(J_W32_Scheduler *scheduler, Arena * const *conflicts, u32 conflict_count);
 
 
 #endif // OS_WIN32_J_H

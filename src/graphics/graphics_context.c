@@ -1,23 +1,9 @@
 
-// TODO: Just move this into the device...
-
 static const char *g_context_vk_validation_layers[] = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
-static const char *g_context_device_extensions[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-	VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-	VK_KHR_RAY_QUERY_EXTENSION_NAME,
-	VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-	VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-#ifdef __APPLE__
-	"VK_KHR_portability_subset"
-#endif
-};
-
-static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+internal VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
 													 VkImageTiling tiling,
 													 VkFormatFeatureFlags features,
 													 u32 candidate_count, const VkFormat *candidates,
@@ -39,7 +25,7 @@ static VkFormat G_ContextFindGraphicsSupportedFormat(VkPhysicalDevice physical_d
 	return VK_FORMAT_MAX_ENUM;
 }
 
-static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device, LOG_Channel log_channel)
+internal VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_device, LOG_Channel log_channel)
 {
 	static const VkFormat candidates[] = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -53,7 +39,7 @@ static VkFormat G_ContextFindGraphicsDepthFormat(VkPhysicalDevice physical_devic
 												log_channel);
 }
 
-static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties, LOG_Channel log_channel)
+internal VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties, LOG_Channel log_channel)
 {
 	VkSampleCountFlags counts =
 		properties.properties.limits.framebufferColorSampleCounts &
@@ -72,7 +58,7 @@ static VkSampleCountFlagBits G_ContextFindGraphicsMaxUsableSampleCount(VkPhysica
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count, LOG_Channel log_channel)
+internal const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *extension_count, LOG_Channel log_channel)
 {
 	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
 
@@ -82,7 +68,7 @@ static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *ext
 	u32 extra_extension_count = 3;
 
 #ifdef __APPLE__
-	extra_extension_count += 2;
+	extra_extension_count += 1;
 #endif
 
 	const char **extensions = ArenaPushArray(arena, const char *, *extension_count + extra_extension_count);
@@ -95,8 +81,9 @@ static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *ext
 	extensions[*extension_count + 2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 
 #ifdef __APPLE__
-	extensions[*extension_count + 3] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
-	extensions[*extension_count + 4] = "VK_EXT_metal_surface";
+	extensions[*extension_count + 3] = "VK_EXT_metal_surface";//VK_EXT_METAL_SURFACE_EXTENSION_NAME
+	// using kosmickrisp
+	//extensions[*extension_count + 4] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 #endif
 
 	*extension_count = *extension_count + extra_extension_count;
@@ -104,50 +91,7 @@ static const char * const *G_ContextGetInstanceExtensions(Arena *arena, u32 *ext
 	return extensions;
 }
 
-static b32 G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(VkPhysicalDevice physical_device, LOG_Channel log_channel)
-{
-	u32 extension_count = 0;
-	
-	vkEnumerateDeviceExtensionProperties(physical_device, NULL,
-										 &extension_count, NULL);
-
-	if (extension_count <= 0)
-		DebugLogB(log_channel, "Failed to find any device extension properties.");
-
-	ScratchArena scratch = ScratchBegin(NULL, 0);
-
-	VkExtensionProperties *available_exts = ArenaPushArray(scratch.arena, VkExtensionProperties, extension_count);
-
-	vkEnumerateDeviceExtensionProperties(physical_device, NULL,
-										 &extension_count, available_exts);
-
-	b32 result = true;
-
-	for (u32 i = 0; i < ArraySize(g_context_device_extensions); i++)
-	{
-		b32 found = false;
-		for (u32 j = 0; j < extension_count; j++)
-		{
-			if (CStrCompare(available_exts[j].extensionName,
-							g_context_device_extensions[i]) == 0)
-			{
-				found = true;
-				break;
-			}
-		}
-		if (!found)
-		{
-			result = false;
-			goto exit;
-		}
-	}
-
-exit:
-	ScratchRelease(&scratch);
-	return result;
-}
-
-static b32 G_ContextCheckForValidationLayerSupport(void)
+internal b32 G_ContextCheckForValidationLayerSupport(void)
 {
 	u32 layer_count = 0;
 	vkEnumerateInstanceLayerProperties(&layer_count, 0);
@@ -188,7 +132,7 @@ exit:
 	return result;
 }
 
-static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
+internal G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
 																VkPhysicalDevice physical_device,
 																VkSurfaceKHR surface)
 {
@@ -224,61 +168,32 @@ static G_SwapchainSupportDetails G_ContextQuerySwapchainSupport(Arena *arena,
 	return result;
 }
 
-static u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
-														  VkPhysicalDevice physical_device,
-														  VkPhysicalDeviceProperties2 properties,
-														  VkPhysicalDeviceFeatures2 features,
-														  b32 *has_essentials,
-														  LOG_Channel log_channel)
+internal u32 G_ContextAssignGraphicsPhysicalDeviceUsability(VkSurfaceKHR surface,
+															VkPhysicalDevice physical_device,
+															VkPhysicalDeviceProperties2 properties,
+															const G_Requirements *requirements,
+															G_Capabilities *out_capabilities,
+															VkPhysicalDeviceFeatures2 *out_features,
+															b32 *has_essentials,
+															LOG_Channel log_channel)
 {
 	u32 usability = 0;
 
 	b32 adequate_swap_chain = false;
-	b32 has_required_extensions = G_ContextCheckGraphicsPhysicalDeviceExtensionSupport(physical_device, log_channel);
-	b32 has_anisotropy = features.features.samplerAnisotropy;
+	b32 meets_requirements = false;
 
-	// Prefer / give more weight to discrete gpus than integrated gpus.
-	if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-		usability += 4;
-	else if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-		usability += 1;
 
-	// If we have anisotropy then that's good... I guess :))).
-	if (has_anisotropy)
-		usability += 1;
 
-	// It must have the required extensions.
-	if (has_required_extensions)
-	{
-		ScratchArena scratch = ScratchBegin(NULL, 0);
-		
-		G_SwapchainSupportDetails details = G_ContextQuerySwapchainSupport(scratch.arena, physical_device, surface);
-
-		adequate_swap_chain =
-			(details.surface_format_count > 0) &&
-			(details.present_mode_count > 0);
-
-		usability += 3;
-
-		ScratchRelease(&scratch);
-	}
-
-	// Essential features must be satisfied.
 	if (has_essentials)
-	{
-		*has_essentials =
-			has_required_extensions &&
-			adequate_swap_chain &&
-			has_anisotropy;
-	}
+		*has_essentials = adequate_swap_chain && meets_requirements;
 
 	return usability;
 }
 
-static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
-															VkDebugUtilsMessengerCreateInfoEXT *debug_info,
-															const VkAllocationCallbacks *allocator,
-															VkDebugUtilsMessengerEXT *messenger)
+internal VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+															  VkDebugUtilsMessengerCreateInfoEXT *debug_info,
+															  const VkAllocationCallbacks *allocator,
+															  VkDebugUtilsMessengerEXT *messenger)
 {
 	PFN_vkCreateDebugUtilsMessengerEXT fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -288,16 +203,19 @@ static VkResult G_ContextCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
 	return VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
-static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
+internal G_Context G_ContextInit(Arena *arena,
+								 LOG_Channel log_channel,
+								 const G_Requirements *requirements,
+								 PFN_vkDebugUtilsMessengerCallbackEXT vk_debug_callback, void *vk_debug_callback_ctx)
 {
 	G_Context context = {0};
 	
 	VkApplicationInfo core_info = {0};
 	
 	core_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-
+	
 	core_info.pApplicationName = OS_DEFAULT_WINDOW_TITLE;
-	core_info.pEngineName      = OS_ENGINE_NAME;
+	core_info.pEngineName = OS_ENGINE_NAME;
 	
 	core_info.applicationVersion = VK_MAKE_API_VERSION(0,
 													   OS_APP_VERSION_MAJOR,
@@ -309,7 +227,7 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 												  OS_ENGINE_VERSION_MINOR,
 												  OS_ENGINE_VERSION_PATCH);
 
-	core_info.apiVersion = VK_API_VERSION_1_4;
+	core_info.apiVersion = VK_API_VERSION_1_3;//VK_API_VERSION_1_4
 
 	VkInstanceCreateInfo instance_create_info = {0};
 	instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -321,7 +239,7 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 
 	instance_create_info.ppEnabledExtensionNames = G_ContextGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount, log_channel);
 
-	static const VkValidationFeatureEnableEXT enabled_features[] = {
+	internal const VkValidationFeatureEnableEXT enabled_features[] = {
 		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
 		//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
 		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
@@ -370,10 +288,12 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 		instance_create_info.pNext = NULL;
 	}
 
+	/* using kosmickrisp
 #ifdef __APPLE__
 	instance_create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
-
+	*/
+	
 	G_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &context.instance),
 			   "Failed to create instance.");
 
@@ -392,60 +312,96 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 
 	// Enumerate physical_resource devices.
 	{
-		u32 device_count = 0;
-		vkEnumeratePhysicalDevices(context.instance, &device_count, NULL);
+		u32 physical_device_count = 0;
+		vkEnumeratePhysicalDevices(context.instance, &physical_device_count, NULL);
 
-		DebugLogAssert(log_channel, device_count > 0, "Failed to find GPUs with Vulkan support.");
+		DebugLogAssert(log_channel, physical_device_count > 0, "Failed to find GPUs with Vulkan support.");
 
+		DebugLogD(log_channel, "Found %u physical devices.", physical_device_count);
+		
 		VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-		VkPhysicalDeviceFeatures2   features   = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
 
-		VkPhysicalDevice *devices = ArenaPushArray(scratch.arena, VkPhysicalDevice, device_count);
+		VkPhysicalDevice *physical_devices = ArenaPushArray(scratch.arena, VkPhysicalDevice, physical_device_count);
 
-		vkEnumeratePhysicalDevices(context.instance, &device_count, devices);
+		vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices);
 
 		u32 best_usability = 0;
-		u32 selected_id = 0;
-
-		for (u32 i = 0; i < device_count; i++)
+		
+		for (u32 i = 0; i < physical_device_count; i++)
 		{
-			VkPhysicalDeviceAccelerationStructureFeaturesKHR rt_features = {0};
-			rt_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-
-			features.pNext = &rt_features;
-
-			vkGetPhysicalDeviceProperties2(devices[i], &properties);
-			vkGetPhysicalDeviceFeatures2(devices[i], &features);
+			VkPhysicalDevice curr_physical_device = physical_devices[i];
+			
+			vkGetPhysicalDeviceProperties2(curr_physical_device, &properties);
 	
 			DebugLogD(log_channel,
 					  "Querying physical device: %s (%d)",
-					  properties.properties.deviceName, properties.properties.deviceID);
+					  properties.properties.deviceName,
+					  properties.properties.deviceID);
 
-			b32 has_essentials = false;
+			b32 has_essentials = true;
 
-			u32 current_usability = G_ContextAssignGraphicsPhysicalDeviceUsability(context.surface,
-																				   devices[i],
-																				   properties, features,
-																				   &has_essentials,
-																				   log_channel);
+			G_Capabilities detected_caps = {0};
+			G_ResolvedCapabilities resolved_caps = {0};
+			VkPhysicalDeviceFeatures2 features = {0};
+	
+			// swapchain
+			{
+				G_SwapchainSupportDetails details = G_ContextQuerySwapchainSupport(scratch.arena, curr_physical_device, context.surface);
+
+				if ((details.surface_format_count <= 0) ||
+					(details.present_mode_count <= 0))
+				{
+					has_essentials = false;
+				}					
+			}
+
+			// capabilities
+			{
+				detected_caps = G_CapabilitiesQuery(curr_physical_device, &features, log_channel);
+				resolved_caps = G_CapabilitiesResolve(scratch.arena, curr_physical_device, detected_caps, requirements, log_channel);
+
+				if (!resolved_caps.meets_requirements)
+				{
+					has_essentials = false;
+				}
+			}
+
+			u32 current_usability = G_CapabilitiesScore(resolved_caps.enabled, requirements);
+			
+			if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+			{
+				current_usability += 4;
+			}
+			else if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+			{
+				current_usability += 1;
+			}
 			
 			if (current_usability > best_usability && has_essentials)
 			{
-				context.physical_device = devices[i];
+				context.physical_device = curr_physical_device;
 				context.physical_device_properties = properties;
 				context.physical_device_features = features;
-
+				
+				context.capabilities = resolved_caps;
+				
 				best_usability = current_usability;
-				selected_id = properties.properties.deviceID;
 			}
 		}
 
-		DebugLogAssert(log_channel, context.physical_device, "Unable to find a suitable GPU.");
+		DebugLogAssert(log_channel,
+					   context.physical_device,
+					   "Unable to find a suitable physical device :(");
 
-		DebugLogD(log_channel, "Selected a suitable GPU: %d", selected_id);
+		DebugLogD(log_channel,
+				  "Selected physical device: %s (%d) :)",
+				  context.physical_device_properties.properties.deviceName,
+				  context.physical_device_properties.properties.deviceID);
 	}
 
 	context.max_msaa_samples = G_ContextFindGraphicsMaxUsableSampleCount(context.physical_device_properties, log_channel);
+	context.max_push_constants_size = context.physical_device_properties.properties.limits.maxPushConstantsSize;
+	
 	context.depth_format = G_ContextFindGraphicsDepthFormat(context.physical_device, log_channel);
 
 	u32 queue_family_count = 0;
@@ -518,25 +474,52 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 	vulkan13_features.synchronization2 = VK_TRUE;
 	vulkan13_features.pNext = &vulkan12_features;
 
+	/*
 	VkPhysicalDeviceVulkan14Features vulkan14_features = {0};
 	vulkan14_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
 	vulkan14_features.maintenance5 = VK_TRUE;
 	vulkan14_features.pNext = &vulkan13_features;
+	*/
+	
+	VkPhysicalDeviceMaintenance5FeaturesKHR mt5_features = {0};
+	mt5_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR;
+	mt5_features.maintenance5 = VK_TRUE;
+	mt5_features.pNext = &vulkan13_features;
+
+	VkPhysicalDeviceMaintenance6FeaturesKHR mt6_features = {0};
+	mt6_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_6_FEATURES_KHR;
+	mt6_features.maintenance6 = VK_TRUE;
+	mt6_features.pNext = &mt5_features;
+
+	void *feature_chain_tail = &mt6_features;
 
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {0};
-	rt_pipeline_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-	rt_pipeline_features.rayTracingPipeline = VK_TRUE;
-	rt_pipeline_features.pNext = &vulkan14_features;
-
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR accel_struct_features = {0};
-	accel_struct_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-	accel_struct_features.accelerationStructure = VK_TRUE;
-	accel_struct_features.pNext = &rt_pipeline_features;
-	
 	VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {0};
-	ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
-	ray_query_features.rayQuery = VK_TRUE;
-	ray_query_features.pNext = &accel_struct_features;
+	
+	if (context.capabilities.enabled.set[G_CapabilityType_RayTracingPipeline] &&
+		context.capabilities.enabled.set[G_CapabilityType_AccelerationStructure] &&
+		context.capabilities.enabled.set[G_CapabilityType_RayQuery])
+	{
+		rt_pipeline_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+		rt_pipeline_features.rayTracingPipeline = VK_TRUE;
+		rt_pipeline_features.pNext = feature_chain_tail;
+
+		accel_struct_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		accel_struct_features.accelerationStructure = VK_TRUE;
+		accel_struct_features.pNext = &rt_pipeline_features;
+
+		ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+		ray_query_features.rayQuery = VK_TRUE;
+		ray_query_features.pNext = &accel_struct_features;
+
+		feature_chain_tail = &ray_query_features;
+	}
+
+	VkPhysicalDeviceFeatures enabled_base_features = {0};
+	enabled_base_features.samplerAnisotropy = context.capabilities.enabled.set[G_CapabilityType_SamplerAnisotropy];
+	enabled_base_features.sampleRateShading = context.capabilities.enabled.set[G_CapabilityType_SampleRateShading];
+	enabled_base_features.shaderInt64 = context.capabilities.enabled.set[G_CapabilityType_ShaderI64];
 	
 	VkDeviceCreateInfo device_create_info = {0};
 	device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -544,11 +527,11 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 	device_create_info.pQueueCreateInfos = &graphics_queue_create_info;
 	device_create_info.enabledLayerCount = 0;
 	device_create_info.ppEnabledLayerNames = NULL;
-	device_create_info.enabledExtensionCount = ArraySize(g_context_device_extensions);
-	device_create_info.ppEnabledExtensionNames = g_context_device_extensions;
-	device_create_info.pEnabledFeatures = &context.physical_device_features.features;
-	device_create_info.pNext = &ray_query_features;
-
+	device_create_info.enabledExtensionCount = context.capabilities.extension_count;
+	device_create_info.ppEnabledExtensionNames = context.capabilities.extension_names;
+	device_create_info.pEnabledFeatures = &enabled_base_features;
+	device_create_info.pNext = feature_chain_tail;
+	
 	G_VK_CHECK(vkCreateDevice(context.physical_device,
 							  &device_create_info, NULL,
 							  &context.device),
@@ -560,21 +543,29 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 					 context.graphics_queue.family_index, 0,
 					 &context.graphics_queue.vk_handle);
 
-	DebugLogD(log_channel, "Created graphics queue.");
-
-	u32 version = 0;
-	VkResult result = vkEnumerateInstanceVersion(&version);
+	u32 instance_version = 0;
+	VkResult result = vkEnumerateInstanceVersion(&instance_version);
 
 	if (result == VK_SUCCESS)
 	{
-		u32 major = VK_API_VERSION_MAJOR(version);
-		u32 minor = VK_API_VERSION_MINOR(version);
+		u32 device_version = context.physical_device_properties.properties.apiVersion;
 		
-		DebugLogD(log_channel, "Using Vulkan %d.%d", major, minor);
+		u32 i_major = VK_API_VERSION_MAJOR(instance_version);
+		u32 i_minor = VK_API_VERSION_MINOR(instance_version);
+		i32 i_patch = VK_API_VERSION_PATCH(instance_version);
+
+		u32 d_major = VK_API_VERSION_MAJOR(device_version);
+		u32 d_minor = VK_API_VERSION_MINOR(device_version);
+		u32 d_patch = VK_API_VERSION_PATCH(device_version);
+		
+		DebugLogD(log_channel,
+				  "Instance Version: %d.%d.%d, Device Version: %d.%d.%d",
+				  i_major, i_minor, i_patch,
+				  d_major, d_minor, d_patch);
 	}
 	else
 	{
-		DebugLogW(log_channel, "Failed to retrieve Vulkan version.");
+		DebugLogE(log_channel, "Failed to retrieve Vulkan version, something's gone wrong probably.");
 	}
 
 	volkLoadDevice(context.device);
@@ -633,7 +624,7 @@ static G_Context G_ContextInit(Arena *arena, LOG_Channel log_channel, PFN_vkDebu
 	return context;
 }
 
-static void G_ContextDestroy(G_Context *context)
+internal void G_ContextDestroy(G_Context *context)
 {
 	vkDestroyPipelineCache(context->device, context->pipeline_process_cache, NULL);
 	osapi->VulkanSurfaceDestroy(context->instance, context->surface);

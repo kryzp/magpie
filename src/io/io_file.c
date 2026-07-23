@@ -1,5 +1,5 @@
 
-static IO_ByteSpan IO_ReadEntireFile(Arena *arena, String8 path)
+internal IO_ByteSpan IO_ReadEntireFile(Arena *arena, String8 path)
 {
 	IO_ByteSpan source = {0};
 

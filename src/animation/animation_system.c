@@ -1,7 +1,7 @@
 
 static AN_System *an_system = NULL;
 
-static void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel)
+internal void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel)
 {
 	system->log_channel = log_channel;
 
@@ -20,7 +20,7 @@ static void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel)
 	DebugLogI(system->log_channel, "Initialized.");
 }
 
-static void AN_SystemDestroy(void)
+internal void AN_SystemDestroy(void)
 {
 	for (u32 i = 0; i < ArraySize(an_system->instances); i++)
 	{
@@ -32,12 +32,12 @@ static void AN_SystemDestroy(void)
 	an_system = NULL;
 }
 
-static void AN_SystemSelectContext(AN_System *system)
+internal void AN_SystemSelectContext(AN_System *system)
 {
 	an_system = system;
 }
 
-static void AN_SystemCalculateIntermediatePoses(f32 elapsed)
+internal void AN_SystemCalculateIntermediatePoses(f32 elapsed)
 {
 	for (u32 i = 0; i < an_system->instance_count; i++)
 	{
@@ -50,7 +50,7 @@ static void AN_SystemCalculateIntermediatePoses(f32 elapsed)
 	}
 }
 
-static void AN_SystemFinalizePoseAndMatrixPalette(void)
+internal void AN_SystemFinalizePoseAndMatrixPalette(void)
 {
 	for (u32 i = 0; i < an_system->instance_count; i++)
 	{
@@ -63,7 +63,7 @@ static void AN_SystemFinalizePoseAndMatrixPalette(void)
 	}
 }
 
-static AN_Instance *AN_SystemResolve(AN_Handle handle)
+internal AN_Instance *AN_SystemResolve(AN_Handle handle)
 {
 	if (handle.index >= ArraySize(an_system->instances))
 		return NULL;
@@ -76,7 +76,7 @@ static AN_Instance *AN_SystemResolve(AN_Handle handle)
 	return inst;
 }
 
-static AN_Animator *AN_SystemGetAnimator(AN_Handle handle)
+internal AN_Animator *AN_SystemGetAnimator(AN_Handle handle)
 {
 	AN_Instance *inst = AN_SystemResolve(handle);
 
@@ -85,7 +85,7 @@ static AN_Animator *AN_SystemGetAnimator(AN_Handle handle)
 	return &inst->animator;
 }
 
-static void AN_Play(AN_Handle handle, AN_ClipKey clip, b32 loop, f32 global_start_time)
+internal void AN_Play(AN_Handle handle, AN_ClipKey clip, b32 loop, f32 global_start_time)
 {
 	AN_Animator *anim = AN_SystemGetAnimator(handle);
 
@@ -95,13 +95,13 @@ static void AN_Play(AN_Handle handle, AN_ClipKey clip, b32 loop, f32 global_star
 	AN_AnimatorPlay(anim, clip, loop, global_start_time);
 }
 
-static b32 AN_IsFinished(AN_Handle handle)
+internal b32 AN_IsFinished(AN_Handle handle)
 {
 	AN_Animator *anim = AN_SystemGetAnimator(handle);
 	return anim ? AN_AnimatorIsFinished(anim) : false;
 }
 
-static AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index)
+internal AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index)
 {
 	AN_Animator *anim = AN_SystemGetAnimator(handle);
 
@@ -116,7 +116,7 @@ static AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index)
 	return AN_AnimatorPalette(anim, skin_index);
 }
 
-static AN_Handle AN_SystemCreateInstance(A_Handle model_handle)
+internal AN_Handle AN_SystemCreateInstance(A_Handle model_handle)
 {
 	AN_Handle result = AN_HandleNull();
 
@@ -157,7 +157,7 @@ static AN_Handle AN_SystemCreateInstance(A_Handle model_handle)
 	return result;
 }
 
-static void AN_SystemKillInstance(AN_Handle h)
+internal void AN_SystemKillInstance(AN_Handle h)
 {
 	AN_Instance *inst = AN_SystemResolve(h);
 

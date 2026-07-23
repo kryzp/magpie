@@ -3,6 +3,8 @@
 
 #if 0
 
+// note: old ass code. don't use. kept around for when i take another crack at this.
+
 /*
  * TODO THIS IS EXPERIMENTAL AND COMPLETE
  * GARBAGE CODE-WISE.
@@ -78,14 +80,14 @@ struct R_IrradianceVolume
 	u32 nz;
 	u32 ntotal;
 
-	G_BufferKey sh_buffer;
-	G_BufferKey grid_info_buffer;
+	G_ResourceKey sh_buffer;
+	G_ResourceKey grid_info_buffer;
 	
 	A_Handle bake_shader_handle;
 
 	const R_Mesh *skybox_mesh;
-	G_TextureViewKey environment_view;
-	G_SamplerKey linear_sampler;
+	G_ResourceKey environment_view;
+	G_ResourceKey linear_sampler;
 
 	G_AccelStructKey tlas;
 	G_AccelStructKey blas_per_page[32]; // we need a blas per geometry page in the scene
@@ -94,24 +96,24 @@ struct R_IrradianceVolume
 	b32 is_baked;
 };
 
-static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
+internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 								   LOG_Channel log_channel,
 								   v3 grid_min, v3 grid_max,
 								   u32 nx, u32 ny, u32 nz,
 								   const R_Mesh *skybox_mesh,
-								   G_TextureViewKey environment_view,
-								   G_SamplerKey linear_sampler);
+								   G_ResourceKey environment_view,
+								   G_ResourceKey linear_sampler);
 
-static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol);
+internal void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol);
 
-static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene);
-static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene);
+internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene);
+internal void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene);
 
-static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol);
+internal void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol);
 
-static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol);
-static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol);
-static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol);
+internal G_ResourceKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol);
+internal G_ResourceKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol);
+internal b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol);
 
 #endif
 

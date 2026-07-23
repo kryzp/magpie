@@ -5,7 +5,7 @@ struct A_ShaderLoadData
 	G_ShaderCompiledStages compiled;
 };
 
-static A_LoadResult A_ShaderLoaderLoad(const A_LCTX *ctx,
+internal A_LoadResult A_ShaderLoaderLoad(const A_LCTX *ctx,
 									   Arena *result_arena)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -34,7 +34,7 @@ static A_LoadResult A_ShaderLoaderLoad(const A_LCTX *ctx,
 	return result;
 }
 
-static void A_ShaderLoaderAlloc(const A_LCTX *ctx,
+internal void A_ShaderLoaderAlloc(const A_LCTX *ctx,
 								A_LoadResult *result,
 								Arena *asset_arena,
 								A_Asset *asset)
@@ -46,12 +46,12 @@ static void A_ShaderLoaderAlloc(const A_LCTX *ctx,
 	asset->shader.key = G_DeviceShaderProgramCreate(compiled->count, compiled->bytecodes);
 }
 
-static void A_ShaderLoaderDestroyAsset(A_Asset *asset)
+internal void A_ShaderLoaderDestroyAsset(A_Asset *asset)
 {
 	G_DeviceShaderProgramDestroy(asset->shader.key);
 }
 
-static A_LoaderAPI A_GetShaderLoaderAPI(void)
+internal A_LoaderAPI A_GetShaderLoaderAPI(void)
 {
 	static A_LoaderAPI shader_loader_api = {
 		.Load = A_ShaderLoaderLoad,

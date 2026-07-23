@@ -1,8 +1,0 @@
-G_DEVICE_MANAGED_RESOURCE(PipelineLayout, VkPipelineLayout)
-G_DEVICE_MANAGED_RESOURCE(Pipeline,       VkPipeline)
-G_DEVICE_MANAGED_RESOURCE(Texture,        G_Texture)
-G_DEVICE_MANAGED_RESOURCE(TextureView,    G_TextureView)
-G_DEVICE_MANAGED_RESOURCE(Buffer,         G_Buffer)
-G_DEVICE_MANAGED_RESOURCE(Sampler,        G_Sampler)
-G_DEVICE_MANAGED_RESOURCE(Shader,         G_ShaderProgram)
-G_DEVICE_MANAGED_RESOURCE(AccelStruct,    G_AccelStruct)

@@ -1,5 +1,5 @@
 
-static void GunFire(Gun *gun)
+internal void GunFire(Gun *gun)
 {
 	if (gun->ammo_count <= 0)
 	{
@@ -20,7 +20,7 @@ static void GunFire(Gun *gun)
 	CH_TimerRestart(&gun->shoot_timer);
 }
 
-static void GunReload(Gun *gun)
+internal void GunReload(Gun *gun)
 {
 	gun->ammo_count = gun->specs.max_ammo_in_clip;
 

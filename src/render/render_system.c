@@ -1,7 +1,7 @@
 
 static R_System *r_system = NULL;
 
-static void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel)
+internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel)
 {
 	system->arena = arena;
 	system->log_channel = log_channel;
@@ -102,7 +102,7 @@ static void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel lo
 					sizeof(v3), VK_INDEX_TYPE_UINT16,
 					ArraySize(vertices), ArraySize(indices));
 
-		G_BufferKey staging_buffer = G_DeviceStageAlloc(R_MeshVertexBufferSize(&system->skybox_mesh) + R_MeshIndexBufferSize(&system->skybox_mesh));
+		G_ResourceKey staging_buffer = G_DeviceStageAlloc(R_MeshVertexBufferSize(&system->skybox_mesh) + R_MeshIndexBufferSize(&system->skybox_mesh));
 
 		R_MeshWriteToStage(&system->skybox_mesh,
 						   staging_buffer, 0,
@@ -128,7 +128,7 @@ static void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel lo
 	DebugLogI(system->log_channel, "Initialized.");
 }
 
-static void R_SystemDestroy(void)
+internal void R_SystemDestroy(void)
 {
 	//R_IrradianceVolumeDestroy(&r_system->irradiance_volume);
 	R_DebugRendererDestroy();
@@ -153,14 +153,14 @@ static void R_SystemDestroy(void)
 	r_system = NULL;
 }
 
-static void R_SystemSelectContext(R_System *system)
+internal void R_SystemSelectContext(R_System *system)
 {
 	r_system = system;
 	
 	R_DebugRendererSelect(&r_system->debug_renderer);
 }
 
-static void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params)
+internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params)
 {
 	const u32 prefilter_mips = 5;
 
@@ -171,7 +171,7 @@ static void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, co
 	r_system->prefilter_cubemap   = G_DeviceTextureAllocCubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 	
 	A_Handle hdr_texture_handle = A_RequireAssetBlocking(r_system->arena, String8Lit("assets://environment_map_1.hdr"), A_Type_Texture);
-	G_TextureKey hdr_texture_gfx = A_GetOrBreak(hdr_texture_handle)->texture.key;
+	G_ResourceKey hdr_texture_gfx = A_GetOrBreak(hdr_texture_handle)->texture.key;
 	
 	// Generate BRDF Lookup Table.
 	{
@@ -254,25 +254,33 @@ static void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, co
 	DebugLogI(r_system->log_channel, "Generated lookups and maps.");
 }
 
-static void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
+internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 {
 	R_FrustumVolume frustum = R_CameraFrustum(&frame_params->camera);
 
 	R_Blackboard bb = {0};
 
+	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
+	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
+
 	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(1., 1.f, 1.f));
 	lighting_info.flags = G_TextureAllocFlag_Storage;
-	bb.lighting = R_GraphCreateMsaa(graph, &lighting_info, VK_SAMPLE_COUNT_4_BIT);
-	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
+	lighting_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	bb.lighting_resolve = R_GraphCreateTexture(graph, &lighting_info);
+	lighting_info.flags = G_TextureAllocFlag_None;
+	lighting_info.samples = VK_SAMPLE_COUNT_4_BIT;
+	bb.lighting_msaa = R_GraphCreateTexture(graph, &lighting_info);
 
 	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_DeviceDepthFormat(), v3(1.f, 1.f, 1.f));
-	bb.depth = R_GraphCreateMsaa(graph, &depth_info, VK_SAMPLE_COUNT_4_BIT);
-	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
+	depth_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	bb.depth_resolve = R_GraphCreateTexture(graph, &depth_info);
+	depth_info.samples = VK_SAMPLE_COUNT_4_BIT;
+	bb.depth_msaa = R_GraphCreateTexture(graph, &depth_info);
 
 	// todo: this is ass
 	R_Pass *clear_pass = R_GraphAdd(graph, String8Lit("Clear"), R_PassType_Graphics);
-	bb.lighting.msaa = R_PassWriteColour(clear_pass, bb.lighting.msaa, &colour_clear);
-	bb.depth.msaa = R_PassWriteDepth(clear_pass, bb.depth.msaa, &depth_clear);
+	bb.lighting_msaa = R_PassWriteColour(clear_pass, bb.lighting_msaa, &colour_clear);
+	bb.depth_msaa = R_PassWriteDepth(clear_pass, bb.depth_msaa, &depth_clear);
 
 	// Scene.
 	if (frame_params->object_count > 0)
@@ -293,8 +301,8 @@ static void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 		data->cubemap = G_DeviceTextureViewAuto(r_system->environment_cubemap);
 
 		R_Pass *skybox_pass = R_GraphAdd(graph, String8Lit("Skybox"), R_PassType_Graphics);
-		bb.lighting.resolved = R_PassWriteColourResolve(skybox_pass, bb.lighting.msaa, bb.lighting.resolved, NULL);
-		bb.depth.resolved = R_PassWriteDepthResolve(skybox_pass, bb.depth.msaa, bb.depth.resolved, NULL);
+		bb.lighting_resolve = R_PassWriteColourResolve(skybox_pass, bb.lighting_msaa, bb.lighting_resolve, NULL);
+		bb.depth_resolve = R_PassWriteDepthResolve(skybox_pass, bb.depth_msaa, bb.depth_resolve, NULL);
 		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(graph, r_system->environment_cubemap));
 		R_PassSetRecord(skybox_pass, R_SkyboxPassFn, data);
 	}
@@ -304,18 +312,18 @@ static void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 		R_PostProcessingPassData *data = ArenaPushArray(frame_params->arena, R_PostProcessingPassData, 1);
 		data->frame_params = frame_params;
 		data->exposure = 0.5f;
-		data->input = bb.lighting.resolved;
-		data->output = bb.lighting.resolved;
+		data->input = bb.lighting_resolve;
+		data->output = bb.lighting_resolve;
 
 		R_Pass *pp_pass = R_GraphAdd(graph, String8Lit("Post Processing"), R_PassType_Compute);
-		bb.lighting.resolved = R_PassWriteTextureCompute(pp_pass, bb.lighting.resolved);
-		R_PassReadTextureCompute(pp_pass, bb.lighting.resolved);
+		bb.lighting_resolve = R_PassWriteTextureCompute(pp_pass, bb.lighting_resolve);
+		R_PassReadTextureCompute(pp_pass, bb.lighting_resolve);
 		R_PassSetRecord(pp_pass, R_PostProcessingPassFn, data);
 	}
 
-	R_DebugRendererRender(graph, frame_params, bb.lighting.resolved, bb.depth.resolved);
+	R_DebugRendererRender(graph, frame_params, bb.lighting_resolve, bb.depth_resolve);
 	
-	R_GraphSetBackbuffer(graph, bb.lighting.resolved);
+	R_GraphSetBackbuffer(graph, bb.lighting_resolve);
 	R_GraphSetPresentFilter(graph, VK_FILTER_LINEAR);
 }
 

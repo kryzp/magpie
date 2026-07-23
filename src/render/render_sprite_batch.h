@@ -35,8 +35,8 @@ R_SpriteSort;
 typedef struct R_SpriteBatchTask R_SpriteBatchTask;
 struct R_SpriteBatchTask
 {
-	G_TextureKey texture_key;
-	G_SamplerKey sampler_key;
+	G_ResourceKey texture_key;
+	G_ResourceKey sampler_key;
 
 	f32 layer;
 
@@ -67,22 +67,22 @@ struct R_SpriteBatch
 #undef SbParam
 };
 
-static void R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel);
-static void R_SpriteBatchDestroy(R_SpriteBatch *b);
+internal void R_SpriteBatchInit(R_SpriteBatch *b, LOG_Channel log_channel);
+internal void R_SpriteBatchDestroy(R_SpriteBatch *b);
 
-static void R_SpriteBatchBegin(R_SpriteBatch *b);
-static void R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *g);
+internal void R_SpriteBatchBegin(R_SpriteBatch *b);
+internal void R_SpriteBatchEnd(R_SpriteBatch *b, R_Graph *g);
 
-static void R_SpriteBatchClear(R_SpriteBatch *b);
+internal void R_SpriteBatchClear(R_SpriteBatch *b);
 
-static void R_SpriteBatchSetPixelSnap(R_SpriteBatch *b, b32 v);
+internal void R_SpriteBatchSetPixelSnap(R_SpriteBatch *b, b32 v);
 
-static void R_SpriteBatchRect(R_SpriteBatch *b, v2 pos, v2 size);
+internal void R_SpriteBatchRect(R_SpriteBatch *b, v2 pos, v2 size);
 
 #define SbParam(type, lower, upper)										\
-	static void R_SpriteBatchPush##upper(R_SpriteBatch *b, type v);	\
-	static type R_SpriteBatchPop##upper(R_SpriteBatch *b);			\
-	static type R_SpriteBatchPeek##upper(const R_SpriteBatch *b);
+	internal void R_SpriteBatchPush##upper(R_SpriteBatch *b, type v);	\
+	internal type R_SpriteBatchPop##upper(R_SpriteBatch *b);			\
+	internal type R_SpriteBatchPeek##upper(const R_SpriteBatch *b);
 #include "render_sprite_batch_params.inc"
 #undef SbParam
 

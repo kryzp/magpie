@@ -2,7 +2,7 @@
 #define HASH_FNV_PRIME          1099511628211ULL
 #define HASH_FNV_OFFSET_BASIS   1469598103934665603ULL
 
-static u64 HashBytesGeneric(const void *key, u64 length)
+internal u64 HashBytesGeneric(const void *key, u64 length)
 {
 	const u8 *data = (const u8 *)key;
 	
@@ -17,7 +17,7 @@ static u64 HashBytesGeneric(const void *key, u64 length)
 	return hash;
 }
 
-static u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
+internal u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
 {
 	const u8 *data = (const u8 *)key;
 	
@@ -32,7 +32,7 @@ static u64 HashBytesGenericCombine(u64 start, const void *key, u64 length)
 	return hash;
 }
 
-static u64 HashStr8(String8 str)
+internal u64 HashStr8(String8 str)
 {
 	u64 hash = HASH_FNV_OFFSET_BASIS;
 
@@ -45,7 +45,7 @@ static u64 HashStr8(String8 str)
 	return hash;
 }
 
-static u64 HashCStr(const char *str)
+internal u64 HashCStr(const char *str)
 {
 	u64 hash = HASH_FNV_OFFSET_BASIS;
 

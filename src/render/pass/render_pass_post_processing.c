@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_PostProcessingPassFn)
+internal R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_PostProcessingPassData *user_data = ctx->user_data;
@@ -19,14 +19,14 @@ static R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 	}
 	args;
 
-	G_TextureKey input_key = R_GraphResolveTexture(ctx->graph, user_data->input);
-	G_TextureKey output_key = R_GraphResolveTexture(ctx->graph, user_data->output);
+	G_ResourceKey input_key = R_GraphResolveTexture(ctx->graph, user_data->input);
+	G_ResourceKey output_key = R_GraphResolveTexture(ctx->graph, user_data->output);
 	
 	G_Texture *input_texture = G_DeviceTextureFromKey(input_key);
 	G_Texture *output_texture = G_DeviceTextureFromKey(output_key);
 
-	G_TextureViewKey input_view = G_DeviceTextureViewAuto(input_key);
-	G_TextureViewKey output_view = G_DeviceTextureViewAuto(output_key);
+	G_ResourceKey input_view = G_DeviceTextureViewAuto(input_key);
+	G_ResourceKey output_view = G_DeviceTextureViewAuto(output_key);
 	
 	args.width = input_texture->width;
 	args.height = input_texture->height;

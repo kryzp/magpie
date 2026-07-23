@@ -1,5 +1,5 @@
 
-static void GameRegisterEntities(E_World *world)
+internal void GameRegisterEntities(E_World *world)
 {
 #define GameEntityDef(type, max)										\
 	{																	\
@@ -23,12 +23,12 @@ static void GameRegisterEntities(E_World *world)
 #undef GameEntityDef
 }
 
-static void GameSelect(Game *game_)
+internal void GameSelect(Game *game_)
 {
 	game = game_;
 }
 
-static void GameInit(E_World *world)
+internal void GameInit(E_World *world)
 {
 	GameRegisterEntities(world);
 
@@ -43,7 +43,7 @@ static void GameInit(E_World *world)
 	game->player_handle = E_WorldSpawn(world, game->entity_types[GameEntityType_Player], TransformIdentity());
 }
 
-static void GameTick(const OS_InputState *input, f32 dt, f32 elapsed)
+internal void GameTick(const OS_InputState *input, f32 dt, f32 elapsed)
 {
 	GameStateStackTick(&game->game_state_stack, game, input, dt, elapsed);
 	

@@ -1,17 +1,17 @@
 
-static b32 IO_IsLittleEndian(void)
+internal b32 IO_IsLittleEndian(void)
 {
 	u16 x = 1;
 	return *(u8 *)&x == 1;
 }
 
-static b32 IO_IsBigEndian(void)
+internal b32 IO_IsBigEndian(void)
 {
 	u16 x = 1;
 	return *(u8 *)&x != 1;
 }
 
-static IO_Endian IO_GetEndian(void)
+internal IO_Endian IO_GetEndian(void)
 {
 	if (IO_IsLittleEndian())
 		return IO_Endian_Little;

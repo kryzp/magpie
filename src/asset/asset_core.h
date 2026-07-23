@@ -91,32 +91,32 @@ struct A_State
    UTILS
    ================================================== */
 
-static A_Handle A_PathMapFind(String8 path);
-static void A_PathMapInsert(String8 path, A_Handle handle);
+internal A_Handle A_PathMapFind(String8 path);
+internal void A_PathMapInsert(String8 path, A_Handle handle);
 
-static A_Record *A_AllocRecord(A_Type type);
-static void A_FreeRecord(A_Record *record);
+internal A_Record *A_AllocRecord(A_Type type);
+internal void A_FreeRecord(A_Record *record);
 
-static A_Record *A_GetRecord(A_Handle handle);
+internal A_Record *A_GetRecord(A_Handle handle);
 
 
 /* ==================================================
    CORE
    ================================================== */
 
-static void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channel);
-static void A_Destroy(void);
-static void A_SelectContext(A_State *state);
+internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channel);
+internal void A_Destroy(void);
+internal void A_SelectContext(A_State *state);
 
-static void A_SetFallback(A_Handle handle);
+internal void A_SetFallback(A_Handle handle);
 
-static void A_PollHotReloads(void);
-static void A_FlushUploads(void);
+internal void A_PollHotReloads(void);
+internal void A_FlushUploads(void);
 
-static A_Handle A_HandleFromFilePath(String8 path, A_Type type);
+internal A_Handle A_HandleFromFilePath(String8 path, A_Type type);
 
-static A_Asset *A_GetOrFallback(A_Handle handle);
-static A_Asset *A_GetOrBreak(A_Handle handle);
+internal A_Asset *A_GetOrFallback(A_Handle handle);
+internal A_Asset *A_GetOrBreak(A_Handle handle);
 
 typedef struct A_LoadJobParam A_LoadJobParam;
 struct A_LoadJobParam
@@ -126,23 +126,23 @@ struct A_LoadJobParam
 	OS_Handle counter;
 };
 
-static J_ENTRY_POINT_DEF(A_LoadJob);
+internal J_ENTRY_POINT_DEF(A_LoadJob);
 
-static A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter);
-static A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type);
+internal A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter);
+internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type);
 
-static void A_DestroyAsset(A_Handle handle);
+internal void A_DestroyAsset(A_Handle handle);
 
-static void A_WaitForLoad(OS_Handle counter);
-static void A_WaitForLoadAndRelease(OS_Handle counter);
+internal void A_WaitForLoad(OS_Handle counter);
+internal void A_WaitForLoadAndRelease(OS_Handle counter);
 
 
 /* ==================================================
    FILESYSTEM
    ================================================== */
 
-static void A_Mount(String8 prefix, String8 directory);
-static String8 A_GetSystemFilePath(Arena *arena, String8 path);
+internal void A_Mount(String8 prefix, String8 directory);
+internal String8 A_GetSystemFilePath(Arena *arena, String8 path);
 
 
 #endif // ASSET_CORE_H

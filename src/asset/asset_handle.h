@@ -11,7 +11,7 @@ typedef enum A_Type
 }
 A_Type;
 
-static inline A_Type A_TypeFromString(String8 string)
+internal inline A_Type A_TypeFromString(String8 string)
 {
 #define AssetDef(name, upper) if (String8Match(string, String8Lit(#name))) return A_Type_##name;
 #include "asset_xmacro.inc"
@@ -20,7 +20,7 @@ static inline A_Type A_TypeFromString(String8 string)
 	return A_Type_Null;
 }
 
-static inline String8 A_StringFromType(Arena *arena, A_Type type)
+internal inline String8 A_StringFromType(Arena *arena, A_Type type)
 {
 #define AssetDef(name, upper) if (type == A_Type_##name) return String8Lit(#name);
 #include "asset_xmacro.inc"
@@ -36,7 +36,7 @@ struct A_Handle
 	A_Type type;
 };
 
-static inline A_Handle A_HandleNull(void)
+internal inline A_Handle A_HandleNull(void)
 {
 	A_Handle handle = {0};
 	handle.uid = 0;
@@ -45,13 +45,13 @@ static inline A_Handle A_HandleNull(void)
 	return handle;
 }
 
-static inline b32 A_HandleIsNull(A_Handle handle)
+internal inline b32 A_HandleIsNull(A_Handle handle)
 {
 	return (handle.uid == 0 ||
 			handle.type == A_Type_Null);
 }
 
-static inline b32 A_HandleMatch(A_Handle a, A_Handle b)
+internal inline b32 A_HandleMatch(A_Handle a, A_Handle b)
 {
 	return (a.uid == b.uid &&
 			a.type == b.type);

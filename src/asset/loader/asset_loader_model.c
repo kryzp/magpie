@@ -19,7 +19,7 @@ static const m4 ast_gltf_basis_inv = {
 	0.f,  0.f,  0.f,  1.f  // c3
 };
 
-static m4 A_GltfFloat16ToM4(const cgltf_float m[16])
+internal m4 A_GltfFloat16ToM4(const cgltf_float m[16])
 {
 	return (m4) {
 		m[0],  m[1],  m[2],  m[3],
@@ -29,22 +29,22 @@ static m4 A_GltfFloat16ToM4(const cgltf_float m[16])
 	};
 }
 
-static v3 A_GltfTransformTranslation(v3 v)
+internal v3 A_GltfTransformTranslation(v3 v)
 {
 	return v3(v.x, -v.z, v.y);
 }
 
-static v4 A_GltfTransformQuat(v4 q)
+internal v4 A_GltfTransformQuat(v4 q)
 {
 	return v4(q.x, -q.z, q.y, q.w);
 }
 
-static v3 A_GltfTransformScale(v3 s)
+internal v3 A_GltfTransformScale(v3 s)
 {
 	return v3(s.x, s.z, s.y);
 }
 
-static m4 A_GltfTransformM4(m4 m)
+internal m4 A_GltfTransformM4(m4 m)
 {
 	return M4MulM4(ast_gltf_basis, M4MulM4(m, ast_gltf_basis_inv));
 }
@@ -98,11 +98,11 @@ struct A_ModelLoadData
 	u64 total_skin_vertex_bytes;
 };
 
-static A_Handle A_ModelTryFetchTexture(const A_LCTX *ctx,
-									   Arena *arena,
-									   A_ModelLoadData *load,
-									   String8 directory,
-									   const cgltf_texture_view *view)
+internal A_Handle A_ModelTryFetchTexture(const A_LCTX *ctx,
+										 Arena *arena,
+										 A_ModelLoadData *load,
+										 String8 directory,
+										 const cgltf_texture_view *view)
 {
 	if (!view->texture || !view->texture->image)
 		return A_HandleNull();
@@ -135,18 +135,19 @@ static A_Handle A_ModelTryFetchTexture(const A_LCTX *ctx,
 	return handle;
 }
 
-static A_ModelMaterial A_ModelResolveMaterial(const A_LCTX *ctx,
-											  Arena *arena,
-											  A_ModelLoadData *load,
-											  String8 directory,
-											  const cgltf_material *gltf_mat)
+internal A_ModelMaterial A_ModelResolveMaterial(const A_LCTX *ctx,
+												Arena *arena,
+												A_ModelLoadData *load,
+												String8 directory,
+												const cgltf_material *gltf_mat,
+												u32 index)
 {
 	A_ModelMaterial mat = {0};
 
 	if (gltf_mat->name && gltf_mat->name[0])
 		mat.name = String8Clone(arena, String8FromCStr(gltf_mat->name));
 	else
-		mat.name = String8Fmt(arena, "Unnamed Material");
+		mat.name = String8Fmt(arena, "Unnamed Material (%u)", index);
 
 	mat.albedo_factor = v4(1.f, 1.f, 1.f, 1.f);
 	mat.normal_scale = 1.f;
@@ -315,21 +316,21 @@ static A_ModelMaterial A_ModelResolveMaterial(const A_LCTX *ctx,
 	return mat;
 }
 
-static void A_ModelProcessPrimitive(const A_LCTX *ctx,
-									Arena *arena,
-									A_ModelLoadData *load,
-									String8 directory,
-									const cgltf_primitive *prim,
-									m4 world_transform,
-									const cgltf_skin *skin,
-									i32 skin_index)
+internal void A_ModelProcessPrimitive(const A_LCTX *ctx,
+									  Arena *arena,
+									  A_ModelLoadData *load,
+									  String8 directory,
+									  const cgltf_primitive *prim,
+									  m4 world_transform,
+									  const cgltf_skin *skin,
+									  i32 skin_index,
+									  u32 index)
 {
 	// TODO: support more topologies
 	DebugLogAssert(ctx->log_channel,
 				   prim->type == cgltf_primitive_type_triangles,
 				   "Only support triangle-primitive models currently!");
 
-	// Locate attributes.
 	const cgltf_accessor *positions = NULL;
 	const cgltf_accessor *normals   = NULL;
 	const cgltf_accessor *tangents  = NULL;
@@ -568,7 +569,7 @@ static void A_ModelProcessPrimitive(const A_LCTX *ctx,
 
 	if (prim->material)
 	{
-		material = A_ModelResolveMaterial(ctx, arena, load, directory, prim->material);
+		material = A_ModelResolveMaterial(ctx, arena, load, directory, prim->material, index);
 	}
 	else
 	{
@@ -614,12 +615,12 @@ static void A_ModelProcessPrimitive(const A_LCTX *ctx,
 		load->total_skin_vertex_bytes += vert_count * sizeof(A_ModelSkinVertex);
 }
 
-static void A_ModelProcessNode(const A_LCTX *ctx,
-							   Arena *arena,
-							   A_ModelLoadData *load,
-							   String8 directory,
-							   const cgltf_node *node,
-							   const cgltf_data *gltf)
+internal void A_ModelProcessNode(const A_LCTX *ctx,
+								 Arena *arena,
+								 A_ModelLoadData *load,
+								 String8 directory,
+								 const cgltf_node *node,
+								 const cgltf_data *gltf)
 {
 	if (node->mesh)
 	{
@@ -646,7 +647,7 @@ static void A_ModelProcessNode(const A_LCTX *ctx,
 		for (u32 i = 0; i < node->mesh->primitives_count; i++)
 		{
 			const cgltf_primitive *prim = &node->mesh->primitives[i];
-			A_ModelProcessPrimitive(ctx, arena, load, directory, prim, mesh_transform, node->skin, skin_index);
+			A_ModelProcessPrimitive(ctx, arena, load, directory, prim, mesh_transform, node->skin, skin_index, i);
 		}
 	}
 
@@ -656,11 +657,11 @@ static void A_ModelProcessNode(const A_LCTX *ctx,
 	}
 }
 
-static void A_ModelLoadSkeleton(const A_LCTX *ctx,
-								Arena *arena,
-								A_ModelLoadData *load,
-								const cgltf_data *gltf,
-								u32 index)
+internal void A_ModelLoadSkeleton(const A_LCTX *ctx,
+								  Arena *arena,
+								  A_ModelLoadData *load,
+								  const cgltf_data *gltf,
+								  u32 index)
 {
 	const cgltf_skin *skin = &gltf->skins[index];
 	A_Skeleton *out = &load->skeletons[index];
@@ -684,7 +685,7 @@ static void A_ModelLoadSkeleton(const A_LCTX *ctx,
 		if (node->name)
 			j->name = String8Clone(arena, String8FromCStr(node->name));
 		else
-			j->name = String8Fmt(arena, "Unnamed Joint (%u)", i);
+			j->name = String8Fmt(arena, "Unnamed Joint (%u:%u)", index, i);
 
 		j->parent = -1;
 
@@ -706,7 +707,7 @@ static void A_ModelLoadSkeleton(const A_LCTX *ctx,
 
 		if (node->has_matrix)
 		{
-			DebugLogW(ctx->log_channel, "Joint (%u) stores a baked matrix but I'm not bothering to decompose the matrix yet so we're just gonna assume identity and act like everything's fine :thumbsup:", i);
+			DebugLogW(ctx->log_channel, "Joint (%u:%u) stores a baked matrix but I'm not bothering to decompose the matrix yet so we're just gonna assume identity and act like everything's fine :thumbsup:", index, i);
 		}
 		else
 		{
@@ -787,7 +788,7 @@ static void A_ModelLoadSkeleton(const A_LCTX *ctx,
 	}
 }
 
-static A_AnimPath A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
+internal A_AnimPath A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
 {
 	switch (t)
 	{
@@ -801,7 +802,7 @@ static A_AnimPath A_ModelAnimPathFromGltf(cgltf_animation_path_type t)
 	return A_AnimPath_COUNT;
 }
 
-static A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
+internal A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 {
 	switch (t)
 	{
@@ -815,11 +816,11 @@ static A_AnimInterp A_ModelAnimInterpFromGltf(cgltf_interpolation_type t)
 	return A_AnimInterp_COUNT;
 }
 
-static void A_ModelLoadClip(const A_LCTX *ctx,
-							Arena *arena,
-							A_ModelLoadData *load,
-							const cgltf_data *gltf,
-							u32 index)
+internal void A_ModelLoadClip(const A_LCTX *ctx,
+							  Arena *arena,
+							  A_ModelLoadData *load,
+							  const cgltf_data *gltf,
+							  u32 index)
 {
 	A_AnimClip *clip = &load->clips[index];
 
@@ -933,7 +934,7 @@ static void A_ModelLoadClip(const A_LCTX *ctx,
 		if (cubic)
 		{
 			DebugLogW(ctx->log_channel,
-					  "Clip (%.*s) channel uses cubic interpolation but we don't support that yet so falling back to linear.",
+					  "Clip (%.*s) channel uses cubic interpolation but we lowkey don't support that yet so we're just gonna fall back to linear and hope for the best... :/",
 					  String8VArg(clip->name));
 
 			ch->interp = A_AnimInterp_Linear;
@@ -987,8 +988,8 @@ static void A_ModelLoadClip(const A_LCTX *ctx,
 	}
 }
 
-static A_LoadResult A_ModelLoaderLoad(const A_LCTX *ctx,
-									  Arena *result_arena)
+internal A_LoadResult A_ModelLoaderLoad(const A_LCTX *ctx,
+										Arena *result_arena)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -1087,10 +1088,10 @@ end:
 	return result;
 }
 
-static void A_ModelLoaderAlloc(const A_LCTX *ctx,
-							   A_LoadResult *result,
-							   Arena *asset_arena,
-							   A_Asset *asset)
+internal void A_ModelLoaderAlloc(const A_LCTX *ctx,
+								 A_LoadResult *result,
+								 Arena *asset_arena,
+								 A_Asset *asset)
 {
 	A_ModelLoadData *load = result->user_data;
 
@@ -1131,7 +1132,7 @@ static void A_ModelLoaderAlloc(const A_LCTX *ctx,
 		}
 		else
 		{
-			dst->skin_buffer = G_BufferKeyNull();
+			dst->skin_buffer = G_ResourceKeyNull();
 		}
 		
 		dst->skin_index = src->skin_index;
@@ -1217,12 +1218,12 @@ static void A_ModelLoaderAlloc(const A_LCTX *ctx,
 	asset->model.clips = clips;
 }
 
-static void A_ModelLoaderUploadGPU(const A_LCTX *ctx,
-								   A_LoadResult *result,
-								   A_Asset *asset,
-								   G_CmdBuffer *cmd,
-								   G_BufferKey stage,
-								   u64 stage_offset)
+internal void A_ModelLoaderUploadGPU(const A_LCTX *ctx,
+									 A_LoadResult *result,
+									 A_Asset *asset,
+									 G_CmdBuffer *cmd,
+									 G_ResourceKey stage,
+									 u64 stage_offset)
 {
 	A_ModelLoadData *load = result->user_data;
 
@@ -1251,18 +1252,18 @@ static void A_ModelLoaderUploadGPU(const A_LCTX *ctx,
 	}
 }
 
-static void A_ModelLoaderDestroyAsset(A_Asset *asset)
+internal void A_ModelLoaderDestroyAsset(A_Asset *asset)
 {
 	for (u32 i = 0; i < asset->model.sub_model_count; i++)
 	{
 		A_SubModel *sub_model = &asset->model.sub_models[i];
 
-		if (!G_BufferKeyIsNull(sub_model->skin_buffer))
+		if (!G_ResourceKeyIsNull(sub_model->skin_buffer))
 			G_DeviceBufferDestroy(sub_model->skin_buffer);
 	}
 }
 
-static A_LoaderAPI A_GetModelLoaderAPI(void)
+internal A_LoaderAPI A_GetModelLoaderAPI(void)
 {
 	static A_LoaderAPI model_loader_api = {
 		.Load = A_ModelLoaderLoad,

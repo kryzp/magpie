@@ -61,23 +61,23 @@ struct Player
 	Gun gun;
 };
 
-static PlayerInput PlayerGatherInput(const OS_InputState *st);
+internal PlayerInput PlayerGatherInput(const OS_InputState *st);
 
-static void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const PlayerAnimationClips *clips, AN_Animator *animator);
+internal void PlayerAnimate(const PlayerAnimationState *st, f32 global_time, const PlayerAnimationClips *clips, AN_Animator *animator);
 
-static v3 CalcPlayerAimingPoint(const OS_InputState *input);
+internal v3 CalcPlayerAimingPoint(const OS_InputState *input);
 
-static PlayerAnimationState PlayerTickMovement(Player *player, const E_TickContext *ctx, const PlayerInput *input_st);
-static PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContext *ctx, const PlayerInput *input_st);
+internal PlayerAnimationState PlayerTickMovement(Player *player, const E_TickContext *ctx, const PlayerInput *input_st);
+internal PlayerAnimationState PlayerTickRolling(Player *player, const E_TickContext *ctx, const PlayerInput *input_st);
 
-static void PlayerInit(Player *player, Transform transform);
-static void PlayerDestroy(Player *player);
+internal void PlayerInit(Player *player, Transform transform);
+internal void PlayerDestroy(Player *player);
 
-static void PlayerPreAnimTick(Player *player, const E_TickContext *ctx);
-static void PlayerPostAnimTick(Player *player, const E_TickContext *ctx);
-static void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx);
+internal void PlayerPreAnimTick(Player *player, const E_TickContext *ctx);
+internal void PlayerPostAnimTick(Player *player, const E_TickContext *ctx);
+internal void PlayerPostPhysicsTick(Player *player, const E_TickContext *ctx);
 
-static void PlayerSerialize(Player *player, IO_ByteSerializer *writer);
-static void PlayerDeserialize(Player *player, IO_ByteSerializer *reader);
+internal void PlayerSerialize(Player *player, IO_ByteSerializer *writer);
+internal void PlayerDeserialize(Player *player, IO_ByteSerializer *reader);
 
 #endif // GAME_PLAYER_H

@@ -1,7 +1,7 @@
 
 static AU_System *au_system = NULL;
 
-static void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_channel)
+internal void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_channel)
 {
 	system->arena = arena;
 	system->log_channel = log_channel;
@@ -23,7 +23,7 @@ static void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_ch
 	DebugLogI(system->log_channel, "Initialized.");
 }
 
-static void AU_Shutdown(void)
+internal void AU_Shutdown(void)
 {
 	AU_StopAll();
 
@@ -32,16 +32,16 @@ static void AU_Shutdown(void)
 	au_system = NULL;
 }
 
-static void AU_SelectContext(AU_System *system)
+internal void AU_SelectContext(AU_System *system)
 {
 	au_system = system;
 }
 
-static void AU_Tick(f32 dt, AU_Listener listener)
+internal void AU_Tick(f32 dt, AU_Listener listener)
 {
 }
 
-static AU_Emitter *AU_AllocEmitter(void)
+internal AU_Emitter *AU_AllocEmitter(void)
 {
 	AU_Emitter *emitter;
 
@@ -69,7 +69,7 @@ static AU_Emitter *AU_AllocEmitter(void)
 	return emitter;
 }
 
-static void AU_ReleaseEmitter(AU_Emitter *emitter)
+internal void AU_ReleaseEmitter(AU_Emitter *emitter)
 {
 	emitter->prev->next = emitter->next;
 	emitter->next->prev = emitter->prev;
@@ -80,7 +80,7 @@ static void AU_ReleaseEmitter(AU_Emitter *emitter)
 	emitter->prev->next = emitter;
 }
 
-static AU_Emitter *AU_GetEmitter(AU_Handle handle)
+internal AU_Emitter *AU_GetEmitter(AU_Handle handle)
 {
 	const AU_Emitter *sentinel = &au_system->emitter_sentinel;
 
@@ -93,7 +93,7 @@ static AU_Emitter *AU_GetEmitter(AU_Handle handle)
 	return NULL;
 }
 
-static AU_Handle AU_Play(const AU_PlayConfig *config)
+internal AU_Handle AU_Play(const AU_PlayConfig *config)
 {
 	AU_SourceHandle source = AU_BackendCreateSourceFromBuffer(config->clip);
 	AU_BackendSetSourceVolume(source, AU_GetOutputVolumeOnBus(config->bus, config->volume));
@@ -112,7 +112,7 @@ static AU_Handle AU_Play(const AU_PlayConfig *config)
 	return emitter->handle;
 }
 
-static void AU_Stop(AU_Handle handle)
+internal void AU_Stop(AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(handle);
 	
@@ -124,7 +124,7 @@ static void AU_Stop(AU_Handle handle)
 	AU_ReleaseEmitter(emitter);
 }
 
-static void AU_StopAll(void)
+internal void AU_StopAll(void)
 {
 	AU_Emitter *sentinel = &au_system->emitter_sentinel;
 	AU_Emitter *emitter = sentinel->next;
@@ -142,7 +142,7 @@ static void AU_StopAll(void)
 	}
 }
 
-static void AU_Resume(AU_Handle handle)
+internal void AU_Resume(AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(handle);
 	
@@ -151,7 +151,7 @@ static void AU_Resume(AU_Handle handle)
 	AU_BackendResume(emitter->source);
 }
 
-static void AU_Pause(AU_Handle handle)
+internal void AU_Pause(AU_Handle handle)
 {
 	AU_Emitter *emitter = AU_GetEmitter(handle);
 	
@@ -160,7 +160,7 @@ static void AU_Pause(AU_Handle handle)
 	AU_BackendPause(emitter->source);
 }
 
-static void AU_SetPositionOf(AU_Handle handle, v3 position)
+internal void AU_SetPositionOf(AU_Handle handle, v3 position)
 {
 	AU_Emitter *emitter = AU_GetEmitter(handle);
 	
@@ -169,7 +169,7 @@ static void AU_SetPositionOf(AU_Handle handle, v3 position)
 	AU_BackendSetSourcePosition(emitter->source, position);
 }
 
-static void AU_SetMasterVolume(f32 volume)
+internal void AU_SetMasterVolume(f32 volume)
 {
 	au_system->master_volume = volume;
 
@@ -177,18 +177,18 @@ static void AU_SetMasterVolume(f32 volume)
 		AU_UpdateEmitterVolumes(b);
 }
 
-static void AU_SetBusVolume(AU_Bus bus, f32 volume)
+internal void AU_SetBusVolume(AU_Bus bus, f32 volume)
 {
 	au_system->bus_volumes[bus] = volume;
 	AU_UpdateEmitterVolumes(bus);
 }
 
-static f32 AU_GetOutputVolumeOnBus(AU_Bus bus, f32 base_volume)
+internal f32 AU_GetOutputVolumeOnBus(AU_Bus bus, f32 base_volume)
 {
 	return base_volume * au_system->bus_volumes[bus] * au_system->master_volume;
 }
 
-static void AU_UpdateEmitterVolumes(AU_Bus bus)
+internal void AU_UpdateEmitterVolumes(AU_Bus bus)
 {
 	const AU_Emitter *sentinel = &au_system->emitter_sentinel;
 

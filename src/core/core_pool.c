@@ -1,5 +1,5 @@
 
-static void SlotPoolInit(SlotPool *pool, Arena *arena, u32 capacity)
+internal void SlotPoolInit(SlotPool *pool, Arena *arena, u32 capacity)
 {
 	pool->free_indices = ArenaPushArray(arena, u32, capacity);
 	pool->capacity = capacity;
@@ -9,7 +9,7 @@ static void SlotPoolInit(SlotPool *pool, Arena *arena, u32 capacity)
 		pool->free_indices[i] = capacity - 1 - i;
 }
 
-static b32 SlotPoolAlloc(SlotPool *pool, u32 *out_index)
+internal b32 SlotPoolAlloc(SlotPool *pool, u32 *out_index)
 {
 	if (pool->free_index_count == 0)
 		return false;
@@ -18,18 +18,18 @@ static b32 SlotPoolAlloc(SlotPool *pool, u32 *out_index)
 	return true;
 }
 
-static void SlotPoolFree(SlotPool *pool, u32 index)
+internal void SlotPoolFree(SlotPool *pool, u32 index)
 {
 	AssertTrue(pool->free_index_count < pool->capacity);
 	pool->free_indices[pool->free_index_count++] = index;
 }
 
-static u32 SlotPoolLiveCount(const SlotPool *pool)
+internal u32 SlotPoolLiveCount(const SlotPool *pool)
 {
 	return pool->capacity - pool->free_index_count;
 }
 
-static void DensePoolInit(DensePool *pool, Arena *arena, u32 capacity)
+internal void DensePoolInit(DensePool *pool, Arena *arena, u32 capacity)
 {
 	pool->id_to_dense = ArenaPushArray(arena, u32, capacity);
 	pool->dense_to_id = ArenaPushArray(arena, u32, capacity);
@@ -42,7 +42,7 @@ static void DensePoolInit(DensePool *pool, Arena *arena, u32 capacity)
 		pool->free_ids[i] = capacity - 1 - i;
 }
 
-static u32 DensePoolGetStableID(DensePool *pool)
+internal u32 DensePoolGetStableID(DensePool *pool)
 {
 	AssertTrue(pool->free_id_count > 0);
 
@@ -55,7 +55,7 @@ static u32 DensePoolGetStableID(DensePool *pool)
 	return id;
 }
 
-static u32 DensePoolFreeID(DensePool *pool, u32 id)
+internal u32 DensePoolFreeID(DensePool *pool, u32 id)
 {
 	u32 dense = pool->id_to_dense[id];
 	u32 last_dense = --pool->count;
@@ -69,12 +69,12 @@ static u32 DensePoolFreeID(DensePool *pool, u32 id)
 	return last_dense;
 }
 
-static u32 DensePoolDenseIndex(const DensePool *pool, u32 id)
+internal u32 DensePoolDenseIndex(const DensePool *pool, u32 id)
 {
 	return pool->id_to_dense[id];
 }
 
-static u32 DensePoolLiveCount(const DensePool *pool)
+internal u32 DensePoolLiveCount(const DensePool *pool)
 {
 	return pool->count;
 }

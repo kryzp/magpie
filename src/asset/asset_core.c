@@ -1,7 +1,7 @@
 
 static A_State *a_assets = NULL;
 
-static A_Handle A_PathMapFind(String8 path)
+internal A_Handle A_PathMapFind(String8 path)
 {
 	for (A_PathMapEntry *entry = a_assets->first_path_entry; entry; entry = entry->next)
 	{
@@ -12,7 +12,7 @@ static A_Handle A_PathMapFind(String8 path)
 	return A_HandleNull();
 }
 
-static void A_PathMapInsert(String8 path, A_Handle handle)
+internal void A_PathMapInsert(String8 path, A_Handle handle)
 {
 	A_PathMapEntry *entry = ArenaPushArray(a_assets->arena, A_PathMapEntry, 1);
 	entry->next = a_assets->first_path_entry;
@@ -22,7 +22,7 @@ static void A_PathMapInsert(String8 path, A_Handle handle)
 	entry->handle = handle;
 }
 
-static A_Record *A_AllocRecord(A_Type type)
+internal A_Record *A_AllocRecord(A_Type type)
 {
 	A_Record *record = NULL;
 
@@ -55,7 +55,7 @@ static A_Record *A_AllocRecord(A_Type type)
 	return record;
 }
 
-static void A_FreeRecord(A_Record *record)
+internal void A_FreeRecord(A_Record *record)
 {
 	record->prev->next = record->next;
 	record->next->prev = record->prev;
@@ -67,7 +67,7 @@ static void A_FreeRecord(A_Record *record)
 	record->prev->next = record;
 }
 
-static A_Record *A_GetRecord(A_Handle handle)
+internal A_Record *A_GetRecord(A_Handle handle)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 
@@ -89,7 +89,7 @@ static A_Record *A_GetRecord(A_Handle handle)
 	return found;
 }
 
-static void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channel)
+internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channel)
 {
 	state->arena = arena;
 	state->log_channel = log_channel;
@@ -114,7 +114,7 @@ static void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_channe
 	DebugLogI(state->log_channel, "Initialized.");
 }
 
-static void A_Destroy(void)
+internal void A_Destroy(void)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 	
@@ -135,17 +135,17 @@ static void A_Destroy(void)
 	a_assets = NULL;
 }
 
-static void A_SelectContext(A_State *state)
+internal void A_SelectContext(A_State *state)
 {
 	a_assets = state;
 }
 
-static void A_SetFallback(A_Handle handle)
+internal void A_SetFallback(A_Handle handle)
 {
 	a_assets->loaders[handle.type].fallback = handle;
 }
 
-static void A_PollHotReloads(void)
+internal void A_PollHotReloads(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 	
@@ -183,7 +183,7 @@ static void A_PollHotReloads(void)
 	ScratchRelease(&scratch);
 }
 
-static void A_FlushUploads(void)
+internal void A_FlushUploads(void)
 {
 	osapi->SpinLockAcquire(&a_assets->upload_spinlock);
 
@@ -228,7 +228,7 @@ static void A_FlushUploads(void)
 			batch_count++;
 		}
 
-		G_BufferKey staging_buffer = G_BufferKeyNull();
+		G_ResourceKey staging_buffer = G_ResourceKeyNull();
 
 		if (batch_stage_size > 0)
 			staging_buffer = G_DeviceStageAlloc(batch_stage_size);
@@ -294,14 +294,14 @@ static void A_FlushUploads(void)
 			G_DeviceSubmitImEnd(&cmd);
 		}
 
-		if (!G_BufferKeyIsNull(staging_buffer))
+		if (!G_ResourceKeyIsNull(staging_buffer))
 			G_DeviceBufferDestroy(staging_buffer);
 
 		base += batch_count;
 	}
 }
 
-static A_Handle A_HandleFromFilePath(String8 path, A_Type type)
+internal A_Handle A_HandleFromFilePath(String8 path, A_Type type)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 	
@@ -337,7 +337,7 @@ static A_Handle A_HandleFromFilePath(String8 path, A_Type type)
 	}
 }
 
-static A_Asset *A_GetOrFallback(A_Handle handle)
+internal A_Asset *A_GetOrFallback(A_Handle handle)
 {
 	A_Record *record = A_GetRecord(handle);
 
@@ -366,7 +366,7 @@ static A_Asset *A_GetOrFallback(A_Handle handle)
 	return &fallback->asset;
 }
 
-static A_Asset *A_GetOrBreak(A_Handle handle)
+internal A_Asset *A_GetOrBreak(A_Handle handle)
 {
 	A_Record *record = A_GetRecord(handle);
 
@@ -378,7 +378,7 @@ static A_Asset *A_GetOrBreak(A_Handle handle)
 	return NULL;
 }
 
-static J_ENTRY_POINT_DEF(A_LoadJob)
+internal J_ENTRY_POINT_DEF(A_LoadJob)
 {
 	A_LoadJobParam *load_params = param;
 
@@ -455,7 +455,7 @@ static J_ENTRY_POINT_DEF(A_LoadJob)
  *       it's gonna be wasted memory after loading but it's so minor I don't
  *       think it matters at all.
  */
-static A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter)
+internal A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter)
 {
 	A_Handle handle = A_HandleFromFilePath(path, type);
 	A_Record *record = A_GetRecord(handle);
@@ -489,7 +489,7 @@ static A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handl
 	return handle;
 }
 
-static A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type)
+internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type)
 {
 	OS_Handle counter = osapi->JobCounterAlloc(0);
 	A_Handle handle = A_RequireAsset(arena, path, type, counter);
@@ -497,7 +497,7 @@ static A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type)
 	return handle;
 }
 
-static void A_DestroyAsset(A_Handle handle)
+internal void A_DestroyAsset(A_Handle handle)
 {
 	A_Record *record = A_GetRecord(handle);
 	
@@ -513,7 +513,7 @@ static void A_DestroyAsset(A_Handle handle)
 	osapi->SpinLockRelease(&a_assets->registry_spinlock);
 }
 
-static void A_WaitForLoad(OS_Handle counter)
+internal void A_WaitForLoad(OS_Handle counter)
 {
 	while (osapi->JobCounterValue(counter) > 0)
 		A_FlushUploads();
@@ -521,13 +521,13 @@ static void A_WaitForLoad(OS_Handle counter)
 	A_FlushUploads();
 }
 
-static void A_WaitForLoadAndRelease(OS_Handle counter)
+internal void A_WaitForLoadAndRelease(OS_Handle counter)
 {
 	A_WaitForLoad(counter);
 	osapi->JobCounterRelease(counter);
 }
 
-static void A_Mount(String8 prefix, String8 directory)
+internal void A_Mount(String8 prefix, String8 directory)
 {
 	DebugLogAssert(a_assets->log_channel, directory.len > 0, "Directory length must be greater than zero.");
 	DebugLogAssert(a_assets->log_channel, a_assets->mount_point_count < ArraySize(a_assets->mount_points), "Cannot mount more directories.");
@@ -538,7 +538,7 @@ static void A_Mount(String8 prefix, String8 directory)
 	mp->directory = String8Clone(a_assets->arena, directory);
 }
 
-static String8 A_GetSystemFilePath(Arena *arena, String8 path)
+internal String8 A_GetSystemFilePath(Arena *arena, String8 path)
 {
 	A_MountPoint *best = NULL;
 	u64 best_len = 0;

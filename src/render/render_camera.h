@@ -41,13 +41,13 @@ struct R_Camera
 	m4 inv_view_proj;
 };
 
-static R_Camera R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 far);
-static R_Camera R_CameraOrthographic(v3 position, v3 forward, v4 rect, f32 near, f32 far);
+internal R_Camera R_CameraPerspective(v3 position, v3 forward, f32 fov, f32 aspect, f32 near, f32 far);
+internal R_Camera R_CameraOrthographic(v3 position, v3 forward, v4 rect, f32 near, f32 far);
 
-static void R_CameraRecompute(R_Camera *camera);
+internal void R_CameraRecompute(R_Camera *camera);
 
-static R_FrustumVolume R_CameraFrustum(const R_Camera *camera);
+internal R_FrustumVolume R_CameraFrustum(const R_Camera *camera);
 
-static v3 R_CameraNDCToWsRayDirection(const R_Camera *camera, v2 ndc);
+internal v3 R_CameraNDCToWsRayDirection(const R_Camera *camera, v2 ndc);
 
 #endif // RENDER_CAMERA_H

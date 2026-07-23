@@ -13,14 +13,14 @@ struct R_System
 	R_DebugRenderer debug_renderer;
 	//R_IrradianceVolume irradiance_volume;
 
-	G_TextureKey brdf_lut;
-	G_TextureKey environment_cubemap;
-	G_TextureKey irradiance_cubemap;
-	G_TextureKey prefilter_cubemap;
+	G_ResourceKey brdf_lut;
+	G_ResourceKey environment_cubemap;
+	G_ResourceKey irradiance_cubemap;
+	G_ResourceKey prefilter_cubemap;
 
 	R_Mesh skybox_mesh;
 
-	G_BufferKey cubemap_capture_transform_buffer;
+	G_ResourceKey cubemap_capture_transform_buffer;
 	
 	struct
 	{
@@ -40,17 +40,17 @@ struct R_System
 
 	struct
 	{
-		G_SamplerKey linear;
-		G_SamplerKey nearest;
+		G_ResourceKey linear;
+		G_ResourceKey nearest;
 	}
 	samplers;
 };
 
-static void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel);
-static void R_SystemDestroy(void);
-static void R_SystemSelectContext(R_System *system);
-static void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params);
-static void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params);
-static void R_SystemHotLoad(void);
+internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel);
+internal void R_SystemDestroy(void);
+internal void R_SystemSelectContext(R_System *system);
+internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params);
+internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params);
+internal void R_SystemHotLoad(void);
 
 #endif // RENDER_SYSTEM_H

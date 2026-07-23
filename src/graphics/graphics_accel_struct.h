@@ -4,13 +4,13 @@
 typedef struct G_BLASGeometry G_BLASGeometry;
 struct G_BLASGeometry
 {
-	G_BufferKey vertex_buffer;
+	G_ResourceKey vertex_buffer;
 	u32 vertex_count;
 	u32 vertex_stride;
 	VkFormat vertex_format;
 	u64 vertex_offset;
 
-	G_BufferKey index_buffer;
+	G_ResourceKey index_buffer;
 	u32 index_count;
 	VkIndexType index_type;
 	u64 index_offset;
@@ -21,7 +21,7 @@ struct G_AccelStruct
 {
 	VkAccelerationStructureKHR vk_handle;
 	VkAccelerationStructureTypeKHR type;
-	G_BufferKey backing_buffer;
+	G_ResourceKey backing_buffer;
 	u64 device_address;
 };
 

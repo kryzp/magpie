@@ -17,17 +17,17 @@ struct AU_Handle
 
 // null handle (value = 0) is reserved
 // as the invalid handle!!
-static inline AU_Handle AU_HandleNull(void)
+internal inline AU_Handle AU_HandleNull(void)
 {
 	return (AU_Handle) {0};
 }
 
-static inline b32 AU_HandleIsValid(AU_Handle h)
+internal inline b32 AU_HandleIsValid(AU_Handle h)
 {
 	return h.value != 0;
 }
 
-static inline b32 AU_HandleMatch(AU_Handle a, AU_Handle b)
+internal inline b32 AU_HandleMatch(AU_Handle a, AU_Handle b)
 {
 	return a.value == b.value;
 }
@@ -72,28 +72,28 @@ struct AU_System
 	f32 bus_volumes[AU_Bus_COUNT];
 };
 
-static void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_channel);
-static void AU_Shutdown(void);
-static void AU_SelectContext(AU_System *system);
+internal void AU_InitAndSelect(AU_System *system, Arena *arena, LOG_Channel log_channel);
+internal void AU_Shutdown(void);
+internal void AU_SelectContext(AU_System *system);
 
-static void AU_Tick(f32 dt, AU_Listener listener);
+internal void AU_Tick(f32 dt, AU_Listener listener);
 
-static AU_Emitter *AU_AllocEmitter(void);
-static void AU_ReleaseEmitter(AU_Emitter *emitter);
-static AU_Emitter *AU_GetEmitter(AU_Handle handle);
+internal AU_Emitter *AU_AllocEmitter(void);
+internal void AU_ReleaseEmitter(AU_Emitter *emitter);
+internal AU_Emitter *AU_GetEmitter(AU_Handle handle);
 
-static AU_Handle AU_Play(const AU_PlayConfig *config);
-static void AU_Stop(AU_Handle handle);
-static void AU_StopAll(void);
-static void AU_Resume(AU_Handle handle);
-static void AU_Pause(AU_Handle handle);
+internal AU_Handle AU_Play(const AU_PlayConfig *config);
+internal void AU_Stop(AU_Handle handle);
+internal void AU_StopAll(void);
+internal void AU_Resume(AU_Handle handle);
+internal void AU_Pause(AU_Handle handle);
 
-static void AU_SetPositionOf(AU_Handle handle, v3 position);
+internal void AU_SetPositionOf(AU_Handle handle, v3 position);
 
-static void AU_SetMasterVolume(f32 volume);
-static void AU_SetBusVolume(AU_Bus bus, f32 volume);
+internal void AU_SetMasterVolume(f32 volume);
+internal void AU_SetBusVolume(AU_Bus bus, f32 volume);
 
-static f32 AU_GetOutputVolumeOnBus(AU_Bus bus, f32 base_volume);
-static void AU_UpdateEmitterVolumes(AU_Bus bus);
+internal f32 AU_GetOutputVolumeOnBus(AU_Bus bus, f32 base_volume);
+internal void AU_UpdateEmitterVolumes(AU_Bus bus);
 
 #endif // AUDIO_SYSTEM_H

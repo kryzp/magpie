@@ -592,7 +592,12 @@ static void traversestrongtable (global_State *g, Table *h) {
 /*
 ** (result & 1) iff weak values; (result & 2) iff weak keys.
 */
-static int getmode (global_State *g, Table *h) {
+
+// note from the big kp:
+// basically cuz it's a unity build and this is part of the
+// compilation unit (in the future I plan to move this into
+// a seperate library secundum what im doing with vma and other stuff
+static int LUA_getmode (global_State *g, Table *h) {
   const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
   if (mode == NULL || !ttisstring(mode))
     return 0;  /* ignore non-string modes */
@@ -607,7 +612,7 @@ static int getmode (global_State *g, Table *h) {
 
 static l_mem traversetable (global_State *g, Table *h) {
   markobjectN(g, h->metatable);
-  switch (getmode(g, h)) {
+  switch (LUA_getmode(g, h)) {
     case 0:  /* not weak */
       traversestrongtable(g, h);
       break;

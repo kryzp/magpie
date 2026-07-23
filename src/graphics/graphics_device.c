@@ -1,42 +1,9 @@
 
 static G_Device *g_device = NULL;
 
-#define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)				\
-	static G_##mgp_name##Key G_Device##mgp_name##ListPush(G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, G_##mgp_name##Key key) \
-	{																	\
-		G_Device##mgp_name##Node *node = ArenaPushArray(arena, G_Device##mgp_name##Node, 1); \
-		node->next = list->first;										\
-		node->key = key;												\
-		node->resource = *resource;										\
-		list->first = node;												\
-		return node->key;												\
-	}																	\
-	static G_##mgp_name##Key G_Device##mgp_name##ListPushAuto(G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource) \
-	{																	\
-		G_Device##mgp_name##Node *node = ArenaPushArray(arena, G_Device##mgp_name##Node, 1); \
-		node->next = list->first;										\
-		node->key.value = list->first ? list->first->key.value + 1 : 1; \
-		node->resource = *resource;										\
-		list->first = node;												\
-		return node->key;												\
-	}																	\
-	static resource_name *G_Device##mgp_name##ListGet(const G_Device##mgp_name##List *list, G_##mgp_name##Key key) \
-	{																	\
-		for (G_Device##mgp_name##Node *n = list->first; n; n = n->next) \
-		{																\
-			if (G_##mgp_name##KeyMatch(key, n->key))					\
-				return &n->resource;									\
-		}																\
-		return NULL;													\
-	}
-
-#include "graphics_device_managed_resources.inc"
-
-#undef G_DEVICE_MANAGED_RESOURCE
-
-static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
-															   u32 available_surface_format_count,
-															   const VkSurfaceFormatKHR *available_surface_formats)
+internal VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
+																 u32 available_surface_format_count,
+																 const VkSurfaceFormatKHR *available_surface_formats)
 {
 	for (u32 i = 0; i < available_surface_format_count; i++)
 	{
@@ -56,9 +23,9 @@ static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel chann
 }
 
 
-static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
-														   const VkPresentModeKHR *available_present_modes,
-														   b32 enable_vsync)
+internal VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
+															 const VkPresentModeKHR *available_present_modes,
+															 b32 enable_vsync)
 {
 	if (!enable_vsync)
 		return VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -72,7 +39,7 @@ static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities)
+internal VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities)
 {
 	if (capabilities->currentExtent.width != ((u32)-1) &&
 		capabilities->currentExtent.height != ((u32)-1))
@@ -99,10 +66,10 @@ static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *
 	return actual_extent;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-																  VkDebugUtilsMessageTypeFlagsEXT message_type,
-																  const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-																  void *ctx)
+internal VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+																	VkDebugUtilsMessageTypeFlagsEXT message_type,
+																	const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+																	void *ctx)
 {
 	LOG_Channel ch = g_device->log_channel;
 
@@ -143,7 +110,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMe
 	return VK_FALSE;
 }
 
-static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel)
+internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel)
 {
 	device->permanent_arena = arena;
 
@@ -152,15 +119,64 @@ static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel lo
 	device->log_channel_general = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
 	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
+
+	device->log_channel_cmd_buffer = osapi->LogChannelOpenFrom(log_channel, String8Lit("CMD"));
 	
 	for (u32 i = 0; i < ArraySize(device->frames_in_flight); i++)
-		device->frames_in_flight[i].arena = ArenaAlloc(Megabytes(128));
+		device->frames_in_flight[i].arena = ArenaAlloc(Megabytes(64));
 
 	device->current_frame_in_flight_index = 0;
 
+	G_ResourceListInit(&device->pipeline_layouts);
+	G_ResourceListInit(&device->pipelines);
+	G_ResourceListInit(&device->textures);
+	G_ResourceListInit(&device->texture_views);
+	G_ResourceListInit(&device->buffers);
+	G_ResourceListInit(&device->samplers);
+	G_ResourceListInit(&device->shaders);
+	G_ResourceListInit(&device->accel_structures);
+	
 	G_DeviceSelectContext(device);
 
-	device->context = G_ContextInit(device->permanent_arena, device->log_channel, G_DeviceVulkanDebugCallback, NULL);
+	// setup conntext + features 'n stuff
+	{
+		static const char *base_extensions[] = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+			VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
+			VK_KHR_MAINTENANCE_6_EXTENSION_NAME,
+		};
+
+		G_Feature features[] = {
+			{
+				.tier = G_FeatureTier_Required,
+				.name = "required",
+				.capability_count = 3,
+				.capabilities[0] = G_CapabilityType_SamplerAnisotropy,
+				.capabilities[1] = G_CapabilityType_SampleRateShading,
+				.capabilities[2] = G_CapabilityType_ShaderI64
+			},
+			{
+				.tier = G_FeatureTier_Optional,
+				.name = "raytracing",
+				.capability_count = 3,
+				.capabilities[0] = G_CapabilityType_RayTracingPipeline,
+				.capabilities[1] = G_CapabilityType_AccelerationStructure,
+				.capabilities[2] = G_CapabilityType_RayQuery
+			}
+		};
+	
+		G_Requirements requirements = {0};
+		requirements.base_extension_count = ArraySize(base_extensions);
+		requirements.base_extensions = base_extensions;
+		requirements.feature_count = ArraySize(features);
+		requirements.features = features;
+		
+		// todo: should probably be G_ContextInit(&device->context, ...) instead, nicer signature imo
+		device->context = G_ContextInit(device->permanent_arena, device->log_channel,
+										&requirements,
+										G_DeviceVulkanDebugCallback, NULL);
+	}
 
 	G_DeviceCreateSyncResources();
 	G_DeviceCreateBindless();
@@ -169,7 +185,7 @@ static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel lo
 	DebugLogI(g_device->log_channel, "Initialized.");
 }
 
-static void G_DeviceDestroy(void)
+internal void G_DeviceDestroy(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
@@ -179,17 +195,30 @@ static void G_DeviceDestroy(void)
 		ArenaRelease(&frame->arena);
 	}
 	
-	// Layouts, Pipelines and Views are special and cached
+	// pipeline layouts, pipelines and texture views are special and cached
 	// internally without any API to destroy them so we
 	// have to destroy them here.
-	for (G_DevicePipelineLayoutNode *node = g_device->layouts.first; node; node = node->next)
-		vkDestroyPipelineLayout(g_device->context.device, node->resource, NULL);
 
-	for (G_DevicePipelineNode *node = g_device->pipelines.first; node; node = node->next)
-		vkDestroyPipeline(g_device->context.device, node->resource, NULL);
+	for (G_ResourceListNode *node = g_device->pipeline_layouts.first_sentinel.next;
+		 node != &g_device->pipeline_layouts.first_sentinel;
+		 node = node->next)
+	{
+		vkDestroyPipelineLayout(g_device->context.device, node->resource.pipeline_layout, NULL);
+	}
 
-	for (G_DeviceTextureViewNode *node = g_device->views.first; node; node = node->next)
-		vkDestroyImageView(g_device->context.device, node->resource.vk_handle, NULL);
+	for (G_ResourceListNode *node = g_device->pipelines.first_sentinel.next;
+		 node != &g_device->pipelines.first_sentinel;
+		 node = node->next)
+	{
+		vkDestroyPipeline(g_device->context.device, node->resource.pipeline, NULL);
+	}
+	
+	for (G_ResourceListNode *node = g_device->texture_views.first_sentinel.next;
+		 node != &g_device->texture_views.first_sentinel;
+		 node = node->next)
+	{
+		vkDestroyImageView(g_device->context.device, node->resource.texture_view.vk_handle, NULL);
+	}
 	
 	G_DeviceDestroyImGui();
 	G_DeviceDestroyBindless();
@@ -202,33 +231,51 @@ static void G_DeviceDestroy(void)
 	g_device = NULL;
 }
 
-static void G_DeviceSelectContext(G_Device *device)
+internal void G_DeviceSelectContext(G_Device *device)
 {
 	g_device = device;
 }
 
-static G_Device *G_DeviceGetSelected(void)
+internal G_Device *G_DeviceGetSelected(void)
 {
 	return g_device;
 }
 
-static VkFormat G_DeviceDepthFormat(void)
+internal VkFormat G_DeviceDepthFormat(void)
 {
 	return g_device->context.depth_format;
 }
 
-static void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
+internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
 {
 	for (G_DestroyedImage *img = frame->destroyed_image_head; img; img = img->next)
+	{
+		G_ResourceListReturn(&g_device->textures, img->key);
 		vmaDestroyImage(g_device->context.vma_allocator, img->image, img->allocation);
+	}
 
 	for (G_DestroyedBuffer *b = frame->destroyed_buffer_head; b; b = b->next)
+	{
+		G_ResourceListReturn(&g_device->buffers, b->key);
 		vmaDestroyBuffer(g_device->context.vma_allocator, b->buffer, b->allocation);
+	}
 	
 	for (G_DestroyedSampler *s = frame->destroyed_sampler_head; s; s = s->next)
 	{
+		G_ResourceListReturn(&g_device->samplers, s->key);
 		vkDestroySampler(g_device->context.device, s->sampler, NULL);
 		G_BindlessFreeSampler(&g_device->bindless, s->bindless);
+	}
+	
+	for (G_DestroyedShaderProgram *sh = frame->destroyed_shader_head; sh; sh = sh->next)
+	{
+		G_ResourceListReturn(&g_device->shaders, sh->key);
+	}
+	
+	for (G_DestroyedAccelStruct *a = frame->destroyed_as_head; a; a = a->next)
+	{
+		G_ResourceListReturn(&g_device->accel_structures, a->key);
+		vkDestroyAccelerationStructureKHR(g_device->context.device, a->handle, NULL);
 	}
 	
 	frame->destroyed_sampler_head = NULL;
@@ -240,7 +287,7 @@ static void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.
 
-static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
+internal G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 {
 	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
@@ -270,7 +317,7 @@ static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 	return cmd;
 }
 
-static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
+internal void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
 {
 	G_DeviceApplyBindlessUpdates();
 
@@ -312,14 +359,14 @@ static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cm
 	G_DeviceCmdPoolRelease(&frame_in_flight->command_pool, cmd, frame_in_flight->completion_point.frame);
 }
 
-static G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
+internal G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd)
 {
 	return G_DeviceSubmitEx(cmd, 0, NULL, 0, NULL);
 }
 
-static G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
-										u32 wait_count, const VkSemaphoreSubmitInfo *waits,
-										u32 signal_count, const VkSemaphoreSubmitInfo *signals)
+internal G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
+										  u32 wait_count, const VkSemaphoreSubmitInfo *waits,
+										  u32 signal_count, const VkSemaphoreSubmitInfo *signals)
 {
 	G_CmdEnd(cmd);
 
@@ -366,7 +413,7 @@ static G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
 	return timeline_point;
 }
 
-static G_CmdBuffer G_DeviceSubmitImBegin(void)
+internal G_CmdBuffer G_DeviceSubmitImBegin(void)
 {
 	vkQueueWaitIdle(g_device->context.graphics_queue.vk_handle);
 
@@ -376,7 +423,7 @@ static G_CmdBuffer G_DeviceSubmitImBegin(void)
 	return cmd;
 }
 
-static void G_DeviceSubmitImEnd(const G_CmdBuffer *cmd)
+internal void G_DeviceSubmitImEnd(const G_CmdBuffer *cmd)
 {
 	G_DeviceWaitUntil(G_DeviceSubmit(cmd));
 }
@@ -390,7 +437,7 @@ static void G_DeviceSubmitImEnd(const G_CmdBuffer *cmd)
 //       --> Also, do VMA's function pointers
 //           break down here? Or is it okay?
 
-static void G_DeviceHotLoad(void)
+internal void G_DeviceHotLoad(void)
 {
 	volkInitialize();
 	volkLoadInstance(g_device->context.instance);
@@ -399,37 +446,37 @@ static void G_DeviceHotLoad(void)
 	G_DeviceWaitIdle();
 }
 
-static void G_DeviceHotUnload(void)
+internal void G_DeviceHotUnload(void)
 {
 	volkFinalize();
 }
 
-static void G_DeviceQueryPoolDestroy(VkQueryPool pool)
+internal void G_DeviceQueryPoolDestroy(VkQueryPool pool)
 {
 	vkDestroyQueryPool(g_device->context.device, pool, NULL);
 }
 
-static void G_DeviceWaitIdle(void)
+internal void G_DeviceWaitIdle(void)
 {
 	vkDeviceWaitIdle(g_device->context.device);
 }
 
-static void G_DeviceWaitForFence(VkFence fence)
+internal void G_DeviceWaitForFence(VkFence fence)
 {
 	vkWaitForFences(g_device->context.device, 1, &fence, VK_TRUE, UINT64_MAX);
 }
 
-static void G_DeviceResetFence(VkFence fence)
+internal void G_DeviceResetFence(VkFence fence)
 {
 	vkResetFences(g_device->context.device, 1, &fence);
 }
 
-static void G_DeviceDestroyFence(VkFence fence)
+internal void G_DeviceDestroyFence(VkFence fence)
 {
 	vkDestroyFence(g_device->context.device, fence, NULL);
 }
 
-static G_Semaphore G_DeviceSemaphoreCreate(u64 value)
+internal G_Semaphore G_DeviceSemaphoreCreate(u64 value)
 {
 	VkSemaphoreTypeCreateInfo timeline_type_create_info = {0};
 	timeline_type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -455,12 +502,12 @@ static G_Semaphore G_DeviceSemaphoreCreate(u64 value)
 	return semaphore;
 }
 
-static void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore)
+internal void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore)
 {
 	vkDestroySemaphore(g_device->context.device, semaphore->vk_handle, NULL);
 }
 
-static u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore)
+internal u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore)
 {
 	u64 result = 0;
 
@@ -471,7 +518,7 @@ static u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore)
 	return result;
 }
 
-static void G_DeviceWaitUntil(G_TimelinePoint point)
+internal void G_DeviceWaitUntil(G_TimelinePoint point)
 {
 	if (point.frame == 0)
 		return;
@@ -487,7 +534,7 @@ static void G_DeviceWaitUntil(G_TimelinePoint point)
 			   "Failed to wait on timeline semaphore");
 }
 
-static G_Swapchain G_DeviceSwapchainCreate(void)
+internal G_Swapchain G_DeviceSwapchainCreate(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -565,7 +612,10 @@ static G_Swapchain G_DeviceSwapchainCreate(void)
 			texture.mipmap_count = 1;
 			texture.sample_count = VK_SAMPLE_COUNT_1_BIT;
 
-			frame->texture_key = G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
+			G_Resource resource = {0};
+			resource.texture = texture;
+			
+			frame->texture_key = G_ResourceListPushAuto(&g_device->textures, g_device->permanent_arena, &resource);
 		}
 
 		// view
@@ -621,7 +671,7 @@ static G_Swapchain G_DeviceSwapchainCreate(void)
 	return swapchain;
 }
 
-static void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
+internal void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < swapchain->frame_count; i++)
 	{
@@ -633,7 +683,7 @@ static void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
 	vkDestroySwapchainKHR(g_device->context.device, swapchain->vk_handle, NULL);
 }
 
-static G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
+internal G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
 {
 	VkCommandPoolCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -655,12 +705,12 @@ static G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
 	return pool;
 }
 
-static void G_DeviceCmdPoolDestroy(const G_CmdPool *pool)
+internal void G_DeviceCmdPoolDestroy(const G_CmdPool *pool)
 {
 	vkDestroyCommandPool(g_device->context.device, pool->vk_handle, NULL);
 }
 
-static G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
+internal G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
 {
 	VkCommandBuffer cb = VK_NULL_HANDLE;
 	
@@ -670,7 +720,7 @@ static G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
 		
 		vkResetCommandBuffer(cb, 0);
 
-		//DebugLogD(g_device->log_channel, "Reused");
+		//DebugLogT(g_device->log_channel, "Reused");
 	}
 	else
 	{
@@ -685,13 +735,13 @@ static G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
 											&cb),
 				   "Failed to allocate command pool command buffers.");
 		
-		//DebugLogD(g_device->log_channel, "Allocation");
+		//DebugLogT(g_device->log_channel, "Allocation");
 	}
 
 	return G_CmdInit(cb);
 }
 
-static void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value)
+internal void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value)
 {
 	DebugLogAssert(g_device->log_channel,
 				   pool->release_count < ArraySize(pool->release_queue),
@@ -707,7 +757,7 @@ static void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 
 	pool->release_count++;
 }
 
-static void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value)
+internal void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value)
 {
 	while (pool->release_count > 0)
 	{
@@ -726,15 +776,12 @@ static void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value)
 	}
 }
 
-static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_ShaderKey program)
+internal G_ResourceKey G_DevicePipelineLayoutFetch(G_ResourceKey program)
 {
-	u64 hashed_key_value = 0;
-	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &program, sizeof(program));
+	G_ResourceKey pipeline_layout_key = program; // 1:1, only dependent on the program
 	
-	G_PipelineLayoutKey hashed_key = { hashed_key_value };
-	
-	if (G_DevicePipelineLayoutFromKey(hashed_key))
-		return hashed_key;
+	if (G_DevicePipelineLayoutFromKey(program))
+		return pipeline_layout_key;
 	
 	const G_ShaderProgram *gfx_program = G_DeviceShaderProgramFromKey(program);
 	
@@ -770,24 +817,24 @@ static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_ShaderKey program)
 									  &layout),
 			   "Failed to create pipeline layout.");
 
-	return G_DevicePipelineLayoutListPush(&g_device->layouts, g_device->permanent_arena, &layout, hashed_key);
+	G_Resource resource = {0};
+	resource.pipeline_layout = layout;
+	
+	return G_ResourceListPush(&g_device->pipeline_layouts, g_device->permanent_arena, &resource, pipeline_layout_key);
 }
 
-static VkPipelineLayout G_DevicePipelineLayoutFromKey(G_PipelineLayoutKey key)
+internal VkPipelineLayout G_DevicePipelineLayoutFromKey(G_ResourceKey key)
 {
-	VkPipelineLayout *layout = G_DevicePipelineLayoutListGet(&g_device->layouts, key);
-	return layout ? *layout : VK_NULL_HANDLE;
+	G_Resource *resource = G_ResourceListGet(&g_device->pipeline_layouts, key);
+	return resource ? resource->pipeline_layout : VK_NULL_HANDLE;
 }
 
-static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
+internal G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
 {
-	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(def->program);
-	
-	u64 hashed_key_value = 0;
-	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
-	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &layout_key, sizeof(layout_key));
-	
-	G_PipelineKey hashed_key = { hashed_key_value };
+	u64 hashed_key_value = HashBytesGeneric(def, sizeof(*def));
+	G_ResourceKey hashed_key = { hashed_key_value };
+
+	G_ResourceKey layout_key = G_DevicePipelineLayoutFetch(def->program);
 	
 	if (G_DevicePipelineFromKey(hashed_key))
 	{
@@ -799,7 +846,7 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *d
 		return st;
 	}
 	
-	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&g_device->layouts, layout_key);
+	VkPipelineLayout layout = G_DevicePipelineLayoutFromKey(layout_key);
 	
 	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
@@ -971,8 +1018,11 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *d
 										 NULL, &pipeline),
 			   "Failed to create graphics pipeline.");
 
+	G_Resource resource = {0};
+	resource.pipeline = pipeline;
+	
 	G_PipelineSt st = {0};
-	st.pipeline = G_DevicePipelineListPush(&g_device->pipelines, g_device->permanent_arena, &pipeline, hashed_key);
+	st.pipeline = G_ResourceListPush(&g_device->pipelines, g_device->permanent_arena, &resource, hashed_key);
 	st.layout = layout_key;
 	st.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
@@ -981,15 +1031,12 @@ static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *d
 	return st;
 }
 
-static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def)
+internal G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def)
 {
-	G_PipelineLayoutKey layout_key = G_DevicePipelineLayoutFetch(def->program);
+	u64 hashed_key_value = HashBytesGeneric(def, sizeof(*def));
+	G_ResourceKey hashed_key = { hashed_key_value };
 	
-	u64 hashed_key_value = 0;
-	hashed_key_value = HashBytesGenericCombine(hashed_key_value, def, sizeof(*def));
-	hashed_key_value = HashBytesGenericCombine(hashed_key_value, &layout_key, sizeof(layout_key));
-	
-	G_PipelineKey hashed_key = { hashed_key_value };
+	G_ResourceKey layout_key = G_DevicePipelineLayoutFetch(def->program);
 	
 	if (G_DevicePipelineFromKey(hashed_key))
 	{
@@ -1001,7 +1048,7 @@ static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def
 		return st;
 	}
 	
-	VkPipelineLayout layout = *G_DevicePipelineLayoutListGet(&g_device->layouts, layout_key);
+	VkPipelineLayout layout = G_DevicePipelineLayoutFromKey(layout_key);
 	
 	G_ShaderProgram *program = G_DeviceShaderProgramFromKey(def->program);
 
@@ -1033,21 +1080,24 @@ static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def
 										NULL, &pipeline),
 			   "Failed to create compute pipeline.");
 
+	G_Resource resource = {0};
+	resource.pipeline = pipeline;
+	
 	G_PipelineSt st = {0};
-	st.pipeline = G_DevicePipelineListPush(&g_device->pipelines, g_device->permanent_arena, &pipeline, hashed_key);
+	st.pipeline = G_ResourceListPush(&g_device->pipelines, g_device->permanent_arena, &resource, hashed_key);
 	st.layout = layout_key;
 	st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 	
 	return st;
 }
 
-static VkPipeline G_DevicePipelineFromKey(G_PipelineKey key)
+internal VkPipeline G_DevicePipelineFromKey(G_ResourceKey key)
 {
-	VkPipeline *pipeline = G_DevicePipelineListGet(&g_device->pipelines, key);
-	return pipeline ? *pipeline : VK_NULL_HANDLE;
+	G_Resource *resource = G_ResourceListGet(&g_device->pipelines, key);
+	return resource ? resource->pipeline : VK_NULL_HANDLE;
 }
 
-static G_TextureKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info)
+internal G_ResourceKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info)
 {
 	G_Texture texture = {0};
 
@@ -1154,10 +1204,13 @@ static G_TextureKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info)
 							  &texture.allocation_info),
 			   "Failed to allocate texture.");
 
-	return G_DeviceTextureListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
+	G_Resource resource = {0};
+	resource.texture = texture;
+	
+	return G_ResourceListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
 }
 
-static G_TextureKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = width;
@@ -1174,7 +1227,7 @@ static G_TextureKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat forma
 	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat format, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = width;
@@ -1191,17 +1244,17 @@ static G_TextureKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat for
 	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAllocDepth2D(u32 width, u32 height, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAllocDepth2D(u32 width, u32 height, u32 mipmaps)
 {
 	return G_DeviceTextureAlloc2D(width, height, G_DeviceDepthFormat(), mipmaps);
 }
 
-static G_TextureKey G_DeviceTextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps)
 {
 	return G_DeviceTextureAlloc2DRW(width, height, G_DeviceDepthFormat(), mipmaps);
 }
 
-static G_TextureKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
 {
 	G_TextureAllocInfo alloc_info = {0};
 	alloc_info.width = resolution;
@@ -1218,34 +1271,36 @@ static G_TextureKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format,
 	return G_DeviceTextureAlloc(&alloc_info);
 }
 
-static G_TextureKey G_DeviceTextureAllocCubemapDepth(u32 resolution, u32 mipmaps)
+internal G_ResourceKey G_DeviceTextureAllocCubemapDepth(u32 resolution, u32 mipmaps)
 {
 	return G_DeviceTextureAllocCubemap(resolution, G_DeviceDepthFormat(), mipmaps);
 }
 
-static void G_DeviceTextureDestroy(G_TextureKey texture_key)
+internal void G_DeviceTextureDestroy(G_ResourceKey key)
 {
-	G_Texture *texture = G_DeviceTextureListGet(&g_device->textures, texture_key);
-	DebugLogAssert(g_device->log_channel, texture, "Invalid texture with key %llu when destroying.", texture_key.value);
+	G_Texture *texture = G_DeviceTextureFromKey(key);
+	DebugLogAssert(g_device->log_channel, texture, "Invalid texture with key %llu when destroying.", key.value);
 
 	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_DestroyedImage *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedImage, 1);
 	node->next = frame_in_flight->destroyed_image_head;
 	frame_in_flight->destroyed_image_head = node;
-	
+
+	node->key = key;
 	node->image = texture->vk_handle;
 	node->allocation = texture->allocation;
 }
 
-static G_Texture *G_DeviceTextureFromKey(G_TextureKey key)
+internal G_Texture *G_DeviceTextureFromKey(G_ResourceKey key)
 {
-	return G_DeviceTextureListGet(&g_device->textures, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->textures, key);
+	return resource ? &resource->texture : NULL;
 }
 
-static G_TextureViewKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *info)
+internal G_ResourceKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *info)
 {
-	G_TextureViewKey hashed_key = { HashBytesGeneric(info, sizeof(*info)) };
+	G_ResourceKey hashed_key = { HashBytesGeneric(info, sizeof(*info)) };
 	
 	if (G_DeviceTextureViewFromKey(hashed_key))
 		return hashed_key;
@@ -1284,10 +1339,13 @@ static G_TextureViewKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *
 
 	view.bindless = G_BindlessRegisterView(&g_device->bindless, view.vk_handle, is_cubemap, is_storage);
 	
-	return G_DeviceTextureViewListPush(&g_device->views, g_device->permanent_arena, &view, hashed_key);
+	G_Resource resource = {0};
+	resource.texture_view = view;
+	
+	return G_ResourceListPush(&g_device->texture_views, g_device->permanent_arena, &resource, hashed_key);
 }
 
-static G_TextureViewKey G_DeviceTextureViewAuto(G_TextureKey texture)
+internal G_ResourceKey G_DeviceTextureViewAuto(G_ResourceKey texture)
 {
 	G_Texture *gfx_texture = G_DeviceTextureFromKey(texture);
 	DebugLogAssert(g_device->log_channel, gfx_texture, "Invalid texture with key %llu when creating view (auto).", texture.value);
@@ -1312,12 +1370,13 @@ static G_TextureViewKey G_DeviceTextureViewAuto(G_TextureKey texture)
 	return G_DeviceTextureViewFetch(&info);
 }
 
-static G_TextureView *G_DeviceTextureViewFromKey(G_TextureViewKey key)
+internal G_TextureView *G_DeviceTextureViewFromKey(G_ResourceKey key)
 {
-	return G_DeviceTextureViewListGet(&g_device->views, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->texture_views, key);
+	return resource ? &resource->texture_view : NULL;
 }
 
-static u32 G_DeviceTextureViewBindless(G_TextureViewKey key)
+internal u32 G_DeviceTextureViewBindless(G_ResourceKey key)
 {
 	G_TextureView *gfx_view = G_DeviceTextureViewFromKey(key);
 	DebugLogAssert(g_device->log_channel, gfx_view, "Invalid texture view with key %llu when getting bindless info.", key.value);
@@ -1325,7 +1384,7 @@ static u32 G_DeviceTextureViewBindless(G_TextureViewKey key)
 	return gfx_view->bindless;
 }
 
-static G_BufferKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
+internal G_ResourceKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
 {
 	G_Buffer buffer = {0};
 	buffer.usage = alloc_info->usage;
@@ -1365,10 +1424,13 @@ static G_BufferKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
 		buffer.device_address = vkGetBufferDeviceAddress(g_device->context.device, &address_info);
 	}
 
-	return G_DeviceBufferListPushAuto(&g_device->buffers, g_device->permanent_arena, &buffer);
+	G_Resource resource = {0};
+	resource.buffer = buffer;
+	
+	return G_ResourceListPushAuto(&g_device->buffers, g_device->permanent_arena, &resource);
 }
 
-static G_BufferKey G_DeviceStageAlloc(u64 size)
+internal G_ResourceKey G_DeviceStageAlloc(u64 size)
 {
 	G_BufferAllocInfo alloc_info = {0};
 	alloc_info.usage = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
@@ -1378,67 +1440,69 @@ static G_BufferKey G_DeviceStageAlloc(u64 size)
 	return G_DeviceBufferAlloc(&alloc_info);
 }
 
-static void G_DeviceBufferDestroy(G_BufferKey buffer_key)
+internal void G_DeviceBufferDestroy(G_ResourceKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, buffer_key);
-	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", buffer_key.value);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
+	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", key.value);
 
 	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_DestroyedBuffer *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedBuffer, 1);
 	node->next = frame_in_flight->destroyed_buffer_head;
 	frame_in_flight->destroyed_buffer_head = node;
-	
+
+	node->key = key;
 	node->buffer = buffer->vk_handle;
 	node->allocation = buffer->allocation;
 }
 
-static G_Buffer *G_DeviceBufferFromKey(G_BufferKey key)
+internal G_Buffer *G_DeviceBufferFromKey(G_ResourceKey key)
 {
-	return G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->buffers, key);
+	return resource ? &resource->buffer : NULL;
 }
 
-static void *G_DeviceBufferMap(G_BufferKey key)
+internal void *G_DeviceBufferMap(G_ResourceKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when mapping memory.", key.value);
 	
 	return buffer->allocation_info.pMappedData;
 }
 
-static u64 G_DeviceBufferAddress(G_BufferKey key)
+internal u64 G_DeviceBufferAddress(G_ResourceKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when getting device address.", key.value);
 
 	return buffer->device_address;
 }
 
-static void G_DeviceBufferRead(G_BufferKey key, void *dst, u64 length, u64 offset)
+internal void G_DeviceBufferRead(G_ResourceKey key, void *dst, u64 length, u64 offset)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when reading.", key.value);
 	
 	vmaCopyAllocationToMemory(g_device->context.vma_allocator, buffer->allocation, offset, dst, length);
 }
 
-static void G_DeviceBufferWrite(G_BufferKey key, const void *src, u64 length, u64 offset)
+internal void G_DeviceBufferWrite(G_ResourceKey key, const void *src, u64 length, u64 offset)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when writing.", key.value);
 	
 	vmaCopyMemoryToAllocation(g_device->context.vma_allocator, src, buffer->allocation, offset, length);
 }
 
-static u64 G_DeviceBufferSize(G_BufferKey key)
+internal u64 G_DeviceBufferSize(G_ResourceKey key)
 {
-	G_Buffer *buffer = G_DeviceBufferListGet(&g_device->buffers, key);
+	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when getting size.", key.value);
 
 	return buffer->size;
 }
 
-static G_SamplerKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
+internal G_ResourceKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
 {
 	VkPhysicalDeviceProperties properties = g_device->context.physical_device_properties.properties;
 
@@ -1474,10 +1538,13 @@ static G_SamplerKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
 	sampler.border_colour = info->border_colour;
 	sampler.bindless = G_BindlessRegisterSampler(&g_device->bindless, sampler.vk_handle);
 
-	return G_DeviceSamplerListPushAuto(&g_device->samplers, g_device->permanent_arena, &sampler);
+	G_Resource resource = {0};
+	resource.sampler = sampler;
+	
+	return G_ResourceListPushAuto(&g_device->samplers, g_device->permanent_arena, &resource);
 }
 
-static G_SamplerKey G_DeviceSamplerCreateF(VkFilter filter)
+internal G_ResourceKey G_DeviceSamplerCreateF(VkFilter filter)
 {
 	G_SamplerCreateInfo create_info = {0};
 	create_info.filter = filter;
@@ -1489,27 +1556,29 @@ static G_SamplerKey G_DeviceSamplerCreateF(VkFilter filter)
 	return G_DeviceSamplerCreate(&create_info);
 }
 
-static void G_DeviceSamplerDestroy(G_SamplerKey sampler_key)
+internal void G_DeviceSamplerDestroy(G_ResourceKey key)
 {
-	G_Sampler *sampler = G_DeviceSamplerListGet(&g_device->samplers, sampler_key);
-	DebugLogAssert(g_device->log_channel, sampler, "Invalid sampler with key %llu when destroying.", sampler_key.value);
+	G_Sampler *sampler = G_DeviceSamplerFromKey(key);
+	DebugLogAssert(g_device->log_channel, sampler, "Invalid sampler with key %llu when destroying.", key.value);
 
 	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_DestroyedSampler *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedSampler, 1);
 	node->next = frame_in_flight->destroyed_sampler_head;
 	frame_in_flight->destroyed_sampler_head = node;
-	
+
+	node->key = key;
 	node->sampler = sampler->vk_handle;
 	node->bindless = sampler->bindless;
 }
 
-static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key)
+internal G_Sampler *G_DeviceSamplerFromKey(G_ResourceKey key)
 {
-	return G_DeviceSamplerListGet(&g_device->samplers, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->samplers, key);
+	return resource ? &resource->sampler : NULL;
 }
 
-static u32 G_DeviceSamplerBindless(G_SamplerKey key)
+internal u32 G_DeviceSamplerBindless(G_ResourceKey key)
 {
 	G_Sampler *gfx_sampler = G_DeviceSamplerFromKey(key);
 	DebugLogAssert(g_device->log_channel, gfx_sampler, "Invalid sampler with key %llu when destroying.", key.value);
@@ -1517,7 +1586,7 @@ static u32 G_DeviceSamplerBindless(G_SamplerKey key)
 	return gfx_sampler->bindless;
 }
 
-static G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode)
+internal G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode)
 {
 	SpvReflectShaderModule reflect_module = {0};
 	SpvReflectResult reflect_result = spvReflectCreateShaderModule(bytecode->size, bytecode->bytes, &reflect_module);
@@ -1575,7 +1644,7 @@ static G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytec
 	return stage;
 }
 
-static G_ShaderKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBytecode *stages)
+internal G_ResourceKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBytecode *stages)
 {
 	G_ShaderProgram program = {0};
 	program.stage_count = stage_count;
@@ -1587,25 +1656,33 @@ static G_ShaderKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBy
 		program.push_constant_size = MaxValue(program.push_constant_size, program.stages[i].push_constant_size);
 	}
 
-	static u32 shader_cookie = 0;
-	program.cookie = ++shader_cookie;
-
-	return G_DeviceShaderListPushAuto(&g_device->shaders, g_device->permanent_arena, &program);
+	G_Resource resource = {0};
+	resource.shader = program;
+	
+	return G_ResourceListPushAuto(&g_device->shaders, g_device->permanent_arena, &resource);
 }
 
-static void G_DeviceShaderProgramDestroy(G_ShaderKey program_key)
+internal void G_DeviceShaderProgramDestroy(G_ResourceKey key)
 {
-	// since we just pass the shader params directly into the pipeline state
-	// when creating it we have nothing to destroy. but i'm keeping this just
-	// in case, also i kinda like symmetry.
+	G_ShaderProgram *shader = G_DeviceShaderProgramFromKey(key);
+	DebugLogAssert(g_device->log_channel, shader, "Invalid shader program with key %llu when destroying.", key.value);
+
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
+
+	G_DestroyedShaderProgram *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedShaderProgram, 1);
+	node->next = frame_in_flight->destroyed_shader_head;
+	frame_in_flight->destroyed_shader_head = node;
+
+	node->key = key;
 }
 
-static G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ShaderKey key)
+internal G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ResourceKey key)
 {
-	return G_DeviceShaderListGet(&g_device->shaders, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->shaders, key);
+	return resource ? &resource->shader : NULL;
 }
 
-static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *geometries, u32 geometry_count)
+internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *geometries, u32 geometry_count)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -1665,7 +1742,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *g
 	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	buf_alloc_info.size = sizes.accelerationStructureSize;
 
-	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
+	G_ResourceKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
 	G_Buffer *backing_buffer = G_DeviceBufferFromKey(backing_buffer_key);
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
@@ -1693,14 +1770,17 @@ static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *g
 
 	DebugLogD(g_device->log_channel, "Allocated BLAS from %u geometries.", geometry_count);
 
+	G_Resource resource = {0};
+	resource.accel_struct = accel_struct;
+	
 	G_DeviceAllocAccelStructReceipt receipt = {0};
-	receipt.key = G_DeviceAccelStructListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &accel_struct);
+	receipt.key = G_ResourceListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &resource);
 	receipt.scratch_size = sizes.buildScratchSize;
 	
 	return receipt;
 }
 
-static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count)
+internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count)
 {
 	VkAccelerationStructureGeometryKHR geometry = {0};
 	geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -1733,7 +1813,7 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count)
 	buf_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	buf_alloc_info.size = sizes.accelerationStructureSize;
 
-	G_BufferKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
+	G_ResourceKey backing_buffer_key = G_DeviceBufferAlloc(&buf_alloc_info);
 	G_Buffer *backing_buffer = G_DeviceBufferFromKey(backing_buffer_key);
 
 	VkAccelerationStructureCreateInfoKHR create_info = {0};
@@ -1757,40 +1837,50 @@ static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count)
 
 	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->context.device, &addr_info);
 
-	DebugLogD(g_device->log_channel, "Allocated TLAS with max instance count %u.", max_instance_count);
+	DebugLogD(g_device->log_channel, "Allocated TLAS with max instance count of %u.", max_instance_count);
+	
+	G_Resource resource = {0};
+	resource.accel_struct = accel_struct;
 	
 	G_DeviceAllocAccelStructReceipt receipt = {0};
-	receipt.key = G_DeviceAccelStructListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &accel_struct);
+	receipt.key = G_ResourceListPushAuto(&g_device->accel_structures, g_device->permanent_arena, &resource);
 	receipt.scratch_size = sizes.buildScratchSize;
 	
 	return receipt;
 }
 
-static void G_DeviceAccelStructDestroy(G_AccelStructKey key)
+internal void G_DeviceAccelStructDestroy(G_ResourceKey key)
 {
-	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&g_device->accel_structures, key);
+	G_AccelStruct *accel_struct = G_DeviceAccelStructFromKey(key);
 	DebugLogAssert(g_device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
-
-	vkDestroyAccelerationStructureKHR(g_device->context.device, accel_struct->vk_handle, NULL);
-	accel_struct->vk_handle = VK_NULL_HANDLE;
+	
+	G_DeviceFrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_DeviceBufferDestroy(accel_struct->backing_buffer);
+
+	G_DestroyedAccelStruct *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedAccelStruct, 1);
+	node->next = frame_in_flight->destroyed_as_head;
+	frame_in_flight->destroyed_as_head = node;
+
+	node->key = key;
+	node->handle = accel_struct->vk_handle;
 }
 
-static u64 G_DeviceAccelStructAddress(G_AccelStructKey key)
+internal u64 G_DeviceAccelStructAddress(G_ResourceKey key)
 {
-	G_AccelStruct *accel_struct = G_DeviceAccelStructListGet(&g_device->accel_structures, key);
+	G_AccelStruct *accel_struct = G_DeviceAccelStructFromKey(key);
 	DebugLogAssert(g_device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when getting device address.", key.value);
 
 	return accel_struct->device_address;
 }
 
-static G_AccelStruct *G_DeviceAccelStructFromKey(G_AccelStructKey key)
+internal G_AccelStruct *G_DeviceAccelStructFromKey(G_ResourceKey key)
 {
-	return G_DeviceAccelStructListGet(&g_device->accel_structures, key);
+	G_Resource *resource = G_ResourceListGet(&g_device->accel_structures, key);
+	return resource ? &resource->accel_struct : NULL;
 }
 
-static void G_DeviceCreateSyncResources(void)
+internal void G_DeviceCreateSyncResources(void)
 {
 	g_device->graphics_semaphore = G_DeviceSemaphoreCreate(0);
 
@@ -1827,7 +1917,7 @@ static void G_DeviceCreateSyncResources(void)
 	DebugLogD(g_device->log_channel, "Created frame sync objects.");
 }
 
-static void G_DeviceDestroySyncResources(void)
+internal void G_DeviceDestroySyncResources(void)
 {
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
@@ -1840,7 +1930,7 @@ static void G_DeviceDestroySyncResources(void)
 	G_DeviceSemaphoreDestroy(&g_device->graphics_semaphore);
 }
 
-static void G_DeviceCreateBindless(void)
+internal void G_DeviceCreateBindless(void)
 {
 	VkDescriptorPoolSize pool_sizes[G_BindlessKind_COUNT] = {0};
 
@@ -1909,13 +1999,13 @@ static void G_DeviceCreateBindless(void)
 	DebugLogD(g_device->log_channel, "Bindless resources created.");
 }
 
-static void G_DeviceDestroyBindless(void)
+internal void G_DeviceDestroyBindless(void)
 {
 	vkDestroyDescriptorSetLayout(g_device->context.device, g_device->bindless.layout, NULL);
 	vkDestroyDescriptorPool(g_device->context.device, g_device->bindless.pool, NULL);
 }
 
-static void G_DeviceApplyBindlessUpdates(void)
+internal void G_DeviceApplyBindlessUpdates(void)
 {
 	if (g_device->bindless.update_count == 0)
 		return;
@@ -1954,7 +2044,7 @@ static void G_DeviceApplyBindlessUpdates(void)
 	ScratchRelease(&scratch);
 }
 
-static void G_DeviceCreateImGui(void)
+internal void G_DeviceCreateImGui(void)
 {
 	/*
 	  const u32 max_sets = 1000;
@@ -2009,7 +2099,7 @@ static void G_DeviceCreateImGui(void)
 	*/
 }
 
-static void G_DeviceDestroyImGui(void)
+internal void G_DeviceDestroyImGui(void)
 {
 	/*
 	  ImGui_ImplVulkan_Shutdown();
@@ -2017,14 +2107,14 @@ static void G_DeviceDestroyImGui(void)
 	*/
 }
 
-static void G_DeviceImGuiNewFrame(void)
+internal void G_DeviceImGuiNewFrame(void)
 {
 	/*
 	  ImGui_ImplVulkan_NewFrame();
 	*/
 }
 
-static void G_DeviceImGuiRecord(const G_CmdBuffer *cmd)
+internal void G_DeviceImGuiRecord(const G_CmdBuffer *cmd)
 {
 	/*
 	  ImDrawData *draw_data = ImGui_GetDrawData();

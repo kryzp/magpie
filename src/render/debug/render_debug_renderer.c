@@ -1,7 +1,7 @@
 
 static R_DebugRenderer *r_selected_debug_renderer = NULL;
 
-static R_DebugDrawNode *R_DebugAllocNode(void)
+internal R_DebugDrawNode *R_DebugAllocNode(void)
 {
 	R_DebugDrawNode *node = r_selected_debug_renderer->free_list;
 
@@ -18,13 +18,13 @@ static R_DebugDrawNode *R_DebugAllocNode(void)
 	return node;
 }
 
-static void R_DebugFreeNode(R_DebugDrawNode *node)
+internal void R_DebugFreeNode(R_DebugDrawNode *node)
 {
 	node->next = r_selected_debug_renderer->free_list;
 	r_selected_debug_renderer->free_list = node;
 }
 
-static void R_DebugCreateLineMesh(void)
+internal void R_DebugCreateLineMesh(void)
 {
 	static const v3 vertices[] = {
 		{ 0.f, 0.f, 1.f },
@@ -37,7 +37,7 @@ static void R_DebugCreateLineMesh(void)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	G_BufferKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->line_mesh) +
+	G_ResourceKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->line_mesh) +
 											 R_MeshIndexBufferSize(&r_selected_debug_renderer->line_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->line_mesh, staging, 0, vertices, indices);
@@ -49,7 +49,7 @@ static void R_DebugCreateLineMesh(void)
 	G_DeviceBufferDestroy(staging);
 }
 
-static void R_DebugCreateCrossMesh(void)
+internal void R_DebugCreateCrossMesh(void)
 {
 	static const v3 vertices[] = {
 		{  1.f,  1.f,  1.f },
@@ -73,7 +73,7 @@ static void R_DebugCreateCrossMesh(void)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	G_BufferKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cross_mesh) +
+	G_ResourceKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cross_mesh) +
 											 R_MeshIndexBufferSize(&r_selected_debug_renderer->cross_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->cross_mesh, staging, 0, vertices, indices);
@@ -85,7 +85,7 @@ static void R_DebugCreateCrossMesh(void)
 	G_DeviceBufferDestroy(staging);
 }
 
-static void R_DebugCreateSphereMesh(void)
+internal void R_DebugCreateSphereMesh(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -125,7 +125,7 @@ static void R_DebugCreateSphereMesh(void)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				vertex_count, index_count);
 
-	G_BufferKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->sphere_mesh) +
+	G_ResourceKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->sphere_mesh) +
 											 R_MeshIndexBufferSize(&r_selected_debug_renderer->sphere_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->sphere_mesh, staging, 0, vertices, indices);
@@ -139,7 +139,7 @@ static void R_DebugCreateSphereMesh(void)
 	ScratchRelease(&scratch);
 }
 
-static void R_DebugCreateCircleMesh(void)
+internal void R_DebugCreateCircleMesh(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -163,7 +163,7 @@ static void R_DebugCreateCircleMesh(void)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				vertex_count, index_count);
 
-	G_BufferKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->circle_mesh) +
+	G_ResourceKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->circle_mesh) +
 											 R_MeshIndexBufferSize(&r_selected_debug_renderer->circle_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->circle_mesh, staging, 0, vertices, indices);
@@ -177,7 +177,7 @@ static void R_DebugCreateCircleMesh(void)
 	ScratchRelease(&scratch);
 }
 
-static void R_DebugCreateCubeMesh(void)
+internal void R_DebugCreateCubeMesh(void)
 {
 	static const v3 vertices[] = {
 		{ -1.f, -1.f, -1.f },
@@ -200,7 +200,7 @@ static void R_DebugCreateCubeMesh(void)
 				sizeof(v3), VK_INDEX_TYPE_UINT16,
 				ArraySize(vertices), ArraySize(indices));
 
-	G_BufferKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cube_mesh) +
+	G_ResourceKey staging = G_DeviceStageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cube_mesh) +
 											 R_MeshIndexBufferSize(&r_selected_debug_renderer->cube_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->cube_mesh, staging, 0, vertices, indices);
@@ -212,7 +212,7 @@ static void R_DebugCreateCubeMesh(void)
 	G_DeviceBufferDestroy(staging);
 }
 
-static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena)
+internal void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena)
 {
 	dr->arena = arena;
 
@@ -233,7 +233,7 @@ static void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena)
 	R_DebugCreateCubeMesh();
 }
 
-static void R_DebugRendererDestroy(void)
+internal void R_DebugRendererDestroy(void)
 {
 	R_MeshDestroy(&r_selected_debug_renderer->line_mesh);
 	R_MeshDestroy(&r_selected_debug_renderer->cross_mesh);
@@ -247,12 +247,12 @@ static void R_DebugRendererDestroy(void)
 	r_selected_debug_renderer = NULL;
 }
 
-static void R_DebugRendererSelect(R_DebugRenderer *dr)
+internal void R_DebugRendererSelect(R_DebugRenderer *dr)
 {
 	r_selected_debug_renderer = dr;
 }
 
-static void R_DebugPushDrawCall(R_DebugDrawType type,
+internal void R_DebugPushDrawCall(R_DebugDrawType type,
 								const R_DebugDrawCall *call,
 								b32 depth_enabled)
 {
@@ -268,7 +268,7 @@ static void R_DebugPushDrawCall(R_DebugDrawType type,
 	*bucket = node;
 }
 
-static void R_DebugPushLine(v3 from, v3 to,
+internal void R_DebugPushLine(v3 from, v3 to,
 							v4 colour, f32 line_width,
 							f32 duration, b32 depth_enabled)
 {
@@ -283,7 +283,7 @@ static void R_DebugPushLine(v3 from, v3 to,
 	R_DebugPushDrawCall(R_DebugDrawType_Line, &call, depth_enabled);
 }
 
-static void R_DebugPushCross(v3 point, f32 size,
+internal void R_DebugPushCross(v3 point, f32 size,
 							 v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -297,7 +297,7 @@ static void R_DebugPushCross(v3 point, f32 size,
 	R_DebugPushDrawCall(R_DebugDrawType_Cross, &call, depth_enabled);
 }
 
-static void R_DebugPushSphere(v3 centre, f32 radius,
+internal void R_DebugPushSphere(v3 centre, f32 radius,
 							  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -311,7 +311,7 @@ static void R_DebugPushSphere(v3 centre, f32 radius,
 	R_DebugPushDrawCall(R_DebugDrawType_Sphere, &call, depth_enabled);
 }
 
-static void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
+internal void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
 							  v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
@@ -326,7 +326,7 @@ static void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
 	R_DebugPushDrawCall(R_DebugDrawType_Circle, &call, depth_enabled);
 }
 
-static void R_DebugPushTriangle(v3 a, v3 b, v3 c,
+internal void R_DebugPushTriangle(v3 a, v3 b, v3 c,
 								v4 colour, f32 line_width,
 								f32 duration, b32 depth_enabled)
 {
@@ -342,7 +342,7 @@ static void R_DebugPushTriangle(v3 a, v3 b, v3 c,
 	R_DebugPushDrawCall(R_DebugDrawType_Triangle, &call, depth_enabled);
 }
 
-static void R_DebugPushAABB(v3 min, v3 max,
+internal void R_DebugPushAABB(v3 min, v3 max,
 							v4 colour, f32 line_width,
 							f32 duration, b32 depth_enabled)
 {
@@ -357,7 +357,7 @@ static void R_DebugPushAABB(v3 min, v3 max,
 	R_DebugPushDrawCall(R_DebugDrawType_AABB, &call, depth_enabled);
 }
 
-static void R_DebugPushOBB(m4 transform, v3 scale,
+internal void R_DebugPushOBB(m4 transform, v3 scale,
 						   v4 colour, f32 line_width,
 						   f32 duration, b32 depth_enabled)
 {
@@ -372,7 +372,7 @@ static void R_DebugPushOBB(m4 transform, v3 scale,
 	R_DebugPushDrawCall(R_DebugDrawType_OBB, &call, depth_enabled);
 }
 
-static void R_DebugWriteInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
+internal void R_DebugWriteInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 								 m4 transform, v4 colour, f32 thickness, f32 alpha)
 {
 	AssertTrue(*id < R_DEBUG_MAX_DRAWS);
@@ -389,7 +389,7 @@ static void R_DebugWriteInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 	(*id)++;
 }
 
-static f32 R_DebugCallAlpha(const R_DebugDrawCall *call)
+internal f32 R_DebugCallAlpha(const R_DebugDrawCall *call)
 {
 	if (call->initial_duration <= MATH_EPSILON_F32)
 		return 1.f;
@@ -399,7 +399,7 @@ static f32 R_DebugCallAlpha(const R_DebugDrawCall *call)
 	return ClampValue(t, 0.f, 1.f);
 }
 
-static void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
+internal void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 									 v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
 {
 	//v3 direction = V3Normalize (V3Sub(to, from));
@@ -411,7 +411,7 @@ static void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 	R_DebugWriteInstance(draws, id, transform, colour, thickness, alpha);
 }
 
-static void R_DebugBuildInstances(R_DebugRenderer *dr,
+internal void R_DebugBuildInstances(R_DebugRenderer *dr,
 								  R_DebugDrawNode **buckets,
 								  R_GPU_DebugObjectDraw *draws,
 								  u32 *draw_id)
@@ -505,7 +505,7 @@ struct R_DebugBatch
 	u32 count;
 };
 
-static u32 R_DebugBuildBatches(R_DebugDrawNode **buckets,
+internal u32 R_DebugBuildBatches(R_DebugDrawNode **buckets,
 							   R_DebugBatch *out_batches,
 							   u32 *running_id)
 {
@@ -551,7 +551,7 @@ struct R_DebugPassData
 	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES];
 };
 
-static R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
+internal R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
 {
 	switch (type)
 	{
@@ -566,11 +566,11 @@ static R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
 	}
 }
 
-static void R_DebugDrawBatches(G_CmdBuffer *cmd,
+internal void R_DebugDrawBatches(G_CmdBuffer *cmd,
 							   G_PipelineSt *pipeline_st,
 							   const R_DebugBatch *batches,
 							   u32 batch_count,
-							   G_BufferKey buffer,
+							   G_ResourceKey buffer,
 							   m4 view_proj)
 {
 	G_CmdBindPipeline(cmd, pipeline_st->bind_point, pipeline_st->pipeline);
@@ -599,7 +599,7 @@ static void R_DebugDrawBatches(G_CmdBuffer *cmd,
 	}
 }
 
-static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
+internal R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_DebugPassData *data = ctx->user_data;
@@ -638,7 +638,7 @@ static R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 					   view_proj);
 }
 
-static void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets, f32 dt)
+internal void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets, f32 dt)
 {
 	for (u32 type = 0; type < R_DebugDrawType_COUNT; type++)
 	{
@@ -665,7 +665,7 @@ static void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **buckets,
 	}
 }
 
-static void R_DebugRendererRender(R_Graph *graph,
+internal void R_DebugRendererRender(R_Graph *graph,
 								  const R_FrameParams *frame_params,
 								  R_GraphTexHandle target_colour,
 								  R_GraphTexHandle target_depth)

@@ -4,7 +4,7 @@
 typedef struct R_PooledTexture R_PooledTexture;
 struct R_PooledTexture
 {
-	G_TextureKey key;
+	G_ResourceKey key;
 	R_TextureInfo info;
 	b32 in_use;
 	u64 last_frame_used;
@@ -14,7 +14,7 @@ struct R_PooledTexture
 typedef struct R_PooledBuffer R_PooledBuffer;
 struct R_PooledBuffer
 {
-	G_BufferKey key;
+	G_ResourceKey key;
 	R_BufferInfo info;
 	u32 in_use;
 	u64 last_frame_used;
@@ -36,27 +36,27 @@ struct R_ResourcePool
 	R_PooledBuffer *buffers;
 };
 
-static void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers);
-static void R_ResourcePoolDestroy(R_ResourcePool *pool);
+internal void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers);
+internal void R_ResourcePoolDestroy(R_ResourcePool *pool);
 
 // Update timeline values and reset used state for all entries.
 // Typically call once per frame.
-static void R_ResourcePoolFlush(R_ResourcePool *pool);
+internal void R_ResourcePoolFlush(R_ResourcePool *pool);
 
-static G_TextureKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
-													 const R_TextureInfo *info,
-													 R_ResourceState *out_state);
-
-static G_BufferKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
-												   const R_BufferInfo *info,
+internal G_ResourceKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
+												   const R_TextureInfo *info,
 												   R_ResourceState *out_state);
 
-static void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
-										  G_TextureKey key,
+internal G_ResourceKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
+												 const R_BufferInfo *info,
+												 R_ResourceState *out_state);
+
+internal void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
+										  G_ResourceKey key,
 										  const R_ResourceState *state);
 
-static void R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
-										 G_BufferKey key,
+internal void R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
+										 G_ResourceKey key,
 										 const R_ResourceState *state);
 
 #endif // RENDER_GRAPH_POOL_H

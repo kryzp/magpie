@@ -22,7 +22,7 @@ struct G_Semaphore
 	u64 last_submitted_frame;
 };
 
-static G_TimelinePoint G_SemaphoreSignal(G_Semaphore *semaphore);
-static G_TimelinePoint G_SemaphoreLastSignaled(const G_Semaphore *semaphore);
+internal G_TimelinePoint G_SemaphoreSignal(G_Semaphore *semaphore);
+internal G_TimelinePoint G_SemaphoreLastSignaled(const G_Semaphore *semaphore);
 
 #endif // GRAPHICS_SEMAPHORE_H

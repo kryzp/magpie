@@ -1,13 +1,13 @@
 
 #if 0
 
-static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
+internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 					   LOG_Channel log_channel,
 					   v3 grid_min, v3 grid_max,
 					   u32 nx, u32 ny, u32 nz,
 					   const R_Mesh *skybox_mesh,
-					   G_TextureViewKey environment_view,
-					   G_SamplerKey linear_sampler)
+					   G_ResourceKey environment_view,
+					   G_ResourceKey linear_sampler)
 {
 	vol->device = device;
 
@@ -72,7 +72,7 @@ static void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 }
 
 
-static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
+internal void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 {
 	if (vol->blas_count > 0)
 	{
@@ -89,7 +89,7 @@ static void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 	G_DeviceBufferDestroy(vol->device, vol->grid_info_buffer);
 }
 
-static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
+internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
 {
 	u64 max_scratch_size = 0;
 
@@ -127,7 +127,7 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 	scratch_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	scratch_info.size  = max_scratch_size;
 
-	G_BufferKey scratch_buffer = G_DeviceBufferAlloc(device, &scratch_info);
+	G_ResourceKey scratch_buffer = G_DeviceBufferAlloc(device, &scratch_info);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -179,7 +179,7 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 	inst_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // MUST HAVE DEVICEADDRESS ALIGNED TO 16 BYTES SO ALLOCATE DEDICATED NEW MEMORY
 	inst_buf_info.size = instance_data_size;
 
-	G_BufferKey instance_buffer = G_DeviceBufferAlloc(device, &inst_buf_info);
+	G_ResourceKey instance_buffer = G_DeviceBufferAlloc(device, &inst_buf_info);
 	G_DeviceBufferWrite(device, instance_buffer, instances, instance_data_size, 0);
 
 	G_CmdBuffer cmd = G_DeviceSubmitImBegin(device);
@@ -238,13 +238,13 @@ static void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R
 			  vol->blas_count, R_SceneGraphObjectCount(&scene->graph));
 }
 
-static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
+internal void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene)
 {
 	DebugLogI(vol->log_channel, "Baking irradiance volume...");
 
 	R_IrradianceVolumeBuildAccelStructs(vol, scene);
 
-	G_ShaderKey shader = A_GetNow(vol->assets, vol->bake_shader_handle)->shader.key;
+	G_ResourceKey shader = A_GetNow(vol->assets, vol->bake_shader_handle)->shader.key;
 
 	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(shader);
 	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(device, &pipeline_def);
@@ -285,7 +285,7 @@ static void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *scene
 			  vol->ntotal, R_IRRADIANCE_RAYS_PER_PROBE);
 }
 
-static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
+internal void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
 {
 	u32 nx = vol->nx;
 	u32 ny = vol->ny;
@@ -318,17 +318,17 @@ static void R_IrradianceVolumeDebug(const R_IrradianceVolume *vol)
 	}
 }
 
-static G_BufferKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol)
+internal G_ResourceKey R_IrradianceVolumeGetSHBuffer(const R_IrradianceVolume *vol)
 {
 	return vol->sh_buffer;
 }
 
-static G_BufferKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol)
+internal G_ResourceKey R_IrradianceVolumeGetGridInfoBuffer(const R_IrradianceVolume *vol)
 {
 	return vol->grid_info_buffer;
 }
 
-static b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol)
+internal b32 R_IrradianceVolumeIsBaked(const R_IrradianceVolume *vol)
 {
 	return vol->is_baked;
 }

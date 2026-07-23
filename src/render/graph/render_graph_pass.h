@@ -103,31 +103,31 @@ struct R_Pass
    GENERAL
    ================================================== */
 
-static void R_PassSetRecord(R_Pass *pass, R_PassRecordFn *fn, const void *user_data);
+internal void R_PassSetRecord(R_Pass *pass, R_PassRecordFn *fn, const void *user_data);
 
-static void R_PassSetMultiViewMask(R_Pass *pass, u32 mask);
+internal void R_PassSetMultiViewMask(R_Pass *pass, u32 mask);
 
 
 /* ==================================================
    HELPERS
    ================================================== */
 
-static R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
+internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
 												R_GraphTexHandle handle,
 												VkPipelineStageFlags2 stage,
 												VkAccessFlags2 access);
 
-static R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
+internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
 												 R_GraphTexHandle handle,
 												 const R_Clear *clear,
 												 VkPipelineStageFlags2 stage,
 												 VkAccessFlags2 access);
 
-static R_GraphBufHandle R_PassAddInputBuffer(R_Pass *pass, R_GraphBufHandle handle,
+internal R_GraphBufHandle R_PassAddInputBuffer(R_Pass *pass, R_GraphBufHandle handle,
 											   VkPipelineStageFlags2 stage,
 											   VkAccessFlags2 access);
 
-static R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle handle,
+internal R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle handle,
 												VkPipelineStageFlags2 stage,
 												VkAccessFlags2 access);
 
@@ -136,39 +136,39 @@ static R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass, R_GraphBufHandle han
    TEXTURES
    ================================================== */
 
-static R_GraphTexHandle R_PassWriteColour          (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
-static R_GraphTexHandle R_PassWriteDepth           (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
+internal R_GraphTexHandle R_PassWriteColour          (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
+internal R_GraphTexHandle R_PassWriteDepth           (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear);
 
-static R_GraphTexHandle R_PassWriteColourEx        (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
-static R_GraphTexHandle R_PassWriteDepthEx         (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteColourEx        (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteDepthEx         (R_Pass *pass, R_GraphTexHandle handle, const R_Clear *clear, G_SubresourceRange range);
 
-static R_GraphTexHandle R_PassWriteColourResolve   (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
-static R_GraphTexHandle R_PassWriteDepthResolve    (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
+internal R_GraphTexHandle R_PassWriteColourResolve   (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
+internal R_GraphTexHandle R_PassWriteDepthResolve    (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear);
 
-static R_GraphTexHandle R_PassWriteColourResolveEx (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
-static R_GraphTexHandle R_PassWriteDepthResolveEx  (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteColourResolveEx (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
+internal R_GraphTexHandle R_PassWriteDepthResolveEx  (R_Pass *pass, R_GraphTexHandle msaa, R_GraphTexHandle resolve, const R_Clear *clear, G_SubresourceRange range);
 
-static R_GraphTexHandle R_PassReadTextureGraphics  (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassReadTextureGraphics  (R_Pass *pass, R_GraphTexHandle handle);
 
-static R_GraphTexHandle R_PassReadTextureCompute   (R_Pass *pass, R_GraphTexHandle handle);
-static R_GraphTexHandle R_PassWriteTextureCompute  (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassReadTextureCompute   (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassWriteTextureCompute  (R_Pass *pass, R_GraphTexHandle handle);
 
-static R_GraphTexHandle R_PassBlitTextureSrc       (R_Pass *pass, R_GraphTexHandle handle);
-static R_GraphTexHandle R_PassBlitTextureDst       (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassBlitTextureSrc       (R_Pass *pass, R_GraphTexHandle handle);
+internal R_GraphTexHandle R_PassBlitTextureDst       (R_Pass *pass, R_GraphTexHandle handle);
 
 
 /* ==================================================
    BUFFERS
    ================================================== */
 
-static R_GraphBufHandle R_PassWriteBufferGraphics  (R_Pass *pass, R_GraphBufHandle handle);
-static R_GraphBufHandle R_PassReadBufferGraphics   (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassWriteBufferGraphics  (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassReadBufferGraphics   (R_Pass *pass, R_GraphBufHandle handle);
 
-static R_GraphBufHandle R_PassWriteBufferCompute   (R_Pass *pass, R_GraphBufHandle handle);
-static R_GraphBufHandle R_PassReadBufferCompute    (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassWriteBufferCompute   (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassReadBufferCompute    (R_Pass *pass, R_GraphBufHandle handle);
 
-static R_GraphBufHandle R_PassIndirectBuffer       (R_Pass *pass, R_GraphBufHandle handle);
-static R_GraphBufHandle R_PassClearBuffer          (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassIndirectBuffer       (R_Pass *pass, R_GraphBufHandle handle);
+internal R_GraphBufHandle R_PassClearBuffer          (R_Pass *pass, R_GraphBufHandle handle);
 
 
 #endif // RENDER_GRAPH_PASS_H

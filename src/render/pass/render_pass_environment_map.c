@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
+internal R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_HdrToEnvPassData *user_data = ctx->user_data;

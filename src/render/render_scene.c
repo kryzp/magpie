@@ -1,10 +1,46 @@
 
-static void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
+internal R_EntityIterator R_EntityIteratorInit(R_Scene *scene)
+{
+	R_EntityIterator iter = {0};
+	iter.scene = scene;
+	iter.index = 0;
+
+	return iter;
+}
+
+internal void R_EntityIteratorReset(R_EntityIterator *iter)
+{
+	iter->index = 0;
+}
+
+internal R_Entity *R_EntityIteratorNext(R_EntityIterator *iter, R_EntityType type)
+{
+	R_Entity *entity = NULL;
+	
+	while (!entity)
+	{
+		R_Entity *entity2 = &iter->scene->entities[iter->index];
+		b32 occupied = iter->scene->entity_occupied[iter->index];
+		
+		iter->index++;
+
+		if (iter->index >= ArraySize(iter->scene->entities))
+			break;
+		
+		if (occupied || entity2->type != type)
+			continue;
+
+		entity = entity2;
+	}
+
+	return entity;
+}
+
+internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 {
 	scene->log_channel = log_channel;
 
-	DensePoolInit(&scene->object_pool, arena, R_SCENE_MAX_INSTANCES);
-	DensePoolInit(&scene->light_pool, arena, R_SCENE_MAX_LIGHTS);
+	DensePoolInit(&scene->entity_pool, arena, R_SCENE_MAX_ENTITIES);
 	SlotPoolInit(&scene->mesh_pool, arena, R_SCENE_MAX_MESHES);
 	SlotPoolInit(&scene->material_pool, arena, R_SCENE_MAX_MATERIALS);
 
@@ -25,10 +61,9 @@ static void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 	scene->material_buffer_dirty = true;
 }
 
-static void R_SceneDestroy(R_Scene *scene)
+internal void R_SceneDestroy(R_Scene *scene)
 {
 	G_DeviceBufferDestroy(scene->material_buffer);
-	
 	G_DeviceBufferDestroy(scene->mesh_buffer);
 
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
@@ -38,84 +73,88 @@ static void R_SceneDestroy(R_Scene *scene)
 	}
 }
 
-static R_InstanceHandle R_SceneInstanceCreate(R_Scene *scene)
+internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
 {
-	R_InstanceHandle handle = {0};
-	handle.id = DensePoolGetStableID(&scene->object_pool);
+	R_EntityHandle handle = {0};
+	handle.id = DensePoolGetStableID(&scene->entity_pool);
+	handle.type = type;
 
-	scene->object_occupied[DensePoolDenseIndex(&scene->object_pool, handle.id)] = true;
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	
+	scene->entity_occupied[index] = true;
+	scene->entity_count[type]++;
 	
 	return handle;
 }
 
-static void R_SceneInstanceDestroy(R_Scene *scene, R_InstanceHandle handle)
+internal void R_SceneEntityDestroy(R_Scene *scene, R_EntityHandle handle)
 {
-	scene->object_occupied[DensePoolDenseIndex(&scene->object_pool, handle.id)] = false;
-	DensePoolFreeID(&scene->object_pool, handle.id);
-}
-
-static void R_SceneSetInstanceTransform(R_Scene *scene, R_InstanceHandle handle, m4 transform)
-{
-	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
 	
-	scene->objects[index].transform = transform;
-	scene->objects[index].normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
-}
-
-static void R_SceneSetInstanceLocalSphereBounds(R_Scene *scene, R_InstanceHandle handle, v4 local_sphere_bounds)
-{
-	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
+	scene->entity_occupied[index] = false;
+	scene->entity_count[handle.type]--;
 	
-	scene->objects[index].local_sphere_bounds = local_sphere_bounds;
+	DensePoolFreeID(&scene->entity_pool, handle.id);
 }
 
-static void R_SceneSetInstanceMesh(R_Scene *scene, R_InstanceHandle handle, R_MeshHandle mesh)
+internal void R_SceneSetObjectTransform(R_Scene *scene, R_EntityHandle handle, m4 transform)
 {
-	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	scene->objects[index].page_index = mesh.page_index;
-	scene->objects[index].mesh_index = mesh.slot_index;
-}
-
-static void R_SceneSetInstanceMaterial(R_Scene *scene, R_InstanceHandle handle, R_MaterialHandle material)
-{
-	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
 	
-	scene->objects[index].material_index = material.index;
+	scene->entities[index].object.transform = transform;
+	scene->entities[index].object.normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
 }
 
-static void R_SceneSetInstanceSkinning(R_Scene *scene, R_InstanceHandle handle, const m4 *palette, u32 joint_count)
+internal void R_SceneSetObjectLocalSphereBounds(R_Scene *scene, R_EntityHandle handle, v4 local_sphere_bounds)
 {
-	u32 index = DensePoolDenseIndex(&scene->object_pool, handle.id);
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	scene->objects[index].skinning_palette = palette;
-	scene->objects[index].skinning_joint_count = joint_count;
-}
-
-static R_LightHandle R_SceneLightCreate(R_Scene *scene)
-{
-	R_LightHandle handle = {0};
-	handle.id = DensePoolGetStableID(&scene->light_pool);
-
-	scene->light_occupied[DensePoolDenseIndex(&scene->light_pool, handle.id)] = true;
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
 	
-	return handle;
+	scene->entities[index].object.local_sphere_bounds = local_sphere_bounds;
 }
 
-static void R_SceneLightDestroy(R_Scene *scene, R_LightHandle handle)
+internal void R_SceneSetObjectMesh(R_Scene *scene, R_EntityHandle handle, R_MeshHandle mesh)
 {
-	scene->light_occupied[DensePoolDenseIndex(&scene->light_pool, handle.id)] = false;
-	DensePoolFreeID(&scene->light_pool, handle.id);
-}
-
-static void R_SceneSetLight(R_Scene *scene, R_LightHandle handle, R_Light light)
-{
-	u32 index = DensePoolDenseIndex(&scene->light_pool, handle.id);
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	scene->lights[index] = light;
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	
+	scene->entities[index].object.page_index = mesh.page_index;
+	scene->entities[index].object.mesh_index = mesh.slot_index;
 }
 
-static R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
+internal void R_SceneSetObjectMaterial(R_Scene *scene, R_EntityHandle handle, R_MaterialHandle material)
+{
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
+	
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	
+	scene->entities[index].object.material_index = material.index;
+}
+
+internal void R_SceneSetObjectSkinning(R_Scene *scene, R_EntityHandle handle, const m4 *palette, u32 joint_count)
+{
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
+	
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	
+	scene->entities[index].object.skinning_palette = palette;
+	scene->entities[index].object.skinning_joint_count = joint_count;
+}
+
+internal void R_SceneSetLightParam(R_Scene *scene, R_EntityHandle handle, R_Light light)
+{
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Light, "Entity handle must point to light.");
+	
+	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	
+	scene->entities[index].light = light;
+}
+
+internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 {
 	u32 slot_index = 0;
 
@@ -170,7 +209,7 @@ static R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	gpu_mesh->first_index = index_offset;
 	gpu_mesh->vertex_buffer = G_DeviceBufferAddress(page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
 
-	if (!G_BufferKeyIsNull(desc->skin_buffer))
+	if (!G_ResourceKeyIsNull(desc->skin_buffer))
 		gpu_mesh->skin_buffer = G_DeviceBufferAddress(desc->skin_buffer);
 	else
 		gpu_mesh->skin_buffer = 0;
@@ -194,17 +233,20 @@ static R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	return handle;
 }
 
-static void R_SceneFreeMesh(R_Scene *scene, R_MeshHandle handle)
+internal void R_SceneFreeMesh(R_Scene *scene, R_MeshHandle handle)
 {
+	// TODO: what about the gpu mesh data in the pages???????????? TODO TODO TODO
+	// importatn1!!!!!
+	
 	SlotPoolFree(&scene->mesh_pool, handle.slot_index);
 }
 
-static u32 R_SceneCountOfMeshes(const R_Scene *scene)
+internal u32 R_SceneCountOfMeshes(const R_Scene *scene)
 {
 	return SlotPoolLiveCount(&scene->mesh_pool);
 }
 
-static u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
+internal u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
 {
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
@@ -229,28 +271,26 @@ static u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_c
 	return new_index;
 }
 
-static R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
+internal R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
 {
 	DebugLogD(scene->log_channel, "Creating new geometry page...");
 
 	// We use vertex pulling so don't need to use VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT.
 	G_BufferAllocInfo vb_info = {0};
-	vb_info.usage =
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
-		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-		vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	vb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	vb_info.size = R_GEOMETRY_PAGE_VERTEX_BUFFER_SIZE;
+	vb_info.usage |= VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	vb_info.usage |= VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	//vb_info.usage |= VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
  
 	G_BufferAllocInfo ib_info = {0};
-	ib_info.usage =
-		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
-		VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT |
-		VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 	ib_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	ib_info.size = R_GEOMETRY_PAGE_INDEX_BUFFER_SIZE;
-
+	ib_info.usage |= VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
+	ib_info.usage |= VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
+	ib_info.usage |= VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT;
+	//ib_info.usage |= K_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KH;
+	
 	u32 max_vertices = vb_info.size / sizeof(R_GPU_ModelVertex);
 	u32 max_indices  = ib_info.size / sizeof(A_ModelIndex);
 	
@@ -268,12 +308,12 @@ static R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
 	return page;
 }
 
-static u32 R_ScenePageCount(const R_Scene *scene)
+internal u32 R_ScenePageCount(const R_Scene *scene)
 {
 	return scene->geometry_page_count;
 }
 
-static R_MaterialHandle R_SceneAddMaterial(R_Scene *scene, const R_Material *material)
+internal R_MaterialHandle R_SceneAddMaterial(R_Scene *scene, const R_Material *material)
 {
 	u32 slot_index = 0;
 
@@ -294,34 +334,34 @@ static R_MaterialHandle R_SceneAddMaterial(R_Scene *scene, const R_Material *mat
 	return handle;
 }
 
-static R_MaterialHandle R_SceneAddMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source)
+internal R_MaterialHandle R_SceneAddMaterialFromAssets(R_Scene *scene, const A_ModelMaterial *source)
 {
 	R_Material render_material = R_MaterialFromAsset(source);
 	return R_SceneAddMaterial(scene, &render_material);
 }
 
-static void R_SceneUpdateMaterial(R_Scene *scene, R_MaterialHandle handle, const R_Material *material)
+internal void R_SceneUpdateMaterial(R_Scene *scene, R_MaterialHandle handle, const R_Material *material)
 {
 	scene->cpu_materials[handle.index] = *material;
 	scene->material_buffer_dirty = true;
 }
 
-static void R_SceneFreeMaterial(R_Scene *scene, R_MaterialHandle handle)
+internal void R_SceneFreeMaterial(R_Scene *scene, R_MaterialHandle handle)
 {
 	SlotPoolFree(&scene->material_pool, handle.index);
 }
 
-static u32 R_SceneCountOfMaterials(const R_Scene *scene)
+internal u32 R_SceneCountOfMaterials(const R_Scene *scene)
 {
 	return SlotPoolLiveCount(&scene->material_pool);
 }
 
-static const R_Material *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle)
+internal const R_Material *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle)
 {
 	return &scene->cpu_materials[handle.index];
 }
 
-static void R_SceneFlushIfDirty(R_Scene *scene)
+internal void R_SceneFlushIfDirty(R_Scene *scene)
 {
 	if (scene->mesh_buffer_dirty)
 	{
@@ -356,7 +396,7 @@ static void R_SceneFlushIfDirty(R_Scene *scene)
 	}
 }
 
-static void R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)
+internal void R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)
 {
 	out->albedo_texture                       = R_SceneResolveToBindlessIndex(scene, material->albedo_texture);
 	out->normal_texture                       = R_SceneResolveToBindlessIndex(scene, material->normal_texture);
@@ -415,11 +455,11 @@ static void R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *m
 	out->alpha_mode                           = material->alpha_mode;
 }
 
-static u32 R_SceneResolveToBindlessIndex(const R_Scene *scene, G_TextureKey key)
+internal u32 R_SceneResolveToBindlessIndex(const R_Scene *scene, G_ResourceKey key)
 {
-	if (G_TextureKeyIsNull(key))
+	if (G_ResourceKeyIsNull(key))
 		return G_BINDLESS_INDEX_INVALID;
 
-	G_TextureViewKey view_key = G_DeviceTextureViewAuto(key);
+	G_ResourceKey view_key = G_DeviceTextureViewAuto(key);
 	return G_DeviceTextureViewBindless(view_key);
 }

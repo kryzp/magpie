@@ -42,7 +42,7 @@ struct AN_ClipKey
 	i32 value;
 };
 
-static AN_ClipKey AN_ClipKeyNull(void)
+internal AN_ClipKey AN_ClipKeyNull(void)
 {
 	AN_ClipKey null_key = {0};
 	null_key.value = -1;
@@ -50,7 +50,7 @@ static AN_ClipKey AN_ClipKeyNull(void)
 	return null_key;
 }
 
-static b32 AN_ClipKeyIsNull(AN_ClipKey k)
+internal b32 AN_ClipKeyIsNull(AN_ClipKey k)
 {
 	return k.value < 0;
 }
@@ -78,37 +78,37 @@ struct AN_Animator
    HELPERS
    ================================================== */
 
-static m4 AN_JointPoseToM4(AN_JointPose trs);
-static AN_JointPose AN_JointPoseBlend(AN_JointPose a, AN_JointPose b, f32 u);
+internal m4 AN_JointPoseToM4(AN_JointPose trs);
+internal AN_JointPose AN_JointPoseBlend(AN_JointPose a, AN_JointPose b, f32 u);
 
-static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
-static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts);
-static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *local_trs);
+internal f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts);
+internal AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts);
+internal void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *local_trs);
 
-static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n);
+internal f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n);
 
 
 /* ==================================================
    ANIMATOR
    ================================================== */
 
-static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle);
-static void AN_AnimatorTick(AN_Animator *animator, f32 global_time);
-static void AN_AnimatorUpdatePalette(AN_Animator *animator);
+internal void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle);
+internal void AN_AnimatorTick(AN_Animator *animator, f32 global_time);
+internal void AN_AnimatorUpdatePalette(AN_Animator *animator);
 
-static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name);
+internal AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name);
 
-static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time);
-static void AN_AnimatorStop(AN_Animator *animator);
+internal void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time);
+internal void AN_AnimatorStop(AN_Animator *animator);
 
-static void AN_AnimatorResume(AN_Animator *animator);
-static void AN_AnimatorPause(AN_Animator *animator, f32 global_time);
-static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time);
+internal void AN_AnimatorResume(AN_Animator *animator);
+internal void AN_AnimatorPause(AN_Animator *animator, f32 global_time);
+internal void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time);
 
-static b32 AN_AnimatorIsFinished(const AN_Animator *animator);
-static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator);
+internal b32 AN_AnimatorIsFinished(const AN_Animator *animator);
+internal f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator);
 
-static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index);
+internal AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index);
 
 
 #endif // ANIMATION_ANIMATOR_H

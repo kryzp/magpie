@@ -1,5 +1,5 @@
 
-static u32 E_PoolAllocSlot(E_TypePool *pool)
+internal u32 E_PoolAllocSlot(E_TypePool *pool)
 {
 	if (pool->free_index_count > 0)
 		return pool->free_indices[--pool->free_index_count];
@@ -9,7 +9,7 @@ static u32 E_PoolAllocSlot(E_TypePool *pool)
 	return pool->count++;
 }
 
-static void E_PoolFreeSlot(E_TypePool *pool, u32 index)
+internal void E_PoolFreeSlot(E_TypePool *pool, u32 index)
 {
 	AssertTrue(pool->free_index_count < pool->capacity);
 
@@ -19,7 +19,7 @@ static void E_PoolFreeSlot(E_TypePool *pool, u32 index)
 	pool->free_index_count++;
 }
 
-static void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
+internal void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 {
 	world->arena = arena;
 	world->log_channel = log_channel;
@@ -36,7 +36,7 @@ static void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 	DebugLogI(world->log_channel, "Initialized.");
 }
 
-static void E_WorldDestroy(E_World *world)
+internal void E_WorldDestroy(E_World *world)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
@@ -64,13 +64,13 @@ static void E_WorldDestroy(E_World *world)
 	DebugLogI(world->log_channel, "Destroyed.");
 }
 
-static void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
+internal void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active)
 {
 	DebugLogAssert(world->log_channel, layer_id < world->layer_count, "Asked for layer %u, which exceeded max layer count of %u.", layer_id, world->layer_count);
 	world->layers[layer_id].active = active;
 }
 
-static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
+internal u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 {
 	DebugLogAssert(world->log_channel,
 				   world->next_tid < E_WORLD_MAX_REGISTERED_TYPES,
@@ -97,7 +97,7 @@ static u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc)
 	return world->next_tid++;
 }
 
-static void E_WorldResolveInittingEntities(E_World *world)
+internal void E_WorldResolveInittingEntities(E_World *world)
 {
 	for (u32 i = 0; i < world->initting_entity_count; i++)
 	{
@@ -126,7 +126,7 @@ static void E_WorldResolveInittingEntities(E_World *world)
 	world->initting_entity_count = 0;
 }
 
-static void E_WorldFlush(E_World *world)
+internal void E_WorldFlush(E_World *world)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
@@ -159,7 +159,7 @@ static void E_WorldFlush(E_World *world)
 	}
 }
 
-static void E_WorldTickPreAnim(E_World *world, const E_TickContext *ctx)
+internal void E_WorldTickPreAnim(E_World *world, const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
@@ -193,7 +193,7 @@ static void E_WorldTickPreAnim(E_World *world, const E_TickContext *ctx)
 	}
 }
 
-static void E_WorldTickPostAnim(E_World *world, const E_TickContext *ctx)
+internal void E_WorldTickPostAnim(E_World *world, const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
@@ -227,7 +227,7 @@ static void E_WorldTickPostAnim(E_World *world, const E_TickContext *ctx)
 	}
 }
 
-static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
+internal void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
 {
 	for (u32 t = 0; t < world->next_tid; t++)
 	{
@@ -261,7 +261,7 @@ static void E_WorldTickPostPhysics(E_World *world, const E_TickContext *ctx)
 	}
 }
 
-static E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform)
+internal E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform)
 {
 	DebugLogAssert(world->log_channel,
 				   world->initting_entity_count < ArraySize(world->initting_entities),
@@ -283,7 +283,7 @@ static E_Handle E_WorldSpawn(E_World *world, u32 type, Transform transform)
 	return handle;
 }
 
-static void E_WorldKill(E_World *world, E_Handle handle)
+internal void E_WorldKill(E_World *world, E_Handle handle)
 {
 	void *entity = E_WorldGet(world, handle);
 
@@ -294,12 +294,12 @@ static void E_WorldKill(E_World *world, E_Handle handle)
 	}
 }
 
-static b32 E_WorldHandleIsValid(E_World *world, E_Handle handle)
+internal b32 E_WorldHandleIsValid(E_World *world, E_Handle handle)
 {
 	return E_WorldGet(world, handle) != NULL;
 }
 
-static void *E_WorldGet(E_World *world, E_Handle handle)
+internal void *E_WorldGet(E_World *world, E_Handle handle)
 {
 	if (handle.generation == 0)
 		return NULL;
@@ -322,7 +322,7 @@ static void *E_WorldGet(E_World *world, E_Handle handle)
 	return pool->data + (handle.slot * store->desc.stride);
 }
 
-static E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type)
+internal E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type)
 {
 	E_TypePool *pool = &world->type_stores[type].pool;
 
@@ -335,7 +335,7 @@ static E_GetAllReceipt E_WorldGetAll(E_World *world, u32 type)
 	return receipt;
 }
 
-static E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
+internal E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 rotation, u16 layer_id)
 {
 	DebugLogAssert(world->log_channel,
 				   world->marker_count < ArraySize(world->markers),
@@ -353,7 +353,7 @@ static E_Marker *E_WorldAddMarker(E_World *world, String8 name, v3 position, v4 
 	return m;
 }
 
-static E_Marker *E_WorldFindMarker(E_World *world, String8 name)
+internal E_Marker *E_WorldFindMarker(E_World *world, String8 name)
 {
 	u64 hash = HashStr8(name);
 	

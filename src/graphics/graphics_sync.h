@@ -17,10 +17,10 @@ struct G_AccessSt
 	 VK_ACCESS_2_MEMORY_WRITE_BIT |						\
 	 VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT)
 
-static VkMemoryBarrier2 G_SyncMemoryBarrier(const G_AccessSt *src,
+internal VkMemoryBarrier2 G_SyncMemoryBarrier(const G_AccessSt *src,
 											const G_AccessSt *dst);
 
-static VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
+internal VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
 												  const G_AccessSt *src,
 												  const G_AccessSt *dst,
 												  VkImageLayout src_layout,
@@ -28,7 +28,7 @@ static VkImageMemoryBarrier2 G_SyncTextureBarrier(const G_Texture *texture,
 												  u32 base_mip,   u32 mip_count,    // VK_REMAINING_MIP_LEVELS
 												  u32 base_layer, u32 layer_count); // VK_REMAINING_ARRAY_LAYERS
 
-static VkBufferMemoryBarrier2 G_SyncBufferBarrier(const G_Buffer *buffer,
+internal VkBufferMemoryBarrier2 G_SyncBufferBarrier(const G_Buffer *buffer,
 												  const G_AccessSt *src,
 												  const G_AccessSt *dst,
 												  u64 offset, u64 size); // VK_WHOLE_SIZE

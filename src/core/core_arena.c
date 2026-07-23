@@ -1,5 +1,5 @@
 
-static Arena ArenaAlloc(u64 size)
+internal Arena ArenaAlloc(u64 size)
 {
 	u64 page = osapi->GetPageSize();
 	u64 reserve_size = MemAlignUp(size, page);
@@ -13,7 +13,7 @@ static Arena ArenaAlloc(u64 size)
 	return arena;
 }
 
-static void ArenaRelease(Arena *arena)
+internal void ArenaRelease(Arena *arena)
 {
 	if (!arena->base)
 		DebugPrintB("Arena (%p) attempted to release by null base pointer.", arena);
@@ -21,7 +21,7 @@ static void ArenaRelease(Arena *arena)
 	osapi->VirtualRelease(arena->base);
 }
 
-static u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
+internal u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 {
 	DebugPrintAssert(parent->capacity >= parent->used, "Arena (%p) out of space (%llu bytes used >= %llu bytes of capacity).", parent, parent->used, parent->capacity);
 	
@@ -40,7 +40,7 @@ static u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
 	return safe_size;
 }
 
-static void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
+internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 {
 	DebugPrintAssert(arena, "Arena must not be NULL!");
 	DebugPrintAssert(arena->base, "Arena base pointer must not be NULL!");
@@ -88,13 +88,13 @@ static void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 	return mem;
 }
 
-static void ArenaPopTo(Arena *arena, u64 to)
+internal void ArenaPopTo(Arena *arena, u64 to)
 {
 	AssertTrue(to <= arena->capacity);
 	arena->used = to;
 }
 
-static void ArenaPop(Arena *arena, u64 bytes)
+internal void ArenaPop(Arena *arena, u64 bytes)
 {
 	if (arena->used <= bytes)
 		arena->used = 0;
@@ -103,7 +103,7 @@ static void ArenaPop(Arena *arena, u64 bytes)
 }
 
 /*
-static void ArenaResizeLastBy(Arena *arena, u64 bytes)
+internal void ArenaResizeLastBy(Arena *arena, u64 bytes)
 {
    	if (arena->used + bytes > arena->capacity)
 	{
@@ -114,7 +114,7 @@ static void ArenaResizeLastBy(Arena *arena, u64 bytes)
 	arena->used += bytes;
 }
 
-static void ArenaResizeLastTo(Arena *arena, u64 bytes)
+internal void ArenaResizeLastTo(Arena *arena, u64 bytes)
 {
 	u64 new_used = arena->last_alloc_offset + bytes;
 
@@ -128,7 +128,7 @@ static void ArenaResizeLastTo(Arena *arena, u64 bytes)
 }
 */
 
-static void ArenaReset(Arena *arena)
+internal void ArenaReset(Arena *arena)
 {
 	// TODO: this is just for debug purposes so remove in release
 	//       0xCD is the standard sentinel for "use-after-free" indicators.
@@ -138,7 +138,7 @@ static void ArenaReset(Arena *arena)
 	arena->used = 0;
 }
 
-static void ArenaResetAndDecommit(Arena *arena)
+internal void ArenaResetAndDecommit(Arena *arena)
 {
 	if (arena->committed > 0)
 	{
@@ -149,7 +149,7 @@ static void ArenaResetAndDecommit(Arena *arena)
 	arena->used = 0;
 }
 
-static void ArenaZero(Arena *arena)
+internal void ArenaZero(Arena *arena)
 {
 	MemSet(arena->base, 0, arena->capacity);
 }

@@ -16,7 +16,7 @@
 typedef struct R_GraphTexture R_GraphTexture;
 struct R_GraphTexture
 {
-	G_TextureKey physical_key;
+	G_ResourceKey physical_key;
 	R_TextureInfo texture_info;
 	
 	u32 first_pass_index;
@@ -26,13 +26,13 @@ struct R_GraphTexture
 	R_ResourceState state;
 
 	b32 is_imported;
-	G_TextureKey imported_key;
+	G_ResourceKey imported_key;
 };
 
 typedef struct R_GraphBuffer R_GraphBuffer;
 struct R_GraphBuffer
 {
-	G_BufferKey physical_key;
+	G_ResourceKey physical_key;
 	R_BufferInfo buffer_info;
 	
 	u32 first_pass_index;
@@ -42,7 +42,7 @@ struct R_GraphBuffer
 	R_ResourceState state;
 
 	b32 is_imported;
-	G_BufferKey imported_key;
+	G_ResourceKey imported_key;
 };
 
 
@@ -74,14 +74,14 @@ struct R_GraphBufVersion
 typedef struct R_GraphImportedTexture R_GraphImportedTexture;
 struct R_GraphImportedTexture
 {
-	G_TextureKey external_key;
+	G_ResourceKey external_key;
 	R_GraphTexHandle handle;
 };
 
 typedef struct R_GraphImportedBuffer R_GraphImportedBuffer;
 struct R_GraphImportedBuffer
 {
-	G_BufferKey external_key;
+	G_ResourceKey external_key;
 	R_GraphBufHandle handle;
 };
 
@@ -121,9 +121,9 @@ struct R_Graph
    CORE
    ================================================== */
 
-static void R_GraphInit    (R_Graph *graph, Arena *arena, LOG_Channel log_channel);
-static void R_GraphDestroy (R_Graph *graph);
-static void R_GraphReset   (R_Graph *graph);
+internal void R_GraphInit    (R_Graph *graph, Arena *arena, LOG_Channel log_channel);
+internal void R_GraphDestroy (R_Graph *graph);
+internal void R_GraphReset   (R_Graph *graph);
 
 
 /* ==================================================
@@ -132,81 +132,74 @@ static void R_GraphReset   (R_Graph *graph);
 
 // --- Passes
 
-static R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type);
+internal R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type);
 
 
 // --- Resources
 
-static R_GraphTexHandle R_GraphCreateTexture (R_Graph *graph, const R_TextureInfo *info);
-static R_GraphBufHandle R_GraphCreateBuffer  (R_Graph *graph, const R_BufferInfo *info);
+internal R_GraphTexHandle R_GraphCreateTexture (R_Graph *graph, const R_TextureInfo *info);
+internal R_GraphBufHandle R_GraphCreateBuffer  (R_Graph *graph, const R_BufferInfo *info);
 
-static R_GraphTexHandle R_GraphImportTexture (R_Graph *graph, G_TextureKey external_key);
-static R_GraphBufHandle R_GraphImportBuffer  (R_Graph *graph, G_BufferKey external_key);
+internal R_GraphTexHandle R_GraphImportTexture (R_Graph *graph, G_ResourceKey external_key);
+internal R_GraphBufHandle R_GraphImportBuffer  (R_Graph *graph, G_ResourceKey external_key);
 
 
 // --- Versioning
 
-static R_GraphTexHandle R_GraphPushTexVersion (R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index);
-static R_GraphBufHandle R_GraphPushBufVersion (R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index);
+internal R_GraphTexHandle R_GraphPushTexVersion (R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index);
+internal R_GraphBufHandle R_GraphPushBufVersion (R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index);
 
 
 /* ==================================================
    COMPILATION
    ================================================== */
 
-static void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain);
+internal void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain);
 
-static void R_GraphPropagateDependencies     (R_Graph *graph);
-static void R_GraphBackpropagateDependencies (R_Graph *graph);
-static void R_GraphAllocateResources         (R_Graph *graph, const G_Swapchain *swapchain);
-static void R_GraphGenerateBarriers          (R_Graph *graph);
+internal void R_GraphPropagateDependencies     (R_Graph *graph);
+internal void R_GraphBackpropagateDependencies (R_Graph *graph);
+internal void R_GraphAllocateResources         (R_Graph *graph, const G_Swapchain *swapchain);
+internal void R_GraphGenerateBarriers          (R_Graph *graph);
 
-static void R_GraphSyncTextureRead  (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
-static void R_GraphSyncTextureWrite (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
+internal void R_GraphSyncTextureRead  (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
+internal void R_GraphSyncTextureWrite (R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge);
 
-static void R_GraphSyncBufferRead   (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
-static void R_GraphSyncBufferWrite  (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferRead   (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
+internal void R_GraphSyncBufferWrite  (R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge);
 
 
 /* ==================================================
    EXECUTION
    ================================================== */
 
-static void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
-static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
+internal void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
+internal void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd);
 
 
 /* ==================================================
    RESOURCE RESOLUTION
    ================================================== */
 
-static G_TextureKey     R_GraphResolveTexture     (const R_Graph *graph, R_GraphTexHandle handle);
-static G_TextureViewKey R_GraphResolveTextureView (const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range);
-static G_BufferKey      R_GraphResolveBuffer      (const R_Graph *graph, R_GraphBufHandle handle);
-static R_BufferRange    R_GraphResolveBufferRange (const R_Graph *graph, R_GraphBufHandle handle);
+internal G_ResourceKey R_GraphResolveTexture     (const R_Graph *graph, R_GraphTexHandle handle);
+internal G_ResourceKey R_GraphResolveTextureView (const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range);
+internal G_ResourceKey R_GraphResolveBuffer      (const R_Graph *graph, R_GraphBufHandle handle);
+internal R_BufferRange R_GraphResolveBufferRange (const R_Graph *graph, R_GraphBufHandle handle);
 
 
 /* ==================================================
    HELPERS
    ================================================== */
 
-static void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle);
-static void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter);
+internal void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle);
+internal void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter);
 
-static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass);
+internal G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass);
 
-static R_GraphTexture *R_GraphTextureFromHandle (R_Graph *graph, R_GraphTexHandle handle);
-static R_GraphBuffer  *R_GraphBufferFromHandle  (R_Graph *graph, R_GraphBufHandle handle);
+internal R_GraphTexture *R_GraphTextureFromHandle (R_Graph *graph, R_GraphTexHandle handle);
+internal R_GraphBuffer  *R_GraphBufferFromHandle  (R_Graph *graph, R_GraphBufHandle handle);
 
-static b32 R_GraphTexVersionIsUnwritten (const R_Graph *graph, R_GraphTexHandle handle);
-static b32 R_GraphBufVersionIsUnwritten (const R_Graph *graph, R_GraphBufHandle handle);
-
-
-/* ==================================================
-   MSAA
-   ================================================== */
-
-static R_GraphMsaaTexture R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples);
+internal b32 R_GraphTexVersionIsUnwritten (const R_Graph *graph, R_GraphTexHandle handle);
+internal b32 R_GraphBufVersionIsUnwritten (const R_Graph *graph, R_GraphBufHandle handle);
 
 
 #endif // RENDER_GRAPH_H

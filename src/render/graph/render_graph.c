@@ -1,5 +1,5 @@
 
-static R_GraphTexture *R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
+internal R_GraphTexture *R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle handle)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(handle), "Handle is null.");
 	DebugLogAssert(graph->log_channel, handle.value <= graph->texture_ver_count, "Handle version is invalid.");
@@ -12,7 +12,7 @@ static R_GraphTexture *R_GraphTextureFromHandle(R_Graph *graph, R_GraphTexHandle
 	return &graph->texture_res[res_index];
 }
 
-static R_GraphBuffer *R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
+internal R_GraphBuffer *R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle handle)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(handle), "Handle is null.");
 	DebugLogAssert(graph->log_channel, handle.value <= graph->buffer_ver_count, "Handle version is invalid.");
@@ -25,19 +25,19 @@ static R_GraphBuffer *R_GraphBufferFromHandle(R_Graph *graph, R_GraphBufHandle h
 	return &graph->buffer_res[res_index];
 }
 
-static b32 R_GraphTexVersionIsUnwritten(const R_Graph *graph, R_GraphTexHandle handle)
+internal b32 R_GraphTexVersionIsUnwritten(const R_Graph *graph, R_GraphTexHandle handle)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(handle), "Handle is null.");
 	return graph->texture_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
-static b32 R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
+internal b32 R_GraphBufVersionIsUnwritten(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(handle), "Handle is null.");
 	return graph->buffer_ver[handle.value - 1].writer_pass == R_GRAPH_INVALID_INDEX;
 }
 
-static void R_GraphInit(R_Graph *graph, Arena *arena, LOG_Channel log_channel)
+internal void R_GraphInit(R_Graph *graph, Arena *arena, LOG_Channel log_channel)
 {
 	graph->permanent_arena = arena;
 	graph->log_channel = log_channel;
@@ -49,14 +49,14 @@ static void R_GraphInit(R_Graph *graph, Arena *arena, LOG_Channel log_channel)
 	DebugLogI(graph->log_channel, "Initialized.");
 }
 
-static void R_GraphDestroy(R_Graph *graph)
+internal void R_GraphDestroy(R_Graph *graph)
 {
 	R_ResourcePoolDestroy(&graph->pool);
 	
 	DebugLogI(graph->log_channel, "Destroyed.");
 }
 
-static void R_GraphReset(R_Graph *graph)
+internal void R_GraphReset(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->texture_res_count; i++)
 	{
@@ -64,7 +64,7 @@ static void R_GraphReset(R_Graph *graph)
 
 		if (t->is_imported)
 			R_ResourceTrackerSetTexture(&graph->tracker, t->imported_key, t->state);
-		else if (!G_TextureKeyIsNull(t->physical_key))
+		else if (!G_ResourceKeyIsNull(t->physical_key))
 			R_ResourcePoolUpdateTexture(&graph->pool, t->physical_key, &t->state);
 	}
 	
@@ -74,7 +74,7 @@ static void R_GraphReset(R_Graph *graph)
 
 		if (b->is_imported)
 			R_ResourceTrackerSetBuffer(&graph->tracker, b->imported_key, b->state);
-		else if (!G_BufferKeyIsNull(b->physical_key))
+		else if (!G_ResourceKeyIsNull(b->physical_key))
 			R_ResourcePoolUpdateBuffer(&graph->pool, b->physical_key, &b->state);
 	}
 
@@ -94,7 +94,7 @@ static void R_GraphReset(R_Graph *graph)
 	R_ResourcePoolFlush(&graph->pool);
 }
 
-static R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
+internal R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 {
 	DebugLogAssert(graph->log_channel, graph->pass_count < ArraySize(graph->passes), "Cannot add more passes.");
 
@@ -113,17 +113,17 @@ static R_Pass *R_GraphAdd(R_Graph *graph, String8 name, R_PassType type)
 	return pass;
 }
 
-static void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle)
+internal void R_GraphSetBackbuffer(R_Graph *graph, R_GraphTexHandle handle)
 {
 	graph->backbuffer_handle = handle;
 }
 
-static void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
+internal void R_GraphSetPresentFilter(R_Graph *graph, VkFilter filter)
 {
 	graph->present_filter = filter;
 }
 
-static R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
+internal R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo *info)
 {
 	DebugLogAssert(graph->log_channel, graph->texture_res_count < ArraySize(graph->texture_res), "Cannot add more texture resources.");
 	DebugLogAssert(graph->log_channel, graph->texture_ver_count < ArraySize(graph->texture_ver), "Cannot add more texture versions.");
@@ -148,7 +148,7 @@ static R_GraphTexHandle R_GraphCreateTexture(R_Graph *graph, const R_TextureInfo
 	return (R_GraphTexHandle) { ver_index + 1 };
 }
 
-static R_GraphBufHandle R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
+internal R_GraphBufHandle R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *info)
 {
 	DebugLogAssert(graph->log_channel, graph->buffer_res_count < ArraySize(graph->buffer_res), "Cannot add more buffer versions.");
 	DebugLogAssert(graph->log_channel, graph->buffer_ver_count < ArraySize(graph->buffer_ver), "Cannot add more buffer versions.");
@@ -173,11 +173,11 @@ static R_GraphBufHandle R_GraphCreateBuffer(R_Graph *graph, const R_BufferInfo *
 	return (R_GraphBufHandle) { ver_index + 1 };
 }
 
-static R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_TextureKey external_key)
+internal R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_ResourceKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_texture_count; i++)
 	{
-		if (G_TextureKeyMatch(graph->imported_textures[i].external_key, external_key))
+		if (G_ResourceKeyMatch(graph->imported_textures[i].external_key, external_key))
 			return graph->imported_textures[i].handle;
 	}
 
@@ -245,11 +245,11 @@ static R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_TextureKey extern
 	return handle;
 }
 
-static R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_BufferKey external_key)
+internal R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_ResourceKey external_key)
 {
 	for (u32 i = 0; i < graph->imported_buffer_count; i++)
 	{
-		if (G_BufferKeyMatch(graph->imported_buffers[i].external_key, external_key))
+		if (G_ResourceKeyMatch(graph->imported_buffers[i].external_key, external_key))
 			return graph->imported_buffers[i].handle;
 	}
 
@@ -305,7 +305,7 @@ static R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_BufferKey external
 	return handle;
 }
 
-static R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index)
+internal R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle parent, u32 writer_pass_index)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphTexHandleIsNull(parent), "Parent handle is null.");
 	DebugLogAssert(graph->log_channel, graph->texture_ver_count < ArraySize(graph->texture_ver), "Cannot add more texture versions.");
@@ -325,7 +325,7 @@ static R_GraphTexHandle R_GraphPushTexVersion(R_Graph *graph, R_GraphTexHandle p
 	return (R_GraphTexHandle) { ver_index + 1 };
 }
 
-static R_GraphBufHandle R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index)
+internal R_GraphBufHandle R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle parent, u32 writer_pass_index)
 {
 	DebugLogAssert(graph->log_channel, !R_GraphBufHandleIsNull(parent), "Parent handle is null.");
 	DebugLogAssert(graph->log_channel, graph->buffer_ver_count < ArraySize(graph->buffer_ver), "Cannot add more buffer versions.");
@@ -345,7 +345,7 @@ static R_GraphBufHandle R_GraphPushBufVersion(R_Graph *graph, R_GraphBufHandle p
 	return (R_GraphBufHandle) { ver_index + 1 };
 }
 
-static void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
+internal void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->texture_res_count; i++)
 	{
@@ -368,7 +368,7 @@ static void R_GraphCompile(R_Graph *graph, const G_Swapchain *swapchain)
 	R_GraphGenerateBarriers          (graph);
 }
 
-static void R_GraphPropagateDependencies(R_Graph *graph)
+internal void R_GraphPropagateDependencies(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -421,7 +421,7 @@ static void R_GraphPropagateDependencies(R_Graph *graph)
 	}
 }
 
-static void R_GraphBackpropagateDependencies(R_Graph *graph)
+internal void R_GraphBackpropagateDependencies(R_Graph *graph)
 {
 	for (i32 i = (i32)graph->pass_count - 1; i >= 0; i--)
 	{
@@ -530,7 +530,7 @@ static void R_GraphBackpropagateDependencies(R_Graph *graph)
 	}
 }
 
-static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
+internal void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchain)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -545,7 +545,7 @@ static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchai
 
 			R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-			if (!t->is_imported && G_TextureKeyIsNull(t->physical_key))
+			if (!t->is_imported && G_ResourceKeyIsNull(t->physical_key))
 			{
 				if (t->texture_info.size_class == R_SizeClass_SwapchainRelative)
 				{
@@ -584,7 +584,7 @@ static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchai
 			{
 				R_GraphTexture *rt = R_GraphTextureFromHandle(graph, edge->resolve_handle);
 
-				if (!rt->is_imported && G_TextureKeyIsNull(rt->physical_key))
+				if (!rt->is_imported && G_ResourceKeyIsNull(rt->physical_key))
 				{
 					if (rt->texture_info.size_class == R_SizeClass_SwapchainRelative)
 					{
@@ -608,7 +608,7 @@ static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchai
 			if (b->is_imported)
 				continue;
 
-			if (!G_BufferKeyIsNull(b->physical_key))
+			if (!G_ResourceKeyIsNull(b->physical_key))
 				continue;
 
 			b->physical_key = R_ResourcePoolAcquireBuffer(&graph->pool,
@@ -618,7 +618,7 @@ static void R_GraphAllocateResources(R_Graph *graph, const G_Swapchain *swapchai
 	}
 }
 
-static void R_GraphGenerateBarriers(R_Graph *graph)
+internal void R_GraphGenerateBarriers(R_Graph *graph)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -677,11 +677,11 @@ static void R_GraphGenerateBarriers(R_Graph *graph)
 	}
 }
 
-static void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
+internal void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-	if (G_TextureKeyIsNull(t->physical_key))
+	if (G_ResourceKeyIsNull(t->physical_key))
 		return;
 
 	R_ResourceState *st = &t->state;
@@ -720,11 +720,11 @@ static void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassTex
 	}
 }
 
-static void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
+internal void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTextureEdge *edge)
 {
 	R_GraphTexture *t = R_GraphTextureFromHandle(graph, edge->handle);
 
-	if (G_TextureKeyIsNull(t->physical_key))
+	if (G_ResourceKeyIsNull(t->physical_key))
 		return;
 
 	R_ResourceState *st = &t->state;
@@ -789,11 +789,11 @@ static void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_PassTe
 	st->read_stages  = 0;
 }
 
-static void R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
+internal void R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
-	if (G_BufferKeyIsNull(b->physical_key))
+	if (G_ResourceKeyIsNull(b->physical_key))
 		return;
 
 	R_ResourceState *st = &b->state;
@@ -827,11 +827,11 @@ static void R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBuff
 	}
 }
 
-static void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
+internal void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBufferEdge *edge)
 {
 	R_GraphBuffer *b = R_GraphBufferFromHandle(graph, edge->handle);
 
-	if (G_BufferKeyIsNull(b->physical_key))
+	if (G_ResourceKeyIsNull(b->physical_key))
 		return;
 
 	R_ResourceState *st = &b->state;
@@ -888,7 +888,7 @@ static void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassBuf
 	st->read_stages  = 0;
 }
 
-static void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
+internal void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
 {
 	for (u32 i = 0; i < graph->pass_count; i++)
 	{
@@ -940,15 +940,15 @@ static void R_GraphExecute(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBu
 	}
 }
 
-static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
+internal void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapchain, G_CmdBuffer *cmd)
 {
 	if (R_GraphTexHandleIsNull(graph->backbuffer_handle))
 		return;
 
 	R_GraphTexture *backbuffer = R_GraphTextureFromHandle(graph, graph->backbuffer_handle);
 
-	G_TextureKey src_texture_key = backbuffer->physical_key;
-	G_TextureKey dst_texture_key = swapchain->frames[swapchain->current_frame_index].texture_key;
+	G_ResourceKey src_texture_key = backbuffer->physical_key;
+	G_ResourceKey dst_texture_key = swapchain->frames[swapchain->current_frame_index].texture_key;
 	
 	const G_Texture *src_texture = G_DeviceTextureFromKey(src_texture_key);
 	const G_Texture *dst_texture = G_DeviceTextureFromKey(dst_texture_key);
@@ -1035,13 +1035,13 @@ static void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapcha
  * THE RESOURCE NEVER GETS MODIFIED AS FAR AS I CARE
  */
 
-static G_TextureKey R_GraphResolveTexture(const R_Graph *graph, R_GraphTexHandle handle)
+internal G_ResourceKey R_GraphResolveTexture(const R_Graph *graph, R_GraphTexHandle handle)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 	return t->physical_key;
 }
 
-static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range)
+internal G_ResourceKey R_GraphResolveTextureView(const R_Graph *graph, R_GraphTexHandle handle, G_SubresourceRange range)
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 
@@ -1055,13 +1055,13 @@ static G_TextureViewKey R_GraphResolveTextureView(const R_Graph *graph, R_GraphT
 	return G_DeviceTextureViewFetch(&create_info);
 }
 
-static G_BufferKey R_GraphResolveBuffer(const R_Graph *graph, R_GraphBufHandle handle)
+internal G_ResourceKey R_GraphResolveBuffer(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
 	return b->physical_key;
 }
 
-static R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph, R_GraphBufHandle handle)
+internal R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph, R_GraphBufHandle handle)
 {
 	const R_GraphBuffer *b = R_GraphBufferFromHandle((R_Graph *)graph, handle);
 
@@ -1073,7 +1073,7 @@ static R_BufferRange R_GraphResolveBufferRange(const R_Graph *graph, R_GraphBufH
 	return range;
 }
 
-static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
+internal G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass *pass)
 {
 	G_RenderInfo render_info = {0};
 	
@@ -1096,7 +1096,7 @@ static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass
 		render_info.width  = MaxValue(1u, (u32)info->size_x >> out->attachment_range.base_mip);
 		render_info.height = MaxValue(1u, (u32)info->size_y >> out->attachment_range.base_mip);
 
-		G_TextureViewKey view = R_GraphResolveTextureView(graph, out->handle, out->attachment_range);
+		G_ResourceKey view = R_GraphResolveTextureView(graph, out->handle, out->attachment_range);
 
 		VkRenderingAttachmentInfo vk_info = {0};
 		vk_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -1109,7 +1109,7 @@ static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass
 
 		if (!R_GraphTexHandleIsNull(out->resolve_handle))
 		{
-			G_TextureViewKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
+			G_ResourceKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
 
 			vk_info.resolveImageView = G_DeviceTextureViewFromKey(resolve_view)->vk_handle;
 			vk_info.resolveImageLayout = out->resolve_layout;
@@ -1150,19 +1150,4 @@ static G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pass
 	}
 
 	return render_info;
-}
-
-static R_GraphMsaaTexture R_GraphCreateMsaa(R_Graph *graph, const R_TextureInfo *base, VkSampleCountFlagBits samples)
-{
-	R_TextureInfo msaa_info = *base;
-	R_TextureInfo resolve_info = *base;
-
-	msaa_info.samples = samples;
-	resolve_info.samples = 1;
-
-	R_GraphMsaaTexture pair = {0};
-	pair.msaa = R_GraphCreateTexture(graph, &msaa_info);
-	pair.resolved = R_GraphCreateTexture(graph, &resolve_info);
-
-	return pair;
 }

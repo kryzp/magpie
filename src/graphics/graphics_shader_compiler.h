@@ -17,11 +17,11 @@ struct G_ShaderCompiler
 	void *global_session;
 };
 
-static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel);
-static void G_ShaderCompilerShutdown(void);
-static void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler);
+internal void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel);
+internal void G_ShaderCompilerShutdown(void);
+internal void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler);
 
-static G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
+internal G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
 													  String8 source_path,
 													  u32 search_path_count, const String8 *search_paths);
 

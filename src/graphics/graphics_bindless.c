@@ -1,5 +1,5 @@
 
-static VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind)
+internal VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind)
 {
 	switch (kind)
 	{
@@ -14,7 +14,7 @@ static VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind)
 	return (VkDescriptorType)0;
 }
 
-static void G_BindlessPushUpdate(G_Bindless *bindless,
+internal void G_BindlessPushUpdate(G_Bindless *bindless,
 					   G_BindlessKind kind, u32 handle,
 					   VkSampler sampler, VkImageView view)
 {
@@ -30,7 +30,7 @@ static void G_BindlessPushUpdate(G_Bindless *bindless,
 	bindless->update_count++;
 }
 
-static u32 G_BindlessRegisterSampler(G_Bindless *bindless, VkSampler sampler)
+internal u32 G_BindlessRegisterSampler(G_Bindless *bindless, VkSampler sampler)
 {
 	u32 index = 0;
 
@@ -51,7 +51,7 @@ static u32 G_BindlessRegisterSampler(G_Bindless *bindless, VkSampler sampler)
 	return index;
 }
 
-static u32 G_BindlessRegisterView(G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage)
+internal u32 G_BindlessRegisterView(G_Bindless *bindless, VkImageView view, b32 is_cubemap, b32 is_also_storage)
 {
 	u32 index = 0;
 
@@ -72,12 +72,12 @@ static u32 G_BindlessRegisterView(G_Bindless *bindless, VkImageView view, b32 is
 	return index;
 }
 
-static void G_BindlessUpdateSampler(G_Bindless *bindless, u32 handle, VkSampler sampler)
+internal void G_BindlessUpdateSampler(G_Bindless *bindless, u32 handle, VkSampler sampler)
 {
 	G_BindlessPushUpdate(bindless, G_BindlessKind_Sampler, handle, sampler, VK_NULL_HANDLE);
 }
 
-static void G_BindlessUpdateView(G_Bindless *bindless, u32 handle, VkImageView view, b32 is_cubemap, b32 is_also_storage)
+internal void G_BindlessUpdateView(G_Bindless *bindless, u32 handle, VkImageView view, b32 is_cubemap, b32 is_also_storage)
 {
 	G_BindlessKind kind = is_cubemap
 		? G_BindlessKind_SampledCubemap
@@ -91,7 +91,7 @@ static void G_BindlessUpdateView(G_Bindless *bindless, u32 handle, VkImageView v
 	}
 }
 
-static void G_BindlessFreeSampler(G_Bindless *bindless, u32 handle)
+internal void G_BindlessFreeSampler(G_Bindless *bindless, u32 handle)
 {
 	AssertTrue(bindless->free_sampler_count < ArraySize(bindless->free_samplers));
 	
@@ -99,7 +99,7 @@ static void G_BindlessFreeSampler(G_Bindless *bindless, u32 handle)
 	bindless->free_sampler_count++;
 }
 
-static void G_BindlessFreeView(G_Bindless *bindless, u32 handle)
+internal void G_BindlessFreeView(G_Bindless *bindless, u32 handle)
 {
 	AssertTrue(bindless->free_view_count < ArraySize(bindless->free_views));
 

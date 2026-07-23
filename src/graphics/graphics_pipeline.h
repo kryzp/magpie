@@ -24,7 +24,7 @@ struct G_RenderInfo
 typedef struct G_GraphicsPipelineDef G_GraphicsPipelineDef;
 struct G_GraphicsPipelineDef
 {
-	G_ShaderKey program;
+	G_ResourceKey program;
 
 	VkPrimitiveTopology topology;
 	VkCullModeFlags cull_mode;
@@ -48,12 +48,12 @@ struct G_GraphicsPipelineDef
 typedef struct G_ComputePipelineDef G_ComputePipelineDef;
 struct G_ComputePipelineDef
 {
-	G_ShaderKey program;
+	G_ResourceKey program;
 };
 
-static G_GraphicsPipelineDef G_GraphicsPipelineDefInit     (G_ShaderKey program);
-static G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo (G_ShaderKey program, const G_RenderInfo *info);
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefInit(G_ResourceKey program);
+internal G_GraphicsPipelineDef G_GraphicsPipelineDefFromInfo(G_ResourceKey program, const G_RenderInfo *info);
 
-static G_ComputePipelineDef  G_ComputePipelineDefInit      (G_ShaderKey program);
+internal G_ComputePipelineDef  G_ComputePipelineDefInit(G_ResourceKey program);
 
 #endif // GRAPHICS_PIPELINE_H

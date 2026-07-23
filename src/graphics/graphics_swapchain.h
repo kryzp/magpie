@@ -6,10 +6,10 @@
 typedef struct G_SwapchainFrame G_SwapchainFrame;
 struct G_SwapchainFrame
 {
-	G_TextureKey texture_key;
+	G_ResourceKey texture_key;
 	G_TextureView texture_view;
 	
-	VkSemaphore render_finished_semaphore; // Signaled when the OS let's us present.
+	VkSemaphore render_finished_semaphore; // Signaled when the OS lets us present.
 };
 
 typedef struct G_Swapchain G_Swapchain;

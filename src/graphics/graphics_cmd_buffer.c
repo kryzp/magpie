@@ -1,5 +1,5 @@
 
-static void G_CmdBegin(const G_CmdBuffer *cmd)
+internal void G_CmdBegin(const G_CmdBuffer *cmd)
 {
 	VkCommandBufferBeginInfo begin_info = {0};
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -9,13 +9,13 @@ static void G_CmdBegin(const G_CmdBuffer *cmd)
 			   "Failed to begin recording instant command buffer.");
 }
 
-static void G_CmdEnd(const G_CmdBuffer *cmd)
+internal void G_CmdEnd(const G_CmdBuffer *cmd)
 {
 	G_VK_CHECK(vkEndCommandBuffer(cmd->vk_handle),
 			   "Failed to record command buffer.");
 }
 
-static void G_CmdBeginRendering(const G_CmdBuffer *cmd, const G_RenderInfo *info)
+internal void G_CmdBeginRendering(const G_CmdBuffer *cmd, const G_RenderInfo *info)
 {
 	VkRenderingInfo rendering_info = {0};
 	rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
@@ -50,12 +50,12 @@ static void G_CmdBeginRendering(const G_CmdBuffer *cmd, const G_RenderInfo *info
 	G_CmdSetScissor(cmd, scissor);
 }
 
-static void G_CmdEndRendering(const G_CmdBuffer *cmd)
+internal void G_CmdEndRendering(const G_CmdBuffer *cmd)
 {
 	vkCmdEndRendering(cmd->vk_handle);
 }
 
-static void G_CmdSetViewport(const G_CmdBuffer *cmd, VkViewport viewport)
+internal void G_CmdSetViewport(const G_CmdBuffer *cmd, VkViewport viewport)
 {
 	// Vulkan uses a Y+ down coordinate system, but
 	// we use Y+ up, so we flip the viewport internally
@@ -72,15 +72,16 @@ static void G_CmdSetViewport(const G_CmdBuffer *cmd, VkViewport viewport)
 	vkCmdSetViewport(cmd->vk_handle, 0, 1, &corrected_viewport);
 }
 
-static void G_CmdSetScissor(const G_CmdBuffer *cmd, VkRect2D scissor)
+internal void G_CmdSetScissor(const G_CmdBuffer *cmd, VkRect2D scissor)
 {
 	vkCmdSetScissor(cmd->vk_handle, 0, 1, &scissor);
 }
 
-static void G_CmdPipelineBarrier(const G_CmdBuffer *cmd, VkDependencyFlags dependency_flags,
-								 u32 memory_barrier_count, const VkMemoryBarrier2 *memory_barriers,
-								 u32 buffer_barrier_count, const VkBufferMemoryBarrier2 *buffer_barriers,
-								 u32 image_barrier_count,  const VkImageMemoryBarrier2 *image_barriers)
+internal void G_CmdPipelineBarrier(const G_CmdBuffer *cmd,
+								   VkDependencyFlags dependency_flags,
+								   u32 memory_barrier_count, const VkMemoryBarrier2 *memory_barriers,
+								   u32 buffer_barrier_count, const VkBufferMemoryBarrier2 *buffer_barriers,
+								   u32 image_barrier_count, const VkImageMemoryBarrier2 *image_barriers)
 {
 	VkDependencyInfo dependency = {0};
 	dependency.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -98,11 +99,11 @@ static void G_CmdPipelineBarrier(const G_CmdBuffer *cmd, VkDependencyFlags depen
 	vkCmdPipelineBarrier2(cmd->vk_handle, &dependency);
 }
 
-static void G_CmdBindDescriptors(const G_CmdBuffer *cmd,
-								 VkShaderStageFlags stage_flags,
-								 G_PipelineLayoutKey layout, u32 first,
-								 u32 descriptor_count, const VkDescriptorSet *descriptors,
-								 u32 dynamic_offset_count, const u32 *dynamic_offsets)
+internal void G_CmdBindDescriptors(const G_CmdBuffer *cmd,
+								   VkShaderStageFlags stage_flags,
+								   G_ResourceKey layout, u32 first,
+								   u32 descriptor_count, const VkDescriptorSet *descriptors,
+								   u32 dynamic_offset_count, const u32 *dynamic_offsets)
 {
 	VkPipelineLayout vk_layout = G_DevicePipelineLayoutFromKey(layout);
 	
@@ -116,12 +117,12 @@ static void G_CmdBindDescriptors(const G_CmdBuffer *cmd,
 	info.dynamicOffsetCount = dynamic_offset_count;
 	info.pDynamicOffsets = dynamic_offsets;
 
-	vkCmdBindDescriptorSets2(cmd->vk_handle, &info);
+	vkCmdBindDescriptorSets2KHR(cmd->vk_handle, &info);
 }
 
-static void G_CmdBindBindless(const G_CmdBuffer *cmd,
-							  VkShaderStageFlags stage_flags,
-							  G_PipelineLayoutKey layout)
+internal void G_CmdBindBindless(const G_CmdBuffer *cmd,
+								VkShaderStageFlags stage_flags,
+								G_ResourceKey layout)
 {
 	VkPipelineLayout vk_layout = G_DevicePipelineLayoutFromKey(layout);
 	
@@ -135,12 +136,12 @@ static void G_CmdBindBindless(const G_CmdBuffer *cmd,
 	info.dynamicOffsetCount = 0;
 	info.pDynamicOffsets = NULL;
 
-	vkCmdBindDescriptorSets2(cmd->vk_handle, &info);
+	vkCmdBindDescriptorSets2KHR(cmd->vk_handle, &info);
 }
 
-static void G_CmdBindPipeline(const G_CmdBuffer *cmd,
-							  VkPipelineBindPoint bind_point,
-							  G_PipelineKey pipeline)
+internal void G_CmdBindPipeline(const G_CmdBuffer *cmd,
+								VkPipelineBindPoint bind_point,
+								G_ResourceKey pipeline)
 {
 	VkPipeline vk_pipeline = G_DevicePipelineFromKey(pipeline);
 	 
@@ -148,27 +149,31 @@ static void G_CmdBindPipeline(const G_CmdBuffer *cmd,
 }
 
 // TODO: Take in G_BufferRange as input?
-static void G_CmdBindIndexBuffer(const G_CmdBuffer *cmd,
-								 G_BufferKey buffer,
-								 u64 offset, u64 size,
-								 VkIndexType type)
+internal void G_CmdBindIndexBuffer(const G_CmdBuffer *cmd,
+								   G_ResourceKey buffer,
+								   u64 offset, u64 size,
+								   VkIndexType type)
 {
 	G_Buffer *gfx_buffer = G_DeviceBufferFromKey(buffer);
 	
-	vkCmdBindIndexBuffer2(cmd->vk_handle,
-						  gfx_buffer->vk_handle,
-						  offset, size,
-						  type);
+	vkCmdBindIndexBuffer2KHR(cmd->vk_handle,
+							 gfx_buffer->vk_handle,
+							 offset, size,
+							 type);
 }
 
-static void G_CmdPushConstantsEx(const G_CmdBuffer *cmd,
-								 G_PipelineLayoutKey layout,
-								 VkShaderStageFlags stage_flags,
-								 u64 size, const void *data,
-								 u32 offset)
+internal void G_CmdPushConstantsEx(const G_CmdBuffer *cmd,
+								   G_ResourceKey layout,
+								   VkShaderStageFlags stage_flags,
+								   u64 size, const void *data,
+								   u32 offset)
 {
-	// Vulkan 1.4 minimum is 256 bytes.
-	AssertTrue(size <= Bytes(256));
+	u64 max_push_constants_size = G_DeviceGetSelected()->context.max_push_constants_size;
+	
+	DebugLogAssert(G_DeviceGetSelected()->log_channel_cmd_buffer,
+				   size <= max_push_constants_size,
+				   "Push constants must not be over %llu bytes in size.",
+				   max_push_constants_size);
 	
 	VkPipelineLayout vk_layout = G_DevicePipelineLayoutFromKey(layout);
 	
@@ -180,19 +185,19 @@ static void G_CmdPushConstantsEx(const G_CmdBuffer *cmd,
 	info.size = size;
 	info.pValues = data;
 
-	vkCmdPushConstants2(cmd->vk_handle, &info);
+	vkCmdPushConstants2KHR(cmd->vk_handle, &info);
 }
 
-static void G_CmdSetLineWidth(const G_CmdBuffer *cmd, f32 thickness)
+internal void G_CmdSetLineWidth(const G_CmdBuffer *cmd, f32 thickness)
 {
 	vkCmdSetLineWidth(cmd->vk_handle, thickness);
 }
 
-static void G_CmdDraw(const G_CmdBuffer *cmd,
-					  u32 vertex_count,
-					  u32 instance_count,
-					  u32 first_vertex,
-					  u32 first_instance)
+internal void G_CmdDraw(const G_CmdBuffer *cmd,
+						u32 vertex_count,
+						u32 instance_count,
+						u32 first_vertex,
+						u32 first_instance)
 {
 	vkCmdDraw(cmd->vk_handle,
 			  vertex_count,
@@ -201,12 +206,12 @@ static void G_CmdDraw(const G_CmdBuffer *cmd,
 			  first_instance);
 }
 
-static void G_CmdDrawIndexed(const G_CmdBuffer *cmd,
-							 u32 index_count,
-							 u32 instance_count,
-							 u32 first_index,
-							 i32 vertex_offset,
-							 u32 first_instance)
+internal void G_CmdDrawIndexed(const G_CmdBuffer *cmd,
+							   u32 index_count,
+							   u32 instance_count,
+							   u32 first_index,
+							   i32 vertex_offset,
+							   u32 first_instance)
 {
 	vkCmdDrawIndexed(cmd->vk_handle,
 					 index_count,
@@ -216,9 +221,9 @@ static void G_CmdDrawIndexed(const G_CmdBuffer *cmd,
 					 first_instance);
 }
 
-static void G_CmdDrawIndexedIndirect(const G_CmdBuffer *cmd,
-									 G_BufferKey buffer, u64 offset,
-									 u32 count, u32 stride)
+internal void G_CmdDrawIndexedIndirect(const G_CmdBuffer *cmd,
+									   G_ResourceKey buffer, u64 offset,
+									   u32 count, u32 stride)
 {
 	G_Buffer *gfx_buffer = G_DeviceBufferFromKey(buffer);
 	
@@ -227,10 +232,10 @@ static void G_CmdDrawIndexedIndirect(const G_CmdBuffer *cmd,
 							 count, stride);
 }
 
-static void G_CmdDrawIndexedIndirectCount(const G_CmdBuffer *cmd,
-										  G_BufferKey indirect_buffer, u64 indirect_offset,
-										  G_BufferKey count_buffer, u64 count_offset,
-										  u32 max_count, u32 stride)
+internal void G_CmdDrawIndexedIndirectCount(const G_CmdBuffer *cmd,
+											G_ResourceKey indirect_buffer, u64 indirect_offset,
+											G_ResourceKey count_buffer, u64 count_offset,
+											u32 max_count, u32 stride)
 {
 	G_Buffer *gfx_indirect_buffer = G_DeviceBufferFromKey(indirect_buffer);
 	G_Buffer *gfx_count_buffer = G_DeviceBufferFromKey(count_buffer);
@@ -241,10 +246,10 @@ static void G_CmdDrawIndexedIndirectCount(const G_CmdBuffer *cmd,
 								  max_count, stride);
 }
 
-static void G_CmdDrawMeshTasksIndirectCount(const G_CmdBuffer *cmd,
-											G_BufferKey indirect_buffer, u64 indirect_offset,
-											G_BufferKey count_buffer, u64 count_offset,
-											u32 max_count, u32 stride)
+internal void G_CmdDrawMeshTasksIndirectCount(const G_CmdBuffer *cmd,
+											  G_ResourceKey indirect_buffer, u64 indirect_offset,
+											  G_ResourceKey count_buffer, u64 count_offset,
+											  u32 max_count, u32 stride)
 {
 	G_Buffer *gfx_indirect_buffer = G_DeviceBufferFromKey(indirect_buffer);
 	G_Buffer *gfx_count_buffer = G_DeviceBufferFromKey(count_buffer);
@@ -255,12 +260,12 @@ static void G_CmdDrawMeshTasksIndirectCount(const G_CmdBuffer *cmd,
 									   max_count, stride);
 }
 
-static void G_CmdDispatch(const G_CmdBuffer *cmd, u32 x, u32 y, u32 z)
+internal void G_CmdDispatch(const G_CmdBuffer *cmd, u32 x, u32 y, u32 z)
 {
 	vkCmdDispatch(cmd->vk_handle, x, y, z);
 }
 
-static void G_CmdDispatchIndirect(const G_CmdBuffer *cmd, G_BufferKey buffer, u64 offset)
+internal void G_CmdDispatchIndirect(const G_CmdBuffer *cmd, G_ResourceKey buffer, u64 offset)
 {
 	G_Buffer *gfx_buffer = G_DeviceBufferFromKey(buffer);
 	
@@ -269,14 +274,14 @@ static void G_CmdDispatchIndirect(const G_CmdBuffer *cmd, G_BufferKey buffer, u6
 						  offset);
 }
 
-static void G_CmdBlit(const G_CmdBuffer *cmd,
-					  G_TextureKey src,
-					  G_TextureKey dst,
-					  u32 region_count, const VkImageBlit2 *regions,
-					  VkFilter filter)
+internal void G_CmdBlit(const G_CmdBuffer *cmd,
+						G_ResourceKey src_texture,
+						G_ResourceKey dst_texture,
+						u32 region_count, const VkImageBlit2 *regions,
+						VkFilter filter)
 {
-	G_Texture *gfx_src = G_DeviceTextureFromKey(src);
-	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst);
+	G_Texture *gfx_src = G_DeviceTextureFromKey(src_texture);
+	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst_texture);
 	
 	VkBlitImageInfo2 info = {0};
 	info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
@@ -291,7 +296,7 @@ static void G_CmdBlit(const G_CmdBuffer *cmd,
 	vkCmdBlitImage2(cmd->vk_handle, &info);
 }
 
-static void G_CmdGenerateMipmaps(const G_CmdBuffer *cmd, G_TextureKey texture)
+internal void G_CmdGenerateMipmaps(const G_CmdBuffer *cmd, G_ResourceKey texture)
 {
 	G_Texture *gfx_texture = G_DeviceTextureFromKey(texture);
 	
@@ -375,10 +380,11 @@ static void G_CmdGenerateMipmaps(const G_CmdBuffer *cmd, G_TextureKey texture)
 	G_CmdPipelineBarrier(cmd, 0, 0, NULL, 0, NULL, 1, &barrier);
 }
 
-static void G_CmdCopyBufferToBuffer(const G_CmdBuffer *cmd,
-									G_BufferKey src,
-									G_BufferKey dst,
-									u32 region_count, const G_BufferCopy *regions)
+internal void G_CmdCopyBufferToBuffer(const G_CmdBuffer *cmd,
+									  G_ResourceKey src_buffer,
+									  G_ResourceKey dst_buffer,
+									  u32 region_count,
+									  const G_BufferCopy *regions)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -386,14 +392,14 @@ static void G_CmdCopyBufferToBuffer(const G_CmdBuffer *cmd,
 
 	for (u32 i = 0; i < region_count; i++)
 	{
-		vk_regions[i].sType     = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+		vk_regions[i].sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
 		vk_regions[i].srcOffset = regions[i].src_offset;
 		vk_regions[i].dstOffset = regions[i].dst_offset;
-		vk_regions[i].size      = regions[i].size;
+		vk_regions[i].size = regions[i].size;
 	}
 	
-	G_Buffer *gfx_src = G_DeviceBufferFromKey(src);
-	G_Buffer *gfx_dst = G_DeviceBufferFromKey(dst);
+	G_Buffer *gfx_src = G_DeviceBufferFromKey(src_buffer);
+	G_Buffer *gfx_dst = G_DeviceBufferFromKey(dst_buffer);
 	
 	VkCopyBufferInfo2 copy_info = {0};
 	copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
@@ -407,10 +413,10 @@ static void G_CmdCopyBufferToBuffer(const G_CmdBuffer *cmd,
 	ScratchRelease(&scratch);
 }
 
-static void G_CmdCopyBufferToTexture(const G_CmdBuffer *cmd,
-									 G_BufferKey src,
-									 G_TextureKey dst,
-									 u32 region_count, const G_BufferImageCopy *regions)
+internal void G_CmdCopyBufferToTexture(const G_CmdBuffer *cmd,
+									   G_ResourceKey src_buffer,
+									   G_ResourceKey dst_texture,
+									   u32 region_count, const G_BufferImageCopy *regions)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -429,8 +435,8 @@ static void G_CmdCopyBufferToTexture(const G_CmdBuffer *cmd,
 		vk_regions[i].imageExtent       = (VkExtent3D) { r->w, r->h, r->d };
 	}
 	
-	G_Buffer *gfx_src = G_DeviceBufferFromKey(src);
-	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst);
+	G_Buffer *gfx_src = G_DeviceBufferFromKey(src_buffer);
+	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst_texture);
 	
 	VkCopyBufferToImageInfo2 copy_info = {0};
 	copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2;
@@ -443,12 +449,12 @@ static void G_CmdCopyBufferToTexture(const G_CmdBuffer *cmd,
 	vkCmdCopyBufferToImage2(cmd->vk_handle, &copy_info);
 }
 
-static void G_CmdCopyBufferToTextureWhole(const G_CmdBuffer *cmd,
-										  G_BufferKey src,
-										  G_TextureKey dst,
-										  u64 buffer_offset)
+internal void G_CmdCopyBufferToTextureWhole(const G_CmdBuffer *cmd,
+											G_ResourceKey src_buffer,
+											G_ResourceKey dst_texture,
+											u64 buffer_offset)
 {
-	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst);
+	G_Texture *gfx_dst = G_DeviceTextureFromKey(dst_texture);
 	
 	G_BufferImageCopy region = {0};
 
@@ -469,12 +475,12 @@ static void G_CmdCopyBufferToTextureWhole(const G_CmdBuffer *cmd,
 	region.h = gfx_dst->height;
 	region.d = 1;
 	
-	G_CmdCopyBufferToTexture(cmd, src, dst, 1, &region);
+	G_CmdCopyBufferToTexture(cmd, src_buffer, dst_texture, 1, &region);
 }
 
-static void G_CmdFillBuffer(const G_CmdBuffer *cmd,
-							G_BufferKey buffer,
-							u64 offset, u64 size, u32 fill)
+internal void G_CmdFillBuffer(const G_CmdBuffer *cmd,
+							  G_ResourceKey buffer,
+							  u64 offset, u64 size, u32 fill)
 {
 	G_Buffer *gfx_buffer = G_DeviceBufferFromKey(buffer);
 	
@@ -483,10 +489,10 @@ static void G_CmdFillBuffer(const G_CmdBuffer *cmd,
 					offset, size, fill);
 }
 
-static void G_CmdBuildBLAS(const G_CmdBuffer *cmd,
-						   G_AccelStructKey blas,
-						   const G_BLASGeometry *geometries, u32 geometry_count,
-						   G_BufferKey scratch_buffer)
+internal void G_CmdBuildBLAS(const G_CmdBuffer *cmd,
+							 G_ResourceKey blas,
+							 const G_BLASGeometry *geometries, u32 geometry_count,
+							 G_ResourceKey scratch_buffer)
 {
 	G_AccelStruct *accel_struct = G_DeviceAccelStructFromKey(blas);
 
@@ -542,10 +548,10 @@ static void G_CmdBuildBLAS(const G_CmdBuffer *cmd,
 	ScratchRelease(&scratch);
 }
 
-static void G_CmdBuildTLAS(const G_CmdBuffer *cmd,
-						   G_AccelStructKey tlas,
-						   G_BufferKey instance_buffer, u32 instance_count,
-						   G_BufferKey scratch_buffer)
+internal void G_CmdBuildTLAS(const G_CmdBuffer *cmd,
+							 G_ResourceKey tlas,
+							 G_ResourceKey instance_buffer, u32 instance_count,
+							 G_ResourceKey scratch_buffer)
 {
 	G_AccelStruct *accel_struct = G_DeviceAccelStructFromKey(tlas);
 
@@ -578,36 +584,36 @@ static void G_CmdBuildTLAS(const G_CmdBuffer *cmd,
 	vkCmdBuildAccelerationStructuresKHR(cmd->vk_handle, 1, &build_info, &range_ptr);
 }
 
-static void G_CmdBeginQuery(const G_CmdBuffer *cmd,
-							VkQueryPool pool,
-							u32 query, VkQueryControlFlags flags)
+internal void G_CmdBeginQuery(const G_CmdBuffer *cmd,
+							  VkQueryPool pool,
+							  u32 query, VkQueryControlFlags flags)
 {
 	vkCmdBeginQuery(cmd->vk_handle, pool, query, flags);
 }
 
-static void G_CmdEndQuery(const G_CmdBuffer *cmd,
-						  VkQueryPool pool,
-						  u32 query)
+internal void G_CmdEndQuery(const G_CmdBuffer *cmd,
+							VkQueryPool pool,
+							u32 query)
 {
 	vkCmdEndQuery(cmd->vk_handle, pool, query);
 }
 
-static void G_CmdResetQueries(const G_CmdBuffer *cmd,
-							  VkQueryPool pool,
-							  u32 first, u32 count)
+internal void G_CmdResetQueries(const G_CmdBuffer *cmd,
+								VkQueryPool pool,
+								u32 first, u32 count)
 {
 	vkCmdResetQueryPool(cmd->vk_handle, pool, first, count);
 }
 
-static void G_CmdWriteTimestamp(const G_CmdBuffer *cmd,
-								VkPipelineStageFlags2 stage,
-								VkQueryPool pool,
-								u32 index)
+internal void G_CmdWriteTimestamp(const G_CmdBuffer *cmd,
+								  VkPipelineStageFlags2 stage,
+								  VkQueryPool pool,
+								  u32 index)
 {
 	vkCmdWriteTimestamp2(cmd->vk_handle, stage, pool, index);
 }
 
-static void G_CmdBeginLabel(const G_CmdBuffer *cmd, String8 name)
+internal void G_CmdBeginLabel(const G_CmdBuffer *cmd, String8 name)
 {
 	VkDebugUtilsLabelEXT label = {0};
 	label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
@@ -616,7 +622,7 @@ static void G_CmdBeginLabel(const G_CmdBuffer *cmd, String8 name)
 	vkCmdBeginDebugUtilsLabelEXT(cmd->vk_handle, &label);
 }
 
-static void G_CmdBeginLabelEx(const G_CmdBuffer *cmd, String8 name, v4 colour)
+internal void G_CmdBeginLabelEx(const G_CmdBuffer *cmd, String8 name, v4 colour)
 {
 	VkDebugUtilsLabelEXT label = {0};
 	label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
@@ -629,7 +635,7 @@ static void G_CmdBeginLabelEx(const G_CmdBuffer *cmd, String8 name, v4 colour)
 	vkCmdBeginDebugUtilsLabelEXT(cmd->vk_handle, &label);
 }
 
-static void G_CmdEndLabel(const G_CmdBuffer *cmd)
+internal void G_CmdEndLabel(const G_CmdBuffer *cmd)
 {
 	vkCmdEndDebugUtilsLabelEXT(cmd->vk_handle);
 }

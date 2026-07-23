@@ -40,7 +40,7 @@ struct A_LoaderAPI
 					  A_LoadResult *result,
 					  A_Asset *asset,
 					  G_CmdBuffer *cmd,
-					  G_BufferKey stage,
+					  G_ResourceKey stage,
 					  u64 stage_offset);
 
 	void (*DestroyIntermediateResources)(A_LoadResult *result);

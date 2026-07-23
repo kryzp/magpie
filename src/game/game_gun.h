@@ -25,7 +25,7 @@ struct Gun
 	CH_Timer shoot_timer;
 };
 
-static void GunFire(Gun *gun);
-static void GunReload(Gun *gun);
+internal void GunFire(Gun *gun);
+internal void GunReload(Gun *gun);
 
 #endif // GAME_GUN_H

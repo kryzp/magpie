@@ -13,16 +13,16 @@ struct Transform
 	b32 dirty;
 };
 
-static Transform TransformIdentity(void);
+internal Transform TransformIdentity(void);
 
-static void TransformRecompute(Transform *transform);
-static m4 TransformMatrix(Transform *transform);
+internal void TransformRecompute(Transform *transform);
+internal m4 TransformMatrix(Transform *transform);
 
-static void TransformSetPosition(Transform *transform, v3 position);
-static void TransformMoveBy(Transform *transform, v3 by);
+internal void TransformSetPosition(Transform *transform, v3 position);
+internal void TransformMoveBy(Transform *transform, v3 by);
 
-static void TransformSetRotation(Transform *transform, v4 rotation);
-static void TransformSetScale(Transform *transform, v3 scale);
-static void TransformSetOrigin(Transform *transform, v3 origin);
+internal void TransformSetRotation(Transform *transform, v4 rotation);
+internal void TransformSetScale(Transform *transform, v3 scale);
+internal void TransformSetOrigin(Transform *transform, v3 origin);
 
 #endif // CORE_TRANSFORM_H

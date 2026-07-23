@@ -4,9 +4,9 @@
 typedef struct R_GenerateMipsPassData R_GenerateMipsPassData;
 struct R_GenerateMipsPassData
 {
-	G_TextureKey texture;
+	G_ResourceKey texture;
 };
 
-static R_PASS_RECORD_DEF(R_GenerateMipsPassFn);
+internal R_PASS_RECORD_DEF(R_GenerateMipsPassFn);
 
 #endif // RENDER_PASS_GENERATE_MIPS_H

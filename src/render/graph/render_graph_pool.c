@@ -1,5 +1,5 @@
 
-static void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers)
+internal void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textures, u32 max_buffers)
 {
 	pool->current_frame = 0;
 	pool->gpu_completed_time = 0;
@@ -14,20 +14,20 @@ static void R_ResourcePoolInit(R_ResourcePool *pool, Arena *arena, u32 max_textu
 	pool->buffers = ArenaPushArray(arena, R_PooledBuffer, max_buffers);
 }
 
-static void R_ResourcePoolDestroy(R_ResourcePool *pool)
+internal void R_ResourcePoolDestroy(R_ResourcePool *pool)
 {
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
 		G_DeviceTextureDestroy(t->key);
-		t->key = G_TextureKeyNull();
+		t->key = G_ResourceKeyNull();
 	}
 	
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
 		G_DeviceBufferDestroy(b->key);
-		b->key = G_BufferKeyNull();
+		b->key = G_ResourceKeyNull();
 	}
 
 	pool->texture_count = 0;
@@ -38,57 +38,57 @@ static void R_ResourcePoolDestroy(R_ResourcePool *pool)
 // Old incomplete code from C++ era:
 
 /*
-	const u64 GARBAGE_COLLECT_THRESHOLD = 120;
+  const u64 GARBAGE_COLLECT_THRESHOLD = 120;
 
-	for (auto t = texture_pool.begin(); t != texture_pool.end();) {
-		t->in_use = false;
+  for (auto t = texture_pool.begin(); t != texture_pool.end();) {
+  t->in_use = false;
 
-		if (current_frame - t->last_frame_used >= GARBAGE_COLLECT_THRESHOLD) {
-			graph.get_device().destroy_texture(t->texture);
-			t->texture = nullptr;
-			t = texture_pool.erase(t);
-		} else {
-			t++;
-		}
-	}
+  if (current_frame - t->last_frame_used >= GARBAGE_COLLECT_THRESHOLD) {
+  graph.get_device().destroy_texture(t->texture);
+  t->texture = nullptr;
+  t = texture_pool.erase(t);
+  } else {
+  t++;
+  }
+  }
 
-	for (auto b = buffer_pool.begin(); b != buffer_pool.end();) {
-		b->in_use = false;
+  for (auto b = buffer_pool.begin(); b != buffer_pool.end();) {
+  b->in_use = false;
 
-		if (current_frame - b->last_frame_used >= GARBAGE_COLLECT_THRESHOLD) {
-			graph.get_device().destroy_buffer(b->buffer);
-			b->buffer = nullptr;
-			b = buffer_pool.erase(b);
-		} else {
-			b++;
-		}
-	}
+  if (current_frame - b->last_frame_used >= GARBAGE_COLLECT_THRESHOLD) {
+  graph.get_device().destroy_buffer(b->buffer);
+  b->buffer = nullptr;
+  b = buffer_pool.erase(b);
+  } else {
+  b++;
+  }
+  }
 
 
 	
-void RenderResourcePool::release_texture(const Texture *texture, const AttachmentInfo &info)
-{
-	PooledTexture resource = {};
-	resource.texture = texture;
-	resource.texture_info = info;
+  void RenderResourcePool::release_texture(const Texture *texture, const AttachmentInfo &info)
+  {
+  PooledTexture resource = {};
+  resource.texture = texture;
+  resource.texture_info = info;
 
-	texture_pool.push_back(resource);
-}
-
-
+  texture_pool.push_back(resource);
+  }
 
 
-void RenderResourcePool::release_buffer(const GpuBuffer *buffer, const GpuBufferInfo &info)
-{
-	PooledBuffer resource = {};
-	resource.buffer = buffer;
-	resource.buffer_info = info;
 
-	buffer_pool.push_back(resource);
-}
+
+  void RenderResourcePool::release_buffer(const GpuBuffer *buffer, const GpuBufferInfo &info)
+  {
+  PooledBuffer resource = {};
+  resource.buffer = buffer;
+  resource.buffer_info = info;
+
+  buffer_pool.push_back(resource);
+  }
 */
 
-static void R_ResourcePoolFlush(R_ResourcePool *pool)
+internal void R_ResourcePoolFlush(R_ResourcePool *pool)
 {
 	pool->current_frame = G_DeviceGetSelected()->graphics_semaphore.last_submitted_frame + 1;
 	pool->gpu_completed_time = G_DeviceSemaphoreGPUCounterValue(&G_DeviceGetSelected()->graphics_semaphore);
@@ -106,9 +106,9 @@ static void R_ResourcePoolFlush(R_ResourcePool *pool)
 	}
 }
 
-static G_TextureKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
-							 const R_TextureInfo *info,
-							 R_ResourceState *out_state)
+internal G_ResourceKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
+												   const R_TextureInfo *info,
+												   R_ResourceState *out_state)
 {
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
@@ -160,9 +160,9 @@ static G_TextureKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 	return texture.key;
 }
 
-static G_BufferKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
-							const R_BufferInfo *info,
-							R_ResourceState *out_state)
+internal G_ResourceKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
+												 const R_BufferInfo *info,
+												 R_ResourceState *out_state)
 {
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
@@ -206,15 +206,15 @@ static G_BufferKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
 	return buffer.key;
 }
 
-static void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
-							G_TextureKey key,
-							const R_ResourceState *state)
+internal void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
+										  G_ResourceKey key,
+										  const R_ResourceState *state)
 {
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
 
-		if (G_TextureKeyMatch(key, t->key))
+		if (G_ResourceKeyMatch(key, t->key))
 		{
 			t->state = *state;
 			return;
@@ -222,15 +222,15 @@ static void R_ResourcePoolUpdateTexture(R_ResourcePool *pool,
 	}
 }
 
-static void R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
-						   G_BufferKey key,
-						   const R_ResourceState *state)
+internal void R_ResourcePoolUpdateBuffer(R_ResourcePool *pool,
+										 G_ResourceKey key,
+										 const R_ResourceState *state)
 {
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
 
-		if (G_BufferKeyMatch(key, b->key))
+		if (G_ResourceKeyMatch(key, b->key))
 		{
 			b->state = *state;
 			return;

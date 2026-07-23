@@ -1,5 +1,5 @@
 
-static R_PASS_RECORD_DEF(R_SkyboxPassFn)
+internal R_PASS_RECORD_DEF(R_SkyboxPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
 	const R_SkyboxPassData *user_data = ctx->user_data;

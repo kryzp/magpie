@@ -16,7 +16,7 @@ struct G_Buffer
 	u64 device_address;
 };
 
-static b32 G_BufferIsStorage(const G_Buffer *buffer);
-static b32 G_BufferIsUniform(const G_Buffer *buffer);
+internal b32 G_BufferIsStorage(const G_Buffer *buffer);
+internal b32 G_BufferIsUniform(const G_Buffer *buffer);
 
 #endif // GRAPHICS_BUFFER_H

@@ -6,7 +6,7 @@ struct R_ForwardPassData
 {
 	const R_FrameParams *frame_params;
 
-	G_BufferKey shadow_caster_table;
+	G_ResourceKey shadow_caster_table;
 
 	u64 irradiance_sh_buffer_address;
 	u64 irradiance_grid_info_buffer_address;
@@ -18,9 +18,9 @@ struct R_ForwardPassData
 	R_DrawStream draw_stream;
 };
 
-static R_PASS_RECORD_DEF(R_ForwardPassFn);
+internal R_PASS_RECORD_DEF(R_ForwardPassFn);
 
-static void R_ForwardRender(R_Graph *graph,
+internal void R_ForwardRender(R_Graph *graph,
 							const R_FrameParams *frame_params,
 							R_Blackboard *bb,
 							const R_DrawStream *draw_stream);

@@ -1,35 +1,8 @@
 #ifndef GRAPHICS_DEVICE_H
 #define GRAPHICS_DEVICE_H
 
-
-/* ==================================================
-   MACRO BULLSHIT
-
-   Auto-generates a linked list for every
-   managed resource in the graphics device.
-   ================================================== */
-
-#define G_DEVICE_MANAGED_RESOURCE(mgp_name, resource_name)			\
-	typedef struct G_Device##mgp_name##Node G_Device##mgp_name##Node; \
-	struct G_Device##mgp_name##Node									\
-	{																	\
-		G_Device##mgp_name##Node *next;								\
-		G_##mgp_name##Key key;										\
-		resource_name resource;											\
-	};																	\
-	typedef struct G_Device##mgp_name##List G_Device##mgp_name##List; \
-	struct G_Device##mgp_name##List									\
-	{																	\
-		G_Device##mgp_name##Node *first;								\
-	};																	\
-	static G_##mgp_name##Key G_Device##mgp_name##ListPush    (G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource, G_##mgp_name##Key key); \
-	static G_##mgp_name##Key G_Device##mgp_name##ListPushAuto(G_Device##mgp_name##List *list, Arena *arena, const resource_name *resource); \
-	static resource_name *G_Device##mgp_name##ListGet(const G_Device##mgp_name##List *list, G_##mgp_name##Key key);
-
-#include "graphics_device_managed_resources.inc"
-
-#undef G_DEVICE_MANAGED_RESOURCE
-
+// TODO: DEVICE DESTROY() FUNCTIONS FOR RESOURCES CURRENTLY DON'T FREE FROM
+//       THE RESOURCE LIST - FIX!
 
 /* ==================================================
    ALLOC / CREATION PARAMETERS
@@ -66,7 +39,7 @@ struct G_TextureAllocInfo
 typedef struct G_TextureViewCreateInfo G_TextureViewCreateInfo;
 struct G_TextureViewCreateInfo
 {	
-	G_TextureKey texture;
+	G_ResourceKey texture;
 	VkImageViewType type;
 	G_SubresourceRange range;
 };
@@ -91,13 +64,14 @@ struct G_SamplerCreateInfo
 
 
 /* ==================================================
-   DESTRUCTION
+   DEVICE
    ================================================== */
 
 typedef struct G_DestroyedImage G_DestroyedImage;
 struct G_DestroyedImage
 {
 	G_DestroyedImage *next;
+	G_ResourceKey key;
 	VkImage image;
 	VmaAllocation allocation;
 };
@@ -106,6 +80,7 @@ typedef struct G_DestroyedBuffer G_DestroyedBuffer;
 struct G_DestroyedBuffer
 {
 	G_DestroyedBuffer *next;
+	G_ResourceKey key;
 	VkBuffer buffer;
 	VmaAllocation allocation;
 };
@@ -114,14 +89,25 @@ typedef struct G_DestroyedSampler G_DestroyedSampler;
 struct G_DestroyedSampler
 {
 	G_DestroyedSampler *next;
+	G_ResourceKey key;
 	VkSampler sampler;
 	u32 bindless;
 };
 
+typedef struct G_DestroyedShaderProgram G_DestroyedShaderProgram;
+struct G_DestroyedShaderProgram
+{
+	G_DestroyedShaderProgram *next;
+	G_ResourceKey key;
+};
 
-/* ==================================================
-   DEVICE
-   ================================================== */
+typedef struct G_DestroyedAccelStruct G_DestroyedAccelStruct;
+struct G_DestroyedAccelStruct
+{
+	G_DestroyedAccelStruct *next;
+	G_ResourceKey key;
+	VkAccelerationStructureKHR handle;
+};
 
 typedef struct G_DeviceFrameInFlight G_DeviceFrameInFlight;
 struct G_DeviceFrameInFlight
@@ -134,9 +120,11 @@ struct G_DeviceFrameInFlight
 
 	VkSemaphore image_available_semaphore; // Wait until the OS gives us an image.
 	
-	G_DestroyedImage    *destroyed_image_head;
-	G_DestroyedBuffer   *destroyed_buffer_head;
-	G_DestroyedSampler  *destroyed_sampler_head;
+	G_DestroyedImage           *destroyed_image_head;
+	G_DestroyedBuffer          *destroyed_buffer_head;
+	G_DestroyedSampler         *destroyed_sampler_head;
+	G_DestroyedShaderProgram   *destroyed_shader_head;
+	G_DestroyedAccelStruct     *destroyed_as_head;
 };
 
 typedef struct G_Device G_Device;
@@ -148,20 +136,21 @@ struct G_Device
 	LOG_Channel log_channel_general;
 	LOG_Channel log_channel_validation;
 	LOG_Channel log_channel_performance;
+	LOG_Channel log_channel_cmd_buffer;
 	
 	G_Context context;
 
 	u32 current_frame_in_flight_index;
 	G_DeviceFrameInFlight frames_in_flight[G_FRAMES_IN_FLIGHT];
 
-	G_DevicePipelineLayoutList layouts;
-	G_DevicePipelineList pipelines;
-	G_DeviceTextureList textures;
-	G_DeviceTextureViewList views;
-	G_DeviceBufferList buffers;
-	G_DeviceSamplerList samplers;
-	G_DeviceShaderList shaders;
-	G_DeviceAccelStructList accel_structures;
+	G_ResourceList pipeline_layouts;
+	G_ResourceList pipelines;
+	G_ResourceList textures;
+	G_ResourceList texture_views;
+	G_ResourceList buffers;
+	G_ResourceList samplers;
+	G_ResourceList shaders;
+	G_ResourceList accel_structures;
 	
 	G_Semaphore graphics_semaphore;
 
@@ -175,196 +164,196 @@ struct G_Device
    INTERNALS
    ================================================== */
 
-static VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
-															   u32 available_surface_format_count,
-															   const VkSurfaceFormatKHR *available_surface_formats);
+internal VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
+																 u32 available_surface_format_count,
+																 const VkSurfaceFormatKHR *available_surface_formats);
 
-static VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
-														   const VkPresentModeKHR *available_present_modes,
-														   b32 enable_vsync);
+internal VkPresentModeKHR G_DeviceChooseSwapchainPresentMode(u32 available_present_mode_count,
+															 const VkPresentModeKHR *available_present_modes,
+															 b32 enable_vsync);
 
-static VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities);
+internal VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR *capabilities);
 
 
 /* ==================================================
    CORE DEVICE
    ================================================== */
 
-static void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel);
-static void G_DeviceDestroy(void);
+internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel);
+internal void G_DeviceDestroy(void);
 
-static void G_DeviceSelectContext(G_Device *device);
-static G_Device *G_DeviceGetSelected(void);
+internal void G_DeviceSelectContext(G_Device *device);
+internal G_Device *G_DeviceGetSelected(void);
 
-static VkFormat G_DeviceDepthFormat(void);
+internal VkFormat G_DeviceDepthFormat(void);
 
-static void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame);
+internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame);
 
-static G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain);
-static void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd);
+internal G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain);
+internal void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd);
 
-static G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd);
+internal G_TimelinePoint G_DeviceSubmit(const G_CmdBuffer *cmd);
 
-static G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
-										u32 wait_count, const VkSemaphoreSubmitInfo *waits,
-										u32 signal_count, const VkSemaphoreSubmitInfo *signals);
+internal G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
+										  u32 wait_count, const VkSemaphoreSubmitInfo *waits,
+										  u32 signal_count, const VkSemaphoreSubmitInfo *signals);
 
-static G_CmdBuffer G_DeviceSubmitImBegin(void);
-static void  G_DeviceSubmitImEnd(const G_CmdBuffer *cmd);
+internal G_CmdBuffer G_DeviceSubmitImBegin(void);
+internal void  G_DeviceSubmitImEnd(const G_CmdBuffer *cmd);
 
-static void G_DeviceHotLoad(void);
-static void G_DeviceHotUnload(void);
+internal void G_DeviceHotLoad(void);
+internal void G_DeviceHotUnload(void);
 
-static void G_DeviceCreateSyncResources(void);
-static void G_DeviceDestroySyncResources(void);
+internal void G_DeviceCreateSyncResources(void);
+internal void G_DeviceDestroySyncResources(void);
 
-static void G_DeviceCreateBindless(void);
-static void G_DeviceApplyBindlessUpdates(void);
-static void G_DeviceDestroyBindless(void);
+internal void G_DeviceCreateBindless(void);
+internal void G_DeviceApplyBindlessUpdates(void);
+internal void G_DeviceDestroyBindless(void);
 
-static void G_DeviceCreateImGui(void);
-static void G_DeviceDestroyImGui(void);
+internal void G_DeviceCreateImGui(void);
+internal void G_DeviceDestroyImGui(void);
 
 
 /* ==================================================
    QUERY
    ================================================== */
 
-static void G_DeviceQueryPoolDestroy(VkQueryPool pool);
+internal void G_DeviceQueryPoolDestroy(VkQueryPool pool);
 
 
 /* ==================================================
    SYNCHRONISATION
    ================================================== */
 
-static void G_DeviceWaitIdle(void);
+internal void G_DeviceWaitIdle(void);
 
-static void G_DeviceWaitForFence(VkFence fence);
-static void G_DeviceResetFence(VkFence fence);
-static void G_DeviceDestroyFence(VkFence fence);
+internal void G_DeviceWaitForFence(VkFence fence);
+internal void G_DeviceResetFence(VkFence fence);
+internal void G_DeviceDestroyFence(VkFence fence);
 
-static G_Semaphore G_DeviceSemaphoreCreate(u64 value);
-static void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore);
-static u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore);
+internal G_Semaphore G_DeviceSemaphoreCreate(u64 value);
+internal void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore);
+internal u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore);
 
-static void G_DeviceWaitUntil(G_TimelinePoint point);
+internal void G_DeviceWaitUntil(G_TimelinePoint point);
 
 
 /* ==================================================
    SWAPCHAIN
    ================================================== */
 
-static G_Swapchain G_DeviceSwapchainCreate(void);
-static void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain);
+internal G_Swapchain G_DeviceSwapchainCreate(void);
+internal void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain);
 
 
 /* ==================================================
    COMMAND POOL
    ================================================== */
 
-static G_CmdPool G_DeviceCmdPoolCreate(u32 family_index);
-static void G_DeviceCmdPoolDestroy(const G_CmdPool *pool);
+internal G_CmdPool G_DeviceCmdPoolCreate(u32 family_index);
+internal void G_DeviceCmdPoolDestroy(const G_CmdPool *pool);
 
-static G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool);
-static void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value);
-static void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value);
+internal G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool);
+internal void G_DeviceCmdPoolRelease(G_CmdPool *pool, const G_CmdBuffer *cmd, u64 fence_value);
+internal void G_DeviceCmdPoolPurge(G_CmdPool *pool, u64 fence_value);
 
 
 /* ==================================================
    PIPELINES
    ================================================== */
 
-static G_PipelineLayoutKey G_DevicePipelineLayoutFetch(G_ShaderKey program);
-static VkPipelineLayout G_DevicePipelineLayoutFromKey(G_PipelineLayoutKey key);
+internal G_ResourceKey G_DevicePipelineLayoutFetch(G_ResourceKey program);
+internal VkPipelineLayout G_DevicePipelineLayoutFromKey(G_ResourceKey key);
 
 
 typedef struct G_PipelineSt G_PipelineSt;
 struct G_PipelineSt
 {
-	G_PipelineKey pipeline;
-	G_PipelineLayoutKey layout;
+	G_ResourceKey pipeline;
+	G_ResourceKey layout;
 	VkPipelineBindPoint bind_point;
 };
 
-static G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *def);
-static G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def);
+internal G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef *def);
+internal G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *def);
 
-static VkPipeline G_DevicePipelineFromKey(G_PipelineKey key);
+internal VkPipeline G_DevicePipelineFromKey(G_ResourceKey key);
 
 
 /* ==================================================
    TEXTURES
    ================================================== */
 
-static G_TextureKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info);
-static G_TextureKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps);
-static G_TextureKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat format, u32 mipmaps);
-static G_TextureKey G_DeviceTextureAllocDepth2D(u32 width, u32 height, u32 mipmaps);
-static G_TextureKey G_DeviceTextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps);
-static G_TextureKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps);
-static G_TextureKey G_DeviceTextureAllocCubemapDepth(u32 resolution, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info);
+internal G_ResourceKey G_DeviceTextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAlloc2DRW(u32 width, u32 height, VkFormat format, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAllocDepth2D(u32 width, u32 height, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps);
+internal G_ResourceKey G_DeviceTextureAllocCubemapDepth(u32 resolution, u32 mipmaps);
 
-static void G_DeviceTextureDestroy(G_TextureKey texture);
+internal void G_DeviceTextureDestroy(G_ResourceKey texture);
 
-static G_Texture *G_DeviceTextureFromKey(G_TextureKey key);
+internal G_Texture *G_DeviceTextureFromKey(G_ResourceKey key);
 
 
 /* ==================================================
    VIEWS
    ================================================== */
 
-static G_TextureViewKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *create_info);
-static G_TextureViewKey G_DeviceTextureViewAuto(G_TextureKey texture);
+internal G_ResourceKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *create_info);
+internal G_ResourceKey G_DeviceTextureViewAuto(G_ResourceKey texture);
 
-static G_TextureView *G_DeviceTextureViewFromKey(G_TextureViewKey key);
+internal G_TextureView *G_DeviceTextureViewFromKey(G_ResourceKey key);
 
-static u32 G_DeviceTextureViewBindless(G_TextureViewKey key);
+internal u32 G_DeviceTextureViewBindless(G_ResourceKey key);
 
 
 /* ==================================================
    BUFFERS
    ================================================== */
 
-static G_BufferKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info);
-static G_BufferKey G_DeviceStageAlloc(u64 size);
+internal G_ResourceKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info);
+internal G_ResourceKey G_DeviceStageAlloc(u64 size);
 
-static void G_DeviceBufferDestroy(G_BufferKey buffer);
+internal void G_DeviceBufferDestroy(G_ResourceKey buffer);
 
-static G_Buffer *G_DeviceBufferFromKey(G_BufferKey key);
+internal G_Buffer *G_DeviceBufferFromKey(G_ResourceKey key);
 
-static void *G_DeviceBufferMap(G_BufferKey key);
-static u64 G_DeviceBufferAddress(G_BufferKey key);
+internal void *G_DeviceBufferMap(G_ResourceKey key);
+internal u64 G_DeviceBufferAddress(G_ResourceKey key);
 
-static void G_DeviceBufferRead(G_BufferKey key, void *dst, u64 length, u64 offset);
-static void G_DeviceBufferWrite(G_BufferKey key, const void *src, u64 length, u64 offset);
+internal void G_DeviceBufferRead(G_ResourceKey key, void *dst, u64 length, u64 offset);
+internal void G_DeviceBufferWrite(G_ResourceKey key, const void *src, u64 length, u64 offset);
 
-static u64 G_DeviceBufferSize(G_BufferKey key);
+internal u64 G_DeviceBufferSize(G_ResourceKey key);
 
 
 /* ==================================================
    SAMPLERS
    ================================================== */
 
-static G_SamplerKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *create_info);
-static G_SamplerKey G_DeviceSamplerCreateF(VkFilter filter);
+internal G_ResourceKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *create_info);
+internal G_ResourceKey G_DeviceSamplerCreateF(VkFilter filter);
 
-static void G_DeviceSamplerDestroy(G_SamplerKey sampler);
+internal void G_DeviceSamplerDestroy(G_ResourceKey key);
 
-static G_Sampler *G_DeviceSamplerFromKey(G_SamplerKey key);
+internal G_Sampler *G_DeviceSamplerFromKey(G_ResourceKey key);
 
-static u32 G_DeviceSamplerBindless(G_SamplerKey key);
+internal u32 G_DeviceSamplerBindless(G_ResourceKey key);
 
 
 /* ==================================================
    SHADERS
    ================================================== */
 
-static G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode);
+internal G_ShaderStage G_DeviceShaderStageCreate(Arena *arena, const G_ShaderBytecode *bytecode);
 
-static G_ShaderKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBytecode *stages);
-static void G_DeviceShaderProgramDestroy(G_ShaderKey program);
+internal G_ResourceKey G_DeviceShaderProgramCreate(u32 stage_count, const G_ShaderBytecode *stages);
+internal void G_DeviceShaderProgramDestroy(G_ResourceKey key);
 
-static G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ShaderKey key);
+internal G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ResourceKey key);
 
 
 /* ==================================================
@@ -374,29 +363,31 @@ static G_ShaderProgram *G_DeviceShaderProgramFromKey(G_ShaderKey key);
 typedef struct G_DeviceAllocAccelStructReceipt G_DeviceAllocAccelStructReceipt;
 struct G_DeviceAllocAccelStructReceipt
 {
-	G_AccelStructKey key;
+	G_ResourceKey key;
 	u64 scratch_size;
 };
 
 // Bottom-Level Acceleration Structure
 // -- vertex / index data
-static G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *geometries, u32 geometry_count);
+internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry *geometries, u32 geometry_count);
 
 // Top-Level Acceleration Structure
 // -- objects
-static G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count);
+internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_count);
 
-static void G_DeviceAccelStructDestroy(G_AccelStructKey key);
-static u64 G_DeviceAccelStructAddress(G_AccelStructKey key);
-static G_AccelStruct *G_DeviceAccelStructFromKey(G_AccelStructKey key);
+internal void G_DeviceAccelStructDestroy(G_ResourceKey key);
+
+internal u64 G_DeviceAccelStructAddress(G_ResourceKey key);
+
+internal G_AccelStruct *G_DeviceAccelStructFromKey(G_ResourceKey key);
 
 
 /* ==================================================
    IMGUI
    ================================================== */
 
-static void G_DeviceImGuiNewFrame(void);
-static void G_DeviceImGuiRecord(const G_CmdBuffer *cmd);
+internal void G_DeviceImGuiNewFrame(void);
+internal void G_DeviceImGuiRecord(const G_CmdBuffer *cmd);
 
 
 #endif // GRAPHICS_DEVICE_H

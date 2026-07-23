@@ -1,5 +1,5 @@
 
-static m4 AN_JointPoseToM4(AN_JointPose trs)
+internal m4 AN_JointPoseToM4(AN_JointPose trs)
 {
 	m4 T = M4Translate(trs.translation);
 	m4 R = M4RotateQuat(trs.rotation);
@@ -8,7 +8,7 @@ static m4 AN_JointPoseToM4(AN_JointPose trs)
 	return M4MulM4(T, M4MulM4(R, S));
 }
 
-static AN_JointPose AN_JointPoseBlend(AN_JointPose a, AN_JointPose b, f32 u)
+internal AN_JointPose AN_JointPoseBlend(AN_JointPose a, AN_JointPose b, f32 u)
 {
 	AN_JointPose blended = {0};
 
@@ -19,7 +19,7 @@ static AN_JointPose AN_JointPoseBlend(AN_JointPose a, AN_JointPose b, f32 u)
 	return blended;
 }
 
-static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
+internal f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 {
 	if (next_ts <= prev_ts)
 		return 0.f;
@@ -27,7 +27,7 @@ static f32 AN_TimestampProgressFactor(f32 prev_ts, f32 next_ts, f32 ts)
 	return (ts - prev_ts) / (next_ts - prev_ts);
 }
 
-static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
+internal AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f32 ts)
 {
 	AN_InterpolatedKeyframe keyframe = {0};
 	
@@ -66,7 +66,7 @@ static AN_InterpolatedKeyframe AN_InterpolateKeyframe(const A_AnimChannel *ch, f
 	return keyframe;
 }
 
-static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *local_trs)
+internal void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *local_trs)
 {
 	AN_InterpolatedKeyframe keyframe = AN_InterpolateKeyframe(ch, ts);
 
@@ -121,7 +121,7 @@ static void AN_SampleChannel(const A_AnimChannel *ch, f32 ts, AN_JointPose *loca
 	}
 }
 
-static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n)
+internal f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playback_rate, f32 duration, u32 n)
 {
 	f32 sample_time = (global_time - global_start_time) * playback_rate;
 
@@ -134,7 +134,7 @@ static f32 AN_CalcSampleTime(f32 global_time, f32 global_start_time, f32 playbac
 	return sample_time;
 }
 
-static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle)
+internal void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle model_handle)
 {
 	A_Asset *asset = A_GetOrFallback(model_handle);
 
@@ -163,7 +163,7 @@ static void AN_AnimatorSelect(AN_Animator *animator, Arena *arena, A_Handle mode
 	}
 }
 
-static void AN_AnimatorTick(AN_Animator *animator, f32 global_time)
+internal void AN_AnimatorTick(AN_Animator *animator, f32 global_time)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -215,7 +215,7 @@ static void AN_AnimatorTick(AN_Animator *animator, f32 global_time)
 	}
 }
 
-static void AN_AnimatorUpdatePalette(AN_Animator *animator)
+internal void AN_AnimatorUpdatePalette(AN_Animator *animator)
 {
 	if (animator->pose_count <= 0)
 		return;
@@ -241,7 +241,7 @@ static void AN_AnimatorUpdatePalette(AN_Animator *animator)
 	}
 }
 
-static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
+internal AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
 {
 	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 
@@ -259,7 +259,7 @@ static AN_ClipKey AN_AnimatorFindClipByName(AN_Animator *animator, String8 name)
 	return AN_ClipKeyNull();
 }
 
-static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time)
+internal void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f32 global_start_time)
 {
 	if (AN_ClipKeyIsNull(clip))
 		return;
@@ -275,18 +275,18 @@ static void AN_AnimatorPlay(AN_Animator *animator, AN_ClipKey clip, b32 loop, f3
 	animator->global_start_time = global_start_time;
 }
 
-static void AN_AnimatorStop(AN_Animator *animator)
+internal void AN_AnimatorStop(AN_Animator *animator)
 {
 	animator->clip = AN_ClipKeyNull();
 	animator->paused = true;
 }
 
-static void AN_AnimatorResume(AN_Animator *animator)
+internal void AN_AnimatorResume(AN_Animator *animator)
 {
 	animator->paused = false;
 }
 
-static void AN_AnimatorPause(AN_Animator *animator, f32 global_time)
+internal void AN_AnimatorPause(AN_Animator *animator, f32 global_time)
 {
 	if (animator->paused)
 		return;
@@ -295,7 +295,7 @@ static void AN_AnimatorPause(AN_Animator *animator, f32 global_time)
 	animator->global_paused_time = global_time;
 }
 
-static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time)
+internal void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time)
 {
 	if (animator->paused)
 		return;
@@ -305,7 +305,7 @@ static void AN_AnimatorPauseAndReset(AN_Animator *animator, f32 global_time)
 	animator->global_paused_time = global_time;
 }
 
-static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
+internal b32 AN_AnimatorIsFinished(const AN_Animator *animator)
 {
 	if (AN_ClipKeyIsNull(animator->clip) || animator->loop)
 		return false;
@@ -316,14 +316,14 @@ static b32 AN_AnimatorIsFinished(const AN_Animator *animator)
 	return animator->last_sample_time >= anim_clip->duration_s;
 }
 
-static f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator)
+internal f32 AN_AnimatorCalcNormalizedTimeForCurrentClip(const AN_Animator *animator)
 {
 	A_ModelAsset *asset_model = &A_GetOrFallback(animator->selected_model)->model;
 	A_AnimClip *c = &asset_model->clips[animator->clip.value];
 	return animator->last_sample_time / c->duration_s;
 }
 
-static AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
+internal AN_Palette AN_AnimatorPalette(AN_Animator *animator, i32 skin_index)
 {
 	AN_Palette palette = {0};
 

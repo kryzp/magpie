@@ -35,7 +35,7 @@ struct TypeInfo
 	const FieldInfo *fields;
 };
 
-static inline b32 TypeInfoIsDerivedFrom(const TypeInfo *me, const TypeInfo *other)
+internal inline b32 TypeInfoIsDerivedFrom(const TypeInfo *me, const TypeInfo *other)
 {
 	const TypeInfo *curr = me;
 
@@ -56,11 +56,11 @@ struct MetaDB
 	// TODO: Hash map [u64 -> TypeInfo]
 };
 
-static void MetaDBBuildRegistry(void);
-static void *MetaDBInstantiate(u64 type_id);
+internal void MetaDBBuildRegistry(void);
+internal void *MetaDBInstantiate(u64 type_id);
 
-static const TypeInfo *MetaDBFetch(String8 name);
-static const TypeInfo *MetaDBFetchByID(u64 type_id);
+internal const TypeInfo *MetaDBFetch(String8 name);
+internal const TypeInfo *MetaDBFetchByID(u64 type_id);
 
 #define MetaDB_DataBegin(type)
 #define MetaDB_DataField(name, type)

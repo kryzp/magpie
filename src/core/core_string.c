@@ -1,5 +1,5 @@
 
-static String8 String8Alloc(Arena *arena, u32 len)
+internal String8 String8Alloc(Arena *arena, u32 len)
 {
 	String8 str = {0};
 	str.str = ArenaPushArray(arena, u8, len + 1);
@@ -8,7 +8,7 @@ static String8 String8Alloc(Arena *arena, u32 len)
 	return str;
 }
 
-static String8 String8Clone(Arena *arena, String8 string)
+internal String8 String8Clone(Arena *arena, String8 string)
 {
 	String8 clone = {0};
 	clone.str = ArenaPushArray(arena, u8, string.len + 1);
@@ -19,7 +19,7 @@ static String8 String8Clone(Arena *arena, String8 string)
 	return clone;
 }
 
-static String8 String8Append(Arena *arena, String8 a, String8 b)
+internal String8 String8Append(Arena *arena, String8 a, String8 b)
 {
 	u32 len = a.len + b.len;
 
@@ -31,7 +31,7 @@ static String8 String8Append(Arena *arena, String8 a, String8 b)
 	return out;
 }
 
-static String8 String8Fmt(Arena *arena, const char *fmt, ...)
+internal String8 String8Fmt(Arena *arena, const char *fmt, ...)
 {
 	char out[512] = {0};
 	
@@ -43,7 +43,7 @@ static String8 String8Fmt(Arena *arena, const char *fmt, ...)
 	return String8Clone(arena, String8FromCStr(out));
 }
 
-static String8 String8Skip(String8 string, u64 to)
+internal String8 String8Skip(String8 string, u64 to)
 {
 	String8 skipped = {0};
 	skipped.str = string.str + to;
@@ -52,7 +52,7 @@ static String8 String8Skip(String8 string, u64 to)
 	return skipped;
 }
 
-static b32 String8Match(String8 a, String8 b)
+internal b32 String8Match(String8 a, String8 b)
 {
 	if (a.len != b.len)
 		return false;
@@ -66,7 +66,7 @@ static b32 String8Match(String8 a, String8 b)
 	return true;
 }
 
-static b32 String8StartsWith(String8 string, String8 prefix)
+internal b32 String8StartsWith(String8 string, String8 prefix)
 {
 	if (prefix.len > string.len)
 		return false;
@@ -80,7 +80,7 @@ static b32 String8StartsWith(String8 string, String8 prefix)
 	return true;
 }
 
-static u64 String8Find(String8 string, String8 substr)
+internal u64 String8Find(String8 string, String8 substr)
 {
 	for (u64 i = 0; i < string.len; i++)
 	{
@@ -93,7 +93,7 @@ static u64 String8Find(String8 string, String8 substr)
 	return CORE_STRING_INVALID_INDEX;
 }
 
-static u64 String8FindLast(String8 string, String8 substr)
+internal u64 String8FindLast(String8 string, String8 substr)
 {
 	for (u64 i = string.len - substr.len - 1; i >= 0; i--)
 	{
@@ -106,7 +106,7 @@ static u64 String8FindLast(String8 string, String8 substr)
 	return CORE_STRING_INVALID_INDEX;
 }
 
-static u64 String8FindLastIncl(String8 string, String8 substr)
+internal u64 String8FindLastIncl(String8 string, String8 substr)
 {
 	for (u64 i = string.len - substr.len - 1; i >= 0; i--)
 	{
@@ -119,32 +119,32 @@ static u64 String8FindLastIncl(String8 string, String8 substr)
 	return CORE_STRING_INVALID_INDEX;
 }
 
-static b32 CharIsWhitespace(u8 c)
+internal b32 CharIsWhitespace(u8 c)
 {
 	return c <= 32;
 }
 
-static b32 CharIsLower(u8 c)
+internal b32 CharIsLower(u8 c)
 {
 	return c >= 'a' && c <= 'z';
 }
 
-static b32 CharIsUpper(u8 c)
+internal b32 CharIsUpper(u8 c)
 {
 	return c >= 'A' && c <= 'Z';
 }
 
-static b32 CharIsAlpha(u8 c)
+internal b32 CharIsAlpha(u8 c)
 {
 	return CharIsLower(c) || CharIsUpper(c);
 }
 
-static b32 CharIsDigit(u8 c)
+internal b32 CharIsDigit(u8 c)
 {
 	return c >= '1' && c <= '9';
 }
 
-static u8 CharToLower(u8 c)
+internal u8 CharToLower(u8 c)
 {
 	if (CharIsLower(c))
 		c += 32;
@@ -152,7 +152,7 @@ static u8 CharToLower(u8 c)
 	return c;
 }
 
-static u8 CharToUpper(u8 c)
+internal u8 CharToUpper(u8 c)
 {
 	if (CharIsUpper(c))
 		c -= 32;

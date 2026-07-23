@@ -13,22 +13,22 @@ struct G_Alloc
 typedef struct G_RingBuffer G_RingBuffer;
 struct G_RingBuffer
 {
-	G_BufferKey buffer;
+	G_ResourceKey buffer;
 	u64 used;
 	u64 capacity;
 	void *base_cpu;
 	u64 base_gpu;
 };
 
-static G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info);
-static void G_RingBufferDestroy(const G_RingBuffer *ring);
+internal G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info);
+internal void G_RingBufferDestroy(const G_RingBuffer *ring);
 
-static void G_RingBufferReset(G_RingBuffer *ring);
+internal void G_RingBufferReset(G_RingBuffer *ring);
 
-static G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment);
+internal G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment);
 #define G_RingBufferPushArray(ring, type, count) G_RingBufferPush((ring), sizeof(type) * (count), _Alignof(type))
 
-static void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset);
-static u64 G_RingBufferAddrGPU(const G_RingBuffer *ring, u64 offset);
+internal void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset);
+internal u64 G_RingBufferAddrGPU(const G_RingBuffer *ring, u64 offset);
 
 #endif // GRAPHICS_RING_BUFFER_H

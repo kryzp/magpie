@@ -66,7 +66,7 @@ struct S_System
 	u32 pending_signal_count;
 };
 
-static S_Coroutine *S_AllocCoroutine(S_Handle *out_handle)
+internal S_Coroutine *S_AllocCoroutine(S_Handle *out_handle)
 {
 	// 0 = null
 	for (u32 i = 1; i < S_MAX_COROUTINES; i++)
@@ -120,7 +120,7 @@ static S_Coroutine *S_AllocCoroutine(S_Handle *out_handle)
 	return NULL;
 }
 
-static void S_FreeCoroutine(S_Coroutine *co)
+internal void S_FreeCoroutine(S_Coroutine *co)
 {
 	if (co->finish_fn)
 		co->finish_fn(co, co->finish_user_data);
@@ -146,7 +146,7 @@ static void S_FreeCoroutine(S_Coroutine *co)
 	co->yield_kind = S_YieldKind_None;
 }
 
-static S_Coroutine *S_ResolveHandle(S_Handle handle)
+internal S_Coroutine *S_ResolveHandle(S_Handle handle)
 {
 	if (S_HandleIsNull(handle))
 		return NULL;
@@ -165,7 +165,7 @@ static S_Coroutine *S_ResolveHandle(S_Handle handle)
 	return co;
 }
 
-static i32 S_BindingTrampoline(lua_State *lua)
+internal i32 S_BindingTrampoline(lua_State *lua)
 {
 	S_BindingFn *fn = (S_BindingFn *)lua_touserdata(lua, lua_upvalueindex(1));
 
@@ -179,7 +179,7 @@ static i32 S_BindingTrampoline(lua_State *lua)
 	return ctx.nretval;
 }
 
-static void S_PushBindingClosure(S_BindingFn *fn, void *const *upvalues, u32 n)
+internal void S_PushBindingClosure(S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	// first upval is reserved for the function pointer
 	lua_pushlightuserdata(s_system->lua, (void *)fn);
@@ -190,7 +190,7 @@ static void S_PushBindingClosure(S_BindingFn *fn, void *const *upvalues, u32 n)
 	lua_pushcclosure(s_system->lua, S_BindingTrampoline, S_USER_UPVAL_BASE - 1 + n);
 }
 
-static void S_PushArg(lua_State *target, const S_Argument *a)
+internal void S_PushArg(lua_State *target, const S_Argument *a)
 {
 	switch (a->type)
 	{
@@ -227,7 +227,7 @@ static void S_PushArg(lua_State *target, const S_Argument *a)
 	}
 }
 
-static S_BINDING_DEF(S_BND_Dispatch)
+internal S_BINDING_DEF(S_BND_Dispatch)
 {
 	u32 n = S_CtxGetArgCount(ctx);
 
@@ -269,7 +269,7 @@ static S_BINDING_DEF(S_BND_Dispatch)
 	child->parent = -1;
 }
 
-static S_BINDING_DEF(S_BND_Parallelize)
+internal S_BINDING_DEF(S_BND_Parallelize)
 {
 	u32 n = S_CtxGetArgCount(ctx);
 
@@ -319,7 +319,7 @@ static S_BINDING_DEF(S_BND_Parallelize)
 	lua_yield(ctx->lua, 0);
 }
 
-static void *S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize new_size)
+internal void *S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize new_size)
 {
 	if (new_size == 0)
 	{
@@ -337,7 +337,7 @@ static void *S_InternalLuaAllocator(void *ud, void *ptr, usize old_size, usize n
 	}
 }
 
-static S_System *S_AllocAndSelect(Arena *arena, LOG_Channel log_channel)
+internal S_System *S_AllocAndSelect(Arena *arena, LOG_Channel log_channel)
 {
 	S_System *system = ArenaPushArray(arena, S_System, 1);
 
@@ -372,7 +372,7 @@ static S_System *S_AllocAndSelect(Arena *arena, LOG_Channel log_channel)
 	return system;
 }
 
-static void S_Destroy(void)
+internal void S_Destroy(void)
 {
 	if (!s_system->lua)
 		return;
@@ -390,12 +390,12 @@ static void S_Destroy(void)
 	s_system = NULL;
 }
 
-static void S_SelectContext(S_System *system)
+internal void S_SelectContext(S_System *system)
 {
 	s_system = system;
 }
 
-static S_Ref S_Compile(IO_ByteSpan source, String8 chunk_name)
+internal S_Ref S_Compile(IO_ByteSpan source, String8 chunk_name)
 {
 	S_Ref result = S_RefNull();
 
@@ -419,7 +419,7 @@ static S_Ref S_Compile(IO_ByteSpan source, String8 chunk_name)
 	return result;
 }
 
-static void S_Release(S_Ref ref)
+internal void S_Release(S_Ref ref)
 {
 	if (S_RefIsNull(ref))
 		return;
@@ -427,7 +427,7 @@ static void S_Release(S_Ref ref)
 	luaL_unref(s_system->lua, LUA_REGISTRYINDEX, ref.value);
 }
 
-static S_Ref S_ExecuteModule(S_Ref chunk_ref)
+internal S_Ref S_ExecuteModule(S_Ref chunk_ref)
 {
 	S_Ref result = S_RefNull();
 
@@ -458,7 +458,7 @@ end:
 	return result;
 }
 
-static S_Ref S_NewInstance(S_Ref module_ref)
+internal S_Ref S_NewInstance(S_Ref module_ref)
 {
 	S_Ref result = S_RefNull();
 
@@ -477,7 +477,7 @@ end:
 	return result;
 }
 
-static S_Handle S_PlayCallableOnThread(lua_State *thread, i32 thread_ref, u32 arg_count)
+internal S_Handle S_PlayCallableOnThread(lua_State *thread, i32 thread_ref, u32 arg_count)
 {
 	S_Handle handle = {0};
 	S_Coroutine *co = S_AllocCoroutine(&handle);
@@ -497,12 +497,12 @@ static S_Handle S_PlayCallableOnThread(lua_State *thread, i32 thread_ref, u32 ar
 	return handle;
 }
 
-static S_Handle S_CallMethod(S_Ref instance_ref, String8 method_name)
+internal S_Handle S_CallMethod(S_Ref instance_ref, String8 method_name)
 {
 	return S_CallMethodEx(instance_ref, method_name, NULL, 0);
 }
 
-static S_Handle S_CallMethodEx(S_Ref instance_ref, String8 method_name, const S_Argument *args, u32 arg_count)
+internal S_Handle S_CallMethodEx(S_Ref instance_ref, String8 method_name, const S_Argument *args, u32 arg_count)
 {
 	if (S_RefIsNull(instance_ref))
 		return S_HandleNull();
@@ -534,7 +534,7 @@ static S_Handle S_CallMethodEx(S_Ref instance_ref, String8 method_name, const S_
 	return S_PlayCallableOnThread(thread, thread_ref, arg_count + 1); // +1 bcuz of self
 }
 
-static void S_Stop(S_Handle handle)
+internal void S_Stop(S_Handle handle)
 {
 	S_Coroutine *co = S_ResolveHandle(handle);
 
@@ -544,12 +544,12 @@ static void S_Stop(S_Handle handle)
 	S_FreeCoroutine(co);
 }
 
-static b32 S_IsRunning(S_Handle handle)
+internal b32 S_IsRunning(S_Handle handle)
 {
 	return S_ResolveHandle(handle) != NULL;
 }
 
-static void S_FireSignal(String8 name)
+internal void S_FireSignal(String8 name)
 {
 	if (s_system->pending_signal_count >= S_MAX_PENDING_SIGNALS)
 	{
@@ -564,7 +564,7 @@ static void S_FireSignal(String8 name)
 	s_system->pending_signals[s_system->pending_signal_count++] = hash;
 }
 
-static b32 S_SignalIsPending(u64 hash)
+internal b32 S_SignalIsPending(u64 hash)
 {
 	for (u32 i = 0; i < s_system->pending_signal_count; i++)
 	{
@@ -575,7 +575,7 @@ static b32 S_SignalIsPending(u64 hash)
 	return false;
 }
 
-static b32 S_CoroutineIsReady(const S_Coroutine *co)
+internal b32 S_CoroutineIsReady(const S_Coroutine *co)
 {
 	if (!co->in_use)
 		return false;
@@ -599,7 +599,7 @@ static b32 S_CoroutineIsReady(const S_Coroutine *co)
 	}
 }
 
-static void S_ResumeOne(S_Coroutine *co)
+internal void S_ResumeOne(S_Coroutine *co)
 {
 	s_system->curr = co;
 
@@ -647,7 +647,7 @@ static void S_ResumeOne(S_Coroutine *co)
 	}
 }
 
-static void S_Tick(f32 dt)
+internal void S_Tick(f32 dt)
 {
 	if (!system || !s_system->lua)
 		return;
@@ -681,7 +681,7 @@ static void S_Tick(f32 dt)
 	s_system->pending_signal_count = 0;
 }
 
-static void S_SetOnFinish(S_Handle handle, S_FinishFn *fn, void *user_data)
+internal void S_SetOnFinish(S_Handle handle, S_FinishFn *fn, void *user_data)
 {
 	S_Coroutine *co = S_ResolveHandle(handle);
 
@@ -692,23 +692,23 @@ static void S_SetOnFinish(S_Handle handle, S_FinishFn *fn, void *user_data)
 	co->finish_user_data = user_data;
 }
 
-static void S_BindGlobal(String8 name, S_BindingFn *fn)
+internal void S_BindGlobal(String8 name, S_BindingFn *fn)
 {
 	S_BindGlobalEx(name, fn, NULL, 0);
 }
 
-static void S_BindToTable(String8 table, String8 name, S_BindingFn *fn)
+internal void S_BindToTable(String8 table, String8 name, S_BindingFn *fn)
 {
 	S_BindToTableEx(table, name, fn, NULL, 0);
 }
 
-static void S_BindGlobalEx(String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
+internal void S_BindGlobalEx(String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	S_PushBindingClosure(fn, upvalues, n);
 	lua_setglobal(s_system->lua, (const char *)name.str);
 }
 
-static void S_BindToTableEx(String8 table, String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
+internal void S_BindToTableEx(String8 table, String8 name, S_BindingFn *fn, void *const *upvalues, u32 n)
 {
 	if (lua_getglobal(s_system->lua, (const char *)table.str) != LUA_TTABLE)
 	{
@@ -723,35 +723,35 @@ static void S_BindToTableEx(String8 table, String8 name, S_BindingFn *fn, void *
 	lua_pop(s_system->lua, 1);
 }
 
-static u32 S_CtxGetArgCount(S_Context *ctx)
+internal u32 S_CtxGetArgCount(S_Context *ctx)
 {
 	return lua_gettop(ctx->lua);
 }
 
-static f32 S_CtxGetArgF32(S_Context *ctx, u32 idx)
+internal f32 S_CtxGetArgF32(S_Context *ctx, u32 idx)
 {
 	return luaL_checknumber(ctx->lua, idx + 1);
 }
 
-static i32 S_CtxGetArgI32(S_Context *ctx, u32 idx)
+internal i32 S_CtxGetArgI32(S_Context *ctx, u32 idx)
 {
 	return luaL_checkinteger(ctx->lua, idx + 1);
 }
 
-static b32 S_CtxGetArgBool(S_Context *ctx, u32 idx)
+internal b32 S_CtxGetArgBool(S_Context *ctx, u32 idx)
 {
 	luaL_checktype(ctx->lua, idx + 1, LUA_TBOOLEAN);
 	return lua_toboolean(ctx->lua, idx + 1) ? 1 : 0;
 }
 
-static String8 S_CtxGetArgStr(S_Context *ctx, u32 idx)
+internal String8 S_CtxGetArgStr(S_Context *ctx, u32 idx)
 {
 	u64 len = 0;
 	const char *s = luaL_checklstring(ctx->lua, idx + 1, &len);
 	return String8Init(s, len);
 }
 
-static u32 S_CtxGetArgTaggedU32(S_Context *ctx, u32 idx, u32 expected_tag)
+internal u32 S_CtxGetArgTaggedU32(S_Context *ctx, u32 idx, u32 expected_tag)
 {
 	lua_Integer packed = luaL_checkinteger(ctx->lua, idx + 1);
 
@@ -770,7 +770,7 @@ static u32 S_CtxGetArgTaggedU32(S_Context *ctx, u32 idx, u32 expected_tag)
 	return value;
 }
 
-static f32 S_CtxGetArgF32Opt(S_Context *ctx, u32 idx, f32 fallback)
+internal f32 S_CtxGetArgF32Opt(S_Context *ctx, u32 idx, f32 fallback)
 {
 	if (lua_isnoneornil(ctx->lua, idx + 1))
 		return fallback;
@@ -778,7 +778,7 @@ static f32 S_CtxGetArgF32Opt(S_Context *ctx, u32 idx, f32 fallback)
 	return luaL_checknumber(ctx->lua, idx + 1);
 }
 
-static i32 S_CtxGetArgI32Opt(S_Context *ctx, u32 idx, i32 fallback)
+internal i32 S_CtxGetArgI32Opt(S_Context *ctx, u32 idx, i32 fallback)
 {
 	if (lua_isnoneornil(ctx->lua, idx + 1))
 		return fallback;
@@ -786,7 +786,7 @@ static i32 S_CtxGetArgI32Opt(S_Context *ctx, u32 idx, i32 fallback)
 	return luaL_checkinteger(ctx->lua, idx + 1);
 }
 
-static b32 S_CtxGetArgB32Opt(S_Context *ctx, u32 idx, b32 fallback)
+internal b32 S_CtxGetArgB32Opt(S_Context *ctx, u32 idx, b32 fallback)
 {
 	if (lua_isnoneornil(ctx->lua, idx + 1))
 		return fallback;
@@ -795,7 +795,7 @@ static b32 S_CtxGetArgB32Opt(S_Context *ctx, u32 idx, b32 fallback)
 	return lua_toboolean(ctx->lua, idx + 1) ? true : false;
 }
 
-static String8 S_CtxGetArgStrOpt(S_Context *ctx, u32 idx, String8 fallback)
+internal String8 S_CtxGetArgStrOpt(S_Context *ctx, u32 idx, String8 fallback)
 {
 	if (lua_isnoneornil(ctx->lua, idx + 1))
 		return fallback;
@@ -806,50 +806,50 @@ static String8 S_CtxGetArgStrOpt(S_Context *ctx, u32 idx, String8 fallback)
 	return String8Init(s, len);
 }
 
-static void *S_CtxUpvaluePtr(S_Context *ctx, u32 idx)
+internal void *S_CtxUpvaluePtr(S_Context *ctx, u32 idx)
 {
 	i32 up_index = lua_upvalueindex(idx + S_USER_UPVAL_BASE);
 	return lua_touserdata(ctx->lua, up_index);
 }
 
-static void S_CtxReturnNil(S_Context *ctx)
+internal void S_CtxReturnNil(S_Context *ctx)
 {
 	lua_pushnil(ctx->lua);
 	ctx->nretval++;
 }
 
-static void S_CtxReturnF32(S_Context *ctx, f32 v)
+internal void S_CtxReturnF32(S_Context *ctx, f32 v)
 {
 	lua_pushnumber(ctx->lua, v);
 	ctx->nretval++;
 }
 
-static void S_CtxReturnI32(S_Context *ctx, i32 v)
+internal void S_CtxReturnI32(S_Context *ctx, i32 v)
 {
 	lua_pushinteger(ctx->lua, v);
 	ctx->nretval++;
 }
 
-static void S_CtxReturnB32(S_Context *ctx, b32 v)
+internal void S_CtxReturnB32(S_Context *ctx, b32 v)
 {
 	lua_pushboolean(ctx->lua, v ? 1 : 0);
 	ctx->nretval++;
 }
 
-static void S_CtxReturnString8(S_Context *ctx, String8 v)
+internal void S_CtxReturnString8(S_Context *ctx, String8 v)
 {
 	lua_pushlstring(ctx->lua, (const char *)v.str, v.len);
 	ctx->nretval++;
 }
 
-static void S_CtxReturnTaggedU32(S_Context *ctx, u32 v, u32 type_tag)
+internal void S_CtxReturnTaggedU32(S_Context *ctx, u32 v, u32 type_tag)
 {
 	lua_Integer packed = (lua_Integer)(((u64)type_tag << 32) | (u64)v);
 	lua_pushinteger(ctx->lua, packed);
 	ctx->nretval++;
 }
 
-static void S_CtxYield(S_Context *ctx)
+internal void S_CtxYield(S_Context *ctx)
 {
 	S_Coroutine *co = s_system->curr;
 
@@ -863,7 +863,7 @@ static void S_CtxYield(S_Context *ctx)
 	lua_yield(ctx->lua, 0);
 }
 
-static void S_CtxYieldTime(S_Context *ctx, f32 time_s)
+internal void S_CtxYieldTime(S_Context *ctx, f32 time_s)
 {
 	S_Coroutine *co = s_system->curr;
 
@@ -877,7 +877,7 @@ static void S_CtxYieldTime(S_Context *ctx, f32 time_s)
 	lua_yield(ctx->lua, 0);
 }
 
-static void S_CtxYieldSignal(S_Context *ctx, String8 name)
+internal void S_CtxYieldSignal(S_Context *ctx, String8 name)
 {
 	S_Coroutine *co = s_system->curr;
 
@@ -891,7 +891,7 @@ static void S_CtxYieldSignal(S_Context *ctx, String8 name)
 	lua_yield(ctx->lua, 0);
 }
 
-static i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext kctx)
+internal i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext kctx)
 {
 	S_Coroutine *co = s_system->curr;
 
@@ -911,7 +911,7 @@ static i32 S_CtxContinuationTrampoline(lua_State *lua, i32 status, lua_KContext 
 	return ctx.nretval;
 }
 
-static void S_CtxYieldSignalCont(S_Context *ctx, String8 name, S_ContinueFn *cont, void *user_data)
+internal void S_CtxYieldSignalCont(S_Context *ctx, String8 name, S_ContinueFn *cont, void *user_data)
 {
 	S_Coroutine *co = s_system->curr;
 
@@ -927,7 +927,7 @@ static void S_CtxYieldSignalCont(S_Context *ctx, String8 name, S_ContinueFn *con
 	lua_yieldk(ctx->lua, 0, 0, S_CtxContinuationTrampoline);
 }
 
-static void S_CtxThrow(S_Context *ctx, const char *fmt, ...)
+internal void S_CtxThrow(S_Context *ctx, const char *fmt, ...)
 {
 	char buf[512] = {0};
 

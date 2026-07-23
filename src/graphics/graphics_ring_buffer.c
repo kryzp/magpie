@@ -1,5 +1,5 @@
 
-static G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info)
+internal G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info)
 {
 	G_RingBuffer ring = {0};
 	ring.buffer = G_DeviceBufferAlloc(alloc_info);
@@ -12,17 +12,17 @@ static G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info)
 	return ring;
 }
 
-static void G_RingBufferDestroy(const G_RingBuffer *ring)
+internal void G_RingBufferDestroy(const G_RingBuffer *ring)
 {
 	G_DeviceBufferDestroy(ring->buffer);
 }
 
-static void G_RingBufferReset(G_RingBuffer *ring)
+internal void G_RingBufferReset(G_RingBuffer *ring)
 {
 	ring->used = 0;
 }
 
-static G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment)
+internal G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment)
 {
 	ring->used = MemAlignUp(ring->used, alignment);
 
@@ -40,12 +40,12 @@ static G_Alloc G_RingBufferPush(G_RingBuffer *ring, u64 bytes, u64 alignment)
 	return alloc;
 }
 
-static void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset)
+internal void *G_RingBufferAddrCPU(const G_RingBuffer *ring, u64 offset)
 {
 	return (void *)((u8 *)ring->base_cpu + offset);
 }
 
-static u64 G_RingBufferAddrGPU(const G_RingBuffer *ring, u64 offset)
+internal u64 G_RingBufferAddrGPU(const G_RingBuffer *ring, u64 offset)
 {
 	return ring->base_gpu + offset;
 }

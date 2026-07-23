@@ -8,7 +8,7 @@ struct A_SoundLoadData
 	u64 size_in_bytes;
 };
 
-static A_LoadResult A_SoundLoaderLoad(const A_LCTX *ctx,
+internal A_LoadResult A_SoundLoaderLoad(const A_LCTX *ctx,
 									  Arena *result_arena)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
@@ -48,7 +48,7 @@ end:
 	return result;
 }
 
-static void A_SoundLoaderAlloc(const A_LCTX *ctx,
+internal void A_SoundLoaderAlloc(const A_LCTX *ctx,
 							   A_LoadResult *result,
 							   Arena *asset_arena,
 							   A_Asset *asset)
@@ -65,12 +65,12 @@ static void A_SoundLoaderAlloc(const A_LCTX *ctx,
 												 AU_Format_F32);
 }
 
-static void A_SoundLoaderDestroyAsset(A_Asset *asset)
+internal void A_SoundLoaderDestroyAsset(A_Asset *asset)
 {
 	AU_BackendDestroyBuffer(asset->sound.buffer);
 }
 
-static A_LoaderAPI A_GetSoundLoaderAPI(void)
+internal A_LoaderAPI A_GetSoundLoaderAPI(void)
 {
 	static A_LoaderAPI sound_loader_api = {
 		.Load = A_SoundLoaderLoad,

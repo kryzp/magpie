@@ -8,6 +8,15 @@
 #include <stdalign.h>
 #include <stdarg.h>
 
+/* originally i removed this because i generally
+   dislike renaming existing keywords (used to have
+   global as well secundum handmade hero), but i think
+   this generally makes sense because i treat .h/.c
+   files in my unity build almost like it was a regular
+   linked build so "theoretically" I could re-define it
+   to mean nothing if i switched to a linked build (?) */
+#define internal static
+
 #define STRINGIFY(x) #x
 #define MCONCAT(a, b) a##b
 

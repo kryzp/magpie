@@ -1,7 +1,7 @@
 
 static G_ShaderCompiler *g_shader_compiler = NULL;
 
-static void G_ShaderCompilerLogCallback(const char *context,
+internal void G_ShaderCompilerLogCallback(const char *context,
 							  const char *source,
 							  const char *message,
 							  void *user_data)
@@ -11,7 +11,7 @@ static void G_ShaderCompilerLogCallback(const char *context,
 			  source, context, message);
 }
 
-static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel)
+internal void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channel log_channel)
 {
 	compiler->log_channel = log_channel;
 
@@ -27,7 +27,7 @@ static void G_ShaderCompilerInitAndSelect(G_ShaderCompiler *compiler, LOG_Channe
 		DebugLogB(compiler->log_channel, "Failed to initialize.");
 }
 
-static void G_ShaderCompilerShutdown(void)
+internal void G_ShaderCompilerShutdown(void)
 {
 	DebugLogI(g_shader_compiler->log_channel, "Shutting down...");
 	
@@ -38,12 +38,12 @@ static void G_ShaderCompilerShutdown(void)
 	g_shader_compiler = NULL;
 }
 
-static void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler)
+internal void G_ShaderCompilerSelectContext(G_ShaderCompiler *compiler)
 {
 	g_shader_compiler = compiler;
 }
 
-static G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
+internal G_ShaderCompiledStages G_ShaderCompilerCompile(Arena *arena,
 													  String8 source_path,
 													  u32 search_path_count, const String8 *search_paths)
 {

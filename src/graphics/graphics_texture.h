@@ -39,7 +39,7 @@ struct G_Texture
 	VkSampleCountFlagBits sample_count;
 };
 
-static VkImageViewType G_TextureDefaultViewType(const G_Texture *texture);
+internal VkImageViewType G_TextureDefaultViewType(const G_Texture *texture);
 
 #define G_SRR_REMAINING_COUNT ((u32)(-1))
 
@@ -53,10 +53,10 @@ struct G_SubresourceRange
 	u32 layers;
 };
 
-static G_SubresourceRange G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *texture);
-static G_SubresourceRange G_SubresourceRangeAll(VkImageAspectFlags aspects);
-static G_SubresourceRange G_SubresourceRangeAllColour(void);
-static G_SubresourceRange G_SubresourceRangeAllDepth(void);
+internal G_SubresourceRange G_SubresourceRangeOfTexture(const G_SubresourceRange *range, const G_Texture *texture);
+internal G_SubresourceRange G_SubresourceRangeAll(VkImageAspectFlags aspects);
+internal G_SubresourceRange G_SubresourceRangeAllColour(void);
+internal G_SubresourceRange G_SubresourceRangeAllDepth(void);
 
 typedef struct G_TextureView G_TextureView;
 struct G_TextureView

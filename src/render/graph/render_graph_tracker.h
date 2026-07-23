@@ -6,14 +6,14 @@
 typedef struct R_TrackedTexture R_TrackedTexture;
 struct R_TrackedTexture
 {
-	G_TextureKey key;
+	G_ResourceKey key;
 	R_ResourceState state;
 };
 
 typedef struct R_TrackedBuffer R_TrackedBuffer;
 struct R_TrackedBuffer
 {
-	G_BufferKey key;
+	G_ResourceKey key;
 	R_ResourceState state;
 };
 
@@ -28,10 +28,10 @@ struct R_ResourceTracker
 };
 
 // return NULL if not tracked!!
-static const R_ResourceState *R_ResourceTrackerFindTexture (R_ResourceTracker *tracker, G_TextureKey key);
-static const R_ResourceState *R_ResourceTrackerFindBuffer  (R_ResourceTracker *tracker, G_BufferKey key);
+internal const R_ResourceState *R_ResourceTrackerFindTexture (R_ResourceTracker *tracker, G_ResourceKey key);
+internal const R_ResourceState *R_ResourceTrackerFindBuffer  (R_ResourceTracker *tracker, G_ResourceKey key);
 
-static void R_ResourceTrackerSetTexture (R_ResourceTracker *tracker, G_TextureKey key, R_ResourceState state);
-static void R_ResourceTrackerSetBuffer  (R_ResourceTracker *tracker, G_BufferKey key,  R_ResourceState state);
+internal void R_ResourceTrackerSetTexture (R_ResourceTracker *tracker, G_ResourceKey key, R_ResourceState state);
+internal void R_ResourceTrackerSetBuffer  (R_ResourceTracker *tracker, G_ResourceKey key,  R_ResourceState state);
 
 #endif // RENDER_GRAPH_TRACKER_H

@@ -1,10 +1,10 @@
 #ifndef IO_BYTE_H
 #define IO_BYTE_H
 
-static u8 IO_ByteSwap8(u8 v);
-static u16 IO_ByteSwap16(u16 v);
-static u32 IO_ByteSwap32(u32 v);
-static u64 IO_ByteSwap64(u64 v);
+internal u8 IO_ByteSwap8(u8 v);
+internal u16 IO_ByteSwap16(u16 v);
+internal u32 IO_ByteSwap32(u32 v);
+internal u64 IO_ByteSwap64(u64 v);
 
 typedef u32 IO_ByteSerializerErrorFlags;
 enum
@@ -26,51 +26,51 @@ struct IO_ByteSerializer
 	IO_ByteSerializerErrorFlags errors;
 };
 
-static u8  IO_ByteSwap8  (u8 v);
-static u16 IO_ByteSwap16 (u16 v);
-static u32 IO_ByteSwap32 (u32 v);
-static u64 IO_ByteSwap64 (u64 v);
+internal u8  IO_ByteSwap8  (u8 v);
+internal u16 IO_ByteSwap16 (u16 v);
+internal u32 IO_ByteSwap32 (u32 v);
+internal u64 IO_ByteSwap64 (u64 v);
 
-static IO_ByteSerializer IO_ByteStart(OS_Handle os_stream, IO_Endian endianness);
-static IO_ByteSerializer IO_ByteStartPlatformEndian(OS_Handle os_stream);
+internal IO_ByteSerializer IO_ByteStart(OS_Handle os_stream, IO_Endian endianness);
+internal IO_ByteSerializer IO_ByteStartPlatformEndian(OS_Handle os_stream);
 
-static b32      IO_ByteOk        (const IO_ByteSerializer *s);
+internal b32      IO_ByteOk        (const IO_ByteSerializer *s);
 
-static void     IO_ByteSkip      (IO_ByteSerializer *s, i64 bytes);
-static void     IO_ByteSeek      (IO_ByteSerializer *s, u64 to);
-static u64      IO_ByteTell      (IO_ByteSerializer *s);
+internal void     IO_ByteSkip      (IO_ByteSerializer *s, i64 bytes);
+internal void     IO_ByteSeek      (IO_ByteSerializer *s, u64 to);
+internal u64      IO_ByteTell      (IO_ByteSerializer *s);
 
-static void     IO_ByteWrite     (IO_ByteSerializer *s, void *bytes, u64 size);
+internal void     IO_ByteWrite     (IO_ByteSerializer *s, void *bytes, u64 size);
 
-static void     IO_ByteReadInto  (IO_ByteSerializer *s, u64 size, void *buf);
-static u8      *IO_ByteRead      (IO_ByteSerializer *s, u64 size, Arena *arena);
+internal void     IO_ByteReadInto  (IO_ByteSerializer *s, u64 size, void *buf);
+internal u8      *IO_ByteRead      (IO_ByteSerializer *s, u64 size, Arena *arena);
 
-static void     IO_ByteWriteU32  (IO_ByteSerializer *s, u32 value);
-static void     IO_ByteWriteI32  (IO_ByteSerializer *s, i32 value);
-static void     IO_ByteWriteF32  (IO_ByteSerializer *s, f32 value);
+internal void     IO_ByteWriteU32  (IO_ByteSerializer *s, u32 value);
+internal void     IO_ByteWriteI32  (IO_ByteSerializer *s, i32 value);
+internal void     IO_ByteWriteF32  (IO_ByteSerializer *s, f32 value);
 
-static u32      IO_ByteReadU32   (IO_ByteSerializer *s);
-static i32      IO_ByteReadI32   (IO_ByteSerializer *s);
-static f32      IO_ByteReadF32   (IO_ByteSerializer *s);
+internal u32      IO_ByteReadU32   (IO_ByteSerializer *s);
+internal i32      IO_ByteReadI32   (IO_ByteSerializer *s);
+internal f32      IO_ByteReadF32   (IO_ByteSerializer *s);
 
-static void     IO_ByteWriteU64  (IO_ByteSerializer *s, u64 value);
-static void     IO_ByteWriteI64  (IO_ByteSerializer *s, i64 value);
-static void     IO_ByteWriteF64  (IO_ByteSerializer *s, f64 value);
+internal void     IO_ByteWriteU64  (IO_ByteSerializer *s, u64 value);
+internal void     IO_ByteWriteI64  (IO_ByteSerializer *s, i64 value);
+internal void     IO_ByteWriteF64  (IO_ByteSerializer *s, f64 value);
 
-static u64      IO_ByteReadU64   (IO_ByteSerializer *s);
-static i64      IO_ByteReadI64   (IO_ByteSerializer *s);
-static f64      IO_ByteReadF64   (IO_ByteSerializer *s);
+internal u64      IO_ByteReadU64   (IO_ByteSerializer *s);
+internal i64      IO_ByteReadI64   (IO_ByteSerializer *s);
+internal f64      IO_ByteReadF64   (IO_ByteSerializer *s);
 
-static void     IO_ByteWriteV2   (IO_ByteSerializer *s, v2 v);
-static void     IO_ByteWriteV3   (IO_ByteSerializer *s, v3 v);
-static void     IO_ByteWriteV4   (IO_ByteSerializer *s, v4 v);
+internal void     IO_ByteWriteV2   (IO_ByteSerializer *s, v2 v);
+internal void     IO_ByteWriteV3   (IO_ByteSerializer *s, v3 v);
+internal void     IO_ByteWriteV4   (IO_ByteSerializer *s, v4 v);
 
-static v2       IO_ByteReadV2    (IO_ByteSerializer *s);
-static v3       IO_ByteReadV3    (IO_ByteSerializer *s);
-static v4       IO_ByteReadV4    (IO_ByteSerializer *s);
+internal v2       IO_ByteReadV2    (IO_ByteSerializer *s);
+internal v3       IO_ByteReadV3    (IO_ByteSerializer *s);
+internal v4       IO_ByteReadV4    (IO_ByteSerializer *s);
 
-static void     IO_ByteWriteStr8 (IO_ByteSerializer *s, String8 value);
-static String8  IO_ByteReadStr8  (IO_ByteSerializer *s, Arena *arena);
+internal void     IO_ByteWriteStr8 (IO_ByteSerializer *s, String8 value);
+internal String8  IO_ByteReadStr8  (IO_ByteSerializer *s, Arena *arena);
 
 #define IO_ByteReadArray(s, type, count, out) IO_ByteRead((s), sizeof(type) * (count), (out))
 
