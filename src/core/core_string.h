@@ -30,7 +30,7 @@ internal b32 String8StartsWith(String8 string, String8 prefix);
 
 internal u64 String8Find(String8 string, String8 substr);
 internal u64 String8FindLast(String8 string, String8 substr);
-internal u64 String8FindLastIncl(String8 string, String8 substr);
+internal u64 String8FindLastIncl(String8 string, String8 substr); // note: inclusive from the left->right !
 
 internal b32 CharIsWhitespace(u8 c);
 internal b32 CharIsLower(u8 c);

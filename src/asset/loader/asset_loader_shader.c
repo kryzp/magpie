@@ -51,6 +51,11 @@ internal void A_ShaderLoaderDestroyAsset(A_Asset *asset)
 	G_ShaderProgramDestroy(asset->shader.key);
 }
 
+internal b32 A_ShaderLoaderIsAssetMine(String8 extension)
+{
+	return String8Match(extension, String8Lit("slang"));
+}
+
 internal A_LoaderAPI A_GetShaderLoaderAPI(void)
 {
 	static A_LoaderAPI shader_loader_api = {
@@ -58,7 +63,8 @@ internal A_LoaderAPI A_GetShaderLoaderAPI(void)
 		.Alloc = A_ShaderLoaderAlloc,
 		.UploadGPU = NULL,
 		.DestroyIntermediateResources = NULL,
-		.DestroyAsset = A_ShaderLoaderDestroyAsset
+		.DestroyAsset = A_ShaderLoaderDestroyAsset,
+		.IsAssetMine = A_ShaderLoaderIsAssetMine
 	};
 
 	return shader_loader_api;

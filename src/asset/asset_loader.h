@@ -46,6 +46,8 @@ struct A_LoaderAPI
 	void (*DestroyIntermediateResources)(A_LoadResult *result);
 
 	void (*DestroyAsset)(A_Asset *asset);
+
+	b32 (*IsAssetMine)(String8 extension);
 };
 
 #endif // ASSET_LOADER_H

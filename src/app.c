@@ -418,7 +418,7 @@ void MagpieHotUnload(App *app_)
 }
 
 /*
-  app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"), A_Type_Sound);
+  app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"));
   A_Asset *test_sound_asset = A_GetNow(&app->assets, app->test_sound_handle);
   app->test_sound = test_sound_asset->sound.buffer;
 

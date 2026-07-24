@@ -105,7 +105,8 @@ internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_chan
 #define AssetDef(name, upper)											\
 	state->loaders[A_Type_##name].api = A_Get##name##LoaderAPI();		\
 	state->loaders[A_Type_##name].log_channel = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper))); \
-	state->loaders[A_Type_##name].fallback = A_HandleNull();
+	state->loaders[A_Type_##name].fallback = A_HandleNull();			\
+	DebugLogAssert(state->log_channel, state->loaders[A_Type_##name].api.IsAssetMine,  "Asset loader \"" STRINGIFY(upper) "\" has no method IsAssetMine implemented.");
 #include "asset_xmacro.inc"
 #undef AssetDef
 
@@ -301,7 +302,27 @@ internal void A_FlushUploads(void)
 	}
 }
 
-internal A_Handle A_HandleFromFilePath(String8 path, A_Type type)
+internal A_Type A_GetAssetTypeFromPath(String8 path)
+{
+	u64 last = String8FindLastIncl(path, String8Lit("."));
+	String8 extension = String8Substr(path, last, path.len);
+
+	for (u32 i = 0; i < A_Type_COUNT; i++)
+	{
+		A_Type type = i;
+		
+		A_LoaderAPI *api = &a_assets->loaders[type].api;
+
+		if (api->IsAssetMine(extension))
+			return type;
+	}
+
+	DebugLogB(a_assets->log_channel, "Couldn't find any asset loader for extension: \".%.*s\"", String8VArg(extension));
+	
+	return A_Type_COUNT;
+}
+
+internal A_Handle A_HandleFromFilePath(String8 path)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 	
@@ -316,6 +337,8 @@ internal A_Handle A_HandleFromFilePath(String8 path, A_Type type)
 	{
 		ScratchArena scratch = ScratchBegin(NULL, 0);
 
+		A_Type type = A_GetAssetTypeFromPath(path);
+		
 		A_Record *record = A_AllocRecord(type);
 
 		String8 sys_path = A_GetSystemFilePath(scratch.arena, path);
@@ -455,9 +478,9 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
  *       it's gonna be wasted memory after loading but it's so minor I don't
  *       think it matters at all.
  */
-internal A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter)
+internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter)
 {
-	A_Handle handle = A_HandleFromFilePath(path, type);
+	A_Handle handle = A_HandleFromFilePath(path);
 	A_Record *record = A_GetRecord(handle);
 	
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
@@ -489,10 +512,10 @@ internal A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Han
 	return handle;
 }
 
-internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type)
+internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path)
 {
 	OS_Handle counter = osapi->JobCounterAlloc(0);
-	A_Handle handle = A_RequireAsset(arena, path, type, counter);
+	A_Handle handle = A_RequireAsset(arena, path, counter);
 	A_WaitForLoadAndRelease(counter);
 	return handle;
 }

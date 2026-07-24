@@ -61,8 +61,7 @@ internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 	}
 
 	vol->bake_shader_handle = A_Require(assets,
-										  String8Lit("assets://shaders/passes/ibl/irradiance_probe_bake.slang"),
-										  A_Type_Shader);
+										  String8Lit("assets://shaders/passes/ibl/irradiance_probe_bake.slang"));
 
 	vol->is_baked = false;
 

@@ -113,7 +113,9 @@ internal void A_SetFallback(A_Handle handle);
 internal void A_PollHotReloads(void);
 internal void A_FlushUploads(void);
 
-internal A_Handle A_HandleFromFilePath(String8 path, A_Type type);
+internal A_Type A_GetAssetTypeFromPath(String8 path);
+
+internal A_Handle A_HandleFromFilePath(String8 path);
 
 internal A_Asset *A_GetOrFallback(A_Handle handle);
 internal A_Asset *A_GetOrBreak(A_Handle handle);
@@ -128,8 +130,8 @@ struct A_LoadJobParam
 
 internal J_ENTRY_POINT_DEF(A_LoadJob);
 
-internal A_Handle A_RequireAsset(Arena *arena, String8 path, A_Type type, OS_Handle counter);
-internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path, A_Type type);
+internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter);
+internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path);
 
 internal void A_DestroyAsset(A_Handle handle);
 

@@ -115,6 +115,13 @@ internal void A_TextureLoaderDestroyAsset(A_Asset *asset)
 	G_TextureDestroy(asset->texture.key);
 }
 
+internal b32 A_TextureLoaderIsAssetMine(String8 extension)
+{
+	return (String8Match(extension, String8Lit("png")) ||
+			String8Match(extension, String8Lit("jpg")) ||
+			String8Match(extension, String8Lit("hdr")));
+}
+
 internal A_LoaderAPI A_GetTextureLoaderAPI(void)
 {
 	static A_LoaderAPI texture_loader_api = {
@@ -122,7 +129,8 @@ internal A_LoaderAPI A_GetTextureLoaderAPI(void)
 		.Alloc = A_TextureLoaderAlloc,
 		.UploadGPU = A_TextureLoaderUploadGPU,
 		.DestroyIntermediateResources = A_TextureLoaderDestroyIntermediateResources,
-		.DestroyAsset = A_TextureLoaderDestroyAsset
+		.DestroyAsset = A_TextureLoaderDestroyAsset,
+		.IsAssetMine = A_TextureLoaderIsAssetMine
 	};
 
 	return texture_loader_api;

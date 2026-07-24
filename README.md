@@ -54,6 +54,8 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
+- True Asset Streaming
+- Virtual Texturing
 - Physically Based Bloom
 - ImGui Integration (C bindings)
 - SSAO (horizon-based none of that random hemisphere stuff)

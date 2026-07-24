@@ -124,8 +124,10 @@ internal A_Handle A_ModelTryFetchTexture(const A_LCTX *ctx,
 	String8 relative = String8Init(image->uri, CStrLength(image->uri));
 	String8 full_path = String8Append(arena, directory, relative);
 
-	A_Handle handle = A_HandleFromFilePath(full_path, A_Type_Texture);
+	A_Handle handle = A_HandleFromFilePath(full_path);
 
+	DebugLogAssert(ctx->log_channel, handle.type == A_Type_Texture, "Model dependency that isn't a texture asset!");
+	
 	A_ModelLoadDependency *dep = ArenaPushArray(arena, A_ModelLoadDependency, 1);
 	dep->next = load->first_dependency;
 	load->first_dependency = dep;
@@ -1269,6 +1271,11 @@ internal void A_ModelLoaderDestroyAsset(A_Asset *asset)
 	}
 }
 
+internal b32 A_ModelLoaderIsAssetMine(String8 extension)
+{
+	return String8Match(extension, String8Lit("gltf"));
+}
+
 internal A_LoaderAPI A_GetModelLoaderAPI(void)
 {
 	static A_LoaderAPI model_loader_api = {
@@ -1277,6 +1284,7 @@ internal A_LoaderAPI A_GetModelLoaderAPI(void)
 		.UploadGPU = A_ModelLoaderUploadGPU,
 		.DestroyIntermediateResources = NULL,
 		.DestroyAsset = A_ModelLoaderDestroyAsset,
+		.IsAssetMine = A_ModelLoaderIsAssetMine
 	};
 
 	return model_loader_api;

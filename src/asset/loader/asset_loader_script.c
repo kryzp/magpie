@@ -44,6 +44,11 @@ internal void A_ScriptLoaderAlloc(const A_LCTX *ctx,
 	asset->script.ref = script->ref;
 }
 
+internal b32 A_ScriptLoaderIsAssetMine(String8 extension)
+{
+	return String8Match(extension, String8Lit("lua"));
+}
+
 internal A_LoaderAPI A_GetScriptLoaderAPI(void)
 {
 	static A_LoaderAPI script_loader_api = {
@@ -52,6 +57,7 @@ internal A_LoaderAPI A_GetScriptLoaderAPI(void)
 		.UploadGPU = NULL,
 		.DestroyIntermediateResources = NULL,
 		.DestroyAsset = NULL,
+		.IsAssetMine = A_ScriptLoaderIsAssetMine
 	};
 
 	return script_loader_api;
