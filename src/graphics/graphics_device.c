@@ -157,7 +157,7 @@ internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel 
 				.capabilities[2] = G_CapabilityType_RayQuery
 			}
 		};
-	
+		
 		G_Requirements requirements = {0};
 		requirements.base_extension_count = ArraySize(base_extensions);
 		requirements.base_extensions = base_extensions;
@@ -236,6 +236,11 @@ internal G_Device *G_DeviceGetSelected(void)
 internal VkFormat G_DeviceDepthFormat(void)
 {
 	return g_device->context.depth_format;
+}
+
+internal u32 G_DeviceFrameInFlightIndex(void)
+{
+	return g_device->current_frame_in_flight_index;
 }
 
 internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
@@ -441,6 +446,25 @@ internal void G_DeviceHotLoad(void)
 internal void G_DeviceHotUnload(void)
 {
 	volkFinalize();
+}
+
+internal VkQueryPool G_DeviceQueryPoolCreate(u32 query_count, VkQueryType type, VkQueryPipelineStatisticFlags pipeline_stat_flags)
+{
+	VkQueryPoolCreateInfo create_info = {0};
+	create_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	create_info.queryCount = query_count;
+	create_info.queryType = type;
+	create_info.pipelineStatistics = pipeline_stat_flags;
+	
+	VkQueryPool handle = VK_NULL_HANDLE;
+
+	G_VK_CHECK(vkCreateQueryPool(g_device->context.device,
+								 &create_info,
+								 NULL,
+								 &handle),
+			   "Failed to create query pool.");
+	
+	return handle;
 }
 
 internal void G_DeviceQueryPoolDestroy(VkQueryPool pool)

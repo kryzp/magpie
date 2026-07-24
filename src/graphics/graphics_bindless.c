@@ -15,8 +15,8 @@ internal VkDescriptorType G_BindlessGetVkType(G_BindlessKind kind)
 }
 
 internal void G_BindlessPushUpdate(G_Bindless *bindless,
-					   G_BindlessKind kind, u32 handle,
-					   VkSampler sampler, VkImageView view)
+								   G_BindlessKind kind, u32 handle,
+								   VkSampler sampler, VkImageView view)
 {
 	AssertTrue(G_BindlessIndexIsValid(handle));
 

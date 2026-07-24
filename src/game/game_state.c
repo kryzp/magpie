@@ -6,7 +6,6 @@ internal void GameStateStackInit(GameStateStack *stack)
 
 internal void GameStateStackPush(GameStateStack *stack, GameState *st, void *state)
 {
-	AssertTrue(st);
 	AssertTrue(stack->top < ArraySize(stack->stack));
 
 	GameState *top = GameStateStackPeek(stack);

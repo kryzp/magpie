@@ -8,9 +8,7 @@
 //       a texture slot and vice versa. It also makes it obvious when
 //       reading code what resource we are talking about.
 
-// NOTE: These index into the graph's version table because in my
-//       implementation pass decleration order != pass execution order.
-//       It also helps prevent bugs like reading a texture before
+// NOTE: Helps prevent bugs like reading a texture before
 //       writing to it, which won't cause a crash but it will
 //       result in complete garbage data being rendered.
 //

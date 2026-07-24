@@ -14,3 +14,4 @@
 #include "graphics_resource.c"
 #include "graphics_device.c"
 #include "graphics_ring_buffer.c"
+#include "graphics_profiler.c"

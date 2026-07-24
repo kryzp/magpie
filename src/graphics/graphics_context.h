@@ -22,6 +22,8 @@ struct G_HardwareQueue
 
 b32 G_HardwareQueueIsValid(const G_HardwareQueue *hq);
 
+// todo: make some kinda limits struct / expose ?
+
 typedef struct G_Context G_Context;
 struct G_Context
 {

@@ -20,3 +20,4 @@
 #include "graphics_resource.h"
 #include "graphics_device.h"
 #include "graphics_ring_buffer.h"
+#include "graphics_profiler.h"

@@ -90,7 +90,10 @@ internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 
 internal void ArenaPopTo(Arena *arena, u64 to)
 {
-	AssertTrue(to <= arena->capacity);
+	DebugPrintAssert(to <= arena->capacity,
+					 "Arena (%p) cannot pop to point (%llu bytes) out of range of it's maximum capacity (%llu bytes)",
+					 to, arena->capacity);
+
 	arena->used = to;
 }
 

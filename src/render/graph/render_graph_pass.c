@@ -11,9 +11,9 @@ internal void R_PassSetMultiViewMask(R_Pass *pass, u32 mask)
 }
 
 internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
-					  R_GraphTexHandle handle,
-					  VkPipelineStageFlags2 stage,
-					  VkAccessFlags2 access)
+												R_GraphTexHandle handle,
+												VkPipelineStageFlags2 stage,
+												VkAccessFlags2 access)
 {
 	R_GraphTexHandle versioned_handle = handle;
 	
@@ -35,10 +35,10 @@ internal R_GraphTexHandle R_PassAddInputTexture(R_Pass *pass,
 }
 
 internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
-					   R_GraphTexHandle handle,
-					   const R_Clear *clear,
-					   VkPipelineStageFlags2 stage,
-					   VkAccessFlags2 access)
+												 R_GraphTexHandle handle,
+												 const R_Clear *clear,
+												 VkPipelineStageFlags2 stage,
+												 VkAccessFlags2 access)
 {
 	R_GraphTexHandle versioned_handle = R_GraphPushTexVersion(pass->graph, handle, pass->index);
 	
@@ -63,9 +63,9 @@ internal R_GraphTexHandle R_PassAddOutputTexture(R_Pass *pass,
 }
 
 internal R_GraphBufHandle R_PassAddInputBuffer(R_Pass *pass,
-					 R_GraphBufHandle handle,
-					 VkPipelineStageFlags2 stage,
-					 VkAccessFlags2 access)
+											   R_GraphBufHandle handle,
+											   VkPipelineStageFlags2 stage,
+											   VkAccessFlags2 access)
 {
 	R_GraphBufHandle versioned_handle = handle;
 	
@@ -86,9 +86,9 @@ internal R_GraphBufHandle R_PassAddInputBuffer(R_Pass *pass,
 }
 
 internal R_GraphBufHandle R_PassAddOutputBuffer(R_Pass *pass,
-					  R_GraphBufHandle handle,
-					  VkPipelineStageFlags2 stage,
-					  VkAccessFlags2 access)
+												R_GraphBufHandle handle,
+												VkPipelineStageFlags2 stage,
+												VkAccessFlags2 access)
 {
 	R_GraphBufHandle versioned_handle = R_GraphPushBufVersion(pass->graph, handle, pass->index);
 	

@@ -186,6 +186,7 @@ internal void G_DeviceSelectContext(G_Device *device);
 internal G_Device *G_DeviceGetSelected(void);
 
 internal VkFormat G_DeviceDepthFormat(void);
+internal u32 G_DeviceFrameInFlightIndex(void);
 
 internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame);
 
@@ -219,6 +220,7 @@ internal void G_DeviceDestroyImGui(void);
    QUERY
    ================================================== */
 
+internal VkQueryPool G_DeviceQueryPoolCreate(u32 query_count, VkQueryType type, VkQueryPipelineStatisticFlags pipeline_stat_flags);
 internal void G_DeviceQueryPoolDestroy(VkQueryPool pool);
 
 

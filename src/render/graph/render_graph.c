@@ -703,6 +703,14 @@ internal void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassT
 
 		const G_Texture *physical = G_DeviceTextureFromKey(t->physical_key);
 
+		/*
+		 * YES I DO THE BARRIER FOR THE ENTIRE TEXTURE.
+		 * IT MAKES STATE TRACKING INFINITELY EASIER, AND ULTIMATELY
+		 * THE COST OF SIMPLY DECLARING YOULL BE READING AND WRITING
+		 * TO A TEXTURE IS NOT THAT GREAT TO JUSTIFY A BUGGY PAIN IN
+		 * THE ASS ACCESS STATE TRACKING SYSTEM FOR EVERY SUBCOMPONENT
+		 * OF THE TEXTURE. THANK YOU AND GOODNIGHT.
+		 */
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
 								 &src, &edge->state,

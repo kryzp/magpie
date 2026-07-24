@@ -1,3 +1,6 @@
+
+- merge graphics_device and graphics_context into a single G_HDI. Remove G_DeviceXXX prefix.
+
 - move /render/graph/ into a layer below, called /render_graph/ with namespace RG_
 
 - replace old AssertTrue()'s with DebugLogAssert() across the codebase for clearer logging
