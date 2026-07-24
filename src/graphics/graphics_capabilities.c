@@ -3,14 +3,6 @@ typedef struct G_CapabilityInfo G_CapabilityInfo;
 struct G_CapabilityInfo
 {
 	const char *name;
-
-	// genuinely arbitrary idk.
-	// this is just here from when i followed
-	// vulkan-tutorial years ago and i feel
-	// sentimental towards this so it just
-	// keeps hitching along the ride of refactors.
-	u64 score;
-	
 	u32 extension_count;
 	const char *extensions[4];
 };
@@ -18,7 +10,6 @@ struct G_CapabilityInfo
 const G_CapabilityInfo g_caps_infos[] = {
 	[G_CapabilityType_RayTracingPipeline] = {
 		.name = "ray_tracing_pipeline",
-		.score = 2,
 		.extension_count = 3,
 		.extensions = {
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
@@ -28,7 +19,6 @@ const G_CapabilityInfo g_caps_infos[] = {
 	},
 	[G_CapabilityType_AccelerationStructure] = {
 		.name = "acceleration_structure",
-		.score = 0,
 		.extension_count = 2,
 		.extensions = {
 			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -37,7 +27,6 @@ const G_CapabilityInfo g_caps_infos[] = {
 	},
 	[G_CapabilityType_RayQuery] = {
 		.name = "ray_query",
-		.score = 0,
 		.extension_count = 3,
 		.extensions = {
 			VK_KHR_RAY_QUERY_EXTENSION_NAME,
@@ -107,14 +96,13 @@ internal G_Capabilities G_CapabilitiesQuery(VkPhysicalDevice physical_device,
 	return result;
 }
 
-internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
-													  VkPhysicalDevice physical_device,
-													  G_Capabilities detected,
-													  const G_Requirements *requirements,
-													  LOG_Channel log_channel)
+internal G_ResolvedFeatures G_FeaturesResolve(Arena *arena,
+											  VkPhysicalDevice physical_device,
+											  G_Capabilities detected,
+											  const G_Requirements *requirements,
+											  LOG_Channel log_channel)
 {
-	G_ResolvedCapabilities result = {0};
-	result.detected = detected;
+	G_ResolvedFeatures result = {0};
 	result.meets_requirements = true;
 	
 	u32 available_count = 0;
@@ -130,8 +118,8 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 	{
 		G_Feature *f = &requirements->features[i];
  
-		for (u32 j = 0; j < f->capability_count; j++)
-			max_extensions += g_caps_infos[f->capabilities[j]].extension_count;
+		for (u32 j = 0; j < f->def.capability_count; j++)
+			max_extensions += g_caps_infos[f->def.capabilities[j]].extension_count;
 	}
 	
 	const char **extensions = ArenaPushArray(arena, const char *, max_extensions);
@@ -161,9 +149,9 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 		
 		b32 feature_supported = true;
 		
-		for (u32 j = 0; j < f->capability_count && feature_supported; j++)
+		for (u32 j = 0; j < f->def.capability_count && feature_supported; j++)
 		{
-			G_CapabilityType cap = f->capabilities[j];
+			G_CapabilityType cap = f->def.capabilities[j];
 			const G_CapabilityInfo *info = &g_caps_infos[cap];
 			
 			if (!detected.set[cap])
@@ -184,12 +172,12 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 		
 		if (feature_supported)
 		{
-			for (u32 j = 0; j < f->capability_count; j++)
+			result.enabled.set[f->type] = true;
+			
+			for (u32 j = 0; j < f->def.capability_count; j++)
 			{
-				G_CapabilityType cap = f->capabilities[j];
+				G_CapabilityType cap = f->def.capabilities[j];
 				const G_CapabilityInfo *info = &g_caps_infos[cap];
-				
-				result.enabled.set[cap] = true;
 				
 				for (u32 k = 0; k < info->extension_count; k++)
 				{
@@ -200,18 +188,18 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 				}
 			}
 			
-			DebugLogD(log_channel, "Feature \"%s\" is supported by this device!", f->name);
+			DebugLogD(log_channel, "Feature \"%s\" is supported by this device!", f->def.name);
 		}
 		else
 		{
 			if (f->tier == G_FeatureTier_Required)
 			{
 				result.meets_requirements = false;
-				DebugLogE(log_channel, "Feature \"%s\" is required but unsupported by this device.", f->name);
+				DebugLogE(log_channel, "Feature \"%s\" is required but unsupported by this device.", f->def.name);
 			}
 			else
 			{
-				DebugLogW(log_channel, "Feature \"%s\" is optional and unsupported by this device.", f->name);
+				DebugLogW(log_channel, "Feature \"%s\" is optional and unsupported by this device.", f->def.name);
 			}
 		}
 	}
@@ -223,7 +211,7 @@ internal G_ResolvedCapabilities G_CapabilitiesResolve(Arena *arena,
 	return result;
 }
 
-internal u32 G_CapabilitiesScore(G_Capabilities enabled, const G_Requirements *requirements)
+internal u32 G_FeaturesScore(G_Features enabled, const G_Requirements *requirements)
 {
 	u32 score = 0;
  
@@ -233,14 +221,9 @@ internal u32 G_CapabilitiesScore(G_Capabilities enabled, const G_Requirements *r
  
 		if (feature->tier == G_FeatureTier_Unused)
 			continue;
- 
-		for (u32 j = 0; j < feature->capability_count; j++)
-		{
-			G_CapabilityType cap = feature->capabilities[j];
- 
-			if (enabled.set[cap])
-				score += g_caps_infos[cap].score;
-		}
+
+		if (enabled.set[feature->type])
+			score += 1;
 	}
  
 	return score;

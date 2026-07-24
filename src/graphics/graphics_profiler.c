@@ -3,7 +3,7 @@ static G_Profiler *g_selected_profiler = NULL;
 
 internal void G_ProfilerInitAndSelect(G_Profiler *profiler)
 {
-	profiler->period = G_DeviceGetSelected()->context.physical_device_properties.properties.limits.timestampPeriod;
+	profiler->period = G_DeviceGetSelected()->vk_physical_device_properties.properties.limits.timestampPeriod;
 	
 	static VkQueryType query_types[] = {
 		[G_ProfileType_Timestamp] = VK_QUERY_TYPE_TIMESTAMP,

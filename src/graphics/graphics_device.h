@@ -67,6 +67,27 @@ struct G_SamplerCreateInfo
    DEVICE
    ================================================== */
 
+typedef struct G_SwapchainSupportDetails G_SwapchainSupportDetails;
+struct G_SwapchainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+
+	u32 surface_format_count;
+	VkSurfaceFormatKHR *surface_formats;
+
+	u32 present_mode_count;
+	VkPresentModeKHR *present_modes;
+};
+
+typedef struct G_HardwareQueue G_HardwareQueue;
+struct G_HardwareQueue
+{
+	VkQueue vk_handle;
+	u32 family_index;
+};
+
+b32 G_HardwareQueueIsValid(const G_HardwareQueue *hq);
+
 typedef struct G_DestroyedImage G_DestroyedImage;
 struct G_DestroyedImage
 {
@@ -127,6 +148,8 @@ struct G_DeviceFrameInFlight
 	G_DestroyedAccelStruct     *destroyed_as_head;
 };
 
+// todo: make some kinda limits struct / expose ?
+
 typedef struct G_Device G_Device;
 struct G_Device
 {
@@ -138,7 +161,31 @@ struct G_Device
 	LOG_Channel log_channel_performance;
 	LOG_Channel log_channel_cmd_buffer;
 	
-	G_Context context;
+	VkInstance vk_instance;
+	VkDevice vk_device;
+
+	VkPhysicalDevice vk_physical_device;
+	VkPhysicalDeviceProperties2 vk_physical_device_properties;
+	VkPhysicalDeviceFeatures2 vk_physical_device_features;
+	
+	VkSurfaceKHR vk_surface;
+
+	VmaAllocator vma_allocator;
+
+	G_HardwareQueue graphics_queue;
+
+	VkPipelineCache pipeline_process_cache;
+
+	b32 has_validation_layers;
+	VkDebugUtilsMessengerEXT debug_messenger;
+
+	VkFormat depth_format;
+	VkSampleCountFlagBits max_msaa_samples;
+	u64 max_push_constants_size; // todo: move into a seperate limits struct
+
+	G_ResolvedFeatures features;
+	
+	G_SwapchainSupportDetails swapchain_details;
 
 	u32 current_frame_in_flight_index;
 	G_DeviceFrameInFlight frames_in_flight[G_FRAMES_IN_FLIGHT];
@@ -164,6 +211,38 @@ struct G_Device
    INTERNALS
    ================================================== */
 
+internal VkFormat G_DeviceFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+													  VkImageTiling tiling,
+													  VkFormatFeatureFlags features,
+													  u32 candidate_count, const VkFormat *candidates,
+													  LOG_Channel log_channel);
+
+internal VkFormat G_DeviceFindGraphicsDepthFormat(VkPhysicalDevice physical_device,
+												  LOG_Channel log_channel);
+
+internal VkSampleCountFlagBits G_DeviceFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties,
+																		LOG_Channel log_channel);
+
+internal const char * const *G_DeviceGetInstanceExtensions(Arena *arena,
+														   u32 *extension_count,
+														   LOG_Channel log_channel);
+
+internal b32 G_DeviceCheckForValidationLayerSupport(void);
+
+internal G_SwapchainSupportDetails G_DeviceQuerySwapchainSupport(Arena *arena,
+																 VkPhysicalDevice physical_device,
+																 VkSurfaceKHR surface);
+
+internal VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+																	VkDebugUtilsMessageTypeFlagsEXT message_type,
+																	const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+																	void *user_data);
+
+internal VkResult G_DeviceCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+															 VkDebugUtilsMessengerCreateInfoEXT *debug_info,
+															 const VkAllocationCallbacks *allocator,
+															 VkDebugUtilsMessengerEXT *messenger);
+
 internal VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
 																 u32 available_surface_format_count,
 																 const VkSurfaceFormatKHR *available_surface_formats);
@@ -179,7 +258,16 @@ internal VkExtent2D G_DeviceChooseSwapchainExtent(const VkSurfaceCapabilitiesKHR
    CORE DEVICE
    ================================================== */
 
-internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel);
+typedef struct G_FeatureRequest
+{
+	G_FeatureType type;
+	G_FeatureTier tier;
+}
+G_FeatureRequest;
+
+internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel,
+									G_FeatureRequest *requested_features, u32 feature_count);
+
 internal void G_DeviceDestroy(void);
 
 internal void G_DeviceSelectContext(G_Device *device);
@@ -187,6 +275,8 @@ internal G_Device *G_DeviceGetSelected(void);
 
 internal VkFormat G_DeviceDepthFormat(void);
 internal u32 G_DeviceFrameInFlightIndex(void);
+
+internal b32 G_DeviceFeatureEnabled(G_FeatureType type);
 
 internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame);
 

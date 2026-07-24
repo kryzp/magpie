@@ -48,8 +48,12 @@ internal void AppInitScripting(void)
 internal void AppInit_(void)
 {
 	AppInitScripting();
-
-	G_DeviceInitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel);
+	
+	G_FeatureRequest features[] = {
+		{ G_FeatureType_RayTracing, G_FeatureTier_Optional }
+	};
+	
+	G_DeviceInitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel, features, ArraySize(features));
 	app->swapchain = G_DeviceSwapchainCreate();
 	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 

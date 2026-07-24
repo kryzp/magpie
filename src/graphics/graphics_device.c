@@ -1,6 +1,198 @@
 
 static G_Device *g_device = NULL;
 
+static const char *g_device_vk_validation_layers[] = {
+	"VK_LAYER_KHRONOS_validation"
+};
+
+static const G_FeatureDef g_device_feature_defs[] = {
+	[G_FeatureType_RayTracing] = {
+		.name = "raytracing",
+		.capability_count = 3,
+		.capabilities[0] = G_CapabilityType_RayTracingPipeline,
+		.capabilities[1] = G_CapabilityType_AccelerationStructure,
+		.capabilities[2] = G_CapabilityType_RayQuery
+	}
+};
+
+internal VkFormat G_DeviceFindGraphicsSupportedFormat(VkPhysicalDevice physical_device,
+													  VkImageTiling tiling,
+													  VkFormatFeatureFlags features,
+													  u32 candidate_count, const VkFormat *candidates,
+													  LOG_Channel log_channel)
+{
+	for (u32 i = 0; i < candidate_count; i++)
+	{
+		VkFormatProperties properties = {0};
+		
+		vkGetPhysicalDeviceFormatProperties(physical_device, candidates[i], &properties);
+
+		if ((tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) ||
+			(tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features))
+			return candidates[i];
+	}
+
+	DebugLogB(log_channel, "Failed to find supported format.");
+
+	return VK_FORMAT_MAX_ENUM;
+}
+
+internal VkFormat G_DeviceFindGraphicsDepthFormat(VkPhysicalDevice physical_device, LOG_Channel log_channel)
+{
+	static const VkFormat candidates[] = {
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT
+	};
+
+	return G_DeviceFindGraphicsSupportedFormat(physical_device,
+											   VK_IMAGE_TILING_OPTIMAL,
+											   VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+											   ArraySize(candidates), candidates,
+											   log_channel);
+}
+
+internal VkSampleCountFlagBits G_DeviceFindGraphicsMaxUsableSampleCount(VkPhysicalDeviceProperties2 properties, LOG_Channel log_channel)
+{
+	VkSampleCountFlags counts =
+		properties.properties.limits.framebufferColorSampleCounts &
+		properties.properties.limits.framebufferDepthSampleCounts;
+
+	if      (counts & VK_SAMPLE_COUNT_64_BIT) return VK_SAMPLE_COUNT_64_BIT;
+	else if (counts & VK_SAMPLE_COUNT_32_BIT) return VK_SAMPLE_COUNT_32_BIT;
+	else if (counts & VK_SAMPLE_COUNT_16_BIT) return VK_SAMPLE_COUNT_16_BIT;
+	else if (counts & VK_SAMPLE_COUNT_8_BIT)  return VK_SAMPLE_COUNT_8_BIT;
+	else if (counts & VK_SAMPLE_COUNT_4_BIT)  return VK_SAMPLE_COUNT_4_BIT;
+	else if (counts & VK_SAMPLE_COUNT_2_BIT)  return VK_SAMPLE_COUNT_2_BIT;
+	else if (counts & VK_SAMPLE_COUNT_1_BIT)  return VK_SAMPLE_COUNT_1_BIT;
+
+	DebugLogB(log_channel, "Could not find a maximum usable sample count.");
+
+	return VK_SAMPLE_COUNT_1_BIT;
+}
+
+internal const char * const *G_DeviceGetInstanceExtensions(Arena *arena, u32 *extension_count, LOG_Channel log_channel)
+{
+	const char * const *names = osapi->VulkanGetInstanceExtensions(extension_count);
+
+	if (!names)
+		DebugLogB(log_channel, "Unable to get instance extension count.");
+
+	u32 extra_extension_count = 3;
+
+#ifdef __APPLE__
+	extra_extension_count += 1;
+#endif
+
+	const char **extensions = ArenaPushArray(arena, const char *, *extension_count + extra_extension_count);
+
+	for (u32 i = 0; i < *extension_count; i++)
+		extensions[i] = names[i];
+
+	extensions[*extension_count + 0] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
+	extensions[*extension_count + 1] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+	extensions[*extension_count + 2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+
+#ifdef __APPLE__
+	extensions[*extension_count + 3] = "VK_EXT_metal_surface";//VK_EXT_METAL_SURFACE_EXTENSION_NAME
+	// using kosmickrisp
+	//extensions[*extension_count + 4] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+#endif
+
+	*extension_count = *extension_count + extra_extension_count;
+
+	return extensions;
+}
+
+internal b32 G_DeviceCheckForValidationLayerSupport(void)
+{
+	u32 layer_count = 0;
+	vkEnumerateInstanceLayerProperties(&layer_count, 0);
+
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	VkLayerProperties *available_layers = ArenaPushArray(scratch.arena, VkLayerProperties, layer_count);
+	
+	vkEnumerateInstanceLayerProperties(&layer_count, available_layers);
+
+	b32 result = true;
+
+	for (u32 i = 0; i < ArraySize(g_device_vk_validation_layers); i++)
+	{
+		b32 has_layer = false;
+		const char *layer_name_0 = g_device_vk_validation_layers[i];
+
+		for (u32 j = 0; j < layer_count; j++)
+		{
+			const char *layer_name_1 = available_layers[j].layerName;
+
+			if (CStrCompare(layer_name_0, layer_name_1) == 0)
+			{
+				has_layer = true;
+				break;
+			}
+		}
+
+		if (!has_layer)
+		{
+			result = false;
+			goto exit;
+		}
+	}
+
+exit:
+	ScratchRelease(&scratch);
+	return result;
+}
+
+internal G_SwapchainSupportDetails G_DeviceQuerySwapchainSupport(Arena *arena,
+																 VkPhysicalDevice physical_device,
+																 VkSurfaceKHR surface)
+{
+	G_SwapchainSupportDetails result = {0};
+
+	u32 surface_format_count = 0;
+	u32 present_mode_count = 0;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &result.capabilities);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, NULL);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
+
+	if (surface_format_count > 0)
+	{
+		result.surface_formats = ArenaPushArray(arena, VkSurfaceFormatKHR, surface_format_count);
+		result.surface_format_count = surface_format_count;
+
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface,
+											 &surface_format_count,
+											 result.surface_formats);
+	}
+
+	if (present_mode_count > 0)
+	{
+		result.present_modes = ArenaPushArray(arena, VkPresentModeKHR, present_mode_count);
+		result.present_mode_count = present_mode_count;
+		
+		vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface,
+												  &present_mode_count,
+												  result.present_modes);
+	}
+
+	return result;
+}
+
+internal VkResult G_DeviceCreateDeviceDebugUtilsMessengerExt(VkInstance instance,
+															 VkDebugUtilsMessengerCreateInfoEXT *debug_info,
+															 const VkAllocationCallbacks *allocator,
+															 VkDebugUtilsMessengerEXT *messenger)
+{
+	PFN_vkCreateDebugUtilsMessengerEXT fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+
+	if (fn)
+		return fn(instance, debug_info, allocator, messenger);
+
+	return VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+
 internal VkSurfaceFormatKHR G_DeviceChooseSwapchainSurfaceFormat(LOG_Channel channel,
 																 u32 available_surface_format_count,
 																 const VkSurfaceFormatKHR *available_surface_formats)
@@ -110,16 +302,17 @@ internal VKAPI_ATTR VkBool32 VKAPI_CALL G_DeviceVulkanDebugCallback(VkDebugUtils
 	return VK_FALSE;
 }
 
-internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel)
+internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_channel,
+									G_FeatureRequest *requested_features, u32 feature_count)
 {
+	ScratchArena scratch = ScratchBegin(&arena, 1);
+		
 	device->permanent_arena = arena;
 
 	device->log_channel = log_channel;
-
 	device->log_channel_general = osapi->LogChannelOpenFrom(log_channel, String8Lit("GENERAL"));
 	device->log_channel_validation = osapi->LogChannelOpenFrom(log_channel, String8Lit("VALIDATION"));
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
-
 	device->log_channel_cmd_buffer = osapi->LogChannelOpenFrom(log_channel, String8Lit("CMD"));
 	
 	for (u32 i = 0; i < ArraySize(device->frames_in_flight); i++)
@@ -135,39 +328,436 @@ internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel 
 	G_ResourceListInit(&device->samplers);
 	G_ResourceListInit(&device->shaders);
 	G_ResourceListInit(&device->accel_structures);
-	
+
 	G_DeviceSelectContext(device);
+	
+	static const char *base_extensions[] = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+		VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
+		VK_KHR_MAINTENANCE_6_EXTENSION_NAME,
+	};
 
-	// setup conntext + features 'n stuff
+	G_Feature *features = ArenaPushArray(scratch.arena, G_Feature, feature_count);
+
+	for (u32 i = 0; i < feature_count; i++)
 	{
-		static const char *base_extensions[] = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
-			VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
-			VK_KHR_MAINTENANCE_6_EXTENSION_NAME,
+		features[i].def = g_device_feature_defs[requested_features[i].type];
+		features[i].type = requested_features[i].type;
+		features[i].tier = requested_features[i].tier;
+	}
+	
+	G_Requirements requirements = {0};
+	requirements.base_extension_count = ArraySize(base_extensions);
+	requirements.base_extensions = base_extensions;
+	requirements.feature_count = feature_count;
+	requirements.features = features;
+
+	{
+		VkApplicationInfo core_info = {0};
+	
+		core_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	
+		core_info.pApplicationName = OS_DEFAULT_WINDOW_TITLE;
+		core_info.pEngineName = OS_ENGINE_NAME;
+	
+		core_info.applicationVersion = VK_MAKE_API_VERSION(0,
+														   OS_APP_VERSION_MAJOR,
+														   OS_APP_VERSION_MINOR,
+														   OS_APP_VERSION_PATCH);
+
+		core_info.engineVersion = VK_MAKE_API_VERSION(0,
+													  OS_ENGINE_VERSION_MAJOR,
+													  OS_ENGINE_VERSION_MINOR,
+													  OS_ENGINE_VERSION_PATCH);
+
+		core_info.apiVersion = VK_API_VERSION_1_3;//VK_API_VERSION_1_4
+
+		VkInstanceCreateInfo instance_create_info = {0};
+		instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		instance_create_info.pApplicationInfo = &core_info;
+
+		volkInitialize();
+
+		instance_create_info.ppEnabledExtensionNames = G_DeviceGetInstanceExtensions(scratch.arena, &instance_create_info.enabledExtensionCount, log_channel);
+
+		internal const VkValidationFeatureEnableEXT enabled_features[] = {
+			//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+			//VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+			VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+			VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT
 		};
 
-		G_Feature features[] = {
+		VkValidationFeaturesEXT validation_features = {0};
+		validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+		validation_features.enabledValidationFeatureCount = ArraySize(enabled_features);
+		validation_features.pEnabledValidationFeatures = enabled_features;
+	
+		VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
+		debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;	
+		debug_create_info.pNext = &validation_features;
+
+		debug_create_info.messageSeverity =
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+
+		debug_create_info.messageType =
+			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+
+		debug_create_info.pfnUserCallback = G_DeviceVulkanDebugCallback;
+		debug_create_info.pUserData = NULL;
+	
+		device->has_validation_layers = G_DeviceCheckForValidationLayerSupport();
+
+		if (device->has_validation_layers)
+		{
+			DebugLogD(log_channel, "Validation layer support verified.");
+
+			instance_create_info.enabledLayerCount = ArraySize(g_device_vk_validation_layers);
+			instance_create_info.ppEnabledLayerNames = g_device_vk_validation_layers;
+			instance_create_info.pNext = &debug_create_info;
+		}
+		else
+		{
+			DebugLogW(log_channel, "No validation layer support.");
+
+			instance_create_info.enabledLayerCount = 0;
+			instance_create_info.ppEnabledLayerNames = NULL;
+			instance_create_info.pNext = NULL;
+		}
+
+		/* using kosmickrisp
+		   #ifdef __APPLE__
+		   instance_create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+		   #endif
+		*/
+	
+		G_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &device->vk_instance),
+				   "Failed to create instance.");
+
+		volkLoadInstance(device->vk_instance);
+
+		if (device->has_validation_layers)
+		{
+			G_VK_CHECK(G_DeviceCreateDeviceDebugUtilsMessengerExt(device->vk_instance,
+																  &debug_create_info, NULL,
+																  &device->debug_messenger),
+					   "Failed to create debug messenger.");
+		}
+
+		if (!osapi->VulkanSurfaceCreate(device->vk_instance, &device->vk_surface))
+			DebugLogB(log_channel, "Failed to create surface.");
+
+		// Enumerate physical_resource devices.
+		{
+			u32 physical_device_count = 0;
+			vkEnumeratePhysicalDevices(device->vk_instance, &physical_device_count, NULL);
+
+			DebugLogAssert(log_channel, physical_device_count > 0, "Failed to find GPUs with Vulkan support.");
+
+			DebugLogD(log_channel, "Found %u physical devices.", physical_device_count);
+		
+			VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+
+			VkPhysicalDevice *physical_devices = ArenaPushArray(scratch.arena, VkPhysicalDevice, physical_device_count);
+
+			vkEnumeratePhysicalDevices(device->vk_instance, &physical_device_count, physical_devices);
+
+			u32 best_usability = 0;
+		
+			for (u32 i = 0; i < physical_device_count; i++)
 			{
-				.tier = G_FeatureTier_Optional,
-				.name = "raytracing",
-				.capability_count = 3,
-				.capabilities[0] = G_CapabilityType_RayTracingPipeline,
-				.capabilities[1] = G_CapabilityType_AccelerationStructure,
-				.capabilities[2] = G_CapabilityType_RayQuery
+				VkPhysicalDevice curr_physical_device = physical_devices[i];
+			
+				vkGetPhysicalDeviceProperties2(curr_physical_device, &properties);
+	
+				DebugLogD(log_channel,
+						  "Querying physical device: %s (%d)",
+						  properties.properties.deviceName,
+						  properties.properties.deviceID);
+
+				b32 has_essentials = true;
+
+				G_Capabilities detected_caps = {0};
+				G_ResolvedFeatures resolved_features = {0};
+				VkPhysicalDeviceFeatures2 features = {0};
+	
+				// swapchain
+				{
+					G_SwapchainSupportDetails details = G_DeviceQuerySwapchainSupport(scratch.arena, curr_physical_device, device->vk_surface);
+
+					if ((details.surface_format_count <= 0) ||
+						(details.present_mode_count <= 0))
+					{
+						has_essentials = false;
+					}					
+				}
+
+				// capabilities
+				{
+					detected_caps = G_CapabilitiesQuery(curr_physical_device, &features, log_channel);
+					resolved_features = G_FeaturesResolve(scratch.arena, curr_physical_device, detected_caps, &requirements, log_channel);
+
+					if (!resolved_features.meets_requirements)
+					{
+						has_essentials = false;
+					}
+				}
+
+				u32 current_usability = G_FeaturesScore(resolved_features.enabled, &requirements);
+			
+				if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+				{
+					current_usability += 4;
+				}
+				else if (properties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+				{
+					current_usability += 1;
+				}
+			
+				if (current_usability > best_usability && has_essentials)
+				{
+					device->vk_physical_device = curr_physical_device;
+					device->vk_physical_device_properties = properties;
+					device->vk_physical_device_features = features;
+				
+					device->features = resolved_features;
+				
+					best_usability = current_usability;
+				}
 			}
-		};
+
+			DebugLogAssert(log_channel,
+						   device->vk_physical_device,
+						   "Unable to find a suitable physical device :(");
+
+			DebugLogD(log_channel,
+					  "Selected physical device: %s (%d) :)",
+					  device->vk_physical_device_properties.properties.deviceName,
+					  device->vk_physical_device_properties.properties.deviceID);
+		}
+
+		device->max_msaa_samples = G_DeviceFindGraphicsMaxUsableSampleCount(device->vk_physical_device_properties, log_channel);
+		device->max_push_constants_size = device->vk_physical_device_properties.properties.limits.maxPushConstantsSize;
+	
+		device->depth_format = G_DeviceFindGraphicsDepthFormat(device->vk_physical_device, log_channel);
+
+		u32 queue_family_count = 0;
+	
+		vkGetPhysicalDeviceQueueFamilyProperties(device->vk_physical_device, &queue_family_count, 0);
+
+		if (queue_family_count <= 0)
+			DebugLogD(log_channel, "Failed to find any queue families.");
+
+		VkQueueFamilyProperties *queue_families = ArenaPushArray(scratch.arena, VkQueueFamilyProperties, queue_family_count);
+
+		vkGetPhysicalDeviceQueueFamilyProperties(device->vk_physical_device, &queue_family_count, queue_families);
+
+		for (u32 i = 0; i < queue_family_count; i++)
+		{
+			if ((queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+			{
+				VkBool32 present_support = VK_FALSE;
+
+				vkGetPhysicalDeviceSurfaceSupportKHR(device->vk_physical_device, i,
+													 device->vk_surface,
+													 &present_support);
+
+				if (present_support)
+				{
+					device->graphics_queue.family_index = i;
+					break;
+				}
+
+				continue;
+			}
+		}
+
+		float queue_priority = 1.f;
+
+		VkDeviceQueueCreateInfo graphics_queue_create_info = {0};
+		graphics_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		graphics_queue_create_info.queueFamilyIndex = device->graphics_queue.family_index;
+		graphics_queue_create_info.queueCount = 1;
+		graphics_queue_create_info.pQueuePriorities = &queue_priority;
+
+		VkPhysicalDeviceFeatures enabled_base_features = {0};
+		enabled_base_features.samplerAnisotropy = VK_TRUE;
+		enabled_base_features.sampleRateShading = VK_TRUE;
+		enabled_base_features.shaderInt64 = VK_TRUE;
+		enabled_base_features.multiDrawIndirect = VK_TRUE;
+		//enabled_base_features.robustBufferAccess = VK_TRUE;
+	
+		VkPhysicalDeviceVulkan11Features vulkan11_features = {0};
+		vulkan11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+		vulkan11_features.shaderDrawParameters = VK_TRUE;
+		vulkan11_features.multiview = VK_TRUE;
+
+		VkPhysicalDeviceVulkan12Features vulkan12_features = {0};
+		vulkan12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		vulkan12_features.runtimeDescriptorArray = VK_TRUE;
+		vulkan12_features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+		vulkan12_features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+		vulkan12_features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+		vulkan12_features.descriptorBindingPartiallyBound = VK_TRUE;
+		vulkan12_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+		vulkan12_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+		vulkan12_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+		vulkan12_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+		vulkan12_features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+		vulkan12_features.bufferDeviceAddress = VK_TRUE;
+		vulkan12_features.scalarBlockLayout = VK_TRUE;
+		vulkan12_features.timelineSemaphore = VK_TRUE;
+		vulkan12_features.drawIndirectCount = VK_TRUE;
+		vulkan12_features.pNext = &vulkan11_features;
+
+		VkPhysicalDeviceVulkan13Features vulkan13_features = {0};
+		vulkan13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+		vulkan13_features.dynamicRendering = VK_TRUE;
+		vulkan13_features.synchronization2 = VK_TRUE;
+		vulkan13_features.pNext = &vulkan12_features;
+
+		/*
+		  VkPhysicalDeviceVulkan14Features vulkan14_features = {0};
+		  vulkan14_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+		  vulkan14_features.maintenance5 = VK_TRUE;
+		  vulkan14_features.pNext = &vulkan13_features;
+		*/
+	
+		VkPhysicalDeviceMaintenance5FeaturesKHR mt5_features = {0};
+		mt5_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR;
+		mt5_features.maintenance5 = VK_TRUE;
+		mt5_features.pNext = &vulkan13_features;
+
+		VkPhysicalDeviceMaintenance6FeaturesKHR mt6_features = {0};
+		mt6_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_6_FEATURES_KHR;
+		mt6_features.maintenance6 = VK_TRUE;
+		mt6_features.pNext = &mt5_features;
 		
-		G_Requirements requirements = {0};
-		requirements.base_extension_count = ArraySize(base_extensions);
-		requirements.base_extensions = base_extensions;
-		requirements.feature_count = ArraySize(features);
-		requirements.features = features;
+		void *feature_chain_tail = &mt6_features;
 		
-		// todo: should probably be G_ContextInit(&device->context, ...) instead, nicer signature imo
-		device->context = G_ContextInit(device->permanent_arena, device->log_channel,
-										&requirements,
-										G_DeviceVulkanDebugCallback, NULL);
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {0};
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR accel_struct_features = {0};
+		VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {0};
+		
+		if (G_DeviceFeatureEnabled(G_FeatureType_RayTracing))
+		{
+			rt_pipeline_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+			rt_pipeline_features.rayTracingPipeline = VK_TRUE;
+			rt_pipeline_features.pNext = feature_chain_tail;
+
+			accel_struct_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+			accel_struct_features.accelerationStructure = VK_TRUE;
+			accel_struct_features.pNext = &rt_pipeline_features;
+
+			ray_query_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+			ray_query_features.rayQuery = VK_TRUE;
+			ray_query_features.pNext = &accel_struct_features;
+
+			feature_chain_tail = &ray_query_features;
+		}
+	
+		VkDeviceCreateInfo device_create_info = {0};
+		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		device_create_info.queueCreateInfoCount = 1;
+		device_create_info.pQueueCreateInfos = &graphics_queue_create_info;
+		device_create_info.enabledLayerCount = 0;
+		device_create_info.ppEnabledLayerNames = NULL;
+		device_create_info.enabledExtensionCount = device->features.extension_count;
+		device_create_info.ppEnabledExtensionNames = device->features.extension_names;
+		device_create_info.pEnabledFeatures = &enabled_base_features;
+		device_create_info.pNext = feature_chain_tail;
+	
+		G_VK_CHECK(vkCreateDevice(device->vk_physical_device,
+								  &device_create_info, NULL,
+								  &device->vk_device),
+				   "Failed to create logical device.");
+
+		DebugLogD(log_channel, "Created logical device.");
+	
+		vkGetDeviceQueue(device->vk_device,
+						 device->graphics_queue.family_index, 0,
+						 &device->graphics_queue.vk_handle);
+
+		u32 instance_version = 0;
+		VkResult result = vkEnumerateInstanceVersion(&instance_version);
+
+		if (result == VK_SUCCESS)
+		{
+			u32 device_version = device->vk_physical_device_properties.properties.apiVersion;
+		
+			u32 i_major = VK_API_VERSION_MAJOR(instance_version);
+			u32 i_minor = VK_API_VERSION_MINOR(instance_version);
+			i32 i_patch = VK_API_VERSION_PATCH(instance_version);
+
+			u32 d_major = VK_API_VERSION_MAJOR(device_version);
+			u32 d_minor = VK_API_VERSION_MINOR(device_version);
+			u32 d_patch = VK_API_VERSION_PATCH(device_version);
+		
+			DebugLogD(log_channel,
+					  "Instance Version: %d.%d.%d, Device Version: %d.%d.%d",
+					  i_major, i_minor, i_patch,
+					  d_major, d_minor, d_patch);
+		}
+		else
+		{
+			DebugLogE(log_channel, "Failed to retrieve Vulkan version, something's gone wrong probably.");
+		}
+
+		volkLoadDevice(device->vk_device);
+
+		VmaVulkanFunctions vulkan_functions = {0};
+		vulkan_functions.vkAllocateMemory                    = vkAllocateMemory;
+		vulkan_functions.vkBindBufferMemory                  = vkBindBufferMemory;
+		vulkan_functions.vkBindImageMemory                   = vkBindImageMemory;
+		vulkan_functions.vkCreateBuffer                      = vkCreateBuffer;
+		vulkan_functions.vkCreateImage                       = vkCreateImage;
+		vulkan_functions.vkDestroyBuffer                     = vkDestroyBuffer;
+		vulkan_functions.vkDestroyImage                      = vkDestroyImage;
+		vulkan_functions.vkFlushMappedMemoryRanges           = vkFlushMappedMemoryRanges;
+		vulkan_functions.vkFreeMemory                        = vkFreeMemory;
+		vulkan_functions.vkGetBufferMemoryRequirements       = vkGetBufferMemoryRequirements;
+		vulkan_functions.vkGetImageMemoryRequirements        = vkGetImageMemoryRequirements;
+		vulkan_functions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+		vulkan_functions.vkGetPhysicalDeviceProperties       = vkGetPhysicalDeviceProperties;
+		vulkan_functions.vkInvalidateMappedMemoryRanges      = vkInvalidateMappedMemoryRanges;
+		vulkan_functions.vkMapMemory                         = vkMapMemory;
+		vulkan_functions.vkUnmapMemory                       = vkUnmapMemory;
+		vulkan_functions.vkCmdCopyBuffer                     = vkCmdCopyBuffer;
+
+		VmaAllocatorCreateInfo allocator_create_info = {0};
+		allocator_create_info.physicalDevice = device->vk_physical_device;
+		allocator_create_info.device = device->vk_device;
+		allocator_create_info.instance = device->vk_instance;
+		allocator_create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+
+		//vmaImportVulkanFunctionsFromVolk(&allocator_create_info, &vulkan_functions);
+
+		allocator_create_info.pVulkanFunctions = &vulkan_functions;
+
+		G_VK_CHECK(vmaCreateAllocator(&allocator_create_info,
+									  &device->vma_allocator),
+				   "Failed to create Vulkan Memory Allocator.");
+	
+		DebugLogD(log_channel, "Created Vulkan Memory Allocator.");
+
+		device->swapchain_details = G_DeviceQuerySwapchainSupport(arena, device->vk_physical_device, device->vk_surface);
+
+		VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
+		pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+		pipeline_cache_create_info.pNext = NULL;
+		pipeline_cache_create_info.flags = 0;
+		pipeline_cache_create_info.initialDataSize = 0;
+		pipeline_cache_create_info.pInitialData = NULL;
+
+		G_VK_CHECK(vkCreatePipelineCache(device->vk_device,
+										 &pipeline_cache_create_info, NULL,
+										 &device->pipeline_process_cache),
+				   "Failed to process pipeline cache.");
 	}
 
 	G_DeviceCreateSyncResources();
@@ -175,6 +765,8 @@ internal void G_DeviceInitAndSelect(G_Device *device, Arena *arena, LOG_Channel 
 	G_DeviceCreateImGui();
 
 	DebugLogI(g_device->log_channel, "Initialized.");
+
+	ScratchRelease(&scratch);
 }
 
 internal void G_DeviceDestroy(void)
@@ -195,28 +787,32 @@ internal void G_DeviceDestroy(void)
 		 node != &g_device->pipeline_layouts.first_sentinel;
 		 node = node->next)
 	{
-		vkDestroyPipelineLayout(g_device->context.device, node->resource.pipeline_layout, NULL);
+		vkDestroyPipelineLayout(g_device->vk_device, node->resource.pipeline_layout, NULL);
 	}
 
 	for (G_ResourceListNode *node = g_device->pipelines.first_sentinel.next;
 		 node != &g_device->pipelines.first_sentinel;
 		 node = node->next)
 	{
-		vkDestroyPipeline(g_device->context.device, node->resource.pipeline, NULL);
+		vkDestroyPipeline(g_device->vk_device, node->resource.pipeline, NULL);
 	}
 	
 	for (G_ResourceListNode *node = g_device->texture_views.first_sentinel.next;
 		 node != &g_device->texture_views.first_sentinel;
 		 node = node->next)
 	{
-		vkDestroyImageView(g_device->context.device, node->resource.texture_view.vk_handle, NULL);
+		vkDestroyImageView(g_device->vk_device, node->resource.texture_view.vk_handle, NULL);
 	}
 	
 	G_DeviceDestroyImGui();
 	G_DeviceDestroyBindless();
 	G_DeviceDestroySyncResources();
 
-	G_ContextDestroy(&g_device->context);
+	vkDestroyPipelineCache(g_device->vk_device, g_device->pipeline_process_cache, NULL);
+	osapi->VulkanSurfaceDestroy(g_device->vk_instance, g_device->vk_surface);
+	vmaDestroyAllocator(g_device->vma_allocator);
+	vkDestroyDebugUtilsMessengerEXT(g_device->vk_instance, g_device->debug_messenger, NULL);
+	vkDestroyDevice(g_device->vk_device, NULL);
 
 	DebugLogI(g_device->log_channel, "Destroyed.");
 
@@ -235,7 +831,7 @@ internal G_Device *G_DeviceGetSelected(void)
 
 internal VkFormat G_DeviceDepthFormat(void)
 {
-	return g_device->context.depth_format;
+	return g_device->depth_format;
 }
 
 internal u32 G_DeviceFrameInFlightIndex(void)
@@ -243,24 +839,29 @@ internal u32 G_DeviceFrameInFlightIndex(void)
 	return g_device->current_frame_in_flight_index;
 }
 
+internal b32 G_DeviceFeatureEnabled(G_FeatureType type)
+{
+	return g_device->features.enabled.set[type];
+}
+
 internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
 {
 	for (G_DestroyedImage *img = frame->destroyed_image_head; img; img = img->next)
 	{
 		G_ResourceListReturn(&g_device->textures, img->key);
-		vmaDestroyImage(g_device->context.vma_allocator, img->image, img->allocation);
+		vmaDestroyImage(g_device->vma_allocator, img->image, img->allocation);
 	}
 
 	for (G_DestroyedBuffer *b = frame->destroyed_buffer_head; b; b = b->next)
 	{
 		G_ResourceListReturn(&g_device->buffers, b->key);
-		vmaDestroyBuffer(g_device->context.vma_allocator, b->buffer, b->allocation);
+		vmaDestroyBuffer(g_device->vma_allocator, b->buffer, b->allocation);
 	}
 	
 	for (G_DestroyedSampler *s = frame->destroyed_sampler_head; s; s = s->next)
 	{
 		G_ResourceListReturn(&g_device->samplers, s->key);
-		vkDestroySampler(g_device->context.device, s->sampler, NULL);
+		vkDestroySampler(g_device->vk_device, s->sampler, NULL);
 		G_BindlessFreeSampler(&g_device->bindless, s->bindless);
 	}
 	
@@ -272,7 +873,7 @@ internal void G_DeviceFlushInFlightFrame(G_DeviceFrameInFlight *frame)
 	for (G_DestroyedAccelStruct *a = frame->destroyed_as_head; a; a = a->next)
 	{
 		G_ResourceListReturn(&g_device->accel_structures, a->key);
-		vkDestroyAccelerationStructureKHR(g_device->context.device, a->handle, NULL);
+		vkDestroyAccelerationStructureKHR(g_device->vk_device, a->handle, NULL);
 	}
 	
 	frame->destroyed_sampler_head = NULL;
@@ -299,7 +900,7 @@ internal G_CmdBuffer G_DeviceBeginFrame(G_Swapchain *swapchain)
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
-	VkResult result = vkAcquireNextImage2KHR(g_device->context.device, &acquire_next_image_info, &swapchain->current_frame_index);
+	VkResult result = vkAcquireNextImage2KHR(g_device->vk_device, &acquire_next_image_info, &swapchain->current_frame_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -344,7 +945,7 @@ internal void G_DeviceEndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &swapchain_frame->render_finished_semaphore;
 
-	VkResult result = vkQueuePresentKHR(g_device->context.graphics_queue.vk_handle, &present_info);
+	VkResult result = vkQueuePresentKHR(g_device->graphics_queue.vk_handle, &present_info);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -402,7 +1003,7 @@ internal G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
 	submit_info.signalSemaphoreInfoCount = 1 + signal_count;
 	submit_info.pSignalSemaphoreInfos = all_signals;
 
-	G_VK_CHECK(vkQueueSubmit2(g_device->context.graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
+	G_VK_CHECK(vkQueueSubmit2(g_device->graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
 			   "Failed to submit command to queue.");
 
 	ScratchRelease(&scratch);
@@ -412,7 +1013,7 @@ internal G_TimelinePoint G_DeviceSubmitEx(const G_CmdBuffer *cmd,
 
 internal G_CmdBuffer G_DeviceSubmitImBegin(void)
 {
-	vkQueueWaitIdle(g_device->context.graphics_queue.vk_handle);
+	vkQueueWaitIdle(g_device->graphics_queue.vk_handle);
 
 	G_CmdBuffer cmd = G_DeviceCmdPoolAcquire(&g_device->frames_in_flight[g_device->current_frame_in_flight_index].command_pool);
 	G_CmdBegin(&cmd);
@@ -437,8 +1038,8 @@ internal void G_DeviceSubmitImEnd(const G_CmdBuffer *cmd)
 internal void G_DeviceHotLoad(void)
 {
 	volkInitialize();
-	volkLoadInstance(g_device->context.instance);
-	volkLoadDevice(g_device->context.device);
+	volkLoadInstance(g_device->vk_instance);
+	volkLoadDevice(g_device->vk_device);
 
 	G_DeviceWaitIdle();
 }
@@ -458,7 +1059,7 @@ internal VkQueryPool G_DeviceQueryPoolCreate(u32 query_count, VkQueryType type, 
 	
 	VkQueryPool handle = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateQueryPool(g_device->context.device,
+	G_VK_CHECK(vkCreateQueryPool(g_device->vk_device,
 								 &create_info,
 								 NULL,
 								 &handle),
@@ -469,27 +1070,27 @@ internal VkQueryPool G_DeviceQueryPoolCreate(u32 query_count, VkQueryType type, 
 
 internal void G_DeviceQueryPoolDestroy(VkQueryPool pool)
 {
-	vkDestroyQueryPool(g_device->context.device, pool, NULL);
+	vkDestroyQueryPool(g_device->vk_device, pool, NULL);
 }
 
 internal void G_DeviceWaitIdle(void)
 {
-	vkDeviceWaitIdle(g_device->context.device);
+	vkDeviceWaitIdle(g_device->vk_device);
 }
 
 internal void G_DeviceWaitForFence(VkFence fence)
 {
-	vkWaitForFences(g_device->context.device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkWaitForFences(g_device->vk_device, 1, &fence, VK_TRUE, UINT64_MAX);
 }
 
 internal void G_DeviceResetFence(VkFence fence)
 {
-	vkResetFences(g_device->context.device, 1, &fence);
+	vkResetFences(g_device->vk_device, 1, &fence);
 }
 
 internal void G_DeviceDestroyFence(VkFence fence)
 {
-	vkDestroyFence(g_device->context.device, fence, NULL);
+	vkDestroyFence(g_device->vk_device, fence, NULL);
 }
 
 internal G_Semaphore G_DeviceSemaphoreCreate(u64 value)
@@ -506,7 +1107,7 @@ internal G_Semaphore G_DeviceSemaphoreCreate(u64 value)
 
 	VkSemaphore vk_semaphore = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
+	G_VK_CHECK(vkCreateSemaphore(g_device->vk_device,
 								 &timeline_semaphore_create_info, NULL,
 								 &vk_semaphore),
 			   "Failed to create timeline semaphore.");
@@ -520,14 +1121,14 @@ internal G_Semaphore G_DeviceSemaphoreCreate(u64 value)
 
 internal void G_DeviceSemaphoreDestroy(const G_Semaphore *semaphore)
 {
-	vkDestroySemaphore(g_device->context.device, semaphore->vk_handle, NULL);
+	vkDestroySemaphore(g_device->vk_device, semaphore->vk_handle, NULL);
 }
 
 internal u64 G_DeviceSemaphoreGPUCounterValue(const G_Semaphore *semaphore)
 {
 	u64 result = 0;
 
-	vkGetSemaphoreCounterValue(g_device->context.device,
+	vkGetSemaphoreCounterValue(g_device->vk_device,
 							   semaphore->vk_handle,
 							   &result);
 
@@ -545,7 +1146,7 @@ internal void G_DeviceWaitUntil(G_TimelinePoint point)
 	wait_info.pSemaphores = &point.semaphore;
 	wait_info.pValues = &point.frame;
 
-	G_VK_CHECK(vkWaitSemaphores(g_device->context.device,
+	G_VK_CHECK(vkWaitSemaphores(g_device->vk_device,
 								&wait_info, UINT64_MAX),
 			   "Failed to wait on timeline semaphore");
 }
@@ -554,7 +1155,7 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	const G_SwapchainSupportDetails *details = &g_device->context.swapchain_details;
+	const G_SwapchainSupportDetails *details = &g_device->swapchain_details;
 
 	VkSurfaceFormatKHR surface_format = G_DeviceChooseSwapchainSurfaceFormat(g_device->log_channel, details->surface_format_count, details->surface_formats);
 	VkPresentModeKHR present_mode = G_DeviceChooseSwapchainPresentMode(details->present_mode_count, details->present_modes, false); // TODO: add option to enable VSYNC
@@ -580,7 +1181,7 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 
 	VkSwapchainCreateInfoKHR create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	create_info.surface = g_device->context.surface;
+	create_info.surface = g_device->vk_surface;
 	create_info.minImageCount = frame_count;
 	create_info.imageFormat = surface_format.format;
 	create_info.imageColorSpace = surface_format.colorSpace;
@@ -596,18 +1197,18 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 	create_info.clipped = VK_TRUE;
 	create_info.oldSwapchain = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateSwapchainKHR(g_device->context.device,
+	G_VK_CHECK(vkCreateSwapchainKHR(g_device->vk_device,
 									&create_info, NULL,
 									&swapchain.vk_handle),
 			   "Failed to create swapchain.");
 
-	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &frame_count, NULL);
+	vkGetSwapchainImagesKHR(g_device->vk_device, swapchain.vk_handle, &frame_count, NULL);
 
 	DebugLogAssert(g_device->log_channel, frame_count > 0, "Failed to find any images in swapchain.");
 
 	VkImage *vk_images = ArenaPushArray(scratch.arena, VkImage, frame_count);
 
-	vkGetSwapchainImagesKHR(g_device->context.device, swapchain.vk_handle, &frame_count, vk_images);
+	vkGetSwapchainImagesKHR(g_device->vk_device, swapchain.vk_handle, &frame_count, vk_images);
 
 	swapchain.frame_count = frame_count;
 	swapchain.frames = ArenaPushArray(g_device->permanent_arena, G_SwapchainFrame, frame_count);
@@ -665,7 +1266,7 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 			view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 			view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-			G_VK_CHECK(vkCreateImageView(g_device->context.device,
+			G_VK_CHECK(vkCreateImageView(g_device->vk_device,
 										 &view_create_info, NULL,
 										 &frame->texture_view.vk_handle),
 					   "Failed to create texture image view.");
@@ -678,7 +1279,7 @@ internal G_Swapchain G_DeviceSwapchainCreate(void)
 			binary_semaphore_create_info.flags = 0;
 			binary_semaphore_create_info.pNext = NULL;
 
-			G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
+			G_VK_CHECK(vkCreateSemaphore(g_device->vk_device,
 										 &binary_semaphore_create_info, NULL,
 										 &frame->render_finished_semaphore),
 					   "Failed to create render finished semaphore.");
@@ -697,11 +1298,11 @@ internal void G_DeviceSwapchainDestroy(const G_Swapchain *swapchain)
 	for (u32 i = 0; i < swapchain->frame_count; i++)
 	{
 		const G_SwapchainFrame *frame = &swapchain->frames[i];
-		vkDestroyImageView(g_device->context.device, frame->texture_view.vk_handle, NULL);
-		vkDestroySemaphore(g_device->context.device, frame->render_finished_semaphore, NULL);
+		vkDestroyImageView(g_device->vk_device, frame->texture_view.vk_handle, NULL);
+		vkDestroySemaphore(g_device->vk_device, frame->render_finished_semaphore, NULL);
 	}
 
-	vkDestroySwapchainKHR(g_device->context.device, swapchain->vk_handle, NULL);
+	vkDestroySwapchainKHR(g_device->vk_device, swapchain->vk_handle, NULL);
 }
 
 internal G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
@@ -713,7 +1314,7 @@ internal G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
 
 	G_CmdPool pool = {0};
 
-	G_VK_CHECK(vkCreateCommandPool(g_device->context.device,
+	G_VK_CHECK(vkCreateCommandPool(g_device->vk_device,
 								   &create_info, NULL,
 								   &pool.vk_handle),
 			   "Failed to create command pool.");
@@ -728,7 +1329,7 @@ internal G_CmdPool G_DeviceCmdPoolCreate(u32 family_index)
 
 internal void G_DeviceCmdPoolDestroy(const G_CmdPool *pool)
 {
-	vkDestroyCommandPool(g_device->context.device, pool->vk_handle, NULL);
+	vkDestroyCommandPool(g_device->vk_device, pool->vk_handle, NULL);
 }
 
 internal G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
@@ -751,7 +1352,7 @@ internal G_CmdBuffer G_DeviceCmdPoolAcquire(G_CmdPool *pool)
 		alloc_info.commandBufferCount = 1;
 		alloc_info.commandPool = pool->vk_handle;
 		
-		G_VK_CHECK(vkAllocateCommandBuffers(g_device->context.device,
+		G_VK_CHECK(vkAllocateCommandBuffers(g_device->vk_device,
 											&alloc_info,
 											&cb),
 				   "Failed to allocate command pool command buffers.");
@@ -835,7 +1436,7 @@ internal G_ResourceKey G_DevicePipelineLayoutFetch(G_ResourceKey program)
 
 	VkPipelineLayout layout = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreatePipelineLayout(g_device->context.device,
+	G_VK_CHECK(vkCreatePipelineLayout(g_device->vk_device,
 									  &create_info, NULL,
 									  &layout),
 			   "Failed to create pipeline layout.");
@@ -1035,8 +1636,8 @@ internal G_PipelineSt G_DeviceFetchGraphicsPipeline(const G_GraphicsPipelineDef 
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateGraphicsPipelines(g_device->context.device,
-										 g_device->context.pipeline_process_cache,
+	G_VK_CHECK(vkCreateGraphicsPipelines(g_device->vk_device,
+										 g_device->pipeline_process_cache,
 										 1, &graphics_pipeline_create_info,
 										 NULL, &pipeline),
 			   "Failed to create graphics pipeline.");
@@ -1097,8 +1698,8 @@ internal G_PipelineSt G_DeviceFetchComputePipeline(const G_ComputePipelineDef *d
 
 	VkPipeline pipeline = VK_NULL_HANDLE;
 
-	G_VK_CHECK(vkCreateComputePipelines(g_device->context.device,
-										g_device->context.pipeline_process_cache,
+	G_VK_CHECK(vkCreateComputePipelines(g_device->vk_device,
+										g_device->pipeline_process_cache,
 										1, &compute_pipeline_create_info,
 										NULL, &pipeline),
 			   "Failed to create compute pipeline.");
@@ -1219,7 +1820,7 @@ internal G_ResourceKey G_DeviceTextureAlloc(const G_TextureAllocInfo *alloc_info
 	vma_alloc_info.priority = 1.f;
 	vma_alloc_info.flags = vma_alloc_flags;
 
-	G_VK_CHECK(vmaCreateImage(g_device->context.vma_allocator,
+	G_VK_CHECK(vmaCreateImage(g_device->vma_allocator,
 							  &create_info,
 							  &vma_alloc_info,
 							  &texture.vk_handle,
@@ -1352,7 +1953,7 @@ internal G_ResourceKey G_DeviceTextureViewFetch(const G_TextureViewCreateInfo *i
 	view.type = info->type;
 	view.range = info->range;
 
-	G_VK_CHECK(vkCreateImageView(g_device->context.device,
+	G_VK_CHECK(vkCreateImageView(g_device->vk_device,
 								 &view_create_info, NULL,
 								 &view.vk_handle),
 			   "Failed to create texture image view.");
@@ -1430,7 +2031,7 @@ internal G_ResourceKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
 	vma_alloc_info.flags = alloc_info->flags | VMA_ALLOCATION_CREATE_MAPPED_BIT; // just map every buffer it's easier and the performance loss is negligible i rekon
 	
-	G_VK_CHECK(vmaCreateBuffer(g_device->context.vma_allocator,
+	G_VK_CHECK(vmaCreateBuffer(g_device->vma_allocator,
 							   &buffer_create_info,
 							   &vma_alloc_info,
 							   &buffer.vk_handle,
@@ -1444,7 +2045,7 @@ internal G_ResourceKey G_DeviceBufferAlloc(const G_BufferAllocInfo *alloc_info)
 		address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
 		address_info.buffer = buffer.vk_handle;
 
-		buffer.device_address = vkGetBufferDeviceAddress(g_device->context.device, &address_info);
+		buffer.device_address = vkGetBufferDeviceAddress(g_device->vk_device, &address_info);
 	}
 
 	G_Resource resource = {0};
@@ -1506,7 +2107,7 @@ internal void G_DeviceBufferRead(G_ResourceKey key, void *dst, u64 length, u64 o
 	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when reading.", key.value);
 	
-	vmaCopyAllocationToMemory(g_device->context.vma_allocator, buffer->allocation, offset, dst, length);
+	vmaCopyAllocationToMemory(g_device->vma_allocator, buffer->allocation, offset, dst, length);
 }
 
 internal void G_DeviceBufferWrite(G_ResourceKey key, const void *src, u64 length, u64 offset)
@@ -1514,7 +2115,7 @@ internal void G_DeviceBufferWrite(G_ResourceKey key, const void *src, u64 length
 	G_Buffer *buffer = G_DeviceBufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when writing.", key.value);
 	
-	vmaCopyMemoryToAllocation(g_device->context.vma_allocator, src, buffer->allocation, offset, length);
+	vmaCopyMemoryToAllocation(g_device->vma_allocator, src, buffer->allocation, offset, length);
 }
 
 internal u64 G_DeviceBufferSize(G_ResourceKey key)
@@ -1527,7 +2128,7 @@ internal u64 G_DeviceBufferSize(G_ResourceKey key)
 
 internal G_ResourceKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
 {
-	VkPhysicalDeviceProperties properties = g_device->context.physical_device_properties.properties;
+	VkPhysicalDeviceProperties properties = g_device->vk_physical_device_properties.properties;
 
 	VkSamplerCreateInfo create_info = {0};
 	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1549,7 +2150,7 @@ internal G_ResourceKey G_DeviceSamplerCreate(const G_SamplerCreateInfo *info)
 
 	G_Sampler sampler = {0};
 	
-	G_VK_CHECK(vkCreateSampler(g_device->context.device,
+	G_VK_CHECK(vkCreateSampler(g_device->vk_device,
 							   &create_info, NULL,
 							   &sampler.vk_handle),
 			   "Failed to create texture sampler.");
@@ -1749,7 +2350,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry 
 	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
 	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-	vkGetAccelerationStructureBuildSizesKHR(g_device->context.device,
+	vkGetAccelerationStructureBuildSizesKHR(g_device->vk_device,
 											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 											&build_info,
 											primitive_counts,
@@ -1778,7 +2379,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry 
 	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 	accel_struct.backing_buffer = backing_buffer_key;
 
-	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->context.device,
+	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->vk_device,
 												&create_info, NULL,
 												&accel_struct.vk_handle),
 			   "Failed to create BLAS.");
@@ -1787,7 +2388,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceBLASAlloc(const G_BLASGeometry 
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 	addr_info.accelerationStructure = accel_struct.vk_handle;
 
-	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->context.device, &addr_info);
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->vk_device, &addr_info);
 	
 	ScratchRelease(&scratch);
 
@@ -1820,7 +2421,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_coun
 	VkAccelerationStructureBuildSizesInfoKHR sizes = {0};
 	sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-	vkGetAccelerationStructureBuildSizesKHR(g_device->context.device,
+	vkGetAccelerationStructureBuildSizesKHR(g_device->vk_device,
 											VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
 											&build_info,
 											&max_instance_count,
@@ -1849,7 +2450,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_coun
 	accel_struct.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 	accel_struct.backing_buffer = backing_buffer_key;
 
-	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->context.device,
+	G_VK_CHECK(vkCreateAccelerationStructureKHR(g_device->vk_device,
 												&create_info, NULL,
 												&accel_struct.vk_handle),
 			   "Failed to create TLAS.");
@@ -1858,7 +2459,7 @@ internal G_DeviceAllocAccelStructReceipt G_DeviceTLASAlloc(u32 max_instance_coun
 	addr_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
 	addr_info.accelerationStructure = accel_struct.vk_handle;
 
-	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->context.device, &addr_info);
+	accel_struct.device_address = vkGetAccelerationStructureDeviceAddressKHR(g_device->vk_device, &addr_info);
 
 	DebugLogD(g_device->log_channel, "Allocated TLAS with max instance count of %u.", max_instance_count);
 	
@@ -1907,7 +2508,7 @@ internal void G_DeviceCreateSyncResources(void)
 {
 	g_device->graphics_semaphore = G_DeviceSemaphoreCreate(0);
 
-	u32 family_index = g_device->context.graphics_queue.family_index;
+	u32 family_index = g_device->graphics_queue.family_index;
 
 	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
 	{
@@ -1925,7 +2526,7 @@ internal void G_DeviceCreateSyncResources(void)
 			binary_semaphore_create_info.flags = 0;
 			binary_semaphore_create_info.pNext = NULL;
 
-			G_VK_CHECK(vkCreateSemaphore(g_device->context.device,
+			G_VK_CHECK(vkCreateSemaphore(g_device->vk_device,
 										 &binary_semaphore_create_info, NULL,
 										 &frame->image_available_semaphore),
 					   "Failed to create image available semaphore.");
@@ -1947,7 +2548,7 @@ internal void G_DeviceDestroySyncResources(void)
 	{
 		G_DeviceFrameInFlight *frame = &g_device->frames_in_flight[i];
 		
-		vkDestroySemaphore(g_device->context.device, frame->image_available_semaphore, NULL);		
+		vkDestroySemaphore(g_device->vk_device, frame->image_available_semaphore, NULL);		
 		G_DeviceCmdPoolDestroy(&frame->command_pool);
 	}
 
@@ -1971,7 +2572,7 @@ internal void G_DeviceCreateBindless(void)
 	pool_create_info.poolSizeCount = ArraySize(pool_sizes);
 	pool_create_info.pPoolSizes = pool_sizes;
 
-	G_VK_CHECK(vkCreateDescriptorPool(g_device->context.device,
+	G_VK_CHECK(vkCreateDescriptorPool(g_device->vk_device,
 									  &pool_create_info, NULL,
 									  &g_device->bindless.pool),
 			   "Failed to create bindless descriptor pool.");
@@ -2004,7 +2605,7 @@ internal void G_DeviceCreateBindless(void)
 	layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 	layout_create_info.pNext = &binding_flags;
 
-	G_VK_CHECK(vkCreateDescriptorSetLayout(g_device->context.device,
+	G_VK_CHECK(vkCreateDescriptorSetLayout(g_device->vk_device,
 										   &layout_create_info, NULL,
 										   &g_device->bindless.layout),
 			   "Failed to create bindless descriptor layout.");
@@ -2015,7 +2616,7 @@ internal void G_DeviceCreateBindless(void)
 	alloc_info.descriptorSetCount = 1;
 	alloc_info.pSetLayouts = &g_device->bindless.layout;
 
-	G_VK_CHECK(vkAllocateDescriptorSets(g_device->context.device,
+	G_VK_CHECK(vkAllocateDescriptorSets(g_device->vk_device,
 										&alloc_info,
 										&g_device->bindless.set),
 			   "Failed to allocate bindless descriptor set.");
@@ -2025,8 +2626,8 @@ internal void G_DeviceCreateBindless(void)
 
 internal void G_DeviceDestroyBindless(void)
 {
-	vkDestroyDescriptorSetLayout(g_device->context.device, g_device->bindless.layout, NULL);
-	vkDestroyDescriptorPool(g_device->context.device, g_device->bindless.pool, NULL);
+	vkDestroyDescriptorSetLayout(g_device->vk_device, g_device->bindless.layout, NULL);
+	vkDestroyDescriptorPool(g_device->vk_device, g_device->bindless.pool, NULL);
 }
 
 internal void G_DeviceApplyBindlessUpdates(void)
@@ -2059,7 +2660,7 @@ internal void G_DeviceApplyBindlessUpdates(void)
 		writes[i].pImageInfo = &infos[i];
 	}
 
-	vkUpdateDescriptorSets(g_device->context.device,
+	vkUpdateDescriptorSets(g_device->vk_device,
 						   count, writes,
 						   0, NULL);
 
@@ -2094,7 +2695,7 @@ internal void G_DeviceCreateImGui(void)
 	  pool_info.poolSizeCount = ArraySize(pool_sizes);
 	  pool_info.pPoolSizes = pool_sizes;
 
-	  G_VK_CHECK(vkCreateDescriptorPool(g_device->context.device,
+	  G_VK_CHECK(vkCreateDescriptorPool(g_device->vk_device,
 	  &pool_info, NULL,
 	  &g_device->imgui_pool),
 	  "Failed to create ImGui descriptor pool.");
@@ -2102,17 +2703,17 @@ internal void G_DeviceCreateImGui(void)
 	  VkFormat swapchain_image_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
 	  ImGui_ImplVulkan_InitInfo init_info = {0};
-	  init_info.Instance = g_device->context.instance;
-	  init_info.PhysicalDevice = g_device->context.physical_device;
-	  init_info.Device = g_device->context.device;
-	  init_info.QueueFamily = g_device->context.graphics_queue.family_index;
-	  init_info.Queue = g_device->context.graphics_queue.vk_handle;
-	  init_info.PipelineCache = g_device->pipeline_cache;
-	  init_info.DescriptorPool = g_device->imgui_pool;
-	  init_info.Allocator = NULL;
-	  init_info.MinImageCount = G_FRAMES_IN_FLIGHT;
-	  init_info.ImageCount = G_FRAMES_IN_FLIGHT;
-	  init_info.CheckVkResultFn = NULL;
+	  init_info.Instance            = g_device->vk_instance;
+	  init_info.PhysicalDevice      = g_device->vk_physical_device;
+	  init_info.Device              = g_device->vk_device;
+	  init_info.QueueFamily         = g_device->graphics_queue.family_index;
+	  init_info.Queue               = g_device->graphics_queue.vk_handle;
+	  init_info.PipelineCache       = g_device->pipeline_cache;
+	  init_info.DescriptorPool      = g_device->imgui_pool;
+	  init_info.Allocator           = NULL;
+	  init_info.MinImageCount       = G_FRAMES_IN_FLIGHT;
+	  init_info.ImageCount          = G_FRAMES_IN_FLIGHT;
+	  init_info.CheckVkResultFn     = NULL;
 	  init_info.UseDynamicRendering = true;
 	  init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	  init_info.PipelineInfoMain.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -2127,7 +2728,7 @@ internal void G_DeviceDestroyImGui(void)
 {
 	/*
 	  ImGui_ImplVulkan_Shutdown();
-	  vkDestroyDescriptorPool(g_device->context.device, g_device->imgui_pool, NULL);
+	  vkDestroyDescriptorPool(g_device->vk_device, g_device->imgui_pool, NULL);
 	*/
 }
 

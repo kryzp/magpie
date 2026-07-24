@@ -2,7 +2,6 @@
 #include "graphics_blend.c"
 #include "graphics_buffer.c"
 #include "graphics_capabilities.c"
-#include "graphics_context.c"
 #include "graphics_bindless.c"
 #include "graphics_shader_compiler.c"
 #include "graphics_texture.c"
