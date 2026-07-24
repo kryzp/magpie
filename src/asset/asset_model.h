@@ -1,8 +1,6 @@
 #ifndef ASSET_MODEL_H
 #define ASSET_MODEL_H
 
-typedef u32 A_ModelIndex; // todo: this is not necessary, as model indices required may vary from model to model
-
 typedef struct A_ModelVertex A_ModelVertex;
 struct A_ModelVertex
 {
@@ -38,7 +36,7 @@ struct A_SubModel
 	
 	void *indices;
 	u32 index_count;
-	u64 index_stride;
+	G_IndexType index_type;
 
 	b32 is_skinned;
 	i32 skin_index; // -1 for invalid

@@ -181,7 +181,7 @@ internal R_GraphTexHandle R_GraphImportTexture(R_Graph *graph, G_ResourceKey ext
 			return graph->imported_textures[i].handle;
 	}
 
-	const G_Texture *physical = G_DeviceTextureFromKey(external_key);
+	const G_Texture *physical = G_TextureFromKey(external_key);
 
 	DebugLogAssert(graph->log_channel, physical, "Imported texture with key %llu is invalid.", external_key.value);
 
@@ -253,7 +253,7 @@ internal R_GraphBufHandle R_GraphImportBuffer(R_Graph *graph, G_ResourceKey exte
 			return graph->imported_buffers[i].handle;
 	}
 
-	const G_Buffer *physical = G_DeviceBufferFromKey(external_key);
+	const G_Buffer *physical = G_BufferFromKey(external_key);
 
 	DebugLogAssert(graph->log_channel, physical, "Imported buffer with key %llu is invalid.", external_key.value);
 
@@ -701,7 +701,7 @@ internal void R_GraphSyncTextureRead(R_Graph *graph, R_Pass *pass, const R_PassT
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src.access = st->write_access;
 
-		const G_Texture *physical = G_DeviceTextureFromKey(t->physical_key);
+		const G_Texture *physical = G_TextureFromKey(t->physical_key);
 
 		/*
 		 * YES I DO THE BARRIER FOR THE ENTIRE TEXTURE.
@@ -752,7 +752,7 @@ internal void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_Pass
 		src.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src.access = st->write_access;
 
-		const G_Texture *physical = G_DeviceTextureFromKey(t->physical_key);
+		const G_Texture *physical = G_TextureFromKey(t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
@@ -779,7 +779,7 @@ internal void R_GraphSyncTextureWrite(R_Graph *graph, R_Pass *pass, const R_Pass
 		dst_access.stage  = edge->state.stage;
 		dst_access.access = layout_change ? edge->state.access : VK_ACCESS_2_NONE;
 
-		const G_Texture *physical = G_DeviceTextureFromKey(t->physical_key);
+		const G_Texture *physical = G_TextureFromKey(t->physical_key);
 
 		pass->texture_barriers[pass->texture_barrier_count++] =
 			G_SyncTextureBarrier(physical,
@@ -818,7 +818,7 @@ internal void R_GraphSyncBufferRead(R_Graph *graph, R_Pass *pass, const R_PassBu
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src_access.access = st->write_access;
 
-		const G_Buffer *physical = G_DeviceBufferFromKey(b->physical_key);
+		const G_Buffer *physical = G_BufferFromKey(b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
@@ -856,7 +856,7 @@ internal void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassB
 		src_access.stage  = st->write_stage ? st->write_stage : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
 		src_access.access = st->write_access;
 
-		const G_Buffer *physical = G_DeviceBufferFromKey(b->physical_key);
+		const G_Buffer *physical = G_BufferFromKey(b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
@@ -881,7 +881,7 @@ internal void R_GraphSyncBufferWrite(R_Graph *graph, R_Pass *pass, const R_PassB
 		dst_access.stage  = edge->state.stage;
 		dst_access.access = VK_ACCESS_2_NONE;
 
-		const G_Buffer *physical = G_DeviceBufferFromKey(b->physical_key);
+		const G_Buffer *physical = G_BufferFromKey(b->physical_key);
 
 		pass->buffer_barriers[pass->buffer_barrier_count++] =
 			G_SyncBufferBarrier(physical,
@@ -958,8 +958,8 @@ internal void R_GraphPresentToSwapchain(R_Graph *graph, const G_Swapchain *swapc
 	G_ResourceKey src_texture_key = backbuffer->physical_key;
 	G_ResourceKey dst_texture_key = swapchain->frames[swapchain->current_frame_index].texture_key;
 	
-	const G_Texture *src_texture = G_DeviceTextureFromKey(src_texture_key);
-	const G_Texture *dst_texture = G_DeviceTextureFromKey(dst_texture_key);
+	const G_Texture *src_texture = G_TextureFromKey(src_texture_key);
+	const G_Texture *dst_texture = G_TextureFromKey(dst_texture_key);
 
 	// Backbuffer = Transfer Source
 	// Swapchain  = Trandfer Destination
@@ -1053,14 +1053,14 @@ internal G_ResourceKey R_GraphResolveTextureView(const R_Graph *graph, R_GraphTe
 {
 	const R_GraphTexture *t = R_GraphTextureFromHandle((R_Graph *)graph, handle);
 
-	const G_Texture *physical = G_DeviceTextureFromKey(t->physical_key);
+	const G_Texture *physical = G_TextureFromKey(t->physical_key);
 
 	G_TextureViewCreateInfo create_info = {0};
 	create_info.texture = t->physical_key;
 	create_info.type = G_TextureDefaultViewType(physical);
 	create_info.range = range;
 	
-	return G_DeviceTextureViewFetch(&create_info);
+	return G_TextureViewFetch(&create_info);
 }
 
 internal G_ResourceKey R_GraphResolveBuffer(const R_Graph *graph, R_GraphBufHandle handle)
@@ -1112,14 +1112,14 @@ internal G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pa
 		vk_info.loadOp = out->should_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		vk_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-		vk_info.imageView = G_DeviceTextureViewFromKey(view)->vk_handle;
+		vk_info.imageView = G_TextureViewFromKey(view)->vk_handle;
 		vk_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		if (!R_GraphTexHandleIsNull(out->resolve_handle))
 		{
 			G_ResourceKey resolve_view = R_GraphResolveTextureView(graph, out->resolve_handle, out->attachment_range);
 
-			vk_info.resolveImageView = G_DeviceTextureViewFromKey(resolve_view)->vk_handle;
+			vk_info.resolveImageView = G_TextureViewFromKey(resolve_view)->vk_handle;
 			vk_info.resolveImageLayout = out->resolve_layout;
 			vk_info.resolveMode = out->resolve_mode;
 		}
@@ -1130,7 +1130,7 @@ internal G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pa
 			vk_info.resolveMode = VK_RESOLVE_MODE_NONE;
 		}
 
-		if (info->format == G_DeviceDepthFormat())
+		if (info->format == G_GetDepthFormat())
 		{
 			vk_info.clearValue.depthStencil.depth = out->clear.depth;
 			vk_info.clearValue.depthStencil.stencil = out->clear.stencil;

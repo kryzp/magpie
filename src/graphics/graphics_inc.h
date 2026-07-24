@@ -3,6 +3,7 @@
 #include "graphics_resource_key.h"
 #include "graphics_blend.h"
 #include "graphics_buffer.h"
+#include "graphics_mesh.h"
 #include "graphics_accel_struct.h"
 #include "graphics_capabilities.h"
 #include "graphics_bindless.h"

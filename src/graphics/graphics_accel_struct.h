@@ -12,7 +12,7 @@ struct G_BLASGeometry
 
 	G_ResourceKey index_buffer;
 	u32 index_count;
-	VkIndexType index_type;
+	G_IndexType index_type;
 	u64 index_offset;
 };
 

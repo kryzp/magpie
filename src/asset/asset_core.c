@@ -231,10 +231,10 @@ internal void A_FlushUploads(void)
 		G_ResourceKey staging_buffer = G_ResourceKeyNull();
 
 		if (batch_stage_size > 0)
-			staging_buffer = G_DeviceStageAlloc(batch_stage_size);
+			staging_buffer = G_StageAlloc(batch_stage_size);
 
 		{
-			G_CmdBuffer cmd = G_DeviceSubmitImBegin();
+			G_CmdBuffer cmd = G_SubmitImBegin();
 		
 			u64 stage_offset = 0;
 
@@ -291,11 +291,11 @@ internal void A_FlushUploads(void)
 				ArenaRelease(&upload->temp_arena);
 			}
 			
-			G_DeviceSubmitImEnd(&cmd);
+			G_SubmitImEnd(&cmd);
 		}
 
 		if (!G_ResourceKeyIsNull(staging_buffer))
-			G_DeviceBufferDestroy(staging_buffer);
+			G_BufferDestroy(staging_buffer);
 
 		base += batch_count;
 	}

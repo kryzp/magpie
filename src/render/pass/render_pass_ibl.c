@@ -7,7 +7,7 @@ internal R_PASS_RECORD_DEF(R_BRDFLutPassFn)
 	
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->brdf_lut_generation_shader, ctx->render_info);
 
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
@@ -22,7 +22,7 @@ internal R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->irradiance_cubemap_gen_shader, ctx->render_info);
 	
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 	
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
@@ -36,10 +36,10 @@ internal R_PASS_RECORD_DEF(R_IBLPassIrradianceFn)
 	}
 	args;
 	
-	args.transform_matrix_buffer = G_DeviceBufferAddress(frame_params->cubemap_capture_transform_buffer);
-	args.vertex_buffer           = G_DeviceBufferAddress(frame_params->skybox_mesh->vertex_buffer);
-	args.environment_map         = G_DeviceTextureViewBindless(user_data->env_view);
-	args.linear_sampler          = G_DeviceSamplerBindless(frame_params->linear_sampler);
+	args.transform_matrix_buffer = G_BufferAddress(frame_params->cubemap_capture_transform_buffer);
+	args.vertex_buffer           = G_BufferAddress(frame_params->skybox_mesh->vertex_buffer);
+	args.environment_map         = G_TextureViewBindless(user_data->env_view);
+	args.linear_sampler          = G_SamplerBindless(frame_params->linear_sampler);
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
@@ -59,7 +59,7 @@ internal R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 	pipeline_def.colour_attachment_count = 1;
 	pipeline_def.colour_attachment_formats[0] = VK_FORMAT_R32G32B32A32_SFLOAT;
 	
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 	
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
@@ -74,10 +74,10 @@ internal R_PASS_RECORD_DEF(R_IBLPassPrefilterFn)
 	}
 	args;
 	
-	args.transform_matrix_buffer = G_DeviceBufferAddress(frame_params->cubemap_capture_transform_buffer);
-	args.vertex_buffer           = G_DeviceBufferAddress(frame_params->skybox_mesh->vertex_buffer);
-	args.environment_map         = G_DeviceTextureViewBindless(user_data->env_view);
-	args.linear_sampler          = G_DeviceSamplerBindless(frame_params->linear_sampler);
+	args.transform_matrix_buffer = G_BufferAddress(frame_params->cubemap_capture_transform_buffer);
+	args.vertex_buffer           = G_BufferAddress(frame_params->skybox_mesh->vertex_buffer);
+	args.environment_map         = G_TextureViewBindless(user_data->env_view);
+	args.linear_sampler          = G_SamplerBindless(frame_params->linear_sampler);
 	args.roughness               = user_data->roughness;
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);

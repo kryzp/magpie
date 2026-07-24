@@ -19,14 +19,14 @@ internal void R_ResourcePoolDestroy(R_ResourcePool *pool)
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
 		R_PooledTexture *t = &pool->textures[i];
-		G_DeviceTextureDestroy(t->key);
+		G_TextureDestroy(t->key);
 		t->key = G_ResourceKeyNull();
 	}
 	
 	for (u32 i = 0; i < pool->buffer_count; i++)
 	{
 		R_PooledBuffer *b = &pool->buffers[i];
-		G_DeviceBufferDestroy(b->key);
+		G_BufferDestroy(b->key);
 		b->key = G_ResourceKeyNull();
 	}
 
@@ -90,8 +90,8 @@ internal void R_ResourcePoolDestroy(R_ResourcePool *pool)
 
 internal void R_ResourcePoolFlush(R_ResourcePool *pool)
 {
-	pool->current_frame = G_DeviceGetSelected()->graphics_semaphore.last_submitted_frame + 1;
-	pool->gpu_completed_time = G_DeviceSemaphoreGPUCounterValue(&G_DeviceGetSelected()->graphics_semaphore);
+	pool->current_frame = G_GetSelected()->graphics_semaphore.last_submitted_frame + 1;
+	pool->gpu_completed_time = G_SemaphoreGPUCounterValue(&G_GetSelected()->graphics_semaphore);
 
 	for (u32 i = 0; i < pool->texture_count; i++)
 	{
@@ -140,7 +140,7 @@ internal G_ResourceKey R_ResourcePoolAcquireTexture(R_ResourcePool *pool,
 	alloc_info.flags = info->flags;
 	
 	R_PooledTexture texture = {0};
-	texture.key = G_DeviceTextureAlloc(&alloc_info);
+	texture.key = G_TextureAlloc(&alloc_info);
 	texture.info = *info;
 	texture.in_use = true;
 	texture.last_frame_used = pool->current_frame;
@@ -187,7 +187,7 @@ internal G_ResourceKey R_ResourcePoolAcquireBuffer(R_ResourcePool *pool,
 	alloc_info.size = info->size;
 	
 	R_PooledBuffer buffer = {0};
-	buffer.key = G_DeviceBufferAlloc(&alloc_info);
+	buffer.key = G_BufferAlloc(&alloc_info);
 	buffer.info = *info;
 	buffer.in_use = true;
 	buffer.last_frame_used = pool->current_frame;

@@ -4,7 +4,7 @@ internal R_PASS_RECORD_DEF(R_CullClearFn)
 	const R_CullClearPassData *data = ctx->user_data;
 	
 	G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->counter_handle);
-	G_CmdFillBuffer(ctx->cmd, counter_key, 0, G_DeviceBufferSize(counter_key), 0);
+	G_CmdFillBuffer(ctx->cmd, counter_key, 0, G_BufferSize(counter_key), 0);
 }
 
 internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
@@ -14,7 +14,7 @@ internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	const R_CullPassData *data = ctx->user_data;
 
 	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(data->shader);
-	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchComputePipeline(&pipeline_def);
 
 	R_BufferRange indirect_range = R_GraphResolveBufferRange(ctx->graph, data->indirect_handle);
 	R_BufferRange counter_range  = R_GraphResolveBufferRange(ctx->graph, data->counter_handle);
@@ -36,8 +36,8 @@ internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc;
 
 	pc.object_buffer = data->frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_DeviceBufferAddress(data->frame_params->mesh_buffer);
-	pc.material_buffer = G_DeviceBufferAddress(data->frame_params->material_buffer);
+	pc.mesh_buffer = G_BufferAddress(data->frame_params->mesh_buffer);
+	pc.material_buffer = G_BufferAddress(data->frame_params->material_buffer);
 	pc.page_buffer = data->frame_params->page_table_buffer.gpu;
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range);
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
@@ -61,7 +61,7 @@ internal R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	const R_CullPassData *data = ctx->user_data;
 
 	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(data->shader);
-	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchComputePipeline(&pipeline_def);
 
 	R_BufferRange indirect_range = R_GraphResolveBufferRange(ctx->graph, data->indirect_handle);
 	R_BufferRange counter_range = R_GraphResolveBufferRange(ctx->graph, data->counter_handle);
@@ -83,8 +83,8 @@ internal R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc;
 
 	pc.object_buffer = data->frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_DeviceBufferAddress(data->frame_params->mesh_buffer);
-	pc.material_buffer = G_DeviceBufferAddress(data->frame_params->material_buffer);
+	pc.mesh_buffer = G_BufferAddress(data->frame_params->mesh_buffer);
+	pc.material_buffer = G_BufferAddress(data->frame_params->material_buffer);
 	pc.page_buffer = data->frame_params->page_table_buffer.gpu;
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range);
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);

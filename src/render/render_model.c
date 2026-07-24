@@ -15,13 +15,17 @@ internal R_Model R_ModelFromAsset(Arena *arena, R_Scene *scene, A_Handle asset_h
 		model.submodel_first = r_submodel;
 
 		R_MeshDesc mesh_desc = {0};
-		mesh_desc.vertices = asset_src->vertices;
-		mesh_desc.indices = asset_src->indices;
-		mesh_desc.vertex_count = asset_src->vertex_count;
-		mesh_desc.index_count = asset_src->index_count;
-		mesh_desc.skin_buffer = asset_src->skin_buffer;
+		
+		mesh_desc.vertices      = asset_src->vertices;
+		mesh_desc.vertex_count  = asset_src->vertex_count;
+		mesh_desc.vertex_stride = asset_src->vertex_stride;
+		mesh_desc.indices       = asset_src->indices;
+		mesh_desc.index_count   = asset_src->index_count;
+		mesh_desc.index_type    = asset_src->index_type;
+		mesh_desc.skin_buffer   = asset_src->skin_buffer;
 
 		r_submodel->mesh = R_SceneAllocMesh(scene, &mesh_desc);
+		
 		r_submodel->material = R_SceneAddMaterialFromAssets(scene, &asset_src->material);
 		r_submodel->local_transform = asset_src->transform;
 		r_submodel->skin_index = asset_src->skin_index;

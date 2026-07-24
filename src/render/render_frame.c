@@ -10,8 +10,12 @@ internal void R_FrameParamsUploadPageTable(R_Scene *scene, G_RingBuffer *ring, R
 
 	for (u32 i = 0; i < out->page_count; i++)
 	{
-		mapped[i].vertex_buffer = G_DeviceBufferAddress(scene->geometry_pages[i].vertex_buffer);
-		out->page_index_buffers[i] = scene->geometry_pages[i].index_buffer;
+		R_GeometryPage *page = &scene->geometry_pages[i];
+		
+		mapped[i].vertex_buffer = G_BufferAddress(page->vertex_buffer);
+		
+		out->page_index_buffers[i] = page->index_buffer;
+		out->page_index_types[i] = page->index_type;
 	}
 }
 
@@ -232,7 +236,7 @@ internal void R_FrameParamsDrawIndirect(const R_FrameParams *frame_params,
 		G_CmdBindIndexBuffer(cmd,
 							 frame_params->page_index_buffers[i],
 							 0, VK_WHOLE_SIZE,
-							 VK_INDEX_TYPE_UINT32);
+							 frame_params->page_index_types[i]);
 
 		G_CmdDrawIndexedIndirectCount(cmd,
 									  indirect_buffer,

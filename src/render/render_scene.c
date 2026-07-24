@@ -46,7 +46,7 @@ internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 	mesh_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	mesh_buffer_alloc_info.size = sizeof(R_GPU_RenderMesh) * R_SCENE_MAX_MESHES;
 
-	scene->mesh_buffer = G_DeviceBufferAlloc(&mesh_buffer_alloc_info);
+	scene->mesh_buffer = G_BufferAlloc(&mesh_buffer_alloc_info);
 	scene->mesh_buffer_dirty = true;
 	
 	G_BufferAllocInfo material_buffer_alloc_info = {0};
@@ -54,19 +54,19 @@ internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 	material_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	material_buffer_alloc_info.size = sizeof(R_GPU_Material) * R_SCENE_MAX_MATERIALS;
 	
-	scene->material_buffer = G_DeviceBufferAlloc(&material_buffer_alloc_info);
+	scene->material_buffer = G_BufferAlloc(&material_buffer_alloc_info);
 	scene->material_buffer_dirty = true;
 }
 
 internal void R_SceneDestroy(R_Scene *scene)
 {
-	G_DeviceBufferDestroy(scene->material_buffer);
-	G_DeviceBufferDestroy(scene->mesh_buffer);
+	G_BufferDestroy(scene->material_buffer);
+	G_BufferDestroy(scene->mesh_buffer);
 
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
-		G_DeviceBufferDestroy(scene->geometry_pages[i].vertex_buffer);
-		G_DeviceBufferDestroy(scene->geometry_pages[i].index_buffer);
+		G_BufferDestroy(scene->geometry_pages[i].vertex_buffer);
+		G_BufferDestroy(scene->geometry_pages[i].index_buffer);
 	}
 }
 
@@ -162,7 +162,10 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 		return R_MeshHandleNull();
 	}
 
-	u32 page_index = R_SceneFindSuitablePage(scene, desc->vertex_count, desc->index_count);
+	u32 page_index = R_SceneFindSuitablePage(scene,
+											 desc->vertex_count, desc->vertex_stride,
+											 desc->index_count, desc->index_type);
+	
 	R_GeometryPage *page = &scene->geometry_pages[page_index];
 
 	u64 vertex_offset = 0;
@@ -174,13 +177,12 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	DebugLogAssert(scene->log_channel, vok, "Vertex region allocation failed after R_GeometryFreeListAvailable returned true.");
 	DebugLogAssert(scene->log_channel, iok, "Index region allocation failed after R_GeometryFreeListAvailable returned true.");
 	
-	const u64 vertex_stride = sizeof(R_GPU_ModelVertex);
-	const u64 index_stride = sizeof(A_ModelIndex);
-
+	const u64 index_stride = G_IndexTypeStride(desc->index_type);
+	
 	G_BufferCopy vc = {0};
 	vc.src_offset = 0;
-	vc.dst_offset = vertex_offset * vertex_stride;
-	vc.size = desc->vertex_count * vertex_stride;
+	vc.dst_offset = vertex_offset * desc->vertex_stride;
+	vc.size = desc->vertex_count * desc->vertex_stride;
 
 	G_BufferCopy ic = {0};
 	ic.src_offset = 0;
@@ -189,8 +191,8 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 
 	R_ScenePageMeshCopy copy = {0};
 	copy.vertices = desc->vertices;
-	copy.vertex_size = desc->vertex_count * vertex_stride;
-	copy.vertex_offset_dst = vertex_offset * vertex_stride;
+	copy.vertex_size = desc->vertex_count * desc->vertex_stride;
+	copy.vertex_offset_dst = vertex_offset * desc->vertex_stride;
 	copy.indices = desc->indices;
 	copy.index_size = desc->index_count * index_stride;
 	copy.index_offset_dst = index_offset * index_stride;
@@ -205,10 +207,10 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[slot_index];
 	gpu_mesh->index_count = desc->index_count;
 	gpu_mesh->first_index = index_offset;
-	gpu_mesh->vertex_buffer = G_DeviceBufferAddress(page->vertex_buffer) + (vertex_offset * sizeof(R_GPU_ModelVertex));
+	gpu_mesh->vertex_buffer = G_BufferAddress(page->vertex_buffer) + (vertex_offset * desc->vertex_stride);
 
 	if (!G_ResourceKeyIsNull(desc->skin_buffer))
-		gpu_mesh->skin_buffer = G_DeviceBufferAddress(desc->skin_buffer);
+		gpu_mesh->skin_buffer = G_BufferAddress(desc->skin_buffer);
 	else
 		gpu_mesh->skin_buffer = 0;
 	
@@ -244,14 +246,18 @@ internal u32 R_SceneCountOfMeshes(const R_Scene *scene)
 	return SlotPoolLiveCount(&scene->mesh_pool);
 }
 
-internal u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count)
+internal u32 R_SceneFindSuitablePage(R_Scene *scene,
+									 u32 vertex_count, u64 vertex_stride,
+									 u32 index_count, G_IndexType index_type)
 {
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
 		R_GeometryPage *page = &scene->geometry_pages[i];
 		
 		if (R_GeometryFreeListHasAvailable(&page->vertex_free, vertex_count) &&
-			R_GeometryFreeListHasAvailable(&page->index_free, index_count))
+			R_GeometryFreeListHasAvailable(&page->index_free, index_count) &&
+			page->vertex_stride == vertex_stride &&
+			page->index_type == index_type)
 		{
 			return i;
 		}
@@ -263,13 +269,13 @@ internal u32 R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index
 
 	u32 new_index = scene->geometry_page_count;
 
-	scene->geometry_pages[new_index] = R_SceneCreateNewPage(scene);
+	scene->geometry_pages[new_index] = R_SceneCreateNewPage(scene, vertex_stride, index_type);
 	scene->geometry_page_count++;
 
 	return new_index;
 }
 
-internal R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
+internal R_GeometryPage R_SceneCreateNewPage(R_Scene *scene, u64 vertex_stride, G_IndexType index_type)
 {
 	DebugLogD(scene->log_channel, "Creating new geometry page...");
 
@@ -288,15 +294,19 @@ internal R_GeometryPage R_SceneCreateNewPage(R_Scene *scene)
 	ib_info.usage |= VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
 	ib_info.usage |= VK_BUFFER_USAGE_2_INDEX_BUFFER_BIT;
 	//ib_info.usage |= K_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KH;
+
+	u64 index_stride = G_IndexTypeStride(index_type);
 	
-	u32 max_vertices = vb_info.size / sizeof(R_GPU_ModelVertex);
-	u32 max_indices  = ib_info.size / sizeof(A_ModelIndex);
+	u32 max_vertices = vb_info.size / vertex_stride;
+	u32 max_indices  = ib_info.size / index_stride;
 	
 	R_GeometryPage page = {0};
-	page.vertex_buffer = G_DeviceBufferAlloc(&vb_info);
-	page.index_buffer = G_DeviceBufferAlloc(&ib_info);
+	page.vertex_buffer = G_BufferAlloc(&vb_info);
+	page.index_buffer = G_BufferAlloc(&ib_info);
 	page.vertex_count = 0;
 	page.index_count = 0;
+	page.vertex_stride = vertex_stride;
+	page.index_type = index_type;
 	page.max_vertices = max_vertices;
 	page.max_indices = max_indices;
 
@@ -365,7 +375,7 @@ internal void R_SceneFlushIfDirty(R_Scene *scene)
 	{
 		if (scene->page_mesh_copy_count > 0)
 		{
-			G_CmdBuffer cmd = G_DeviceSubmitImBegin();
+			G_CmdBuffer cmd = G_SubmitImBegin();
 
 			for (u32 i = 0; i < scene->page_mesh_copy_count; i++)
 			{
@@ -373,23 +383,23 @@ internal void R_SceneFlushIfDirty(R_Scene *scene)
 				
 				R_GeometryPage *page = &scene->geometry_pages[copy->dst_page_index];
 				
-				uptr vertices_mapped = (uptr)G_DeviceBufferMap(page->vertex_buffer);
-				uptr indices_mapped = (uptr)G_DeviceBufferMap(page->index_buffer);
+				uptr vertices_mapped = (uptr)G_BufferMap(page->vertex_buffer);
+				uptr indices_mapped = (uptr)G_BufferMap(page->index_buffer);
 
 				MemCopy((void *)(vertices_mapped + copy->vertex_offset_dst), copy->vertices, copy->vertex_size);
 				MemCopy((void *)(indices_mapped + copy->index_offset_dst), copy->indices, copy->index_size);
 			}
 	
-			G_DeviceSubmitImEnd(&cmd);
+			G_SubmitImEnd(&cmd);
 		}
 		
-		G_DeviceBufferWrite(scene->mesh_buffer, scene->gpu_meshes, sizeof(scene->gpu_meshes), 0);
+		G_BufferWrite(scene->mesh_buffer, scene->gpu_meshes, sizeof(scene->gpu_meshes), 0);
 		scene->mesh_buffer_dirty = false;
 	}
 
 	if (scene->material_buffer_dirty)
 	{
-		G_DeviceBufferWrite(scene->material_buffer, scene->gpu_materials, sizeof(scene->gpu_materials), 0);
+		G_BufferWrite(scene->material_buffer, scene->gpu_materials, sizeof(scene->gpu_materials), 0);
 		scene->material_buffer_dirty = false;
 	}
 }
@@ -457,7 +467,6 @@ internal u32 R_SceneResolveToBindlessIndex(const R_Scene *scene, G_ResourceKey k
 {
 	if (G_ResourceKeyIsNull(key))
 		return G_BINDLESS_INDEX_INVALID;
-
-	G_ResourceKey view_key = G_DeviceTextureViewAuto(key);
-	return G_DeviceTextureViewBindless(view_key);
+	else
+		return G_TextureViewBindless(G_TextureViewAuto(key));
 }

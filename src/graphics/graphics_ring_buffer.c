@@ -2,19 +2,19 @@
 internal G_RingBuffer G_RingBufferAlloc(const G_BufferAllocInfo *alloc_info)
 {
 	G_RingBuffer ring = {0};
-	ring.buffer = G_DeviceBufferAlloc(alloc_info);
+	ring.buffer = G_BufferAlloc(alloc_info);
 	ring.capacity = alloc_info->size;
 	ring.used = 0;
 
-	ring.base_cpu = G_DeviceBufferMap(ring.buffer);
-	ring.base_gpu = G_DeviceBufferAddress(ring.buffer);
+	ring.base_cpu = G_BufferMap(ring.buffer);
+	ring.base_gpu = G_BufferAddress(ring.buffer);
 
 	return ring;
 }
 
 internal void G_RingBufferDestroy(const G_RingBuffer *ring)
 {
-	G_DeviceBufferDestroy(ring->buffer);
+	G_BufferDestroy(ring->buffer);
 }
 
 internal void G_RingBufferReset(G_RingBuffer *ring)

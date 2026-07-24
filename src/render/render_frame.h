@@ -32,6 +32,7 @@ struct R_FrameParams
 	u32 page_count;
 	G_Alloc page_table_buffer;
 	G_ResourceKey page_index_buffers[R_SCENE_MAX_GEOMETRY_PAGES];
+	G_IndexType page_index_types[R_SCENE_MAX_GEOMETRY_PAGES];
 
 	u32 object_count;
 	G_Alloc object_buffer;

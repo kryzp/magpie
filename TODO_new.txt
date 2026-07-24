@@ -1,13 +1,11 @@
 
-- merge graphics_device and graphics_context into a single G_HDI. Remove G_DeviceXXX prefix.
-
 - move /render/graph/ into a layer below, called /render_graph/ with namespace RG_
 
 - replace old AssertTrue()'s with DebugLogAssert() across the codebase for clearer logging
 
 - remove skin buffer from A_SubModel
-
-- get rid of A_ModelIndex
+---> fix paging not existing for skinning vertices (this is super scuffed in general, need to remove buffer alloc in model loader, should just be skinning buffer size?)
+---> skinning buffers in general are complete ass right now, just taped on
 
 - fix performance problems in shader code -- far too much branching right now
 
@@ -30,7 +28,6 @@
 							  another newline!
   [ ... ] [ ... ] [ channel ] this is a new log
 
-- fix paging not existing for skinning vertices (this is super scuffed in general, need to remove buffer alloc in model loader, should just be skinning buffer size?)
 
 - finish graphics profiler currently just a skeleton
 

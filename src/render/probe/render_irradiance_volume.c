@@ -32,7 +32,7 @@ internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 		info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		info.size  = sizeof(R_GPU_ProbeSH) * vol->ntotal;
 
-		vol->sh_buffer = G_DeviceBufferAlloc(device, &info);
+		vol->sh_buffer = G_BufferAlloc(device, &info);
 	}
 
 	// Allocate and upload the grid info buffer.
@@ -42,7 +42,7 @@ internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 		info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		info.size = sizeof(R_GPU_ProbeGridInfo);
 
-		vol->grid_info_buffer = G_DeviceBufferAlloc(device, &info);
+		vol->grid_info_buffer = G_BufferAlloc(device, &info);
 
 		R_GPU_ProbeGridInfo grid_info = {0};
 		grid_info.grid_min = grid_min;
@@ -56,7 +56,7 @@ internal void R_IrradianceVolumeInit(R_IrradianceVolume *vol,
 								 (ny > 1) ? (grid_max.y - grid_min.y) / (f32)(ny - 1) : 0.f,
 								 (nz > 1) ? (grid_max.z - grid_min.z) / (f32)(nz - 1) : 0.f);
 
-		G_DeviceBufferWrite(device, vol->grid_info_buffer,
+		G_BufferWrite(device, vol->grid_info_buffer,
 							  &grid_info, sizeof(grid_info), 0);
 	}
 
@@ -77,16 +77,16 @@ internal void R_IrradianceVolumeDestroy(R_IrradianceVolume *vol)
 	if (vol->blas_count > 0)
 	{
 		for (u32 i = 0; i < vol->blas_count; i++)
-			G_DeviceAccelStructDestroy(vol->device, vol->blas_per_page[i]);
+			G_AccelStructDestroy(vol->device, vol->blas_per_page[i]);
 	}
 
 	if (vol->is_baked)
 	{
-		G_DeviceAccelStructDestroy(vol->device, vol->tlas);
+		G_AccelStructDestroy(vol->device, vol->tlas);
 	}
 
-	G_DeviceBufferDestroy(vol->device, vol->sh_buffer);
-	G_DeviceBufferDestroy(vol->device, vol->grid_info_buffer);
+	G_BufferDestroy(vol->device, vol->sh_buffer);
+	G_BufferDestroy(vol->device, vol->grid_info_buffer);
 }
 
 internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const R_Scene *scene)
@@ -113,12 +113,12 @@ internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const
 		geometry.index_type    = VK_INDEX_TYPE_UINT32;
 		geometry.index_offset  = 0;
 
-		G_DeviceAllocAccelStructReceipt receipt = G_DeviceBLASAlloc(device, &geometry, 1);
+		G_AllocAccelStructReceipt receipt = G_BLASAlloc(device, &geometry, 1);
 		vol->blas_per_page[page_index] = receipt.key;
 		max_scratch_size = MaxValue(max_scratch_size, receipt.scratch_size);
 	}
 	
-	G_DeviceAllocAccelStructReceipt tlas_receipt = G_DeviceTLASAlloc(device, scene->graph.object_count);
+	G_AllocAccelStructReceipt tlas_receipt = G_TLASAlloc(device, scene->graph.object_count);
 	vol->tlas = tlas_receipt.key;
 	max_scratch_size = MaxValue(max_scratch_size, tlas_receipt.scratch_size);
 
@@ -127,7 +127,7 @@ internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const
 	scratch_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 	scratch_info.size  = max_scratch_size;
 
-	G_ResourceKey scratch_buffer = G_DeviceBufferAlloc(device, &scratch_info);
+	G_ResourceKey scratch_buffer = G_BufferAlloc(device, &scratch_info);
 
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
@@ -167,7 +167,7 @@ internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const
 		// TODO: this is ASS
 		u32 mesh_index = slot->mesh.index;
 		u32 page_idx = scene->meshes.mesh_slots[mesh_index].page_index;
-		inst->accelerationStructureReference = G_DeviceAccelStructAddress(device, vol->blas_per_page[page_idx]);
+		inst->accelerationStructureReference = G_AccelStructAddress(device, vol->blas_per_page[page_idx]);
 
 		instance_index++;
 	}
@@ -179,10 +179,10 @@ internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const
 	inst_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // MUST HAVE DEVICEADDRESS ALIGNED TO 16 BYTES SO ALLOCATE DEDICATED NEW MEMORY
 	inst_buf_info.size = instance_data_size;
 
-	G_ResourceKey instance_buffer = G_DeviceBufferAlloc(device, &inst_buf_info);
-	G_DeviceBufferWrite(device, instance_buffer, instances, instance_data_size, 0);
+	G_ResourceKey instance_buffer = G_BufferAlloc(device, &inst_buf_info);
+	G_BufferWrite(device, instance_buffer, instances, instance_data_size, 0);
 
-	G_CmdBuffer cmd = G_DeviceSubmitImBegin(device);
+	G_CmdBuffer cmd = G_SubmitImBegin(device);
 	{
 		for (u32 page_index = 0; page_index < scene->meshes.geometry_page_count; page_index++)
 		{
@@ -226,10 +226,10 @@ internal void R_IrradianceVolumeBuildAccelStructs(R_IrradianceVolume *vol, const
 			G_CmdPipelineBarrier(&cmd, 0, 1, &barrier, 0, NULL, 0, NULL);
 		}
 	}
-	G_DeviceSubmitImEnd(device, &cmd);
+	G_SubmitImEnd(device, &cmd);
 
-	G_DeviceBufferDestroy(device, scratch_buffer);
-	G_DeviceBufferDestroy(device, instance_buffer);
+	G_BufferDestroy(device, scratch_buffer);
+	G_BufferDestroy(device, instance_buffer);
 
 	ScratchRelease(&scratch);
 
@@ -247,7 +247,7 @@ internal void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *sce
 	G_ResourceKey shader = A_GetNow(vol->assets, vol->bake_shader_handle)->shader.key;
 
 	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(shader);
-	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(device, &pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchComputePipeline(device, &pipeline_def);
 
 	struct
 	{
@@ -263,21 +263,21 @@ internal void R_IrradianceVolumeBake(R_IrradianceVolume *vol, const R_Scene *sce
 	}
 	pc;
 
-	pc.sh_buffer           = G_DeviceBufferAddress(device, vol->sh_buffer);
-	pc.grid_info_buffer    = G_DeviceBufferAddress(device, vol->grid_info_buffer);
-	pc.tlas_address        = G_DeviceAccelStructAddress(device, vol->tlas);
-	pc.environment_cubemap = G_DeviceTextureViewBindless(device, vol->environment_view);
-	pc.linear_sampler      = G_DeviceSamplerBindless(device, vol->linear_sampler);
+	pc.sh_buffer           = G_BufferAddress(device, vol->sh_buffer);
+	pc.grid_info_buffer    = G_BufferAddress(device, vol->grid_info_buffer);
+	pc.tlas_address        = G_AccelStructAddress(device, vol->tlas);
+	pc.environment_cubemap = G_TextureViewBindless(device, vol->environment_view);
+	pc.linear_sampler      = G_SamplerBindless(device, vol->linear_sampler);
 	pc.rays_per_probe      = R_IRRADIANCE_RAYS_PER_PROBE;
 
-	G_CmdBuffer cmd = G_DeviceSubmitImBegin(device);
+	G_CmdBuffer cmd = G_SubmitImBegin(device);
 	{
 		G_CmdBindBindless(&cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
 		G_CmdBindPipeline(&cmd, pipeline_st.bind_point, pipeline_st.pipeline);
 		G_CmdPushConstants(&cmd, pipeline_st.layout, VK_SHADER_STAGE_COMPUTE_BIT, sizeof(pc), &pc, 0);
 		G_CmdDispatch(&cmd, G_ComputeGroupCount(vol->ntotal, 64), 1, 1);
 	}
-	G_DeviceSubmitImEnd(device, &cmd);
+	G_SubmitImEnd(device, &cmd);
 
 	vol->is_baked = true;
 

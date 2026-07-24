@@ -35,6 +35,9 @@ struct R_GeometryPage
 	u32 vertex_count;
 	u32 index_count;
 	
+	u64 vertex_stride;
+	G_IndexType index_type;
+	
 	u32 max_vertices;
 	u32 max_indices;
 

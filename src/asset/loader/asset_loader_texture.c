@@ -59,7 +59,7 @@ internal void A_TextureLoaderAlloc(const A_LCTX *ctx,
 		? VK_FORMAT_R32G32B32A32_SFLOAT
 		: VK_FORMAT_R8G8B8A8_UNORM;
 
-	asset->texture.key = G_DeviceTextureAlloc2D(tex_data->width, tex_data->height, format, 5);
+	asset->texture.key = G_TextureAlloc2D(tex_data->width, tex_data->height, format, 5);
 }
 
 internal void A_TextureLoaderUploadGPU(const A_LCTX *ctx,
@@ -71,9 +71,9 @@ internal void A_TextureLoaderUploadGPU(const A_LCTX *ctx,
 {
 	A_TextureLoadData *tex_data = result->user_data;
 	
-	G_Texture *gfx_texture = G_DeviceTextureFromKey(asset->texture.key);
+	G_Texture *gfx_texture = G_TextureFromKey(asset->texture.key);
 	
-	G_DeviceBufferWrite(stage, tex_data->pixel_data, result->stage_size, stage_offset);
+	G_BufferWrite(stage, tex_data->pixel_data, result->stage_size, stage_offset);
 
 	G_AccessSt copy_src = { VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_ACCESS_2_NONE };
 	G_AccessSt copy_dst = { VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
@@ -112,7 +112,7 @@ internal void A_TextureLoaderDestroyIntermediateResources(A_LoadResult *result)
 
 internal void A_TextureLoaderDestroyAsset(A_Asset *asset)
 {
-	G_DeviceTextureDestroy(asset->texture.key);
+	G_TextureDestroy(asset->texture.key);
 }
 
 internal A_LoaderAPI A_GetTextureLoaderAPI(void)

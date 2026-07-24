@@ -65,7 +65,8 @@ struct A_ModelLoadSubModel
 	A_ModelVertex *vertices;
 
 	u32 index_count;
-	A_ModelIndex *indices;
+	void *indices;
+	G_IndexType index_type;
 
 	A_ModelSkinVertex *skin_vertices;
 	i32 skin_index;
@@ -540,28 +541,33 @@ internal void A_ModelProcessPrimitive(const A_LCTX *ctx,
 
 	// Indices.
 	u32 idx_count = 0;
-	A_ModelIndex *indices = NULL;
-
+	u32 *indices = NULL;
+	
 	if (prim->indices)
 	{
 		idx_count = (u32)prim->indices->count;
-		indices = ArenaPushArray(arena, A_ModelIndex, idx_count);
+		
+		indices = ArenaPushArray(arena, u32, idx_count);
 
 		for (u32 i = 0; i < idx_count; i++)
 		{
 			cgltf_uint idx = 0;
 			cgltf_accessor_read_uint(prim->indices, i, &idx, 1);
-			indices[i] = (A_ModelIndex)idx;
+			
+			indices[i] = idx;
 		}
 	}
 	else
 	{
 		// Non-indexed primitive: emit sequential indices.
+		// todo: is this up to spec?
+		
 		idx_count = vert_count;
-		indices = ArenaPushArray(arena, A_ModelIndex, idx_count);
+		
+		indices = ArenaPushArray(arena, u32, idx_count);
 
 		for (u32 i = 0; i < idx_count; i++)
-			indices[i] = (A_ModelIndex)i;
+			indices[i] = i;
 	}
 
 	// Material.
@@ -609,7 +615,7 @@ internal void A_ModelProcessPrimitive(const A_LCTX *ctx,
 	submodel->material = material;
 
 	load->total_vertex_bytes += vert_count * sizeof(A_ModelVertex);
-	load->total_index_bytes  += idx_count * sizeof(A_ModelIndex);
+	load->total_index_bytes += idx_count * sizeof(u32);
 
 	if (is_skinned)
 		load->total_skin_vertex_bytes += vert_count * sizeof(A_ModelSkinVertex);
@@ -1115,11 +1121,11 @@ internal void A_ModelLoaderAlloc(const A_LCTX *ctx,
 		dst->vertex_count = src->vertex_count;
 		dst->vertex_stride = sizeof(A_ModelVertex);
 
-		dst->indices = ArenaPushArray(asset_arena, A_ModelIndex, src->index_count);
-		MemCopy(dst->indices, src->indices, sizeof(A_ModelIndex) * src->index_count);
+		dst->indices = ArenaPushArray(asset_arena, u32, src->index_count);
+		MemCopy(dst->indices, src->indices, sizeof(u32) * src->index_count);
 
 		dst->index_count = src->index_count;
-		dst->index_stride = sizeof(A_ModelIndex);
+		dst->index_type = G_IndexType_U32; // TODO: make this variable based on model??
 
 		if (src->skin_vertices)
 		{
@@ -1128,7 +1134,7 @@ internal void A_ModelLoaderAlloc(const A_LCTX *ctx,
 			svb_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 			svb_info.size  = src->vertex_count * sizeof(A_ModelSkinVertex);
 			
-			dst->skin_buffer = G_DeviceBufferAlloc(&svb_info);
+			dst->skin_buffer = G_BufferAlloc(&svb_info);
 		}
 		else
 		{
@@ -1239,7 +1245,7 @@ internal void A_ModelLoaderUploadGPU(const A_LCTX *ctx,
 		{
 			u64 svb_size = src->vertex_count * sizeof(A_ModelSkinVertex);
 			
-			G_DeviceBufferWrite(stage, src->skin_vertices, svb_size, offset);
+			G_BufferWrite(stage, src->skin_vertices, svb_size, offset);
 
 			G_BufferCopy svb_copy = {0};
 			svb_copy.src_offset = offset;
@@ -1259,7 +1265,7 @@ internal void A_ModelLoaderDestroyAsset(A_Asset *asset)
 		A_SubModel *sub_model = &asset->model.sub_models[i];
 
 		if (!G_ResourceKeyIsNull(sub_model->skin_buffer))
-			G_DeviceBufferDestroy(sub_model->skin_buffer);
+			G_BufferDestroy(sub_model->skin_buffer);
 	}
 }
 

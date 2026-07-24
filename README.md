@@ -1,15 +1,15 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C. Magpie currently sticks to supporting devices running Vulkan 1.3 and higher (with some base extensions), and has an optional features system, such as using hardware raytracing if available.
+**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C.
 
 ![](images/helmet.png)
 ![](images/sponza.png)
 
-TODO: add more images :p
+TODO: add more images :p, these are outdated
 
 
 ## About the Project
-Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else.
+Basically, this is a testing ground for whatever programming project I want to try at any given point. I hope maybe this project helps someone else. Magpie currently sticks to supporting devices running Vulkan 1.3 and higher (with some base extensions), and has an optional features system, such as using hardware raytracing if available. I also assume only one graphics device and such.
 
 Yes, it's over-engineered for a solo project. No gurantees on quality, some of it is probably bad, some of it is maybe good :).
 

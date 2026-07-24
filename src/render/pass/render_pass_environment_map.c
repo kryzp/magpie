@@ -7,7 +7,7 @@ internal R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->hdr_to_cubemap_shader, ctx->render_info);
 	
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 	
 	struct
 	{
@@ -18,10 +18,10 @@ internal R_PASS_RECORD_DEF(R_HdrToEnvPassFn)
 	}
 	args;
 	
-	args.transform_matrix_buffer = G_DeviceBufferAddress(frame_params->cubemap_capture_transform_buffer);
-	args.vertex_buffer = G_DeviceBufferAddress(frame_params->skybox_mesh->vertex_buffer);
-	args.hdr_image = G_DeviceTextureViewBindless(user_data->hdr_view);
-	args.linear_sampler = G_DeviceSamplerBindless(frame_params->linear_sampler);
+	args.transform_matrix_buffer = G_BufferAddress(frame_params->cubemap_capture_transform_buffer);
+	args.vertex_buffer = G_BufferAddress(frame_params->skybox_mesh->vertex_buffer);
+	args.hdr_image = G_TextureViewBindless(user_data->hdr_view);
+	args.linear_sampler = G_SamplerBindless(frame_params->linear_sampler);
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);	

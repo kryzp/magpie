@@ -5,7 +5,7 @@ typedef struct R_Mesh R_Mesh;
 struct R_Mesh
 {
 	u64 vertex_stride;
-	VkIndexType index_type;
+	G_IndexType index_type;
 
 	u32 vertex_count;
 	u32 index_count;
@@ -15,7 +15,7 @@ struct R_Mesh
 };
 
 internal void R_MeshAlloc(R_Mesh *mesh,
-						  u64 vertex_stride, VkIndexType index_type,
+						  u64 vertex_stride, G_IndexType index_type,
 						  u32 vertex_count, u32 index_count);
 
 internal void R_MeshDestroy(const R_Mesh *mesh);
@@ -41,16 +41,7 @@ internal inline u64 R_MeshVertexBufferSize(const R_Mesh *mesh)
 
 internal inline u64 R_MeshIndexBufferSize(const R_Mesh *mesh)
 {
-	u64 index_stride = 0;
-
-	switch (mesh->index_type)
-	{
-		case VK_INDEX_TYPE_UINT16:  index_stride = sizeof(u16); break;
-		case VK_INDEX_TYPE_UINT32:  index_stride = sizeof(u32); break;
-		default:                    AssertTrue(false);          break;
-	}
-	
-	return mesh->index_count * index_stride;
+	return mesh->index_count * G_IndexTypeStride(mesh->index_type);
 }
 
 #endif // RENDER_MESH_H

@@ -9,7 +9,7 @@ internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);
@@ -40,21 +40,21 @@ internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	args.frame_data_buffer = frame_params->frame_data.gpu;
 	args.object_buffer = frame_params->object_buffer.gpu;
-	args.material_buffer = G_DeviceBufferAddress(frame_params->material_buffer);
-	args.mesh_buffer = G_DeviceBufferAddress(frame_params->mesh_buffer);
+	args.material_buffer = G_BufferAddress(frame_params->material_buffer);
+	args.mesh_buffer = G_BufferAddress(frame_params->mesh_buffer);
 
 	args.light_buffer = frame_params->light_buffer.gpu;
-	args.shadow_caster_buffer = G_DeviceBufferAddress(data->shadow_caster_table);
+	args.shadow_caster_buffer = G_BufferAddress(data->shadow_caster_table);
 
 	args.irr_sh_buffer = data->irradiance_sh_buffer_address;
 	args.irr_grid_info_buffer = data->irradiance_grid_info_buffer_address;
 
-	args.irradiance_fallback_cubemap = G_DeviceTextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, G_SubresourceRangeAllColour()));
-	args.prefilter_cubemap = G_DeviceTextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->prefilter_handle, G_SubresourceRangeAllColour()));
-	args.brdf_lut = G_DeviceTextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->brdf_handle, G_SubresourceRangeAllColour()));
+	args.irradiance_fallback_cubemap = G_TextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->irradiance_fb_handle, G_SubresourceRangeAllColour()));
+	args.prefilter_cubemap = G_TextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->prefilter_handle, G_SubresourceRangeAllColour()));
+	args.brdf_lut = G_TextureViewBindless(R_GraphResolveTextureView(ctx->graph, data->brdf_handle, G_SubresourceRangeAllColour()));
 
-	args.linear_sampler = G_DeviceSamplerBindless(frame_params->linear_sampler);
-	args.shadow_sampler = G_DeviceSamplerBindless(frame_params->nearest_sampler);
+	args.linear_sampler = G_SamplerBindless(frame_params->linear_sampler);
+	args.shadow_sampler = G_SamplerBindless(frame_params->nearest_sampler);
 
 	args.light_count = frame_params->light_count;
 
@@ -96,8 +96,8 @@ internal void R_ForwardRender(R_Graph *graph,
 
 	if (false /*R_IrradianceVolumeIsBaked(irradiance_volume)*/)
 	{
-		//data->irradiance_sh_buffer_address        = G_DeviceBufferAddress(R_IrradianceVolumeGetSHBuffer(irradiance_volume));
-		//data->irradiance_grid_info_buffer_address = G_DeviceBufferAddress(R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
+		//data->irradiance_sh_buffer_address        = G_BufferAddress(R_IrradianceVolumeGetSHBuffer(irradiance_volume));
+		//data->irradiance_grid_info_buffer_address = G_BufferAddress(R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
 	}
 	else
 	{

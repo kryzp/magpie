@@ -42,9 +42,11 @@ struct R_MeshDesc
 {
 	const void *vertices;
 	u32 vertex_count;
+	u64 vertex_stride;
 	
 	const void *indices;
 	u32 index_count;
+	G_IndexType index_type;
 
 	G_ResourceKey skin_buffer;
 };
@@ -195,8 +197,11 @@ internal void                  R_SceneFreeMesh(R_Scene *scene, R_MeshHandle hand
 
 internal u32                   R_SceneCountOfMeshes(const R_Scene *scene);
 
-internal u32                   R_SceneFindSuitablePage(R_Scene *scene, u32 vertex_count, u32 index_count);
-internal R_GeometryPage        R_SceneCreateNewPage(R_Scene *scene);
+internal u32                   R_SceneFindSuitablePage(R_Scene *scene,
+													   u32 vertex_count, u64 vertex_stride,
+													   u32 index_count, G_IndexType index_type);
+
+internal R_GeometryPage        R_SceneCreateNewPage(R_Scene *scene, u64 vertex_stride, G_IndexType index_type);
 internal u32                   R_ScenePageCount(const R_Scene *scene);
 
 

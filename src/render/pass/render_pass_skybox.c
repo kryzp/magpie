@@ -10,7 +10,7 @@ internal R_PASS_RECORD_DEF(R_SkyboxPassFn)
 	pipeline_def.depth_stencil_state.depth_write_enabled = false;
 	pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
 
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 	
 	struct
 	{
@@ -22,9 +22,9 @@ internal R_PASS_RECORD_DEF(R_SkyboxPassFn)
 	args;
 	
 	args.frame_data_buffer = frame_params->frame_data.gpu;
-	args.vertex_buffer = G_DeviceBufferAddress(frame_params->skybox_mesh->vertex_buffer);
-	args.cubemap_texture = G_DeviceTextureViewBindless(user_data->cubemap);
-	args.linear_sampler = G_DeviceSamplerBindless(frame_params->linear_sampler);
+	args.vertex_buffer = G_BufferAddress(frame_params->skybox_mesh->vertex_buffer);
+	args.cubemap_texture = G_TextureViewBindless(user_data->cubemap);
+	args.linear_sampler = G_SamplerBindless(frame_params->linear_sampler);
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);	

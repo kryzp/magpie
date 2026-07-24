@@ -71,7 +71,7 @@ internal void G_CmdBindPipeline(const G_CmdBuffer *cmd,
 internal void G_CmdBindIndexBuffer(const G_CmdBuffer *cmd,
 								   G_ResourceKey buffer,
 								   u64 offset, u64 size, // VK_WHOLE_SIZE
-								   VkIndexType type);
+								   G_IndexType index_type);
 
 
 /* ==================================================

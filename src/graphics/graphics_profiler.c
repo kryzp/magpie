@@ -3,7 +3,7 @@ static G_Profiler *g_selected_profiler = NULL;
 
 internal void G_ProfilerInitAndSelect(G_Profiler *profiler)
 {
-	profiler->period = G_DeviceGetSelected()->vk_physical_device_properties.properties.limits.timestampPeriod;
+	profiler->period = G_GetSelected()->vk_physical_device_properties.properties.limits.timestampPeriod;
 	
 	static VkQueryType query_types[] = {
 		[G_ProfileType_Timestamp] = VK_QUERY_TYPE_TIMESTAMP,
@@ -19,7 +19,7 @@ internal void G_ProfilerInitAndSelect(G_Profiler *profiler)
 			if (query_types[j] == VK_QUERY_TYPE_PIPELINE_STATISTICS)
 				pipeline_stat_flags = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT;
 
-			g_selected_profiler->frames[i].pools[j].vk_pool = G_DeviceQueryPoolCreate(G_PROFILER_MAX_QUERIES_PER_FRAME,
+			g_selected_profiler->frames[i].pools[j].vk_pool = G_QueryPoolCreate(G_PROFILER_MAX_QUERIES_PER_FRAME,
 																					  query_types[j],
 																					  pipeline_stat_flags);
 		}
@@ -34,7 +34,7 @@ internal void G_ProfilerDestroy(void)
 	{
 		for (u32 j = 0; j < G_ProfileType_COUNT; j++)
 		{
-			G_DeviceQueryPoolDestroy(g_selected_profiler->frames[i].pools[j].vk_pool);
+			G_QueryPoolDestroy(g_selected_profiler->frames[i].pools[j].vk_pool);
 		}
 	}
 	
@@ -50,7 +50,7 @@ internal void G_ProfilerGrabQueries(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_DeviceFrameInFlightIndex()];
+	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_GetFrameInFlightIndex()];
 
 	for (u32 i = 0; i < G_ProfileType_COUNT; i++)
 	{
@@ -107,7 +107,7 @@ internal void G_ProfilerGrabQueries(void)
 
 internal void G_ProfilerAddEvent(const G_ProfileEvent *event)
 {
-	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_DeviceFrameInFlightIndex()];
+	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_GetFrameInFlightIndex()];
 	G_ProfilePool *current_pool = &current_frame->pools[event->type];
 	
 	AssertTrue(current_pool->count < ArraySize(current_pool->events));
@@ -117,13 +117,13 @@ internal void G_ProfilerAddEvent(const G_ProfileEvent *event)
 
 internal VkQueryPool G_ProfilerGetVkPool(G_ProfileType type)
 {
-	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_DeviceFrameInFlightIndex()];
+	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_GetFrameInFlightIndex()];
 	return current_frame->pools[type].vk_pool;
 }
 
 internal u64 G_ProfilerGetNewID(G_ProfileType type)
 {
-	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_DeviceFrameInFlightIndex()];
+	G_ProfilerFrame *current_frame = &g_selected_profiler->frames[G_GetFrameInFlightIndex()];
 	return current_frame->pools[type].count++;
 }
 

@@ -7,7 +7,7 @@ internal R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 	
 	G_ComputePipelineDef pipeline_def = G_ComputePipelineDefInit(frame_params->tonemapping_shader);
 
-	G_PipelineSt pipeline_st = G_DeviceFetchComputePipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchComputePipeline(&pipeline_def);
 	
 	struct
 	{
@@ -22,17 +22,17 @@ internal R_PASS_RECORD_DEF(R_PostProcessingPassFn)
 	G_ResourceKey input_key = R_GraphResolveTexture(ctx->graph, user_data->input);
 	G_ResourceKey output_key = R_GraphResolveTexture(ctx->graph, user_data->output);
 	
-	G_Texture *input_texture = G_DeviceTextureFromKey(input_key);
-	G_Texture *output_texture = G_DeviceTextureFromKey(output_key);
+	G_Texture *input_texture = G_TextureFromKey(input_key);
+	G_Texture *output_texture = G_TextureFromKey(output_key);
 
-	G_ResourceKey input_view = G_DeviceTextureViewAuto(input_key);
-	G_ResourceKey output_view = G_DeviceTextureViewAuto(output_key);
+	G_ResourceKey input_view = G_TextureViewAuto(input_key);
+	G_ResourceKey output_view = G_TextureViewAuto(output_key);
 	
 	args.width = input_texture->width;
 	args.height = input_texture->height;
 	args.exposure = user_data->exposure;
-	args.input_texture  = G_DeviceTextureViewBindless(input_view);
-	args.output_texture = G_DeviceTextureViewBindless(output_view);
+	args.input_texture  = G_TextureViewBindless(input_view);
+	args.output_texture = G_TextureViewBindless(output_view);
 	
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_st.layout);
 	G_CmdBindPipeline(cmd, pipeline_st.bind_point, pipeline_st.pipeline);

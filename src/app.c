@@ -53,8 +53,8 @@ internal void AppInit_(void)
 		{ G_FeatureType_RayTracing, G_FeatureTier_Optional }
 	};
 	
-	G_DeviceInitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel, features, ArraySize(features));
-	app->swapchain = G_DeviceSwapchainCreate();
+	G_InitAndSelect(&app->graphics_device, &app->graphics_arena, app->graphics_log_channel, features, ArraySize(features));
+	app->swapchain = G_SwapchainCreate();
 	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
 	//app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
@@ -162,7 +162,7 @@ App *MagpieInit(const OS_API *osapi_)
 
 void MagpieDestroy(App *app_)
 {
-	G_DeviceWaitIdle();
+	G_WaitIdle();
 
 	DebugLogI(app->log_channel, "Destroying...");
 	
@@ -183,8 +183,8 @@ void MagpieDestroy(App *app_)
 	//AU_BackendShutdown();
 	
 	G_ShaderCompilerShutdown();
-	G_DeviceSwapchainDestroy(&app->swapchain);
-	G_DeviceDestroy();
+	G_SwapchainDestroy(&app->swapchain);
+	G_Destroy();
 
 	S_Destroy();
 
@@ -354,10 +354,10 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	R_GraphCompile(&app->graph, &app->swapchain);
 	
 	{ // --- [[ THE GRAPHICS ZONE ooOooOooOOOooOOo !! ]] ---
-		G_CmdBuffer cmd = G_DeviceBeginFrame(&app->swapchain);
+		G_CmdBuffer cmd = G_BeginFrame(&app->swapchain);
 		R_GraphExecute(&app->graph, &app->swapchain, &cmd);
 		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
-		G_DeviceEndFrame(&app->swapchain, &cmd);
+		G_EndFrame(&app->swapchain, &cmd);
 	} // ---
 	
 	R_GraphReset(&app->graph);
@@ -391,9 +391,9 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	ArenaReset(&app->scripting_arena);
 	AppInitScripting();
 
-	G_DeviceSelectContext(&app->graphics_device);
+	G_SelectContext(&app->graphics_device);
 	G_ShaderCompilerSelectContext(&app->shader_compiler);
-	G_DeviceHotLoad();
+	G_HotLoad();
 
 	//AU_BackendSelectContext(app->audio_backend);
 	//AU_SelectContext(&app->audio_system);
@@ -411,7 +411,7 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 
 void MagpieHotUnload(App *app_)
 {
-	G_DeviceHotUnload();
+	G_HotUnload();
 
 	// hack
 	S_Destroy();

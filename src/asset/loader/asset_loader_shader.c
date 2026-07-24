@@ -43,12 +43,12 @@ internal void A_ShaderLoaderAlloc(const A_LCTX *ctx,
 
 	G_ShaderCompiledStages *compiled = &load_data->compiled;
 	
-	asset->shader.key = G_DeviceShaderProgramCreate(compiled->count, compiled->bytecodes);
+	asset->shader.key = G_ShaderProgramCreate(compiled->count, compiled->bytecodes);
 }
 
 internal void A_ShaderLoaderDestroyAsset(A_Asset *asset)
 {
-	G_DeviceShaderProgramDestroy(asset->shader.key);
+	G_ShaderProgramDestroy(asset->shader.key);
 }
 
 internal A_LoaderAPI A_GetShaderLoaderAPI(void)

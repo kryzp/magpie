@@ -1,6 +1,6 @@
 
 internal void R_MeshAlloc(R_Mesh *mesh,
-						  u64 vertex_stride, VkIndexType index_type,
+						  u64 vertex_stride, G_IndexType index_type,
 						  u32 vertex_count, u32 index_count)
 {
 	mesh->vertex_stride = vertex_stride;
@@ -19,14 +19,14 @@ internal void R_MeshAlloc(R_Mesh *mesh,
 	index_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	index_info.size = R_MeshIndexBufferSize(mesh);
 
-	mesh->vertex_buffer = G_DeviceBufferAlloc(&vertex_info);
-	mesh->index_buffer  = G_DeviceBufferAlloc(&index_info);
+	mesh->vertex_buffer = G_BufferAlloc(&vertex_info);
+	mesh->index_buffer  = G_BufferAlloc(&index_info);
 }
 
 internal void R_MeshDestroy(const R_Mesh *mesh)
 {
-	G_DeviceBufferDestroy(mesh->vertex_buffer);
-	G_DeviceBufferDestroy(mesh->index_buffer);
+	G_BufferDestroy(mesh->vertex_buffer);
+	G_BufferDestroy(mesh->index_buffer);
 }
 
 internal void R_MeshWriteToStage(const R_Mesh *mesh,
@@ -36,8 +36,8 @@ internal void R_MeshWriteToStage(const R_Mesh *mesh,
 	u64 vb_size = R_MeshVertexBufferSize(mesh);
 	u64 ib_size = R_MeshIndexBufferSize(mesh);
 
-	G_DeviceBufferWrite(stage, vertices, vb_size, stage_base);
-	G_DeviceBufferWrite(stage, indices,  ib_size, stage_base + vb_size);
+	G_BufferWrite(stage, vertices, vb_size, stage_base);
+	G_BufferWrite(stage, indices,  ib_size, stage_base + vb_size);
 }
 
 internal u64 R_MeshUpload(const R_Mesh *mesh, const G_CmdBuffer *cmd,

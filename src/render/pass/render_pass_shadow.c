@@ -9,7 +9,7 @@ internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
 	pipeline_def.depth_stencil_state.depth_write_enabled = true;
 
-	G_PipelineSt pipeline_st = G_DeviceFetchGraphicsPipeline(&pipeline_def);
+	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 
 	struct
 	{
@@ -21,8 +21,8 @@ internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc;
 
 	pc.object_buffer = frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_DeviceBufferAddress(frame_params->mesh_buffer);
-	pc.caster_data_buffer = G_DeviceBufferAddress(data->caster_table_buffer);
+	pc.mesh_buffer = G_BufferAddress(frame_params->mesh_buffer);
+	pc.caster_data_buffer = G_BufferAddress(data->caster_table_buffer);
 	pc.caster_index = data->caster_index;
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
@@ -42,27 +42,27 @@ internal void R_ShadowsInit(R_ShadowState *st)
 	caster_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	caster_buf_info.size = R_FRAME_PARAMS_MAX_SHADOW_CASTERS * sizeof(R_GPU_ShadowCaster);
 
-	st->caster_table_buffer = G_DeviceBufferAlloc(&caster_buf_info);
+	st->caster_table_buffer = G_BufferAlloc(&caster_buf_info);
 
 	for (u32 i = 0; i < R_FRAME_PARAMS_MAX_SHADOW_CASTERS; i++)
 	{
-		st->shadow_cubemaps[i] = G_DeviceTextureAllocCubemapDepth(R_SHADOW_MAP_RESOLUTION, 1);
+		st->shadow_cubemaps[i] = G_TextureAllocCubemapDepth(R_SHADOW_MAP_RESOLUTION, 1);
 
 		G_TextureViewCreateInfo view_info = {0};
 		view_info.texture = st->shadow_cubemaps[i];
 		view_info.type = VK_IMAGE_VIEW_TYPE_CUBE;
 		view_info.range = G_SubresourceRangeAllDepth();
 
-		st->shadow_cubemap_views[i] = G_DeviceTextureViewFetch(&view_info);
+		st->shadow_cubemap_views[i] = G_TextureViewFetch(&view_info);
 	}
 }
 
 internal void R_ShadowsDestroy(R_ShadowState *st)
 {
-	G_DeviceBufferDestroy(st->caster_table_buffer);
+	G_BufferDestroy(st->caster_table_buffer);
 
 	for (u32 i = 0; i < R_FRAME_PARAMS_MAX_SHADOW_CASTERS; i++)
-		G_DeviceTextureDestroy(st->shadow_cubemaps[i]);
+		G_TextureDestroy(st->shadow_cubemaps[i]);
 }
 
 internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params)
@@ -87,7 +87,7 @@ internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_p
 
 	st->caster_count = MinValue(frame_params->shadow_caster_count, R_FRAME_PARAMS_MAX_SHADOW_CASTERS);
 
-	R_GPU_ShadowCaster *caster_mapping = G_DeviceBufferMap(st->caster_table_buffer);
+	R_GPU_ShadowCaster *caster_mapping = G_BufferMap(st->caster_table_buffer);
 
 	for (u32 i = 0; i < st->caster_count; i++)
 	{
@@ -97,7 +97,7 @@ internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_p
 		gpu->position = info->position;
 		gpu->near_plane = info->near;
 		gpu->far_plane = info->far;
-		gpu->shadow_map = G_DeviceTextureViewBindless(st->shadow_cubemap_views[i]);
+		gpu->shadow_map = G_TextureViewBindless(st->shadow_cubemap_views[i]);
 
 		m4 light_proj = M4Perspective(90.f, 1.f, info->near, info->far);
 
