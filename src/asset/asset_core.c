@@ -3,7 +3,9 @@ static A_State *a_assets = NULL;
 
 internal A_Handle A_PathMapFind(String8 path)
 {
-	for (A_PathMapEntry *entry = a_assets->first_path_entry; entry; entry = entry->next)
+	for (A_PathMapEntry *entry = a_assets->path_entry_sentinel.next;
+		 entry != &a_assets->path_entry_sentinel;
+		 entry = entry->next)
 	{
 		if (String8Match(entry->path, path))
 			return entry->handle;
@@ -14,42 +16,65 @@ internal A_Handle A_PathMapFind(String8 path)
 
 internal void A_PathMapInsert(String8 path, A_Handle handle)
 {
-	A_PathMapEntry *entry = ArenaPushArray(a_assets->arena, A_PathMapEntry, 1);
-	entry->next = a_assets->first_path_entry;
-	a_assets->first_path_entry = entry;
+	A_PathMapEntry *entry = NULL;
+
+	if (a_assets->path_free_sentinel.next != &a_assets->path_free_sentinel)
+	{
+		entry = a_assets->path_free_sentinel.next;
+
+		entry->prev->next = entry->next;
+		entry->next->prev = entry->prev;
+
+		MemZeroStruct(entry);
+	}
+	else
+	{
+		entry = ArenaPushArray(a_assets->arena, A_PathMapEntry, 1);
+	}
 
 	entry->path = path;
 	entry->handle = handle;
+	
+	entry->next = a_assets->path_entry_sentinel.next;
+	entry->prev = &a_assets->path_entry_sentinel;
+
+	entry->next->prev = entry;
+	entry->prev->next = entry;
+}
+
+internal void A_PathMapRemove(String8 path)
+{
+	for (A_PathMapEntry *entry = a_assets->path_entry_sentinel.next;
+		 entry != &a_assets->path_entry_sentinel;
+		 entry = entry->next)
+	{
+		if (String8Match(path, entry->path))
+			continue;
+	
+		entry->prev->next = entry->next;
+		entry->next->prev = entry->prev;
+
+		entry->next = a_assets->path_free_sentinel.next;
+		entry->prev = &a_assets->path_free_sentinel;
+
+		entry->next->prev = entry;
+		entry->prev->next = entry;
+
+		return;
+	}
 }
 
 internal A_Record *A_AllocRecord(A_Type type)
 {
-	A_Record *record = NULL;
+	u32 id = DensePoolGetStableID(&a_assets->record_pool);
+	A_Record *record = &a_assets->records[DensePoolIndexFromID(&a_assets->record_pool, id)];
 
-	if (a_assets->free_record_sentinel.next != &a_assets->free_record_sentinel)
-	{
-		record = a_assets->free_record_sentinel.next;
+	u32 next_gen = record->generation + 1;
 
-		record->prev->next = record->next;
-		record->next->prev = record->prev;
-
-		MemZeroStruct(record);
-	}
-	else
-	{
-		record = ArenaPushArray(a_assets->arena, A_Record, 1);
-	}
-
-	record->uid = a_assets->current_record_uid;
-	a_assets->current_record_uid++;
-
-	record->next = a_assets->record_sentinel.next;
-	record->prev = &a_assets->record_sentinel;
-
-	record->next->prev = record;
-	record->prev->next = record;
-
-	record->uid = a_assets->current_record_uid++;
+	MemZeroStruct(record);
+	
+	record->id = id;
+	record->generation = next_gen;
 	record->type = type;
 	
 	return record;
@@ -57,33 +82,26 @@ internal A_Record *A_AllocRecord(A_Type type)
 
 internal void A_FreeRecord(A_Record *record)
 {
-	record->prev->next = record->next;
-	record->next->prev = record->prev;
+	u32 dense = DensePoolIndexFromID(&a_assets->record_pool, record->id);
+	u32 moved = DensePoolFreeID(&a_assets->record_pool, record->id);
 
-	record->next = a_assets->free_record_sentinel.next;
-	record->prev = &a_assets->free_record_sentinel;
-
-	record->next->prev = record;
-	record->prev->next = record;
+	a_assets->records[dense] = a_assets->records[moved];
 }
 
 internal A_Record *A_GetRecord(A_Handle handle)
 {
+	if (A_HandleIsNull(handle))
+		return NULL;
+
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 
 	A_Record *found = NULL;
 	
-	for (A_Record *record = a_assets->record_sentinel.next;
-		 record != &a_assets->record_sentinel;
-		 record = record->next)
-	{
-		if (record->uid == handle.uid)
-		{
-			found = record;
-			break;
-		}
-	}
-
+	A_Record *record = &a_assets->records[DensePoolIndexFromID(&a_assets->record_pool, handle.id)];
+	
+	if (record->generation == handle.generation)
+		found = record;
+	
 	osapi->SpinLockRelease(&a_assets->registry_spinlock);
 	
 	return found;
@@ -93,14 +111,11 @@ internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_chan
 {
 	state->arena = arena;
 	state->log_channel = log_channel;
-	
-	state->record_sentinel.next = &state->record_sentinel;
-	state->record_sentinel.prev = &state->record_sentinel;
 
-	state->free_record_sentinel.next = &state->free_record_sentinel;
-	state->free_record_sentinel.prev = &state->free_record_sentinel;
+	DensePoolInit(&state->record_pool, arena, ArraySize(state->records));
 
-	state->current_record_uid = 1; // start at 1 as current_record_uid=0=null
+	// burn index 0
+	DensePoolGetStableID(&state->record_pool);
 	
 #define AssetDef(name, upper)											\
 	state->loaders[A_Type_##name].api = A_Get##name##LoaderAPI();		\
@@ -110,6 +125,12 @@ internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_chan
 #include "asset_xmacro.inc"
 #undef AssetDef
 
+	state->path_entry_sentinel.next = &state->path_entry_sentinel;
+	state->path_entry_sentinel.prev = &state->path_entry_sentinel;
+
+	state->path_free_sentinel.next = &state->path_free_sentinel;
+	state->path_free_sentinel.prev = &state->path_free_sentinel;
+	
 	A_SelectContext(state);
 	
 	DebugLogI(state->log_channel, "Initialized.");
@@ -119,10 +140,9 @@ internal void A_Destroy(void)
 {
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 	
-	for (A_Record *record = a_assets->record_sentinel.next;
-		 record != &a_assets->record_sentinel;
-		 record = record->next)
+	for (u32 i = 0; i < DensePoolLiveCount(&a_assets->record_pool); i++)
 	{
+		A_Record *record = &a_assets->records[i];
 		A_LoaderAPI *api = &a_assets->loaders[record->type].api;
 
 		if (api->DestroyAsset)
@@ -152,10 +172,10 @@ internal void A_PollHotReloads(void)
 	
 	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
 	
-	for (A_Record *record = a_assets->record_sentinel.next;
-		 record != &a_assets->record_sentinel;
-		 record = record->next)
+	for (u32 i = 0; i < DensePoolLiveCount(&a_assets->record_pool); i++)
 	{
+		A_Record *record = &a_assets->records[i];
+
 		if (record->load_state != A_LoadState_Ready)
 			continue;
 
@@ -307,7 +327,7 @@ internal A_Type A_GetAssetTypeFromPath(String8 path)
 	u64 last = String8FindLastIncl(path, String8Lit("."));
 	String8 extension = String8Substr(path, last, path.len);
 
-	for (u32 i = 0; i < A_Type_COUNT; i++)
+	for (u32 i = A_Type_Null + 1; i < A_Type_COUNT; i++)
 	{
 		A_Type type = i;
 		
@@ -319,7 +339,7 @@ internal A_Type A_GetAssetTypeFromPath(String8 path)
 
 	DebugLogB(a_assets->log_channel, "Couldn't find any asset loader for extension: \".%.*s\"", String8VArg(extension));
 	
-	return A_Type_COUNT;
+	return A_Type_Null;
 }
 
 internal A_Handle A_HandleFromFilePath(String8 path)
@@ -347,7 +367,8 @@ internal A_Handle A_HandleFromFilePath(String8 path)
 		record->metadata.last_write_time = osapi->GetFileLastWriteTime(sys_path);
 		
 		A_Handle handle = {0};
-		handle.uid = record->uid;
+		handle.id = record->id;
+		handle.generation = record->generation;
 		handle.type = type;
 
 		A_PathMapInsert(path, handle);
@@ -371,9 +392,19 @@ internal A_Asset *A_GetOrFallback(A_Handle handle)
 	
 	String8 type_string = A_StringFromType(scratch.arena, handle.type);
 
-	DebugLogW(a_assets->log_channel,
-			  "%.*s asset not found. Falling back...",
-			  String8VArg(type_string));
+	if (record)
+	{
+		DebugLogW(a_assets->log_channel,
+				  "%.*s asset not found (path: %.*s). Falling back...",
+				  String8VArg(type_string),
+				  String8VArg(record->metadata.path));	
+	}
+	else
+	{
+		DebugLogW(a_assets->log_channel,
+				  "%.*s asset not found. Falling back...",
+				  String8VArg(type_string));
+	}
 	
 	A_Record *fallback = A_GetRecord(a_assets->loaders[handle.type].fallback);
 
@@ -382,6 +413,10 @@ internal A_Asset *A_GetOrFallback(A_Handle handle)
 		DebugLogB(a_assets->log_channel,
 				  "No fallback found. We're fucked.",
 				  String8VArg(type_string));
+		
+		ScratchRelease(&scratch);
+
+		return NULL;
 	}
 	
 	ScratchRelease(&scratch);
@@ -393,11 +428,19 @@ internal A_Asset *A_GetOrBreak(A_Handle handle)
 {
 	A_Record *record = A_GetRecord(handle);
 
-	if (record->load_state == A_LoadState_Ready)
+	if (!record)
+	{
+		DebugLogB(a_assets->log_channel, "Asset not found.");
+	}
+	else if (record->load_state != A_LoadState_Ready)
+	{
+		DebugLogB(a_assets->log_channel, "Asset not ready.");
+	}
+	else
+	{
 		return &record->asset;
-
-	DebugLogB(a_assets->log_channel, "Asset not found / ready.");
-
+	}
+	
 	return NULL;
 }
 
@@ -532,6 +575,8 @@ internal void A_DestroyAsset(A_Handle handle)
 		api->DestroyAsset(&record->asset);
 
 	A_FreeRecord(record);
+	
+	A_PathMapRemove(record->metadata.path);
 	
 	osapi->SpinLockRelease(&a_assets->registry_spinlock);
 }

@@ -15,22 +15,20 @@ internal void R_EntityIteratorReset(R_EntityIterator *iter)
 
 internal R_Entity *R_EntityIteratorNext(R_EntityIterator *iter, R_EntityType type)
 {
-	while (iter->index < ArraySize(iter->scene->entities))
+	for (;;)
 	{
 		iter->index++;
 
-		if (!iter->scene->entity_occupied[iter->index])
-			continue;
+		if (iter->index >= DensePoolLiveCount(&iter->scene->entity_pool))
+			return NULL;
 
 		R_Entity *entity = &iter->scene->entities[iter->index];
-		
+
 		if (entity->type != type)
 			continue;
 
 		return entity;
 	}
-
-	return NULL;
 }
 
 internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
@@ -76,10 +74,9 @@ internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
 	handle.id = DensePoolGetStableID(&scene->entity_pool);
 	handle.type = type;
 
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 
 	scene->entities[index].type = type;
-	scene->entity_occupied[index] = true;
 	scene->entity_count[type]++;
 	
 	return handle;
@@ -87,19 +84,18 @@ internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
 
 internal void R_SceneEntityDestroy(R_Scene *scene, R_EntityHandle handle)
 {
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
-	
-	scene->entity_occupied[index] = false;
+	u32 dense = DensePoolIndexFromID(&scene->entity_pool, handle.id);
+	u32 moved = DensePoolFreeID(&scene->entity_pool, handle.id);
+
+	scene->entities[dense] = scene->entities[moved];
 	scene->entity_count[handle.type]--;
-	
-	DensePoolFreeID(&scene->entity_pool, handle.id);
 }
 
 internal void R_SceneSetObjectTransform(R_Scene *scene, R_EntityHandle handle, m4 transform)
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].object.transform = transform;
 	scene->entities[index].object.normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
@@ -109,7 +105,7 @@ internal void R_SceneSetObjectLocalSphereBounds(R_Scene *scene, R_EntityHandle h
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].object.local_sphere_bounds = local_sphere_bounds;
 }
@@ -118,7 +114,7 @@ internal void R_SceneSetObjectMesh(R_Scene *scene, R_EntityHandle handle, R_Mesh
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].object.page_index = mesh.page_index;
 	scene->entities[index].object.mesh_index = mesh.slot_index;
@@ -128,7 +124,7 @@ internal void R_SceneSetObjectMaterial(R_Scene *scene, R_EntityHandle handle, R_
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].object.material_index = material.index;
 }
@@ -137,7 +133,7 @@ internal void R_SceneSetObjectSkinning(R_Scene *scene, R_EntityHandle handle, co
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].object.skinning_palette = palette;
 	scene->entities[index].object.skinning_joint_count = joint_count;
@@ -147,7 +143,7 @@ internal void R_SceneSetLightParam(R_Scene *scene, R_EntityHandle handle, R_Ligh
 {
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Light, "Entity handle must point to light.");
 	
-	u32 index = DensePoolDenseIndex(&scene->entity_pool, handle.id);
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 	
 	scene->entities[index].light = light;
 }

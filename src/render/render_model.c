@@ -99,6 +99,7 @@ internal R_Model *R_ModelCatalogueCreateModel(R_ModelCatalogue *catalogue, A_Han
 	}
 
 	R_ModelCatalogueEntry *entry = ArenaPushArray(catalogue->arena, R_ModelCatalogueEntry, 1);
+	
 	entry->asset_handle = asset_handle;
 	entry->model = R_ModelFromAsset(catalogue->arena, catalogue->equipped_scene, asset_handle);
 	entry->ref_count = 1;

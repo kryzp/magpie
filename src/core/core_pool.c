@@ -69,9 +69,14 @@ internal u32 DensePoolFreeID(DensePool *pool, u32 id)
 	return last_dense;
 }
 
-internal u32 DensePoolDenseIndex(const DensePool *pool, u32 id)
+internal u32 DensePoolIndexFromID(const DensePool *pool, u32 id)
 {
 	return pool->id_to_dense[id];
+}
+
+internal u32 DensePoolIDFromIndex(const DensePool *pool, u32 index)
+{
+	return pool->dense_to_id[index];
 }
 
 internal u32 DensePoolLiveCount(const DensePool *pool)

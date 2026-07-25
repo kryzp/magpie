@@ -1,7 +1,8 @@
 #ifndef ASSET_CORE_H
 #define ASSET_CORE_H
 
-#define A_MAX_MOUNT_POINTS              8
+#define A_MAX_RECORDS                   512
+#define A_MAX_MOUNT_POINTS              16
 #define A_UPLOAD_QUEUE_MAX_SIZE         512
 #define A_GPU_UPLOAD_CHUNK_MAX_SIZE     Megabytes(256)
 #define A_JOB_ARENA_ALLOC_SIZE          Megabytes(512)
@@ -21,8 +22,9 @@ struct A_Record
 {
 	A_Record *next;
 	A_Record *prev;
-	
-	u32 uid;
+
+	u32 id;
+	u32 generation;
 	A_Type type;
 	
 	A_Asset asset;
@@ -34,6 +36,8 @@ typedef struct A_PathMapEntry A_PathMapEntry;
 struct A_PathMapEntry
 {
 	A_PathMapEntry *next;
+	A_PathMapEntry *prev;
+	
 	String8 path;
 	A_Handle handle;
 };
@@ -68,15 +72,14 @@ struct A_State
 	Arena *arena;
 	LOG_Channel log_channel;
 
-	A_Record record_sentinel;
-	A_Record free_record_sentinel;
-	u32 current_record_uid;
-
+	A_Record records[A_MAX_RECORDS];
+	DensePool record_pool;
 	i32 registry_spinlock;
 
 	A_TypeLoader loaders[A_Type_COUNT];
 
-	A_PathMapEntry *first_path_entry;
+	A_PathMapEntry path_entry_sentinel;
+	A_PathMapEntry path_free_sentinel;
 
 	A_MountPoint mount_points[A_MAX_MOUNT_POINTS];
 	u32 mount_point_count;
@@ -93,6 +96,7 @@ struct A_State
 
 internal A_Handle A_PathMapFind(String8 path);
 internal void A_PathMapInsert(String8 path, A_Handle handle);
+internal void A_PathMapRemove(String8 path);
 
 internal A_Record *A_AllocRecord(A_Type type);
 internal void A_FreeRecord(A_Record *record);

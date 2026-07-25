@@ -141,7 +141,6 @@ struct R_Scene
 
 	DensePool entity_pool;
 	R_Entity entities[R_SCENE_MAX_ENTITIES];
-	b32 entity_occupied[R_SCENE_MAX_ENTITIES];
 	u32 entity_count[R_EntityType_COUNT];
 	
 	SlotPool mesh_pool;

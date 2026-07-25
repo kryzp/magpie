@@ -3,6 +3,7 @@
 
 typedef enum A_Type
 {
+	A_Type_Null,
 #define AssetDef(name, upper) A_Type_##name,
 #include "asset_xmacro.inc"
 #undef AssetDef
@@ -16,7 +17,7 @@ internal inline A_Type A_TypeFromString(String8 string)
 #include "asset_xmacro.inc"
 #undef AssetDef
 	DebugPrintB("Unknown Asset Name: %.*s", String8VArg(string));
-	return A_Type_COUNT;
+	return A_Type_Null;
 }
 
 internal inline String8 A_StringFromType(Arena *arena, A_Type type)
@@ -31,28 +32,30 @@ internal inline String8 A_StringFromType(Arena *arena, A_Type type)
 typedef struct A_Handle A_Handle;
 struct A_Handle
 {
-	u32 uid;
+	u32 id;
+	u32 generation;
 	A_Type type;
 };
 
 internal inline A_Handle A_HandleNull(void)
 {
 	A_Handle handle = {0};
-	handle.uid = 0;
-	handle.type = A_Type_COUNT;
+	handle.id = 0;
+	handle.generation = 0;
+	handle.type = A_Type_Null;
 	
 	return handle;
 }
 
 internal inline b32 A_HandleIsNull(A_Handle handle)
 {
-	return (handle.uid == 0 ||
-			handle.type == A_Type_COUNT);
+	return handle.type == A_Type_Null;
 }
 
 internal inline b32 A_HandleMatch(A_Handle a, A_Handle b)
 {
-	return (a.uid == b.uid &&
+	return (a.id == b.id &&
+			a.generation == b.generation &&
 			a.type == b.type);
 }
 
