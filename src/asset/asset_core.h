@@ -20,9 +20,6 @@ A_LoadState;
 typedef struct A_Record A_Record;
 struct A_Record
 {
-	A_Record *next;
-	A_Record *prev;
-
 	u32 id;
 	u32 generation;
 	A_Type type;
