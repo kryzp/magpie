@@ -15,10 +15,10 @@ internal Arena ArenaAlloc(u64 size)
 
 internal void ArenaRelease(Arena *arena)
 {
-	if (!arena->base)
-		DebugPrintB("Arena (%p) attempted to release by null base pointer.", arena);
-	
+	DebugPrintAssert(arena->base, "Arena (%p) attempted to release by NULL base pointer.", arena);
 	osapi->VirtualRelease(arena->base);
+
+	arena->base = NULL;
 }
 
 internal u64 ArenaSafePartitionSize(const Arena *parent, u32 count, u64 alignment)
@@ -133,9 +133,7 @@ internal void ArenaResizeLastTo(Arena *arena, u64 bytes)
 
 internal void ArenaReset(Arena *arena)
 {
-	// TODO: this is just for debug purposes so remove in release
-	//       0xCD is the standard sentinel for "use-after-free" indicators.
-	// TODO: need some kind of debug build flag!!! literally 2 seconds to add im just so fucking tired right now.
+	// todo: debug purposes
 	MemSet((u8 *)arena->base, 0xCD, arena->used);
 
 	arena->used = 0;
@@ -155,4 +153,6 @@ internal void ArenaResetAndDecommit(Arena *arena)
 internal void ArenaZero(Arena *arena)
 {
 	MemSet(arena->base, 0, arena->capacity);
+	
+	arena->used = 0;
 }

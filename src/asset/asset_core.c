@@ -77,11 +77,15 @@ internal A_Record *A_AllocRecord(A_Type type)
 	record->generation = next_gen;
 	record->type = type;
 	
+	record->arena = ArenaAlloc(A_ASSET_BACKING_ARENA_DEFAULT_SIZE);
+	
 	return record;
 }
 
 internal void A_FreeRecord(A_Record *record)
 {
+	ArenaRelease(&record->arena);
+	
 	u32 dense = DensePoolIndexFromID(&a_assets->record_pool, record->id);
 	u32 moved = DensePoolFreeID(&a_assets->record_pool, record->id);
 
@@ -114,14 +118,11 @@ internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_chan
 
 	DensePoolInit(&state->record_pool, arena, ArraySize(state->records));
 
-	// burn index 0
-	DensePoolGetStableID(&state->record_pool);
-	
 #define AssetDef(name, upper)											\
 	state->loaders[A_Type_##name].api = A_Get##name##LoaderAPI();		\
 	state->loaders[A_Type_##name].log_channel = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper))); \
 	state->loaders[A_Type_##name].fallback = A_HandleNull();			\
-	DebugLogAssert(state->log_channel, state->loaders[A_Type_##name].api.IsAssetMine,  "Asset loader \"" STRINGIFY(upper) "\" has no method IsAssetMine implemented.");
+	DebugLogAssert(state->log_channel, state->loaders[A_Type_##name].api.IsAssetMine,  "Asset loader \"" STRINGIFY(upper) "\" has no method IsAssetMine implemented in it's API.");
 #include "asset_xmacro.inc"
 #undef AssetDef
 
@@ -147,6 +148,8 @@ internal void A_Destroy(void)
 
 		if (api->DestroyAsset)
 			api->DestroyAsset(&record->asset);
+
+		ArenaRelease(&record->arena);
 	}
 
 	osapi->SpinLockRelease(&a_assets->registry_spinlock);
@@ -183,17 +186,24 @@ internal void A_PollHotReloads(void)
 
 		u64 latest_write = osapi->GetFileLastWriteTime(system_path);
 
-		if (latest_write > record->metadata.last_write_time && latest_write > 0)
+		if (latest_write > record->metadata.last_write_time)
 		{
 			record->metadata.last_write_time = latest_write;
 
-			// reload??? ?!?? ? ?! ?
-			// how???
-			// need to somehow reload the data inside of the arena in which the asset
-			// is stored, but it's stored in a group alloc with a bunch of others.... :(
-			// shoot.
+			ArenaReset(&record->arena);
+			
+			record->load_state = A_LoadState_Loading;
+			
+			A_LoadJobParam *param = ArenaPushArray(a_assets->arena, A_LoadJobParam, 1);
+			param->record = record;
+			param->counter = osapi->JobCounterAlloc(0);
 
-			DebugLogE(a_assets->log_channel, "(not implemented, should be reloading: %.*s)", String8VArg(record->metadata.path));
+			J_Decl decl = {0};
+			decl.EntryPoint = A_LoadJob;
+			decl.param = param;
+			decl.priority = J_Priority_Normal;
+
+			osapi->JobKick(&decl, param->counter);
 		}
 		
 		ScratchClear(&scratch);
@@ -292,7 +302,7 @@ internal void A_FlushUploads(void)
 				else
 				{
 					if (loader->api.Alloc)
-						loader->api.Alloc(&ctx, &upload->result, upload->perm_arena, &record->asset);
+						loader->api.Alloc(&ctx, &upload->result, &record->arena, &record->asset);
 					
 					if (loader->api.UploadGPU)
 						loader->api.UploadGPU(&ctx, &upload->result, &record->asset, &cmd, staging_buffer, stage_offset);
@@ -487,7 +497,6 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
 			{
 				record->load_state = A_LoadState_Loading;
 	
-				params[i].arena = load_params->arena;
 				params[i].record = record;
 				params[i].counter = load_params->counter;
 	
@@ -508,7 +517,6 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
 	A_Upload upload = {0};
 	upload.record = load_params->record;
 	upload.temp_arena = job_arena;
-	upload.perm_arena = load_params->arena;
 	upload.result = result;
 
 	osapi->SpinLockAcquire(&a_assets->upload_spinlock);
@@ -516,12 +524,7 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
 	osapi->SpinLockRelease(&a_assets->upload_spinlock);
 }
 
-/*
- * TODO: Allocating the params onto the arena mutex right now. Problem is that
- *       it's gonna be wasted memory after loading but it's so minor I don't
- *       think it matters at all.
- */
-internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter)
+internal A_Handle A_RequireAsset(String8 path, OS_Handle counter)
 {
 	A_Handle handle = A_HandleFromFilePath(path);
 	A_Record *record = A_GetRecord(handle);
@@ -539,8 +542,10 @@ internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter)
 		osapi->SpinLockRelease(&a_assets->registry_spinlock);
 	}
 
-	A_LoadJobParam *param = ArenaPushArray(arena, A_LoadJobParam, 1);
-	param->arena = arena;
+	// TODO: Allocating the params onto the system arena right now. Problem is that
+	//       it's gonna be wasted memory after loading but it's so minor I don't
+	//       think it matters at all.
+	A_LoadJobParam *param = ArenaPushArray(a_assets->arena, A_LoadJobParam, 1);
 	param->record = record;
 	param->counter = counter;
 	
@@ -555,10 +560,10 @@ internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter)
 	return handle;
 }
 
-internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path)
+internal A_Handle A_RequireAssetBlocking(String8 path)
 {
 	OS_Handle counter = osapi->JobCounterAlloc(0);
-	A_Handle handle = A_RequireAsset(arena, path, counter);
+	A_Handle handle = A_RequireAsset(path, counter);
 	A_WaitForLoadAndRelease(counter);
 	return handle;
 }

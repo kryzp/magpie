@@ -212,7 +212,7 @@ internal R_ModelInstance R_ModelInstanceCreate(R_ModelCatalogue *catalogue, A_Ha
 
 internal R_ModelInstance R_ModelInstanceCreateFromPath(R_ModelCatalogue *catalogue, String8 asset_path, m4 initial_transform)
 {
-	A_Handle asset_handle = A_RequireAssetBlocking(catalogue->arena, asset_path);
+	A_Handle asset_handle = A_RequireAssetBlocking(asset_path);
 	AssertTrue(asset_handle.type == A_Type_Model && "Attempting to load model asset and it's not a model!!!");
 	return R_ModelInstanceCreate(catalogue, asset_handle, initial_transform);
 }

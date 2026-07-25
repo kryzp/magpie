@@ -44,17 +44,17 @@ internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel 
 	{
 		OS_Handle counter = osapi->JobCounterAlloc(0);
 		
-		system->shaders.debug_line_handle             = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/debug/debug_line.slang"), counter);
-		system->shaders.forward_handle                = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/forward/forward.slang"), counter);
-		system->shaders.shadow_handle                 = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), counter);
-		system->shaders.cull_frustum_handle           = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), counter);
-		system->shaders.cull_sphere_handle            = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/culling/sphere_culling.slang"), counter);
-		system->shaders.skybox_handle                 = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/post/skybox.slang"), counter);
-		system->shaders.tonemapping_handle            = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), counter);
-		system->shaders.brdf_lut_generation_handle    = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"), counter);
-		system->shaders.hdr_to_cubemap_handle         = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), counter);
-		system->shaders.irradiance_cubemap_gen_handle = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"), counter);
-		system->shaders.prefilter_cubemap_gen_handle  = A_RequireAsset(system->arena, String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"), counter);
+		system->shaders.debug_line_handle             = A_RequireAsset(String8Lit("assets://shaders/passes/debug/debug_line.slang"), counter);
+		system->shaders.forward_handle                = A_RequireAsset(String8Lit("assets://shaders/passes/forward/forward.slang"), counter);
+		system->shaders.shadow_handle                 = A_RequireAsset(String8Lit("assets://shaders/passes/shadow/shadow_mapping.slang"), counter);
+		system->shaders.cull_frustum_handle           = A_RequireAsset(String8Lit("assets://shaders/passes/culling/frustum_culling.slang"), counter);
+		system->shaders.cull_sphere_handle            = A_RequireAsset(String8Lit("assets://shaders/passes/culling/sphere_culling.slang"), counter);
+		system->shaders.skybox_handle                 = A_RequireAsset(String8Lit("assets://shaders/passes/post/skybox.slang"), counter);
+		system->shaders.tonemapping_handle            = A_RequireAsset(String8Lit("assets://shaders/passes/post/hdr_tonemapping.slang"), counter);
+		system->shaders.brdf_lut_generation_handle    = A_RequireAsset(String8Lit("assets://shaders/passes/ibl/brdf_lut.slang"), counter);
+		system->shaders.hdr_to_cubemap_handle         = A_RequireAsset(String8Lit("assets://shaders/passes/ibl/hdr_to_environment_cubemap.slang"), counter);
+		system->shaders.irradiance_cubemap_gen_handle = A_RequireAsset(String8Lit("assets://shaders/passes/ibl/irradiance_convolution.slang"), counter);
+		system->shaders.prefilter_cubemap_gen_handle  = A_RequireAsset(String8Lit("assets://shaders/passes/ibl/prefilter_convolution.slang"), counter);
 		
 		A_WaitForLoadAndRelease(counter);
 	}
@@ -170,7 +170,7 @@ internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, 
 	r_system->irradiance_cubemap  = G_TextureAllocCubemap( 32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
 	r_system->prefilter_cubemap   = G_TextureAllocCubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
 	
-	A_Handle hdr_texture_handle = A_RequireAssetBlocking(r_system->arena, String8Lit("assets://environment_map_1.hdr"));
+	A_Handle hdr_texture_handle = A_RequireAssetBlocking(String8Lit("assets://environment_map_1.hdr"));
 	G_ResourceKey hdr_texture_gfx = A_GetOrBreak(hdr_texture_handle)->texture.key;
 	
 	// Generate BRDF Lookup Table.

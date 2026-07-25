@@ -11,7 +11,7 @@ struct Arena
 };
 
 internal Arena ArenaAlloc(u64 size);
-internal void  ArenaRelease(Arena *arena);
+internal void ArenaRelease(Arena *arena);
 
 /*
  * Partitioning arenas into sub-arenas can be a pain in the ass

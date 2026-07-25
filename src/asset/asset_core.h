@@ -1,11 +1,12 @@
 #ifndef ASSET_CORE_H
 #define ASSET_CORE_H
 
-#define A_MAX_RECORDS                   512
-#define A_MAX_MOUNT_POINTS              16
-#define A_UPLOAD_QUEUE_MAX_SIZE         512
-#define A_GPU_UPLOAD_CHUNK_MAX_SIZE     Megabytes(256)
-#define A_JOB_ARENA_ALLOC_SIZE          Megabytes(512)
+#define A_MAX_RECORDS                          512
+#define A_MAX_MOUNT_POINTS                     16
+#define A_UPLOAD_QUEUE_MAX_SIZE                512
+#define A_GPU_UPLOAD_CHUNK_MAX_SIZE            Megabytes(256)
+#define A_JOB_ARENA_ALLOC_SIZE                 Megabytes(512)
+#define A_ASSET_BACKING_ARENA_DEFAULT_SIZE     Megabytes(16)
 
 typedef enum A_LoadState
 {
@@ -23,6 +24,8 @@ struct A_Record
 	u32 id;
 	u32 generation;
 	A_Type type;
+
+	Arena arena;
 	
 	A_Asset asset;
 	A_LoadState load_state;
@@ -59,7 +62,6 @@ struct A_Upload
 {
 	A_Record *record;
 	Arena temp_arena;
-	Arena *perm_arena;
 	A_LoadResult result;
 };
 
@@ -124,15 +126,14 @@ internal A_Asset *A_GetOrBreak(A_Handle handle);
 typedef struct A_LoadJobParam A_LoadJobParam;
 struct A_LoadJobParam
 {
-	Arena *arena;
 	A_Record *record;
 	OS_Handle counter;
 };
 
 internal J_ENTRY_POINT_DEF(A_LoadJob);
 
-internal A_Handle A_RequireAsset(Arena *arena, String8 path, OS_Handle counter);
-internal A_Handle A_RequireAssetBlocking(Arena *arena, String8 path);
+internal A_Handle A_RequireAsset(String8 path, OS_Handle counter);
+internal A_Handle A_RequireAssetBlocking(String8 path);
 
 internal void A_DestroyAsset(A_Handle handle);
 
