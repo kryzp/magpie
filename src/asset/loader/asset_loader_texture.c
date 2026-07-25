@@ -115,22 +115,32 @@ internal void A_TextureLoaderDestroyAsset(A_Asset *asset)
 	G_TextureDestroy(asset->texture.key);
 }
 
-internal b32 A_TextureLoaderIsAssetMine(String8 extension)
+internal A_ResidencyLevel A_TextureLoaderCalculateResidency(const A_LoadResidencyCtx *ctx)
 {
-	return (String8Match(extension, String8Lit("png")) ||
-			String8Match(extension, String8Lit("jpg")) ||
-			String8Match(extension, String8Lit("hdr")));
+	A_ResidencyLevel level = {0};
+	level.lod = 0;
+
+	return level;
 }
 
 internal A_LoaderAPI A_GetTextureLoaderAPI(void)
 {
+	static String8 file_extensions[] = {
+		String8Lit("png"),
+		String8Lit("jpg"),
+		String8Lit("hdr")
+	};
+	
 	static A_LoaderAPI texture_loader_api = {
+		.is_streamable = true,
+		.file_extension_count = ArraySize(file_extensions),
+		.file_extensions = file_extensions,
 		.Load = A_TextureLoaderLoad,
 		.Alloc = A_TextureLoaderAlloc,
 		.UploadGPU = A_TextureLoaderUploadGPU,
 		.DestroyIntermediateResources = A_TextureLoaderDestroyIntermediateResources,
 		.DestroyAsset = A_TextureLoaderDestroyAsset,
-		.IsAssetMine = A_TextureLoaderIsAssetMine
+		.CalculateResidency = A_TextureLoaderCalculateResidency
 	};
 
 	return texture_loader_api;

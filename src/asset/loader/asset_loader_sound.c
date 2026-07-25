@@ -70,20 +70,21 @@ internal void A_SoundLoaderDestroyAsset(A_Asset *asset)
 	AU_BackendDestroyBuffer(asset->sound.buffer);
 }
 
-internal b32 A_SoundLoaderIsAssetMine(String8 extension)
-{
-	return String8Match(extension, String8Lit("mp3"));
-}
-
 internal A_LoaderAPI A_GetSoundLoaderAPI(void)
 {
+	static String8 file_extensions[] = {
+		String8Lit("mp3")
+	};
+	
 	static A_LoaderAPI sound_loader_api = {
+		.is_streamable = false,
+		.file_extension_count = ArraySize(file_extensions),
+		.file_extensions = file_extensions,
 		.Load = A_SoundLoaderLoad,
 		.Alloc = A_SoundLoaderAlloc,
 		.UploadGPU = NULL,
 		.DestroyIntermediateResources = NULL,
-		.DestroyAsset = A_SoundLoaderDestroyAsset,
-		.IsAssetMine = A_SoundLoaderIsAssetMine
+		.DestroyAsset = A_SoundLoaderDestroyAsset
 	};
 
 	return sound_loader_api;

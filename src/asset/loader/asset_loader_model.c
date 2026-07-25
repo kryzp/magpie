@@ -1271,20 +1271,21 @@ internal void A_ModelLoaderDestroyAsset(A_Asset *asset)
 	}
 }
 
-internal b32 A_ModelLoaderIsAssetMine(String8 extension)
-{
-	return String8Match(extension, String8Lit("gltf"));
-}
-
 internal A_LoaderAPI A_GetModelLoaderAPI(void)
 {
+	static String8 file_extensions[] = {
+		String8Lit("gltf")
+	};
+	
 	static A_LoaderAPI model_loader_api = {
+		.is_streamable = false,
+		.file_extension_count = ArraySize(file_extensions),
+		.file_extensions = file_extensions,
 		.Load = A_ModelLoaderLoad,
 		.Alloc = A_ModelLoaderAlloc,
 		.UploadGPU = A_ModelLoaderUploadGPU,
 		.DestroyIntermediateResources = NULL,
-		.DestroyAsset = A_ModelLoaderDestroyAsset,
-		.IsAssetMine = A_ModelLoaderIsAssetMine
+		.DestroyAsset = A_ModelLoaderDestroyAsset
 	};
 
 	return model_loader_api;

@@ -5,6 +5,8 @@ typedef struct A_TextureAsset A_TextureAsset;
 struct A_TextureAsset
 {
 	G_ResourceKey key;
+	u8 loaded_mip_count;
+	u8 max_mip_count;
 };
 
 typedef struct A_ShaderAsset A_ShaderAsset;

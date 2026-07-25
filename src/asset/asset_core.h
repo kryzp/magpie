@@ -30,6 +30,12 @@ struct A_Record
 	A_Asset asset;
 	A_LoadState load_state;
 	A_Metadata metadata;
+
+	b32 is_reloading;
+	b32 is_streaming;
+
+	A_ResidencyLevel current_residency;
+	A_ResidencyLevel target_residency;
 };
 
 typedef struct A_PathMapEntry A_PathMapEntry;
@@ -115,6 +121,10 @@ internal void A_SetFallback(A_Handle handle);
 
 internal void A_PollHotReloads(void);
 internal void A_FlushUploads(void);
+
+internal void A_DoAssetStreaming(void);
+
+internal void A_SetStreamingState(A_Handle handle, const A_LoadResidencyCtx *residency_ctx);
 
 internal A_Type A_GetAssetTypeFromPath(String8 path);
 

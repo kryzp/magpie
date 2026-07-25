@@ -240,7 +240,8 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	}
 
 	A_FlushUploads();
-
+	A_DoAssetStreaming();
+	
 	E_TickContext entity_tick_context = {0};
 	entity_tick_context.dt = dt;
 	entity_tick_context.elapsed = elapsed;

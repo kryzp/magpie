@@ -122,7 +122,10 @@ internal void A_InitAndSelect(A_State *state, Arena *arena, LOG_Channel log_chan
 	state->loaders[A_Type_##name].api = A_Get##name##LoaderAPI();		\
 	state->loaders[A_Type_##name].log_channel = osapi->LogChannelOpenFrom(log_channel, String8Lit(STRINGIFY(upper))); \
 	state->loaders[A_Type_##name].fallback = A_HandleNull();			\
-	DebugLogAssert(state->log_channel, state->loaders[A_Type_##name].api.IsAssetMine,  "Asset loader \"" STRINGIFY(upper) "\" has no method IsAssetMine implemented in it's API.");
+	if (state->loaders[A_Type_##name].api.is_streamable)				\
+	{																	\
+		DebugLogAssert(state->loaders[A_Type_##name].log_channel, state->loaders[A_Type_##name].api.CalculateResidency, "Must have CalculateResidency implemented to support streaming."); \
+	}
 #include "asset_xmacro.inc"
 #undef AssetDef
 
@@ -191,8 +194,10 @@ internal void A_PollHotReloads(void)
 			record->metadata.last_write_time = latest_write;
 
 			ArenaReset(&record->arena);
-			
+
 			record->load_state = A_LoadState_Loading;
+
+			record->is_reloading = true;
 			
 			A_LoadJobParam *param = ArenaPushArray(a_assets->arena, A_LoadJobParam, 1);
 			param->record = record;
@@ -201,9 +206,13 @@ internal void A_PollHotReloads(void)
 			J_Decl decl = {0};
 			decl.EntryPoint = A_LoadJob;
 			decl.param = param;
-			decl.priority = J_Priority_Normal;
+			decl.priority = J_Priority_Low;
 
 			osapi->JobKick(&decl, param->counter);
+			
+			DebugLogD(a_assets->log_channel,
+					  "Reloading: %.*s",
+					  String8VArg(record->metadata.path));
 		}
 		
 		ScratchClear(&scratch);
@@ -279,25 +288,33 @@ internal void A_FlushUploads(void)
 				A_LCTX ctx = {0};
 				ctx.log_channel = loader->log_channel;
 				ctx.metadata = record->metadata;
+				ctx.current_residency = record->current_residency;
+				ctx.target_residency = record->target_residency;
 
 				if (upload->result.failed)
 				{
-					/*
-					if (record->reloading)
+					if (record->is_reloading)
 					{
+						record->is_reloading = false;
+						
 						DebugLogW(a_assets->log_channel,
 								  "Reload failed for %.*s, keeping previous version.",
-								  String8VArg(upload->metadata.path));
+								  String8VArg(record->metadata.path));
+					}
+					else if (record->is_streaming)
+					{
+						record->is_streaming = false;
+
+						record->target_residency = record->current_residency;
 						
-						record->load_state = A_LoadState_Ready;
+						DebugLogW(a_assets->log_channel,
+								  "Streaming failed for %.*s, keeping previous version.",
+								  String8VArg(record->metadata.path));
 					}
 					else
 					{
 						record->load_state = A_LoadState_Failed;
 					}
-					*/
-					
-					record->load_state = A_LoadState_Failed;
 				}
 				else
 				{
@@ -316,6 +333,11 @@ internal void A_FlushUploads(void)
 					
 					record->load_state = A_LoadState_Ready;
 
+					record->is_reloading = false;
+					record->is_streaming = false;
+
+					record->current_residency = record->target_residency;
+
 					stage_offset += MemAlignUp(upload->result.stage_size, 16);
 				}
 
@@ -332,6 +354,64 @@ internal void A_FlushUploads(void)
 	}
 }
 
+internal void A_DoAssetStreaming(void)
+{
+	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
+
+	for (u32 i = 0; i < DensePoolLiveCount(&a_assets->record_pool); i++)
+	{
+		A_Record *record = &a_assets->records[i];
+
+		A_LoaderAPI *api = &a_assets->loaders[record->type].api;
+
+		if (!api->is_streamable)
+			continue;
+
+		u32 cmp = A_ResidencyLevelCompare(record->target_residency, record->current_residency);
+
+		if (cmp > 0)
+		{
+			//record->load_state = A_LoadState_Loading;
+			
+			//record->is_streaming = true;
+
+			DebugLogD(a_assets->log_channel,
+					  "(not implemented) Streaming in/upgrading: %.*s",
+					  String8VArg(record->metadata.path));
+		}
+		else if (cmp < 0)
+		{
+			DebugLogD(a_assets->log_channel,
+					  "(not implemented) Streaming out/evicting: %.*s",
+					  String8VArg(record->metadata.path));
+
+			record->current_residency = record->target_residency;
+		}
+	}
+	
+	osapi->SpinLockRelease(&a_assets->registry_spinlock);
+}
+
+internal void A_SetStreamingState(A_Handle handle, const A_LoadResidencyCtx *residency_ctx)
+{
+	A_Record *record = A_GetRecord(handle);
+
+	if (!record)
+		return;
+
+	osapi->SpinLockAcquire(&a_assets->registry_spinlock);
+	
+	A_LoaderAPI *api = &a_assets->loaders[record->type].api;
+
+	record->target_residency = api->CalculateResidency(residency_ctx);
+
+	// todo: calculate a priority as well?
+	// maybe something like:
+	//   record->streaming_priority = A_CalcStreamingPriority(residency_ctx, frames_since_last_used);
+
+	osapi->SpinLockRelease(&a_assets->registry_spinlock);
+}
+
 internal A_Type A_GetAssetTypeFromPath(String8 path)
 {
 	u64 last = String8FindLastIncl(path, String8Lit("."));
@@ -343,8 +423,11 @@ internal A_Type A_GetAssetTypeFromPath(String8 path)
 		
 		A_LoaderAPI *api = &a_assets->loaders[type].api;
 
-		if (api->IsAssetMine(extension))
-			return type;
+		for (u32 j = 0; j < api->file_extension_count; j++)
+		{
+			if (String8Match(extension, api->file_extensions[j]))
+				return type;
+		}
 	}
 
 	DebugLogB(a_assets->log_channel, "Couldn't find any asset loader for extension: \".%.*s\"", String8VArg(extension));
@@ -465,6 +548,8 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
 	A_LCTX ctx = {0};
 	ctx.log_channel = a_assets->loaders[type].log_channel;
 	ctx.metadata = load_params->record->metadata;
+	ctx.current_residency = load_params->record->current_residency;
+	ctx.target_residency = load_params->record->target_residency;
 	
 	A_LoaderAPI *api = &a_assets->loaders[type].api;
 
@@ -472,7 +557,7 @@ internal J_ENTRY_POINT_DEF(A_LoadJob)
 
 	if (result.failed)
 	{
-		DebugLogE(a_assets->log_channel,
+		DebugLogD(a_assets->log_channel,
 				  "Failed to load: %.*s",
 				  String8VArg(ctx.metadata.path));
 	}

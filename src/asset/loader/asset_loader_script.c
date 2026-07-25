@@ -44,20 +44,21 @@ internal void A_ScriptLoaderAlloc(const A_LCTX *ctx,
 	asset->script.ref = script->ref;
 }
 
-internal b32 A_ScriptLoaderIsAssetMine(String8 extension)
-{
-	return String8Match(extension, String8Lit("lua"));
-}
-
 internal A_LoaderAPI A_GetScriptLoaderAPI(void)
 {
+	static String8 file_extensions[] = {
+		String8Lit("lua")
+	};
+	
 	static A_LoaderAPI script_loader_api = {
+		.is_streamable = false,
+		.file_extension_count = ArraySize(file_extensions),
+		.file_extensions = file_extensions,
 		.Load = A_ScriptLoaderLoad,
 		.Alloc = A_ScriptLoaderAlloc,
 		.UploadGPU = NULL,
 		.DestroyIntermediateResources = NULL,
-		.DestroyAsset = NULL,
-		.IsAssetMine = A_ScriptLoaderIsAssetMine
+		.DestroyAsset = NULL
 	};
 
 	return script_loader_api;
