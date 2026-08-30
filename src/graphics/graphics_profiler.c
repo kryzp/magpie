@@ -55,6 +55,7 @@ internal void G_ProfilerGrabQueries(void)
 	for (u32 i = 0; i < G_ProfileType_COUNT; i++)
 	{
 		G_ProfilePool *pool = &current_frame->pools[i];
+		G_ProfileQueryList *query_list = &g_selected_profiler->query_lists[i];
 
 		if (pool->count <= 0)
 			continue;
@@ -71,8 +72,6 @@ internal void G_ProfilerGrabQueries(void)
 							  sizeof(u64),
 							  VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 		*/
-
-		G_ProfileQueryList *query_list = &current_frame->pools[i];
 		
 		for (u32 j = 0; j < pool->count; j++)
 		{

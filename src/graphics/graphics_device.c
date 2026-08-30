@@ -1834,7 +1834,7 @@ internal G_ResourceKey G_TextureAlloc(const G_TextureAllocInfo *alloc_info)
 	G_Resource resource = {0};
 	resource.texture = texture;
 	
-	return G_ResourceListPushAuto(&g_device->textures, g_device->permanent_arena, &texture);
+	return G_ResourceListPushAuto(&g_device->textures, g_device->permanent_arena, &resource);
 }
 
 internal G_ResourceKey G_TextureAlloc2D(u32 width, u32 height, VkFormat format, u32 mipmaps)
