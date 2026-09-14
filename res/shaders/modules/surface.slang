@@ -98,7 +98,7 @@ namespace surface
 		
 		normal = normalize(mul(input.tbn, normal));
 
-
+		
 		float3 emissive = mat.emissive_factor * mat.emissive_intensity;
 
 		if (bdl::IsValid(mat.emissive_texture))
@@ -184,7 +184,7 @@ namespace surface
 		
 		s.sheen_roughness = mat.sheen_roughness_factor;
 
-		if (bdl::IsValid(mat.sheen_colour_texture))
+		if (bdl::IsValid(mat.sheen_roughness_texture))
 			s.sheen_roughness *= bdl::textures[mat.sheen_roughness_texture].Sample(sampler, uv).a;
 
 		

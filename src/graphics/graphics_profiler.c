@@ -20,8 +20,8 @@ internal void G_ProfilerInitAndSelect(G_Profiler *profiler)
 				pipeline_stat_flags = VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT;
 
 			g_selected_profiler->frames[i].pools[j].vk_pool = G_QueryPoolCreate(G_PROFILER_MAX_QUERIES_PER_FRAME,
-																					  query_types[j],
-																					  pipeline_stat_flags);
+																				query_types[j],
+																				pipeline_stat_flags);
 		}
 	}
 	
@@ -63,14 +63,14 @@ internal void G_ProfilerGrabQueries(void)
 		u64 *queries = ArenaPushArray(scratch.arena, u64, pool->count);
 
 		/*
-		vkGetQueryPoolResults(device->get_context().get_device(),
-							  pool.vk_pool,
-							  0,
-							  pool.count,
-							  pool.count * sizeof(u64),
-							  queries,
-							  sizeof(u64),
-							  VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+		  vkGetQueryPoolResults(device->get_context().get_device(),
+		  pool.vk_pool,
+		  0,
+		  pool.count,
+		  pool.count * sizeof(u64),
+		  queries,
+		  sizeof(u64),
+		  VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 		*/
 		
 		for (u32 j = 0; j < pool->count; j++)

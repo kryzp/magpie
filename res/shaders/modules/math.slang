@@ -8,18 +8,23 @@ namespace math
 	// sampling requires Y-up left handed.
 	// Thanks RenderMan!!
 	// Warning: Does NOT normalize.
-	public float3
-	WorldToCubemap(float3 v)
+	public float3 WorldToCubemap(float3 v)
 	{
 		return float3(v.x, v.z, v.y);
 	}
 
-	public void
-	BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitangent)
+	public void BuildOrthonormalBasis(float3 normal, out float3 tangent, out float3 bitangent)
 	{
 		float3 u = abs(normal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
 
 		tangent = normalize(cross(normal, u));
 		bitangent = normalize(cross(tangent, normal));
+	}
+
+	public float3 SafeNormalize3(float3 v)
+	{
+		float l2 = dot(v, v);
+		float il = rsqrt(max(l2, 0.0001));
+		return v * il;
 	}
 }

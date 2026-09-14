@@ -5,6 +5,7 @@ import irradiance;
 import lighting;
 import surface;
 import shadows;
+import math;
 
 struct PushConstants
 {
@@ -38,8 +39,10 @@ struct VS_Output
 	[vk::location(0)] float3 world_position;
 	[vk::location(1)] float2 texcoord;
 	[vk::location(2)] float3 colour;
-	[vk::location(3)] float3x3 tbn;
-	[vk::location(6)] uint32_t material_index; // TBN matrix takes 3 locations	
+	[vk::location(3)] float3 T;
+	[vk::location(4)] float3 B;
+	[vk::location(5)] float3 N;
+	[vk::location(6)] uint32_t material_index;	
 };
 
 [shader("vertex")]
@@ -73,12 +76,16 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 	
 	float3x3 normal_matrix = (float3x3)object_data.normal_matrix;
 
-	float3 T = normalize(mul(normal_matrix, local_tangent));
-	float3 B = normalize(mul(normal_matrix, local_bitangent));
-	float3 N = normalize(mul(normal_matrix, local_normal));
+	float3 T = mul(normal_matrix, local_tangent);
+	float3 B = mul(normal_matrix, local_bitangent);
+	float3 N = mul(normal_matrix, local_normal);
 
-	T = normalize(T - dot(T, N) * N);
-	B = normalize(B - dot(B, N) * N);
+	T = math::SafeNormalize3(T);
+	B = math::SafeNormalize3(B);
+	N = math::SafeNormalize3(N);
+	
+	T = math::SafeNormalize3(T - dot(T, N) * N);
+	B = math::SafeNormalize3(B - dot(B, N) * N);
 
 	float4 world_pos = mul(object_data.model_matrix, float4(local_position, 1.0));
 
@@ -87,7 +94,9 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 	output.world_position = world_pos.xyz;
 	output.texcoord = vertex.texcoord;
 	output.colour = vertex.colour;
-	output.tbn = transpose(float3x3(T, B, N));
+	output.T = T;
+	output.B = B;
+	output.N = N;
 	output.material_index = object_data.material_index;
 
 	return output;
@@ -96,6 +105,8 @@ VS_Output VertexMain(uint vertex_id : SV_VertexID, uint instance : SV_VulkanInst
 [shader("fragment")]
 float4 FragmentMain(VS_Output input) : SV_Target
 {
+	float3x3 tbn = transpose(float3x3(input.T, input.B, input.N));
+	
 	frame::FrameData frame_data = *args.frame_data;
 	scene::Material mat = args.materials[input.material_index];
 
@@ -103,7 +114,7 @@ float4 FragmentMain(VS_Output input) : SV_Target
 	surface_input.world_position = input.world_position;
 	surface_input.texcoord = input.texcoord;
 	surface_input.vertex_colour = input.colour;
-	surface_input.tbn = input.tbn;
+	surface_input.tbn = tbn;
 
 	surface::Surface surface = surface::SampleSurface(surface_input, mat, frame_data, args.linear_sampler);
 

@@ -476,7 +476,7 @@ internal void G_InitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_ch
 				vkGetPhysicalDeviceProperties2(curr_physical_device, &properties);
 	
 				DebugLogD(log_channel,
-						  "Querying physical device: %s (%d)",
+						  "Querying physical device: \"%s\" (%d)",
 						  properties.properties.deviceName,
 						  properties.properties.deviceID);
 
@@ -536,7 +536,7 @@ internal void G_InitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_ch
 						   "Unable to find a suitable physical device :(");
 
 			DebugLogD(log_channel,
-					  "Selected physical device: %s (%d) :)",
+					  "Selected physical device: \"%s\" (%d) :)",
 					  device->vk_physical_device_properties.properties.deviceName,
 					  device->vk_physical_device_properties.properties.deviceID);
 		}

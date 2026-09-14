@@ -263,7 +263,7 @@ internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 	R_Clear colour_clear = R_ClearColour(0.f, 0.f, 0.f, 1.f);
 	R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
-	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3(0.5f, 0.5f, 1.0f));
+	R_TextureInfo lighting_info = R_TextureInfoInitSwapchain(VK_FORMAT_R16G16B16A16_SFLOAT, v3x(1.f));
 	lighting_info.flags = G_TextureAllocFlag_Storage;
 	lighting_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	bb.lighting_resolve = R_GraphCreateTexture(graph, &lighting_info);
@@ -271,7 +271,7 @@ internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 	lighting_info.samples = VK_SAMPLE_COUNT_4_BIT;
 	bb.lighting_msaa = R_GraphCreateTexture(graph, &lighting_info);
 
-	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_GetDepthFormat(), v3(0.5f, 0.5f, 1.0f));
+	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_GetDepthFormat(), v3x(1.f));
 	depth_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	bb.depth_resolve = R_GraphCreateTexture(graph, &depth_info);
 	depth_info.samples = VK_SAMPLE_COUNT_4_BIT;

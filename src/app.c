@@ -365,7 +365,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	ArenaReset(&app->frame_arena);
 	
-	AppLogFPS(dt);
+	//AppLogFPS(dt);
 
 	app->frame_number++;
 	
