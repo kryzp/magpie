@@ -12,6 +12,7 @@ struct Game
 	b32 camera_driver_active;
 };
 
+internal void GameRegisterEntities(E_World *world);
 internal void GameSelect(Game *game_);
 internal void GameInit(E_World *world);
 internal void GameTick(const OS_InputState *input, f32 dt, f32 elapsed);

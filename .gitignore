@@ -19,4 +19,5 @@ compile_commands.json
 build.bat
 run.bat
 build.sh
+build_run.sh
 

@@ -8,10 +8,10 @@ typedef struct App App;
 struct App
 {
 	void *bootstrap_memory;
+	LOG_Channel log_channel;
 	
-	Arena log_arena;
-	Arena graphics_arena;
 	Arena scripting_arena;
+	Arena graphics_arena;
 	Arena audio_arena;
 	Arena asset_arena;
 	Arena animation_arena;
@@ -20,7 +20,6 @@ struct App
 	Arena entity_arena;
 	Arena frame_arena;
 	
-	LOG_Channel log_channel;
 	LOG_Channel scripting_log_channel;
 	LOG_Channel graphics_log_channel;
 	LOG_Channel audio_log_channel;
@@ -36,10 +35,8 @@ struct App
 	G_Swapchain swapchain;
 	G_ShaderCompiler shader_compiler;
 
-	/*
 	AU_System audio_system;
 	AU_Backend *audio_backend;
-	*/
 	
 	A_State assets;
 

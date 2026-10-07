@@ -271,7 +271,7 @@ internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 	lighting_info.samples = VK_SAMPLE_COUNT_4_BIT;
 	bb.lighting_msaa = R_GraphCreateTexture(graph, &lighting_info);
 
-	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_GetDepthFormat(), v3x(1.f));
+	R_TextureInfo depth_info = R_TextureInfoInitSwapchain(G_GetDepthStencilFormat(), v3x(1.f));
 	depth_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	bb.depth_resolve = R_GraphCreateTexture(graph, &depth_info);
 	depth_info.samples = VK_SAMPLE_COUNT_4_BIT;

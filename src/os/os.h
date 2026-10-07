@@ -95,6 +95,10 @@ struct OS_API
 
 	u32 (*GetNumCores)(void);
 
+	// NOTE: IVE REMOVED THIS CODE BECAUSE IT MAKES NO SENSE REALLY.
+	//       WHY SHOULD THE OS API EXPOSE THIS WHILE ALSO EXPOSING
+	//       THE JOB SYSTEM? IT SHOULD BE ONE OR THE OTHER!
+#if 0
 	OS_Handle (*ThreadCreate)(void (*Entry)(void *param), void *param);
 	void      (*ThreadJoin)(OS_Handle handle);
 	void      (*ThreadDetach)(OS_Handle handle);
@@ -112,7 +116,7 @@ struct OS_API
 
 	OS_Handle (*ConvertThreadToFiber)(void);
 	b32       (*ConvertFiberToThread)(void);
-
+#endif
 
 	/* ==================================================
 	   TLS
@@ -128,18 +132,26 @@ struct OS_API
 	   ATOMICS
 	   ================================================== */
 
-	// TODO: Some kind of OS_MemoryOrder parameter?
+	// TODO: ADD MEMORY ORDER (OS_MemoryOrder) PARAMETER
+	
+	i32   (*AtomicLoadI32)(const i32 *ptr);
+	i64   (*AtomicLoadI64)(const i64 *ptr);
+	void *(*AtomicLoadPtr)(const void **ptr);
 
+	void  (*AtomicStoreI32)(i32 *ptr, i32 value);
+	void  (*AtomicStoreI64)(i64 *ptr, i64 value);
+	void  (*AtomicStorePtr)(void **ptr, void *value);
+
+	i32   (*AtomicExchangeI32)(i32 *ptr, i32 value);
+	i64   (*AtomicExchangeI64)(i64 *ptr, i64 value);
+	void *(*AtomicExchangePtr)(void **ptr, void *value);
+	
 	i32   (*AtomicCompareExchangeI32)(i32 *ptr, i32 exchange, i32 comperand);
 	i64   (*AtomicCompareExchangeI64)(i64 *ptr, i64 exchange, i64 comperand);
-	void *(*AtomicCompareExchangePtr)(void *ptr, void *exchange, void *comperand);
+	void *(*AtomicCompareExchangePtr)(void **ptr, void *exchange, void *comperand);
 
-	i32   (*AtomicStoreI32)(i32 *ptr, i32 value);
-	i64   (*AtomicStoreI64)(i64 *ptr, i64 value);
-	void *(*AtomicStorePtr)(void *ptr, void *value);
-
-	i32   (*AtomicAddI32)(i32 *ptr, i32 delta);
-	i64   (*AtomicAddI64)(i64 *ptr, i64 delta);
+	i32   (*AtomicFetchAddI32)(i32 *ptr, i32 delta);
+	i64   (*AtomicFetchAddI64)(i64 *ptr, i64 delta);
 
 	
 	/* ==================================================
@@ -223,7 +235,7 @@ struct OS_API
 	void         (*JobCounterRelease) (OS_Handle handle);
 	void         (*JobCounterInc)     (OS_Handle handle, i32 amount);
 	void         (*JobCounterDec)     (OS_Handle handle, i32 amount);
-	u32          (*JobCounterValue)   (OS_Handle handle);
+	i32          (*JobCounterValue)   (OS_Handle handle);
 	void         (*JobYield)          (OS_Handle handle, i32 value);
 	void         (*JobKick)           (const J_Decl *decl, OS_Handle counter_handle);
 	void         (*JobBatch)          (const J_Decl *decls, u32 count, OS_Handle counter_handle);
@@ -255,7 +267,5 @@ typedef void  OS_EntryDestroyFn(void *ctx);
 typedef b32   OS_EntryTickFn(void *ctx, const OS_InputState *input);
 typedef void  OS_EntryHotLoadFn(void *ctx, const OS_API *api);
 typedef void  OS_EntryHotUnloadFn(void *ctx);
-
-static const OS_API *osapi = NULL; // must be manually set
 
 #endif // OS_H

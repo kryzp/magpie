@@ -31,7 +31,9 @@
 #define MemZero(x, y)       MemSet((x), 0, (y))
 #define MemZeroArray(a)     MemSet((a), 0, sizeof(a))
 #define MemZeroStruct(s)    MemSet((s), 0, sizeof(*(s)))
+
 #define MemAlignUp(v, a)    (((v) + (a) - 1) & ~((a) - 1))
+#define MemAlignDown(v, a)  ((v) & ~((u64)(a) - 1))
 
 #define CStrCopy            strcpy
 #define CStrCopyN           strncpy

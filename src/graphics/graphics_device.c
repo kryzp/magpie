@@ -832,7 +832,7 @@ internal G_Device *G_GetSelected(void)
 	return g_device;
 }
 
-internal VkFormat G_GetDepthFormat(void)
+internal VkFormat G_GetDepthStencilFormat(void)
 {
 	return g_device->depth_format;
 }
@@ -1151,7 +1151,7 @@ internal void G_WaitUntil(G_TimelinePoint point)
 
 	G_VK_CHECK(vkWaitSemaphores(g_device->vk_device,
 								&wait_info, UINT64_MAX),
-			   "Failed to wait on timeline semaphore");
+			   "Failed to wait on timeline semaphore.");
 }
 
 internal G_Swapchain G_SwapchainCreate(void)
@@ -1590,7 +1590,7 @@ internal G_PipelineSt G_FetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
 	dynamic_state_create_info.pDynamicStates = graphics_pipeline_dynamic_states;
 
 	VkFormat depth_stencil_format = def->has_depth_attachment
-		? G_GetDepthFormat()
+		? G_GetDepthStencilFormat()
 		: VK_FORMAT_UNDEFINED;
 
 	VkPipelineRenderingCreateInfo pipeline_rendering_create_info = {0};
@@ -1756,7 +1756,7 @@ internal G_ResourceKey G_TextureAlloc(const G_TextureAllocInfo *alloc_info)
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	b32 is_depth   = (alloc_info->format == G_GetDepthFormat());
+	b32 is_depth   = (alloc_info->format == G_GetDepthStencilFormat());
 	b32 is_cubemap = (alloc_info->flags & G_TextureAllocFlag_Cubemap) != 0;
 	b32 is_storage = (alloc_info->flags & G_TextureAllocFlag_Storage) != 0;
 
@@ -1873,12 +1873,12 @@ internal G_ResourceKey G_TextureAlloc2DRW(u32 width, u32 height, VkFormat format
 
 internal G_ResourceKey G_TextureAllocDepth2D(u32 width, u32 height, u32 mipmaps)
 {
-	return G_TextureAlloc2D(width, height, G_GetDepthFormat(), mipmaps);
+	return G_TextureAlloc2D(width, height, G_GetDepthStencilFormat(), mipmaps);
 }
 
 internal G_ResourceKey G_TextureAllocDepth2DRW(u32 width, u32 height, u32 mipmaps)
 {
-	return G_TextureAlloc2DRW(width, height, G_GetDepthFormat(), mipmaps);
+	return G_TextureAlloc2DRW(width, height, G_GetDepthStencilFormat(), mipmaps);
 }
 
 internal G_ResourceKey G_TextureAllocCubemap(u32 resolution, VkFormat format, u32 mipmaps)
@@ -1900,7 +1900,7 @@ internal G_ResourceKey G_TextureAllocCubemap(u32 resolution, VkFormat format, u3
 
 internal G_ResourceKey G_TextureAllocCubemapDepth(u32 resolution, u32 mipmaps)
 {
-	return G_TextureAllocCubemap(resolution, G_GetDepthFormat(), mipmaps);
+	return G_TextureAllocCubemap(resolution, G_GetDepthStencilFormat(), mipmaps);
 }
 
 internal void G_TextureDestroy(G_ResourceKey key)

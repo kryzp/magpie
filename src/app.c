@@ -57,8 +57,8 @@ internal void AppInit_(void)
 	app->swapchain = G_SwapchainCreate();
 	G_ShaderCompilerInitAndSelect(&app->shader_compiler, osapi->LogChannelOpenFrom(app->graphics_log_channel, String8Lit("SLANG")));
 
-	//app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
-	//AU_InitAndSelect(&app->audio_system, &app->audio_arena, app->audio_log_channel);
+	app->audio_backend = AU_BackendAllocAndSelect(&app->audio_arena, osapi->LogChannelOpenFrom(app->audio_log_channel, String8Lit("MINI")));
+	AU_InitAndSelect(&app->audio_system, &app->audio_arena, app->audio_log_channel);
 	
 	A_InitAndSelect(&app->assets, &app->asset_arena, app->asset_log_channel);
 	
@@ -179,8 +179,8 @@ void MagpieDestroy(App *app_)
 	
 	A_Destroy();
 	
-	//AU_Shutdown();
-	//AU_BackendShutdown();
+	AU_Shutdown();
+	AU_BackendShutdown();
 	
 	G_ShaderCompilerShutdown();
 	G_SwapchainDestroy(&app->swapchain);
@@ -195,8 +195,8 @@ void MagpieDestroy(App *app_)
 	ArenaRelease(&app->animation_arena);
 	ArenaRelease(&app->asset_arena);
 	ArenaRelease(&app->audio_arena);
-	ArenaRelease(&app->scripting_arena);
 	ArenaRelease(&app->graphics_arena);
+	ArenaRelease(&app->scripting_arena);
 	
 	DebugLogI(app->log_channel, "Destroyed.");
 
@@ -254,9 +254,9 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	AN_SystemCalculateIntermediatePoses(elapsed);
 
 	E_WorldTickPostAnim(&app->world, &entity_tick_context);
-
-	S_Tick(dt);
 	
+	S_Tick(dt);
+
 	f32 clamped_delta = dt;
 
 	if (dt > max_frame_time)
@@ -282,12 +282,12 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldFlush(&app->world);
 
-	//AU_Listener listener = {0};
-	//listener.position = app->game.camera.position;
-	//listener.direction = app->game.camera.forward;
+	AU_Listener listener = {0};
+	listener.position = app->game.camera.position;
+	listener.direction = app->game.camera.forward;
 
-	//AU_Tick(dt, listener);
-	//AU_BackendTick(dt, listener);
+	AU_Tick(dt, listener);
+	AU_BackendTick(dt, listener);
 
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
@@ -372,6 +372,18 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	return false;
 }
 
+/*
+ * TODO:
+ *
+ * RIGHT NOW HOT LOADING DOESN'T WORK FOR 3 MAJOR REASONS:
+ * 1) THE SCRIPTING SYSTEM DOESN'T LIKE IT
+ * 2) THE ENTITY SYSTEM DOESN'T LIKE IT (FUNCTION POINTERS ARE LOST TO THE ENTITY DESCRIPTIONS)
+ * 3) THE AUDIO SYSTEM DOESN'T LIKE IT (SOMETHING SOMETHING MINIAUDIO GLOBAL DATA I THINK)
+ *
+ * HOWEVER THE ACTUAL /OS/ LEVEL HOT LOADING DOES WORK. IT'S JUST THE CODE I'VE WRITTEN HERE
+ * ISN'T VERY HAPPY ABOUT IT.
+ */
+
 void MagpieHotLoad(App *app_, const OS_API *osapi_)
 {
 	osapi = osapi_;
@@ -388,6 +400,8 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	 * option b. is a complete nightmare i dont wanna deal with right
 	 * now so in my opinion it's far more preferable to just reset the whole thing.
 	 */
+
+	// TODO: Scripting kinda sucks for hot reloading rn so ive disabled it. needs fix pronto!!!
 	
 	ArenaReset(&app->scripting_arena);
 	AppInitScripting();
@@ -396,8 +410,8 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	G_ShaderCompilerSelectContext(&app->shader_compiler);
 	G_HotLoad();
 
-	//AU_BackendSelectContext(app->audio_backend);
-	//AU_SelectContext(&app->audio_system);
+	AU_BackendSelectContext(app->audio_backend);
+	AU_SelectContext(&app->audio_system);
 
 	A_SelectContext(&app->assets);
 
@@ -406,7 +420,7 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 	R_SystemSelectContext(&app->render_system);
 	
 	P_EngineSelectContext(&app->physics_engine);
-
+	
 	GameSelect(&app->game);
 }
 

@@ -271,7 +271,7 @@ internal void G_Destroy(void);
 internal void G_SelectContext(G_Device *device);
 internal G_Device *G_GetSelected(void);
 
-internal VkFormat G_GetDepthFormat(void);
+internal VkFormat G_GetDepthStencilFormat(void);
 internal u32 G_GetFrameInFlightIndex(void);
 
 internal b32 G_FeatureEnabled(G_FeatureType type);

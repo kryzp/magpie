@@ -1130,7 +1130,7 @@ internal G_RenderInfo R_GraphBuildRenderingInfo(const R_Graph *graph, const R_Pa
 			vk_info.resolveMode = VK_RESOLVE_MODE_NONE;
 		}
 
-		if (info->format == G_GetDepthFormat())
+		if (info->format == G_GetDepthStencilFormat())
 		{
 			vk_info.clearValue.depthStencil.depth = out->clear.depth;
 			vk_info.clearValue.depthStencil.stencil = out->clear.stencil;

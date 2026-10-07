@@ -1,4 +1,5 @@
 #include "os_param.h"
+#include "os_atomic.h"
 #include "os_file.h"
 #include "os_log.h"
 #include "os_job.h"

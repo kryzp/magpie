@@ -85,6 +85,7 @@ internal void E_WorldInit(E_World *world, Arena *arena, LOG_Channel log_channel)
 internal void E_WorldDestroy(E_World *world);
 
 internal void E_WorldToggleLayer(E_World *world, u16 layer_id, b32 active);
+
 internal u32 E_WorldRegisterType(E_World *world, const E_TypeDesc *desc);
 
 

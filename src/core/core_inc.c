@@ -1,3 +1,7 @@
+
+// must be manually set!
+static const OS_API *osapi = NULL;
+
 #include "core_math.c"
 #include "core_arena.c"
 #include "core_scratch.c"

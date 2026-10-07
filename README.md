@@ -33,7 +33,7 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 - **Indirect Forward Rendering**
 - **Point Lights** with compute-culled shadow-mapping
 - **Right-Handed Z-up Coordinates** as it SHOULD be
-- **Async Generic Asset Streaming**
+- **Async Generic Asset Loading**
 - **Asset Hot-Reloading**
 - **Arena Memory Allocation System**
 - **Page-Allocated Geometry Data** in the render scene allowing for efficient mesh data streaming in and out
@@ -54,7 +54,7 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 ## Roadmap
 
 ### Planned Features (in rough order of what's next)
-- True Asset Streaming
+- LOD-based Asset Streaming for Models, Textures, etc...
 - Virtual Texturing
 - Physically Based Bloom
 - ImGui Integration (C bindings)
@@ -108,7 +108,7 @@ An example is the `/render/` module, which depends on `/graphics/` (and a variet
 
 I've considered organizing modules into "tiers", where a tier is just a collection of modules that strictly depend on a lower tier. For instance, you could have `tier0` be `/core/`, `/os/` and other utilities, then `tier1` composed of `/graphics/` and other backend stuff, then `tier2` is high-level engine code like `/render/`, `/physics/` and `/entity/`, and so on... But that's just a fun experiment with literally zero utility other than organization.
 
-Each module follows a strict namespace system. I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read as it's clear what module something originates from. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for common types, etc.).
+Each module follows a strict namespace system. I'm referring to typically 2-3 (rarely 4, sometimes 1) capitalized characters in front of each exposed type or function in the layer indicating where it comes from. This prevents naming collisions and makes code much easier to read as it's clear what module something originates from. `/core/` is the exception to this rule, and has no namespace for brevity, as it contains common types used throughout the codebase (maths functions, `typedef`s for common types, etc.). Additionally, I don't use it for the `/os/` job and log files, simply because it's more convenient.
 
 The hierarchy of modules is visible clearly in `magpie.c`.
 
@@ -183,7 +183,7 @@ Note: right now hot-reloading actually doesn't work because of `miniaudio`, whic
 
 ```
 +--------------------------------------------------+
-|  magpie_win32.exe                                |
+|  magpie_unix                                     |
 |                                                  |
 |  All OS primitives, job scheduler, etc...        |
 |  Exposes API via function pointer table          |
@@ -228,7 +228,7 @@ Interesting files that you might wanna have a look at if you're just starting wi
 - `app` DLL Entry Point
 - `core/core_arena.*`
 - `os/*` OS API
-- `os/win32/*` Job System, Logging and Win32 Platform layer
+- `os/unix/*` Job System, Logging and Platform layer - Seriously, please check this out, it took me too much blood sweat and tears for this to go unnoticed as just some boring system stuff.
 - `render/render_graph.*`
 - `render/render_scene.*`
 - `asset/asset_manager.*`

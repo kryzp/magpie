@@ -77,6 +77,8 @@ internal void *ArenaPush(Arena *arena, u64 bytes, u64 alignment)
 		u64 commit_bytes = commit_to - arena->committed;
 
 		osapi->VirtualCommit((u8 *)arena->base + arena->committed, commit_bytes);
+
+		arena->committed = commit_to;
 	}
 	
 	void *mem = (u8 *)arena->base + aligned;
