@@ -3149,10 +3149,16 @@ internal void OS_UNIX_ReconnectAllGamepads(void)
 	if (!ids)
 		return;
 
-	AssertTrue(sdl_gp_count >= 0);
-
 	if (sdl_gp_count > OS_MAX_GAMEPADS)
+	{
+		DebugLogW(unix_st.log_channel,
+				  "Found %d gamepads, but we only support a maximum of %d gamepads, so we're capping it and only opening %d gamepads.",
+				  sdl_gp_count,
+				  OS_MAX_GAMEPADS,
+				  OS_MAX_GAMEPADS);
+		
 		sdl_gp_count = OS_MAX_GAMEPADS;
+	}
 	
 	unix_st.gamepad_count = sdl_gp_count;
 	
@@ -3161,7 +3167,7 @@ internal void OS_UNIX_ReconnectAllGamepads(void)
 		unix_st.gamepads[i] = SDL_OpenGamepad(ids[i]);
 
 		if (unix_st.gamepads[i])
-			DebugLogD(unix_st.log_channel, "Added gamepad with player index: %d.", SDL_GetGamepadPlayerIndex(unix_st.gamepads[i]));
+			DebugLogD(unix_st.log_channel, "Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(unix_st.gamepads[i]));
 		else
 			DebugLogD(unix_st.log_channel, "Failed to open gamepad %u: %s", (u32)ids[i], SDL_GetError());
 	}
@@ -3179,20 +3185,20 @@ internal void OS_UNIX_MessagePump(void *)
 	while (local_event_count < ArraySize(local_events) && SDL_PollEvent(&ev))
 		local_events[local_event_count++] = ev;
 
-	if (local_event_count > 0)
-	{
-		OS_UNIX_ThreadMutexLock(unix_st.event_mutex);
-		{
-			DebugLogAssert(unix_st.log_channel, unix_st.pending_event_count <= OS_UNIX_MAX_PENDING_EVENTS, "Ran out of event buffer space SHIT.");
-			
-			u32 available_space = OS_UNIX_MAX_PENDING_EVENTS - unix_st.pending_event_count;
-			u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
+	if (local_event_count <= 0)
+		return;
 
-			MemCopy(unix_st.pending_events + unix_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
-			unix_st.pending_event_count += copy_count;
-		}
-		OS_UNIX_ThreadMutexUnlock(unix_st.event_mutex);
+	OS_UNIX_ThreadMutexLock(unix_st.event_mutex);
+	{
+		DebugLogAssert(unix_st.log_channel, unix_st.pending_event_count <= OS_UNIX_MAX_PENDING_EVENTS, "Ran out of event buffer space SHIT.");
+			
+		u32 available_space = OS_UNIX_MAX_PENDING_EVENTS - unix_st.pending_event_count;
+		u32 copy_count = (local_event_count > available_space) ? available_space : local_event_count;
+
+		MemCopy(unix_st.pending_events + unix_st.pending_event_count, local_events, copy_count * sizeof(SDL_Event));
+		unix_st.pending_event_count += copy_count;
 	}
+	OS_UNIX_ThreadMutexUnlock(unix_st.event_mutex);
 }
 
 internal OS_GamepadState *OS_UNIX_GamepadForID(OS_InputState *input, SDL_JoystickID id)
