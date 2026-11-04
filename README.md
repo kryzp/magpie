@@ -1,6 +1,6 @@
 # Magpie
 
-**Magpie** is primarily a Vulkan renderer (though it's turning into more of a game engine (-ish, closer to a more developed framework) as I add more features I'm randomly interested in) written in pure C.
+**Magpie** is primarily a fully jobified/multithreaded GPU-driven Vulkan renderer (though it's turning into more of a game framework as I add more features I'm randomly interested in) written in pure C.
 
 ![](images/helmet.png)
 ![](images/sponza.png)
@@ -47,8 +47,9 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 - **Raytraced Static Irradiance Probes**
 - **Skeletal Animation Support** with skinning etc...
 - **Scripting Integration** with all top-level systems (using Lua).
-- **Naughty Dog-Style Frame System** hard to explain, essentially frames are packed into "frame params" which are then sent to the render system, which allows for far more synchronisation and performance.
+- **Naughty Dog-Style Frame System** frames are packed into "frame params" which are then sent to the render system. This a) creates a very clean architecture, as there is a single source of input for the renderer, but also b) creates a massive performance gain, as we can run the rendering multithreaded jobs for the current frame while also running jobs on computing the next frame.
 - **Frame Interpolation** based on the highly inluential https://gafferongames.com/post/fix_your_timestep/ article, integrated with the Naughty Dog frame params as listed above.
+- **Sorted Forward Transparency**
 
 
 ## Roadmap
@@ -57,7 +58,7 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 - LOD-based Asset Streaming for Models, Textures, etc...
 - Virtual Texturing
 - Physically Based Bloom
-- ImGui Integration (C bindings)
+- ImGui Integration (C bindings)... I keep putting this off
 - SSAO (horizon-based none of that random hemisphere stuff)
 - Cascaded Shadow Mapping (CSM)
 - Advanced Material Rendering
@@ -67,7 +68,6 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
   - [ ] Sheen
   - [ ] Iridescence
   - [x] Unlit Materials
-- Basic Sorted Forward Transparency (also look into order-independent transparency)
 - Forward+ Light Clustering
 - Alpha to Coverage for foliage / alpha-cutout geometry
 - Advanced Reflections + Reflective Materials (e.g: Mirrors, SSR, Multiple reflection probes)
@@ -75,7 +75,7 @@ Yes, it's over-engineered for a solo project. No gurantees on quality, some of i
 - Multi-Threaded CPU profiler integrated with the Job system (difficult due to fibers, as there is no guarantee a job will start and end on the same thread)
 - Visualisation for Profilers (CPU & GPU)
 - Dynamic Irradiance Probes which automatically reposition themselves
-- 2D Batch Quad Renderer (basically the SpriteBatch from XNA/FNA/MonoGame)
+- 2D Batch Quad Renderer (basically the SpriteBatch from XNA/FNA/MonoGame/LibGDX)
 - UI System (needs 2D batch renderer)
 - Compositive Post Processing Pipeline
 - Refraction
