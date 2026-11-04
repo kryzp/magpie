@@ -160,6 +160,14 @@ struct R_GPU_IndirectDraw
 	VkDrawIndexedIndirectCommand vk_command;
 };
 
+typedef struct R_GPU_DebugObjectDraw R_GPU_DebugObjectDraw;
+struct R_GPU_DebugObjectDraw
+{
+	m4 transform;
+	v4 colour;
+	f32 thickness;
+};
+
 typedef struct R_GPU_PagePointers R_GPU_PagePointers;
 struct R_GPU_PagePointers
 {

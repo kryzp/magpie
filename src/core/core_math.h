@@ -46,7 +46,7 @@
 #define ClampValue(v, lo, hi)               MaxValue((lo), MinValue((hi), (v)))
 #define SaturateValue(v)                    ClampValue((v), 0, 1)
 #define LerpValue(from, to, t)              ((from) + ((to) - (from)) * (t))
-#define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (amount)), (to)) : MaxValue(((from) - (amount)), (to)))
+#define ApproachValue(from, to, t)          (((to) > (from)) ? MinValue(((from) + (t)), (to)) : MaxValue(((from) - (t)), (to)))
 
 typedef union v2 v2;
 union v2
@@ -202,6 +202,8 @@ union m4
 		})
 
 #define M4Identity() m4(1.f)
+
+internal b32 M4Equals(m4 a, m4 b);
 
 internal m4 M4MulM4(m4 a, m4 b);
 internal v4 M4MulV4(m4 m, v4 v);

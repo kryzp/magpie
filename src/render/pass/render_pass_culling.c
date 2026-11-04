@@ -36,8 +36,8 @@ internal R_PASS_RECORD_DEF(R_CullFrustumComputeFn)
 	pc;
 
 	pc.object_buffer = data->frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_BufferAddress(data->frame_params->mesh_buffer);
-	pc.material_buffer = G_BufferAddress(data->frame_params->material_buffer);
+	pc.mesh_buffer = data->frame_params->mesh_table.gpu;
+	pc.material_buffer = data->frame_params->material_table.gpu;
 	pc.page_buffer = data->frame_params->page_table_buffer.gpu;
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range);
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);
@@ -83,8 +83,8 @@ internal R_PASS_RECORD_DEF(R_CullSphereComputeFn)
 	pc;
 
 	pc.object_buffer = data->frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_BufferAddress(data->frame_params->mesh_buffer);
-	pc.material_buffer = G_BufferAddress(data->frame_params->material_buffer);
+	pc.mesh_buffer = data->frame_params->mesh_table.gpu;
+	pc.material_buffer = data->frame_params->material_table.gpu;
 	pc.page_buffer = data->frame_params->page_table_buffer.gpu;
 	pc.indirect_buffer = R_BufferRangeAddress(&indirect_range);
 	pc.count_buffer = R_BufferRangeAddress(&counter_range);

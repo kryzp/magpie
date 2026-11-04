@@ -2,12 +2,32 @@
 internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 {
 	G_CmdBuffer *cmd = ctx->cmd;
+
 	const R_ForwardPassData *data = ctx->user_data;
 	const R_FrameParams *frame_params = data->frame_params;
-	
+
+	if (data->mode == R_ForwardMode_Translucent && frame_params->translucent_count == 0)
+		return;
+
 	G_GraphicsPipelineDef pipeline_def = G_GraphicsPipelineDefFromInfo(frame_params->forward_shader, ctx->render_info);
 	pipeline_def.depth_stencil_state.depth_test_enabled = true;
-	pipeline_def.depth_stencil_state.depth_write_enabled = true;
+
+	if (data->mode == R_ForwardMode_Opaque)
+	{
+		pipeline_def.depth_stencil_state.depth_write_enabled = true;
+	}
+	else
+	{
+		pipeline_def.depth_stencil_state.depth_write_enabled = false;
+		pipeline_def.depth_stencil_state.depth_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL;
+		pipeline_def.blend_state.enabled = true;
+		pipeline_def.blend_state.colour.op = VK_BLEND_OP_ADD;
+		pipeline_def.blend_state.colour.src = VK_BLEND_FACTOR_SRC_ALPHA;
+		pipeline_def.blend_state.colour.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		pipeline_def.blend_state.alpha.op = VK_BLEND_OP_ADD;
+		pipeline_def.blend_state.alpha.src = VK_BLEND_FACTOR_ONE;
+		pipeline_def.blend_state.alpha.dst = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	}
 
 	G_PipelineSt pipeline_st = G_FetchGraphicsPipeline(&pipeline_def);
 
@@ -40,11 +60,11 @@ internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	args.frame_data_buffer = frame_params->frame_data.gpu;
 	args.object_buffer = frame_params->object_buffer.gpu;
-	args.material_buffer = G_BufferAddress(frame_params->material_buffer);
-	args.mesh_buffer = G_BufferAddress(frame_params->mesh_buffer);
+	args.material_buffer = frame_params->material_table.gpu;
+	args.mesh_buffer = frame_params->mesh_table.gpu;
 
 	args.light_buffer = frame_params->light_buffer.gpu;
-	args.shadow_caster_buffer = G_BufferAddress(data->shadow_caster_table);
+	args.shadow_caster_buffer = data->shadow_caster_table;
 
 	args.irr_sh_buffer = data->irradiance_sh_buffer_address;
 	args.irr_grid_info_buffer = data->irradiance_grid_info_buffer_address;
@@ -60,25 +80,24 @@ internal R_PASS_RECORD_DEF(R_ForwardPassFn)
 
 	G_CmdPushConstants(cmd, pipeline_st.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
 
-	G_ResourceKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.indirect_buffer);
-	G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->draw_stream.count_buffer);
+	if (data->mode == R_ForwardMode_Opaque)
+	{
+		G_ResourceKey indirect_key = R_GraphResolveBuffer(ctx->graph, data->opaque_draw_stream.indirect_buffer);
+		G_ResourceKey counter_key = R_GraphResolveBuffer(ctx->graph, data->opaque_draw_stream.count_buffer);
 
-	R_FrameParamsDrawIndirect(frame_params, cmd, indirect_key, counter_key);
+		R_FrameParamsDrawIndirect(frame_params, cmd, indirect_key, counter_key);
+	}
+	else
+	{
+		R_FrameParamsDrawTranslucent(frame_params, cmd);
+	}
 }
 
-internal void R_ForwardRender(R_Graph *graph,
-							const R_FrameParams *frame_params,
-							R_Blackboard *bb,
-							const R_DrawStream *draw_stream)
+internal R_ForwardPassData *R_ForwardPassDataInit(R_Graph *graph, R_Pass *pass,
+												  const R_FrameParams *frame_params,
+												  const R_Blackboard *bb,
+												  R_ForwardMode mode)
 {
-	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward"), R_PassType_Graphics);
-
-	bb->lighting_msaa = R_PassWriteColour(pass, bb->lighting_msaa, NULL);
-	bb->depth_msaa = R_PassWriteDepth(pass, bb->depth_msaa, NULL);
-
-	R_PassIndirectBuffer(pass, draw_stream->indirect_buffer);
-	R_PassIndirectBuffer(pass, draw_stream->count_buffer);
-
 	R_GraphTexHandle irradiance_fb_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->irradiance_fallback_cubemap));
 	R_GraphTexHandle prefilter_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->prefilter_cubemap));
 	R_GraphTexHandle brdf_handle = R_PassReadTextureGraphics(pass, R_GraphImportTexture(graph, frame_params->brdf_lut));
@@ -88,22 +107,48 @@ internal void R_ForwardRender(R_Graph *graph,
 
 	R_ForwardPassData *data = ArenaPushArray(frame_params->arena, R_ForwardPassData, 1);
 	data->frame_params = frame_params;
+	data->mode = mode;
 	data->shadow_caster_table = bb->shadow_caster_table;
 	data->irradiance_fb_handle = irradiance_fb_handle;
 	data->prefilter_handle = prefilter_handle;
 	data->brdf_handle = brdf_handle;
-	data->draw_stream = *draw_stream;
 
-	if (false /*R_IrradianceVolumeIsBaked(irradiance_volume)*/)
-	{
-		//data->irradiance_sh_buffer_address        = G_BufferAddress(R_IrradianceVolumeGetSHBuffer(irradiance_volume));
-		//data->irradiance_grid_info_buffer_address = G_BufferAddress(R_IrradianceVolumeGetGridInfoBuffer(irradiance_volume));
-	}
-	else
-	{
-		data->irradiance_sh_buffer_address = 0;
-		data->irradiance_grid_info_buffer_address = 0;
-	}
+	// todo: disabled for now
+	data->irradiance_sh_buffer_address = 0;
+	data->irradiance_grid_info_buffer_address = 0;
+
+	return data;
+}
+
+internal void R_ForwardRender(R_Graph *graph,
+							  const R_FrameParams *frame_params,
+							  R_Blackboard *bb,
+							  const R_DrawStream *opaque_draw_stream)
+{
+	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward Opaque"), R_PassType_Graphics);
+
+	bb->lighting_msaa = R_PassWriteColour(pass, bb->lighting_msaa, NULL);
+	bb->depth_msaa = R_PassWriteDepth(pass, bb->depth_msaa, NULL);
+
+	R_PassIndirectBuffer(pass, opaque_draw_stream->indirect_buffer);
+	R_PassIndirectBuffer(pass, opaque_draw_stream->count_buffer);
+
+	R_ForwardPassData *data = R_ForwardPassDataInit(graph, pass, frame_params, bb, R_ForwardMode_Opaque);
+	data->opaque_draw_stream = *opaque_draw_stream;
+
+	R_PassSetRecord(pass, R_ForwardPassFn, data);
+}
+
+internal void R_ForwardRenderTranslucent(R_Graph *graph,
+										 const R_FrameParams *frame_params,
+										 R_Blackboard *bb)
+{
+	R_Pass *pass = R_GraphAdd(graph, String8Lit("Forward Translucent"), R_PassType_Graphics);
+
+	bb->lighting_resolve = R_PassWriteColourResolve(pass, bb->lighting_msaa, bb->lighting_resolve, NULL);
+	bb->depth_resolve = R_PassWriteDepthResolve(pass, bb->depth_msaa, bb->depth_resolve, NULL);
+
+	R_ForwardPassData *data = R_ForwardPassDataInit(graph, pass, frame_params, bb, R_ForwardMode_Translucent);
 
 	R_PassSetRecord(pass, R_ForwardPassFn, data);
 }

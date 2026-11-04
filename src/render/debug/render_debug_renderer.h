@@ -2,15 +2,6 @@
 #define RENDER_DEBUG_RENDERER_H
 
 #define R_DEBUG_MAX_DRAWS    65536
-#define R_DEBUG_MAX_BATCHES  64
-
-typedef struct R_GPU_DebugObjectDraw R_GPU_DebugObjectDraw;
-struct R_GPU_DebugObjectDraw
-{
-	m4 transform;
-	v4 colour;
-	f32 thickness;
-};
 
 typedef enum R_DebugDrawType
 {
@@ -101,14 +92,13 @@ struct R_DebugRenderer
 {
 	Arena *arena;
 
+	i32 spinlock;
+
 	R_DebugDrawNode *free_list;
 
 	// sort draw calls into buckets
 	R_DebugDrawNode *depth_enabled[R_DebugDrawType_COUNT];
 	R_DebugDrawNode *depth_disabled[R_DebugDrawType_COUNT];
-
-	G_ResourceKey depth_enabled_buffer;
-	G_ResourceKey depth_disabled_buffer;
 
 	R_Mesh line_mesh;
 	R_Mesh cross_mesh;
@@ -131,10 +121,12 @@ internal void R_DebugRendererSelect(R_DebugRenderer *dr);
    RENDERING
    ================================================== */
 
+internal void R_DebugCollectInto(R_FramePacket *packet, f32 dt);
+
 internal void R_DebugRendererRender(R_Graph *graph,
-								  const R_FrameParams *frame_params,
-								  R_GraphTexHandle target_colour,
-								  R_GraphTexHandle target_depth);
+									const R_FrameParams *frame_params,
+									R_GraphTexHandle target_colour,
+									R_GraphTexHandle target_depth);
 
 
 /* ==================================================

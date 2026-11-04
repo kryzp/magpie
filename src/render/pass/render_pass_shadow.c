@@ -21,8 +21,8 @@ internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 	pc;
 
 	pc.object_buffer = frame_params->object_buffer.gpu;
-	pc.mesh_buffer = G_BufferAddress(frame_params->mesh_buffer);
-	pc.caster_data_buffer = G_BufferAddress(data->caster_table_buffer);
+	pc.mesh_buffer = frame_params->mesh_table.gpu;
+	pc.caster_data_buffer = data->caster_table_address;
 	pc.caster_index = data->caster_index;
 
 	G_CmdBindBindless(cmd, VK_SHADER_STAGE_ALL_GRAPHICS, pipeline_st.layout);
@@ -37,13 +37,6 @@ internal R_PASS_RECORD_DEF(R_ShadowMappingPassFn)
 
 internal void R_ShadowsInit(R_ShadowState *st)
 {
-	G_BufferAllocInfo caster_buf_info = {0};
-	caster_buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT;
-	caster_buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	caster_buf_info.size = R_FRAME_PARAMS_MAX_SHADOW_CASTERS * sizeof(R_GPU_ShadowCaster);
-
-	st->caster_table_buffer = G_BufferAlloc(&caster_buf_info);
-
 	for (u32 i = 0; i < R_FRAME_PARAMS_MAX_SHADOW_CASTERS; i++)
 	{
 		st->shadow_cubemaps[i] = G_TextureAllocCubemapDepth(R_SHADOW_MAP_RESOLUTION, 1);
@@ -59,13 +52,12 @@ internal void R_ShadowsInit(R_ShadowState *st)
 
 internal void R_ShadowsDestroy(R_ShadowState *st)
 {
-	G_BufferDestroy(st->caster_table_buffer);
 
 	for (u32 i = 0; i < R_FRAME_PARAMS_MAX_SHADOW_CASTERS; i++)
 		G_TextureDestroy(st->shadow_cubemaps[i]);
 }
 
-internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_params)
+internal void R_ShadowsBuildCasterTable(const R_ShadowState *st, G_RingBuffer *upload, R_FrameParams *frame_params)
 {
 	static const v3 light_dirs[6] = {
 		{  1.f,  0.f,  0.f }, // Right.
@@ -85,11 +77,13 @@ internal void R_ShadowsUploadGPU(R_ShadowState *st, const R_FrameParams *frame_p
 		{  0.f,  0.f,  1.f }, // Backwards.
 	};
 
-	st->caster_count = MinValue(frame_params->shadow_caster_count, R_FRAME_PARAMS_MAX_SHADOW_CASTERS);
+	u32 caster_count = MinValue(frame_params->shadow_caster_count, R_FRAME_PARAMS_MAX_SHADOW_CASTERS);
 
-	R_GPU_ShadowCaster *caster_mapping = G_BufferMap(st->caster_table_buffer);
+	frame_params->shadow_caster_table = G_RingBufferPushArray(upload, R_GPU_ShadowCaster, MaxValue(caster_count, 1));
 
-	for (u32 i = 0; i < st->caster_count; i++)
+	R_GPU_ShadowCaster *caster_mapping = frame_params->shadow_caster_table.cpu;
+
+	for (u32 i = 0; caster_mapping && i < caster_count; i++)
 	{
 		const R_ShadowCaster *info = &frame_params->shadow_casters[i];
 		R_GPU_ShadowCaster *gpu = &caster_mapping[i];
@@ -115,10 +109,12 @@ internal void R_ShadowsRender(R_ShadowState *st,
 							const R_FrameParams *frame_params,
 							R_Blackboard *bb)
 {
-	bb->shadow_caster_table = st->caster_table_buffer;
-	bb->shadow_map_count = st->caster_count;
+	const u32 caster_count = MinValue(frame_params->shadow_caster_count, R_FRAME_PARAMS_MAX_SHADOW_CASTERS);
+	
+	bb->shadow_caster_table = frame_params->shadow_caster_table.gpu;
+	bb->shadow_map_count = caster_count;
 
-	for (u32 caster_index = 0; caster_index < st->caster_count; caster_index++)
+	for (u32 caster_index = 0; caster_index < caster_count; caster_index++)
 	{
 		const R_ShadowCaster *info = &frame_params->shadow_casters[caster_index];
 		
@@ -126,11 +122,10 @@ internal void R_ShadowsRender(R_ShadowState *st,
 												R_CullFilter_All,
 												info->position, info->radius);
 
-		// TODO: snprintf the pass name with the caster index for debug labelling.
 		R_ShadowMappingPassData *data = ArenaPushArray(frame_params->arena, R_ShadowMappingPassData, 1);
 		data->frame_params = frame_params;
 		data->caster_index = caster_index;
-		data->caster_table_buffer = st->caster_table_buffer;
+		data->caster_table_address = frame_params->shadow_caster_table.gpu;
 		data->draw_stream = draw_stream;
 
 		R_GraphTexHandle cubemap_handle = R_GraphImportTexture(graph, st->shadow_cubemaps[caster_index]);
@@ -138,6 +133,7 @@ internal void R_ShadowsRender(R_ShadowState *st,
 
 		R_Clear depth_clear = R_ClearDepthStencil(1.f, 0);
 
+		// TODO: format the pass name with the caster index.
 		R_Pass *pass = R_GraphAdd(graph, String8Lit("Shadow Mapping"), R_PassType_Graphics);
 
 		R_PassSetRecord(pass, R_ShadowMappingPassFn, data);

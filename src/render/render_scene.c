@@ -15,20 +15,15 @@ internal void R_EntityIteratorReset(R_EntityIterator *iter)
 
 internal R_Entity *R_EntityIteratorNext(R_EntityIterator *iter, R_EntityType type)
 {
-	for (;;)
+	while (iter->index < DensePoolLiveCount(&iter->scene->entity_pool))
 	{
-		iter->index++;
+		R_Entity *entity = &iter->scene->entities[iter->index++];
 
-		if (iter->index >= DensePoolLiveCount(&iter->scene->entity_pool))
-			return NULL;
-
-		R_Entity *entity = &iter->scene->entities[iter->index];
-
-		if (entity->type != type)
-			continue;
-
-		return entity;
+		if (entity->type == type)
+			return entity;
 	}
+
+	return NULL;
 }
 
 internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
@@ -39,33 +34,54 @@ internal void R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel)
 	SlotPoolInit(&scene->mesh_pool, arena, R_SCENE_MAX_MESHES);
 	SlotPoolInit(&scene->material_pool, arena, R_SCENE_MAX_MATERIALS);
 
-	G_BufferAllocInfo mesh_buffer_alloc_info = {0};
-	mesh_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	mesh_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	mesh_buffer_alloc_info.size = sizeof(R_GPU_RenderMesh) * R_SCENE_MAX_MESHES;
-
-	scene->mesh_buffer = G_BufferAlloc(&mesh_buffer_alloc_info);
-	scene->mesh_buffer_dirty = true;
-	
-	G_BufferAllocInfo material_buffer_alloc_info = {0};
-	material_buffer_alloc_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	material_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	material_buffer_alloc_info.size = sizeof(R_GPU_Material) * R_SCENE_MAX_MATERIALS;
-	
-	scene->material_buffer = G_BufferAlloc(&material_buffer_alloc_info);
-	scene->material_buffer_dirty = true;
+	scene->frame_number = 0;
+	scene->gpu_completed_frame = 0;
+	scene->any_gpu_completed = false;
 }
 
 internal void R_SceneDestroy(R_Scene *scene)
 {
-	G_BufferDestroy(scene->material_buffer);
-	G_BufferDestroy(scene->mesh_buffer);
-
 	for (u32 i = 0; i < scene->geometry_page_count; i++)
 	{
 		G_BufferDestroy(scene->geometry_pages[i].vertex_buffer);
 		G_BufferDestroy(scene->geometry_pages[i].index_buffer);
 	}
+}
+
+internal void R_SceneReleaseRegion(R_Scene *scene, const R_MeshAllocRegion *region)
+{
+	R_GeometryPage *page = &scene->geometry_pages[region->page_index];
+
+	R_GeometryFreeListRelease(&page->vertex_free, region->vertex_offset, region->vertex_count);
+	R_GeometryFreeListRelease(&page->index_free, region->index_offset, region->index_count);
+
+	page->vertex_count -= region->vertex_count;
+	page->index_count -= region->index_count;
+}
+
+internal void R_SceneBeginFrame(R_Scene *scene, u64 frame_number,
+								b32 has_completed, u64 gpu_completed_frame)
+{
+	scene->frame_number = frame_number;
+	scene->any_gpu_completed = has_completed;
+	scene->gpu_completed_frame = gpu_completed_frame;
+
+	if (!has_completed)
+		return;
+	
+	u32 kept = 0;
+
+	for (u32 i = 0; i < scene->retired_region_count; i++)
+	{
+		R_SceneRetiredRegion *r = &scene->retired_regions[i];
+
+		if (r->retire_frame <= gpu_completed_frame)
+			R_SceneReleaseRegion(scene, &r->region);
+		else
+			scene->retired_regions[kept++] = *r;
+	}
+
+	scene->retired_region_count = kept;
 }
 
 internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
@@ -76,6 +92,7 @@ internal R_EntityHandle R_SceneEntityCreate(R_Scene *scene, R_EntityType type)
 
 	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
 
+	MemZeroStruct(&scene->entities[index]);
 	scene->entities[index].type = type;
 	scene->entity_count[type]++;
 	
@@ -96,9 +113,63 @@ internal void R_SceneSetObjectTransform(R_Scene *scene, R_EntityHandle handle, m
 	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
 	
 	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
+	R_Object *object = &scene->entities[index].object;
+
+	if (!object->has_transform)
+	{
+		object->prev_transform = transform;
+		object->has_transform = true;
+	}
 	
-	scene->entities[index].object.transform = transform;
-	scene->entities[index].object.normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
+	object->transform = transform;
+	object->normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
+}
+
+internal void R_SceneTeleportObject(R_Scene *scene, R_EntityHandle handle, m4 transform)
+{
+	DebugLogAssert(scene->log_channel, handle.type == R_EntityType_Object, "Entity handle must point to object.");
+	
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
+	R_Object *object = &scene->entities[index].object;
+
+	object->transform = transform;
+	object->prev_transform = transform;
+	object->has_transform = true;
+	object->normal_matrix = M4RemoveTranslation(M4Inverse(M4Transpose(transform)));
+}
+
+internal void R_SceneBeginSimSteps(R_Scene *scene, u32 step_count)
+{
+	if (step_count == 0)
+		return;
+	
+	for (u32 i = 0; i < DensePoolLiveCount(&scene->entity_pool); i++)
+	{
+		R_Entity *entity = &scene->entities[i];
+
+		if (entity->type == R_EntityType_Object)
+			entity->object.prev_transform = entity->object.transform;
+	}
+
+	scene->last_sim_step_count = step_count;
+}
+
+internal m4 R_SceneObjectRenderTransform(const R_Scene *scene, R_EntityHandle handle, f32 interp_t)
+{
+	u32 index = DensePoolIndexFromID(&scene->entity_pool, handle.id);
+	const R_Object *object = &scene->entities[index].object;
+	return M4Lerp(object->prev_transform, object->transform, interp_t);
+}
+
+internal f32 R_SceneInterpolationFactor(const R_Scene *scene, f32 alpha)
+{
+	u32 k = scene->last_sim_step_count;
+
+	if (k == 0)
+		return 1.f;
+
+	f32 t = ((f32)k - 1.f + alpha) / (f32)k;
+	return ClampValue(t, 0.f, 1.f);
 }
 
 internal void R_SceneSetObjectLocalSphereBounds(R_Scene *scene, R_EntityHandle handle, v4 local_sphere_bounds)
@@ -174,31 +245,18 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	DebugLogAssert(scene->log_channel, iok, "Index region allocation failed after R_GeometryFreeListAvailable returned true.");
 	
 	const u64 index_stride = G_IndexTypeStride(desc->index_type);
-	
-	G_BufferCopy vc = {0};
-	vc.src_offset = 0;
-	vc.dst_offset = vertex_offset * desc->vertex_stride;
-	vc.size = desc->vertex_count * desc->vertex_stride;
 
-	G_BufferCopy ic = {0};
-	ic.src_offset = 0;
-	ic.dst_offset = index_offset * index_stride;
-	ic.size = desc->index_count * index_stride;
+	// The region was just taken off the free list, so no recorded frame can
+	// be reading it (freed regions are retired, see R_SceneFreeMesh). Write
+	// straight into the mapped page; the next queue submit makes the host
+	// writes visible to the GPU.
+	{
+		u8 *vertices_mapped = G_BufferMap(page->vertex_buffer);
+		u8 *indices_mapped = G_BufferMap(page->index_buffer);
 
-	R_ScenePageMeshCopy copy = {0};
-	copy.vertices = desc->vertices;
-	copy.vertex_size = desc->vertex_count * desc->vertex_stride;
-	copy.vertex_offset_dst = vertex_offset * desc->vertex_stride;
-	copy.indices = desc->indices;
-	copy.index_size = desc->index_count * index_stride;
-	copy.index_offset_dst = index_offset * index_stride;
-	copy.dst_page_index = page_index;
-
-	DebugLogAssert(scene->log_channel,
-				   scene->page_mesh_copy_count < ArraySize(scene->page_mesh_copies),
-				   "Ran out of mesh upload buffer!!!!!!!!!!! SHITTTTTT");
-
-	scene->page_mesh_copies[scene->page_mesh_copy_count++] = copy;
+		MemCopy(vertices_mapped + vertex_offset * desc->vertex_stride, desc->vertices, desc->vertex_count * desc->vertex_stride);
+		MemCopy(indices_mapped + index_offset * index_stride, desc->indices, desc->index_count * index_stride);
+	}
 	
 	R_GPU_RenderMesh *gpu_mesh = &scene->gpu_meshes[slot_index];
 	gpu_mesh->index_count = desc->index_count;
@@ -219,8 +277,8 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 	alloc->vertex_count = desc->vertex_count;
 	alloc->index_offset = index_offset;
 	alloc->index_count = desc->index_count;
-	
-	scene->mesh_buffer_dirty = true;
+
+	scene->mesh_high_water = MaxValue(scene->mesh_high_water, slot_index + 1);
 	
 	R_MeshHandle handle = {0};
 	handle.slot_index = slot_index;
@@ -231,8 +289,19 @@ internal R_MeshHandle R_SceneAllocMesh(R_Scene *scene, const R_MeshDesc *desc)
 
 internal void R_SceneFreeMesh(R_Scene *scene, R_MeshHandle handle)
 {
-	// TODO: what about the gpu mesh data in the pages???????????? TODO TODO TODO
-	// importatn1!!!!!
+	// The table slot can be reused straight away (every packet carries its
+	// own copy of the mesh table), but the page region can't: frames
+	// already handed to the render side may still draw it.
+	DebugLogAssert(scene->log_channel,
+				   scene->retired_region_count < ArraySize(scene->retired_regions),
+				   "Too many mesh regions waiting to retire.");
+
+	R_SceneRetiredRegion *retired = &scene->retired_regions[scene->retired_region_count++];
+	retired->region = scene->mesh_allocs[handle.slot_index];
+	retired->retire_frame = scene->frame_number;
+
+	MemZeroStruct(&scene->gpu_meshes[handle.slot_index]);
+	MemZeroStruct(&scene->mesh_allocs[handle.slot_index]);
 	
 	SlotPoolFree(&scene->mesh_pool, handle.slot_index);
 }
@@ -273,7 +342,7 @@ internal u32 R_SceneFindSuitablePage(R_Scene *scene,
 
 internal R_GeometryPage R_SceneCreateNewPage(R_Scene *scene, u64 vertex_stride, G_IndexType index_type)
 {
-	DebugLogD(scene->log_channel, "Creating new geometry page...");
+	DebugLogD(scene->log_channel, "Creating a new geometry page... VERTEXSTRIDE: %llu, INDEXTYPE: %u", vertex_stride, index_type);
 
 	// We use vertex pulling so don't need to use VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT.
 	G_BufferAllocInfo vb_info = {0};
@@ -330,7 +399,7 @@ internal R_MaterialHandle R_SceneAddMaterial(R_Scene *scene, const R_Material *m
 	scene->cpu_materials[slot_index] = *material;
 	
 	R_SceneBakeMaterialIntoGPU(scene, material, &scene->gpu_materials[slot_index]);
-	scene->material_buffer_dirty = true;
+	scene->material_high_water = MaxValue(scene->material_high_water, slot_index + 1);
 
 	R_MaterialHandle handle = {0};
 	handle.index = slot_index;
@@ -347,11 +416,12 @@ internal R_MaterialHandle R_SceneAddMaterialFromAssets(R_Scene *scene, const A_M
 internal void R_SceneUpdateMaterial(R_Scene *scene, R_MaterialHandle handle, const R_Material *material)
 {
 	scene->cpu_materials[handle.index] = *material;
-	scene->material_buffer_dirty = true;
+	R_SceneBakeMaterialIntoGPU(scene, material, &scene->gpu_materials[handle.index]);
 }
 
 internal void R_SceneFreeMaterial(R_Scene *scene, R_MaterialHandle handle)
 {
+	MemZeroStruct(&scene->gpu_materials[handle.index]);
 	SlotPoolFree(&scene->material_pool, handle.index);
 }
 
@@ -363,41 +433,6 @@ internal u32 R_SceneCountOfMaterials(const R_Scene *scene)
 internal const R_Material *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle)
 {
 	return &scene->cpu_materials[handle.index];
-}
-
-internal void R_SceneFlushIfDirty(R_Scene *scene)
-{
-	if (scene->mesh_buffer_dirty)
-	{
-		if (scene->page_mesh_copy_count > 0)
-		{
-			G_CmdBuffer cmd = G_SubmitImBegin();
-
-			for (u32 i = 0; i < scene->page_mesh_copy_count; i++)
-			{
-				R_ScenePageMeshCopy *copy = &scene->page_mesh_copies[i];
-				
-				R_GeometryPage *page = &scene->geometry_pages[copy->dst_page_index];
-				
-				uptr vertices_mapped = (uptr)G_BufferMap(page->vertex_buffer);
-				uptr indices_mapped = (uptr)G_BufferMap(page->index_buffer);
-
-				MemCopy((void *)(vertices_mapped + copy->vertex_offset_dst), copy->vertices, copy->vertex_size);
-				MemCopy((void *)(indices_mapped + copy->index_offset_dst), copy->indices, copy->index_size);
-			}
-	
-			G_SubmitImEnd(&cmd);
-		}
-		
-		G_BufferWrite(scene->mesh_buffer, scene->gpu_meshes, sizeof(scene->gpu_meshes), 0);
-		scene->mesh_buffer_dirty = false;
-	}
-
-	if (scene->material_buffer_dirty)
-	{
-		G_BufferWrite(scene->material_buffer, scene->gpu_materials, sizeof(scene->gpu_materials), 0);
-		scene->material_buffer_dirty = false;
-	}
 }
 
 internal void R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out)

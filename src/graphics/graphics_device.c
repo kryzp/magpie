@@ -315,10 +315,14 @@ internal void G_InitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_ch
 	device->log_channel_performance = osapi->LogChannelOpenFrom(log_channel, String8Lit("PERFORMANCE"));
 	device->log_channel_cmd_buffer = osapi->LogChannelOpenFrom(log_channel, String8Lit("CMD"));
 	
-	for (u32 i = 0; i < ArraySize(device->frames_in_flight); i++)
-		device->frames_in_flight[i].arena = ArenaAlloc(Megabytes(64));
-
 	device->current_frame_in_flight_index = 0;
+	device->atomic_retire_frame = 0;
+	device->destroy_queue = (G_DestroyQueue){0};
+	device->queue_spinlock = 0;
+	device->view_cache_spinlock = 0;
+	device->bindless_apply_spinlock = 0;
+	device->pipeline_cache_spinlock = 0;
+	device->immediate_mutex = osapi->FiberMutexCreate();
 
 	G_ResourceListInit(&device->pipeline_layouts);
 	G_ResourceListInit(&device->pipelines);
@@ -774,13 +778,8 @@ internal void G_InitAndSelect(G_Device *device, Arena *arena, LOG_Channel log_ch
 
 internal void G_Destroy(void)
 {
-	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
-	{
-		G_FrameInFlight *frame = &g_device->frames_in_flight[i];
-		G_WaitUntil(frame->completion_point);
-		G_FlushInFlightFrame(frame);
-		ArenaRelease(&frame->arena);
-	}
+	G_WaitIdle();
+	G_ReleaseRetired(0, true);
 	
 	// pipeline layouts, pipelines and texture views are special and cached
 	// internally without any API to destroy them so we
@@ -810,6 +809,8 @@ internal void G_Destroy(void)
 	G_DestroyImGui();
 	G_DestroyBindless();
 	G_DestroySyncResources();
+	
+	osapi->FiberMutexDestroy(g_device->immediate_mutex);
 
 	vkDestroyPipelineCache(g_device->vk_device, g_device->pipeline_process_cache, NULL);
 	osapi->VulkanSurfaceDestroy(g_device->vk_instance, g_device->vk_surface);
@@ -847,53 +848,143 @@ internal b32 G_FeatureEnabled(G_FeatureType type)
 	return g_device->features.enabled.set[type];
 }
 
-internal void G_FlushInFlightFrame(G_FrameInFlight *frame)
+internal void G_SetRetiredFrame(u64 frame_number)
 {
-	for (G_DestroyedImage *img = frame->destroyed_image_head; img; img = img->next)
-	{
-		G_ResourceListReturn(&g_device->textures, img->key);
-		vmaDestroyImage(g_device->vma_allocator, img->image, img->allocation);
-	}
+	osapi->AtomicStoreI64(&g_device->atomic_retire_frame, (i64)frame_number);
+}
 
-	for (G_DestroyedBuffer *b = frame->destroyed_buffer_head; b; b = b->next)
-	{
-		G_ResourceListReturn(&g_device->buffers, b->key);
-		vmaDestroyBuffer(g_device->vma_allocator, b->buffer, b->allocation);
-	}
-	
-	for (G_DestroyedSampler *s = frame->destroyed_sampler_head; s; s = s->next)
-	{
-		G_ResourceListReturn(&g_device->samplers, s->key);
-		vkDestroySampler(g_device->vk_device, s->sampler, NULL);
-		G_BindlessFreeSampler(&g_device->bindless, s->bindless);
-	}
-	
-	for (G_DestroyedShaderProgram *sh = frame->destroyed_shader_head; sh; sh = sh->next)
-	{
-		G_ResourceListReturn(&g_device->shaders, sh->key);
-	}
-	
-	for (G_DestroyedAccelStruct *a = frame->destroyed_as_head; a; a = a->next)
-	{
-		G_ResourceListReturn(&g_device->accel_structures, a->key);
-		vkDestroyAccelerationStructureKHR(g_device->vk_device, a->handle, NULL);
-	}
-	
-	frame->destroyed_sampler_head = NULL;
-	frame->destroyed_image_head = NULL;
-	frame->destroyed_buffer_head = NULL;
+internal G_PendingDestroy *G_PushPendingDestroy(G_PendingDestroyKind kind, G_ResourceKey key)
+{
+	G_DestroyQueue *q = &g_device->destroy_queue;
 
-	ArenaReset(&frame->arena);
+	osapi->SpinLockAcquire(&q->spinlock);
+
+	G_PendingDestroy *node = q->free_list;
+
+	if (node)
+		q->free_list = node->next;
+	else
+		node = ArenaPushArray(g_device->permanent_arena, G_PendingDestroy, 1);
+
+	MemZeroStruct(node);
+	node->kind = kind;
+	node->key = key;
+	node->retire_frame = (u64)osapi->AtomicLoadI64(&g_device->atomic_retire_frame);
+
+	if (q->last)
+		q->last->next = node;
+	else
+		q->first = node;
+
+	q->last = node;
+
+	osapi->SpinLockRelease(&q->spinlock);
+
+	return node;
+}
+
+internal void G_DestroyPendingNow(G_PendingDestroy *d)
+{
+	switch (d->kind)
+	{
+		case G_PendingDestroyKind_Image:
+		{
+			G_ResourceListReturn(&g_device->textures, d->key);
+			vmaDestroyImage(g_device->vma_allocator, d->image.image, d->image.allocation);
+		}
+		break;
+
+		case G_PendingDestroyKind_Buffer:
+		{
+			G_ResourceListReturn(&g_device->buffers, d->key);
+			vmaDestroyBuffer(g_device->vma_allocator, d->buffer.buffer, d->buffer.allocation);
+		}
+		break;
+
+		case G_PendingDestroyKind_Sampler:
+		{
+			G_ResourceListReturn(&g_device->samplers, d->key);
+			vkDestroySampler(g_device->vk_device, d->sampler.sampler, NULL);
+			G_BindlessFreeSampler(&g_device->bindless, d->sampler.bindless);
+		}
+		break;
+
+		case G_PendingDestroyKind_Shader:
+		{
+			G_ResourceListReturn(&g_device->shaders, d->key);
+		}
+		break;
+
+		case G_PendingDestroyKind_AccelStruct:
+		{
+			G_ResourceListReturn(&g_device->accel_structures, d->key);
+			vkDestroyAccelerationStructureKHR(g_device->vk_device, d->accel.handle, NULL);
+		}
+		break;
+
+		default: break;
+	}
+}
+
+// Releases every queued destroy whose retire frame is <= completed_frame
+// (or everything, at shutdown, after the device is idle).
+internal void G_ReleaseRetired(u64 completed_frame, b32 release_all)
+{
+	G_DestroyQueue *q = &g_device->destroy_queue;
+
+	for (;;)
+	{
+		osapi->SpinLockAcquire(&q->spinlock);
+
+		G_PendingDestroy *node = q->first;
+
+		if (!node || (!release_all && node->retire_frame > completed_frame))
+		{
+			osapi->SpinLockRelease(&q->spinlock);
+			break;
+		}
+
+		q->first = node->next;
+		if (!q->first)
+			q->last = NULL;
+
+		G_PendingDestroy copy = *node;
+
+		node->next = q->free_list;
+		q->free_list = node;
+
+		osapi->SpinLockRelease(&q->spinlock);
+
+		G_DestroyPendingNow(&copy);
+	}
 }
 
 // TODO: BeginFrame / EndFrame should be moved into the swapchain.
 
-internal G_CmdBuffer G_BeginFrame(G_Swapchain *swapchain)
+internal void G_FrameWait(u64 frame_number)
 {
+	g_device->current_frame_in_flight_index = (u32)(frame_number % G_FRAMES_IN_FLIGHT);
+
 	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_WaitUntil(frame_in_flight->completion_point);
-	G_FlushInFlightFrame(frame_in_flight);
+
+	frame_in_flight->frame_number = frame_number;
+
+	if (frame_number >= G_FRAMES_IN_FLIGHT)
+		G_ReleaseRetired(frame_number - G_FRAMES_IN_FLIGHT, false);
+
+	G_CmdPoolPurge(&frame_in_flight->command_pool, frame_in_flight->completion_point.frame);
+}
+
+internal u32 G_FrameSlotIndex(void)
+{
+	return g_device->current_frame_in_flight_index;
+}
+
+internal G_CmdBuffer G_BeginFrame(G_Swapchain *swapchain)
+{
+	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {0};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
@@ -909,8 +1000,6 @@ internal G_CmdBuffer G_BeginFrame(G_Swapchain *swapchain)
 		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		DebugLogB(g_device->log_channel, "Failed to acquire next image in swapchain.");
-
-	G_CmdPoolPurge(&frame_in_flight->command_pool, frame_in_flight->completion_point.frame);
 
 	G_CmdBuffer cmd = G_CmdPoolAcquire(&frame_in_flight->command_pool);
 	G_CmdBegin(&cmd);
@@ -948,7 +1037,9 @@ internal void G_EndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = &swapchain_frame->render_finished_semaphore;
 
+	osapi->SpinLockAcquire(&g_device->queue_spinlock);
 	VkResult result = vkQueuePresentKHR(g_device->graphics_queue.vk_handle, &present_info);
+	osapi->SpinLockRelease(&g_device->queue_spinlock);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 		DebugLogB(g_device->log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -956,8 +1047,6 @@ internal void G_EndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd)
 		DebugLogB(g_device->log_channel, "Failed to present swapchain image. (%u)", result);
 
 	G_CmdPoolRelease(&frame_in_flight->command_pool, cmd, frame_in_flight->completion_point.frame);
-	
-	g_device->current_frame_in_flight_index = (g_device->current_frame_in_flight_index + 1) % G_FRAMES_IN_FLIGHT;
 }
 
 internal G_TimelinePoint G_Submit(const G_CmdBuffer *cmd)
@@ -971,9 +1060,11 @@ internal G_TimelinePoint G_SubmitEx(const G_CmdBuffer *cmd,
 {
 	G_CmdEnd(cmd);
 
-	G_TimelinePoint timeline_point = G_SemaphoreSignal(&g_device->graphics_semaphore);
-
 	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	osapi->SpinLockAcquire(&g_device->queue_spinlock);
+
+	G_TimelinePoint timeline_point = G_SemaphoreSignal(&g_device->graphics_semaphore);
 
 	VkSemaphoreSubmitInfo *all_signals = ArenaPushArray(scratch.arena, VkSemaphoreSubmitInfo, 1 + signal_count);
 
@@ -1006,8 +1097,11 @@ internal G_TimelinePoint G_SubmitEx(const G_CmdBuffer *cmd,
 	submit_info.signalSemaphoreInfoCount = 1 + signal_count;
 	submit_info.pSignalSemaphoreInfos = all_signals;
 
-	G_VK_CHECK(vkQueueSubmit2(g_device->graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE),
-			   "Failed to submit command to queue.");
+	VkResult submit_result = vkQueueSubmit2(g_device->graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE);
+
+	osapi->SpinLockRelease(&g_device->queue_spinlock);
+
+	G_VK_CHECK(submit_result, "Failed to submit command to queue.");
 
 	ScratchRelease(&scratch);
 
@@ -1016,9 +1110,9 @@ internal G_TimelinePoint G_SubmitEx(const G_CmdBuffer *cmd,
 
 internal G_CmdBuffer G_SubmitImBegin(void)
 {
-	vkQueueWaitIdle(g_device->graphics_queue.vk_handle);
+	osapi->FiberMutexLock(g_device->immediate_mutex);
 
-	G_CmdBuffer cmd = G_CmdPoolAcquire(&g_device->frames_in_flight[g_device->current_frame_in_flight_index].command_pool);
+	G_CmdBuffer cmd = G_CmdPoolAcquire(&g_device->immediate_pool);
 	G_CmdBegin(&cmd);
 
 	return cmd;
@@ -1026,7 +1120,15 @@ internal G_CmdBuffer G_SubmitImBegin(void)
 
 internal void G_SubmitImEnd(const G_CmdBuffer *cmd)
 {
-	G_WaitUntil(G_Submit(cmd));
+	G_ApplyBindlessUpdates();
+	
+	G_TimelinePoint point = G_Submit(cmd);
+	G_WaitUntil(point);
+
+	G_CmdPoolRelease(&g_device->immediate_pool, cmd, point.frame);
+	G_CmdPoolPurge(&g_device->immediate_pool, point.frame);
+
+	osapi->FiberMutexUnlock(g_device->immediate_mutex);
 }
 
 // TODO: We really shouldn't need to initialize
@@ -1078,7 +1180,9 @@ internal void G_QueryPoolDestroy(VkQueryPool pool)
 
 internal void G_WaitIdle(void)
 {
+	osapi->SpinLockAcquire(&g_device->queue_spinlock);
 	vkDeviceWaitIdle(g_device->vk_device);
+	osapi->SpinLockRelease(&g_device->queue_spinlock);
 }
 
 internal void G_WaitForFence(VkFence fence)
@@ -1456,7 +1560,7 @@ internal VkPipelineLayout G_PipelineLayoutFromKey(G_ResourceKey key)
 	return resource ? resource->pipeline_layout : VK_NULL_HANDLE;
 }
 
-internal G_PipelineSt G_FetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
+internal G_PipelineSt G_FetchGraphicsPipelineUnlocked(const G_GraphicsPipelineDef *def)
 {
 	u64 hashed_key_value = HashBytesGeneric(def, sizeof(*def));
 	G_ResourceKey hashed_key = { hashed_key_value };
@@ -1658,7 +1762,15 @@ internal G_PipelineSt G_FetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
 	return st;
 }
 
-internal G_PipelineSt G_FetchComputePipeline(const G_ComputePipelineDef *def)
+internal G_PipelineSt G_FetchGraphicsPipeline(const G_GraphicsPipelineDef *def)
+{
+	osapi->SpinLockAcquire(&g_device->pipeline_cache_spinlock);
+	G_PipelineSt result = G_FetchGraphicsPipelineUnlocked(def);
+	osapi->SpinLockRelease(&g_device->pipeline_cache_spinlock);
+	return result;
+}
+
+internal G_PipelineSt G_FetchComputePipelineUnlocked(const G_ComputePipelineDef *def)
 {
 	u64 hashed_key_value = HashBytesGeneric(def, sizeof(*def));
 	G_ResourceKey hashed_key = { hashed_key_value };
@@ -1716,6 +1828,14 @@ internal G_PipelineSt G_FetchComputePipeline(const G_ComputePipelineDef *def)
 	st.bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
 	
 	return st;
+}
+
+internal G_PipelineSt G_FetchComputePipeline(const G_ComputePipelineDef *def)
+{
+	osapi->SpinLockAcquire(&g_device->pipeline_cache_spinlock);
+	G_PipelineSt result = G_FetchComputePipelineUnlocked(def);
+	osapi->SpinLockRelease(&g_device->pipeline_cache_spinlock);
+	return result;
 }
 
 internal VkPipeline G_PipelineFromKey(G_ResourceKey key)
@@ -1908,15 +2028,9 @@ internal void G_TextureDestroy(G_ResourceKey key)
 	G_Texture *texture = G_TextureFromKey(key);
 	DebugLogAssert(g_device->log_channel, texture, "Invalid texture with key %llu when destroying.", key.value);
 
-	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
-
-	G_DestroyedImage *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedImage, 1);
-	node->next = frame_in_flight->destroyed_image_head;
-	frame_in_flight->destroyed_image_head = node;
-
-	node->key = key;
-	node->image = texture->vk_handle;
-	node->allocation = texture->allocation;
+	G_PendingDestroy *node = G_PushPendingDestroy(G_PendingDestroyKind_Image, key);
+	node->image.image = texture->vk_handle;
+	node->image.allocation = texture->allocation;
 }
 
 internal G_Texture *G_TextureFromKey(G_ResourceKey key)
@@ -1925,7 +2039,7 @@ internal G_Texture *G_TextureFromKey(G_ResourceKey key)
 	return resource ? &resource->texture : NULL;
 }
 
-internal G_ResourceKey G_TextureViewFetch(const G_TextureViewCreateInfo *info)
+internal G_ResourceKey G_TextureViewFetchUnlocked(const G_TextureViewCreateInfo *info)
 {
 	G_ResourceKey hashed_key = { HashBytesGeneric(info, sizeof(*info)) };
 	
@@ -1970,6 +2084,14 @@ internal G_ResourceKey G_TextureViewFetch(const G_TextureViewCreateInfo *info)
 	resource.texture_view = view;
 	
 	return G_ResourceListPush(&g_device->texture_views, g_device->permanent_arena, &resource, hashed_key);
+}
+
+internal G_ResourceKey G_TextureViewFetch(const G_TextureViewCreateInfo *info)
+{
+	osapi->SpinLockAcquire(&g_device->view_cache_spinlock);
+	G_ResourceKey result = G_TextureViewFetchUnlocked(info);
+	osapi->SpinLockRelease(&g_device->view_cache_spinlock);
+	return result;
 }
 
 internal G_ResourceKey G_TextureViewAuto(G_ResourceKey texture)
@@ -2019,6 +2141,7 @@ internal G_ResourceKey G_BufferAlloc(const G_BufferAllocInfo *alloc_info)
 	buffer.allocation_flags = alloc_info->flags;
 
 	// just implicitly make all storage buffers have device address
+	// todo: is this a good idea?
 	if ((buffer.usage & VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT) != 0)
 		buffer.usage |= VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT;
 
@@ -2072,15 +2195,9 @@ internal void G_BufferDestroy(G_ResourceKey key)
 	G_Buffer *buffer = G_BufferFromKey(key);
 	DebugLogAssert(g_device->log_channel, buffer, "Invalid buffer with key %llu when destroying.", key.value);
 
-	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
-
-	G_DestroyedBuffer *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedBuffer, 1);
-	node->next = frame_in_flight->destroyed_buffer_head;
-	frame_in_flight->destroyed_buffer_head = node;
-
-	node->key = key;
-	node->buffer = buffer->vk_handle;
-	node->allocation = buffer->allocation;
+	G_PendingDestroy *node = G_PushPendingDestroy(G_PendingDestroyKind_Buffer, key);
+	node->buffer.buffer = buffer->vk_handle;
+	node->buffer.allocation = buffer->allocation;
 }
 
 internal G_Buffer *G_BufferFromKey(G_ResourceKey key)
@@ -2188,15 +2305,9 @@ internal void G_SamplerDestroy(G_ResourceKey key)
 	G_Sampler *sampler = G_SamplerFromKey(key);
 	DebugLogAssert(g_device->log_channel, sampler, "Invalid sampler with key %llu when destroying.", key.value);
 
-	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
-
-	G_DestroyedSampler *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedSampler, 1);
-	node->next = frame_in_flight->destroyed_sampler_head;
-	frame_in_flight->destroyed_sampler_head = node;
-
-	node->key = key;
-	node->sampler = sampler->vk_handle;
-	node->bindless = sampler->bindless;
+	G_PendingDestroy *node = G_PushPendingDestroy(G_PendingDestroyKind_Sampler, key);
+	node->sampler.sampler = sampler->vk_handle;
+	node->sampler.bindless = sampler->bindless;
 }
 
 internal G_Sampler *G_SamplerFromKey(G_ResourceKey key)
@@ -2294,13 +2405,7 @@ internal void G_ShaderProgramDestroy(G_ResourceKey key)
 	G_ShaderProgram *shader = G_ShaderProgramFromKey(key);
 	DebugLogAssert(g_device->log_channel, shader, "Invalid shader program with key %llu when destroying.", key.value);
 
-	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
-
-	G_DestroyedShaderProgram *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedShaderProgram, 1);
-	node->next = frame_in_flight->destroyed_shader_head;
-	frame_in_flight->destroyed_shader_head = node;
-
-	node->key = key;
+	G_PushPendingDestroy(G_PendingDestroyKind_Shader, key);
 }
 
 internal G_ShaderProgram *G_ShaderProgramFromKey(G_ResourceKey key)
@@ -2343,6 +2448,7 @@ internal G_AllocAccelStructReceipt G_BLASAlloc(const G_BLASGeometry *geometries,
 	}
 
 	// so much fucking typing oh my god.
+	
 	VkAccelerationStructureBuildGeometryInfoKHR build_info = {0};
 	build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
 	build_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
@@ -2480,17 +2586,11 @@ internal void G_AccelStructDestroy(G_ResourceKey key)
 {
 	G_AccelStruct *accel_struct = G_AccelStructFromKey(key);
 	DebugLogAssert(g_device->log_channel, accel_struct, "Invalid acceleration structure with key %llu when destroying.", key.value);
-	
-	G_FrameInFlight *frame_in_flight = &g_device->frames_in_flight[g_device->current_frame_in_flight_index];
 
 	G_BufferDestroy(accel_struct->backing_buffer);
 
-	G_DestroyedAccelStruct *node = ArenaPushArray(&frame_in_flight->arena, G_DestroyedAccelStruct, 1);
-	node->next = frame_in_flight->destroyed_as_head;
-	frame_in_flight->destroyed_as_head = node;
-
-	node->key = key;
-	node->handle = accel_struct->vk_handle;
+	G_PendingDestroy *node = G_PushPendingDestroy(G_PendingDestroyKind_AccelStruct, key);
+	node->accel.handle = accel_struct->vk_handle;
 }
 
 internal u64 G_AccelStructAddress(G_ResourceKey key)
@@ -2535,12 +2635,10 @@ internal void G_CreateSyncResources(void)
 					   "Failed to create image available semaphore.");
 		}
 		
-		frame->destroyed_image_head = NULL;
-		frame->destroyed_buffer_head = NULL;
-		frame->destroyed_sampler_head = NULL;
-		frame->destroyed_shader_head = NULL;
-		frame->destroyed_as_head = NULL;
+		frame->frame_number = 0;
 	}
+
+	g_device->immediate_pool = G_CmdPoolCreate(family_index);
 
 	DebugLogD(g_device->log_channel, "Created frame sync objects.");
 }
@@ -2555,6 +2653,7 @@ internal void G_DestroySyncResources(void)
 		G_CmdPoolDestroy(&frame->command_pool);
 	}
 
+	G_CmdPoolDestroy(&g_device->immediate_pool);
 	G_SemaphoreDestroy(&g_device->graphics_semaphore);
 }
 
@@ -2635,39 +2734,43 @@ internal void G_DestroyBindless(void)
 
 internal void G_ApplyBindlessUpdates(void)
 {
-	if (g_device->bindless.update_count == 0)
-		return;
-
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	u32 count = g_device->bindless.update_count;
+	G_BindlessUpdate *updates = ArenaPushArray(scratch.arena, G_BindlessUpdate, G_BINDLESS_MAX_UPDATES);
 
-	VkWriteDescriptorSet *writes = ArenaPushArray(scratch.arena, VkWriteDescriptorSet, count);
-	VkDescriptorImageInfo *infos = ArenaPushArray(scratch.arena, VkDescriptorImageInfo, count);
+	osapi->SpinLockAcquire(&g_device->bindless_apply_spinlock);
+	
+	u32 count = G_BindlessDrainUpdates(&g_device->bindless, updates);
 
-	for (u32 i = 0; i < count; i++)
+	if (count > 0)
 	{
-		G_BindlessUpdate *update = &g_device->bindless.updates[i];
+		VkWriteDescriptorSet *writes = ArenaPushArray(scratch.arena, VkWriteDescriptorSet, count);
+		VkDescriptorImageInfo *infos = ArenaPushArray(scratch.arena, VkDescriptorImageInfo, count);
 
-		infos[i].sampler = update->sampler;
-		infos[i].imageView = update->view;
-		infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		for (u32 i = 0; i < count; i++)
+		{
+			G_BindlessUpdate *update = &updates[i];
 
-		writes[i] = (VkWriteDescriptorSet) {0};
-		writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		writes[i].descriptorCount = 1;
-		writes[i].dstArrayElement = update->slot;
-		writes[i].descriptorType = G_BindlessGetVkType(update->kind);
-		writes[i].dstSet = g_device->bindless.set;
-		writes[i].dstBinding = update->kind;
-		writes[i].pImageInfo = &infos[i];
+			infos[i].sampler = update->sampler;
+			infos[i].imageView = update->view;
+			infos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+			writes[i] = (VkWriteDescriptorSet) {0};
+			writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writes[i].descriptorCount = 1;
+			writes[i].dstArrayElement = update->slot;
+			writes[i].descriptorType = G_BindlessGetVkType(update->kind);
+			writes[i].dstSet = g_device->bindless.set;
+			writes[i].dstBinding = update->kind;
+			writes[i].pImageInfo = &infos[i];
+		}
+
+		vkUpdateDescriptorSets(g_device->vk_device,
+							   count, writes,
+							   0, NULL);
 	}
 
-	vkUpdateDescriptorSets(g_device->vk_device,
-						   count, writes,
-						   0, NULL);
-
-	g_device->bindless.update_count = 0;
+	osapi->SpinLockRelease(&g_device->bindless_apply_spinlock);
 
 	ScratchRelease(&scratch);
 }

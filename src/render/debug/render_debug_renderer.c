@@ -38,7 +38,7 @@ internal void R_DebugCreateLineMesh(void)
 				ArraySize(vertices), ArraySize(indices));
 
 	G_ResourceKey staging = G_StageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->line_mesh) +
-											 R_MeshIndexBufferSize(&r_selected_debug_renderer->line_mesh));
+										 R_MeshIndexBufferSize(&r_selected_debug_renderer->line_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->line_mesh, staging, 0, vertices, indices);
 
@@ -74,7 +74,7 @@ internal void R_DebugCreateCrossMesh(void)
 				ArraySize(vertices), ArraySize(indices));
 
 	G_ResourceKey staging = G_StageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cross_mesh) +
-											 R_MeshIndexBufferSize(&r_selected_debug_renderer->cross_mesh));
+										 R_MeshIndexBufferSize(&r_selected_debug_renderer->cross_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->cross_mesh, staging, 0, vertices, indices);
 
@@ -126,7 +126,7 @@ internal void R_DebugCreateSphereMesh(void)
 				vertex_count, index_count);
 
 	G_ResourceKey staging = G_StageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->sphere_mesh) +
-											 R_MeshIndexBufferSize(&r_selected_debug_renderer->sphere_mesh));
+										 R_MeshIndexBufferSize(&r_selected_debug_renderer->sphere_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->sphere_mesh, staging, 0, vertices, indices);
 
@@ -143,9 +143,9 @@ internal void R_DebugCreateCircleMesh(void)
 {
 	ScratchArena scratch = ScratchBegin(NULL, 0);
 
-	u32 segments     = 32;
+	const u32 segments = 32;
 	u32 vertex_count = segments;
-	u32 index_count  = segments * 2;
+	u32 index_count = segments * 2;
 
 	v3  *vertices = ArenaPushArray(scratch.arena, v3,  vertex_count);
 	u16 *indices  = ArenaPushArray(scratch.arena, u16, index_count);
@@ -164,7 +164,7 @@ internal void R_DebugCreateCircleMesh(void)
 				vertex_count, index_count);
 
 	G_ResourceKey staging = G_StageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->circle_mesh) +
-											 R_MeshIndexBufferSize(&r_selected_debug_renderer->circle_mesh));
+										 R_MeshIndexBufferSize(&r_selected_debug_renderer->circle_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->circle_mesh, staging, 0, vertices, indices);
 
@@ -191,9 +191,9 @@ internal void R_DebugCreateCubeMesh(void)
 	};
 
 	static const u16 indices[] = {
-		0, 1,  1, 2,  2, 3,  3, 0,
-		4, 5,  5, 6,  6, 7,  7, 4,
-		0, 4,  1, 5,  2, 6,  3, 7,
+		0, 1, 1, 2, 2, 3, 3, 0,
+		4, 5, 5, 6, 6, 7, 7, 4,
+		0, 4, 1, 5, 2, 6, 3, 7,
 	};
 
 	R_MeshAlloc(&r_selected_debug_renderer->cube_mesh,
@@ -201,7 +201,7 @@ internal void R_DebugCreateCubeMesh(void)
 				ArraySize(vertices), ArraySize(indices));
 
 	G_ResourceKey staging = G_StageAlloc(R_MeshVertexBufferSize(&r_selected_debug_renderer->cube_mesh) +
-											 R_MeshIndexBufferSize(&r_selected_debug_renderer->cube_mesh));
+										 R_MeshIndexBufferSize(&r_selected_debug_renderer->cube_mesh));
 
 	R_MeshWriteToStage(&r_selected_debug_renderer->cube_mesh, staging, 0, vertices, indices);
 
@@ -215,14 +215,7 @@ internal void R_DebugCreateCubeMesh(void)
 internal void R_DebugRendererInitAndSelect(R_DebugRenderer *dr, Arena *arena)
 {
 	dr->arena = arena;
-
-	G_BufferAllocInfo buf_info = {0};
-	buf_info.usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	buf_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-	buf_info.size = sizeof(R_GPU_DebugObjectDraw) * R_DEBUG_MAX_DRAWS;
-
-	dr->depth_enabled_buffer = G_BufferAlloc(&buf_info);
-	dr->depth_disabled_buffer = G_BufferAlloc(&buf_info);
+	dr->spinlock = 0;
 	
 	R_DebugRendererSelect(dr);
 
@@ -241,9 +234,6 @@ internal void R_DebugRendererDestroy(void)
 	R_MeshDestroy(&r_selected_debug_renderer->circle_mesh);
 	R_MeshDestroy(&r_selected_debug_renderer->cube_mesh);
 
-	G_BufferDestroy(r_selected_debug_renderer->depth_enabled_buffer);
-	G_BufferDestroy(r_selected_debug_renderer->depth_disabled_buffer);
-
 	r_selected_debug_renderer = NULL;
 }
 
@@ -253,9 +243,11 @@ internal void R_DebugRendererSelect(R_DebugRenderer *dr)
 }
 
 internal void R_DebugPushDrawCall(R_DebugDrawType type,
-								const R_DebugDrawCall *call,
-								b32 depth_enabled)
+								  const R_DebugDrawCall *call,
+								  b32 depth_enabled)
 {
+	osapi->SpinLockAcquire(&r_selected_debug_renderer->spinlock);
+	
 	R_DebugDrawNode *node = R_DebugAllocNode();
 	node->type = type;
 	node->call = *call;
@@ -266,11 +258,13 @@ internal void R_DebugPushDrawCall(R_DebugDrawType type,
 
 	node->next = *bucket;
 	*bucket = node;
+	
+	osapi->SpinLockRelease(&r_selected_debug_renderer->spinlock);
 }
 
 internal void R_DebugPushLine(v3 from, v3 to,
-							v4 colour, f32 line_width,
-							f32 duration, b32 depth_enabled)
+							  v4 colour, f32 line_width,
+							  f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -284,7 +278,7 @@ internal void R_DebugPushLine(v3 from, v3 to,
 }
 
 internal void R_DebugPushCross(v3 point, f32 size,
-							 v4 colour, f32 duration, b32 depth_enabled)
+							   v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -298,7 +292,7 @@ internal void R_DebugPushCross(v3 point, f32 size,
 }
 
 internal void R_DebugPushSphere(v3 centre, f32 radius,
-							  v4 colour, f32 duration, b32 depth_enabled)
+								v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -312,7 +306,7 @@ internal void R_DebugPushSphere(v3 centre, f32 radius,
 }
 
 internal void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
-							  v4 colour, f32 duration, b32 depth_enabled)
+								v4 colour, f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -327,8 +321,8 @@ internal void R_DebugPushCircle(v3 centre, f32 radius, v3 plane_normal,
 }
 
 internal void R_DebugPushTriangle(v3 a, v3 b, v3 c,
-								v4 colour, f32 line_width,
-								f32 duration, b32 depth_enabled)
+								  v4 colour, f32 line_width,
+								  f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -343,8 +337,8 @@ internal void R_DebugPushTriangle(v3 a, v3 b, v3 c,
 }
 
 internal void R_DebugPushAABB(v3 min, v3 max,
-							v4 colour, f32 line_width,
-							f32 duration, b32 depth_enabled)
+							  v4 colour, f32 line_width,
+							  f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -358,8 +352,8 @@ internal void R_DebugPushAABB(v3 min, v3 max,
 }
 
 internal void R_DebugPushOBB(m4 transform, v3 scale,
-						   v4 colour, f32 line_width,
-						   f32 duration, b32 depth_enabled)
+							 v4 colour, f32 line_width,
+							 f32 duration, b32 depth_enabled)
 {
 	R_DebugDrawCall call = {0};
 	call.colour = colour;
@@ -373,9 +367,10 @@ internal void R_DebugPushOBB(m4 transform, v3 scale,
 }
 
 internal void R_DebugWriteInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
-								 m4 transform, v4 colour, f32 thickness, f32 alpha)
+								   m4 transform, v4 colour, f32 thickness, f32 alpha)
 {
-	AssertTrue(*id < R_DEBUG_MAX_DRAWS);
+	if (*id >= R_DEBUG_MAX_DRAWS)
+		return;
 
 	v4 premul_colour = v4(colour.x * colour.w,
 						  colour.y * colour.w,
@@ -400,7 +395,7 @@ internal f32 R_DebugCallAlpha(const R_DebugDrawCall *call)
 }
 
 internal void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
-									 v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
+									   v3 from, v3 to, v4 colour, f32 thickness, f32 alpha)
 {
 	//v3 direction = V3Normalize (V3Sub(to, from));
 	f32 length = V3Length(V3Sub(to, from));
@@ -412,9 +407,9 @@ internal void R_DebugBuildLineInstance(R_GPU_DebugObjectDraw *draws, u32 *id,
 }
 
 internal void R_DebugBuildInstances(R_DebugRenderer *dr,
-								  R_DebugDrawNode **buckets,
-								  R_GPU_DebugObjectDraw *draws,
-								  u32 *draw_id)
+									R_DebugDrawNode **buckets,
+									R_GPU_DebugObjectDraw *draws,
+									u32 *draw_id)
 {
 	for (u32 type = 0; type < R_DebugDrawType_COUNT; type++)
 	{
@@ -497,17 +492,9 @@ internal void R_DebugBuildInstances(R_DebugRenderer *dr,
 	}
 }
 
-typedef struct R_DebugBatch R_DebugBatch;
-struct R_DebugBatch
-{
-	R_DebugDrawType type;
-	u32 start;
-	u32 count;
-};
-
 internal u32 R_DebugBuildBatches(R_DebugDrawNode **buckets,
-							   R_DebugBatch *out_batches,
-							   u32 *running_id)
+								 R_DebugBatch *out_batches,
+								 u32 *running_id)
 {
 	u32 batch_count = 0;
 
@@ -543,12 +530,9 @@ typedef struct R_DebugPassData R_DebugPassData;
 struct R_DebugPassData
 {
 	const R_FrameParams *frame_params;
-	
-	u32 depth_batch_count;
-	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES];
 
-	u32 no_depth_batch_count;
-	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES];
+	// This frame's instance arrays, in the frame's upload slice.
+	u64 instance_address[R_DebugDepthMode_COUNT];
 };
 
 internal R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
@@ -567,18 +551,18 @@ internal R_Mesh *R_DebugMeshForType(R_DebugDrawType type)
 }
 
 internal void R_DebugDrawBatches(G_CmdBuffer *cmd,
-							   G_PipelineSt *pipeline_st,
-							   const R_DebugBatch *batches,
-							   u32 batch_count,
-							   G_ResourceKey buffer,
-							   m4 view_proj)
+								 G_PipelineSt *pipeline_st,
+								 const R_DebugBatch *batches,
+								 u32 batch_count,
+								 u64 instance_address,
+								 m4 view_proj)
 {
 	G_CmdBindPipeline(cmd, pipeline_st->bind_point, pipeline_st->pipeline);
 
 	for (u32 i = 0; i < batch_count; i++)
 	{
 		const R_DebugBatch *batch = &batches[i];
-		R_Mesh *mesh = R_DebugMeshForType(batch->type);
+		R_Mesh *mesh = R_DebugMeshForType((R_DebugDrawType)batch->type);
 
 		struct
 		{
@@ -586,10 +570,10 @@ internal void R_DebugDrawBatches(G_CmdBuffer *cmd,
 			u64 calls_buffer;
 			u64 vertex_buffer;
 		}
-		args;
+			args;
 
 		args.view_proj = view_proj;
-		args.calls_buffer = G_BufferAddress(buffer);
+		args.calls_buffer = instance_address;
 		args.vertex_buffer = G_BufferAddress(mesh->vertex_buffer);
 
 		G_CmdPushConstants(cmd, pipeline_st->layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);
@@ -623,18 +607,19 @@ internal R_PASS_RECORD_DEF(R_DebugRenderPassFn)
 	pipeline_def.depth_stencil_state.depth_test_enabled = false;
 	G_PipelineSt pipeline_st_no_depth = G_FetchGraphicsPipeline(&pipeline_def);
 	
-	m4 view_proj = data->frame_params->camera.view_proj;
+	m4 view_proj = frame_params->camera.view_proj;
+	const R_DebugPacket *debug = &frame_params->packet->debug;
 	
 	R_DebugDrawBatches(cmd, &pipeline_st,
-					   data->depth_batches,
-					   data->depth_batch_count,
-					   r_selected_debug_renderer->depth_enabled_buffer,
+					   debug->batches[R_DebugDepthMode_Tested],
+					   debug->batch_count[R_DebugDepthMode_Tested],
+					   data->instance_address[R_DebugDepthMode_Tested],
 					   view_proj);
 
 	R_DebugDrawBatches(cmd, &pipeline_st_no_depth,
-					   data->no_depth_batches,
-					   data->no_depth_batch_count,
-					   r_selected_debug_renderer->depth_disabled_buffer,
+					   debug->batches[R_DebugDepthMode_Overlay],
+					   debug->batch_count[R_DebugDepthMode_Overlay],
+					   data->instance_address[R_DebugDepthMode_Overlay],
 					   view_proj);
 }
 
@@ -665,44 +650,81 @@ internal void R_DebugFilterBuckets(R_DebugRenderer *dr, R_DebugDrawNode **bucket
 	}
 }
 
-internal void R_DebugRendererRender(R_Graph *graph,
-								  const R_FrameParams *frame_params,
-								  R_GraphTexHandle target_colour,
-								  R_GraphTexHandle target_depth)
+internal u32 R_DebugCountInstances(R_DebugDrawNode **buckets)
 {
+	u32 count = 0;
+
+	for (u32 type = 0; type < R_DebugDrawType_COUNT; type++)
+		for (R_DebugDrawNode *node = buckets[type]; node; node = node->next)
+			count += (type == R_DebugDrawType_Triangle) ? 3 : 1;
+
+	return MinValue(count, R_DEBUG_MAX_DRAWS);
+}
+
+internal void R_DebugCollectInto(R_FramePacket *packet, f32 dt)
+{
+	R_DebugRenderer *dr = r_selected_debug_renderer;
+	R_DebugPacket *out = &packet->debug;
+
+	osapi->SpinLockAcquire(&dr->spinlock);
+	
 	// Expire old draws and return their nodes to the freelist.
-	R_DebugFilterBuckets(r_selected_debug_renderer, r_selected_debug_renderer->depth_enabled, frame_params->dt);
-	R_DebugFilterBuckets(r_selected_debug_renderer, r_selected_debug_renderer->depth_disabled, frame_params->dt);
+	R_DebugFilterBuckets(dr, dr->depth_enabled, dt);
+	R_DebugFilterBuckets(dr, dr->depth_disabled, dt);
 
-	// Build GPU instance data for both depth modes.
-	u32 depth_enabled_id = 0;
-	u32 depth_disabled_id = 0;
+	R_DebugDrawNode **buckets[R_DebugDepthMode_COUNT] = {
+		dr->depth_enabled,
+		dr->depth_disabled,
+	};
 
-	R_GPU_DebugObjectDraw *depth_enabled_draws  = G_BufferMap(r_selected_debug_renderer->depth_enabled_buffer);
-	R_GPU_DebugObjectDraw *depth_disabled_draws = G_BufferMap(r_selected_debug_renderer->depth_disabled_buffer);
+	for (u32 mode = 0; mode < R_DebugDepthMode_COUNT; mode++)
+	{
+		u32 count = R_DebugCountInstances(buckets[mode]);
+		
+		out->instances[mode] = ArenaPushArray(&packet->arena, R_GPU_DebugObjectDraw, MaxValue(count, 1));
+		out->instance_count[mode] = 0;
 
-	R_DebugBuildInstances(r_selected_debug_renderer, r_selected_debug_renderer->depth_enabled,  depth_enabled_draws,  &depth_enabled_id);
-	R_DebugBuildInstances(r_selected_debug_renderer, r_selected_debug_renderer->depth_disabled, depth_disabled_draws, &depth_disabled_id);
+		R_DebugBuildInstances(dr, buckets[mode], out->instances[mode], &out->instance_count[mode]);
 
-	// Build batch descriptors.
-	u32 depth_running_id = 0;
-	u32 no_depth_running_id = 0;
+		u32 running_id = 0;
+		out->batch_count[mode] = R_DebugBuildBatches(buckets[mode], out->batches[mode], &running_id);
 
-	R_DebugBatch depth_batches[R_DEBUG_MAX_BATCHES] = {0};
-	R_DebugBatch no_depth_batches[R_DEBUG_MAX_BATCHES] = {0};
+		// Keep batches inside what was actually written if we hit the cap.
+		for (u32 b = 0; b < out->batch_count[mode]; b++)
+		{
+			R_DebugBatch *batch = &out->batches[mode][b];
+			u32 end = MinValue(batch->start + batch->count, out->instance_count[mode]);
+			batch->count = (end > batch->start) ? (end - batch->start) : 0;
+		}
+	}
 
-	u32 depth_batch_count = R_DebugBuildBatches(r_selected_debug_renderer->depth_enabled, depth_batches, &depth_running_id);
-	u32 no_depth_batch_count = R_DebugBuildBatches(r_selected_debug_renderer->depth_disabled, no_depth_batches, &no_depth_running_id);
+	osapi->SpinLockRelease(&dr->spinlock);
+}
 
-	// Create the render pass.
+internal void R_DebugRendererRender(R_Graph *graph,
+									const R_FrameParams *frame_params,
+									R_GraphTexHandle target_colour,
+									R_GraphTexHandle target_depth)
+{
+	const R_DebugPacket *debug = &frame_params->packet->debug;
+
+	if (debug->instance_count[R_DebugDepthMode_Tested] == 0 &&
+		debug->instance_count[R_DebugDepthMode_Overlay] == 0)
+	{
+		return;
+	}
+
 	R_DebugPassData *data = ArenaPushArray(frame_params->arena, R_DebugPassData, 1);
 	data->frame_params = frame_params;
-	
-	MemCopy(data->depth_batches, depth_batches, depth_batch_count * sizeof(R_DebugBatch));
-	data->depth_batch_count = depth_batch_count;
 
-	MemCopy(data->no_depth_batches, no_depth_batches, no_depth_batch_count * sizeof(R_DebugBatch));
-	data->no_depth_batch_count = no_depth_batch_count;
+	for (u32 mode = 0; mode < R_DebugDepthMode_COUNT; mode++)
+	{
+		G_Alloc alloc = G_RingBufferPushCopyArray(frame_params->upload,
+												  R_GPU_DebugObjectDraw,
+												  debug->instances[mode],
+												  MaxValue(debug->instance_count[mode], 1));
+		data->instance_address[mode] = alloc.gpu;
+	}
 	
 	R_Pass *pass = R_GraphAdd(graph, String8Lit("Debug Lines"), R_PassType_Graphics);
 	R_PassSetRecord(pass, R_DebugRenderPassFn, data);

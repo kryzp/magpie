@@ -1,6 +1,7 @@
 
 internal void GameRegisterEntities(E_World *world)
 {
+	// todo: this is retarded, this will not survive a hot reload!!!!!!!!!!!
 #define GameEntityDef(type, max)										\
 	{																	\
 		E_TypeDesc desc = {												\
@@ -46,6 +47,9 @@ internal void GameInit(E_World *world)
 internal void GameTick(const OS_InputState *input, f32 dt, f32 elapsed)
 {
 	GameStateStackTick(&game->game_state_stack, game, input, dt, elapsed);
-	
+}
+
+internal void GameUpdateCamera(const OS_InputState *input, f32 dt)
+{
 	CameraDriverDrive(&game->camera_driver, &game->camera, input, dt);
 }

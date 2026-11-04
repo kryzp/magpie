@@ -86,64 +86,82 @@ struct G_HardwareQueue
 	u32 family_index;
 };
 
-typedef struct G_DestroyedImage G_DestroyedImage;
-struct G_DestroyedImage
+/*
+ * ALRIGHTY:
+ * Anything a recorded frame may still read is queued here instead of being destroyed.
+ * Each entry is tagged with the newest frame/packet number, that could reference it
+ * aka: g_device->retire_frame
+ * this is a number that the top level (app) advances whenever it starts a new frame to build.
+ * because the game always runs at or ahead of the rendering, that tag is conservative for destroys issued from either side.
+ * when the render side has waited for frame N's slot, then every frame <= N - G_FRAMES_IN_FLIGHT has finished on the GPU, so it is released.
+ */
+typedef enum G_PendingDestroyKind
 {
-	G_DestroyedImage *next;
+	G_PendingDestroyKind_Image,
+	G_PendingDestroyKind_Buffer,
+	G_PendingDestroyKind_Sampler,
+	G_PendingDestroyKind_Shader,
+	G_PendingDestroyKind_AccelStruct,
+	G_PendingDestroyKind_COUNT
+}
+G_PendingDestroyKind;
+
+typedef struct G_PendingDestroy G_PendingDestroy;
+struct G_PendingDestroy
+{
+	G_PendingDestroy *next;
+	
+	G_PendingDestroyKind kind;
+	u64 retire_frame;
 	G_ResourceKey key;
-	VkImage image;
-	VmaAllocation allocation;
+
+	union
+	{
+		struct
+		{
+			VkImage image;
+			VmaAllocation allocation;
+		}
+		image;
+		
+		struct
+		{
+			VkBuffer buffer;
+			VmaAllocation allocation;
+		}
+		buffer;
+
+		struct
+		{
+			VkSampler sampler;
+			u32 bindless;
+		}
+		sampler;
+
+		struct
+		{
+			VkAccelerationStructureKHR handle;
+		}
+		accel;
+	};
 };
 
-typedef struct G_DestroyedBuffer G_DestroyedBuffer;
-struct G_DestroyedBuffer
+typedef struct G_DestroyQueue G_DestroyQueue;
+struct G_DestroyQueue
 {
-	G_DestroyedBuffer *next;
-	G_ResourceKey key;
-	VkBuffer buffer;
-	VmaAllocation allocation;
-};
-
-typedef struct G_DestroyedSampler G_DestroyedSampler;
-struct G_DestroyedSampler
-{
-	G_DestroyedSampler *next;
-	G_ResourceKey key;
-	VkSampler sampler;
-	u32 bindless;
-};
-
-typedef struct G_DestroyedShaderProgram G_DestroyedShaderProgram;
-struct G_DestroyedShaderProgram
-{
-	G_DestroyedShaderProgram *next;
-	G_ResourceKey key;
-};
-
-typedef struct G_DestroyedAccelStruct G_DestroyedAccelStruct;
-struct G_DestroyedAccelStruct
-{
-	G_DestroyedAccelStruct *next;
-	G_ResourceKey key;
-	VkAccelerationStructureKHR handle;
+	i32 spinlock;
+	G_PendingDestroy *first;
+	G_PendingDestroy *last;
+	G_PendingDestroy *free_list;
 };
 
 typedef struct G_FrameInFlight G_FrameInFlight;
 struct G_FrameInFlight
 {
-	Arena arena;
-	
+	u64 frame_number;
 	G_TimelinePoint completion_point;
-
 	G_CmdPool command_pool;
-
 	VkSemaphore image_available_semaphore; // Wait until the OS gives us an image.
-	
-	G_DestroyedImage           *destroyed_image_head;
-	G_DestroyedBuffer          *destroyed_buffer_head;
-	G_DestroyedSampler         *destroyed_sampler_head;
-	G_DestroyedShaderProgram   *destroyed_shader_head;
-	G_DestroyedAccelStruct     *destroyed_as_head;
 };
 
 // todo: make some kinda limits struct / expose ?
@@ -187,6 +205,25 @@ struct G_Device
 
 	u32 current_frame_in_flight_index;
 	G_FrameInFlight frames_in_flight[G_FRAMES_IN_FLIGHT];
+
+	i64 atomic_retire_frame;
+
+	G_DestroyQueue destroy_queue;
+
+	// this quards vkQueueXXX2() operations and the timeline value allocation,
+	// as it must reach the queue in order!
+	i32 queue_spinlock;
+
+	// for blocking/immediate submits which must be carried out one at a time
+	// and have their own command pool
+	// so they never touch the render side's per-frame pools.
+	OS_Handle immediate_mutex;
+	G_CmdPool immediate_pool;
+
+	i32 bindless_apply_spinlock;
+
+	i32 view_cache_spinlock;
+	i32 pipeline_cache_spinlock;
 
 	G_ResourceList pipeline_layouts;
 	G_ResourceList pipelines;
@@ -276,10 +313,14 @@ internal u32 G_GetFrameInFlightIndex(void);
 
 internal b32 G_FeatureEnabled(G_FeatureType type);
 
-internal void G_FlushInFlightFrame(G_FrameInFlight *frame);
+internal void G_SetRetiredFrame(u64 frame_number);
 
+internal void G_FrameWait(u64 frame_number);
+internal u32  G_FrameSlotIndex(void);
 internal G_CmdBuffer G_BeginFrame(G_Swapchain *swapchain);
 internal void G_EndFrame(const G_Swapchain *swapchain, const G_CmdBuffer *cmd);
+
+internal void G_ReleaseRetired(u64 completed_frame, b32 release_all);
 
 internal G_TimelinePoint G_Submit(const G_CmdBuffer *cmd);
 

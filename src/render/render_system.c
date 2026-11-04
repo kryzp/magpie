@@ -7,13 +7,16 @@ internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel 
 	system->log_channel = log_channel;
 	
 	G_BufferAllocInfo ring_buffer_alloc_info = {0};
-	ring_buffer_alloc_info.size = Megabytes(512);
+	ring_buffer_alloc_info.size = R_FRAME_UPLOAD_BUDGET * G_FRAMES_IN_FLIGHT;
 	ring_buffer_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 	ring_buffer_alloc_info.usage =
 		VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT |
 		VK_BUFFER_USAGE_2_TRANSFER_DST_BIT;
-	system->frame_upload_ring_buffer = G_RingBufferAlloc(&ring_buffer_alloc_info);
+	system->upload_ring = G_RingBufferAlloc(&ring_buffer_alloc_info);
+
+	for (u32 i = 0; i < G_FRAMES_IN_FLIGHT; i++)
+		system->upload_slices[i] = G_RingBufferSliceView(&system->upload_ring, i * R_FRAME_UPLOAD_BUDGET, R_FRAME_UPLOAD_BUDGET);
 	
 	m4 capture_view_matrices[] = {
 		M4LookAt(v3(0.f, 0.f, 0.f), v3( 1.f, 0.f, 0.f), v3( 0.f, 0.f, 1.f)), // +x :: right
@@ -117,6 +120,17 @@ internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel 
 		G_BufferDestroy(staging_buffer);
 	}
 
+	// IBL
+	{
+		system->brdf_lut = G_TextureAlloc2D(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+		
+		system->environment_cubemap = G_TextureAllocCubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
+		system->irradiance_cubemap  = G_TextureAllocCubemap( 32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
+		system->prefilter_cubemap   = G_TextureAllocCubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, R_SYSTEM_PREFILTER_MIPS);
+		
+		system->environment_hdr_handle = A_RequireAssetBlocking(String8Lit("assets://environment_map_1.hdr"));
+	}
+	
 	// Init sub-render systems.
 	{
 		R_ShadowsInit(&system->shadow_render_state);
@@ -146,7 +160,7 @@ internal void R_SystemDestroy(void)
 
 	G_BufferDestroy(r_system->cubemap_capture_transform_buffer);
 
-	G_RingBufferDestroy(&r_system->frame_upload_ring_buffer);
+	G_RingBufferDestroy(&r_system->upload_ring);
 
 	DebugLogI(r_system->log_channel, "Destroyed.");
 
@@ -160,18 +174,54 @@ internal void R_SystemSelectContext(R_System *system)
 	R_DebugRendererSelect(&r_system->debug_renderer);
 }
 
-internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params)
+internal G_RingBuffer *R_SystemBeginFrameUploads(R_System *system, u32 frame_slot_index)
 {
-	const u32 prefilter_mips = 5;
+	G_RingBuffer *slice = &system->upload_slices[frame_slot_index];
+	G_RingBufferReset(slice);
+	return slice;
+}
 
-	r_system->brdf_lut = G_TextureAlloc2D(512, 512, VK_FORMAT_R32G32_SFLOAT, 1);
+internal void R_SystemBakeLookupsAndMaps(R_Graph *graph, const G_Swapchain *swapchain)
+{
+	ScratchArena scratch = ScratchBegin(NULL, 0);
+
+	R_FrameParams params = {0};
+	params.arena = scratch.arena;
+	params.brdf_lut = r_system->brdf_lut;
+	params.irradiance_fallback_cubemap = r_system->irradiance_cubemap;
+	params.prefilter_cubemap = r_system->prefilter_cubemap;
+	params.skybox_mesh = &r_system->skybox_mesh;
+	params.cubemap_capture_transform_buffer = r_system->cubemap_capture_transform_buffer;
+	params.linear_sampler = r_system->samplers.linear;
+	params.nearest_sampler = r_system->samplers.nearest;
+
+	if (!R_FrameParamsResolveShaders(r_system, &params))
+	{
+		DebugLogE(r_system->log_channel, "IBL bake skipped: Shaders not loaded.");
+		ScratchRelease(&scratch);
+		return;
+	}
+
+	R_SystemGenerateLookupsAndMaps(graph, &params);
+	R_GraphCompile(graph, swapchain);
+
+	G_CmdBuffer cmd = G_SubmitImBegin();
+	R_GraphExecute(graph, swapchain, &cmd);
+	G_SubmitImEnd(&cmd);
+
+	R_GraphReset(graph);
+
+	ScratchRelease(&scratch);
+
+	DebugLogI(r_system->log_channel, "Baked lookups and maps.");
+}
+
+internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, const R_FrameParams *frame_params)
+{
+	const u32 prefilter_mips = R_SYSTEM_PREFILTER_MIPS;
+	Arena *pass_arena = frame_params->arena;
 	
-	r_system->environment_cubemap = G_TextureAllocCubemap(512, VK_FORMAT_R32G32B32A32_SFLOAT, 8);
-	r_system->irradiance_cubemap  = G_TextureAllocCubemap( 32, VK_FORMAT_R32G32B32A32_SFLOAT, 1);
-	r_system->prefilter_cubemap   = G_TextureAllocCubemap(128, VK_FORMAT_R32G32B32A32_SFLOAT, prefilter_mips);
-	
-	A_Handle hdr_texture_handle = A_RequireAssetBlocking(String8Lit("assets://environment_map_1.hdr"));
-	G_ResourceKey hdr_texture_gfx = A_GetOrBreak(hdr_texture_handle)->texture.key;
+	G_ResourceKey hdr_texture_gfx = A_GetOrBreak(r_system->environment_hdr_handle)->texture.key;
 	
 	// Generate BRDF Lookup Table.
 	{
@@ -254,6 +304,17 @@ internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, 
 	DebugLogI(r_system->log_channel, "Generated lookups and maps.");
 }
 
+/*
+ * 1. CLEAR
+ * 2. SHADOWS
+ * 3. FRUSTUM CULL
+ * 4. FORWARD - OPAQUE
+ * 5. SKYBOX
+ * 6. FORWARD - TRANSLUCENT
+ * 7. POST PROCESSING
+ * 8. DEBUG LINES
+ * 9. PRESENT / BLIT
+ */
 internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 {
 	R_FrustumVolume frustum = R_CameraFrustum(&frame_params->camera);
@@ -277,16 +338,14 @@ internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 	depth_info.samples = VK_SAMPLE_COUNT_4_BIT;
 	bb.depth_msaa = R_GraphCreateTexture(graph, &depth_info);
 
-	// todo: this is ass
+	// todo: fold the clear into the first pass that writes each target.
 	R_Pass *clear_pass = R_GraphAdd(graph, String8Lit("Clear"), R_PassType_Graphics);
 	bb.lighting_msaa = R_PassWriteColour(clear_pass, bb.lighting_msaa, &colour_clear);
 	bb.depth_msaa = R_PassWriteDepth(clear_pass, bb.depth_msaa, &depth_clear);
 
-	// Scene.
+	// shadows + forward opaque
 	if (frame_params->object_count > 0)
 	{
-		R_ShadowsUploadGPU(&r_system->shadow_render_state, frame_params);
-
 		R_ShadowsRender(&r_system->shadow_render_state, graph, frame_params, &bb);
 
 		R_DrawStream draw_stream = R_CullFrustum(graph, frame_params, R_CullFilter_OpaqueOnly, &frustum);
@@ -294,20 +353,23 @@ internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params)
 		R_ForwardRender(graph, frame_params, &bb, &draw_stream);
 	}
 
-	// Skybox.
+	// skybox
 	{
 		R_SkyboxPassData *data = ArenaPushArray(frame_params->arena, R_SkyboxPassData, 1);
 		data->frame_params = frame_params;
 		data->cubemap = G_TextureViewAuto(r_system->environment_cubemap);
 
 		R_Pass *skybox_pass = R_GraphAdd(graph, String8Lit("Skybox"), R_PassType_Graphics);
-		bb.lighting_resolve = R_PassWriteColourResolve(skybox_pass, bb.lighting_msaa, bb.lighting_resolve, NULL);
-		bb.depth_resolve = R_PassWriteDepthResolve(skybox_pass, bb.depth_msaa, bb.depth_resolve, NULL);
+		bb.lighting_msaa = R_PassWriteColour(skybox_pass, bb.lighting_msaa, NULL);
+		bb.depth_msaa = R_PassWriteDepth(skybox_pass, bb.depth_msaa, NULL);
 		R_PassReadTextureGraphics(skybox_pass, R_GraphImportTexture(graph, r_system->environment_cubemap));
 		R_PassSetRecord(skybox_pass, R_SkyboxPassFn, data);
 	}
-	
-	// Post Processing.
+
+	// forward translucent + MSAA resolve
+	R_ForwardRenderTranslucent(graph, frame_params, &bb);
+
+	// post processing
 	{
 		R_PostProcessingPassData *data = ArenaPushArray(frame_params->arena, R_PostProcessingPassData, 1);
 		data->frame_params = frame_params;

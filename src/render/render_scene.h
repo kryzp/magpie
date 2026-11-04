@@ -3,7 +3,7 @@
 
 #define R_SCENE_MAX_ENTITIES           1024
 #define R_SCENE_MAX_MESHES             1024
-#define R_SCENE_MAX_MESH_COPIES        128
+#define R_SCENE_MAX_RETIRED_REGIONS    256
 #define R_SCENE_MAX_GEOMETRY_PAGES     16
 #define R_SCENE_MAX_MATERIALS          1024
 
@@ -63,18 +63,11 @@ struct R_MeshAllocRegion
 	u32 index_count;
 };
 
-typedef struct R_ScenePageMeshCopy R_ScenePageMeshCopy;
-struct R_ScenePageMeshCopy
+typedef struct R_SceneRetiredRegion R_SceneRetiredRegion;
+struct R_SceneRetiredRegion
 {
-	const void *vertices;
-	u64 vertex_size;
-	uptr vertex_offset_dst;
-
-	const void *indices;
-	u64 index_size;
-	uptr index_offset_dst;
-
-	u32 dst_page_index;
+	R_MeshAllocRegion region;
+	u64 retire_frame;
 };
 
 typedef struct R_Object R_Object;
@@ -83,14 +76,21 @@ struct R_Object
 	m4 transform;
 	m4 normal_matrix;
 
+	// Transform as of the start of the last frame that ran simulation
+	// steps. Rendered transform = lerp(prev_transform, transform, t),
+	// see R_SceneInterpolationFactor.
+	m4 prev_transform;
+	b32 has_transform;
+
 	v4 local_sphere_bounds;
 
 	u32 page_index;
 	u32 mesh_index;
 	u32 material_index;
 
+	// Points into animation memory. Only read on the game side, during
+	// R_FramePacketCollectScene, which copies the matrices by value.
 	const m4 *skinning_palette;
-	u64 skinning_address;
 	u32 skinning_joint_count;
 };
 
@@ -143,23 +143,27 @@ struct R_Scene
 	R_Entity entities[R_SCENE_MAX_ENTITIES];
 	u32 entity_count[R_EntityType_COUNT];
 	
+	u64 frame_number;
+	
+	u32 last_sim_step_count;
+	u64 gpu_completed_frame;
+	b32 any_gpu_completed;
+
 	SlotPool mesh_pool;
+	u32 mesh_high_water; // highest slot we've handed out so far + 1
 	R_MeshAllocRegion mesh_allocs[R_SCENE_MAX_MESHES];
 	R_GPU_RenderMesh gpu_meshes[R_SCENE_MAX_MESHES];
-	G_ResourceKey mesh_buffer;
-	b32 mesh_buffer_dirty;
 
-	R_ScenePageMeshCopy page_mesh_copies[R_SCENE_MAX_MESH_COPIES];
-	u32 page_mesh_copy_count;
+	u32 retired_region_count;
+	R_SceneRetiredRegion retired_regions[R_SCENE_MAX_RETIRED_REGIONS];
 	
 	R_GeometryPage geometry_pages[R_SCENE_MAX_GEOMETRY_PAGES];
 	u32 geometry_page_count;
 
 	SlotPool material_pool;
+	u32 material_high_water;
 	R_Material cpu_materials[R_SCENE_MAX_MATERIALS];
 	R_GPU_Material gpu_materials[R_SCENE_MAX_MATERIALS];
-	G_ResourceKey material_buffer;
-	b32 material_buffer_dirty;
 };
 
 
@@ -170,6 +174,13 @@ struct R_Scene
 internal void                  R_SceneInit(R_Scene *scene, Arena *arena, LOG_Channel log_channel);
 internal void                  R_SceneDestroy(R_Scene *scene);
 
+internal void                  R_SceneBeginFrame(R_Scene *scene, u64 frame_number,
+												 b32 has_completed, u64 gpu_completed_frame);
+
+internal void                  R_SceneBeginSimSteps(R_Scene *scene, u32 step_count);
+internal f32                   R_SceneInterpolationFactor(const R_Scene *scene, f32 alpha);
+internal m4                    R_SceneObjectRenderTransform(const R_Scene *scene, R_EntityHandle handle, f32 interp_t);
+
 
 /* ==================================================
    ENTITIES
@@ -179,6 +190,7 @@ internal R_EntityHandle        R_SceneEntityCreate(R_Scene *scene, R_EntityType 
 internal void                  R_SceneEntityDestroy(R_Scene *scene, R_EntityHandle handle);
 
 internal void                  R_SceneSetObjectTransform(R_Scene *scene, R_EntityHandle handle, m4 transform);
+internal void                  R_SceneTeleportObject(R_Scene *scene, R_EntityHandle handle, m4 transform); // no interpolation
 internal void                  R_SceneSetObjectLocalSphereBounds(R_Scene *scene, R_EntityHandle handle, v4 local_sphere_bounds);
 internal void                  R_SceneSetObjectMesh(R_Scene *scene, R_EntityHandle handle, R_MeshHandle mesh);
 internal void                  R_SceneSetObjectMaterial(R_Scene *scene, R_EntityHandle handle, R_MaterialHandle material);
@@ -218,7 +230,6 @@ internal u32                   R_SceneCountOfMaterials(const R_Scene *scene);
 
 internal const R_Material     *R_SceneGetMaterial(const R_Scene *scene, R_MaterialHandle handle);
 
-internal void                  R_SceneFlushIfDirty(R_Scene *scene);
 internal void                  R_SceneBakeMaterialIntoGPU(const R_Scene *scene, const R_Material *material, R_GPU_Material *out);
 internal u32                   R_SceneResolveToBindlessIndex(const R_Scene *scene, G_ResourceKey key);
 

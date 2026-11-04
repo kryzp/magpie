@@ -27,3 +27,5 @@
 #include "render_system.h"
 
 #include "render_model.h"
+
+#include "render_job.h"

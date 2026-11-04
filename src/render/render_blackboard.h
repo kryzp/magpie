@@ -14,7 +14,7 @@ struct R_Blackboard
 
 	u32 shadow_map_count;
 	R_GraphTexHandle shadow_maps[R_FRAME_PARAMS_MAX_SHADOW_CASTERS];
-	G_ResourceKey shadow_caster_table;
+	u64 shadow_caster_table; // device address
 };
 
 #endif // RENDER_BLACKBOARD_H

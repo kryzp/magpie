@@ -1,13 +1,18 @@
 #ifndef RENDER_SYSTEM_H
 #define RENDER_SYSTEM_H
 
+#define R_SYSTEM_PREFILTER_MIPS 5
+
 typedef struct R_System R_System;
 struct R_System
 {
 	Arena *arena;
 	LOG_Channel log_channel;
-	
-	G_RingBuffer frame_upload_ring_buffer;
+
+	G_RingBuffer upload_ring;
+	G_RingBuffer upload_slices[G_FRAMES_IN_FLIGHT];
+
+	A_Handle environment_hdr_handle;
 	
 	R_ShadowState shadow_render_state;
 	R_DebugRenderer debug_renderer;
@@ -49,7 +54,9 @@ struct R_System
 internal void R_SystemInitAndSelect(R_System *system, Arena *arena, LOG_Channel log_channel);
 internal void R_SystemDestroy(void);
 internal void R_SystemSelectContext(R_System *system);
-internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, Arena *pass_arena, const R_FrameParams *frame_params);
+internal G_RingBuffer *R_SystemBeginFrameUploads(R_System *system, u32 frame_slot_index);
+internal void R_SystemBakeLookupsAndMaps(R_Graph *graph, const G_Swapchain *swapchain);
+internal void R_SystemGenerateLookupsAndMaps(R_Graph *graph, const R_FrameParams *frame_params);
 internal void R_SystemRender(R_Graph *graph, const R_FrameParams *frame_params);
 internal void R_SystemHotLoad(void);
 

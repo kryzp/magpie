@@ -1,22 +1,4 @@
 
-/*
- * At the willow tree grows the wallflower,
- * pale and cold,
- * from dust, alone.
- *
- * To the voices outside unresponsive,
- * blossoming only for the wind,
- * and to the touch, you are cold.
- *
- * Of no mother, nor child,
- * to bear your name,
- * to free your spirit.
- *
- * And I will meet you there,
- * But I have one final question,
- * what is it, you fear most?
- */
-
 internal S_BINDING_DEF(S_BND_WaitSeconds)
 {
 	f32 s = S_CtxGetArgF32(ctx, 0); 
@@ -72,6 +54,13 @@ internal void AppInit_(void)
 	R_SystemInitAndSelect(&app->render_system, &app->render_arena, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("SYSTEM")));
 	R_ModelCatalogueInit(&app->model_catalogue, &app->render_arena);
 	R_ModelCatalogueEquipScene(&app->model_catalogue, &app->scene);
+	R_RenderJobInit(&app->render_job, &app->render_system, &app->graph, &app->swapchain, osapi->LogChannelOpenFrom(app->render_log_channel, String8Lit("JOB")));
+
+	// one off thing, blocks
+	// must happen b4 the first R_RenderJobSubmit!!!
+	// the render job will own the graph from that point on.
+	// todo: kind of messy :(
+	R_SystemBakeLookupsAndMaps(&app->graph, &app->swapchain);
 	
 	P_EngineInitAndSelect(&app->physics_engine, &app->physics_arena, app->physics_log_channel);
 	
@@ -101,7 +90,6 @@ App *MagpieInit(const OS_API *osapi_)
 	app->render_arena    = ArenaAlloc(Gigabytes(2));
 	app->physics_arena   = ArenaAlloc(Gigabytes(1));
 	app->entity_arena    = ArenaAlloc(Gigabytes(1));
-	app->frame_arena     = ArenaAlloc(Gigabytes(1));
 	
 	app->log_channel           = osapi->LogChannelOpen(String8Lit("APP"));
 	app->scripting_log_channel = osapi->LogChannelOpen(String8Lit("SCRIPT"));
@@ -127,9 +115,9 @@ App *MagpieInit(const OS_API *osapi_)
 		light.position = v3(0.f, 0.f, 1.f);
 		light.direction = v3x(0.f);
 		light.colour = v3(1.f, 1.f, 1.f);
-		light.intensity = 5.f;
+		light.intensity = 10.f;
 		light.falloff = 0.1f;
-		light.casts_shadows = false;
+		light.casts_shadows = true;
 		light.shadow_near = 0.1f;
 		light.shadow_far = 20.f;
 
@@ -162,6 +150,7 @@ App *MagpieInit(const OS_API *osapi_)
 
 void MagpieDestroy(App *app_)
 {
+	R_RenderJobDestroy(&app->render_job);
 	G_WaitIdle();
 
 	DebugLogI(app->log_channel, "Destroying...");
@@ -188,7 +177,6 @@ void MagpieDestroy(App *app_)
 
 	S_Destroy();
 
-	ArenaRelease(&app->frame_arena);
 	ArenaRelease(&app->entity_arena);
 	ArenaRelease(&app->physics_arena);
 	ArenaRelease(&app->render_arena);
@@ -232,6 +220,34 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	const f32 elapsed = CH_TimerElapsed(&app->elapsed_timer);
 	const f32 dt = CH_TimerRestart(&app->delta_timer);
 	const f32 fixed_dt = 1.f / APP_TARGET_FPS;
+	const u64 frame_number = app->frame_number;
+
+	// ---> Anything destroyed from here on MAY STILL BE REFERENCED BY FRAMES UP TO AND INCLUDING THIS ONE!
+	// aka: "retired frames
+	G_SetRetiredFrame(frame_number);
+
+	{
+		u64 gpu_completed = 0;
+		b32 has_completed = R_RenderJobGpuCompletedFrame(&app->render_job, &gpu_completed);
+		R_SceneBeginFrame(&app->scene, frame_number, has_completed, gpu_completed);
+	}
+
+	f32 clamped_delta = dt;
+
+	if (dt > max_frame_time)
+	{
+		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f).", dt, max_frame_time);
+		clamped_delta = max_frame_time;
+	}
+	
+	app->delta_accumulator += clamped_delta;
+
+	u32 sim_steps = 0;
+
+	while (app->delta_accumulator >= fixed_dt * (f32)(sim_steps + 1))
+		sim_steps++;
+
+	R_SceneBeginSimSteps(&app->scene, sim_steps);
 
 	if (CH_TimerElapsed(&app->hot_reload_timer) >= APP_HOT_RELOAD_INTERVAL)
 	{
@@ -257,17 +273,7 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	
 	S_Tick(dt);
 
-	f32 clamped_delta = dt;
-
-	if (dt > max_frame_time)
-	{
-		DebugLogW(app->log_channel, "Had to clamp delta (was %f, clamped to %f).", dt, max_frame_time);
-		clamped_delta = max_frame_time;
-	}
-	
-	app->delta_accumulator += clamped_delta;
-
-	while (app->delta_accumulator >= fixed_dt)
+	for (u32 step = 0; step < sim_steps; step++)
 	{
 		P_EngineTick(fixed_dt);
 		GameTick(input, fixed_dt, elapsed);
@@ -282,6 +288,15 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 
 	E_WorldFlush(&app->world);
 
+	// https://gafferongames.com/post/fix_your_timestep/
+	const f32 alpha = ClampValue(app->delta_accumulator / fixed_dt, 0.f, 1.f);
+	const f32 interp_t = R_SceneInterpolationFactor(&app->scene, alpha);
+
+	// TODOTODO: follow the interpolated player pose (R_SceneObjectRenderTransform
+	//           with interp_t), or the camera and player will still jitter relative to
+	//           each other at render rates that don't divide the step rate.
+	GameUpdateCamera(input, dt);
+
 	AU_Listener listener = {0};
 	listener.position = app->game.camera.position;
 	listener.direction = app->game.camera.forward;
@@ -292,53 +307,31 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 	//R_IrradianceVolumeDebug(&app->irradiance_volume);
 	//R_SceneDebug(&app->scene);
 
-	// https://gafferongames.com/post/fix_your_timestep/
-	const float alpha = app->delta_accumulator / fixed_dt;
-
 	R_CameraRecompute(&app->game.camera);
-	
-	R_SceneFlushIfDirty(&app->scene);
-	
-	R_FrameParams frame_params = R_FrameParamsBuild(&app->frame_arena,
-													&app->render_system,
-													app->frame_number, dt, elapsed,
-													&app->scene, &app->game.camera);
-
-	if (app->frame_number == 0)
-	{
-		R_SystemGenerateLookupsAndMaps(&app->graph, &app->frame_arena, &frame_params);		
-
-		// genuinely fuck this
-		// BRDF LUT and IBL shouldnt be generated as part of the RENDER GRAPH FUCK
-		frame_params = R_FrameParamsBuild(&app->frame_arena,
-										  &app->render_system,
-										  app->frame_number, dt, elapsed,
-										  &app->scene, &app->game.camera);
-	}
 
 	// render debug sphere bounds on objects for culling debug.
 	/*
 	{
 		R_EntityIterator iterator = R_EntityIteratorInit(&app->scene);
 		R_Entity *entity = NULL;
-	
+
 		while ((entity = R_EntityIteratorNext(&iterator, R_EntityType_Object)))
 		{
 			R_Object *object = &entity->object;
-			
+
 			v4 local_sphere_bounds = object->local_sphere_bounds;
 
 			v3 local_centre = v3(local_sphere_bounds.x,
 								 local_sphere_bounds.y,
 								 local_sphere_bounds.z);
-	
+
 			v3 local_edge = v3(local_sphere_bounds.x + local_sphere_bounds.w,
 							   local_sphere_bounds.y,
 							   local_sphere_bounds.z);
- 
+
 			v3 world_centre = M4MulV3Point(object->transform, local_centre);
 			v3 world_edge = M4MulV3Point(object->transform, local_edge);
-			
+
 			v3 dx = V3Sub(world_edge, world_centre);
 			f32 world_radius = V3Length(dx);
 
@@ -349,23 +342,15 @@ b32 MagpieTick(App *app_, const OS_InputState *input)
 		}
 	}
 	*/
+
+	{
+		R_FramePacket *packet = R_RenderJobBeginPacket(&app->render_job, frame_number, dt, elapsed);
+		R_FramePacketCollectScene(packet, &app->scene, &app->game.camera, interp_t);
+		R_DebugCollectInto(packet, dt);
+		R_RenderJobSubmit(&app->render_job, packet);
+	}
 	
-	R_SystemRender(&app->graph, &frame_params);
-	
-	R_GraphCompile(&app->graph, &app->swapchain);
-	
-	{ // --- [[ THE GRAPHICS ZONE ooOooOooOOOooOOo !! ]] ---
-		G_CmdBuffer cmd = G_BeginFrame(&app->swapchain);
-		R_GraphExecute(&app->graph, &app->swapchain, &cmd);
-		R_GraphPresentToSwapchain(&app->graph, &app->swapchain, &cmd);
-		G_EndFrame(&app->swapchain, &cmd);
-	} // ---
-	
-	R_GraphReset(&app->graph);
-	
-	ArenaReset(&app->frame_arena);
-	
-	//AppLogFPS(dt);
+	AppLogFPS(dt);
 
 	app->frame_number++;
 	
@@ -426,11 +411,32 @@ void MagpieHotLoad(App *app_, const OS_API *osapi_)
 
 void MagpieHotUnload(App *app_)
 {
+	R_RenderJobWaitIdle(&app->render_job);
+	G_WaitIdle();
+	
 	G_HotUnload();
 
 	// hack
 	S_Destroy();
 }
+
+/*
+ * At the willow tree grows the wallflower,
+ * pale and cold,
+ * from dust, alone.
+ *
+ * To the voices outside unresponsive,
+ * blossoming only for the wind,
+ * and to the touch, you are cold.
+ *
+ * Of no mother, nor child,
+ * to bear your name,
+ * to free your spirit.
+ *
+ * And I will meet you there,
+ * But I have one final question,
+ * what is it, you fear most?
+ */
 
 /*
   app->test_sound_handle = A_Require(&app->assets, String8Lit("assets://sounds/test_sound.mp3"));

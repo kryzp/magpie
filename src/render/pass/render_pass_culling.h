@@ -7,8 +7,8 @@ typedef enum R_CullFilter R_CullFilter;
 enum R_CullFilter
 {
 	R_CullFilter_OpaqueOnly = 0,
-	R_CullFilter_AlphaOnly  = 1,
-	R_CullFilter_All        = 2,
+	R_CullFilter_AlphaOnly = 1,
+	R_CullFilter_All = 2,
 	R_CullFilter_COUNT
 };
 

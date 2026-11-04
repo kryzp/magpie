@@ -18,7 +18,6 @@ struct App
 	Arena render_arena;
 	Arena physics_arena;
 	Arena entity_arena;
-	Arena frame_arena;
 	
 	LOG_Channel scripting_log_channel;
 	LOG_Channel graphics_log_channel;
@@ -46,6 +45,7 @@ struct App
 	R_Scene scene;
 	R_System render_system;
 	R_ModelCatalogue model_catalogue;
+	R_RenderJob render_job;
 
 	P_Engine physics_engine;
 
@@ -59,7 +59,7 @@ struct App
 	CH_Timer hot_reload_timer;
 	f32 delta_accumulator;
 
-	u32 frame_number;
+	u64 frame_number;
 };
 
 App  *MagpieInit(const OS_API *osapi_);

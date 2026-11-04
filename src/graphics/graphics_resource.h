@@ -13,13 +13,13 @@ union G_Resource
 	G_ShaderProgram shader;
 	G_AccelStruct accel_struct;
 };
-	
+
 typedef struct G_ResourceListNode G_ResourceListNode;
 struct G_ResourceListNode
 {
 	G_ResourceListNode *next;
 	G_ResourceListNode *prev;
-	
+
 	G_ResourceKey key;
 	G_Resource resource;
 };
@@ -29,6 +29,9 @@ struct G_ResourceList
 {
 	G_ResourceListNode first_sentinel;
 	G_ResourceListNode free_sentinel;
+
+	u64 next_auto_key;
+	i32 lock;
 };
 
 internal void G_ResourceListInit(G_ResourceList *list);
@@ -36,7 +39,7 @@ internal void G_ResourceListInit(G_ResourceList *list);
 internal G_ResourceKey G_ResourceListPush(G_ResourceList *list, Arena *arena, const G_Resource *resource, G_ResourceKey key);
 internal G_ResourceKey G_ResourceListPushAuto(G_ResourceList *list, Arena *arena, const G_Resource *resource);
 
-internal G_Resource *G_ResourceListGet(const G_ResourceList *list, G_ResourceKey key);
+internal G_Resource *G_ResourceListGet(G_ResourceList *list, G_ResourceKey key);
 
 internal void G_ResourceListReturn(G_ResourceList *list, G_ResourceKey key);
 

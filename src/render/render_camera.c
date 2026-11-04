@@ -80,7 +80,7 @@ internal v3 R_CameraNDCToWsRayDirection(const R_Camera *camera, v2 ndc)
 	m4 inv_proj = M4Inverse(camera->proj);
 	m4 inv_view = M4Inverse(camera->view);
 
-	v4 clip = v4(ndc.x, ndc.y, -1.f, 1.f);
+	v4 clip = v4(ndc.x, ndc.y, 0.f, 1.f);
 
 	v4 view_pos = M4MulV4(inv_proj, clip);
 

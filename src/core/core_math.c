@@ -373,6 +373,25 @@ internal v4 V4QuatSlerp(v4 a, v4 b, f32 t)
 	return V4Add(V4MulF32(a, scale_a), V4MulF32(b, scale_b));
 }
 
+internal b32 M4Equals(m4 a, m4 b)
+{
+	for (u32 i = 0; i < 16; i++) {
+		if ((&a.m00)[i] != (&b.m00)[i])
+			return false;
+	}
+	return true;
+}
+
+internal m4 M4Lerp(m4 a, m4 b, f32 t)
+{
+	m4 result = {0};
+
+	for (u32 i = 0; i < 16; i++)
+		(&result.m00)[i] = LerpValue((&a.m00)[i], (&b.m00)[i], t);
+
+	return result;
+}
+
 internal m4 M4MulM4(m4 a, m4 b)
 {
 	m4 c = {0};
@@ -467,8 +486,8 @@ internal m4 M4Perspective(f32 fov, f32 aspect, f32 near, f32 far)
 
 	result.m00 = f / aspect;
 	result.m12 = f;
-	result.m21 = (far + near) / (far - near);
-	result.m23 = -(2.f * far * near) / (far - near);
+	result.m21 = far / (far - near);
+	result.m23 = -(far * near) / (far - near);
 	result.m31 = 1.f;
 
 	return result;
@@ -477,14 +496,14 @@ internal m4 M4Perspective(f32 fov, f32 aspect, f32 near, f32 far)
 internal m4 M4Orthographic(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
 {
 	m4 result = {0};
-
+	
 	result.m00 = 2.f / (right - left);
 	result.m12 = 2.f / (top - bottom);
-	result.m21 = 2.f / (far - near);
+	result.m21 = 1.f / (far - near);
 
 	result.m03 = -(right + left) / (right - left);
 	result.m13 = -(top + bottom) / (top - bottom);
-	result.m23 = -(far + near) / (far - near);
+	result.m23 = -near / (far - near);
 	result.m33 = 1.f;
 
 	return result;
