@@ -1,70 +1,74 @@
-#ifndef ANIMATION_SYSTEM_H
-#define ANIMATION_SYSTEM_H
+#ifndef ANIMATION_ANIMATION_SYSTEM_H
+#define ANIMATION_ANIMATION_SYSTEM_H
 
-typedef struct AN_Handle AN_Handle;
-struct AN_Handle
-{
-	u32 index;
-	u32 generation;
+#include "core/types.h"
+#include "core/log.h"
+#include "animation/animator.h"
+
+#define ANIMATION_MAX_INSTANCES 128
+
+namespace anim {
+
+struct Handle {
+	unsigned index = (unsigned)-1;
+	unsigned generation = 0;
+
+	bool IsNull() const
+	{
+		return index == (unsigned)-1 && generation == 0;
+	}
+
+	bool operator==(const Handle &other) const
+	{
+		return index == other.index && generation == other.generation;
+	}
+
+	bool operator!=(const Handle &other) const
+	{
+		return !(*this == other);
+	}
 };
 
-internal inline AN_Handle AN_HandleNull(void)
-{
-	AN_Handle handle = {0};
-	handle.index = (u32)-1;
-	handle.generation = 0;
-	
-	return handle;
-}
+struct Instance {
+	Animator animator;
 
-internal inline b32 AN_HandleIsNull(AN_Handle handle)
-{
-	return (handle.index == (u32)-1 &&
-			handle.generation == 0);
-}
-
-internal inline b32 AN_HandleMatch(AN_Handle a, AN_Handle b)
-{
-	return (a.index == b.index &&
-			a.generation == b.generation);
-}
-
-typedef struct AN_Instance AN_Instance;
-struct AN_Instance
-{
-	Arena arena;
-	
-	AN_Animator animator;
-	
-	b32 alive;
-	u32 generation;
+	bool alive = false;
+	unsigned generation = 0;
 };
 
-typedef struct AN_System AN_System;
-struct AN_System
-{
-	LOG_Channel log_channel;
+// todo: make the instance pool dynamically allocated
+class AnimationSystem {
+public:
+	explicit AnimationSystem(LogChannel log_channel);
+	~AnimationSystem();
 
-	AN_Instance instances[128]; // todo: make dynamically allocated
-	u32 instance_count;
+	AnimationSystem(const AnimationSystem &) = delete;
+	AnimationSystem &operator=(const AnimationSystem &) = delete;
 
-	u32 free_indices[128];
-	u32 free_index_count;
+	static AnimationSystem *Get();
+
+	void CalculateIntermediatePoses(float elapsed);
+	void FinalizePoseAndMatrixPalette();
+
+	Instance *Resolve(Handle handle);
+	Animator *GetAnimator(Handle handle);
+
+	void Play(Handle handle, ClipKey clip, bool loop, float global_start_time);
+	bool IsFinished(Handle handle);
+	Palette GetPalette(Handle handle, int skin_index);
+
+	Handle CreateInstance(ast::Handle model_handle);
+	void KillInstance(Handle handle);
+
+private:
+	LogChannel log_channel;
+
+	Instance instances[ANIMATION_MAX_INSTANCES];
+	unsigned instance_count;
+
+	unsigned free_indices[ANIMATION_MAX_INSTANCES];
+	unsigned free_index_count;
 };
+}
 
-internal void AN_SystemInitAndSelect(AN_System *system, LOG_Channel log_channel);
-internal void AN_SystemDestroy(void);
-internal void AN_SystemSelectContext(AN_System *system);
-
-internal void AN_SystemCalculateIntermediatePoses(f32 elapsed);
-internal void AN_SystemFinalizePoseAndMatrixPalette(void);
-
-internal AN_Instance *AN_SystemResolve(AN_Handle handle);
-internal AN_Animator *AN_SystemGetAnimator(AN_Handle handle);
-
-internal AN_Palette AN_GetPalette(AN_Handle handle, i32 skin_index);
-
-internal AN_Handle AN_SystemCreateInstance(A_Handle model_handle);
-internal void AN_SystemKillInstance(AN_Handle h);
-
-#endif // ANIMATION_SYSTEM_H
+#endif // ANIMATION_ANIMATION_SYSTEM_H

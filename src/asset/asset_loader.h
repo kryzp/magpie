@@ -1,80 +1,159 @@
 #ifndef ASSET_LOADER_H
 #define ASSET_LOADER_H
 
-typedef struct A_Metadata A_Metadata;
-struct A_Metadata
-{
-	String8 path;
-	u64 last_write_time;
-};
+#include "core/types.h"
+#include "core/log.h"
+#include "asset/handle.h"
+#include "asset/types.h"
+#include "graphics/resource_key.h"
+#include "container/string.h"
+#include "container/vector.h"
 
-typedef struct A_ResidencyLevel A_ResidencyLevel;
-struct A_ResidencyLevel
-{
-	u8 lod;
-};
-
-internal inline u32 A_ResidencyLevelCompare(A_ResidencyLevel a, A_ResidencyLevel b)
-{
-	return a.lod - b.lod;
+namespace gfx {
+class CmdBuffer;
 }
 
-typedef struct A_LoadResidencyCtx A_LoadResidencyCtx;
-struct A_LoadResidencyCtx
-{
-	f32 distance;
+namespace ast {
+
+struct Metadata {
+	String path;
+	u64 last_write_time = 0;
+	bool srgb = false;
 };
 
-typedef struct A_LCTX A_LCTX;
-struct A_LCTX
-{
-	LOG_Channel log_channel;
-	A_Metadata metadata;
+struct ResidencyLevel {
+	int lod = 0;
 
-	A_ResidencyLevel current_residency;
-	A_ResidencyLevel target_residency;
+	int Compare(const ResidencyLevel &other) const
+	{
+		return lod - other.lod;
+	}
 };
 
-typedef struct A_LoadResult A_LoadResult;
-struct A_LoadResult
-{
-	void *user_data;
-	u64 stage_size;
-	b32 failed;
-	A_Handle *dependencies;
-	u32 dependency_count;
+struct LoadResidencyCtx {
+	float distance = 0.f;
 };
 
-// todo: rename to A_LoaderDesc or something as it consists
-//       of an API + properties
-typedef struct A_LoaderAPI A_LoaderAPI;
-struct A_LoaderAPI
-{
-	b32 is_streamable;
+struct LoaderContext {
+	LogChannel log_channel;
+	Metadata metadata;
+	ResidencyLevel current_residency;
+	ResidencyLevel target_residency;
 
-	u32 file_extension_count;
-	String8 *file_extensions;
-	
-	A_LoadResult (*Load)(const A_LCTX *ctx,
-						 Arena *result_arena);
-	
-	void (*Alloc)(const A_LCTX *ctx,
-				  A_LoadResult *result,
-				  Arena *asset_arena,
-				  A_Asset *asset);
-	
-	void (*UploadGPU)(const A_LCTX *ctx,
-					  A_LoadResult *result,
-					  A_Asset *asset,
-					  G_CmdBuffer *cmd,
-					  G_ResourceKey stage,
-					  u64 stage_offset);
-
-	void (*DestroyIntermediateResources)(A_LoadResult *result);
-	
-	void (*DestroyAsset)(A_Asset *asset);
-
-	A_ResidencyLevel (*CalculateResidency)(const A_LoadResidencyCtx *ctx);
+	/*
+	String SystemFilePath() const
+	{
+		return AssetSystem::Get()->GetSystemFilePath(metadata.path);
+	}
+	*/
 };
+
+struct LoadData {
+	virtual ~LoadData() = default;
+};
+
+struct LoadResult {
+	LoadData *user_data = nullptr; // owned and deleted once the upload is finished.
+	u64 stage_size = 0;
+	bool failed = false;
+	Vector<Handle> dependencies;
+};
+
+class IAssetLoader {
+public:
+	virtual ~IAssetLoader() = default;
+
+	virtual bool IsStreamable() const
+	{
+		return false;
+	}
+
+	virtual const Vector<String> &GetFileExtensions() const = 0;
+
+	virtual LoadResult Load(const LoaderContext &ctx) = 0;
+
+	virtual void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
+	{
+	}
+
+	virtual void UploadGPU(
+		const LoaderContext &ctx,
+		LoadResult *result,
+		Asset *asset,
+		const gfx::CmdBuffer &cmd,
+		gfx::ResourceKey stage,
+		u64 stage_offset
+	)
+	{
+	}
+
+	virtual void DestroyIntermediateResources(LoadResult *result)
+	{
+	}
+
+	virtual void DestroyAsset(Asset *asset)
+	{
+	}
+
+	virtual ResidencyLevel CalculateResidency(const LoadResidencyCtx &ctx)
+	{
+		return ResidencyLevel();
+	}
+};
+
+class TextureLoader : public IAssetLoader {
+public:
+	bool IsStreamable() const override
+	{
+		return true;
+	}
+
+	const Vector<String> &GetFileExtensions() const override;
+
+	LoadResult Load(const LoaderContext &ctx) override;
+	void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset) override;
+	void UploadGPU(const LoaderContext &ctx, LoadResult *result, Asset *asset, const gfx::CmdBuffer &cmd, gfx::ResourceKey stage, u64 stage_offset) override;
+	void DestroyIntermediateResources(LoadResult *result) override;
+	void DestroyAsset(Asset *asset) override;
+	ResidencyLevel CalculateResidency(const LoadResidencyCtx &ctx) override;
+};
+
+class ShaderLoader : public IAssetLoader {
+public:
+	const Vector<String> &GetFileExtensions() const override;
+
+	LoadResult Load(const LoaderContext &ctx) override;
+	void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset) override;
+	void DestroyAsset(Asset *asset) override;
+};
+
+class ModelLoader : public IAssetLoader {
+public:
+	const Vector<String> &GetFileExtensions() const override;
+
+	LoadResult Load(const LoaderContext &ctx) override;
+	void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset) override;
+	void UploadGPU(const LoaderContext &ctx, LoadResult *result, Asset *asset, const gfx::CmdBuffer &cmd, gfx::ResourceKey stage, u64 stage_offset) override;
+	void DestroyAsset(Asset *asset) override;
+};
+
+class SoundLoader : public IAssetLoader {
+public:
+	const Vector<String> &GetFileExtensions() const override;
+
+	LoadResult Load(const LoaderContext &ctx) override;
+	void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset) override;
+	void DestroyAsset(Asset *asset) override;
+};
+
+class ScriptLoader : public IAssetLoader {
+public:
+	const Vector<String> &GetFileExtensions() const override;
+
+	LoadResult Load(const LoaderContext &ctx) override;
+	void Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset) override;
+};
+
+}
 
 #endif // ASSET_LOADER_H

@@ -1,6 +1,0 @@
-#include "entity_type.h"
-#include "entity_header.h"
-#include "entity_scene_layer.h"
-#include "entity_event.h"
-#include "entity_event_queue.h"
-#include "entity_world.h"

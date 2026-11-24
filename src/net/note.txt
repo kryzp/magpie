@@ -1,0 +1,2 @@
+half-assed implementation of TCP
+in the future I want to replace this with GameNetworkingSockets.

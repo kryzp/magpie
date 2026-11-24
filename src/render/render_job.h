@@ -1,44 +1,62 @@
-#ifndef RENDER_JOB_H
-#define RENDER_JOB_H
+#ifndef RENDER_RENDER_JOB_H
+#define RENDER_RENDER_JOB_H
 
-#define R_RENDER_JOB_PACKET_ARENA_SIZE    Gigabytes(1)
-#define R_RENDER_JOB_FRAME_ARENA_SIZE     Gigabytes(1)
+#include "core/types.h"
+#include "core/log.h"
+#include "os/job.h"
+#include "os/platform.h"
+#include "graphics/swapchain.h"
+#include "render/frame.h"
 
-typedef struct R_RenderJob R_RenderJob;
-struct R_RenderJob
-{
-	LOG_Channel log_channel;
+#include <atomic>
 
-	R_System *system;
-	R_Graph *graph;
-	G_Swapchain *swapchain;
+namespace rnd {
 
-	R_FramePacket slots[R_FRAME_SLOT_COUNT];
+class System;
+class Graph;
 
-	// 1 while a render job is in flight, 0 otherwise.
-	OS_Handle counter;
+class RenderJob {
+public:
+	RenderJob(
+		System *system,
+		Graph *graph,
+		gfx::Swapchain *swapchain,
+		os::Window *window,
+		LogChannel log_channel
+	);
+	~RenderJob();
+
+	RenderJob(const RenderJob &) = delete;
+	RenderJob &operator=(const RenderJob &) = delete;
+
+	FramePacket *BeginPacket(u64 frame_number, float dt, float elapsed);
+	void Submit(const FramePacket *packet);
+	void WaitIdle();
+	bool GpuCompletedFrame(u64 *out_frame);
+
+private:
+	static void Entry(void *param);
+
+	void Run();
+
+	LogChannel log_channel;
+
+	System *system;
+	Graph *graph;
+	gfx::Swapchain *swapchain;
+	os::Window *window;
+
+	FramePacket slots[RENDER_FRAME_SLOT_COUNT];
+
+	job::Counter counter;
 
 	// only written while counter = 0
-	const R_FramePacket *pending;
+	const FramePacket *pending;
 
-	Arena frame_arena;
+	FrameParams frame_params;
 
-	i64 atomic_gpu_completed_frame; // -1 if not finished yet
+	std::atomic<i64> atomic_gpu_completed_frame; // -1 if not finished yet
 };
+}
 
-internal void R_RenderJobInit(R_RenderJob *rj,
-							  R_System *system,
-							  R_Graph *graph,
-							  G_Swapchain *swapchain,
-							  LOG_Channel log_channel);
-
-internal void R_RenderJobDestroy(R_RenderJob *rj);
-
-internal R_FramePacket *R_RenderJobBeginPacket(R_RenderJob *rj, u64 frame_number, f32 dt, f32 elapsed);
-internal void R_RenderJobSubmit(R_RenderJob *rj, const R_FramePacket *packet);
-internal void R_RenderJobWaitIdle(R_RenderJob *rj);
-internal b32 R_RenderJobGpuCompletedFrame(R_RenderJob *rj, u64 *out_frame);
-
-internal J_ENTRY_POINT_DEF(R_RenderJobEntry);
-
-#endif // RENDER_JOB_H
+#endif // RENDER_RENDER_JOB_H

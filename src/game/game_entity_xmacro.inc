@@ -1,1 +1,0 @@
-GameEntityDef(Player, 1)

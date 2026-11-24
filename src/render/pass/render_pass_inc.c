@@ -1,8 +1,0 @@
-#include "render_pass_environment_map.c"
-#include "render_pass_ibl.c"
-#include "render_pass_generate_mips.c"
-#include "render_pass_skybox.c"
-#include "render_pass_post_processing.c"
-#include "render_pass_culling.c"
-#include "render_pass_shadow.c"
-#include "render_pass_forward.c"
