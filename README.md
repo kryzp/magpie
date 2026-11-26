@@ -65,13 +65,13 @@ public:
 		Colour colour = Colour::FromHSV(static_cast<float>((int)((float)frame / 50.f) % 360), 1.f, 1.f);
 		rnd::Clear clear = rnd::Clear::Colour(colour.r, colour.g, colour.b, 1.f);
 
-		rnd::TextureInfo swapchain_info = rnd::TextureInfo::Swapchain(VK_FORMAT_R16G16B16A16_SFLOAT, Vec3(1.f));
-		rnd::GraphTexHandle swapchain_handle = graph->CreateTexture(swapchain_info);
+		rnd::TextureInfo backbuffer_info = rnd::TextureInfo::Swapchain(VK_FORMAT_R16G16B16A16_SFLOAT, Vec3(1.f));
+		rnd::GraphTexHandle backbuffer_handle = graph->CreateTexture(backbuffer_info);
 
 		rnd::Pass *pass = graph->Add("Pass", rnd::PassType_Graphics);
-		pass->WriteColour(swapchain_handle, &clear);
+		pass->WriteColour(backbuffer_handle, &clear);
 
-		graph->SetBackbuffer(swapchain_handle);
+		graph->SetBackbuffer(backbuffer_handle);
 		graph->SetPresentFilter(VK_FILTER_LINEAR);
 
 		graph->Compile(swapchain);
