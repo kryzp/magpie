@@ -260,7 +260,7 @@ void ast::TextureLoader::UploadGPU(
 
 		Vector<gfx::BufferImageCopy> regions(levels);
 
-		for (int l = 0; l < levels; l++) {
+		for (u32 l = 0; l < levels; l++) {
 			ktx_size_t off = 0;
 			ktxTexture_GetImageOffset(k, l, 0, 0, &off);
 			gfx::BufferImageCopy &r = regions[l];
