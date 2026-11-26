@@ -344,17 +344,14 @@ static void RootJobEntry(void *)
 
 int os::Run(IApplication *app, const RunConfig &config)
 {
-	SDL_InitFlags init_flags = SDL_INIT_EVENTS;
-
-	if (config.create_window) {
-		init_flags |=
-			SDL_INIT_VIDEO |
-			SDL_INIT_AUDIO |
-			SDL_INIT_JOYSTICK |
-			SDL_INIT_GAMEPAD |
-			SDL_INIT_HAPTIC |
-			SDL_INIT_SENSOR;
-	}
+	SDL_InitFlags init_flags =
+		SDL_INIT_EVENTS |
+		SDL_INIT_VIDEO |
+		SDL_INIT_AUDIO |
+		SDL_INIT_JOYSTICK |
+		SDL_INIT_GAMEPAD |
+		SDL_INIT_HAPTIC |
+		SDL_INIT_SENSOR;
 
 	if (!SDL_Init(init_flags)) {
 		fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -366,18 +363,11 @@ int os::Run(IApplication *app, const RunConfig &config)
 	state = platform_state.get();
 	state->app = app;
 	state->config = config;
+	state->window = new Window(config.window_title, config.window_width, config.window_height);
 
-	Unique<Window> window;
-
-	if (config.create_window) {
-		window = CreateScope<Window>(config.window_title, config.window_width, config.window_height);
-
-		if (!window->IsValid()) {
-			SDL_Quit();
-			return -1;
-		}
-
-		state->window = window.get();
+	if (!state->window->IsValid()) {
+		SDL_Quit();
+		return -1;
 	}
 
 	int result = 0;
@@ -409,7 +399,7 @@ int os::Run(IApplication *app, const RunConfig &config)
 		CloseAllGamepads();
 	}
 
-	window.reset();
+	delete state->window;
 
 	state = nullptr;
 

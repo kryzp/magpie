@@ -23,7 +23,6 @@ struct RunConfig {
 	unsigned window_width = 1280;
 	unsigned window_height = 720;
 
-	bool create_window = true;
 	bool enable_imgui = true;
 
 	const char *log_sink = nullptr;

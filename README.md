@@ -103,7 +103,6 @@ int main(int argc, char **argv)
 	config.window_title = "hello world";
 	config.window_width = 1920;
 	config.window_height = 1080;
-	config.create_window = true;
 	config.enable_imgui = true;
 	config.log_sink = "log.txt";
 
