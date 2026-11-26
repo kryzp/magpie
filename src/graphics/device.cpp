@@ -10,7 +10,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
 
-#define MAGPIE_VULKAN_API_VERSION VK_API_VERSION_1_4
+#define MAGPIE_VULKAN_API_VERSION VK_API_VERSION_1_3
 
 static gfx::Device *selected_device = nullptr;
 
