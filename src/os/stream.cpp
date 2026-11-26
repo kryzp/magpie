@@ -83,12 +83,12 @@ os::Stream os::Stream::FromConstMemory(const void *memory, u64 bytes)
 
 i64 os::Stream::Read(void *dst, u64 bytes)
 {
-	return (i64)SDL_ReadIO(io, dst, bytes);
+	return static_cast<i64>(SDL_ReadIO(io, dst, bytes));
 }
 
 i64 os::Stream::Write(const void *src, u64 bytes)
 {
-	return (i64)SDL_WriteIO(io, src, bytes);
+	return static_cast<i64>(SDL_WriteIO(io, src, bytes));
 }
 
 i64 os::Stream::Seek(i64 offset)

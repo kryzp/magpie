@@ -71,7 +71,7 @@ public:
 	virtual bool IsPlaying(SourceHandle handle) = 0;
 	virtual bool IsLooping(SourceHandle handle) = 0;
 
-	virtual BufferHandle CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned short sample_rate, Format format) = 0;
+	virtual BufferHandle CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned sample_rate, Format format) = 0;
 	virtual void DestroyBuffer(BufferHandle handle) = 0;
 
 	virtual SourceHandle CreateSourceFromBuffer(BufferHandle handle) = 0;

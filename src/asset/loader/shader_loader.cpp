@@ -47,10 +47,10 @@ ast::LoadResult ast::ShaderLoader::Load(const LoaderContext &ctx)
 
 void ast::ShaderLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
 {
-	ShaderLoadData *load_data = (ShaderLoadData *)result->user_data;
+	ShaderLoadData *load_data = static_cast<ShaderLoadData *>(result->user_data);
 	gfx::ShaderCompiledStages *compiled = &load_data->compiled;
 
-	asset->shader.key = gfx::Device::Get()->ShaderProgramCreate((unsigned)compiled->bytecodes.size(), compiled->bytecodes.data());
+	asset->shader.key = gfx::Device::Get()->ShaderProgramCreate(compiled->bytecodes.size(), compiled->bytecodes.data());
 }
 
 void ast::ShaderLoader::DestroyAsset(Asset *asset)

@@ -37,7 +37,7 @@ u64 rnd::Image::ImGuiTextureID() const
 
 Unique<rnd::Image> rnd::Image::Create(unsigned width, unsigned height, const u8 *rgba)
 {
-	u64 size = (u64)width * (u64)height * 4;
+	u64 size = static_cast<u64>(width) * static_cast<u64>(height) * 4;
 
 	if (rgba)
 		return CreateWith(width, height, VK_FORMAT_R8G8B8A8_UNORM, rgba, size);
@@ -48,7 +48,7 @@ Unique<rnd::Image> rnd::Image::Create(unsigned width, unsigned height, const u8 
 
 Unique<rnd::Image> rnd::Image::CreateBlank(unsigned width, unsigned height, VkFormat format, unsigned bytes_per_pixel)
 {
-	u64 size = (u64)width * (u64)height * bytes_per_pixel;
+	u64 size = static_cast<u64>(width) * static_cast<u64>(height) * bytes_per_pixel;
 
 	Vector<u8> zeroes(size, 0);
 	return CreateWith(width, height, format, zeroes.data(), size);
@@ -118,10 +118,10 @@ Unique<rnd::Image> rnd::Image::CreateSolid(unsigned width, unsigned height, unsi
 	Vector<u8> pixels(width * height * 4);
 
 	for (u64 i = 0; i < width * height; i++) {
-		pixels[i*4 + 0] = (u8)((rgba >> 24) & 0xFF);
-		pixels[i*4 + 1] = (u8)((rgba >> 16) & 0xFF);
-		pixels[i*4 + 2] = (u8)((rgba >>  8) & 0xFF);
-		pixels[i*4 + 3] = (u8)((rgba      ) & 0xFF);
+		pixels[i*4 + 0] = static_cast<u8>((rgba >> 24) & 0xFF);
+		pixels[i*4 + 1] = static_cast<u8>((rgba >> 16) & 0xFF);
+		pixels[i*4 + 2] = static_cast<u8>((rgba >>  8) & 0xFF);
+		pixels[i*4 + 3] = static_cast<u8>((rgba >>  0) & 0xFF);
 	}
 
 	return Create(width, height, pixels.data());
@@ -167,7 +167,7 @@ void rnd::ImageUploads::Queue(const Image *image, unsigned x, unsigned y, unsign
 	p.height = height;
 	p.offset = bytes.size();
 
-	u64 size = (u64)width * height * 4;
+	u64 size = static_cast<u64>(width) * height * 4;
 
 	bytes.resize(bytes.size() + size);
 	memcpy(bytes.data() + p.offset, rgba, size);
@@ -186,7 +186,7 @@ void rnd::ImageUploads::Record(const gfx::CmdBuffer &cmd, gfx::RingBuffer *uploa
 	gfx::AccessState copy = { VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
 
 	for (const PendingUpload &p : pending) {
-		u64 size = (u64)p.width * p.height * 4;
+		u64 size = static_cast<u64>(p.width) * p.height * 4;
 
 		gfx::Alloc alloc = upload->PushCopy(bytes.data() + p.offset, size, 16);
 

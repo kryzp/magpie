@@ -31,7 +31,7 @@ i64 json::Value::AsI64() const
 		case Type_Int:
 			return int_value;
 		case Type_Double:
-			return (i64)double_value;
+			return static_cast<i64>(double_value);
 		case Type_String:
 			return strtoll(string_value.c_str(), nullptr, 10);
 		default:
@@ -45,7 +45,7 @@ double json::Value::AsDouble() const
 		case Type_Bool:
 			return bool_value ? 1.0 : 0.0;
 		case Type_Int:
-			return (double)int_value;
+			return static_cast<double>(int_value);
 		case Type_Double:
 			return double_value;
 		case Type_String:
@@ -221,9 +221,9 @@ String json::Quote(const String &str)
 				out += "\\f";
 				break;
 			default:
-				if ((u8)c < 0x20) {
+				if (static_cast<u8>(c) < 0x20) {
 					char buf[8];
-					snprintf(buf, sizeof(buf), "\\u%04x", (u32)(u8)c);
+					snprintf(buf, sizeof(buf), "\\u%04x", static_cast<u32>(static_cast<u8>(c)));
 					out += buf;
 				} else {
 					out.push_back(c);
@@ -250,7 +250,7 @@ void json::Value::WriteScalar(String *out) const
 			break;
 
 		case Type_Int:
-			snprintf(buf, sizeof(buf), "%lld", (long long)int_value);
+			snprintf(buf, sizeof(buf), "%lld", int_value);
 			*out += buf;
 			break;
 
@@ -439,19 +439,19 @@ struct Parser {
 	static void AppendUTF8(String *out, u32 cp)
 	{
 		if (cp < 0x80) {
-			out->push_back((char)cp);
+			out->push_back(static_cast<char>(cp));
 		} else if (cp < 0x800) {
-			out->push_back((char)(0xC0 | (cp >> 6)));
-			out->push_back((char)(0x80 | (cp & 0x3F)));
+			out->push_back(static_cast<char>(0xC0 | (cp >> 6)));
+			out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
 		} else if (cp < 0x10000) {
-			out->push_back((char)(0xE0 | (cp >> 12)));
-			out->push_back((char)(0x80 | ((cp >> 6) & 0x3F)));
-			out->push_back((char)(0x80 | (cp & 0x3F)));
+			out->push_back(static_cast<char>(0xE0 | (cp >> 12)));
+			out->push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+			out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
 		} else {
-			out->push_back((char)(0xF0 | (cp >> 18)));
-			out->push_back((char)(0x80 | ((cp >> 12) & 0x3F)));
-			out->push_back((char)(0x80 | ((cp >> 6) & 0x3F)));
-			out->push_back((char)(0x80 | (cp & 0x3F)));
+			out->push_back(static_cast<char>(0xF0 | (cp >> 18)));
+			out->push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+			out->push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+			out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
 		}
 	}
 
@@ -510,7 +510,7 @@ struct Parser {
 					char hex[5] = { text[at], text[at + 1], text[at + 2], text[at + 3], 0 };
 					at += 4;
 
-					AppendUTF8(out, (u32)strtoul(hex, nullptr, 16));
+					AppendUTF8(out, static_cast<u32>(strtoul(hex, nullptr, 16)));
 				} break;
 				default:
 					return Fail("bad escape");

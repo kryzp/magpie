@@ -5,7 +5,7 @@
 static void DepthPrepassFn(const rnd::PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const rnd::DepthPrepassData *data = (const rnd::DepthPrepassData *)ctx.user_data;
+	const rnd::DepthPrepassData *data = static_cast<const rnd::DepthPrepassData *>(ctx.user_data);
 	const rnd::FrameParams *fp = data->frame_params;
 	gfx::Device *device = gfx::Device::Get();
 
@@ -58,7 +58,7 @@ static void ForwardPassFn(const rnd::PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
 
-	const rnd::ForwardPassData *data = (const rnd::ForwardPassData *)ctx.user_data;
+	const rnd::ForwardPassData *data = static_cast<const rnd::ForwardPassData *>(ctx.user_data);
 	const rnd::FrameParams *frame_params = data->frame_params;
 
 	if (data->mode == rnd::ForwardMode_Translucent && frame_params->translucent_draws.empty())

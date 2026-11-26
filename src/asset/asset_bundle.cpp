@@ -115,7 +115,7 @@ float ast::BundleLoader::GetProgress() const
 			ready++;
 	}
 
-	return (float)ready / (float)handles.size();
+	return static_cast<float>(ready) / static_cast<float>(handles.size());
 }
 
 ast::Handle ast::BundleLoader::Find(const String &file) const

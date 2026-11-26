@@ -42,7 +42,7 @@ gfx::RingBuffer gfx::RingBuffer::SliceView(u64 offset, u64 size) const
 	slice.buffer = buffer;
 	slice.base_offset = base_offset + offset;
 	slice.capacity = size;
-	slice.base_cpu = (u8 *)base_cpu + offset;
+	slice.base_cpu = static_cast<u8 *>(base_cpu) + offset;
 	slice.base_gpu = base_gpu + offset;
 
 	return slice;
@@ -58,7 +58,7 @@ gfx::Alloc gfx::RingBuffer::Push(u64 bytes, u64 alignment)
 {
 	Alloc alloc;
 
-	alignment = maths::Max(alignment, (u64)16);
+	alignment = maths::Max(alignment, static_cast<u64>(16));
 
 	u64 offset = MemAlignUp(used, alignment);
 
@@ -94,7 +94,7 @@ gfx::Alloc gfx::RingBuffer::PushCopy(const void *src, u64 bytes, u64 alignment)
 
 void *gfx::RingBuffer::AddrCPU(u64 offset) const
 {
-	return (void *)((u8 *)base_cpu + offset);
+	return static_cast<u8 *>(base_cpu) + offset;
 }
 
 u64 gfx::RingBuffer::AddrGPU(u64 offset) const

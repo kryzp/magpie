@@ -60,9 +60,9 @@ static const char *LogLevelAnsi(LogLevel level)
 static void MakeDedupBody(char *dst, int dst_size, const char *body, unsigned count)
 {
 	if (count > 1)
-		snprintf(dst, (u64)dst_size, "%s (%ux)", body, count);
+		snprintf(dst, static_cast<u64>(dst_size), "%s (%ux)", body, count);
 	else
-		snprintf(dst, (u64)dst_size, "%s", body);
+		snprintf(dst, static_cast<u64>(dst_size), "%s", body);
 }
 
 os::Logger::Logger(const String &sink)
@@ -99,7 +99,7 @@ os::Logger::Logger(const String &sink)
 os::Logger::~Logger()
 {
 	if (dedup_active) {
-		float elapsed = (float)timer.Elapsed();
+		float elapsed = static_cast<float>(timer.Elapsed());
 		FlushDedupToFile(elapsed);
 		dedup_active = false;
 	}
@@ -144,9 +144,9 @@ void os::Logger::ChannelNameResolve(LogChannel channel, char *dst, int dst_size)
 	if (entry->parent.id != 0) {
 		char parent[64] = {};
 		ChannelNameResolve(entry->parent, parent, sizeof(parent));
-		snprintf(dst, (u64)dst_size, "%s/%s", parent, entry->name.c_str());
+		snprintf(dst, static_cast<u64>(dst_size), "%s/%s", parent, entry->name.c_str());
 	} else {
-		snprintf(dst, (u64)dst_size, "%s", entry->name.c_str());
+		snprintf(dst, static_cast<u64>(dst_size), "%s", entry->name.c_str());
 	}
 }
 
@@ -247,7 +247,7 @@ void os::Logger::WriteToFile(const char *line, int len)
 	if (len <= 0 || !file_stream.IsOpen())
 		return;
 
-	file_stream.Write(line, (u64)len);
+	file_stream.Write(line, static_cast<u64>(len));
 
 	// necessary for linux since on linux it's buffered so after an assert
 	// crash the last couple lines would be lost, unlike on windows.
@@ -293,7 +293,7 @@ void os::Logger::WriteV(
 	if (!channels[channel.id].enabled)
 		return;
 
-	float elapsed = (float)timer.Elapsed();
+	float elapsed = static_cast<float>(timer.Elapsed());
 
 	char body[LOGGER_LINE_BUFFER_SIZE] = {};
 	vsnprintf(body, sizeof(body), fmt, args);
@@ -336,7 +336,7 @@ void os::Logger::WriteV(
 				else
 					fwrite("\r", 1, 1, stdout);
 
-				fwrite(console_line, 1, (u64)write_len, stdout);
+				fwrite(console_line, 1, static_cast<u64>(write_len), stdout);
 
 				fflush(stdout);
 			}
@@ -360,7 +360,7 @@ void os::Logger::WriteV(
 			);
 
 			if (console_len > 0) {
-				fwrite(console_line, 1, (u64)console_len, stdout);
+				fwrite(console_line, 1, static_cast<u64>(console_len), stdout);
 
 				if (level >= LogLevel_Warn)
 					fflush(stdout);

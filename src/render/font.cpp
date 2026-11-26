@@ -10,7 +10,9 @@
 
 static u64 KerningKey(unsigned first, unsigned second)
 {
-	return ((u64)first << 32) | (u64)second;
+	return
+		(static_cast<u64>(first) << 32) |
+		(static_cast<u64>(second) << 0);
 }
 
 // "key=value key2="quoted value"" -> map
@@ -117,7 +119,7 @@ Unique<rnd::Font> rnd::Font::LoadBMFont(const String &path)
 		HashMap<String, String> values = ParseBMFontLine(line, &tag);
 
 		if (tag == "common") {
-			font->line_height = (float)IntOf(values, "lineHeight");
+			font->line_height = static_cast<float>(IntOf(values, "lineHeight"));
 		} else if (tag == "page") {
 			String file_name = values["file"];
 			String page_path = directory + file_name;
@@ -130,12 +132,12 @@ Unique<rnd::Font> rnd::Font::LoadBMFont(const String &path)
 			if (!pixels)
 				return nullptr;
 
-			unsigned id = (unsigned)IntOf(values, "id");
+			unsigned id = static_cast<unsigned>(IntOf(values, "id"));
 
 			if (font->pages.size() <= id)
 				font->pages.resize(id + 1);
 
-			font->pages[id] = Image::Create((unsigned)w, (unsigned)h, pixels);
+			font->pages[id] = Image::Create(w, h, pixels);
 			stbi_image_free(pixels);
 		} else if (tag == "char") {
 			FontGlyph g;
@@ -148,10 +150,10 @@ Unique<rnd::Font> rnd::Font::LoadBMFont(const String &path)
 			g.advance = IntOf(values, "xadvance");
 			g.page = IntOf(values, "page");
 
-			font->glyphs[(unsigned)IntOf(values, "id")] = g;
+			font->glyphs[static_cast<unsigned>(IntOf(values, "id"))] = g;
 		} else if (tag == "kerning") {
-			unsigned first = (unsigned)IntOf(values, "first");
-			unsigned second = (unsigned)IntOf(values, "second");
+			unsigned first = static_cast<unsigned>(IntOf(values, "first"));
+			unsigned second = static_cast<unsigned>(IntOf(values, "second"));
 
 			font->kernings[KerningKey(first, second)] = IntOf(values, "amount");
 		}
@@ -170,7 +172,7 @@ Unique<rnd::Font> rnd::Font::CreateDefault()
 	unsigned w = default_font::ATLAS_WIDTH;
 	unsigned h = default_font::ATLAS_HEIGHT;
 
-	Vector<u8> pixels((u64)w * h * 4, 0);
+	Vector<u8> pixels(static_cast<u64>(w) * h * 4, 0);
 
 	for (unsigned i = 0; i < w * h; i++) {
 		bool set = (default_font::ATLAS_BITS[i / 8] >> (i % 8)) & 1;
@@ -184,8 +186,9 @@ Unique<rnd::Font> rnd::Font::CreateDefault()
 	}
 
 	Unique<Font> font(new Font());
+
 	font->pages.push_back(Image::Create(w, h, pixels.data()));
-	font->line_height = (float)default_font::LINE_HEIGHT;
+	font->line_height = static_cast<float>(default_font::LINE_HEIGHT);
 
 	for (unsigned i = 0; i < default_font::GLYPH_COUNT; i++) {
 		const DefaultFontGlyph &src = default_font::GLYPHS[i];
@@ -200,7 +203,7 @@ Unique<rnd::Font> rnd::Font::CreateDefault()
 		g.advance = src.advance;
 		g.page = 0;
 
-		font->glyphs[(unsigned)src.codepoint] = g;
+		font->glyphs[src.codepoint] = g;
 	}
 
 	font->ComputeCapTop();
@@ -213,11 +216,11 @@ void rnd::Font::ComputeCapTop()
 	const char *capitals = "XEMHIKLNTUVWZ";
 
 	for (const char *c = capitals; *c; c++) {
-		const FontGlyph *g = GetGlyph((unsigned)*c);
+		const FontGlyph *g = GetGlyph(static_cast<unsigned>(*c));
 
 		if (g && g->height > 0) {
-			cap_top = (float)g->offset_y;
-			cap_height = (float)g->height;
+			cap_top = static_cast<float>(g->offset_y);
+			cap_height = static_cast<float>(g->height);
 			return;
 		}
 	}
@@ -288,7 +291,7 @@ float rnd::Font::GetKerning(unsigned first, unsigned second) const
 
 float rnd::Font::GetAdvanceAt(const String &text, u64 index) const
 {
-	unsigned c = (u8)text[index];
+	unsigned c = static_cast<u8>(text[index]);
 
 	const FontGlyph *g = GetGlyph(c);
 
@@ -307,9 +310,8 @@ float rnd::Font::MeasureWidth(const String &text) const
 {
 	float width = 0.f;
 
-	for (u64 i = 0; i < text.size(); i++) {
+	for (u64 i = 0; i < text.size(); i++)
 		width += GetAdvanceAt(text, i);
-	}
 
 	return width;
 }
@@ -368,7 +370,7 @@ int rnd::Font::DrawWrapped(Canvas *canvas, const String &text, float x, float y,
 		}
 
 		String line = text.substr(line_start, line_end - line_start);
-		Draw(canvas, line, x, y - (float)lines * line_height * scale, target_width, align);
+		Draw(canvas, line, x, y - static_cast<float>(lines) * line_height * scale, target_width, align);
 
 		lines++;
 		line_start = next_start;
@@ -394,7 +396,7 @@ void rnd::Font::DrawRange(Canvas *canvas, const String &text, u64 start, u64 end
 	}
 
 	for (u64 i = start; i < end && i < text.size(); i++) {
-		unsigned c = (u8)text[i];
+		unsigned c = static_cast<u8>(text[i]);
 
 		const FontGlyph *g = GetGlyph(c);
 
@@ -404,15 +406,15 @@ void rnd::Font::DrawRange(Canvas *canvas, const String &text, u64 start, u64 end
 		if (g->width > 0 && g->height > 0 && g->page < pages.size()) {
 			TextureRegion region(pages[g->page].get(), g->x, g->y, g->width, g->height);
 
-			float gx = pen_x + (float)g->offset_x * scale;
-			float gy = line_top - (float)(g->offset_y + g->height) * scale;
+			float gx = pen_x + static_cast<float>(g->offset_x) * scale;
+			float gy = line_top - static_cast<float>(g->offset_y + g->height) * scale;
 
 			if (integer_positions) {
 				gx = std::round(gx);
 				gy = std::round(gy);
 			}
 
-			canvas->Draw(region, gx, gy, (float)g->width * scale, (float)g->height * scale);
+			canvas->Draw(region, gx, gy, static_cast<float>(g->width) * scale, static_cast<float>(g->height) * scale);
 		}
 
 		pen_x += GetAdvanceAt(text, i);

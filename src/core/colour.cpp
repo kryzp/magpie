@@ -56,10 +56,10 @@ u32 Colour::ToPacked8888() const
 	Colour c = Clamped();
 
 	return
-		((u32)(c.r * 255.f) << 24) |
-		((u32)(c.g * 255.f) << 16) |
-		((u32)(c.b * 255.f) <<  8) |
-		((u32)(c.a * 255.f) <<  0);
+		(static_cast<u32>(c.r * 255.f) << 24) |
+		(static_cast<u32>(c.g * 255.f) << 16) |
+		(static_cast<u32>(c.b * 255.f) <<  8) |
+		(static_cast<u32>(c.a * 255.f) <<  0);
 }
 
 Colour Colour::FromPacked8888(u32 rgba)
@@ -96,8 +96,8 @@ Colour Colour::FromHex(const char *hex)
 Colour Colour::FromHSV(float hue_degrees, float saturation, float value, float alpha)
 {
 	float h = std::fmod(hue_degrees / 60.f + 6.f, 6.f);
-	int i = (int)std::floor(h);
-	float f = h - (float)i;
+	int i = static_cast<int>(std::floor(h));
+	float f = h - static_cast<float>(i);
 	float p = value * (1.f - saturation);
 	float q = value * (1.f - saturation * f);
 	float t = value * (1.f - saturation * (1.f - f));

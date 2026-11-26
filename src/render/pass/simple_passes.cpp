@@ -6,7 +6,7 @@
 void rnd::HdrToEnvPassFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const HdrToEnvPassData *user_data = (const HdrToEnvPassData *)ctx.user_data;
+	const HdrToEnvPassData *user_data = static_cast<const HdrToEnvPassData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();
@@ -37,7 +37,7 @@ void rnd::HdrToEnvPassFn(const PassContext &ctx)
 void rnd::BRDFLutPassFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const BRDFLutPassData *user_data = (const BRDFLutPassData *)ctx.user_data;
+	const BRDFLutPassData *user_data = static_cast<const BRDFLutPassData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::GraphicsPipelineDef pipeline_def(frame_params->brdf_lut_generation_shader, *ctx.render_info);
@@ -51,7 +51,7 @@ void rnd::BRDFLutPassFn(const PassContext &ctx)
 void rnd::IBLPassIrradianceFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const IBLPassIrradianceData *user_data = (const IBLPassIrradianceData *)ctx.user_data;
+	const IBLPassIrradianceData *user_data = static_cast<const IBLPassIrradianceData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();
@@ -83,7 +83,7 @@ void rnd::IBLPassIrradianceFn(const PassContext &ctx)
 void rnd::IBLPassPrefilterFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const IBLPassPrefilterData *user_data = (const IBLPassPrefilterData *)ctx.user_data;
+	const IBLPassPrefilterData *user_data = static_cast<const IBLPassPrefilterData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();
@@ -119,15 +119,14 @@ void rnd::IBLPassPrefilterFn(const PassContext &ctx)
 
 void rnd::GenerateMipsPassFn(const PassContext &ctx)
 {
-	const GenerateMipsPassData *user_data = (const GenerateMipsPassData *)ctx.user_data;
-
+	const GenerateMipsPassData *user_data = static_cast<const GenerateMipsPassData *>(ctx.user_data);
 	ctx.cmd->GenerateMipmaps(user_data->texture);
 }
 
 void rnd::SkyboxPassFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const SkyboxPassData *user_data = (const SkyboxPassData *)ctx.user_data;
+	const SkyboxPassData *user_data = static_cast<const SkyboxPassData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();
@@ -161,7 +160,7 @@ void rnd::SkyboxPassFn(const PassContext &ctx)
 void rnd::PostProcessingPassFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const PostProcessingPassData *user_data = (const PostProcessingPassData *)ctx.user_data;
+	const PostProcessingPassData *user_data = static_cast<const PostProcessingPassData *>(ctx.user_data);
 	const FrameParams *frame_params = user_data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();

@@ -18,7 +18,7 @@ struct ShaderBytecode {
 
 struct ShaderStage {
 	ShaderBytecode bytecode;
-	VkShaderStageFlagBits flags = (VkShaderStageFlagBits)0;
+	VkShaderStageFlagBits flags = static_cast<VkShaderStageFlagBits>(0);
 	unsigned push_constant_size = 0;
 };
 

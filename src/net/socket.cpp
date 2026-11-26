@@ -186,7 +186,7 @@ bool net::Socket::ConnectTcp(const String &host, u16 port, u32 timeout_ms, Strin
 		pfd.events = POLLOUT;
 		pfd.revents = 0;
 
-		rc = poll(&pfd, 1, (int)timeout_ms);
+		rc = poll(&pfd, 1, static_cast<int>(timeout_ms));
 
 		if (rc > 0 && (pfd.revents & POLLOUT)) {
 			int so_error = 0;
@@ -218,7 +218,7 @@ bool net::Socket::ListenTcp(u16 port, String *error)
 {
 	Close();
 
-	SocketHandle s = (SocketHandle)socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	SocketHandle s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if (s == NET_INVALID_SOCKET) {
 		if (error)
@@ -229,14 +229,14 @@ bool net::Socket::ListenTcp(u16 port, String *error)
 	handle = s;
 
 	int one = 1;
-	setsockopt((NativeSocket)handle, SOL_SOCKET, SO_REUSEADDR, (const char *)&one, sizeof(one));
+	setsockopt(handle, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
 	sockaddr_in addr = {};
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr.sin_port = htons(port);
 
-	if (bind(handle, (sockaddr *)&addr, sizeof(addr)) != 0) {
+	if (bind(handle, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) != 0) {
 		if (error)
 			*error = "bind() failed: " + LastSocketError();
 
@@ -293,10 +293,10 @@ net::SocketResult net::Socket::Send(const void *data, u64 size, u64 *out_sent)
 	int flags = MSG_NOSIGNAL;
 #endif
 
-	long rc = send((NativeSocket)handle, data, size, flags);
+	long rc = send(handle, data, size, flags);
 
 	if (rc >= 0) {
-		*out_sent = (u64)rc;
+		*out_sent = static_cast<u64>(rc);
 		return SocketResult_Ok;
 	}
 
@@ -318,7 +318,7 @@ net::SocketResult net::Socket::Receive(void *data, u64 size, u64 *out_received)
 	long rc = recv(handle, data, size, 0);
 
 	if (rc > 0) {
-		*out_received = (u64)rc;
+		*out_received = static_cast<u64>(rc);
 		return SocketResult_Ok;
 	}
 
@@ -341,13 +341,13 @@ String net::Socket::GetRemoteAddress() const
 	sockaddr_storage addr = {};
 	socklen_t len = sizeof(addr);
 
-	if (getpeername(handle, (sockaddr *)&addr, &len) != 0)
+	if (getpeername(handle, reinterpret_cast<sockaddr *>(&addr), &len) != 0)
 		return "";
 
 	char host[128] = {};
 	char serv[32] = {};
 
-	if (getnameinfo((sockaddr *)&addr, len, host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV) != 0)
+	if (getnameinfo(reinterpret_cast<sockaddr *>(&addr), len, host, sizeof(host), serv, sizeof(serv), NI_NUMERICHOST | NI_NUMERICSERV) != 0)
 		return "";
 
 	return String(host) + ":" + serv;

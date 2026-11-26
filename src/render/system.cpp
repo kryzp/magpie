@@ -286,7 +286,7 @@ void rnd::System::GenerateLookupsAndMaps(Graph *graph, const FrameParams *frame_
 			IBLPassPrefilterData *data = graph->NewPassData<IBLPassPrefilterData>();
 			data->frame_params = frame_params;
 			data->env_view = device->TextureViewAuto(environment_cubemap);
-			data->roughness = (float)i / (float)(mipmap_count - 1);
+			data->roughness = static_cast<float>(i) / static_cast<float>(mipmap_count - 1);
 
 			gfx::SubresourceRange range = {};
 			range.aspects = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -388,5 +388,5 @@ void rnd::System::Render(Graph *graph, const FrameParams *frame_params)
 	debug_renderer.Render(graph, frame_params, bb.lighting_resolve, bb.depth_resolve);
 
 	graph->SetBackbuffer(bb.lighting_resolve);
-	graph->SetPresentFilter(VK_FILTER_NEAREST);
+	graph->SetPresentFilter(VK_FILTER_LINEAR);
 }

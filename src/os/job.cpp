@@ -54,8 +54,8 @@ static void SetCurrentWorker(job::Worker *worker)
 
 bool job::Queue::TryPopRequest(Request *out)
 {
-	if ((unsigned)added_task_count.load(std::memory_order_acquire) ==
-		(unsigned)taken_task_count.load(std::memory_order_acquire)) {
+	if (static_cast<unsigned>(added_task_count.load(std::memory_order_acquire)) ==
+		static_cast<unsigned>(taken_task_count.load(std::memory_order_acquire))) {
 		return false;
 	}
 
@@ -63,12 +63,12 @@ bool job::Queue::TryPopRequest(Request *out)
 
 	lock.Acquire();
 	{
-		unsigned t = (unsigned)taken_task_count.load(std::memory_order_relaxed);
-		unsigned a = (unsigned)added_task_count.load(std::memory_order_relaxed);
+		unsigned t = static_cast<unsigned>(taken_task_count.load(std::memory_order_relaxed));
+		unsigned a = static_cast<unsigned>(added_task_count.load(std::memory_order_relaxed));
 
 		if (a != t) {
 			*out = requests[t % JOBS_MAX_JOBS_PER_QUEUE];
-			taken_task_count.store((int)(t + 1), std::memory_order_release);
+			taken_task_count.store(static_cast<int>(t + 1), std::memory_order_release);
 			popped = true;
 		}
 	}
@@ -93,7 +93,7 @@ job::JobFiber *job::Queue::TryPopWaiting()
 
 		if (a != t) {
 			fiber = waiting[t % JOBS_MAX_JOBS_PER_QUEUE];
-			taken_waiting_count.store((int)(t + 1), std::memory_order_release);
+			taken_waiting_count.store(static_cast<int>(t + 1), std::memory_order_release);
 		}
 	}
 	lock.Release();
@@ -533,12 +533,12 @@ bool job::Scheduler::TryPush(const Request &request)
 
 	queue->lock.Acquire();
 	{
-		unsigned t = (unsigned)queue->taken_task_count.load(std::memory_order_relaxed);
-		unsigned a = (unsigned)queue->added_task_count.load(std::memory_order_relaxed);
+		unsigned t = static_cast<unsigned>(queue->taken_task_count.load(std::memory_order_relaxed));
+		unsigned a = static_cast<unsigned>(queue->added_task_count.load(std::memory_order_relaxed));
 
 		if ((a - t) < JOBS_MAX_JOBS_PER_QUEUE) {
 			queue->requests[a % JOBS_MAX_JOBS_PER_QUEUE] = request;
-			queue->added_task_count.store((int)(a + 1), std::memory_order_release);
+			queue->added_task_count.store(static_cast<int>(a + 1), std::memory_order_release);
 			pushed = true;
 		}
 	}
@@ -571,18 +571,17 @@ void job::Scheduler::PushWaitingFiber(JobFiber *fiber)
 	for (;;) {
 		queue->lock.Acquire();
 
-		unsigned t = (unsigned)queue->taken_waiting_count.load(std::memory_order_relaxed);
-		unsigned a = (unsigned)queue->added_waiting_count.load(std::memory_order_relaxed);
+		unsigned t = static_cast<unsigned>(queue->taken_waiting_count.load(std::memory_order_relaxed));
+		unsigned a = static_cast<unsigned>(queue->added_waiting_count.load(std::memory_order_relaxed));
 
 		bool is_full = (a - t) >= JOBS_MAX_JOBS_PER_QUEUE;
 
 		if (is_full) {
 			queue->lock.Release();
-
 			OS_SPIN_PAUSE();
 		} else {
 			queue->waiting[a % JOBS_MAX_JOBS_PER_QUEUE] = fiber;
-			queue->added_waiting_count.store((int)(a + 1), std::memory_order_release);
+			queue->added_waiting_count.store(static_cast<int>(a + 1), std::memory_order_release);
 
 			queue->lock.Release();
 
@@ -611,7 +610,7 @@ void job::Scheduler::KickRaw(const Decl &decl, Counter *counter)
 void job::Scheduler::BatchRaw(const Decl *decls, unsigned count, Counter *counter)
 {
 	if (counter)
-		counter->Increment((int)count);
+		counter->Increment(count);
 
 	for (unsigned i = 0; i < count; i++) {
 		Request request;
@@ -629,7 +628,7 @@ void job::Scheduler::BatchRaw(const Decl *decls, unsigned count, Counter *counte
 
 void job::Scheduler::FiberEntry(void *param)
 {
-	Scheduler *self = (Scheduler *)param;
+	Scheduler *self = static_cast<Scheduler *>(param);
 
 	for (;;) {
 		JobFiber *f = GetCurrentWorker()->current_fiber;
@@ -812,7 +811,7 @@ struct ParallelForParam {
 
 static void ParallelForBatchEntry(void *param)
 {
-	ParallelForParam *p = (ParallelForParam *)param;
+	ParallelForParam *p = static_cast<ParallelForParam *>(param);
 
 	for (unsigned i = 0; i < p->loop_size; i++)
 		p->inner(p->base_index + i, p->inner_param);
@@ -907,7 +906,7 @@ job::Context job::GetContext()
 
 	if (worker) {
 		ctx.worker_id = worker->id;
-		ctx.fiber_id = worker->current_fiber ? (int)worker->current_fiber->id : -1;
+		ctx.fiber_id = worker->current_fiber ? static_cast<int>(worker->current_fiber->id) : -1;
 	}
 
 	return ctx;

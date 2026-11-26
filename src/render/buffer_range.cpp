@@ -3,7 +3,7 @@
 
 void *rnd::BufferRange::Map() const
 {
-	return (void *)((u8 *)gfx::Device::Get()->BufferMap(buffer) + offset);
+	return static_cast<u8 *>(gfx::Device::Get()->BufferMap(buffer)) + offset;
 }
 
 u64 rnd::BufferRange::Address() const

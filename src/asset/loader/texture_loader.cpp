@@ -94,7 +94,7 @@ ast::LoadResult ast::TextureLoader::Load(const LoaderContext &ctx)
 				return result;
 		}
 
-		VkFormat format = (VkFormat)ktx->vkFormat;
+		VkFormat format = static_cast<VkFormat>(ktx->vkFormat);
 		if (format == VK_FORMAT_UNDEFINED || !device->FormatSupports(format, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_TRANSFER_DST_BIT))
 			return result;
 
@@ -172,7 +172,7 @@ static VkFormat FormatWithSRGB(VkFormat format, bool srgb)
 void ast::TextureLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
 {
 	gfx::Device *device = gfx::Device::Get();
-	TextureLoadData *tex_data = (TextureLoadData *)result->user_data;
+	TextureLoadData *tex_data = static_cast<TextureLoadData *>(result->user_data);
 
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	int mips = 1;
@@ -193,7 +193,7 @@ void ast::TextureLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Ass
 		VkDebugUtilsObjectNameInfoEXT name = {};
 		name.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
 		name.objectType = VK_OBJECT_TYPE_IMAGE;
-		name.objectHandle = (u64)device->TextureFromKey(asset->texture.key)->vk_handle;
+		name.objectHandle = reinterpret_cast<u64>(device->TextureFromKey(asset->texture.key)->vk_handle);
 		name.pObjectName = ctx.metadata.path.c_str();
 
 		vkSetDebugUtilsObjectNameEXT(device->vk_device, &name);
@@ -210,7 +210,7 @@ void ast::TextureLoader::UploadGPU(
 )
 {
 	gfx::Device *device = gfx::Device::Get();
-	TextureLoadData *tex_data = (TextureLoadData *)result->user_data;
+	TextureLoadData *tex_data = static_cast<TextureLoadData *>(result->user_data);
 	gfx::Texture *gfx_texture = device->TextureFromKey(asset->texture.key);
 
 	gfx::AccessState copy_src = {
@@ -322,7 +322,7 @@ void ast::TextureLoader::UploadGPU(
 
 void ast::TextureLoader::DestroyIntermediateResources(LoadResult *result)
 {
-	TextureLoadData *tex_data = (TextureLoadData *)result->user_data;
+	TextureLoadData *tex_data = static_cast<TextureLoadData *>(result->user_data);
 
 	if (tex_data)
 		tex_data->Release();

@@ -389,10 +389,11 @@ void gfx::CmdBuffer::GenerateMipmaps(ResourceKey texture) const
 		PipelineBarrier(0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 		for (unsigned face = 0; face < gfx_texture->layer_count; face++) {
-			int src_mip_width = (int)gfx_texture->width >> (i - 1);
-			int src_mip_height = (int)gfx_texture->height >> (i - 1);
-			int dst_mip_width = (int)gfx_texture->width >> (i - 0);
-			int dst_mip_height = (int)gfx_texture->height >> (i - 0);
+
+			int src_mip_width  = static_cast<int>(gfx_texture->width)  >> (i - 1);
+			int src_mip_height = static_cast<int>(gfx_texture->height) >> (i - 1);
+			int dst_mip_width  = static_cast<int>(gfx_texture->width)  >> (i - 0);
+			int dst_mip_height = static_cast<int>(gfx_texture->height) >> (i - 0);
 
 			VkImageBlit2 blit = {};
 			blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;

@@ -7,7 +7,7 @@
 struct SoundLoadData : ast::LoadData {
 	Vector<u8> pcm_data;
 	unsigned channels = 0;
-	unsigned short sample_rate = 0;
+	unsigned sample_rate = 0;
 };
 
 const Vector<String> &ast::SoundLoader::GetFileExtensions() const
@@ -43,8 +43,8 @@ ast::LoadResult ast::SoundLoader::Load(const LoaderContext &ctx)
 
 	SoundLoadData *sound = new SoundLoadData();
 	sound->channels = decoder.outputChannels;
-	sound->sample_rate = (unsigned short)decoder.outputSampleRate;
-	sound->pcm_data.resize((u64)(frame_count * sound->channels * sizeof(float)));
+	sound->sample_rate = decoder.outputSampleRate;
+	sound->pcm_data.resize(frame_count * sound->channels * sizeof(float));
 
 	ma_decoder_read_pcm_frames(&decoder, sound->pcm_data.data(), frame_count, nullptr);
 	ma_decoder_uninit(&decoder);
@@ -56,7 +56,7 @@ ast::LoadResult ast::SoundLoader::Load(const LoaderContext &ctx)
 
 void ast::SoundLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
 {
-	SoundLoadData *sound = (SoundLoadData *)result->user_data;
+	SoundLoadData *sound = static_cast<SoundLoadData *>(result->user_data);
 
 	asset->sound.pcm = sound->pcm_data;
 

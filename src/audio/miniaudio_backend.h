@@ -27,7 +27,7 @@ public:
 	bool IsPlaying(SourceHandle handle) override;
 	bool IsLooping(SourceHandle handle) override;
 
-	BufferHandle CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned short sample_rate, Format format) override;
+	BufferHandle CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned sample_rate, Format format) override;
 	void DestroyBuffer(BufferHandle handle) override;
 
 	SourceHandle CreateSourceFromBuffer(BufferHandle handle) override;

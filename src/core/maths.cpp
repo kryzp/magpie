@@ -44,12 +44,12 @@ int maths::FloorMod(int a, int b)
 
 float maths::Quantize(float value, float resolution)
 {
-	return (float)std::lround(value * resolution) / resolution;
+	return static_cast<float>(std::lround(value * resolution)) / resolution;
 }
 
 float maths::WrapPi(float radians)
 {
-	return radians - PI2f * (float)std::lround(radians / PI2f);
+	return radians - PI2f * static_cast<float>(std::lround(radians / PI2f));
 }
 
 float maths::AngleDistance(float from_radians, float to_radians)
@@ -67,14 +67,13 @@ float maths::SmoothStep(float t)
 float maths::HashSigned(int a, int b)
 {
 	u32 h = hash::Ints(a, b);
-
-	return (float)(h & 0xFFFFu) / 32767.5f - 1.f;
+	return static_cast<float>(h & 0xFFFFu) / 32767.5f - 1.f;
 }
 
 float maths::ValueNoise(float x, int seed)
 {
 	int i = Floor(x);
-	float u = SmoothStep(x - (float)i);
+	float u = SmoothStep(x - static_cast<float>(i));
 
 	float a = HashSigned(i, seed);
 	float b = HashSigned(i + 1, seed);

@@ -16,7 +16,7 @@ ast::AssetType ast::TypeFromString(const String &string)
 {
 	for (unsigned i = AssetType_Null + 1; i < AssetType_MaxEnum; i++) {
 		if (string == type_names[i])
-			return (AssetType)i;
+			return static_cast<AssetType>(i);
 	}
 
 	DebugPrintB("Unknown Asset Name: %s", string.c_str());
@@ -29,7 +29,7 @@ const char *ast::StringFromType(AssetType type)
 	if (type < AssetType_MaxEnum)
 		return type_names[type];
 
-	DebugPrintB("Unknown Asset Type: %d", (int)type);
+	DebugPrintB("Unknown Asset Type: %d", static_cast<int>(type));
 
 	return "";
 }

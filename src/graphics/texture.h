@@ -72,7 +72,7 @@ struct Texture {
 // hashed byte for byte
 struct SubresourceRange {
 
-	static constexpr  unsigned REMAINING = (unsigned)(-1);
+	static constexpr  unsigned REMAINING = static_cast<unsigned>(-1);
 
 	VkImageAspectFlags aspects;
 	unsigned base_mip;

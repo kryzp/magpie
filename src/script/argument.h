@@ -45,13 +45,15 @@ struct Argument {
 
 inline u64 PackTaggedU32(unsigned value, unsigned tag)
 {
-	return ((u64)tag << 32) | (u64)value;
+	return
+		(static_cast<u64>(tag) << 32) |
+		(static_cast<u64>(value) << 0);
 }
 
 inline void UnpackTaggedU32(u64 packed, unsigned *out_value, unsigned *out_tag)
 {
-	*out_tag = (unsigned)(packed >> 32);
-	*out_value = (unsigned)(packed & 0xFFFFFFFFu);
+	*out_tag = static_cast<unsigned>(packed >> 32);
+	*out_value = static_cast<unsigned>(packed & 0xFFFFFFFFu);
 }
 }
 

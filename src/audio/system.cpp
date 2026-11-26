@@ -183,7 +183,7 @@ void aud::System::SetMasterVolume(float volume)
 	master_volume = volume;
 
 	for (int b = 0; b < Bus_MaxEnum; b++)
-		UpdateEmitterVolumes((Bus)b);
+		UpdateEmitterVolumes(static_cast<Bus>(b));
 }
 
 void aud::System::SetBusVolume(Bus bus, float volume)

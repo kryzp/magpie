@@ -324,7 +324,7 @@ ast::AssetType ast::AssetSystem::GetAssetTypeFromPath(const String &path)
 
 		for (const String &candidate : loader->GetFileExtensions()) {
 			if (extension == candidate)
-				return (AssetType)i;
+				return static_cast<AssetType>(i);
 		}
 	}
 
@@ -418,7 +418,7 @@ ast::LoadState ast::AssetSystem::GetLoadState(Handle handle)
 void ast::AssetSystem::LoadJob(void *param)
 {
 	AssetSystem *self = selected_system;
-	LoadJobParam *load_params = (LoadJobParam *)param;
+	LoadJobParam *load_params = static_cast<LoadJobParam *>(param);
 
 	AssetType type = load_params->record->type;
 

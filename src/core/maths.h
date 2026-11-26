@@ -81,12 +81,12 @@ float NormalizeAngle(float radians);
 
 inline int Floor(float v)
 {
-	return (int)std::floor(v);
+	return static_cast<int>(std::floor(v));
 }
 
 inline int Ceil(float v)
 {
-	return (int)std::ceil(v);
+	return static_cast<int>(std::ceil(v));
 }
 
 template <typename T>

@@ -45,7 +45,7 @@ public:
 		Value r;
 		r.type = Type_Int;
 		r.int_value = v;
-		r.double_value = (double)v;
+		r.double_value = static_cast<double>(v);
 		return r;
 	}
 
@@ -54,7 +54,7 @@ public:
 		Value r;
 		r.type = Type_Double;
 		r.double_value = v;
-		r.int_value = (i64)v;
+		r.int_value = static_cast<i64>(v);
 		return r;
 	}
 
@@ -120,14 +120,14 @@ public:
 
 	i32 AsInt() const
 	{
-		return (i32)AsI64();
+		return static_cast<i32>(AsI64());
 	}
 
 	double AsDouble() const;
 
 	float AsFloat() const
 	{
-		return (float)AsDouble();
+		return static_cast<float>(AsDouble());
 	}
 
 	String AsString() const;
@@ -140,7 +140,7 @@ public:
 	// Arrays and objects.
 	u32 Size() const
 	{
-		return (u32)children.size();
+		return static_cast<u32>(children.size());
 	}
 
 	const Value &At(u32 index) const

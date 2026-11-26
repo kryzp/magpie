@@ -34,7 +34,7 @@ static void QuerySystemInfo()
 #else
 
 	long page = sysconf(_SC_PAGESIZE);
-	page_size = (page > 0) ? (u64)page : 4096;
+	page_size = (page > 0) ? static_cast<u64>(page) : 4096;
 
 	unsigned cores = 0;
 
@@ -43,12 +43,12 @@ static void QuerySystemInfo()
 	CPU_ZERO(&set);
 
 	if (sched_getaffinity(0, sizeof(set), &set) == 0)
-		cores = (unsigned)CPU_COUNT(&set);
+		cores = static_cast<unsigned>(CPU_COUNT(&set));
 #endif
 
 	if (cores == 0) {
 		long n = sysconf(_SC_NPROCESSORS_ONLN);
-		cores = (n > 0) ? (unsigned)n : 1;
+		cores = (n > 0) ? static_cast<unsigned>(n) : 1;
 	}
 
 	num_cores = cores;
@@ -115,7 +115,7 @@ os::Window::Window(const char *title, unsigned width, unsigned height)
 		SDL_WINDOW_VULKAN |
 		SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-	sdl_window = SDL_CreateWindow(title, (int)width, (int)height, window_flags);
+	sdl_window = SDL_CreateWindow(title, static_cast<int>(width), static_cast<int>(height), window_flags);
 
 	if (!sdl_window)
 		fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -211,9 +211,9 @@ bool os::Window::IsMouseLocked() const
 	return SDL_GetWindowRelativeMouseMode(sdl_window);
 }
 
-bool os::Window::SetCursorImage(const u8 *rgba, unsigned width, unsigned height, int hot_x, int hot_y)
+bool os::Window::SetCursorImage(u8 *rgba, unsigned width, unsigned height, int hot_x, int hot_y)
 {
-	SDL_Surface *surface = SDL_CreateSurfaceFrom((int)width, (int)height, SDL_PIXELFORMAT_RGBA32, (void *)rgba, (int)width * 4);
+	SDL_Surface *surface = SDL_CreateSurfaceFrom(static_cast<int>(width), static_cast<int>(height), SDL_PIXELFORMAT_RGBA32, rgba, static_cast<int>(width) * 4);
 
 	if (!surface)
 		return false;
@@ -240,8 +240,8 @@ Vec2 os::Window::ScreenToNDC(const Vec2 &window_position) const
 
 	GetSize(&window_width, &window_height);
 
-	float x = (2.f * window_position.x) / ((float)window_width) - 1.f;
-	float y = (2.f * window_position.y) / ((float)window_height) - 1.f;
+	float x = (2.f * window_position.x) / static_cast<float>(window_width) - 1.f;
+	float y = (2.f * window_position.y) / static_cast<float>(window_height) - 1.f;
 
 	y *= -1.f;
 

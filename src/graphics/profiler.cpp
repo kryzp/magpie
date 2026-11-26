@@ -151,13 +151,13 @@ u64 gfx::Profiler::GetRawStat(ProfileType type, const char *name) const
 
 double gfx::Profiler::GetTimer(const char *name) const
 {
-	double dur = (double)GetRawStat(ProfileType_Timestamp, name);
-	return dur * (double)period / 1000000.0;
+	double dur = static_cast<double>(GetRawStat(ProfileType_Timestamp, name));
+	return dur * static_cast<double>(period) / 1000000.0;
 }
 
 int gfx::Profiler::GetPipelineStatistics(const char *name) const
 {
-	int pipeline_stat = (int)GetRawStat(ProfileType_PipelineStatistics, name);
+	int pipeline_stat = static_cast<int>(GetRawStat(ProfileType_PipelineStatistics, name));
 	return pipeline_stat;
 }
 

@@ -54,11 +54,11 @@ void gfx::CmdPool::Release(const CmdBuffer &cmd, u64 fence_value)
 {
 	DebugLogAssert(
 		log_channel,
-		release_count < (int)ArraySize(release_queue),
+		release_count < ArraySize(release_queue),
 		"Command pool release queue is full."
 	);
 
-	unsigned slot = (unsigned)(release_front + release_count) % ArraySize(release_queue);
+	unsigned slot = static_cast<unsigned>(release_front + release_count) % ArraySize(release_queue);
 
 	CmdPoolReleasedBuffer *released = &release_queue[slot];
 
@@ -84,7 +84,7 @@ void gfx::CmdPool::Purge(u64 fence_value)
 
 		acquire_stack[acquire_count++] = released->vk_handle;
 
-		release_front = (release_front + 1) % (int)ArraySize(release_queue);
+		release_front = (release_front + 1) % static_cast<int>(ArraySize(release_queue));
 
 		release_count--;
 	}

@@ -124,7 +124,7 @@ static void ReconnectAllGamepads()
 		if (state->gamepads[i])
 			DebugLogD(state->log_channel, "Added gamepad with player index: %d", SDL_GetGamepadPlayerIndex(state->gamepads[i]));
 		else
-			DebugLogD(state->log_channel, "Failed to open gamepad %u: %s", (unsigned)ids[i], SDL_GetError());
+			DebugLogD(state->log_channel, "Failed to open gamepad %u: %s", static_cast<unsigned>(ids[i]), SDL_GetError());
 	}
 
 	SDL_free(ids);
@@ -259,11 +259,11 @@ static os::InputState ProcessEvents(const os::InputState &prev_state)
 				if (!gp)
 					break;
 
-				os::GamepadAxis axis = (os::GamepadAxis)ev->gaxis.axis;
+				os::GamepadAxis axis = static_cast<os::GamepadAxis>(ev->gaxis.axis);
 
 				float normalized_value = (ev->gaxis.value < 0)
-					 ? (float)ev->gaxis.value / 32768.f
-					 : (float)ev->gaxis.value / (float)SDL_JOYSTICK_AXIS_MAX;
+					 ? static_cast<float>(ev->gaxis.value) / 32768.f
+					 : static_cast<float>(ev->gaxis.value) / static_cast<float>(SDL_JOYSTICK_AXIS_MAX);
 
 				gp->SetAxisValue(axis, normalized_value);
 			} break;

@@ -182,7 +182,7 @@ private:
 	template <typename T>
 	static void DeletePassData(void *ptr)
 	{
-		delete (T *)ptr;
+		delete static_cast<T *>(ptr);
 	}
 
 	void FreePassData();

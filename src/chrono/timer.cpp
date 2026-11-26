@@ -62,7 +62,7 @@ double Timer::Elapsed() const
 		return 0.0;
 
 	if (paused)
-		return (double)paused_ticks / (double)os::GetPerformanceFrequency();
+		return static_cast<double>(paused_ticks) / static_cast<double>(os::GetPerformanceFrequency());
 
-	return (double)(os::GetPerformanceCounter() - start_ticks) / (double)os::GetPerformanceFrequency();
+	return static_cast<double>(os::GetPerformanceCounter() - start_ticks) / static_cast<double>(os::GetPerformanceFrequency());
 }

@@ -51,7 +51,7 @@ static void PushArg(lua_State *target, const scr::Argument &a)
 			break;
 
 		case scr::ArgType_TaggedU32:
-			lua_pushinteger(target, (lua_Integer)scr::PackTaggedU32(a.tagged_value, a.tag));
+			lua_pushinteger(target, static_cast<lua_Integer>(scr::PackTaggedU32(a.tagged_value, a.tag)));
 			break;
 
 		default:
@@ -149,7 +149,7 @@ scr::Coroutine *scr::System::AllocCoroutine(CoroutineHandle *out_handle)
 		}
 	}
 
-	DebugLogE(log_channel, "Out of coroutine slots (max %u).", (unsigned)SCRIPT_MAX_COROUTINES);
+	DebugLogE(log_channel, "Out of coroutine slots (max %u).", SCRIPT_MAX_COROUTINES);
 
 	if (out_handle)
 		*out_handle = CoroutineHandle();
@@ -162,7 +162,7 @@ void scr::System::FreeCoroutine(Coroutine *co)
 	if (co->finish_fn)
 		co->finish_fn(co, co->finish_user_data);
 
-	if (co->parent >= 0 && co->parent < (int)SCRIPT_MAX_COROUTINES) {
+	if (co->parent >= 0 && co->parent < SCRIPT_MAX_COROUTINES) {
 		Coroutine *parent = &coroutines[co->parent];
 
 		if (parent->in_use && parent->active_children > 0)
@@ -201,7 +201,7 @@ scr::Coroutine *scr::System::ResolveHandle(CoroutineHandle handle)
 
 int scr::System::BindingTrampoline(lua_State *lua)
 {
-	BindingFn *fn = (BindingFn *)lua_touserdata(lua, lua_upvalueindex(1));
+	BindingFn *fn = reinterpret_cast<BindingFn *>(lua_touserdata(lua, lua_upvalueindex(1)));
 
 	Context ctx(lua);
 
@@ -214,7 +214,7 @@ int scr::System::BindingTrampoline(lua_State *lua)
 void scr::System::PushBindingClosure(BindingFn *fn, void *const *upvalues, unsigned n)
 {
 	// first upval is reserved for the function pointer
-	lua_pushlightuserdata(lua, (void *)fn);
+	lua_pushlightuserdata(lua, reinterpret_cast<void *>(fn));
 
 	for (int i = 0; i < n; i++)
 		lua_pushlightuserdata(lua, upvalues ? upvalues[i] : nullptr);
@@ -283,7 +283,7 @@ void scr::System::BindParallelize(Context *ctx)
 
 	parent->active_children = n;
 
-	const int parent_idx = (int)(parent - self->coroutines);
+	const int parent_idx = static_cast<int>(parent - self->coroutines);
 
 	for (int i = 0; i < n; i++) {
 		CoroutineHandle child_handle;
@@ -316,7 +316,7 @@ scr::Ref scr::System::Compile(const void *source, u64 size, const String &chunk_
 {
 	Ref result;
 
-	int status = luaL_loadbufferx(lua, (const char *)source, size, chunk_name.c_str(), "t");
+	int status = luaL_loadbufferx(lua, static_cast<const char *>(source), size, chunk_name.c_str(), "t");
 
 	if (status != LUA_OK) {
 		const char *err = lua_tostring(lua, -1);
@@ -515,7 +515,7 @@ void scr::System::ResumeOne(Coroutine *co)
 	int nargs = 0;
 
 	if (!co->has_been_resumed) {
-		nargs = (int)co->initial_arg_count;
+		nargs = co->initial_arg_count;
 		co->has_been_resumed = true;
 	}
 
@@ -625,17 +625,17 @@ void scr::System::BindToTableEx(const String &table, const String &name, Binding
 
 unsigned scr::Context::GetArgCount()
 {
-	return (unsigned)lua_gettop(lua);
+	return static_cast<unsigned>(lua_gettop(lua));
 }
 
 float scr::Context::GetArgFloat(unsigned idx)
 {
-	return (float)luaL_checknumber(lua, idx + 1);
+	return static_cast<float>(luaL_checknumber(lua, idx + 1));
 }
 
 int scr::Context::GetArgInt(unsigned idx)
 {
-	return (int)luaL_checkinteger(lua, idx + 1);
+	return static_cast<int>(luaL_checkinteger(lua, idx + 1));
 }
 
 bool scr::Context::GetArgBool(unsigned idx)
@@ -658,7 +658,7 @@ unsigned scr::Context::GetArgTaggedU32(unsigned idx, unsigned expected_tag)
 	unsigned value = 0;
 	unsigned tag = 0;
 
-	UnpackTaggedU32((u64)packed, &value, &tag);
+	UnpackTaggedU32(packed, &value, &tag);
 
 	if (tag != expected_tag) {
 		luaL_error(
@@ -676,7 +676,7 @@ float scr::Context::GetArgFloatOpt(unsigned idx, float fallback)
 	if (lua_isnoneornil(lua, idx + 1))
 		return fallback;
 
-	return (float)luaL_checknumber(lua, idx + 1);
+	return static_cast<float>(luaL_checknumber(lua, idx + 1));
 }
 
 int scr::Context::GetArgIntOpt(unsigned idx, int fallback)
@@ -684,7 +684,7 @@ int scr::Context::GetArgIntOpt(unsigned idx, int fallback)
 	if (lua_isnoneornil(lua, idx + 1))
 		return fallback;
 
-	return (int)luaL_checkinteger(lua, idx + 1);
+	return static_cast<int>(luaL_checkinteger(lua, idx + 1));
 }
 
 bool scr::Context::GetArgBoolOpt(unsigned idx, bool fallback)
@@ -708,7 +708,7 @@ String scr::Context::GetArgStringOpt(unsigned idx, const String &fallback)
 
 void *scr::Context::UpvaluePtr(unsigned idx)
 {
-	int up_index = lua_upvalueindex((int)idx + SCRIPT_USER_UPVAL_BASE);
+	int up_index = lua_upvalueindex(static_cast<int>(idx) + SCRIPT_USER_UPVAL_BASE);
 	return lua_touserdata(lua, up_index);
 }
 
@@ -744,7 +744,7 @@ void scr::Context::ReturnString(const String &v)
 
 void scr::Context::ReturnTaggedU32(unsigned v, unsigned type_tag)
 {
-	lua_pushinteger(lua, (lua_Integer)PackTaggedU32(v, type_tag));
+	lua_pushinteger(lua, static_cast<lua_Integer>(PackTaggedU32(v, type_tag)));
 	nretval++;
 }
 

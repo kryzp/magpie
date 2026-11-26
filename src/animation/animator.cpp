@@ -119,7 +119,7 @@ float anim::CalcSampleTime(float global_time, float global_start_time, float pla
 	float sample_time = (global_time - global_start_time) * playback_rate;
 
 	if (n > 0)
-		sample_time = maths::Clamp(sample_time, 0.f, duration * (float)n);
+		sample_time = maths::Clamp(sample_time, 0.f, duration * static_cast<float>(n));
 
 	if (duration <= 0.f)
 		return 0.f;
@@ -187,7 +187,7 @@ void anim::Animator::Tick(float global_time)
 	}
 
 	// advance and sample the clip
-	if (!current_clip.IsNull() && current_clip.value < (int)asset_model->clips.size()) {
+	if (!current_clip.IsNull() && current_clip.value < static_cast<int>(asset_model->clips.size())) {
 		const ast::AnimClip *anim_clip = &asset_model->clips[current_clip.value];
 
 		if (paused)
@@ -196,7 +196,7 @@ void anim::Animator::Tick(float global_time)
 		float sample_time = CalcSampleTime(global_time, global_start_time, playback_rate, anim_clip->duration_s, 0);
 
 		for (const ast::AnimChannel &ch : anim_clip->channels) {
-			if (ch.target_skeleton < 0 || ch.target_skeleton >= (int)poses.size())
+			if (ch.target_skeleton < 0 || ch.target_skeleton >= static_cast<int>(poses.size()))
 				continue;
 
 			SkeletonPose *pose = &poses[ch.target_skeleton];

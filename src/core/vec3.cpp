@@ -153,8 +153,8 @@ Vec3 Vec3::Reflect(const Vec3 &normal) const
 
 Vec3 Vec3::Refract(const Vec3 &normal, double eta21) const
 {
-	double cost = maths::Min((double)-Dot(normal), 1.0);
-	Vec3 out_perp = (*this + normal * (float)cost) * (float)eta21; // eta . (v + cost . n)
+	double cost = maths::Min(static_cast<double>(-Dot(normal)), 1.0);
+	Vec3 out_perp = (*this + normal * static_cast<float>(cost)) * static_cast<float>(eta21); // eta . (v + cost . n)
 	Vec3 out_para = normal * -std::sqrt(maths::Abs(1.f - out_perp.LengthSqr()));
 	return out_perp + out_para;
 }

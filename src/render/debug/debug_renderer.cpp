@@ -64,9 +64,9 @@ static void CreateSphereMesh(rnd::Mesh *mesh)
 	unsigned i_idx = 0;
 
 	for (unsigned ring = 0; ring <= rings; ring++) {
-		float v = (float)ring / (float)rings;
+		float v = static_cast<float>(ring) / static_cast<float>(rings);
 		for (unsigned segment = 0; segment <= segments; segment++) {
-			float u = (float)segment / (float)segments;
+			float u = static_cast<float>(segment) / static_cast<float>(segments);
 
 			float phi = (v - 0.5f) * maths::PIf;
 			float theta = u * maths::PIf * 2.f;
@@ -107,7 +107,7 @@ static void CreateCircleMesh(rnd::Mesh *mesh)
 	Vector<unsigned short> indices(index_count);
 
 	for (unsigned i = 0; i < segments; i++) {
-		float phi = ((float)i / (float)segments) * (maths::PIf * 2.f);
+		float phi = (static_cast<float>(i) / static_cast<float>(segments)) * (maths::PIf * 2.f);
 		vertices[i] = Vec3::SphericalToCartesian(1.f, phi, 0.f);
 		indices[i * 2 + 0] = (i + 0) % segments;
 		indices[i * 2 + 1] = (i + 1) % segments;
@@ -361,7 +361,7 @@ void rnd::DebugRenderer::BuildInstances(const Bucket *buckets, Vector<GPU_DebugO
 		for (const DebugDrawCall &call : buckets[type]) {
 			float alpha = CallAlpha(call);
 
-			switch ((DebugDrawType)type) {
+			switch (static_cast<DebugDrawType>(type)) {
 				case DebugDrawType_Line: {
 					BuildLineInstance(draws, call.a, call.b, call.colour, call.line_width, alpha);
 				} break;
@@ -418,7 +418,7 @@ unsigned rnd::DebugRenderer::BuildBatches(const Bucket *buckets, DebugBatch *out
 		unsigned count = 0;
 
 		for (unsigned i = 0; i < buckets[type].size(); i++) {
-			if ((DebugDrawType)type == DebugDrawType_Triangle)
+			if (static_cast<DebugDrawType>(type) == DebugDrawType_Triangle)
 				count += 3; // triangles produce 3 line instances
 			else
 				count += 1;
@@ -493,7 +493,7 @@ static void DrawBatches(
 
 	for (unsigned i = 0; i < batch_count; i++) {
 		const rnd::DebugBatch *batch = &batches[i];
-		const rnd::Mesh *mesh = renderer->MeshForType((rnd::DebugDrawType)batch->type);
+		const rnd::Mesh *mesh = renderer->MeshForType(static_cast<rnd::DebugDrawType>(batch->type));
 
 		struct {
 			Mat4 view_proj;
@@ -516,7 +516,7 @@ static void DrawBatches(
 static void DebugRenderPassFn(const rnd::PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const DebugPassData *data = (const DebugPassData *)ctx.user_data;
+	const DebugPassData *data = static_cast<const DebugPassData *>(ctx.user_data);
 	const rnd::FrameParams *frame_params = data->frame_params;
 
 	gfx::Device *device = gfx::Device::Get();

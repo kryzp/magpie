@@ -28,7 +28,7 @@ static void SetupShadowPipeline(gfx::GraphicsPipelineDef *def)
 void rnd::ShadowMappingPassFn(const PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
-	const ShadowMappingPassData *data = (const ShadowMappingPassData *)ctx.user_data;
+	const ShadowMappingPassData *data = static_cast<const ShadowMappingPassData *>(ctx.user_data);
 	const FrameParams *frame_params = data->frame_params;
 	gfx::Device *device = gfx::Device::Get();
 
@@ -208,7 +208,7 @@ void rnd::ShadowRenderer::BuildCasterTable(gfx::RingBuffer *upload, FrameParams 
 
 	frame_params->shadow_caster_table = upload->PushArray<GPU_ShadowCaster>(maths::Max<unsigned>(caster_count, 1));
 
-	GPU_ShadowCaster *caster_mapping = (GPU_ShadowCaster *)frame_params->shadow_caster_table.cpu;
+	GPU_ShadowCaster *caster_mapping = static_cast<GPU_ShadowCaster *>(frame_params->shadow_caster_table.cpu);
 
 	if (!caster_mapping)
 		return;
@@ -227,7 +227,7 @@ void rnd::ShadowRenderer::BuildCasterTable(gfx::RingBuffer *upload, FrameParams 
 		gpu->near_plane = info->near_plane;
 		gpu->far_plane = info->far_plane;
 		gpu->shadow_map = device->TextureViewBindless(shadow_cubemap_views[i]);
-		gpu->texel_world_scale = 2.f / (float)RENDER_SHADOW_MAP_RESOLUTION; // 90 degree face is 2 units wide at distance 1
+		gpu->texel_world_scale = 2.f / static_cast<float>(RENDER_SHADOW_MAP_RESOLUTION); // 90 degree face is 2 units wide at distance 1
 		gpu->cull_radius = cull_radius;
 
 		Mat4 light_proj = Mat4::Perspective(90.f, 1.f, info->far_plane, info->near_plane); // reversed-z

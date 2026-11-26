@@ -5,7 +5,7 @@
 
 void rnd::CullClearFn(const PassContext &ctx)
 {
-	const CullClearPassData *data = (const CullClearPassData *)ctx.user_data;
+	const CullClearPassData *data = static_cast<const CullClearPassData *>(ctx.user_data);
 
 	gfx::ResourceKey counter_key = ctx.graph->ResolveBuffer(data->counter_handle);
 	ctx.cmd->FillBuffer(counter_key, 0, gfx::Device::Get()->BufferSize(counter_key), 0);
@@ -15,7 +15,7 @@ static void CullFrustumComputeFn(const rnd::PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
 
-	const rnd::CullPassData *data = (const rnd::CullPassData *)ctx.user_data;
+	const rnd::CullPassData *data = static_cast<const rnd::CullPassData *>(ctx.user_data);
 
 	gfx::ComputePipelineDef pipeline_def(data->shader);
 	gfx::PipelineState pipeline_st = gfx::Device::Get()->FetchComputePipeline(pipeline_def);
@@ -59,7 +59,7 @@ static void CullShadowCastersComputeFn(const rnd::PassContext &ctx)
 {
 	const gfx::CmdBuffer &cmd = *ctx.cmd;
 
-	const rnd::ShadowCullPassData *data = (const rnd::ShadowCullPassData *)ctx.user_data;
+	const rnd::ShadowCullPassData *data = static_cast<const rnd::ShadowCullPassData *>(ctx.user_data);
 
 	gfx::ComputePipelineDef pipeline_def(data->shader);
 	gfx::PipelineState pipeline_st = gfx::Device::Get()->FetchComputePipeline(pipeline_def);

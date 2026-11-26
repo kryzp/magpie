@@ -30,7 +30,7 @@ i64 fs::GetLastWriteTime(const String &path)
 	if (ec)
 		return 0;
 
-	return (i64)std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
+	return std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch()).count();
 }
 
 bool fs::DirectoryCreate(const String &path)
@@ -122,12 +122,12 @@ bool fs::ReadEntireFile(const String &path, Vector<u8> *out)
 	i64 size = stream.Size();
 
 	if (out) {
-		out->resize((u64)size);
+		out->resize(static_cast<u64>(size));
 
-		i64 read = size > 0 ? stream.Read(out->data(), (u64)size) : 0;
+		i64 read = size > 0 ? stream.Read(out->data(), static_cast<u64>(size)) : 0;
 
 		if (read != size) {
-			DebugPrintE("Short read on \"%s\" (%lld of %lld).", path.c_str(), (i64)read, (i64)size);
+			DebugPrintE("Short read on \"%s\" (%lld of %lld).", path.c_str(), read, size);
 			out->clear();
 			return false;
 		}
@@ -144,7 +144,7 @@ bool fs::ReadEntireTextFile(const String &path, String *out)
 		return false;
 
 	if (out)
-		out->assign((const char *)bytes.data(), bytes.size());
+		out->assign(reinterpret_cast<const char *>(bytes.data()), bytes.size());
 
 	return true;
 }
@@ -158,7 +158,7 @@ bool fs::WriteEntireFile(const String &path, const void *data, u64 size)
 		return false;
 	}
 
-	return stream.Write(data, size) == (i64)size;
+	return stream.Write(data, size) == static_cast<i64>(size);
 }
 
 bool fs::WriteEntireTextFile(const String &path, const String &text)

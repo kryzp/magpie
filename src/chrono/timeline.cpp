@@ -93,6 +93,6 @@ bool Timeline::TriggerAtTime(void *state, float elapsed, void *data)
 {
 	(void)state;
 
-	TriggerAtTimeData *t = (TriggerAtTimeData *)data;
+	TriggerAtTimeData *t = static_cast<TriggerAtTimeData *>(data);
 	return elapsed >= t->timestamp;
 }

@@ -4,7 +4,7 @@
 
 void ByteWriter::WriteBytes(const void *src, u64 count)
 {
-	const u8 *bytes = (const u8 *)src;
+	const u8 *bytes = static_cast<const u8 *>(src);
 	data.insert(data.end(), bytes, bytes + count);
 }
 
@@ -20,32 +20,32 @@ void ByteWriter::WriteBool(bool value)
 
 void ByteWriter::WriteU16(u16 value)
 {
-	data.push_back((u8)(value >> 8));
-	data.push_back((u8)(value));
+	data.push_back(static_cast<u8>(value >> 8));
+	data.push_back(static_cast<u8>(value));
 }
 
 void ByteWriter::WriteI32(i32 value)
 {
-	WriteU32((u32)value);
+	WriteU32(static_cast<u32>(value));
 }
 
 void ByteWriter::WriteU32(u32 value)
 {
-	data.push_back((u8)(value >> 24));
-	data.push_back((u8)(value >> 16));
-	data.push_back((u8)(value >> 8));
-	data.push_back((u8)(value));
+	data.push_back(static_cast<u8>(value >> 24));
+	data.push_back(static_cast<u8>(value >> 16));
+	data.push_back(static_cast<u8>(value >> 8));
+	data.push_back(static_cast<u8>(value >> 0));
 }
 
 void ByteWriter::WriteI64(i64 value)
 {
-	WriteU64((u64)value);
+	WriteU64(static_cast<u64>(value));
 }
 
 void ByteWriter::WriteU64(u64 value)
 {
-	WriteU32((u32)(value >> 32));
-	WriteU32((u32)(value));
+	WriteU32(static_cast<u32>(value >> 32));
+	WriteU32(static_cast<u32>(value));
 }
 
 void ByteWriter::WriteFloat(float value)
@@ -64,20 +64,20 @@ void ByteWriter::WriteDouble(double value)
 
 void ByteWriter::WriteVarInt(i32 value, bool optimize_positive)
 {
-	u32 unsigned_value = (u32)value;
+	u32 unsigned_value = static_cast<u32>(value);
 
 	if (!optimize_positive) {
 		// zigzag
-		u32 sign_mask = (u32)(value >> 31);
+		u32 sign_mask = static_cast<u32>(value >> 31);
 		unsigned_value = (unsigned_value << 1) ^ sign_mask;
 	}
 
 	while (unsigned_value >= 0x80) {
-		data.push_back((u8)((unsigned_value & 0x7F) | 0x80));
+		data.push_back(static_cast<u8>((unsigned_value & 0x7F) | 0x80));
 		unsigned_value >>= 7;
 	}
 
-	data.push_back((u8)unsigned_value);
+	data.push_back(static_cast<u8>(unsigned_value));
 }
 
 void ByteWriter::WriteString(const String &value)
@@ -87,19 +87,19 @@ void ByteWriter::WriteString(const String &value)
 	if (clamped > 0xFFFF)
 		clamped = 0xFFFF;
 
-	u16 length = (u16)clamped;
+	u16 length = static_cast<u16>(clamped);
 	WriteU16(length);
 	WriteBytes(value.data(), length);
 }
 
 void ByteWriter::WriteBlob(const Vector<u8> &value)
 {
-	WriteU32((u32)value.size());
+	WriteU32(static_cast<u32>(value.size()));
 	WriteBytes(value.data(), value.size());
 }
 
 ByteReader::ByteReader(const void *data_, u64 size_)
-	: data((const u8 *)data_)
+	: data(static_cast<const u8 *>(data_))
 	, size(size_)
 	, offset(0)
 	, failed(false)
@@ -144,24 +144,29 @@ u16 ByteReader::ReadU16()
 {
 	u8 b[2];
 	ReadBytes(b, 2);
-	return (u16)((b[0] << 8) | b[1]);
+	return static_cast<u16>((b[0] << 8) | b[1]);
 }
 
 i32 ByteReader::ReadI32()
 {
-	return (i32)ReadU32();
+	return static_cast<i32>(ReadU32());
 }
 
 u32 ByteReader::ReadU32()
 {
 	u8 b[4];
 	ReadBytes(b, 4);
-	return ((u32)b[0] << 24) | ((u32)b[1] << 16) | ((u32)b[2] << 8) | (u32)b[3];
+
+	return
+		(static_cast<u32>(b[0]) << 24) |
+		(static_cast<u32>(b[1]) << 16) |
+		(static_cast<u32>(b[2]) <<  8) |
+		(static_cast<u32>(b[3]) <<  0);
 }
 
 i64 ByteReader::ReadI64()
 {
-	return (i64)ReadU64();
+	return static_cast<i64>(ReadU64());
 }
 
 u64 ByteReader::ReadU64()
@@ -197,16 +202,16 @@ i32 ByteReader::ReadVarInt(bool optimize_positive)
 		if (failed)
 			return 0;
 
-		result |= (u32)(b & 0x7F) << shift;
+		result |= static_cast<u32>(b & 0x7F) << shift;
 
 		if ((b & 0x80) == 0)
 			break;
 	}
 
 	if (optimize_positive)
-		return (i32)result;
+		return static_cast<i32>(result);
 
-	return (i32)((result >> 1) ^ (u32)(-(i32)(result & 1)));
+	return static_cast<i32>((result >> 1) ^ static_cast<u32>(-static_cast<i32>(result & 1)));
 }
 
 String ByteReader::ReadString()
@@ -218,7 +223,7 @@ String ByteReader::ReadString()
 		return String();
 	}
 
-	String result((const char *)data + offset, length);
+	String result(reinterpret_cast<const char *>(data) + offset, length);
 	offset += length;
 
 	return result;

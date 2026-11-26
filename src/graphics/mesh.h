@@ -27,7 +27,7 @@ inline VkIndexType IndexTypeToVk(IndexType type)
 
 	AssertTrue(false);
 
-	return (VkIndexType)0;
+	return static_cast<VkIndexType>(0);
 }
 
 inline u64 IndexTypeStride(IndexType type)

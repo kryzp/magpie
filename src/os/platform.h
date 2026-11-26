@@ -49,7 +49,7 @@ public:
 	void SetMouseLocked(bool locked);
 	[[nodiscard]] bool IsMouseLocked() const;
 
-	bool SetCursorImage(const u8 *rgba, unsigned width, unsigned height, int hot_x, int hot_y);
+	bool SetCursorImage(u8 *rgba, unsigned width, unsigned height, int hot_x, int hot_y);
 
 	[[nodiscard]] Vec2 ScreenToNDC(const Vec2 &window_position) const;
 

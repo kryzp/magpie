@@ -19,7 +19,7 @@ VkDescriptorType gfx::BindlessKindToVk(BindlessKind kind)
 
 	AssertTrue(false && "Could not find descriptor type from bindless binding type.");
 
-	return (VkDescriptorType)0;
+	return static_cast<VkDescriptorType>(0);
 }
 
 gfx::Bindless::Bindless()

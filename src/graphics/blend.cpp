@@ -4,7 +4,7 @@
 
 gfx::BlendState::BlendState()
 {
-	memset((void *)this, 0, sizeof(*this));
+	memset(this, 0, sizeof(*this));
 
 	enabled = true;
 
@@ -54,7 +54,7 @@ gfx::BlendState gfx::BlendState::Uniform(VkBlendOp op, VkBlendFactor src, VkBlen
 
 gfx::DepthStencilState::DepthStencilState()
 {
-	memset((void *)this, 0, sizeof(*this));
+	memset(this, 0, sizeof(*this));
 
 	depth_test_enabled = false;
 	depth_write_enabled = false;

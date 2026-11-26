@@ -186,7 +186,7 @@ bool aud::MiniaudioBackend::IsLooping(SourceHandle handle)
 	return ma_sound_is_looping(&source->sound);
 }
 
-aud::BufferHandle aud::MiniaudioBackend::CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned short sample_rate, Format format)
+aud::BufferHandle aud::MiniaudioBackend::CreateBuffer(const void *data, u64 bytes, unsigned channels, unsigned sample_rate, Format format)
 {
 	BufferHandle handle = curr_buffer_handle;
 	curr_buffer_handle.value++;

@@ -48,14 +48,14 @@ void net::TcpConnection::Send(const void *data, u32 size, Delivery delivery)
 		return;
 
 	u8 header[4] = {
-		(u8)(size >> 24),
-		(u8)(size >> 16),
-		(u8)(size >> 8),
-		(u8)(size)
+		static_cast<u8>(size >> 24),
+		static_cast<u8>(size >> 16),
+		static_cast<u8>(size >> 8),
+		static_cast<u8>(size)
 	};
 
 	send_buffer.insert(send_buffer.end(), header, header + 4);
-	send_buffer.insert(send_buffer.end(), (const u8 *)data, (const u8 *)data + size);
+	send_buffer.insert(send_buffer.end(), static_cast<const u8 *>(data), static_cast<const u8 *>(data) + size);
 }
 
 bool net::TcpConnection::Receive(Vector<u8> *out_message)
@@ -91,7 +91,7 @@ void net::TcpConnection::Flush()
 		send_buffer.clear();
 		send_offset = 0;
 	} else if (send_offset > Kilobytes(64)) {
-		send_buffer.erase(send_buffer.begin(), send_buffer.begin() + (u64)send_offset);
+		send_buffer.erase(send_buffer.begin(), send_buffer.begin() + send_offset);
 		send_offset = 0;
 	}
 }
@@ -122,8 +122,14 @@ void net::TcpConnection::ExtractMessages()
 	u64 at = 0;
 
 	while (recv_buffer.size() - at >= 4) {
+
 		const u8 *h = recv_buffer.data() + at;
-		u32 size = ((u32)h[0] << 24) | ((u32)h[1] << 16) | ((u32)h[2] << 8) | (u32)h[3];
+
+		u32 size =
+			(static_cast<u32>(h[0]) << 24) |
+			(static_cast<u32>(h[1]) << 16) |
+			(static_cast<u32>(h[2]) <<  8) |
+			(static_cast<u32>(h[3]) <<  0);
 
 		if (size > NET_MAX_MESSAGE_SIZE) {
 			Close();
@@ -133,12 +139,12 @@ void net::TcpConnection::ExtractMessages()
 		if (recv_buffer.size() - at - 4 < size)
 			break;
 
-		inbox.emplace_back(recv_buffer.begin() + (u64)(at + 4), recv_buffer.begin() + (u64)(at + 4 + size));
+		inbox.emplace_back(recv_buffer.begin() + (at + 4), recv_buffer.begin() + (at + 4 + size));
 		at += 4 + size;
 	}
 
 	if (at > 0)
-		recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + (u64)at);
+		recv_buffer.erase(recv_buffer.begin(), recv_buffer.begin() + at);
 }
 
 void net::TcpConnection::Update()

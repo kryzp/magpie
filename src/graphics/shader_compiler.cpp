@@ -51,7 +51,7 @@ void gfx::ShaderCompiler::LogDiagnostics(const char *context, const char *source
 	if (!diag)
 		return;
 
-	const char *msg = (const char *)diag->getBufferPointer();
+	const char *msg = static_cast<const char *>(diag->getBufferPointer());
 
 	if (!msg || !msg[0])
 		return;
@@ -123,7 +123,7 @@ gfx::ShaderCompiledStages gfx::ShaderCompiler::Compile(
 	session_desc.targets = &target_desc;
 	session_desc.targetCount = 1;
 	session_desc.searchPaths = search_path_cstrs.data();
-	session_desc.searchPathCount = (SlangInt)search_path_cstrs.size();
+	session_desc.searchPathCount = static_cast<SlangInt>(search_path_cstrs.size());
 	session_desc.compilerOptionEntries = options;
 	session_desc.compilerOptionEntryCount = ArraySize(options);
 
@@ -203,7 +203,7 @@ gfx::ShaderCompiledStages gfx::ShaderCompiler::Compile(
 		Slang::ComPtr<slang::IBlob> spirv_blob;
 
 		sr = linked->getEntryPointCode(
-			(SlangInt)i, 0,
+			i, 0,
 			spirv_blob.writeRef(),
 			diagnostics.writeRef()
 		);
@@ -215,7 +215,7 @@ gfx::ShaderCompiledStages gfx::ShaderCompiler::Compile(
 			return compiled;
 		}
 
-		const u8 *code = (const u8 *)spirv_blob->getBufferPointer();
+		const u8 *code = static_cast<const u8 *>(spirv_blob->getBufferPointer());
 		u64 code_size = spirv_blob->getBufferSize();
 
 		ShaderBytecode bytecode;

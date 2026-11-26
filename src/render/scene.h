@@ -22,7 +22,7 @@
 namespace rnd {
 
 struct MaterialHandle {
-	unsigned index = (unsigned)-1;
+	unsigned index = static_cast<unsigned>(-1);
 
 	static MaterialHandle Null()
 	{
@@ -31,8 +31,8 @@ struct MaterialHandle {
 };
 
 struct MeshHandle {
-	unsigned slot_index = (unsigned)-1;
-	unsigned page_index = (unsigned)-1;
+	unsigned slot_index = static_cast<unsigned>(-1);
+	unsigned page_index = static_cast<unsigned>(-1);
 
 	static MeshHandle Null()
 	{

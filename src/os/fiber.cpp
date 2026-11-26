@@ -159,12 +159,12 @@ os::Fiber::Fiber(u64 stack_size, FiberEntryFn *entry_, void *param_)
 	stack_mapping = mapping;
 	stack_mapping_size = mapping_size;
 
-	u8 *stack_top = (u8 *)mapping + mapping_size;
+	u8 *stack_top = static_cast<u8 *>(mapping) + mapping_size;
 
 #if OS_FIBER_BACKEND_ASM_X64
 
 	// stack_top is page aligned, so 16 byte aligned.
-	u64 *frame = (u64 *)(stack_top - 64);
+	u64 *frame = reinterpret_cast<u64 *>(stack_top - 64);
 
 	// default floating point control words:
 	const u64 MXCSR_CW = 0x1F80;
@@ -173,11 +173,11 @@ os::Fiber::Fiber(u64 stack_size, FiberEntryFn *entry_, void *param_)
 	frame[0] = (MXCSR_CW << 0) | (X87_FPU_CW << 32);
 	frame[1] = 0;                // r15
 	frame[2] = 0;                // r14
-	frame[3] = (u64)(uptr)param; // r13
-	frame[4] = (u64)(uptr)entry; // r12
+	frame[3] = static_cast<u64>(reinterpret_cast<uptr>(param)); // r13
+	frame[4] = static_cast<u64>(reinterpret_cast<uptr>(entry)); // r12
 	frame[5] = 0;                // rbx
 	frame[6] = 0;                // rbp
-	frame[7] = (u64)(uptr)PlatformFiberAsmTrampoline;
+	frame[7] = static_cast<u64>(reinterpret_cast<uptr>(PlatformFiberAsmTrampoline));
 
 	// after the final return in the switch, rsp == stack_top so the trampoline's callq hands Entry the alignment the ABI wants
 	sp = frame;

@@ -177,7 +177,7 @@ static VkResult CreateDebugUtilsMessengerExt(
 	VkDebugUtilsMessengerEXT *messenger
 )
 {
-	PFN_vkCreateDebugUtilsMessengerEXT fn = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+	PFN_vkCreateDebugUtilsMessengerEXT fn = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
 
 	if (fn)
 		return fn(instance, debug_info, allocator, messenger);
@@ -198,7 +198,7 @@ static VkSurfaceFormatKHR ChooseSwapchainSurfaceFormat(
 	const Vector<VkSurfaceFormatKHR> &available_surface_formats
 )
 {
-	static const VkFormat preferred[] = {
+	static constexpr VkFormat preferred[] = {
 		VK_FORMAT_B8G8R8A8_UNORM,
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_FORMAT_B8G8R8A8_SRGB,
@@ -237,8 +237,8 @@ static VkPresentModeKHR ChooseSwapchainPresentMode(
 
 static VkExtent2D ChooseSwapchainExtent(const os::Window *window, const VkSurfaceCapabilitiesKHR &capabilities)
 {
-	if (capabilities.currentExtent.width != ((unsigned)-1) &&
-		capabilities.currentExtent.height != ((unsigned)-1)) {
+	if (capabilities.currentExtent.width != static_cast<unsigned>(-1) &&
+		capabilities.currentExtent.height != static_cast<unsigned>(-1)) {
 		return capabilities.currentExtent;
 	}
 
@@ -274,7 +274,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(
 	void *ctx
 )
 {
-	gfx::Device *device = (gfx::Device *)ctx;
+	gfx::Device *device = static_cast<gfx::Device *>(ctx);
 
 	LogChannel ch = device->log_channel;
 
@@ -289,6 +289,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(
 
 		case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
 			ch = device->log_channel_performance;
+			break;
+
+		default:
 			break;
 	}
 
@@ -404,7 +407,7 @@ gfx::Device::Device(os::Window *window_, LogChannel log_channel_, const Vector<F
 
 	Vector<const char *> instance_extensions = GetInstanceExtensions(log_channel);
 
-	instance_create_info.enabledExtensionCount = (unsigned)instance_extensions.size();
+	instance_create_info.enabledExtensionCount = static_cast<unsigned>(instance_extensions.size());
 	instance_create_info.ppEnabledExtensionNames = instance_extensions.data();
 
 	static const VkValidationFeatureEnableEXT enabled_features[] = {
@@ -881,7 +884,7 @@ bool gfx::Device::FormatSupports(VkFormat format, VkFormatFeatureFlags required)
 
 void gfx::Device::SetRetiredFrame(u64 frame_number)
 {
-	retire_frame.store((i64)frame_number, std::memory_order_release);
+	retire_frame.store(static_cast<i64>(frame_number), std::memory_order_release);
 }
 
 // THE CALLER HOLDS THE LOCK!!!!!!!!!!!!!!!!!!!!!!!!
@@ -890,7 +893,7 @@ gfx::PendingDestroy &gfx::Device::PushPendingDestroyLocked(PendingDestroyKind ki
 	PendingDestroy node;
 	node.kind = kind;
 	node.key = key;
-	node.retire_frame = (u64)retire_frame.load(std::memory_order_acquire);
+	node.retire_frame = static_cast<u64>(retire_frame.load(std::memory_order_acquire));
 
 	destroy_queue.push_back(node);
 
@@ -961,7 +964,7 @@ void gfx::Device::ReleaseRetired(u64 completed_frame, bool release_all)
 
 void gfx::Device::FrameWait(u64 frame_number)
 {
-	current_frame_in_flight_index = (unsigned)(frame_number % GRAPHICS_FRAMES_IN_FLIGHT);
+	current_frame_in_flight_index = frame_number % GRAPHICS_FRAMES_IN_FLIGHT;
 
 	FrameInFlight *frame_in_flight = &frames_in_flight[current_frame_in_flight_index];
 
@@ -1450,7 +1453,7 @@ gfx::PipelineState gfx::Device::FetchGraphicsPipelineUnlocked(const GraphicsPipe
 	for (unsigned i = 0; i < program->stage_count; i++) {
 		module_infos[i].sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		module_infos[i].codeSize = program->stages[i].bytecode.bytes.size();
-		module_infos[i].pCode = (const unsigned *)program->stages[i].bytecode.bytes.data();
+		module_infos[i].pCode = reinterpret_cast<const unsigned *>(program->stages[i].bytecode.bytes.data());
 		module_infos[i].flags = 0;
 
 		shader_stages[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1528,7 +1531,7 @@ gfx::PipelineState gfx::Device::FetchComputePipelineUnlocked(const ComputePipeli
 	VkShaderModuleCreateInfo module_info = {};
 	module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	module_info.codeSize = program->stages[0].bytecode.bytes.size();
-	module_info.pCode = (const unsigned *)program->stages[0].bytecode.bytes.data();
+	module_info.pCode = reinterpret_cast<const unsigned *>(program->stages[0].bytecode.bytes.data());
 	module_info.flags = 0;
 
 	VkPipelineShaderStageCreateInfo shader_stage = {};
@@ -2065,7 +2068,7 @@ gfx::ShaderStage gfx::Device::ShaderStageCreate(const ShaderBytecode &bytecode)
 	ShaderStage stage;
 
 	if (reflect_module.entry_point_count >= 1) {
-		stage.flags = (VkShaderStageFlagBits)reflect_module.entry_points[0].shader_stage;
+		stage.flags = static_cast<VkShaderStageFlagBits>(reflect_module.entry_points[0].shader_stage);
 
 		unsigned push_constant_count = 0;
 		reflect_result = spvReflectEnumeratePushConstantBlocks(&reflect_module, &push_constant_count, nullptr);
@@ -2116,7 +2119,7 @@ gfx::ResourceKey gfx::Device::ShaderProgramCreate(unsigned stage_count, const Sh
 void gfx::Device::ShaderProgramDestroy(ResourceKey key)
 {
 	ShaderProgram *shader = ShaderProgramFromKey(key);
-	DebugLogAssert(log_channel, shader, "Invalid shader program with key %llu when destroying.", (u64)key.value);
+	DebugLogAssert(log_channel, shader, "Invalid shader program with key %llu when destroying.", key.value);
 
 	SpinLockScope scope(destroy_queue_lock);
 
@@ -2380,7 +2383,7 @@ void gfx::Device::CreateBindless()
 	VkDescriptorPoolSize pool_sizes[BindlessKind_MaxEnum] = {};
 
 	for (unsigned i = 0; i < BindlessKind_MaxEnum; i++) {
-		pool_sizes[i].type = BindlessKindToVk((BindlessKind)i);
+		pool_sizes[i].type = BindlessKindToVk(static_cast<BindlessKind>(i));
 		pool_sizes[i].descriptorCount = GRAPHICS_BINDLESS_MAX_RESOURCES;
 	}
 
@@ -2402,7 +2405,7 @@ void gfx::Device::CreateBindless()
 	VkDescriptorBindingFlags bindless_flags[BindlessKind_MaxEnum] = {};
 
 	for (unsigned i = 0; i < BindlessKind_MaxEnum; i++) {
-		bindings[i].descriptorType = BindlessKindToVk((BindlessKind)i);
+		bindings[i].descriptorType = BindlessKindToVk(static_cast<BindlessKind>(i));
 		bindings[i].descriptorCount = GRAPHICS_BINDLESS_MAX_RESOURCES;
 		bindings[i].binding = i;
 		bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
@@ -2581,7 +2584,7 @@ u64 gfx::Device::ImGuiTextureIdForView(ResourceKey view_key)
 	auto it = imgui_textures.find(view_key.value);
 
 	if (it != imgui_textures.end())
-		return (u64)it->second;
+		return reinterpret_cast<u64>(it->second);
 
 	TextureView *view = TextureViewFromKey(view_key);
 
@@ -2591,7 +2594,7 @@ u64 gfx::Device::ImGuiTextureIdForView(ResourceKey view_key)
 	VkDescriptorSet set = ImGui_ImplVulkan_AddTexture(view->vk_handle, VK_IMAGE_LAYOUT_GENERAL);
 	imgui_textures[view_key.value] = set;
 
-	return (u64)set;
+	return reinterpret_cast<u64>(set);
 }
 
 void gfx::Device::ImGuiForgetTextureView(ResourceKey view_key)

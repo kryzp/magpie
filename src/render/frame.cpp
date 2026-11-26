@@ -142,7 +142,7 @@ void rnd::FrameParams::UploadSceneTables(const FramePacket &packet, gfx::RingBuf
 	page_count = packet.page_count;
 	page_table_buffer = upload->PushArray<GPU_PagePointers>(maths::Max<unsigned>(packet.page_count, 1));
 
-	GPU_PagePointers *mapped = (GPU_PagePointers *)page_table_buffer.cpu;
+	GPU_PagePointers *mapped = static_cast<GPU_PagePointers *>(page_table_buffer.cpu);
 
 	for (unsigned i = 0; mapped && i < packet.page_count; i++) {
 		mapped[i].vertex_buffer = packet.pages[i].vertex_buffer_address;
@@ -160,7 +160,7 @@ void rnd::FrameParams::UploadObjects(const FramePacket &packet, gfx::RingBuffer 
 
 	object_buffer = upload->PushArray<GPU_ObjectData>(maths::Max<unsigned>(object_count, 1));
 
-	GPU_ObjectData *mapped = (GPU_ObjectData *)object_buffer.cpu;
+	GPU_ObjectData *mapped = static_cast<GPU_ObjectData *>(object_buffer.cpu);
 
 	for (unsigned i = 0; mapped && i < object_count; i++) {
 		const PacketObject *object = &packet.objects[i];
@@ -184,7 +184,7 @@ void rnd::FrameParams::UploadLights(const FramePacket &packet, gfx::RingBuffer *
 	light_count = packet.lights.size();
 	light_buffer = upload->PushArray<GPU_Light>(maths::Max<unsigned>(light_count, 1));
 
-	GPU_Light *mapped = (GPU_Light *)light_buffer.cpu;
+	GPU_Light *mapped = static_cast<GPU_Light *>(light_buffer.cpu);
 
 	for (unsigned i = 0; mapped && i < light_count; i++) {
 		const Light *light = &packet.lights[i];
@@ -215,7 +215,7 @@ void rnd::FrameParams::UploadFrameData(const FramePacket &packet, gfx::RingBuffe
 {
 	frame_data = upload->PushArray<GPU_FrameData>(1);
 
-	GPU_FrameData *data = (GPU_FrameData *)frame_data.cpu;
+	GPU_FrameData *data = static_cast<GPU_FrameData *>(frame_data.cpu);
 
 	if (!data)
 		return;
@@ -453,7 +453,7 @@ void rnd::FrameParams::RecordIndirectStream(
 
 void rnd::FrameParams::RecordTranslucent(const gfx::CmdBuffer &cmd) const
 {
-	unsigned bound_page = (unsigned)-1;
+	unsigned bound_page = static_cast<unsigned>(-1);
 
 	for (const TranslucentDraw &draw : translucent_draws) {
 		if (draw.page_index >= page_count)

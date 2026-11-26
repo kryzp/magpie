@@ -150,7 +150,7 @@ float rnd::Scene::InterpolationFactor(float alpha) const
 	if (k == 0)
 		return 1.f;
 
-	float t = ((float)k - 1.f + alpha) / (float)k;
+	float t = (static_cast<float>(k) - 1.f + alpha) / static_cast<float>(k);
 	return maths::Clamp(t, 0.f, 1.f);
 }
 
@@ -242,11 +242,11 @@ rnd::MeshHandle rnd::Scene::AllocMesh(const MeshDesc &desc)
 	*/
 
 	{
-		const u64 vb_bytes = (u64)desc.vertex_count * desc.vertex_stride;
-		const u64 ib_bytes = (u64)desc.index_count * index_stride;
+		const u64 vb_bytes = static_cast<u64>(desc.vertex_count) * desc.vertex_stride;
+		const u64 ib_bytes = static_cast<u64>(desc.index_count) * index_stride;
 
 		gfx::ResourceKey stage = device->StageAlloc(vb_bytes + ib_bytes);
-		u8 *stage_mapped = (u8 *)device->BufferMap(stage);
+		u8 *stage_mapped = static_cast<u8 *>(device->BufferMap(stage));
 
 		memcpy(stage_mapped, desc.vertices, vb_bytes);
 		memcpy(stage_mapped + vb_bytes, desc.indices, ib_bytes);
@@ -284,7 +284,7 @@ rnd::MeshHandle rnd::Scene::AllocMesh(const MeshDesc &desc)
 
 	GPU_RenderMesh *gpu_mesh = &gpu_meshes[slot_index];
 	gpu_mesh->index_count = desc.index_count;
-	gpu_mesh->first_index = (unsigned)index_offset;
+	gpu_mesh->first_index = static_cast<unsigned>(index_offset);
 	gpu_mesh->vertex_buffer = device->BufferAddress(page->vertex_buffer) + (vertex_offset * desc.vertex_stride);
 
 	if (!desc.skin_buffer.IsNull())
@@ -366,7 +366,7 @@ unsigned rnd::Scene::FindSuitablePage(
 
 rnd::GeometryPage rnd::Scene::CreateNewPage(u64 vertex_stride, gfx::IndexType index_type)
 {
-	DebugLogD(log_channel, "Creating a new geometry page... VERTEXSTRIDE: %llu, INDEXTYPE: %u", (u64)vertex_stride, (unsigned)index_type);
+	DebugLogD(log_channel, "Creating a new geometry page... VERTEXSTRIDE: %llu, INDEXTYPE: %u", static_cast<unsigned long long>(vertex_stride), static_cast<unsigned>(index_type));
 
 
 	// tpc im so pissed off ight now.
@@ -404,8 +404,8 @@ rnd::GeometryPage rnd::Scene::CreateNewPage(u64 vertex_stride, gfx::IndexType in
 
 	u64 index_stride = gfx::IndexTypeStride(index_type);
 
-	unsigned max_vertices = (unsigned)(vb_info.size / vertex_stride);
-	unsigned max_indices = (unsigned)(ib_info.size / index_stride);
+	unsigned max_vertices = static_cast<unsigned>(vb_info.size / vertex_stride);
+	unsigned max_indices = static_cast<unsigned>(ib_info.size / index_stride);
 
 	gfx::Device *device = gfx::Device::Get();
 

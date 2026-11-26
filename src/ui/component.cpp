@@ -324,7 +324,7 @@ bool ui::Component::IsMouseInSector(Vec2 mouse_position, float theta, float radi
 	float diff = std::atan2(dy, dx) - theta;
 	diff -= maths::PI2f * std::floor((diff + maths::PIf) / maths::PI2f);
 
-	return std::abs(diff) <= maths::PIf / (float)segments;
+	return std::abs(diff) <= maths::PIf / static_cast<float>(segments);
 }
 
 bool ui::Component::IsMouseHovering(Vec2 mouse_position) const

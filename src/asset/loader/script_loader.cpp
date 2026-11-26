@@ -45,6 +45,6 @@ ast::LoadResult ast::ScriptLoader::Load(const LoaderContext &ctx)
 
 void ast::ScriptLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
 {
-	ScriptLoadData *script = (ScriptLoadData *)result->user_data;
+	ScriptLoadData *script = static_cast<ScriptLoadData *>(result->user_data);
 	asset->script.ref = script->ref;
 }

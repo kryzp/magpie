@@ -10,12 +10,12 @@
 namespace anim {
 
 struct Handle {
-	unsigned index = (unsigned)-1;
+	unsigned index = static_cast<unsigned>(-1);
 	unsigned generation = 0;
 
 	bool IsNull() const
 	{
-		return index == (unsigned)-1 && generation == 0;
+		return index == static_cast<unsigned>(-1) && generation == 0;
 	}
 
 	bool operator==(const Handle &other) const

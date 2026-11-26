@@ -35,7 +35,7 @@ rnd::FramePacket *rnd::RenderJob::BeginPacket(u64 frame_number, float dt, float 
 		log_channel,
 		packet != pending || counter.Value() == 0,
 		"Packet slot %u is still being rendered.",
-		(unsigned)(frame_number % RENDER_FRAME_SLOT_COUNT)
+		static_cast<unsigned>(frame_number % RENDER_FRAME_SLOT_COUNT)
 	);
 
 	unsigned window_width = 0;
@@ -75,13 +75,14 @@ bool rnd::RenderJob::GpuCompletedFrame(u64 *out_frame)
 	if (completed < 0)
 		return false;
 
-	*out_frame = (u64)completed;
+	*out_frame = static_cast<u64>(completed);
+
 	return true;
 }
 
 void rnd::RenderJob::Entry(void *param)
 {
-	((RenderJob *)param)->Run();
+	static_cast<RenderJob *>(param)->Run();
 }
 
 void rnd::RenderJob::Run()
@@ -94,7 +95,7 @@ void rnd::RenderJob::Run()
 	device->FrameWait(frame_number);
 
 	if (frame_number >= GRAPHICS_FRAMES_IN_FLIGHT)
-		atomic_gpu_completed_frame.store((i64)(frame_number - GRAPHICS_FRAMES_IN_FLIGHT));
+		atomic_gpu_completed_frame.store(static_cast<i64>(frame_number - GRAPHICS_FRAMES_IN_FLIGHT));
 
 	gfx::RingBuffer *upload = system->BeginFrameUploads(device->FrameSlotIndex());
 

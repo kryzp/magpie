@@ -451,7 +451,7 @@ static void ProcessPrimitive(
 		if (colours) {
 			float col[4] = { 1.f, 1.f, 1.f, 1.f };
 
-			unsigned comps = (unsigned)cgltf_num_components(colours->type);
+			unsigned comps = static_cast<unsigned>(cgltf_num_components(colours->type));
 
 			if (comps > 4)
 				comps = 4;
@@ -608,7 +608,7 @@ static void ProcessNode(
 		int skin_index = -1;
 
 		if (is_skinned)
-			skin_index = (int)cgltf_skin_index(gltf, node->skin);
+			skin_index = static_cast<int>(cgltf_skin_index(gltf, node->skin));
 
 		for (int i = 0; i < node->mesh->primitives_count; i++) {
 			const cgltf_primitive *prim = &node->mesh->primitives[i];
@@ -655,7 +655,7 @@ static void LoadSkeleton(
 				if (skin->joints[k] != node->parent)
 					continue;
 
-				j->parent = (int)k;
+				j->parent = k;
 				break;
 			}
 		}
@@ -988,7 +988,7 @@ ast::LoadResult ast::ModelLoader::Load(const LoaderContext &ctx)
 
 void ast::ModelLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Asset *asset)
 {
-	ModelLoadData *load = (ModelLoadData *)result->user_data;
+	ModelLoadData *load = static_cast<ModelLoadData *>(result->user_data);
 
 	gfx::Device *device = gfx::Device::Get();
 
@@ -1038,7 +1038,7 @@ void ast::ModelLoader::UploadGPU(
 	u64 stage_offset
 )
 {
-	ModelLoadData *load = (ModelLoadData *)result->user_data;
+	ModelLoadData *load = static_cast<ModelLoadData *>(result->user_data);
 
 	gfx::Device *device = gfx::Device::Get();
 

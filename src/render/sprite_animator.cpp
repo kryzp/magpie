@@ -23,12 +23,12 @@ const rnd::TextureRegion *rnd::SpriteAnimation::GetKeyFrame(float time, bool loo
 	if (frames.empty())
 		return nullptr;
 
-	int index = (int)(time / interval);
+	int index = static_cast<int>(time / interval);
 
 	if (looping)
 		index = index % frames.size();
 	else
-		index = std::min((int)(frames.size() - 1), index);
+		index = std::min(static_cast<int>(frames.size() - 1), index);
 
 	index = std::max(0, index);
 

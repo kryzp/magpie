@@ -24,8 +24,8 @@ rnd::TextureRegion::TextureRegion(const Image *image_)
 	image = image_;
 
 	if (image) {
-		width = (int)image->GetWidth();
-		height = (int)image->GetHeight();
+		width = static_cast<int>(image->GetWidth());
+		height = static_cast<int>(image->GetHeight());
 	}
 }
 
@@ -40,14 +40,14 @@ rnd::TextureRegion::TextureRegion(const Image *image_, int x_, int y_, int width
 	float inv_h = 1.f;
 
 	if (image) {
-		inv_w = 1.f / (float)image->GetWidth();
-		inv_h = 1.f / (float)image->GetHeight();
+		inv_w = 1.f / static_cast<float>(image->GetWidth());
+		inv_h = 1.f / static_cast<float>(image->GetHeight());
 	}
 
-	u = (float)x * inv_w;
-	v = (float)y * inv_h;
-	u2 = (float)(x + width) * inv_w;
-	v2 = (float)(y + height) * inv_h;
+	u  = static_cast<float>(x) * inv_w;
+	v  = static_cast<float>(y) * inv_h;
+	u2 = static_cast<float>(x + width) * inv_w;
+	v2 = static_cast<float>(y + height) * inv_h;
 }
 
 rnd::TextureRegion rnd::TextureRegion::FromUV(const Image *image, float u, float v, float u2, float v2)
@@ -60,10 +60,10 @@ rnd::TextureRegion rnd::TextureRegion::FromUV(const Image *image, float u, float
 	region.v2 = v2;
 
 	if (image) {
-		region.x = (int)std::round(u * (float)image->GetWidth());
-		region.y = (int)std::round(v * (float)image->GetHeight());
-		region.width = (int)std::round(std::abs(u2 - u) * (float)image->GetWidth());
-		region.height = (int)std::round(std::abs(v2 - v) * (float)image->GetHeight());
+		region.x = static_cast<int>(std::round(u * static_cast<float>(image->GetWidth())));
+		region.y = static_cast<int>(std::round(v * static_cast<float>(image->GetHeight())));
+		region.width = static_cast<int>(std::round(std::abs(u2 - u) * static_cast<float>(image->GetWidth())));
+		region.height = static_cast<int>(std::round(std::abs(v2 - v) * static_cast<float>(image->GetHeight())));
 	}
 
 	return region;
@@ -181,7 +181,7 @@ rnd::CanvasBlend rnd::Canvas::GetBlend() const
 
 void rnd::Canvas::Draw(const TextureRegion &region, float x, float y)
 {
-	Draw(region, x, y, (float)region.width, (float)region.height);
+	Draw(region, x, y, region.width, region.height);
 }
 
 void rnd::Canvas::Draw(const TextureRegion &region, float x, float y, float width, float height)
@@ -329,7 +329,7 @@ void rnd::Canvas::FilledArc(float cx, float cy, float radius, float start_degree
 	if (segments == 0)
 		return;
 
-	float step = degrees * maths::DEG_TO_RADf / (float)segments;
+	float step = degrees * maths::DEG_TO_RADf / static_cast<float>(segments);
 	float angle = start_degrees * maths::DEG_TO_RADf;
 
 	Vec2 centre(cx, cy);
@@ -401,11 +401,11 @@ void rnd::Canvas::Circle(float cx, float cy, float radius, unsigned segments, fl
 	if (segments == 0)
 		return;
 
-	float step = maths::PI2f / (float)segments;
+	float step = maths::PI2f / static_cast<float>(segments);
 
 	for (unsigned i = 0; i < segments; i++) {
-		float a0 = step * (float)i;
-		float a1 = step * (float)(i + 1);
+		float a0 = step * static_cast<float>(i);
+		float a1 = step * static_cast<float>(i + 1);
 
 		Line(
 			cx + std::cos(a0) * radius, cy + std::sin(a0) * radius,
@@ -606,7 +606,7 @@ void rnd::CanvasRenderer::Draw(
 		// SV_VertexID doesn't include the first vertex...
 		// so the batch offset goes into the vertex pointer instead
 		// :P
-		args.vertices = vertex_alloc.gpu + (u64)batch.first_vertex * sizeof(CanvasVertex);
+		args.vertices = vertex_alloc.gpu + static_cast<u64>(batch.first_vertex) * sizeof(CanvasVertex);
 
 		cmd.BindPipelineState(pipeline);
 		cmd.PushConstants(pipeline.layout, VK_SHADER_STAGE_ALL_GRAPHICS, args, 0);

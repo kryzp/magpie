@@ -279,7 +279,7 @@ rnd::GraphBufHandle rnd::Graph::ImportBuffer(gfx::ResourceKey external_key)
 
 	const gfx::Buffer *physical = device->BufferFromKey(external_key);
 
-	DebugLogAssert(log_channel, physical, "Imported buffer with key %llu is invalid.", (u64)external_key.value);
+	DebugLogAssert(log_channel, physical, "Imported buffer with key %llu is invalid.", static_cast<u64>(external_key.value));
 
 	GraphBuffer buffer;
 
@@ -421,7 +421,7 @@ void rnd::Graph::PropagateDependencies()
 
 void rnd::Graph::BackpropagateDependencies()
 {
-	for (int i = (int)passes.size() - 1; i >= 0; i--) {
+	for (int i = static_cast<int>(passes.size()) - 1; i >= 0; i--) {
 		Pass *pass = &passes[i];
 
 		pass->is_culled = true;
@@ -523,8 +523,8 @@ void rnd::Graph::AllocateResources(const gfx::Swapchain *swapchain)
 
 			if (!t->is_imported && t->physical_key.IsNull()) {
 				if (t->texture_info.size_class == SizeClass_SwapchainRelative) {
-					t->texture_info.size_x *= (float)swapchain->width;
-					t->texture_info.size_y *= (float)swapchain->height;
+					t->texture_info.size_x *= static_cast<float>(swapchain->width);
+					t->texture_info.size_y *= static_cast<float>(swapchain->height);
 					t->texture_info.size_class = SizeClass_Absolute;
 				} else if (t->texture_info.size_class == SizeClass_Relative) {
 					GraphTexHandle rel = t->texture_info.relative_to;
@@ -558,8 +558,8 @@ void rnd::Graph::AllocateResources(const gfx::Swapchain *swapchain)
 
 				if (!rt->is_imported && rt->physical_key.IsNull()) {
 					if (rt->texture_info.size_class == SizeClass_SwapchainRelative) {
-						rt->texture_info.size_x *= (float)swapchain->width;
-						rt->texture_info.size_y *= (float)swapchain->height;
+						rt->texture_info.size_x *= static_cast<float>(swapchain->width);
+						rt->texture_info.size_y *= static_cast<float>(swapchain->height);
 						rt->texture_info.size_class = SizeClass_Absolute;
 					} else if (rt->texture_info.size_class == SizeClass_Relative) {
 						GraphTexHandle rel = rt->texture_info.relative_to;
@@ -988,10 +988,10 @@ void rnd::Graph::PresentToSwapchain(const gfx::Swapchain *swapchain, const gfx::
 	blit.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
 
 	blit.srcOffsets[0] = VkOffset3D{ 0, 0, 0 };
-	blit.srcOffsets[1] = VkOffset3D{ (int)src_texture->width, (int)src_texture->height, 1 };
+	blit.srcOffsets[1] = VkOffset3D{ static_cast<int>(src_texture->width), static_cast<int>(src_texture->height), 1 };
 
 	blit.dstOffsets[0] = VkOffset3D{ 0, 0, 0 };
-	blit.dstOffsets[1] = VkOffset3D{ (int)dst_texture->width, (int)dst_texture->height, 1 };
+	blit.dstOffsets[1] = VkOffset3D{ static_cast<int>(dst_texture->width), static_cast<int>(dst_texture->height), 1 };
 
 	blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	blit.srcSubresource.mipLevel = 0;
@@ -1011,7 +1011,7 @@ void rnd::Graph::PresentToSwapchain(const gfx::Swapchain *swapchain, const gfx::
 	backbuffer->state.write_access = 0;
 	backbuffer->state.read_stages = VK_PIPELINE_STAGE_2_BLIT_BIT;
 
-	// Transition swpachain to present.
+	// Transition swapchain to present.
 
 	gfx::AccessState present_src = { VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT };
 	gfx::AccessState present_dst = { VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, VK_ACCESS_2_NONE };
@@ -1092,8 +1092,8 @@ gfx::RenderInfo rnd::Graph::BuildRenderingInfo(const Pass &pass) const
 		//           get around to finally implementing msaa n stuff.
 		render_info.samples = info->samples;
 
-		render_info.width = maths::Max(1u, (unsigned)info->size_x >> out.attachment_range.base_mip);
-		render_info.height = maths::Max(1u, (unsigned)info->size_y >> out.attachment_range.base_mip);
+		render_info.width = maths::Max(1u, static_cast<unsigned>(info->size_x) >> out.attachment_range.base_mip);
+		render_info.height = maths::Max(1u, static_cast<unsigned>(info->size_y) >> out.attachment_range.base_mip);
 
 		gfx::ResourceKey view = ResolveTextureView(out.handle, out.attachment_range);
 
@@ -1135,7 +1135,7 @@ gfx::RenderInfo rnd::Graph::BuildRenderingInfo(const Pass &pass) const
 				log_channel,
 				render_info.colour_attachment_count < ArraySize(render_info.colour_attachments),
 				"Exceeded max number of colour attachments (%u) in render info.",
-				(unsigned)ArraySize(render_info.colour_attachments)
+				ArraySize(render_info.colour_attachments)
 			);
 
 			render_info.colour_attachment_formats[render_info.colour_attachment_count] = info->format;
