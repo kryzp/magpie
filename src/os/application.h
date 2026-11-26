@@ -12,8 +12,8 @@ class IApplication {
 public:
 	virtual ~IApplication() = default;
 	virtual void Init(Window *window) = 0;
-	virtual bool Tick(const InputState &input) = 0;
 	virtual void Destroy() = 0;
+	virtual bool Tick(const InputState &input) = 0;
 };
 
 struct RunConfig {

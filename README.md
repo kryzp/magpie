@@ -23,6 +23,94 @@ Yes, it's over-engineered for a solo project. No guarantees on quality, some of 
   - I've used this more for structuring the engine as a whole, it doesn't focus on graphics as much, but I've taken a lot from it and I'd recommend it to anyone learning how to make a game engine, or renderer.
 - Vulkan Guide
 
+
+## Usage
+Magpie is a collection of subsystems, so you gotta initialize the ones that you wanna use, and call them appropriately. However, to just open up a window:
+
+```cpp
+#include "os/application.h"
+#include "core/colour.h"
+#include "graphics/device.h"
+#include "graphics/swapchain.h"
+#include "render/graph/graph.h"
+
+class MyApp : public os::IApplication {
+public:
+	void Init(os::Window *window) override
+	{
+		Vector<gfx::FeatureRequest> features;
+
+		device = new gfx::Device(window, logs::OpenChannel("VULKAN"), features);
+		swapchain = new gfx::Swapchain(device);
+		graph = new rnd::Graph(logs::OpenChannel("GRAPH"));
+	}
+
+	void Destroy() override
+	{
+		device->WaitIdle();
+
+		delete graph;
+		delete swapchain;
+		delete device;
+	}
+
+	bool Tick(const os::InputState &input) override
+	{
+		if (input.KbPressed(os::KeyboardKey_Escape))
+			return true;
+
+		device->SetRetiredFrame(frame);
+		device->FrameWait(frame);
+
+		Colour colour = Colour::FromHSV(static_cast<float>((int)((float)frame / 50.f) % 360), 1.f, 1.f);
+		rnd::Clear clear = rnd::Clear::Colour(colour.r, colour.g, colour.b, 1.f);
+
+		rnd::TextureInfo swapchain_info = rnd::TextureInfo::Swapchain(VK_FORMAT_R16G16B16A16_SFLOAT, Vec3(1.f));
+		rnd::GraphTexHandle swapchain_handle = graph->CreateTexture(swapchain_info);
+
+		rnd::Pass *pass = graph->Add("Pass", rnd::PassType_Graphics);
+		pass->WriteColour(swapchain_handle, &clear);
+
+		graph->SetBackbuffer(swapchain_handle);
+		graph->SetPresentFilter(VK_FILTER_LINEAR);
+
+		graph->Compile(swapchain);
+
+		gfx::CmdBuffer cmd = device->BeginFrame(swapchain);
+		graph->Execute(cmd);
+		graph->PresentToSwapchain(swapchain, cmd);
+		device->EndFrame(swapchain, cmd);
+
+		graph->Reset();
+
+		frame++;
+
+		return false;
+	}
+
+	gfx::Device *device = nullptr;
+	gfx::Swapchain *swapchain = nullptr;
+	rnd::Graph *graph = nullptr;
+
+	int frame = 0;
+};
+
+int main(int argc, char **argv)
+{
+	MyApp app;
+
+	os::RunConfig config;
+	config.window_title = "hello world";
+	config.window_width = 1920;
+	config.window_height = 1080;
+	config.create_window = true;
+	config.enable_imgui = true;
+	config.log_sink = "log.txt";
+
+	return os::Run(&app, config);
+}
+```
+
 ---
 
 ## Notable Features
@@ -48,7 +136,7 @@ Yes, it's over-engineered for a solo project. No guarantees on quality, some of 
 - **Skeletal Animation Support** with skinning etc...
 - **Scripting Integration** with all top-level systems (using Lua).
 - **Naughty Dog-Style Frame System** frames are packed into "frame params" which are then sent to the render system. This a) creates a very clean architecture, as there is a single source of input for the renderer, but also b) creates a massive performance gain, as we can run the rendering multithreaded jobs for the current frame while also running jobs on computing the next frame.
-- **Frame Interpolation** based on the highly inluential https://gafferongames.com/post/fix_your_timestep/ article, integrated with the Naughty Dog frame params as listed above.
+- **Frame Interpolation** based on the highly influential https://gafferongames.com/post/fix_your_timestep/ article, integrated with the Naughty Dog frame params as listed above.
 - **Sorted Forward Transparency**
 - **Depth Prepass**
 
@@ -93,20 +181,18 @@ Yes, it's over-engineered for a solo project. No guarantees on quality, some of 
 ---
 
 ### Job System
-The job system is effectively at the core of the project. It is a fiber-based job system based off-of the pioneering work of Naughty Dog in their presentation "Parallelizing the Naughty Dog by Christian Gyrling". It's pretty complicated but the basic idea is that using a naiive job queue is that when a job dispatches more jobs and waits on them, the thread running that job stalls when it could be working! This can get even worse, when in some cases it can straight up lead to a deadlock as there might not be any free thread to complete the child job!
+The job system is effectively at the core of the project. It is a fiber-based job system based off-of the pioneering work of Naughty Dog in their presentation "Parallelizing the Naughty Dog by Christian Gyrling". It's pretty complicated but the basic idea is that using a naive job queue is that when a job dispatches more jobs and waits on them, the thread running that job stalls when it could be working! This can get even worse, when in some cases it can straight up lead to a deadlock as there might not be any free thread to complete the child job!
 
 To fix this problem, we turn to a thing called a "fiber". The special thing about fibers is that they maintain their own call stack, which allows us to context-switch between any job at any time we want. Therefore, every time we "wait" at a counter (renamed - "Yield" because it's more apt) the fiber running that job context switches to a different job, and once all the jobs that the counter is waiting on are completed, then we resume that job by context-switching back into it.
 
-If you're more curious I wrote a blog post about my implementation approach [here](https://kryzp.github.io/posts/fiber-job-system/).
-
 
 ### Assets
-Assets are loaded entirely asynchronously since they're integrated with the job system. However, that leads to a problem, which is that an asset actually goes through multiple stages until it's considered "ready". In a naiive asset system, you typically have a single `Load()` function that handles everything from finding the file on the disk, to load it into memory, and potentally uploading to the GPU. That's pretty terrible because you have to wait for the entire asset to load in before moving on to the next one, when you could be loading multiple in parallel.
+Assets are loaded entirely asynchronously since they're integrated with the job system. However, that leads to a problem, which is that an asset actually goes through multiple stages until it's considered "ready". In a naive asset system, you typically have a single `Load()` function that handles everything from finding the file on the disk, to load it into memory, and potentially uploading to the GPU. That's pretty terrible because you have to wait for the entire asset to load in before moving on to the next one, when you could be loading multiple in parallel.
 
 You can't just parallelize the whole thing because while loading an asset into memory is super simple, when it comes to things like uploading onto the GPU it's not so simple and we want to minimize the number of command buffers we use / submit. Therefore, I split asset loading into four stages:
 
 1. The Load Stage: This is where we find the file in memory, load it in, and allocate some temporary memory for it. We haven't modified the actual asset record yet. For example, loading in pixel data from a texture file.
-2. The Alloc Stage. This is where we actually move that temporary data into the asset and allocate any resources. This has to be seperate from the load stage as memory allocation on the main asset arena has to be synchronised between jobs. In the load stage each job gets its own arena so there's never any contention.
+2. The Alloc Stage. This is where we actually move that temporary data into the asset and allocate any resources. This has to be separate from the load stage as memory allocation on the main asset arena has to be synchronized between jobs. In the load stage each job gets its own arena so there's never any contention.
 3. The GPU Upload Stage. This is where we upload the data onto the GPU, exposing a command buffer and staging buffer which can be used.
 4. The Cleanup Stage. Any temporary data that was allocated in previous stages can be cleaned up here. Only really necessary for external API's (e.g: cleaning up texture data from `stbi`) because we use arenas for everything internally anyway.
 

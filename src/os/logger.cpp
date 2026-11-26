@@ -366,6 +366,11 @@ void os::Logger::WriteV(
 					fflush(stdout);
 			}
 
+			// TODO
+			// temporarily removed, writing *per line* is incredibly slow
+			// figure out a better solution
+			// idea: store the last idk 1024 lines, once it goes past that write them all then clear the buffer
+			/*
 			if (file_stream.IsOpen()) {
 				char file_line[LOGGER_LINE_BUFFER_SIZE] = {};
 
@@ -380,6 +385,7 @@ void os::Logger::WriteV(
 
 				WriteToFile(file_line, file_len);
 			}
+			*/
 
 			snprintf(dedup_body, sizeof(dedup_body), "%s", body);
 			dedup_level = level;
@@ -393,9 +399,7 @@ void os::Logger::WriteV(
 
 	if (level == LogLevel_Break) {
 		fflush(stdout);
-
 		file_stream.Close();
-
 		AssertTrue(false);
 	}
 }
