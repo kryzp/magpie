@@ -232,8 +232,6 @@ void rnd::System::BakeLookupsAndMaps(Graph *graph, const gfx::Swapchain *swapcha
 
 void rnd::System::GenerateLookupsAndMaps(Graph *graph, const FrameParams *frame_params)
 {
-	const unsigned prefilter_mips = RENDER_SYSTEM_PREFILTER_MIPS;
-
 	gfx::Device *device = gfx::Device::Get();
 
 	gfx::ResourceKey hdr_texture_gfx = ast::AssetSystem::Get()->GetOrBreak(environment_hdr_handle)->texture.key;
@@ -281,7 +279,7 @@ void rnd::System::GenerateLookupsAndMaps(Graph *graph, const FrameParams *frame_
 
 	// Prefilter.
 	{
-		const int mipmap_count = prefilter_mips;
+		const int mipmap_count = RENDER_SYSTEM_PREFILTER_MIPS;
 
 		for (int i = 0; i < mipmap_count; i++) {
 			IBLPassPrefilterData *data = graph->NewPassData<IBLPassPrefilterData>();
