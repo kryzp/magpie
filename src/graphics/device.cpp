@@ -983,19 +983,19 @@ unsigned gfx::Device::FrameSlotIndex() const
 	return current_frame_in_flight_index;
 }
 
-gfx::CmdBuffer gfx::Device::BeginFrame(Swapchain *swapchain)
+gfx::CmdBuffer gfx::Device::BeginFrame(Swapchain &swapchain)
 {
 	FrameInFlight *frame_in_flight = &frames_in_flight[current_frame_in_flight_index];
 
 	VkAcquireNextImageInfoKHR acquire_next_image_info = {};
 	acquire_next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
-	acquire_next_image_info.swapchain = swapchain->vk_handle;
+	acquire_next_image_info.swapchain = swapchain.vk_handle;
 	acquire_next_image_info.timeout = UINT64_MAX;
 	acquire_next_image_info.semaphore = frame_in_flight->image_available_semaphore;
 	acquire_next_image_info.fence = VK_NULL_HANDLE;
 	acquire_next_image_info.deviceMask = 1;
 
-	VkResult result = vkAcquireNextImage2KHR(vk_device, &acquire_next_image_info, &swapchain->current_frame_index);
+	VkResult result = vkAcquireNextImage2KHR(vk_device, &acquire_next_image_info, &swapchain.current_frame_index);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		DebugLogB(log_channel, "TODO We need to rebuild the entire swapchain here.");
@@ -1008,24 +1008,24 @@ gfx::CmdBuffer gfx::Device::BeginFrame(Swapchain *swapchain)
 	return cmd;
 }
 
-void gfx::Device::EndFrame(const Swapchain *swapchain, const CmdBuffer &cmd)
+void gfx::Device::EndFrame(const Swapchain &swapchain, const CmdBuffer &cmd)
 {
 	ApplyBindlessUpdates();
 
-	FrameInFlight *frame_in_flight = &frames_in_flight[current_frame_in_flight_index];
-	const SwapchainFrame *swapchain_frame = &swapchain->frames[swapchain->current_frame_index];
+	FrameInFlight &frame_in_flight = frames_in_flight[current_frame_in_flight_index];
+	const SwapchainFrame &swapchain_frame = swapchain.GetCurrentFrame();
 
 	VkSemaphoreSubmitInfo image_available_semaphore_info = {};
 	image_available_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	image_available_semaphore_info.semaphore = frame_in_flight->image_available_semaphore;
+	image_available_semaphore_info.semaphore = frame_in_flight.image_available_semaphore;
 	image_available_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VkSemaphoreSubmitInfo render_finished_semaphore_info = {};
 	render_finished_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-	render_finished_semaphore_info.semaphore = swapchain_frame->render_finished_semaphore;
+	render_finished_semaphore_info.semaphore = swapchain_frame.render_finished_semaphore;
 	render_finished_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // TODO: Do we need to be waiting on VK_PIPELINE_STAGE_2_ALL_COMMANDS ????
 
-	frame_in_flight->completion_point = SubmitEx(
+	frame_in_flight.completion_point = SubmitEx(
 		cmd,
 		1, &image_available_semaphore_info,
 		1, &render_finished_semaphore_info
@@ -1035,10 +1035,10 @@ void gfx::Device::EndFrame(const Swapchain *swapchain, const CmdBuffer &cmd)
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pResults = nullptr;
 	present_info.swapchainCount = 1;
-	present_info.pSwapchains = &swapchain->vk_handle;
-	present_info.pImageIndices = &swapchain->current_frame_index;
+	present_info.pSwapchains = &swapchain.vk_handle;
+	present_info.pImageIndices = &swapchain.current_frame_index;
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = &swapchain_frame->render_finished_semaphore;
+	present_info.pWaitSemaphores = &swapchain_frame.render_finished_semaphore;
 
 	queue_lock.Acquire();
 	VkResult result = vkQueuePresentKHR(graphics_queue.vk_handle, &present_info);
@@ -1049,7 +1049,7 @@ void gfx::Device::EndFrame(const Swapchain *swapchain, const CmdBuffer &cmd)
 	else if (result != VK_SUCCESS)
 		DebugLogB(log_channel, "Failed to present swapchain image. (%u)", result);
 
-	frame_in_flight->command_pool->Release(cmd, frame_in_flight->completion_point.frame);
+	frame_in_flight.command_pool->Release(cmd, frame_in_flight.completion_point.frame);
 }
 
 gfx::TimelinePoint gfx::Device::Submit(const CmdBuffer &cmd)
@@ -1079,7 +1079,7 @@ gfx::TimelinePoint gfx::Device::SubmitEx(
 
 	all_signals[0] = timeline_signal_info;
 
-	for (unsigned i = 0; i < signal_count; i++)
+	for (int i = 0; i < signal_count; i++)
 		all_signals[i + 1] = signals[i];
 
 	VkCommandBufferSubmitInfo buffer_info = {};
@@ -1198,7 +1198,8 @@ gfx::Semaphore gfx::Device::SemaphoreCreate(u64 value)
 	GRAPHICS_VK_CHECK(
 		vkCreateSemaphore(vk_device,
 			&timeline_semaphore_create_info, nullptr,
-			&vk_semaphore),
+			&vk_semaphore
+		),
 		"Failed to create timeline semaphore."
 	);
 
@@ -2623,13 +2624,13 @@ void gfx::Device::ImGuiRecord(const CmdBuffer &cmd) const
 		ImGui_ImplVulkan_RenderDrawData(draw_data, cmd.GetVkHandle());
 }
 
-gfx::Swapchain::Swapchain(Device *device_)
-	: vk_handle(VK_NULL_HANDLE)
+gfx::Swapchain::Swapchain(Device &dev)
+	: device(&dev)
+	, vk_handle(VK_NULL_HANDLE)
 	, current_frame_index(0)
 	, width(0)
 	, height(0)
 	, format(VK_FORMAT_UNDEFINED)
-	, device(device_)
 {
 	const SwapchainSupportDetails *details = &device->swapchain_details;
 
@@ -2780,4 +2781,29 @@ gfx::Swapchain::~Swapchain()
 	}
 
 	vkDestroySwapchainKHR(device->vk_device, vk_handle, nullptr);
+}
+
+const gfx::SwapchainFrame &gfx::Swapchain::GetCurrentFrame() const
+{
+	return frames[current_frame_index];
+}
+
+unsigned gfx::Swapchain::GetWidth() const
+{
+	return width;
+}
+
+unsigned gfx::Swapchain::GetHeight() const
+{
+	return height;
+}
+
+VkFormat gfx::Swapchain::GetFormat() const
+{
+	return format;
+}
+
+bool gfx::Swapchain::NeedsManualSRGBEncode() const
+{
+	return needs_manual_srgb_encode;
 }

@@ -7,6 +7,7 @@
 #include <vma/vk_mem_alloc.h>
 
 namespace gfx {
+
 struct BufferAllocInfo {
 	VkBufferUsageFlags2 usage = 0;
 	VmaAllocationCreateFlags flags = 0;
@@ -34,6 +35,7 @@ struct Buffer {
 		return (usage & VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT) != 0;
 	}
 };
+
 }
 
 #endif // GRAPHICS_BUFFER_H

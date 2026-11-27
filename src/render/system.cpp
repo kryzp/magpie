@@ -218,10 +218,11 @@ void rnd::System::BakeLookupsAndMaps(Graph *graph, const gfx::Swapchain *swapcha
 	}
 
 	GenerateLookupsAndMaps(graph, &params);
-	graph->Compile(swapchain);
+
+	graph->Compile(*swapchain);
 
 	gfx::CmdBuffer cmd = device->SubmitImBegin();
-	graph->Execute(cmd);
+	graph->RecordInto(cmd);
 	device->SubmitImEnd(cmd);
 
 	graph->Reset();

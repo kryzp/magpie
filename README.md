@@ -29,20 +29,28 @@ Magpie is a collection of subsystems, so you gotta initialize the ones that you 
 
 ```cpp
 #include "os/application.h"
-#include "core/colour.h"
 #include "graphics/device.h"
 #include "graphics/swapchain.h"
 #include "render/graph/graph.h"
 
-class MyApp : public os::IApplication {
+class MyApplicationImplementation : public os::IApplication {
 public:
 	void Init(os::Window *window) override
 	{
 		Vector<gfx::FeatureRequest> features;
 
 		device = new gfx::Device(window, logs::OpenChannel("VULKAN"), features);
-		swapchain = new gfx::Swapchain(device);
+		swapchain = new gfx::Swapchain(*device);
 		graph = new rnd::Graph(logs::OpenChannel("GRAPH"));
+
+		rnd::TextureInfo backbuffer_info = rnd::TextureInfo::Swapchain(swapchain->GetFormat(), Vec3(1.f));
+		rnd::GraphTexHandle backbuffer_handle = graph->CreateTexture(backbuffer_info);
+
+		rnd::Pass *pass = graph->Add("asdf", rnd::PassType_Graphics);
+		pass->WriteColour(backbuffer_handle, nullptr);
+
+		graph->SetBackbuffer(backbuffer_handle);
+		graph->SetPresentFilter(VK_FILTER_LINEAR);
 	}
 
 	void Destroy() override
@@ -62,42 +70,28 @@ public:
 		device->SetRetiredFrame(frame);
 		device->FrameWait(frame);
 
-		Colour colour = Colour::FromHSV(static_cast<float>((int)((float)frame / 50.f) % 360), 1.f, 1.f);
-		rnd::Clear clear = rnd::Clear::Colour(colour.r, colour.g, colour.b, 1.f);
+		graph->Compile(*swapchain);
 
-		rnd::TextureInfo backbuffer_info = rnd::TextureInfo::Swapchain(VK_FORMAT_R16G16B16A16_SFLOAT, Vec3(1.f));
-		rnd::GraphTexHandle backbuffer_handle = graph->CreateTexture(backbuffer_info);
-
-		rnd::Pass *pass = graph->Add("Pass", rnd::PassType_Graphics);
-		pass->WriteColour(backbuffer_handle, &clear);
-
-		graph->SetBackbuffer(backbuffer_handle);
-		graph->SetPresentFilter(VK_FILTER_LINEAR);
-
-		graph->Compile(swapchain);
-
-		gfx::CmdBuffer cmd = device->BeginFrame(swapchain);
-		graph->Execute(cmd);
-		graph->PresentToSwapchain(swapchain, cmd);
-		device->EndFrame(swapchain, cmd);
-
-		graph->Reset();
+		gfx::CmdBuffer cmd = device->BeginFrame(*swapchain);
+		graph->RecordInto(cmd);
+		graph->PresentToSwapchain(*swapchain, cmd);
+		device->EndFrame(*swapchain, cmd);
 
 		frame++;
 
 		return false;
 	}
 
-	gfx::Device *device = nullptr;
-	gfx::Swapchain *swapchain = nullptr;
-	rnd::Graph *graph = nullptr;
+	gfx::Device *device;
+	gfx::Swapchain *swapchain;
+	rnd::Graph *graph;
 
 	int frame = 0;
 };
 
 int main(int argc, char **argv)
 {
-	MyApp app;
+	MyApplicationImplementation app;
 
 	os::RunConfig config;
 	config.window_title = "hello world";

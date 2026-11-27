@@ -17,12 +17,9 @@ enum IndexType {
 inline VkIndexType IndexTypeToVk(IndexType type)
 {
 	switch (type) {
-		case IndexType_U16:
-			return VK_INDEX_TYPE_UINT16;
-		case IndexType_U32:
-			return VK_INDEX_TYPE_UINT32;
-		default:
-			break;
+		case IndexType_U16: return VK_INDEX_TYPE_UINT16;
+		case IndexType_U32: return VK_INDEX_TYPE_UINT32;
+		default: break;
 	}
 
 	AssertTrue(false);
@@ -33,12 +30,9 @@ inline VkIndexType IndexTypeToVk(IndexType type)
 inline u64 IndexTypeStride(IndexType type)
 {
 	switch (type) {
-		case IndexType_U16:
-			return sizeof(u16);
-		case IndexType_U32:
-			return sizeof(unsigned);
-		default:
-			break;
+		case IndexType_U16: return sizeof(u16);
+		case IndexType_U32: return sizeof(u32);
+		default: break;
 	}
 
 	AssertTrue(false);

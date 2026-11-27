@@ -104,12 +104,12 @@ void rnd::RenderJob::Run()
 	if (frame_params.shaders_ready) {
 		system->Render(graph, &frame_params);
 
-		graph->Compile(swapchain);
+		graph->Compile(*swapchain);
 
-		gfx::CmdBuffer cmd = device->BeginFrame(swapchain);
-		graph->Execute(cmd);
-		graph->PresentToSwapchain(swapchain, cmd);
-		device->EndFrame(swapchain, cmd);
+		gfx::CmdBuffer cmd = device->BeginFrame(*swapchain);
+		graph->RecordInto(cmd);
+		graph->PresentToSwapchain(*swapchain, cmd);
+		device->EndFrame(*swapchain, cmd);
 
 		graph->Reset();
 	} else {

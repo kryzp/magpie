@@ -103,20 +103,11 @@ public:
 	static Device *Get();
 	static void Select(Device *device);
 
-	VkFormat GetDefaultDepthStencilFormat() const
-	{
-		return default_depth_stencil_format;
-	}
-
-	unsigned GetFrameInFlightIndex() const
-	{
-		return current_frame_in_flight_index;
-	}
-
 	bool FeatureEnabled(FeatureType type) const;
 
 	bool SupportsTextureCompressionBC() const;
 	bool SupportsTextureCompressionASTC() const;
+
 	bool FormatSupports(VkFormat format, VkFormatFeatureFlags required) const;
 
 	void SetRetiredFrame(u64 frame_number);
@@ -124,8 +115,8 @@ public:
 	void FrameWait(u64 frame_number);
 	unsigned FrameSlotIndex() const;
 
-	CmdBuffer BeginFrame(Swapchain *swapchain);
-	void EndFrame(const Swapchain *swapchain, const CmdBuffer &cmd);
+	CmdBuffer BeginFrame(Swapchain &swapchain);
+	void EndFrame(const Swapchain &swapchain, const CmdBuffer &cmd);
 
 	void ReleaseRetired(u64 completed_frame, bool release_all);
 
@@ -139,8 +130,6 @@ public:
 
 	CmdBuffer SubmitImBegin();
 	void SubmitImEnd(const CmdBuffer &cmd);
-
-	void ApplyBindlessUpdates();
 
 
 	/* ==================================================
@@ -304,14 +293,71 @@ public:
 	   STATE
 	   ================================================== */
 
+	VkDevice GetVkDevice() const
+	{
+		return vk_device;
+	}
+
+	VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const
+	{
+		return vk_physical_device_properties.properties;
+	}
+
+	VkPhysicalDeviceFeatures GetPhysicalDeviceFeatures() const
+	{
+		return vk_physical_device_features.features;
+	}
+
+	const Bindless &GetBindless() const
+	{
+		return bindless;
+	}
+
+	u64 GetMaxPushConstantsSize() const
+	{
+		return max_push_constants_size;
+	}
+
+	VkFormat GetDefaultDepthStencilFormat() const
+	{
+		return default_depth_stencil_format;
+	}
+
+	unsigned GetFrameInFlightIndex() const
+	{
+		return current_frame_in_flight_index;
+	}
+
+private:
+	void ApplyBindlessUpdates();
+
+	void CreateSyncResources();
+	void DestroySyncResources();
+
+	void CreateBindless();
+	void DestroyBindless();
+
+	void CreateImGui();
+	void DestroyImGui();
+
+	PendingDestroy &PushPendingDestroyLocked(PendingDestroyKind kind, ResourceKey key);
+	void DestroyPendingNow(const PendingDestroy &d);
+
+	PipelineState FetchGraphicsPipelineUnlocked(const GraphicsPipelineDef &def);
+	PipelineState FetchComputePipelineUnlocked(const ComputePipelineDef &def);
+
+	ResourceKey TextureViewFetchUnlocked(const TextureViewCreateInfo &info);
+
 	os::Window *window;
 
+public:
 	LogChannel log_channel;
 	LogChannel log_channel_general;
 	LogChannel log_channel_validation;
 	LogChannel log_channel_performance;
 	LogChannel log_channel_cmd_buffer;
 
+private:
 	VkInstance vk_instance;
 	VkDevice vk_device;
 
@@ -339,24 +385,6 @@ public:
 	SwapchainSupportDetails swapchain_details;
 
 	Bindless bindless;
-
-private:
-	void CreateSyncResources();
-	void DestroySyncResources();
-
-	void CreateBindless();
-	void DestroyBindless();
-
-	void CreateImGui();
-	void DestroyImGui();
-
-	PendingDestroy &PushPendingDestroyLocked(PendingDestroyKind kind, ResourceKey key);
-	void DestroyPendingNow(const PendingDestroy &d);
-
-	PipelineState FetchGraphicsPipelineUnlocked(const GraphicsPipelineDef &def);
-	PipelineState FetchComputePipelineUnlocked(const ComputePipelineDef &def);
-
-	ResourceKey TextureViewFetchUnlocked(const TextureViewCreateInfo &info);
 
 	unsigned current_frame_in_flight_index;
 	FrameInFlight frames_in_flight[GRAPHICS_FRAMES_IN_FLIGHT];

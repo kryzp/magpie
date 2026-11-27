@@ -86,11 +86,11 @@ os::Logger::Logger(const String &sink)
 	logger = this;
 
 	null_channel = OpenChannel(LogChannel(), "----------");
-	log_channel = OpenChannel(LogChannel(), "PLATFORM/LOG"); // yes yes, i know. I'm faking the parent channel for aesthetics because I can't make the platform channel until the logging system is created!
+	log_channel = OpenChannel(LogChannel(), "OS/LOG"); // yes yes, i know. I'm faking the parent channel for aesthetics because I can't make the os channel until the logging system is created!
 
 	if (!sink.empty()) {
 		file_stream = Stream::FromFile(sink, FilePresetCreate);
-		DebugLogI(log_channel, "Initialized (\"%s\" as file output).", sink.c_str());
+		DebugLogI(log_channel, "Initialized (\"%s\" as file sink).", sink.c_str());
 	} else {
 		DebugLogI(log_channel, "Initialized (no file sink).");
 	}

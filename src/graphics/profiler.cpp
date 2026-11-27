@@ -16,9 +16,9 @@ gfx::Profiler::Profiler()
 {
 	Device *device = Device::Get();
 
-	period = device->vk_physical_device_properties.properties.limits.timestampPeriod;
+	period = device->GetPhysicalDeviceProperties().limits.timestampPeriod;
 
-	static const VkQueryType query_types[] = {
+	static constexpr VkQueryType query_types[] = {
 		VK_QUERY_TYPE_TIMESTAMP,          // ProfileType_Timestamp
 		VK_QUERY_TYPE_PIPELINE_STATISTICS // ProfileType_PipelineStatistics
 	};
@@ -71,7 +71,7 @@ void gfx::Profiler::GrabQueries()
 		Vector<u64> queries(pool->count);
 
 		vkGetQueryPoolResults(
-			device->vk_device,
+			device->GetVkDevice(),
 			pool->vk_pool,
 			0,
 			pool->count,

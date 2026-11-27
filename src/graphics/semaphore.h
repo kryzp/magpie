@@ -13,6 +13,7 @@
  */
 
 namespace gfx {
+
 struct TimelinePoint {
 	VkSemaphore semaphore = VK_NULL_HANDLE;
 	u64 frame = 0;
@@ -25,17 +26,14 @@ struct Semaphore {
 	TimelinePoint Signal()
 	{
 		last_submitted_frame++;
-		return LastSignaled();
-	}
 
-	TimelinePoint LastSignaled() const
-	{
-		TimelinePoint p;
-		p.semaphore = vk_handle;
-		p.frame = last_submitted_frame;
-		return p;
+		TimelinePoint point;
+		point.semaphore = vk_handle;
+		point.frame = last_submitted_frame;
+		return point;
 	}
 };
+
 }
 
 #endif // GRAPHICS_SEMAPHORE_H

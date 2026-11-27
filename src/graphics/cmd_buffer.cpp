@@ -145,7 +145,7 @@ void gfx::CmdBuffer::BindBindless(VkShaderStageFlags stage_flags, ResourceKey la
 	info.layout = vk_layout;
 	info.firstSet = 0;
 	info.descriptorSetCount = 1;
-	info.pDescriptorSets = &device->bindless.set;
+	info.pDescriptorSets = &device->GetBindless().set;
 	info.dynamicOffsetCount = 0;
 	info.pDynamicOffsets = nullptr;
 
@@ -200,7 +200,7 @@ void gfx::CmdBuffer::PushConstantsEx(
 {
 	Device *device = Device::Get();
 
-	u64 max_push_constants_size = device->max_push_constants_size;
+	u64 max_push_constants_size = device->GetMaxPushConstantsSize();
 
 	DebugLogAssert(
 		device->log_channel_cmd_buffer,

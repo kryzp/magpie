@@ -196,7 +196,7 @@ void ast::TextureLoader::Alloc(const LoaderContext &ctx, LoadResult *result, Ass
 		name.objectHandle = reinterpret_cast<u64>(device->TextureFromKey(asset->texture.key)->vk_handle);
 		name.pObjectName = ctx.metadata.path.c_str();
 
-		vkSetDebugUtilsObjectNameEXT(device->vk_device, &name);
+		vkSetDebugUtilsObjectNameEXT(device->GetVkDevice(), &name);
 	}
 }
 

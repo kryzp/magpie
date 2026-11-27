@@ -17,17 +17,30 @@ class Device;
 struct SwapchainFrame {
 	ResourceKey texture_key;
 	TextureView texture_view;
-
 	VkSemaphore render_finished_semaphore = VK_NULL_HANDLE; // Signaled when the OS lets us present.
 };
 
 class Swapchain {
+	friend class Device;
+
 public:
-	explicit Swapchain(Device *device);
+	explicit Swapchain(Device &dev);
 	~Swapchain();
 
 	Swapchain(const Swapchain &) = delete;
 	Swapchain &operator=(const Swapchain &) = delete;
+
+	const SwapchainFrame &GetCurrentFrame() const;
+
+	unsigned GetWidth() const;
+	unsigned GetHeight() const;
+
+	VkFormat GetFormat() const;
+
+	bool NeedsManualSRGBEncode() const;
+
+private:
+	Device *device;
 
 	VkSwapchainKHR vk_handle;
 
@@ -47,10 +60,8 @@ public:
 	VkFormat format;
 
 	bool needs_manual_srgb_encode;
-
-private:
-	Device *device;
 };
+
 }
 
 #endif // GRAPHICS_SWAPCHAIN_H

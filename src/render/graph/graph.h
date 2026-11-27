@@ -124,15 +124,15 @@ public:
 	   COMPILATION
 	   ================================================== */
 
-	void Compile(const gfx::Swapchain *swapchain);
+	void Compile(const gfx::Swapchain &swapchain);
 
 
 	/* ==================================================
 	   EXECUTION
 	   ================================================== */
 
-	void Execute(const gfx::CmdBuffer &cmd);
-	void PresentToSwapchain(const gfx::Swapchain *swapchain, const gfx::CmdBuffer &cmd);
+	void RecordInto(const gfx::CmdBuffer &cmd);
+	void PresentToSwapchain(const gfx::Swapchain &swapchain, const gfx::CmdBuffer &cmd);
 
 
 	/* ==================================================
@@ -189,7 +189,7 @@ private:
 
 	void PropagateDependencies();
 	void BackpropagateDependencies();
-	void AllocateResources(const gfx::Swapchain *swapchain);
+	void AllocateResources(const gfx::Swapchain &swapchain);
 	void GenerateBarriers();
 
 	void SyncTextureRead(Pass &pass, const PassTextureEdge &edge);

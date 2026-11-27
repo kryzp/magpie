@@ -359,7 +359,7 @@ rnd::GraphBufHandle rnd::Graph::PushBufVersion(GraphBufHandle parent, unsigned w
 	return handle;
 }
 
-void rnd::Graph::Compile(const gfx::Swapchain *swapchain)
+void rnd::Graph::Compile(const gfx::Swapchain &swapchain)
 {
 	for (auto &t : texture_resources) {
 		if (t.is_imported)
@@ -511,7 +511,7 @@ void rnd::Graph::BackpropagateDependencies()
 	}
 }
 
-void rnd::Graph::AllocateResources(const gfx::Swapchain *swapchain)
+void rnd::Graph::AllocateResources(const gfx::Swapchain &swapchain)
 {
 	for (auto &pass : passes) {
 
@@ -523,8 +523,8 @@ void rnd::Graph::AllocateResources(const gfx::Swapchain *swapchain)
 
 			if (!t->is_imported && t->physical_key.IsNull()) {
 				if (t->texture_info.size_class == SizeClass_SwapchainRelative) {
-					t->texture_info.size_x *= static_cast<float>(swapchain->width);
-					t->texture_info.size_y *= static_cast<float>(swapchain->height);
+					t->texture_info.size_x *= static_cast<float>(swapchain.GetWidth());
+					t->texture_info.size_y *= static_cast<float>(swapchain.GetHeight());
 					t->texture_info.size_class = SizeClass_Absolute;
 				} else if (t->texture_info.size_class == SizeClass_Relative) {
 					GraphTexHandle rel = t->texture_info.relative_to;
@@ -558,8 +558,8 @@ void rnd::Graph::AllocateResources(const gfx::Swapchain *swapchain)
 
 				if (!rt->is_imported && rt->physical_key.IsNull()) {
 					if (rt->texture_info.size_class == SizeClass_SwapchainRelative) {
-						rt->texture_info.size_x *= static_cast<float>(swapchain->width);
-						rt->texture_info.size_y *= static_cast<float>(swapchain->height);
+						rt->texture_info.size_x *= static_cast<float>(swapchain.GetWidth());
+						rt->texture_info.size_y *= static_cast<float>(swapchain.GetHeight());
 						rt->texture_info.size_class = SizeClass_Absolute;
 					} else if (rt->texture_info.size_class == SizeClass_Relative) {
 						GraphTexHandle rel = rt->texture_info.relative_to;
@@ -880,7 +880,7 @@ void rnd::Graph::SyncBufferWrite(Pass &pass, const PassBufferEdge &edge)
 	st->read_stages = 0;
 }
 
-void rnd::Graph::Execute(const gfx::CmdBuffer &cmd)
+void rnd::Graph::RecordInto(const gfx::CmdBuffer &cmd)
 {
 	for (auto &pass : passes) {
 
@@ -929,7 +929,7 @@ void rnd::Graph::Execute(const gfx::CmdBuffer &cmd)
 	}
 }
 
-void rnd::Graph::PresentToSwapchain(const gfx::Swapchain *swapchain, const gfx::CmdBuffer &cmd)
+void rnd::Graph::PresentToSwapchain(const gfx::Swapchain &swapchain, const gfx::CmdBuffer &cmd)
 {
 	gfx::Device *device = gfx::Device::Get();
 
@@ -939,7 +939,7 @@ void rnd::Graph::PresentToSwapchain(const gfx::Swapchain *swapchain, const gfx::
 	GraphTexture *backbuffer = TextureFromHandle(backbuffer_handle);
 
 	gfx::ResourceKey src_texture_key = backbuffer->physical_key;
-	gfx::ResourceKey dst_texture_key = swapchain->frames[swapchain->current_frame_index].texture_key;
+	gfx::ResourceKey dst_texture_key = swapchain.GetCurrentFrame().texture_key;
 
 	const gfx::Texture *src_texture = device->TextureFromKey(src_texture_key);
 	const gfx::Texture *dst_texture = device->TextureFromKey(dst_texture_key);

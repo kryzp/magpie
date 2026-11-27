@@ -262,7 +262,7 @@ static os::InputState ProcessEvents(const os::InputState &prev_state)
 				os::GamepadAxis axis = static_cast<os::GamepadAxis>(ev->gaxis.axis);
 
 				float normalized_value = (ev->gaxis.value < 0)
-					 ? static_cast<float>(ev->gaxis.value) / 32768.f
+					 ? static_cast<float>(ev->gaxis.value) / static_cast<float>(SDL_JOYSTICK_AXIS_MAX + 1)
 					 : static_cast<float>(ev->gaxis.value) / static_cast<float>(SDL_JOYSTICK_AXIS_MAX);
 
 				gp->SetAxisValue(axis, normalized_value);
